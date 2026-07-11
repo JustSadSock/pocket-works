@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Pocket Works",
+  "short_name": "Pocket Works",
+  "description": "A launcher for small offline-first mobile applications.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#11120f",
+  "theme_color": "#11120f",
+  "icons": [
+    {
+      "src": "./shared/pocket-works-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
