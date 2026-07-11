@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11120f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pocket Works">
+  <title>Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">LOCAL APPLICATION INDEX</p>
+        <h1>Pocket Works</h1>
+      </div>
+      <p class="masthead__meta"><span id="app-count">0</span> installed experiments</p>
+    </header>
+
+    <section class="intro" aria-labelledby="intro-title">
+      <h2 id="intro-title">Small software, treated seriously.</h2>
+      <p>Every item below is an independent, installable and offline-first mobile web app.</p>
+    </section>
+
+    <section aria-labelledby="catalog-title">
+      <div class="section-head">
+        <h2 id="catalog-title">Applications</h2>
+        <button id="refresh-button" type="button">Refresh registry</button>
+      </div>
+
+      <div id="app-list" class="app-list" aria-live="polite"></div>
+      <p id="empty-state" class="empty-state" hidden>No applications have been published yet.</p>
+      <p id="error-state" class="error-state" hidden>Could not read the application registry.</p>
+    </section>
+  </main>
+
+  <template id="app-card-template">
+    <article class="app-entry">
+      <a class="app-entry__link">
+        <span class="app-entry__index" aria-hidden="true"></span>
+        <span class="app-entry__body">
+          <span class="app-entry__name"></span>
+          <span class="app-entry__description"></span>
+          <span class="app-entry__tags"></span>
+        </span>
+        <span class="app-entry__arrow" aria-hidden="true">↗</span>
+      </a>
+    </article>
+  </template>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
