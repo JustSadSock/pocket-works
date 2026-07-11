@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "slug": "screen-lab",
+    "name": "Screen Lab",
+    "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
+    "path": "./apps/screen-lab/",
+    "status": "active",
+    "version": "1.0.0",
+    "accent": "#ff4d1f",
+    "tags": ["PWA", "offline", "device test"]
+  }
+]
