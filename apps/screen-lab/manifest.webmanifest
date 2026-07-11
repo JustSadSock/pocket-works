@@ -1,0 +1,22 @@
+{
+  "id": "/apps/screen-lab/",
+  "name": "Screen Lab",
+  "short_name": "Screen Lab",
+  "description": "An interactive mobile viewport, safe-area, touch and motion laboratory.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f2efe6",
+  "theme_color": "#f2efe6",
+  "categories": ["utilities", "developer tools"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
