@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#f2efe6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Screen Lab">
+  <title>Screen Lab</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="safe-probe" aria-hidden="true"></div>
+  <canvas id="field" aria-hidden="true"></canvas>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="back-link" href="../../" aria-label="Back to Pocket Works">←</a>
+      <div class="brand-block">
+        <p class="kicker">DEVICE / MOTION / TOUCH</p>
+        <h1>Screen Lab</h1>
+      </div>
+      <button class="status-orb" id="status-orb" type="button" aria-label="Toggle motion intensity">
+        <span></span>
+      </button>
+    </header>
+
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="serial">LAB 001 · LIVE INSTRUMENT</p>
+        <h2 id="hero-title">Your screen is the specimen.</h2>
+        <p>Move, rotate, touch and install. The interface exposes what the browser usually hides.</p>
+      </div>
+
+      <div class="specimen" id="specimen" aria-label="Interactive motion specimen">
+        <div class="specimen-ring specimen-ring--outer"></div>
+        <div class="specimen-ring specimen-ring--inner"></div>
+        <div class="specimen-core">
+          <span id="aspect-live">—</span>
+          <small>aspect</small>
+        </div>
+        <div class="specimen-marker marker-a"></div>
+        <div class="specimen-marker marker-b"></div>
+      </div>
+    </section>
+
+    <section class="metric-strip" aria-label="Live device metrics">
+      <article>
+        <span>VIEWPORT</span>
+        <strong id="viewport">—</strong>
+      </article>
+      <article>
+        <span>DPR</span>
+        <strong id="dpr">—</strong>
+      </article>
+      <article>
+        <span>FPS</span>
+        <strong id="fps">—</strong>
+      </article>
+      <article>
+        <span>MODE</span>
+        <strong id="display-mode">—</strong>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel panel--safe">
+        <header>
+          <span>01</span>
+          <h3>Safe area</h3>
+        </header>
+        <div class="safe-map" aria-hidden="true">
+          <div class="safe-map__island"></div>
+          <div class="safe-map__inner"></div>
+          <div class="safe-map__home"></div>
+        </div>
+        <dl class="data-list">
+          <div><dt>top</dt><dd id="safe-top">0px</dd></div>
+          <div><dt>right</dt><dd id="safe-right">0px</dd></div>
+          <div><dt>bottom</dt><dd id="safe-bottom">0px</dd></div>
+          <div><dt>left</dt><dd id="safe-left">0px</dd></div>
+        </dl>
+      </article>
+
+      <article class="panel panel--orientation">
+        <header>
+          <span>02</span>
+          <h3>Orientation</h3>
+        </header>
+        <div class="orientation-figure" id="orientation-figure">
+          <div></div>
+        </div>
+        <p class="reading" id="orientation">—</p>
+        <p class="subreading" id="angle">Angle unavailable</p>
+      </article>
+
+      <article class="panel panel--touch">
+        <header>
+          <span>03</span>
+          <h3>Touch field</h3>
+        </header>
+        <div class="touch-zone" id="touch-zone">
+          <p>Press / drag / multiply</p>
+          <div class="touch-count"><strong id="touch-count">0</strong><span>points</span></div>
+        </div>
+      </article>
+
+      <article class="panel panel--network">
+        <header>
+          <span>04</span>
+          <h3>Runtime</h3>
+        </header>
+        <dl class="data-list data-list--wide">
+          <div><dt>network</dt><dd id="network">—</dd></div>
+          <div><dt>platform</dt><dd id="platform">—</dd></div>
+          <div><dt>motion</dt><dd id="motion-mode">live</dd></div>
+          <div><dt>visibility</dt><dd id="visibility">visible</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="controls" aria-labelledby="controls-title">
+      <div>
+        <p class="kicker">EXPERIMENT CONTROLS</p>
+        <h2 id="controls-title">Stress the interface.</h2>
+      </div>
+      <div class="control-row">
+        <button type="button" data-action="pulse">Impulse</button>
+        <button type="button" data-action="freeze">Freeze</button>
+        <button type="button" data-action="fullscreen">Fullscreen</button>
+        <button type="button" data-action="reset">Reset</button>
+      </div>
+    </section>
+
+    <footer>
+      <span>SCREEN LAB / v1.0.0</span>
+      <span id="clock">—</span>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
