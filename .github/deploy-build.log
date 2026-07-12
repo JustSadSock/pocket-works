@@ -19,4 +19,14 @@ Enhanced build complete: 0 applications.
 > pocket-works@0.7.1 registry:check
 > node scripts/build-registry.mjs --check
 
-Registry build failed: apps.json is stale; run npm run registry:build and commit the generated result
+Generated app registry is current.
+
+> pocket-works@0.7.1 validate:scripts
+> node --check app.js && node --check shared/app-icon-previews.js && node --check shared/launcher-list-motion.js && node --check shared/view-transition-guard.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/enhanced-presets.mjs && node --check scripts/build-enhanced.mjs && node --check scripts/test-enhanced.mjs && node --check scripts/promote-enhanced-build.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/serve-site.mjs && node --check scripts/test-forge.mjs && node --check scripts/test-enhanced-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs && node --check scripts/validate-enhanced.mjs && node --check scripts/validate-quality-gates.mjs
+
+
+> pocket-works@0.7.1 validate:configs
+> node scripts/validate-app-configs.mjs
+
+Application config validation failed with 1 issue:
+- apps/udel/manifest.webmanifest description must equal app.config.json value Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.
