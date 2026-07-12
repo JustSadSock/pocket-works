@@ -4,9 +4,11 @@
   "name": "КРОМКА",
   "shortName": "КРОМКА",
   "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "releaseDate": "2026-07-12",
+  "releaseDateTime": "2026-07-12T19:07:24Z",
   "changelog": [
+    "Inherited the platform interaction lock so long presses no longer select interface text.",
     "Fixed every Pocket Works exit control so it reliably returns to the launcher.",
     "Replaced inert exit buttons with native links that work without game JavaScript."
   ],
@@ -17,7 +19,7 @@
   "backgroundColor": "#eee2c8",
   "themeColor": "#eee2c8",
   "orientation": "portrait",
-  "cacheName": "kromka-v1.1.1",
+  "cacheName": "kromka-v1.1.2",
   "storageNamespace": "pocket-works:kromka",
   "tags": [
     "PWA",
