@@ -114,7 +114,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const backgroundColor = typeof options.background === 'string' ? options.background : '#10110f';
   const themeColor = typeof options.theme === 'string' ? options.theme : backgroundColor;
   const version = '0.1.0';
-  const releaseDate = new Date().toISOString().slice(0, 10);
+  const releaseDateTime = new Date().toISOString();
+  const releaseDate = releaseDateTime.slice(0, 10);
   const changelog = [typeof options['release-note'] === 'string' ? options['release-note'] : `Initial ${preset.label.toLowerCase()} preset release.`];
   const order = Number.parseInt(options.order || '100', 10);
 
@@ -127,6 +128,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     description,
     version,
     releaseDate,
+    releaseDateTime,
     changelog,
     status: typeof options.status === 'string' ? options.status : 'experimental',
     preset: presetName,
@@ -158,6 +160,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     '__APP_THEME__': themeColor,
     '__APP_VERSION__': version,
     '__APP_RELEASE_DATE__': releaseDate,
+    '__APP_RELEASE_DATETIME__': releaseDateTime,
     '__APP_CHANGELOG_JSON__': JSON.stringify(changelog),
     '__APP_CACHE_VERSION__': config.cacheName,
     '__APP_STORAGE_NAMESPACE__': config.storageNamespace,
