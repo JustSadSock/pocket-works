@@ -2,7 +2,15 @@ const root = document.documentElement;
 const list = document.querySelector('#app-list');
 const detailUpdated = document.querySelector('#detail-updated');
 const detailOpen = document.querySelector('#detail-open');
+const detailName = document.querySelector('#detail-name');
+const detailContent = document.querySelector('#detail-content');
 const searchInput = document.querySelector('#app-search');
+const count = document.querySelector('#app-count');
+const networkStatus = document.querySelector('#network-status');
+const syncStatus = document.querySelector('#sync-status');
+const refreshButton = document.querySelector('#refresh-button');
+const sortButton = document.querySelector('#sort-button');
+const resetShelf = document.querySelector('#reset-shelf');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const registryCacheKey = 'pocket-works:registry:v1';
 
@@ -11,9 +19,31 @@ if (list) {
 
   let registryBySlug = new Map();
   let previousRects = new Map();
-  let previousHeight = 0;
   let pendingReason = null;
-  let animationFrame = 0;
+  let pendingCapturedAt = 0;
+  let pendingTimeout = 0;
+  let firstRenderHandled = list.childElementCount > 0;
+  let animationGeneration = 0;
+  let rafOne = 0;
+  let rafTwo = 0;
+  let resetConfirmTimer = 0;
+  const activeAnimations = new Set();
+
+  const toast = document.createElement('div');
+  toast.className = 'launcher-toast';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.setAttribute('aria-atomic', 'true');
+  document.body.append(toast);
+
+  function showToast(message, tone = 'default') {
+    toast.textContent = message;
+    toast.dataset.tone = tone;
+    toast.classList.remove('is-visible');
+    requestAnimationFrame(() => toast.classList.add('is-visible'));
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => toast.classList.remove('is-visible'), 1900);
+  }
 
   function normalizeRegistry(apps) {
     registryBySlug = new Map(
@@ -78,121 +108,362 @@ if (list) {
     if (selected && detailUpdated) detailUpdated.textContent = formatReleaseTime(selected.updatedAt);
   }
 
-  function captureLayout(reason) {
-    previousRects = new Map(
-      [...list.querySelectorAll('.app-entry[data-slug]')]
-        .map((entry) => [entry.dataset.slug, entry.getBoundingClientRect()])
-    );
-    previousHeight = list.getBoundingClientRect().height;
-    pendingReason = reason;
-    root.classList.add('is-list-motion-pending');
-    if (reason === 'refresh') {
-      list.classList.add('is-list-syncing');
-      refreshRegistry();
+  function cancelScheduledFrames() {
+    cancelAnimationFrame(rafOne);
+    cancelAnimationFrame(rafTwo);
+    rafOne = 0;
+    rafTwo = 0;
+  }
+
+  function cancelActiveAnimations() {
+    animationGeneration += 1;
+    for (const animation of activeAnimations) {
+      try {
+        animation.cancel();
+      } catch {
+        // A finished animation may already be detached.
+      }
     }
+    activeAnimations.clear();
+    for (const entry of list.querySelectorAll('.app-entry')) {
+      for (const animation of entry.getAnimations?.() || []) animation.cancel();
+    }
+    list.style.removeProperty('height');
+    list.style.removeProperty('overflow');
+    list.classList.remove('is-list-animating');
   }
 
   function finishListMotion(delay = 0) {
     window.setTimeout(() => {
-      list.classList.remove('is-list-syncing');
+      list.classList.remove('is-list-syncing', 'is-list-animating');
       root.classList.remove('is-list-motion-pending');
     }, delay);
   }
 
-  function animateListUpdate() {
-    animationFrame = 0;
+  function clearPendingMotion({ cancelAnimations = false } = {}) {
+    window.clearTimeout(pendingTimeout);
+    cancelScheduledFrames();
+    if (cancelAnimations) cancelActiveAnimations();
+    previousRects.clear();
+    pendingReason = null;
+    pendingCapturedAt = 0;
+    list.classList.remove('is-list-syncing', 'is-list-animating');
+    root.classList.remove('is-list-motion-pending');
+  }
+
+  function captureLayout(reason) {
+    if (!firstRenderHandled || document.hidden || reducedMotion.matches || pendingReason) return;
+
+    cancelActiveAnimations();
+    previousRects = new Map(
+      [...list.querySelectorAll('.app-entry[data-slug]')]
+        .map((entry) => [entry.dataset.slug, entry.getBoundingClientRect()])
+        .filter(([, rect]) => rect.width > 0 && rect.height > 0)
+    );
+
+    pendingReason = reason;
+    pendingCapturedAt = performance.now();
+    root.classList.add('is-list-motion-pending');
+
+    if (reason === 'refresh') {
+      list.classList.add('is-list-syncing');
+      refreshRegistry();
+    }
+
+    window.clearTimeout(pendingTimeout);
+    pendingTimeout = window.setTimeout(() => clearPendingMotion(), 2500);
+  }
+
+  function trackAnimation(animation) {
+    activeAnimations.add(animation);
+    animation.finished.then(
+      () => activeAnimations.delete(animation),
+      () => activeAnimations.delete(animation)
+    );
+    return animation;
+  }
+
+  function revealInitialEntries() {
     patchReleaseTimes();
+    if (reducedMotion.matches || document.hidden || typeof list.animate !== 'function') return;
 
     const entries = [...list.querySelectorAll('.app-entry[data-slug]')];
-    const reason = pendingReason;
-    pendingReason = null;
+    list.classList.add('is-list-animating');
+    const animations = entries.map((entry, index) => trackAnimation(entry.animate(
+      [
+        { opacity: 0, transform: 'translateY(12px)' },
+        { opacity: 1, transform: 'translateY(0)' }
+      ],
+      {
+        duration: 330,
+        delay: Math.min(index, 8) * 34,
+        easing: 'cubic-bezier(.22,.82,.24,1)'
+      }
+    )));
+    Promise.allSettled(animations.map((animation) => animation.finished))
+      .then(() => list.classList.remove('is-list-animating'));
+  }
 
-    if (!reason || reducedMotion.matches || typeof list.animate !== 'function') {
-      previousRects.clear();
-      finishListMotion();
+  function animateListUpdate() {
+    patchReleaseTimes();
+
+    const reason = pendingReason;
+    const capturedAt = pendingCapturedAt;
+    const oldRects = new Map(previousRects);
+    clearPendingMotion();
+
+    if (
+      !reason
+      || reducedMotion.matches
+      || document.hidden
+      || typeof list.animate !== 'function'
+      || performance.now() - capturedAt > 3000
+    ) {
       return;
     }
 
-    const nextHeight = list.getBoundingClientRect().height;
-    const duration = reason === 'refresh' ? 460 : 380;
-    const easing = 'cubic-bezier(.2,.82,.2,1)';
+    const generation = ++animationGeneration;
+    const entries = [...list.querySelectorAll('.app-entry[data-slug]')];
+    const duration = reason === 'refresh' ? 420 : 350;
+    const easing = 'cubic-bezier(.22,.82,.24,1)';
+    const animations = [];
 
-    if (Math.abs(nextHeight - previousHeight) > 1) {
-      list.style.height = `${previousHeight}px`;
-      list.style.overflow = 'clip';
-      const heightAnimation = list.animate(
-        [{ height: `${previousHeight}px` }, { height: `${nextHeight}px` }],
-        { duration, easing, fill: 'both' }
-      );
-      heightAnimation.finished.then(
-        () => {
-          list.style.removeProperty('height');
-          list.style.removeProperty('overflow');
-        },
-        () => {
-          list.style.removeProperty('height');
-          list.style.removeProperty('overflow');
-        }
-      );
-    }
+    list.classList.add('is-list-animating');
+    if (reason === 'refresh') list.classList.add('is-list-syncing');
 
     entries.forEach((entry, index) => {
-      const previous = previousRects.get(entry.dataset.slug);
+      const previous = oldRects.get(entry.dataset.slug);
       const next = entry.getBoundingClientRect();
-      const delay = Math.min(index, 10) * 22;
+      const delay = Math.min(index, 9) * 18;
 
       if (previous) {
         const deltaX = previous.left - next.left;
         const deltaY = previous.top - next.top;
         const moved = Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1;
-        entry.animate(
-          moved
-            ? [
-                { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: .72 },
-                { transform: 'translate(0, 0)', opacity: 1 }
-              ]
-            : [
-                { transform: 'scale(.992)', opacity: .62 },
-                { transform: 'scale(1)', opacity: 1 }
-              ],
-          { duration, delay, easing, fill: 'both' }
-        );
+        if (moved) {
+          animations.push(trackAnimation(entry.animate(
+            [
+              { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)`, opacity: .78 },
+              { transform: 'translate3d(0, 0, 0)', opacity: 1 }
+            ],
+            { duration, delay, easing }
+          )));
+        } else if (reason === 'refresh') {
+          animations.push(trackAnimation(entry.animate(
+            [
+              { opacity: .68 },
+              { opacity: 1 }
+            ],
+            { duration: 260, delay, easing: 'ease-out' }
+          )));
+        }
         return;
       }
 
-      entry.animate(
+      animations.push(trackAnimation(entry.animate(
         [
-          { transform: 'translateY(18px) scale(.985)', opacity: 0, filter: 'blur(5px)' },
-          { transform: 'translateY(0) scale(1)', opacity: 1, filter: 'blur(0)' }
+          { transform: 'translate3d(0, 14px, 0)', opacity: 0 },
+          { transform: 'translate3d(0, 0, 0)', opacity: 1 }
         ],
-        { duration: duration + 60, delay, easing, fill: 'both' }
-      );
+        { duration: duration + 40, delay, easing }
+      )));
     });
 
-    previousRects.clear();
-    finishListMotion(duration + 260);
+    Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+      if (generation !== animationGeneration) return;
+      finishListMotion(reason === 'refresh' ? 140 : 0);
+    });
   }
 
   function scheduleAnimation() {
-    window.cancelAnimationFrame(animationFrame);
-    animationFrame = window.requestAnimationFrame(animateListUpdate);
+    cancelScheduledFrames();
+
+    if (!firstRenderHandled) {
+      firstRenderHandled = true;
+      rafOne = requestAnimationFrame(() => {
+        rafTwo = requestAnimationFrame(revealInitialEntries);
+      });
+      return;
+    }
+
+    if (!pendingReason) {
+      patchReleaseTimes();
+      return;
+    }
+
+    rafOne = requestAnimationFrame(() => {
+      rafTwo = requestAnimationFrame(animateListUpdate);
+    });
+  }
+
+  function reasonForControl(control) {
+    if (control.id === 'refresh-button') return 'refresh';
+    if (control.matches('[data-filter]')) return 'filter';
+    if (control.id === 'sort-button') return 'sort';
+    if (control.id === 'clear-search') return 'search';
+    if (control.matches('[data-action="favorite"], #detail-favorite')) return 'favorite';
+    if (control.id === 'reset-shelf') return 'reset';
+    return 'control';
   }
 
   function captureControlLayout(event) {
-    const control = event.target.closest?.('[data-filter], #sort-button, #refresh-button, #clear-search, [data-action="favorite"], #reset-shelf');
-    if (!control || pendingReason) return;
-    captureLayout(control.id === 'refresh-button' ? 'refresh' : 'control');
+    const control = event.target.closest?.(
+      '[data-filter], #sort-button, #refresh-button, #clear-search, [data-action="favorite"], #detail-favorite, #reset-shelf'
+    );
+    if (!control) return;
+    captureLayout(reasonForControl(control));
   }
 
-  document.addEventListener('pointerdown', captureControlLayout, { capture: true });
+  function animateTextChange(element) {
+    if (!element || reducedMotion.matches || typeof element.animate !== 'function') return;
+    trackAnimation(element.animate(
+      [
+        { opacity: .35, transform: 'translateY(-3px)' },
+        { opacity: 1, transform: 'translateY(0)' }
+      ],
+      { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' }
+    ));
+  }
+
+  function syncSearchState() {
+    document.querySelector('.search-field')?.classList.toggle('has-value', Boolean(searchInput?.value));
+  }
+
+  function clearResetConfirmation() {
+    window.clearTimeout(resetConfirmTimer);
+    if (!resetShelf?.dataset.confirming) return;
+    delete resetShelf.dataset.confirming;
+    resetShelf.classList.remove('is-confirming');
+    resetShelf.textContent = 'Reset personal shelf';
+    resetShelf.setAttribute('aria-label', 'Reset personal shelf');
+  }
+
+  function installControlPolish() {
+    syncStatus?.setAttribute('aria-live', 'polite');
+    refreshButton?.setAttribute('aria-controls', 'app-list');
+    sortButton?.setAttribute('aria-controls', 'app-list');
+
+    for (const button of document.querySelectorAll('[data-filter]')) {
+      button.setAttribute('aria-controls', 'app-list');
+      button.dataset.haptic = 'selection';
+    }
+    for (const control of document.querySelectorAll('[data-native-press]')) {
+      control.dataset.interactionReady = 'true';
+    }
+
+    searchInput?.addEventListener('input', syncSearchState, { passive: true });
+    syncSearchState();
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest?.('[data-filter], #sort-button, #refresh-button, #detail-copy, [data-action="favorite"], #detail-favorite');
+      if (!control) return;
+
+      if (control.matches('[data-filter]')) {
+        requestAnimationFrame(() => animateTextChange(control.querySelector('[data-filter-count]')));
+      }
+
+      if (control.id === 'sort-button') {
+        requestAnimationFrame(() => {
+          sortButton.setAttribute('aria-label', `Change application sort order. Current: ${sortButton.textContent}`);
+          animateTextChange(sortButton);
+        });
+      }
+
+      if (control.id === 'refresh-button') {
+        refreshButton.classList.add('is-busy');
+        refreshButton.setAttribute('aria-busy', 'true');
+      }
+
+      if (control.id === 'detail-copy') {
+        window.setTimeout(() => showToast('Application link copied'), 60);
+      }
+
+      if (control.matches('[data-action="favorite"], #detail-favorite')) {
+        window.setTimeout(() => {
+          const favorite = document.querySelector(`[data-action="favorite"][data-slug="${control.dataset.slug}"]`);
+          const pressed = favorite?.getAttribute('aria-pressed') === 'true';
+          showToast(pressed ? 'Saved to shelf' : 'Shelf updated');
+        }, 100);
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest?.('#reset-shelf');
+      if (!control) return;
+
+      if (control.dataset.confirming !== 'true') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        control.dataset.confirming = 'true';
+        control.classList.add('is-confirming');
+        control.textContent = 'Press again to reset';
+        control.setAttribute('aria-label', 'Press again to confirm shelf reset');
+        showToast('Reset armed. Press once more to confirm.', 'warning');
+        resetConfirmTimer = window.setTimeout(clearResetConfirmation, 2600);
+        return;
+      }
+
+      clearResetConfirmation();
+      window.setTimeout(() => showToast('Personal shelf reset'), 80);
+    }, { capture: true });
+
+    const refreshObserver = new MutationObserver(() => {
+      if (!refreshButton) return;
+      const done = !refreshButton.disabled && refreshButton.textContent.trim() === 'Sync';
+      if (!done) return;
+      window.setTimeout(() => {
+        refreshButton.classList.remove('is-busy');
+        refreshButton.removeAttribute('aria-busy');
+      }, 180);
+    });
+    if (refreshButton) refreshObserver.observe(refreshButton, { attributes: true, childList: true, characterData: true, subtree: true });
+
+    const countObserver = new MutationObserver(() => animateTextChange(count));
+    if (count) countObserver.observe(count, { childList: true, characterData: true, subtree: true });
+
+    const statusObserver = new MutationObserver(() => {
+      animateTextChange(networkStatus);
+      animateTextChange(syncStatus);
+    });
+    if (networkStatus) statusObserver.observe(networkStatus, { childList: true, characterData: true, subtree: true });
+    if (syncStatus) statusObserver.observe(syncStatus, { childList: true, characterData: true, subtree: true });
+
+    const detailObserver = new MutationObserver(() => {
+      patchReleaseTimes();
+      if (!detailContent || detailContent.hidden || reducedMotion.matches) return;
+      trackAnimation(detailContent.animate(
+        [
+          { opacity: .72, transform: 'translateY(6px)' },
+          { opacity: 1, transform: 'translateY(0)' }
+        ],
+        { duration: 280, easing: 'cubic-bezier(.22,.82,.24,1)' }
+      ));
+    });
+    if (detailName) detailObserver.observe(detailName, { childList: true, characterData: true, subtree: true });
+
+    root.classList.add('is-launcher-ui-ready');
+  }
+
   document.addEventListener('click', captureControlLayout, { capture: true });
-  searchInput?.addEventListener('beforeinput', () => {
-    if (!pendingReason) captureLayout('search');
-  }, { capture: true });
+  searchInput?.addEventListener('beforeinput', () => captureLayout('search'), { capture: true });
 
   new MutationObserver(scheduleAnimation).observe(list, { childList: true });
+
+  window.addEventListener('pageshow', (event) => {
+    clearPendingMotion({ cancelAnimations: true });
+    firstRenderHandled = list.childElementCount > 0;
+    patchReleaseTimes();
+    if (event.persisted) requestAnimationFrame(() => list.getBoundingClientRect());
+  }, { passive: true });
+
+  window.addEventListener('pagehide', () => clearPendingMotion({ cancelAnimations: true }), { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearPendingMotion({ cancelAnimations: true });
+  });
 
   readSavedRegistry();
   refreshRegistry();
   patchReleaseTimes();
+  installControlPolish();
 }
