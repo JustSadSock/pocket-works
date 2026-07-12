@@ -10,19 +10,24 @@ import {
 
 const registry = JSON.parse(
   readFileSync(new URL('../../apps.json', import.meta.url), 'utf8')
-) as Array<{ slug: string; version: string }>;
+) as Array<{ slug: string; version: string; updatedAt: string }>;
 const screenLabVersion = registry.find((app) => app.slug === 'screen-lab')?.version;
 const echoesVersion = registry.find((app) => app.slug === 'echoes')?.version;
+const newestApp = [...registry].sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
 if (!screenLabVersion) throw new Error('Screen Lab is missing from apps.json');
 if (!echoesVersion) throw new Error('ECHOES is missing from apps.json');
+if (!newestApp) throw new Error('apps.json is empty');
 
-test('launcher shelf supports search, real icons, details, favorites and keyboard focus', async ({ page }, testInfo) => {
+test('launcher shelf supports precise updated sorting, search, details and favorites', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/', 'h1');
 
   await expect(page.locator('h1')).toContainText('Pocket');
+  await expect(page.locator('html')).toHaveClass(/has-launcher-list-motion/);
   await expect(page.locator('.app-entry')).toHaveCount(registry.length);
   await expect(page.locator('#app-count')).toHaveText(String(registry.length));
+  await expect(page.locator('.app-entry').first()).toHaveAttribute('data-slug', newestApp.slug);
+  await expect(page.locator('.app-entry').first().locator('.app-entry__meta')).not.toContainText(/T\d{2}:/);
 
   const echoesPreview = page.locator('.app-entry[data-slug="echoes"] .app-preview');
   await expect(echoesPreview).toHaveClass(/has-app-icon/);
@@ -81,6 +86,22 @@ test('launcher retains personal shelf state after reload', async ({ page }) => {
   await page.locator('[data-filter="favorites"]').click();
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__name')).toHaveText('Screen Lab');
   await assertNoHorizontalOverflow(page);
+  monitor.assertClean();
+});
+
+test('shared runtime blocks game text selection while preserving explicit selectable content', async ({ page }) => {
+  const monitor = monitorUnexpectedBrowserOutput(page);
+  await openStablePage(page, '/apps/screen-lab/', '#hero-title');
+
+  await expect.poll(() => page.locator('#hero-title').evaluate((element) => getComputedStyle(element).userSelect)).toBe('none');
+  await expect.poll(() => page.locator('.selectable-content').evaluate((element) => getComputedStyle(element).userSelect)).toBe('text');
+
+  const selectionPrevented = await page.locator('#hero-title').evaluate((element) => {
+    const event = new Event('selectstart', { bubbles: true, cancelable: true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(selectionPrevented).toBe(true);
   monitor.assertClean();
 });
 
