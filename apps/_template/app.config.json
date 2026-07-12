@@ -6,6 +6,7 @@
   "description": "__APP_DESCRIPTION__",
   "version": "__APP_VERSION__",
   "releaseDate": "__APP_RELEASE_DATE__",
+  "releaseDateTime": "__APP_RELEASE_DATETIME__",
   "changelog": __APP_CHANGELOG_JSON__,
   "status": "__APP_STATUS__",
   "preset": "__APP_PRESET__",
