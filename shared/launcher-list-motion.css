@@ -1,0 +1,51 @@
+html.has-launcher-list-motion .app-list {
+  position: relative;
+  isolation: isolate;
+}
+
+html.has-launcher-list-motion .app-entry {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  will-change: transform, opacity, filter;
+}
+
+html.has-launcher-list-motion .app-list::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    color-mix(in srgb, var(--accent) 5%, transparent) 42%,
+    color-mix(in srgb, var(--accent) 19%, transparent) 50%,
+    color-mix(in srgb, var(--accent) 5%, transparent) 58%,
+    transparent 100%
+  );
+  transform: translateY(-100%);
+}
+
+html.has-launcher-list-motion .app-list.is-list-syncing::after {
+  opacity: 1;
+  animation: launcher-sync-scan 780ms cubic-bezier(.2,.75,.2,1) infinite;
+}
+
+@keyframes launcher-sync-scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.has-launcher-list-motion .app-entry {
+    will-change: auto;
+  }
+
+  html.has-launcher-list-motion .app-list.is-list-syncing::after {
+    animation: none;
+    opacity: .14;
+    transform: none;
+  }
+}
