@@ -43,6 +43,28 @@ Mobile runtime validation passed for Quick and Enhanced templates plus 6 registe
 > pocket-works@0.7.1 validate:updates
 > node scripts/validate-update-contract.mjs
 
-Update contract validation failed with 2 issues:
-- apps/udel/sw.js must not activate a new worker automatically during install
-- apps/udel/sw.js RELEASE_NOTES must match app.config.json changelog
+Managed update contract passed for Quick and Enhanced runtimes plus 6 published apps.
+
+> pocket-works@0.7.1 validate:launcher
+> node scripts/validate-launcher.mjs
+
+Launcher validation passed for Pocket Works 0.7.1 and 6 registered apps.
+
+> pocket-works@0.7.1 validate:capabilities
+> node scripts/validate-capabilities.mjs
+
+Capability validation failed with 14 issues:
+- apps/udel/index.html must include ../../shared/workshop-mode.css
+- apps/udel/index.html must include data-workshop-trigger
+- apps/udel/app.js must include from '../../shared/workshop-mode.js'
+- apps/udel/app.js must include createWorkshopMode
+- apps/udel/app.js must include storageNamespace: 'pocket-works:udel'
+- apps/udel/app.js must include cachePrefix: 'udel-'
+- apps/udel/sw.js must cache ../../shared/capabilities/motion.js
+- apps/udel/sw.js must cache ../../shared/capabilities/storage.js
+- apps/udel/sw.js must cache ../../shared/capabilities/transfer.js
+- apps/udel/sw.js must cache ../../shared/capabilities/audio.js
+- apps/udel/sw.js must cache ../../shared/capabilities/device.js
+- apps/udel/sw.js must cache ../../shared/capabilities/diagnostics.js
+- apps/udel/sw.js must cache ../../shared/workshop-mode.js
+- apps/udel/sw.js must cache ../../shared/workshop-mode.css
