@@ -1,0 +1,22 @@
+
+> pocket-works@0.7.1 build:site
+> npm run health && npm run prepare:site && npm run validate:site
+
+
+> pocket-works@0.7.1 health
+> npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced
+
+
+> pocket-works@0.7.1 build:enhanced
+> node scripts/build-enhanced.mjs
+
+Enhanced build complete: 0 applications.
+
+> pocket-works@0.7.1 validate:all
+> npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities && npm run validate:enhanced && npm run validate:quality
+
+
+> pocket-works@0.7.1 registry:check
+> node scripts/build-registry.mjs --check
+
+Registry build failed: apps.json is stale; run npm run registry:build and commit the generated result
