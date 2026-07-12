@@ -1,11 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.4';
-const APP_VERSION = '0.6.4';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.5';
+const APP_VERSION = '0.6.5';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
   'Disabled accidental long-press text selection across the shared Pocket Works runtime.',
   'Added smooth list reflow and refresh feedback for filters, sorting and registry sync.',
-  'Changed Updated sorting from day-level dates to exact release timestamps.'
+  'Changed Updated sorting from day-level dates to exact release timestamps.',
+  'Hardened update detection by comparing waiting builds with the service worker that is actually active.'
 ];
 const APP_SHELL = [
   './',
