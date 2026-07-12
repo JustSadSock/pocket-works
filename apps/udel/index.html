@@ -14,6 +14,7 @@
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
@@ -23,6 +24,13 @@
       <strong>РАЗВОРАЧИВАЕМ КАРТУ</strong>
     </div>
   </main>
+  <button
+    type="button"
+    data-workshop-trigger
+    data-native-press
+    aria-label="Открыть Workshop Mode"
+    style="position:fixed;z-index:24;left:0;bottom:max(84px,calc(env(safe-area-inset-bottom) + 74px));min-width:44px;min-height:44px;border:1px solid #d7c7a5;border-left:0;background:#26251f;color:#eadfc7;padding:6px 8px;font:800 9px/1 system-ui,sans-serif;writing-mode:vertical-rl;letter-spacing:.08em"
+  >WORKSHOP</button>
   <noscript>Для работы игры требуется JavaScript.</noscript>
   <script
     type="module"
@@ -32,6 +40,7 @@
     data-app-name="УДЕЛ"
     data-app-version="1.0.0"
   ></script>
+  <script type="module" src="./workshop.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
