@@ -27,12 +27,13 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await page.locator('.app-entry__select').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
-  await expect(page.locator('#detail-version')).toHaveText('1.3.0');
+  await expect(page.locator('#detail-version')).toHaveText('v1.3.0');
   await expect(page.locator('#detail-open')).toHaveAttribute('href', './apps/screen-lab/');
 
   const favorite = page.locator('#detail-favorite');
   await favorite.click();
-  await expect(favorite).toHaveText(/Saved|Remove from shelf/);
+  await expect(favorite).toHaveText('Remove from saved');
+  await expect(favorite).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#detail-close').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'true');
 
