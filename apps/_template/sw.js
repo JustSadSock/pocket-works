@@ -6,6 +6,7 @@ const RELEASE_NOTES = __APP_CHANGELOG_JSON__;
 const APP_SHELL = [
   './',
   './index.html',
+  './app.config.json',
   './styles.css',
   './app.js',
   './manifest.webmanifest',
