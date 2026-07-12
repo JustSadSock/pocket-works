@@ -120,32 +120,145 @@ export function setDocumentScrollLocked(locked) {
   window.scrollTo({ top: scrollLockY, behavior: 'instant' });
 }
 
+function vibrateFor(element) {
+  const haptic = element?.dataset?.haptic;
+  if (!haptic || !navigator.vibrate) return;
+  const pattern = haptic === 'success'
+    ? [8, 24, 8]
+    : haptic === 'warning'
+      ? [12, 36, 12]
+      : haptic === 'selection'
+        ? 5
+        : 8;
+  navigator.vibrate(pattern);
+}
+
 function installPressFeedback(controller, selector) {
   const active = new Map();
   const signal = controller.signal;
 
-  const clear = (pointerId) => {
-    const element = active.get(pointerId);
-    element?.classList.remove('is-pressed');
+  const clear = (pointerId, delayed = false) => {
+    const state = active.get(pointerId);
+    if (!state) return;
     active.delete(pointerId);
+    const remove = () => state.element.classList.remove('is-pressed');
+    if (delayed && !state.cancelled) window.setTimeout(remove, 35);
+    else remove();
   };
 
   document.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
     const element = event.target.closest?.(selector);
     if (!element || element.matches(':disabled, [aria-disabled="true"]')) return;
-    active.set(event.pointerId, element);
+    active.set(event.pointerId, {
+      element,
+      startX: event.clientX,
+      startY: event.clientY,
+      cancelled: false
+    });
     element.classList.add('is-pressed');
   }, { capture: true, signal });
 
-  for (const type of ['pointerup', 'pointercancel']) {
+  document.addEventListener('pointermove', (event) => {
+    const state = active.get(event.pointerId);
+    if (!state || state.cancelled) return;
+    const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+    if (distance <= 12) return;
+    state.cancelled = true;
+    state.element.classList.remove('is-pressed');
+  }, { capture: true, signal, passive: true });
+
+  document.addEventListener('pointerup', (event) => {
+    const state = active.get(event.pointerId);
+    if (state && !state.cancelled) vibrateFor(state.element);
+    clear(event.pointerId, true);
+  }, { capture: true, signal });
+
+  for (const type of ['pointercancel', 'lostpointercapture']) {
     document.addEventListener(type, (event) => clear(event.pointerId), { capture: true, signal });
   }
 
-  document.addEventListener('lostpointercapture', (event) => clear(event.pointerId), { capture: true, signal });
+  document.addEventListener('keydown', (event) => {
+    if (event.repeat || (event.key !== 'Enter' && event.key !== ' ')) return;
+    const element = event.target.closest?.(selector);
+    if (!element || element.matches(':disabled, [aria-disabled="true"]')) return;
+    element.classList.add('is-keyboard-pressed');
+  }, { capture: true, signal });
+
+  document.addEventListener('keyup', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const element = event.target.closest?.(selector);
+    if (!element) return;
+    element.classList.remove('is-keyboard-pressed');
+    vibrateFor(element);
+  }, { capture: true, signal });
+
   window.addEventListener('blur', () => {
-    for (const pointerId of active.keys()) clear(pointerId);
+    for (const pointerId of [...active.keys()]) clear(pointerId);
+    for (const element of document.querySelectorAll('.is-keyboard-pressed')) {
+      element.classList.remove('is-keyboard-pressed');
+    }
   }, { signal });
+}
+
+function rangeProgress(input) {
+  const minimum = Number.parseFloat(input.min || '0');
+  const maximum = Number.parseFloat(input.max || '100');
+  const value = Number.parseFloat(input.value || '0');
+  if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || maximum <= minimum) return 0;
+  return Math.min(100, Math.max(0, ((value - minimum) / (maximum - minimum)) * 100));
+}
+
+function syncRange(input) {
+  if (!(input instanceof HTMLInputElement) || input.type !== 'range') return;
+  const progress = rangeProgress(input);
+  input.style.setProperty('--app-range-progress', `${progress}%`);
+  input.dataset.rangeReady = 'true';
+  window.dispatchEvent(new CustomEvent('appcontrolchange', {
+    detail: { type: 'range', element: input, value: input.value, progress }
+  }));
+}
+
+function installRangeFeedback(controller) {
+  const signal = controller.signal;
+  const rangeSelector = 'input[type="range"]:not([data-native-range="false"])';
+
+  const syncAllRanges = (scope = document) => {
+    if (scope instanceof HTMLInputElement && scope.matches(rangeSelector)) syncRange(scope);
+    for (const input of scope.querySelectorAll?.(rangeSelector) || []) syncRange(input);
+  };
+
+  syncAllRanges();
+
+  document.addEventListener('input', (event) => syncRange(event.target), { capture: true, signal, passive: true });
+  document.addEventListener('change', (event) => syncRange(event.target), { capture: true, signal, passive: true });
+
+  document.addEventListener('pointerdown', (event) => {
+    const input = event.target.closest?.(rangeSelector);
+    if (!input || input.disabled) return;
+    input.classList.add('is-dragging');
+  }, { capture: true, signal });
+
+  const finishDrag = (event) => {
+    const input = event.target.closest?.(rangeSelector) || document.querySelector(`${rangeSelector}.is-dragging`);
+    if (!input) return;
+    input.classList.remove('is-dragging');
+    syncRange(input);
+  };
+  document.addEventListener('pointerup', finishDrag, { capture: true, signal });
+  document.addEventListener('pointercancel', finishDrag, { capture: true, signal });
+
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node instanceof Element) syncAllRanges(node);
+      }
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+
+  return syncAllRanges;
 }
 
 export function installMobileRuntime(options = {}) {
@@ -153,7 +266,8 @@ export function installMobileRuntime(options = {}) {
 
   const controller = new AbortController();
   const signal = controller.signal;
-  const pressSelector = options.pressSelector ?? 'button, [role="button"], [data-pressable]';
+  const pressSelector = options.pressSelector
+    ?? '[data-native-press], button, [role="button"], [data-pressable], a[href]';
   const selectableSelector = options.selectableSelector
     ?? 'input, textarea, select, [contenteditable="true"], [data-selectable], .selectable-content';
   const calloutSelector = options.calloutSelector ?? 'body';
@@ -167,6 +281,7 @@ export function installMobileRuntime(options = {}) {
   window.visualViewport?.addEventListener('scroll', writeViewportState, { passive: true, signal });
 
   installPressFeedback(controller, pressSelector);
+  const refreshControls = installRangeFeedback(controller);
 
   document.addEventListener('dragstart', (event) => {
     const image = event.target.closest?.('img');
@@ -195,6 +310,7 @@ export function installMobileRuntime(options = {}) {
   const runtime = {
     getViewportState,
     refreshViewport: writeViewportState,
+    refreshControls,
     setScrollLocked: setDocumentScrollLocked,
     destroy() {
       controller.abort();
