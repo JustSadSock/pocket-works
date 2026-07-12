@@ -4,12 +4,12 @@
   "name": "КРОМКА",
   "shortName": "КРОМКА",
   "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Added an infinite procedural printed track with daily and random seeded runs.",
-    "Added one-finger drift steering, tension-powered boosts, obstacles and persistent records.",
-    "Added generated machine audio, tactile print effects, offline support and Workshop diagnostics."
+    "Increased the sense of speed with a faster opening pace, road vibration and a more aggressive animated shredder.",
+    "Smoothed high-speed steering and reduced the lateral snap during tension boosts.",
+    "Accelerated the difficulty curve and added explicit Pocket Works exit controls to every game menu."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -18,7 +18,7 @@
   "backgroundColor": "#eee2c8",
   "themeColor": "#eee2c8",
   "orientation": "portrait",
-  "cacheName": "kromka-v1.0.0",
+  "cacheName": "kromka-v1.1.0",
   "storageNamespace": "pocket-works:kromka",
   "tags": [
     "PWA",
