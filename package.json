@@ -3,22 +3,47 @@
   "version": "0.5.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/[!_]*"
+  ],
   "scripts": {
     "new:app": "node scripts/new-app.mjs",
     "registry:build": "node scripts/build-registry.mjs",
     "registry:check": "node scripts/build-registry.mjs --check",
+    "build:enhanced": "node scripts/build-enhanced.mjs",
+    "test:enhanced": "node scripts/test-enhanced.mjs",
+    "prepare:site": "node scripts/prepare-site.mjs",
+    "validate:site": "node scripts/validate-site.mjs",
+    "build:site": "npm run health && npm run prepare:site && npm run validate:site",
     "validate": "node scripts/validate.mjs",
     "validate:mobile": "node scripts/validate-mobile-runtime.mjs",
     "validate:configs": "node scripts/validate-app-configs.mjs",
     "validate:updates": "node scripts/validate-update-contract.mjs",
     "validate:launcher": "node scripts/validate-launcher.mjs",
     "validate:capabilities": "node scripts/validate-capabilities.mjs",
-    "validate:scripts": "node --check app.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs",
-    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities",
-    "test:forge": "node scripts/test-forge.mjs",
-    "health": "npm run validate:all && npm run test:forge"
+    "validate:enhanced": "node scripts/validate-enhanced.mjs",
+    "validate:scripts": "node --check app.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/enhanced-presets.mjs && node --check scripts/build-enhanced.mjs && node --check scripts/test-enhanced.mjs && node --check scripts/promote-enhanced-build.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/test-forge.mjs && node --check scripts/test-enhanced-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs && node --check scripts/validate-enhanced.mjs",
+    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities && npm run validate:enhanced",
+    "test:forge:quick": "node scripts/test-forge.mjs",
+    "test:forge:enhanced": "node scripts/test-enhanced-forge.mjs",
+    "health": "npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "pixi.js": "^8.0.0",
+    "tone": "^15.0.0",
+    "workbox-core": "^7.3.0",
+    "workbox-precaching": "^7.3.0",
+    "workbox-routing": "^7.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.1.4",
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.0.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   }
 }

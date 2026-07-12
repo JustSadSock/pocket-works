@@ -3,7 +3,10 @@ import path from 'node:path';
 
 export const APP_CONFIG_FILE = 'app.config.json';
 export const APP_CONFIG_SCHEMA_VERSION = 1;
-export const APP_PRESETS = ['vanilla', 'interactive', 'canvas', 'game-2d', 'audio'];
+export const QUICK_APP_PRESETS = ['vanilla', 'interactive', 'canvas', 'game-2d', 'audio'];
+export const ENHANCED_APP_PRESETS = ['vite', 'pixi', 'phaser', 'tone'];
+export const APP_PRESETS = [...QUICK_APP_PRESETS, ...ENHANCED_APP_PRESETS];
+export const APP_RUNTIMES = ['quick', 'enhanced'];
 export const APP_STATUSES = ['active', 'experimental', 'archived'];
 export const APP_ORIENTATIONS = ['any', 'portrait', 'landscape'];
 
@@ -16,6 +19,10 @@ function requireString(config, key, errors) {
   if (typeof config[key] !== 'string' || config[key].trim() === '') {
     errors.push(`${key} must be a non-empty string`);
   }
+}
+
+export function runtimeForConfig(config) {
+  return config?.runtime || 'quick';
 }
 
 export function validateAppConfig(config, directoryName = config?.slug) {
@@ -48,6 +55,9 @@ export function validateAppConfig(config, directoryName = config?.slug) {
     requireString(config, key, errors);
   }
 
+  const runtime = runtimeForConfig(config);
+  if (!APP_RUNTIMES.includes(runtime)) errors.push(`runtime must be one of: ${APP_RUNTIMES.join(', ')}`);
+
   if (!slugPattern.test(config.slug || '')) errors.push('slug must be lowercase kebab-case');
   if (directoryName && config.slug !== directoryName) errors.push(`slug must match directory name ${directoryName}`);
   if (!semverPattern.test(config.version || '')) errors.push('version must use semantic versioning');
@@ -55,7 +65,12 @@ export function validateAppConfig(config, directoryName = config?.slug) {
     errors.push('releaseDate must use a valid YYYY-MM-DD date');
   }
   if (!APP_STATUSES.includes(config.status)) errors.push(`status must be one of: ${APP_STATUSES.join(', ')}`);
-  if (!APP_PRESETS.includes(config.preset)) errors.push(`preset must be one of: ${APP_PRESETS.join(', ')}`);
+
+  const allowedPresets = runtime === 'enhanced' ? ENHANCED_APP_PRESETS : QUICK_APP_PRESETS;
+  if (!allowedPresets.includes(config.preset)) {
+    errors.push(`preset ${config.preset} is not valid for the ${runtime} runtime; expected one of: ${allowedPresets.join(', ')}`);
+  }
+
   if (!APP_ORIENTATIONS.includes(config.orientation)) errors.push(`orientation must be one of: ${APP_ORIENTATIONS.join(', ')}`);
 
   for (const key of ['accent', 'backgroundColor', 'themeColor']) {
@@ -100,6 +115,7 @@ export function toRegistryEntry(config) {
     accent: config.accent,
     tags: [...config.tags],
     preset: config.preset,
+    runtime: runtimeForConfig(config),
     storageNamespace: config.storageNamespace
   };
 }
@@ -144,10 +160,7 @@ export async function collectAppConfigs(root = process.cwd()) {
     }
   }
 
-  if (errors.length > 0) {
-    throw new Error(errors.join('\n'));
-  }
-
+  if (errors.length > 0) throw new Error(errors.join('\n'));
   return configs.sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
 }
 

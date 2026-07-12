@@ -13,72 +13,19 @@ Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of
 
 ## Personal application shelf
 
-Pocket Works is not a static link index. The root PWA provides:
+Pocket Works is not a static link index. The root PWA provides search, filters, favorites, recents, procedural previews, release details, offline readiness, a desktop focus bay, mobile detail sheet and local registry fallback.
 
-- search across names, descriptions, mechanics, tags and release notes;
-- filters for saved, recent, offline-ready and experimental applications;
-- persistent favorites, recents, selection and sort order;
-- procedural app previews derived from each app's preset, slug and accent;
-- version, update date, cache readiness and release notes;
-- a desktop focus bay and mobile bottom-sheet details panel;
-- quick actions for open, save and copy link;
-- a locally saved registry fallback when the live registry is unavailable.
+## Two application runtimes
 
-The shelf uses `shared/mobile-runtime.*` for native-feeling behavior and remains useful offline after the first successful load.
+### Quick PWA
 
-## Repository layout
-
-```text
-/
-├── AGENTS.md
-├── apps.json                    # generated launcher registry
-├── index.html
-├── styles.css
-├── app.js
-├── manifest.webmanifest
-├── sw.js
-├── package.json
-├── netlify.toml
-├── scripts/
-│   ├── app-config.mjs           # config schema and uniqueness rules
-│   ├── build-registry.mjs       # app.config.json → apps.json
-│   ├── new-app.mjs              # Pocket Forge CLI
-│   ├── presets.mjs              # starter mechanics
-│   ├── test-forge.mjs           # smoke-tests every preset
-│   └── validate*.mjs
-├── shared/
-│   ├── mobile-runtime.*         # native-feeling behavior
-│   ├── update-manager.*         # controlled PWA updates
-│   ├── workshop-mode.*          # opt-in diagnostics console
-│   └── capabilities/
-│       ├── motion.js
-│       ├── storage.js
-│       ├── transfer.js
-│       ├── audio.js
-│       ├── device.js
-│       └── diagnostics.js
-├── docs/
-│   ├── BASELINE.md
-│   ├── PUBLISHING.md
-│   ├── SHARED-CAPABILITIES.md
-│   ├── ENVIRONMENT-ROADMAP.md
-│   └── IMPLEMENTATION-PLAN.md
-└── apps/
-    ├── AGENTS.md
-    ├── _template/
-    └── <app-slug>/
-        └── app.config.json
-```
-
-## Create a new app
-
-Use Pocket Forge instead of copying the template manually:
+Quick applications remain plain HTML, CSS and JavaScript. They are the default for focused tools, experiments and small games.
 
 ```bash
-npm run new:app -- signal-board --preset=interactive --name="Signal Board"
+npm run new:app -- signal-board --runtime=quick --preset=interactive --name="Signal Board"
 ```
 
-Available presets:
+Quick presets:
 
 - `vanilla` — focused persistent utility shell;
 - `interactive` — pointer capture and direct manipulation;
@@ -86,9 +33,27 @@ Available presets:
 - `game-2d` — lightweight animation/game loop;
 - `audio` — user-gesture-safe Web Audio starter.
 
-Useful options:
+### Enhanced PWA
+
+Enhanced applications use Vite, TypeScript, Workbox and Vitest. Choose this path when a real dependency graph, compilation, unit tests or a specialised engine materially helps the product.
+
+```bash
+npm run new:app -- particle-room --runtime=enhanced --preset=pixi --name="Particle Room"
+```
+
+Enhanced presets:
+
+- `vite` — typed platform application without an additional engine;
+- `pixi` — PixiJS 8 WebGL scene;
+- `phaser` — Phaser 3 scene and update loop;
+- `tone` — Tone.js scheduled audio instrument.
+
+Enhanced source lives under `source/`. Vite builds deployable `index.html`, `app.js`, `styles.css`, `manifest.webmanifest` and `sw.js` into the app directory. Complete commands and architecture are documented in [`docs/ENHANCED-APPS.md`](./docs/ENHANCED-APPS.md).
+
+## Useful Forge options
 
 ```text
+--runtime=quick|enhanced
 --description="One sentence purpose"
 --release-note="Initial user-visible release note"
 --accent=#ff4d1f
@@ -99,18 +64,45 @@ Useful options:
 --order=100
 ```
 
-Pocket Forge creates the directory, starter mechanic, manifest, app-owned icon, Service Worker cache identity, storage namespace, release metadata and `app.config.json`. It regenerates `apps.json` and runs the full validation suite. A failed generation is rolled back.
+Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Worker identity, storage namespace, release metadata and `app.config.json`. Enhanced applications are built before registration. A failed generation is rolled back.
+
+## Repository layout
+
+```text
+/
+├── apps.json
+├── package.json
+├── netlify.toml
+├── scripts/
+│   ├── new-app.mjs
+│   ├── presets.mjs
+│   ├── enhanced-presets.mjs
+│   ├── build-enhanced.mjs
+│   ├── test-enhanced.mjs
+│   └── validate*.mjs
+├── shared/
+│   ├── mobile-runtime.*
+│   ├── update-manager.*
+│   ├── enhanced-update-manager.ts
+│   ├── workshop-mode.*
+│   └── capabilities/
+├── docs/
+│   ├── BASELINE.md
+│   ├── PUBLISHING.md
+│   ├── SHARED-CAPABILITIES.md
+│   ├── ENHANCED-APPS.md
+│   ├── ENVIRONMENT-ROADMAP.md
+│   └── IMPLEMENTATION-PLAN.md
+└── apps/
+    ├── AGENTS.md
+    ├── _template/
+    ├── _enhanced-template/
+    └── <app-slug>/
+```
 
 ## Shared capabilities and Workshop Mode
 
-The lightweight capability modules are opt-in and visually neutral. They provide:
-
-- interruptible animation and visibility-aware RAF loops;
-- versioned local state with migrations and validation;
-- bounded JSON import, export and clipboard fallback;
-- user-gesture-safe procedural audio feedback;
-- feature-detected sensor, fullscreen and orientation helpers;
-- viewport, FPS, storage, cache, Service Worker and error diagnostics.
+The opt-in, visually neutral shared modules provide interruptible animation, versioned local state, JSON transfer, audio feedback, device APIs and diagnostics.
 
 Pocket Forge wires Workshop Mode into generated apps. Open it through the visible **Workshop** control or `Ctrl/Command + Shift + W`. It can export a diagnostics report and clear only data owned by the current app.
 
@@ -125,51 +117,48 @@ npm run registry:build
 npm run registry:check
 ```
 
-The build command scans every non-template application directory and generates the launcher registry from `app.config.json` files. Duplicate slugs, cache names and storage namespaces are rejected.
+The registry includes each app's runtime (`quick` or `enhanced`) alongside version, preset, release notes and storage namespace.
 
 ## Managed updates
 
-Every installed PWA uses `shared/update-manager.js` and `shared/update-manager.css`.
+Quick PWAs use `shared/update-manager.js`. Enhanced PWAs use `shared/enhanced-update-manager.ts` with `virtual:pwa-register`. Both paths keep prompt-based updates: a waiting worker does not reload a live session until the user selects **Update now**.
 
-A new worker downloads into the waiting state, reports its version and changelog, and shows an in-app prompt. It activates only after the user selects **Update now**. Choosing **Later** leaves the current session unchanged.
+Every release must update version, release date, changelog, cache identity and matching Service Worker metadata. The atomic release and rollback procedure is in [`docs/PUBLISHING.md`](./docs/PUBLISHING.md).
 
-Each release must update:
+## Build and health
 
-- `version`;
-- `releaseDate`;
-- `changelog`;
-- `cacheName`;
-- matching Service Worker metadata.
+Install the root build toolchain:
 
-The complete atomic release and rollback procedure is in [`docs/PUBLISHING.md`](./docs/PUBLISHING.md).
+```bash
+npm install
+```
 
-## Repository health
+Build and test published Enhanced applications:
 
-Run the same checks used by GitHub Actions and Netlify:
+```bash
+npm run build:enhanced
+npm run test:enhanced
+```
+
+Run the same complete suite used by GitHub Actions and Netlify:
 
 ```bash
 npm run health
 ```
 
-This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, launcher shelf behavior, shared capabilities, Workshop Mode, script syntax and all five Pocket Forge presets.
-
-The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
+This builds Enhanced apps, validates both runtime contracts, checks PWA scope and metadata, runs TypeScript and Vitest, and smoke-tests all five Quick plus four Enhanced Forge presets.
 
 ## Finish an app
 
-After generation:
-
 1. Read `AGENTS.md` and `apps/AGENTS.md`.
-2. Replace the starter mechanic with the actual product loop inside its own directory.
-3. Preserve the generated app identity, cache ownership and storage namespace.
-4. Replace the generated icon with a deliberate application symbol.
-5. Keep only the capability modules the app genuinely uses, but preserve Workshop Mode unless there is a documented reason not to.
+2. Choose Quick or Enhanced based on product complexity rather than prestige.
+3. Replace the starter mechanic with the actual product loop.
+4. Preserve app identity, cache ownership and storage namespace.
+5. Replace the generated icon with a deliberate application symbol.
 6. Update version, release date and changelog before publishing.
 7. Run `npm run health`.
 8. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode, Workshop actions and update activation.
 
 ## Product roadmap
 
-The broad evolution of Pocket Works is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md).
-
-The execution order and phase completion log are maintained in [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md).
+The broad evolution is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md). The phased completion log is maintained in [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md).
