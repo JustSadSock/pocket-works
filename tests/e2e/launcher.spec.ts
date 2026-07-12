@@ -19,8 +19,8 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await openStablePage(page, '/', 'h1');
 
   await expect(page.locator('h1')).toContainText('Pocket');
-  await expect(page.locator('.app-entry')).toHaveCount(1);
-  await expect(page.locator('#app-count')).toHaveText('1');
+  await expect(page.locator('.app-entry')).toHaveCount(registry.length);
+  await expect(page.locator('#app-count')).toHaveText(String(registry.length));
 
   const search = page.locator('#app-search');
   await search.fill('screen');
@@ -29,9 +29,10 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await search.fill('missing object');
   await expect(page.locator('#empty-state')).toBeVisible();
   await page.locator('#clear-search').click();
-  await expect(page.locator('.app-entry')).toHaveCount(1);
+  await expect(page.locator('.app-entry')).toHaveCount(registry.length);
 
-  await page.locator('.app-entry__select').click();
+  const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
+  await screenLabEntry.locator('.app-entry__select').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
   await expect(page.locator('#detail-version')).toHaveText(`v${screenLabVersion}`);
@@ -62,14 +63,15 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
 
 test('launcher retains personal shelf state after reload', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
-  await openStablePage(page, '/', '.app-entry');
+  const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
+  await openStablePage(page, '/', screenLabEntry);
 
-  await page.locator('.app-entry__favorite').click();
+  await screenLabEntry.locator('.app-entry__favorite').click();
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('.app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
 
   await page.locator('[data-filter="favorites"]').click();
-  await expect(page.locator('.app-entry__name')).toHaveText('Screen Lab');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__name')).toHaveText('Screen Lab');
   await assertNoHorizontalOverflow(page);
   monitor.assertClean();
 });

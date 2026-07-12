@@ -26,10 +26,11 @@ test('Screen Lab matches the project orientation without viewport overflow', asy
 
 test('launcher remains usable in the project orientation', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
-  await openStablePage(page, '/', '.app-entry');
+  const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
+  await openStablePage(page, '/', screenLabEntry);
 
   await expect(page.locator('#app-search')).toBeVisible();
-  await expect(page.locator('.app-entry__select')).toBeVisible();
+  await expect(screenLabEntry.locator('.app-entry__select')).toBeVisible();
   await assertNoHorizontalOverflow(page);
 
   const viewport = page.viewportSize();
