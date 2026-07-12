@@ -32,9 +32,15 @@ jobs:
         continue-on-error: true
         run: npm install --no-audit --no-fund
 
+      - name: Generate application registry
+        id: registry
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run registry:build
+
       - name: Build and validate site
         id: build
-        if: steps.install.outcome == 'success'
+        if: steps.registry.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
@@ -69,12 +75,13 @@ jobs:
         if: always()
         env:
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          REGISTRY_OUTCOME: ${{ steps.registry.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           AUTH_OUTCOME: ${{ steps.auth.outcome }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
         run: |
-          printf '{\n  "sourceCommit": "%s",\n  "recordedAt": "%s",\n  "install": "%s",\n  "build": "%s",\n  "auth": "%s",\n  "deploy": "%s"\n}\n' \
-            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INSTALL_OUTCOME" "$BUILD_OUTCOME" "$AUTH_OUTCOME" "$DEPLOY_OUTCOME" \
+          printf '{\n  "sourceCommit": "%s",\n  "recordedAt": "%s",\n  "install": "%s",\n  "registry": "%s",\n  "build": "%s",\n  "auth": "%s",\n  "deploy": "%s"\n}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INSTALL_OUTCOME" "$REGISTRY_OUTCOME" "$BUILD_OUTCOME" "$AUTH_OUTCOME" "$DEPLOY_OUTCOME" \
             > .github/deploy-status.json
           if [ -f /tmp/pocket-works-build-tail.log ]; then
             cp /tmp/pocket-works-build-tail.log .github/deploy-build.log
@@ -83,8 +90,8 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/deploy-status.json .github/deploy-build.log
-          git commit -m "Record Netlify deployment diagnostics" || exit 0
+          git add apps.json .github/deploy-status.json .github/deploy-build.log
+          git commit -m "Generate registry and record deployment diagnostics" || exit 0
           git push
 
       - name: Fail unsuccessful deployment
