@@ -38,7 +38,7 @@ h1{margin:7px 0 0;font-family:Georgia,"Times New Roman",serif;font-size:74px;lin
 .pause-card,.gameover-card{position:absolute;left:18px;right:18px;top:50%;transform:translateY(-50%) rotate(-.5deg);z-index:19;background:var(--paper);border:2px solid var(--ink);padding:20px;box-shadow:10px 12px 0 #20242135}.pause-card.hidden,.gameover-card.hidden{display:none}.pause-card h2,.gameover-card h2{font-family:Georgia,"Times New Roman",serif;font-size:38px;margin:0 0 8px}.pause-card p,.gameover-card p{font-size:11px;line-height:1.5;color:var(--ink-soft)}.card-actions{display:grid;gap:8px;margin-top:20px}.final-grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #20242155;border-bottom:1px solid #20242155;margin:17px 0}.final-grid div{padding:13px 7px;border-right:1px solid #20242135}.final-grid div:last-child{border-right:0}.final-grid b{display:block;font-family:Georgia,"Times New Roman",serif;font-size:22px}.final-grid small{font-size:7px;letter-spacing:.13em;color:var(--ink-soft)}
 @media (max-height:700px){h1{font-size:61px}.title-field{padding-top:10vh}.subtitle{margin-top:18px}.status{height:58px}.hint{bottom:97px}}
 
-.icon-btn{text-decoration:none}
+.icon-btn,.icon-btn:visited{color:var(--ink);text-decoration:none}
 .setting-note{margin:4px 0 0}
 .reset-best{margin-top:auto}
 .is-pressed.icon-btn,.is-pressed.action,.is-pressed.switch{transform:translate(1px,1px);box-shadow:none}
