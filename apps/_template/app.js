@@ -7,6 +7,7 @@ import {
   watchConnectivity
 } from '../../shared/pwa-utils.js';
 
+// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
 installMobileRuntime();
 
 const storage = createStorage('__APP_STORAGE_NAMESPACE__');
