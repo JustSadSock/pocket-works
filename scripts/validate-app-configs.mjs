@@ -55,8 +55,10 @@ for (const config of configs) {
 const templateChecks = [
   ['apps/_template/app.config.json', '__APP_STORAGE_NAMESPACE__'],
   ['apps/_template/app.config.json', '__APP_PRESET__'],
+  ['apps/_template/app.config.json', '__APP_RELEASE_DATETIME__'],
   ['apps/_template/manifest.webmanifest', '__APP_ORIENTATION__'],
   ['apps/_template/sw.js', '__APP_CACHE_VERSION__'],
+  ['apps/_template/sw.js', './app.config.json'],
   ['apps/_template/app.js', '__PRESET_SCRIPT__'],
   ['apps/_template/index.html', '__PRESET_MARKUP__'],
   ['apps/_template/styles.css', '__PRESET_STYLES__'],
