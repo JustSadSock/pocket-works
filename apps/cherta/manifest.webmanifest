@@ -1,0 +1,25 @@
+{
+  "id": "/apps/cherta/",
+  "name": "ЧЕРТА",
+  "short_name": "ЧЕРТА",
+  "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#e9e1cf",
+  "theme_color": "#e9e1cf",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
