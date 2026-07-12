@@ -60,7 +60,8 @@ test('DOCTRINA runs a deterministic quarter and persists it inside Pocket Works'
   await page.locator('[data-action="open-menu"]').click();
   await page.getByRole('button', { name: 'Workshop Mode' }).click();
   await expect(page.locator('.workshop-mode')).toHaveClass(/is-open/);
-  await page.locator('[data-workshop-close]').first().click();
+  await page.locator('.workshop-mode__close').click();
+  await expect(page.locator('.workshop-mode')).not.toHaveClass(/is-open/);
 
   await assertNoHorizontalOverflow(page);
   await attachCriticalScreenshot(page, testInfo, 'doctrina-state', { fullPage: false });
