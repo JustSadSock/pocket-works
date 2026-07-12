@@ -6,9 +6,10 @@
     "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
     "path": "./apps/screen-lab/",
     "status": "active",
-    "version": "1.4.0",
-    "updatedAt": "2026-07-12",
+    "version": "1.4.1",
+    "updatedAt": "2026-07-12T19:07:20Z",
     "changelog": [
+      "Inherited the platform interaction lock so long presses no longer select interface text.",
       "Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.",
       "Added one-tap diagnostic snapshots with clipboard and JSON download fallback.",
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
@@ -32,9 +33,10 @@
     "description": "Touch, drag and tilt a luminous field that remembers your movement.",
     "path": "./apps/echoes/",
     "status": "experimental",
-    "version": "1.0.1",
-    "updatedAt": "2026-07-12",
+    "version": "1.0.2",
+    "updatedAt": "2026-07-12T19:07:21Z",
     "changelog": [
+      "Inherited the platform interaction lock so long presses no longer select interface text.",
       "Replaced the ring-based launcher icon with a bold waveform identity distinct from the existing shelf geometry.",
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
@@ -58,9 +60,10 @@
     "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
     "path": "./apps/cherta/",
     "status": "active",
-    "version": "1.0.2",
-    "updatedAt": "2026-07-12",
+    "version": "1.0.3",
+    "updatedAt": "2026-07-12T19:07:23Z",
     "changelog": [
+      "Inherited the platform interaction lock so long presses no longer select interface text.",
       "Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.",
       "Added one-step dash input buffering so swipes made during the end of a dash are not discarded.",
       "Made the top home and sound controls reliably accessible from the title menu."
@@ -84,9 +87,10 @@
     "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
     "path": "./apps/kromka/",
     "status": "active",
-    "version": "1.1.1",
-    "updatedAt": "2026-07-12",
+    "version": "1.1.2",
+    "updatedAt": "2026-07-12T19:07:24Z",
     "changelog": [
+      "Inherited the platform interaction lock so long presses no longer select interface text.",
       "Fixed every Pocket Works exit control so it reliably returns to the launcher.",
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
@@ -111,9 +115,10 @@
     "description": "Procedural statecraft strategy about laws, doctrines, technologies and war.",
     "path": "./apps/doctrina/",
     "status": "experimental",
-    "version": "0.1.0",
-    "updatedAt": "2026-07-12",
+    "version": "0.1.1",
+    "updatedAt": "2026-07-12T19:07:22Z",
     "changelog": [
+      "Inherited the platform interaction lock so long presses no longer select interface text.",
       "Added a seeded procedural state simulation with regions, factions and quarterly causality.",
       "Added laws, doctrines and conditional technologies that change simulation rules rather than flat bonuses.",
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
