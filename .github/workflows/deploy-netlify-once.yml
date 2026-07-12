@@ -10,14 +10,32 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pocket-works-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        with
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build and validate site
+        run: npm run build:site
+
+      - name: Deploy production build
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: 3ef43b6a-1a20-4563-af37-b1ddc8e3b5e8
+        run: npx --yes netlify-cli@latest deploy --dir=dist-site --prod --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" --message="Pocket Works 0.7.1 — UDEL"
