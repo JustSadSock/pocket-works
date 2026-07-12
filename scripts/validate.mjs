@@ -172,6 +172,12 @@ async function validateServiceWorker(label, relativePath, expectedPrefix) {
   }
 }
 
+function validatesServiceWorkerRegistration(source, html) {
+  const directRegistration = source.includes("serviceWorker.register('./sw.js')") || source.includes('serviceWorker.register("./sw.js")');
+  const managedRegistration = html.includes('data-update-manager') && html.includes('data-service-worker="./sw.js"');
+  return directRegistration || managedRegistration;
+}
+
 for (const relativePath of rootRequiredFiles) {
   if (!(await exists(path.join(root, relativePath)))) fail(`root launcher is missing ${relativePath}`);
 }
@@ -183,9 +189,7 @@ await validateServiceWorker('root sw.js', 'sw.js', 'pocket-works-launcher-');
 try {
   const launcherSource = await readText('app.js');
   const launcherHtml = await readText('index.html');
-  const directRegistration = launcherSource.includes("serviceWorker.register('./sw.js')") || launcherSource.includes('serviceWorker.register("./sw.js")');
-  const managedRegistration = launcherHtml.includes('data-update-manager') && launcherHtml.includes('data-service-worker="./sw.js"');
-  if (!directRegistration && !managedRegistration) {
+  if (!validatesServiceWorkerRegistration(launcherSource, launcherHtml)) {
     fail('root launcher must register ./sw.js directly or through the managed update script');
   }
 } catch (error) {
@@ -247,11 +251,12 @@ if (!Array.isArray(apps)) {
 
     try {
       const appSource = await readText(path.join(appDirectory, 'app.js'));
-      if (!appSource.includes("serviceWorker.register('./sw.js')") && !appSource.includes('serviceWorker.register("./sw.js")')) {
-        fail(`${app.slug}/app.js must register ./sw.js`);
+      const appHtml = await readText(path.join(appDirectory, 'index.html'));
+      if (!validatesServiceWorkerRegistration(appSource, appHtml)) {
+        fail(`${app.slug} must register ./sw.js directly or through the managed update script`);
       }
     } catch (error) {
-      fail(`${app.slug}/app.js could not be read: ${error.message}`);
+      fail(`${app.slug} Service Worker registration could not be validated: ${error.message}`);
     }
   }
 
