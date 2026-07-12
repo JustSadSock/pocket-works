@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
   <title>Pocket Works</title>
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -52,6 +53,14 @@
     </article>
   </template>
 
+  <script
+    type="module"
+    src="./shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="Pocket Works"
+    data-app-version="0.4.0"
+  ></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>
