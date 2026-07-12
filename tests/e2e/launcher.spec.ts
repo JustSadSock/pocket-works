@@ -31,7 +31,7 @@ test('launcher shelf supports search, real icons, details, favorites and keyboar
 
   const search = page.locator('#app-search');
   await search.fill('screen');
-  await expect(page.locator('.app-entry__name')).toHaveText('Screen Lab');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__name')).toHaveText('Screen Lab');
 
   await search.fill('missing object');
   await expect(page.locator('#empty-state')).toBeVisible();

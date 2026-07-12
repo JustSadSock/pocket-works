@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#202424">
+  <meta name="description" content="ДОКТРИНА — процедурная государственная стратегия внутри Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ДОКТРИНА">
+  <title>ДОКТРИНА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <div id="app" class="app-shell" data-app-shell aria-live="polite">
+    <a class="boot-back" href="../../" aria-label="Назад в Pocket Works" data-app-control data-native-press>←</a>
+    <div class="boot-state" role="status">ЗАГРУЗКА ГОСУДАРСТВЕННОГО АРХИВА</div>
+  </div>
+  <button type="button" hidden data-workshop-trigger data-native-press aria-label="Открыть Workshop Mode">Workshop</button>
+  <noscript>Для работы ДОКТРИНЫ требуется JavaScript.</noscript>
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ДОКТРИНА"
+    data-app-version="0.1.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
