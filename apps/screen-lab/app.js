@@ -2,8 +2,18 @@ import {
   bindPointerGesture,
   installMobileRuntime
 } from '../../shared/mobile-runtime.js';
+import { createRafLoop } from '../../shared/capabilities/motion.js';
+import { createVersionedStore } from '../../shared/capabilities/storage.js';
+import { toggleFullscreen, watchOrientation } from '../../shared/capabilities/device.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 installMobileRuntime();
+
+const preferences = createVersionedStore({
+  namespace: 'pocket-works:screen-lab',
+  version: 1,
+  defaults: { motionLevel: 1 }
+});
 
 const root = document.documentElement;
 const body = document.body;
@@ -42,12 +52,18 @@ let width = 0;
 let height = 0;
 let dpr = 1;
 let frozen = false;
-let motionLevel = 1;
+let motionLevel = preferences.get('motionLevel', 1);
 let toastTimer;
 let lastFrame = performance.now();
 let frameSamples = [];
+let orientationStop = null;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const motionStates = [
+  { label: 'calm', scale: 0.25 },
+  { label: 'live', scale: 1 },
+  { label: 'wild', scale: 1.7 }
+];
 
 function showToast(message) {
   toast.textContent = message;
@@ -163,7 +179,6 @@ function animationLoop(now) {
     readings.fps.textContent = String(Math.round(average));
   }
   if (!frozen) drawParticles();
-  requestAnimationFrame(animationLoop);
 }
 
 function createTouchDot(pointerId, x, y) {
@@ -197,44 +212,45 @@ function updateNetwork() {
   showToast(navigator.onLine ? 'Network restored' : 'Offline mode active');
 }
 
-function cycleMotion() {
-  motionLevel = (motionLevel + 1) % 3;
-  const states = [
-    { label: 'calm', scale: 0.25 },
-    { label: 'live', scale: 1 },
-    { label: 'wild', scale: 1.7 }
-  ];
-  const state = states[motionLevel];
+function applyMotionLevel(level) {
+  motionLevel = clamp(Number(level) || 0, 0, motionStates.length - 1);
+  const state = motionStates[motionLevel];
   root.style.setProperty('--motion-scale', state.scale);
   readings.motion.textContent = state.label;
-  showToast(`Motion: ${state.label}`);
+}
+
+function cycleMotion() {
+  applyMotionLevel((motionLevel + 1) % motionStates.length);
+  preferences.set('motionLevel', motionLevel);
+  showToast(`Motion: ${motionStates[motionLevel].label}`);
   navigator.vibrate?.(18);
 }
 
-async function requestMotionPermission() {
-  if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
-    try {
-      const result = await DeviceOrientationEvent.requestPermission();
-      if (result !== 'granted') showToast('Motion permission denied');
-      return result === 'granted';
-    } catch {
-      showToast('Motion permission unavailable');
-      return false;
-    }
-  }
-  return true;
-}
-
 async function enableDeviceMotion() {
-  const allowed = await requestMotionPermission();
-  if (!allowed) return;
-  window.addEventListener('deviceorientation', (event) => {
+  if (orientationStop) return true;
+  orientationStop = await watchOrientation((event) => {
     if (frozen || event.gamma == null || event.beta == null) return;
     const mx = clamp(event.gamma / 35, -1, 1);
     const my = clamp((event.beta - 35) / 45, -1, 1);
     root.style.setProperty('--mx', mx.toFixed(3));
     root.style.setProperty('--my', my.toFixed(3));
-  }, { passive: true });
+  });
+
+  if (!orientationStop) {
+    showToast('Motion permission unavailable');
+    return false;
+  }
+  return true;
+}
+
+function resetLab() {
+  particles.length = 0;
+  root.style.setProperty('--mx', '0');
+  root.style.setProperty('--my', '0');
+  preferences.reset();
+  applyMotionLevel(1);
+  readings.visibility.textContent = document.visibilityState;
+  showToast('Lab reset');
 }
 
 window.addEventListener('pointermove', (event) => {
@@ -292,29 +308,20 @@ document.querySelector('.control-row').addEventListener('click', async (event) =
   }
 
   if (action === 'fullscreen') {
-    try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      } else if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        showToast('Use “Add to Home Screen” for fullscreen on iPhone');
-      }
-    } catch {
-      showToast('Fullscreen unavailable in this browser');
-    }
+    const changed = await toggleFullscreen();
+    if (!changed) showToast('Use “Add to Home Screen” for fullscreen on iPhone');
     updateMetrics();
   }
 
-  if (action === 'reset') {
-    particles.length = 0;
-    root.style.setProperty('--mx', '0');
-    root.style.setProperty('--my', '0');
-    motionLevel = 1;
-    root.style.setProperty('--motion-scale', '1');
-    readings.motion.textContent = 'live';
-    showToast('Lab reset');
-  }
+  if (action === 'reset') resetLab();
+});
+
+createWorkshopMode({
+  appName: 'Screen Lab',
+  version: '1.3.0',
+  cachePrefix: 'screen-lab-',
+  storageNamespace: 'pocket-works:screen-lab',
+  onReset: resetLab
 });
 
 window.addEventListener('resize', resizeCanvas, { passive: true });
@@ -327,15 +334,8 @@ document.addEventListener('visibilitychange', () => {
 });
 document.addEventListener('fullscreenchange', updateMetrics);
 
+applyMotionLevel(motionLevel);
 resizeCanvas();
 updateClock();
 setInterval(updateClock, 1000);
-requestAnimationFrame(animationLoop);
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((error) => {
-      console.warn('Screen Lab service worker registration failed', error);
-    });
-  });
-}
+createRafLoop(animationLoop, { pauseWhenHidden: true, maxDelta: 80 });
