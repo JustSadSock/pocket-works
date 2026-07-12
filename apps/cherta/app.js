@@ -9,7 +9,7 @@ Promise.all([
   setDocumentScrollLocked(true);
   createWorkshopMode({
     appName: 'ЧЕРТА',
-    version: '1.0.0',
+    version: '1.0.1',
     cachePrefix: 'cherta-',
     storageNamespace: 'pocket-works:cherta',
     onReset() {
@@ -28,7 +28,7 @@ function releasePointer(e){if(!pointer.down||e.pointerId!==pointer.id)return;con
 canvas.addEventListener('pointerup',releasePointer);canvas.addEventListener('pointercancel',e=>{pointer.down=false;player.focus=false});
 function showPanel(panel){panel.classList.remove('hidden')}
 el('play').onclick=startGame;el('rulesPlay').onclick=startGame;el('restart').onclick=startGame;el('rulesBtn').onclick=()=>showPanel(ui.rules);
-el('pauseBtn').onclick=()=>pauseGame(!paused);el('resume').onclick=()=>pauseGame(false);el('quit').onclick=quitToMenu;el('gameoverQuit').onclick=quitToMenu;
+ui.pauseBtn.onclick=()=>pauseGame(!paused);el('resume').onclick=()=>pauseGame(false);el('quit').onclick=quitToMenu;el('gameoverQuit').onclick=quitToMenu;
 el('shellBtn').onclick=(event)=>{if(window.PocketWorks?.closeApp){event.preventDefault();window.PocketWorks.closeApp();}else if(window.parent!==window){event.preventDefault();window.parent.postMessage({type:'pocketworks:close-app',appId:'cherta'},'*');}};
 el('settingsBtn').onclick=()=>showPanel(ui.settings);document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>el(b.dataset.close).classList.add('hidden'));
 ui.soundBtn.onclick=()=>{settings.sound=!settings.sound;saveSettings();if(settings.sound)tone(300,.08,'sine',.025,100)};
@@ -45,5 +45,5 @@ window.__CHERTA__={
   start:startGame,
   dash:(dx,dy)=>beginDash(dx,dy),
   detonate,
-  snapshot:()=>({running,paused,gameOver,score,kills,wave,enemies:enemies.filter(e=>!e.dead).length,projectiles:projectiles.length,player:{x:player.x,y:player.y,hp:player.hp,charges:player.charges,lines:player.lines.length,dashing:player.dashing,detonating:player.detonating}})
+  snapshot:()=>({running,paused,gameOver,score,kills,wave,enemies:enemies.filter(e=>!e.dead).length,corpses:enemies.filter(e=>e.dead).length,projectiles:projectiles.length,shake,player:{x:player.x,y:player.y,hp:player.hp,charges:player.charges,lines:player.lines.length,dashing:player.dashing,detonating:player.detonating}})
 };
