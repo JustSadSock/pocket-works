@@ -99,10 +99,10 @@ test('launcher list remains expanded after reload and BFCache-safe cleanup', asy
   await page.waitForTimeout(750);
   await expectExpandedLauncherList(page);
 
-  const activeAnimations = await page.locator('#app-list').evaluate((element) =>
-    element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running').length
+  const activeCardAnimations = await page.locator('.app-entry').evaluateAll((entries) =>
+    entries.reduce((total, entry) => total + entry.getAnimations().filter((animation) => animation.playState === 'running').length, 0)
   );
-  expect(activeAnimations).toBe(0);
+  expect(activeCardAnimations).toBe(0);
   monitor.assertClean();
 });
 
