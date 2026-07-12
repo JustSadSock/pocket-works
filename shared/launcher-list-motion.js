@@ -85,10 +85,18 @@ if (list) {
     );
     previousHeight = list.getBoundingClientRect().height;
     pendingReason = reason;
+    root.classList.add('is-list-motion-pending');
     if (reason === 'refresh') {
       list.classList.add('is-list-syncing');
       refreshRegistry();
     }
+  }
+
+  function finishListMotion(delay = 0) {
+    window.setTimeout(() => {
+      list.classList.remove('is-list-syncing');
+      root.classList.remove('is-list-motion-pending');
+    }, delay);
   }
 
   function animateListUpdate() {
@@ -101,7 +109,7 @@ if (list) {
 
     if (!reason || reducedMotion.matches || typeof list.animate !== 'function') {
       previousRects.clear();
-      list.classList.remove('is-list-syncing');
+      finishListMotion();
       return;
     }
 
@@ -116,10 +124,16 @@ if (list) {
         [{ height: `${previousHeight}px` }, { height: `${nextHeight}px` }],
         { duration, easing, fill: 'both' }
       );
-      heightAnimation.finished.finally(() => {
-        list.style.removeProperty('height');
-        list.style.removeProperty('overflow');
-      });
+      heightAnimation.finished.then(
+        () => {
+          list.style.removeProperty('height');
+          list.style.removeProperty('overflow');
+        },
+        () => {
+          list.style.removeProperty('height');
+          list.style.removeProperty('overflow');
+        }
+      );
     }
 
     entries.forEach((entry, index) => {
@@ -156,7 +170,7 @@ if (list) {
     });
 
     previousRects.clear();
-    window.setTimeout(() => list.classList.remove('is-list-syncing'), duration + 260);
+    finishListMotion(duration + 260);
   }
 
   function scheduleAnimation() {
@@ -164,13 +178,17 @@ if (list) {
     animationFrame = window.requestAnimationFrame(animateListUpdate);
   }
 
-  document.addEventListener('pointerdown', (event) => {
+  function captureControlLayout(event) {
     const control = event.target.closest?.('[data-filter], #sort-button, #refresh-button, #clear-search, [data-action="favorite"], #reset-shelf');
-    if (!control) return;
+    if (!control || pendingReason) return;
     captureLayout(control.id === 'refresh-button' ? 'refresh' : 'control');
-  }, { capture: true });
+  }
 
-  searchInput?.addEventListener('beforeinput', () => captureLayout('search'), { capture: true });
+  document.addEventListener('pointerdown', captureControlLayout, { capture: true });
+  document.addEventListener('click', captureControlLayout, { capture: true });
+  searchInput?.addEventListener('beforeinput', () => {
+    if (!pendingReason) captureLayout('search');
+  }, { capture: true });
 
   new MutationObserver(scheduleAnimation).observe(list, { childList: true });
 
