@@ -2,54 +2,168 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#11120f">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0e100e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
   <title>Pocket Works</title>
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css">
   <link rel="stylesheet" href="./shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="masthead">
-      <div>
-        <p class="eyebrow">LOCAL APPLICATION INDEX</p>
-        <h1>Pocket Works</h1>
+  <div class="shelf-atmosphere" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+
+  <main class="shelf-shell" data-app-shell>
+    <header class="masthead" data-ui>
+      <div class="brand-lockup">
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.5</p>
+        <h1>Pocket<br>Works</h1>
       </div>
-      <p class="masthead__meta"><span id="app-count">0</span> installed experiments</p>
+
+      <div class="system-rail" aria-label="Shelf status">
+        <p><span class="status-light" id="network-light" aria-hidden="true"></span><strong id="network-status">online</strong></p>
+        <p><span>mode</span><strong id="display-mode">browser</strong></p>
+        <p><span>visible</span><strong id="app-count">0</strong></p>
+      </div>
     </header>
 
-    <section class="intro" aria-labelledby="intro-title">
-      <h2 id="intro-title">Small software, treated seriously.</h2>
-      <p>Every item below is an independent, installable and offline-first mobile web app.</p>
-    </section>
+    <section class="command-deck" aria-label="Application shelf controls" data-ui>
+      <label class="search-field" for="app-search">
+        <span aria-hidden="true">⌕</span>
+        <input
+          id="app-search"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Search name, tag, mechanic…"
+        >
+        <button id="clear-search" type="button" aria-label="Clear search" data-native-press hidden>×</button>
+      </label>
 
-    <section aria-labelledby="catalog-title">
-      <div class="section-head">
-        <h2 id="catalog-title">Applications</h2>
-        <button id="refresh-button" type="button">Refresh registry</button>
+      <div class="command-row">
+        <div class="filter-strip" id="filter-strip" role="toolbar" aria-label="Filter applications">
+          <button type="button" data-filter="all" aria-pressed="true" data-native-press>All <span data-filter-count="all">0</span></button>
+          <button type="button" data-filter="favorites" aria-pressed="false" data-native-press>Saved <span data-filter-count="favorites">0</span></button>
+          <button type="button" data-filter="recent" aria-pressed="false" data-native-press>Recent <span data-filter-count="recent">0</span></button>
+          <button type="button" data-filter="offline" aria-pressed="false" data-native-press>Offline <span data-filter-count="offline">0</span></button>
+          <button type="button" data-filter="experimental" aria-pressed="false" data-native-press>Lab <span data-filter-count="experimental">0</span></button>
+        </div>
+
+        <div class="deck-actions">
+          <button id="sort-button" type="button" data-native-press aria-label="Change application sort order">Updated ↓</button>
+          <button id="refresh-button" type="button" data-native-press>Sync</button>
+        </div>
       </div>
-
-      <div id="app-list" class="app-list" aria-live="polite"></div>
-      <p id="empty-state" class="empty-state" hidden>No applications have been published yet.</p>
-      <p id="error-state" class="error-state" hidden>Could not read the application registry.</p>
     </section>
+
+    <section class="shelf-workspace">
+      <section class="collection-panel" aria-labelledby="catalog-title">
+        <header class="collection-head" data-ui>
+          <div>
+            <p class="section-code">INDEX / ACTIVE OBJECTS</p>
+            <h2 id="catalog-title">Applications</h2>
+          </div>
+          <p id="result-summary" aria-live="polite">Reading shelf…</p>
+        </header>
+
+        <div id="app-list" class="app-list" aria-live="polite"></div>
+        <div id="empty-state" class="shelf-message" hidden>
+          <strong>No matching objects.</strong>
+          <p>Change the filter or clear the search field.</p>
+        </div>
+        <div id="error-state" class="shelf-message shelf-message--error" hidden>
+          <strong>The live registry could not be read.</strong>
+          <p id="error-copy">A locally saved shelf will be used when available.</p>
+        </div>
+      </section>
+
+      <aside class="detail-panel" id="detail-panel" aria-labelledby="detail-name" aria-hidden="true" tabindex="-1">
+        <button class="detail-close" id="detail-close" type="button" aria-label="Close application details" data-native-press>×</button>
+
+        <div class="detail-empty" id="detail-empty">
+          <p class="section-code">FOCUS BAY / IDLE</p>
+          <strong>Select an application.</strong>
+          <span>Its release history, offline state and quick actions will appear here.</span>
+        </div>
+
+        <div class="detail-content" id="detail-content" hidden>
+          <div class="app-preview app-preview--detail" id="detail-preview" aria-hidden="true">
+            <span class="preview-grid"></span>
+            <span class="preview-orbit"></span>
+            <span class="preview-signal"></span>
+            <span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="preview-scan"></span>
+          </div>
+
+          <header class="detail-header">
+            <p class="section-code" id="detail-kicker">APPLICATION</p>
+            <h2 id="detail-name">—</h2>
+            <p id="detail-description">—</p>
+          </header>
+
+          <dl class="detail-facts">
+            <div><dt>version</dt><dd id="detail-version">—</dd></div>
+            <div><dt>updated</dt><dd id="detail-updated">—</dd></div>
+            <div><dt>offline</dt><dd id="detail-offline">—</dd></div>
+            <div><dt>opened</dt><dd id="detail-opened">—</dd></div>
+          </dl>
+
+          <div class="detail-tags" id="detail-tags" aria-label="Application tags"></div>
+
+          <section class="release-notes" aria-labelledby="release-title">
+            <p class="section-code" id="release-title">LATEST RELEASE</p>
+            <ul id="detail-changelog"></ul>
+          </section>
+
+          <div class="detail-actions">
+            <a id="detail-open" href="#" data-native-press>Open application ↗</a>
+            <button id="detail-favorite" type="button" data-native-press>Save to shelf</button>
+            <button id="detail-copy" type="button" data-native-press>Copy link</button>
+          </div>
+
+          <p class="install-note" id="install-note"></p>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="shelf-footer" data-ui>
+      <p><span id="sync-status">Registry not synced</span><span aria-hidden="true"> / </span><span id="offline-count">0 offline-ready</span></p>
+      <button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button>
+    </footer>
   </main>
+
+  <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
 
   <template id="app-card-template">
     <article class="app-entry">
-      <a class="app-entry__link">
-        <span class="app-entry__index" aria-hidden="true"></span>
-        <span class="app-entry__body">
-          <span class="app-entry__name"></span>
-          <span class="app-entry__description"></span>
-          <span class="app-entry__tags"></span>
+      <button class="app-entry__select" type="button" data-action="details" data-native-press>
+        <span class="app-preview" aria-hidden="true">
+          <span class="preview-grid"></span>
+          <span class="preview-orbit"></span>
+          <span class="preview-signal"></span>
+          <span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="preview-scan"></span>
         </span>
-        <span class="app-entry__arrow" aria-hidden="true">↗</span>
-      </a>
+
+        <span class="app-entry__body">
+          <span class="app-entry__topline">
+            <strong class="app-entry__name"></strong>
+            <span class="app-entry__status"></span>
+          </span>
+          <span class="app-entry__description"></span>
+          <span class="app-entry__meta"></span>
+        </span>
+      </button>
+
+      <button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button>
+      <a class="app-entry__open" data-action="open" data-native-press aria-label="Open application">↗</a>
     </article>
   </template>
 
@@ -59,7 +173,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.4.0"
+    data-app-version="0.5.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
