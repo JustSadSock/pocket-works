@@ -1,14 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <defs>
-    <radialGradient id="bg" cx="46%" cy="38%"><stop offset="0" stop-color="#151a23"/><stop offset="1" stop-color="#080b10"/></radialGradient>
-    <radialGradient id="core" cx="58%" cy="40%"><stop offset="0" stop-color="#fff"/><stop offset=".09" stop-color="#70ffd0"/><stop offset=".35" stop-color="#31e99e"/><stop offset=".75" stop-color="#164a37"/><stop offset="1" stop-color="#06110d"/></radialGradient>
-    <linearGradient id="cut" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6ef3e7"/><stop offset="1" stop-color="#51bfee"/></linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  </defs>
-  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="342" fill="none" stroke="#baff36" stroke-width="30" stroke-dasharray="34 28"/>
-  <circle cx="512" cy="512" r="270" fill="none" stroke="#f6f7f4" stroke-width="38"/>
-  <circle cx="512" cy="512" r="196" fill="none" stroke="#baff36" stroke-width="62" filter="url(#glow)"/>
-  <circle cx="512" cy="512" r="78" fill="url(#core)" stroke="#07110d" stroke-width="18" filter="url(#glow)"/>
-  <rect x="492" y="260" width="92" height="430" rx="46" fill="url(#cut)" transform="rotate(-32 538 475)" filter="url(#glow)"/>
+  <rect width="1024" height="1024" rx="220" fill="#090a0d"/>
+  <path d="M118 554H250L326 438L401 680L488 260L579 734L654 390L724 586H786" fill="none" stroke="#42d9ff" stroke-width="106" stroke-linecap="square" stroke-linejoin="miter" transform="translate(34 30)"/>
+  <path d="M118 554H250L326 438L401 680L488 260L579 734L654 390L724 586H786" fill="none" stroke="#f3efe4" stroke-width="90" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M118 554H250L326 438L401 680L488 260L579 734L654 390L724 586H786" fill="none" stroke="#d9ff45" stroke-width="28" stroke-linecap="square" stroke-linejoin="miter"/>
+  <rect x="820" y="342" width="72" height="340" fill="#d9ff45"/>
+  <rect x="906" y="416" width="40" height="192" fill="#42d9ff"/>
 </svg>

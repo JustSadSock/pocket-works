@@ -1,11 +1,10 @@
 const CACHE_PREFIX = 'echoes-';
-const CACHE_NAME = 'echoes-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'echoes-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added a WebGL2 field that reacts to touch velocity, pressure and device tilt.',
-  'Added local echo capture, archive replay, PNG export and generative Web Audio.',
-  'Added Nocturne and Dawn modes, Workshop diagnostics and offline installation.'
+  'Replaced the ring-based launcher icon with a bold waveform identity distinct from the existing shelf geometry.',
+  'Updated the launcher accent and cache identity so the new icon appears immediately after updating.'
 ];
 const APP_SHELL = [
   './',

@@ -12,15 +12,22 @@ const registry = JSON.parse(
   readFileSync(new URL('../../apps.json', import.meta.url), 'utf8')
 ) as Array<{ slug: string; version: string }>;
 const screenLabVersion = registry.find((app) => app.slug === 'screen-lab')?.version;
+const echoesVersion = registry.find((app) => app.slug === 'echoes')?.version;
 if (!screenLabVersion) throw new Error('Screen Lab is missing from apps.json');
+if (!echoesVersion) throw new Error('ECHOES is missing from apps.json');
 
-test('launcher shelf supports search, details, favorites and keyboard focus', async ({ page }, testInfo) => {
+test('launcher shelf supports search, real icons, details, favorites and keyboard focus', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/', 'h1');
 
   await expect(page.locator('h1')).toContainText('Pocket');
   await expect(page.locator('.app-entry')).toHaveCount(registry.length);
   await expect(page.locator('#app-count')).toHaveText(String(registry.length));
+
+  const echoesPreview = page.locator('.app-entry[data-slug="echoes"] .app-preview');
+  await expect(echoesPreview).toHaveClass(/has-app-icon/);
+  await expect.poll(() => echoesPreview.evaluate((element) => element.style.getPropertyValue('--app-icon-image')))
+    .toContain(`/apps/echoes/icons/icon.svg?v=${echoesVersion}`);
 
   const search = page.locator('#app-search');
   await search.fill('screen');
@@ -37,6 +44,7 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
   await expect(page.locator('#detail-version')).toHaveText(`v${screenLabVersion}`);
   await expect(page.locator('#detail-open')).toHaveAttribute('href', './apps/screen-lab/');
+  await expect(page.locator('#detail-preview')).toHaveClass(/has-app-icon/);
 
   const favorite = page.locator('#detail-favorite');
   await favorite.click();

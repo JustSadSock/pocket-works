@@ -1,0 +1,45 @@
+.app-preview.has-app-icon {
+  background:
+    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--entry-accent) 13%, transparent), transparent 58%),
+    #090a09;
+}
+
+.app-preview.has-app-icon > .preview-grid,
+.app-preview.has-app-icon > .preview-orbit,
+.app-preview.has-app-icon > .preview-signal,
+.app-preview.has-app-icon > .preview-bars,
+.app-preview.has-app-icon > .preview-scan {
+  display: none !important;
+}
+
+.app-preview.has-app-icon::before {
+  content: "";
+  position: absolute;
+  inset: 10%;
+  z-index: 1;
+  background-image: var(--app-icon-image);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.34));
+  transform: translateZ(0);
+}
+
+.app-preview--detail.has-app-icon::before {
+  inset: 8% 16%;
+}
+
+.app-preview.has-app-icon::after {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-preview.has-app-icon.is-in-view::before {
+    animation: app-icon-settle 420ms cubic-bezier(.2,.8,.2,1) both;
+  }
+}
+
+@keyframes app-icon-settle {
+  from { opacity: 0; transform: scale(.94); }
+  to { opacity: 1; transform: scale(1); }
+}

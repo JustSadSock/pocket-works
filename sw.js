@@ -1,11 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.0';
-const APP_VERSION = '0.6.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.1';
+const APP_VERSION = '0.6.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added automated Chromium and WebKit mobile quality gates.',
-  'Added Lighthouse performance, accessibility and resource budgets.',
-  'Fixed mobile detail layering and false same-version update prompts.'
+  'Launcher previews now use each application’s real icon instead of generic preset geometry.',
+  'Added versioned icon URLs so icon redesigns are visible immediately after an update.'
 ];
 const APP_SHELL = [
   './',
@@ -20,7 +19,9 @@ const APP_SHELL = [
   './shared/mobile-runtime.js',
   './shared/update-manager.css',
   './shared/update-manager.js',
-  './shared/view-transition-guard.js'
+  './shared/view-transition-guard.js',
+  './shared/app-icon-previews.css',
+  './shared/app-icon-previews.js'
 ];
 
 self.addEventListener('install', (event) => {
