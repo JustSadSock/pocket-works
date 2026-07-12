@@ -24,7 +24,18 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await page.locator('#clear-search').click();
   await expect(page.locator('.app-entry')).toHaveCount(1);
 
-  await page.locator('.app-entry__select').click();
+  const entry = page.locator('.app-entry');
+  const previewTrigger = page.locator('[data-preview-trigger]');
+  const entryBox = await entry.boundingBox();
+  const triggerBox = await previewTrigger.boundingBox();
+  expect(entryBox).not.toBeNull();
+  expect(triggerBox).not.toBeNull();
+  expect(triggerBox!.width).toBeLessThan(entryBox!.width * 0.5);
+
+  await page.locator('.app-entry__body').click();
+  await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'true');
+
+  await previewTrigger.click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
   await expect(page.locator('#detail-version')).toHaveText('v1.3.1');
