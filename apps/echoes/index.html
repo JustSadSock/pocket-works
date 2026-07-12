@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#07080b">
+  <meta name="description" content="ECHOES — интерактивный аудиовизуальный организм от Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ECHOES">
+  <title>ECHOES — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <canvas id="field" aria-label="Интерактивное поле ECHOES" data-gesture-surface data-block-callout></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="app-shell shell" id="shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" aria-label="Назад в Pocket Works" data-app-control data-native-press>←</a>
+      <button class="brand" id="brandButton" type="button" aria-label="О приложении ECHOES" data-native-press>
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-copy"><b>ECHOES</b><small>POCKET WORKS / EXPERIMENT 02</small></span>
+      </button>
+      <div class="status-chip" id="statusChip">
+        <span id="themeLabel">NOCTURNE</span><i></i>
+      </div>
+    </header>
+
+    <section class="view view-field active" data-view="field" aria-label="Поле">
+      <div class="field-copy">
+        <p class="eyebrow">RESPONSIVE FIELD</p>
+        <h1>Коснись.<br><span>Оно запомнит.</span></h1>
+        <p class="lede">Давление, скорость и направление превращаются в свет, звук и след.</p>
+      </div>
+
+      <div class="organism-ui" aria-hidden="true">
+        <div class="orbit orbit-a"></div>
+        <div class="orbit orbit-b"></div>
+        <div class="orbit orbit-c"></div>
+        <div class="core"></div>
+      </div>
+
+      <div class="readouts" data-ui>
+        <article><span>ENERGY</span><strong id="energyReadout">00</strong></article>
+        <article><span>MEMORY</span><strong id="memoryReadout">00</strong></article>
+        <article><span>FIELD</span><strong id="fieldReadout">IDLE</strong></article>
+      </div>
+    </section>
+
+    <section class="view view-archive" data-view="archive" aria-label="Архив">
+      <div class="panel-head">
+        <div><p class="eyebrow">MEMORY VAULT</p><h2>Сохранённые эхо</h2></div>
+        <button class="action compact" id="clearArchive" type="button" data-native-press>CLEAR</button>
+      </div>
+      <div class="archive-grid" id="archiveGrid"></div>
+      <div class="empty-state" id="emptyArchive">
+        <div class="empty-glyph"><i></i><i></i><i></i></div>
+        <p>Архив пуст.</p><span>Создай сигнал и зафиксируй его.</span>
+      </div>
+    </section>
+
+    <section class="view view-system" data-view="system" aria-label="Настройки">
+      <div class="panel-head"><div><p class="eyebrow">SYSTEM</p><h2>Поведение организма</h2></div></div>
+      <div class="settings-grid">
+        <label class="setting toggle-row"><span><b>Звук</b><small>Генеративная аудиореакция</small></span><input id="soundToggle" type="checkbox" checked><i></i></label>
+        <label class="setting toggle-row"><span><b>Наклон</b><small>Реакция на гироскоп телефона</small></span><input id="tiltToggle" type="checkbox" checked><i></i></label>
+        <label class="setting toggle-row"><span><b>След</b><small>Длительное послесвечение касаний</small></span><input id="trailToggle" type="checkbox" checked><i></i></label>
+        <div class="setting slider-row"><span><b>Интенсивность</b><small id="intensityValue">72%</small></span><input id="intensitySlider" type="range" min="20" max="100" value="72"></div>
+        <div class="setting slider-row"><span><b>Плотность</b><small id="densityValue">64%</small></span><input id="densitySlider" type="range" min="25" max="100" value="64"></div>
+        <button class="setting mode-row" id="themeToggle" type="button" data-native-press><span><b>Режим света</b><small>NOCTURNE / DAWN</small></span><em>SWITCH</em></button>
+        <button class="setting mode-row workshop-row" type="button" data-workshop-trigger data-native-press><span><b>Workshop</b><small>Диагностика, обновления и сброс</small></span><em>OPEN</em></button>
+      </div>
+      <p class="system-note selectable-content">Все состояния сохраняются локально. Никаких аккаунтов, облаков и корпоративной херни.</p>
+    </section>
+
+    <div class="action-dock" aria-label="Главные действия" data-ui>
+      <button class="dock-icon" id="captureButton" type="button" aria-label="Сохранить эхо" title="Сохранить эхо" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M8 4v6h8V5M8 20v-6h8v6"/></svg>
+      </button>
+      <button class="signal-button" id="signalButton" type="button" aria-label="Удерживай для сигнала" data-pressable data-block-callout>
+        <span class="signal-rings" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="signal-label"><b>HOLD</b><small>TO SIGNAL</small></span>
+      </button>
+      <button class="dock-icon" id="exportButton" type="button" aria-label="Экспортировать изображение" title="Экспорт PNG" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v7h14v-7"/></svg>
+      </button>
+    </div>
+
+    <nav class="nav" aria-label="Разделы" data-ui>
+      <button class="active" type="button" data-target="field" data-native-press><span>01</span>FIELD</button>
+      <button type="button" data-target="archive" data-native-press><span>02</span>ARCHIVE</button>
+      <button type="button" data-target="system" data-native-press><span>03</span>SYSTEM</button>
+    </nav>
+  </main>
+
+  <section class="onboarding" id="onboarding" aria-label="Запуск ECHOES" data-ui>
+    <div class="onboarding-card">
+      <p class="eyebrow">POCKET WORKS PRESENTS</p>
+      <div class="app-icon" aria-hidden="true">
+        <div class="icon-dash"></div><div class="icon-white"></div><div class="icon-acid"></div><div class="icon-core"></div><div class="icon-cut"></div>
+      </div>
+      <h2>ECHOES</h2>
+      <p>Интерфейс, который слушает способ твоего движения.</p>
+      <button id="awakenButton" type="button" data-native-press>ENTER THE SIGNAL <span>—</span></button>
+      <small>Лучше с включённым звуком и гироскопом.</small>
+    </div>
+  </section>
+
+  <section class="about-modal" id="aboutModal" aria-hidden="true">
+    <div class="about-card">
+      <button class="close" id="closeAbout" type="button" aria-label="Закрыть" data-native-press>×</button>
+      <p class="eyebrow">ABOUT / ECHOES</p>
+      <h2>Интерфейс без пользы.<br>Наконец-то.</h2>
+      <p class="selectable-content">ECHOES существует ради движения, реакции и ощущения живого цифрового объекта. Каждое касание меняет поле и оставляет краткую память.</p>
+      <div class="about-meta"><span>WEBGL2</span><span>WEB AUDIO</span><span>PWA</span><span>POCKET WORKS</span></div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ECHOES"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
