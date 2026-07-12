@@ -19,7 +19,7 @@
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
-    <canvas id="gameCanvas" aria-label="Трёхмерный лабиринт ОТВЕС" data-gesture-surface data-block-callout></canvas>
+    <canvas id="gameCanvas" aria-label="Объёмный лабиринт внутри экрана ОТВЕС" data-gesture-surface data-block-callout></canvas>
 
     <header class="instrument-bar" data-ui>
       <a class="text-key" href="../../" data-shell-exit data-app-control data-native-press>POCKET WORKS</a>
@@ -41,7 +41,7 @@
         <img class="app-mark" src="./icons/icon.svg" alt="" draggable="false">
         <h1>ОТВЕС</h1>
         <p class="subtitle">СТЕКЛО · ЛАБИРИНТ · ГРАВИТАЦИЯ</p>
-        <p class="instruction">Положи телефон <strong>экраном вверх</strong>. Наклоняй его как настоящую доску и закати шар в латунную лунку.</p>
+        <p class="instruction">Положи телефон <strong>экраном вверх</strong>. Шар находится будто внутри дисплея: наклоняй сам телефон и закати его в латунную лунку.</p>
         <div class="tilt-diagram" aria-hidden="true">
           <span>↖</span><span>↑</span><span>↗</span>
           <span>←</span><i></i><span>→</span>
@@ -86,7 +86,7 @@
     </section>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.1.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
