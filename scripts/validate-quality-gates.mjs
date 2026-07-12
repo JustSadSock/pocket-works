@@ -39,6 +39,7 @@ for (const script of ['preview:test', 'test:e2e', 'test:lighthouse', 'validate:q
 const requiredFiles = [
   'playwright.config.ts',
   'lighthouserc.json',
+  'launcher-performance.css',
   'scripts/serve-site.mjs',
   'shared/view-transition-guard.js',
   'apps/screen-lab/viewport-containment.css',
@@ -98,6 +99,14 @@ requireIncludes(containment, [
   'contain: layout paint'
 ], 'apps/screen-lab/viewport-containment.css');
 
+const launcherPerformance = await read('launcher-performance.css');
+requireIncludes(launcherPerformance, [
+  '.preview-scan',
+  'will-change: transform',
+  '@keyframes preview-scan',
+  'translateY(42px)'
+], 'launcher-performance.css');
+
 const screenLabIndex = await read('apps/screen-lab/index.html');
 const screenLabWorker = await read('apps/screen-lab/sw.js');
 requireIncludes(screenLabIndex, ['./viewport-containment.css', 'data-app-version="1.3.1"'], 'apps/screen-lab/index.html');
@@ -110,7 +119,7 @@ if (collect?.staticDistDir !== './dist-site') errors.push('Lighthouse must audit
 if (!Array.isArray(collect?.url) || !collect.url.includes('http://localhost/') || !collect.url.includes('http://localhost/apps/screen-lab/')) {
   errors.push('Lighthouse must audit the launcher and Screen Lab');
 }
-if (!Number.isInteger(collect?.numberOfRuns) || collect.numberOfRuns < 2) errors.push('Lighthouse must run each URL at least twice');
+if (!Number.isInteger(collect?.numberOfRuns) || collect.numberOfRuns < 3) errors.push('Lighthouse must run each URL at least three times');
 for (const assertion of [
   'categories:performance',
   'categories:accessibility',
