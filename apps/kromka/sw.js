@@ -1,14 +1,16 @@
 const CACHE_PREFIX = 'kromka-';
-const CACHE_NAME = 'kromka-v1.1.1';
-const APP_VERSION = '1.1.1';
+const CACHE_NAME = 'kromka-v1.1.2';
+const APP_VERSION = '1.1.2';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Fixed every Pocket Works exit control so it reliably returns to the launcher.',
   'Replaced inert exit buttons with native links that work without game JavaScript.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
+  './app.config.json',
   './styles.css',
   './app.js',
   './runtime/part-00.txt',
