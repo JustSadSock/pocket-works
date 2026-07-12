@@ -28,7 +28,7 @@
         <p class="kicker">DEVICE / MOTION / TOUCH</p>
         <h1>Screen Lab</h1>
       </div>
-      <button class="status-orb" id="status-orb" type="button" aria-label="Toggle motion intensity" data-native-press>
+      <button class="status-orb" id="status-orb" type="button" aria-label="Change motion intensity" data-native-press>
         <span></span>
       </button>
     </header>
@@ -99,6 +99,35 @@
           <div><dt>visibility</dt><dd id="visibility">visible</dd></div>
         </dl>
       </article>
+
+      <article class="panel panel--viewport">
+        <header><span>05</span><h3>Visual viewport</h3></header>
+        <div class="viewport-plot" aria-hidden="true" data-ui>
+          <div class="viewport-plot__layout"></div>
+          <div class="viewport-plot__visual" id="viewport-plot-visual"></div>
+        </div>
+        <dl class="data-list data-list--wide">
+          <div><dt>visual</dt><dd id="visual-viewport">—</dd></div>
+          <div><dt>offset</dt><dd id="visual-offset">—</dd></div>
+          <div><dt>scale</dt><dd id="visual-scale">—</dd></div>
+          <div><dt>keyboard</dt><dd id="keyboard-inset">0px</dd></div>
+        </dl>
+      </article>
+
+      <article class="panel panel--pointer">
+        <header><span>06</span><h3>Pointer signal</h3></header>
+        <div class="pointer-gauge" aria-hidden="true" data-ui>
+          <div class="pointer-gauge__needle" id="pressure-needle"></div>
+          <strong id="pressure-live">0.00</strong>
+          <span>pressure</span>
+        </div>
+        <dl class="data-list data-list--wide">
+          <div><dt>type</dt><dd id="pointer-type">idle</dd></div>
+          <div><dt>position</dt><dd id="pointer-position">—</dd></div>
+          <div><dt>gesture</dt><dd id="gesture">1.00× / 0°</dd></div>
+          <div><dt>peak points</dt><dd id="peak-points">0</dd></div>
+        </dl>
+      </article>
     </section>
 
     <section class="controls" aria-labelledby="controls-title">
@@ -108,15 +137,16 @@
       </div>
       <div class="control-row">
         <button type="button" data-action="pulse" data-native-press>Impulse</button>
-        <button type="button" data-action="freeze" data-native-press>Freeze</button>
+        <button type="button" data-action="freeze" aria-pressed="false" data-native-press>Freeze</button>
         <button type="button" data-action="fullscreen" data-native-press>Fullscreen</button>
+        <button type="button" data-action="snapshot" data-native-press>Snapshot</button>
         <button type="button" data-action="reset" data-native-press>Reset</button>
         <button type="button" data-workshop-trigger data-native-press>Workshop</button>
       </div>
     </section>
 
     <footer>
-      <span>SCREEN LAB / v1.3.1</span>
+      <span>SCREEN LAB / v1.4.0</span>
       <span id="clock">—</span>
     </footer>
   </main>
@@ -128,7 +158,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Screen Lab"
-    data-app-version="1.3.1"
+    data-app-version="1.4.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
