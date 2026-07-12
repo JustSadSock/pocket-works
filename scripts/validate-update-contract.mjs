@@ -16,11 +16,11 @@ function requireIncludes(source, fragments, label) {
 }
 
 function staticString(source, name) {
-  return source.match(new RegExp(`(?:const|let)\s+${name}\s*=\s*['"\\`]([^'"\\`]+)['"\\`]`))?.[1] || null;
+  return source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*['"]([^'"]+)['"]`))?.[1] || null;
 }
 
 function staticArray(source, name) {
-  const match = source.match(new RegExp(`(?:const|let)\s+${name}\s*=\s*(\[[\s\S]*?\]);`));
+  const match = source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*(\[[\s\S]*?\]);`));
   if (!match) return null;
   try { return Function(`"use strict"; return (${match[1]});`)(); } catch { return null; }
 }
