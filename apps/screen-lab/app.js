@@ -1,3 +1,10 @@
+import {
+  bindPointerGesture,
+  installMobileRuntime
+} from '../../shared/mobile-runtime.js';
+
+installMobileRuntime();
+
 const root = document.documentElement;
 const body = document.body;
 const canvas = document.querySelector('#field');
@@ -238,21 +245,22 @@ window.addEventListener('pointerdown', (event) => {
   if (!frozen) spawnParticle(event.clientX, event.clientY, 0.75, event.pointerId % 3);
 }, { passive: true });
 
-touchZone.addEventListener('pointerdown', (event) => {
-  touchZone.setPointerCapture?.(event.pointerId);
-  createTouchDot(event.pointerId, event.clientX, event.clientY);
-  spawnParticle(event.clientX, event.clientY, 1.25, event.pointerId % 3);
-  navigator.vibrate?.(10);
-});
-
-touchZone.addEventListener('pointermove', (event) => {
-  if (!activeTouches.has(event.pointerId)) return;
-  createTouchDot(event.pointerId, event.clientX, event.clientY);
-  if (Math.random() > 0.62) spawnParticle(event.clientX, event.clientY, 0.38, event.pointerId % 3);
-});
-
-['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
-  touchZone.addEventListener(type, (event) => removeTouchDot(event.pointerId));
+bindPointerGesture(touchZone, {
+  onStart(event) {
+    createTouchDot(event.pointerId, event.clientX, event.clientY);
+    spawnParticle(event.clientX, event.clientY, 1.25, event.pointerId % 3);
+    navigator.vibrate?.(10);
+  },
+  onMove(event) {
+    createTouchDot(event.pointerId, event.clientX, event.clientY);
+    if (Math.random() > 0.62) spawnParticle(event.clientX, event.clientY, 0.38, event.pointerId % 3);
+  },
+  onEnd(event) {
+    removeTouchDot(event.pointerId);
+  },
+  onCancel(event) {
+    removeTouchDot(event.pointerId);
+  }
 });
 
 statusOrb.addEventListener('click', async () => {
@@ -310,7 +318,7 @@ document.querySelector('.control-row').addEventListener('click', async (event) =
 });
 
 window.addEventListener('resize', resizeCanvas, { passive: true });
-window.visualViewport?.addEventListener('resize', updateMetrics, { passive: true });
+window.addEventListener('appviewportchange', updateMetrics, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(updateMetrics, 180), { passive: true });
 window.addEventListener('online', updateNetwork);
 window.addEventListener('offline', updateNetwork);
