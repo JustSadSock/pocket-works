@@ -15,13 +15,16 @@ The engine implements captures, suicide prevention, simple ko, passing, resignat
 
 ## Computer players
 
-The computer now evaluates play using territory efficiency rather than rewarding the raw number of stones on the board. Empty points that are surrounded or plausibly controlled are valuable; placing another stone inside an already secure area reduces that value.
+The computer uses a hybrid Go policy and Monte Carlo Tree Search. Tactical knowledge proposes sensible moves, while UCT-guided simulations compare many alternating continuations before the final choice.
 
-- `Calm` uses the same territorial model with a small search budget and deliberate variation.
-- `Steady` prioritizes captures, saves groups in atari, attacks weak groups and checks the opponent's strongest reply.
-- `Sharp` also searches a continuation after that reply and uses a larger time budget.
+- The opening policy spreads across available corners and sides instead of extending directly beside every friendly stone.
+- Captures and saves from atari are resolved before strategic search.
+- The move policy rewards frontier expansion, reductions, cuts and connections, while rejecting true-eye fills and moves inside secure friendly territory.
+- `Calm` uses shorter, more varied simulations.
+- `Steady` searches a deeper tree with longer tactical rollouts.
+- `Sharp` uses the largest search budget and the deepest continuation tree.
 
-Moves that fill a true eye or secure friendly territory are rejected unless they capture stones or save a threatened group. Once no useful contested points remain, the computer passes instead of filling the board. The search remains locally bounded to keep 19×19 play responsive on a phone; it is not a replacement for KataGo or another neural engine running with a model and substantially more memory.
+This remains a lightweight offline phone engine rather than a neural KataGo-class system, but its decisions are based on sampled future play rather than a single greedy position score.
 
 ## Controls
 
@@ -41,4 +44,4 @@ Stone, capture, pass and completion sounds are generated with Web Audio after a 
 
 ## Offline
 
-The app shell, engine, territorial search, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.2.0` after the first successful load.
+The app shell, rules engine, Monte Carlo search modules, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.3.0` after the first successful load.
