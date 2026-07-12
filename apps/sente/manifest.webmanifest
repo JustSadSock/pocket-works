@@ -1,0 +1,25 @@
+{
+  "id": "/apps/sente/",
+  "name": "SENTE",
+  "short_name": "SENTE",
+  "description": "Классическое Go с тактильной доской, локальной игрой, компьютерным соперником и разбором партий.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#eee7d8",
+  "theme_color": "#d9b778",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
