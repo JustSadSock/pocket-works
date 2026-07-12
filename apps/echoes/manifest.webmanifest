@@ -1,6 +1,6 @@
 {
   "id": "/apps/echoes/",
-  "name": "ECHOES — Pocket Works",
+  "name": "ECHOES",
   "short_name": "ECHOES",
   "description": "Touch, drag and tilt a luminous field that remembers your movement.",
   "start_url": "./",
