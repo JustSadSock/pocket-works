@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "otves",
+  "name": "ОТВЕС",
+  "shortName": "ОТВЕС",
+  "description": "Тактильный лабиринт со стеклянным шариком, который управляется наклоном телефона.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-12",
+  "releaseDateTime": "2026-07-12T22:48:00Z",
+  "changelog": [
+    "Добавлен процедурный лабиринт со стеклянным шариком и физикой столкновений.",
+    "Добавлено управление наклоном телефона с калибровкой и пальцевым fallback-режимом.",
+    "Добавлен псевдо-3D рендеринг стен, глубины, параллакса, теней и преломления стекла.",
+    "Добавлены процедурные звуки качения и ударов, рекорды, пауза, офлайн-режим и Workshop Mode."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#c6ad66",
+  "backgroundColor": "#151a16",
+  "themeColor": "#151a16",
+  "orientation": "any",
+  "cacheName": "otves-v1.0.0",
+  "storageNamespace": "pocket-works:otves",
+  "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
+  "order": 80
+}

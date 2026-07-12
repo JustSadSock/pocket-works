@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#151a16">
+  <meta name="description" content="ОТВЕС — тактильный лабиринт со стеклянным шариком, который управляется наклоном телефона.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ОТВЕС">
+  <title>ОТВЕС — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="gameCanvas" aria-label="Трёхмерный лабиринт ОТВЕС" data-gesture-surface data-block-callout></canvas>
+
+    <header class="instrument-bar" data-ui>
+      <a class="text-key" href="../../" data-shell-exit data-app-control data-native-press>POCKET WORKS</a>
+      <div class="readout" aria-label="Текущий уровень и время">
+        <span>ЛАБ. <output id="levelValue">01</output></span>
+        <strong id="timeValue">00:00.00</strong>
+      </div>
+      <button class="round-key" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <div class="best-readout" data-ui><span>ЛУЧШЕЕ</span><output id="bestValue">—</output></div>
+    <div class="input-readout" id="inputReadout" data-ui><i></i><span id="inputLabel">ДАТЧИК НЕ АКТИВЕН</span></div>
+    <button class="calibration-key" id="calibrateButton" type="button" data-native-press data-ui>В НОЛЬ</button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen start-screen is-visible" id="startScreen" aria-label="Начальный экран" data-ui>
+      <div class="title-plate">
+        <div class="serial-row"><span>PW / TILT INSTRUMENT 07</span><b>⌁</b></div>
+        <img class="app-mark" src="./icons/icon.svg" alt="" draggable="false">
+        <h1>ОТВЕС</h1>
+        <p class="subtitle">СТЕКЛО · ЛАБИРИНТ · ГРАВИТАЦИЯ</p>
+        <p class="instruction">Положи телефон <strong>экраном вверх</strong>. Наклоняй его как настоящую доску и закати шар в латунную лунку.</p>
+        <div class="tilt-diagram" aria-hidden="true">
+          <span>↖</span><span>↑</span><span>↗</span>
+          <span>←</span><i></i><span>→</span>
+          <span>↙</span><span>↓</span><span>↘</span>
+        </div>
+        <button class="primary-key" id="continueButton" type="button" data-native-press>РАЗРЕШИТЬ НАКЛОН И ИГРАТЬ</button>
+        <button class="line-key" id="newRunButton" type="button" data-native-press>НОВАЯ СЕРИЯ ЛАБИРИНТОВ</button>
+        <button class="line-key sound-toggle" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" aria-label="Пауза" aria-hidden="true" data-ui>
+      <div class="control-plate">
+        <p>МЕХАНИЗМ ОСТАНОВЛЕН</p>
+        <h2>ПАУЗА</h2>
+        <button class="primary-key" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button class="line-key" id="restartButton" type="button" data-native-press>ЗАНОВО ЭТОТ ЛАБИРИНТ</button>
+        <button class="line-key" id="pauseCalibrateButton" type="button" data-native-press>ВЫРОВНЯТЬ НОЛЬ</button>
+        <button class="line-key sound-toggle" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <button class="line-key" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+        <button class="bare-key" id="menuButton" type="button" data-native-press>К ТИТУЛЬНОЙ ПЛАСТИНЕ</button>
+      </div>
+    </section>
+
+    <section class="screen complete-screen" id="completeScreen" aria-label="Лабиринт пройден" aria-hidden="true" data-ui>
+      <div class="result-disc">
+        <div class="result-rings" aria-hidden="true"></div>
+        <p>ШАР В ЛУНКЕ</p>
+        <h2 id="resultTitle">УРОВЕНЬ ПРОЙДЕН</h2>
+        <dl>
+          <div><dt>ВРЕМЯ</dt><dd id="resultTime">00:00.00</dd></div>
+          <div><dt>КАСАНИЯ</dt><dd id="resultCollisions">0</dd></div>
+          <div><dt>РЕКОРД</dt><dd id="resultBest">—</dd></div>
+        </dl>
+        <div class="record-stamp" id="recordStamp">НОВЫЙ РЕКОРД</div>
+        <button class="primary-key" id="nextButton" type="button" data-native-press>СЛЕДУЮЩИЙ ЛАБИРИНТ</button>
+        <button class="line-key" id="retryButton" type="button" data-native-press>ПОВТОРИТЬ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

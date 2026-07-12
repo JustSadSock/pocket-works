@@ -14,6 +14,15 @@
   min-height: 0;
 }
 
+#app-list:empty:has(+ #empty-state[hidden]) {
+  min-height: max(82vh, 680px);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(232, 227, 215, .018) 0 175px,
+    var(--line) 175px 176px
+  );
+}
+
 @keyframes preview-scan {
   from { transform: translateY(0); }
   to { transform: translateY(42px); }
