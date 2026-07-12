@@ -58,12 +58,12 @@
     "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
     "path": "./apps/cherta/",
     "status": "active",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "updatedAt": "2026-07-12",
     "changelog": [
-      "Added the first complete release of the one-thumb combat game.",
-      "Added three enemy archetypes, endless waves, local records, sound and haptics.",
-      "Added Pocket Works mobile runtime integration and offline installation."
+      "Dead enemies now dissolve cleanly and cancel active attack telegraphs.",
+      "Screen shake and impact flashes now decay after the player dies.",
+      "Fixed the top-right home, sound and pause controls across game states."
     ],
     "accent": "#a94738",
     "tags": [
