@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -72,13 +59,7 @@
       "Made the top home and sound controls reliably accessible from the title menu."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -99,15 +80,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -129,14 +102,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -157,14 +123,7 @@
       "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
     ],
     "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -176,25 +135,16 @@
     "description": "Классическое Go с тактильной доской, локальной игрой, компьютерным соперником и разбором партий.",
     "path": "./apps/sente/",
     "status": "active",
-    "version": "1.0.0",
-    "updatedAt": "2026-07-12T21:55:00Z",
+    "version": "1.1.0",
+    "updatedAt": "2026-07-12T22:50:00Z",
     "changelog": [
-      "Добавлены классические правила Go для досок 9×9, 13×13 и 19×19 с захватами, ко, пасами и подсчётом территории.",
-      "Добавлены локальная игра вдвоём и три характера компьютерного соперника.",
-      "Добавлены точное управление пальцем, увеличительная линза, процедурные звуки камней и тактильная обратная связь.",
-      "Добавлены автосохранение, архив последних партий, просмотр ходов и экспорт SGF.",
-      "Добавлены офлайн-режим, Workshop Mode, сниженная анимация и возврат в Pocket Works из всех основных состояний."
+      "Компьютерные соперники получили оценку групп, влияния и территории, защиту атари и поиск ответов соперника.",
+      "Собранный бот теперь просчитывает один ответ вперёд, а Острый — ещё и лучший тактический ответ на него.",
+      "Лупа теперь в реальном времени увеличивает настоящий участок доски вместе с камнями и точкой постановки.",
+      "После двух пасов SENTE автоматически отмечает очевидно мёртвые группы, сохраняя ручную коррекцию спорных случаев."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -215,17 +165,7 @@
       "Добавлены процедурные звуки качения и ударов, рекорды, пауза, офлайн-режим и Workshop Mode."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
