@@ -28,5 +28,10 @@ Generated app registry is current.
 > pocket-works@0.7.1 validate:configs
 > node scripts/validate-app-configs.mjs
 
-Application config validation failed with 1 issue:
-- apps/udel/manifest.webmanifest description must equal app.config.json value Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.
+Application config validation passed for 6 registered apps.
+
+> pocket-works@0.7.1 validate
+> node scripts/validate.mjs
+
+Pocket Works health check failed with 1 issue:
+- udel must register ./sw.js directly or through the managed update script
