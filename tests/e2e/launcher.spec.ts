@@ -30,7 +30,7 @@ test('launcher shelf supports search, real icons, details, favorites and keyboar
     .toContain(`/apps/echoes/icons/icon.svg?v=${echoesVersion}`);
 
   const search = page.locator('#app-search');
-  await search.fill('screen');
+  await search.fill('screen lab');
   await expect(page.locator('.app-entry__name')).toHaveText('Screen Lab');
 
   await search.fill('missing object');
