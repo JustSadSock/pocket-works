@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.0';
+const CACHE_NAME = 'cherta-v1.0.0-r2';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
