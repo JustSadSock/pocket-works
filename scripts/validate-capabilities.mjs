@@ -20,6 +20,10 @@ async function read(relativePath) {
   try { return await readFile(path.join(root, relativePath), 'utf8'); }
   catch (error) { fail(`${relativePath} could not be read: ${error.message}`); return ''; }
 }
+async function readOptional(relativePath) {
+  try { return await readFile(path.join(root, relativePath), 'utf8'); }
+  catch { return ''; }
+}
 function requireFragments(source, fragments, label) {
   for (const fragment of fragments) if (!source.includes(fragment)) fail(`${label} must include ${fragment}`);
 }
@@ -62,9 +66,12 @@ for (const config of configs) {
   } else {
     const index = await read(`${directory}/index.html`);
     const app = await read(`${directory}/app.js`);
+    const workshopBootstrap = await readOptional(`${directory}/workshop.js`);
+    const integrationSource = `${app}\n${workshopBootstrap}`;
     const worker = await read(`${directory}/sw.js`);
     requireFragments(index, ['../../shared/workshop-mode.css', 'data-workshop-trigger'], `${directory}/index.html`);
-    requireFragments(app, ["from '../../shared/workshop-mode.js'", 'createWorkshopMode', `storageNamespace: '${config.storageNamespace}'`, `cachePrefix: '${config.slug}-'`], `${directory}/app.js`);
+    if (workshopBootstrap) requireFragments(index, ['./workshop.js'], `${directory}/index.html`);
+    requireFragments(integrationSource, ["from '../../shared/workshop-mode.js'", 'createWorkshopMode', `storageNamespace: '${config.storageNamespace}'`, `cachePrefix: '${config.slug}-'`], `${directory} Workshop integration`);
     if (app.includes("navigator.serviceWorker.register('./sw.js')")) fail(`${directory}/app.js must leave Service Worker registration to update-manager`);
     for (const offlineFile of requiredOfflineFiles) if (!worker.includes(offlineFile)) fail(`${directory}/sw.js must cache ${offlineFile}`);
   }
