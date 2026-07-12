@@ -1,0 +1,5 @@
+node_modules/
+dist-site/
+.vite/
+coverage/
+.DS_Store
