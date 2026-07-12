@@ -1,0 +1,21 @@
+{
+  "id": "/apps/echoes/",
+  "name": "ECHOES — Pocket Works",
+  "short_name": "ECHOES",
+  "description": "Touch, drag and tilt a luminous field that remembers your movement.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#07080b",
+  "theme_color": "#07080b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
