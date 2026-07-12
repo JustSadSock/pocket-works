@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "udel",
+  "name": "УДЕЛ",
+  "shortName": "УДЕЛ",
+  "description": "Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-12",
+  "releaseDateTime": "2026-07-12T21:20:00Z",
+  "changelog": [
+    "Добавлена процедурная кампания на 24 сезона с восемью областями и тремя державами.",
+    "Добавлены династия, наследование, сословия, законы, технологии и дипломатия.",
+    "Добавлены набор армии и интерактивные трёхфланговые битвы с приказами в реальном времени.",
+    "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#325b52",
+  "backgroundColor": "#26251f",
+  "themeColor": "#26251f",
+  "orientation": "portrait",
+  "cacheName": "udel-v1.0.0",
+  "storageNamespace": "pocket-works:udel",
+  "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
+  "order": 60
+}
