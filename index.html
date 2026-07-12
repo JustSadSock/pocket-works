@@ -22,7 +22,7 @@
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
       <div class="brand-lockup">
-        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.6</p>
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.6.1</p>
         <h1>Pocket<br>Works</h1>
       </div>
 
@@ -144,7 +144,7 @@
 
   <template id="app-card-template">
     <article class="app-entry">
-      <button class="app-entry__select" type="button" data-action="details" data-native-press>
+      <button class="app-entry__select" type="button" data-action="details" data-preview-trigger data-native-press>
         <span class="app-preview" aria-hidden="true">
           <span class="preview-grid"></span>
           <span class="preview-orbit"></span>
@@ -152,16 +152,16 @@
           <span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span>
           <span class="preview-scan"></span>
         </span>
-
-        <span class="app-entry__body">
-          <span class="app-entry__topline">
-            <strong class="app-entry__name"></strong>
-            <span class="app-entry__status"></span>
-          </span>
-          <span class="app-entry__description"></span>
-          <span class="app-entry__meta"></span>
-        </span>
       </button>
+
+      <span class="app-entry__body">
+        <span class="app-entry__topline">
+          <strong class="app-entry__name"></strong>
+          <span class="app-entry__status"></span>
+        </span>
+        <span class="app-entry__description"></span>
+        <span class="app-entry__meta"></span>
+      </span>
 
       <button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button>
       <a class="app-entry__open" data-action="open" data-native-press aria-label="Open application">↗</a>
@@ -174,7 +174,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.6.0"
+    data-app-version="0.6.1"
   ></script>
   <script src="./shared/view-transition-guard.js" type="module"></script>
   <script src="./app.js" type="module"></script>
