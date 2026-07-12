@@ -41,5 +41,8 @@ jobs:
       - name: Validate launcher shelf
         run: npm run validate:launcher
 
+      - name: Validate shared capabilities
+        run: npm run validate:capabilities
+
       - name: Smoke-test Pocket Forge presets
         run: npm run test:forge
