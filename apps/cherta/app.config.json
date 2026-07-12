@@ -4,12 +4,12 @@
   "name": "ЧЕРТА",
   "shortName": "ЧЕРТА",
   "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Added the first complete release of the one-thumb combat game.",
-    "Added three enemy archetypes, endless waves, local records, sound and haptics.",
-    "Added Pocket Works mobile runtime integration and offline installation."
+    "Dead enemies now dissolve cleanly and cancel active attack telegraphs.",
+    "Screen shake and impact flashes now decay after the player dies.",
+    "Fixed the top-right home, sound and pause controls across game states."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -18,7 +18,7 @@
   "backgroundColor": "#e9e1cf",
   "themeColor": "#e9e1cf",
   "orientation": "portrait",
-  "cacheName": "cherta-v1.0.0-r2",
+  "cacheName": "cherta-v1.0.1",
   "storageNamespace": "pocket-works:cherta",
   "tags": ["PWA", "offline", "game", "canvas", "audio"],
   "order": 30
