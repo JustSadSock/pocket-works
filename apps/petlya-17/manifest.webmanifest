@@ -1,0 +1,21 @@
+{
+  "id": "/apps/petlya-17/",
+  "name": "ПЕТЛЯ 17",
+  "short_name": "ПЕТЛЯ 17",
+  "description": "Гонка из кабины болида с рулением наклоном телефона.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#d9cfb5",
+  "theme_color": "#d9cfb5",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
