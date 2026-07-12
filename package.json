@@ -1,6 +1,6 @@
 {
   "name": "pocket-works",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,8 +11,9 @@
     "validate:mobile": "node scripts/validate-mobile-runtime.mjs",
     "validate:configs": "node scripts/validate-app-configs.mjs",
     "validate:updates": "node scripts/validate-update-contract.mjs",
-    "validate:scripts": "node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs",
-    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates",
+    "validate:launcher": "node scripts/validate-launcher.mjs",
+    "validate:scripts": "node --check app.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs",
+    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher",
     "test:forge": "node scripts/test-forge.mjs",
     "health": "npm run validate:all && npm run test:forge"
   },

@@ -11,6 +11,21 @@ Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of
 - Production branch: `main`
 - Deployment: Netlify continuous deployment from GitHub
 
+## Personal application shelf
+
+Pocket Works is not a static link index. The root PWA provides:
+
+- search across names, descriptions, mechanics, tags and release notes;
+- filters for saved, recent, offline-ready and experimental applications;
+- persistent favorites, recents, selection and sort order;
+- procedural app previews derived from each app's preset, slug and accent;
+- version, update date, cache readiness and release notes;
+- a desktop focus bay and mobile bottom-sheet details panel;
+- quick actions for open, save and copy link;
+- a locally saved registry fallback when the live registry is unavailable.
+
+The shelf uses `shared/mobile-runtime.*` for native-feeling behavior and remains useful offline after the first successful load.
+
 ## Repository layout
 
 ```text
@@ -112,7 +127,7 @@ Run the same checks used by GitHub Actions and Netlify:
 npm run health
 ```
 
-This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, script syntax and all five Pocket Forge presets.
+This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, launcher shelf behavior, script syntax and all five Pocket Forge presets.
 
 The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
 

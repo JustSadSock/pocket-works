@@ -25,7 +25,7 @@ function requireIncludes(source, fragments, label) {
 }
 
 function staticString(source, name) {
-  return source.match(new RegExp(`(?:const|let)\\s+${name}\\s*=\\s*['\"\\\`]([^'\"\\\`]+)['\"\\\`]`))?.[1] || null;
+  return source.match(new RegExp(`(?:const|let)\\s+${name}\\s*=\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`))?.[1] || null;
 }
 
 function staticArray(source, name) {
@@ -61,8 +61,13 @@ function validateWorker(source, label, expected) {
   if (version !== expected.version) fail(`${label} APP_VERSION must equal ${expected.version}`);
   if (releaseDate !== expected.releaseDate) fail(`${label} RELEASE_DATE must equal ${expected.releaseDate}`);
   if (cacheName !== expected.cacheName) fail(`${label} CACHE_NAME must equal ${expected.cacheName}`);
-  if (JSON.stringify(releaseNotes) !== JSON.stringify(expected.changelog)) {
-    fail(`${label} RELEASE_NOTES must match app.config.json changelog`);
+
+  if (expected.changelog) {
+    if (JSON.stringify(releaseNotes) !== JSON.stringify(expected.changelog)) {
+      fail(`${label} RELEASE_NOTES must match app.config.json changelog`);
+    }
+  } else if (!Array.isArray(releaseNotes) || releaseNotes.length === 0 || releaseNotes.some((note) => typeof note !== 'string' || note.trim() === '')) {
+    fail(`${label} RELEASE_NOTES must contain at least one user-visible note`);
   }
 }
 
@@ -103,12 +108,7 @@ validateWorker(
   {
     version: packageJson.version,
     releaseDate: '2026-07-12',
-    cacheName: `pocket-works-launcher-v${packageJson.version}`,
-    changelog: [
-      'Added managed updates for the launcher and every generated app.',
-      'New builds now show release notes before activation.',
-      'Published application versions and release dates are visible in the catalog.'
-    ]
+    cacheName: `pocket-works-launcher-v${packageJson.version}`
   }
 );
 

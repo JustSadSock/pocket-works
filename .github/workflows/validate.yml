@@ -38,5 +38,8 @@ jobs:
       - name: Validate managed updates
         run: npm run validate:updates
 
+      - name: Validate launcher shelf
+        run: npm run validate:launcher
+
       - name: Smoke-test Pocket Forge presets
         run: npm run test:forge
