@@ -4,10 +4,11 @@
   "name": "ECHOES",
   "shortName": "ECHOES",
   "description": "Touch, drag and tilt a luminous field that remembers your movement.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "releaseDate": "2026-07-12",
-  "releaseDateTime": "2026-07-12T19:07:21Z",
+  "releaseDateTime": "2026-07-12T19:29:21Z",
   "changelog": [
+    "Hardened managed updates by comparing waiting builds against the service worker that is actually active.",
     "Inherited the platform interaction lock so long presses no longer select interface text.",
     "Replaced the ring-based launcher icon with a bold waveform identity distinct from the existing shelf geometry.",
     "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
@@ -18,7 +19,7 @@
   "backgroundColor": "#07080b",
   "themeColor": "#07080b",
   "orientation": "any",
-  "cacheName": "echoes-v1.0.2",
+  "cacheName": "echoes-v1.0.3",
   "storageNamespace": "pocket-works:echoes",
   "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
   "order": 20
