@@ -8,6 +8,10 @@
   --safe-right: max(18px, var(--app-safe-right));
   --safe-bottom: max(22px, var(--app-safe-bottom));
   --safe-left: max(18px, var(--app-safe-left));
+  --workshop-bg: var(--bg);
+  --workshop-fg: var(--fg);
+  --workshop-muted: var(--muted);
+  --workshop-accent: var(--accent);
 }
 
 * { box-sizing: border-box; }
@@ -101,6 +105,7 @@ footer {
   display: flex;
   justify-content: space-between;
   gap: 18px;
+  align-items: center;
   padding-top: 16px;
   color: var(--muted);
   font: .68rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -108,7 +113,24 @@ footer {
   text-transform: uppercase;
 }
 
+.workshop-trigger {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.workshop-trigger:active,
+.workshop-trigger.is-pressed { color: var(--accent); }
+
 __PRESET_STYLES__
+
+@media (max-width: 480px) {
+  footer { flex-wrap: wrap; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
