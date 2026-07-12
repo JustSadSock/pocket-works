@@ -1,171 +1,106 @@
 # Pocket Works — phased implementation plan
 
-This is the compact execution document for the Pocket Works environment roadmap. Work on one phase at a time. Every phase ends with validation, one squash commit on `main`, one Netlify production deploy and a user-facing status report.
+Work on one phase at a time. Every phase ends with a green health check, one squash commit on `main`, one Netlify production deploy and a user-facing completion report.
 
 ## Context rule
 
-At the start of a phase, load only:
+At the beginning of a phase, load only:
 
 1. `AGENTS.md`;
 2. `apps/AGENTS.md`;
-3. the current phase section below;
-4. the files listed by that phase;
+3. the current phase below;
+4. the listed reference files;
 5. the previous phase result.
 
-Do not reload the full repository or long roadmap unless a concrete dependency requires it.
-
 Status values: `not-started`, `in-progress`, `blocked`, `done`.
-
----
 
 ## Phase 0 — Baseline and safety net
 
 **Status:** `done`
 
-**Goal:** establish a rollback point and prevent structurally broken applications from reaching production.
+Structural validation, shared health command, CI/Netlify checks, rollback baseline and cache ownership protection.
 
-**Implemented:**
+**Reference:** `scripts/validate.mjs`, `docs/BASELINE.md`, `.github/workflows/validate.yml`.
 
-- one `npm run health` command for local work, GitHub Actions and Netlify;
-- launcher, app, manifest, icon, Service Worker and cache ownership validation;
-- documented production baseline and rollback reference;
-- Screen Lab cache cleanup restricted to its own namespace.
-
-**Reference files:** `scripts/validate.mjs`, `package.json`, `docs/BASELINE.md`, `.github/workflows/validate.yml`, `netlify.toml`.
-
-**Result:** commit `d1458cf525b57e2c3e0fc0714ae0440017089538`; production `ready`.
-
----
+**Result:** `d1458cf525b57e2c3e0fc0714ae0440017089538`; production ready.
 
 ## Phase 1 — Native-feeling mobile foundation
 
 **Status:** `done`
 
-**Goal:** remove accidental browser behavior without imposing one shared visual style.
+Shared viewport, safe-area, keyboard, selection, touch-action, pointer lifecycle, press feedback and scroll-lock behavior without a shared visual style.
 
-**Implemented:**
+**Reference:** `shared/mobile-runtime.*`, `scripts/validate-mobile-runtime.mjs`, app template and Screen Lab.
 
-- shared dynamic viewport, safe-area and keyboard variables;
-- scoped selection, callout, tap-highlight and image-drag policies;
-- explicit `touch-action` utilities and immediate press feedback;
-- pointer capture, cancellation and gesture lifecycle helpers;
-- stable document scroll locking and standalone/browser state;
-- template and Screen Lab integration with offline caching;
-- dedicated mobile-runtime validation.
-
-**Reference files:** `shared/mobile-runtime.css`, `shared/mobile-runtime.js`, `scripts/validate-mobile-runtime.mjs`, `apps/_template/`, `apps/screen-lab/`, `apps/AGENTS.md`.
-
-**Result:** commit `6a5973c14c9f60faf4493183725a0c40494cbea6`; production `ready`.
-
----
+**Result:** `6a5973c14c9f60faf4493183725a0c40494cbea6`; production ready.
 
 ## Phase 2 — Pocket Forge and generated metadata
 
 **Status:** `done`
 
-**Goal:** make creation and registration of new apps deterministic.
+`app.config.json`, generated registry, isolated identifiers, rollback-safe Forge command and five starter presets with smoke tests.
 
-**Implemented:**
+**Reference:** `scripts/app-config.mjs`, `scripts/build-registry.mjs`, `scripts/new-app.mjs`, `scripts/presets.mjs`.
 
-- `app.config.json` as the source of truth for every published application;
-- generated `apps.json` with stale-registry detection;
-- Pocket Forge command with automatic rollback after failed validation;
-- generated manifest identity, cache name, storage namespace and SVG icon;
-- `vanilla`, `interactive`, `canvas`, `game-2d` and `audio` presets;
-- schema, duplicate identifier, config/manifest and config/Service Worker checks;
-- CI smoke test that creates, validates and removes all five preset applications;
-- separated CI stages so failures identify the exact validation layer.
-
-**Reference files:** `scripts/app-config.mjs`, `scripts/build-registry.mjs`, `scripts/new-app.mjs`, `scripts/presets.mjs`, `scripts/test-forge.mjs`, `scripts/validate-app-configs.mjs`, `apps/_template/`, `apps/screen-lab/app.config.json`.
-
-**Result:** commit `a155a020ca2d14708a755a0475821b159d90a1c9`; production `ready`.
-
----
+**Result:** `a155a020ca2d14708a755a0475821b159d90a1c9`; production ready.
 
 ## Phase 3 — Atomic publishing and dependable updates
 
 **Status:** `done`
 
-**Goal:** prevent half-finished deployments and stale installed PWAs.
+Managed waiting-worker updates, release notes, explicit activation, scoped cache cleanup and documented forward-version rollback.
 
-**Implemented:**
+**Reference:** `shared/update-manager.*`, `scripts/validate-update-contract.mjs`, `docs/PUBLISHING.md`.
 
-- visually neutral shared update-manager JavaScript and CSS;
-- waiting-worker detection and version/release-note exchange;
-- visible **Later** and **Update now** controls;
-- explicit activation through `SKIP_WAITING` only after user confirmation;
-- safe reload after `controllerchange`;
-- periodic, online and resume update checks;
-- version, release date and changelog fields in every app config and generated registry;
-- generated release metadata in Pocket Forge and Service Workers;
-- launcher and Screen Lab reference integration;
-- scoped old-cache cleanup after activation;
-- dedicated update-contract validation;
-- documented atomic release and forward-versioned rollback process.
-
-**Reference files:** `shared/update-manager.js`, `shared/update-manager.css`, `scripts/validate-update-contract.mjs`, `scripts/app-config.mjs`, `scripts/new-app.mjs`, `docs/PUBLISHING.md`, launcher files, `apps/_template/`, `apps/screen-lab/`.
-
-**Acceptance:** `npm run health` passes; generated apps expose managed update metadata; no Service Worker auto-activates during install; launcher and Screen Lab show an update prompt for a waiting version.
-
-**Result:** Phase 3 branch completed; final squash SHA and production verification are recorded in the completion report.
-
----
+**Result:** `ef885f473a6559159e66925c8563cc035f17ebe5`; production ready.
 
 ## Phase 4 — Pocket Works launcher upgrade
 
-**Status:** `not-started`
+**Status:** `done`
 
-**Goal:** turn the launcher into a useful personal application shelf.
+Implemented:
 
-**Scope:** search, filters, favorites, recents, versions, last-update and offline indicators, distinct previews, details and quick actions, local persistence and standalone/offline usefulness. Avoid generic App Store and SaaS styling.
+- search across names, descriptions, mechanics, tags and release notes;
+- filters for all, saved, recent, offline-ready and experimental apps;
+- persistent favorites, recents, selection and sorting;
+- preset-aware seeded previews with restrained ambient motion;
+- version, update date, offline cache and last-opened information;
+- desktop focus bay and mobile bottom-sheet details;
+- release notes and open, save and copy-link actions;
+- local registry snapshot fallback for offline use;
+- mobile-runtime integration and controlled sheet scroll locking;
+- network-first registry refresh with stable cached fallback;
+- dedicated `validate:launcher` CI contract.
 
-**Files to load:** root `index.html`, `styles.css`, `app.js`, generated registry and launcher Service Worker.
+**Reference:** root `index.html`, `styles.css`, `app.js`, `manifest.webmanifest`, `sw.js`, `scripts/validate-launcher.mjs`.
 
-**Done when:** the launcher remains fast and useful with dozens of visually distinct apps.
+**Acceptance:** `npm run health` passes, personal state survives reloads, cached applications are identified, the shelf remains useful offline and mobile details behave as an interruptible sheet.
 
----
+**Result:** Phase 4 PR passed every CI stage. Final squash SHA and production status are recorded in the completion report.
 
 ## Phase 5 — Shared capabilities and Workshop Mode
 
 **Status:** `not-started`
 
-**Goal:** expand the technical arsenal without creating a shared visual template.
+Add opt-in, visually neutral modules for motion, input, storage/migrations, import/export, audio, sensors, fullscreen, orientation and diagnostics. Add Workshop Mode for viewport, FPS, errors, storage, caches and reset tools.
 
-**Scope:** optional modules for motion, input, storage, migrations, import/export, audio, sensors, fullscreen, orientation and diagnostics. Add Workshop Mode for viewport, FPS, errors, storage, caches and reset tools. Possible justified libraries: Motion, Dexie, Zod and Lit.
-
-**Files to load:** `shared/`, the template and Screen Lab as the reference fixture.
-
-**Done when:** every module is opt-in, app-local in effect and visually neutral.
-
----
+**Reference to load:** `shared/`, app template, Screen Lab.
 
 ## Phase 6 — Enhanced application templates
 
 **Status:** `not-started`
 
-**Goal:** support larger apps and games without burdening simple tools.
+Keep Quick PWA and add an optional Vite/TypeScript/Workbox path with Vitest and justified PixiJS, Phaser and Tone.js presets.
 
-**Scope:** retain Quick PWA; add Vite/TypeScript/Workbox Enhanced PWA; optional Vitest; PixiJS, Phaser and Tone.js presets; Netlify and offline support for both paths.
-
-**Files to load:** Pocket Forge, templates, root build configuration and Netlify configuration.
-
-**Done when:** Pocket Forge can generate either a lightweight or enhanced isolated app.
-
----
+**Reference to load:** Pocket Forge, templates, build configuration and Netlify configuration.
 
 ## Phase 7 — Automated quality gates
 
 **Status:** `not-started`
 
-**Goal:** catch broken interaction, viewport and PWA behavior before production.
+Add Vitest, Playwright Chromium/WebKit mobile coverage, portrait/landscape tests, console and Service Worker checks, critical screenshots and Lighthouse budgets.
 
-**Scope:** Vitest, Playwright Chromium/WebKit mobile tests, portrait/landscape coverage, console-error and Service Worker checks, critical screenshots, Lighthouse budgets and deploy blocking.
-
-**Files to load:** validators, templates, Screen Lab, GitHub workflows and Netlify configuration.
-
-**Done when:** every registered app receives a basic automated smoke test and failures identify the exact app and action.
-
----
+**Reference to load:** validators, templates, Screen Lab, GitHub workflows and Netlify configuration.
 
 ## Completion log
 
@@ -174,8 +109,8 @@ Status values: `not-started`, `in-progress`, `blocked`, `done`.
 | 0 | done | `d1458cf525b57e2c3e0fc0714ae0440017089538` | ready |
 | 1 | done | `6a5973c14c9f60faf4493183725a0c40494cbea6` | ready |
 | 2 | done | `a155a020ca2d14708a755a0475821b159d90a1c9` | ready |
-| 3 | done | Phase 3 squash PR | verify after merge |
-| 4 | not-started | — | — |
+| 3 | done | `ef885f473a6559159e66925c8563cc035f17ebe5` | ready |
+| 4 | done | Phase 4 squash PR | verify after merge |
 | 5 | not-started | — | — |
 | 6 | not-started | — | — |
 | 7 | not-started | — | — |
