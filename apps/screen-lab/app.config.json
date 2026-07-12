@@ -4,9 +4,11 @@
   "name": "Screen Lab",
   "shortName": "Screen Lab",
   "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "releaseDate": "2026-07-12",
+  "releaseDateTime": "2026-07-12T19:07:20Z",
   "changelog": [
+    "Inherited the platform interaction lock so long presses no longer select interface text.",
     "Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.",
     "Added one-tap diagnostic snapshots with clipboard and JSON download fallback.",
     "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
@@ -17,7 +19,7 @@
   "backgroundColor": "#f2efe6",
   "themeColor": "#f2efe6",
   "orientation": "any",
-  "cacheName": "screen-lab-v1.4.0",
+  "cacheName": "screen-lab-v1.4.1",
   "storageNamespace": "pocket-works:screen-lab",
   "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
   "order": 10
