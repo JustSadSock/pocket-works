@@ -10,6 +10,11 @@ html.has-launcher-list-motion .app-entry {
   will-change: transform, opacity, filter;
 }
 
+html.is-list-motion-pending::view-transition-old(root),
+html.is-list-motion-pending::view-transition-new(root) {
+  animation-duration: .01ms;
+}
+
 html.has-launcher-list-motion .app-list::after {
   content: "";
   position: absolute;
