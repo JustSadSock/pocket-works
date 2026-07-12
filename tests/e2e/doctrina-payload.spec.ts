@@ -24,5 +24,5 @@ test('DOCTRINA bundled simulation payload remains complete', () => {
   const source = gunzipSync(compressed).toString('utf8');
   expect(source.length).toBeGreaterThan(200_000);
   expect(source).toContain('window.__DOCTRINA__');
-  expect(source).toContain('pocket-works:doctrina');
+  expect(source).toContain('__POCKET_DOCTRINA_STORE__');
 });
