@@ -21,11 +21,12 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, app, worker, packageSource, manifestSource, registrySource] = await Promise.all([
+const [html, css, app, worker, guard, packageSource, manifestSource, registrySource] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('app.js'),
   read('sw.js'),
+  read('shared/view-transition-guard.js'),
   read('package.json'),
   read('manifest.webmanifest'),
   read('apps.json')
@@ -54,6 +55,7 @@ for (const reference of [
   './shared/mobile-runtime.css',
   './shared/update-manager.css',
   './shared/update-manager.js',
+  './shared/view-transition-guard.js',
   './app.js'
 ]) {
   requireText(html, reference, 'index.html');
@@ -80,20 +82,30 @@ for (const [label, version] of [
 }
 
 for (const token of [
-  "installMobileRuntime()",
-  "pocket-works:shelf:v1",
-  "pocket-works:registry:v1",
-  "favorites",
-  "recents",
-  "caches.keys()",
-  "data-action=\"details\"",
-  "navigator.clipboard",
-  "startViewTransition",
+  'installMobileRuntime()',
+  'pocket-works:shelf:v1',
+  'pocket-works:registry:v1',
+  'favorites',
+  'recents',
+  'caches.keys()',
+  'data-action="details"',
+  'navigator.clipboard',
+  'startViewTransition',
   "addEventListener('online'",
   "addEventListener('offline'",
-  "setDocumentScrollLocked"
+  'setDocumentScrollLocked'
 ]) {
   requireText(app, token, 'app.js');
+}
+
+for (const token of [
+  'installViewTransitionGuard',
+  'activeTransition',
+  'skipTransition()',
+  'immediateTransition',
+  '__pocketWorksGuarded'
+]) {
+  requireText(guard, token, 'shared/view-transition-guard.js');
 }
 
 for (const selector of [
@@ -115,6 +127,7 @@ for (const asset of [
   './shared/mobile-runtime.js',
   './shared/update-manager.css',
   './shared/update-manager.js',
+  './shared/view-transition-guard.js',
   './apps.json'
 ]) {
   requireText(worker, asset, 'sw.js APP_SHELL');
@@ -125,7 +138,7 @@ requireText(worker, "event.data?.type === 'GET_UPDATE_INFO'", 'sw.js managed upd
 requireText(worker, "event.data?.type === 'SKIP_WAITING'", 'sw.js managed updates');
 
 if (manifest.background_color !== '#0e100e' || manifest.theme_color !== '#0e100e') {
-  errors.push('manifest colors must match the Phase 4 launcher surface #0e100e');
+  errors.push('manifest colors must match the launcher surface #0e100e');
 }
 
 if (!Array.isArray(registry) || registry.length === 0) {
