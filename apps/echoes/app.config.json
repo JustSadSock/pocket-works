@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "slug": "echoes",
+  "name": "ECHOES",
+  "shortName": "ECHOES",
+  "description": "Touch, drag and tilt a luminous field that remembers your movement.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-12",
+  "changelog": [
+    "Added a WebGL2 field that reacts to touch velocity, pressure and device tilt.",
+    "Added local echo capture, archive replay, PNG export and generative Web Audio.",
+    "Added Nocturne and Dawn modes, Workshop diagnostics and offline installation."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#4bffb3",
+  "backgroundColor": "#07080b",
+  "themeColor": "#07080b",
+  "orientation": "any",
+  "cacheName": "echoes-v1.0.0",
+  "storageNamespace": "pocket-works:echoes",
+  "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
+  "order": 20
+}
