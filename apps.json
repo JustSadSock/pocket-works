@@ -22,6 +22,7 @@
       "workshop"
     ],
     "preset": "interactive",
+    "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
   }
 ]
