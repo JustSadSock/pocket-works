@@ -1,5 +1,12 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.1.0';
+const CACHE_NAME = 'screen-lab-v1.2.0';
+const APP_VERSION = '1.2.0';
+const RELEASE_DATE = '2026-07-12';
+const RELEASE_NOTES = [
+  'Added a visible update prompt with release notes.',
+  'Updates now activate only after explicit confirmation.',
+  'Old Screen Lab caches remain scoped and are cleaned after activation.'
+];
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,15 +15,28 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
-  '../../shared/mobile-runtime.js'
+  '../../shared/mobile-runtime.js',
+  '../../shared/update-manager.css',
+  '../../shared/update-manager.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_UPDATE_INFO') {
+    event.ports?.[0]?.postMessage({
+      version: APP_VERSION,
+      releaseDate: RELEASE_DATE,
+      releaseNotes: RELEASE_NOTES
+    });
+  }
+
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

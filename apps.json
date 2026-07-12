@@ -6,7 +6,13 @@
     "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
     "path": "./apps/screen-lab/",
     "status": "active",
-    "version": "1.1.0",
+    "version": "1.2.0",
+    "updatedAt": "2026-07-12",
+    "changelog": [
+      "Added a visible update prompt with release notes.",
+      "Updates now activate only after explicit confirmation.",
+      "Old Screen Lab caches remain scoped and are cleaned after activation."
+    ],
     "accent": "#ff4d1f",
     "tags": [
       "PWA",

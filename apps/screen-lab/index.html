@@ -12,6 +12,7 @@
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
@@ -50,30 +51,15 @@
     </section>
 
     <section class="metric-strip" aria-label="Live device metrics">
-      <article>
-        <span>VIEWPORT</span>
-        <strong id="viewport">—</strong>
-      </article>
-      <article>
-        <span>DPR</span>
-        <strong id="dpr">—</strong>
-      </article>
-      <article>
-        <span>FPS</span>
-        <strong id="fps">—</strong>
-      </article>
-      <article>
-        <span>MODE</span>
-        <strong id="display-mode">—</strong>
-      </article>
+      <article><span>VIEWPORT</span><strong id="viewport">—</strong></article>
+      <article><span>DPR</span><strong id="dpr">—</strong></article>
+      <article><span>FPS</span><strong id="fps">—</strong></article>
+      <article><span>MODE</span><strong id="display-mode">—</strong></article>
     </section>
 
     <section class="panel-grid">
       <article class="panel panel--safe">
-        <header>
-          <span>01</span>
-          <h3>Safe area</h3>
-        </header>
+        <header><span>01</span><h3>Safe area</h3></header>
         <div class="safe-map" aria-hidden="true" data-ui>
           <div class="safe-map__island"></div>
           <div class="safe-map__inner"></div>
@@ -88,22 +74,14 @@
       </article>
 
       <article class="panel panel--orientation">
-        <header>
-          <span>02</span>
-          <h3>Orientation</h3>
-        </header>
-        <div class="orientation-figure" id="orientation-figure" data-ui>
-          <div></div>
-        </div>
+        <header><span>02</span><h3>Orientation</h3></header>
+        <div class="orientation-figure" id="orientation-figure" data-ui><div></div></div>
         <p class="reading" id="orientation">—</p>
         <p class="subreading" id="angle">Angle unavailable</p>
       </article>
 
       <article class="panel panel--touch">
-        <header>
-          <span>03</span>
-          <h3>Touch field</h3>
-        </header>
+        <header><span>03</span><h3>Touch field</h3></header>
         <div class="touch-zone" id="touch-zone" data-gesture-surface data-block-callout>
           <p>Press / drag / multiply</p>
           <div class="touch-count"><strong id="touch-count">0</strong><span>points</span></div>
@@ -111,10 +89,7 @@
       </article>
 
       <article class="panel panel--network">
-        <header>
-          <span>04</span>
-          <h3>Runtime</h3>
-        </header>
+        <header><span>04</span><h3>Runtime</h3></header>
         <dl class="data-list data-list--wide">
           <div><dt>network</dt><dd id="network">—</dd></div>
           <div><dt>platform</dt><dd id="platform">—</dd></div>
@@ -138,12 +113,20 @@
     </section>
 
     <footer>
-      <span>SCREEN LAB / v1.1.0</span>
+      <span>SCREEN LAB / v1.2.0</span>
       <span id="clock">—</span>
     </footer>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="Screen Lab"
+    data-app-version="1.2.0"
+  ></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

@@ -84,7 +84,7 @@ function runValidation(root) {
 }
 
 function printHelp() {
-  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n\nPresets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --name=\"Human Name\"\n  --short-name=\"Home Label\"\n  --description=\"One sentence purpose\"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n`);
+  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n\nPresets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --name="Human Name"\n  --short-name="Home Label"\n  --description="One sentence purpose"\n  --release-note="Initial release note"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n`);
 }
 
 export async function createApp(argv = process.argv.slice(2), root = process.cwd()) {
@@ -105,6 +105,12 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const backgroundColor = typeof options.background === 'string' ? options.background : '#10110f';
   const themeColor = typeof options.theme === 'string' ? options.theme : backgroundColor;
   const version = '0.1.0';
+  const releaseDate = new Date().toISOString().slice(0, 10);
+  const changelog = [
+    typeof options['release-note'] === 'string'
+      ? options['release-note']
+      : `Initial ${preset.label.toLowerCase()} preset release.`
+  ];
   const order = Number.parseInt(options.order || '100', 10);
 
   const config = {
@@ -114,6 +120,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     shortName,
     description,
     version,
+    releaseDate,
+    changelog,
     status: typeof options.status === 'string' ? options.status : 'experimental',
     preset: presetName,
     accent,
@@ -142,6 +150,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     '__APP_BACKGROUND__': backgroundColor,
     '__APP_THEME__': themeColor,
     '__APP_VERSION__': version,
+    '__APP_RELEASE_DATE__': releaseDate,
+    '__APP_CHANGELOG_JSON__': JSON.stringify(changelog),
     '__APP_CACHE_VERSION__': config.cacheName,
     '__APP_STORAGE_NAMESPACE__': config.storageNamespace,
     '__APP_STATUS__': config.status,
@@ -184,12 +194,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
     const safeName = escapeMarkup(name);
-    const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">
-  <rect width="512" height="512" fill="${backgroundColor}"/>
-  <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>
-  <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>
-  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>
-</svg>\n`;
+    const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">\n  <rect width="512" height="512" fill="${backgroundColor}"/>\n  <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>\n  <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>\n  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>\n</svg>\n`;
     await writeFile(path.join(appDirectory, 'icons', 'icon.svg'), icon, 'utf8');
 
     await buildRegistry({ root });

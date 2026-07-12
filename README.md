@@ -32,8 +32,11 @@ Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of
 │   ├── test-forge.mjs           # smoke-tests every preset
 │   └── validate*.mjs
 ├── shared/
+│   ├── mobile-runtime.*         # native-feeling behavior
+│   └── update-manager.*         # controlled PWA updates
 ├── docs/
 │   ├── BASELINE.md
+│   ├── PUBLISHING.md
 │   ├── ENVIRONMENT-ROADMAP.md
 │   └── IMPLEMENTATION-PLAN.md
 └── apps/
@@ -63,6 +66,7 @@ Useful options:
 
 ```text
 --description="One sentence purpose"
+--release-note="Initial user-visible release note"
 --accent=#ff4d1f
 --background=#10110f
 --theme=#10110f
@@ -71,7 +75,7 @@ Useful options:
 --order=100
 ```
 
-Pocket Forge creates the directory, starter mechanic, manifest, app-owned icon, Service Worker cache identity, storage namespace and `app.config.json`. It regenerates `apps.json` and runs the full validation suite. A failed generation is rolled back.
+Pocket Forge creates the directory, starter mechanic, manifest, app-owned icon, Service Worker cache identity, storage namespace, release metadata and `app.config.json`. It regenerates `apps.json` and runs the full validation suite. A failed generation is rolled back.
 
 ## Registry
 
@@ -84,6 +88,22 @@ npm run registry:check
 
 The build command scans every non-template application directory and generates the launcher registry from `app.config.json` files. Duplicate slugs, cache names and storage namespaces are rejected.
 
+## Managed updates
+
+Every installed PWA uses `shared/update-manager.js` and `shared/update-manager.css`.
+
+A new worker downloads into the waiting state, reports its version and changelog, and shows an in-app prompt. It activates only after the user selects **Update now**. Choosing **Later** leaves the current session unchanged.
+
+Each release must update:
+
+- `version`;
+- `releaseDate`;
+- `changelog`;
+- `cacheName`;
+- matching Service Worker metadata.
+
+The complete atomic release and rollback procedure is in [`docs/PUBLISHING.md`](./docs/PUBLISHING.md).
+
 ## Repository health
 
 Run the same checks used by GitHub Actions and Netlify:
@@ -92,7 +112,7 @@ Run the same checks used by GitHub Actions and Netlify:
 npm run health
 ```
 
-This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, script syntax and all five Pocket Forge presets.
+This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, script syntax and all five Pocket Forge presets.
 
 The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
 
@@ -104,8 +124,9 @@ After generation:
 2. Replace the starter mechanic with the actual product loop inside its own directory.
 3. Preserve the generated app identity, cache ownership and storage namespace.
 4. Replace the generated icon with a deliberate application symbol.
-5. Run `npm run health`.
-6. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas and standalone mode.
+5. Update version, release date and changelog before publishing.
+6. Run `npm run health`.
+7. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode and update activation.
 
 ## Product roadmap
 

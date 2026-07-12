@@ -12,6 +12,7 @@
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-app-preset="__APP_PRESET__">
@@ -32,6 +33,14 @@
     </footer>
   </main>
 
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="__APP_NAME__"
+    data-app-version="__APP_VERSION__"
+  ></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

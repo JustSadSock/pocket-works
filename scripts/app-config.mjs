@@ -10,6 +10,7 @@ export const APP_ORIENTATIONS = ['any', 'portrait', 'landscape'];
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const colorPattern = /^#[0-9a-f]{6}$/i;
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function requireString(config, key, errors) {
   if (typeof config[key] !== 'string' || config[key].trim() === '') {
@@ -34,6 +35,7 @@ export function validateAppConfig(config, directoryName = config?.slug) {
     'shortName',
     'description',
     'version',
+    'releaseDate',
     'status',
     'preset',
     'accent',
@@ -49,6 +51,9 @@ export function validateAppConfig(config, directoryName = config?.slug) {
   if (!slugPattern.test(config.slug || '')) errors.push('slug must be lowercase kebab-case');
   if (directoryName && config.slug !== directoryName) errors.push(`slug must match directory name ${directoryName}`);
   if (!semverPattern.test(config.version || '')) errors.push('version must use semantic versioning');
+  if (!isoDatePattern.test(config.releaseDate || '') || Number.isNaN(Date.parse(`${config.releaseDate}T00:00:00Z`))) {
+    errors.push('releaseDate must use a valid YYYY-MM-DD date');
+  }
   if (!APP_STATUSES.includes(config.status)) errors.push(`status must be one of: ${APP_STATUSES.join(', ')}`);
   if (!APP_PRESETS.includes(config.preset)) errors.push(`preset must be one of: ${APP_PRESETS.join(', ')}`);
   if (!APP_ORIENTATIONS.includes(config.orientation)) errors.push(`orientation must be one of: ${APP_ORIENTATIONS.join(', ')}`);
@@ -59,6 +64,10 @@ export function validateAppConfig(config, directoryName = config?.slug) {
 
   if (!Array.isArray(config.tags) || config.tags.length === 0 || config.tags.some((tag) => typeof tag !== 'string' || tag.trim() === '')) {
     errors.push('tags must be a non-empty array of non-empty strings');
+  }
+
+  if (!Array.isArray(config.changelog) || config.changelog.length === 0 || config.changelog.length > 8 || config.changelog.some((note) => typeof note !== 'string' || note.trim() === '')) {
+    errors.push('changelog must contain between 1 and 8 non-empty strings');
   }
 
   if (!Number.isInteger(config.order) || config.order < 0) errors.push('order must be a non-negative integer');
@@ -86,6 +95,8 @@ export function toRegistryEntry(config) {
     path: `./apps/${config.slug}/`,
     status: config.status,
     version: config.version,
+    updatedAt: config.releaseDate,
+    changelog: [...config.changelog],
     accent: config.accent,
     tags: [...config.tags],
     preset: config.preset,

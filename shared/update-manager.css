@@ -1,0 +1,106 @@
+.app-update-prompt {
+  position: fixed;
+  z-index: 2147483000;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  width: min(720px, calc(100% - 24px));
+  margin-inline: auto;
+  padding: 16px;
+  border: 1px solid var(--app-update-border, currentColor);
+  border-radius: var(--app-update-radius, 0);
+  background: var(--app-update-background, #11120f);
+  color: var(--app-update-color, #f4f1e8);
+  box-shadow: 0 18px 60px rgb(0 0 0 / .24);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(100% + 24px));
+  transition: transform 240ms cubic-bezier(.2, .8, .2, 1), opacity 160ms ease;
+  font: 500 14px/1.35 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.app-update-prompt.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.app-update-prompt__copy {
+  min-width: 0;
+}
+
+.app-update-prompt__eyebrow {
+  margin: 0 0 5px;
+  color: var(--app-update-accent, #c8ff45);
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.app-update-prompt__title {
+  display: block;
+  font-size: 17px;
+}
+
+.app-update-prompt__notes {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.app-update-prompt__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-update-prompt button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  touch-action: manipulation;
+  transition: transform 100ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.app-update-prompt button[data-update-apply] {
+  border-color: var(--app-update-accent, #c8ff45);
+  background: var(--app-update-accent, #c8ff45);
+  color: var(--app-update-accent-text, #11120f);
+}
+
+.app-update-prompt button.is-pressed,
+.app-update-prompt button:active {
+  transform: translateY(1px) scale(.98);
+}
+
+.app-update-prompt button:disabled {
+  opacity: .58;
+}
+
+@media (max-width: 560px) {
+  .app-update-prompt {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .app-update-prompt__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-update-prompt {
+    transition-duration: .01ms;
+  }
+}

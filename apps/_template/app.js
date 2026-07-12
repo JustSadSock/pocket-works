@@ -7,6 +7,7 @@ import {
   watchConnectivity
 } from '../../shared/pwa-utils.js';
 
+// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
 installMobileRuntime();
 
 const storage = createStorage('__APP_STORAGE_NAMESPACE__');
@@ -17,11 +18,3 @@ __PRESET_SCRIPT__
 watchConnectivity((online) => {
   document.documentElement.dataset.network = online ? 'online' : 'offline';
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((error) => {
-      console.warn('__APP_NAME__ service worker registration failed', error);
-    });
-  });
-}

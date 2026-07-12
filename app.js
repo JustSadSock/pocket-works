@@ -1,3 +1,4 @@
+// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
 const list = document.querySelector('#app-list');
 const emptyState = document.querySelector('#empty-state');
 const errorState = document.querySelector('#error-state');
@@ -21,7 +22,7 @@ function renderApps(apps) {
     fragment.querySelector('.app-entry__index').textContent = String(index + 1).padStart(2, '0');
     fragment.querySelector('.app-entry__name').textContent = app.name;
     fragment.querySelector('.app-entry__description').textContent = app.description;
-    tags.textContent = [app.status, ...(app.tags || [])].filter(Boolean).join(' · ');
+    tags.textContent = [app.status, `v${app.version}`, app.updatedAt, ...(app.tags || [])].filter(Boolean).join(' · ');
 
     list.append(fragment);
   });
@@ -53,11 +54,3 @@ async function loadRegistry() {
 
 refreshButton.addEventListener('click', loadRegistry);
 loadRegistry();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((error) => {
-      console.warn('Launcher service worker registration failed', error);
-    });
-  });
-}
