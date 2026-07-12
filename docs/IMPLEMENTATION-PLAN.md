@@ -78,30 +78,36 @@ Status values: `not-started`, `in-progress`, `blocked`, `done`.
 
 **Reference files:** `scripts/app-config.mjs`, `scripts/build-registry.mjs`, `scripts/new-app.mjs`, `scripts/presets.mjs`, `scripts/test-forge.mjs`, `scripts/validate-app-configs.mjs`, `apps/_template/`, `apps/screen-lab/app.config.json`.
 
-**Acceptance:** `npm run health` passes; all five presets generate valid isolated PWAs; duplicate slugs, caches and storage namespaces fail; `apps.json` exactly matches generated configs.
-
-**Result:** PR `#3` passed every CI stage. The squash SHA and production deployment are recorded in the user-facing completion report.
+**Result:** commit `a155a020ca2d14708a755a0475821b159d90a1c9`; production `ready`.
 
 ---
 
 ## Phase 3 — Atomic publishing and dependable updates
 
-**Status:** `not-started`
+**Status:** `done`
 
 **Goal:** prevent half-finished deployments and stale installed PWAs.
 
-**Scope:**
+**Implemented:**
 
-- one coherent commit for each completed app or update;
-- shared Service Worker update manager;
-- visible update prompt and safe refresh;
-- explicit cache versions and scoped cleanup;
-- per-app changelog/version metadata;
-- documented rollback behavior.
+- visually neutral shared update-manager JavaScript and CSS;
+- waiting-worker detection and version/release-note exchange;
+- visible **Later** and **Update now** controls;
+- explicit activation through `SKIP_WAITING` only after user confirmation;
+- safe reload after `controllerchange`;
+- periodic, online and resume update checks;
+- version, release date and changelog fields in every app config and generated registry;
+- generated release metadata in Pocket Forge and Service Workers;
+- launcher and Screen Lab reference integration;
+- scoped old-cache cleanup after activation;
+- dedicated update-contract validation;
+- documented atomic release and forward-versioned rollback process.
 
-**Files to load:** `shared/mobile-runtime.*`, template Service Worker and app entry files, launcher files, validators and Phase 2 Forge files.
+**Reference files:** `shared/update-manager.js`, `shared/update-manager.css`, `scripts/validate-update-contract.mjs`, `scripts/app-config.mjs`, `scripts/new-app.mjs`, `docs/PUBLISHING.md`, launcher files, `apps/_template/`, `apps/screen-lab/`.
 
-**Done when:** installed apps detect waiting versions and update without manual Safari cache clearing.
+**Acceptance:** `npm run health` passes; generated apps expose managed update metadata; no Service Worker auto-activates during install; launcher and Screen Lab show an update prompt for a waiting version.
+
+**Result:** Phase 3 branch completed; final squash SHA and production verification are recorded in the completion report.
 
 ---
 
@@ -167,8 +173,8 @@ Status values: `not-started`, `in-progress`, `blocked`, `done`.
 |---|---|---|---|
 | 0 | done | `d1458cf525b57e2c3e0fc0714ae0440017089538` | ready |
 | 1 | done | `6a5973c14c9f60faf4493183725a0c40494cbea6` | ready |
-| 2 | done | PR `#3` | verify after squash merge |
-| 3 | not-started | — | — |
+| 2 | done | `a155a020ca2d14708a755a0475821b159d90a1c9` | ready |
+| 3 | done | Phase 3 squash PR | verify after merge |
 | 4 | not-started | — | — |
 | 5 | not-started | — | — |
 | 6 | not-started | — | — |
