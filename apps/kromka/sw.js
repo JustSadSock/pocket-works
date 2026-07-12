@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'kromka-';
-const CACHE_NAME = 'kromka-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'kromka-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added an infinite procedural printed track with daily and random seeded runs.',
-  'Added one-finger drift steering, tension-powered boosts, obstacles and persistent records.',
-  'Added generated machine audio, tactile print effects, offline support and Workshop diagnostics.'
+  'Increased the sense of speed with a faster opening pace, road vibration and a more aggressive animated shredder.',
+  'Smoothed high-speed steering and reduced the lateral snap during tension boosts.',
+  'Accelerated the difficulty curve and added explicit Pocket Works exit controls to every game menu.'
 ];
 const APP_SHELL = [
   './',

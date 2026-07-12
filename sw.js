@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.1';
-const APP_VERSION = '0.6.1';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.2';
+const APP_VERSION = '0.6.2';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Launcher previews now use each application’s real icon instead of generic preset geometry.',
-  'Added versioned icon URLs so icon redesigns are visible immediately after an update.'
+  'Launcher search now matches user-facing app identity, mechanics and tags without leaking hidden release-note text.',
+  'Preserved stable initial shelf layout and versioned application icon previews.'
 ];
 const APP_SHELL = [
   './',

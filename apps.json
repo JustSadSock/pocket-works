@@ -84,12 +84,12 @@
     "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
     "path": "./apps/kromka/",
     "status": "active",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "updatedAt": "2026-07-12",
     "changelog": [
-      "Added an infinite procedural printed track with daily and random seeded runs.",
-      "Added one-finger drift steering, tension-powered boosts, obstacles and persistent records.",
-      "Added generated machine audio, tactile print effects, offline support and Workshop diagnostics."
+      "Increased the sense of speed with a faster opening pace, road vibration and a more aggressive animated shredder.",
+      "Smoothed high-speed steering and reduced the lateral snap during tension boosts.",
+      "Accelerated the difficulty curve and added explicit Pocket Works exit controls to every game menu."
     ],
     "accent": "#d65b2a",
     "tags": [
