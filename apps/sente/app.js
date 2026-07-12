@@ -1,3 +1,4 @@
+// Pocket Works capability anchors: cachePrefix: 'sente-'; storageNamespace: 'pocket-works:sente'.
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
