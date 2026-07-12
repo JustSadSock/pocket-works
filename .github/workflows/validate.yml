@@ -59,11 +59,25 @@ jobs:
       - name: Smoke-test Quick presets
         run: npm run test:forge:quick
 
-      - name: Smoke-test Enhanced presets
-        run: npm run test:forge:enhanced
-
       - name: Assemble production site
         run: npm run prepare:site
 
       - name: Validate production site
         run: npm run validate:site
+
+  enhanced-presets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install build dependencies
+        run: npm install --silent --no-audit --no-fund
+
+      - name: Generate, build and test Enhanced presets
+        run: npm run test:forge:enhanced
