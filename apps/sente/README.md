@@ -15,11 +15,13 @@ The engine implements captures, suicide prevention, simple ko, passing, resignat
 
 ## Computer players
 
-- `Calm` uses tactical priorities with deliberate variation.
-- `Steady` evaluates group health, influence, territory, captures and the opponent's strongest reply.
-- `Sharp` also searches the best continuation after that reply and uses a larger time budget.
+The computer now evaluates play using territory efficiency rather than rewarding the raw number of stones on the board. Empty points that are surrounded or plausibly controlled are valuable; placing another stone inside an already secure area reduces that value.
 
-The search is locally bounded to keep 19×19 play responsive on a phone. It is intended as a competent offline opponent, not a replacement for a full neural Go engine running on a server or desktop GPU.
+- `Calm` uses the same territorial model with a small search budget and deliberate variation.
+- `Steady` prioritizes captures, saves groups in atari, attacks weak groups and checks the opponent's strongest reply.
+- `Sharp` also searches a continuation after that reply and uses a larger time budget.
+
+Moves that fill a true eye or secure friendly territory are rejected unless they capture stones or save a threatened group. Once no useful contested points remain, the computer passes instead of filling the board. The search remains locally bounded to keep 19×19 play responsive on a phone; it is not a replacement for KataGo or another neural engine running with a model and substantially more memory.
 
 ## Controls
 
@@ -39,4 +41,4 @@ Stone, capture, pass and completion sounds are generated with Web Audio after a 
 
 ## Offline
 
-The app shell, engine, tactical search, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.1.0` after the first successful load.
+The app shell, engine, territorial search, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.2.0` after the first successful load.
