@@ -114,6 +114,7 @@ The shared runtime owns behavior only. Do not turn it into a common visual theme
 
 - Preserve state and spatial context across screens and modes.
 - Every secondary surface needs predictable back and close behavior.
+- Every game must provide an explicit text-labelled control that returns to the Pocket Works launcher from the initial menu, pause menu and completion or game-over screen. An icon-only header control, browser back gesture or hidden edge gesture is not sufficient.
 - Do not use browser `alert`, `confirm` or `prompt` in finished apps.
 - Avoid raw blue links and visited-link styling unless the app is content-oriented.
 - External navigation must be deliberate and communicated.
@@ -199,6 +200,7 @@ Before marking an app done, verify on a real phone or mobile emulation:
 - rapid repeated input does not break animation state;
 - gestures recover from `pointercancel` and lost capture;
 - important state survives reload, suspension and resume;
+- every game exposes a working text-labelled route back to the Pocket Works launcher from start, pause and completion states;
 - offline launch feels like the same product;
 - reduced-motion mode remains complete;
 - no browser alert, prompt, dead link or generic web behavior breaks the application illusion.
