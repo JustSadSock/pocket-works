@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ЛУНКА">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#183129"/>
+      <stop offset="1" stop-color="#07100d"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".42" stop-color="#dce5df"/>
+      <stop offset="1" stop-color="#748078"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0d184"/>
+      <stop offset=".48" stop-color="#b78e42"/>
+      <stop offset="1" stop-color="#5f4922"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <path d="M76 72 32 252M170 44 122 240M444 68 394 278" stroke="#d6e1d9" stroke-width="10" stroke-linecap="round" opacity=".13"/>
+  <ellipse cx="294" cy="359" rx="132" ry="58" fill="#020504" opacity=".62"/>
+  <ellipse cx="294" cy="341" rx="111" ry="48" fill="url(#brass)"/>
+  <ellipse cx="294" cy="338" rx="78" ry="34" fill="#020504"/>
+  <path d="M298 338V116" stroke="#e4d2a0" stroke-width="15" stroke-linecap="round"/>
+  <path d="M306 124 432 165 306 224Z" fill="#d6b462"/>
+  <circle cx="172" cy="300" r="84" fill="#000" opacity=".32"/>
+  <circle cx="158" cy="276" r="82" fill="url(#ball)"/>
+  <g fill="#607068" opacity=".5">
+    <circle cx="132" cy="245" r="7"/><circle cx="164" cy="232" r="7"/><circle cx="192" cy="252" r="7"/>
+    <circle cx="119" cy="280" r="7"/><circle cx="156" cy="272" r="7"/><circle cx="190" cy="290" r="7"/>
+    <circle cx="136" cy="314" r="7"/><circle cx="174" cy="318" r="7"/>
+  </g>
+  <circle cx="126" cy="235" r="15" fill="#fff" opacity=".72"/>
+</svg>
