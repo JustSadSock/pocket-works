@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./shared/mobile-runtime.css">
   <link rel="stylesheet" href="./shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./launcher-performance.css">
 </head>
 <body>
   <div class="shelf-atmosphere" aria-hidden="true">
@@ -21,7 +22,7 @@
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
       <div class="brand-lockup">
-        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.5</p>
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.6</p>
         <h1>Pocket<br>Works</h1>
       </div>
 
@@ -137,9 +138,9 @@
       <p><span id="sync-status">Registry not synced</span><span aria-hidden="true"> / </span><span id="offline-count">0 offline-ready</span></p>
       <button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button>
     </footer>
-  </main>
 
-  <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
+    <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
+  </main>
 
   <template id="app-card-template">
     <article class="app-entry">
@@ -173,8 +174,9 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.5.0"
+    data-app-version="0.6.0"
   ></script>
+  <script src="./shared/view-transition-guard.js" type="module"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

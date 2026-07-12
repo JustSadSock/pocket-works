@@ -132,6 +132,10 @@ export async function registerManagedServiceWorker(options = {}) {
     waitingWorker = worker;
     waitingInfo = await workerInfo(worker) || {};
 
+    if (currentVersion && waitingInfo.version === currentVersion) {
+      return;
+    }
+
     const detail = {
       registration,
       worker,

@@ -1,0 +1,9 @@
+.app-shell,
+.hero {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.specimen {
+  contain: layout paint;
+}

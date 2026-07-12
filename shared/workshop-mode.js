@@ -69,6 +69,7 @@ export function createWorkshopMode(options = {}) {
     onReset
   } = options;
 
+  const releaseVersion = document.querySelector('script[data-update-manager]')?.dataset.appVersion || version;
   const controller = new AbortController();
   const signal = controller.signal;
   const fpsProbe = createFpsProbe();
@@ -111,7 +112,7 @@ export function createWorkshopMode(options = {}) {
     </div>
   `;
 
-  root.querySelector('#workshop-title').textContent = `${appName}${version ? ` · ${version}` : ''}`;
+  root.querySelector('#workshop-title').textContent = `${appName}${releaseVersion ? ` · ${releaseVersion}` : ''}`;
   const panel = root.querySelector('.workshop-mode__panel');
   const status = root.querySelector('.workshop-mode__status');
   const metrics = root.querySelector('[data-workshop-metrics]');
@@ -120,7 +121,7 @@ export function createWorkshopMode(options = {}) {
   const render = async () => {
     currentReport = await collectDiagnostics({
       appName,
-      version,
+      version: releaseVersion,
       cachePrefix,
       storageNamespace,
       fps: fpsProbe.value,
@@ -201,7 +202,7 @@ export function createWorkshopMode(options = {}) {
   }, { signal });
   root.querySelector('[data-workshop-export]').addEventListener('click', async () => {
     await render();
-    downloadJson(currentReport, `${appName}-${version || 'diagnostics'}-report.json`);
+    downloadJson(currentReport, `${appName}-${releaseVersion || 'diagnostics'}-report.json`);
   }, { signal });
   root.querySelector('[data-workshop-clear-errors]').addEventListener('click', () => {
     errorCollector.clear();

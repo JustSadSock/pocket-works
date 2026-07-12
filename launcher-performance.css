@@ -1,0 +1,16 @@
+.preview-scan {
+  inset: -42px 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 20px,
+    color-mix(in srgb, var(--entry-accent) 18%, transparent) 20px 22px,
+    transparent 22px 42px
+  );
+  background-size: 100% 42px;
+  will-change: transform;
+}
+
+@keyframes preview-scan {
+  from { transform: translateY(0); }
+  to { transform: translateY(42px); }
+}

@@ -16,11 +16,11 @@ function requireIncludes(source, fragments, label) {
 }
 
 function staticString(source, name) {
-  return source.match(new RegExp(`(?:const|let)\\s+${name}\\s*=\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`))?.[1] || null;
+  return source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*['"]([^'"]+)['"]`))?.[1] || null;
 }
 
 function staticArray(source, name) {
-  const match = source.match(new RegExp(`(?:const|let)\\s+${name}\\s*=\\s*(\\[[\\s\\S]*?\\]);`));
+  const match = source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*(\[[\s\S]*?\]);`));
   if (!match) return null;
   try { return Function(`"use strict"; return (${match[1]});`)(); } catch { return null; }
 }
@@ -53,7 +53,16 @@ function validateEnhancedWorker(source, label, expected) {
 }
 
 const managerJs = await read('shared/update-manager.js');
-requireIncludes(managerJs, ['export async function registerManagedServiceWorker', 'GET_UPDATE_INFO', 'SKIP_WAITING', 'controllerchange', 'appupdateavailable', 'registration.update()', 'data-update-manager'], 'shared/update-manager.js');
+requireIncludes(managerJs, [
+  'export async function registerManagedServiceWorker',
+  'GET_UPDATE_INFO',
+  'SKIP_WAITING',
+  'controllerchange',
+  'appupdateavailable',
+  'registration.update()',
+  'data-update-manager',
+  'waitingInfo.version === currentVersion'
+], 'shared/update-manager.js');
 
 const enhancedManager = await read('shared/enhanced-update-manager.ts');
 requireIncludes(enhancedManager, ['virtual:pwa-register', 'onNeedRefresh', 'registerEnhancedUpdate', 'Update now'], 'shared/enhanced-update-manager.ts');

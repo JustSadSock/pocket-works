@@ -53,6 +53,9 @@ jobs:
       - name: Validate Enhanced runtime
         run: npm run validate:enhanced
 
+      - name: Validate browser quality contract
+        run: npm run validate:quality
+
       - name: Test published Enhanced apps
         run: npm run test:enhanced
 
@@ -89,3 +92,73 @@ jobs:
           name: enhanced-smoke-report
           path: enhanced-smoke-report.txt
           if-no-files-found: error
+          retention-days: 14
+
+  browser-quality:
+    needs: health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install browser engines
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Assemble browser test site
+        run: npm run build:quality-site
+
+      - name: Run Playwright mobile matrix
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  lighthouse:
+    needs: health
+    runs-on: ubuntu-latest
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Assemble Lighthouse site
+        run: npm run build:quality-site
+
+      - name: Run Lighthouse budgets
+        run: npm run test:lighthouse
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: |
+            quality-artifacts/lighthouse
+            .lighthouseci
+          if-no-files-found: warn
+          retention-days: 14
