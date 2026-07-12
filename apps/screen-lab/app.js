@@ -4,10 +4,12 @@ import {
 } from '../../shared/mobile-runtime.js';
 import { createRafLoop } from '../../shared/capabilities/motion.js';
 import { createVersionedStore } from '../../shared/capabilities/storage.js';
+import { copyText, downloadJson, serializeJson } from '../../shared/capabilities/transfer.js';
 import { toggleFullscreen, watchOrientation } from '../../shared/capabilities/device.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
-installMobileRuntime();
+const APP_VERSION = '1.4.0';
+const mobileRuntime = installMobileRuntime();
 
 const preferences = createVersionedStore({
   namespace: 'pocket-works:screen-lab',
@@ -25,6 +27,9 @@ const touchCount = document.querySelector('#touch-count');
 const safeProbe = document.querySelector('.safe-probe');
 const toast = document.querySelector('#toast');
 const statusOrb = document.querySelector('#status-orb');
+const freezeButton = document.querySelector('[data-action="freeze"]');
+const viewportPlotVisual = document.querySelector('#viewport-plot-visual');
+const pressureNeedle = document.querySelector('#pressure-needle');
 
 const readings = {
   viewport: document.querySelector('#viewport'),
@@ -42,7 +47,16 @@ const readings = {
   safeTop: document.querySelector('#safe-top'),
   safeRight: document.querySelector('#safe-right'),
   safeBottom: document.querySelector('#safe-bottom'),
-  safeLeft: document.querySelector('#safe-left')
+  safeLeft: document.querySelector('#safe-left'),
+  visualViewport: document.querySelector('#visual-viewport'),
+  visualOffset: document.querySelector('#visual-offset'),
+  visualScale: document.querySelector('#visual-scale'),
+  keyboardInset: document.querySelector('#keyboard-inset'),
+  pointerType: document.querySelector('#pointer-type'),
+  pointerPosition: document.querySelector('#pointer-position'),
+  pressure: document.querySelector('#pressure-live'),
+  gesture: document.querySelector('#gesture'),
+  peakPoints: document.querySelector('#peak-points')
 };
 
 const orientationFigure = document.querySelector('#orientation-figure');
@@ -57,6 +71,17 @@ let toastTimer;
 let lastFrame = performance.now();
 let frameSamples = [];
 let orientationStop = null;
+let gestureBaseline = null;
+
+const pointerState = {
+  type: 'idle',
+  x: null,
+  y: null,
+  pressure: 0,
+  scale: 1,
+  rotation: 0,
+  peakPoints: 0
+};
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const motionStates = [
@@ -94,19 +119,56 @@ function readOrientation() {
   readings.angle.textContent = Number.isFinite(angle) ? `${angle}° rotation` : 'Angle unavailable';
 }
 
+function readVisualViewport() {
+  const state = mobileRuntime.getViewportState();
+  const viewport = window.visualViewport;
+  const visualWidth = viewport?.width ?? state.width;
+  const visualHeight = viewport?.height ?? state.height;
+  const offsetLeft = viewport?.offsetLeft ?? 0;
+  const offsetTop = viewport?.offsetTop ?? state.offsetTop;
+  const scale = viewport?.scale ?? 1;
+
+  readings.visualViewport.textContent = `${Math.round(visualWidth)} × ${Math.round(visualHeight)}`;
+  readings.visualOffset.textContent = `${Math.round(offsetLeft)}, ${Math.round(offsetTop)}px`;
+  readings.visualScale.textContent = `${scale.toFixed(2)}×`;
+  readings.keyboardInset.textContent = `${Math.round(state.keyboardInset)}px`;
+
+  const layoutWidth = Math.max(window.innerWidth, 1);
+  const layoutHeight = Math.max(window.innerHeight, 1);
+  viewportPlotVisual.style.width = `${clamp(visualWidth / layoutWidth, 0.08, 1) * 100}%`;
+  viewportPlotVisual.style.height = `${clamp(visualHeight / layoutHeight, 0.08, 1) * 100}%`;
+  viewportPlotVisual.style.left = `${clamp(offsetLeft / layoutWidth, 0, 1) * 100}%`;
+  viewportPlotVisual.style.top = `${clamp(offsetTop / layoutHeight, 0, 1) * 100}%`;
+}
+
+function updateNetworkReading() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!navigator.onLine) {
+    readings.network.textContent = 'offline';
+    return;
+  }
+  readings.network.textContent = connection?.effectiveType ? `online · ${connection.effectiveType}` : 'online';
+}
+
+function updateVisibilityReading() {
+  readings.visibility.textContent = frozen ? 'frozen' : document.visibilityState;
+}
+
 function updateMetrics() {
   const viewport = window.visualViewport;
-  const vw = Math.round(viewport?.width || window.innerWidth);
-  const vh = Math.round(viewport?.height || window.innerHeight);
+  const vw = Math.max(1, Math.round(viewport?.width || window.innerWidth));
+  const vh = Math.max(1, Math.round(viewport?.height || window.innerHeight));
   const ratio = vw / vh;
   readings.viewport.textContent = `${vw} × ${vh}`;
   readings.dpr.textContent = (window.devicePixelRatio || 1).toFixed(2);
   readings.aspect.textContent = ratio >= 1 ? ratio.toFixed(2) : `1:${(1 / ratio).toFixed(2)}`;
   readings.displayMode.textContent = getDisplayMode();
-  readings.network.textContent = navigator.onLine ? 'online' : 'offline';
   readings.platform.textContent = navigator.userAgentData?.platform || navigator.platform || 'unknown';
+  updateNetworkReading();
+  updateVisibilityReading();
   readSafeArea();
   readOrientation();
+  readVisualViewport();
 }
 
 function resizeCanvas() {
@@ -181,17 +243,19 @@ function animationLoop(now) {
   if (!frozen) drawParticles();
 }
 
-function createTouchDot(pointerId, x, y) {
-  let dot = activeTouches.get(pointerId);
+function createTouchDot(event) {
+  let dot = activeTouches.get(event.pointerId);
   if (!dot) {
     dot = document.createElement('span');
     dot.className = 'touch-dot';
     touchZone.append(dot);
-    activeTouches.set(pointerId, dot);
+    activeTouches.set(event.pointerId, dot);
   }
   const rect = touchZone.getBoundingClientRect();
-  dot.style.left = `${x - rect.left}px`;
-  dot.style.top = `${y - rect.top}px`;
+  const pressure = clamp(Number.isFinite(event.pressure) ? event.pressure : 0, 0, 1);
+  dot.style.left = `${event.clientX - rect.left}px`;
+  dot.style.top = `${event.clientY - rect.top}px`;
+  dot.style.setProperty('--dot-pressure', String(Math.max(pressure, event.buttons ? 0.45 : 0.2)));
   touchCount.textContent = String(activeTouches.size);
 }
 
@@ -201,6 +265,71 @@ function removeTouchDot(pointerId) {
   touchCount.textContent = String(activeTouches.size);
 }
 
+function gestureValues(activePointers) {
+  if (activePointers.size < 2) {
+    gestureBaseline = null;
+    return { scale: 1, rotation: 0 };
+  }
+
+  const points = [...activePointers.values()]
+    .sort((a, b) => a.pointerId - b.pointerId)
+    .slice(0, 2);
+  const [first, second] = points;
+  const dx = second.clientX - first.clientX;
+  const dy = second.clientY - first.clientY;
+  const distance = Math.max(Math.hypot(dx, dy), 1);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const key = points.map((point) => point.pointerId).join(':');
+
+  if (!gestureBaseline || gestureBaseline.key !== key) {
+    gestureBaseline = { key, distance, angle };
+  }
+
+  let rotation = angle - gestureBaseline.angle;
+  while (rotation > 180) rotation -= 360;
+  while (rotation < -180) rotation += 360;
+  return {
+    scale: clamp(distance / gestureBaseline.distance, 0.1, 9.99),
+    rotation
+  };
+}
+
+function renderPointerState() {
+  readings.pointerType.textContent = pointerState.type;
+  readings.pointerPosition.textContent = pointerState.x == null ? '—' : `${Math.round(pointerState.x)}, ${Math.round(pointerState.y)}`;
+  readings.pressure.textContent = pointerState.pressure.toFixed(2);
+  readings.gesture.textContent = `${pointerState.scale.toFixed(2)}× / ${Math.round(pointerState.rotation)}°`;
+  readings.peakPoints.textContent = String(pointerState.peakPoints);
+  pressureNeedle.style.setProperty('--pressure', String(pointerState.pressure));
+}
+
+function updatePointerTelemetry(event, activePointers) {
+  const gesture = gestureValues(activePointers);
+  pointerState.type = event.pointerType || 'unknown';
+  pointerState.x = event.clientX;
+  pointerState.y = event.clientY;
+  pointerState.pressure = clamp(Number.isFinite(event.pressure) ? event.pressure : 0, 0, 1);
+  pointerState.scale = gesture.scale;
+  pointerState.rotation = gesture.rotation;
+  pointerState.peakPoints = Math.max(pointerState.peakPoints, activePointers.size);
+  renderPointerState();
+}
+
+function resetPointerTelemetry() {
+  gestureBaseline = null;
+  pointerState.type = 'idle';
+  pointerState.x = null;
+  pointerState.y = null;
+  pointerState.pressure = 0;
+  pointerState.scale = 1;
+  pointerState.rotation = 0;
+  pointerState.peakPoints = 0;
+  for (const dot of activeTouches.values()) dot.remove();
+  activeTouches.clear();
+  touchCount.textContent = '0';
+  renderPointerState();
+}
+
 function updateClock() {
   readings.clock.textContent = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
@@ -208,7 +337,7 @@ function updateClock() {
 }
 
 function updateNetwork() {
-  readings.network.textContent = navigator.onLine ? 'online' : 'offline';
+  updateNetworkReading();
   showToast(navigator.onLine ? 'Network restored' : 'Offline mode active');
 }
 
@@ -217,6 +346,8 @@ function applyMotionLevel(level) {
   const state = motionStates[motionLevel];
   root.style.setProperty('--motion-scale', state.scale);
   readings.motion.textContent = state.label;
+  statusOrb.dataset.motionState = state.label;
+  statusOrb.setAttribute('aria-label', `Motion intensity: ${state.label}. Activate to change.`);
 }
 
 function cycleMotion() {
@@ -243,13 +374,83 @@ async function enableDeviceMotion() {
   return true;
 }
 
+function setFrozen(nextFrozen) {
+  frozen = Boolean(nextFrozen);
+  body.classList.toggle('frozen', frozen);
+  freezeButton.textContent = frozen ? 'Resume' : 'Freeze';
+  freezeButton.setAttribute('aria-pressed', String(frozen));
+  updateVisibilityReading();
+}
+
+function collectSnapshot() {
+  const viewportState = mobileRuntime.getViewportState();
+  return {
+    app: 'Screen Lab',
+    version: APP_VERSION,
+    capturedAt: new Date().toISOString(),
+    displayMode: getDisplayMode(),
+    viewport: {
+      layout: { width: window.innerWidth, height: window.innerHeight },
+      visual: {
+        width: window.visualViewport?.width ?? viewportState.width,
+        height: window.visualViewport?.height ?? viewportState.height,
+        offsetLeft: window.visualViewport?.offsetLeft ?? 0,
+        offsetTop: window.visualViewport?.offsetTop ?? viewportState.offsetTop,
+        scale: window.visualViewport?.scale ?? 1
+      },
+      keyboardInset: viewportState.keyboardInset,
+      dpr: window.devicePixelRatio || 1,
+      safeArea: {
+        top: readings.safeTop.textContent,
+        right: readings.safeRight.textContent,
+        bottom: readings.safeBottom.textContent,
+        left: readings.safeLeft.textContent
+      }
+    },
+    orientation: {
+      type: readings.orientation.textContent,
+      angle: readings.angle.textContent
+    },
+    runtime: {
+      online: navigator.onLine,
+      network: readings.network.textContent,
+      platform: readings.platform.textContent,
+      visibility: readings.visibility.textContent,
+      motion: readings.motion.textContent,
+      fps: Number(readings.fps.textContent) || null
+    },
+    pointer: { ...pointerState }
+  };
+}
+
+async function exportSnapshot() {
+  const snapshot = collectSnapshot();
+  try {
+    const copied = await copyText(serializeJson(snapshot));
+    if (copied) {
+      showToast('Diagnostic snapshot copied');
+      return;
+    }
+  } catch {
+    // Fall through to a local JSON download when clipboard access is blocked.
+  }
+  downloadJson(snapshot, `screen-lab-${APP_VERSION}-snapshot.json`);
+  showToast('Snapshot downloaded');
+}
+
 function resetLab() {
   particles.length = 0;
+  context.clearRect(0, 0, width, height);
   root.style.setProperty('--mx', '0');
   root.style.setProperty('--my', '0');
+  orientationStop?.();
+  orientationStop = null;
   preferences.reset();
   applyMotionLevel(1);
-  readings.visibility.textContent = document.visibilityState;
+  setFrozen(false);
+  resetPointerTelemetry();
+  frameSamples = [];
+  readings.fps.textContent = '—';
   showToast('Lab reset');
 }
 
@@ -258,24 +459,30 @@ window.addEventListener('pointermove', (event) => {
 }, { passive: true });
 
 window.addEventListener('pointerdown', (event) => {
-  if (!frozen) spawnParticle(event.clientX, event.clientY, 0.75, event.pointerId % 3);
+  if (!frozen && !event.target.closest?.('#touch-zone')) {
+    spawnParticle(event.clientX, event.clientY, 0.75, event.pointerId % 3);
+  }
 }, { passive: true });
 
 bindPointerGesture(touchZone, {
-  onStart(event) {
-    createTouchDot(event.pointerId, event.clientX, event.clientY);
-    spawnParticle(event.clientX, event.clientY, 1.25, event.pointerId % 3);
+  onStart(event, activePointers) {
+    createTouchDot(event);
+    updatePointerTelemetry(event, activePointers);
+    if (!frozen) spawnParticle(event.clientX, event.clientY, 1.25, event.pointerId % 3);
     navigator.vibrate?.(10);
   },
-  onMove(event) {
-    createTouchDot(event.pointerId, event.clientX, event.clientY);
-    if (Math.random() > 0.62) spawnParticle(event.clientX, event.clientY, 0.38, event.pointerId % 3);
+  onMove(event, activePointers) {
+    createTouchDot(event);
+    updatePointerTelemetry(event, activePointers);
+    if (!frozen && Math.random() > 0.62) spawnParticle(event.clientX, event.clientY, 0.38, event.pointerId % 3);
   },
-  onEnd(event) {
+  onEnd(event, activePointers) {
     removeTouchDot(event.pointerId);
+    updatePointerTelemetry(event, activePointers);
   },
-  onCancel(event) {
+  onCancel(event, activePointers) {
     removeTouchDot(event.pointerId);
+    updatePointerTelemetry(event, activePointers);
   }
 });
 
@@ -300,10 +507,7 @@ document.querySelector('.control-row').addEventListener('click', async (event) =
   }
 
   if (action === 'freeze') {
-    frozen = !frozen;
-    body.classList.toggle('frozen', frozen);
-    button.textContent = frozen ? 'Resume' : 'Freeze';
-    readings.visibility.textContent = frozen ? 'frozen' : document.visibilityState;
+    setFrozen(!frozen);
     showToast(frozen ? 'Motion suspended' : 'Motion resumed');
   }
 
@@ -313,12 +517,13 @@ document.querySelector('.control-row').addEventListener('click', async (event) =
     updateMetrics();
   }
 
+  if (action === 'snapshot') await exportSnapshot();
   if (action === 'reset') resetLab();
 });
 
 createWorkshopMode({
   appName: 'Screen Lab',
-  version: '1.3.0',
+  version: APP_VERSION,
   cachePrefix: 'screen-lab-',
   storageNamespace: 'pocket-works:screen-lab',
   onReset: resetLab
@@ -329,12 +534,15 @@ window.addEventListener('appviewportchange', updateMetrics, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(updateMetrics, 180), { passive: true });
 window.addEventListener('online', updateNetwork);
 window.addEventListener('offline', updateNetwork);
-document.addEventListener('visibilitychange', () => {
-  readings.visibility.textContent = document.visibilityState;
-});
+document.addEventListener('visibilitychange', updateVisibilityReading);
 document.addEventListener('fullscreenchange', updateMetrics);
+window.addEventListener('pagehide', () => {
+  orientationStop?.();
+  orientationStop = null;
+}, { once: true });
 
 applyMotionLevel(motionLevel);
+renderPointerState();
 resizeCanvas();
 updateClock();
 setInterval(updateClock, 1000);
