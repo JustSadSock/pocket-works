@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'doctrina-';
-const CACHE_NAME = 'doctrina-v0.1.0';
-const APP_VERSION = '0.1.0';
+const CACHE_NAME = 'doctrina-v0.1.1';
+const APP_VERSION = '0.1.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Added a seeded procedural state simulation with regions, factions and quarterly causality.',
   'Added laws, doctrines and conditional technologies that change simulation rules rather than flat bonuses.',
   'Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support.'
@@ -10,6 +11,7 @@ const RELEASE_NOTES = [
 const APP_SHELL = [
   './',
   './index.html',
+  './app.config.json',
   './styles.css',
   './styles/part-01.css',
   './styles/part-02.css',
