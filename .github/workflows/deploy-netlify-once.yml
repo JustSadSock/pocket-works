@@ -36,7 +36,13 @@ jobs:
         id: build
         if: steps.install.outcome == 'success'
         continue-on-error: true
-        run: npm run build:site
+        shell: bash
+        run: |
+          set +e
+          npm run build:site 2>&1 | tee /tmp/pocket-works-build.log
+          exit_code=${PIPESTATUS[0]}
+          sed -r 's/\x1B\[[0-9;]*[mK]//g' /tmp/pocket-works-build.log | tail -n 180 > /tmp/pocket-works-build-tail.log
+          exit "$exit_code"
 
       - name: Check Netlify credentials
         id: auth
@@ -70,10 +76,15 @@ jobs:
           printf '{\n  "sourceCommit": "%s",\n  "recordedAt": "%s",\n  "install": "%s",\n  "build": "%s",\n  "auth": "%s",\n  "deploy": "%s"\n}\n' \
             "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INSTALL_OUTCOME" "$BUILD_OUTCOME" "$AUTH_OUTCOME" "$DEPLOY_OUTCOME" \
             > .github/deploy-status.json
+          if [ -f /tmp/pocket-works-build-tail.log ]; then
+            cp /tmp/pocket-works-build-tail.log .github/deploy-build.log
+          else
+            printf 'Build step did not produce a log.\n' > .github/deploy-build.log
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/deploy-status.json
-          git commit -m "Record Netlify deployment status" || exit 0
+          git add .github/deploy-status.json .github/deploy-build.log
+          git commit -m "Record Netlify deployment diagnostics" || exit 0
           git push
 
       - name: Fail unsuccessful deployment
