@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.4.1';
-const APP_VERSION = '1.4.1';
+const CACHE_NAME = 'screen-lab-v1.4.2';
+const APP_VERSION = '1.4.2';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Hardened managed updates by comparing waiting builds against the service worker that is actually active.',
   'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.',
   'Added one-tap diagnostic snapshots with clipboard and JSON download fallback.',
