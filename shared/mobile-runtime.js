@@ -8,6 +8,11 @@ function px(value) {
   return `${Math.max(0, Math.round(value * 100) / 100)}px`;
 }
 
+function closestElement(target, selector) {
+  const element = target instanceof Element ? target : target?.parentElement;
+  return element?.closest?.(selector) || null;
+}
+
 export function getViewportState() {
   const viewport = window.visualViewport;
   const width = viewport?.width ?? window.innerWidth;
@@ -149,7 +154,9 @@ export function installMobileRuntime(options = {}) {
   const controller = new AbortController();
   const signal = controller.signal;
   const pressSelector = options.pressSelector ?? 'button, [role="button"], [data-pressable]';
-  const calloutSelector = options.calloutSelector ?? '[data-block-callout], [data-gesture-surface]';
+  const selectableSelector = options.selectableSelector
+    ?? 'input, textarea, select, [contenteditable="true"], [data-selectable], .selectable-content';
+  const calloutSelector = options.calloutSelector ?? 'body';
 
   root.classList.add('has-mobile-runtime');
   writeViewportState();
@@ -166,8 +173,19 @@ export function installMobileRuntime(options = {}) {
     if (image && !image.hasAttribute('data-native-drag')) event.preventDefault();
   }, { capture: true, signal });
 
+  document.addEventListener('selectstart', (event) => {
+    if (!closestElement(event.target, selectableSelector)) event.preventDefault();
+  }, { capture: true, signal });
+
+  document.addEventListener('selectionchange', () => {
+    const selection = document.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    if (!closestElement(selection.anchorNode, selectableSelector)) selection.removeAllRanges();
+  }, { signal });
+
   document.addEventListener('contextmenu', (event) => {
-    if (event.target.closest?.(calloutSelector)) event.preventDefault();
+    if (closestElement(event.target, selectableSelector)) return;
+    if (closestElement(event.target, calloutSelector)) event.preventDefault();
   }, { capture: true, signal });
 
   document.addEventListener('gesturestart', (event) => {
