@@ -36,8 +36,8 @@ for (const dependency of ['vite', 'vite-plugin-pwa', 'vitest', 'typescript', 'pi
   }
 }
 
-if (!Array.isArray(packageJson.workspaces) || !packageJson.workspaces.includes('apps/*')) {
-  errors.push('root package.json must declare apps/* as an npm workspace');
+if (!Array.isArray(packageJson.workspaces) || !packageJson.workspaces.includes('apps/[!_]*')) {
+  errors.push('root package.json must declare non-template apps as npm workspaces');
 }
 
 const manager = await read('shared/enhanced-update-manager.ts');
