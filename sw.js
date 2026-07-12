@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.0';
-const APP_VERSION = '0.6.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.1';
+const APP_VERSION = '0.6.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added automated Chromium and WebKit mobile quality gates.',
-  'Added Lighthouse performance, accessibility and resource budgets.',
-  'Fixed mobile detail layering and false same-version update prompts.'
+  'Restricted application details to the preview thumbnail.',
+  'Added regression coverage for accidental detail opening.',
+  'Re-ran structural, browser and performance quality gates.'
 ];
 const APP_SHELL = [
   './',
