@@ -83,3 +83,21 @@ test('launcher retains personal shelf state after reload', async ({ page }) => {
   await assertNoHorizontalOverflow(page);
   monitor.assertClean();
 });
+
+test('KROMKA exit controls use native links and return to the Pocket Works launcher', async ({ page }) => {
+  const monitor = monitorUnexpectedBrowserOutput(page);
+  await openStablePage(page, '/apps/kromka/', '#startScreen');
+
+  const exits = page.locator('[data-shell-exit]');
+  await expect(exits).toHaveCount(3);
+  for (const exit of await exits.all()) {
+    await expect(exit).toHaveAttribute('href', '../../');
+  }
+
+  await Promise.all([
+    page.waitForURL((url) => url.pathname === '/'),
+    exits.first().click()
+  ]);
+  await expect(page.locator('h1')).toContainText('Pocket');
+  monitor.assertClean();
+});
