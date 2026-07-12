@@ -73,12 +73,16 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 ├── apps.json
 ├── package.json
 ├── netlify.toml
+├── playwright.config.ts
+├── lighthouserc.json
+├── tests/e2e/
 ├── scripts/
 │   ├── new-app.mjs
 │   ├── presets.mjs
 │   ├── enhanced-presets.mjs
 │   ├── build-enhanced.mjs
 │   ├── test-enhanced.mjs
+│   ├── serve-site.mjs
 │   └── validate*.mjs
 ├── shared/
 │   ├── mobile-runtime.*
@@ -91,6 +95,7 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 │   ├── PUBLISHING.md
 │   ├── SHARED-CAPABILITIES.md
 │   ├── ENHANCED-APPS.md
+│   ├── QUALITY-GATES.md
 │   ├── ENVIRONMENT-ROADMAP.md
 │   └── IMPLEMENTATION-PLAN.md
 └── apps/
@@ -127,26 +132,42 @@ Every release must update version, release date, changelog, cache identity and m
 
 ## Build and health
 
-Install the root build toolchain:
+Install the root toolchain:
 
 ```bash
 npm install
 ```
 
-Build and test published Enhanced applications:
-
-```bash
-npm run build:enhanced
-npm run test:enhanced
-```
-
-Run the same complete suite used by GitHub Actions and Netlify:
+Run the structural, generator and unit-test suite used by GitHub Actions and Netlify:
 
 ```bash
 npm run health
 ```
 
 This builds Enhanced apps, validates both runtime contracts, checks PWA scope and metadata, runs TypeScript and Vitest, and smoke-tests all five Quick plus four Enhanced Forge presets.
+
+## Real-browser quality gates
+
+Prepare the production preview and install the browser engines once:
+
+```bash
+npm run build:quality-site
+npx playwright install chromium webkit
+```
+
+Run the mobile Chromium/WebKit matrix:
+
+```bash
+npm run test:e2e
+```
+
+Run Lighthouse performance, accessibility and resource budgets:
+
+```bash
+npm run test:lighthouse
+```
+
+The browser suite covers portrait and landscape layouts, launcher user flows, Screen Lab controls, Workshop Mode, console errors, native touch styles and Chromium offline Service Worker reloads. CI retains screenshots, traces, failure video and private Lighthouse reports. Full thresholds and maintenance rules are in [`docs/QUALITY-GATES.md`](./docs/QUALITY-GATES.md).
 
 ## Finish an app
 
@@ -157,7 +178,8 @@ This builds Enhanced apps, validates both runtime contracts, checks PWA scope an
 5. Replace the generated icon with a deliberate application symbol.
 6. Update version, release date and changelog before publishing.
 7. Run `npm run health`.
-8. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode, Workshop actions and update activation.
+8. Run relevant Playwright user flows and Lighthouse budgets.
+9. Test installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode, Workshop actions and update activation on a real phone when the release changes those paths.
 
 ## Product roadmap
 
