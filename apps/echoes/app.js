@@ -576,7 +576,7 @@ createWorkshopMode({
   appName: 'ECHOES',
   version: APP_VERSION,
   cachePrefix: 'echoes-',
-  storageNamespace: STORAGE_NAMESPACE,
+  storageNamespace: 'pocket-works:echoes',
   onReset: resetEchoes
 });
 
