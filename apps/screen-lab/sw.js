@@ -1,12 +1,14 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.0.0';
+const CACHE_NAME = 'screen-lab-v1.1.0';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.webmanifest',
-  './icons/icon.svg'
+  './icons/icon.svg',
+  '../../shared/mobile-runtime.css',
+  '../../shared/mobile-runtime.js'
 ];
 
 self.addEventListener('install', (event) => {
