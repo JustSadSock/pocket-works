@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.4.0';
-const APP_VERSION = '0.4.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.5.0';
+const APP_VERSION = '0.5.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added managed updates for the launcher and every generated app.',
-  'New builds now show release notes before activation.',
-  'Published application versions and release dates are visible in the catalog.'
+  'Rebuilt the launcher as a searchable personal application shelf.',
+  'Added saved applications, recents, filters, release details and quick actions.',
+  'Added procedural previews and live offline-readiness indicators.'
 ];
 const APP_SHELL = [
   './',
@@ -15,6 +15,8 @@ const APP_SHELL = [
   './apps.json',
   './manifest.webmanifest',
   './shared/pocket-works-icon.svg',
+  './shared/mobile-runtime.css',
+  './shared/mobile-runtime.js',
   './shared/update-manager.css',
   './shared/update-manager.js'
 ];
@@ -47,6 +49,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function networkFirst(request, fallback = './') {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const copy = response.clone();
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request.mode === 'navigate' ? fallback : request, copy);
+    }
+    return response;
+  } catch {
+    return caches.match(request).then((cached) => cached || caches.match(fallback));
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
@@ -54,15 +70,12 @@ self.addEventListener('fetch', (event) => {
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
-          return response;
-        })
-        .catch(() => caches.match('./'))
-    );
+    event.respondWith(networkFirst(event.request, './'));
+    return;
+  }
+
+  if (requestUrl.pathname.endsWith('/apps.json')) {
+    event.respondWith(networkFirst(event.request, './apps.json'));
     return;
   }
 
