@@ -182,11 +182,14 @@ await validateServiceWorker('root sw.js', 'sw.js', 'pocket-works-launcher-');
 
 try {
   const launcherSource = await readText('app.js');
-  if (!launcherSource.includes("serviceWorker.register('./sw.js')") && !launcherSource.includes('serviceWorker.register("./sw.js")')) {
-    fail('root app.js must register ./sw.js');
+  const launcherHtml = await readText('index.html');
+  const directRegistration = launcherSource.includes("serviceWorker.register('./sw.js')") || launcherSource.includes('serviceWorker.register("./sw.js")');
+  const managedRegistration = launcherHtml.includes('data-update-manager') && launcherHtml.includes('data-service-worker="./sw.js"');
+  if (!directRegistration && !managedRegistration) {
+    fail('root launcher must register ./sw.js directly or through the managed update script');
   }
 } catch (error) {
-  fail(`root app.js could not be read: ${error.message}`);
+  fail(`root launcher registration could not be validated: ${error.message}`);
 }
 
 const apps = await readJson('apps.json');
