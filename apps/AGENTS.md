@@ -1,211 +1,206 @@
-# AGENTS.md — Native mobile experience rules
+# AGENTS.md — Native mobile application rules
 
-These rules apply to every application under `apps/`. They extend the repository-level `AGENTS.md`.
+These rules apply to every application under `apps/` and extend the repository-level `AGENTS.md`.
 
-The default expectation is not merely “mobile-friendly web”. Every application should behave like deliberate installed software. Browser-native accidents, page-like behavior and generic web feedback are defects unless the concept explicitly requires them.
+The default target is installed-software behavior, not merely a responsive website. Browser accidents, page-like feedback and generic web interaction are defects unless the concept explicitly needs them.
 
-## 1. App-shell behavior
+## 1. Shared mobile runtime contract
 
-- Build around a stable application shell, not a document page with controls placed on it.
-- Use `100dvh` and safe-area insets for full-screen apps. Do not rely on `100vh` alone.
-- Avoid accidental horizontal overflow at every supported width.
-- A full-screen tool or game should normally keep the outer document fixed and give scrolling responsibility to explicit internal regions.
-- Use `overscroll-behavior` to prevent browser-like chaining and page bounce where supported.
-- Do not allow the body to visibly expose an unstyled background during overscroll, rotation, loading or resume.
-- Installed standalone mode and Safari browser mode must both remain usable.
-- Detect standalone mode only to refine chrome and spacing; core functionality must not depend on installation.
-- Set coherent `theme-color`, Apple web-app metadata, icons and background colors so browser chrome, launch surfaces and the application feel continuous.
-- Avoid flashes of unstyled content, abrupt font swaps and layout jumps during startup.
+Every new app must adopt the shared runtime unless a documented technical reason makes it impossible.
 
-## 2. Eliminate accidental browser behavior
+Required HTML wiring:
 
-### Text selection and callouts
-
-- Disable text selection on application chrome, controls, canvases, game surfaces, draggable objects and decorative labels.
-- Preserve selection in actual reading, copying, code, notes, input, textarea and contenteditable surfaces.
-- Disable the iOS long-press callout on non-content interactive surfaces.
-- Do not disable copying where text is a meaningful user asset.
-- Prevent browser image dragging and ghost previews on decorative and draggable images.
-- Set draggable elements explicitly rather than inheriting browser defaults.
-
-A typical baseline may include:
-
-```css
-.app-shell,
-button,
-[role="button"],
-.control,
-.interactive-surface {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-input,
-textarea,
-[contenteditable="true"],
-.selectable-content {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
-}
-
-img:not(.selectable-content img) {
-  -webkit-user-drag: none;
-  user-drag: none;
-}
+```html
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<main class="app-shell" data-app-shell>...</main>
 ```
 
-Adapt selectors to the app instead of blindly copying them.
+Required JavaScript wiring:
 
-### Zoom and double-tap behavior
+```js
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+installMobileRuntime();
+```
 
-- Do not use double-tap as an interaction unless the user explicitly requests it or the concept genuinely depends on it.
-- Prevent double-tap zoom on controls with appropriate `touch-action`, normally `manipulation`.
-- Use explicit `touch-action: pan-y`, `pan-x`, `manipulation` or `none` per region. Do not apply `touch-action: none` globally without a reason.
-- Full-screen games, canvases and direct-manipulation tools may disable page zoom when zoom would break the interaction model.
-- Reading-heavy or accessibility-sensitive apps should preserve user zoom and instead prevent accidental zoom through correct layout, gesture scoping and input sizing.
-- Inputs must normally use at least `16px` font size on iOS to avoid focus-triggered page zoom.
-- If a canvas/editor disables browser pinch zoom, provide an intentional in-app zoom mechanism when zoom is useful.
-- Never allow random viewport scaling after orientation changes, keyboard appearance or repeated taps.
+Required Service Worker shell entries:
 
-### Context menus and native gestures
+```js
+'../../shared/mobile-runtime.css',
+'../../shared/mobile-runtime.js'
+```
 
-- Suppress `contextmenu` only on surfaces where long-press is an app gesture or would produce an irrelevant browser menu.
-- Never suppress context menus globally on content that users may need to copy.
-- Avoid edge-only gestures that conflict with iOS navigation.
-- Do not depend on hover, right click, browser drag-and-drop or a desktop cursor model.
-- Do not rely on multi-touch unless it is central to the concept and a one-finger fallback would be inappropriate.
+Use the provided semantic attributes rather than duplicating global browser fixes:
 
-## 3. Touch and gesture quality
+- `data-app-shell` — stable application shell;
+- `data-ui` — non-selectable interface chrome;
+- `data-native-press` — immediate press-state utility;
+- `data-pressable` — custom pressable element;
+- `data-app-control` — app-like link/control behavior;
+- `data-gesture-surface` — app-owned gesture region with `touch-action: none`;
+- `data-touch-action="pan-x|pan-y|manipulation|none"` — explicit gesture ownership;
+- `data-block-callout` — suppress irrelevant long-press menus only on that surface;
+- `data-selectable` or `.selectable-content` — preserve copying and selection;
+- `data-native-drag` — explicitly opt an image back into browser dragging;
+- `data-keyboard-aware` — include runtime keyboard inset in bottom spacing;
+- `data-fullscreen-app` — full-screen shell with controlled overscroll.
+
+Available JavaScript helpers:
+
+- `installMobileRuntime()`;
+- `getViewportState()`;
+- `bindPointerGesture()`;
+- `capturePointer()` and `releasePointer()`;
+- `setDocumentScrollLocked()`.
+
+The shared runtime owns behavior only. Do not turn it into a common visual theme, component library or source of app-specific colors and geometry.
+
+## 2. Application shell
+
+- Build around a stable application shell, not a document page with controls placed on it.
+- Use `var(--app-viewport-height)` and runtime safe-area variables for full-screen layouts.
+- Do not rely on `100vh` alone.
+- Avoid accidental horizontal overflow at every supported width.
+- Full-screen tools and games should keep outer-document movement controlled and put scrolling in explicit internal regions.
+- Use scroll locking only while a modal, sheet, canvas mode or other interaction genuinely owns the viewport.
+- Never expose an unstyled body background during overscroll, rotation, loading or resume.
+- Safari browser mode and installed standalone mode must both work.
+- Standalone detection may refine spacing and chrome, but core functionality must not depend on installation.
+- Keep `theme-color`, Apple metadata, icons and launch background coherent with the app identity.
+- Avoid layout jumps, font flashes and abrupt startup reflow.
+
+## 3. Eliminate accidental browser behavior
+
+### Selection, callouts and dragging
+
+- Disable selection on controls, app chrome, canvases, draggable objects and decorative labels.
+- Preserve selection for reading, copying, notes, code, inputs, textareas and contenteditable surfaces.
+- Suppress iOS callouts and context menus only on surfaces where they are irrelevant or conflict with an app gesture.
+- Never disable copying when text is meaningful user content.
+- Decorative images must not create drag ghosts. Use `data-native-drag` only when native dragging is intentional.
+
+### Zoom and repeated taps
+
+- Do not use double-tap as an interaction unless explicitly required.
+- Controls must use `touch-action: manipulation` through the runtime.
+- Assign `pan-x`, `pan-y` or `none` only to regions that truly own those gestures.
+- Never apply `touch-action: none` to the entire document without a full-screen interaction reason.
+- Inputs must render at least 16 CSS pixels on iOS to avoid focus zoom.
+- Reading-heavy apps should preserve deliberate user zoom.
+- Full-screen games and direct-manipulation tools may restrict browser zoom when it would break the mechanic; provide in-app zoom when useful.
+- Orientation changes, keyboard appearance and repeated taps must never leave the viewport randomly scaled.
+
+### Native gesture conflicts
+
+- Avoid edge-only gestures that conflict with iOS back navigation.
+- Do not depend on hover, right click or desktop drag-and-drop.
+- Use multi-touch only when central to the concept.
+- Never use global `contextmenu`, `touchmove` or gesture cancellation when a scoped surface is sufficient.
+
+## 4. Touch and gesture quality
 
 - Use Pointer Events as the default unified input model.
-- Handle `pointercancel`, lost pointer capture, interrupted gestures and orientation changes.
-- Use pointer capture for drags that must remain stable when the finger leaves the element.
-- Distinguish tap, drag, long-press and scroll using deliberate time and distance thresholds.
-- A finger moving a few pixels must not accidentally activate a tap after a drag.
-- Long-press progress should be visible when the action is important.
-- Dragged objects should visibly lift, follow the finger without lag and settle into their result.
-- Interactive elements must have a clear pressed state within one rendered frame.
-- Never wait for `click` feedback before showing that a control is pressed.
-- Do not block scrolling with non-passive listeners unless gesture ownership requires it.
-- When gesture ownership is required, call `preventDefault()` only in the specific active path.
-- Tap targets should usually be at least 44×44 CSS pixels, but visual geometry may remain smaller if the hit area is enlarged invisibly.
+- Prefer `bindPointerGesture()` for drags and custom gesture surfaces.
+- Handle `pointercancel`, lost pointer capture, interruption, app suspension and orientation change.
+- Use pointer capture when a drag must remain stable after the finger leaves the element.
+- Distinguish tap, drag, long-press and scroll with deliberate distance and time thresholds.
+- A moved finger must not activate a tap after a drag.
+- Important long-press actions need visible progress.
+- Dragged objects should lift, track the finger without decorative lag and settle clearly.
+- Press feedback must appear in the first rendered frame; do not wait for `click`.
+- Use non-passive listeners and `preventDefault()` only on the active gesture path that needs them.
+- Touch targets should usually be at least 44×44 CSS pixels; invisible hit-area expansion is allowed.
 
-## 4. Native-feeling navigation
+## 5. Navigation and focused input
 
-- Navigation should preserve state and spatial context.
-- Define a consistent back behavior for every secondary screen, modal and mode.
-- A modal should dismiss predictably through a visible control and, when appropriate, a backdrop gesture.
-- Do not use browser alerts, confirms or prompts in finished applications.
-- Do not expose raw links, blue underlines or browser-style visited states unless the app is explicitly content-oriented.
-- External navigation must be deliberate and visually communicated.
-- Avoid unexpected full-page reloads. Update state in place when possible.
-- Persist important work before `pagehide`, `visibilitychange` and app suspension.
-- Resuming the app should restore the previous meaningful state rather than restarting without warning.
-- Destructive actions need undo, recovery or explicit confirmation using an in-app surface.
+- Preserve state and spatial context across screens and modes.
+- Every secondary surface needs predictable back and close behavior.
+- Do not use browser `alert`, `confirm` or `prompt` in finished apps.
+- Avoid raw blue links and visited-link styling unless the app is content-oriented.
+- External navigation must be deliberate and communicated.
+- Avoid unexpected full-page reloads.
+- Persist important work before `pagehide`, `visibilitychange` and suspension.
+- Resume into the previous meaningful state instead of silently restarting.
+- Destructive actions need undo, recovery or an in-app confirmation surface.
+- Use runtime `visualViewport` variables when the software keyboard affects layout.
+- Focused controls must remain visible above fixed toolbars and the keyboard.
+- Do not let keyboard appearance resize the composition chaotically.
+- Use appropriate `inputmode`, `autocomplete`, `enterkeyhint` and input types.
+- Do not autofocus on launch unless typing is unquestionably the primary first action.
+- Provide an intentional way to dismiss the keyboard.
 
-## 5. Keyboard and focused input behavior
+## 6. Motion and micro-interactions
 
-- Account for the software keyboard using `visualViewport` when relevant.
-- Focused controls must remain visible and must not be covered by a fixed toolbar.
-- Do not resize the entire composition chaotically when the keyboard appears.
-- Separate editing mode from navigation mode when complex gestures and text entry coexist.
-- Use suitable `inputmode`, `autocomplete`, `enterkeyhint` and input types.
-- Avoid automatically focusing an input on launch unless typing is unquestionably the first action.
-- Dismiss the keyboard intentionally; do not make users tap random empty space repeatedly.
+Motion is part of interaction design, not decoration added at the end.
 
-## 6. Motion quality
-
-Animation is part of interaction design, not decoration added after completion.
-
-### Required characteristics
-
-- Motion must be interruptible. New user input overrides or redirects the previous animation.
-- Rapid repeated actions must not queue animations into a delayed mess.
-- Animate state continuity: origin, destination, ownership and consequence should remain understandable.
-- Use transform and opacity for frequent motion. Avoid animating layout properties in continuous interactions.
-- Direct-manipulation motion should follow the finger with minimal filtering and no decorative delay.
-- Settling motion may use restrained spring behavior when physicality improves understanding.
-- Use velocity-aware releases for swipes, sheets, carousels, sliders and thrown objects where appropriate.
-- Button feedback should begin within approximately 16–60 ms.
+- Motion must be interruptible; new input overrides or redirects current animation.
+- Rapid actions must not queue into delayed animation debt.
+- Preserve origin, destination, ownership and consequence across transitions.
+- Use transform and opacity for frequent motion.
+- Direct manipulation should follow the finger with minimal filtering.
+- Use restrained spring settling and velocity-aware releases only where they improve comprehension.
+- Press response should begin within roughly 16–60 ms.
 - Small micro-interactions usually belong around 80–220 ms.
 - Medium state transitions usually belong around 180–420 ms.
-- Large scene changes may take longer only when the transition carries useful spatial information.
-- Never delay data changes, navigation or confirmation merely to finish an animation.
-- Ambient animation must stop or reduce when the app is hidden, inactive or under performance pressure.
-- Respect `prefers-reduced-motion` and provide a coherent low-motion alternative, not simply broken half-animation.
+- Never delay data changes or confirmation to finish animation.
+- Pause or reduce ambient motion while hidden, inactive or under performance pressure.
+- `prefers-reduced-motion` must produce a complete low-motion experience.
 
-### Micro-interaction standard
+Where applicable, implement:
 
-Where applicable, include:
-
-- press depth, scale, displacement, highlight or material response;
+- press depth, displacement, scale, highlight or material response;
 - toggle travel and state-color transition;
-- counter interpolation or carefully chosen snap behavior;
-- drag pickup and drop settlement;
+- drag pickup, movement and drop settlement;
 - insertion and removal that preserve surrounding context;
-- success, invalid action, blocked action and failure responses;
-- mode transitions that visibly establish the new state;
-- progress indicators tied to actual work;
-- subtle scroll-boundary and limit feedback;
+- success, blocked, invalid and failure feedback;
+- visible mode transitions;
+- progress tied to real work;
+- subtle boundary and limit feedback;
 - loading-to-content transitions without layout jumps.
 
-Do not animate everything. Strong motion hierarchy is more convincing than constant movement.
+Do not animate everything. Strong hierarchy is more convincing than constant motion.
 
-## 7. Audio and haptic feedback
+## 7. Audio, haptics and performance feel
 
-- Treat sound as optional reinforcement, never as the only feedback channel.
-- Short interaction sounds should be quiet, distinct and user-disableable.
-- Unlock Web Audio through an intentional user gesture before playback.
-- Do not autoplay sound on launch.
-- The Vibration API may be used as progressive enhancement where supported, but iOS support cannot be assumed.
-- Always provide visual feedback equivalent to any vibration or audio cue.
-- Avoid adding generic clicks to every action; sound needs a clear role in the product language.
-
-## 8. Standalone PWA polish
-
-- The installed icon, short name, orientation preference, theme colors and launch background must match the app identity.
-- Each app needs a coherent first-launch experience without marketing-site onboarding.
-- Explain installation only when useful and use platform-appropriate instructions.
-- Handle Service Worker updates visibly when stale UI or data behavior could confuse the user.
-- Do not silently trap the user on an obsolete cached version.
-- Provide an in-app update action when a new version is waiting.
-- Offline mode should feel normal, not like an error page.
-- Network-only features must disclose their status without disabling unrelated offline functionality.
-- Avoid CDN-critical dependencies unless they are cached and have an offline fallback.
-
-## 9. Performance feel
-
-- Perceived responsiveness is a product requirement.
+- Sound reinforces interaction but is never the only feedback channel.
+- Sounds must be quiet, distinct, user-disableable and unlocked by an intentional gesture.
+- Do not autoplay audio.
+- Vibration is progressive enhancement; iOS support cannot be assumed.
+- Always provide equivalent visual feedback.
 - Input feedback must not wait for storage, network requests or expensive rendering.
-- Apply optimistic local updates when failure is recoverable.
-- Move expensive calculations away from the input frame; use workers when justified.
-- Pause hidden canvases, simulations, audio analysis and sensor loops.
-- Adapt canvas resolution and effect density to the actual device frame budget.
-- Avoid full-screen blur, excessive backdrop filters and large animated shadows on mobile.
-- Prefer graceful reduction of effects over frame drops.
-- A visually simpler 60 fps interaction is preferable to a richer 25 fps one.
+- Prefer optimistic local updates when failure is recoverable.
+- Move expensive work away from the input frame; use workers only when justified.
+- Pause hidden canvases, simulations, sensors and audio analysis.
+- Adapt canvas resolution and effect density to the real device frame budget.
+- Prefer a simpler 60 fps interaction over a richer 25 fps effect.
 
-## 10. Application-feel acceptance checklist
+## 8. Standalone PWA quality
+
+- Icon, short name, orientation, colors and launch background must match the app identity.
+- First launch should feel like opening software, not arriving on a marketing page.
+- Explain installation only when useful and with platform-appropriate instructions.
+- Offline mode should feel normal, not like an error fallback.
+- Network-only features must disclose status without disabling unrelated local functionality.
+- Cache shared runtime files and all offline-critical assets.
+- Never silently trap the user on a stale cached version; Phase 3 will provide the shared update manager.
+
+## 9. Acceptance checklist
 
 Before marking an app done, verify on a real phone or mobile emulation:
 
-- long-pressing controls does not select labels or open irrelevant callouts;
-- repeated tapping does not zoom the page;
-- pinch gestures behave intentionally for that app;
-- focusing inputs does not unexpectedly zoom or hide the field;
-- no accidental image dragging or ghost previews appear;
-- the page does not shift horizontally;
-- safe areas remain correct in browser and standalone modes;
-- keyboard appearance does not cover critical controls;
+- long-pressing controls does not select labels or show irrelevant callouts;
+- repeated tapping does not zoom controls or shift the viewport;
+- pinch behavior is intentional for the product;
+- input focus does not zoom unexpectedly or hide the field;
+- decorative images do not produce drag ghosts;
+- no horizontal page shift appears;
+- safe areas work in browser and standalone modes;
+- the keyboard does not cover critical controls;
 - press feedback is immediate;
-- animations remain coherent under rapid repeated input;
-- gestures recover cleanly from interruption and `pointercancel`;
+- rapid repeated input does not break animation state;
+- gestures recover from `pointercancel` and lost capture;
 - important state survives reload, suspension and resume;
-- offline launch feels like the same product, not a degraded webpage;
-- reduced-motion mode remains complete and understandable;
-- no browser alert, prompt, dead link or generic web behavior breaks the illusion of installed software.
+- offline launch feels like the same product;
+- reduced-motion mode remains complete;
+- no browser alert, prompt, dead link or generic web behavior breaks the application illusion.
 
 When accessibility and app-like behavior conflict, solve the interaction deliberately rather than disabling accessibility by default.
