@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'echoes-';
-const CACHE_NAME = 'echoes-v1.0.2';
-const APP_VERSION = '1.0.2';
+const CACHE_NAME = 'echoes-v1.0.3';
+const APP_VERSION = '1.0.3';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Hardened managed updates by comparing waiting builds against the service worker that is actually active.',
   'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Replaced the ring-based launcher icon with a bold waveform identity distinct from the existing shelf geometry.',
   'Updated the launcher accent and cache identity so the new icon appears immediately after updating.'
