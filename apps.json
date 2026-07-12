@@ -32,14 +32,13 @@
     "description": "Touch, drag and tilt a luminous field that remembers your movement.",
     "path": "./apps/echoes/",
     "status": "experimental",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "updatedAt": "2026-07-12",
     "changelog": [
-      "Added a WebGL2 field that reacts to touch velocity, pressure and device tilt.",
-      "Added local echo capture, archive replay, PNG export and generative Web Audio.",
-      "Added Nocturne and Dawn modes, Workshop diagnostics and offline installation."
+      "Replaced the ring-based launcher icon with a bold waveform identity that is visually distinct from Screen Lab.",
+      "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
-    "accent": "#4bffb3",
+    "accent": "#d9ff45",
     "tags": [
       "PWA",
       "offline",
