@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e1cf">
+  <meta name="description" content="ЧЕРТА — однопальцевая боевая каллиграфия для Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ЧЕРТА">
+  <title>ЧЕРТА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main id="app" class="app-shell" data-app-shell>
+  <canvas id="game" aria-label="Игровая арена" data-gesture-surface data-block-callout></canvas>
+  <div class="paper-noise"></div>
+  <header class="topbar" data-ui>
+    <div class="brand"><i class="brand-mark"></i><div class="brand-copy"><b>ЧЕРТА</b><small>БОЕВАЯ КАЛЛИГРАФИЯ</small></div></div>
+    <div class="score"><b id="score">0</b><small>СЧЁТ</small></div>
+    <div class="controls"><a class="icon-btn" id="shellBtn" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>⌂</a><button type="button" data-native-press class="icon-btn" id="soundBtn" aria-label="Звук">♪</button><button type="button" data-native-press class="icon-btn" id="pauseBtn" aria-label="Пауза">Ⅱ</button></div>
+  </header>
+  <section class="status" data-ui>
+    <div><div class="health" id="health"></div><div class="combo" id="combo"><i></i><i></i><i></i></div></div>
+    <div class="wave"><b id="wave">Ⅰ</b><small>КРУГ</small></div>
+  </section>
+  <div class="hint" id="hint">ЗАЖМИ · ПРОТЯНИ · ОТПУСТИ</div>
+  <div class="callout" id="callout"></div>
+
+  <section class="overlay" id="menu" data-ui>
+    <div class="title-field">
+      <div class="kicker">КАРМАННАЯ БОЁВКА / 01</div>
+      <h1><span class="slash-title">ЧЕР</span><br>ТА</h1>
+      <p class="subtitle">Рывки оставляют следы. Третья черта заставляет все три разом прорезать арену. Враги, разумеется, против.</p>
+    </div>
+    <div class="menu-stack">
+      <button type="button" data-native-press class="action" id="play"><span>НАЧАТЬ РЕЗНЮ</span><small>ОДИН ПАЛЕЦ →</small></button>
+      <button type="button" data-native-press class="action secondary" id="rulesBtn"><span>КАК ЭТО РАБОТАЕТ</span><small>30 СЕКУНД</small></button>
+    </div>
+    <div class="stats-row"><span>РЕКОРД <b id="best">0</b></span><span>ЛУЧШИЙ КРУГ <b id="bestWave">1</b></span></div>
+  </section>
+
+  <section class="panel hidden" id="rulesPanel" data-ui>
+    <div class="panel-head"><h2>Три движения</h2><button type="button" data-native-press class="icon-btn" data-close="rulesPanel">×</button></div>
+    <div class="rules">
+      <article class="rule"><b>1</b><div><h3>Зажми</h3><p>Время замедляется. Начальная точка касания не важна — палец работает как рукоять.</p></div></article>
+      <article class="rule"><b>2</b><div><h3>Протяни и отпусти</h3><p>Герой рванёт в этом направлении и оставит вооружённую черту.</p></div></article>
+      <article class="rule"><b>3</b><div><h3>Замкни три черты</h3><p>После третьего рывка все следы срабатывают по очереди. Одна линия может разрезать нескольких врагов.</p></div></article>
+      <article class="rule"><b>※</b><div><h3>Играй нагло</h3><p>Во время рывка ты неуязвим. Проскочить сквозь удар выгоднее, чем трусливо убежать в кусты, которых тут даже нет.</p></div></article>
+    </div>
+    <button type="button" data-native-press class="action" id="rulesPlay"><span>ПОНЯТНО. РЕЗАТЬ.</span><small>→</small></button>
+  </section>
+
+  <section class="panel hidden" id="settingsPanel" data-ui>
+    <div class="panel-head"><h2>Настройки</h2><button type="button" data-native-press class="icon-btn" data-close="settingsPanel">×</button></div>
+    <div class="setting"><div><b>Звук</b><div class="subtitle setting-note">Процедурные щелчки и удары</div></div><button type="button" data-native-press class="switch" id="soundSwitch">ВКЛ</button></div>
+    <div class="setting"><div><b>Вибрация</b><div class="subtitle setting-note">Короткая отдача на ударе</div></div><button type="button" data-native-press class="switch" id="vibeSwitch">ВКЛ</button></div>
+    <button type="button" data-native-press class="action secondary reset-best" id="resetBest"><span>СБРОСИТЬ РЕКОРД</span><small>БЕЗ ДРАМЫ</small></button>
+  </section>
+
+  <section class="pause-card hidden" id="pauseCard" data-ui>
+    <h2>Пауза</h2><p>Черты никуда не денутся. Враги тоже. Удивительно дисциплинированные мерзавцы.</p>
+    <div class="card-actions"><button type="button" data-native-press class="action" id="resume"><span>ПРОДОЛЖИТЬ</span><small>→</small></button><button type="button" data-native-press class="action secondary" id="settingsBtn"><span>НАСТРОЙКИ</span><small>♪</small></button><button type="button" data-native-press class="action secondary" id="quit"><span>В МЕНЮ</span><small>×</small></button></div>
+  </section>
+
+  <section class="gameover-card hidden" id="gameoverCard" data-ui>
+    <h2 id="endTitle">Черта оборвалась</h2><p id="endText">Тебя аккуратно разобрали на художественные материалы.</p>
+    <div class="final-grid"><div><b id="finalScore">0</b><small>СЧЁТ</small></div><div><b id="finalKills">0</b><small>ВРАГОВ</small></div><div><b id="finalWave">1</b><small>КРУГ</small></div></div>
+    <div class="card-actions"><button type="button" data-native-press class="action" id="restart"><span>ЕЩЁ РАЗ</span><small>→</small></button><button type="button" data-native-press class="action secondary" id="gameoverQuit"><span>В МЕНЮ</span><small>×</small></button></div>
+  </section>
+</main>
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ЧЕРТА"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
