@@ -3,4 +3,8 @@ dist-site/
 .vite/
 .dist/
 coverage/
+playwright-report/
+test-results/
+quality-artifacts/
+.lighthouseci/
 .DS_Store
