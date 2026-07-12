@@ -20,10 +20,19 @@ function beginDash(dx,dy){
 function finishDash(){
   player.dashing=false;player.x=player.toX;player.y=player.toY;player.lines.push({x1:player.fromX,y1:player.fromY,x2:player.toX,y2:player.toY,age:0,cut:false});player.comboTimer=.95;
   slashParticles(player.fromX,player.fromY,player.toX,player.toY,'#202421');
-  if(player.charges<=0)setTimeout(()=>{if(running&&!gameOver&&!paused)detonate()},80);updateUI();
+  if(player.charges<=0){
+    queuedDash=null;
+    setTimeout(()=>{if(running&&!gameOver&&!paused)detonate()},80);
+  }else if(queuedDash){
+    const next=queuedDash;queuedDash=null;
+    requestAnimationFrame(()=>{if(running&&!paused&&!gameOver&&!player.dashing&&!player.detonating&&player.charges>0)beginDash(next.dx,next.dy)});
+  }else if(pointer.down){
+    player.focus=true;
+  }
+  updateUI();
 }
 function detonate(){
-  if(player.detonating||!player.lines.length)return;player.detonating=true;player.comboTimer=0;const lines=player.lines.map(l=>({...l}));player.lines=[];
+  if(player.detonating||!player.lines.length)return;player.detonating=true;player.comboTimer=0;queuedDash=null;const lines=player.lines.map(l=>({...l}));player.lines=[];
   lines.forEach((l,i)=>cutQueue.push({t:i*.095,line:l}));cutQueue.push({t:lines.length*.095+.09,finish:true});tone(110,.16,'sawtooth',.03,250);updateUI();
 }
 function performCut(l){
