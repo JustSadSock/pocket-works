@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.1';
-const APP_VERSION = '1.0.1';
+const CACHE_NAME = 'cherta-v1.0.2';
+const APP_VERSION = '1.0.2';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Dead enemies now dissolve cleanly and cancel active attack telegraphs.',
-  'Screen shake and impact flashes now decay after the player dies.',
-  'Fixed the top-right home, sound and pause controls across game states.'
+  'Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.',
+  'Added one-step dash input buffering so swipes made during the end of a dash are not discarded.',
+  'Made the top home and sound controls reliably accessible from the title menu.'
 ];
 const APP_SHELL = [
   './',
