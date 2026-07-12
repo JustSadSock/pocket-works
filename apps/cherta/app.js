@@ -1,4 +1,10 @@
 'use strict';
+
+import('../../shared/mobile-runtime.js').then(({ installMobileRuntime, setDocumentScrollLocked }) => {
+  installMobileRuntime();
+  setDocumentScrollLocked(true);
+});
+
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 canvas.addEventListener('pointerdown',e=>{if(!running||paused||gameOver||player.dashing||player.detonating||player.charges<=0)return;initAudio();const p=pointerPos(e);pointer={down:true,id:e.pointerId,sx:p.x,sy:p.y,x:p.x,y:p.y};player.focus=true;canvas.setPointerCapture?.(e.pointerId);tone(72,.09,'sine',.015,35)});
 canvas.addEventListener('pointermove',e=>{if(!pointer.down||e.pointerId!==pointer.id)return;const p=pointerPos(e);pointer.x=p.x;pointer.y=p.y});
