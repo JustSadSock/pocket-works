@@ -4,20 +4,19 @@
   "name": "ECHOES",
   "shortName": "ECHOES",
   "description": "Touch, drag and tilt a luminous field that remembers your movement.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Added a WebGL2 field that reacts to touch velocity, pressure and device tilt.",
-    "Added local echo capture, archive replay, PNG export and generative Web Audio.",
-    "Added Nocturne and Dawn modes, Workshop diagnostics and offline installation."
+    "Replaced the ring-based launcher icon with a bold waveform identity that is visually distinct from Screen Lab.",
+    "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
   ],
   "status": "experimental",
   "preset": "interactive",
-  "accent": "#4bffb3",
+  "accent": "#d9ff45",
   "backgroundColor": "#07080b",
   "themeColor": "#07080b",
   "orientation": "any",
-  "cacheName": "echoes-v1.0.0",
+  "cacheName": "echoes-v1.0.1",
   "storageNamespace": "pocket-works:echoes",
   "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
   "order": 20
