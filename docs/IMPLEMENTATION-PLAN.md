@@ -78,36 +78,37 @@ Opt-in motion, versioned storage, JSON transfer, audio, device APIs and diagnost
 
 **Status:** `done`
 
-Implemented:
+Retained Quick PWAs and added the isolated Vite, TypeScript, Workbox and Vitest path with Vite, PixiJS, Phaser and Tone.js presets; runtime-aware validators; safe `.dist` promotion; clean `dist-site/` production assembly.
 
-- retained the dependency-free Quick PWA path and its five existing presets;
-- added runtime-aware `app.config.json` metadata and Forge generation;
-- added an isolated Enhanced template with Vite, TypeScript, Workbox and Vitest;
-- added `vite`, PixiJS, Phaser and Tone.js Enhanced presets with distinct working mechanics;
-- added prompt-based Enhanced PWA updates through `virtual:pwa-register`;
-- added Workbox `injectManifest`, navigation fallback and app-owned cache cleanup;
-- added isolated `.dist` builds followed by safe promotion into each app directory;
-- added published-app build, typecheck and Vitest orchestration;
-- added separate Quick and Enhanced Forge smoke-test jobs;
-- added compact CI diagnostic artifacts for Enhanced preset failures;
-- added runtime-aware PWA, mobile, update, capability and metadata validators;
-- added clean `dist-site/` production assembly that excludes source, tests and build tooling;
-- changed Netlify to publish only the clean assembled site;
-- documented runtime selection and Enhanced application development.
+**Reference:** `apps/_enhanced-template/`, Enhanced Forge/build/test scripts, `scripts/validate-enhanced.mjs`, `scripts/prepare-site.mjs`, `docs/ENHANCED-APPS.md`, package and Netlify configuration.
 
-**Reference:** `apps/_enhanced-template/`, `scripts/enhanced-presets.mjs`, `scripts/build-enhanced.mjs`, `scripts/test-enhanced.mjs`, `scripts/promote-enhanced-build.mjs`, `scripts/test-enhanced-forge.mjs`, `scripts/validate-enhanced.mjs`, `scripts/prepare-site.mjs`, `docs/ENHANCED-APPS.md`, root package and Netlify configuration.
-
-**Acceptance:** both CI jobs pass; all four Enhanced presets generate, build, typecheck and pass Vitest; Quick presets remain green; production output contains only deployable assets; no CDN runtime dependency is required.
-
-**Result:** Phase 6 PR passed the complete Quick, Enhanced and production-assembly test matrix. Final squash SHA and production status are recorded in the completion report.
+**Result:** `7444d1aaad66dd61ff2eef8a284f14b6c003c671`; production ready.
 
 ## Phase 7 — Automated quality gates
 
-**Status:** `not-started`
+**Status:** `done`
 
-Add Playwright Chromium/WebKit mobile coverage, portrait/landscape tests, console and Service Worker checks, critical screenshots and Lighthouse budgets. Vitest already exists for Enhanced application logic.
+Implemented:
 
-**Reference to load:** validators, templates, Screen Lab, GitHub workflows and Netlify configuration.
+- Playwright mobile projects for Chromium Pixel 5 and WebKit iPhone 13 profiles;
+- portrait and landscape startup and overflow coverage;
+- launcher search, empty-state, details, favorites, persistence and keyboard-flow tests;
+- Screen Lab metrics, repeated-tap recovery, Workshop Mode, focus restoration and native-control tests;
+- Chromium Service Worker activation, controller and offline reload coverage;
+- console error, page error and browser-dialog rejection;
+- critical screenshots plus failure screenshots, traces and video artifacts;
+- deterministic `dist-site/` preview server;
+- Lighthouse audits of launcher and Screen Lab with hard performance, accessibility, best-practice, layout, blocking-time and resource budgets;
+- independent `browser-quality` and `lighthouse` CI jobs;
+- static validation that protects the test matrix, budgets and browser-discovered product fixes;
+- Pocket Works 0.6.0 with interruptible View Transitions, correct mobile detail layering and same-version update suppression;
+- Screen Lab 1.3.1 with WebKit viewport containment and a new app-owned cache identity.
+
+**Reference:** `playwright.config.ts`, `tests/e2e/`, `lighthouserc.json`, `scripts/serve-site.mjs`, `scripts/validate-quality-gates.mjs`, `docs/QUALITY-GATES.md`, GitHub workflow, launcher and Screen Lab release files.
+
+**Acceptance:** health, Enhanced preset, Playwright and Lighthouse jobs pass; Chromium and WebKit mobile scenarios stay free of uncaught errors and horizontal overflow; Chromium launcher and Screen Lab reload offline; performance budgets remain within the committed thresholds.
+
+**Result:** Phase 7 PR completed. Final squash SHA and Netlify production status are recorded in the completion report.
 
 ## Completion log
 
@@ -119,5 +120,5 @@ Add Playwright Chromium/WebKit mobile coverage, portrait/landscape tests, consol
 | 3 | done | `ef885f473a6559159e66925c8563cc035f17ebe5` | ready |
 | 4 | done | `f4e5d9f5d9dcf782af8d386cc75b1cd42a35a8ea` | ready |
 | 5 | done | `953f6dfc192bfb44a5dbde893f8dc27a236d2a39` | ready |
-| 6 | done | Phase 6 squash PR | verify after merge |
-| 7 | not-started | — | — |
+| 6 | done | `7444d1aaad66dd61ff2eef8a284f14b6c003c671` | ready |
+| 7 | done | Phase 7 squash PR | verify after merge |
