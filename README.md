@@ -2,7 +2,7 @@
 
 A monorepo for small, installable, offline-first mobile web applications.
 
-Each app lives in its own directory under `apps/<slug>/` and is registered in `apps.json`. The repository root is a launcher/catalog that links to every app.
+Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of truth; `apps.json` is generated for the launcher.
 
 ## Production
 
@@ -15,56 +15,100 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 
 ```text
 /
-├── AGENTS.md                  # global engineering, design and interaction rules
-├── apps.json                  # app registry used by the root launcher
-├── index.html                 # root launcher
-├── styles.css                 # launcher-only styles
-├── app.js                     # launcher-only logic
-├── manifest.webmanifest       # launcher PWA manifest
-├── sw.js                      # launcher service worker
-├── package.json               # repository health commands
-├── netlify.toml               # production build and response headers
+├── AGENTS.md
+├── apps.json                    # generated launcher registry
+├── index.html
+├── styles.css
+├── app.js
+├── manifest.webmanifest
+├── sw.js
+├── package.json
+├── netlify.toml
 ├── scripts/
-│   └── validate.mjs           # launcher and app structural health checks
-├── shared/                    # deliberately small shared utilities
+│   ├── app-config.mjs           # config schema and uniqueness rules
+│   ├── build-registry.mjs       # app.config.json → apps.json
+│   ├── new-app.mjs              # Pocket Forge CLI
+│   ├── presets.mjs              # starter mechanics
+│   ├── test-forge.mjs           # smoke-tests every preset
+│   └── validate*.mjs
+├── shared/
 ├── docs/
-│   ├── BASELINE.md            # Phase 0 reference state and rollback point
-│   ├── ENVIRONMENT-ROADMAP.md # full platform and tooling roadmap
-│   └── IMPLEMENTATION-PLAN.md # phased execution plan and completion log
+│   ├── BASELINE.md
+│   ├── ENVIRONMENT-ROADMAP.md
+│   └── IMPLEMENTATION-PLAN.md
 └── apps/
-    ├── AGENTS.md              # mandatory native-mobile behavior for every app
-    ├── _template/             # copy this when starting a new app
-    └── <app-slug>/            # one isolated PWA
+    ├── AGENTS.md
+    ├── _template/
+    └── <app-slug>/
+        └── app.config.json
 ```
+
+## Create a new app
+
+Use Pocket Forge instead of copying the template manually:
+
+```bash
+npm run new:app -- signal-board --preset=interactive --name="Signal Board"
+```
+
+Available presets:
+
+- `vanilla` — focused persistent utility shell;
+- `interactive` — pointer capture and direct manipulation;
+- `canvas` — responsive high-DPI drawing surface;
+- `game-2d` — lightweight animation/game loop;
+- `audio` — user-gesture-safe Web Audio starter.
+
+Useful options:
+
+```text
+--description="One sentence purpose"
+--accent=#ff4d1f
+--background=#10110f
+--theme=#10110f
+--orientation=portrait|landscape|any
+--status=active|experimental
+--order=100
+```
+
+Pocket Forge creates the directory, starter mechanic, manifest, app-owned icon, Service Worker cache identity, storage namespace and `app.config.json`. It regenerates `apps.json` and runs the full validation suite. A failed generation is rolled back.
+
+## Registry
+
+Never edit `apps.json` by hand.
+
+```bash
+npm run registry:build
+npm run registry:check
+```
+
+The build command scans every non-template application directory and generates the launcher registry from `app.config.json` files. Duplicate slugs, cache names and storage namespaces are rejected.
 
 ## Repository health
 
-Run the same structural check used by CI and Netlify:
+Run the same checks used by GitHub Actions and Netlify:
 
 ```bash
 npm run health
 ```
 
-It validates the root launcher, registry, registered app directories, manifests, local icons, Service Worker ownership, cache names, registration wiring and required app-shell files.
+This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, script syntax and all five Pocket Forge presets.
 
 The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
 
-## Add a new app
+## Finish an app
 
-1. Read both `AGENTS.md` and `apps/AGENTS.md`.
-2. Copy `apps/_template/` to `apps/<unique-slug>/`.
-3. Replace all template identifiers, cache names, paths, titles and colors.
-4. Build the app inside that directory only.
-5. Add one record to `apps.json`.
-6. Run `npm run health`.
-7. Confirm the app works after the network is disabled.
-8. Confirm it can be installed independently from the root launcher.
-9. Test long-press, double-tap, input focus, orientation, safe areas and standalone mode.
+After generation:
+
+1. Read `AGENTS.md` and `apps/AGENTS.md`.
+2. Replace the starter mechanic with the actual product loop inside its own directory.
+3. Preserve the generated app identity, cache ownership and storage namespace.
+4. Replace the generated icon with a deliberate application symbol.
+5. Run `npm run health`.
+6. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas and standalone mode.
 
 ## Product roadmap
 
 The broad evolution of Pocket Works is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md).
 
-The step-by-step execution order, phase boundaries, acceptance criteria and completion log are maintained in [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md).
-
-Implement one phase at a time. Each phase should end with one coherent commit, one Netlify deploy and an updated completion-log entry.
+The execution order and phase completion log are maintained in [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md).

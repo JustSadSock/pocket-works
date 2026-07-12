@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  --bg: #10110f;
+  --bg: __APP_BACKGROUND__;
   --fg: #f0eee7;
   --muted: #9b9d94;
   --accent: __APP_ACCENT__;
@@ -11,15 +11,14 @@
 }
 
 * { box-sizing: border-box; }
-
 html, body { min-height: 100%; }
-
 html { background: var(--bg); }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: var(--app-viewport-height);
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--fg);
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -28,15 +27,13 @@ body {
 button { font: inherit; }
 
 .app-shell {
-  width: min(100%, 720px);
+  width: min(100%, 760px);
   min-height: var(--app-viewport-height);
   margin: 0 auto;
-  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--app-keyboard-inset)) var(--safe-left);
 }
 
-.app-header {
-  padding: 18px 0 38px;
-}
+.app-header { padding: 18px 0 38px; }
 
 .app-kicker {
   margin: 0 0 12px;
@@ -64,6 +61,8 @@ h1 {
   min-height: 46dvh;
   align-content: center;
   border-top: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  padding: 28px 0;
 }
 
 .stage h2 {
@@ -97,6 +96,19 @@ h1 {
   color: var(--muted);
   font: .78rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 16px;
+  color: var(--muted);
+  font: .68rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+__PRESET_STYLES__
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

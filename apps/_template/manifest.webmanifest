@@ -6,20 +6,15 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#10110f",
-  "theme_color": "__APP_ACCENT__",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "__APP_ORIENTATION__",
+  "background_color": "__APP_BACKGROUND__",
+  "theme_color": "__APP_THEME__",
   "icons": [
     {
-      "src": "./icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]

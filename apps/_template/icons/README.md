@@ -1,8 +1,7 @@
-# Required install icons
+# Generated install icon
 
-Replace this file with:
+Pocket Forge creates `icon.svg` automatically from the application name, accent and background colors.
 
-- `icon-192.png` — 192×192 PNG;
-- `icon-512.png` — 512×512 PNG with maskable-safe padding.
+Replace it with a deliberate app-specific symbol before calling the product visually finished. Keep the same local path or update both the manifest and Service Worker shell together.
 
-Use a real app-specific symbol. Do not reuse the launcher icon or another app's icon.
+Platform-specific PNG generation can be added later without changing the app identity contract.
