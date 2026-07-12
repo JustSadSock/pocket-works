@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.3';
-const APP_VERSION = '1.0.3';
+const CACHE_NAME = 'cherta-v1.0.4';
+const APP_VERSION = '1.0.4';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Hardened managed updates by comparing waiting builds against the service worker that is actually active.',
   'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.',
   'Added one-step dash input buffering so swipes made during the end of a dash are not discarded.',
