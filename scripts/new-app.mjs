@@ -3,25 +3,29 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { buildRegistry } from './build-registry.mjs';
-import { APP_PRESETS, validateAppConfig } from './app-config.mjs';
+import {
+  APP_PRESETS,
+  APP_RUNTIMES,
+  ENHANCED_APP_PRESETS,
+  QUICK_APP_PRESETS,
+  validateAppConfig
+} from './app-config.mjs';
 import { getPreset } from './presets.mjs';
+import { getEnhancedPreset } from './enhanced-presets.mjs';
 
-const textExtensions = new Set(['.css', '.html', '.js', '.json', '.md', '.svg', '.webmanifest']);
+const textExtensions = new Set(['.css', '.html', '.js', '.ts', '.json', '.md', '.svg', '.webmanifest']);
 
 function parseArguments(argv) {
   const options = {};
   const positionals = [];
-
   for (const argument of argv) {
     if (!argument.startsWith('--')) {
       positionals.push(argument);
       continue;
     }
-
     const [rawKey, ...rawValue] = argument.slice(2).split('=');
     options[rawKey] = rawValue.length > 0 ? rawValue.join('=') : true;
   }
-
   return { slug: positionals[0], options };
 }
 
@@ -44,9 +48,7 @@ function escapeMarkup(value) {
 
 function replaceTokens(source, replacements) {
   let result = source;
-  for (const [token, value] of Object.entries(replacements)) {
-    result = result.split(token).join(value);
-  }
+  for (const [token, value] of Object.entries(replacements)) result = result.split(token).join(value);
   return result;
 }
 
@@ -73,31 +75,38 @@ async function transformDirectory(directory, replacements) {
   }
 }
 
-function runValidation(root) {
+function runNpm(root, args, failureMessage) {
   const command = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const result = spawnSync(command, ['run', 'validate:all'], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: false
-  });
-  if (result.status !== 0) throw new Error('generated application did not pass validation');
+  const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', shell: false });
+  if (result.status !== 0) throw new Error(failureMessage);
+}
+
+function runValidation(root) {
+  runNpm(root, ['run', 'validate:all'], 'generated application did not pass validation');
+}
+
+function buildEnhancedApp(root, slug) {
+  runNpm(root, ['run', 'build', '--workspace', `@pocket-works/${slug}`], 'enhanced application build failed; run npm install at the repository root first');
 }
 
 function printHelp() {
-  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n\nPresets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --name="Human Name"\n  --short-name="Home Label"\n  --description="One sentence purpose"\n  --release-note="Initial release note"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n`);
+  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n  npm run new:app -- <slug> --runtime=enhanced --preset=pixi [options]\n\nRuntimes:\n  ${APP_RUNTIMES.join(', ')}\n\nQuick presets:\n  ${QUICK_APP_PRESETS.join(', ')}\n\nEnhanced presets:\n  ${ENHANCED_APP_PRESETS.join(', ')}\n\nAll presets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --runtime=quick|enhanced\n  --name="Human Name"\n  --short-name="Home Label"\n  --description="One sentence purpose"\n  --release-note="Initial release note"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n  --skip-build\n`);
 }
 
 export async function createApp(argv = process.argv.slice(2), root = process.cwd()) {
   const { slug, options } = parseArguments(argv);
-
   if (options.help || !slug) {
     printHelp();
     if (!slug) throw new Error('an application slug is required');
     return null;
   }
 
-  const presetName = typeof options.preset === 'string' ? options.preset : 'vanilla';
-  const preset = getPreset(presetName);
+  const runtime = typeof options.runtime === 'string' ? options.runtime : 'quick';
+  if (!APP_RUNTIMES.includes(runtime)) throw new Error(`Unknown runtime ${runtime}. Available: ${APP_RUNTIMES.join(', ')}`);
+
+  const defaultPreset = runtime === 'enhanced' ? 'vite' : 'vanilla';
+  const presetName = typeof options.preset === 'string' ? options.preset : defaultPreset;
+  const preset = runtime === 'enhanced' ? getEnhancedPreset(presetName) : getPreset(presetName);
   const name = typeof options.name === 'string' ? options.name : humanize(slug);
   const shortName = typeof options['short-name'] === 'string' ? options['short-name'] : name.slice(0, 20);
   const description = typeof options.description === 'string' ? options.description : preset.description;
@@ -106,15 +115,12 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const themeColor = typeof options.theme === 'string' ? options.theme : backgroundColor;
   const version = '0.1.0';
   const releaseDate = new Date().toISOString().slice(0, 10);
-  const changelog = [
-    typeof options['release-note'] === 'string'
-      ? options['release-note']
-      : `Initial ${preset.label.toLowerCase()} preset release.`
-  ];
+  const changelog = [typeof options['release-note'] === 'string' ? options['release-note'] : `Initial ${preset.label.toLowerCase()} preset release.`];
   const order = Number.parseInt(options.order || '100', 10);
 
   const config = {
     schemaVersion: 1,
+    runtime,
     slug,
     name,
     shortName,
@@ -137,7 +143,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const configErrors = validateAppConfig(config, slug);
   if (configErrors.length > 0) throw new Error(configErrors.join('\n'));
 
-  const templateDirectory = path.join(root, 'apps', '_template');
+  const templateName = runtime === 'enhanced' ? '_enhanced-template' : '_template';
+  const templateDirectory = path.join(root, 'apps', templateName);
   const appDirectory = path.join(root, 'apps', slug);
   if (await pathExists(appDirectory)) throw new Error(`apps/${slug} already exists`);
 
@@ -162,8 +169,13 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     '__PRESET_LABEL__': escapeMarkup(preset.label),
     '__PRESET_DESCRIPTION__': preset.description,
     '__PRESET_MARKUP__': preset.markup,
-    '__PRESET_SCRIPT__': preset.script,
-    '__PRESET_STYLES__': preset.styles
+    '__PRESET_SCRIPT__': preset.script || '',
+    '__PRESET_STYLES__': preset.styles || '',
+    '__ENHANCED_IMPORTS__': preset.imports || '',
+    '__ENHANCED_SCRIPT__': preset.script || '',
+    '__ENHANCED_CORE__': preset.core || '',
+    '__ENHANCED_TEST__': preset.test || '',
+    '__ENHANCED_STYLES__': preset.styles || ''
   };
 
   const manifest = {
@@ -178,25 +190,22 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     orientation: config.orientation,
     background_color: backgroundColor,
     theme_color: themeColor,
-    icons: [{
-      src: './icons/icon.svg',
-      sizes: 'any',
-      type: 'image/svg+xml',
-      purpose: 'any maskable'
-    }]
+    icons: [{ src: './icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
   };
 
   try {
     await cp(templateDirectory, appDirectory, { recursive: true });
     await transformDirectory(appDirectory, replacements);
-    await mkdir(path.join(appDirectory, 'icons'), { recursive: true });
+    const iconDirectory = runtime === 'enhanced' ? path.join(appDirectory, 'public', 'icons') : path.join(appDirectory, 'icons');
+    await mkdir(iconDirectory, { recursive: true });
     await writeFile(path.join(appDirectory, 'app.config.json'), `${JSON.stringify(config, null, 2)}\n`, 'utf8');
-    await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    if (runtime === 'quick') await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
     const safeName = escapeMarkup(name);
     const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">\n  <rect width="512" height="512" fill="${backgroundColor}"/>\n  <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>\n  <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>\n  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>\n</svg>\n`;
-    await writeFile(path.join(appDirectory, 'icons', 'icon.svg'), icon, 'utf8');
+    await writeFile(path.join(iconDirectory, 'icon.svg'), icon, 'utf8');
 
+    if (runtime === 'enhanced' && !options['skip-build']) buildEnhancedApp(root, slug);
     await buildRegistry({ root });
     if (!options['skip-health']) runValidation(root);
   } catch (error) {
@@ -205,7 +214,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     throw error;
   }
 
-  console.log(`Pocket Forge created apps/${slug} with the ${presetName} preset.`);
+  console.log(`Pocket Forge created apps/${slug} with the ${runtime}/${presetName} preset.`);
   console.log(`Open: /apps/${slug}/`);
   return config;
 }
