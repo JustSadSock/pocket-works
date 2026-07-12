@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.4.0';
-const APP_VERSION = '1.4.0';
+const CACHE_NAME = 'screen-lab-v1.4.1';
+const APP_VERSION = '1.4.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.',
   'Added one-tap diagnostic snapshots with clipboard and JSON download fallback.',
   'Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions.'
@@ -10,6 +11,7 @@ const RELEASE_NOTES = [
 const APP_SHELL = [
   './',
   './index.html',
+  './app.config.json',
   './styles.css',
   './viewport-containment.css',
   './app.js',
