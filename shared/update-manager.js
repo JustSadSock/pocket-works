@@ -57,6 +57,9 @@ function createUpdatePrompt({ appName, onApply, onDismiss }) {
       notes.append(item);
     }
 
+    applyButton.disabled = false;
+    applyButton.textContent = 'Update now';
+    prompt.classList.remove('is-applying');
     prompt.classList.add('is-visible');
   };
 
@@ -70,7 +73,13 @@ function createUpdatePrompt({ appName, onApply, onDismiss }) {
     applyButton.disabled = true;
     applyButton.textContent = 'Updating…';
     prompt.classList.add('is-applying');
-    await onApply?.();
+
+    const applied = await onApply?.();
+    if (applied) return;
+
+    applyButton.disabled = false;
+    applyButton.textContent = 'Try again';
+    prompt.classList.remove('is-applying');
   });
 
   document.body.append(prompt);
@@ -100,17 +109,22 @@ export async function registerManagedServiceWorker(options = {}) {
     applying = true;
 
     const controllerChanged = new Promise((resolve) => {
-      navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+      navigator.serviceWorker.addEventListener('controllerchange', () => resolve(true), { once: true });
     });
 
     waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    await Promise.race([
+    const changed = await Promise.race([
       controllerChanged,
-      new Promise((resolve) => window.setTimeout(resolve, 4000))
+      new Promise((resolve) => window.setTimeout(() => resolve(false), 4000))
     ]);
 
-    window.location.reload();
-    return true;
+    if (changed) {
+      window.location.reload();
+      return true;
+    }
+
+    applying = false;
+    return false;
   };
 
   const announce = async (worker) => {
