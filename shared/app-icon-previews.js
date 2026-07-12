@@ -9,9 +9,12 @@ function iconUrl(app) {
 
 function applyIcon(preview, app) {
   if (!preview || !app) return;
+  const imageValue = `url("${iconUrl(app)}")`;
+  if (preview.dataset.iconSlug === app.slug && preview.style.getPropertyValue('--app-icon-image') === imageValue) return;
+
   preview.classList.add('has-app-icon');
   preview.dataset.iconSlug = app.slug;
-  preview.style.setProperty('--app-icon-image', `url("${iconUrl(app)}")`);
+  preview.style.setProperty('--app-icon-image', imageValue);
 }
 
 function selectedSlug() {
@@ -62,7 +65,7 @@ async function startIconPreviews() {
   const detail = document.querySelector('#detail-content');
 
   new MutationObserver(refreshCardIcons).observe(list, { childList: true, subtree: true });
-  new MutationObserver(refreshDetailIcon).observe(detail, { childList: true, subtree: true, attributes: true });
+  new MutationObserver(refreshDetailIcon).observe(detail, { childList: true, subtree: true });
 
   document.addEventListener('click', () => requestAnimationFrame(refreshDetailIcon), { passive: true });
   refreshAllIcons();
