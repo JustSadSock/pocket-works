@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.7.0';
-const APP_VERSION = '0.7.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.7.1';
+const APP_VERSION = '0.7.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Added UDEL, a portrait dynasty strategy with laws, technology, diplomacy and tactical battles.',
   'Rebuilt launcher list motion to prevent cards collapsing into an accordion after reload or page restoration.',
   'Added shared motion tokens, improved press feedback and responsive range controls across Pocket Works applications.',
   'Polished launcher controls with loading, confirmation, toast, focus and status micro-interactions.',
