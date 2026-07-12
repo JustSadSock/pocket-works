@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#d9cfb5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПЕТЛЯ 17">
+  <title>ПЕТЛЯ 17 — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+  <canvas id="race" aria-label="Трасса от первого лица" data-gesture-surface data-block-callout></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="hud" data-ui>
+    <div class="race-id"><b>ПЕТЛЯ 17</b><small>СУХОЙ ДОК / КОНТУР A</small></div>
+    <div class="readout"><span><b id="position">6</b><small>ИЗ 6</small></span><span><b id="lap">1/3</b><small>КРУГ</small></span><span><b id="gap">—</b><small>ОТРЫВ</small></span></div>
+    <button id="pauseButton" class="metal square" type="button" aria-label="Пауза" data-native-press hidden>Ⅱ</button>
+  </header>
+
+  <div id="draft" class="draft" data-ui hidden>ВОЗДУШНЫЙ СЛЕД <b>+0</b></div>
+  <div id="message" class="message" data-ui aria-live="polite"></div>
+
+  <section id="controls" class="pedals" data-ui hidden>
+    <button id="brake" class="pedal brake" type="button" data-native-press><b>ТОРМОЗ</b><small>ЛЕВАЯ</small></button>
+    <div id="steerPad" class="steer-pad" data-gesture-surface data-block-callout hidden><span>ТАЩИ РУЛЬ</span><i></i></div>
+    <button id="gas" class="pedal gas" type="button" data-native-press><b>ГАЗ</b><small>ПРАВАЯ</small></button>
+  </section>
+
+  <section id="menu" class="screen menu" data-ui>
+    <a class="home" href="../../" data-app-control data-native-press>← В POCKET WORKS</a>
+    <div class="title"><p>ЗАКРЫТАЯ ЛИГА / СЕКТОР 17</p><h1>ПЕТЛЯ<br><em>17</em></h1><div>Три круга. Пять соперников. Телефон — руль. Газ справа, тормоз слева. Всё остальное решает траектория.</div></div>
+    <div class="rig">
+      <div class="records"><span>ЛУЧШИЙ ФИНИШ<b id="bestFinish">—</b></span><span>ЛУЧШИЙ КРУГ<b id="bestLap">—</b></span></div>
+      <button id="start" class="ignition" type="button" data-native-press><b>ЗАПУСТИТЬ ДВИГАТЕЛЬ</b><small>РАЗРЕШИТЬ НАКЛОН И НАЧАТЬ</small></button>
+      <div class="row"><button id="practice" class="metal" type="button" data-native-press>БЕЗ НАКЛОНА</button><button id="settingsButton" class="metal" type="button" data-native-press>НАСТРОЙКИ</button></div>
+    </div>
+  </section>
+
+  <section id="settings" class="screen sheet hidden" data-ui>
+    <div class="sheet-head"><div><p>ТЕХНИЧЕСКИЙ ПЛАНШЕТ</p><h2>Настройки</h2></div><button id="closeSettings" class="metal square" type="button" data-native-press>×</button></div>
+    <label class="setting"><span><b>Чувствительность наклона</b><small>Меньше градусов — резче руль</small></span><input id="sensitivity" type="range" min="10" max="35" value="22"><output id="sensitivityValue">22°</output></label>
+    <div class="setting"><span><b>Звук двигателя</b><small>Процедурный звук без файлов</small></span><button id="sound" class="toggle" type="button" data-native-press>ВКЛ</button></div>
+    <div class="setting"><span><b>Вибрация</b><small>Бордюры, контакты, передачи</small></span><button id="haptics" class="toggle" type="button" data-native-press>ВКЛ</button></div>
+    <button class="metal wide" type="button" data-workshop-trigger data-native-press>WORKSHOP MODE / ДИАГНОСТИКА</button>
+    <button id="reset" class="metal wide danger" type="button" data-native-press>СБРОСИТЬ РЕКОРДЫ</button>
+  </section>
+
+  <section id="pause" class="screen modal hidden" data-ui>
+    <p>МАШИНА ЗАФИКСИРОВАНА</p><h2>Пауза</h2><div class="copy">Гонка стоит. Соперники тоже. Редкий момент, когда они не творят херню в первом повороте.</div>
+    <div class="stack"><button id="resume" class="ignition small" type="button" data-native-press><b>ПРОДОЛЖИТЬ</b><small>ВЕРНУТЬСЯ В КАБИНУ</small></button><button id="pauseSettings" class="metal wide" type="button">НАСТРОЙКИ</button><button id="restart" class="metal wide" type="button">ЗАНОВО</button><button id="quit" class="metal wide" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="metal wide link" href="../../" data-app-control>В POCKET WORKS</a></div>
+  </section>
+
+  <section id="results" class="screen modal hidden" data-ui>
+    <p>КЛАССИФИКАЦИЯ / ФИНИШ</p><h2 id="resultTitle">Финиш</h2><div id="resultText" class="copy"></div>
+    <div class="result-grid"><span><b id="resultPosition">—</b><small>ПОЗИЦИЯ</small></span><span><b id="resultTime">—</b><small>ВРЕМЯ</small></span><span><b id="resultLap">—</b><small>ЛУЧШИЙ КРУГ</small></span><span><b id="resultPasses">0</b><small>ОБГОНЫ</small></span></div>
+    <div class="stack"><button id="again" class="ignition small" type="button"><b>ЕЩЁ ОДИН ЗАЕЗД</b><small>С ТЕКУЩИМ УПРАВЛЕНИЕМ</small></button><button id="resultsMenu" class="metal wide" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="metal wide link" href="../../" data-app-control>В POCKET WORKS</a></div>
+  </section>
+
+  <section class="rotate" data-ui><div></div><b>Поверни телефон горизонтально</b><span>Кабина в портрет не помещается. Физика, зараза.</span><a href="../../" data-app-control>Вернуться в Pocket Works</a></section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕТЛЯ 17" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
