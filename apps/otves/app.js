@@ -154,7 +154,10 @@ function currentAspect() {
 function buildLevel(nextLevel = level) {
   level = Math.max(1, nextLevel);
   const dimensions = dimensionsForLevel(level, currentAspect());
-  maze = createMaze({ ...dimensions, seed: seedForLevel(runSeed, level) });
+  maze = createMaze({
+    ...dimensions,
+    seed: seedForLevel(runSeed, level)
+  });
   marble.reset(maze.start);
   elapsed = 0;
   collisions = 0;
@@ -251,11 +254,13 @@ async function enableSensor() {
 }
 
 async function prepareInput() {
-  await audio.unlock();
   if (capabilities.orientationSensor) {
-    const enabled = await enableSensor();
+    const sensorPromise = enableSensor();
+    await audio.unlock();
+    const enabled = await sensorPromise;
     if (!enabled) showToast('НАКЛОН НЕ ДОСТУПЕН · ВКЛЮЧЁН ПАЛЬЦЕВОЙ РЕЖИМ', 2200);
   } else {
+    await audio.unlock();
     sensorEnabled = false;
     updateInputReadout();
     showToast('НА ЭТОМ УСТРОЙСТВЕ ТЯНИ ДОСКУ ПАЛЬЦЕМ', 2200);
@@ -288,6 +293,7 @@ function resumeGame() {
 
 function returnToMenu() {
   state = 'menu';
+  elements.pauseButton.disabled = true;
   setScreen(elements.startScreen);
   updateContinueLabel();
   demoLevel();
@@ -297,6 +303,7 @@ function returnToMenu() {
 function completeLevel() {
   if (state !== 'playing') return;
   state = 'complete';
+  elements.pauseButton.disabled = true;
   completedAt = performance.now();
   completion = 0;
   marble.velocity.x = 0;
@@ -307,7 +314,12 @@ function completeLevel() {
   const isRecord = elapsed < oldBest;
   if (isRecord) bestTimes[level] = Number(elapsed.toFixed(3));
   const unlockedLevel = Math.max(store.get('unlockedLevel', 1), level + 1);
-  store.patch({ bestTimes, unlockedLevel, currentLevel: level + 1, runSeed });
+  store.patch({
+    bestTimes,
+    unlockedLevel,
+    currentLevel: level + 1,
+    runSeed
+  });
 
   elements.resultTitle.textContent = `ЛАБИРИНТ ${String(level).padStart(2, '0')} ПРОЙДЕН`;
   elements.resultTime.textContent = formatTime(elapsed);
@@ -446,6 +458,7 @@ window.addEventListener('keydown', (event) => {
 });
 window.addEventListener('keyup', (event) => keyState.delete(event.code));
 window.addEventListener('blur', () => keyState.clear());
+
 window.addEventListener('resize', () => renderer.resize());
 window.addEventListener('orientationchange', () => {
   window.setTimeout(() => {
@@ -468,12 +481,14 @@ elements.continueButton.addEventListener('click', () => {
   runSeed = store.get('runSeed', runSeed);
   startLevel(level);
 });
+
 elements.newRunButton.addEventListener('click', () => {
   runSeed = randomSeed();
   level = 1;
   store.patch({ currentLevel: 1, runSeed });
   startLevel(1);
 });
+
 elements.pauseButton.addEventListener('click', pauseGame);
 elements.resumeButton.addEventListener('click', resumeGame);
 elements.restartButton.addEventListener('click', () => startLevel(level));
@@ -500,10 +515,11 @@ createWorkshopMode({
   appName: 'ОТВЕС',
   version: '1.0.0',
   cachePrefix: 'otves-',
-  storageNamespace: STORAGE_NAMESPACE,
+  storageNamespace: 'pocket-works:otves',
   onReset: async () => location.reload()
 });
 
+elements.pauseButton.disabled = true;
 updateSoundButtons();
 updateContinueLabel();
 updateInputReadout();
