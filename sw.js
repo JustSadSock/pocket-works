@@ -1,10 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.2';
-const APP_VERSION = '0.6.2';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.3';
+const APP_VERSION = '0.6.3';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Launcher search now matches user-facing app identity, mechanics and tags without leaking hidden release-note text.',
-  'Preserved stable initial shelf layout and versioned application icon previews.'
+  'Disabled accidental long-press text selection across the shared Pocket Works runtime.',
+  'Added smooth list reflow and refresh feedback for filters, sorting and registry sync.',
+  'Changed Updated sorting from day-level dates to exact release timestamps.'
 ];
 const APP_SHELL = [
   './',
@@ -21,7 +22,9 @@ const APP_SHELL = [
   './shared/update-manager.js',
   './shared/view-transition-guard.js',
   './shared/app-icon-previews.css',
-  './shared/app-icon-previews.js'
+  './shared/app-icon-previews.js',
+  './shared/launcher-list-motion.css',
+  './shared/launcher-list-motion.js'
 ];
 
 self.addEventListener('install', (event) => {
