@@ -4,14 +4,20 @@
   "name": "Screen Lab",
   "shortName": "Screen Lab",
   "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "releaseDate": "2026-07-12",
+  "changelog": [
+    "Added a visible update prompt with release notes.",
+    "Updates now activate only after explicit confirmation.",
+    "Old Screen Lab caches remain scoped and are cleaned after activation."
+  ],
   "status": "active",
   "preset": "interactive",
   "accent": "#ff4d1f",
   "backgroundColor": "#f2efe6",
   "themeColor": "#f2efe6",
   "orientation": "any",
-  "cacheName": "screen-lab-v1.1.0",
+  "cacheName": "screen-lab-v1.2.0",
   "storageNamespace": "pocket-works:screen-lab",
   "tags": ["PWA", "offline", "device test", "mobile runtime"],
   "order": 10
