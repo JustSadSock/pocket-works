@@ -12,8 +12,9 @@
     "validate:configs": "node scripts/validate-app-configs.mjs",
     "validate:updates": "node scripts/validate-update-contract.mjs",
     "validate:launcher": "node scripts/validate-launcher.mjs",
-    "validate:scripts": "node --check app.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs",
-    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher",
+    "validate:capabilities": "node scripts/validate-capabilities.mjs",
+    "validate:scripts": "node --check app.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs",
+    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities",
     "test:forge": "node scripts/test-forge.mjs",
     "health": "npm run validate:all && npm run test:forge"
   },
