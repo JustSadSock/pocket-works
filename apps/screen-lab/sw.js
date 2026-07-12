@@ -1,16 +1,17 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.3.0';
-const APP_VERSION = '1.3.0';
+const CACHE_NAME = 'screen-lab-v1.3.1';
+const APP_VERSION = '1.3.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added Workshop Mode with live diagnostics, error capture and app-owned reset tools.',
-  'Added shared motion, storage, transfer, audio and device capability modules.',
-  'Screen Lab now pauses its animation loop while hidden and uses managed sensor helpers.'
+  'Contained decorative geometry within the WebKit mobile viewport.',
+  'Added automated Chromium and WebKit interaction and orientation coverage.',
+  'Preserved offline launch, Workshop Mode and native touch behavior under browser quality gates.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './viewport-containment.css',
   './app.js',
   './manifest.webmanifest',
   './icons/icon.svg',
