@@ -6,7 +6,7 @@
         "http://localhost/",
         "http://localhost/apps/screen-lab/"
       ],
-      "numberOfRuns": 2,
+      "numberOfRuns": 3,
       "settings": {
         "chromeFlags": "--headless=new --no-sandbox --disable-gpu"
       }
