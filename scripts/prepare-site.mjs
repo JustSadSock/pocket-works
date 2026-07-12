@@ -12,7 +12,8 @@ const appDevEntries = new Set([
   'tsconfig.json',
   'README.md',
   'source',
-  'public'
+  'public',
+  '.dist'
 ]);
 
 async function copyDirectoryFiltered(source, destination, shouldSkip) {
@@ -29,7 +30,6 @@ async function copyDirectoryFiltered(source, destination, shouldSkip) {
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-
 for (const file of rootFiles) await cp(path.join(root, file), path.join(output, file));
 
 await copyDirectoryFiltered(
@@ -38,10 +38,11 @@ await copyDirectoryFiltered(
   (name, entry) => !entry.isDirectory() && (name.endsWith('.ts') || name.endsWith('.map'))
 );
 
-for (const config of await collectAppConfigs(root)) {
+const configs = await collectAppConfigs(root);
+for (const config of configs) {
   const source = path.join(root, 'apps', config.slug);
   const destination = path.join(output, 'apps', config.slug);
   await copyDirectoryFiltered(source, destination, (name) => appDevEntries.has(name) || name.endsWith('.map'));
 }
 
-console.log(`Prepared production site with ${(await collectAppConfigs(root)).length} registered application(s) in dist-site/.`);
+console.log(`Prepared production site with ${configs.length} registered application(s) in dist-site/.`);
