@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0b1310">
+  <meta name="description" content="ЛУНКА — атмосферный мини-гольф на мокрой крыше после дождя.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ЛУНКА">
+  <title>ЛУНКА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="gameCanvas" aria-label="Ночная площадка мини-гольфа" data-gesture-surface data-block-callout></canvas>
+
+    <header class="score-rail" data-ui>
+      <a class="shell-exit" href="../../" data-shell-exit data-app-control data-native-press>PW</a>
+      <div class="hole-readout"><span>ЛУНКА</span><strong id="holeValue">01</strong></div>
+      <div class="course-readout">
+        <strong id="courseName">ПЕРВЫЙ БЛИК</strong>
+        <span id="courseSubtitle">мокрый сланец</span>
+      </div>
+      <div class="score-readout"><span>УДАРЫ</span><strong id="strokesValue">00</strong></div>
+      <div class="par-readout"><span>ПАР</span><strong id="parValue">2</strong></div>
+      <button class="pause-key" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <div class="power-rail" data-ui aria-live="polite">
+      <span id="powerLabel">ТЯНИ НАЗАД</span>
+      <i><b id="powerFill"></b></i>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen start-screen is-visible" id="startScreen" aria-label="Начальный экран" data-ui>
+      <div class="rain-glass" aria-hidden="true"></div>
+      <div class="start-copy">
+        <div class="serial">ROOFTOP COURSE · PW 09</div>
+        <img class="app-mark" src="./icons/icon.svg" alt="" draggable="false">
+        <h1>ЛУНКА</h1>
+        <p class="tagline">МИНИ-ГОЛЬФ ПОСЛЕ ДОЖДЯ</p>
+        <p class="intro">Коснись шара, оттяни палец назад и отпусти. Линия покажет рикошеты, но движущиеся препятствия всё равно могут послать твой идеальный план нахер.</p>
+
+        <div class="course-label"><span>МАРШРУТ</span><small>лучший / пар</small></div>
+        <div class="course-strip" id="courseStrip" aria-label="Выбор лунки"></div>
+
+        <button class="primary-action" id="startButton" type="button" data-native-press data-haptic="selection">ВЫЙТИ НА КРЫШУ</button>
+        <button class="text-action" type="button" data-sound-toggle aria-pressed="true" data-native-press>ЗВУК · ВКЛ</button>
+        <a class="text-action exit-action" href="../../" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" aria-label="Пауза" aria-hidden="true" data-ui>
+      <div class="pause-panel">
+        <p>ДОЖДЬ НЕ ОСТАНОВИЛСЯ</p>
+        <h2>ПАУЗА</h2>
+        <button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button class="line-action" id="restartButton" type="button" data-native-press>ЗАНОВО ЭТУ ЛУНКУ</button>
+        <button class="line-action" type="button" data-sound-toggle aria-pressed="true" data-native-press>ЗВУК · ВКЛ</button>
+        <button class="line-action" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+        <button class="text-action" id="pauseMenuButton" type="button" data-native-press>К КАРТЕ ЛУНОК</button>
+        <a class="text-action exit-action" href="../../" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" aria-label="Результат лунки" aria-hidden="true" data-ui>
+      <div class="result-panel">
+        <div class="result-score" id="resultScore">E</div>
+        <p>ШАР В ЛУНКЕ</p>
+        <h2 id="resultTitle">ПАР</h2>
+        <div class="record-stamp" id="resultRecord">НОВЫЙ ЛУЧШИЙ</div>
+        <dl>
+          <div><dt>УДАРЫ</dt><dd id="resultStrokes">2</dd></div>
+          <div><dt>ПАР</dt><dd id="resultPar">2</dd></div>
+          <div><dt>ЛУЧШИЙ</dt><dd id="resultBest">2</dd></div>
+          <div><dt>КРУГ</dt><dd id="resultRound">2 УД. · E</dd></div>
+        </dl>
+        <button class="primary-action" id="nextButton" type="button" data-native-press data-haptic="success">СЛЕДУЮЩАЯ ЛУНКА</button>
+        <button class="line-action" id="retryButton" type="button" data-native-press>ПЕРЕИГРАТЬ</button>
+        <button class="text-action" id="resultMenuButton" type="button" data-native-press>К КАРТЕ ЛУНОК</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛУНКА" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
