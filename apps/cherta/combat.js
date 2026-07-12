@@ -7,7 +7,7 @@ function spawnEnemy(type){
     needle:{r:11,hp:1.55*scale,speed:31+wave,cd:rand(.5,1.1),kind:'needle'},
     brute:{r:23,hp:6.2*scale,speed:24+wave*.7,cd:1.4,kind:'brute'}
   };
-  const e={x,y,vx:0,vy:0,dead:false,hit:0,wind:0,attack:0,angle:0,lockedX:0,lockedY:0,seed:Math.random()*99,...defs[type]};enemies.push(e);
+  const e={x,y,vx:0,vy:0,dead:false,deathT:0,deathDur:.28,hit:0,wind:0,attack:0,angle:0,lockedX:0,lockedY:0,seed:Math.random()*99,...defs[type]};enemies.push(e);
   inkSplash(x,y,type==='brute'?18:9,'#a94738',.45);
 }
 function inkSplash(x,y,n=8,color='#202421',life=.45){n=reducedMotion?Math.ceil(n*.35):n;for(let i=0;i<n;i++){const a=rand(0,TAU),s=rand(10,65);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:rand(1,4),life,max:life,color,drag:3})}}
@@ -32,7 +32,11 @@ function performCut(l){
   score+=hitCount*5*Math.max(1,hitCount);if(hitCount>=2)callout(hitCount+' ЗА ОДНУ');tone(290+hitCount*45,.075,'square',.028,-110);hiss(.09,.02);vibrate(hitCount>=2?24:13);
 }
 function damageEnemy(e,dmg,line=null){if(e.dead)return;e.hp-=dmg;e.hit=.18;if(line){const a=Math.atan2(line.y2-line.y1,line.x2-line.x1);e.vx+=Math.cos(a)*32;e.vy+=Math.sin(a)*32}inkSplash(e.x,e.y,5,'#a94738',.3);if(e.hp<=0)killEnemy(e)}
-function killEnemy(e){e.dead=true;kills++;score+=e.kind==='brute'?45:e.kind==='needle'?18:14;inkSplash(e.x,e.y,e.kind==='brute'?28:14,'#7a3029',.62);shake=Math.max(shake,e.kind==='brute'?11:5);tone(e.kind==='brute'?70:130,.14,'sawtooth',.035,e.kind==='brute'?70:110);if(kills%6===0&&player.hp<player.maxHp){player.hp++;callout('ЧЕРНИЛА СТЯНУЛИСЬ');}updateUI()}
+function killEnemy(e){
+  if(e.dead)return;
+  e.dead=true;e.deathT=e.deathDur;e.hit=0;e.wind=0;e.attack=0;e.cd=Infinity;e.grazed=true;
+  kills++;score+=e.kind==='brute'?45:e.kind==='needle'?18:14;inkSplash(e.x,e.y,e.kind==='brute'?28:14,'#7a3029',.62);shake=Math.max(shake,e.kind==='brute'?11:5);tone(e.kind==='brute'?70:130,.14,'sawtooth',.035,e.kind==='brute'?70:110);if(kills%6===0&&player.hp<player.maxHp){player.hp++;callout('ЧЕРНИЛА СТЯНУЛИСЬ');}updateUI()
+}
 function hurtPlayer(){if(player.invuln>0||gameOver)return;player.hp--;player.invuln=1.0;player.hitFlash=.35;shake=13;flash=.35;inkSplash(player.x,player.y,18,'#202421',.5);tone(85,.24,'sawtooth',.055,-30);vibrate(40);callout('ПРОПУЩЕНО',true);updateUI();if(player.hp<=0)endGame()}
 function graze(obj){if(obj.grazed)return;obj.grazed=true;player.grazes=Math.min(4,player.grazes+1);score+=8;callout('ЧИСТО');tone(510,.07,'sine',.022,160);vibrate(9)}
 function enemyLogic(e,dt){
