@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.0-r2';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'cherta-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added the first complete release of the one-thumb combat game.',
-  'Added three enemy archetypes, endless waves, local records, sound and haptics.',
-  'Added Pocket Works mobile runtime integration and offline installation.'
+  'Dead enemies now dissolve cleanly and cancel active attack telegraphs.',
+  'Screen shake and impact flashes now decay after the player dies.',
+  'Fixed the top-right home, sound and pause controls across game states.'
 ];
 const APP_SHELL = [
   './',
