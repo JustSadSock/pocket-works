@@ -58,33 +58,37 @@ Managed waiting-worker updates, release notes, explicit activation, scoped cache
 
 **Status:** `done`
 
-Implemented:
+Search, persistent filters, favorites, recents, procedural previews, release details, offline readiness, mobile details and local registry fallback.
 
-- search across names, descriptions, mechanics, tags and release notes;
-- filters for all, saved, recent, offline-ready and experimental apps;
-- persistent favorites, recents, selection and sorting;
-- preset-aware seeded previews with restrained ambient motion;
-- version, update date, offline cache and last-opened information;
-- desktop focus bay and mobile bottom-sheet details;
-- release notes and open, save and copy-link actions;
-- local registry snapshot fallback for offline use;
-- mobile-runtime integration and controlled sheet scroll locking;
-- network-first registry refresh with stable cached fallback;
-- dedicated `validate:launcher` CI contract.
+**Reference:** root launcher files and `scripts/validate-launcher.mjs`.
 
-**Reference:** root `index.html`, `styles.css`, `app.js`, `manifest.webmanifest`, `sw.js`, `scripts/validate-launcher.mjs`.
-
-**Acceptance:** `npm run health` passes, personal state survives reloads, cached applications are identified, the shelf remains useful offline and mobile details behave as an interruptible sheet.
-
-**Result:** Phase 4 PR passed every CI stage. Final squash SHA and production status are recorded in the completion report.
+**Result:** `f4e5d9f5d9dcf782af8d386cc75b1cd42a35a8ea`; production ready.
 
 ## Phase 5 — Shared capabilities and Workshop Mode
 
-**Status:** `not-started`
+**Status:** `done`
 
-Add opt-in, visually neutral modules for motion, input, storage/migrations, import/export, audio, sensors, fullscreen, orientation and diagnostics. Add Workshop Mode for viewport, FPS, errors, storage, caches and reset tools.
+Implemented:
 
-**Reference to load:** `shared/`, app template, Screen Lab.
+- opt-in motion helpers with reduced-motion handling and hidden-page suspension;
+- versioned local storage with migrations, validation, subscriptions and export/import envelopes;
+- bounded JSON transfer and clipboard fallback;
+- user-gesture-safe procedural audio feedback;
+- feature-detected orientation, motion, fullscreen and orientation-lock helpers;
+- diagnostics for viewport, FPS, errors, storage, caches, Service Worker and device support;
+- Workshop Mode with mobile sheet and desktop console layouts;
+- live reports, error capture, report copy/export and app-owned reset tools;
+- two-step destructive actions without browser confirm dialogs;
+- template and Screen Lab integration with complete offline caching;
+- Screen Lab 1.3.0 as the reference capability consumer;
+- dedicated `validate:capabilities` CI contract;
+- documented shared API and dependency policy.
+
+**Reference:** `shared/capabilities/`, `shared/workshop-mode.*`, `scripts/validate-capabilities.mjs`, `docs/SHARED-CAPABILITIES.md`, app template and Screen Lab.
+
+**Acceptance:** `npm run health` passes; every Forge preset includes an offline Workshop Mode; diagnostics and destructive actions remain app-scoped; Screen Lab uses shared motion, storage and device helpers.
+
+**Result:** Phase 5 branch completed; final squash SHA and production status are recorded in the completion report.
 
 ## Phase 6 — Enhanced application templates
 
@@ -110,7 +114,7 @@ Add Vitest, Playwright Chromium/WebKit mobile coverage, portrait/landscape tests
 | 1 | done | `6a5973c14c9f60faf4493183725a0c40494cbea6` | ready |
 | 2 | done | `a155a020ca2d14708a755a0475821b159d90a1c9` | ready |
 | 3 | done | `ef885f473a6559159e66925c8563cc035f17ebe5` | ready |
-| 4 | done | Phase 4 squash PR | verify after merge |
-| 5 | not-started | — | — |
+| 4 | done | `f4e5d9f5d9dcf782af8d386cc75b1cd42a35a8ea` | ready |
+| 5 | done | Phase 5 squash PR | verify after merge |
 | 6 | not-started | — | — |
 | 7 | not-started | — | — |
