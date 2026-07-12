@@ -50,5 +50,31 @@
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
+  },
+  {
+    "slug": "cherta",
+    "name": "ЧЕРТА",
+    "shortName": "ЧЕРТА",
+    "description": "One-thumb combat calligraphy: draw three armed dashes, then cut the whole arena.",
+    "path": "./apps/cherta/",
+    "status": "active",
+    "version": "1.0.0",
+    "updatedAt": "2026-07-12",
+    "changelog": [
+      "Added the complete three-dash combat loop with sequential arena cuts.",
+      "Added stalker, needle and brute enemies with endless procedural waves.",
+      "Added local records, sound, haptics, reduced motion and offline installation."
+    ],
+    "accent": "#a94738",
+    "tags": [
+      "PWA",
+      "offline",
+      "game",
+      "canvas",
+      "audio"
+    ],
+    "preset": "interactive",
+    "runtime": "quick",
+    "storageNamespace": "pocket-works:cherta"
   }
 ]
