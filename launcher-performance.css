@@ -10,14 +10,8 @@
   will-change: transform;
 }
 
-#app-list[data-loading="true"] {
-  min-height: 752px;
-}
-
-@media (min-width: 721px) {
-  #app-list[data-loading="true"] {
-    min-height: 704px;
-  }
+#app-list:empty {
+  min-height: 0;
 }
 
 @keyframes preview-scan {
