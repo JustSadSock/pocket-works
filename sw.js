@@ -49,17 +49,17 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function networkFirst(request, fallback = './') {
+async function networkFirst(request, fallback = './', cacheKey = null) {
   try {
     const response = await fetch(request);
     if (response && response.ok) {
       const copy = response.clone();
       const cache = await caches.open(CACHE_NAME);
-      await cache.put(request.mode === 'navigate' ? fallback : request, copy);
+      await cache.put(cacheKey || (request.mode === 'navigate' ? fallback : request), copy);
     }
     return response;
   } catch {
-    return caches.match(request).then((cached) => cached || caches.match(fallback));
+    return caches.match(request).then((cached) => cached || caches.match(cacheKey || fallback));
   }
 }
 
@@ -70,12 +70,12 @@ self.addEventListener('fetch', (event) => {
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(networkFirst(event.request, './'));
+    event.respondWith(networkFirst(event.request, './', './'));
     return;
   }
 
   if (requestUrl.pathname.endsWith('/apps.json')) {
-    event.respondWith(networkFirst(event.request, './apps.json'));
+    event.respondWith(networkFirst(event.request, './apps.json', './apps.json'));
     return;
   }
 
