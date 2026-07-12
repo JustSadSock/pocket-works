@@ -5,10 +5,11 @@
   "name": "ДОКТРИНА",
   "shortName": "ДОКТРИНА",
   "description": "Procedural statecraft strategy about laws, doctrines, technologies and war.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "releaseDate": "2026-07-12",
-  "releaseDateTime": "2026-07-12T19:07:22Z",
+  "releaseDateTime": "2026-07-12T19:29:22Z",
   "changelog": [
+    "Hardened managed updates by comparing waiting builds against the service worker that is actually active.",
     "Inherited the platform interaction lock so long presses no longer select interface text.",
     "Added a seeded procedural state simulation with regions, factions and quarterly causality.",
     "Added laws, doctrines and conditional technologies that change simulation rules rather than flat bonuses.",
@@ -20,7 +21,7 @@
   "backgroundColor": "#202424",
   "themeColor": "#202424",
   "orientation": "portrait",
-  "cacheName": "doctrina-v0.1.1",
+  "cacheName": "doctrina-v0.1.2",
   "storageNamespace": "pocket-works:doctrina",
   "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
   "order": 50
