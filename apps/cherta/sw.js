@@ -1,8 +1,9 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.2';
-const APP_VERSION = '1.0.2';
+const CACHE_NAME = 'cherta-v1.0.3';
+const APP_VERSION = '1.0.3';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
+  'Inherited the platform interaction lock so long presses no longer select interface text.',
   'Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.',
   'Added one-step dash input buffering so swipes made during the end of a dash are not discarded.',
   'Made the top home and sound controls reliably accessible from the title menu.'
@@ -10,6 +11,7 @@ const RELEASE_NOTES = [
 const APP_SHELL = [
   './',
   './index.html',
+  './app.config.json',
   './styles.css',
   './state.js',
   './combat.js',
