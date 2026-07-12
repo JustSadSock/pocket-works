@@ -40,6 +40,8 @@ const requiredFiles = [
   'playwright.config.ts',
   'lighthouserc.json',
   'scripts/serve-site.mjs',
+  'shared/view-transition-guard.js',
+  'apps/screen-lab/viewport-containment.css',
   'tests/e2e/helpers.ts',
   'tests/e2e/launcher.spec.ts',
   'tests/e2e/screen-lab.spec.ts',
@@ -80,6 +82,26 @@ requireIncludes(serviceWorkerTest, [
   'navigator.serviceWorker.controller',
   'manifest?.display'
 ], 'tests/e2e/service-worker.spec.ts');
+
+const transitionGuard = await read('shared/view-transition-guard.js');
+requireIncludes(transitionGuard, [
+  'activeTransition',
+  'skipTransition()',
+  'immediateTransition',
+  '__pocketWorksGuarded'
+], 'shared/view-transition-guard.js');
+
+const containment = await read('apps/screen-lab/viewport-containment.css');
+requireIncludes(containment, [
+  '.app-shell',
+  'overflow-x: clip',
+  'contain: layout paint'
+], 'apps/screen-lab/viewport-containment.css');
+
+const screenLabIndex = await read('apps/screen-lab/index.html');
+const screenLabWorker = await read('apps/screen-lab/sw.js');
+requireIncludes(screenLabIndex, ['./viewport-containment.css', 'data-app-version="1.3.1"'], 'apps/screen-lab/index.html');
+requireIncludes(screenLabWorker, ['./viewport-containment.css', "const APP_VERSION = '1.3.1'", "const CACHE_NAME = 'screen-lab-v1.3.1'"], 'apps/screen-lab/sw.js');
 
 const lighthouse = JSON.parse(await read('lighthouserc.json') || '{}');
 const collect = lighthouse.ci?.collect;
