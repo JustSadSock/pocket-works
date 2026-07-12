@@ -17,7 +17,8 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 ├── sw.js                      # launcher service worker
 ├── shared/                    # deliberately small shared utilities
 ├── docs/
-│   └── ENVIRONMENT-ROADMAP.md # planned platform, tooling and launcher evolution
+│   ├── ENVIRONMENT-ROADMAP.md # full platform and tooling roadmap
+│   └── IMPLEMENTATION-PLAN.md # phased execution plan and completion log
 └── apps/
     ├── AGENTS.md              # mandatory native-mobile behavior for every app
     ├── _template/             # copy this when starting a new app
@@ -37,6 +38,8 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 
 ## Product roadmap
 
-The planned evolution of Pocket Works is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md).
+The broad evolution of Pocket Works is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md).
 
-It covers atomic publishing, Pocket Forge app generation, generated registries, shared capabilities, update handling, Workshop Mode, launcher improvements, testing and optional libraries such as Motion, Dexie, PixiJS, Phaser and Tone.js.
+The step-by-step execution order, phase boundaries, acceptance criteria and completion log are maintained in [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md).
+
+Implement one phase at a time. Each phase should end with one coherent commit, one Netlify deploy and an updated completion-log entry.
