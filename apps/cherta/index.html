@@ -24,7 +24,7 @@
   <header class="topbar" data-ui>
     <div class="brand"><i class="brand-mark"></i><div class="brand-copy"><b>ЧЕРТА</b><small>БОЕВАЯ КАЛЛИГРАФИЯ</small></div></div>
     <div class="score"><b id="score">0</b><small>СЧЁТ</small></div>
-    <div class="controls"><a class="icon-btn" id="shellBtn" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>⌂</a><button type="button" data-native-press class="icon-btn" id="soundBtn" aria-label="Звук">♪</button><button type="button" data-native-press class="icon-btn" id="pauseBtn" aria-label="Пауза">Ⅱ</button></div>
+    <div class="controls"><a class="icon-btn" id="shellBtn" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>⌂</a><button type="button" data-native-press class="icon-btn" id="soundBtn" aria-label="Звук" aria-pressed="true">♪</button><button type="button" data-native-press class="icon-btn" id="pauseBtn" aria-label="Пауза" aria-pressed="false" hidden>Ⅱ</button></div>
   </header>
   <section class="status" data-ui>
     <div><div class="health" id="health"></div><div class="combo" id="combo"><i></i><i></i><i></i></div></div>
@@ -82,7 +82,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ЧЕРТА"
-    data-app-version="1.0.0"
+    data-app-version="1.0.1"
   ></script>
   <script src="./state.js"></script>
   <script src="./combat.js"></script>
