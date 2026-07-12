@@ -55,6 +55,7 @@ test('DOCTRINA runs a deterministic quarter and persists it inside Pocket Works'
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect.poll(() => page.evaluate(() => window.__DOCTRINA__?.state.turn ?? -1)).toBe(turnBefore + 1);
   await expect.poll(() => page.evaluate(() => window.__DOCTRINA__?.state.seed ?? '')).toBe(initial.seed);
+  await resolvePendingEvent(page);
 
   await page.locator('[data-action="open-menu"]').click();
   await page.getByRole('button', { name: 'Workshop Mode' }).click();
