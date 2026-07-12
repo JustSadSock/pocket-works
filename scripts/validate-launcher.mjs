@@ -21,9 +21,10 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, app, worker, guard, packageSource, manifestSource, registrySource] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, packageSource, manifestSource, registrySource] = await Promise.all([
   read('index.html'),
   read('styles.css'),
+  read('launcher-performance.css'),
   read('app.js'),
   read('sw.js'),
   read('shared/view-transition-guard.js'),
@@ -56,6 +57,7 @@ for (const reference of [
   './shared/update-manager.css',
   './shared/update-manager.js',
   './shared/view-transition-guard.js',
+  './launcher-performance.css',
   './app.js'
 ]) {
   requireText(html, reference, 'index.html');
@@ -108,6 +110,15 @@ for (const token of [
   requireText(guard, token, 'shared/view-transition-guard.js');
 }
 
+for (const token of [
+  '.preview-scan',
+  'will-change: transform',
+  '@keyframes preview-scan',
+  'translateY(42px)'
+]) {
+  requireText(performanceCss, token, 'launcher-performance.css');
+}
+
 for (const selector of [
   '.command-deck',
   '.filter-strip',
@@ -128,6 +139,7 @@ for (const asset of [
   './shared/update-manager.css',
   './shared/update-manager.js',
   './shared/view-transition-guard.js',
+  './launcher-performance.css',
   './apps.json'
 ]) {
   requireText(worker, asset, 'sw.js APP_SHELL');
