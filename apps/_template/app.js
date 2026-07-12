@@ -4,7 +4,6 @@ import {
 } from '../../shared/mobile-runtime.js';
 import {
   createStorage,
-  registerAppServiceWorker,
   watchConnectivity
 } from '../../shared/pwa-utils.js';
 
@@ -19,4 +18,10 @@ watchConnectivity((online) => {
   document.documentElement.dataset.network = online ? 'online' : 'offline';
 });
 
-registerAppServiceWorker('./sw.js');
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((error) => {
+      console.warn('__APP_NAME__ service worker registration failed', error);
+    });
+  });
+}
