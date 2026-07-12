@@ -68,6 +68,15 @@ requireText(html, 'data-app-shell', 'index.html');
 requireText(html, 'data-filter="favorites"', 'index.html');
 requireText(html, 'data-filter="recent"', 'index.html');
 requireText(html, 'data-filter="offline"', 'index.html');
+requireText(html, 'data-preview-trigger', 'index.html application template');
+
+const cardTemplate = html.match(/<template id="app-card-template">([\s\S]*?)<\/template>/)?.[1] || '';
+const previewTrigger = cardTemplate.match(/<button class="app-entry__select"[\s\S]*?<\/button>/)?.[0] || '';
+if (!previewTrigger) {
+  errors.push('index.html application template must contain a dedicated preview trigger button');
+} else if (previewTrigger.includes('app-entry__body')) {
+  errors.push('application text must remain outside the preview trigger button');
+}
 
 const htmlVersion = matchValue(html, /data-app-version="([^"]+)"/, 'index.html data-app-version');
 const workerVersion = matchValue(worker, /const APP_VERSION = '([^']+)'/, 'sw.js APP_VERSION');
@@ -114,7 +123,10 @@ for (const token of [
   '.preview-scan',
   'will-change: transform',
   '@keyframes preview-scan',
-  'translateY(42px)'
+  'translateY(42px)',
+  '.app-entry__body',
+  'grid-column: 2',
+  'The preview thumbnail is the only detail trigger'
 ]) {
   requireText(performanceCss, token, 'launcher-performance.css');
 }
