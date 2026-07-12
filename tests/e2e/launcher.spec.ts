@@ -18,13 +18,27 @@ if (!screenLabVersion) throw new Error('Screen Lab is missing from apps.json');
 if (!echoesVersion) throw new Error('ECHOES is missing from apps.json');
 if (!newestApp) throw new Error('apps.json is empty');
 
+async function expectExpandedLauncherList(page: import('@playwright/test').Page) {
+  await expect(page.locator('.app-entry')).toHaveCount(registry.length);
+  const geometry = await page.locator('.app-entry').evaluateAll((entries) => entries.map((entry) => {
+    const rect = entry.getBoundingClientRect();
+    return { top: Math.round(rect.top), height: Math.round(rect.height), width: Math.round(rect.width) };
+  }));
+
+  expect(geometry.every((rect) => rect.height >= 90 && rect.width > 200)).toBe(true);
+  expect(new Set(geometry.map((rect) => rect.top)).size).toBe(geometry.length);
+  await expect(page.locator('#app-list')).not.toHaveCSS('height', '0px');
+  expect(await page.locator('#app-list').evaluate((element) => element.style.height)).toBe('');
+}
+
 test('launcher shelf supports precise updated sorting, search, details and favorites', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/', 'h1');
 
   await expect(page.locator('h1')).toContainText('Pocket');
   await expect(page.locator('html')).toHaveClass(/has-launcher-list-motion/);
-  await expect(page.locator('.app-entry')).toHaveCount(registry.length);
+  await expect(page.locator('html')).toHaveClass(/is-launcher-ui-ready/);
+  await expectExpandedLauncherList(page);
   await expect(page.locator('#app-count')).toHaveText(String(registry.length));
   await expect(page.locator('.app-entry').first()).toHaveAttribute('data-slug', newestApp.slug);
   await expect(page.locator('.app-entry').first().locator('.app-entry__meta')).not.toContainText(/T\d{2}:/);
@@ -41,7 +55,7 @@ test('launcher shelf supports precise updated sorting, search, details and favor
   await search.fill('missing object');
   await expect(page.locator('#empty-state')).toBeVisible();
   await page.locator('#clear-search').click();
-  await expect(page.locator('.app-entry')).toHaveCount(registry.length);
+  await expectExpandedLauncherList(page);
 
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
   await screenLabEntry.locator('.app-entry__select').click();
@@ -55,6 +69,7 @@ test('launcher shelf supports precise updated sorting, search, details and favor
   await favorite.click();
   await expect(favorite).toHaveText('Remove from saved');
   await expect(favorite).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.launcher-toast')).toHaveClass(/is-visible/);
   await page.locator('#detail-close').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'true');
 
@@ -74,7 +89,24 @@ test('launcher shelf supports precise updated sorting, search, details and favor
   monitor.assertClean();
 });
 
-test('launcher retains personal shelf state after reload', async ({ page }) => {
+test('launcher list remains expanded after reload and BFCache-safe cleanup', async ({ page }) => {
+  const monitor = monitorUnexpectedBrowserOutput(page);
+  await openStablePage(page, '/', '.app-entry');
+  await expectExpandedLauncherList(page);
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('.app-entry').first().waitFor();
+  await page.waitForTimeout(750);
+  await expectExpandedLauncherList(page);
+
+  const activeAnimations = await page.locator('#app-list').evaluate((element) =>
+    element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running').length
+  );
+  expect(activeAnimations).toBe(0);
+  monitor.assertClean();
+});
+
+test('launcher retains personal shelf state and reset requires a second confirmation press', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
   await openStablePage(page, '/', screenLabEntry);
@@ -82,14 +114,22 @@ test('launcher retains personal shelf state after reload', async ({ page }) => {
   await screenLabEntry.locator('.app-entry__favorite').click();
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
+  await expectExpandedLauncherList(page);
 
-  await page.locator('[data-filter="favorites"]').click();
-  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__name')).toHaveText('Screen Lab');
+  const reset = page.locator('#reset-shelf');
+  await reset.click();
+  await expect(reset).toHaveText('Press again to reset');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
+
+  await reset.click();
+  await expect(reset).toHaveText('Reset personal shelf');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
   await assertNoHorizontalOverflow(page);
   monitor.assertClean();
 });
 
-test('shared runtime blocks game text selection while preserving explicit selectable content', async ({ page }) => {
+test('shared runtime blocks game text selection and initializes dynamic range controls', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/apps/screen-lab/', '#hero-title');
 
@@ -102,6 +142,24 @@ test('shared runtime blocks game text selection while preserving explicit select
     return event.defaultPrevented;
   });
   expect(selectionPrevented).toBe(true);
+
+  await page.evaluate(() => {
+    const range = document.createElement('input');
+    range.id = 'runtime-range-probe';
+    range.type = 'range';
+    range.min = '0';
+    range.max = '100';
+    range.value = '25';
+    document.body.append(range);
+  });
+  const range = page.locator('#runtime-range-probe');
+  await expect(range).toHaveAttribute('data-range-ready', 'true');
+  await expect.poll(() => range.evaluate((element) => element.style.getPropertyValue('--app-range-progress'))).toBe('25%');
+  await range.evaluate((element: HTMLInputElement) => {
+    element.value = '75';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect.poll(() => range.evaluate((element) => element.style.getPropertyValue('--app-range-progress'))).toBe('75%');
   monitor.assertClean();
 });
 
