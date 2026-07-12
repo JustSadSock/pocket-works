@@ -53,18 +53,65 @@ Launcher validation passed for Pocket Works 0.7.1 and 6 registered apps.
 > pocket-works@0.7.1 validate:capabilities
 > node scripts/validate-capabilities.mjs
 
-Capability validation failed with 14 issues:
-- apps/udel/index.html must include ../../shared/workshop-mode.css
-- apps/udel/index.html must include data-workshop-trigger
-- apps/udel/app.js must include from '../../shared/workshop-mode.js'
-- apps/udel/app.js must include createWorkshopMode
-- apps/udel/app.js must include storageNamespace: 'pocket-works:udel'
-- apps/udel/app.js must include cachePrefix: 'udel-'
-- apps/udel/sw.js must cache ../../shared/capabilities/motion.js
-- apps/udel/sw.js must cache ../../shared/capabilities/storage.js
-- apps/udel/sw.js must cache ../../shared/capabilities/transfer.js
-- apps/udel/sw.js must cache ../../shared/capabilities/audio.js
-- apps/udel/sw.js must cache ../../shared/capabilities/device.js
-- apps/udel/sw.js must cache ../../shared/capabilities/diagnostics.js
-- apps/udel/sw.js must cache ../../shared/workshop-mode.js
-- apps/udel/sw.js must cache ../../shared/workshop-mode.css
+Shared capabilities and Workshop Mode passed for Quick and Enhanced templates plus 6 published apps.
+
+> pocket-works@0.7.1 validate:enhanced
+> node scripts/validate-enhanced.mjs
+
+Enhanced runtime contract passed for the template and 0 published enhanced apps.
+
+> pocket-works@0.7.1 validate:quality
+> node scripts/validate-quality-gates.mjs
+
+Quality gate contract passed for 7 browser test files and the Lighthouse budget.
+
+> pocket-works@0.7.1 test:enhanced
+> node scripts/test-enhanced.mjs
+
+Enhanced tests complete: 0 applications.
+
+> pocket-works@0.7.1 test:forge:quick
+> node scripts/test-forge.mjs
+
+Generated apps.json with 7 application entries.
+Pocket Forge created apps/forge-smoke-vanilla with the quick/vanilla preset.
+Open: /apps/forge-smoke-vanilla/
+Generated apps.json with 8 application entries.
+Pocket Forge created apps/forge-smoke-interactive with the quick/interactive preset.
+Open: /apps/forge-smoke-interactive/
+Generated apps.json with 9 application entries.
+Pocket Forge created apps/forge-smoke-canvas with the quick/canvas preset.
+Open: /apps/forge-smoke-canvas/
+Generated apps.json with 10 application entries.
+Pocket Forge created apps/forge-smoke-game-2d with the quick/game-2d preset.
+Open: /apps/forge-smoke-game-2d/
+Generated apps.json with 11 application entries.
+Pocket Forge created apps/forge-smoke-audio with the quick/audio preset.
+Open: /apps/forge-smoke-audio/
+Generated app registry is current.
+Pocket Works health check passed: root launcher and 11 registered apps validated.
+Mobile runtime validation passed for Quick and Enhanced templates plus 11 registered apps.
+Shared capabilities and Workshop Mode passed for Quick and Enhanced templates plus 11 published apps.
+Pocket Forge Quick smoke test passed for 5 presets.
+
+> pocket-works@0.7.1 test:forge:enhanced
+> node scripts/test-enhanced-forge.mjs
+
+Pocket Works health check passed: root launcher and 10 registered apps validated.
+
+## Enhanced validation
+$ /opt/hostedtoolcache/node/22.23.1/x64/bin/node scripts/validate-enhanced.mjs
+Enhanced runtime contract passed for the template and 4 published enhanced apps.
+
+PASS: 4 Enhanced presets generated, built, typechecked and tested.
+Pocket Forge Enhanced smoke test passed for 4 presets.
+
+> pocket-works@0.7.1 prepare:site
+> node scripts/prepare-site.mjs
+
+Prepared production site with 6 registered application(s) in dist-site/.
+
+> pocket-works@0.7.1 validate:site
+> node scripts/validate-site.mjs
+
+Production output contains only deployable Pocket Works assets.
