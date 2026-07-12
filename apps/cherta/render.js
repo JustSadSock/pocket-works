@@ -1,5 +1,12 @@
 'use strict';
+function updateAmbient(dt){
+  shake=Math.max(0,shake-dt*35);flash=Math.max(0,flash-dt*2.3);
+  for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-p.drag*dt);p.vy*=Math.exp(-p.drag*dt);p.life-=dt}
+  for(const e of enemies){if(!e.dead)continue;e.deathT-=dt;e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=Math.exp(-7*dt);e.vy*=Math.exp(-7*dt)}
+  particles=particles.filter(p=>p.life>0);enemies=enemies.filter(e=>!e.dead||e.deathT>0);
+}
 function update(dt){
+  updateAmbient(dt);
   if(!running||paused||gameOver)return;
   const scaled=dt*(player.focus&&!player.dashing?.16:1);timeScale=scaled/dt;
   score+=scaled*.8;waveClock+=scaled;spawnClock-=scaled;player.invuln=Math.max(0,player.invuln-scaled);player.hitFlash=Math.max(0,player.hitFlash-scaled);
@@ -9,10 +16,8 @@ function update(dt){
   else if(player.lines.length&&!player.detonating){player.comboTimer-=scaled;if(player.comboTimer<=0)detonate()}
   for(const e of enemies)enemyLogic(e,scaled);
   for(const p of projectiles){p.x+=p.vx*scaled;p.y+=p.vy*scaled;p.life-=scaled;const d=dist(p.x,p.y,player.x,player.y);if(d<p.r+player.r+2){if(player.invuln>0){graze(p);p.life=0}else{hurtPlayer();p.life=0}}}
-  for(const p of particles){p.x+=p.vx*scaled;p.y+=p.vy*scaled;p.vx*=Math.exp(-p.drag*scaled);p.vy*=Math.exp(-p.drag*scaled);p.life-=scaled}
   for(const q of cutQueue)q.t-=dt;for(const q of cutQueue.filter(q=>q.t<=0&&!q.done)){q.done=true;if(q.finish){player.detonating=false;player.charges=3;player.grazes=0;updateUI()}else performCut(q.line)}
-  cutQueue=cutQueue.filter(q=>!q.done);projectiles=projectiles.filter(p=>p.life>0);particles=particles.filter(p=>p.life>0);enemies=enemies.filter(e=>!e.dead||e.hit>.01);
-  shake=Math.max(0,shake-dt*35);flash=Math.max(0,flash-dt*2.3);updateUI();
+  cutQueue=cutQueue.filter(q=>!q.done);projectiles=projectiles.filter(p=>p.life>0);updateUI();
 }
 function drawPaper(){
   ctx.fillStyle='#e9e1cf';ctx.fillRect(0,0,W,H);
@@ -20,11 +25,12 @@ function drawPaper(){
   ctx.strokeStyle='rgba(169,71,56,.16)';ctx.beginPath();ctx.moveTo(46,92);ctx.lineTo(46,H-104);ctx.stroke();
   const a=arena();ctx.strokeStyle='rgba(32,36,33,.45)';ctx.setLineDash([4,7]);ctx.strokeRect(a.l+.5,a.t+.5,a.r-a.l,a.b-a.t);ctx.setLineDash([])
 }
-function drawLine(l,alpha=1){const age=l.age||0;ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle='#202421';ctx.lineCap='round';ctx.lineWidth=3.2;ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();ctx.strokeStyle='rgba(169,71,56,.72)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(l.x1+2,l.y1-1);ctx.lineTo(l.x2+2,l.y2-1);ctx.stroke();ctx.restore()}
+function drawLine(l,alpha=1){ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle='#202421';ctx.lineCap='round';ctx.lineWidth=3.2;ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();ctx.strokeStyle='rgba(169,71,56,.72)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(l.x1+2,l.y1-1);ctx.lineTo(l.x2+2,l.y2-1);ctx.stroke();ctx.restore()}
 function drawAim(){if(!pointer.down||!player.focus)return;const dx=pointer.x-pointer.sx,dy=pointer.y-pointer.sy,len=Math.hypot(dx,dy);if(len<4)return;const d=clamp(len*1.15,45,124),nx=dx/len,ny=dy/len,a=arena(),tx=clamp(player.x+nx*d,a.l+player.r,a.r-player.r),ty=clamp(player.y+ny*d,a.t+player.r,a.b-player.r);ctx.save();ctx.strokeStyle='rgba(32,36,33,.43)';ctx.setLineDash([3,7]);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(tx,ty);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(169,71,56,.22)';ctx.beginPath();ctx.arc(tx,ty,12+Math.sin(performance.now()/90)*2,0,TAU);ctx.fill();ctx.restore()}
 function drawEnemy(e){
   ctx.save();ctx.translate(e.x,e.y);const hit=e.hit>0;ctx.rotate(Math.sin(e.seed*7)*.08);
-  if(e.wind>0){const p=e.kind==='brute'?1-e.wind/.75:e.kind==='needle'?1-e.wind/.62:1-e.wind/.48;ctx.strokeStyle=`rgba(169,71,56,${.25+.55*p})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,e.kind==='brute'?75:e.kind==='needle'?e.r+10:e.r+13,0,TAU*p);ctx.stroke();if(e.kind==='needle'){ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(e.lockedX-e.x,e.lockedY-e.y);ctx.stroke();ctx.setLineDash([])}}
+  if(e.dead){const p=clamp(e.deathT/e.deathDur,0,1);ctx.globalAlpha=p;ctx.scale(.72+.28*p,.72+.28*p);ctx.rotate((1-p)*.5)}
+  if(!e.dead&&e.wind>0){const p=e.kind==='brute'?1-e.wind/.75:e.kind==='needle'?1-e.wind/.62:1-e.wind/.48;ctx.strokeStyle=`rgba(169,71,56,${.25+.55*p})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,e.kind==='brute'?75:e.kind==='needle'?e.r+10:e.r+13,0,TAU*p);ctx.stroke();if(e.kind==='needle'){ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(e.lockedX-e.x,e.lockedY-e.y);ctx.stroke();ctx.setLineDash([])}}
   ctx.fillStyle=hit?'#202421':'#a94738';ctx.strokeStyle='#6e2e29';ctx.lineWidth=2;
   if(e.kind==='stalker'){ctx.rotate(Math.PI/4);ctx.fillRect(-e.r*.72,-e.r*.72,e.r*1.44,e.r*1.44);ctx.strokeRect(-e.r*.72,-e.r*.72,e.r*1.44,e.r*1.44);ctx.fillStyle='#e9e1cf';ctx.fillRect(-2,-7,4,14);ctx.fillRect(-7,-2,14,4)}
   else if(e.kind==='needle'){ctx.beginPath();ctx.moveTo(0,-e.r-3);ctx.lineTo(e.r,e.r);ctx.lineTo(-e.r,e.r);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#e9e1cf';ctx.fillRect(-1,-5,2,10)}
@@ -43,4 +49,4 @@ function render(){
   if(flash>0){ctx.fillStyle=`rgba(169,71,56,${flash*.23})`;ctx.fillRect(0,0,W,H)}
 }
 function loop(t){const dt=Math.min(.034,(t-last)/1000||.016);last=t;update(dt);render();raf=requestAnimationFrame(loop)}
-function endGame(){gameOver=true;running=false;pointer.down=false;player.focus=false;best=Math.max(best,Math.floor(score));bestWave=Math.max(bestWave,wave);localStorage.setItem('pocket-works:cherta:best',best);localStorage.setItem('pocket-works:cherta:bestWave',bestWave);ui.finalScore.textContent=Math.floor(score);ui.finalKills.textContent=kills;ui.finalWave.textContent=wave;ui.gameover.classList.remove('hidden');syncSettings();tone(110,.45,'sawtooth',.04,-55)}
+function endGame(){gameOver=true;running=false;pointer.down=false;player.focus=false;syncChrome();best=Math.max(best,Math.floor(score));bestWave=Math.max(bestWave,wave);localStorage.setItem('pocket-works:cherta:best',best);localStorage.setItem('pocket-works:cherta:bestWave',bestWave);ui.finalScore.textContent=Math.floor(score);ui.finalKills.textContent=kills;ui.finalWave.textContent=wave;ui.gameover.classList.remove('hidden');syncSettings();tone(110,.45,'sawtooth',.04,-55)}
