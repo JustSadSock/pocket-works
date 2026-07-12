@@ -9,19 +9,20 @@
   <meta name="apple-mobile-web-app-title" content="__APP_SHORT_NAME__">
   <title>__APP_NAME__</title>
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="app-shell">
-    <header class="app-header">
+  <main class="app-shell" data-app-shell>
+    <header class="app-header" data-ui>
       <p class="app-kicker">OFFLINE-FIRST APPLICATION</p>
       <h1>__APP_NAME__</h1>
-      <p>__APP_DESCRIPTION__</p>
+      <p class="selectable-content">__APP_DESCRIPTION__</p>
     </header>
 
     <section class="stage" aria-labelledby="stage-title">
       <h2 id="stage-title">Replace this with the real interaction loop.</h2>
-      <button id="primary-action" type="button">Test interaction</button>
+      <button id="primary-action" type="button" data-native-press>Test interaction</button>
       <output id="status" aria-live="polite">Ready</output>
     </section>
   </main>
