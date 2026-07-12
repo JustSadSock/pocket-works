@@ -1,11 +1,10 @@
 const CACHE_PREFIX = 'kromka-';
-const CACHE_NAME = 'kromka-v1.1.0';
-const APP_VERSION = '1.1.0';
+const CACHE_NAME = 'kromka-v1.1.1';
+const APP_VERSION = '1.1.1';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Increased the sense of speed with a faster opening pace, road vibration and a more aggressive animated shredder.',
-  'Smoothed high-speed steering and reduced the lateral snap during tension boosts.',
-  'Accelerated the difficulty curve and added explicit Pocket Works exit controls to every game menu.'
+  'Fixed every Pocket Works exit control so it reliably returns to the launcher.',
+  'Replaced inert exit buttons with native links that work without game JavaScript.'
 ];
 const APP_SHELL = [
   './',
