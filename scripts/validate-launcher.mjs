@@ -21,13 +21,15 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, performanceCss, app, worker, guard, packageSource, manifestSource, registrySource] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registrySource] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('launcher-performance.css'),
   read('app.js'),
   read('sw.js'),
   read('shared/view-transition-guard.js'),
+  read('shared/launcher-list-motion.js'),
+  read('shared/launcher-list-motion.css'),
   read('package.json'),
   read('manifest.webmanifest'),
   read('apps.json')
@@ -57,6 +59,8 @@ for (const reference of [
   './shared/update-manager.css',
   './shared/update-manager.js',
   './shared/view-transition-guard.js',
+  './shared/launcher-list-motion.css',
+  './shared/launcher-list-motion.js',
   './launcher-performance.css',
   './app.js'
 ]) {
@@ -101,6 +105,27 @@ for (const token of [
 }
 
 for (const token of [
+  'captureLayout',
+  'previousRects',
+  'entry.animate',
+  'formatReleaseTime',
+  'app.updatedAt',
+  'is-list-syncing',
+  'prefers-reduced-motion'
+]) {
+  requireText(motionJs, token, 'shared/launcher-list-motion.js');
+}
+
+for (const token of [
+  '.has-launcher-list-motion',
+  '.is-list-syncing',
+  '@keyframes launcher-sync-scan',
+  '@media (prefers-reduced-motion: reduce)'
+]) {
+  requireText(motionCss, token, 'shared/launcher-list-motion.css');
+}
+
+for (const token of [
   'installViewTransitionGuard',
   'activeTransition',
   'skipTransition()',
@@ -139,6 +164,8 @@ for (const asset of [
   './shared/update-manager.css',
   './shared/update-manager.js',
   './shared/view-transition-guard.js',
+  './shared/launcher-list-motion.css',
+  './shared/launcher-list-motion.js',
   './launcher-performance.css',
   './apps.json'
 ]) {
@@ -159,6 +186,8 @@ if (!Array.isArray(registry) || registry.length === 0) {
   for (const appEntry of registry) {
     if (typeof appEntry.updatedAt !== 'string' || appEntry.updatedAt.length === 0) {
       errors.push(`${appEntry.slug || 'unknown app'} must expose updatedAt for the launcher`);
+    } else if (!appEntry.updatedAt.includes('T') || Number.isNaN(Date.parse(appEntry.updatedAt))) {
+      errors.push(`${appEntry.slug || 'unknown app'} updatedAt must be an exact ISO timestamp`);
     }
     if (!Array.isArray(appEntry.changelog) || appEntry.changelog.length === 0) {
       errors.push(`${appEntry.slug || 'unknown app'} must expose changelog for the launcher`);
