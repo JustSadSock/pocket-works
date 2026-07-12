@@ -4,12 +4,12 @@
   "name": "Screen Lab",
   "shortName": "Screen Lab",
   "description": "Interactive mobile viewport, safe-area, motion and multi-touch laboratory.",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Contained decorative geometry within the WebKit mobile viewport.",
-    "Added automated Chromium and WebKit interaction and orientation coverage.",
-    "Preserved offline launch, Workshop Mode and native touch behavior under browser quality gates."
+    "Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.",
+    "Added one-tap diagnostic snapshots with clipboard and JSON download fallback.",
+    "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
   ],
   "status": "active",
   "preset": "interactive",
@@ -17,7 +17,7 @@
   "backgroundColor": "#f2efe6",
   "themeColor": "#f2efe6",
   "orientation": "any",
-  "cacheName": "screen-lab-v1.3.1",
+  "cacheName": "screen-lab-v1.4.0",
   "storageNamespace": "pocket-works:screen-lab",
   "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
   "order": 10
