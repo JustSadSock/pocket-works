@@ -4,12 +4,11 @@
   "name": "КРОМКА",
   "shortName": "КРОМКА",
   "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Increased the sense of speed with a faster opening pace, road vibration and a more aggressive animated shredder.",
-    "Smoothed high-speed steering and reduced the lateral snap during tension boosts.",
-    "Accelerated the difficulty curve and added explicit Pocket Works exit controls to every game menu."
+    "Fixed every Pocket Works exit control so it reliably returns to the launcher.",
+    "Replaced inert exit buttons with native links that work without game JavaScript."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -18,7 +17,7 @@
   "backgroundColor": "#eee2c8",
   "themeColor": "#eee2c8",
   "orientation": "portrait",
-  "cacheName": "kromka-v1.1.0",
+  "cacheName": "kromka-v1.1.1",
   "storageNamespace": "pocket-works:kromka",
   "tags": [
     "PWA",
