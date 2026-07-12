@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="__APP_THEME__">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="__APP_SHORT_NAME__">
+  <title>__APP_NAME__</title>
+</head>
+<body data-app-preset="__APP_PRESET__" data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="app-header" data-ui>
+      <div>
+        <p class="app-kicker">__PRESET_LABEL__ / ENHANCED</p>
+        <h1>__APP_NAME__</h1>
+        <p class="selectable-content">__APP_DESCRIPTION__</p>
+      </div>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </header>
+
+    <section class="stage" aria-labelledby="stage-title">
+      __PRESET_MARKUP__
+    </section>
+
+    <footer data-ui>
+      <span>__APP_SLUG__</span>
+      <span>v__APP_VERSION__ · __APP_STATUS__</span>
+    </footer>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
