@@ -4,18 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="theme-color" content="#0e100e">
+  <meta name="description" content="Pocket Works — a personal shelf for small installable offline-first applications.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
   <title>Pocket Works</title>
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./shared/pocket-works-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./shared/mobile-runtime.css">
   <link rel="stylesheet" href="./shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./launcher-performance.css">
   <link rel="stylesheet" href="./shared/app-icon-previews.css">
 </head>
-<body class="is-shelf-loading" style="--shelf-reserved-height: 704px;">
+<body>
   <div class="shelf-atmosphere" aria-hidden="true">
     <span></span><span></span><span></span>
   </div>
@@ -75,7 +77,7 @@
           <p id="result-summary" aria-live="polite">Reading shelf…</p>
         </header>
 
-        <div id="app-list" class="app-list" aria-live="polite" aria-busy="true"></div>
+        <div id="app-list" class="app-list" aria-live="polite" data-loading="true"></div>
         <div id="empty-state" class="shelf-message" hidden>
           <strong>No matching objects.</strong>
           <p>Change the filter or clear the search field.</p>
@@ -172,23 +174,16 @@
   <script>
     (() => {
       const list = document.querySelector('#app-list');
-      const panel = document.querySelector('.collection-panel');
-      if (!list || !panel) return;
-
-      const settleShelf = () => {
-        const hasResult = list.childElementCount > 0;
-        const hasTerminalState = panel.querySelector('#empty-state:not([hidden]), #error-state:not([hidden])');
-        if (!hasResult && !hasTerminalState) return;
-        document.body.classList.remove('is-shelf-loading');
-        list.setAttribute('aria-busy', 'false');
-        observer.disconnect();
-      };
-
-      const observer = new MutationObserver(settleShelf);
-      observer.observe(panel, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+      if (!list) return;
+      const observer = new MutationObserver(() => {
+        if (list.childElementCount > 0) {
+          list.dataset.loading = 'false';
+          observer.disconnect();
+        }
+      });
+      observer.observe(list, { childList: true });
       window.setTimeout(() => {
-        document.body.classList.remove('is-shelf-loading');
-        list.setAttribute('aria-busy', 'false');
+        list.dataset.loading = 'false';
         observer.disconnect();
       }, 5000);
     })();
