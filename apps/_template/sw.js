@@ -1,3 +1,4 @@
+const CACHE_PREFIX = '__APP_SLUG__-';
 const CACHE_NAME = '__APP_CACHE_VERSION__';
 const APP_SHELL = [
   './',
@@ -5,25 +6,30 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './manifest.webmanifest',
+  './icons/icon.svg',
   '../../shared/mobile-runtime.css',
   '../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys
-        .filter((key) => key.startsWith('__APP_SLUG__-') && key !== CACHE_NAME)
-        .map((key) => caches.delete(key))
-    ))
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -32,19 +38,28 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
           return response;
         })
-        .catch(() => cached || caches.match('./index.html'));
+        .catch(() => caches.match('./'))
+    );
+    return;
+  }
 
-      return cached || network;
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (!response || response.status !== 200 || response.type === 'opaque') return response;
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      });
     })
   );
 });
