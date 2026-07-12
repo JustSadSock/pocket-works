@@ -16,18 +16,27 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 ├── manifest.webmanifest       # launcher PWA manifest
 ├── sw.js                      # launcher service worker
 ├── shared/                    # deliberately small shared utilities
+├── docs/
+│   └── ENVIRONMENT-ROADMAP.md # planned platform, tooling and launcher evolution
 └── apps/
+    ├── AGENTS.md              # mandatory native-mobile behavior for every app
     ├── _template/             # copy this when starting a new app
     └── <app-slug>/            # one isolated PWA
 ```
 
 ## Add a new app
 
-1. Copy `apps/_template/` to `apps/<unique-slug>/`.
-2. Replace all template identifiers, cache names, paths, titles and colors.
-3. Build the app inside that directory only.
-4. Add one record to `apps.json`.
-5. Confirm the app works after the network is disabled.
-6. Confirm it can be installed independently from the root launcher.
+1. Read both `AGENTS.md` and `apps/AGENTS.md`.
+2. Copy `apps/_template/` to `apps/<unique-slug>/`.
+3. Replace all template identifiers, cache names, paths, titles and colors.
+4. Build the app inside that directory only.
+5. Add one record to `apps.json`.
+6. Confirm the app works after the network is disabled.
+7. Confirm it can be installed independently from the root launcher.
+8. Test long-press, double-tap, input focus, orientation, safe areas and standalone mode.
 
-Read `AGENTS.md` before making changes.
+## Product roadmap
+
+The planned evolution of Pocket Works is documented in [`docs/ENVIRONMENT-ROADMAP.md`](./docs/ENVIRONMENT-ROADMAP.md).
+
+It covers atomic publishing, Pocket Forge app generation, generated registries, shared capabilities, update handling, Workshop Mode, launcher improvements, testing and optional libraries such as Motion, Dexie, PixiJS, Phaser and Tone.js.
