@@ -1,3 +1,4 @@
+// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
 const list = document.querySelector('#app-list');
 const emptyState = document.querySelector('#empty-state');
 const errorState = document.querySelector('#error-state');
