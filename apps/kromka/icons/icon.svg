@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="94" fill="#eee2c8"/>
+  <path d="M471 41C337 80 236 147 209 262c-23 97 44 148 94 215H512V38z" fill="#171612"/>
+  <path d="M452 65C342 104 263 163 239 268c-18 79 36 128 79 190" fill="none" stroke="#eee2c8" stroke-width="14"/>
+  <path d="M426 36c-28 10-57 24-84 40M394 51l16 24M357 68l15 24M324 88l14 23" stroke="#d65b2a" stroke-width="18"/>
+  <path d="M0 369l161-6 47 149H0z" fill="#171612"/>
+  <path d="M0 401l151-5 16 53H0z" fill="#d65b2a"/>
+  <path d="M0 344l172 8-23 35L0 382z" fill="#eee2c8" stroke="#171612" stroke-width="8"/>
+  <g transform="translate(315 286) rotate(24)">
+    <rect x="-48" y="-82" width="96" height="164" rx="22" fill="#171612" opacity=".28" transform="translate(10 12)"/>
+    <path d="M-34-80H34L46-48V54L31 82H-31L-46 54V-48z" fill="#f4ead4" stroke="#171612" stroke-width="7"/>
+    <rect x="-13" y="-76" width="10" height="154" fill="#d65b2a"/><rect x="4" y="-76" width="10" height="154" fill="#d65b2a"/>
+    <path d="M-29-42H29L34-8H-34zM-32 16H32L28 49H-28z" fill="#24231f"/>
+    <rect x="-30" y="66" width="18" height="8" fill="#b82d20"/><rect x="12" y="66" width="18" height="8" fill="#b82d20"/>
+  </g>
+  <path d="M269 373c-14 12-27 32-32 54M290 384c-10 16-15 34-16 54" fill="none" stroke="#171612" stroke-width="9" stroke-linecap="round" opacity=".7"/>
+  <circle cx="78" cy="92" r="20" fill="none" stroke="#171612" stroke-width="5"/><path d="M43 92h70M78 57v70" stroke="#171612" stroke-width="5"/>
+  <text x="42" y="305" font-family="Arial Black, sans-serif" font-size="174" font-weight="900" fill="#171612">К</text>
+</svg>
