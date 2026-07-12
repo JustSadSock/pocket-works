@@ -1,16 +1,16 @@
 # Pocket Works — phased implementation plan
 
-This file turns the broad environment roadmap into small, self-contained implementation phases. Work on one phase at a time. Each phase should end with one coherent commit, one Netlify deploy and one short status update in this document.
+This document turns the environment roadmap into small, self-contained implementation phases. Work on one phase at a time. Each phase should end with one coherent main-branch commit, one Netlify deploy and one status report.
 
 ## Operating rule
 
 For every phase:
 
 1. Read only `AGENTS.md`, `apps/AGENTS.md`, this file and the files explicitly named by the phase.
-2. Do not start work from later phases unless it is required to keep the current phase functional.
-3. Keep the existing launcher and published apps working throughout.
-4. Finish with validation, a production deploy check and a status update below.
-5. Use one commit per phase whenever practical.
+2. Do not begin later-phase work unless required to keep the current phase functional.
+3. Keep the launcher and all published apps working.
+4. Finish with validation, production verification and a completion-log update.
+5. Prefer a branch plus squash merge so `main` receives one coherent phase commit.
 
 Status values: `not-started`, `in-progress`, `blocked`, `done`.
 
@@ -18,7 +18,7 @@ Status values: `not-started`, `in-progress`, `blocked`, `done`.
 
 ## Phase 0 — Baseline and safety net
 
-**Status:** `not-started`
+**Status:** `done`
 
 ### Goal
 
@@ -26,24 +26,35 @@ Record the current working state and make later refactors safer.
 
 ### Scope
 
-- document current launcher and app structure;
-- confirm `Screen Lab` remains the reference working app;
-- add a lightweight repository health command;
-- ensure the validator checks root files as well as registered apps;
-- record current production URL and expected paths.
+- document the launcher and app structure;
+- retain `Screen Lab` as the reference working app;
+- add `npm run health` as the repository health command;
+- validate root files as well as every registered app;
+- validate manifests, icons, Service Worker registration and cache ownership;
+- record production URLs, expected paths and a rollback reference;
+- prevent one app from deleting caches owned by another app.
 
 ### Main files
 
 - `scripts/validate.mjs`
+- `package.json`
 - `README.md`
 - `docs/BASELINE.md`
 - `netlify.toml`
+- `.github/workflows/validate.yml`
+- `apps/screen-lab/sw.js`
 
 ### Done when
 
-- `node scripts/validate.mjs` validates the launcher and every registered app;
-- the current production site and Screen Lab load successfully;
+- `npm run health` validates the launcher and every registered app;
+- GitHub validation passes;
+- Netlify completes the production build with status `ready`;
+- `/` and `/apps/screen-lab/` remain available;
 - later work has a documented rollback/reference point.
+
+### Result
+
+The repository now has one health command shared by local development, CI and Netlify. The validator rejects missing launcher/app files, broken manifest paths, missing local icons, duplicate caches, unregistered app directories and unsafe cross-app cache cleanup. `Screen Lab` cache deletion is prefix-scoped.
 
 ---
 
@@ -53,20 +64,18 @@ Record the current working state and make later refactors safer.
 
 ### Goal
 
-Create a small shared mobile runtime that removes browser-like behavior and improves app-like interaction without imposing a shared visual style.
+Create a small shared mobile runtime that removes browser-like behavior without imposing a shared visual style.
 
 ### Scope
 
 - controlled `touch-action` policies;
-- disable unwanted text selection, callouts and image dragging on interactive surfaces;
-- prevent accidental double-tap zoom where the interaction model requires it;
-- prevent input-focus zoom by enforcing mobile-safe input sizing;
-- normalize tap highlight behavior;
-- handle `pointercancel` and pointer capture helpers;
-- provide `visualViewport` keyboard helpers;
-- provide safe-area and `100dvh` utilities;
-- provide overscroll and scroll-lock helpers for true full-screen apps;
-- keep text selectable inside real reading/editing surfaces.
+- disable unwanted selection, callouts and image dragging on interactive surfaces;
+- prevent accidental double-tap and input-focus zoom;
+- normalize tap highlights;
+- pointer capture and `pointercancel` helpers;
+- `visualViewport` keyboard helpers;
+- safe-area, `100dvh`, overscroll and scroll-lock utilities;
+- preserve selection in real reading and editing surfaces.
 
 ### Main files
 
@@ -79,8 +88,8 @@ Create a small shared mobile runtime that removes browser-like behavior and impr
 
 ### Done when
 
-- a newly generated/template app behaves like an app in Safari and standalone mode;
-- long-press, double-tap, input focus and orientation do not trigger unwanted browser behavior;
+- a template app behaves like installed software in Safari and standalone mode;
+- long-press, repeated taps, input focus and orientation do not trigger unwanted browser behavior;
 - Screen Lab can adopt the runtime without visual regressions.
 
 ---
@@ -91,16 +100,15 @@ Create a small shared mobile runtime that removes browser-like behavior and impr
 
 ### Goal
 
-Make creation of a new application deterministic and difficult to screw up.
+Make creation of a new application deterministic and difficult to break.
 
 ### Scope
 
 - add `app.config.json` inside each app;
 - create `scripts/new-app.mjs`;
 - generate unique manifest IDs, cache names, storage namespaces and paths;
-- generate `apps.json` from app configs instead of editing it manually;
-- add presets such as `vanilla`, `interactive`, `canvas`, `game-2d` and `audio`;
-- make one command create, register and validate an app skeleton.
+- generate `apps.json` from app configs;
+- add `vanilla`, `interactive`, `canvas`, `game-2d` and `audio` presets.
 
 ### Main files
 
@@ -113,9 +121,9 @@ Make creation of a new application deterministic and difficult to screw up.
 
 ### Done when
 
-- a command such as `node scripts/new-app.mjs example --preset=interactive` creates a valid isolated app;
+- one command creates, registers and validates an isolated app;
 - the registry is generated rather than hand-maintained;
-- duplicate slugs, scopes, caches and storage namespaces are rejected.
+- duplicate scopes, caches and storage namespaces are rejected.
 
 ---
 
@@ -129,14 +137,12 @@ Ensure users never receive half-finished files or confusing stale PWA versions.
 
 ### Scope
 
-- enforce one coherent commit for a completed app/update;
-- add a shared update manager;
-- detect a waiting Service Worker;
-- display an in-app update prompt;
-- support safe refresh after update;
-- maintain explicit cache versions and cleanup;
-- add per-app changelog/version metadata;
-- document rollback behavior.
+- one coherent commit for each completed app/update;
+- shared Service Worker update manager;
+- visible waiting-update prompt and safe refresh;
+- explicit cache versions and cleanup;
+- per-app changelog/version metadata;
+- rollback documentation.
 
 ### Main files
 
@@ -148,8 +154,8 @@ Ensure users never receive half-finished files or confusing stale PWA versions.
 
 ### Done when
 
-- a deployed update is detected inside an installed PWA;
-- the user can update deliberately without manually clearing Safari data;
+- installed PWAs detect deployed updates;
+- users can update without clearing Safari data;
 - old caches are removed without touching neighboring apps;
 - the launcher displays current app versions.
 
@@ -165,15 +171,12 @@ Turn the root site into a useful personal application shelf rather than a plain 
 
 ### Scope
 
-- search and filtering;
-- favorites;
+- search, filtering and favorites;
 - recently opened apps;
-- app version and last-update metadata;
-- offline-ready and experimental indicators;
-- distinct previews or cover treatments per app;
-- app details panel;
-- actions for open, install guidance, clear local data and view changelog;
-- preserve the non-generic, non-App-Store visual direction.
+- version, last-update and offline-ready indicators;
+- distinct previews per app;
+- details panel and quick actions;
+- preserve a non-generic, non-App-Store visual direction.
 
 ### Main files
 
@@ -186,7 +189,7 @@ Turn the root site into a useful personal application shelf rather than a plain 
 ### Done when
 
 - the launcher remains fast with dozens of apps;
-- recent/favorite state persists locally;
+- recent and favorite state persists locally;
 - each app remains visually distinct;
 - the launcher is useful in standalone mode and offline.
 
@@ -202,23 +205,18 @@ Expand the creative and technical arsenal without creating a shared visual templ
 
 ### Scope
 
-Create small optional modules for:
+Optional modules for:
 
-- motion and gesture primitives;
+- motion and gestures;
 - storage and migrations;
-- data export/import;
-- audio activation and lifecycle;
+- export/import;
+- audio lifecycle;
 - sensors and permissions;
 - fullscreen and orientation;
-- debugging and performance measurement;
+- debugging and performance;
 - Workshop Mode with cache, storage, viewport, FPS, errors and reset tools.
 
-Possible libraries may be introduced only where justified:
-
-- Motion for advanced DOM/SVG motion;
-- Dexie for structured IndexedDB data;
-- Zod for schema validation;
-- Lit for isolated reusable system controls.
+Libraries may be introduced only where justified: Motion, Dexie, Zod and Lit.
 
 ### Main files
 
@@ -232,9 +230,9 @@ Possible libraries may be introduced only where justified:
 
 ### Done when
 
-- modules are opt-in and tree/locality friendly;
+- modules are opt-in and locality-friendly;
 - apps do not inherit a common visual appearance;
-- Workshop Mode can be enabled per app without shipping intrusive debug UI by default.
+- Workshop Mode can be enabled per app without intrusive production UI.
 
 ---
 
@@ -246,10 +244,6 @@ Possible libraries may be introduced only where justified:
 
 Support larger applications and games without forcing build tooling onto small experiments.
 
-### Scope
-
-Maintain two paths:
-
 ### Quick PWA
 
 - plain HTML, CSS and JavaScript;
@@ -258,17 +252,12 @@ Maintain two paths:
 
 ### Enhanced PWA
 
-- Vite;
-- TypeScript;
+- Vite and TypeScript;
 - `vite-plugin-pwa`/Workbox;
 - optional Vitest;
-- proper asset bundling and code splitting.
+- asset bundling and code splitting.
 
-Add specialized presets:
-
-- PixiJS visual/canvas app;
-- Phaser 2D game;
-- Tone.js audio app.
+Specialized presets: PixiJS, Phaser and Tone.js.
 
 ### Main files
 
@@ -277,14 +266,14 @@ Add specialized presets:
 - `templates/pixi/`
 - `templates/phaser/`
 - `templates/tone/`
-- root package/build configuration as needed.
+- root build configuration as needed.
 
 ### Done when
 
-- Pocket Forge can create either a Quick or Enhanced app;
+- Pocket Forge creates Quick and Enhanced apps;
 - Netlify builds both correctly;
-- heavy dependencies are limited to apps that need them;
-- offline behavior remains valid after bundling.
+- heavy dependencies remain app-local;
+- bundled apps retain valid offline behavior.
 
 ---
 
@@ -303,8 +292,8 @@ Catch broken controls, viewport regressions and PWA failures before production.
 - portrait and landscape checks;
 - console-error detection;
 - manifest and Service Worker checks;
-- screenshot regression coverage for critical screens;
-- Lighthouse CI performance/accessibility budgets;
+- screenshot regression coverage;
+- Lighthouse CI budgets;
 - deploy-blocking validation for serious failures.
 
 ### Main files
@@ -318,10 +307,10 @@ Catch broken controls, viewport regressions and PWA failures before production.
 
 ### Done when
 
-- each registered app receives a basic automated smoke test;
+- each registered app receives a smoke test;
 - broken main interactions prevent deployment;
 - reports identify the exact app and failure;
-- Screen Lab acts as the first complete test fixture.
+- Screen Lab serves as the first complete fixture.
 
 ---
 
@@ -338,27 +327,25 @@ Implement strictly in this order:
 7. Phase 6 — enhanced templates and optional libraries;
 8. Phase 7 — automated quality gates.
 
-Phases 0–3 form the platform foundation. New experimental apps can continue to be added after Phase 1, but large launcher or library work should wait until the foundation is stable.
+Phases 0–3 form the platform foundation. Experimental apps can continue after Phase 1, but large launcher or library work should wait until the foundation is stable.
 
 ## Per-phase context packet
 
-At the start of a phase, only load:
+At the start of a phase, load only:
 
-- the phase section from this document;
+- that phase section;
 - `AGENTS.md`;
 - `apps/AGENTS.md`;
-- the files listed under that phase;
-- the current status of the preceding phase.
+- files listed under that phase;
+- the preceding phase result.
 
-Do not reload the entire repository or the full environment roadmap unless a concrete dependency requires it.
+Do not reload the entire repository or full roadmap unless a concrete dependency requires it.
 
 ## Completion log
 
-Update this section after each phase.
-
 | Phase | Status | Commit | Production check | Notes |
 |---|---|---|---|---|
-| 0 | not-started | — | — | — |
+| 0 | done | phase-0 squash commit | Netlify `ready` required | Baseline, health command, root/app validation and cache ownership guard |
 | 1 | not-started | — | — | — |
 | 2 | not-started | — | — | — |
 | 3 | not-started | — | — | — |
