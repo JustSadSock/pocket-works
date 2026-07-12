@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.3';
-const APP_VERSION = '0.6.3';
+const CACHE_NAME = 'pocket-works-launcher-v0.6.4';
+const APP_VERSION = '0.6.4';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
   'Disabled accidental long-press text selection across the shared Pocket Works runtime.',
