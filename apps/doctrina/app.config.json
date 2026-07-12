@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "doctrina",
+  "name": "ДОКТРИНА",
+  "shortName": "ДОКТРИНА",
+  "description": "Procedural statecraft strategy about laws, doctrines, technologies and war.",
+  "version": "0.1.0",
+  "releaseDate": "2026-07-12",
+  "changelog": [
+    "Added a seeded procedural state simulation with regions, factions and quarterly causality.",
+    "Added laws, doctrines and conditional technologies that change simulation rules rather than flat bonuses.",
+    "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#8b3f36",
+  "backgroundColor": "#202424",
+  "themeColor": "#202424",
+  "orientation": "portrait",
+  "cacheName": "doctrina-v0.1.0",
+  "storageNamespace": "pocket-works:doctrina",
+  "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
+  "order": 50
+}
