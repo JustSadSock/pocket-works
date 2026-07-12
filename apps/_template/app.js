@@ -1,9 +1,12 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {
   createStorage,
   isStandalone,
   registerAppServiceWorker,
   watchConnectivity
 } from '../../shared/pwa-utils.js';
+
+installMobileRuntime();
 
 const storage = createStorage('__APP_SLUG__');
 const action = document.querySelector('#primary-action');
