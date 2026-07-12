@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "slug": "__APP_SLUG__",
+  "name": "__APP_NAME__",
+  "shortName": "__APP_SHORT_NAME__",
+  "description": "__APP_DESCRIPTION__",
+  "version": "__APP_VERSION__",
+  "status": "__APP_STATUS__",
+  "preset": "__APP_PRESET__",
+  "accent": "__APP_ACCENT__",
+  "backgroundColor": "__APP_BACKGROUND__",
+  "themeColor": "__APP_THEME__",
+  "orientation": "__APP_ORIENTATION__",
+  "cacheName": "__APP_CACHE_VERSION__",
+  "storageNamespace": "__APP_STORAGE_NAMESPACE__",
+  "tags": __APP_TAGS_JSON__,
+  "order": __APP_ORDER__
+}
