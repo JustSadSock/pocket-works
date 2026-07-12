@@ -18,7 +18,7 @@ const runtimeCss = await read('shared/mobile-runtime.css');
 requireIncludes(runtimeCss, [
   '--app-safe-top', '--app-viewport-height', '--app-keyboard-inset', '-webkit-user-select: none', '-webkit-touch-callout: none',
   '-webkit-tap-highlight-color: transparent', 'touch-action: manipulation', 'font-size: max(16px, 1em)', '[data-gesture-surface]',
-  '.is-app-scroll-locked', '[data-native-press].is-pressed'
+  '.is-app-scroll-locked', '[data-native-press].is-pressed', 'overflow-x: clip'
 ], 'shared/mobile-runtime.css');
 
 const runtimeJs = await read('shared/mobile-runtime.js');
