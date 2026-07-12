@@ -1,0 +1,17 @@
+{
+  "id": "/apps/otves/",
+  "name": "ОТВЕС",
+  "short_name": "ОТВЕС",
+  "description": "Тактильный лабиринт со стеклянным шариком, который управляется наклоном телефона.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#151a16",
+  "theme_color": "#151a16",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
