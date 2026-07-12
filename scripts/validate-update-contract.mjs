@@ -55,6 +55,8 @@ function validateEnhancedWorker(source, label, expected) {
 const managerJs = await read('shared/update-manager.js');
 requireIncludes(managerJs, [
   'export async function registerManagedServiceWorker',
+  'resolveCurrentVersion',
+  './app.config.json',
   'GET_UPDATE_INFO',
   'SKIP_WAITING',
   'controllerchange',
@@ -101,7 +103,8 @@ for (const config of configs) {
   } else {
     const index = await read(`${directory}/index.html`);
     const worker = await read(`${directory}/sw.js`);
-    requireIncludes(index, ['../../shared/update-manager.css', '../../shared/update-manager.js', 'data-update-manager', `data-app-name="${config.name}"`, `data-app-version="${config.version}"`], `${directory}/index.html`);
+    requireIncludes(index, ['../../shared/update-manager.css', '../../shared/update-manager.js', 'data-update-manager', `data-app-name="${config.name}"`, 'data-app-version='], `${directory}/index.html`);
+    requireIncludes(worker, ["'./app.config.json'"], `${directory}/sw.js`);
     validateQuickWorker(worker, `${directory}/sw.js`, config);
   }
 }
