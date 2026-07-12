@@ -1,13 +1,17 @@
 html.has-launcher-list-motion .app-list {
   position: relative;
   isolation: isolate;
+  contain: layout paint;
 }
 
 html.has-launcher-list-motion .app-entry {
   opacity: 1;
   transform: none;
   animation: none;
-  will-change: transform, opacity, filter;
+}
+
+html.has-launcher-list-motion .app-list.is-list-animating .app-entry {
+  will-change: transform, opacity;
 }
 
 html.is-list-motion-pending::view-transition-old(root),
@@ -25,9 +29,9 @@ html.has-launcher-list-motion .app-list::after {
   background: linear-gradient(
     180deg,
     transparent 0,
-    color-mix(in srgb, var(--accent) 5%, transparent) 42%,
-    color-mix(in srgb, var(--accent) 19%, transparent) 50%,
-    color-mix(in srgb, var(--accent) 5%, transparent) 58%,
+    color-mix(in srgb, var(--accent) 4%, transparent) 42%,
+    color-mix(in srgb, var(--accent) 16%, transparent) 50%,
+    color-mix(in srgb, var(--accent) 4%, transparent) 58%,
     transparent 100%
   );
   transform: translateY(-100%);
@@ -35,7 +39,145 @@ html.has-launcher-list-motion .app-list::after {
 
 html.has-launcher-list-motion .app-list.is-list-syncing::after {
   opacity: 1;
-  animation: launcher-sync-scan 780ms cubic-bezier(.2,.75,.2,1) infinite;
+  animation: launcher-sync-scan 820ms cubic-bezier(.2,.75,.2,1) infinite;
+}
+
+html.is-launcher-ui-ready .search-field {
+  transition:
+    border-color var(--app-motion-fast, 160ms) ease,
+    background-color var(--app-motion-fast, 160ms) ease,
+    box-shadow var(--app-motion-fast, 160ms) ease,
+    translate var(--app-motion-press, 110ms) ease;
+}
+
+html.is-launcher-ui-ready .search-field:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+html.is-launcher-ui-ready .search-field.has-value > span {
+  animation: launcher-search-mark 360ms cubic-bezier(.2,.8,.2,1);
+}
+
+html.is-launcher-ui-ready [data-filter] [data-filter-count] {
+  transition:
+    background-color var(--app-motion-fast, 160ms) ease,
+    border-color var(--app-motion-fast, 160ms) ease,
+    color var(--app-motion-fast, 160ms) ease,
+    scale var(--app-motion-press, 110ms) ease;
+}
+
+html.is-launcher-ui-ready [data-filter][aria-pressed="true"] [data-filter-count] {
+  scale: 1.06;
+}
+
+html.is-launcher-ui-ready .deck-actions button,
+html.is-launcher-ui-ready #reset-shelf,
+html.is-launcher-ui-ready .detail-actions a,
+html.is-launcher-ui-ready .detail-actions button,
+html.is-launcher-ui-ready .app-entry__favorite,
+html.is-launcher-ui-ready .app-entry__open {
+  position: relative;
+  overflow: hidden;
+}
+
+html.is-launcher-ui-ready .deck-actions button::after,
+html.is-launcher-ui-ready #reset-shelf::after,
+html.is-launcher-ui-ready .detail-actions a::after,
+html.is-launcher-ui-ready .detail-actions button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.09) 50%, transparent 85%);
+  translate: -120% 0;
+}
+
+html.is-launcher-ui-ready #refresh-button.is-busy::after {
+  opacity: 1;
+  animation: launcher-control-sheen 820ms linear infinite;
+}
+
+html.is-launcher-ui-ready #reset-shelf.is-confirming {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--paper);
+}
+
+html.is-launcher-ui-ready .app-entry {
+  transition:
+    background-color var(--app-motion-fast, 160ms) ease,
+    box-shadow var(--app-motion-fast, 160ms) ease;
+}
+
+html.is-launcher-ui-ready .app-entry__select:focus-visible,
+html.is-launcher-ui-ready .app-entry__favorite:focus-visible,
+html.is-launcher-ui-ready .app-entry__open:focus-visible {
+  z-index: 2;
+}
+
+html.is-launcher-ui-ready .app-entry__select:active .app-preview {
+  border-color: var(--entry-accent);
+}
+
+html.is-launcher-ui-ready .detail-panel {
+  overscroll-behavior: contain;
+}
+
+html.is-launcher-ui-ready .status-light {
+  animation: launcher-status-breathe 3.2s ease-in-out infinite;
+}
+
+html.is-launcher-ui-ready.is-offline .status-light {
+  animation-duration: 1.5s;
+}
+
+.launcher-toast {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  bottom: calc(var(--safe-bottom, 22px) + 14px);
+  max-width: min(92vw, 440px);
+  padding: 12px 15px;
+  border: 1px solid var(--line-bright);
+  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
+  box-shadow: 0 16px 44px rgba(0,0,0,.38);
+  color: var(--paper);
+  font-size: .7rem;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  text-align: center;
+  opacity: 0;
+  translate: -50% 12px;
+  scale: .98;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    translate 260ms cubic-bezier(.2,.8,.2,1),
+    scale 260ms cubic-bezier(.2,.8,.2,1);
+}
+
+.launcher-toast[data-tone="warning"] {
+  border-color: var(--danger);
+}
+
+.launcher-toast.is-visible {
+  opacity: 1;
+  translate: -50% 0;
+  scale: 1;
+}
+
+@media (hover: hover) {
+  html.is-launcher-ui-ready .deck-actions button:hover,
+  html.is-launcher-ui-ready #reset-shelf:hover,
+  html.is-launcher-ui-ready .detail-actions button:hover,
+  html.is-launcher-ui-ready .detail-actions a:hover {
+    translate: 0 -1px;
+  }
+
+  html.is-launcher-ui-ready .app-entry:hover {
+    background: color-mix(in srgb, var(--entry-accent) 3%, transparent);
+  }
 }
 
 @keyframes launcher-sync-scan {
@@ -43,14 +185,38 @@ html.has-launcher-list-motion .app-list.is-list-syncing::after {
   to { transform: translateY(100%); }
 }
 
+@keyframes launcher-control-sheen {
+  to { translate: 120% 0; }
+}
+
+@keyframes launcher-search-mark {
+  0% { rotate: -8deg; scale: .86; opacity: .5; }
+  100% { rotate: 0deg; scale: 1; opacity: 1; }
+}
+
+@keyframes launcher-status-breathe {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(200,255,69,.06); }
+  50% { box-shadow: 0 0 0 7px rgba(200,255,69,.015); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html.has-launcher-list-motion .app-entry {
     will-change: auto;
   }
 
-  html.has-launcher-list-motion .app-list.is-list-syncing::after {
+  html.has-launcher-list-motion .app-list.is-list-syncing::after,
+  html.is-launcher-ui-ready #refresh-button.is-busy::after,
+  html.is-launcher-ui-ready .status-light,
+  html.is-launcher-ui-ready .search-field.has-value > span {
     animation: none;
-    opacity: .14;
+  }
+
+  html.has-launcher-list-motion .app-list.is-list-syncing::after {
+    opacity: .12;
     transform: none;
+  }
+
+  .launcher-toast {
+    transition-duration: .01ms;
   }
 }
