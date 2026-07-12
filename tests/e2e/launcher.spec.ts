@@ -71,7 +71,7 @@ test('launcher retains personal shelf state after reload', async ({ page }) => {
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
 
   await page.locator('[data-filter="favorites"]').click();
-  await expect(page.locator('.app-entry__name')).toHaveText('Screen Lab');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__name')).toHaveText('Screen Lab');
   await assertNoHorizontalOverflow(page);
   monitor.assertClean();
 });
