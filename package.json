@@ -1,11 +1,12 @@
 {
   "name": "pocket-works",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate.mjs",
-    "health": "node scripts/validate.mjs"
+    "validate:mobile": "node scripts/validate-mobile-runtime.mjs",
+    "health": "node scripts/validate.mjs && node scripts/validate-mobile-runtime.mjs"
   },
   "engines": {
     "node": ">=22"
