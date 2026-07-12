@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build --config vite.config.ts",
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs __APP_SLUG__",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit"
   }
