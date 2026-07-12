@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "lunka",
+  "name": "ЛУНКА",
+  "shortName": "ЛУНКА",
+  "description": "Атмосферный мини-гольф на мокрой крыше с водой, песком, порталами и движущимися препятствиями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-13",
+  "releaseDateTime": "2026-07-13T17:30:00+01:00",
+  "changelog": [
+    "Добавлен круг из шести авторских лунок с индивидуальными препятствиями и паром.",
+    "Добавлена тактильная физика удара одним жестом, прогноз траектории и рикошетов.",
+    "Добавлены вода, песок, уклоны, порталы, движущиеся ворота и вращающийся ротор.",
+    "Добавлены ночной дождливый рендеринг, процедурный звук, локальные рекорды, офлайн-режим и Workshop Mode."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d6b462",
+  "backgroundColor": "#07100d",
+  "themeColor": "#0b1310",
+  "orientation": "any",
+  "cacheName": "lunka-v1.0.0",
+  "storageNamespace": "pocket-works:lunka",
+  "tags": ["PWA", "offline", "game", "mini golf", "physics", "canvas", "audio", "workshop"],
+  "order": 90
+}
