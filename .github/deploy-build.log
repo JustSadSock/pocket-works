@@ -33,5 +33,16 @@ Application config validation passed for 6 registered apps.
 > pocket-works@0.7.1 validate
 > node scripts/validate.mjs
 
-Pocket Works health check failed with 1 issue:
-- udel must register ./sw.js directly or through the managed update script
+Pocket Works health check passed: root launcher and 6 registered apps validated.
+
+> pocket-works@0.7.1 validate:mobile
+> node scripts/validate-mobile-runtime.mjs
+
+Mobile runtime validation passed for Quick and Enhanced templates plus 6 registered apps.
+
+> pocket-works@0.7.1 validate:updates
+> node scripts/validate-update-contract.mjs
+
+Update contract validation failed with 2 issues:
+- apps/udel/sw.js must not activate a new worker automatically during install
+- apps/udel/sw.js RELEASE_NOTES must match app.config.json changelog
