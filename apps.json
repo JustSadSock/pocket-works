@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -72,13 +59,7 @@
       "Made the top home and sound controls reliably accessible from the title menu."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -99,15 +80,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -129,16 +102,30 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
+  },
+  {
+    "slug": "udel",
+    "name": "УДЕЛ",
+    "shortName": "УДЕЛ",
+    "description": "Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.",
+    "path": "./apps/udel/",
+    "status": "active",
+    "version": "1.0.0",
+    "updatedAt": "2026-07-12T21:20:00Z",
+    "changelog": [
+      "Добавлена процедурная кампания на 24 сезона с восемью областями и тремя державами.",
+      "Добавлены династия, наследование, сословия, законы, технологии и дипломатия.",
+      "Добавлены набор армии и интерактивные трёхфланговые битвы с приказами в реальном времени.",
+      "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
+    ],
+    "accent": "#325b52",
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
+    "preset": "game-2d",
+    "runtime": "quick",
+    "storageNamespace": "pocket-works:udel"
   }
 ]
