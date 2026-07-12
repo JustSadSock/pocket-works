@@ -18,7 +18,8 @@ const APP_SHELL = [
   './shared/mobile-runtime.css',
   './shared/mobile-runtime.js',
   './shared/update-manager.css',
-  './shared/update-manager.js'
+  './shared/update-manager.js',
+  './shared/view-transition-guard.js'
 ];
 
 self.addEventListener('install', (event) => {
