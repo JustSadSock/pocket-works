@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.6.5';
-const APP_VERSION = '0.6.5';
+const CACHE_NAME = 'pocket-works-launcher-v0.7.0';
+const APP_VERSION = '0.7.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Disabled accidental long-press text selection across the shared Pocket Works runtime.',
-  'Added smooth list reflow and refresh feedback for filters, sorting and registry sync.',
-  'Changed Updated sorting from day-level dates to exact release timestamps.',
-  'Hardened update detection by comparing waiting builds with the service worker that is actually active.'
+  'Rebuilt launcher list motion to prevent cards collapsing into an accordion after reload or page restoration.',
+  'Added shared motion tokens, improved press feedback and responsive range controls across Pocket Works applications.',
+  'Polished launcher controls with loading, confirmation, toast, focus and status micro-interactions.',
+  'Removed the duplicate early-search DOM observer that could race the primary launcher renderer.'
 ];
 const APP_SHELL = [
   './',
