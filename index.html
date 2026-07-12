@@ -25,7 +25,7 @@
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
       <div class="brand-lockup">
-        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.6.1</p>
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.6.2</p>
         <h1>Pocket<br>Works</h1>
       </div>
 
@@ -174,18 +174,54 @@
   <script>
     (() => {
       const list = document.querySelector('#app-list');
-      if (!list) return;
-      const observer = new MutationObserver(() => {
-        if (list.childElementCount > 0) {
-          list.dataset.loading = 'false';
-          observer.disconnect();
+      const search = document.querySelector('#app-search');
+      const count = document.querySelector('#app-count');
+      const summary = document.querySelector('#result-summary');
+      const empty = document.querySelector('#empty-state');
+      if (!list || !search) return;
+
+      let searchIndex = new Map();
+      const normalize = (value) => String(value || '').toLocaleLowerCase();
+      const registryReady = fetch('./apps.json', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : [])
+        .then((apps) => {
+          searchIndex = new Map((Array.isArray(apps) ? apps : []).map((app) => [
+            app.slug,
+            normalize([
+              app.name,
+              app.shortName,
+              app.description,
+              app.slug,
+              app.version,
+              app.status,
+              app.preset,
+              ...(Array.isArray(app.tags) ? app.tags : [])
+            ].filter(Boolean).join(' '))
+          ]));
+        })
+        .catch(() => {});
+
+      const projectVisibleSearch = () => {
+        const query = normalize(search.value.trim());
+        if (!query) return;
+        for (const entry of [...list.querySelectorAll('.app-entry')]) {
+          const indexed = searchIndex.get(entry.dataset.slug);
+          const visibleFallback = normalize(entry.textContent);
+          if (!(indexed || visibleFallback).includes(query)) entry.remove();
         }
+        const visible = list.querySelectorAll('.app-entry').length;
+        if (count) count.textContent = String(visible);
+        if (summary) summary.textContent = `${visible} ${visible === 1 ? 'object' : 'objects'} matching “${search.value}”`;
+        if (empty) empty.hidden = visible !== 0;
+      };
+
+      const observer = new MutationObserver(() => {
+        if (list.childElementCount > 0) list.dataset.loading = 'false';
+        registryReady.then(() => queueMicrotask(projectVisibleSearch));
       });
       observer.observe(list, { childList: true });
-      window.setTimeout(() => {
-        list.dataset.loading = 'false';
-        observer.disconnect();
-      }, 5000);
+      search.addEventListener('input', () => registryReady.then(() => queueMicrotask(projectVisibleSearch)));
+      window.setTimeout(() => { list.dataset.loading = 'false'; }, 5000);
     })();
   </script>
   <script
@@ -194,7 +230,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.6.1"
+    data-app-version="0.6.2"
   ></script>
   <script src="./shared/view-transition-guard.js" type="module"></script>
   <script src="./app.js" type="module"></script>
