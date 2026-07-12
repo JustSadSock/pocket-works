@@ -1,0 +1,19 @@
+{
+  "name": "ЛУНКА — Pocket Works",
+  "short_name": "ЛУНКА",
+  "description": "Атмосферный мини-гольф на мокрой крыше после дождя.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07100d",
+  "theme_color": "#0b1310",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
