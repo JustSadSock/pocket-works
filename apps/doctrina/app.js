@@ -35,7 +35,7 @@ try {
   throw error;
 }
 
-createWorkshopMode({
+const workshop = createWorkshopMode({
   appName: 'ДОКТРИНА',
   version: APP_VERSION,
   cachePrefix: 'doctrina-',
@@ -44,6 +44,12 @@ createWorkshopMode({
     store.reset();
     window.__DOCTRINA__?.reset?.();
   }
+});
+
+// The game menu is rendered after Workshop Mode initialises, so its trigger is dynamic.
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest?.('[data-workshop-trigger]');
+  if (trigger && !trigger.hidden) workshop.open();
 });
 
 const persist = () => window.__DOCTRINA__?.save?.();
