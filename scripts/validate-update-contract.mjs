@@ -55,8 +55,9 @@ function validateEnhancedWorker(source, label, expected) {
 const managerJs = await read('shared/update-manager.js');
 requireIncludes(managerJs, [
   'export async function registerManagedServiceWorker',
-  'resolveCurrentVersion',
-  './app.config.json',
+  'workerInfo',
+  'navigator.serviceWorker.controller || registration.active',
+  'activeInfo?.version || configuredVersion',
   'GET_UPDATE_INFO',
   'SKIP_WAITING',
   'controllerchange',
