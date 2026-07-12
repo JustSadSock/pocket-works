@@ -11,20 +11,21 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body data-fullscreen-app>
   <div class="safe-probe" aria-hidden="true"></div>
   <canvas id="field" aria-hidden="true"></canvas>
 
-  <main class="app-shell">
-    <header class="topbar">
-      <a class="back-link" href="../../" aria-label="Back to Pocket Works">←</a>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" aria-label="Back to Pocket Works" data-app-control data-native-press>←</a>
       <div class="brand-block">
         <p class="kicker">DEVICE / MOTION / TOUCH</p>
         <h1>Screen Lab</h1>
       </div>
-      <button class="status-orb" id="status-orb" type="button" aria-label="Toggle motion intensity">
+      <button class="status-orb" id="status-orb" type="button" aria-label="Toggle motion intensity" data-native-press>
         <span></span>
       </button>
     </header>
@@ -33,10 +34,10 @@
       <div class="hero-copy">
         <p class="serial">LAB 001 · LIVE INSTRUMENT</p>
         <h2 id="hero-title">Your screen is the specimen.</h2>
-        <p>Move, rotate, touch and install. The interface exposes what the browser usually hides.</p>
+        <p class="selectable-content">Move, rotate, touch and install. The interface exposes what the browser usually hides.</p>
       </div>
 
-      <div class="specimen" id="specimen" aria-label="Interactive motion specimen">
+      <div class="specimen" id="specimen" aria-label="Interactive motion specimen" data-ui>
         <div class="specimen-ring specimen-ring--outer"></div>
         <div class="specimen-ring specimen-ring--inner"></div>
         <div class="specimen-core">
@@ -73,7 +74,7 @@
           <span>01</span>
           <h3>Safe area</h3>
         </header>
-        <div class="safe-map" aria-hidden="true">
+        <div class="safe-map" aria-hidden="true" data-ui>
           <div class="safe-map__island"></div>
           <div class="safe-map__inner"></div>
           <div class="safe-map__home"></div>
@@ -91,7 +92,7 @@
           <span>02</span>
           <h3>Orientation</h3>
         </header>
-        <div class="orientation-figure" id="orientation-figure">
+        <div class="orientation-figure" id="orientation-figure" data-ui>
           <div></div>
         </div>
         <p class="reading" id="orientation">—</p>
@@ -103,7 +104,7 @@
           <span>03</span>
           <h3>Touch field</h3>
         </header>
-        <div class="touch-zone" id="touch-zone">
+        <div class="touch-zone" id="touch-zone" data-gesture-surface data-block-callout>
           <p>Press / drag / multiply</p>
           <div class="touch-count"><strong id="touch-count">0</strong><span>points</span></div>
         </div>
@@ -129,15 +130,15 @@
         <h2 id="controls-title">Stress the interface.</h2>
       </div>
       <div class="control-row">
-        <button type="button" data-action="pulse">Impulse</button>
-        <button type="button" data-action="freeze">Freeze</button>
-        <button type="button" data-action="fullscreen">Fullscreen</button>
-        <button type="button" data-action="reset">Reset</button>
+        <button type="button" data-action="pulse" data-native-press>Impulse</button>
+        <button type="button" data-action="freeze" data-native-press>Freeze</button>
+        <button type="button" data-action="fullscreen" data-native-press>Fullscreen</button>
+        <button type="button" data-action="reset" data-native-press>Reset</button>
       </div>
     </section>
 
     <footer>
-      <span>SCREEN LAB / v1.0.0</span>
+      <span>SCREEN LAB / v1.1.0</span>
       <span id="clock">—</span>
     </footer>
   </main>
