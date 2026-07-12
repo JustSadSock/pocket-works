@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="__APP_NAME__">
+  <rect width="512" height="512" fill="__APP_BACKGROUND__"/>
+  <path d="M70 70h372v372H70z" fill="none" stroke="__APP_ACCENT__" stroke-width="22"/>
+  <circle cx="256" cy="256" r="124" fill="__APP_ACCENT__"/>
+</svg>
