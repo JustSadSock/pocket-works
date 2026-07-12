@@ -4,12 +4,12 @@
   "name": "ЧЕРТА",
   "shortName": "ЧЕРТА",
   "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "releaseDate": "2026-07-12",
   "changelog": [
-    "Dead enemies now dissolve cleanly and cancel active attack telegraphs.",
-    "Screen shake and impact flashes now decay after the player dies.",
-    "Fixed the top-right home, sound and pause controls across game states."
+    "Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.",
+    "Added one-step dash input buffering so swipes made during the end of a dash are not discarded.",
+    "Made the top home and sound controls reliably accessible from the title menu."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -18,7 +18,7 @@
   "backgroundColor": "#e9e1cf",
   "themeColor": "#e9e1cf",
   "orientation": "portrait",
-  "cacheName": "cherta-v1.0.1",
+  "cacheName": "cherta-v1.0.2",
   "storageNamespace": "pocket-works:cherta",
   "tags": ["PWA", "offline", "game", "canvas", "audio"],
   "order": 30
