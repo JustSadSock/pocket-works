@@ -1,0 +1,17 @@
+{
+  "id": "/apps/kromka/",
+  "name": "КРОМКА",
+  "short_name": "КРОМКА",
+  "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eee2c8",
+  "theme_color": "#eee2c8",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#eee2c8">
+  <meta name="description" content="КРОМКА — бесконечная гонка по трассе, которую печатают прямо перед машиной.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КРОМКА">
+  <title>КРОМКА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="game" aria-label="Игровое поле КРОМКИ" data-gesture-surface data-block-callout></canvas>
+
+    <header class="machine-header" data-ui>
+      <a class="shell-back" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>←</a>
+      <div class="brand-lockup" aria-label="КРОМКА">
+        <strong>КРОМКА</strong>
+        <small>ПЕЧАТНЫЙ ЗАЕЗД / KRMK–01</small>
+      </div>
+      <button class="metal-button" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <section class="score-block" aria-label="Результат" data-ui>
+      <small>СЧЁТ</small>
+      <output id="scoreValue">000 000</output>
+      <span id="multiplierValue">×1,0</span>
+    </section>
+
+    <section class="speed-block" aria-label="Скорость" data-ui>
+      <small>СКОРОСТЬ</small>
+      <output id="speedValue">000</output><span>км/ч</span>
+    </section>
+
+    <section class="tension-block" aria-label="Натяжение" data-ui>
+      <span>НАТЯЖЕНИЕ</span>
+      <div class="tension-track"><i id="tensionFill"></i><b id="tensionMarker"></b></div>
+      <small>ТАП — РЫВОК</small>
+    </section>
+
+    <div class="run-label" id="runLabel" data-ui>РУЛОН № ———</div>
+    <div class="live-message" id="liveMessage" role="status" aria-live="polite"></div>
+
+    <section class="screen start-screen is-visible" id="startScreen" aria-label="Начать игру" data-ui>
+      <div class="start-sheet">
+        <div class="print-swatches" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <p class="serial">POCKET WORKS / MACHINE 03</p>
+        <img src="./icons/icon.svg" alt="" class="start-icon" draggable="false">
+        <h1>КРОМКА</h1>
+        <p class="tagline">Трасса печатается впереди.<br>Бумага рвётся сзади.</p>
+        <div class="instructions">
+          <span><b>ВЕДИ</b> пальцем влево и вправо</span>
+          <span><b>ТАПНИ</b> для рывка, когда есть натяжение</span>
+        </div>
+        <button class="primary-print" id="randomRunButton" type="button" data-native-press>НОВЫЙ РУЛОН <span>→</span></button>
+        <button class="secondary-print" id="dailyRunButton" type="button" data-native-press>ЛИСТ ДНЯ</button>
+        <button class="sound-line" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" aria-label="Пауза" aria-hidden="true" data-ui>
+      <div class="machine-panel">
+        <p class="serial">ПЕЧАТЬ ОСТАНОВЛЕНА</p>
+        <h2>ПАУЗА</h2>
+        <button class="primary-print" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ <span>→</span></button>
+        <button class="secondary-print" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <button class="secondary-print" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+        <button class="text-action" id="quitButton" type="button" data-native-press>ЗАВЕРШИТЬ ЗАЕЗД</button>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" aria-label="Результат заезда" aria-hidden="true" data-ui>
+      <div class="receipt">
+        <p class="serial">KRMK–01 / ОТЧЁТ О ПЕЧАТИ</p>
+        <h2 id="resultTitle">ЛИСТ ПОРВАН</h2>
+        <div class="receipt-row"><span>СЧЁТ</span><b id="resultScore">0</b></div>
+        <div class="receipt-row"><span>ДЛИНА</span><b id="resultDistance">0 м</b></div>
+        <div class="receipt-row"><span>РЕКОРД</span><b id="resultBest">0</b></div>
+        <div class="receipt-row"><span>РУЛОН</span><b id="resultSeed">—</b></div>
+        <div class="new-record" id="newRecordStamp">НОВЫЙ РЕКОРД</div>
+        <button class="primary-print" id="retryButton" type="button" data-native-press>ЕЩЁ РАЗ <span>↻</span></button>
+        <button class="secondary-print" id="newRollButton" type="button" data-native-press>ДРУГОЙ РУЛОН</button>
+        <button class="text-action" id="homeButton" type="button" data-native-press>К ГЛАВНОМУ ЛИСТУ</button>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="КРОМКА"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

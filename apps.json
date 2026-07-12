@@ -76,5 +76,33 @@
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
+  },
+  {
+    "slug": "kromka",
+    "name": "КРОМКА",
+    "shortName": "КРОМКА",
+    "description": "Бесконечная гонка по трассе, которую печатают прямо перед машиной.",
+    "path": "./apps/kromka/",
+    "status": "active",
+    "version": "1.0.0",
+    "updatedAt": "2026-07-12",
+    "changelog": [
+      "Added an infinite procedural printed track with daily and random seeded runs.",
+      "Added one-finger drift steering, tension-powered boosts, obstacles and persistent records.",
+      "Added generated machine audio, tactile print effects, offline support and Workshop diagnostics."
+    ],
+    "accent": "#d65b2a",
+    "tags": [
+      "PWA",
+      "offline",
+      "game",
+      "procedural",
+      "canvas",
+      "audio",
+      "workshop"
+    ],
+    "preset": "game-2d",
+    "runtime": "quick",
+    "storageNamespace": "pocket-works:kromka"
   }
 ]
