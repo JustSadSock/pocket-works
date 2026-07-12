@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/deploy-netlify-once.yml"
+      - "apps/**"
+      - "apps.json"
+      - "index.html"
+      - "sw.js"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
