@@ -48,10 +48,19 @@ The shelf uses `shared/mobile-runtime.*` for native-feeling behavior and remains
 │   └── validate*.mjs
 ├── shared/
 │   ├── mobile-runtime.*         # native-feeling behavior
-│   └── update-manager.*         # controlled PWA updates
+│   ├── update-manager.*         # controlled PWA updates
+│   ├── workshop-mode.*          # opt-in diagnostics console
+│   └── capabilities/
+│       ├── motion.js
+│       ├── storage.js
+│       ├── transfer.js
+│       ├── audio.js
+│       ├── device.js
+│       └── diagnostics.js
 ├── docs/
 │   ├── BASELINE.md
 │   ├── PUBLISHING.md
+│   ├── SHARED-CAPABILITIES.md
 │   ├── ENVIRONMENT-ROADMAP.md
 │   └── IMPLEMENTATION-PLAN.md
 └── apps/
@@ -92,6 +101,21 @@ Useful options:
 
 Pocket Forge creates the directory, starter mechanic, manifest, app-owned icon, Service Worker cache identity, storage namespace, release metadata and `app.config.json`. It regenerates `apps.json` and runs the full validation suite. A failed generation is rolled back.
 
+## Shared capabilities and Workshop Mode
+
+The lightweight capability modules are opt-in and visually neutral. They provide:
+
+- interruptible animation and visibility-aware RAF loops;
+- versioned local state with migrations and validation;
+- bounded JSON import, export and clipboard fallback;
+- user-gesture-safe procedural audio feedback;
+- feature-detected sensor, fullscreen and orientation helpers;
+- viewport, FPS, storage, cache, Service Worker and error diagnostics.
+
+Pocket Forge wires Workshop Mode into generated apps. Open it through the visible **Workshop** control or `Ctrl/Command + Shift + W`. It can export a diagnostics report and clear only data owned by the current app.
+
+The full API and dependency policy are documented in [`docs/SHARED-CAPABILITIES.md`](./docs/SHARED-CAPABILITIES.md).
+
 ## Registry
 
 Never edit `apps.json` by hand.
@@ -127,7 +151,7 @@ Run the same checks used by GitHub Actions and Netlify:
 npm run health
 ```
 
-This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, launcher shelf behavior, script syntax and all five Pocket Forge presets.
+This validates repository/PWA structure, generated metadata, manifests, icons, Service Worker ownership, mobile-runtime wiring, managed-update wiring, launcher shelf behavior, shared capabilities, Workshop Mode, script syntax and all five Pocket Forge presets.
 
 The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
 
@@ -139,9 +163,10 @@ After generation:
 2. Replace the starter mechanic with the actual product loop inside its own directory.
 3. Preserve the generated app identity, cache ownership and storage namespace.
 4. Replace the generated icon with a deliberate application symbol.
-5. Update version, release date and changelog before publishing.
-6. Run `npm run health`.
-7. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode and update activation.
+5. Keep only the capability modules the app genuinely uses, but preserve Workshop Mode unless there is a documented reason not to.
+6. Update version, release date and changelog before publishing.
+7. Run `npm run health`.
+8. Test offline launch, installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode, Workshop actions and update activation.
 
 ## Product roadmap
 
