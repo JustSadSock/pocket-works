@@ -16,17 +16,6 @@ function workerInfo(worker, timeout = 1200) {
   });
 }
 
-async function resolveCurrentVersion(explicitVersion = '', configPath = './app.config.json') {
-  try {
-    const response = await fetch(`${configPath}?v=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) return explicitVersion;
-    const config = await response.json();
-    return typeof config?.version === 'string' && config.version ? config.version : explicitVersion;
-  } catch {
-    return explicitVersion;
-  }
-}
-
 function createUpdatePrompt({ appName, onApply, onDismiss }) {
   const existing = document.querySelector('[data-app-update-prompt]');
   if (existing) existing.remove();
@@ -104,13 +93,13 @@ export async function registerManagedServiceWorker(options = {}) {
     path = './sw.js',
     appName = document.title || 'Application',
     currentVersion: configuredVersion = '',
-    configPath = './app.config.json',
     checkInterval = DEFAULT_CHECK_INTERVAL,
     renderPrompt = true
   } = options;
-  const currentVersion = await resolveCurrentVersion(configuredVersion, configPath);
 
   const registration = await navigator.serviceWorker.register(path);
+  const activeInfo = await workerInfo(navigator.serviceWorker.controller || registration.active);
+  const currentVersion = activeInfo?.version || configuredVersion;
   let waitingWorker = null;
   let waitingInfo = null;
   let applying = false;
@@ -221,8 +210,7 @@ if (autoScript) {
   registerManagedServiceWorker({
     path: autoScript.dataset.serviceWorker || './sw.js',
     appName: autoScript.dataset.appName || document.title,
-    currentVersion: autoScript.dataset.appVersion || '',
-    configPath: autoScript.dataset.appConfig || './app.config.json'
+    currentVersion: autoScript.dataset.appVersion || ''
   }).catch((error) => {
     console.warn(`${autoScript.dataset.appName || document.title} managed service worker registration failed`, error);
   });
