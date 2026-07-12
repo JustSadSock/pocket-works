@@ -1,8 +1,24 @@
 'use strict';
 
-import('../../shared/mobile-runtime.js').then(({ installMobileRuntime, setDocumentScrollLocked }) => {
+// Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
+Promise.all([
+  import('../../shared/mobile-runtime.js'),
+  import('../../shared/workshop-mode.js')
+]).then(([{ installMobileRuntime, setDocumentScrollLocked }, { createWorkshopMode }]) => {
   installMobileRuntime();
   setDocumentScrollLocked(true);
+  createWorkshopMode({
+    appName: 'ЧЕРТА',
+    version: '1.0.0',
+    cachePrefix: 'cherta-',
+    storageNamespace: 'pocket-works:cherta',
+    onReset() {
+      localStorage.removeItem('pocket-works:cherta:settings');
+      localStorage.removeItem('pocket-works:cherta:best');
+      localStorage.removeItem('pocket-works:cherta:bestWave');
+      window.location.reload();
+    }
+  });
 });
 
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
