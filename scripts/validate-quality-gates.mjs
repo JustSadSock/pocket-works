@@ -107,10 +107,24 @@ requireIncludes(launcherPerformance, [
   'translateY(42px)'
 ], 'launcher-performance.css');
 
+const screenLabConfig = JSON.parse(await read('apps/screen-lab/app.config.json') || '{}');
+const screenLabVersion = screenLabConfig.version;
+if (typeof screenLabVersion !== 'string' || !/^\d+\.\d+\.\d+$/.test(screenLabVersion)) {
+  errors.push('apps/screen-lab/app.config.json must define a semantic version');
+}
+
 const screenLabIndex = await read('apps/screen-lab/index.html');
 const screenLabWorker = await read('apps/screen-lab/sw.js');
-requireIncludes(screenLabIndex, ['./viewport-containment.css', 'data-app-version="1.3.1"'], 'apps/screen-lab/index.html');
-requireIncludes(screenLabWorker, ['./viewport-containment.css', "const APP_VERSION = '1.3.1'", "const CACHE_NAME = 'screen-lab-v1.3.1'"], 'apps/screen-lab/sw.js');
+requireIncludes(screenLabIndex, [
+  './viewport-containment.css',
+  `data-app-version="${screenLabVersion}"`,
+  `SCREEN LAB / v${screenLabVersion}`
+], 'apps/screen-lab/index.html');
+requireIncludes(screenLabWorker, [
+  './viewport-containment.css',
+  `const APP_VERSION = '${screenLabVersion}'`,
+  `const CACHE_NAME = 'screen-lab-v${screenLabVersion}'`
+], 'apps/screen-lab/sw.js');
 
 const lighthouse = JSON.parse(await read('lighthouserc.json') || '{}');
 const collect = lighthouse.ci?.collect;
