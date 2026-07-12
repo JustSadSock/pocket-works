@@ -60,7 +60,7 @@ Artifacts are private to GitHub Actions and expire after 14 days.
 npm run test:lighthouse
 ```
 
-Lighthouse CI audits the assembled production launcher and Screen Lab twice each using its local static server. The median or pessimistic result is used depending on the assertion.
+Lighthouse CI audits the assembled production launcher and Screen Lab three times each using its local static server. Median assertions use the middle result of three independent runs; pessimistic resource assertions still use the largest measured result.
 
 Hard gates:
 
@@ -76,7 +76,7 @@ Hard gates:
 
 SEO, first contentful paint and time to interactive initially report warnings rather than blocking releases. Tighten these thresholds after enough stable CI history exists; do not lower a hard threshold merely to make a single build pass.
 
-The `lighthouse-report` artifact contains private HTML and JSON reports plus the result manifest.
+The launcher preview scan uses transform-only motion because Lighthouse identified animated background positioning as a non-composited path. The `lighthouse-report` artifact contains private HTML and JSON reports plus the result manifest.
 
 ## CI topology
 
