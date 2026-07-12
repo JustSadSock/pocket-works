@@ -9,8 +9,9 @@
     "registry:check": "node scripts/build-registry.mjs --check",
     "validate": "node scripts/validate.mjs",
     "validate:mobile": "node scripts/validate-mobile-runtime.mjs",
-    "validate:scripts": "node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs",
-    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate && npm run validate:mobile",
+    "validate:configs": "node scripts/validate-app-configs.mjs",
+    "validate:scripts": "node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs",
+    "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile",
     "test:forge": "node scripts/test-forge.mjs",
     "health": "npm run validate:all && npm run test:forge"
   },
