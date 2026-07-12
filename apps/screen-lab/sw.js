@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'screen-lab-v1.3.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Added a visible update prompt with release notes.',
-  'Updates now activate only after explicit confirmation.',
-  'Old Screen Lab caches remain scoped and are cleaned after activation.'
+  'Added Workshop Mode with live diagnostics, error capture and app-owned reset tools.',
+  'Added shared motion, storage, transfer, audio and device capability modules.',
+  'Screen Lab now pauses its animation loop while hidden and uses managed sensor helpers.'
 ];
 const APP_SHELL = [
   './',
@@ -17,7 +17,15 @@ const APP_SHELL = [
   '../../shared/mobile-runtime.css',
   '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css',
-  '../../shared/update-manager.js'
+  '../../shared/update-manager.js',
+  '../../shared/workshop-mode.css',
+  '../../shared/workshop-mode.js',
+  '../../shared/capabilities/motion.js',
+  '../../shared/capabilities/storage.js',
+  '../../shared/capabilities/transfer.js',
+  '../../shared/capabilities/audio.js',
+  '../../shared/capabilities/device.js',
+  '../../shared/capabilities/diagnostics.js'
 ];
 
 self.addEventListener('install', (event) => {
