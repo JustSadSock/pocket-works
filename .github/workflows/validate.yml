@@ -35,5 +35,8 @@ jobs:
       - name: Validate mobile runtime
         run: npm run validate:mobile
 
+      - name: Validate managed updates
+        run: npm run validate:updates
+
       - name: Smoke-test Pocket Forge presets
         run: npm run test:forge
