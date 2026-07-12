@@ -13,13 +13,22 @@ const APP_SHELL = [
   './index.html',
   './styles.css',
   './app.js',
+  './workshop.js',
   './app.config.json',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
   '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css',
-  '../../shared/update-manager.js'
+  '../../shared/update-manager.js',
+  '../../shared/workshop-mode.css',
+  '../../shared/workshop-mode.js',
+  '../../shared/capabilities/motion.js',
+  '../../shared/capabilities/storage.js',
+  '../../shared/capabilities/transfer.js',
+  '../../shared/capabilities/audio.js',
+  '../../shared/capabilities/device.js',
+  '../../shared/capabilities/diagnostics.js'
 ];
 
 self.addEventListener('install', (event) => {
