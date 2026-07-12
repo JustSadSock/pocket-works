@@ -10,11 +10,17 @@
   will-change: transform;
 }
 
+#app-list[data-loading="true"] {
+  min-height: 752px;
+}
+
+@media (min-width: 721px) {
+  #app-list[data-loading="true"] {
+    min-height: 704px;
+  }
+}
+
 @keyframes preview-scan {
   from { transform: translateY(0); }
   to { transform: translateY(42px); }
-}
-
-.is-shelf-loading .app-list {
-  min-height: var(--shelf-reserved-height, 704px);
 }
