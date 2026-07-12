@@ -14,6 +14,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const colorPattern = /^#[0-9a-f]{6}$/i;
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const isoDateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 function requireString(config, key, errors) {
   if (typeof config[key] !== 'string' || config[key].trim() === '') {
@@ -43,6 +44,7 @@ export function validateAppConfig(config, directoryName = config?.slug) {
     'description',
     'version',
     'releaseDate',
+    'releaseDateTime',
     'status',
     'preset',
     'accent',
@@ -63,6 +65,11 @@ export function validateAppConfig(config, directoryName = config?.slug) {
   if (!semverPattern.test(config.version || '')) errors.push('version must use semantic versioning');
   if (!isoDatePattern.test(config.releaseDate || '') || Number.isNaN(Date.parse(`${config.releaseDate}T00:00:00Z`))) {
     errors.push('releaseDate must use a valid YYYY-MM-DD date');
+  }
+  if (!isoDateTimePattern.test(config.releaseDateTime || '') || Number.isNaN(Date.parse(config.releaseDateTime || ''))) {
+    errors.push('releaseDateTime must use an ISO 8601 timestamp with timezone');
+  } else if (config.releaseDateTime.slice(0, 10) !== config.releaseDate) {
+    errors.push('releaseDateTime calendar date must match releaseDate');
   }
   if (!APP_STATUSES.includes(config.status)) errors.push(`status must be one of: ${APP_STATUSES.join(', ')}`);
 
@@ -110,7 +117,7 @@ export function toRegistryEntry(config) {
     path: `./apps/${config.slug}/`,
     status: config.status,
     version: config.version,
-    updatedAt: config.releaseDate,
+    updatedAt: config.releaseDateTime,
     changelog: [...config.changelog],
     accent: config.accent,
     tags: [...config.tags],
