@@ -25,14 +25,9 @@ body {
   min-height: var(--app-viewport-height);
 }
 
-:where(
-  button,
-  [role="button"],
-  [data-pressable],
-  [data-ui],
-  [data-gesture-surface],
-  canvas
-) {
+/* Pocket Works behaves as an application surface by default. Text selection
+   is opt-in, rather than something every game has to disable independently. */
+:where(html, body, body *) {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -44,8 +39,11 @@ body {
   textarea,
   select,
   [contenteditable="true"],
+  [contenteditable="true"] *,
   [data-selectable],
-  .selectable-content
+  [data-selectable] *,
+  .selectable-content,
+  .selectable-content *
 ) {
   -webkit-user-select: text;
   user-select: text;
