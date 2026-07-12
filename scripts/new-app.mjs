@@ -1,6 +1,7 @@
 import { access, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { buildRegistry } from './build-registry.mjs';
 import { APP_PRESETS, validateAppConfig } from './app-config.mjs';
 import { getPreset } from './presets.mjs';
@@ -30,6 +31,15 @@ function humanize(slug) {
 
 function initials(name) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+}
+
+function escapeMarkup(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 function replaceTokens(source, replacements) {
@@ -125,9 +135,9 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
 
   const replacements = {
     '__APP_SLUG__': slug,
-    '__APP_NAME__': name,
-    '__APP_SHORT_NAME__': shortName,
-    '__APP_DESCRIPTION__': description,
+    '__APP_NAME__': escapeMarkup(name),
+    '__APP_SHORT_NAME__': escapeMarkup(shortName),
+    '__APP_DESCRIPTION__': escapeMarkup(description),
     '__APP_ACCENT__': accent,
     '__APP_BACKGROUND__': backgroundColor,
     '__APP_THEME__': themeColor,
@@ -139,23 +149,46 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     '__APP_ORIENTATION__': config.orientation,
     '__APP_ORDER__': String(order),
     '__APP_TAGS_JSON__': JSON.stringify(config.tags),
-    '__PRESET_LABEL__': preset.label,
+    '__PRESET_LABEL__': escapeMarkup(preset.label),
     '__PRESET_DESCRIPTION__': preset.description,
     '__PRESET_MARKUP__': preset.markup,
     '__PRESET_SCRIPT__': preset.script,
     '__PRESET_STYLES__': preset.styles
   };
 
+  const manifest = {
+    id: `/apps/${slug}/`,
+    name,
+    short_name: shortName,
+    description,
+    start_url: './',
+    scope: './',
+    display: 'standalone',
+    display_override: ['standalone', 'fullscreen', 'minimal-ui'],
+    orientation: config.orientation,
+    background_color: backgroundColor,
+    theme_color: themeColor,
+    icons: [{
+      src: './icons/icon.svg',
+      sizes: 'any',
+      type: 'image/svg+xml',
+      purpose: 'any maskable'
+    }]
+  };
+
   try {
     await cp(templateDirectory, appDirectory, { recursive: true });
     await transformDirectory(appDirectory, replacements);
     await mkdir(path.join(appDirectory, 'icons'), { recursive: true });
+    await writeFile(path.join(appDirectory, 'app.config.json'), `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+    await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
-    const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${name}">
+    const safeName = escapeMarkup(name);
+    const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">
   <rect width="512" height="512" fill="${backgroundColor}"/>
   <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>
   <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>
-  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${initials(name)}</text>
+  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>
 </svg>\n`;
     await writeFile(path.join(appDirectory, 'icons', 'icon.svg'), icon, 'utf8');
 
@@ -172,7 +205,10 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   return config;
 }
 
-createApp().catch((error) => {
-  console.error(`Pocket Forge failed: ${error.message}`);
-  process.exit(1);
-});
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMain) {
+  createApp().catch((error) => {
+    console.error(`Pocket Forge failed: ${error.message}`);
+    process.exit(1);
+  });
+}
