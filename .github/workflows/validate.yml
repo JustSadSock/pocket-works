@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  health:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,5 +20,5 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate app registry and PWA structure
-        run: node scripts/validate.mjs
+      - name: Run repository health check
+        run: npm run health

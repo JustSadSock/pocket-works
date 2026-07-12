@@ -4,6 +4,13 @@ A monorepo for small, installable, offline-first mobile web applications.
 
 Each app lives in its own directory under `apps/<slug>/` and is registered in `apps.json`. The repository root is a launcher/catalog that links to every app.
 
+## Production
+
+- Launcher: https://pocket-works.netlify.app/
+- Reference app: https://pocket-works.netlify.app/apps/screen-lab/
+- Production branch: `main`
+- Deployment: Netlify continuous deployment from GitHub
+
 ## Repository layout
 
 ```text
@@ -15,8 +22,13 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 ├── app.js                     # launcher-only logic
 ├── manifest.webmanifest       # launcher PWA manifest
 ├── sw.js                      # launcher service worker
+├── package.json               # repository health commands
+├── netlify.toml               # production build and response headers
+├── scripts/
+│   └── validate.mjs           # launcher and app structural health checks
 ├── shared/                    # deliberately small shared utilities
 ├── docs/
+│   ├── BASELINE.md            # Phase 0 reference state and rollback point
 │   ├── ENVIRONMENT-ROADMAP.md # full platform and tooling roadmap
 │   └── IMPLEMENTATION-PLAN.md # phased execution plan and completion log
 └── apps/
@@ -25,6 +37,18 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
     └── <app-slug>/            # one isolated PWA
 ```
 
+## Repository health
+
+Run the same structural check used by CI and Netlify:
+
+```bash
+npm run health
+```
+
+It validates the root launcher, registry, registered app directories, manifests, local icons, Service Worker ownership, cache names, registration wiring and required app-shell files.
+
+The current reference state and expected production paths are documented in [`docs/BASELINE.md`](./docs/BASELINE.md).
+
 ## Add a new app
 
 1. Read both `AGENTS.md` and `apps/AGENTS.md`.
@@ -32,9 +56,10 @@ Each app lives in its own directory under `apps/<slug>/` and is registered in `a
 3. Replace all template identifiers, cache names, paths, titles and colors.
 4. Build the app inside that directory only.
 5. Add one record to `apps.json`.
-6. Confirm the app works after the network is disabled.
-7. Confirm it can be installed independently from the root launcher.
-8. Test long-press, double-tap, input focus, orientation, safe areas and standalone mode.
+6. Run `npm run health`.
+7. Confirm the app works after the network is disabled.
+8. Confirm it can be installed independently from the root launcher.
+9. Test long-press, double-tap, input focus, orientation, safe areas and standalone mode.
 
 ## Product roadmap
 
