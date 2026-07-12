@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'screen-lab-';
-const CACHE_NAME = 'screen-lab-v1.3.1';
-const APP_VERSION = '1.3.1';
+const CACHE_NAME = 'screen-lab-v1.4.0';
+const APP_VERSION = '1.4.0';
 const RELEASE_DATE = '2026-07-12';
 const RELEASE_NOTES = [
-  'Contained decorative geometry within the WebKit mobile viewport.',
-  'Added automated Chromium and WebKit interaction and orientation coverage.',
-  'Preserved offline launch, Workshop Mode and native touch behavior under browser quality gates.'
+  'Added live Visual Viewport, keyboard inset, pointer pressure and pinch-rotation telemetry.',
+  'Added one-tap diagnostic snapshots with clipboard and JSON download fallback.',
+  'Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions.'
 ];
 const APP_SHELL = [
   './',

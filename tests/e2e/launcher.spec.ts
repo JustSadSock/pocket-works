@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import {
   assertNativeControlStyles,
@@ -6,6 +7,12 @@ import {
   monitorUnexpectedBrowserOutput,
   openStablePage
 } from './helpers';
+
+const registry = JSON.parse(
+  readFileSync(new URL('../../apps.json', import.meta.url), 'utf8')
+) as Array<{ slug: string; version: string }>;
+const screenLabVersion = registry.find((app) => app.slug === 'screen-lab')?.version;
+if (!screenLabVersion) throw new Error('Screen Lab is missing from apps.json');
 
 test('launcher shelf supports search, details, favorites and keyboard focus', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
@@ -27,7 +34,7 @@ test('launcher shelf supports search, details, favorites and keyboard focus', as
   await page.locator('.app-entry__select').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
-  await expect(page.locator('#detail-version')).toHaveText('v1.3.1');
+  await expect(page.locator('#detail-version')).toHaveText(`v${screenLabVersion}`);
   await expect(page.locator('#detail-open')).toHaveAttribute('href', './apps/screen-lab/');
 
   const favorite = page.locator('#detail-favorite');
