@@ -21,6 +21,7 @@ let W=390,H=844,DPR=1,last=0,raf=0;
 let running=false,paused=false,gameOver=false,firstRun=true;
 let score=0,kills=0,wave=1,waveClock=0,spawnClock=0,shake=0,flash=0,timeScale=1;
 let pointer={down:false,id:null,sx:0,sy:0,x:0,y:0};
+let queuedDash=null;
 let enemies=[],projectiles=[],particles=[],splashes=[],cutQueue=[];
 let settings={sound:true,vibe:true};
 try{settings={...settings,...JSON.parse(localStorage.getItem('pocket-works:cherta:settings')||'{}')}}catch{}
@@ -47,10 +48,11 @@ function tone(freq=220,dur=.08,type='triangle',gain=.035,slide=0){if(!settings.s
 function hiss(dur=.1,gain=.018){if(!settings.sound)return;initAudio();if(!audio)return;const n=audio.createBufferSource(),b=audio.createBuffer(1,audio.sampleRate*dur,audio.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const g=audio.createGain();g.gain.value=gain;n.buffer=b;n.connect(g).connect(audio.destination);n.start()}
 function callout(text,red=false){ui.callout.textContent=text;ui.callout.className='callout show'+(red?' red':'');clearTimeout(callout.t);callout.t=setTimeout(()=>ui.callout.className='callout',650)}
 function saveSettings(){localStorage.setItem('pocket-works:cherta:settings',JSON.stringify(settings));syncSettings()}
-function syncChrome(){ui.pauseBtn.hidden=!running||gameOver;ui.pauseBtn.setAttribute('aria-pressed',String(paused))}
+function syncMenuLayer(){const panelOpen=!ui.rules.classList.contains('hidden')||!ui.settings.classList.contains('hidden');el('app').classList.toggle('menu-open',!ui.menu.classList.contains('hidden')&&!panelOpen)}
+function syncChrome(){ui.pauseBtn.hidden=!running||gameOver;ui.pauseBtn.setAttribute('aria-pressed',String(paused));syncMenuLayer()}
 function syncSettings(){ui.soundBtn.textContent=settings.sound?'♪':'×';ui.soundBtn.setAttribute('aria-pressed',String(settings.sound));ui.soundSwitch.textContent=settings.sound?'ВКЛ':'ВЫКЛ';ui.vibeSwitch.textContent=settings.vibe?'ВКЛ':'ВЫКЛ';ui.soundSwitch.classList.toggle('on',settings.sound);ui.vibeSwitch.classList.toggle('on',settings.vibe);ui.best.textContent=best;ui.bestWave.textContent=bestWave;syncChrome()}
 function resetGame(){
-  score=0;kills=0;wave=1;waveClock=0;spawnClock=.65;shake=0;flash=0;enemies=[];projectiles=[];particles=[];splashes=[];cutQueue=[];
+  score=0;kills=0;wave=1;waveClock=0;spawnClock=.65;shake=0;flash=0;queuedDash=null;pointer.down=false;enemies=[];projectiles=[];particles=[];splashes=[];cutQueue=[];
   Object.assign(player,{x:W*.5,y:H*.61,hp:4,maxHp:4,charges:3,focus:false,dashing:false,dashT:0,dashId:0,invuln:0,hitFlash:0,lines:[],comboTimer:0,detonating:false,grazes:0});hudHealthSig='';
   running=true;paused=false;gameOver=false;ui.pause.classList.add('hidden');ui.gameover.classList.add('hidden');ui.menu.classList.add('hidden');ui.rules.classList.add('hidden');ui.settings.classList.add('hidden');syncChrome();
   spawnEnemy('stalker');spawnEnemy('stalker');updateUI();ui.hint.classList.add('show');setTimeout(()=>ui.hint.classList.remove('show'),2600);tone(150,.15,'sine',.035,140);
@@ -62,5 +64,5 @@ function updateUI(){
   if(player.lines.length&&player.comboTimer>0&&!player.detonating){const last=ui.combo.children[Math.max(0,player.lines.length-1)];last.classList.add('timer');last.style.setProperty('--progress',clamp(player.comboTimer/.95,0,1))}
 }
 function startGame(){initAudio();resetGame();if(!raf){last=performance.now();raf=requestAnimationFrame(loop)}}
-function quitToMenu(){running=false;paused=false;gameOver=false;pointer.down=false;shake=0;flash=0;ui.pause.classList.add('hidden');ui.gameover.classList.add('hidden');ui.settings.classList.add('hidden');ui.menu.classList.remove('hidden');syncSettings()}
-function pauseGame(v=true){if(!running||gameOver)return;paused=v;pointer.down=false;player.focus=false;ui.pause.classList.toggle('hidden',!v);syncChrome()}
+function quitToMenu(){running=false;paused=false;gameOver=false;pointer.down=false;queuedDash=null;player.focus=false;shake=0;flash=0;ui.pause.classList.add('hidden');ui.gameover.classList.add('hidden');ui.settings.classList.add('hidden');ui.rules.classList.add('hidden');ui.menu.classList.remove('hidden');syncSettings()}
+function pauseGame(v=true){if(!running||gameOver)return;paused=v;pointer.down=false;queuedDash=null;player.focus=false;ui.pause.classList.toggle('hidden',!v);syncChrome()}
