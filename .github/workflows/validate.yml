@@ -20,5 +20,20 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run repository health check
-        run: npm run health
+      - name: Check generated registry
+        run: npm run registry:check
+
+      - name: Check script syntax
+        run: npm run validate:scripts
+
+      - name: Validate app configs
+        run: npm run validate:configs
+
+      - name: Validate PWA structure
+        run: npm run validate
+
+      - name: Validate mobile runtime
+        run: npm run validate:mobile
+
+      - name: Smoke-test Pocket Forge presets
+        run: npm run test:forge
