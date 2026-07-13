@@ -1,0 +1,35 @@
+name: SENTE AI Audit
+
+on:
+  pull_request:
+    paths:
+      - 'apps/sente/**'
+      - 'scripts/*sente*'
+      - '.github/workflows/sente-ai-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+      - name: Prepare pinned GNU Go engine
+        run: node scripts/prepare-sente-engine.mjs
+      - name: Run behavioral audit
+        run: node scripts/audit-sente-ai.mjs
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sente-ai-audit
+          if-no-files-found: warn
+          path: |
+            apps/sente/AI_AUDIT.md
+            apps/sente/AI_AUDIT.json
