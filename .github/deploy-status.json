@@ -1,9 +1,9 @@
 {
-  "sourceCommit": "2f52a773b2fbf5b9aa0d144dc9553e2cd7e7c1fc",
-  "recordedAt": "2026-07-13T12:07:36Z",
+  "sourceCommit": "988034b2015e893e95d5ef53cf5301c950376f24",
+  "recordedAt": "2026-07-13T12:12:25Z",
   "install": "success",
   "registry": "success",
-  "build": "success",
-  "auth": "failure",
+  "build": "failure",
+  "auth": "skipped",
   "deploy": "skipped"
 }
