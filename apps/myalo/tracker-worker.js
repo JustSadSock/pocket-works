@@ -1,7 +1,5 @@
-import { FaceLandmarker, HandLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs';
-
-const VERSION = '0.10.35';
-const WASM_ROOT = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wasm`;
+const VISION_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs';
+const WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
 const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
@@ -11,18 +9,29 @@ let frameCounter = 0;
 let lastHands = [];
 let lastHandedness = [];
 let initialized = false;
+let visionRuntime = null;
 
 function postProgress(progress, label) {
   self.postMessage({ type: 'progress', progress, label });
 }
 
+async function loadVisionRuntime() {
+  if (!visionRuntime) visionRuntime = await import(VISION_BUNDLE);
+  const { FaceLandmarker, HandLandmarker, FilesetResolver } = visionRuntime;
+  if (!FaceLandmarker || !HandLandmarker || !FilesetResolver) {
+    throw new Error('Движок MediaPipe загрузился не полностью');
+  }
+  return { FaceLandmarker, HandLandmarker, FilesetResolver };
+}
+
 async function init() {
   if (initialized) return;
-  postProgress(0.08, 'Загружаю движок зрения');
-  const fileset = {
-    wasmLoaderPath: `${WASM_ROOT}/vision_wasm_module_internal.js`,
-    wasmBinaryPath: `${WASM_ROOT}/vision_wasm_module_internal.wasm`
-  };
+  postProgress(0.05, 'Загружаю движок зрения');
+  const { FaceLandmarker, HandLandmarker, FilesetResolver } = await loadVisionRuntime();
+
+  // A classic worker is intentional. FilesetResolver then selects the classic
+  // WASM loader, which can install ModuleFactory through importScripts on iOS.
+  const fileset = await FilesetResolver.forVisionTasks(WASM_ROOT);
 
   const createWithFallback = async (Task, options) => {
     try {
