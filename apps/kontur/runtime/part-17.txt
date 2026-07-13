@@ -1,0 +1,15 @@
+
+/* КОНТУР 1.4 — переключатель всегда находится строго в состоянии A или B. */
+const generateBoardBeforeFocusedSwitch = generateBoard;
+const startLevelBeforeFocusedSwitch = startLevel;
+
+generateBoard = function generateBoardFocusedSwitch(level, seed) {
+  const board = generateBoardBeforeFocusedSwitch(level, seed);
+  if (board?.featureMode === 'switch') normalizeSwitches(board);
+  return board;
+};
+
+startLevel = function startLevelFocusedSwitch(restoredBoard = null, restoredPulse = null) {
+  startLevelBeforeFocusedSwitch(restoredBoard, restoredPulse);
+  if (game.board?.featureMode === 'switch') normalizeSwitches(game.board);
+};
