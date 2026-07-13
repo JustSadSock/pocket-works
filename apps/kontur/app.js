@@ -10,7 +10,7 @@
  *   cachePrefix: 'kontur-'
  * });
  */
-const PARTS = 7;
+const PARTS = 8;
 const paths = Array.from({ length: PARTS }, (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt`);
 
 try {
