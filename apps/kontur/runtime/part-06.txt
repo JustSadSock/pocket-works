@@ -1,0 +1,435 @@
+
+/* КОНТУР 1.1 — внешний источник, предстартовый отсчёт и визуальная доводка. */
+const LAUNCH_COUNTDOWN_MS = 3000;
+const RELAUNCH_COUNTDOWN_MS = 1400;
+const originalStartLevel = startLevel;
+const originalResetPulse = resetPulse;
+const originalEvaluatePulse = evaluatePulse;
+const originalUpdateSimulation = updateSimulation;
+const originalBoardPoint = boardPoint;
+const originalDrawBackground = drawBackground;
+const originalDrawBench = drawBench;
+const originalDrawTile = drawTile;
+const originalRender = render;
+
+game.countdownEnd = 0;
+game.countdownLast = -1;
+game.sourcePulse = 0;
+game.launchShock = 0;
+game.ambientTime = 0;
+
+sound.count = function count(value) {
+  const freq = value > 0 ? 250 + (4 - value) * 80 : 620;
+  this.tone(freq, value > 0 ? 0.08 : 0.13, value > 0 ? 0.08 : 0.13, 'square', value > 0 ? 40 : 120);
+};
+
+function armExternalSource(delay, label) {
+  if (!game.board || !game.pulse) return;
+  const now = performance.now();
+  game.pulse.x = game.board.source.x;
+  game.pulse.y = ROWS;
+  game.pulse.entryBit = S;
+  game.pulse.moving = false;
+  game.pulse.move = null;
+  game.pulse.visits = {};
+  game.pulse.completeAfterMove = false;
+  game.pulse.faultUntil = 0;
+  game.pulse.nextDecisionAt = now + delay + 110;
+  game.countdownEnd = now + delay;
+  game.countdownLast = Math.ceil(delay / 1000) + 1;
+  game.launchShock = 1;
+  setStatus(label, '', 0);
+}
+
+startLevel = function startLevelPolished(restoredBoard = null, restoredPulse = null) {
+  const fresh = !restoredBoard;
+  originalStartLevel(restoredBoard, restoredPulse);
+  if (!game.board || !game.pulse) return;
+  if (fresh) {
+    armExternalSource(LAUNCH_COUNTDOWN_MS, 'ИСТОЧНИК: ПОДГОТОВКА К ПУСКУ');
+    game.board.startedAt = game.countdownEnd;
+    saveResume();
+  } else {
+    game.countdownEnd = 0;
+    game.countdownLast = -1;
+    game.pulse.nextDecisionAt = Math.max(game.pulse.nextDecisionAt || 0, performance.now() + 800);
+    setStatus('ЦЕПЬ ВОССТАНОВЛЕНА', 'success', 850);
+  }
+};
+
+resetPulse = function resetPulsePolished(extraDelay = 0) {
+  originalResetPulse(extraDelay);
+  armExternalSource(RELAUNCH_COUNTDOWN_MS + extraDelay, 'ПОВТОРНЫЙ ПУСК ИСТОЧНИКА');
+};
+
+evaluatePulse = function evaluatePulsePolished(now) {
+  if (
+    game.mode !== 'playing' ||
+    !game.pulse ||
+    game.pulse.moving ||
+    now < game.pulse.nextDecisionAt ||
+    now < game.pulse.faultUntil
+  ) return;
+
+  if (game.pulse.y >= ROWS) {
+    const source = game.board.source;
+    const sourceTile = game.board.tiles[source.y][source.x];
+    if (!(sourceTile.mask & S)) {
+      game.pulse.x = source.x;
+      game.pulse.y = source.y;
+      game.pulse.entryBit = S;
+      triggerFault('ВХОД НЕ ПОДКЛЮЧЁН', S);
+      return;
+    }
+    game.launchShock = 1;
+    beginMove(N);
+    return;
+  }
+
+  originalEvaluatePulse(now);
+};
+
+boardPoint = function boardPointPolished(cell) {
+  if (!game.layout) return { x: 0, y: 0 };
+  const layout = game.layout;
+  if (cell.y >= ROWS) {
+    return {
+      x: layout.boardX + (cell.x + 0.5) * layout.cell,
+      y: layout.boardY + layout.boardHeight + Math.max(18, layout.cell * 0.31)
+    };
+  }
+  if (cell.y < 0) {
+    return {
+      x: layout.boardX + (cell.x + 0.5) * layout.cell,
+      y: layout.boardY - Math.max(16, layout.cell * 0.27)
+    };
+  }
+  return originalBoardPoint(cell);
+};
+
+function updateCountdown(now) {
+  if (game.mode !== 'playing' || !game.countdownEnd) return;
+  const remainingMs = game.countdownEnd - now;
+  const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+  if (remaining !== game.countdownLast) {
+    game.countdownLast = remaining;
+    sound.count(remaining);
+    if (remaining > 0) {
+      setStatus(`ПОДАЧА ТОКА ЧЕРЕЗ ${remaining}`, '', 0);
+      navigator.vibrate?.(remaining === 1 ? 18 : 10);
+    } else {
+      setStatus('ПУСК · СЛЕДИ ЗА ВХОДОМ', 'success', 700);
+      navigator.vibrate?.([16, 28, 22]);
+      game.countdownEnd = 0;
+      game.launchShock = 1;
+    }
+  }
+}
+
+updateSimulation = function updateSimulationPolished(dt, now) {
+  game.ambientTime += dt;
+  game.sourcePulse = (game.sourcePulse + dt * 1.65) % 1;
+  game.launchShock = Math.max(0, game.launchShock - dt * 1.8);
+  updateCountdown(now);
+  originalUpdateSimulation(dt, now);
+};
+
+drawBackground = function drawBackgroundPolished() {
+  originalDrawBackground();
+  const { width, height } = game.layout;
+  ctx.save();
+
+  const wash = ctx.createRadialGradient(width * 0.5, height * 0.34, 10, width * 0.5, height * 0.48, Math.max(width, height) * 0.76);
+  wash.addColorStop(0, 'rgba(255,248,224,.16)');
+  wash.addColorStop(0.58, 'rgba(93,80,55,.02)');
+  wash.addColorStop(1, 'rgba(41,35,27,.13)');
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#6f6047';
+  const offset = Math.floor((game.ambientTime * 8) % 37);
+  for (let y = -37 + offset; y < height; y += 37) {
+    for (let x = ((y / 37) % 2) * 17; x < width; x += 37) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = '#17211d';
+  ctx.font = '700 8px ui-monospace, monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('КС–6 / 50 Гц / ЛИНИЯ 04', 14, game.layout.height - 18);
+  ctx.restore();
+};
+
+drawBench = function drawBenchPolished() {
+  originalDrawBench();
+  const l = game.layout;
+  const rail = Math.max(7, l.cell * 0.11);
+  const x = l.boardX - 10;
+  const y = l.boardY - 10;
+  const w = l.boardWidth + 20;
+  const h = l.boardHeight + 20;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(238,230,207,.32)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 4.5, y + 4.5, w - 9, h - 9);
+
+  ctx.fillStyle = '#25372f';
+  ctx.fillRect(x - rail, y + rail, rail, h - rail * 2);
+  ctx.fillRect(x + w, y + rail, rail, h - rail * 2);
+  ctx.fillStyle = 'rgba(238,230,207,.2)';
+  ctx.fillRect(x - rail + 2, y + rail + 2, 1, h - rail * 2 - 4);
+  ctx.fillRect(x + w + 2, y + rail + 2, 1, h - rail * 2 - 4);
+
+  ctx.font = `700 ${Math.max(7, l.cell * 0.095)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(238,230,207,.72)';
+  for (let col = 0; col < COLS; col += 1) {
+    ctx.fillText(String(col + 1), l.boardX + (col + 0.5) * l.cell, y + 5);
+  }
+  ctx.textAlign = 'right';
+  for (let row = 0; row < ROWS; row += 1) {
+    ctx.fillText(String.fromCharCode(65 + row), l.boardX - 4, l.boardY + (row + 0.5) * l.cell);
+  }
+
+  ctx.strokeStyle = 'rgba(23,33,29,.65)';
+  ctx.lineWidth = 2;
+  for (const sideX of [x - rail * 0.5, x + w + rail * 0.5]) {
+    for (let i = 1; i <= 3; i += 1) {
+      const yy = y + (h * i) / 4;
+      ctx.beginPath();
+      ctx.moveTo(sideX - rail * 0.22, yy - rail * 0.22);
+      ctx.lineTo(sideX + rail * 0.22, yy + rail * 0.22);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+};
+
+drawTile = function drawTilePolished(tile, x, y, size, hintActive) {
+  originalDrawTile(tile, x, y, size, hintActive);
+  const inset = Math.max(4, size * 0.09);
+  const screw = Math.max(1.5, size * 0.025);
+  ctx.save();
+  ctx.fillStyle = tile.locked ? 'rgba(23,33,29,.72)' : 'rgba(61,58,45,.42)';
+  for (const [sx, sy] of [
+    [x + inset, y + inset],
+    [x + size - inset, y + inset],
+    [x + inset, y + size - inset],
+    [x + size - inset, y + size - inset]
+  ]) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, screw, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const wear = ((tile.x * 13 + tile.y * 17 + (game.board?.seed || 0)) >>> 0) % 5;
+  ctx.globalAlpha = 0.16;
+  ctx.strokeStyle = '#66563d';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + size * (0.18 + wear * 0.04), y + size * 0.78);
+  ctx.lineTo(x + size * (0.28 + wear * 0.03), y + size * 0.72);
+  ctx.stroke();
+  ctx.restore();
+};
+
+drawPorts = function drawPortsPolished() {
+  if (!game.board) return;
+  const l = game.layout;
+  const sourceCell = game.board.source;
+  const goalCell = game.board.goal;
+  const source = boardPoint({ x: sourceCell.x, y: ROWS });
+  const goal = boardPoint({ x: goalCell.x, y: -1 });
+  const edgeSourceX = l.boardX + (sourceCell.x + 0.5) * l.cell;
+  const edgeGoalX = l.boardX + (goalCell.x + 0.5) * l.cell;
+  const boxW = Math.min(l.cell * 0.86, 58);
+  const boxH = Math.max(18, l.cell * 0.28);
+  const active = game.pulse?.y >= ROWS || game.countdownEnd > 0;
+  const throb = 0.5 + Math.sin(performance.now() * 0.008) * 0.5;
+
+  ctx.save();
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#5d2d20';
+  ctx.lineWidth = Math.max(7, l.cell * 0.12);
+  ctx.beginPath();
+  ctx.moveTo(edgeSourceX, l.boardY + l.boardHeight);
+  ctx.lineTo(source.x, source.y);
+  ctx.stroke();
+  ctx.strokeStyle = active ? '#e4a465' : '#b85d32';
+  ctx.lineWidth = Math.max(4, l.cell * 0.075);
+  ctx.stroke();
+
+  ctx.fillStyle = '#17211d';
+  ctx.fillRect(source.x - boxW / 2 - 3, source.y - boxH / 2 - 3, boxW + 6, boxH + 6);
+  ctx.fillStyle = active ? '#b85d32' : '#8a7959';
+  ctx.fillRect(source.x - boxW / 2, source.y - boxH / 2, boxW, boxH);
+  ctx.strokeStyle = 'rgba(255,235,197,.55)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(source.x - boxW / 2 + 3.5, source.y - boxH / 2 + 3.5, boxW - 7, boxH - 7);
+
+  ctx.fillStyle = '#f3ead2';
+  ctx.beginPath();
+  ctx.arc(source.x, source.y, Math.max(4, l.cell * 0.075), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  if (active) {
+    ctx.strokeStyle = `rgba(232,173,114,${0.28 + throb * 0.45})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(source.x, source.y, l.cell * (0.18 + throb * 0.1), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#5d2d20';
+  ctx.lineWidth = Math.max(6, l.cell * 0.1);
+  ctx.beginPath();
+  ctx.moveTo(edgeGoalX, l.boardY);
+  ctx.lineTo(goal.x, goal.y);
+  ctx.stroke();
+  ctx.strokeStyle = '#d7cdb0';
+  ctx.lineWidth = Math.max(3, l.cell * 0.055);
+  ctx.stroke();
+  ctx.fillStyle = '#17211d';
+  ctx.fillRect(goal.x - boxW * 0.38, goal.y - boxH * 0.32, boxW * 0.76, boxH * 0.64);
+  ctx.fillStyle = '#d9cfb3';
+  ctx.fillRect(goal.x - boxW * 0.32, goal.y - boxH * 0.24, boxW * 0.64, boxH * 0.48);
+
+  ctx.fillStyle = '#17211d';
+  ctx.font = `800 ${Math.max(7, l.cell * 0.105)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('ИСТОЧНИК', source.x, source.y + boxH / 2 + 6);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('ВЫХОД', goal.x, goal.y - boxH / 2 - 4);
+  ctx.restore();
+};
+
+drawPulse = function drawPulsePolished() {
+  if (!game.pulse || !game.board) return;
+  let point = boardPoint(game.pulse);
+  let from = point;
+  if (game.pulse.moving && game.pulse.move) {
+    from = boardPoint(game.pulse.move.from);
+    const to = boardPoint(game.pulse.move.to);
+    const t = Math.min(1, game.pulse.move.progress);
+    point = {
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t
+    };
+  }
+
+  const pulse = 0.5 + Math.sin(performance.now() * 0.018) * 0.5;
+  ctx.save();
+  if (game.pulse.moving) {
+    ctx.globalCompositeOperation = 'screen';
+    ctx.strokeStyle = 'rgba(239,146,74,.58)';
+    ctx.lineWidth = Math.max(3, game.layout.cell * 0.055);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'screen';
+  const radius = game.layout.cell * (game.pulse.y >= ROWS ? 0.42 : 0.34);
+  const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+  gradient.addColorStop(0, 'rgba(255,250,219,1)');
+  gradient.addColorStop(0.2, 'rgba(246,174,87,.98)');
+  gradient.addColorStop(0.62, 'rgba(226,103,40,.42)');
+  gradient.addColorStop(1, 'rgba(226,103,40,0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, radius * (0.84 + pulse * 0.16), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle = '#fff6d4';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, Math.max(5, game.layout.cell * 0.087), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(184,93,50,.85)';
+  ctx.beginPath();
+  ctx.arc(point.x - game.layout.cell * 0.022, point.y - game.layout.cell * 0.022, Math.max(1.5, game.layout.cell * 0.025), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};
+
+function drawCountdownOverlay() {
+  if (!game.board || !game.countdownEnd || game.mode !== 'playing') return;
+  const now = performance.now();
+  const remaining = Math.max(1, Math.ceil((game.countdownEnd - now) / 1000));
+  const l = game.layout;
+  const sourceX = l.boardX + (game.board.source.x + 0.5) * l.cell;
+  const phase = 1 - Math.max(0, Math.min(1, (game.countdownEnd - now) % 1000 / 1000));
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(232,173,114,.09)';
+  ctx.fillRect(l.boardX + game.board.source.x * l.cell, l.boardY, l.cell, l.boardHeight);
+  ctx.strokeStyle = `rgba(232,173,114,${0.34 + phase * 0.34})`;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath();
+  ctx.moveTo(sourceX, l.boardY + l.boardHeight + l.cell * 0.18);
+  ctx.lineTo(sourceX, l.boardY + l.boardHeight - l.cell * 0.32);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const plateW = Math.min(l.boardWidth * 0.56, 250);
+  const plateH = Math.min(l.cell * 1.45, 88);
+  const plateX = l.boardX + (l.boardWidth - plateW) / 2;
+  const plateY = l.boardY + l.boardHeight * 0.5 - plateH / 2;
+  ctx.fillStyle = 'rgba(23,33,29,.88)';
+  ctx.fillRect(plateX + 5, plateY + 5, plateW, plateH);
+  ctx.fillStyle = 'rgba(221,210,180,.94)';
+  ctx.fillRect(plateX, plateY, plateW, plateH);
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(plateX + 1.5, plateY + 1.5, plateW - 3, plateH - 3);
+  ctx.fillStyle = '#17211d';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `900 ${Math.min(54, plateH * 0.64)}px "Arial Narrow", sans-serif`;
+  ctx.fillText(String(remaining), plateX + plateW * 0.26, plateY + plateH * 0.52);
+  ctx.textAlign = 'left';
+  ctx.font = `800 ${Math.max(8, l.cell * 0.12)}px ui-monospace, monospace`;
+  ctx.fillText('ДО ПОДАЧИ ТОКА', plateX + plateW * 0.47, plateY + plateH * 0.39);
+  ctx.font = `700 ${Math.max(7, l.cell * 0.1)}px ui-monospace, monospace`;
+  ctx.fillStyle = '#8b2e24';
+  ctx.fillText(`ВХОД · КОЛОНКА ${game.board.source.x + 1}`, plateX + plateW * 0.47, plateY + plateH * 0.65);
+  ctx.restore();
+}
+
+function drawScreenPatina() {
+  const { width, height } = game.layout;
+  ctx.save();
+  ctx.globalAlpha = 0.045;
+  ctx.fillStyle = '#17211d';
+  for (let y = 0; y < height; y += 4) ctx.fillRect(0, y, width, 1);
+  const vignette = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.2, width / 2, height / 2, Math.max(width, height) * 0.72);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(18,22,19,.12)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+render = function renderPolished() {
+  originalRender();
+  if (!game.layout) return;
+  drawCountdownOverlay();
+  drawScreenPatina();
+};
