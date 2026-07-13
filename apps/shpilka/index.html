@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#d2c49d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ШПИЛЬКА">
+  <title>ШПИЛЬКА</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app data-ui>
+    <canvas id="game" data-gesture-surface data-touch-action="none" aria-label="Гоночная трасса"></canvas>
+
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="hud" id="hud" hidden>
+      <div class="hud-race">
+        <span class="hud-kicker">ПОЗИЦИЯ</span>
+        <strong id="positionValue">1/5</strong>
+      </div>
+      <div class="hud-lap">
+        <span class="hud-kicker">КРУГ</span>
+        <strong id="lapValue">1/3</strong>
+      </div>
+      <button class="pause-button" id="pauseButton" type="button" data-native-press aria-label="Пауза">ПАУЗА</button>
+    </header>
+
+    <section class="speed-cluster" id="speedCluster" hidden aria-live="polite">
+      <span id="speedValue">0</span>
+      <small>КМ/Ч</small>
+      <div class="lap-clock"><span id="lapTime">0:00.000</span><em id="bestLap">ЛУЧШИЙ —</em></div>
+    </section>
+
+    <button class="recover-button" id="recoverButton" type="button" data-native-press hidden>НА ТРАССУ</button>
+
+    <section class="controls" id="controls" hidden aria-label="Управление">
+      <div class="steering" aria-label="Руление">
+        <button class="steer steer-left" id="leftButton" type="button" data-pressable aria-label="Повернуть влево"><span>ЛЕВО</span></button>
+        <button class="steer steer-right" id="rightButton" type="button" data-pressable aria-label="Повернуть вправо"><span>ПРАВО</span></button>
+      </div>
+      <div class="pedals" aria-label="Педали">
+        <button class="pedal brake" id="brakeButton" type="button" data-pressable><span>ТОРМОЗ</span></button>
+        <button class="pedal throttle" id="throttleButton" type="button" data-pressable><span>ГАЗ</span></button>
+      </div>
+    </section>
+
+    <div class="countdown" id="countdown" hidden aria-live="assertive">3</div>
+    <div class="race-message" id="raceMessage" hidden></div>
+
+    <section class="screen start-screen" id="startScreen">
+      <div class="track-mark" aria-hidden="true">
+        <svg viewBox="0 0 180 180" role="img" aria-label="Схема шпильки">
+          <path d="M30 145 C64 145 85 126 85 99 C85 73 65 54 42 54 C23 54 15 70 21 84 C27 99 48 101 62 88 C84 67 104 45 157 35" />
+          <path d="M84 91 L122 114" class="bridge-line" />
+          <circle cx="31" cy="145" r="5" />
+        </svg>
+      </div>
+      <div class="start-copy">
+        <p class="eyebrow">ГОНОЧНЫЙ УЗЕЛ № 09</p>
+        <h1>ШПИЛЬКА</h1>
+        <p class="subtitle">Три круга. Пять машин. Никаких бустов — только траектория, торможение и яйца, желательно свои.</p>
+      </div>
+      <div class="briefing">
+        <div><b>← →</b><span>рули</span></div>
+        <div><b>ГАЗ</b><span>держи скорость</span></div>
+        <div><b>ТОРМОЗ</b><span>срывай заднюю ось</span></div>
+      </div>
+      <button class="primary-action" id="startButton" type="button" data-native-press>НА СТАРТ</button>
+      <div class="start-footer">
+        <button class="text-control" id="soundButtonStart" type="button" data-native-press>ЗВУК: ВКЛ</button>
+        <button class="text-control" type="button" data-workshop-trigger data-native-press>МАСТЕРСКАЯ</button>
+        <a href="../../" class="text-control" data-app-control>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" hidden>
+      <p class="eyebrow">ЗАЕЗД ОСТАНОВЛЕН</p>
+      <h2>ПАУЗА</h2>
+      <button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+      <button class="secondary-action" id="restartButtonPause" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
+      <button class="secondary-action" id="soundButtonPause" type="button" data-native-press>ЗВУК: ВКЛ</button>
+      <a href="../../" class="text-control pause-back" data-app-control>В POCKET WORKS</a>
+    </section>
+
+    <section class="screen finish-screen" id="finishScreen" hidden>
+      <p class="eyebrow" id="finishKicker">ФИНИШ</p>
+      <h2 id="finishTitle">1 МЕСТО</h2>
+      <p class="finish-summary" id="finishSummary"></p>
+      <ol class="results" id="results"></ol>
+      <button class="primary-action" id="restartButtonFinish" type="button" data-native-press>ЕЩЁ ЗАЕЗД</button>
+      <a href="../../" class="text-control" data-app-control>В POCKET WORKS</a>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ШПИЛЬКА"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./workshop.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
