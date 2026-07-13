@@ -1,5 +1,5 @@
 [build]
-  command = "npm run validate:launcher && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>launcher ok</title><h1>launcher ok</h1>' > dist-site/index.html"
+  command = "npm run build:site"
   publish = "dist-site"
 
 [[headers]]
