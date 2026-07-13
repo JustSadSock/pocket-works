@@ -172,7 +172,14 @@ for (const asset of [
   requireText(worker, asset, 'sw.js APP_SHELL');
 }
 
-requireText(worker, "requestUrl.pathname.endsWith('/apps.json')", 'sw.js registry strategy');
+for (const token of [
+  'SHELL_KEYS.get(requestUrl.pathname)',
+  "cache: 'no-store'",
+  'startsWith(APPLICATIONS_PATH)',
+  '__pw_build'
+]) {
+  requireText(worker, token, 'sw.js fresh cache strategy');
+}
 requireText(worker, "event.data?.type === 'GET_UPDATE_INFO'", 'sw.js managed updates');
 requireText(worker, "event.data?.type === 'SKIP_WAITING'", 'sw.js managed updates');
 
