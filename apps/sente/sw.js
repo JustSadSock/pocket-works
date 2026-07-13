@@ -1,43 +1,44 @@
 const CACHE_PREFIX = 'sente-';
-const CACHE_NAME = 'sente-v2.0.0';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'sente-v2.1.0-p2';
+const APP_VERSION = '2.1.0';
 const RELEASE_DATE = '2026-07-13';
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  "Самописный позиционный бот заменён проверенным движком GNU Go 3.9.1 с чтением групп, жизни и смерти, захватов и территории.",
-  "Добавлены три новых соперника: Ученик, Клубный и Мастер; они используют разное число независимых чтений и симметрий доски.",
-  "Каждое чтение запускается в чистом WASM-экземпляре, а worker уничтожается после хода, поэтому внутренние таблицы движка не накапливают память.",
-  "Каждая сборка проходит строгий поведенческий аудит: тактические позиции, 24 дебюта и шесть наблюдаемых партий со снимками доски."
+  "Исполняемые файлы, worker и WASM получили версионные URL, поэтому старый iOS-кэш больше не может смешать интерфейс 2.x с прежним ботом.",
+  "При первом запуске 2.1 незавершённая партия против старого компьютера закрывается, чтобы новый движок не продолжал уже испорченную позицию.",
+  "Имя соперника теперь явно показывает GNU Go, а аварийный переход на резервную эвристику отображается как ошибка движка.",
+  "Браузерный тест проверяет загрузку только версионных ресурсов и настоящий GNU Go worker в Chromium и WebKit."
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css',
-  './board.css',
-  './sheets.css',
-  './app.js',
-  './runtime-1.txt',
-  './runtime-2.txt',
-  './runtime-3.txt',
-  './runtime-4.txt',
-  './go-engine.js',
-  './ai.js',
-  './gnugo-client.js',
-  './gnugo-worker.js',
-  './gnugo-protocol.js',
-  './dead-groups.js',
-  './assets/gnugo/gnugo.js',
-  './assets/gnugo/gnugo.wasm',
-  './assets/gnugo/COPYING.txt',
-  './assets/gnugo/SOURCE.txt',
-  './manifest.webmanifest',
-  './icons/icon.svg',
-  '../../shared/mobile-runtime.css',
+  './styles.css?v=2.1.0',
+  './board.css?v=2.1.0',
+  './sheets.css?v=2.1.0',
+  './app.js?v=2.1.0',
+  './runtime-1.txt?v=2.1.0',
+  './runtime-2.txt?v=2.1.0',
+  './runtime-3.txt?v=2.1.0',
+  './runtime-4.txt?v=2.1.0',
+  './go-engine.js?v=2.1.0',
+  './ai-v2.1.js?v=2.1.0',
+  './gnugo-client-v2.1.js?v=2.1.0',
+  './gnugo-worker-v2.1.js?v=2.1.0',
+  './gnugo-protocol.js?v=2.1.0',
+  './dead-groups.js?v=2.1.0',
+  './assets/gnugo/gnugo.js?v=2.1.0',
+  './assets/gnugo/gnugo.wasm?v=2.1.0',
+  './assets/gnugo/COPYING.txt?v=2.1.0',
+  './assets/gnugo/SOURCE.txt?v=2.1.0',
+  './manifest.webmanifest?v=2.1.0',
+  './icons/icon.svg?v=2.1.0',
+  '../../shared/mobile-runtime.css?v=2.1.0',
   '../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js',
-  '../../shared/update-manager.css',
-  '../../shared/update-manager.js',
-  '../../shared/workshop-mode.css',
+  '../../shared/update-manager.css?v=2.1.0',
+  '../../shared/update-manager.js?v=2.1.0',
+  '../../shared/workshop-mode.css?v=2.1.0',
   '../../shared/workshop-mode.js',
   '../../shared/capabilities/motion.js',
   '../../shared/capabilities/storage.js',
@@ -47,13 +48,69 @@ const APP_SHELL = [
   '../../shared/capabilities/diagnostics.js'
 ];
 
+const SCOPE_URL = new URL('./', self.registration.scope);
+const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
+const SHELL_KEYS = new Map(
+  APP_SHELL.map((entry) => {
+    const url = new URL(entry, SCOPE_URL);
+    return [url.pathname, url.href];
+  })
+);
+
+function buildNetworkUrl(input) {
+  const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
+  url.searchParams.set('__pw_build', BUILD_TOKEN);
+  return url;
+}
+
+async function fetchFresh(input) {
+  const response = await fetch(buildNetworkUrl(input), {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'follow'
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Fresh SENTE request failed: ${response?.status || 'network'}`);
+  }
+
+  return response;
+}
+
+async function precacheFreshShell() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+      const response = await fetchFresh(canonicalUrl);
+      await cache.put(canonicalUrl, response);
+    })
+  );
+}
+
+async function networkFirstFresh(input, canonicalUrl, fallbackUrl = canonicalUrl) {
+  try {
+    const response = await fetchFresh(input);
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(canonicalUrl, response.clone());
+    return response;
+  } catch {
+    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(precacheFreshShell());
 });
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
+    event.ports?.[0]?.postMessage({
+      version: APP_VERSION,
+      releaseDate: RELEASE_DATE,
+      releaseNotes: RELEASE_NOTES,
+      cacheProtocol: CACHE_PROTOCOL,
+      cacheName: CACHE_NAME
+    });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
@@ -61,35 +118,28 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
-          return response;
-        })
-        .catch(() => caches.match('./'))
-    );
+    event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      if (!response || response.status !== 200 || response.type === 'opaque') return response;
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-      return response;
-    }))
-  );
+  const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
+  if (!canonicalUrl) return;
+
+  event.respondWith(networkFirstFresh(canonicalUrl, canonicalUrl, SCOPE_URL.href));
 });
