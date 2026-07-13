@@ -245,4 +245,4 @@ function serializeBoard(board) {
     rotations: board.rotations,
     faults: board.faults,
     hintRemaining: Math.max(0, board.hintUntil - performance.now()),
-    tiles: board.tiles.map((row) => row.map((tile) =>
+    tiles: board.tiles.map((row) => row.map((tile) =
