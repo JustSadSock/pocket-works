@@ -20,7 +20,7 @@
   "backgroundColor": "#eee7d8",
   "themeColor": "#d9b778",
   "orientation": "any",
-  "cacheName": "sente-v2.1.0",
+  "cacheName": "sente-v2.1.0-p2",
   "storageNamespace": "pocket-works:sente",
   "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
   "order": 70
