@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./polish.css">
   <link rel="stylesheet" href="./v12.css">
   <link rel="stylesheet" href="./brake.css">
+  <link rel="stylesheet" href="./clarity.css">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
@@ -53,10 +54,10 @@
       <output id="checkpointValue">0/0</output>
     </section>
 
-    <button class="overload-control" id="overloadButton" type="button" aria-label="Активировать аварийное замедление" aria-pressed="false" data-ui data-native-press>
-      <span>СТАБИЛИЗАТОР</span>
-      <small>ЗАРЯДЫ</small>
-      <b id="brakeCharges">2×</b>
+    <button class="overload-control stabilizer-button" id="overloadButton" type="button" aria-label="Замедлить импульс" aria-pressed="false" data-ui data-native-press>
+      <span class="stabilizer-symbol" aria-hidden="true">Ⅱ</span>
+      <span class="stabilizer-label">ЗАМЕДЛИТЬ</span>
+      <b id="brakeCharges" aria-label="Осталось зарядов">2×</b>
       <i aria-hidden="true"></i>
     </button>
 
@@ -70,11 +71,11 @@
           <span class="plate-code">КС–6 / POCKET WORKS</span>
           <img src="./icons/icon.svg" alt="" class="title-icon" draggable="false">
           <h1>КОНТУР</h1>
-          <p>Заглушки, тройники, мосты и блок-сектора меняют геометрию каждой платы.<br>Ограничители требуют планировать повороты до запуска импульса.</p>
+          <p>Проведи импульс через читаемую цепь, обходя блоки и учитывая ограничители.<br>Каждый символ прямо на клетке показывает её функцию.</p>
         </div>
         <div class="rule-row">
           <span><b>ТАП</b> вращает доступный модуль</span>
-          <span><b>БЛОКИ</b> нужно обходить, лимиты нельзя отменить</span>
+          <span><b>Ⅱ</b> замедляет импульс в критический момент</span>
         </div>
         <div class="record-line"><span>ЛУЧШИЙ КАСКАД</span><b id="bestLevelValue">01</b></div>
         <button class="knife-switch primary" id="newRunButton" type="button" data-native-press>
@@ -130,7 +131,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="КОНТУР"
-    data-app-version="1.3.0"
+    data-app-version="1.3.1"
   ></script>
   <script type="module" src="./app.js"></script>
 </body>
