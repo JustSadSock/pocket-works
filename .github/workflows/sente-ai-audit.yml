@@ -1,0 +1,104 @@
+name: SENTE AI Audit
+
+on:
+  pull_request:
+    paths:
+      - 'apps/sente/**'
+      - 'scripts/*sente*'
+      - '.github/workflows/sente-ai-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+      - name: Prepare pinned GNU Go engine
+        id: prepare
+        shell: bash
+        run: |
+          set +e
+          node scripts/prepare-sente-engine.mjs > sente-audit.log 2>&1
+          code=$?
+          cat sente-audit.log
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Run behavioral audit
+        id: audit
+        if: steps.prepare.outputs.exit == '0'
+        shell: bash
+        run: |
+          set +e
+          node scripts/audit-sente-gnugo.mjs >> sente-audit.log 2>&1
+          code=$?
+          cat sente-audit.log
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Validate Pocket Works capability integration
+        id: capabilities
+        shell: bash
+        run: |
+          set +e
+          node scripts/validate-capabilities.mjs >> sente-audit.log 2>&1
+          code=$?
+          tail -n 80 sente-audit.log
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sente-ai-audit
+          if-no-files-found: warn
+          path: |
+            sente-audit.log
+            apps/sente/AI_AUDIT.md
+            apps/sente/AI_AUDIT.json
+      - name: Publish diagnostic summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PREPARE_EXIT: ${{ steps.prepare.outputs.exit }}
+          AUDIT_EXIT: ${{ steps.audit.outputs.exit }}
+          CAPABILITIES_EXIT: ${{ steps.capabilities.outputs.exit }}
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.existsSync('sente-audit.log') ? fs.readFileSync('sente-audit.log', 'utf8') : 'No audit log was produced.';
+            let report = null;
+            try { report = JSON.parse(fs.readFileSync('apps/sente/AI_AUDIT.json', 'utf8')); } catch {}
+            const marker = '<!-- sente-ai-audit -->';
+            const summary = report?.summary
+              ? `Checks: ${report.summary.passed}/${report.summary.total} passed; ${report.summary.failed} failed.`
+              : `Audit did not reach report generation.`;
+            const tail = log.slice(-12000).replace(/```/g, '~~~');
+            const body = `${marker}\n## SENTE AI audit\n\n${summary}\n\nPrepare exit: \`${process.env.PREPARE_EXIT || 'not-run'}\`; audit exit: \`${process.env.AUDIT_EXIT || 'not-run'}\`; capabilities exit: \`${process.env.CAPABILITIES_EXIT || 'not-run'}\`.\n\n<details><summary>Diagnostic tail</summary>\n\n\`\`\`text\n${tail}\n\`\`\`\n</details>`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+            const existing = comments.find(comment => comment.user?.type === 'Bot' && comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
+      - name: Enforce audit result
+        if: always()
+        shell: bash
+        run: |
+          prepare='${{ steps.prepare.outputs.exit }}'
+          audit='${{ steps.audit.outputs.exit }}'
+          capabilities='${{ steps.capabilities.outputs.exit }}'
+          test "$prepare" = '0' && test "$audit" = '0' && test "$capabilities" = '0'
