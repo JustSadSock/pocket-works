@@ -11,11 +11,18 @@ Every application release is one coherent change set. Do not publish a half-fini
 5. Replace `changelog` with concise user-visible notes for that version.
 6. Change `cacheName` so it ends with the new version.
 7. Mirror version, date and notes in the application Service Worker.
-8. Regenerate `apps.json` with `npm run registry:build`.
-9. Run `npm run health`.
-10. Open a pull request and require a successful health workflow.
-11. Squash-merge so `main` receives one release commit.
-12. Verify that Netlify production is `ready` for the exact squash SHA.
+8. For an Enhanced application, run `npm run build:enhanced` and include its generated deployable files.
+9. Regenerate `apps.json` with `npm run registry:build`.
+10. Run `npm run health` locally for the affected paths when practical.
+11. Open a pull request and require a successful `npm run ci:full` GitHub workflow.
+12. Squash-merge so `main` receives one release commit.
+13. Verify that Netlify production is `ready` for the exact squash SHA.
+
+## Deployment pipeline invariant
+
+Netlify is deliberately a fast packaging stage. It must run `npm run deploy:site`, which only generates the registry, prepares `dist-site` and validates the production directory. Exhaustive engine preparation, GNU Go audits, Enhanced builds, structural validators, unit tests and Forge tests belong to `npm run ci:full` in GitHub Actions.
+
+Do not move heavy safety checks into Netlify. Extend GitHub CI instead. The enforceable rule is documented in [`DEPLOYMENT-PIPELINE.md`](./DEPLOYMENT-PIPELINE.md) and checked by `npm run validate:pipeline`.
 
 ## Installed PWA update lifecycle
 
@@ -44,6 +51,6 @@ To roll back a faulty release:
 2. Publish the rollback as a new version rather than reusing the faulty version number.
 3. Use a new cache name for the rollback release.
 4. Explain the rollback in `changelog`.
-5. Run the complete health workflow and verify the resulting production SHA.
+5. Run the complete `npm run ci:full` workflow and verify the resulting production SHA.
 
 A previously installed faulty worker cannot be reliably replaced by publishing different bytes under the same version/cache identity. Version and cache identity must always move forward, including rollback releases.
