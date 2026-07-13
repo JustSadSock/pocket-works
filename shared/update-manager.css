@@ -59,6 +59,10 @@
   align-items: center;
 }
 
+.app-update-receipt .app-update-prompt__actions {
+  justify-content: end;
+}
+
 .app-update-prompt button {
   min-width: 44px;
   min-height: 44px;
@@ -72,7 +76,8 @@
   transition: transform 100ms ease, background-color 140ms ease, color 140ms ease;
 }
 
-.app-update-prompt button[data-update-apply] {
+.app-update-prompt button[data-update-apply],
+.app-update-receipt button[data-update-receipt-close] {
   border-color: var(--app-update-accent, #c8ff45);
   background: var(--app-update-accent, #c8ff45);
   color: var(--app-update-accent-text, #11120f);
@@ -96,6 +101,10 @@
   .app-update-prompt__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .app-update-receipt .app-update-prompt__actions {
+    grid-template-columns: 1fr;
   }
 }
 
