@@ -1,0 +1,48 @@
+[data-whats-new] {
+  position: relative;
+}
+
+[data-whats-new].has-release::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent, #c8ff45);
+  box-shadow: 0 0 0 2px #0e100e;
+}
+
+[data-whats-new-count] {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding-inline: 4px;
+  border: 1px solid currentColor;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.launcher-release-digest {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  --app-update-accent: #c8ff45;
+  --app-update-background: #11130f;
+  --app-update-border: color-mix(in srgb, #c8ff45 42%, #f4f1e8);
+}
+
+.launcher-release-digest .app-update-prompt__actions {
+  justify-content: end;
+}
+
+.launcher-release-digest [data-digest-close] {
+  border-color: var(--app-update-accent);
+  background: var(--app-update-accent);
+  color: #11120f;
+}
+
+@media (max-width: 560px) {
+  .launcher-release-digest .app-update-prompt__actions {
+    grid-template-columns: 1fr;
+  }
+}

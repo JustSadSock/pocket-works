@@ -1,20 +1,21 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.7.1';
-const APP_VERSION = '0.7.1';
-const RELEASE_DATE = '2026-07-12';
+const CACHE_NAME = 'pocket-works-launcher-v0.8.0';
+const APP_VERSION = '0.8.0';
+const RELEASE_DATE = '2026-07-13';
 const RELEASE_NOTES = [
-  'Added UDEL, a portrait dynasty strategy with laws, technology, diplomacy and tactical battles.',
-  'Rebuilt launcher list motion to prevent cards collapsing into an accordion after reload or page restoration.',
-  'Added shared motion tokens, improved press feedback and responsive range controls across Pocket Works applications.',
-  'Polished launcher controls with loading, confirmation, toast, focus and status micro-interactions.',
-  'Removed the duplicate early-search DOM observer that could race the primary launcher renderer.'
+  'The launcher now rechecks the live application registry when it returns to the foreground, reconnects or resumes from page cache.',
+  'New and updated applications are detected against the last visible shelf and surfaced in a persistent What’s new ledger.',
+  'Managed updates retry release metadata reads and show the release notes again after the new Service Worker takes control.',
+  'Registry requests now bypass HTTP caches before updating the offline fallback, reducing stale shelves.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './launcher-performance.css',
+  './launcher-sync.css',
   './app.js',
+  './launcher-sync.js',
   './apps.json',
   './manifest.webmanifest',
   './shared/pocket-works-icon.svg',
@@ -57,9 +58,9 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function networkFirst(request, fallback = './', cacheKey = null) {
+async function networkFirst(request, fallback = './', cacheKey = null, { bypassHttpCache = false } = {}) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, bypassHttpCache ? { cache: 'no-store' } : undefined);
     if (response && response.ok) {
       const copy = response.clone();
       const cache = await caches.open(CACHE_NAME);
@@ -83,7 +84,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (requestUrl.pathname.endsWith('/apps.json')) {
-    event.respondWith(networkFirst(event.request, './apps.json', './apps.json'));
+    event.respondWith(networkFirst(event.request, './apps.json', './apps.json', { bypassHttpCache: true }));
     return;
   }
 

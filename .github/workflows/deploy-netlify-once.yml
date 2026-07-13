@@ -7,8 +7,9 @@ on:
       - ".github/workflows/deploy-netlify-once.yml"
       - "apps/**"
       - "apps.json"
-      - "index.html"
-      - "sw.js"
+      - "*.html"
+      - "*.js"
+      - "*.css"
       - "package.json"
       - "scripts/**"
       - "shared/**"
@@ -76,7 +77,9 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: 3ef43b6a-1a20-4563-af37-b1ddc8e3b5e8
-        run: npx --yes netlify-cli@latest deploy --dir=dist-site --prod --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" --message="Pocket Works 0.7.1 — UDEL"
+        run: |
+          APP_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
+          npx --yes netlify-cli@latest deploy --dir=dist-site --prod --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" --message="Pocket Works ${APP_VERSION} — reliable release discovery"
 
       - name: Record deployment result
         if: always()
