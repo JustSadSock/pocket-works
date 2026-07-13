@@ -1,0 +1,430 @@
+
+/* КОНТУР 1.2 — специальные модули, контрольные точки и перегрузка. */
+const OVERLOAD_MOVE_FACTOR = 0.54;
+const OVERLOAD_DELAY_FACTOR = 0.44;
+const OVERLOAD_HEAT_SECONDS = 3.8;
+const OVERLOAD_COOL_SECONDS = 2.6;
+const CAPACITOR_HOLD_MS = 320;
+const CHECKPOINT_BASE_BONUS = 180;
+
+const generateBoardBeforeV12 = generateBoard;
+const serializeBoardBeforeV12 = serializeBoard;
+const startLevelBeforeV12 = startLevel;
+const evaluatePulseBeforeV12 = evaluatePulse;
+const currentDelayBeforeV12 = currentDelay;
+const beginMoveBeforeV12 = beginMove;
+const rotateTileBeforeV12 = rotateTile;
+const triggerFaultBeforeV12 = triggerFault;
+const finishLevelBeforeV12 = finishLevel;
+const updateSimulationBeforeV12 = updateSimulation;
+const drawTileBeforeV12 = drawTile;
+const renderBeforeV12 = render;
+const setModeBeforeV12 = setMode;
+
+const checkpointRack = document.querySelector('#checkpointRack');
+const checkpointValue = document.querySelector('#checkpointValue');
+const overloadButton = document.querySelector('#overloadButton');
+const overloadHeat = document.querySelector('#overloadHeat');
+
+game.overloadActive = false;
+game.overloadHeat = 0;
+game.overloadTripped = false;
+game.overloadPulse = 0;
+game.checkpointFlash = 0;
+
+sound.overloadOn = function overloadOn() {
+  this.tone(118, 0.11, 0.12, 'sawtooth', 190);
+  window.setTimeout(() => this.tone(270, 0.08, 0.08, 'square', 80), 65);
+};
+sound.overloadOff = function overloadOff() {
+  this.tone(235, 0.07, 0.08, 'square', -120);
+};
+sound.capacitor = function capacitor() {
+  this.tone(155, 0.12, 0.08, 'sine', 70);
+  window.setTimeout(() => this.tone(360, 0.07, 0.08, 'square', 90), 120);
+};
+sound.checkpoint = function checkpoint() {
+  this.tone(430, 0.07, 0.09, 'square', 110);
+};
+sound.trip = function trip() {
+  this.noise(0.18, 0.17);
+  this.tone(82, 0.24, 0.13, 'sawtooth', -35);
+};
+
+function tileTurns(tile) {
+  return ((Math.round((tile.targetAngle || 0) / (Math.PI / 2)) % 4) + 4) % 4;
+}
+
+function currentDiodeEntry(tile) {
+  return rotateMask(tile.specialEntryTarget || S, tileTurns(tile));
+}
+
+function checkpointAligned(tile) {
+  return tile?.auxTargetMask != null && tile.mask === tile.auxTargetMask;
+}
+
+function checkpointSummary() {
+  if (!game.board?.tiles) return { complete: 0, total: 0 };
+  let complete = 0;
+  let total = 0;
+  for (const row of game.board.tiles) {
+    for (const tile of row) {
+      if (tile.auxTargetMask == null) continue;
+      total += 1;
+      if (checkpointAligned(tile)) complete += 1;
+    }
+  }
+  return { complete, total };
+}
+
+function updateCheckpointHud() {
+  const { complete, total } = checkpointSummary();
+  if (checkpointValue) checkpointValue.textContent = `${complete}/${total}`;
+  if (checkpointRack) {
+    checkpointRack.hidden = total === 0;
+    checkpointRack.dataset.complete = String(total > 0 && complete === total);
+  }
+}
+
+function configureSpecialBoard(board, level) {
+  if (!board?.tiles || board.v12Configured) return board;
+  board.v12Configured = true;
+  const random = mulberry32(hashSeed(board.seed, level, 'kontur-v12'));
+  const pathCells = shuffled(board.path.slice(1, -1), random);
+  let cursor = 0;
+
+  function assignSpecial(type, minLevel) {
+    if (level < minLevel || cursor >= pathCells.length) return;
+    const cell = pathCells[cursor++];
+    const tile = board.tiles[cell.y][cell.x];
+    tile.specialType = type;
+    const index = board.path.findIndex((item) => item.x === cell.x && item.y === cell.y);
+    tile.specialEntryTarget = index <= 0 ? S : OPP[directionBetween(board.path[index - 1], board.path[index])];
+  }
+
+  assignSpecial('capacitor', 2);
+  assignSpecial('diode', 4);
+  assignSpecial('switch', 7);
+  if (level >= 12) assignSpecial(random() < 0.5 ? 'diode' : 'capacitor', 12);
+
+  const pathKeys = new Set(board.path.map((cell) => `${cell.x},${cell.y}`));
+  const candidates = [];
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      if (!pathKeys.has(`${tile.x},${tile.y}`) && !tile.locked) candidates.push(tile);
+    }
+  }
+  const checkpointCount = level >= 8 ? 2 : level >= 2 ? 1 : 0;
+  for (const tile of shuffled(candidates, random).slice(0, checkpointCount)) {
+    let target = rotateMask(tile.mask, random() < 0.5 ? 1 : 3);
+    if (target === tile.mask) target = rotateMask(tile.mask, 1);
+    tile.auxTargetMask = target;
+    tile.checkpointFlash = 0;
+  }
+  return board;
+}
+
+generateBoard = function generateBoardV12(level, seed) {
+  return configureSpecialBoard(generateBoardBeforeV12(level, seed), level);
+};
+
+serializeBoard = function serializeBoardV12(board) {
+  const snapshot = serializeBoardBeforeV12(board);
+  snapshot.v12Configured = Boolean(board.v12Configured);
+  snapshot.tiles = snapshot.tiles.map((row, y) => row.map((tile, x) => {
+    const live = board.tiles[y][x];
+    return {
+      ...tile,
+      specialType: live.specialType || null,
+      specialEntryTarget: live.specialEntryTarget || 0,
+      auxTargetMask: live.auxTargetMask ?? null,
+      checkpointFlash: 0
+    };
+  }));
+  return snapshot;
+};
+
+function setOverload(active, silent = false) {
+  const allowed = Boolean(
+    active &&
+    game.mode === 'playing' &&
+    !game.countdownEnd &&
+    !game.fastTrackActive &&
+    !game.overloadTripped &&
+    game.run?.fuses > 0
+  );
+  if (game.overloadActive === allowed) return;
+  game.overloadActive = allowed;
+  if (overloadButton) {
+    overloadButton.dataset.active = String(allowed);
+    overloadButton.setAttribute('aria-pressed', String(allowed));
+  }
+  if (!silent) {
+    if (allowed) {
+      sound.overloadOn();
+      navigator.vibrate?.(14);
+      setStatus('ПЕРЕГРУЗКА · УСКОРЕНИЕ ×2', 'danger', 0);
+    } else {
+      sound.overloadOff();
+      if (game.mode === 'playing') setStatus('ПЕРЕГРУЗКА СНЯТА', '', 450);
+    }
+  }
+}
+
+function updateOverloadControl(dt) {
+  if (game.fastTrackActive || game.mode !== 'playing') setOverload(false, true);
+  if (game.overloadActive) {
+    game.overloadHeat = Math.min(1, game.overloadHeat + dt / OVERLOAD_HEAT_SECONDS);
+    game.overloadPulse = (game.overloadPulse + dt * 5.2) % 1;
+    if (game.overloadHeat >= 1 && !game.overloadTripped) {
+      game.overloadTripped = true;
+      setOverload(false, true);
+      sound.trip();
+      navigator.vibrate?.([30, 25, 45]);
+      triggerFaultBeforeV12('ПЕРЕГРЕВ ЛИНИИ');
+    }
+  } else {
+    game.overloadHeat = Math.max(0, game.overloadHeat - dt / OVERLOAD_COOL_SECONDS);
+    if (game.overloadHeat < 0.35) game.overloadTripped = false;
+  }
+  if (overloadButton) {
+    overloadButton.style.setProperty('--heat', String(game.overloadHeat));
+    overloadButton.dataset.locked = String(game.overloadTripped || game.fastTrackActive || game.mode !== 'playing');
+  }
+  if (overloadHeat) overloadHeat.textContent = `${Math.round(game.overloadHeat * 100)}%`;
+}
+
+startLevel = function startLevelV12(restoredBoard = null, restoredPulse = null) {
+  startLevelBeforeV12(restoredBoard, restoredPulse);
+  if (game.board && !game.board.v12Configured) configureSpecialBoard(game.board, game.run?.level || 1);
+  game.overloadActive = false;
+  game.overloadHeat = 0;
+  game.overloadTripped = false;
+  updateCheckpointHud();
+};
+
+evaluatePulse = function evaluatePulseV12(now) {
+  if (
+    game.mode === 'playing' &&
+    game.pulse &&
+    !game.pulse.moving &&
+    now >= game.pulse.nextDecisionAt &&
+    now >= game.pulse.faultUntil &&
+    game.pulse.y >= 0 &&
+    game.pulse.y < ROWS
+  ) {
+    const tile = game.board.tiles[game.pulse.y]?.[game.pulse.x];
+    if (tile?.specialType === 'diode' && game.pulse.entryBit !== currentDiodeEntry(tile)) {
+      triggerFault('ДИОД ЗАПЕРТ', game.pulse.entryBit);
+      return;
+    }
+    if (tile?.specialType === 'capacitor') {
+      const key = `${game.pulse.x},${game.pulse.y}`;
+      game.pulse.capacitorSeen ||= {};
+      if (!game.pulse.capacitorSeen[key]) {
+        game.pulse.capacitorSeen[key] = true;
+        game.pulse.nextDecisionAt = now + CAPACITOR_HOLD_MS;
+        tile.heat = 1;
+        sound.capacitor();
+        setStatus('КОНДЕНСАТОР НАКАПЛИВАЕТ ЗАРЯД', 'success', CAPACITOR_HOLD_MS);
+        return;
+      }
+    }
+  }
+  evaluatePulseBeforeV12(now);
+};
+
+currentDelay = function currentDelayV12() {
+  const base = currentDelayBeforeV12();
+  if (!game.overloadActive || game.fastTrackActive) return base;
+  return Math.max(85, Math.round(base * OVERLOAD_DELAY_FACTOR));
+};
+
+beginMove = function beginMoveV12(direction) {
+  beginMoveBeforeV12(direction);
+  if (!game.overloadActive || game.fastTrackActive || !game.pulse?.move) return;
+  game.pulse.move.duration = Math.max(82, Math.round(game.pulse.move.duration * OVERLOAD_MOVE_FACTOR));
+};
+
+rotateTile = function rotateTileV12(x, y) {
+  const tile = game.board?.tiles[y]?.[x];
+  const wasCheckpoint = checkpointAligned(tile);
+  rotateTileBeforeV12(x, y);
+  if (!tile || tile.auxTargetMask == null) return;
+  const isCheckpoint = checkpointAligned(tile);
+  if (isCheckpoint !== wasCheckpoint) {
+    tile.checkpointFlash = 1;
+    game.checkpointFlash = 1;
+    updateCheckpointHud();
+    if (isCheckpoint) {
+      sound.checkpoint();
+      navigator.vibrate?.(10);
+      const { complete, total } = checkpointSummary();
+      setStatus(`КОНТРОЛЬНАЯ ТОЧКА ${complete}/${total}`, 'success', 650);
+    } else {
+      setStatus('КОНТРОЛЬНАЯ ТОЧКА РАЗОМКНУТА', '', 500);
+    }
+  }
+};
+
+triggerFault = function triggerFaultV12(...args) {
+  const overloadWasActive = game.overloadActive;
+  const before = game.run?.fuses ?? 0;
+  if (overloadWasActive) setOverload(false, true);
+  triggerFaultBeforeV12(...args);
+  if (overloadWasActive && game.run && game.run.fuses === before - 1) {
+    game.run.fuses = Math.max(0, game.run.fuses - 1);
+    updateHud();
+    saveResume();
+    setStatus('ПЕРЕГРУЗКА · ДВОЙНОЙ СБРОС', 'danger', 1100);
+  }
+};
+
+finishLevel = function finishLevelV12() {
+  const { complete, total } = checkpointSummary();
+  const bonus = complete * (CHECKPOINT_BASE_BONUS + (game.run?.level || 1) * 22);
+  if (game.run && bonus > 0) game.run.score += bonus;
+  finishLevelBeforeV12();
+  if (total > 0) {
+    setStatus(
+      `КОНТРОЛЬ ${complete}/${total} · БОНУС +${bonus}`,
+      complete === total ? 'success' : '',
+      1200
+    );
+  }
+};
+
+updateSimulation = function updateSimulationV12(dt, now) {
+  updateOverloadControl(dt);
+  const scoreBefore = game.run?.score ?? 0;
+  const modeBefore = game.mode;
+  updateSimulationBeforeV12(dt, now);
+  if (modeBefore === 'playing' && game.mode === 'playing' && game.overloadActive && game.run) {
+    const gained = Math.max(0, game.run.score - scoreBefore);
+    if (gained > 0) {
+      game.run.score += gained;
+      updateHud();
+    }
+  }
+  game.checkpointFlash = Math.max(0, game.checkpointFlash - dt * 2.4);
+  if (game.board?.tiles) {
+    for (const row of game.board.tiles) {
+      for (const tile of row) tile.checkpointFlash = Math.max(0, (tile.checkpointFlash || 0) - dt * 3.2);
+    }
+  }
+};
+
+function directionAngle(bit) {
+  const dir = DIRS.find((item) => item.bit === bit) || DIRS[0];
+  return Math.atan2(dir.dy, dir.dx);
+}
+
+drawTile = function drawTileV12(tile, x, y, size, hintActive) {
+  drawTileBeforeV12(tile, x, y, size, hintActive);
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+
+  if (tile.specialType) {
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = '#17211d';
+    ctx.fillStyle = '#f3ead2';
+    ctx.lineWidth = Math.max(1.5, size * 0.028);
+    if (tile.specialType === 'diode') {
+      const entry = currentDiodeEntry(tile);
+      const exit = DIRS.map((dir) => dir.bit).find((bit) => bit !== entry && (tile.mask & bit)) || OPP[entry];
+      ctx.rotate(directionAngle(exit));
+      const r = size * 0.13;
+      ctx.beginPath();
+      ctx.moveTo(r, 0);
+      ctx.lineTo(-r * 0.72, -r * 0.72);
+      ctx.lineTo(-r * 0.72, r * 0.72);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 1.08, -r * 0.9);
+      ctx.lineTo(r * 1.08, r * 0.9);
+      ctx.stroke();
+    } else if (tile.specialType === 'capacitor') {
+      ctx.rotate(tile.targetAngle || 0);
+      const gap = size * 0.055;
+      const h = size * 0.16;
+      ctx.lineWidth = Math.max(3, size * 0.055);
+      ctx.beginPath();
+      ctx.moveTo(-gap, -h);
+      ctx.lineTo(-gap, h);
+      ctx.moveTo(gap, -h);
+      ctx.lineTo(gap, h);
+      ctx.stroke();
+    } else if (tile.specialType === 'switch') {
+      ctx.rotate(tile.targetAngle || 0);
+      ctx.fillRect(-size * 0.16, -size * 0.035, size * 0.1, size * 0.07);
+      ctx.save();
+      ctx.rotate(-0.52);
+      ctx.fillRect(-size * 0.03, -size * 0.035, size * 0.24, size * 0.07);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(size * 0.17, -size * 0.1, size * 0.045, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+  if (tile.auxTargetMask != null) {
+    const aligned = checkpointAligned(tile);
+    const glow = 0.5 + Math.sin(performance.now() * 0.012) * 0.5;
+    ctx.save();
+    ctx.fillStyle = '#17211d';
+    ctx.fillRect(x + size * 0.08, y + size * 0.08, size * 0.26, size * 0.19);
+    ctx.fillStyle = aligned ? '#e3a15f' : '#77715d';
+    ctx.fillRect(x + size * 0.105, y + size * 0.105, size * 0.21, size * 0.14);
+    if (aligned) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(242,178,105,${0.18 + glow * 0.28 + (tile.checkpointFlash || 0) * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(x + size * 0.21, y + size * 0.175, size * 0.19, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+};
+
+function drawOverloadOverlay() {
+  if (!game.overloadActive || !game.layout) return;
+  const { width, height } = game.layout;
+  const pulse = 0.5 + Math.sin(performance.now() * 0.022) * 0.5;
+  ctx.save();
+  ctx.strokeStyle = `rgba(139,46,36,${0.34 + pulse * 0.34})`;
+  ctx.lineWidth = 5 + pulse * 3;
+  ctx.strokeRect(3, 3, width - 6, height - 6);
+  ctx.fillStyle = `rgba(139,46,36,${0.035 + game.overloadHeat * 0.06})`;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+render = function renderV12() {
+  renderBeforeV12();
+  drawOverloadOverlay();
+};
+
+setMode = function setModeV12(mode) {
+  if (mode !== 'playing') setOverload(false, true);
+  setModeBeforeV12(mode);
+  updateCheckpointHud();
+};
+
+if (overloadButton) {
+  overloadButton.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    overloadButton.setPointerCapture?.(event.pointerId);
+    setOverload(true);
+  });
+  for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture', 'pointerleave']) {
+    overloadButton.addEventListener(eventName, () => setOverload(false));
+  }
+}
+window.addEventListener('pointerup', () => setOverload(false));
+window.addEventListener('blur', () => setOverload(false, true));
+updateCheckpointHud();

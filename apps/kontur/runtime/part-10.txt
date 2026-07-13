@@ -1,0 +1,96 @@
+
+/* КОНТУР 1.2 — двухпозиционный переключатель и ввод новых компонентов. */
+const generateBoardBeforeSwitch = generateBoard;
+const serializeBoardBeforeSwitch = serializeBoard;
+const startLevelBeforeSwitch = startLevel;
+const rotateTileBeforeSwitch = rotateTile;
+const drawTileBeforeSwitch = drawTile;
+
+function normalizeSwitches(board) {
+  if (!board?.tiles) return board;
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      if (tile.specialType !== 'switch') continue;
+      tile.switchMaskA ??= tile.targetMask;
+      tile.switchMaskB ??= rotateMask(tile.targetMask, 1);
+      if (tile.mask !== tile.switchMaskA && tile.mask !== tile.switchMaskB) {
+        tile.mask = tile.switchMaskB;
+        tile.angle = Math.PI / 2;
+        tile.targetAngle = Math.PI / 2;
+      }
+    }
+  }
+  return board;
+}
+
+generateBoard = function generateBoardSwitches(level, seed) {
+  return normalizeSwitches(generateBoardBeforeSwitch(level, seed));
+};
+
+serializeBoard = function serializeBoardSwitches(board) {
+  const snapshot = serializeBoardBeforeSwitch(board);
+  snapshot.tiles = snapshot.tiles.map((row, y) => row.map((tile, x) => {
+    const live = board.tiles[y][x];
+    return {
+      ...tile,
+      switchMaskA: live.switchMaskA ?? null,
+      switchMaskB: live.switchMaskB ?? null
+    };
+  }));
+  return snapshot;
+};
+
+startLevel = function startLevelSwitches(restoredBoard = null, restoredPulse = null) {
+  startLevelBeforeSwitch(restoredBoard, restoredPulse);
+  normalizeSwitches(game.board);
+  const level = game.run?.level || 1;
+  const intro = {
+    2: 'КОНДЕНСАТОР ЗАДЕРЖИВАЕТ ЗАРЯД · КОНТРОЛЬНЫЕ ТОЧКИ ДАЮТ БОНУС',
+    4: 'ДИОД ПРОПУСКАЕТ ТОК ТОЛЬКО ПО СТРЕЛКЕ',
+    7: 'ПЕРЕКЛЮЧАТЕЛЬ ИМЕЕТ ТОЛЬКО ДВА ПОЛОЖЕНИЯ'
+  }[level];
+  if (intro && !restoredBoard) {
+    const runSeed = game.run?.seed;
+    window.setTimeout(() => {
+      if (game.mode === 'playing' && game.run?.seed === runSeed && game.run?.level === level) {
+        setStatus(intro, 'success', 1500);
+      }
+    }, LAUNCH_COUNTDOWN_MS + 180);
+  }
+};
+
+rotateTile = function rotateTileSwitches(x, y) {
+  const tile = game.board?.tiles[y]?.[x];
+  if (tile?.specialType !== 'switch') {
+    rotateTileBeforeSwitch(x, y);
+    return;
+  }
+  if (game.mode !== 'playing' || game.fastTrackActive) {
+    if (game.fastTrackActive) setStatus('ПРОВЕРКА ЦЕПИ УЖЕ ИДЁТ', 'success', 500);
+    return;
+  }
+  const toB = tile.mask === tile.switchMaskA;
+  tile.mask = toB ? tile.switchMaskB : tile.switchMaskA;
+  tile.targetAngle += toB ? Math.PI / 2 : -Math.PI / 2;
+  tile.heat = Math.max(tile.heat, 0.48);
+  game.board.rotations += 1;
+  sound.click();
+  window.setTimeout(() => sound.tone(toB ? 390 : 310, 0.045, 0.055, 'square', toB ? 55 : -45), 30);
+  navigator.vibrate?.(9);
+  const stats = store.get('stats', { runs: 0, levels: 0, turns: 0 });
+  store.set('stats', { ...stats, turns: stats.turns + 1 });
+  saveResumeDebounced();
+  updateFastTrackState();
+};
+
+drawTile = function drawTileSwitchState(tile, x, y, size, hintActive) {
+  drawTileBeforeSwitch(tile, x, y, size, hintActive);
+  if (tile.specialType !== 'switch') return;
+  ctx.save();
+  ctx.fillStyle = '#17211d';
+  ctx.font = `900 ${Math.max(6, size * 0.09)}px ui-monospace, monospace`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(tile.mask === tile.switchMaskA ? 'A' : 'B', x + size * 0.88, y + size * 0.9);
+  ctx.restore();
+};

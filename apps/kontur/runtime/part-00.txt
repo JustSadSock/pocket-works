@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 installMobileRuntime();
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const STORAGE_NAMESPACE = 'pocket-works:kontur';
 const COLS = 6;
 const ROWS = 8;
