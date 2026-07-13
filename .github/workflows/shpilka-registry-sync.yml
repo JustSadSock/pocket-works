@@ -1,0 +1,30 @@
+name: Sync ШПИЛЬКА registry
+
+on:
+  push:
+    branches:
+      - feature/shpilka-2-3-clean
+    paths:
+      - apps/shpilka/app.config.json
+      - .github/workflows/shpilka-registry-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/shpilka-2-3-clean
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run registry:build
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps.json
+          git commit -m "Regenerate app registry for ШПИЛЬКА 2.3" || exit 0
+          git push
