@@ -1,0 +1,38 @@
+name: Audit ШПИЛЬКА 2.3
+
+on:
+  pull_request:
+    paths:
+      - "apps/shpilka/**"
+      - "scripts/audit-shpilka-2-3.mjs"
+      - ".github/workflows/shpilka-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run deterministic audit
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          node scripts/audit-shpilka-2-3.mjs > shpilka-audit.txt 2>&1
+          code=$?
+          cat shpilka-audit.txt
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload audit output
+        uses: actions/upload-artifact@v4
+        with:
+          name: shpilka-audit-output
+          path: shpilka-audit.txt
+          if-no-files-found: error
+      - name: Enforce audit
+        run: test "${{ steps.audit.outputs.exit_code }}" = "0"
