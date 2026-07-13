@@ -15,21 +15,26 @@ The local rules engine implements captures, suicide prevention, simple ko, passi
 
 ## Computer players
 
-SENTE 2.0 no longer attempts to recreate Go strategy with a handcrafted influence formula. Move generation is provided by GNU Go 3.9.1, a mature Go engine with pattern databases and dedicated reading for strings, dragons, eyes, connections, ladders, life-and-death and territory.
+SENTE 2.1 does not attempt to recreate Go strategy with a handcrafted influence formula. Move generation is provided by GNU Go 3.9.1, a mature Go engine with pattern databases and dedicated reading for strings, dragons, eyes, connections, ladders, life-and-death and territory.
 
 - `Ученик` uses a small number of independent engine readings and permits variation among engine-supported alternatives.
 - `Клубный` is the default. It combines several readings made with different seeds and board symmetries, then uses consensus.
 - `Мастер` uses the widest consensus set and always prefers the most strongly supported move.
+- The in-game opponent name includes `GNU Go`, making the active engine visible instead of relying on the release-number label.
 - Board symmetries prevent the engine from returning the same symmetric opening every game without injecting arbitrary bad moves.
 - Every suggested move is checked again by SENTE's rules engine before it reaches the board.
 - Each independent reading receives a clean WebAssembly runtime. The disposable worker is terminated after the move, preventing the old Emscripten build's native tables from accumulating across a long game.
-- A conservative emergency policy exists only for asset or runtime failure; normal games do not use the old heuristic/minimax bot.
+- A conservative emergency policy exists only for asset or runtime failure. If it is ever used, the opponent is visibly renamed `Ошибка GNU Go` and the board explains the failure.
+
+## Coherent browser builds
+
+SENTE 2.1 fingerprints the page entrypoint, runtime chunks, Go modules, worker, loader and WebAssembly binary with `v=2.1.0`. This is required because an older iOS Service Worker could otherwise serve cached 1.x JavaScript below a freshly downloaded 2.x HTML shell. On the first 2.1 launch, an unfinished computer game from an older engine generation is cleared while settings and the completed-game archive remain intact.
 
 ## Behavioral audit
 
 `npm run test:sente-ai` loads the exact WebAssembly engine shipped to users and writes `AI_AUDIT.md` and `AI_AUDIT.json`. The build checks tactical captures and rescues, true-eye avoidance, 24 opening probes across all board sizes, and six observed 9×9 games against expansion, contact and self-play opponents. Each observed game records board snapshots every ten moves, pass timing, occupancy, illegal suggestions and dense peaceful moves. Any failed check stops the production build.
 
-The audit report is linked from the in-app menu so the shipped result can be inspected rather than trusted as a release-note claim.
+The audit report is linked from the in-app menu so the shipped result can be inspected rather than trusted as a release-note claim. Playwright additionally verifies that Chromium and WebKit request only the 2.1 runtime graph and that the real GNU Go worker returns legal moves without emergency fallback.
 
 ## Third-party engine
 
@@ -53,4 +58,4 @@ Stone, capture, pass and completion sounds are generated with Web Audio after a 
 
 ## Offline
 
-The app shell, local rules engine, GNU Go worker, verified engine assets, generated audit report, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v2.0.0` after the first successful load.
+The app shell, local rules engine, fingerprinted GNU Go worker, verified engine assets, generated audit report, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v2.1.0` after the first successful load.
