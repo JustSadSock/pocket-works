@@ -298,8 +298,20 @@ function updatedTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 }
 
+function repairSortLabel() {
+  if (!sortButton) return;
+  const labels = {
+    updated: 'Updated ↓',
+    recent: 'Opened ↓',
+    name: 'Name A–Z'
+  };
+  const expected = labels[sortButton.dataset.sort];
+  if (expected && sortButton.textContent !== expected) sortButton.textContent = expected;
+}
+
 function repairUpdatedOrder() {
   orderRepairQueued = false;
+  repairSortLabel();
   if (repairingOrder || !appList || sortButton?.dataset.sort !== 'updated') return;
 
   const registry = readJson(REGISTRY_CACHE_KEY)?.apps;
@@ -326,6 +338,7 @@ function repairUpdatedOrder() {
 }
 
 function queueOrderRepair() {
+  repairSortLabel();
   if (orderRepairQueued) return;
   orderRepairQueued = true;
   requestAnimationFrame(repairUpdatedOrder);
@@ -347,10 +360,14 @@ const buttonLabelObserver = refreshButton
   : null;
 buttonLabelObserver?.observe(refreshButton, { childList: true, characterData: true, subtree: true });
 
+const sortLabelObserver = sortButton ? new MutationObserver(queueOrderRepair) : null;
+sortLabelObserver?.observe(sortButton, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['data-sort'] });
+
 const listObserver = appList ? new MutationObserver(queueOrderRepair) : null;
 listObserver?.observe(appList, { childList: true });
 sortButton?.addEventListener('click', queueOrderRepair);
 window.addEventListener('pocketworks:bulk-update-complete', queueOrderRepair);
 
+repairSortLabel();
 queueOrderRepair();
 if (refreshButton && refreshButton.textContent === 'Sync') refreshButton.textContent = 'Update';
