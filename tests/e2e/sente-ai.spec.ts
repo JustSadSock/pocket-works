@@ -72,4 +72,29 @@ test.describe('SENTE GNU Go browser core', () => {
     expect(urls.some((url) => /\/apps\/sente\/runtime-[1-4]\.txt$/.test(url.pathname) && url.searchParams.get('v') !== '2.1.0')).toBe(false);
     expect(suspiciousConsole).toEqual([]);
   });
+
+  test('drops only the unfinished legacy AI game on the first 2.1 load', async ({ page }) => {
+    await page.goto('/apps/sente/', { waitUntil: 'domcontentloaded' });
+    await page.evaluate(() => {
+      localStorage.setItem('pocket-works:sente:engine-build', '2.0.0');
+      localStorage.setItem('pocket-works:sente:state:v1', JSON.stringify({
+        settings: { size: 19, mode: 'ai', level: 'sharp', sound: false },
+        current: { size: 19, phase: 'playing', moves: [{ x: 3, y: 3, color: 1 }] },
+        archive: [{ identity: 'kept-game', endedAt: 1, game: { size: 9 } }]
+      }));
+    });
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const migrated = await page.evaluate(() => ({
+      build: localStorage.getItem('pocket-works:sente:engine-build'),
+      state: JSON.parse(localStorage.getItem('pocket-works:sente:state:v1') || 'null')
+    }));
+
+    expect(migrated.build).toBe('2.1.0');
+    expect(migrated.state.current).toBeNull();
+    expect(migrated.state.settings).toMatchObject({ size: 19, mode: 'ai', level: 'sharp', sound: false });
+    expect(migrated.state.archive).toHaveLength(1);
+    expect(migrated.state.archive[0].identity).toBe('kept-game');
+    await expect(page.locator('#toast')).toContainText('Старая AI-партия закрыта');
+  });
 });
