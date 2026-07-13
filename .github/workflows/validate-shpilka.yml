@@ -1,0 +1,21 @@
+name: Validate Shpilka
+on:
+  pull_request:
+    paths: ["apps/shpilka/**", "scripts/audit-shpilka-2-3.mjs", "package.json"]
+  push:
+    branches: [main]
+    paths: ["apps/shpilka/**", "scripts/audit-shpilka-2-3.mjs", "package.json"]
+permissions:
+  contents: read
+jobs:
+  runtime-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --check apps/shpilka/engine-v2-23.js
+      - run: node --check scripts/audit-shpilka-2-3.mjs
+      - run: node scripts/audit-shpilka-2-3.mjs
