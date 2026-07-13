@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 
 installMobileRuntime();
 
+const VERSION = '2.0.0';
 const gameParts = [
   './game-core.js',
   './game-race.js',
@@ -12,7 +13,7 @@ const gameParts = [
 for (const source of gameParts) {
   await new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = source;
+    script.src = `${source}?v=${VERSION}`;
     script.onload = resolve;
     script.onerror = () => reject(new Error(`Failed to load ${source}`));
     document.head.append(script);
