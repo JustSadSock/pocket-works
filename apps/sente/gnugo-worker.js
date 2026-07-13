@@ -2,7 +2,12 @@ import { buildSgf, chooseConsensus, makeReadPlan, parseGeneratedMove } from './g
 
 const LOADER_URL = new URL('./assets/gnugo/gnugo.js', import.meta.url);
 const WASM_URL = new URL('./assets/gnugo/gnugo.wasm', import.meta.url);
-let enginePromise = null;
+let loaderSourcePromise = null;
+
+if (typeof globalThis.importScripts !== 'function') globalThis.importScripts = () => {};
+globalThis.exit = (status) => {
+  throw new Error(`GNU Go requested exit(${status})`);
+};
 
 function getLoader(source) {
   const exportsObject = {};
@@ -12,20 +17,22 @@ function getLoader(source) {
   return moduleObject.exports?.get ? moduleObject.exports : exportsObject;
 }
 
-async function loadEngine() {
-  if (enginePromise) return enginePromise;
-  enginePromise = (async () => {
-    if (typeof globalThis.importScripts !== 'function') globalThis.importScripts = () => {};
-    const response = await fetch(LOADER_URL, { cache: 'force-cache' });
-    if (!response.ok) throw new Error(`GNU Go loader: ${response.status}`);
-    const loader = getLoader(await response.text());
-    if (typeof loader.get !== 'function') throw new Error('GNU Go loader has no get() function');
-    const module = await loader.get(WASM_URL.href);
-    if (!module?.ccall) throw new Error('GNU Go runtime did not expose ccall()');
-    const version = module.ccall('get_version', 'string', [], []);
-    return { module, version };
-  })();
-  return enginePromise;
+async function getLoaderSource() {
+  if (!loaderSourcePromise) {
+    loaderSourcePromise = fetch(LOADER_URL, { cache: 'force-cache' }).then(async (response) => {
+      if (!response.ok) throw new Error(`GNU Go loader: ${response.status}`);
+      return response.text();
+    });
+  }
+  return loaderSourcePromise;
+}
+
+async function instantiateEngine() {
+  const loader = getLoader(await getLoaderSource());
+  if (typeof loader.get !== 'function') throw new Error('GNU Go loader has no get() function');
+  const module = await loader.get(WASM_URL.href);
+  if (!module?.ccall) throw new Error('GNU Go runtime did not expose ccall()');
+  return { module, version: module.ccall('get_version', 'string', [], []) };
 }
 
 function compactGame(raw) {
@@ -44,14 +51,16 @@ function compactGame(raw) {
 }
 
 async function analyze(payload) {
-  const { module, version } = await loadEngine();
   const game = compactGame(payload.game);
   const plan = makeReadPlan(payload.level, game.size, payload.seed >>> 0);
   const votes = [];
+  let version = null;
   for (let index = 0; index < plan.length; index += 1) {
     const read = plan[index];
+    const engine = await instantiateEngine();
+    version ||= engine.version;
     const input = buildSgf(game, read.transform);
-    const output = module.ccall('play', 'string', ['number', 'string'], [read.seed, input]);
+    const output = engine.module.ccall('play', 'string', ['number', 'string'], [read.seed, input]);
     const move = parseGeneratedMove(output, game.turn, game.size, read.transform);
     votes.push({ index, seed: read.seed, transform: read.transform, move });
   }
@@ -69,7 +78,7 @@ self.onmessage = async (event) => {
   const { id, type, payload } = event.data || {};
   try {
     if (type === 'warmup') {
-      const { version } = await loadEngine();
+      const { version } = await instantiateEngine();
       self.postMessage({ id, ok: true, result: { version } });
       return;
     }
