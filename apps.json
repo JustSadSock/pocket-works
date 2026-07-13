@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -72,13 +59,7 @@
       "Made the top home and sound controls reliably accessible from the title menu."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -99,15 +80,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -129,14 +102,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -157,14 +123,7 @@
       "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
     ],
     "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -176,24 +135,16 @@
     "description": "Классическое Go с тактильной доской, локальной игрой, компьютерным соперником и разбором партий.",
     "path": "./apps/sente/",
     "status": "active",
-    "version": "1.5.0",
-    "updatedAt": "2026-07-13T17:40:00+01:00",
+    "version": "2.0.0",
+    "updatedAt": "2026-07-13T19:30:00+01:00",
     "changelog": [
-      "Статистические playout-симуляции заменены селективным minimax-поиском с alpha-beta-отсечениями и итеративным углублением.",
-      "Каждый кандидат теперь проверяется против лучшего найденного ответа соперника и последующего контрответа компьютера.",
-      "Нестабильные тактические позиции автоматически досчитываются дальше через отдельный поиск захватов, атари и спасений.",
-      "Адаптивный характер и вариативность сохранены, но выбор возможен только между вариантами с почти одинаковым расчётным результатом."
+      "Самописный позиционный бот заменён проверенным движком GNU Go 3.9.1 с чтением групп, жизни и смерти, захватов и территории.",
+      "Добавлены три новых соперника: Ученик, Клубный и Мастер; они используют разное число независимых чтений и симметрий доски.",
+      "Расчёт перенесён в отдельный Web Worker, поэтому интерфейс остаётся отзывчивым даже на больших досках.",
+      "Каждая сборка проходит поведенческий аудит: тактические позиции, 24 дебюта и шесть наблюдаемых партий со снимками доски."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -214,16 +165,7 @@
       "Добавлены кабина, приборы, зеркала, звук двигателя, вибрация, офлайн-режим и возврат в Pocket Works."
     ],
     "accent": "#d75b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "tilt",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "tilt", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:petlya-17"
@@ -244,17 +186,7 @@
       "Параллакс перенесён из геометрии в свет, отражения и контактные тени для более естественной глубины."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
@@ -266,25 +198,16 @@
     "description": "Камерный мини-гольф в старой оранжерее с девятью тактильными лунками.",
     "path": "./apps/moss-marble/",
     "status": "active",
-    "version": "1.0.0",
-    "updatedAt": "2026-07-13T00:56:26+01:00",
+    "version": "1.1.0",
+    "updatedAt": "2026-07-13T12:16:17+01:00",
     "changelog": [
-      "Добавлен законченный круг из девяти мини-гольф лунок в старой оранжерее.",
-      "Добавлены физика мяча, песок, густой мох, вода, склоны, вращающиеся планки и туннель.",
-      "Добавлены процедурный звук, виброотдача, визуальная глубина от наклона и живые детали окружения.",
-      "Добавлены сохранение лучших результатов, выбор лунок, пауза, Workshop Mode и полноценный офлайн-режим."
+      "Рендеринг поля пересобран как стилизованная 2.5D-диорама с объёмным основанием, каменным бордюром и контактными тенями.",
+      "Трава, мох, песок, вода, стекло, дерево и препятствия получили процедурные фактуры и более читаемые материалы.",
+      "Стеклянный шар получил внутренний рисунок, преломление, мягкую тень и новый точный индикатор прицеливания.",
+      "HUD, меню выбора лунок и итоговые экраны приведены к единой минималистичной дизайн-системе без тяжёлых карточек."
     ],
-    "accent": "#71895f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "mini-golf",
-      "physics",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "accent": "#809465",
+    "tags": ["PWA", "offline", "game", "mini-golf", "physics", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:moss-marble"
