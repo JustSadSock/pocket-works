@@ -1,0 +1,17 @@
+{
+  "id": "/apps/kontur/",
+  "name": "КОНТУР",
+  "short_name": "КОНТУР",
+  "description": "Бесконечная процедурная игра о живой электрической схеме.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ddd2b4",
+  "theme_color": "#ddd2b4",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

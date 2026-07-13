@@ -1,0 +1,248 @@
+}
+  fail() { this.tone(95, 0.35, 0.18, 'sawtooth', -40); }
+  module() { this.tone(240, 0.09, 0.11, 'square', 180); }
+
+  startHum() {
+    if (!this.enabled) return;
+    this.unlock();
+    if (!this.ctx || !this.master || this.hum) return;
+    this.hum = this.ctx.createOscillator();
+    this.humGain = this.ctx.createGain();
+    this.hum.type = 'sine';
+    this.hum.frequency.value = 54;
+    this.humGain.gain.value = 0.018;
+    this.hum.connect(this.humGain).connect(this.master);
+    this.hum.start();
+  }
+
+  stopHum() {
+    if (!this.hum) return;
+    try { this.hum.stop(); } catch {}
+    this.hum.disconnect();
+    this.humGain?.disconnect();
+    this.hum = null;
+    this.humGain = null;
+  }
+}
+
+const sound = new SoundRack(store.get('sound', true));
+
+const game = {
+  mode: 'menu',
+  run: null,
+  board: null,
+  pulse: null,
+  particles: [],
+  sparks: [],
+  layout: null,
+  lastFrame: performance.now(),
+  hiddenAt: 0,
+  statusTimer: 0,
+  saveTimer: 0,
+  boardTransition: 0,
+  boardTransitionKind: 'in',
+  breakingFuse: -1,
+  keyboardCell: { x: 0, y: ROWS - 1 }
+};
+
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6D2B79F5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(...values) {
+  let h = 2166136261;
+  const text = values.join(':');
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function rotateMask(mask, turns = 1) {
+  let result = mask;
+  for (let i = 0; i < turns; i += 1) {
+    result = ((result << 1) & 15) | ((result & W) ? N : 0);
+  }
+  return result;
+}
+
+function directionBetween(a, b) {
+  if (b.x === a.x && b.y === a.y - 1) return N;
+  if (b.x === a.x + 1 && b.y === a.y) return E;
+  if (b.x === a.x && b.y === a.y + 1) return S;
+  return W;
+}
+
+function randomItem(list, random) {
+  return list[Math.floor(random() * list.length)];
+}
+
+function shuffled(list, random) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function createPath(random, level) {
+  let x = Math.floor(random() * COLS);
+  let y = ROWS - 1;
+  const path = [{ x, y }];
+  const maxShift = level < 4 ? 1 : level < 10 ? 2 : 3;
+
+  while (y > 0) {
+    const roomLeft = x;
+    const roomRight = COLS - 1 - x;
+    let shift = Math.floor(random() * (maxShift * 2 + 1)) - maxShift;
+    if (shift === 0 && random() < Math.min(0.72, 0.38 + level * 0.025)) {
+      shift = random() < 0.5 ? -1 : 1;
+    }
+    shift = Math.max(-roomLeft, Math.min(roomRight, shift));
+
+    const direction = Math.sign(shift);
+    for (let step = 0; step < Math.abs(shift); step += 1) {
+      x += direction;
+      path.push({ x, y });
+    }
+
+    y -= 1;
+    path.push({ x, y });
+  }
+
+  return path;
+}
+
+function generateBoard(level, seed) {
+  const random = mulberry32(seed);
+  const path = createPath(random, level);
+  const pathIndex = new Map(path.map((cell, index) => [`${cell.x},${cell.y}`, index]));
+  const tiles = Array.from({ length: ROWS }, (_, y) => Array.from({ length: COLS }, (_, x) => {
+    let targetMask = null;
+    const index = pathIndex.get(`${x},${y}`);
+    if (index !== undefined) {
+      const previousBit = index === 0 ? S : OPP[directionBetween(path[index - 1], path[index])];
+      const nextBit = index === path.length - 1 ? N : directionBetween(path[index], path[index + 1]);
+      targetMask = previousBit | nextBit;
+    }
+    const base = targetMask ?? randomItem(BASE_PIECES, random);
+    const turns = Math.floor(random() * 4);
+    const locked = index === undefined && level >= 5 && random() < Math.min(0.08 + level * 0.006, 0.22);
+    return {
+      x,
+      y,
+      baseMask: base,
+      mask: rotateMask(base, turns),
+      targetMask,
+      angle: turns * Math.PI / 2,
+      targetAngle: turns * Math.PI / 2,
+      locked,
+      heat: 0,
+      flash: 0
+    };
+  }));
+
+  return {
+    cols: COLS,
+    rows: ROWS,
+    tiles,
+    path,
+    source: path[0],
+    goal: path[path.length - 1],
+    seed,
+    rotations: 0,
+    faults: 0,
+    startedAt: performance.now(),
+    hintUntil: performance.now() + ((level <= 2 || game.run?.hintModules > 0) ? 4000 : 0)
+  };
+}
+
+function newRun(seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0) {
+  game.run = {
+    seed,
+    level: 1,
+    score: 0,
+    fuses: 3,
+    maxFuses: 3,
+    modules: [],
+    delayBonus: 0,
+    scoreMultiplier: 1,
+    freeFaults: 0,
+    freeFaultsUsed: 0,
+    hintModules: 0,
+    cleanBonus: 0,
+    restartPenalty: 0,
+    startedAt: Date.now()
+  };
+  startLevel();
+  const stats = store.get('stats', { runs: 0, levels: 0, turns: 0 });
+  store.set('stats', { ...stats, runs: stats.runs + 1 });
+}
+
+function startLevel(restoredBoard = null, restoredPulse = null) {
+  if (!game.run) return;
+  const levelSeed = hashSeed(game.run.seed, game.run.level, 'kontur');
+  game.board = restoredBoard ?? generateBoard(game.run.level, levelSeed);
+  if (!restoredBoard) game.run.freeFaultsUsed = 0;
+  game.pulse = restoredPulse ?? {
+    x: game.board.source.x,
+    y: game.board.source.y,
+    entryBit: S,
+    moving: false,
+    move: null,
+    nextDecisionAt: performance.now() + 1150,
+    faultUntil: 0,
+    visits: {},
+    completeAfterMove: false
+  };
+  game.keyboardCell = { ...game.board.source };
+  game.boardTransition = 1;
+  game.boardTransitionKind = 'in';
+  setMode('playing');
+  setStatus('ЦЕПЬ ПОД НАПРЯЖЕНИЕМ', 'success', 900);
+  sound.startHum();
+  updateHud();
+  saveResume();
+}
+
+function currentDelay() {
+  const base = Math.max(285, 850 - (game.run.level - 1) * 28);
+  return Math.max(220, base + game.run.delayBonus);
+}
+
+function resetPulse(extraDelay = 0) {
+  const now = performance.now();
+  game.pulse = {
+    x: game.board.source.x,
+    y: game.board.source.y,
+    entryBit: S,
+    moving: false,
+    move: null,
+    nextDecisionAt: now + 700 + extraDelay,
+    faultUntil: 0,
+    visits: {},
+    completeAfterMove: false
+  };
+}
+
+function serializeBoard(board) {
+  return {
+    cols: board.cols,
+    rows: board.rows,
+    path: board.path,
+    source: board.source,
+    goal: board.goal,
+    seed: board.seed,
+    rotations: board.rotations,
+    faults: board.faults,
+    hintRemaining: Math.max(0, board.hintUntil - performance.now()),
+    tiles: board.tiles.map((row) => row.map((tile) =
