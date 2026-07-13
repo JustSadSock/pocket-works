@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "zero-frame",
+  "name": "НУЛЕВОЙ КАДР",
+  "shortName": "КАДР 0",
+  "description": "Иммерсивная хоррор-игра о проклятом моментальном фотоаппарате, который проявляет снимки экраном вниз.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-13",
+  "releaseDateTime": "2026-07-13T11:42:42Z",
+  "changelog": [
+    "Добавлен полный хоррор-цикл из пяти снимков с поиском аномалий, ограниченной плёнкой и растущим страхом.",
+    "Добавлено управление камерой наклоном телефона с полноценным пальцевым и клавиатурным резервом.",
+    "Добавлено физическое проявление снимков переворотом телефона экраном вниз и резервным удержанием кнопки.",
+    "Добавлены процедурный звук, вибрация, живая панорамная комната, локальное сохранение, офлайн-режим и Workshop."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#a48755",
+  "backgroundColor": "#0b0c0a",
+  "themeColor": "#0b0c0a",
+  "orientation": "portrait",
+  "cacheName": "zero-frame-v1.0.0",
+  "storageNamespace": "pocket-works:zero-frame",
+  "tags": ["PWA", "offline", "game", "horror", "tilt", "device motion", "canvas", "audio", "workshop"],
+  "order": 95
+}
