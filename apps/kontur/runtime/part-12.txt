@@ -71,7 +71,7 @@ function adjustCurrentMoveForBrake(active) {
     move.duration = Math.max(120, move.duration * BRAKE_MOVE_FACTOR);
     move.brakeAdjusted = true;
   } else if (!active && move.brakeAdjusted) {
-    move.duration = Math.max(45, move.duration / BRAKE_MOVE_FACTOR);
+    if (!game.fastTrackActive) move.duration = Math.max(45, move.duration / BRAKE_MOVE_FACTOR);
     move.brakeAdjusted = false;
   }
 }
@@ -81,7 +81,7 @@ function endEmergencyBrake(silent = false) {
   game.brakeActive = false;
   game.brakeEndsAt = 0;
   adjustCurrentMoveForBrake(false);
-  retimeIdlePulse(1 / BRAKE_DELAY_FACTOR);
+  if (!game.fastTrackActive) retimeIdlePulse(1 / BRAKE_DELAY_FACTOR);
   if (!silent && game.mode === 'playing') setStatus('СТАБИЛИЗАЦИЯ ЗАВЕРШЕНА', '', 480);
   updateBrakeHud();
 }
@@ -170,6 +170,7 @@ triggerFault = function triggerFaultEmergencyBrake(...args) {
 
 updateSimulation = function updateSimulationEmergencyBrake(dt, now) {
   updateSimulationBeforeBrake(dt, now);
+  updateOverloadControl();
   game.brakeFlash = Math.max(0, game.brakeFlash - dt * 1.7);
   updateBrakeHud(now);
 };
@@ -196,7 +197,7 @@ function drawEmergencyBrakeOverlay() {
     ctx.stroke();
   }
   ctx.restore();
-};
+}
 
 render = function renderEmergencyBrake() {
   renderBeforeBrake();
