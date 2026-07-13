@@ -2,14 +2,14 @@
   "id": "/apps/petlya-17/",
   "name": "ПЕТЛЯ 17",
   "short_name": "ПЕТЛЯ 17",
-  "description": "Гонка из низкой кабины болида с плавной трассой, читаемыми соперниками, рулением наклоном и воздушным следом.",
+  "description": "Кабинная гонка с выраженной перспективой, компактным управлением, читаемым пелотоном и рулением наклоном телефона.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "landscape",
-  "background_color": "#d9cfb5",
-  "theme_color": "#d9cfb5",
+  "background_color": "#101512",
+  "theme_color": "#101512",
   "icons": [
     {
       "src": "./icons/icon.svg",
