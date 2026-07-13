@@ -4,9 +4,7 @@
   const NativeWorker = window.Worker;
   function PocketWorker(url, options) {
     const source = String(url || '');
-    if (source.endsWith('/tracker-worker.js') || source === './tracker-worker.js' || source.includes('tracker-worker.js')) {
-      return new NativeWorker(url);
-    }
+    if (source.includes('tracker-worker.js')) return new NativeWorker(url);
     return new NativeWorker(url, options);
   }
   PocketWorker.prototype = NativeWorker.prototype;
@@ -173,14 +171,12 @@
     startButton?.insertAdjacentElement('afterend', help);
   }
 
-  startButton?.addEventListener('click', async (event) => {
+  startButton?.addEventListener('click', (event) => {
     if (bypassStartGuide) {
       bypassStartGuide = false;
       return;
     }
-    let state = 'unknown';
-    try { state = (await navigator.permissions?.query({ name: 'camera' }))?.state || 'unknown'; } catch {}
-    if (state === 'granted' || localStorage.getItem(INTRO_KEY) === '1') return;
+    if (localStorage.getItem(INTRO_KEY) === '1') return;
     event.preventDefault();
     event.stopImmediatePropagation();
     openGuide('intro');
@@ -193,11 +189,16 @@
     const vision = /зрени|ModuleFactory|модел|MediaPipe|WASM/i.test(`${errorTitle} ${errorCopy}`);
     const denied = /запрещ|доступ|NotAllowed|Security/i.test(`${errorTitle} ${errorCopy}`);
     lastErrorMode = vision ? 'vision' : denied ? 'permission' : 'help';
+    const signature = `${lastErrorMode}:${errorTitle}:${errorCopy}`;
+    if (errorPanel.dataset.myaloDecorated === signature) return;
+    errorPanel.dataset.myaloDecorated = signature;
     const code = errorPanel.querySelector('.error-code');
     if (code) code.textContent = vision ? 'Ошибка движка зрения' : denied ? 'Нужен доступ к камере' : 'Ошибка запуска';
     if (vision) {
       const copyNode = errorPanel.querySelector('#error-copy');
-      if (copyNode) copyNode.textContent = 'Камера уже работает. Менять разрешения не нужно: не запустился локальный движок распознавания.';
+      if (copyNode && copyNode.textContent !== 'Камера уже работает. Менять разрешения не нужно: не запустился локальный движок распознавания.') {
+        copyNode.textContent = 'Камера уже работает. Менять разрешения не нужно: не запустился локальный движок распознавания.';
+      }
     }
     let list = errorPanel.querySelector('.myalo-error-steps');
     if (!list) {
