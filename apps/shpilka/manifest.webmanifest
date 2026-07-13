@@ -1,0 +1,20 @@
+{
+  "id": "/apps/shpilka/",
+  "name": "ШПИЛЬКА",
+  "short_name": "ШПИЛЬКА",
+  "description": "Top-down гонка на траекторию, торможение и контролируемый дрифт с ботами и многоуровневой трассой.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#d2c49d",
+  "theme_color": "#d2c49d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
