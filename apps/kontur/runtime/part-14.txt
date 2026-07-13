@@ -1,0 +1,342 @@
+
+/* КОНТУР 1.3.1 — читаемая визуальная грамматика и свободный выход. */
+const READABILITY_VERSION = 1;
+const generateBoardBeforeReadability = generateBoard;
+const serializeBoardBeforeReadability = serializeBoard;
+const startLevelBeforeReadability = startLevel;
+const rotateTileBeforeReadability = rotateTile;
+const drawTileBeforeReadability = drawTile;
+const setStatusBeforeReadability = setStatus;
+
+function applyReadableOrientation(tile, solutionMask, random) {
+  tile.baseMask = solutionMask;
+  tile.targetMask = solutionMask;
+  tile.conductorType = 'basic';
+  tile.rotationsUsed = 0;
+
+  if (tile.locked || tile.sealed) {
+    tile.mask = solutionMask;
+    tile.angle = 0;
+    tile.targetAngle = 0;
+    return;
+  }
+
+  if (tile.rotationLimit) {
+    setTileOrientation(tile, 3);
+    return;
+  }
+
+  setTileOrientation(tile, 1 + Math.floor(random() * 3));
+}
+
+function normalizeReadableBoard(board, level, seed = board?.seed || 0) {
+  if (!board?.tiles || !board.path) return board;
+  const random = mulberry32(hashSeed(seed, level, 'kontur-readability'));
+  const pathIndex = new Map(board.path.map((cell, index) => [keyOf(cell.x, cell.y), index]));
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      tile.readabilityVersion = READABILITY_VERSION;
+      if (tile.blocked || tile.conductorType === 'bridge') continue;
+
+      const index = pathIndex.get(keyOf(tile.x, tile.y));
+      const ambiguous = tile.conductorType === 'tee' || tile.conductorType === 'cross' || bitCount(tile.baseMask) > 2;
+      if (!ambiguous) continue;
+
+      if (index !== undefined) {
+        const { entry, exit } = pathEntryAndExit(board.path, index);
+        applyReadableOrientation(tile, entry | exit, random);
+      } else {
+        const pool = level >= 2 ? [...BASE_PIECES, ...CAP_MASKS, ...CAP_MASKS] : BASE_PIECES;
+        const replacement = randomItem(pool, random);
+        tile.baseMask = replacement;
+        tile.conductorType = conductorTypeForMask(replacement);
+        setTileOrientation(tile, Math.floor(random() * 4));
+        if (tile.auxTargetMask != null) tile.auxTargetMask = rotateMask(replacement, 1);
+      }
+    }
+  }
+
+  board.readabilityVersion = READABILITY_VERSION;
+  return board;
+}
+
+generateBoard = function generateBoardReadability(level, seed) {
+  return normalizeReadableBoard(generateBoardBeforeReadability(level, seed), level, seed);
+};
+
+serializeBoard = function serializeBoardReadability(board) {
+  const snapshot = serializeBoardBeforeReadability(board);
+  snapshot.readabilityVersion = board.readabilityVersion || READABILITY_VERSION;
+  snapshot.tiles = snapshot.tiles.map((row, y) => row.map((tile, x) => ({
+    ...tile,
+    readabilityVersion: board.tiles[y][x].readabilityVersion || READABILITY_VERSION
+  })));
+  return snapshot;
+};
+
+setStatus = function setStatusReadability(text, tone = '', duration = 0) {
+  if (text.includes('ТРОЙНИКИ') || text.includes('ЛОЖНЫЕ ОТВОДЫ')) return;
+  const replacements = new Map([
+    ['НОВЫЕ ЗАГЛУШКИ · ТУПИКИ ТЕПЕРЬ ВИДНЫ ПО ФОРМЕ', 'ТУПИК · ОДИН КОНТАКТ, ДАЛЬШЕ ПУТИ НЕТ'],
+    ['БЛОК-СЕКТОРА НЕПРОХОДИМЫ · ИЩИ ОБХОД', 'БЛОК · ЧЁРНАЯ КЛЕТКА НЕ ПРОПУСКАЕТ ТОК'],
+    ['ЖЁЛТЫЕ ОГРАНИЧИТЕЛИ ДОПУСКАЮТ ЛИШЬ 1–2 ПОВОРОТА', 'ЖЁЛТЫЙ СЧЁТЧИК ↻ ПОКАЗЫВАЕТ ОСТАВШИЕСЯ ПОВОРОТЫ'],
+    ['МОСТЫ ПРОВОДЯТ ТОК НАСКВОЗЬ БЕЗ СОЕДИНЕНИЯ КАНАЛОВ', 'МОСТ · ДВА КАНАЛА ПЕРЕСЕКАЮТСЯ, НО НЕ СОЕДИНЯЮТСЯ'],
+    ['ОПЛОМБИРОВАННЫЕ МОДУЛИ НЕЛЬЗЯ ВРАЩАТЬ', 'ЗАМОК · ЭТУ КЛЕТКУ НЕЛЬЗЯ ВРАЩАТЬ']
+  ]);
+  setStatusBeforeReadability(replacements.get(text) || text, tone, duration);
+};
+
+startLevel = function startLevelReadability(restoredBoard = null, restoredPulse = null) {
+  if (restoredBoard) normalizeReadableBoard(restoredBoard, game.run?.level || 1, restoredBoard.seed || game.run?.seed || 0);
+  startLevelBeforeReadability(restoredBoard, restoredPulse);
+  if (game.board) normalizeReadableBoard(game.board, game.run?.level || 1, game.board.seed || game.run?.seed || 0);
+};
+
+rotateTile = function rotateTileReadability(x, y) {
+  const tile = game.board?.tiles[y]?.[x];
+  const before = tile?.mask;
+  rotateTileBeforeReadability(x, y);
+  if (!tile || tile.mask === before) return;
+
+  if (tile.rotationLimit) {
+    const remaining = Math.max(0, tile.rotationLimit - tile.rotationsUsed);
+    setStatus(`ОГРАНИЧИТЕЛЬ ↻${remaining} · ОСТАЛОСЬ ПОВОРОТОВ`, remaining ? '' : 'danger', 650);
+  } else if (tile.conductorType === 'cap') {
+    setStatus('ТУПИК · ОДИН КОНТАКТ, ДАЛЬШЕ ПУТИ НЕТ', '', 650);
+  } else if (tile.specialType === 'diode') {
+    setStatus('ДИОД · СТРЕЛКА ПОКАЗЫВАЕТ РАЗРЕШЁННОЕ НАПРАВЛЕНИЕ', '', 720);
+  } else if (tile.specialType === 'capacitor') {
+    setStatus('КОНДЕНСАТОР · ЗАДЕРЖИВАЕТ ИМПУЛЬС НА 0,3 С', '', 720);
+  } else if (tile.specialType === 'switch') {
+    setStatus('ПЕРЕКЛЮЧАТЕЛЬ · ТАП МЕНЯЕТ ПОЛОЖЕНИЕ A/B', '', 720);
+  }
+};
+
+resizeCanvas = function resizeCanvasReadability() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const safeTop = Math.max(154, Math.min(184, rect.height * 0.225));
+  const safeBottom = Math.max(126, Math.min(150, rect.height * 0.18));
+  const maxWidth = Math.min(rect.width - 24, 500);
+  const maxHeight = rect.height - safeTop - safeBottom;
+  const cell = Math.max(34, Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS)));
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+  game.layout = {
+    width: rect.width,
+    height: rect.height,
+    dpr,
+    cell,
+    boardX: Math.round((rect.width - boardWidth) / 2),
+    boardY: Math.round(safeTop + Math.max(0, (maxHeight - boardHeight) / 2)),
+    boardWidth,
+    boardHeight
+  };
+};
+
+function drawTerminal(point, y, label, active, pointsUp) {
+  const l = game.layout;
+  const w = l.cell * 0.68;
+  const h = Math.max(15, l.cell * 0.22);
+  ctx.save();
+  ctx.fillStyle = '#17211d';
+  ctx.fillRect(point.x - w / 2 - 3, y - 3, w + 6, h + 6);
+  ctx.fillStyle = active ? '#c96637' : '#eee2bd';
+  ctx.fillRect(point.x - w / 2, y, w, h);
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(2, l.cell * 0.035);
+  ctx.beginPath();
+  if (pointsUp) {
+    ctx.moveTo(point.x, y + h);
+    ctx.lineTo(point.x, l.boardY);
+  } else {
+    ctx.moveTo(point.x, l.boardY + l.boardHeight);
+    ctx.lineTo(point.x, y);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = '#17211d';
+  ctx.font = `900 ${Math.max(7, l.cell * 0.115)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, point.x, y + h / 2 + 0.5);
+
+  const arrowY = pointsUp ? y - 8 : y + h + 8;
+  ctx.beginPath();
+  if (pointsUp) {
+    ctx.moveTo(point.x, arrowY - 7);
+    ctx.lineTo(point.x - 6, arrowY + 2);
+    ctx.lineTo(point.x + 6, arrowY + 2);
+  } else {
+    ctx.moveTo(point.x, arrowY + 7);
+    ctx.lineTo(point.x - 6, arrowY - 2);
+    ctx.lineTo(point.x + 6, arrowY - 2);
+  }
+  ctx.closePath();
+  ctx.fillStyle = active ? '#c96637' : '#17211d';
+  ctx.fill();
+  ctx.restore();
+}
+
+drawPorts = function drawPortsReadability() {
+  if (!game.board || !game.layout) return;
+  const l = game.layout;
+  const source = boardPoint(game.board.source);
+  const goal = boardPoint(game.board.goal);
+  drawTerminal(goal, l.boardY - Math.max(29, l.cell * 0.48), 'ВЫХОД', true, true);
+  drawTerminal(source, l.boardY + l.boardHeight + Math.max(8, l.cell * 0.14), 'ВХОД', false, false);
+};
+
+function drawReadableStop(tile, x, y, size) {
+  if (tile.conductorType !== 'cap') return;
+  const bit = DIRS.find((dir) => tile.mask & dir.bit)?.bit || N;
+  const angle = directionAngle(bit);
+  ctx.save();
+  ctx.translate(x + size / 2, y + size / 2);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#f1e6c9';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(2, size * 0.035);
+  ctx.fillRect(-size * 0.045, -size * 0.18, size * 0.09, size * 0.36);
+  ctx.strokeRect(-size * 0.045, -size * 0.18, size * 0.09, size * 0.36);
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.1, -size * 0.1);
+  ctx.lineTo(size * 0.1, size * 0.1);
+  ctx.moveTo(size * 0.1, -size * 0.1);
+  ctx.lineTo(-size * 0.1, size * 0.1);
+  ctx.strokeStyle = '#8b2e24';
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawReadableBlock(tile, x, y, size) {
+  if (!tile.blocked) return;
+  ctx.save();
+  ctx.fillStyle = '#eee2bd';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.5, size * 0.025);
+  const w = size * 0.55;
+  const h = size * 0.18;
+  ctx.fillRect(x + (size - w) / 2, y + (size - h) / 2, w, h);
+  ctx.strokeRect(x + (size - w) / 2, y + (size - h) / 2, w, h);
+  ctx.fillStyle = '#17211d';
+  ctx.font = `900 ${Math.max(6, size * 0.095)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('БЛОК', x + size / 2, y + size / 2 + 0.5);
+  ctx.restore();
+}
+
+function drawReadableBridge(tile, x, y, size) {
+  if (tile.conductorType !== 'bridge') return;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+  ctx.fillStyle = '#17211d';
+  ctx.font = `900 ${Math.max(6, size * 0.078)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('МОСТ', cx, y + size * 0.14);
+  ctx.fillStyle = '#f3ead2';
+  for (const [px, py, angle] of [
+    [cx, y + size * 0.29, -Math.PI / 2],
+    [cx, y + size * 0.71, Math.PI / 2],
+    [x + size * 0.29, cy, Math.PI],
+    [x + size * 0.71, cy, 0]
+  ]) {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(size * 0.055, 0);
+    ctx.lineTo(-size * 0.035, -size * 0.04);
+    ctx.lineTo(-size * 0.035, size * 0.04);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawReadableLimiter(tile, x, y, size) {
+  if (!tile.rotationLimit) return;
+  const remaining = Math.max(0, tile.rotationLimit - tile.rotationsUsed);
+  ctx.save();
+  const w = size * 0.36;
+  const h = size * 0.2;
+  const bx = x + size - w - size * 0.055;
+  const by = y + size * 0.055;
+  ctx.fillStyle = remaining ? '#e0b34f' : '#8b2e24';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.5, size * 0.025);
+  ctx.fillRect(bx, by, w, h);
+  ctx.strokeRect(bx, by, w, h);
+  ctx.fillStyle = remaining ? '#17211d' : '#f3ead2';
+  ctx.font = `900 ${Math.max(7, size * 0.105)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`↻${remaining}`, bx + w / 2, by + h / 2 + 0.5);
+  ctx.restore();
+}
+
+function drawReadableSeal(tile, x, y, size) {
+  if (!tile.sealed || tile.blocked) return;
+  ctx.save();
+  const cx = x + size * 0.18;
+  const cy = y + size * 0.18;
+  const w = size * 0.22;
+  const h = size * 0.18;
+  ctx.fillStyle = '#b5ae91';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.5, size * 0.025);
+  ctx.fillRect(cx - w / 2, cy - h / 2 + size * 0.035, w, h);
+  ctx.strokeRect(cx - w / 2, cy - h / 2 + size * 0.035, w, h);
+  ctx.beginPath();
+  ctx.arc(cx, cy - h * 0.22, w * 0.3, Math.PI, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawReadableSpecialTag(tile, x, y, size) {
+  let label = '';
+  if (tile.specialType === 'diode') label = 'ДИОД →';
+  else if (tile.specialType === 'capacitor') label = '+0,3с';
+  else if (tile.specialType === 'switch') label = 'A / B';
+  if (!label) return;
+  ctx.save();
+  const w = size * 0.42;
+  const h = size * 0.15;
+  const bx = x + size * 0.06;
+  const by = y + size - h - size * 0.06;
+  ctx.fillStyle = '#17211d';
+  ctx.fillRect(bx, by, w, h);
+  ctx.fillStyle = '#f3ead2';
+  ctx.font = `800 ${Math.max(5.5, size * 0.075)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, bx + w / 2, by + h / 2 + 0.5);
+  ctx.restore();
+}
+
+drawTile = function drawTileReadability(tile, x, y, size, hintActive) {
+  drawTileBeforeReadability(tile, x, y, size, hintActive);
+  drawReadableBlock(tile, x, y, size);
+  if (tile.blocked) return;
+  drawReadableStop(tile, x, y, size);
+  drawReadableBridge(tile, x, y, size);
+  drawReadableSpecialTag(tile, x, y, size);
+  drawReadableLimiter(tile, x, y, size);
+  drawReadableSeal(tile, x, y, size);
+};
+
+window.addEventListener('resize', resizeCanvas);
+window.visualViewport?.addEventListener('resize', resizeCanvas);
+resizeCanvas();

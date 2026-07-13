@@ -10,8 +10,8 @@
  *   cachePrefix: 'kontur-'
  * });
  */
-const PARTS = 14;
-const RUNTIME_VERSION = '1.3.0';
+const PARTS = 15;
+const RUNTIME_VERSION = '1.3.1';
 const paths = Array.from({ length: PARTS }, (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt`);
 
 try {
