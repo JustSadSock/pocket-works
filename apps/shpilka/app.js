@@ -2,8 +2,12 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 
 installMobileRuntime();
 
-const VERSION = '2.0.0';
-const gameParts = Array.from({ length: 12 }, (_, index) => `./engine-v2-${String(index + 1).padStart(2, '0')}.js`);
+const VERSION = '2.1.0';
+const gameParts = [
+  ...Array.from({ length: 11 }, (_, index) => `./engine-v2-${String(index + 1).padStart(2, '0')}.js`),
+  './engine-v2-stability.js',
+  './engine-v2-12.js'
+];
 
 for (const source of gameParts) {
   await new Promise((resolve, reject) => {
