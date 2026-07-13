@@ -65,11 +65,6 @@ function drawCar(car) {
   ctx.lineTo(18, 13);
   ctx.stroke();
 
-  if (car.player) {
-    ctx.strokeStyle = '#e65e2f';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-CAR_HALF_LENGTH - 2, -CAR_HALF_WIDTH - 2, CAR_HALF_LENGTH * 2 + 4, CAR_HALF_WIDTH * 2 + 4);
-  }
   ctx.restore();
 }
 

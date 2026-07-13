@@ -15,56 +15,65 @@ function findCarAhead(car) {
 
 function aiControls(car, dt) {
   const speed = Math.abs(car.forwardSpeed);
-  const lookAhead = Math.round(18 + speed / 23);
+  const lookAhead = Math.round(22 + speed / 22);
   const targetIndex = (car.trackIndex + lookAhead) % track.length;
   const target = track[targetIndex];
 
   car.overtakeTimer = Math.max(0, car.overtakeTimer - dt);
   const ahead = findCarAhead(car);
-  if (ahead && ahead.gap < 150 + speed * 0.08 && car.overtakeTimer <= 0) {
+  if (ahead && ahead.gap < 175 + speed * 0.10 && car.overtakeTimer <= 0) {
     const relativeX = ahead.car.x - car.x;
     const relativeY = ahead.car.y - car.y;
     const side = relativeX * track[car.trackIndex].nx + relativeY * track[car.trackIndex].ny;
     car.overtakeSide = side > 0 ? -1 : 1;
     if (Math.abs(side) < 9) car.overtakeSide = Math.sin(car.aiPhase + raceElapsed) > 0 ? 1 : -1;
-    car.overtakeTimer = 1.2 + car.aggression * 1.1;
+    car.overtakeTimer = 1.45 + car.aggression * 1.25;
   }
 
-  const baseOffset = target.raceOffset + car.lane * 0.35;
-  const overtakeOffset = car.overtakeTimer > 0 ? car.overtakeSide * roadHalf * (0.31 + car.aggression * 0.08) : 0;
-  car.aiOffset = lerp(car.aiOffset, clamp(baseOffset + overtakeOffset, -roadHalf * 0.52, roadHalf * 0.52), clamp(dt * 2.5, 0, 1));
+  const baseOffset = target.raceOffset + car.lane * 0.30;
+  const overtakeOffset = car.overtakeTimer > 0 ? car.overtakeSide * roadHalf * (0.34 + car.aggression * 0.08) : 0;
+  car.aiOffset = lerp(car.aiOffset, clamp(baseOffset + overtakeOffset, -roadHalf * 0.55, roadHalf * 0.55), clamp(dt * 3.2, 0, 1));
   const targetX = target.x + target.nx * car.aiOffset;
   const targetY = target.y + target.ny * car.aiOffset;
   const desired = Math.atan2(targetY - car.y, targetX - car.x);
   const headingError = wrapAngle(desired - car.angle);
   const point = track[car.trackIndex];
   const crossTrack = (car.x - point.x) * point.nx + (car.y - point.y) * point.ny - car.aiOffset;
-  let steer = headingError * 1.95 - crossTrack / Math.max(80, roadHalf * 1.25) - car.yawRate * 0.17;
+  let steer = headingError * 2.20 - crossTrack / Math.max(76, roadHalf * 1.16) - car.yawRate * 0.19;
   steer = clamp(steer, -1, 1);
 
-  let targetSpeed = 730;
-  for (let j = 0; j < 92; j += 4) {
-    const index = (car.trackIndex + j) % track.length;
-    const brakingPenalty = j * 1.45;
-    targetSpeed = Math.min(targetSpeed, track[index].speedLimit + brakingPenalty);
+  let targetSpeed = MAX_SPEED * 0.99;
+  for (let j = 0; j < 120; j += 4) {
+    let upcomingCurvature = 0;
+    for (let k = 0; k < 20; k += 4) {
+      const index = (car.trackIndex + j + k) % track.length;
+      upcomingCurvature = Math.max(upcomingCurvature, Math.abs(track[index].curvature));
+    }
+    const cornerSpeed = clamp(1100 / (1 + upcomingCurvature * 600), 365, MAX_SPEED * 0.99);
+    targetSpeed = Math.min(targetSpeed, cornerSpeed + j * 2.6);
   }
-  targetSpeed *= car.skill;
-  if (car.distanceFromRoad > roadHalf * 0.72) targetSpeed *= 0.76;
+
+  const paceFactor = clamp(0.99 + (car.skill - 0.98) * 1.55, 0.99, 1.10);
+  targetSpeed = Math.min(MAX_SPEED * 1.01, targetSpeed * paceFactor);
+  if (car.distanceFromRoad > roadHalf * 0.72) targetSpeed *= 0.84;
   if (rampIndex >= 0) {
     let gapToRamp = rampIndex - car.trackIndex;
     if (gapToRamp < 0) gapToRamp += track.length;
-    if (gapToRamp < 30) targetSpeed = Math.max(targetSpeed, 475);
+    if (gapToRamp < 34) targetSpeed = Math.max(targetSpeed, 520);
   }
 
   car.mistakeTimer = Math.max(0, car.mistakeTimer - dt);
-  if (car.mistakeTimer <= 0 && Math.random() < dt * (0.010 - Math.min(0.008, (car.skill - 0.95) * 0.08))) {
-    car.mistakeTimer = 0.35 + Math.random() * 0.5;
+  const mistakeChance = Math.max(0.0004, 0.0035 - Math.max(0, car.skill - 0.98) * 0.035);
+  if (car.mistakeTimer <= 0 && Math.random() < dt * mistakeChance) {
+    car.mistakeTimer = 0.22 + Math.random() * 0.30;
   }
-  if (car.mistakeTimer > 0) steer *= 0.78;
+  if (car.mistakeTimer > 0) steer *= 0.88;
 
   const speedError = targetSpeed - speed;
-  const brake = speedError < -18 ? clamp(-speedError / 150, 0, 1) : (Math.abs(steer) > 0.78 && speed > targetSpeed - 12 ? 0.16 : 0);
-  const throttle = speedError > 0 ? clamp(speedError / 105, 0.18, 1) : 0;
+  const brake = speedError < -28
+    ? clamp(-speedError / 190, 0, 0.92)
+    : (Math.abs(steer) > 0.88 && speed > targetSpeed - 4 ? 0.10 : 0);
+  const throttle = speedError > -8 ? clamp((speedError + 45) / 100, 0.34, 1) : 0;
   return { steer, throttle, brake };
 }
 
