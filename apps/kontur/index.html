@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./polish.css">
   <link rel="stylesheet" href="./v12.css">
+  <link rel="stylesheet" href="./brake.css">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
@@ -52,9 +53,10 @@
       <output id="checkpointValue">0/0</output>
     </section>
 
-    <button class="overload-control" id="overloadButton" type="button" aria-label="Удерживать для перегрузки" aria-pressed="false" data-ui data-native-press>
-      <span>ПЕРЕГРУЗКА</span>
-      <b id="overloadHeat">0%</b>
+    <button class="overload-control" id="overloadButton" type="button" aria-label="Активировать аварийное замедление" aria-pressed="false" data-ui data-native-press>
+      <span>СТАБИЛИЗАТОР</span>
+      <small>ЗАРЯДЫ</small>
+      <b id="brakeCharges">2×</b>
       <i aria-hidden="true"></i>
     </button>
 
@@ -68,11 +70,11 @@
           <span class="plate-code">КС–6 / POCKET WORKS</span>
           <img src="./icons/icon.svg" alt="" class="title-icon" draggable="false">
           <h1>КОНТУР</h1>
-          <p>Диоды, конденсаторы и контрольные точки меняют каждый каскад.<br>Удерживай перегрузку ради скорости — ошибка станет вдвое дороже.</p>
+          <p>Диоды, конденсаторы и контрольные точки меняют каждый каскад.<br>Аварийный стабилизатор замедляет импульс, но имеет только два заряда.</p>
         </div>
         <div class="rule-row">
           <span><b>ТАП</b> вращает модуль по часовой</span>
-          <span><b>УДЕРЖИВАЙ</b> перегрузку для ускорения</span>
+          <span><b>КНОПКА</b> даёт 2,6 секунды замедления</span>
         </div>
         <div class="record-line"><span>ЛУЧШИЙ КАСКАД</span><b id="bestLevelValue">01</b></div>
         <button class="knife-switch primary" id="newRunButton" type="button" data-native-press>
@@ -128,7 +130,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="КОНТУР"
-    data-app-version="1.2.0"
+    data-app-version="1.2.1"
   ></script>
   <script type="module" src="./app.js"></script>
 </body>
