@@ -44,10 +44,13 @@ function aiControls(car, dt) {
 
   let targetSpeed = MAX_SPEED * 0.99;
   for (let j = 0; j < 120; j += 4) {
-    const index = (car.trackIndex + j) % track.length;
-    const brakingAllowance = j * 2.15;
-    const cornerSpeed = track[index].speedLimit * 1.17 + 52 + brakingAllowance;
-    targetSpeed = Math.min(targetSpeed, cornerSpeed);
+    let upcomingCurvature = 0;
+    for (let k = 0; k < 20; k += 4) {
+      const index = (car.trackIndex + j + k) % track.length;
+      upcomingCurvature = Math.max(upcomingCurvature, Math.abs(track[index].curvature));
+    }
+    const cornerSpeed = clamp(1100 / (1 + upcomingCurvature * 600), 365, MAX_SPEED * 0.99);
+    targetSpeed = Math.min(targetSpeed, cornerSpeed + j * 2.6);
   }
 
   const paceFactor = clamp(0.99 + (car.skill - 0.98) * 1.55, 0.99, 1.10);
