@@ -1,9 +1,14 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('SENTE GNU Go browser core', () => {
-  test('loads the real worker and returns legal moves without emergency fallback', async ({ page }) => {
+  test('loads one coherent 2.1 build and returns legal moves without emergency fallback', async ({ page }) => {
     test.setTimeout(90_000);
     const suspiciousConsole: string[] = [];
+    const requestedUrls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().includes('/apps/sente/')) requestedUrls.push(request.url());
+    });
     page.on('console', (message) => {
       const text = message.text();
       if (/SENTE GNU Go fallback|out of memory|requested exit|worker crashed/i.test(text)) suspiciousConsole.push(text);
@@ -11,14 +16,15 @@ test.describe('SENTE GNU Go browser core', () => {
     page.on('pageerror', (error) => suspiciousConsole.push(error.message));
 
     await page.goto('/apps/sente/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toHaveAttribute('data-sente-build', '2.1.0');
 
-    const results = await page.evaluate(async () => {
-      const rules = await import('/apps/sente/go-engine.js');
-      const client = await import('/apps/sente/gnugo-client.js');
-      const levels = ['calm', 'steady'] as const;
+    const result = await page.evaluate(async () => {
+      const rules = await import('/apps/sente/go-engine.js?v=2.1.0');
+      const client = await import('/apps/sente/gnugo-client-v2.1.js?v=2.1.0');
+      const ai = await import('/apps/sente/ai-v2.1.js?v=2.1.0');
       const output = [];
 
-      for (const level of levels) {
+      for (const level of ['calm', 'steady'] as const) {
         const game = rules.createGame({ size: 9, komi: 6.5 });
         const move = await client.chooseGnugoMove(game, level);
         output.push({
@@ -34,21 +40,36 @@ test.describe('SENTE GNU Go browser core', () => {
       }
 
       client.resetGnugoWorker();
-      return output;
+      return {
+        build: window.__SENTE_BUILD__,
+        masterLabel: ai.aiLabel('sharp'),
+        moves: output
+      };
     });
 
-    expect(results).toHaveLength(2);
-    for (const result of results) {
-      expect(result.engine).toMatch(/^3\./);
-      expect(result.reason).toBe('gnugo');
-      expect(result.pass).toBe(false);
-      expect(result.legal).toBe(true);
-      expect(result.x).toBeGreaterThanOrEqual(0);
-      expect(result.y).toBeGreaterThanOrEqual(0);
-      expect(result.x).toBeLessThan(9);
-      expect(result.y).toBeLessThan(9);
-      expect(result.reads).toBeGreaterThan(0);
+    expect(result.build).toBe('2.1.0');
+    expect(result.masterLabel).toBe('Мастер · GNU Go');
+    expect(result.moves).toHaveLength(2);
+    for (const move of result.moves) {
+      expect(move.engine).toMatch(/^3\./);
+      expect(move.reason).toBe('gnugo');
+      expect(move.pass).toBe(false);
+      expect(move.legal).toBe(true);
+      expect(move.x).toBeGreaterThanOrEqual(0);
+      expect(move.y).toBeGreaterThanOrEqual(0);
+      expect(move.x).toBeLessThan(9);
+      expect(move.y).toBeLessThan(9);
+      expect(move.reads).toBeGreaterThan(0);
     }
+
+    const urls = requestedUrls.map((value) => new URL(value));
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/app.js') && url.searchParams.get('v') === '2.1.0')).toBe(true);
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/runtime-1.txt') && url.searchParams.get('v') === '2.1.0')).toBe(true);
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/ai-v2.1.js') && url.searchParams.get('v') === '2.1.0')).toBe(true);
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/gnugo-worker-v2.1.js') && url.searchParams.get('v') === '2.1.0')).toBe(true);
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/assets/gnugo/gnugo.wasm') && url.searchParams.get('v') === '2.1.0')).toBe(true);
+    expect(urls.some((url) => url.pathname.endsWith('/apps/sente/ai.js') && !url.searchParams.has('v'))).toBe(false);
+    expect(urls.some((url) => /\/apps\/sente\/runtime-[1-4]\.txt$/.test(url.pathname) && url.searchParams.get('v') !== '2.1.0')).toBe(false);
     expect(suspiciousConsole).toEqual([]);
   });
 });
