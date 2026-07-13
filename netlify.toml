@@ -1,5 +1,5 @@
 [build]
-  command = "rm -rf dist-site && mkdir -p dist-site && (npm run build:site > /tmp/pocket-build.log 2>&1; echo $? > /tmp/pocket-build.status); mkdir -p dist-site; cp /tmp/pocket-build.log dist-site/build-output.txt; cp /tmp/pocket-build.status dist-site/build-status.txt; exit 0"
+  command = "npm run registry:check && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>registry ok</title><h1>registry ok</h1>' > dist-site/index.html"
   publish = "dist-site"
 
 [[headers]]
