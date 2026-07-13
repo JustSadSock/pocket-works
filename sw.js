@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.8.1';
-const APP_VERSION = '0.8.1';
+const CACHE_NAME = 'pocket-works-launcher-v0.8.2';
+const APP_VERSION = '0.8.2';
 const RELEASE_DATE = '2026-07-13';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Replaced cache-first launcher execution with a network-first cache protocol that bypasses the browser HTTP cache.',
-  'Every install now fetches shell files with a unique build token before writing them into the new Cache Storage namespace.',
-  'The launcher Service Worker no longer intercepts or stores files owned by applications under /apps/.',
-  'Removed long-lived immutable caching for mutable application assets so deployed code can actually replace older files.'
+  'The Update button now checks and installs updates for every registered application, not only the shelf registry.',
+  'Application updates are activated only after their new Service Worker finishes downloading; failed downloads leave the previous offline cache active.',
+  'Update progress and partial failures are reported per application without sacrificing offline availability.',
+  'Updated-time ordering now compares real timestamps, including timezone offsets, instead of lexicographic date strings.'
 ];
 const APP_SHELL = [
   './',
@@ -16,6 +16,7 @@ const APP_SHELL = [
   './launcher-performance.css',
   './launcher-sync.css',
   './app.js',
+  './launcher-update-all.js',
   './launcher-sync.js',
   './apps.json',
   './manifest.webmanifest',
