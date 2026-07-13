@@ -10,11 +10,10 @@ export async function loadSenteGnugo(assetDirectory = path.join(process.cwd(), '
   ]);
 
   const exportsObject = {};
-  const quietConsole = { log() {}, warn() {}, error() {} };
   const sandbox = {
     exports: exportsObject,
     module: { exports: exportsObject },
-    console: quietConsole,
+    console,
     WebAssembly,
     TextDecoder,
     TextEncoder,
@@ -66,6 +65,9 @@ export async function loadSenteGnugo(assetDirectory = path.join(process.cwd(), '
     clearInterval,
     queueMicrotask,
     importScripts() {},
+    exit(status) {
+      throw new Error(`GNU Go requested exit(${status})`);
+    },
     fetch: async () => new Response(wasm, {
       status: 200,
       headers: { 'content-type': 'application/wasm' }
