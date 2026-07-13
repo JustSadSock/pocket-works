@@ -249,16 +249,17 @@ export function stepBall(ball, level, dt, time) {
   ball.vy *= damping;
 
   const afterSpeed = Math.hypot(ball.vx, ball.vy);
+  const waterNow = isInWater(ball, level);
   if (afterSpeed < STOP_SPEED) {
     ball.vx = 0;
     ball.vy = 0;
-    if (ball.moving) events.push({ type: 'stopped' });
+    if (ball.moving && !waterNow) events.push({ type: 'stopped' });
     ball.moving = false;
   } else {
     ball.moving = true;
   }
 
-  if (isInWater(ball, level)) {
+  if (waterNow) {
     ball.waterTime += dt;
     ball.vx *= Math.pow(.88, dt * 60);
     ball.vy *= Math.pow(.88, dt * 60);
