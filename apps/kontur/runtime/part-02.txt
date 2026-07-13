@@ -1,0 +1,215 @@
+> ({
+      x: tile.x,
+      y: tile.y,
+      baseMask: tile.baseMask,
+      mask: tile.mask,
+      targetMask: tile.targetMask,
+      angle: tile.targetAngle,
+      targetAngle: tile.targetAngle,
+      locked: tile.locked,
+      heat: 0,
+      flash: 0
+    })))
+  };
+}
+
+function restoreBoard(snapshot) {
+  return {
+    ...snapshot,
+    startedAt: performance.now(),
+    hintUntil: performance.now() + (snapshot.hintRemaining || 0),
+    tiles: snapshot.tiles.map((row) => row.map((tile) => ({ ...tile })))
+  };
+}
+
+function serializePulse(pulse) {
+  return {
+    x: pulse.x,
+    y: pulse.y,
+    entryBit: pulse.entryBit,
+    moving: false,
+    move: null,
+    nextDecisionAt: performance.now() + 850,
+    faultUntil: 0,
+    visits: pulse.visits || {},
+    completeAfterMove: false
+  };
+}
+
+function saveResume() {
+  if (!game.run || !game.board || !game.pulse || !['playing', 'paused'].includes(game.mode)) return;
+  store.set('resume', {
+    kind: 'board',
+    savedAt: Date.now(),
+    run: JSON.parse(JSON.stringify(game.run)),
+    board: serializeBoard(game.board),
+    pulse: serializePulse(game.pulse)
+  });
+}
+
+function clearResume() {
+  store.set('resume', null);
+}
+
+function continueRun() {
+  const resume = store.get('resume');
+  if (!resume?.run) return;
+  game.run = resume.run;
+  if (resume.kind === 'module') {
+    openModuleChoice();
+    return;
+  }
+  if (!resume.board || !resume.pulse) returnToMenu();
+  else {
+    const board = restoreBoard(resume.board);
+    const pulse = { ...resume.pulse, nextDecisionAt: performance.now() + 850 };
+    startLevel(board, pulse);
+  }
+}
+
+function chooseOutgoing(mask, entryBit) {
+  if (!(mask & entryBit)) return 0;
+  const available = DIRS.map((dir) => dir.bit).filter((bit) => bit !== entryBit && (mask & bit));
+  if (!available.length) return 0;
+  const straight = OPP[entryBit];
+  if (available.includes(straight)) return straight;
+  if (available.includes(N)) return N;
+  return available[0];
+}
+
+function beginMove(direction) {
+  const nx = game.pulse.x + DIRS.find((dir) => dir.bit === direction).dx;
+  const ny = game.pulse.y + DIRS.find((dir) => dir.bit === direction).dy;
+  const outside = nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS;
+  if (outside) {
+    if (game.pulse.y === 0 && direction === N) {
+      game.pulse.moving = true;
+      game.pulse.completeAfterMove = true;
+      game.pulse.move = {
+        from: { x: game.pulse.x, y: game.pulse.y },
+        to: { x: nx, y: ny },
+        direction,
+        progress: 0,
+        duration: 230
+      };
+      return;
+    }
+    triggerFault('ВЫХОД ЗА КРАЙ');
+    return;
+  }
+
+  const nextTile = game.board.tiles[ny][nx];
+  if (!(nextTile.mask & OPP[direction])) {
+    triggerFault('РАЗРЫВ ЦЕПИ', direction);
+    return;
+  }
+
+  game.pulse.moving = true;
+  game.pulse.move = {
+    from: { x: game.pulse.x, y: game.pulse.y },
+    to: { x: nx, y: ny },
+    direction,
+    progress: 0,
+    duration: 215
+  };
+  game.pulse.completeAfterMove = false;
+  nextTile.heat = 1;
+  sound.step();
+}
+
+function evaluatePulse(now) {
+  if (game.mode !== 'playing' || !game.pulse || game.pulse.moving || now < game.pulse.nextDecisionAt || now < game.pulse.faultUntil) return;
+  const tile = game.board.tiles[game.pulse.y][game.pulse.x];
+  const key = `${game.pulse.x},${game.pulse.y}`;
+  game.pulse.visits[key] = (game.pulse.visits[key] || 0) + 1;
+  if (game.pulse.visits[key] > 2) {
+    triggerFault('ПЕТЛЯ ОБРАТНОЙ СВЯЗИ');
+    return;
+  }
+  const outgoing = chooseOutgoing(tile.mask, game.pulse.entryBit);
+  if (!outgoing) {
+    triggerFault('КОНТАКТ НЕ СОВПАЛ');
+    return;
+  }
+  beginMove(outgoing);
+}
+
+function triggerFault(message, direction = 0) {
+  if (game.mode !== 'playing' || performance.now() < (game.pulse?.faultUntil || 0)) return;
+  const board = game.board;
+  board.faults += 1;
+  const protectedFault = game.run.freeFaultsUsed < game.run.freeFaults;
+  if (protectedFault) {
+    game.run.freeFaultsUsed += 1;
+    setStatus('ИЗОЛЯТОР ПРИНЯЛ УДАР', 'success', 1000);
+  } else {
+    game.run.fuses -= 1;
+    game.breakingFuse = game.run.fuses;
+    setStatus(message, 'danger', 1100);
+  }
+  sound.spark();
+  navigator.vibrate?.(protectedFault ? 18 : [28, 35, 42]);
+  spawnSpark(game.pulse.x, game.pulse.y, direction);
+  const tile = board.tiles[game.pulse.y][game.pulse.x];
+  tile.flash = 1;
+  game.pulse.faultUntil = performance.now() + 820 + game.run.restartPenalty;
+  game.pulse.moving = false;
+  game.pulse.move = null;
+  updateHud();
+  if (game.breakingFuse >= 0) {
+    window.setTimeout(() => { game.breakingFuse = -1; updateHud(); }, 340);
+  }
+  saveResume();
+
+  window.setTimeout(() => {
+    if (game.mode !== 'playing') return;
+    if (game.run.fuses <= 0) {
+      finishRun();
+      return;
+    }
+    resetPulse(game.run.restartPenalty);
+  }, 830 + game.run.restartPenalty);
+}
+
+function finishLevel() {
+  if (game.mode !== 'playing') return;
+  const elapsed = Math.max(1, (performance.now() - game.board.startedAt) / 1000);
+  const clean = game.board.faults === 0;
+  const efficiency = Math.max(0, 1600 - game.board.rotations * 16 - elapsed * 7);
+  const base = 700 + game.run.level * 95 + efficiency;
+  const cleanMultiplier = clean ? 1 + game.run.cleanBonus : 1;
+  const gained = Math.max(100, Math.round(base * cleanMultiplier * game.run.scoreMultiplier));
+  setMode('transition');
+  game.run.score += gained;
+  game.run.fuses = Math.min(game.run.maxFuses, game.run.fuses + 1);
+  game.run.level += 1;
+  sound.success();
+  navigator.vibrate?.([18, 30, 18]);
+  setStatus(`КАСКАД ЗАМКНУТ · +${gained}`, 'success', 1200);
+  const stats = store.get('stats', { runs: 0, levels: 0, turns: 0 });
+  store.set('stats', { ...stats, levels: stats.levels + 1 });
+  updateHud();
+  clearResume();
+
+  window.setTimeout(() => {
+    if (!game.run) return;
+    if ((game.run.level - 1) % 4 === 0) {
+      openModuleChoice();
+    } else {
+      startLevel();
+    }
+  }, 900);
+}
+
+function finishRun() {
+  if (!game.run) return;
+  sound.stopHum();
+  sound.fail();
+  const previousBest = store.get('bestScore', 0);
+  const bestScore = Math.max(previousBest, Math.round(game.run.score));
+  const bestLevel = Math.max(store.get('bestLevel', 1), game.run.level);
+  store.patch({ bestScore, bestLevel, resume: null });
+  ui.resultScore.textContent = formatNumber(game.run.score);
+  ui.resultLevel.textContent = String(game.run.level).padStart(2, '0');
+  ui.resultBest.textContent = formatNumber(bestScore);
+  ui.recordStamp.classList.toggle('is-visible', game.run.score > previous
