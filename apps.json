@@ -228,5 +228,35 @@
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
+  },
+  {
+    "slug": "moss-marble",
+    "name": "Moss & Marble",
+    "shortName": "Moss & Marble",
+    "description": "Камерный мини-гольф в старой оранжерее с девятью тактильными лунками.",
+    "path": "./apps/moss-marble/",
+    "status": "active",
+    "version": "1.0.0",
+    "updatedAt": "2026-07-13T00:56:26+01:00",
+    "changelog": [
+      "Добавлен законченный круг из девяти мини-гольф лунок в старой оранжерее.",
+      "Добавлены физика мяча, песок, густой мох, вода, склоны, вращающиеся планки и туннель.",
+      "Добавлены процедурный звук, виброотдача, визуальная глубина от наклона и живые детали окружения.",
+      "Добавлены сохранение лучших результатов, выбор лунок, пауза, Workshop Mode и полноценный офлайн-режим."
+    ],
+    "accent": "#71895f",
+    "tags": [
+      "PWA",
+      "offline",
+      "game",
+      "mini-golf",
+      "physics",
+      "canvas",
+      "audio",
+      "workshop"
+    ],
+    "preset": "game-2d",
+    "runtime": "quick",
+    "storageNamespace": "pocket-works:moss-marble"
   }
 ]

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#d9d3b4">
+  <meta name="description" content="Moss & Marble — камерный мини-гольф в старой оранжерее для Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Moss & Marble">
+  <title>Moss & Marble — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" id="app" data-app-shell>
+    <canvas id="game" aria-label="Поле для мини-гольфа" data-gesture-surface data-block-callout></canvas>
+
+    <header class="scorebar" data-ui aria-live="polite">
+      <button class="text-control" type="button" id="pauseBtn" data-native-press aria-label="Открыть паузу">Пауза</button>
+      <div class="score-cluster">
+        <div><span>Лунка</span><strong id="holeNumber">1 / 9</strong></div>
+        <i></i>
+        <div><span>Удары</span><strong id="strokeCount">0</strong></div>
+        <i></i>
+        <div><span>Пар</span><strong id="parCount">3</strong></div>
+      </div>
+      <button class="sound-control" type="button" id="soundBtn" data-native-press aria-label="Выключить звук" aria-pressed="true">Звук</button>
+    </header>
+
+    <div class="aim-hint" id="aimHint" data-ui>Потяни мяч назад</div>
+    <div class="surface-note" id="surfaceNote" data-ui></div>
+
+    <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
+      <div class="menu-wash"></div>
+      <div class="menu-copy">
+        <p class="eyebrow">Оранжерея № 1 · После дождя</p>
+        <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
+        <p class="lead">Девять маленьких полей среди мха, чашек и старого дерева. Потяни шар назад и отпусти.</p>
+      </div>
+      <div class="menu-actions">
+        <button class="primary-action" type="button" id="continueBtn" data-native-press>
+          <span id="continueLabel">Начать прогулку</span>
+          <small id="continueMeta">Лунка 1 · пар 3</small>
+        </button>
+        <button class="paper-action" type="button" id="holesBtn" data-native-press>Выбрать лунку</button>
+        <a class="paper-link" href="../../" id="menuHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+      <p class="menu-best" id="courseBest">Лучший круг ещё не сыгран</p>
+    </section>
+
+    <section class="screen potting-screen" id="holesScreen" data-ui aria-labelledby="holesTitle">
+      <div class="screen-head">
+        <div><p class="eyebrow">Полка садовника</p><h2 id="holesTitle">Девять лунок</h2></div>
+        <button class="close-control" type="button" data-close-screen="holesScreen" data-native-press>Закрыть</button>
+      </div>
+      <div class="pot-shelf" id="holeShelf"></div>
+      <a class="paper-link shelf-home" href="../../" id="holesHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" data-ui aria-labelledby="pauseTitle">
+      <div class="pause-sheet">
+        <p class="eyebrow">Мяч подождёт</p>
+        <h2 id="pauseTitle">Пауза</h2>
+        <button class="primary-action compact" type="button" id="resumeBtn" data-native-press><span>Продолжить</span><small>Вернуться к удару</small></button>
+        <button class="paper-action" type="button" id="restartBtn" data-native-press>Начать лунку заново</button>
+        <div class="settings-row">
+          <button class="setting-toggle" type="button" id="hapticsBtn" data-native-press aria-pressed="true"><span>Отдача</span><b>Вкл</b></button>
+          <button class="setting-toggle" type="button" id="tiltBtn" data-native-press aria-pressed="false"><span>Глубина</span><b>Включить</b></button>
+        </div>
+        <button class="paper-action" type="button" id="quitBtn" data-native-press>В оранжерею</button>
+        <button class="paper-action workshop" type="button" data-workshop-trigger data-native-press>Workshop mode</button>
+        <a class="paper-link" href="../../" id="pauseHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" data-ui aria-labelledby="resultTitle">
+      <div class="result-vignette"></div>
+      <div class="result-card">
+        <p class="eyebrow" id="resultEyebrow">Лунка завершена</p>
+        <h2 id="resultTitle">Чисто</h2>
+        <div class="result-score"><strong id="resultStrokes">3</strong><span>удара</span></div>
+        <p id="resultDetail">Пар. Мох одобрительно промолчал.</p>
+        <div class="result-actions">
+          <button class="primary-action compact" type="button" id="nextBtn" data-native-press><span>Следующая лунка</span><small id="nextMeta">№ 2 · пар 3</small></button>
+          <button class="paper-action" type="button" id="retryBtn" data-native-press>Переиграть</button>
+          <button class="paper-action" type="button" id="resultMenuBtn" data-native-press>В оранжерею</button>
+          <a class="paper-link" href="../../" id="resultHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen finish-screen" id="finishScreen" data-ui aria-labelledby="finishTitle">
+      <div class="finish-copy">
+        <p class="eyebrow">Круг завершён</p>
+        <h2 id="finishTitle">После дождя</h2>
+        <p class="finish-total"><strong id="finishStrokes">0</strong><span>ударов</span></p>
+        <p id="finishDetail">Оранжерея запомнила этот круг.</p>
+        <button class="primary-action compact" type="button" id="againBtn" data-native-press><span>Сыграть круг снова</span><small>С первой лунки</small></button>
+        <button class="paper-action" type="button" id="finishMenuBtn" data-native-press>В оранжерею</button>
+        <a class="paper-link" href="../../" id="finishHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" data-ui role="status"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="Moss & Marble"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
