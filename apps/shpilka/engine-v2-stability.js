@@ -39,7 +39,7 @@ function stableSegmentsIntersect(a, b, c, d) {
 }
 
 function trackIsValid(points) {
-  if (!points.length || points.totalLength < 3000 || points.totalLength > 6800) return false;
+  if (!points.length || points.totalLength < 4700 || points.totalLength > 8800) return false;
 
   let sharpSections = 0;
   let maximumLocalTurn = 0;
@@ -49,13 +49,13 @@ function trackIsValid(points) {
     const next = points[(i + 1) % points.length];
     const localTurn = Math.abs(wrapAngle(next.heading - previous.heading));
     maximumLocalTurn = Math.max(maximumLocalTurn, localTurn);
-    if (Math.abs(point.curvature) > 0.0028) sharpSections += 1;
-    if (Math.hypot(next.x - point.x, next.y - point.y) > 28) return false;
+    if (Math.abs(point.curvature) > 0.0024) sharpSections += 1;
+    if (Math.hypot(next.x - point.x, next.y - point.y) > 36) return false;
   }
-  if (maximumLocalTurn > 0.34 || sharpSections < points.length * 0.02) return false;
+  if (maximumLocalTurn > 0.34 || sharpSections < points.length * 0.018) return false;
 
   const spacingStride = 5;
-  const minimumSpacing = roadWidth + 72;
+  const minimumSpacing = roadWidth + 80;
   for (let i = 0; i < points.length; i += spacingStride) {
     for (let j = i + spacingStride * 7; j < points.length; j += spacingStride) {
       const cyclicDistance = Math.min(j - i, points.length - (j - i));
@@ -83,8 +83,8 @@ function trackIsValid(points) {
 
 function buildFallbackTrack() {
   const anchors = [
-    [-760, -170], [-570, -520], [-170, -650], [300, -590], [690, -300], [790, 100],
-    [590, 470], [180, 640], [-250, 570], [-560, 300], [-790, 100]
+    [-980, -230], [-730, -670], [-210, -840], [380, -760], [870, -390], [1010, 120],
+    [760, 610], [240, 820], [-310, 730], [-720, 390], [-1010, 120]
   ].map(([x, y]) => ({ x, y }));
   roadWidth = 164;
   roadHalf = roadWidth * 0.5;
@@ -93,15 +93,15 @@ function buildFallbackTrack() {
 
 function generateTrack(seed) {
   const seeded = mulberry32(seed);
-  roadWidth = Math.round(lerp(154, 170, seeded()));
+  roadWidth = Math.round(lerp(158, 172, seeded()));
   roadHalf = roadWidth * 0.5;
 
-  for (let attempt = 0; attempt < 32; attempt += 1) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
     const random = mulberry32(hashSeed(seed + attempt * 977));
     const profile = STABLE_TRACK_PROFILES[Math.floor(random() * STABLE_TRACK_PROFILES.length)];
-    const anchorCount = 15 + Math.floor(random() * 5);
-    const radiusX = lerp(700, 930, random());
-    const radiusY = lerp(500, 720, random());
+    const anchorCount = 18 + Math.floor(random() * 6);
+    const radiusX = lerp(900, 1240, random());
+    const radiusY = lerp(680, 940, random());
     const rotation = random() * TAU;
     const phases = [random() * TAU, random() * TAU, random() * TAU];
     const anchors = [];
@@ -111,9 +111,9 @@ function generateTrack(seed) {
       let radius = 1;
       for (let harmonicIndex = 0; harmonicIndex < profile.length; harmonicIndex += 1) {
         const [frequency, amplitude] = profile[harmonicIndex];
-        radius += amplitude * lerp(0.88, 1.12, random()) * Math.sin(frequency * angle + phases[harmonicIndex]);
+        radius += amplitude * lerp(0.90, 1.10, random()) * Math.sin(frequency * angle + phases[harmonicIndex]);
       }
-      radius += (random() - 0.5) * 0.025;
+      radius += (random() - 0.5) * 0.020;
       const localX = Math.cos(angle) * radiusX * radius;
       const localY = Math.sin(angle) * radiusY * radius;
       anchors.push({
@@ -131,9 +131,9 @@ function generateTrack(seed) {
 
 function updateCar(car, dt) {
   const commands = car.player ? playerControls() : aiControls(car, dt);
-  const throttleResponse = car.player ? 8.5 : 6.2;
-  const brakeResponse = car.player ? 14 : 10;
-  const steerResponse = car.player ? (Math.abs(commands.steer) > Math.abs(car.steerInput) ? 17 : 14) : 10;
+  const throttleResponse = car.player ? 8.5 : 9.2;
+  const brakeResponse = car.player ? 14 : 12;
+  const steerResponse = car.player ? (Math.abs(commands.steer) > Math.abs(car.steerInput) ? 17 : 14) : 13.5;
   car.throttleInput += (commands.throttle - car.throttleInput) * clamp(dt * throttleResponse, 0, 1);
   car.brakeInput += (commands.brake - car.brakeInput) * clamp(dt * brakeResponse, 0, 1);
   car.steerInput += (commands.steer - car.steerInput) * clamp(dt * steerResponse, 0, 1);
@@ -156,10 +156,22 @@ function updateCar(car, dt) {
   if (!car.airborne) {
     const engineAcceleration = (585 - 245 * speedRatio) * car.throttleInput * (onRoad ? 1 : 0.54);
     const brakingAcceleration = car.brakeInput * (forwardSpeed >= 0 ? 720 : 410);
-    if (forwardSpeed > 7) forwardSpeed = Math.max(0, forwardSpeed + (engineAcceleration - brakingAcceleration) * dt);
-    else if (forwardSpeed < -7) forwardSpeed = Math.min(0, forwardSpeed + (engineAcceleration + brakingAcceleration) * dt);
-    else if (car.brakeInput > 0.55 && car.throttleInput < 0.1) forwardSpeed -= 170 * car.brakeInput * dt;
-    else forwardSpeed += engineAcceleration * dt;
+    const wantsReverse = car.player && car.brakeInput > 0.32 && car.throttleInput < 0.12;
+    const reverseAcceleration = car.brakeInput * (onRoad ? 760 : 560);
+
+    if (forwardSpeed > 7) {
+      forwardSpeed = Math.max(0, forwardSpeed + (engineAcceleration - brakingAcceleration) * dt);
+    } else if (forwardSpeed < -7) {
+      if (wantsReverse) {
+        forwardSpeed = Math.max(-285, forwardSpeed - reverseAcceleration * dt);
+      } else {
+        forwardSpeed = Math.min(0, forwardSpeed + (engineAcceleration + brakingAcceleration) * dt);
+      }
+    } else if (wantsReverse) {
+      forwardSpeed = Math.max(-285, forwardSpeed - reverseAcceleration * dt);
+    } else {
+      forwardSpeed += engineAcceleration * dt;
+    }
 
     const rollingDrag = 0.24 * forwardSpeed;
     const aerodynamicDrag = 0.00072 * forwardSpeed * Math.abs(forwardSpeed);
@@ -172,7 +184,7 @@ function updateCar(car, dt) {
     if (car.player && Math.abs(car.steerInput) < 0.04 && Math.abs(lateralSpeed) > 28 && Math.abs(forwardSpeed) > 130) {
       desiredSteerAngle = clamp(-lateralSpeed / Math.max(110, Math.abs(forwardSpeed)) * 0.22, -0.11, 0.11);
     }
-    const steeringActuation = car.player ? lerp(15, 11, speedRatio) : lerp(10, 7, speedRatio);
+    const steeringActuation = car.player ? lerp(15, 11, speedRatio) : lerp(13, 9, speedRatio);
     car.steerAngle += (desiredSteerAngle - car.steerAngle) * (1 - Math.exp(-steeringActuation * dt));
 
     const requestedDrift = car.brakeInput > 0.18 && Math.abs(car.steerInput) > 0.18 && Math.abs(forwardSpeed) > 160;
