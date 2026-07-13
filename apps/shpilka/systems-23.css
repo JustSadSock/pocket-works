@@ -1,0 +1,315 @@
+/* ШПИЛЬКА 2.3 — compact race systems without a settings dashboard. */
+
+.precision-controls {
+  position: relative;
+  display: block;
+}
+
+.steering-arc {
+  position: absolute;
+  left: var(--steer-center, 28%);
+  bottom: var(--control-lift, 0px);
+  transform: translateX(-50%);
+}
+
+.power-gate {
+  position: absolute;
+  left: var(--power-center, 86%);
+  bottom: var(--control-lift, 0px);
+  transform: translateX(-50%);
+}
+
+.route-tools {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr minmax(106px, auto);
+  min-height: 34px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  gap: 1px;
+}
+
+.route-tools button,
+.route-code-value {
+  min-width: 0;
+  border: 0;
+  color: var(--ink);
+  background: var(--terrain);
+  font: 950 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+
+.route-tools button {
+  padding: 0 8px;
+}
+
+.route-tools button.is-selected {
+  color: var(--paper-light);
+  background: #2e5f4d;
+}
+
+.route-code-value {
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.medal-strip {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: rgba(30, 33, 31, .38);
+}
+
+.medal-strip span {
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 4px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: var(--ink);
+  background: var(--terrain);
+  font: 900 7px/1.05 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+
+.medal-strip em {
+  font-style: normal;
+  opacity: .68;
+}
+
+.medal-strip b {
+  margin-top: 3px;
+  font-size: 9px;
+}
+
+.medal-strip[data-record="gold"] [data-medal="gold"],
+.medal-strip[data-record="silver"] [data-medal="silver"],
+.medal-strip[data-record="bronze"] [data-medal="bronze"] {
+  color: var(--paper-light);
+  background: var(--ink);
+}
+
+.medal-strip [data-medal="gold"]::before,
+.medal-strip [data-medal="silver"]::before,
+.medal-strip [data-medal="bronze"]::before {
+  content: "";
+  width: 12px;
+  height: 4px;
+  margin-bottom: 3px;
+  display: block;
+  border: 1px solid currentColor;
+}
+
+.medal-strip [data-medal="gold"]::before { background: #c99b37; }
+.medal-strip [data-medal="silver"]::before { background: #a7aaa3; }
+.medal-strip [data-medal="bronze"]::before { background: #9b6244; }
+
+.finish-medal {
+  width: min(100%, 320px);
+  min-height: 44px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  border-block: 3px solid var(--ink);
+  color: var(--ink);
+  background: var(--terrain);
+  font: 950 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.finish-medal[data-medal="gold"] { background: #c99b37; }
+.finish-medal[data-medal="silver"] { background: #b7b9b2; }
+.finish-medal[data-medal="bronze"] { background: #a66c4a; }
+
+.route-code-dialog,
+.control-calibration {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  padding: calc(var(--safe-top) + 22px) 18px calc(var(--safe-bottom) + 22px);
+  display: grid;
+  place-items: center;
+  color: var(--paper-light);
+  background: rgba(24, 26, 24, .93);
+  backdrop-filter: blur(5px);
+}
+
+.route-code-dialog[hidden],
+.control-calibration[hidden] {
+  display: none;
+}
+
+.route-code-panel {
+  width: min(100%, 390px);
+  padding: 22px 18px 18px;
+  display: grid;
+  gap: 12px;
+  border: 3px solid var(--paper-light);
+  background: var(--ink);
+  box-shadow: 9px 9px 0 rgba(230, 94, 47, .72);
+}
+
+.route-code-panel h3,
+.calibration-copy h3 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: .05em;
+}
+
+.route-code-panel p,
+.calibration-copy p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.current-route-code {
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border-block: 2px solid var(--paper-light);
+  color: #ef7540;
+  font: 950 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+  user-select: text;
+}
+
+.route-code-panel input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 2px solid var(--paper-light);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--paper-light);
+  font: 950 16px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.route-code-actions,
+.calibration-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.route-code-actions button,
+.calibration-actions button,
+.route-code-close {
+  min-height: 42px;
+  border: 2px solid var(--paper-light);
+  color: var(--paper-light);
+  background: transparent;
+  font: 950 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+
+.route-code-actions .strong {
+  color: var(--ink);
+  background: var(--paper-light);
+}
+
+.route-code-close {
+  width: 100%;
+}
+
+.route-code-status {
+  min-height: 12px;
+  color: #ef7540;
+  font: 900 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+  text-align: center;
+}
+
+.control-calibration {
+  grid-template-rows: auto 1fr auto;
+  align-items: stretch;
+}
+
+.calibration-copy {
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: 18px 15px;
+  border-block: 3px solid var(--paper-light);
+  text-align: center;
+}
+
+.calibration-hit {
+  position: relative;
+  width: min(100%, 520px);
+  min-height: 260px;
+  margin: 16px auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.calibration-hit::before,
+.calibration-hit::after {
+  content: "";
+  position: absolute;
+  border: 2px solid rgba(244, 239, 224, .35);
+  pointer-events: none;
+}
+
+.calibration-hit::before {
+  inset: 15% 7%;
+  clip-path: polygon(0 100%, 18% 42%, 50% 20%, 82% 42%, 100% 100%);
+}
+
+.calibration-hit::after {
+  left: 50%;
+  bottom: 13%;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #ef7540;
+}
+
+.calibration-actions {
+  width: min(100%, 420px);
+  margin: 0 auto;
+}
+
+.start-screen {
+  grid-template-rows: minmax(78px, 16vh) auto auto auto auto auto auto auto auto 1fr;
+  gap: 8px;
+}
+
+.pause-screen .compact-setting {
+  margin-top: 4px;
+}
+
+@media (max-width: 360px) {
+  .route-tools { grid-template-columns: 1fr 1fr; }
+  .route-code-value { grid-column: 1 / -1; min-height: 26px; }
+  .medal-strip span { min-height: 31px; }
+}
+
+@media (max-height: 760px) {
+  .start-screen {
+    grid-template-rows: 56px auto auto auto auto auto auto auto auto 1fr;
+    gap: 5px;
+  }
+  .route-tools { min-height: 29px; }
+  .medal-strip span { min-height: 29px; padding-block: 3px; }
+  .control-help { display: none; }
+}
+
+@media (orientation: landscape) {
+  .steering-arc,
+  .power-gate { bottom: calc(var(--control-lift, 0px) * .45); }
+  .route-code-dialog,
+  .control-calibration { padding-inline: max(22px, env(safe-area-inset-left)); }
+}
