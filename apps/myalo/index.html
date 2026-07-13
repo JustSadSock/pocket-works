@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#171816">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="МЯЛО">
+  <title>МЯЛО</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive" data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="mirror" id="mirror" data-gesture-surface data-touch-action="none" data-block-callout aria-label="Интерактивное зеркало">
+      <video id="camera" autoplay muted playsinline aria-hidden="true"></video>
+      <canvas id="scene" aria-hidden="true"></canvas>
+      <canvas id="overlay" aria-hidden="true"></canvas>
+
+      <div class="grain" aria-hidden="true"></div>
+      <div class="edge-mark edge-mark--top" aria-hidden="true"></div>
+      <div class="edge-mark edge-mark--bottom" aria-hidden="true"></div>
+
+      <header class="topbar" data-ui>
+        <a class="control control--back" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">Pocket Works</a>
+        <div class="wordmark" aria-label="МЯЛО">
+          <span>МЯ</span><span>ЛО</span>
+        </div>
+        <div class="top-actions">
+          <button class="control control--icon" id="points-toggle" type="button" data-native-press aria-pressed="true">Точки</button>
+          <button class="control control--icon" id="sound-toggle" type="button" data-native-press aria-pressed="true">Звук</button>
+        </div>
+      </header>
+
+      <div class="startup" id="startup" data-ui>
+        <div class="startup-mark" aria-hidden="true">
+          <svg viewBox="0 0 160 180" role="img">
+            <path d="M80 12C44 12 20 42 20 82c0 30 14 56 33 73 9 8 18 13 27 13s18-5 27-13c19-17 33-43 33-73 0-40-24-70-60-70Z" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M52 72c8-8 18-10 28-5M108 72c-8-8-18-10-28-5M80 68v36M66 116c9 7 19 7 28 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="80" cy="94" r="7"/><circle cx="53" cy="84" r="5"/><circle cx="107" cy="84" r="5"/><circle cx="47" cy="116" r="5"/><circle cx="113" cy="116" r="5"/>
+            <path d="M124 32c12 7 18 18 16 32M132 39l11-7M138 50l12 1" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="startup-label">Эластичное зеркало</p>
+        <h1>Схвати лицо<br>и потяни</h1>
+        <p class="startup-copy">Камера и распознавание работают на устройстве. Видео никуда не отправляется.</p>
+        <button class="start-button" id="start-button" type="button" data-native-press>
+          <span>Включить камеру</span>
+          <span aria-hidden="true">↗</span>
+        </button>
+        <a class="startup-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+
+      <div class="permission-error" id="permission-error" hidden data-ui>
+        <p class="error-code">Камера недоступна</p>
+        <h2 id="error-title">Не удалось открыть фронтальную камеру</h2>
+        <p id="error-copy">Разреши доступ к камере в настройках браузера и попробуй снова.</p>
+        <button class="start-button" id="retry-button" type="button" data-native-press>Повторить</button>
+        <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+
+      <div class="loading-rail" id="loading-rail" hidden data-ui aria-live="polite">
+        <span id="loading-label">Поднимаю камеру</span>
+        <span class="loading-track"><i id="loading-fill"></i></span>
+      </div>
+
+      <div class="live-status" id="live-status" hidden data-ui aria-live="polite">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-copy">Ищу лицо</span>
+      </div>
+
+      <div class="instruction" id="instruction" hidden data-ui>
+        <span class="instruction-index">01</span>
+        <span id="instruction-copy">Сведи большой и указательный пальцы на точке</span>
+      </div>
+
+      <button class="workshop-trigger workshop-trigger--myalo" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="МЯЛО"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

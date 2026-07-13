@@ -1,0 +1,25 @@
+{
+  "id": "/apps/myalo/",
+  "name": "МЯЛО",
+  "short_name": "МЯЛО",
+  "description": "Эластичное зеркало: хватай точки лица щепоткой и растягивай их с пружинной физикой.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#171816",
+  "theme_color": "#171816",
+  "lang": "ru",
+  "categories": [
+    "entertainment",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
