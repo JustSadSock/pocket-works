@@ -1,0 +1,17 @@
+{
+  "id": "/apps/zero-frame/",
+  "name": "НУЛЕВОЙ КАДР",
+  "short_name": "КАДР 0",
+  "description": "Иммерсивная хоррор-игра о проклятом моментальном фотоаппарате, который проявляет снимки экраном вниз.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c0a",
+  "theme_color": "#0b0c0a",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
