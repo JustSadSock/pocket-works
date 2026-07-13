@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -72,13 +59,7 @@
       "Made the top home and sound controls reliably accessible from the title menu."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -99,15 +80,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -129,14 +102,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -157,14 +123,7 @@
       "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
     ],
     "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -185,15 +144,7 @@
       "Сообщение об ошибке теперь показывает этап сбоя — загрузчик, WASM, worker, протокол или тайм-аут — вместо общего текста."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -215,16 +166,7 @@
       "Полностью заменены кокпит, руль, приборка, halo, портовое окружение, контейнеры и трассовые фермы."
     ],
     "accent": "#dd5d2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "tilt",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "tilt", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:petlya-17"
@@ -245,17 +187,7 @@
       "Параллакс перенесён из геометрии в свет, отражения и контактные тени для более естественной глубины."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
@@ -276,21 +208,7 @@
       "Добавлены три честных уровня соперников без резинового ускорения и более выразительные контакты машин с вращением, дрожью кузова, искрами, звуком и вибрацией."
     ],
     "accent": "#e65e2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "procedural",
-      "top-down",
-      "drift",
-      "physics",
-      "ghost",
-      "analog controls",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "procedural", "top-down", "drift", "physics", "ghost", "analog controls", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:shpilka"
@@ -302,25 +220,16 @@
     "description": "Бесконечная процедурная игра о живой электрической схеме.",
     "path": "./apps/kontur/",
     "status": "active",
-    "version": "1.1.0",
-    "updatedAt": "2026-07-13T18:38:00+01:00",
+    "version": "1.3.1",
+    "updatedAt": "2026-07-13T23:42:00+03:00",
     "changelog": [
-      "Добавлен трёхсекундный предстартовый отсчёт с подсветкой входной колонки и релейными сигналами.",
-      "Источник импульса вынесен за пределы сетки: заряд физически входит в нижний модуль после запуска.",
-      "Переработаны источник, выход, импульс, направляющие стенда, маркировка модулей и фактура интерфейса.",
-      "Повторный запуск после ошибки также начинается у внешнего источника и остаётся визуально читаемым."
+      "Освобождена верхняя зона платы: выход вынесен в отдельный крупный терминал со стрелкой.",
+      "Тройники и четырёхконтактные развилки убраны из генерации как неоднозначные; основной маршрут снова имеет единственный читаемый ход.",
+      "Блоки, тупики, мосты, пломбы, ограничители и специальные компоненты получили прямые символы и короткие подписи на клетках.",
+      "Стабилизатор переработан в крупную круглую нажимную кнопку с отдельным счётчиком зарядов."
     ],
     "accent": "#b85d32",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "puzzle",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "puzzle", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kontur"
@@ -329,28 +238,19 @@
     "slug": "myalo",
     "name": "МЯЛО",
     "shortName": "МЯЛО",
-    "description": "Эластичное зеркало: хватай точки лица щепоткой и растягивай их с пружинной физикой.",
+    "description": "Эластичное зеркало: хватай детали лица как отдельные объёмные объекты и вытягивай их щепоткой.",
     "path": "./apps/myalo/",
     "status": "experimental",
-    "version": "1.1.0",
-    "updatedAt": "2026-07-13T19:58:00+01:00",
+    "version": "1.3.0",
+    "updatedAt": "2026-07-13T20:42:00+01:00",
     "changelog": [
-      "Исправлен запуск MediaPipe в iOS PWA: трекер переведён с проблемного module worker на classic-worker runtime.",
-      "Устранена ошибка «ModuleFactory not set»; FilesetResolver выбирает SIMD или совместимый WASM автоматически.",
-      "Добавлены полноценные всплывающие инструкции для запроса камеры, отказа в доступе и ошибок загрузки моделей.",
-      "Ошибки камеры и движка зрения теперь диагностируются отдельно; экран больше не советует менять разрешения, когда камера уже работает."
+      "Выбранная часть лица теперь переносится цельным текстурным объектом, а не растягивается вместе со всей фотографией.",
+      "Между точкой крепления и перемещённой деталью дорисовывается новая объёмная поверхность с боковым светом, тенью и толщиной.",
+      "Область под сдвинутой деталью восстанавливается из окружающей кожи, поэтому исходный нос, глаз или губа не остаются размазанными на месте.",
+      "Нос, губы, глаза, щёки, уши и брови получили разные формы, пределы растяжения и процедурные детали; рендер ограничен двумя активными объектами для сохранения плавности."
     ],
     "accent": "#b8ff68",
-    "tags": [
-      "PWA",
-      "camera",
-      "face tracking",
-      "hand tracking",
-      "WebGL",
-      "physics",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "camera", "face tracking", "hand tracking", "WebGL", "GPU compositing", "procedural extrusion", "physics", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:myalo"
@@ -371,16 +271,7 @@
       "HUD, меню выбора лунок и итоговые экраны приведены к единой минималистичной дизайн-системе без тяжёлых карточек."
     ],
     "accent": "#809465",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "mini-golf",
-      "physics",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "mini-golf", "physics", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:moss-marble"
@@ -401,17 +292,7 @@
       "Добавлены процедурный звук, вибрация, живая панорамная комната, локальное сохранение, офлайн-режим и Workshop."
     ],
     "accent": "#a48755",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "horror",
-      "tilt",
-      "device motion",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "horror", "tilt", "device motion", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:zero-frame"
