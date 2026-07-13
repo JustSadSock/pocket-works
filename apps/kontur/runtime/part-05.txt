@@ -1,0 +1,206 @@
+e],
+    [goal, l.boardY - portHeight - 5, 'ВЫХОД', false]
+  ]) {
+    ctx.fillStyle = '#17211d';
+    ctx.fillRect(point.x - portWidth / 2 - 2, y - 2, portWidth + 4, portHeight + 4);
+    ctx.fillStyle = active ? '#b85d32' : '#e9dfc4';
+    ctx.fillRect(point.x - portWidth / 2, y, portWidth, portHeight);
+    ctx.fillStyle = '#17211d';
+    ctx.font = `700 ${Math.max(7, l.cell * 0.11)}px ui-monospace, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = active ? 'top' : 'bottom';
+    ctx.fillText(label, point.x, active ? y + portHeight + 5 : y - 5);
+  }
+}
+
+function drawKeyboardFocus() {
+  if (!game.board || game.mode !== 'playing') return;
+  const l = game.layout;
+  const x = l.boardX + game.keyboardCell.x * l.cell;
+  const y = l.boardY + game.keyboardCell.y * l.cell;
+  ctx.strokeStyle = 'rgba(23,33,29,.7)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.strokeRect(x + 4, y + 4, l.cell - 8, l.cell - 8);
+  ctx.setLineDash([]);
+}
+
+function drawPulse() {
+  if (!game.pulse || !game.board) return;
+  let point = boardPoint(game.pulse);
+  if (game.pulse.moving && game.pulse.move) {
+    const from = boardPoint(game.pulse.move.from);
+    const to = boardPoint(game.pulse.move.to);
+    const t = Math.min(1, game.pulse.move.progress);
+    point = {
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t
+    };
+  }
+  const pulse = 0.5 + Math.sin(performance.now() * 0.018) * 0.5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, game.layout.cell * 0.33);
+  gradient.addColorStop(0, 'rgba(255,245,205,.98)');
+  gradient.addColorStop(0.2, 'rgba(246,174,87,.95)');
+  gradient.addColorStop(1, 'rgba(246,122,47,0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, game.layout.cell * (0.23 + pulse * 0.04), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = '#fff6d4';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, Math.max(5, game.layout.cell * 0.085), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawSparks() {
+  ctx.save();
+  ctx.lineCap = 'square';
+  for (const spark of game.sparks) {
+    const alpha = Math.max(0, 1 - spark.age / spark.life);
+    ctx.strokeStyle = `rgba(232,125,62,${alpha})`;
+    ctx.lineWidth = spark.size;
+    ctx.beginPath();
+    ctx.moveTo(spark.x, spark.y);
+    ctx.lineTo(spark.x - spark.vx * 0.025, spark.y - spark.vy * 0.025);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function render() {
+  if (!game.layout) return;
+  drawBackground();
+  if (!game.board) return;
+  const l = game.layout;
+  const transitionOffset = game.boardTransitionKind === 'in' ? game.boardTransition * l.height * 0.06 : 0;
+  ctx.save();
+  ctx.translate(0, transitionOffset);
+  drawBench();
+  const hintActive = performance.now() < game.board.hintUntil;
+  for (let y = 0; y < ROWS; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      drawTile(game.board.tiles[y][x], l.boardX + x * l.cell, l.boardY + y * l.cell, l.cell, hintActive);
+    }
+  }
+  drawPorts();
+  drawKeyboardFocus();
+  drawPulse();
+  drawSparks();
+  ctx.restore();
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0, (now - game.lastFrame) / 1000));
+  game.lastFrame = now;
+  if (!document.hidden) updateSimulation(dt, now);
+  render();
+  requestAnimationFrame(frame);
+}
+
+function pointerToCell(event) {
+  if (!game.layout) return null;
+  const rect = canvas.getBoundingClientRect();
+  const px = event.clientX - rect.left;
+  const py = event.clientY - rect.top;
+  const x = Math.floor((px - game.layout.boardX) / game.layout.cell);
+  const y = Math.floor((py - game.layout.boardY) / game.layout.cell);
+  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return null;
+  return { x, y };
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (game.mode !== 'playing') return;
+  event.preventDefault();
+  canvas.setPointerCapture?.(event.pointerId);
+  const cell = pointerToCell(event);
+  if (!cell) return;
+  game.keyboardCell = cell;
+  rotateTile(cell.x, cell.y);
+});
+
+canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+ui.newRunButton.addEventListener('click', () => {
+  sound.unlock();
+  clearResume();
+  newRun();
+});
+ui.continueButton.addEventListener('click', () => { sound.unlock(); continueRun(); });
+ui.pauseButton.addEventListener('click', pauseGame);
+ui.resumeButton.addEventListener('click', resumeGame);
+ui.endRunButton.addEventListener('click', endRunManually);
+ui.retryButton.addEventListener('click', () => { sound.unlock(); newRun(); });
+ui.menuButton.addEventListener('click', returnToMenu);
+ui.startSoundButton.addEventListener('click', toggleSound);
+ui.pauseSoundButton.addEventListener('click', toggleSound);
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    if (game.mode === 'playing') pauseGame();
+    else if (game.mode === 'paused') resumeGame();
+    return;
+  }
+  if (game.mode !== 'playing') return;
+  const movement = {
+    ArrowUp: [0, -1],
+    ArrowRight: [1, 0],
+    ArrowDown: [0, 1],
+    ArrowLeft: [-1, 0]
+  }[event.key];
+  if (movement) {
+    event.preventDefault();
+    game.keyboardCell.x = Math.max(0, Math.min(COLS - 1, game.keyboardCell.x + movement[0]));
+    game.keyboardCell.y = Math.max(0, Math.min(ROWS - 1, game.keyboardCell.y + movement[1]));
+  }
+  if (event.key === ' ' || event.key === 'Enter') {
+    event.preventDefault();
+    rotateTile(game.keyboardCell.x, game.keyboardCell.y);
+  }
+});
+
+window.addEventListener('resize', resizeCanvas);
+window.visualViewport?.addEventListener('resize', resizeCanvas);
+window.addEventListener('pagehide', saveResume);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    game.hiddenAt = Date.now();
+    if (game.mode === 'playing') pauseGame();
+    saveResume();
+  } else {
+    game.lastFrame = performance.now();
+  }
+});
+
+window.addEventListener('appdatareset', () => {
+  sound.stopHum();
+  game.run = null;
+  game.board = null;
+  game.pulse = null;
+  refreshMenu();
+  setMode('menu');
+});
+
+createWorkshopMode({
+  appName: 'КОНТУР',
+  version: APP_VERSION,
+  cachePrefix: 'kontur-',
+  storageNamespace: STORAGE_NAMESPACE,
+  onReset() {
+    store.reset();
+    window.dispatchEvent(new CustomEvent('appdatareset'));
+  }
+});
+
+resizeCanvas();
+refreshMenu();
+setMode('menu');
+requestAnimationFrame((now) => {
+  game.lastFrame = now;
+  requestAnimationFrame(frame);
+});
