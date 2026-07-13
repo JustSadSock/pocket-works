@@ -29,8 +29,11 @@ const APP_SHELL = [
   '../../shared/update-manager.js',
   '../../shared/workshop-mode.css',
   '../../shared/workshop-mode.js',
+  '../../shared/capabilities/motion.js',
   '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js',
+  '../../shared/capabilities/audio.js',
+  '../../shared/capabilities/device.js',
   '../../shared/capabilities/diagnostics.js'
 ];
 
