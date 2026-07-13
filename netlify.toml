@@ -1,5 +1,5 @@
 [build]
-  command = "node --check apps/shpilka/engine-v2-advanced.js && node --check apps/shpilka/engine-v2-advanced-fixes.js && node --check apps/shpilka/app.js && node --check apps/shpilka/sw.js && node scripts/audit-shpilka-2-2.mjs && npm run build:site"
+  command = "npm run deploy:site"
   publish = "dist-site"
 
 [[headers]]
