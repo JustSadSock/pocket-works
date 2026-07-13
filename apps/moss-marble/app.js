@@ -3,6 +3,8 @@ import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { AudioGarden } from './audio.js';
 
+// Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
+
 const APP_VERSION = '1.0.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = {
