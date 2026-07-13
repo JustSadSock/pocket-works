@@ -1,0 +1,300 @@
+
+/* КОНТУР 1.4 — один выразительный принцип на каскад и извилистые маршруты. */
+const FOCUS_VERSION = 1;
+const serializeBoardBeforeFocus = serializeBoard;
+const startLevelBeforeFocus = startLevel;
+const setStatusBeforeFocus = setStatus;
+
+function focusModeForLevel(level) {
+  if (level <= 1) return 'basic';
+  const sequence = ['capacitor', 'blocks', 'diode', 'blocks', 'limiter', 'switch', 'bridge', 'seal', 'checkpoint'];
+  return sequence[(level - 2) % sequence.length];
+}
+
+function focusModeLabel(mode) {
+  return {
+    basic: 'ЧИСТАЯ ЦЕПЬ',
+    capacitor: 'КОНДЕНСАТОР',
+    blocks: 'ОБХОД БЛОКОВ',
+    diode: 'НАПРАВЛЕНИЕ ДИОДА',
+    limiter: 'ЛИМИТ ПОВОРОТОВ',
+    switch: 'ПЕРЕКЛЮЧАТЕЛЬ A/B',
+    bridge: 'МОСТ',
+    seal: 'ОПЛОМБИРОВАННЫЕ УЗЛЫ',
+    checkpoint: 'КОНТРОЛЬНАЯ ТОЧКА'
+  }[mode] || 'ЧИСТАЯ ЦЕПЬ';
+}
+
+function chooseWindingTarget(x, direction, level, random) {
+  const minSpan = level <= 2 ? 1 : 2;
+  const maxSpan = level >= 8 ? 4 : 3;
+  const candidates = [];
+  const fallback = [];
+
+  for (let target = 0; target < COLS; target += 1) {
+    const delta = target - x;
+    const span = Math.abs(delta);
+    if (span < 1 || span > maxSpan) continue;
+    fallback.push(target);
+    if (span >= minSpan && Math.sign(delta) === direction) candidates.push(target);
+  }
+
+  const pool = candidates.length ? candidates : fallback.filter((target) => Math.abs(target - x) >= minSpan);
+  return randomItem(pool.length ? pool : fallback, random);
+}
+
+function buildWindingPath(level, random) {
+  const path = [];
+  let x = Math.floor(random() * COLS);
+  let y = ROWS - 1;
+  const sourceX = x;
+  let direction = x < COLS / 2 ? 1 : -1;
+  path.push({ x, y });
+
+  while (y > 0) {
+    const target = chooseWindingTarget(x, direction, level, random);
+    const step = target > x ? 1 : -1;
+    while (x !== target) {
+      x += step;
+      path.push({ x, y });
+    }
+
+    y -= 1;
+    path.push({ x, y });
+
+    if (x <= 1) direction = 1;
+    else if (x >= COLS - 2) direction = -1;
+    else direction = random() < 0.82 ? -step : step;
+  }
+
+  if (Math.abs(x - sourceX) < 2) {
+    const far = Array.from({ length: COLS }, (_, target) => target)
+      .filter((target) => Math.abs(target - x) >= 2)
+      .sort((a, b) => Math.abs(b - sourceX) - Math.abs(a - sourceX));
+    const target = far[Math.floor(random() * Math.min(2, far.length))] ?? x;
+    const step = target > x ? 1 : -1;
+    while (x !== target) {
+      x += step;
+      path.push({ x, y: 0 });
+    }
+  }
+
+  return path;
+}
+
+createObstacleLayout = function createObstacleLayoutFocus(level, random) {
+  const path = buildWindingPath(level, random);
+  const mode = focusModeForLevel(level);
+  const blocked = new Set();
+  if (mode !== 'blocks') return { blocked, path };
+
+  const pathKeys = new Set(path.map((cell) => keyOf(cell.x, cell.y)));
+  const candidates = [];
+  for (let y = 1; y < ROWS - 1; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      if (!pathKeys.has(keyOf(x, y))) candidates.push({ x, y });
+    }
+  }
+  const count = Math.min(candidates.length, level >= 10 ? 6 : 4);
+  for (const cell of shuffled(candidates, random).slice(0, count)) blocked.add(keyOf(cell.x, cell.y));
+  return { blocked, path };
+};
+
+diverseDecoyMask = function diverseDecoyMaskFocus(level, random) {
+  if (level >= 2 && random() < 0.28) return randomItem(CAP_MASKS, random);
+  return randomItem(BASE_PIECES, random);
+};
+
+configureSpecialBoard = function configureSpecialBoardFocus(board, level) {
+  if (!board?.tiles) return board;
+  const mode = focusModeForLevel(level);
+  const random = mulberry32(hashSeed(board.seed, level, 'kontur-focus-special'));
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      tile.specialType = null;
+      tile.specialEntryTarget = 0;
+      tile.auxTargetMask = null;
+      tile.checkpointFlash = 0;
+      tile.switchMaskA = null;
+      tile.switchMaskB = null;
+    }
+  }
+
+  const pathCells = shuffled(board.path.slice(2, -2), random);
+  const chosen = pathCells[0];
+  if (chosen && ['capacitor', 'diode', 'switch'].includes(mode)) {
+    const tile = board.tiles[chosen.y][chosen.x];
+    const index = board.path.findIndex((item) => item.x === chosen.x && item.y === chosen.y);
+    tile.specialType = mode;
+    tile.specialEntryTarget = index <= 0 ? S : OPP[directionBetween(board.path[index - 1], board.path[index])];
+  }
+
+  if (mode === 'checkpoint') {
+    const pathKeys = new Set(board.path.map((cell) => keyOf(cell.x, cell.y)));
+    const candidates = [];
+    for (const row of board.tiles) {
+      for (const tile of row) {
+        if (!tile.blocked && !pathKeys.has(keyOf(tile.x, tile.y))) candidates.push(tile);
+      }
+    }
+    const tile = randomItem(candidates, random);
+    if (tile) tile.auxTargetMask = rotateMask(tile.mask, 1);
+  }
+
+  board.featureMode = mode;
+  board.focusVersion = FOCUS_VERSION;
+  board.v12Configured = true;
+  return board;
+};
+
+decorateDiverseBoard = function decorateDiverseBoardFocus(board, level, random) {
+  const mode = focusModeForLevel(level);
+  const pathIndex = new Map(board.path.map((cell, index) => [keyOf(cell.x, cell.y), index]));
+  const straightCandidates = [];
+  const pathCandidates = [];
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      if (tile.blocked) continue;
+      const index = pathIndex.get(keyOf(tile.x, tile.y));
+      tile.rotationLimit = 0;
+      tile.rotationsUsed = 0;
+      tile.sealed = false;
+      tile.locked = false;
+      tile.focusVersion = FOCUS_VERSION;
+
+      if (index === undefined) {
+        tile.conductorType = conductorTypeForMask(tile.baseMask);
+        continue;
+      }
+
+      const { entry, exit } = pathEntryAndExit(board.path, index);
+      tile.baseMask = entry | exit;
+      tile.targetMask = entry | exit;
+      tile.conductorType = 'basic';
+      const roll = random();
+      const turns = roll < 0.34 ? 0 : roll < 0.84 ? 1 : 2;
+      setTileOrientation(tile, turns);
+
+      if (index > 1 && index < board.path.length - 2) {
+        pathCandidates.push(tile);
+        if (exit === OPP[entry]) straightCandidates.push(tile);
+      }
+    }
+  }
+
+  if (mode === 'limiter') {
+    for (const tile of shuffled(pathCandidates, random).slice(0, 2)) {
+      tile.rotationLimit = random() < 0.5 ? 1 : 2;
+      tile.rotationsUsed = 0;
+      setTileOrientation(tile, 3);
+    }
+  }
+
+  if (mode === 'seal') {
+    for (const tile of shuffled(pathCandidates, random).slice(0, 2)) {
+      tile.sealed = true;
+      tile.locked = true;
+      setTileOrientation(tile, 0);
+    }
+  }
+
+  if (mode === 'bridge') {
+    for (const tile of shuffled(straightCandidates, random).slice(0, 1)) {
+      tile.baseMask = CROSS_MASK;
+      tile.mask = CROSS_MASK;
+      tile.targetMask = CROSS_MASK;
+      tile.conductorType = 'bridge';
+      tile.locked = true;
+      tile.angle = 0;
+      tile.targetAngle = 0;
+    }
+  }
+
+  board.featureMode = mode;
+  board.focusVersion = FOCUS_VERSION;
+  return board;
+};
+
+serializeBoard = function serializeBoardFocus(board) {
+  const snapshot = serializeBoardBeforeFocus(board);
+  snapshot.focusVersion = FOCUS_VERSION;
+  snapshot.featureMode = board.featureMode || focusModeForLevel(game.run?.level || 1);
+  return snapshot;
+};
+
+startLevel = function startLevelFocus(restoredBoard = null, restoredPulse = null) {
+  const replacedLegacyBoard = Boolean(restoredBoard && restoredBoard.focusVersion !== FOCUS_VERSION);
+  if (replacedLegacyBoard) {
+    restoredBoard = null;
+    restoredPulse = null;
+  }
+  startLevelBeforeFocus(restoredBoard, restoredPulse);
+  if (!game.board) return;
+  game.board.focusVersion = FOCUS_VERSION;
+  game.board.featureMode ||= focusModeForLevel(game.run?.level || 1);
+  document.body.dataset.konturMode = game.board.featureMode;
+  if (replacedLegacyBoard) {
+    window.setTimeout(() => setStatus('ПЛАТА ПЕРЕСОБРАНА · ОДНО ПРАВИЛО НА КАСКАД', 'success', 1100), 120);
+  }
+};
+
+setStatus = function setStatusFocus(text, tone = '', duration = 0) {
+  const replacements = new Map([
+    ['КОНДЕНСАТОР ЗАДЕРЖИВАЕТ ЗАРЯД · КОНТРОЛЬНЫЕ ТОЧКИ ДАЮТ БОНУС', 'КОНДЕНСАТОР · ЗАДЕРЖИВАЕТ ИМПУЛЬС НА 0,3 С'],
+    ['НОВЫЕ ЗАГЛУШКИ · ТУПИКИ ТЕПЕРЬ ВИДНЫ ПО ФОРМЕ', 'ТУПИК · ОДИН КОНТАКТ, ДАЛЬШЕ ПУТИ НЕТ']
+  ]);
+  setStatusBeforeFocus(replacements.get(text) || text, tone, duration);
+};
+
+drawReadableStop = function drawReadableStopFocus(tile, x, y, size) {
+  if (tile.conductorType !== 'cap') return;
+  const bit = DIRS.find((dir) => tile.mask & dir.bit)?.bit || N;
+  const angle = directionAngle(bit);
+  ctx.save();
+  ctx.translate(x + size / 2, y + size / 2);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#e9dfc3';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(2, size * 0.035);
+  ctx.fillRect(-size * 0.04, -size * 0.17, size * 0.08, size * 0.34);
+  ctx.strokeRect(-size * 0.04, -size * 0.17, size * 0.08, size * 0.34);
+  ctx.restore();
+};
+
+resizeCanvas = function resizeCanvasFocus() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const safeTop = Math.max(154, Math.min(184, rect.height * 0.205));
+  const safeBottom = rect.height < 700 ? 176 : Math.max(198, Math.min(228, rect.height * 0.25));
+  const maxWidth = Math.min(rect.width - 30, 500);
+  const maxHeight = Math.max(232, rect.height - safeTop - safeBottom);
+  const cell = Math.max(32, Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS)));
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+  const spareY = Math.max(0, maxHeight - boardHeight);
+
+  game.layout = {
+    width: rect.width,
+    height: rect.height,
+    dpr,
+    cell,
+    boardX: Math.round((rect.width - boardWidth) / 2),
+    boardY: Math.round(safeTop + spareY * 0.14),
+    boardWidth,
+    boardHeight
+  };
+};
+
+window.addEventListener('resize', resizeCanvas);
+window.visualViewport?.addEventListener('resize', resizeCanvas);
+resizeCanvas();
