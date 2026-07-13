@@ -103,10 +103,10 @@ function analyzeRegions(board, size) {
       }
     }
     const owner = borderColors.size === 1 ? [...borderColors][0] : EMPTY;
-    const closure = boundaryStones.size + edgeSides.size * 1.15;
-    const required = 2.8 + Math.sqrt(points.length) * 1.18;
-    const confidence = Math.min(1.5, closure / Math.max(1, required));
-    const secure = owner !== EMPTY && boundaryStones.size >= 2 && confidence >= 1;
+    const closure = boundaryStones.size + edgeSides.size * 1.1;
+    const required = 3.2 + Math.sqrt(points.length) * 1.3;
+    const confidence = Math.min(1.45, closure / Math.max(1, required));
+    const secure = owner !== EMPTY && boundaryStones.size >= 3 && confidence >= 1;
     regions.push({ id, points, owner, secure, confidence, boundaryStones, edgeSides });
   }
   return { regions, regionAt };
@@ -144,10 +144,49 @@ function groupEyeCount(group, regions, regionAt, size) {
       const regionId = regionAt[keyOf(size, neighbor.x, neighbor.y)];
       if (regionId < 0) continue;
       const region = regions[regionId];
-      if (region.secure && region.owner === group.color && region.points.length <= Math.max(12, size)) eyes.add(regionId);
+      if (region.secure && region.owner === group.color && region.points.length <= Math.max(10, size)) eyes.add(regionId);
     }
   }
   return eyes.size;
+}
+
+function localCount(board, size, x, y, color, radius) {
+  let count = 0;
+  for (let py = Math.max(0, y - radius); py <= Math.min(size - 1, y + radius); py += 1) {
+    for (let px = Math.max(0, x - radius); px <= Math.min(size - 1, x + radius); px += 1) {
+      if (px === x && py === y) continue;
+      if (Math.max(Math.abs(px - x), Math.abs(py - y)) > radius) continue;
+      if (board[keyOf(size, px, py)] === color) count += 1;
+    }
+  }
+  return count;
+}
+
+function shapeWaste(board, size, color) {
+  const opponent = other(color);
+  let waste = 0;
+  for (let y = 0; y < size - 1; y += 1) {
+    for (let x = 0; x < size - 1; x += 1) {
+      let own = 0;
+      let enemy = 0;
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+        const value = board[keyOf(size, x + dx, y + dy)];
+        if (value === color) own += 1;
+        else if (value === opponent) enemy += 1;
+      }
+      if (enemy === 0 && own === 3) waste += 2.8;
+      else if (enemy === 0 && own === 4) waste += 6.5;
+    }
+  }
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      if (board[keyOf(size, x, y)] !== color) continue;
+      const friendly = localCount(board, size, x, y, color, 1);
+      const hostile = localCount(board, size, x, y, opponent, 2);
+      if (hostile === 0 && friendly >= 3) waste += (friendly - 2) * 0.75;
+    }
+  }
+  return waste;
 }
 
 export function analyzePosition(game, perspective) {
@@ -172,11 +211,11 @@ export function analyzePosition(game, perspective) {
     } else {
       const own = ownDistance[key];
       const enemy = enemyDistance[key];
-      if (own >= INF && enemy < INF) value = -0.72 * Math.exp(-Math.max(0, enemy - 1) / 4.5);
-      else if (enemy >= INF && own < INF) value = 0.72 * Math.exp(-Math.max(0, own - 1) / 4.5);
-      else if (own < INF && enemy < INF) value = Math.tanh((enemy - own) / 2.35) * 0.82;
-      if (region?.owner === perspective) value += 0.05 * Math.min(1, region.confidence);
-      else if (region?.owner === opponent) value -= 0.05 * Math.min(1, region.confidence);
+      if (own >= INF && enemy < INF) value = -0.72 * Math.exp(-Math.max(0, enemy - 1) / 4.3);
+      else if (enemy >= INF && own < INF) value = 0.72 * Math.exp(-Math.max(0, own - 1) / 4.3);
+      else if (own < INF && enemy < INF) value = Math.tanh((enemy - own) / 2.25) * 0.84;
+      if (region?.owner === perspective) value += 0.04 * Math.min(1, region.confidence);
+      else if (region?.owner === opponent) value -= 0.04 * Math.min(1, region.confidence);
       value = Math.max(-1, Math.min(1, value));
     }
     control[key] = value;
@@ -191,19 +230,21 @@ export function analyzePosition(game, perspective) {
     const stones = group.stones.length;
     const eyes = groupEyeCount(group, regions, regionAt, size);
     let value = 0;
-    if (liberties === 1) value -= 55 + stones * 9;
-    else if (liberties === 2) value -= 17 + stones * 2.6;
-    else if (liberties === 3) value -= 3;
-    else value += Math.min(6, (liberties - 3) * 0.9);
-    if (eyes >= 2) value += 28;
-    else if (eyes === 1) value += 7;
+    if (liberties === 1) value -= 62 + stones * 10;
+    else if (liberties === 2) value -= 19 + stones * 2.8;
+    else if (liberties === 3) value -= 2.5;
+    if (eyes >= 2) value += 11;
+    else if (eyes === 1 && liberties <= 4) value += 2;
     groupHealth += group.color === perspective ? value : -value;
   }
 
+  const ownWaste = shapeWaste(board, size, perspective);
+  const enemyWaste = shapeWaste(board, size, opponent);
+  const shapeEfficiency = enemyWaste - ownWaste;
   const captureDifference = (game.captures?.[perspective] || 0) - (game.captures?.[opponent] || 0);
   const komi = perspective === WHITE ? game.komi : -game.komi;
-  const value = territory * 2.1 + secureTerritory * 0.45 + groupHealth + captureDifference * 11 + komi;
-  const analysis = { value, territory, secureTerritory, contested, regions, regionAt, control, ownDistance, enemyDistance, groups };
+  const value = territory * 2.55 + secureTerritory * 0.3 + groupHealth + captureDifference * 10.5 + shapeEfficiency * 4.2 + komi;
+  const analysis = { value, territory, secureTerritory, contested, regions, regionAt, control, ownDistance, enemyDistance, groups, shapeEfficiency, ownWaste, enemyWaste };
   game[cacheKey] = analysis;
   return analysis;
 }
@@ -221,15 +262,7 @@ export function adjacentGroups(game, x, y, color) {
 }
 
 export function neighborhood(game, x, y, color, radius) {
-  let count = 0;
-  for (let py = Math.max(0, y - radius); py <= Math.min(game.size - 1, y + radius); py += 1) {
-    for (let px = Math.max(0, x - radius); px <= Math.min(game.size - 1, x + radius); px += 1) {
-      if (px === x && py === y) continue;
-      if (Math.max(Math.abs(px - x), Math.abs(py - y)) > radius) continue;
-      if (game.board[keyOf(game.size, px, py)] === color) count += 1;
-    }
-  }
-  return count;
+  return localCount(game.board, game.size, x, y, color, radius);
 }
 
 export function isEyeFill(game, x, y, color) {
@@ -250,19 +283,35 @@ export function isEyeFill(game, x, y, color) {
   return hostileDiagonals + Math.max(0, offboardDiagonals - 1) <= 1;
 }
 
+export function influenceDelta(beforeGame, afterGame, beforeAnalysis, afterAnalysis, pointKey) {
+  let frontierGain = 0;
+  let claimed = 0;
+  let reduced = 0;
+  for (let key = 0; key < beforeGame.board.length; key += 1) {
+    if (key === pointKey || beforeGame.board[key] !== EMPTY || afterGame.board[key] !== EMPTY) continue;
+    const before = beforeAnalysis.control[key];
+    const after = afterAnalysis.control[key];
+    const delta = Math.max(-0.45, Math.min(0.45, after - before));
+    frontierGain += delta;
+    if (before < 0.2 && after >= 0.38) claimed += 1;
+    if (before <= -0.35 && after > before + 0.22) reduced += 1;
+  }
+  return { frontierGain, claimed, reduced };
+}
+
 export function openingBonus(game, x, y, nearestOwn, ownAdj, enemyAdj) {
-  if (game.moveNumber >= Math.floor(game.size * 1.15)) return 0;
+  if (game.moveNumber >= Math.floor(game.size * 1.2)) return 0;
   const edge = Math.min(x, y, game.size - 1 - x, game.size - 1 - y);
   let score = 0;
-  if (edge === 0) score -= 26;
-  else if (edge === 1) score -= 10;
-  else if (edge === 2) score += game.size === 9 ? 10 : 4;
-  else if (edge === 3) score += game.size >= 13 ? 12 : 4;
-  if (openingPoints(game.size).some(([sx, sy]) => sx === x && sy === y)) score += 18;
+  if (edge === 0) score -= 32;
+  else if (edge === 1) score -= 12;
+  else if (edge === 2) score += game.size === 9 ? 11 : 4;
+  else if (edge === 3) score += game.size >= 13 ? 13 : 4;
+  if (openingPoints(game.size).some(([sx, sy]) => sx === x && sy === y)) score += 20;
   if (enemyAdj === 0) {
-    if (ownAdj > 0) score -= 34 + ownAdj * 10;
-    else if (nearestOwn >= 4 && nearestOwn <= Math.max(7, Math.floor(game.size * 0.55))) score += 18;
-    else if (nearestOwn === 2) score += 4;
+    if (ownAdj > 0) score -= 38 + ownAdj * 12;
+    else if (nearestOwn >= 4 && nearestOwn <= Math.max(7, Math.floor(game.size * 0.6))) score += 22;
+    else if (nearestOwn === 2) score += 3;
   }
   return score;
 }
