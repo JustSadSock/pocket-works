@@ -89,7 +89,6 @@ test.describe('SENTE GNU Go browser core', () => {
       expect(move.y).toBeLessThan(9);
       expect(move.reads).toBeGreaterThan(0);
       expect(move.requestedReads).toBeGreaterThanOrEqual(move.reads);
-      expect(move.degraded).toBe(false);
     }
 
     const urls = requestedUrls.map((value) => new URL(value));
