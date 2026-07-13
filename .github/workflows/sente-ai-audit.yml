@@ -43,6 +43,16 @@ jobs:
           cat sente-audit.log
           echo "exit=$code" >> "$GITHUB_OUTPUT"
           exit 0
+      - name: Validate Pocket Works capability integration
+        id: capabilities
+        shell: bash
+        run: |
+          set +e
+          node scripts/validate-capabilities.mjs >> sente-audit.log 2>&1
+          code=$?
+          tail -n 80 sente-audit.log
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
       - name: Upload audit report
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,6 +69,7 @@ jobs:
         env:
           PREPARE_EXIT: ${{ steps.prepare.outputs.exit }}
           AUDIT_EXIT: ${{ steps.audit.outputs.exit }}
+          CAPABILITIES_EXIT: ${{ steps.capabilities.outputs.exit }}
         with:
           script: |
             const fs = require('fs');
@@ -70,7 +81,7 @@ jobs:
               ? `Checks: ${report.summary.passed}/${report.summary.total} passed; ${report.summary.failed} failed.`
               : `Audit did not reach report generation.`;
             const tail = log.slice(-12000).replace(/```/g, '~~~');
-            const body = `${marker}\n## SENTE AI audit\n\n${summary}\n\nPrepare exit: \`${process.env.PREPARE_EXIT || 'not-run'}\`; audit exit: \`${process.env.AUDIT_EXIT || 'not-run'}\`.\n\n<details><summary>Diagnostic tail</summary>\n\n\`\`\`text\n${tail}\n\`\`\`\n</details>`;
+            const body = `${marker}\n## SENTE AI audit\n\n${summary}\n\nPrepare exit: \`${process.env.PREPARE_EXIT || 'not-run'}\`; audit exit: \`${process.env.AUDIT_EXIT || 'not-run'}\`; capabilities exit: \`${process.env.CAPABILITIES_EXIT || 'not-run'}\`.\n\n<details><summary>Diagnostic tail</summary>\n\n\`\`\`text\n${tail}\n\`\`\`\n</details>`;
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -89,4 +100,5 @@ jobs:
         run: |
           prepare='${{ steps.prepare.outputs.exit }}'
           audit='${{ steps.audit.outputs.exit }}'
-          test "$prepare" = '0' && test "$audit" = '0'
+          capabilities='${{ steps.capabilities.outputs.exit }}'
+          test "$prepare" = '0' && test "$audit" = '0' && test "$capabilities" = '0'
