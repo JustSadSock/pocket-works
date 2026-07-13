@@ -63,7 +63,7 @@ Enhanced runtime contract passed for the template and 0 published enhanced apps.
 > pocket-works@0.7.1 validate:quality
 > node scripts/validate-quality-gates.mjs
 
-Quality gate contract passed for 7 browser test files and the Lighthouse budget.
+Quality gate contract passed for 8 browser test files and the Lighthouse budget.
 
 > pocket-works@0.7.1 test:enhanced
 > node scripts/test-enhanced.mjs
