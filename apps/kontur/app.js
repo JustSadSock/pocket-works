@@ -11,6 +11,7 @@
  * });
  */
 const PARTS = 14;
+const RUNTIME_VERSION = '1.3.0';
 const paths = Array.from({ length: PARTS }, (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt`);
 
 try {
@@ -20,6 +21,7 @@ try {
     return response.text();
   }));
   let source = parts.join('');
+  source = source.replace(/const APP_VERSION = '[^']+';/, `const APP_VERSION = '${RUNTIME_VERSION}';`);
   for (const relative of [
     '../../shared/mobile-runtime.js',
     '../../shared/capabilities/storage.js',
