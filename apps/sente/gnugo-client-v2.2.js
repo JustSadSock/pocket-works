@@ -155,12 +155,14 @@ export async function chooseGnugoMove(game, level = 'steady') {
 
   if (votes.length > 0) {
     const consensus = chooseConsensus(votes, level, seed);
+    const degraded = failures.length > 0 || votes.length < plan.length;
     if (!consensus?.move || consensus.move.pass) {
       return {
         pass: true,
         engine: version || 'GNU Go',
         reads: votes.length,
-        degraded: failures.length > 0,
+        requestedReads: plan.length,
+        degraded,
         failures
       };
     }
@@ -177,7 +179,7 @@ export async function chooseGnugoMove(game, level = 'steady') {
       alternatives: (consensus.alternatives || []).map((item) => ({ move: item.move, count: item.count })),
       engine: version || 'GNU Go',
       reason: 'gnugo',
-      degraded: failures.length > 0,
+      degraded,
       failures
     };
   }
