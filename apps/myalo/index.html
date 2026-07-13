@@ -90,8 +90,19 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="МЯЛО"
-    data-app-version="1.0.0"
+    data-app-version="1.0.1"
   ></script>
+  <script>
+    for (const name of ['WebGLRenderingContext', 'WebGL2RenderingContext']) {
+      const Context = window[name];
+      if (!Context) continue;
+      const originalPixelStorei = Context.prototype.pixelStorei;
+      Context.prototype.pixelStorei = function pixelStorei(pname, parameter) {
+        const value = pname === this.UNPACK_FLIP_Y_WEBGL ? false : parameter;
+        return originalPixelStorei.call(this, pname, value);
+      };
+    }
+  </script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>
