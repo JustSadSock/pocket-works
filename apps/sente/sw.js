@@ -26,8 +26,6 @@ const APP_SHELL = [
   './gnugo-worker.js',
   './gnugo-protocol.js',
   './dead-groups.js',
-  './AI_AUDIT.md',
-  './AI_AUDIT.json',
   './assets/gnugo/gnugo.js',
   './assets/gnugo/gnugo.wasm',
   './assets/gnugo/COPYING.txt',
