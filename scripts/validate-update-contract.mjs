@@ -64,14 +64,16 @@ requireIncludes(managerJs, [
   'appupdateavailable',
   'registration.update()',
   'data-update-manager',
-  'waitingInfo.version === currentVersion'
+  'waitingInfo.version === currentVersion',
+  'managed-update-receipt',
+  'createUpdateReceipt'
 ], 'shared/update-manager.js');
 
 const enhancedManager = await read('shared/enhanced-update-manager.ts');
 requireIncludes(enhancedManager, ['virtual:pwa-register', 'onNeedRefresh', 'registerEnhancedUpdate', 'Update now'], 'shared/enhanced-update-manager.ts');
 
 const managerCss = await read('shared/update-manager.css');
-requireIncludes(managerCss, ['.app-update-prompt', '.is-visible', 'env(safe-area-inset-bottom)', 'prefers-reduced-motion'], 'shared/update-manager.css');
+requireIncludes(managerCss, ['.app-update-prompt', '.app-update-receipt', '.is-visible', 'env(safe-area-inset-bottom)', 'prefers-reduced-motion'], 'shared/update-manager.css');
 
 const packageJson = JSON.parse(await read('package.json') || '{}');
 const rootIndex = await read('index.html');
@@ -79,7 +81,7 @@ const rootWorker = await read('sw.js');
 requireIncludes(rootIndex, ['./shared/update-manager.css', './shared/update-manager.js', 'data-update-manager', `data-app-version="${packageJson.version}"`], 'root index.html');
 validateQuickWorker(rootWorker.replaceAll('./shared/update-manager.css', '../../shared/update-manager.css').replaceAll('./shared/update-manager.js', '../../shared/update-manager.js'), 'root sw.js', {
   version: packageJson.version,
-  releaseDate: '2026-07-12',
+  releaseDate: '2026-07-13',
   cacheName: `pocket-works-launcher-v${packageJson.version}`
 });
 
