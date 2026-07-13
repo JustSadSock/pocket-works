@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'kontur-';
-const CACHE_NAME = 'kontur-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'kontur-v1.2.1';
+const APP_VERSION = '1.2.1';
 const RELEASE_DATE = '2026-07-13';
 const RELEASE_NOTES = [
-  'Добавлены специальные модули: направленные диоды, задерживающие конденсаторы и механические переключатели.',
-  'Добавлены необязательные контрольные точки с отдельной индикацией и бонусом за собранные узлы.',
-  'Добавлена удерживаемая перегрузка: ускорение и двойной заряд в обмен на нагрев и двойную цену ошибки.',
-  'Обновлены визуальные обозначения компонентов, звуки, вибрация, сохранение и офлайн-кэш.'
+  'Механический рычаг заменён на отдельную нажимную кнопку аварийного стабилизатора.',
+  'Стабилизатор замедляет импульс примерно в 2,4 раза на 2,6 секунды.',
+  'На каждый каскад выдаются два заряда стабилизатора; их остаток сохраняется вместе с забегом.',
+  'Убраны перегрев, двойной расход предохранителей и ускорение прежней перегрузки.'
 ];
 const APP_SHELL = [
   './',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './styles.css',
   './polish.css',
   './v12.css',
+  './brake.css',
   './app.js',
   './runtime/part-00.txt',
   './runtime/part-01.txt',
@@ -28,6 +29,7 @@ const APP_SHELL = [
   './runtime/part-09.txt',
   './runtime/part-10.txt',
   './runtime/part-11.txt',
+  './runtime/part-12.txt',
   './manifest.webmanifest',
   './README.md',
   './icons/icon.svg',
@@ -51,7 +53,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
+    event.ports?.[0].postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
