@@ -1,5 +1,5 @@
 [build]
-  command = "npm run registry:check && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>registry ok</title><h1>registry ok</h1>' > dist-site/index.html"
+  command = "npm run validate:all && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>validation ok</title><h1>validation ok</h1>' > dist-site/index.html"
   publish = "dist-site"
 
 [[headers]]
