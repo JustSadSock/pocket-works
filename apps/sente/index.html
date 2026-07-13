@@ -9,17 +9,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="SENTE">
   <title>SENTE — Go</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
-  <link rel="stylesheet" href="../../shared/update-manager.css">
-  <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./board.css">
-  <link rel="stylesheet" href="./sheets.css">
+  <link rel="manifest" href="./manifest.webmanifest?v=2.1.0">
+  <link rel="icon" href="./icons/icon.svg?v=2.1.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.1.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=2.1.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=2.1.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=2.1.0">
+  <link rel="stylesheet" href="./styles.css?v=2.1.0">
+  <link rel="stylesheet" href="./board.css?v=2.1.0">
+  <link rel="stylesheet" href="./sheets.css?v=2.1.0">
 </head>
-<body data-fullscreen-app>
+<body data-fullscreen-app data-sente-build="2.1.0">
   <main class="app-shell" data-app-shell>
     <header class="topbar" data-ui>
       <a class="pocket-link" href="../../" data-app-control data-native-press>Pocket Works</a>
@@ -129,8 +129,8 @@
           <button type="button" id="openArchiveButton" data-native-press><b>Архив партий</b><small id="archiveCount">Пока пусто</small></button>
           <button type="button" id="exportButton" data-native-press><b>Экспорт SGF</b><small>Сохранить текущую партию</small></button>
           <button type="button" id="newGameButton" data-native-press><b>Новая партия</b><small>Текущая позиция сохранится</small></button>
-          <a href="./AI_AUDIT.md" target="_blank" rel="noopener"><b>Аудит компьютера</b><small>Позиции, партии и снимки досок</small></a>
-          <a href="./assets/gnugo/SOURCE.txt" target="_blank" rel="noopener"><b>GNU Go 3.9.1</b><small>Исходный код и лицензия движка</small></a>
+          <a href="./AI_AUDIT.md?v=2.1.0" target="_blank" rel="noopener"><b>Аудит компьютера</b><small>Позиции, партии и снимки досок</small></a>
+          <a href="./assets/gnugo/SOURCE.txt?v=2.1.0" target="_blank" rel="noopener"><b>GNU Go 3.9.1</b><small>Исходный код и лицензия движка</small></a>
           <button type="button" id="resignButton" class="danger-action" data-native-press><b>Сдаться</b><small>Потребуется второе нажатие</small></button>
           <a href="../../" data-app-control data-native-press><b>Вернуться в Pocket Works</b><small>Партия уже сохранена</small></a>
         </div>
@@ -170,12 +170,12 @@
 
   <script
     type="module"
-    src="../../shared/update-manager.js"
+    src="../../shared/update-manager.js?v=2.1.0"
     data-update-manager
-    data-service-worker="./sw.js"
+    data-service-worker="./sw.js?v=2.1.0"
     data-app-name="SENTE"
-    data-app-version="2.0.0"
+    data-app-version="2.1.0"
   ></script>
-  <script src="./app.js" type="module"></script>
+  <script src="./app.js?v=2.1.0" type="module"></script>
 </body>
 </html>
