@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#ddd2b4">
+  <meta name="description" content="КОНТУР — бесконечная процедурная игра о живой электрической схеме.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КОНТУР">
+  <title>КОНТУР — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="game" aria-label="Игровая плата КОНТУРА" data-gesture-surface data-block-callout></canvas>
+
+    <header class="bench-head" data-ui>
+      <a class="square-key" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>←</a>
+      <div class="identity">
+        <strong>КОНТУР</strong>
+        <span>КС–6 / ИСПЫТАТЕЛЬНАЯ СТАНЦИЯ</span>
+      </div>
+      <button class="square-key" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <section class="meter meter-level" aria-label="Уровень" data-ui>
+      <span>КАСКАД</span>
+      <output id="levelValue">01</output>
+    </section>
+
+    <section class="meter meter-score" aria-label="Счёт" data-ui>
+      <span>ЗАРЯД</span>
+      <output id="scoreValue">000000</output>
+    </section>
+
+    <section class="fuse-rack" aria-label="Предохранители" data-ui>
+      <span>ПРЕДОХРАНИТЕЛИ</span>
+      <div id="fuseLights" class="fuse-lights"></div>
+    </section>
+
+    <div class="status-strip" id="statusStrip" role="status" aria-live="polite" data-ui>
+      ТАПАЙ МОДУЛИ — ПОВОРАЧИВАЙ ЦЕПЬ
+    </div>
+
+    <section class="screen start-screen is-visible" id="startScreen" aria-label="Главное меню" data-ui>
+      <div class="title-instrument">
+        <div class="title-plate">
+          <span class="plate-code">КС–6 / POCKET WORKS</span>
+          <img src="./icons/icon.svg" alt="" class="title-icon" draggable="false">
+          <h1>КОНТУР</h1>
+          <p>Импульс не ждёт.<br>Плата собирается заново каждый каскад.</p>
+        </div>
+        <div class="rule-row">
+          <span><b>ТАП</b> вращает модуль по часовой</span>
+          <span><b>3 ОШИБКИ</b> сжигают цепь</span>
+        </div>
+        <div class="record-line"><span>ЛУЧШИЙ КАСКАД</span><b id="bestLevelValue">01</b></div>
+        <button class="knife-switch primary" id="newRunButton" type="button" data-native-press>
+          <span>ЗАМКНУТЬ НОВУЮ ЦЕПЬ</span><i aria-hidden="true"></i>
+        </button>
+        <button class="knife-switch" id="continueButton" type="button" data-native-press hidden>
+          <span>ПРОДОЛЖИТЬ ЦЕПЬ</span><i aria-hidden="true"></i>
+        </button>
+        <button class="text-switch" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" aria-label="Пауза" aria-hidden="true" data-ui>
+      <div class="service-panel">
+        <span class="plate-code">ЦЕПЬ РАЗОМКНУТА</span>
+        <h2>ПАУЗА</h2>
+        <button class="knife-switch primary" id="resumeButton" type="button" data-native-press><span>ПОДАТЬ ТОК</span><i></i></button>
+        <button class="knife-switch" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press><span>ЗВУК: ВКЛ</span><i></i></button>
+        <button class="knife-switch" type="button" data-workshop-trigger data-native-press><span>WORKSHOP</span><i></i></button>
+        <button class="text-switch danger" id="endRunButton" type="button" data-native-press>СЖЕЧЬ ТЕКУЩУЮ ЦЕПЬ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen module-screen" id="moduleScreen" aria-label="Выбор модуля" aria-hidden="true" data-ui>
+      <div class="module-bay">
+        <span class="plate-code">СЛОТ РАСШИРЕНИЯ ДОСТУПЕН</span>
+        <h2>ВСТАВЬ МОДУЛЬ</h2>
+        <p>Один меняет правила цепи до конца забега.</p>
+        <div id="moduleChoices" class="module-choices"></div>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" aria-label="Результат" aria-hidden="true" data-ui>
+      <div class="burn-report">
+        <span class="plate-code">ОТЧЁТ КС–6 / АВАРИЯ</span>
+        <h2>КОНТУР СГОРЕЛ</h2>
+        <div class="report-row"><span>ЗАРЯД</span><b id="resultScore">0</b></div>
+        <div class="report-row"><span>КАСКАД</span><b id="resultLevel">1</b></div>
+        <div class="report-row"><span>ЛУЧШИЙ</span><b id="resultBest">0</b></div>
+        <div class="record-stamp" id="recordStamp">НОВЫЙ РЕКОРД</div>
+        <button class="knife-switch primary" id="retryButton" type="button" data-native-press><span>СОБРАТЬ СНОВА</span><i></i></button>
+        <button class="text-switch" id="menuButton" type="button" data-native-press>К ГЛАВНОЙ ПАНЕЛИ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="КОНТУР"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
