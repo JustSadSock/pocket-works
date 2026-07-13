@@ -17,7 +17,7 @@
     "test:shpilka": "node scripts/audit-shpilka-2-3.mjs",
     "prepare:site": "node scripts/prepare-site.mjs",
     "validate:site": "node scripts/validate-site.mjs",
-    "deploy:site": "npm run registry:build && npm run prepare:site && npm run validate:site",
+    "deploy:site": "npm run test:shpilka && npm run registry:build && npm run prepare:site && npm run validate:site",
     "build:site": "npm run deploy:site",
     "ci:full": "npm run prepare:sente-engine && npm run test:sente-ai && npm run registry:build && npm run health && npm run prepare:site && npm run validate:site",
     "build:quality-site": "npm run prepare:sente-engine && npm run build:enhanced && npm run prepare:site && npm run validate:site",
@@ -53,7 +53,7 @@
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0",
     "vite": "^8.1.4",
-    "vite-plugin-pwa": "^1.2.0",
+    "vite-plugin-pwa": "^8.1.4",
     "vitest": "^4.0.0"
   },
   "engines": {
