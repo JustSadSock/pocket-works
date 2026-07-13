@@ -9,8 +9,9 @@ const gameParts = [
   './engine-v2-advanced.js',
   './engine-v2-advanced-fixes.js',
   './engine-v2-23-ui.js',
-  './engine-v2-23.js',
-  './engine-v2-23-fixes.js',
+  './engine-v2-23-routes.js',
+  './engine-v2-23-controls.js',
+  './engine-v2-23-physics.js',
   './engine-v2-12.js'
 ];
 
