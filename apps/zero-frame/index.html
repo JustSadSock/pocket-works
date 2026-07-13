@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0b0c0a">
+  <meta name="description" content="НУЛЕВОЙ КАДР — иммерсивная хоррор-игра о проклятом моментальном фотоаппарате.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="НУЛЕВОЙ КАДР">
+  <title>НУЛЕВОЙ КАДР — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="roomCanvas" aria-label="Видоискатель проклятого моментального фотоаппарата" data-gesture-surface data-block-callout></canvas>
+    <div class="flash" id="flash" aria-hidden="true"></div>
+    <div class="sensor-curtain" id="sensorCurtain" aria-hidden="true">
+      <div class="curtain-noise"></div>
+      <p id="curtainLabel">ЭКРАН ВНИЗ</p>
+    </div>
+
+    <header class="top-rail" data-ui>
+      <a class="rail-link" href="../../" data-shell-exit data-app-control data-native-press>POCKET WORKS</a>
+      <div class="camera-id" aria-label="Название камеры">
+        <span>MODEL 0</span>
+        <strong>ZERO FRAME</strong>
+      </div>
+      <button class="square-key" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <section class="viewfinder-hud" id="hud" aria-label="Показания камеры" data-ui>
+      <div class="focus-brackets" id="focusBrackets" aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </div>
+      <div class="left-meter">
+        <span>FILM</span>
+        <output id="filmValue">07</output>
+        <div class="film-notches" id="filmNotches" aria-hidden="true"></div>
+      </div>
+      <div class="right-meter">
+        <span>DREAD</span>
+        <div class="dread-track"><i id="dreadFill"></i></div>
+        <output id="dreadValue">08</output>
+      </div>
+      <div class="clue-strip">
+        <span id="stageValue">КАДР 01 / 05</span>
+        <strong id="clueText">НАЙДИ ТО, ЧТО СМОТРИТ БЕЗ ГЛАЗ</strong>
+      </div>
+      <div class="focus-readout" id="focusReadout"><span>ИЩИ</span><i></i></div>
+    </section>
+
+    <div class="bottom-deck" id="bottomDeck" data-ui>
+      <button class="mechanical-key" id="calibrateButton" type="button" data-native-press>В НОЛЬ</button>
+      <button class="shutter" id="shutterButton" type="button" aria-label="Сделать снимок" data-native-press>
+        <span></span><i></i>
+      </button>
+      <button class="mechanical-key" id="soundButton" type="button" aria-pressed="true" data-native-press>ЗВУК</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="screen start-screen is-visible" id="startScreen" aria-label="Начальный экран" data-ui>
+      <div class="camera-shell">
+        <div class="camera-topline"><span>POCKET WORKS / OCCULT OPTICS</span><b>№ 000</b></div>
+        <div class="camera-face">
+          <div class="viewfinder-hole"><i></i></div>
+          <img class="camera-mark" src="./icons/icon.svg" alt="" draggable="false">
+          <div class="camera-label">
+            <p>INSTANT CAMERA</p>
+            <h1>НУЛЕВОЙ<br>КАДР</h1>
+            <span>СНИМОК ПОКАЖЕТ ТО, ЧЕГО НЕТ</span>
+          </div>
+        </div>
+        <div class="warning-copy">
+          <p>Осматривай комнату наклоном телефона или пальцем. Фотографируй аномалии по подсказкам.</p>
+          <p>После каждого снимка переверни телефон <strong>экраном вниз</strong>, чтобы проявить плёнку. Пока ты не смотришь, комната меняется.</p>
+        </div>
+        <button class="primary-key" id="continueButton" type="button" data-native-press>ВЗЯТЬ КАМЕРУ</button>
+        <button class="line-key" id="newRunButton" type="button" data-native-press>НОВАЯ ПЛЁНКА</button>
+        <button class="line-key" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" aria-label="Пауза" aria-hidden="true" data-ui>
+      <div class="darkroom-panel">
+        <p>ЗАТВОР ЗАКРЫТ</p>
+        <h2>ПАУЗА</h2>
+        <div class="pause-stats">
+          <span>ПЛЁНКА <b id="pauseFilm">07</b></span>
+          <span>МЕТКИ <b id="pauseMarks">00</b></span>
+          <span>СТРАХ <b id="pauseDread">08</b></span>
+        </div>
+        <button class="primary-key" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button class="line-key" id="restartButton" type="button" data-native-press>СЖЕЧЬ ПЛЁНКУ И НАЧАТЬ ЗАНОВО</button>
+        <button class="line-key" id="pauseCalibrateButton" type="button" data-native-press>ПЕРЕКАЛИБРОВАТЬ НАКЛОН</button>
+        <button class="line-key" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <button class="line-key" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+        <button class="bare-key" id="menuButton" type="button" data-native-press>К КАМЕРЕ</button>
+      </div>
+    </section>
+
+    <section class="photo-stage" id="photoStage" aria-label="Проявление снимка" aria-hidden="true" data-ui>
+      <div class="photo-machine">
+        <div class="slot"><i></i></div>
+        <article class="instant-photo" id="instantPhoto">
+          <div class="photo-image-wrap">
+            <img id="photoImage" alt="Сделанный снимок комнаты">
+            <canvas id="photoNoise" aria-hidden="true"></canvas>
+            <div class="photo-burn" id="photoBurn"></div>
+          </div>
+          <div class="photo-caption">
+            <span id="photoSerial">FRAME 01</span>
+            <strong id="photoResult">ПРОЯВЛЕНИЕ...</strong>
+          </div>
+        </article>
+        <div class="develop-instruction" id="developInstruction">
+          <p id="developTitle">ПЕРЕВЕРНИ ТЕЛЕФОН ЭКРАНОМ ВНИЗ</p>
+          <div class="develop-track"><i id="developFill"></i></div>
+          <small id="developHint">или удерживай кнопку ниже</small>
+        </div>
+        <button class="cover-key" id="coverButton" type="button" data-native-press>УДЕРЖИВАТЬ · ЗАКРЫТЬ КАМЕРУ</button>
+        <button class="primary-key reveal-key" id="closePhotoButton" type="button" data-native-press>УБРАТЬ СНИМОК</button>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" aria-label="Результат" aria-hidden="true" data-ui>
+      <div class="result-sheet">
+        <div class="result-stamp" id="resultStamp">NEGATIVE</div>
+        <p id="resultEyebrow">ПЛЁНКА ЗАКОНЧИЛАСЬ</p>
+        <h2 id="resultTitle">ТЫ ОСТАЛСЯ В КОМНАТЕ</h2>
+        <p class="result-copy" id="resultCopy">Последний снимок проявился уже без тебя.</p>
+        <dl>
+          <div><dt>МЕТКИ</dt><dd id="resultMarks">0 / 5</dd></div>
+          <div><dt>ОШИБКИ</dt><dd id="resultWrong">0</dd></div>
+          <div><dt>ВРЕМЯ</dt><dd id="resultTime">00:00</dd></div>
+          <div><dt>ПОБЕГИ</dt><dd id="resultEscapes">0</dd></div>
+        </dl>
+        <button class="primary-key" id="resultRestartButton" type="button" data-native-press>НОВАЯ ПЛЁНКА</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="НУЛЕВОЙ КАДР" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
