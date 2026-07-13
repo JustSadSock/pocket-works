@@ -27,6 +27,7 @@ const APP_SHELL = [
   './runtime/part-08.txt',
   './runtime/part-09.txt',
   './runtime/part-10.txt',
+  './runtime/part-11.txt',
   './manifest.webmanifest',
   './README.md',
   './icons/icon.svg',
