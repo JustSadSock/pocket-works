@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="./v12.css">
   <link rel="stylesheet" href="./brake.css">
   <link rel="stylesheet" href="./clarity.css">
+  <link rel="stylesheet" href="./layout-132.css">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
@@ -71,7 +72,7 @@
           <span class="plate-code">КС–6 / POCKET WORKS</span>
           <img src="./icons/icon.svg" alt="" class="title-icon" draggable="false">
           <h1>КОНТУР</h1>
-          <p>Проведи импульс через читаемую цепь, обходя блоки и учитывая ограничители.<br>Каждый символ прямо на клетке показывает её функцию.</p>
+          <p>Проведи импульс через читаемую цепь, обходя блоки и учитывая ограничители.<br>Во время предстартового отсчёта плату уже можно собирать.</p>
         </div>
         <div class="rule-row">
           <span><b>ТАП</b> вращает доступный модуль</span>
@@ -101,11 +102,11 @@
       </div>
     </section>
 
-    <section class="screen module-screen" id="moduleScreen" aria-label="Выбор модуля" aria-hidden="true" data-ui>
+    <section class="screen module-screen" id="moduleScreen" aria-label="Улучшения отключены" aria-hidden="true" data-ui hidden>
       <div class="module-bay">
-        <span class="plate-code">СЛОТ РАСШИРЕНИЯ ДОСТУПЕН</span>
-        <h2>ВСТАВЬ МОДУЛЬ</h2>
-        <p>Один меняет правила цепи до конца забега.</p>
+        <span class="plate-code">МОДУЛИ ОТКЛЮЧЕНЫ</span>
+        <h2>ПРОДОЛЖЕНИЕ</h2>
+        <p>Следующий каскад запускается автоматически.</p>
         <div id="moduleChoices" class="module-choices"></div>
       </div>
     </section>
@@ -131,7 +132,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="КОНТУР"
-    data-app-version="1.3.1"
+    data-app-version="1.3.2"
   ></script>
   <script type="module" src="./app.js"></script>
 </body>

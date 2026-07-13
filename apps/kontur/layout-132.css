@@ -1,0 +1,86 @@
+/* КОНТУР 1.3.2 — игровое поле и приборы больше не перекрывают друг друга. */
+.module-screen { display: none !important; }
+
+.status-strip {
+  bottom: max(8px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 6px));
+  min-height: 30px;
+  z-index: 6;
+}
+
+.status-strip[data-tone="countdown"] {
+  color: var(--cream);
+  background: #6b572f;
+  animation: countdown-status-pulse 900ms steps(2, end) infinite;
+}
+
+@keyframes countdown-status-pulse {
+  50% { background: #876f3c; }
+}
+
+.fuse-rack {
+  bottom: max(48px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 42px));
+  z-index: 5;
+}
+
+.checkpoint-rack {
+  left: 14px;
+  bottom: max(104px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 98px));
+  min-width: 98px;
+  min-height: 46px;
+  z-index: 5;
+}
+
+.overload-control {
+  right: 14px;
+  bottom: max(104px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 98px));
+  width: 70px;
+  height: 70px;
+  min-height: 70px;
+  border-width: 4px;
+  z-index: 5;
+}
+
+.overload-control::before { inset: 7px; }
+.overload-control::after { bottom: -18px; font-size: 6px; }
+.overload-control .stabilizer-symbol { top: 15px; font-size: 21px; }
+.overload-control .stabilizer-label { top: 40px; font-size: 6px; }
+.overload-control b {
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 23px;
+  font-size: 12px;
+}
+.overload-control i {
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+}
+
+@media (max-height: 700px) {
+  .checkpoint-rack {
+    bottom: max(91px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 84px));
+    min-height: 42px;
+  }
+
+  .overload-control {
+    bottom: max(91px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 84px));
+    width: 62px;
+    height: 62px;
+    min-height: 62px;
+  }
+
+  .overload-control .stabilizer-symbol { top: 12px; font-size: 19px; }
+  .overload-control .stabilizer-label { top: 35px; font-size: 5.5px; }
+  .overload-control::after { bottom: -16px; }
+  .fuse-rack { bottom: max(45px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 39px)); }
+}
+
+@media (max-width: 360px) {
+  .checkpoint-rack { left: 10px; min-width: 88px; }
+  .overload-control { right: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-strip[data-tone="countdown"] { animation: none; }
+}

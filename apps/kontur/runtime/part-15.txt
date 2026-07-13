@@ -1,0 +1,187 @@
+
+/* КОНТУР 1.3.2 — безопасная компоновка, честная проверка цепи и интерактивный отсчёт. */
+const generateBoardBefore132 = generateBoard;
+const serializeBoardBefore132 = serializeBoard;
+const startLevelBefore132 = startLevel;
+
+function stripRunUpgrades132(run) {
+  if (!run) return;
+  run.modules = [];
+  run.delayBonus = 0;
+  run.scoreMultiplier = 1;
+  run.freeFaults = 0;
+  run.freeFaultsUsed = 0;
+  run.hintModules = 0;
+  run.cleanBonus = 0;
+  run.restartPenalty = 0;
+  if (Number.isFinite(run.maxFuses) && run.maxFuses > 3) {
+    run.maxFuses = 3;
+    run.fuses = Math.min(Number(run.fuses || 0), 3);
+  }
+}
+
+function disableRouteHint132(board) {
+  if (!board) return board;
+  board.hintUntil = 0;
+  return board;
+}
+
+generateBoard = function generateBoard132(level, seed) {
+  return disableRouteHint132(generateBoardBefore132(level, seed));
+};
+
+serializeBoard = function serializeBoard132(board) {
+  if (board) board.hintUntil = 0;
+  const snapshot = serializeBoardBefore132(board);
+  snapshot.hintRemaining = 0;
+  return snapshot;
+};
+
+startLevel = function startLevel132(restoredBoard = null, restoredPulse = null) {
+  stripRunUpgrades132(game.run);
+  disableRouteHint132(restoredBoard);
+  startLevelBefore132(restoredBoard, restoredPulse);
+  disableRouteHint132(game.board);
+};
+
+openModuleChoice = function openModuleChoiceRemoved132() {
+  if (!game.run) return;
+  stripRunUpgrades132(game.run);
+  clearResume();
+  startLevel();
+};
+
+function dryRunCurrentCircuit132() {
+  const board = game.board;
+  if (!board?.source || !board?.goal || !board?.tiles) return false;
+
+  let x = board.source.x;
+  let y = board.source.y;
+  let entryBit = S;
+  const seen = new Set();
+  const maxSteps = COLS * ROWS * 4 + 4;
+
+  for (let step = 0; step < maxSteps; step += 1) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
+    const tile = board.tiles[y]?.[x];
+    if (!tile || tile.blocked) return false;
+
+    const stateKey = `${x},${y},${entryBit}`;
+    if (seen.has(stateKey)) return false;
+    seen.add(stateKey);
+
+    if (!(tile.mask & entryBit)) return false;
+    if (tile.specialType === 'diode' && entryBit !== currentDiodeEntry(tile)) return false;
+
+    let outgoing = 0;
+    if (tile.conductorType === 'bridge') outgoing = OPP[entryBit];
+    else outgoing = chooseOutgoing(tile.mask, entryBit);
+    if (!outgoing) return false;
+
+    const dir = DIRS.find((candidate) => candidate.bit === outgoing);
+    if (!dir) return false;
+    const nx = x + dir.dx;
+    const ny = y + dir.dy;
+
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
+      return Boolean(
+        x === board.goal.x &&
+        y === board.goal.y &&
+        y === 0 &&
+        outgoing === N
+      );
+    }
+
+    const nextTile = board.tiles[ny]?.[nx];
+    if (!nextTile || nextTile.blocked || !(nextTile.mask & OPP[outgoing])) return false;
+    x = nx;
+    y = ny;
+    entryBit = OPP[outgoing];
+  }
+
+  return false;
+}
+
+isPathFullyConnected = function isPathFullyConnected132() {
+  return dryRunCurrentCircuit132();
+};
+
+armExternalSource = function armExternalSource132(delay) {
+  if (!game.board || !game.pulse) return;
+  const now = performance.now();
+  game.pulse.x = game.board.source.x;
+  game.pulse.y = ROWS;
+  game.pulse.entryBit = S;
+  game.pulse.moving = false;
+  game.pulse.move = null;
+  game.pulse.visits = {};
+  game.pulse.completeAfterMove = false;
+  game.pulse.faultUntil = 0;
+  game.pulse.nextDecisionAt = now + delay + 110;
+  game.countdownEnd = now + delay;
+  game.countdownLast = Math.ceil(delay / 1000) + 1;
+  game.launchShock = 1;
+  const seconds = Math.max(1, Math.ceil(delay / 1000));
+  setStatus(`МОЖНО ВРАЩАТЬ · ТОК ЧЕРЕЗ ${seconds}`, 'countdown', 0);
+};
+
+updateCountdown = function updateCountdown132(now) {
+  if (game.mode !== 'playing' || !game.countdownEnd) return;
+  const remaining = Math.max(0, Math.ceil((game.countdownEnd - now) / 1000));
+  if (remaining === game.countdownLast) return;
+  game.countdownLast = remaining;
+  sound.count(remaining);
+
+  if (remaining > 0) {
+    setStatus(`МОЖНО ВРАЩАТЬ · ТОК ЧЕРЕЗ ${remaining}`, 'countdown', 0);
+    navigator.vibrate?.(remaining === 1 ? 18 : 9);
+    return;
+  }
+
+  setStatus('ТОК ПОДАН · ПРОВЕРЬ ЦЕПЬ', 'success', 700);
+  navigator.vibrate?.([16, 28, 22]);
+  game.countdownEnd = 0;
+  game.launchShock = 1;
+};
+
+drawCountdownOverlay = function drawCountdownOverlay132() {
+  /* Отсчёт живёт в нижней строке состояния и не закрывает игровое поле. */
+};
+
+resizeCanvas = function resizeCanvas132() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const safeTop = Math.max(146, Math.min(174, rect.height * 0.19));
+  const safeBottom = rect.height < 700
+    ? 176
+    : Math.max(198, Math.min(228, rect.height * 0.25));
+  const maxWidth = Math.min(rect.width - 30, 500);
+  const maxHeight = Math.max(240, rect.height - safeTop - safeBottom);
+  const cell = Math.max(34, Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS)));
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+  const spareY = Math.max(0, maxHeight - boardHeight);
+
+  game.layout = {
+    width: rect.width,
+    height: rect.height,
+    dpr,
+    cell,
+    boardX: Math.round((rect.width - boardWidth) / 2),
+    boardY: Math.round(safeTop + spareY * 0.18),
+    boardWidth,
+    boardHeight
+  };
+};
+
+window.addEventListener('resize', resizeCanvas);
+window.visualViewport?.addEventListener('resize', resizeCanvas);
+resizeCanvas();
