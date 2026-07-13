@@ -33,6 +33,7 @@ const VERTEX_SHADER = `
   attribute vec2 a_position;
   attribute vec2 a_screen;
   varying vec2 v_screen;
+
   void main() {
     gl_Position = vec4(a_position, 0.0, 1.0);
     v_screen = a_screen;
@@ -58,6 +59,8 @@ const FRAGMENT_SHADER = `
   uniform vec4 u_anchor1;
   uniform vec4 u_material1;
 
+  const float PI = 3.14159265359;
+
   vec2 toAspect(vec2 point) {
     return vec2(point.x * u_aspect, point.y);
   }
@@ -74,17 +77,238 @@ const FRAGMENT_SHADER = `
     return texture2D(u_video, screenToUv(point)).rgb;
   }
 
-  float ellipseDistance(vec2 pointA, vec2 centerA, vec2 radii) {
-    return length((pointA - centerA) / max(radii, vec2(0.003)));
+  vec2 safeNormalize(vec2 value, vec2 fallbackValue) {
+    float lengthValue = length(value);
+    return lengthValue > 0.00001 ? value / lengthValue : fallbackValue;
   }
 
-  float softEllipse(vec2 pointA, vec2 centerA, vec2 radii, float inner, float outer) {
-    return 1.0 - smoothstep(inner, outer, ellipseDistance(pointA, centerA, radii));
+  float ellipseMask(vec2 point, vec2 center, vec2 axis, vec2 radii, float inner, float outer) {
+    vec2 perpendicular = vec2(-axis.y, axis.x);
+    vec2 relative = point - center;
+    vec2 local = vec2(dot(relative, perpendicular), dot(relative, axis));
+    float distanceValue = length(local / max(radii, vec2(0.003)));
+    return 1.0 - smoothstep(inner, outer, distanceValue);
   }
 
-  float oval(vec2 point, vec2 center, vec2 radii) {
-    vec2 q = (point - center) / radii;
-    return 1.0 - smoothstep(0.72, 1.0, dot(q, q));
+  vec4 segmentInfo(vec2 point, vec2 startPoint, vec2 endPoint) {
+    vec2 segment = endPoint - startPoint;
+    float lengthSquared = max(0.000001, dot(segment, segment));
+    float t = clamp(dot(point - startPoint, segment) / lengthSquared, 0.0, 1.0);
+    vec2 closest = startPoint + segment * t;
+    return vec4(closest, t, length(point - closest));
+  }
+
+  vec3 pullSoft(
+    vec3 inputColor,
+    vec2 pointA,
+    vec2 centerA,
+    vec2 deltaA,
+    vec2 restAxis,
+    vec2 radii,
+    float core,
+    float depth,
+    float softness,
+    float motion
+  ) {
+    vec2 perpendicular = vec2(-restAxis.y, restAxis.x);
+    vec2 relative = pointA - centerA;
+    vec2 local = vec2(dot(relative, perpendicular), dot(relative, restAxis));
+    vec2 q = local / max(radii, vec2(0.004));
+    float distanceValue = length(q);
+    float baseWeight = 1.0 - smoothstep(core * 0.58, 1.16, distanceValue);
+
+    vec2 dragAxis = safeNormalize(deltaA, restAxis);
+    float forward = dot(relative, dragAxis);
+    float forwardBoost = smoothstep(-min(radii.x, radii.y) * 0.35, max(radii.x, radii.y) * 1.25, forward);
+    float weight = baseWeight * mix(0.72, 1.0, forwardBoost) * motion;
+
+    vec2 sourceA = pointA - deltaA * weight * mix(0.70, 0.92, softness);
+    vec3 color = mix(inputColor, sampleScreen(fromAspect(sourceA)), weight);
+
+    vec2 destinationA = centerA + deltaA;
+    vec2 tipAxis = safeNormalize(restAxis + dragAxis * 0.34, restAxis);
+    float tipMask = ellipseMask(pointA, destinationA, tipAxis, radii * vec2(1.02, 0.94), 0.70, 1.03) * motion;
+    vec2 tipPerpendicular = vec2(-tipAxis.y, tipAxis.x);
+    vec2 tipRelative = pointA - destinationA;
+    vec2 tipLocal = vec2(dot(tipRelative, tipPerpendicular), dot(tipRelative, tipAxis));
+    vec2 sourcePointA = centerA + perpendicular * tipLocal.x + restAxis * tipLocal.y;
+    vec3 tipColor = sampleScreen(fromAspect(sourcePointA));
+
+    float radial = clamp(1.0 - length(tipLocal / max(radii, vec2(0.004))), 0.0, 1.0);
+    float sideLight = dot(safeNormalize(tipRelative, perpendicular), vec2(-0.55, -0.84));
+    float light = 0.96 + radial * depth * 0.09 + sideLight * depth * 0.035;
+    tipColor *= light;
+    color = mix(color, tipColor, tipMask * 0.88);
+
+    float rimMask = ellipseMask(pointA, destinationA + dragAxis * min(radii.x, radii.y) * 0.16, tipAxis, radii * 1.08, 0.82, 1.10);
+    color *= 1.0 - rimMask * tipMask * depth * 0.045;
+    return color;
+  }
+
+  vec3 pullFeature(
+    vec3 inputColor,
+    vec2 pointA,
+    vec2 centerA,
+    vec2 deltaA,
+    vec2 anchorA,
+    vec2 radii,
+    float core,
+    float kind,
+    float anchorHold,
+    float rootWidth,
+    float capScale,
+    float depth,
+    float softness,
+    float motion
+  ) {
+    float baseRadius = max(0.012, min(radii.x, radii.y));
+    vec2 fallbackAxis = safeNormalize(deltaA, vec2(0.0, 1.0));
+    vec2 restAxis = safeNormalize(centerA - anchorA, -fallbackAxis);
+    vec2 restPerpendicular = vec2(-restAxis.y, restAxis.x);
+    float anchorDistance = length(centerA - anchorA);
+    float rootReach = min(anchorDistance, max(radii.y * 0.66, baseRadius * mix(0.55, 1.42, anchorHold)));
+    vec2 rootA = centerA - restAxis * rootReach;
+    vec2 destinationA = centerA + deltaA;
+    vec2 dragAxis = safeNormalize(deltaA, restAxis);
+
+    vec2 bendA = centerA + deltaA * 0.27 + restAxis * baseRadius * 0.08;
+    vec4 firstSegment = segmentInfo(pointA, rootA, bendA);
+    vec4 secondSegment = segmentInfo(pointA, bendA, destinationA);
+    bool useFirst = firstSegment.w < secondSegment.w;
+    vec2 closest = useFirst ? firstSegment.xy : secondSegment.xy;
+    float pathT = useFirst ? firstSegment.z * 0.46 : 0.46 + secondSegment.z * 0.54;
+    vec2 tangent = useFirst
+      ? safeNormalize(bendA - rootA, restAxis)
+      : safeNormalize(destinationA - bendA, dragAxis);
+    vec2 perpendicular = vec2(-tangent.y, tangent.x);
+    float signedSide = dot(pointA - closest, perpendicular);
+
+    float kindWidth = 1.0;
+    if (kind > 1.5 && kind < 2.5) kindWidth = 0.68;
+    else if (kind > 2.5 && kind < 3.5) kindWidth = 0.72;
+    else if (kind > 4.5) kindWidth = 0.52;
+
+    float widthProfile = mix(max(0.22, rootWidth), 0.96, smoothstep(0.0, 1.0, pathT));
+    widthProfile *= 1.0 + sin(pathT * PI) * mix(0.05, 0.16, softness);
+    float bodyWidth = baseRadius * widthProfile * kindWidth;
+    float side = signedSide / max(0.002, bodyWidth);
+    float bodyMask = 1.0 - smoothstep(0.76, 1.03, abs(side));
+    bodyMask *= smoothstep(-0.03, 0.05, pathT) * (1.0 - smoothstep(0.97, 1.03, pathT));
+    bodyMask *= motion;
+
+    float bound = max(radii.x, radii.y) * 1.65 + length(deltaA);
+    vec2 minimum = min(min(rootA, centerA), destinationA) - vec2(bound);
+    vec2 maximum = max(max(rootA, centerA), destinationA) + vec2(bound);
+    if (pointA.x < minimum.x || pointA.y < minimum.y || pointA.x > maximum.x || pointA.y > maximum.y) {
+      return inputColor;
+    }
+
+    vec3 color = inputColor;
+
+    vec2 oldRelative = pointA - centerA;
+    vec2 oldLocal = vec2(dot(oldRelative, restPerpendicular), dot(oldRelative, restAxis));
+    float oldDistance = length(oldLocal / max(radii, vec2(0.004)));
+    float collapseMask = (1.0 - smoothstep(core * 0.72, 1.08, oldDistance)) * motion;
+    vec2 collapseSourceA = pointA - deltaA * collapseMask * mix(0.48, 0.68, softness);
+    collapseSourceA -= restAxis * length(deltaA) * collapseMask * 0.045;
+    color = mix(color, sampleScreen(fromAspect(collapseSourceA)), collapseMask * 0.86);
+
+    if (bodyMask > 0.001) {
+      float sourceT = pow(clamp(pathT, 0.0, 1.0), mix(0.48, 0.68, softness));
+      vec2 sourceAxisPoint = mix(rootA, centerA, sourceT);
+      float sourceWidth = baseRadius * mix(max(0.20, rootWidth * 0.82), 0.98, sourceT) * kindWidth;
+      vec2 sourcePointA = sourceAxisPoint + restPerpendicular * side * sourceWidth;
+      vec3 bodyColor = sampleScreen(fromAspect(sourcePointA));
+
+      float cylindrical = sqrt(max(0.0, 1.0 - min(1.0, side * side)));
+      float light = 0.91 + cylindrical * depth * 0.10 - side * depth * 0.035;
+      light *= 0.98 + sin(pathT * PI) * depth * 0.035;
+
+      if (kind > 0.5 && kind < 1.5) {
+        float underside = smoothstep(0.10, 0.92, side) * smoothstep(0.12, 0.82, pathT);
+        bodyColor *= 1.0 - underside * depth * 0.15;
+      } else if (kind > 1.5 && kind < 2.5) {
+        float crease = exp(-abs(side) * 7.0) * smoothstep(0.14, 0.84, pathT);
+        bodyColor = mix(bodyColor, vec3(bodyColor.r * 0.78 + 0.10, bodyColor.g * 0.54, bodyColor.b * 0.54), crease * 0.42);
+      } else if (kind > 2.5 && kind < 3.5) {
+        float lidShade = exp(-abs(side) * 8.0) * smoothstep(0.10, 0.72, pathT);
+        bodyColor *= 1.0 - lidShade * 0.12;
+      } else if (kind > 3.5 && kind < 4.5) {
+        light *= 0.96 + sin((pathT + side * 0.11) * 8.0) * 0.035;
+      } else if (kind > 4.5) {
+        bodyColor *= 0.94;
+      }
+
+      bodyColor *= light;
+      color = mix(color, bodyColor, bodyMask * 0.96);
+    }
+
+    vec2 tipAxis = safeNormalize(destinationA - bendA, dragAxis);
+    vec2 tipPerpendicular = vec2(-tipAxis.y, tipAxis.x);
+    vec2 tipRelative = pointA - destinationA;
+    vec2 tipLocal = vec2(dot(tipRelative, tipPerpendicular), dot(tipRelative, tipAxis));
+    vec2 tipRadii = radii * capScale;
+    vec2 capQ = tipLocal / max(tipRadii, vec2(0.004));
+
+    if (kind > 0.5 && kind < 1.5) {
+      capQ.x /= 1.0 + clamp(capQ.y, -0.5, 0.8) * 0.16;
+      capQ.y *= 0.94;
+    } else if (kind > 1.5 && kind < 2.5) {
+      capQ.y *= 1.22;
+    } else if (kind > 2.5 && kind < 3.5) {
+      capQ.y *= 1.12;
+    } else if (kind > 3.5 && kind < 4.5) {
+      capQ.x *= 1.08;
+    } else if (kind > 4.5) {
+      capQ.y *= 1.62;
+    }
+
+    float capDistance = length(capQ);
+    float capMask = (1.0 - smoothstep(max(core, 0.60), 1.03, capDistance)) * motion;
+
+    if (capMask > 0.001) {
+      vec2 sourceLocal = vec2(capQ.x * radii.x, capQ.y * radii.y);
+      vec2 sourcePointA = centerA + restPerpendicular * sourceLocal.x + restAxis * sourceLocal.y;
+      vec3 capColor = sampleScreen(fromAspect(sourcePointA));
+
+      float z = sqrt(max(0.0, 1.0 - min(1.0, dot(capQ, capQ))));
+      vec3 normal = normalize(vec3(capQ.x * 0.66, capQ.y * 0.66, z + 0.22));
+      vec3 lightDirection = normalize(vec3(-0.48, -0.72, 1.22));
+      float light = 0.90 + max(0.0, dot(normal, lightDirection)) * depth * 0.16;
+      light += smoothstep(0.64, 0.98, capDistance) * depth * 0.025;
+
+      if (kind > 0.5 && kind < 1.5) {
+        float nostrilLeft = 1.0 - smoothstep(0.52, 0.78, length((capQ - vec2(-0.31, 0.30)) / vec2(0.22, 0.15)));
+        float nostrilRight = 1.0 - smoothstep(0.52, 0.78, length((capQ - vec2(0.31, 0.30)) / vec2(0.22, 0.15)));
+        capColor *= 1.0 - max(nostrilLeft, nostrilRight) * depth * 0.20;
+      } else if (kind > 1.5 && kind < 2.5) {
+        float lipLine = exp(-abs(capQ.y) * 16.0) * (1.0 - smoothstep(0.58, 0.94, abs(capQ.x)));
+        capColor = mix(capColor, vec3(capColor.r * 0.74 + 0.12, capColor.g * 0.50, capColor.b * 0.50), lipLine * 0.40);
+      } else if (kind > 2.5 && kind < 3.5) {
+        float gloss = pow(max(0.0, 1.0 - length(capQ - vec2(-0.24, -0.24))), 8.0);
+        capColor += vec3(gloss * 0.075);
+      } else if (kind > 3.5 && kind < 4.5) {
+        capColor *= 0.98 + sin((capQ.y + capQ.x * 0.24) * 9.0) * 0.025;
+      } else if (kind > 4.5) {
+        capColor *= 0.93 + z * 0.07;
+      }
+
+      capColor *= light;
+      color = mix(color, capColor, capMask);
+    }
+
+    float shadowMask = ellipseMask(
+      pointA,
+      destinationA + dragAxis * baseRadius * 0.10 + vec2(baseRadius * 0.08, baseRadius * 0.12),
+      tipAxis,
+      tipRadii * 1.08,
+      0.78,
+      1.10
+    );
+    shadowMask *= smoothstep(0.72, 1.02, capDistance) * motion;
+    color *= 1.0 - shadowMask * depth * 0.065;
+
+    return color;
   }
 
   vec3 composeFeature(
@@ -97,141 +321,44 @@ const FRAGMENT_SHADER = `
   ) {
     if (anchor.w < 0.5) return inputColor;
 
-    vec2 center = pose.xy;
-    vec2 delta = pose.zw;
-    vec2 radii = max(shape.xy, vec2(0.012));
-    float core = clamp(shape.z, 0.24, 0.72);
-    float kind = shape.w;
-    float tubeFactor = material.x;
-    float objectScale = max(0.82, material.y);
-    float depth = material.z;
-    float healStrength = material.w;
-
-    vec2 pointA = toAspect(screen);
-    vec2 centerA = toAspect(center);
-    vec2 deltaA = vec2(delta.x * u_aspect, delta.y);
-    vec2 destinationA = centerA + deltaA;
+    vec2 centerA = toAspect(pose.xy);
+    vec2 deltaA = vec2(pose.z * u_aspect, pose.w);
     float stretch = length(deltaA);
-    float motion = smoothstep(0.003, 0.020, stretch);
+    float motion = smoothstep(0.004, 0.018, stretch);
     if (motion < 0.002) return inputColor;
 
-    float baseRadius = max(0.012, min(radii.x, radii.y));
     vec2 anchorA = toAspect(anchor.xy);
-    vec2 anchorVector = anchorA - centerA;
-    float anchorLength = length(anchorVector);
-    vec2 fallbackDirection = normalize(vec2(-deltaA.x, -deltaA.y - 0.001));
-    vec2 anchorDirection = anchorLength > 0.001 ? anchorVector / anchorLength : fallbackDirection;
-    float rootReach = min(anchorLength, baseRadius * mix(0.28, 1.18, clamp(anchor.z, 0.0, 1.0)));
-    vec2 rootA = centerA + anchorDirection * rootReach;
+    vec2 radii = vec2(max(0.012, shape.x * u_aspect), max(0.012, shape.y));
+    float core = clamp(shape.z, 0.24, 0.72);
+    float kind = shape.w;
+    float rootWidth = material.x;
+    float capScale = material.y;
+    float depth = material.z;
+    float softness = material.w;
+    vec2 pointA = toAspect(screen);
+    vec2 fallbackAxis = safeNormalize(deltaA, vec2(0.0, 1.0));
+    vec2 restAxis = safeNormalize(centerA - anchorA, -fallbackAxis);
 
-    float bound = max(radii.x, radii.y) * 1.65 + stretch;
-    vec2 minimum = min(min(centerA, destinationA), rootA) - vec2(bound);
-    vec2 maximum = max(max(centerA, destinationA), rootA) + vec2(bound);
-    if (pointA.x < minimum.x || pointA.y < minimum.y || pointA.x > maximum.x || pointA.y > maximum.y) {
-      return inputColor;
+    if (kind < 0.5) {
+      return pullSoft(inputColor, pointA, centerA, deltaA, restAxis, radii, core, depth, softness, motion);
     }
 
-    vec3 color = inputColor;
-
-    vec2 sourceMetric = (pointA - centerA) / radii;
-    float sourceDistance = length(sourceMetric);
-    float holeMask = (1.0 - smoothstep(core * 0.72, 1.03, sourceDistance)) * motion;
-    if (holeMask > 0.001) {
-      vec2 radial = sourceMetric + anchorDirection * 0.34;
-      radial = radial / max(0.001, length(radial));
-      vec2 ringA = centerA + vec2(radial.x * radii.x, radial.y * radii.y) * 1.08;
-      ringA += anchorDirection * baseRadius * 0.18;
-      vec3 healed = sampleScreen(fromAspect(ringA));
-      color = mix(color, healed, holeMask * healStrength * 0.94);
-    }
-
-    vec2 shadowDirection = normalize(deltaA + vec2(baseRadius * 0.28, baseRadius * 0.42));
-    vec2 shadowCenterA = destinationA + shadowDirection * baseRadius * (0.16 + depth * 0.08);
-    float shadowMask = softEllipse(pointA, shadowCenterA, radii * 1.16, 0.70, 1.05) * motion;
-    float destinationDistance = ellipseDistance(pointA, destinationA, radii);
-    shadowMask *= smoothstep(0.72, 0.98, destinationDistance);
-    color *= 1.0 - shadowMask * (0.13 + depth * 0.10);
-
-    vec2 segment = destinationA - rootA;
-    float segmentLengthSq = max(0.000001, dot(segment, segment));
-    float rawT = dot(pointA - rootA, segment) / segmentLengthSq;
-    float t = clamp(rawT, 0.0, 1.0);
-    vec2 direction = segment / sqrt(segmentLengthSq);
-    vec2 perpendicular = vec2(-direction.y, direction.x);
-    vec2 closest = rootA + segment * t;
-    float tubeWidth = baseRadius * tubeFactor * mix(0.48, 0.92, smoothstep(0.0, 1.0, t));
-    float signedSide = dot(pointA - closest, perpendicular);
-    float side = signedSide / max(0.002, tubeWidth);
-    float tubeMask = 1.0 - smoothstep(0.76, 1.0, abs(side));
-    tubeMask *= smoothstep(-0.06, 0.08, rawT) * (1.0 - smoothstep(0.92, 1.08, rawT));
-    tubeMask *= motion;
-
-    if (tubeMask > 0.001) {
-      vec2 sourceAxisA = mix(rootA, centerA, smoothstep(0.02, 0.98, t));
-      vec2 sourceA = sourceAxisA + perpendicular * side * baseRadius * tubeFactor * 0.68;
-      vec3 tubeColor = sampleScreen(fromAspect(sourceA));
-      float cylinderLight = 0.78 + 0.20 * sqrt(max(0.0, 1.0 - min(1.0, side * side)));
-      cylinderLight += -side * 0.055;
-      cylinderLight *= 0.93 + 0.08 * sin(t * 3.14159265);
-
-      if (kind > 1.5 && kind < 2.5) {
-        float innerLip = exp(-abs(side) * 6.0) * smoothstep(0.12, 0.78, t);
-        vec3 lipInterior = vec3(tubeColor.r * 0.86 + 0.10, tubeColor.g * 0.50, tubeColor.b * 0.50);
-        tubeColor = mix(tubeColor, lipInterior, innerLip * 0.58);
-      } else if (kind > 2.5 && kind < 3.5) {
-        float lidSeam = exp(-abs(side) * 9.0) * smoothstep(0.20, 0.72, t);
-        tubeColor *= 1.0 - lidSeam * 0.20;
-      } else if (kind > 3.5 && kind < 4.5) {
-        cylinderLight *= 0.90 + 0.10 * sin((t + side * 0.16) * 9.0);
-      } else if (kind > 4.5) {
-        tubeColor *= 0.88;
-      }
-
-      tubeColor *= cylinderLight;
-      color = mix(color, tubeColor, tubeMask * 0.96);
-    }
-
-    vec2 localA = pointA - destinationA;
-    vec2 objectQ = localA / radii;
-    float objectDistance = length(objectQ);
-    float objectMask = 1.0 - smoothstep(max(core, 0.68), 1.03, objectDistance);
-    objectMask *= motion;
-
-    if (objectMask > 0.001) {
-      vec2 sourceLocalA = localA / objectScale;
-      vec2 sourcePointA = centerA + sourceLocalA;
-      vec3 objectColor = sampleScreen(fromAspect(sourcePointA));
-
-      float z = sqrt(max(0.0, 1.0 - min(1.0, dot(objectQ, objectQ))));
-      vec3 normal = normalize(vec3(objectQ.x * 0.72, objectQ.y * 0.72, z + 0.16));
-      vec3 lightDirection = normalize(vec3(-0.48, -0.62, 1.15));
-      float light = 0.80 + max(0.0, dot(normal, lightDirection)) * (0.18 + depth * 0.13);
-      float rim = smoothstep(0.62, 0.96, objectDistance) * max(0.0, dot(normal.xy, -lightDirection.xy));
-      light += rim * depth * 0.12;
-
-      if (kind > 0.5 && kind < 1.5) {
-        float nostrilA = oval(objectQ, vec2(-0.30, 0.30), vec2(0.20, 0.13));
-        float nostrilB = oval(objectQ, vec2(0.30, 0.30), vec2(0.20, 0.13));
-        float nostrils = max(nostrilA, nostrilB) * smoothstep(0.035, 0.10, stretch);
-        objectColor *= 1.0 - nostrils * 0.22;
-      } else if (kind > 1.5 && kind < 2.5) {
-        float lipLine = exp(-abs(objectQ.y) * 18.0) * (1.0 - smoothstep(0.60, 0.94, abs(objectQ.x)));
-        objectColor = mix(objectColor, vec3(objectColor.r * 0.74 + 0.12, objectColor.g * 0.48, objectColor.b * 0.48), lipLine * 0.42);
-      } else if (kind > 2.5 && kind < 3.5) {
-        float eyeGloss = pow(max(0.0, 1.0 - length(objectQ - vec2(-0.22, -0.24))), 7.0);
-        objectColor += vec3(eyeGloss * 0.10);
-      } else if (kind > 3.5 && kind < 4.5) {
-        float fold = sin((objectQ.y + objectQ.x * 0.28) * 10.0) * 0.035;
-        objectColor *= 0.98 + fold;
-      } else if (kind > 4.5) {
-        objectColor *= 0.90 + z * 0.10;
-      }
-
-      objectColor *= light;
-      color = mix(color, objectColor, objectMask);
-    }
-
-    return color;
+    return pullFeature(
+      inputColor,
+      pointA,
+      centerA,
+      deltaA,
+      anchorA,
+      radii,
+      core,
+      kind,
+      anchor.z,
+      rootWidth,
+      capScale,
+      depth,
+      softness,
+      motion
+    );
   }
 
   void main() {
@@ -240,9 +367,9 @@ const FRAGMENT_SHADER = `
     color = composeFeature(color, v_screen, u_pose1, u_shape1, u_anchor1, u_material1);
 
     float luminance = dot(color, vec3(0.299, 0.587, 0.114));
-    color = mix(vec3(luminance), color, 0.91);
-    color = pow(max(color, vec3(0.0)), vec3(0.97));
-    color *= vec3(0.995, 1.0, 0.97);
+    color = mix(vec3(luminance), color, 0.92);
+    color = pow(max(color, vec3(0.0)), vec3(0.975));
+    color *= vec3(0.997, 1.0, 0.975);
     vec3 idle = vec3(0.08, 0.085, 0.075);
     gl_FragColor = vec4(mix(idle, color, u_live), 1.0);
   }
@@ -252,13 +379,17 @@ export class ElasticRenderer {
   constructor(canvas, video) {
     this.canvas = canvas;
     this.video = video;
-    const contextOptions = {
+    this.gl = canvas.getContext('webgl2', {
       alpha: false,
       antialias: false,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false
-    };
-    this.gl = canvas.getContext('webgl', contextOptions) || canvas.getContext('experimental-webgl', contextOptions);
+    }) || canvas.getContext('webgl', {
+      alpha: false,
+      antialias: false,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: false
+    });
 
     if (!this.gl) throw new Error('WebGL недоступен');
 
@@ -322,7 +453,7 @@ export class ElasticRenderer {
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = Math.min(1.2, window.devicePixelRatio || 1);
+    const dpr = Math.min(1.15, window.devicePixelRatio || 1);
     const width = Math.max(1, Math.round(rect.width * dpr));
     const height = Math.max(1, Math.round(rect.height * dpr));
     if (this.canvas.width === width && this.canvas.height === height) return false;
@@ -401,9 +532,27 @@ export class ElasticRenderer {
 
       const gain = node.gain || 1;
       gl.uniform4f(locations.pose, node.base.x, node.base.y, node.offset.x * gain, node.offset.y * gain);
-      gl.uniform4f(locations.shape, node.radiusX || node.radius || 0.08, node.radiusY || node.radius || 0.08, node.core || 0.48, node.renderKind || 0);
-      gl.uniform4f(locations.anchor, node.anchor?.x ?? node.base.x, node.anchor?.y ?? node.base.y, node.anchorHold || 0.35, 1);
-      gl.uniform4f(locations.material, node.tube || 0.65, node.objectScale || 1, node.depth || 0.7, node.heal || 0.9);
+      gl.uniform4f(
+        locations.shape,
+        node.radiusX || node.radius || 0.08,
+        node.radiusY || node.radius || 0.08,
+        node.core || 0.48,
+        node.renderKind || 0
+      );
+      gl.uniform4f(
+        locations.anchor,
+        node.anchor?.x ?? node.base.x,
+        node.anchor?.y ?? node.base.y,
+        node.anchorHold || 0.35,
+        1
+      );
+      gl.uniform4f(
+        locations.material,
+        node.rootWidth || 0.58,
+        node.capScale || 1,
+        node.depth || 0.7,
+        node.softness || 0.82
+      );
     }
   }
 
@@ -458,7 +607,7 @@ export class ElasticRenderer {
     }
     const gl = this.gl;
     gl.deleteTexture(this.texture);
-    gl.deleteBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.deleteBuffer(this.vertexBuffer);
     gl.deleteBuffer(this.indexBuffer);
     gl.deleteProgram(this.program);
   }
