@@ -10,6 +10,7 @@ const gameParts = [
   './engine-v2-advanced-fixes.js',
   './engine-v2-23-ui.js',
   './engine-v2-23.js',
+  './engine-v2-23-fixes.js',
   './engine-v2-12.js'
 ];
 
