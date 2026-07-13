@@ -1,12 +1,13 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.8.0';
-const APP_VERSION = '0.8.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.8.1';
+const APP_VERSION = '0.8.1';
 const RELEASE_DATE = '2026-07-13';
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'The launcher now rechecks the live application registry when it returns to the foreground, reconnects or resumes from page cache.',
-  'New and updated applications are detected against the last visible shelf and surfaced in a persistent What’s new ledger.',
-  'Managed updates retry release metadata reads and show the release notes again after the new Service Worker takes control.',
-  'Registry requests now bypass HTTP caches before updating the offline fallback, reducing stale shelves.'
+  'Replaced cache-first launcher execution with a network-first cache protocol that bypasses the browser HTTP cache.',
+  'Every install now fetches shell files with a unique build token before writing them into the new Cache Storage namespace.',
+  'The launcher Service Worker no longer intercepts or stores files owned by applications under /apps/.',
+  'Removed long-lived immutable caching for mutable application assets so deployed code can actually replace older files.'
 ];
 const APP_SHELL = [
   './',
@@ -30,8 +31,59 @@ const APP_SHELL = [
   './shared/launcher-list-motion.js'
 ];
 
+const SCOPE_URL = new URL('./', self.registration.scope);
+const APPLICATIONS_PATH = new URL('./apps/', SCOPE_URL).pathname;
+const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
+const SHELL_KEYS = new Map(
+  APP_SHELL.map((entry) => {
+    const url = new URL(entry, SCOPE_URL);
+    return [url.pathname, url.href];
+  })
+);
+
+function buildNetworkUrl(input) {
+  const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
+  url.searchParams.set('__pw_build', BUILD_TOKEN);
+  return url;
+}
+
+async function fetchFresh(input) {
+  const response = await fetch(buildNetworkUrl(input), {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'follow'
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Fresh launcher request failed: ${response?.status || 'network'}`);
+  }
+
+  return response;
+}
+
+async function precacheFreshShell() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+      const response = await fetchFresh(canonicalUrl);
+      await cache.put(canonicalUrl, response);
+    })
+  );
+}
+
+async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
+  try {
+    const response = await fetchFresh(request);
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(canonicalUrl, response.clone());
+    return response;
+  } catch {
+    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(precacheFreshShell());
 });
 
 self.addEventListener('message', (event) => {
@@ -39,7 +91,9 @@ self.addEventListener('message', (event) => {
     event.ports?.[0]?.postMessage({
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
-      releaseNotes: RELEASE_NOTES
+      releaseNotes: RELEASE_NOTES,
+      cacheProtocol: CACHE_PROTOCOL,
+      cacheName: CACHE_NAME
     });
   }
 
@@ -58,45 +112,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function networkFirst(request, fallback = './', cacheKey = null, { bypassHttpCache = false } = {}) {
-  try {
-    const response = await fetch(request, bypassHttpCache ? { cache: 'no-store' } : undefined);
-    if (response && response.ok) {
-      const copy = response.clone();
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(cacheKey || (request.mode === 'navigate' ? fallback : request), copy);
-    }
-    return response;
-  } catch {
-    return caches.match(request).then((cached) => cached || caches.match(cacheKey || fallback));
-  }
-}
-
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
+  // Application directories own their own lifecycle and caches. The root worker
+  // must never become a second stale cache in front of them.
+  if (requestUrl.pathname.startsWith(APPLICATIONS_PATH)) return;
+
   if (event.request.mode === 'navigate') {
-    event.respondWith(networkFirst(event.request, './', './'));
+    event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
 
-  if (requestUrl.pathname.endsWith('/apps.json')) {
-    event.respondWith(networkFirst(event.request, './apps.json', './apps.json', { bypassHttpCache: true }));
-    return;
-  }
+  const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
+  if (!canonicalUrl) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'opaque') return response;
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      });
-    })
-  );
+  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
 });
