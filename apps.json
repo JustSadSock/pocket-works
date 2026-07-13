@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -72,13 +59,7 @@
       "Made the top home and sound controls reliably accessible from the title menu."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -99,15 +80,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -129,14 +102,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -157,14 +123,7 @@
       "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
     ],
     "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -185,15 +144,7 @@
       "Сообщение об ошибке теперь показывает этап сбоя — загрузчик, WASM, worker, протокол или тайм-аут — вместо общего текста."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -215,16 +166,7 @@
       "Полностью заменены кокпит, руль, приборка, halo, портовое окружение, контейнеры и трассовые фермы."
     ],
     "accent": "#dd5d2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "tilt",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "tilt", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:petlya-17"
@@ -245,17 +187,7 @@
       "Параллакс перенесён из геометрии в свет, отражения и контактные тени для более естественной глубины."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
@@ -264,29 +196,19 @@
     "slug": "shpilka",
     "name": "ШПИЛЬКА",
     "shortName": "ШПИЛЬКА",
-    "description": "Top-down гонка на траекторию, торможение и контролируемый дрифт с ботами и многоуровневой трассой.",
+    "description": "Процедурная top-down гонка с весом, инерцией, контролируемым дрифтом, сильными ботами и точными коллизиями.",
     "path": "./apps/shpilka/",
     "status": "active",
-    "version": "1.0.0",
-    "updatedAt": "2026-07-13T15:20:00+01:00",
+    "version": "2.0.0",
+    "updatedAt": "2026-07-13T16:25:00+01:00",
     "changelog": [
-      "Добавлена полноценная гонка на три круга против четырёх ботов с честной физикой скорости, торможения и бокового скольжения.",
-      "Построена нелинейная трасса с быстрыми дугами, S-связками, двумя шпильками, эстакадой и прыжком над нижним участком.",
-      "Скорость подчёркивают динамическая камера, изменение масштаба, следы шин, частицы, удары и синтезированный звук двигателя.",
-      "Интерфейс адаптирован под вертикальный телефон: раздельное руление, газ, тормоз, пауза, возврат на трассу и сохранение лучшего круга."
+      "Физика полностью пересобрана вокруг массы, инерции, задержки руления, переноса веса и управляемого тормозного заноса.",
+      "Каждый заезд получает новую проверенную трассу, тему окружения, длину, один–три круга и иногда скоростной трамплин.",
+      "Боты используют гоночную линию, прогноз торможения, обгоны и контроль прогресса; аудит подтверждает финиш на серии процедурных трасс.",
+      "Круглые хитбоксы заменены ориентированными прямоугольниками, совпадающими с кузовом; камера, звук и компактное управление усиливают ощущение скорости."
     ],
     "accent": "#e65e2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "top-down",
-      "drift",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "procedural", "top-down", "drift", "physics", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:shpilka"
@@ -307,16 +229,7 @@
       "HUD, меню выбора лунок и итоговые экраны приведены к единой минималистичной дизайн-системе без тяжёлых карточек."
     ],
     "accent": "#809465",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "mini-golf",
-      "physics",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "mini-golf", "physics", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:moss-marble"
@@ -337,17 +250,7 @@
       "Добавлены процедурный звук, вибрация, живая панорамная комната, локальное сохранение, офлайн-режим и Workshop."
     ],
     "accent": "#a48755",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "horror",
-      "tilt",
-      "device motion",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "horror", "tilt", "device motion", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:zero-frame"
