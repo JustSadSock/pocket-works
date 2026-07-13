@@ -1,7 +1,8 @@
 const CACHE_PREFIX = 'sente-';
-const CACHE_NAME = 'sente-v2.1.0';
+const CACHE_NAME = 'sente-v2.1.0-p2';
 const APP_VERSION = '2.1.0';
 const RELEASE_DATE = '2026-07-13';
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
   "Исполняемые файлы, worker и WASM получили версионные URL, поэтому старый iOS-кэш больше не может смешать интерфейс 2.x с прежним ботом.",
   "При первом запуске 2.1 незавершённая партия против старого компьютера закрывается, чтобы новый движок не продолжал уже испорченную позицию.",
@@ -47,13 +48,69 @@ const APP_SHELL = [
   '../../shared/capabilities/diagnostics.js'
 ];
 
+const SCOPE_URL = new URL('./', self.registration.scope);
+const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
+const SHELL_KEYS = new Map(
+  APP_SHELL.map((entry) => {
+    const url = new URL(entry, SCOPE_URL);
+    return [url.pathname, url.href];
+  })
+);
+
+function buildNetworkUrl(input) {
+  const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
+  url.searchParams.set('__pw_build', BUILD_TOKEN);
+  return url;
+}
+
+async function fetchFresh(input) {
+  const response = await fetch(buildNetworkUrl(input), {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'follow'
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Fresh SENTE request failed: ${response?.status || 'network'}`);
+  }
+
+  return response;
+}
+
+async function precacheFreshShell() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+      const response = await fetchFresh(canonicalUrl);
+      await cache.put(canonicalUrl, response);
+    })
+  );
+}
+
+async function networkFirstFresh(input, canonicalUrl, fallbackUrl = canonicalUrl) {
+  try {
+    const response = await fetchFresh(input);
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(canonicalUrl, response.clone());
+    return response;
+  } catch {
+    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(precacheFreshShell());
 });
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
+    event.ports?.[0]?.postMessage({
+      version: APP_VERSION,
+      releaseDate: RELEASE_DATE,
+      releaseNotes: RELEASE_NOTES,
+      cacheProtocol: CACHE_PROTOCOL,
+      cacheName: CACHE_NAME
+    });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
@@ -61,46 +118,28 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-function cacheResponse(request, response) {
-  if (!response || response.status !== 200 || response.type === 'opaque') return response;
-  const copy = response.clone();
-  caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-  return response;
-}
-
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => cacheResponse('./', response))
-        .catch(() => caches.match('./'))
-    );
+    event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
 
-  const isLegacySenteRuntime = requestUrl.pathname.includes('/apps/sente/')
-    && /\.(?:js|css|txt|wasm)$/.test(requestUrl.pathname)
-    && requestUrl.searchParams.get('v') !== APP_VERSION;
+  const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
+  if (!canonicalUrl) return;
 
-  if (isLegacySenteRuntime) {
-    event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
-        .then((response) => cacheResponse(event.request, response))
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => cacheResponse(event.request, response)))
-  );
+  event.respondWith(networkFirstFresh(canonicalUrl, canonicalUrl, SCOPE_URL.href));
 });
