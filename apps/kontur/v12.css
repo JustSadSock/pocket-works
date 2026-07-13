@@ -1,0 +1,172 @@
+/* КОНТУР 1.2 — контрольные точки и механический рычаг перегрузки. */
+.checkpoint-rack,
+.overload-control {
+  position: absolute;
+  z-index: 4;
+  bottom: max(100px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 94px));
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: #c8bb99;
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.checkpoint-rack {
+  left: 12px;
+  min-width: 92px;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  background-image:
+    linear-gradient(115deg, rgba(255,255,255,.16), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0 4px, rgba(23,33,29,.035) 4px 5px);
+}
+
+.checkpoint-rack[hidden] { display: none; }
+
+.checkpoint-rack::before {
+  content: "";
+  grid-row: 1 / 3;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  background: #77715d;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.22);
+}
+
+.checkpoint-rack[data-complete="true"]::before {
+  background: #d98b4d;
+  box-shadow: 0 0 12px rgba(217,139,77,.68);
+}
+
+.checkpoint-rack span {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.checkpoint-rack output {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.overload-control {
+  --heat: 0;
+  right: 12px;
+  width: 118px;
+  min-height: 50px;
+  padding: 6px 9px 7px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: center;
+  gap: 3px 8px;
+  text-align: left;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 80ms ease, box-shadow 80ms ease, background-color 100ms ease, color 100ms ease;
+}
+
+.overload-control span,
+.overload-control b {
+  position: relative;
+  z-index: 2;
+}
+
+.overload-control span {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.overload-control b {
+  font-size: 10px;
+}
+
+.overload-control::before {
+  content: "УДЕРЖИВАТЬ";
+  position: relative;
+  z-index: 2;
+  grid-column: 1 / -1;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  opacity: .64;
+}
+
+.overload-control i {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  border-top: 2px solid var(--ink);
+  background: var(--danger);
+  transform-origin: left center;
+  transform: scaleX(var(--heat));
+}
+
+.overload-control[data-active="true"] {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink), 0 0 18px rgba(139,46,36,.38);
+  background: var(--danger);
+  color: var(--cream);
+}
+
+.overload-control[data-active="true"] i {
+  background: #f2b077;
+}
+
+.overload-control[data-locked="true"] {
+  opacity: .52;
+}
+
+.overload-control[data-locked="true"]::before {
+  content: "ОХЛАЖДЕНИЕ";
+}
+
+@keyframes overload-jitter {
+  0%, 100% { translate: 0 0; }
+  35% { translate: 1px 0; }
+  70% { translate: -1px 0; }
+}
+
+.overload-control[data-active="true"] {
+  animation: overload-jitter 110ms steps(2, end) infinite;
+}
+
+@media (max-width: 360px) {
+  .checkpoint-rack {
+    min-width: 82px;
+    padding-inline: 7px;
+  }
+
+  .overload-control {
+    width: 105px;
+    padding-inline: 7px;
+  }
+
+  .overload-control span { font-size: 8px; }
+}
+
+@media (max-height: 650px) {
+  .checkpoint-rack,
+  .overload-control {
+    bottom: max(91px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 84px));
+    min-height: 43px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overload-control[data-active="true"] { animation: none; }
+}
