@@ -1,0 +1,205 @@
+Best);
+  ui.bestLevelValue.textContent = String(bestLevel).padStart(2, '0');
+  setMode('result');
+}
+
+function endRunManually() {
+  if (!game.run) return;
+  game.run.fuses = 0;
+  finishRun();
+}
+
+function openModuleChoice() {
+  store.set('resume', { kind: 'module', savedAt: Date.now(), run: JSON.parse(JSON.stringify(game.run)) });
+  setMode('module');
+  sound.stopHum();
+  const random = mulberry32(hashSeed(game.run.seed, game.run.level, game.run.modules.length));
+  const available = MODULES.filter((module) => {
+    if (module.id === 'tracer') return game.run.hintModules < 2;
+    if (module.id === 'reserve') return game.run.maxFuses < 6;
+    if (module.id === 'isolator') return game.run.freeFaults < 2;
+    return true;
+  });
+  const choices = shuffled(available, random).slice(0, 2);
+  ui.moduleChoices.replaceChildren();
+  for (const module of choices) {
+    const button = document.createElement('button');
+    button.className = 'module-choice';
+    button.type = 'button';
+    button.dataset.nativePress = '';
+    button.innerHTML = `<strong>${module.name}</strong><span>${module.effect}</span><small>${module.tradeoff}</small>`;
+    button.addEventListener('click', () => {
+      sound.unlock();
+      sound.module();
+      module.apply(game.run);
+      game.run.modules.push(module.id);
+      clearResume();
+      startLevel();
+    }, { once: true });
+    ui.moduleChoices.append(button);
+  }
+}
+
+function setMode(mode) {
+  game.mode = mode;
+  const visible = {
+    menu: ui.startScreen,
+    paused: ui.pauseScreen,
+    module: ui.moduleScreen,
+    result: ui.resultScreen
+  }[mode] || null;
+  for (const screen of [ui.startScreen, ui.pauseScreen, ui.moduleScreen, ui.resultScreen]) {
+    const active = screen === visible;
+    screen.classList.toggle('is-visible', active);
+    screen.setAttribute('aria-hidden', String(!active));
+  }
+  ui.pauseButton.disabled = mode !== 'playing';
+  if (mode !== 'playing') sound.stopHum();
+  if (mode === 'playing') sound.startHum();
+}
+
+function pauseGame() {
+  if (game.mode !== 'playing') return;
+  saveResume();
+  setMode('paused');
+}
+
+function resumeGame() {
+  if (game.mode !== 'paused') return;
+  if (game.pulse?.faultUntil) resetPulse(game.run.restartPenalty);
+  else game.pulse.nextDecisionAt = performance.now() + 700;
+  setMode('playing');
+}
+
+function returnToMenu() {
+  sound.stopHum();
+  game.run = null;
+  game.board = null;
+  game.pulse = null;
+  game.particles.length = 0;
+  game.sparks.length = 0;
+  refreshMenu();
+  setMode('menu');
+}
+
+function rotateTile(x, y) {
+  if (game.mode !== 'playing' || !game.board) return;
+  const tile = game.board.tiles[y]?.[x];
+  if (!tile || tile.locked) {
+    if (tile) tile.flash = 0.6;
+    setStatus('МОДУЛЬ ЗАПАЯН', 'danger', 650);
+    sound.tone(95, 0.08, 0.08, 'square', -20);
+    return;
+  }
+  tile.mask = rotateMask(tile.mask);
+  tile.targetAngle += Math.PI / 2;
+  tile.heat = Math.max(tile.heat, 0.35);
+  game.board.rotations += 1;
+  sound.click();
+  navigator.vibrate?.(8);
+  const stats = store.get('stats', { runs: 0, levels: 0, turns: 0 });
+  store.set('stats', { ...stats, turns: stats.turns + 1 });
+  saveResumeDebounced();
+}
+
+function saveResumeDebounced() {
+  window.clearTimeout(game.saveTimer);
+  game.saveTimer = window.setTimeout(saveResume, 450);
+}
+
+function setStatus(text, tone = '', duration = 0) {
+  ui.statusStrip.textContent = text;
+  if (tone) ui.statusStrip.dataset.tone = tone;
+  else delete ui.statusStrip.dataset.tone;
+  window.clearTimeout(game.statusTimer);
+  if (duration) {
+    game.statusTimer = window.setTimeout(() => {
+      ui.statusStrip.textContent = 'ТАПАЙ МОДУЛИ — ПОВОРАЧИВАЙ ЦЕПЬ';
+      delete ui.statusStrip.dataset.tone;
+    }, duration);
+  }
+}
+
+function updateHud() {
+  const level = game.run?.level ?? 1;
+  const score = game.run?.score ?? 0;
+  ui.levelValue.textContent = String(level).padStart(2, '0');
+  ui.scoreValue.textContent = String(Math.round(score)).padStart(6, '0').slice(-6);
+  ui.fuseLights.replaceChildren();
+  const maxFuses = game.run?.maxFuses ?? 3;
+  const fuses = game.run?.fuses ?? maxFuses;
+  for (let i = 0; i < maxFuses; i += 1) {
+    const light = document.createElement('i');
+    light.className = `fuse-light${i < fuses ? ' is-live' : ''}${i === game.breakingFuse ? ' is-breaking' : ''}`;
+    ui.fuseLights.append(light);
+  }
+}
+
+function formatNumber(value) {
+  return Math.round(value).toLocaleString('ru-RU');
+}
+
+function refreshMenu() {
+  ui.bestLevelValue.textContent = String(store.get('bestLevel', 1)).padStart(2, '0');
+  const resume = store.get('resume');
+  ui.continueButton.hidden = !resume?.run;
+  updateSoundLabels();
+  updateHud();
+}
+
+function updateSoundLabels() {
+  const enabled = sound.enabled;
+  const label = enabled ? 'ЗВУК: ВКЛ' : 'ЗВУК: ВЫКЛ';
+  ui.startSoundButton.textContent = label;
+  ui.pauseSoundButton.querySelector('span').textContent = label;
+  ui.startSoundButton.setAttribute('aria-pressed', String(enabled));
+  ui.pauseSoundButton.setAttribute('aria-pressed', String(enabled));
+}
+
+function toggleSound() {
+  sound.setEnabled(!sound.enabled);
+  store.set('sound', sound.enabled);
+  updateSoundLabels();
+  if (sound.enabled) sound.click();
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const safeTop = Math.max(116, Math.min(142, rect.height * 0.18));
+  const safeBottom = Math.max(104, Math.min(136, rect.height * 0.16));
+  const maxWidth = Math.min(rect.width - 24, 500);
+  const maxHeight = rect.height - safeTop - safeBottom;
+  const cell = Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS));
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+  game.layout = {
+    width: rect.width,
+    height: rect.height,
+    dpr,
+    cell,
+    boardX: Math.round((rect.width - boardWidth) / 2),
+    boardY: Math.round(safeTop + (maxHeight - boardHeight) / 2),
+    boardWidth,
+    boardHeight
+  };
+}
+
+function boardPoint(cell) {
+  const layout = game.layout;
+  return {
+    x: layout.boardX + (cell.x + 0.5) * layout.cell,
+    y: layout.boardY + (cell.y + 0.5) * layout.cell
+  };
+}
+
+function spawnSpark(x, y, direction) {
+  const origin = boardPoint({ x, y });
+  const dir = 
