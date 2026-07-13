@@ -1,0 +1,535 @@
+
+/* КОНТУР 1.3 — разнообразные проводники, блок-сектора и ограничители. */
+const DIVERSITY_VERSION = 1;
+const CAP_MASKS = [N, E, S, W];
+const TEE_MASKS = [N | E | S, E | S | W, S | W | N, W | N | E];
+const CROSS_MASK = N | E | S | W;
+
+const generateBoardBeforeDiversity = generateBoard;
+const serializeBoardBeforeDiversity = serializeBoard;
+const startLevelBeforeDiversity = startLevel;
+const rotateTileBeforeDiversity = rotateTile;
+const beginMoveBeforeDiversity = beginMove;
+const evaluatePulseBeforeDiversity = evaluatePulse;
+const drawTileBeforeDiversity = drawTile;
+
+function bitCount(mask) {
+  let value = mask & 15;
+  let count = 0;
+  while (value) {
+    count += value & 1;
+    value >>>= 1;
+  }
+  return count;
+}
+
+function keyOf(x, y) {
+  return `${x},${y}`;
+}
+
+function conductorTypeForMask(mask) {
+  const count = bitCount(mask);
+  if (count === 1) return 'cap';
+  if (count === 3) return 'tee';
+  if (count === 4) return 'cross';
+  return 'basic';
+}
+
+function diverseDecoyMask(level, random) {
+  const pool = [...BASE_PIECES, ...BASE_PIECES];
+  if (level >= 2) pool.push(...CAP_MASKS, ...CAP_MASKS);
+  if (level >= 3) pool.push(...TEE_MASKS);
+  if (level >= 7) pool.push(CROSS_MASK);
+  return randomItem(pool, random);
+}
+
+function findObstaclePath(random, blocked) {
+  const starts = shuffled(
+    Array.from({ length: COLS }, (_, x) => ({ x, y: ROWS - 1 })),
+    random
+  );
+
+  for (const start of starts) {
+    if (blocked.has(keyOf(start.x, start.y))) continue;
+    const dist = Array.from({ length: ROWS }, () => Array(COLS).fill(Infinity));
+    const previous = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    const open = [{ ...start, cost: 0 }];
+    dist[start.y][start.x] = 0;
+
+    while (open.length) {
+      open.sort((a, b) => a.cost - b.cost);
+      const current = open.shift();
+      if (current.cost !== dist[current.y][current.x]) continue;
+
+      if (current.y === 0) {
+        const path = [];
+        let cursor = { x: current.x, y: current.y };
+        while (cursor) {
+          path.push(cursor);
+          cursor = previous[cursor.y][cursor.x];
+        }
+        return path.reverse();
+      }
+
+      const directions = shuffled(DIRS, random);
+      for (const dir of directions) {
+        const nx = current.x + dir.dx;
+        const ny = current.y + dir.dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        if (blocked.has(keyOf(nx, ny))) continue;
+
+        const verticalCost = dir.bit === N ? 0.72 : dir.bit === S ? 2.85 : 1.08;
+        const edgePenalty = nx === 0 || nx === COLS - 1 ? 0.12 : 0;
+        const cost = current.cost + verticalCost + edgePenalty + random() * 0.72;
+        if (cost >= dist[ny][nx]) continue;
+        dist[ny][nx] = cost;
+        previous[ny][nx] = { x: current.x, y: current.y };
+        open.push({ x: nx, y: ny, cost });
+      }
+    }
+  }
+  return null;
+}
+
+function createObstacleLayout(level, random) {
+  const targetCount = level < 5 ? 0 : Math.min(8, 2 + Math.floor((level - 5) / 3));
+  if (!targetCount) return { blocked: new Set(), path: findObstaclePath(random, new Set()) };
+
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    const blocked = new Set();
+
+    if (targetCount >= 3) {
+      const wallY = 2 + Math.floor(random() * (ROWS - 4));
+      const wallLength = Math.min(3, 2 + Math.floor(level / 12));
+      const wallX = Math.floor(random() * Math.max(1, COLS - wallLength + 1));
+      for (let i = 0; i < wallLength; i += 1) blocked.add(keyOf(wallX + i, wallY));
+    }
+
+    while (blocked.size < targetCount) {
+      const x = Math.floor(random() * COLS);
+      const y = 1 + Math.floor(random() * (ROWS - 2));
+      blocked.add(keyOf(x, y));
+    }
+
+    const path = findObstaclePath(random, blocked);
+    if (path) return { blocked, path };
+  }
+
+  const blocked = new Set();
+  return { blocked, path: findObstaclePath(random, blocked) };
+}
+
+function pathEntryAndExit(path, index) {
+  const entry = index === 0 ? S : OPP[directionBetween(path[index - 1], path[index])];
+  const exit = index === path.length - 1 ? N : directionBetween(path[index], path[index + 1]);
+  return { entry, exit };
+}
+
+function safeTeeMask(targetMask, entry, exit, random) {
+  const candidates = shuffled(
+    DIRS.map((dir) => dir.bit).filter((bit) => !(targetMask & bit)),
+    random
+  );
+  for (const third of candidates) {
+    const mask = targetMask | third;
+    if (chooseOutgoing(mask, entry) === exit) return mask;
+  }
+  return 0;
+}
+
+function setTileOrientation(tile, turns) {
+  const normalized = ((turns % 4) + 4) % 4;
+  tile.mask = rotateMask(tile.baseMask, normalized);
+  tile.angle = normalized * Math.PI / 2;
+  tile.targetAngle = normalized * Math.PI / 2;
+}
+
+function decorateDiverseBoard(board, level, random) {
+  const pathIndex = new Map(board.path.map((cell, index) => [keyOf(cell.x, cell.y), index]));
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      if (tile.blocked) continue;
+      tile.conductorType ||= conductorTypeForMask(tile.baseMask);
+      tile.rotationLimit ??= 0;
+      tile.rotationsUsed ??= 0;
+      tile.sealed ||= false;
+      tile.diversityVersion = DIVERSITY_VERSION;
+
+      const index = pathIndex.get(keyOf(tile.x, tile.y));
+      if (index === undefined) {
+        if (!tile.locked && level >= 5 && random() < Math.min(0.12 + level * 0.006, 0.25)) {
+          tile.rotationLimit = random() < 0.45 ? 1 : 2;
+        }
+        if (!tile.locked && level >= 9 && random() < 0.08) {
+          tile.sealed = true;
+          tile.locked = true;
+        }
+        continue;
+      }
+
+      if (tile.specialType) continue;
+      const { entry, exit } = pathEntryAndExit(board.path, index);
+      const isInterior = index > 0 && index < board.path.length - 1;
+      const isStraight = exit === OPP[entry];
+
+      if (isInterior && level >= 8 && isStraight && random() < 0.22) {
+        tile.baseMask = CROSS_MASK;
+        tile.mask = CROSS_MASK;
+        tile.targetMask = CROSS_MASK;
+        tile.conductorType = 'bridge';
+        tile.locked = true;
+        tile.sealed = false;
+        tile.angle = 0;
+        tile.targetAngle = 0;
+        continue;
+      }
+
+      if (isInterior && level >= 3 && random() < 0.3) {
+        const teeMask = safeTeeMask(tile.targetMask, entry, exit, random);
+        if (teeMask) {
+          tile.baseMask = teeMask;
+          tile.targetMask = teeMask;
+          tile.conductorType = 'tee';
+        }
+      }
+
+      if (level >= 9 && random() < 0.1) {
+        tile.sealed = true;
+        tile.locked = true;
+        setTileOrientation(tile, 0);
+        continue;
+      }
+
+      if (level >= 5 && random() < Math.min(0.18 + level * 0.004, 0.28)) {
+        tile.rotationLimit = level >= 12 && random() < 0.36 ? 1 : 2;
+        const needed = 1 + Math.floor(random() * tile.rotationLimit);
+        setTileOrientation(tile, 4 - needed);
+      }
+    }
+  }
+  return board;
+}
+
+function buildDiverseBoard(level, seed) {
+  const random = mulberry32(seed);
+  const { blocked, path } = createObstacleLayout(level, random);
+  if (!path?.length) return generateBoardBeforeDiversity(level, seed);
+
+  const pathIndex = new Map(path.map((cell, index) => [keyOf(cell.x, cell.y), index]));
+  const tiles = Array.from({ length: ROWS }, (_, y) => Array.from({ length: COLS }, (_, x) => {
+    if (blocked.has(keyOf(x, y))) {
+      return {
+        x, y,
+        baseMask: 0,
+        mask: 0,
+        targetMask: null,
+        angle: 0,
+        targetAngle: 0,
+        locked: true,
+        blocked: true,
+        conductorType: 'block',
+        rotationLimit: 0,
+        rotationsUsed: 0,
+        sealed: false,
+        heat: 0,
+        flash: 0,
+        diversityVersion: DIVERSITY_VERSION
+      };
+    }
+
+    const index = pathIndex.get(keyOf(x, y));
+    let targetMask = null;
+    if (index !== undefined) {
+      const { entry, exit } = pathEntryAndExit(path, index);
+      targetMask = entry | exit;
+    }
+
+    const baseMask = targetMask ?? diverseDecoyMask(level, random);
+    const turns = Math.floor(random() * 4);
+    const locked = index === undefined && level >= 6 && random() < Math.min(0.045 + level * 0.004, 0.13);
+    return {
+      x, y,
+      baseMask,
+      mask: rotateMask(baseMask, turns),
+      targetMask,
+      angle: turns * Math.PI / 2,
+      targetAngle: turns * Math.PI / 2,
+      locked,
+      blocked: false,
+      conductorType: conductorTypeForMask(baseMask),
+      rotationLimit: 0,
+      rotationsUsed: 0,
+      sealed: locked,
+      heat: 0,
+      flash: 0,
+      diversityVersion: DIVERSITY_VERSION
+    };
+  }));
+
+  const board = {
+    cols: COLS,
+    rows: ROWS,
+    tiles,
+    path,
+    source: path[0],
+    goal: path[path.length - 1],
+    seed,
+    rotations: 0,
+    faults: 0,
+    startedAt: performance.now(),
+    hintUntil: performance.now() + ((level <= 2 || game.run?.hintModules > 0) ? 4000 : 0),
+    diversityVersion: DIVERSITY_VERSION
+  };
+
+  configureSpecialBoard(board, level);
+  normalizeSwitches(board);
+  return decorateDiverseBoard(board, level, random);
+}
+
+generateBoard = function generateBoardDiversity(level, seed) {
+  return buildDiverseBoard(level, seed);
+};
+
+serializeBoard = function serializeBoardDiversity(board) {
+  const snapshot = serializeBoardBeforeDiversity(board);
+  snapshot.diversityVersion = board.diversityVersion || DIVERSITY_VERSION;
+  snapshot.tiles = snapshot.tiles.map((row, y) => row.map((tile, x) => {
+    const live = board.tiles[y][x];
+    return {
+      ...tile,
+      blocked: Boolean(live.blocked),
+      conductorType: live.conductorType || conductorTypeForMask(live.baseMask),
+      rotationLimit: Number(live.rotationLimit || 0),
+      rotationsUsed: Number(live.rotationsUsed || 0),
+      sealed: Boolean(live.sealed),
+      diversityVersion: live.diversityVersion || DIVERSITY_VERSION
+    };
+  }));
+  return snapshot;
+};
+
+startLevel = function startLevelDiversity(restoredBoard = null, restoredPulse = null) {
+  startLevelBeforeDiversity(restoredBoard, restoredPulse);
+  const level = game.run?.level || 1;
+  const intro = {
+    2: 'НОВЫЕ ЗАГЛУШКИ · ТУПИКИ ТЕПЕРЬ ВИДНЫ ПО ФОРМЕ',
+    3: 'ТРОЙНИКИ ДОБАВЛЯЮТ ЛОЖНЫЕ ОТВОДЫ',
+    5: 'БЛОК-СЕКТОРА НЕПРОХОДИМЫ · ИЩИ ОБХОД',
+    6: 'ЖЁЛТЫЕ ОГРАНИЧИТЕЛИ ДОПУСКАЮТ ЛИШЬ 1–2 ПОВОРОТА',
+    8: 'МОСТЫ ПРОВОДЯТ ТОК НАСКВОЗЬ БЕЗ СОЕДИНЕНИЯ КАНАЛОВ',
+    9: 'ОПЛОМБИРОВАННЫЕ МОДУЛИ НЕЛЬЗЯ ВРАЩАТЬ'
+  }[level];
+  if (intro && !restoredBoard) {
+    const seed = game.run?.seed;
+    window.setTimeout(() => {
+      if (game.mode === 'playing' && game.run?.seed === seed && game.run?.level === level) {
+        setStatus(intro, 'success', 1700);
+      }
+    }, LAUNCH_COUNTDOWN_MS + 260);
+  }
+};
+
+function rejectFixedDiverseTile(tile) {
+  if (!tile) return false;
+  let message = '';
+  if (tile.blocked) message = 'БЛОК-СЕКТОР НЕПРОХОДИМ';
+  else if (tile.conductorType === 'bridge') message = 'МОСТ ЗАФИКСИРОВАН';
+  else if (tile.sealed) message = 'МОДУЛЬ ПОД ПЛОМБОЙ';
+  if (!message) return false;
+  tile.flash = 0.7;
+  setStatus(message, 'danger', 650);
+  sound.tone(92, 0.09, 0.075, 'square', -18);
+  navigator.vibrate?.(7);
+  return true;
+}
+
+rotateTile = function rotateTileDiversity(x, y) {
+  const tile = game.board?.tiles[y]?.[x];
+  if (rejectFixedDiverseTile(tile)) return;
+  if (tile?.rotationLimit && tile.rotationsUsed >= tile.rotationLimit) {
+    tile.flash = 0.65;
+    setStatus('ОГРАНИЧИТЕЛЬ СРАБОТАЛ · ПОВОРОТЫ ИСЧЕРПАНЫ', 'danger', 800);
+    sound.tone(118, 0.08, 0.08, 'square', -45);
+    navigator.vibrate?.([7, 18, 7]);
+    return;
+  }
+
+  const before = tile?.mask;
+  rotateTileBeforeDiversity(x, y);
+  if (tile?.rotationLimit && tile.mask !== before) {
+    tile.rotationsUsed = Math.min(tile.rotationLimit, tile.rotationsUsed + 1);
+    if (tile.rotationsUsed >= tile.rotationLimit) {
+      window.setTimeout(() => sound.tone(145, 0.055, 0.055, 'square', -55), 34);
+    }
+    saveResumeDebounced();
+  }
+};
+
+beginMove = function beginMoveDiversity(direction) {
+  const dir = DIRS.find((item) => item.bit === direction);
+  const nx = game.pulse.x + (dir?.dx || 0);
+  const ny = game.pulse.y + (dir?.dy || 0);
+  if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+    const nextTile = game.board?.tiles[ny]?.[nx];
+    if (nextTile?.blocked) {
+      triggerFault('УДАР В БЛОК-СЕКТОР', direction);
+      return;
+    }
+  }
+  beginMoveBeforeDiversity(direction);
+};
+
+evaluatePulse = function evaluatePulseDiversity(now) {
+  if (
+    game.mode === 'playing' &&
+    game.pulse &&
+    !game.pulse.moving &&
+    now >= game.pulse.nextDecisionAt &&
+    now >= game.pulse.faultUntil &&
+    game.pulse.y >= 0 &&
+    game.pulse.y < ROWS
+  ) {
+    const tile = game.board.tiles[game.pulse.y]?.[game.pulse.x];
+    if (tile?.conductorType === 'bridge') {
+      const key = keyOf(game.pulse.x, game.pulse.y);
+      game.pulse.visits[key] = (game.pulse.visits[key] || 0) + 1;
+      if (game.pulse.visits[key] > 2) {
+        triggerFault('ПЕТЛЯ НА МОСТУ');
+        return;
+      }
+      if (!(tile.mask & game.pulse.entryBit)) {
+        triggerFault('МОСТ НЕ ПРИНЯЛ ИМПУЛЬС');
+        return;
+      }
+      beginMove(OPP[game.pulse.entryBit]);
+      return;
+    }
+  }
+  evaluatePulseBeforeDiversity(now);
+};
+
+function drawBlockSector(tile, x, y, size) {
+  const inset = Math.max(3, size * 0.055);
+  ctx.save();
+  ctx.fillStyle = '#303733';
+  ctx.fillRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
+  ctx.strokeStyle = '#171e1b';
+  ctx.lineWidth = Math.max(2, size * 0.035);
+  ctx.strokeRect(x + inset + 1, y + inset + 1, size - inset * 2 - 2, size - inset * 2 - 2);
+  ctx.beginPath();
+  ctx.moveTo(x + inset + 6, y + size - inset - 6);
+  ctx.lineTo(x + size - inset - 6, y + inset + 6);
+  ctx.moveTo(x + inset + 6, y + inset + 6);
+  ctx.lineTo(x + size - inset - 6, y + size - inset - 6);
+  ctx.strokeStyle = '#737666';
+  ctx.lineWidth = Math.max(3, size * 0.055);
+  ctx.stroke();
+  ctx.strokeStyle = '#b58a55';
+  ctx.lineWidth = Math.max(1, size * 0.016);
+  ctx.setLineDash([Math.max(3, size * 0.07), Math.max(3, size * 0.055)]);
+  ctx.strokeRect(x + inset + 5, y + inset + 5, size - inset * 2 - 10, size - inset * 2 - 10);
+  ctx.restore();
+}
+
+function drawBridge(tile, x, y, size) {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const width = Math.max(5, size * 0.1);
+  ctx.save();
+  ctx.fillStyle = '#d9cfb3';
+  ctx.fillRect(cx - size * 0.18, cy - size * 0.18, size * 0.36, size * 0.36);
+  ctx.strokeStyle = '#5d2d20';
+  ctx.lineWidth = width + Math.max(2, size * 0.035);
+  ctx.beginPath();
+  ctx.moveTo(cx - size * 0.21, cy);
+  ctx.lineTo(cx + size * 0.21, cy);
+  ctx.stroke();
+  ctx.strokeStyle = '#b85d32';
+  ctx.lineWidth = width;
+  ctx.stroke();
+  ctx.strokeStyle = '#5d2d20';
+  ctx.lineWidth = width + Math.max(2, size * 0.035);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size * 0.2);
+  ctx.quadraticCurveTo(cx + size * 0.14, cy, cx, cy + size * 0.2);
+  ctx.stroke();
+  ctx.strokeStyle = '#d98b4d';
+  ctx.lineWidth = width;
+  ctx.stroke();
+  ctx.fillStyle = '#17211d';
+  ctx.font = `900 ${Math.max(6, size * 0.085)}px ui-monospace, monospace`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('М', x + size * 0.9, y + size * 0.1);
+  ctx.restore();
+}
+
+function drawLimiter(tile, x, y, size) {
+  if (!tile.rotationLimit) return;
+  const remaining = Math.max(0, tile.rotationLimit - tile.rotationsUsed);
+  ctx.save();
+  ctx.fillStyle = '#d4a94f';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.5, size * 0.025);
+  const w = size * 0.31;
+  const h = size * 0.17;
+  const bx = x + size - w - size * 0.07;
+  const by = y + size * 0.07;
+  ctx.fillRect(bx, by, w, h);
+  ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
+  for (let i = 0; i < tile.rotationLimit; i += 1) {
+    ctx.beginPath();
+    ctx.fillStyle = i < remaining ? '#17211d' : '#7f6c42';
+    ctx.arc(bx + w * (i + 1) / (tile.rotationLimit + 1), by + h / 2, Math.max(1.7, size * 0.028), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSeal(tile, x, y, size) {
+  if (!tile.sealed || tile.blocked) return;
+  ctx.save();
+  ctx.strokeStyle = '#4b514a';
+  ctx.fillStyle = '#9b967f';
+  ctx.lineWidth = Math.max(1.5, size * 0.026);
+  const pad = size * 0.09;
+  const len = size * 0.16;
+  for (const [sx, sy, dx, dy] of [
+    [x + pad, y + pad, 1, 1],
+    [x + size - pad, y + pad, -1, 1],
+    [x + pad, y + size - pad, 1, -1],
+    [x + size - pad, y + size - pad, -1, -1]
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(sx + dx * len, sy);
+    ctx.lineTo(sx, sy);
+    ctx.lineTo(sx, sy + dy * len);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(sx, sy, Math.max(2, size * 0.035), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+drawTile = function drawTileDiversity(tile, x, y, size, hintActive) {
+  drawTileBeforeDiversity(tile, x, y, size, hintActive);
+  if (tile.blocked) {
+    drawBlockSector(tile, x, y, size);
+    return;
+  }
+  if (tile.conductorType === 'bridge') drawBridge(tile, x, y, size);
+  if (tile.conductorType === 'cap') {
+    ctx.save();
+    ctx.strokeStyle = '#17211d';
+    ctx.lineWidth = Math.max(2, size * 0.035);
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, Math.max(4, size * 0.082), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawLimiter(tile, x, y, size);
+  drawSeal(tile, x, y, size);
+};
