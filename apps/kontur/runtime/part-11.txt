@@ -1,0 +1,38 @@
+
+/* КОНТУР 1.2 — согласование специальных модулей с форсированным прогоном. */
+const updateSimulationBeforeV12Integration = updateSimulation;
+
+updateSimulation = function updateSimulationV12Integration(dt, now) {
+  if (
+    game.fastTrackActive &&
+    game.pulse &&
+    !game.pulse.moving &&
+    game.pulse.y >= 0 &&
+    game.pulse.y < ROWS
+  ) {
+    const tile = game.board?.tiles[game.pulse.y]?.[game.pulse.x];
+    if (tile?.specialType === 'capacitor') {
+      const key = `${game.pulse.x},${game.pulse.y}`;
+      game.pulse.capacitorSeen ||= {};
+      game.pulse.capacitorSeen[key] = true;
+    }
+  }
+
+  updateSimulationBeforeV12Integration(dt, now);
+
+  if (overloadButton) {
+    overloadButton.dataset.locked = String(
+      game.overloadTripped ||
+      game.fastTrackActive ||
+      Boolean(game.countdownEnd) ||
+      game.mode !== 'playing'
+    );
+  }
+};
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Shift' && !event.repeat) setOverload(true);
+});
+window.addEventListener('keyup', (event) => {
+  if (event.key === 'Shift') setOverload(false);
+});
