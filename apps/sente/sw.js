@@ -28,6 +28,7 @@ const APP_SHELL = [
   './dead-groups.js',
   './AI_AUDIT.md',
   './AI_AUDIT.json',
+  './AI_AUDIT.log',
   './assets/gnugo/gnugo.js',
   './assets/gnugo/gnugo.wasm',
   './assets/gnugo/COPYING.txt',
