@@ -1,0 +1,8 @@
+.steering-knob {
+  bottom: calc(25px + var(--steer-arc-y, 31px));
+  transform: translateX(calc(-50% + var(--steer-offset, 0px))) rotate(var(--steer-angle, 0deg));
+}
+
+.power-knob {
+  top: var(--power-top, 62%);
+}

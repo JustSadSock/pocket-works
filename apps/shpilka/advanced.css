@@ -1,0 +1,271 @@
+/* ШПИЛЬКА 2.2 — precision controls and compact race setup. */
+
+.sector-delta {
+  width: 124px;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(30, 33, 31, 0.36);
+  font: 900 8px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+}
+
+.sector-delta[data-tone="gain"] { color: #25634f; }
+.sector-delta[data-tone="loss"] { color: #a8422e; }
+
+.controls {
+  height: 184px;
+  padding-bottom: calc(var(--safe-bottom) + 8px);
+}
+
+.precision-controls,
+.button-controls {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  pointer-events: none;
+}
+
+.controls[data-mode="precision"] .button-controls,
+.controls[data-mode="buttons"] .precision-controls {
+  display: none;
+}
+
+.steering-arc {
+  --steer-value: 0;
+  position: relative;
+  width: min(54vw, 214px);
+  height: 128px;
+  pointer-events: auto;
+  touch-action: none;
+  filter: drop-shadow(0 7px 0 rgba(30, 33, 31, 0.22));
+}
+
+.steering-arc::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 2px;
+  height: 108px;
+  border: 13px solid rgba(30, 33, 31, 0.86);
+  border-bottom: 0;
+  border-radius: 120px 120px 0 0;
+  clip-path: polygon(0 100%, 8% 40%, 19% 14%, 36% 2%, 64% 2%, 81% 14%, 92% 40%, 100% 100%, 82% 100%, 75% 51%, 66% 33%, 57% 26%, 43% 26%, 34% 33%, 25% 51%, 18% 100%);
+  background: rgba(244, 239, 224, 0.20);
+}
+
+.steering-arc::after {
+  content: "−30  −15   0   +15  +30";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 7px;
+  font: 900 7px/1 ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--paper-light);
+  word-spacing: 8px;
+  opacity: 0.78;
+}
+
+.steering-knob {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(25px + (1 - abs(var(--steer-value))) * 31px);
+  width: 66px;
+  height: 42px;
+  transform: translateX(calc(-50% + var(--steer-value) * min(17vw, 70px))) rotate(calc(var(--steer-value) * 16deg));
+  display: grid;
+  place-items: center;
+  color: var(--paper-light);
+  background: var(--ink);
+  border: 3px solid rgba(244, 239, 224, 0.62);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  transition: transform 45ms linear, bottom 45ms linear;
+}
+
+.steering-knob span {
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.power-gate {
+  --power-value: .62;
+  position: relative;
+  width: min(25vw, 96px);
+  height: 164px;
+  pointer-events: auto;
+  touch-action: none;
+  background: rgba(30, 33, 31, 0.80);
+  border: 2px solid rgba(244, 239, 224, 0.38);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  box-shadow: 0 7px 0 rgba(30, 33, 31, 0.22);
+}
+
+.power-gate::before {
+  content: "";
+  position: absolute;
+  inset: 8px 21px 8px 25px;
+  background:
+    linear-gradient(to bottom,
+      rgba(230, 94, 47, .94) 0 57%,
+      rgba(244, 239, 224, .26) 57% 66%,
+      rgba(244, 239, 224, .72) 66% 90%,
+      rgba(168, 79, 66, .96) 90% 100%);
+}
+
+.power-label {
+  position: absolute;
+  z-index: 2;
+  right: 5px;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  color: var(--paper-light);
+  writing-mode: vertical-rl;
+}
+
+.power-label.max { top: 8px; }
+.power-label.neutral { top: 57%; transform: translateY(-50%); }
+.power-label.reverse { bottom: 8px; }
+
+.power-knob {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  right: 13px;
+  top: calc(var(--power-value) * (100% - 26px));
+  height: 26px;
+  transform: translateY(-50%) skewX(-6deg);
+  background: var(--paper-light);
+  border: 3px solid var(--ink);
+  box-shadow: 0 3px 0 rgba(30, 33, 31, 0.35);
+  transition: top 42ms linear, background-color 70ms linear;
+}
+
+.power-gate[data-state="throttle"] .power-knob { background: #f1723d; }
+.power-gate[data-state="reverse"] .power-knob { background: #b25345; }
+
+.button-controls .steering,
+.button-controls .pedals {
+  pointer-events: auto;
+}
+
+.race-options {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+}
+
+.option-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.option-label {
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+}
+
+.option-buttons {
+  min-width: 0;
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.option-buttons::-webkit-scrollbar { display: none; }
+
+.option-buttons button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 9px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid rgba(30, 33, 31, 0.44);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+.option-buttons button.is-selected {
+  color: var(--paper-light);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.control-help {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: rgba(30, 33, 31, 0.34);
+}
+
+.control-help span {
+  min-height: 38px;
+  padding: 7px 8px;
+  display: grid;
+  align-content: center;
+  color: var(--ink);
+  background: var(--terrain);
+  font-size: 8px;
+  line-height: 1.18;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.control-help b { font-size: 10px; }
+
+.start-screen {
+  grid-template-rows: minmax(94px, 19vh) auto auto auto auto auto auto 1fr;
+  gap: 10px;
+}
+
+.start-footer {
+  flex-wrap: wrap;
+}
+
+.pause-screen .secondary-action.compact-setting {
+  min-height: 42px;
+  font-size: 9px;
+}
+
+@media (max-height: 760px) {
+  .start-screen {
+    grid-template-rows: 70px auto auto auto auto auto auto 1fr;
+    gap: 7px;
+  }
+
+  .track-mark { width: 124px; }
+  .subtitle { display: none; }
+  .option-buttons button { min-height: 29px; padding-inline: 7px; }
+  .control-help span { min-height: 32px; padding-block: 5px; }
+  .primary-action, .secondary-action { min-height: 43px; }
+}
+
+@media (orientation: landscape) {
+  .controls { height: 142px; }
+  .steering-arc { width: 190px; height: 112px; }
+  .power-gate { height: 126px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steering-knob,
+  .power-knob { transition: none; }
+}
