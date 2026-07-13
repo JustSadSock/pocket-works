@@ -1,50 +1,44 @@
 import { BLACK, WHITE, getGroup, inspectMove } from './go-engine.js';
 import { gameSeed } from './gnugo-protocol.js';
 
-let worker = null;
 let nextRequestId = 1;
-const pending = new Map();
-
-function ensureWorker() {
-  if (worker) return worker;
-  worker = new Worker(new URL('./gnugo-worker.js', import.meta.url), { type: 'module', name: 'sente-gnugo' });
-  worker.onmessage = (event) => {
-    const { id, ok, result, error } = event.data || {};
-    const request = pending.get(id);
-    if (!request) return;
-    pending.delete(id);
-    clearTimeout(request.timeout);
-    if (ok) request.resolve(result);
-    else request.reject(new Error(error || 'GNU Go worker failed'));
-  };
-  worker.onerror = (event) => {
-    for (const request of pending.values()) {
-      clearTimeout(request.timeout);
-      request.reject(new Error(event.message || 'GNU Go worker crashed'));
-    }
-    pending.clear();
-    worker?.terminate();
-    worker = null;
-  };
-  return worker;
-}
+const activeWorkers = new Set();
 
 function request(type, payload, timeoutMs) {
-  const active = ensureWorker();
+  const worker = new Worker(new URL('./gnugo-worker.js', import.meta.url), { type: 'module', name: 'sente-gnugo' });
+  activeWorkers.add(worker);
   const id = nextRequestId++;
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      activeWorkers.delete(worker);
+      worker.terminate();
+    };
     const timeout = setTimeout(() => {
-      pending.delete(id);
+      cleanup();
       reject(new Error('GNU Go exceeded its move time limit'));
     }, timeoutMs);
-    pending.set(id, { resolve, reject, timeout });
-    active.postMessage({ id, type, payload });
+    worker.onmessage = (event) => {
+      if (event.data?.id !== id) return;
+      const { ok, result, error } = event.data;
+      cleanup();
+      if (ok) resolve(result);
+      else reject(new Error(error || 'GNU Go worker failed'));
+    };
+    worker.onerror = (event) => {
+      cleanup();
+      reject(new Error(event.message || 'GNU Go worker crashed'));
+    };
+    worker.postMessage({ id, type, payload });
   });
 }
 
 function timeoutFor(level, size) {
-  const base = level === 'sharp' ? 15000 : level === 'steady' ? 9500 : 6000;
-  return base + (size === 19 ? 5000 : size === 13 ? 2500 : 0);
+  const base = level === 'sharp' ? 20000 : level === 'steady' ? 13000 : 8000;
+  return base + (size === 19 ? 6000 : size === 13 ? 3000 : 0);
 }
 
 function openingFallback(game) {
@@ -129,15 +123,10 @@ export async function chooseGnugoMove(game, level) {
 }
 
 export function prewarmGnugo() {
-  request('warmup', {}, 12000).catch((error) => console.warn('GNU Go warmup failed', error));
+  // Each actual move runs in a disposable worker so leaked native tables cannot accumulate.
 }
 
 export function resetGnugoWorker() {
-  worker?.terminate();
-  worker = null;
-  for (const request of pending.values()) {
-    clearTimeout(request.timeout);
-    request.reject(new Error('GNU Go worker reset'));
-  }
-  pending.clear();
+  for (const worker of activeWorkers) worker.terminate();
+  activeWorkers.clear();
 }
