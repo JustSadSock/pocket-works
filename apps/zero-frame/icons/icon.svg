@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="НУЛЕВОЙ КАДР">
+  <rect width="512" height="512" rx="84" fill="#0b0c0a"/>
+  <path d="M92 78h328l28 32v292l-34 32H92l-28-28V106z" fill="#1b1d17" stroke="#a48755" stroke-width="14"/>
+  <rect x="118" y="126" width="276" height="244" fill="#c8bea7"/>
+  <rect x="145" y="151" width="222" height="158" fill="#090a08"/>
+  <path d="M223 309V189l33-34 33 34v120z" fill="#2c2e27"/>
+  <path d="M256 177v132" stroke="#a48755" stroke-width="10"/>
+  <circle cx="256" cy="353" r="23" fill="#7d4937"/>
+  <path d="M126 101h80M306 101h80" stroke="#c8bea7" stroke-width="12"/>
+  <path d="M155 401h202" stroke="#5f6255" stroke-width="10"/>
+</svg>
