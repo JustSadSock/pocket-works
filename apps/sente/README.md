@@ -15,21 +15,19 @@ The engine implements captures, suicide prevention, simple ko, passing, resignat
 
 ## Computer players
 
-The computer uses a Go-specific move policy, a persistent player model and Monte Carlo Tree Search. Tactical knowledge proposes legal productive moves, while UCT-guided simulations compare alternating continuations before the final choice.
+The computer uses a Go-specific candidate policy, a persistent player model and selective minimax search. It does not choose a move from statistical playout averages. For each serious candidate it assumes the opponent will find the strongest available reply, then searches the best counter-reply with alpha-beta pruning and iterative deepening.
 
 - The player model measures contact play, aggression, invasions, expansion, local persistence and stone density from recent moves.
 - Each game receives a strategic character: territorial, influence-oriented, fighting, invasive or balanced.
-- The computer adapts that character to the opponent and to whether it is ahead or behind.
-- Root search receives controlled diversity, but the final move is sampled only from candidates inside a strict quality window.
-- Recent opening choices are remembered so repeated games do not begin with the same response every time.
-- Captures and saves from atari are resolved before strategic search.
-- Empty triangles, compact peaceful blocks, true-eye fills and moves inside secure friendly territory are rejected before entering the search tree.
-- A peaceful adjacent move must produce measurable frontier expansion, reduction or connection; merely adding another friendly stone is not considered progress.
-- `Calm` uses shorter and more varied simulations.
-- `Steady` uses a materially deeper search and remains the default human-like opponent.
-- `Sharp` uses the largest search budget and the narrowest quality window.
+- The candidate policy rejects true-eye fills, secure-territory fills, empty triangles and peaceful compact blocks before calculation starts.
+- Search considers captures and saves first, but they are no longer accepted blindly; the opponent's strongest tactical refutation is calculated.
+- Quiescence search extends unstable leaves through captures, atari and group-saving sequences instead of evaluating a fight halfway through.
+- Transposition caching prevents repeated calculation of the same position, while alpha-beta cutoffs remove branches that cannot change the decision.
+- `Calm` searches fewer branches and permits wider variation between close results.
+- `Steady` is the default: it calculates several alternating replies and varies only inside a narrow score window.
+- `Sharp` searches the deepest tree and normally selects the best calculated result directly.
 
-This remains a lightweight offline phone engine rather than a neural KataGo-class system, but it no longer relies on raw group size or liberties as a positive strategic reward.
+A full exhaustive search of Go is not feasible on a phone because the number of legal continuations grows exponentially. SENTE therefore searches a carefully filtered set of productive whole-board moves and extends local tactical fights more deeply.
 
 ## Controls
 
@@ -49,4 +47,4 @@ Stone, capture, pass and completion sounds are generated with Web Audio after a 
 
 ## Offline
 
-The app shell, rules engine, adaptive player model, Monte Carlo search modules, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.4.0` after the first successful load.
+The app shell, rules engine, adaptive player model, selective minimax module, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.5.0` after the first successful load.
