@@ -1,0 +1,218 @@
+
+/* КОНТУР 1.2.1 — кнопка аварийного замедления вместо рычага перегрузки. */
+const BRAKE_DURATION_MS = 2600;
+const BRAKE_USES_PER_LEVEL = 2;
+const BRAKE_MOVE_FACTOR = 2.45;
+const BRAKE_DELAY_FACTOR = 2.15;
+
+const startLevelBeforeBrake = startLevel;
+const currentDelayBeforeBrake = currentDelay;
+const beginMoveBeforeBrake = beginMove;
+const triggerFaultBeforeBrake = triggerFault;
+const updateSimulationBeforeBrake = updateSimulation;
+const renderBeforeBrake = render;
+const setModeBeforeBrake = setMode;
+
+const brakeCharges = document.querySelector('#brakeCharges');
+
+game.brakeActive = false;
+game.brakeEndsAt = 0;
+game.brakeFlash = 0;
+game.overloadActive = false;
+game.overloadHeat = 0;
+game.overloadTripped = false;
+
+sound.brake = function brake() {
+  this.tone(420, 0.08, 0.09, 'square', -120);
+  window.setTimeout(() => this.tone(205, 0.18, 0.1, 'sine', -55), 62);
+};
+
+sound.brakeEmpty = function brakeEmpty() {
+  this.tone(120, 0.08, 0.08, 'square', -30);
+};
+
+function brakeUsesLeft() {
+  return Math.max(0, Number(game.run?.brakeUses ?? 0));
+}
+
+function updateBrakeHud(now = performance.now()) {
+  if (!overloadButton) return;
+  const uses = brakeUsesLeft();
+  const remaining = game.brakeActive ? Math.max(0, game.brakeEndsAt - now) : 0;
+  const progress = game.brakeActive ? remaining / BRAKE_DURATION_MS : 0;
+  const locked = Boolean(
+    game.mode !== 'playing' ||
+    game.countdownEnd ||
+    game.fastTrackActive ||
+    game.brakeActive ||
+    uses <= 0
+  );
+  overloadButton.dataset.active = String(game.brakeActive);
+  overloadButton.dataset.locked = String(locked);
+  overloadButton.dataset.empty = String(uses <= 0);
+  overloadButton.setAttribute('aria-pressed', String(game.brakeActive));
+  overloadButton.setAttribute('aria-disabled', String(locked));
+  overloadButton.style.setProperty('--brake-progress', String(progress));
+  overloadButton.style.setProperty('--heat', '0');
+  if (brakeCharges) brakeCharges.textContent = `${uses}×`;
+}
+
+function retimeIdlePulse(factor) {
+  if (!game.pulse || game.pulse.moving || !game.pulse.nextDecisionAt) return;
+  const now = performance.now();
+  const remaining = Math.max(0, game.pulse.nextDecisionAt - now);
+  game.pulse.nextDecisionAt = now + remaining * factor;
+}
+
+function adjustCurrentMoveForBrake(active) {
+  const move = game.pulse?.move;
+  if (!move) return;
+  if (active && !move.brakeAdjusted) {
+    move.duration = Math.max(120, move.duration * BRAKE_MOVE_FACTOR);
+    move.brakeAdjusted = true;
+  } else if (!active && move.brakeAdjusted) {
+    move.duration = Math.max(45, move.duration / BRAKE_MOVE_FACTOR);
+    move.brakeAdjusted = false;
+  }
+}
+
+function endEmergencyBrake(silent = false) {
+  if (!game.brakeActive) return;
+  game.brakeActive = false;
+  game.brakeEndsAt = 0;
+  adjustCurrentMoveForBrake(false);
+  retimeIdlePulse(1 / BRAKE_DELAY_FACTOR);
+  if (!silent && game.mode === 'playing') setStatus('СТАБИЛИЗАЦИЯ ЗАВЕРШЕНА', '', 480);
+  updateBrakeHud();
+}
+
+function activateEmergencyBrake() {
+  if (!game.run || game.mode !== 'playing') return;
+  if (game.countdownEnd) {
+    setStatus('СТАБИЛИЗАТОР ДОСТУПЕН ПОСЛЕ ПУСКА', '', 650);
+    return;
+  }
+  if (game.fastTrackActive) {
+    setStatus('ЦЕПЬ УЖЕ НА ФОРСИРОВАННОМ ПРОГОНЕ', 'success', 650);
+    return;
+  }
+  if (game.brakeActive) {
+    setStatus('СТАБИЛИЗАТОР УЖЕ РАБОТАЕТ', 'success', 480);
+    return;
+  }
+  if (brakeUsesLeft() <= 0) {
+    sound.brakeEmpty();
+    navigator.vibrate?.(8);
+    setStatus('ЗАРЯДЫ СТАБИЛИЗАТОРА ИСЧЕРПАНЫ', 'danger', 850);
+    return;
+  }
+
+  game.run.brakeUses = brakeUsesLeft() - 1;
+  game.brakeActive = true;
+  game.brakeEndsAt = performance.now() + BRAKE_DURATION_MS;
+  game.brakeFlash = 1;
+  game.overloadActive = false;
+  adjustCurrentMoveForBrake(true);
+  retimeIdlePulse(BRAKE_DELAY_FACTOR);
+  sound.brake();
+  navigator.vibrate?.([12, 16, 10]);
+  setStatus(`АВАРИЙНАЯ СТАБИЛИЗАЦИЯ · ОСТАЛОСЬ ${game.run.brakeUses}`, 'success', 900);
+  saveResume();
+  updateBrakeHud();
+}
+
+/* Старые обработчики рычага и Shift вызывают эту функцию динамически. Теперь это одноразовый пуск. */
+setOverload = function setOverloadAsEmergencyBrake(active) {
+  game.overloadActive = false;
+  game.overloadHeat = 0;
+  game.overloadTripped = false;
+  if (active) activateEmergencyBrake();
+};
+
+updateOverloadControl = function updateEmergencyBrakeControl() {
+  game.overloadActive = false;
+  game.overloadHeat = 0;
+  game.overloadTripped = false;
+  const now = performance.now();
+  if (game.brakeActive && (game.mode !== 'playing' || game.fastTrackActive || now >= game.brakeEndsAt)) {
+    endEmergencyBrake(game.mode !== 'playing' || game.fastTrackActive);
+  }
+  updateBrakeHud(now);
+};
+
+startLevel = function startLevelEmergencyBrake(restoredBoard = null, restoredPulse = null) {
+  startLevelBeforeBrake(restoredBoard, restoredPulse);
+  endEmergencyBrake(true);
+  if (game.run) {
+    if (!restoredBoard || !Number.isFinite(game.run.brakeUses)) game.run.brakeUses = BRAKE_USES_PER_LEVEL;
+    game.run.brakeUses = Math.max(0, Math.min(BRAKE_USES_PER_LEVEL, game.run.brakeUses));
+  }
+  updateBrakeHud();
+  saveResume();
+};
+
+currentDelay = function currentDelayEmergencyBrake() {
+  const base = currentDelayBeforeBrake();
+  if (!game.brakeActive || game.fastTrackActive) return base;
+  return Math.round(base * BRAKE_DELAY_FACTOR);
+};
+
+beginMove = function beginMoveEmergencyBrake(direction) {
+  beginMoveBeforeBrake(direction);
+  if (game.brakeActive && !game.fastTrackActive) adjustCurrentMoveForBrake(true);
+};
+
+triggerFault = function triggerFaultEmergencyBrake(...args) {
+  endEmergencyBrake(true);
+  game.overloadActive = false;
+  triggerFaultBeforeBrake(...args);
+};
+
+updateSimulation = function updateSimulationEmergencyBrake(dt, now) {
+  updateSimulationBeforeBrake(dt, now);
+  game.brakeFlash = Math.max(0, game.brakeFlash - dt * 1.7);
+  updateBrakeHud(now);
+};
+
+function drawEmergencyBrakeOverlay() {
+  if (!game.brakeActive || !game.layout) return;
+  const { width, height } = game.layout;
+  const remaining = Math.max(0, game.brakeEndsAt - performance.now()) / BRAKE_DURATION_MS;
+  const pulse = 0.5 + Math.sin(performance.now() * 0.009) * 0.5;
+  ctx.save();
+  ctx.fillStyle = `rgba(134,157,146,${0.035 + remaining * 0.045})`;
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = `rgba(218,226,207,${0.26 + pulse * 0.22})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(7, 7, width - 14, height - 14);
+  ctx.translate(width / 2, height / 2);
+  const radius = Math.min(width, height) * 0.46;
+  for (let i = 0; i < 12; i += 1) {
+    const angle = (i / 12) * Math.PI * 2;
+    const inner = radius - 8 - (i % 3 === 0 ? 6 : 0);
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+    ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
+render = function renderEmergencyBrake() {
+  renderBeforeBrake();
+  drawEmergencyBrakeOverlay();
+};
+
+setMode = function setModeEmergencyBrake(mode) {
+  if (mode !== 'playing') endEmergencyBrake(true);
+  setModeBeforeBrake(mode);
+  updateBrakeHud();
+};
+
+if (overloadButton) {
+  overloadButton.addEventListener('click', (event) => {
+    if (event.detail === 0) activateEmergencyBrake();
+  });
+}
+
+updateBrakeHud();
