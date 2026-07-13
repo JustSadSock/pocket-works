@@ -47,6 +47,19 @@ function validateQuickWorker(source, label, expected) {
   validateMetadata(source, label, expected);
 }
 
+function validateFreshCacheWorker(source, label, { passThroughApps = false } = {}) {
+  requireIncludes(source, [
+    'const CACHE_PROTOCOL = 2',
+    'precacheFreshShell',
+    "cache: 'no-store'",
+    '__pw_build',
+    'networkFirstFresh',
+    'SHELL_KEYS'
+  ], label);
+  if (source.includes('cache.addAll(')) fail(`${label} must not populate a release cache through cache.addAll`);
+  if (passThroughApps) requireIncludes(source, ['APPLICATIONS_PATH', 'startsWith(APPLICATIONS_PATH)'], label);
+}
+
 function validateEnhancedWorker(source, label, expected) {
   requireIncludes(source, ['precacheAndRoute', 'cleanupOutdatedCaches', 'GET_UPDATE_INFO', 'SKIP_WAITING', "addEventListener('message'"], label);
   validateMetadata(source, label, expected);
@@ -78,17 +91,26 @@ requireIncludes(managerCss, ['.app-update-prompt', '.app-update-receipt', '.is-v
 const packageJson = JSON.parse(await read('package.json') || '{}');
 const rootIndex = await read('index.html');
 const rootWorker = await read('sw.js');
-requireIncludes(rootIndex, ['./shared/update-manager.css', './shared/update-manager.js', 'data-update-manager', `data-app-version="${packageJson.version}"`], 'root index.html');
+const netlifyConfig = await read('netlify.toml');
+requireIncludes(rootIndex, ['./shared/update-manager.css', './shared/update-manager.js', 'data-update-manager', `data-app-version="${packageJson.version}"`, `content="${packageJson.version}"`], 'root index.html');
 validateQuickWorker(rootWorker.replaceAll('./shared/update-manager.css', '../../shared/update-manager.css').replaceAll('./shared/update-manager.js', '../../shared/update-manager.js'), 'root sw.js', {
   version: packageJson.version,
   releaseDate: '2026-07-13',
   cacheName: `pocket-works-launcher-v${packageJson.version}`
 });
+validateFreshCacheWorker(rootWorker, 'root sw.js', { passThroughApps: true });
+requireIncludes(netlifyConfig, [
+  'for = "/*"',
+  'Cache-Control = "public, max-age=0, must-revalidate"',
+  'Cache-Control = "no-store, max-age=0"'
+], 'netlify.toml');
+if (/immutable/i.test(netlifyConfig)) fail('netlify.toml must not mark mutable application paths as immutable');
 
 const templateIndex = await read('apps/_template/index.html');
 const templateWorker = await read('apps/_template/sw.js');
 requireIncludes(templateIndex, ['../../shared/update-manager.css', '../../shared/update-manager.js', 'data-update-manager', 'data-app-version="__APP_VERSION__"'], 'apps/_template/index.html');
 requireIncludes(templateWorker, ["const APP_VERSION = '__APP_VERSION__'", "const RELEASE_DATE = '__APP_RELEASE_DATE__'", 'const RELEASE_NOTES = __APP_CHANGELOG_JSON__', 'GET_UPDATE_INFO', 'SKIP_WAITING'], 'apps/_template/sw.js');
+validateFreshCacheWorker(templateWorker, 'apps/_template/sw.js');
 
 const enhancedTemplateMain = await read('apps/_enhanced-template/source/main.ts');
 const enhancedTemplateWorker = await read('apps/_enhanced-template/source/sw.ts');
