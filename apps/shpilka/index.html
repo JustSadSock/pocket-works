@@ -14,9 +14,10 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=2.2.0">
-  <link rel="stylesheet" href="./advanced.css?v=2.2.0">
-  <link rel="stylesheet" href="./advanced-fixes.css?v=2.2.0">
+  <link rel="stylesheet" href="./styles.css?v=2.3.0">
+  <link rel="stylesheet" href="./advanced.css?v=2.3.0">
+  <link rel="stylesheet" href="./advanced-fixes.css?v=2.3.0">
+  <link rel="stylesheet" href="./systems-23.css?v=2.3.0">
 </head>
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app data-ui>
@@ -45,7 +46,7 @@
 
     <section class="controls" id="controls" data-mode="precision" hidden aria-label="Управление">
       <div class="precision-controls" id="precisionControls">
-        <div class="steering-arc" id="steeringArc" role="slider" aria-label="Руль" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+        <div class="steering-arc" id="steeringArc" role="slider" aria-label="Руль с автоматическим передаточным числом" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
           <div class="steering-knob" id="steeringKnob"><span>РУЛЬ</span></div>
         </div>
         <div class="power-gate" id="powerGate" role="slider" aria-label="Тяга, тормоз и реверс" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" data-state="neutral">
@@ -82,11 +83,23 @@
       <div class="start-copy">
         <p class="eyebrow">ПРОЦЕДУРНАЯ ГОНОЧНАЯ СЕРИЯ</p>
         <h1>ШПИЛЬКА</h1>
-        <p class="subtitle">Точная арка руля, единый рычаг тяги и тормоза, честные соперники, сектора и призрак лучшего круга.</p>
+        <p class="subtitle">Автоматическое передаточное число руля, честные соперники, сектора, призрак и маршруты дня.</p>
       </div>
       <div class="route-strip">
         <b id="routeName">МАРШРУТ</b>
         <span id="routeMeta">—</span>
+      </div>
+
+      <div class="route-tools" aria-label="Маршруты и коды">
+        <button id="todayRouteButton" type="button" data-native-press>СЕГОДНЯ</button>
+        <button id="routeCodeButton" type="button" data-native-press>ВВЕСТИ КОД</button>
+        <span class="route-code-value" id="routeCodeValue">—</span>
+      </div>
+
+      <div class="medal-strip" id="medalStrip" data-record="none" hidden aria-label="Времена медалей маршрута">
+        <span data-medal="gold"><em>ЗОЛОТО</em><b>—</b></span>
+        <span data-medal="silver"><em>СЕРЕБРО</em><b>—</b></span>
+        <span data-medal="bronze"><em>БРОНЗА</em><b>—</b></span>
       </div>
 
       <div class="race-options" aria-label="Параметры заезда">
@@ -111,7 +124,7 @@
       </div>
 
       <div class="control-help">
-        <span><b>РУЛЬ</b> веди пальцем по дуге; центр точный, края резкие</span>
+        <span><b>РУЛЬ</b> сам становится точнее на скорости, полный угол остаётся на краях</span>
         <span><b>РЫЧАГ</b> вверх — тяга, вниз — тормоз, после остановки — реверс</span>
       </div>
       <button class="primary-action" id="startButton" type="button" data-native-press>НА СТАРТ</button>
@@ -130,7 +143,8 @@
       <button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
       <button class="secondary-action" id="restartButtonPause" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
       <button class="secondary-action compact-setting" id="controlModeButtonPause" type="button" data-native-press>УПРАВЛЕНИЕ: РУЛЬ</button>
-      <button class="secondary-action compact-setting" id="steeringFeelButtonPause" type="button" data-native-press>КРИВАЯ РУЛЯ: ТОЧНАЯ</button>
+      <button class="secondary-action compact-setting" id="calibrateControlsButtonPause" type="button" data-native-press>ПОДОГНАТЬ УПРАВЛЕНИЕ</button>
+      <button class="secondary-action compact-setting" id="handednessButtonPause" type="button" data-native-press>ХВАТ: ОБЫЧНЫЙ</button>
       <button class="secondary-action compact-setting" id="soundButtonPause" type="button" data-native-press>ЗВУК: ВКЛ</button>
       <a href="../../" class="text-control pause-back" data-app-control>В POCKET WORKS</a>
     </section>
@@ -138,10 +152,39 @@
     <section class="screen finish-screen" id="finishScreen" hidden>
       <p class="eyebrow" id="finishKicker">ФИНИШ</p>
       <h2 id="finishTitle">1 МЕСТО</h2>
+      <div class="finish-medal" id="finishMedal" hidden></div>
       <p class="finish-summary" id="finishSummary"></p>
       <ol class="results" id="results"></ol>
       <button class="primary-action" id="restartButtonFinish" type="button" data-native-press>НОВАЯ ТРАССА</button>
       <a href="../../" class="text-control" data-app-control>В POCKET WORKS</a>
+    </section>
+
+    <section class="route-code-dialog" id="routeCodeDialog" hidden aria-modal="true" role="dialog" aria-labelledby="routeCodeTitle">
+      <div class="route-code-panel">
+        <h3 id="routeCodeTitle">КОД МАРШРУТА</h3>
+        <p>Скопируй текущий код или введи чужой. Код хранит форму трассы и её тип.</p>
+        <div class="current-route-code" id="currentRouteCode">—</div>
+        <input id="routeCodeInput" type="text" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="V-0000000-X" aria-label="Код маршрута">
+        <div class="route-code-status" id="routeCodeStatus" aria-live="polite"></div>
+        <div class="route-code-actions">
+          <button id="routeCodeCopy" type="button">КОПИРОВАТЬ</button>
+          <button class="strong" id="routeCodeLoad" type="button">ЗАГРУЗИТЬ</button>
+        </div>
+        <button class="route-code-close" id="routeCodeClose" type="button">ЗАКРЫТЬ</button>
+        <button id="routeCodeCancel" type="button" hidden aria-hidden="true"></button>
+      </div>
+    </section>
+
+    <section class="control-calibration" id="controlCalibration" data-step="steer" hidden aria-modal="true" role="dialog" aria-labelledby="calibrationTitle">
+      <div class="calibration-copy">
+        <h3 id="calibrationTitle">ПОЛОЖИ ПАЛЕЦ ДЛЯ РУЛЯ</h3>
+        <p id="calibrationHint">Коснись экрана там, где большой палец естественно лежит во время игры.</p>
+      </div>
+      <div class="calibration-hit" id="calibrationHit" aria-label="Область калибровки"></div>
+      <div class="calibration-actions">
+        <button id="calibrationReset" type="button">ПО УМОЛЧАНИЮ</button>
+        <button id="calibrationCancel" type="button">ОТМЕНА</button>
+      </div>
     </section>
   </main>
 
@@ -151,9 +194,9 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ШПИЛЬКА"
-    data-app-version="2.2.0"
+    data-app-version="2.3.0"
   ></script>
-  <script type="module" src="./workshop.js?v=2.2.0"></script>
-  <script type="module" src="./app.js?v=2.2.0"></script>
+  <script type="module" src="./workshop.js?v=2.3.0"></script>
+  <script type="module" src="./app.js?v=2.3.0"></script>
 </body>
 </html>
