@@ -1,0 +1,199 @@
+/* КОНТУР 1.1 — дополнительная фактура испытательного стенда. */
+.app-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: .16;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(23, 33, 29, .055) 3px 4px),
+    radial-gradient(circle at 20% 16%, rgba(255,255,255,.2) 0 1px, transparent 1.5px) 0 0 / 29px 31px;
+  mix-blend-mode: multiply;
+}
+
+.bench-head,
+.meter,
+.fuse-rack,
+.status-strip {
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,.18));
+}
+
+.identity {
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+.identity::before,
+.identity::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.25);
+}
+
+.identity::before { left: 5px; }
+.identity::after { right: 5px; }
+
+.square-key,
+.meter,
+.fuse-rack,
+.knife-switch,
+.service-panel,
+.module-bay,
+.burn-report,
+.title-plate {
+  background-image:
+    linear-gradient(115deg, rgba(255,255,255,.12), transparent 34%),
+    repeating-linear-gradient(0deg, transparent 0 4px, rgba(23,33,29,.025) 4px 5px);
+}
+
+.meter::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border: 1px solid var(--cream);
+  background: var(--copper);
+  box-shadow: 0 0 7px rgba(224,154,101,.52);
+}
+
+.fuse-rack {
+  overflow: hidden;
+}
+
+.fuse-rack::before {
+  content: "FUSE / 6A";
+  position: absolute;
+  right: -17px;
+  top: 7px;
+  transform: rotate(90deg);
+  font: 700 6px/1 ui-monospace, monospace;
+  letter-spacing: .08em;
+  opacity: .48;
+}
+
+.status-strip {
+  position: absolute;
+  padding-inline: 30px;
+  overflow: hidden;
+}
+
+.status-strip::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateY(-50%);
+  border: 2px solid var(--ink);
+  background: #7c765f;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.28);
+}
+
+.status-strip[data-tone="success"]::before {
+  background: #d58848;
+  box-shadow: 0 0 9px rgba(213,136,72,.62);
+}
+
+.status-strip[data-tone="danger"]::before {
+  border-color: var(--cream);
+  background: #f0c39a;
+  animation: kontur-alarm 180ms steps(2, end) infinite;
+}
+
+@keyframes kontur-alarm {
+  50% { opacity: .24; }
+}
+
+.screen {
+  background:
+    linear-gradient(rgba(221,210,180,.94), rgba(221,210,180,.98)),
+    repeating-linear-gradient(90deg, transparent 0 27px, rgba(23,33,29,.08) 27px 28px),
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(23,33,29,.07) 27px 28px);
+}
+
+.screen::after {
+  content: "КС–6  •  ИСПЫТАНО  •  50 Гц";
+  position: absolute;
+  right: 18px;
+  bottom: max(17px, calc(var(--safe-area-bottom, env(safe-area-inset-bottom)) + 12px));
+  font: 700 7px/1 ui-monospace, monospace;
+  letter-spacing: .12em;
+  opacity: .42;
+  writing-mode: vertical-rl;
+}
+
+.title-plate,
+.service-panel,
+.module-bay,
+.burn-report {
+  overflow: hidden;
+}
+
+.title-plate::before,
+.title-plate::after,
+.service-panel::before,
+.service-panel::after,
+.module-bay::before,
+.module-bay::after,
+.burn-report::before,
+.burn-report::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: .55;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.28);
+}
+
+.title-plate::before,
+.service-panel::before,
+.module-bay::before,
+.burn-report::before { left: 7px; top: 7px; }
+
+.title-plate::after,
+.service-panel::after,
+.module-bay::after,
+.burn-report::after { right: 7px; bottom: 7px; }
+
+.title-icon {
+  background: rgba(238,230,207,.08);
+  box-shadow:
+    0 0 0 5px rgba(23,33,29,.22),
+    inset 0 0 0 3px rgba(255,255,255,.08);
+}
+
+.knife-switch i::after {
+  content: "";
+  position: absolute;
+  left: 19px;
+  bottom: 5px;
+  width: 16px;
+  height: 5px;
+  border: 2px solid var(--ink);
+  background: var(--copper);
+}
+
+.module-choice {
+  background-image:
+    linear-gradient(135deg, rgba(255,255,255,.08), transparent 44%),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(0,0,0,.035) 5px 6px);
+}
+
+.module-choice strong::before {
+  content: "▣ ";
+  color: #e7ad79;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-strip[data-tone="danger"]::before { animation: none; }
+}
