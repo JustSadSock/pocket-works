@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./performance.css">
 </head>
 <body data-app-preset="interactive" data-fullscreen-app>
   <main class="app-shell" data-app-shell data-fullscreen-app>
@@ -90,19 +91,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="МЯЛО"
-    data-app-version="1.1.0"
+    data-app-version="1.2.0"
   ></script>
-  <script>
-    for (const name of ['WebGLRenderingContext', 'WebGL2RenderingContext']) {
-      const Context = window[name];
-      if (!Context) continue;
-      const originalPixelStorei = Context.prototype.pixelStorei;
-      Context.prototype.pixelStorei = function pixelStorei(pname, parameter) {
-        const value = pname === this.UNPACK_FLIP_Y_WEBGL ? false : parameter;
-        return originalPixelStorei.call(this, pname, value);
-      };
-    }
-  </script>
   <script src="./support.js"></script>
   <script src="./app.js" type="module"></script>
 </body>
