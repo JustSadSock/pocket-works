@@ -1,53 +1,24 @@
-import { generateMoves, chooseOpeningBookMove } from './ai-policy.js';
-import { buildSearchContext, rememberOpening } from './ai-adaptation.js';
-import { calculateBestMove } from './ai-minimax.js';
+import { chooseGnugoMove, prewarmGnugo } from './gnugo-client.js';
 
-const ROOT_CANDIDATES = {
-  calm: 26,
-  steady: 40,
-  sharp: 54
-};
+prewarmGnugo();
 
 export async function chooseAiMove(game, level = 'steady') {
-  const context = buildSearchContext(game, level);
-  const rootLimit = ROOT_CANDIDATES[level] || ROOT_CANDIDATES.steady;
-  const rootMoves = generateMoves(game, game.turn, rootLimit, true, true, context);
-
-  if (game.moveNumber < 2 && !rootMoves.some((move) => move.urgent)) {
-    const bookMove = chooseOpeningBookMove(game, rootMoves, level, context);
-    if (bookMove) {
-      rememberOpening(game, bookMove);
-      return {
-        x: bookMove.x,
-        y: bookMove.y,
-        score: bookMove.prior,
-        depth: 0,
-        nodes: 0,
-        plan: context.personality,
-        reason: 'opening-symmetry'
-      };
-    }
-  }
-
-  const calculated = await calculateBestMove(game, rootMoves, level, context);
-  if (!calculated || calculated.move?.pass) return null;
-
-  rememberOpening(game, calculated.move);
+  const result = await chooseGnugoMove(game, level);
+  if (!result || result.pass) return null;
   return {
-    x: calculated.move.x,
-    y: calculated.move.y,
-    score: calculated.value,
-    depth: calculated.depth,
-    nodes: calculated.nodes,
-    cutoffs: calculated.cutoffs,
-    candidates: calculated.candidates,
-    plan: context.personality,
-    reason: 'calculated'
+    x: result.x,
+    y: result.y,
+    score: result.agreement || 0,
+    reads: result.reads || 1,
+    agreement: result.agreement || 1,
+    alternatives: result.alternatives || [],
+    engine: result.engine || 'GNU Go',
+    reason: result.reason || 'gnugo'
   };
 }
 
 export function aiLabel(level) {
-  if (level === 'calm') return 'Спокойный';
-  if (level === 'sharp') return 'Острый';
-  return 'Собранный';
+  if (level === 'calm') return 'Ученик';
+  if (level === 'sharp') return 'Мастер';
+  return 'Клубный';
 }
