@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node scripts/audit-sente-ai.mjs >> sente-audit.log 2>&1
+          node scripts/audit-sente-gnugo.mjs >> sente-audit.log 2>&1
           code=$?
           cat sente-audit.log
           echo "exit=$code" >> "$GITHUB_OUTPUT"
