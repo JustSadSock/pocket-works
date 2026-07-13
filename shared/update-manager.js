@@ -1,6 +1,9 @@
 const DEFAULT_CHECK_INTERVAL = 30 * 60 * 1000;
+const UPDATE_RECEIPT_PREFIX = 'pocket-works:managed-update-receipt:v1:';
+const UPDATE_SEEN_PREFIX = 'pocket-works:managed-update-seen:v1:';
+const UPDATE_RECEIPT_MAX_AGE = 24 * 60 * 60 * 1000;
 
-function workerInfo(worker, timeout = 1200) {
+function workerInfoAttempt(worker, timeout) {
   if (!worker) return Promise.resolve(null);
 
   return new Promise((resolve) => {
@@ -12,8 +15,59 @@ function workerInfo(worker, timeout = 1200) {
       resolve(event.data || null);
     };
 
-    worker.postMessage({ type: 'GET_UPDATE_INFO' }, [channel.port2]);
+    try {
+      worker.postMessage({ type: 'GET_UPDATE_INFO' }, [channel.port2]);
+    } catch {
+      window.clearTimeout(timer);
+      resolve(null);
+    }
   });
+}
+
+async function workerInfo(worker) {
+  for (const timeout of [1200, 2000, 3200]) {
+    const info = await workerInfoAttempt(worker, timeout);
+    if (info) return info;
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
+  }
+  return null;
+}
+
+function storageKey(prefix, path) {
+  const pathname = new URL(path, window.location.href).pathname;
+  return `${prefix}${encodeURIComponent(pathname)}`;
+}
+
+function readStoredJson(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Managed updates must still work when storage is unavailable.
+  }
+}
+
+function removeStoredValue(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function setStoredValue(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage failures.
+  }
 }
 
 function createUpdatePrompt({ appName, onApply, onDismiss }) {
@@ -86,6 +140,51 @@ function createUpdatePrompt({ appName, onApply, onDismiss }) {
   return prompt;
 }
 
+function createUpdateReceipt({ appName, info = {}, onClose }) {
+  const existing = document.querySelector('[data-app-update-receipt]');
+  if (existing) existing.remove();
+
+  const receipt = document.createElement('aside');
+  receipt.className = 'app-update-prompt app-update-receipt';
+  receipt.dataset.appUpdateReceipt = '';
+  receipt.dataset.ui = '';
+  receipt.setAttribute('role', 'status');
+  receipt.setAttribute('aria-live', 'polite');
+  receipt.innerHTML = `
+    <div class="app-update-prompt__copy">
+      <p class="app-update-prompt__eyebrow">UPDATED</p>
+      <strong class="app-update-prompt__title"></strong>
+      <ul class="app-update-prompt__notes"></ul>
+    </div>
+    <div class="app-update-prompt__actions">
+      <button type="button" data-update-receipt-close data-native-press>Got it</button>
+    </div>
+  `;
+
+  const version = info.version ? ` ${info.version}` : '';
+  receipt.querySelector('.app-update-prompt__title').textContent = `${appName}${version}`;
+  const notes = receipt.querySelector('.app-update-prompt__notes');
+  const releaseNotes = Array.isArray(info.releaseNotes) && info.releaseNotes.length > 0
+    ? info.releaseNotes
+    : ['The new build is now active.'];
+
+  for (const note of releaseNotes.slice(0, 4)) {
+    const item = document.createElement('li');
+    item.textContent = note;
+    notes.append(item);
+  }
+
+  receipt.querySelector('[data-update-receipt-close]').addEventListener('click', () => {
+    receipt.classList.remove('is-visible');
+    window.setTimeout(() => receipt.remove(), 240);
+    onClose?.();
+  });
+
+  document.body.append(receipt);
+  requestAnimationFrame(() => receipt.classList.add('is-visible'));
+  return receipt;
+}
+
 export async function registerManagedServiceWorker(options = {}) {
   if (!('serviceWorker' in navigator)) return null;
 
@@ -97,6 +196,8 @@ export async function registerManagedServiceWorker(options = {}) {
     renderPrompt = true
   } = options;
 
+  const receiptKey = storageKey(UPDATE_RECEIPT_PREFIX, path);
+  const seenKey = storageKey(UPDATE_SEEN_PREFIX, path);
   const registration = await navigator.serviceWorker.register(path);
   const activeInfo = await workerInfo(navigator.serviceWorker.controller || registration.active);
   const currentVersion = activeInfo?.version || configuredVersion;
@@ -105,6 +206,15 @@ export async function registerManagedServiceWorker(options = {}) {
   let applying = false;
   let prompt = null;
   let snoozedUntil = 0;
+
+  const storedReceipt = readStoredJson(receiptKey);
+  if (storedReceipt && Date.now() - storedReceipt.savedAt <= UPDATE_RECEIPT_MAX_AGE) {
+    removeStoredValue(receiptKey);
+    if (storedReceipt.info?.version) setStoredValue(seenKey, storedReceipt.info.version);
+    queueMicrotask(() => createUpdateReceipt({ appName, info: storedReceipt.info || {} }));
+  } else if (storedReceipt) {
+    removeStoredValue(receiptKey);
+  }
 
   const apply = async () => {
     if (!waitingWorker || applying) return false;
@@ -121,6 +231,10 @@ export async function registerManagedServiceWorker(options = {}) {
     ]);
 
     if (changed) {
+      writeStoredJson(receiptKey, {
+        savedAt: Date.now(),
+        info: waitingInfo || {}
+      });
       window.location.reload();
       return true;
     }
