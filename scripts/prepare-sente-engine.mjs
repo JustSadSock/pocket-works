@@ -13,7 +13,7 @@ const ASSETS = [
   },
   {
     name: 'gnugo.wasm',
-    url: 'https://raw.githubusercontent.com/TristanCacqueray/wasm-gnugo/382df5a9b14b62ea451012ec7d2e81c61162e037/gnugo.wasm',
+    url: 'https://raw.githubusercontent.com/TristanCacqueray/wasm-gnugo/pages/gnugo.wasm',
     blob: 'ce0f0f6a20deb8366c75d7c7ea14dadf0b856f58'
   },
   {
@@ -55,6 +55,6 @@ async function download(asset) {
 await mkdir(output, { recursive: true });
 for (const asset of ASSETS) await download(asset);
 
-const sourceNotice = `GNU Go browser engine\n\nUpstream: https://github.com/TristanCacqueray/wasm-gnugo\nPinned commit: 382df5a9b14b62ea451012ec7d2e81c61162e037\nGNU Go version reported by the build: 3.9.1\nLicense: GNU General Public License v3 or later (see COPYING.txt)\n\nThe JavaScript loader and WebAssembly binary are downloaded during the Pocket Works build and verified against their Git blob SHA-1 identifiers. The corresponding source is available at the pinned upstream commit above.\n`;
+const sourceNotice = `GNU Go browser engine\n\nUpstream: https://github.com/TristanCacqueray/wasm-gnugo\nSource commit: 382df5a9b14b62ea451012ec7d2e81c61162e037\nGNU Go version reported by the build: 3.9.1\nLicense: GNU General Public License v3 or later (see COPYING.txt)\n\nThe JavaScript loader and WebAssembly binary are downloaded during the Pocket Works build and verified against pinned Git blob SHA-1 identifiers. The source is available at the commit above; the verified WebAssembly artifact is served from the upstream pages branch.\n`;
 await writeFile(path.join(output, 'SOURCE.txt'), sourceNotice, 'utf8');
 console.log('Prepared pinned GNU Go browser assets for SENTE.');
