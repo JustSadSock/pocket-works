@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'myalo-';
-const CACHE_NAME = 'myalo-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'myalo-v1.3.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-07-13';
 const RELEASE_NOTES = [
-  'Деформация деталей лица стала локальной: выбранная часть движется цельным ядром, а окружающая область остаётся закреплённой.',
-  'WebGL-деформация перенесена в GPU-шейдер, а видеотекстура загружается только при появлении нового кадра камеры.',
-  'Снижена нагрузка рендера и трекинга на iPhone; жест руки интерполируется между результатами распознавания.'
+  'Детали лица теперь перемещаются как отдельные объёмные текстурные объекты.',
+  'Между основанием и перемещённой частью дорисовывается новая поверхность с толщиной, светом и тенью.',
+  'Освободившееся место восстанавливается из окружающей кожи; нос, губы, глаза, щёки, уши и брови ведут себя по-разному.'
 ];
 
 const APP_SHELL = [
@@ -77,39 +77,28 @@ self.addEventListener('activate', (event) => {
 });
 
 async function cacheFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
+  const cached = await caches.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response?.ok) await cache.put(request, response.clone());
+  if (response?.ok || response?.type === 'opaque') {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone()).catch(() => {});
+  }
   return response;
 }
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  const requestUrl = new URL(event.request.url);
+  const url = new URL(event.request.url);
+  const cacheable = url.origin === self.location.origin || MODEL_ASSETS.has(url.href);
+  if (!cacheable) return;
 
-  if (MODEL_ASSETS.has(requestUrl.href)) {
-    event.respondWith(cacheFirst(event.request));
-    return;
-  }
-
-  if (requestUrl.origin !== self.location.origin) return;
-
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response?.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match('./'))
-    );
-    return;
-  }
-
-  event.respondWith(cacheFirst(event.request));
+  event.respondWith(
+    cacheFirst(event.request).catch(async () => {
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
+      return Response.error();
+    })
+  );
 });
