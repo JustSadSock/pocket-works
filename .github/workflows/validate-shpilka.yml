@@ -27,7 +27,13 @@ jobs:
           node scripts/audit-shpilka-2-3.mjs >> shpilka-audit.log 2>&1
           third=$?
           test "$first" = 0 -a "$second" = 0 -a "$third" = 0
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shpilka-audit-log
+          path: shpilka-audit.log
       - if: steps.audit.outcome != 'success'
+        continue-on-error: true
         run: |
           cp shpilka-audit.log .github/shpilka-audit.log
           git config user.name "github-actions[bot]"
