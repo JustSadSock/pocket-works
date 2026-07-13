@@ -1,4 +1,4 @@
-name: Deploy Pocket Works to Netlify
+name: Validate Pocket Works production
 
 on:
   push:
@@ -19,11 +19,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: pocket-works-production
+  group: pocket-works-production-validation
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -58,40 +58,15 @@ jobs:
           sed -r 's/\x1B\[[0-9;]*[mK]//g' /tmp/pocket-works-build.log | tail -n 180 > /tmp/pocket-works-build-tail.log
           exit "$exit_code"
 
-      - name: Check Netlify credentials
-        id: auth
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: |
-          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
-            echo "NETLIFY_AUTH_TOKEN is not configured" >&2
-            exit 1
-          fi
-
-      - name: Deploy production build
-        id: deploy
-        if: steps.build.outcome == 'success' && steps.auth.outcome == 'success'
-        continue-on-error: true
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: 3ef43b6a-1a20-4563-af37-b1ddc8e3b5e8
-        run: |
-          APP_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
-          npx --yes netlify-cli@latest deploy --dir=dist-site --prod --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" --message="Pocket Works ${APP_VERSION} — reliable release discovery"
-
-      - name: Record deployment result
+      - name: Record validation result
         if: always()
         env:
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           REGISTRY_OUTCOME: ${{ steps.registry.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
-          AUTH_OUTCOME: ${{ steps.auth.outcome }}
-          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
         run: |
-          printf '{\n  "sourceCommit": "%s",\n  "recordedAt": "%s",\n  "install": "%s",\n  "registry": "%s",\n  "build": "%s",\n  "auth": "%s",\n  "deploy": "%s"\n}\n' \
-            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INSTALL_OUTCOME" "$REGISTRY_OUTCOME" "$BUILD_OUTCOME" "$AUTH_OUTCOME" "$DEPLOY_OUTCOME" \
+          printf '{\n  "sourceCommit": "%s",\n  "recordedAt": "%s",\n  "install": "%s",\n  "registry": "%s",\n  "build": "%s",\n  "auth": "not-required",\n  "deploy": "delegated-to-netlify-git"\n}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INSTALL_OUTCOME" "$REGISTRY_OUTCOME" "$BUILD_OUTCOME" \
             > .github/deploy-status.json
           if [ -f /tmp/pocket-works-build-tail.log ]; then
             cp /tmp/pocket-works-build-tail.log .github/deploy-build.log
@@ -104,6 +79,9 @@ jobs:
           git commit -m "Generate registry and record deployment diagnostics" || exit 0
           git push
 
-      - name: Fail unsuccessful deployment
-        if: steps.deploy.outcome != 'success'
-        run: exit 1
+      - name: Enforce validation result
+        if: always()
+        run: |
+          test '${{ steps.install.outcome }}' = 'success'
+          test '${{ steps.registry.outcome }}' = 'success'
+          test '${{ steps.build.outcome }}' = 'success'
