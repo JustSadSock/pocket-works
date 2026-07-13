@@ -53,7 +53,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0].postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
+    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
