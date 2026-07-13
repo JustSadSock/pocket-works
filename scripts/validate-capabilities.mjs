@@ -27,6 +27,22 @@ async function readOptional(relativePath) {
 function requireFragments(source, fragments, label) {
   for (const fragment of fragments) if (!source.includes(fragment)) fail(`${label} must include ${fragment}`);
 }
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function hasConfiguredValue(source, field, expected) {
+  const expectedPattern = escapeRegExp(expected);
+  if (new RegExp(String.raw`${field}\s*:\s*['"]${expectedPattern}['"]`).test(source)) return true;
+
+  const reference = source.match(new RegExp(String.raw`${field}\s*:\s*([A-Za-z_$][\w$]*)`))?.[1];
+  if (!reference) return false;
+  return new RegExp(String.raw`(?:const|let)\s+${escapeRegExp(reference)}\s*=\s*['"]${expectedPattern}['"]`).test(source);
+}
+function requireConfiguredValue(source, field, expected, label) {
+  if (!hasConfiguredValue(source, field, expected)) {
+    fail(`${label} must configure ${field} as '${expected}' directly or through a static constant`);
+  }
+}
 
 const sources = new Map();
 for (const file of capabilityFiles) sources.set(file, await read(file));
@@ -62,7 +78,9 @@ for (const config of configs) {
     const index = await read(`${directory}/source/index.html`);
     const app = await read(`${directory}/source/main.ts`);
     requireFragments(index, ['data-workshop-trigger', 'data-app-shell'], `${directory}/source/index.html`);
-    requireFragments(app, ['shared/workshop-mode', 'createWorkshopMode', `storageNamespace: '${config.storageNamespace}'`, `cachePrefix: '${config.slug}-'`], `${directory}/source/main.ts`);
+    requireFragments(app, ['shared/workshop-mode', 'createWorkshopMode'], `${directory}/source/main.ts`);
+    requireConfiguredValue(app, 'storageNamespace', config.storageNamespace, `${directory}/source/main.ts`);
+    requireConfiguredValue(app, 'cachePrefix', `${config.slug}-`, `${directory}/source/main.ts`);
   } else {
     const index = await read(`${directory}/index.html`);
     const app = await read(`${directory}/app.js`);
@@ -71,7 +89,9 @@ for (const config of configs) {
     const worker = await read(`${directory}/sw.js`);
     requireFragments(index, ['../../shared/workshop-mode.css', 'data-workshop-trigger'], `${directory}/index.html`);
     if (workshopBootstrap) requireFragments(index, ['./workshop.js'], `${directory}/index.html`);
-    requireFragments(integrationSource, ["from '../../shared/workshop-mode.js'", 'createWorkshopMode', `storageNamespace: '${config.storageNamespace}'`, `cachePrefix: '${config.slug}-'`], `${directory} Workshop integration`);
+    requireFragments(integrationSource, ["from '../../shared/workshop-mode.js'", 'createWorkshopMode'], `${directory} Workshop integration`);
+    requireConfiguredValue(integrationSource, 'storageNamespace', config.storageNamespace, `${directory} Workshop integration`);
+    requireConfiguredValue(integrationSource, 'cachePrefix', `${config.slug}-`, `${directory} Workshop integration`);
     if (app.includes("navigator.serviceWorker.register('./sw.js')")) fail(`${directory}/app.js must leave Service Worker registration to update-manager`);
     for (const offlineFile of requiredOfflineFiles) if (!worker.includes(offlineFile)) fail(`${directory}/sw.js must cache ${offlineFile}`);
   }
