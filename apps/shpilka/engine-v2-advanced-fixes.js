@@ -1,4 +1,9 @@
 // Runtime-safe CSS variable bridge for the analog controls.
+const shpFixStyles = document.createElement('link');
+shpFixStyles.rel = 'stylesheet';
+shpFixStyles.href = './advanced-fixes.css?v=2.2.0';
+document.head.append(shpFixStyles);
+
 shpRenderPrecisionControls = function shpRenderPrecisionControlsSafe() {
   const arc = document.querySelector('#steeringArc');
   const gate = document.querySelector('#powerGate');
