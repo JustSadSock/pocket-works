@@ -62,6 +62,14 @@ function boardHash(state) {
   hash ^= state.turn * 0x9e3779b1;
   hash = Math.imul(hash, 16777619);
   hash ^= (state.passes || 0) * 0x85ebca6b;
+  hash = Math.imul(hash, 16777619);
+  hash ^= (state.captures?.[1] || 0) * 0xc2b2ae35;
+  hash = Math.imul(hash, 16777619);
+  hash ^= (state.captures?.[2] || 0) * 0x27d4eb2f;
+  const hashes = state.hashes || [];
+  hash ^= hashes.at(-1) || 0;
+  hash = Math.imul(hash, 16777619);
+  hash ^= hashes.at(-2) || 0;
   return hash >>> 0;
 }
 
@@ -75,7 +83,7 @@ function staticValue(state, rootColor) {
 }
 
 function moveOrder(move) {
-  if (move.pass) return -100000 + (move.prior || 0);
+  if (move.pass) return -5000 + (move.prior || 0);
   return (move.prior || 0)
     + (move.captureCount || 0) * 1800
     + (move.savedAtari || 0) * 1450
@@ -84,6 +92,14 @@ function moveOrder(move) {
     + (move.claimed || 0) * 18
     + (move.reduced || 0) * 15
     + Math.max(0, move.shapeDelta || 0) * 12;
+}
+
+function trimWithPass(generated, limit) {
+  const pass = generated.find((move) => move.pass);
+  const active = generated.filter((move) => !move.pass).sort((a, b) => moveOrder(b) - moveOrder(a));
+  const selected = active.slice(0, pass ? Math.max(1, limit - 1) : limit);
+  if (pass) selected.push(pass);
+  return selected;
 }
 
 function orderedMoves(state, search, ply, includePass = true) {
@@ -96,8 +112,7 @@ function orderedMoves(state, search, ply, includePass = true) {
     includePass,
     search.context
   );
-  generated.sort((a, b) => moveOrder(b) - moveOrder(a));
-  return generated.slice(0, branchLimit);
+  return trimWithPass(generated, branchLimit);
 }
 
 function tacticalMoves(state, search) {
@@ -187,6 +202,7 @@ function alphaBeta(state, depth, alpha, beta, rootColor, search, ply, quiescence
 }
 
 function rootOrder(rootMoves, previousScores, limit) {
+  const pass = rootMoves.find((move) => move.pass);
   const moves = rootMoves.filter((move) => !move.pass && !move.wasteful);
   moves.sort((a, b) => {
     const previousA = previousScores.get(`${a.x},${a.y}`);
@@ -194,7 +210,9 @@ function rootOrder(rootMoves, previousScores, limit) {
     if (previousA !== undefined || previousB !== undefined) return (previousB ?? -INF) - (previousA ?? -INF);
     return moveOrder(b) - moveOrder(a);
   });
-  return moves.slice(0, limit);
+  const selected = moves.slice(0, pass ? Math.max(1, limit - 1) : limit);
+  if (pass) selected.push(pass);
+  return selected;
 }
 
 function chooseNearBest(results, context, profile) {
@@ -235,11 +253,11 @@ export async function calculateBestMove(game, rootMoves, level, context) {
   };
   const previousScores = new Map();
   let completed = [];
+  let partial = [];
   let completedDepth = 0;
 
   for (let depth = 1; depth <= profile.maxDepth; depth += 1) {
     const iteration = [];
-    let alpha = -INF;
     let finished = true;
     const candidates = rootOrder(rootMoves, previousScores, profile.rootLimit);
     for (let index = 0; index < candidates.length; index += 1) {
@@ -250,7 +268,7 @@ export async function calculateBestMove(game, rootMoves, level, context) {
         const value = alphaBeta(
           child,
           depth - 1,
-          alpha,
+          -INF,
           INF,
           rootColor,
           search,
@@ -258,8 +276,7 @@ export async function calculateBestMove(game, rootMoves, level, context) {
           profile.quiescenceDepth
         );
         iteration.push({ move, value, depth });
-        previousScores.set(`${move.x},${move.y}`, value);
-        alpha = Math.max(alpha, value);
+        previousScores.set(move.pass ? 'pass' : `${move.x},${move.y}`, value);
       } catch (error) {
         if (!(error instanceof SearchStopped)) throw error;
         finished = false;
@@ -267,23 +284,25 @@ export async function calculateBestMove(game, rootMoves, level, context) {
       }
       if ((index & 1) === 1) await yieldFrame();
     }
+    partial = iteration;
     if (!finished || iteration.length !== candidates.length) break;
     completed = iteration;
     completedDepth = depth;
     await yieldFrame();
   }
 
-  if (!completed.length) {
+  const usable = completed.length ? completed : partial;
+  if (!usable.length) {
     const fallback = rootOrder(rootMoves, previousScores, 1)[0];
     return fallback ? { move: fallback, value: fallback.prior || 0, depth: 0, nodes: search.nodes, cutoffs: search.cutoffs } : null;
   }
 
-  const chosen = chooseNearBest(completed, context, profile);
+  const chosen = chooseNearBest(usable, context, profile);
   return chosen ? {
     ...chosen,
-    depth: completedDepth,
+    depth: completed.length ? completedDepth : chosen.depth,
     nodes: search.nodes,
     cutoffs: search.cutoffs,
-    candidates: completed.length
+    candidates: usable.length
   } : null;
 }
