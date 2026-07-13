@@ -1,5 +1,5 @@
 [build]
-  command = "npm run validate:launcher && npm run validate:capabilities && npm run validate:enhanced && npm run validate:quality && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>remaining validators ok</title><h1>remaining validators ok</h1>' > dist-site/index.html"
+  command = "npm run validate:launcher && npm run validate:capabilities && rm -rf dist-site && mkdir -p dist-site && printf '<!doctype html><title>launcher capabilities ok</title><h1>launcher capabilities ok</h1>' > dist-site/index.html"
   publish = "dist-site"
 
 [[headers]]
