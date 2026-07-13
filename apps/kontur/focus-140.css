@@ -1,0 +1,47 @@
+/* КОНТУР 1.4 — меньше визуального шума и чуть больше верхнего отступа. */
+.bench-head {
+  top: max(16px, calc(var(--safe-area-top, env(safe-area-inset-top)) + 12px));
+}
+
+.meter {
+  top: max(80px, calc(var(--safe-area-top, env(safe-area-inset-top)) + 76px));
+}
+
+#game {
+  filter: saturate(.78) contrast(.98);
+}
+
+.meter,
+.fuse-rack,
+.checkpoint-rack {
+  box-shadow: 2px 2px 0 rgba(23,33,29,.9);
+}
+
+.status-strip {
+  letter-spacing: .09em;
+}
+
+body[data-kontur-mode="basic"] .checkpoint-rack,
+body:not([data-kontur-mode="checkpoint"]) .checkpoint-rack {
+  display: none !important;
+}
+
+body[data-kontur-mode="blocks"] #game {
+  filter: saturate(.72) contrast(1.01);
+}
+
+body[data-kontur-mode="diode"] #game,
+body[data-kontur-mode="capacitor"] #game,
+body[data-kontur-mode="switch"] #game {
+  filter: saturate(.84) contrast(.99);
+}
+
+@media (max-height: 700px) {
+  .bench-head {
+    top: max(12px, calc(var(--safe-area-top, env(safe-area-inset-top)) + 8px));
+  }
+
+  .meter {
+    top: max(72px, calc(var(--safe-area-top, env(safe-area-inset-top)) + 68px));
+  }
+}
