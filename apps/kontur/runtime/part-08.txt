@@ -1,0 +1,181 @@
+
+/* КОНТУР 1.1.1 — ускоренная проводимость полностью собранной цепи. */
+const FAST_MOVE_MS = 72;
+const FAST_STEP_DELAY_MS = 34;
+const conductionStartLevel = startLevel;
+const conductionRotateTile = rotateTile;
+const conductionCurrentDelay = currentDelay;
+const conductionBeginMove = beginMove;
+const conductionUpdateSimulation = updateSimulation;
+const conductionDrawTile = drawTile;
+const conductionDrawPulse = drawPulse;
+
+game.fastConducting = false;
+game.fastConductingAwaitingLaunch = false;
+game.fastConductingGlow = 0;
+
+sound.conductionReady = function conductionReady() {
+  this.tone(420, 0.07, 0.09, 'square', 90);
+  window.setTimeout(() => this.tone(560, 0.08, 0.08, 'square', 60), 55);
+};
+
+sound.conductionSurge = function conductionSurge() {
+  this.tone(460, 0.06, 0.1, 'square', 180);
+  window.setTimeout(() => this.tone(720, 0.1, 0.12, 'triangle', 160), 45);
+};
+
+function isRouteFullyConnected() {
+  if (!game.board?.path?.length) return false;
+  return game.board.path.every(({ x, y }) => {
+    const tile = game.board.tiles[y]?.[x];
+    return Boolean(tile && tile.targetMask !== null && tile.mask === tile.targetMask);
+  });
+}
+
+function refreshFastConduction(now = performance.now(), announce = true) {
+  const ready = isRouteFullyConnected();
+  if (ready === game.fastConducting) return ready;
+
+  game.fastConducting = ready;
+  game.fastConductingGlow = ready ? 1 : 0;
+
+  if (!ready) {
+    game.fastConductingAwaitingLaunch = false;
+    return false;
+  }
+
+  if (game.pulse) {
+    if (game.countdownEnd > now) {
+      game.pulse.nextDecisionAt = Math.min(
+        game.pulse.nextDecisionAt || Infinity,
+        game.countdownEnd + 45
+      );
+    } else {
+      game.pulse.nextDecisionAt = Math.min(game.pulse.nextDecisionAt || Infinity, now + 18);
+    }
+    if (game.pulse.move) game.pulse.move.duration = Math.min(game.pulse.move.duration, FAST_MOVE_MS);
+  }
+
+  if (!announce) return true;
+
+  if (game.countdownEnd > now) {
+    game.fastConductingAwaitingLaunch = true;
+    sound.conductionReady();
+    setStatus('ЦЕПЬ СОБРАНА · ФОРСАЖ ПОСЛЕ ПУСКА', 'success', 0);
+    navigator.vibrate?.([9, 22, 9]);
+  } else {
+    game.fastConductingAwaitingLaunch = false;
+    sound.conductionSurge();
+    setStatus('ЦЕПЬ СОБРАНА · УСКОРЕННАЯ ПРОВОДИМОСТЬ', 'success', 950);
+    navigator.vibrate?.([10, 18, 10]);
+  }
+  return true;
+}
+
+startLevel = function startLevelWithFastConduction(restoredBoard = null, restoredPulse = null) {
+  conductionStartLevel(restoredBoard, restoredPulse);
+  game.fastConducting = false;
+  game.fastConductingAwaitingLaunch = false;
+  game.fastConductingGlow = 0;
+  refreshFastConduction(performance.now(), false);
+};
+
+rotateTile = function rotateTileWithFastConduction(x, y) {
+  conductionRotateTile(x, y);
+  refreshFastConduction(performance.now(), true);
+};
+
+currentDelay = function currentDelayWithFastConduction() {
+  if (game.fastConducting) return FAST_STEP_DELAY_MS;
+  return conductionCurrentDelay();
+};
+
+beginMove = function beginMoveWithFastConduction(direction) {
+  conductionBeginMove(direction);
+  if (game.fastConducting && game.pulse?.moving && game.pulse.move) {
+    game.pulse.move.duration = Math.min(game.pulse.move.duration, FAST_MOVE_MS);
+  }
+};
+
+updateSimulation = function updateSimulationWithFastConduction(dt, now) {
+  const countdownWasRunning = game.countdownEnd > now;
+  refreshFastConduction(now, true);
+
+  if (game.fastConducting && game.pulse) {
+    game.fastConductingGlow = Math.min(1, game.fastConductingGlow + dt * 4.5);
+    if (game.pulse.move) game.pulse.move.duration = Math.min(game.pulse.move.duration, FAST_MOVE_MS);
+    if (!game.pulse.moving && game.countdownEnd <= now) {
+      game.pulse.nextDecisionAt = Math.min(game.pulse.nextDecisionAt || Infinity, now + FAST_STEP_DELAY_MS);
+    }
+  } else {
+    game.fastConductingGlow = Math.max(0, game.fastConductingGlow - dt * 5);
+  }
+
+  conductionUpdateSimulation(dt, now);
+
+  if (
+    countdownWasRunning &&
+    !game.countdownEnd &&
+    game.fastConducting &&
+    game.fastConductingAwaitingLaunch
+  ) {
+    game.fastConductingAwaitingLaunch = false;
+    sound.conductionSurge();
+    setStatus('ПУСК · ЦЕПЬ ПРОВОДИТ В ФОРСАЖЕ', 'success', 850);
+    navigator.vibrate?.([12, 20, 14]);
+  }
+};
+
+drawTile = function drawTileWithFastConduction(tile, x, y, size, hintActive) {
+  if (!game.fastConducting || tile.targetMask === null) {
+    conductionDrawTile(tile, x, y, size, hintActive);
+    return;
+  }
+
+  const storedHeat = tile.heat;
+  const wave = 0.72 + Math.sin(performance.now() * 0.022 + tile.x * 0.7 + tile.y * 0.45) * 0.2;
+  tile.heat = Math.max(tile.heat, wave);
+  conductionDrawTile(tile, x, y, size, hintActive);
+  tile.heat = storedHeat;
+
+  ctx.save();
+  ctx.strokeStyle = `rgba(244,178,104,${0.22 + game.fastConductingGlow * 0.2})`;
+  ctx.lineWidth = Math.max(1, size * 0.018);
+  ctx.strokeRect(x + size * 0.09, y + size * 0.09, size * 0.82, size * 0.82);
+  ctx.restore();
+};
+
+drawPulse = function drawPulseWithFastConduction() {
+  if (game.fastConducting && game.pulse?.moving && game.pulse.move) {
+    const from = boardPoint(game.pulse.move.from);
+    const to = boardPoint(game.pulse.move.to);
+    const t = Math.min(1, game.pulse.move.progress);
+    const px = from.x + (to.x - from.x) * t;
+    const py = from.y + (to.y - from.y) * t;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const tail = Math.min(game.layout.cell * 0.58, length * 0.7);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const gradient = ctx.createLinearGradient(
+      px - (dx / length) * tail,
+      py - (dy / length) * tail,
+      px,
+      py
+    );
+    gradient.addColorStop(0, 'rgba(226,103,40,0)');
+    gradient.addColorStop(0.65, 'rgba(239,146,74,.38)');
+    gradient.addColorStop(1, 'rgba(255,244,194,.92)');
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = Math.max(4, game.layout.cell * 0.075);
+    ctx.beginPath();
+    ctx.moveTo(px - (dx / length) * tail, py - (dy / length) * tail);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  conductionDrawPulse();
+};
