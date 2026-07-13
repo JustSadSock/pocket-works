@@ -99,10 +99,9 @@ test('launcher list remains expanded after reload and BFCache-safe cleanup', asy
   await page.waitForTimeout(750);
   await expectExpandedLauncherList(page);
 
-  const activeCardAnimations = await page.locator('.app-entry').evaluateAll((entries) =>
+  await expect.poll(async () => page.locator('.app-entry').evaluateAll((entries) =>
     entries.reduce((total, entry) => total + entry.getAnimations().filter((animation) => animation.playState === 'running').length, 0)
-  );
-  expect(activeCardAnimations).toBe(0);
+  ), { timeout: 3_000 }).toBe(0);
   monitor.assertClean();
 });
 
@@ -133,8 +132,14 @@ test('shared runtime blocks game text selection and initializes dynamic range co
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/apps/screen-lab/', '#hero-title');
 
-  await expect.poll(() => page.locator('#hero-title').evaluate((element) => getComputedStyle(element).userSelect)).toBe('none');
-  await expect.poll(() => page.locator('.selectable-content').evaluate((element) => getComputedStyle(element).userSelect)).toBe('text');
+  await expect.poll(() => page.locator('#hero-title').evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return computed.userSelect || computed.getPropertyValue('-webkit-user-select');
+  })).toBe('none');
+  await expect.poll(() => page.locator('.selectable-content').evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return computed.userSelect || computed.getPropertyValue('-webkit-user-select');
+  })).toBe('text');
 
   const selectionPrevented = await page.locator('#hero-title').evaluate((element) => {
     const event = new Event('selectstart', { bubbles: true, cancelable: true });

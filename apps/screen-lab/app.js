@@ -8,7 +8,7 @@ import { copyText, downloadJson, serializeJson } from '../../shared/capabilities
 import { toggleFullscreen, watchOrientation } from '../../shared/capabilities/device.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.2';
 const mobileRuntime = installMobileRuntime();
 
 const preferences = createVersionedStore({

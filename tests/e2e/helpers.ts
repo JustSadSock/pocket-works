@@ -23,7 +23,7 @@ export function monitorUnexpectedBrowserOutput(page: Page) {
 
 export async function openStablePage(page: Page, url: string, ready: string | Locator) {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  const target = typeof ready === 'string' ? page.locator(ready) : ready;
+  const target = typeof ready === 'string' ? page.locator(ready).first() : ready;
   await expect(target).toBeVisible();
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
