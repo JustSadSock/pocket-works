@@ -12,3 +12,4 @@ apps/sente/assets/gnugo/
 apps/sente/AI_AUDIT.json
 apps/sente/AI_AUDIT.md
 apps/sente/AI_AUDIT.log
+apps/sente/BUILD_DIAGNOSTICS.log
