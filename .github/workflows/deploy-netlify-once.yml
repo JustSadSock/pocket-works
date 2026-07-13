@@ -48,14 +48,14 @@ jobs:
         continue-on-error: true
         run: npm run registry:build
 
-      - name: Build and validate site
+      - name: Run exhaustive production validation
         id: build
         if: steps.registry.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set +e
-          npm run build:site 2>&1 | tee /tmp/pocket-works-build.log
+          npm run ci:full 2>&1 | tee /tmp/pocket-works-build.log
           exit_code=${PIPESTATUS[0]}
           sed -r 's/\x1B\[[0-9;]*[mK]//g' /tmp/pocket-works-build.log | tail -n 180 > /tmp/pocket-works-build-tail.log
           exit "$exit_code"
