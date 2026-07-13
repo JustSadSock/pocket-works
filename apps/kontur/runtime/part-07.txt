@@ -1,0 +1,29 @@
+
+/* КОНТУР 1.1 — резерв места под внешний источник на компактных экранах. */
+const resizeCanvasBeforeExternalPort = resizeCanvas;
+
+function resizeCanvasForExternalPort() {
+  resizeCanvasBeforeExternalPort();
+  const rect = canvas.getBoundingClientRect();
+  const safeTop = Math.max(116, Math.min(142, rect.height * 0.18));
+  const safeBottom = Math.max(150, Math.min(188, rect.height * 0.22));
+  const maxWidth = Math.min(rect.width - 24, 500);
+  const maxHeight = Math.max(ROWS * 30, rect.height - safeTop - safeBottom);
+  const cell = Math.max(30, Math.floor(Math.min(maxWidth / COLS, maxHeight / ROWS)));
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+  game.layout = {
+    ...game.layout,
+    width: rect.width,
+    height: rect.height,
+    cell,
+    boardX: Math.round((rect.width - boardWidth) / 2),
+    boardY: Math.round(safeTop + Math.max(0, (maxHeight - boardHeight) / 2)),
+    boardWidth,
+    boardHeight
+  };
+}
+
+window.addEventListener('resize', resizeCanvasForExternalPort);
+window.visualViewport?.addEventListener('resize', resizeCanvasForExternalPort);
+resizeCanvasForExternalPort();
