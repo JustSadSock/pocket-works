@@ -16,7 +16,7 @@
     "test:sente-ai": "node scripts/audit-sente-gnugo.mjs",
     "prepare:site": "node scripts/prepare-site.mjs",
     "validate:site": "node scripts/validate-site.mjs",
-    "build:quality-site": "npm run prepare:sente-engine && npm run test:sente-ai && npm run build:enhanced && npm run prepare:site && npm run validate:site",
+    "build:quality-site": "npm run prepare:sente-engine && npm run build:enhanced && npm run prepare:site && npm run validate:site",
     "build:site": "npm run prepare:sente-engine && npm run test:sente-ai && npm run registry:build && npm run health && npm run prepare:site && npm run validate:site",
     "preview:test": "node scripts/serve-site.mjs",
     "test:e2e": "playwright test",
