@@ -127,11 +127,15 @@ async function settleInstallation(registration) {
   if (state === 'redundant') throw new Error('The new application worker could not finish downloading');
 }
 
-async function activateWaitingWorker(registration) {
+async function activateWaitingWorker(registration, expectedVersion) {
   const waiting = registration.waiting;
   if (!waiting) return null;
 
   const info = await workerInfo(waiting);
+  if (info?.version && expectedVersion && info.version !== expectedVersion) {
+    throw new Error(`Downloaded v${info.version}, but the live registry expects v${expectedVersion}`);
+  }
+
   waiting.postMessage({ type: 'SKIP_WAITING' });
   await waitForWorkerState(waiting, ['activated', 'redundant'], ACTIVATION_TIMEOUT);
   if (waiting.state === 'redundant') throw new Error('The new application worker failed during activation');
@@ -172,7 +176,7 @@ async function updateApplication(app) {
 
     await settleInstallation(registration);
 
-    const downloadedInfo = await activateWaitingWorker(registration);
+    const downloadedInfo = await activateWaitingWorker(registration, app.version);
     const activeWorker = await waitForRegistrationActive(registration);
     const activeInfo = await workerInfo(activeWorker) || downloadedInfo;
 
