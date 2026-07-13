@@ -1,0 +1,21 @@
+{
+  "id": "/apps/moss-marble/",
+  "name": "Moss & Marble",
+  "short_name": "Moss & Marble",
+  "description": "Камерный мини-гольф в старой оранжерее с девятью тактильными лунками.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#1d2a22",
+  "theme_color": "#d9d3b4",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
