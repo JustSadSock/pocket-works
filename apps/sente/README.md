@@ -15,16 +15,21 @@ The engine implements captures, suicide prevention, simple ko, passing, resignat
 
 ## Computer players
 
-The computer uses a hybrid Go policy and Monte Carlo Tree Search. Tactical knowledge proposes sensible moves, while UCT-guided simulations compare many alternating continuations before the final choice.
+The computer uses a Go-specific move policy, a persistent player model and Monte Carlo Tree Search. Tactical knowledge proposes legal productive moves, while UCT-guided simulations compare alternating continuations before the final choice.
 
-- The opening policy spreads across available corners and sides instead of extending directly beside every friendly stone.
+- The player model measures contact play, aggression, invasions, expansion, local persistence and stone density from recent moves.
+- Each game receives a strategic character: territorial, influence-oriented, fighting, invasive or balanced.
+- The computer adapts that character to the opponent and to whether it is ahead or behind.
+- Root search receives controlled diversity, but the final move is sampled only from candidates inside a strict quality window.
+- Recent opening choices are remembered so repeated games do not begin with the same response every time.
 - Captures and saves from atari are resolved before strategic search.
-- The move policy rewards frontier expansion, reductions, cuts and connections, while rejecting true-eye fills and moves inside secure friendly territory.
-- `Calm` uses shorter, more varied simulations.
-- `Steady` searches a deeper tree with longer tactical rollouts.
-- `Sharp` uses the largest search budget and the deepest continuation tree.
+- Empty triangles, compact peaceful blocks, true-eye fills and moves inside secure friendly territory are rejected before entering the search tree.
+- A peaceful adjacent move must produce measurable frontier expansion, reduction or connection; merely adding another friendly stone is not considered progress.
+- `Calm` uses shorter and more varied simulations.
+- `Steady` uses a materially deeper search and remains the default human-like opponent.
+- `Sharp` uses the largest search budget and the narrowest quality window.
 
-This remains a lightweight offline phone engine rather than a neural KataGo-class system, but its decisions are based on sampled future play rather than a single greedy position score.
+This remains a lightweight offline phone engine rather than a neural KataGo-class system, but it no longer relies on raw group size or liberties as a positive strategic reward.
 
 ## Controls
 
@@ -36,7 +41,7 @@ This remains a lightweight offline phone engine rather than a neural KataGo-clas
 
 ## Persistence
 
-All state is stored under `pocket-works:sente`. The current game is saved after every move. The latest sixteen completed games are stored locally for replay. Workshop Mode can clear only SENTE-owned data.
+All state is stored under `pocket-works:sente`. The current game is saved after every move. The latest sixteen completed games are stored locally for replay. The adaptive computer profile and recent opening choices use SENTE-owned keys under the same namespace. Workshop Mode can clear only SENTE-owned data.
 
 ## Audio and motion
 
@@ -44,4 +49,4 @@ Stone, capture, pass and completion sounds are generated with Web Audio after a 
 
 ## Offline
 
-The app shell, rules engine, Monte Carlo search modules, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.3.0` after the first successful load.
+The app shell, rules engine, adaptive player model, Monte Carlo search modules, dead-group analyser, icon and required Pocket Works shared runtime files are cached by `sente-v1.4.0` after the first successful load.
