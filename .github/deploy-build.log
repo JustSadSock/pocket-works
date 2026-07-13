@@ -1,7 +1,22 @@
 
 > pocket-works@0.7.1 build:site
-> npm run health && npm run prepare:site && npm run validate:site
+> npm run prepare:sente-engine && npm run test:sente-ai && npm run registry:build && npm run health && npm run prepare:site && npm run validate:site
 
+
+> pocket-works@0.7.1 prepare:sente-engine
+> node scripts/prepare-sente-engine.mjs
+
+Prepared pinned GNU Go browser assets for SENTE.
+
+> pocket-works@0.7.1 test:sente-ai
+> node scripts/audit-sente-gnugo.mjs
+
+SENTE AI audit: 92/92 checks passed; 6 observed games.
+
+> pocket-works@0.7.1 registry:build
+> node scripts/build-registry.mjs
+
+Generated apps.json with 11 application entries.
 
 > pocket-works@0.7.1 health
 > npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced
@@ -22,7 +37,7 @@ Enhanced build complete: 0 applications.
 Generated app registry is current.
 
 > pocket-works@0.7.1 validate:scripts
-> node --check app.js && node --check shared/app-icon-previews.js && node --check shared/launcher-list-motion.js && node --check shared/view-transition-guard.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/enhanced-presets.mjs && node --check scripts/build-enhanced.mjs && node --check scripts/test-enhanced.mjs && node --check scripts/promote-enhanced-build.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/serve-site.mjs && node --check scripts/test-forge.mjs && node --check scripts/test-enhanced-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs && node --check scripts/validate-enhanced.mjs && node --check scripts/validate-quality-gates.mjs
+> node --check app.js && node --check shared/app-icon-previews.js && node --check shared/launcher-list-motion.js && node --check shared/view-transition-guard.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/enhanced-presets.mjs && node --check scripts/build-enhanced.mjs && node --check scripts/test-enhanced.mjs && node --check scripts/promote-enhanced-build.mjs && node --check scripts/prepare-sente-engine.mjs && node --check scripts/sente-gnugo-node.mjs && node --check scripts/audit-sente-gnugo.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/serve-site.mjs && node --check scripts/test-forge.mjs && node --check scripts/test-enhanced-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs && node --check scripts/validate-enhanced.mjs && node --check scripts/validate-quality-gates.mjs
 
 
 > pocket-works@0.7.1 validate:configs
@@ -53,5 +68,65 @@ Launcher validation passed for Pocket Works 0.7.1 and 11 registered apps.
 > pocket-works@0.7.1 validate:capabilities
 > node scripts/validate-capabilities.mjs
 
-Capability validation failed with 1 issue:
-- apps/zero-frame Workshop integration must include storageNamespace: 'pocket-works:zero-frame'
+Shared capabilities and Workshop Mode passed for Quick and Enhanced templates plus 11 published apps.
+
+> pocket-works@0.7.1 validate:enhanced
+> node scripts/validate-enhanced.mjs
+
+Enhanced runtime contract passed for the template and 0 published enhanced apps.
+
+> pocket-works@0.7.1 validate:quality
+> node scripts/validate-quality-gates.mjs
+
+Quality gate contract passed for 9 browser test files and the Lighthouse budget.
+
+> pocket-works@0.7.1 test:enhanced
+> node scripts/test-enhanced.mjs
+
+Enhanced tests complete: 0 applications.
+
+> pocket-works@0.7.1 test:forge:quick
+> node scripts/test-forge.mjs
+
+Generated apps.json with 12 application entries.
+Pocket Forge created apps/forge-smoke-vanilla with the quick/vanilla preset.
+Open: /apps/forge-smoke-vanilla/
+Generated apps.json with 13 application entries.
+Pocket Forge created apps/forge-smoke-interactive with the quick/interactive preset.
+Open: /apps/forge-smoke-interactive/
+Generated apps.json with 14 application entries.
+Pocket Forge created apps/forge-smoke-canvas with the quick/canvas preset.
+Open: /apps/forge-smoke-canvas/
+Generated apps.json with 15 application entries.
+Pocket Forge created apps/forge-smoke-game-2d with the quick/game-2d preset.
+Open: /apps/forge-smoke-game-2d/
+Generated apps.json with 16 application entries.
+Pocket Forge created apps/forge-smoke-audio with the quick/audio preset.
+Open: /apps/forge-smoke-audio/
+Generated app registry is current.
+Pocket Works health check passed: root launcher and 16 registered apps validated.
+Mobile runtime validation passed for Quick and Enhanced templates plus 16 registered apps.
+Shared capabilities and Workshop Mode passed for Quick and Enhanced templates plus 16 published apps.
+Pocket Forge Quick smoke test passed for 5 presets.
+
+> pocket-works@0.7.1 test:forge:enhanced
+> node scripts/test-enhanced-forge.mjs
+
+Pocket Works health check passed: root launcher and 15 registered apps validated.
+
+## Enhanced validation
+$ /opt/hostedtoolcache/node/22.23.1/x64/bin/node scripts/validate-enhanced.mjs
+Enhanced runtime contract passed for the template and 4 published enhanced apps.
+
+PASS: 4 Enhanced presets generated, built, typechecked and tested.
+Pocket Forge Enhanced smoke test passed for 4 presets.
+
+> pocket-works@0.7.1 prepare:site
+> node scripts/prepare-site.mjs
+
+Prepared production site with 11 registered application(s) in dist-site/.
+
+> pocket-works@0.7.1 validate:site
+> node scripts/validate-site.mjs
+
+Production output contains only deployable Pocket Works assets.
