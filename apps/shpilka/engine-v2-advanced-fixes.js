@@ -33,4 +33,22 @@ shpRenderPrecisionControls = function shpRenderPrecisionControlsSafe() {
   }
 };
 
+gearForSpeed = function shpGearForSignedSpeed(speed) {
+  if (speed < -8) return 'R';
+  if (speed < 18) return 'N';
+  return String(Math.min(6, 1 + Math.floor(speed / 118)));
+};
+
+updateHud = function shpUpdateHudSigned() {
+  if (!player) return;
+  const signedSpeed = player.forwardSpeed || 0;
+  speedValue.textContent = String(Math.round(Math.abs(signedSpeed) * 0.56));
+  gearValue.textContent = gearForSpeed(signedSpeed);
+  positionValue.textContent = `${raceOrder.indexOf(player) + 1}/${cars.length}`;
+  lapValue.textContent = `${Math.min(player.completedLaps + 1, lapsToWin)}/${lapsToWin}`;
+  lapTime.textContent = formatTime(Math.max(0, raceElapsed - player.lapStartTime));
+  const record = currentRouteRecord();
+  bestLap.textContent = record?.bestLap ? `РЕКОРД ${formatTime(record.bestLap)}` : 'РЕКОРД —';
+};
+
 shpRenderPrecisionControls();
