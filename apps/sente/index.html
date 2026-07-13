@@ -99,11 +99,11 @@
           </div>
         </div>
         <div class="setup-row" id="levelRow">
-          <label>Характер</label>
+          <label>Сила</label>
           <div class="choice-line three" id="levelChoices" role="group" aria-label="Сила компьютера">
-            <button type="button" data-value="calm" data-native-press>Спокойный</button>
-            <button type="button" data-value="steady" class="selected" data-native-press>Собранный</button>
-            <button type="button" data-value="sharp" data-native-press>Острый</button>
+            <button type="button" data-value="calm" data-native-press>Ученик</button>
+            <button type="button" data-value="steady" class="selected" data-native-press>Клубный</button>
+            <button type="button" data-value="sharp" data-native-press>Мастер</button>
           </div>
         </div>
       </div>
@@ -129,6 +129,8 @@
           <button type="button" id="openArchiveButton" data-native-press><b>Архив партий</b><small id="archiveCount">Пока пусто</small></button>
           <button type="button" id="exportButton" data-native-press><b>Экспорт SGF</b><small>Сохранить текущую партию</small></button>
           <button type="button" id="newGameButton" data-native-press><b>Новая партия</b><small>Текущая позиция сохранится</small></button>
+          <a href="./AI_AUDIT.md" target="_blank" rel="noopener"><b>Аудит компьютера</b><small>Позиции, партии и снимки досок</small></a>
+          <a href="./assets/gnugo/SOURCE.txt" target="_blank" rel="noopener"><b>GNU Go 3.9.1</b><small>Исходный код и лицензия движка</small></a>
           <button type="button" id="resignButton" class="danger-action" data-native-press><b>Сдаться</b><small>Потребуется второе нажатие</small></button>
           <a href="../../" data-app-control data-native-press><b>Вернуться в Pocket Works</b><small>Партия уже сохранена</small></a>
         </div>
@@ -172,7 +174,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="SENTE"
-    data-app-version="1.5.0"
+    data-app-version="2.0.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
