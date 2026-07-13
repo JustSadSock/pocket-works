@@ -8,17 +8,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.8.1">
+  <meta name="pocket-works-build" content="0.8.2">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.8.1">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.8.1" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.8.1">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.8.1">
-  <link rel="stylesheet" href="./styles.css?v=0.8.1">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.8.1">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.8.1">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.8.1">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.8.1">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.8.2">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.8.2" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.8.2">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.8.2">
+  <link rel="stylesheet" href="./styles.css?v=0.8.2">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.8.2">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.8.2">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.8.2">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.8.2">
 </head>
 <body>
   <div class="shelf-atmosphere" aria-hidden="true">
@@ -28,7 +28,7 @@
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
       <div class="brand-lockup">
-        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.8.1</p>
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.8.2</p>
         <h1>Pocket<br>Works</h1>
       </div>
 
@@ -58,14 +58,14 @@
         <div class="filter-strip" id="filter-strip" role="toolbar" aria-label="Filter applications">
           <button type="button" data-filter="all" aria-pressed="true" data-native-press>All <span data-filter-count="all">0</span></button>
           <button type="button" data-filter="favorites" aria-pressed="false" data-native-press>Saved <span data-filter-count="favorites">0</span></button>
-          <button type="button" data-filter="recent" aria-pressed="false" data-native-press>Recent <span data-filter-count="recent">0</span></button>
+          <button type="button" data-filter="recent" aria-pressed="false" data-native-press>Opened <span data-filter-count="recent">0</span></button>
           <button type="button" data-filter="offline" aria-pressed="false" data-native-press>Offline <span data-filter-count="offline">0</span></button>
           <button type="button" data-filter="experimental" aria-pressed="false" data-native-press>Lab <span data-filter-count="experimental">0</span></button>
         </div>
 
         <div class="deck-actions">
           <button id="sort-button" type="button" data-native-press aria-label="Change application sort order">Updated ↓</button>
-          <button id="refresh-button" type="button" data-native-press>Sync</button>
+          <button id="refresh-button" type="button" data-native-press>Update</button>
         </div>
       </div>
     </section>
@@ -176,16 +176,17 @@
 
   <script
     type="module"
-    src="./shared/update-manager.js?v=0.8.1"
+    src="./shared/update-manager.js?v=0.8.2"
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.8.1"
+    data-app-version="0.8.2"
   ></script>
-  <script src="./shared/view-transition-guard.js?v=0.8.1" type="module"></script>
-  <script src="./app.js?v=0.8.1" type="module"></script>
-  <script src="./launcher-sync.js?v=0.8.1" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.8.1" type="module"></script>
-  <script src="./shared/app-icon-previews.js?v=0.8.1" type="module"></script>
+  <script src="./shared/view-transition-guard.js?v=0.8.2" type="module"></script>
+  <script src="./app.js?v=0.8.2" type="module"></script>
+  <script src="./launcher-update-all.js?v=0.8.2" type="module"></script>
+  <script src="./launcher-sync.js?v=0.8.2" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.8.2" type="module"></script>
+  <script src="./shared/app-icon-previews.js?v=0.8.2" type="module"></script>
 </body>
 </html>

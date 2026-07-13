@@ -4,7 +4,18 @@ import { collectAppConfigs } from './app-config.mjs';
 
 const root = process.cwd();
 const output = path.join(root, 'dist-site');
-const rootFiles = ['index.html', 'styles.css', 'launcher-performance.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'apps.json'];
+const rootFiles = [
+  'index.html',
+  'styles.css',
+  'launcher-performance.css',
+  'launcher-sync.css',
+  'app.js',
+  'launcher-update-all.js',
+  'launcher-sync.js',
+  'manifest.webmanifest',
+  'sw.js',
+  'apps.json'
+];
 const appDevEntries = new Set([
   'package.json',
   'vite.config.ts',

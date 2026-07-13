@@ -10,7 +10,18 @@ async function exists(target) {
   try { await access(target); return true; } catch { return false; }
 }
 
-for (const file of ['index.html', 'styles.css', 'launcher-performance.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'apps.json']) {
+for (const file of [
+  'index.html',
+  'styles.css',
+  'launcher-performance.css',
+  'launcher-sync.css',
+  'app.js',
+  'launcher-update-all.js',
+  'launcher-sync.js',
+  'manifest.webmanifest',
+  'sw.js',
+  'apps.json'
+]) {
   if (!(await exists(path.join(output, file)))) errors.push(`dist-site is missing ${file}`);
 }
 
