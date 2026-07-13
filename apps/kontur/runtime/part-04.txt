@@ -1,0 +1,211 @@
+DIRS.find((item) => item.bit === direction) || { dx: 0, dy: 0 };
+  for (let i = 0; i < 24; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 55 + Math.random() * 145;
+    game.sparks.push({
+      x: origin.x + dir.dx * game.layout.cell * 0.35,
+      y: origin.y + dir.dy * game.layout.cell * 0.35,
+      vx: Math.cos(angle) * speed + dir.dx * 80,
+      vy: Math.sin(angle) * speed + dir.dy * 80,
+      life: 0.32 + Math.random() * 0.38,
+      age: 0,
+      size: 1 + Math.random() * 2.4
+    });
+  }
+}
+
+function updateSimulation(dt, now) {
+  if (game.board) {
+    for (const row of game.board.tiles) {
+      for (const tile of row) {
+        const delta = tile.targetAngle - tile.angle;
+        tile.angle += delta * Math.min(1, dt * 18);
+        if (Math.abs(delta) < 0.001) tile.angle = tile.targetAngle;
+        tile.heat = Math.max(0, tile.heat - dt * 1.2);
+        tile.flash = Math.max(0, tile.flash - dt * 2.8);
+      }
+    }
+  }
+
+  if (game.mode === 'playing' && game.pulse?.moving) {
+    const move = game.pulse.move;
+    move.progress += dt * 1000 / move.duration;
+    if (move.progress >= 1) {
+      move.progress = 1;
+      if (game.pulse.completeAfterMove) {
+        game.pulse.moving = false;
+        finishLevel();
+      } else {
+        game.pulse.x = move.to.x;
+        game.pulse.y = move.to.y;
+        game.pulse.entryBit = OPP[move.direction];
+        game.pulse.moving = false;
+        game.pulse.move = null;
+        game.pulse.nextDecisionAt = now + currentDelay();
+        game.run.score += Math.max(1, 5 * game.run.scoreMultiplier);
+        updateHud();
+      }
+    }
+  }
+
+  evaluatePulse(now);
+
+  for (const spark of game.sparks) {
+    spark.age += dt;
+    spark.x += spark.vx * dt;
+    spark.y += spark.vy * dt;
+    spark.vy += 360 * dt;
+    spark.vx *= 0.985;
+  }
+  game.sparks = game.sparks.filter((spark) => spark.age < spark.life);
+  game.boardTransition = Math.max(0, game.boardTransition - dt * 2.6);
+}
+
+function drawBackground() {
+  const { width, height } = game.layout;
+  ctx.fillStyle = '#ddd2b4';
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(39,50,43,.08)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < width; x += 22) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 22) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+}
+
+function drawBench() {
+  const l = game.layout;
+  const pad = 10;
+  const x = l.boardX - pad;
+  const y = l.boardY - pad;
+  const w = l.boardWidth + pad * 2;
+  const h = l.boardHeight + pad * 2;
+  ctx.fillStyle = '#19231f';
+  ctx.fillRect(x + 7, y + 7, w, h);
+  ctx.fillStyle = '#857a5f';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+  ctx.fillStyle = '#33463c';
+  ctx.fillRect(l.boardX, l.boardY, l.boardWidth, l.boardHeight);
+  const bolt = Math.max(4, l.cell * 0.055);
+  ctx.fillStyle = '#17211d';
+  for (const [bx, by] of [[x + 5, y + 5], [x + w - 5, y + 5], [x + 5, y + h - 5], [x + w - 5, y + h - 5]]) {
+    ctx.beginPath();
+    ctx.arc(bx, by, bolt, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawTile(tile, x, y, size, hintActive) {
+  const gap = Math.max(2, size * 0.035);
+  const tx = x + gap;
+  const ty = y + gap;
+  const ts = size - gap * 2;
+  ctx.save();
+  if (tile.flash > 0) {
+    ctx.fillStyle = `rgba(139,46,36,${tile.flash * 0.65})`;
+    ctx.fillRect(tx - 2, ty - 2, ts + 4, ts + 4);
+  }
+  ctx.fillStyle = tile.locked ? '#6c705f' : '#d9cfb3';
+  ctx.fillRect(tx, ty, ts, ts);
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.4, size * 0.03);
+  ctx.strokeRect(tx + 0.5, ty + 0.5, ts - 1, ts - 1);
+  ctx.strokeStyle = 'rgba(255,255,255,.56)';
+  ctx.lineWidth = Math.max(1, size * 0.018);
+  ctx.beginPath();
+  ctx.moveTo(tx + 3, ty + ts - 3);
+  ctx.lineTo(tx + 3, ty + 3);
+  ctx.lineTo(tx + ts - 3, ty + 3);
+  ctx.stroke();
+
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.translate(cx, cy);
+  ctx.rotate(tile.angle);
+  const mask = tile.baseMask;
+  const arm = size * 0.44;
+  const traceWidth = Math.max(6, size * 0.115);
+  const highlightWidth = Math.max(1.5, traceWidth * 0.25);
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+  ctx.strokeStyle = '#5d2d20';
+  ctx.lineWidth = traceWidth + Math.max(3, size * 0.05);
+  for (const dir of DIRS) {
+    if (!(mask & dir.bit)) continue;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(dir.dx * arm, dir.dy * arm);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = tile.heat > 0 ? '#e8ad72' : '#b85d32';
+  ctx.lineWidth = traceWidth;
+  for (const dir of DIRS) {
+    if (!(mask & dir.bit)) continue;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(dir.dx * arm, dir.dy * arm);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = `rgba(255,224,181,${0.2 + tile.heat * 0.45})`;
+  ctx.lineWidth = highlightWidth;
+  for (const dir of DIRS) {
+    if (!(mask & dir.bit)) continue;
+    ctx.beginPath();
+    ctx.moveTo(-dir.dy * 2, -dir.dx * 2);
+    ctx.lineTo(dir.dx * arm - dir.dy * 2, dir.dy * arm - dir.dx * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#e9dfc4';
+  ctx.strokeStyle = '#17211d';
+  ctx.lineWidth = Math.max(1.5, size * 0.026);
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(5, size * 0.095), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (tile.locked) {
+    ctx.fillStyle = '#17211d';
+    const r = size * 0.18;
+    ctx.fillRect(-r, -size * 0.027, r * 2, size * 0.054);
+    ctx.fillRect(-size * 0.027, -r, size * 0.054, r * 2);
+  }
+  ctx.restore();
+
+  if (hintActive && tile.targetMask !== null) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(238,230,207,.78)';
+    ctx.lineWidth = Math.max(1.4, size * 0.025);
+    ctx.setLineDash([Math.max(2, size * 0.05), Math.max(2, size * 0.05)]);
+    const cx2 = x + size / 2;
+    const cy2 = y + size / 2;
+    for (const dir of DIRS) {
+      if (!(tile.targetMask & dir.bit)) continue;
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2);
+      ctx.lineTo(cx2 + dir.dx * size * 0.46, cy2 + dir.dy * size * 0.46);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPorts() {
+  if (!game.board) return;
+  const l = game.layout;
+  const source = boardPoint(game.board.source);
+  const goal = boardPoint(game.board.goal);
+  const portWidth = l.cell * 0.42;
+  const portHeight = Math.max(12, l.cell * 0.18);
+  for (const [point, y, label, active] of [
+    [source, l.boardY + l.boardHeight + 5, 'ВХОД', tru
