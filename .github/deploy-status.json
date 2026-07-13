@@ -1,9 +1,9 @@
 {
-  "sourceCommit": "946508170126676613f4821f8c1bba0b25f64bc3",
-  "recordedAt": "2026-07-13T13:02:05Z",
+  "sourceCommit": "2be31a2d0e905dee7e556f909f7586a3559ca24f",
+  "recordedAt": "2026-07-13T13:26:46Z",
   "install": "success",
   "registry": "success",
-  "build": "success",
+  "build": "failure",
   "auth": "not-required",
   "deploy": "delegated-to-netlify-git"
 }
