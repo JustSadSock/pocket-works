@@ -8,16 +8,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
+  <meta name="pocket-works-build" content="0.8.1">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./shared/pocket-works-icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css">
-  <link rel="stylesheet" href="./shared/update-manager.css">
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./launcher-performance.css">
-  <link rel="stylesheet" href="./launcher-sync.css">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.8.1">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.8.1" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.8.1">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.8.1">
+  <link rel="stylesheet" href="./styles.css?v=0.8.1">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.8.1">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.8.1">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.8.1">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.8.1">
 </head>
 <body>
   <div class="shelf-atmosphere" aria-hidden="true">
@@ -27,7 +28,7 @@
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
       <div class="brand-lockup">
-        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.8.0</p>
+        <p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.8.1</p>
         <h1>Pocket<br>Works</h1>
       </div>
 
@@ -175,16 +176,16 @@
 
   <script
     type="module"
-    src="./shared/update-manager.js"
+    src="./shared/update-manager.js?v=0.8.1"
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Pocket Works"
-    data-app-version="0.8.0"
+    data-app-version="0.8.1"
   ></script>
-  <script src="./shared/view-transition-guard.js" type="module"></script>
-  <script src="./app.js" type="module"></script>
-  <script src="./launcher-sync.js" type="module"></script>
-  <script src="./shared/launcher-list-motion.js" type="module"></script>
-  <script src="./shared/app-icon-previews.js" type="module"></script>
+  <script src="./shared/view-transition-guard.js?v=0.8.1" type="module"></script>
+  <script src="./app.js?v=0.8.1" type="module"></script>
+  <script src="./launcher-sync.js?v=0.8.1" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.8.1" type="module"></script>
+  <script src="./shared/app-icon-previews.js?v=0.8.1" type="module"></script>
 </body>
 </html>
