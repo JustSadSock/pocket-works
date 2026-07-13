@@ -1,0 +1,146 @@
+/* КОНТУР 1.2.1 — физическая кнопка аварийного стабилизатора. */
+.overload-control {
+  --brake-progress: 0;
+  width: 132px;
+  min-height: 58px;
+  padding: 7px 9px 7px 52px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 7px;
+  overflow: hidden;
+  text-align: left;
+  touch-action: manipulation;
+  animation: none !important;
+  transition: transform 70ms ease, box-shadow 70ms ease, background-color 120ms ease, opacity 120ms ease;
+}
+
+.overload-control::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 37% 31%, rgba(255,255,255,.34) 0 9%, transparent 10%),
+    radial-gradient(circle at 50% 55%, #b84b38 0 48%, #812d24 49% 72%, #4e211d 73% 100%);
+  box-shadow:
+    inset 0 -4px 0 rgba(34,20,18,.38),
+    0 2px 0 #19211d,
+    0 0 0 4px rgba(23,33,29,.12);
+}
+
+.overload-control::after {
+  content: "НАЖАТЬ";
+  position: absolute;
+  left: 6px;
+  bottom: 2px;
+  width: 39px;
+  text-align: center;
+  font: 800 5px/1 ui-monospace, monospace;
+  letter-spacing: .08em;
+  color: var(--ink);
+  opacity: .68;
+}
+
+.overload-control span,
+.overload-control b,
+.overload-control small {
+  position: relative;
+  z-index: 2;
+}
+
+.overload-control span {
+  grid-column: 1 / -1;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: .08em;
+}
+
+.overload-control b {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.overload-control small {
+  grid-column: 1;
+  grid-row: 2;
+  font: 800 6px/1.05 ui-monospace, monospace;
+  letter-spacing: .06em;
+  opacity: .66;
+}
+
+.overload-control i {
+  left: 0;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  height: 6px;
+  border-top: 2px solid var(--ink);
+  background: #8ca79c;
+  transform: scaleX(var(--brake-progress));
+  transform-origin: left center;
+  transition: transform 80ms linear;
+}
+
+.overload-control[data-active="true"] {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink), 0 0 16px rgba(126,153,140,.34);
+  background: #a9b9ab;
+  color: var(--ink);
+}
+
+.overload-control[data-active="true"]::before {
+  transform: translateY(-50%) translateY(2px);
+  box-shadow:
+    inset 0 -1px 0 rgba(34,20,18,.28),
+    0 0 0 #19211d,
+    0 0 15px rgba(216,226,207,.58);
+}
+
+.overload-control[data-active="true"]::after {
+  content: "РАБОТАЕТ";
+}
+
+.overload-control[data-locked="true"] {
+  opacity: .58;
+}
+
+.overload-control[data-locked="true"]::before {
+  filter: saturate(.55);
+}
+
+.overload-control[data-empty="true"]::after {
+  content: "ПУСТО";
+}
+
+.overload-control[data-empty="true"]::before {
+  background:
+    radial-gradient(circle at 37% 31%, rgba(255,255,255,.18) 0 9%, transparent 10%),
+    radial-gradient(circle at 50% 55%, #756d5d 0 48%, #5b5448 49% 72%, #37342d 73% 100%);
+}
+
+@media (max-width: 360px) {
+  .overload-control {
+    width: 119px;
+    padding-left: 47px;
+  }
+
+  .overload-control::before {
+    left: 8px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overload-control,
+  .overload-control i { transition: none; }
+}
