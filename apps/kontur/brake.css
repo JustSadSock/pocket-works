@@ -114,6 +114,7 @@
 }
 
 .overload-control[data-locked="true"]::before {
+  content: "";
   filter: saturate(.55);
 }
 
