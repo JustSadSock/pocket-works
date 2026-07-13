@@ -15,27 +15,13 @@ on:
       - "package.json"
       - "scripts/**"
       - "shared/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/deploy-netlify-once.yml"
-      - "apps/**"
-      - "apps.json"
-      - "*.html"
-      - "*.js"
-      - "*.css"
-      - "manifest.webmanifest"
-      - "netlify.toml"
-      - "package.json"
-      - "scripts/**"
-      - "shared/**"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: pocket-works-production-validation-${{ github.ref }}
+  group: pocket-works-production-validation
   cancel-in-progress: true
 
 jobs:
@@ -75,7 +61,7 @@ jobs:
           exit "$exit_code"
 
       - name: Record validation result
-        if: always() && github.event_name == 'push'
+        if: always()
         env:
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           REGISTRY_OUTCOME: ${{ steps.registry.outcome }}
