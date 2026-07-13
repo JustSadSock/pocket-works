@@ -8,44 +8,12 @@ const ROOT_CANDIDATES = {
   sharp: 54
 };
 
-function strongestTactical(moves, field) {
-  const tactical = moves.filter((move) => !move.pass && move[field] > 0);
-  tactical.sort((a, b) => b[field] - a[field] || b.prior - a.prior);
-  return tactical[0] || null;
-}
-
 export async function chooseAiMove(game, level = 'steady') {
   const context = buildSearchContext(game, level);
   const rootLimit = ROOT_CANDIDATES[level] || ROOT_CANDIDATES.steady;
   const rootMoves = generateMoves(game, game.turn, rootLimit, true, true, context);
 
-  const capture = strongestTactical(rootMoves, 'captureCount');
-  if (capture) {
-    return {
-      x: capture.x,
-      y: capture.y,
-      score: capture.prior,
-      depth: 0,
-      nodes: 0,
-      plan: context.personality,
-      reason: 'capture'
-    };
-  }
-
-  const save = strongestTactical(rootMoves, 'savedAtari');
-  if (save) {
-    return {
-      x: save.x,
-      y: save.y,
-      score: save.prior,
-      depth: 0,
-      nodes: 0,
-      plan: context.personality,
-      reason: 'save'
-    };
-  }
-
-  if (game.moveNumber < 2) {
+  if (game.moveNumber < 2 && !rootMoves.some((move) => move.urgent)) {
     const bookMove = chooseOpeningBookMove(game, rootMoves, level, context);
     if (bookMove) {
       rememberOpening(game, bookMove);
