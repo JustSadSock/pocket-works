@@ -1,0 +1,30 @@
+/* МЯЛО 1.2 — keep the live camera compositor cheap on mobile WebKit. */
+.grain {
+  display: none;
+}
+
+.control,
+.live-status,
+.instruction,
+.myalo-guide-scrim {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.control {
+  background: rgba(18, 19, 17, .78);
+}
+
+.live-status {
+  background: rgba(20, 21, 19, .78);
+}
+
+.instruction {
+  background: rgba(17, 18, 16, .86);
+}
+
+#scene,
+#overlay {
+  contain: strict;
+  transform: translateZ(0);
+}
