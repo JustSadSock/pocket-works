@@ -168,6 +168,68 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </main>
 
+  <script>
+    (() => {
+      const BUILD = '2.1.0';
+      const STATE_KEY = 'pocket-works:sente:state:v1';
+      const ENGINE_KEY = 'pocket-works:sente:engine-build';
+      let resetLegacyGame = false;
+
+      window.__SENTE_BUILD__ = BUILD;
+      document.documentElement.dataset.senteBuild = BUILD;
+
+      try {
+        if (localStorage.getItem(ENGINE_KEY) !== BUILD) {
+          const state = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
+          if (state && typeof state === 'object' && state.current && (state.settings?.mode || 'ai') === 'ai') {
+            state.current = null;
+            localStorage.setItem(STATE_KEY, JSON.stringify(state));
+            resetLegacyGame = true;
+          }
+          localStorage.setItem(ENGINE_KEY, BUILD);
+        }
+      } catch {}
+
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const source = input instanceof Request ? input.url : String(input);
+        const url = new URL(source, location.href);
+        if (/\/apps\/sente\/runtime-[1-4]\.txt$/.test(url.pathname)) url.searchParams.set('v', BUILD);
+        if (input instanceof Request) return nativeFetch(new Request(url.href, input), init);
+        return nativeFetch(url.href, init);
+      };
+
+      window.addEventListener('DOMContentLoaded', () => {
+        if (!resetLegacyGame) return;
+        const toast = document.querySelector('#toast');
+        if (!toast) return;
+        toast.textContent = 'Старая AI-партия закрыта. Начните новую партию с GNU Go.';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 4200);
+      });
+
+      window.addEventListener('sente-engine-ready', (event) => {
+        document.body.dataset.senteEngine = event.detail?.version || 'GNU Go';
+      });
+      window.addEventListener('sente-engine-error', () => {
+        document.body.dataset.senteEngine = 'error';
+        const message = document.querySelector('#boardMessage');
+        if (!message) return;
+        message.textContent = 'GNU Go не загрузился: используется помеченный резервный ход.';
+        message.classList.add('show');
+        setTimeout(() => message.classList.remove('show'), 4200);
+      });
+    })();
+  </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "/apps/sente/go-engine.js": "/apps/sente/go-engine.js?v=2.1.0",
+        "/apps/sente/ai.js": "/apps/sente/ai-v2.1.js?v=2.1.0",
+        "/apps/sente/dead-groups.js": "/apps/sente/dead-groups.js?v=2.1.0"
+      }
+    }
+  </script>
   <script
     type="module"
     src="../../shared/update-manager.js?v=2.1.0"
