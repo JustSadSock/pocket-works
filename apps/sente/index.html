@@ -9,17 +9,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="SENTE">
   <title>SENTE — Go</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=2.1.0">
-  <link rel="icon" href="./icons/icon.svg?v=2.1.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/update-manager.css?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=2.1.0">
-  <link rel="stylesheet" href="./styles.css?v=2.1.0">
-  <link rel="stylesheet" href="./board.css?v=2.1.0">
-  <link rel="stylesheet" href="./sheets.css?v=2.1.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=2.2.0">
+  <link rel="icon" href="./icons/icon.svg?v=2.2.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=2.2.0">
+  <link rel="stylesheet" href="./styles.css?v=2.2.0">
+  <link rel="stylesheet" href="./board.css?v=2.2.0">
+  <link rel="stylesheet" href="./sheets.css?v=2.2.0">
 </head>
-<body data-fullscreen-app data-sente-build="2.1.0">
+<body data-fullscreen-app data-sente-build="2.2.0">
   <main class="app-shell" data-app-shell>
     <header class="topbar" data-ui>
       <a class="pocket-link" href="../../" data-app-control data-native-press>Pocket Works</a>
@@ -129,8 +129,8 @@
           <button type="button" id="openArchiveButton" data-native-press><b>Архив партий</b><small id="archiveCount">Пока пусто</small></button>
           <button type="button" id="exportButton" data-native-press><b>Экспорт SGF</b><small>Сохранить текущую партию</small></button>
           <button type="button" id="newGameButton" data-native-press><b>Новая партия</b><small>Текущая позиция сохранится</small></button>
-          <a href="./AI_AUDIT.md?v=2.1.0" target="_blank" rel="noopener"><b>Аудит компьютера</b><small>Позиции, партии и снимки досок</small></a>
-          <a href="./assets/gnugo/SOURCE.txt?v=2.1.0" target="_blank" rel="noopener"><b>GNU Go 3.9.1</b><small>Исходный код и лицензия движка</small></a>
+          <a href="./AI_AUDIT.md?v=2.2.0" target="_blank" rel="noopener"><b>Аудит компьютера</b><small>Позиции, партии и снимки досок</small></a>
+          <a href="./assets/gnugo/SOURCE.txt?v=2.2.0" target="_blank" rel="noopener"><b>GNU Go 3.9.1</b><small>Исходный код и лицензия движка</small></a>
           <button type="button" id="resignButton" class="danger-action" data-native-press><b>Сдаться</b><small>Потребуется второе нажатие</small></button>
           <a href="../../" data-app-control data-native-press><b>Вернуться в Pocket Works</b><small>Партия уже сохранена</small></a>
         </div>
@@ -170,7 +170,7 @@
 
   <script>
     (() => {
-      const BUILD = '2.1.0';
+      const BUILD = '2.2.0';
       const STATE_KEY = 'pocket-works:sente:state:v1';
       const ENGINE_KEY = 'pocket-works:sente:engine-build';
       let resetLegacyGame = false;
@@ -199,45 +199,58 @@
         return nativeFetch(url.href, init);
       };
 
+      function showBoardMessage(text, duration = 5200) {
+        const message = document.querySelector('#boardMessage');
+        if (!message) return;
+        message.textContent = text;
+        message.classList.add('show');
+        setTimeout(() => message.classList.remove('show'), duration);
+      }
+
       window.addEventListener('DOMContentLoaded', () => {
         if (!resetLegacyGame) return;
         const toast = document.querySelector('#toast');
         if (!toast) return;
-        toast.textContent = 'Старая AI-партия закрыта. Начните новую партию с GNU Go.';
+        toast.textContent = 'Предыдущая AI-партия закрыта. Начните новую партию с GNU Go 2.2.';
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 4200);
       });
 
       window.addEventListener('sente-engine-ready', (event) => {
         document.body.dataset.senteEngine = event.detail?.version || 'GNU Go';
+        if (event.detail?.degraded) {
+          const reads = Number(event.detail?.reads || 0);
+          const requested = Number(event.detail?.requestedReads || reads);
+          showBoardMessage(`GNU Go работает: ${reads} из ${requested} чтений.`, 3600);
+        }
       });
-      window.addEventListener('sente-engine-error', () => {
+
+      window.addEventListener('sente-engine-error', (event) => {
         document.body.dataset.senteEngine = 'error';
-        const message = document.querySelector('#boardMessage');
-        if (!message) return;
-        message.textContent = 'GNU Go не загрузился: используется помеченный резервный ход.';
-        message.classList.add('show');
-        setTimeout(() => message.classList.remove('show'), 4200);
+        const detail = String(event.detail?.message || 'worker: неизвестная ошибка')
+          .replace(/\s+/g, ' ')
+          .slice(0, 180);
+        showBoardMessage(`GNU Go — ${detail}. Использован резервный ход.`, 7600);
       });
     })();
   </script>
   <script type="importmap">
     {
       "imports": {
-        "/apps/sente/go-engine.js": "/apps/sente/go-engine.js?v=2.1.0",
-        "/apps/sente/ai.js": "/apps/sente/ai-v2.1.js?v=2.1.0",
-        "/apps/sente/dead-groups.js": "/apps/sente/dead-groups.js?v=2.1.0"
+        "/apps/sente/go-engine.js": "/apps/sente/go-engine.js?v=2.2.0",
+        "/apps/sente/ai.js": "/apps/sente/ai-v2.2.js?v=2.2.0",
+        "/apps/sente/dead-groups.js": "/apps/sente/dead-groups.js?v=2.2.0"
       }
     }
   </script>
   <script
     type="module"
-    src="../../shared/update-manager.js?v=2.1.0"
+    src="../../shared/update-manager.js?v=2.2.0"
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="SENTE"
-    data-app-version="2.1.0"
+    data-app-version="2.2.0"
   ></script>
-  <script src="./app.js?v=2.1.0" type="module"></script>
+  <script src="./app.js?v=2.2.0" type="module"></script>
 </body>
 </html>
