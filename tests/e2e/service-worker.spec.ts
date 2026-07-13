@@ -13,15 +13,20 @@ test.describe('Service Worker quality gate', () => {
       await expect(page.locator('h1')).toContainText(target.heading.split(' ')[0]);
       await waitForActiveServiceWorker(page, target.scope);
 
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.locator('h1')).toBeVisible();
-      await expect.poll(async () => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+      const controlledPage = await context.newPage();
+      await controlledPage.goto(target.path, { waitUntil: 'domcontentloaded' });
+      await expect(controlledPage.locator('h1')).toBeVisible();
+      await expect.poll(
+        async () => controlledPage.evaluate(() => Boolean(navigator.serviceWorker.controller)),
+        { timeout: 15_000 }
+      ).toBe(true);
+      await page.close();
 
       await context.setOffline(true);
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.locator('h1')).toContainText(target.heading.split(' ')[0]);
+      await controlledPage.reload({ waitUntil: 'domcontentloaded' });
+      await expect(controlledPage.locator('h1')).toContainText(target.heading.split(' ')[0]);
 
-      const manifest = await page.evaluate(async () => {
+      const manifest = await controlledPage.evaluate(async () => {
         const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
         if (!link) return null;
         const response = await fetch(link.href);
@@ -31,6 +36,7 @@ test.describe('Service Worker quality gate', () => {
       expect(manifest?.start_url).toBe('./');
 
       await context.setOffline(false);
+      await controlledPage.close();
     });
   }
 });

@@ -21,10 +21,10 @@ for (const forbidden of ['node_modules', 'scripts', 'docs', 'package.json', 'net
 const configs = await collectAppConfigs(root);
 for (const config of configs) {
   const directory = path.join(output, 'apps', config.slug);
-  for (const file of ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'icons']) {
+  for (const file of ['index.html', 'styles.css', 'app.js', 'app.config.json', 'manifest.webmanifest', 'sw.js', 'icons']) {
     if (!(await exists(path.join(directory, file)))) errors.push(`dist-site/apps/${config.slug} is missing ${file}`);
   }
-  for (const forbidden of ['source', 'public', '.dist', 'package.json', 'vite.config.ts', 'tsconfig.json', 'app.config.json']) {
+  for (const forbidden of ['source', 'public', '.dist', 'package.json', 'vite.config.ts', 'tsconfig.json']) {
     if (await exists(path.join(directory, forbidden))) errors.push(`dist-site/apps/${config.slug} must not publish ${forbidden}`);
   }
 }

@@ -6,7 +6,6 @@ const root = process.cwd();
 const output = path.join(root, 'dist-site');
 const rootFiles = ['index.html', 'styles.css', 'launcher-performance.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'apps.json'];
 const appDevEntries = new Set([
-  'app.config.json',
   'package.json',
   'vite.config.ts',
   'tsconfig.json',

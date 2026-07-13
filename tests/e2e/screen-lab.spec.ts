@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import {
   assertNativeControlStyles,
@@ -6,6 +7,11 @@ import {
   monitorUnexpectedBrowserOutput,
   openStablePage
 } from './helpers';
+
+const screenLabConfig = JSON.parse(
+  readFileSync(new URL('../../apps/screen-lab/app.config.json', import.meta.url), 'utf8')
+) as { version: string };
+const screenLabVersion = screenLabConfig.version;
 
 test('Screen Lab exposes live metrics and resilient mobile controls', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
@@ -83,7 +89,7 @@ test('diagnostic snapshot serializes current lab state', async ({ page }) => {
 
   await expect(page.locator('#toast')).toHaveText('Diagnostic snapshot copied');
   const snapshot = await page.evaluate(() => (window as typeof window & { __screenLabSnapshot?: any }).__screenLabSnapshot);
-  expect(snapshot.version).toBe('1.4.0');
+  expect(snapshot.version).toBe(screenLabVersion);
   expect(snapshot.viewport.visual.width).toBeGreaterThan(0);
   expect(snapshot.pointer.type).toBe('idle');
   monitor.assertClean();
@@ -99,7 +105,7 @@ test('Workshop Mode opens, reports diagnostics and restores focus', async ({ pag
   const workshop = page.locator('[data-workshop-mode]');
   await expect(workshop).toHaveClass(/is-open/);
   await expect(workshop).toHaveAttribute('aria-hidden', 'false');
-  await expect(workshop.locator('#workshop-title')).toContainText('1.4.0');
+  await expect(workshop.locator('#workshop-title')).toContainText(screenLabVersion);
   await expect(workshop.locator('[data-workshop-metrics]')).toContainText('Viewport');
   await expect(workshop.locator('[data-workshop-errors]')).toContainText('No captured runtime errors');
   await expect(page.locator('html')).toHaveClass(/is-app-scroll-locked/);
