@@ -16,11 +16,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --check apps/shpilka/engine-v2-23.js
-      - run: node --check scripts/audit-shpilka-2-3.mjs
       - id: audit
         continue-on-error: true
-        run: node scripts/audit-shpilka-2-3.mjs > shpilka-audit.log 2>&1
+        run: |
+          set +e
+          node --check apps/shpilka/engine-v2-23.js > shpilka-audit.log 2>&1
+          first=$?
+          node --check scripts/audit-shpilka-2-3.mjs >> shpilka-audit.log 2>&1
+          second=$?
+          node scripts/audit-shpilka-2-3.mjs >> shpilka-audit.log 2>&1
+          third=$?
+          test "$first" = 0 -a "$second" = 0 -a "$third" = 0
       - if: always()
         uses: actions/upload-artifact@v4
         with:
