@@ -1,0 +1,138 @@
+
+/* КОНТУР 1.1.1 — форсированный прогон полностью собранной цепи. */
+const FAST_TRACK_MOVE_MS = 58;
+const FAST_TRACK_EDGE_MOVE_MS = 92;
+const FAST_TRACK_DELAY_MS = 18;
+const currentDelayBeforeFastTrack = currentDelay;
+const beginMoveBeforeFastTrack = beginMove;
+const updateSimulationBeforeFastTrack = updateSimulation;
+const rotateTileBeforeFastTrack = rotateTile;
+const renderBeforeFastTrack = render;
+
+game.fastTrackActive = false;
+game.fastTrackFlash = 0;
+game.fastTrackAnnouncedSeed = null;
+
+sound.surge = function surge() {
+  this.tone(280, 0.09, 0.1, 'square', 180);
+  window.setTimeout(() => this.tone(520, 0.16, 0.12, 'sawtooth', 260), 70);
+};
+
+function isPathFullyConnected() {
+  if (!game.board?.path?.length) return false;
+  return game.board.path.every((cell) => {
+    const tile = game.board.tiles[cell.y]?.[cell.x];
+    return Boolean(tile && tile.targetMask !== null && tile.mask === tile.targetMask);
+  });
+}
+
+function pulseCanUseFastTrack() {
+  if (!game.pulse || !game.board) return false;
+  if (game.pulse.y >= ROWS) return true;
+  const tile = game.board.tiles[game.pulse.y]?.[game.pulse.x];
+  return Boolean(
+    tile &&
+    tile.targetMask !== null &&
+    tile.mask === tile.targetMask &&
+    (tile.mask & game.pulse.entryBit)
+  );
+}
+
+function updateFastTrackState() {
+  const active = Boolean(
+    game.mode === 'playing' &&
+    !game.countdownEnd &&
+    isPathFullyConnected() &&
+    pulseCanUseFastTrack()
+  );
+
+  if (active && !game.fastTrackActive) {
+    game.fastTrackActive = true;
+    game.fastTrackFlash = 1;
+    game.fastTrackAnnouncedSeed = game.board?.seed ?? null;
+    setStatus('ЦЕПЬ СОБРАНА · ФОРСИРОВАННЫЙ ПРОГОН', 'success', 950);
+    sound.surge();
+    navigator.vibrate?.([12, 18, 12]);
+  } else if (!active && game.fastTrackActive) {
+    game.fastTrackActive = false;
+  }
+
+  if (game.fastTrackActive && game.pulse?.moving && game.pulse.move) {
+    const move = game.pulse.move;
+    const edgeMove = move.from.y >= ROWS || move.to.y < 0;
+    move.duration = Math.min(move.duration, edgeMove ? FAST_TRACK_EDGE_MOVE_MS : FAST_TRACK_MOVE_MS);
+  }
+}
+
+currentDelay = function currentDelayFastTrack() {
+  if (game.fastTrackActive) return FAST_TRACK_DELAY_MS;
+  return currentDelayBeforeFastTrack();
+};
+
+beginMove = function beginMoveFastTrack(direction) {
+  beginMoveBeforeFastTrack(direction);
+  if (!game.fastTrackActive || !game.pulse?.moving || !game.pulse.move) return;
+  const move = game.pulse.move;
+  const edgeMove = move.from.y >= ROWS || move.to.y < 0;
+  move.duration = edgeMove ? FAST_TRACK_EDGE_MOVE_MS : FAST_TRACK_MOVE_MS;
+};
+
+rotateTile = function rotateTileFastTrack(x, y) {
+  if (game.fastTrackActive) {
+    setStatus('ПРОВЕРКА ЦЕПИ УЖЕ ИДЁТ', 'success', 500);
+    return;
+  }
+  rotateTileBeforeFastTrack(x, y);
+  updateFastTrackState();
+};
+
+updateSimulation = function updateSimulationFastTrack(dt, now) {
+  updateFastTrackState();
+  game.fastTrackFlash = Math.max(0, game.fastTrackFlash - dt * 1.65);
+  updateSimulationBeforeFastTrack(dt, now);
+};
+
+function drawFastTrackOverlay() {
+  if (!game.fastTrackActive || !game.board || !game.layout) return;
+  const l = game.layout;
+  const shimmer = 0.5 + Math.sin(performance.now() * 0.026) * 0.5;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = `rgba(245,177,104,${0.18 + shimmer * 0.24})`;
+  ctx.lineWidth = Math.max(1.5, l.cell * 0.026);
+  for (const cell of game.board.path) {
+    const x = l.boardX + cell.x * l.cell;
+    const y = l.boardY + cell.y * l.cell;
+    const inset = Math.max(4, l.cell * 0.09);
+    ctx.strokeRect(x + inset, y + inset, l.cell - inset * 2, l.cell - inset * 2);
+  }
+
+  if (game.pulse?.moving && game.pulse.move) {
+    const from = boardPoint(game.pulse.move.from);
+    const to = boardPoint(game.pulse.move.to);
+    const t = Math.min(1, game.pulse.move.progress);
+    const px = from.x + (to.x - from.x) * t;
+    const py = from.y + (to.y - from.y) * t;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const nx = dx / length;
+    const ny = dy / length;
+    ctx.lineCap = 'square';
+    for (let i = 1; i <= 3; i += 1) {
+      ctx.globalAlpha = 0.34 / i;
+      ctx.lineWidth = Math.max(1, l.cell * 0.035 / i);
+      ctx.beginPath();
+      ctx.moveTo(px - nx * l.cell * (0.14 + i * 0.1), py - ny * l.cell * (0.14 + i * 0.1));
+      ctx.lineTo(px - nx * l.cell * (0.02 + i * 0.035), py - ny * l.cell * (0.02 + i * 0.035));
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+render = function renderFastTrack() {
+  renderBeforeFastTrack();
+  drawFastTrackOverlay();
+};
