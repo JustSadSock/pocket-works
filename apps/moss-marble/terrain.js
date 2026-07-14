@@ -1,5 +1,9 @@
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+export function zoneKind(zone) {
+  return zone?.physicsType || zone?.type;
+}
+
 export function insideZone(point, zone) {
   if (!zone) return false;
   if (zone.shape === 'circle') return Math.hypot(point.x - zone.x, point.y - zone.y) <= zone.r;
@@ -35,10 +39,11 @@ export function terrainHeightAt(level, x, y) {
   const point = { x, y };
   for (const zone of level?.zones || []) {
     if (!insideZone(point, zone)) continue;
-    if (zone.type === 'bridge') height = Math.max(height, Number(zone.height ?? 10));
-    else if (zone.type === 'sand') height = Number(zone.baseZ ?? -6);
-    else if (zone.type === 'slope') height = slopeHeight(zone, x, y);
-    else if (zone.type === 'platform') height = Number(zone.height ?? 0);
+    const kind = zoneKind(zone);
+    if (kind === 'bridge') height = Math.max(height, Number(zone.height ?? 10));
+    else if (kind === 'sand') height = Number(zone.baseZ ?? -6);
+    else if (kind === 'slope') height = slopeHeight(zone, x, y);
+    else if (kind === 'platform') height = Number(zone.height ?? 0);
   }
   return height;
 }
@@ -47,7 +52,7 @@ export function terrainGradientAt(level, x, y) {
   const point = { x, y };
   let gradient = { x: 0, y: 0 };
   for (const zone of level?.zones || []) {
-    if (zone.type !== 'slope' || !insideZone(point, zone)) continue;
+    if (zoneKind(zone) !== 'slope' || !insideZone(point, zone)) continue;
     const hasHeightGradient = Number.isFinite(Number(zone.riseX)) || Number.isFinite(Number(zone.riseY));
     gradient = hasHeightGradient
       ? {
@@ -67,18 +72,19 @@ export function surfaceAt(level, x, y) {
   let surface = 'grass';
   for (const zone of level?.zones || []) {
     if (!insideZone(point, zone)) continue;
-    if (zone.type === 'bridge') return 'bridge';
-    if (zone.type === 'water') surface = 'water';
-    else if (zone.type === 'sand') surface = 'sand';
-    else if (zone.type === 'moss') surface = 'moss';
-    else if (zone.type === 'slope') surface = zone.ramp ? 'ramp' : 'slope';
+    const kind = zoneKind(zone);
+    if (kind === 'bridge') return 'bridge';
+    if (kind === 'water') surface = 'water';
+    else if (kind === 'sand') surface = 'sand';
+    else if (kind === 'moss') surface = 'moss';
+    else if (kind === 'slope') surface = zone.ramp ? 'ramp' : 'slope';
   }
   return surface;
 }
 
 export function rampAt(level, x, y) {
   const point = { x, y };
-  return (level?.zones || []).find((zone) => zone.type === 'slope' && zone.ramp && insideZone(point, zone)) || null;
+  return (level?.zones || []).find((zone) => zoneKind(zone) === 'slope' && zone.ramp && insideZone(point, zone)) || null;
 }
 
 export function waterAt(level, x, y) {
@@ -86,13 +92,20 @@ export function waterAt(level, x, y) {
   let water = false;
   for (const zone of level?.zones || []) {
     if (!insideZone(point, zone)) continue;
-    if (zone.type === 'water') water = true;
-    if (zone.type === 'bridge') water = false;
+    const kind = zoneKind(zone);
+    if (kind === 'water') water = true;
+    if (kind === 'bridge') water = false;
   }
   return water;
 }
 
 export function zoneCenter(zone) {
   if (zone.shape === 'circle') return { x: zone.x, y: zone.y };
+  if (zone.shape === 'poly' && Array.isArray(zone.points) && zone.points.length) {
+    return zone.points.reduce((sum, point) => ({
+      x: sum.x + point.x / zone.points.length,
+      y: sum.y + point.y / zone.points.length
+    }), { x: 0, y: 0 });
+  }
   return { x: zone.x + zone.w * .5, y: zone.y + zone.h * .5 };
 }

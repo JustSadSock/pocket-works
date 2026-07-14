@@ -1,0 +1,26 @@
+:root {
+  --terrain-soil: #30271b;
+  --terrain-moss: #315d36;
+  --terrain-water: #285d5b;
+  --terrain-iron: #13291f;
+}
+
+.moss-terrain-cues-v16 {
+  mix-blend-mode: normal;
+  filter: saturate(.96) contrast(1.02);
+}
+
+.moss-greenhouse-foreground {
+  opacity: .88;
+}
+
+body[data-overview="true"] .moss-greenhouse-foreground {
+  opacity: .72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moss-terrain-cues-v16,
+  .moss-greenhouse-foreground {
+    transition: none;
+  }
+}
