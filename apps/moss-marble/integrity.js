@@ -133,26 +133,35 @@ function rotorConflicts(level, rotor, acceptedRotors = []) {
 
 export function stabilizeLevelGeometry(level) {
   if (!level || level.__integrityVersion === INTEGRITY_VERSION) return level;
-  const report = { movedObstacles: 0, movedRotors: 0, shortenedRotors: 0, removedRotors: 0, removedDecorations: 0 };
+  const report = { movedObstacles: 0, removedObstacles: 0, movedRotors: 0, shortenedRotors: 0, removedRotors: 0, removedDecorations: 0 };
 
+  const stableObstacles = [];
   for (const obstacle of level.obstacles || []) {
-    if (!pointOnUnstableTerrain(level, obstacle)) continue;
-    const placement = findFlatPlacement(level, obstacle, obstacleRadius(obstacle));
-    if (!placement) continue;
-    obstacle.x = placement.x;
-    obstacle.y = placement.y;
-    report.movedObstacles += 1;
+    if (pointOnUnstableTerrain(level, obstacle)) {
+      const placement = findFlatPlacement(level, obstacle, obstacleRadius(obstacle));
+      if (!placement) {
+        report.removedObstacles += 1;
+        continue;
+      }
+      obstacle.x = placement.x;
+      obstacle.y = placement.y;
+      report.movedObstacles += 1;
+    }
+    stableObstacles.push(obstacle);
   }
+  level.obstacles = stableObstacles;
 
   const acceptedRotors = [];
   for (const rotor of level.rotors || []) {
     if (pointOnUnstableTerrain(level, rotor)) {
       const placement = findFlatPlacement(level, rotor, Math.max(34, Number(rotor.thickness || 20)));
-      if (placement) {
-        rotor.x = placement.x;
-        rotor.y = placement.y;
-        report.movedRotors += 1;
+      if (!placement) {
+        report.removedRotors += 1;
+        continue;
       }
+      rotor.x = placement.x;
+      rotor.y = placement.y;
+      report.movedRotors += 1;
     }
     const requestedHalf = Math.max(0, Number(rotor.length || 0) * .5);
     const safeHalf = rotorMaximumHalf(level, rotor, acceptedRotors);
@@ -196,5 +205,12 @@ export function inspectLevelIntegrity(level) {
     accepted.push(rotor);
   }
   const elevatedObstacles = (level?.obstacles || []).filter((obstacle) => pointOnUnstableTerrain(level, obstacle));
-  return { ok: rotorIssues.length === 0 && elevatedObstacles.length === 0, rotorIssues, elevatedObstacles, report: level?.__integrityReport || null };
+  const elevatedRotors = (level?.rotors || []).filter((rotor) => pointOnUnstableTerrain(level, rotor));
+  return {
+    ok: rotorIssues.length === 0 && elevatedObstacles.length === 0 && elevatedRotors.length === 0,
+    rotorIssues,
+    elevatedObstacles,
+    elevatedRotors,
+    report: level?.__integrityReport || null
+  };
 }
