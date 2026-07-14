@@ -1,0 +1,575 @@
+
+const D2_VERSION = '2.0.0';
+const D2_MALE_NAMES = ['Алексей','Богдан','Владислав','Георгий','Добромир','Изяслав','Константин','Любомир','Никита','Ратибор','Станислав','Фёдор'];
+const D2_FEMALE_NAMES = ['Агния','Василиса','Дарья','Елена','Злата','Ирина','Любава','Милена','Ольга','Рада','Софья','Ярослава'];
+const D2_HOUSES = ['Дом Белого Ястреба','Дом Речной Башни','Дом Медного Льва','Дом Трёх Сосен','Дом Соляной Короны','Дом Чёрного Брода'];
+const D2_PERSON_TRAITS = ['Осторожный','Честолюбивый','Верный','Хитроумный','Щедрый','Суровый','Учёный','Воинственный'];
+const D2_COUNCIL = {
+  marshal: { name: 'Воевода', icon: '⚔', stat: 'martial', effect: 'Снижает содержание армии и помогает подавлять мятежи.' },
+  steward: { name: 'Казначей', icon: '¤', stat: 'stewardship', effect: 'Повышает доход и предел прямого управления.' },
+  chancellor: { name: 'Канцлер', icon: '☏', stat: 'diplomacy', effect: 'Даёт власть, улучшает брачные союзы и раскрывает заговоры.' }
+};
+
+function d2Id(prefix = 'c') {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function d2GenderedName(gender) {
+  return pick(gender === 'f' ? D2_FEMALE_NAMES : D2_MALE_NAMES);
+}
+
+function d2MakeCharacter(data = {}) {
+  const gender = data.gender || (Math.random() < 0.48 ? 'f' : 'm');
+  return {
+    id: data.id || d2Id('person'),
+    name: data.name || d2GenderedName(gender),
+    gender,
+    age: data.age ?? 18 + Math.floor(Math.random() * 28),
+    health: data.health ?? 76 + Math.floor(Math.random() * 15),
+    martial: data.martial ?? 1 + Math.floor(Math.random() * 5),
+    diplomacy: data.diplomacy ?? 1 + Math.floor(Math.random() * 5),
+    stewardship: data.stewardship ?? 1 + Math.floor(Math.random() * 5),
+    loyalty: data.loyalty ?? 52 + Math.floor(Math.random() * 28),
+    ambition: data.ambition ?? 25 + Math.floor(Math.random() * 60),
+    claim: data.claim ?? 0,
+    trait: data.trait || pick(D2_PERSON_TRAITS),
+    relation: data.relation || 'родич',
+    role: data.role || 'courtier',
+    house: data.house || state?.house || 'Дом без имени',
+    marriedTo: data.marriedTo || null,
+    parentIds: data.parentIds || [],
+    alive: data.alive !== false,
+    imprisoned: Boolean(data.imprisoned),
+    branch: data.branch || null,
+    realm: data.realm || null
+  };
+}
+
+function d2CoreRecord(source, role, relation, extras = {}) {
+  return d2MakeCharacter({
+    id: source.id || d2Id(role),
+    name: source.name,
+    gender: source.gender || 'm',
+    age: source.age,
+    health: source.health,
+    martial: source.martial,
+    diplomacy: source.diplomacy,
+    stewardship: source.stewardship,
+    loyalty: extras.loyalty,
+    ambition: extras.ambition,
+    claim: extras.claim,
+    trait: source.trait || extras.trait,
+    role,
+    relation,
+    ...extras
+  });
+}
+
+function d2EnsureDynasty(input, fresh = false) {
+  if (!input) return input;
+  input.version = D2_VERSION;
+  input.ruler.id ||= d2Id('ruler');
+  input.ruler.gender ||= 'm';
+  input.heir.id ||= d2Id('heir');
+  input.heir.gender ||= Math.random() < 0.45 ? 'f' : 'm';
+  input.heir.health ??= 82;
+  input.heir.trait ||= pick(D2_PERSON_TRAITS);
+
+  if (!Array.isArray(input.family) || !input.family.length) {
+    const rulerRecord = d2CoreRecord(input.ruler, 'ruler', 'правитель', { loyalty: 100, ambition: 55, claim: 100 });
+    const spouseGender = input.ruler.gender === 'f' ? 'm' : 'f';
+    const spouse = d2MakeCharacter({
+      gender: spouseGender,
+      age: clamp(input.ruler.age - 2 + Math.floor(Math.random() * 6), 20, 55),
+      relation: 'супруг',
+      role: 'consort',
+      loyalty: 72,
+      ambition: 34,
+      claim: 5,
+      house: pick(D2_HOUSES),
+      marriedTo: rulerRecord.id
+    });
+    rulerRecord.marriedTo = spouse.id;
+    const heirRecord = d2CoreRecord(input.heir, 'heir', 'ребёнок', {
+      loyalty: 65,
+      ambition: 48,
+      claim: 82,
+      parentIds: [rulerRecord.id, spouse.id]
+    });
+    const younger = d2MakeCharacter({
+      gender: Math.random() < 0.5 ? 'f' : 'm',
+      age: clamp(heirRecord.age - 4 - Math.floor(Math.random() * 5), 5, 18),
+      relation: 'ребёнок',
+      role: 'child',
+      loyalty: 69,
+      ambition: 32 + Math.floor(Math.random() * 35),
+      claim: 48,
+      parentIds: [rulerRecord.id, spouse.id]
+    });
+    const sibling = d2MakeCharacter({
+      gender: Math.random() < 0.45 ? 'f' : 'm',
+      age: clamp(input.ruler.age - 5 + Math.floor(Math.random() * 10), 24, 58),
+      relation: 'сиблинг',
+      role: 'claimant',
+      loyalty: 46 + Math.floor(Math.random() * 18),
+      ambition: 62 + Math.floor(Math.random() * 28),
+      claim: 58
+    });
+    input.family = [rulerRecord, spouse, heirRecord, younger, sibling];
+    input.spouseId = spouse.id;
+    input.designatedHeirId = heirRecord.id;
+    input.council = { marshal: sibling.id, steward: spouse.id, chancellor: null };
+    input.plots = [{ id: d2Id('plot'), actorId: sibling.id, target: 'throne', progress: 12 + Math.floor(Math.random() * 16), revealed: false }];
+    input.cadetBranches = [];
+    input.marriageCandidates = d2GenerateMarriageCandidates(heirRecord.gender);
+    input.houseUnity = 61;
+    input.dynastyPrestige = input.renown || 8;
+    input.successionCount = 0;
+    if (fresh) input.log.unshift({ season: 1, text: 'Двор собран: родичи получили притязания, амбиции и собственные ожидания.' });
+  }
+
+  input.family = input.family.map((member) => {
+    const normalized = d2MakeCharacter(member);
+    if (normalized.house === 'Дом без имени') normalized.house = input.house || 'Дом без имени';
+    return normalized;
+  });
+  input.council = { marshal: null, steward: null, chancellor: null, ...(input.council || {}) };
+  input.plots = Array.isArray(input.plots) ? input.plots : [];
+  input.cadetBranches = Array.isArray(input.cadetBranches) ? input.cadetBranches : [];
+  input.marriageCandidates = Array.isArray(input.marriageCandidates) && input.marriageCandidates.length
+    ? input.marriageCandidates.map((candidate) => d2MakeCharacter(candidate))
+    : d2GenerateMarriageCandidates(input.heir.gender);
+  input.houseUnity ??= 58;
+  input.dynastyPrestige ??= input.renown || 8;
+  input.successionCount ??= 0;
+  input.civilWar ??= null;
+
+  for (const province of input.provinces) {
+    province.administration ||= 'direct';
+    province.governorId ||= null;
+    province.lordId ||= null;
+    province.branch ||= null;
+    province.rebel = Boolean(province.rebel);
+  }
+  d2SyncCoreFamily(input);
+  return input;
+}
+
+function d2SyncCoreFamily(input = state) {
+  if (!input?.family) return;
+  let rulerMember = input.family.find((member) => member.id === input.ruler.id);
+  if (!rulerMember) {
+    rulerMember = d2CoreRecord(input.ruler, 'ruler', 'правитель', { loyalty: 100, ambition: 55, claim: 100 });
+    input.family.unshift(rulerMember);
+    input.ruler.id = rulerMember.id;
+  }
+  Object.assign(rulerMember, {
+    name: input.ruler.name,
+    age: input.ruler.age,
+    health: input.ruler.health,
+    martial: input.ruler.martial,
+    diplomacy: input.ruler.diplomacy,
+    stewardship: input.ruler.stewardship,
+    trait: input.ruler.trait,
+    role: 'ruler',
+    relation: 'правитель',
+    claim: 100,
+    alive: true
+  });
+  let heirMember = input.family.find((member) => member.id === input.heir.id);
+  if (!heirMember) {
+    heirMember = d2CoreRecord(input.heir, 'heir', 'ребёнок', { loyalty: 64, ambition: 45, claim: 80 });
+    input.family.push(heirMember);
+    input.heir.id = heirMember.id;
+  }
+  Object.assign(heirMember, {
+    name: input.heir.name,
+    age: input.heir.age,
+    health: input.heir.health ?? heirMember.health,
+    martial: input.heir.martial,
+    diplomacy: input.heir.diplomacy,
+    stewardship: input.heir.stewardship,
+    trait: input.heir.trait || heirMember.trait,
+    role: 'heir',
+    alive: true
+  });
+}
+
+function d2GenerateMarriageCandidates(subjectGender = 'm') {
+  const gender = subjectGender === 'f' ? 'm' : 'f';
+  return [
+    d2MakeCharacter({ gender, house: D2_HOUSES[0], relation: 'кандидат', role: 'candidate', loyalty: 58, ambition: 44, claim: 18, diplomacy: 5, stewardship: 3, martial: 2, realm: 'north' }),
+    d2MakeCharacter({ gender, house: D2_HOUSES[2], relation: 'кандидат', role: 'candidate', loyalty: 61, ambition: 57, claim: 12, diplomacy: 3, stewardship: 5, martial: 2, realm: 'south' }),
+    d2MakeCharacter({ gender, house: D2_HOUSES[4], relation: 'кандидат', role: 'candidate', loyalty: 67, ambition: 31, claim: 5, diplomacy: 4, stewardship: 4, martial: 4, realm: 'free' })
+  ];
+}
+
+function d2Member(id) {
+  return state.family.find((member) => member.id === id && member.alive !== false);
+}
+
+function d2LivingFamily() {
+  return state.family.filter((member) => member.alive !== false);
+}
+
+function d2Adults() {
+  return d2LivingFamily().filter((member) => member.age >= 16 && !member.imprisoned);
+}
+
+function d2CouncilMember(role) {
+  return d2Member(state.council?.[role]);
+}
+
+function d2DirectProvinces() {
+  return playerProvinces().filter((province) => province.administration !== 'vassal');
+}
+
+function d2VassalProvinces() {
+  return playerProvinces().filter((province) => province.administration === 'vassal');
+}
+
+function d2DomainLimit() {
+  const steward = d2CouncilMember('steward');
+  return 4 + Math.floor(state.ruler.stewardship / 2) + Math.floor((steward?.stewardship || 0) / 3) + (state.laws.rule === 2 ? 2 : state.laws.rule === 1 ? 1 : 0);
+}
+
+function d2PlotFor(actorId) {
+  return state.plots.find((plot) => plot.actorId === actorId);
+}
+
+function d2PotentialClaimants() {
+  return d2Adults().filter((member) => member.id !== state.ruler.id && member.claim >= 35 && !member.imprisoned);
+}
+
+const d2Normalize15 = normalizeState;
+normalizeState = function normalizeStateD2(input) {
+  return d2EnsureDynasty(d2Normalize15(input));
+};
+
+loadState = function loadStateD2() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!saved?.game) return null;
+    return normalizeState(saved.game);
+  } catch (error) {
+    console.warn('UDEL 2.0 save ignored', error);
+    return null;
+  }
+};
+
+saveState = function saveStateD2() {
+  if (!state) return;
+  d2EnsureDynasty(state);
+  state.version = D2_VERSION;
+  state.savedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: D2_VERSION, game: state }));
+};
+
+const d2NewGame15 = newGame;
+newGame = function newGameD2(house, ambition) {
+  d2NewGame15(house, ambition);
+  d2EnsureDynasty(state, true);
+  addLog('Двор собран: родичи получили притязания, амбиции и собственные ожидания.');
+  state.version = D2_VERSION;
+  saveState();
+  render();
+};
+
+const d2ProvinceYield15 = provinceYield;
+provinceYield = function provinceYieldD2(province) {
+  const output = d2ProvinceYield15(province);
+  const governor = d2Member(province.governorId);
+  if (governor && province.administration !== 'vassal') {
+    output.tax *= 1 + governor.stewardship * 0.025;
+    output.food *= 1 + governor.stewardship * 0.012;
+    output.manpower *= 1 + governor.martial * 0.018;
+  }
+  if (province.administration === 'vassal') {
+    const lord = d2Member(province.lordId);
+    output.tax *= 0.32 + (lord?.stewardship || 0) * 0.012;
+    output.food *= 0.18;
+    output.manpower *= 0.48 + (lord?.martial || 0) * 0.015;
+  }
+  if (province.rebel) {
+    output.tax *= 0.18;
+    output.food *= 0.42;
+    output.manpower *= 0.12;
+  }
+  return output;
+};
+
+const d2CalculateEconomy15 = calculateEconomy;
+calculateEconomy = function calculateEconomyD2() {
+  const economy = d2CalculateEconomy15();
+  const spouse = d2Member(state.spouseId);
+  const steward = d2CouncilMember('steward');
+  const marshal = d2CouncilMember('marshal');
+  const chancellor = d2CouncilMember('chancellor');
+  economy.income.tax += (spouse?.stewardship || 0) * 0.35 + (steward?.stewardship || 0) * 0.75;
+  economy.income.manpower += (marshal?.martial || 0) * 0.45;
+  economy.expenses.armyUpkeep = Math.max(0, economy.expenses.armyUpkeep - (marshal?.martial || 0) * 0.22);
+  economy.net.gold = economy.income.tax - economy.expenses.armyUpkeep - economy.expenses.fortUpkeep - economy.expenses.courtUpkeep;
+  economy.net.manpower = economy.income.manpower;
+  const direct = d2DirectProvinces().length;
+  const limit = d2DomainLimit();
+  const over = Math.max(0, direct - limit);
+  economy.expenses.domain = over * 3.2;
+  economy.net.gold -= economy.expenses.domain;
+  economy.net.authority = (chancellor?.diplomacy || 0) * 0.22;
+  economy.domain = { direct, limit, over };
+  if (state.civilWar) {
+    economy.expenses.civilWar = state.civilWar.provinces.length * 2.4;
+    economy.net.gold -= economy.expenses.civilWar;
+  }
+  return economy;
+};
+
+function d2RefreshHeir() {
+  const eligible = d2LivingFamily().filter((member) => member.id !== state.ruler.id && member.age >= 10 && member.claim > 0 && !member.imprisoned);
+  if (!eligible.length) return null;
+  let successor;
+  if (state.laws.succession === 2) successor = d2Member(state.designatedHeirId);
+  if (!successor && state.laws.succession === 1) {
+    successor = eligible.filter((member) => member.relation === 'ребёнок').sort((a, b) => b.age - a.age)[0];
+  }
+  if (!successor) successor = [...eligible].sort((a, b) => (b.loyalty + b.claim + b.diplomacy * 5) - (a.loyalty + a.claim + a.diplomacy * 5))[0];
+  if (!successor) return null;
+  state.designatedHeirId = successor.id;
+  state.family.forEach((member) => { if (member.role === 'heir') member.role = member.relation === 'ребёнок' ? 'child' : 'claimant'; });
+  successor.role = 'heir';
+  state.heir = {
+    id: successor.id,
+    name: successor.name,
+    gender: successor.gender,
+    age: successor.age,
+    health: successor.health,
+    martial: successor.martial,
+    diplomacy: successor.diplomacy,
+    stewardship: successor.stewardship,
+    trait: successor.trait
+  };
+  return successor;
+}
+
+function d2StartCivilWar(leader, reason = 'притязание на престол') {
+  if (!leader || state.civilWar || leader.imprisoned) return;
+  const candidates = [...playerProvinces()]
+    .filter((province) => province.id !== 'p10')
+    .sort((a, b) => (a.loyalty + (a.administration === 'vassal' ? -25 : 0)) - (b.loyalty + (b.administration === 'vassal' ? -25 : 0)));
+  const provinces = candidates.slice(0, clamp(2 + Math.floor(leader.claim / 35), 2, 5)).map((province) => province.id);
+  provinces.forEach((id) => {
+    const province = provinceById(id);
+    province.rebel = true;
+    province.loyalty = Math.min(province.loyalty, 24);
+  });
+  state.civilWar = {
+    leaderId: leader.id,
+    reason,
+    provinces,
+    support: clamp(48 + leader.claim * 0.32 + leader.ambition * 0.18 - leader.loyalty * 0.15, 38, 92),
+    strength: round(totalArmy() * 0.38 + provinces.length * 15 + leader.martial * 7),
+    turns: 0
+  };
+  state.stability -= 10;
+  state.authority -= 8;
+  addLog(`${leader.name} поднял мятеж: ${reason}. ${provinces.length} областей признали его знамя.`);
+  if (state.pendingEvent === null) {
+    state.pendingEvent = {
+      title: 'Война внутри дома',
+      text: `${leader.name} объявил власть незаконной. Родовые дружины и недовольные наместники подняли знамёна в ${provinces.length} областях.`,
+      choices: [['Собрать верных', () => 'Двор готовится решать семейный спор наиболее семейным способом — армией.']]
+    };
+  }
+  tone('war');
+}
+
+function d2EndCivilWar(outcome) {
+  if (!state.civilWar) return;
+  const leader = d2Member(state.civilWar.leaderId);
+  state.civilWar.provinces.forEach((id) => {
+    const province = provinceById(id);
+    if (province) province.rebel = false;
+  });
+  if (leader) {
+    if (outcome === 'crushed') {
+      leader.imprisoned = true;
+      leader.loyalty = 10;
+      leader.role = 'prisoner';
+    } else if (outcome === 'settled') {
+      leader.loyalty = clamp(leader.loyalty + 22, 0, 100);
+      leader.ambition = Math.max(15, leader.ambition - 18);
+    }
+  }
+  addLog(outcome === 'crushed' ? 'Гражданская война подавлена, претендент заключён под стражу.' : 'Гражданская война завершена династическим соглашением.');
+  state.civilWar = null;
+}
+
+function d2CivilWarTurn() {
+  const war = state.civilWar;
+  if (!war) return;
+  war.turns += 1;
+  const leader = d2Member(war.leaderId);
+  const nobleMood = state.estates.nobles.loyalty;
+  war.support = clamp(war.support + (50 - nobleMood) * 0.08 + (leader?.ambition || 45) * 0.025 - state.authority * 0.025 + Math.random() * 8 - 3, 0, 150);
+  war.strength = Math.max(10, war.strength + war.provinces.length * 1.3 - state.ruler.martial * 0.4);
+  state.stability -= 1.8;
+  state.gold = Math.max(0, state.gold - war.provinces.length * 1.4);
+  if (war.support >= 130) {
+    state.gameOver = true;
+    state.victory = false;
+    addLog(`${leader?.name || 'Претендент'} вошёл в столицу. Правящая ветвь свергнута.`);
+  } else if (war.support <= 10) {
+    d2EndCivilWar('crushed');
+  }
+}
+
+function d2AdvancePlots() {
+  for (const claimant of d2PotentialClaimants()) {
+    let plot = d2PlotFor(claimant.id);
+    if (!plot && Math.random() < 0.05 + claimant.ambition / 900 + Math.max(0, 50 - claimant.loyalty) / 700) {
+      plot = { id: d2Id('plot'), actorId: claimant.id, target: 'throne', progress: 5, revealed: false };
+      state.plots.push(plot);
+    }
+    if (!plot) continue;
+    const chancellor = d2CouncilMember('chancellor');
+    plot.progress = clamp(plot.progress + claimant.ambition * 0.055 + Math.max(0, 52 - claimant.loyalty) * 0.11 + state.estates.nobles.influence * 0.025 - (chancellor?.diplomacy || 0) * 0.35, 0, 120);
+    if (!plot.revealed && plot.progress > 48 && Math.random() < 0.12 + (chancellor?.diplomacy || 0) * 0.025) {
+      plot.revealed = true;
+      addLog(`Канцелярия обнаружила сторонников ${claimant.name}.`);
+    }
+    if (plot.progress >= 100) {
+      d2StartCivilWar(claimant, 'заговор о смене правителя');
+      state.plots = state.plots.filter((item) => item.id !== plot.id);
+      break;
+    }
+  }
+}
+
+function d2FamilySeason() {
+  d2SyncCoreFamily();
+  if (state.season % 4 === 0) {
+    for (const member of d2LivingFamily()) {
+      if (member.id === state.ruler.id || member.id === state.heir.id) continue;
+      member.age += 1;
+      if (member.age > 45) member.health -= Math.max(0.25, (member.age - 44) * 0.05);
+    }
+    const spouse = d2Member(state.spouseId);
+    if (spouse && spouse.age >= 18 && spouse.age <= 43 && d2LivingFamily().length < 10 && Math.random() < 0.26) {
+      const child = d2MakeCharacter({
+        age: 0,
+        relation: 'ребёнок',
+        role: 'child',
+        loyalty: 72,
+        ambition: 20 + Math.floor(Math.random() * 45),
+        claim: 42,
+        parentIds: [state.ruler.id, spouse.id]
+      });
+      state.family.push(child);
+      state.dynastyPrestige += 3;
+      addLog(`У ${state.ruler.name} родился ребёнок — ${child.name}.`);
+    }
+    for (const member of d2LivingFamily().filter((person) => person.id !== state.ruler.id && person.health < 25)) {
+      if (Math.random() < 0.12) {
+        member.alive = false;
+        member.role = 'deceased';
+        addLog(`${member.name} умер. Двор немедленно начал считать освободившиеся земли и должности.`);
+        if (member.id === state.spouseId) state.spouseId = null;
+        if (member.id === state.heir.id) d2RefreshHeir();
+      }
+    }
+  }
+  for (const province of d2DirectProvinces()) {
+    const governor = d2Member(province.governorId);
+    if (governor) {
+      province.loyalty = clamp(province.loyalty + (governor.diplomacy - 2.5) * 0.12, 0, 100);
+      governor.loyalty = clamp(governor.loyalty + 0.1, 0, 100);
+    }
+  }
+  for (const province of d2VassalProvinces()) {
+    const lord = d2Member(province.lordId);
+    if (lord) {
+      province.autonomy = clamp(province.autonomy + 0.18, 45, 92);
+      lord.loyalty = clamp(lord.loyalty + (province.loyalty - 50) * 0.012, 0, 100);
+    }
+  }
+  const economy = calculateEconomy();
+  if (economy.domain?.over > 0) {
+    state.stability -= economy.domain.over * 0.45;
+    state.houseUnity -= economy.domain.over * 0.3;
+  }
+  state.houseUnity = clamp(state.houseUnity + (average(d2LivingFamily().map((member) => member.loyalty)) - 55) * 0.018 - (state.civilWar ? 1.6 : 0), 0, 100);
+  state.dynastyPrestige = Math.max(0, state.dynastyPrestige + state.renown * 0.008 + state.successionCount * 0.03);
+  d2AdvancePlots();
+  d2CivilWarTurn();
+}
+
+maybeSuccession = function maybeSuccessionD2() {
+  d2SyncCoreFamily();
+  const deathRisk = state.ruler.health < 24 ? 0.2 : state.ruler.age > 64 ? 0.07 : 0.008;
+  if (Math.random() >= deathRisk) return;
+  const oldRuler = d2Member(state.ruler.id);
+  if (oldRuler) {
+    oldRuler.alive = false;
+    oldRuler.role = 'late-ruler';
+  }
+  const oldName = state.ruler.name;
+  const successor = d2RefreshHeir();
+  if (!successor) {
+    state.gameOver = true;
+    state.victory = false;
+    addLog(`${oldName} умер без признанного наследника. Дом распался.`);
+    return;
+  }
+  const previousHeirId = successor.id;
+  successor.role = 'ruler';
+  successor.relation = 'правитель';
+  successor.claim = 100;
+  state.ruler = {
+    id: successor.id,
+    name: successor.name,
+    gender: successor.gender,
+    age: successor.age,
+    health: Math.max(55, successor.health),
+    martial: successor.martial,
+    diplomacy: successor.diplomacy,
+    stewardship: successor.stewardship,
+    trait: successor.trait,
+    traitDesc: `Черта дома: ${successor.trait}.`
+  };
+  state.spouseId = successor.marriedTo || null;
+  state.successionCount += 1;
+  const next = d2LivingFamily().filter((member) => member.id !== previousHeirId && member.claim > 0 && !member.imprisoned).sort((a, b) => b.claim - a.claim || b.age - a.age)[0];
+  if (next) {
+    state.designatedHeirId = next.id;
+    next.role = 'heir';
+    state.heir = { id: next.id, name: next.name, gender: next.gender, age: next.age, health: next.health, martial: next.martial, diplomacy: next.diplomacy, stewardship: next.stewardship, trait: next.trait };
+  } else {
+    const emergencyHeir = d2MakeCharacter({ age: 8 + Math.floor(Math.random() * 8), relation: 'дальний родич', role: 'heir', loyalty: 58, ambition: 42, claim: 38 });
+    state.family.push(emergencyHeir);
+    state.designatedHeirId = emergencyHeir.id;
+    state.heir = { id: emergencyHeir.id, name: emergencyHeir.name, gender: emergencyHeir.gender, age: emergencyHeir.age, health: emergencyHeir.health, martial: emergencyHeir.martial, diplomacy: emergencyHeir.diplomacy, stewardship: emergencyHeir.stewardship, trait: emergencyHeir.trait };
+  }
+  const rival = d2PotentialClaimants().filter((member) => member.id !== state.ruler.id).sort((a, b) => (b.claim + b.ambition - b.loyalty) - (a.claim + a.ambition - a.loyalty))[0];
+  const disputed = rival && rival.claim + rival.ambition - rival.loyalty > 75;
+  const loss = clamp(11 - state.houseUnity * 0.06 + (state.laws.succession === 2 ? 4 : 0), 4, 18);
+  state.stability -= loss;
+  state.authority -= 7;
+  state.renown += 9;
+  addLog(`${oldName} умер. ${state.ruler.name} принимает печать дома.`);
+  state.pendingEvent = {
+    title: disputed ? 'Спорное наследование' : 'Смена правителя',
+    text: `${oldName} скончался. ${state.ruler.name} наследует власть. Единство дома потеряло ${round(loss)} пунктов порядка.`,
+    choices: [['Принять печать', () => 'Новая ветвь власти закрепляется при дворе.']]
+  };
+  if (disputed && Math.random() < 0.55) d2StartCivilWar(rival, 'спорное наследование');
+};
+
+const d2EndSeason15 = endSeason;
+endSeason = function endSeasonD2() {
+  d2EndSeason15();
+  if (!state || state.gameOver) return;
+  d2FamilySeason();
+  checkEnding();
+  saveState();
+  render();
+};
