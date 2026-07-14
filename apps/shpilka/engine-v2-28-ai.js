@@ -1,5 +1,5 @@
 // ШПИЛЬКА 2.8 — rare contextual mistakes and route-aware pace.
-var shp28MistakeRates = { rookie: 0.022, racer: 0.011, maniac: 0.0052, pilot: 0.0031 };
+var shp28MistakeRates = { rookie: 0.042, racer: 0.025, maniac: 0.015, pilot: 0.010 };
 
 shp27UpdateMildError = function shp28UpdateMildError(car, dt, tune, preview) {
   car.shp27ErrorTimer = Math.max(0, (car.shp27ErrorTimer || 0) - dt);
@@ -38,18 +38,18 @@ aiControls = function shp28AiControls(car, dt) {
   if (car.shp28MistakeKind === 'late') {
     if (phase < 0.46) {
       controls.brake = Math.min(controls.brake, 0.05);
-      controls.throttle = Math.max(controls.throttle, 0.68);
+      controls.throttle = Math.max(controls.throttle, 0.72);
     } else {
-      controls.brake = Math.max(controls.brake, 0.60);
-      controls.throttle = Math.min(controls.throttle, 0.18);
-      controls.steer *= 0.84;
+      controls.brake = Math.max(controls.brake, 0.64);
+      controls.throttle = Math.min(controls.throttle, 0.16);
+      controls.steer *= 0.80;
     }
   } else if (car.shp28MistakeKind === 'wide') {
-    controls.steer *= lerp(0.92, 0.76, Math.sin(phase * Math.PI));
-    controls.throttle = Math.min(controls.throttle, 0.70);
+    controls.steer *= lerp(0.90, 0.64, Math.sin(phase * Math.PI));
+    controls.throttle = Math.min(controls.throttle, 0.76);
   } else if (car.shp28MistakeKind === 'snap') {
-    controls.steer = clamp(controls.steer + car.shp27ErrorSide * Math.sin(phase * Math.PI) * 0.19, -1, 1);
-    controls.throttle = Math.min(controls.throttle, 0.58);
+    controls.steer = clamp(controls.steer + car.shp27ErrorSide * Math.sin(phase * Math.PI) * 0.24, -1, 1);
+    controls.throttle = Math.min(controls.throttle, 0.52);
   }
 
   if (section?.grip < 0.9) controls.throttle = Math.min(controls.throttle, 0.84);
