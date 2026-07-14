@@ -1,0 +1,176 @@
+    campaign.progress = campaign.siege;
+    d25ConsumeSupply((8 + totalArmy() / 31) * doctrine.supply, 'Осада');
+    campaign.log.unshift(`Осадные работы продвинулись до ${round(campaign.siege)}%.`);
+    if (campaign.siege >= 100) {
+      campaign.phase = 'battle';
+      campaign.log.unshift('Стены проломлены. Можно входить в город или вынудить гарнизон сдаться в бою.');
+    }
+  }
+  if (source === 'season') state.armyReadiness = clamp(state.armyReadiness - 1.2, 0, 100);
+}
+
+function d25StartCampaign(targetId, commanderId) {
+  const target = provinceById(targetId);
+  if (!target || target.owner === 'player' || state.campaign || !state.wars[relationKey(target.owner)]) return;
+  const route = d25FindRoute(targetId);
+  if (!route) return toast('К этой области нет доступного военного маршрута');
+  if (state.actions <= 0 || !canAfford({ gold: 10, food: 8 })) return toast('Нужны решение, золото и продовольствие');
+  const commander = d25Commander(commanderId);
+  spendAction();
+  spend({ gold: 10, food: 8 });
+  const capacity = d25CampaignCapacity(route, commander);
+  state.campaignCommanderId = commander?.id || state.ruler.id;
+  state.campaign = {
+    id: d2Id('campaign'),
+    enemy: relationKey(target.owner),
+    targetId,
+    commanderId: state.campaignCommanderId,
+    phase: 'mustering',
+    route,
+    routeIndex: 0,
+    progress: 0,
+    siege: 0,
+    supply: Math.min(capacity, 58 + Math.floor(state.food * 0.18)),
+    capacity,
+    stance: state.militaryDoctrine,
+    turns: 0,
+    startedSeason: state.season,
+    log: [`Цель похода — ${target.name}. Маршрут: ${route.map((id) => provinceById(id)?.name).join(' → ')}.`]
+  };
+  d25WarRecord(state, state.campaign.enemy).objectiveId = targetId;
+  state.armyReadiness = clamp(state.armyReadiness + 3, 0, 100);
+  addLog(`${d25CommanderName(state.campaignCommanderId)} повёл дружину к области ${target.name}.`);
+  tone('war');
+  toast('Поход начат');
+  saveState();
+  render();
+}
+
+function d25OpenCampaignBattle(assault = false) {
+  const campaign = state.campaign;
+  const target = d25CampaignTarget(campaign);
+  if (!campaign || !target || totalArmy() < 20) return;
+  if (assault && campaign.phase !== 'siege') return;
+  if (!assault && campaign.phase !== 'battle') return;
+  if (assault && campaign.siege < 35) return toast('Для штурма нужно подготовить хотя бы 35% осадных работ');
+  state.battle = createBattle(target, false);
+  state.battle.campaignId = campaign.id;
+  state.battle.assault = assault;
+  state.battle.commanderId = campaign.commanderId;
+  state.battle.playerMorale = clamp(state.battle.playerMorale + state.armyReadiness * 0.12 + campaign.supply * 0.06 - (assault ? 14 : 0), 25, 100);
+  if (assault) {
+    state.battle.lanes.forEach((lane) => { lane.theirs *= Math.max(0.62, 1 - campaign.siege / 230); });
+    d25ConsumeSupply(10, 'Подготовка штурма');
+  }
+  tone('war');
+  render();
+}
+
+function d25CampaignAction(action) {
+  const campaign = state.campaign;
+  if (!campaign) return;
+  if (action === 'advance') {
+    if (!spendAction()) return;
+    d25AdvanceCampaign('order');
+  } else if (action === 'resupply') {
+    if (state.actions <= 0 || !canAfford({ gold: 12, food: 14 })) return;
+    spendAction(); spend({ gold: 12, food: 14 });
+    campaign.supply = Math.min(campaign.capacity, campaign.supply + 34);
+    state.armyReadiness = clamp(state.armyReadiness + 8, 0, 100);
+    campaign.log.unshift('Свежий обоз прибыл из домена.');
+    toast('Обоз пополнен');
+  } else if (action === 'forage') {
+    if (!spendAction()) return;
+    const current = d25CampaignPosition(campaign);
+    campaign.supply = Math.min(campaign.capacity, campaign.supply + 20);
+    if (current) {
+      current.loyalty = clamp(current.loyalty - (current.owner === 'player' ? 8 : 4), 0, 100);
+      current.unrest = clamp((current.unrest || 0) + 1.4, 0, 10);
+    }
+    state.armyReadiness = clamp(state.armyReadiness - 2, 0, 100);
+    campaign.log.unshift(`Фуражиры собрали припасы в области ${current?.name || 'на марше'}.`);
+    toast('Припасы добыты ценой лояльности');
+  } else if (action === 'withdraw') {
+    state.armyReadiness = clamp(state.armyReadiness - 8, 0, 100);
+    d25WarRecord(state, campaign.enemy).score -= 5;
+    addLog(`Поход на ${d25CampaignTarget(campaign)?.name} прекращён.`);
+    state.campaign = null;
+    toast('Дружина отозвана');
+  } else if (action === 'assault') {
+    d25OpenCampaignBattle(true);
+    return;
+  } else if (action === 'battle') {
+    d25OpenCampaignBattle(false);
+    return;
+  } else if (action === 'stance') {
+    const order = ['cautious', 'balanced', 'aggressive'];
+    campaign.stance = order[(order.indexOf(campaign.stance) + 1) % order.length];
+    state.militaryDoctrine = campaign.stance;
+    campaign.log.unshift(`Порядок похода изменён: ${D25_DOCTRINES[campaign.stance].name}.`);
+  }
+  tone(action === 'withdraw' ? 'war' : 'success');
+  saveState();
+  render();
+}
+
+function d25EndWar(enemy, term) {
+  const record = d25WarRecord(state, enemy);
+  const captured = record.captured.map(provinceById).filter(Boolean);
+  if (term === 'white') {
+    captured.forEach((province) => {
+      province.owner = enemy;
+      province.administration = 'direct';
+      province.lordId = null;
+      province.governorId = null;
+      province.branch = null;
+    });
+  }
+  if (term === 'tribute') {
+    const payment = 42 + state.provinces.filter((province) => province.owner === enemy).length * 5;
+    state.gold += payment;
+    state.authority += 5;
+    record.tribute += payment;
+  }
+  if (term === 'subjugate') {
+    const lord = d2MakeCharacter({
+      relation: 'подчинённый князь', role: 'vassal', house: enemy === 'north' ? 'Дом Северной Короны' : 'Дом Южного Солнца',
+      loyalty: 54 + state.ruler.diplomacy * 2, ambition: 58, claim: 45, martial: 4, stewardship: 4, diplomacy: 4
+    });
+    const branchName = enemy === 'north' ? 'Северная корона' : 'Южная корона';
+    lord.branch = branchName;
+    state.family.push(lord);
+    const branch = { id: d2Id('branch'), name: branchName, founderId: lord.id, provinces: [] };
+    state.cadetBranches.push(branch);
+    for (const province of state.provinces.filter((item) => item.owner === enemy)) {
+      province.owner = 'player';
+      province.administration = 'vassal';
+      province.lordId = lord.id;
+      province.governorId = null;
+      province.branch = branchName;
+      province.autonomy = Math.max(72, province.autonomy);
+      province.loyalty = Math.max(38, province.loyalty);
+      branch.provinces.push(province.id);
+    }
+    state.dynastyPrestige += 24;
+    state.authority += 12;
+  }
+  state.wars[enemy] = false;
+  state.relations[enemy] = term === 'white' ? -8 : term === 'recognize' ? -28 : -42;
+  if (state.campaign?.enemy === enemy) state.campaign = null;
+  const label = term === 'white' ? 'белый мир' : term === 'recognize' ? 'признание завоеваний' : term === 'tribute' ? 'дань и признание границ' : 'подчинение в вассальную зависимость';
+  state.peaceHistory.unshift({ season: state.season, enemy, term, score: round(record.score), text: label });
+  state.peaceHistory = state.peaceHistory.slice(0, 8);
+  addLog(`${enemyName(enemy)} принял мир: ${label}.`);
+  record.score = 0;
+  record.exhaustion = Math.max(0, record.exhaustion - 35);
+  record.captured = [];
+  record.objectiveId = null;
+  toast('Мирный договор подписан');
+  tone('success');
+  saveState();
+  render();
+}
+
+function d25PeaceAction(enemy, term) {
+  if (!state.wars[enemy]) return;
+  const record = d25WarRecord(state, enemy);
