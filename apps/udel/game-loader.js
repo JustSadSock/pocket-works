@@ -8,7 +8,15 @@ const CHUNKS = [
   './chunks/game-07.txt',
   './chunks/game-08.txt',
   './chunks/game-09.txt',
-  './chunks/game-10.txt'
+  './chunks/game-10.txt',
+  './chunks/game-11a.txt',
+  './chunks/game-11b.txt',
+  './chunks/game-11c.txt',
+  './chunks/game-11d.txt',
+  './chunks/game-12a.txt',
+  './chunks/game-12b.txt',
+  './chunks/game-12c.txt',
+  './chunks/game-13.txt'
 ];
 
 export async function loadGameModule() {

@@ -1,0 +1,368 @@
+
+/* UDEL 2.5 — Field and Crown */
+.war-25 {
+  min-width: 0;
+  padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  overflow-x: clip;
+}
+
+.war-25 *,
+.d25-map-campaign *,
+.d25-battle-command * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.d25-military-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 12px 0 16px;
+}
+
+.d25-military-overview > div {
+  padding: 11px 10px;
+  border-block: 1px solid rgba(239,229,206,.1);
+  background: linear-gradient(120deg, rgba(49,95,84,.2), rgba(8,14,12,.28));
+}
+
+.d25-military-overview b {
+  display: block;
+  color: var(--gold);
+  font-size: 21px;
+}
+
+.d25-military-overview span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 700 9px/1.25 system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.d25-planner,
+.d25-active-campaign {
+  margin: 4px 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(211,173,104,.24);
+  background:
+    linear-gradient(145deg, rgba(39,67,59,.34), rgba(8,14,12,.52)),
+    repeating-linear-gradient(135deg, transparent 0 18px, rgba(255,255,255,.015) 18px 19px);
+  box-shadow: 0 14px 34px rgba(0,0,0,.16);
+}
+
+.d25-panel-head,
+.d25-commanders > header,
+.d25-campaign-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.d25-panel-head h3,
+.d25-commanders h3,
+.d25-campaign-head h3,
+.d25-target-card h3,
+.d25-peace-card h3,
+.d25-realm h3 {
+  margin: 0;
+}
+
+.d25-panel-head > span,
+.d25-commanders > header > span,
+.d25-campaign-head > div > span {
+  max-width: 48%;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.d25-commanders {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.d25-commander-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(152px, 72%);
+  gap: 8px;
+  margin: 10px -14px 0;
+  padding: 0 14px 4px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline proximity;
+  scrollbar-width: thin;
+}
+
+.d25-commander {
+  min-height: 78px;
+  padding: 10px;
+  border: 1px solid rgba(239,229,206,.14);
+  border-radius: 2px;
+  background: rgba(11,19,17,.62);
+  color: var(--ink);
+  text-align: left;
+  scroll-snap-align: start;
+}
+
+.d25-commander.selected {
+  border-color: rgba(211,173,104,.72);
+  box-shadow: inset 3px 0 var(--gold);
+  background: linear-gradient(110deg, rgba(85,71,38,.36), rgba(11,19,17,.65));
+}
+
+.d25-commander b,
+.d25-commander span,
+.d25-commander small {
+  display: block;
+}
+
+.d25-commander span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.d25-commander small {
+  margin-top: 7px;
+  color: var(--gold);
+  font: 700 10px/1.2 system-ui, sans-serif;
+}
+
+.d25-target-list,
+.d25-peace-list,
+.d25-realms {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.d25-target-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(239,229,206,.12);
+  background: rgba(8,14,12,.34);
+}
+
+.d25-target-sign {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 48px;
+  border: 1px solid rgba(211,173,104,.28);
+  color: var(--gold);
+  font-size: 24px;
+}
+
+.d25-target-copy header,
+.d25-peace-card > header,
+.d25-realm > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.d25-target-copy header p,
+.d25-peace-card header p,
+.d25-realm header p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.d25-target-copy header > b,
+.d25-realm header > b {
+  color: var(--gold);
+  font: 800 9px/1.2 system-ui, sans-serif;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.d25-target-copy > span,
+.d25-target-copy > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.d25-target-copy > small {
+  color: rgba(239,229,206,.72);
+}
+
+.d25-target-card > button {
+  grid-column: 1 / -1;
+  min-height: 48px;
+  padding: 9px 11px;
+  border: 1px solid rgba(211,173,104,.46);
+  border-radius: 2px;
+  background: linear-gradient(110deg, rgba(49,95,84,.76), rgba(30,56,49,.72));
+  color: var(--ink);
+  text-align: left;
+}
+
+.d25-target-card > button b,
+.d25-target-card > button span {
+  display: block;
+}
+
+.d25-target-card > button span {
+  margin-top: 3px;
+  color: var(--muted);
+  font: 600 9px/1.25 system-ui, sans-serif;
+}
+
+.d25-campaign-seal {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(211,173,104,.55);
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 22px;
+  box-shadow: inset 0 0 0 5px rgba(0,0,0,.14);
+}
+
+.d25-campaign-command {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.d25-campaign-command > div {
+  padding: 10px;
+  border-block: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+}
+
+.d25-campaign-command small,
+.d25-campaign-command b,
+.d25-campaign-command span {
+  display: block;
+}
+
+.d25-campaign-command small {
+  color: var(--muted);
+  font: 700 8px/1 system-ui, sans-serif;
+  text-transform: uppercase;
+}
+
+.d25-campaign-command b {
+  margin-top: 4px;
+}
+
+.d25-campaign-command span {
+  margin-top: 3px;
+  color: var(--gold);
+  font-size: 10px;
+}
+
+.d25-campaign-bars {
+  display: grid;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.d25-bar > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font: 700 9px/1.2 system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.d25-bar > div b {
+  color: var(--paper);
+}
+
+.d25-bar > i {
+  display: block;
+  height: 7px;
+  margin-top: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(239,229,206,.08);
+  background: rgba(0,0,0,.22);
+}
+
+.d25-bar > i > em {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #476d60, var(--green-bright));
+  transition: width .32s ease;
+}
+
+.d25-bar.siege > i > em {
+  background: linear-gradient(90deg, #866936, var(--gold));
+}
+
+.d25-bar.danger > i > em {
+  background: linear-gradient(90deg, #723c36, #c2695f);
+}
+
+.d25-route {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 13px -5px 0;
+  padding: 5px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.d25-route span {
+  flex: 0 0 auto;
+  max-width: 150px;
+  padding: 6px 8px;
+  border: 1px solid rgba(239,229,206,.1);
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.d25-route span.passed { opacity: .52; }
+.d25-route span.current { border-color: rgba(111,155,136,.7); color: #b9dacb; box-shadow: inset 0 -2px var(--green-bright); }
+.d25-route span.target { border-color: rgba(211,173,104,.55); color: var(--gold); }
+.d25-route i { flex: 0 0 auto; color: rgba(239,229,206,.35); }
+
+.d25-doctrine {
+  margin-top: 10px;
+}
+
+.d25-doctrine > button {
+  width: 100%;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px dashed rgba(211,173,104,.32);
+  background: rgba(0,0,0,.12);
+  color: var(--ink);
+  text-align: left;
+}
+
+.d25-doctrine small,
+.d25-doctrine b,
+.d25-doctrine span {
+  display: block;
+}
+
+.d25-doctrine small {
+  color: var(--muted);
+  font: 700 8px/1 system-ui, sans-serif;
+  text-transform: uppercase;
+}
+
+.d25-doctrine b { margin-top: 4px; color: var(--gold); }
+.d25-doctrine span { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.35; }

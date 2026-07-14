@@ -1,0 +1,14 @@
+  if (state.campaign && !state.battle) d25AdvanceCampaign('season');
+  if (!state.campaign && !state.wars.north && !state.wars.south) state.armyReadiness = clamp(state.armyReadiness + 7, 0, 100);
+  else if (!state.campaign) state.armyReadiness = clamp(state.armyReadiness + 2, 0, 100);
+}
+
+const d25EndSeason2 = endSeason;
+endSeason = function endSeasonD25() {
+  d25EndSeason2();
+  if (!state || state.gameOver) return;
+  d25MilitarySeason();
+  checkEnding();
+  saveState();
+  render();
+};
