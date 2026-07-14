@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 
 installMobileRuntime();
 
-const VERSION = '2.7.0';
+const VERSION = '2.7.1';
 const gameParts = [
   ...Array.from({ length: 11 }, (_, index) => `./engine-v2-${String(index + 1).padStart(2, '0')}.js`),
   './engine-v2-stability.js',
@@ -24,6 +24,7 @@ const gameParts = [
   './engine-v2-26-fixes.js',
   './engine-v2-27-ai.js',
   './engine-v2-27-fixes.js',
+  './engine-v2-27-1.js',
   './engine-v2-12.js'
 ];
 
