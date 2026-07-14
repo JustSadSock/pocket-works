@@ -148,3 +148,4 @@ const LEVELS = [
     hintFrom: [0.2, 0.8],
     hintTo: [0.8, 0.2],
     groups: [
+      {
