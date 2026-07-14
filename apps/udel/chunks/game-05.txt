@@ -1,0 +1,167 @@
+function renderEstate(id) {
+  const estate = state.estates[id];
+  const meta = ESTATES[id];
+  const demand = estateDemand(id);
+  return `<article class="estate-card">
+    <header><span>${meta.icon}</span><div><h3>${meta.name}</h3><p>${meta.desc}</p></div></header>
+    <div class="estate-meters">
+      <label>лояльность <b>${round(estate.loyalty)}</b><i><em style="width:${clamp(estate.loyalty,0,100)}%"></em></i></label>
+      <label>влияние <b>${round(estate.influence)}</b><i><em style="width:${clamp(estate.influence,0,100)}%"></em></i></label>
+    </div>
+    <p class="estate-demand"><strong>Требование:</strong> ${demand.text}</p>
+    <div class="estate-actions">
+      <button data-estate-demand="${id}" data-native-press ${state.actions <= 0 || !canAfford(demand.cost) ? 'disabled' : ''}>Исполнить</button>
+      <button data-estate-privilege="${id}" data-native-press ${estate.privilege || state.actions <= 0 || state.authority < 12 ? 'disabled' : ''}>${estate.privilege ? 'Привилегия дана' : 'Дать привилегию'}</button>
+    </div>
+  </article>`;
+}
+
+function estateDemand(id) {
+  if (id === 'nobles') return { text: 'Усилить одну крепость или выделить 16 золота.', cost: { gold: 16 } };
+  if (id === 'clergy') return { text: 'Пожертвовать 12 золота и 5 продовольствия.', cost: { gold: 12, food: 5 } };
+  if (id === 'burghers') return { text: 'Вложить 18 золота в городские дороги.', cost: { gold: 18 } };
+  return { text: 'Открыть запас в 12 единиц продовольствия.', cost: { food: 12 } };
+}
+
+function renderState() {
+  const economy = calculateEconomy();
+  return `
+    <section class="section">
+      <header class="section-title"><p class="eyebrow">УСТРОЙСТВО ДЕРЖАВЫ</p><h2>Государство</h2><span>Здесь видно, почему казна растёт, а иногда внезапно перестаёт существовать.</span></header>
+      <div class="economy-ledger">
+        <div class="ledger-main"><span>Баланс казны</span><b class="${economy.net.gold < 0 ? 'bad' : ''}">${economy.net.gold >= 0 ? '+' : ''}${economy.net.gold.toFixed(1)}</b></div>
+        <div class="ledger-columns">
+          <div><h3>Доходы</h3>${ledgerRow('Налоги и торговля', economy.income.tax)}${ledgerRow('Производство еды', economy.income.food)}${ledgerRow('Людские резервы', economy.income.manpower)}</div>
+          <div><h3>Расходы</h3>${ledgerRow('Армия', -economy.expenses.armyUpkeep)}${ledgerRow('Крепости', -economy.expenses.fortUpkeep)}${ledgerRow('Двор', -economy.expenses.courtUpkeep)}${ledgerRow('Потребление еды', -economy.expenses.foodUse)}</div>
+        </div>
+      </div>
+      <div class="subhead">Законы</div>
+      <div class="laws-list">${LAWS.map(renderLaw).join('')}</div>
+      <div class="subhead">Сводка земель</div>
+      <div class="province-summary">
+        ${summaryMetric('20', 'областей на карте')}
+        ${summaryMetric(String(playerProvinces().length), 'под прямой властью')}
+        ${summaryMetric(`${round(average(playerProvinces().map((p) => p.autonomy)))}%`, 'средняя автономия')}
+        ${summaryMetric(`${round(playerProvinces().reduce((sum, p) => sum + p.population, 0))}к`, 'население державы')}
+      </div>
+    </section>
+  `;
+}
+
+function ledgerRow(label, value) {
+  const sign = value > 0 ? '+' : '';
+  return `<p><span>${label}</span><b class="${value < 0 ? 'bad' : ''}">${sign}${value.toFixed(1)}</b></p>`;
+}
+
+function summaryMetric(value, label) {
+  return `<div><b>${value}</b><span>${label}</span></div>`;
+}
+
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function renderLaw(law) {
+  const current = state.laws[law.id] ?? 0;
+  return `<article class="law-card"><header><div><h3>${law.name}</h3><p>${law.choices[current].name} — ${law.choices[current].desc}</p></div><span>${current + 1}/3</span></header>
+    <div class="law-options">${law.choices.map((choice, index) => `<button class="${index === current ? 'active' : ''}" data-law="${law.id}" data-law-choice="${index}" data-native-press ${index === current || state.actions <= 0 || state.authority < 14 + Math.abs(index-current)*5 ? 'disabled' : ''}><b>${choice.name}</b><small>${choice.desc}</small></button>`).join('')}</div>
+  </article>`;
+}
+
+function renderTech() {
+  return `<section class="section">
+    <header class="section-title"><p class="eyebrow">ЗНАНИЯ И ИНСТИТУТЫ</p><h2>Технологии</h2><span>Новые знания работают только там, где для них уже есть земля, дороги и люди.</span></header>
+    <div class="tech-tree">${TECHS.map((tech) => {
+      const unlocked = state.techs.includes(tech.id);
+      const blocked = tech.requires && !state.techs.includes(tech.requires);
+      const cost = Math.max(8, tech.cost[0] - (state.researchDiscount || 0) - (state.ruler.trait === 'Книжник' ? 8 : 0));
+      return `<article class="tech-card ${unlocked ? 'unlocked' : ''} ${blocked ? 'blocked' : ''}"><div class="tech-icon">${tech.icon}</div><div><p>${tech.branch}</p><h3>${tech.name}</h3><span>${tech.desc}</span>${blocked ? `<small>Требуется: ${TECHS.find((item) => item.id === tech.requires)?.name}</small>` : ''}</div><button data-tech="${tech.id}" data-native-press ${unlocked || blocked || state.actions <= 0 || !canAfford({ gold: cost, renown: tech.cost[1] }) ? 'disabled' : ''}>${unlocked ? 'Освоено' : `¤${cost} · ✧${tech.cost[1]}`}</button></article>`;
+    }).join('')}</div>
+  </section>`;
+}
+
+function renderWar() {
+  const armyPower = battlePower(state.army, state.ruler.martial);
+  return `<section class="section">
+    <header class="section-title"><p class="eyebrow">ДРУЖИНА И ГРАНИЦЫ</p><h2>Война</h2><span>Армия существует не только на поле боя. Она ещё и ежедневно ест вашу экономику.</span></header>
+    <div class="army-banner"><div><span>сила дружины</span><b>${round(armyPower)}</b><small>${totalArmy()} воинов · содержание ${calculateEconomy().expenses.armyUpkeep.toFixed(1)} золота</small></div><div class="army-glyph">⚔</div></div>
+    <div class="army-units">
+      ${unitRow('infantry', 'Пехота', '♟', 14, 10)}
+      ${unitRow('archers', 'Лучники', '➶', 18, 12)}
+      ${unitRow('cavalry', 'Конница', '♞', state.estates.nobles.privilege ? 20 : 26, 15)}
+    </div>
+    <div class="subhead">Соседние державы</div>
+    ${['north','south'].map(renderDiplomacy).join('')}
+    <div class="war-note"><b>Как начать поход</b><span>Объявите войну, откройте карту и выберите вражескую область, которая граничит с вашей.</span></div>
+  </section>`;
+}
+
+function unitRow(id, name, icon, gold, manpower) {
+  return `<article class="unit-row"><span>${icon}</span><div><h3>${name}</h3><p>${state.army[id]} воинов</p></div><button data-recruit="${id}" data-native-press ${(!state.techs.includes('standing') && state.actions <= 0) || !canAfford({ gold, manpower }) ? 'disabled' : ''}>+10<br>¤${gold} ♟${manpower}</button></article>`;
+}
+
+function renderDiplomacy(id) {
+  const relation = state.relations[id];
+  const atWar = state.wars[id];
+  const provinces = state.provinces.filter((province) => province.owner === id).length;
+  return `<article class="diplomacy-card ${atWar ? 'at-war' : ''}"><header><div><h3>${enemyName(id)}</h3><p>${provinces} областей · отношения ${round(relation)}</p></div><b>${atWar ? 'ВОЙНА' : relation > 35 ? 'СОЮЗНЫЙ ТОН' : relation < -35 ? 'ВРАЖДА' : 'НАСТОРОЖЕННОСТЬ'}</b></header><div>
+    <button data-diplomacy="${id}" data-native-press ${atWar || state.actions <= 0 || state.gold < 12 ? 'disabled' : ''}>Посольство<br>¤12</button>
+    <button data-war="${id}" data-native-press ${state.actions <= 0 ? 'disabled' : ''}>${atWar ? 'Предложить мир' : 'Объявить войну'}</button>
+  </div></article>`;
+}
+
+function renderEventModal(index) {
+  const event = typeof index === 'number' ? EVENTS[index] : index;
+  return `<div class="modal-backdrop"><section class="event-card"><p class="eyebrow">СОБЫТИЕ / СЕЗОН ${state.season}</p><h2>${event.title}</h2><p>${event.text}</p><div>${event.choices ? event.choices.map((choice, choiceIndex) => `<button data-event-choice="${choiceIndex}" data-native-press><b>${choice[0]}</b><span>Принять последствия</span></button>`).join('') : '<button data-event-choice="0" data-native-press><b>Продолжить</b></button>'}</div></section></div>`;
+}
+
+function renderBattle() {
+  const battle = state.battle;
+  app.innerHTML = `<section class="battle-screen">
+    <header class="battle-head"><div><p class="eyebrow">${battle.defending ? 'ОБОРОНА' : 'ПОХОД'}</p><h1>${provinceById(battle.targetId).name}</h1><span>${TERRAIN[provinceById(battle.targetId).terrain].name} · крепость ${provinceById(battle.targetId).fort}</span></div><button data-action="retreat" data-native-press>Отступить</button></header>
+    <div class="morale-strip"><div><span>${state.house}</span><i><em style="width:${battle.playerMorale}%"></em></i><b>${round(battle.playerMorale)}</b></div><div class="enemy"><span>${enemyName(battle.enemy)}</span><i><em style="width:${battle.enemyMorale}%"></em></i><b>${round(battle.enemyMorale)}</b></div></div>
+    <div class="battlefield">
+      ${battle.lanes.map((lane, index) => renderLane(lane, index)).join('')}
+    </div>
+    <div class="battle-orders">
+      <p>Выберите приказ для одного фланга. Приказы меняют ход столкновения, а не просто мигают для моральной поддержки разработчика.</p>
+      <div>${battle.lanes.map((lane, index) => `<button data-command="push" data-lane="${index}" data-native-press>Фланг ${index+1}<br><b>Нажим</b></button>`).join('')}</div>
+      <div><button data-command="rally" data-native-press ${battle.rallyUsed ? 'disabled' : ''}>♛ Собрать строй</button><button data-command="flank" data-native-press ${battle.flankUsed || state.army.cavalry < 10 ? 'disabled' : ''}>♞ Обход</button></div>
+    </div>
+    <div class="battle-log">${battle.log.slice(0, 4).map((entry) => `<span>${entry}</span>`).join('')}</div>
+  </section>`;
+  bindBattle();
+  pendingBattleTimer = setTimeout(battleTick, 900);
+}
+
+function renderLane(lane, index) {
+  const balance = clamp(50 + lane.progress, 8, 92);
+  return `<article class="battle-lane"><header><span>${['Левый фланг','Центр','Правый фланг'][index]}</span><b>${lane.terrain}</b></header><div class="line-field"><div class="our-line" style="width:${balance}%"><i></i><b>${round(lane.ours)}</b></div><div class="enemy-line" style="width:${100-balance}%"><i></i><b>${round(lane.theirs)}</b></div></div><footer><span>нажим ${lane.progress >= 0 ? '+' : ''}${round(lane.progress)}</span><span>${lane.order || 'держать строй'}</span></footer></article>`;
+}
+
+function bindBattle() {
+  app.querySelector('[data-action="retreat"]').addEventListener('click', retreatBattle);
+  app.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => battleCommand(button.dataset.command, Number(button.dataset.lane))));
+}
+
+function createBattle(target, defending, enemyOverride) {
+  const enemy = enemyOverride || relationKey(target.owner);
+  const ours = totalArmy();
+  const baseEnemy = 78 + target.fort * 15 + Math.floor(Math.random() * 45);
+  return {
+    targetId: target.id,
+    enemy,
+    defending,
+    playerMorale: 78 + state.ruler.martial * 2,
+    enemyMorale: 76 + target.fort * 4,
+    rallyUsed: false,
+    flankUsed: false,
+    ticks: 0,
+    lanes: [0,1,2].map((index) => ({
+      ours: ours / 3 * (0.88 + Math.random() * 0.25),
+      theirs: baseEnemy / 3 * (0.85 + Math.random() * 0.3),
+      progress: defending ? 5 : -target.fort * 3,
+      terrain: index === 1 ? TERRAIN[target.terrain].name : index === 0 ? 'низина' : 'перелесок',
+      order: ''
+    })),
