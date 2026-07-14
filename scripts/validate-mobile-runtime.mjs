@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildRegistryEntries } from './app-config.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -30,7 +31,9 @@ requireIncludes(runtimeJs, [
   "'contextmenu'", "'gesturestart'", '--app-keyboard-inset'
 ], 'shared/mobile-runtime.js');
 
-const registry = JSON.parse(await read('apps.json') || '[]');
+let registry = [];
+try { registry = await buildRegistryEntries(root); }
+catch (error) { fail(`application manifests could not build the registry: ${error.message}`); }
 
 const quickTargets = [
   { slug: '_template', registered: false },
@@ -71,4 +74,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Mobile runtime validation passed for Quick and Enhanced templates plus ${registry.length} registered app${registry.length === 1 ? '' : 's'}.`);
+console.log(`Mobile runtime validation passed for Quick and Enhanced templates plus ${registry.length} self-registered app${registry.length === 1 ? '' : 's'}.`);
