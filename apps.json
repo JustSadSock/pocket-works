@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -70,13 +57,7 @@
       "Forced a fresh offline cache so previously installed 1.1.1 builds cannot retain the older input script."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -97,15 +78,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -127,14 +100,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -143,26 +109,22 @@
     "slug": "udel",
     "name": "УДЕЛ",
     "shortName": "УДЕЛ",
-    "description": "Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.",
+    "description": "Карманная династическая стратегия о землях, семье, походах, осадах и мирных договорах.",
     "path": "./apps/udel/",
     "status": "active",
-    "version": "1.0.0",
-    "updatedAt": "2026-07-12T21:20:00Z",
+    "version": "2.5.0",
+    "updatedAt": "2026-07-14T11:30:00+01:00",
     "changelog": [
-      "Добавлена процедурная кампания на 24 сезона с восемью областями и тремя державами.",
-      "Добавлены династия, наследование, сословия, законы, технологии и дипломатия.",
-      "Добавлены набор армии и интерактивные трёхфланговые битвы с приказами в реальном времени.",
-      "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
+      "Походы теперь проходят через сбор дружины, маршрут по карте, обоз, марш, осаду и полевое сражение.",
+      "Добавлены командующие, готовность армии, резерв и перенос ставки между флангами во время битвы.",
+      "Крепости требуют осадных работ; ранний штурм возможен, но повышает потери и расход припасов.",
+      "Войны получили счёт, усталость и четыре мирных исхода: белый мир, признание границ, дань и подчинение короны.",
+      "Военный совет полностью перестроен для вертикального телефона с понятными маршрутами, состояниями и крупными элементами управления.",
+      "Добавлен автоматический мобильный аудит запуска, пяти основных разделов, похода, карты, провинций и горизонтального переполнения.",
+      "Сохранения 2.0 и более ранних версий автоматически получают новую военную структуру без потери карты и династии."
     ],
-    "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "accent": "#315f54",
+    "tags": ["PWA", "offline", "strategy", "dynasty", "campaigns", "sieges", "tactics", "peace treaties", "mobile", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -183,15 +145,7 @@
       "Сообщение об ошибке теперь показывает этап сбоя — загрузчик, WASM, worker, протокол или тайм-аут — вместо общего текста."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -213,16 +167,7 @@
       "Камера получила динамическое расширение сцены, продольную инерцию, микровибрацию покрытия и усиление контраста на высокой скорости."
     ],
     "accent": "#dd5d2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "tilt",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "tilt", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:petlya-17"
@@ -243,17 +188,7 @@
       "Параллакс перенесён из геометрии в свет, отражения и контактные тени для более естественной глубины."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
@@ -274,27 +209,7 @@
       "Секторы показывают локальную и суммарную дельту, а разные направления контакта дают разные физические последствия."
     ],
     "accent": "#e65e2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "procedural",
-      "long races",
-      "rival personalities",
-      "clean driving",
-      "daily challenge",
-      "route codes",
-      "medals",
-      "top-down",
-      "drift",
-      "physics",
-      "ghost",
-      "adaptive controls",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "procedural", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:shpilka"
@@ -315,16 +230,7 @@
       "Стабилизатор переработан в крупную круглую нажимную кнопку с отдельным счётчиком зарядов."
     ],
     "accent": "#b85d32",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "puzzle",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "puzzle", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kontur"
@@ -345,18 +251,7 @@
       "Форма, толщина, тень и предел растяжения снова настроены отдельно для каждого типа детали; одновременно рассчитываются не более двух активных зон."
     ],
     "accent": "#b8ff68",
-    "tags": [
-      "PWA",
-      "camera",
-      "face tracking",
-      "hand tracking",
-      "WebGL",
-      "organic warp",
-      "procedural shading",
-      "physics",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "camera", "face tracking", "hand tracking", "WebGL", "organic warp", "procedural shading", "physics", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:myalo"
@@ -377,22 +272,7 @@
       "Песок, склоны, вода и стеклянные мосты получили читаемые края, линии рельефа, перепады высоты и направляющие фактуры."
     ],
     "accent": "#809465",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "mini-golf",
-      "physics",
-      "3D physics",
-      "terrain",
-      "camera",
-      "procedural",
-      "endless",
-      "WebGL2",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "mini-golf", "physics", "3D physics", "terrain", "camera", "procedural", "endless", "WebGL2", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:moss-marble"
@@ -413,17 +293,7 @@
       "Добавлены процедурный звук, вибрация, живая панорамная комната, локальное сохранение, офлайн-режим и Workshop."
     ],
     "accent": "#a48755",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "horror",
-      "tilt",
-      "device motion",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "horror", "tilt", "device motion", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:zero-frame"
