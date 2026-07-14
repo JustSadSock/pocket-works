@@ -136,7 +136,14 @@ function findTouch(list, id) {
 }
 
 function onTouchStart(event) {
-  if (pointer.down || event.touches.length > 1 || event.changedTouches.length === 0) return;
+  if (event.touches.length > 1 || event.changedTouches.length === 0) return;
+  if (pointer.down) {
+    if (pointer.source === 'touch' && findTouch(event.touches, pointer.id)) return;
+    pointer.down = false;
+    pointer.id = null;
+    pointer.source = null;
+    player.focus = false;
+  }
   const touch = event.changedTouches[0];
   if (beginGesture('touch', touch.identifier, touch.clientX, touch.clientY, event.target) && event.cancelable) {
     event.preventDefault();
