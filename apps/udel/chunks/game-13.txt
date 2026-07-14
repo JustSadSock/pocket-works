@@ -1,0 +1,80 @@
+
+/* UDEL 2.5 — final bindings, accessibility and viewport safeguards */
+const d25BindCommon2 = bindCommon;
+bindCommon = function bindCommonD25() {
+  d25BindCommon2();
+  app.querySelectorAll('[data-select-commander]').forEach((button) => button.addEventListener('click', () => {
+    state.campaignCommanderId = button.dataset.selectCommander;
+    tone();
+    saveState();
+    render();
+  }));
+  app.querySelectorAll('[data-campaign-target]').forEach((button) => button.addEventListener('click', () => d25StartCampaign(button.dataset.campaignTarget, state.campaignCommanderId)));
+  app.querySelectorAll('[data-campaign-action]').forEach((button) => button.addEventListener('click', () => d25CampaignAction(button.dataset.campaignAction)));
+  app.querySelectorAll('[data-peace-action]').forEach((button) => button.addEventListener('click', () => d25PeaceAction(button.dataset.enemy, button.dataset.peaceAction)));
+};
+
+function d25AfterRender() {
+  document.querySelectorAll('button:not([type])').forEach((button) => button.setAttribute('type', 'button'));
+  document.querySelectorAll('button:disabled').forEach((button) => button.setAttribute('aria-disabled', 'true'));
+  document.querySelectorAll('.bottom-nav [data-tab]').forEach((button) => {
+    const active = button.dataset.tab === currentTab;
+    button.setAttribute('aria-current', active ? 'page' : 'false');
+    const label = button.querySelector('small')?.textContent?.trim();
+    if (label) button.setAttribute('aria-label', label);
+  });
+  document.querySelectorAll('details > summary').forEach((summary) => {
+    if (!summary.hasAttribute('tabindex')) summary.setAttribute('tabindex', '0');
+  });
+  const content = document.querySelector('.content');
+  if (content) content.setAttribute('aria-label', currentTab === 'war' ? 'Военный совет' : 'Основное содержимое игры');
+}
+
+const d25RenderFinal = render;
+render = function renderD25Accessible() {
+  d25RenderFinal();
+  d25AfterRender();
+  requestAnimationFrame(d25AfterRender);
+};
+
+const d25OpenGameMenu2 = openGameMenu;
+openGameMenu = function openGameMenuD25() {
+  d25OpenGameMenu2();
+  const menu = document.querySelector('.game-menu');
+  menu?.querySelector('.eyebrow')?.replaceChildren(document.createTextNode('ПАУЗА / УДЕЛ 2.5'));
+  menu?.setAttribute('role', 'dialog');
+  menu?.setAttribute('aria-modal', 'true');
+  d25AfterRender();
+};
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const modal = document.querySelector('.modal-backdrop .game-menu');
+  if (modal) {
+    modal.closest('.modal-backdrop')?.remove();
+    return;
+  }
+  if (drawerOpen) closeDrawer();
+});
+
+window.__udelQualitySnapshot = () => {
+  const interactive = [...document.querySelectorAll('button:not(:disabled), a[href], input, summary')];
+  const clipped = interactive.filter((element) => {
+    if (element.closest('.d25-commander-scroll, .d25-route')) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && (rect.right > window.innerWidth + 1 || rect.left < -1);
+  });
+  const undersized = interactive.filter((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && (rect.width < 40 || rect.height < 40) && !element.classList.contains('back-link');
+  });
+  return {
+    version: D25_VERSION,
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+    clippedControls: clipped.map((element) => element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 40)),
+    undersizedControls: undersized.map((element) => element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 40)),
+    tab: currentTab,
+    campaign: state?.campaign ? { phase: state.campaign.phase, targetId: state.campaign.targetId } : null
+  };
+};
