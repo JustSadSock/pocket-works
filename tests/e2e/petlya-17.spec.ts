@@ -6,12 +6,12 @@ import {
   openStablePage
 } from './helpers';
 
-test('ПЕТЛЯ 17 loads a real WebGL cockpit and accelerates through the 3D scene', async ({ page }, testInfo) => {
+test('ПЕТЛЯ 17 loads WebGL, accelerates and exposes live handling state', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('portrait'), 'ПЕТЛЯ 17 is intentionally landscape-only.');
 
   const monitor = monitorUnexpectedBrowserOutput(page);
   await openStablePage(page, '/apps/petlya-17/', '#practice');
-  await expect(page.locator('#loading')).toHaveClass(/hidden/, { timeout: 20_000 });
+  await expect(page.locator('#loading')).toHaveClass(/hidden/, { timeout: 25_000 });
   await expect(page.locator('#menu')).toBeVisible();
 
   const renderer = await page.locator('#renderCanvas').evaluate((canvas: HTMLCanvasElement) => {
@@ -39,10 +39,24 @@ test('ПЕТЛЯ 17 loads a real WebGL cockpit and accelerates through the 3D sc
   await page.keyboard.down('KeyW');
   await expect.poll(
     async () => Number(await page.locator('#speed').textContent()),
-    { timeout: 10_000 }
-  ).toBeGreaterThan(80);
-  await page.waitForTimeout(1200);
+    { timeout: 12_000 }
+  ).toBeGreaterThan(110);
+
+  await page.keyboard.down('KeyD');
+  await page.waitForTimeout(1800);
+  await page.keyboard.up('KeyD');
   await page.keyboard.up('KeyW');
+
+  const handling = await page.locator('html').evaluate((root) => ({
+    state: root.dataset.handlingState || '',
+    grip: Number(root.dataset.grip),
+    slip: Number(root.dataset.slip)
+  }));
+  expect(['grip', 'limit', 'sliding']).toContain(handling.state);
+  expect(handling.grip).toBeGreaterThanOrEqual(0);
+  expect(handling.grip).toBeLessThanOrEqual(1);
+  expect(Number.isFinite(handling.slip)).toBe(true);
+  expect(Math.abs(handling.slip)).toBeGreaterThan(0.001);
 
   await expect(page.locator('#gear')).not.toHaveText('1');
   await expect(page.locator('#rpmBar')).toHaveAttribute('style', /width:/);
@@ -56,6 +70,6 @@ test('ПЕТЛЯ 17 loads a real WebGL cockpit and accelerates through the 3D sc
   expect(gas!.width).toBeLessThan(190);
 
   await assertNoHorizontalOverflow(page);
-  await attachCriticalScreenshot(page, testInfo, 'petlya-17-real-3d-cockpit', { fullPage: false });
+  await attachCriticalScreenshot(page, testInfo, 'petlya-17-handling-31', { fullPage: false });
   monitor.assertClean();
 });
