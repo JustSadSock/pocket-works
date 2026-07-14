@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildRegistryEntries } from './app-config.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -21,7 +22,7 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registrySource] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('launcher-performance.css'),
@@ -31,13 +32,14 @@ const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packa
   read('shared/launcher-list-motion.js'),
   read('shared/launcher-list-motion.css'),
   read('package.json'),
-  read('manifest.webmanifest'),
-  read('apps.json')
+  read('manifest.webmanifest')
 ]);
 
 const packageJson = JSON.parse(packageSource);
 const manifest = JSON.parse(manifestSource);
-const registry = JSON.parse(registrySource);
+let registry = [];
+try { registry = await buildRegistryEntries(root); }
+catch (error) { errors.push(`application manifests could not build the launcher registry: ${error.message}`); }
 
 for (const id of [
   'app-search',
@@ -187,8 +189,8 @@ if (manifest.background_color !== '#0e100e' || manifest.theme_color !== '#0e100e
   errors.push('manifest colors must match the launcher surface #0e100e');
 }
 
-if (!Array.isArray(registry) || registry.length === 0) {
-  errors.push('apps.json must contain at least one application');
+if (registry.length === 0) {
+  errors.push('app.config.json manifests must produce at least one application');
 } else {
   for (const appEntry of registry) {
     if (typeof appEntry.updatedAt !== 'string' || appEntry.updatedAt.length === 0) {
@@ -211,4 +213,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Launcher validation passed for Pocket Works ${packageJson.version} and ${registry.length} registered app${registry.length === 1 ? '' : 's'}.`);
+console.log(`Launcher validation passed for Pocket Works ${packageJson.version} and ${registry.length} self-registered app${registry.length === 1 ? '' : 's'}.`);
