@@ -1,0 +1,275 @@
+      ['Открыть амбары', (s) => { s.food -= 14; s.estates.commons.loyalty += 12; s.stability += 5; return 'Голод смягчён, военные склады опустели.'; }],
+      ['Сохранить военный запас', (s) => { s.authority += 5; s.estates.commons.loyalty -= 13; s.stability -= 5; return 'Армия обеспечена. Деревни этого не забудут.'; }]
+    ]
+  },
+  {
+    title: 'Город требует новую хартию',
+    condition: (s) => s.estates.burghers.loyalty < 48,
+    text: 'Купцы готовы вложиться в дороги, если получат право самим выбирать старост и собирать часть пошлин.',
+    choices: [
+      ['Подписать хартию', (s) => { s.gold += 16; s.estates.burghers.loyalty += 13; s.estates.burghers.influence += 7; return 'Город празднует свободы и немедленно считает их недостаточными.'; }],
+      ['Сохранить княжеский контроль', (s) => { s.authority += 8; s.estates.burghers.loyalty -= 10; return 'Печать осталась у двора, раздражение — в городе.'; }]
+    ]
+  },
+  {
+    title: 'Спор о древней меже',
+    condition: () => true,
+    text: 'Два рода предъявили разные грамоты на одну долину. Обе выглядят достаточно древними, чтобы быть поддельными.',
+    choices: [
+      ['Судить по закону', (s) => { s.authority += 5; s.estates.nobles.loyalty -= 4; return 'Решение признали справедливым. В основном те, кто победил.'; }],
+      ['Наградить сильнейшего', (s) => { s.gold += 10; s.estates.nobles.loyalty += 6; s.stability -= 3; return 'Сильные благодарны. Слабые заняты запоминанием.'; }]
+    ]
+  },
+  {
+    title: 'Странствующий инженер',
+    condition: () => true,
+    text: 'Чужеземец предлагает укрепить дороги и водяные колёса. Казначей утверждает, что чужеземец подозрительно хорошо считает.',
+    choices: [
+      ['Нанять мастера', (s) => { s.gold -= 20; s.researchDiscount = (s.researchDiscount || 0) + 7; s.renown += 6; return 'При дворе появилась школа механики.'; }],
+      ['Проводить до границы', (s) => { s.gold += 4; return 'Экономия впечатляет. Развитие — меньше.'; }]
+    ]
+  },
+  {
+    title: 'Воевода просит землю',
+    condition: (s) => s.renown > 20,
+    text: 'Популярный воевода считает, что победы должны измеряться не только песнями, но и поместьями.',
+    choices: [
+      ['Дать поместье', (s) => { s.estates.nobles.loyalty += 10; s.estates.nobles.influence += 5; s.authority -= 4; return 'Воевода доволен. Остальные воеводы внезапно тоже вспомнили о заслугах.'; }],
+      ['Наградить золотом', (s) => { s.gold -= 18; s.renown += 5; return 'Воевода получил кошель. Земля осталась у короны.'; }]
+    ]
+  }
+];
+
+const RULER_NAMES = ['Радомир', 'Всеволод', 'Мирослав', 'Остромир', 'Борислав', 'Ярополк', 'Святогор', 'Велемир'];
+const HEIR_NAMES = ['Лев', 'Яромир', 'Глеб', 'Милан', 'Ростислав', 'Данило', 'Мстислав', 'Тихомир'];
+const TRAITS = [
+  ['Расчётливый', 'Налоговые потери ниже.'],
+  ['Неумолимый', 'Победы дают больше славы.'],
+  ['Книжник', 'Технологии дешевле.'],
+  ['Дружелюбный', 'Посольства эффективнее.'],
+  ['Полководец', 'Армия сильнее в бою.'],
+  ['Благочестивый', 'Духовенство терпеливее.']
+];
+
+const AMBITIONS = {
+  crown: { name: 'Железная корона', icon: '♛', desc: 'Подчинить не меньше пятнадцати областей и провозгласить королевство.' },
+  state: { name: 'Живое государство', icon: '◆', desc: 'Закончить кампанию с высокой стабильностью, развитой экономикой и лояльными сословиями.' },
+  dynasty: { name: 'Дом без конца', icon: '⚜', desc: 'Пережить смену правителя и сохранить державу на протяжении семидесяти двух сезонов.' }
+};
+
+let app;
+let state;
+let settings;
+let currentTab = 'map';
+let selectedProvince = null;
+let mapZoom = 1.18;
+let drawerOpen = false;
+let pendingBattleTimer = null;
+let audioContext = null;
+let toastTimer = null;
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const pick = (items) => items[Math.floor(Math.random() * items.length)];
+const round = (value) => Math.round(value);
+const totalArmy = (army = state.army) => army.infantry + army.archers + army.cavalry;
+const provinceById = (id) => state.provinces.find((province) => province.id === id);
+const ownerLabel = (owner) => owner === 'player' ? state.house : owner === 'north' ? 'Северный союз' : 'Южное княжество';
+const enemyName = (id) => id === 'north' ? 'Северный союз' : 'Южное княжество';
+const relationKey = (owner) => owner === 'north' ? 'north' : 'south';
+
+export function bootUdel() {
+  app = document.querySelector('#app');
+  settings = loadSettings();
+  state = loadState();
+  render();
+}
+
+function loadSettings() {
+  try {
+    return { sound: true, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+  } catch {
+    return { sound: true };
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!saved?.game) return null;
+    if (saved.version === VERSION || saved.game.version === VERSION) return normalizeState(saved.game);
+    return migrateLegacy(saved.game);
+  } catch (error) {
+    console.warn('UDEL save ignored', error);
+    return null;
+  }
+}
+
+function saveState() {
+  if (!state) return;
+  state.savedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: VERSION, game: state }));
+}
+
+function createProvince(seed, index) {
+  const basePopulation = 26 + (index % 5) * 5 + Math.floor(Math.random() * 8);
+  const initialOwner = seed.owner;
+  const player = initialOwner === 'player';
+  return {
+    ...seed,
+    population: basePopulation,
+    autonomy: player ? 30 + Math.floor(Math.random() * 12) : 42 + Math.floor(Math.random() * 18),
+    loyalty: player ? 60 + Math.floor(Math.random() * 16) : 48 + Math.floor(Math.random() * 16),
+    development: 1 + (index % 4),
+    fort: seed.terrain === 'hills' ? 2 : seed.terrain === 'coast' ? 1 : 0,
+    infrastructure: seed.name === 'Королевский Тракт' ? 2 : 0,
+    buildings: seed.resource === 'grain' ? ['fields'] : seed.resource === 'amber' ? ['market'] : [],
+    unrest: 0
+  };
+}
+
+function newGame(house, ambition) {
+  const trait = pick(TRAITS);
+  state = {
+    version: VERSION,
+    house: house || 'Дом Ясеня',
+    ambition,
+    season: 1,
+    maxSeasons: 72,
+    actions: 3,
+    gold: 86,
+    food: 78,
+    manpower: 92,
+    authority: 48,
+    renown: 8,
+    stability: 61,
+    ruler: {
+      name: pick(RULER_NAMES),
+      age: 37 + Math.floor(Math.random() * 9),
+      martial: 3 + Math.floor(Math.random() * 3),
+      diplomacy: 2 + Math.floor(Math.random() * 4),
+      stewardship: 3 + Math.floor(Math.random() * 3),
+      health: 82,
+      trait: trait[0],
+      traitDesc: trait[1]
+    },
+    heir: {
+      name: pick(HEIR_NAMES),
+      age: 14 + Math.floor(Math.random() * 9),
+      martial: 2 + Math.floor(Math.random() * 3),
+      diplomacy: 2 + Math.floor(Math.random() * 3),
+      stewardship: 2 + Math.floor(Math.random() * 3)
+    },
+    provinces: PROVINCE_SEED.map(createProvince),
+    estates: {
+      nobles: { loyalty: 56, influence: 56, privilege: false },
+      clergy: { loyalty: 54, influence: 42, privilege: false },
+      burghers: { loyalty: 58, influence: 39, privilege: false },
+      commons: { loyalty: 61, influence: 48, privilege: false }
+    },
+    laws: { tax: 1, levy: 1, rule: 0, succession: 1 },
+    techs: [],
+    army: { infantry: 72, archers: 34, cavalry: 20 },
+    relations: { north: -8, south: 12 },
+    wars: { north: false, south: false },
+    pendingEvent: null,
+    battle: null,
+    gameOver: false,
+    victory: false,
+    score: 0,
+    log: [{ season: 1, text: `${house || 'Дом Ясеня'} получил печать Срединных земель.` }]
+  };
+  tone('start');
+  saveState();
+  render();
+}
+
+function migrateLegacy(old) {
+  if (!old) return null;
+  const trait = old.ruler?.trait ? [old.ruler.trait, old.ruler.traitDesc || 'Старая черта характера.'] : pick(TRAITS);
+  const migrated = {
+    version: VERSION,
+    house: old.house || 'Дом Ясеня',
+    ambition: old.ambition === 'enlightenment' ? 'state' : old.ambition || 'crown',
+    season: Math.max(1, old.season || 1),
+    maxSeasons: 72,
+    actions: 3,
+    gold: Math.max(20, old.gold || 70),
+    food: Math.max(30, old.grain || old.food || 65),
+    manpower: Math.max(45, totalLegacyArmy(old.army)),
+    authority: old.authority || 45,
+    renown: old.renown || 8,
+    stability: old.stability || 58,
+    ruler: { ...old.ruler, trait: trait[0], traitDesc: trait[1], health: old.ruler?.health || 78 },
+    heir: old.heir || { name: pick(HEIR_NAMES), age: 16, martial: 2, diplomacy: 2, stewardship: 2 },
+    provinces: PROVINCE_SEED.map(createProvince),
+    estates: {
+      nobles: { loyalty: old.factions?.nobles || 55, influence: 55, privilege: false },
+      clergy: { loyalty: old.factions?.clergy || 53, influence: 42, privilege: false },
+      burghers: { loyalty: old.factions?.towns || 57, influence: 40, privilege: false },
+      commons: { loyalty: 58, influence: 47, privilege: false }
+    },
+    laws: { tax: old.laws?.tax ?? 1, levy: old.laws?.levy ?? 1, rule: 0, succession: old.laws?.succession ?? 1 },
+    techs: old.techs || [],
+    army: old.army || { infantry: 70, archers: 35, cavalry: 20 },
+    relations: old.relations || { north: 0, south: 10 },
+    wars: old.wars || { north: false, south: false },
+    pendingEvent: null,
+    battle: null,
+    gameOver: false,
+    victory: false,
+    score: old.score || 0,
+    log: [{ season: old.season || 1, text: 'Старая летопись перенесена на расширенную карту.' }, ...(old.log || []).slice(0, 20)]
+  };
+  const oldOwners = (old.provinces || []).map((p) => p.owner);
+  if (oldOwners.filter((owner) => owner === 'player').length >= 5) {
+    ['p14', 'p15'].forEach((id) => { migrated.provinces.find((p) => p.id === id).owner = 'player'; });
+  }
+  return normalizeState(migrated);
+}
+
+function totalLegacyArmy(army = {}) {
+  return (army.infantry || 0) + (army.archers || 0) + (army.cavalry || 0);
+}
+
+function normalizeState(input) {
+  input.version = VERSION;
+  input.food ??= input.grain ?? 60;
+  input.manpower ??= 75;
+  input.actions ??= 3;
+  input.maxSeasons = 72;
+  input.estates ??= {
+    nobles: { loyalty: 55, influence: 55, privilege: false },
+    clergy: { loyalty: 53, influence: 42, privilege: false },
+    burghers: { loyalty: 57, influence: 40, privilege: false },
+    commons: { loyalty: 58, influence: 47, privilege: false }
+  };
+  input.laws = { tax: 1, levy: 1, rule: 0, succession: 1, ...(input.laws || {}) };
+  if (!Array.isArray(input.provinces) || input.provinces.length !== PROVINCE_SEED.length) {
+    input.provinces = PROVINCE_SEED.map(createProvince);
+  }
+  input.provinces = input.provinces.map((province, index) => ({
+    ...createProvince(PROVINCE_SEED[index], index),
+    ...province,
+    path: PROVINCE_SEED[index].path,
+    label: PROVINCE_SEED[index].label
+  }));
+  input.battle = null;
+  return input;
+}
+
+function tone(kind = 'tap') {
+  if (!settings.sound) return;
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const now = audioContext.currentTime;
+    oscillator.type = kind === 'war' ? 'sawtooth' : 'triangle';
+    oscillator.frequency.setValueAtTime(kind === 'success' ? 520 : kind === 'war' ? 116 : kind === 'start' ? 230 : 310, now);
+    if (kind === 'success') oscillator.frequency.exponentialRampToValueAtTime(760, now + 0.16);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.05, now + 0.012);
