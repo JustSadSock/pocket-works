@@ -54,6 +54,7 @@ function resolveMatches() {
       const kind = interactionKind(first, second);
       if (!kind) continue;
       const separation = distance(first, second);
+      if (!Number.isFinite(separation)) continue;
       if (separation <= interactionThreshold(first, second, kind)) {
         pairs.push({ first, second, separation, kind });
       }
@@ -100,11 +101,13 @@ function resolveMatches() {
   state.entities = state.entities.filter((entity) => !removed.has(entity.id)).concat(additions);
 
   if (seals) {
-    audio.seal();
+    if (typeof audio.seal === 'function') audio.seal();
+    else if (typeof audio.match === 'function') audio.match();
     vibrate([7, 20, 7]);
   }
   if (spills) {
-    audio.spill();
+    if (typeof audio.spill === 'function') audio.spill();
+    else if (typeof audio.invalid === 'function') audio.invalid();
     vibrate([16, 22, 10]);
     showToast(spills === 1 ? 'Две капли слиплись в кляксу' : 'Чернила слиплись в новые кляксы');
   }

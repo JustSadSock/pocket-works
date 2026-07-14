@@ -45,10 +45,9 @@ function moveGesture(event) {
   state.gesture.current = point;
   state.gesture.line = line;
   if (!line) return;
-  const almostClosed = line.length < 44
-    ? (line.length / 44) * 0.99
-    : 0.99 + 0.01 * (1 - Math.exp(-(line.length - 44) / 72));
-  state.gesture.angle = clamp(almostClosed, 0, 1) * Math.PI;
+  const rawProgress = clamp((line.length - 20) / 260, 0, 0.985);
+  const easedProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
+  state.gesture.angle = easedProgress * Math.PI;
   state.gesture.valid = validateFold(line);
 }
 
@@ -93,13 +92,13 @@ function validateFold(line) {
 
 function commitFold(line, currentAngle) {
   state.history.push(cloneSnapshot());
-  const settledAngle = clamp(currentAngle, 0.12 * Math.PI, Math.PI);
+  const settledAngle = clamp(currentAngle, 0.08 * Math.PI, 0.985 * Math.PI);
   state.animation = {
     line,
     fromAngle: settledAngle,
     angle: settledAngle,
     startedAt: performance.now(),
-    duration: REDUCED_MOTION ? 60 : 260,
+    duration: REDUCED_MOTION ? 60 : 300,
     applied: false
   };
   state.lastInputAt = performance.now();
