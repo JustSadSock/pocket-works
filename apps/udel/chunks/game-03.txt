@@ -1,0 +1,252 @@
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.22);
+  } catch {}
+}
+
+function toast(message) {
+  let element = document.querySelector('.toast');
+  if (!element) {
+    element = document.createElement('div');
+    element.className = 'toast';
+    document.body.append(element);
+  }
+  element.textContent = message;
+  requestAnimationFrame(() => element.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => element.classList.remove('show'), 1900);
+}
+
+function addLog(text) {
+  state.log.unshift({ season: state.season, text });
+  state.log = state.log.slice(0, 36);
+}
+
+function spendAction() {
+  if (state.actions <= 0) {
+    toast('Решения этого сезона закончились');
+    return false;
+  }
+  state.actions -= 1;
+  return true;
+}
+
+function canAfford({ gold = 0, food = 0, manpower = 0, authority = 0, renown = 0 }) {
+  return state.gold >= gold && state.food >= food && state.manpower >= manpower && state.authority >= authority && state.renown >= renown;
+}
+
+function spend(cost) {
+  for (const key of ['gold', 'food', 'manpower', 'authority', 'renown']) state[key] -= cost[key] || 0;
+}
+
+function playerProvinces() {
+  return state.provinces.filter((province) => province.owner === 'player');
+}
+
+function adjacentToOwner(province, owner) {
+  return (ADJACENCY[province.id] || []).some((id) => provinceById(id)?.owner === owner);
+}
+
+function lawChoice(id) {
+  const law = LAWS.find((item) => item.id === id);
+  return law?.choices[state.laws[id] ?? 0];
+}
+
+function lawEffect(key) {
+  return LAWS.reduce((sum, law) => sum + (lawChoice(law.id)?.effects?.[key] || 0), 0);
+}
+
+function buildingEffect(province, key) {
+  return (province.buildings || []).reduce((sum, id) => sum + (BUILDINGS[id]?.[key] || 0), 0);
+}
+
+function provinceYield(province) {
+  const terrain = TERRAIN[province.terrain];
+  const resource = RESOURCES[province.resource][2];
+  const control = clamp((100 - province.autonomy) / 100, 0.15, 1);
+  const loyalty = clamp(province.loyalty / 100, 0.25, 1);
+  const populationScale = province.population / 34;
+  let tax = (terrain.tax + province.development * 0.8 + (resource.tax || 0) + buildingEffect(province, 'tax')) * control * loyalty * populationScale;
+  let food = (terrain.food + (resource.food || 0) + buildingEffect(province, 'food')) * loyalty * populationScale;
+  let manpower = (terrain.manpower + (resource.manpower || 0) + buildingEffect(province, 'manpower')) * control * populationScale;
+  if (state.techs.includes('irrigation') && ['plains', 'river', 'delta'].includes(province.terrain)) food += 2;
+  if (state.techs.includes('mills') && province.buildings.includes('fields')) { food += 2; tax += 1; }
+  if (state.techs.includes('ledgers') && (province.buildings.includes('market') || resource.tax)) tax += 1.5;
+  if (state.estates.burghers.privilege && province.buildings.includes('market')) tax += 1;
+  if (state.estates.commons.privilege && province.buildings.includes('fields')) food += 1.5;
+  return { tax, food, manpower };
+}
+
+function calculateEconomy() {
+  const income = { tax: 0, food: 0, manpower: 0 };
+  for (const province of playerProvinces()) {
+    const yieldData = provinceYield(province);
+    income.tax += yieldData.tax;
+    income.food += yieldData.food;
+    income.manpower += yieldData.manpower;
+  }
+  income.tax += lawEffect('tax') + state.ruler.stewardship;
+  income.food += lawEffect('food');
+  income.manpower += lawEffect('manpower');
+
+  const armyUpkeep = totalArmy() * 0.085 + lawEffect('upkeep');
+  const fortUpkeep = playerProvinces().reduce((sum, province) => sum + province.fort * 0.42, 0);
+  const courtUpkeep = 4 + state.ruler.stewardship * 0.35 + lawEffect('court');
+  const foodUse = totalArmy() * 0.055 + playerProvinces().reduce((sum, province) => sum + province.population * 0.035, 0);
+  const net = {
+    gold: income.tax - armyUpkeep - fortUpkeep - courtUpkeep,
+    food: income.food - foodUse,
+    manpower: income.manpower
+  };
+  return {
+    income,
+    expenses: { armyUpkeep, fortUpkeep, courtUpkeep, foodUse },
+    net
+  };
+}
+
+function render() {
+  clearBattleTimer();
+  if (!state) return renderMenu();
+  if (state.battle) return renderBattle();
+  if (state.gameOver) return renderEnding();
+  app.innerHTML = `
+    <section class="screen">
+      ${renderTopbar()}
+      <main class="content">${renderTab()}</main>
+      ${renderBottomNav()}
+    </section>
+    <aside class="action-drawer ${drawerOpen ? 'open' : ''}" id="drawer"></aside>
+    ${state.pendingEvent !== null ? renderEventModal(state.pendingEvent) : ''}
+  `;
+  bindCommon();
+  if (drawerOpen && selectedProvince) renderProvinceDrawer(provinceById(selectedProvince));
+  saveState();
+}
+
+function renderMenu() {
+  const hasSave = Boolean(loadState());
+  app.innerHTML = `
+    <section class="menu-screen">
+      <div class="menu-map" aria-hidden="true">
+        <svg viewBox="0 0 800 1050">${PROVINCE_SEED.map((p) => `<path d="${p.path}"></path>`).join('')}</svg>
+      </div>
+      <div class="menu-copy">
+        <p class="eyebrow">КАРМАННАЯ ЛЕТОПИСЬ / 1.5</p>
+        <h1>УДЕЛ</h1>
+        <p>Династическая стратегия о земле, сословиях и войне. Теперь государство состоит не из восьми прямоугольников, а из настоящего региона, который можно испортить значительно убедительнее.</p>
+      </div>
+      <div class="menu-actions">
+        ${hasSave ? '<button class="ink-button primary" data-action="continue" data-native-press><strong>Продолжить летопись</strong><small>Вернуться к последнему сезону</small></button>' : ''}
+        <button class="ink-button" data-action="setup" data-native-press><strong>Новая династия</strong><small>20 областей · 72 сезона</small></button>
+        <button class="ink-button" data-action="toggle-sound" data-native-press><strong>Звук: ${settings.sound ? 'включён' : 'выключен'}</strong><small>Сигналы событий, приказов и побед</small></button>
+      </div>
+      <a class="menu-exit" href="../../" data-app-control data-native-press>← Pocket Works</a>
+    </section>
+  `;
+  app.querySelector('[data-action="continue"]')?.addEventListener('click', () => { state = loadState(); tone(); render(); });
+  app.querySelector('[data-action="setup"]').addEventListener('click', renderSetup);
+  app.querySelector('[data-action="toggle-sound"]').addEventListener('click', () => {
+    settings.sound = !settings.sound;
+    saveSettings();
+    tone();
+    renderMenu();
+  });
+}
+
+function renderSetup() {
+  let selected = 'crown';
+  app.innerHTML = `
+    <section class="setup-screen">
+      <button class="back-link" data-action="back" data-native-press>←</button>
+      <p class="eyebrow">ОСНОВАНИЕ ДОМА</p>
+      <h1>Какую историю<br>пишем?</h1>
+      <label class="field-label"><span>Имя династии</span><input class="name-input" maxlength="24" value="Дом Ясеня" data-selectable aria-label="Имя династии"></label>
+      <div class="ambition-list">
+        ${Object.entries(AMBITIONS).map(([id, ambition], index) => `
+          <button class="ambition ${index === 0 ? 'selected' : ''}" data-ambition="${id}" data-native-press>
+            <span>${ambition.icon}</span><div><h3>${ambition.name}</h3><p>${ambition.desc}</p></div>
+          </button>`).join('')}
+      </div>
+      <button class="ink-button primary begin-button" data-action="begin" data-native-press><strong>Развернуть карту</strong><small>Мир будет создан заново</small></button>
+    </section>
+  `;
+  app.querySelector('[data-action="back"]').addEventListener('click', renderMenu);
+  app.querySelectorAll('[data-ambition]').forEach((button) => button.addEventListener('click', () => {
+    selected = button.dataset.ambition;
+    app.querySelectorAll('[data-ambition]').forEach((item) => item.classList.toggle('selected', item === button));
+    tone();
+  }));
+  app.querySelector('[data-action="begin"]').addEventListener('click', () => newGame(app.querySelector('.name-input').value.trim() || 'Дом Ясеня', selected));
+}
+
+function renderTopbar() {
+  const economy = calculateEconomy();
+  return `
+    <header class="topbar">
+      <div class="topline">
+        <a class="back-link" href="../../" data-app-control data-native-press aria-label="В Pocket Works">←</a>
+        <div class="title-stack"><strong>${state.house}</strong><small>${state.ruler.name}, ${state.ruler.age} лет · ${state.actions} решения</small></div>
+        <button class="icon-button" data-action="menu" data-native-press aria-label="Меню">☰</button>
+      </div>
+      <div class="resource-strip">
+        ${resource('¤', state.gold, economy.net.gold, 'казна')}
+        ${resource('✦', state.food, economy.net.food, 'еда')}
+        ${resource('♟', state.manpower, economy.net.manpower, 'люди')}
+        ${resource('♛', state.authority, lawEffect('authority'), 'власть')}
+        ${resource('◆', state.stability, 0, 'порядок')}
+      </div>
+    </header>
+  `;
+}
+
+function resource(icon, value, delta, label) {
+  const sign = delta > 0.05 ? '+' : '';
+  const className = delta < -0.05 ? 'negative' : delta > 0.05 ? 'positive' : '';
+  return `<div class="resource"><b>${icon} ${round(value)}</b><span>${label}</span><em class="${className}">${sign}${round(delta)}</em></div>`;
+}
+
+function renderBottomNav() {
+  const items = [
+    ['map', '⌖', 'Карта'],
+    ['court', '♛', 'Двор'],
+    ['state', '▤', 'Держава'],
+    ['tech', '✥', 'Знания'],
+    ['war', '⚔', 'Война']
+  ];
+  return `<nav class="bottom-nav">${items.map(([id, icon, label]) => `<button class="nav-button ${currentTab === id ? 'active' : ''}" data-tab="${id}" data-native-press><span>${icon}</span><small>${label}</small></button>`).join('')}</nav>`;
+}
+
+function renderTab() {
+  if (currentTab === 'court') return renderCourt();
+  if (currentTab === 'state') return renderState();
+  if (currentTab === 'tech') return renderTech();
+  if (currentTab === 'war') return renderWar();
+  return renderMap();
+}
+
+function renderMap() {
+  const controlled = playerProvinces().length;
+  const war = state.wars.north || state.wars.south;
+  const seaDots = Array.from({ length: 26 }, (_, index) => `<circle cx="${45 + (index * 79) % 715}" cy="${82 + (index * 137) % 890}" r="${index % 3 === 0 ? 2 : 1.2}"></circle>`).join('');
+  return `
+    <section class="map-view">
+      <header class="map-head">
+        <div><p class="eyebrow">СРЕДИННЫЕ ЗЕМЛИ</p><h2>${controlled} из 20 областей</h2><span>${war ? 'границы горят' : 'хрупкий мир'} · сезон ${state.season}/${state.maxSeasons}</span></div>
+        <div class="map-controls">
+          <button data-map-zoom="out" data-native-press aria-label="Уменьшить карту">−</button>
+          <b>${round(mapZoom * 100)}%</b>
+          <button data-map-zoom="in" data-native-press aria-label="Увеличить карту">+</button>
+        </div>
+      </header>
+      <div class="map-shell">
+        <div class="map-scroll" data-gesture-surface>
+          <svg class="realm-map" viewBox="0 0 800 1050" style="width:${round(mapZoom * 100)}%" aria-label="Карта Срединных земель">
+            <defs>
+              <filter id="coast-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="10" stdDeviation="11" flood-color="#08110e" flood-opacity=".52"/>
+              </filter>
+              <filter id="selected-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#f5dba4" flood-opacity=".95"/>
+              </filter>
