@@ -1,6 +1,8 @@
 import { DioramaRenderer as CoreDioramaRenderer } from './render-core14.js';
 import { LivingGreenhouseLayer } from './greenhouse15.js';
-import { installTerrain161 } from './terrain161.js';
+import { installTerrain17 } from './terrain17.js';
+import { upgradeCourseLevel17 } from './course17.js';
+import { stabilizeLevelGeometry } from './integrity.js';
 
 export { polygonArea, triangulatePolygon } from './render-core14.js';
 
@@ -35,23 +37,29 @@ function installWorldSpaceFlag(greenhouse) {
 function createVisualLevel(level) {
   return {
     ...level,
-    renderId: `${level.renderId ?? level.id}:terrain-161`,
+    renderId: `${level.renderId ?? level.id}:terrain-17`,
     zones: (level.zones || []).map((zone) => ({
       ...zone,
       physicsType: zone.physicsType || zone.type,
-      type: 'terrain-161'
+      type: 'terrain-17'
     })),
     terrainWalls: (level.walls || []).map((wall) => ({ ...wall })),
-    walls: []
+    terrainTunnels: (level.tunnels || []).map((tunnel) => ({
+      entry: tunnel.entry ? { ...tunnel.entry } : null,
+      exit: tunnel.exit ? { ...tunnel.exit } : null
+    })),
+    walls: [],
+    tunnels: []
   };
 }
 
 export class DioramaRenderer {
   constructor(canvas) {
     const core = new CoreDioramaRenderer(canvas);
-    const terrain161 = installTerrain161(core, canvas);
+    const terrain17 = installTerrain17(core, canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
     const visualCache = new WeakMap();
+    const integrityCache = new WeakSet();
     installWorldSpaceFlag(greenhouse);
 
     greenhouse.drawGroundingFringe = () => {};
@@ -59,6 +67,12 @@ export class DioramaRenderer {
 
     const visualFor = (level) => {
       if (!level || typeof level !== 'object') return level;
+      upgradeCourseLevel17(level);
+      if (!integrityCache.has(level)) {
+        try { level.__integrityVersion = 0; } catch {}
+        stabilizeLevelGeometry(level);
+        integrityCache.add(level);
+      }
       let visual = visualCache.get(level);
       if (!visual) {
         visual = createVisualLevel(level);
@@ -70,8 +84,8 @@ export class DioramaRenderer {
     return new Proxy(core, {
       get(target, property) {
         if (property === 'livingGreenhouse') return greenhouse;
-        if (property === 'terrain161') return terrain161;
-        if (property === 'drawMesh' && terrain161.captureLegacyDrawMesh) return () => {};
+        if (property === 'terrain17') return terrain17;
+        if (property === 'drawMesh' && terrain17.captureLegacyDrawMesh) return () => {};
         if (property === 'draw') {
           return (level, ball, aim, time, dt, mode) => {
             const visualLevel = visualFor(level);
@@ -88,7 +102,7 @@ export class DioramaRenderer {
         }
         if (property === 'destroy') {
           return () => {
-            terrain161.destroy();
+            terrain17.destroy();
             greenhouse.destroy();
             target.destroy?.();
           };

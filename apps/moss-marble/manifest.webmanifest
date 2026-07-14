@@ -2,7 +2,7 @@
   "id": "/apps/moss-marble/",
   "name": "Moss & Marble",
   "short_name": "Moss & Marble",
-  "description": "Камерный мини-гольф в старой оранжерее с девятью тактильными лунками.",
+  "description": "Маршрутный мини-гольф в старой оранжерее с девятью лунками, асимметричными холмами и боковыми туннелями.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
