@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.1.1';
-const APP_VERSION = '1.1.1';
+const CACHE_NAME = 'cherta-v1.1.2';
+const APP_VERSION = '1.1.2';
 const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Rebuilt touch input around native iOS Touch Events while retaining Pointer Events for mouse and stylus.',
-  'Buffered up to three complete swipes across dash and detonation animations instead of discarding early input.',
-  'Added stale-touch recovery and made short intentional swipes register more reliably.'
+  'Moved gesture start handling to the window capture phase so shared mobile runtime handlers cannot intercept it first.',
+  'Kept native iOS Touch Events and a three-swipe buffer across dash and detonation animations.',
+  'Forced a fresh offline cache so previously installed 1.1.1 builds cannot retain the older input script.'
 ];
 const APP_SHELL = [
   './',
