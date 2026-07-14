@@ -15,7 +15,7 @@
     "prepare:sente-engine": "node scripts/prepare-sente-engine.mjs",
     "test:sente-ai": "node scripts/audit-sente-gnugo.mjs",
     "test:shpilka": "node scripts/audit-shpilka-2-4.mjs",
-    "test:moss-marble": "node scripts/audit-moss-marble-1-3.mjs",
+    "test:moss-marble": "node scripts/audit-moss-marble-1-2.mjs && node scripts/audit-moss-marble-1-3.mjs",
     "prepare:site": "node scripts/prepare-site.mjs",
     "validate:site": "node scripts/validate-site.mjs",
     "deploy:site": "npm run registry:build && npm run prepare:site && npm run validate:site",
