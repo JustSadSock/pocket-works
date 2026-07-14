@@ -1,0 +1,102 @@
+  state.layers = nextLayers;
+  for (const entity of state.entities) {
+    if (signedDistance(entity, line) < -0.5) {
+      const reflected = reflectPoint(entity, line);
+      entity.x = reflected.x;
+      entity.y = reflected.y;
+      entity.flip = !entity.flip;
+    }
+  }
+  state.creases.push({
+    point: clonePoint(line.point),
+    normal: clonePoint(line.normal),
+    tangent: clonePoint(line.tangent)
+  });
+  state.foldsUsed += 1;
+  resolveMatches();
+  updateHud();
+
+  if (state.entities.length === 0) {
+    finishSuccess();
+  } else if (state.foldsUsed >= state.maxFolds) {
+    completionTimer = setTimeout(finishFailure, REDUCED_MOTION ? 80 : 520);
+  } else {
+    showHint(state.level.hint || 'Ищи следующую ось', true);
+  }
+}
+
+function isMatch(first, second) {
+  if (first.type === 'void' && second.type === 'void') return false;
+  if (first.type === 'ink' && second.type === 'ink') return true;
+  return first.type !== second.type;
+}
+
+function resolveMatches() {
+  const pairs = [];
+  for (let firstIndex = 0; firstIndex < state.entities.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < state.entities.length; secondIndex += 1) {
+      const first = state.entities[firstIndex];
+      const second = state.entities[secondIndex];
+      if (!isMatch(first, second)) continue;
+      const threshold = first.type === 'void' || second.type === 'void' ? 42 : 35;
+      const separation = distance(first, second);
+      if (separation <= threshold) pairs.push({ first, second, separation });
+    }
+  }
+  pairs.sort((left, right) => left.separation - right.separation);
+  const removed = new Set();
+  for (const pair of pairs) {
+    if (removed.has(pair.first.id) || removed.has(pair.second.id)) continue;
+    removed.add(pair.first.id);
+    removed.add(pair.second.id);
+    const point = {
+      x: (pair.first.x + pair.second.x) * 0.5,
+      y: (pair.first.y + pair.second.y) * 0.5
+    };
+    spawnMatch(point);
+  }
+  if (removed.size) {
+    state.entities = state.entities.filter((entity) => !removed.has(entity.id));
+    audio.match();
+    vibrate([8, 24, 8]);
+  }
+}
+
+function spawnMatch(point) {
+  state.pulses.push({ x: point.x, y: point.y, life: 1, age: 0 });
+  const count = REDUCED_MOTION ? 5 : 14;
+  for (let index = 0; index < count; index += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 35 + Math.random() * 95;
+    state.particles.push({
+      x: point.x,
+      y: point.y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      radius: 2 + Math.random() * 3.5,
+      age: 0,
+      life: 0.45 + Math.random() * 0.35
+    });
+  }
+}
+
+function finishSuccess() {
+  state.resolved = true;
+  hideHint();
+  audio.success();
+  vibrate([10, 32, 12, 45, 16]);
+
+  if (state.mode === 'campaign') {
+    const previous = settings.best?.[state.levelIndex];
+    const best = previous == null ? state.foldsUsed : Math.min(previous, state.foldsUsed);
+    settings.best = { ...(settings.best || {}), [state.levelIndex]: best };
+    settings.unlocked = Math.max(settings.unlocked || 1, Math.min(LEVELS.length, state.levelIndex + 2));
+    settings.lastLevel = Math.min(LEVELS.length - 1, state.levelIndex + 1);
+    store.patch({ best: settings.best, unlocked: settings.unlocked, lastLevel: settings.lastLevel });
+
+    dom.resultStamp.textContent = state.levelIndex === LEVELS.length - 1 ? 'АРХИВ ЗАВЕРШЁН' : 'ЛИСТ ЧИСТ';
+    dom.resultTitle.textContent = state.levelIndex === LEVELS.length - 1 ? 'Папка закрыта' : 'Совпадение';
+    dom.resultCopy.textContent = previous == null || state.foldsUsed < previous
+      ? 'Новый лучший результат сохранён на полях.'
+      : 'Чернила ушли точно в тиснение.';
+    dom.resultFolds.textContent = String(state.foldsUsed);
