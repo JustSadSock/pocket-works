@@ -1,19 +1,31 @@
 const CACHE_PREFIX = 'udel-';
-const CACHE_NAME = 'udel-v1.0.0';
-const APP_VERSION = '1.0.0';
-const RELEASE_DATE = '2026-07-12';
+const CACHE_NAME = 'udel-v1.5.0';
+const APP_VERSION = '1.5.0';
+const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Добавлена процедурная кампания на 24 сезона с восемью областями и тремя державами.',
-  'Добавлены династия, наследование, сословия, законы, технологии и дипломатия.',
-  'Добавлены набор армии и интерактивные трёхфланговые битвы с приказами в реальном времени.',
-  'Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works.'
+  'Карта расширена до двадцати связанных областей с цельной береговой линией, реками, дорогами и естественными внутренними границами.',
+  'Провинции получили население, автономию, культуру, веру, ресурс, инфраструктуру и отдельную экономическую специализацию.',
+  'Экономика теперь учитывает налоги, продовольствие, людские резервы, содержание армии, крепостей и двора.',
+  'Сословия получили влияние, требования и привилегии, а законы теперь меняют реальные правила государства.',
+  'Кампания увеличена до семидесяти двух сезонов, добавлены миграция старых сохранений и расширенные объяснения последствий.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './workshop.js',
+  './game-loader.js',
+  './chunks/game-01.txt',
+  './chunks/game-02.txt',
+  './chunks/game-03.txt',
+  './chunks/game-04.txt',
+  './chunks/game-05.txt',
+  './chunks/game-06.txt',
+  './chunks/game-07.txt',
+  './styles/part-01.css',
+  './styles/part-02.css',
+  './styles/part-03.css',
+  './styles/part-04.css',
   './app.config.json',
   './manifest.webmanifest',
   './icons/icon.svg',
@@ -37,11 +49,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({
-      version: APP_VERSION,
-      releaseDate: RELEASE_DATE,
-      releaseNotes: RELEASE_NOTES
-    });
+    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
@@ -49,11 +57,7 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      ))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
