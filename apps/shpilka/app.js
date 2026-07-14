@@ -21,6 +21,7 @@ const gameParts = [
   './engine-v2-26-racecraft.js',
   './engine-v2-26-landmarks.js',
   './engine-v2-26-feel.js',
+  './engine-v2-26-fixes.js',
   './engine-v2-12.js'
 ];
 
