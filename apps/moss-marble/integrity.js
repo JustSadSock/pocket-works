@@ -1,9 +1,9 @@
-import { insideZone, terrainHeightAt } from './terrain.js';
+import { insideZone, terrainHeightAt, zoneKind } from './terrain.js';
 
-const INTEGRITY_VERSION = 1;
+const INTEGRITY_VERSION = 2;
 const MIN_ROTOR_HALF = 72;
-const ROTOR_MARGIN = 12;
-const ROTOR_NUMERIC_BUFFER = 3;
+const ROTOR_MARGIN = 14;
+const ROTOR_NUMERIC_BUFFER = 4;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -40,8 +40,13 @@ function distanceToOutline(point, outline) {
   return distance;
 }
 
-function obstacleRadius(obstacle) {
-  return Math.max(8, Number(obstacle?.r) || 0);
+export function obstacleVisualRadius(obstacle) {
+  const base = Math.max(8, Number(obstacle?.r) || 0);
+  if (obstacle?.material === 'cup') return base * 1.18;
+  if (obstacle?.material === 'pot') return base * 1.11;
+  if (obstacle?.material === 'spoon') return base * 1.14;
+  if (obstacle?.material === 'wood') return base * 1.06;
+  return base * 1.04;
 }
 
 function decorationRadius(decoration) {
@@ -52,7 +57,8 @@ function decorationRadius(decoration) {
 }
 
 function changesPhysicalHeight(zone) {
-  return zone?.type === 'slope' || zone?.type === 'bridge' || zone?.type === 'platform' || zone?.type === 'sand' || zone?.type === 'water';
+  const kind = zoneKind(zone);
+  return kind === 'slope' || kind === 'bridge' || kind === 'platform' || kind === 'sand' || kind === 'water';
 }
 
 function pointOnUnstableTerrain(level, point) {
@@ -60,33 +66,39 @@ function pointOnUnstableTerrain(level, point) {
   return (level.zones || []).some((zone) => changesPhysicalHeight(zone) && insideZone(point, zone));
 }
 
-function pointClear(level, point, radius, ignore = null) {
+function obstacleOverlap(point, radius, obstacles, ignore = null, gap = 34) {
+  return obstacles.some((obstacle) => obstacle !== ignore && Math.hypot(point.x - obstacle.x, point.y - obstacle.y) < radius + obstacleVisualRadius(obstacle) + gap);
+}
+
+function pointClear(level, point, radius, ignore = null, acceptedObstacles = level.obstacles || []) {
   if (!pointInPolygon(point, level.outline || [])) return false;
-  if (distanceToOutline(point, level.outline || []) < radius + 28) return false;
+  if (distanceToOutline(point, level.outline || []) < radius + 32) return false;
   if (pointOnUnstableTerrain(level, point)) return false;
-  if (Math.hypot(point.x - level.start.x, point.y - level.start.y) < radius + 105) return false;
-  if (Math.hypot(point.x - level.hole.x, point.y - level.hole.y) < radius + level.hole.r + 56) return false;
-  for (const obstacle of level.obstacles || []) {
-    if (obstacle === ignore) continue;
-    if (Math.hypot(point.x - obstacle.x, point.y - obstacle.y) < radius + obstacleRadius(obstacle) + 28) return false;
-  }
+  if (Math.hypot(point.x - level.start.x, point.y - level.start.y) < radius + 112) return false;
+  if (Math.hypot(point.x - level.hole.x, point.y - level.hole.y) < radius + level.hole.r + 62) return false;
+  if (obstacleOverlap(point, radius, acceptedObstacles, ignore)) return false;
   for (const wall of level.walls || []) {
     const distance = distanceToSegment(point, { x: wall.ax, y: wall.ay }, { x: wall.bx, y: wall.by });
-    if (distance < radius + Number(wall.thickness || 18) * .5 + 22) return false;
+    if (distance < radius + Number(wall.thickness || 18) * .5 + 24) return false;
+  }
+  for (const tunnel of level.tunnels || []) {
+    for (const endpoint of [tunnel.entry, tunnel.exit]) {
+      if (Math.hypot(point.x - endpoint.x, point.y - endpoint.y) < radius + endpoint.r + 28) return false;
+    }
   }
   return true;
 }
 
-function findFlatPlacement(level, item, radius) {
+function findFlatPlacement(level, item, radius, acceptedObstacles) {
   const origin = { x: item.x, y: item.y };
-  if (pointClear(level, origin, radius, item)) return origin;
-  for (let ring = 1; ring <= 8; ring += 1) {
+  if (pointClear(level, origin, radius, item, acceptedObstacles)) return origin;
+  for (let ring = 1; ring <= 11; ring += 1) {
     const distance = ring * 34;
-    const samples = 12 + ring * 2;
+    const samples = 14 + ring * 3;
     for (let sample = 0; sample < samples; sample += 1) {
       const angle = sample / samples * Math.PI * 2 + ring * .41;
       const candidate = { x: origin.x + Math.cos(angle) * distance, y: origin.y + Math.sin(angle) * distance };
-      if (pointClear(level, candidate, radius, item)) return candidate;
+      if (pointClear(level, candidate, radius, item, acceptedObstacles)) return candidate;
     }
   }
   return null;
@@ -99,9 +111,8 @@ function rotorMaximumHalf(level, rotor, acceptedRotors) {
   maximum = Math.min(maximum, distanceToOutline(center, level.outline || []) - halfThickness - ROTOR_MARGIN);
   maximum = Math.min(maximum, Math.hypot(center.x - level.hole.x, center.y - level.hole.y) - level.hole.r - halfThickness - 20);
   maximum = Math.min(maximum, Math.hypot(center.x - level.start.x, center.y - level.start.y) - halfThickness - 72);
-
   for (const obstacle of level.obstacles || []) {
-    maximum = Math.min(maximum, Math.hypot(center.x - obstacle.x, center.y - obstacle.y) - obstacleRadius(obstacle) - halfThickness - ROTOR_MARGIN);
+    maximum = Math.min(maximum, Math.hypot(center.x - obstacle.x, center.y - obstacle.y) - obstacleVisualRadius(obstacle) - halfThickness - ROTOR_MARGIN);
   }
   for (const wall of level.walls || []) {
     maximum = Math.min(maximum, distanceToSegment(center, { x: wall.ax, y: wall.ay }, { x: wall.bx, y: wall.by }) - Number(wall.thickness || 18) * .5 - halfThickness - ROTOR_MARGIN);
@@ -119,7 +130,7 @@ function rotorConflicts(level, rotor, acceptedRotors = []) {
   const issues = [];
   if (distanceToOutline(center, level.outline || []) < half + halfThickness + ROTOR_MARGIN) issues.push('outline');
   for (const obstacle of level.obstacles || []) {
-    if (Math.hypot(center.x - obstacle.x, center.y - obstacle.y) < half + halfThickness + obstacleRadius(obstacle) + ROTOR_MARGIN) issues.push('obstacle');
+    if (Math.hypot(center.x - obstacle.x, center.y - obstacle.y) < half + halfThickness + obstacleVisualRadius(obstacle) + ROTOR_MARGIN) issues.push('obstacle');
   }
   for (const wall of level.walls || []) {
     const distance = distanceToSegment(center, { x: wall.ax, y: wall.ay }, { x: wall.bx, y: wall.by });
@@ -134,12 +145,24 @@ function rotorConflicts(level, rotor, acceptedRotors = []) {
 
 export function stabilizeLevelGeometry(level) {
   if (!level || level.__integrityVersion === INTEGRITY_VERSION) return level;
-  const report = { movedObstacles: 0, removedObstacles: 0, movedRotors: 0, shortenedRotors: 0, removedRotors: 0, removedDecorations: 0 };
+  const report = {
+    movedObstacles: 0,
+    separatedObstacles: 0,
+    removedObstacles: 0,
+    movedRotors: 0,
+    shortenedRotors: 0,
+    removedRotors: 0,
+    removedDecorations: 0
+  };
 
+  const sourceObstacles = [...(level.obstacles || [])];
   const stableObstacles = [];
-  for (const obstacle of level.obstacles || []) {
-    if (pointOnUnstableTerrain(level, obstacle)) {
-      const placement = findFlatPlacement(level, obstacle, obstacleRadius(obstacle));
+  for (const obstacle of sourceObstacles) {
+    const radius = obstacleVisualRadius(obstacle);
+    const unstable = pointOnUnstableTerrain(level, obstacle);
+    const overlaps = obstacleOverlap(obstacle, radius, stableObstacles, obstacle);
+    if (unstable || overlaps || !pointClear(level, obstacle, radius, obstacle, stableObstacles)) {
+      const placement = findFlatPlacement(level, obstacle, radius, stableObstacles);
       if (!placement) {
         report.removedObstacles += 1;
         continue;
@@ -147,6 +170,7 @@ export function stabilizeLevelGeometry(level) {
       obstacle.x = placement.x;
       obstacle.y = placement.y;
       report.movedObstacles += 1;
+      if (overlaps) report.separatedObstacles += 1;
     }
     stableObstacles.push(obstacle);
   }
@@ -155,7 +179,7 @@ export function stabilizeLevelGeometry(level) {
   const acceptedRotors = [];
   for (const rotor of level.rotors || []) {
     if (pointOnUnstableTerrain(level, rotor)) {
-      const placement = findFlatPlacement(level, rotor, Math.max(34, Number(rotor.thickness || 20)));
+      const placement = findFlatPlacement(level, rotor, Math.max(34, Number(rotor.thickness || 20)), stableObstacles);
       if (!placement) {
         report.removedRotors += 1;
         continue;
@@ -179,12 +203,13 @@ export function stabilizeLevelGeometry(level) {
 
   level.decorations = (level.decorations || []).filter((decoration) => {
     const radius = decorationRadius(decoration);
-    const conflicts = acceptedRotors.some((rotor) => {
+    const rotorConflict = acceptedRotors.some((rotor) => {
       const sweep = Number(rotor.length || 0) * .5 + Number(rotor.thickness || 20) * .5;
       return Math.hypot(decoration.x - rotor.x, decoration.y - rotor.y) < sweep + radius + 8;
     });
-    if (conflicts) report.removedDecorations += 1;
-    return !conflicts;
+    const objectConflict = stableObstacles.some((obstacle) => Math.hypot(decoration.x - obstacle.x, decoration.y - obstacle.y) < radius + obstacleVisualRadius(obstacle) * .78);
+    if (rotorConflict || objectConflict) report.removedDecorations += 1;
+    return !rotorConflict && !objectConflict;
   });
 
   try {
@@ -207,11 +232,20 @@ export function inspectLevelIntegrity(level) {
   }
   const elevatedObstacles = (level?.obstacles || []).filter((obstacle) => pointOnUnstableTerrain(level, obstacle));
   const elevatedRotors = (level?.rotors || []).filter((rotor) => pointOnUnstableTerrain(level, rotor));
+  const overlappingObstacles = [];
+  const obstacles = level?.obstacles || [];
+  for (let a = 0; a < obstacles.length; a += 1) {
+    for (let b = a + 1; b < obstacles.length; b += 1) {
+      const distance = Math.hypot(obstacles[a].x - obstacles[b].x, obstacles[a].y - obstacles[b].y);
+      if (distance < obstacleVisualRadius(obstacles[a]) + obstacleVisualRadius(obstacles[b]) + 24) overlappingObstacles.push([a, b]);
+    }
+  }
   return {
-    ok: rotorIssues.length === 0 && elevatedObstacles.length === 0 && elevatedRotors.length === 0,
+    ok: rotorIssues.length === 0 && elevatedObstacles.length === 0 && elevatedRotors.length === 0 && overlappingObstacles.length === 0,
     rotorIssues,
     elevatedObstacles,
     elevatedRotors,
+    overlappingObstacles,
     report: level?.__integrityReport || null
   };
 }
