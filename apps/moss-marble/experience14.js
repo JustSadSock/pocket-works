@@ -49,6 +49,66 @@ export function installLivingTerrain(renderer, canvas, getState) {
     scale: 1
   };
   let dpr = 1;
+  let terrainMesh = null;
+  let terrainMeshKey = null;
+
+  function pushVertex(data, position, normal, tint, material) {
+    data.push(position[0], position[1], position[2], normal[0], normal[1], normal[2], tint[0], tint[1], tint[2], tint[3], material);
+  }
+
+  function pushTriangle(data, a, b, c, tint, material, normal = [0, 0, 1]) {
+    pushVertex(data, a, normal, tint, material);
+    pushVertex(data, b, normal, tint, material);
+    pushVertex(data, c, normal, tint, material);
+  }
+
+  function terrainMeshFor(level) {
+    if (!renderer.gl || !renderer.program || !renderer.drawMesh) return null;
+    const key = level.renderId ?? level.id;
+    if (terrainMesh && terrainMeshKey === key) return terrainMesh;
+    if (terrainMesh?.buffer) renderer.gl.deleteBuffer(terrainMesh.buffer);
+    const data = [];
+    const topTint = [.47, .51, .31, 1];
+    const sideTint = [.25, .31, .22, 1];
+    for (const zone of level.zones || []) {
+      if (zone.type !== 'slope' || !Number.isFinite(zone.w) || !Number.isFinite(zone.h)) continue;
+      const corners = zoneCorners(zone);
+      const top = corners.map((point) => [point.x, point.y, terrainHeightAt({ zones: [zone] }, point.x, point.y) + .72]);
+      pushTriangle(data, top[0], top[1], top[2], topTint, 5);
+      pushTriangle(data, top[0], top[2], top[3], topTint, 5);
+      for (let index = 0; index < 4; index += 1) {
+        const next = (index + 1) % 4;
+        const zA = top[index][2];
+        const zB = top[next][2];
+        if (Math.max(zA, zB) < 2) continue;
+        const a0 = [top[index][0], top[index][1], .58];
+        const b0 = [top[next][0], top[next][1], .58];
+        pushTriangle(data, a0, b0, top[next], sideTint, 0);
+        pushTriangle(data, a0, top[next], top[index], sideTint, 0);
+      }
+    }
+    const gl = renderer.gl;
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    terrainMesh = { buffer, count: data.length / 11 };
+    terrainMeshKey = key;
+    return terrainMesh;
+  }
+
+  function drawTerrainMesh(level) {
+    const mesh = terrainMeshFor(level);
+    if (!mesh?.count) return;
+    const gl = renderer.gl;
+    gl.useProgram(renderer.program);
+    gl.uniform2f(renderer.locations.viewport, renderer.width, renderer.height);
+    gl.uniform1f(renderer.locations.scale, renderer.scale);
+    gl.uniform2f(renderer.locations.offset, renderer.offsetX, renderer.offsetY);
+    gl.uniform2f(renderer.locations.parallax, renderer.parallaxX, renderer.parallaxY);
+    gl.uniform3f(renderer.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
+    gl.uniform1f(renderer.locations.time, performance.now() / 1000);
+    renderer.drawMesh(mesh, false, true);
+  }
 
   function resizeOverlay() {
     const rect = canvas.getBoundingClientRect();
@@ -289,6 +349,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
   }
 
   function draw(level, ball, time, mode) {
+    drawTerrainMesh(level);
     const size = resizeOverlay();
     ctx.clearRect(0, 0, size.width, size.height);
     if (!level) return;
