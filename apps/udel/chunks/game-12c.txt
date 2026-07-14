@@ -1,0 +1,47 @@
+  return `<button class="drawer-action primary" data-campaign-target="${province.id}" data-native-press ${!state.wars[enemy] || !route || state.campaign || totalArmy() < 20 || state.actions <= 0 || state.gold < 10 || state.food < 8 ? 'disabled' : ''}><b>Подготовить поход</b><small>${!state.wars[enemy] ? 'Сначала объявите войну' : !route ? 'Нет доступного маршрута' : state.campaign ? 'Другая дружина уже в походе' : `${route.length - 1} перехода · ¤10 ✦8`}</small></button>`;
+};
+
+const d25RenderProvinceDrawer2 = renderProvinceDrawer;
+renderProvinceDrawer = function renderProvinceDrawerD25(province) {
+  d25RenderProvinceDrawer2(province);
+  const drawer = app.querySelector('#drawer');
+  if (!drawer || !province) return;
+  const campaign = state.campaign;
+  if (campaign?.route?.includes(province.id)) {
+    const isCurrent = d25CampaignPosition(campaign)?.id === province.id;
+    drawer.querySelector('.drawer-actions')?.insertAdjacentHTML('beforebegin', `<div class="d25-drawer-route"><b>${isCurrent ? '⚔ Дружина находится здесь' : campaign.targetId === province.id ? '⚑ Цель действующего похода' : 'Маршрут действующего похода'}</b><span>${d25Esc(d25CampaignPhaseText(campaign))} · припасы ${round(campaign.supply)}</span><button data-tab="war" data-native-press>Открыть военный совет</button></div>`);
+  }
+  drawer.querySelectorAll('[data-campaign-target]').forEach((button) => button.addEventListener('click', () => d25StartCampaign(button.dataset.campaignTarget, state.campaignCommanderId)));
+  drawer.querySelectorAll('[data-tab="war"]').forEach((button) => button.addEventListener('click', () => { currentTab = 'war'; closeDrawer(); render(); }));
+};
+
+const d25RenderTopbar2 = renderTopbar;
+renderTopbar = function renderTopbarD25() {
+  const html = d25RenderTopbar2();
+  if (!state.campaign || html.includes('campaign-alert')) return html;
+  const alert = `<span class="campaign-alert">⚔ ${d25Esc(D25_PHASES[state.campaign.phase] || 'поход')}</span>`;
+  return html.replace('<div class="resource-strip">', `${alert}<div class="resource-strip">`);
+};
+
+const d25RenderMenu2 = renderMenu;
+renderMenu = function renderMenuD25() {
+  d25RenderMenu2();
+  app.querySelector('.eyebrow')?.replaceChildren(document.createTextNode('КАРМАННАЯ ЛЕТОПИСЬ / 2.5'));
+  const description = app.querySelector('.menu-copy > p:last-child');
+  if (description) description.textContent = 'Династическая стратегия о земле, крови и войне. Походы требуют маршрута, припасов и командующего; крепости — осады; победы — договора, которые действительно меняют карту.';
+  const setupNote = app.querySelector('[data-action="setup"] small');
+  if (setupNote) setupNote.textContent = '20 областей · 72 сезона · походы и осады';
+};
+
+const d25RenderBattle2 = renderBattle;
+renderBattle = function renderBattleD25() {
+  d25RenderBattle2();
+  const battleData = state.battle;
+  if (!battleData) return;
+  const commander = d25Commander(battleData.commanderId);
+  const morale = app.querySelector('.morale-strip');
+  morale?.insertAdjacentHTML('afterend', `<section class="d25-battle-command"><div><small>командующий</small><b>${d25Esc(commander?.name || state.ruler.name)}</b><span>ставка: ${['левый фланг', 'центр', 'правый фланг'][battleData.commanderLane ?? 1]} · перемещений ${battleData.commanderMoves || 0}/2</span></div><div><small>резерв</small><b>${round(battleData.reserve || 0)}</b><span>${battleData.reserveUsed ? 'уже введён' : 'готов поддержать слабый фланг'}</span></div></section>`);
+  const orders = app.querySelector('.battle-orders');
+  orders?.insertAdjacentHTML('beforeend', `<div class="d25-battle-tools"><button data-command="reserve" data-native-press ${battleData.reserveUsed ? 'disabled' : ''}>♟ Ввести резерв</button><div><span>Перенести ставку</span>${[0, 1, 2].map((index) => `<button data-command="commander" data-lane="${index}" data-native-press ${battleData.commanderMoves >= 2 || battleData.commanderLane === index ? 'disabled' : ''}>${index + 1}</button>`).join('')}</div></div>`);
+  app.querySelectorAll('.d25-battle-tools [data-command]').forEach((button) => button.addEventListener('click', () => battleCommand(button.dataset.command, Number(button.dataset.lane))));
+};
