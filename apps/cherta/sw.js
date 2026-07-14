@@ -1,13 +1,11 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.1.0';
-const APP_VERSION = '1.1.0';
+const CACHE_NAME = 'cherta-v1.1.1';
+const APP_VERSION = '1.1.1';
 const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Added a stronger third stroke and bonus bursts where armed lines intersect.',
-  'Added readable wave themes, edge spawn warnings and the line-erasing Eraser enemy.',
-  'Added a procedural boss every fifth wave, assembled from independent shape, movement, attack and tempo traits.',
-  'Expanded multi-kill, graze, healing and paper-history feedback without adding new controls.',
-  'Added end-of-run records for the best single cut, clean dodges and defeated seals.'
+  'Rebuilt touch input around native iOS Touch Events while retaining Pointer Events for mouse and stylus.',
+  'Buffered up to three complete swipes across dash and detonation animations instead of discarding early input.',
+  'Added stale-touch recovery and made short intentional swipes register more reliably.'
 ];
 const APP_SHELL = [
   './',
