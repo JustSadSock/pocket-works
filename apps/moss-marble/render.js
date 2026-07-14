@@ -2,6 +2,7 @@ import { DioramaRenderer as CoreDioramaRenderer } from './render-core14.js';
 import { LivingGreenhouseLayer } from './greenhouse15.js';
 import { installTerrain17 } from './terrain17.js';
 import { upgradeCourseLevel17 } from './course17.js';
+import { stabilizeLevelGeometry } from './integrity.js';
 
 export { polygonArea, triangulatePolygon } from './render-core14.js';
 
@@ -58,6 +59,7 @@ export class DioramaRenderer {
     const terrain17 = installTerrain17(core, canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
     const visualCache = new WeakMap();
+    const integrityCache = new WeakSet();
     installWorldSpaceFlag(greenhouse);
 
     greenhouse.drawGroundingFringe = () => {};
@@ -66,6 +68,11 @@ export class DioramaRenderer {
     const visualFor = (level) => {
       if (!level || typeof level !== 'object') return level;
       upgradeCourseLevel17(level);
+      if (!integrityCache.has(level)) {
+        try { level.__integrityVersion = 0; } catch {}
+        stabilizeLevelGeometry(level);
+        integrityCache.add(level);
+      }
       let visual = visualCache.get(level);
       if (!visual) {
         visual = createVisualLevel(level);
