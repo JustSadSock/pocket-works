@@ -6,7 +6,7 @@ installMobileRuntime();
 
 const workshop = createWorkshopMode({
   appName: 'УДЕЛ',
-  version: '1.5.0',
+  version: '2.0.0',
   storageNamespace: 'pocket-works:udel',
   cachePrefix: 'udel-',
   onReset: async () => {
@@ -23,7 +23,7 @@ try {
   document.querySelector('#app').innerHTML = `
     <section class="boot">
       <a href="../../" data-app-control data-native-press>← Pocket Works</a>
-      <strong>КАРТА НЕ РАЗВЕРНУЛАСЬ</strong>
+      <strong>ЛЕТОПИСЬ НЕ ОТКРЫЛАСЬ</strong>
       <span>Обновите приложение или проверьте соединение.</span>
     </section>`;
 }
