@@ -1,0 +1,46 @@
+  installMobileRuntime();
+  collectDom();
+  store = createVersionedStore({
+    namespace: STORAGE_NAMESPACE,
+    version: 1,
+    defaults: DEFAULTS,
+    validate: validateStoredState
+  });
+  settings = { ...DEFAULTS, ...store.getAll() };
+  audio.setEnabled(settings.sound);
+  createTextures();
+  bindControls();
+  createWorkshopMode({
+    appName: 'СГИБ',
+    version: APP_VERSION,
+    cachePrefix: CACHE_PREFIX,
+    storageNamespace: STORAGE_NAMESPACE,
+    onReset() {
+      store.reset();
+      settings = { ...DEFAULTS };
+      updateMenu();
+      returnToMenu();
+      showToast('Данные СГИБ очищены');
+    }
+  });
+  watchConnectivity((online) => {
+    document.documentElement.dataset.network = online ? 'online' : 'offline';
+  });
+  updateMenu();
+  resizeCanvas();
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(render);
+}
+
+boot().catch((error) => {
+  console.error('СГИБ failed to initialise', error);
+  try {
+    document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
+    const errorScreen = document.getElementById('errorScreen');
+    const copy = document.getElementById('errorCopy');
+    if (copy) copy.textContent = 'Перезагрузи приложение. Если ошибка повторится, открой Workshop Mode после следующего запуска.';
+    errorScreen?.classList.add('is-visible');
+  } catch (fallbackError) {
+    console.error('СГИБ fallback failed', fallbackError);
+  }
+});
