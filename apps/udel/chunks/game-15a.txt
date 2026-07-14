@@ -1,0 +1,111 @@
+/* UDEL 2.6 — map-first interface and compact province command panel */
+const D26_VERSION = '2.6.0';
+let d26ProvinceView = 'summary';
+
+function d26Esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+}
+
+function d26Signed(value) {
+  const rounded = round(value);
+  return `${rounded > 0 ? '+' : ''}${rounded}`;
+}
+
+function d26Metric(label, value, delta) {
+  const className = delta < -0.05 ? 'negative' : delta > 0.05 ? 'positive' : '';
+  return `<div class="realm-metric"><span>${d26Esc(label)}</span><b>${round(value)}</b><em class="${className}">${d26Signed(delta)}</em></div>`;
+}
+
+renderTopbar = function renderTopbarD26() {
+  const economy = calculateEconomy();
+  return `<header class="topbar topbar-26">
+    <div class="topline">
+      <a class="back-link" href="../../" data-app-control data-native-press aria-label="В Pocket Works">Назад</a>
+      <div class="title-stack"><strong>${d26Esc(state.house)}</strong><small>Сезон ${state.season} · ${state.actions} решения · ${d26Esc(state.ruler.name)}</small></div>
+      <button class="menu-word" data-action="menu" data-native-press aria-label="Открыть меню">Меню</button>
+    </div>
+    <div class="realm-ticker" aria-label="Основные ресурсы">
+      ${d26Metric('Казна', state.gold, economy.net.gold)}
+      ${d26Metric('Запасы', state.food, economy.net.food)}
+      ${d26Metric('Люди', state.manpower, economy.net.manpower)}
+      ${d26Metric('Власть', state.authority, lawEffect('authority'))}
+    </div>
+  </header>`;
+};
+
+renderBottomNav = function renderBottomNavD26() {
+  const items = [
+    ['map', 'Карта'],
+    ['court', 'Дом'],
+    ['state', 'Страна'],
+    ['tech', 'Знания'],
+    ['war', 'Война']
+  ];
+  return `<nav class="bottom-nav bottom-nav-26" aria-label="Разделы игры">${items.map(([id, label]) => `<button class="nav-button ${currentTab === id ? 'active' : ''}" data-tab="${id}" data-native-press aria-label="${label}"><span>${label}</span></button>`).join('')}</nav>`;
+};
+
+renderProvinceLabel = function renderProvinceLabelD26(province) {
+  const [x, y] = province.label;
+  return `<g class="province-label province-label-26" data-province="${province.id}" transform="translate(${x} ${y})">
+    <text class="province-name" text-anchor="middle" y="4">${d26Esc(province.name)}</text>
+  </g>`;
+};
+
+const d26RenderMapBase = renderMap;
+renderMap = function renderMapD26() {
+  return d26RenderMapBase()
+    .replace('<p class="eyebrow">КАРТА</p>', '')
+    .replace(/<span>Сезон ([^<]+)<\/span>/, '<span>$1</span>')
+    .replace('<span>Завершить сезон</span><small>Получить доход и продолжить</small>', '<span>Следующий сезон</span><small>Получить доход</small>');
+};
+
+function d26DecisionButton({ action, building = '', title, effect, cost, disabled: isDisabled = false, primary = false }) {
+  return `<button class="command-row ${primary ? 'primary' : ''}" data-province-action="${action}" ${building ? `data-building="${building}"` : ''} data-native-press ${isDisabled ? 'disabled' : ''}>
+    <span><b>${d26Esc(title)}</b><small>${d26Esc(effect)}</small></span><em>${d26Esc(cost)}</em>
+  </button>`;
+}
+
+function d26SummaryPane(province) {
+  const yields = provinceYield(province);
+  const control = clamp(100 - province.autonomy, 0, 100);
+  const buildings = province.buildings.map((id) => BUILDINGS[id]?.name).filter(Boolean);
+  return `<div class="province-pane summary-pane">
+    <div class="province-scoreline">
+      <div><span>Лояльность</span><b>${round(province.loyalty)}</b><i><em style="width:${clamp(province.loyalty, 0, 100)}%"></em></i></div>
+      <div><span>Контроль</span><b>${round(control)}%</b><i><em style="width:${control}%"></em></i></div>
+      <div><span>Население</span><b>${round(province.population)} тыс.</b></div>
+    </div>
+    <div class="province-income-line"><span>Доход</span><b>${yields.tax.toFixed(1)} золота</b><b>${yields.food.toFixed(1)} еды</b><b>${yields.manpower.toFixed(1)} людей</b></div>
+    <dl class="province-brief">
+      <div><dt>Земля</dt><dd>${d26Esc(TERRAIN[province.terrain]?.name || '')}</dd></div>
+      <div><dt>Ресурс</dt><dd>${d26Esc(RESOURCES[province.resource]?.[0] || '')}</dd></div>
+      <div><dt>Крепость</dt><dd>${round(province.fort)}</dd></div>
+      <div><dt>Постройки</dt><dd>${buildings.length ? buildings.join(', ') : 'нет'}</dd></div>
+    </dl>
+    ${d251CampaignNotice(province)}
+  </div>`;
+}
+
+function d26ActionsPane(province) {
+  if (province.owner !== 'player') {
+    const enemy = relationKey(province.owner);
+    const route = d25FindRoute(province.id);
+    const active = state.campaign?.targetId === province.id;
+    const reason = !state.wars[enemy] ? 'Сначала объявите войну' : !route ? 'Нет маршрута' : state.campaign ? 'Дружина уже занята' : `${route.length - 1} перехода`;
+    return `<div class="province-pane action-pane">${active
+      ? '<p class="panel-note">Эта область уже является целью действующего похода.</p>'
+      : `<button class="command-row primary" data-campaign-target="${province.id}" data-native-press ${!state.wars[enemy] || !route || state.campaign || totalArmy() < 20 || state.actions <= 0 || state.gold < 10 || state.food < 8 ? 'disabled' : ''}><span><b>Подготовить поход</b><small>${d26Esc(reason)}</small></span><em>10 золота · 8 еды</em></button>`}
+    </div>`;
+  }
+
+  const controlCost = state.techs.includes('roads') ? 8 : 12;
+  const nextBuildings = Object.entries(BUILDINGS).filter(([id]) => !province.buildings.includes(id)).slice(0, 2);
+  return `<div class="province-pane action-pane">
+    ${d26DecisionButton({ action: 'develop', title: 'Развить землю', effect: 'Развитие +1 · население +2 тыс.', cost: '22 золота', disabled: state.actions <= 0 || !canAfford({ gold: 22 }) })}
+    ${d26DecisionButton({ action: 'control', title: 'Усилить контроль', effect: 'Автономия −10 · лояльность −3', cost: `${controlCost} власти`, disabled: state.actions <= 0 || !canAfford({ authority: controlCost }) })}
+    ${d26DecisionButton({ action: 'appease', title: 'Провести праздник', effect: 'Лояльность +12 · снизить волнения', cost: '12 золота · 7 еды', disabled: state.actions <= 0 || !canAfford({ gold: 12, food: 7 }) })}
+    ${nextBuildings.map(([id, building]) => d26DecisionButton({ action: 'build', building: id, title: `Построить: ${building.name}`, effect: building.desc, cost: `${building.cost} золота`, disabled: state.actions <= 0 || !canAfford({ gold: building.cost }) })).join('')}
+  </div>`;
+}
