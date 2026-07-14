@@ -1,14 +1,13 @@
 const CACHE_PREFIX = 'shpilka-';
-const CACHE_NAME = 'shpilka-v2.6.0-p1';
-const APP_VERSION = '2.6.0';
+const CACHE_NAME = 'shpilka-v2.7.0-p1';
+const APP_VERSION = '2.7.0';
 const RELEASE_DATE = '2026-07-14';
 const CACHE_PROTOCOL = 1;
 const RELEASE_NOTES = [
-  'Добавлен Кубок трёх с тремя процедурными этапами, общей таблицей очков и итоговым чемпионом.',
-  'Соперники получили защиту позиции, выбор стороны атаки, отмену опасного обгона и перекрёстный выход без резинового ускорения.',
-  'Игра запоминает главного соперника, а маршруты получили мосты, тоннели, контейнерные коридоры, дамбы, обрывы и площади.',
-  'Автомобили заметнее кренятся и клюют, передние колёса поворачиваются, дым зависит от скольжения, а звук — от нагрузки.',
-  'После первой победы над Безумцем открывается скрытый уровень Пилот.'
+  'AI теперь ориентируется по реальному расстоянию трассы, поэтому не начинает поворот слишком рано.',
+  'Безумец и Пилот больше не получают случайные ошибки траектории; темп рассчитывается по кривизне и тормозному пути.',
+  'Безопасные пределы смещения, возврат к центру и гашение наружного импульса удерживают плотный пелотон на дороге.',
+  'После финиша игрока оставшиеся машины ускоренно доезжают, а прогноз в таблице заменяется фактическим временем.'
 ];
 const APP_SHELL = [
   './',
@@ -20,6 +19,7 @@ const APP_SHELL = [
   './systems-23.css',
   './systems-25.css',
   './systems-26.css',
+  './systems-27.css',
   './app.js',
   './engine-v2-01.js',
   './engine-v2-02.js',
@@ -49,6 +49,8 @@ const APP_SHELL = [
   './engine-v2-26-landmarks.js',
   './engine-v2-26-feel.js',
   './engine-v2-26-fixes.js',
+  './engine-v2-27-ai.js',
+  './engine-v2-27-fixes.js',
   './engine-v2-12.js',
   './workshop.js',
   './manifest.webmanifest',
@@ -120,7 +122,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({
+    event.ports?.[0].postMessage({
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
       releaseNotes: RELEASE_NOTES,
