@@ -1,163 +1,20 @@
 <!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#d2c49d">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ШПИЛЬКА">
-  <title>ШПИЛЬКА</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
-  <link rel="stylesheet" href="../../shared/update-manager.css">
-  <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=2.7.1">
-  <link rel="stylesheet" href="./advanced.css?v=2.7.1">
-  <link rel="stylesheet" href="./advanced-fixes.css?v=2.7.1">
-  <link rel="stylesheet" href="./systems-23.css?v=2.7.1">
-  <link rel="stylesheet" href="./systems-25.css?v=2.7.1">
-  <link rel="stylesheet" href="./systems-26.css?v=2.7.1">
-  <link rel="stylesheet" href="./systems-27.css?v=2.7.1">
-</head>
-<body>
-  <main class="app-shell" data-app-shell data-fullscreen-app data-ui>
-    <canvas id="game" data-gesture-surface data-touch-action="none" aria-label="Гоночная трасса"></canvas>
-    <div class="grain" aria-hidden="true"></div>
-
-    <header class="hud" id="hud" hidden>
-      <div class="hud-race">
-        <span class="hud-kicker">ПОЗИЦИЯ</span>
-        <strong id="positionValue">1/5</strong>
-      </div>
-      <div class="hud-lap">
-        <span class="hud-kicker">КРУГ</span>
-        <strong id="lapValue">1/2</strong>
-      </div>
-      <button class="pause-button" id="pauseButton" type="button" data-native-press aria-label="Пауза">ПАУЗА</button>
-    </header>
-
-    <section class="speed-cluster" id="speedCluster" hidden aria-live="polite">
-      <div class="speed-line"><span id="speedValue">0</span><small>КМ/Ч</small><b id="gearValue">N</b></div>
-      <div class="lap-clock"><span id="lapTime">0:00.000</span><em id="bestLap">РЕКОРД —</em></div>
-      <div class="sector-delta" id="sectorDelta" data-tone="neutral">ПРИЗРАК —</div>
-    </section>
-
-    <button class="recover-button" id="recoverButton" type="button" data-native-press hidden>НА ТРАССУ</button>
-
-    <section class="controls" id="controls" data-mode="precision" hidden aria-label="Управление">
-      <div class="precision-controls" id="precisionControls">
-        <div class="steering-arc" id="steeringArc" role="slider" aria-label="Руль" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
-          <div class="steering-knob" id="steeringKnob"><span>РУЛЬ</span></div>
-        </div>
-        <div class="power-gate" id="powerGate" role="slider" aria-label="Тяга, тормоз и реверс" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" data-state="neutral">
-          <span class="power-label max">МАКС</span>
-          <span class="power-label neutral">N</span>
-          <span class="power-label reverse">R</span>
-          <div class="power-knob" id="powerKnob"></div>
-        </div>
-      </div>
-
-      <div class="button-controls" id="buttonControls">
-        <div class="steering" aria-label="Руление">
-          <button class="steer steer-left" id="leftButton" type="button" data-pressable aria-label="Повернуть влево"><span>ЛЕВО</span></button>
-          <button class="steer steer-right" id="rightButton" type="button" data-pressable aria-label="Повернуть вправо"><span>ПРАВО</span></button>
-        </div>
-        <div class="pedals" aria-label="Педали">
-          <button class="pedal brake" id="brakeButton" type="button" data-pressable><span>ТОРМОЗ</span></button>
-          <button class="pedal throttle" id="throttleButton" type="button" data-pressable><span>ГАЗ</span></button>
-        </div>
-      </div>
-    </section>
-
-    <div class="countdown" id="countdown" hidden aria-live="assertive">3</div>
-    <div class="race-message" id="raceMessage" hidden></div>
-
-    <section class="screen start-screen" id="startScreen">
-      <div class="track-mark" aria-hidden="true">
-        <svg viewBox="0 0 180 180" role="img" aria-label="Схема шпильки">
-          <path d="M24 141 C62 151 96 128 82 94 C71 67 31 61 23 87 C18 105 42 116 61 98 C85 76 103 44 159 32" />
-          <path d="M82 94 L127 118" class="bridge-line" />
-          <circle cx="24" cy="141" r="5" />
-        </svg>
-      </div>
-      <div class="start-copy">
-        <p class="eyebrow">ПРОЦЕДУРНАЯ ГОНОЧНАЯ СЕРИЯ</p>
-        <h1>ШПИЛЬКА</h1>
-        <p class="subtitle">Устойчивые гоночные линии, честная траектория, полный финиш и три этапа борьбы за кубок.</p>
-      </div>
-      <div class="route-strip">
-        <b id="routeName">МАРШРУТ</b>
-        <span id="routeMeta">—</span>
-      </div>
-
-      <div class="race-options" aria-label="Параметры заезда">
-        <div class="option-row">
-          <span class="option-label">ТРАССА</span>
-          <div class="option-buttons">
-            <button type="button" data-track-type="mix">МИКС</button>
-            <button type="button" data-track-type="speed">СКОРОСТЬ</button>
-            <button type="button" data-track-type="technical">ТЕХНИКА</button>
-            <button type="button" data-track-type="mountain">ГОРА</button>
-            <button type="button" data-track-type="cascade">КАСКАД</button>
-          </div>
-        </div>
-        <div class="option-row">
-          <span class="option-label">СОПЕРНИКИ</span>
-          <div class="option-buttons">
-            <button type="button" data-difficulty="rookie">НОВИЧОК</button>
-            <button type="button" data-difficulty="racer">ГОНЩИК</button>
-            <button type="button" data-difficulty="maniac">БЕЗУМЕЦ</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="control-help">
-        <span><b>РУЛЬ</b> сам меняет передаточное число: резче медленно, точнее на скорости</span>
-        <span><b>ЧИСТАЯ ЛИНИЯ</b> три аккуратных поворота слегка стабилизируют машину</span>
-      </div>
-      <button class="primary-action" id="startButton" type="button" data-native-press>НА СТАРТ</button>
-      <button class="secondary-action" id="newRouteButton" type="button" data-native-press>ДРУГАЯ ТРАССА</button>
-      <div class="start-footer">
-        <button class="text-control" id="controlModeButton" type="button" data-native-press>УПРАВЛЕНИЕ: РУЛЬ</button>
-        <button class="text-control" id="soundButtonStart" type="button" data-native-press>ЗВУК: ВКЛ</button>
-        <button class="text-control" type="button" data-workshop-trigger data-native-press>МАСТЕРСКАЯ</button>
-        <a href="../../" class="text-control" data-app-control>В POCKET WORKS</a>
-      </div>
-    </section>
-
-    <section class="screen pause-screen" id="pauseScreen" hidden>
-      <p class="eyebrow">ЗАЕЗД ОСТАНОВЛЕН</p>
-      <h2>ПАУЗА</h2>
-      <button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
-      <button class="secondary-action" id="restartButtonPause" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
-      <button class="secondary-action compact-setting" id="controlModeButtonPause" type="button" data-native-press>УПРАВЛЕНИЕ: РУЛЬ</button>
-      <button class="secondary-action compact-setting" id="steeringFeelButtonPause" type="button" data-native-press>КРИВАЯ РУЛЯ: ТОЧНАЯ</button>
-      <button class="secondary-action compact-setting" id="soundButtonPause" type="button" data-native-press>ЗВУК: ВКЛ</button>
-      <a href="../../" class="text-control pause-back" data-app-control>В POCKET WORKS</a>
-    </section>
-
-    <section class="screen finish-screen" id="finishScreen" hidden>
-      <p class="eyebrow" id="finishKicker">ФИНИШ</p>
-      <h2 id="finishTitle">1 МЕСТО</h2>
-      <p class="finish-summary" id="finishSummary"></p>
-      <ol class="results" id="results"></ol>
-      <button class="primary-action" id="restartButtonFinish" type="button" data-native-press>НОВАЯ ТРАССА</button>
-      <a href="../../" class="text-control" data-app-control>В POCKET WORKS</a>
-    </section>
-  </main>
-
-  <script
-    type="module"
-    src="../../shared/update-manager.js"
-    data-update-manager
-    data-service-worker="./sw.js"
-    data-app-name="ШПИЛЬКА"
-    data-app-version="2.7.1"
-  ></script>
-  <script type="module" src="./workshop.js?v=2.7.1"></script>
-  <script type="module" src="./app.js?v=2.7.1"></script>
-</body>
-</html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#d2c49d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ШПИЛЬКА"><title>ШПИЛЬКА</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css?v=2.7.2"><link rel="stylesheet" href="./advanced.css?v=2.7.2"><link rel="stylesheet" href="./advanced-fixes.css?v=2.7.2"><link rel="stylesheet" href="./systems-23.css?v=2.7.2"><link rel="stylesheet" href="./systems-25.css?v=2.7.2"><link rel="stylesheet" href="./systems-26.css?v=2.7.2"><link rel="stylesheet" href="./systems-27.css?v=2.7.2">
+</head><body>
+<main class="app-shell" data-app-shell data-fullscreen-app data-ui>
+<canvas id="game" data-gesture-surface data-touch-action="none" aria-label="Гоночная трасса"></canvas><div class="grain" aria-hidden="true"></div>
+<header class="hud" id="hud" hidden><div class="hud-race"><span class="hud-kicker">ПОЗИЦИЯ</span><strong id="positionValue">1/5</strong></div><div class="hud-lap"><span class="hud-kicker">КРУГ</span><strong id="lapValue">1/2</strong></div><button class="pause-button" id="pauseButton" type="button" data-native-press aria-label="Пауза">ПАУЗА</button></header>
+<section class="speed-cluster" id="speedCluster" hidden aria-live="polite"><div class="speed-line"><span id="speedValue">0</span><small>КМ/Ч</small><b id="gearValue">N</b></div><div class="lap-clock"><span id="lapTime">0:00.000</span><em id="bestLap">РЕКОРД —</em></div><div class="sector-delta" id="sectorDelta" data-tone="neutral">ПРИЗРАК —</div></section>
+<button class="recover-button" id="recoverButton" type="button" data-native-press hidden>НА ТРАССУ</button>
+<section class="controls" id="controls" data-mode="precision" hidden aria-label="Управление"><div class="precision-controls" id="precisionControls"><div class="steering-arc" id="steeringArc" role="slider" aria-label="Руль" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0"><div class="steering-knob" id="steeringKnob"><span>РУЛЬ</span></div></div><div class="power-gate" id="powerGate" role="slider" aria-label="Тяга, тормоз и реверс" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" data-state="neutral"><span class="power-label max">МАКС</span><span class="power-label neutral">N</span><span class="power-label reverse">R</span><div class="power-knob" id="powerKnob"></div></div></div><div class="button-controls" id="buttonControls"><div class="steering" aria-label="Руление"><button class="steer steer-left" id="leftButton" type="button" data-pressable aria-label="Повернуть влево"><span>ЛЕВО</span></button><button class="steer steer-right" id="rightButton" type="button" data-pressable aria-label="Повернуть вправо"><span>ПРАВО</span></button></div><div class="pedals" aria-label="Педали"><button class="pedal brake" id="brakeButton" type="button" data-pressable><span>ТОРМОЗ</span></button><button class="pedal throttle" id="throttleButton" type="button" data-pressable><span>ГАЗ</span></button></div></div></section>
+<div class="countdown" id="countdown" hidden aria-live="assertive">3</div><div class="race-message" id="raceMessage" hidden></div>
+<section class="screen start-screen" id="startScreen"><div class="track-mark" aria-hidden="true"><svg viewBox="0 0 180 180" role="img" aria-label="Схема шпильки"><path d="M24 141 C62 151 96 128 82 94 C71 67 31 61 23 87 C18 105 42 116 61 98 C85 76 103 44 159 32"/><path d="M82 94 L127 118" class="bridge-line"/><circle cx="24" cy="141" r="5"/></svg></div><div class="start-copy"><p class="eyebrow">ПРОЦЕДУРНАЯ ГОНОЧНАЯ СЕРИЯ</p><h1>ШПИЛЬКА</h1><p class="subtitle">Разные сильные стороны соперников, естественные разрывы и три этапа борьбы за кубок.</p></div><div class="route-strip"><b id="routeName">МАРШРУТ</b><span id="routeMeta">—</span></div>
+<div class="race-options" aria-label="Параметры заезда"><div class="option-row"><span class="option-label">ТРАССА</span><div class="option-buttons"><button type="button" data-track-type="mix">МИКС</button><button type="button" data-track-type="speed">СКОРОСТЬ</button><button type="button" data-track-type="technical">ТЕХНИКА</button><button type="button" data-track-type="mountain">ГОРА</button><button type="button" data-track-type="cascade">КАСКАД</button></div></div><div class="option-row"><span class="option-label">СОПЕРНИКИ</span><div class="option-buttons"><button type="button" data-difficulty="rookie">НОВИЧОК</button><button type="button" data-difficulty="racer">ГОНЩИК</button><button type="button" data-difficulty="maniac">БЕЗУМЕЦ</button></div></div></div>
+<div class="control-help"><span><b>РУЛЬ</b> сам меняет передаточное число: резче медленно, точнее на скорости</span><span><b>ЧИСТАЯ ЛИНИЯ</b> три аккуратных поворота слегка стабилизируют машину</span></div><button class="primary-action" id="startButton" type="button" data-native-press>НА СТАРТ</button><button class="secondary-action" id="newRouteButton" type="button" data-native-press>ДРУГАЯ ТРАССА</button><div class="start-footer"><button class="text-control" id="controlModeButton" type="button" data-native-press>УПРАВЛЕНИЕ: РУЛЬ</button><button class="text-control" id="soundButtonStart" type="button" data-native-press>ЗВУК: ВКЛ</button><button class="text-control" type="button" data-workshop-trigger data-native-press>МАСТЕРСКАЯ</button><a href="../../" class="text-control" data-app-control>В POCKET WORKS</a></div></section>
+<section class="screen pause-screen" id="pauseScreen" hidden><p class="eyebrow">ЗАЕЗД ОСТАНОВЛЕН</p><h2>ПАУЗА</h2><button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button><button class="secondary-action" id="restartButtonPause" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button><button class="secondary-action compact-setting" id="controlModeButtonPause" type="button" data-native-press>УПРАВЛЕНИЕ: РУЛЬ</button><button class="secondary-action compact-setting" id="steeringFeelButtonPause" type="button" data-native-press>КРИВАЯ РУЛЯ: ТОЧНАЯ</button><button class="secondary-action compact-setting" id="soundButtonPause" type="button" data-native-press>ЗВУК: ВКЛ</button><a href="../../" class="text-control pause-back" data-app-control>В POCKET WORKS</a></section>
+<section class="screen finish-screen" id="finishScreen" hidden><p class="eyebrow" id="finishKicker">ФИНИШ</p><h2 id="finishTitle">1 МЕСТО</h2><p class="finish-summary" id="finishSummary"></p><ol class="results" id="results"></ol><button class="primary-action" id="restartButtonFinish" type="button" data-native-press>НОВАЯ ТРАССА</button><a href="../../" class="text-control" data-app-control>В POCKET WORKS</a></section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШПИЛЬКА" data-app-version="2.7.2"></script><script type="module" src="./workshop.js?v=2.7.2"></script><script type="module" src="./app.js?v=2.7.2"></script>
+</body></html>
