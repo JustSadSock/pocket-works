@@ -5,6 +5,13 @@ on:
     branches: [agent/petlya-17-handling]
     paths:
       - ".github/workflows/upgrade-petlya-handling.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/upgrade-petlya-handling.yml"
+      - "scripts/upgrade-petlya-handling.mjs"
+      - "apps/petlya-17/source/handling.ts"
+      - "apps/petlya-17/source/handling.test.ts"
 
 permissions:
   contents: write
