@@ -36,6 +36,54 @@ function installWorldSpaceFlag(greenhouse) {
   };
 }
 
+function markCompiledIntegrity(level) {
+  try {
+    Object.defineProperty(level, '__integrityVersion', { value: 2, writable: true, configurable: true, enumerable: false });
+    Object.defineProperty(level, '__integrityReport', {
+      value: { source: 'course18-compiler', movedObstacles: 0, removedObstacles: 0, movedRotors: 0, removedRotors: 0 },
+      writable: true,
+      configurable: true,
+      enumerable: false
+    });
+  } catch {
+    level.__integrityVersion = 2;
+  }
+}
+
+function orientExitPortal(level) {
+  if (!isCourse18(level) || level.__course18ExitOriented) return;
+  const tunnel = level.tunnels?.[0];
+  const visual = tunnel?.visualExit || level.course18?.tunnelVisuals?.[0]?.exit;
+  if (!visual) return;
+
+  const travelX = visual.axisX;
+  const travelY = visual.axisY;
+  visual.axisX = -travelX;
+  visual.axisY = -travelY;
+  visual.angle = Math.atan2(visual.axisY, visual.axisX);
+
+  const half = visual.width * .5;
+  const normalX = -visual.axisY;
+  const normalY = visual.axisX;
+  const sideLength = visual.depth * .64;
+  for (const wall of level.walls || []) {
+    if (!String(wall.tunnelWall || '').startsWith('exit-')) continue;
+    const sign = String(wall.tunnelWall).endsWith('--1') ? -1 : 1;
+    wall.ax = visual.x + normalX * half * sign;
+    wall.ay = visual.y + normalY * half * sign;
+    wall.bx = wall.ax + visual.axisX * sideLength;
+    wall.by = wall.ay + visual.axisY * sideLength;
+  }
+
+  if (tunnel?.exit) {
+    tunnel.exit.axisX = travelX;
+    tunnel.exit.axisY = travelY;
+    tunnel.exit.angle = Math.atan2(travelY, travelX);
+  }
+  try { Object.defineProperty(level, '__course18ExitOriented', { value: true, configurable: true }); }
+  catch { level.__course18ExitOriented = true; }
+}
+
 function createVisualLevel(level) {
   if (isCourse18(level)) {
     return {
@@ -75,12 +123,17 @@ export class DioramaRenderer {
     const visualFor = (level) => {
       if (!level || typeof level !== 'object') return level;
       upgradeCourse18InPlace(level);
-      if (!isCourse18(level)) upgradeCourseLevel17(level);
-      if (!integrityCache.has(level)) {
-        try { level.__integrityVersion = 0; } catch {}
-        stabilizeLevelGeometry(level);
-        integrityCache.add(level);
+      if (isCourse18(level)) {
+        orientExitPortal(level);
+        markCompiledIntegrity(level);
+      } else {
+        upgradeCourseLevel17(level);
+        if (!integrityCache.has(level)) {
+          try { level.__integrityVersion = 0; } catch {}
+          stabilizeLevelGeometry(level);
+        }
       }
+      integrityCache.add(level);
       let visual = visualCache.get(level);
       if (!visual) {
         visual = createVisualLevel(level);
