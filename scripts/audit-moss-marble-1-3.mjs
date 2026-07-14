@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createBall, strikeBall, stepBall } from '../apps/moss-marble/physics.js';
+import { polygonArea, triangulatePolygon } from '../apps/moss-marble/render.js';
 import { generateEndlessLevel, inspectEndlessLevel, formatRunCode } from '../apps/moss-marble/procedural.js';
 
 const featureCounts = { water: 0, bridge: 0, slope: 0, rotor: 0, tunnel: 0, wall: 0 };
@@ -14,8 +16,21 @@ for (let seedIndex = 1; seedIndex <= 96; seedIndex += 1) {
     assert.equal(first.section, depth + 1);
     assert.ok(first.par >= 3 && first.par <= 6);
     assert.ok(first.id !== generateEndlessLevel(seed, depth + 1).id, 'renderer id must change between sections');
+    assert.equal(triangulatePolygon(first.outline).length, first.outline.length - 2, `section ${seed}/${depth} must triangulate`);
+    assert.ok(Math.abs(polygonArea(first.outline)) > 100000, `section ${seed}/${depth} must have a meaningful area`);
     const report = inspectEndlessLevel(first);
     assert.equal(report.ok, true, `invalid endless section ${seed}/${depth}: ${report.issues.join(', ')}`);
+
+    if (seedIndex <= 16) {
+      const ball = createBall(first.start);
+      const dx = first.hole.x - first.start.x;
+      const dy = first.hole.y - first.start.y;
+      const length = Math.hypot(dx, dy) || 1;
+      strikeBall(ball, dx / length * 420, dy / length * 420);
+      for (let step = 0; step < 24; step += 1) stepBall(ball, first, 1 / 60, step / 60);
+      assert.ok(Number.isFinite(ball.x) && Number.isFinite(ball.y), `section ${seed}/${depth} physics must remain finite`);
+    }
+
     featureCounts.water += first.zones.some((zone) => zone.type === 'water') ? 1 : 0;
     featureCounts.bridge += first.zones.some((zone) => zone.type === 'bridge') ? 1 : 0;
     featureCounts.slope += first.zones.some((zone) => zone.type === 'slope') ? 1 : 0;
