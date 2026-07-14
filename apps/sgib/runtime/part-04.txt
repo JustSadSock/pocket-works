@@ -1,0 +1,105 @@
+  clearTimeout(completionTimer);
+  state.mode = 'menu';
+  state.paused = false;
+  state.gesture = null;
+  state.animation = null;
+  state.resolved = false;
+  setPlaying(false);
+  showScreen('menuScreen');
+  updateMenu();
+}
+
+function updateMenu() {
+  settings = { ...DEFAULTS, ...store.getAll() };
+  const unlocked = clamp(settings.unlocked, 1, LEVELS.length);
+  const continueIndex = clamp(settings.lastLevel, 0, unlocked - 1);
+  const completedCount = Object.keys(settings.best || {}).length;
+  dom.continueLabel.textContent = completedCount ? `Продолжить: лист ${continueIndex + 1}` : 'Начать архив';
+  dom.continueMeta.textContent = `${LEVELS[continueIndex].title} · ${foldWord(LEVELS[continueIndex].maxFolds)}`;
+  dom.progressMeta.textContent = `Открыто ${unlocked} из ${LEVELS.length}`;
+  dom.endlessMeta.textContent = `Лучший ряд: ${settings.endlessBest || 0}`;
+  updateSettingLabels();
+  buildLevelGrid();
+}
+
+function buildLevelGrid() {
+  dom.levelGrid.replaceChildren();
+  const unlocked = clamp(settings.unlocked, 1, LEVELS.length);
+  LEVELS.forEach((level, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'level-button';
+    button.dataset.number = String(index + 1).padStart(2, '0');
+    button.dataset.nativePress = '';
+    button.disabled = index >= unlocked;
+    if (settings.best?.[index] != null) button.classList.add('is-complete');
+    const best = settings.best?.[index];
+    button.innerHTML = `<strong>${level.title}</strong><span>${button.disabled ? 'Закрыт' : best ? `Лучшее: ${foldWord(best)}` : level.note}</span>`;
+    button.addEventListener('click', () => {
+      pressFeedback();
+      startCampaign(index);
+    });
+    dom.levelGrid.append(button);
+  });
+}
+
+function updateHud() {
+  if (!state.level) return;
+  dom.modeLabel.textContent = state.mode === 'endless' ? `Ряд ${state.endlessStreak}` : `Лист ${state.levelIndex + 1} / ${LEVELS.length}`;
+  dom.levelTitle.textContent = state.level.title;
+  dom.foldCounter.textContent = `${state.foldsUsed} / ${state.maxFolds}`;
+  dom.undoBtn.disabled = state.history.length === 0 || Boolean(state.animation);
+}
+
+function showHint(text, immediate = false) {
+  dom.gestureHintText.textContent = text;
+  if (immediate) dom.gestureHint.classList.add('is-visible');
+}
+
+function hideHint() {
+  dom.gestureHint.classList.remove('is-visible');
+}
+
+function updateSettingLabels() {
+  const soundText = `Звук: ${settings.sound ? 'вкл' : 'выкл'}`;
+  dom.soundMenuBtn.textContent = soundText;
+  dom.soundPauseBtn.textContent = soundText;
+  dom.soundMenuBtn.setAttribute('aria-pressed', String(settings.sound));
+  dom.soundPauseBtn.setAttribute('aria-pressed', String(settings.sound));
+  dom.hapticsPauseBtn.textContent = `Отдача: ${settings.haptics ? 'вкл' : 'выкл'}`;
+  dom.hapticsPauseBtn.setAttribute('aria-pressed', String(settings.haptics));
+  audio.setEnabled(settings.sound);
+}
+
+function toggleSound() {
+  settings.sound = !settings.sound;
+  store.set('sound', settings.sound);
+  audio.setEnabled(settings.sound);
+  updateSettingLabels();
+  if (settings.sound) audio.unlock().then(() => audio.press());
+}
+
+function toggleHaptics() {
+  settings.haptics = !settings.haptics;
+  store.set('haptics', settings.haptics);
+  updateSettingLabels();
+  vibrate(10);
+}
+
+function vibrate(pattern) {
+  if (settings.haptics && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function foldWord(count) {
+  if (count % 10 === 1 && count % 100 !== 11) return `${count} сгиб`;
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} сгиба`;
+  return `${count} сгибов`;
+}
+
+function pressFeedback() {
+  audio.unlock().then(() => audio.press());
+  vibrate(5);
+}
+
+function showToast(message) {
+  clearTimeout(toastTimer);
