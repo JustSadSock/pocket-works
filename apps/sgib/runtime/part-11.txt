@@ -40,6 +40,21 @@ function drawMenuScene() {
   context.restore();
 }
 
+function recoverFailedFold(error) {
+  console.error('СГИБ fold application failed', error);
+  clearTimeout(completionTimer);
+  const snapshot = state.history.pop();
+  if (snapshot) restoreSnapshot(snapshot);
+  else restartCurrent();
+  state.animation = null;
+  state.resolved = false;
+  state.paused = false;
+  showScreen(null);
+  showToast('Сгиб отменён — лист восстановлен');
+  audio.invalid();
+  vibrate([18, 35, 10]);
+}
+
 function updateAnimation(now) {
   if (!state.animation) return;
   const progress = clamp((now - state.animation.startedAt) / state.animation.duration, 0, 1);
@@ -49,7 +64,11 @@ function updateAnimation(now) {
     state.animation.applied = true;
     const line = state.animation.line;
     state.animation = null;
-    applyFold(line);
+    try {
+      applyFold(line);
+    } catch (error) {
+      recoverFailedFold(error);
+    }
   }
 }
 
