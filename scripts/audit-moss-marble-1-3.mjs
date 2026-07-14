@@ -22,13 +22,13 @@ for (let seedIndex = 1; seedIndex <= 96; seedIndex += 1) {
     assert.equal(report.ok, true, `invalid endless section ${seed}/${depth}: ${report.issues.join(', ')}`);
 
     if (seedIndex <= 16) {
-      const ball = createBall(first.start);
+      const ball = createBall(first.start, first);
       const dx = first.hole.x - first.start.x;
       const dy = first.hole.y - first.start.y;
       const length = Math.hypot(dx, dy) || 1;
       strikeBall(ball, dx / length * 420, dy / length * 420);
       for (let step = 0; step < 24; step += 1) stepBall(ball, first, 1 / 60, step / 60);
-      assert.ok(Number.isFinite(ball.x) && Number.isFinite(ball.y), `section ${seed}/${depth} physics must remain finite`);
+      assert.ok(Number.isFinite(ball.x) && Number.isFinite(ball.y) && Number.isFinite(ball.z), `section ${seed}/${depth} physics must remain finite`);
     }
 
     featureCounts.water += first.zones.some((zone) => zone.type === 'water') ? 1 : 0;
@@ -56,7 +56,7 @@ assert.match(app, /endlessRun/);
 assert.match(index, /id="endlessBtn"/);
 assert.match(index, /id="holeLabel"/);
 assert.match(worker, /\.\/procedural\.js/);
-assert.match(worker, /moss-marble-v1\.3\.0/);
+assert.match(worker, /moss-marble-v1\.4\.0/);
 
-console.log(`Moss & Marble 1.3 audit passed across ${96 * 32} deterministic sections.`);
+console.log(`Moss & Marble 1.3 endless audit passed across ${96 * 32} deterministic sections.`);
 console.log(featureCounts);
