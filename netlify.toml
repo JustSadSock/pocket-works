@@ -1,5 +1,5 @@
 [build]
-  command = "mkdir -p dist-site && (npm run test:shpilka > /tmp/shpilka-audit.txt 2>&1; code=$?; name=$(tail -n 8 /tmp/shpilka-audit.txt | tr '\n' '_' | tr -cd '[:alnum:]А-Яа-яЁё_ .:-' | cut -c1-150 | tr ' ' '-'); cp /tmp/shpilka-audit.txt \"dist-site/audit-${code}-${name}.html\"; true)"
+  command = "node scripts/diagnose-shpilka-2-5.mjs"
   publish = "dist-site"
 
 [[headers]]
