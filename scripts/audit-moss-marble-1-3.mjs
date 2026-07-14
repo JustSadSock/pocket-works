@@ -56,7 +56,7 @@ assert.match(app, /endlessRun/);
 assert.match(index, /id="endlessBtn"/);
 assert.match(index, /id="holeLabel"/);
 assert.match(worker, /\.\/procedural\.js/);
-assert.match(worker, /moss-marble-v1\.4\.0/);
+assert.match(worker, /moss-marble-v1\.4\.[01]/);
 
 console.log(`Moss & Marble 1.3 endless audit passed across ${96 * 32} deterministic sections.`);
 console.log(featureCounts);
