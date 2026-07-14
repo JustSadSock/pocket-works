@@ -37,8 +37,8 @@ for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'val
   }
 }
 
-if (!/command\s*=\s*"npm run deploy:site"/.test(netlifyConfig)) {
-  errors.push('netlify.toml must run npm run deploy:site');
+if (!/command\s*=\s*"[^"]*npm run deploy:site"/.test(netlifyConfig)) {
+  errors.push('netlify.toml build command must end by running npm run deploy:site');
 }
 
 if (!workflow.includes('npm run ci:full')) {
