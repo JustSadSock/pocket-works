@@ -31,19 +31,49 @@ function installWorldSpaceFlag(greenhouse) {
   };
 }
 
+function createVisualLevel(level) {
+  return {
+    ...level,
+    renderId: `${level.renderId ?? level.id}:terrain-16`,
+    zones: (level.zones || []).map((zone) => ({
+      ...zone,
+      physicsType: zone.physicsType || zone.type,
+      type: 'terrain-16'
+    })),
+    walls: (level.walls || []).map((wall) => wall.material === 'glass'
+      ? { ...wall, material: 'iron' }
+      : wall)
+  };
+}
+
 export class DioramaRenderer {
   constructor(canvas) {
     const core = new CoreDioramaRenderer(canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
+    const visualCache = new WeakMap();
     installWorldSpaceFlag(greenhouse);
+
+    greenhouse.drawGroundingFringe = () => {};
+    greenhouse.drawGlassArchitecture = () => {};
+
+    const visualFor = (level) => {
+      if (!level || typeof level !== 'object') return level;
+      let visual = visualCache.get(level);
+      if (!visual) {
+        visual = createVisualLevel(level);
+        visualCache.set(level, visual);
+      }
+      return visual;
+    };
 
     return new Proxy(core, {
       get(target, property) {
         if (property === 'livingGreenhouse') return greenhouse;
         if (property === 'draw') {
           return (level, ball, aim, time, dt, mode) => {
-            const result = target.draw(level, ball, aim, time, dt, mode);
-            greenhouse.draw(level, ball, aim, time, dt, mode);
+            const visualLevel = visualFor(level);
+            const result = target.draw(visualLevel, ball, aim, time, dt, mode);
+            greenhouse.draw(visualLevel, ball, aim, time, dt, mode);
             return result;
           };
         }
