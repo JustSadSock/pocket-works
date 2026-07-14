@@ -12,17 +12,31 @@ Every application release is one coherent change set. Do not publish a half-fini
 6. Change `cacheName` so it ends with the new version.
 7. Mirror version, date and notes in the application Service Worker.
 8. For an Enhanced application, run `npm run build:enhanced` and include its generated deployable files.
-9. Regenerate `apps.json` with `npm run registry:build`.
-10. Run `npm run health` locally for the affected paths when practical.
-11. Open a pull request and require a successful `npm run ci:full` GitHub workflow.
+9. Validate manifests with `npm run registry:check`; do not commit a root `apps.json`.
+10. Run the affected app checks and `npm run health` when the validation environment is available.
+11. Open a pull request that modifies only `apps/<slug>/**` unless it is explicitly a platform change.
 12. Squash-merge so `main` receives one release commit.
-13. Verify that Netlify production is `ready` for the exact squash SHA.
+13. Verify that Cloudflare Workers Builds publishes the exact squash SHA successfully.
 
 ## Deployment pipeline invariant
 
-Netlify is deliberately a fast packaging stage. It must run `npm run deploy:site`, which only generates the registry, prepares `dist-site` and validates the production directory. Exhaustive engine preparation, GNU Go audits, Enhanced builds, structural validators, unit tests and Forge tests belong to `npm run ci:full` in GitHub Actions.
+Cloudflare is the primary production host. Its connected build runs:
 
-Do not move heavy safety checks into Netlify. Extend GitHub CI instead. The enforceable rule is documented in [`DEPLOYMENT-PIPELINE.md`](./DEPLOYMENT-PIPELINE.md) and checked by `npm run validate:pipeline`.
+```bash
+npm run deploy:site
+```
+
+and deploys the result with:
+
+```bash
+npx wrangler deploy --assets ./dist-site/
+```
+
+The packaging stage generates `dist-site/apps.json`, prepares `dist-site/` and validates the production directory. Exhaustive engine preparation, GNU Go audits, Enhanced builds, structural validators, unit tests and Forge tests belong to `npm run ci:full` in GitHub Actions.
+
+Do not move heavy safety checks into the Cloudflare production build. Extend GitHub CI instead. The enforceable separation is documented in [`DEPLOYMENT-PIPELINE.md`](./DEPLOYMENT-PIPELINE.md); hosting configuration is documented in [`HOSTING.md`](./HOSTING.md).
+
+Netlify is a legacy fallback only. A Netlify deploy or Netlify PR check is not a release requirement and must not block merges.
 
 ## Installed PWA update lifecycle
 
@@ -47,10 +61,11 @@ Every application owns only caches beginning with its slug prefix. The launcher 
 
 To roll back a faulty release:
 
-1. Revert the single squash commit on `main`, or redeploy the last known-good Netlify deploy.
-2. Publish the rollback as a new version rather than reusing the faulty version number.
-3. Use a new cache name for the rollback release.
-4. Explain the rollback in `changelog`.
-5. Run the complete `npm run ci:full` workflow and verify the resulting production SHA.
+1. Revert the single squash commit on `main`.
+2. Let Cloudflare publish the resulting `main` commit automatically.
+3. Publish the rollback as a new application version rather than reusing the faulty version number.
+4. Use a new cache name for the rollback release.
+5. Explain the rollback in `changelog`.
+6. Run the complete `npm run ci:full` workflow when available and verify the resulting Cloudflare production SHA.
 
 A previously installed faulty worker cannot be reliably replaced by publishing different bytes under the same version/cache identity. Version and cache identity must always move forward, including rollback releases.
