@@ -1,0 +1,171 @@
+
+/* UDEL 2.5 — Field and Crown: strategic war layer */
+const D25_VERSION = '2.5.0';
+const D25_DOCTRINES = {
+  cautious: { name: 'Осторожный поход', supply: 0.82, speed: 0, siege: 0, readiness: 2, desc: 'Меньше расход припасов и потерь, но медленнее движение.' },
+  balanced: { name: 'Размеренный поход', supply: 1, speed: 0, siege: 2, readiness: 0, desc: 'Ровный темп без крайностей.' },
+  aggressive: { name: 'Стремительный поход', supply: 1.28, speed: 1, siege: 5, readiness: -3, desc: 'Быстрее марш и осада ценой припасов и готовности.' }
+};
+const D25_PHASES = {
+  mustering: 'Сбор дружины',
+  march: 'Марш',
+  siege: 'Осада',
+  battle: 'Готовность к сражению'
+};
+
+function d25WarRecord(input, enemy) {
+  input.warState ||= {};
+  input.warState[enemy] ||= { score: 0, exhaustion: 0, captured: [], victories: 0, defeats: 0, tribute: 0, objectiveId: null };
+  const record = input.warState[enemy];
+  record.score ??= 0;
+  record.exhaustion ??= 0;
+  record.captured = Array.isArray(record.captured) ? record.captured : [];
+  record.victories ??= 0;
+  record.defeats ??= 0;
+  record.tribute ??= 0;
+  record.objectiveId ??= null;
+  return record;
+}
+
+function d25EnsureMilitary(input, fresh = false) {
+  if (!input) return input;
+  input.version = D25_VERSION;
+  d25WarRecord(input, 'north');
+  d25WarRecord(input, 'south');
+  input.campaign ||= null;
+  input.armyReadiness ??= 82;
+  input.militaryDoctrine ||= 'balanced';
+  input.campaignCommanderId ||= input.council?.marshal || input.ruler?.id || null;
+  input.lastBattleReport ||= null;
+  input.peaceHistory = Array.isArray(input.peaceHistory) ? input.peaceHistory : [];
+  if (input.campaign) {
+    input.campaign.phase ||= 'mustering';
+    input.campaign.route = Array.isArray(input.campaign.route) ? input.campaign.route : [];
+    input.campaign.routeIndex ??= 0;
+    input.campaign.progress ??= 0;
+    input.campaign.siege ??= 0;
+    input.campaign.supply ??= 55;
+    input.campaign.capacity ??= Math.max(55, input.campaign.supply);
+    input.campaign.turns ??= 0;
+    input.campaign.log = Array.isArray(input.campaign.log) ? input.campaign.log : [];
+    input.campaign.stance ||= input.militaryDoctrine;
+  }
+  if (fresh) input.log.unshift({ season: 1, text: 'Военный совет подготовил обозы, маршруты и порядок командования.' });
+  return input;
+}
+
+function d25Neighbours(id) {
+  const result = new Set(ADJACENCY[id] || []);
+  for (const [other, neighbours] of Object.entries(ADJACENCY)) if (neighbours.includes(id)) result.add(other);
+  return [...result];
+}
+
+function d25FindRoute(targetId) {
+  const target = provinceById(targetId);
+  if (!target || target.owner === 'player') return null;
+  const allowed = new Set(['player', target.owner]);
+  const starts = playerProvinces().map((province) => province.id);
+  const queue = starts.map((id) => [id]);
+  const visited = new Set(starts);
+  while (queue.length) {
+    const path = queue.shift();
+    const current = path[path.length - 1];
+    if (current === targetId) return path;
+    for (const next of d25Neighbours(current)) {
+      if (visited.has(next)) continue;
+      const province = provinceById(next);
+      if (!province || !allowed.has(province.owner)) continue;
+      visited.add(next);
+      queue.push([...path, next]);
+    }
+  }
+  return null;
+}
+
+function d25Commander(id = state.campaign?.commanderId || state.campaignCommanderId) {
+  return d2Member?.(id) || d2CouncilMember?.('marshal') || d2Member?.(state.ruler.id) || state.ruler;
+}
+
+function d25CommanderName(id) {
+  return d25Commander(id)?.name || state.ruler.name;
+}
+
+function d25CampaignCapacity(route, commander) {
+  const roadCount = (route || []).reduce((sum, id) => {
+    const province = provinceById(id);
+    return sum + (province?.infrastructure || 0) + (province?.buildings?.includes('road') ? 1 : 0);
+  }, 0);
+  return round(50 + (commander?.stewardship || 0) * 6 + roadCount * 3 + (state.techs.includes('roads') ? 12 : 0));
+}
+
+function d25CampaignPosition(campaign = state.campaign) {
+  if (!campaign?.route?.length) return null;
+  return provinceById(campaign.route[clamp(campaign.routeIndex, 0, campaign.route.length - 1)]);
+}
+
+function d25CampaignTarget(campaign = state.campaign) {
+  return campaign ? provinceById(campaign.targetId) : null;
+}
+
+function d25ArmyLoss(ratio, reason) {
+  const safeRatio = clamp(ratio, 0, 0.35);
+  let lost = 0;
+  for (const unit of ['infantry', 'archers', 'cavalry']) {
+    const before = state.army[unit];
+    state.army[unit] = Math.max(0, round(before * (1 - safeRatio)));
+    lost += before - state.army[unit];
+  }
+  if (lost > 0) addLog(`${reason}: потеряно ${lost} воинов.`);
+  return lost;
+}
+
+function d25ConsumeSupply(amount, reason = 'Поход расходует припасы') {
+  const campaign = state.campaign;
+  if (!campaign) return;
+  campaign.supply = Math.max(0, campaign.supply - amount);
+  campaign.log.unshift(`${reason}: −${round(amount)} припасов.`);
+  campaign.log = campaign.log.slice(0, 7);
+  if (campaign.supply <= 22) {
+    const severity = campaign.supply <= 4 ? 0.055 : 0.025;
+    d25ArmyLoss(severity, 'Голод и болезни в обозе');
+    state.armyReadiness = clamp(state.armyReadiness - (campaign.supply <= 4 ? 9 : 4), 0, 100);
+    campaign.log.unshift('Нехватка припасов вызвала потери и падение готовности.');
+  }
+}
+
+function d25AdvanceCampaign(source = 'season') {
+  const campaign = state.campaign;
+  if (!campaign || state.battle) return;
+  const commander = d25Commander(campaign.commanderId);
+  const doctrine = D25_DOCTRINES[campaign.stance] || D25_DOCTRINES.balanced;
+  campaign.turns += 1;
+  if (campaign.phase === 'mustering') {
+    campaign.phase = 'march';
+    campaign.progress = 10;
+    state.armyReadiness = clamp(state.armyReadiness + doctrine.readiness + (commander?.martial || 0) * 0.5, 0, 100);
+    d25ConsumeSupply(4 * doctrine.supply, 'Сбор дружины');
+    campaign.log.unshift('Дружина выступила из сборного места.');
+    return;
+  }
+  if (campaign.phase === 'march') {
+    const current = d25CampaignPosition(campaign);
+    const road = (current?.infrastructure || 0) + (current?.buildings?.includes('road') ? 1 : 0);
+    const step = 1 + doctrine.speed + ((commander?.martial || 0) >= 5 && road > 0 ? 1 : 0);
+    campaign.routeIndex = Math.min(campaign.route.length - 1, campaign.routeIndex + step);
+    campaign.progress = campaign.route.length <= 1 ? 100 : round((campaign.routeIndex / (campaign.route.length - 1)) * 100);
+    d25ConsumeSupply((7 + totalArmy() / 34 + (current?.terrain === 'hills' || current?.terrain === 'forest' ? 2 : 0)) * doctrine.supply, 'Марш');
+    const arrived = campaign.routeIndex >= campaign.route.length - 1;
+    campaign.log.unshift(arrived ? `Дружина подошла к области ${d25CampaignTarget(campaign)?.name}.` : `Обоз достиг области ${d25CampaignPosition(campaign)?.name}.`);
+    if (arrived) {
+      const target = d25CampaignTarget(campaign);
+      campaign.phase = (target?.fort || 0) > 0 ? 'siege' : 'battle';
+      campaign.progress = 0;
+      if (campaign.phase === 'battle') campaign.log.unshift('Враг вынужден принять полевое сражение.');
+    }
+    return;
+  }
+  if (campaign.phase === 'siege') {
+    const target = d25CampaignTarget(campaign);
+    const supplyFactor = clamp(campaign.supply / Math.max(1, campaign.capacity), 0.35, 1.1);
+    const siegeGain = Math.max(3, 7 + totalArmy() / 30 + (commander?.martial || 0) * 1.5 + state.army.archers / 22 + doctrine.siege - (target?.fort || 0) * 4) * supplyFactor;
+    campaign.siege = clamp(campaign.siege + siegeGain, 0, 100);
