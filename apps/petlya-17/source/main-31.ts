@@ -6,7 +6,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { RaceGame } from './race-game';
 
-const version = '3.1.0';
+const version = '3.1.1';
 const appName = 'ПЕТЛЯ 17';
 const namespace = 'pocket-works:petlya-17';
 
@@ -15,11 +15,10 @@ registerEnhancedUpdate({
   appName,
   version,
   releaseNotes: [
-    'Новая simcade-модель сцепления, скольжения, рыскания и переноса нагрузки.',
-    'Соперники тормозят перед поворотами, готовят внешнюю линию и атакуют апекс.',
-    'Контакты передают продольный и боковой импульс между машинами.',
-    'Кокпит реагирует на перегрузки, скольжение, разгон и торможение.',
-    'Зеркала показывают изображение с настоящей задней камеры.'
+    'Исправлена остановка загрузки на этапе сборки банков и геометрии кольца в iOS WebKit.',
+    'Процедурная фактура асфальта теперь имеет безопасный резервный материал, если 2D Canvas-контекст недоступен.',
+    'Декоративные блоки мира изолированы: ошибка одного элемента больше не блокирует всю трассу.',
+    'Добавлен резервный контур и явная диагностика вместо бесконечной полосы загрузки.'
   ]
 });
 
@@ -33,5 +32,17 @@ if (canvas) {
     storageNamespace: namespace,
     onReset: () => game.resetAll()
   });
-  void game.boot();
+  void game.boot().catch((error: unknown) => {
+    console.error('[ПЕТЛЯ 17] Критическая ошибка загрузки.', error);
+    const loadingBar = document.querySelector<HTMLElement>('#loadingBar');
+    const loadingText = document.querySelector<HTMLElement>('#loadingText');
+    const loadingTitle = document.querySelector<HTMLElement>('#loading h1');
+    if (loadingBar) loadingBar.style.width = '100%';
+    if (loadingTitle) loadingTitle.textContent = 'СБОЙ СБОРКИ';
+    if (loadingText) {
+      const details = error instanceof Error ? error.message : String(error);
+      loadingText.textContent = `Перезапусти приложение · ${details.slice(0, 90)}`;
+    }
+    document.documentElement.dataset.bootError = error instanceof Error ? error.message : String(error);
+  });
 }
