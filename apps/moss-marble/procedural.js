@@ -2,14 +2,14 @@ const WORLD_CENTER = 500;
 const Y_NODES = [1320, 1130, 925, 715, 505, 295, 82];
 const MATERIALS = ['stone', 'pot', 'wood', 'cup', 'sugar', 'spoon'];
 const DECORATIONS = ['leaf', 'mushroom', 'snail', 'frog'];
-const NAMES_A = ['Тихая', 'Мокрая', 'Латунная', 'Зелёная', 'Стеклянная', 'Старая', 'Лунная', 'Тёплая'];
+const NAMES_A = ['Тихая', 'Мокрая', 'Латунная', 'Зелёная', 'Садовая', 'Старая', 'Лунная', 'Тёплая'];
 const NAMES_B = ['галерея', 'клумба', 'полка', 'арка', 'аллея', 'чаша', 'рассада', 'петля'];
 const NOTES = [
   'Оранжерея переставила горшки, пока никто не смотрел',
   'Маршрут повторится только с тем же кодом',
   'Чем глубже путь, тем смелее механика',
   'Мох здесь растёт быстрее памяти',
-  'Следующая секция уже собирается за стеклом'
+  'Следующая секция уже собирается за решёткой'
 ];
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -50,6 +50,26 @@ function mixSeed(seed, depth) {
 
 function choose(random, values) {
   return values[Math.floor(random() * values.length) % values.length];
+}
+
+function organicRect(x, y, w, h, random, extra = {}) {
+  const cx = x + w * .5;
+  const cy = y + h * .5;
+  const rx = w * .5;
+  const ry = h * .5;
+  const power = 6.5 + random() * 2;
+  const count = 20;
+  const points = Array.from({ length: count }, (_, index) => {
+    const angle = index / count * Math.PI * 2;
+    const ca = Math.cos(angle);
+    const sa = Math.sin(angle);
+    const wobble = .94 + random() * .12;
+    return {
+      x: cx + Math.sign(ca) * Math.pow(Math.abs(ca), 2 / power) * rx * wobble,
+      y: cy + Math.sign(sa) * Math.pow(Math.abs(sa), 2 / power) * ry * wobble
+    };
+  });
+  return { shape: 'poly', x, y, w, h, points, ...extra };
 }
 
 function pointInPolygon(point, polygon) {
@@ -112,31 +132,32 @@ function makeOutline(profile) {
   return [...left, ...right];
 }
 
+function visualRadius(obstacle) {
+  const scale = obstacle.material === 'cup' ? 1.18 : obstacle.material === 'pot' ? 1.10 : obstacle.material === 'spoon' ? 1.12 : 1.04;
+  return obstacle.r * scale;
+}
+
 function hasClearance(candidate, obstacles, start, hole, outline, extra = 0) {
+  const radius = visualRadius(candidate);
   if (!pointInPolygon(candidate, outline)) return false;
-  if (distanceToOutline(candidate, outline) < candidate.r + 30 + extra) return false;
-  if (Math.hypot(candidate.x - start.x, candidate.y - start.y) < candidate.r + 150) return false;
-  if (Math.hypot(candidate.x - hole.x, candidate.y - hole.y) < candidate.r + 150) return false;
-  return obstacles.every((obstacle) => Math.hypot(candidate.x - obstacle.x, candidate.y - obstacle.y) > candidate.r + obstacle.r + 58);
+  if (distanceToOutline(candidate, outline) < radius + 34 + extra) return false;
+  if (Math.hypot(candidate.x - start.x, candidate.y - start.y) < radius + 160) return false;
+  if (Math.hypot(candidate.x - hole.x, candidate.y - hole.y) < radius + hole.r + 125) return false;
+  return obstacles.every((obstacle) => Math.hypot(candidate.x - obstacle.x, candidate.y - obstacle.y) > radius + visualRadius(obstacle) + 64);
 }
 
 function createObstacles(random, depth, profile, outline, start, hole) {
   const obstacles = [];
   const target = clamp(2 + Math.floor(depth / 2), 2, 7);
   let attempts = 0;
-  while (obstacles.length < target && attempts < 80) {
+  while (obstacles.length < target && attempts < 120) {
     attempts += 1;
     const y = 1040 - random() * 720;
     const center = interpolateProfile(profile.centers, y);
     const width = interpolateProfile(profile.widths, y);
     const side = (obstacles.length + Math.floor(random() * 2)) % 2 ? 1 : -1;
     const radius = 44 + random() * clamp(42 + depth * 1.7, 42, 72);
-    const candidate = circle(
-      center + side * width * (.42 + random() * .18),
-      y,
-      radius,
-      { material: choose(random, MATERIALS) }
-    );
+    const candidate = circle(center + side * width * (.42 + random() * .18), y, radius, { material: choose(random, MATERIALS) });
     if (hasClearance(candidate, obstacles, start, hole, outline)) obstacles.push(candidate);
   }
   return obstacles;
@@ -158,10 +179,11 @@ function createSurfaceZones(random, depth, profile) {
     const width = interpolateProfile(profile.widths, y + 72);
     const zoneWidth = width * (1.25 + random() * .35);
     const type = choose(random, depth > 3 ? ['moss', 'sand', 'slope'] : ['moss', 'sand']);
-    const zone = rect(center - zoneWidth / 2, y, zoneWidth, 135 + random() * 45, { type });
+    const zone = organicRect(center - zoneWidth / 2, y, zoneWidth, 135 + random() * 45, random, { type });
     if (type === 'slope') {
-      zone.forceX = (random() - .5) * (150 + depth * 4);
-      zone.forceY = (random() - .5) * 65;
+      zone.riseX = (random() - .5) * (28 + Math.min(18, depth));
+      zone.riseY = (random() - .5) * 24;
+      zone.baseZ = 0;
     }
     zones.push(zone);
   }
@@ -176,11 +198,11 @@ function createWaterCrossing(random, depth, profile, zones, walls) {
   const inset = 32;
   const waterWidth = width * 2 - inset * 2;
   const bridgeWidth = 112 + random() * 22;
-  zones.push(rect(center - width + inset, y, waterWidth, 185, { type: 'water' }));
-  zones.push(rect(center - bridgeWidth / 2, y - 8, bridgeWidth, 201, { type: 'bridge' }));
+  zones.push(organicRect(center - width + inset, y, waterWidth, 185, random, { type: 'water', depth: 28 }));
+  zones.push(rect(center - bridgeWidth / 2, y - 8, bridgeWidth, 201, { type: 'bridge', height: 12 }));
   walls.push(
-    { ax: center - bridgeWidth / 2, ay: y - 8, bx: center - bridgeWidth / 2, by: y + 193, thickness: 18, material: 'glass' },
-    { ax: center + bridgeWidth / 2, ay: y - 8, bx: center + bridgeWidth / 2, by: y + 193, thickness: 18, material: 'glass' }
+    { ax: center - bridgeWidth / 2, ay: y - 8, bx: center - bridgeWidth / 2, by: y + 193, thickness: 18, material: 'iron' },
+    { ax: center + bridgeWidth / 2, ay: y - 8, bx: center + bridgeWidth / 2, by: y + 193, thickness: 18, material: 'iron' }
   );
 }
 
@@ -192,7 +214,7 @@ function createSplitGate(random, depth, profile, walls) {
   const gap = 72 + random() * 42;
   const left = center - width + 28;
   const right = center + width - 28;
-  const material = random() > .55 ? 'glass' : 'wood';
+  const material = random() > .55 ? 'brass' : 'wood';
   walls.push(
     { ax: left, ay: y, bx: center - gap, by: y, thickness: 20, material },
     { ax: center + gap, ay: y, bx: right, by: y, thickness: 20, material }
@@ -237,11 +259,7 @@ function createDecorations(random, profile) {
     const center = interpolateProfile(profile.centers, y);
     const width = interpolateProfile(profile.widths, y);
     const side = random() > .5 ? 1 : -1;
-    decorations.push({
-      type: choose(random, DECORATIONS),
-      x: center + side * width * (.72 + random() * .12),
-      y
-    });
+    decorations.push({ type: choose(random, DECORATIONS), x: center + side * width * (.72 + random() * .12), y });
   }
   return decorations;
 }
@@ -311,6 +329,12 @@ export function inspectEndlessLevel(level) {
   for (const obstacle of level.obstacles || []) {
     if (!hasClearance(obstacle, (level.obstacles || []).filter((item) => item !== obstacle), level.start, level.hole, level.outline, -20)) {
       issues.push('obstacle-clearance');
+      break;
+    }
+  }
+  for (const zone of level.zones || []) {
+    if (['sand', 'moss', 'slope', 'water'].includes(zone.type) && (zone.shape !== 'poly' || !Array.isArray(zone.points) || zone.points.length < 12)) {
+      issues.push('flat-zone');
       break;
     }
   }
