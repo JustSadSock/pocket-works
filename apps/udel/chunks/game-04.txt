@@ -1,0 +1,208 @@
+              <pattern id="grain" width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M2 9L5 4M8 10L10 6" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect class="sea" x="0" y="0" width="800" height="1050" rx="34"></rect>
+            <g class="sea-dots">${seaDots}</g>
+            <path class="land-shadow" d="${landOutline()}" filter="url(#coast-shadow)"></path>
+            <g class="province-layer">
+              ${state.provinces.map(renderProvincePath).join('')}
+            </g>
+            <g class="geography" aria-hidden="true">
+              <path class="river major" d="M505 125 C480 245 535 335 470 430 C405 520 470 625 430 740 C402 820 450 900 520 980"></path>
+              <path class="river" d="M180 280 C270 320 300 390 325 500"></path>
+              <path class="river" d="M655 330 C590 385 595 470 640 545"></path>
+              <path class="road" d="M220 160 C310 250 340 420 360 600 C390 760 475 850 575 930"></path>
+              <path class="road" d="M135 500 C300 470 475 485 690 520"></path>
+              <g class="mountains">${renderMountains()}</g>
+              <g class="forests">${renderForests()}</g>
+              <ellipse class="lake-mark" cx="518" cy="142" rx="48" ry="24"></ellipse>
+              <ellipse class="lake-mark" cx="497" cy="633" rx="42" ry="20"></ellipse>
+            </g>
+            <g class="province-labels">
+              ${state.provinces.map(renderProvinceLabel).join('')}
+            </g>
+            <path class="coast-line" d="${landOutline()}"></path>
+          </svg>
+        </div>
+        <div class="map-legend">
+          <span><i class="player"></i>${state.house}</span>
+          <span><i class="north"></i>Север</span>
+          <span><i class="south"></i>Юг</span>
+        </div>
+      </div>
+      <button class="end-turn" data-action="end-turn" data-native-press><b>↻</b><span>Завершить сезон</span><small>Получить доход и передать ход миру</small></button>
+    </section>
+  `;
+}
+
+function landOutline() {
+  return 'M170,55 L280,30 L405,55 L540,42 L660,105 L710,190 L690,285 L735,385 L700,500 L730,620 L675,720 L690,835 L620,965 L505,1015 L385,990 L285,1025 L185,965 L125,865 L145,755 L95,650 L120,545 L80,430 L115,330 L85,225 L125,130 Z';
+}
+
+function renderProvincePath(province) {
+  const selected = selectedProvince === province.id;
+  const threatened = province.owner !== 'player' && state.wars[relationKey(province.owner)] && adjacentToOwner(province, 'player');
+  const lowLoyalty = province.owner === 'player' && province.loyalty < 35;
+  return `<path class="province-shape owner-${province.owner} terrain-${province.terrain} ${selected ? 'selected' : ''} ${threatened ? 'threatened' : ''} ${lowLoyalty ? 'unrest' : ''}" data-province="${province.id}" data-native-press d="${province.path}" fill="url(#grain)"></path>`;
+}
+
+function renderProvinceLabel(province) {
+  const [x, y] = province.label;
+  const resource = RESOURCES[province.resource];
+  return `<g class="province-label" data-province="${province.id}" transform="translate(${x} ${y})">
+    <circle r="18"></circle>
+    <text class="terrain-icon" text-anchor="middle" y="6">${TERRAIN[province.terrain].icon}</text>
+    <text class="province-name" text-anchor="middle" y="36">${province.name}</text>
+    <text class="province-mini" text-anchor="middle" y="54">${resource[1]} ${round(province.population)}к · ◆ ${round(province.loyalty)}</text>
+  </g>`;
+}
+
+function renderMountains() {
+  return [[335,115],[390,126],[455,115],[492,302],[530,312],[545,682],[610,690],[205,810]].map(([x,y], index) => `<path d="M${x-16},${y+14} L${x},${y-18-index%2*7} L${x+17},${y+14} L${x+5},${y+4} L${x},${y+14} L${x-5},${y+4} Z"></path>`).join('');
+}
+
+function renderForests() {
+  return [[150,280],[185,300],[145,435],[182,452],[210,460],[178,850],[220,875]].map(([x,y]) => `<g transform="translate(${x} ${y})"><path d="M0-17L-13 6H-5L-17 20H17L5 6H13Z"></path><path d="M0 18V30"></path></g>`).join('');
+}
+
+function renderProvinceDrawer(province) {
+  const drawer = app.querySelector('#drawer');
+  if (!drawer || !province) return;
+  const yields = provinceYield(province);
+  const resource = RESOURCES[province.resource];
+  const terrain = TERRAIN[province.terrain];
+  const owned = province.owner === 'player';
+  drawer.innerHTML = `
+    <div class="drawer-handle"></div>
+    <header class="drawer-head">
+      <div><p class="eyebrow">${ownerLabel(province.owner)}</p><h3>${province.name}</h3><span>${terrain.name} · ${resource[0]}</span></div>
+      <button class="icon-button" data-action="close-drawer" data-native-press>×</button>
+    </header>
+    <div class="province-facts">
+      ${fact('Население', `${round(province.population)} тыс.`)}
+      ${fact('Лояльность', `${round(province.loyalty)}`)}
+      ${fact('Автономия', `${round(province.autonomy)}%`)}
+      ${fact('Крепость', `${province.fort}`)}
+      ${fact('Культура', province.culture)}
+      ${fact('Вера', province.faith)}
+    </div>
+    <div class="yield-line">
+      <span>за сезон</span><b>¤ ${yields.tax.toFixed(1)}</b><b>✦ ${yields.food.toFixed(1)}</b><b>♟ ${yields.manpower.toFixed(1)}</b>
+    </div>
+    <div class="building-list">
+      ${province.buildings.length ? province.buildings.map((id) => `<span>${BUILDINGS[id].icon} ${BUILDINGS[id].name}</span>`).join('') : '<span class="muted">Значимых построек нет</span>'}
+    </div>
+    <div class="drawer-actions">
+      ${owned ? renderOwnedProvinceActions(province) : renderEnemyProvinceActions(province)}
+    </div>
+  `;
+  drawer.classList.add('open');
+  drawer.querySelector('[data-action="close-drawer"]').addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('[data-province-action]').forEach((button) => button.addEventListener('click', () => provinceAction(province, button.dataset.provinceAction, button.dataset.building)));
+}
+
+function fact(label, value) {
+  return `<div><small>${label}</small><b>${value}</b></div>`;
+}
+
+function renderOwnedProvinceActions(province) {
+  const nextBuilding = Object.entries(BUILDINGS).filter(([id]) => !province.buildings.includes(id));
+  return `
+    <button class="drawer-action" data-province-action="develop" data-native-press ${disabled({ gold: 22 })}><b>Развить землю</b><small>¤22 · развитие +1, население +2</small></button>
+    <button class="drawer-action" data-province-action="control" data-native-press ${disabled({ authority: state.techs.includes('roads') ? 8 : 12 })}><b>Усилить контроль</b><small>♛${state.techs.includes('roads') ? 8 : 12} · автономия −10</small></button>
+    <button class="drawer-action" data-province-action="appease" data-native-press ${disabled({ gold: 12, food: 7 })}><b>Местный праздник</b><small>¤12 ✦7 · лояльность +12</small></button>
+    ${nextBuilding.slice(0, 2).map(([id, building]) => `<button class="drawer-action" data-province-action="build" data-building="${id}" data-native-press ${disabled({ gold: building.cost })}><b>${building.icon} ${building.name}</b><small>¤${building.cost} · ${building.desc}</small></button>`).join('')}
+  `;
+}
+
+function renderEnemyProvinceActions(province) {
+  const key = relationKey(province.owner);
+  const border = adjacentToOwner(province, 'player');
+  return `<button class="drawer-action primary" data-province-action="attack" data-native-press ${!state.wars[key] || !border || totalArmy() < 25 ? 'disabled' : ''}><b>Начать поход</b><small>${!state.wars[key] ? 'Сначала объявите войну' : !border ? 'Нет общей границы' : 'Развернуть три фланга'}</small></button>`;
+}
+
+function disabled(cost) {
+  return state.actions <= 0 || !canAfford(cost) ? 'disabled' : '';
+}
+
+function closeDrawer() {
+  drawerOpen = false;
+  selectedProvince = null;
+  app.querySelector('#drawer')?.classList.remove('open');
+  app.querySelectorAll('.province-shape').forEach((path) => path.classList.remove('selected'));
+}
+
+function provinceAction(province, action, buildingId) {
+  if (action === 'attack') {
+    state.battle = createBattle(province, false);
+    drawerOpen = false;
+    selectedProvince = null;
+    tone('war');
+    render();
+    return;
+  }
+  if (!spendAction()) return;
+  if (action === 'develop' && canAfford({ gold: 22 })) {
+    spend({ gold: 22 });
+    province.development += 1;
+    province.population += 2;
+    province.loyalty = clamp(province.loyalty + 2, 0, 100);
+    addLog(`${province.name} получила новые мастерские и поселения.`);
+    toast('Область развита');
+  } else if (action === 'control') {
+    const cost = state.techs.includes('roads') ? 8 : 12;
+    if (!canAfford({ authority: cost })) return;
+    spend({ authority: cost });
+    province.autonomy = clamp(province.autonomy - 10, 0, 90);
+    province.loyalty = clamp(province.loyalty - 3, 0, 100);
+    state.estates.nobles.loyalty -= 2;
+    addLog(`В области ${province.name} усилена княжеская администрация.`);
+    toast('Автономия снижена');
+  } else if (action === 'appease' && canAfford({ gold: 12, food: 7 })) {
+    spend({ gold: 12, food: 7 });
+    province.loyalty = clamp(province.loyalty + 12, 0, 100);
+    province.unrest = Math.max(0, province.unrest - 2);
+    addLog(`Праздник примирил жителей области ${province.name}.`);
+    toast('Лояльность выросла');
+  } else if (action === 'build' && BUILDINGS[buildingId] && !province.buildings.includes(buildingId)) {
+    const building = BUILDINGS[buildingId];
+    if (!canAfford({ gold: building.cost })) return;
+    spend({ gold: building.cost });
+    province.buildings.push(buildingId);
+    if (buildingId === 'road') province.infrastructure += 1;
+    addLog(`В области ${province.name} построено: ${building.name}.`);
+    toast('Строительство завершено');
+  }
+  tone('success');
+  drawerOpen = false;
+  selectedProvince = null;
+  render();
+}
+
+function renderCourt() {
+  const ruler = state.ruler;
+  const heir = state.heir;
+  return `
+    <section class="section">
+      <header class="section-title"><p class="eyebrow">ДОМ И СОВЕТ</p><h2>Двор</h2><span>Люди здесь опаснее армий: армия хотя бы честно носит копья.</span></header>
+      <article class="ruler-banner">
+        <div class="portrait">${ruler.trait === 'Книжник' ? '✥' : ruler.trait === 'Полководец' ? '⚔' : '♛'}</div>
+        <div><h3>${ruler.name}</h3><p>${ruler.age} лет · здоровье ${round(ruler.health)} · ${ruler.traitDesc}</p><div class="tag-row"><span>${ruler.trait}</span><span>правитель</span></div>
+          <div class="stats-grid">${stat('⚔', ruler.martial, 'война')}${stat('☏', ruler.diplomacy, 'слово')}${stat('¤', ruler.stewardship, 'казна')}${stat('♥', round(ruler.health / 10), 'тело')}</div>
+        </div>
+      </article>
+      <div class="subhead">Наследник</div>
+      <article class="heir-row"><div class="portrait small">⚜</div><div><h3>${heir.name}</h3><p>${heir.age} лет · война ${heir.martial} · слово ${heir.diplomacy} · казна ${heir.stewardship}</p></div><button class="small-action" data-action="educate" data-native-press ${state.actions <= 0 || state.gold < 18 ? 'disabled' : ''}>Обучить<br>¤18</button></article>
+      <div class="subhead">Сословия</div>
+      <div class="estate-grid">${Object.keys(ESTATES).map(renderEstate).join('')}</div>
+      <div class="subhead">Летопись</div>
+      <div class="timeline">${state.log.slice(0, 8).map((item) => `<div class="log-entry"><b>Сезон ${item.season}</b><span>${item.text}</span></div>`).join('')}</div>
+    </section>
+  `;
+}
+
+function stat(icon, value, label) {
+  return `<div><b>${icon} ${value}</b><small>${label}</small></div>`;
+}
+
