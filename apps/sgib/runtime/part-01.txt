@@ -1,7 +1,7 @@
         from: [0.2, 0.8],
         to: [0.8, 0.2],
         points: [[0.27, 0.72], [0.33, 0.58], [0.22, 0.52]],
-        types: [['ink', 'void'], ['ink', 'ink'], ['ink', 'void']]
+        types: [['ink', 'void'], ['ink', 'void'], ['ink', 'void']]
       }
     ]
   },
@@ -17,7 +17,7 @@
         from: [0.16, 0.28],
         to: [0.48, 0.28],
         points: [[0.18, 0.18], [0.18, 0.39]],
-        types: [['ink', 'void'], ['ink', 'ink']]
+        types: [['ink', 'void'], ['ink', 'void']]
       },
       {
         from: [0.76, 0.88],
