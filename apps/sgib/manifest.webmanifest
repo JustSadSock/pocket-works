@@ -1,0 +1,21 @@
+{
+  "id": "/apps/sgib/",
+  "name": "СГИБ",
+  "short_name": "СГИБ",
+  "description": "Тактильная головоломка о физическом складывании листа: совмещай чернила и пустоты, меняя геометрию бумаги.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#2b2924",
+  "theme_color": "#2b2924",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
