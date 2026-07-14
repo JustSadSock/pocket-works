@@ -78,6 +78,7 @@ function submitDash(dx, dy) {
 }
 
 function beginGesture(source, id, clientX, clientY, target) {
+  if (!(target instanceof Node) || !gestureSurface.contains(target)) return false;
   if (!canCaptureGesture() || isControlTarget(target)) return false;
 
   if (pointer.down) {
@@ -200,13 +201,13 @@ function onPointerCancel(event) {
 }
 
 if (touchInputAvailable) {
-  gestureSurface.addEventListener('touchstart', onTouchStart, { passive: false, capture: true });
+  window.addEventListener('touchstart', onTouchStart, { passive: false, capture: true });
   window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
   window.addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
   window.addEventListener('touchcancel', onTouchCancel, { passive: false, capture: true });
 }
 
-gestureSurface.addEventListener('pointerdown', onPointerDown, { passive: false, capture: true });
+window.addEventListener('pointerdown', onPointerDown, { passive: false, capture: true });
 window.addEventListener('pointermove', onPointerMove, { passive: false, capture: true });
 window.addEventListener('pointerup', onPointerUp, { passive: false, capture: true });
 window.addEventListener('pointercancel', onPointerCancel, { passive: false, capture: true });
