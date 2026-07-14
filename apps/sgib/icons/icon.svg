@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="СГИБ">
+  <defs>
+    <linearGradient id="paper" x1="96" y1="70" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f3ead5"/>
+      <stop offset="1" stop-color="#d5c39d"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="282" y1="241" x2="425" y2="394" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c9b589"/>
+      <stop offset="1" stop-color="#a99770"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="12" dy="18" stdDeviation="14" flood-color="#0c100e" flood-opacity=".34"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="88" fill="#2b2924"/>
+  <g filter="url(#shadow)">
+    <path d="M92 72h328v285l-91 91H92z" fill="url(#paper)" stroke="#5d5545" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M329 448v-91h91z" fill="url(#fold)" stroke="#6f634c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M116 276 396 167" fill="none" stroke="#315d50" stroke-width="9" stroke-dasharray="18 17" stroke-linecap="round"/>
+    <path d="m328 193 68-26-48 55" fill="#315d50"/>
+    <path d="M153 175c-16 2-28 14-29 31-1 20 13 37 34 39 18 2 36-9 41-27 4-16-4-34-19-41-8-4-18-4-27-2Z" fill="#18211e"/>
+    <ellipse cx="145" cy="189" rx="10" ry="6" transform="rotate(-25 145 189)" fill="#5d6d66" opacity=".5"/>
+    <circle cx="344" cy="319" r="39" fill="none" stroke="#315d50" stroke-width="12"/>
+    <circle cx="344" cy="319" r="23" fill="none" stroke="#fff" stroke-opacity=".36" stroke-width="4"/>
+  </g>
+</svg>
