@@ -17,7 +17,7 @@ import {
   transformPolygon
 } from './geometry.js';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const STORAGE_NAMESPACE = 'pocket-works:sgib';
 const CACHE_PREFIX = 'sgib-';
 const LOGICAL_WIDTH = 1000;
@@ -82,7 +82,7 @@ const LEVELS = [
       ['ink', 0.22, 0.32],
       ['void', 0.78, 0.32],
       ['ink', 0.22, 0.68],
-      ['ink', 0.78, 0.68]
+      ['void', 0.78, 0.68]
     ]
   },
   {
@@ -137,7 +137,7 @@ const LEVELS = [
     groups: [
       { from: [0.14, 0.19], to: [0.42, 0.19], points: [[0.16, 0.17]], types: [['ink', 'void']] },
       { from: [0.71, 0.12], to: [0.71, 0.43], points: [[0.7, 0.15]], types: [['ink', 'void']] },
-      { from: [0.88, 0.82], to: [0.57, 0.82], points: [[0.86, 0.84]], types: [['ink', 'ink']] }
+      { from: [0.88, 0.82], to: [0.57, 0.82], points: [[0.86, 0.84]], types: [['ink', 'void']] }
     ]
   },
   {

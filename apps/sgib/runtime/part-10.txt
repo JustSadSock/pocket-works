@@ -90,16 +90,50 @@ function drawEffects() {
     const progress = pulse.age / pulse.life;
     context.save();
     context.globalAlpha = 1 - progress;
-    context.strokeStyle = '#315d50';
-    context.lineWidth = 4 * (1 - progress);
-    context.beginPath();
-    context.arc(pulse.x, pulse.y, 18 + progress * 55, 0, Math.PI * 2);
-    context.stroke();
+    if (pulse.kind === 'spill') {
+      const radius = pulse.radius * (0.58 + progress * 0.7);
+      context.fillStyle = `rgba(9,17,14,${0.16 * (1 - progress)})`;
+      context.beginPath();
+      context.ellipse(pulse.x, pulse.y + progress * 4, radius * 1.08, radius * 0.92, progress * 0.25, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = 'rgba(18,34,29,.58)';
+      context.lineWidth = 3.5 * (1 - progress);
+      context.setLineDash([5, 8]);
+      context.stroke();
+    } else {
+      const radius = (pulse.radius || 28) * 0.6 + progress * 58;
+      context.strokeStyle = '#315d50';
+      context.lineWidth = 4 * (1 - progress);
+      context.beginPath();
+      context.arc(pulse.x, pulse.y, radius, 0, Math.PI * 2);
+      context.stroke();
+      context.strokeStyle = 'rgba(255,255,255,.5)';
+      context.lineWidth = 1.5 * (1 - progress);
+      context.beginPath();
+      context.arc(pulse.x, pulse.y, Math.max(5, radius - 7), 0, Math.PI * 2);
+      context.stroke();
+    }
     context.restore();
   }
+
   for (const particle of state.particles) {
     const progress = particle.age / particle.life;
     context.save();
     context.globalAlpha = 1 - progress;
-    context.fillStyle = '#18211e';
-    context.beginPath();
+    if (particle.kind === 'fiber') {
+      context.strokeStyle = 'rgba(237,226,199,.85)';
+      context.lineWidth = Math.max(0.7, particle.radius * 0.5);
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(particle.x, particle.y);
+      context.lineTo(particle.x - particle.vx * 0.035, particle.y - particle.vy * 0.035);
+      context.stroke();
+    } else {
+      context.fillStyle = particle.kind === 'spill' ? '#0b1411' : '#315d50';
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.radius * (1 - progress * .4), 0, Math.PI * 2);
+      context.fill();
+    }
+    context.restore();
+  }
+}

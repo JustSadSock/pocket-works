@@ -25,10 +25,24 @@
   }
 }
 
-function isMatch(first, second) {
-  if (first.type === 'void' && second.type === 'void') return false;
-  if (first.type === 'ink' && second.type === 'ink') return true;
-  return first.type !== second.type;
+function isInkMass(entity) {
+  return entity.type === 'ink' || entity.type === 'blot';
+}
+
+function interactionKind(first, second) {
+  const firstVoid = first.type === 'void';
+  const secondVoid = second.type === 'void';
+  if (firstVoid && secondVoid) return null;
+  if ((firstVoid && isInkMass(second)) || (secondVoid && isInkMass(first))) return 'seal';
+  if (isInkMass(first) && isInkMass(second)) return 'spill';
+  return null;
+}
+
+function interactionThreshold(first, second, kind) {
+  const radiusSum = (first.radius || 25) + (second.radius || 25);
+  return kind === 'seal'
+    ? clamp(radiusSum * 0.74, 40, 54)
+    : clamp(radiusSum * 0.72, 35, 50);
 }
 
 function resolveMatches() {
@@ -37,14 +51,20 @@ function resolveMatches() {
     for (let secondIndex = firstIndex + 1; secondIndex < state.entities.length; secondIndex += 1) {
       const first = state.entities[firstIndex];
       const second = state.entities[secondIndex];
-      if (!isMatch(first, second)) continue;
-      const threshold = first.type === 'void' || second.type === 'void' ? 42 : 35;
+      const kind = interactionKind(first, second);
+      if (!kind) continue;
       const separation = distance(first, second);
-      if (separation <= threshold) pairs.push({ first, second, separation });
+      if (separation <= interactionThreshold(first, second, kind)) {
+        pairs.push({ first, second, separation, kind });
+      }
     }
   }
   pairs.sort((left, right) => left.separation - right.separation);
   const removed = new Set();
+  const additions = [];
+  let seals = 0;
+  let spills = 0;
+
   for (const pair of pairs) {
     if (removed.has(pair.first.id) || removed.has(pair.second.id)) continue;
     removed.add(pair.first.id);
@@ -53,29 +73,77 @@ function resolveMatches() {
       x: (pair.first.x + pair.second.x) * 0.5,
       y: (pair.first.y + pair.second.y) * 0.5
     };
-    spawnMatch(point);
+
+    if (pair.kind === 'seal') {
+      seals += 1;
+      spawnSeal(point, Math.max(pair.first.radius || 25, pair.second.radius || 25));
+      continue;
+    }
+
+    spills += 1;
+    const combinedRadius = clamp(
+      Math.hypot(pair.first.radius || 25, pair.second.radius || 25) * 0.94,
+      32,
+      52
+    );
+    additions.push({
+      id: `blot-${state.foldsUsed}-${pair.first.id}-${pair.second.id}`,
+      type: 'blot',
+      x: point.x,
+      y: point.y,
+      radius: combinedRadius
+    });
+    spawnSpill(point, combinedRadius);
   }
-  if (removed.size) {
-    state.entities = state.entities.filter((entity) => !removed.has(entity.id));
-    audio.match();
-    vibrate([8, 24, 8]);
+
+  if (!removed.size) return;
+  state.entities = state.entities.filter((entity) => !removed.has(entity.id)).concat(additions);
+
+  if (seals) {
+    audio.seal();
+    vibrate([7, 20, 7]);
+  }
+  if (spills) {
+    audio.spill();
+    vibrate([16, 22, 10]);
+    showToast(spills === 1 ? 'Две капли слиплись в кляксу' : 'Чернила слиплись в новые кляксы');
   }
 }
 
-function spawnMatch(point) {
-  state.pulses.push({ x: point.x, y: point.y, life: 1, age: 0 });
+function spawnSeal(point, radius = 28) {
+  state.pulses.push({ x: point.x, y: point.y, radius, kind: 'seal', life: 0.72, age: 0 });
   const count = REDUCED_MOTION ? 5 : 14;
   for (let index = 0; index < count; index += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 35 + Math.random() * 95;
+    const speed = 32 + Math.random() * 88;
     state.particles.push({
       x: point.x,
       y: point.y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      radius: 2 + Math.random() * 3.5,
+      radius: 1.5 + Math.random() * 3,
+      kind: index % 3 === 0 ? 'fiber' : 'seal',
       age: 0,
-      life: 0.45 + Math.random() * 0.35
+      life: 0.42 + Math.random() * 0.34
+    });
+  }
+}
+
+function spawnSpill(point, radius = 34) {
+  state.pulses.push({ x: point.x, y: point.y, radius, kind: 'spill', life: 0.9, age: 0 });
+  const count = REDUCED_MOTION ? 4 : 11;
+  for (let index = 0; index < count; index += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 18 + Math.random() * 58;
+    state.particles.push({
+      x: point.x,
+      y: point.y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      radius: 2.5 + Math.random() * 5,
+      kind: 'spill',
+      age: 0,
+      life: 0.55 + Math.random() * 0.38
     });
   }
 }

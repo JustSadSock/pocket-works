@@ -10,9 +10,9 @@
       const partner = reflectPoint(point, line);
       if (!pointInPolygon(partner, BASE_PAPER)) continue;
       if (occupied.some((other) => distance(other, point) < 88 || distance(other, partner) < 88)) continue;
-      const pairType = random() < 0.22 ? ['ink', 'ink'] : ['ink', 'void'];
+      const pairType = ['ink', 'void'];
       entities.push({ id: `endless-${created}-a`, type: pairType[0], x: point.x, y: point.y, radius: 25 });
-      entities.push({ id: `endless-${created}-b`, type: pairType[1], x: partner.x, y: partner.y, radius: pairType[1] === 'void' ? 30 : 25 });
+      entities.push({ id: `endless-${created}-b`, type: pairType[1], x: partner.x, y: partner.y, radius: 30 });
       occupied.push(point, partner);
       created += 1;
     }
