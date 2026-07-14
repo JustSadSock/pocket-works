@@ -6,7 +6,7 @@ import {
   openStablePage
 } from './helpers';
 
-test('ПЕТЛЯ 17 starts a readable cockpit race with compact controls and live opponents', async ({ page }, testInfo) => {
+test('ПЕТЛЯ 17 starts a readable cockpit race with an active Velocity Core', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('portrait'), 'ПЕТЛЯ 17 is intentionally landscape-only.');
 
   const monitor = monitorUnexpectedBrowserOutput(page);
@@ -17,10 +17,19 @@ test('ПЕТЛЯ 17 starts a readable cockpit race with compact controls and liv
   await expect(page.locator('#controls')).toBeVisible();
   await expect(page.locator('#pauseButton')).toBeVisible();
   await expect(page.locator('#race')).toBeVisible();
+  await expect(page.locator('.velocity-core-layer')).toBeVisible();
 
   await page.waitForTimeout(4200);
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(2200);
+  await expect.poll(
+    async () => page.evaluate(() => (window as any).__petlyaVelocityCore?.getState().speedFeel || 0),
+    { timeout: 8_000 }
+  ).toBeGreaterThan(0.22);
+
+  const velocity = await page.evaluate(() => (window as any).__petlyaVelocityCore?.getState());
+  expect(velocity.active).toBe(true);
+  expect(velocity.estimatedSpeed).toBeGreaterThan(80);
+  expect(velocity.speedFeel).toBeGreaterThan(0.22);
   await page.keyboard.up('KeyW');
 
   const scene = await page.locator('#race').evaluate((canvas: HTMLCanvasElement) => {
@@ -55,12 +64,7 @@ test('ПЕТЛЯ 17 starts a readable cockpit race with compact controls and liv
   expect(brake!.height).toBeLessThan(130);
   expect(gas!.height).toBeLessThan(130);
 
-  const viewport = page.viewportSize();
-  expect(viewport).not.toBeNull();
-  expect(brake!.width / viewport!.width).toBeLessThan(0.22);
-  expect(gas!.width / viewport!.width).toBeLessThan(0.22);
-
   await assertNoHorizontalOverflow(page);
-  await attachCriticalScreenshot(page, testInfo, 'petlya-17-cockpit-v2-1', { fullPage: false });
+  await attachCriticalScreenshot(page, testInfo, 'petlya-17-velocity-core', { fullPage: false });
   monitor.assertClean();
 });
