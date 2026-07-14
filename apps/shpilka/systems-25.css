@@ -1,0 +1,11 @@
+.clean-line-meter {
+  margin-top: 3px;
+  color: rgba(244, 239, 224, 0.58);
+  font: 850 0.56rem/1.1 var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: color 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+.clean-line-meter[data-level="1"] { color: rgba(244, 239, 224, 0.76); }
+.clean-line-meter[data-level="2"] { color: #f4efe0; }
+.clean-line-meter[data-level="3"] { color: #f2bc38; transform: translateX(2px); }
