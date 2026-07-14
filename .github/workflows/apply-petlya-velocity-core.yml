@@ -1,0 +1,43 @@
+name: Apply Petlya 17 Velocity Core
+
+on:
+  push:
+    branches: [agent/petlya-17-velocity-core]
+    paths:
+      - ".github/workflows/apply-petlya-velocity-core.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/petlya-17-velocity-core
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply Velocity Core
+        run: node scripts/apply-petlya-velocity-core.mjs
+
+      - name: Rebuild launcher registry
+        run: node scripts/build-registry.mjs
+
+      - name: Remove one-shot patch files
+        run: git rm scripts/apply-petlya-velocity-core.mjs .github/workflows/apply-petlya-velocity-core.yml
+
+      - name: Commit Velocity Core
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/petlya-17 apps.json tests/e2e/petlya-17.spec.ts
+          git commit -m "Implement Petlya 17 Velocity Core"
+          git push origin HEAD:agent/petlya-17-velocity-core
