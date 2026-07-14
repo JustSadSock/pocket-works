@@ -37,7 +37,7 @@
     <div class="title-field">
       <div class="kicker">КАРМАННАЯ БОЁВКА / 01</div>
       <h1><span class="slash-title">ЧЕР</span><br>ТА</h1>
-      <p class="subtitle">Рывки оставляют следы. Третья черта заставляет все три разом прорезать арену. Враги, разумеется, против.</p>
+      <p class="subtitle">Три рывка оставляют три черты. Третья сильнее, пересечения взрываются, а каждая пятая волна собирает новую процедурную печать-босса.</p>
     </div>
     <div class="menu-stack">
       <button type="button" data-native-press class="action" id="play"><span>НАЧАТЬ РЕЗНЮ</span><small>ОДИН ПАЛЕЦ →</small></button>
@@ -49,10 +49,10 @@
   <section class="panel hidden" id="rulesPanel" data-ui>
     <div class="panel-head"><h2>Три движения</h2><button type="button" data-native-press class="icon-btn" data-close="rulesPanel">×</button></div>
     <div class="rules">
-      <article class="rule"><b>1</b><div><h3>Зажми</h3><p>Время замедляется. Начальная точка касания не важна — палец работает как рукоять.</p></div></article>
-      <article class="rule"><b>2</b><div><h3>Протяни и отпусти</h3><p>Герой рванёт в этом направлении и оставит вооружённую черту.</p></div></article>
-      <article class="rule"><b>3</b><div><h3>Замкни три черты</h3><p>После третьего рывка все следы срабатывают по очереди. Одна линия может разрезать нескольких врагов.</p></div></article>
-      <article class="rule"><b>※</b><div><h3>Играй нагло</h3><p>Во время рывка ты неуязвим. Проскочить сквозь удар выгоднее, чем трусливо убежать в кусты, которых тут даже нет.</p></div></article>
+      <article class="rule"><b>1</b><div><h3>Зажми</h3><p>Время замедляется. Протяни палец в сторону будущего рывка.</p></div></article>
+      <article class="rule"><b>2</b><div><h3>Оставь три черты</h3><p>Третья черта толще и сильнее. Если линии пересеклись, точка пересечения ударит ещё раз.</p></div></article>
+      <article class="rule"><b>3</b><div><h3>Режь группами</h3><p>Несколько врагов одной линией дают намного больше очков. Красный след на краю заранее показывает место появления.</p></div></article>
+      <article class="rule"><b>※</b><div><h3>Не дай стереть</h3><p>Прямоугольный Стиратель охотится за оставленными линиями. Боссы появляются каждую пятую волну и каждый раз собираются заново.</p></div></article>
     </div>
     <button type="button" data-native-press class="action" id="rulesPlay"><span>ПОНЯТНО. РЕЗАТЬ.</span><small>→</small></button>
   </section>
@@ -73,17 +73,11 @@
   <section class="gameover-card hidden" id="gameoverCard" data-ui>
     <h2 id="endTitle">Черта оборвалась</h2><p id="endText">Тебя аккуратно разобрали на художественные материалы.</p>
     <div class="final-grid"><div><b id="finalScore">0</b><small>СЧЁТ</small></div><div><b id="finalKills">0</b><small>ВРАГОВ</small></div><div><b id="finalWave">1</b><small>КРУГ</small></div></div>
+    <div class="final-details"><span>ЛУЧШАЯ ЧЕРТА <b id="finalBestCut">0</b></span><span>ЧИСТЫХ УКЛОНЕНИЙ <b id="finalGrazes">0</b></span><span>ПЕЧАТЕЙ <b id="finalBosses">0</b></span></div>
     <div class="card-actions"><button type="button" data-native-press class="action" id="restart"><span>ЕЩЁ РАЗ</span><small>→</small></button><button type="button" data-native-press class="action secondary" id="gameoverQuit"><span>В МЕНЮ</span><small>×</small></button></div>
   </section>
 </main>
-  <script
-    type="module"
-    src="../../shared/update-manager.js"
-    data-update-manager
-    data-service-worker="./sw.js"
-    data-app-name="ЧЕРТА"
-    data-app-version="1.0.2"
-  ></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЧЕРТА" data-app-version="1.1.0"></script>
   <script src="./state.js"></script>
   <script src="./combat.js"></script>
   <script src="./render.js"></script>
