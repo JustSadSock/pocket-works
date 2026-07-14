@@ -3,18 +3,40 @@
   toastTimer = setTimeout(() => dom.toast.classList.remove('is-visible'), 1500);
 }
 
-function pointerToLogical(event) {
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+function snapshotPointerFrame() {
   return {
-    x: (x - view.offsetX) / view.scale,
-    y: (y - view.offsetY) / view.scale
+    scale: Number.isFinite(view.scale) && view.scale > 0.0001 ? view.scale : 1,
+    offsetX: Number.isFinite(view.offsetX) ? view.offsetX : 0,
+    offsetY: Number.isFinite(view.offsetY) ? view.offsetY : 0
   };
 }
 
+function pointerClientPoint(event) {
+  const x = Number(event.clientX);
+  const y = Number(event.clientY);
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+}
+
+function pointerToLogical(event, frame = view) {
+  const client = pointerClientPoint(event);
+  if (!client) return null;
+  const scale = Number.isFinite(frame?.scale) && frame.scale > 0.0001 ? frame.scale : 1;
+  const offsetX = Number.isFinite(frame?.offsetX) ? frame.offsetX : 0;
+  const offsetY = Number.isFinite(frame?.offsetY) ? frame.offsetY : 0;
+  return {
+    x: (client.x - offsetX) / scale,
+    y: (client.y - offsetY) / scale
+  };
+}
+
+function foldCommitDistance(pointerType) {
+  if (pointerType === 'touch') return 54;
+  if (pointerType === 'pen') return 38;
+  return 24;
+}
+
 function pointOnPaper(point) {
-  return state.layers.some((layer) => pointInPolygon(point, layer.polygon));
+  return Boolean(point) && state.layers.some((layer) => pointInPolygon(point, layer.polygon));
 }
 
 function tryCapturePointer(pointerId) {
@@ -37,14 +59,28 @@ function safeReleasePointer(pointerId) {
 
 function beginGesture(event) {
   if (state.mode === 'menu' || state.screen || state.animation || state.resolved || state.paused) return;
-  const point = pointerToLogical(event);
+  if (state.gesture || event.isPrimary === false) return;
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+  const client = pointerClientPoint(event);
+  if (!client) return;
+  const coordinateFrame = snapshotPointerFrame();
+  const point = pointerToLogical(event, coordinateFrame);
   if (!pointOnPaper(point)) {
     showToast('Начни жест на бумаге');
     return;
   }
+
+  event.preventDefault?.();
   audio.unlock();
   state.gesture = {
     pointerId: event.pointerId,
+    pointerType: event.pointerType || 'touch',
+    coordinateFrame,
+    startClient: client,
+    currentClient: client,
+    dragDistance: 0,
+    commitDistance: foldCommitDistance(event.pointerType),
     start: point,
     current: point,
     line: null,
@@ -57,16 +93,33 @@ function beginGesture(event) {
 }
 
 function moveGesture(event) {
-  if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
-  const point = pointerToLogical(event);
-  const line = lineFromGesture(state.gesture.start, point);
-  state.gesture.current = point;
-  state.gesture.line = line;
-  if (!line) return;
-  const rawProgress = clamp((line.length - 24) / 520, 0, 1);
+  const gesture = state.gesture;
+  if (!gesture || gesture.pointerId !== event.pointerId) return;
+  const client = pointerClientPoint(event);
+  const point = pointerToLogical(event, gesture.coordinateFrame);
+  if (!client || !point) return;
+
+  event.preventDefault?.();
+  gesture.currentClient = client;
+  gesture.dragDistance = Math.hypot(
+    client.x - gesture.startClient.x,
+    client.y - gesture.startClient.y
+  );
+  gesture.current = point;
+  gesture.line = lineFromGesture(gesture.start, point);
+
+  if (!gesture.line || gesture.dragDistance < 8) {
+    gesture.angle = 0;
+    gesture.valid = false;
+    return;
+  }
+
+  // Progress is based on real CSS pixels. A visualViewport resize can no longer
+  // turn a stationary finger into a full logical drag.
+  const rawProgress = clamp((gesture.dragDistance - 8) / 240, 0, 1);
   const easedProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
-  state.gesture.angle = Math.min(easedProgress, 0.86) * Math.PI;
-  state.gesture.valid = validateFold(line);
+  gesture.angle = Math.min(easedProgress, 0.86) * Math.PI;
+  gesture.valid = gesture.dragDistance >= gesture.commitDistance && validateFold(gesture.line);
 }
 
 function endGesture(event) {
@@ -79,10 +132,19 @@ function endGesture(event) {
   safeReleasePointer(event.pointerId);
   state.lastInputAt = performance.now();
 
-  if (!gesture.line || !gesture.valid) {
+  const dragDistance = Number.isFinite(gesture.dragDistance) ? gesture.dragDistance : 0;
+  if (!gesture.line || dragDistance < gesture.commitDistance || !gesture.valid) {
+    if (dragDistance < 8) {
+      showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
+      return;
+    }
     audio.invalid();
     vibrate(14);
-    showToast(gesture.line?.length > 44 ? 'Сгиб должен пересечь лист' : 'Потяни чуть дальше');
+    showToast(
+      dragDistance < gesture.commitDistance
+        ? 'Потяни дальше, затем отпусти'
+        : 'Сгиб должен пересечь лист'
+    );
     return;
   }
   commitFold(gesture.line, gesture.angle);
@@ -116,13 +178,14 @@ function validateFold(line) {
 
 function commitFold(line, currentAngle) {
   state.history.push(cloneSnapshot());
-  const settledAngle = clamp(currentAngle, 0.06 * Math.PI, 0.86 * Math.PI);
+  const safeAngle = Number.isFinite(currentAngle) ? currentAngle : 0;
+  const settledAngle = clamp(safeAngle, 0.06 * Math.PI, 0.86 * Math.PI);
   state.animation = {
     line,
     fromAngle: settledAngle,
     angle: settledAngle,
     startedAt: performance.now(),
-    duration: REDUCED_MOTION ? 60 : 320,
+    duration: REDUCED_MOTION ? 60 : 380,
     applied: false
   };
   state.lastInputAt = performance.now();
