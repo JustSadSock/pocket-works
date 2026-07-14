@@ -4,11 +4,33 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
 
 permissions:
   contents: read
 
 jobs:
+  change-scope:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enforce isolated application PR scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ALLOW_PLATFORM_CHANGES: ${{ contains(github.event.pull_request.labels.*.name, 'platform-change') }}
+        run: npm run validate:scope
+
   health:
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +48,7 @@ jobs:
       - name: Build published Enhanced apps
         run: npm run build:enhanced
 
-      - name: Check generated registry
+      - name: Validate self-registering app manifests
         run: npm run registry:check
 
       - name: Check script syntax
@@ -62,7 +84,7 @@ jobs:
       - name: Smoke-test Quick presets
         run: npm run test:forge:quick
 
-      - name: Assemble production site
+      - name: Assemble production site and generated registry
         run: npm run prepare:site
 
       - name: Validate production site
