@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/petlya-17",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs petlya-17",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1"
+  }
+}
