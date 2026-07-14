@@ -1,0 +1,100 @@
+  const random = mulberry32(88102);
+  for (let index = 0; index < 100; index += 1) {
+    const y = random() * 256;
+    dctx.strokeStyle = `rgba(${random() > .5 ? '255,245,220' : '0,0,0'},${0.01 + random() * 0.035})`;
+    dctx.lineWidth = 0.5 + random() * 2;
+    dctx.beginPath();
+    dctx.moveTo(-20, y);
+    dctx.bezierCurveTo(60, y + random() * 8 - 4, 170, y + random() * 8 - 4, 276, y + random() * 5 - 2);
+    dctx.stroke();
+  }
+  deskTexture = context.createPattern(desk, 'repeat');
+
+  const paper = document.createElement('canvas');
+  paper.width = paper.height = 192;
+  const pctx = paper.getContext('2d');
+  pctx.clearRect(0, 0, 192, 192);
+  const paperRandom = mulberry32(22241);
+  for (let index = 0; index < 750; index += 1) {
+    const light = paperRandom() > 0.5;
+    pctx.fillStyle = light ? 'rgba(255,255,255,.05)' : 'rgba(82,65,42,.045)';
+    const size = paperRandom() * 1.5 + 0.25;
+    pctx.fillRect(paperRandom() * 192, paperRandom() * 192, size, size);
+  }
+  for (let index = 0; index < 24; index += 1) {
+    pctx.strokeStyle = 'rgba(92,73,46,.026)';
+    pctx.beginPath();
+    const x = paperRandom() * 192;
+    pctx.moveTo(x, 0);
+    pctx.lineTo(x + paperRandom() * 7 - 3.5, 192);
+    pctx.stroke();
+  }
+  paperTexture = context.createPattern(paper, 'repeat');
+}
+
+function beginLogicalFrame() {
+  context.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  context.clearRect(0, 0, view.width, view.height);
+  context.fillStyle = '#2b2924';
+  context.fillRect(0, 0, view.width, view.height);
+  if (deskTexture) {
+    context.save();
+    context.globalAlpha = 0.48;
+    context.fillStyle = deskTexture;
+    context.fillRect(0, 0, view.width, view.height);
+    context.restore();
+  }
+  context.translate(view.offsetX, view.offsetY);
+  context.scale(view.scale, view.scale);
+}
+
+function tracePolygon(polygon) {
+  if (!polygon.length) return;
+  context.beginPath();
+  context.moveTo(polygon[0].x, polygon[0].y);
+  for (let index = 1; index < polygon.length; index += 1) context.lineTo(polygon[index].x, polygon[index].y);
+  context.closePath();
+}
+
+function drawPaperPolygon(polygon, layer = {}, lifted = false) {
+  if (polygon.length < 3) return;
+  const depth = layer.depth || 0;
+  const shade = layer.shade || 0;
+  context.save();
+  tracePolygon(polygon);
+  context.shadowColor = `rgba(0,0,0,${lifted ? .32 : .18 + Math.min(depth, 4) * .025})`;
+  context.shadowBlur = lifted ? 28 : 18 + Math.min(depth, 4) * 4;
+  context.shadowOffsetX = lifted ? 6 : 5 + Math.min(depth, 5) * 1.5;
+  context.shadowOffsetY = lifted ? 18 : 11 + Math.min(depth, 5) * 2;
+  const gradient = context.createLinearGradient(160, 180, 860, 1200);
+  const shift = Math.min(shade, 5) * 5;
+  gradient.addColorStop(0, `rgb(${244 - shift}, ${237 - shift}, ${218 - shift})`);
+  gradient.addColorStop(0.58, `rgb(${234 - shift}, ${225 - shift}, ${202 - shift})`);
+  gradient.addColorStop(1, `rgb(${216 - shift}, ${203 - shift}, ${171 - shift})`);
+  context.fillStyle = gradient;
+  context.fill();
+  context.shadowColor = 'transparent';
+  context.clip();
+  if (paperTexture) {
+    context.globalAlpha = lifted ? 0.75 : 0.9;
+    context.fillStyle = paperTexture;
+    context.fillRect(-300, -200, 1600, 1800);
+  }
+  context.restore();
+
+  context.save();
+  tracePolygon(polygon);
+  context.strokeStyle = lifted ? 'rgba(76,62,42,.5)' : 'rgba(79,63,39,.32)';
+  context.lineWidth = lifted ? 2.3 : 1.6;
+  context.stroke();
+  context.restore();
+}
+
+function drawCreases() {
+  context.save();
+  context.setLineDash([8, 11]);
+  context.lineWidth = 1.2;
+  context.strokeStyle = 'rgba(73,62,46,.24)';
+  for (const crease of state.creases) {
+    context.beginPath();
+    context.moveTo(crease.point.x - crease.tangent.x * 950, crease.point.y - crease.tangent.y * 950);
