@@ -23,6 +23,7 @@ const gameParts = [
   './engine-v2-26-feel.js',
   './engine-v2-26-fixes.js',
   './engine-v2-27-ai.js',
+  './engine-v2-27-fixes.js',
   './engine-v2-12.js'
 ];
 
