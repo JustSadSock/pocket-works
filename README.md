@@ -2,14 +2,19 @@
 
 A monorepo for small, installable, offline-first mobile web applications.
 
-Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of truth; `apps.json` is generated for the launcher.
+Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of truth; `dist-site/apps.json` is generated for the launcher during production assembly.
 
 ## Production
 
-- Launcher: https://pocket-works.netlify.app/
-- Reference app: https://pocket-works.netlify.app/apps/screen-lab/
+- Hosting: Cloudflare Workers Builds
+- Cloudflare project: `pocket-works`
 - Production branch: `main`
-- Deployment: Netlify continuous deployment from GitHub
+- Build command: `npm run deploy:site`
+- Deploy command: `npx wrangler deploy --assets ./dist-site/`
+- Worker config: [`wrangler.jsonc`](./wrangler.jsonc)
+- Hosting details: [`docs/HOSTING.md`](./docs/HOSTING.md)
+
+Every squash merge into `main` triggers a Cloudflare production build. Netlify is retained only as a legacy fallback and must not be treated as the production source of truth or as a required merge check.
 
 ## Personal application shelf
 
@@ -70,9 +75,9 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 
 ```text
 /
-├── apps.json
 ├── package.json
-├── netlify.toml
+├── wrangler.jsonc
+├── netlify.toml          # legacy fallback only
 ├── playwright.config.ts
 ├── lighthouserc.json
 ├── tests/e2e/
@@ -93,6 +98,8 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 ├── docs/
 │   ├── BASELINE.md
 │   ├── PUBLISHING.md
+│   ├── HOSTING.md
+│   ├── DEPLOYMENT-PIPELINE.md
 │   ├── SHARED-CAPABILITIES.md
 │   ├── ENHANCED-APPS.md
 │   ├── QUALITY-GATES.md
@@ -115,14 +122,16 @@ The full API and dependency policy are documented in [`docs/SHARED-CAPABILITIES.
 
 ## Registry
 
-Never edit `apps.json` by hand.
+Never create or edit a root `apps.json` file. Application metadata is discovered from `apps/<slug>/app.config.json`.
 
 ```bash
-npm run registry:build
 npm run registry:check
+npm run prepare:site
 ```
 
-The registry includes each app's runtime (`quick` or `enhanced`) alongside version, preset, release notes and storage namespace.
+`registry:check` validates all manifests without mutating the repository. `prepare:site` generates `dist-site/apps.json` together with the deployable production directory.
+
+The generated registry includes each app's runtime (`quick` or `enhanced`) alongside version, preset, release notes and storage namespace.
 
 ## Managed updates
 
@@ -138,13 +147,21 @@ Install the root toolchain:
 npm install
 ```
 
-Run the structural, generator and unit-test suite used by GitHub Actions and Netlify:
+Run the structural, generator and unit-test suite used by GitHub Actions:
 
 ```bash
 npm run health
 ```
 
 This builds Enhanced apps, validates both runtime contracts, checks PWA scope and metadata, runs TypeScript and Vitest, and smoke-tests all five Quick plus four Enhanced Forge presets.
+
+For production packaging only:
+
+```bash
+npm run deploy:site
+```
+
+This assembles `dist-site/`, generates the launcher registry and validates the deployable output consumed by Cloudflare.
 
 ## Real-browser quality gates
 
@@ -177,9 +194,10 @@ The browser suite covers portrait and landscape layouts, launcher user flows, Sc
 4. Preserve app identity, cache ownership and storage namespace.
 5. Replace the generated icon with a deliberate application symbol.
 6. Update version, release date and changelog before publishing.
-7. Run `npm run health`.
-8. Run relevant Playwright user flows and Lighthouse budgets.
+7. Run `npm run health` when the validation environment is available.
+8. Run relevant Playwright user flows and Lighthouse budgets for affected platform paths.
 9. Test installation, long-press, repeated taps, input focus, orientation, safe areas, standalone mode, Workshop actions and update activation on a real phone when the release changes those paths.
+10. Squash-merge into `main`; Cloudflare publishes the resulting production commit automatically.
 
 ## Product roadmap
 

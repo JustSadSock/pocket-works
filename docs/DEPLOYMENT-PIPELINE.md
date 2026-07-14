@@ -2,23 +2,32 @@
 
 This separation is a repository invariant, not an optional optimization.
 
-## Netlify: fast production packaging only
+## Cloudflare Workers: fast production packaging only
 
-Netlify must run exactly:
+Cloudflare Workers Builds is the primary production deployment path. The connected build must run:
 
 ```bash
 npm run deploy:site
 ```
 
+and publish the resulting static directory with:
+
+```bash
+npx wrangler deploy --assets ./dist-site/
+```
+
+`wrangler.jsonc` owns the Worker name, compatibility date and static asset directory.
+
 `deploy:site` must remain limited to:
 
 ```bash
-npm run registry:build
 npm run prepare:site
 npm run validate:site
 ```
 
-Do not add SENTE preparation, GNU Go audits, Enhanced test suites, Forge tests, `health`, `validate:all`, browser tests or other exhaustive checks to the Netlify command. Netlify's job is to generate the registry, package already-prepared deployable assets and validate the resulting publication directory.
+`prepare:site` discovers each `apps/<slug>/app.config.json`, generates `dist-site/apps.json` and assembles the deployable directory.
+
+Do not add SENTE preparation, GNU Go audits, Enhanced test suites, Forge tests, `health`, `validate:all`, browser tests or other exhaustive checks to the Cloudflare build. Cloudflare's job is to package already-prepared deployable assets, validate the publication directory and distribute the resulting static site.
 
 ## GitHub Actions: exhaustive validation
 
@@ -28,11 +37,17 @@ The production validation workflow must run:
 npm run ci:full
 ```
 
-`ci:full` owns engine preparation, AI audits, Enhanced builds, all structural validators, unit tests and Forge smoke tests. Add new expensive safety checks here rather than to Netlify.
+`ci:full` owns engine preparation, AI audits, Enhanced builds, all structural validators, unit tests and Forge smoke tests. Add new expensive safety checks here rather than to the Cloudflare production command.
+
+When hosted Actions minutes are temporarily unavailable, required status checks may be disabled at the repository ruleset level. This does not change application ownership boundaries or permit mixed app/platform PRs.
 
 ## Enhanced application releases
 
-Because Netlify intentionally does not compile Enhanced applications, any change under an Enhanced app's `source/` directory must run `npm run build:enhanced` before merge and include the generated deployable files in the release change set.
+Because the fast production packaging stage intentionally does not compile every Enhanced source tree, any change under an Enhanced app's `source/` directory must run `npm run build:enhanced` before merge and include the generated deployable files in the release change set.
+
+## Netlify legacy status
+
+Netlify is no longer the production pipeline. Existing `netlify.toml`, historical deploys and the old site may remain as a temporary fallback, but Netlify checks must not be required for merge and new deployment work must target Cloudflare Workers.
 
 ## Enforcement
 
@@ -42,11 +57,12 @@ Run:
 npm run validate:pipeline
 ```
 
-The validator rejects changes that:
+The validator must preserve these principles:
 
-- point `netlify.toml` at a heavy command;
-- add heavy steps to `deploy:site`;
-- remove exhaustive checks from `ci:full`;
-- make GitHub Actions use the fast deploy path instead of full CI.
+- `deploy:site` remains a fast packaging command;
+- generated registry output stays in `dist-site/` and is never committed at the repository root;
+- exhaustive validation remains in `ci:full`;
+- GitHub Actions does not substitute the fast deploy path for full CI;
+- Cloudflare deploys only the validated `dist-site/` assets.
 
-Do not bypass this validator to make a deploy pass. Fix the pipeline while preserving the separation.
+Do not bypass this validator to make a deployment pass. Fix the pipeline while preserving the separation.
