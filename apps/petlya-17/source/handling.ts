@@ -61,7 +61,8 @@ export function stepVehicle(state: VehicleDynamics, input: VehicleInput, delta: 
   const surfaceGrip = lerp(1, 0.34, clamp(input.offroad, 0, 1));
   const gripScale = clamp(input.gripScale ?? 1, 0.55, 1.25);
 
-  const steeringAngle = clamp(input.steer, -1, 1) * lerp(0.43, 0.145, clamp(speedRatio, 0, 1));
+  const steeringLock = lerp(0.36, 0.045, Math.pow(clamp(speedRatio, 0, 1), 0.55));
+  const steeringAngle = clamp(input.steer, -1, 1) * steeringLock;
   const pathYawRate = input.curvature * speedMps;
   const idealYawRate = Math.tan(steeringAngle) * speedMps / 2.85;
   const lateralDemandG = Math.abs(idealYawRate * speedMps) / 9.81;
