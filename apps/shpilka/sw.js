@@ -1,18 +1,18 @@
 const CACHE_PREFIX='shpilka-';
-const CACHE_NAME='shpilka-v2.7.2-p1';
-const APP_VERSION='2.7.2';
+const CACHE_NAME='shpilka-v2.8.0-p1';
+const APP_VERSION='2.8.0';
 const RELEASE_DATE='2026-07-14';
 const CACHE_PROTOCOL=1;
 const RELEASE_NOTES=[
-'Темп соперников теперь зависит от типа трассы: ВОЛЬТ сильнее на скорости, МАРА в технических секциях, ШУНТ на атакующих участках, ГРАЧ наиболее стабилен.',
-'Каждая машина получает небольшую детерминированную форму маршрута и собственные сильные сектора, поэтому пелотон не финиширует одной цепочкой.',
-'Более быстрый бот раньше начинает обгон медленного соперника и после выхода в соседнюю полосу больше не упирается в скорость лидера.',
-'Целевой естественный разброс на высоких сложностях составляет несколько секунд на минутном заезде без резинового ускорения и подмены итогового времени.'
+'Главное меню стало компактнее, получило отдельный экран загрузки и явные кнопки возврата после гонки и из паузы.',
+'Разгон стал заметно длиннее, машина сохраняет инерцию на скорости, а камера больше не повторяет мелкие колебания кузова.',
+'AI использует выраженную траекторию вход–апекс–выход и иногда допускает редкие контекстные ошибки даже на высоких сложностях.',
+'Трассы получили узкие, широкие и скользкие функциональные сектора; трамплины оставлены только там, где нужно перелететь реальный разрыв.'
 ];
 const APP_SHELL=[
-'./','./index.html','./app.config.json','./styles.css','./advanced.css','./advanced-fixes.css','./systems-23.css','./systems-25.css','./systems-26.css','./systems-27.css','./app.js',
+'./','./index.html','./app.config.json','./styles.css','./advanced.css','./advanced-fixes.css','./systems-23.css','./systems-25.css','./systems-26.css','./systems-27.css','./systems-28.css','./app.js',
 ...Array.from({length:11},(_,i)=>`./engine-v2-${String(i+1).padStart(2,'0')}.js`),
-'./engine-v2-stability.js','./engine-v2-advanced.js','./engine-v2-advanced-fixes.js','./engine-v2-23-ui.js','./engine-v2-23.js','./engine-v2-23-fixes.js','./engine-v2-24.js','./engine-v2-25-ai.js','./engine-v2-25-race.js','./engine-v2-25-1.js','./engine-v2-25-contacts.js','./engine-v2-25-wall.js','./engine-v2-26-career.js','./engine-v2-26-racecraft.js','./engine-v2-26-landmarks.js','./engine-v2-26-feel.js','./engine-v2-26-fixes.js','./engine-v2-27-ai.js','./engine-v2-27-fixes.js','./engine-v2-27-1.js','./engine-v2-27-2.js','./engine-v2-12.js','./workshop.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+'./engine-v2-stability.js','./engine-v2-advanced.js','./engine-v2-advanced-fixes.js','./engine-v2-23-ui.js','./engine-v2-23.js','./engine-v2-23-fixes.js','./engine-v2-24.js','./engine-v2-25-ai.js','./engine-v2-25-race.js','./engine-v2-25-1.js','./engine-v2-25-contacts.js','./engine-v2-25-wall.js','./engine-v2-26-career.js','./engine-v2-26-racecraft.js','./engine-v2-26-landmarks.js','./engine-v2-26-feel.js','./engine-v2-26-fixes.js','./engine-v2-27-ai.js','./engine-v2-27-fixes.js','./engine-v2-27-1.js','./engine-v2-27-2.js','./engine-v2-28-route.js','./engine-v2-28-ai.js','./engine-v2-28-physics.js','./engine-v2-28-ui.js','./engine-v2-12.js','./workshop.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE_URL=new URL('./',self.registration.scope);
 const BUILD_TOKEN=`${APP_VERSION}-p${CACHE_PROTOCOL}`;
 const SHELL_KEYS=new Map(APP_SHELL.map(entry=>{const url=new URL(entry,SCOPE_URL);return[url.pathname,url.href];}));
