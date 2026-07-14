@@ -20,7 +20,7 @@ Every application release is one coherent change set. Do not publish a half-fini
 
 ## Deployment pipeline invariant
 
-Cloudflare is the primary production host. Its connected build runs:
+Cloudflare is the production host. Its connected build runs:
 
 ```bash
 npm run deploy:site
@@ -36,7 +36,7 @@ The packaging stage generates `dist-site/apps.json`, prepares `dist-site/` and v
 
 Do not move heavy safety checks into the Cloudflare production build. Extend GitHub CI instead. The enforceable separation is documented in [`DEPLOYMENT-PIPELINE.md`](./DEPLOYMENT-PIPELINE.md); hosting configuration is documented in [`HOSTING.md`](./HOSTING.md).
 
-Netlify is a legacy fallback only. A Netlify deploy or Netlify PR check is not a release requirement and must not block merges.
+No retired hosting integration is part of the release contract. Production verification is based only on the Cloudflare deployment generated from the squash commit on `main`.
 
 ## Installed PWA update lifecycle
 
