@@ -1,0 +1,119 @@
+  dom.toast.textContent = message;
+  dom.toast.classList.add('is-visible');
+  toastTimer = setTimeout(() => dom.toast.classList.remove('is-visible'), 1500);
+}
+
+function pointerToLogical(event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return {
+    x: (x - view.offsetX) / view.scale,
+    y: (y - view.offsetY) / view.scale
+  };
+}
+
+function pointOnPaper(point) {
+  return state.layers.some((layer) => pointInPolygon(point, layer.polygon));
+}
+
+function beginGesture(event) {
+  if (state.mode === 'menu' || state.screen || state.animation || state.resolved || state.paused) return;
+  const point = pointerToLogical(event);
+  if (!pointOnPaper(point)) {
+    showToast('Начни жест на бумаге');
+    return;
+  }
+  audio.unlock();
+  state.gesture = {
+    pointerId: event.pointerId,
+    start: point,
+    current: point,
+    line: null,
+    angle: 0,
+    valid: false
+  };
+  state.lastInputAt = performance.now();
+  hideHint();
+  canvas.setPointerCapture?.(event.pointerId);
+}
+
+function moveGesture(event) {
+  if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
+  const point = pointerToLogical(event);
+  const line = lineFromGesture(state.gesture.start, point);
+  state.gesture.current = point;
+  state.gesture.line = line;
+  if (!line) return;
+  state.gesture.angle = clamp(line.length / 260, 0, 0.96) * Math.PI;
+  state.gesture.valid = validateFold(line);
+}
+
+function endGesture(event) {
+  if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
+  canvas.releasePointerCapture?.(event.pointerId);
+  const gesture = state.gesture;
+  state.gesture = null;
+  state.lastInputAt = performance.now();
+  if (!gesture.line || !gesture.valid) {
+    audio.invalid();
+    vibrate(14);
+    showToast(gesture.line?.length > 80 ? 'Сгиб должен пересечь лист' : 'Потяни дальше');
+    return;
+  }
+  commitFold(gesture.line, gesture.angle);
+}
+
+function cancelGesture(event) {
+  if (!state.gesture || (event && state.gesture.pointerId !== event.pointerId)) return;
+  state.gesture = null;
+}
+
+function validateFold(line) {
+  if (!line || line.length < 105) return false;
+  let totalArea = 0;
+  let movingArea = 0;
+  let stationaryArea = 0;
+  let crosses = false;
+  for (const layer of state.layers) {
+    const area = polygonArea(layer.polygon);
+    const moving = clipPolygon(layer.polygon, line, false);
+    const stationary = clipPolygon(layer.polygon, line, true);
+    totalArea += area;
+    movingArea += polygonArea(moving);
+    stationaryArea += polygonArea(stationary);
+    if (lineCrossesPolygon(line, layer.polygon)) crosses = true;
+  }
+  return crosses && movingArea > totalArea * 0.035 && stationaryArea > totalArea * 0.035;
+}
+
+function commitFold(line, currentAngle) {
+  state.history.push(cloneSnapshot());
+  state.animation = {
+    line,
+    fromAngle: clamp(currentAngle, 0.12 * Math.PI, 0.95 * Math.PI),
+    angle: currentAngle,
+    startedAt: performance.now(),
+    duration: REDUCED_MOTION ? 60 : 390,
+    applied: false
+  };
+  state.lastInputAt = performance.now();
+  audio.fold();
+  vibrate(8);
+  updateHud();
+}
+
+function applyFold(line) {
+  const nextLayers = [];
+  let highestDepth = state.layers.reduce((maximum, layer) => Math.max(maximum, layer.depth || 0), 0);
+  for (const layer of state.layers) {
+    const stationary = clipPolygon(layer.polygon, line, true);
+    const moving = clipPolygon(layer.polygon, line, false);
+    if (stationary.length >= 3 && polygonArea(stationary) > 1) {
+      nextLayers.push({ ...layer, polygon: stationary });
+    }
+    if (moving.length >= 3 && polygonArea(moving) > 1) {
+      highestDepth += 1;
+      nextLayers.push({ polygon: reflectPolygon(moving, line), depth: highestDepth, shade: (layer.shade || 0) + 1 });
+    }
+  }
