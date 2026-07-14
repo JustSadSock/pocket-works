@@ -1,0 +1,9 @@
+.moss-terrain-depth-fixed .moss-terrain-cues-v16 {
+  z-index: 1 !important;
+  visibility: hidden;
+  opacity: 0 !important;
+}
+
+.moss-terrain-depth-fixed #game {
+  z-index: 2;
+}
