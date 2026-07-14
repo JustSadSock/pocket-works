@@ -84,6 +84,28 @@ function orientExitPortal(level) {
   catch { level.__course18ExitOriented = true; }
 }
 
+function prepareTunnelTrigger(level, ball) {
+  if (!isCourse18(level) || !ball) return;
+  const tunnel = level.tunnels?.[0];
+  const entry = tunnel?.entry;
+  const visual = tunnel?.visualEntry;
+  if (!entry || !visual) return;
+  if (!Number.isFinite(entry.__baseRadius)) {
+    try { Object.defineProperty(entry, '__baseRadius', { value: Number(entry.r || 28), writable: false, configurable: true }); }
+    catch { entry.__baseRadius = Number(entry.r || 28); }
+  }
+  const baseRadius = Number(entry.__baseRadius || 28);
+  const speed = Math.hypot(ball.vx || 0, ball.vy || 0);
+  const inwardSpeed = (ball.vx || 0) * visual.axisX + (ball.vy || 0) * visual.axisY;
+  const dx = ball.x - visual.x;
+  const dy = ball.y - visual.y;
+  const longitudinal = dx * visual.axisX + dy * visual.axisY;
+  const lateral = Math.abs(dx * -visual.axisY + dy * visual.axisX);
+  const inCorridor = longitudinal > -baseRadius * 2.2 && longitudinal < visual.depth + baseRadius * 2.4 && lateral < visual.width * .62;
+  const directionAllowed = speed < 12 || (inwardSpeed > Math.max(18, speed * .08) && inCorridor);
+  entry.r = directionAllowed ? baseRadius : 0;
+}
+
 function createVisualLevel(level) {
   if (isCourse18(level)) {
     return {
@@ -150,6 +172,7 @@ export class DioramaRenderer {
         if (property === 'draw') {
           return (level, ball, aim, time, dt, mode) => {
             const visualLevel = visualFor(level);
+            prepareTunnelTrigger(level, ball);
             const result = target.draw(visualLevel, ball, aim, time, dt, mode);
             greenhouse.draw(visualLevel, ball, aim, time, dt, mode);
             return result;
