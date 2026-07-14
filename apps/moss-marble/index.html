@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#1b3024">
-  <meta name="description" content="Moss & Marble — объёмный мини-гольф с органическим рельефом и бесконечными маршрутами для Pocket Works.">
+  <meta name="description" content="Moss & Marble — объёмный мини-гольф с настоящими холмами, отдельными рампами и бесконечными маршрутами для Pocket Works.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Moss & Marble">
@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./styles14.css?v=1.4.0">
   <link rel="stylesheet" href="./styles15.css?v=1.5.0">
   <link rel="stylesheet" href="./styles16.css?v=1.6.0">
+  <link rel="stylesheet" href="./styles161.css?v=1.6.1">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -46,9 +47,9 @@
     <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
       <div class="menu-wash"></div>
       <div class="menu-copy">
-        <p class="eyebrow">Оранжерея № 1 · Органический рельеф</p>
+        <p class="eyebrow">Оранжерея № 1 · Холмы и рампы</p>
         <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
-        <p class="lead">Песок, мох, вода, склоны и трамплины теперь являются частью объёмного поля: с живыми берегами, плотными материалами и тёмными рамами вместо стеклянных полос.</p>
+        <p class="lead">Обычный рельеф теперь формируется как мягкие холмы со спуском во все стороны, а прыжки оставлены отдельным деревянным и каменным рампам. Все поверхности находятся в одной глубинной сцене с шариком.</p>
       </div>
       <div class="menu-actions">
         <button class="primary-action" type="button" id="continueBtn" data-native-press>
@@ -111,7 +112,7 @@
     <section class="screen finish-screen" id="finishScreen" data-ui aria-labelledby="finishTitle">
       <div class="finish-copy">
         <p class="eyebrow">Круг завершён</p>
-        <h2 id="finishTitle">Органический рельеф</h2>
+        <h2 id="finishTitle">Холмы и рампы</h2>
         <p class="finish-total"><strong id="finishStrokes">0</strong><span>ударов</span></p>
         <p id="finishDetail">Оранжерея запомнила этот длинный круг.</p>
         <button class="primary-action compact" type="button" id="againBtn" data-native-press><span>Сыграть круг снова</span><small>С первой лунки</small></button>
@@ -129,9 +130,9 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Moss & Marble"
-    data-app-version="1.6.0"
+    data-app-version="1.6.1"
   ></script>
-  <script type="module" src="./camera-intro-guard.js?v=1.6.0"></script>
-  <script type="module" src="./app.js?v=1.6.0"></script>
+  <script type="module" src="./camera-intro-guard.js?v=1.6.1"></script>
+  <script type="module" src="./app.js?v=1.6.1"></script>
 </body>
 </html>
