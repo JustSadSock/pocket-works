@@ -2,11 +2,12 @@ import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel } from './procedural.js';
 import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
+import { installLivingTerrain } from './experience14.js';
 import { AudioGarden } from './audio.js';
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = {
   version: 2,
@@ -32,7 +33,7 @@ let save = loadSave();
 let mode = 'menu';
 let levelIndex = Math.min(save.current, save.unlocked - 1, LEVELS.length - 1);
 let level = getLevel(levelIndex);
-let ball = createBall(level.start);
+let ball = createBall(level.start, level);
 let strokes = 0;
 let roundStrokes = [];
 let roundActive = false;
@@ -49,6 +50,7 @@ let surfaceTimer = 0;
 let tiltListening = false;
 
 const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
+const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
 function normalizeEndlessRun(value) {
   if (!value || typeof value !== 'object') return null;
@@ -120,7 +122,7 @@ function showSurface(text) {
   note.textContent = text;
   note.classList.add('is-visible');
   clearTimeout(surfaceTimer);
-  surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1200);
+  surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1350);
 }
 
 function setMode(next) {
@@ -129,7 +131,21 @@ function setMode(next) {
   document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
   const map = { menu: 'menuScreen', holes: 'holesScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
   if (map[next]) $(map[next]).classList.add('is-visible');
-  if (next !== 'playing') cancelAim();
+  if (next !== 'playing') {
+    cancelAim();
+    livingTerrain.cancelOverview();
+  }
+  syncOverviewControl();
+}
+
+function syncOverviewControl() {
+  const button = $('overviewBtn');
+  if (!button) return;
+  const available = mode === 'playing' && isBallStopped(ball) && !ball.sunk && waterResetTimer <= 0;
+  button.disabled = !available;
+  button.setAttribute('aria-pressed', String(livingTerrain.isOverview()));
+  button.querySelector('span').textContent = livingTerrain.isOverview() ? 'К мячу' : 'Обзор';
+  document.body.dataset.overview = String(livingTerrain.isOverview());
 }
 
 function syncHeader() {
@@ -145,13 +161,14 @@ function syncHeader() {
   $('tiltBtn').setAttribute('aria-pressed', String(save.tilt));
   $('tiltBtn').querySelector('b').textContent = save.tilt ? 'Вкл' : 'Включить';
   document.body.dataset.hasAimed = String(save.hasAimed);
-  document.body.dataset.ballMoving = String(ball.moving || ball.sunk);
+  document.body.dataset.ballMoving = String(ball.moving || ball.sunk || ball.airborne || ball.inCup);
   document.body.dataset.route = endlessActive ? 'endless' : 'course';
+  syncOverviewControl();
 }
 
 function syncMenu() {
   const current = getLevel(Math.min(save.current, save.unlocked - 1));
-  $('continueLabel').textContent = save.best.some((value) => value != null) ? 'Продолжить прогулку' : 'Начать прогулку';
+  $('continueLabel').textContent = save.best.some((value) => value != null) ? 'Продолжить длинную прогулку' : 'Начать длинную прогулку';
   $('continueMeta').textContent = `Лунка ${current.id} · пар ${current.par}`;
   const total = save.best.every((value) => Number.isFinite(value)) ? save.best.reduce((sum, value) => sum + value, 0) : null;
   $('courseBest').textContent = total == null ? 'Лучший круг ещё не сыгран' : `Лучший собранный круг · ${total} ударов`;
@@ -192,7 +209,7 @@ function renderHoleShelf() {
 }
 
 function resetBall(to = level.start) {
-  ball = createBall(to);
+  ball = createBall(to, level);
   lastSafe = { x: to.x, y: to.y };
   waterResetTimer = 0;
   syncHeader();
@@ -202,8 +219,10 @@ function preparePlayingLevel() {
   strokes = 0;
   finishTimer = 0;
   endlessResult = null;
+  livingTerrain.cancelOverview();
   resetBall(level.start);
   setMode('playing');
+  livingTerrain.beginLevel();
   syncHeader();
   showSurface(level.note);
 }
@@ -288,7 +307,7 @@ function pointerLocal(event) {
 }
 
 function beginAim(event) {
-  if (mode !== 'playing' || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
+  if (mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
   const point = pointerLocal(event);
   const ballPoint = renderer.ballScreenPoint(ball);
   const distance = Math.hypot(point.x - ballPoint.x, point.y - ballPoint.y);
@@ -333,6 +352,7 @@ function finishAim(event, cancelled = false) {
   const pointerId = aim.pointerId;
   try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   if (!cancelled && aim.power > .055) {
+    livingTerrain.cancelOverview();
     strikeBall(ball, aim.vx, aim.vy);
     strokes += 1;
     save.hasAimed = true;
@@ -362,14 +382,29 @@ function handlePhysicsEvent(event) {
     audio.water();
     vibrate([12, 32, 12]);
     renderer.emit(ball.x, ball.y, 'water', 18);
-    showSurface('Вода вернула мяч');
+    showSurface('Мяч ушёл ниже кромки воды');
   } else if (event.type === 'tunnel') {
     audio.tunnel();
     vibrate(12);
     renderer.emit(ball.x, ball.y, 'dust', 10);
     showSurface('Тихий туннель');
+  } else if (event.type === 'jump') {
+    audio.collision('wood', Math.min(420, event.speed * .34));
+    vibrate(8);
+    showSurface('Мяч оторвался от поверхности');
+  } else if (event.type === 'land') {
+    audio.collision('stone', Math.min(620, event.speed));
+    if (event.speed > 260) vibrate(10);
+    renderer.emit(ball.x, ball.y, 'dust', 9);
+  } else if (event.type === 'lip-out') {
+    audio.collision('cup', Math.max(110, event.speed));
+    vibrate([7, 20, 7]);
+    showSurface('Кромка вернула мяч');
+  } else if (event.type === 'cup-bottom') {
+    audio.collision('cup', Math.max(120, event.speed));
+    vibrate(10);
   } else if (event.type === 'cup') {
-    finishTimer = 1.18;
+    finishTimer = 1.05;
     audio.cup(strokes === 1);
     vibrate(strokes === 1 ? [18, 45, 18, 45, 26] : [16, 45, 22]);
     renderer.emit(level.hole.x, level.hole.y, 'cup', strokes === 1 ? 30 : 18);
@@ -384,7 +419,7 @@ function resultCopy(delta, strokesTaken) {
   if (delta === -1) return ['Чисто', 'Ни одного лишнего движения. Почти подозрительно.'];
   if (delta === 0) return ['Пар', 'Ровно столько, сколько задумал садовник.'];
   if (delta === 1) return ['Почти', 'Один лишний удар. Мох переживёт.'];
-  return ['Дошёл', 'Не изящно, зато мяч всё-таки в лунке.'];
+  return ['Дошёл', 'Не изящно, зато мяч всё-таки остался на дне.'];
 }
 
 function setResultCopy(eyebrow, title, detail, isRecord = false) {
@@ -506,6 +541,15 @@ function attachTilt() {
   }, { passive: true });
 }
 
+function toggleOverview() {
+  if (mode !== 'playing' || !isBallStopped(ball)) return;
+  cancelAim();
+  const active = livingTerrain.toggleOverview();
+  audio.ui();
+  showToast(active ? 'Показана вся территория' : 'Камера вернулась к мячу');
+  syncOverviewControl();
+}
+
 function bindControls() {
   canvas.addEventListener('pointerdown', beginAim, { passive: false });
   canvas.addEventListener('pointermove', moveAim, { passive: false });
@@ -532,6 +576,7 @@ function bindControls() {
   $('holesBtn').addEventListener('click', async () => { await audio.unlock(); audio.ui(); setMode('holes'); renderHoleShelf(); });
   document.querySelectorAll('[data-close-screen]').forEach((button) => button.addEventListener('click', () => { audio.ui(); openMenu(); }));
   $('pauseBtn').addEventListener('click', pauseGame);
+  $('overviewBtn').addEventListener('click', toggleOverview);
   $('resumeBtn').addEventListener('click', resumeGame);
   $('restartBtn').addEventListener('click', restartHole);
   $('quitBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
@@ -568,6 +613,7 @@ function bindControls() {
       if (mode === 'playing') pauseGame();
       else if (mode === 'paused') resumeGame();
     }
+    if (event.key.toLowerCase() === 'v') toggleOverview();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -582,10 +628,10 @@ function bindControls() {
 
 function previewMotion(time) {
   if (mode !== 'menu' || save.best.some((value) => value != null)) return;
-  const cx = level.start.x + Math.sin(time * .21) * 34;
-  const cy = level.start.y - 30 + Math.cos(time * .25) * 18;
-  ball.x += (cx - ball.x) * .018;
-  ball.y += (cy - ball.y) * .018;
+  const centerX = level.start.x + Math.sin(time * .21) * 34;
+  const centerY = level.start.y - 30 + Math.cos(time * .25) * 18;
+  ball.x += (centerX - ball.x) * .018;
+  ball.y += (centerY - ball.y) * .018;
 }
 
 function frame(now) {
@@ -612,9 +658,11 @@ function frame(now) {
     previewMotion(elapsed);
   }
 
-  document.body.dataset.ballMoving = String(ball.moving || ball.sunk || waterResetTimer > 0);
+  document.body.dataset.ballMoving = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
   const renderMode = mode === 'menu' || mode === 'holes' ? 'menu' : 'playing';
   renderer.draw(level, ball, aim, elapsed, dt, renderMode);
+  livingTerrain.draw(level, ball, elapsed, renderMode);
+  syncOverviewControl();
   requestAnimationFrame(frame);
 }
 
@@ -649,12 +697,14 @@ window.__MOSS_MARBLE__ = {
   startEndless,
   restartHole,
   generateEndlessLevel,
+  toggleOverview,
   snapshot: () => ({
     mode,
     levelIndex,
     strokes,
     roundActive,
     endlessActive,
+    overview: livingTerrain.isOverview(),
     level: { id: level.id, name: level.name, par: level.par, section: level.section, endless: level.endless },
     ball: { ...ball },
     save: structuredClone(save)
@@ -662,6 +712,7 @@ window.__MOSS_MARBLE__ = {
   strike: (vx, vy) => {
     if (mode === 'playing' && isBallStopped(ball)) {
       strokes += 1;
+      livingTerrain.cancelOverview();
       strikeBall(ball, vx, vy);
       syncHeader();
     }
@@ -669,8 +720,10 @@ window.__MOSS_MARBLE__ = {
   complete: () => {
     if (mode === 'playing') {
       ball.sunk = true;
+      ball.inCup = true;
       ball.x = level.hole.x;
       ball.y = level.hole.y;
+      ball.z = -20;
       finishTimer = .01;
     }
   }

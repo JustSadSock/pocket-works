@@ -1,151 +1,239 @@
 const rect = (x, y, w, h, extra = {}) => ({ shape: 'rect', x, y, w, h, ...extra });
 const circle = (x, y, r, extra = {}) => ({ shape: 'circle', x, y, r, ...extra });
-const poly = (...points) => points.map(([x, y]) => ({ x, y }));
+const route = (...points) => points.map(([x, y]) => ({ x, y }));
+
+function routeOutline(centerline, width = 560) {
+  const widths = Array.isArray(width) ? width : centerline.map(() => width);
+  const sideA = [];
+  const sideB = [];
+  for (let index = 0; index < centerline.length; index += 1) {
+    const previous = centerline[Math.max(0, index - 1)];
+    const next = centerline[Math.min(centerline.length - 1, index + 1)];
+    const dx = next.x - previous.x;
+    const dy = next.y - previous.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const nx = -dy / length;
+    const ny = dx / length;
+    const half = widths[index] * .5;
+    sideA.push({ x: centerline[index].x + nx * half, y: centerline[index].y + ny * half });
+    sideB.push({ x: centerline[index].x - nx * half, y: centerline[index].y - ny * half });
+  }
+  return [...sideA, ...sideB.reverse()];
+}
+
+function authoredLevel({ id, name, note, par, centerline, width, holeRadius = 32, ...rest }) {
+  const first = centerline[0];
+  const second = centerline[1];
+  const last = centerline.at(-1);
+  const beforeLast = centerline.at(-2);
+  const startPoint = { x: first.x + (second.x - first.x) * .16, y: first.y + (second.y - first.y) * .16 };
+  const holePoint = { x: last.x + (beforeLast.x - last.x) * .16, y: last.y + (beforeLast.y - last.y) * .16 };
+  return {
+    id,
+    name,
+    note,
+    par,
+    start: { x: startPoint.x, y: startPoint.y },
+    hole: { x: holePoint.x, y: holePoint.y, r: holeRadius, depth: 64 },
+    centerline,
+    outline: routeOutline(centerline, width),
+    ...rest
+  };
+}
 
 export const LEVELS = [
-  {
+  authoredLevel({
     id: 1,
-    name: 'Первая капля',
-    note: 'Прямой путь после дождя',
-    par: 3,
-    start: { x: 500, y: 1220 },
-    hole: { x: 500, y: 235, r: 31 },
-    outline: poly([250,1300],[175,1130],[210,880],[155,650],[230,360],[350,130],[650,130],[770,360],[845,650],[790,880],[825,1130],[750,1300]),
+    name: 'Длинная капля',
+    note: 'Первый настоящий маршрут через всю оранжерею',
+    par: 6,
+    centerline: route([230,1170],[560,1010],[430,770],[830,590],[1210,790],[1600,560],[2050,175]),
+    width: [560,600,560,630,590,560,520],
     obstacles: [
-      circle(360, 740, 72, { material: 'stone' }),
-      circle(650, 560, 62, { material: 'pot' })
+      circle(620, 870, 70, { material: 'stone' }),
+      circle(1110, 660, 78, { material: 'pot' }),
+      circle(1580, 510, 58, { material: 'wood' })
     ],
-    zones: [rect(250, 870, 500, 160, { type: 'moss' })],
-    decorations: [{type:'snail',x:735,y:1070},{type:'mushroom',x:295,y:340},{type:'leaf',x:690,y:860}]
-  },
-  {
-    id: 2,
-    name: 'Чашечный край',
-    note: 'Обойди старую чашку',
-    par: 3,
-    start: { x: 260, y: 1120 },
-    hole: { x: 720, y: 260, r: 31 },
-    outline: poly([145,1250],[130,910],[220,680],[160,410],[280,135],[740,135],[850,310],[825,650],[870,930],[790,1250]),
-    obstacles: [
-      circle(520, 700, 170, { material: 'cup' }),
-      circle(265, 430, 55, { material: 'stone' })
-    ],
-    zones: [rect(550, 965, 220, 145, { type: 'sand' })],
-    decorations: [{type:'leaf',x:205,y:760},{type:'mushroom',x:760,y:1100},{type:'frog',x:725,y:520}]
-  },
-  {
-    id: 3,
-    name: 'Медленный мох',
-    note: 'Сила здесь быстро вязнет',
-    par: 4,
-    start: { x: 500, y: 1240 },
-    hole: { x: 500, y: 190, r: 31 },
-    outline: poly([210,1315],[155,1110],[215,900],[150,690],[230,470],[170,260],[305,100],[695,100],[830,260],[770,470],[850,690],[785,900],[845,1110],[790,1315]),
-    obstacles: [
-      circle(320, 790, 58, { material: 'wood' }),
-      circle(680, 790, 58, { material: 'wood' }),
-      circle(500, 500, 75, { material: 'stone' })
-    ],
-    zones: [rect(205, 890, 590, 215, { type: 'sand' }), rect(300, 275, 400, 140, { type: 'moss' })],
-    decorations: [{type:'snail',x:275,y:990},{type:'leaf',x:760,y:650},{type:'mushroom',x:260,y:260}]
-  },
-  {
-    id: 4,
-    name: 'Латунный ритм',
-    note: 'Планка движется честно',
-    par: 4,
-    start: { x: 500, y: 1220 },
-    hole: { x: 500, y: 215, r: 31 },
-    outline: poly([200,1310],[145,1040],[210,760],[145,480],[240,130],[760,130],[855,480],[790,760],[855,1040],[800,1310]),
-    obstacles: [circle(305, 430, 66, { material: 'pot' }), circle(695, 930, 66, { material: 'pot' })],
-    rotors: [{ x: 500, y: 700, length: 420, thickness: 30, speed: .72, angle: .45, material: 'brass' }],
-    zones: [rect(220, 1040, 560, 120, { type: 'moss' })],
-    decorations: [{type:'frog',x:730,y:320},{type:'leaf',x:260,y:830},{type:'mushroom',x:755,y:1110}]
-  },
-  {
-    id: 5,
-    name: 'Стеклянный мост',
-    note: 'Вода возвращает последний удар',
-    par: 4,
-    start: { x: 500, y: 1245 },
-    hole: { x: 500, y: 180, r: 31 },
-    outline: poly([245,1320],[170,1050],[220,820],[150,620],[220,390],[180,170],[350,85],[650,85],[820,170],[780,390],[850,620],[780,820],[830,1050],[755,1320]),
-    obstacles: [circle(340, 1050, 54, { material: 'stone' }), circle(660, 1050, 54, { material: 'stone' })],
     zones: [
-      rect(185, 480, 630, 275, { type: 'water' }),
-      rect(438, 445, 124, 345, { type: 'bridge' })
+      rect(735, 505, 330, 190, { type: 'moss' }),
+      rect(1320, 550, 350, 180, { type: 'sand', baseZ: -7 })
+    ],
+    decorations: [{type:'snail',x:330,y:1030},{type:'mushroom',x:760,y:430},{type:'leaf',x:1440,y:760},{type:'frog',x:1870,y:360}]
+  }),
+  authoredLevel({
+    id: 2,
+    name: 'Чашечный поворот',
+    note: 'Два широких виража вокруг старой посуды',
+    par: 6,
+    centerline: route([220,1120],[620,1160],[850,870],[650,570],[1080,360],[1510,570],[1800,380],[2180,205]),
+    width: [590,650,610,590,660,600,560,520],
+    obstacles: [
+      circle(690, 940, 150, { material: 'cup' }),
+      circle(1040, 410, 62, { material: 'stone' }),
+      circle(1510, 555, 82, { material: 'pot' }),
+      circle(1900, 330, 55, { material: 'stone' })
+    ],
+    zones: [
+      rect(1180, 410, 340, 175, { type: 'sand', baseZ: -8 }),
+      rect(1770, 245, 270, 150, { type: 'moss' })
+    ],
+    decorations: [{type:'leaf',x:450,y:990},{type:'mushroom',x:930,y:700},{type:'frog',x:1390,y:315},{type:'snail',x:2030,y:470}]
+  }),
+  authoredLevel({
+    id: 3,
+    name: 'Мшистая серпантинная',
+    note: 'Скорость теряется, направление — нет',
+    par: 7,
+    centerline: route([180,1200],[520,980],[840,1110],[1050,790],[850,520],[1220,260],[1580,440],[1900,230],[2220,150]),
+    width: [560,620,590,630,560,620,580,540,500],
+    obstacles: [
+      circle(510, 970, 60, { material: 'wood' }),
+      circle(910, 910, 66, { material: 'wood' }),
+      circle(970, 570, 76, { material: 'stone' }),
+      circle(1530, 425, 68, { material: 'pot' }),
+      circle(1970, 255, 56, { material: 'stone' })
+    ],
+    zones: [
+      rect(640, 860, 420, 220, { type: 'sand', baseZ: -7 }),
+      rect(1120, 240, 430, 170, { type: 'moss' }),
+      rect(1710, 205, 300, 150, { type: 'moss' })
+    ],
+    decorations: [{type:'snail',x:330,y:1100},{type:'leaf',x:780,y:650},{type:'mushroom',x:1280,y:510},{type:'frog',x:1780,y:450}]
+  }),
+  authoredLevel({
+    id: 4,
+    name: 'Латунная петля',
+    note: 'Длинный маршрут пересекают два честных механизма',
+    par: 7,
+    centerline: route([240,1170],[610,930],[980,1080],[1180,760],[980,470],[1390,270],[1770,500],[2070,250]),
+    width: [580,620,630,610,570,640,570,510],
+    obstacles: [
+      circle(530, 1010, 64, { material: 'pot' }),
+      circle(1120, 610, 62, { material: 'stone' }),
+      circle(1650, 440, 70, { material: 'pot' })
+    ],
+    rotors: [
+      { x: 930, y: 930, length: 370, thickness: 30, speed: .64, angle: .4, material: 'brass' },
+      { x: 1510, y: 350, length: 330, thickness: 28, speed: -.48, angle: 1.1, material: 'wood' }
+    ],
+    zones: [rect(1180, 230, 410, 170, { type: 'moss' })],
+    decorations: [{type:'frog',x:420,y:870},{type:'leaf',x:890,y:1180},{type:'mushroom',x:1370,y:530},{type:'snail',x:1940,y:410}]
+  }),
+  authoredLevel({
+    id: 5,
+    name: 'Мост над дождём',
+    note: 'Вода ниже поля, стекло — действительно над водой',
+    par: 7,
+    centerline: route([230,1180],[610,1010],[890,760],[1240,880],[1510,590],[1810,420],[2150,190]),
+    width: [570,620,600,660,600,550,500],
+    obstacles: [
+      circle(540, 1040, 58, { material: 'stone' }),
+      circle(1060, 820, 62, { material: 'stone' }),
+      circle(1700, 510, 58, { material: 'pot' })
+    ],
+    zones: [
+      rect(1135, 700, 420, 290, { type: 'water', depth: 28 }),
+      rect(1265, 675, 126, 330, { type: 'bridge', height: 12 }),
+      rect(1770, 350, 300, 150, { type: 'moss' })
     ],
     walls: [
-      { ax: 438, ay: 445, bx: 438, by: 790, thickness: 22, material: 'glass' },
-      { ax: 562, ay: 445, bx: 562, by: 790, thickness: 22, material: 'glass' }
+      { ax: 1265, ay: 675, bx: 1265, by: 1005, thickness: 20, material: 'glass' },
+      { ax: 1391, ay: 675, bx: 1391, by: 1005, thickness: 20, material: 'glass' }
     ],
-    decorations: [{type:'frog',x:275,y:600},{type:'leaf',x:730,y:670},{type:'snail',x:720,y:1180}]
-  },
-  {
+    decorations: [{type:'frog',x:1050,y:690},{type:'leaf',x:1510,y:970},{type:'snail',x:680,y:1120},{type:'mushroom',x:1980,y:370}]
+  }),
+  authoredLevel({
     id: 6,
-    name: 'Ложка сахара',
-    note: 'Склоны меняют траекторию',
-    par: 4,
-    start: { x: 250, y: 1210 },
-    hole: { x: 750, y: 215, r: 31 },
-    outline: poly([130,1320],[110,940],[180,690],[125,380],[250,110],[740,110],[865,380],[820,690],[890,940],[870,1320]),
+    name: 'Склоны сахарницы',
+    note: 'Высота теперь видна и действительно толкает мяч вниз',
+    par: 7,
+    centerline: route([190,1160],[540,920],[880,1030],[1110,710],[1450,800],[1700,500],[2140,210]),
+    width: [570,620,600,650,610,560,510],
     obstacles: [
-      circle(420, 935, 84, { material: 'spoon' }),
-      circle(610, 500, 68, { material: 'sugar' })
+      circle(600, 910, 82, { material: 'spoon' }),
+      circle(1210, 730, 68, { material: 'sugar' }),
+      circle(1740, 490, 64, { material: 'stone' })
     ],
     zones: [
-      rect(155, 650, 340, 170, { type: 'slope', forceX: 120, forceY: -15 }),
-      rect(525, 270, 300, 150, { type: 'slope', forceX: -90, forceY: 25 })
+      rect(760, 850, 390, 220, { type: 'slope', baseZ: 0, riseX: 24, riseY: -8 }),
+      rect(1330, 650, 370, 210, { type: 'slope', baseZ: 0, riseX: -18, riseY: 28 }),
+      rect(1850, 295, 280, 160, { type: 'sand', baseZ: -7 })
     ],
-    decorations: [{type:'mushroom',x:215,y:240},{type:'leaf',x:735,y:850},{type:'snail',x:250,y:1070}]
-  },
-  {
+    decorations: [{type:'mushroom',x:360,y:990},{type:'leaf',x:950,y:790},{type:'snail',x:1450,y:930},{type:'frog',x:2010,y:470}]
+  }),
+  authoredLevel({
     id: 7,
-    name: 'Две дороги',
-    note: 'Коротко через риск или спокойно вокруг',
-    par: 4,
-    start: { x: 500, y: 1250 },
-    hole: { x: 500, y: 175, r: 31 },
-    outline: poly([180,1320],[130,1060],[220,840],[125,610],[210,390],[160,170],[310,85],[690,85],[840,170],[790,390],[875,610],[780,840],[870,1060],[820,1320]),
+    name: 'Две длинные дороги',
+    note: 'Короткий рискованный центр или спокойные внешние виражи',
+    par: 7,
+    centerline: route([220,1190],[590,960],[890,1090],[1130,770],[1420,980],[1690,650],[1990,420],[2220,170]),
+    width: [600,660,700,720,680,620,560,500],
     obstacles: [
-      circle(500, 720, 165, { material: 'pot' }),
-      circle(250, 470, 52, { material: 'stone' }),
-      circle(750, 470, 52, { material: 'stone' })
+      circle(900, 970, 170, { material: 'pot' }),
+      circle(1320, 850, 130, { material: 'cup' }),
+      circle(1750, 630, 58, { material: 'stone' }),
+      circle(2050, 360, 54, { material: 'wood' })
     ],
-    zones: [rect(430, 515, 140, 410, { type: 'sand' })],
-    decorations: [{type:'frog',x:255,y:800},{type:'mushroom',x:745,y:300},{type:'leaf',x:710,y:1050}]
-  },
-  {
+    zones: [
+      rect(1010, 720, 180, 360, { type: 'sand', baseZ: -8 }),
+      rect(1510, 660, 310, 160, { type: 'moss' })
+    ],
+    walls: [
+      { ax: 1110, ay: 690, bx: 1390, by: 760, thickness: 18, material: 'glass' }
+    ],
+    decorations: [{type:'frog',x:520,y:830},{type:'mushroom',x:1110,y:1120},{type:'leaf',x:1580,y:1020},{type:'snail',x:2110,y:560}]
+  }),
+  authoredLevel({
     id: 8,
-    name: 'Тихий туннель',
-    note: 'Труба переносит мяч наверх',
-    par: 3,
-    start: { x: 260, y: 1215 },
-    hole: { x: 750, y: 235, r: 31 },
-    outline: poly([130,1320],[115,930],[190,690],[140,360],[270,105],[735,105],[860,360],[815,690],[890,930],[870,1320]),
-    obstacles: [circle(540, 760, 105, { material: 'stone' }), circle(300, 430, 60, { material: 'wood' })],
-    tunnels: [{ entry: {x: 760, y: 1030, r: 48}, exit: {x: 570, y: 385, r: 48} }],
-    zones: [rect(155, 820, 260, 120, { type: 'moss' })],
-    decorations: [{type:'snail',x:335,y:1070},{type:'leaf',x:735,y:620},{type:'mushroom',x:700,y:280}]
-  },
-  {
-    id: 9,
-    name: 'Светлячки',
-    note: 'Финальная лунка оранжереи',
-    par: 5,
-    start: { x: 500, y: 1260 },
-    hole: { x: 500, y: 155, r: 32 },
-    outline: poly([205,1330],[130,1120],[210,900],[125,680],[210,470],[145,255],[290,70],[710,70],[855,255],[790,470],[875,680],[790,900],[870,1120],[795,1330]),
+    name: 'Прыжок через галерею',
+    note: 'Разгонись по пандусу или воспользуйся тихим туннелем',
+    par: 6,
+    centerline: route([190,1170],[520,990],[820,760],[1160,900],[1460,650],[1790,430],[2160,190]),
+    width: [570,610,590,660,600,550,500],
     obstacles: [
-      circle(300, 980, 62, { material: 'stone' }),
-      circle(700, 980, 62, { material: 'stone' }),
-      circle(500, 455, 92, { material: 'cup' })
+      circle(600, 930, 78, { material: 'stone' }),
+      circle(1080, 820, 70, { material: 'wood' }),
+      circle(1660, 530, 62, { material: 'pot' })
     ],
-    rotors: [{ x: 500, y: 735, length: 470, thickness: 28, speed: -.55, angle: 0, material: 'wood' }],
-    zones: [rect(235, 1080, 530, 110, { type: 'moss' }), rect(185, 260, 230, 130, { type: 'sand' }), rect(585, 260, 230, 130, { type: 'sand' })],
-    decorations: [{type:'frog',x:250,y:560},{type:'snail',x:730,y:1110},{type:'mushroom',x:745,y:330},{type:'mushroom',x:255,y:330}],
-    fireflies: 18
-  }
+    tunnels: [{ entry: {x: 690, y: 1080, r: 48}, exit: {x: 1570, y: 520, r: 48} }],
+    zones: [
+      rect(1050, 735, 330, 190, { type: 'slope', baseZ: 0, riseX: 30, riseY: -4, ramp: true, launch: 350 }),
+      rect(1390, 610, 260, 190, { type: 'water', depth: 30 }),
+      rect(1680, 390, 300, 150, { type: 'moss' })
+    ],
+    decorations: [{type:'snail',x:360,y:1080},{type:'leaf',x:920,y:620},{type:'mushroom',x:1430,y:970},{type:'frog',x:1970,y:420}]
+  }),
+  authoredLevel({
+    id: 9,
+    name: 'Светлячковый серпантин',
+    note: 'Финальная длинная лунка с высотой, водой и двумя ритмами',
+    par: 8,
+    centerline: route([190,1190],[530,980],[820,1130],[1090,830],[920,560],[1300,330],[1620,560],[1880,350],[2220,150]),
+    width: [580,620,650,620,570,650,600,550,500],
+    obstacles: [
+      circle(500, 1010, 62, { material: 'stone' }),
+      circle(900, 930, 68, { material: 'stone' }),
+      circle(1040, 620, 92, { material: 'cup' }),
+      circle(1510, 500, 70, { material: 'pot' }),
+      circle(1950, 300, 58, { material: 'wood' })
+    ],
+    rotors: [
+      { x: 790, y: 1040, length: 360, thickness: 28, speed: -.52, angle: 0, material: 'wood' },
+      { x: 1700, y: 470, length: 330, thickness: 27, speed: .66, angle: .7, material: 'brass' }
+    ],
+    zones: [
+      rect(1090, 300, 390, 210, { type: 'slope', baseZ: 0, riseX: 22, riseY: -14 }),
+      rect(1310, 420, 280, 210, { type: 'water', depth: 26 }),
+      rect(1400, 400, 115, 240, { type: 'bridge', height: 12 }),
+      rect(1840, 235, 270, 150, { type: 'sand', baseZ: -7 })
+    ],
+    walls: [
+      { ax: 1400, ay: 400, bx: 1400, by: 640, thickness: 18, material: 'glass' },
+      { ax: 1515, ay: 400, bx: 1515, by: 640, thickness: 18, material: 'glass' }
+    ],
+    decorations: [{type:'frog',x:350,y:940},{type:'snail',x:680,y:1180},{type:'mushroom',x:1200,y:600},{type:'mushroom',x:1770,y:620},{type:'leaf',x:2070,y:440}],
+    fireflies: 22
+  })
 ];
 
 export function getLevel(index) {
@@ -153,8 +241,8 @@ export function getLevel(index) {
 }
 
 export function levelBounds(level) {
-  const xs = level.outline.map((p) => p.x);
-  const ys = level.outline.map((p) => p.y);
+  const xs = level.outline.map((point) => point.x);
+  const ys = level.outline.map((point) => point.y);
   return {
     minX: Math.min(...xs), maxX: Math.max(...xs),
     minY: Math.min(...ys), maxY: Math.max(...ys)

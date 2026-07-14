@@ -1,12 +1,19 @@
+import { rampAt, surfaceAt, terrainGradientAt, terrainHeightAt, waterAt } from './terrain.js';
+
 export const BALL_RADIUS = 22;
 const STOP_SPEED = 12;
 const MAX_SPEED = 1780;
+const GRAVITY = 1180;
+const SLOPE_ACCEL = 960;
+const CUP_DEFAULT_DEPTH = 64;
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export function pointInPolygon(point, polygon) {
   let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const a = polygon[i];
-    const b = polygon[j];
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const a = polygon[index];
+    const b = polygon[previous];
     const crosses = ((a.y > point.y) !== (b.y > point.y)) &&
       point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x;
     if (crosses) inside = !inside;
@@ -17,21 +24,9 @@ export function pointInPolygon(point, polygon) {
 export function closestPointOnSegment(px, py, ax, ay, bx, by) {
   const abx = bx - ax;
   const aby = by - ay;
-  const denom = abx * abx + aby * aby;
-  const t = denom ? Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / denom)) : 0;
+  const denominator = abx * abx + aby * aby;
+  const t = denominator ? clamp(((px - ax) * abx + (py - ay) * aby) / denominator, 0, 1) : 0;
   return { x: ax + abx * t, y: ay + aby * t, t };
-}
-
-function insideRect(p, zone) {
-  return p.x >= zone.x && p.x <= zone.x + zone.w && p.y >= zone.y && p.y <= zone.y + zone.h;
-}
-
-function insideCircle(p, zone) {
-  return Math.hypot(p.x - zone.x, p.y - zone.y) <= zone.r;
-}
-
-export function insideZone(point, zone) {
-  return zone.shape === 'circle' ? insideCircle(point, zone) : insideRect(point, zone);
 }
 
 function materialRestitution(material) {
@@ -52,32 +47,47 @@ function bounce(ball, nx, ny, restitution, extraVx = 0, extraVy = 0) {
   ball.vy += extraVy;
 }
 
+function obstacleHeight(obstacle) {
+  if (obstacle.material === 'glass') return 72;
+  if (obstacle.material === 'cup') return obstacle.r * .86;
+  if (obstacle.material === 'pot') return obstacle.r * 1.12;
+  if (obstacle.material === 'wood') return obstacle.r * .72;
+  if (obstacle.material === 'spoon') return Math.max(10, obstacle.r * .22);
+  return obstacle.r * .95;
+}
+
+function canClear(ball, topZ) {
+  return ball.z - BALL_RADIUS > topZ + 4;
+}
+
 function resolveBoundary(ball, level, events) {
+  const localGround = terrainHeightAt(level, ball.x, ball.y);
+  if (canClear(ball, localGround + 24)) return;
   const polygon = level.outline;
-  for (let i = 0; i < polygon.length; i += 1) {
-    const a = polygon[i];
-    const b = polygon[(i + 1) % polygon.length];
-    const q = closestPointOnSegment(ball.x, ball.y, a.x, a.y, b.x, b.y);
-    let dx = ball.x - q.x;
-    let dy = ball.y - q.y;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const a = polygon[index];
+    const b = polygon[(index + 1) % polygon.length];
+    const nearest = closestPointOnSegment(ball.x, ball.y, a.x, a.y, b.x, b.y);
+    let dx = ball.x - nearest.x;
+    let dy = ball.y - nearest.y;
     let distance = Math.hypot(dx, dy);
     if (distance >= BALL_RADIUS + 4) continue;
 
     if (distance < .001) {
-      const sx = -(b.y - a.y);
-      const sy = b.x - a.x;
-      const sm = Math.hypot(sx, sy) || 1;
-      const n1 = { x: sx / sm, y: sy / sm };
-      const sample = { x: q.x + n1.x * 3, y: q.y + n1.y * 3 };
+      const sideX = -(b.y - a.y);
+      const sideY = b.x - a.x;
+      const sideLength = Math.hypot(sideX, sideY) || 1;
+      const normal = { x: sideX / sideLength, y: sideY / sideLength };
+      const sample = { x: nearest.x + normal.x * 3, y: nearest.y + normal.y * 3 };
       const sign = pointInPolygon(sample, polygon) ? 1 : -1;
-      dx = n1.x * sign;
-      dy = n1.y * sign;
+      dx = normal.x * sign;
+      dy = normal.y * sign;
       distance = 1;
     }
 
     const nx = dx / distance;
     const ny = dy / distance;
-    const test = { x: q.x + nx * (BALL_RADIUS + 2), y: q.y + ny * (BALL_RADIUS + 2) };
+    const test = { x: nearest.x + nx * (BALL_RADIUS + 2), y: nearest.y + ny * (BALL_RADIUS + 2) };
     if (!pointInPolygon(test, polygon)) continue;
 
     const push = BALL_RADIUS + 4 - distance;
@@ -96,22 +106,24 @@ function resolveBoundary(ball, level, events) {
   }
 }
 
-function resolveCircle(ball, obstacle, events) {
+function resolveCircle(ball, obstacle, level, events) {
+  const ground = terrainHeightAt(level, obstacle.x, obstacle.y);
+  if (canClear(ball, ground + obstacleHeight(obstacle))) return;
   const dx = ball.x - obstacle.x;
   const dy = ball.y - obstacle.y;
-  const minDistance = BALL_RADIUS + obstacle.r;
+  const minimumDistance = BALL_RADIUS + obstacle.r;
   const distance = Math.hypot(dx, dy);
-  if (distance >= minDistance || distance === 0) return;
+  if (distance >= minimumDistance || distance === 0) return;
   const nx = dx / distance;
   const ny = dy / distance;
-  ball.x = obstacle.x + nx * minDistance;
-  ball.y = obstacle.y + ny * minDistance;
+  ball.x = obstacle.x + nx * minimumDistance;
+  ball.y = obstacle.y + ny * minimumDistance;
   const speed = Math.hypot(ball.vx, ball.vy);
   bounce(ball, nx, ny, materialRestitution(obstacle.material));
   if (speed > 85) events.push({ type: 'collision', material: obstacle.material, speed });
 }
 
-function resolveCapsule(ball, wall, events, time) {
+function resolveCapsule(ball, wall, level, events, time) {
   let ax = wall.ax;
   let ay = wall.ay;
   let bx = wall.bx;
@@ -121,27 +133,34 @@ function resolveCapsule(ball, wall, events, time) {
 
   if (wall.rotor) {
     const angle = wall.angle + time * wall.speed;
-    const hx = Math.cos(angle) * wall.length * .5;
-    const hy = Math.sin(angle) * wall.length * .5;
-    ax = wall.x - hx; ay = wall.y - hy; bx = wall.x + hx; by = wall.y + hy;
+    const halfX = Math.cos(angle) * wall.length * .5;
+    const halfY = Math.sin(angle) * wall.length * .5;
+    ax = wall.x - halfX;
+    ay = wall.y - halfY;
+    bx = wall.x + halfX;
+    by = wall.y + halfY;
   }
 
-  const q = closestPointOnSegment(ball.x, ball.y, ax, ay, bx, by);
-  const dx = ball.x - q.x;
-  const dy = ball.y - q.y;
-  const minDistance = BALL_RADIUS + wall.thickness * .5;
+  const wallTop = wall.material === 'glass' ? 74 : 38;
+  const ground = terrainHeightAt(level, (ax + bx) * .5, (ay + by) * .5);
+  if (canClear(ball, ground + wallTop)) return;
+
+  const nearest = closestPointOnSegment(ball.x, ball.y, ax, ay, bx, by);
+  const dx = ball.x - nearest.x;
+  const dy = ball.y - nearest.y;
+  const minimumDistance = BALL_RADIUS + wall.thickness * .5;
   const distance = Math.hypot(dx, dy);
-  if (distance >= minDistance || distance === 0) return;
+  if (distance >= minimumDistance || distance === 0) return;
   const nx = dx / distance;
   const ny = dy / distance;
-  ball.x = q.x + nx * minDistance;
-  ball.y = q.y + ny * minDistance;
+  ball.x = nearest.x + nx * minimumDistance;
+  ball.y = nearest.y + ny * minimumDistance;
 
   if (wall.rotor) {
-    const rx = q.x - wall.x;
-    const ry = q.y - wall.y;
-    extraVx = -ry * wall.speed * .24;
-    extraVy = rx * wall.speed * .24;
+    const radiusX = nearest.x - wall.x;
+    const radiusY = nearest.y - wall.y;
+    extraVx = -radiusY * wall.speed * .24;
+    extraVy = radiusX * wall.speed * .24;
   }
 
   const speed = Math.hypot(ball.vx, ball.vy);
@@ -149,61 +168,214 @@ function resolveCapsule(ball, wall, events, time) {
   if (speed > 85) events.push({ type: 'collision', material: wall.material, speed });
 }
 
-function currentSurface(ball, level) {
-  let surface = 'grass';
-  for (const zone of level.zones || []) {
-    if (!insideZone(ball, zone)) continue;
-    if (zone.type === 'bridge') return 'bridge';
-    if (zone.type === 'sand') surface = 'sand';
-    if (zone.type === 'moss') surface = 'moss';
-  }
-  return surface;
-}
-
-function isInWater(ball, level) {
-  let water = false;
-  for (const zone of level.zones || []) {
-    if (!insideZone(ball, zone)) continue;
-    if (zone.type === 'water') water = true;
-    if (zone.type === 'bridge') water = false;
-  }
-  return water;
-}
-
-function applySlopes(ball, level, dt) {
-  for (const zone of level.zones || []) {
-    if (zone.type !== 'slope' || !insideZone(ball, zone)) continue;
-    ball.vx += (zone.forceX || 0) * dt;
-    ball.vy += (zone.forceY || 0) * dt;
-  }
+function applyTerrainAcceleration(ball, level, dt) {
+  if (ball.airborne || ball.inCup) return;
+  const gradient = terrainGradientAt(level, ball.x, ball.y);
+  ball.vx -= gradient.x * SLOPE_ACCEL * dt;
+  ball.vy -= gradient.y * SLOPE_ACCEL * dt;
 }
 
 function handleTunnel(ball, level, events) {
-  if (ball.tunnelCooldown > 0) return;
+  if (ball.tunnelCooldown > 0 || ball.airborne || ball.inCup) return;
   for (const tunnel of level.tunnels || []) {
     if (Math.hypot(ball.x - tunnel.entry.x, ball.y - tunnel.entry.y) > tunnel.entry.r) continue;
     const speed = Math.max(220, Math.hypot(ball.vx, ball.vy));
-    const angle = Math.atan2(ball.vy, ball.vx);
+    const angle = Number.isFinite(tunnel.exit.angle) ? tunnel.exit.angle : Math.atan2(ball.vy, ball.vx);
     ball.x = tunnel.exit.x;
     ball.y = tunnel.exit.y;
+    ball.prevX = ball.x;
+    ball.prevY = ball.y;
     ball.vx = Math.cos(angle) * speed * .84;
     ball.vy = Math.sin(angle) * speed * .84;
+    ball.groundZ = terrainHeightAt(level, ball.x, ball.y);
+    ball.z = ball.groundZ + BALL_RADIUS;
+    ball.vz = 0;
+    ball.airborne = false;
     ball.tunnelCooldown = .8;
     events.push({ type: 'tunnel' });
     break;
   }
 }
 
-export function createBall(start) {
+function maybeLaunchFromRamp(ball, level, previousX, previousY, events) {
+  if (ball.airborne || ball.inCup) return;
+  const previousRamp = rampAt(level, previousX, previousY);
+  const currentRamp = rampAt(level, ball.x, ball.y);
+  if (!previousRamp || currentRamp === previousRamp) return;
+  const gradient = terrainGradientAt({ zones: [previousRamp] }, previousX, previousY);
+  const length = Math.hypot(gradient.x, gradient.y) || 1;
+  const uphillX = gradient.x / length;
+  const uphillY = gradient.y / length;
+  const uphillSpeed = ball.vx * uphillX + ball.vy * uphillY;
+  const totalSpeed = Math.hypot(ball.vx, ball.vy);
+  if (uphillSpeed < Math.max(120, totalSpeed * .2) || totalSpeed < Number(previousRamp.minLaunchSpeed ?? 360)) return;
+  ball.airborne = true;
+  ball.grounded = false;
+  ball.vz = Number(previousRamp.launch ?? 300) + totalSpeed * .08;
+  ball.z = Math.max(ball.z, terrainHeightAt(level, previousX, previousY) + BALL_RADIUS + 1);
+  events.push({ type: 'jump', speed: totalSpeed });
+}
+
+function stepVertical(ball, level, dt, events) {
+  const ground = terrainHeightAt(level, ball.x, ball.y);
+  ball.groundZ = ground;
+  const target = ground + BALL_RADIUS;
+
+  if (ball.airborne) {
+    ball.vz -= GRAVITY * dt;
+    ball.z += ball.vz * dt;
+    if (ball.z <= target) {
+      const impact = -ball.vz;
+      ball.z = target;
+      ball.vz = 0;
+      ball.airborne = false;
+      ball.grounded = true;
+      if (impact > 140) events.push({ type: 'land', speed: impact });
+    }
+    return;
+  }
+
+  if (ball.z > target + 1.5) {
+    ball.airborne = true;
+    ball.grounded = false;
+    ball.vz = Math.min(0, ball.vz);
+    return;
+  }
+
+  if (target > ball.z + 1.5) {
+    const climb = target - ball.z;
+    const speedLoss = clamp(1 - climb / 75, .72, 1);
+    ball.vx *= speedLoss;
+    ball.vy *= speedLoss;
+  }
+  ball.z = target;
+  ball.vz = 0;
+  ball.grounded = true;
+}
+
+function cupMetrics(level) {
+  const hole = level.hole;
+  const surfaceZ = terrainHeightAt(level, hole.x, hole.y);
+  const depth = Math.max(52, Number(hole.depth ?? CUP_DEFAULT_DEPTH));
+  const throat = Math.max(12, hole.r - BALL_RADIUS * .42);
+  const influence = hole.r + BALL_RADIUS * .82;
+  const bottomCenterZ = surfaceZ - depth + BALL_RADIUS;
+  return { hole, surfaceZ, depth, throat, influence, bottomCenterZ };
+}
+
+function stepCup(ball, level, dt, events) {
+  const { hole, surfaceZ, throat, influence, bottomCenterZ } = cupMetrics(level);
+  let dx = ball.x - hole.x;
+  let dy = ball.y - hole.y;
+  let distance = Math.hypot(dx, dy);
+  const speed = Math.hypot(ball.vx, ball.vy);
+
+  if (!ball.inCup) {
+    if (!ball.airborne && distance < influence && ball.z <= surfaceZ + BALL_RADIUS + 4) {
+      const pullStrength = (1 - distance / influence) * 300 * (1 - clamp(speed / 820, 0, .82));
+      if (distance > .001) {
+        ball.vx -= dx / distance * pullStrength * dt;
+        ball.vy -= dy / distance * pullStrength * dt;
+      }
+    }
+    if (distance >= throat || ball.z > surfaceZ + BALL_RADIUS + 3 || ball.vz > 100) return false;
+    ball.inCup = true;
+    ball.airborne = true;
+    ball.grounded = false;
+    ball.cupEntrySpeed = speed;
+  }
+
+  ball.vz -= GRAVITY * dt;
+  ball.z += ball.vz * dt;
+  dx = ball.x - hole.x;
+  dy = ball.y - hole.y;
+  distance = Math.hypot(dx, dy);
+
+  if (distance > throat) {
+    const escapeAllowance = ball.cupEntrySpeed > 650 ? 10 : ball.cupEntrySpeed > 500 ? 5 : 1;
+    if (ball.z >= surfaceZ + BALL_RADIUS - escapeAllowance) {
+      ball.inCup = false;
+      const outsideGround = terrainHeightAt(level, ball.x, ball.y);
+      const outsideTarget = outsideGround + BALL_RADIUS;
+      if (ball.z <= outsideTarget) {
+        ball.z = outsideTarget;
+        ball.vz = 0;
+        ball.airborne = false;
+        ball.grounded = true;
+      }
+      events.push({ type: 'lip-out', speed: Math.hypot(ball.vx, ball.vy) });
+      return false;
+    }
+
+    const nx = dx / distance;
+    const ny = dy / distance;
+    ball.x = hole.x + nx * throat;
+    ball.y = hole.y + ny * throat;
+    const radialVelocity = ball.vx * nx + ball.vy * ny;
+    if (radialVelocity > 0) {
+      ball.vx -= (1 + .42) * radialVelocity * nx;
+      ball.vy -= (1 + .42) * radialVelocity * ny;
+    }
+    ball.vx *= .9;
+    ball.vy *= .9;
+    ball.vz *= .82;
+    if (Math.abs(radialVelocity) > 90) events.push({ type: 'collision', material: 'cup', speed: Math.abs(radialVelocity) });
+  }
+
+  if (ball.z <= bottomCenterZ) {
+    const impact = -ball.vz;
+    ball.z = bottomCenterZ;
+    if (impact > 48) {
+      ball.vz = impact * .23;
+      events.push({ type: 'cup-bottom', speed: impact });
+    } else {
+      ball.vz = 0;
+    }
+    ball.vx *= Math.pow(.78, dt * 60);
+    ball.vy *= Math.pow(.78, dt * 60);
+    const settledSpeed = Math.hypot(ball.vx, ball.vy);
+    if (settledSpeed < 14 && Math.abs(ball.vz) < 10 && distance < throat * .9) {
+      ball.sunk = true;
+      ball.moving = false;
+      ball.airborne = false;
+      ball.grounded = false;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.vz = 0;
+      events.push({ type: 'cup' });
+    }
+  }
+  return true;
+}
+
+export function createBall(start, level = null) {
+  const groundZ = level ? terrainHeightAt(level, start.x, start.y) : Number(start.z ?? 0);
   return {
-    x: start.x, y: start.y, prevX: start.x, prevY: start.y,
-    vx: 0, vy: 0, moving: false, sunk: false, sink: 0,
-    waterTime: 0, tunnelCooldown: 0, surface: 'grass'
+    x: start.x,
+    y: start.y,
+    z: groundZ + BALL_RADIUS,
+    prevX: start.x,
+    prevY: start.y,
+    prevZ: groundZ + BALL_RADIUS,
+    groundZ,
+    vx: 0,
+    vy: 0,
+    vz: 0,
+    moving: false,
+    grounded: true,
+    airborne: false,
+    inCup: false,
+    sunk: false,
+    sink: 0,
+    cupEntrySpeed: 0,
+    waterTime: 0,
+    tunnelCooldown: 0,
+    surface: 'grass'
   };
 }
 
 export function isBallStopped(ball) {
-  return !ball.sunk && Math.hypot(ball.vx, ball.vy) < STOP_SPEED;
+  return !ball.sunk && !ball.airborne && !ball.inCup && Math.hypot(ball.vx, ball.vy) < STOP_SPEED;
 }
 
 export function strikeBall(ball, vx, vy) {
@@ -213,70 +385,72 @@ export function strikeBall(ball, vx, vy) {
   ball.vy = vy * scale;
   ball.moving = true;
   ball.waterTime = 0;
+  ball.inCup = false;
 }
 
 export function stepBall(ball, level, dt, time) {
   const events = [];
   if (ball.sunk) {
-    ball.sink = Math.min(1, ball.sink + dt * 2.8);
+    ball.sink = Math.min(1, ball.sink + dt * 2.4);
     return events;
   }
 
   dt = Math.min(dt, 1 / 24);
-  const speed = Math.hypot(ball.vx, ball.vy);
-  const substeps = Math.max(1, Math.ceil(speed * dt / 14));
+  const totalSpeed = Math.hypot(ball.vx, ball.vy, ball.vz);
+  const substeps = Math.max(1, Math.ceil(totalSpeed * dt / 12));
   const step = dt / substeps;
 
-  for (let i = 0; i < substeps; i += 1) {
+  for (let index = 0; index < substeps; index += 1) {
     ball.prevX = ball.x;
     ball.prevY = ball.y;
-    applySlopes(ball, level, step);
+    ball.prevZ = ball.z;
+
+    applyTerrainAcceleration(ball, level, step);
     ball.x += ball.vx * step;
     ball.y += ball.vy * step;
 
     resolveBoundary(ball, level, events);
-    for (const obstacle of level.obstacles || []) resolveCircle(ball, obstacle, events);
-    for (const wall of level.walls || []) resolveCapsule(ball, wall, events, time);
-    for (const rotor of level.rotors || []) resolveCapsule(ball, { ...rotor, rotor: true }, events, time);
+    for (const obstacle of level.obstacles || []) resolveCircle(ball, obstacle, level, events);
+    for (const wall of level.walls || []) resolveCapsule(ball, wall, level, events, time);
+    for (const rotor of level.rotors || []) resolveCapsule(ball, { ...rotor, rotor: true }, level, events, time);
     handleTunnel(ball, level, events);
+    maybeLaunchFromRamp(ball, level, ball.prevX, ball.prevY, events);
+
+    const cupHandled = stepCup(ball, level, step, events);
+    if (!cupHandled && !ball.sunk) stepVertical(ball, level, step, events);
+    if (ball.sunk) break;
   }
 
   ball.tunnelCooldown = Math.max(0, ball.tunnelCooldown - dt);
-  ball.surface = currentSurface(ball, level);
-  const friction = ball.surface === 'sand' ? .925 : ball.surface === 'moss' ? .955 : ball.surface === 'bridge' ? .982 : .972;
+  ball.surface = surfaceAt(level, ball.x, ball.y);
+  const friction = ball.surface === 'sand' ? .915 : ball.surface === 'moss' ? .952 : ball.surface === 'bridge' ? .982 : ball.surface === 'ramp' ? .976 : .972;
   const damping = Math.pow(friction, dt * 60);
-  ball.vx *= damping;
-  ball.vy *= damping;
-
-  const afterSpeed = Math.hypot(ball.vx, ball.vy);
-  const waterNow = isInWater(ball, level);
-  if (afterSpeed < STOP_SPEED) {
-    ball.vx = 0;
-    ball.vy = 0;
-    if (ball.moving && !waterNow) events.push({ type: 'stopped' });
-    ball.moving = false;
+  if (!ball.airborne || ball.inCup) {
+    ball.vx *= damping;
+    ball.vy *= damping;
   } else {
-    ball.moving = true;
+    ball.vx *= Math.pow(.995, dt * 60);
+    ball.vy *= Math.pow(.995, dt * 60);
   }
 
+  const afterSpeed = Math.hypot(ball.vx, ball.vy);
+  const waterNow = waterAt(level, ball.x, ball.y) && !ball.airborne && !ball.inCup;
   if (waterNow) {
     ball.waterTime += dt;
-    ball.vx *= Math.pow(.88, dt * 60);
-    ball.vy *= Math.pow(.88, dt * 60);
+    ball.vx *= Math.pow(.86, dt * 60);
+    ball.vy *= Math.pow(.86, dt * 60);
     if (ball.waterTime > .18) events.push({ type: 'water' });
   } else {
     ball.waterTime = 0;
   }
 
-  const holeDistance = Math.hypot(ball.x - level.hole.x, ball.y - level.hole.y);
-  if (holeDistance < level.hole.r + 4 && afterSpeed < 260) {
-    ball.sunk = true;
+  if (!ball.airborne && !ball.inCup && !ball.sunk && afterSpeed < STOP_SPEED) {
     ball.vx = 0;
     ball.vy = 0;
+    if (ball.moving && !waterNow) events.push({ type: 'stopped' });
     ball.moving = false;
-    ball.x = level.hole.x;
-    ball.y = level.hole.y;
-    events.push({ type: 'cup' });
+  } else if (!ball.sunk) {
+    ball.moving = true;
   }
 
   return events;
