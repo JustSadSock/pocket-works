@@ -26,7 +26,8 @@ check(route.includes("['gravel'") && route.includes("['narrow'") && route.includ
 check(route.includes("type === 'speed' ? 0.28 : 0") && route.includes('gapLength'), 'decorative ramp rules remain');
 check(physics.includes("fillText('ПРЫЖОК'") && physics.includes("'НЕ ХВАТИЛО СКОРОСТИ'"), 'jump does not communicate a real gap');
 check(route.includes('currentLoad') && route.includes('aheadLoad') && route.includes('exitLoad'), 'entry-apex-exit line is missing');
-check(ai.includes('pilot: 0.0031') && ai.includes("'late'") && ai.includes("'wide'") && ai.includes("'snap'"), 'contextual mistakes are incomplete');
+check(ai.includes('pilot: 0.010') && ai.includes("'late'") && ai.includes("'wide'") && ai.includes("'snap'"), 'contextual mistakes are incomplete');
+check(fixes.includes("shp28MistakeKind === 'wide'") && fixes.includes('strength * pulse * dt'), 'AI mistakes cannot physically reach the shoulder');
 check(physics.includes('shp28StableTrackHeading') && fixes.includes('shp28StableHighSpeedUpdateCar'), 'high-speed stability is incomplete');
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
