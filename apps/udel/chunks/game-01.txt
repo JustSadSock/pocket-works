@@ -1,0 +1,106 @@
+const VERSION = '1.5.0';
+const STORAGE_KEY = 'pocket-works:udel:state';
+const SETTINGS_KEY = 'pocket-works:udel:settings';
+
+const PROVINCE_SEED = [{"id":"p0","name":"Северный Мыс","terrain":"coast","resource":"fish","culture":"северяне","faith":"старый обряд","owner":"north","path":"M256.0,219.7 L289.0,190.3 L272.6,31.7 L170.0,55.0 L125.0,130.0 L98.3,193.5 Z","label":[207.7,133.8]},{"id":"p1","name":"Белая Гряда","terrain":"hills","resource":"iron","culture":"северяне","faith":"старый обряд","owner":"north","path":"M289.0,190.3 L424.3,207.7 L432.9,200.4 L442.0,51.4 L405.0,55.0 L280.0,30.0 L272.6,31.7 Z","label":[358.3,119.6]},{"id":"p2","name":"Озёрный Край","terrain":"lake","resource":"fish","culture":"северяне","faith":"старый обряд","owner":"north","path":"M432.9,200.4 L550.3,215.0 L629.2,88.8 L540.0,42.0 L442.0,51.4 Z","label":[516.9,125.3]},{"id":"p3","name":"Штормовой Берег","terrain":"coast","resource":"salt","culture":"северяне","faith":"старый обряд","owner":"north","path":"M550.3,215.0 L587.8,276.7 L693.4,268.9 L710.0,190.0 L660.0,105.0 L629.2,88.8 Z","label":[634.8,197.2]},{"id":"p4","name":"Волчьи Пущи","terrain":"forest","resource":"timber","culture":"северяне","faith":"старый обряд","owner":"north","path":"M234.8,377.0 L264.6,348.3 L256.0,219.7 L98.3,193.5 L85.0,225.0 L115.0,330.0 L103.9,361.6 Z","label":[178.4,285.7]},{"id":"p5","name":"Серебряная Долина","terrain":"plains","resource":"grain","culture":"пограничники","faith":"единая вера","owner":"player","path":"M424.3,207.7 L289.0,190.3 L256.0,219.7 L264.6,348.3 L410.7,357.7 Z","label":[339.2,274.6]},{"id":"p6","name":"Каменец","terrain":"hills","resource":"stone","culture":"пограничники","faith":"единая вера","owner":"player","path":"M553.2,380.4 L587.8,276.7 L550.3,215.0 L432.9,200.4 L424.3,207.7 L410.7,357.7 L419.3,368.5 Z","label":[493.8,292.2]},{"id":"p7","name":"Тихая Заводь","terrain":"river","resource":"fish","culture":"пограничники","faith":"единая вера","owner":"player","path":"M587.8,276.7 L553.2,380.4 L582.0,420.0 L724.3,420.0 L735.0,385.0 L690.0,285.0 L693.4,268.9 Z","label":[643.3,352.3]},{"id":"p8","name":"Чернолесье","terrain":"forest","resource":"timber","culture":"пограничники","faith":"единая вера","owner":"player","path":"M247.2,532.8 L257.4,521.9 L234.8,377.0 L103.9,361.6 L80.0,430.0 L118.5,540.6 Z","label":[169.3,452.9]},{"id":"p9","name":"Серый Брод","terrain":"river","resource":"grain","culture":"пограничники","faith":"единая вера","owner":"player","path":"M410.7,357.7 L264.6,348.3 L234.8,377.0 L257.4,521.9 L391.3,518.2 L419.3,368.5 Z","label":[325.2,432.8]},{"id":"p10","name":"Златополье","terrain":"plains","resource":"grain","culture":"пограничники","faith":"единая вера","owner":"player","path":"M391.3,518.2 L421.0,549.0 L553.7,536.9 L582.0,420.0 L553.2,380.4 L419.3,368.5 Z","label":[484.4,459.5]},{"id":"p11","name":"Янтарный Берег","terrain":"coast","resource":"amber","culture":"прибрежники","faith":"единая вера","owner":"player","path":"M582.0,420.0 L553.7,536.9 L593.4,584.5 L723.0,592.0 L700.0,500.0 L724.3,420.0 Z","label":[641.0,504.1]},{"id":"p12","name":"Ржаная Марка","terrain":"plains","resource":"grain","culture":"пограничники","faith":"единая вера","owner":"player","path":"M257.4,691.6 L247.2,532.8 L118.5,540.6 L120.0,545.0 L95.0,650.0 L127.6,718.4 Z","label":[179.2,623.1]},{"id":"p13","name":"Срединные Холмы","terrain":"hills","resource":"iron","culture":"пограничники","faith":"единая вера","owner":"player","path":"M257.4,521.9 L247.2,532.8 L257.4,691.6 L280.2,706.8 L409.5,679.3 L421.0,549.0 L391.3,518.2 Z","label":[331.5,606.3]},{"id":"p14","name":"Ладожье","terrain":"lake","resource":"fish","culture":"озёрники","faith":"озёрный культ","owner":"south","path":"M548.0,711.7 L593.4,584.5 L553.7,536.9 L421.0,549.0 L409.5,679.3 L463.3,727.7 Z","label":[495.7,627.0]},{"id":"p15","name":"Красный Утёс","terrain":"hills","resource":"stone","culture":"южане","faith":"единая вера","owner":"south","path":"M593.4,584.5 L548.0,711.7 L688.1,820.8 L675.0,720.0 L730.0,620.0 L723.0,592.0 Z","label":[639.0,677.5]},{"id":"p16","name":"Дубравы","terrain":"forest","resource":"timber","culture":"южане","faith":"солнечный канон","owner":"south","path":"M280.2,706.8 L257.4,691.6 L127.6,718.4 L145.0,755.0 L125.0,865.0 L185.0,965.0 L285.0,1025.0 L310.1,1016.2 Z","label":[222.7,848.2]},{"id":"p17","name":"Королевский Тракт","terrain":"plains","resource":"horses","culture":"южане","faith":"солнечный канон","owner":"south","path":"M423.7,920.2 L463.3,727.7 L409.5,679.3 L280.2,706.8 L310.1,1016.2 L369.4,995.4 Z","label":[365.0,828.1]},{"id":"p18","name":"Солёные Степи","terrain":"steppe","resource":"horses","culture":"южане","faith":"солнечный канон","owner":"south","path":"M548.0,711.7 L463.3,727.7 L423.7,920.2 L688.2,821.0 L688.1,820.8 Z","label":[533.3,809.3]},{"id":"p19","name":"Южная Дельта","terrain":"delta","resource":"salt","culture":"южане","faith":"солнечный канон","owner":"south","path":"M423.7,920.2 L369.4,995.4 L385.0,990.0 L505.0,1015.0 L620.0,965.0 L690.0,835.0 L688.2,821.0 Z","label":[538.0,931.1]}];
+const ADJACENCY = {"p0":["p1","p4","p5"],"p1":["p2","p5","p6"],"p4":["p5","p8","p9"],"p5":["p6","p9"],"p2":["p3","p6"],"p6":["p7","p9","p10"],"p3":["p6","p7"],"p7":["p10","p11"],"p8":["p9","p12","p13"],"p9":["p10","p13"],"p10":["p11","p13","p14"],"p11":["p14","p15"],"p12":["p13","p16"],"p13":["p14","p16","p17"],"p14":["p15","p17","p18"],"p15":["p18"],"p16":["p17"],"p17":["p18","p19"],"p18":["p19"],"p19":[]};
+
+const TERRAIN = {
+  coast: { name: 'Побережье', icon: '≈', food: 2, tax: 2, manpower: 1, color: '#9eb8aa' },
+  hills: { name: 'Холмы', icon: '▲', food: 1, tax: 2, manpower: 2, color: '#a69b79' },
+  lake: { name: 'Озёрный край', icon: '◉', food: 3, tax: 1, manpower: 1, color: '#8faeae' },
+  forest: { name: 'Лес', icon: '♠', food: 2, tax: 1, manpower: 2, color: '#688168' },
+  plains: { name: 'Равнина', icon: '✦', food: 4, tax: 2, manpower: 2, color: '#b3aa73' },
+  river: { name: 'Речная долина', icon: '≋', food: 4, tax: 2, manpower: 1, color: '#8aa7a0' },
+  steppe: { name: 'Степь', icon: '⌁', food: 2, tax: 1, manpower: 3, color: '#b39467' },
+  delta: { name: 'Дельта', icon: '⋔', food: 5, tax: 2, manpower: 1, color: '#80a58e' }
+};
+
+const RESOURCES = {
+  fish: ['Рыба', '◌', { food: 2 }],
+  iron: ['Железо', '◆', { tax: 2, army: 1 }],
+  salt: ['Соль', '◇', { tax: 2 }],
+  timber: ['Лес', '♠', { tax: 1, fort: 1 }],
+  grain: ['Зерно', '✦', { food: 3 }],
+  stone: ['Камень', '▰', { tax: 1, fort: 1 }],
+  amber: ['Янтарь', '●', { tax: 3 }],
+  horses: ['Лошади', '♞', { manpower: 2, army: 1 }]
+};
+
+const BUILDINGS = {
+  fields: { name: 'Поля и амбары', icon: '✦', cost: 26, food: 4, tax: 0, manpower: 0, desc: '+4 продовольствия за сезон' },
+  market: { name: 'Рынок', icon: '¤', cost: 32, food: 0, tax: 4, manpower: 0, desc: '+4 налогов за сезон' },
+  road: { name: 'Королевский тракт', icon: '↝', cost: 38, food: 1, tax: 2, manpower: 1, desc: 'Доход, резервы и контроль' },
+  barracks: { name: 'Воинский двор', icon: '⚔', cost: 36, food: 0, tax: 0, manpower: 4, desc: '+4 людских резервов' }
+};
+
+const ESTATES = {
+  nobles: { name: 'Знать', icon: '♜', desc: 'Даёт конницу, командиров и проблемы с идеями о собственной незаменимости.' },
+  clergy: { name: 'Духовенство', icon: '✥', desc: 'Удерживает порядок, но требует права определять, что именно считается порядком.' },
+  burghers: { name: 'Города', icon: '¤', desc: 'Наполняют казну, строят рынки и читают ваши налоговые указы слишком внимательно.' },
+  commons: { name: 'Общины', icon: '♟', desc: 'Кормят державу и составляют большую часть армии. Плохой урожай замечают первыми.' }
+};
+
+const PRIVILEGES = {
+  nobles: { name: 'Право частных дружин', effect: 'Конница дешевле, но влияние знати растёт.', loyalty: 12, influence: 8 },
+  clergy: { name: 'Суд духовных лиц', effect: 'Порядок выше, налоги с церкви ниже.', loyalty: 12, influence: 7 },
+  burghers: { name: 'Городские хартии', effect: 'Рынки дают больше золота, автономия растёт.', loyalty: 12, influence: 7 },
+  commons: { name: 'Защита общинных земель', effect: 'Поля дают больше еды, знать недовольна.', loyalty: 13, influence: 5 }
+};
+
+const LAWS = [
+  {
+    id: 'tax',
+    name: 'Налоговый уклад',
+    choices: [
+      { name: 'Натуральный оброк', desc: 'Меньше золота, больше продовольствия и спокойствия.', effects: { tax: -2, food: 4, towns: 4 } },
+      { name: 'Земельный сбор', desc: 'Сбалансированная система прямых налогов.', effects: { tax: 2 } },
+      { name: 'Казённая десятина', desc: 'Больше дохода, ниже лояльность городов и общин.', effects: { tax: 6, burghers: -7, commons: -5 } }
+    ]
+  },
+  {
+    id: 'levy',
+    name: 'Воинская повинность',
+    choices: [
+      { name: 'Феодальное ополчение', desc: 'Меньше содержания, сильнее знать.', effects: { upkeep: -3, nobles: 7 } },
+      { name: 'Земской набор', desc: 'Сбалансированная армия и людские резервы.', effects: { manpower: 3 } },
+      { name: 'Всеобщий призыв', desc: 'Больше резервов, хуже производство и лояльность.', effects: { manpower: 8, food: -3, commons: -8 } }
+    ]
+  },
+  {
+    id: 'rule',
+    name: 'Устройство управления',
+    choices: [
+      { name: 'Автономные наместники', desc: 'Провинции спокойнее, но платят меньше.', effects: { autonomy: 8, stability: 2 } },
+      { name: 'Княжеские чиновники', desc: 'Меньше автономии, дороже содержание двора.', effects: { autonomy: -5, court: 2 } },
+      { name: 'Личная власть', desc: 'Больше авторитета, сильнее сопротивление сословий.', effects: { authority: 3, estatePressure: 4 } }
+    ]
+  },
+  {
+    id: 'succession',
+    name: 'Наследование',
+    choices: [
+      { name: 'Совет рода', desc: 'Знать спокойнее, но престол может оспариваться.', effects: { nobles: 7, succession: -4 } },
+      { name: 'Первородство', desc: 'Надёжная передача власти без сильных бонусов.', effects: { succession: 4 } },
+      { name: 'Назначенный наследник', desc: 'Свобода выбора, высокий риск кризиса при смерти.', effects: { authority: 2, succession: -2 } }
+    ]
+  }
+];
+
+const TECHS = [
+  { id: 'irrigation', branch: 'Хозяйство', icon: '≋', name: 'Оросительные каналы', cost: [42, 10], desc: 'Равнины, реки и дельты дают +2 еды.' },
+  { id: 'ledgers', branch: 'Управление', icon: '▤', name: 'Счётные книги', cost: [48, 12], desc: 'Рынки и ресурсы дают больше налогов.' },
+  { id: 'roads', branch: 'Управление', icon: '↝', name: 'Почтовые тракты', cost: [58, 16], desc: 'Снижение автономии дешевле, дипломатия сильнее.', requires: 'ledgers' },
+  { id: 'mills', branch: 'Хозяйство', icon: '✣', name: 'Водяные мельницы', cost: [62, 17], desc: 'Поля дают +2 еды и +1 золото.', requires: 'irrigation' },
+  { id: 'pikes', branch: 'Военное дело', icon: '⚔', name: 'Длинные пики', cost: [56, 15], desc: 'Пехота эффективнее в тактических битвах.' },
+  { id: 'standing', branch: 'Военное дело', icon: '♜', name: 'Постоянное ядро', cost: [78, 24], desc: 'Набор войск не тратит действие.', requires: 'pikes' },
+  { id: 'charters', branch: 'Право', icon: '§', name: 'Городские грамоты', cost: [66, 20], desc: 'Привилегии городам дешевле и прибыльнее.', requires: 'ledgers' },
+  { id: 'chronicles', branch: 'Право', icon: '✥', name: 'Дворцовая хроника', cost: [84, 28], desc: '+2 авторитета и славы каждый сезон.', requires: 'charters' }
+];
+
+const EVENTS = [
+  {
+    title: 'Неурожай в центральных землях',
+    condition: (s) => s.food < 35,
+    text: 'Запасы скудны. Общины требуют открыть княжеские амбары, армейские казначеи требуют ровно обратного.',
+    choices: [
