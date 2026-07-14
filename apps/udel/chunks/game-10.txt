@@ -1,0 +1,26 @@
+
+loadState = function loadStateD2Compatible() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!saved?.game) return null;
+    const game = Array.isArray(saved.game.provinces) && saved.game.provinces.length === PROVINCE_SEED.length
+      ? saved.game
+      : migrateLegacy(saved.game);
+    return normalizeState(game);
+  } catch (error) {
+    console.warn('UDEL 2.0 save ignored', error);
+    return null;
+  }
+};
+
+const d2RenderTopbarPatched = renderTopbar;
+renderTopbar = function renderTopbarD2Alert() {
+  let html = d2RenderTopbarPatched();
+  if (html.includes('dynasty-alert')) return html;
+  const crisis = state.civilWar
+    ? `<span class="dynasty-alert">⚔ мятеж ${round(state.civilWar.support)}</span>`
+    : state.plots.some((plot) => plot.revealed)
+      ? '<span class="dynasty-alert quiet">◉ заговор раскрыт</span>'
+      : '';
+  return crisis ? html.replace('<div class="resource-strip">', `${crisis}<div class="resource-strip">`) : html;
+};
