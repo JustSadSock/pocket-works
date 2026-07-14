@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2b2924">
+  <meta name="description" content="СГИБ — тактильная головоломка о физическом складывании бумаги для Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СГИБ">
+  <title>СГИБ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" id="app" data-app-shell>
+    <canvas id="paperCanvas" aria-label="Игровой лист СГИБ" data-gesture-surface data-block-callout></canvas>
+
+    <header class="game-hud" id="gameHud" data-ui aria-live="polite">
+      <button class="binding-tab" type="button" id="pauseBtn" data-native-press>Пауза</button>
+      <div class="folio-label">
+        <span id="modeLabel">Лист 1</span>
+        <strong id="levelTitle">Первая линия</strong>
+      </div>
+      <div class="fold-counter">
+        <span>Сгибы</span>
+        <strong id="foldCounter">0 / 1</strong>
+      </div>
+      <button class="binding-tab" type="button" id="undoBtn" data-native-press disabled>Отменить</button>
+    </header>
+
+    <div class="gesture-hint" id="gestureHint" data-ui>
+      <i aria-hidden="true"></i>
+      <span id="gestureHintText">Потяни каплю к пустому кругу</span>
+    </div>
+
+    <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="appTitle">
+      <div class="menu-sheet">
+        <div class="printer-mark">АРХИВ СКЛАДОК · № 01</div>
+        <div class="title-lockup">
+          <div class="fold-glyph" aria-hidden="true"><i></i><b></b></div>
+          <div>
+            <p>Бумажная головоломка</p>
+            <h1 id="appTitle">СГИБ</h1>
+          </div>
+        </div>
+        <p class="menu-lead">Не двигай отметки. Сложи сам лист так, чтобы чернила нашли пустоты.</p>
+
+        <div class="menu-actions">
+          <button class="primary-cut" type="button" id="continueBtn" data-native-press>
+            <span id="continueLabel">Начать архив</span>
+            <small id="continueMeta">Лист 1 · один сгиб</small>
+          </button>
+          <button class="paper-cut" type="button" id="levelsBtn" data-native-press>
+            <span>Выбрать лист</span><small id="progressMeta">Открыт 1 из 10</small>
+          </button>
+          <button class="paper-cut" type="button" id="endlessBtn" data-native-press>
+            <span>Бесконечная стопка</span><small id="endlessMeta">Лучший ряд: 0</small>
+          </button>
+        </div>
+
+        <div class="menu-footer">
+          <button class="text-toggle" type="button" id="soundMenuBtn" data-native-press aria-pressed="true">Звук: вкл</button>
+          <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen index-screen" id="levelsScreen" data-ui aria-labelledby="levelsTitle">
+      <div class="index-sheet">
+        <header>
+          <div><p>Каталог</p><h2 id="levelsTitle">Авторские листы</h2></div>
+          <button class="close-cut" type="button" id="closeLevelsBtn" data-native-press>Закрыть</button>
+        </header>
+        <div class="level-grid" id="levelGrid"></div>
+        <a class="index-home" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" data-ui aria-labelledby="pauseTitle">
+      <div class="pause-board">
+        <p class="stamp">ЛИСТ ЗАФИКСИРОВАН</p>
+        <h2 id="pauseTitle">Пауза</h2>
+        <button class="primary-cut" type="button" id="resumeBtn" data-native-press><span>Продолжить</span><small>Вернуться к сгибу</small></button>
+        <button class="paper-cut" type="button" id="restartBtn" data-native-press><span>Начать лист заново</span><small>Без штрафа</small></button>
+        <div class="switch-row">
+          <button class="text-toggle" type="button" id="soundPauseBtn" data-native-press aria-pressed="true">Звук: вкл</button>
+          <button class="text-toggle" type="button" id="hapticsPauseBtn" data-native-press aria-pressed="true">Отдача: вкл</button>
+        </div>
+        <button class="paper-cut" type="button" id="pauseMenuBtn" data-native-press><span>В архив</span><small>Прогресс сохранён</small></button>
+        <button class="workshop-cut" type="button" data-workshop-trigger data-native-press>Workshop mode</button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" data-ui aria-labelledby="resultTitle">
+      <div class="result-sheet">
+        <div class="result-seal" aria-hidden="true"><span>✓</span></div>
+        <p class="stamp" id="resultStamp">ЛИСТ ЧИСТ</p>
+        <h2 id="resultTitle">Совпадение</h2>
+        <p class="result-copy" id="resultCopy">Чернила ушли точно в тиснение.</p>
+        <div class="result-stat"><strong id="resultFolds">1</strong><span id="resultUnit">сгиб</span></div>
+        <button class="primary-cut" type="button" id="nextBtn" data-native-press><span id="nextLabel">Следующий лист</span><small id="nextMeta">Лист 2</small></button>
+        <button class="paper-cut" type="button" id="resultRetryBtn" data-native-press><span>Повторить</span><small>Попробовать другую линию</small></button>
+        <button class="paper-cut" type="button" id="resultMenuBtn" data-native-press><span>В архив</span><small>Выбрать другой лист</small></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen fail-screen" id="failScreen" data-ui aria-labelledby="failTitle">
+      <div class="fail-sheet">
+        <div class="ink-failure" aria-hidden="true"></div>
+        <p class="stamp">ЛИМИТ ИСЧЕРПАН</p>
+        <h2 id="failTitle">Лист не сошёлся</h2>
+        <p id="failCopy">Остались несовмещённые отметки. Отмени последний сгиб или начни заново.</p>
+        <button class="primary-cut" type="button" id="failRetryBtn" data-native-press><span>Начать заново</span><small>Вернуть целый лист</small></button>
+        <button class="paper-cut" type="button" id="failUndoBtn" data-native-press><span>Отменить сгиб</span><small>Вернуться к последней складке</small></button>
+        <button class="paper-cut" type="button" id="failMenuBtn" data-native-press><span>В архив</span><small>Прогресс сохранён</small></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen error-screen" id="errorScreen" data-ui aria-labelledby="errorTitle">
+      <div class="error-sheet">
+        <p class="stamp">ОШИБКА ЗАПУСКА</p>
+        <h2 id="errorTitle">Лист не развернулся</h2>
+        <p id="errorCopy">Перезагрузи приложение. Сохранённый прогресс останется на месте.</p>
+        <button class="primary-cut" type="button" id="reloadBtn" data-native-press><span>Перезагрузить</span><small>Повторить запуск</small></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" data-ui role="status"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="СГИБ"
+    data-app-version="1.0.0"
+  ></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>

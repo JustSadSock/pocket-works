@@ -1,0 +1,108 @@
+    source.buffer = this.noise;
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(high, now);
+    filter.Q.setValueAtTime(0.7, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    source.connect(filter).connect(gain).connect(this.context.destination);
+    source.start(now, Math.random() * 0.1);
+    source.stop(now + duration + 0.03);
+  }
+
+  press() { this.tone(310, 0.045, 0.012, 'triangle'); }
+  invalid() { this.tone(92, 0.13, 0.035, 'sine'); }
+  fold() { this.rustle(0.3, 0.045, 1250); }
+  match() {
+    this.tone(480, 0.08, 0.026, 'sine');
+    this.tone(690, 0.1, 0.022, 'sine', 0.045);
+  }
+  success() {
+    this.tone(392, 0.18, 0.025, 'triangle');
+    this.tone(523, 0.2, 0.024, 'triangle', 0.08);
+    this.tone(659, 0.28, 0.022, 'triangle', 0.16);
+  }
+}
+
+const audio = new PaperAudio();
+
+function normalizedPoint(nx, ny) {
+  return {
+    x: PAPER_MIN_X + (PAPER_MAX_X - PAPER_MIN_X) * nx,
+    y: PAPER_MIN_Y + (PAPER_MAX_Y - PAPER_MIN_Y) * ny
+  };
+}
+
+function clonePoint(point) {
+  return { x: point.x, y: point.y };
+}
+
+function clonePolygon(polygon) {
+  return polygon.map(clonePoint);
+}
+
+function cloneSnapshot() {
+  return {
+    layers: state.layers.map((layer) => ({ ...layer, polygon: clonePolygon(layer.polygon) })),
+    entities: state.entities.map((entity) => ({ ...entity })),
+    creases: state.creases.map((crease) => ({
+      point: clonePoint(crease.point),
+      normal: clonePoint(crease.normal),
+      tangent: clonePoint(crease.tangent)
+    })),
+    foldsUsed: state.foldsUsed
+  };
+}
+
+function restoreSnapshot(snapshot) {
+  state.layers = snapshot.layers.map((layer) => ({ ...layer, polygon: clonePolygon(layer.polygon) }));
+  state.entities = snapshot.entities.map((entity) => ({ ...entity }));
+  state.creases = snapshot.creases.map((crease) => ({
+    point: clonePoint(crease.point),
+    normal: clonePoint(crease.normal),
+    tangent: clonePoint(crease.tangent)
+  }));
+  state.foldsUsed = snapshot.foldsUsed;
+  state.animation = null;
+  state.gesture = null;
+  state.resolved = false;
+  state.particles = [];
+  state.pulses = [];
+  updateHud();
+}
+
+function buildEntities(level) {
+  const entities = [];
+  let id = 0;
+  for (const entry of level.entities || []) {
+    const [type, nx, ny] = entry;
+    const point = normalizedPoint(nx, ny);
+    entities.push({ id: `e${id += 1}`, type, x: point.x, y: point.y, radius: type === 'void' ? 30 : 25 });
+  }
+  for (const group of level.groups || []) {
+    const start = normalizedPoint(...group.from);
+    const end = normalizedPoint(...group.to);
+    const line = lineFromGesture(start, end);
+    group.points.forEach((rawPoint, index) => {
+      const point = normalizedPoint(...rawPoint);
+      const partner = reflectPoint(point, line);
+      const types = group.types?.[index] || ['ink', 'void'];
+      entities.push({ id: `e${id += 1}`, type: types[0], x: point.x, y: point.y, radius: types[0] === 'void' ? 30 : 25 });
+      entities.push({ id: `e${id += 1}`, type: types[1], x: partner.x, y: partner.y, radius: types[1] === 'void' ? 30 : 25 });
+    });
+  }
+  return entities;
+}
+
+function createInitialLayers() {
+  return [{ polygon: clonePolygon(BASE_PAPER), depth: 0, shade: 0 }];
+}
+
+function buildEndlessLevel(seed, streak) {
+  const random = mulberry32(seed);
+  const pairCount = clamp(1 + Math.floor(streak / 3), 1, 4);
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const angle = random() * Math.PI;
+    const midpoint = normalizedPoint(0.43 + random() * 0.14, 0.43 + random() * 0.14);
+    const normal = { x: Math.cos(angle), y: Math.sin(angle) };
+    const start = { x: midpoint.x - normal.x * 285, y: midpoint.y - normal.y * 285 };

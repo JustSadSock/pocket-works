@@ -1,0 +1,103 @@
+    dom.resultUnit.textContent = foldWord(state.foldsUsed).replace(/^\d+\s*/, '');
+    dom.resultRetryBtn.querySelector('span').textContent = 'Повторить';
+    dom.resultRetryBtn.querySelector('small').textContent = 'Попробовать другую линию';
+    if (state.levelIndex < LEVELS.length - 1) {
+      dom.nextLabel.textContent = 'Следующий лист';
+      dom.nextMeta.textContent = `Лист ${state.levelIndex + 2} · ${LEVELS[state.levelIndex + 1].title}`;
+    } else {
+      dom.nextLabel.textContent = 'Бесконечная стопка';
+      dom.nextMeta.textContent = 'Новые листы без конца';
+    }
+  } else {
+    state.endlessStreak += 1;
+    settings.endlessBest = Math.max(settings.endlessBest || 0, state.endlessStreak);
+    store.set('endlessBest', settings.endlessBest);
+    dom.resultStamp.textContent = 'СТОПКА ПРОДОЛЖАЕТСЯ';
+    dom.resultTitle.textContent = `Ряд ${state.endlessStreak}`;
+    dom.resultCopy.textContent = state.endlessStreak === settings.endlessBest
+      ? 'Это твоя лучшая непрерывная серия.'
+      : 'Ещё один лист сложился без остатка.';
+    dom.resultFolds.textContent = String(state.endlessStreak);
+    dom.resultUnit.textContent = 'листов подряд';
+    dom.nextLabel.textContent = 'Следующий лист';
+    dom.nextMeta.textContent = `Стопка ${state.endlessStreak + 1}`;
+    dom.resultRetryBtn.querySelector('span').textContent = 'Новая стопка';
+    dom.resultRetryBtn.querySelector('small').textContent = 'Сбросить серию и начать заново';
+  }
+
+  completionTimer = setTimeout(() => showScreen('resultScreen'), REDUCED_MOTION ? 80 : 620);
+}
+
+function finishFailure() {
+  if (state.resolved || state.entities.length === 0) return;
+  state.resolved = true;
+  hideHint();
+  audio.invalid();
+  vibrate(28);
+  dom.failCopy.textContent = state.mode === 'endless'
+    ? `Серия остановилась на ${state.endlessStreak}. Этот лист можно переиграть или начать новую стопку.`
+    : 'Остались несовмещённые отметки. Отмени последний сгиб или начни лист заново.';
+  dom.failUndoBtn.disabled = state.history.length === 0;
+  showScreen('failScreen');
+}
+
+function undoFold() {
+  if (!state.history.length || state.animation) return;
+  clearTimeout(completionTimer);
+  const snapshot = state.history.pop();
+  restoreSnapshot(snapshot);
+  showScreen(null);
+  state.paused = false;
+  state.resolved = false;
+  showHint('Последний сгиб отменён', true);
+  audio.rustle(0.17, 0.025, 900);
+  vibrate(7);
+}
+
+function restartCurrent() {
+  if (state.mode === 'campaign') startCampaign(state.levelIndex);
+  else loadEndlessSheet();
+}
+
+function pauseGame() {
+  if (state.mode === 'menu' || state.animation || state.resolved) return;
+  cancelGesture();
+  state.paused = true;
+  hideHint();
+  showScreen('pauseScreen');
+  updateSettingLabels();
+}
+
+function resumeGame() {
+  state.paused = false;
+  showScreen(null);
+  if (state.foldsUsed < state.maxFolds && state.level?.hint) showHint(state.level.hint, true);
+  state.lastInputAt = performance.now();
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = clamp(window.devicePixelRatio || 1, 1, 2.5);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  const scale = Math.min(rect.width / LOGICAL_WIDTH, rect.height / LOGICAL_HEIGHT);
+  view = {
+    dpr,
+    width: rect.width,
+    height: rect.height,
+    scale,
+    offsetX: (rect.width - LOGICAL_WIDTH * scale) * 0.5,
+    offsetY: (rect.height - LOGICAL_HEIGHT * scale) * 0.5
+  };
+}
+
+function createTextures() {
+  const desk = document.createElement('canvas');
+  desk.width = desk.height = 256;
+  const dctx = desk.getContext('2d');
+  dctx.fillStyle = '#2b2924';
+  dctx.fillRect(0, 0, 256, 256);

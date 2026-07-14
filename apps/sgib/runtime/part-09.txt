@@ -1,0 +1,110 @@
+    context.lineTo(crease.point.x + crease.tangent.x * 950, crease.point.y + crease.tangent.y * 950);
+    context.stroke();
+  }
+  context.restore();
+}
+
+function entitySeed(id) {
+  let hash = 2166136261;
+  for (const character of String(id)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function drawInk(entity, point = entity, alpha = 1) {
+  const random = mulberry32(entitySeed(entity.id));
+  context.save();
+  context.translate(point.x, point.y);
+  context.globalAlpha = alpha;
+  context.shadowColor = 'rgba(0,0,0,.28)';
+  context.shadowBlur = 10;
+  context.shadowOffsetY = 6;
+  context.beginPath();
+  const lobes = 11;
+  for (let index = 0; index <= lobes; index += 1) {
+    const angle = (index / lobes) * Math.PI * 2;
+    const radius = entity.radius * (0.82 + random() * 0.24);
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.closePath();
+  const gradient = context.createRadialGradient(-8, -10, 3, 0, 0, entity.radius * 1.25);
+  gradient.addColorStop(0, '#35413c');
+  gradient.addColorStop(0.34, '#1a2421');
+  gradient.addColorStop(1, '#0b1110');
+  context.fillStyle = gradient;
+  context.fill();
+  context.shadowColor = 'transparent';
+  context.fillStyle = 'rgba(255,255,255,.13)';
+  context.beginPath();
+  context.ellipse(-8, -10, 7, 4, -.35, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawVoid(entity, point = entity, alpha = 1) {
+  context.save();
+  context.translate(point.x, point.y);
+  context.globalAlpha = alpha;
+  context.strokeStyle = 'rgba(49,93,80,.68)';
+  context.lineWidth = 3;
+  context.shadowColor = 'rgba(48,42,32,.28)';
+  context.shadowBlur = 4;
+  context.shadowOffsetX = 2;
+  context.shadowOffsetY = 3;
+  context.beginPath();
+  context.arc(0, 0, entity.radius, 0, Math.PI * 2);
+  context.stroke();
+  context.shadowColor = 'rgba(255,255,255,.5)';
+  context.shadowOffsetX = -2;
+  context.shadowOffsetY = -2;
+  context.strokeStyle = 'rgba(255,255,255,.42)';
+  context.lineWidth = 1.4;
+  context.beginPath();
+  context.arc(0, 0, entity.radius - 4, 0, Math.PI * 2);
+  context.stroke();
+  context.shadowColor = 'transparent';
+  context.fillStyle = 'rgba(49,93,80,.13)';
+  context.beginPath();
+  context.arc(0, 0, 5, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawEntity(entity, point = entity, alpha = 1) {
+  if (entity.type === 'void') drawVoid(entity, point, alpha);
+  else drawInk(entity, point, alpha);
+}
+
+function drawPaperScene() {
+  if (state.gesture?.line) {
+    drawFoldPreview(state.gesture.line, state.gesture.angle, state.gesture.valid);
+  } else if (state.animation) {
+    drawFoldPreview(state.animation.line, state.animation.angle, true);
+  } else {
+    [...state.layers].sort((a, b) => (a.depth || 0) - (b.depth || 0)).forEach((layer) => drawPaperPolygon(layer.polygon, layer));
+    drawCreases();
+    state.entities.forEach((entity) => drawEntity(entity));
+  }
+  drawHintGesture();
+  drawEffects();
+}
+
+function drawFoldPreview(line, angle, valid) {
+  const movingLayers = [];
+  const stationaryLayers = [];
+  for (const layer of state.layers) {
+    const stationary = clipPolygon(layer.polygon, line, true);
+    const moving = clipPolygon(layer.polygon, line, false);
+    if (stationary.length >= 3) stationaryLayers.push({ ...layer, polygon: stationary });
+    if (moving.length >= 3) movingLayers.push({ ...layer, polygon: transformPolygon(moving, line, angle) });
+  }
+  stationaryLayers.sort((a, b) => (a.depth || 0) - (b.depth || 0)).forEach((layer) => drawPaperPolygon(layer.polygon, layer));
+
+  context.save();
+  const shadow = context.createLinearGradient(
+    line.point.x - line.normal.x * 80,
