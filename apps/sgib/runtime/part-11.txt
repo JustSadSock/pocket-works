@@ -1,0 +1,104 @@
+    context.arc(particle.x, particle.y, particle.radius * (1 - progress * .4), 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  }
+}
+
+function drawMenuScene() {
+  context.save();
+  const centerX = LOGICAL_WIDTH * 0.43;
+  const centerY = LOGICAL_HEIGHT * 0.57;
+  context.translate(centerX, centerY);
+  context.rotate(-0.09);
+  const sheets = [
+    { offsetX: -65, offsetY: 52, angle: -0.04, shade: 4 },
+    { offsetX: 20, offsetY: 24, angle: 0.055, shade: 2 },
+    { offsetX: -10, offsetY: -12, angle: -0.015, shade: 0 }
+  ];
+  for (const sheet of sheets) {
+    context.save();
+    context.translate(sheet.offsetX, sheet.offsetY);
+    context.rotate(sheet.angle);
+    const polygon = [
+      { x: -315, y: -440 },
+      { x: 310, y: -430 },
+      { x: 325, y: 430 },
+      { x: -320, y: 445 }
+    ];
+    drawPaperPolygon(polygon, { depth: sheet.shade, shade: sheet.shade });
+    context.restore();
+  }
+  context.restore();
+
+  context.save();
+  context.globalAlpha = 0.55;
+  const demoInk = { id: 'menu-ink', type: 'ink', radius: 27, x: 260, y: 1000 };
+  const demoVoid = { id: 'menu-void', type: 'void', radius: 32, x: 730, y: 710 };
+  drawEntity(demoInk);
+  drawEntity(demoVoid);
+  context.setLineDash([10, 12]);
+  context.strokeStyle = 'rgba(49,93,80,.45)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(260, 1000);
+  context.lineTo(730, 710);
+  context.stroke();
+  context.restore();
+}
+
+function updateAnimation(now) {
+  if (!state.animation) return;
+  const progress = clamp((now - state.animation.startedAt) / state.animation.duration, 0, 1);
+  const eased = 1 - Math.pow(1 - progress, 3);
+  state.animation.angle = state.animation.fromAngle + (Math.PI - state.animation.fromAngle) * eased;
+  if (progress >= 1 && !state.animation.applied) {
+    state.animation.applied = true;
+    const line = state.animation.line;
+    state.animation = null;
+    applyFold(line);
+  }
+}
+
+function updateEffects(deltaSeconds) {
+  for (const particle of state.particles) {
+    particle.age += deltaSeconds;
+    particle.x += particle.vx * deltaSeconds;
+    particle.y += particle.vy * deltaSeconds;
+    particle.vx *= Math.pow(0.08, deltaSeconds);
+    particle.vy = particle.vy * Math.pow(0.12, deltaSeconds) + 70 * deltaSeconds;
+  }
+  state.particles = state.particles.filter((particle) => particle.age < particle.life);
+  for (const pulse of state.pulses) pulse.age += deltaSeconds;
+  state.pulses = state.pulses.filter((pulse) => pulse.age < pulse.life);
+}
+
+function render(now) {
+  resizeCanvas();
+  beginLogicalFrame();
+  if (state.mode === 'menu') drawMenuScene();
+  else drawPaperScene();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  const deltaSeconds = clamp((now - lastFrameTime) / 1000, 0, 0.05);
+  lastFrameTime = now;
+  updateAnimation(now);
+  updateEffects(deltaSeconds);
+  rafId = requestAnimationFrame(render);
+}
+
+function bindControls() {
+  canvas.addEventListener('pointerdown', beginGesture);
+  canvas.addEventListener('pointermove', moveGesture);
+  canvas.addEventListener('pointerup', endGesture);
+  canvas.addEventListener('pointercancel', cancelGesture);
+  canvas.addEventListener('lostpointercapture', cancelGesture);
+
+  dom.continueBtn.addEventListener('click', () => {
+    pressFeedback();
+    const unlocked = clamp(settings.unlocked, 1, LEVELS.length);
+    startCampaign(clamp(settings.lastLevel, 0, unlocked - 1));
+  });
+  dom.levelsBtn.addEventListener('click', () => { pressFeedback(); buildLevelGrid(); showScreen('levelsScreen'); });
+  dom.closeLevelsBtn.addEventListener('click', () => { pressFeedback(); showScreen('menuScreen'); });
+  dom.endlessBtn.addEventListener('click', () => { pressFeedback(); startEndless(true); });
+  dom.soundMenuBtn.addEventListener('click', toggleSound);
+  dom.soundPauseBtn.addEventListener('click', toggleSound);
