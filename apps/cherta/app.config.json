@@ -4,13 +4,13 @@
   "name": "ЧЕРТА",
   "shortName": "ЧЕРТА",
   "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "releaseDate": "2026-07-14",
-  "releaseDateTime": "2026-07-14T01:45:00+01:00",
+  "releaseDateTime": "2026-07-14T02:00:00+01:00",
   "changelog": [
-    "Rebuilt touch input around native iOS Touch Events while retaining Pointer Events for mouse and stylus.",
-    "Buffered up to three complete swipes across dash and detonation animations instead of discarding early input.",
-    "Added stale-touch recovery and made short intentional swipes register more reliably."
+    "Moved gesture start handling to the window capture phase so shared mobile runtime handlers cannot intercept it first.",
+    "Kept native iOS Touch Events and a three-swipe buffer across dash and detonation animations.",
+    "Forced a fresh offline cache so previously installed 1.1.1 builds cannot retain the older input script."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -19,7 +19,7 @@
   "backgroundColor": "#e9e1cf",
   "themeColor": "#e9e1cf",
   "orientation": "portrait",
-  "cacheName": "cherta-v1.1.1",
+  "cacheName": "cherta-v1.1.2",
   "storageNamespace": "pocket-works:cherta",
   "tags": ["PWA", "offline", "game", "canvas", "audio"],
   "order": 30
