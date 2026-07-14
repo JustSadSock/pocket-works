@@ -1,10 +1,9 @@
-import { access, readFile, readdir } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildRegistryEntries } from './app-config.mjs';
 
 const root = process.cwd();
-const appsDirectory = path.join(root, 'apps');
-
-const rootRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'apps.json', 'README.md', 'netlify.toml'];
+const rootRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md', 'netlify.toml'];
 const appRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md'];
 const errors = [];
 const cacheNames = new Map();
@@ -131,58 +130,51 @@ try {
   fail(`root launcher registration could not be validated: ${error.message}`);
 }
 
-const apps = await readJson('apps.json');
-if (!Array.isArray(apps)) {
-  fail('apps.json must contain a JSON array');
-} else {
-  if (apps.length === 0) fail('apps.json must contain at least one registered reference app');
-  const slugs = new Set();
-  const paths = new Set();
+let apps = [];
+try {
+  apps = await buildRegistryEntries(root);
+} catch (error) {
+  fail(`application manifests could not build the registry: ${error.message}`);
+}
 
-  for (const [index, app] of apps.entries()) {
-    const prefix = `apps.json[${index}]`;
-    for (const key of ['slug', 'name', 'description', 'path', 'status', 'version', 'accent', 'runtime']) requireString(app, key, prefix);
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(app.slug || '')) fail(`${prefix}.slug must be lowercase kebab-case`);
-    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(app.version || '')) fail(`${prefix}.version must use semantic versioning`);
-    if (!/^#[0-9a-f]{6}$/i.test(app.accent || '')) fail(`${prefix}.accent must be a six-digit hex color`);
-    if (!['active', 'experimental', 'archived'].includes(app.status)) fail(`${prefix}.status must be active, experimental or archived`);
-    if (!['quick', 'enhanced'].includes(app.runtime)) fail(`${prefix}.runtime must be quick or enhanced`);
-    if (!Array.isArray(app.tags) || app.tags.some((tag) => typeof tag !== 'string' || tag.trim() === '')) fail(`${prefix}.tags must be an array of non-empty strings`);
+if (apps.length === 0) fail('at least one app.config.json application must exist');
+const slugs = new Set();
+const paths = new Set();
 
-    const expectedPath = `./apps/${app.slug}/`;
-    if (app.path !== expectedPath) fail(`${prefix}.path must equal ${expectedPath}`);
-    if (slugs.has(app.slug)) fail(`duplicate slug: ${app.slug}`);
-    if (paths.has(app.path)) fail(`duplicate path: ${app.path}`);
-    slugs.add(app.slug);
-    paths.add(app.path);
+for (const [index, app] of apps.entries()) {
+  const prefix = `generated registry[${index}]`;
+  for (const key of ['slug', 'name', 'description', 'path', 'status', 'version', 'accent', 'runtime']) requireString(app, key, prefix);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(app.slug || '')) fail(`${prefix}.slug must be lowercase kebab-case`);
+  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(app.version || '')) fail(`${prefix}.version must use semantic versioning`);
+  if (!/^#[0-9a-f]{6}$/i.test(app.accent || '')) fail(`${prefix}.accent must be a six-digit hex color`);
+  if (!['active', 'experimental', 'archived'].includes(app.status)) fail(`${prefix}.status must be active, experimental or archived`);
+  if (!['quick', 'enhanced'].includes(app.runtime)) fail(`${prefix}.runtime must be quick or enhanced`);
+  if (!Array.isArray(app.tags) || app.tags.some((tag) => typeof tag !== 'string' || tag.trim() === '')) fail(`${prefix}.tags must be an array of non-empty strings`);
 
-    const appDirectory = path.join('apps', app.slug);
-    for (const requiredFile of appRequiredFiles) {
-      if (!(await exists(path.join(root, appDirectory, requiredFile)))) fail(`${app.slug} is missing ${requiredFile}`);
-    }
+  const expectedPath = `./apps/${app.slug}/`;
+  if (app.path !== expectedPath) fail(`${prefix}.path must equal ${expectedPath}`);
+  if (slugs.has(app.slug)) fail(`duplicate slug: ${app.slug}`);
+  if (paths.has(app.path)) fail(`duplicate path: ${app.path}`);
+  slugs.add(app.slug);
+  paths.add(app.path);
 
-    await validateHtml(`${app.slug}/index.html`, path.join(appDirectory, 'index.html'));
-    await validateManifest(`${app.slug}/manifest.webmanifest`, path.join(appDirectory, 'manifest.webmanifest'), { id: `/apps/${app.slug}/`, name: app.name });
-    await validateServiceWorker(`${app.slug}/sw.js`, path.join(appDirectory, 'sw.js'), `${app.slug}-`, app.runtime);
-
-    if (app.runtime === 'quick') {
-      try {
-        const appSource = await readText(path.join(appDirectory, 'app.js'));
-        const appHtml = await readText(path.join(appDirectory, 'index.html'));
-        if (!validatesServiceWorkerRegistration(appSource, appHtml)) fail(`${app.slug} must register ./sw.js directly or through the managed update script`);
-      } catch (error) {
-        fail(`${app.slug} Service Worker registration could not be validated: ${error.message}`);
-      }
-    }
+  const appDirectory = path.join('apps', app.slug);
+  for (const requiredFile of appRequiredFiles) {
+    if (!(await exists(path.join(root, appDirectory, requiredFile)))) fail(`${app.slug} is missing ${requiredFile}`);
   }
 
-  try {
-    const entries = await readdir(appsDirectory, { withFileTypes: true });
-    for (const directory of entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith('_') && !slugs.has(entry.name)).map((entry) => entry.name)) {
-      fail(`apps/${directory}/ exists but is not registered in apps.json`);
+  await validateHtml(`${app.slug}/index.html`, path.join(appDirectory, 'index.html'));
+  await validateManifest(`${app.slug}/manifest.webmanifest`, path.join(appDirectory, 'manifest.webmanifest'), { id: `/apps/${app.slug}/`, name: app.name });
+  await validateServiceWorker(`${app.slug}/sw.js`, path.join(appDirectory, 'sw.js'), `${app.slug}-`, app.runtime);
+
+  if (app.runtime === 'quick') {
+    try {
+      const appSource = await readText(path.join(appDirectory, 'app.js'));
+      const appHtml = await readText(path.join(appDirectory, 'index.html'));
+      if (!validatesServiceWorkerRegistration(appSource, appHtml)) fail(`${app.slug} must register ./sw.js directly or through the managed update script`);
+    } catch (error) {
+      fail(`${app.slug} Service Worker registration could not be validated: ${error.message}`);
     }
-  } catch (error) {
-    fail(`apps directory could not be inspected: ${error.message}`);
   }
 }
 
@@ -192,4 +184,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Pocket Works health check passed: root launcher and ${apps.length} registered app${apps.length === 1 ? '' : 's'} validated.`);
+console.log(`Pocket Works health check passed: root launcher and ${apps.length} self-registered app${apps.length === 1 ? '' : 's'} validated.`);
