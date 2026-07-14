@@ -26,6 +26,17 @@ function shp28ReturnToMenu() {
   lastFrame = performance.now();
 }
 
+function shp28CreateMenuButton(id, className) {
+  const button = document.createElement('button');
+  button.id = id;
+  button.type = 'button';
+  button.className = className;
+  button.textContent = 'В ГЛАВНОЕ МЕНЮ';
+  button.setAttribute('data-native-press', '');
+  button.addEventListener('click', shp28ReturnToMenu);
+  return button;
+}
+
 function shp28BuildUi() {
   const eyebrow = document.querySelector('.start-copy .eyebrow');
   if (eyebrow) eyebrow.textContent = 'ГОНОЧНАЯ СЕРИЯ';
@@ -35,23 +46,10 @@ function shp28BuildUi() {
   document.querySelector('[data-workshop-trigger]')?.remove();
 
   if (!document.querySelector('#finishMenuButton')) {
-    const button = document.createElement('button');
-    button.id = 'finishMenuButton';
-    button.type = 'button';
-    button.className = 'secondary-action finish-menu-action';
-    button.textContent = 'В ГЛАВНОЕ МЕНЮ';
-    restartButtonFinish.after(button);
-    button.addEventListener('click', shp28ReturnToMenu);
+    restartButtonFinish.after(shp28CreateMenuButton('finishMenuButton', 'secondary-action finish-menu-action'));
   }
-
   if (!document.querySelector('#pauseMenuButton')) {
-    const button = document.createElement('button');
-    button.id = 'pauseMenuButton';
-    button.type = 'button';
-    button.className = 'secondary-action';
-    button.textContent = 'В ГЛАВНОЕ МЕНЮ';
-    document.querySelector('#restartButtonPause')?.after(button);
-    button.addEventListener('click', shp28ReturnToMenu);
+    document.querySelector('#restartButtonPause')?.after(shp28CreateMenuButton('pauseMenuButton', 'secondary-action'));
   }
 
   const routeTools = document.querySelector('.route-tools');
