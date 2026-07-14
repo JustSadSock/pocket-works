@@ -1,0 +1,274 @@
+/* UDEL 2.5.1 — quiet province sheet and reduced map chrome */
+const D251_VERSION = '2.5.1';
+
+function d251Esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+}
+
+function d251Decision({ action, building = '', title, effect, cost, disabled: isDisabled = false, primary = false }) {
+  return `<button class="province-decision ${primary ? 'primary' : ''}" data-province-action="${action}" ${building ? `data-building="${building}"` : ''} data-native-press ${isDisabled ? 'disabled' : ''}>
+    <span><b>${d251Esc(title)}</b><small>${d251Esc(effect)}</small></span>
+    <em>${d251Esc(cost)}</em>
+  </button>`;
+}
+
+renderProvinceLabel = function renderProvinceLabelD251(province) {
+  const [x, y] = province.label;
+  return `<g class="province-label province-label-clean" data-province="${province.id}" transform="translate(${x} ${y})">
+    <text class="province-name" text-anchor="middle" y="-2">${d251Esc(province.name)}</text>
+    <text class="province-mini" text-anchor="middle" y="13">${round(province.population)} тыс. · ${round(province.loyalty)}</text>
+  </g>`;
+};
+
+resource = function resourceD251(icon, value, delta, label) {
+  const sign = delta > 0.05 ? '+' : '';
+  const className = delta < -0.05 ? 'negative' : delta > 0.05 ? 'positive' : '';
+  return `<div class="resource resource-quiet"><span>${d251Esc(label)}</span><b>${round(value)}</b><em class="${className}">${sign}${round(delta)}</em></div>`;
+};
+
+renderBottomNav = function renderBottomNavD251() {
+  const items = [
+    ['map', 'Карта'],
+    ['court', 'Дом'],
+    ['state', 'Держава'],
+    ['tech', 'Знания'],
+    ['war', 'Война']
+  ];
+  return `<nav class="bottom-nav bottom-nav-quiet" aria-label="Разделы игры">${items.map(([id, label]) => `<button class="nav-button ${currentTab === id ? 'active' : ''}" data-tab="${id}" data-native-press aria-label="${label}"><span>${label}</span></button>`).join('')}</nav>`;
+};
+
+const d251RenderMapBase = renderMap;
+renderMap = function renderMapD251() {
+  return d251RenderMapBase()
+    .replace('<p class="eyebrow">СРЕДИННЫЕ ЗЕМЛИ</p>', '<p class="eyebrow">КАРТА</p>')
+    .replace(/<h2>(\d+) из 20 областей<\/h2>/, '<h2>$1 областей</h2>')
+    .replace(/<span>(границы горят|хрупкий мир) · сезон (\d+)\/(\d+)<\/span>/, '<span>Сезон $2 · $1</span>')
+    .replace('<b>↻</b><span>Завершить сезон</span><small>Получить доход и передать ход миру</small>', '<span>Завершить сезон</span><small>Получить доход и продолжить</small>');
+};
+
+function d251Administration(province) {
+  if (province.owner !== 'player') return '';
+  const governor = d2Member(province.governorId);
+  const lord = d2Member(province.lordId);
+  const candidates = d2Adults()
+    .filter((member) => member.id !== state.ruler.id && !member.imprisoned)
+    .sort((a, b) => (b.loyalty + b.stewardship * 4) - (a.loyalty + a.stewardship * 4))
+    .slice(0, 4);
+
+  if (province.administration === 'vassal') {
+    return `<details class="province-fold province-admin-fold">
+      <summary><span>Управление</span><b>${d251Esc(lord?.name || province.branch || 'Удельный правитель')}</b></summary>
+      <div class="province-fold-body">
+        <p>Вассальный удел · автономия ${round(province.autonomy)}%</p>
+        <button class="province-secondary-action danger" data-admin-action="revoke" data-province-id="${province.id}" data-native-press ${state.actions <= 0 || state.authority < 15 ? 'disabled' : ''}>
+          <span>Вернуть под прямую власть</span><em>15 власти</em>
+        </button>
+      </div>
+    </details>`;
+  }
+
+  const governors = candidates.slice(0, 3).map((member) => `<button class="province-person-choice" data-admin-action="governor" data-province-id="${province.id}" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 5 ? 'disabled' : ''}><span>${d251Esc(member.name)}</span><small>управление ${member.stewardship} · верность ${round(member.loyalty)}</small><em>5 власти</em></button>`).join('');
+  const vassals = candidates.filter((member) => member.age >= 18).slice(0, 2).map((member) => `<button class="province-person-choice" data-admin-action="vassal" data-province-id="${province.id}" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 8 ? 'disabled' : ''}><span>Передать ${d251Esc(member.name)}</span><small>создать младшую ветвь</small><em>8 власти</em></button>`).join('');
+
+  return `<details class="province-fold province-admin-fold">
+    <summary><span>Управление</span><b>${governor ? d251Esc(governor.name) : 'Прямая власть'}</b></summary>
+    <div class="province-fold-body">
+      <p>${governor ? `Наместник: управление ${governor.stewardship}, верность ${round(governor.loyalty)}` : `Автономия ${round(province.autonomy)}%`}</p>
+      <div class="province-choice-list">${governors}</div>
+      ${vassals ? `<div class="province-choice-divider">Создать удел</div><div class="province-choice-list">${vassals}</div>` : ''}
+    </div>
+  </details>`;
+}
+
+function d251OwnedDecisions(province) {
+  const controlCost = state.techs.includes('roads') ? 8 : 12;
+  const nextBuildings = Object.entries(BUILDINGS).filter(([id]) => !province.buildings.includes(id)).slice(0, 3);
+  const decisions = [
+    d251Decision({
+      action: 'develop',
+      title: 'Развить землю',
+      effect: 'Развитие +1 · население +2 тыс.',
+      cost: '22 золота',
+      disabled: state.actions <= 0 || !canAfford({ gold: 22 })
+    }),
+    d251Decision({
+      action: 'control',
+      title: 'Усилить контроль',
+      effect: 'Автономия −10 · лояльность −3',
+      cost: `${controlCost} власти`,
+      disabled: state.actions <= 0 || !canAfford({ authority: controlCost })
+    }),
+    d251Decision({
+      action: 'appease',
+      title: 'Провести праздник',
+      effect: 'Лояльность +12 · снизить волнения',
+      cost: '12 золота · 7 еды',
+      disabled: state.actions <= 0 || !canAfford({ gold: 12, food: 7 })
+    })
+  ].join('');
+
+  const buildingChoices = nextBuildings.map(([id, building]) => d251Decision({
+    action: 'build',
+    building: id,
+    title: building.name,
+    effect: building.desc,
+    cost: `${building.cost} золота`,
+    disabled: state.actions <= 0 || !canAfford({ gold: building.cost })
+  })).join('');
+
+  return `<section class="province-decisions" aria-label="Решения по области">
+    <h4>Решения</h4>
+    <div class="province-decision-list">${decisions}</div>
+    ${buildingChoices ? `<details class="province-fold province-build-fold"><summary><span>Строительство</span><b>${nextBuildings.length} варианта</b></summary><div class="province-fold-body province-decision-list">${buildingChoices}</div></details>` : ''}
+  </section>`;
+}
+
+function d251EnemyDecision(province) {
+  const enemy = relationKey(province.owner);
+  const route = d25FindRoute(province.id);
+  const isActiveTarget = state.campaign?.targetId === province.id;
+  const reason = !state.wars[enemy]
+    ? 'Сначала объявите войну'
+    : !route
+      ? 'Нет доступного маршрута'
+      : state.campaign
+        ? 'Другая дружина уже в походе'
+        : `${route.length - 1} перехода`;
+  return `<section class="province-decisions enemy">
+    <h4>Военное решение</h4>
+    ${isActiveTarget
+      ? '<p class="province-quiet-note">Эта область уже является целью действующего похода.</p>'
+      : `<button class="province-decision primary single" data-campaign-target="${province.id}" data-native-press ${!state.wars[enemy] || !route || state.campaign || totalArmy() < 20 || state.actions <= 0 || state.gold < 10 || state.food < 8 ? 'disabled' : ''}><span><b>Подготовить поход</b><small>${d251Esc(reason)}</small></span><em>10 золота · 8 еды</em></button>`}
+  </section>`;
+}
+
+function d251CampaignNotice(province) {
+  const campaign = state.campaign;
+  if (!campaign?.route?.includes(province.id)) return '';
+  const isCurrent = d25CampaignPosition(campaign)?.id === province.id;
+  const label = isCurrent
+    ? 'Дружина находится здесь'
+    : campaign.targetId === province.id
+      ? 'Цель действующего похода'
+      : 'Через область проходит маршрут';
+  return `<aside class="province-campaign-note"><div><b>${label}</b><span>${d251Esc(d25CampaignPhaseText(campaign))} · припасы ${round(campaign.supply)}</span></div><button data-tab="war" data-native-press>Военный совет</button></aside>`;
+}
+
+renderProvinceDrawer = function renderProvinceDrawerD251(province) {
+  const drawer = app.querySelector('#drawer');
+  if (!drawer || !province) return;
+
+  const yields = provinceYield(province);
+  const resourceName = RESOURCES[province.resource]?.[0] || '';
+  const terrainName = TERRAIN[province.terrain]?.name || '';
+  const control = clamp(100 - province.autonomy, 0, 100);
+  const buildings = province.buildings.map((id) => BUILDINGS[id]?.name).filter(Boolean);
+
+  drawer.innerHTML = `<div class="province-sheet">
+    <div class="drawer-handle" aria-hidden="true"></div>
+    <header class="drawer-head">
+      <div>
+        <p class="eyebrow">${d251Esc(ownerLabel(province.owner))}</p>
+        <h3 id="province-sheet-title">${d251Esc(province.name)}</h3>
+        <span>${d251Esc(terrainName)} · ${d251Esc(resourceName)}</span>
+      </div>
+      <button class="drawer-close" data-action="close-drawer" data-native-press aria-label="Закрыть сведения об области">Закрыть</button>
+    </header>
+    <div class="province-sheet-scroll">
+      <section class="province-vitals" aria-label="Главные показатели">
+        <div><span>Население</span><b>${round(province.population)} тыс.</b></div>
+        <div><span>Лояльность</span><b>${round(province.loyalty)}</b><i><em style="width:${clamp(province.loyalty, 0, 100)}%"></em></i></div>
+        <div><span>Контроль</span><b>${round(control)}%</b><i><em style="width:${control}%"></em></i></div>
+      </section>
+
+      <section class="province-output" aria-label="Доход за сезон">
+        <span>За сезон</span>
+        <div><small>Налог</small><b>${yields.tax.toFixed(1)}</b></div>
+        <div><small>Еда</small><b>${yields.food.toFixed(1)}</b></div>
+        <div><small>Ополчение</small><b>${yields.manpower.toFixed(1)}</b></div>
+      </section>
+
+      ${d251CampaignNotice(province)}
+
+      <details class="province-fold province-info-fold">
+        <summary><span>Земля и постройки</span><b>${buildings.length || 'нет'}</b></summary>
+        <div class="province-fold-body">
+          <dl class="province-detail-list">
+            <div><dt>Культура</dt><dd>${d251Esc(province.culture)}</dd></div>
+            <div><dt>Вера</dt><dd>${d251Esc(province.faith)}</dd></div>
+            <div><dt>Крепость</dt><dd>${round(province.fort)}</dd></div>
+            <div><dt>Развитие</dt><dd>${round(province.development)}</dd></div>
+          </dl>
+          <div class="province-building-names">${buildings.length ? buildings.map((name) => `<span>${d251Esc(name)}</span>`).join('') : '<p>Значимых построек пока нет.</p>'}</div>
+        </div>
+      </details>
+
+      ${d251Administration(province)}
+      ${province.owner === 'player' ? d251OwnedDecisions(province) : d251EnemyDecision(province)}
+    </div>
+  </div>`;
+
+  drawer.classList.add('open');
+  drawer.setAttribute('role', 'dialog');
+  drawer.setAttribute('aria-modal', 'true');
+  drawer.setAttribute('aria-labelledby', 'province-sheet-title');
+  document.body.classList.add('province-sheet-open');
+
+  drawer.querySelector('[data-action="close-drawer"]')?.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('[data-province-action]').forEach((button) => button.addEventListener('click', () => {
+    document.body.classList.remove('province-sheet-open');
+    provinceAction(province, button.dataset.provinceAction, button.dataset.building);
+  }));
+  drawer.querySelectorAll('[data-admin-action]').forEach((button) => button.addEventListener('click', () => {
+    document.body.classList.remove('province-sheet-open');
+    d2AdministrationAction(button.dataset.adminAction, button.dataset.provinceId, button.dataset.member);
+  }));
+  drawer.querySelectorAll('[data-campaign-target]').forEach((button) => button.addEventListener('click', () => {
+    document.body.classList.remove('province-sheet-open');
+    d25StartCampaign(button.dataset.campaignTarget, state.campaignCommanderId);
+  }));
+  drawer.querySelectorAll('[data-tab="war"]').forEach((button) => button.addEventListener('click', () => {
+    currentTab = 'war';
+    closeDrawer();
+    render();
+  }));
+
+  requestAnimationFrame(() => drawer.querySelector('[data-action="close-drawer"]')?.focus({ preventScroll: true }));
+};
+
+const d251CloseDrawerBase = closeDrawer;
+closeDrawer = function closeDrawerD251() {
+  document.body.classList.remove('province-sheet-open');
+  const drawer = app.querySelector('#drawer');
+  drawer?.removeAttribute('role');
+  drawer?.removeAttribute('aria-modal');
+  drawer?.removeAttribute('aria-labelledby');
+  d251CloseDrawerBase();
+};
+
+const d251OpenGameMenuBase = openGameMenu;
+openGameMenu = function openGameMenuD251() {
+  d251OpenGameMenuBase();
+  document.querySelector('.game-menu .eyebrow')?.replaceChildren(document.createTextNode('ПАУЗА / УДЕЛ 2.5.1'));
+};
+
+const d251QualityBase = window.__udelQualitySnapshot;
+window.__udelQualitySnapshot = () => {
+  const base = d251QualityBase?.() || {};
+  const drawer = document.querySelector('.action-drawer.open');
+  const rect = drawer?.getBoundingClientRect();
+  const scroll = drawer?.querySelector('.province-sheet-scroll');
+  return {
+    ...base,
+    version: D251_VERSION,
+    provinceSheet: drawer ? {
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      viewportHeight: window.innerHeight,
+      contained: rect.top >= -1 && rect.bottom <= window.innerHeight + 1,
+      scrollable: scroll ? scroll.scrollHeight > scroll.clientHeight : false
+    } : null
+  };
+};
