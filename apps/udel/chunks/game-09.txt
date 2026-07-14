@@ -1,0 +1,268 @@
+
+function d2Esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+function d2Glyph(member) {
+  if (member.role === 'ruler') return '♛';
+  if (member.role === 'heir') return '⚜';
+  if (member.imprisoned) return '▥';
+  if (member.role === 'vassal') return '♜';
+  if (member.gender === 'f') return '◒';
+  return '◓';
+}
+
+function d2RoleLabel(member) {
+  if (member.role === 'ruler') return 'правитель';
+  if (member.role === 'heir') return 'наследник';
+  if (member.role === 'consort') return 'супруг правителя';
+  if (member.role === 'vassal') return member.branch || 'удельный правитель';
+  if (member.role === 'prisoner') return 'узник';
+  if (member.relation === 'ребёнок') return 'ребёнок дома';
+  if (member.relation === 'сиблинг') return 'брат или сестра';
+  return member.relation || 'родич';
+}
+
+function d2CharacterCard(member) {
+  const plot = d2PlotFor(member.id);
+  const canAct = member.id !== state.ruler.id && member.alive !== false;
+  const canDesignate = canAct && member.age >= 10 && member.claim > 0 && state.designatedHeirId !== member.id;
+  return `<article class="dyn-character ${member.id === state.designatedHeirId ? 'designated' : ''} ${member.imprisoned ? 'imprisoned' : ''}">
+    <div class="dyn-portrait"><span>${d2Glyph(member)}</span><small>${member.age}</small></div>
+    <div class="dyn-copy">
+      <header><div><h3>${d2Esc(member.name)}</h3><p>${d2Esc(d2RoleLabel(member))} · ${d2Esc(member.trait)}</p></div><b>${round(member.claim)}<small>притязание</small></b></header>
+      <div class="dyn-stats"><span>⚔ ${member.martial}</span><span>☏ ${member.diplomacy}</span><span>¤ ${member.stewardship}</span><span>♥ ${round(member.health)}</span></div>
+      <div class="relation-line"><span>верность <b>${round(member.loyalty)}</b></span><i><em style="width:${clamp(member.loyalty,0,100)}%"></em></i></div>
+      ${plot ? `<div class="plot-line ${plot.revealed ? 'revealed' : ''}"><span>${plot.revealed ? 'раскрытый заговор' : 'тихие слухи'}</span><i><em style="width:${plot.revealed ? clamp(plot.progress,0,100) : 18}%"></em></i><b>${plot.revealed ? round(plot.progress) : '?'}</b></div>` : ''}
+      ${canAct ? `<div class="dyn-actions">
+        <button data-dynasty-action="sway" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.gold < 10 ? 'disabled' : ''}>Склонить<br><small>¤10</small></button>
+        <button data-dynasty-action="investigate" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 8 ? 'disabled' : ''}>Проверить<br><small>♛8</small></button>
+        ${plot?.revealed && plot.progress >= 42 && !member.imprisoned ? `<button class="danger" data-dynasty-action="imprison" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 10 ? 'disabled' : ''}>Арест</button>` : ''}
+        ${canDesignate ? `<button data-dynasty-action="designate" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 16 ? 'disabled' : ''}>Назначить<br><small>наследником</small></button>` : ''}
+        ${member.imprisoned ? `<button data-dynasty-action="release" data-member="${member.id}" data-native-press>Освободить</button>` : ''}
+      </div>` : ''}
+    </div>
+  </article>`;
+}
+
+function d2RenderCouncil() {
+  return `<div class="council-grid">${Object.entries(D2_COUNCIL).map(([role, meta]) => {
+    const member = d2CouncilMember(role);
+    const candidates = d2Adults().filter((person) => person.id !== state.ruler.id && person.id !== member?.id).sort((a,b) => b[meta.stat] - a[meta.stat]).slice(0,3);
+    return `<article class="council-seat"><header><span>${meta.icon}</span><div><h3>${meta.name}</h3><p>${meta.effect}</p></div></header><div class="council-holder"><b>${member ? d2Esc(member.name) : 'место пустует'}</b><span>${member ? `${meta.stat === 'martial' ? 'война' : meta.stat === 'diplomacy' ? 'слово' : 'казна'} ${member[meta.stat]}` : 'нет эффекта'}</span></div><div class="council-candidates">${candidates.map((candidate) => `<button data-council-role="${role}" data-member="${candidate.id}" data-native-press ${state.actions <= 0 || state.authority < 5 ? 'disabled' : ''}>${d2Esc(candidate.name)} <b>${candidate[meta.stat]}</b></button>`).join('') || '<span>Нет доступных родичей</span>'}</div></article>`;
+  }).join('')}</div>`;
+}
+
+function d2MarriageSubject() {
+  const ruler = d2Member(state.ruler.id);
+  if (ruler && !ruler.marriedTo) return ruler;
+  const heir = d2Member(state.heir.id);
+  if (heir && heir.age >= 16 && !heir.marriedTo) return heir;
+  return d2Adults().find((member) => member.relation === 'ребёнок' && !member.marriedTo);
+}
+
+function d2RenderMarriageMarket() {
+  const subject = d2MarriageSubject();
+  if (!subject) return '<div class="quiet-note">Сейчас в доме нет совершеннолетнего незамужнего или неженатого члена основной ветви.</div>';
+  if (!state.marriageCandidates?.length || state.marriageCandidates[0].gender === subject.gender) state.marriageCandidates = d2GenerateMarriageCandidates(subject.gender);
+  return `<div class="marriage-intro"><div><b>Брак для ${d2Esc(subject.name)}</b><span>Союз меняет отношения, приносит способности супруга и иногда красиво заворачивает будущую войну.</span></div><small>одно решение · ¤12</small></div><div class="marriage-grid">${state.marriageCandidates.map((candidate, index) => `<button class="marriage-candidate" data-marriage-index="${index}" data-subject="${subject.id}" data-native-press ${state.actions <= 0 || state.gold < 12 ? 'disabled' : ''}><span class="candidate-glyph">${candidate.gender === 'f' ? '◒' : '◓'}</span><div><h3>${d2Esc(candidate.name)}</h3><p>${d2Esc(candidate.house)}</p><small>⚔${candidate.martial} · ☏${candidate.diplomacy} · ¤${candidate.stewardship}</small></div><b>${candidate.realm === 'north' ? 'СЕВЕР' : candidate.realm === 'south' ? 'ЮГ' : 'ВОЛЬНЫЕ ГОРОДА'}</b></button>`).join('')}</div>`;
+}
+
+function d2RenderCivilWar() {
+  const war = state.civilWar;
+  if (!war) return '<div class="quiet-note">Открытого мятежа нет. Это не значит, что все довольны; это значит, что пока никто не нашёл достаточно знамён.</div>';
+  const leader = d2Member(war.leaderId);
+  return `<article class="civil-war-card"><header><div><p class="eyebrow">ГРАЖДАНСКАЯ ВОЙНА</p><h3>${d2Esc(leader?.name || 'Претендент')} против короны</h3><span>${d2Esc(war.reason)} · ${war.provinces.length} мятежных областей</span></div><b>${round(war.support)}<small>поддержка</small></b></header><div class="war-balance"><i><em style="width:${clamp(war.support,0,100)}%"></em></i><span>сила мятежа ${round(war.strength)} · ход ${war.turns}</span></div><div class="civil-actions"><button data-civil-action="negotiate" data-native-press ${state.actions <= 0 || state.gold < 25 || state.authority < 8 ? 'disabled' : ''}>Переговоры<br><small>¤25 ♛8</small></button><button data-civil-action="appanage" data-native-press ${state.actions <= 0 || state.authority < 12 ? 'disabled' : ''}>Дать удел<br><small>сохранить ветвь</small></button><button class="danger" data-civil-action="crush" data-native-press ${state.actions <= 0 || totalArmy() < 35 ? 'disabled' : ''}>Подавить<br><small>риск боя</small></button></div></article>`;
+}
+
+renderCourt = function renderCourtD2() {
+  d2EnsureDynasty(state);
+  const spouse = d2Member(state.spouseId);
+  const rulerMember = d2Member(state.ruler.id);
+  const living = d2LivingFamily();
+  return `<section class="section dynasty-section">
+    <header class="section-title"><p class="eyebrow">КРОВЬ ДОМА / 2.0</p><h2>Династия</h2><span>Теперь родственники не являются декоративными портретами. Они управляют землями, заключают браки и иногда пытаются забрать всё.</span></header>
+    <div class="house-vitals">${summaryMetric(String(living.length), 'живых членов')}${summaryMetric(String(round(state.houseUnity)), 'единство дома')}${summaryMetric(String(round(state.dynastyPrestige)), 'престиж')}${summaryMetric(String(state.successionCount), 'наследований')}</div>
+    <article class="family-hero"><div class="dyn-portrait ruler"><span>♛</span><small>${state.ruler.age}</small></div><div><p class="eyebrow">ПРАВЯЩАЯ ПАРА</p><h3>${d2Esc(state.ruler.name)}${spouse ? ` и ${d2Esc(spouse.name)}` : ''}</h3><span>${d2Esc(state.ruler.trait)} · наследник ${d2Esc(state.heir.name)} · предел домена ${d2DomainLimit()}</span><div class="dyn-stats"><span>⚔ ${state.ruler.martial}</span><span>☏ ${state.ruler.diplomacy}</span><span>¤ ${state.ruler.stewardship}</span><span>♥ ${round(state.ruler.health)}</span></div></div></article>
+    <div class="subhead">Открытый кризис</div>${d2RenderCivilWar()}
+    <div class="subhead">Основная и боковые ветви</div><div class="dynasty-list">${living.sort((a,b) => (a.id === state.ruler.id ? -1 : b.claim - a.claim)).map(d2CharacterCard).join('')}</div>
+    <div class="subhead">Совет дома</div>${d2RenderCouncil()}
+    <div class="subhead">Династические браки</div>${d2RenderMarriageMarket()}
+    <div class="subhead">Ветви и уделы</div><div class="branch-list">${state.cadetBranches.length ? state.cadetBranches.map((branch) => `<article><b>⚜ ${d2Esc(branch.name)}</b><span>${d2Esc(d2Member(branch.founderId)?.name || 'угасшая ветвь')} · ${branch.provinces.length} земель · верность ${round(d2Member(branch.founderId)?.loyalty || 0)}</span></article>`).join('') : '<div class="quiet-note">Младших ветвей пока нет. Выдайте родичу землю как вассалу — и проблема обзаведётся гербом.</div>'}</div>
+    <div class="subhead">Летопись</div><div class="timeline">${state.log.slice(0,10).map((item) => `<div class="log-entry"><b>Сезон ${item.season}</b><span>${item.text}</span></div>`).join('')}</div>
+  </section>`;
+};
+
+const d2RenderState15 = renderState;
+renderState = function renderStateD2() {
+  const html = d2RenderState15();
+  const economy = calculateEconomy();
+  const insert = `<div class="subhead">Устройство владений</div><div class="domain-ledger"><article><span>Прямой домен</span><b>${economy.domain.direct}/${economy.domain.limit}</b><small>${economy.domain.over ? `Превышение: −${economy.expenses.domain.toFixed(1)} золота` : 'Управление укладывается в возможности двора'}</small></article><article><span>Вассальные земли</span><b>${d2VassalProvinces().length}</b><small>Меньше налогов, больше автономии и собственных амбиций</small></article><article><span>Губернаторы</span><b>${playerProvinces().filter((province) => province.governorId).length}</b><small>Родичи усиливают земли и накапливают местную опору</small></article></div>`;
+  return html.replace('<div class="subhead">Законы</div>', `${insert}<div class="subhead">Законы</div>`);
+};
+
+const d2RenderProvincePath15 = renderProvincePath;
+renderProvincePath = function renderProvincePathD2(province) {
+  return d2RenderProvincePath15(province).replace('province-shape ', `province-shape ${province.administration === 'vassal' ? 'vassal-land ' : ''}${province.rebel ? 'civil-rebel ' : ''}`);
+};
+
+const d2RenderProvinceLabel15 = renderProvinceLabel;
+renderProvinceLabel = function renderProvinceLabelD2(province) {
+  const marker = province.rebel ? '⚔' : province.administration === 'vassal' ? '⚜' : province.governorId ? '♛' : '';
+  if (!marker) return d2RenderProvinceLabel15(province);
+  return d2RenderProvinceLabel15(province).replace('</g>', `<text class="admin-mark" text-anchor="middle" x="26" y="-15">${marker}</text></g>`);
+};
+
+const d2RenderProvinceDrawer15 = renderProvinceDrawer;
+renderProvinceDrawer = function renderProvinceDrawerD2(province) {
+  d2RenderProvinceDrawer15(province);
+  if (!province || province.owner !== 'player') return;
+  const drawer = app.querySelector('#drawer');
+  const actions = drawer?.querySelector('.drawer-actions');
+  if (!actions) return;
+  const governor = d2Member(province.governorId);
+  const lord = d2Member(province.lordId);
+  const candidates = d2Adults().filter((member) => member.id !== state.ruler.id && !member.imprisoned).sort((a,b) => (b.loyalty + b.stewardship * 4) - (a.loyalty + a.stewardship * 4)).slice(0,4);
+  actions.insertAdjacentHTML('beforebegin', `<section class="province-administration"><header><div><small>Управление</small><b>${province.administration === 'vassal' ? `Удел ${d2Esc(province.branch || '')}` : governor ? `Наместник ${d2Esc(governor.name)}` : 'Прямая власть короны'}</b></div><span>${province.administration === 'vassal' ? `лорд ${d2Esc(lord?.name || 'неизвестен')}` : `автономия ${round(province.autonomy)}%`}</span></header>${province.administration === 'vassal' ? `<button data-admin-action="revoke" data-province-id="${province.id}" data-native-press ${state.actions <= 0 || state.authority < 15 ? 'disabled' : ''}>Отозвать удел · ♛15</button>` : `<div class="admin-candidates">${candidates.map((member) => `<button data-admin-action="governor" data-province-id="${province.id}" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 5 ? 'disabled' : ''}>Наместник: ${d2Esc(member.name)} <b>¤${member.stewardship}</b></button>`).join('')}</div><div class="admin-candidates vassal">${candidates.filter((member) => member.age >= 18).slice(0,3).map((member) => `<button data-admin-action="vassal" data-province-id="${province.id}" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 8 ? 'disabled' : ''}>Дать удел: ${d2Esc(member.name)}</button>`).join('')}</div>`}</section>`);
+  drawer.querySelectorAll('[data-admin-action]').forEach((button) => button.addEventListener('click', () => d2AdministrationAction(button.dataset.adminAction, button.dataset.provinceId, button.dataset.member)));
+};
+
+const d2RenderMenu15 = renderMenu;
+renderMenu = function renderMenuD2() {
+  d2RenderMenu15();
+  app.querySelector('.eyebrow')?.replaceChildren(document.createTextNode('КАРМАННАЯ ЛЕТОПИСЬ / 2.0'));
+  const description = app.querySelector('.menu-copy > p:last-child');
+  if (description) description.textContent = 'Династическая стратегия о земле, крови и власти. Семья теперь управляет провинциями, заключает браки, создаёт боковые ветви и вполне способна начать войну против самой себя.';
+  const setupNote = app.querySelector('[data-action="setup"] small');
+  if (setupNote) setupNote.textContent = '20 областей · 72 сезона · живая династия';
+};
+
+const d2RenderTopbar15 = renderTopbar;
+renderTopbar = function renderTopbarD2() {
+  const html = d2RenderTopbar15();
+  const crisis = state.civilWar ? `<span class="dynasty-alert">⚔ мятеж ${round(state.civilWar.support)}</span>` : state.plots.some((plot) => plot.revealed) ? '<span class="dynasty-alert quiet">◉ заговор раскрыт</span>' : '';
+  return html.replace('</div>\n      </div>\n      <div class="resource-strip">', `</div>${crisis}\n      </div>\n      <div class="resource-strip">`);
+};
+
+function d2AdministrationAction(action, provinceId, memberId) {
+  const province = provinceById(provinceId);
+  const member = d2Member(memberId);
+  if (!province || province.owner !== 'player') return;
+  if (action === 'governor') {
+    if (!member || state.actions <= 0 || state.authority < 5) return;
+    spendAction(); spend({ authority: 5 });
+    province.administration = 'direct'; province.lordId = null; province.branch = null; province.governorId = member.id;
+    member.loyalty = clamp(member.loyalty + 6,0,100); member.role = member.role === 'heir' ? 'heir' : 'governor';
+    addLog(`${member.name} назначен наместником области ${province.name}.`); toast('Наместник назначен');
+  }
+  if (action === 'vassal') {
+    if (!member || state.actions <= 0 || state.authority < 8) return;
+    spendAction(); spend({ authority: 8 });
+    const branchName = member.branch || `${state.house.replace(/^Дом\s+/,'')} — ${province.name}`;
+    province.administration = 'vassal'; province.lordId = member.id; province.governorId = null; province.branch = branchName; province.autonomy = Math.max(66, province.autonomy);
+    member.role = 'vassal'; member.branch = branchName; member.loyalty = clamp(member.loyalty + 18,0,100); member.claim = Math.max(member.claim, 28);
+    let branch = state.cadetBranches.find((item) => item.founderId === member.id);
+    if (!branch) { branch = { id: d2Id('branch'), name: branchName, founderId: member.id, provinces: [] }; state.cadetBranches.push(branch); }
+    if (!branch.provinces.includes(province.id)) branch.provinces.push(province.id);
+    addLog(`${province.name} передана ${member.name}. Возникла младшая ветвь «${branchName}».`); toast('Создан вассальный удел');
+  }
+  if (action === 'revoke') {
+    const lord = d2Member(province.lordId);
+    if (state.actions <= 0 || state.authority < 15) return;
+    spendAction(); spend({ authority: 15 });
+    const rebellionRisk = lord ? clamp((65 - lord.loyalty + lord.ambition * 0.35) / 100, 0.08, 0.78) : 0;
+    province.administration = 'direct'; province.lordId = null; province.branch = null; province.autonomy = clamp(province.autonomy - 12, 0, 90);
+    if (lord) { lord.loyalty -= 24; lord.role = 'claimant'; }
+    addLog(`Удел ${province.name} возвращён под прямую власть.`);
+    if (lord && Math.random() < rebellionRisk) d2StartCivilWar(lord, `отзыв удела ${province.name}`);
+    toast('Удел отозван');
+  }
+  drawerOpen = false; selectedProvince = null; tone('success'); saveState(); render();
+}
+
+function d2DynastyAction(action, memberId) {
+  const member = d2Member(memberId);
+  if (!member) return;
+  const plot = d2PlotFor(member.id);
+  if (action === 'sway') {
+    if (state.actions <= 0 || state.gold < 10) return;
+    spendAction(); spend({ gold: 10 }); member.loyalty = clamp(member.loyalty + 15 + state.ruler.diplomacy,0,100); if (plot) plot.progress = Math.max(0, plot.progress - 16); addLog(`${state.ruler.name} примирил ${member.name} с основной ветвью.`);
+  }
+  if (action === 'investigate') {
+    if (state.actions <= 0 || state.authority < 8) return;
+    spendAction(); spend({ authority: 8 });
+    if (plot) { plot.revealed = true; addLog(`Заговор ${member.name} раскрыт канцелярией.`); toast('Заговор раскрыт'); }
+    else { member.loyalty = clamp(member.loyalty - 5,0,100); toast('Улик нет. Обида есть.'); }
+  }
+  if (action === 'imprison') {
+    if (!plot?.revealed || plot.progress < 42 || state.actions <= 0 || state.authority < 10) return;
+    spendAction(); spend({ authority: 10 });
+    const chance = clamp(0.48 + state.ruler.martial * 0.055 - member.martial * 0.04,0.18,0.88);
+    if (Math.random() < chance) { member.imprisoned = true; member.role = 'prisoner'; member.loyalty = 8; state.plots = state.plots.filter((item) => item.actorId !== member.id); state.estates.nobles.loyalty -= 7; addLog(`${member.name} арестован за заговор.`); toast('Арест проведён'); }
+    else { plot.progress = 100; d2StartCivilWar(member, 'неудавшийся арест'); }
+  }
+  if (action === 'designate') {
+    if (state.actions <= 0 || state.authority < 16 || member.age < 10 || member.claim <= 0) return;
+    spendAction(); spend({ authority: 16 }); state.designatedHeirId = member.id; d2RefreshHeir(); state.estates.nobles.loyalty -= state.laws.succession === 2 ? 2 : 7; addLog(`${member.name} объявлен наследником.`); toast('Наследник назначен');
+  }
+  if (action === 'release') {
+    member.imprisoned = false; member.role = member.claim > 35 ? 'claimant' : 'courtier'; member.loyalty = clamp(member.loyalty + 10,0,100); state.authority -= 3; addLog(`${member.name} освобождён из-под стражи.`);
+  }
+  tone('success'); saveState(); render();
+}
+
+function d2AppointCouncil(role, memberId) {
+  const member = d2Member(memberId);
+  if (!D2_COUNCIL[role] || !member || state.actions <= 0 || state.authority < 5) return;
+  spendAction(); spend({ authority: 5 });
+  const previous = d2CouncilMember(role); if (previous) previous.loyalty -= 5;
+  state.council[role] = member.id; member.loyalty = clamp(member.loyalty + 8,0,100);
+  addLog(`${member.name} занял должность «${D2_COUNCIL[role].name}».`); tone('success'); render();
+}
+
+function d2ArrangeMarriage(subjectId, index) {
+  const subject = d2Member(subjectId); const candidate = state.marriageCandidates[index];
+  if (!subject || !candidate || subject.marriedTo || state.actions <= 0 || state.gold < 12) return;
+  spendAction(); spend({ gold: 12 });
+  candidate.id ||= d2Id('spouse'); candidate.relation = subject.id === state.ruler.id ? 'супруг' : 'родич по браку'; candidate.role = subject.id === state.ruler.id ? 'consort' : 'in-law'; candidate.marriedTo = subject.id; candidate.loyalty = 70; candidate.alive = true;
+  subject.marriedTo = candidate.id; state.family.push(candidate);
+  if (subject.id === state.ruler.id) state.spouseId = candidate.id;
+  if (candidate.realm === 'north') state.relations.north = clamp(state.relations.north + 24, -100, 100);
+  if (candidate.realm === 'south') state.relations.south = clamp(state.relations.south + 24, -100, 100);
+  if (candidate.realm === 'free') state.gold += 18;
+  state.dynastyPrestige += 10; state.houseUnity += 4; state.marriageCandidates = d2GenerateMarriageCandidates(subject.gender);
+  addLog(`${subject.name} заключил брак с ${candidate.name} из дома «${candidate.house}».`); tone('success'); toast('Брачный союз заключён'); render();
+}
+
+function d2CivilAction(action) {
+  const war = state.civilWar; if (!war) return;
+  const leader = d2Member(war.leaderId);
+  if (action === 'negotiate') {
+    if (state.actions <= 0 || state.gold < 25 || state.authority < 8) return;
+    spendAction(); spend({ gold: 25, authority: 8 }); war.support -= 30 + state.ruler.diplomacy * 2; if (leader) leader.loyalty += 12; addLog(`Двор начал переговоры с ${leader?.name || 'мятежниками'}.`); if (war.support <= 18) d2EndCivilWar('settled');
+  }
+  if (action === 'appanage') {
+    if (state.actions <= 0 || state.authority < 12) return;
+    spendAction(); spend({ authority: 12 });
+    const first = provinceById(war.provinces[0]); if (first && leader) { first.administration = 'vassal'; first.lordId = leader.id; first.branch = `${state.house.replace(/^Дом\s+/,'')} — ${first.name}`; leader.role = 'vassal'; leader.branch = first.branch; leader.loyalty = 62; let branch = state.cadetBranches.find((item) => item.founderId === leader.id); if (!branch) { branch = { id:d2Id('branch'), name:first.branch, founderId:leader.id, provinces:[] }; state.cadetBranches.push(branch); } for (const id of war.provinces.slice(0,2)) { const province = provinceById(id); if (province) { province.administration='vassal'; province.lordId=leader.id; province.branch=first.branch; if (!branch.provinces.includes(id)) branch.provinces.push(id); } } }
+    state.stability += 5; d2EndCivilWar('settled');
+  }
+  if (action === 'crush') {
+    if (state.actions <= 0 || totalArmy() < 35) return;
+    spendAction();
+    const marshal = d2CouncilMember('marshal'); const ourPower = battlePower(state.army, state.ruler.martial) + (marshal?.martial || 0) * 8 + Math.random() * 45; const success = ourPower > war.strength + war.support * 0.6;
+    const loss = success ? 0.12 : 0.24; for (const unit of ['infantry','archers','cavalry']) state.army[unit] = Math.max(0, round(state.army[unit] * (1-loss)));
+    if (success) { state.authority += 9; state.stability -= 3; d2EndCivilWar('crushed'); toast('Мятеж подавлен'); }
+    else { war.support += 24; war.strength += 12; state.stability -= 9; addLog('Коронная армия проиграла сражение мятежным дружинам.'); toast('Подавление провалилось'); }
+  }
+  tone(action === 'crush' ? 'war' : 'success'); saveState(); render();
+}
+
+const d2BindCommon15 = bindCommon;
+bindCommon = function bindCommonD2() {
+  d2BindCommon15();
+  app.querySelectorAll('[data-dynasty-action]').forEach((button) => button.addEventListener('click', () => d2DynastyAction(button.dataset.dynastyAction, button.dataset.member)));
+  app.querySelectorAll('[data-council-role]').forEach((button) => button.addEventListener('click', () => d2AppointCouncil(button.dataset.councilRole, button.dataset.member)));
+  app.querySelectorAll('[data-marriage-index]').forEach((button) => button.addEventListener('click', () => d2ArrangeMarriage(button.dataset.subject, Number(button.dataset.marriageIndex))));
+  app.querySelectorAll('[data-civil-action]').forEach((button) => button.addEventListener('click', () => d2CivilAction(button.dataset.civilAction)));
+};
