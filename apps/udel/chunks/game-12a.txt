@@ -1,0 +1,75 @@
+
+/* UDEL 2.5 — Field and Crown: mobile war interface */
+function d25Esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+}
+
+function d25Bar(value, label, className = '') {
+  const safe = clamp(Number(value) || 0, 0, 100);
+  return `<div class="d25-bar ${className}"><div><span>${d25Esc(label)}</span><b>${round(safe)}</b></div><i role="progressbar" aria-label="${d25Esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${round(safe)}"><em style="width:${safe}%"></em></i></div>`;
+}
+
+function d25RouteText(route = []) {
+  return route.map((id) => provinceById(id)?.name).filter(Boolean).join(' → ');
+}
+
+function d25CampaignPhaseText(campaign) {
+  if (!campaign) return '';
+  if (campaign.phase === 'march') return `${D25_PHASES.march}: ${round(campaign.progress)}% маршрута`;
+  if (campaign.phase === 'siege') return `${D25_PHASES.siege}: ${round(campaign.siege)}% работ`;
+  return D25_PHASES[campaign.phase] || campaign.phase;
+}
+
+function d25AvailableCommanders() {
+  const candidates = d2Adults().filter((member) => !member.imprisoned && member.alive !== false);
+  const ruler = d2Member(state.ruler.id);
+  if (ruler && !candidates.some((member) => member.id === ruler.id)) candidates.unshift(ruler);
+  return candidates.sort((a, b) => (b.martial * 3 + b.stewardship + b.loyalty * 0.04) - (a.martial * 3 + a.stewardship + a.loyalty * 0.04)).slice(0, 6);
+}
+
+function d25RenderCommanderPicker() {
+  const selected = d25Commander(state.campaignCommanderId);
+  return `<section class="d25-commanders" aria-labelledby="d25-commanders-title">
+    <header><div><p class="eyebrow">КОМАНДОВАНИЕ</p><h3 id="d25-commanders-title">Кто поведёт дружину</h3></div><span>${selected ? `${d25Esc(selected.name)} · ⚔${selected.martial} ¤${selected.stewardship}` : 'выберите командира'}</span></header>
+    <div class="d25-commander-scroll" role="list">${d25AvailableCommanders().map((member) => `<button role="listitem" class="d25-commander ${state.campaignCommanderId === member.id ? 'selected' : ''}" data-select-commander="${member.id}" data-native-press aria-pressed="${state.campaignCommanderId === member.id}"><b>${d25Esc(member.name)}</b><span>${d25Esc(member.trait)} · верность ${round(member.loyalty)}</span><small>⚔ ${member.martial} · ¤ ${member.stewardship} · ☏ ${member.diplomacy}</small></button>`).join('')}</div>
+  </section>`;
+}
+
+function d25ReachableTargets(enemy) {
+  return state.provinces.filter((province) => province.owner === enemy).map((province) => ({ province, route: d25FindRoute(province.id) })).filter((item) => item.route).sort((a, b) => a.route.length - b.route.length || a.province.fort - b.province.fort);
+}
+
+function d25RenderTargetPlanner() {
+  const wars = ['north', 'south'].filter((enemy) => state.wars[enemy]);
+  if (!wars.length) return '<div class="quiet-note">Сначала объявите войну соседней державе. После этого военный совет покажет маршруты, крепости и стоимость похода.</div>';
+  const targets = wars.flatMap((enemy) => d25ReachableTargets(enemy).map((item) => ({ ...item, enemy })));
+  if (!targets.length) return '<div class="quiet-note">У армии нет доступного пути к вражеским землям. Нужна общая граница или уже занятый коридор.</div>';
+  return `<div class="d25-target-list">${targets.map(({ province, route, enemy }) => {
+    const commander = d25Commander(state.campaignCommanderId);
+    const capacity = d25CampaignCapacity(route, commander);
+    const travel = Math.max(1, route.length - 1);
+    const disabledTarget = state.actions <= 0 || state.gold < 10 || state.food < 8 || totalArmy() < 20;
+    return `<article class="d25-target-card">
+      <div class="d25-target-sign">${TERRAIN[province.terrain].icon}</div>
+      <div class="d25-target-copy"><header><div><h3>${d25Esc(province.name)}</h3><p>${d25Esc(enemyName(enemy))} · ${TERRAIN[province.terrain].name}</p></div><b>крепость ${province.fort}</b></header><span>${travel} переход${travel === 1 ? '' : travel < 5 ? 'а' : 'ов'} · обоз до ${capacity} · население ${round(province.population)}к</span><small>${d25Esc(d25RouteText(route))}</small></div>
+      <button data-campaign-target="${province.id}" data-native-press ${disabledTarget ? 'disabled' : ''}><b>Начать поход</b><span>¤10 · ✦8 · 1 решение</span></button>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function d25RenderCampaignCard() {
+  const campaign = state.campaign;
+  if (!campaign) return `<section class="d25-planner"><header class="d25-panel-head"><div><p class="eyebrow">НОВЫЙ ПОХОД</p><h3>Выберите цель</h3></div><span>Маршрут рассчитывается по дорогам и доступным границам</span></header>${d25RenderCommanderPicker()}${d25RenderTargetPlanner()}</section>`;
+  const target = d25CampaignTarget(campaign);
+  const commander = d25Commander(campaign.commanderId);
+  const current = d25CampaignPosition(campaign);
+  const canAdvance = state.actions > 0 && campaign.phase !== 'battle';
+  return `<section class="d25-active-campaign" aria-labelledby="d25-campaign-title">
+    <header class="d25-campaign-head"><div><p class="eyebrow">ДЕЙСТВУЮЩИЙ ПОХОД / СЕЗОН ${campaign.turns + 1}</p><h3 id="d25-campaign-title">${d25Esc(target?.name || 'Неизвестная цель')}</h3><span>${d25Esc(d25CampaignPhaseText(campaign))}</span></div><div class="d25-campaign-seal">⚔</div></header>
+    <div class="d25-campaign-command"><div><small>командир</small><b>${d25Esc(commander?.name || state.ruler.name)}</b><span>⚔${commander?.martial || 0} · ¤${commander?.stewardship || 0}</span></div><div><small>текущая позиция</small><b>${d25Esc(current?.name || 'сборное место')}</b><span>${TERRAIN[current?.terrain || 'plains']?.name || ''}</span></div></div>
+    <div class="d25-campaign-bars">${d25Bar(campaign.supply / Math.max(1, campaign.capacity) * 100, `Припасы ${round(campaign.supply)}/${round(campaign.capacity)}`, campaign.supply < 24 ? 'danger' : '')}${d25Bar(state.armyReadiness, 'Готовность дружины', state.armyReadiness < 35 ? 'danger' : '')}${campaign.phase === 'march' ? d25Bar(campaign.progress, 'Пройдено маршрута') : campaign.phase === 'siege' ? d25Bar(campaign.siege, 'Осадные работы', 'siege') : ''}</div>
+    <div class="d25-route" aria-label="Маршрут похода">${campaign.route.map((id, index) => `<span class="${index < campaign.routeIndex ? 'passed' : index === campaign.routeIndex ? 'current' : index === campaign.route.length - 1 ? 'target' : ''}">${d25Esc(provinceById(id)?.name || id)}</span>`).join('<i>›</i>')}</div>
+    <div class="d25-doctrine"><button data-campaign-action="stance" data-native-press><small>порядок похода</small><b>${D25_DOCTRINES[campaign.stance].name}</b><span>${D25_DOCTRINES[campaign.stance].desc}</span></button></div>
+    <div class="d25-campaign-actions">
+      ${campaign.phase === 'battle' ? '<button class="primary" data-campaign-action="battle" data-native-press><b>Принять сражение</b><span>Развернуть три фланга</span></button>' : `<button class="primary" data-campaign-action="advance" data-native-press ${canAdvance ? '' : 'disabled'}><b>${campaign.phase === 'siege' ? 'Продолжить осаду' : campaign.phase === 'mustering' ? 'Выступить' : 'Ускорить марш'}</b><span>1 решение · расход припасов</span></button>`}
+      ${campaign.phase === 'siege' ? `<button class="danger" data-campaign-action="assault" data-native-press ${campaign.siege < 35 || totalArmy() < 20 ? 'disabled' : ''}><b>Штурмовать</b><span>доступно с 35% · высокие потери</span></button>` : ''}
