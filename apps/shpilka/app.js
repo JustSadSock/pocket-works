@@ -29,6 +29,7 @@ const gameParts = [
   './engine-v2-28-route.js',
   './engine-v2-28-ai.js',
   './engine-v2-28-physics.js',
+  './engine-v2-28-fixes.js',
   './engine-v2-28-ui.js',
   './engine-v2-12.js'
 ];
