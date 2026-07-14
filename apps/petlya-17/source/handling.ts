@@ -90,9 +90,9 @@ export function stepVehicle(state: VehicleDynamics, input: VehicleInput, delta: 
   const slipAngle = Math.atan2(lateralSpeed, Math.max(2.5, speedMps)) + yawOffset * 0.58;
   const slipLoss = clamp(Math.abs(slipAngle) * 2.4, 0, 0.7);
 
-  const engineAcceleration = clamp(input.throttle, 0, 1) * (10.7 * (1 - clamp(speedRatio, 0, 1) * 0.73));
+  const engineAcceleration = clamp(input.throttle, 0, 1) * (14.8 * (1 - clamp(speedRatio, 0, 1) * 0.52));
   const draftingAcceleration = clamp(input.drafting, 0, 1) * 1.45;
-  const aerodynamicDrag = 0.34 + speedMps * 0.021 + speedMps * speedMps * 0.00069;
+  const aerodynamicDrag = 0.34 + speedMps * 0.021 + speedMps * speedMps * 0.00055;
   const brakingAcceleration = clamp(input.brake, 0, 1) * (17.2 + grip * 3.8);
   const rollingLoss = input.offroad * (4.8 + speedMps * 0.055);
   const accelerationMps = engineAcceleration + draftingAcceleration - aerodynamicDrag - brakingAcceleration - rollingLoss - slipLoss * 2.2;
