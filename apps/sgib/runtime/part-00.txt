@@ -1,0 +1,151 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createVersionedStore } from '../../shared/capabilities/storage.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
+import { watchConnectivity } from '../../shared/pwa-utils.js';
+import {
+  clamp,
+  clipPolygon,
+  distance,
+  lineCrossesPolygon,
+  lineFromGesture,
+  pointInPolygon,
+  polygonArea,
+  reflectPoint,
+  reflectPolygon,
+  signedDistance,
+  transformFoldPoint,
+  transformPolygon
+} from './geometry.js';
+
+const APP_VERSION = '1.0.0';
+const STORAGE_NAMESPACE = 'pocket-works:sgib';
+const CACHE_PREFIX = 'sgib-';
+const LOGICAL_WIDTH = 1000;
+const LOGICAL_HEIGHT = 1400;
+const PAPER_MIN_X = 150;
+const PAPER_MAX_X = 850;
+const PAPER_MIN_Y = 220;
+const PAPER_MAX_Y = 1160;
+const BASE_PAPER = [
+  { x: 137, y: 207 },
+  { x: 858, y: 193 },
+  { x: 875, y: 1178 },
+  { x: 128, y: 1207 }
+];
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const LEVELS = [
+  {
+    title: 'Первая линия',
+    note: 'Один прямой сгиб',
+    maxFolds: 1,
+    hint: 'Потяни каплю к пустому кругу',
+    hintFrom: [0.24, 0.5],
+    hintTo: [0.76, 0.5],
+    entities: [
+      ['ink', 0.24, 0.5],
+      ['void', 0.76, 0.5]
+    ]
+  },
+  {
+    title: 'Поперёк волокон',
+    note: 'Вертикальное движение',
+    maxFolds: 1,
+    hint: 'Сложи нижнюю половину вверх',
+    hintFrom: [0.5, 0.78],
+    hintTo: [0.5, 0.26],
+    entities: [
+      ['ink', 0.5, 0.78],
+      ['void', 0.5, 0.26]
+    ]
+  },
+  {
+    title: 'Косая кромка',
+    note: 'Диагональ',
+    maxFolds: 1,
+    hint: 'Направление жеста важнее края листа',
+    hintFrom: [0.27, 0.29],
+    hintTo: [0.73, 0.71],
+    entities: [
+      ['ink', 0.27, 0.29],
+      ['void', 0.73, 0.71]
+    ]
+  },
+  {
+    title: 'Двойной оттиск',
+    note: 'Две пары за раз',
+    maxFolds: 1,
+    hint: 'Одна линия может закрыть несколько отметок',
+    hintFrom: [0.22, 0.5],
+    hintTo: [0.78, 0.5],
+    entities: [
+      ['ink', 0.22, 0.32],
+      ['void', 0.78, 0.32],
+      ['ink', 0.22, 0.68],
+      ['ink', 0.78, 0.68]
+    ]
+  },
+  {
+    title: 'Угол архива',
+    note: 'Два последовательных сгиба',
+    maxFolds: 2,
+    hint: 'Сначала слева направо, затем снизу вверх',
+    hintFrom: [0.22, 0.28],
+    hintTo: [0.78, 0.28],
+    entities: [
+      ['ink', 0.22, 0.28],
+      ['void', 0.78, 0.28],
+      ['ink', 0.76, 0.83],
+      ['void', 0.76, 0.51]
+    ]
+  },
+  {
+    title: 'Поля документа',
+    note: 'Порядок сохраняет форму',
+    maxFolds: 2,
+    hint: 'Оставь верхнюю пару на неподвижной стороне',
+    hintFrom: [0.21, 0.76],
+    hintTo: [0.79, 0.76],
+    entities: [
+      ['ink', 0.21, 0.76],
+      ['void', 0.79, 0.76],
+      ['ink', 0.72, 0.2],
+      ['void', 0.72, 0.52]
+    ]
+  },
+  {
+    title: 'Крестовой шов',
+    note: 'Два независимых плеча',
+    maxFolds: 2,
+    hint: 'Сначала верх вниз, затем справа налево',
+    hintFrom: [0.22, 0.2],
+    hintTo: [0.22, 0.56],
+    entities: [
+      ['ink', 0.22, 0.2],
+      ['void', 0.22, 0.56],
+      ['ink', 0.84, 0.78],
+      ['void', 0.52, 0.78]
+    ]
+  },
+  {
+    title: 'Три клапана',
+    note: 'Точный ритм',
+    maxFolds: 3,
+    hint: 'Каждый следующий оттиск лежит на неподвижной части',
+    hintFrom: [0.14, 0.19],
+    hintTo: [0.42, 0.19],
+    groups: [
+      { from: [0.14, 0.19], to: [0.42, 0.19], points: [[0.16, 0.17]], types: [['ink', 'void']] },
+      { from: [0.71, 0.12], to: [0.71, 0.43], points: [[0.7, 0.15]], types: [['ink', 'void']] },
+      { from: [0.88, 0.82], to: [0.57, 0.82], points: [[0.86, 0.84]], types: [['ink', 'ink']] }
+    ]
+  },
+  {
+    title: 'Косой тираж',
+    note: 'Три совпадения одной диагональю',
+    maxFolds: 1,
+    hint: 'Проведи жест по оси всей композиции',
+    hintFrom: [0.2, 0.8],
+    hintTo: [0.8, 0.2],
+    groups: [
+      {
