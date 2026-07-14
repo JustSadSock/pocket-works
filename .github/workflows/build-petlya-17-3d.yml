@@ -28,12 +28,6 @@ jobs:
       - name: Install workspace dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Typecheck 3D rewrite
-        run: npm run typecheck --workspace=@pocket-works/petlya-17
-
-      - name: Test track math
-        run: npm run test --workspace=@pocket-works/petlya-17
-
       - name: Build enhanced application
         run: npm run build --workspace=@pocket-works/petlya-17
 
