@@ -1,0 +1,173 @@
+  const remaining = state.provinces.filter((province) => province.owner === enemy).length;
+  if (term === 'white' && record.score < -8) return toast('Противник не считает себя обязанным миру');
+  if (term === 'recognize' && (record.score < 20 || record.captured.length === 0)) return toast('Нужно удерживать захваченные земли и иметь счёт войны 20');
+  if (term === 'tribute' && record.score < 38) return toast('Для дани нужен счёт войны 38');
+  if (term === 'subjugate' && (record.score < 75 || remaining > 3)) return toast('Подчинение возможно при счёте 75 и не более трёх оставшихся областях');
+  d25EndWar(enemy, term);
+}
+
+const d25Normalize2 = normalizeState;
+normalizeState = function normalizeStateD25(input) {
+  return d25EnsureMilitary(d25Normalize2(input));
+};
+
+saveState = function saveStateD25() {
+  if (!state) return;
+  d2EnsureDynasty(state);
+  d25EnsureMilitary(state);
+  state.version = D25_VERSION;
+  state.savedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: D25_VERSION, game: state }));
+};
+
+const d25NewGame2 = newGame;
+newGame = function newGameD25(house, ambition) {
+  d25NewGame2(house, ambition);
+  d25EnsureMilitary(state, true);
+  state.version = D25_VERSION;
+  saveState();
+  render();
+};
+
+const d25CalculateEconomy2 = calculateEconomy;
+calculateEconomy = function calculateEconomyD25() {
+  const economy = d25CalculateEconomy2();
+  economy.expenses.campaign = state.campaign ? 2.5 + totalArmy() * 0.018 : 0;
+  economy.expenses.war = ['north', 'south'].reduce((sum, enemy) => sum + (state.wars[enemy] ? d25WarRecord(state, enemy).exhaustion * 0.025 : 0), 0);
+  economy.net.gold -= economy.expenses.campaign + economy.expenses.war;
+  return economy;
+};
+
+const d25ToggleWar2 = toggleWar;
+toggleWar = function toggleWarD25(enemy) {
+  if (state.wars[enemy]) {
+    currentTab = 'war';
+    toast('Условия мира доступны в военном совете');
+    render();
+    return;
+  }
+  d25ToggleWar2(enemy);
+  d25EnsureMilitary(state);
+  if (state.wars[enemy]) {
+    const record = d25WarRecord(state, enemy);
+    record.score = 0; record.exhaustion = 4; record.captured = []; record.objectiveId = null;
+  }
+  saveState();
+};
+
+const d25CreateBattle2 = createBattle;
+createBattle = function createBattleD25(target, defending = false, enemyOverride = null) {
+  const battleData = d25CreateBattle2(target, defending, enemyOverride);
+  const campaign = !defending && state.campaign?.targetId === target.id ? state.campaign : null;
+  const commander = d25Commander(campaign?.commanderId || state.council?.marshal || state.ruler.id);
+  const readiness = clamp(state.armyReadiness / 100, 0.35, 1.08);
+  battleData.commanderId = commander?.id || state.ruler.id;
+  battleData.commanderLane = 1;
+  battleData.commanderMoves = 0;
+  battleData.reserve = round(totalArmy() * 0.16);
+  battleData.reserveUsed = false;
+  battleData.campaignId = campaign?.id || null;
+  battleData.supply = campaign?.supply ?? 55;
+  battleData.playerMorale = clamp(battleData.playerMorale * (0.76 + readiness * 0.28) + (commander?.martial || 0) * 1.8, 30, 100);
+  battleData.lanes.forEach((lane, index) => {
+    const commandBonus = index === battleData.commanderLane ? 1 + (commander?.martial || 0) * 0.025 : 1;
+    lane.ours *= commandBonus * (0.82 + readiness * 0.2);
+  });
+  return battleData;
+};
+
+const d25BattleCommand2 = battleCommand;
+battleCommand = function battleCommandD25(command, laneIndex) {
+  const battleData = state.battle;
+  if (!battleData) return;
+  if (command === 'reserve' && !battleData.reserveUsed) {
+    battleData.reserveUsed = true;
+    const weakestIndex = battleData.lanes.reduce((best, lane, index, lanes) => lane.ours < lanes[best].ours ? index : best, 0);
+    const lane = battleData.lanes[weakestIndex];
+    lane.ours += battleData.reserve;
+    lane.progress += 7;
+    lane.order = 'введён резерв';
+    battleData.playerMorale = clamp(battleData.playerMorale + 9, 0, 100);
+    battleData.log.unshift(`Резерв введён на ${['левый фланг', 'центр', 'правый фланг'][weakestIndex]}.`);
+    tone('success'); render(); return;
+  }
+  if (command === 'commander' && Number.isInteger(laneIndex) && battleData.commanderMoves < 2) {
+    battleData.commanderLane = laneIndex;
+    battleData.commanderMoves += 1;
+    battleData.lanes[laneIndex].progress += 5 + (d25Commander(battleData.commanderId)?.martial || 0);
+    battleData.lanes[laneIndex].order = 'командир на фланге';
+    battleData.log.unshift(`${d25CommanderName(battleData.commanderId)} перенёс ставку на фланг ${laneIndex + 1}.`);
+    tone('war'); render(); return;
+  }
+  d25BattleCommand2(command, laneIndex);
+};
+
+const d25BattleTick2 = battleTick;
+battleTick = function battleTickD25() {
+  const battleData = state.battle;
+  if (battleData) {
+    const lane = battleData.lanes[battleData.commanderLane ?? 1];
+    const commander = d25Commander(battleData.commanderId);
+    if (lane && commander) lane.progress += commander.martial * 0.18;
+  }
+  d25BattleTick2();
+};
+
+const d25FinishBattle2 = finishBattle;
+finishBattle = function finishBattleD25(victory) {
+  const snapshot = state.battle ? {
+    targetId: state.battle.targetId,
+    enemy: state.battle.enemy,
+    defending: state.battle.defending,
+    campaignId: state.battle.campaignId,
+    playerMorale: state.battle.playerMorale,
+    enemyMorale: state.battle.enemyMorale
+  } : null;
+  d25FinishBattle2(victory);
+  if (!snapshot || !state) return;
+  const record = d25WarRecord(state, snapshot.enemy);
+  const delta = victory ? (snapshot.defending ? 18 : 28) : (snapshot.defending ? -28 : -20);
+  record.score = clamp(record.score + delta, -100, 100);
+  record.exhaustion = clamp(record.exhaustion + (victory ? 7 : 12), 0, 100);
+  if (victory) record.victories += 1; else record.defeats += 1;
+  if (victory && !snapshot.defending && !record.captured.includes(snapshot.targetId)) record.captured.push(snapshot.targetId);
+  state.armyReadiness = clamp(state.armyReadiness + (victory ? 4 : -12), 0, 100);
+  state.lastBattleReport = { season: state.season, targetId: snapshot.targetId, victory, delta, playerMorale: round(snapshot.playerMorale), enemyMorale: round(snapshot.enemyMorale) };
+  if (snapshot.campaignId && state.campaign?.id === snapshot.campaignId) state.campaign = null;
+  saveState();
+  render();
+};
+
+const d25RetreatBattle2 = retreatBattle;
+retreatBattle = function retreatBattleD25() {
+  const campaignId = state.battle?.campaignId;
+  const enemy = state.battle?.enemy;
+  d25RetreatBattle2();
+  if (enemy) d25WarRecord(state, enemy).score -= 8;
+  if (campaignId && state.campaign?.id === campaignId) state.campaign = null;
+  state.armyReadiness = clamp(state.armyReadiness - 10, 0, 100);
+  saveState();
+  render();
+};
+
+function d25MilitarySeason() {
+  d25EnsureMilitary(state);
+  if (state.campaign) {
+    const target = d25CampaignTarget(state.campaign);
+    if (!state.wars[state.campaign.enemy] || !target || target.owner === 'player') {
+      addLog('Действующий поход завершён: военная цель больше не существует.');
+      state.campaign = null;
+    }
+  }
+  for (const enemy of ['north', 'south']) {
+    const record = d25WarRecord(state, enemy);
+    if (state.wars[enemy]) {
+      record.exhaustion = clamp(record.exhaustion + 1.4 + totalArmy() / 260, 0, 100);
+      if (record.exhaustion > 72) {
+        state.stability -= 0.9;
+        state.estates.commons.loyalty -= 0.45;
+      }
+    } else {
+      record.exhaustion = Math.max(0, record.exhaustion - 4);
+    }
+  }
