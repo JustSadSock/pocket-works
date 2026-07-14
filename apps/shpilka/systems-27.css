@@ -1,0 +1,22 @@
+.finish-screen .primary-action:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  box-shadow: none;
+  transform: none;
+}
+
+.finish-screen .primary-action:disabled::after {
+  content: "···";
+  letter-spacing: 0.12em;
+}
+
+.results li.is-rival:not(.is-player) b::after {
+  content: " · ДУЭЛЬ";
+  color: var(--orange);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+}
+
+.results time {
+  white-space: nowrap;
+}
