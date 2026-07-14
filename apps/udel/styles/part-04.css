@@ -1,0 +1,39 @@
+    margin: 0 auto;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  .action-drawer {
+    width: min(100%, 560px);
+    left: 50%;
+    transform: translate(-50%, 105%);
+  }
+
+  .action-drawer.open {
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 360px) {
+  .resource b { font-size: 11px; }
+  .resource span { font-size: 8px; }
+  .map-scroll { height: 54vh; }
+  .province-name { font-size: 12px; }
+  .province-mini { font-size: 9px; }
+  .section { padding-inline: 10px; }
+  .tech-card { grid-template-columns: 42px minmax(0, 1fr) 58px; }
+  .tech-icon { height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+.province-label { pointer-events: none; }
