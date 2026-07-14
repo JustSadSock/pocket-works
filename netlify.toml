@@ -1,5 +1,5 @@
 [build]
-  command = "npm run test:shpilka > shpilka-audit.log 2>&1 || true; npm run build:enhanced && npm run deploy:site && cp shpilka-audit.log dist-site/shpilka-audit.log"
+  command = "node scripts/audit-shpilka-2-6-diagnostic.mjs; npm run build:enhanced && npm run deploy:site && cp shpilka-audit-pages/*.html dist-site/"
   publish = "dist-site"
 
 [[headers]]
