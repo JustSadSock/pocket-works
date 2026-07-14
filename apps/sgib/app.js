@@ -12,11 +12,15 @@
  * });
  */
 const PARTS = 14;
-const paths = Array.from({ length: PARTS }, (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt`);
+const RUNTIME_VERSION = '1.1.1';
+const paths = Array.from(
+  { length: PARTS },
+  (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt?v=${RUNTIME_VERSION}`
+);
 
 try {
   const parts = await Promise.all(paths.map(async (path) => {
-    const response = await fetch(path);
+    const response = await fetch(path, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Failed to load ${path} (${response.status})`);
     return response.text();
   }));
