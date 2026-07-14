@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#1b3024">
-  <meta name="description" content="Moss & Marble — камерный и бесконечный мини-гольф в старой оранжерее для Pocket Works.">
+  <meta name="description" content="Moss & Marble — объёмный мини-гольф с длинными маршрутами и бесконечной оранжереей для Pocket Works.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Moss & Marble">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css?v=1.3.0">
+  <link rel="stylesheet" href="./styles14.css?v=1.4.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -28,10 +29,14 @@
         <i></i>
         <div><span>Удары</span><strong id="strokeCount">0</strong></div>
         <i></i>
-        <div><span>Пар</span><strong id="parCount">3</strong></div>
+        <div><span>Пар</span><strong id="parCount">6</strong></div>
       </div>
       <button class="sound-control" type="button" id="soundBtn" data-native-press aria-label="Выключить звук" aria-pressed="true">Звук</button>
     </header>
+
+    <button class="overview-control" type="button" id="overviewBtn" data-ui data-native-press aria-pressed="false" aria-label="Показать всю территорию">
+      <i aria-hidden="true"></i><span>Обзор</span>
+    </button>
 
     <div class="aim-hint" id="aimHint" data-ui>Потяни мяч назад</div>
     <div class="surface-note" id="surfaceNote" data-ui></div>
@@ -39,14 +44,14 @@
     <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
       <div class="menu-wash"></div>
       <div class="menu-copy">
-        <p class="eyebrow">Оранжерея № 1 · После дождя</p>
+        <p class="eyebrow">Оранжерея № 1 · Живой рельеф</p>
         <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
-        <p class="lead">Девять ручных лунок и бесконечный маршрут, который оранжерея собирает заново для каждого кода.</p>
+        <p class="lead">Девять длинных маршрутов с настоящими склонами, прыжками и физической лункой — плюс бесконечный путь по старому генератору.</p>
       </div>
       <div class="menu-actions">
         <button class="primary-action" type="button" id="continueBtn" data-native-press>
-          <span id="continueLabel">Начать прогулку</span>
-          <small id="continueMeta">Лунка 1 · пар 3</small>
+          <span id="continueLabel">Начать длинную прогулку</span>
+          <small id="continueMeta">Лунка 1 · пар 6</small>
         </button>
         <button class="primary-action compact" type="button" id="endlessBtn" data-native-press>
           <span id="endlessLabel">Бесконечная оранжерея</span>
@@ -62,7 +67,7 @@
 
     <section class="screen potting-screen" id="holesScreen" data-ui aria-labelledby="holesTitle">
       <div class="screen-head">
-        <div><p class="eyebrow">Полка садовника</p><h2 id="holesTitle">Девять лунок</h2></div>
+        <div><p class="eyebrow">Полка садовника</p><h2 id="holesTitle">Девять длинных лунок</h2></div>
         <button class="close-control" type="button" data-close-screen="holesScreen" data-native-press>Закрыть</button>
       </div>
       <div class="pot-shelf" id="holeShelf"></div>
@@ -91,9 +96,9 @@
         <p class="eyebrow" id="resultEyebrow">Лунка завершена</p>
         <h2 id="resultTitle">Чисто</h2>
         <div class="result-score"><strong id="resultStrokes">3</strong><span>удара</span></div>
-        <p id="resultDetail">Пар. Мох одобрительно промолчал.</p>
+        <p id="resultDetail">Мяч действительно остался на дне.</p>
         <div class="result-actions">
-          <button class="primary-action compact" type="button" id="nextBtn" data-native-press><span>Следующая лунка</span><small id="nextMeta">№ 2 · пар 3</small></button>
+          <button class="primary-action compact" type="button" id="nextBtn" data-native-press><span>Следующая лунка</span><small id="nextMeta">№ 2 · пар 6</small></button>
           <button class="paper-action" type="button" id="retryBtn" data-native-press>Переиграть</button>
           <button class="paper-action" type="button" id="resultMenuBtn" data-native-press>В оранжерею</button>
           <a class="paper-link" href="../../" id="resultHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
@@ -104,9 +109,9 @@
     <section class="screen finish-screen" id="finishScreen" data-ui aria-labelledby="finishTitle">
       <div class="finish-copy">
         <p class="eyebrow">Круг завершён</p>
-        <h2 id="finishTitle">После дождя</h2>
+        <h2 id="finishTitle">Живой рельеф</h2>
         <p class="finish-total"><strong id="finishStrokes">0</strong><span>ударов</span></p>
-        <p id="finishDetail">Оранжерея запомнила этот круг.</p>
+        <p id="finishDetail">Оранжерея запомнила этот длинный круг.</p>
         <button class="primary-action compact" type="button" id="againBtn" data-native-press><span>Сыграть круг снова</span><small>С первой лунки</small></button>
         <button class="paper-action" type="button" id="finishMenuBtn" data-native-press>В оранжерею</button>
         <a class="paper-link" href="../../" id="finishHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
@@ -122,8 +127,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Moss & Marble"
-    data-app-version="1.3.0"
+    data-app-version="1.4.0"
   ></script>
-  <script type="module" src="./app.js?v=1.3.0"></script>
+  <script type="module" src="./app.js?v=1.4.0"></script>
 </body>
 </html>
