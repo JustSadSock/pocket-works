@@ -1,3 +1,4 @@
+import { stabilizeLevelGeometry } from './integrity.js';
 import { rampAt, surfaceAt, terrainGradientAt, terrainHeightAt, waterAt } from './terrain.js';
 
 export const BALL_RADIUS = 22;
@@ -6,6 +7,7 @@ const MAX_SPEED = 1780;
 const GRAVITY = 1180;
 const SLOPE_ACCEL = 960;
 const CUP_DEFAULT_DEPTH = 64;
+const CUP_FAILSAFE_TIME = 3.1;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -56,13 +58,27 @@ function obstacleHeight(obstacle) {
   return obstacle.r * .95;
 }
 
-function canClear(ball, topZ) {
-  return ball.z - BALL_RADIUS > topZ + 4;
+export function obstacleVerticalSpan(level, obstacle) {
+  const ground = terrainHeightAt(level, obstacle.x, obstacle.y);
+  return { bottom: ground + Number(obstacle.bottomOffset ?? .5), top: ground + obstacleHeight(obstacle) };
+}
+
+export function wallVerticalSpan(level, wall, ax = wall.ax, ay = wall.ay, bx = wall.bx, by = wall.by) {
+  const ground = terrainHeightAt(level, (ax + bx) * .5, (ay + by) * .5);
+  if (wall.rotor) return { bottom: ground + Number(wall.bottomOffset ?? 13), top: ground + Number(wall.topOffset ?? 32) };
+  if (wall.material === 'glass') return { bottom: ground + 9, top: ground + 74 };
+  return { bottom: ground + .5, top: ground + 38 };
+}
+
+export function verticalIntervalsOverlap(ball, bottom, top, tolerance = 1.25) {
+  const ballBottom = ball.z - BALL_RADIUS;
+  const ballTop = ball.z + BALL_RADIUS;
+  return ballTop > bottom + tolerance && ballBottom < top - tolerance;
 }
 
 function resolveBoundary(ball, level, events) {
   const localGround = terrainHeightAt(level, ball.x, ball.y);
-  if (canClear(ball, localGround + 24)) return;
+  if (!verticalIntervalsOverlap(ball, localGround, localGround + 24)) return;
   const polygon = level.outline;
   for (let index = 0; index < polygon.length; index += 1) {
     const a = polygon[index];
@@ -107,15 +123,21 @@ function resolveBoundary(ball, level, events) {
 }
 
 function resolveCircle(ball, obstacle, level, events) {
-  const ground = terrainHeightAt(level, obstacle.x, obstacle.y);
-  if (canClear(ball, ground + obstacleHeight(obstacle))) return;
+  const span = obstacleVerticalSpan(level, obstacle);
+  if (!verticalIntervalsOverlap(ball, span.bottom, span.top)) return;
   const dx = ball.x - obstacle.x;
   const dy = ball.y - obstacle.y;
   const minimumDistance = BALL_RADIUS + obstacle.r;
   const distance = Math.hypot(dx, dy);
-  if (distance >= minimumDistance || distance === 0) return;
-  const nx = dx / distance;
-  const ny = dy / distance;
+  if (distance >= minimumDistance) return;
+
+  let nx = distance > .001 ? dx / distance : 1;
+  let ny = distance > .001 ? dy / distance : 0;
+  if (distance <= .001) {
+    const velocityLength = Math.hypot(ball.vx, ball.vy) || 1;
+    nx = -ball.vx / velocityLength;
+    ny = -ball.vy / velocityLength;
+  }
   ball.x = obstacle.x + nx * minimumDistance;
   ball.y = obstacle.y + ny * minimumDistance;
   const speed = Math.hypot(ball.vx, ball.vy);
@@ -141,18 +163,26 @@ function resolveCapsule(ball, wall, level, events, time) {
     by = wall.y + halfY;
   }
 
-  const wallTop = wall.material === 'glass' ? 74 : 38;
-  const ground = terrainHeightAt(level, (ax + bx) * .5, (ay + by) * .5);
-  if (canClear(ball, ground + wallTop)) return;
+  const span = wallVerticalSpan(level, wall, ax, ay, bx, by);
+  if (!verticalIntervalsOverlap(ball, span.bottom, span.top)) return;
 
   const nearest = closestPointOnSegment(ball.x, ball.y, ax, ay, bx, by);
   const dx = ball.x - nearest.x;
   const dy = ball.y - nearest.y;
   const minimumDistance = BALL_RADIUS + wall.thickness * .5;
   const distance = Math.hypot(dx, dy);
-  if (distance >= minimumDistance || distance === 0) return;
-  const nx = dx / distance;
-  const ny = dy / distance;
+  if (distance >= minimumDistance) return;
+
+  let nx = distance > .001 ? dx / distance : 1;
+  let ny = distance > .001 ? dy / distance : 0;
+  if (distance <= .001) {
+    const lineX = bx - ax;
+    const lineY = by - ay;
+    const lineLength = Math.hypot(lineX, lineY) || 1;
+    nx = -lineY / lineLength;
+    ny = lineX / lineLength;
+    if (ball.vx * nx + ball.vy * ny > 0) { nx *= -1; ny *= -1; }
+  }
   ball.x = nearest.x + nx * minimumDistance;
   ball.y = nearest.y + ny * minimumDistance;
 
@@ -191,6 +221,7 @@ function handleTunnel(ball, level, events) {
     ball.z = ball.groundZ + BALL_RADIUS;
     ball.vz = 0;
     ball.airborne = false;
+    ball.grounded = true;
     ball.tunnelCooldown = .8;
     events.push({ type: 'tunnel' });
     break;
@@ -217,6 +248,7 @@ function maybeLaunchFromRamp(ball, level, previousX, previousY, events) {
 }
 
 function stepVertical(ball, level, dt, events) {
+  if (ball.inCup) return;
   const ground = terrainHeightAt(level, ball.x, ball.y);
   ball.groundZ = ground;
   const target = ground + BALL_RADIUS;
@@ -260,11 +292,45 @@ function cupMetrics(level) {
   const throat = Math.max(12, hole.r - BALL_RADIUS * .42);
   const influence = hole.r + BALL_RADIUS * .82;
   const bottomCenterZ = surfaceZ - depth + BALL_RADIUS;
-  return { hole, surfaceZ, depth, throat, influence, bottomCenterZ };
+  const committedCenterZ = surfaceZ + BALL_RADIUS - 8;
+  return { hole, surfaceZ, depth, throat, influence, bottomCenterZ, committedCenterZ };
+}
+
+function leaveCup(ball, level, events) {
+  ball.inCup = false;
+  ball.cupPhase = 'outside';
+  ball.cupTime = 0;
+  ball.cupBottomTime = 0;
+  const outsideGround = terrainHeightAt(level, ball.x, ball.y);
+  const outsideTarget = outsideGround + BALL_RADIUS;
+  if (ball.z <= outsideTarget) {
+    ball.z = outsideTarget;
+    ball.vz = Math.max(0, ball.vz);
+  }
+  ball.airborne = ball.z > outsideTarget + 1.5;
+  ball.grounded = !ball.airborne;
+  events.push({ type: 'lip-out', speed: Math.hypot(ball.vx, ball.vy) });
+}
+
+function sinkBall(ball, events) {
+  if (ball.sunk) return;
+  ball.sunk = true;
+  ball.inCup = true;
+  ball.cupPhase = 'sunk';
+  ball.moving = false;
+  ball.airborne = false;
+  ball.grounded = false;
+  ball.vx = 0;
+  ball.vy = 0;
+  ball.vz = 0;
+  if (!ball.cupEventSent) {
+    ball.cupEventSent = true;
+    events.push({ type: 'cup' });
+  }
 }
 
 function stepCup(ball, level, dt, events) {
-  const { hole, surfaceZ, throat, influence, bottomCenterZ } = cupMetrics(level);
+  const { hole, surfaceZ, depth, throat, influence, bottomCenterZ, committedCenterZ } = cupMetrics(level);
   let dx = ball.x - hole.x;
   let dy = ball.y - hole.y;
   let distance = Math.hypot(dx, dy);
@@ -283,72 +349,81 @@ function stepCup(ball, level, dt, events) {
     ball.airborne = true;
     ball.grounded = false;
     ball.cupEntrySpeed = speed;
+    ball.cupTime = 0;
+    ball.cupBottomTime = 0;
+    ball.cupPhase = 'falling';
+    ball.cupEventSent = false;
   }
 
+  ball.cupTime += dt;
   ball.vz -= GRAVITY * dt;
   ball.z += ball.vz * dt;
   dx = ball.x - hole.x;
   dy = ball.y - hole.y;
   distance = Math.hypot(dx, dy);
 
+  const committed = ball.z <= committedCenterZ || ball.cupTime > .18;
   if (distance > throat) {
     const escapeAllowance = ball.cupEntrySpeed > 650 ? 10 : ball.cupEntrySpeed > 500 ? 5 : 1;
-    if (ball.z >= surfaceZ + BALL_RADIUS - escapeAllowance) {
-      ball.inCup = false;
-      const outsideGround = terrainHeightAt(level, ball.x, ball.y);
-      const outsideTarget = outsideGround + BALL_RADIUS;
-      if (ball.z <= outsideTarget) {
-        ball.z = outsideTarget;
-        ball.vz = 0;
-        ball.airborne = false;
-        ball.grounded = true;
-      }
-      events.push({ type: 'lip-out', speed: Math.hypot(ball.vx, ball.vy) });
+    const canEscape = !committed && ball.z >= surfaceZ + BALL_RADIUS - escapeAllowance;
+    if (canEscape) {
+      leaveCup(ball, level, events);
       return false;
     }
 
-    const nx = dx / distance;
-    const ny = dy / distance;
+    const nx = distance > .001 ? dx / distance : 1;
+    const ny = distance > .001 ? dy / distance : 0;
     ball.x = hole.x + nx * throat;
     ball.y = hole.y + ny * throat;
     const radialVelocity = ball.vx * nx + ball.vy * ny;
     if (radialVelocity > 0) {
-      ball.vx -= (1 + .42) * radialVelocity * nx;
-      ball.vy -= (1 + .42) * radialVelocity * ny;
+      ball.vx -= 1.42 * radialVelocity * nx;
+      ball.vy -= 1.42 * radialVelocity * ny;
     }
-    ball.vx *= .9;
-    ball.vy *= .9;
+    ball.vx *= .88;
+    ball.vy *= .88;
     ball.vz *= .82;
     if (Math.abs(radialVelocity) > 90) events.push({ type: 'collision', material: 'cup', speed: Math.abs(radialVelocity) });
+  }
+
+  const depthProgress = clamp((surfaceZ + BALL_RADIUS - ball.z) / Math.max(1, depth), 0, 1);
+  if (distance > .001 && depthProgress > .08) {
+    const centering = (5 + depthProgress * 24) * dt;
+    ball.vx -= dx * centering;
+    ball.vy -= dy * centering;
   }
 
   if (ball.z <= bottomCenterZ) {
     const impact = -ball.vz;
     ball.z = bottomCenterZ;
-    if (impact > 48) {
+    ball.cupPhase = 'bottom';
+    ball.cupBottomTime += dt;
+    if (impact > 48 && ball.cupBottomTime < .38) {
       ball.vz = impact * .23;
       events.push({ type: 'cup-bottom', speed: impact });
     } else {
       ball.vz = 0;
     }
-    ball.vx *= Math.pow(.78, dt * 60);
-    ball.vy *= Math.pow(.78, dt * 60);
+    const bottomDamping = Math.pow(.72, dt * 60);
+    ball.vx *= bottomDamping;
+    ball.vy *= bottomDamping;
+    ball.x += (hole.x - ball.x) * Math.min(1, dt * 4.8);
+    ball.y += (hole.y - ball.y) * Math.min(1, dt * 4.8);
+    distance = Math.hypot(ball.x - hole.x, ball.y - hole.y);
     const settledSpeed = Math.hypot(ball.vx, ball.vy);
-    if (settledSpeed < 14 && Math.abs(ball.vz) < 10 && distance < throat * .9) {
-      ball.sunk = true;
-      ball.moving = false;
-      ball.airborne = false;
-      ball.grounded = false;
-      ball.vx = 0;
-      ball.vy = 0;
-      ball.vz = 0;
-      events.push({ type: 'cup' });
-    }
+    const physicallySettled = settledSpeed < 18 && Math.abs(ball.vz) < 10 && distance < throat * .98;
+    if (physicallySettled || ball.cupBottomTime > .72 || ball.cupTime > CUP_FAILSAFE_TIME) sinkBall(ball, events);
+  } else if (ball.cupTime > CUP_FAILSAFE_TIME) {
+    ball.x += (hole.x - ball.x) * Math.min(1, dt * 8);
+    ball.y += (hole.y - ball.y) * Math.min(1, dt * 8);
+    ball.z = Math.max(bottomCenterZ, ball.z - depth * dt * 2.2);
+    if (ball.z <= bottomCenterZ + 1.5) sinkBall(ball, events);
   }
   return true;
 }
 
 export function createBall(start, level = null) {
+  if (level) stabilizeLevelGeometry(level);
   const groundZ = level ? terrainHeightAt(level, start.x, start.y) : Number(start.z ?? 0);
   return {
     x: start.x,
@@ -368,6 +443,10 @@ export function createBall(start, level = null) {
     sunk: false,
     sink: 0,
     cupEntrySpeed: 0,
+    cupTime: 0,
+    cupBottomTime: 0,
+    cupPhase: 'outside',
+    cupEventSent: false,
     waterTime: 0,
     tunnelCooldown: 0,
     surface: 'grass'
@@ -386,10 +465,15 @@ export function strikeBall(ball, vx, vy) {
   ball.moving = true;
   ball.waterTime = 0;
   ball.inCup = false;
+  ball.cupPhase = 'outside';
+  ball.cupTime = 0;
+  ball.cupBottomTime = 0;
+  ball.cupEventSent = false;
 }
 
 export function stepBall(ball, level, dt, time) {
   const events = [];
+  stabilizeLevelGeometry(level);
   if (ball.sunk) {
     ball.sink = Math.min(1, ball.sink + dt * 2.4);
     return events;
@@ -409,15 +493,16 @@ export function stepBall(ball, level, dt, time) {
     ball.x += ball.vx * step;
     ball.y += ball.vy * step;
 
+    maybeLaunchFromRamp(ball, level, ball.prevX, ball.prevY, events);
+    if (!ball.inCup) stepVertical(ball, level, step, events);
+
     resolveBoundary(ball, level, events);
     for (const obstacle of level.obstacles || []) resolveCircle(ball, obstacle, level, events);
     for (const wall of level.walls || []) resolveCapsule(ball, wall, level, events, time);
     for (const rotor of level.rotors || []) resolveCapsule(ball, { ...rotor, rotor: true }, level, events, time);
-    handleTunnel(ball, level, events);
-    maybeLaunchFromRamp(ball, level, ball.prevX, ball.prevY, events);
 
-    const cupHandled = stepCup(ball, level, step, events);
-    if (!cupHandled && !ball.sunk) stepVertical(ball, level, step, events);
+    handleTunnel(ball, level, events);
+    stepCup(ball, level, step, events);
     if (ball.sunk) break;
   }
 

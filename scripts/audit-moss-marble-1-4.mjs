@@ -18,6 +18,7 @@ for (const level of LEVELS) {
   assert.ok(Math.abs(polygonArea(level.outline)) > 500000, `Hole ${level.id} needs a meaningful play area.`);
   assert.ok(level.par >= 6 && level.par <= 8, `Hole ${level.id} par must reflect its new length.`);
   assert.ok(Number(level.hole.depth) >= 52, `Hole ${level.id} needs a physical cup depth.`);
+  features.rotor += level.rotors?.length || 0;
 
   const ball = createBall(level.start, level);
   assert.equal(ball.z, terrainHeightAt(level, ball.x, ball.y) + 22);
@@ -30,7 +31,6 @@ for (const level of LEVELS) {
     if (zone.ramp) features.ramp += 1;
   }
   features.tunnel += level.tunnels?.length || 0;
-  features.rotor += level.rotors?.length || 0;
 }
 
 for (const [feature, count] of Object.entries(features)) assert.ok(count > 0, `${feature} must exist in the authored course.`);
@@ -87,7 +87,7 @@ assert.match(index, /styles14\.css\?v=1\.4\.0/);
 assert.match(experience, /overviewProgress/);
 assert.match(experience, /drawTerrainMesh/);
 assert.match(experience, /ВСЯ ТЕРРИТОРИЯ/);
-assert.match(worker, /moss-marble-v1\.4\.0/);
+assert.match(worker, /moss-marble-v1\.4\.[01]/);
 assert.match(worker, /\.\/terrain\.js/);
 assert.match(worker, /\.\/experience14\.js/);
 
