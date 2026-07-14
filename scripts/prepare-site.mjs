@@ -1,6 +1,7 @@
 import { cp, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs } from './app-config.mjs';
+import { buildRegistry } from './build-registry.mjs';
 
 const root = process.cwd();
 const output = path.join(root, 'dist-site');
@@ -13,8 +14,7 @@ const rootFiles = [
   'launcher-update-all.js',
   'launcher-sync.js',
   'manifest.webmanifest',
-  'sw.js',
-  'apps.json'
+  'sw.js'
 ];
 const appDevEntries = new Set([
   'package.json',
@@ -55,4 +55,5 @@ for (const config of configs) {
   await copyDirectoryFiltered(source, destination, (name) => appDevEntries.has(name) || name.endsWith('.map'));
 }
 
-console.log(`Prepared production site with ${configs.length} registered application(s) in dist-site/.`);
+await buildRegistry({ root, outputPath: path.join('dist-site', 'apps.json') });
+console.log(`Prepared production site with ${configs.length} self-registered application(s) in dist-site/.`);

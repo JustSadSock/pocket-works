@@ -1,11 +1,9 @@
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { QUICK_APP_PRESETS } from './app-config.mjs';
 
 const root = process.cwd();
-const registryPath = path.join(root, 'apps.json');
-const originalRegistry = await readFile(registryPath, 'utf8');
 const generatedSlugs = [];
 
 function run(command, args) {
@@ -38,5 +36,4 @@ try {
   console.log(`Pocket Forge Quick smoke test passed for ${QUICK_APP_PRESETS.length} presets.`);
 } finally {
   for (const slug of generatedSlugs) await rm(path.join(root, 'apps', slug), { recursive: true, force: true });
-  await writeFile(registryPath, originalRegistry, 'utf8');
 }

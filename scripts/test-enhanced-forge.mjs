@@ -1,12 +1,10 @@
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ENHANCED_APP_PRESETS } from './app-config.mjs';
 
 const root = process.cwd();
-const registryPath = path.join(root, 'apps.json');
 const reportPath = path.join(root, 'enhanced-smoke-report.txt');
-const originalRegistry = await readFile(registryPath, 'utf8');
 const generatedSlugs = [];
 const report = [];
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -58,7 +56,6 @@ try {
   report.push(`\nFAIL: ${error.message}`);
 } finally {
   for (const slug of generatedSlugs) await rm(path.join(root, 'apps', slug), { recursive: true, force: true });
-  await writeFile(registryPath, originalRegistry, 'utf8');
   await writeFile(reportPath, `${report.join('\n')}\n`, 'utf8');
 }
 
