@@ -17,6 +17,24 @@ function pointOnPaper(point) {
   return state.layers.some((layer) => pointInPolygon(point, layer.polygon));
 }
 
+function tryCapturePointer(pointerId) {
+  try {
+    canvas.setPointerCapture?.(pointerId);
+  } catch (error) {
+    console.warn('СГИБ pointer capture was unavailable', error);
+  }
+}
+
+function safeReleasePointer(pointerId) {
+  try {
+    if (typeof canvas.hasPointerCapture !== 'function' || canvas.hasPointerCapture(pointerId)) {
+      canvas.releasePointerCapture?.(pointerId);
+    }
+  } catch (error) {
+    console.warn('СГИБ pointer release was unavailable', error);
+  }
+}
+
 function beginGesture(event) {
   if (state.mode === 'menu' || state.screen || state.animation || state.resolved || state.paused) return;
   const point = pointerToLogical(event);
@@ -35,7 +53,7 @@ function beginGesture(event) {
   };
   state.lastInputAt = performance.now();
   hideHint();
-  canvas.setPointerCapture?.(event.pointerId);
+  tryCapturePointer(event.pointerId);
 }
 
 function moveGesture(event) {
@@ -45,18 +63,22 @@ function moveGesture(event) {
   state.gesture.current = point;
   state.gesture.line = line;
   if (!line) return;
-  const rawProgress = clamp((line.length - 20) / 260, 0, 0.985);
+  const rawProgress = clamp((line.length - 24) / 520, 0, 1);
   const easedProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
-  state.gesture.angle = easedProgress * Math.PI;
+  state.gesture.angle = Math.min(easedProgress, 0.86) * Math.PI;
   state.gesture.valid = validateFold(line);
 }
 
 function endGesture(event) {
-  if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
-  canvas.releasePointerCapture?.(event.pointerId);
   const gesture = state.gesture;
+  if (!gesture || gesture.pointerId !== event.pointerId) return;
+
+  // Safari may dispatch lostpointercapture synchronously from releasePointerCapture().
+  // Detach the gesture first so that event can never erase the snapshot used below.
   state.gesture = null;
+  safeReleasePointer(event.pointerId);
   state.lastInputAt = performance.now();
+
   if (!gesture.line || !gesture.valid) {
     audio.invalid();
     vibrate(14);
@@ -67,8 +89,10 @@ function endGesture(event) {
 }
 
 function cancelGesture(event) {
-  if (!state.gesture || (event && state.gesture.pointerId !== event.pointerId)) return;
+  const gesture = state.gesture;
+  if (!gesture || (event && gesture.pointerId !== event.pointerId)) return;
   state.gesture = null;
+  safeReleasePointer(gesture.pointerId);
 }
 
 function validateFold(line) {
@@ -92,13 +116,13 @@ function validateFold(line) {
 
 function commitFold(line, currentAngle) {
   state.history.push(cloneSnapshot());
-  const settledAngle = clamp(currentAngle, 0.08 * Math.PI, 0.985 * Math.PI);
+  const settledAngle = clamp(currentAngle, 0.06 * Math.PI, 0.86 * Math.PI);
   state.animation = {
     line,
     fromAngle: settledAngle,
     angle: settledAngle,
     startedAt: performance.now(),
-    duration: REDUCED_MOTION ? 60 : 300,
+    duration: REDUCED_MOTION ? 60 : 320,
     applied: false
   };
   state.lastInputAt = performance.now();
