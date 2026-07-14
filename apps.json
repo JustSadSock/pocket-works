@@ -16,13 +16,7 @@
       "Fixed reset, freeze, visibility and touch-particle state leaks across repeated interactions."
     ],
     "accent": "#ff4d1f",
-    "tags": [
-      "PWA",
-      "offline",
-      "device test",
-      "mobile runtime",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "device test", "mobile runtime", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:screen-lab"
@@ -43,14 +37,7 @@
       "Updated the launcher accent and cache identity so the new icon appears immediately after updating."
     ],
     "accent": "#d9ff45",
-    "tags": [
-      "PWA",
-      "offline",
-      "WebGL2",
-      "audio",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "WebGL2", "audio", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:echoes"
@@ -70,13 +57,7 @@
       "Forced a fresh offline cache so previously installed 1.1.1 builds cannot retain the older input script."
     ],
     "accent": "#a94738",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:cherta"
@@ -97,15 +78,7 @@
       "Replaced inert exit buttons with native links that work without game JavaScript."
     ],
     "accent": "#d65b2a",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kromka"
@@ -127,14 +100,7 @@
       "Added diplomacy, configurable fronts, delayed consequences, local saves, Workshop diagnostics and offline support."
     ],
     "accent": "#8b3f36",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "procedural",
-      "simulation",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "strategy", "procedural", "simulation", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:doctrina"
@@ -155,14 +121,7 @@
       "Добавлены автосохранение, офлайн-режим, звуковая обратная связь и возврат в Pocket Works."
     ],
     "accent": "#325b52",
-    "tags": [
-      "PWA",
-      "offline",
-      "strategy",
-      "dynasty",
-      "tactics",
-      "procedural"
-    ],
+    "tags": ["PWA", "offline", "strategy", "dynasty", "tactics", "procedural"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:udel"
@@ -183,15 +142,7 @@
       "Сообщение об ошибке теперь показывает этап сбоя — загрузчик, WASM, worker, протокол или тайм-аут — вместо общего текста."
     ],
     "accent": "#3d574d",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "Go",
-      "board game",
-      "canvas",
-      "audio"
-    ],
+    "tags": ["PWA", "offline", "game", "Go", "board game", "canvas", "audio"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:sente"
@@ -200,31 +151,22 @@
     "slug": "petlya-17",
     "name": "ПЕТЛЯ 17",
     "shortName": "ПЕТЛЯ 17",
-    "description": "Кабинная гонка с синхронным скоростным потоком дороги, динамической камерой, ветром, параллаксом и тактильной отдачей.",
+    "description": "Полноценная 3D-гонка из кокпита по портовому кольцу с объёмной трассой, живым пелотоном, рулением наклоном и физическим ощущением скорости.",
     "path": "./apps/petlya-17/",
     "status": "active",
-    "version": "2.2.0",
-    "updatedAt": "2026-07-14T18:30:00Z",
+    "version": "3.0.0",
+    "updatedAt": "2026-07-14T12:15:00Z",
     "changelog": [
-      "Добавлен единый Velocity Core: дорожный поток, камера, ветер, вибрация и периферийные эффекты синхронно зависят от скорости.",
-      "Поверх трассы появился отдельный высокопроизводительный слой с перспективными частицами, отражателями и ускоряющейся фактурой асфальта.",
-      "Добавлен ближний параллакс технических панелей и скоростных штрихов, которые быстро пролетают у краёв кокпита.",
-      "Звук дополнен отдельными слоями ветра, шин и вибрации корпуса; воздушный след усиливает поток.",
-      "Камера получила динамическое расширение сцены, продольную инерцию, микровибрацию покрытия и усиление контраста на высокой скорости."
+      "Старый псевдо-3D Canvas-рендер полностью удалён и заменён настоящей Babylon.js-сценой с перспективной камерой внутри кокпита.",
+      "Трасса теперь является объёмной замкнутой геометрией с высотами, виражами, кербами, ограждениями, портовыми конструкциями и реальным ближним параллаксом.",
+      "Пять соперников получили полноценные 3D-болиды, тени, разные траектории, борьбу за позицию и корректную относительную скорость при обгонах.",
+      "Кокпит, руль, halo, зеркала, нос машины, свет, туман, частицы, динамический FOV и процедурный звук работают в одной трёхмерной системе координат.",
+      "Приложение переведено на Enhanced runtime с TypeScript, Vite, Workbox, офлайн-сборкой и автоматическим снижением качества при падении FPS."
     ],
-    "accent": "#dd5d2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "tilt",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
-    "preset": "game-2d",
-    "runtime": "quick",
+    "accent": "#e05d31",
+    "tags": ["PWA", "offline", "game", "racing", "3D", "Babylon.js", "tilt", "WebGL2", "audio", "workshop"],
+    "preset": "vite",
+    "runtime": "enhanced",
     "storageNamespace": "pocket-works:petlya-17"
   },
   {
@@ -243,17 +185,7 @@
       "Параллакс перенесён из геометрии в свет, отражения и контактные тени для более естественной глубины."
     ],
     "accent": "#c6ad66",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "tilt",
-      "physics",
-      "procedural",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "tilt", "physics", "procedural", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:otves"
@@ -274,27 +206,7 @@
       "Секторы показывают локальную и суммарную дельту, а разные направления контакта дают разные физические последствия."
     ],
     "accent": "#e65e2f",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "racing",
-      "procedural",
-      "long races",
-      "rival personalities",
-      "clean driving",
-      "daily challenge",
-      "route codes",
-      "medals",
-      "top-down",
-      "drift",
-      "physics",
-      "ghost",
-      "adaptive controls",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "racing", "procedural", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:shpilka"
@@ -315,16 +227,7 @@
       "Стабилизатор переработан в крупную круглую нажимную кнопку с отдельным счётчиком зарядов."
     ],
     "accent": "#b85d32",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "procedural",
-      "puzzle",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "procedural", "puzzle", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:kontur"
@@ -345,18 +248,7 @@
       "Форма, толщина, тень и предел растяжения снова настроены отдельно для каждого типа детали; одновременно рассчитываются не более двух активных зон."
     ],
     "accent": "#b8ff68",
-    "tags": [
-      "PWA",
-      "camera",
-      "face tracking",
-      "hand tracking",
-      "WebGL",
-      "organic warp",
-      "procedural shading",
-      "physics",
-      "interactive",
-      "workshop"
-    ],
+    "tags": ["PWA", "camera", "face tracking", "hand tracking", "WebGL", "organic warp", "procedural shading", "physics", "interactive", "workshop"],
     "preset": "interactive",
     "runtime": "quick",
     "storageNamespace": "pocket-works:myalo"
@@ -377,22 +269,7 @@
       "Песок, склоны, вода и стеклянные мосты получили читаемые края, линии рельефа, перепады высоты и направляющие фактуры."
     ],
     "accent": "#809465",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "mini-golf",
-      "physics",
-      "3D physics",
-      "terrain",
-      "camera",
-      "procedural",
-      "endless",
-      "WebGL2",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "mini-golf", "physics", "3D physics", "terrain", "camera", "procedural", "endless", "WebGL2", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:moss-marble"
@@ -413,17 +290,7 @@
       "Добавлены процедурный звук, вибрация, живая панорамная комната, локальное сохранение, офлайн-режим и Workshop."
     ],
     "accent": "#a48755",
-    "tags": [
-      "PWA",
-      "offline",
-      "game",
-      "horror",
-      "tilt",
-      "device motion",
-      "canvas",
-      "audio",
-      "workshop"
-    ],
+    "tags": ["PWA", "offline", "game", "horror", "tilt", "device motion", "canvas", "audio", "workshop"],
     "preset": "game-2d",
     "runtime": "quick",
     "storageNamespace": "pocket-works:zero-frame"
