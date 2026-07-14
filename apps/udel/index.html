@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <meta name="theme-color" content="#26251f">
-  <meta name="description" content="УДЕЛ — карманная династическая стратегия о землях, законах, технологиях и тактических битвах.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#20332f">
+  <meta name="description" content="УДЕЛ — карманная династическая стратегия о землях, сословиях, экономике и войне.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="УДЕЛ">
@@ -18,19 +18,13 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
-  <main id="app" class="app-shell" data-app-shell data-ui aria-live="polite">
+  <main id="app" class="app-shell" data-app-shell aria-live="polite">
     <div class="boot">
       <a href="../../" data-app-control data-native-press>← Pocket Works</a>
-      <strong>РАЗВОРАЧИВАЕМ КАРТУ</strong>
+      <strong>ПЕРЕРИСОВЫВАЕМ ГРАНИЦЫ</strong>
     </div>
   </main>
-  <button
-    type="button"
-    data-workshop-trigger
-    data-native-press
-    aria-label="Открыть Workshop Mode"
-    style="position:fixed;z-index:24;left:0;bottom:max(84px,calc(env(safe-area-inset-bottom) + 74px));min-width:44px;min-height:44px;border:1px solid #d7c7a5;border-left:0;background:#26251f;color:#eadfc7;padding:6px 8px;font:800 9px/1 system-ui,sans-serif;writing-mode:vertical-rl;letter-spacing:.08em"
-  >WORKSHOP</button>
+  <button class="workshop-fab" type="button" data-workshop-trigger data-native-press aria-label="Открыть Workshop Mode">⌁</button>
   <noscript>Для работы игры требуется JavaScript.</noscript>
   <script
     type="module"
@@ -38,9 +32,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="УДЕЛ"
-    data-app-version="1.0.0"
+    data-app-version="1.5.0"
   ></script>
-  <script type="module" src="./workshop.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
