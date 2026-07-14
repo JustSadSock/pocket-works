@@ -3,15 +3,15 @@
   "slug": "shpilka",
   "name": "ШПИЛЬКА",
   "shortName": "ШПИЛЬКА",
-  "description": "Процедурная top-down гонка с разными сильными сторонами соперников, естественными разрывами пелотона и полной классификацией после финиша.",
-  "version": "2.7.2",
+  "description": "Процедурная top-down гонка с тяжёлой машиной, функционально разными трассами, живыми ошибками соперников и осмысленными прыжками.",
+  "version": "2.8.0",
   "releaseDate": "2026-07-14",
-  "releaseDateTime": "2026-07-14T22:20:00+01:00",
+  "releaseDateTime": "2026-07-14T23:30:00+01:00",
   "changelog": [
-    "Темп соперников теперь зависит от типа трассы: ВОЛЬТ сильнее на скорости, МАРА в технических секциях, ШУНТ на атакующих участках, ГРАЧ наиболее стабилен.",
-    "Каждая машина получает небольшую детерминированную форму маршрута и собственные сильные сектора, поэтому пелотон не финиширует одной цепочкой.",
-    "Более быстрый бот раньше начинает обгон медленного соперника и после выхода в соседнюю полосу больше не упирается в скорость лидера.",
-    "Целевой естественный разброс на высоких сложностях составляет несколько секунд на минутном заезде без резинового ускорения и подмены итогового времени."
+    "Главное меню стало компактнее, получило отдельный экран загрузки и явные кнопки возврата после гонки и из паузы.",
+    "Разгон стал заметно длиннее, машина сохраняет инерцию на скорости, а камера больше не повторяет мелкие колебания кузова.",
+    "AI использует выраженную траекторию вход–апекс–выход и иногда допускает редкие контекстные ошибки даже на высоких сложностях.",
+    "Трассы получили узкие, широкие и скользкие функциональные сектора; трамплины оставлены только там, где нужно перелететь реальный разрыв."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -20,8 +20,8 @@
   "backgroundColor": "#d2c49d",
   "themeColor": "#d2c49d",
   "orientation": "portrait",
-  "cacheName": "shpilka-v2.7.2-p1",
+  "cacheName": "shpilka-v2.8.0-p1",
   "storageNamespace": "pocket-works:shpilka",
-  "tags": ["PWA", "offline", "game", "racing", "procedural", "championship", "rivalry", "racecraft", "stable AI", "field spread", "driver form", "landmarks", "live classification", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
+  "tags": ["PWA", "offline", "game", "racing", "procedural", "championship", "rivalry", "racecraft", "stable AI", "field spread", "driver form", "route modules", "meaningful jumps", "vehicle weight", "loading screen", "live classification", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
   "order": 80
 }
