@@ -103,7 +103,11 @@ function bindControls() {
   canvas.addEventListener('pointermove', moveGesture);
   canvas.addEventListener('pointerup', endGesture);
   canvas.addEventListener('pointercancel', cancelGesture);
-  canvas.addEventListener('lostpointercapture', cancelGesture);
+
+  // Safari may release capture before the element-level pointerup handler completes.
+  // Window fallbacks finish or cancel the same gesture; duplicate bubbled events are harmless.
+  window.addEventListener('pointerup', endGesture);
+  window.addEventListener('pointercancel', cancelGesture);
 
   dom.continueBtn.addEventListener('click', () => {
     pressFeedback();
