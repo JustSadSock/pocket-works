@@ -48,6 +48,7 @@
   font: 700 13px/1 system-ui, sans-serif;
 }
 .resource.resource-quiet em {
+  position: static;
   margin-top: 3px;
   font: 600 8px/1 system-ui, sans-serif;
 }
@@ -73,11 +74,16 @@
   background: transparent;
   transition: background-color .16s ease, left .16s ease, right .16s ease;
 }
-.bottom-nav-quiet .nav-button.active span { color: #f2e8d4; }
+.bottom-nav-quiet .nav-button.active span { color: #f2e8d4; transform: none; }
 .bottom-nav-quiet .nav-button.active::before {
+  width: auto;
   left: 12%;
   right: 12%;
   background: var(--gold);
+}
+.end-turn {
+  grid-template-columns: 1fr;
+  padding: 11px 14px;
 }
 .end-turn > b { display: none; }
 
