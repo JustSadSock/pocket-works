@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'cherta-';
-const CACHE_NAME = 'cherta-v1.0.4';
-const APP_VERSION = '1.0.4';
-const RELEASE_DATE = '2026-07-12';
+const CACHE_NAME = 'cherta-v1.1.0';
+const APP_VERSION = '1.1.0';
+const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Hardened managed updates by comparing waiting builds against the service worker that is actually active.',
-  'Inherited the platform interaction lock so long presses no longer select interface text.',
-  'Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.',
-  'Added one-step dash input buffering so swipes made during the end of a dash are not discarded.',
-  'Made the top home and sound controls reliably accessible from the title menu.'
+  'Added a stronger third stroke and bonus bursts where armed lines intersect.',
+  'Added readable wave themes, edge spawn warnings and the line-erasing Eraser enemy.',
+  'Added a procedural boss every fifth wave, assembled from independent shape, movement, attack and tempo traits.',
+  'Expanded multi-kill, graze, healing and paper-history feedback without adding new controls.',
+  'Added end-of-run records for the best single cut, clean dodges and defeated seals.'
 ];
 const APP_SHELL = [
   './',
