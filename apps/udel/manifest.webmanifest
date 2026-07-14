@@ -2,13 +2,24 @@
   "id": "/apps/udel/",
   "name": "УДЕЛ",
   "short_name": "УДЕЛ",
-  "description": "Карманная династическая стратегия о землях, законах, технологиях и тактических битвах.",
+  "description": "Карманная династическая стратегия о землях, сословиях, экономике и войне.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
-  "background_color": "#26251f",
-  "theme_color": "#26251f",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "background_color": "#172420",
+  "theme_color": "#20332f",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
