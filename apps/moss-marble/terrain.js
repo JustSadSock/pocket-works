@@ -12,8 +12,7 @@ export function insideZone(point, zone) {
     for (let index = 0, previous = zone.points.length - 1; index < zone.points.length; previous = index++) {
       const a = zone.points[index];
       const b = zone.points[previous];
-      const crosses = ((a.y > point.y) !== (b.y > point.y)) &&
-        point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x;
+      const crosses = ((a.y > point.y) !== (b.y > point.y)) && point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x;
       if (crosses) inside = !inside;
     }
     return inside;
@@ -26,12 +25,46 @@ export function zonesAt(level, x, y) {
   return (level?.zones || []).filter((zone) => insideZone(point, zone));
 }
 
-function slopeHeight(zone, x, y) {
+export function zoneCenter(zone) {
+  if (zone.shape === 'circle') return { x: zone.x, y: zone.y };
+  if (zone.shape === 'poly' && Array.isArray(zone.points) && zone.points.length) {
+    return zone.points.reduce((sum, point) => ({ x: sum.x + point.x / zone.points.length, y: sum.y + point.y / zone.points.length }), { x: 0, y: 0 });
+  }
+  return { x: zone.x + zone.w * .5, y: zone.y + zone.h * .5 };
+}
+
+function zoneRadii(zone) {
+  if (zone.shape === 'circle') return { rx: Math.max(1, zone.r), ry: Math.max(1, zone.r) };
+  return { rx: Math.max(1, Number(zone.w || 1) * .5), ry: Math.max(1, Number(zone.h || 1) * .5) };
+}
+
+export function hillPeakHeight(zone) {
+  const explicit = Number(zone?.peakHeight);
+  if (Number.isFinite(explicit)) return clamp(explicit, 8, 72);
+  const legacyRise = Math.hypot(Number(zone?.riseX ?? 0), Number(zone?.riseY ?? 0));
+  return clamp(18 + legacyRise * .68, 18, 48);
+}
+
+export function rampHeightAt(zone, x, y) {
   const tx = clamp((x - zone.x) / Math.max(1, zone.w || 1), 0, 1);
   const ty = clamp((y - zone.y) / Math.max(1, zone.h || 1), 0, 1);
-  const riseX = Number(zone.riseX ?? 0);
-  const riseY = Number(zone.riseY ?? 0);
-  return Number(zone.baseZ ?? 0) + tx * riseX + ty * riseY;
+  return Number(zone.baseZ ?? 0) + tx * Number(zone.riseX ?? 0) + ty * Number(zone.riseY ?? 0);
+}
+
+export function hillHeightAt(zone, x, y) {
+  const base = Number(zone.baseZ ?? 0);
+  const center = zoneCenter(zone);
+  const { rx, ry } = zoneRadii(zone);
+  const nx = (x - center.x) / rx;
+  const ny = (y - center.y) / ry;
+  const radiusSq = nx * nx + ny * ny;
+  if (radiusSq >= 1) return base;
+  const crown = 1 - radiusSq;
+  return base + hillPeakHeight(zone) * crown * crown;
+}
+
+function slopeHeight(zone, x, y) {
+  return zone.ramp ? rampHeightAt(zone, x, y) : hillHeightAt(zone, x, y);
 }
 
 export function terrainHeightAt(level, x, y) {
@@ -41,9 +74,9 @@ export function terrainHeightAt(level, x, y) {
     if (!insideZone(point, zone)) continue;
     const kind = zoneKind(zone);
     if (kind === 'bridge') height = Math.max(height, Number(zone.height ?? 10));
-    else if (kind === 'sand') height = Number(zone.baseZ ?? -6);
-    else if (kind === 'slope') height = slopeHeight(zone, x, y);
-    else if (kind === 'platform') height = Number(zone.height ?? 0);
+    else if (kind === 'sand') height = Math.max(height, Number(zone.surfaceZ ?? .35));
+    else if (kind === 'slope') height = Math.max(height, slopeHeight(zone, x, y));
+    else if (kind === 'platform') height = Math.max(height, Number(zone.height ?? 0));
   }
   return height;
 }
@@ -53,16 +86,22 @@ export function terrainGradientAt(level, x, y) {
   let gradient = { x: 0, y: 0 };
   for (const zone of level?.zones || []) {
     if (zoneKind(zone) !== 'slope' || !insideZone(point, zone)) continue;
-    const hasHeightGradient = Number.isFinite(Number(zone.riseX)) || Number.isFinite(Number(zone.riseY));
-    gradient = hasHeightGradient
-      ? {
-          x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1),
-          y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1)
-        }
-      : {
-          x: -Number(zone.forceX ?? 0) / 960,
-          y: -Number(zone.forceY ?? 0) / 960
-        };
+    if (zone.ramp) {
+      gradient = { x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1), y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1) };
+      continue;
+    }
+    const center = zoneCenter(zone);
+    const { rx, ry } = zoneRadii(zone);
+    const dx = x - center.x;
+    const dy = y - center.y;
+    const radiusSq = dx * dx / (rx * rx) + dy * dy / (ry * ry);
+    if (radiusSq >= 1) {
+      gradient = { x: 0, y: 0 };
+      continue;
+    }
+    const crown = 1 - radiusSq;
+    const peak = hillPeakHeight(zone);
+    gradient = { x: -4 * peak * dx / (rx * rx) * crown, y: -4 * peak * dy / (ry * ry) * crown };
   }
   return gradient;
 }
@@ -97,15 +136,4 @@ export function waterAt(level, x, y) {
     if (kind === 'bridge') water = false;
   }
   return water;
-}
-
-export function zoneCenter(zone) {
-  if (zone.shape === 'circle') return { x: zone.x, y: zone.y };
-  if (zone.shape === 'poly' && Array.isArray(zone.points) && zone.points.length) {
-    return zone.points.reduce((sum, point) => ({
-      x: sum.x + point.x / zone.points.length,
-      y: sum.y + point.y / zone.points.length
-    }), { x: 0, y: 0 });
-  }
-  return { x: zone.x + zone.w * .5, y: zone.y + zone.h * .5 };
 }
