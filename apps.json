@@ -62,14 +62,12 @@
     "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
     "path": "./apps/cherta/",
     "status": "active",
-    "version": "1.1.0",
-    "updatedAt": "2026-07-14T00:00:00+01:00",
+    "version": "1.1.1",
+    "updatedAt": "2026-07-14T01:45:00+01:00",
     "changelog": [
-      "Added a stronger third stroke and bonus bursts where armed lines intersect.",
-      "Added readable wave themes, edge spawn warnings and the line-erasing Eraser enemy.",
-      "Added a procedural boss every fifth wave, assembled from independent shape, movement, attack and tempo traits.",
-      "Expanded multi-kill, graze, healing and paper-history feedback without adding new controls.",
-      "Added end-of-run records for the best single cut, clean dodges and defeated seals."
+      "Rebuilt touch input around native iOS Touch Events while retaining Pointer Events for mouse and stylus.",
+      "Buffered up to three complete swipes across dash and detonation animations instead of discarding early input.",
+      "Added stale-touch recovery and made short intentional swipes register more reliably."
     ],
     "accent": "#a94738",
     "tags": [
