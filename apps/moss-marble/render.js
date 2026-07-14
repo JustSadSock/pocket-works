@@ -1,7 +1,8 @@
 import { DioramaRenderer as CoreDioramaRenderer } from './render-core14.js';
 import { LivingGreenhouseLayer } from './greenhouse15.js';
-import { installTerrain17 } from './terrain17.js';
+import { installTerrain18 } from './terrain18.js';
 import { upgradeCourseLevel17 } from './course17.js';
+import { isCourse18, upgradeCourse18InPlace } from './course18.js';
 import { stabilizeLevelGeometry } from './integrity.js';
 
 export { polygonArea, triangulatePolygon } from './render-core14.js';
@@ -12,12 +13,13 @@ function installWorldSpaceFlag(greenhouse) {
   greenhouse.drawFlag = function drawFlag(ctx, level, time) {
     if (!this.renderer.worldToScreen || !level?.hole) return;
     const hole = level.hole;
+    const ground = level.course18?.field?.heightAt?.(hole.x, hole.y) || 0;
     const poleX = hole.x + hole.r * .24;
     const poleY = hole.y - hole.r * .08;
-    const top = this.renderer.worldToScreen(poleX, poleY, 126);
-    const tip = this.renderer.worldToScreen(poleX + 58, poleY + 3, 112);
-    const bottom = this.renderer.worldToScreen(poleX, poleY, 94);
-    const lowerTip = this.renderer.worldToScreen(poleX + 48, poleY + 3, 102);
+    const top = this.renderer.worldToScreen(poleX, poleY, ground + 126);
+    const tip = this.renderer.worldToScreen(poleX + 58, poleY + 3, ground + 112);
+    const bottom = this.renderer.worldToScreen(poleX, poleY, ground + 94);
+    const lowerTip = this.renderer.worldToScreen(poleX + 48, poleY + 3, ground + 102);
     const wave = this.reducedMotion ? 0 : Math.sin(time * 2.15 + hole.x * .01) * 3 + this.wind * 3.5;
     ctx.save();
     ctx.fillStyle = 'rgba(210,169,84,.92)';
@@ -35,19 +37,25 @@ function installWorldSpaceFlag(greenhouse) {
 }
 
 function createVisualLevel(level) {
+  if (isCourse18(level)) {
+    return {
+      ...level,
+      renderId: `${level.renderId ?? level.id}:visual`,
+      zones: [],
+      obstacles: [],
+      walls: [],
+      tunnels: [],
+      decorations: [],
+      terrainWalls: [],
+      terrainTunnels: []
+    };
+  }
   return {
     ...level,
     renderId: `${level.renderId ?? level.id}:terrain-17`,
-    zones: (level.zones || []).map((zone) => ({
-      ...zone,
-      physicsType: zone.physicsType || zone.type,
-      type: 'terrain-17'
-    })),
+    zones: (level.zones || []).map((zone) => ({ ...zone, physicsType: zone.physicsType || zone.type, type: 'terrain-17' })),
     terrainWalls: (level.walls || []).map((wall) => ({ ...wall })),
-    terrainTunnels: (level.tunnels || []).map((tunnel) => ({
-      entry: tunnel.entry ? { ...tunnel.entry } : null,
-      exit: tunnel.exit ? { ...tunnel.exit } : null
-    })),
+    terrainTunnels: (level.tunnels || []).map((tunnel) => ({ entry: tunnel.entry ? { ...tunnel.entry } : null, exit: tunnel.exit ? { ...tunnel.exit } : null })),
     walls: [],
     tunnels: []
   };
@@ -56,18 +64,18 @@ function createVisualLevel(level) {
 export class DioramaRenderer {
   constructor(canvas) {
     const core = new CoreDioramaRenderer(canvas);
-    const terrain17 = installTerrain17(core, canvas);
+    const terrain = installTerrain18(core, canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
     const visualCache = new WeakMap();
     const integrityCache = new WeakSet();
     installWorldSpaceFlag(greenhouse);
-
     greenhouse.drawGroundingFringe = () => {};
     greenhouse.drawGlassArchitecture = () => {};
 
     const visualFor = (level) => {
       if (!level || typeof level !== 'object') return level;
-      upgradeCourseLevel17(level);
+      upgradeCourse18InPlace(level);
+      if (!isCourse18(level)) upgradeCourseLevel17(level);
       if (!integrityCache.has(level)) {
         try { level.__integrityVersion = 0; } catch {}
         stabilizeLevelGeometry(level);
@@ -84,8 +92,8 @@ export class DioramaRenderer {
     return new Proxy(core, {
       get(target, property) {
         if (property === 'livingGreenhouse') return greenhouse;
-        if (property === 'terrain17') return terrain17;
-        if (property === 'drawMesh' && terrain17.captureLegacyDrawMesh) return () => {};
+        if (property === 'terrain18') return terrain;
+        if (property === 'drawMesh' && terrain.captureLegacyDrawMesh) return () => {};
         if (property === 'draw') {
           return (level, ball, aim, time, dt, mode) => {
             const visualLevel = visualFor(level);
@@ -102,7 +110,7 @@ export class DioramaRenderer {
         }
         if (property === 'destroy') {
           return () => {
-            terrain17.destroy();
+            terrain.destroy();
             greenhouse.destroy();
             target.destroy?.();
           };
