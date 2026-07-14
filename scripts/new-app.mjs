@@ -2,7 +2,6 @@ import { access, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/pro
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { buildRegistry } from './build-registry.mjs';
 import {
   APP_PRESETS,
   APP_RUNTIMES,
@@ -209,16 +208,15 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     await writeFile(path.join(iconDirectory, 'icon.svg'), icon, 'utf8');
 
     if (runtime === 'enhanced' && !options['skip-build']) buildEnhancedApp(root, slug);
-    await buildRegistry({ root });
     if (!options['skip-health']) runValidation(root);
   } catch (error) {
     await rm(appDirectory, { recursive: true, force: true });
-    await buildRegistry({ root }).catch(() => {});
     throw error;
   }
 
   console.log(`Pocket Forge created apps/${slug} with the ${runtime}/${presetName} preset.`);
-  console.log(`Open: /apps/${slug}/`);
+  console.log('The app is self-registered by app.config.json; no shared registry file was modified.');
+  console.log(`Open after npm run prepare:site: /apps/${slug}/`);
   return config;
 }
 
