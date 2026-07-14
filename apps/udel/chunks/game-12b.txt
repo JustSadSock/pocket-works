@@ -1,0 +1,71 @@
+      <button data-campaign-action="resupply" data-native-press ${state.actions <= 0 || state.gold < 12 || state.food < 14 ? 'disabled' : ''}><b>Отправить обоз</b><span>¤12 · ✦14 · +34 припаса</span></button>
+      <button data-campaign-action="forage" data-native-press ${state.actions <= 0 ? 'disabled' : ''}><b>Фуражировать</b><span>+20 припаса · недовольство земли</span></button>
+      <button data-campaign-action="withdraw" data-native-press><b>Отозвать дружину</b><span>−8 готовности · −5 счёта войны</span></button>
+    </div>
+    <details class="d25-campaign-log"><summary>Последние донесения <span>${campaign.log.length}</span></summary>${campaign.log.slice(0, 6).map((entry) => `<p>${d25Esc(entry)}</p>`).join('')}</details>
+  </section>`;
+}
+
+function d25RenderPeace() {
+  const wars = ['north', 'south'].filter((enemy) => state.wars[enemy]);
+  if (!wars.length) return '<div class="quiet-note">Действующих внешних войн нет.</div>';
+  return `<div class="d25-peace-list">${wars.map((enemy) => {
+    const record = d25WarRecord(state, enemy);
+    const remaining = state.provinces.filter((province) => province.owner === enemy).length;
+    return `<article class="d25-peace-card"><header><div><h3>${d25Esc(enemyName(enemy))}</h3><p>${record.captured.length} занятых земель · ${remaining} вражеских областей</p></div><b class="${record.score < 0 ? 'negative' : ''}">${record.score >= 0 ? '+' : ''}${round(record.score)}<small>счёт войны</small></b></header>${d25Bar(record.exhaustion, 'Усталость от войны', record.exhaustion > 70 ? 'danger' : '')}<div class="d25-peace-actions"><button data-peace-action="white" data-enemy="${enemy}" data-native-press ${record.score < -8 ? 'disabled' : ''}><b>Белый мир</b><span>вернуть занятые земли</span></button><button data-peace-action="recognize" data-enemy="${enemy}" data-native-press ${record.score < 20 || !record.captured.length ? 'disabled' : ''}><b>Закрепить границы</b><span>сохранить завоевания · счёт 20</span></button><button data-peace-action="tribute" data-enemy="${enemy}" data-native-press ${record.score < 38 ? 'disabled' : ''}><b>Потребовать дань</b><span>завоевания + золото · счёт 38</span></button><button data-peace-action="subjugate" data-enemy="${enemy}" data-native-press ${record.score < 75 || remaining > 3 ? 'disabled' : ''}><b>Подчинить корону</b><span>вассальная держава · счёт 75</span></button></div></article>`;
+  }).join('')}</div>`;
+}
+
+function d25RealmCard(enemy) {
+  const relation = state.relations[enemy];
+  const atWar = state.wars[enemy];
+  const record = d25WarRecord(state, enemy);
+  const provinces = state.provinces.filter((province) => province.owner === enemy).length;
+  return `<article class="d25-realm ${atWar ? 'at-war' : ''}"><header><div><h3>${d25Esc(enemyName(enemy))}</h3><p>${provinces} областей · отношения ${round(relation)}</p></div><b>${atWar ? `ВОЙНА ${record.score >= 0 ? '+' : ''}${round(record.score)}` : relation > 35 ? 'БЛАГОСКЛОНЕН' : relation < -35 ? 'ВРАЖДЕБЕН' : 'НАСТОРОЖЕН'}</b></header><div><button data-diplomacy="${enemy}" data-native-press ${atWar || state.actions <= 0 || state.gold < 12 ? 'disabled' : ''}>Посольство <small>¤12</small></button>${atWar ? '<span>Мирные условия находятся выше</span>' : `<button class="danger" data-war="${enemy}" data-native-press ${state.actions <= 0 ? 'disabled' : ''}>Объявить войну</button>`}</div></article>`;
+}
+
+renderWar = function renderWarD25() {
+  d25EnsureMilitary(state);
+  const armyPower = battlePower(state.army, state.ruler.martial);
+  const averageExhaustion = average(['north', 'south'].filter((enemy) => state.wars[enemy]).map((enemy) => d25WarRecord(state, enemy).exhaustion));
+  return `<section class="section war-25">
+    <header class="section-title"><p class="eyebrow">ПОЛЕ И КОРОНА / 2.5</p><h2>Военный совет</h2><span>Поход теперь начинается не телепортацией к крепости, а сбором дружины, маршрутом, обозом и решением — ждать пролома или лезть на стены.</span></header>
+    <div class="d25-military-overview">${summaryMetric(String(round(armyPower)), 'сила дружины')}${summaryMetric(String(totalArmy()), 'воинов')}${summaryMetric(`${round(state.armyReadiness)}%`, 'готовность')}${summaryMetric(`${round(averageExhaustion)}%`, 'усталость войн')}</div>
+    ${d25RenderCampaignCard()}
+    <div class="subhead">Мирные договоры</div>${d25RenderPeace()}
+    <details class="d25-fold" open><summary><span>Дружина и пополнение</span><small>содержание ${calculateEconomy().expenses.armyUpkeep.toFixed(1)} золота</small></summary><div class="army-units">${unitRow('infantry', 'Пехота', '♟', 14, 10)}${unitRow('archers', 'Лучники', '➶', 18, 12)}${unitRow('cavalry', 'Конница', '♞', state.estates.nobles.privilege ? 20 : 26, 15)}</div></details>
+    <div class="subhead">Соседние державы</div><div class="d25-realms">${['north', 'south'].map(d25RealmCard).join('')}</div>
+    ${state.lastBattleReport ? `<div class="d25-last-report"><b>${state.lastBattleReport.victory ? 'Последняя битва выиграна' : 'Последняя битва проиграна'}</b><span>${d25Esc(provinceById(state.lastBattleReport.targetId)?.name || '')} · счёт войны ${state.lastBattleReport.delta >= 0 ? '+' : ''}${state.lastBattleReport.delta}</span></div>` : ''}
+  </section>`;
+};
+
+const d25RenderMap2 = renderMap;
+renderMap = function renderMapD25() {
+  let html = d25RenderMap2();
+  const campaign = state.campaign;
+  if (!campaign) return html;
+  const target = d25CampaignTarget(campaign);
+  const strip = `<aside class="d25-map-campaign"><div><small>${d25Esc(d25CampaignPhaseText(campaign))}</small><b>${d25Esc(target?.name || 'Поход')}</b><span>${d25Esc(d25CommanderName(campaign.commanderId))} · припасы ${round(campaign.supply)}</span></div><button data-tab="war" data-native-press>Открыть совет</button></aside>`;
+  return html.replace('<div class="map-shell">', `${strip}<div class="map-shell">`);
+};
+
+const d25RenderProvincePath2 = renderProvincePath;
+renderProvincePath = function renderProvincePathD25(province) {
+  const campaign = state.campaign;
+  const classes = campaign ? `${campaign.targetId === province.id ? 'campaign-target ' : ''}${campaign.route?.includes(province.id) ? 'campaign-route ' : ''}${d25CampaignPosition(campaign)?.id === province.id ? 'campaign-current ' : ''}` : '';
+  return d25RenderProvincePath2(province).replace('province-shape ', `province-shape ${classes}`);
+};
+
+const d25RenderProvinceLabel2 = renderProvinceLabel;
+renderProvinceLabel = function renderProvinceLabelD25(province) {
+  const base = d25RenderProvinceLabel2(province);
+  const campaign = state.campaign;
+  if (!campaign) return base;
+  const marker = campaign.targetId === province.id ? '⚑' : d25CampaignPosition(campaign)?.id === province.id ? '⚔' : '';
+  return marker ? base.replace('</g>', `<text class="campaign-mark" text-anchor="middle" x="-27" y="-15">${marker}</text></g>`) : base;
+};
+
+renderEnemyProvinceActions = function renderEnemyProvinceActionsD25(province) {
+  const enemy = relationKey(province.owner);
+  const route = d25FindRoute(province.id);
+  if (state.campaign?.targetId === province.id) return '<div class="quiet-note">К этой области уже движется дружина. Управление походом находится во вкладке «Война».</div>';
