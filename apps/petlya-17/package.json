@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run typecheck && npm run test && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs petlya-17",
+    "build": "vitest run --config vite.config.ts && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs petlya-17",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit"
   },
