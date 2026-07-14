@@ -50,14 +50,9 @@ npm run ci:full
 
 When GitHub-hosted Actions minutes are unavailable, required status checks may remain disabled temporarily. Application PRs must still respect the isolated `apps/<slug>/**` boundary and document their targeted checks.
 
-## Netlify status
+## Production source of truth
 
-Netlify is no longer the primary deployment target. Existing Netlify configuration and historical deploys may remain temporarily as a legacy fallback, but:
-
-- Netlify checks must not block merges;
-- agents must not describe Netlify as production;
-- new deployment work must target Cloudflare Workers;
-- the current production source of truth is the latest successful Cloudflare deployment from `main`.
+The latest successful Cloudflare deployment from `main` is the only production source of truth. Pull-request branches do not create production deployments because non-production branch builds are disabled. Statuses from retired hosting integrations are not release signals and must not be used to assess an application PR.
 
 ## Rollback
 
