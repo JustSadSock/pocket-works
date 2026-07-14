@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const failures = [];
 const check = (value, message) => { if (!value) failures.push(message); };
@@ -10,10 +11,12 @@ const [index, app, boot, route, ai, physics, fixes, ui, worker, configRaw] = awa
   read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
 ]);
 const config = JSON.parse(configRaw);
-const layers = ['route', 'ai', 'physics', 'fixes', 'ui'];
-for (const layer of layers) {
-  check(app.includes(`engine-v2-28-${layer}.js`), `${layer} layer is not loaded`);
-  check(worker.includes(`engine-v2-28-${layer}.js`), `${layer} layer is not cached`);
+const runtimeSources = { route, ai, physics, fixes, ui };
+for (const [name, source] of Object.entries(runtimeSources)) {
+  try { new vm.Script(source, { filename: `engine-v2-28-${name}.js` }); }
+  catch (error) { failures.push(`${name} syntax: ${error.message}`); }
+  check(app.includes(`engine-v2-28-${name}.js`), `${name} layer is not loaded`);
+  check(worker.includes(`engine-v2-28-${name}.js`), `${name} layer is not cached`);
 }
 check(config.version === '2.8.0' && config.cacheName === 'shpilka-v2.8.0-p1', 'release metadata is stale');
 check(index.includes('loadingScreen') && boot.includes('shp28LoadingVisible(true)'), 'loading flow is missing');
