@@ -1,0 +1,177 @@
+  state.season += 1;
+  state.actions = 3;
+  state.ruler.age += state.season % 4 === 0 ? 1 : 0;
+  state.heir.age += state.season % 4 === 0 ? 1 : 0;
+  state.ruler.health -= Math.max(0.35, (state.ruler.age - 44) * 0.065);
+
+  if (state.food < 0) {
+    state.stability -= 8;
+    state.estates.commons.loyalty -= 10;
+    playerProvinces().forEach((province) => { province.population = Math.max(8, province.population - 1); province.loyalty -= 4; });
+    state.food = 0;
+    addLog('Запасы исчерпаны. Голод ударил по населению и порядку.');
+  }
+  if (state.gold < 0) {
+    state.authority -= 6;
+    state.estates.nobles.loyalty -= 5;
+    state.gold = 0;
+    addLog('Казна пуста. Жалование задержано, обещания обесценились.');
+  }
+
+  updateProvinces();
+  driftEstates();
+  enemyTurn('north');
+  enemyTurn('south');
+  maybeSuccession();
+  maybeEvent();
+  checkEnding();
+  addLog(`Сезон завершён: казна ${economy.net.gold >= 0 ? '+' : ''}${economy.net.gold.toFixed(1)}, еда ${economy.net.food >= 0 ? '+' : ''}${economy.net.food.toFixed(1)}.`);
+  tone();
+  saveState();
+  render();
+}
+
+function updateProvinces() {
+  const ruleAutonomy = lawEffect('autonomy');
+  for (const province of playerProvinces()) {
+    const estateMood = average(Object.values(state.estates).map((estate) => estate.loyalty));
+    province.loyalty = clamp(province.loyalty + (state.stability - 50) * 0.035 + (estateMood - 50) * 0.02 - province.unrest, 0, 100);
+    province.autonomy = clamp(province.autonomy + ruleAutonomy * 0.08 - province.infrastructure * 0.15, 0, 90);
+    province.unrest = clamp(province.unrest + (province.loyalty < 35 ? 0.7 : -0.35), 0, 8);
+    if (province.loyalty > 58 && state.food > 25) province.population += 0.18;
+  }
+}
+
+function driftEstates() {
+  const pressure = lawEffect('estatePressure');
+  for (const [id, estate] of Object.entries(state.estates)) {
+    estate.loyalty = clamp(estate.loyalty + (50 - estate.loyalty) * 0.035 - pressure * 0.2, 0, 100);
+    estate.influence = clamp(estate.influence + (estate.privilege ? 0.25 : -0.08), 15, 90);
+    if (estate.loyalty < 25 && Math.random() < 0.18) {
+      state.stability -= 5;
+      addLog(`Сословие «${ESTATES[id].name}» саботирует решения двора.`);
+    }
+  }
+  const weightedMood = Object.values(state.estates).reduce((sum, estate) => sum + estate.loyalty * estate.influence, 0) / Object.values(state.estates).reduce((sum, estate) => sum + estate.influence, 1);
+  state.stability = clamp(state.stability + (weightedMood - 50) * 0.025 + lawEffect('stability') - (state.wars.north || state.wars.south ? 0.8 : 0), 0, 100);
+}
+
+function enemyTurn(id) {
+  const owned = state.provinces.filter((province) => province.owner === id);
+  if (!owned.length) {
+    state.wars[id] = false;
+    return;
+  }
+  if (!state.wars[id]) {
+    state.relations[id] = clamp(state.relations[id] + Math.random() * 7 - 3, -100, 100);
+    if (state.relations[id] < -48 && Math.random() < 0.13) {
+      state.wars[id] = true;
+      addLog(`${enemyName(id)} объявляет войну вашему дому.`);
+    }
+    return;
+  }
+  if (Math.random() < 0.2 && !state.battle) {
+    const targets = playerProvinces().filter((province) => adjacentToOwner(province, id));
+    if (targets.length) {
+      const target = pick(targets);
+      state.battle = createBattle(target, true, id);
+      addLog(`${enemyName(id)} вторгается в область ${target.name}.`);
+    }
+  }
+}
+
+function maybeSuccession() {
+  const deathRisk = state.ruler.health < 24 ? 0.2 : state.ruler.age > 64 ? 0.07 : 0.008;
+  if (Math.random() >= deathRisk) return;
+  const oldName = state.ruler.name;
+  const heir = state.heir;
+  const trait = pick(TRAITS);
+  state.ruler = { ...heir, health: 82, trait: trait[0], traitDesc: trait[1] };
+  state.heir = { name: pick(HEIR_NAMES.filter((name) => name !== heir.name)), age: 10 + Math.floor(Math.random() * 8), martial: 2, diplomacy: 2, stewardship: 2 };
+  const succession = lawEffect('succession');
+  const loss = clamp(10 - succession + (state.laws.succession === 2 ? 4 : 0), 4, 18);
+  state.stability -= loss;
+  state.authority -= 7;
+  state.renown += 8;
+  addLog(`${oldName} умер. ${state.ruler.name} принимает печать дома.`);
+  state.pendingEvent = {
+    title: 'Смена правителя',
+    text: `${oldName} скончался. ${state.ruler.name} наследует власть. Стабильность снижена на ${loss}.`,
+    choices: [['Принять печать', () => 'Новая глава летописи началась.']]
+  };
+}
+
+function maybeEvent() {
+  if (state.pendingEvent !== null || state.battle || state.season % 2 !== 0 || Math.random() > 0.72) return;
+  const candidates = EVENTS.map((event, index) => (event.condition(state) ? index : null)).filter((index) => index !== null);
+  if (candidates.length) state.pendingEvent = pick(candidates);
+}
+
+function resolveEvent(choiceIndex) {
+  const event = typeof state.pendingEvent === 'number' ? EVENTS[state.pendingEvent] : state.pendingEvent;
+  const result = event.choices?.[choiceIndex]?.[1]?.(state) || 'Решение принято.';
+  addLog(`${event.title}: ${result}`);
+  state.pendingEvent = null;
+  tone('success');
+  render();
+}
+
+function checkEnding() {
+  const controlled = playerProvinces().length;
+  if (controlled === 0 || state.stability <= 0) {
+    state.gameOver = true;
+    state.victory = false;
+    return;
+  }
+  if (controlled >= 18) {
+    state.gameOver = true;
+    state.victory = true;
+    state.score += 500;
+    return;
+  }
+  if (state.season > state.maxSeasons) finishCampaign();
+}
+
+function finishCampaign() {
+  const economy = calculateEconomy();
+  const averageEstate = average(Object.values(state.estates).map((estate) => estate.loyalty));
+  const success = state.ambition === 'crown'
+    ? playerProvinces().length >= 15
+    : state.ambition === 'state'
+      ? state.stability >= 68 && economy.net.gold >= 4 && averageEstate >= 52
+      : state.stability >= 55 && state.ruler.name !== '';
+  state.gameOver = true;
+  state.victory = success;
+  state.score += playerProvinces().length * 35 + state.techs.length * 25 + round(state.stability * 2);
+}
+
+function renderEnding() {
+  app.innerHTML = `<section class="ending-screen"><p class="eyebrow">ЛЕТОПИСЬ ЗАКРЫТА</p><div class="ending-seal">${state.victory ? '♛' : '∴'}</div><h1>${state.victory ? 'Держава устояла' : 'Дом потерял власть'}</h1><p>${state.victory ? 'Границы, законы и люди пережили ваши решения. Это уже подозрительно похоже на государство.' : 'История продолжится без вашего дома. Неприятно, но исторически достоверно.'}</p><div class="ending-stats">${summaryMetric(String(playerProvinces().length), 'областей')}${summaryMetric(String(round(state.stability)), 'порядок')}${summaryMetric(String(state.techs.length), 'технологий')}${summaryMetric(String(round(state.score)), 'очки')}</div><button class="ink-button primary" data-action="new-game" data-native-press><strong>Новая летопись</strong><small>Создать другой мир</small></button><a href="../../" data-app-control data-native-press>← Pocket Works</a></section>`;
+  app.querySelector('[data-action="new-game"]').addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    state = null;
+    renderSetup();
+  });
+}
+
+function openGameMenu() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `<section class="game-menu"><p class="eyebrow">ПАУЗА</p><h2>${state.house}</h2><button data-menu="resume" data-native-press>Продолжить</button><button data-menu="sound" data-native-press>Звук: ${settings.sound ? 'включён' : 'выключен'}</button><button data-menu="new" data-native-press>Начать новую кампанию</button><a href="../../" data-app-control data-native-press>В Pocket Works</a></section>`;
+  document.body.append(modal);
+  modal.querySelector('[data-menu="resume"]').addEventListener('click', () => modal.remove());
+  modal.querySelector('[data-menu="sound"]').addEventListener('click', () => {
+    settings.sound = !settings.sound;
+    saveSettings();
+    tone();
+    modal.remove();
+    render();
+  });
+  modal.querySelector('[data-menu="new"]').addEventListener('click', () => {
+    if (!confirm('Стереть текущую летопись и начать заново?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = null;
+    modal.remove();
+    renderSetup();
+  });
+}
