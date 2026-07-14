@@ -1,8 +1,27 @@
-// ШПИЛЬКА 2.8 — final high-speed stability clamp.
+// ШПИЛЬКА 2.8 — final mistake motion and high-speed stability clamp.
 var shp28FixBaseUpdateCar = updateCar;
 updateCar = function shp28StableHighSpeedUpdateCar(car, dt) {
   shp28FixBaseUpdateCar(car, dt);
   if (!car || car.airborne) return;
+
+  if (!car.player && car.shp27ErrorTimer > 0 && car.shp28MistakeKind) {
+    const point = track[car.trackIndex];
+    if (point) {
+      const phase = 1 - car.shp27ErrorTimer / Math.max(0.001, car.shp28MistakeTotal || car.shp27ErrorTimer);
+      const pulse = Math.sin(clamp(phase, 0, 1) * Math.PI);
+      const side = car.shp27ErrorSide || 1;
+      const strength = car.shp28MistakeKind === 'wide' ? 115 : car.shp28MistakeKind === 'snap' ? 82 : 38;
+      car.vx += point.nx * side * strength * pulse * dt;
+      car.vy += point.ny * side * strength * pulse * dt;
+      const fx = Math.cos(car.angle);
+      const fy = Math.sin(car.angle);
+      const rx = -fy;
+      const ry = fx;
+      car.forwardSpeed = car.vx * fx + car.vy * fy;
+      car.lateralSpeed = car.vx * rx + car.vy * ry;
+    }
+  }
+
   const speed = Math.abs(car.forwardSpeed || 0);
   const ratio = clamp(speed / MAX_SPEED, 0, 1);
   const highSpeedLoad = smoothstep(0.58, 1, ratio);
