@@ -1,29 +1,29 @@
 import { spawnSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 
-const result = spawnSync(process.execPath, ['scripts/audit-shpilka-2-5-final.mjs'], {
+const result = spawnSync(process.execPath, ['scripts/audit-shpilka-2-5-release.mjs'], {
   cwd: process.cwd(),
   encoding: 'utf8'
 });
 const output = `${result.stdout || ''}\n${result.stderr || ''}`.trim();
 let category = 'UNKNOWN';
 const categories = [
-  ['four distinct roles', 'ROLES'],
-  ['sprinter straight pace', 'SPRINTER'],
-  ['technician corner pace', 'TECHNICIAN'],
-  ['attacker aggression', 'AGGRESSION'],
-  ['mistakes do not alter', 'MISTAKES'],
+  ['four distinct rival roles', 'ROLES'],
+  ['sprinter identity', 'SPRINTER'],
+  ['technician identity', 'TECHNICIAN'],
+  ['attacker identity', 'AGGRESSION'],
+  ['distinct countersteer', 'COUNTERSTEER'],
   ['late braking', 'LATE-BRAKE'],
   ['clean rhythm', 'CLEAN-RHYTHM'],
   ['clean grip', 'CLEAN-GRIP'],
-  ['rear classified', 'REAR-IMPACT'],
-  ['frontal classified', 'FRONTAL-IMPACT'],
-  ['side classified', 'SIDE-IMPACT'],
+  ['rear impact', 'REAR-IMPACT'],
+  ['frontal impact', 'FRONTAL-IMPACT'],
+  ['side impact', 'SIDE-IMPACT'],
   ['sustained contact', 'CONTACT'],
   ['injected energy', 'ENERGY'],
   ['race simulation', 'SIMULATION'],
   ['rivals made no progress', 'AI-PROGRESS'],
-  ['sector text', 'SECTORS'],
+  ['sector output', 'SECTORS'],
   ['SyntaxError', 'SYNTAX'],
   ['ReferenceError', 'REFERENCE'],
   ['TypeError', 'TYPE']
