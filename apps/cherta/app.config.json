@@ -4,15 +4,15 @@
   "name": "ЧЕРТА",
   "shortName": "ЧЕРТА",
   "description": "Однопальцевая боевая каллиграфия: три рывка оставляют линии, которые прорезают арену.",
-  "version": "1.0.4",
-  "releaseDate": "2026-07-12",
-  "releaseDateTime": "2026-07-12T19:29:23Z",
+  "version": "1.1.0",
+  "releaseDate": "2026-07-14",
+  "releaseDateTime": "2026-07-14T00:00:00+01:00",
   "changelog": [
-    "Hardened managed updates by comparing waiting builds against the service worker that is actually active.",
-    "Inherited the platform interaction lock so long presses no longer select interface text.",
-    "Made swipe recognition resilient to pointer cancellation, lost capture and rapid chained input.",
-    "Added one-step dash input buffering so swipes made during the end of a dash are not discarded.",
-    "Made the top home and sound controls reliably accessible from the title menu."
+    "Added a stronger third stroke and bonus bursts where armed lines intersect.",
+    "Added readable wave themes, edge spawn warnings and the line-erasing Eraser enemy.",
+    "Added a procedural boss every fifth wave, assembled from independent shape, movement, attack and tempo traits.",
+    "Expanded multi-kill, graze, healing and paper-history feedback without adding new controls.",
+    "Added end-of-run records for the best single cut, clean dodges and defeated seals."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -21,7 +21,7 @@
   "backgroundColor": "#e9e1cf",
   "themeColor": "#e9e1cf",
   "orientation": "portrait",
-  "cacheName": "cherta-v1.0.4",
+  "cacheName": "cherta-v1.1.0",
   "storageNamespace": "pocket-works:cherta",
   "tags": ["PWA", "offline", "game", "canvas", "audio"],
   "order": 30
