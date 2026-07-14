@@ -1,0 +1,291 @@
+    log: [defending ? 'Враг вступил в пределы области.' : 'Дружина развернулась перед рубежом.']
+  };
+}
+
+function battleCommand(command, laneIndex) {
+  const battle = state.battle;
+  if (!battle) return;
+  if (command === 'push' && Number.isInteger(laneIndex)) {
+    const lane = battle.lanes[laneIndex];
+    lane.progress += 9 + state.ruler.martial;
+    lane.ours -= 1.5;
+    lane.theirs -= 3.5;
+    lane.order = 'решительный нажим';
+    battle.playerMorale -= 2;
+    battle.log.unshift(`Фланг ${laneIndex + 1} пошёл в наступление.`);
+  }
+  if (command === 'rally' && !battle.rallyUsed) {
+    battle.rallyUsed = true;
+    battle.playerMorale = clamp(battle.playerMorale + 18, 0, 100);
+    battle.lanes.forEach((lane) => lane.progress += 3);
+    battle.log.unshift(`${state.ruler.name} восстановил строй.`);
+  }
+  if (command === 'flank' && !battle.flankUsed && state.army.cavalry >= 10) {
+    battle.flankUsed = true;
+    const weakest = [...battle.lanes].sort((a, b) => a.theirs - b.theirs)[0];
+    weakest.progress += 18;
+    weakest.theirs -= 8;
+    weakest.order = 'кавалерийский обход';
+    battle.log.unshift('Конница обошла слабый фланг.');
+  }
+  tone(command === 'push' ? 'war' : 'success');
+  render();
+}
+
+function battleTick() {
+  const battle = state.battle;
+  if (!battle) return;
+  battle.ticks += 1;
+  const target = provinceById(battle.targetId);
+  const playerTech = state.techs.includes('pikes') ? 1.12 : 1;
+  const trait = state.ruler.trait === 'Полководец' ? 1.1 : 1;
+  for (const lane of battle.lanes) {
+    const ours = Math.max(1, lane.ours);
+    const theirs = Math.max(1, lane.theirs);
+    const pressure = ((ours * playerTech * trait) - theirs * (1 + target.fort * 0.03)) / 18 + (Math.random() * 5 - 2.5);
+    lane.progress = clamp(lane.progress + pressure, -45, 45);
+    lane.ours = Math.max(0, lane.ours - Math.max(0.5, theirs / ours * 0.8));
+    lane.theirs = Math.max(0, lane.theirs - Math.max(0.5, ours / theirs * 0.8));
+    battle.playerMorale -= lane.progress < -20 ? 2.4 : 0.6;
+    battle.enemyMorale -= lane.progress > 20 ? 2.6 : 0.7;
+  }
+  const playerRemaining = battle.lanes.reduce((sum, lane) => sum + lane.ours, 0);
+  const enemyRemaining = battle.lanes.reduce((sum, lane) => sum + lane.theirs, 0);
+  if (battle.playerMorale <= 0 || playerRemaining < 12) return finishBattle(false);
+  if (battle.enemyMorale <= 0 || enemyRemaining < 10) return finishBattle(true);
+  if (battle.ticks > 34) return finishBattle(battle.playerMorale + playerRemaining * 0.2 > battle.enemyMorale + enemyRemaining * 0.2);
+  render();
+}
+
+function finishBattle(victory) {
+  clearBattleTimer();
+  const battle = state.battle;
+  const target = provinceById(battle.targetId);
+  const remaining = battle.lanes.reduce((sum, lane) => sum + lane.ours, 0);
+  const before = totalArmy();
+  const casualtyRatio = clamp(1 - remaining / Math.max(1, before), 0.06, 0.5);
+  for (const unit of ['infantry','archers','cavalry']) state.army[unit] = Math.max(0, round(state.army[unit] * (1 - casualtyRatio)));
+  if (victory) {
+    if (battle.defending) {
+      target.loyalty = clamp(target.loyalty + 6, 0, 100);
+      addLog(`Вторжение в ${target.name} отражено.`);
+    } else {
+      target.owner = 'player';
+      target.autonomy = 68;
+      target.loyalty = 38;
+      target.unrest = 4;
+      state.authority += 5;
+      state.renown += state.ruler.trait === 'Неумолимый' ? 15 : 10;
+      addLog(`Область ${target.name} покорена и передана временной администрации.`);
+    }
+    state.score += 80;
+    tone('success');
+    toast('Победа');
+  } else {
+    if (battle.defending) {
+      target.owner = battle.enemy;
+      addLog(`${enemyName(battle.enemy)} захватил область ${target.name}.`);
+    } else {
+      addLog(`Поход на ${target.name} завершился поражением.`);
+    }
+    state.stability -= 6;
+    state.authority -= 4;
+    tone('war');
+    toast('Поражение');
+  }
+  state.battle = null;
+  checkEnding();
+  saveState();
+  render();
+}
+
+function retreatBattle() {
+  const battle = state.battle;
+  if (!battle) return;
+  state.army.infantry = Math.max(0, state.army.infantry - 5);
+  state.army.archers = Math.max(0, state.army.archers - 3);
+  state.authority -= 3;
+  addLog(`Дружина отступила от области ${provinceById(battle.targetId).name}.`);
+  state.battle = null;
+  tone('war');
+  render();
+}
+
+function clearBattleTimer() {
+  if (pendingBattleTimer) clearTimeout(pendingBattleTimer);
+  pendingBattleTimer = null;
+}
+
+function battlePower(army, martial) {
+  return army.infantry + army.archers * 1.15 + army.cavalry * 1.45 + martial * 7;
+}
+
+function bindCommon() {
+  app.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
+    currentTab = button.dataset.tab;
+    selectedProvince = null;
+    drawerOpen = false;
+    tone();
+    render();
+  }));
+  app.querySelectorAll('[data-province]').forEach((element) => element.addEventListener('click', () => {
+    selectedProvince = element.dataset.province;
+    drawerOpen = true;
+    app.querySelectorAll('.province-shape').forEach((path) => path.classList.toggle('selected', path.dataset.province === selectedProvince));
+    renderProvinceDrawer(provinceById(selectedProvince));
+    tone();
+  }));
+  app.querySelectorAll('[data-map-zoom]').forEach((button) => button.addEventListener('click', () => {
+    mapZoom = clamp(mapZoom + (button.dataset.mapZoom === 'in' ? 0.18 : -0.18), 0.9, 1.9);
+    tone();
+    render();
+  }));
+  app.querySelector('[data-action="end-turn"]')?.addEventListener('click', endSeason);
+  app.querySelector('[data-action="menu"]')?.addEventListener('click', openGameMenu);
+  app.querySelector('[data-action="educate"]')?.addEventListener('click', educateHeir);
+  app.querySelectorAll('[data-estate-demand]').forEach((button) => button.addEventListener('click', () => fulfillEstateDemand(button.dataset.estateDemand)));
+  app.querySelectorAll('[data-estate-privilege]').forEach((button) => button.addEventListener('click', () => grantPrivilege(button.dataset.estatePrivilege)));
+  app.querySelectorAll('[data-law-choice]').forEach((button) => button.addEventListener('click', () => changeLaw(button.dataset.law, Number(button.dataset.lawChoice))));
+  app.querySelectorAll('[data-tech]').forEach((button) => button.addEventListener('click', () => research(button.dataset.tech)));
+  app.querySelectorAll('[data-recruit]').forEach((button) => button.addEventListener('click', () => recruit(button.dataset.recruit)));
+  app.querySelectorAll('[data-diplomacy]').forEach((button) => button.addEventListener('click', () => diplomacy(button.dataset.diplomacy)));
+  app.querySelectorAll('[data-war]').forEach((button) => button.addEventListener('click', () => toggleWar(button.dataset.war)));
+  app.querySelectorAll('[data-event-choice]').forEach((button) => button.addEventListener('click', () => resolveEvent(Number(button.dataset.eventChoice))));
+}
+
+function educateHeir() {
+  if (state.actions <= 0 || !canAfford({ gold: 18 })) return toast('Нужны золото и свободное решение');
+  spendAction();
+  spend({ gold: 18 });
+  const key = pick(['martial','diplomacy','stewardship']);
+  state.heir[key] += 1;
+  state.heir.age += 1;
+  addLog(`${state.heir.name} завершил новый этап обучения.`);
+  tone('success');
+  render();
+}
+
+function fulfillEstateDemand(id) {
+  const demand = estateDemand(id);
+  if (!spendAction() || !canAfford(demand.cost)) return;
+  spend(demand.cost);
+  state.estates[id].loyalty = clamp(state.estates[id].loyalty + 12, 0, 100);
+  state.estates[id].influence = clamp(state.estates[id].influence + 2, 0, 100);
+  if (id === 'nobles') {
+    const target = [...playerProvinces()].sort((a,b) => a.fort-b.fort)[0];
+    if (target) target.fort += 1;
+  }
+  addLog(`Сословие «${ESTATES[id].name}» получило обещанное.`);
+  tone('success');
+  render();
+}
+
+function grantPrivilege(id) {
+  const estate = state.estates[id];
+  if (estate.privilege || state.actions <= 0 || state.authority < 12) return;
+  spendAction();
+  spend({ authority: 12 });
+  const privilege = PRIVILEGES[id];
+  estate.privilege = true;
+  estate.loyalty += privilege.loyalty;
+  estate.influence += privilege.influence;
+  if (id === 'commons') state.estates.nobles.loyalty -= 5;
+  addLog(`Сословию «${ESTATES[id].name}» дарована привилегия: ${privilege.name}.`);
+  tone('success');
+  render();
+}
+
+function changeLaw(id, choice) {
+  const current = state.laws[id];
+  const cost = 14 + Math.abs(choice - current) * 5;
+  if (choice === current || state.actions <= 0 || state.authority < cost) return;
+  spendAction();
+  spend({ authority: cost });
+  const effects = LAWS.find((law) => law.id === id).choices[choice].effects;
+  for (const estate of ['nobles','clergy','burghers','commons']) {
+    if (effects[estate]) state.estates[estate].loyalty += effects[estate];
+  }
+  state.laws[id] = choice;
+  addLog(`Принят закон: ${LAWS.find((law) => law.id === id).choices[choice].name}.`);
+  tone('success');
+  render();
+}
+
+function research(id) {
+  const tech = TECHS.find((item) => item.id === id);
+  const cost = Math.max(8, tech.cost[0] - (state.researchDiscount || 0) - (state.ruler.trait === 'Книжник' ? 8 : 0));
+  if (state.techs.includes(id) || (tech.requires && !state.techs.includes(tech.requires)) || state.actions <= 0 || !canAfford({ gold: cost, renown: tech.cost[1] })) return;
+  spendAction();
+  spend({ gold: cost, renown: tech.cost[1] });
+  state.techs.push(id);
+  state.renown += 4;
+  addLog(`Освоено знание «${tech.name}».`);
+  tone('success');
+  render();
+}
+
+function recruit(id) {
+  const data = {
+    infantry: { gold: 14, manpower: 10 },
+    archers: { gold: 18, manpower: 12 },
+    cavalry: { gold: state.estates.nobles.privilege ? 20 : 26, manpower: 15 }
+  }[id];
+  const freeAction = state.techs.includes('standing');
+  if (!canAfford(data) || (!freeAction && state.actions <= 0)) return;
+  if (!freeAction) spendAction();
+  spend(data);
+  state.army[id] += 10;
+  addLog(`Набрано 10 воинов: ${id === 'infantry' ? 'пехота' : id === 'archers' ? 'лучники' : 'конница'}.`);
+  tone('success');
+  render();
+}
+
+function diplomacy(id) {
+  if (state.actions <= 0 || state.gold < 12) return;
+  spendAction();
+  spend({ gold: 12 });
+  const gain = 10 + state.ruler.diplomacy * 2 + (state.techs.includes('roads') ? 8 : 0);
+  state.relations[id] = clamp(state.relations[id] + gain, -100, 100);
+  state.renown += 2;
+  addLog(`Посольство улучшило отношения с державой «${enemyName(id)}».`);
+  tone('success');
+  render();
+}
+
+function toggleWar(id) {
+  if (!spendAction()) return;
+  if (state.wars[id]) {
+    const chance = 38 + state.ruler.diplomacy * 6 + state.relations[id] * 0.22;
+    if (Math.random() * 100 < chance) {
+      state.wars[id] = false;
+      state.relations[id] = -15;
+      addLog(`Заключён мир с державой «${enemyName(id)}».`);
+      toast('Мир заключён');
+    } else {
+      state.authority -= 4;
+      addLog(`${enemyName(id)} отверг мирные условия.`);
+      toast('Условия отвергнуты');
+    }
+  } else {
+    state.wars[id] = true;
+    state.relations[id] = -65;
+    state.authority += 3;
+    state.estates.nobles.loyalty += 4;
+    addLog(`Объявлена война: ${enemyName(id)}.`);
+    toast('Война началась');
+    tone('war');
+  }
+  render();
+}
+
+function endSeason() {
+  closeDrawer();
+  const economy = calculateEconomy();
+  state.gold += economy.net.gold;
+  state.food += economy.net.food;
+  state.manpower += economy.net.manpower;
+  state.authority += lawEffect('authority');
+  if (state.techs.includes('chronicles')) {
+    state.authority += 2;
+    state.renown += 2;
+  }
