@@ -1,0 +1,36 @@
+  .d25-target-card { grid-template-columns: 38px minmax(0, 1fr); padding: 10px; }
+  .d25-target-sign { width: 38px; height: 44px; }
+  .d25-campaign-command { grid-template-columns: 1fr; }
+  .d25-map-campaign { align-items: stretch; }
+  .d25-map-campaign button { max-width: 104px; }
+  .d25-battle-tools { grid-template-columns: 1fr; }
+  .d25-battle-tools > div { grid-template-columns: minmax(0,1fr) repeat(3, 44px); }
+}
+
+@media (max-height: 680px) {
+  .d25-planner,
+  .d25-active-campaign { padding-block: 10px; }
+  .d25-campaign-command,
+  .d25-campaign-bars { margin-top: 9px; }
+  .d25-campaign-actions button { min-height: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d25-bar > i > em { transition: none; }
+}
+
+/* Shared mobile reachability safeguards */
+.map-controls button,
+.icon-button,
+.d25-fold > summary,
+.d25-campaign-log > summary {
+  min-width: 44px;
+  min-height: 44px;
+}
+.d25-fold > summary,
+.d25-campaign-log > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
