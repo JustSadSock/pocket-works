@@ -1,18 +1,22 @@
 import { LEVELS, getLevel } from './levels.js';
+import { createRunSeed, formatRunCode, generateEndlessLevel } from './procedural.js';
 import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { AudioGarden } from './audio.js';
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.3.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = {
-  version: 1,
+  version: 2,
   unlocked: 1,
   current: 0,
   best: Array(LEVELS.length).fill(null),
   roundBest: null,
+  endlessBest: 0,
+  endlessBestStrokes: null,
+  endlessRun: null,
   sound: true,
   haptics: true,
   tilt: false,
@@ -32,6 +36,8 @@ let ball = createBall(level.start);
 let strokes = 0;
 let roundStrokes = [];
 let roundActive = false;
+let endlessActive = false;
+let endlessResult = null;
 let lastSafe = { ...level.start };
 let waterResetTimer = 0;
 let finishTimer = 0;
@@ -44,17 +50,33 @@ let tiltListening = false;
 
 const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 
+function normalizeEndlessRun(value) {
+  if (!value || typeof value !== 'object') return null;
+  const seed = Number(value.seed) >>> 0;
+  if (!seed) return null;
+  return {
+    seed,
+    depth: Math.max(0, Math.trunc(Number(value.depth) || 0)),
+    totalStrokes: Math.max(0, Math.trunc(Number(value.totalStrokes) || 0)),
+    startedAt: Number.isFinite(Number(value.startedAt)) ? Number(value.startedAt) : Date.now()
+  };
+}
+
 function loadSave() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!parsed || parsed.version !== 1) return structuredClone(DEFAULT_SAVE);
-    const best = Array.from({ length: LEVELS.length }, (_, i) => Number.isFinite(parsed.best?.[i]) ? parsed.best[i] : null);
+    if (!parsed || ![1, 2].includes(parsed.version)) return structuredClone(DEFAULT_SAVE);
+    const best = Array.from({ length: LEVELS.length }, (_, index) => Number.isFinite(parsed.best?.[index]) ? parsed.best[index] : null);
     return {
       ...structuredClone(DEFAULT_SAVE),
       ...parsed,
+      version: 2,
       best,
       unlocked: Math.max(1, Math.min(LEVELS.length, Number(parsed.unlocked) || 1)),
-      current: Math.max(0, Math.min(LEVELS.length - 1, Number(parsed.current) || 0))
+      current: Math.max(0, Math.min(LEVELS.length - 1, Number(parsed.current) || 0)),
+      endlessBest: Math.max(0, Math.trunc(Number(parsed.endlessBest) || 0)),
+      endlessBestStrokes: Number.isFinite(parsed.endlessBestStrokes) ? Math.max(0, Math.trunc(parsed.endlessBestStrokes)) : null,
+      endlessRun: normalizeEndlessRun(parsed.endlessRun)
     };
   } catch {
     return structuredClone(DEFAULT_SAVE);
@@ -98,7 +120,7 @@ function showSurface(text) {
   note.textContent = text;
   note.classList.add('is-visible');
   clearTimeout(surfaceTimer);
-  surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1000);
+  surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1200);
 }
 
 function setMode(next) {
@@ -111,7 +133,8 @@ function setMode(next) {
 }
 
 function syncHeader() {
-  $('holeNumber').textContent = `${levelIndex + 1} / ${LEVELS.length}`;
+  $('holeLabel').textContent = endlessActive ? 'Секция' : 'Лунка';
+  $('holeNumber').textContent = endlessActive ? String(level.section) : `${levelIndex + 1} / ${LEVELS.length}`;
   $('strokeCount').textContent = String(strokes);
   $('parCount').textContent = String(level.par);
   $('soundBtn').textContent = save.sound ? 'Звук' : 'Тихо';
@@ -123,14 +146,27 @@ function syncHeader() {
   $('tiltBtn').querySelector('b').textContent = save.tilt ? 'Вкл' : 'Включить';
   document.body.dataset.hasAimed = String(save.hasAimed);
   document.body.dataset.ballMoving = String(ball.moving || ball.sunk);
+  document.body.dataset.route = endlessActive ? 'endless' : 'course';
 }
 
 function syncMenu() {
   const current = getLevel(Math.min(save.current, save.unlocked - 1));
-  $('continueLabel').textContent = save.best.some((v) => v != null) ? 'Продолжить прогулку' : 'Начать прогулку';
+  $('continueLabel').textContent = save.best.some((value) => value != null) ? 'Продолжить прогулку' : 'Начать прогулку';
   $('continueMeta').textContent = `Лунка ${current.id} · пар ${current.par}`;
-  const total = save.best.every((v) => Number.isFinite(v)) ? save.best.reduce((a, b) => a + b, 0) : null;
+  const total = save.best.every((value) => Number.isFinite(value)) ? save.best.reduce((sum, value) => sum + value, 0) : null;
   $('courseBest').textContent = total == null ? 'Лучший круг ещё не сыгран' : `Лучший собранный круг · ${total} ударов`;
+
+  const run = normalizeEndlessRun(save.endlessRun);
+  $('endlessLabel').textContent = run ? 'Продолжить бесконечный путь' : 'Бесконечная оранжерея';
+  $('endlessMeta').textContent = run
+    ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}`
+    : save.endlessBest > 0
+      ? `Новый код · рекорд ${save.endlessBest} секций`
+      : 'Новый код · без конца';
+  $('newEndlessBtn').hidden = !run;
+  $('endlessBest').textContent = save.endlessBest > 0
+    ? `Глубже всего · ${save.endlessBest} секций${Number.isFinite(save.endlessBestStrokes) ? ` · ${save.endlessBestStrokes} ударов` : ''}`
+    : 'Бесконечный путь ещё не начат';
   renderHoleShelf();
 }
 
@@ -162,10 +198,20 @@ function resetBall(to = level.start) {
   syncHeader();
 }
 
+function preparePlayingLevel() {
+  strokes = 0;
+  finishTimer = 0;
+  endlessResult = null;
+  resetBall(level.start);
+  setMode('playing');
+  syncHeader();
+  showSurface(level.note);
+}
+
 function startHole(index, { round = false, preserveRound = false } = {}) {
+  endlessActive = false;
   levelIndex = Math.max(0, Math.min(LEVELS.length - 1, index));
   level = getLevel(levelIndex);
-  strokes = 0;
   if (round && !preserveRound) {
     roundActive = true;
     roundStrokes = [];
@@ -175,20 +221,49 @@ function startHole(index, { round = false, preserveRound = false } = {}) {
   }
   save.current = levelIndex;
   persist();
-  resetBall(level.start);
-  finishTimer = 0;
-  setMode('playing');
-  syncHeader();
-  showSurface(level.note);
+  preparePlayingLevel();
+}
+
+function ensureEndlessRun(fresh = false) {
+  let run = fresh ? null : normalizeEndlessRun(save.endlessRun);
+  if (!run) {
+    run = { seed: createRunSeed(), depth: 0, totalStrokes: 0, startedAt: Date.now() };
+    save.endlessRun = run;
+    persist();
+  }
+  return run;
+}
+
+function startEndless({ fresh = false } = {}) {
+  const run = ensureEndlessRun(fresh);
+  endlessActive = true;
+  roundActive = false;
+  roundStrokes = [];
+  levelIndex = -1;
+  level = generateEndlessLevel(run.seed, run.depth);
+  preparePlayingLevel();
 }
 
 function restartHole() {
   audio.ui();
-  strokes = 0;
-  resetBall(level.start);
-  finishTimer = 0;
-  setMode('playing');
-  showSurface('Лунка начата заново');
+  preparePlayingLevel();
+  showSurface(endlessActive ? `Секция ${level.section} начата заново` : 'Лунка начата заново');
+}
+
+function retryResult() {
+  audio.ui();
+  if (endlessActive && endlessResult) {
+    save.endlessRun = {
+      seed: endlessResult.seed,
+      depth: endlessResult.depth,
+      totalStrokes: endlessResult.totalBefore,
+      startedAt: endlessResult.startedAt
+    };
+    persist();
+    startEndless();
+    return;
+  }
+  restartHole();
 }
 
 function openMenu() {
@@ -214,18 +289,18 @@ function pointerLocal(event) {
 
 function beginAim(event) {
   if (mode !== 'playing' || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
-  const p = pointerLocal(event);
+  const point = pointerLocal(event);
   const ballPoint = renderer.ballScreenPoint(ball);
-  const distance = Math.hypot(p.x - ballPoint.x, p.y - ballPoint.y);
+  const distance = Math.hypot(point.x - ballPoint.x, point.y - ballPoint.y);
   if (distance > Math.max(76, 56 * renderer.scale)) return;
   if (event.cancelable) event.preventDefault();
   audio.unlock();
   aim.active = true;
   aim.pointerId = event.pointerId;
-  aim.startX = p.x;
-  aim.startY = p.y;
-  aim.currentX = p.x;
-  aim.currentY = p.y;
+  aim.startX = point.x;
+  aim.startY = point.y;
+  aim.currentX = point.x;
+  aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
   try { canvas.setPointerCapture(event.pointerId); } catch {}
@@ -234,11 +309,11 @@ function beginAim(event) {
 function moveAim(event) {
   if (!aim.active || event.pointerId !== aim.pointerId) return;
   if (event.cancelable) event.preventDefault();
-  const p = pointerLocal(event);
-  aim.currentX = p.x;
-  aim.currentY = p.y;
-  const dxScreen = aim.startX - p.x;
-  const dyScreen = aim.startY - p.y;
+  const point = pointerLocal(event);
+  aim.currentX = point.x;
+  aim.currentY = point.y;
+  const dxScreen = aim.startX - point.x;
+  const dyScreen = aim.startY - point.y;
   const worldDx = dxScreen / renderer.scale;
   const worldDy = dyScreen / (renderer.scale * .82);
   const distance = Math.hypot(worldDx, worldDy);
@@ -312,8 +387,47 @@ function resultCopy(delta, strokesTaken) {
   return ['Дошёл', 'Не изящно, зато мяч всё-таки в лунке.'];
 }
 
+function setResultCopy(eyebrow, title, detail, isRecord = false) {
+  $('resultEyebrow').textContent = eyebrow;
+  $('resultTitle').textContent = title;
+  $('resultStrokes').textContent = String(strokes);
+  $('resultDetail').textContent = isRecord ? `${detail} Новый лучший результат.` : detail;
+}
+
+function finishEndlessSection() {
+  const run = ensureEndlessRun(false);
+  const totalBefore = run.totalStrokes;
+  const completedSections = run.depth + 1;
+  const totalStrokes = totalBefore + strokes;
+  endlessResult = { seed: run.seed, depth: run.depth, strokes, totalBefore, startedAt: run.startedAt };
+  save.endlessRun = { ...run, depth: completedSections, totalStrokes };
+  const isDepthRecord = completedSections > save.endlessBest;
+  const isScoreRecord = completedSections === save.endlessBest && (!Number.isFinite(save.endlessBestStrokes) || totalStrokes < save.endlessBestStrokes);
+  if (isDepthRecord || isScoreRecord) {
+    save.endlessBest = completedSections;
+    save.endlessBestStrokes = totalStrokes;
+  }
+  persist();
+
+  const delta = strokes - level.par;
+  const [title, detail] = resultCopy(delta, strokes);
+  setResultCopy(`Секция ${level.section} · ${level.name}`, title, `${detail} Пройдено секций: ${completedSections}.`, isDepthRecord);
+  $('nextBtn').hidden = false;
+  $('nextBtn').querySelector('span').textContent = 'Дальше в оранжерею';
+  const next = generateEndlessLevel(run.seed, completedSections);
+  $('nextMeta').textContent = `секция ${next.section} · пар ${next.par}`;
+  $('retryBtn').hidden = false;
+  setMode('result');
+  syncMenu();
+}
+
 function finishHole() {
   finishTimer = 0;
+  if (endlessActive) {
+    finishEndlessSection();
+    return;
+  }
+
   const previous = save.best[levelIndex];
   if (previous == null || strokes < previous) save.best[levelIndex] = strokes;
   if (levelIndex + 1 < LEVELS.length) save.unlocked = Math.max(save.unlocked, levelIndex + 2);
@@ -323,10 +437,7 @@ function finishHole() {
   if (roundActive) roundStrokes[levelIndex] = strokes;
   const delta = strokes - level.par;
   const [title, detail] = resultCopy(delta, strokes);
-  $('resultTitle').textContent = title;
-  $('resultStrokes').textContent = String(strokes);
-  $('resultDetail').textContent = previous == null || strokes < previous ? `${detail} Новый лучший результат.` : detail;
-  $('resultEyebrow').textContent = `${level.id}. ${level.name}`;
+  setResultCopy(`${level.id}. ${level.name}`, title, detail, previous == null || strokes < previous);
 
   if (levelIndex === LEVELS.length - 1 && roundActive) {
     const total = roundStrokes.reduce((sum, value) => sum + (value || 0), 0);
@@ -335,12 +446,18 @@ function finishHole() {
     $('finishStrokes').textContent = String(total);
     const par = LEVELS.reduce((sum, item) => sum + item.par, 0);
     const courseDelta = total - par;
-    $('finishDetail').textContent = courseDelta < 0 ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.` : courseDelta === 0 ? 'Точно общий пар. Очень аккуратная прогулка.' : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
+    $('finishDetail').textContent = courseDelta < 0
+      ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.`
+      : courseDelta === 0
+        ? 'Точно общий пар. Очень аккуратная прогулка.'
+        : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
     setMode('finish');
     syncMenu();
     return;
   }
 
+  $('nextBtn').querySelector('span').textContent = 'Следующая лунка';
+  $('retryBtn').hidden = false;
   if (levelIndex === LEVELS.length - 1) {
     $('nextBtn').hidden = true;
   } else {
@@ -392,13 +509,25 @@ function attachTilt() {
 function bindControls() {
   canvas.addEventListener('pointerdown', beginAim, { passive: false });
   canvas.addEventListener('pointermove', moveAim, { passive: false });
-  canvas.addEventListener('pointerup', (e) => finishAim(e, false), { passive: false });
-  canvas.addEventListener('pointercancel', (e) => finishAim(e, true), { passive: false });
+  canvas.addEventListener('pointerup', (event) => finishAim(event, false), { passive: false });
+  canvas.addEventListener('pointercancel', (event) => finishAim(event, true), { passive: false });
   canvas.addEventListener('lostpointercapture', () => cancelAim());
 
   $('continueBtn').addEventListener('click', async () => {
-    await audio.unlock(); audio.ui();
+    await audio.unlock();
+    audio.ui();
     startHole(Math.min(save.current, save.unlocked - 1), { round: true });
+  });
+  $('endlessBtn').addEventListener('click', async () => {
+    await audio.unlock();
+    audio.ui();
+    startEndless({ fresh: !normalizeEndlessRun(save.endlessRun) });
+  });
+  $('newEndlessBtn').addEventListener('click', async () => {
+    await audio.unlock();
+    audio.ui();
+    startEndless({ fresh: true });
+    showToast(`Новый код · ${formatRunCode(save.endlessRun.seed)}`);
   });
   $('holesBtn').addEventListener('click', async () => { await audio.unlock(); audio.ui(); setMode('holes'); renderHoleShelf(); });
   document.querySelectorAll('[data-close-screen]').forEach((button) => button.addEventListener('click', () => { audio.ui(); openMenu(); }));
@@ -406,24 +535,28 @@ function bindControls() {
   $('resumeBtn').addEventListener('click', resumeGame);
   $('restartBtn').addEventListener('click', restartHole);
   $('quitBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
-  $('retryBtn').addEventListener('click', restartHole);
+  $('retryBtn').addEventListener('click', retryResult);
   $('resultMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
   $('finishMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
   $('againBtn').addEventListener('click', () => { audio.ui(); startHole(0, { round: true }); });
   $('nextBtn').addEventListener('click', () => {
     audio.ui();
-    startHole(levelIndex + 1, { round: roundActive, preserveRound: roundActive });
+    if (endlessActive) startEndless();
+    else startHole(levelIndex + 1, { round: roundActive, preserveRound: roundActive });
   });
   $('soundBtn').addEventListener('click', async () => {
     save.sound = !save.sound;
     audio.setEnabled(save.sound);
     if (save.sound) { await audio.unlock(); audio.ui(); }
-    persist(); syncHeader();
+    persist();
+    syncHeader();
   });
   $('hapticsBtn').addEventListener('click', () => {
     save.haptics = !save.haptics;
     if (save.haptics) vibrate(14);
-    audio.ui(); persist(); syncHeader();
+    audio.ui();
+    persist();
+    syncHeader();
   });
   $('tiltBtn').addEventListener('click', enableTilt);
   ['menuHomeLink', 'holesHomeLink', 'pauseHomeLink', 'resultHomeLink', 'finishHomeLink'].forEach((id) => $(id).addEventListener('click', exitToShelf));
@@ -432,7 +565,8 @@ function bindControls() {
   window.addEventListener('orientationchange', () => window.setTimeout(() => renderer.resize(), 180), { passive: true });
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      if (mode === 'playing') pauseGame(); else if (mode === 'paused') resumeGame();
+      if (mode === 'playing') pauseGame();
+      else if (mode === 'paused') resumeGame();
     }
   });
   document.addEventListener('visibilitychange', () => {
@@ -447,7 +581,7 @@ function bindControls() {
 }
 
 function previewMotion(time) {
-  if (mode !== 'menu' || save.best.some((v) => v != null)) return;
+  if (mode !== 'menu' || save.best.some((value) => value != null)) return;
   const cx = level.start.x + Math.sin(time * .21) * 34;
   const cy = level.start.y - 30 + Math.cos(time * .25) * 18;
   ball.x += (cx - ball.x) * .018;
@@ -512,8 +646,32 @@ requestAnimationFrame(frame);
 
 window.__MOSS_MARBLE__ = {
   startHole,
+  startEndless,
   restartHole,
-  snapshot: () => ({ mode, levelIndex, strokes, roundActive, ball: { ...ball }, save: structuredClone(save) }),
-  strike: (vx, vy) => { if (mode === 'playing' && isBallStopped(ball)) { strokes += 1; strikeBall(ball, vx, vy); syncHeader(); } },
-  complete: () => { if (mode === 'playing') { ball.sunk = true; ball.x = level.hole.x; ball.y = level.hole.y; finishTimer = .01; } }
+  generateEndlessLevel,
+  snapshot: () => ({
+    mode,
+    levelIndex,
+    strokes,
+    roundActive,
+    endlessActive,
+    level: { id: level.id, name: level.name, par: level.par, section: level.section, endless: level.endless },
+    ball: { ...ball },
+    save: structuredClone(save)
+  }),
+  strike: (vx, vy) => {
+    if (mode === 'playing' && isBallStopped(ball)) {
+      strokes += 1;
+      strikeBall(ball, vx, vy);
+      syncHeader();
+    }
+  },
+  complete: () => {
+    if (mode === 'playing') {
+      ball.sunk = true;
+      ball.x = level.hole.x;
+      ball.y = level.hole.y;
+      finishTimer = .01;
+    }
+  }
 };

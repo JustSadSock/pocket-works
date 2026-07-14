@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#1b3024">
-  <meta name="description" content="Moss & Marble — камерный мини-гольф в старой оранжерее для Pocket Works.">
+  <meta name="description" content="Moss & Marble — камерный и бесконечный мини-гольф в старой оранжерее для Pocket Works.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Moss & Marble">
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=1.2.0">
+  <link rel="stylesheet" href="./styles.css?v=1.3.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -24,7 +24,7 @@
     <header class="scorebar" data-ui aria-live="polite">
       <button class="text-control" type="button" id="pauseBtn" data-native-press aria-label="Открыть паузу">Пауза</button>
       <div class="score-cluster">
-        <div><span>Лунка</span><strong id="holeNumber">1 / 9</strong></div>
+        <div><span id="holeLabel">Лунка</span><strong id="holeNumber">1 / 9</strong></div>
         <i></i>
         <div><span>Удары</span><strong id="strokeCount">0</strong></div>
         <i></i>
@@ -41,17 +41,23 @@
       <div class="menu-copy">
         <p class="eyebrow">Оранжерея № 1 · После дождя</p>
         <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
-        <p class="lead">Девять маленьких полей среди мха, чашек и старого дерева. Потяни шар назад и отпусти.</p>
+        <p class="lead">Девять ручных лунок и бесконечный маршрут, который оранжерея собирает заново для каждого кода.</p>
       </div>
       <div class="menu-actions">
         <button class="primary-action" type="button" id="continueBtn" data-native-press>
           <span id="continueLabel">Начать прогулку</span>
           <small id="continueMeta">Лунка 1 · пар 3</small>
         </button>
+        <button class="primary-action compact" type="button" id="endlessBtn" data-native-press>
+          <span id="endlessLabel">Бесконечная оранжерея</span>
+          <small id="endlessMeta">Новый код · без конца</small>
+        </button>
+        <button class="paper-action" type="button" id="newEndlessBtn" data-native-press hidden>Начать новый бесконечный путь</button>
         <button class="paper-action" type="button" id="holesBtn" data-native-press>Выбрать лунку</button>
         <a class="paper-link" href="../../" id="menuHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
       </div>
       <p class="menu-best" id="courseBest">Лучший круг ещё не сыгран</p>
+      <p class="menu-best" id="endlessBest">Бесконечный путь ещё не начат</p>
     </section>
 
     <section class="screen potting-screen" id="holesScreen" data-ui aria-labelledby="holesTitle">
@@ -116,8 +122,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="Moss & Marble"
-    data-app-version="1.2.0"
+    data-app-version="1.3.0"
   ></script>
-  <script type="module" src="./app.js?v=1.2.0"></script>
+  <script type="module" src="./app.js?v=1.3.0"></script>
 </body>
 </html>
