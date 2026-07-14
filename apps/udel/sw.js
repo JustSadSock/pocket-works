@@ -1,24 +1,22 @@
 const CACHE_PREFIX = 'udel-';
-const CACHE_NAME = 'udel-v2.5.0';
-const APP_VERSION = '2.5.0';
+const CACHE_NAME = 'udel-v2.5.1';
+const APP_VERSION = '2.5.1';
 const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Походы теперь проходят через сбор дружины, маршрут по карте, обоз, марш, осаду и полевое сражение.',
-  'Добавлены командующие, готовность армии, резерв и перенос ставки между флангами во время битвы.',
-  'Крепости требуют осадных работ; ранний штурм возможен, но повышает потери и расход припасов.',
-  'Войны получили счёт, усталость и четыре мирных исхода: белый мир, признание границ, дань и подчинение короны.',
-  'Военный совет полностью перестроен для вертикального телефона с понятными маршрутами, состояниями и крупными элементами управления.',
-  'Добавлен автоматический мобильный аудит запуска, пяти основных разделов, похода, карты, провинций и горизонтального переполнения.',
-  'Сохранения 2.0 и более ранних версий автоматически получают новую военную структуру без потери карты и династии.'
+  'Карточка области стала ограниченным по высоте мобильным листом с одним внутренним скроллом и больше не выходит за границы экрана.',
+  'Главные показатели и сезонный доход видны сразу; культура, вера, крепость, постройки и управление убраны в понятные раскрывающиеся разделы.',
+  'Решения по области получили короткие названия, ясные последствия и отдельную стоимость без длинных повторяющихся описаний.',
+  'С карты убраны декоративные пиктограммы провинций, а верхняя панель и нижняя навигация переведены на спокойные текстовые подписи.',
+  'Добавлена диагностика, проверяющая, что открытый лист провинции целиком находится внутри текущего мобильного viewport.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './game-loader.js',
   './chunks/game-01.txt', './chunks/game-02.txt', './chunks/game-03.txt', './chunks/game-04.txt', './chunks/game-05.txt',
   './chunks/game-06.txt', './chunks/game-07.txt', './chunks/game-08.txt', './chunks/game-09.txt', './chunks/game-10.txt',
   './chunks/game-11a.txt', './chunks/game-11b.txt', './chunks/game-11c.txt', './chunks/game-11d.txt',
-  './chunks/game-12a.txt', './chunks/game-12b.txt', './chunks/game-12c.txt', './chunks/game-13.txt',
+  './chunks/game-12a.txt', './chunks/game-12b.txt', './chunks/game-12c.txt', './chunks/game-13.txt', './chunks/game-14.txt',
   './styles/part-01.css', './styles/part-02.css', './styles/part-03.css', './styles/part-04.css', './styles/part-05.css',
-  './styles/part-06a.css', './styles/part-06b.css', './styles/part-06c.css',
+  './styles/part-06a.css', './styles/part-06b.css', './styles/part-06c.css', './styles/part-07.css',
   './app.config.json', './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js',
