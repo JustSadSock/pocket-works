@@ -37,6 +37,7 @@ const APP_SHELL = [
   './engine-v2-23-fixes.js',
   './engine-v2-24.js',
   './engine-v2-25.js',
+  './engine-v2-25-fixes.js',
   './engine-v2-12.js',
   './workshop.js',
   './manifest.webmanifest',
