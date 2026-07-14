@@ -1,0 +1,22 @@
+const CHUNKS = [
+  './chunks/game-01.txt',
+  './chunks/game-02.txt',
+  './chunks/game-03.txt',
+  './chunks/game-04.txt',
+  './chunks/game-05.txt',
+  './chunks/game-06.txt',
+  './chunks/game-07.txt'
+];
+
+export async function loadGameModule() {
+  const responses = await Promise.all(CHUNKS.map((path) => fetch(path)));
+  const failed = responses.find((response) => !response.ok);
+  if (failed) throw new Error(`Не удалось загрузить модуль игры: ${failed.status}`);
+  const source = (await Promise.all(responses.map((response) => response.text()))).join('');
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  try {
+    return await import(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
