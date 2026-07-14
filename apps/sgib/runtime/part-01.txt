@@ -1,0 +1,134 @@
+        from: [0.2, 0.8],
+        to: [0.8, 0.2],
+        points: [[0.27, 0.72], [0.33, 0.58], [0.22, 0.52]],
+        types: [['ink', 'void'], ['ink', 'ink'], ['ink', 'void']]
+      }
+    ]
+  },
+  {
+    title: 'Последняя папка',
+    note: 'Четыре отметки, две оси',
+    maxFolds: 2,
+    hint: 'Закрой левый клапан, затем подними нижний',
+    hintFrom: [0.16, 0.28],
+    hintTo: [0.48, 0.28],
+    groups: [
+      {
+        from: [0.16, 0.28],
+        to: [0.48, 0.28],
+        points: [[0.18, 0.18], [0.18, 0.39]],
+        types: [['ink', 'void'], ['ink', 'ink']]
+      },
+      {
+        from: [0.76, 0.88],
+        to: [0.76, 0.48],
+        points: [[0.68, 0.83], [0.83, 0.88]],
+        types: [['ink', 'void'], ['ink', 'void']]
+      }
+    ]
+  }
+];
+
+const DEFAULTS = {
+  unlocked: 1,
+  best: {},
+  sound: true,
+  haptics: true,
+  endlessBest: 0,
+  lastLevel: 0,
+  endlessSeed: 17017
+};
+
+let store;
+let settings = { ...DEFAULTS };
+let canvas;
+let context;
+let view = { scale: 1, offsetX: 0, offsetY: 0, dpr: 1, width: 1, height: 1 };
+let deskTexture;
+let paperTexture;
+let rafId = 0;
+let lastFrameTime = performance.now();
+let toastTimer = 0;
+let completionTimer = 0;
+
+const dom = {};
+const state = {
+  mode: 'menu',
+  screen: 'menuScreen',
+  levelIndex: 0,
+  endlessStreak: 0,
+  endlessSeed: DEFAULTS.endlessSeed,
+  level: null,
+  layers: [],
+  entities: [],
+  creases: [],
+  foldsUsed: 0,
+  maxFolds: 1,
+  history: [],
+  gesture: null,
+  animation: null,
+  particles: [],
+  pulses: [],
+  lastInputAt: performance.now(),
+  paused: false,
+  resolved: false
+};
+
+class PaperAudio {
+  constructor() {
+    this.context = null;
+    this.noise = null;
+    this.enabled = true;
+  }
+
+  setEnabled(value) {
+    this.enabled = Boolean(value);
+    if (!this.enabled && this.context?.state === 'running') this.context.suspend().catch(() => {});
+  }
+
+  async unlock() {
+    if (!this.enabled) return false;
+    if (!this.context) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return false;
+      this.context = new AudioContextClass();
+      this.noise = this.createNoiseBuffer();
+    }
+    if (this.context.state === 'suspended') await this.context.resume().catch(() => {});
+    return this.context.state === 'running';
+  }
+
+  createNoiseBuffer() {
+    const length = Math.floor(this.context.sampleRate * 0.45);
+    const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let index = 0; index < length; index += 1) {
+      const white = Math.random() * 2 - 1;
+      last = last * 0.68 + white * 0.32;
+      data[index] = last;
+    }
+    return buffer;
+  }
+
+  tone(frequency, duration = 0.08, volume = 0.025, type = 'sine', delay = 0) {
+    if (!this.enabled || !this.context || this.context.state !== 'running') return;
+    const now = this.context.currentTime + delay;
+    const oscillator = this.context.createOscillator();
+    const gain = this.context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain).connect(this.context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  }
+
+  rustle(duration = 0.22, volume = 0.035, high = 1700) {
+    if (!this.enabled || !this.context || this.context.state !== 'running' || !this.noise) return;
+    const now = this.context.currentTime;
+    const source = this.context.createBufferSource();
+    const filter = this.context.createBiquadFilter();
+    const gain = this.context.createGain();
