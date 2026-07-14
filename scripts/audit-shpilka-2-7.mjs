@@ -20,7 +20,7 @@ class MockElement {
     this.hidden = false;
     this.disabled = false;
     this.textContent = '';
-    this.innerHTML = '';
+    this._innerHTML = '';
     this.value = '';
     this.type = '';
     this.className = '';
@@ -30,6 +30,11 @@ class MockElement {
     this.style = { setProperty() {} };
     this.listeners = new Map();
   }
+  set innerHTML(value) {
+    this._innerHTML = String(value);
+    if (value === '') this.children = [];
+  }
+  get innerHTML() { return this._innerHTML; }
   addEventListener(type, handler) { this.listeners.set(type, handler); }
   append(...children) { this.children.push(...children); }
   appendChild(child) { this.children.push(child); return child; }
@@ -137,6 +142,7 @@ const parts = [
   'apps/shpilka/engine-v2-26-feel.js',
   'apps/shpilka/engine-v2-26-fixes.js',
   'apps/shpilka/engine-v2-27-ai.js',
+  'apps/shpilka/engine-v2-27-fixes.js',
   'apps/shpilka/engine-v2-12.js'
 ];
 for (const file of parts) {
@@ -185,7 +191,7 @@ const result = new vm.Script(`(() => {
     const offroadRatio = offroadFrames / Math.max(1, totalFrames);
     assert(cars.slice(1).every((car) => [car.x, car.y, car.vx, car.vy, car.angle, car.raceScore].every(Number.isFinite)), type + ': AI produced non-finite state');
     assert(Math.min(...progresses) > track.totalLength * 0.58, type + ': a Pilot bot failed to sustain race pace');
-    assert(offroadRatio < 0.045, type + ': bots spend too much time beyond the road');
+    assert(offroadRatio < 0.045, type + ': bots spend too much time beyond the road (' + offroadRatio.toFixed(3) + ')');
     assert(maximumDistance < roadHalf + 240, type + ': a bot escaped far into the terrain');
     assert(cars.slice(1).every((car) => car.shp27ErrorTimer === 0 && car.shp27ErrorCooldown > 9000), type + ': Pilot still receives random driving errors');
     routeStats[type] = {
