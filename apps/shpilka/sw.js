@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'shpilka-';
-const CACHE_NAME = 'shpilka-v2.5.1-p1';
-const APP_VERSION = '2.5.1';
+const CACHE_NAME = 'shpilka-v2.7.0-p1';
+const APP_VERSION = '2.7.0';
 const RELEASE_DATE = '2026-07-14';
 const CACHE_PROTOCOL = 1;
 const RELEASE_NOTES = [
-  'Максимальная сложность переработана: игрок стартует с пятого места, а соперники быстрее реагируют и увереннее держат гоночный темп.',
-  'Слабые стороны характеров на уровне Безумец уменьшены, но различия между разгоном, апексом, стабильностью и агрессией сохранены.',
-  'Боты позже тормозят, быстрее возвращаются на тягу и решительнее проводят обгоны без зависимости от позиции игрока.',
-  'Ошибки Безумца стали существенно реже и короче; Новичок и Гонщик остались без изменений.'
+  'AI теперь ориентируется по реальному расстоянию трассы, поэтому не начинает поворот слишком рано.',
+  'Безумец и Пилот больше не получают случайные ошибки траектории; темп рассчитывается по кривизне и тормозному пути.',
+  'Безопасные пределы смещения, возврат к центру и гашение наружного импульса удерживают плотный пелотон на дороге.',
+  'После финиша игрока оставшиеся машины ускоренно доезжают, а прогноз в таблице заменяется фактическим временем.'
 ];
 const APP_SHELL = [
   './',
@@ -18,6 +18,8 @@ const APP_SHELL = [
   './advanced-fixes.css',
   './systems-23.css',
   './systems-25.css',
+  './systems-26.css',
+  './systems-27.css',
   './app.js',
   './engine-v2-01.js',
   './engine-v2-02.js',
@@ -42,6 +44,13 @@ const APP_SHELL = [
   './engine-v2-25-1.js',
   './engine-v2-25-contacts.js',
   './engine-v2-25-wall.js',
+  './engine-v2-26-career.js',
+  './engine-v2-26-racecraft.js',
+  './engine-v2-26-landmarks.js',
+  './engine-v2-26-feel.js',
+  './engine-v2-26-fixes.js',
+  './engine-v2-27-ai.js',
+  './engine-v2-27-fixes.js',
   './engine-v2-12.js',
   './workshop.js',
   './manifest.webmanifest',
@@ -113,7 +122,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({
+    event.ports?.[0].postMessage({
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
       releaseNotes: RELEASE_NOTES,

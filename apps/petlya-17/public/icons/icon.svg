@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1b2722"/><stop offset="1" stop-color="#070a08"/></linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#4a514c"/><stop offset="1" stop-color="#161b18"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <path d="M78 468 205 92h102l127 376Z" fill="url(#road)" stroke="#e7dcc0" stroke-width="12"/>
+  <path d="M244 92h24l36 376h-96Z" fill="#e05d31" opacity=".92"/>
+  <path d="M90 408h332M110 350h292M132 292h248M154 235h204" stroke="#d7c9a7" stroke-width="10" stroke-dasharray="22 18" opacity=".7"/>
+  <path d="M146 430c14-72 51-114 110-114s96 42 110 114l-49 49H195Z" fill="#0b100e" stroke="#e7dcc0" stroke-width="13"/>
+  <path d="M184 385h144l-18-44H202Z" fill="#184b43" stroke="#0b100e" stroke-width="10"/>
+  <path d="M244 320h24v142h-24Z" fill="#e05d31"/>
+  <circle cx="256" cy="408" r="52" fill="none" stroke="#6f766f" stroke-width="13"/>
+  <path d="M118 60h276" stroke="#e05d31" stroke-width="18"/>
+</svg>

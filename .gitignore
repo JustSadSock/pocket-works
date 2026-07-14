@@ -1,5 +1,6 @@
 node_modules/
 dist-site/
+/apps.json
 .vite/
 .dist/
 coverage/

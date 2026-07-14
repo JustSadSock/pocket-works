@@ -1,0 +1,159 @@
+.start-screen {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.start-screen::-webkit-scrollbar { display: none; }
+
+.rival-badge {
+  width: max-content;
+  max-width: 100%;
+  padding: 2px 5px;
+  border: 1px solid rgba(244, 239, 224, 0.48);
+  color: #f2bc38;
+  font: 900 0.52rem/1.15 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  opacity: 1 !important;
+  text-transform: uppercase;
+}
+
+.championship-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  width: 100%;
+  padding: 11px 0 10px;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid rgba(30, 33, 31, 0.45);
+}
+
+.championship-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  grid-column: 1 / -1;
+}
+
+.championship-heading b {
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  transform: skewX(-6deg);
+}
+
+.championship-heading span {
+  font: 900 0.62rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.09em;
+}
+
+.championship-card p {
+  align-self: center;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.championship-action {
+  min-width: 126px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-left: 5px solid var(--orange);
+  color: var(--paper-light);
+  background: var(--ink);
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.championship-action:active {
+  transform: translateY(2px);
+}
+
+.pilot-option {
+  position: relative;
+  color: var(--paper-light) !important;
+  background: var(--ink) !important;
+  box-shadow: inset 0 -3px 0 #f2bc38;
+  animation: pilot-reveal 360ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.pilot-option::before {
+  content: "◆";
+  margin-right: 4px;
+  color: #f2bc38;
+}
+
+@keyframes pilot-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.championship-finish {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  margin: 4px 0 14px;
+  border-top: 3px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+.championship-finish header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(30, 33, 31, 0.35);
+}
+
+.championship-finish header b {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.championship-finish header span {
+  font: 900 0.56rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.06em;
+}
+
+.championship-finish ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.championship-finish li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  min-height: 29px;
+  padding: 0 5px;
+  border-bottom: 1px solid rgba(30, 33, 31, 0.2);
+  font-size: 10px;
+}
+
+.championship-finish li:last-child { border-bottom: 0; }
+.championship-finish li.is-player { background: rgba(230, 94, 47, 0.13); }
+.championship-finish li.is-rival { box-shadow: inset 4px 0 0 #f2bc38; }
+.championship-finish li span,
+.championship-finish li strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.championship-finish li strong { font-size: 12px; }
+
+@media (max-height: 780px) {
+  .start-screen { gap: 9px; }
+  .track-mark { max-height: 118px; }
+  .subtitle { margin-top: 9px; font-size: 13px; }
+  .championship-card { padding-block: 8px; }
+  .championship-card p { font-size: 10px; }
+}
+
+@media (max-width: 380px) {
+  .championship-card { grid-template-columns: 1fr; }
+  .championship-action { width: 100%; }
+}
