@@ -2,7 +2,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 const workshop = createWorkshopMode({
   appName: 'ШПИЛЬКА',
-  version: '2.4.0',
+  version: '2.5.0',
   storageNamespace: 'pocket-works:shpilka',
   cachePrefix: 'shpilka-',
   onReset() {
