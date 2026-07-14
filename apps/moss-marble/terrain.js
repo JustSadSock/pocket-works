@@ -29,10 +29,7 @@ export function zonesAt(level, x, y) {
 export function zoneCenter(zone) {
   if (zone.shape === 'circle') return { x: zone.x, y: zone.y };
   if (zone.shape === 'poly' && Array.isArray(zone.points) && zone.points.length) {
-    return zone.points.reduce(
-      (sum, point) => ({ x: sum.x + point.x / zone.points.length, y: sum.y + point.y / zone.points.length }),
-      { x: 0, y: 0 }
-    );
+    return zone.points.reduce((sum, point) => ({ x: sum.x + point.x / zone.points.length, y: sum.y + point.y / zone.points.length }), { x: 0, y: 0 });
   }
   return { x: zone.x + zone.w * .5, y: zone.y + zone.h * .5 };
 }
@@ -84,10 +81,7 @@ export function hillPeakPoint(zone) {
   const sin = Math.sin(angle);
   const localX = clamp(Number(zone.peakOffsetX ?? 0), -.42, .42) * bounds.w * .5;
   const localY = clamp(Number(zone.peakOffsetY ?? 0), -.42, .42) * bounds.h * .5;
-  return {
-    x: center.x + localX * cos - localY * sin,
-    y: center.y + localX * sin + localY * cos
-  };
+  return { x: center.x + localX * cos - localY * sin, y: center.y + localX * sin + localY * cos };
 }
 
 export function rampHeightAt(zone, x, y) {
@@ -100,7 +94,6 @@ export function hillHeightAt(zone, x, y) {
   const base = Number(zone.baseZ ?? 0);
   const point = { x, y };
   if (!insideZone(point, zone)) return base;
-
   const bounds = zoneBounds(zone);
   const peak = hillPeakPoint(zone);
   const angle = Number(zone.axisAngle ?? 0);
@@ -115,19 +108,14 @@ export function hillHeightAt(zone, x, y) {
   const radiusX = Math.max(24, bounds.w * .48 * (localX >= 0 ? 1 + asymmetryX : 1 - asymmetryX));
   const radiusY = Math.max(24, bounds.h * .48 * (localY >= 0 ? 1 + asymmetryY : 1 - asymmetryY));
   const power = clamp(Number(zone.shapePower ?? 2), 1.25, 3.5);
-  const normalized = Math.pow(
-    Math.pow(Math.abs(localX) / radiusX, power) + Math.pow(Math.abs(localY) / radiusY, power),
-    1 / power
-  );
+  const normalized = Math.pow(Math.pow(Math.abs(localX) / radiusX, power) + Math.pow(Math.abs(localY) / radiusY, power), 1 / power);
   if (normalized >= 1.18) return base;
-
   const radialCrown = clamp(1 - normalized, 0, 1);
   const falloff = clamp(Number(zone.falloff ?? 1.65), .8, 3.2);
   const edgeSoftness = clamp(Number(zone.edgeSoftness ?? Math.min(bounds.w, bounds.h) * .24), 18, 90);
   const edge = clamp(distanceToZoneEdge(point, zone) / edgeSoftness, 0, 1);
   const edgeBlend = edge * edge * (3 - 2 * edge);
-  const crown = Math.pow(radialCrown, falloff) * edgeBlend;
-  return base + hillPeakHeight(zone) * crown;
+  return base + hillPeakHeight(zone) * Math.pow(radialCrown, falloff) * edgeBlend;
 }
 
 function slopeHeight(zone, x, y) {
@@ -135,6 +123,8 @@ function slopeHeight(zone, x, y) {
 }
 
 export function terrainHeightAt(level, x, y) {
+  const field = level?.course18?.field;
+  if (field?.heightAt) return field.heightAt(x, y);
   let height = Number(level?.baseZ ?? 0);
   const point = { x, y };
   for (const zone of level?.zones || []) {
@@ -149,15 +139,14 @@ export function terrainHeightAt(level, x, y) {
 }
 
 export function terrainGradientAt(level, x, y) {
+  const field = level?.course18?.field;
+  if (field?.gradientAt) return field.gradientAt(x, y);
   const point = { x, y };
   let gradient = { x: 0, y: 0 };
   for (const zone of level?.zones || []) {
     if (zoneKind(zone) !== 'slope' || !insideZone(point, zone)) continue;
     if (zone.ramp) {
-      gradient = {
-        x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1),
-        y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1)
-      };
+      gradient = { x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1), y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1) };
       continue;
     }
     const epsilon = 2.5;
@@ -170,6 +159,8 @@ export function terrainGradientAt(level, x, y) {
 }
 
 export function surfaceAt(level, x, y) {
+  const field = level?.course18?.field;
+  if (field?.surfaceAt) return field.surfaceAt(x, y);
   const point = { x, y };
   let surface = 'grass';
   for (const zone of level?.zones || []) {
@@ -185,11 +176,15 @@ export function surfaceAt(level, x, y) {
 }
 
 export function rampAt(level, x, y) {
+  const field = level?.course18?.field;
+  if (field?.rampAt) return field.rampAt(x, y);
   const point = { x, y };
   return (level?.zones || []).find((zone) => zoneKind(zone) === 'slope' && zone.ramp && insideZone(point, zone)) || null;
 }
 
 export function waterAt(level, x, y) {
+  const field = level?.course18?.field;
+  if (field?.surfaceAt) return field.surfaceAt(x, y) === 'water';
   const point = { x, y };
   let water = false;
   for (const zone of level?.zones || []) {
