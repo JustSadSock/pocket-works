@@ -6,7 +6,7 @@ installMobileRuntime();
 
 const workshop = createWorkshopMode({
   appName: 'УДЕЛ',
-  version: '2.5.1',
+  version: '2.6.0',
   storageNamespace: 'pocket-works:udel',
   cachePrefix: 'udel-',
   onReset: async () => {

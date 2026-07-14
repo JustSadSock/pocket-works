@@ -1,22 +1,18 @@
 const CACHE_PREFIX = 'udel-';
-const CACHE_NAME = 'udel-v2.5.1';
-const APP_VERSION = '2.5.1';
+const CACHE_NAME = 'udel-v2.6.0';
+const APP_VERSION = '2.6.0';
 const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [
-  'Карточка области стала ограниченным по высоте мобильным листом с одним внутренним скроллом и больше не выходит за границы экрана.',
-  'Главные показатели и сезонный доход видны сразу; культура, вера, крепость, постройки и управление убраны в понятные раскрывающиеся разделы.',
-  'Решения по области получили короткие названия, ясные последствия и отдельную стоимость без длинных повторяющихся описаний.',
-  'С карты убраны декоративные пиктограммы провинций, а верхняя панель и нижняя навигация переведены на спокойные текстовые подписи.',
-  'Добавлена диагностика, проверяющая, что открытый лист провинции целиком находится внутри текущего мобильного viewport.'
+  'Провинции открываются компактной панелью над навигацией, а карта остаётся видимой.',
+  'Сводка, решения и управление разделены на три короткие вкладки.',
+  'Верхняя панель, карта, навигация, технологии и армия получили более спокойную и компактную иерархию.'
 ];
+const numberedChunks = Array.from({ length: 10 }, (_, index) => `./chunks/game-${String(index + 1).padStart(2, '0')}.txt`);
+const laterChunks = ['11a', '11b', '11c', '11d', '12a', '12b', '12c', '13', '14', '15a', '15b'].map((name) => `./chunks/game-${name}.txt`);
+const styleParts = ['01', '02', '03', '04', '05', '06a', '06b', '06c', '07', '08a', '08b'].map((name) => `./styles/part-${name}.css`);
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './game-loader.js',
-  './chunks/game-01.txt', './chunks/game-02.txt', './chunks/game-03.txt', './chunks/game-04.txt', './chunks/game-05.txt',
-  './chunks/game-06.txt', './chunks/game-07.txt', './chunks/game-08.txt', './chunks/game-09.txt', './chunks/game-10.txt',
-  './chunks/game-11a.txt', './chunks/game-11b.txt', './chunks/game-11c.txt', './chunks/game-11d.txt',
-  './chunks/game-12a.txt', './chunks/game-12b.txt', './chunks/game-12c.txt', './chunks/game-13.txt', './chunks/game-14.txt',
-  './styles/part-01.css', './styles/part-02.css', './styles/part-03.css', './styles/part-04.css', './styles/part-05.css',
-  './styles/part-06a.css', './styles/part-06b.css', './styles/part-06c.css', './styles/part-07.css',
+  ...numberedChunks, ...laterChunks, ...styleParts,
   './app.config.json', './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js',
@@ -37,37 +33,27 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(caches.keys()
+    .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
+    .then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
-          return response;
-        })
-        .catch(() => caches.match('./'))
-    );
+    event.respondWith(fetch(event.request)
+      .then((response) => {
+        caches.open(CACHE_NAME).then((cache) => cache.put('./', response.clone()));
+        return response;
+      })
+      .catch(() => caches.match('./')));
     return;
   }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      if (!response || response.status !== 200 || response.type === 'opaque') return response;
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-      return response;
-    }))
-  );
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+    if (!response || response.status !== 200 || response.type === 'opaque') return response;
+    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+    return response;
+  })));
 });

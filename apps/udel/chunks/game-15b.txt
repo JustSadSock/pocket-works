@@ -1,0 +1,91 @@
+function d26AdministrationPane(province) {
+  if (province.owner !== 'player') return '<div class="province-pane"><p class="panel-note">Управление доступно только для земель вашего дома.</p></div>';
+  const governor = d2Member(province.governorId);
+  const lord = d2Member(province.lordId);
+  if (province.administration === 'vassal') {
+    return `<div class="province-pane administration-pane">
+      <div class="current-administrator"><span>Удельный правитель</span><b>${d26Esc(lord?.name || province.branch || 'Неизвестен')}</b><small>Автономия ${round(province.autonomy)}%</small></div>
+      <button class="command-row danger" data-admin-action="revoke" data-province-id="${province.id}" data-native-press ${state.actions <= 0 || state.authority < 15 ? 'disabled' : ''}><span><b>Вернуть область</b><small>Под прямую власть дома</small></span><em>15 власти</em></button>
+    </div>`;
+  }
+  const candidates = d2Adults().filter((member) => member.id !== state.ruler.id && !member.imprisoned).sort((a, b) => (b.loyalty + b.stewardship * 4) - (a.loyalty + a.stewardship * 4)).slice(0, 3);
+  return `<div class="province-pane administration-pane">
+    <div class="current-administrator"><span>Сейчас</span><b>${governor ? d26Esc(governor.name) : 'Прямая власть'}</b><small>${governor ? `Управление ${governor.stewardship} · верность ${round(governor.loyalty)}` : `Автономия ${round(province.autonomy)}%`}</small></div>
+    <div class="administrator-list">${candidates.map((member) => `<button class="administrator-row" data-admin-action="governor" data-province-id="${province.id}" data-member="${member.id}" data-native-press ${state.actions <= 0 || state.authority < 5 ? 'disabled' : ''}><span><b>${d26Esc(member.name)}</b><small>Управление ${member.stewardship} · верность ${round(member.loyalty)}</small></span><em>Назначить · 5 власти</em></button>`).join('')}</div>
+  </div>`;
+}
+
+function d26ProvincePane(province) {
+  if (d26ProvinceView === 'actions') return d26ActionsPane(province);
+  if (d26ProvinceView === 'administration') return d26AdministrationPane(province);
+  return d26SummaryPane(province);
+}
+
+renderProvinceDrawer = function renderProvinceDrawerD26(province) {
+  const drawer = app.querySelector('#drawer');
+  if (!drawer || !province) return;
+  const owner = ownerLabel(province.owner);
+  const tabs = [
+    ['summary', 'Сводка'],
+    ['actions', province.owner === 'player' ? 'Решения' : 'Поход'],
+    ['administration', 'Управление']
+  ];
+  drawer.innerHTML = `<section class="province-command-panel" aria-labelledby="province-panel-title">
+    <header>
+      <div><span>${d26Esc(owner)}</span><h3 id="province-panel-title">${d26Esc(province.name)}</h3></div>
+      <button class="panel-close" data-action="close-drawer" data-native-press>Закрыть</button>
+    </header>
+    <nav class="province-panel-tabs" aria-label="Разделы области">${tabs.map(([id, label]) => `<button class="${d26ProvinceView === id ? 'active' : ''}" data-province-view="${id}" data-native-press aria-pressed="${d26ProvinceView === id}">${label}</button>`).join('')}</nav>
+    <div class="province-panel-body">${d26ProvincePane(province)}</div>
+  </section>`;
+  drawer.classList.add('open', 'province-command-host');
+  drawer.setAttribute('role', 'region');
+  drawer.removeAttribute('aria-modal');
+  drawer.setAttribute('aria-labelledby', 'province-panel-title');
+  document.body.classList.remove('province-sheet-open');
+
+  drawer.querySelector('[data-action="close-drawer"]')?.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('[data-province-view]').forEach((button) => button.addEventListener('click', () => {
+    d26ProvinceView = button.dataset.provinceView || 'summary';
+    renderProvinceDrawer(province);
+    tone();
+  }));
+  drawer.querySelectorAll('[data-province-action]').forEach((button) => button.addEventListener('click', () => provinceAction(province, button.dataset.provinceAction, button.dataset.building)));
+  drawer.querySelectorAll('[data-admin-action]').forEach((button) => button.addEventListener('click', () => d2AdministrationAction(button.dataset.adminAction, button.dataset.provinceId, button.dataset.member)));
+  drawer.querySelectorAll('[data-campaign-target]').forEach((button) => button.addEventListener('click', () => d25StartCampaign(button.dataset.campaignTarget, state.campaignCommanderId)));
+  drawer.querySelectorAll('[data-tab="war"]').forEach((button) => button.addEventListener('click', () => { currentTab = 'war'; closeDrawer(); render(); }));
+};
+
+const d26CloseDrawerBase = closeDrawer;
+closeDrawer = function closeDrawerD26() {
+  d26ProvinceView = 'summary';
+  const drawer = app.querySelector('#drawer');
+  drawer?.classList.remove('province-command-host');
+  drawer?.removeAttribute('role');
+  drawer?.removeAttribute('aria-labelledby');
+  d26CloseDrawerBase();
+};
+
+const d26OpenGameMenuBase = openGameMenu;
+openGameMenu = function openGameMenuD26() {
+  d26OpenGameMenuBase();
+  document.querySelector('.game-menu .eyebrow')?.replaceChildren(document.createTextNode('ПАУЗА / УДЕЛ 2.6'));
+};
+
+const d26QualityBase = window.__udelQualitySnapshot;
+window.__udelQualitySnapshot = () => {
+  const base = d26QualityBase?.() || {};
+  const panel = document.querySelector('.province-command-panel');
+  const rect = panel?.getBoundingClientRect();
+  return {
+    ...base,
+    version: D26_VERSION,
+    provincePanel: panel ? {
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      left: Math.round(rect.left),
+      right: Math.round(rect.right),
+      contained: rect.top >= -1 && rect.bottom <= window.innerHeight + 1 && rect.left >= -1 && rect.right <= window.innerWidth + 1
+    } : null
+  };
+};

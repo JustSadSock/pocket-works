@@ -1,0 +1,112 @@
+/* UDEL 2.6 — map-first shell and compact province command panel */
+.topbar-26 {
+  padding: calc(8px + env(safe-area-inset-top)) 10px 0;
+  background: #15231f;
+  box-shadow: none;
+}
+.topbar-26 .topline { grid-template-columns: 58px minmax(0, 1fr) 58px; }
+.topbar-26 .back-link,
+.topbar-26 .menu-word {
+  width: auto;
+  min-width: 54px;
+  height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: rgba(242, 232, 212, .72);
+  font: 650 10px/1 system-ui, sans-serif;
+}
+.topbar-26 .title-stack strong { font-size: 14px; }
+.topbar-26 .title-stack small { font-size: 9px; }
+.realm-ticker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 6px;
+  border-top: 1px solid rgba(239, 229, 206, .09);
+}
+.realm-metric {
+  min-width: 0;
+  padding: 7px 6px 8px;
+  border-right: 1px solid rgba(239, 229, 206, .07);
+}
+.realm-metric:last-child { border-right: 0; }
+.realm-metric span,
+.realm-metric b,
+.realm-metric em { display: block; }
+.realm-metric span {
+  color: rgba(232, 222, 201, .46);
+  font: 650 7px/1 system-ui, sans-serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.realm-metric b { margin-top: 4px; font: 700 13px/1 system-ui, sans-serif; }
+.realm-metric em { margin-top: 3px; color: var(--muted); font: 650 8px/1 system-ui, sans-serif; }
+.realm-metric em.positive { color: #9dc9a4; }
+.realm-metric em.negative { color: #d98a7c; }
+
+.bottom-nav-26 {
+  min-height: 58px;
+  padding: 0 6px var(--safe-bottom);
+  background: #111d19;
+  box-shadow: none;
+}
+.bottom-nav-26 .nav-button { min-height: 52px; padding: 0 3px; }
+.bottom-nav-26 .nav-button span {
+  color: rgba(232, 222, 201, .48);
+  font: 650 10px/1 system-ui, sans-serif;
+  transform: none;
+}
+.bottom-nav-26 .nav-button.active span { color: #f2e8d4; }
+.bottom-nav-26 .nav-button.active::before { top: 0; left: 28%; width: 44%; height: 2px; }
+
+.map-head { padding: 10px 12px 8px; }
+.map-head h2 { font-size: 19px; }
+.map-head span { font-size: 10px; }
+.map-controls { border-color: rgba(239,229,206,.1); }
+.map-controls button { width: 38px; height: 38px; font-size: 18px; }
+.map-shell { margin: 0 6px; border-color: rgba(239,229,206,.09); box-shadow: none; }
+.map-scroll { height: min(64vh, 640px); }
+.map-legend { display: none; }
+.province-label-26 { pointer-events: auto; cursor: pointer; }
+.province-label-26 .province-name {
+  fill: rgba(246, 237, 217, .9);
+  paint-order: stroke fill;
+  stroke: rgba(13, 24, 20, .92);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  font: 700 11px/1 system-ui, sans-serif;
+}
+.end-turn {
+  min-height: 50px;
+  margin: 8px 6px 0;
+  width: calc(100% - 12px);
+  padding: 8px 12px;
+  border-color: rgba(211,173,104,.26);
+  background: rgba(211,173,104,.055);
+}
+.end-turn span { font-size: 13px; }
+.end-turn small { font-size: 9px; }
+
+.section { padding: 14px 10px 26px; }
+.section-title { margin-bottom: 12px; padding-bottom: 9px; }
+.section-title .eyebrow,
+.section-title > span { display: none; }
+.section-title h2 { margin: 0; font-size: 24px; }
+.subhead { margin: 16px 0 7px; font-size: 9px; letter-spacing: .09em; }
+.tech-icon,
+.army-glyph,
+.unit-row > span { display: none; }
+.tech-card { grid-template-columns: minmax(0, 1fr) auto; }
+.unit-row { grid-template-columns: minmax(0, 1fr) auto; }
+.dyn-character,
+.council-seat,
+.diplomacy-card,
+.d25-realm,
+.d25-peace-card,
+.tech-card,
+.law-card,
+.estate-card {
+  border-color: rgba(239,229,206,.09);
+  background: transparent;
+  box-shadow: none;
+}
