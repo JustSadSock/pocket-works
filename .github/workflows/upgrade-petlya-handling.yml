@@ -1,0 +1,55 @@
+name: Upgrade Petlya 17 handling
+
+on:
+  push:
+    branches: [agent/petlya-17-handling]
+    paths:
+      - ".github/workflows/upgrade-petlya-handling.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/petlya-17-handling
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply handling upgrade
+        run: node scripts/upgrade-petlya-handling.mjs
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Typecheck Petlya 17
+        run: npm --workspace apps/petlya-17 run typecheck
+
+      - name: Test Petlya 17
+        run: npm --workspace apps/petlya-17 test
+
+      - name: Build Petlya 17
+        run: npm --workspace apps/petlya-17 run build
+
+      - name: Regenerate launcher registry
+        run: node scripts/build-registry.mjs
+
+      - name: Remove one-shot files
+        run: git rm scripts/upgrade-petlya-handling.mjs .github/workflows/upgrade-petlya-handling.yml
+
+      - name: Commit upgrade
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/petlya-17 apps.json
+          git commit -m "Upgrade ПЕТЛЯ 17 handling and racecraft"
+          git push origin HEAD:agent/petlya-17-handling
