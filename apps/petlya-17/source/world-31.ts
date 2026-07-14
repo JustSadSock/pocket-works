@@ -7,7 +7,7 @@ import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { TrackModel } from './track-model';
-import { buildTrackWorld } from './world-track';
+import { buildFallbackTrackWorld, buildTrackWorld } from './world-track';
 import { VisualRig, type CarVisual, type CockpitMotion } from './world-visuals';
 
 export class RaceWorld {
@@ -75,9 +75,25 @@ export class RaceWorld {
   }
 
   build(): void {
-    buildTrackWorld(this.scene, this.track, this.shadows);
-    this.visuals.buildCockpit();
-    this.visuals.buildSpeedStreaks();
+    try {
+      buildTrackWorld(this.scene, this.track, this.shadows);
+    } catch (error) {
+      console.error('[ПЕТЛЯ 17] Сборка мира завершилась ошибкой; включён резервный контур.', error);
+      buildFallbackTrackWorld(this.scene, this.track);
+    }
+
+    try {
+      this.visuals.buildCockpit();
+    } catch (error) {
+      console.error('[ПЕТЛЯ 17] Кокпит не собран.', error);
+    }
+
+    try {
+      this.visuals.buildSpeedStreaks();
+    } catch (error) {
+      console.warn('[ПЕТЛЯ 17] Скоростные частицы отключены.', error);
+    }
+
     this.visuals.initializeCamera();
   }
 
