@@ -12,8 +12,7 @@ export function insideZone(point, zone) {
     for (let index = 0, previous = zone.points.length - 1; index < zone.points.length; previous = index++) {
       const a = zone.points[index];
       const b = zone.points[previous];
-      const crosses = ((a.y > point.y) !== (b.y > point.y)) &&
-        point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x;
+      const crosses = ((a.y > point.y) !== (b.y > point.y)) && point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x;
       if (crosses) inside = !inside;
     }
     return inside;
@@ -29,10 +28,7 @@ export function zonesAt(level, x, y) {
 export function zoneCenter(zone) {
   if (zone.shape === 'circle') return { x: zone.x, y: zone.y };
   if (zone.shape === 'poly' && Array.isArray(zone.points) && zone.points.length) {
-    return zone.points.reduce((sum, point) => ({
-      x: sum.x + point.x / zone.points.length,
-      y: sum.y + point.y / zone.points.length
-    }), { x: 0, y: 0 });
+    return zone.points.reduce((sum, point) => ({ x: sum.x + point.x / zone.points.length, y: sum.y + point.y / zone.points.length }), { x: 0, y: 0 });
   }
   return { x: zone.x + zone.w * .5, y: zone.y + zone.h * .5 };
 }
@@ -78,7 +74,7 @@ export function terrainHeightAt(level, x, y) {
     if (!insideZone(point, zone)) continue;
     const kind = zoneKind(zone);
     if (kind === 'bridge') height = Math.max(height, Number(zone.height ?? 10));
-    else if (kind === 'sand') height = Number(zone.baseZ ?? -6);
+    else if (kind === 'sand') height = Math.max(height, Number(zone.surfaceZ ?? .35));
     else if (kind === 'slope') height = Math.max(height, slopeHeight(zone, x, y));
     else if (kind === 'platform') height = Math.max(height, Number(zone.height ?? 0));
   }
@@ -91,10 +87,7 @@ export function terrainGradientAt(level, x, y) {
   for (const zone of level?.zones || []) {
     if (zoneKind(zone) !== 'slope' || !insideZone(point, zone)) continue;
     if (zone.ramp) {
-      gradient = {
-        x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1),
-        y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1)
-      };
+      gradient = { x: Number(zone.riseX ?? 0) / Math.max(1, zone.w || 1), y: Number(zone.riseY ?? 0) / Math.max(1, zone.h || 1) };
       continue;
     }
     const center = zoneCenter(zone);
@@ -108,10 +101,7 @@ export function terrainGradientAt(level, x, y) {
     }
     const crown = 1 - radiusSq;
     const peak = hillPeakHeight(zone);
-    gradient = {
-      x: -4 * peak * dx / (rx * rx) * crown,
-      y: -4 * peak * dy / (ry * ry) * crown
-    };
+    gradient = { x: -4 * peak * dx / (rx * rx) * crown, y: -4 * peak * dy / (ry * ry) * crown };
   }
   return gradient;
 }
