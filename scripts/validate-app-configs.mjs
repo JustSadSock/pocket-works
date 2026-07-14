@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { buildRegistryEntries, collectAppConfigs, formatRegistry, runtimeForConfig } from './app-config.mjs';
+import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -14,14 +14,6 @@ async function readJson(relativePath) {
 let configs = [];
 try { configs = await collectAppConfigs(root); }
 catch (error) { fail(error.message); }
-
-try {
-  const expected = formatRegistry(await buildRegistryEntries(root));
-  const actual = await readFile(path.join(root, 'apps.json'), 'utf8');
-  if (actual !== expected) fail('apps.json does not match generated app.config.json metadata');
-} catch (error) {
-  fail(`registry comparison failed: ${error.message}`);
-}
 
 for (const config of configs) {
   const directory = `apps/${config.slug}`;
@@ -84,4 +76,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Application config validation passed for ${configs.length} registered app${configs.length === 1 ? '' : 's'}.`);
+console.log(`Application config validation passed for ${configs.length} self-registered app${configs.length === 1 ? '' : 's'}.`);
