@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ПЕТЛЯ 17">
-  <meta name="pocket-works-build" content="3.0.0">
+  <meta name="pocket-works-build" content="3.1.0">
   <title>ПЕТЛЯ 17 — Pocket Works</title>
 </head>
 <body data-fullscreen-app>
@@ -42,7 +42,7 @@
 
     <section id="loading" class="screen loading" data-ui>
       <div class="loading-mark"><span></span><span></span><span></span></div>
-      <p>ПЕТЛЯ 17 / 3D ENGINE</p>
+      <p>ПЕТЛЯ 17 / HANDLING 3.1</p>
       <h1>СБОРКА КОКПИТА</h1>
       <div class="loading-track"><i id="loadingBar"></i></div>
       <small id="loadingText">Геометрия трассы</small>
@@ -53,7 +53,7 @@
       <div class="menu-copy">
         <p>ЗАКРЫТАЯ ЛИГА / СЕКТОР 17</p>
         <h1>ПЕТЛЯ<br><em>17</em></h1>
-        <div>Настоящая 3D-трасса. Камера внутри болида. Телефон — руль. Газ справа, тормоз слева.</div>
+        <div>Настоящая 3D-трасса и simcade-физика сцепления. Тормози до апекса, держи машину на пределе и не надейся, что соперники уступят линию.</div>
       </div>
       <div class="menu-rig">
         <div class="records"><span>ЛУЧШИЙ ФИНИШ<b id="bestFinish">—</b></span><span>ЛУЧШИЙ КРУГ<b id="bestLap">—</b></span></div>
@@ -66,7 +66,7 @@
       <div class="panel-head"><div><p>ТЕХНИЧЕСКИЙ ПЛАНШЕТ</p><h2>Настройки</h2></div><button id="closeSettings" class="square metal" type="button">×</button></div>
       <label class="setting"><span><b>Чувствительность наклона</b><small>Меньше градусов — резче руль</small></span><input id="sensitivity" type="range" min="10" max="35" value="21"><output id="sensitivityValue">21°</output></label>
       <div class="setting"><span><b>Звук двигателя</b><small>Двигатель, шины, ветер и контакты</small></span><button id="sound" class="toggle" type="button">ВКЛ</button></div>
-      <div class="setting"><span><b>Вибрация</b><small>Передачи, кербы, удары и покрытие</small></span><button id="haptics" class="toggle" type="button">ВКЛ</button></div>
+      <div class="setting"><span><b>Вибрация</b><small>Передачи, предел сцепления, удары и покрытие</small></span><button id="haptics" class="toggle" type="button">ВКЛ</button></div>
       <div class="setting"><span><b>Качество 3D</b><small>Автоматически снижается при просадке FPS</small></span><button id="quality" class="toggle" type="button">АВТО</button></div>
       <button class="metal wide" type="button" data-workshop-trigger>WORKSHOP MODE / ДИАГНОСТИКА</button>
       <button id="reset" class="metal wide danger" type="button">СБРОСИТЬ РЕКОРДЫ</button>
@@ -75,7 +75,7 @@
     <section id="pause" class="screen modal hidden" data-ui>
       <p>МАШИНА ЗАФИКСИРОВАНА</p>
       <h2>Пауза</h2>
-      <div class="copy">Гонка остановлена. Свет, частицы и соперники тоже замерли, как и положено нормальному движку.</div>
+      <div class="copy">Гонка остановлена. Сцепление, зеркала и соперники тоже замерли.</div>
       <div class="stack"><button id="resume" class="ignition compact" type="button"><b>ПРОДОЛЖИТЬ</b><small>В КОКПИТ</small></button><button id="restart" class="metal wide" type="button">ЗАНОВО</button><button id="quit" class="metal wide" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="metal wide link" href="../../" data-app-control>В POCKET WORKS</a></div>
     </section>
 
@@ -89,6 +89,6 @@
 
     <section class="rotate" data-ui><div></div><b>Поверни телефон горизонтально</b><span>Кокпит не обязан помещаться в вертикальную щель.</span><a href="../../" data-app-control>Вернуться в Pocket Works</a></section>
   </main>
-  <script type="module" src="./main.ts"></script>
+  <script type="module" src="./main-31.ts"></script>
 </body>
 </html>
