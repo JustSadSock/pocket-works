@@ -29,6 +29,7 @@ const APP_SHELL = [
   './runtime/app-07.txt',
   './runtime/app-08.txt',
   './runtime/app-09.txt',
+  './runtime/app-10.txt',
   './shell/part-01.html',
   './shell/part-02.html',
   './shell/part-03.html',
