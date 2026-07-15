@@ -2,7 +2,8 @@ const PARTS = [
   './runtime/core-01.txt',
   './runtime/core-02.txt',
   './runtime/core-03.txt',
-  './runtime/core-04.txt'
+  './runtime/core-04.txt',
+  './runtime/core-05.txt'
 ];
 
 async function readPart(path) {
@@ -31,6 +32,10 @@ export const WEATHER = module.WEATHER;
 export const DOCTRINES = module.DOCTRINES;
 export const UNIT_TYPES = module.UNIT_TYPES;
 export const UPGRADES = module.UPGRADES;
+export const FACTIONS = module.FACTIONS;
+export const COMMANDERS = module.COMMANDERS;
+export const OFFICERS = module.OFFICERS;
+export const MISSION_TYPES = module.MISSION_TYPES;
 export const seededRandom = module.seededRandom;
 export const hashSeed = module.hashSeed;
 export const clamp = module.clamp;
@@ -66,3 +71,13 @@ export const completeDefeat = module.completeDefeat;
 export const campaignRank = module.campaignRank;
 export const visibleEnemyIds = module.visibleEnemyIds;
 export const summarizeUnit = module.summarizeUnit;
+export const migrateCampaignContent = module.migrateCampaignContent;
+export const generateFrontChoices = module.generateFrontChoices;
+export const applyRouteToBattle = module.applyRouteToBattle;
+export const updateMissionProgress = module.updateMissionProgress;
+export const missionProgress = module.missionProgress;
+export const evaluateMissionState = module.evaluateMissionState;
+export const missionTimeoutOutcome = module.missionTimeoutOutcome;
+export const generateOfficerChoices = module.generateOfficerChoices;
+export const addOfficer = module.addOfficer;
+export const routeRewardSummary = module.routeRewardSummary;

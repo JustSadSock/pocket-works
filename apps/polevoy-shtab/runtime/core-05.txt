@@ -1,0 +1,332 @@
+export const FACTIONS = {
+  crown: {
+    name: 'Северная корона',
+    short: 'КОРОНА',
+    color: '#6d563c',
+    doctrine: 'Редуты, тяжёлая гвардия и медленное удушение фронта.',
+  },
+  ash: {
+    name: 'Пепельная конница',
+    short: 'ПЕПЕЛ',
+    color: '#8a4937',
+    doctrine: 'Кавалерийские обходы, высокий темп и удары по обозу.',
+  },
+  foundry: {
+    name: 'Чугунный союз',
+    short: 'ЧУГУН',
+    color: '#4f5450',
+    doctrine: 'Батареи, плотная линия и методичное истощение.',
+  },
+  veil: {
+    name: 'Серая лига',
+    short: 'ЛИГА',
+    color: '#52686a',
+    doctrine: 'Туман, разведка, ложные позиции и охота на слабые части.',
+  },
+};
+
+export const COMMANDERS = {
+  kord: { name: 'Кайя Корд', title: 'Железная вдова', faction: 'crown', trait: 'Перед боем вся армия получает укрепление.' },
+  varr: { name: 'Генрих Варр', title: 'Старый бастион', faction: 'crown', trait: 'Гвардия начинает бой с повышенной моралью.' },
+  tarek: { name: 'Тарек Аш', title: 'Красный всадник', faction: 'ash', trait: 'Кавалерия усилена и чаще появляется на поле.' },
+  mira: { name: 'Мира Сет', title: 'Пыльная лисица', faction: 'ash', trait: 'Передовые части развёрнуты ближе к штандартам.' },
+  holm: { name: 'Борис Холм', title: 'Первый молот', faction: 'foundry', trait: 'Батареи получают дополнительную выносливость.' },
+  selig: { name: 'Иво Селиг', title: 'Счётчик потерь', faction: 'foundry', trait: 'Вражеский строй труднее сломать.' },
+  lene: { name: 'Элиза Лен', title: 'Серая игла', faction: 'veil', trait: 'Бой почти всегда начинается в тумане.' },
+  vosk: { name: 'Марк Воск', title: 'Чужой голос', faction: 'veil', trait: 'Разведчики получают больше здоровья и морали.' },
+};
+
+export const OFFICERS = {
+  chief: { name: 'Лидия Морн', role: 'Начальник штаба', effect: '+1 очко приказов в каждом бою.', mark: '★' },
+  gunner: { name: 'Остап Ремез', role: 'Инспектор батарей', effect: 'Артиллерия получает здоровье и мораль.', mark: '✦' },
+  scout: { name: 'Марта Вельт', role: 'Глава разведки', effect: '+1 к радиусу обнаружения врага.', mark: '⌁' },
+  quartermaster: { name: 'Яков Рой', role: 'Квартирмейстер', effect: 'Все части начинают бой с дополнительным снабжением.', mark: '▣' },
+  surgeon: { name: 'Эмма Соль', role: 'Главный хирург', effect: '+1 к максимуму здоровья всех частей.', mark: '✚' },
+  banner: { name: 'Нора Вир', role: 'Хранитель знамени', effect: 'Армия начинает бой с повышенной моралью.', mark: '⚑' },
+  engineer: { name: 'Феликс Кран', role: 'Начальник сапёров', effect: 'Пехота начинает бой с укреплением.', mark: '⌂' },
+  rider: { name: 'Рада Чир', role: 'Кавалерийский офицер', effect: 'Кавалерия получает здоровье и мораль.', mark: '↟' },
+};
+
+export const MISSION_TYPES = {
+  control: { name: 'Захват рубежа', short: 'КОНТРОЛЬ', description: 'Наберите очки контроля, удерживая штандарты.', target: 8 },
+  hold: { name: 'Удержание позиции', short: 'ОБОРОНА', description: 'Удерживайте хотя бы один штандарт несколько раундов.', target: 5 },
+  breakthrough: { name: 'Прорыв', short: 'ПРОРЫВ', description: 'Проведите две свои части к правому краю карты.', target: 2 },
+  decapitation: { name: 'Обезглавливание', short: 'КОМАНДИР', description: 'Найдите и разгромите жетон вражеского командира.', target: 1 },
+  raid: { name: 'Рейд на обоз', short: 'РЕЙД', description: 'Уничтожьте отмеченные части снабжения противника.', target: 2 },
+};
+
+const ROUTE_ARCHETYPES = [
+  { title: 'Переправа под огнём', mission: 'breakthrough', threat: 2, reward: 'renown', note: 'Быстрый удар через узкий коридор.' },
+  { title: 'Курган трёх знамён', mission: 'hold', threat: 1, reward: 'intel', note: 'Позиция выгодная, но отходить некуда.' },
+  { title: 'Штаб на колёсах', mission: 'decapitation', threat: 3, reward: 'officer', note: 'Опасная охота за вражеским командованием.' },
+  { title: 'Склад у старого тракта', mission: 'raid', threat: 2, reward: 'requisition', note: 'Удар по обозу ослабит следующий фронт.' },
+  { title: 'Линия красных флажков', mission: 'control', threat: 1, reward: 'renown', note: 'Классический бой за два узла местности.' },
+  { title: 'Ночной марш', mission: 'breakthrough', threat: 3, reward: 'upgrade', note: 'Туман скрывает движение, но и врага тоже.' },
+  { title: 'Зубчатый редут', mission: 'hold', threat: 3, reward: 'upgrade', note: 'Редут выдержит многое. Вопрос — выдержите ли вы.' },
+  { title: 'Пыльный котёл', mission: 'control', threat: 2, reward: 'requisition', note: 'Обе армии уже втянуты в ближний бой.' },
+  { title: 'Молчаливая батарея', mission: 'raid', threat: 3, reward: 'officer', note: 'Сначала уничтожьте охранение, затем батареи.' },
+  { title: 'Охота на лиса', mission: 'decapitation', threat: 2, reward: 'intel', note: 'Командир противника меняет позицию под прикрытием.' },
+  { title: 'Белая просека', mission: 'control', threat: 2, reward: 'renown', note: 'Открытая местность и почти никакого укрытия.' },
+  { title: 'Последний мост', mission: 'hold', threat: 2, reward: 'requisition', note: 'Потеря моста обрушит всю линию снабжения.' },
+];
+
+function commanderIdsForFaction(faction) {
+  return Object.keys(COMMANDERS).filter((key) => COMMANDERS[key].faction === faction);
+}
+
+export function migrateCampaignContent(campaign, masteryLevel = 0) {
+  if (!campaign || typeof campaign !== 'object') return campaign;
+  campaign.contentVersion = 2;
+  campaign.resources = { intel: 0, requisition: 0, ...(campaign.resources || {}) };
+  campaign.officers = Array.isArray(campaign.officers) ? campaign.officers : [];
+  campaign.medals = Array.isArray(campaign.medals) ? campaign.medals : [];
+  campaign.routeChoices = Array.isArray(campaign.routeChoices) ? campaign.routeChoices : [];
+  campaign.currentRoute = campaign.currentRoute || null;
+  campaign.encounteredFactions = Array.isArray(campaign.encounteredFactions) ? campaign.encounteredFactions : [];
+  campaign.encounteredCommanders = Array.isArray(campaign.encounteredCommanders) ? campaign.encounteredCommanders : [];
+  campaign.nextBattleModifiers = { ...(campaign.nextBattleModifiers || {}) };
+  campaign.doctrineMastery = Number.isFinite(campaign.doctrineMastery) ? campaign.doctrineMastery : masteryLevel;
+  if (!campaign.officers.length) {
+    const starter = campaign.doctrine === 'fire' ? 'gunner' : campaign.doctrine === 'resolve' ? 'banner' : 'scout';
+    campaign.officers.push(starter);
+  }
+  return campaign;
+}
+
+export function generateFrontChoices(campaign) {
+  migrateCampaignContent(campaign);
+  const rng = seededRandom(hashSeed(campaign.seed, campaign.stage, campaign.victories, 'front-map-v2'));
+  const archetypes = [...ROUTE_ARCHETYPES];
+  const factionKeys = Object.keys(FACTIONS);
+  const choices = [];
+  while (choices.length < 3 && archetypes.length) {
+    const archetype = archetypes.splice(Math.floor(rng() * archetypes.length), 1)[0];
+    const faction = factionKeys[Math.floor(rng() * factionKeys.length)];
+    const commanders = commanderIdsForFaction(faction);
+    const commander = commanders[Math.floor(rng() * commanders.length)];
+    const threat = clamp(archetype.threat + Math.floor((campaign.stage - 1) / 7), 1, 4);
+    choices.push({
+      id: `${campaign.stage}-${choices.length}-${hashSeed(campaign.seed, archetype.title, faction)}`,
+      ...archetype,
+      faction,
+      commander,
+      threat,
+      rewardValue: archetype.reward === 'renown' ? 18 + campaign.stage * 2 : archetype.reward === 'requisition' ? 2 : 1,
+    });
+  }
+  campaign.routeChoices = choices;
+  return choices;
+}
+
+function setUnitType(unit, type, bonus = 0) {
+  const spec = UNIT_TYPES[type];
+  unit.type = type;
+  unit.maxHp = Math.max(unit.maxHp, spec.maxHp + bonus);
+  unit.hp = unit.maxHp;
+  unit.maxSupply = Math.max(unit.maxSupply, spec.maxSupply);
+  unit.supply = unit.maxSupply;
+}
+
+function applyFactionDoctrine(battle, route) {
+  const enemies = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed);
+  if (route.faction === 'crown') {
+    enemies.forEach((unit) => { unit.entrenched = Math.max(unit.entrenched, 1); });
+    const line = enemies.find((unit) => unit.type === 'line');
+    if (line) setUnitType(line, 'guard', route.threat - 1);
+  } else if (route.faction === 'ash') {
+    enemies.filter((unit) => unit.type === 'line').slice(0, 2).forEach((unit) => setUnitType(unit, 'cavalry', route.threat - 1));
+    enemies.forEach((unit) => { unit.morale = clamp(unit.morale + 7, 0, unit.maxMorale + 7); unit.maxMorale += 7; });
+  } else if (route.faction === 'foundry') {
+    const artillery = enemies.filter((unit) => unit.type === 'artillery');
+    if (!artillery.length && enemies.length) setUnitType(enemies[enemies.length - 1], 'artillery', route.threat);
+    enemies.filter((unit) => unit.type === 'artillery').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; unit.morale += 10; unit.maxMorale += 10; });
+  } else if (route.faction === 'veil') {
+    battle.weather = 'fog';
+    enemies.filter((unit) => unit.type === 'scout').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; unit.morale += 12; unit.maxMorale += 12; });
+  }
+}
+
+function applyCommanderDoctrine(battle, route) {
+  const commander = COMMANDERS[route.commander];
+  const enemies = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed);
+  const commanderUnit = enemies.find((unit) => unit.type === 'guard') || enemies[0];
+  if (commanderUnit) {
+    battle.commanderUnitId = commanderUnit.id;
+    commanderUnit.isCommander = true;
+    commanderUnit.maxHp += 2 + Math.floor(route.threat / 2);
+    commanderUnit.hp = commanderUnit.maxHp;
+    commanderUnit.maxMorale += 18;
+    commanderUnit.morale = commanderUnit.maxMorale;
+  }
+  if (route.commander === 'kord') enemies.forEach((unit) => { unit.entrenched = Math.max(1, unit.entrenched); });
+  if (route.commander === 'varr') enemies.filter((unit) => unit.type === 'guard').forEach((unit) => { unit.morale += 15; unit.maxMorale += 15; });
+  if (route.commander === 'tarek') enemies.filter((unit) => unit.type === 'cavalry').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; });
+  if (route.commander === 'mira') enemies.slice(0, 2).forEach((unit) => { if (unit.col > 4) unit.col -= 1; });
+  if (route.commander === 'holm') enemies.filter((unit) => unit.type === 'artillery').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; });
+  if (route.commander === 'selig') battle.enemyResolve = clamp(battle.enemyResolve + 16, 0, 150);
+  if (route.commander === 'lene') battle.weather = 'fog';
+  if (route.commander === 'vosk') enemies.filter((unit) => unit.type === 'scout').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; unit.morale += 10; unit.maxMorale += 10; });
+  battle.enemyCommander = { id: route.commander, ...commander };
+}
+
+function applyOfficerEffects(battle, campaign) {
+  const officers = new Set(campaign.officers || []);
+  const players = battle.units.filter((unit) => unit.side === 'player' && !unit.routed);
+  if (officers.has('chief')) {
+    battle.command += 1;
+    battle.maxCommand += 1;
+  }
+  if (officers.has('quartermaster')) players.forEach((unit) => { unit.maxSupply += 20; unit.supply += 20; });
+  if (officers.has('surgeon')) players.forEach((unit) => { unit.maxHp += 1; unit.hp += 1; });
+  if (officers.has('banner')) players.forEach((unit) => { unit.maxMorale += 12; unit.morale += 12; });
+  if (officers.has('engineer')) players.filter((unit) => unit.type === 'line' || unit.type === 'guard').forEach((unit) => { unit.entrenched = 1; });
+  if (officers.has('gunner')) players.filter((unit) => unit.type === 'artillery').forEach((unit) => { unit.maxHp += 2; unit.hp += 2; unit.maxMorale += 10; unit.morale += 10; });
+  if (officers.has('rider')) players.filter((unit) => unit.type === 'cavalry').forEach((unit) => { unit.maxHp += 1; unit.hp += 1; unit.maxMorale += 12; unit.morale += 12; });
+  if (officers.has('scout')) battle.revealRadiusBonus = 1;
+}
+
+function applyMasteryEffects(battle, campaign) {
+  const level = clamp(Math.floor((campaign.doctrineMastery || 0) / 3), 0, 3);
+  battle.masteryLevel = level;
+  if (!level) return;
+  const players = battle.units.filter((unit) => unit.side === 'player' && !unit.routed);
+  if (campaign.doctrine === 'maneuver') {
+    battle.command += level;
+    battle.maxCommand += level;
+  } else if (campaign.doctrine === 'fire') {
+    players.filter((unit) => unit.type === 'artillery' || unit.type === 'line').forEach((unit) => { unit.morale += level * 5; unit.maxMorale += level * 5; unit.supply += level * 6; });
+  } else if (campaign.doctrine === 'resolve') {
+    players.forEach((unit) => { unit.morale += level * 7; unit.maxMorale += level * 7; });
+    battle.playerResolve = clamp(battle.playerResolve + level * 5, 0, 120);
+  }
+}
+
+function applyNextBattleModifiers(battle, campaign) {
+  const modifiers = campaign.nextBattleModifiers || {};
+  const players = battle.units.filter((unit) => unit.side === 'player' && !unit.routed);
+  if (modifiers.command) { battle.command += modifiers.command; battle.maxCommand += modifiers.command; }
+  if (modifiers.morale) players.forEach((unit) => { unit.morale = clamp(unit.morale + modifiers.morale, 0, unit.maxMorale + Math.max(0, modifiers.morale)); if (modifiers.morale > 0) unit.maxMorale += modifiers.morale; });
+  if (modifiers.supply) players.forEach((unit) => { unit.supply = clamp(unit.supply + modifiers.supply, 0, unit.maxSupply); });
+  if (modifiers.health) players.forEach((unit) => { unit.maxHp += modifiers.health; unit.hp += modifiers.health; });
+  if (modifiers.turnLimit) battle.turnLimit = clamp(battle.turnLimit + modifiers.turnLimit, 7, 16);
+  if (modifiers.playerResolve) battle.playerResolve = clamp(battle.playerResolve + modifiers.playerResolve, 1, 120);
+  if (modifiers.enemyResolve) battle.enemyResolve = clamp(battle.enemyResolve + modifiers.enemyResolve, 20, 150);
+  if (modifiers.weather && WEATHER[modifiers.weather]) battle.weather = modifiers.weather;
+}
+
+export function applyRouteToBattle(battle, campaign, route) {
+  migrateCampaignContent(campaign);
+  const selected = route || campaign.currentRoute || generateFrontChoices(campaign)[0];
+  campaign.currentRoute = selected;
+  battle.route = { ...selected };
+  battle.faction = selected.faction;
+  battle.mission = {
+    type: selected.mission,
+    ...MISSION_TYPES[selected.mission],
+    progress: 0,
+    holdProgress: 0,
+    targetIds: [],
+  };
+  battle.turnLimit = clamp(battle.turnLimit + (selected.threat >= 3 ? -1 : 0), 8, 14);
+  battle.enemyResolve = clamp(battle.enemyResolve + (selected.threat - 1) * 8, 30, 150);
+  battle.units.filter((unit) => unit.side === 'enemy').forEach((unit) => {
+    const bonus = Math.max(0, selected.threat - 1);
+    unit.maxHp += bonus;
+    unit.hp += bonus;
+    unit.maxMorale += bonus * 4;
+    unit.morale += bonus * 4;
+  });
+  applyFactionDoctrine(battle, selected);
+  applyCommanderDoctrine(battle, selected);
+
+  if (selected.mission === 'control') battle.mission.target = 7 + Math.min(2, selected.threat - 1);
+  if (selected.mission === 'hold') {
+    battle.mission.target = 4 + Math.min(2, selected.threat - 1);
+    battle.objectives[0].owner = 'player';
+  }
+  if (selected.mission === 'breakthrough') battle.mission.target = selected.threat >= 3 ? 3 : 2;
+  if (selected.mission === 'decapitation') battle.mission.targetIds = battle.commanderUnitId ? [battle.commanderUnitId] : [];
+  if (selected.mission === 'raid') {
+    const candidates = battle.units.filter((unit) => unit.side === 'enemy' && unit.id !== battle.commanderUnitId).slice(-3);
+    battle.mission.targetIds = candidates.slice(0, 2).map((unit) => unit.id);
+    battle.mission.targetIds.forEach((id) => { const unit = battle.units.find((candidate) => candidate.id === id); if (unit) unit.isSupplyTarget = true; });
+  }
+
+  applyOfficerEffects(battle, campaign);
+  applyMasteryEffects(battle, campaign);
+  applyNextBattleModifiers(battle, campaign);
+  battle.log.push(`${MISSION_TYPES[selected.mission].name}. Противник: ${FACTIONS[selected.faction].name}.`);
+  return battle;
+}
+
+export function updateMissionProgress(battle) {
+  if (!battle?.mission) return 0;
+  const mission = battle.mission;
+  if (mission.type === 'control') mission.progress = battle.playerObjective;
+  if (mission.type === 'hold') {
+    const owned = battle.objectives.some((objective) => objective.owner === 'player');
+    if (owned) mission.holdProgress = (mission.holdProgress || 0) + 1;
+    else mission.holdProgress = Math.max(0, (mission.holdProgress || 0) - 1);
+    mission.progress = mission.holdProgress;
+  }
+  if (mission.type === 'breakthrough') mission.progress = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0 && unit.col >= COLS - 1).length;
+  if (mission.type === 'decapitation') {
+    const commander = battle.units.find((unit) => unit.id === battle.commanderUnitId);
+    mission.progress = !commander || commander.routed || commander.hp <= 0 ? 1 : 0;
+  }
+  if (mission.type === 'raid') mission.progress = (mission.targetIds || []).filter((id) => {
+    const target = battle.units.find((unit) => unit.id === id);
+    return !target || target.routed || target.hp <= 0;
+  }).length;
+  return mission.progress;
+}
+
+export function missionProgress(battle) {
+  if (!battle?.mission) return { value: battle?.playerObjective || 0, target: OBJECTIVE_TARGET, label: 'Контроль' };
+  updateMissionProgress(battle);
+  const mission = battle.mission;
+  return { value: mission.progress || 0, target: mission.target || 1, label: mission.short, name: mission.name, description: mission.description };
+}
+
+export function evaluateMissionState(battle) {
+  if (!battle?.mission) return null;
+  updateMissionProgress(battle);
+  return battle.mission.progress >= battle.mission.target ? 'victory' : null;
+}
+
+export function missionTimeoutOutcome(battle, playerAlive, enemyAlive) {
+  if (!battle?.mission || battle.mission.type === 'control') {
+    const playerValue = battle.playerObjective * 8 + battle.playerResolve + playerAlive * 4;
+    const enemyValue = battle.enemyObjective * 8 + battle.enemyResolve + enemyAlive * 4;
+    return playerValue >= enemyValue ? 'victory' : 'defeat';
+  }
+  updateMissionProgress(battle);
+  return battle.mission.progress >= battle.mission.target ? 'victory' : 'defeat';
+}
+
+export function generateOfficerChoices(campaign, count = 3) {
+  migrateCampaignContent(campaign);
+  const owned = new Set(campaign.officers || []);
+  const pool = Object.keys(OFFICERS).filter((id) => !owned.has(id));
+  const rng = seededRandom(hashSeed(campaign.seed, campaign.stage, campaign.victories, 'officer-draft'));
+  const choices = [];
+  while (pool.length && choices.length < count) choices.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  return choices;
+}
+
+export function addOfficer(campaign, officerId) {
+  migrateCampaignContent(campaign);
+  if (!OFFICERS[officerId] || campaign.officers.includes(officerId)) return false;
+  campaign.officers.push(officerId);
+  return true;
+}
+
+export function routeRewardSummary(route) {
+  if (!route) return 'Обычная награда';
+  if (route.reward === 'renown') return `+${route.rewardValue} славы`;
+  if (route.reward === 'requisition') return `+${route.rewardValue} реквизиции`;
+  if (route.reward === 'intel') return '+1 разведданные';
+  if (route.reward === 'officer') return 'Шанс нанять офицера';
+  if (route.reward === 'upgrade') return 'Усиленный выбор опыта';
+  return 'Неизвестная награда';
+}

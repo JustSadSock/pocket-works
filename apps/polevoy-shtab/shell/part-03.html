@@ -1,0 +1,74 @@
+
+    <button class="mission-chip" id="missionChip" type="button" data-native-press hidden>
+      <span id="missionChipLabel">КОНТРОЛЬ</span>
+      <strong><b id="missionChipValue">0</b>/<b id="missionChipTarget">8</b></strong>
+      <i><b id="missionChipFill"></b></i>
+    </button>
+
+    <section class="screen route-screen" id="routeScreen" data-ui aria-labelledby="routeTitle">
+      <div class="front-folder">
+        <header class="front-header">
+          <div><span>ОПЕРАТИВНОЕ НАПРАВЛЕНИЕ</span><h2 id="routeTitle">Выберите следующий рубеж</h2></div>
+          <div class="sector-seal"><span>БОЙ</span><strong id="routeStage">1</strong></div>
+        </header>
+        <p class="front-copy">Маршрут определяет не только сложность, но и цель боя, противника и награду. Лёгкой дороги тут, сюрприз, нет.</p>
+        <div class="front-path" id="routeList" aria-label="Доступные направления"></div>
+        <div class="front-legend">
+          <span><i class="risk-one"></i> обычный риск</span>
+          <span><i class="risk-three"></i> тяжёлый риск</span>
+          <span>Маршрут сохраняется сразу после выбора</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen event-screen" id="eventScreen" data-ui aria-labelledby="eventTitle">
+      <div class="event-dispatch">
+        <span class="classified">ДОНЕСЕНИЕ МЕЖДУ БОЯМИ</span>
+        <div class="event-mark" id="eventMark">!</div>
+        <h2 id="eventTitle">Сломанный мост</h2>
+        <p id="eventCopy">Передовые части докладывают о проблеме на маршруте.</p>
+        <div class="event-consequence" id="eventConsequence">Решение изменит следующий бой.</div>
+        <div class="event-choices" id="eventChoices"></div>
+      </div>
+    </section>
+
+    <section class="screen officer-screen" id="officerScreen" data-ui aria-labelledby="officerTitle">
+      <div class="officer-folder">
+        <span class="classified">ПОПОЛНЕНИЕ ПОЛЕВОГО ШТАБА</span>
+        <h2 id="officerTitle">Выберите офицера</h2>
+        <p>Офицер остаётся до конца кампании и постоянно меняет стартовые условия боёв.</p>
+        <div class="officer-list" id="officerList"></div>
+      </div>
+    </section>
+
+    <section class="screen dossier-screen" id="dossierScreen" data-ui aria-labelledby="dossierTitle">
+      <div class="dossier-folder">
+        <header class="panel-header">
+          <div><span>ЛИЧНОЕ ДЕЛО КОМАНДУЮЩЕГО</span><h2 id="dossierTitle">Штабной архив</h2></div>
+          <button class="metal-button" id="closeDossierButton" type="button" data-native-press>×</button>
+        </header>
+        <div class="dossier-summary">
+          <div><span>СЛАВА</span><strong id="dossierRenown">0</strong></div>
+          <div><span>РАЗВЕДДАННЫЕ</span><strong id="dossierIntel">0</strong></div>
+          <div><span>РЕКВИЗИЦИЯ</span><strong id="dossierRequisition">0</strong></div>
+          <div><span>ПОБЕДЫ</span><strong id="dossierVictories">0</strong></div>
+        </div>
+        <section class="dossier-section">
+          <header><span>ОФИЦЕРЫ</span><small>Постоянные бонусы текущей кампании</small></header>
+          <div class="dossier-officers" id="dossierOfficers"></div>
+        </section>
+        <section class="dossier-section">
+          <header><span>МЕДАЛИ</span><small>Сохраняются между кампаниями</small></header>
+          <div class="medal-grid" id="medalGrid"></div>
+        </section>
+        <section class="dossier-section">
+          <header><span>МАСТЕРСТВО ДОКТРИН</span><small>Каждые три победы усиливают выбранный стиль</small></header>
+          <div class="mastery-list" id="masteryList"></div>
+        </section>
+        <section class="dossier-section">
+          <header><span>ИЗВЕСТНЫЕ ПРОТИВНИКИ</span><small>Фракции и командиры, встреченные в походе</small></header>
+          <div class="enemy-codex" id="enemyCodex"></div>
+        </section>
+      </div>
+    </section>
+  

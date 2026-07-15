@@ -1,6 +1,6 @@
 installMobileRuntime();
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const SAVE_KEY = 'pocket-works:polevoy-shtab:campaign';
 const SETTINGS_KEY = 'pocket-works:polevoy-shtab:settings';
 const PROFILE_KEY = 'pocket-works:polevoy-shtab:profile';

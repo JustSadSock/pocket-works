@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'polevoy-shtab-';
-const CACHE_NAME = 'polevoy-shtab-v1.0.0-p2';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'polevoy-shtab-v1.1.0-p3';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-15';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Добавлена бесконечная процедурная кампания с растущей сложностью, тремя доктринами и десятью постоянными улучшениями штаба.',
-  'Реализованы тактические бои на тканевой карте: пять типов войск, рельеф, снабжение, мораль, укрепления, разведка и контроль штандартов.',
-  'Игра сохраняет активный поход, работает офлайн и поддерживает звук, вибрацию, reduced motion, Workshop Mode и возврат в Pocket Works.'
+  'Кампания получила карту фронта с тремя маршрутами, пятью типами миссий, риском, наградами и расходуемыми разведданными и реквизицией.',
+  'Добавлены четыре вражеские фракции, восемь командиров с собственными особенностями, десять межбоевых событий и восемь офицеров штаба.',
+  'Появились постоянные медали, мастерство доктрин, штабной архив и совместимое продолжение кампаний версии 1.0.0.'
 ];
 const APP_SHELL = [
   './',
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './runtime/core-02.txt',
   './runtime/core-03.txt',
   './runtime/core-04.txt',
+  './runtime/core-05.txt',
   './runtime/app-01.txt',
   './runtime/app-02.txt',
   './runtime/app-03.txt',
@@ -26,11 +27,16 @@ const APP_SHELL = [
   './runtime/app-05.txt',
   './runtime/app-06.txt',
   './runtime/app-07.txt',
+  './runtime/app-08.txt',
+  './runtime/app-09.txt',
+  './runtime/app-10.txt',
   './shell/part-01.html',
   './shell/part-02.html',
+  './shell/part-03.html',
   './styles/part-01.css',
   './styles/part-02.css',
   './styles/part-03.css',
+  './styles/part-04.css',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

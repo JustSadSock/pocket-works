@@ -3,14 +3,14 @@
   "slug": "polevoy-shtab",
   "name": "ПОЛЕВОЙ ШТАБ",
   "shortName": "ШТАБ",
-  "description": "Бесконечная процедурная стратегия о полевом командовании: отдавай приказы, используй рельеф, снабжение, мораль и доктрины.",
-  "version": "1.0.0",
+  "description": "Бесконечная процедурная стратегия о полевом командовании: выбирай фронт, выполняй разные миссии, собирай офицеров и развивай штаб.",
+  "version": "1.1.0",
   "releaseDate": "2026-07-15",
-  "releaseDateTime": "2026-07-15T22:10:00+02:00",
+  "releaseDateTime": "2026-07-15T23:42:00+02:00",
   "changelog": [
-    "Добавлена бесконечная процедурная кампания с растущей сложностью, тремя доктринами и десятью постоянными улучшениями штаба.",
-    "Реализованы тактические бои на тканевой карте: пять типов войск, рельеф, снабжение, мораль, укрепления, разведка и контроль штандартов.",
-    "Игра сохраняет активный поход, работает офлайн и поддерживает звук, вибрацию, reduced motion, Workshop Mode и возврат в Pocket Works."
+    "Кампания получила карту фронта с тремя маршрутами, пятью типами миссий, риском, наградами и расходуемыми разведданными и реквизицией.",
+    "Добавлены четыре вражеские фракции, восемь командиров с собственными особенностями, десять межбоевых событий и восемь офицеров штаба.",
+    "Появились постоянные медали, мастерство доктрин, штабной архив и совместимое продолжение кампаний версии 1.0.0."
   ],
   "status": "active",
   "preset": "canvas",
@@ -19,8 +19,8 @@
   "backgroundColor": "#18231e",
   "themeColor": "#28372f",
   "orientation": "portrait",
-  "cacheName": "polevoy-shtab-v1.0.0-p2",
+  "cacheName": "polevoy-shtab-v1.1.0-p3",
   "storageNamespace": "pocket-works:polevoy-shtab",
-  "tags": ["PWA", "offline", "game", "strategy", "tactics", "commander", "procedural", "campaign", "canvas", "AI", "audio", "haptics", "resume", "workshop"],
+  "tags": ["PWA", "offline", "game", "strategy", "tactics", "commander", "procedural", "campaign", "missions", "officers", "factions", "events", "metaprogression", "canvas", "AI", "audio", "haptics", "resume", "workshop"],
   "order": 89
 }

@@ -21,6 +21,7 @@ export function executeEnemyAction(battle, campaign, action) {
 
 export function finishRound(battle, campaign) {
   captureObjectives(battle);
+  updateMissionProgress(battle);
   upkeepUnits(battle, campaign);
   battle.turn += 1;
   battle.phase = 'player';
@@ -35,12 +36,15 @@ export function finishRound(battle, campaign) {
 export function evaluateBattle(battle) {
   const playerAlive = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0).length;
   const enemyAlive = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0).length;
-  if (enemyAlive === 0 || battle.enemyResolve <= 0 || battle.playerObjective >= OBJECTIVE_TARGET) return 'victory';
+  if (enemyAlive === 0 || battle.enemyResolve <= 0) return 'victory';
   if (playerAlive === 0 || battle.playerResolve <= 0) return 'defeat';
+  const missionResult = battle.mission?.type === 'hold'
+    ? ((battle.mission.holdProgress || 0) >= (battle.mission.target || 1) ? 'victory' : null)
+    : evaluateMissionState(battle);
+  if (missionResult) return missionResult;
   if (battle.turn > battle.turnLimit) {
-    const playerValue = battle.playerObjective * 8 + battle.playerResolve + playerAlive * 4;
-    const enemyValue = battle.enemyObjective * 8 + battle.enemyResolve + enemyAlive * 4;
-    return playerValue >= enemyValue ? 'victory' : 'defeat';
+    if (battle.mission?.type === 'hold') return (battle.mission.holdProgress || 0) >= (battle.mission.target || 1) ? 'victory' : 'defeat';
+    return missionTimeoutOutcome(battle, playerAlive, enemyAlive);
   }
   return null;
 }
@@ -58,11 +62,21 @@ export function getUpgradeChoices(campaign, count = 3) {
 
 export function completeVictory(campaign, battle, upgradeKey = null) {
   const surviving = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0).length;
-  const reward = 80 + campaign.stage * 25 + battle.playerResolve + surviving * 18 + battle.playerObjective * 6;
+  const routeBonus = Math.max(0, (battle.route?.threat || 1) - 1) * 22;
+  const reward = 80 + campaign.stage * 25 + battle.playerResolve + surviving * 18 + battle.playerObjective * 6 + routeBonus;
   campaign.victories += 1;
   campaign.renown += Math.round(reward / 10);
   campaign.score += Math.round(reward);
-  campaign.history.push({ stage: campaign.stage, result: 'victory', turn: battle.turn, reward: Math.round(reward), weather: battle.weather });
+  campaign.history.push({
+    stage: campaign.stage,
+    result: 'victory',
+    turn: battle.turn,
+    reward: Math.round(reward),
+    weather: battle.weather,
+    mission: battle.mission?.type || 'control',
+    faction: battle.faction || null,
+    commander: battle.enemyCommander?.id || null,
+  });
   if (upgradeKey && UPGRADES[upgradeKey]) campaign.upgrades[upgradeKey] = (campaign.upgrades[upgradeKey] || 0) + 1;
   campaign.stage += 1;
   return reward;
@@ -71,7 +85,16 @@ export function completeVictory(campaign, battle, upgradeKey = null) {
 export function completeDefeat(campaign, battle) {
   const reward = campaign.stage * 20 + battle.playerObjective * 5;
   campaign.score += reward;
-  campaign.history.push({ stage: campaign.stage, result: 'defeat', turn: battle.turn, reward, weather: battle.weather });
+  campaign.history.push({
+    stage: campaign.stage,
+    result: 'defeat',
+    turn: battle.turn,
+    reward,
+    weather: battle.weather,
+    mission: battle.mission?.type || 'control',
+    faction: battle.faction || null,
+    commander: battle.enemyCommander?.id || null,
+  });
   return reward;
 }
 
@@ -88,7 +111,7 @@ export function visibleEnemyIds(battle) {
   const scouts = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0);
   for (const enemy of battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0)) {
     for (const unit of scouts) {
-      let sight = UNIT_TYPES[unit.type].sight;
+      let sight = UNIT_TYPES[unit.type].sight + (battle.revealRadiusBonus || 0);
       if (battle.weather === 'fog') sight = Math.max(2, sight - 1);
       if (manhattan(unit, enemy) <= sight) {
         visible.add(enemy.id);

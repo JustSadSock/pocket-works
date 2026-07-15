@@ -1,0 +1,95 @@
+function safeMissionSnapshot() {
+  if (!battle?.mission) return { value: battle?.playerObjective || 0, target: 8, label: 'КОНТРОЛЬ', name: 'Захват рубежа', description: 'Удерживайте штандарты.' };
+  const mission = battle.mission;
+  let value = mission.progress || 0;
+  if (mission.type === 'control') value = battle.playerObjective;
+  else if (mission.type === 'hold') value = mission.holdProgress || 0;
+  else if (mission.type === 'breakthrough') value = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0 && unit.col >= COLS - 1).length;
+  else if (mission.type === 'decapitation') {
+    const commander = battle.units.find((unit) => unit.id === battle.commanderUnitId);
+    value = !commander || commander.routed || commander.hp <= 0 ? 1 : 0;
+  } else if (mission.type === 'raid') {
+    value = (mission.targetIds || []).filter((id) => {
+      const target = battle.units.find((unit) => unit.id === id);
+      return !target || target.routed || target.hp <= 0;
+    }).length;
+  }
+  mission.progress = value;
+  return {
+    value,
+    target: mission.target || 1,
+    label: mission.short || 'МИССИЯ',
+    name: mission.name || 'Боевая задача',
+    description: mission.description || '',
+  };
+}
+
+renderMissionChip = function safeRenderMissionChip() {
+  if (!battle?.mission || !['playing', 'enemy', 'pause'].includes(mode)) {
+    exp.missionChip.hidden = true;
+    return;
+  }
+  const progress = safeMissionSnapshot();
+  exp.missionChip.hidden = false;
+  exp.missionChipLabel.textContent = progress.label;
+  exp.missionChipValue.textContent = progress.value;
+  exp.missionChipTarget.textContent = progress.target;
+  exp.missionChipFill.style.width = `${clamp(progress.value / Math.max(1, progress.target) * 100, 0, 100)}%`;
+  exp.missionChip.dataset.complete = String(progress.value >= progress.target);
+};
+
+exp.missionChip.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const progress = safeMissionSnapshot();
+  toast(`${progress.name}: ${progress.value}/${progress.target}. ${progress.description}`);
+}, { capture: true });
+
+document.querySelector('#routeRerollButton').addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (campaign.resources.requisition < 1) return;
+  campaign.resources.requisition -= 1;
+  campaign.routeSalt = (campaign.routeSalt || 0) + 1;
+  const shadow = {
+    ...campaign,
+    seed: hashSeed(campaign.seed, campaign.routeSalt, 'requisition-reroll'),
+    routeChoices: [],
+  };
+  campaign.routeChoices = generateFrontChoices(shadow).map((route, index) => ({
+    ...route,
+    id: `${campaign.stage}-r${campaign.routeSalt}-${index}-${hashSeed(route.id, campaign.seed)}`,
+  }));
+  persist();
+  renderRouteChoices();
+  sound('paper');
+  haptic(12);
+}, { capture: true });
+
+const continueButtonClone = dom.continueButton.cloneNode(true);
+dom.continueButton.replaceWith(continueButtonClone);
+dom.continueButton = continueButtonClone;
+dom.continueButton.addEventListener('click', continueExpandedCampaign);
+refreshMenu();
+
+const baseDrawUnitToken = drawUnitToken;
+drawUnitToken = function drawMissionMarkedToken(ctx, unit, x, y, now, scale = 1) {
+  baseDrawUnitToken(ctx, unit, x, y, now, scale);
+  if (!unit.isCommander && !unit.isSupplyTarget) return;
+  const size = layout.tile * .62 * scale;
+  ctx.save();
+  ctx.translate(x + size * .43, y - size * .43);
+  ctx.fillStyle = unit.isCommander ? '#d7b75d' : '#d4c99e';
+  ctx.strokeStyle = unit.isCommander ? '#5c3427' : '#35453b';
+  ctx.lineWidth = Math.max(1.2, layout.tile * .025);
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(7, layout.tile * .13), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = unit.isCommander ? '#5c3427' : '#35453b';
+  ctx.font = `900 ${Math.max(8, layout.tile * .15)}px Georgia`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(unit.isCommander ? '★' : '▣', 0, .5);
+  ctx.restore();
+};
