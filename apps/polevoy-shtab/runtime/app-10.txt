@@ -65,3 +65,9 @@ document.querySelector('#routeRerollButton').addEventListener('click', (event) =
   sound('paper');
   haptic(12);
 }, { capture: true });
+
+const continueButtonClone = dom.continueButton.cloneNode(true);
+dom.continueButton.replaceWith(continueButtonClone);
+dom.continueButton = continueButtonClone;
+dom.continueButton.addEventListener('click', continueExpandedCampaign);
+refreshMenu();
