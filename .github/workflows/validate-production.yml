@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/deploy-netlify-once.yml"
+      - ".github/workflows/validate-production.yml"
       - "apps/**"
       - "*.html"
       - "*.js"
       - "*.css"
       - "manifest.webmanifest"
-      - "netlify.toml"
+      - "wrangler.jsonc"
       - "package.json"
       - "scripts/**"
       - "shared/**"

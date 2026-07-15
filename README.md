@@ -14,7 +14,7 @@ Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of
 - Worker config: [`wrangler.jsonc`](./wrangler.jsonc)
 - Hosting details: [`docs/HOSTING.md`](./docs/HOSTING.md)
 
-Every squash merge into `main` triggers a Cloudflare production build. Netlify is retained only as a legacy fallback and must not be treated as the production source of truth or as a required merge check.
+Every squash merge into `main` triggers a Cloudflare production build. The resulting Cloudflare deployment is the only production source of truth.
 
 ## Personal application shelf
 
@@ -77,7 +77,6 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 /
 ├── package.json
 ├── wrangler.jsonc
-├── netlify.toml          # legacy fallback only
 ├── playwright.config.ts
 ├── lighthouserc.json
 ├── tests/e2e/

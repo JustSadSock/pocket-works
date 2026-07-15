@@ -8,19 +8,20 @@ async function read(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
-const [packageSource, netlifyConfig, workflow] = await Promise.all([
+const [packageSource, wranglerSource, workflow] = await Promise.all([
   read('package.json'),
-  read('netlify.toml'),
-  read('.github/workflows/deploy-netlify-once.yml')
+  read('wrangler.jsonc'),
+  read('.github/workflows/validate-production.yml')
 ]);
 
 const packageJson = JSON.parse(packageSource);
+const wrangler = JSON.parse(wranglerSource);
 const scripts = packageJson.scripts || {};
 const deployCommand = 'npm run prepare:site && npm run validate:site';
 const fullCiCommand = 'npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
 if (scripts['deploy:site'] !== deployCommand) {
-  errors.push(`package.json deploy:site must remain the fast production path: ${deployCommand}`);
+  errors.push(`package.json deploy:site must remain the fast Cloudflare production path: ${deployCommand}`);
 }
 
 if (scripts['ci:full'] !== fullCiCommand) {
@@ -37,8 +38,16 @@ for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'val
   }
 }
 
-if (!/command\s*=\s*"[^"]*npm run deploy:site"/.test(netlifyConfig)) {
-  errors.push('netlify.toml build command must end by running npm run deploy:site');
+if (wrangler.name !== 'pocket-works') {
+  errors.push('wrangler.jsonc must deploy the pocket-works Worker');
+}
+
+if (wrangler.assets?.directory !== './dist-site') {
+  errors.push('wrangler.jsonc assets.directory must remain ./dist-site');
+}
+
+if (!/^\d{4}-\d{2}-\d{2}$/.test(wrangler.compatibility_date || '')) {
+  errors.push('wrangler.jsonc must define an explicit compatibility_date');
 }
 
 if (!workflow.includes('npm run ci:full')) {
@@ -59,4 +68,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Deployment pipeline separation is valid: the registry is generated in dist-site, Netlify is fast, and GitHub CI is exhaustive.');
+console.log('Deployment pipeline separation is valid: Cloudflare packages dist-site and GitHub CI owns exhaustive validation.');

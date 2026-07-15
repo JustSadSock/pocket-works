@@ -1,116 +1,87 @@
-# Pocket Works — Phase 0 baseline
+# Pocket Works — platform baseline
 
-Captured: 2026-07-12
+Captured: 2026-07-15
 
-This document records the first stable reference point before platform-level refactors.
+This document records the current stable platform contract for later application and infrastructure work.
 
 ## Production
 
-- Launcher: https://pocket-works.netlify.app/
-- Reference app: https://pocket-works.netlify.app/apps/screen-lab/
-- Netlify project: `pocket-works`
+- Host: Cloudflare Workers Builds
+- Worker: `pocket-works`
 - Production branch: `main`
-- Automatic deployment: enabled for pushes to `main`
+- Build command: `npm run deploy:site`
+- Deploy command: `npx wrangler deploy --assets ./dist-site/`
+- Worker configuration: `wrangler.jsonc`
+- Production source of truth: the latest successful Cloudflare deployment from `main`
 
 ## Repository reference
 
-Pre-Phase-0 rollback commit:
-
-```text
-6fa130d6b5ef372b4ade6f8a171adbaefbc2fb98
-```
-
-This commit is the last documented state before the Phase 0 safety work. The completed Phase 0 squash commit becomes the preferred platform baseline.
-
-## Current structure
+The platform uses isolated application directories and a generated production registry:
 
 ```text
 /
 ├── index.html
 ├── styles.css
 ├── app.js
-├── apps.json
 ├── manifest.webmanifest
 ├── sw.js
-├── netlify.toml
 ├── package.json
+├── wrangler.jsonc
 ├── scripts/
-│   └── validate.mjs
 ├── shared/
 ├── docs/
 └── apps/
-    ├── AGENTS.md
     ├── _template/
-    └── screen-lab/
+    ├── _enhanced-template/
+    └── <app-slug>/
 ```
 
-## Reference application
+The root `apps.json` is not committed. `npm run prepare:site` generates `dist-site/apps.json` from each app-owned `app.config.json`.
 
-`Screen Lab` is the reference working application for later phases.
+## Application boundary
 
-It currently verifies:
+Every application owns:
 
-- independent app routing under `/apps/screen-lab/`;
-- its own manifest and Service Worker scope;
-- offline app-shell behavior;
-- safe-area and dynamic viewport readings;
-- orientation, fullscreen, motion and pointer input;
-- independent visual identity from the launcher.
+- `apps/<slug>/app.config.json`;
+- its deployable HTML, CSS and JavaScript;
+- its manifest, icon and Service Worker;
+- its cache and storage namespaces;
+- its release metadata and README.
 
-Later platform work must keep both the launcher and Screen Lab functional.
+Normal application PRs change exactly one `apps/<slug>/**` directory. Platform changes use a separate PR and the `platform-change` label.
 
-## Health command
-
-Run from the repository root:
+## Health commands
 
 ```bash
-npm run health
+npm run registry:check
+npm run validate:all
+npm run prepare:site
+npm run validate:site
 ```
 
-The command validates:
+The validation contract checks:
 
-- required launcher files;
-- launcher HTML, manifest, icon and Service Worker wiring;
-- the application registry;
-- every registered app directory;
-- app manifest IDs, scopes, names and local icons;
-- semantic versions, registry paths, statuses and accent values;
-- unique Service Worker cache names;
-- ownership-scoped cache cleanup;
-- Service Worker registration and app-shell files;
-- unregistered application directories.
+- application metadata and unique identifiers;
+- launcher and app manifests;
+- Service Worker scope and cache ownership;
+- app shell completeness;
+- mobile runtime integration;
+- update metadata;
+- production output isolation;
+- Cloudflare Worker configuration;
+- separation between fast packaging and exhaustive CI.
 
-The same command runs in GitHub Actions and as the Netlify build command.
+## Production acceptance
 
-## Expected paths
+A platform or release change is complete when:
 
-| Surface | Expected path |
-|---|---|
-| Launcher | `/` |
-| Registry | `/apps.json` |
-| Launcher manifest | `/manifest.webmanifest` |
-| Launcher Service Worker | `/sw.js` |
-| Screen Lab | `/apps/screen-lab/` |
-| Screen Lab manifest | `/apps/screen-lab/manifest.webmanifest` |
-| Screen Lab Service Worker | `/apps/screen-lab/sw.js` |
+1. its PR contains the intended isolated change set;
+2. relevant checks have completed when runners are available;
+3. the PR is squash-merged into `main`;
+4. Cloudflare successfully deploys the exact squash commit;
+5. the launcher and affected application load from the production Worker;
+6. installed PWAs receive the expected versioned update.
 
-## Known baseline limitations
+## Rollback baseline
 
-These are intentionally deferred to later phases:
-
-- no generated per-app metadata yet;
-- no shared mobile runtime yet;
-- no in-app Service Worker update prompt yet;
-- no automated browser smoke tests yet;
-- SVG install icons are accepted, but platform-specific PNG icon generation is not yet enforced;
-- production health currently proves build-time structure, not full runtime interaction.
-
-## Phase 0 acceptance
-
-Phase 0 is complete when:
-
-1. `npm run health` passes in Netlify;
-2. the production deploy is `ready`;
-3. `/` and `/apps/screen-lab/` remain available;
-4. Screen Lab no longer deletes caches belonging to other Pocket Works applications;
-5. this baseline can be used as a rollback and comparison reference.
+Rollback is performed by reverting the faulty squash commit and publishing a new forward-moving application version and cache identity. Historical hosting integrations are not part of the platform contract.

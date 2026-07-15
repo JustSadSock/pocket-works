@@ -13,9 +13,22 @@ These rules are mandatory.
 - If an app requires a platform capability, create a separate platform PR first. The app PR consumes the capability after it exists.
 - Platform changes must carry the `platform-change` label. CI rejects mixed app/core changes without it.
 - Never wait for another application PR merely to rebuild metadata. Independent app branches must remain mergeable in any order.
-- Do not rebase repeatedly while waiting. Finish the app, push the branch, open a Draft PR early, pass CI, mark it ready and use auto-merge or the merge queue.
+- Do not rebase repeatedly while waiting. Finish the app, push the branch, open a Draft PR early, pass available checks, mark it ready and use auto-merge.
 
-## 2. Self-registration contract
+## 2. Production hosting
+
+Cloudflare Workers Builds is the only production hosting path.
+
+- Production branch: `main`.
+- Build command: `npm run deploy:site`.
+- Deploy command: `npx wrangler deploy --assets ./dist-site/`.
+- Worker configuration: `wrangler.jsonc`.
+- Worker name: `pocket-works`.
+- Production source of truth: the latest successful Cloudflare deployment from `main`.
+- Application agents must not add, configure, reference or depend on alternative hosting providers.
+- Hosting changes are platform work and must not be bundled into an application PR.
+
+## 3. Self-registration contract
 
 `apps/<slug>/app.config.json` is the only source of launcher metadata for an application.
 
@@ -37,7 +50,7 @@ A visible app requires a valid `app.config.json` with:
 - isolation metadata: `cacheName`, `storageNamespace`;
 - runtime metadata: `runtime`.
 
-## 3. Branch and PR workflow
+## 4. Branch and PR workflow
 
 For a new app:
 
@@ -45,11 +58,11 @@ For a new app:
 2. Reserve a unique lowercase kebab-case slug.
 3. Open a Draft PR early so ownership is visible.
 4. Work only in `apps/<slug>/`.
-5. Run the app-specific tests and `npm run validate:all` when practical.
-6. Push the completed branch. Do not edit shared registry files.
-7. Mark the PR ready after required checks pass.
-8. Enable auto-merge or add the PR to the merge queue.
-9. Resolve a conflict only when Git reports a real conflict. Do not pre-emptively rewrite the app around unrelated merged apps.
+5. Run app-specific tests and broader checks when practical.
+6. Push the completed branch. Do not edit shared registry or hosting files.
+7. Mark the PR ready after available checks pass.
+8. Enable auto-merge or squash-merge the ready PR.
+9. Resolve a conflict only when Git reports a real conflict.
 
 For platform work:
 
@@ -59,7 +72,7 @@ For platform work:
 4. Preserve compatibility with existing applications.
 5. Document the capability contract before app branches depend on it.
 
-## 4. Repository boundaries
+## 5. Repository boundaries
 
 - App-specific CSS, assets, storage, cache logic and dependencies stay inside the app directory.
 - Shared code belongs in `shared/` only when at least two real apps use it and the abstraction is stable.
@@ -69,7 +82,7 @@ For platform work:
 - Never reuse another app's manifest ID, Service Worker scope, cache name, storage namespace or IndexedDB database.
 - Never add a root dependency for one app without an explicit platform decision.
 
-## 5. Required app structure
+## 6. Required app structure
 
 A typical Quick app:
 
@@ -88,7 +101,7 @@ apps/<slug>/
 
 Enhanced apps keep their source/build structure inside the same app directory. Empty directories are not required.
 
-## 6. Product standard
+## 7. Product standard
 
 A finished app includes:
 
@@ -104,7 +117,7 @@ A finished app includes:
 
 Every visible control must work or be removed.
 
-## 7. Design doctrine
+## 8. Design doctrine
 
 Do not default to generic AI-generated interface patterns. Avoid unless the concept specifically requires them:
 
@@ -114,7 +127,7 @@ Do not default to generic AI-generated interface patterns. Avoid unless the conc
 - giant decorative headings;
 - fake charts and meaningless numbers;
 - random red horizontal accents;
-- black-and-gold “premium” styling;
+- black-and-gold premium styling;
 - emoji as the primary icon system;
 - identical geometry, navigation and palette across recent apps.
 
@@ -127,7 +140,7 @@ Before coding, define internally:
 
 Each app must have its own visual language without sacrificing usability.
 
-## 8. Interaction, motion and mobile ergonomics
+## 9. Interaction, motion and mobile ergonomics
 
 - Design mobile-first with `100dvh`, `viewport-fit=cover` and safe-area insets.
 - Keep critical targets approximately 44×44 CSS pixels or larger.
@@ -140,7 +153,7 @@ Each app must have its own visual language without sacrificing usability.
 - Do not delay functional actions for animation.
 - Pause expensive loops while hidden or idle.
 
-## 9. PWA and offline isolation
+## 10. PWA and offline isolation
 
 Every app owns its own:
 
@@ -154,7 +167,7 @@ Every app owns its own:
 
 Cache only app-owned files and explicitly required shared files. Cache cleanup must be prefix-scoped and must never delete another app's data.
 
-## 10. Engineering quality
+## 11. Engineering quality
 
 - Prefer plain HTML, CSS and JavaScript for small apps.
 - Use an Enhanced runtime only when the app genuinely benefits from it.
@@ -165,7 +178,7 @@ Cache only app-owned files and explicitly required shared files. Cache cleanup m
 - Remove abandoned experiments and debug UI before completion.
 - Keep app-specific documentation in `apps/<slug>/README.md`.
 
-## 11. Definition of done
+## 12. Definition of done
 
 An app is done only when:
 

@@ -4,7 +4,7 @@ This separation is a repository invariant, not an optional optimization.
 
 ## Cloudflare Workers: fast production packaging only
 
-Cloudflare Workers Builds is the primary production deployment path. The connected build must run:
+Cloudflare Workers Builds is the production deployment path. The connected build must run:
 
 ```bash
 npm run deploy:site
@@ -45,9 +45,9 @@ When hosted Actions minutes are temporarily unavailable, required status checks 
 
 Because the fast production packaging stage intentionally does not compile every Enhanced source tree, any change under an Enhanced app's `source/` directory must run `npm run build:enhanced` before merge and include the generated deployable files in the release change set.
 
-## Netlify legacy status
+## Retired deployment paths
 
-Netlify is no longer the production pipeline. Existing `netlify.toml`, historical deploys and the old site may remain as a temporary fallback, but Netlify checks must not be required for merge and new deployment work must target Cloudflare Workers.
+Cloudflare Workers Builds is the only supported hosting path. Repository validation must not read configuration from retired providers, and statuses produced by disconnected or historical integrations must not be required for merge or release verification.
 
 ## Enforcement
 
@@ -63,6 +63,7 @@ The validator must preserve these principles:
 - generated registry output stays in `dist-site/` and is never committed at the repository root;
 - exhaustive validation remains in `ci:full`;
 - GitHub Actions does not substitute the fast deploy path for full CI;
+- `wrangler.jsonc` targets the `pocket-works` Worker and `./dist-site` assets;
 - Cloudflare deploys only the validated `dist-site/` assets.
 
 Do not bypass this validator to make a deployment pass. Fix the pipeline while preserving the separation.
