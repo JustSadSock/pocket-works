@@ -12,7 +12,7 @@
  * });
  */
 const PARTS = 14;
-const RUNTIME_VERSION = '1.1.2';
+const RUNTIME_VERSION = '1.1.3';
 const paths = Array.from(
   { length: PARTS },
   (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt?v=${RUNTIME_VERSION}`
