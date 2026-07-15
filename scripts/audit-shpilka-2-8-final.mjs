@@ -4,29 +4,30 @@ import vm from 'node:vm';
 const failures = [];
 const check = (value, message) => { if (!value) failures.push(message); };
 const read = (path) => readFile(path, 'utf8');
-const [index, app, boot, route, ai, physics, fixes, ui, hotfix, styles, worker, configRaw] = await Promise.all([
+const [index, app, boot, route, ai, physics, fixes, ui, hotfix, patch, styles, patchStyles, worker, configRaw] = await Promise.all([
   read('apps/shpilka/index.html'), read('apps/shpilka/app.js'), read('apps/shpilka/engine-v2-12.js'),
   read('apps/shpilka/engine-v2-28-route.js'), read('apps/shpilka/engine-v2-28-ai.js'),
   read('apps/shpilka/engine-v2-28-physics.js'), read('apps/shpilka/engine-v2-28-fixes.js'),
   read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/engine-v2-28-1.js'),
-  read('apps/shpilka/systems-28.css'), read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
+  read('apps/shpilka/engine-v2-28-2.js'), read('apps/shpilka/systems-28.css'),
+  read('apps/shpilka/systems-282.css'), read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
 ]);
 const config = JSON.parse(configRaw);
-const runtimeSources = { route, ai, physics, fixes, ui, '1': hotfix };
+const runtimeSources = { route, ai, physics, fixes, ui, '1': hotfix, '2': patch };
 for (const [name, source] of Object.entries(runtimeSources)) {
   try { new vm.Script(source, { filename: `engine-v2-28-${name}.js` }); }
   catch (error) { failures.push(`${name} syntax: ${error.message}`); }
   check(app.includes(`engine-v2-28-${name}.js`), `${name} layer is not loaded`);
   check(worker.includes(`engine-v2-28-${name}.js`), `${name} layer is not cached`);
 }
-check(config.version === '2.8.1' && config.cacheName === 'shpilka-v2.8.1-p1', 'release metadata is stale');
-check(index.includes('data-app-version="2.8.1"') && index.includes('app.js?v=2.8.1'), 'HTML release version is stale');
+check(config.version === '2.8.2' && config.cacheName === 'shpilka-v2.8.2-p1', 'release metadata is stale');
+check(index.includes('data-app-version="2.8.2"') && index.includes('app.js?v=2.8.2'), 'HTML release version is stale');
+check(index.includes('systems-282.css?v=2.8.2') && worker.includes('systems-282.css'), '2.8.2 styles are not wired or cached');
 check(index.includes('loadingScreen') && boot.includes('shp28LoadingVisible(true)'), 'loading flow is missing');
 check(app.includes('script.async = false') && app.includes('Promise.all(sources.map'), 'engine files are still downloaded serially');
 check(app.includes('loadingProgress.textContent') && app.includes('loading-retry') && styles.includes('.loading-retry'), 'loading failure recovery is missing');
 check(!index.includes('data-workshop-trigger') && !index.includes('class="control-help"'), 'system controls remain in the main menu');
 check(styles.includes('overflow: hidden !important') && styles.includes('repeat(5, minmax(0, 1fr))'), 'main menu can still scroll or overflow');
-check(styles.includes('.route-tools,') && styles.includes('.route-code-panel { display: none !important; }'), 'technical route controls remain visible');
 check(ui.includes('finishMenuButton') && ui.includes('pauseMenuButton'), 'main-menu exits are missing');
 check(boot.includes("restartButtonFinish.addEventListener('click', () => beginRace())"), 'replay still generates a different route');
 check(ui.includes("restartButtonFinish.textContent = 'ЕЩЁ РАЗ'"), 'replay action is mislabeled after classification');
@@ -47,6 +48,19 @@ check(fixes.includes('pilot, { brake: 352') || fixes.includes('pilot, { brake: 3
 check(fixes.includes("shp28MistakeKind === 'wide' ? 165") && fixes.includes('strength * pulse * dt'), 'AI mistakes cannot physically reach the shoulder');
 check(physics.includes('shp28StableTrackHeading') && fixes.includes('shp28StableHighSpeedUpdateCar'), 'high-speed stability is incomplete');
 check(fixes.includes('maximumAcceleration = lerp(145, 62') && fixes.includes('maximumBraking = lerp(450, 330'), 'final weight caps are missing');
+
+check(patch.includes('shp282DrawGround') && patch.includes('drawProps()'), 'compatible renderer does not restore environment props');
+check(patch.includes('shp282DrawAdaptiveCurbs') && patch.includes('shp282DrawRacingLine'), 'curbs or racing line are still missing');
+check(patch.includes('shp282RouteRecordKey') && patch.includes('shp282NormalizeCurrentRouteRecord'), 'records are not scoped by route type and seed');
+check(patch.includes('numeric > 0xFFFFFFFF'), 'route-code overflow is not rejected');
+check(patch.includes('shp282TransactionalUpdateCar') && patch.includes('shp282RestoreCar'), 'car fallback is not transactional');
+check(patch.includes('runtimeErrorScreen') && patch.includes("mode = 'error'"), 'repeated runtime errors have no recoverable screen');
+check(patch.includes('routeHubButton') && patch.includes('routeHubContent'), 'daily route, codes and medals remain inaccessible');
+check(patch.includes('shp282TraceDistanceRange') && patch.includes('shp282DrawCurvedJumpGap'), 'jump gap does not follow track geometry');
+check(patch.includes('РАЗРЫВ ТРАССЫ') && patch.includes('НУЖНО ≈'), 'jump speed warning is missing');
+check(patch.includes("if (mode === 'postfinish') return;"), 'post-finish collision work is still enabled');
+check(patchStyles.includes('.route-hub') && patchStyles.includes('.runtime-error-screen') && patchStyles.includes('.race-advisory'), '2.8.2 UI styles are incomplete');
+check(patchStyles.includes('@media (max-height: 720px)') && patchStyles.includes('.championship-card'), 'short-screen championship access is not restored');
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -92,11 +106,11 @@ check(brakingTime > 1.22 && brakingTime < 1.52, `full stop takes ${brakingTime.t
 check(brakingDistance > 375 && brakingDistance < 430, `full stop distance is ${brakingDistance.toFixed(1)}`);
 
 if (failures.length) {
-  console.error('ШПИЛЬКА 2.8.1 gate failed:');
+  console.error('ШПИЛЬКА 2.8.2 gate failed:');
   failures.forEach((failure) => console.error('-', failure));
   process.exit(1);
 }
-console.log('ШПИЛЬКА 2.8.1 gate passed:', JSON.stringify({
+console.log('ШПИЛЬКА 2.8.2 gate passed:', JSON.stringify({
   speedAtThree: +speedAtThree.toFixed(1), speedAtSix: +speedAtSix.toFixed(1), terminal: +terminal.toFixed(1),
   brakingTime: +brakingTime.toFixed(2), brakingDistance: +brakingDistance.toFixed(1)
 }));

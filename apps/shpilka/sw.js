@@ -1,17 +1,17 @@
 const CACHE_PREFIX='shpilka-';
-const CACHE_NAME='shpilka-v2.8.1-p1';
-const APP_VERSION='2.8.1';
+const CACHE_NAME='shpilka-v2.8.2-p1';
+const APP_VERSION='2.8.2';
 const RELEASE_DATE='2026-07-15';
 const CACHE_PROTOCOL=1;
 const RELEASE_NOTES=[
-'Исправлено зависание на цифре 3: игровой цикл восстанавливается после ошибки кадра, а трасса рисуется совместимым с iPhone способом.',
-'Файлы движка загружаются параллельно и исполняются в правильном порядке, поэтому ожидание перед меню стало короче.',
-'Главное меню больше не прокручивается и не выходит за границы экрана.'
+'Возвращены окружение, поребрики и гоночная линия в совместимый iPhone-рендер.',
+'Рекорды, медали, сектора и призраки разделены по полному коду маршрута.',
+'Добавлены архив маршрутов, предупреждения о прыжках и аварийное восстановление заезда.'
 ];
 const APP_SHELL=[
-'./','./index.html','./app.config.json','./styles.css','./advanced.css','./advanced-fixes.css','./systems-23.css','./systems-25.css','./systems-26.css','./systems-27.css','./systems-28.css','./app.js',
+'./','./index.html','./app.config.json','./styles.css','./advanced.css','./advanced-fixes.css','./systems-23.css','./systems-25.css','./systems-26.css','./systems-27.css','./systems-28.css','./systems-282.css','./app.js',
 ...Array.from({length:11},(_,i)=>`./engine-v2-${String(i+1).padStart(2,'0')}.js`),
-'./engine-v2-stability.js','./engine-v2-advanced.js','./engine-v2-advanced-fixes.js','./engine-v2-23-ui.js','./engine-v2-23.js','./engine-v2-23-fixes.js','./engine-v2-24.js','./engine-v2-25-ai.js','./engine-v2-25-race.js','./engine-v2-25-1.js','./engine-v2-25-contacts.js','./engine-v2-25-wall.js','./engine-v2-26-career.js','./engine-v2-26-racecraft.js','./engine-v2-26-landmarks.js','./engine-v2-26-feel.js','./engine-v2-26-fixes.js','./engine-v2-27-ai.js','./engine-v2-27-fixes.js','./engine-v2-27-1.js','./engine-v2-27-2.js','./engine-v2-28-route.js','./engine-v2-28-ai.js','./engine-v2-28-physics.js','./engine-v2-28-fixes.js','./engine-v2-28-ui.js','./engine-v2-28-1.js','./engine-v2-12.js','./workshop.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+'./engine-v2-stability.js','./engine-v2-advanced.js','./engine-v2-advanced-fixes.js','./engine-v2-23-ui.js','./engine-v2-23.js','./engine-v2-23-fixes.js','./engine-v2-24.js','./engine-v2-25-ai.js','./engine-v2-25-race.js','./engine-v2-25-1.js','./engine-v2-25-contacts.js','./engine-v2-25-wall.js','./engine-v2-26-career.js','./engine-v2-26-racecraft.js','./engine-v2-26-landmarks.js','./engine-v2-26-feel.js','./engine-v2-26-fixes.js','./engine-v2-27-ai.js','./engine-v2-27-fixes.js','./engine-v2-27-1.js','./engine-v2-27-2.js','./engine-v2-28-route.js','./engine-v2-28-ai.js','./engine-v2-28-physics.js','./engine-v2-28-fixes.js','./engine-v2-28-ui.js','./engine-v2-28-1.js','./engine-v2-28-2.js','./engine-v2-12.js','./workshop.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE_URL=new URL('./',self.registration.scope);
 const BUILD_TOKEN=`${APP_VERSION}-p${CACHE_PROTOCOL}`;
 const SHELL_KEYS=new Map(APP_SHELL.map(entry=>{const url=new URL(entry,SCOPE_URL);return[url.pathname,url.href];}));
