@@ -1,0 +1,21 @@
+{
+  "name": "ПОЛЕВОЙ ШТАБ",
+  "short_name": "ШТАБ",
+  "description": "Бесконечная процедурная стратегия о полевом командовании: отдавай приказы, используй рельеф, снабжение, мораль и доктрины.",
+  "id": "/apps/polevoy-shtab/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#18231e",
+  "theme_color": "#28372f",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
