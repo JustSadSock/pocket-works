@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'sgib-';
-const CACHE_NAME = 'sgib-v1.1.5';
-const APP_VERSION = '1.1.5';
+const CACHE_NAME = 'sgib-v1.1.6';
+const APP_VERSION = '1.1.6';
 const RELEASE_DATE = '2026-07-15';
-const CACHE_PROTOCOL = 3;
+const CACHE_PROTOCOL = 4;
 const RELEASE_NOTES = [
-  'Жест больше не зависает при неожиданной потере pointer capture на iPhone.',
-  'Координаты считаются относительно Canvas и стабильного физического движения пальца.',
-  'Лист начинает подниматься только после осознанного протягивания, а не от микродвижения.',
-  'Версионные runtime-файлы изолированы от кешей других выпусков.'
+  'Касания не используют нестабильные screenX/screenY и ручной capture в WebKit.',
+  'Жест проходит фазы tracking, armed и preview; бумага не поднимается преждевременно.',
+  'Одиночные аномальные скачки координат игнорируются.',
+  'Порог и минимальная длительность жеста защищают от случайного сгиба.'
 ];
 const APP_SHELL = [
   './',
@@ -145,7 +145,6 @@ self.addEventListener('fetch', (event) => {
 
   const requestedVersion = requestUrl.searchParams.get('v');
   if (requestedVersion && requestedVersion !== APP_VERSION) {
-    // Never place files from another release into this worker's cache.
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
