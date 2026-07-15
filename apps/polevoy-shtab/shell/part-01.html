@@ -1,0 +1,146 @@
+
+    <section class="battle-screen" id="battleScreen" aria-label="Поле боя">
+      <header class="field-header" data-ui>
+        <button class="metal-button compact" id="pauseButton" type="button" data-native-press aria-label="Пауза">II</button>
+        <div class="battle-title">
+          <span id="battleKicker">БОЙ 1 · ЯСНО</span>
+          <strong id="battleName">ПЕРЕПРАВА</strong>
+        </div>
+        <div class="turn-dial" aria-live="polite">
+          <span>ХОД</span>
+          <strong id="turnValue">1/13</strong>
+        </div>
+      </header>
+
+      <div class="war-state" data-ui>
+        <div class="resolve player-resolve">
+          <span>НАШ СТРОЙ</span>
+          <div><i id="playerResolveFill"></i></div>
+          <strong id="playerResolveValue">100</strong>
+        </div>
+        <div class="objective-score">
+          <span>ШТАНДАРТЫ</span>
+          <strong><b id="playerObjectiveValue">0</b><em>:</em><b id="enemyObjectiveValue">0</b></strong>
+        </div>
+        <div class="resolve enemy-resolve">
+          <span>ВРАЖЕСКИЙ СТРОЙ</span>
+          <div><i id="enemyResolveFill"></i></div>
+          <strong id="enemyResolveValue">85</strong>
+        </div>
+      </div>
+
+      <div class="map-frame" id="mapFrame">
+        <canvas id="battleCanvas" aria-label="Тактическая карта. Выберите свой отряд, затем клетку назначения или врага." data-gesture-surface data-block-callout></canvas>
+        <div class="phase-stamp" id="phaseStamp" aria-live="assertive"></div>
+        <div class="map-note" id="mapNote">Выберите свой жетон</div>
+      </div>
+
+      <section class="command-board" data-ui>
+        <div class="selected-strip" id="selectedStrip">
+          <div class="unit-seal" id="selectedGlyph">—</div>
+          <div class="unit-copy">
+            <span id="selectedName">Нет выбранного отряда</span>
+            <strong id="selectedState">Тапните по синему жетону</strong>
+          </div>
+          <div class="mini-meters" id="miniMeters" hidden>
+            <label>Ж <i><b id="hpFill"></b></i><span id="hpValue">0</span></label>
+            <label>М <i><b id="moraleFill"></b></i><span id="moraleValue">0</span></label>
+            <label>С <i><b id="supplyFill"></b></i><span id="supplyValue">0</span></label>
+          </div>
+        </div>
+
+        <div class="order-rack">
+          <div class="command-points" aria-label="Очки приказов">
+            <span>ПРИКАЗЫ</span>
+            <div id="commandPips"></div>
+          </div>
+          <div class="order-buttons">
+            <button id="entrenchButton" type="button" data-native-press><b>⌂</b><span>Окопаться</span><small>1</small></button>
+            <button id="supplyButton" type="button" data-native-press><b>▣</b><span>Снабжение</span><small>1</small></button>
+            <button id="rallyButton" type="button" data-native-press><b>⚑</b><span>Собрать строй</span><small>2</small></button>
+            <button class="doctrine-order" id="doctrineButton" type="button" data-native-press><b>★</b><span id="doctrineButtonLabel">Второй темп</span><small>2</small></button>
+          </div>
+          <button class="end-turn" id="endTurnButton" type="button" data-native-press>
+            <span>ПЕРЕДАТЬ ХОД</span>
+            <small id="endTurnHint">Враг ответит на приказы</small>
+          </button>
+        </div>
+      </section>
+    </section>
+
+    <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="gameTitle">
+      <div class="map-cloth menu-cloth">
+        <div class="menu-mark">АРХИВ ПОЛЕВЫХ КАМПАНИЙ · 04</div>
+        <div class="title-assembly">
+          <div class="commander-emblem" aria-hidden="true"><i></i><b></b><span>★</span></div>
+          <div>
+            <p>Бесконечная штабная стратегия</p>
+            <h1 id="gameTitle">ПОЛЕВОЙ<br>ШТАБ</h1>
+          </div>
+        </div>
+        <p class="lead">Не таскай юнитов как мясо. Читай рельеф, держи снабжение и ломай чужую волю раньше, чем сломают твою.</p>
+
+        <div class="campaign-card" id="continueCard" hidden>
+          <span>ДЕЙСТВУЮЩАЯ КАМПАНИЯ</span>
+          <strong id="continueTitle">Бой 1 · Манёвр</strong>
+          <small id="continueMeta">Ход 1 · 0 славы</small>
+        </div>
+
+        <div class="menu-actions">
+          <button class="primary-order" id="continueButton" type="button" data-native-press hidden>
+            <span>Продолжить кампанию</span><small>Состояние сохранено</small>
+          </button>
+          <button class="primary-order" id="newCampaignButton" type="button" data-native-press>
+            <span>Новая кампания</span><small>Процедурный фронт без финальной главы</small>
+          </button>
+          <button class="secondary-order" id="fieldManualButton" type="button" data-native-press>
+            <span>Краткий устав</span><small>Механики за одну минуту</small>
+          </button>
+          <button class="secondary-order" id="settingsButton" type="button" data-native-press>
+            <span>Настройки</span><small id="bestMeta">Лучший счёт: 0</small>
+          </button>
+        </div>
+        <footer class="menu-footer">
+          <button class="workshop-link" type="button" data-workshop-trigger data-native-press>Workshop mode</button>
+          <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        </footer>
+      </div>
+    </section>
+
+    <section class="screen doctrine-screen" id="doctrineScreen" data-ui aria-labelledby="doctrineTitle">
+      <div class="map-cloth doctrine-cloth">
+        <header class="panel-header">
+          <div><span>ПЕРЕД ПЕРВЫМ ПРИКАЗОМ</span><h2 id="doctrineTitle">Выберите доктрину</h2></div>
+          <button class="metal-button" id="closeDoctrineButton" type="button" data-native-press>×</button>
+        </header>
+        <p class="panel-copy">Это не класс персонажа, а принцип командования. Его особый приказ доступен один раз за бой.</p>
+        <div class="doctrine-list" id="doctrineList">
+          <button data-doctrine="maneuver" type="button" data-native-press>
+            <i>↝</i><span><b>Манёвр</b><small>Быстрые фланги и повторная активация отряда.</small></span>
+          </button>
+          <button data-doctrine="fire" type="button" data-native-press>
+            <i>✦</i><span><b>Огневой вал</b><small>Сильнее пехота и батареи, общий залп на ход.</small></span>
+          </button>
+          <button data-doctrine="resolve" type="button" data-native-press>
+            <i>⚑</i><span><b>Несгибаемость</b><small>Больше морали и мгновенное укрепление всей линии.</small></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen briefing-screen" id="briefingScreen" data-ui aria-labelledby="briefingTitle">
+      <div class="briefing-folder">
+        <span class="classified">ОПЕРАТИВНАЯ СВОДКА</span>
+        <h2 id="briefingTitle">Переправа</h2>
+        <div class="briefing-grid">
+          <div><span>ПОГОДА</span><strong id="briefingWeather">Ясно</strong><small id="briefingWeatherNote">Без особых условий.</small></div>
+          <div><span>ЦЕЛЬ</span><strong>8 очков контроля</strong><small>Удерживайте два штандарта или сломайте вражеский строй.</small></div>
+          <div><span>ДОКТРИНА</span><strong id="briefingDoctrine">Манёвр</strong><small id="briefingDoctrineNote">Разведка и кавалерия быстрее.</small></div>
+          <div><span>ЛИМИТ</span><strong id="briefingLimit">13 ходов</strong><small>После лимита победит сторона с преимуществом.</small></div>
+        </div>
+        <button class="primary-order" id="beginBattleButton" type="button" data-native-press><span>Развернуть карту</span><small>Начать планирование</small></button>
+      </div>
+    </section>
+
+    <section class="screen manual-screen" id="manualScreen" data-ui aria-labelledby="manualTitle">
+      <div 
