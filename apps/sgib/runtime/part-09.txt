@@ -15,97 +15,33 @@ function entitySeed(id) {
 
 function drawInk(entity, point = entity, alpha = 1) {
   const random = mulberry32(entitySeed(entity.id));
-  const isBlot = entity.type === 'blot';
-  const baseRadius = entity.radius || 25;
-  const pointCount = isBlot ? 19 : 15;
-  const outline = [];
-
-  for (let index = 0; index < pointCount; index += 1) {
-    const angle = (index / pointCount) * Math.PI * 2;
-    const wave = Math.sin(angle * (isBlot ? 5 : 4) + random() * 1.8) * (isBlot ? 0.09 : 0.055);
-    const radius = baseRadius * (0.82 + random() * (isBlot ? 0.34 : 0.25) + wave);
-    outline.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
-  }
-
-  const traceInk = () => {
-    const last = outline[outline.length - 1];
-    const first = outline[0];
-    context.beginPath();
-    context.moveTo((last.x + first.x) * 0.5, (last.y + first.y) * 0.5);
-    for (let index = 0; index < outline.length; index += 1) {
-      const current = outline[index];
-      const next = outline[(index + 1) % outline.length];
-      context.quadraticCurveTo(current.x, current.y, (current.x + next.x) * 0.5, (current.y + next.y) * 0.5);
-    }
-    context.closePath();
-  };
-
   context.save();
   context.translate(point.x, point.y);
   context.globalAlpha = alpha;
-
-  context.save();
-  context.scale(1.1, 1.1);
-  traceInk();
-  context.fillStyle = isBlot ? 'rgba(24,36,32,.18)' : 'rgba(30,48,42,.13)';
-  context.fill();
-  context.restore();
-
-  context.shadowColor = isBlot ? 'rgba(0,0,0,.36)' : 'rgba(0,0,0,.28)';
-  context.shadowBlur = isBlot ? 14 : 10;
-  context.shadowOffsetY = isBlot ? 8 : 6;
-  traceInk();
-  const gradient = context.createRadialGradient(-baseRadius * 0.3, -baseRadius * 0.36, 2, 0, 0, baseRadius * 1.35);
-  gradient.addColorStop(0, isBlot ? '#34453f' : '#35413c');
-  gradient.addColorStop(0.28, isBlot ? '#17231f' : '#1a2421');
-  gradient.addColorStop(0.72, '#0b1210');
-  gradient.addColorStop(1, '#050908');
+  context.shadowColor = 'rgba(0,0,0,.28)';
+  context.shadowBlur = 10;
+  context.shadowOffsetY = 6;
+  context.beginPath();
+  const lobes = 11;
+  for (let index = 0; index <= lobes; index += 1) {
+    const angle = (index / lobes) * Math.PI * 2;
+    const radius = entity.radius * (0.82 + random() * 0.24);
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.closePath();
+  const gradient = context.createRadialGradient(-8, -10, 3, 0, 0, entity.radius * 1.25);
+  gradient.addColorStop(0, '#35413c');
+  gradient.addColorStop(0.34, '#1a2421');
+  gradient.addColorStop(1, '#0b1110');
   context.fillStyle = gradient;
   context.fill();
-
   context.shadowColor = 'transparent';
-  context.strokeStyle = isBlot ? 'rgba(2,7,6,.68)' : 'rgba(5,12,10,.48)';
-  context.lineWidth = isBlot ? 2.2 : 1.25;
-  traceInk();
-  context.stroke();
-
-  const satellites = isBlot ? 7 : 3;
-  for (let index = 0; index < satellites; index += 1) {
-    const angle = random() * Math.PI * 2;
-    const orbit = baseRadius * (1.08 + random() * (isBlot ? 0.72 : 0.38));
-    const size = baseRadius * (isBlot ? 0.07 + random() * 0.13 : 0.045 + random() * 0.075);
-    context.fillStyle = index % 3 === 0 ? '#111b18' : '#08100e';
-    context.beginPath();
-    context.ellipse(Math.cos(angle) * orbit, Math.sin(angle) * orbit, size * (0.8 + random() * 0.45), size, angle, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  const tendrils = isBlot ? 4 : 2;
-  context.lineCap = 'round';
-  for (let index = 0; index < tendrils; index += 1) {
-    const angle = random() * Math.PI * 2;
-    const inner = baseRadius * (0.72 + random() * 0.16);
-    const outer = baseRadius * (1.05 + random() * (isBlot ? 0.42 : 0.2));
-    context.strokeStyle = `rgba(8,16,13,${isBlot ? 0.55 : 0.34})`;
-    context.lineWidth = isBlot ? 1.8 + random() * 1.6 : 1 + random();
-    context.beginPath();
-    context.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
-    context.quadraticCurveTo(
-      Math.cos(angle + 0.12) * ((inner + outer) * 0.52),
-      Math.sin(angle + 0.12) * ((inner + outer) * 0.52),
-      Math.cos(angle) * outer,
-      Math.sin(angle) * outer
-    );
-    context.stroke();
-  }
-
-  context.fillStyle = isBlot ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.13)';
+  context.fillStyle = 'rgba(255,255,255,.13)';
   context.beginPath();
-  context.ellipse(-baseRadius * 0.31, -baseRadius * 0.38, baseRadius * 0.27, baseRadius * 0.13, -0.38, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = 'rgba(255,255,255,.065)';
-  context.beginPath();
-  context.ellipse(baseRadius * 0.12, -baseRadius * 0.1, baseRadius * 0.1, baseRadius * 0.055, 0.25, 0, Math.PI * 2);
+  context.ellipse(-8, -10, 7, 4, -.35, 0, Math.PI * 2);
   context.fill();
   context.restore();
 }
@@ -144,26 +80,15 @@ function drawEntity(entity, point = entity, alpha = 1) {
   else drawInk(entity, point, alpha);
 }
 
-function drawSettledPaperScene() {
-  [...state.layers]
-    .sort((a, b) => (a.depth || 0) - (b.depth || 0))
-    .forEach((layer) => drawPaperPolygon(layer.polygon, layer));
-  drawCreases();
-  state.entities.forEach((entity) => drawEntity(entity));
-}
-
 function drawPaperScene() {
-  const gesture = state.gesture;
-  if (gesture?.line && gesture.previewReady) {
-    drawFoldPreview(gesture.line, gesture.angle, gesture.valid);
+  if (state.gesture?.line) {
+    drawFoldPreview(state.gesture.line, state.gesture.angle, state.gesture.valid);
   } else if (state.animation) {
     drawFoldPreview(state.animation.line, state.animation.angle, true);
   } else {
-    drawSettledPaperScene();
-    if (gesture?.line) {
-      drawFoldGuide(gesture.line, false);
-      drawGestureArrow(gesture.start, gesture.current, false);
-    }
+    [...state.layers].sort((a, b) => (a.depth || 0) - (b.depth || 0)).forEach((layer) => drawPaperPolygon(layer.polygon, layer));
+    drawCreases();
+    state.entities.forEach((entity) => drawEntity(entity));
   }
   drawHintGesture();
   drawEffects();
