@@ -1,0 +1,204 @@
+export const COLS = 7;
+export const ROWS = 8;
+export const OBJECTIVE_TARGET = 8;
+
+export const TERRAIN = {
+  plain: { label: 'Равнина', move: 1, defense: 0, color: '#b9b084' },
+  forest: { label: 'Лес', move: 2, defense: 2, color: '#6f7f57' },
+  hill: { label: 'Высота', move: 2, defense: 1, color: '#9b8663' },
+  marsh: { label: 'Топь', move: 3, defense: -1, color: '#75877d' },
+  ruins: { label: 'Руины', move: 2, defense: 2, color: '#8b8274' },
+};
+
+export const WEATHER = {
+  clear: { name: 'Ясно', note: 'Без особых модификаторов.' },
+  rain: { name: 'Ливень', note: 'Топи тяжелее, артиллерия наносит на 1 меньше урона.' },
+  fog: { name: 'Туман', note: 'Дальность артиллерии уменьшена на 1.' },
+  heat: { name: 'Жара', note: 'Каждая атака тратит больше снабжения.' },
+};
+
+export const DOCTRINES = {
+  maneuver: {
+    name: 'Манёвр',
+    short: 'МАНЁВР',
+    description: 'Разведка и кавалерия проходят на клетку дальше. Особый приказ повторно активирует один отряд.',
+    special: 'Второй темп',
+  },
+  fire: {
+    name: 'Огневой вал',
+    short: 'ОГОНЬ',
+    description: 'Артиллерия и линейная пехота бьют сильнее. Особый приказ усиливает все атаки текущего хода.',
+    special: 'Подготовленный залп',
+  },
+  resolve: {
+    name: 'Несгибаемость',
+    short: 'СТОЙКОСТЬ',
+    description: 'Армия начинает бой с повышенной моралью. Особый приказ укрепляет весь строй.',
+    special: 'Ни шагу назад',
+  },
+};
+
+export const UNIT_TYPES = {
+  line: { name: 'Линейная пехота', glyph: 'Ⅰ', maxHp: 10, attack: 4, move: 2, range: 1, minRange: 1, sight: 3, maxSupply: 100 },
+  guard: { name: 'Гвардия', glyph: '◆', maxHp: 12, attack: 5, move: 1, range: 1, minRange: 1, sight: 3, maxSupply: 100 },
+  scout: { name: 'Разведчики', glyph: '⌁', maxHp: 7, attack: 3, move: 3, range: 1, minRange: 1, sight: 5, maxSupply: 90 },
+  artillery: { name: 'Полевая батарея', glyph: '✦', maxHp: 6, attack: 6, move: 1, range: 3, minRange: 2, sight: 4, maxSupply: 80 },
+  cavalry: { name: 'Кавалерия', glyph: '↟', maxHp: 8, attack: 4, move: 3, range: 1, minRange: 1, sight: 4, maxSupply: 90 },
+};
+
+export const UPGRADES = {
+  engineers: { name: 'Инженерный корпус', description: 'Лес и руины стоят на 1 очко движения меньше.', max: 1 },
+  baggage: { name: 'Железный обоз', description: '+20 к максимуму снабжения всех отрядов.', max: 2 },
+  surgeons: { name: 'Полевая медицина', description: 'После каждого раунда выжившие восстанавливают 1 здоровье.', max: 2 },
+  batteries: { name: 'Батарейный штаб', description: '+1 к урону артиллерии.', max: 2 },
+  drill: { name: 'Строевая школа', description: '+12 к начальной морали каждого отряда.', max: 2 },
+  signal: { name: 'Сигнальные флаги', description: '+1 очко приказов в каждом ходу.', max: 2 },
+  reserve: { name: 'Свежий полк', description: 'К армии присоединяется ещё один линейный отряд.', max: 1 },
+  quartermaster: { name: 'Квартирмейстер', description: 'Снабжение восстанавливает на 15 больше.', max: 2 },
+  sharpshooters: { name: 'Отборные стрелки', description: '+1 к урону линейной пехоты и разведчиков.', max: 2 },
+  standards: { name: 'Полковые знамёна', description: 'Потери морали снижены на 20%.', max: 2 },
+};
+
+function xmur3(value) {
+  let h = 1779033703 ^ value.length;
+  for (let i = 0; i < value.length; i += 1) {
+    h = Math.imul(h ^ value.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+
+export function seededRandom(seed) {
+  let a = typeof seed === 'number' ? seed >>> 0 : xmur3(String(seed))();
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function hashSeed(...parts) {
+  return xmur3(parts.join('|'))();
+}
+
+export function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+export function cellIndex(row, col) {
+  return row * COLS + col;
+}
+
+export function inBounds(row, col) {
+  return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+}
+
+export function manhattan(a, b) {
+  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+}
+
+export function neighbors(cell) {
+  return [
+    { row: cell.row - 1, col: cell.col },
+    { row: cell.row + 1, col: cell.col },
+    { row: cell.row, col: cell.col - 1 },
+    { row: cell.row, col: cell.col + 1 },
+  ].filter((next) => inBounds(next.row, next.col));
+}
+
+export function createCampaign(seed = Date.now(), doctrine = 'maneuver') {
+  return {
+    version: 1,
+    seed: hashSeed(seed, Math.random()),
+    doctrine: DOCTRINES[doctrine] ? doctrine : 'maneuver',
+    stage: 1,
+    victories: 0,
+    renown: 0,
+    score: 0,
+    upgrades: {},
+    history: [],
+    startedAt: Date.now(),
+  };
+}
+
+function terrainFor(rng, row, col) {
+  if (col <= 1 || col >= COLS - 2) return rng() < 0.13 ? 'forest' : 'plain';
+  const roll = rng();
+  if (roll < 0.48) return 'plain';
+  if (roll < 0.65) return 'forest';
+  if (roll < 0.78) return 'hill';
+  if (roll < 0.89) return 'ruins';
+  return 'marsh';
+}
+
+function makeUnit(id, side, type, row, col, campaign, elite = 0) {
+  const spec = UNIT_TYPES[type];
+  const supplyBonus = (campaign.upgrades?.baggage || 0) * 20;
+  const moraleBonus = (campaign.upgrades?.drill || 0) * 12 + (campaign.doctrine === 'resolve' && side === 'player' ? 15 : 0);
+  const enemyScale = side === 'enemy' ? Math.min(4, Math.floor((campaign.stage - 1) / 3)) : 0;
+  return {
+    id,
+    side,
+    type,
+    row,
+    col,
+    hp: spec.maxHp + elite + enemyScale,
+    maxHp: spec.maxHp + elite + enemyScale,
+    morale: clamp(78 + moraleBonus + elite * 4 + enemyScale * 3, 1, 120),
+    maxMorale: 100 + moraleBonus + elite * 4 + enemyScale * 3,
+    supply: spec.maxSupply + supplyBonus,
+    maxSupply: spec.maxSupply + supplyBonus,
+    acted: false,
+    entrenched: 0,
+    routed: false,
+    veteran: elite,
+  };
+}
+
+export function generateBattle(campaign) {
+  const seed = hashSeed(campaign.seed, campaign.stage, campaign.victories);
+  const rng = seededRandom(seed);
+  const weatherKeys = Object.keys(WEATHER);
+  const weather = weatherKeys[Math.floor(rng() * weatherKeys.length)];
+  const terrain = [];
+  for (let row = 0; row < ROWS; row += 1) {
+    for (let col = 0; col < COLS; col += 1) terrain.push(terrainFor(rng, row, col));
+  }
+
+  const objectives = [
+    { id: 'north', row: 2 + Math.floor(rng() * 2), col: 3, owner: null },
+    { id: 'south', row: 5 + Math.floor(rng() * 2), col: 3, owner: null },
+  ];
+  objectives.forEach((objective) => { terrain[cellIndex(objective.row, objective.col)] = rng() < 0.5 ? 'hill' : 'ruins'; });
+
+  const units = [];
+  const playerLayout = [
+    ['line', 2, 0], ['guard', 4, 0], ['scout', 1, 1], ['artillery', 6, 0], ['cavalry', 5, 1],
+  ];
+  if ((campaign.upgrades?.reserve || 0) > 0) playerLayout.push(['line', 7, 1]);
+  playerLayout.forEach(([type, row, col], index) => units.push(makeUnit(`p${index}`, 'player', type, row, col, campaign, Math.floor(campaign.victories / 5))));
+
+  const enemyPool = ['line', 'line', 'guard', 'scout', 'artillery', 'cavalry'];
+  const enemyCount = clamp(5 + Math.floor((campaign.stage - 1) / 2), 5, 8);
+  const enemyRows = [2, 4, 1, 6, 5, 0, 7, 3];
+  for (let index = 0; index < enemyCount; index += 1) {
+    const type = enemyPool[Math.floor(rng() * enemyPool.length)];
+    const row = enemyRows[index];
+    const col = index % 2 === 0 ? 6 : 5;
+    units.push(makeUnit(`e${index}`, 'enemy', type, row, col, campaign, Math.floor((campaign.stage - 1) / 4)));
+  }
+
+  return {
+    version: 1,
+    seed,
+    stage: campaign.stage,
+    turn: 1,
+    turnLimit: clamp(13 - Math.floor(campaign.stage / 6), 10, 13),
+    phase: 'player',
+    weather,
