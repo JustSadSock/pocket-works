@@ -7,6 +7,7 @@ import { AudioGarden } from './audio.js';
 import {
   campaignSegmentTotal,
   checkpointCampaignRun,
+  checkpointEndlessRun,
   createCampaignRun,
   createDefaultSave,
   fullCampaignTotal,
@@ -190,7 +191,7 @@ function syncMenu() {
   const run = normalizeEndlessRun(save.endlessRun);
   $('endlessLabel').textContent = run ? 'Продолжить бесконечный путь' : 'Бесконечная оранжерея';
   $('endlessMeta').textContent = run
-    ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}`
+    ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}${run.currentStrokes ? ` · ${run.currentStrokes} ${strokeWord(run.currentStrokes)}` : ''}`
     : save.endlessBest > 0
       ? `Новый код · рекорд ${save.endlessBest} секций`
       : 'Новый код · без конца';
@@ -258,17 +259,18 @@ function resetBall(to = level.start) {
   syncHeader();
 }
 
-function saveCampaignCheckpoint() {
-  if (!['playing', 'paused'].includes(mode) || !roundActive || endlessActive || levelIndex < 0 || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
-  save.campaignRun = checkpointCampaignRun(
-    save.campaignRun,
-    LEVELS.length,
-    levelIndex,
-    strokes,
-    { x: ball.x, y: ball.y },
-    lastSafe
-  );
-  save.current = levelIndex;
+function saveActiveCheckpoint() {
+  if (!['playing', 'paused'].includes(mode)) return;
+  const stable = isBallStopped(ball) && !ball.sunk && waterResetTimer <= 0;
+  const point = stable ? { x: ball.x, y: ball.y } : { ...lastSafe };
+  if (roundActive && !endlessActive && levelIndex >= 0) {
+    save.campaignRun = checkpointCampaignRun(save.campaignRun, LEVELS.length, levelIndex, strokes, point, lastSafe);
+    save.current = levelIndex;
+  } else if (endlessActive) {
+    save.endlessRun = checkpointEndlessRun(save.endlessRun, strokes, point, lastSafe);
+  } else {
+    return;
+  }
   persist();
 }
 
@@ -327,7 +329,7 @@ function startCampaign({ fresh = false } = {}) {
 function ensureEndlessRun(fresh = false, requestedSeed = null) {
   let run = fresh ? null : normalizeEndlessRun(save.endlessRun);
   if (!run) {
-    run = { seed: requestedSeed || createRunSeed(), depth: 0, totalStrokes: 0, startedAt: Date.now() };
+    run = { seed: requestedSeed || createRunSeed(), depth: 0, totalStrokes: 0, currentStrokes: 0, checkpoint: null, startedAt: Date.now() };
     save.endlessRun = run;
     persist();
   }
@@ -341,7 +343,7 @@ function startEndless({ fresh = false, seed = null } = {}) {
   roundStrokes = [];
   levelIndex = -1;
   level = generateEndlessLevel(run.seed, run.depth);
-  preparePlayingLevel();
+  preparePlayingLevel({ checkpoint: run.checkpoint, checkpointStrokes: run.currentStrokes });
 }
 
 function openCodeScreen() {
@@ -408,6 +410,9 @@ function restartHole() {
     save.campaignRun = checkpointCampaignRun(save.campaignRun, LEVELS.length, levelIndex, 0, null);
     save.current = levelIndex;
     persist();
+  } else if (endlessActive) {
+    save.endlessRun = checkpointEndlessRun(save.endlessRun, 0, null);
+    persist();
   }
   preparePlayingLevel();
   showSurface(endlessActive ? `Секция ${level.section} начата заново` : 'Лунка начата заново');
@@ -420,6 +425,8 @@ function retryResult() {
       seed: endlessResult.seed,
       depth: endlessResult.depth,
       totalStrokes: endlessResult.totalBefore,
+      currentStrokes: 0,
+      checkpoint: null,
       startedAt: endlessResult.startedAt
     };
     persist();
@@ -430,14 +437,14 @@ function retryResult() {
 }
 
 function openMenu() {
-  saveCampaignCheckpoint();
+  saveActiveCheckpoint();
   setMode('menu');
   syncMenu();
 }
 
 function pauseGame() {
   if (mode !== 'playing') return;
-  saveCampaignCheckpoint();
+  saveActiveCheckpoint();
   audio.ui();
   setMode('paused');
 }
@@ -502,6 +509,7 @@ function takeShot() {
     strokes += 1;
     save.hasAimed = true;
     lastSafe = { x: ball.x, y: ball.y };
+    saveActiveCheckpoint();
     audio.strike(aim.power);
     vibrate(aim.power > .72 ? 18 : 10);
     renderer.emit(ball.x, ball.y, 'dust', 7);
@@ -545,6 +553,7 @@ function handlePhysicsEvent(event) {
     renderer.emit(ball.x, ball.y, 'water', 18);
     showSurface('Вода · один штрафной удар');
     syncHeader();
+    saveActiveCheckpoint();
   } else if (event.type === 'tunnel') {
     audio.tunnel();
     vibrate(12);
@@ -576,7 +585,7 @@ function handlePhysicsEvent(event) {
     renderer.emit(level.hole.x, level.hole.y, 'cup', strokes === 1 ? 30 : 18);
   } else if (event.type === 'stopped') {
     lastSafe = { x: ball.x, y: ball.y };
-    saveCampaignCheckpoint();
+    saveActiveCheckpoint();
   }
 }
 
@@ -603,7 +612,7 @@ function finishEndlessSection() {
   const completedSections = run.depth + 1;
   const totalStrokes = totalBefore + strokes;
   endlessResult = { seed: run.seed, depth: run.depth, strokes, totalBefore, startedAt: run.startedAt };
-  save.endlessRun = { ...run, depth: completedSections, totalStrokes };
+  save.endlessRun = { ...run, depth: completedSections, totalStrokes, currentStrokes: 0, checkpoint: null };
   const isDepthRecord = completedSections > save.endlessBest;
   const isScoreRecord = completedSections === save.endlessBest && (!Number.isFinite(save.endlessBestStrokes) || totalStrokes < save.endlessBestStrokes);
   if (isDepthRecord || isScoreRecord) {
@@ -862,7 +871,7 @@ function bindControls() {
   window.addEventListener('resize', () => renderer.resize(), { passive: true });
   window.addEventListener('orientationchange', () => window.setTimeout(() => renderer.resize(), 180), { passive: true });
   window.addEventListener('moss-marble:webgl-lost', () => {
-    saveCampaignCheckpoint();
+    saveActiveCheckpoint();
     cancelAim();
     audio.suspend();
     persist();
@@ -881,13 +890,13 @@ function bindControls() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       pausedBeforeHidden = mode === 'playing';
-      saveCampaignCheckpoint();
+      saveActiveCheckpoint();
       if (pausedBeforeHidden) setMode('paused');
       audio.suspend();
       persist();
     }
   });
-  window.addEventListener('pagehide', () => { saveCampaignCheckpoint(); persist(); }, { capture: true });
+  window.addEventListener('pagehide', () => { saveActiveCheckpoint(); persist(); }, { capture: true });
 }
 
 function previewMotion(time) {
@@ -909,7 +918,7 @@ function frame(now) {
       waterResetTimer -= dt;
       if (waterResetTimer <= 0) {
         resetBall(lastSafe);
-        saveCampaignCheckpoint();
+        saveActiveCheckpoint();
       }
     } else if (!ball.sunk) {
       const events = stepBall(ball, level, dt, elapsed);
@@ -988,6 +997,8 @@ window.__MOSS_MARBLE__ = {
       strokes += 1;
       livingTerrain.cancelOverview();
       strikeBall(ball, vx, vy);
+      lastSafe = { x: ball.x, y: ball.y };
+      saveActiveCheckpoint();
       syncHeader();
     }
   },

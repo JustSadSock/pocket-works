@@ -12,6 +12,15 @@ const finiteStroke = (value) => {
   return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : null;
 };
 
+const normalizeCheckpoint = (value) => value && Number.isFinite(Number(value.x)) && Number.isFinite(Number(value.y))
+  ? {
+      x: Number(value.x),
+      y: Number(value.y),
+      safeX: Number.isFinite(Number(value.safeX)) ? Number(value.safeX) : Number(value.x),
+      safeY: Number.isFinite(Number(value.safeY)) ? Number(value.safeY) : Number(value.y)
+    }
+  : null;
+
 export function createDefaultSave(levelCount) {
   return {
     version: SAVE_VERSION,
@@ -38,6 +47,8 @@ export function normalizeEndlessRun(value) {
     seed,
     depth: Math.max(0, Math.trunc(Number(value.depth) || 0)),
     totalStrokes: Math.max(0, Math.trunc(Number(value.totalStrokes) || 0)),
+    currentStrokes: finiteStroke(value.currentStrokes) ?? 0,
+    checkpoint: normalizeCheckpoint(value.checkpoint),
     startedAt: Number.isFinite(Number(value.startedAt)) ? Number(value.startedAt) : Date.now()
   };
 }
@@ -59,14 +70,7 @@ export function normalizeCampaignRun(value, levelCount) {
   const startHole = clampInt(value.startHole, 0, levelCount - 1, 0);
   const current = clampInt(value.current, startHole, levelCount - 1, startHole);
   const strokes = Array.from({ length: levelCount }, (_, index) => finiteStroke(value.strokes?.[index]));
-  const checkpoint = value.checkpoint && Number.isFinite(Number(value.checkpoint.x)) && Number.isFinite(Number(value.checkpoint.y))
-    ? {
-        x: Number(value.checkpoint.x),
-        y: Number(value.checkpoint.y),
-        safeX: Number.isFinite(Number(value.checkpoint.safeX)) ? Number(value.checkpoint.safeX) : Number(value.checkpoint.x),
-        safeY: Number.isFinite(Number(value.checkpoint.safeY)) ? Number(value.checkpoint.safeY) : Number(value.checkpoint.y)
-      }
-    : null;
+  const checkpoint = normalizeCheckpoint(value.checkpoint);
   return {
     startHole,
     current,
@@ -102,6 +106,16 @@ export function normalizeSave(value, levelCount) {
 export function checkpointCampaignRun(run, levelCount, hole, strokes, point, safePoint = point) {
   const normalized = normalizeCampaignRun(run, levelCount) || createCampaignRun(hole, levelCount);
   normalized.current = clampInt(hole, normalized.startHole, levelCount - 1, normalized.current);
+  normalized.currentStrokes = finiteStroke(strokes) ?? 0;
+  normalized.checkpoint = point && Number.isFinite(point.x) && Number.isFinite(point.y)
+    ? { x: point.x, y: point.y, safeX: safePoint?.x ?? point.x, safeY: safePoint?.y ?? point.y }
+    : null;
+  return normalized;
+}
+
+export function checkpointEndlessRun(run, strokes, point, safePoint = point) {
+  const normalized = normalizeEndlessRun(run);
+  if (!normalized) return null;
   normalized.currentStrokes = finiteStroke(strokes) ?? 0;
   normalized.checkpoint = point && Number.isFinite(point.x) && Number.isFinite(point.y)
     ? { x: point.x, y: point.y, safeX: safePoint?.x ?? point.x, safeY: safePoint?.y ?? point.y }

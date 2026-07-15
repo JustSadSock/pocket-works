@@ -5,9 +5,11 @@ import { createBall, stepBall, strikeBall } from './physics.js';
 import {
   campaignSegmentTotal,
   checkpointCampaignRun,
+  checkpointEndlessRun,
   createCampaignRun,
   fullCampaignTotal,
   normalizeCampaignRun,
+  normalizeEndlessRun,
   normalizeSave,
   recordCampaignHole,
   sectionWord,
@@ -104,6 +106,9 @@ assert(fullCampaignTotal(partial, LEVELS.length) == null, 'campaign: one-hole re
 assert(campaignSegmentTotal(partial, LEVELS.length) === 6, 'campaign: segment total mismatch');
 const migrated = normalizeSave({ version: 2, current: 1.9, unlocked: 3.8, best: [] }, LEVELS.length);
 assert(migrated.current === 1 && migrated.unlocked === 3 && migrated.campaignRun == null, 'save: legacy migration mismatch');
+const endlessCheckpoint = checkpointEndlessRun({ seed: 233, depth: 4, totalStrokes: 17, startedAt: 10 }, 3, { x: 14, y: 21 }, { x: 12, y: 19 });
+const restoredEndless = normalizeEndlessRun(structuredClone(endlessCheckpoint));
+assert(restoredEndless.currentStrokes === 3 && restoredEndless.checkpoint.x === 14 && restoredEndless.checkpoint.safeY === 19, 'endless: checkpoint did not survive normalization');
 assert(strokeWord(1) === 'удар' && strokeWord(3) === 'удара' && strokeWord(11) === 'ударов', 'copy: stroke plural mismatch');
 assert(sectionWord(21) === 'секция' && sectionWord(24) === 'секции', 'copy: section plural mismatch');
 for (const seed of [1, 13, 233, 0xDEADBEEF]) assert(parseRunCode(formatRunCode(seed)) === (seed >>> 0), `seed ${seed}: code did not round-trip`);
