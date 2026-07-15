@@ -2,7 +2,9 @@ import { DioramaRenderer as CoreDioramaRenderer } from './render-core14.js';
 import { LivingGreenhouseLayer } from './greenhouse15.js';
 import { installTerrain18 } from './terrain18.js';
 import { upgradeCourseLevel17 } from './course17.js';
-import { isCourse18, upgradeCourse18InPlace } from './course18.js';
+import { isCourse18 } from './course18.js';
+import { upgradeCourse19InPlace } from './course19.js';
+import { CoursePolishLayer } from './polish19.js';
 import { stabilizeLevelGeometry } from './integrity.js';
 
 export { polygonArea, triangulatePolygon } from './render-core14.js';
@@ -40,7 +42,7 @@ function markCompiledIntegrity(level) {
   try {
     Object.defineProperty(level, '__integrityVersion', { value: 2, writable: true, configurable: true, enumerable: false });
     Object.defineProperty(level, '__integrityReport', {
-      value: { source: 'course18-compiler', movedObstacles: 0, removedObstacles: 0, movedRotors: 0, removedRotors: 0 },
+      value: { source: 'course19-compiler', movedObstacles: 0, removedObstacles: 0, movedRotors: 0, removedRotors: 0 },
       writable: true,
       configurable: true,
       enumerable: false
@@ -51,7 +53,7 @@ function markCompiledIntegrity(level) {
 }
 
 function orientExitPortal(level) {
-  if (!isCourse18(level) || level.__course18ExitOriented) return;
+  if (!isCourse18(level) || level.__course19ExitOriented) return;
   const tunnel = level.tunnels?.[0];
   const visual = tunnel?.visualExit || level.course18?.tunnelVisuals?.[0]?.exit;
   if (!visual) return;
@@ -80,8 +82,8 @@ function orientExitPortal(level) {
     tunnel.exit.axisY = travelY;
     tunnel.exit.angle = Math.atan2(travelY, travelX);
   }
-  try { Object.defineProperty(level, '__course18ExitOriented', { value: true, configurable: true }); }
-  catch { level.__course18ExitOriented = true; }
+  try { Object.defineProperty(level, '__course19ExitOriented', { value: true, configurable: true }); }
+  catch { level.__course19ExitOriented = true; }
 }
 
 function prepareTunnelTrigger(level, ball) {
@@ -136,6 +138,7 @@ export class DioramaRenderer {
     const core = new CoreDioramaRenderer(canvas);
     const terrain = installTerrain18(core, canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
+    const polish = new CoursePolishLayer(canvas, core);
     const visualCache = new WeakMap();
     const integrityCache = new WeakSet();
     installWorldSpaceFlag(greenhouse);
@@ -144,7 +147,7 @@ export class DioramaRenderer {
 
     const visualFor = (level) => {
       if (!level || typeof level !== 'object') return level;
-      upgradeCourse18InPlace(level);
+      upgradeCourse19InPlace(level);
       if (isCourse18(level)) {
         orientExitPortal(level);
         markCompiledIntegrity(level);
@@ -167,13 +170,14 @@ export class DioramaRenderer {
     return new Proxy(core, {
       get(target, property) {
         if (property === 'livingGreenhouse') return greenhouse;
-        if (property === 'terrain18') return terrain;
+        if (property === 'terrain19') return terrain;
         if (property === 'drawMesh' && terrain.captureLegacyDrawMesh) return () => {};
         if (property === 'draw') {
           return (level, ball, aim, time, dt, mode) => {
             const visualLevel = visualFor(level);
             prepareTunnelTrigger(level, ball);
             const result = target.draw(visualLevel, ball, aim, time, dt, mode);
+            polish.draw(visualLevel, time, dt, ball);
             greenhouse.draw(visualLevel, ball, aim, time, dt, mode);
             return result;
           };
@@ -187,6 +191,7 @@ export class DioramaRenderer {
         if (property === 'destroy') {
           return () => {
             terrain.destroy();
+            polish.destroy();
             greenhouse.destroy();
             target.destroy?.();
           };

@@ -1,4 +1,34 @@
+import { upgradeCourse19InPlace } from './course19.js';
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+function markCompiledRuntime(level) {
+  if (!level?.course18?.field) return;
+  const meshOutline = level.course18.surfaceMesh?.outline;
+  if (Array.isArray(meshOutline) && meshOutline.length >= 6 && !level.__course19OutlineApplied) {
+    level.outline = meshOutline.map((point) => ({ x: point.x, y: point.y }));
+    try { Object.defineProperty(level, '__course19OutlineApplied', { value: true, configurable: true, enumerable: false }); }
+    catch { level.__course19OutlineApplied = true; }
+  }
+  if (level.__integrityVersion === 2) return;
+  try {
+    Object.defineProperty(level, '__integrityVersion', { value: 2, writable: true, configurable: true, enumerable: false });
+    Object.defineProperty(level, '__integrityReport', {
+      value: { source: 'course19-runtime', movedObstacles: 0, removedObstacles: 0, movedRotors: 0, removedRotors: 0 },
+      writable: true,
+      configurable: true,
+      enumerable: false
+    });
+  } catch {
+    level.__integrityVersion = 2;
+  }
+}
+
+function runtimeField(level) {
+  if (level && typeof level === 'object' && !level.course18?.field) upgradeCourse19InPlace(level);
+  markCompiledRuntime(level);
+  return level?.course18?.field || null;
+}
 
 export function zoneKind(zone) {
   return zone?.physicsType || zone?.type;
@@ -123,7 +153,7 @@ function slopeHeight(zone, x, y) {
 }
 
 export function terrainHeightAt(level, x, y) {
-  const field = level?.course18?.field;
+  const field = runtimeField(level);
   if (field?.heightAt) return field.heightAt(x, y);
   let height = Number(level?.baseZ ?? 0);
   const point = { x, y };
@@ -139,7 +169,7 @@ export function terrainHeightAt(level, x, y) {
 }
 
 export function terrainGradientAt(level, x, y) {
-  const field = level?.course18?.field;
+  const field = runtimeField(level);
   if (field?.gradientAt) return field.gradientAt(x, y);
   const point = { x, y };
   let gradient = { x: 0, y: 0 };
@@ -159,7 +189,7 @@ export function terrainGradientAt(level, x, y) {
 }
 
 export function surfaceAt(level, x, y) {
-  const field = level?.course18?.field;
+  const field = runtimeField(level);
   if (field?.surfaceAt) return field.surfaceAt(x, y);
   const point = { x, y };
   let surface = 'grass';
@@ -176,14 +206,14 @@ export function surfaceAt(level, x, y) {
 }
 
 export function rampAt(level, x, y) {
-  const field = level?.course18?.field;
+  const field = runtimeField(level);
   if (field?.rampAt) return field.rampAt(x, y);
   const point = { x, y };
   return (level?.zones || []).find((zone) => zoneKind(zone) === 'slope' && zone.ramp && insideZone(point, zone)) || null;
 }
 
 export function waterAt(level, x, y) {
-  const field = level?.course18?.field;
+  const field = runtimeField(level);
   if (field?.surfaceAt) return field.surfaceAt(x, y) === 'water';
   const point = { x, y };
   let water = false;

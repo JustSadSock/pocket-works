@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.8.0';
-const APP_VERSION = '1.8.0';
-const RELEASE_DATE = '2026-07-14';
+const CACHE_NAME = 'moss-marble-v1.9.0';
+const APP_VERSION = '1.9.0';
+const RELEASE_DATE = '2026-07-15';
 const RELEASE_NOTES = [
-  'Лунки 1, 6 и 8 используют единую маршрутную поверхность вместо набора наложенных зон.',
-  'Рендер и физика читают одно поле высоты, градиента и материала.',
-  'Добавлены изогнутые бортики, новые камни и пни, контактные тени и плавные края песка и мха.',
-  'Туннель восьмой лунки встроен в склон, а его триггер перенесён внутрь боковой арки.'
+  'Все девять кампанийных лунок теперь используют единую физическую поверхность и собственную композицию рельефа.',
+  'Бесконечная оранжерея собирает секции из сценарных блоков вместо независимых случайных объектов.',
+  'Добавлены водные перешейки, развилки вокруг холмов, процедурные туннели и встроенные в маршрут механизмы.',
+  'Финальный художественный слой добавляет водную рябь, следы на песке и редкую растительность.'
 ];
 const APP_SHELL = [
   './',
@@ -16,23 +16,25 @@ const APP_SHELL = [
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
-  './styles161.css?v=1.8.0',
+  './styles161.css?v=1.9.0',
   './levels.js',
   './procedural.js',
   './course17.js',
   './course18.js',
+  './course19.js',
   './terrain.js',
   './terrain17.js',
   './terrain18.js',
+  './polish19.js',
   './integrity.js',
   './physics.js',
   './render-core14.js',
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.8.0',
+  './camera-intro-guard.js?v=1.9.0',
   './audio.js',
-  './app.js?v=1.8.0',
+  './app.js?v=1.9.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
