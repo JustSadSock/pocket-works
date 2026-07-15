@@ -1,0 +1,141 @@
+aign, battle, attacker) + flank + moraleBonus + variance - supplyPenalty - weatherPenalty;
+  const defense = targetTerrain.defense + target.entrenched + (target.type === 'guard' ? 1 : 0);
+  const damage = clamp(raw - defense, 1, 9);
+  target.hp = clamp(target.hp - damage, 0, target.maxHp);
+  const routedNow = target.hp <= 0;
+  target.morale = clamp(target.morale - moraleLoss(campaign, target, damage, routedNow), 0, target.maxMorale);
+  if (target.morale <= 0 || target.hp <= 0) target.routed = true;
+  attacker.acted = true;
+  attacker.entrenched = 0;
+  const supplyCost = 12 + (battle.weather === 'heat' ? 5 : 0) + (attacker.type === 'artillery' ? 4 : 0);
+  attacker.supply = clamp(attacker.supply - supplyCost, 0, attacker.maxSupply);
+  attacker.morale = clamp(attacker.morale - 2, 0, attacker.maxMorale);
+  if (side === 'player') battle.command -= 1;
+  const resolveLoss = damage * 2 + (target.routed ? 9 : 0);
+  if (target.side === 'enemy') battle.enemyResolve = clamp(battle.enemyResolve - resolveLoss, 0, 140);
+  else battle.playerResolve = clamp(battle.playerResolve - resolveLoss, 0, 120);
+  battle.actionCounter += 1;
+  battle.log.push(`${UNIT_TYPES[attacker.type].name} наносит ${damage} урона${target.routed ? ' и ломает строй' : ''}.`);
+  return { ok: true, kind: 'attack', attackerId, targetId, damage, routed: target.routed, from: { row: attacker.row, col: attacker.col }, to: { row: target.row, col: target.col } };
+}
+
+export function entrenchUnit(battle, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.side !== 'player' || unit.acted || unit.routed) return { ok: false, reason: 'Отряд недоступен.' };
+  if (battle.command < 1) return { ok: false, reason: 'Не хватает приказов.' };
+  unit.entrenched = clamp(unit.entrenched + 1, 0, 2);
+  unit.morale = clamp(unit.morale + 8, 0, unit.maxMorale);
+  unit.acted = true;
+  battle.command -= 1;
+  battle.actionCounter += 1;
+  battle.log.push(`${UNIT_TYPES[unit.type].name} окапывается.`);
+  return { ok: true, kind: 'entrench', unitId };
+}
+
+export function resupplyUnit(battle, campaign, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.side !== 'player' || unit.acted || unit.routed) return { ok: false, reason: 'Отряд недоступен.' };
+  if (battle.command < 1) return { ok: false, reason: 'Не хватает приказов.' };
+  const nearLine = unit.col <= 2 || battle.objectives.some((objective) => objective.owner === 'player' && manhattan(unit, objective) <= 2);
+  const gain = 30 + (campaign.upgrades?.quartermaster || 0) * 15 + (nearLine ? 15 : 0);
+  unit.supply = clamp(unit.supply + gain, 0, unit.maxSupply);
+  unit.hp = clamp(unit.hp + (nearLine ? 1 : 0), 0, unit.maxHp);
+  unit.acted = true;
+  battle.command -= 1;
+  battle.actionCounter += 1;
+  battle.log.push(`${UNIT_TYPES[unit.type].name}: обоз доставлен.`);
+  return { ok: true, kind: 'resupply', unitId, gain };
+}
+
+export function rallyUnit(battle, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.side !== 'player' || unit.acted || unit.routed) return { ok: false, reason: 'Отряд недоступен.' };
+  if (battle.command < 2) return { ok: false, reason: 'Нужно 2 приказа.' };
+  unit.morale = clamp(unit.morale + 28, 0, unit.maxMorale);
+  unit.acted = true;
+  battle.command -= 2;
+  battle.playerResolve = clamp(battle.playerResolve + 4, 0, 120);
+  battle.actionCounter += 1;
+  battle.log.push(`${UNIT_TYPES[unit.type].name}: строй восстановлен.`);
+  return { ok: true, kind: 'rally', unitId };
+}
+
+export function useDoctrine(battle, campaign, selectedUnitId = null) {
+  if (battle.doctrineUsed) return { ok: false, reason: 'Особый приказ уже использован.' };
+  if (battle.command < 2) return { ok: false, reason: 'Нужно 2 приказа.' };
+  if (campaign.doctrine === 'maneuver') {
+    const unit = getUnit(battle, selectedUnitId);
+    if (!unit || unit.side !== 'player' || unit.routed) return { ok: false, reason: 'Выбери свой отряд.' };
+    unit.acted = false;
+    unit.morale = clamp(unit.morale + 6, 0, unit.maxMorale);
+  } else if (campaign.doctrine === 'fire') {
+    battle.fireBonus = 2;
+  } else {
+    battle.units.filter((unit) => unit.side === 'player' && !unit.routed).forEach((unit) => {
+      unit.morale = clamp(unit.morale + 16, 0, unit.maxMorale);
+      unit.entrenched = clamp(unit.entrenched + 1, 0, 2);
+    });
+    battle.playerResolve = clamp(battle.playerResolve + 8, 0, 120);
+  }
+  battle.command -= 2;
+  battle.doctrineUsed = true;
+  battle.actionCounter += 1;
+  battle.log.push(`Особый приказ: ${DOCTRINES[campaign.doctrine].special}.`);
+  return { ok: true, kind: 'doctrine', doctrine: campaign.doctrine };
+}
+
+function captureObjectives(battle) {
+  for (const objective of battle.objectives) {
+    const unit = getUnitAt(battle, objective.row, objective.col);
+    if (unit) objective.owner = unit.side;
+  }
+  const playerHeld = battle.objectives.filter((objective) => objective.owner === 'player').length;
+  const enemyHeld = battle.objectives.filter((objective) => objective.owner === 'enemy').length;
+  battle.playerObjective += playerHeld;
+  battle.enemyObjective += enemyHeld;
+  if (playerHeld === 2) battle.enemyResolve = clamp(battle.enemyResolve - 4, 0, 140);
+  if (enemyHeld === 2) battle.playerResolve = clamp(battle.playerResolve - 4, 0, 120);
+}
+
+function upkeepUnits(battle, campaign) {
+  for (const unit of battle.units) {
+    if (unit.routed || unit.hp <= 0) continue;
+    const onSupplyLine = unit.side === 'player'
+      ? unit.col <= 2 || battle.objectives.some((objective) => objective.owner === 'player' && manhattan(unit, objective) <= 1)
+      : unit.col >= 4 || battle.objectives.some((objective) => objective.owner === 'enemy' && manhattan(unit, objective) <= 1);
+    unit.supply = clamp(unit.supply - (onSupplyLine ? 1 : 4), 0, unit.maxSupply);
+    if (unit.supply <= 10) unit.morale = clamp(unit.morale - 8, 0, unit.maxMorale);
+    if (unit.side === 'player' && (campaign.upgrades?.surgeons || 0) > 0) unit.hp = clamp(unit.hp + Math.min(2, campaign.upgrades.surgeons), 0, unit.maxHp);
+    unit.acted = false;
+    unit.entrenched = clamp(unit.entrenched - (unit.acted ? 1 : 0), 0, 2);
+  }
+}
+
+export function beginEnemyPhase(battle) {
+  battle.phase = 'enemy';
+  battle.units.filter((unit) => unit.side === 'enemy').forEach((unit) => { unit.acted = false; });
+}
+
+export function chooseEnemyAction(battle, campaign, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.side !== 'enemy' || unit.acted || unit.routed) return { type: 'wait', unitId };
+  const targets = attackableUnits(battle, unitId).sort((a, b) => {
+    const valueA = (a.type === 'artillery' ? 5 : 0) + (a.maxHp - a.hp) + (100 - a.morale) / 20;
+    const valueB = (b.type === 'artillery' ? 5 : 0) + (b.maxHp - b.hp) + (100 - b.morale) / 20;
+    return valueB - valueA;
+  });
+  if (targets.length) return { type: 'attack', unitId, targetId: targets[0].id };
+
+  if (unit.morale < 30 && deterministicRoll(battle, `hold:${unit.id}`) < 0.55) return { type: 'entrench', unitId };
+  const playerUnits = battle.units.filter((candidate) => candidate.side === 'player' && !candidate.routed && candidate.hp > 0);
+  const liveObjectives = battle.objectives.filter((objective) => objective.owner !== 'enemy');
+  const target = liveObjectives.length
+    ? liveObjectives.sort((a, b) => manhattan(unit, a) - manhattan(unit, b))[0]
+    : playerUnits.sort((a, b) => manhattan(unit, a) - manhattan(unit, b))[0];
+  if (!target) return { type: 'wait', unitId };
+  const cells = reachableCellsForEnemy(battle, campaign, unitId);
+  if (!cells.length) return { type: 'entrench', unitId };
+  cells.sort((a, b) => {
+    const da = manhattan(a, target) + (getTerrain(battle, a.row, a.col).defense < 0 ? 0.6 : 0);
+    const db = manhattan(b, target) + (getTerrain(battle, b.row, b.col).defense < 0 ? 0.6 : 0);
+    return 
