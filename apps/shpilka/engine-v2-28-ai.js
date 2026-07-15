@@ -1,5 +1,9 @@
 // ШПИЛЬКА 2.8 — rare contextual mistakes and route-aware pace.
 var shp28MistakeRates = { rookie: 0.042, racer: 0.025, maniac: 0.015, pilot: 0.010 };
+Object.assign(shp27DifficultyTune.rookie, { brake: 390 });
+Object.assign(shp27DifficultyTune.racer, { brake: 425 });
+Object.assign(shp27DifficultyTune.maniac, { brake: 450 });
+Object.assign(shp27DifficultyTune.pilot, { brake: 465 });
 
 shp27UpdateMildError = function shp28UpdateMildError(car, dt, tune, preview) {
   car.shp27ErrorTimer = Math.max(0, (car.shp27ErrorTimer || 0) - dt);
