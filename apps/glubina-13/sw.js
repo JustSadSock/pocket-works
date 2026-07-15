@@ -1,12 +1,13 @@
 const CACHE_PREFIX = 'glubina-13-';
-const CACHE_NAME = 'glubina-13-v2.0.0-p1';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'glubina-13-v2.1.0-p3';
+const APP_VERSION = '2.1.0';
 const RELEASE_DATE = '2026-07-15';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Линейный спуск перестроен в свободную экспедицию по бесконечным подводным руинам с возвращением к шлюзу.',
-  'Добавлены джойстик, тихий ход, три класса добычи, чёрный ящик, Слушатель и постоянные модули капсулы.',
-  'Обновлены 3D-движок, интерфейс, сохранение экспедиции, обучение и автономный кэш.'
+  'Стартовый сектор получил гарантированный безопасный маршрут, постоянный ближний свет и всегда видимый указатель на шлюз.',
+  'Столкновения больше не убивают серией, базовый корпус усилен, а запас воздуха увеличен.',
+  'Слушатель появляется позже, идёт к последнему шуму, теряет след в тишине и отступает после атаки.',
+  'Runtime упрощён до прямого модуля; обновлены офлайн-кэш, обучение, тесты и обратная связь управления.'
 ];
 const APP_SHELL = [
   './',
@@ -16,11 +17,6 @@ const APP_SHELL = [
   './app.js',
   './engine.js',
   './game-core.js',
-  './runtime/part-00.txt',
-  './runtime/part-01.txt',
-  './runtime/part-02.txt',
-  './runtime/part-03.txt',
-  './runtime/part-04.txt',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
@@ -45,77 +41,59 @@ const SHELL_KEYS = new Map(APP_SHELL.map((entry) => {
   return [url.pathname, url.href];
 }));
 
-function buildNetworkUrl(input) {
+function freshUrl(input) {
   const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
   url.searchParams.set('__pw_build', BUILD_TOKEN);
   return url;
 }
 
 async function fetchFresh(input) {
-  const response = await fetch(buildNetworkUrl(input), {
-    cache: 'no-store',
-    credentials: 'same-origin',
-    redirect: 'follow'
-  });
-  if (!response || !response.ok) throw new Error(`Fresh application request failed: ${response?.status || 'network'}`);
+  const response = await fetch(freshUrl(input), { cache: 'no-store', credentials: 'same-origin', redirect: 'follow' });
+  if (!response?.ok) throw new Error(`Fresh request failed: ${response?.status || 'network'}`);
   return response;
 }
 
-async function precacheFreshShell() {
+async function precache() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all([...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
-    const response = await fetchFresh(canonicalUrl);
-    await cache.put(canonicalUrl, response);
+  await Promise.all([...new Set(SHELL_KEYS.values())].map(async (url) => {
+    const response = await fetchFresh(url);
+    await cache.put(url, response);
   }));
 }
 
-async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
+async function networkFirst(request, canonical, fallback = canonical) {
   try {
     const response = await fetchFresh(request);
     const cache = await caches.open(CACHE_NAME);
-    await cache.put(canonicalUrl, response.clone());
+    await cache.put(canonical, response.clone());
     return response;
   } catch {
-    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+    return (await caches.match(canonical)) || caches.match(fallback);
   }
 }
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(precacheFreshShell());
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({
-      version: APP_VERSION,
-      releaseDate: RELEASE_DATE,
-      releaseNotes: RELEASE_NOTES,
-      cacheProtocol: CACHE_PROTOCOL,
-      cacheName: CACHE_NAME
-    });
-  }
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
+self.addEventListener('install', (event) => event.waitUntil(precache()));
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys
-        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-        .map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
-
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_UPDATE_INFO') {
+    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES, cacheProtocol: CACHE_PROTOCOL, cacheName: CACHE_NAME });
+  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
   if (event.request.mode === 'navigate') {
-    event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
+    event.respondWith(networkFirst(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
-  const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
-  if (!canonicalUrl) return;
-  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
+  const canonical = SHELL_KEYS.get(url.pathname);
+  if (canonical) event.respondWith(networkFirst(event.request, canonical, SCOPE_URL.href));
 });
