@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 
 installMobileRuntime();
 
-const VERSION = '2.7.1';
+const VERSION = '2.8.0';
 const gameParts = [
   ...Array.from({ length: 11 }, (_, index) => `./engine-v2-${String(index + 1).padStart(2, '0')}.js`),
   './engine-v2-stability.js',
@@ -25,15 +25,43 @@ const gameParts = [
   './engine-v2-27-ai.js',
   './engine-v2-27-fixes.js',
   './engine-v2-27-1.js',
+  './engine-v2-27-2.js',
+  './engine-v2-28-route.js',
+  './engine-v2-28-ai.js',
+  './engine-v2-28-physics.js',
+  './engine-v2-28-fixes.js',
+  './engine-v2-28-ui.js',
   './engine-v2-12.js'
 ];
 
-for (const source of gameParts) {
-  await new Promise((resolve, reject) => {
+const loadingProgress = document.querySelector('#loadingProgress');
+
+function loadGamePart(source) {
+  return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = `${source}?v=${VERSION}`;
     script.onload = resolve;
     script.onerror = () => reject(new Error(`Failed to load ${source}`));
     document.head.append(script);
   });
+}
+
+try {
+  for (let index = 0; index < gameParts.length; index += 1) {
+    if (loadingProgress) loadingProgress.textContent = `ДВИЖОК ${index + 1}/${gameParts.length}`;
+    await loadGamePart(gameParts[index]);
+  }
+} catch (error) {
+  console.error(error);
+  const screen = document.querySelector('#loadingScreen');
+  if (screen) {
+    screen.dataset.error = 'true';
+    if (loadingProgress) loadingProgress.textContent = 'НЕ УДАЛОСЬ ЗАГРУЗИТЬ';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'loading-retry';
+    retry.textContent = 'ПОВТОРИТЬ';
+    retry.addEventListener('click', () => window.location.reload());
+    screen.append(retry);
+  }
 }
