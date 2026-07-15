@@ -54,17 +54,36 @@ document.addEventListener('visibilitychange', () => {
   lastFrame = performance.now();
 });
 
+function shp28LoadingVisible(visible, label = 'СБОРКА ТРАССЫ') {
+  const screen = document.querySelector('#loadingScreen');
+  const progress = document.querySelector('#loadingProgress');
+  if (progress) progress.textContent = label;
+  if (screen) screen.hidden = !visible;
+}
+
+function shp28GenerateRoute() {
+  shp28LoadingVisible(true);
+  startScreen.hidden = true;
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      prepareRoute();
+      setupRace();
+      showRaceUi(false);
+      startScreen.hidden = false;
+      shp28LoadingVisible(false);
+      showRaceMessage('НОВАЯ ТРАССА', 0.5);
+      lastFrame = performance.now();
+    }, 24);
+  });
+}
+
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 startButton.addEventListener('click', () => beginRace());
-newRouteButton.addEventListener('click', () => {
-  prepareRoute();
-  setupRace();
-  showRaceMessage('НОВАЯ ТРАССА', 0.5);
-});
+newRouteButton.addEventListener('click', shp28GenerateRoute);
 document.querySelector('#pauseButton').addEventListener('click', () => setPause(true));
 document.querySelector('#resumeButton').addEventListener('click', () => setPause(false));
 document.querySelector('#restartButtonPause').addEventListener('click', () => beginRace());
-restartButtonFinish.addEventListener('click', () => beginRace({ newRoute: true }));
+restartButtonFinish.addEventListener('click', () => beginRace());
 recoverButton.addEventListener('click', () => recoverCar(player));
 document.querySelector('#soundButtonStart').addEventListener('click', async () => {
   await audio.unlock();
@@ -76,8 +95,17 @@ document.querySelector('#soundButtonPause').addEventListener('click', async () =
 });
 
 updateSoundLabels();
-prepareRoute(hashSeed(Date.now() ^ 0x51a7b33f));
-setupRace();
 showRaceUi(false);
+startScreen.hidden = true;
 resize();
 requestAnimationFrame(frame);
+requestAnimationFrame(() => {
+  setTimeout(() => {
+    prepareRoute(hashSeed(Date.now() ^ 0x51a7b33f));
+    setupRace();
+    mode = 'menu';
+    startScreen.hidden = false;
+    shp28LoadingVisible(false);
+    lastFrame = performance.now();
+  }, 32);
+});
