@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'sgib-';
-const CACHE_NAME = 'sgib-v1.1.4';
-const APP_VERSION = '1.1.4';
+const CACHE_NAME = 'sgib-v1.1.5';
+const APP_VERSION = '1.1.5';
 const RELEASE_DATE = '2026-07-15';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Метки видны на обратной стороне клапана и за границей исходного листа.',
-  'Ось сгиба получила контрастную линию поверх бумаги и стола.',
-  'Поднятый клапан выделен отдельным контуром, тенью и фактурой оборота.',
-  'Перекрытые и вынесенные метки получают светлую подложку для читаемости.'
+  'Жест больше не зависает при неожиданной потере pointer capture на iPhone.',
+  'Координаты считаются относительно Canvas и стабильного физического движения пальца.',
+  'Лист начинает подниматься только после осознанного протягивания, а не от микродвижения.',
+  'Версионные runtime-файлы изолированы от кешей других выпусков.'
 ];
 const APP_SHELL = [
   './',
@@ -82,14 +82,24 @@ async function precacheFreshShell() {
   );
 }
 
+function cacheKeyFor(requestUrl, canonicalUrl) {
+  return requestUrl.searchParams.get('v') === APP_VERSION
+    ? requestUrl.href
+    : canonicalUrl;
+}
+
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
+  const requestUrl = new URL(request.url);
+  const cacheKey = cacheKeyFor(requestUrl, canonicalUrl);
   try {
     const response = await fetchFresh(request);
     const cache = await caches.open(CACHE_NAME);
-    await cache.put(canonicalUrl, response.clone());
+    await cache.put(cacheKey, response.clone());
     return response;
   } catch {
-    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+    const exact = await caches.match(cacheKey);
+    if (exact) return exact;
+    return caches.match(fallbackUrl);
   }
 }
 
@@ -132,5 +142,13 @@ self.addEventListener('fetch', (event) => {
   }
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
   if (!canonicalUrl) return;
-  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
+
+  const requestedVersion = requestUrl.searchParams.get('v');
+  if (requestedVersion && requestedVersion !== APP_VERSION) {
+    // Never place files from another release into this worker's cache.
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
+  event.respondWith(networkFirstFresh(event.request, canonicalUrl, canonicalUrl));
 });
