@@ -1,3 +1,9 @@
+    context.arc(particle.x, particle.y, particle.radius * (1 - progress * .4), 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  }
+}
+
 function drawMenuScene() {
   context.save();
   const centerX = LOGICAL_WIDTH * 0.43;
@@ -40,40 +46,16 @@ function drawMenuScene() {
   context.restore();
 }
 
-function recoverFailedFold(error) {
-  console.error('СГИБ fold application failed', error);
-  clearTimeout(completionTimer);
-  const snapshot = state.history.pop();
-  if (snapshot) restoreSnapshot(snapshot);
-  else restartCurrent();
-  state.animation = null;
-  state.resolved = false;
-  state.paused = false;
-  showScreen(null);
-  showToast('Сгиб отменён — лист восстановлен');
-  audio.invalid();
-  vibrate([18, 35, 10]);
-}
-
 function updateAnimation(now) {
-  const animation = state.animation;
-  if (!animation) return;
-
-  const duration = Number.isFinite(animation.duration) && animation.duration > 0 ? animation.duration : 1;
-  const startedAt = Number.isFinite(animation.startedAt) ? animation.startedAt : now - duration;
-  const progress = clamp((now - startedAt) / duration, 0, 1);
+  if (!state.animation) return;
+  const progress = clamp((now - state.animation.startedAt) / state.animation.duration, 0, 1);
   const eased = 1 - Math.pow(1 - progress, 3);
-  const fromAngle = Number.isFinite(animation.fromAngle) ? animation.fromAngle : 0;
-  animation.angle = fromAngle + (Math.PI - fromAngle) * eased;
-
-  if (progress >= 1 && !animation.applied) {
-    animation.applied = true;
+  state.animation.angle = state.animation.fromAngle + (Math.PI - state.animation.fromAngle) * eased;
+  if (progress >= 1 && !state.animation.applied) {
+    state.animation.applied = true;
+    const line = state.animation.line;
     state.animation = null;
-    try {
-      applyFold(animation.line);
-    } catch (error) {
-      recoverFailedFold(error);
-    }
+    applyFold(line);
   }
 }
 
@@ -90,68 +72,25 @@ function updateEffects(deltaSeconds) {
   state.pulses = state.pulses.filter((pulse) => pulse.age < pulse.life);
 }
 
-function recoverStaleInteractions(now) {
-  const gesture = state.gesture;
-  const lastGestureEvent = gesture?.lastEventAt || gesture?.startedAt;
-  if (gesture && Number.isFinite(lastGestureEvent) && now - lastGestureEvent > GESTURE_STALE_MS) {
-    cancelGesture();
-    showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
-  }
-
-  const animation = state.animation;
-  const animationStartedAt = animation?.startedAt;
-  if (animation && Number.isFinite(animationStartedAt) && now - animationStartedAt > ANIMATION_STALE_MS) {
-    recoverFailedFold(new Error('Fold animation watchdog expired'));
-  }
-}
-
 function render(now) {
-  const frameNow = Number.isFinite(now) ? now : performance.now();
-  try {
-    const deltaSeconds = clamp((frameNow - lastFrameTime) / 1000, 0, 0.05);
-    lastFrameTime = frameNow;
-    updateAnimation(frameNow);
-    recoverStaleInteractions(frameNow);
-    updateEffects(deltaSeconds);
-    resizeCanvas();
-    beginLogicalFrame();
-    if (state.mode === 'menu') drawMenuScene();
-    else drawPaperScene();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-  } catch (error) {
-    console.error('СГИБ frame failed', error);
-    if (state.animation) {
-      try {
-        recoverFailedFold(error);
-      } catch (recoveryError) {
-        console.error('СГИБ frame recovery failed', recoveryError);
-        state.animation = null;
-      }
-    }
-  } finally {
-    // A single malformed preview frame must never kill the RAF loop and leave
-    // the game permanently blocked by state.animation.
-    rafId = requestAnimationFrame(render);
-  }
+  resizeCanvas();
+  beginLogicalFrame();
+  if (state.mode === 'menu') drawMenuScene();
+  else drawPaperScene();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  const deltaSeconds = clamp((now - lastFrameTime) / 1000, 0, 0.05);
+  lastFrameTime = now;
+  updateAnimation(now);
+  updateEffects(deltaSeconds);
+  rafId = requestAnimationFrame(render);
 }
 
 function bindControls() {
-  canvas.addEventListener('pointerdown', beginGesture, { passive: false });
-
-  // Touch and pen input use the window path instead of explicit pointer capture.
-  // This avoids WebKit capture-loss races while keeping the gesture alive if the
-  // finger crosses UI chrome or the canvas boundary.
-  window.addEventListener('pointermove', moveGesture, { capture: true, passive: false });
-  window.addEventListener('pointerup', endGesture, { capture: true, passive: false });
-  window.addEventListener('pointercancel', cancelGesture, { capture: true, passive: false });
-
-  canvas.addEventListener('lostpointercapture', (event) => {
-    const gesture = state.gesture;
-    if (!gesture || !gesture.captured || gesture.pointerId !== event.pointerId) return;
-    if (cancelGesture(event)) {
-      showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
-    }
-  });
+  canvas.addEventListener('pointerdown', beginGesture);
+  canvas.addEventListener('pointermove', moveGesture);
+  canvas.addEventListener('pointerup', endGesture);
+  canvas.addEventListener('pointercancel', cancelGesture);
+  canvas.addEventListener('lostpointercapture', cancelGesture);
 
   dom.continueBtn.addEventListener('click', () => {
     pressFeedback();

@@ -13,14 +13,9 @@
   press() { this.tone(310, 0.045, 0.012, 'triangle'); }
   invalid() { this.tone(92, 0.13, 0.035, 'sine'); }
   fold() { this.rustle(0.3, 0.045, 1250); }
-  seal() {
-    this.tone(520, 0.07, 0.024, 'sine');
-    this.tone(760, 0.12, 0.02, 'sine', 0.035);
-  }
-  match() { this.seal(); }
-  spill() {
-    this.rustle(0.14, 0.045, 430);
-    this.tone(118, 0.13, 0.032, 'triangle', 0.015);
+  match() {
+    this.tone(480, 0.08, 0.026, 'sine');
+    this.tone(690, 0.1, 0.022, 'sine', 0.045);
   }
   success() {
     this.tone(392, 0.18, 0.025, 'triangle');

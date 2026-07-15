@@ -12,24 +12,15 @@
  * });
  */
 const PARTS = 14;
-const RUNTIME_VERSION = '1.1.6';
-const paths = Array.from(
-  { length: PARTS },
-  (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt?v=${RUNTIME_VERSION}`
-);
+const paths = Array.from({ length: PARTS }, (_, index) => `./runtime/part-${String(index).padStart(2, '0')}.txt`);
 
 try {
-  const parts = await Promise.all(paths.map(async (path, index) => {
-    const response = await fetch(path, { cache: 'no-store' });
+  const parts = await Promise.all(paths.map(async (path) => {
+    const response = await fetch(path);
     if (!response.ok) throw new Error(`Failed to load ${path} (${response.status})`);
-    const source = await response.text();
-    if (!source.trim()) throw new Error(`Runtime part ${index} was empty`);
-    return source;
+    return response.text();
   }));
-  let source = parts.join('\n');
-  if (!source.includes(`const APP_VERSION = '${RUNTIME_VERSION}'`)) {
-    throw new Error(`Runtime version mismatch; expected ${RUNTIME_VERSION}`);
-  }
+  let source = parts.join('');
   for (const relative of [
     '../../shared/mobile-runtime.js',
     '../../shared/capabilities/storage.js',
@@ -41,11 +32,8 @@ try {
     source = source.replaceAll(`'${relative}'`, absolute).replaceAll(`"${relative}"`, absolute);
   }
   const moduleUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-  try {
-    await import(moduleUrl);
-  } finally {
-    URL.revokeObjectURL(moduleUrl);
-  }
+  await import(moduleUrl);
+  URL.revokeObjectURL(moduleUrl);
 } catch (error) {
   console.error('СГИБ failed to initialise', error);
   document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
