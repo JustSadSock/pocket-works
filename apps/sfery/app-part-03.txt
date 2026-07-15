@@ -1,0 +1,180 @@
+  const trade = factions.reduce((sum, faction) => sum + faction.trade, 0);
+  return Math.max(0, Math.round(
+    state.legitimacy * 1.8 + state.treasury * 1.25 + state.readiness * 0.8 +
+    (100 - state.tension) * 1.6 + relations * 0.8 + trade * 11 - leverage * 1.1 + (state.turn - 1) * 8
+  ));
+}
+
+function renderState(previous = null) {
+  ui.turnValue.textContent = `${state.turn} / ${TOTAL_TURNS}`;
+  ui.turnFill.style.width = `${(state.turn / TOTAL_TURNS) * 100}%`;
+  state.score = calculateScore();
+  ui.scoreValue.textContent = state.score;
+  renderMetrics(previous);
+  renderMap();
+  renderCrisis();
+  ui.pauseTurn.textContent = state.turn;
+  ui.pauseScore.textContent = state.score;
+}
+
+function setActionsEnabled(enabled) {
+  for (const button of ui.actionDock.querySelectorAll('.action-token')) button.disabled = !enabled;
+  resolutionLocked = !enabled;
+}
+
+function selectAction(actionId) {
+  if (resolutionLocked || !ACTIONS[actionId]) return;
+  selectedAction = selectedAction === actionId ? null : actionId;
+  for (const button of ui.actionDock.querySelectorAll('.action-token')) {
+    button.classList.toggle('is-selected', button.dataset.action === selectedAction);
+  }
+  ui.selectionHint.textContent = selectedAction ? `Выберите державу для: ${ACTIONS[selectedAction].label}` : 'Перетащите инструмент на державу';
+  ui.selectionHint.classList.toggle('is-active', Boolean(selectedAction));
+  playTone('tap');
+}
+
+function handleRegionTap(regionId) {
+  if (resolutionLocked) return;
+  if (!selectedAction) {
+    showToast('Сначала выберите инструмент');
+    const group = ui.regionLayer.querySelector(`[data-region="${regionId}"]`);
+    group?.classList.add('is-blocked');
+    window.setTimeout(() => group?.classList.remove('is-blocked'), 520);
+    return;
+  }
+  resolveAction(selectedAction, regionId);
+}
+
+function actionDeltas(actionId, targetId) {
+  const faction = state.factions[targetId];
+  const targetDef = REGION_DEFS.find((region) => region.id === targetId);
+  const crisisMatch = currentCrisis?.targetId === targetId;
+  const deltas = { treasury: 0, legitimacy: 0, readiness: 0, tension: 0, relation: 0, leverage: 0, trade: 0 };
+
+  if (actionId === 'treaty') {
+    deltas.treasury = -7;
+    deltas.legitimacy = 3;
+    deltas.tension = -6;
+    deltas.relation = 18;
+    deltas.leverage = 7;
+    if (targetDef.doctrine === 'coalition') { deltas.relation += 6; deltas.tension -= 2; }
+    if (targetDef.doctrine === 'hawk') deltas.leverage += 4;
+    if (currentCrisis?.tag === 'humanitarian' && crisisMatch) deltas.legitimacy += 4;
+  }
+
+  if (actionId === 'trade') {
+    deltas.treasury = 7 + faction.trade * 2;
+    deltas.legitimacy = 1;
+    deltas.tension = 1;
+    deltas.relation = 10;
+    deltas.leverage = 11;
+    deltas.trade = faction.trade < 3 ? 1 : 0;
+    if (targetDef.doctrine === 'merchant') { deltas.treasury += 5; deltas.relation += 4; }
+    if (currentCrisis?.tag === 'trade' && crisisMatch) { deltas.treasury += 4; deltas.legitimacy += 2; }
+  }
+
+  if (actionId === 'pressure') {
+    deltas.treasury = -4;
+    deltas.legitimacy = faction.relation < -20 ? 3 : -2;
+    deltas.readiness = -7;
+    deltas.tension = 9;
+    deltas.relation = -13;
+    deltas.leverage = -12;
+    if (targetDef.doctrine === 'hawk') { deltas.tension += 5; deltas.relation -= 4; }
+    if (currentCrisis?.tag === 'security' && crisisMatch) { deltas.readiness += 4; deltas.legitimacy += 3; }
+  }
+
+  if (!crisisMatch) {
+    deltas.legitimacy -= 2;
+    deltas.tension += 2;
+  } else {
+    deltas.legitimacy += 2;
+  }
+
+  return deltas;
+}
+
+function applyFactionReaction(targetId, actionId) {
+  const target = state.factions[targetId];
+  const others = Object.entries(state.factions).filter(([id]) => id !== targetId);
+  const mostHostile = others.sort((a, b) => a[1].relation - b[1].relation)[0];
+  let note = '';
+  const reaction = { treasury: 0, legitimacy: 0, readiness: 0, tension: 0 };
+
+  if (target.relation >= 35 && actionId !== 'pressure') {
+    reaction.treasury += 3;
+    target.leverage += 2;
+    note = `${factionName(targetId)} публично поддерживает Вею и открывает экстренное финансирование. Цена поддержки — ещё немного влияния.`;
+  } else if (target.relation <= -32 || actionId === 'pressure') {
+    reaction.tension += 4;
+    reaction.readiness -= 2;
+    note = `${factionName(targetId)} отвечает демонстрацией силы. Ставки вокруг кризиса выросли.`;
+  } else if (mostHostile && mostHostile[1].relation <= -28 && rand() > 0.48) {
+    reaction.legitimacy -= 3;
+    mostHostile[1].leverage += 3;
+    note = `${factionName(mostHostile[0])} использует момент и запускает кампанию давления внутри Веи.`;
+  } else {
+    reaction.tension -= 1;
+    note = 'Остальные столицы заняли выжидательную позицию. Кризис пока не расползается.';
+  }
+
+  state.treasury = clamp(state.treasury + reaction.treasury, -20, 120);
+  state.legitimacy = clamp(state.legitimacy + reaction.legitimacy);
+  state.readiness = clamp(state.readiness + reaction.readiness);
+  state.tension = clamp(state.tension + reaction.tension);
+  return { reaction, note };
+}
+
+function applyQuarterlyEconomy() {
+  const tradeIncome = Object.values(state.factions).reduce((sum, faction) => sum + faction.trade * 2, 0);
+  const cost = Math.floor(state.tension / 25);
+  const net = 4 + tradeIncome - cost;
+  state.treasury = clamp(state.treasury + net, -20, 120);
+  state.readiness = clamp(state.readiness + (state.tension > 65 ? -2 : 2));
+  return net;
+}
+
+function resolveAction(actionId, targetId) {
+  if (resolutionLocked || !ACTIONS[actionId] || !state.factions[targetId]) return;
+  setActionsEnabled(false);
+  selectedAction = null;
+  for (const button of ui.actionDock.querySelectorAll('.action-token')) button.classList.remove('is-selected');
+  ui.selectionHint.classList.remove('is-active');
+  ui.selectionHint.textContent = 'Решение исполняется';
+
+  const previous = { treasury: state.treasury, legitimacy: state.legitimacy, readiness: state.readiness, tension: state.tension };
+  const faction = state.factions[targetId];
+  const deltas = actionDeltas(actionId, targetId);
+  state.treasury = clamp(state.treasury + deltas.treasury, -20, 120);
+  state.legitimacy = clamp(state.legitimacy + deltas.legitimacy);
+  state.readiness = clamp(state.readiness + deltas.readiness);
+  state.tension = clamp(state.tension + deltas.tension);
+  faction.relation = clamp(faction.relation + deltas.relation, -100, 100);
+  faction.leverage = clamp(faction.leverage + deltas.leverage);
+  faction.trade = clamp(faction.trade + deltas.trade, 0, 3);
+
+  const reactionResult = applyFactionReaction(targetId, actionId);
+  const economyNet = applyQuarterlyEconomy();
+  state.score = calculateScore();
+  state.awaitingAdvance = true;
+  state.pendingResolution = { actionId, targetId, deltas, reactionResult, economyNet };
+  saveState();
+  renderRoute(actionId, targetId);
+  renderState(previous);
+  populateConsequence(actionId, targetId, deltas, reactionResult, economyNet);
+  playTone(actionId);
+  vibrate(actionId === 'pressure' ? [12, 35, 18] : [8, 22, 8]);
+
+  const delay = state.settings.motion ? 360 : 0;
+  window.setTimeout(() => {
+    ui.consequenceOverlay.hidden = false;
+    ui.nextTurnButton.focus({ preventScroll: true });
+  }, delay);
+}
+
+function populateConsequence(actionId, targetId, deltas, reactionResult, economyNet) {
+  const action = ACTIONS[actionId];
+  ui.resultStamp.textContent = action.label;
+  ui.resultStamp.style.color = action.color;
+  ui.resultKicker.textContent = `РЕШЕНИЕ ПО ЦЕЛИ: ${factionName(targetId)}`;
+  ui.resultHeadline.textContent = choose(action.headline);
