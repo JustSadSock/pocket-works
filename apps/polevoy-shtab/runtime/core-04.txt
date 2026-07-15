@@ -1,0 +1,113 @@
+da - db;
+  });
+  return { type: 'move', unitId, row: cells[0].row, col: cells[0].col };
+}
+
+export function executeEnemyAction(battle, campaign, action) {
+  const unit = getUnit(battle, action.unitId);
+  if (!unit || unit.routed) return { ok: false };
+  if (action.type === 'attack') return attackUnit(battle, campaign, action.unitId, action.targetId, 'enemy');
+  if (action.type === 'move') return moveUnit(battle, campaign, action.unitId, action.row, action.col, 'enemy');
+  if (action.type === 'entrench') {
+    unit.entrenched = clamp(unit.entrenched + 1, 0, 2);
+    unit.morale = clamp(unit.morale + 6, 0, unit.maxMorale);
+    unit.acted = true;
+    battle.actionCounter += 1;
+    return { ok: true, kind: 'entrench', unitId: unit.id };
+  }
+  unit.acted = true;
+  return { ok: true, kind: 'wait', unitId: unit.id };
+}
+
+export function finishRound(battle, campaign) {
+  captureObjectives(battle);
+  upkeepUnits(battle, campaign);
+  battle.turn += 1;
+  battle.phase = 'player';
+  battle.command = commandPerTurn(campaign);
+  battle.maxCommand = commandPerTurn(campaign);
+  battle.fireBonus = 0;
+  const result = evaluateBattle(battle);
+  if (result) battle.result = result;
+  return result;
+}
+
+export function evaluateBattle(battle) {
+  const playerAlive = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0).length;
+  const enemyAlive = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0).length;
+  if (enemyAlive === 0 || battle.enemyResolve <= 0 || battle.playerObjective >= OBJECTIVE_TARGET) return 'victory';
+  if (playerAlive === 0 || battle.playerResolve <= 0) return 'defeat';
+  if (battle.turn > battle.turnLimit) {
+    const playerValue = battle.playerObjective * 8 + battle.playerResolve + playerAlive * 4;
+    const enemyValue = battle.enemyObjective * 8 + battle.enemyResolve + enemyAlive * 4;
+    return playerValue >= enemyValue ? 'victory' : 'defeat';
+  }
+  return null;
+}
+
+export function getUpgradeChoices(campaign, count = 3) {
+  const rng = seededRandom(hashSeed(campaign.seed, campaign.stage, 'rewards'));
+  const pool = Object.keys(UPGRADES).filter((key) => (campaign.upgrades?.[key] || 0) < UPGRADES[key].max);
+  const choices = [];
+  while (pool.length && choices.length < count) {
+    const index = Math.floor(rng() * pool.length);
+    choices.push(pool.splice(index, 1)[0]);
+  }
+  return choices;
+}
+
+export function completeVictory(campaign, battle, upgradeKey = null) {
+  const surviving = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0).length;
+  const reward = 80 + campaign.stage * 25 + battle.playerResolve + surviving * 18 + battle.playerObjective * 6;
+  campaign.victories += 1;
+  campaign.renown += Math.round(reward / 10);
+  campaign.score += Math.round(reward);
+  campaign.history.push({ stage: campaign.stage, result: 'victory', turn: battle.turn, reward: Math.round(reward), weather: battle.weather });
+  if (upgradeKey && UPGRADES[upgradeKey]) campaign.upgrades[upgradeKey] = (campaign.upgrades[upgradeKey] || 0) + 1;
+  campaign.stage += 1;
+  return reward;
+}
+
+export function completeDefeat(campaign, battle) {
+  const reward = campaign.stage * 20 + battle.playerObjective * 5;
+  campaign.score += reward;
+  campaign.history.push({ stage: campaign.stage, result: 'defeat', turn: battle.turn, reward, weather: battle.weather });
+  return reward;
+}
+
+export function campaignRank(score) {
+  if (score >= 6500) return ['ЛЕГЕНДА ФРОНТА', 'Ваши приказы пережили саму войну.'];
+  if (score >= 3800) return ['МАРШАЛ', 'Вы превратили хаос в систему.'];
+  if (score >= 2200) return ['ГЕНЕРАЛ', 'Армия выдержала длинную кампанию.'];
+  if (score >= 1000) return ['КОМАНДУЮЩИЙ', 'Вы научились выигрывать не только атакой.'];
+  return ['ПОЛКОВНИК', 'Первый штабной опыт оплачен дорого.'];
+}
+
+export function visibleEnemyIds(battle) {
+  const visible = new Set();
+  const scouts = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && unit.hp > 0);
+  for (const enemy of battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0)) {
+    for (const unit of scouts) {
+      let sight = UNIT_TYPES[unit.type].sight;
+      if (battle.weather === 'fog') sight = Math.max(2, sight - 1);
+      if (manhattan(unit, enemy) <= sight) {
+        visible.add(enemy.id);
+        break;
+      }
+    }
+  }
+  return visible;
+}
+
+export function summarizeUnit(unit) {
+  return {
+    name: UNIT_TYPES[unit.type].name,
+    glyph: UNIT_TYPES[unit.type].glyph,
+    hp: unit.hp,
+    maxHp: unit.maxHp,
+    morale: Math.round(unit.morale),
+    supply: Math.round(unit.supply),
+    acted: unit.acted,
+    entrenched: unit.entrenched,
+  };
+}
