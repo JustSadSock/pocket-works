@@ -1,20 +1,39 @@
 # Pocket Works hosting
 
-Pocket Works production is deployed through **Cloudflare Workers Builds** from the private GitHub repository.
+Pocket Works production is published through Cloudflare Workers Builds.
 
-## Primary production pipeline
+## Production contract
 
-- Connected repository: `JustSadSock/pocket-works`
+- Worker: `pocket-works`
 - Production branch: `main`
 - Non-production branch builds: disabled
 - Build command: `npm run deploy:site`
 - Deploy command: `npx wrangler deploy --assets ./dist-site/`
-- Worker configuration: `/wrangler.jsonc`
+- Worker configuration: `wrangler.jsonc`
 - Static asset directory: `dist-site/`
+- Production source of truth: the latest successful Cloudflare deployment from `main`
 
-Each squash merge into `main` triggers a Cloudflare build. The build assembles and validates the complete static publication directory, then deploys it as Worker static assets.
+## Build sequence
 
-## Configuration contract
+```text
+push or squash merge to main
+→ Cloudflare clones the repository
+→ dependencies are installed
+→ npm run deploy:site
+→ dist-site is assembled and validated
+→ Wrangler publishes dist-site to the pocket-works Worker
+```
+
+`npm run deploy:site` performs only production packaging:
+
+```bash
+npm run prepare:site
+npm run validate:site
+```
+
+The build generates `dist-site/apps.json` from app-owned `app.config.json` files. The registry is not committed at the repository root.
+
+## Worker configuration
 
 `wrangler.jsonc` must retain:
 
@@ -30,32 +49,28 @@ Each squash merge into `main` triggers a Cloudflare build. The build assembles a
 
 Advance `compatibility_date` only as an explicit platform change after verifying the current Worker runtime behavior.
 
-## Deployment responsibilities
+## Validation responsibilities
 
-Cloudflare is responsible for production packaging and distribution, not exhaustive quality assurance.
-
-The Cloudflare build runs:
-
-```bash
-npm run deploy:site
-```
-
-That command must remain limited to assembling `dist-site/`, generating `dist-site/apps.json` from application manifests and validating the deployable output.
-
-GitHub Actions owns exhaustive validation through:
+Cloudflare production packaging verifies that deployable assets can be assembled. Exhaustive validation remains a GitHub CI responsibility:
 
 ```bash
 npm run ci:full
 ```
 
+Do not move engine audits, full Forge smoke tests, Playwright or Lighthouse into the production deployment command.
+
 When GitHub-hosted Actions minutes are unavailable, required status checks may remain disabled temporarily. Application PRs must still respect the isolated `apps/<slug>/**` boundary and document their targeted checks.
 
-## Production source of truth
+## Deployment verification
 
-The latest successful Cloudflare deployment from `main` is the only production source of truth. Pull-request branches do not create production deployments because non-production branch builds are disabled. Statuses from retired hosting integrations are not release signals and must not be used to assess an application PR.
+After a squash merge:
+
+1. find the build for the exact `main` commit;
+2. confirm the build and deploy stages succeeded;
+3. open the Worker URL;
+4. verify the launcher and affected application;
+5. confirm the installed PWA offers the expected versioned update.
 
 ## Rollback
 
-Prefer reverting the faulty squash commit on `main`. Cloudflare will publish the resulting commit automatically.
-
-A release rollback must still advance application version and cache identity. Do not publish different bytes under an already released Service Worker cache version.
+Revert the faulty squash commit on `main`. Application rollback releases must still increment their version and cache identity. Cloudflare then publishes the new revert commit through the same production path.
