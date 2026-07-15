@@ -1,0 +1,176 @@
+h([layout.tile * .11, layout.tile * .07]);
+    ctx.strokeRect(-size * .62, -size * .62, size * 1.24, size * 1.24);
+    ctx.setLineDash([]);
+  }
+  ctx.shadowColor = 'rgba(21,25,20,.42)';
+  ctx.shadowBlur = layout.tile * .1;
+  ctx.shadowOffsetY = layout.tile * .08;
+  ctx.fillStyle = unit.side === 'player' ? '#31566a' : '#7b3d37';
+  ctx.strokeStyle = unit.side === 'player' ? '#173845' : '#4b2421';
+  ctx.lineWidth = Math.max(1.4, layout.tile * .035);
+  const cut = size * .16;
+  ctx.beginPath();
+  ctx.moveTo(-size / 2 + cut, -size / 2);
+  ctx.lineTo(size / 2 - cut, -size / 2);
+  ctx.lineTo(size / 2, -size / 2 + cut);
+  ctx.lineTo(size / 2, size / 2 - cut);
+  ctx.lineTo(size / 2 - cut, size / 2);
+  ctx.lineTo(-size / 2 + cut, size / 2);
+  ctx.lineTo(-size / 2, size / 2 - cut);
+  ctx.lineTo(-size / 2, -size / 2 + cut);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = 'rgba(238,231,205,.25)';
+  ctx.strokeRect(-size * .38, -size * .38, size * .76, size * .76);
+  ctx.fillStyle = '#f0e8ca';
+  ctx.font = `900 ${Math.max(12, size * .45)}px Georgia`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(spec.glyph, 0, -size * .02);
+
+  if (unit.entrenched) {
+    ctx.strokeStyle = '#e2d4a9';
+    ctx.lineWidth = Math.max(1.2, layout.tile * .025);
+    for (let i = 0; i < unit.entrenched; i += 1) {
+      ctx.beginPath();
+      ctx.arc(0, size * .37, size * (.45 + i * .08), Math.PI * .12, Math.PI * .88, true);
+      ctx.stroke();
+    }
+  }
+  if (unit.acted) {
+    ctx.fillStyle = 'rgba(20,29,24,.4)';
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+    ctx.strokeStyle = 'rgba(239,229,194,.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-size * .3, size * .3); ctx.lineTo(size * .3, -size * .3); ctx.stroke();
+  }
+
+  const barY = size * .62;
+  const barW = size * .9;
+  ctx.fillStyle = 'rgba(22,28,24,.5)';
+  ctx.fillRect(-barW / 2, barY, barW, Math.max(3, layout.tile * .06));
+  ctx.fillStyle = unit.side === 'player' ? '#d5d7b7' : '#e2b59d';
+  ctx.fillRect(-barW / 2, barY, barW * clamp(unit.hp / unit.maxHp, 0, 1), Math.max(3, layout.tile * .06));
+  ctx.restore();
+}
+
+function drawEffects(ctx, now) {
+  effects = effects.filter((effect) => now - effect.startedAt < effect.duration + (effect.delay || 0));
+  for (const effect of effects) {
+    const elapsed = now - effect.startedAt - (effect.delay || 0);
+    if (elapsed < 0) continue;
+    const p = clamp(elapsed / effect.duration, 0, 1);
+    ctx.save();
+    if (effect.type === 'line') {
+      const from = cellCenter(effect.from.row, effect.from.col);
+      const to = cellCenter(effect.to.row, effect.to.col);
+      ctx.strokeStyle = `rgba(243,220,151,${1 - p})`;
+      ctx.lineWidth = Math.max(2, layout.tile * .07 * (1 - p * .5));
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(from.x + (to.x - from.x) * clamp(p * 1.8, 0, 1), from.y + (to.y - from.y) * clamp(p * 1.8, 0, 1)); ctx.stroke();
+    } else if (effect.type === 'damage') {
+      const point = cellCenter(effect.row, effect.col);
+      ctx.globalAlpha = 1 - p;
+      ctx.fillStyle = '#5b201e';
+      ctx.font = `900 ${Math.max(14, layout.tile * .32)}px Georgia`;
+      ctx.textAlign = 'center';
+      ctx.fillText(effect.text, point.x, point.y - layout.tile * (.25 + p * .35));
+    } else if (effect.type === 'ring') {
+      const unit = getUnit(battle, effect.unitId);
+      if (unit) {
+        const point = cellCenter(unit.row, unit.col);
+        ctx.globalAlpha = 1 - p;
+        ctx.strokeStyle = '#e4d49c';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(point.x, point.y, layout.tile * (.25 + p * .45), 0, Math.PI * 2); ctx.stroke();
+      }
+    } else if (effect.type === 'text') {
+      const unit = getUnit(battle, effect.unitId);
+      if (unit) {
+        const point = cellCenter(unit.row, unit.col);
+        ctx.globalAlpha = 1 - p;
+        ctx.fillStyle = '#214638';
+        ctx.font = `900 ${Math.max(10, layout.tile * .2)}px Georgia`;
+        ctx.textAlign = 'center';
+        ctx.fillText(effect.text, point.x, point.y - layout.tile * (.35 + p * .3));
+      }
+    } else if (effect.type === 'doctrine') {
+      ctx.globalAlpha = (1 - p) * .5;
+      ctx.fillStyle = campaign.doctrine === 'fire' ? '#7c3e32' : campaign.doctrine === 'resolve' ? '#30483b' : '#31536a';
+      ctx.fillRect(layout.left, layout.top, layout.width, layout.height);
+    }
+    ctx.restore();
+  }
+}
+
+function startRenderLoop() {
+  if (renderFrame) return;
+  const frame = (now) => {
+    renderFrame = requestAnimationFrame(frame);
+    if (!battle) return;
+    if (now - lastRenderedAt < 16) return;
+    lastRenderedAt = now;
+    resizeCanvas();
+    drawBattle(now);
+    if (!animation && !effects.length && !['playing', 'enemy'].includes(mode)) stopRenderLoopIfIdle();
+  };
+  renderFrame = requestAnimationFrame(frame);
+}
+
+function stopRenderLoopIfIdle() {
+  if (renderFrame && !animation && !effects.length && !['playing', 'enemy'].includes(mode)) {
+    cancelAnimationFrame(renderFrame);
+    renderFrame = 0;
+  }
+}
+
+function pointToCell(clientX, clientY) {
+  const rect = dom.canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const col = Math.floor((x - layout.left) / layout.tile);
+  const row = Math.floor((y - layout.top) / layout.tile);
+  if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
+  return { row, col };
+}
+
+function titleCase(value) {
+  return value.toLowerCase().replace(/(^|\s)\S/g, (match) => match.toUpperCase());
+}
+
+function bindEvents() {
+  dom.newCampaignButton.addEventListener('click', startDoctrineChoice);
+  dom.continueButton.addEventListener('click', continueSaved);
+  dom.fieldManualButton.addEventListener('click', () => showManual('menu'));
+  dom.settingsButton.addEventListener('click', () => openSettings('menu'));
+  dom.closeDoctrineButton.addEventListener('click', showMenu);
+  dom.doctrineList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-doctrine]');
+    if (button) chooseDoctrine(button.dataset.doctrine);
+  });
+  dom.beginBattleButton.addEventListener('click', beginBattle);
+  dom.closeManualButton.addEventListener('click', closeManual);
+  dom.manualDoneButton.addEventListener('click', closeManual);
+  dom.nextTutorialButton.addEventListener('click', () => tutorialIndex >= 2 ? finishTutorial() : showTutorial(tutorialIndex + 1));
+  dom.skipTutorialButton.addEventListener('click', finishTutorial);
+  dom.pauseButton.addEventListener('click', pauseGame);
+  dom.resumeButton.addEventListener('click', resumeGame);
+  dom.pauseManualButton.addEventListener('click', () => showManual('pause'));
+  dom.pauseSettingsButton.addEventListener('click', () => openSettings('pause'));
+  dom.abandonButton.addEventListener('click', abandonPrompt);
+  dom.confirmAbandonButton.addEventListener('click', abandonCampaign);
+  dom.cancelAbandonButton.addEventListener('click', () => { mode = 'pause'; showScreen('pauseScreen'); });
+  dom.newRunButton.addEventListener('click', resetToNewCampaign);
+  dom.defeatMenuButton.addEventListener('click', returnAfterDefeat);
+  dom.upgradeList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-upgrade]');
+    if (button) chooseUpgrade(button.dataset.upgrade);
+  });
+  dom.entrenchButton.addEventListener('click', () => useSelectedOrder('entrench'));
+  dom.supplyButton.addEventListener('click', () => useSelectedOrder('supply'));
+  dom.rallyButton.addEventListener('click', () => useSelectedOrder('rally'));
+  dom.doctrineButton.addEventListener('click', invokeDoctrine);
+  dom.endTurnButton.addEventListener('click', endTurn);
+  dom.settingsBackdrop.addEventListener('click', closeSettings);
+  dom.closeSettingsButton.addEventListener('click', closeSettings);
