@@ -3,15 +3,15 @@
   "slug": "shpilka",
   "name": "ШПИЛЬКА",
   "shortName": "ШПИЛЬКА",
-  "description": "Процедурная top-down гонка с тяжёлой машиной, функционально разными трассами, живыми ошибками соперников и осмысленными прыжками.",
-  "version": "2.8.2",
-  "releaseDate": "2026-07-15",
-  "releaseDateTime": "2026-07-15T21:30:00Z",
+  "description": "Процедурная top-down гонка с выразительными биомами, насыщенными трассами, живыми соперниками и косметической кастомизацией машины.",
+  "version": "2.9.0",
+  "releaseDate": "2026-07-16",
+  "releaseDateTime": "2026-07-16T00:00:00Z",
   "changelog": [
-    "Возвращены окружение, поребрики и гоночная линия в совместимый iPhone-рендер; сектора больше не подписываются перевёрнутым текстом на полотне.",
-    "Рекорды, медали, сектора и призраки теперь сохраняются по полному типу и seed маршрута, поэтому разные трассы больше не делят один результат.",
-    "Добавлены доступный архив маршрутов, корректная проверка кодов, предупреждения о прыжках и восстановление после повторяющихся ошибок движка.",
-    "Ускоренный расчёт классификации после финиша больше не тратит ресурсы на столкновения и частицы."
+    "Каждый тип маршрута получил пять характерных секций: рынки и шиканы, горные гребни и тоннели, дамбы и водосбросы, аэродромы и профилированные виражи.",
+    "Окружение стало полноценной частью трассы: вода, скалы, лес, портовые краны, контейнеры, вышки, ограждения, тормозные щиты и крупные ориентиры.",
+    "Добавлены живая мини-карта с машинами и реальный силуэт сгенерированной трассы на стартовом экране.",
+    "Добавлен косметический гараж с цветом, ливреей и номером; настройки не влияют на скорость, сцепление или физику."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -20,8 +20,8 @@
   "backgroundColor": "#d2c49d",
   "themeColor": "#d2c49d",
   "orientation": "portrait",
-  "cacheName": "shpilka-v2.8.2-p1",
+  "cacheName": "shpilka-v2.9.0-p1",
   "storageNamespace": "pocket-works:shpilka",
-  "tags": ["PWA", "offline", "game", "racing", "procedural", "championship", "rivalry", "racecraft", "stable AI", "field spread", "driver form", "route modules", "meaningful jumps", "vehicle weight", "fast loading", "iPhone stability", "runtime recovery", "scoped records", "route hub", "live classification", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
+  "tags": ["PWA", "offline", "game", "racing", "procedural", "championship", "rivalry", "racecraft", "stable AI", "route modules", "biome scenery", "live minimap", "cosmetic garage", "route silhouettes", "track furniture", "meaningful jumps", "vehicle weight", "iPhone stability", "runtime recovery", "scoped records", "route hub", "live classification", "long races", "rival personalities", "clean driving", "daily challenge", "route codes", "medals", "top-down", "drift", "physics", "ghost", "adaptive controls", "canvas", "audio", "workshop"],
   "order": 80
 }
