@@ -840,12 +840,16 @@ class WebGLDiorama {
   }
 
   surfaceHeight(level, ball) {
+    if (Number.isFinite(ball?.groundZ)) return ball.groundZ;
+    const terrain = level?.course18?.field?.heightAt?.(ball.x, ball.y);
+    if (Number.isFinite(terrain)) return terrain;
     for (const zone of level.zones || []) if (zone.type === 'bridge' && pointInRect(ball, zone)) return 10;
     if (ball.waterTime > 0) return -Math.min(8, ball.waterTime * 22);
     return 0;
   }
 
   ballHeight(level, ball) {
+    if (Number.isFinite(ball?.z)) return ball.z - (ball.sunk ? ball.sink * (BALL_RADIUS + 20) : 0);
     const surface = this.surfaceHeight(level, ball);
     const sinkDepth = ball.sunk ? ball.sink * (BALL_RADIUS + 48) : 0;
     return surface + BALL_RADIUS - sinkDepth;
@@ -1016,21 +1020,34 @@ class WebGLDiorama {
 
     if (aim.active && !ball.sunk) {
       const center = this.ballScreenPoint(ball);
+      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
+        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
+        : null;
       const worldLength = 95 + aim.power * 250;
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
-      const end = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
+      const fallbackEnd = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
+      const guide = predicted || [center, fallbackEnd];
+      const end = guide.at(-1);
+      const outcomeColor = aim.previewOutcome === 'water' ? '169,215,208' : aim.previewOutcome === 'cup' ? '227,201,118' : aim.previewOutcome === 'tunnel-blocked' ? '210,169,116' : '244,238,205';
       ctx.save();
-      ctx.strokeStyle = 'rgba(244,238,205,.78)';
+      ctx.strokeStyle = `rgba(${outcomeColor},.78)`;
       ctx.lineWidth = 1.25;
       ctx.setLineDash([2, 8]);
-      ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+      ctx.beginPath();
+      guide.forEach((point, index) => {
+        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
       ctx.setLineDash([]);
-      const dots = 5;
-      for (let index = 1; index <= dots; index += 1) {
-        const t = index / dots;
-        ctx.fillStyle = `rgba(244,238,205,${.34 + t * .5})`;
-        ctx.beginPath(); ctx.arc(lerp(center.x, end.x, t), lerp(center.y, end.y, t), 1.5 + t * 1.7, 0, TAU); ctx.fill();
+      for (let index = 1; index < guide.length; index += 1) {
+        const t = index / Math.max(1, guide.length - 1);
+        ctx.fillStyle = `rgba(${outcomeColor},${.30 + t * .52})`;
+        ctx.beginPath(); ctx.arc(guide[index].x, guide[index].y, 1.35 + t * 1.8, 0, TAU); ctx.fill();
       }
+      ctx.strokeStyle = `rgba(${outcomeColor},.68)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(end.x, end.y, 5.5, 0, TAU); ctx.stroke();
       ctx.restore();
     }
 
@@ -1148,7 +1165,7 @@ class CanvasFallback {
     this.offsetY = 84 + (this.height - 120) * .5 - (bounds.minY + bounds.maxY) * .5 * this.scale * .82;
   }
   worldToScreen(x, y, z = 0) { return { x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale * .82 - z * this.scale }; }
-  ballScreenPoint(ball) { return this.worldToScreen(ball.x, ball.y, BALL_RADIUS); }
+  ballScreenPoint(ball) { return this.worldToScreen(ball.x, ball.y, Number.isFinite(ball.z) ? ball.z : BALL_RADIUS); }
   emit(x, y, type, amount = 8) { for (let i = 0; i < amount; i += 1) this.particles.push({ x, y, type, life: 1 }); }
   pathEllipse(feature, scale = 1, segments = 32) {
     const ctx = this.ctx;
@@ -1286,21 +1303,43 @@ class CanvasFallback {
       const halfY = Math.sin(angle) * rotor.length * .5;
       this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, material: rotor.material });
     }
-    const hole = this.worldToScreen(level.hole.x, level.hole.y, .5);
+    const holeGround = level.course18?.field?.heightAt?.(level.hole.x, level.hole.y) || 0;
+    const hole = this.worldToScreen(level.hole.x, level.hole.y, holeGround + .5);
     const hr = level.hole.r * this.scale;
     ctx.fillStyle = '#17150f'; ctx.beginPath(); ctx.ellipse(hole.x, hole.y, hr, hr * .82, 0, 0, TAU); ctx.fill();
-    const bp = this.worldToScreen(ball.x, ball.y, BALL_RADIUS - (ball.sunk ? ball.sink * 60 : 0));
+    const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : 0;
+    const centerZ = (Number.isFinite(ball.z) ? ball.z : ground + BALL_RADIUS) - (ball.sunk ? ball.sink * (BALL_RADIUS + 20) : 0);
+    const bp = this.worldToScreen(ball.x, ball.y, centerZ);
     const br = BALL_RADIUS * this.scale;
-    ctx.fillStyle = 'rgba(3,10,6,.45)'; ctx.beginPath(); ctx.ellipse(bp.x, this.worldToScreen(ball.x, ball.y, 0).y, br, br * .35, 0, 0, TAU); ctx.fill();
-    const sphere = ctx.createRadialGradient(bp.x - br * .35, bp.y - br * .45, br * .08, bp.x, bp.y, br);
-    sphere.addColorStop(0, '#f5fff8'); sphere.addColorStop(.35, '#a7d1c0'); sphere.addColorStop(1, '#315448');
-    ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(bp.x, bp.y, br, 0, TAU); ctx.fill();
+    const ballOpacity = ball.sunk ? Math.max(0, 1 - ball.sink * 1.35) : 1;
+    if (ballOpacity > 0) {
+      ctx.save();
+      ctx.globalAlpha = ballOpacity;
+      ctx.fillStyle = 'rgba(3,10,6,.45)'; ctx.beginPath(); ctx.ellipse(bp.x, this.worldToScreen(ball.x, ball.y, ground).y, br, br * .35, 0, 0, TAU); ctx.fill();
+      const sphere = ctx.createRadialGradient(bp.x - br * .35, bp.y - br * .45, br * .08, bp.x, bp.y, br);
+      sphere.addColorStop(0, '#f5fff8'); sphere.addColorStop(.35, '#a7d1c0'); sphere.addColorStop(1, '#315448');
+      ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(bp.x, bp.y, br, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
     if (aim.active) {
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
       const length = 95 + aim.power * 250;
+      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
+        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
+        : null;
       const end = this.worldToScreen(ball.x + aim.vx / speed * length, ball.y + aim.vy / speed * length, 2);
-      ctx.save(); ctx.strokeStyle = '#eee9d4'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
-      ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(end.x, end.y); ctx.stroke(); ctx.restore();
+      const guide = predicted || [bp, end];
+      const color = aim.previewOutcome === 'water' ? '#a9d7d0' : aim.previewOutcome === 'cup' ? '#e3c976' : aim.previewOutcome === 'tunnel-blocked' ? '#d2a974' : '#eee9d4';
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
+      ctx.beginPath();
+      guide.forEach((point, index) => {
+        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const last = guide.at(-1);
+      ctx.beginPath(); ctx.arc(last.x, last.y, 5, 0, TAU); ctx.stroke(); ctx.restore();
     }
   }
 }

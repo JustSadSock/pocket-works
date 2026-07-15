@@ -561,3 +561,27 @@ export function stepBall(ball, level, dt, time) {
 
   return events;
 }
+
+export function predictShot(ball, level, vx, vy, time = 0, { duration = .48, sampleEvery = 3 } = {}) {
+  const ghost = { ...ball };
+  strikeBall(ghost, vx, vy);
+  const frames = Math.max(1, Math.min(48, Math.ceil(Math.max(.1, duration) * 60)));
+  const cadence = Math.max(1, Math.trunc(sampleEvery));
+  const points = [{ x: ghost.x, y: ghost.y, z: ghost.z, breakBefore: false }];
+  let outcome = null;
+
+  for (let frame = 0; frame < frames; frame += 1) {
+    const events = stepBall(ghost, level, 1 / 60, time + frame / 60);
+    const tunneled = events.some((event) => event.type === 'tunnel');
+    const terminal = events.find((event) => ['water', 'cup', 'tunnel-blocked', 'stopped'].includes(event.type));
+    if (terminal) outcome = terminal.type;
+    else if (ghost.inCup || ghost.sunk) outcome = 'cup';
+    else if (outcome === 'cup') outcome = null;
+    if ((frame + 1) % cadence === 0 || tunneled || terminal || frame === frames - 1) {
+      points.push({ x: ghost.x, y: ghost.y, z: ghost.z, breakBefore: tunneled });
+    }
+    if (terminal) break;
+  }
+
+  return { points, outcome };
+}

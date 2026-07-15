@@ -1,6 +1,6 @@
 import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
-import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
+import { createBall, isBallStopped, predictShot, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -53,11 +53,15 @@ let surfaceTimer = 0;
 let tiltListening = false;
 let confirmationAction = null;
 let confirmationReturnMode = 'menu';
+let confirmationFocus = null;
 let keyboardAngle = 0;
 let overviewUiKey = '';
 let lastBallMovingState = '';
+let invalidAimAt = 0;
+let lastAimPreviewAt = 0;
+let lastInactiveRenderAt = 0;
 
-const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
+const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0, preview: [], previewOutcome: null };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
 function loadSave() {
@@ -109,33 +113,60 @@ function showSurface(text) {
   surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1350);
 }
 
-function requestConfirmation({ eyebrow = 'Подтверждение', title, detail, acceptLabel, returnMode = mode, action }) {
+function requestConfirmation({ eyebrow = 'Подтверждение', title, detail, acceptLabel, meta = 'действие нельзя отменить', returnMode = mode, action }) {
+  confirmationFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   confirmationAction = action;
   confirmationReturnMode = returnMode;
   $('confirmEyebrow').textContent = eyebrow;
   $('confirmTitle').textContent = title;
   $('confirmDetail').textContent = detail;
   $('confirmAcceptLabel').textContent = acceptLabel;
+  $('confirmMeta').textContent = meta;
   setMode('confirm');
 }
 
 function closeConfirmation() {
+  const focus = confirmationFocus;
+  confirmationFocus = null;
   confirmationAction = null;
   setMode(confirmationReturnMode);
   if (confirmationReturnMode === 'menu') syncMenu();
+  if (focus?.isConnected) window.requestAnimationFrame(() => focus.focus({ preventScroll: true }));
 }
 
-function setMode(next) {
+function setMode(next, { focus = true } = {}) {
   mode = next;
   document.body.dataset.mode = next;
-  document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
+  const playing = next === 'playing';
   const map = { menu: 'menuScreen', holes: 'holesScreen', code: 'codeScreen', confirm: 'confirmScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
-  if (map[next]) $(map[next]).classList.add('is-visible');
+  const activeId = map[next] || '';
+  document.querySelectorAll('.screen').forEach((screen) => {
+    const active = screen.id === activeId;
+    screen.classList.toggle('is-visible', active);
+    screen.inert = !active;
+    screen.setAttribute('aria-hidden', String(!active));
+  });
+  [canvas, document.querySelector('.scorebar'), $('overviewBtn')].forEach((element) => {
+    if (!element) return;
+    element.inert = !playing;
+    element.setAttribute('aria-hidden', String(!playing));
+  });
   if (next !== 'playing') {
     cancelAim();
     livingTerrain.cancelOverview();
   }
+  if (next === 'paused') syncPauseContext();
   syncOverviewControl();
+  if (!focus) return;
+  const focusId = { menu: 'continueBtn', holes: 'holesCloseBtn', code: 'runCodeInput', confirm: 'confirmAcceptBtn', paused: 'resumeBtn', result: $('nextBtn').hidden ? 'retryBtn' : 'nextBtn', finish: 'againBtn' }[next];
+  if (next === 'playing') window.requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+  else if (focusId) window.requestAnimationFrame(() => $(focusId)?.focus?.({ preventScroll: true }));
+}
+
+function syncPauseContext() {
+  $('pauseContext').textContent = endlessActive
+    ? `${formatRunCode(level.endless?.seed || save.endlessRun?.seed)} · секция ${level.section} · ${strokes} ${strokeWord(strokes)}`
+    : `Лунка ${levelIndex + 1} · ${strokes} ${strokeWord(strokes)} · пар ${level.par}`;
 }
 
 function syncOverviewControl() {
@@ -194,7 +225,7 @@ function syncMenu() {
   $('endlessMeta').textContent = run
     ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}${run.currentStrokes ? ` · ${run.currentStrokes} ${strokeWord(run.currentStrokes)}` : ''}`
     : save.endlessBest > 0
-      ? `Новый код · рекорд ${save.endlessBest} секций`
+      ? `Новый код · рекорд ${save.endlessBest} ${sectionWord(save.endlessBest)}`
       : 'Новый код · без конца';
   $('newEndlessBtn').hidden = !run;
   $('endlessBest').textContent = save.endlessBest > 0
@@ -347,11 +378,26 @@ function startEndless({ fresh = false, seed = null } = {}) {
   preparePlayingLevel({ checkpoint: run.checkpoint, checkpointStrokes: run.currentStrokes });
 }
 
-function openCodeScreen() {
+function openCodeScreen(seed = null, { focus = true } = {}) {
   const run = normalizeEndlessRun(save.endlessRun);
-  $('runCodeInput').value = run ? formatRunCode(run.seed) : '';
+  $('runCodeInput').value = seed ? formatRunCode(seed) : run ? formatRunCode(run.seed) : '';
   $('codeError').textContent = '';
-  setMode('code');
+  setMode('code', { focus });
+}
+
+function sharedRouteUrl(seed) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('route', formatRunCode(seed));
+  url.hash = '';
+  return url.toString();
+}
+
+function clearSharedRoute() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('route')) return;
+  url.searchParams.delete('route');
+  window.history.replaceState(null, '', url);
 }
 
 function startCodeRoute() {
@@ -363,6 +409,7 @@ function startCodeRoute() {
   }
   const launch = () => {
     $('codeError').textContent = '';
+    clearSharedRoute();
     startEndless({ fresh: true, seed });
     showToast(`Маршрут ${formatRunCode(seed)}`);
   };
@@ -373,6 +420,7 @@ function startCodeRoute() {
       title: `Открыть ${formatRunCode(seed)}?`,
       detail: `Текущий путь ${formatRunCode(current.seed)} останется в рекордах, но продолжить его уже не получится.`,
       acceptLabel: 'Открыть новый код',
+      meta: 'пройденные секции останутся в рекорде',
       returnMode: 'code',
       action: launch
     });
@@ -389,19 +437,33 @@ async function shareRunCode() {
   }
   const code = formatRunCode(seed);
   const text = `Moss & Marble · маршрут ${code}`;
-  try {
-    if (navigator.share) await navigator.share({ title: 'Moss & Marble', text });
-    else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
-    else {
-      const input = $('runCodeInput');
-      input.value = code;
-      input.select();
-      document.execCommand('copy');
-      input.setSelectionRange(code.length, code.length);
+  const url = sharedRouteUrl(seed);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Moss & Marble', text, url });
+      showToast('Маршрут передан');
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
     }
-    showToast(navigator.share ? 'Код готов к отправке' : `Код ${code} скопирован`);
-  } catch (error) {
-    if (error?.name !== 'AbortError') $('codeError').textContent = `Код маршрута: ${code}`;
+  }
+  const sharedText = `${text}\n${url}`;
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(sharedText);
+    else {
+      const copy = document.createElement('textarea');
+      copy.value = sharedText;
+      copy.setAttribute('readonly', '');
+      copy.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.append(copy);
+      copy.select();
+      const copied = document.execCommand('copy');
+      copy.remove();
+      if (!copied) throw new Error('Copy command was rejected');
+    }
+    showToast(`Ссылка на ${code} скопирована`);
+  } catch {
+    $('codeError').textContent = `Код маршрута: ${code}`;
   }
 }
 
@@ -417,6 +479,23 @@ function restartHole() {
   }
   preparePlayingLevel();
   showSurface(endlessActive ? `Секция ${level.section} начата заново` : 'Лунка начата заново');
+}
+
+function requestRestart() {
+  if (strokes <= 0) {
+    restartHole();
+    return;
+  }
+  audio.ui();
+  requestConfirmation({
+    eyebrow: endlessActive ? `Секция ${level.section}` : `${level.id}. ${level.name}`,
+    title: 'Начать эту попытку заново?',
+    detail: `${strokes} ${strokeWord(strokes)} текущей попытки будут сброшены. Лучшие результаты не изменятся.`,
+    acceptLabel: 'Начать заново',
+    meta: 'текущие удары будут сброшены',
+    returnMode: 'paused',
+    action: restartHole
+  });
 }
 
 function retryResult() {
@@ -438,6 +517,7 @@ function retryResult() {
 }
 
 function openMenu() {
+  if (mode === 'code') clearSharedRoute();
   saveActiveCheckpoint();
   setMode('menu');
   syncMenu();
@@ -462,11 +542,18 @@ function pointerLocal(event) {
 }
 
 function beginAim(event) {
-  if (mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
+  if (aim.active || mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
   const point = pointerLocal(event);
   const ballPoint = renderer.ballScreenPoint(ball);
   const distance = Math.hypot(point.x - ballPoint.x, point.y - ballPoint.y);
-  if (distance > Math.max(76, 56 * renderer.scale)) return;
+  if (distance > Math.max(76, 56 * renderer.scale)) {
+    if (performance.now() - invalidAimAt > 900) {
+      invalidAimAt = performance.now();
+      showSurface('Начни жест от стеклянного шара');
+      vibrate(4);
+    }
+    return;
+  }
   if (event.cancelable) event.preventDefault();
   audio.unlock();
   aim.active = true;
@@ -477,6 +564,8 @@ function beginAim(event) {
   aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
+  aim.preview = [];
+  aim.previewOutcome = null;
   syncAimMeter();
   try { canvas.setPointerCapture(event.pointerId); } catch {}
 }
@@ -500,6 +589,22 @@ function moveAim(event) {
   aim.power = shaped;
   aim.vx = unitX * shaped * 1780;
   aim.vy = unitY * shaped * 1780;
+  refreshAimPreview();
+  syncAimMeter();
+}
+
+function refreshAimPreview(force = false) {
+  if (!aim.active || aim.power <= .055) {
+    aim.preview = [];
+    aim.previewOutcome = null;
+    return;
+  }
+  const now = performance.now();
+  if (!force && now - lastAimPreviewAt < 52) return;
+  lastAimPreviewAt = now;
+  const prediction = predictShot(ball, level, aim.vx, aim.vy, elapsed);
+  aim.preview = prediction.points;
+  aim.previewOutcome = prediction.outcome;
   syncAimMeter();
 }
 
@@ -514,22 +619,33 @@ function takeShot() {
     audio.strike(aim.power);
     vibrate(aim.power > .72 ? 18 : 10);
     renderer.emit(ball.x, ball.y, 'dust', 7);
+    return true;
   }
+  showSurface('Потяни немного дальше');
+  vibrate(4);
+  return false;
 }
 
 function finishAim(event, cancelled = false) {
   if (!aim.active || event.pointerId !== aim.pointerId) return;
   if (event.cancelable) event.preventDefault();
   const pointerId = aim.pointerId;
-  try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   if (!cancelled) takeShot();
   cancelAim();
+  try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   syncHeader();
 }
 
 function syncAimMeter() {
   const meter = $('powerGauge');
-  if (meter) meter.style.setProperty('--aim-power', String(Math.max(0, Math.min(1, aim.power))));
+  if (meter) {
+    const value = Math.round(Math.max(0, Math.min(1, aim.power)) * 100);
+    meter.style.setProperty('--aim-power', String(value / 100));
+    meter.dataset.outcome = aim.previewOutcome || '';
+    meter.setAttribute('aria-valuenow', String(value));
+    meter.setAttribute('aria-valuetext', `${value}%`);
+    meter.setAttribute('aria-hidden', String(!aim.active));
+  }
   document.body.dataset.aiming = String(aim.active);
 }
 
@@ -539,6 +655,8 @@ function cancelAim() {
   aim.vx = 0;
   aim.vy = 0;
   aim.power = 0;
+  aim.preview = [];
+  aim.previewOutcome = null;
   syncAimMeter();
 }
 
@@ -624,7 +742,7 @@ function finishEndlessSection() {
 
   const delta = strokes - level.par;
   const [title, detail] = resultCopy(delta, strokes);
-  setResultCopy(`Секция ${level.section} · ${level.name}`, title, `${detail} Пройдено секций: ${completedSections}.`, isDepthRecord);
+  setResultCopy(`Секция ${level.section} · ${level.name}`, title, `${detail} Пройдено секций: ${completedSections}.`, isDepthRecord || isScoreRecord);
   $('nextBtn').hidden = false;
   $('nextBtn').querySelector('span').textContent = 'Дальше в оранжерею';
   const next = generateEndlessLevel(run.seed, completedSections);
@@ -678,10 +796,10 @@ function finishHole() {
       const par = LEVELS.reduce((sum, item) => sum + item.par, 0);
       const courseDelta = fullTotal - par;
       $('finishDetail').textContent = courseDelta < 0
-        ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.`
+        ? `На ${Math.abs(courseDelta)} ${strokeWord(Math.abs(courseDelta))} ниже общего пара. Оранжерея запомнила этот круг.`
         : courseDelta === 0
           ? 'Точно общий пар. Очень аккуратная прогулка.'
-          : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
+          : `На ${courseDelta} ${strokeWord(courseDelta)} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
     }
     setMode('finish');
     syncMenu();
@@ -741,7 +859,7 @@ function attachTilt() {
 }
 
 function toggleOverview() {
-  if (mode !== 'playing' || !isBallStopped(ball)) return;
+  if (!canAimNow()) return;
   cancelAim();
   const active = livingTerrain.toggleOverview();
   audio.ui();
@@ -760,11 +878,12 @@ function updateKeyboardAim() {
   aim.power = power;
   aim.vx = Math.cos(keyboardAngle) * power * 1780;
   aim.vy = Math.sin(keyboardAngle) * power * 1780;
+  refreshAimPreview(true);
   syncAimMeter();
 }
 
 function handleKeyboardAim(event) {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return false;
+  if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) return false;
   const key = event.key;
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(key)) return false;
   if (!canAimNow() && aim.pointerId !== 'keyboard') return false;
@@ -791,7 +910,9 @@ function bindControls() {
   canvas.addEventListener('pointermove', moveAim, { passive: false });
   canvas.addEventListener('pointerup', (event) => finishAim(event, false), { passive: false });
   canvas.addEventListener('pointercancel', (event) => finishAim(event, true), { passive: false });
-  canvas.addEventListener('lostpointercapture', () => cancelAim());
+  canvas.addEventListener('lostpointercapture', (event) => {
+    if (aim.active && aim.pointerId === event.pointerId) cancelAim();
+  });
 
   $('continueBtn').addEventListener('click', async () => {
     await audio.unlock();
@@ -812,6 +933,7 @@ function bindControls() {
       title: 'Заменить текущий маршрут?',
       detail: current ? `Путь ${formatRunCode(current.seed)} останется в рекордах, но его текущая секция будет потеряна.` : 'Оранжерея вырастит новый маршрут с другим кодом.',
       acceptLabel: 'Вырастить новый путь',
+      meta: 'пройденные секции останутся в рекорде',
       returnMode: 'menu',
       action: () => {
         startEndless({ fresh: true });
@@ -832,7 +954,9 @@ function bindControls() {
   });
   $('confirmAcceptBtn').addEventListener('click', async () => {
     const action = confirmationAction;
+    confirmationFocus = null;
     confirmationAction = null;
+    audio.ui();
     if (action) await action();
   });
   $('confirmCancelBtn').addEventListener('click', () => { audio.ui(); closeConfirmation(); });
@@ -841,7 +965,7 @@ function bindControls() {
   $('pauseBtn').addEventListener('click', pauseGame);
   $('overviewBtn').addEventListener('click', toggleOverview);
   $('resumeBtn').addEventListener('click', resumeGame);
-  $('restartBtn').addEventListener('click', restartHole);
+  $('restartBtn').addEventListener('click', requestRestart);
   $('quitBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
   $('retryBtn').addEventListener('click', retryResult);
   $('resultMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
@@ -914,6 +1038,16 @@ function frame(now) {
   elapsed += dt;
   audio.ambientTick(dt);
 
+  if (document.hidden) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (mode !== 'playing' && lastInactiveRenderAt > 0 && now - lastInactiveRenderAt < 1000 / 30) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (mode !== 'playing') lastInactiveRenderAt = now;
+
   if (mode === 'playing') {
     if (waterResetTimer > 0) {
       waterResetTimer -= dt;
@@ -936,6 +1070,7 @@ function frame(now) {
   }
 
   audio.rollTick(ball, mode === 'playing' && waterResetTimer <= 0);
+  if (aim.active) refreshAimPreview();
 
   const movingState = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
   if (movingState !== lastBallMovingState) {
@@ -973,7 +1108,9 @@ audio.setEnabled(save.sound);
 if (save.tilt) attachTilt();
 syncMenu();
 syncHeader();
-setMode('menu');
+setMode('menu', { focus: false });
+const sharedRouteSeed = parseRunCode(new URL(window.location.href).searchParams.get('route'));
+if (sharedRouteSeed) openCodeScreen(sharedRouteSeed, { focus: false });
 requestAnimationFrame(frame);
 
 window.__MOSS_MARBLE__ = {
