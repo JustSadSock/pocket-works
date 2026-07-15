@@ -1,0 +1,21 @@
+{
+  "id": "/apps/glubina-13/",
+  "name": "ГЛУБИНА 13",
+  "short_name": "ГЛУБИНА 13",
+  "description": "Трёхмерное тихое погружение в геометрический разлом.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#07100d",
+  "theme_color": "#07100d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
