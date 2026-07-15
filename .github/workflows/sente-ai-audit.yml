@@ -1,11 +1,6 @@
 name: SENTE AI Audit
 
 on:
-  pull_request:
-    paths:
-      - 'apps/sente/**'
-      - 'scripts/*sente*'
-      - '.github/workflows/sente-ai-audit.yml'
   workflow_dispatch:
 
 permissions:
