@@ -61,19 +61,31 @@ function shp28LoadingVisible(visible, label = 'СБОРКА ТРАССЫ') {
   if (screen) screen.hidden = !visible;
 }
 
+function shp281PrepareVisibleRoute(seed = null, announce = false) {
+  prepareRoute(seed);
+  setupRace();
+  mode = 'menu';
+  showRaceUi(false);
+  startScreen.hidden = false;
+  shp28LoadingVisible(false);
+  if (announce) showRaceMessage('НОВАЯ ТРАССА', 0.5);
+  lastFrame = performance.now();
+}
+
 function shp28GenerateRoute() {
   shp28LoadingVisible(true);
   startScreen.hidden = true;
   requestAnimationFrame(() => {
     setTimeout(() => {
-      prepareRoute();
-      setupRace();
-      showRaceUi(false);
-      startScreen.hidden = false;
-      shp28LoadingVisible(false);
-      showRaceMessage('НОВАЯ ТРАССА', 0.5);
-      lastFrame = performance.now();
-    }, 24);
+      try {
+        shp281PrepareVisibleRoute(null, true);
+      } catch (error) {
+        shp281ReportError('route-generation', error);
+        shp28LoadingVisible(false);
+        startScreen.hidden = false;
+        showRaceMessage('ОШИБКА ТРАССЫ · ЕЩЁ РАЗ', 1.2);
+      }
+    }, 0);
   });
 }
 
@@ -101,11 +113,14 @@ resize();
 requestAnimationFrame(frame);
 requestAnimationFrame(() => {
   setTimeout(() => {
-    prepareRoute(hashSeed(Date.now() ^ 0x51a7b33f));
-    setupRace();
-    mode = 'menu';
-    startScreen.hidden = false;
-    shp28LoadingVisible(false);
-    lastFrame = performance.now();
-  }, 32);
+    try {
+      shp281PrepareVisibleRoute(hashSeed(Date.now() ^ 0x51a7b33f));
+    } catch (error) {
+      shp281ReportError('initial-route', error);
+      const progress = document.querySelector('#loadingProgress');
+      const screen = document.querySelector('#loadingScreen');
+      if (progress) progress.textContent = 'НЕ УДАЛОСЬ СОБРАТЬ ТРАССУ';
+      if (screen) screen.dataset.error = 'true';
+    }
+  }, 0);
 });
