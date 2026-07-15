@@ -1,0 +1,252 @@
+}
+  catch (error) { console.warn('ПОЛЕВОЙ ШТАБ: сохранение недоступно', error); }
+}
+
+function removeSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch {}
+}
+
+function validSave(saved) {
+  return Boolean(saved && saved.campaign && saved.battle && Number.isFinite(saved.campaign.stage) && Array.isArray(saved.battle.units) && saved.battle.terrain?.length === ROWS * COLS);
+}
+
+function persist() {
+  if (!campaign || !battle) return;
+  saveJSON(SAVE_KEY, { version: 1, campaign, battle, pending, savedAt: Date.now() });
+  refreshMenu();
+}
+
+function showScreen(name = null) {
+  for (const key of screens) dom[key].classList.toggle('is-visible', key === name);
+}
+
+function battleLabel() {
+  if (!campaign || !battle) return 'ПЕРЕПРАВА';
+  return MAP_NAMES[hashSeed(campaign.seed, battle.stage) % MAP_NAMES.length].toUpperCase();
+}
+
+function refreshMenu() {
+  const saved = loadJSON(SAVE_KEY, null);
+  const available = validSave(saved);
+  dom.continueButton.hidden = !available;
+  dom.continueCard.hidden = !available;
+  if (available) {
+    const doctrine = DOCTRINES[saved.campaign.doctrine]?.name || 'Манёвр';
+    dom.continueTitle.textContent = `Бой ${saved.campaign.stage} · ${doctrine}`;
+    dom.continueMeta.textContent = `Ход ${saved.battle.turn} · ${saved.campaign.renown} славы`;
+  }
+  dom.bestMeta.textContent = `Лучший счёт: ${profile.bestScore || 0}`;
+}
+
+function showMenu() {
+  mode = 'menu';
+  selectedId = null;
+  inspectedId = null;
+  inputLocked = false;
+  showScreen('menuScreen');
+  refreshMenu();
+  stopRenderLoopIfIdle();
+}
+
+function startDoctrineChoice() {
+  mode = 'doctrine';
+  showScreen('doctrineScreen');
+  sound('paper');
+}
+
+function chooseDoctrine(doctrine) {
+  campaign = createCampaign(Date.now(), doctrine);
+  battle = generateBattle(campaign);
+  pending = null;
+  selectedId = null;
+  profile.campaigns += 1;
+  saveJSON(PROFILE_KEY, profile);
+  persist();
+  showBriefing();
+  sound('stamp');
+  haptic(18);
+}
+
+function showBriefing() {
+  if (!campaign || !battle) return;
+  mode = 'briefing';
+  const weather = WEATHER[battle.weather];
+  const doctrine = DOCTRINES[campaign.doctrine];
+  const name = battleLabel();
+  dom.briefingTitle.textContent = titleCase(name);
+  dom.briefingWeather.textContent = weather.name;
+  dom.briefingWeatherNote.textContent = weather.note;
+  dom.briefingDoctrine.textContent = doctrine.name;
+  dom.briefingDoctrineNote.textContent = doctrine.description;
+  dom.briefingLimit.textContent = `${battle.turnLimit} ходов`;
+  showScreen('briefingScreen');
+  renderAll();
+}
+
+function beginBattle() {
+  mode = 'playing';
+  battle.phase = 'player';
+  showScreen(null);
+  selectedId = null;
+  inspectedId = null;
+  inputLocked = false;
+  renderAll();
+  startRenderLoop();
+  sound('start');
+  if (!settings.tutorialSeen) showTutorial(0);
+  else stamp('ВАШ ХОД');
+}
+
+function continueSaved() {
+  const saved = loadJSON(SAVE_KEY, null);
+  if (!validSave(saved)) {
+    toast('Сохранение не найдено.');
+    refreshMenu();
+    return;
+  }
+  campaign = saved.campaign;
+  battle = saved.battle;
+  pending = saved.pending || battle.result || null;
+  if (!pending && battle.phase === 'enemy') {
+    const recoveredResult = finishRound(battle, campaign);
+    if (recoveredResult) {
+      battle.result = recoveredResult;
+      pending = recoveredResult;
+    }
+  }
+  selectedId = null;
+  inspectedId = null;
+  renderAll();
+  if (pending === 'victory') showVictory();
+  else if (pending === 'defeat') {
+    if (!campaign.history.some((entry) => entry.result === 'defeat' && entry.stage === campaign.stage)) completeDefeat(campaign, battle);
+    showDefeat();
+  } else showBriefing();
+  sound('paper');
+}
+
+function showTutorial(index) {
+  const steps = [
+    ['Сначала выберите отряд', 'Синие жетоны — ваши. После выбора карта покажет клетки марша и видимые цели атаки.'],
+    ['Приказы ограничены', 'Марш, атака, окопы и снабжение тратят очки штаба. Необязательно двигать всех: иногда выгоднее закончить ход раньше.'],
+    ['Побеждает не мясорубка', 'Удерживайте штандарты, берегите мораль и обоз. Если строй врага упадёт до нуля, поле рухнет без полного уничтожения армии.'],
+  ];
+  tutorialIndex = clamp(index, 0, steps.length - 1);
+  dom.tutorialStep.textContent = `${tutorialIndex + 1} / ${steps.length}`;
+  dom.tutorialTitle.textContent = steps[tutorialIndex][0];
+  dom.tutorialCopy.textContent = steps[tutorialIndex][1];
+  dom.nextTutorialButton.querySelector('span').textContent = tutorialIndex === steps.length - 1 ? 'К карте' : 'Дальше';
+  showScreen('tutorialScreen');
+  mode = 'tutorial';
+}
+
+function finishTutorial() {
+  settings.tutorialSeen = true;
+  saveJSON(SETTINGS_KEY, settings);
+  mode = 'playing';
+  showScreen(null);
+  stamp('ВАШ ХОД');
+  renderAll();
+}
+
+function showManual(origin = mode) {
+  manualReturn = origin === 'pause' ? 'pause' : origin === 'playing' ? 'playing' : 'menu';
+  showScreen('manualScreen');
+  mode = 'manual';
+  sound('paper');
+}
+
+function closeManual() {
+  if (manualReturn === 'pause') {
+    mode = 'pause';
+    showScreen('pauseScreen');
+  } else if (manualReturn === 'playing') {
+    mode = 'playing';
+    showScreen(null);
+  } else showMenu();
+}
+
+function pauseGame() {
+  if (mode !== 'playing' || inputLocked) return;
+  mode = 'pause';
+  persist();
+  dom.pauseStage.textContent = campaign.stage;
+  dom.pauseTurn.textContent = battle.turn;
+  dom.pauseRenown.textContent = campaign.renown;
+  showScreen('pauseScreen');
+  sound('paper');
+}
+
+function resumeGame() {
+  mode = 'playing';
+  showScreen(null);
+  renderAll();
+  sound('tap');
+}
+
+function openSettings(origin = mode) {
+  settingsReturn = origin;
+  refreshSettings();
+  dom.settingsLayer.hidden = false;
+  sound('paper');
+}
+
+function closeSettings() {
+  dom.settingsLayer.hidden = true;
+  sound('tap');
+}
+
+function refreshSettings() {
+  for (const [button, key] of [[dom.soundToggle, 'sound'], [dom.hapticsToggle, 'haptics'], [dom.motionToggle, 'motion']]) {
+    button.setAttribute('aria-pressed', String(Boolean(settings[key])));
+    button.querySelector('i').textContent = settings[key] ? 'ВКЛ' : 'ВЫКЛ';
+  }
+}
+
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  saveJSON(SETTINGS_KEY, settings);
+  refreshSettings();
+  if (key === 'sound' && settings.sound) sound('tap');
+  if (key === 'haptics' && settings.haptics) haptic(12);
+}
+
+function abandonPrompt() {
+  showScreen('confirmScreen');
+  mode = 'confirm';
+}
+
+function abandonCampaign() {
+  if (!campaign || !battle) return showMenu();
+  pending = 'defeat';
+  completeDefeat(campaign, battle);
+  persist();
+  showDefeat(true);
+}
+
+function showVictory() {
+  mode = 'victory';
+  pending = 'victory';
+  const playerUnits = battle.units.filter((unit) => unit.side === 'player');
+  const losses = playerUnits.filter((unit) => unit.routed || unit.hp <= 0).length;
+  const surviving = playerUnits.length - losses;
+  const previewReward = Math.round(80 + campaign.stage * 25 + battle.playerResolve + surviving * 18 + battle.playerObjective * 6);
+  dom.victorySummary.textContent = battle.playerObjective >= 8 ? 'Штандарты удержаны. Противник потерял оперативную инициативу.' : 'Вражеский строй сломан. Дорога на следующий рубеж открыта.';
+  dom.victoryReward.textContent = previewReward;
+  dom.victoryLosses.textContent = losses;
+  dom.victoryTurns.textContent = Math.min(battle.turn, battle.turnLimit);
+  buildUpgradeChoices();
+  showScreen('victoryScreen');
+  persist();
+  sound('victory');
+  haptic([30, 40, 60]);
+}
+
+function buildUpgradeChoices() {
+  const choices = getUpgradeChoices(campaign, 3);
+  dom.upgradeList.replaceChildren();
+  if (!choices.length) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.upgrade = '';
+    button.innerHTML = '<i>★</i><span><b>Полевая слава</b><small>Все штабные школы уже освоены. Получите допо
