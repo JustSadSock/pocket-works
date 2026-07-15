@@ -1,0 +1,206 @@
+.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (dom.canvas.width !== width || dom.canvas.height !== height) {
+    dom.canvas.width = width;
+    dom.canvas.height = height;
+  }
+  const tile = Math.min(rect.width / COLS, rect.height / ROWS);
+  layout = {
+    dpr,
+    tile,
+    left: (rect.width - tile * COLS) / 2,
+    top: (rect.height - tile * ROWS) / 2,
+    width: tile * COLS,
+    height: tile * ROWS,
+    cssWidth: rect.width,
+    cssHeight: rect.height,
+  };
+}
+
+function drawBattle(now) {
+  const ctx = dom.canvas.getContext('2d');
+  if (!ctx) return;
+  const { dpr } = layout;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
+  drawMapBackdrop(ctx);
+  drawTiles(ctx);
+  drawHighlights(ctx);
+  drawObjectives(ctx);
+  drawUnits(ctx, now);
+  drawEffects(ctx, now);
+}
+
+function drawMapBackdrop(ctx) {
+  ctx.fillStyle = '#a59b75';
+  ctx.fillRect(0, 0, layout.cssWidth, layout.cssHeight);
+  ctx.save();
+  ctx.globalAlpha = .12;
+  ctx.strokeStyle = '#4c4e3e';
+  ctx.lineWidth = 1;
+  for (let y = 4; y < layout.cssHeight; y += 6) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + Math.sin(y * .18));
+    ctx.lineTo(layout.cssWidth, y - Math.cos(y * .13));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function tileRect(row, col) {
+  return { x: layout.left + col * layout.tile, y: layout.top + row * layout.tile, size: layout.tile };
+}
+
+function cellCenter(row, col) {
+  const rect = tileRect(row, col);
+  return { x: rect.x + rect.size / 2, y: rect.y + rect.size / 2 };
+}
+
+function drawTiles(ctx) {
+  const rng = seededRandom(hashSeed(battle.seed, 'texture'));
+  for (let row = 0; row < ROWS; row += 1) {
+    for (let col = 0; col < COLS; col += 1) {
+      const key = battle.terrain[row * COLS + col];
+      const terrain = TERRAIN[key];
+      const { x, y, size } = tileRect(row, col);
+      ctx.fillStyle = terrain.color;
+      ctx.fillRect(x, y, size, size);
+      ctx.save();
+      ctx.globalAlpha = .14;
+      ctx.strokeStyle = '#27352e';
+      ctx.lineWidth = Math.max(.6, size * .015);
+      for (let i = 0; i < 3; i += 1) {
+        const oy = y + size * (.2 + i * .28) + (rng() - .5) * 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 2, oy);
+        ctx.bezierCurveTo(x + size * .3, oy - 2, x + size * .66, oy + 2, x + size - 2, oy);
+        ctx.stroke();
+      }
+      ctx.restore();
+      drawTerrainMark(ctx, key, x, y, size, row, col);
+      ctx.strokeStyle = 'rgba(42,49,41,.45)';
+      ctx.lineWidth = Math.max(.7, size * .018);
+      ctx.setLineDash([size * .12, size * .08]);
+      ctx.strokeRect(x + .5, y + .5, size - 1, size - 1);
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+function drawTerrainMark(ctx, key, x, y, size, row, col) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = 'rgba(31,46,38,.35)';
+  ctx.fillStyle = 'rgba(31,46,38,.25)';
+  ctx.lineWidth = Math.max(1, size * .025);
+  if (key === 'forest') {
+    for (let i = 0; i < 3; i += 1) {
+      const px = size * (.25 + i * .24);
+      const py = size * (.4 + ((row + col + i) % 2) * .14);
+      ctx.beginPath(); ctx.moveTo(px, py - size * .18); ctx.lineTo(px - size * .1, py + size * .06); ctx.lineTo(px + size * .1, py + size * .06); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, py + size * .05); ctx.lineTo(px, py + size * .18); ctx.stroke();
+    }
+  } else if (key === 'hill') {
+    ctx.beginPath();
+    ctx.ellipse(size * .5, size * .55, size * .3, size * .16, -.18, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(size * .5, size * .58, size * .2, size * .1, -.18, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  } else if (key === 'marsh') {
+    for (let i = 0; i < 3; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo(size * (.18 + i * .25), size * .38);
+      ctx.quadraticCurveTo(size * (.25 + i * .25), size * .33, size * (.32 + i * .25), size * .38);
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(size * (.25 + i * .25), size * .45); ctx.lineTo(size * (.22 + i * .25), size * .64); ctx.stroke();
+    }
+  } else if (key === 'ruins') {
+    ctx.strokeRect(size * .26, size * .28, size * .42, size * .38);
+    ctx.beginPath(); ctx.moveTo(size * .27, size * .28); ctx.lineTo(size * .39, size * .42); ctx.lineTo(size * .51, size * .31); ctx.lineTo(size * .68, size * .48); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHighlights(ctx) {
+  if (mode !== 'playing' || battle.phase !== 'player' || !selectedId) return;
+  const unit = getUnit(battle, selectedId);
+  if (!unit || unit.acted || unit.routed) return;
+  for (const cell of reachableCells(battle, campaign, selectedId)) {
+    const { x, y, size } = tileRect(cell.row, cell.col);
+    ctx.save();
+    ctx.fillStyle = 'rgba(49,93,119,.24)';
+    ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+    ctx.strokeStyle = 'rgba(30,64,82,.9)';
+    ctx.lineWidth = Math.max(1.2, size * .035);
+    ctx.setLineDash([size * .15, size * .08]);
+    ctx.strokeRect(x + 4, y + 4, size - 8, size - 8);
+    ctx.restore();
+  }
+  for (const target of attackableUnits(battle, selectedId)) {
+    const { x, y, size } = tileRect(target.row, target.col);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(112,38,34,.95)';
+    ctx.lineWidth = Math.max(2, size * .055);
+    ctx.setLineDash([size * .19, size * .07]);
+    ctx.strokeRect(x + 3, y + 3, size - 6, size - 6);
+    ctx.restore();
+  }
+}
+
+function drawObjectives(ctx) {
+  for (const objective of battle.objectives) {
+    const { x, y } = cellCenter(objective.row, objective.col);
+    const size = layout.tile;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#2d372f';
+    ctx.lineWidth = Math.max(1.2, size * .035);
+    ctx.beginPath(); ctx.moveTo(-size * .17, size * .24); ctx.lineTo(-size * .17, -size * .28); ctx.stroke();
+    ctx.fillStyle = objective.owner === 'player' ? '#31556a' : objective.owner === 'enemy' ? '#803d37' : '#d0b45f';
+    ctx.beginPath();
+    ctx.moveTo(-size * .16, -size * .27); ctx.lineTo(size * .18, -size * .19); ctx.lineTo(size * .03, -size * .05); ctx.lineTo(-size * .16, -size * .1); ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawUnits(ctx, now) {
+  const visible = visibleEnemyIds(battle);
+  const movingId = animation?.kind === 'move' ? animation.unitId : null;
+  for (const unit of battle.units) {
+    if (unit.routed || unit.hp <= 0) continue;
+    if (unit.side === 'enemy' && !visible.has(unit.id)) continue;
+    if (unit.id === movingId) continue;
+    const center = cellCenter(unit.row, unit.col);
+    drawUnitToken(ctx, unit, center.x, center.y, now);
+  }
+  if (movingId) {
+    const unit = getUnit(battle, movingId);
+    if (unit) {
+      const progress = clamp((now - animation.startedAt) / animation.duration, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const from = cellCenter(animation.from.row, animation.from.col);
+      const to = cellCenter(animation.to.row, animation.to.col);
+      const x = from.x + (to.x - from.x) * eased;
+      const y = from.y + (to.y - from.y) * eased - Math.sin(progress * Math.PI) * layout.tile * .08;
+      drawUnitToken(ctx, unit, x, y, now, 1 + Math.sin(progress * Math.PI) * .05);
+    }
+  }
+}
+
+function drawUnitToken(ctx, unit, x, y, now, scale = 1) {
+  const size = layout.tile * .62 * scale;
+  const selected = unit.id === selectedId || unit.id === inspectedId;
+  const spec = UNIT_TYPES[unit.type];
+  ctx.save();
+  ctx.translate(x, y);
+  if (selected) {
+    const pulse = settings.motion ? 1 + Math.sin(now * .006) * .035 : 1;
+    ctx.scale(pulse, pulse);
+    ctx.strokeStyle = unit.side === 'player' ? '#f1d67d' : '#f0b08a';
+    ctx.lineWidth = Math.max(2, layout.tile * .055);
+    ctx.setLineDas
