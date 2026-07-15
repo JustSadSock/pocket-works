@@ -23,7 +23,7 @@ shp27UpdateMildError = function shp28UpdateMildError(car, dt, tune, preview) {
     : lerp(0.48, 0.82, shp25Random(car));
   car.shp27ErrorTimer = car.shp28MistakeTotal;
   car.shp27ErrorSide = car.shp28MistakeKind === 'wide'
-    ? (Math.sign(preview.signed) || (shp25Random(car) > 0.5 ? 1 : -1))
+    ? -(Math.sign(preview.signed) || (shp25Random(car) > 0.5 ? 1 : -1))
     : (shp25Random(car) > 0.5 ? 1 : -1);
 };
 
