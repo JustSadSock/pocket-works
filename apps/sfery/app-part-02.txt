@@ -1,0 +1,180 @@
+  const gain = audioContext.createGain();
+  const map = {
+    tap: [260, 0.035, 'triangle'],
+    treaty: [430, 0.11, 'sine'],
+    trade: [330, 0.12, 'triangle'],
+    pressure: [155, 0.14, 'sawtooth'],
+    good: [560, 0.18, 'sine'],
+    bad: [105, 0.22, 'square']
+  };
+  const [frequency, duration, type] = map[kind] || map.tap;
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  if (kind === 'good') oscillator.frequency.exponentialRampToValueAtTime(760, now + duration);
+  if (kind === 'bad') oscillator.frequency.exponentialRampToValueAtTime(75, now + duration);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.045, now + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(gain).connect(audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.02);
+}
+
+function vibrate(pattern = 8) {
+  if (state.settings.haptic && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function showToast(message) {
+  clearTimeout(toastTimer);
+  ui.mapToast.textContent = message;
+  ui.mapToast.classList.add('is-visible');
+  toastTimer = window.setTimeout(() => ui.mapToast.classList.remove('is-visible'), 1150);
+}
+
+function createSvg(tag, attributes = {}) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
+  return node;
+}
+
+function relationStatus(value) {
+  if (value >= 28) return { label: 'ПАРТНЁР', tone: '#4f8179' };
+  if (value <= -24) return { label: 'ПРОТИВНИК', tone: '#b65d52' };
+  return { label: 'НЕЙТРАЛ', tone: '#d2a646' };
+}
+
+function tintFor(region, faction) {
+  if (!faction) return region.color;
+  const status = relationStatus(faction.relation);
+  const blend = faction.relation >= 28 ? '#4f8179' : faction.relation <= -24 ? '#b65d52' : region.color;
+  return blend;
+}
+
+function buildMap() {
+  ui.regionLayer.replaceChildren();
+  for (const region of REGION_DEFS) {
+    const group = createSvg('g', {
+      class: `region${region.id === 'veya' ? ' player' : ''}`,
+      'data-region': region.id,
+      tabindex: region.id === 'veya' ? '-1' : '0',
+      role: region.id === 'veya' ? 'img' : 'button',
+      'aria-label': region.id === 'veya' ? 'Республика Вея' : `${region.name}, выбрать как цель`
+    });
+    group.append(createSvg('polygon', { points: region.points }));
+    const label = createSvg('text', { x: region.center[0], y: region.center[1] - (region.id === 'veya' ? 2 : 5) });
+    label.textContent = region.short;
+    group.append(label);
+    if (region.id !== 'veya') {
+      const status = createSvg('text', { class: 'region-status', x: region.center[0], y: region.center[1] + 12 });
+      status.textContent = 'НЕЙТРАЛ · 0%';
+      group.append(status);
+      const ring = createSvg('circle', {
+        class: 'leverage-ring', cx: region.center[0], cy: region.center[1] + 28, r: 8,
+        pathLength: 100
+      });
+      group.append(ring);
+      group.addEventListener('click', () => handleRegionTap(region.id));
+      group.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleRegionTap(region.id);
+        }
+      });
+    }
+    ui.regionLayer.append(group);
+  }
+  renderMap();
+}
+
+function renderMap() {
+  for (const region of REGION_DEFS) {
+    const group = ui.regionLayer.querySelector(`[data-region="${region.id}"]`);
+    if (!group) continue;
+    const polygon = group.querySelector('polygon');
+    if (region.id === 'veya') {
+      polygon.setAttribute('fill', region.color);
+      continue;
+    }
+    const faction = state.factions[region.id];
+    const status = relationStatus(faction.relation);
+    polygon.setAttribute('fill', tintFor(region, faction));
+    polygon.setAttribute('opacity', String(0.82 + clamp(Math.abs(faction.relation), 0, 100) / 600));
+    const statusLabel = group.querySelector('.region-status');
+    statusLabel.textContent = `${status.label} · ${Math.round(faction.leverage)}%`;
+    const ring = group.querySelector('.leverage-ring');
+    ring.setAttribute('stroke-dasharray', `${clamp(faction.leverage)} ${100 - clamp(faction.leverage)}`);
+    ring.setAttribute('stroke', status.tone);
+    group.classList.toggle('is-selected', selectedAction && dragState?.targetId === region.id);
+  }
+}
+
+function factionName(id) {
+  return REGION_DEFS.find((region) => region.id === id)?.name || id;
+}
+
+function generateCrisis() {
+  const targetIds = Object.keys(state.factions);
+  const weighted = targetIds.flatMap((id) => {
+    const faction = state.factions[id];
+    const weight = 1 + Math.floor(Math.max(0, -faction.relation) / 20) + Math.floor(faction.leverage / 35);
+    return Array(weight).fill(id);
+  });
+  const targetId = choose(weighted);
+  const template = choose(CRISIS_TEMPLATES);
+  const crisis = {
+    id: `${state.turn}-${Math.floor(rand() * 100000)}`,
+    targetId,
+    code: template.code,
+    title: template.title,
+    body: template.body.replace('{target}', factionName(targetId)),
+    tag: template.tag,
+    opening: {
+      treasury: template.treasury || 0,
+      legitimacy: template.legitimacy || 0,
+      readiness: template.readiness || 0,
+      tension: template.tension || 0
+    }
+  };
+  applyOpeningShock(crisis.opening);
+  state.crisis = crisis;
+  currentCrisis = crisis;
+  saveState();
+}
+
+function applyOpeningShock(opening) {
+  state.treasury = clamp(state.treasury + opening.treasury, -20, 120);
+  state.legitimacy = clamp(state.legitimacy + opening.legitimacy);
+  state.readiness = clamp(state.readiness + opening.readiness);
+  state.tension = clamp(state.tension + opening.tension);
+}
+
+function renderCrisis() {
+  if (!currentCrisis) return;
+  ui.crisisCode.textContent = `ДОКЛАД ${String(state.turn).padStart(2, '0')} · ${currentCrisis.code}`;
+  ui.crisisTarget.textContent = factionName(currentCrisis.targetId);
+  ui.crisisTitle.textContent = currentCrisis.title;
+  ui.crisisBody.textContent = currentCrisis.body;
+  for (const group of ui.regionLayer.querySelectorAll('.region')) {
+    group.classList.toggle('is-targeted', group.dataset.region === currentCrisis.targetId && !selectedAction);
+  }
+}
+
+function renderMetrics(previous = null) {
+  const metrics = ['treasury', 'legitimacy', 'readiness', 'tension'];
+  for (const key of metrics) {
+    const value = Math.round(state[key]);
+    ui[`${key}Value`].textContent = value;
+    const normalized = key === 'treasury' ? clamp((value + 20) / 1.4) : clamp(value);
+    ui[`${key}Bar`].style.width = `${normalized}%`;
+    if (previous && Math.round(previous[key]) !== value) {
+      const metric = document.querySelector(`[data-metric="${key}"]`);
+      metric.classList.remove('is-flashing');
+      requestAnimationFrame(() => metric.classList.add('is-flashing'));
+    }
+  }
+}
+
+function calculateScore() {
+  const factions = Object.values(state.factions);
+  const relations = factions.reduce((sum, faction) => sum + faction.relation, 0) / factions.length;
+  const leverage = factions.reduce((sum, faction) => sum + faction.leverage, 0) / factions.length;

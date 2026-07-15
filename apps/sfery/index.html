@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#eee9dc">
+  <meta name="description" content="СФЕРЫ — тактическая геополитическая игра о кризисах и чужом влиянии.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="СФЕРЫ">
+  <title>СФЕРЫ</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a href="../../" class="launcher-link" data-app-control data-native-press>Pocket Works</a>
+      <div class="wordmark" aria-label="СФЕРЫ"><span></span><strong>СФЕРЫ</strong></div>
+      <button type="button" id="pauseButton" class="header-button" data-native-press hidden>Пауза</button>
+    </header>
+
+    <section class="game-screen" id="gameScreen" aria-label="Карта кампании">
+      <div class="turn-strip" data-ui>
+        <div><span>КВАРТАЛ</span><b id="turnValue">1 / 12</b></div>
+        <div class="turn-track" aria-hidden="true"><i id="turnFill"></i></div>
+        <div><span>СЧЁТ</span><b id="scoreValue">0</b></div>
+      </div>
+
+      <section class="crisis-brief" id="crisisBrief" data-ui aria-live="polite">
+        <div class="crisis-code"><span id="crisisCode">ДОКЛАД 01</span><b id="crisisTarget">—</b></div>
+        <h1 id="crisisTitle">Совет собирается</h1>
+        <p id="crisisBody">Выберите инструмент и направьте его на державу.</p>
+      </section>
+
+      <div class="map-stage" id="mapStage" data-gesture-surface data-block-callout>
+        <svg id="worldMap" viewBox="0 0 400 360" role="application" aria-label="Карта шести держав вокруг республики Вея">
+          <defs>
+            <pattern id="paperGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M20 0H0V20" fill="none" stroke="currentColor" stroke-width="0.65" opacity="0.16"/>
+            </pattern>
+            <filter id="mapShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#172c3c" flood-opacity="0.18"/>
+            </filter>
+          </defs>
+          <rect class="map-grid" x="0" y="0" width="400" height="360" fill="url(#paperGrid)"/>
+          <g id="regionLayer" filter="url(#mapShadow)"></g>
+          <g id="routeLayer" aria-hidden="true"></g>
+        </svg>
+        <div class="map-legend" data-ui>
+          <span><i class="ally"></i>партнёр</span>
+          <span><i class="neutral"></i>нейтрал</span>
+          <span><i class="hostile"></i>противник</span>
+        </div>
+        <div class="selection-hint" id="selectionHint" data-ui>Перетащите инструмент на державу</div>
+        <div class="map-toast" id="mapToast" aria-live="polite"></div>
+      </div>
+
+      <section class="state-board" aria-label="Состояние республики" data-ui>
+        <div class="metric" data-metric="treasury"><span>КАЗНА</span><b id="treasuryValue">62</b><i><em id="treasuryBar"></em></i></div>
+        <div class="metric" data-metric="legitimacy"><span>ЛЕГИТИМНОСТЬ</span><b id="legitimacyValue">64</b><i><em id="legitimacyBar"></em></i></div>
+        <div class="metric" data-metric="readiness"><span>ГОТОВНОСТЬ</span><b id="readinessValue">50</b><i><em id="readinessBar"></em></i></div>
+        <div class="metric tension" data-metric="tension"><span>НАПРЯЖЕНИЕ</span><b id="tensionValue">28</b><i><em id="tensionBar"></em></i></div>
+      </section>
+
+      <section class="action-dock" id="actionDock" data-ui aria-label="Инструменты внешней политики">
+        <button type="button" class="action-token treaty" data-action="treaty" data-native-press>
+          <span class="token-mark">I</span><b>ДОГОВОР</b><small>отношения ↑ · влияние ↑</small>
+        </button>
+        <button type="button" class="action-token trade" data-action="trade" data-native-press>
+          <span class="token-mark">II</span><b>КОРИДОР</b><small>казна ↑ · зависимость ↑</small>
+        </button>
+        <button type="button" class="action-token pressure" data-action="pressure" data-native-press>
+          <span class="token-mark">III</span><b>ДАВЛЕНИЕ</b><small>влияние ↓ · риск ↑</small>
+        </button>
+      </section>
+    </section>
+
+    <section class="overlay start-overlay" id="startOverlay" data-ui>
+      <div class="cover-map" aria-hidden="true">
+        <span class="orbit o1"></span><span class="orbit o2"></span><span class="orbit o3"></span>
+        <i class="node n1"></i><i class="node n2"></i><i class="node n3"></i><i class="node n4"></i><i class="node n5"></i><i class="node n6"></i>
+        <b>В</b>
+      </div>
+      <div class="start-copy">
+        <p>ГЕОПОЛИТИЧЕСКАЯ ИГРА НА 12 ХОДОВ</p>
+        <h1>Чужая дружба<br>тоже стоит власти.</h1>
+        <span>Вея зажата между шестью державами. Гаси кризисы, торгуй, угрожай и не преврати страну в удобную пешку.</span>
+      </div>
+      <div class="start-actions">
+        <button type="button" id="startButton" class="primary-action" data-native-press><span>Новая кампания</span><small>случайная расстановка сил</small></button>
+        <button type="button" id="resumeButton" class="resume-action" data-native-press hidden><span>Продолжить</span><small id="resumeMeta">квартал 1</small></button>
+        <div class="start-row">
+          <button type="button" id="settingsButton" data-native-press>Настройки</button>
+          <button type="button" id="rulesButton" data-native-press>Как играть</button>
+          <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay tutorial-overlay" id="tutorialOverlay" data-ui hidden>
+      <div class="tutorial-sheet">
+        <p>ПЕРВЫЙ БРИФИНГ</p>
+        <h2>Инструмент → держава → последствия.</h2>
+        <ol>
+          <li><b>Перетащите</b> один из трёх инструментов на страну. Можно также нажать инструмент, затем страну.</li>
+          <li>Договор и торговля улучшают положение, но дают партнёру рычаги влияния.</li>
+          <li>Давление возвращает свободу действий, зато поднимает мировое напряжение.</li>
+        </ol>
+        <div class="tutorial-warning">Кампания закончится через 12 кварталов или раньше, если рухнет легитимность, казна либо напряжение достигнет 100.</div>
+        <button type="button" id="tutorialDoneButton" class="primary-action" data-native-press>Принято</button>
+      </div>
+    </section>
+
+    <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
+      <div class="panel-sheet">
+        <p>ЗАСЕДАНИЕ ПРИОСТАНОВЛЕНО</p>
+        <h2>Пауза</h2>
+        <div class="panel-stats"><span>Квартал <b id="pauseTurn">1</b></span><span>Счёт <b id="pauseScore">0</b></span></div>
+        <button type="button" id="continueButton" class="primary-action" data-native-press>Продолжить</button>
+        <button type="button" id="pauseSettingsButton" class="panel-action" data-native-press>Настройки</button>
+        <button type="button" id="restartButton" class="panel-action danger" data-native-press>Начать заново</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay consequence-overlay" id="consequenceOverlay" data-ui hidden>
+      <div class="consequence-sheet">
+        <div class="result-stamp" id="resultStamp">ДОГОВОР</div>
+        <p id="resultKicker">РЕШЕНИЕ ИСПОЛНЕНО</p>
+        <h2 id="resultHeadline">Канал связи открыт</h2>
+        <p class="result-copy" id="resultCopy">Отношения улучшились, но чужое влияние выросло.</p>
+        <div class="delta-list" id="deltaList"></div>
+        <div class="reaction-note" id="reactionNote"></div>
+        <button type="button" id="nextTurnButton" class="primary-action" data-native-press>Следующий квартал</button>
+      </div>
+    </section>
+
+    <section class="overlay result-overlay" id="resultOverlay" data-ui hidden>
+      <div class="ending-map" id="endingMap" aria-hidden="true"></div>
+      <div class="panel-sheet result-panel">
+        <p id="endingKicker">КАМПАНИЯ ЗАВЕРШЕНА</p>
+        <h2 id="endingTitle">Суверенный балансир</h2>
+        <div class="final-score"><span id="finalScore">0</span><small>очков</small></div>
+        <p id="endingBody">Вея сохранила свободу манёвра и не дала ни одной сфере проглотить страну целиком.</p>
+        <div class="final-grid" id="finalGrid"></div>
+        <button type="button" id="againButton" class="primary-action" data-native-press>Новая кампания</button>
+        <button type="button" id="resultMenuButton" class="panel-action" data-native-press>В главное меню</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet-layer" id="settingsLayer" data-ui hidden>
+      <button class="sheet-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
+      <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header><div><p>СФЕРЫ</p><h2 id="settingsTitle">Настройки</h2></div><button type="button" id="closeSettingsButton" data-native-press>Закрыть</button></header>
+        <button type="button" class="setting-row" id="soundToggle" data-native-press><span><b>Звук</b><small>Сигналы кабинета и решений</small></span><em>Вкл</em></button>
+        <button type="button" class="setting-row" id="hapticToggle" data-native-press><span><b>Вибрация</b><small>Если устройство поддерживает</small></span><em>Вкл</em></button>
+        <button type="button" class="setting-row" id="motionToggle" data-native-press><span><b>Движение</b><small>Маршруты и переходы</small></span><em>Вкл</em></button>
+        <div class="best-row"><span>Лучший результат</span><b id="bestValue">0</b></div>
+        <button type="button" id="clearBestButton" class="clear-button" data-native-press>Сбросить рекорд</button>
+      </div>
+    </section>
+
+    <div class="drag-token" id="dragToken" aria-hidden="true"></div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СФЕРЫ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>

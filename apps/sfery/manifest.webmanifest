@@ -1,0 +1,20 @@
+{
+  "id": "/apps/sfery/",
+  "name": "СФЕРЫ",
+  "short_name": "СФЕРЫ",
+  "description": "Тактическая геополитическая игра о кризисах, чужом влиянии и суверенитете.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eee9dc",
+  "theme_color": "#eee9dc",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

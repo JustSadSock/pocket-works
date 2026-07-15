@@ -1,0 +1,180 @@
+  ui.resultCopy.textContent = action.copy;
+
+  const entries = [
+    ['Казна', deltas.treasury + reactionResult.reaction.treasury + economyNet],
+    ['Легитимность', deltas.legitimacy + reactionResult.reaction.legitimacy],
+    ['Готовность', deltas.readiness + reactionResult.reaction.readiness],
+    ['Напряжение', deltas.tension + reactionResult.reaction.tension],
+    [`Отношения: ${REGION_DEFS.find((region) => region.id === targetId).short}`, deltas.relation],
+    ['Чужое влияние', deltas.leverage]
+  ];
+  ui.deltaList.replaceChildren(...entries.map(([label, value]) => {
+    const item = document.createElement('div');
+    item.className = `delta-item ${value >= 0 ? 'positive' : 'negative'}`;
+    const span = document.createElement('span');
+    span.textContent = label;
+    const bold = document.createElement('b');
+    bold.textContent = `${value > 0 ? '+' : ''}${Math.round(value)}`;
+    item.append(span, bold);
+    return item;
+  }));
+  ui.reactionNote.textContent = reactionResult.note;
+}
+
+function renderRoute(actionId, targetId) {
+  ui.routeLayer.replaceChildren();
+  const target = REGION_DEFS.find((region) => region.id === targetId);
+  const player = REGION_DEFS.find((region) => region.id === 'veya');
+  const controlX = (player.center[0] + target.center[0]) / 2 + (target.center[1] - player.center[1]) * 0.18;
+  const controlY = (player.center[1] + target.center[1]) / 2 - (target.center[0] - player.center[0]) * 0.14;
+  const line = createSvg('path', {
+    class: 'route-line',
+    d: `M${player.center[0]} ${player.center[1]} Q${controlX} ${controlY} ${target.center[0]} ${target.center[1]}`,
+    stroke: ACTIONS[actionId].color
+  });
+  const burst = createSvg('circle', {
+    class: 'route-burst', cx: target.center[0], cy: target.center[1], r: 8, stroke: ACTIONS[actionId].color
+  });
+  ui.routeLayer.append(line, burst);
+}
+
+function advanceTurn() {
+  ui.consequenceOverlay.hidden = true;
+  ui.routeLayer.replaceChildren();
+  state.awaitingAdvance = false;
+  state.pendingResolution = null;
+  if (isFailure()) {
+    finishCampaign(false);
+    return;
+  }
+  if (state.turn >= TOTAL_TURNS) {
+    finishCampaign(true);
+    return;
+  }
+  state.turn += 1;
+  generateCrisis();
+  renderState();
+  setActionsEnabled(true);
+  ui.selectionHint.textContent = 'Перетащите инструмент на державу';
+}
+
+function isFailure() {
+  return state.legitimacy <= 0 || state.treasury <= -10 || state.tension >= 100;
+}
+
+function endingForState(completed) {
+  const factions = Object.values(state.factions);
+  const avgRelation = factions.reduce((sum, faction) => sum + faction.relation, 0) / factions.length;
+  const avgLeverage = factions.reduce((sum, faction) => sum + faction.leverage, 0) / factions.length;
+  const trade = factions.reduce((sum, faction) => sum + faction.trade, 0);
+  if (!completed) {
+    if (state.tension >= 100) return ['Цепная реакция', 'Один кризис потянул другой, и Вея потеряла пространство для манёвра раньше, чем дипломаты успели подобрать нейтральные формулировки.'];
+    if (state.legitimacy <= 0) return ['Правительство без страны', 'Внешняя политика пережила внутреннее доверие. Инструменты остались, но никто больше не признаёт руку, которая ими пользуется.'];
+    return ['Касса закрыта', 'Казна закончилась раньше кризисов. Внешние партнёры предложили помощь — вместе с управлением тем, на что её тратить.'];
+  }
+  if (avgLeverage < 28 && state.tension < 55 && state.legitimacy > 45) return ['Суверенный балансир', 'Вея сохранила свободу манёвра и не дала ни одной сфере проглотить страну целиком.'];
+  if (trade >= 9 && state.treasury > 70) return ['Республика-перекрёсток', 'Торговые пути превратили Вею в необходимую всем страну. Правда, слишком многие теперь знают, где у неё рубильник.'];
+  if (avgRelation > 30 && state.tension < 45) return ['Архитектор порядка', 'Вея связала соперников сетью договоров и пережила кампанию без большой войны. Мир держится — пока подписи чего-то стоят.'];
+  if (avgLeverage > 58) return ['Пешка чужих сфер', 'Страна выглядит стабильной, но слишком много решений уже принимается в чужих столицах. Флаг остался; рычаги — не все.'];
+  if (state.readiness > 70 && state.tension > 65) return ['Осаждённая крепость', 'Вея сохранила независимость, превратив каждую границу в нерв. Никто не победил, но все заряжают следующий магазин.'];
+  return ['Холодный прагматик', 'Вея прошла между уступками, угрозами и сделками без красивой доктрины — зато осталась на карте и со своим голосом.'];
+}
+
+function finishCampaign(completed) {
+  state.active = false;
+  state.awaitingAdvance = false;
+  state.pendingResolution = null;
+  state.score = calculateScore();
+  state.best = Math.max(state.best, state.score);
+  saveState();
+  const [title, body] = endingForState(completed);
+  ui.endingKicker.textContent = completed ? 'ДВЕНАДЦАТЬ КВАРТАЛОВ ПОЗАДИ' : 'КАМПАНИЯ ОБОРВАНА';
+  ui.endingTitle.textContent = title;
+  ui.endingBody.textContent = body;
+  ui.finalScore.textContent = state.score;
+  const factions = Object.values(state.factions);
+  const avgRelation = Math.round(factions.reduce((sum, faction) => sum + faction.relation, 0) / factions.length);
+  const avgLeverage = Math.round(factions.reduce((sum, faction) => sum + faction.leverage, 0) / factions.length);
+  ui.finalGrid.innerHTML = `
+    <span>КАЗНА<b>${Math.round(state.treasury)}</b></span>
+    <span>ЛЕГИТИМНОСТЬ<b>${Math.round(state.legitimacy)}</b></span>
+    <span>НАПРЯЖЕНИЕ<b>${Math.round(state.tension)}</b></span>
+    <span>СРЕДНЕЕ ВЛИЯНИЕ<b>${avgLeverage}%</b></span>
+    <span>СРЕДНИЕ ОТНОШЕНИЯ<b>${avgRelation > 0 ? '+' : ''}${avgRelation}</b></span>
+    <span>ЛУЧШИЙ СЧЁТ<b>${state.best}</b></span>`;
+  ui.resultOverlay.hidden = false;
+  ui.pauseButton.hidden = true;
+  ui.bestValue.textContent = state.best;
+  playTone(completed ? 'good' : 'bad');
+  vibrate(completed ? [10, 30, 10, 30, 18] : [30, 60, 30]);
+}
+
+function startCampaign() {
+  const settings = { ...state.settings };
+  const best = state.best;
+  const seenTutorial = state.seenTutorial;
+  state = createFreshState();
+  state.settings = settings;
+  state.best = best;
+  state.seenTutorial = seenTutorial;
+  state.active = true;
+  currentCrisis = null;
+  generateCrisis();
+  ui.startOverlay.hidden = true;
+  ui.pauseButton.hidden = false;
+  ui.resultOverlay.hidden = true;
+  ui.pauseOverlay.hidden = true;
+  setActionsEnabled(true);
+  renderState();
+  saveState();
+  ensureAudio();
+  playTone('good');
+  if (!state.seenTutorial) ui.tutorialOverlay.hidden = false;
+}
+
+function resumeCampaign() {
+  state.active = true;
+  currentCrisis = state.crisis;
+  if (!currentCrisis) generateCrisis();
+  ui.startOverlay.hidden = true;
+  ui.pauseButton.hidden = false;
+  ui.resultOverlay.hidden = true;
+  ui.pauseOverlay.hidden = true;
+  renderState();
+  ensureAudio();
+  playTone('tap');
+  if (state.awaitingAdvance && state.pendingResolution) {
+    const pending = state.pendingResolution;
+    setActionsEnabled(false);
+    renderRoute(pending.actionId, pending.targetId);
+    populateConsequence(pending.actionId, pending.targetId, pending.deltas, pending.reactionResult, pending.economyNet);
+    ui.consequenceOverlay.hidden = false;
+  } else {
+    setActionsEnabled(true);
+  }
+}
+
+function returnToMenu() {
+  ui.startOverlay.hidden = false;
+  ui.pauseOverlay.hidden = true;
+  ui.resultOverlay.hidden = true;
+  ui.consequenceOverlay.hidden = true;
+  ui.pauseButton.hidden = true;
+  updateResumeButton();
+}
+
+function updateResumeButton() {
+  const canResume = Boolean(state.active && state.crisis);
+  ui.resumeButton.hidden = !canResume;
+  ui.resumeMeta.textContent = canResume ? `квартал ${state.turn} · ${state.score} очков` : '';
+  ui.bestValue.textContent = state.best;
+}
+
+function showSettings() {
+  renderSettings();
+  ui.settingsLayer.hidden = false;
+}
+
+function hideSettings() {
+  ui.settingsLayer.hidden = true;
+}

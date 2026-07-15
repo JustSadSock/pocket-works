@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "sfery",
+  "name": "СФЕРЫ",
+  "shortName": "СФЕРЫ",
+  "description": "Тактическая геополитическая игра о кризисах, чужом влиянии и попытке сохранить суверенитет между шестью державами.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-15",
+  "releaseDateTime": "2026-07-15T19:05:00Z",
+  "changelog": [
+    "Добавлена законченная кампания на двенадцать кварталов с процедурными кризисами, реакциями держав и несколькими политическими итогами.",
+    "Реализовано прямое управление картой: перетаскивай договор, торговый коридор или давление на выбранную страну либо используй последовательное касание.",
+    "Сохраняются кампания, рекорд и настройки; приложение работает офлайн, поддерживает звук, вибрацию и возврат в Pocket Works из всех ключевых экранов."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#d77c42",
+  "backgroundColor": "#eee9dc",
+  "themeColor": "#eee9dc",
+  "orientation": "portrait",
+  "cacheName": "sfery-v1.0.0-p2",
+  "storageNamespace": "pocket-works:sfery",
+  "tags": ["PWA", "offline", "game", "strategy", "geopolitics", "crisis", "diplomacy", "procedural", "map", "touch", "audio", "haptics", "resume"],
+  "order": 87
+}
