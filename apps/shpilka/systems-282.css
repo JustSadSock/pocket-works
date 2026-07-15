@@ -180,3 +180,6 @@
 @media (prefers-reduced-motion: reduce) {
   .race-advisory[data-tone="danger"] { animation: none; }
 }
+
+.option-row:last-child .option-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.option-row:last-child .option-buttons:has(.pilot-option:not([hidden])) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
