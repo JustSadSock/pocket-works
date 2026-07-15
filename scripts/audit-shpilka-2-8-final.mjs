@@ -31,9 +31,10 @@ check(physics.includes("fillText('ПРЫЖОК'") && physics.includes("'НЕ Х�
 check(route.includes('currentLoad') && route.includes('aheadLoad') && route.includes('exitLoad'), 'entry-apex-exit line is missing');
 check(route.includes('const inside = Math.sign(corner || 1)'), 'racing-line inside direction is inverted');
 check(ai.includes('pilot: 0.010') && ai.includes("'late'") && ai.includes("'wide'") && ai.includes("'snap'"), 'contextual mistakes are incomplete');
+check(ai.includes("shp28MistakeKind === 'wide') car.shp28MistakeTotal = lerp(0.62, 0.98"), 'wide-exit mistake duration is too weak');
 check(ai.includes('? -(Math.sign(preview.signed)'), 'wide-exit mistakes point toward the inside of the corner');
 check(ai.includes('pilot, { brake: 465') || ai.includes('pilot, { brake: 465 }'), 'AI braking plan does not match heavier vehicle physics');
-check(fixes.includes("shp28MistakeKind === 'wide'") && fixes.includes('strength * pulse * dt'), 'AI mistakes cannot physically reach the shoulder');
+check(fixes.includes("shp28MistakeKind === 'wide' ? 165") && fixes.includes('strength * pulse * dt'), 'AI mistakes cannot physically reach the shoulder');
 check(physics.includes('shp28StableTrackHeading') && fixes.includes('shp28StableHighSpeedUpdateCar'), 'high-speed stability is incomplete');
 check(physics.includes('maximumBraking') && physics.includes('oldForward - maximumBraking * dt'), 'weighted braking cap is missing');
 
