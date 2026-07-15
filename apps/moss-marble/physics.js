@@ -208,15 +208,36 @@ function applyTerrainAcceleration(ball, level, dt) {
 function handleTunnel(ball, level, events) {
   if (ball.tunnelCooldown > 0 || ball.airborne || ball.inCup) return;
   for (const tunnel of level.tunnels || []) {
-    if (Math.hypot(ball.x - tunnel.entry.x, ball.y - tunnel.entry.y) > tunnel.entry.r) continue;
-    const speed = Math.max(220, Math.hypot(ball.vx, ball.vy));
+    const entry = tunnel.entry;
+    const radius = Math.max(1, Number(entry.r || 0));
+    const distance = Math.hypot(ball.x - entry.x, ball.y - entry.y);
+    const previousDistance = Math.hypot(ball.prevX - entry.x, ball.prevY - entry.y);
+    if (distance > radius || previousDistance <= radius) continue;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const axisLength = Math.hypot(entry.axisX || 0, entry.axisY || 0) || 1;
+    const axisX = Number(entry.axisX || 0) / axisLength;
+    const axisY = Number(entry.axisY || 0) / axisLength;
+    const inwardSpeed = ball.vx * axisX + ball.vy * axisY;
+    const minSpeed = Math.max(0, Number(entry.minSpeed ?? tunnel.minSpeed ?? 90));
+    const directionAllowed = inwardSpeed > Math.max(18, speed * .08);
+    if (!directionAllowed) continue;
+    if (speed < minSpeed) {
+      ball.x = ball.prevX;
+      ball.y = ball.prevY;
+      ball.vx -= axisX * inwardSpeed * 1.45;
+      ball.vy -= axisY * inwardSpeed * 1.45;
+      ball.tunnelCooldown = .28;
+      events.push({ type: 'tunnel-blocked', speed, minSpeed });
+      continue;
+    }
+    const releaseSpeed = Math.max(220, speed);
     const angle = Number.isFinite(tunnel.exit.angle) ? tunnel.exit.angle : Math.atan2(ball.vy, ball.vx);
     ball.x = tunnel.exit.x;
     ball.y = tunnel.exit.y;
     ball.prevX = ball.x;
     ball.prevY = ball.y;
-    ball.vx = Math.cos(angle) * speed * .84;
-    ball.vy = Math.sin(angle) * speed * .84;
+    ball.vx = Math.cos(angle) * releaseSpeed * .84;
+    ball.vy = Math.sin(angle) * releaseSpeed * .84;
     ball.groundZ = terrainHeightAt(level, ball.x, ball.y);
     ball.z = ball.groundZ + BALL_RADIUS;
     ball.vz = 0;

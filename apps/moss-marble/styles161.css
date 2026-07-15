@@ -7,3 +7,211 @@
 .moss-terrain-depth-fixed #game {
   z-index: 2;
 }
+
+.menu-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menu-actions > .primary-action,
+.menu-actions > #newEndlessBtn,
+.menu-actions > .paper-link {
+  grid-column: 1 / -1;
+}
+
+#codeBtn,
+#holesBtn {
+  min-height: 46px;
+  padding-inline: 8px;
+  font-size: .64rem;
+  line-height: 1.2;
+}
+
+.power-gauge {
+  --aim-power: 0;
+  position: absolute;
+  z-index: 12;
+  right: calc(var(--safe-right) + 3px);
+  bottom: calc(var(--safe-bottom) + 74px);
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  opacity: 0;
+  translate: 8px 0;
+  transition: opacity .16s ease, translate .18s ease;
+  pointer-events: none;
+}
+
+.power-gauge > span {
+  position: relative;
+  width: 9px;
+  height: 92px;
+  overflow: hidden;
+  border: 1px solid rgba(239, 233, 207, .55);
+  background: rgba(12, 29, 20, .42);
+  box-shadow: 0 6px 18px rgba(3, 13, 7, .22);
+}
+
+.power-gauge i {
+  position: absolute;
+  inset: auto 1px 1px;
+  height: calc((100% - 2px) * var(--aim-power));
+  background: linear-gradient(0deg, #9dbb75 0%, #d2c16f 58%, #d68e58 100%);
+  transition: height .04s linear;
+}
+
+.power-gauge b {
+  color: rgba(242, 237, 214, .72);
+  font-size: .49rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+}
+
+body[data-aiming="true"] .power-gauge {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.hole-pot .hole-map {
+  position: absolute;
+  z-index: 1;
+  inset: 14px 9px auto;
+  width: calc(100% - 18px);
+  height: 76px;
+  overflow: visible;
+  filter: drop-shadow(0 4px 8px rgba(3, 13, 7, .22));
+}
+
+.hole-map .map-route-shadow,
+.hole-map .map-route {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hole-map .map-route-shadow {
+  stroke: rgba(4, 16, 9, .28);
+  stroke-width: 10;
+}
+
+.hole-map .map-route {
+  stroke: rgba(222, 220, 171, .72);
+  stroke-width: 5.4;
+}
+
+.hole-map .map-obstacle { fill: #28372d; stroke: rgba(229, 220, 177, .42); stroke-width: .8; }
+.hole-map .map-start { fill: #e0c66f; stroke: #26382c; stroke-width: 1; }
+.hole-map .map-hole { fill: #17241d; stroke: #ebdfaa; stroke-width: 1.3; }
+.hole-pot[disabled] .hole-map { opacity: .62; }
+
+.code-screen,
+.confirm-screen {
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(9, 22, 15, .58);
+  backdrop-filter: blur(9px) saturate(.8);
+}
+
+.code-screen[data-keyboard-aware] {
+  padding-bottom: calc(var(--app-keyboard-inset) + var(--safe-bottom));
+}
+
+.paper-dialog {
+  width: min(100%, 470px);
+  max-height: calc(var(--app-viewport-height) - var(--safe-top) - var(--safe-bottom));
+  overflow-y: auto;
+  padding: 28px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, .45);
+  background:
+    linear-gradient(110deg, rgba(255,255,255,.22), transparent 24%),
+    linear-gradient(180deg, #ebe5cd, #d9cfac);
+  color: var(--ink);
+  box-shadow: 0 -12px 48px rgba(3, 13, 7, .3), inset 0 1px rgba(255,255,255,.35);
+  clip-path: polygon(6px 0, calc(100% - 5px) 1px, 100% 8px, calc(100% - 2px) calc(100% - 7px), 7px 100%, 0 calc(100% - 6px));
+}
+
+.paper-dialog h2 { margin: 0 0 10px; }
+.paper-dialog > p:not(.eyebrow):not(.field-error) { margin: 0 0 18px; color: var(--ink-soft); line-height: 1.45; }
+.paper-dialog .primary-action,
+.paper-dialog .paper-action { margin-top: 9px; }
+.paper-dialog .paper-link { display: block; margin-top: 18px; }
+
+.code-field {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0 4px;
+}
+
+.code-field span {
+  font-size: .59rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.code-field input {
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid rgba(43, 57, 46, .35);
+  border-radius: 0;
+  padding: 9px 13px 7px;
+  background: rgba(249, 245, 224, .68);
+  color: var(--ink);
+  font: 650 1.45rem/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  outline: none;
+  box-shadow: inset 0 2px 8px rgba(53, 58, 44, .08);
+}
+
+.code-field input:focus {
+  border-color: var(--brass);
+  box-shadow: inset 0 2px 8px rgba(53, 58, 44, .08), 0 0 0 3px rgba(174, 135, 72, .18);
+}
+
+.field-error {
+  min-height: 18px;
+  margin: 5px 0 0;
+  color: #77502f;
+  font-size: .76rem;
+  font-weight: 650;
+}
+
+button:focus-visible,
+a:focus-visible,
+#game:focus-visible {
+  outline: 2px solid var(--brass-light);
+  outline-offset: 3px;
+}
+
+@media (min-width: 720px) {
+  .pot-shelf {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    align-content: center;
+    width: min(100%, 900px);
+    margin: auto;
+    gap: 14px;
+  }
+
+  .hole-pot { min-height: 178px; }
+  .hole-pot .hole-map { height: 92px; }
+}
+
+@media (prefers-contrast: more) {
+  .scorebar,
+  .aim-hint,
+  .surface-note { color: #fffbe8; }
+  .hole-map .map-route { stroke: #fff4b6; }
+  .hole-map .map-route-shadow { stroke: #07110b; }
+  .text-control,
+  .sound-control,
+  .overview-control { background: rgba(5, 17, 10, .82); border-color: #f4e8ad; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-gauge,
+  .power-gauge i { transition: none; }
+  .code-screen,
+  .confirm-screen { backdrop-filter: none; }
+}
