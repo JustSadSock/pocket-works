@@ -23,11 +23,16 @@ updateCar = function shp28UpdateCar(car, dt) {
   let forward = car.vx * fx + car.vy * fy;
   let lateral = car.vx * rx + car.vy * ry;
   const ratio = clamp(Math.abs(forward) / MAX_SPEED, 0, 1);
+  const freeOfImpact = (car.collisionCooldown || 0) <= 0.02;
 
-  if (!car.airborne && (car.collisionCooldown || 0) <= 0.02 && forward > oldForward) {
+  if (!car.airborne && freeOfImpact && forward > oldForward) {
     const skillFactor = car.player ? 1 : clamp(1 + ((car.skill || 1) - 1) * 0.30, 0.96, 1.06);
     const maximumAcceleration = lerp(178, 72, smoothstep(0.06, 1, ratio)) * skillFactor;
     forward = Math.min(forward, oldForward + maximumAcceleration * dt);
+  }
+  if (!car.airborne && freeOfImpact && oldForward > 0 && forward < oldForward && (car.brakeInput || 0) > 0.05) {
+    const maximumBraking = lerp(610, 455, smoothstep(0.18, 1, ratio));
+    forward = Math.max(forward, Math.max(0, oldForward - maximumBraking * dt));
   }
 
   if (!car.airborne) {
