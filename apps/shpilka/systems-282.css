@@ -1,0 +1,182 @@
+/* ШПИЛЬКА 2.8.2 — route hub, runtime recovery and restored race readability. */
+.route-action-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+}
+.route-action-row > .secondary-action {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.route-hub,
+.runtime-error-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  align-items: end;
+  padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(18, 20, 18, 0.48);
+  backdrop-filter: blur(4px);
+}
+.route-hub[hidden],
+.runtime-error-screen[hidden] { display: none; }
+
+.route-hub-sheet,
+.runtime-error-panel {
+  width: min(100%, 520px);
+  max-height: min(82vh, 720px);
+  margin: 0 auto;
+  overflow: auto;
+  border: 3px solid #1e211f;
+  border-bottom-width: 7px;
+  padding: 18px;
+  background: #d2c49d;
+  color: #1e211f;
+  box-shadow: 0 18px 0 rgba(30, 33, 31, 0.24);
+}
+.route-hub-sheet > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid #1e211f;
+}
+.route-hub-sheet h2,
+.runtime-error-panel h2 {
+  margin: 0;
+  font: italic 900 clamp(38px, 12vw, 64px) / 0.88 system-ui, sans-serif;
+  letter-spacing: -0.055em;
+}
+.route-hub-sheet header button {
+  min-height: 44px;
+  border: 2px solid #1e211f;
+  padding: 0 12px;
+  background: transparent;
+  color: inherit;
+  font: 800 10px/1 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+}
+.route-hub-summary {
+  display: grid;
+  gap: 4px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(30, 33, 31, 0.42);
+}
+.route-hub-summary b { font: 850 14px/1.15 system-ui, sans-serif; }
+.route-hub-summary span { font: 750 10px/1.2 system-ui, sans-serif; letter-spacing: 0.08em; }
+.route-hub-content { display: grid; gap: 12px; padding-top: 12px; }
+
+.route-hub .route-tools,
+.route-hub .route-code-panel,
+.route-hub .medal-board {
+  display: grid !important;
+  position: static !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+  visibility: visible !important;
+}
+.route-hub .route-code-panel[hidden] { display: none !important; }
+.route-hub .route-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.route-hub .route-tool,
+.route-hub .route-code-panel button,
+.route-hub .route-code-panel input {
+  min-height: 44px;
+  border: 2px solid #1e211f;
+  padding: 0 10px;
+  background: transparent;
+  color: #1e211f;
+  font: 800 11px/1 system-ui, sans-serif;
+}
+.route-hub .route-tool.is-active { background: #1e211f; color: #f4efe0; }
+.route-hub .route-code-panel {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+}
+.route-hub .route-code-status { grid-column: 1 / -1; min-height: 18px; font: 750 10px/1.2 system-ui, sans-serif; }
+.route-hub .route-code-status[data-error="true"] { color: #9b2f24; }
+.route-hub .medal-board {
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 4px;
+}
+.route-hub .medal-title,
+.route-hub .medal-target {
+  min-width: 0;
+  border: 1px solid rgba(30, 33, 31, 0.55);
+  padding: 9px 7px;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  text-align: center;
+}
+.route-hub .medal-title { font: 800 9px/1 system-ui, sans-serif; letter-spacing: 0.1em; }
+.route-hub .medal-target span { font: 750 8px/1 system-ui, sans-serif; }
+.route-hub .medal-target b { font: 850 10px/1 system-ui, sans-serif; }
+.route-hub .medal-target.is-earned { background: #1e211f; color: #f4efe0; }
+
+.runtime-error-screen { align-items: center; }
+.runtime-error-panel { max-width: 460px; }
+.runtime-error-panel > p:not(.eyebrow) {
+  margin: 16px 0 20px;
+  font: 650 14px/1.45 system-ui, sans-serif;
+}
+.runtime-error-panel .primary-action,
+.runtime-error-panel .secondary-action { width: 100%; margin-top: 8px; }
+.runtime-error-panel .text-control { width: 100%; min-height: 42px; margin-top: 10px; justify-content: center; }
+
+.race-advisory {
+  position: absolute;
+  z-index: 38;
+  top: max(84px, calc(env(safe-area-inset-top) + 70px));
+  left: 50%;
+  width: min(calc(100% - 120px), 320px);
+  transform: translateX(-50%);
+  border-top: 3px solid currentColor;
+  padding: 7px 9px 6px;
+  background: rgba(30, 33, 31, 0.84);
+  color: #f4efe0;
+  text-align: center;
+  pointer-events: none;
+}
+.race-advisory[hidden] { display: none; }
+.race-advisory b,
+.race-advisory span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race-advisory b { font: 850 11px/1 system-ui, sans-serif; letter-spacing: 0.11em; }
+.race-advisory span { margin-top: 4px; font: 700 9px/1 system-ui, sans-serif; letter-spacing: 0.05em; opacity: 0.82; }
+.race-advisory[data-tone="jump"] { color: #f2b340; }
+.race-advisory[data-tone="danger"] { color: #ff785c; animation: shp282-warning 0.5s steps(2, end) infinite; }
+.race-advisory[data-tone="active"] { color: #f4efe0; }
+.race-advisory[data-tone="preview"] { color: #cfd8c3; }
+@keyframes shp282-warning { 50% { opacity: 0.62; } }
+
+@media (max-height: 720px) {
+  .championship-card {
+    display: grid !important;
+    min-height: 32px;
+    padding-top: 4px !important;
+  }
+  .championship-heading span,
+  .rival-badge { display: none !important; }
+  .championship-action { min-height: 30px !important; }
+  .route-action-row > .secondary-action { min-height: 32px; }
+}
+
+@media (max-width: 390px) {
+  .route-hub-sheet,
+  .runtime-error-panel { padding: 14px; }
+  .route-hub .route-code-panel { grid-template-columns: 1fr 1fr; }
+  .route-hub .route-code-panel input { grid-column: 1 / -1; }
+  .race-advisory { width: min(calc(100% - 96px), 294px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .race-advisory[data-tone="danger"] { animation: none; }
+}
