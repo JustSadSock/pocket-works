@@ -4,11 +4,12 @@ import vm from 'node:vm';
 const failures = [];
 const check = (value, message) => { if (!value) failures.push(message); };
 const read = (path) => readFile(path, 'utf8');
-const [index, app, boot, route, ai, physics, fixes, ui, worker, configRaw] = await Promise.all([
+const [index, app, boot, route, ai, physics, fixes, ui, styles, worker, configRaw] = await Promise.all([
   read('apps/shpilka/index.html'), read('apps/shpilka/app.js'), read('apps/shpilka/engine-v2-12.js'),
   read('apps/shpilka/engine-v2-28-route.js'), read('apps/shpilka/engine-v2-28-ai.js'),
   read('apps/shpilka/engine-v2-28-physics.js'), read('apps/shpilka/engine-v2-28-fixes.js'),
-  read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
+  read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/systems-28.css'),
+  read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
 ]);
 const config = JSON.parse(configRaw);
 const runtimeSources = { route, ai, physics, fixes, ui };
@@ -20,6 +21,7 @@ for (const [name, source] of Object.entries(runtimeSources)) {
 }
 check(config.version === '2.8.0' && config.cacheName === 'shpilka-v2.8.0-p1', 'release metadata is stale');
 check(index.includes('loadingScreen') && boot.includes('shp28LoadingVisible(true)'), 'loading flow is missing');
+check(app.includes('loadingProgress.textContent') && app.includes('loading-retry') && styles.includes('.loading-retry'), 'loading failure recovery is missing');
 check(!index.includes('data-workshop-trigger') && !index.includes('class="control-help"'), 'system controls remain in the main menu');
 check(ui.includes('finishMenuButton') && ui.includes('pauseMenuButton'), 'main-menu exits are missing');
 check(ui.includes("restartButtonFinish.textContent = 'ЕЩЁ РАЗ'"), 'replay action is mislabeled after classification');
@@ -29,6 +31,7 @@ check(physics.includes("fillText('ПРЫЖОК'") && physics.includes("'НЕ Х�
 check(route.includes('currentLoad') && route.includes('aheadLoad') && route.includes('exitLoad'), 'entry-apex-exit line is missing');
 check(route.includes('const inside = Math.sign(corner || 1)'), 'racing-line inside direction is inverted');
 check(ai.includes('pilot: 0.010') && ai.includes("'late'") && ai.includes("'wide'") && ai.includes("'snap'"), 'contextual mistakes are incomplete');
+check(ai.includes('? -(Math.sign(preview.signed)'), 'wide-exit mistakes point toward the inside of the corner');
 check(fixes.includes("shp28MistakeKind === 'wide'") && fixes.includes('strength * pulse * dt'), 'AI mistakes cannot physically reach the shoulder');
 check(physics.includes('shp28StableTrackHeading') && fixes.includes('shp28StableHighSpeedUpdateCar'), 'high-speed stability is incomplete');
 
