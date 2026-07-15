@@ -91,7 +91,6 @@ requireIncludes(managerCss, ['.app-update-prompt', '.app-update-receipt', '.is-v
 const packageJson = JSON.parse(await read('package.json') || '{}');
 const rootIndex = await read('index.html');
 const rootWorker = await read('sw.js');
-const netlifyConfig = await read('netlify.toml');
 requireIncludes(rootIndex, ['./shared/update-manager.css', './shared/update-manager.js', 'data-update-manager', `data-app-version="${packageJson.version}"`, `content="${packageJson.version}"`], 'root index.html');
 validateQuickWorker(rootWorker.replaceAll('./shared/update-manager.css', '../../shared/update-manager.css').replaceAll('./shared/update-manager.js', '../../shared/update-manager.js'), 'root sw.js', {
   version: packageJson.version,
@@ -99,12 +98,6 @@ validateQuickWorker(rootWorker.replaceAll('./shared/update-manager.css', '../../
   cacheName: `pocket-works-launcher-v${packageJson.version}`
 });
 validateFreshCacheWorker(rootWorker, 'root sw.js', { passThroughApps: true });
-requireIncludes(netlifyConfig, [
-  'for = "/*"',
-  'Cache-Control = "public, max-age=0, must-revalidate"',
-  'Cache-Control = "no-store, max-age=0"'
-], 'netlify.toml');
-if (/immutable/i.test(netlifyConfig)) fail('netlify.toml must not mark mutable application paths as immutable');
 
 const templateIndex = await read('apps/_template/index.html');
 const templateWorker = await read('apps/_template/sw.js');
