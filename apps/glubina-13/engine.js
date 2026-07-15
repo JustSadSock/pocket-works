@@ -1,7 +1,7 @@
 const TAU = Math.PI * 2;
 
 function mat4Identity() {
-  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1]);
 }
 
 function mat4Multiply(a, b) {
@@ -86,10 +86,10 @@ function createBuffer(gl, target, data) {
 
 function makeNormals(positions, indices) {
   const normals = new Float32Array(positions.length);
-  for (let i = 0; i < indices.length; i += 3) {
-    const ia = indices[i] * 3;
-    const ib = indices[i + 1] * 3;
-    const ic = indices[i + 2] * 3;
+  for (let index = 0; index < indices.length; index += 3) {
+    const ia = indices[index] * 3;
+    const ib = indices[index + 1] * 3;
+    const ic = indices[index + 2] * 3;
     const ax = positions[ia]; const ay = positions[ia + 1]; const az = positions[ia + 2];
     const bx = positions[ib]; const by = positions[ib + 1]; const bz = positions[ib + 2];
     const cx = positions[ic]; const cy = positions[ic + 1]; const cz = positions[ic + 2];
@@ -98,13 +98,17 @@ function makeNormals(positions, indices) {
     const nx = aby * acz - abz * acy;
     const ny = abz * acx - abx * acz;
     const nz = abx * acy - aby * acx;
-    for (const index of [ia, ib, ic]) {
-      normals[index] += nx; normals[index + 1] += ny; normals[index + 2] += nz;
+    for (const offset of [ia, ib, ic]) {
+      normals[offset] += nx;
+      normals[offset + 1] += ny;
+      normals[offset + 2] += nz;
     }
   }
-  for (let i = 0; i < normals.length; i += 3) {
-    const length = Math.hypot(normals[i], normals[i + 1], normals[i + 2]) || 1;
-    normals[i] /= length; normals[i + 1] /= length; normals[i + 2] /= length;
+  for (let index = 0; index < normals.length; index += 3) {
+    const length = Math.hypot(normals[index], normals[index + 1], normals[index + 2]) || 1;
+    normals[index] /= length;
+    normals[index + 1] /= length;
+    normals[index + 2] /= length;
   }
   return normals;
 }
@@ -112,8 +116,8 @@ function makeNormals(positions, indices) {
 function edgeIndices(indices) {
   const seen = new Set();
   const edges = [];
-  for (let i = 0; i < indices.length; i += 3) {
-    const triangle = [indices[i], indices[i + 1], indices[i + 2]];
+  for (let index = 0; index < indices.length; index += 3) {
+    const triangle = [indices[index], indices[index + 1], indices[index + 2]];
     for (let side = 0; side < 3; side += 1) {
       const a = triangle[side];
       const b = triangle[(side + 1) % 3];
@@ -126,54 +130,67 @@ function edgeIndices(indices) {
   return new Uint16Array(edges);
 }
 
+function finalizeGeometry(positions, indices) {
+  const positionArray = positions instanceof Float32Array ? positions : new Float32Array(positions);
+  const indexArray = indices instanceof Uint16Array ? indices : new Uint16Array(indices);
+  return {
+    positions: positionArray,
+    indices: indexArray,
+    normals: makeNormals(positionArray, indexArray),
+    edges: edgeIndices(indexArray),
+  };
+}
+
 export function boxGeometry() {
-  const positions = new Float32Array([
+  return finalizeGeometry([
     -1,-1,-1, 1,-1,-1, 1,1,-1, -1,1,-1,
     -1,-1,1, 1,-1,1, 1,1,1, -1,1,1,
-  ]);
-  const indices = new Uint16Array([
+  ], [
     0,1,2, 0,2,3, 4,6,5, 4,7,6,
     0,4,5, 0,5,1, 3,2,6, 3,6,7,
     1,5,6, 1,6,2, 0,3,7, 0,7,4,
   ]);
-  return { positions, indices, normals: makeNormals(positions, indices), edges: edgeIndices(indices) };
 }
 
 export function octaGeometry() {
-  const positions = new Float32Array([
+  return finalizeGeometry([
     0,1,0, 1,0,0, 0,0,1, -1,0,0, 0,0,-1, 0,-1,0,
-  ]);
-  const indices = new Uint16Array([
+  ], [
     0,1,2, 0,2,3, 0,3,4, 0,4,1,
     5,2,1, 5,3,2, 5,4,3, 5,1,4,
   ]);
-  return { positions, indices, normals: makeNormals(positions, indices), edges: edgeIndices(indices) };
 }
 
 export function tetraGeometry() {
-  const positions = new Float32Array([
+  return finalizeGeometry([
     0,1.25,0, -1,-0.7,0.8, 1,-0.7,0.8, 0,-0.7,-1.2,
-  ]);
-  const indices = new Uint16Array([0,1,2, 0,2,3, 0,3,1, 1,3,2]);
-  return { positions, indices, normals: makeNormals(positions, indices), edges: edgeIndices(indices) };
+  ], [0,1,2, 0,2,3, 0,3,1, 1,3,2]);
 }
 
-export function tunnelGeometry(sides = 8, length = 1) {
+export function cylinderGeometry(sides = 10) {
   const positions = [];
   const indices = [];
-  for (let i = 0; i < sides; i += 1) {
-    const angle = (i / sides) * TAU + Math.PI / 8;
-    positions.push(Math.cos(angle), Math.sin(angle), 0);
-    positions.push(Math.cos(angle), Math.sin(angle), -length);
+  for (let index = 0; index < sides; index += 1) {
+    const angle = (index / sides) * TAU;
+    const x = Math.cos(angle);
+    const z = Math.sin(angle);
+    positions.push(x, -1, z, x, 1, z);
   }
-  for (let i = 0; i < sides; i += 1) {
-    const next = (i + 1) % sides;
-    const a = i * 2; const b = next * 2; const c = next * 2 + 1; const d = i * 2 + 1;
-    indices.push(a,b,c, a,c,d);
+  const bottomCenter = positions.length / 3;
+  positions.push(0, -1, 0);
+  const topCenter = positions.length / 3;
+  positions.push(0, 1, 0);
+  for (let index = 0; index < sides; index += 1) {
+    const next = (index + 1) % sides;
+    const bottom = index * 2;
+    const top = bottom + 1;
+    const nextBottom = next * 2;
+    const nextTop = nextBottom + 1;
+    indices.push(bottom, nextBottom, nextTop, bottom, nextTop, top);
+    indices.push(bottomCenter, nextBottom, bottom);
+    indices.push(topCenter, top, nextTop);
   }
-  const p = new Float32Array(positions);
-  const idx = new Uint16Array(indices);
-  return { positions: p, indices: idx, normals: makeNormals(p, idx), edges: edgeIndices(idx) };
+  return finalizeGeometry(positions, indices);
 }
 
 export class Mesh {
@@ -185,8 +202,9 @@ export class Mesh {
     this.color = [0.7, 0.75, 0.65];
     this.emissive = 0;
     this.visibility = 1;
-    this.edgeVisibility = 0.6;
+    this.edgeVisibility = 0.55;
     this.fogBias = 0;
+    this.sonarGain = 1;
     this.buffers = {
       positions: createBuffer(gl, gl.ARRAY_BUFFER, geometry.positions),
       normals: createBuffer(gl, gl.ARRAY_BUFFER, geometry.normals),
@@ -200,17 +218,24 @@ export class Mesh {
 
 export class DeepEngine {
   constructor(canvas) {
-    const gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+    const gl = canvas.getContext('webgl', {
+      antialias: true,
+      alpha: false,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: false,
+    });
     if (!gl) throw new Error('WebGL unavailable');
+
     this.canvas = canvas;
     this.gl = gl;
     this.meshes = [];
-    this.camera = { x: 0, y: 0, roll: 0, pitch: 0, yaw: 0 };
+    this.camera = { x: 0, y: 5.2, z: 8.5, roll: 0, pitch: -0.43, yaw: 0 };
+    this.sonarCenter = [0, 0, 0];
     this.sonarRadius = -1000;
     this.sonarStrength = 0;
-    this.baseVisibility = 0.025;
+    this.baseVisibility = 0.018;
     this.time = 0;
-    this.background = [0.008, 0.018, 0.014];
+    this.background = [0.003, 0.009, 0.011];
 
     this.program = createProgram(gl, `
       attribute vec3 aPosition;
@@ -229,53 +254,57 @@ export class DeepEngine {
       precision mediump float;
       uniform vec3 uColor;
       uniform vec3 uCamera;
+      uniform vec3 uSonarCenter;
       uniform float uSonarRadius;
       uniform float uSonarStrength;
       uniform float uBaseVisibility;
       uniform float uVisibility;
       uniform float uEmissive;
       uniform float uFogBias;
+      uniform float uSonarGain;
       uniform float uTime;
       uniform float uEdgePass;
       varying vec3 vWorld;
       varying vec3 vNormal;
       void main() {
         float distanceToCamera = length(vWorld - uCamera);
-        float band = 1.0 - smoothstep(1.2, 4.8, abs(distanceToCamera - uSonarRadius));
-        float afterglow = exp(-distanceToCamera * 0.028) * uSonarStrength * 0.22;
-        float light = max(0.0, dot(normalize(vNormal), normalize(vec3(-0.45, 0.75, 0.55)))) * 0.36 + 0.18;
-        float reveal = clamp(uBaseVisibility + band * uSonarStrength + afterglow + uEmissive, 0.0, 1.0);
-        float fog = 1.0 - smoothstep(9.0 + uFogBias, 76.0 + uFogBias, distanceToCamera);
-        float pulseGrain = 0.94 + 0.06 * sin(vWorld.z * 2.8 + uTime * 4.0);
-        vec3 shaded = uColor * mix(light, 1.0, uEdgePass) * reveal * fog * pulseGrain * uVisibility;
-        if (uEdgePass > 0.5) shaded *= 1.7;
+        float distanceToSonar = length(vWorld - uSonarCenter);
+        float band = 1.0 - smoothstep(0.7, 3.8, abs(distanceToSonar - uSonarRadius));
+        float innerEcho = (1.0 - smoothstep(0.0, max(1.0, uSonarRadius), distanceToSonar)) * uSonarStrength * 0.1;
+        float normalLight = max(0.0, dot(normalize(vNormal), normalize(vec3(-0.3, 0.82, 0.55)))) * 0.34 + 0.12;
+        float reveal = clamp(uBaseVisibility + (band * uSonarStrength + innerEcho) * uSonarGain + uEmissive, 0.0, 1.0);
+        float fog = 1.0 - smoothstep(7.0 + uFogBias, 58.0 + uFogBias, distanceToCamera);
+        float grain = 0.93 + 0.07 * sin(vWorld.x * 2.1 + vWorld.z * 2.7 + uTime * 3.0);
+        vec3 shaded = uColor * mix(normalLight, 1.0, step(0.5, uEdgePass)) * reveal * fog * grain * uVisibility;
+        if (uEdgePass > 0.5) shaded *= 1.85;
         gl_FragColor = vec4(shaded, 1.0);
       }
     `);
 
-    const p = this.program;
+    const program = this.program;
     this.locations = {
-      position: gl.getAttribLocation(p, 'aPosition'),
-      normal: gl.getAttribLocation(p, 'aNormal'),
-      model: gl.getUniformLocation(p, 'uModel'),
-      viewProjection: gl.getUniformLocation(p, 'uViewProjection'),
-      color: gl.getUniformLocation(p, 'uColor'),
-      camera: gl.getUniformLocation(p, 'uCamera'),
-      sonarRadius: gl.getUniformLocation(p, 'uSonarRadius'),
-      sonarStrength: gl.getUniformLocation(p, 'uSonarStrength'),
-      baseVisibility: gl.getUniformLocation(p, 'uBaseVisibility'),
-      visibility: gl.getUniformLocation(p, 'uVisibility'),
-      emissive: gl.getUniformLocation(p, 'uEmissive'),
-      fogBias: gl.getUniformLocation(p, 'uFogBias'),
-      time: gl.getUniformLocation(p, 'uTime'),
-      edgePass: gl.getUniformLocation(p, 'uEdgePass'),
+      position: gl.getAttribLocation(program, 'aPosition'),
+      normal: gl.getAttribLocation(program, 'aNormal'),
+      model: gl.getUniformLocation(program, 'uModel'),
+      viewProjection: gl.getUniformLocation(program, 'uViewProjection'),
+      color: gl.getUniformLocation(program, 'uColor'),
+      camera: gl.getUniformLocation(program, 'uCamera'),
+      sonarCenter: gl.getUniformLocation(program, 'uSonarCenter'),
+      sonarRadius: gl.getUniformLocation(program, 'uSonarRadius'),
+      sonarStrength: gl.getUniformLocation(program, 'uSonarStrength'),
+      baseVisibility: gl.getUniformLocation(program, 'uBaseVisibility'),
+      visibility: gl.getUniformLocation(program, 'uVisibility'),
+      emissive: gl.getUniformLocation(program, 'uEmissive'),
+      fogBias: gl.getUniformLocation(program, 'uFogBias'),
+      sonarGain: gl.getUniformLocation(program, 'uSonarGain'),
+      time: gl.getUniformLocation(program, 'uTime'),
+      edgePass: gl.getUniformLocation(program, 'uEdgePass'),
     };
 
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
 
   createMesh(geometry) {
@@ -287,6 +316,10 @@ export class DeepEngine {
   remove(mesh) {
     const index = this.meshes.indexOf(mesh);
     if (index >= 0) this.meshes.splice(index, 1);
+  }
+
+  clear() {
+    this.meshes.splice(0, this.meshes.length);
   }
 
   resize() {
@@ -303,11 +336,11 @@ export class DeepEngine {
 
   viewProjection() {
     const aspect = this.canvas.width / Math.max(1, this.canvas.height);
-    const projection = mat4Perspective(Math.PI * 0.43, aspect, 0.08, 150);
-    const c = this.camera;
-    const cosR = Math.cos(-c.roll); const sinR = Math.sin(-c.roll);
-    const cosY = Math.cos(-c.yaw); const sinY = Math.sin(-c.yaw);
-    const cosP = Math.cos(-c.pitch); const sinP = Math.sin(-c.pitch);
+    const projection = mat4Perspective(Math.PI * 0.4, aspect, 0.08, 130);
+    const camera = this.camera;
+    const cosR = Math.cos(-camera.roll); const sinR = Math.sin(-camera.roll);
+    const cosY = Math.cos(-camera.yaw); const sinY = Math.sin(-camera.yaw);
+    const cosP = Math.cos(-camera.pitch); const sinP = Math.sin(-camera.pitch);
     const rotation = new Float32Array([
       cosY * cosR + sinY * sinP * sinR, cosP * sinR, -sinY * cosR + cosY * sinP * sinR, 0,
       -cosY * sinR + sinY * sinP * cosR, cosP * cosR, sinY * sinR + cosY * sinP * cosR, 0,
@@ -315,8 +348,9 @@ export class DeepEngine {
       0, 0, 0, 1,
     ]);
     const translation = mat4Identity();
-    translation[12] = -c.x;
-    translation[13] = -c.y;
+    translation[12] = -camera.x;
+    translation[13] = -camera.y;
+    translation[14] = -camera.z;
     return mat4Multiply(projection, mat4Multiply(rotation, translation));
   }
 
@@ -327,9 +361,10 @@ export class DeepEngine {
     gl.clearColor(this.background[0], this.background[1], this.background[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.program);
-    const viewProjection = this.viewProjection();
-    gl.uniformMatrix4fv(locations.viewProjection, false, viewProjection);
-    gl.uniform3f(locations.camera, this.camera.x, this.camera.y, 0);
+
+    gl.uniformMatrix4fv(locations.viewProjection, false, this.viewProjection());
+    gl.uniform3f(locations.camera, this.camera.x, this.camera.y, this.camera.z);
+    gl.uniform3fv(locations.sonarCenter, this.sonarCenter);
     gl.uniform1f(locations.sonarRadius, this.sonarRadius);
     gl.uniform1f(locations.sonarStrength, this.sonarStrength);
     gl.uniform1f(locations.baseVisibility, this.baseVisibility);
@@ -337,12 +372,13 @@ export class DeepEngine {
 
     for (const mesh of this.meshes) {
       if (mesh.visibility <= 0) continue;
-      const model = mat4TranslateRotateScale(mesh.position, mesh.rotation, mesh.scale);
-      gl.uniformMatrix4fv(locations.model, false, model);
+      gl.uniformMatrix4fv(locations.model, false, mat4TranslateRotateScale(mesh.position, mesh.rotation, mesh.scale));
       gl.uniform3fv(locations.color, mesh.color);
       gl.uniform1f(locations.visibility, mesh.visibility);
       gl.uniform1f(locations.emissive, mesh.emissive);
       gl.uniform1f(locations.fogBias, mesh.fogBias);
+      gl.uniform1f(locations.sonarGain, mesh.sonarGain);
+
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.positions);
       gl.enableVertexAttribArray(locations.position);
       gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, 0, 0);
