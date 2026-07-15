@@ -107,3 +107,4 @@ function drawFoldPreview(line, angle, valid) {
 
   context.save();
   const shadow = context.createLinearGradient(
+    line.point.x - line.normal.x * 80,
