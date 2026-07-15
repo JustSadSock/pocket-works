@@ -53,9 +53,11 @@ let surfaceTimer = 0;
 let tiltListening = false;
 let confirmationAction = null;
 let confirmationReturnMode = 'menu';
+let confirmationFocus = null;
 let keyboardAngle = 0;
 let overviewUiKey = '';
 let lastBallMovingState = '';
+let invalidAimAt = 0;
 
 const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
@@ -109,33 +111,46 @@ function showSurface(text) {
   surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1350);
 }
 
-function requestConfirmation({ eyebrow = 'Подтверждение', title, detail, acceptLabel, returnMode = mode, action }) {
+function requestConfirmation({ eyebrow = 'Подтверждение', title, detail, acceptLabel, meta = 'действие нельзя отменить', returnMode = mode, action }) {
+  confirmationFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   confirmationAction = action;
   confirmationReturnMode = returnMode;
   $('confirmEyebrow').textContent = eyebrow;
   $('confirmTitle').textContent = title;
   $('confirmDetail').textContent = detail;
   $('confirmAcceptLabel').textContent = acceptLabel;
+  $('confirmMeta').textContent = meta;
   setMode('confirm');
 }
 
 function closeConfirmation() {
+  const focus = confirmationFocus;
+  confirmationFocus = null;
   confirmationAction = null;
   setMode(confirmationReturnMode);
   if (confirmationReturnMode === 'menu') syncMenu();
+  if (focus?.isConnected) window.requestAnimationFrame(() => focus.focus({ preventScroll: true }));
 }
 
 function setMode(next) {
   mode = next;
   document.body.dataset.mode = next;
-  document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
   const map = { menu: 'menuScreen', holes: 'holesScreen', code: 'codeScreen', confirm: 'confirmScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
-  if (map[next]) $(map[next]).classList.add('is-visible');
+  const activeId = map[next] || '';
+  document.querySelectorAll('.screen').forEach((screen) => {
+    const active = screen.id === activeId;
+    screen.classList.toggle('is-visible', active);
+    screen.inert = !active;
+    screen.setAttribute('aria-hidden', String(!active));
+  });
   if (next !== 'playing') {
     cancelAim();
     livingTerrain.cancelOverview();
   }
   syncOverviewControl();
+  const focusId = { menu: 'continueBtn', holes: 'holesCloseBtn', code: 'runCodeInput', confirm: 'confirmAcceptBtn', paused: 'resumeBtn', result: $('nextBtn').hidden ? 'retryBtn' : 'nextBtn', finish: 'againBtn' }[next];
+  if (next === 'playing') window.requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+  else if (focusId) window.requestAnimationFrame(() => $(focusId)?.focus?.({ preventScroll: true }));
 }
 
 function syncOverviewControl() {
@@ -194,7 +209,7 @@ function syncMenu() {
   $('endlessMeta').textContent = run
     ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}${run.currentStrokes ? ` · ${run.currentStrokes} ${strokeWord(run.currentStrokes)}` : ''}`
     : save.endlessBest > 0
-      ? `Новый код · рекорд ${save.endlessBest} секций`
+      ? `Новый код · рекорд ${save.endlessBest} ${sectionWord(save.endlessBest)}`
       : 'Новый код · без конца';
   $('newEndlessBtn').hidden = !run;
   $('endlessBest').textContent = save.endlessBest > 0
@@ -373,6 +388,7 @@ function startCodeRoute() {
       title: `Открыть ${formatRunCode(seed)}?`,
       detail: `Текущий путь ${formatRunCode(current.seed)} останется в рекордах, но продолжить его уже не получится.`,
       acceptLabel: 'Открыть новый код',
+      meta: 'пройденные секции останутся в рекорде',
       returnMode: 'code',
       action: launch
     });
@@ -419,6 +435,23 @@ function restartHole() {
   showSurface(endlessActive ? `Секция ${level.section} начата заново` : 'Лунка начата заново');
 }
 
+function requestRestart() {
+  if (strokes <= 0) {
+    restartHole();
+    return;
+  }
+  audio.ui();
+  requestConfirmation({
+    eyebrow: endlessActive ? `Секция ${level.section}` : `${level.id}. ${level.name}`,
+    title: 'Начать эту попытку заново?',
+    detail: `${strokes} ${strokeWord(strokes)} текущей попытки будут сброшены. Лучшие результаты не изменятся.`,
+    acceptLabel: 'Начать заново',
+    meta: 'текущие удары будут сброшены',
+    returnMode: 'paused',
+    action: restartHole
+  });
+}
+
 function retryResult() {
   audio.ui();
   if (endlessActive && endlessResult) {
@@ -462,11 +495,18 @@ function pointerLocal(event) {
 }
 
 function beginAim(event) {
-  if (mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
+  if (aim.active || mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
   const point = pointerLocal(event);
   const ballPoint = renderer.ballScreenPoint(ball);
   const distance = Math.hypot(point.x - ballPoint.x, point.y - ballPoint.y);
-  if (distance > Math.max(76, 56 * renderer.scale)) return;
+  if (distance > Math.max(76, 56 * renderer.scale)) {
+    if (performance.now() - invalidAimAt > 900) {
+      invalidAimAt = performance.now();
+      showSurface('Начни жест от стеклянного шара');
+      vibrate(4);
+    }
+    return;
+  }
   if (event.cancelable) event.preventDefault();
   audio.unlock();
   aim.active = true;
@@ -514,16 +554,20 @@ function takeShot() {
     audio.strike(aim.power);
     vibrate(aim.power > .72 ? 18 : 10);
     renderer.emit(ball.x, ball.y, 'dust', 7);
+    return true;
   }
+  showSurface('Потяни немного дальше');
+  vibrate(4);
+  return false;
 }
 
 function finishAim(event, cancelled = false) {
   if (!aim.active || event.pointerId !== aim.pointerId) return;
   if (event.cancelable) event.preventDefault();
   const pointerId = aim.pointerId;
-  try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   if (!cancelled) takeShot();
   cancelAim();
+  try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   syncHeader();
 }
 
@@ -624,7 +668,7 @@ function finishEndlessSection() {
 
   const delta = strokes - level.par;
   const [title, detail] = resultCopy(delta, strokes);
-  setResultCopy(`Секция ${level.section} · ${level.name}`, title, `${detail} Пройдено секций: ${completedSections}.`, isDepthRecord);
+  setResultCopy(`Секция ${level.section} · ${level.name}`, title, `${detail} Пройдено секций: ${completedSections}.`, isDepthRecord || isScoreRecord);
   $('nextBtn').hidden = false;
   $('nextBtn').querySelector('span').textContent = 'Дальше в оранжерею';
   const next = generateEndlessLevel(run.seed, completedSections);
@@ -678,10 +722,10 @@ function finishHole() {
       const par = LEVELS.reduce((sum, item) => sum + item.par, 0);
       const courseDelta = fullTotal - par;
       $('finishDetail').textContent = courseDelta < 0
-        ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.`
+        ? `На ${Math.abs(courseDelta)} ${strokeWord(Math.abs(courseDelta))} ниже общего пара. Оранжерея запомнила этот круг.`
         : courseDelta === 0
           ? 'Точно общий пар. Очень аккуратная прогулка.'
-          : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
+          : `На ${courseDelta} ${strokeWord(courseDelta)} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
     }
     setMode('finish');
     syncMenu();
@@ -741,7 +785,7 @@ function attachTilt() {
 }
 
 function toggleOverview() {
-  if (mode !== 'playing' || !isBallStopped(ball)) return;
+  if (!canAimNow()) return;
   cancelAim();
   const active = livingTerrain.toggleOverview();
   audio.ui();
@@ -764,7 +808,7 @@ function updateKeyboardAim() {
 }
 
 function handleKeyboardAim(event) {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return false;
+  if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) return false;
   const key = event.key;
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(key)) return false;
   if (!canAimNow() && aim.pointerId !== 'keyboard') return false;
@@ -791,7 +835,9 @@ function bindControls() {
   canvas.addEventListener('pointermove', moveAim, { passive: false });
   canvas.addEventListener('pointerup', (event) => finishAim(event, false), { passive: false });
   canvas.addEventListener('pointercancel', (event) => finishAim(event, true), { passive: false });
-  canvas.addEventListener('lostpointercapture', () => cancelAim());
+  canvas.addEventListener('lostpointercapture', (event) => {
+    if (aim.active && aim.pointerId === event.pointerId) cancelAim();
+  });
 
   $('continueBtn').addEventListener('click', async () => {
     await audio.unlock();
@@ -812,6 +858,7 @@ function bindControls() {
       title: 'Заменить текущий маршрут?',
       detail: current ? `Путь ${formatRunCode(current.seed)} останется в рекордах, но его текущая секция будет потеряна.` : 'Оранжерея вырастит новый маршрут с другим кодом.',
       acceptLabel: 'Вырастить новый путь',
+      meta: 'пройденные секции останутся в рекорде',
       returnMode: 'menu',
       action: () => {
         startEndless({ fresh: true });
@@ -832,7 +879,9 @@ function bindControls() {
   });
   $('confirmAcceptBtn').addEventListener('click', async () => {
     const action = confirmationAction;
+    confirmationFocus = null;
     confirmationAction = null;
+    audio.ui();
     if (action) await action();
   });
   $('confirmCancelBtn').addEventListener('click', () => { audio.ui(); closeConfirmation(); });
@@ -841,7 +890,7 @@ function bindControls() {
   $('pauseBtn').addEventListener('click', pauseGame);
   $('overviewBtn').addEventListener('click', toggleOverview);
   $('resumeBtn').addEventListener('click', resumeGame);
-  $('restartBtn').addEventListener('click', restartHole);
+  $('restartBtn').addEventListener('click', requestRestart);
   $('quitBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
   $('retryBtn').addEventListener('click', retryResult);
   $('resultMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
