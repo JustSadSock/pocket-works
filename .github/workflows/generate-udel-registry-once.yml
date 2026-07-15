@@ -1,10 +1,6 @@
 name: Generate UDEL registry once
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/generate-udel-registry-once.yml"
   workflow_dispatch:
 
 permissions:
@@ -38,4 +34,4 @@ jobs:
           git pull --rebase origin main
           git push
 
-# Retry from the current main after concurrent application merges.
+# Manual-only fallback. Automatic Actions are disabled while repository minutes are exhausted.
