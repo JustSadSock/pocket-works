@@ -1,0 +1,305 @@
+let dossierReturnMode = 'menu';
+
+function updateExpansionMenu() {
+  const saved = loadJSON(SAVE_KEY, null);
+  const line = document.querySelector('#contentMeta');
+  if (line) {
+    if (validSave(saved)) {
+      const savedCampaign = migrateCampaignContent(saved.campaign, profile.doctrineMastery[saved.campaign.doctrine] || 0);
+      line.textContent = `${savedCampaign.officers.length} офицеров · ${savedCampaign.resources.intel} разведданных · ${savedCampaign.resources.requisition} реквизиции`;
+    } else line.textContent = `${Object.keys(profile.medals).filter((key) => profile.medals[key]).length}/${Object.keys(MEDALS).length} медалей открыто`;
+  }
+  updateDoctrineMasteryLabels();
+}
+
+function ensureExpansionControls() {
+  if (!document.querySelector('#dossierMenuButton')) {
+    const button = document.createElement('button');
+    button.className = 'secondary-order dossier-entry';
+    button.id = 'dossierMenuButton';
+    button.type = 'button';
+    button.setAttribute('data-native-press', '');
+    button.innerHTML = '<span>Штабной архив</span><small id="contentMeta">Офицеры, медали, противники и мастерство</small>';
+    dom.settingsButton.before(button);
+  }
+  if (!document.querySelector('#dossierPauseButton')) {
+    const button = document.createElement('button');
+    button.className = 'secondary-order';
+    button.id = 'dossierPauseButton';
+    button.type = 'button';
+    button.setAttribute('data-native-press', '');
+    button.innerHTML = '<span>Штабной архив</span><small>Офицеры и история фронта</small>';
+    dom.abandonButton.before(button);
+  }
+  if (!document.querySelector('#frontTools')) {
+    const tools = document.createElement('div');
+    tools.className = 'front-tools';
+    tools.id = 'frontTools';
+    tools.innerHTML = `
+      <button id="routeScoutButton" type="button" data-native-press><span>Разведать командиров</span><small>1 разведданные</small></button>
+      <button id="routeRerollButton" type="button" data-native-press><span>Сменить маршруты</span><small>1 реквизиция</small></button>
+    `;
+    exp.routeList.after(tools);
+  }
+  const grid = document.querySelector('.briefing-grid');
+  if (grid && !document.querySelector('#briefingMissionBox')) {
+    const missionBox = document.createElement('div');
+    missionBox.id = 'briefingMissionBox';
+    missionBox.innerHTML = '<span>МИССИЯ</span><strong id="briefingMissionName">Захват рубежа</strong><small id="briefingMissionNote">Удерживайте штандарты.</small>';
+    const enemyBox = document.createElement('div');
+    enemyBox.id = 'briefingEnemyBox';
+    enemyBox.innerHTML = '<span>ПРОТИВНИК</span><strong id="briefingEnemyName">Неизвестный штаб</strong><small id="briefingEnemyNote">Доктрина противника неизвестна.</small>';
+    grid.append(missionBox, enemyBox);
+  }
+}
+
+function updateDoctrineMasteryLabels() {
+  for (const button of dom.doctrineList.querySelectorAll('[data-doctrine]')) {
+    const doctrine = button.dataset.doctrine;
+    const wins = profile.doctrineMastery[doctrine] || 0;
+    let badge = button.querySelector('.mastery-badge');
+    if (!badge) {
+      badge = document.createElement('em');
+      badge.className = 'mastery-badge';
+      button.querySelector('span').append(badge);
+    }
+    const level = Math.floor(wins / 3);
+    badge.textContent = `Мастерство ${level} · побед ${wins}`;
+  }
+}
+
+function renderRouteChoices() {
+  ensureExpansionControls();
+  const scouted = campaign.routeScoutedStage === campaign.stage;
+  exp.routeList.replaceChildren();
+  campaign.routeChoices.forEach((route, index) => {
+    const faction = FACTIONS[route.faction];
+    const commander = COMMANDERS[route.commander];
+    const mission = MISSION_TYPES[route.mission];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'route-node';
+    button.dataset.route = route.id;
+    button.dataset.faction = route.faction;
+    button.setAttribute('data-native-press', '');
+    const risks = Array.from({ length: 4 }, (_, riskIndex) => `<i class="${riskIndex < route.threat ? 'active' : ''}"></i>`).join('');
+    button.innerHTML = `
+      <span class="route-index">0${index + 1}</span>
+      <div class="route-copy">
+        <small>${mission.short} · ${faction.short}</small>
+        <strong>${route.title}</strong>
+        <p>${route.note}</p>
+        <div class="route-details">
+          <span class="risk-meter">${risks}</span>
+          <span>${routeRewardSummary(route)}</span>
+        </div>
+        <div class="commander-line ${scouted ? 'revealed' : ''}">
+          <b>${scouted ? `${commander.name} · ${commander.title}` : 'Командир скрыт'}</b>
+          <em>${scouted ? commander.trait : 'Потратьте разведданные, чтобы увидеть особенность.'}</em>
+        </div>
+      </div>
+      <span class="route-arrow">→</span>
+    `;
+    exp.routeList.append(button);
+  });
+  const scout = document.querySelector('#routeScoutButton');
+  const reroll = document.querySelector('#routeRerollButton');
+  scout.disabled = campaign.resources.intel < 1 || scouted;
+  scout.querySelector('small').textContent = scouted ? 'Командиры раскрыты' : `${campaign.resources.intel} доступно · цена 1`;
+  reroll.disabled = campaign.resources.requisition < 1;
+  reroll.querySelector('small').textContent = `${campaign.resources.requisition} доступно · цена 1`;
+}
+
+function scoutFront() {
+  if (campaign.resources.intel < 1 || campaign.routeScoutedStage === campaign.stage) return;
+  campaign.resources.intel -= 1;
+  campaign.routeScoutedStage = campaign.stage;
+  persist();
+  renderRouteChoices();
+  sound('paper');
+  haptic(10);
+}
+
+function rerollFront() {
+  if (campaign.resources.requisition < 1) return;
+  campaign.resources.requisition -= 1;
+  campaign.routeSalt = (campaign.routeSalt || 0) + 1;
+  campaign.routeChoices = [];
+  generateFrontChoices(campaign);
+  persist();
+  renderRouteChoices();
+  sound('paper');
+  haptic(12);
+}
+
+function renderExpansionBriefing() {
+  ensureExpansionControls();
+  if (!battle?.mission) return;
+  const mission = MISSION_TYPES[battle.mission.type];
+  const faction = FACTIONS[battle.faction];
+  const commander = battle.enemyCommander;
+  document.querySelector('#briefingMissionName').textContent = mission.name;
+  document.querySelector('#briefingMissionNote').textContent = `${mission.description} Цель: ${battle.mission.target}.`;
+  document.querySelector('#briefingEnemyName').textContent = `${faction.name} · ${commander?.name || 'неизвестный командир'}`;
+  document.querySelector('#briefingEnemyNote').textContent = commander ? `${commander.title}. ${commander.trait}` : faction.doctrine;
+  dom.briefingLimit.textContent = `${battle.turnLimit} ходов`;
+  dom.briefingWeather.textContent = WEATHER[battle.weather].name;
+  dom.briefingWeatherNote.textContent = WEATHER[battle.weather].note;
+  document.documentElement.dataset.enemyFaction = battle.faction || 'none';
+}
+
+function renderMissionChip() {
+  if (!battle?.mission || !['playing', 'enemy', 'pause'].includes(mode)) {
+    exp.missionChip.hidden = true;
+    return;
+  }
+  const progress = missionProgress(battle);
+  exp.missionChip.hidden = false;
+  exp.missionChipLabel.textContent = progress.label;
+  exp.missionChipValue.textContent = progress.value;
+  exp.missionChipTarget.textContent = progress.target;
+  exp.missionChipFill.style.width = `${clamp(progress.value / Math.max(1, progress.target) * 100, 0, 100)}%`;
+  exp.missionChip.dataset.complete = String(progress.value >= progress.target);
+}
+
+function renderVictoryContext() {
+  if (!battle?.mission) return;
+  const mission = MISSION_TYPES[battle.mission.type];
+  const faction = FACTIONS[battle.faction];
+  dom.victorySummary.textContent = `${mission.name} выполнено. ${faction.name} отступает, но фронт уже предлагает три новых направления.`;
+}
+
+function unlockBattleMedals() {
+  if (!battle || !campaign) return;
+  const players = battle.units.filter((unit) => unit.side === 'player');
+  const survivors = players.filter((unit) => !unit.routed && unit.hp > 0);
+  const losses = players.length - survivors.length;
+  const averageSupply = survivors.length ? survivors.reduce((sum, unit) => sum + unit.supply, 0) / survivors.length : 0;
+  const unlocked = [];
+  if (losses === 0) unlocked.push('clean');
+  if (battle.turn <= 5) unlocked.push('swift');
+  if (battle.playerResolve >= 85) unlocked.push('iron');
+  if (battle.playerObjective >= 8) unlocked.push('standards');
+  if (battle.mission?.type === 'decapitation') unlocked.push('hunter');
+  if (battle.mission?.type === 'breakthrough' && battle.turn <= 6) unlocked.push('breach');
+  if (averageSupply < 30) unlocked.push('dry');
+  if (campaign.victories >= 9) unlocked.push('veteran');
+  let fresh = 0;
+  for (const id of unlocked) {
+    if (!profile.medals[id]) fresh += 1;
+    profile.medals[id] = true;
+  }
+  if (fresh) {
+    campaign.renown += fresh * 5;
+    toast(`Новая медаль${fresh > 1 ? ` ×${fresh}` : ''}.`);
+  }
+  saveJSON(PROFILE_KEY, profile);
+}
+
+function openDossier(returnMode = mode) {
+  dossierReturnMode = returnMode;
+  renderDossier();
+  mode = 'dossier';
+  showScreen('dossierScreen');
+  sound('paper');
+}
+
+function closeDossier() {
+  const target = dossierReturnMode;
+  if (target === 'pause') {
+    mode = 'pause';
+    showScreen('pauseScreen');
+  } else if (target === 'playing' || target === 'enemy') {
+    mode = target === 'enemy' ? 'enemy' : 'playing';
+    showScreen(null);
+    renderAll();
+  } else if (target === 'route') showRouteMap();
+  else showMenu();
+}
+
+function renderDossier() {
+  const active = campaign ? migrateCampaignContent(campaign, profile.doctrineMastery[campaign.doctrine] || 0) : null;
+  exp.dossierRenown.textContent = active?.renown || 0;
+  exp.dossierIntel.textContent = active?.resources?.intel || 0;
+  exp.dossierRequisition.textContent = active?.resources?.requisition || 0;
+  exp.dossierVictories.textContent = active?.victories || 0;
+  exp.dossierOfficers.replaceChildren();
+  const officerIds = active?.officers || [];
+  if (!officerIds.length) exp.dossierOfficers.innerHTML = '<p class="empty-file">В новой кампании первый офицер назначается вместе с доктриной.</p>';
+  else officerIds.forEach((id) => {
+    const officer = OFFICERS[id];
+    const card = document.createElement('article');
+    card.innerHTML = `<i>${officer.mark}</i><span><b>${officer.name}</b><em>${officer.role}</em><small>${officer.effect}</small></span>`;
+    exp.dossierOfficers.append(card);
+  });
+
+  exp.medalGrid.replaceChildren();
+  Object.entries(MEDALS).forEach(([id, medal]) => {
+    const unlocked = Boolean(profile.medals[id]);
+    const card = document.createElement('article');
+    card.className = unlocked ? 'unlocked' : 'locked';
+    card.innerHTML = `<i>${unlocked ? medal.mark : '?'}</i><span><b>${unlocked ? medal.name : 'Закрытая медаль'}</b><small>${unlocked ? medal.description : 'Условие откроется после выполнения.'}</small></span>`;
+    exp.medalGrid.append(card);
+  });
+
+  exp.masteryList.replaceChildren();
+  Object.entries(DOCTRINES).forEach(([id, doctrine]) => {
+    const wins = profile.doctrineMastery[id] || 0;
+    const level = Math.floor(wins / 3);
+    const row = document.createElement('article');
+    row.innerHTML = `<span><b>${doctrine.name}</b><small>${wins} побед · уровень ${level}</small></span><i><b style="width:${Math.min(100, wins % 3 / 3 * 100)}%"></b></i>`;
+    exp.masteryList.append(row);
+  });
+
+  exp.enemyCodex.replaceChildren();
+  const seenFactions = new Set([...(profile.factionsSeen || []), ...(active?.encounteredFactions || [])]);
+  Object.entries(FACTIONS).forEach(([id, faction]) => {
+    const known = seenFactions.has(id);
+    const card = document.createElement('article');
+    card.className = known ? 'known' : 'unknown';
+    card.innerHTML = `<i style="--faction:${faction.color}"></i><span><b>${known ? faction.name : 'Неизвестная армия'}</b><small>${known ? faction.doctrine : 'Встретьте эту фракцию на карте фронта.'}</small></span>`;
+    exp.enemyCodex.append(card);
+  });
+}
+
+function bindExpansionEvents() {
+  exp.routeList.addEventListener('click', (event) => {
+    const node = event.target.closest('[data-route]');
+    if (node) selectFrontRoute(node.dataset.route);
+  });
+  exp.eventChoices.addEventListener('click', (event) => {
+    const choice = event.target.closest('[data-event-choice]');
+    if (choice) applyEventChoice(Number(choice.dataset.eventChoice));
+  });
+  exp.officerList.addEventListener('click', (event) => {
+    const officer = event.target.closest('[data-officer]');
+    if (officer) chooseOfficer(officer.dataset.officer);
+  });
+  exp.closeDossierButton.addEventListener('click', closeDossier);
+  exp.missionChip.addEventListener('click', () => {
+    const progress = missionProgress(battle);
+    toast(`${progress.name}: ${progress.value}/${progress.target}. ${progress.description}`);
+  });
+  document.querySelector('#routeScoutButton').addEventListener('click', scoutFront);
+  document.querySelector('#routeRerollButton').addEventListener('click', rerollFront);
+  document.querySelector('#dossierMenuButton').addEventListener('click', () => openDossier('menu'));
+  document.querySelector('#dossierPauseButton').addEventListener('click', () => openDossier('pause'));
+
+  dom.continueButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    continueExpandedCampaign();
+  }, { capture: true });
+
+  dom.newCampaignButton.addEventListener('click', () => setTimeout(updateDoctrineMasteryLabels, 0));
+  dom.newRunButton.addEventListener('click', () => setTimeout(updateDoctrineMasteryLabels, 0));
+}
+
+function initExpansion() {
+  ensureExpansionControls();
+  bindExpansionEvents();
+  updateDoctrineMasteryLabels();
+  refreshMenu();
+}
+
+initExpansion();
