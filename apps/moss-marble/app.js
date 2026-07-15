@@ -2,6 +2,7 @@ import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
 import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
+import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
 import { AudioGarden } from './audio.js';
 import {
@@ -33,7 +34,7 @@ const audio = new AudioGarden();
 let save = loadSave();
 let mode = 'menu';
 let levelIndex = Math.min(save.current, save.unlocked - 1, LEVELS.length - 1);
-let level = getLevel(levelIndex);
+let level = compileCourse19(getLevel(levelIndex));
 let ball = createBall(level.start, level);
 let strokes = 0;
 let roundStrokes = [];
@@ -297,7 +298,7 @@ function preparePlayingLevel({ checkpoint = null, checkpointStrokes = 0 } = {}) 
 function startHole(index, { round = false, preserveRound = false, checkpoint = null, checkpointStrokes = 0 } = {}) {
   endlessActive = false;
   levelIndex = Math.max(0, Math.min(LEVELS.length - 1, index));
-  level = getLevel(levelIndex);
+  level = compileCourse19(getLevel(levelIndex));
   if (round && !preserveRound) {
     roundActive = true;
     roundStrokes = [];
@@ -342,7 +343,7 @@ function startEndless({ fresh = false, seed = null } = {}) {
   roundActive = false;
   roundStrokes = [];
   levelIndex = -1;
-  level = generateEndlessLevel(run.seed, run.depth);
+  level = compileCourse19(generateEndlessLevel(run.seed, run.depth));
   preparePlayingLevel({ checkpoint: run.checkpoint, checkpointStrokes: run.currentStrokes });
 }
 
