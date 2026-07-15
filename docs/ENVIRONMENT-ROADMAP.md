@@ -1,556 +1,258 @@
 # Pocket Works — Environment Roadmap
 
-This document preserves the planned evolution of Pocket Works as a personal factory for small, installable, offline-first mobile applications.
-
-The goal is not to turn every experiment into a large framework project. The goal is to make future apps faster to create, safer to publish, broader in capability and more convincing as installed software.
+Pocket Works is a personal factory for small, installable, offline-first mobile applications. The environment should make new apps fast to create, safe to publish and distinct enough to feel like real software rather than interchangeable web pages.
 
 ## Product direction
 
-Pocket Works should feel like a private collection of real tools, toys and games rather than a directory of webpages.
-
-The environment should optimize for:
+Pocket Works optimizes for:
 
 - rapid creation from a short concept;
-- distinct visual identity per app;
-- isolated failures and isolated storage;
-- one-command or one-request publishing;
+- a distinct visual identity for every app;
+- isolated failures, caches and storage;
+- concurrent application development without shared-file conflicts;
 - smooth installed-mobile behavior;
 - strong offline support;
-- reusable technical capabilities without forcing a shared visual style;
-- easy diagnostics from a phone;
-- safe updates and recovery of user data.
+- reusable technical capabilities without a shared aesthetic;
+- diagnostics that work from a phone;
+- safe updates and recovery of user data;
+- automatic production publishing from `main`.
 
-## 1. Atomic publishing
+## 1. Atomic delivery
 
-Current connector-based file creation may produce several sequential commits. The preferred future workflow is:
-
-```text
-create all files
-→ validate the complete app
-→ create one Git tree
-→ create one commit
-→ push main
-→ one Netlify deployment
-```
-
-Benefits:
-
-- Netlify never sees a partially assembled app;
-- one application change produces one deployment;
-- rollback is simple;
-- Git history stays meaningful;
-- validation can run before the public version changes.
-
-Target commit style:
+The preferred workflow is:
 
 ```text
-Add screen-lab app
-Improve Pocket Works launcher
-Upgrade app creation pipeline
+create or update one isolated app
+→ validate the completed change
+→ open a pull request
+→ squash-merge into main
+→ Cloudflare builds dist-site
+→ Wrangler publishes the pocket-works Worker
 ```
 
-## 2. Pocket Forge — application generator
+One application release should produce one meaningful commit and one production deployment. Intermediate or partially assembled files must not reach `main`.
 
-Create a repository script such as:
+## 2. Concurrent application ownership
 
-```bash
-node scripts/new-app.mjs pulse-board --preset=interactive
-```
+Every application lives in `apps/<slug>/` and owns its metadata through `app.config.json`.
 
-The generator should:
+Ordinary application PRs:
 
-- validate a unique kebab-case slug;
-- create `apps/<slug>/` from a chosen preset;
-- generate a unique manifest ID, scope and start URL;
-- generate unique Service Worker cache and storage namespaces;
-- create initial icons or icon source files;
-- create an app README;
-- create `app.config.json`;
-- run validation;
-- register the app automatically;
-- optionally create a preview entry before publishing.
+- modify exactly one `apps/<slug>/**` directory;
+- do not edit root, shared, scripts, workflows or other apps;
+- may merge in any order;
+- do not rebuild or commit a central registry;
+- use a separate platform PR when a shared capability is required.
 
-Suggested presets:
+The launcher registry is generated into `dist-site/apps.json` during production assembly.
 
-```text
-templates/
-├── vanilla/        small utility or experiment
-├── interactive/    gesture-heavy tool or visual toy
-├── game-2d/        game loop, canvas and input layer
-├── audio/          Web Audio initialization and controls
-├── data-tool/      IndexedDB, import and export
-└── enhanced/       Vite and TypeScript project
-```
+## 3. Pocket Forge
 
-## 3. Replace the manually edited central registry
+Pocket Forge should continue to create complete application directories with:
 
-Each application should eventually own an `app.config.json` file:
+- a unique lowercase kebab-case slug;
+- application metadata;
+- a manifest and install icon;
+- a scoped Service Worker;
+- unique cache and storage namespaces;
+- local persistence where appropriate;
+- a finished entry screen;
+- a working primary interaction loop;
+- app-owned documentation;
+- a deliberate visual premise rather than a generic preset skin.
 
-```json
-{
-  "slug": "screen-lab",
-  "name": "Screen Lab",
-  "description": "An interactive mobile display and input laboratory.",
-  "status": "active",
-  "version": "1.0.0",
-  "accent": "#d7ff46",
-  "tags": ["tool", "motion", "offline"]
-}
-```
+Forge templates are technical starting points, not finished designs.
 
-A build script should scan application directories and generate `apps.json`.
-
-Advantages:
-
-- metadata lives beside the app it describes;
-- removing or moving an app cannot leave a stale registry entry silently;
-- schema validation is easier;
-- the launcher can be generated from one source of truth.
-
-Use Zod or a lightweight custom validator when the schema becomes complex enough to justify it.
-
-## 4. Two project levels
+## 4. Two application runtimes
 
 ### Quick PWA
 
-Default for small ideas:
+Default for focused tools, experiments and compact games:
 
 - plain HTML, CSS and JavaScript;
-- no build step beyond validation;
 - direct browser APIs;
-- smallest possible dependency surface;
-- fast implementation and easy inspection.
-
-Best for:
-
-- randomizers;
-- trackers;
-- single-purpose utilities;
-- compact visual experiments;
-- small games and toys.
+- minimal dependency surface;
+- fast inspection and iteration.
 
 ### Enhanced PWA
 
-Use only when complexity warrants it:
+Use when complexity materially benefits from:
 
 - Vite;
 - TypeScript;
-- npm dependencies;
-- modular source and generated distribution;
-- formal tests;
-- generated Service Worker and manifest handling.
+- formal unit tests;
+- PixiJS, Phaser or Tone.js;
+- generated Workbox assets;
+- a real source/build separation.
 
-Possible foundation:
-
-- `vite-plugin-pwa`;
-- Workbox;
-- Vitest;
-- optional component or rendering libraries.
-
-Do not migrate simple apps merely for consistency. Pocket Works should support both levels indefinitely.
+Simple apps should not migrate merely for consistency.
 
 ## 5. Launcher evolution
 
-Transform the root launcher into a lightweight personal application shelf rather than a generic app store clone.
+The root launcher is a personal application shelf, not an app-store imitation.
 
-Potential features:
+Useful capabilities include:
 
-- live or generated previews;
-- recently opened apps;
-- favorites;
-- categories and filters;
-- search;
-- version and last-updated information;
-- `offline-ready`, `installed`, `experimental` and `update available` states;
-- locally stored usage history;
-- per-app changelog;
-- long-press quick actions;
-- clear application details;
-- data reset, export and import actions;
+- search and filters;
+- favorites and recents;
+- generated or live previews;
+- version and release notes;
+- offline-ready and update states;
+- application details;
+- installation and update guidance;
 - launcher-level diagnostics.
 
-The visual direction should resemble a cabinet of distinct artifacts. Every app may have its own silhouette, material, typography and motion signature. The launcher provides order without flattening all apps into identical cards.
+The launcher supplies order without flattening every app into the same card, palette or navigation pattern.
 
-Avoid:
+## 6. Shared capabilities, not shared visuals
 
-- an App Store imitation;
-- a dashboard of interchangeable rounded tiles;
-- one shared color system applied to every app;
-- generic category icons and decorative metrics.
+Shared modules may provide:
 
-## 6. Shared capabilities, not a shared aesthetic
+- viewport and safe-area handling;
+- pointer lifecycle and gesture primitives;
+- interruptible motion;
+- versioned local storage;
+- import and export;
+- audio initialization and feedback;
+- motion and orientation permission handling;
+- diagnostics and Workshop Mode;
+- managed Service Worker updates.
 
-Shared code should provide infrastructure and behavior. It should not force every app to use the same visual components.
+Shared code must remain visually neutral. An app’s appearance belongs inside its own directory.
 
-Suggested structure:
+## 7. Native-feeling mobile behavior
 
-```text
-shared/
-├── pwa/
-├── updates/
-├── storage/
-├── input/
-├── motion/
-├── audio/
-├── sensors/
-├── export/
-├── diagnostics/
-└── accessibility/
-```
+Every app should be evaluated as installed software.
 
-Potential modules:
-
-### PWA and updates
-
-- Service Worker registration;
-- waiting-update detection;
-- update prompt and reload flow;
-- cache version helpers;
-- online/offline state;
-- install-state detection;
-- iOS installation instructions.
-
-### Storage
-
-- namespaced settings;
-- IndexedDB database initialization;
-- migrations;
-- schema validation;
-- export/import;
-- automatic backup snapshots;
-- recovery from malformed state.
-
-Dexie is a strong candidate for apps with structured IndexedDB data.
-
-### Input
-
-- Pointer Event gesture state;
-- pointer capture;
-- tap, drag, swipe and long-press recognition;
-- gesture cancellation;
-- velocity tracking;
-- keyboard and controller abstraction where useful.
-
-### Motion
-
-- interruptible springs;
-- velocity-aware release;
-- stagger and reveal helpers;
-- reduced-motion adaptation;
-- frame-budget monitoring.
-
-Motion is a candidate for DOM and SVG interactions. It should remain optional rather than a universal dependency.
-
-### Export
-
-- JSON export and import;
-- image export;
-- share-sheet support;
-- file-system access where supported;
-- safe filename generation.
-
-### Sensors
-
-- orientation and motion permission flow;
-- sensor normalization;
-- feature detection;
-- fallback interaction models.
-
-## 7. Native-feeling application experience
-
-Every app should be judged as installed software, not merely responsive web content.
-
-Detailed mandatory rules live in `apps/AGENTS.md`.
-
-Core expectations include:
+Core expectations:
 
 - no accidental text selection on controls;
-- no irrelevant iOS long-press callouts;
-- no random double-tap zoom;
-- no focus-triggered input zoom;
-- intentional pinch behavior;
-- no browser image dragging;
-- no blue tap flash or generic link states;
-- no browser alerts or prompts;
-- stable safe areas and `100dvh` layouts;
-- controlled overscroll and internal scrolling;
+- no irrelevant long-press callouts or browser drag behavior;
+- no undocumented essential gestures;
+- correct safe areas and dynamic viewport sizing;
 - software-keyboard-aware layouts;
-- immediate pressed feedback;
-- interruptible, high-quality animation;
-- state preservation across reload, suspension and resume;
-- seamless offline operation;
-- coherent icons, status bar color and launch appearance.
+- visible pressed, dragging, success and error states;
+- interruptible animation;
+- controlled overscroll and internal scrolling;
+- preservation of expected state after suspension or reload;
+- usable offline behavior after the first successful load;
+- deliberate icon, theme color and launch appearance;
+- reduced-motion support.
 
-Native feel must not be achieved by blindly disabling accessibility. Selection, zoom and context behavior should be preserved where they are genuinely useful.
+Native feel must not be achieved by disabling useful accessibility behavior.
 
-## 8. Workshop Mode
+## 8. Managed updates
 
-Add an optional hidden diagnostics panel to apps, activated by an intentional gesture such as holding a version mark or app symbol.
-
-Possible information:
-
-- viewport and visual viewport;
-- device pixel ratio;
-- safe-area values;
-- browser versus standalone mode;
-- FPS and frame-time history;
-- storage usage;
-- active Service Worker and cache version;
-- online/offline status;
-- last update time;
-- current app version;
-- recent errors;
-- pointer and sensor state.
-
-Possible actions:
-
-- clear app cache;
-- reset local state;
-- export data;
-- import data;
-- simulate offline behavior;
-- force reduced-motion mode;
-- reveal touch targets;
-- reveal layout bounds;
-- inspect current storage namespaces;
-- check for an update.
-
-Workshop Mode must remain absent from ordinary visual hierarchy and must not compromise production performance.
-
-## 9. Update system
-
-Create a shared update manager that handles waiting Service Workers and version changes.
-
-Desired flow:
-
-```text
-New version available
-[Update now] [Later]
-```
-
-After updating:
-
-```text
-Screen Lab 1.1.0
-— Added sensor calibration
-— Improved landscape handling
-— Fixed stale viewport values
-```
+A new Service Worker reaches the waiting state and presents an explicit update prompt.
 
 Requirements:
 
-- never silently destroy unsaved state;
-- save or serialize important state before reload;
-- expose the current app version;
-- retain a small migration history;
-- delete only caches owned by the app;
-- allow critical fixes to request immediate update without creating an infinite reload loop.
+- never silently destroy an active session;
+- expose version, date and release notes;
+- activate only after the user confirms;
+- reload once after `controllerchange`;
+- delete only caches owned by the current app;
+- move version and cache identity forward for every rollback release.
 
-## 10. Broader creative and technical arsenal
+## 9. Workshop Mode and diagnostics
 
-Libraries should be chosen per project, not installed globally by default.
+Workshop Mode should remain optional and outside the ordinary visual hierarchy.
 
-### Motion
+Useful information:
 
-Use for:
+- viewport and visual viewport;
+- device pixel ratio and safe areas;
+- standalone state;
+- frame timing;
+- storage usage;
+- current app and cache version;
+- online/offline state;
+- recent errors;
+- pointer and sensor state.
 
-- DOM and SVG animation;
-- springs;
-- gesture-linked transitions;
-- layout continuity;
-- velocity-aware interaction.
+Useful actions:
 
-### Dexie
+- export diagnostics;
+- reset only app-owned state;
+- clear only app-owned caches;
+- reveal touch or layout bounds;
+- check for updates.
 
-Use for:
+## 10. Testing and quality gates
 
-- substantial local data;
-- structured IndexedDB stores;
-- migrations;
-- offline-first records;
-- binary or larger data.
-
-### Zod
-
-Use for:
-
-- validating app metadata;
-- validating imported saves;
-- validating settings and migration boundaries;
-- deriving TypeScript types in enhanced projects.
-
-### Lit
-
-Use selectively for:
-
-- isolated reusable Web Components;
-- shared infrastructure controls;
-- encapsulated behavior without adopting React across the repository.
-
-### Shoelace or similar component libraries
-
-Use only for secondary, non-signature controls such as dialogs, menus and accessible form primitives.
-
-Do not use a component library as the visual identity of an app.
-
-### PixiJS
-
-Use for:
-
-- high-object-count 2D rendering;
-- particles;
-- interactive visual fields;
-- nontraditional interfaces;
-- GPU-accelerated art and simulation.
-
-### Phaser
-
-Use for:
-
-- larger 2D games;
-- scenes;
-- cameras;
-- asset management;
-- game input;
-- game-oriented physics and lifecycle.
-
-### Tone.js
-
-Use for:
-
-- procedural sound;
-- musical tools;
-- rhythm mechanics;
-- synchronized audio events;
-- synthesis and effects.
-
-Sound must remain optional and user-controlled.
-
-### Workbox and vite-plugin-pwa
-
-Use in enhanced projects for:
-
-- generated precaching;
-- runtime caching strategies;
-- update handling;
-- offline fallbacks;
-- background retry where appropriate.
-
-## 11. Testing and deployment quality
-
-### Repository validation
-
-Expand the existing validator to check:
+Repository validation should cover:
 
 - metadata schemas;
-- duplicate namespaces;
+- duplicate identifiers and namespaces;
 - manifest correctness;
 - Service Worker scope;
-- missing assets;
-- broken relative links;
-- icon presence and dimensions;
-- accidental root-scoped caches;
-- forbidden placeholder values.
+- missing assets and broken relative paths;
+- icon presence;
+- cache ownership;
+- release metadata consistency;
+- isolated PR scope;
+- production directory cleanliness;
+- Cloudflare Worker configuration.
 
-### Playwright
+Browser testing should cover Chromium and WebKit mobile profiles, portrait and landscape layouts, primary interaction loops, offline reloads, console errors and horizontal overflow.
 
-Use for cross-browser and mobile behavior:
+Performance and accessibility budgets are regression guards, not substitutes for real interaction testing.
 
-- Chromium;
-- WebKit;
-- Firefox;
-- narrow mobile viewport;
-- tall iPhone-like viewport;
-- portrait and landscape;
-- interaction smoke tests;
-- screenshot comparisons;
-- console-error detection.
+## 11. Production architecture
 
-### Lighthouse CI
-
-Suggested baseline targets:
+Production is published through Cloudflare Workers Builds.
 
 ```text
-Performance >= 80
-Accessibility >= 90
-Best Practices >= 90
+main
+→ npm run deploy:site
+→ npm run prepare:site
+→ npm run validate:site
+→ npx wrangler deploy --assets ./dist-site/
 ```
 
-Treat these as regression guards, not as a substitute for real interaction testing.
+`wrangler.jsonc` must keep:
 
-### Vitest
+- Worker name `pocket-works`;
+- an explicit compatibility date;
+- assets directory `./dist-site`.
 
-Use for:
-
-- generators;
-- state machines;
-- migrations;
-- import/export logic;
-- game rules;
-- calculations;
-- registry generation.
+The production build packages already-prepared deployable files. Exhaustive audits and browser matrices remain CI responsibilities and must not be moved into the fast deployment command.
 
 ## 12. Data safety
 
-For applications containing meaningful user-created data:
+Applications containing meaningful user-created data should:
 
 - use versioned schemas;
 - validate before loading;
 - migrate incrementally;
-- preserve the last known-good snapshot;
+- preserve a last known-good snapshot;
 - provide export and import;
-- do not erase state when an update fails;
-- store app data under a unique namespace;
+- avoid erasing data when an update fails;
+- store data under an app-owned namespace;
 - document reset behavior clearly.
 
-The launcher may eventually provide centralized backup discovery, but it must not become the runtime owner of app data.
+## 13. Design doctrine
 
-## 13. Suggested implementation order
+Each new app needs one recognizable product decision: a mechanic, spatial model, navigation principle, material language, animation character or interaction metaphor.
 
-### Phase 1 — publishing and consistency
+Avoid defaulting to:
 
-1. Atomic commits for full app changes.
-2. `app.config.json` per app.
-3. Generated `apps.json`.
-4. Pocket Forge generator.
-5. Stronger validation.
+- dark neon dashboards;
+- glass surfaces without functional reason;
+- endless rounded cards;
+- generic giant headings;
+- decorative charts or metrics;
+- repeated red divider lines;
+- emoji as the primary icon system;
+- visual patterns copied from recent apps.
 
-### Phase 2 — app experience
+Originality must improve the product rather than obscure basic controls.
 
-1. Shared update manager.
-2. Native-feel baseline utilities.
-3. Workshop Mode.
-4. Export/import helpers.
-5. Keyboard and visual viewport helpers.
+## Current priorities
 
-### Phase 3 — launcher
-
-1. Favorites and recent apps.
-2. Versions and update states.
-3. Better individual previews.
-4. Search and categories.
-5. App data and diagnostics actions.
-
-### Phase 4 — enhanced projects
-
-1. Vite and TypeScript preset.
-2. Workbox and PWA generation.
-3. Vitest.
-4. Playwright smoke testing.
-5. Lighthouse CI.
-
-### Phase 5 — creative libraries
-
-1. Motion helper preset.
-2. PixiJS visual preset.
-3. Phaser game preset.
-4. Tone.js audio preset.
-5. Dexie data-heavy preset.
-
-## Decision principle
-
-When choosing between adding a universal abstraction and completing a strong app, prefer the app.
-
-Promote code into `shared/` only after repeated real use demonstrates a stable abstraction.
-
-Pocket Works succeeds when a new idea can quickly become a distinct, reliable, installable application without inheriting the visual or architectural baggage of every previous project.
+1. Keep app PRs isolated and order-independent.
+2. Keep Cloudflare publishing automatic and provider-specific details out of app work.
+3. Reduce CI cost with path-aware checks and self-hosted capacity where useful.
+4. Improve first-launch clarity and real-device mobile testing.
+5. Expand shared capabilities only after multiple apps prove the need.
+6. Preserve distinct visual languages across new releases.
