@@ -1,28 +1,30 @@
 import { LEVELS, getLevel } from './levels.js';
-import { createRunSeed, formatRunCode, generateEndlessLevel } from './procedural.js';
+import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
 import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
+import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
 import { AudioGarden } from './audio.js';
+import {
+  campaignSegmentTotal,
+  checkpointCampaignRun,
+  checkpointEndlessRun,
+  createCampaignRun,
+  createDefaultSave,
+  fullCampaignTotal,
+  normalizeCampaignRun,
+  normalizeEndlessRun,
+  normalizeSave,
+  recordCampaignHole,
+  sectionWord,
+  strokeWord
+} from './state.js';
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.10.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
-const DEFAULT_SAVE = {
-  version: 2,
-  unlocked: 1,
-  current: 0,
-  best: Array(LEVELS.length).fill(null),
-  roundBest: null,
-  endlessBest: 0,
-  endlessBestStrokes: null,
-  endlessRun: null,
-  sound: true,
-  haptics: true,
-  tilt: false,
-  hasAimed: false
-};
+const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -32,11 +34,12 @@ const audio = new AudioGarden();
 let save = loadSave();
 let mode = 'menu';
 let levelIndex = Math.min(save.current, save.unlocked - 1, LEVELS.length - 1);
-let level = getLevel(levelIndex);
+let level = compileCourse19(getLevel(levelIndex));
 let ball = createBall(level.start, level);
 let strokes = 0;
 let roundStrokes = [];
 let roundActive = false;
+let roundStartHole = 0;
 let endlessActive = false;
 let endlessResult = null;
 let lastSafe = { ...level.start };
@@ -48,38 +51,19 @@ let pausedBeforeHidden = false;
 let toastTimer = 0;
 let surfaceTimer = 0;
 let tiltListening = false;
+let confirmationAction = null;
+let confirmationReturnMode = 'menu';
+let keyboardAngle = 0;
+let overviewUiKey = '';
+let lastBallMovingState = '';
 
 const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
-function normalizeEndlessRun(value) {
-  if (!value || typeof value !== 'object') return null;
-  const seed = Number(value.seed) >>> 0;
-  if (!seed) return null;
-  return {
-    seed,
-    depth: Math.max(0, Math.trunc(Number(value.depth) || 0)),
-    totalStrokes: Math.max(0, Math.trunc(Number(value.totalStrokes) || 0)),
-    startedAt: Number.isFinite(Number(value.startedAt)) ? Number(value.startedAt) : Date.now()
-  };
-}
-
 function loadSave() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!parsed || ![1, 2].includes(parsed.version)) return structuredClone(DEFAULT_SAVE);
-    const best = Array.from({ length: LEVELS.length }, (_, index) => Number.isFinite(parsed.best?.[index]) ? parsed.best[index] : null);
-    return {
-      ...structuredClone(DEFAULT_SAVE),
-      ...parsed,
-      version: 2,
-      best,
-      unlocked: Math.max(1, Math.min(LEVELS.length, Number(parsed.unlocked) || 1)),
-      current: Math.max(0, Math.min(LEVELS.length - 1, Number(parsed.current) || 0)),
-      endlessBest: Math.max(0, Math.trunc(Number(parsed.endlessBest) || 0)),
-      endlessBestStrokes: Number.isFinite(parsed.endlessBestStrokes) ? Math.max(0, Math.trunc(parsed.endlessBestStrokes)) : null,
-      endlessRun: normalizeEndlessRun(parsed.endlessRun)
-    };
+    return normalizeSave(parsed, LEVELS.length);
   } catch {
     return structuredClone(DEFAULT_SAVE);
   }
@@ -125,11 +109,27 @@ function showSurface(text) {
   surfaceTimer = window.setTimeout(() => note.classList.remove('is-visible'), 1350);
 }
 
+function requestConfirmation({ eyebrow = 'Подтверждение', title, detail, acceptLabel, returnMode = mode, action }) {
+  confirmationAction = action;
+  confirmationReturnMode = returnMode;
+  $('confirmEyebrow').textContent = eyebrow;
+  $('confirmTitle').textContent = title;
+  $('confirmDetail').textContent = detail;
+  $('confirmAcceptLabel').textContent = acceptLabel;
+  setMode('confirm');
+}
+
+function closeConfirmation() {
+  confirmationAction = null;
+  setMode(confirmationReturnMode);
+  if (confirmationReturnMode === 'menu') syncMenu();
+}
+
 function setMode(next) {
   mode = next;
   document.body.dataset.mode = next;
   document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('is-visible'));
-  const map = { menu: 'menuScreen', holes: 'holesScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
+  const map = { menu: 'menuScreen', holes: 'holesScreen', code: 'codeScreen', confirm: 'confirmScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
   if (map[next]) $(map[next]).classList.add('is-visible');
   if (next !== 'playing') {
     cancelAim();
@@ -142,10 +142,14 @@ function syncOverviewControl() {
   const button = $('overviewBtn');
   if (!button) return;
   const available = mode === 'playing' && isBallStopped(ball) && !ball.sunk && waterResetTimer <= 0;
+  const overview = livingTerrain.isOverview();
+  const key = `${mode}:${available}:${overview}`;
+  if (key === overviewUiKey) return;
+  overviewUiKey = key;
   button.disabled = !available;
-  button.setAttribute('aria-pressed', String(livingTerrain.isOverview()));
-  button.querySelector('span').textContent = livingTerrain.isOverview() ? 'К мячу' : 'Обзор';
-  document.body.dataset.overview = String(livingTerrain.isOverview());
+  button.setAttribute('aria-pressed', String(overview));
+  button.querySelector('span').textContent = overview ? 'К мячу' : 'Обзор';
+  document.body.dataset.overview = String(overview);
 }
 
 function syncHeader() {
@@ -167,24 +171,65 @@ function syncHeader() {
 }
 
 function syncMenu() {
-  const current = getLevel(Math.min(save.current, save.unlocked - 1));
-  $('continueLabel').textContent = save.best.some((value) => value != null) ? 'Продолжить длинную прогулку' : 'Начать длинную прогулку';
-  $('continueMeta').textContent = `Лунка ${current.id} · пар ${current.par}`;
-  const total = save.best.every((value) => Number.isFinite(value)) ? save.best.reduce((sum, value) => sum + value, 0) : null;
-  $('courseBest').textContent = total == null ? 'Лучший круг ещё не сыгран' : `Лучший собранный круг · ${total} ударов`;
+  const campaign = normalizeCampaignRun(save.campaignRun, LEVELS.length);
+  const currentIndex = campaign?.current ?? Math.min(save.current, save.unlocked - 1);
+  const current = getLevel(currentIndex);
+  $('continueLabel').textContent = campaign
+    ? 'Продолжить длинный круг'
+    : save.best.some((value) => value != null)
+      ? save.current > 0 ? 'Продолжить знакомство' : 'Сыграть полный круг'
+      : 'Начать длинную прогулку';
+  $('continueMeta').textContent = campaign?.currentStrokes
+    ? `Лунка ${current.id} · ${campaign.currentStrokes} ${strokeWord(campaign.currentStrokes)}`
+    : `Лунка ${current.id} · пар ${current.par}`;
+  const collected = save.best.every((value) => Number.isFinite(value)) ? save.best.reduce((sum, value) => sum + value, 0) : null;
+  $('courseBest').textContent = Number.isFinite(save.roundBest)
+    ? `Лучший полный круг · ${save.roundBest} ${strokeWord(save.roundBest)}`
+    : collected == null
+      ? 'Полный круг ещё не сыгран'
+      : `Сумма рекордов лунок · ${collected} ${strokeWord(collected)}`;
 
   const run = normalizeEndlessRun(save.endlessRun);
   $('endlessLabel').textContent = run ? 'Продолжить бесконечный путь' : 'Бесконечная оранжерея';
   $('endlessMeta').textContent = run
-    ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}`
+    ? `Секция ${run.depth + 1} · ${formatRunCode(run.seed)}${run.currentStrokes ? ` · ${run.currentStrokes} ${strokeWord(run.currentStrokes)}` : ''}`
     : save.endlessBest > 0
       ? `Новый код · рекорд ${save.endlessBest} секций`
       : 'Новый код · без конца';
   $('newEndlessBtn').hidden = !run;
   $('endlessBest').textContent = save.endlessBest > 0
-    ? `Глубже всего · ${save.endlessBest} секций${Number.isFinite(save.endlessBestStrokes) ? ` · ${save.endlessBestStrokes} ударов` : ''}`
+    ? `Глубже всего · ${save.endlessBest} ${sectionWord(save.endlessBest)}${Number.isFinite(save.endlessBestStrokes) ? ` · ${save.endlessBestStrokes} ${strokeWord(save.endlessBestStrokes)}` : ''}`
     : 'Бесконечный путь ещё не начат';
   renderHoleShelf();
+}
+
+function holeMapMarkup(item) {
+  const padding = 8;
+  const width = 100;
+  const height = 66;
+  const xs = item.centerline.map((point) => point.x);
+  const ys = item.centerline.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const scale = Math.min((width - padding * 2) / Math.max(1, maxX - minX), (height - padding * 2) / Math.max(1, maxY - minY));
+  const point = ({ x, y }) => ({
+    x: padding + (x - minX) * scale,
+    y: padding + (y - minY) * scale
+  });
+  const route = item.centerline.map((value, index) => {
+    const mapped = point(value);
+    return `${index ? 'L' : 'M'}${mapped.x.toFixed(1)} ${mapped.y.toFixed(1)}`;
+  }).join(' ');
+  const start = point(item.start);
+  const hole = point(item.hole);
+  const obstacles = (item.obstacles || []).slice(0, 5).map((obstacle) => {
+    const mapped = point(obstacle);
+    const radius = Math.max(1.8, Math.min(4.2, obstacle.r * scale * .24));
+    return `<circle class="map-obstacle" cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="${radius.toFixed(1)}"/>`;
+  }).join('');
+  return `<svg class="hole-map" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
 }
 
 function renderHoleShelf() {
@@ -198,7 +243,7 @@ function renderHoleShelf() {
     button.dataset.index = String(index);
     if (save.best[index] === 1) button.classList.add('is-perfect');
     const best = save.best[index];
-    button.innerHTML = `<span class="plant"></span><span class="label"><b>${item.id}. ${item.name}</b><small>${button.disabled ? 'Закрыто' : best == null ? `пар ${item.par}` : `лучшее ${best} · пар ${item.par}`}</small></span>`;
+    button.innerHTML = `${holeMapMarkup(item)}<span class="label"><b>${item.id}. ${item.name}</b><small>${button.disabled ? 'Закрыто' : best == null ? `пар ${item.par}` : `лучшее ${best} · пар ${item.par}`}</small></span>`;
     button.addEventListener('click', () => {
       if (button.disabled) return;
       audio.ui();
@@ -215,56 +260,161 @@ function resetBall(to = level.start) {
   syncHeader();
 }
 
-function preparePlayingLevel() {
+function saveActiveCheckpoint() {
+  if (!['playing', 'paused'].includes(mode)) return;
+  const stable = isBallStopped(ball) && !ball.sunk && waterResetTimer <= 0;
+  const point = stable ? { x: ball.x, y: ball.y } : { ...lastSafe };
+  if (roundActive && !endlessActive && levelIndex >= 0) {
+    save.campaignRun = checkpointCampaignRun(save.campaignRun, LEVELS.length, levelIndex, strokes, point, lastSafe);
+    save.current = levelIndex;
+  } else if (endlessActive) {
+    save.endlessRun = checkpointEndlessRun(save.endlessRun, strokes, point, lastSafe);
+  } else {
+    return;
+  }
+  persist();
+}
+
+function preparePlayingLevel({ checkpoint = null, checkpointStrokes = 0 } = {}) {
   strokes = 0;
   finishTimer = 0;
   endlessResult = null;
   livingTerrain.cancelOverview();
   resetBall(level.start);
+  if (checkpoint && Number.isFinite(checkpoint.x) && Number.isFinite(checkpoint.y)) {
+    resetBall({ x: checkpoint.x, y: checkpoint.y });
+    lastSafe = {
+      x: Number.isFinite(checkpoint.safeX) ? checkpoint.safeX : checkpoint.x,
+      y: Number.isFinite(checkpoint.safeY) ? checkpoint.safeY : checkpoint.y
+    };
+    strokes = Math.max(0, Math.trunc(Number(checkpointStrokes) || 0));
+  }
   setMode('playing');
   livingTerrain.beginLevel();
   syncHeader();
   showSurface(level.note);
 }
 
-function startHole(index, { round = false, preserveRound = false } = {}) {
+function startHole(index, { round = false, preserveRound = false, checkpoint = null, checkpointStrokes = 0 } = {}) {
   endlessActive = false;
   levelIndex = Math.max(0, Math.min(LEVELS.length - 1, index));
-  level = getLevel(levelIndex);
+  level = compileCourse19(getLevel(levelIndex));
   if (round && !preserveRound) {
     roundActive = true;
     roundStrokes = [];
+    roundStartHole = levelIndex;
   } else if (!round) {
     roundActive = false;
     roundStrokes = [];
   }
-  save.current = levelIndex;
-  persist();
-  preparePlayingLevel();
+  preparePlayingLevel({ checkpoint, checkpointStrokes });
 }
 
-function ensureEndlessRun(fresh = false) {
+function startCampaign({ fresh = false } = {}) {
+  let run = fresh ? null : normalizeCampaignRun(save.campaignRun, LEVELS.length);
+  if (!run) run = createCampaignRun(fresh ? 0 : Math.min(save.current, save.unlocked - 1), LEVELS.length);
+  save.campaignRun = run;
+  save.current = run.current;
+  roundActive = true;
+  roundStartHole = run.startHole;
+  roundStrokes = [...run.strokes];
+  persist();
+  startHole(run.current, {
+    round: true,
+    preserveRound: true,
+    checkpoint: run.checkpoint,
+    checkpointStrokes: run.currentStrokes
+  });
+}
+
+function ensureEndlessRun(fresh = false, requestedSeed = null) {
   let run = fresh ? null : normalizeEndlessRun(save.endlessRun);
   if (!run) {
-    run = { seed: createRunSeed(), depth: 0, totalStrokes: 0, startedAt: Date.now() };
+    run = { seed: requestedSeed || createRunSeed(), depth: 0, totalStrokes: 0, currentStrokes: 0, checkpoint: null, startedAt: Date.now() };
     save.endlessRun = run;
     persist();
   }
   return run;
 }
 
-function startEndless({ fresh = false } = {}) {
-  const run = ensureEndlessRun(fresh);
+function startEndless({ fresh = false, seed = null } = {}) {
+  const run = ensureEndlessRun(fresh, seed);
   endlessActive = true;
   roundActive = false;
   roundStrokes = [];
   levelIndex = -1;
-  level = generateEndlessLevel(run.seed, run.depth);
-  preparePlayingLevel();
+  level = compileCourse19(generateEndlessLevel(run.seed, run.depth));
+  preparePlayingLevel({ checkpoint: run.checkpoint, checkpointStrokes: run.currentStrokes });
+}
+
+function openCodeScreen() {
+  const run = normalizeEndlessRun(save.endlessRun);
+  $('runCodeInput').value = run ? formatRunCode(run.seed) : '';
+  $('codeError').textContent = '';
+  setMode('code');
+}
+
+function startCodeRoute() {
+  const seed = parseRunCode($('runCodeInput').value);
+  if (!seed) {
+    $('codeError').textContent = 'Нужны от одного до семи латинских букв или цифр.';
+    vibrate(7);
+    return;
+  }
+  const launch = () => {
+    $('codeError').textContent = '';
+    startEndless({ fresh: true, seed });
+    showToast(`Маршрут ${formatRunCode(seed)}`);
+  };
+  const current = normalizeEndlessRun(save.endlessRun);
+  if (current && (current.seed !== seed || current.depth > 0 || current.totalStrokes > 0)) {
+    requestConfirmation({
+      eyebrow: 'Смена маршрута',
+      title: `Открыть ${formatRunCode(seed)}?`,
+      detail: `Текущий путь ${formatRunCode(current.seed)} останется в рекордах, но продолжить его уже не получится.`,
+      acceptLabel: 'Открыть новый код',
+      returnMode: 'code',
+      action: launch
+    });
+    return;
+  }
+  launch();
+}
+
+async function shareRunCode() {
+  const seed = parseRunCode($('runCodeInput').value) || normalizeEndlessRun(save.endlessRun)?.seed;
+  if (!seed) {
+    $('codeError').textContent = 'Сначала введи код маршрута.';
+    return;
+  }
+  const code = formatRunCode(seed);
+  const text = `Moss & Marble · маршрут ${code}`;
+  try {
+    if (navigator.share) await navigator.share({ title: 'Moss & Marble', text });
+    else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+    else {
+      const input = $('runCodeInput');
+      input.value = code;
+      input.select();
+      document.execCommand('copy');
+      input.setSelectionRange(code.length, code.length);
+    }
+    showToast(navigator.share ? 'Код готов к отправке' : `Код ${code} скопирован`);
+  } catch (error) {
+    if (error?.name !== 'AbortError') $('codeError').textContent = `Код маршрута: ${code}`;
+  }
 }
 
 function restartHole() {
   audio.ui();
+  if (roundActive && !endlessActive) {
+    save.campaignRun = checkpointCampaignRun(save.campaignRun, LEVELS.length, levelIndex, 0, null);
+    save.current = levelIndex;
+    persist();
+  } else if (endlessActive) {
+    save.endlessRun = checkpointEndlessRun(save.endlessRun, 0, null);
+    persist();
+  }
   preparePlayingLevel();
   showSurface(endlessActive ? `Секция ${level.section} начата заново` : 'Лунка начата заново');
 }
@@ -276,6 +426,8 @@ function retryResult() {
       seed: endlessResult.seed,
       depth: endlessResult.depth,
       totalStrokes: endlessResult.totalBefore,
+      currentStrokes: 0,
+      checkpoint: null,
       startedAt: endlessResult.startedAt
     };
     persist();
@@ -286,17 +438,20 @@ function retryResult() {
 }
 
 function openMenu() {
+  saveActiveCheckpoint();
   setMode('menu');
   syncMenu();
 }
 
 function pauseGame() {
   if (mode !== 'playing') return;
+  saveActiveCheckpoint();
   audio.ui();
   setMode('paused');
 }
 
-function resumeGame() {
+async function resumeGame() {
+  await audio.unlock();
   audio.ui();
   setMode('playing');
 }
@@ -322,6 +477,7 @@ function beginAim(event) {
   aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
+  syncAimMeter();
   try { canvas.setPointerCapture(event.pointerId); } catch {}
 }
 
@@ -344,6 +500,21 @@ function moveAim(event) {
   aim.power = shaped;
   aim.vx = unitX * shaped * 1780;
   aim.vy = unitY * shaped * 1780;
+  syncAimMeter();
+}
+
+function takeShot() {
+  if (aim.power > .055) {
+    livingTerrain.cancelOverview();
+    strikeBall(ball, aim.vx, aim.vy);
+    strokes += 1;
+    save.hasAimed = true;
+    lastSafe = { x: ball.x, y: ball.y };
+    saveActiveCheckpoint();
+    audio.strike(aim.power);
+    vibrate(aim.power > .72 ? 18 : 10);
+    renderer.emit(ball.x, ball.y, 'dust', 7);
+  }
 }
 
 function finishAim(event, cancelled = false) {
@@ -351,18 +522,15 @@ function finishAim(event, cancelled = false) {
   if (event.cancelable) event.preventDefault();
   const pointerId = aim.pointerId;
   try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
-  if (!cancelled && aim.power > .055) {
-    livingTerrain.cancelOverview();
-    strikeBall(ball, aim.vx, aim.vy);
-    strokes += 1;
-    save.hasAimed = true;
-    lastSafe = { x: ball.x, y: ball.y };
-    audio.strike(aim.power);
-    vibrate(aim.power > .72 ? 18 : 10);
-    renderer.emit(ball.x, ball.y, 'dust', 7);
-  }
+  if (!cancelled) takeShot();
   cancelAim();
   syncHeader();
+}
+
+function syncAimMeter() {
+  const meter = $('powerGauge');
+  if (meter) meter.style.setProperty('--aim-power', String(Math.max(0, Math.min(1, aim.power))));
+  document.body.dataset.aiming = String(aim.active);
 }
 
 function cancelAim() {
@@ -371,6 +539,7 @@ function cancelAim() {
   aim.vx = 0;
   aim.vy = 0;
   aim.power = 0;
+  syncAimMeter();
 }
 
 function handlePhysicsEvent(event) {
@@ -379,15 +548,22 @@ function handlePhysicsEvent(event) {
     if (event.speed > 520) vibrate(8);
   } else if (event.type === 'water' && waterResetTimer <= 0) {
     waterResetTimer = .85;
+    strokes += 1;
     audio.water();
     vibrate([12, 32, 12]);
     renderer.emit(ball.x, ball.y, 'water', 18);
-    showSurface('Мяч ушёл ниже кромки воды');
+    showSurface('Вода · один штрафной удар');
+    syncHeader();
+    saveActiveCheckpoint();
   } else if (event.type === 'tunnel') {
     audio.tunnel();
     vibrate(12);
     renderer.emit(ball.x, ball.y, 'dust', 10);
     showSurface('Тихий туннель');
+  } else if (event.type === 'tunnel-blocked') {
+    audio.collision('stone', Math.max(90, event.speed));
+    vibrate(7);
+    showSurface('Туннелю не хватило разгона');
   } else if (event.type === 'jump') {
     audio.collision('wood', Math.min(420, event.speed * .34));
     vibrate(8);
@@ -410,6 +586,7 @@ function handlePhysicsEvent(event) {
     renderer.emit(level.hole.x, level.hole.y, 'cup', strokes === 1 ? 30 : 18);
   } else if (event.type === 'stopped') {
     lastSafe = { x: ball.x, y: ball.y };
+    saveActiveCheckpoint();
   }
 }
 
@@ -426,6 +603,7 @@ function setResultCopy(eyebrow, title, detail, isRecord = false) {
   $('resultEyebrow').textContent = eyebrow;
   $('resultTitle').textContent = title;
   $('resultStrokes').textContent = String(strokes);
+  $('resultStrokeWord').textContent = strokeWord(strokes);
   $('resultDetail').textContent = isRecord ? `${detail} Новый лучший результат.` : detail;
 }
 
@@ -435,7 +613,7 @@ function finishEndlessSection() {
   const completedSections = run.depth + 1;
   const totalStrokes = totalBefore + strokes;
   endlessResult = { seed: run.seed, depth: run.depth, strokes, totalBefore, startedAt: run.startedAt };
-  save.endlessRun = { ...run, depth: completedSections, totalStrokes };
+  save.endlessRun = { ...run, depth: completedSections, totalStrokes, currentStrokes: 0, checkpoint: null };
   const isDepthRecord = completedSections > save.endlessBest;
   const isScoreRecord = completedSections === save.endlessBest && (!Number.isFinite(save.endlessBestStrokes) || totalStrokes < save.endlessBestStrokes);
   if (isDepthRecord || isScoreRecord) {
@@ -466,30 +644,51 @@ function finishHole() {
   const previous = save.best[levelIndex];
   if (previous == null || strokes < previous) save.best[levelIndex] = strokes;
   if (levelIndex + 1 < LEVELS.length) save.unlocked = Math.max(save.unlocked, levelIndex + 2);
-  save.current = Math.min(LEVELS.length - 1, levelIndex + 1);
-  persist();
-
-  if (roundActive) roundStrokes[levelIndex] = strokes;
+  let completedRun = null;
+  if (roundActive) {
+    roundStrokes[levelIndex] = strokes;
+    completedRun = recordCampaignHole(save.campaignRun, LEVELS.length, levelIndex, strokes);
+    roundStartHole = completedRun.startHole;
+    if (levelIndex < LEVELS.length - 1) {
+      save.campaignRun = completedRun;
+      save.current = completedRun.current;
+    }
+  }
   const delta = strokes - level.par;
   const [title, detail] = resultCopy(delta, strokes);
   setResultCopy(`${level.id}. ${level.name}`, title, detail, previous == null || strokes < previous);
 
   if (levelIndex === LEVELS.length - 1 && roundActive) {
-    const total = roundStrokes.reduce((sum, value) => sum + (value || 0), 0);
-    if (save.roundBest == null || total < save.roundBest) save.roundBest = total;
+    const fullTotal = fullCampaignTotal(completedRun, LEVELS.length);
+    const segmentTotal = campaignSegmentTotal(completedRun, LEVELS.length);
+    const total = fullTotal ?? segmentTotal;
+    if (fullTotal != null && (save.roundBest == null || fullTotal < save.roundBest)) save.roundBest = fullTotal;
+    save.campaignRun = null;
+    save.current = 0;
     persist();
     $('finishStrokes').textContent = String(total);
-    const par = LEVELS.reduce((sum, item) => sum + item.par, 0);
-    const courseDelta = total - par;
-    $('finishDetail').textContent = courseDelta < 0
-      ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.`
-      : courseDelta === 0
-        ? 'Точно общий пар. Очень аккуратная прогулка.'
-        : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
+    $('finishStrokeWord').textContent = strokeWord(total);
+    if (fullTotal == null) {
+      $('finishEyebrow').textContent = 'Прогулка завершена';
+      $('finishTitle').textContent = 'Финальная лунка';
+      $('finishDetail').textContent = `${total} ${strokeWord(total)} с лунки ${roundStartHole + 1}. Полный круг начнётся с первой лунки.`;
+    } else {
+      $('finishEyebrow').textContent = 'Круг завершён';
+      $('finishTitle').textContent = 'Садовые маршруты';
+      const par = LEVELS.reduce((sum, item) => sum + item.par, 0);
+      const courseDelta = fullTotal - par;
+      $('finishDetail').textContent = courseDelta < 0
+        ? `${Math.abs(courseDelta)} ниже общего пара. Оранжерея запомнила этот круг.`
+        : courseDelta === 0
+          ? 'Точно общий пар. Очень аккуратная прогулка.'
+          : `${courseDelta} выше общего пара. В следующий раз растения будут менее самоуверенны.`;
+    }
     setMode('finish');
     syncMenu();
     return;
   }
+
+  persist();
 
   $('nextBtn').querySelector('span').textContent = 'Следующая лунка';
   $('retryBtn').hidden = false;
@@ -550,6 +749,43 @@ function toggleOverview() {
   syncOverviewControl();
 }
 
+function canAimNow() {
+  return mode === 'playing' && !livingTerrain.isOverview() && isBallStopped(ball) && !ball.sunk && waterResetTimer <= 0;
+}
+
+function updateKeyboardAim() {
+  const power = Math.max(.08, Math.min(1, aim.power || .34));
+  aim.active = true;
+  aim.pointerId = 'keyboard';
+  aim.power = power;
+  aim.vx = Math.cos(keyboardAngle) * power * 1780;
+  aim.vy = Math.sin(keyboardAngle) * power * 1780;
+  syncAimMeter();
+}
+
+function handleKeyboardAim(event) {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return false;
+  const key = event.key;
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(key)) return false;
+  if (!canAimNow() && aim.pointerId !== 'keyboard') return false;
+  event.preventDefault();
+  if (aim.pointerId !== 'keyboard') {
+    keyboardAngle = Math.atan2(level.hole.y - ball.y, level.hole.x - ball.x);
+    aim.power = .34;
+  }
+  if (key === 'ArrowLeft') keyboardAngle -= .075;
+  if (key === 'ArrowRight') keyboardAngle += .075;
+  if (key === 'ArrowUp') aim.power = Math.min(1, (aim.power || .34) + .055);
+  if (key === 'ArrowDown') aim.power = Math.max(.08, (aim.power || .34) - .055);
+  updateKeyboardAim();
+  if (key === ' ' || key === 'Enter') {
+    takeShot();
+    cancelAim();
+    syncHeader();
+  }
+  return true;
+}
+
 function bindControls() {
   canvas.addEventListener('pointerdown', beginAim, { passive: false });
   canvas.addEventListener('pointermove', moveAim, { passive: false });
@@ -560,7 +796,7 @@ function bindControls() {
   $('continueBtn').addEventListener('click', async () => {
     await audio.unlock();
     audio.ui();
-    startHole(Math.min(save.current, save.unlocked - 1), { round: true });
+    startCampaign();
   });
   $('endlessBtn').addEventListener('click', async () => {
     await audio.unlock();
@@ -570,9 +806,36 @@ function bindControls() {
   $('newEndlessBtn').addEventListener('click', async () => {
     await audio.unlock();
     audio.ui();
-    startEndless({ fresh: true });
-    showToast(`Новый код · ${formatRunCode(save.endlessRun.seed)}`);
+    const current = normalizeEndlessRun(save.endlessRun);
+    requestConfirmation({
+      eyebrow: 'Новый бесконечный путь',
+      title: 'Заменить текущий маршрут?',
+      detail: current ? `Путь ${formatRunCode(current.seed)} останется в рекордах, но его текущая секция будет потеряна.` : 'Оранжерея вырастит новый маршрут с другим кодом.',
+      acceptLabel: 'Вырастить новый путь',
+      returnMode: 'menu',
+      action: () => {
+        startEndless({ fresh: true });
+        showToast(`Новый код · ${formatRunCode(save.endlessRun.seed)}`);
+      }
+    });
   });
+  $('codeBtn').addEventListener('click', async () => { await audio.unlock(); audio.ui(); openCodeScreen(); });
+  $('startCodeBtn').addEventListener('click', startCodeRoute);
+  $('shareCodeBtn').addEventListener('click', shareRunCode);
+  $('runCodeInput').addEventListener('input', (event) => {
+    const cleaned = event.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 7);
+    if (event.target.value !== cleaned) event.target.value = cleaned;
+    $('codeError').textContent = '';
+  });
+  $('runCodeInput').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); startCodeRoute(); }
+  });
+  $('confirmAcceptBtn').addEventListener('click', async () => {
+    const action = confirmationAction;
+    confirmationAction = null;
+    if (action) await action();
+  });
+  $('confirmCancelBtn').addEventListener('click', () => { audio.ui(); closeConfirmation(); });
   $('holesBtn').addEventListener('click', async () => { await audio.unlock(); audio.ui(); setMode('holes'); renderHoleShelf(); });
   document.querySelectorAll('[data-close-screen]').forEach((button) => button.addEventListener('click', () => { audio.ui(); openMenu(); }));
   $('pauseBtn').addEventListener('click', pauseGame);
@@ -583,7 +846,7 @@ function bindControls() {
   $('retryBtn').addEventListener('click', retryResult);
   $('resultMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
   $('finishMenuBtn').addEventListener('click', () => { audio.ui(); openMenu(); });
-  $('againBtn').addEventListener('click', () => { audio.ui(); startHole(0, { round: true }); });
+  $('againBtn').addEventListener('click', () => { audio.ui(); startCampaign({ fresh: true }); });
   $('nextBtn').addEventListener('click', () => {
     audio.ui();
     if (endlessActive) startEndless();
@@ -604,26 +867,37 @@ function bindControls() {
     syncHeader();
   });
   $('tiltBtn').addEventListener('click', enableTilt);
-  ['menuHomeLink', 'holesHomeLink', 'pauseHomeLink', 'resultHomeLink', 'finishHomeLink'].forEach((id) => $(id).addEventListener('click', exitToShelf));
+  ['menuHomeLink', 'codeHomeLink', 'holesHomeLink', 'pauseHomeLink', 'resultHomeLink', 'finishHomeLink'].forEach((id) => $(id).addEventListener('click', exitToShelf));
 
   window.addEventListener('resize', () => renderer.resize(), { passive: true });
   window.addEventListener('orientationchange', () => window.setTimeout(() => renderer.resize(), 180), { passive: true });
+  window.addEventListener('moss-marble:webgl-lost', () => {
+    saveActiveCheckpoint();
+    cancelAim();
+    audio.suspend();
+    persist();
+  });
   window.addEventListener('keydown', (event) => {
+    if (handleKeyboardAim(event)) return;
     if (event.key === 'Escape') {
-      if (mode === 'playing') pauseGame();
+      if (aim.pointerId === 'keyboard') cancelAim();
+      else if (mode === 'playing') pauseGame();
       else if (mode === 'paused') resumeGame();
+      else if (mode === 'code' || mode === 'holes') openMenu();
+      else if (mode === 'confirm') closeConfirmation();
     }
     if (event.key.toLowerCase() === 'v') toggleOverview();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       pausedBeforeHidden = mode === 'playing';
+      saveActiveCheckpoint();
       if (pausedBeforeHidden) setMode('paused');
       audio.suspend();
       persist();
     }
   });
-  window.addEventListener('pagehide', persist, { capture: true });
+  window.addEventListener('pagehide', () => { saveActiveCheckpoint(); persist(); }, { capture: true });
 }
 
 function previewMotion(time) {
@@ -643,7 +917,10 @@ function frame(now) {
   if (mode === 'playing') {
     if (waterResetTimer > 0) {
       waterResetTimer -= dt;
-      if (waterResetTimer <= 0) resetBall(lastSafe);
+      if (waterResetTimer <= 0) {
+        resetBall(lastSafe);
+        saveActiveCheckpoint();
+      }
     } else if (!ball.sunk) {
       const events = stepBall(ball, level, dt, elapsed);
       events.forEach(handlePhysicsEvent);
@@ -658,8 +935,15 @@ function frame(now) {
     previewMotion(elapsed);
   }
 
-  document.body.dataset.ballMoving = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
-  const renderMode = mode === 'menu' || mode === 'holes' ? 'menu' : 'playing';
+  audio.rollTick(ball, mode === 'playing' && waterResetTimer <= 0);
+
+  const movingState = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
+  if (movingState !== lastBallMovingState) {
+    lastBallMovingState = movingState;
+    document.body.dataset.ballMoving = movingState;
+    overviewUiKey = '';
+  }
+  const renderMode = ['menu', 'holes', 'code', 'confirm'].includes(mode) ? 'menu' : 'playing';
   renderer.draw(level, ball, aim, elapsed, dt, renderMode);
   livingTerrain.draw(level, ball, elapsed, renderMode);
   syncOverviewControl();
@@ -714,6 +998,8 @@ window.__MOSS_MARBLE__ = {
       strokes += 1;
       livingTerrain.cancelOverview();
       strikeBall(ball, vx, vy);
+      lastSafe = { x: ball.x, y: ball.y };
+      saveActiveCheckpoint();
       syncHeader();
     }
   },

@@ -685,6 +685,7 @@ class WebGLDiorama {
     this.particles = [];
     this.spin = [0, 0, 0];
     this.debugHitboxes = localStorage.getItem('pocket-works:moss-marble:hitboxes') === '1';
+    this.contextLost = false;
     this.overlay = this.createOverlay();
     this.overlayCtx = this.overlay.getContext('2d');
     this.rain = Array.from({ length: 38 }, (_, index) => ({
@@ -708,6 +709,15 @@ class WebGLDiorama {
     gl.depthFunc(gl.LEQUAL);
     gl.disable(gl.CULL_FACE);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      this.contextLost = true;
+      window.dispatchEvent(new CustomEvent('moss-marble:webgl-lost'));
+      this.drawContextLost();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      window.setTimeout(() => window.location.reload(), 120);
+    });
     canvas.style.background = [
       'radial-gradient(circle at 72% 8%, rgba(231,220,151,.24), transparent 34%)',
       'repeating-linear-gradient(90deg, transparent 0 calc(25% - 5px), rgba(6,18,12,.26) calc(25% - 4px) 25%)',
@@ -776,7 +786,21 @@ class WebGLDiorama {
       this.overlay.height = pixelHeight;
     }
     this.overlayCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.gl.viewport(0, 0, pixelWidth, pixelHeight);
+    if (!this.contextLost) this.gl.viewport(0, 0, pixelWidth, pixelHeight);
+  }
+
+  drawContextLost() {
+    const ctx = this.overlayCtx;
+    ctx.clearRect(0, 0, this.width, this.height);
+    ctx.fillStyle = 'rgba(9,22,15,.82)';
+    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.fillStyle = '#eee9d4';
+    ctx.textAlign = 'center';
+    ctx.font = '600 22px "Iowan Old Style", Georgia, serif';
+    ctx.fillText('Оранжерея восстанавливает свет', this.width * .5, this.height * .5 - 8);
+    ctx.fillStyle = 'rgba(238,233,212,.68)';
+    ctx.font = '700 10px "Avenir Next", sans-serif';
+    ctx.fillText('ПРОГРЕСС СОХРАНЁН', this.width * .5, this.height * .5 + 20);
   }
 
   setParallax(x, y) {
@@ -1077,6 +1101,10 @@ class WebGLDiorama {
   }
 
   draw(level, ball, aim, time, dt, mode) {
+    if (this.contextLost) {
+      this.drawContextLost();
+      return;
+    }
     this.lastLevel = level;
     this.resize();
     this.fit(level, ball, dt);
@@ -1122,21 +1150,141 @@ class CanvasFallback {
   worldToScreen(x, y, z = 0) { return { x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale * .82 - z * this.scale }; }
   ballScreenPoint(ball) { return this.worldToScreen(ball.x, ball.y, BALL_RADIUS); }
   emit(x, y, type, amount = 8) { for (let i = 0; i < amount; i += 1) this.particles.push({ x, y, type, life: 1 }); }
-  draw(level, ball, aim) {
+  pathEllipse(feature, scale = 1, segments = 32) {
+    const ctx = this.ctx;
+    const cos = Number.isFinite(feature.cos) ? feature.cos : Math.cos(feature.angle || 0);
+    const sin = Number.isFinite(feature.sin) ? feature.sin : Math.sin(feature.angle || 0);
+    const rx = Math.max(1, Number(feature.length || feature.w || feature.r * 2 || 40) * .5 * scale);
+    const ry = Math.max(1, Number(feature.width || feature.h || feature.r * 2 || 40) * .5 * scale);
+    ctx.beginPath();
+    for (let index = 0; index <= segments; index += 1) {
+      const angle = index / segments * TAU;
+      const localX = Math.cos(angle) * rx;
+      const localY = Math.sin(angle) * ry;
+      const point = this.worldToScreen(feature.x + localX * cos - localY * sin, feature.y + localX * sin + localY * cos, .4);
+      if (index) ctx.lineTo(point.x, point.y); else ctx.moveTo(point.x, point.y);
+    }
+    ctx.closePath();
+  }
+  drawSurface(feature) {
+    const ctx = this.ctx;
+    const palette = {
+      water: ['rgba(35,104,104,.92)', 'rgba(173,225,212,.34)'],
+      sand: ['#b99754', 'rgba(246,220,159,.48)'],
+      moss: ['#315f3a', 'rgba(144,181,102,.36)']
+    };
+    const colors = palette[feature.type];
+    if (!colors) return;
+    ctx.save();
+    if (feature.a && feature.b) {
+      const a = this.worldToScreen(feature.a.x, feature.a.y, .4);
+      const b = this.worldToScreen(feature.b.x, feature.b.y, .4);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(4, feature.width * this.scale * .82);
+      ctx.strokeStyle = colors[0];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.lineWidth = Math.max(1, feature.width * this.scale * .05);
+      ctx.strokeStyle = colors[1];
+      ctx.stroke();
+    } else {
+      this.pathEllipse(feature, .92);
+      ctx.fillStyle = colors[0];
+      ctx.fill();
+      ctx.strokeStyle = colors[1];
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  drawLandform(feature) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = feature.kind === 'depression' ? 'rgba(225,210,151,.24)' : 'rgba(229,232,178,.30)';
+    ctx.lineWidth = .8;
+    if (feature.a && feature.b) {
+      const a = this.worldToScreen(feature.a.x, feature.a.y, 1);
+      const b = this.worldToScreen(feature.b.x, feature.b.y, 1);
+      ctx.lineWidth = Math.max(2, feature.width * this.scale * .07);
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    } else {
+      for (const scale of [.38, .62, .82]) {
+        this.pathEllipse(feature, scale);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  drawBarrier(wall) {
+    const ctx = this.ctx;
+    const a = this.worldToScreen(wall.ax, wall.ay, 1);
+    const b = this.worldToScreen(wall.bx, wall.by, 1);
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(3, Number(wall.thickness || 18) * this.scale);
+    ctx.strokeStyle = wall.material === 'brass' ? '#a78448' : wall.material === 'stone' ? '#6f7165' : wall.material === 'glass' ? 'rgba(186,216,204,.72)' : '#604329';
+    ctx.beginPath(); ctx.moveTo(a.x + 2, a.y + 4); ctx.lineTo(b.x + 2, b.y + 4); ctx.stroke();
+    ctx.lineWidth *= .52;
+    ctx.strokeStyle = wall.material === 'stone' ? '#aaa993' : wall.material === 'glass' ? 'rgba(222,241,231,.82)' : '#a47b46';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.restore();
+  }
+  drawPortal(endpoint, isEntry) {
+    const ctx = this.ctx;
+    const center = this.worldToScreen(endpoint.x, endpoint.y, 1);
+    const radius = endpoint.r * this.scale;
+    ctx.save();
+    ctx.strokeStyle = '#aaa993';
+    ctx.lineWidth = Math.max(3, radius * .24);
+    ctx.beginPath(); ctx.ellipse(center.x, center.y, radius, radius * .82, 0, Math.PI, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(10,18,14,.78)';
+    ctx.beginPath(); ctx.ellipse(center.x, center.y + radius * .05, radius * .72, radius * .52, 0, 0, TAU); ctx.fill();
+    const marker = this.worldToScreen(endpoint.x + endpoint.axisX * endpoint.r * .75, endpoint.y + endpoint.axisY * endpoint.r * .75, 2);
+    ctx.strokeStyle = isEntry ? '#d5ba6e' : '#9ab9aa';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(marker.x, marker.y); ctx.stroke();
+    ctx.restore();
+  }
+  drawProp(obstacle) {
+    const ctx = this.ctx;
+    const parts = obstacle.parts?.length ? obstacle.parts : [{ x: 0, y: 0, r: obstacle.r }];
+    for (const part of parts) {
+      const x = obstacle.x + Number(part.x || 0);
+      const y = obstacle.y + Number(part.y || 0);
+      const radius = Number(part.r || obstacle.r);
+      const p = this.worldToScreen(x, y, radius * .5);
+      const r = radius * this.scale;
+      ctx.fillStyle = 'rgba(3,10,6,.34)'; ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 8, r, r * .5, 0, 0, TAU); ctx.fill();
+      const rock = ctx.createRadialGradient(p.x - r * .3, p.y - r * .4, 0, p.x, p.y, r);
+      rock.addColorStop(0, obstacle.material === 'wood' ? '#ad8350' : '#b8b59d');
+      rock.addColorStop(1, obstacle.material === 'wood' ? '#4e3925' : '#596158');
+      ctx.fillStyle = rock;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y - r * .35, r, r * .8, 0, 0, TAU); ctx.fill();
+    }
+  }
+  draw(level, ball, aim, time = 0) {
     this.resize(); this.fit(level);
     const ctx = this.ctx;
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
     gradient.addColorStop(0, '#30463b'); gradient.addColorStop(1, '#101d17');
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
-    ctx.fillStyle = '#6f8658'; ctx.fill();
-    for (const obstacle of level.obstacles || []) {
-      const p = this.worldToScreen(obstacle.x, obstacle.y, obstacle.r * .5);
-      const r = obstacle.r * this.scale;
-      ctx.fillStyle = '#4a574c'; ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 8, r, r * .5, 0, 0, TAU); ctx.fill();
-      const rock = ctx.createRadialGradient(p.x - r * .3, p.y - r * .4, 0, p.x, p.y, r);
-      rock.addColorStop(0, '#b1af96'); rock.addColorStop(1, '#596158'); ctx.fillStyle = rock;
-      ctx.beginPath(); ctx.ellipse(p.x, p.y - r * .35, r, r * .8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#78945e'; ctx.fill();
+    ctx.strokeStyle = 'rgba(230,222,178,.42)'; ctx.lineWidth = 2; ctx.stroke();
+    const field = level.course18?.field;
+    for (const mask of field?.masks || []) this.drawSurface(mask);
+    for (const landform of field?.landforms || []) this.drawLandform(landform);
+    for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall);
+    for (const tunnel of level.course18?.tunnelVisuals || []) {
+      if (tunnel.entry) this.drawPortal(tunnel.entry, true);
+      if (tunnel.exit) this.drawPortal(tunnel.exit, false);
+    }
+    for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle);
+    for (const rotor of level.rotors || []) {
+      const angle = rotor.angle + time * rotor.speed;
+      const halfX = Math.cos(angle) * rotor.length * .5;
+      const halfY = Math.sin(angle) * rotor.length * .5;
+      this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, material: rotor.material });
     }
     const hole = this.worldToScreen(level.hole.x, level.hole.y, .5);
     const hr = level.hole.r * this.scale;
@@ -1147,7 +1295,13 @@ class CanvasFallback {
     const sphere = ctx.createRadialGradient(bp.x - br * .35, bp.y - br * .45, br * .08, bp.x, bp.y, br);
     sphere.addColorStop(0, '#f5fff8'); sphere.addColorStop(.35, '#a7d1c0'); sphere.addColorStop(1, '#315448');
     ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(bp.x, bp.y, br, 0, TAU); ctx.fill();
-    if (aim.active) { ctx.strokeStyle = '#eee9d4'; ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(bp.x + aim.vx * this.scale * .12, bp.y + aim.vy * this.scale * .1); ctx.stroke(); }
+    if (aim.active) {
+      const speed = Math.hypot(aim.vx, aim.vy) || 1;
+      const length = 95 + aim.power * 250;
+      const end = this.worldToScreen(ball.x + aim.vx / speed * length, ball.y + aim.vy / speed * length, 2);
+      ctx.save(); ctx.strokeStyle = '#eee9d4'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
+      ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(end.x, end.y); ctx.stroke(); ctx.restore();
+    }
   }
 }
 

@@ -207,7 +207,9 @@ function addFinalFunnel(blueprint, random, t) {
 }
 
 function buildScenario(random, depth) {
-  const difficulty = clamp(depth, 0, 18);
+  const difficulty = depth <= 18
+    ? Math.max(0, depth)
+    : Math.min(28, 18 + Math.log2(depth - 16) * 2.15);
   const blueprint = { theme: 'procedural-scenario', landforms: [], surfaces: [], barriers: [], props: [], rotors: [], tunnel: null, tags: ['opening'] };
   const side = random() > .5 ? 1 : -1;
 
@@ -247,6 +249,14 @@ export function createRunSeed() {
 
 export function formatRunCode(seed) {
   return normalizeSeed(seed).toString(36).toUpperCase().padStart(7, '0').slice(-7);
+}
+
+export function parseRunCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  if (!/^[0-9A-Z]{1,7}$/.test(code)) return null;
+  const seed = Number.parseInt(code, 36);
+  if (!Number.isSafeInteger(seed) || seed <= 0 || seed > 0xFFFFFFFF) return null;
+  return seed >>> 0;
 }
 
 export function generateEndlessLevel(seed, depth = 0) {

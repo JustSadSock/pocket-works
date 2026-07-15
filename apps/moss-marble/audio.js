@@ -4,6 +4,9 @@ export class AudioGarden {
     this.master = null;
     this.enabled = true;
     this.ambientTimer = 0;
+    this.rollSource = null;
+    this.rollFilter = null;
+    this.rollGain = null;
   }
 
   setEnabled(value) {
@@ -21,8 +24,46 @@ export class AudioGarden {
       this.master = this.context.createGain();
       this.master.gain.value = .42;
       this.master.connect(this.context.destination);
+      this.createRollingBed();
     }
     if (this.context.state === 'suspended') await this.context.resume().catch(() => {});
+  }
+
+  createRollingBed() {
+    if (!this.context || !this.master || this.rollSource) return;
+    const sampleCount = this.context.sampleRate;
+    const buffer = this.context.createBuffer(1, sampleCount, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    let smooth = 0;
+    for (let index = 0; index < sampleCount; index += 1) {
+      smooth = smooth * .72 + (Math.random() * 2 - 1) * .28;
+      data[index] = smooth;
+    }
+    this.rollSource = this.context.createBufferSource();
+    this.rollFilter = this.context.createBiquadFilter();
+    this.rollGain = this.context.createGain();
+    this.rollSource.buffer = buffer;
+    this.rollSource.loop = true;
+    this.rollFilter.type = 'bandpass';
+    this.rollFilter.frequency.value = 420;
+    this.rollFilter.Q.value = .7;
+    this.rollGain.gain.value = 0;
+    this.rollSource.connect(this.rollFilter).connect(this.rollGain).connect(this.master);
+    this.rollSource.start();
+  }
+
+  rollTick(ball, active = true) {
+    if (!this.enabled || !this.context || !this.rollGain || !ball) return;
+    const speed = Math.hypot(ball.vx || 0, ball.vy || 0);
+    const audible = active && !ball.sunk && !ball.inCup && !ball.airborne && ball.waterTime <= 0 && speed > 18;
+    const surface = ball.surface || 'grass';
+    const surfaceGain = surface === 'sand' ? .018 : surface === 'moss' ? .010 : surface === 'bridge' || surface === 'ramp' ? .024 : .014;
+    const targetGain = audible ? Math.min(.034, surfaceGain + speed / 90000) : .0001;
+    const baseFrequency = surface === 'sand' ? 260 : surface === 'moss' ? 330 : surface === 'bridge' || surface === 'ramp' ? 690 : 430;
+    const time = this.context.currentTime;
+    this.rollGain.gain.setTargetAtTime(targetGain, time, audible ? .045 : .08);
+    this.rollFilter.frequency.setTargetAtTime(baseFrequency + Math.min(620, speed * .38), time, .06);
+    this.rollSource.playbackRate.setTargetAtTime(.72 + Math.min(1.35, speed / 850), time, .06);
   }
 
   tone({ frequency = 220, end = frequency, duration = .08, gain = .05, type = 'sine', when = 0 }) {
@@ -98,6 +139,7 @@ export class AudioGarden {
   }
 
   suspend() {
+    if (this.rollGain && this.context) this.rollGain.gain.setTargetAtTime(.0001, this.context.currentTime, .03);
     if (this.context?.state === 'running') this.context.suspend().catch(() => {});
   }
 }

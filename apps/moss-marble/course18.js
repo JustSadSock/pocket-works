@@ -176,7 +176,8 @@ function landformHeight(feature, x, y) {
   if (metric.radius >= 1) return 0;
   const crown = Math.pow(1 - metric.radius, Number(feature.falloff || 1.6));
   const asymmetry = clamp(Number(feature.asymmetry || 0), -.65, .65);
-  const sideFactor = metric.localX >= 0 ? 1 + asymmetry : 1 - asymmetry;
+  const directional = clamp(metric.localX / Math.max(1, feature.length * .22), -1, 1);
+  const sideFactor = 1 + asymmetry * directional;
   const amount = Number(feature.height || 0) * crown * sideFactor;
   return feature.kind === 'depression' ? -Math.abs(amount) : amount;
 }
