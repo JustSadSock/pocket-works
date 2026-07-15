@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#172020">
+  <meta name="description" content="ХРЕБЕТ — процедурный 3D-полёт в вингсьюте по горному разлому.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ХРЕБЕТ">
+  <title>ХРЕБЕТ</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <section class="flight-stage" id="flightStage" data-gesture-surface data-block-callout aria-label="Полёт над горным разломом">
+      <div class="sky-sun" aria-hidden="true"></div>
+      <canvas id="worldCanvas" role="application" aria-label="Трёхмерный горный разлом. Веди пилота пальцем или стрелками."></canvas>
+      <div class="atmosphere" aria-hidden="true"></div>
+      <div class="speed-lines" id="speedLines" aria-hidden="true"></div>
+      <div class="impact-flash" id="impactFlash" aria-hidden="true"></div>
+      <div class="flow-flash" id="flowFlash" aria-hidden="true"></div>
+
+      <div class="loading-state" id="loadingState" data-ui>
+        <div class="loading-mark" aria-hidden="true"><i></i><b></b><i></i></div>
+        <p>СОБИРАЕМ РЕЛЬЕФ</p>
+        <span id="loadingCopy">проверяем направление ветра</span>
+      </div>
+
+      <div class="webgl-fallback" id="webglFallback" data-ui hidden>
+        <p>ПОЛЁТ ОТМЕНЁН</p>
+        <h1>3D-система не запустилась.</h1>
+        <span>ХРЕБТУ нужен браузер с поддержкой WebGL. Обнови страницу или открой игру в Safari / Chrome.</span>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+
+      <header class="flight-header" id="flightHeader" data-ui hidden>
+        <div class="run-identity"><span>ХРЕБЕТ</span><b id="modeLabel">СВОБОДНЫЙ ВЕТЕР</b></div>
+        <div class="distance-readout"><b id="distanceValue">0</b><span>МЕТРОВ</span></div>
+        <button type="button" class="pause-control" id="pauseButton" data-native-press aria-label="Пауза"><i></i><i></i></button>
+      </header>
+
+      <section class="flight-hud" id="flightHud" data-ui hidden>
+        <div class="integrity-block">
+          <span>КРЫЛО</span>
+          <div class="integrity-track"><i id="integrityFill"></i></div>
+          <b id="integrityValue">100</b>
+        </div>
+        <div class="combo-block" id="comboBlock">
+          <span id="comboLabel">ЧИСТЫЙ ВОЗДУХ</span>
+          <b id="comboValue">×1</b>
+          <i id="comboTimer"></i>
+        </div>
+        <div class="score-block"><span>СЧЁТ</span><b id="scoreValue">000000</b></div>
+        <div class="flow-block" id="flowBlock">
+          <span>ПОТОК</span>
+          <div><i id="flowFill"></i></div>
+          <b id="flowValue">0</b>
+        </div>
+      </section>
+
+      <div class="flight-reticle" id="flightReticle" aria-hidden="true"><i></i><b></b><i></i></div>
+      <div class="steer-cursor" id="steerCursor" aria-hidden="true"><i></i></div>
+      <div class="event-callout" id="eventCallout" aria-live="polite" data-ui><b></b><span></span></div>
+
+      <div class="speed-tape" id="speedTape" data-ui hidden>
+        <span>СКОРОСТЬ</span><b id="speedValue">92</b><small>КМ/Ч</small>
+      </div>
+
+      <button type="button" class="dive-control" id="diveButton" data-ui data-native-press hidden>
+        <span class="dive-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
+        <b id="diveLabel">СЛОЖИТЬ</b>
+        <small>УДЕРЖИВАЙ</small>
+      </button>
+
+      <section class="overlay menu-overlay" id="menuOverlay" data-ui>
+        <div class="menu-index"><span>PW / FLIGHT 09</span><b>∞</b></div>
+        <div class="menu-title">
+          <p>ПРОЦЕДУРНЫЙ 3D-ПОЛЁТ</p>
+          <h1>ХРЕБЕТ</h1>
+          <div class="title-cut" aria-hidden="true"></div>
+          <h2>Камню всё равно,<br>насколько красиво ты летел.</h2>
+        </div>
+
+        <div class="launch-console">
+          <div class="record-strip">
+            <span>ЛУЧШАЯ ДАЛЬНОСТЬ <b id="bestDistance">0 м</b></span>
+            <span>ЛУЧШИЙ СЧЁТ <b id="bestScore">0</b></span>
+            <span>ВЫЛЕТОВ <b id="flightCount">0</b></span>
+          </div>
+          <button type="button" class="primary-action" id="startButton" data-native-press>
+            <span>В СВОБОДНЫЙ ВЕТЕР</span><i>случайный маршрут</i><b>→</b>
+          </button>
+          <button type="button" class="daily-action" id="dailyButton" data-native-press>
+            <span><b>МАРШРУТ ДНЯ</b><small id="dailyCode">—</small></span><i>один рельеф для всех попыток</i>
+          </button>
+          <button type="button" class="resume-action" id="resumeButton" data-native-press hidden>
+            <span><b>ПРОДОЛЖИТЬ ПОЛЁТ</b><small id="resumeMeta">сохранённый маршрут</small></span><i>→</i>
+          </button>
+          <div class="menu-actions">
+            <button type="button" id="howButton" data-native-press>Как лететь</button>
+            <button type="button" id="settingsButton" data-native-press>Настройки</button>
+            <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+            <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="overlay briefing-overlay" id="briefingOverlay" data-ui hidden>
+        <div class="briefing-sheet">
+          <header><span>ПЕРЕД ПРЫЖКОМ / 01</span><button type="button" id="briefingClose" data-native-press>Закрыть</button></header>
+          <h2>Лети туда,<br>куда смотришь пальцем.</h2>
+          <div class="briefing-grid">
+            <article><b>01</b><span><strong>ВЕДИ ПО ЭКРАНУ</strong>Влево и вправо — крен. Вверх — набор высоты ценой скорости.</span></article>
+            <article><b>02</b><span><strong>УДЕРЖИВАЙ «СЛОЖИТЬ»</strong>Пилот прижимает крылья, ныряет и резко ускоряется.</span></article>
+            <article><b>03</b><span><strong>РЕЖЬ ВОРОТА И СКАЛЫ</strong>Оранжевые створы и близкие пролёты кормят серию и шкалу потока.</span></article>
+            <article><b>04</b><span><strong>ПОТОК = ПРОРЫВ</strong>Полная шкала на несколько секунд ускоряет время и удваивает добычу очков.</span></article>
+          </div>
+          <button type="button" class="primary-action" id="briefingStart" data-native-press><span>ПРЫГНУТЬ</span><i>понял достаточно</i><b>→</b></button>
+        </div>
+      </section>
+
+      <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
+        <div class="pause-panel">
+          <p>ВЕТЕР ПОСТАВЛЕН НА ПАУЗУ</p>
+          <h2>Передохни.<br>Скалы подождут.</h2>
+          <div class="pause-stats"><span>Дальность <b id="pauseDistance">0 м</b></span><span>Счёт <b id="pauseScore">0</b></span><span>Серия <b id="pauseCombo">×1</b></span></div>
+          <button type="button" class="primary-action" id="continueButton" data-native-press><span>ПРОДОЛЖИТЬ</span><i>вернуться в поток</i><b>→</b></button>
+          <button type="button" class="panel-action" id="pauseRestartButton" data-native-press>Начать этот маршрут заново</button>
+          <button type="button" class="panel-action" id="pauseSettingsButton" data-native-press>Настройки</button>
+          <button type="button" class="panel-action" id="pauseMenuButton" data-native-press>Завершить полёт и выйти в меню</button>
+          <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        </div>
+      </section>
+
+      <section class="overlay panel-overlay result-overlay" id="resultOverlay" data-ui hidden>
+        <div class="result-panel">
+          <p id="resultKicker">КОНТАКТ С РЕЛЬЕФОМ</p>
+          <h2 id="resultTitle">Гора победила.</h2>
+          <div class="result-score"><b id="resultScore">0</b><span>ОЧКОВ</span><i id="newRecord" hidden>НОВЫЙ РЕКОРД</i></div>
+          <div class="result-stats">
+            <span>Дальность <b id="resultDistance">0 м</b></span>
+            <span>Ворота <b id="resultGates">0</b></span>
+            <span>На грани <b id="resultNear">0</b></span>
+            <span>Макс. серия <b id="resultCombo">×1</b></span>
+          </div>
+          <p class="result-note" id="resultNote">В следующий раз можно попробовать не целовать именно эту скалу.</p>
+          <button type="button" class="primary-action" id="againButton" data-native-press><span>ЕЩЁ РАЗ</span><i>тот же маршрут</i><b>→</b></button>
+          <button type="button" class="panel-action" id="resultMenuButton" data-native-press>Другой маршрут</button>
+          <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        </div>
+      </section>
+
+      <section class="settings-layer" id="settingsLayer" data-ui hidden>
+        <button type="button" class="settings-backdrop" id="settingsBackdrop" aria-label="Закрыть настройки"></button>
+        <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <header><div><p>ПАРАМЕТРЫ ПОЛЁТА</p><h2 id="settingsTitle">Настройки</h2></div><button type="button" id="settingsClose" data-native-press>Готово</button></header>
+          <button type="button" class="setting-row" id="soundSetting" data-native-press><span><b>Ветер и сигналы</b><small>Процедурный звук без загруженных файлов</small></span><i>ВКЛ</i></button>
+          <button type="button" class="setting-row" id="hapticSetting" data-native-press><span><b>Вибрация</b><small>Касания ворот и камня, если устройство умеет</small></span><i>ВКЛ</i></button>
+          <button type="button" class="setting-row" id="sensitivitySetting" data-native-press><span><b>Чувствительность</b><small>Насколько резко пилот следует за пальцем</small></span><i>ОБЫЧНАЯ</i></button>
+          <button type="button" class="setting-row" id="effectsSetting" data-native-press><span><b>Воздушные частицы</b><small>Можно убрать на уставшем телефоне</small></span><i>ПОЛНО</i></button>
+          <div class="settings-record"><span>Лучшая дальность <b id="settingsBestDistance">0 м</b></span><span>Лучший счёт <b id="settingsBestScore">0</b></span></div>
+          <button type="button" class="reset-records" id="resetButton" data-native-press>Сбросить рекорды</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ХРЕБЕТ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js?v=1.0.0" type="module"></script>
+</body>
+</html>
