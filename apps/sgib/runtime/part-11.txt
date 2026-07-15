@@ -110,8 +110,8 @@ function render(now) {
   try {
     const deltaSeconds = clamp((frameNow - lastFrameTime) / 1000, 0, 0.05);
     lastFrameTime = frameNow;
-    recoverStaleInteractions(frameNow);
     updateAnimation(frameNow);
+    recoverStaleInteractions(frameNow);
     updateEffects(deltaSeconds);
     resizeCanvas();
     beginLogicalFrame();
