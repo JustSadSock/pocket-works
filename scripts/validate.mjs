@@ -3,7 +3,7 @@ import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
 
 const root = process.cwd();
-const rootRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md', 'netlify.toml'];
+const rootRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md', 'wrangler.jsonc'];
 const appRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md'];
 const errors = [];
 const cacheNames = new Map();
