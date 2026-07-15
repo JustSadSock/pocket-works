@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "prosvet",
+  "name": "ПРОСВЕТ",
+  "shortName": "ПРОСВЕТ",
+  "description": "Кинетическая игра о вращающихся кольцах: совмещай прорези, проваливай импульс к центру и не дай пульсу погаснуть.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-15",
+  "releaseDateTime": "2026-07-15T16:30:00Z",
+  "changelog": [
+    "Добавлен законченный бесконечный игровой цикл с процедурными наборами колец, ускорением сложности и точностными бонусами.",
+    "Реализовано прямое вращение активного кольца пальцем, инерция после броска, визуальная отдача, тихий синтезированный звук и вибрация.",
+    "Сохраняются рекорд, настройки и незавершённый забег; приложение работает офлайн и возвращается в Pocket Works из всех ключевых экранов."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#c85f49",
+  "backgroundColor": "#eee5d3",
+  "themeColor": "#eee5d3",
+  "orientation": "portrait",
+  "cacheName": "prosvet-v1.0.0-p1",
+  "storageNamespace": "pocket-works:prosvet",
+  "tags": ["PWA", "offline", "game", "arcade", "kinetic", "rings", "precision", "procedural", "one-thumb", "canvas", "audio", "haptics", "resume", "workshop"],
+  "order": 86
+}

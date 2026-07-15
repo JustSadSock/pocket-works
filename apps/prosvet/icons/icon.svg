@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ПРОСВЕТ">
+  <rect width="512" height="512" rx="112" fill="#eee5d3"/>
+  <circle cx="256" cy="256" r="172" fill="#263331"/>
+  <path d="M256 84a172 172 0 0 1 149 86l-73 42a88 88 0 0 0-76-44z" fill="#c85f49"/>
+  <circle cx="256" cy="256" r="112" fill="#eee5d3"/>
+  <path d="M256 144a112 112 0 0 1 97 56l-55 32a48 48 0 0 0-42-24z" fill="#2f746c"/>
+  <circle cx="256" cy="256" r="48" fill="#263331"/>
+  <circle cx="256" cy="256" r="14" fill="#e2b34e"/>
+  <path d="M240 28h32v104h-32z" fill="#eee5d3"/>
+  <path d="M226 30h60l-30 46z" fill="#c85f49"/>
+</svg>

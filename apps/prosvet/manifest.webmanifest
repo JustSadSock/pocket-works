@@ -1,0 +1,20 @@
+{
+  "name": "ПРОСВЕТ",
+  "short_name": "ПРОСВЕТ",
+  "description": "Кинетическая игра о вращающихся кольцах: совмещай прорези, проваливай импульс к центру и не дай пульсу погаснуть.",
+  "id": "/apps/prosvet/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eee5d3",
+  "theme_color": "#eee5d3",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
