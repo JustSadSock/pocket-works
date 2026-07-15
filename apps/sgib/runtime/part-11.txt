@@ -137,20 +137,21 @@ function render(now) {
 
 function bindControls() {
   canvas.addEventListener('pointerdown', beginGesture, { passive: false });
-  canvas.addEventListener('pointermove', moveGesture, { passive: false });
-  canvas.addEventListener('pointerup', endGesture, { passive: false });
-  canvas.addEventListener('pointercancel', cancelGesture, { passive: false });
+
+  // Touch and pen input use the window path instead of explicit pointer capture.
+  // This avoids WebKit capture-loss races while keeping the gesture alive if the
+  // finger crosses UI chrome or the canvas boundary.
+  window.addEventListener('pointermove', moveGesture, { capture: true, passive: false });
+  window.addEventListener('pointerup', endGesture, { capture: true, passive: false });
+  window.addEventListener('pointercancel', cancelGesture, { capture: true, passive: false });
+
   canvas.addEventListener('lostpointercapture', (event) => {
-    if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
+    const gesture = state.gesture;
+    if (!gesture || !gesture.captured || gesture.pointerId !== event.pointerId) return;
     if (cancelGesture(event)) {
       showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
     }
   });
-
-  // Safari may release capture before the element-level pointerup handler completes.
-  // Window fallbacks finish or cancel the same gesture; duplicate bubbled events are harmless.
-  window.addEventListener('pointerup', endGesture, { passive: false });
-  window.addEventListener('pointercancel', cancelGesture, { passive: false });
 
   dom.continueBtn.addEventListener('click', () => {
     pressFeedback();
