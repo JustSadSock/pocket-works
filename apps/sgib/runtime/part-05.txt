@@ -20,18 +20,6 @@ function pointerClientPoint(event) {
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
 }
 
-function pointerScreenPoint(event) {
-  const x = Number(event.screenX);
-  const y = Number(event.screenY);
-  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
-}
-
-function pointerMovementPoint(event, coordinateSpace = 'client') {
-  return coordinateSpace === 'screen'
-    ? pointerScreenPoint(event) || pointerClientPoint(event)
-    : pointerClientPoint(event);
-}
-
 function pointerToLogical(event, frame = view) {
   const client = pointerClientPoint(event);
   if (!client) return null;
@@ -47,24 +35,34 @@ function pointerToLogical(event, frame = view) {
 }
 
 function foldCommitDistance(pointerType) {
-  if (pointerType === 'touch') return 54;
-  if (pointerType === 'pen') return 38;
-  return 24;
+  if (pointerType === 'touch') return 72;
+  if (pointerType === 'pen') return 48;
+  return 28;
+}
+
+function foldPreviewDistance(pointerType) {
+  if (pointerType === 'touch') return 96;
+  if (pointerType === 'pen') return 64;
+  return 42;
 }
 
 function pointOnPaper(point) {
   return Boolean(point) && state.layers.some((layer) => pointInPolygon(point, layer.polygon));
 }
 
-function tryCapturePointer(pointerId) {
+function tryCapturePointer(pointerId, pointerType) {
+  if (pointerType !== 'mouse') return false;
   try {
     canvas.setPointerCapture?.(pointerId);
+    return typeof canvas.hasPointerCapture !== 'function' || canvas.hasPointerCapture(pointerId);
   } catch (error) {
     console.warn('СГИБ pointer capture was unavailable', error);
+    return false;
   }
 }
 
-function safeReleasePointer(pointerId) {
+function safeReleasePointer(pointerId, captured = true) {
+  if (!captured) return;
   try {
     if (typeof canvas.hasPointerCapture !== 'function' || canvas.hasPointerCapture(pointerId)) {
       canvas.releasePointerCapture?.(pointerId);
@@ -74,45 +72,70 @@ function safeReleasePointer(pointerId) {
   }
 }
 
+function isAnomalousPointerStep(gesture, client, now) {
+  if (!gesture.currentClient) return false;
+  const elapsed = Math.max(1, now - (gesture.lastEventAt || now));
+  const step = Math.hypot(
+    client.x - gesture.currentClient.x,
+    client.y - gesture.currentClient.y
+  );
+  return step > GESTURE_MAX_STEP_PX && step / elapsed > GESTURE_MAX_SPEED_PX_MS;
+}
+
 function updateGestureFromEvent(gesture, event) {
-  const movement = pointerMovementPoint(event, gesture.movementSpace);
-  if (!movement) return false;
+  const client = pointerClientPoint(event);
+  if (!client) return false;
+
+  const now = performance.now();
+  if (isAnomalousPointerStep(gesture, client, now)) {
+    gesture.anomalies += 1;
+    return false;
+  }
 
   const scale = Number.isFinite(gesture.coordinateFrame?.scale) && gesture.coordinateFrame.scale > 0.0001
     ? gesture.coordinateFrame.scale
     : 1;
-  const deltaX = movement.x - gesture.startMovement.x;
-  const deltaY = movement.y - gesture.startMovement.y;
+  const deltaX = client.x - gesture.startClient.x;
+  const deltaY = client.y - gesture.startClient.y;
   const dragDistance = Math.hypot(deltaX, deltaY);
+  const elapsed = now - gesture.startedAt;
 
-  gesture.currentClient = pointerClientPoint(event) || gesture.currentClient;
-  gesture.currentMovement = movement;
+  gesture.currentClient = client;
   gesture.dragDistance = dragDistance;
   gesture.current = {
     x: gesture.start.x + deltaX / scale,
     y: gesture.start.y + deltaY / scale
   };
   gesture.line = lineFromGesture(gesture.start, gesture.current);
-  gesture.lastEventAt = performance.now();
+  gesture.lastEventAt = now;
 
-  if (!gesture.line || dragDistance < 8) {
+  if (!gesture.line || dragDistance < GESTURE_TRACK_DISTANCE) {
     gesture.angle = 0;
+    gesture.lineValid = false;
+    gesture.armed = false;
     gesture.previewReady = false;
     gesture.valid = false;
+    gesture.phase = 'tracking';
     return true;
   }
 
-  gesture.previewReady = dragDistance >= GESTURE_PREVIEW_DISTANCE;
-  if (!gesture.previewReady) {
-    gesture.angle = 0;
-    gesture.valid = false;
-    return true;
-  }
+  gesture.lineValid = validateFold(gesture.line);
+  gesture.armed = Boolean(
+    elapsed >= GESTURE_MIN_DURATION_MS
+    && dragDistance >= gesture.commitDistance
+    && gesture.lineValid
+  );
 
-  const rawProgress = clamp((dragDistance - GESTURE_PREVIEW_DISTANCE) / 210, 0, 1);
+  const rawProgress = clamp((dragDistance - gesture.previewDistance) / 190, 0, 1);
   const easedProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
   gesture.angle = Math.min(easedProgress, 0.86) * Math.PI;
-  gesture.valid = dragDistance >= gesture.commitDistance && validateFold(gesture.line);
+  gesture.previewReady = Boolean(
+    gesture.armed
+    && dragDistance >= gesture.previewDistance
+    && gesture.angle >= 0.08 * Math.PI
+  );
+  gesture.valid = gesture.armed;
+  gesture.phase = gesture.previewReady ? 'preview' : gesture.armed ? 'armed' : 'tracking';
   return true;
 }
 
@@ -130,36 +153,37 @@ function beginGesture(event) {
     return;
   }
 
-  const screen = pointerScreenPoint(event);
-  const movementSpace = screen ? 'screen' : 'client';
-  const movement = screen || client;
+  const pointerType = event.pointerType || 'touch';
   const now = performance.now();
 
   event.preventDefault?.();
   audio.unlock();
   state.gesture = {
     pointerId: event.pointerId,
-    pointerType: event.pointerType || 'touch',
+    pointerType,
     coordinateFrame,
-    movementSpace,
     startClient: client,
     currentClient: client,
-    startMovement: movement,
-    currentMovement: movement,
     dragDistance: 0,
-    commitDistance: foldCommitDistance(event.pointerType),
+    commitDistance: foldCommitDistance(pointerType),
+    previewDistance: foldPreviewDistance(pointerType),
     start: point,
     current: point,
     line: null,
     angle: 0,
+    lineValid: false,
+    armed: false,
     previewReady: false,
     valid: false,
+    phase: 'tracking',
+    anomalies: 0,
+    captured: false,
     startedAt: now,
     lastEventAt: now
   };
+  state.gesture.captured = tryCapturePointer(event.pointerId, pointerType);
   state.lastInputAt = now;
   hideHint();
-  tryCapturePointer(event.pointerId);
 }
 
 function moveGesture(event) {
@@ -176,29 +200,31 @@ function endGesture(event) {
   event.preventDefault?.();
   updateGestureFromEvent(gesture, event);
 
-  // Safari may dispatch lostpointercapture synchronously from releasePointerCapture().
-  // Detach the gesture first so that event can never erase the snapshot used below.
   state.gesture = null;
-  safeReleasePointer(event.pointerId);
+  safeReleasePointer(event.pointerId, gesture.captured);
   state.lastInputAt = performance.now();
 
   const dragDistance = Number.isFinite(gesture.dragDistance) ? gesture.dragDistance : 0;
+  const elapsed = performance.now() - gesture.startedAt;
   const valid = Boolean(
     gesture.line
+    && elapsed >= GESTURE_MIN_DURATION_MS
     && dragDistance >= gesture.commitDistance
     && validateFold(gesture.line)
   );
   if (!valid) {
-    if (dragDistance < 8) {
+    if (dragDistance < GESTURE_TRACK_DISTANCE) {
       showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
       return;
     }
     audio.invalid();
     vibrate(14);
     showToast(
-      dragDistance < gesture.commitDistance
-        ? 'Потяни дальше, затем отпусти'
-        : 'Сгиб должен пересечь лист'
+      elapsed < GESTURE_MIN_DURATION_MS
+        ? 'Проведи линию чуть спокойнее'
+        : dragDistance < gesture.commitDistance
+          ? 'Потяни дальше, затем отпусти'
+          : 'Сгиб должен пересечь лист'
     );
     return;
   }
@@ -210,7 +236,7 @@ function cancelGesture(event) {
   if (!gesture || (event && gesture.pointerId !== event.pointerId)) return false;
   state.gesture = null;
   state.lastInputAt = performance.now();
-  safeReleasePointer(gesture.pointerId);
+  safeReleasePointer(gesture.pointerId, gesture.captured);
   return true;
 }
 
