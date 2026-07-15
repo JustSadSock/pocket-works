@@ -1,0 +1,63 @@
+  dom.soundToggle.addEventListener('click', () => toggleSetting('sound'));
+  dom.hapticsToggle.addEventListener('click', () => toggleSetting('haptics'));
+  dom.motionToggle.addEventListener('click', () => toggleSetting('motion'));
+  dom.resetRecordButton.addEventListener('click', () => {
+    profile.bestScore = 0;
+    saveJSON(PROFILE_KEY, profile);
+    refreshMenu();
+    toast('Рекорд сброшен.');
+  });
+  dom.reloadButton.addEventListener('click', () => location.reload());
+
+  dom.canvas.addEventListener('pointerdown', (event) => {
+    if (mode !== 'playing') return;
+    pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  });
+  dom.canvas.addEventListener('pointerup', (event) => {
+    if (!pointerStart || pointerStart.id !== event.pointerId) return;
+    const distance = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
+    pointerStart = null;
+    if (distance > 12) return;
+    const cell = pointToCell(event.clientX, event.clientY);
+    if (cell) handleCell(cell.row, cell.col);
+  });
+  dom.canvas.addEventListener('pointercancel', () => { pointerStart = null; });
+  window.addEventListener('resize', renderAll, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(renderAll, 120), { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && ['playing', 'enemy'].includes(mode)) {
+      persist();
+      if (mode === 'playing' && !inputLocked) pauseGame();
+    }
+  });
+  window.addEventListener('pagehide', persist);
+  window.addEventListener('error', (event) => {
+    console.error(event.error || event.message);
+  });
+}
+
+function init() {
+  try {
+    bindEvents();
+    refreshSettings();
+    refreshMenu();
+    showMenu();
+    watchConnectivity((online) => { document.documentElement.dataset.network = online ? 'online' : 'offline'; });
+    createWorkshopMode({
+      appName: 'ПОЛЕВОЙ ШТАБ',
+      version: VERSION,
+      cachePrefix: 'polevoy-shtab-',
+      storageNamespace: 'pocket-works:polevoy-shtab',
+      onReset() {
+        [SAVE_KEY, SETTINGS_KEY, PROFILE_KEY].forEach((key) => localStorage.removeItem(key));
+        location.reload();
+      },
+    });
+  } catch (error) {
+    console.error('ПОЛЕВОЙ ШТАБ: ошибка запуска', error);
+    dom.errorCopy.textContent = error?.message || 'Перезапустите приложение. Сохранённая кампания останется на месте.';
+    showScreen('errorScreen');
+  }
+}
+
+init();
