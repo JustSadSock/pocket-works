@@ -297,8 +297,8 @@ export function inspectEndlessLevel(level) {
   const blueprint = level?.course19Blueprint;
   if (!blueprint || !Array.isArray(blueprint.landforms) || !Array.isArray(blueprint.barriers)) issues.push('scenario');
   if ((blueprint?.tags || []).length < 4) issues.push('scenario-depth');
-  const finite = JSON.stringify(level, (_, value) => typeof value === 'number' && !Number.isFinite(value) ? null : value);
-  if (finite.includes(':null')) issues.push('non-finite');
+  const finite = JSON.stringify(level, (_, value) => typeof value === 'number' && !Number.isFinite(value) ? '__NON_FINITE__' : value);
+  if (finite.includes('__NON_FINITE__')) issues.push('non-finite');
   return {
     ok: issues.length === 0,
     issues,
