@@ -1,0 +1,180 @@
+const { bindPointerGesture, installMobileRuntime } = globalThis.__SferyRuntime;
+
+installMobileRuntime();
+
+const STORAGE_KEY = 'pocket-works:sfery:v1';
+const TOTAL_TURNS = 12;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const REGION_DEFS = [
+  {
+    id: 'north', name: 'СЕВЕРНЫЙ ПАКТ', short: 'СЕВЕР', doctrine: 'hawk', color: '#7e9cad',
+    points: '45,55 65,20 195,10 220,70 170,115 80,95', center: [130, 62]
+  },
+  {
+    id: 'meridian', name: 'МЕРИДИАН', short: 'МЕРИДИАН', doctrine: 'coalition', color: '#c38b75',
+    points: '220,20 365,45 360,145 300,165 235,115 220,70', center: [292, 84]
+  },
+  {
+    id: 'cascade', name: 'КАСКАД', short: 'КАСКАД', doctrine: 'hawk', color: '#9a8ea7',
+    points: '300,165 365,145 378,290 270,330 245,260', center: [326, 232]
+  },
+  {
+    id: 'ports', name: 'ВОЛЬНЫЕ ПОРТЫ', short: 'ПОРТЫ', doctrine: 'merchant', color: '#6fa4a0',
+    points: '130,250 245,260 270,330 105,345 70,300', center: [175, 300]
+  },
+  {
+    id: 'south', name: 'ЮЖНЫЙ СОЮЗ', short: 'ЮГ', doctrine: 'coalition', color: '#d0a56c',
+    points: '20,155 110,150 135,225 130,250 70,300 10,255', center: [68, 221]
+  },
+  {
+    id: 'league', name: 'ГОРНАЯ ЛИГА', short: 'ЛИГА', doctrine: 'merchant', color: '#8eaa78',
+    points: '45,55 80,95 110,150 20,155 10,70', center: [53, 112]
+  },
+  {
+    id: 'veya', name: 'РЕСПУБЛИКА ВЕЯ', short: 'ВЕЯ', doctrine: 'player', color: '#eee9dc',
+    points: '170,115 235,115 300,165 245,260 135,225 110,150', center: [203, 185]
+  }
+];
+
+const ACTIONS = {
+  treaty: {
+    label: 'ДОГОВОР', color: '#4f8179', mark: 'I',
+    headline: ['Открыт прямой канал', 'Подписан протокол', 'Создана контактная группа'],
+    copy: 'Отношения улучшились, но партнёр получил новые рычаги внутри Веи.'
+  },
+  trade: {
+    label: 'КОРИДОР', color: '#a06d19', mark: 'II',
+    headline: ['Грузы пошли через границу', 'Открыт расчётный коридор', 'Порты получили новый маршрут'],
+    copy: 'Казна выиграла от сделки, а экономическая зависимость стала глубже.'
+  },
+  pressure: {
+    label: 'ДАВЛЕНИЕ', color: '#b65d52', mark: 'III',
+    headline: ['Ультиматум доставлен', 'Учения начались у границы', 'Активы заморожены'],
+    copy: 'Чужое влияние ослабло, но отношения и общий уровень безопасности ухудшились.'
+  }
+};
+
+const CRISIS_TEMPLATES = [
+  { code: 'ГРАНИЦА', title: 'Пограничный конвой задержан', body: '{target} требует досмотра грузов Веи и публичных гарантий.', tension: 4, tag: 'security' },
+  { code: 'ЭНЕРГИЯ', title: 'Зимний контракт сорван', body: 'Поставщики из {target} внезапно требуют пересмотреть цену топлива.', treasury: -4, tag: 'trade' },
+  { code: 'ВЫБОРЫ', title: 'Иностранные деньги в кампании', body: 'Следы финансирования ведут к структурам, связанным с {target}.', legitimacy: -4, tag: 'influence' },
+  { code: 'ПОРТ', title: 'Контейнеры стоят без движения', body: '{target} блокирует страхование судов под флагом Веи.', treasury: -3, tension: 2, tag: 'trade' },
+  { code: 'КАБЕЛЬ', title: 'Подводный кабель повреждён', body: 'Разведка считает, что {target} знает больше, чем говорит публично.', readiness: -3, tension: 4, tag: 'security' },
+  { code: 'БЕЖЕНЦЫ', title: 'Коридор переполнен', body: 'Тысячи людей идут из зоны кризиса через территорию {target}.', legitimacy: -2, treasury: -2, tag: 'humanitarian' },
+  { code: 'САНКЦИИ', title: 'Банки отключают расчёты', body: '{target} предлагает исключение в обмен на политическую уступку.', treasury: -5, tag: 'influence' },
+  { code: 'РЕАКТОР', title: 'Инспекторов не пускают на объект', body: 'Объект у границы с {target} работает в закрытом режиме.', tension: 5, tag: 'security' },
+  { code: 'ЗЕРНО', title: 'Рынок лихорадит', body: '{target} скупает зерно и поднимает цены внутри Веи.', legitimacy: -3, treasury: -2, tag: 'trade' },
+  { code: 'ПЕРЕВОРОТ', title: 'Ночь длинных радиоперехватов', body: 'В столице {target} меняется власть, договоры зависли в воздухе.', tension: 3, tag: 'influence' },
+  { code: 'ФЛОТ', title: 'Эскадра вошла в пролив', body: '{target} называет это плановыми манёврами и ждёт реакции Веи.', tension: 6, readiness: -2, tag: 'security' },
+  { code: 'ДОЛГ', title: 'Кредиторы требуют досрочную выплату', body: 'Фонды, связанные с {target}, давят на валюту Веи.', treasury: -5, legitimacy: -2, tag: 'trade' }
+];
+
+const ui = Object.fromEntries([
+  'pauseButton', 'turnValue', 'turnFill', 'scoreValue', 'crisisCode', 'crisisTarget', 'crisisTitle', 'crisisBody',
+  'regionLayer', 'routeLayer', 'selectionHint', 'mapToast', 'treasuryValue', 'legitimacyValue', 'readinessValue',
+  'tensionValue', 'treasuryBar', 'legitimacyBar', 'readinessBar', 'tensionBar', 'actionDock', 'startOverlay',
+  'startButton', 'resumeButton', 'resumeMeta', 'settingsButton', 'rulesButton', 'tutorialOverlay', 'tutorialDoneButton',
+  'pauseOverlay', 'pauseTurn', 'pauseScore', 'continueButton', 'pauseSettingsButton', 'restartButton',
+  'consequenceOverlay', 'resultStamp', 'resultKicker', 'resultHeadline', 'resultCopy', 'deltaList', 'reactionNote',
+  'nextTurnButton', 'resultOverlay', 'endingKicker', 'endingTitle', 'endingBody', 'finalScore', 'finalGrid',
+  'againButton', 'resultMenuButton', 'settingsLayer', 'settingsBackdrop', 'closeSettingsButton', 'soundToggle',
+  'hapticToggle', 'motionToggle', 'bestValue', 'clearBestButton', 'dragToken'
+].map((id) => [id, document.getElementById(id)]));
+
+let audioContext = null;
+let toastTimer = 0;
+let state = createFreshState();
+let selectedAction = null;
+let currentCrisis = null;
+let dragState = null;
+let resolutionLocked = false;
+
+function defaultSettings() {
+  return { sound: true, haptic: true, motion: !window.matchMedia('(prefers-reduced-motion: reduce)').matches };
+}
+
+function createFreshState(seed = Math.floor(Math.random() * 2147483647)) {
+  return {
+    active: false,
+    seed,
+    randomState: seed || 1,
+    turn: 1,
+    score: 0,
+    treasury: 62,
+    legitimacy: 64,
+    readiness: 50,
+    tension: 28,
+    settings: defaultSettings(),
+    seenTutorial: false,
+    best: 0,
+    crisis: null,
+    awaitingAdvance: false,
+    pendingResolution: null,
+    factions: Object.fromEntries(REGION_DEFS.filter((region) => region.id !== 'veya').map((region, index) => [region.id, {
+      relation: [-20, 4, -8, 18, 10, -2][index],
+      leverage: [16, 20, 12, 24, 18, 14][index],
+      trade: 0
+    }]))
+  };
+}
+
+function safeNumber(value, fallback = 0) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clamp(value, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, safeNumber(value)));
+}
+
+function readStored() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!parsed || typeof parsed !== 'object') return null;
+    const fresh = createFreshState();
+    const merged = {
+      ...fresh,
+      ...parsed,
+      settings: { ...fresh.settings, ...(parsed.settings || {}) },
+      factions: { ...fresh.factions, ...(parsed.factions || {}) }
+    };
+    for (const id of Object.keys(fresh.factions)) merged.factions[id] = { ...fresh.factions[id], ...(parsed.factions?.[id] || {}) };
+    merged.turn = Math.max(1, Math.min(TOTAL_TURNS, Math.floor(safeNumber(merged.turn, 1))));
+    merged.treasury = clamp(merged.treasury, -20, 120);
+    merged.legitimacy = clamp(merged.legitimacy);
+    merged.readiness = clamp(merged.readiness);
+    merged.tension = clamp(merged.tension);
+    merged.best = Math.max(0, Math.floor(safeNumber(merged.best)));
+    return merged;
+  } catch {
+    return null;
+  }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* local persistence is best-effort */ }
+}
+
+function rand() {
+  state.randomState = (state.randomState * 1664525 + 1013904223) >>> 0;
+  return state.randomState / 4294967296;
+}
+
+function choose(list) {
+  return list[Math.floor(rand() * list.length) % list.length];
+}
+
+function ensureAudio() {
+  if (!state.settings.sound || audioContext) return;
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return;
+  try { audioContext = new AudioCtor(); } catch { audioContext = null; }
+}
+
+function playTone(kind = 'tap') {
+  if (!state.settings.sound) return;
+  ensureAudio();
+  if (!audioContext) return;
+  if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+  const now = audioContext.currentTime;
+  const oscillator = audioContext.createOscillator();
