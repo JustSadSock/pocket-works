@@ -56,7 +56,7 @@ function shp28RebuildRacingLine() {
     const aheadLoad = smoothstep(0.00030, 0.00162, Math.max(Math.abs(ahead), Math.abs(farAhead)));
     const exitLoad = smoothstep(0.00032, 0.00155, Math.abs(behind));
     const corner = Math.abs(current) > 0.00022 ? current : Math.abs(ahead) > Math.abs(farAhead) ? ahead : farAhead;
-    const inside = -Math.sign(corner || 1);
+    const inside = Math.sign(corner || 1);
     let offset = 0;
     if (currentLoad > 0.08) offset = inside * shp28BaseRoadHalf * lerp(0.24, 0.62, currentLoad);
     else if (aheadLoad > 0.08) offset = -inside * shp28BaseRoadHalf * lerp(0.16, 0.48, aheadLoad);
