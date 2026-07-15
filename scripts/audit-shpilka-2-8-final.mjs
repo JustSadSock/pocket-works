@@ -4,28 +4,35 @@ import vm from 'node:vm';
 const failures = [];
 const check = (value, message) => { if (!value) failures.push(message); };
 const read = (path) => readFile(path, 'utf8');
-const [index, app, boot, route, ai, physics, fixes, ui, styles, worker, configRaw] = await Promise.all([
+const [index, app, boot, route, ai, physics, fixes, ui, hotfix, styles, worker, configRaw] = await Promise.all([
   read('apps/shpilka/index.html'), read('apps/shpilka/app.js'), read('apps/shpilka/engine-v2-12.js'),
   read('apps/shpilka/engine-v2-28-route.js'), read('apps/shpilka/engine-v2-28-ai.js'),
   read('apps/shpilka/engine-v2-28-physics.js'), read('apps/shpilka/engine-v2-28-fixes.js'),
-  read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/systems-28.css'),
-  read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
+  read('apps/shpilka/engine-v2-28-ui.js'), read('apps/shpilka/engine-v2-28-1.js'),
+  read('apps/shpilka/systems-28.css'), read('apps/shpilka/sw.js'), read('apps/shpilka/app.config.json')
 ]);
 const config = JSON.parse(configRaw);
-const runtimeSources = { route, ai, physics, fixes, ui };
+const runtimeSources = { route, ai, physics, fixes, ui, '1': hotfix };
 for (const [name, source] of Object.entries(runtimeSources)) {
   try { new vm.Script(source, { filename: `engine-v2-28-${name}.js` }); }
   catch (error) { failures.push(`${name} syntax: ${error.message}`); }
   check(app.includes(`engine-v2-28-${name}.js`), `${name} layer is not loaded`);
   check(worker.includes(`engine-v2-28-${name}.js`), `${name} layer is not cached`);
 }
-check(config.version === '2.8.0' && config.cacheName === 'shpilka-v2.8.0-p1', 'release metadata is stale');
+check(config.version === '2.8.1' && config.cacheName === 'shpilka-v2.8.1-p1', 'release metadata is stale');
+check(index.includes('data-app-version="2.8.1"') && index.includes('app.js?v=2.8.1'), 'HTML release version is stale');
 check(index.includes('loadingScreen') && boot.includes('shp28LoadingVisible(true)'), 'loading flow is missing');
+check(app.includes('script.async = false') && app.includes('Promise.all(sources.map'), 'engine files are still downloaded serially');
 check(app.includes('loadingProgress.textContent') && app.includes('loading-retry') && styles.includes('.loading-retry'), 'loading failure recovery is missing');
 check(!index.includes('data-workshop-trigger') && !index.includes('class="control-help"'), 'system controls remain in the main menu');
+check(styles.includes('overflow: hidden !important') && styles.includes('repeat(5, minmax(0, 1fr))'), 'main menu can still scroll or overflow');
+check(styles.includes('.route-tools,') && styles.includes('.route-code-panel { display: none !important; }'), 'technical route controls remain visible');
 check(ui.includes('finishMenuButton') && ui.includes('pauseMenuButton'), 'main-menu exits are missing');
 check(boot.includes("restartButtonFinish.addEventListener('click', () => beginRace())"), 'replay still generates a different route');
 check(ui.includes("restartButtonFinish.textContent = 'ЕЩЁ РАЗ'"), 'replay action is mislabeled after classification');
+check(hotfix.includes('frame = function shp281Frame') && hotfix.includes('finally {\n    requestAnimationFrame(frame);'), 'animation loop can still die after a frame error');
+check(hotfix.includes('function shp281TraceTrack') && hotfix.includes('ctx.lineTo(track[index].x'), 'iPhone renderer still depends on Path2D for the track');
+check(hotfix.includes('shp281AdvanceCountdownFallback') && hotfix.includes("mode = 'race'"), 'countdown has no recovery path');
 check(route.includes("['gravel'") && route.includes("['narrow'") && route.includes("['plaza'"), 'practical route modules are incomplete');
 check(fixes.includes('shp28VariedModulePlan') && fixes.includes('ДВОЙНАЯ ШПИЛЬКА') && fixes.includes('АЭРОДРОМ'), 'route module selection is not varied per seed');
 check(route.includes("type === 'speed' ? 0.28 : 0") && route.includes('gapLength'), 'decorative ramp rules remain');
@@ -85,11 +92,11 @@ check(brakingTime > 1.22 && brakingTime < 1.52, `full stop takes ${brakingTime.t
 check(brakingDistance > 375 && brakingDistance < 430, `full stop distance is ${brakingDistance.toFixed(1)}`);
 
 if (failures.length) {
-  console.error('ШПИЛЬКА 2.8 final gate failed:');
+  console.error('ШПИЛЬКА 2.8.1 gate failed:');
   failures.forEach((failure) => console.error('-', failure));
   process.exit(1);
 }
-console.log('ШПИЛЬКА 2.8 final gate passed:', JSON.stringify({
+console.log('ШПИЛЬКА 2.8.1 gate passed:', JSON.stringify({
   speedAtThree: +speedAtThree.toFixed(1), speedAtSix: +speedAtSix.toFixed(1), terminal: +terminal.toFixed(1),
   brakingTime: +brakingTime.toFixed(2), brakingDistance: +brakingDistance.toFixed(1)
 }));
