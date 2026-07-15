@@ -3,7 +3,14 @@ import { upgradeCourse19InPlace } from './course19.js';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 function markCompiledRuntime(level) {
-  if (!level?.course18?.field || level.__integrityVersion === 2) return;
+  if (!level?.course18?.field) return;
+  const meshOutline = level.course18.surfaceMesh?.outline;
+  if (Array.isArray(meshOutline) && meshOutline.length >= 6 && !level.__course19OutlineApplied) {
+    level.outline = meshOutline.map((point) => ({ x: point.x, y: point.y }));
+    try { Object.defineProperty(level, '__course19OutlineApplied', { value: true, configurable: true, enumerable: false }); }
+    catch { level.__course19OutlineApplied = true; }
+  }
+  if (level.__integrityVersion === 2) return;
   try {
     Object.defineProperty(level, '__integrityVersion', { value: 2, writable: true, configurable: true, enumerable: false });
     Object.defineProperty(level, '__integrityReport', {
