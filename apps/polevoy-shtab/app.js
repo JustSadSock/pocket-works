@@ -3,12 +3,15 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 import {
   COLS, ROWS, DOCTRINES, TERRAIN, WEATHER, UNIT_TYPES, UPGRADES,
+  FACTIONS, COMMANDERS, OFFICERS, MISSION_TYPES,
   attackableUnits, attackUnit, campaignRank, chooseEnemyAction, clamp,
   completeDefeat, completeVictory, createCampaign, entrenchUnit, evaluateBattle,
   executeEnemyAction, finishRound, generateBattle, getTerrain, getUnit, getUnitAt,
   getUpgradeChoices, hashSeed, manhattan, moveUnit, rallyUnit, reachableCells,
   resupplyUnit, seededRandom, summarizeUnit, useDoctrine, visibleEnemyIds,
-  beginEnemyPhase,
+  beginEnemyPhase, migrateCampaignContent, generateFrontChoices, applyRouteToBattle,
+  updateMissionProgress, missionProgress, generateOfficerChoices, addOfficer,
+  routeRewardSummary,
 } from './game-core.js';
 
 const WORKSHOP_CONFIG = {
@@ -17,12 +20,14 @@ const WORKSHOP_CONFIG = {
 };
 const SHELL_PARTS = [
   './shell/part-01.html',
-  './shell/part-02.html'
+  './shell/part-02.html',
+  './shell/part-03.html'
 ];
 const STYLE_PARTS = [
   './styles/part-01.css',
   './styles/part-02.css',
-  './styles/part-03.css'
+  './styles/part-03.css',
+  './styles/part-04.css'
 ];
 const APP_PARTS = [
   './runtime/app-01.txt',
@@ -31,7 +36,9 @@ const APP_PARTS = [
   './runtime/app-04.txt',
   './runtime/app-05.txt',
   './runtime/app-06.txt',
-  './runtime/app-07.txt'
+  './runtime/app-07.txt',
+  './runtime/app-08.txt',
+  './runtime/app-09.txt'
 ];
 
 async function loadText(path) {
@@ -56,14 +63,17 @@ async function boot() {
   globalThis.__POLEVOY_DEPS = {
     installMobileRuntime, createWorkshopMode, watchConnectivity,
     COLS, ROWS, DOCTRINES, TERRAIN, WEATHER, UNIT_TYPES, UPGRADES,
+    FACTIONS, COMMANDERS, OFFICERS, MISSION_TYPES,
     attackableUnits, attackUnit, campaignRank, chooseEnemyAction, clamp,
     completeDefeat, completeVictory, createCampaign, entrenchUnit, evaluateBattle,
     executeEnemyAction, finishRound, generateBattle, getTerrain, getUnit, getUnitAt,
     getUpgradeChoices, hashSeed, manhattan, moveUnit, rallyUnit, reachableCells,
     resupplyUnit, seededRandom, summarizeUnit, useDoctrine, visibleEnemyIds,
-    beginEnemyPhase, WORKSHOP_CONFIG,
+    beginEnemyPhase, migrateCampaignContent, generateFrontChoices, applyRouteToBattle,
+    updateMissionProgress, missionProgress, generateOfficerChoices, addOfficer,
+    routeRewardSummary, WORKSHOP_CONFIG,
   };
-  const prelude = `const { installMobileRuntime, createWorkshopMode, watchConnectivity, COLS, ROWS, DOCTRINES, TERRAIN, WEATHER, UNIT_TYPES, UPGRADES, attackableUnits, attackUnit, campaignRank, chooseEnemyAction, clamp, completeDefeat, completeVictory, createCampaign, entrenchUnit, evaluateBattle, executeEnemyAction, finishRound, generateBattle, getTerrain, getUnit, getUnitAt, getUpgradeChoices, hashSeed, manhattan, moveUnit, rallyUnit, reachableCells, resupplyUnit, seededRandom, summarizeUnit, useDoctrine, visibleEnemyIds, beginEnemyPhase } = globalThis.__POLEVOY_DEPS;\n`;
+  const prelude = `const { installMobileRuntime, createWorkshopMode, watchConnectivity, COLS, ROWS, DOCTRINES, TERRAIN, WEATHER, UNIT_TYPES, UPGRADES, FACTIONS, COMMANDERS, OFFICERS, MISSION_TYPES, attackableUnits, attackUnit, campaignRank, chooseEnemyAction, clamp, completeDefeat, completeVictory, createCampaign, entrenchUnit, evaluateBattle, executeEnemyAction, finishRound, generateBattle, getTerrain, getUnit, getUnitAt, getUpgradeChoices, hashSeed, manhattan, moveUnit, rallyUnit, reachableCells, resupplyUnit, seededRandom, summarizeUnit, useDoctrine, visibleEnemyIds, beginEnemyPhase, migrateCampaignContent, generateFrontChoices, applyRouteToBattle, updateMissionProgress, missionProgress, generateOfficerChoices, addOfficer, routeRewardSummary } = globalThis.__POLEVOY_DEPS;\n`;
   const blobUrl = URL.createObjectURL(new Blob([prelude, runtime, '\n//# sourceURL=polevoy-shtab-runtime.js'], { type: 'text/javascript' }));
   try { await import(blobUrl); } finally { URL.revokeObjectURL(blobUrl); delete globalThis.__POLEVOY_DEPS; }
 }
