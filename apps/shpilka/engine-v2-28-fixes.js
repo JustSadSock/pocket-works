@@ -10,7 +10,7 @@ updateCar = function shp28StableHighSpeedUpdateCar(car, dt) {
       const phase = 1 - car.shp27ErrorTimer / Math.max(0.001, car.shp28MistakeTotal || car.shp27ErrorTimer);
       const pulse = Math.sin(clamp(phase, 0, 1) * Math.PI);
       const side = car.shp27ErrorSide || 1;
-      const strength = car.shp28MistakeKind === 'wide' ? 115 : car.shp28MistakeKind === 'snap' ? 82 : 38;
+      const strength = car.shp28MistakeKind === 'wide' ? 165 : car.shp28MistakeKind === 'snap' ? 95 : 42;
       car.vx += point.nx * side * strength * pulse * dt;
       car.vy += point.ny * side * strength * pulse * dt;
       const fx = Math.cos(car.angle);
