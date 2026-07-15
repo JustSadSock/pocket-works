@@ -1,19 +1,6 @@
 name: Validate Pocket Works production
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/validate-production.yml"
-      - "apps/**"
-      - "*.html"
-      - "*.js"
-      - "*.css"
-      - "manifest.webmanifest"
-      - "wrangler.jsonc"
-      - "package.json"
-      - "scripts/**"
-      - "shared/**"
   workflow_dispatch:
 
 permissions:
