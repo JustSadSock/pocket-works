@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07100d">
+  <meta name="description" content="ГЛУБИНА 13 — 3D-аркада о сонаре, тишине и погружении в геометрический разлом.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ГЛУБИНА 13">
+  <title>ГЛУБИНА 13</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <section class="stage" id="stage" data-gesture-surface data-block-callout aria-label="Трёхмерный разлом">
+      <canvas id="worldCanvas" role="application" aria-label="Трёхмерное погружение"></canvas>
+      <div class="grain" aria-hidden="true"></div>
+      <div class="depth-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="danger-wash" id="dangerWash" aria-hidden="true"></div>
+      <div class="pulse-ring" id="pulseRing" aria-hidden="true"></div>
+      <div class="fallback" id="fallback" hidden>
+        <strong>WebGL не запустился.</strong>
+        <span>Для этой игры нужен браузер с аппаратным 3D.</span>
+      </div>
+
+      <header class="topbar" data-ui>
+        <a href="../../" class="back-link" data-app-control data-native-press>PW</a>
+        <div class="identity"><span>ОБЪЕКТ</span><strong>ГЛУБИНА 13</strong></div>
+        <button type="button" id="pauseButton" class="pause-button" data-native-press hidden>II</button>
+      </header>
+
+      <aside class="telemetry left-telemetry" data-ui>
+        <div class="readout distance-readout"><span>ГЛУБИНА</span><b id="distanceValue">0</b><em>м</em></div>
+        <div class="readout"><span>СЕКТОР</span><b id="zoneValue">1</b></div>
+        <div class="readout multiplier"><span>ТИШИНА</span><b id="multiplierValue">×1.00</b></div>
+      </aside>
+
+      <aside class="telemetry right-telemetry" data-ui>
+        <div class="hull-readout"><span>КОРПУС</span><div><i class="hull-mark" data-alive="true"></i><i class="hull-mark" data-alive="true"></i><i class="hull-mark" data-alive="true"></i></div></div>
+        <div class="bar-readout oxygen-readout">
+          <header><span>ВОЗДУХ</span><b id="oxygenValue">100</b></header>
+          <div class="bar"><i id="oxygenFill"></i></div>
+        </div>
+        <div class="bar-readout sonar-readout">
+          <header><span>СОНАР</span><b id="sonarValue">100</b></header>
+          <div class="bar"><i id="sonarFill"></i></div>
+        </div>
+      </aside>
+
+      <div class="reticle" aria-hidden="true"><i></i><b></b><span></span></div>
+      <div class="hint" id="hint" aria-live="polite"></div>
+      <div class="toast" id="toast" aria-live="polite"></div>
+
+      <button type="button" class="sonar-button" id="sonarButton" data-native-press data-ui>
+        <span class="sonar-disc"><i></i><b></b></span>
+        <strong>ИМПУЛЬС</strong>
+        <small>35 ед.</small>
+      </button>
+    </section>
+
+    <section class="overlay menu-overlay" id="menuOverlay" data-ui>
+      <div class="menu-grid" aria-hidden="true"></div>
+      <div class="menu-sonar" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+      <div class="menu-copy">
+        <p>3D / ТИХОЕ ПОГРУЖЕНИЕ</p>
+        <h1>Не смотри.<br>Слушай.</h1>
+        <span>Разлом виден только после сонарного импульса. Но каждый импульс сообщает глубине, где ты.</span>
+      </div>
+      <div class="menu-actions">
+        <button type="button" id="startButton" class="launch-button" data-native-press><span>Погрузиться</span><small>новый маршрут</small></button>
+        <button type="button" id="resumeButton" class="resume-button" data-native-press hidden><span>Продолжить</span><small id="resumeMeta">сохранённое погружение</small></button>
+        <div class="menu-links">
+          <button type="button" id="settingsButton" data-native-press>Настройки</button>
+          <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+          <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+        </div>
+      </div>
+      <div class="menu-warning"><b>ПРАВИЛО 13</b><span>Чем дольше молчишь, тем выше множитель. Чем чаще пингуешь — тем быстрее просыпаются охотники.</span></div>
+    </section>
+
+    <section class="overlay tutorial-overlay" id="tutorialOverlay" data-ui hidden>
+      <div class="tutorial-panel">
+        <p>ПЕРЕД СПУСКОМ</p>
+        <h2>Три действия. Ни одного лишнего.</h2>
+        <div class="tutorial-step"><b>01</b><span><strong>Веди пальцем по экрану</strong>Капсула тянется к точке касания.</span></div>
+        <div class="tutorial-step"><b>02</b><span><strong>Жми «Импульс»</strong>Волна на секунду проявит стены и проходы.</span></div>
+        <div class="tutorial-step"><b>03</b><span><strong>Не шуми без причины</strong>Импульс сбрасывает множитель тишины и будит охотников.</span></div>
+        <button type="button" id="tutorialButton" class="launch-button" data-native-press><span>Начать спуск</span><small>ясно, глубина</small></button>
+      </div>
+    </section>
+
+    <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
+      <div class="instrument-panel">
+        <p>ДВИЖЕНИЕ ОСТАНОВЛЕНО</p>
+        <h2>Пауза</h2>
+        <div class="pause-stats"><span>Глубина <b id="pauseDistance">0 м</b></span><span>Сектор <b id="pauseZone">1</b></span></div>
+        <button type="button" id="continueButton" class="launch-button" data-native-press><span>Продолжить</span><small>вернуться в разлом</small></button>
+        <button type="button" id="pauseSettingsButton" class="panel-button" data-native-press>Настройки</button>
+        <button type="button" id="restartButton" class="panel-button" data-native-press>Начать заново</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay panel-overlay result-overlay" id="resultOverlay" data-ui hidden>
+      <div class="instrument-panel result-panel">
+        <p>СИГНАЛ ПОТЕРЯН</p>
+        <h2 id="resultTitle">Корпус не выдержал.</h2>
+        <div class="result-depth"><b id="resultDistance">0</b><span>метров</span></div>
+        <div class="result-record"><span>Лучший спуск</span><b id="resultBest">0</b></div>
+        <p class="result-note" id="resultNote">Разлом запомнил тебя.</p>
+        <button type="button" id="againButton" class="launch-button" data-native-press><span>Ещё раз</span><small>другой маршрут</small></button>
+        <button type="button" id="resultMenuButton" class="panel-button" data-native-press>В главное меню</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet-layer" id="settingsLayer" data-ui hidden>
+      <button type="button" class="sheet-backdrop" id="settingsBackdrop" aria-label="Закрыть настройки"></button>
+      <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header><div><p>ГЛУБИНА 13</p><h2 id="settingsTitle">Бортовые системы</h2></div><button type="button" id="closeSettingsButton" data-native-press>Закрыть</button></header>
+        <button type="button" class="setting-row" id="soundToggle" data-native-press><span><b>Звук</b><small>Сонар, корпус и кислородные кристаллы</small></span><em>Вкл</em></button>
+        <button type="button" class="setting-row" id="hapticToggle" data-native-press><span><b>Вибрация</b><small>Удары и подтверждение импульса</small></span><em>Вкл</em></button>
+        <button type="button" class="setting-row" id="motionToggle" data-native-press><span><b>Инерция камеры</b><small>Крен, дрожание и плавное ведение</small></span><em>Вкл</em></button>
+        <div class="best-row"><span>Лучший спуск</span><b id="bestValue">0 м</b></div>
+        <button type="button" id="clearBestButton" class="clear-button" data-native-press>Сбросить рекорд</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ГЛУБИНА 13" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
