@@ -31,11 +31,8 @@ jobs:
 
       - name: Commit verified hotfix
         run: |
-          rm .github/workflows/moss-marble-hotfix.yml
-          rm .github/workflows/moss-marble-hotfix-pr.yml
-          rm .github/scripts/moss-marble-hotfix.py
           git config user.name "Pocket Works Agent"
           git config user.email "actions@users.noreply.github.com"
-          git add apps/moss-marble/procedural.js apps/moss-marble/course19.js apps/moss-marble/audit19.mjs apps/moss-marble/app.config.json apps/moss-marble/sw.js apps/moss-marble/index.html .github/workflows/moss-marble-hotfix.yml .github/workflows/moss-marble-hotfix-pr.yml .github/scripts/moss-marble-hotfix.py
+          git add apps/moss-marble/procedural.js apps/moss-marble/course19.js apps/moss-marble/audit19.mjs apps/moss-marble/app.config.json apps/moss-marble/sw.js apps/moss-marble/index.html
           git commit -m "Moss & Marble 1.9.1: очистить подход к лунке"
           git push origin HEAD:${{ github.head_ref }}
