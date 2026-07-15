@@ -4,6 +4,7 @@ import { installTerrain18 } from './terrain18.js';
 import { upgradeCourseLevel17 } from './course17.js';
 import { isCourse18 } from './course18.js';
 import { upgradeCourse19InPlace } from './course19.js';
+import { CoursePolishLayer } from './polish19.js';
 import { stabilizeLevelGeometry } from './integrity.js';
 
 export { polygonArea, triangulatePolygon } from './render-core14.js';
@@ -137,6 +138,7 @@ export class DioramaRenderer {
     const core = new CoreDioramaRenderer(canvas);
     const terrain = installTerrain18(core, canvas);
     const greenhouse = new LivingGreenhouseLayer(canvas, core);
+    const polish = new CoursePolishLayer(canvas, core);
     const visualCache = new WeakMap();
     const integrityCache = new WeakSet();
     installWorldSpaceFlag(greenhouse);
@@ -175,6 +177,7 @@ export class DioramaRenderer {
             const visualLevel = visualFor(level);
             prepareTunnelTrigger(level, ball);
             const result = target.draw(visualLevel, ball, aim, time, dt, mode);
+            polish.draw(visualLevel, time, dt, ball);
             greenhouse.draw(visualLevel, ball, aim, time, dt, mode);
             return result;
           };
@@ -188,6 +191,7 @@ export class DioramaRenderer {
         if (property === 'destroy') {
           return () => {
             terrain.destroy();
+            polish.destroy();
             greenhouse.destroy();
             target.destroy?.();
           };
