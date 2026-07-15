@@ -35,14 +35,25 @@
   dom.failMenuBtn.addEventListener('click', () => { pressFeedback(); returnToMenu(); });
   dom.reloadBtn.addEventListener('click', () => location.reload());
 
+  const handleViewportMutation = () => {
+    cancelGesture();
+    resizeCanvas();
+  };
+
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       cancelGesture();
       audio.context?.suspend().catch(() => {});
     }
   });
-  window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 50));
+  window.addEventListener('appviewportchange', handleViewportMutation);
+  window.addEventListener('resize', handleViewportMutation);
+  window.addEventListener('orientationchange', () => {
+    cancelGesture();
+    setTimeout(resizeCanvas, 50);
+  });
+  window.addEventListener('blur', () => cancelGesture());
+  window.addEventListener('pagehide', () => cancelGesture());
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.mode !== 'menu') {
       if (state.screen === 'pauseScreen') resumeGame();
