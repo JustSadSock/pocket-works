@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ГЛУБИНА 13">
-  <rect width="512" height="512" rx="92" fill="#07100d"/>
-  <path d="M80 92h352v328H80z" fill="none" stroke="#33483b" stroke-width="12"/>
-  <path d="M103 116 256 256 409 116M103 396 256 256 409 396" fill="none" stroke="#7d8b7a" stroke-width="9" opacity=".7"/>
-  <circle cx="256" cy="256" r="126" fill="none" stroke="#d5ddc6" stroke-width="10" opacity=".28"/>
-  <circle cx="256" cy="256" r="78" fill="none" stroke="#d5ddc6" stroke-width="10" opacity=".55"/>
-  <circle cx="256" cy="256" r="22" fill="#d5ddc6"/>
-  <path d="M256 256 381 206" stroke="#b9653f" stroke-width="14" stroke-linecap="square"/>
-  <path d="M94 72h92v20H94zm232 348h92v20h-92z" fill="#b9653f"/>
-  <text x="256" y="475" text-anchor="middle" fill="#d5ddc6" font-family="ui-monospace,monospace" font-size="48" font-weight="800" letter-spacing="12">13</text>
+  <rect width="512" height="512" rx="84" fill="#030a0d"/>
+  <path d="M72 86h368v340H72z" fill="none" stroke="#263b3e" stroke-width="12"/>
+  <path d="M96 382c49-76 100-112 160-112s111 36 160 112" fill="none" stroke="#77877e" stroke-width="10" opacity=".55"/>
+  <circle cx="256" cy="270" r="126" fill="none" stroke="#41565a" stroke-width="8"/>
+  <circle cx="256" cy="270" r="76" fill="none" stroke="#77877e" stroke-width="7" opacity=".8"/>
+  <path d="M256 143v254M129 270h254" stroke="#263b3e" stroke-width="7" opacity=".7"/>
+  <path d="M197 272c0-42 26-72 59-72s59 30 59 72l-12 58h-94z" fill="#d2d8c8" stroke="#77877e" stroke-width="8"/>
+  <path d="m211 257-37 24 31 18m96-42 37 24-31 18" fill="none" stroke="#d2d8c8" stroke-width="13" stroke-linecap="square"/>
+  <circle cx="256" cy="248" r="17" fill="#b96743"/>
+  <path d="M257 248 382 156" stroke="#b96743" stroke-width="8" opacity=".9"/>
+  <circle cx="382" cy="156" r="11" fill="#b96743"/>
+  <text x="256" y="113" text-anchor="middle" fill="#d2d8c8" font-family="system-ui,sans-serif" font-size="42" font-weight="800" letter-spacing="8">13</text>
 </svg>

@@ -1,0 +1,295 @@
+  wreckNotice.hidden = !profile.wreck;
+  startButton.querySelector('small').textContent = profile.wreck ? 'вернуться за чёрным ящиком' : 'новая экспедиция';
+  bestValue.textContent = profile.bestValue;
+  for (const button of upgradeButtons) {
+    const kind = button.dataset.upgrade;
+    const level = profile.upgrades[kind];
+    const cost = upgradeCost(kind, level);
+    const badge = button.querySelector('em');
+    badge.textContent = cost === null ? `УР. ${level} · МАКС` : `УР. ${level} · ${cost}`;
+    button.disabled = cost === null || profile.credits < cost;
+  }
+  refreshResume();
+}
+
+function buyUpgrade(kind) {
+  const level = profile.upgrades[kind];
+  const cost = upgradeCost(kind, level);
+  if (cost === null) return showToast('МОДУЛЬ УЖЕ МАКСИМАЛЬНЫЙ');
+  if (profile.credits < cost) return showToast(`НЕ ХВАТАЕТ ${cost - profile.credits}`);
+  profile.credits -= cost;
+  profile.upgrades[kind] += 1;
+  saveProfile();
+  refreshMenu();
+  sound('upgrade');
+  haptic(25);
+  showToast('МОДУЛЬ УСТАНОВЛЕН');
+}
+
+function updateHullMeter() {
+  if (!state) return;
+  if (hullMeter.children.length !== state.maxHull) {
+    hullMeter.replaceChildren(...Array.from({ length: state.maxHull }, () => document.createElement('i')));
+  }
+  [...hullMeter.children].forEach((mark, index) => {
+    mark.dataset.alive = index < state.hull ? 'true' : 'false';
+  });
+}
+
+function updateCargoSlots() {
+  if (!state) return;
+  if (cargoSlots.children.length !== state.capacity) {
+    cargoSlots.replaceChildren(...Array.from({ length: state.capacity }, () => document.createElement('i')));
+  }
+  [...cargoSlots.children].forEach((slot, index) => {
+    const item = state.cargo[index];
+    if (item) slot.dataset.filled = item.treasureType;
+    else delete slot.dataset.filled;
+  });
+}
+
+function updateHud() {
+  if (!state) return;
+  oxygenValue.textContent = Math.ceil(state.oxygen);
+  oxygenFill.style.transform = `scaleX(${state.oxygen / 100})`;
+  sonarValue.textContent = Math.floor(state.sonar);
+  sonarCharge.style.setProperty('--charge', `${state.sonar}%`);
+  sonarButton.disabled = mode !== 'playing' || state.sonar < 34.9 || state.pulseAge < 0.42;
+  const baseDistance = distanceToBase(state.player);
+  baseDistanceValue.textContent = `${Math.floor(baseDistance)} м`;
+  const baseAngle = Math.atan2(-state.player.x, state.player.z);
+  bearingArrow.style.transform = `rotate(${baseAngle}rad)`;
+  cargoCount.textContent = `${state.cargo.length}/${state.capacity}`;
+  cargoValueNode.textContent = cargoValue(state.cargo);
+  listenerWarning.dataset.visible = state.listener && (Math.hypot(state.listener.x - state.player.x, state.listener.z - state.player.z) < 24 || state.attention > 0.92) ? 'true' : 'false';
+  updateHullMeter();
+  updateCargoSlots();
+}
+
+function setContext(label, progress = 0) {
+  contextReadout.style.opacity = label ? '0.82' : '0';
+  contextLabel.textContent = label || '';
+  contextProgress.style.transform = `scaleX(${clamp(progress, 0, 1)})`;
+}
+
+function allPickups() {
+  const pickups = [];
+  for (const entry of loadedChunks.values()) {
+    for (const pickup of entry.pickups) {
+      if (!state.collected.has(pickup.id)) pickups.push(pickup);
+    }
+  }
+  return pickups;
+}
+
+function nearestPickup() {
+  let nearest = null;
+  let distance = Infinity;
+  for (const pickup of allPickups()) {
+    const current = Math.hypot(pickup.x - state.player.x, pickup.z - state.player.z);
+    if (current < distance) {
+      distance = current;
+      nearest = pickup;
+    }
+  }
+  return { pickup: nearest, distance };
+}
+
+function collectPickup(pickup) {
+  state.collected.add(pickup.id);
+  for (const mesh of pickup.meshes || []) mesh.visibility = 0;
+  if (pickup.type === 'oxygen') {
+    state.oxygen = clamp(state.oxygen + 32, 0, 100);
+    state.sonar = clamp(state.sonar + 14, 0, 100);
+    showToast('+ ВОЗДУХ');
+    sound('oxygen');
+    haptic([16, 22, 18]);
+  } else if (pickup.type === 'wreck') {
+    if (pickup.item && state.cargo.length < state.capacity) {
+      state.cargo.push({
+        id: pickup.id,
+        treasureType: pickup.item.treasureType || 'relic',
+        label: pickup.item.label || 'Чёрный ящик',
+        value: Number(pickup.item.value) || 30,
+      });
+    }
+    profile.wreck = null;
+    saveProfile();
+    showToast('ЧЁРНЫЙ ЯЩИК ВОЗВРАЩЁН');
+    sound('wreck');
+    haptic([30, 30, 60]);
+  } else {
+    const info = TREASURE_TYPES[pickup.treasureType];
+    state.cargo.push({
+      id: pickup.id,
+      treasureType: pickup.treasureType,
+      label: info.label,
+      value: pickup.value,
+    });
+    state.attention = clamp(state.attention + 0.08, 0, 3);
+    showToast(`${info.label.toUpperCase()} · ${pickup.value}`);
+    sound('collect');
+    haptic([18, 18, 30]);
+  }
+  state.pickupTarget = null;
+  state.pickupProgress = 0;
+  updateHud();
+  saveRun();
+}
+
+function updateInteraction(dt, speed) {
+  const baseDistance = distanceToBase(state.player);
+  if (baseDistance <= 4.2) {
+    state.pickupTarget = null;
+    state.pickupProgress = 0;
+    if (state.cargo.length === 0) {
+      state.extractionProgress = 0;
+      setContext('ШЛЮЗ ЖДЁТ ДОБЫЧУ', 0);
+      return;
+    }
+    if (!canExtract(state.player, state.cargo, speed)) {
+      state.extractionProgress = Math.max(0, state.extractionProgress - dt * 1.4);
+      setContext('СБРОСЬ ХОД В ЦЕНТРЕ ШЛЮЗА', state.extractionProgress);
+      return;
+    }
+    state.extractionProgress += dt / 2;
+    setContext('ФИКСАЦИЯ КАПСУЛЫ', state.extractionProgress);
+    if (state.extractionProgress >= 1) finishExpedition(true);
+    return;
+  }
+  state.extractionProgress = 0;
+
+  const { pickup, distance } = nearestPickup();
+  if (!pickup || distance > 2.15) {
+    state.pickupTarget = null;
+    state.pickupProgress = Math.max(0, state.pickupProgress - dt * 2);
+    setContext(state.listener ? 'НЕ ДАВАЙ ЕМУ НОВЫЙ ЗВУК' : 'ТИХИЙ ХОД МЕНЬШЕ СЛЫШЕН', 0);
+    return;
+  }
+  if (pickup.type === 'treasure' && state.cargo.length >= state.capacity) {
+    state.pickupProgress = 0;
+    setContext('ГРУЗОВЫЕ КРЕПЛЕНИЯ ЗАПОЛНЕНЫ', 0);
+    return;
+  }
+  if (pickup.type === 'wreck' && pickup.item && state.cargo.length >= state.capacity) {
+    state.pickupProgress = 0;
+    setContext('ОСВОБОДИ КРЕПЛЕНИЕ ДЛЯ ЯЩИКА', 0);
+    return;
+  }
+  if (state.pickupTarget !== pickup.id) {
+    state.pickupTarget = pickup.id;
+    state.pickupProgress = 0;
+  }
+  if (speed > 1.45) {
+    state.pickupProgress = Math.max(0, state.pickupProgress - dt * 1.8);
+    setContext('СБРОСЬ ХОД ДЛЯ МАНИПУЛЯТОРА', state.pickupProgress);
+    return;
+  }
+  const duration = pickup.type === 'wreck' ? 1.35 : pickup.type === 'oxygen' ? 0.55 : 0.9;
+  state.pickupProgress += dt / duration;
+  setContext(pickup.type === 'oxygen' ? 'ЗАБОР КИСЛОРОДА' : pickup.type === 'wreck' ? 'ИЗВЛЕЧЕНИЕ ЧЁРНОГО ЯЩИКА' : 'ЗАХВАТ НАХОДКИ', state.pickupProgress);
+  if (state.pickupProgress >= 1) collectPickup(pickup);
+}
+
+function spawnListener() {
+  if (state.listener) return;
+  const angle = runRandom() * Math.PI * 2;
+  const radius = 30 + runRandom() * 9;
+  state.listener = {
+    active: true,
+    x: state.player.x + Math.cos(angle) * radius,
+    z: state.player.z + Math.sin(angle) * radius,
+    heading: 0,
+    phase: runRandom() * Math.PI * 2,
+  };
+  createListenerMeshes();
+  showToast('ЭХО ВЕРНУЛОСЬ НЕ ОДНО');
+  sound('wake');
+  haptic([10, 90, 18]);
+}
+
+function makeNoise(amount, x = state.player.x, z = state.player.z) {
+  state.attention = clamp(state.attention + amount, 0, 3);
+  state.lastNoise = { x, z, age: 0 };
+}
+
+function damageCapsule(source) {
+  if (state.invulnerable > 0 || mode !== 'playing') return;
+  state.hull -= 1;
+  state.oxygen = Math.max(0, state.oxygen - 7);
+  state.invulnerable = 1.4;
+  state.collisionCooldown = 1.1;
+  damageFlash = 1;
+  cameraKick = settings.motion ? 1 : 0.25;
+  makeNoise(source === 'listener' ? 0.5 : 0.3);
+  showToast(source === 'listener' ? 'ОНО НАШЛО КАПСУЛУ' : 'УДАР ПО КОРПУСУ');
+  sound('hit');
+  haptic([70, 35, 80]);
+  if (state.hull <= 0) finishExpedition(false, 'hull');
+}
+
+function updateMovement(dt) {
+  const keyX = Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA'));
+  const keyY = Number(keys.has('ArrowDown') || keys.has('KeyS')) - Number(keys.has('ArrowUp') || keys.has('KeyW'));
+  let inputX = joystickVector.x;
+  let inputY = joystickVector.y;
+  if (keyX || keyY) {
+    const length = Math.hypot(keyX, keyY) || 1;
+    inputX = keyX / length;
+    inputY = keyY / length;
+  }
+  const magnitude = clamp(Math.hypot(inputX, inputY), 0, 1);
+  const maxSpeed = 1.3 + magnitude * 4.4;
+  const desiredVx = inputX * maxSpeed;
+  const desiredVz = inputY * maxSpeed;
+  const response = 1 - Math.exp(-dt * 4.1);
+  state.player.vx = lerp(state.player.vx, desiredVx, response);
+  state.player.vz = lerp(state.player.vz, desiredVz, response);
+  if (magnitude < 0.03) {
+    const drag = Math.exp(-dt * 2.8);
+    state.player.vx *= drag;
+    state.player.vz *= drag;
+  }
+
+  const previousX = state.player.x;
+  const previousZ = state.player.z;
+  const speedBeforeCollision = Math.hypot(state.player.vx, state.player.vz);
+  let next = {
+    x: state.player.x + state.player.vx * dt,
+    z: state.player.z + state.player.vz * dt,
+  };
+  let collided = false;
+  for (const entry of loadedChunks.values()) {
+    for (const obstacle of entry.data.obstacles) {
+      const resolved = resolveCircleObstacle(next, 0.72, obstacle);
+      if (!resolved.hit) continue;
+      next = { x: resolved.x, z: resolved.z };
+      collided = true;
+    }
+  }
+  state.player.x = next.x;
+  state.player.z = next.z;
+  if (collided) {
+    state.player.vx *= 0.28;
+    state.player.vz *= 0.28;
+    if (speedBeforeCollision > 3.1 && state.collisionCooldown <= 0) damageCapsule('collision');
+  }
+
+  const travelled = Math.hypot(state.player.x - previousX, state.player.z - previousZ);
+  state.distanceTravelled += travelled;
+  state.maxRange = Math.max(state.maxRange, distanceToBase(state.player));
+  if (Math.hypot(state.player.vx, state.player.vz) > 0.12) {
+    const desiredHeading = Math.atan2(state.player.vx, -state.player.vz);
+    state.player.heading = angleLerp(state.player.heading, desiredHeading, 1 - Math.exp(-dt * 5.2));
+  }
+
+  const noise = movementNoise(magnitude, profile.upgrades.quiet);
+  state.attention = clamp(state.attention + noise * dt * 0.09 - dt * 0.012, 0, 3);
+  if (noise > 0.3) {
+    state.lastNoise.x = state.player.x;
+    state.lastNoise.z = state.player.z;
+    state.lastNoise.age = 0;
+  }
+
+  const speed = Math.hypot(state.player.vx, state.player.vz);
+  state.oxygen = clamp(state.oxygen - dt * (0.24 + speed * 0.025), 0, 100);

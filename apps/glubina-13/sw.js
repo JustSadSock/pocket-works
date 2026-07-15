@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'glubina-13-';
-const CACHE_NAME = 'glubina-13-v1.0.0-p1';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'glubina-13-v2.0.0-p1';
+const APP_VERSION = '2.0.0';
 const RELEASE_DATE = '2026-07-15';
-const CACHE_PROTOCOL = 1;
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Добавлен законченный бесконечный 3D-забег с процедурными воротами, кислородными кристаллами, секторами сложности и охотниками, реагирующими на шум.',
-  'Реализован собственный компактный WebGL-движок с перспективной камерой, мешами, туманом, сонарной волной, подсветкой граней и мобильным управлением прямым касанием.',
-  'Работают сохранение погружения, рекорд, звук, вибрация, снижение движения, офлайн-кэш, Workshop Mode и возврат в Pocket Works из всех ключевых экранов.'
+  'Линейный спуск перестроен в свободную экспедицию по бесконечным подводным руинам с возвращением к шлюзу.',
+  'Добавлены джойстик, тихий ход, три класса добычи, чёрный ящик, Слушатель и постоянные модули капсулы.',
+  'Обновлены 3D-движок, интерфейс, сохранение экспедиции, обучение и автономный кэш.'
 ];
 const APP_SHELL = [
   './',
@@ -16,6 +16,11 @@ const APP_SHELL = [
   './app.js',
   './engine.js',
   './game-core.js',
+  './runtime/part-00.txt',
+  './runtime/part-01.txt',
+  './runtime/part-02.txt',
+  './runtime/part-03.txt',
+  './runtime/part-04.txt',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
@@ -75,7 +80,10 @@ async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalU
   }
 }
 
-self.addEventListener('install', (event) => event.waitUntil(precacheFreshShell()));
+self.addEventListener('install', (event) => {
+  event.waitUntil(precacheFreshShell());
+});
+
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
     event.ports?.[0]?.postMessage({
@@ -88,13 +96,17 @@ self.addEventListener('message', (event) => {
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys
+        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+        .map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const requestUrl = new URL(event.request.url);

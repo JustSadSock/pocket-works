@@ -2,14 +2,14 @@
   "id": "/apps/glubina-13/",
   "name": "ГЛУБИНА 13",
   "short_name": "ГЛУБИНА 13",
-  "description": "Трёхмерное тихое погружение в геометрический разлом.",
+  "description": "Экспедиционный 3D-хоррор о подводных руинах, сонаре и дороге назад.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#07100d",
-  "theme_color": "#07100d",
+  "background_color": "#030a0d",
+  "theme_color": "#030a0d",
   "icons": [
     {
       "src": "./icons/icon.svg",
