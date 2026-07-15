@@ -11,30 +11,227 @@
   context.fillRect(-1200, -90, 2400, 180);
   context.restore();
 
-  movingLayers.sort((a, b) => (a.depth || 0) - (b.depth || 0)).forEach((layer, index) => {
-    drawPaperPolygon(layer.polygon, { ...layer, depth: 10 + index, shade: (layer.shade || 0) + 1 }, true);
-  });
+  const backsideProgress = clamp(
+    (angle - Math.PI * 0.34) / (Math.PI * 0.58),
+    0,
+    1
+  );
+
+  movingLayers
+    .sort((a, b) => (a.depth || 0) - (b.depth || 0))
+    .forEach((layer, index) => {
+      drawPaperPolygon(layer.polygon, { ...layer, depth: 10 + index, shade: (layer.shade || 0) + 1 }, true);
+      drawLiftedFlapOverlay(layer.polygon, backsideProgress, index);
+    });
 
   for (const entity of state.entities) {
-    if (signedDistance(entity, line) < 0) {
-      const transformed = transformFoldPoint(entity, line, angle);
-      drawEntity(entity, transformed, 0.95);
-    } else {
-      drawEntity(entity);
-    }
+    const moving = signedDistance(entity, line) < 0;
+    const point = moving ? transformFoldPoint(entity, line, angle) : entity;
+    const surfaceLayers = moving ? movingLayers : stationaryLayers;
+    const onSurface = surfaceLayers.some((layer) => pointInPolygon(point, layer.polygon));
+    const coveredByFlap = !moving && movingLayers.some((layer) => pointInPolygon(point, layer.polygon));
+
+    drawPreviewEntity(entity, point, {
+      backside: moving && backsideProgress > 0.04,
+      backsideProgress,
+      covered: coveredByFlap,
+      offSurface: !onSurface
+    });
   }
 
-  context.save();
-  context.setLineDash(valid ? [13, 10] : [4, 9]);
-  context.lineWidth = valid ? 2.1 : 2.5;
-  context.strokeStyle = valid ? 'rgba(49,93,80,.72)' : 'rgba(150,95,63,.78)';
-  context.beginPath();
-  context.moveTo(line.point.x - line.tangent.x * 1000, line.point.y - line.tangent.y * 1000);
-  context.lineTo(line.point.x + line.tangent.x * 1000, line.point.y + line.tangent.y * 1000);
-  context.stroke();
-  context.restore();
+  drawFoldGuide(line, valid);
 
   if (state.gesture) drawGestureArrow(state.gesture.start, state.gesture.current, valid);
+}
+
+function drawLiftedFlapOverlay(polygon, backsideProgress, index = 0) {
+  if (!polygon || polygon.length < 3) return;
+
+  context.save();
+  tracePolygon(polygon);
+  context.shadowColor = `rgba(0,0,0,${0.34 + backsideProgress * 0.16})`;
+  context.shadowBlur = 22 + backsideProgress * 16;
+  context.shadowOffsetX = 5;
+  context.shadowOffsetY = 12 + backsideProgress * 10;
+  context.strokeStyle = `rgba(244,237,220,${0.68 + backsideProgress * 0.22})`;
+  context.lineWidth = 3.2 + backsideProgress * 1.2;
+  context.stroke();
+
+  context.shadowColor = 'transparent';
+  context.clip();
+  const veil = context.createLinearGradient(120, 180, 900, 1240);
+  veil.addColorStop(0, `rgba(49,93,80,${0.025 + backsideProgress * 0.075})`);
+  veil.addColorStop(0.55, `rgba(255,255,255,${0.015 + backsideProgress * 0.035})`);
+  veil.addColorStop(1, `rgba(82,65,42,${0.035 + backsideProgress * 0.09})`);
+  context.fillStyle = veil;
+  context.fillRect(-260, -260, LOGICAL_WIDTH + 520, LOGICAL_HEIGHT + 520);
+
+  if (backsideProgress > 0.05) {
+    context.save();
+    context.globalAlpha = (0.04 + index * 0.006) * backsideProgress;
+    context.strokeStyle = '#315d50';
+    context.lineWidth = 1;
+    for (let offset = -1500; offset < 1800; offset += 54) {
+      context.beginPath();
+      context.moveTo(offset, -260);
+      context.lineTo(offset + 620, LOGICAL_HEIGHT + 260);
+      context.stroke();
+    }
+    context.restore();
+  }
+  context.restore();
+
+  context.save();
+  tracePolygon(polygon);
+  context.strokeStyle = `rgba(47,42,33,${0.48 + backsideProgress * 0.22})`;
+  context.lineWidth = 1.4;
+  context.stroke();
+  context.restore();
+}
+
+function drawPreviewEntity(entity, point, options = {}) {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+  const radius = entity.radius || 25;
+  const { backside = false, backsideProgress = 0, covered = false, offSurface = false } = options;
+
+  if (offSurface || covered) {
+    context.save();
+    context.translate(point.x, point.y);
+    context.shadowColor = 'rgba(0,0,0,.55)';
+    context.shadowBlur = offSurface ? 16 : 8;
+    context.fillStyle = offSurface ? 'rgba(244,237,220,.92)' : 'rgba(244,237,220,.68)';
+    context.beginPath();
+    context.arc(0, 0, radius + (offSurface ? 12 : 8), 0, Math.PI * 2);
+    context.fill();
+    context.shadowColor = 'transparent';
+    context.strokeStyle = offSurface ? 'rgba(49,93,80,.88)' : 'rgba(49,93,80,.58)';
+    context.lineWidth = 2;
+    context.setLineDash([5, 6]);
+    context.stroke();
+    context.restore();
+  }
+
+  if (backside || covered) {
+    drawBacksideEntity(entity, point, covered ? 0.58 : Math.max(0.48, backsideProgress));
+  } else {
+    drawEntity(entity, point);
+  }
+}
+
+function drawBacksideEntity(entity, point, strength = 1) {
+  const radius = entity.radius || 25;
+  const opacity = clamp(0.48 + strength * 0.42, 0.48, 0.94);
+
+  if (entity.type === 'void') {
+    context.save();
+    context.translate(point.x, point.y);
+    context.globalAlpha = opacity;
+    context.shadowColor = 'rgba(244,237,220,.72)';
+    context.shadowBlur = 8;
+    context.fillStyle = 'rgba(244,237,220,.16)';
+    context.beginPath();
+    context.arc(0, 0, radius + 3, 0, Math.PI * 2);
+    context.fill();
+    context.shadowColor = 'transparent';
+    context.strokeStyle = 'rgba(34,72,61,.96)';
+    context.lineWidth = 4.2;
+    context.setLineDash([8, 5]);
+    context.stroke();
+    context.strokeStyle = 'rgba(244,237,220,.92)';
+    context.lineWidth = 1.8;
+    context.setLineDash([]);
+    context.beginPath();
+    context.arc(0, 0, Math.max(5, radius - 5), 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = 'rgba(49,93,80,.82)';
+    context.beginPath();
+    context.arc(0, 0, 5, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    return;
+  }
+
+  drawInk(entity, point, opacity * 0.72);
+  context.save();
+  context.translate(point.x, point.y);
+  context.globalAlpha = opacity;
+  context.shadowColor = 'rgba(244,237,220,.78)';
+  context.shadowBlur = 7;
+  context.strokeStyle = 'rgba(244,237,220,.92)';
+  context.lineWidth = 2.5;
+  context.setLineDash([5, 6]);
+  context.beginPath();
+  context.arc(0, 0, radius * 1.18 + 4, 0, Math.PI * 2);
+  context.stroke();
+  context.shadowColor = 'transparent';
+  context.strokeStyle = 'rgba(49,93,80,.92)';
+  context.lineWidth = 1.5;
+  context.setLineDash([]);
+  context.beginPath();
+  context.arc(0, 0, radius * 1.04 + 2, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+}
+
+function drawFoldGuide(line, valid) {
+  const extent = 1450;
+  const start = {
+    x: line.point.x - line.tangent.x * extent,
+    y: line.point.y - line.tangent.y * extent
+  };
+  const end = {
+    x: line.point.x + line.tangent.x * extent,
+    y: line.point.y + line.tangent.y * extent
+  };
+  const accent = valid ? 'rgba(104,177,153,.98)' : 'rgba(218,142,96,.98)';
+
+  context.save();
+  context.lineCap = 'round';
+  context.setLineDash([]);
+  context.strokeStyle = 'rgba(12,13,11,.78)';
+  context.lineWidth = 10;
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
+
+  context.strokeStyle = 'rgba(244,237,220,.94)';
+  context.lineWidth = 4.8;
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
+
+  context.strokeStyle = accent;
+  context.lineWidth = 2.4;
+  context.setLineDash(valid ? [15, 10] : [5, 7]);
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
+
+  context.setLineDash([]);
+  context.translate(line.point.x, line.point.y);
+  context.rotate(Math.atan2(line.tangent.y, line.tangent.x));
+  context.fillStyle = 'rgba(30,29,25,.94)';
+  context.strokeStyle = accent;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(-18, 0);
+  context.lineTo(0, -13);
+  context.lineTo(18, 0);
+  context.lineTo(0, 13);
+  context.closePath();
+  context.fill();
+  context.stroke();
+
+  context.strokeStyle = 'rgba(244,237,220,.94)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(0, -28);
+  context.lineTo(0, 28);
+  context.stroke();
+  context.restore();
 }
 
 function drawGestureArrow(start, end, valid) {
