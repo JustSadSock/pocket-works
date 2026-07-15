@@ -196,12 +196,13 @@ function addRecovery(blueprint, random, t, side) {
 }
 
 function addFinalFunnel(blueprint, random, t) {
-  const spread = .56 + random() * .07;
+  const spread = .58 + random() * .05;
+  const neck = .22;
   blueprint.barriers.push(
-    { material: 'wood', width: 17, height: 26, points: [{ t: t - .08, side: -spread }, { t, side: -.30 }, { t: t + .08, side: -.09 }] },
-    { material: 'wood', width: 17, height: 26, points: [{ t: t - .08, side: spread }, { t, side: .30 }, { t: t + .08, side: .09 }] }
+    { material: 'wood', width: 17, height: 26, points: [{ t: t - .09, side: -spread }, { t: t - .025, side: -.38 }, { t: t + .035, side: -neck }] },
+    { material: 'wood', width: 17, height: 26, points: [{ t: t - .09, side: spread }, { t: t - .025, side: .38 }, { t: t + .035, side: neck }] }
   );
-  blueprint.landforms.push({ kind: 'mound', t: t - .04, side: (random() - .5) * .20, length: 260, width: 190, height: 10 + random() * 6, asymmetry: (random() - .5) * .5, falloff: 1.7 });
+  blueprint.landforms.push({ kind: 'mound', t: t - .06, side: (random() - .5) * .18, length: 240, width: 180, height: 8 + random() * 5, asymmetry: (random() - .5) * .45, falloff: 1.75 });
   blueprint.tags.push('funnel');
 }
 
@@ -231,7 +232,7 @@ function buildScenario(random, depth) {
 
   addRecovery(blueprint, random, .70, -side);
   if (depth >= 6 && random() > .48 && blueprint.rotors.length === 0) addRotor(blueprint, random, .75, difficulty);
-  addFinalFunnel(blueprint, random, .87);
+  addFinalFunnel(blueprint, random, .84);
   blueprint.theme = blueprint.tags.join('-');
   return blueprint;
 }
