@@ -1,14 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ГЛУБИНА 13">
-  <rect width="512" height="512" rx="84" fill="#030a0d"/>
-  <path d="M72 86h368v340H72z" fill="none" stroke="#263b3e" stroke-width="12"/>
-  <path d="M96 382c49-76 100-112 160-112s111 36 160 112" fill="none" stroke="#77877e" stroke-width="10" opacity=".55"/>
-  <circle cx="256" cy="270" r="126" fill="none" stroke="#41565a" stroke-width="8"/>
-  <circle cx="256" cy="270" r="76" fill="none" stroke="#77877e" stroke-width="7" opacity=".8"/>
-  <path d="M256 143v254M129 270h254" stroke="#263b3e" stroke-width="7" opacity=".7"/>
-  <path d="M197 272c0-42 26-72 59-72s59 30 59 72l-12 58h-94z" fill="#d2d8c8" stroke="#77877e" stroke-width="8"/>
-  <path d="m211 257-37 24 31 18m96-42 37 24-31 18" fill="none" stroke="#d2d8c8" stroke-width="13" stroke-linecap="square"/>
-  <circle cx="256" cy="248" r="17" fill="#b96743"/>
-  <path d="M257 248 382 156" stroke="#b96743" stroke-width="8" opacity=".9"/>
-  <circle cx="382" cy="156" r="11" fill="#b96743"/>
-  <text x="256" y="113" text-anchor="middle" fill="#d2d8c8" font-family="system-ui,sans-serif" font-size="42" font-weight="800" letter-spacing="8">13</text>
+  <rect width="512" height="512" rx="82" fill="#041012"/>
+  <path d="M68 366c63-33 120-49 188-49s125 16 188 49v82H68z" fill="#0b282a"/>
+  <circle cx="256" cy="245" r="164" fill="none" stroke="#1f4a49" stroke-width="10"/>
+  <circle cx="256" cy="245" r="111" fill="none" stroke="#346b64" stroke-width="8"/>
+  <path d="M256 84v322M95 245h322" stroke="#72b9a7" stroke-width="7" opacity=".45"/>
+  <path d="M180 257c0-43 34-78 76-78s76 35 76 78c0 27-14 51-36 65l-13 43h-54l-13-43c-22-14-36-38-36-65Z" fill="#c6dfd5" stroke="#041012" stroke-width="12"/>
+  <circle cx="256" cy="253" r="35" fill="#153a3a" stroke="#72b9a7" stroke-width="8"/>
+  <path d="m256 253 82-53" stroke="#72b9a7" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="253" r="8" fill="#72b9a7"/>
+  <text x="256" y="468" text-anchor="middle" fill="#c6dfd5" font-family="system-ui,sans-serif" font-size="54" font-weight="900" letter-spacing="10">13</text>
 </svg>
