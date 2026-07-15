@@ -38,7 +38,9 @@ export function evaluateBattle(battle) {
   const enemyAlive = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0).length;
   if (enemyAlive === 0 || battle.enemyResolve <= 0) return 'victory';
   if (playerAlive === 0 || battle.playerResolve <= 0) return 'defeat';
-  const missionResult = evaluateMissionState(battle);
+  const missionResult = battle.mission?.type === 'hold'
+    ? ((battle.mission.holdProgress || 0) >= (battle.mission.target || 1) ? 'victory' : null)
+    : evaluateMissionState(battle);
   if (missionResult) return missionResult;
   if (battle.turn > battle.turnLimit) return missionTimeoutOutcome(battle, playerAlive, enemyAlive);
   return null;
