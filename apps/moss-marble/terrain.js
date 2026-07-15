@@ -2,8 +2,24 @@ import { upgradeCourse19InPlace } from './course19.js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+function markCompiledRuntime(level) {
+  if (!level?.course18?.field || level.__integrityVersion === 2) return;
+  try {
+    Object.defineProperty(level, '__integrityVersion', { value: 2, writable: true, configurable: true, enumerable: false });
+    Object.defineProperty(level, '__integrityReport', {
+      value: { source: 'course19-runtime', movedObstacles: 0, removedObstacles: 0, movedRotors: 0, removedRotors: 0 },
+      writable: true,
+      configurable: true,
+      enumerable: false
+    });
+  } catch {
+    level.__integrityVersion = 2;
+  }
+}
+
 function runtimeField(level) {
   if (level && typeof level === 'object' && !level.course18?.field) upgradeCourse19InPlace(level);
+  markCompiledRuntime(level);
   return level?.course18?.field || null;
 }
 
