@@ -4,6 +4,15 @@ import { generateEndlessLevel, inspectEndlessLevel } from './procedural.js';
 
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
+const wallDistanceToPoint = (wall, point) => {
+  const dx = wall.bx - wall.ax;
+  const dy = wall.by - wall.ay;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq ? Math.max(0, Math.min(1, ((point.x - wall.ax) * dx + (point.y - wall.ay) * dy) / lengthSq)) : 0;
+  const x = wall.ax + dx * t;
+  const y = wall.ay + dy * t;
+  return Math.hypot(point.x - x, point.y - y) - Number(wall.thickness || 0) * .5;
+};
 
 for (const source of LEVELS) {
   const level = compileCourse19(source);
@@ -14,7 +23,7 @@ for (const source of LEVELS) {
   assert(level.course18?.field?.surfaceAt, `campaign ${source.id}: field contract`);
 }
 
-for (const seed of [1, 17, 50291, 0xDEADBEEF]) {
+for (const seed of [1, 2, 3, 5, 8, 13, 17, 21, 34, 55, 89, 144, 233, 50291, 0xDEADBEEF]) {
   for (let depth = 0; depth < 28; depth += 1) {
     const rawA = generateEndlessLevel(seed, depth);
     const rawB = generateEndlessLevel(seed, depth);
@@ -25,6 +34,10 @@ for (const seed of [1, 17, 50291, 0xDEADBEEF]) {
     const report = inspectCourse19(level);
     assert(report.ok, `compiled ${seed}/${depth}: ${report.issues.join(', ')}`);
     assert(level.course18?.triangleCount === 1932, `compiled ${seed}/${depth}: unexpected mesh budget`);
+    const holeClearance = Math.max(72, Number(level.hole?.r || 31) * 2.25);
+    for (const wall of level.walls || []) {
+      assert(wallDistanceToPoint(wall, level.hole) >= holeClearance, `compiled ${seed}/${depth}: wall blocks hole approach`);
+    }
     if (level.tunnels?.length) {
       const tunnel = level.tunnels[0];
       assert(Number.isFinite(tunnel.entry.axisX) && Number.isFinite(tunnel.exit.axisY), `tunnel ${seed}/${depth}: invalid axis`);
@@ -37,4 +50,4 @@ if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);
 }
-console.log('Moss & Marble 1.9 audit passed');
+console.log('Moss & Marble 1.9.1 audit passed');
