@@ -1,0 +1,147 @@
+installMobileRuntime();
+
+const VERSION = '1.0.0';
+const SAVE_KEY = 'pocket-works:polevoy-shtab:campaign';
+const SETTINGS_KEY = 'pocket-works:polevoy-shtab:settings';
+const PROFILE_KEY = 'pocket-works:polevoy-shtab:profile';
+const MAP_NAMES = ['Переправа', 'Сухой лог', 'Медная гряда', 'Чёрный тракт', 'Старая цитадель', 'Три кургана', 'Северная просека', 'Пепельный рубеж', 'Разбитый мост', 'Волчья низина'];
+const UPGRADE_ICONS = { engineers: '⌂', baggage: '▣', surgeons: '✚', batteries: '✦', drill: 'Ⅰ', signal: '⚑', reserve: 'Ⅱ', quartermaster: '↺', sharpshooters: '⌁', standards: '★' };
+
+const dom = {
+  app: document.querySelector('#app'),
+  canvas: document.querySelector('#battleCanvas'),
+  mapFrame: document.querySelector('#mapFrame'),
+  mapNote: document.querySelector('#mapNote'),
+  phaseStamp: document.querySelector('#phaseStamp'),
+  battleKicker: document.querySelector('#battleKicker'),
+  battleName: document.querySelector('#battleName'),
+  turnValue: document.querySelector('#turnValue'),
+  playerResolveFill: document.querySelector('#playerResolveFill'),
+  playerResolveValue: document.querySelector('#playerResolveValue'),
+  enemyResolveFill: document.querySelector('#enemyResolveFill'),
+  enemyResolveValue: document.querySelector('#enemyResolveValue'),
+  playerObjectiveValue: document.querySelector('#playerObjectiveValue'),
+  enemyObjectiveValue: document.querySelector('#enemyObjectiveValue'),
+  selectedGlyph: document.querySelector('#selectedGlyph'),
+  selectedName: document.querySelector('#selectedName'),
+  selectedState: document.querySelector('#selectedState'),
+  miniMeters: document.querySelector('#miniMeters'),
+  hpFill: document.querySelector('#hpFill'),
+  hpValue: document.querySelector('#hpValue'),
+  moraleFill: document.querySelector('#moraleFill'),
+  moraleValue: document.querySelector('#moraleValue'),
+  supplyFill: document.querySelector('#supplyFill'),
+  supplyValue: document.querySelector('#supplyValue'),
+  commandPips: document.querySelector('#commandPips'),
+  entrenchButton: document.querySelector('#entrenchButton'),
+  supplyButton: document.querySelector('#supplyButton'),
+  rallyButton: document.querySelector('#rallyButton'),
+  doctrineButton: document.querySelector('#doctrineButton'),
+  doctrineButtonLabel: document.querySelector('#doctrineButtonLabel'),
+  endTurnButton: document.querySelector('#endTurnButton'),
+  endTurnHint: document.querySelector('#endTurnHint'),
+  pauseButton: document.querySelector('#pauseButton'),
+  menuScreen: document.querySelector('#menuScreen'),
+  doctrineScreen: document.querySelector('#doctrineScreen'),
+  briefingScreen: document.querySelector('#briefingScreen'),
+  manualScreen: document.querySelector('#manualScreen'),
+  tutorialScreen: document.querySelector('#tutorialScreen'),
+  pauseScreen: document.querySelector('#pauseScreen'),
+  victoryScreen: document.querySelector('#victoryScreen'),
+  defeatScreen: document.querySelector('#defeatScreen'),
+  confirmScreen: document.querySelector('#confirmScreen'),
+  errorScreen: document.querySelector('#errorScreen'),
+  continueCard: document.querySelector('#continueCard'),
+  continueTitle: document.querySelector('#continueTitle'),
+  continueMeta: document.querySelector('#continueMeta'),
+  continueButton: document.querySelector('#continueButton'),
+  newCampaignButton: document.querySelector('#newCampaignButton'),
+  fieldManualButton: document.querySelector('#fieldManualButton'),
+  settingsButton: document.querySelector('#settingsButton'),
+  bestMeta: document.querySelector('#bestMeta'),
+  doctrineList: document.querySelector('#doctrineList'),
+  closeDoctrineButton: document.querySelector('#closeDoctrineButton'),
+  briefingTitle: document.querySelector('#briefingTitle'),
+  briefingWeather: document.querySelector('#briefingWeather'),
+  briefingWeatherNote: document.querySelector('#briefingWeatherNote'),
+  briefingDoctrine: document.querySelector('#briefingDoctrine'),
+  briefingDoctrineNote: document.querySelector('#briefingDoctrineNote'),
+  briefingLimit: document.querySelector('#briefingLimit'),
+  beginBattleButton: document.querySelector('#beginBattleButton'),
+  closeManualButton: document.querySelector('#closeManualButton'),
+  manualDoneButton: document.querySelector('#manualDoneButton'),
+  tutorialStep: document.querySelector('#tutorialStep'),
+  tutorialTitle: document.querySelector('#tutorialTitle'),
+  tutorialCopy: document.querySelector('#tutorialCopy'),
+  skipTutorialButton: document.querySelector('#skipTutorialButton'),
+  nextTutorialButton: document.querySelector('#nextTutorialButton'),
+  pauseStage: document.querySelector('#pauseStage'),
+  pauseTurn: document.querySelector('#pauseTurn'),
+  pauseRenown: document.querySelector('#pauseRenown'),
+  resumeButton: document.querySelector('#resumeButton'),
+  pauseManualButton: document.querySelector('#pauseManualButton'),
+  pauseSettingsButton: document.querySelector('#pauseSettingsButton'),
+  abandonButton: document.querySelector('#abandonButton'),
+  victorySummary: document.querySelector('#victorySummary'),
+  victoryReward: document.querySelector('#victoryReward'),
+  victoryLosses: document.querySelector('#victoryLosses'),
+  victoryTurns: document.querySelector('#victoryTurns'),
+  upgradeList: document.querySelector('#upgradeList'),
+  rankLabel: document.querySelector('#rankLabel'),
+  finalScore: document.querySelector('#finalScore'),
+  rankCopy: document.querySelector('#rankCopy'),
+  finalVictories: document.querySelector('#finalVictories'),
+  finalBattles: document.querySelector('#finalBattles'),
+  finalRenown: document.querySelector('#finalRenown'),
+  newRunButton: document.querySelector('#newRunButton'),
+  defeatMenuButton: document.querySelector('#defeatMenuButton'),
+  settingsLayer: document.querySelector('#settingsLayer'),
+  settingsBackdrop: document.querySelector('#settingsBackdrop'),
+  closeSettingsButton: document.querySelector('#closeSettingsButton'),
+  soundToggle: document.querySelector('#soundToggle'),
+  hapticsToggle: document.querySelector('#hapticsToggle'),
+  motionToggle: document.querySelector('#motionToggle'),
+  resetRecordButton: document.querySelector('#resetRecordButton'),
+  confirmAbandonButton: document.querySelector('#confirmAbandonButton'),
+  cancelAbandonButton: document.querySelector('#cancelAbandonButton'),
+  reloadButton: document.querySelector('#reloadButton'),
+  errorCopy: document.querySelector('#errorCopy'),
+  toast: document.querySelector('#toast'),
+};
+
+const screens = ['menuScreen', 'doctrineScreen', 'briefingScreen', 'manualScreen', 'tutorialScreen', 'pauseScreen', 'victoryScreen', 'defeatScreen', 'confirmScreen', 'errorScreen'];
+const defaultSettings = { sound: true, haptics: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, tutorialSeen: false };
+const settings = loadJSON(SETTINGS_KEY, defaultSettings);
+const profile = loadJSON(PROFILE_KEY, { bestScore: 0, campaigns: 0, victories: 0 });
+
+let campaign = null;
+let battle = null;
+let pending = null;
+let mode = 'menu';
+let selectedId = null;
+let inspectedId = null;
+let inputLocked = false;
+let layout = { tile: 40, left: 0, top: 0, width: 280, height: 320, dpr: 1 };
+let pointerStart = null;
+let toastTimer = 0;
+let tutorialIndex = 0;
+let manualReturn = 'menu';
+let settingsReturn = 'menu';
+let animation = null;
+let effects = [];
+let renderFrame = 0;
+let audio = null;
+let lastRenderedAt = 0;
+
+function loadJSON(key, fallback) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key));
+    if (parsed && typeof parsed === 'object') return { ...(fallback || {}), ...parsed };
+  } catch (error) {
+    console.warn('ПОЛЕВОЙ ШТАБ: не удалось прочитать сохранение', error);
+  }
+  return fallback ? { ...fallback } : null;
+}
+
+function saveJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); 

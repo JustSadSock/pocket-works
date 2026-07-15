@@ -1,0 +1,162 @@
+ht; }
+
+.order-rack { display: grid; grid-template-columns: minmax(0, 1fr) 118px; grid-template-rows: auto auto; gap: 5px; padding: 6px; }
+.command-points { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; height: 12px; }
+.command-points > span { font-size: 8px; letter-spacing: .14em; }
+.command-points > div { display: flex; gap: 4px; }
+.command-points i { width: 13px; height: 7px; display: block; background: #314f60; border: 1px solid #203540; transform: skew(-18deg); }
+.command-points i.spent { background: transparent; opacity: .35; }
+.order-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; min-width: 0; }
+.order-buttons button {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px;
+  border: 1px solid #6a624a;
+  border-bottom-width: 3px;
+  background: #d0c69f;
+  box-shadow: inset 0 1px #eee5c3;
+}
+.order-buttons button b { font-family: Georgia, serif; font-size: 14px; }
+.order-buttons button span { font-size: 7px; line-height: 1.05; text-align: left; overflow-wrap: anywhere; }
+.order-buttons button small { min-width: 14px; height: 14px; display: grid; place-items: center; background: #2e4137; color: #f3ebd0; font-size: 8px; border-radius: 50%; }
+.order-buttons button:disabled { filter: grayscale(.5); opacity: .42; }
+.order-buttons button:not(:disabled):active { transform: translateY(2px); border-bottom-width: 1px; }
+.order-buttons .doctrine-order { background: #b79c65; border-color: #6b5732; }
+.order-buttons .doctrine-order.used { text-decoration: line-through; opacity: .45; }
+
+.end-turn {
+  grid-column: 2;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 5px;
+  border: 1px solid #16251f;
+  border-bottom: 4px solid #101b17;
+  background: #2d4438;
+  color: #f0e7c9;
+  text-align: left;
+}
+.end-turn span { font-family: Georgia, serif; font-weight: 900; font-size: 12px; }
+.end-turn small { font-size: 7px; opacity: .7; line-height: 1.1; margin-top: 2px; }
+.end-turn:active { transform: translateY(2px); border-bottom-width: 2px; }
+.end-turn:disabled { opacity: .48; }
+
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  place-items: center;
+  padding: var(--safe-top) 12px var(--safe-bottom);
+  background: rgba(13,20,17,.76);
+  backdrop-filter: blur(7px);
+}
+.screen.is-visible { display: grid; }
+.map-cloth,
+.briefing-folder,
+.victory-folder,
+.defeat-folder,
+.confirm-slip,
+.tutorial-slip {
+  width: min(100%, 430px);
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.map-cloth {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.05) 4px, transparent 5px),
+    var(--cloth);
+  border: 1px solid #6c654d;
+  box-shadow: inset 0 0 0 3px #d8cda5, 0 16px 40px rgba(0,0,0,.44);
+}
+.map-cloth::before,
+.map-cloth::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(49,51,40,.38);
+  border-radius: 50%;
+  top: 10px;
+}
+.map-cloth::before { left: 10px; }
+.map-cloth::after { right: 10px; }
+.menu-cloth { padding: 23px 18px 15px; }
+.menu-mark, .classified { display: block; font-size: 8px; letter-spacing: .18em; opacity: .68; }
+.title-assembly { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 13px; align-items: center; margin: 16px 0 11px; }
+.title-assembly p { margin: 0 0 2px; font-size: 8px; letter-spacing: .12em; }
+.title-assembly h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(34px, 12vw, 52px); line-height: .82; letter-spacing: -.04em; }
+.commander-emblem { position: relative; width: 80px; height: 80px; border: 2px solid #2c4337; transform: rotate(-4deg); background: #b9ae85; }
+.commander-emblem i, .commander-emblem b { position: absolute; display: block; background: #2c4337; }
+.commander-emblem i { width: 60px; height: 4px; left: 8px; top: 36px; transform: rotate(45deg); }
+.commander-emblem b { width: 60px; height: 4px; left: 8px; top: 36px; transform: rotate(-45deg); }
+.commander-emblem span { position: absolute; inset: 19px; display: grid; place-items: center; color: #b99a53; background: #253b31; border-radius: 50%; font-size: 25px; }
+.lead { margin: 0 0 14px; max-width: 34em; font-family: Georgia, serif; font-size: 13px; line-height: 1.4; }
+.campaign-card { padding: 9px 11px; margin-bottom: 8px; background: #ddd2aa; border-left: 5px solid var(--blue-deep); box-shadow: inset 0 0 0 1px #a79b72; }
+.campaign-card span, .campaign-card strong, .campaign-card small { display: block; }
+.campaign-card span { font-size: 7px; letter-spacing: .14em; }
+.campaign-card strong { margin-top: 3px; font-family: Georgia, serif; font-size: 16px; }
+.campaign-card small { margin-top: 2px; font-size: 8px; opacity: .66; }
+.menu-actions { display: grid; gap: 6px; }
+.primary-order, .secondary-order, .danger-order {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 8px 11px;
+  border: 1px solid #23332b;
+  border-bottom-width: 4px;
+  text-align: left;
+}
+.primary-order { background: #2e473b; color: #f1e8ca; border-color: #15241e; }
+.secondary-order { background: #d5caa2; border-color: #766d51; color: var(--ink); }
+.danger-order { background: #7b3934; color: #f5e9ce; border-color: #4f2824; }
+.primary-order span, .secondary-order span, .danger-order span { font-family: Georgia, serif; font-size: 14px; font-weight: 900; }
+.primary-order small, .secondary-order small, .danger-order small { margin-top: 2px; font-size: 8px; opacity: .68; }
+.primary-order:active, .secondary-order:active, .danger-order:active { transform: translateY(2px); border-bottom-width: 2px; }
+.menu-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; font-size: 8px; }
+.menu-footer a, .pause-cloth > a, .defeat-folder > a, .confirm-slip > a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.workshop-link { border: 0; background: transparent; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+.panel-header { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.panel-header span { font-size: 8px; letter-spacing: .16em; opacity: .65; }
+.panel-header h2 { margin: 3px 0 0; font-family: Georgia, serif; font-size: 28px; line-height: 1; }
+.panel-copy { margin: 12px 0; font-family: Georgia, serif; font-size: 13px; line-height: 1.35; }
+.doctrine-cloth, .manual-cloth, .pause-cloth { padding: 22px 17px 16px; }
+.doctrine-list { display: grid; gap: 7px; }
+.doctrine-list button {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 72px;
+  padding: 8px;
+  border: 1px solid #756c50;
+  border-left-width: 5px;
+  background: #dcd1aa;
+  text-align: left;
+}
+.doctrine-list button:nth-child(2) { border-left-color: #825044; }
+.doctrine-list button:nth-child(3) { border-left-color: #465d4f; }
+.doctrine-list i { width: 42px; height: 42px; display: grid; place-items: center; background: #314a3f; color: #eee5c6; font-family: Georgia, serif; font-style: normal; font-size: 23px; }
+.doctrine-list b, .doctrine-list small { display: block; }
+.doctrine-list b { font-family: Georgia, serif; font-size: 17px; }
+.doctrine-list small { margin-top: 3px; font-size: 9px; line-height: 1.25; opacity: .72; }
+
+.briefing-folder, .victory-folder, .defeat-folder {
+  padding: 22px 17px 16px;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, transparent 0 25px, rgba(126,54,49,.25) 26px 27px, transparent 28px),
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(45,57,48,.12) 28px 29px),
+    var

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#28372f">
+  <meta name="description" content="ПОЛЕВОЙ ШТАБ — бесконечная процедурная игра о командовании армией для Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ШТАБ">
+  <title>ПОЛЕВОЙ ШТАБ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell boot-shell" id="app" data-app-shell>
+    <section class="boot-card" aria-live="polite">
+      <span>ПОЛЕВОЙ ШТАБ</span>
+      <strong id="bootStatus">Разворачиваем карту…</strong>
+      <div class="boot-rule"><i></i></div>
+      <button id="bootRetry" type="button" data-native-press hidden onclick="location.reload()">Перезагрузить</button>
+      <button type="button" data-workshop-trigger data-native-press hidden>Workshop</button>
+      <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+    </section>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПОЛЕВОЙ ШТАБ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>

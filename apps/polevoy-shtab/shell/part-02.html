@@ -1,0 +1,93 @@
+class="map-cloth manual-cloth">
+        <header class="panel-header"><div><span>ПОЛЕВОЙ УСТАВ</span><h2 id="manualTitle">Как командовать</h2></div><button class="metal-button" id="closeManualButton" type="button" data-native-press>×</button></header>
+        <ol class="manual-steps">
+          <li><b>1</b><span><strong>Отдайте приказ</strong>Тапните свой жетон, затем доступную клетку или видимого врага.</span></li>
+          <li><b>2</b><span><strong>Читайте ткань карты</strong>Лес и руины защищают, топь тормозит, высота выгодна обороне.</span></li>
+          <li><b>3</b><span><strong>Не теряйте обоз</strong>Атаки жрут снабжение. Пустой отряд бьёт слабее и теряет мораль.</span></li>
+          <li><b>4</b><span><strong>Берите штандарты</strong>Каждый удерживаемый пункт даёт очко в конце раунда. Нужно 8.</span></li>
+          <li><b>5</b><span><strong>Выживайте между боями</strong>Победа даёт один постоянный штабной апгрейд. Враги тоже растут.</span></li>
+        </ol>
+        <button class="primary-order" id="manualDoneButton" type="button" data-native-press><span>Понятно</span><small>Вернуться к карте</small></button>
+      </div>
+    </section>
+
+    <section class="screen tutorial-screen" id="tutorialScreen" data-ui aria-labelledby="tutorialTitle">
+      <div class="tutorial-slip">
+        <span id="tutorialStep">1 / 3</span>
+        <h2 id="tutorialTitle">Сначала выберите отряд</h2>
+        <p id="tutorialCopy">Синие жетоны — ваши. После выбора карта покажет клетки марша и цели атаки.</p>
+        <div class="tutorial-actions">
+          <button class="secondary-order" id="skipTutorialButton" type="button" data-native-press><span>Пропустить</span></button>
+          <button class="primary-order" id="nextTutorialButton" type="button" data-native-press><span>Дальше</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" data-ui aria-labelledby="pauseTitle">
+      <div class="map-cloth pause-cloth">
+        <span class="classified">КАРТА СВЁРНУТА</span>
+        <h2 id="pauseTitle">Пауза</h2>
+        <div class="pause-summary"><span>Бой <b id="pauseStage">1</b></span><span>Ход <b id="pauseTurn">1</b></span><span>Слава <b id="pauseRenown">0</b></span></div>
+        <button class="primary-order" id="resumeButton" type="button" data-native-press><span>Продолжить</span><small>Вернуться к приказам</small></button>
+        <button class="secondary-order" id="pauseManualButton" type="button" data-native-press><span>Открыть устав</span></button>
+        <button class="secondary-order" id="pauseSettingsButton" type="button" data-native-press><span>Настройки</span></button>
+        <button class="danger-order" id="abandonButton" type="button" data-native-press><span>Завершить кампанию</span><small>Текущий поход будет потерян</small></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen victory-screen" id="victoryScreen" data-ui aria-labelledby="victoryTitle">
+      <div class="victory-folder">
+        <span class="classified">ПОЛЕ ОСТАЛОСЬ ЗА НАМИ</span>
+        <h2 id="victoryTitle">Выберите опыт штаба</h2>
+        <p id="victorySummary">Строй выдержал. Кампания продолжается.</p>
+        <div class="battle-result-line"><span>НАГРАДА <b id="victoryReward">0</b></span><span>ПОТЕРИ <b id="victoryLosses">0</b></span><span>ХОДЫ <b id="victoryTurns">0</b></span></div>
+        <div class="upgrade-list" id="upgradeList"></div>
+      </div>
+    </section>
+
+    <section class="screen defeat-screen" id="defeatScreen" data-ui aria-labelledby="defeatTitle">
+      <div class="defeat-folder">
+        <span class="classified">ПРИКАЗЫ БОЛЬШЕ НЕ ДОХОДЯТ</span>
+        <h2 id="defeatTitle">Кампания окончена</h2>
+        <div class="rank-stamp"><span id="rankLabel">ПОЛКОВНИК</span><strong id="finalScore">0</strong><small>ИТОГОВЫЙ СЧЁТ</small></div>
+        <p id="rankCopy">Первый штабной опыт оплачен дорого.</p>
+        <div class="final-stats"><span>Побед <b id="finalVictories">0</b></span><span>Пройдено боёв <b id="finalBattles">1</b></span><span>Слава <b id="finalRenown">0</b></span></div>
+        <button class="primary-order" id="newRunButton" type="button" data-native-press><span>Новая кампания</span><small>Другой фронт и новый расклад</small></button>
+        <button class="secondary-order" id="defeatMenuButton" type="button" data-native-press><span>В архив</span></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="settings-layer" id="settingsLayer" data-ui hidden>
+      <button class="settings-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
+      <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header class="panel-header"><div><span>ПОЛЕВАЯ СУМКА</span><h2 id="settingsTitle">Настройки</h2></div><button class="metal-button" id="closeSettingsButton" type="button" data-native-press>×</button></header>
+        <button class="toggle-row" id="soundToggle" type="button" data-native-press aria-pressed="true"><span><b>Звук</b><small>Барабаны, карандаш, выстрелы</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="hapticsToggle" type="button" data-native-press aria-pressed="true"><span><b>Вибрация</b><small>Короткая отдача приказов</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="motionToggle" type="button" data-native-press aria-pressed="true"><span><b>Анимации</b><small>Движение жетонов и удары</small></span><i>ВКЛ</i></button>
+        <button class="secondary-order" id="resetRecordButton" type="button" data-native-press><span>Сбросить рекорд</span><small>Кампанию не затронет</small></button>
+      </div>
+    </section>
+
+    <section class="screen confirm-screen" id="confirmScreen" data-ui aria-labelledby="confirmTitle">
+      <div class="confirm-slip">
+        <span>НЕОБРАТИМЫЙ ПРИКАЗ</span>
+        <h2 id="confirmTitle">Завершить кампанию?</h2>
+        <p>Активный фронт и все выбранные улучшения будут удалены.</p>
+        <div><button class="danger-order" id="confirmAbandonButton" type="button" data-native-press><span>Да, отступить</span></button><button class="secondary-order" id="cancelAbandonButton" type="button" data-native-press><span>Отмена</span></button></div>
+      </div>
+    </section>
+
+    <section class="screen error-screen" id="errorScreen" data-ui aria-labelledby="errorTitle">
+      <div class="confirm-slip">
+        <span>СВЯЗЬ СО ШТАБОМ ПОТЕРЯНА</span>
+        <h2 id="errorTitle">Карта повреждена</h2>
+        <p id="errorCopy">Перезапустите приложение. Сохранённая кампания останется на месте.</p>
+        <button class="primary-order" id="reloadButton" type="button" data-native-press><span>Перезагрузить</span></button>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" data-ui role="status"></div>
+  

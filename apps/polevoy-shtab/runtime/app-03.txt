@@ -1,0 +1,242 @@
+лнительную славу и продолжайте кампанию.</small></span>';
+    dom.upgradeList.append(button);
+    return;
+  }
+  for (const key of choices) {
+    const item = UPGRADES[key];
+    const level = campaign.upgrades?.[key] || 0;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.upgrade = key;
+    button.setAttribute('data-native-press', '');
+    button.innerHTML = `<i>${UPGRADE_ICONS[key] || '★'}</i><span><b>${item.name}${item.max > 1 ? ` · ${level + 1}/${item.max}` : ''}</b><small>${item.description}</small></span>`;
+    dom.upgradeList.append(button);
+  }
+}
+
+function chooseUpgrade(key) {
+  if (mode !== 'victory') return;
+  inputLocked = true;
+  completeVictory(campaign, battle, key || null);
+  if (!key) campaign.renown += 20;
+  profile.victories += 1;
+  profile.bestScore = Math.max(profile.bestScore || 0, campaign.score);
+  saveJSON(PROFILE_KEY, profile);
+  battle = generateBattle(campaign);
+  pending = null;
+  selectedId = null;
+  inspectedId = null;
+  inputLocked = false;
+  persist();
+  sound('stamp');
+  showBriefing();
+}
+
+function concludeDefeat() {
+  if (pending !== 'defeat') {
+    completeDefeat(campaign, battle);
+    pending = 'defeat';
+  }
+  profile.bestScore = Math.max(profile.bestScore || 0, campaign.score);
+  saveJSON(PROFILE_KEY, profile);
+  persist();
+  showDefeat();
+}
+
+function showDefeat(abandoned = false) {
+  mode = 'defeat';
+  pending = 'defeat';
+  const [rank, copy] = campaignRank(campaign.score);
+  dom.rankLabel.textContent = abandoned ? 'ОТСТУПЛЕНИЕ' : rank;
+  dom.finalScore.textContent = campaign.score;
+  dom.rankCopy.textContent = abandoned ? 'Штаб сохранил людей, но оставил фронт противнику.' : copy;
+  dom.finalVictories.textContent = campaign.victories;
+  dom.finalBattles.textContent = campaign.history.length || campaign.stage;
+  dom.finalRenown.textContent = campaign.renown;
+  showScreen('defeatScreen');
+  sound('defeat');
+  haptic([60, 70, 60]);
+}
+
+function resetToNewCampaign() {
+  removeSave();
+  campaign = null;
+  battle = null;
+  pending = null;
+  selectedId = null;
+  startDoctrineChoice();
+}
+
+function returnAfterDefeat() {
+  removeSave();
+  campaign = null;
+  battle = null;
+  pending = null;
+  showMenu();
+}
+
+function selectUnit(unit) {
+  if (!unit || unit.side !== 'player' || unit.routed || unit.hp <= 0) return;
+  selectedId = unit.id;
+  inspectedId = null;
+  sound('select');
+  haptic(8);
+  renderAll();
+}
+
+async function handleCell(row, col) {
+  if (mode !== 'playing' || inputLocked || battle.phase !== 'player') return;
+  const clicked = getUnitAt(battle, row, col);
+  const visible = visibleEnemyIds(battle);
+  if (clicked?.side === 'player') {
+    selectUnit(clicked);
+    return;
+  }
+  if (clicked?.side === 'enemy' && visible.has(clicked.id)) {
+    if (selectedId && attackableUnits(battle, selectedId).some((unit) => unit.id === clicked.id)) {
+      await performAction(() => attackUnit(battle, campaign, selectedId, clicked.id), 'attack');
+    } else {
+      inspectedId = clicked.id;
+      selectedId = null;
+      sound('select');
+      renderAll();
+    }
+    return;
+  }
+  if (!selectedId) {
+    toast('Сначала выберите свой жетон.');
+    return;
+  }
+  const reachable = reachableCells(battle, campaign, selectedId);
+  if (reachable.some((cell) => cell.row === row && cell.col === col)) {
+    await performAction(() => moveUnit(battle, campaign, selectedId, row, col), 'move');
+    return;
+  }
+  toast('Сюда приказ не проходит.');
+}
+
+async function performAction(actionFactory, soundType = 'tap') {
+  if (inputLocked || mode !== 'playing') return;
+  const result = actionFactory();
+  if (!result?.ok) {
+    toast(result?.reason || 'Приказ невозможен.');
+    sound('deny');
+    haptic(14);
+    return;
+  }
+  inputLocked = true;
+  sound(soundType);
+  haptic(soundType === 'attack' ? [16, 25, 28] : 10);
+  persist();
+  renderAll();
+  await animateResult(result);
+  inputLocked = false;
+  selectedId = getUnit(battle, selectedId)?.routed ? null : selectedId;
+  renderAll();
+  const status = evaluateBattle(battle);
+  if (status === 'victory') {
+    battle.result = 'victory';
+    showVictory();
+  } else if (status === 'defeat') {
+    battle.result = 'defeat';
+    concludeDefeat();
+  }
+}
+
+async function useSelectedOrder(kind) {
+  if (!selectedId) return toast('Выберите отряд.');
+  if (kind === 'entrench') return performAction(() => entrenchUnit(battle, selectedId), 'entrench');
+  if (kind === 'supply') return performAction(() => resupplyUnit(battle, campaign, selectedId), 'supply');
+  if (kind === 'rally') return performAction(() => rallyUnit(battle, selectedId), 'rally');
+}
+
+async function invokeDoctrine() {
+  await performAction(() => useDoctrine(battle, campaign, selectedId), 'stamp');
+}
+
+async function endTurn() {
+  if (mode !== 'playing' || inputLocked) return;
+  inputLocked = true;
+  selectedId = null;
+  inspectedId = null;
+  beginEnemyPhase(battle);
+  renderAll();
+  stamp('ХОД ПРОТИВНИКА');
+  sound('turn');
+  await wait(settings.motion ? 650 : 80);
+  mode = 'enemy';
+  const enemies = battle.units.filter((unit) => unit.side === 'enemy' && !unit.routed && unit.hp > 0).map((unit) => unit.id);
+  for (const id of enemies) {
+    const unit = getUnit(battle, id);
+    if (!unit || unit.routed) continue;
+    const action = chooseEnemyAction(battle, campaign, id);
+    const result = executeEnemyAction(battle, campaign, action);
+    renderAll();
+    if (result?.ok) {
+      if (result.kind === 'attack') { sound('enemyAttack'); haptic(12); }
+      await animateResult(result);
+    }
+    const early = evaluateBattle(battle);
+    if (early === 'defeat') {
+      battle.result = 'defeat';
+      mode = 'playing';
+      inputLocked = false;
+      concludeDefeat();
+      return;
+    }
+    await wait(settings.motion ? 120 : 10);
+  }
+  const result = finishRound(battle, campaign);
+  persist();
+  if (result === 'victory') {
+    inputLocked = false;
+    showVictory();
+    return;
+  }
+  if (result === 'defeat') {
+    inputLocked = false;
+    concludeDefeat();
+    return;
+  }
+  mode = 'playing';
+  inputLocked = false;
+  stamp('ВАШ ХОД');
+  sound('turnBack');
+  renderAll();
+}
+
+function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+function animateResult(result) {
+  if (!settings.motion || !result?.ok) {
+    if (result?.kind === 'attack') addEffect({ type: 'damage', row: result.to.row, col: result.to.col, text: `−${result.damage}`, duration: 520 });
+    return Promise.resolve();
+  }
+  const duration = result.kind === 'move' ? 280 : result.kind === 'attack' ? 420 : 220;
+  animation = { ...result, startedAt: performance.now(), duration };
+  if (result.kind === 'attack') {
+    addEffect({ type: 'line', from: result.from, to: result.to, duration: 300 });
+    addEffect({ type: 'damage', row: result.to.row, col: result.to.col, text: `−${result.damage}`, duration: 700, delay: 120 });
+  } else if (result.kind === 'entrench') addEffect({ type: 'ring', unitId: result.unitId, duration: 420 });
+  else if (result.kind === 'resupply') addEffect({ type: 'text', unitId: result.unitId, text: `+${result.gain}`, duration: 600 });
+  else if (result.kind === 'rally') addEffect({ type: 'text', unitId: result.unitId, text: '+МОРАЛЬ', duration: 600 });
+  else if (result.kind === 'doctrine') addEffect({ type: 'doctrine', duration: 650 });
+  startRenderLoop();
+  return wait(duration + 40).then(() => { animation = null; });
+}
+
+function addEffect(effect) {
+  effects.push({ startedAt: performance.now(), delay: 0, ...effect });
+  startRenderLoop();
+}
+
+function toast(message) {
+  clearTimeout(toastTimer);
+  dom.toast.textContent = message;
+  dom.toast.classList.add('show');
+  toastTimer = setTimeout(() => dom.toast.classList.remove('show'), 1800);
+}
+
+function stamp(text) {
+  dom.phaseStamp.textContent = text;
+  dom.phaseStamp.classL
