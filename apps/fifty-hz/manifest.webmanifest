@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "50 ГЦ — симулятор подстанции",
+  "short_name": "50 ГЦ",
+  "description": "Удержи городскую энергосеть во время утреннего пика.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#c9c5ad",
+  "theme_color": "#2e3c37",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
