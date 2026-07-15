@@ -1,0 +1,145 @@
+ist.remove('show');
+  void dom.phaseStamp.offsetWidth;
+  dom.phaseStamp.classList.add('show');
+}
+
+function haptic(pattern) {
+  if (!settings.haptics || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern); } catch {}
+}
+
+function ensureAudio() {
+  if (!settings.sound) return null;
+  if (!audio) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audio = new AudioContextClass();
+  }
+  if (audio.state === 'suspended') audio.resume().catch(() => {});
+  return audio;
+}
+
+function osc(ctx, frequency, duration, type = 'sine', gainValue = .05, offset = 0) {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, ctx.currentTime + offset);
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
+  gain.gain.exponentialRampToValueAtTime(gainValue, ctx.currentTime + offset + .01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + duration);
+  oscillator.connect(gain).connect(ctx.destination);
+  oscillator.start(ctx.currentTime + offset);
+  oscillator.stop(ctx.currentTime + offset + duration + .02);
+}
+
+function noise(ctx, duration = .1, gainValue = .04, offset = 0) {
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  source.buffer = buffer;
+  gain.gain.value = gainValue;
+  source.connect(gain).connect(ctx.destination);
+  source.start(ctx.currentTime + offset);
+}
+
+function sound(type) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  if (type === 'select') { osc(ctx, 180, .05, 'square', .025); osc(ctx, 260, .045, 'square', .02, .025); }
+  else if (type === 'move') { noise(ctx, .08, .022); osc(ctx, 120, .09, 'triangle', .035); }
+  else if (type === 'attack') { noise(ctx, .16, .075); osc(ctx, 74, .2, 'sawtooth', .07); osc(ctx, 150, .08, 'square', .035, .03); }
+  else if (type === 'enemyAttack') { noise(ctx, .12, .045); osc(ctx, 62, .16, 'sawtooth', .05); }
+  else if (type === 'supply') { osc(ctx, 210, .08, 'triangle', .035); osc(ctx, 315, .1, 'triangle', .03, .06); }
+  else if (type === 'rally') { osc(ctx, 196, .1, 'square', .03); osc(ctx, 294, .12, 'square', .03, .08); }
+  else if (type === 'entrench') { noise(ctx, .08, .03); osc(ctx, 105, .12, 'triangle', .035); }
+  else if (type === 'turn') { osc(ctx, 82, .14, 'triangle', .055); osc(ctx, 64, .18, 'triangle', .05, .12); }
+  else if (type === 'turnBack') { osc(ctx, 116, .1, 'triangle', .04); osc(ctx, 174, .12, 'triangle', .04, .08); }
+  else if (type === 'stamp') { noise(ctx, .045, .06); osc(ctx, 90, .11, 'square', .045); }
+  else if (type === 'paper') { noise(ctx, .1, .018); }
+  else if (type === 'deny') { osc(ctx, 110, .09, 'square', .03); osc(ctx, 88, .12, 'square', .025, .07); }
+  else if (type === 'start') { osc(ctx, 131, .16, 'triangle', .035); osc(ctx, 196, .18, 'triangle', .035, .11); osc(ctx, 262, .2, 'triangle', .03, .22); }
+  else if (type === 'victory') { [196, 247, 294, 392].forEach((f, i) => osc(ctx, f, .38, 'triangle', .035, i * .08)); }
+  else if (type === 'defeat') { [120, 101, 82].forEach((f, i) => osc(ctx, f, .32, 'sawtooth', .04, i * .12)); }
+  else { osc(ctx, 170, .05, 'triangle', .025); }
+}
+
+function renderAll() {
+  if (!battle || !campaign) return;
+  resizeCanvas();
+  renderHud();
+  drawBattle(performance.now());
+}
+
+function renderHud() {
+  const weather = WEATHER[battle.weather];
+  dom.battleKicker.textContent = `БОЙ ${campaign.stage} · ${weather.name.toUpperCase()}`;
+  dom.battleName.textContent = battleLabel();
+  dom.turnValue.textContent = `${Math.min(battle.turn, battle.turnLimit)}/${battle.turnLimit}`;
+  dom.playerResolveValue.textContent = Math.round(battle.playerResolve);
+  dom.enemyResolveValue.textContent = Math.round(battle.enemyResolve);
+  dom.playerResolveFill.style.width = `${clamp(battle.playerResolve, 0, 100)}%`;
+  dom.enemyResolveFill.style.width = `${clamp(battle.enemyResolve, 0, 100)}%`;
+  dom.playerObjectiveValue.textContent = battle.playerObjective;
+  dom.enemyObjectiveValue.textContent = battle.enemyObjective;
+  dom.doctrineButtonLabel.textContent = DOCTRINES[campaign.doctrine].special;
+  dom.doctrineButton.classList.toggle('used', battle.doctrineUsed);
+
+  dom.commandPips.replaceChildren();
+  for (let i = 0; i < battle.maxCommand; i += 1) {
+    const pip = document.createElement('i');
+    pip.className = i < battle.command ? '' : 'spent';
+    dom.commandPips.append(pip);
+  }
+
+  const selected = selectedId ? getUnit(battle, selectedId) : inspectedId ? getUnit(battle, inspectedId) : null;
+  if (selected) {
+    const summary = summarizeUnit(selected);
+    dom.selectedGlyph.textContent = summary.glyph;
+    dom.selectedGlyph.style.background = selected.side === 'player' ? '#314f60' : '#743b36';
+    dom.selectedName.textContent = summary.name;
+    dom.selectedState.textContent = selected.side === 'enemy'
+      ? `${getTerrain(battle, selected.row, selected.col).label} · ${selected.entrenched ? `укрепление ${selected.entrenched}` : 'без укреплений'}`
+      : selected.acted ? 'Приказ уже выполнен' : `${getTerrain(battle, selected.row, selected.col).label} · готов к приказу`;
+    dom.miniMeters.hidden = false;
+    dom.hpFill.style.width = `${summary.hp / summary.maxHp * 100}%`;
+    dom.hpValue.textContent = `${summary.hp}/${summary.maxHp}`;
+    dom.moraleFill.style.width = `${summary.morale / selected.maxMorale * 100}%`;
+    dom.moraleValue.textContent = summary.morale;
+    dom.supplyFill.style.width = `${summary.supply / selected.maxSupply * 100}%`;
+    dom.supplyValue.textContent = summary.supply;
+  } else {
+    dom.selectedGlyph.textContent = '—';
+    dom.selectedGlyph.style.background = '#314f60';
+    dom.selectedName.textContent = 'Нет выбранного отряда';
+    dom.selectedState.textContent = battle.phase === 'enemy' ? 'Противник исполняет приказы' : 'Тапните по синему жетону';
+    dom.miniMeters.hidden = true;
+  }
+
+  const ownSelected = selectedId ? getUnit(battle, selectedId) : null;
+  const canAct = mode === 'playing' && battle.phase === 'player' && !inputLocked && ownSelected && !ownSelected.routed && !ownSelected.acted;
+  dom.entrenchButton.disabled = !canAct || battle.command < 1;
+  dom.supplyButton.disabled = !canAct || battle.command < 1;
+  dom.rallyButton.disabled = !canAct || battle.command < 2;
+  const doctrineNeedsUnit = campaign.doctrine === 'maneuver';
+  dom.doctrineButton.disabled = mode !== 'playing' || inputLocked || battle.phase !== 'player' || battle.doctrineUsed || battle.command < 2 || (doctrineNeedsUnit && !ownSelected);
+  dom.endTurnButton.disabled = mode !== 'playing' || inputLocked || battle.phase !== 'player';
+
+  const ready = battle.units.filter((unit) => unit.side === 'player' && !unit.routed && !unit.acted).length;
+  dom.endTurnHint.textContent = ready > 0 && battle.command > 0 ? `Ещё готовы: ${ready}` : 'Враг ответит на приказы';
+  dom.mapNote.textContent = mapInstruction(selected);
+}
+
+function mapInstruction(selected) {
+  if (battle.phase === 'enemy') return 'Противник исполняет приказы';
+  if (!selected) return 'Выберите свой жетон';
+  if (selected.side === 'enemy') return `${UNIT_TYPES[selected.type].name}: здоровье ${selected.hp}, мораль ${Math.round(selected.morale)}`;
+  if (selected.acted) return 'Этот отряд уже выполнил приказ';
+  const targets = attackableUnits(battle, selected.id).length;
+  return targets ? 'Синие клетки — марш, красные цели — атака' : 'Выберите подсвеченную клетку марша';
+}
+
+function resizeCanvas() {
+  const rect = dom.canvas
