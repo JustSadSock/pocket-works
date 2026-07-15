@@ -15,6 +15,7 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './game-core.js',
+  './lifecycle.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
