@@ -50,6 +50,11 @@ shp28ModulePlan = function shp28VariedModulePlan() {
   return selected;
 };
 
+var shp28FixBaseAverageRaceOffset = shp271AverageRaceOffset;
+shp271AverageRaceOffset = function shp28FullRacingLine(car, preview) {
+  return shp28FixBaseAverageRaceOffset(car, preview) * 1.25;
+};
+
 var shp28FixBaseAiControls = aiControls;
 aiControls = function shp28WiderRacingEnvelope(car, dt) {
   const physicalHalf = roadHalf;
@@ -76,13 +81,14 @@ updateCar = function shp28StableHighSpeedUpdateCar(car, dt) {
   let lateral = car.vx * rx + car.vy * ry;
   const speedRatio = clamp(Math.abs(forward) / MAX_SPEED, 0, 1);
   const freeOfImpact = (car.collisionCooldown || 0) <= 0.02;
+  const onRoad = car.distanceFromRoad <= shp28LocalHalf(car) + 6;
 
   if (freeOfImpact && forward > beforeForward) {
     const skillFactor = car.player ? 1 : clamp(1 + ((car.skill || 1) - 1) * 0.25, 0.97, 1.05);
     const maximumAcceleration = lerp(145, 62, smoothstep(0.06, 1, speedRatio)) * skillFactor;
     forward = Math.min(forward, beforeForward + maximumAcceleration * dt);
   }
-  if (freeOfImpact && beforeForward > 0 && forward < beforeForward && (car.brakeInput || 0) > 0.05) {
+  if (freeOfImpact && onRoad && beforeForward > 0 && forward < beforeForward && (car.brakeInput || 0) > 0.05) {
     const maximumBraking = lerp(450, 330, smoothstep(0.18, 1, speedRatio));
     forward = Math.max(forward, Math.max(0, beforeForward - maximumBraking * dt));
   }
