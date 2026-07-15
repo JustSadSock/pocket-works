@@ -1,0 +1,238 @@
+/* ШПИЛЬКА 2.9 — route identity, live map and cosmetic garage. */
+:root {
+  --route-terrain: #d2c49d;
+  --route-dark: #8b806a;
+  --route-accent: #df5d35;
+  --route-water: #789799;
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 72% 18%, color-mix(in srgb, var(--route-water) 34%, transparent), transparent 30%),
+    linear-gradient(145deg, var(--route-terrain), color-mix(in srgb, var(--route-terrain) 72%, #20231f));
+}
+
+.track-mark {
+  filter: drop-shadow(0 14px 0 color-mix(in srgb, var(--route-dark) 32%, transparent));
+}
+.track-mark svg path:first-child {
+  stroke: var(--route-accent);
+  stroke-width: 9;
+  transition: d 260ms ease, stroke 220ms ease;
+}
+.track-mark svg .bridge-line {
+  stroke: #202421;
+  stroke-width: 6;
+  stroke-dasharray: 7 7;
+}
+
+.route-strip {
+  border-left: 6px solid var(--route-accent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--route-dark) 24%, transparent), transparent 72%);
+}
+
+.route-action-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.route-action-row > .secondary-action {
+  font-size: clamp(8px, 2.45vw, 10px);
+  letter-spacing: 0.04em;
+}
+
+.route-map {
+  position: absolute;
+  z-index: 37;
+  top: max(72px, calc(env(safe-area-inset-top) + 58px));
+  right: max(10px, env(safe-area-inset-right));
+  width: 106px;
+  height: 119px;
+  border: 2px solid rgba(240, 235, 219, 0.78);
+  border-bottom-width: 5px;
+  padding: 5px;
+  background: rgba(25, 29, 26, 0.78);
+  color: #f1ebdb;
+  box-shadow: 0 8px 0 rgba(19, 22, 20, 0.22);
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+.route-map[hidden] { display: none; }
+.route-map > span {
+  display: block;
+  height: 13px;
+  font: 850 8px/1 system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-align: center;
+  opacity: 0.82;
+}
+.route-map canvas {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.garage-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 126;
+  display: grid;
+  align-items: end;
+  padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(19, 22, 20, 0.56);
+  backdrop-filter: blur(5px);
+}
+.garage-screen[hidden] { display: none; }
+
+.garage-sheet {
+  width: min(100%, 540px);
+  max-height: min(88vh, 760px);
+  margin: 0 auto;
+  overflow: auto;
+  border: 3px solid #1e211f;
+  border-bottom-width: 8px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.10), transparent 36%),
+    #d2c49d;
+  color: #1e211f;
+  box-shadow: 0 18px 0 rgba(25, 28, 26, 0.26);
+}
+.garage-sheet > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 3px solid #1e211f;
+  padding-bottom: 11px;
+}
+.garage-sheet h2 {
+  margin: 0;
+  font: italic 900 clamp(42px, 13vw, 68px) / 0.84 system-ui, sans-serif;
+  letter-spacing: -0.06em;
+}
+.garage-sheet header button {
+  min-height: 44px;
+  border: 2px solid #1e211f;
+  padding: 0 13px;
+  background: #1e211f;
+  color: #f2ecdc;
+  font: 850 10px/1 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+}
+.garage-preview {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  margin: 14px 0 8px;
+  background:
+    linear-gradient(90deg, transparent 49.5%, rgba(30,33,31,.10) 50%, transparent 50.5%),
+    linear-gradient(rgba(30,33,31,.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 22px;
+}
+.garage-preview svg {
+  width: min(94%, 380px);
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 8px 0 rgba(30,33,31,.12));
+}
+.garage-group {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(30,33,31,.42);
+  padding: 12px 0 2px;
+}
+.garage-group > span {
+  font: 900 9px/1 system-ui, sans-serif;
+  letter-spacing: 0.16em;
+}
+.garage-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.garage-swatches button,
+.garage-segments button,
+.garage-numbers button {
+  min-height: 44px;
+  border: 2px solid rgba(30,33,31,.54);
+  background: transparent;
+  color: inherit;
+  font: 800 9px/1 system-ui, sans-serif;
+}
+.garage-swatches button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  text-align: left;
+}
+.garage-swatches i {
+  width: 26px;
+  height: 26px;
+  display: block;
+  border: 2px solid #1e211f;
+  background: linear-gradient(135deg, var(--swatch-body) 0 64%, var(--swatch-accent) 64%);
+}
+.garage-swatches b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.garage-segments {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.garage-numbers {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+}
+.garage-swatches button.is-selected,
+.garage-segments button.is-selected,
+.garage-numbers button.is-selected {
+  border-color: #1e211f;
+  background: #1e211f;
+  color: #f2ecdc;
+  box-shadow: inset 0 -3px 0 var(--route-accent);
+}
+.garage-note {
+  margin: 13px 0 0;
+  border-left: 4px solid var(--route-accent);
+  padding: 8px 10px;
+  background: rgba(30,33,31,.08);
+  font: 700 10px/1.35 system-ui, sans-serif;
+}
+
+@media (max-width: 390px) {
+  .route-map {
+    width: 92px;
+    height: 105px;
+  }
+  .route-map canvas {
+    width: 82px;
+    height: 82px;
+  }
+  .garage-sheet { padding: 13px; }
+  .garage-preview { min-height: 126px; }
+  .garage-swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .garage-segments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .garage-numbers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-height: 720px) {
+  .route-map {
+    top: max(62px, calc(env(safe-area-inset-top) + 48px));
+    transform: scale(.88);
+    transform-origin: top right;
+  }
+  .garage-preview { min-height: 104px; margin-top: 8px; }
+  .garage-preview svg { width: min(78%, 300px); }
+  .garage-group { padding-top: 8px; }
+  .garage-note { margin-top: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-mark svg path:first-child { transition: none; }
+}
