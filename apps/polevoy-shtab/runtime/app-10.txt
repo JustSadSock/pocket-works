@@ -71,3 +71,25 @@ dom.continueButton.replaceWith(continueButtonClone);
 dom.continueButton = continueButtonClone;
 dom.continueButton.addEventListener('click', continueExpandedCampaign);
 refreshMenu();
+
+const baseDrawUnitToken = drawUnitToken;
+drawUnitToken = function drawMissionMarkedToken(ctx, unit, x, y, now, scale = 1) {
+  baseDrawUnitToken(ctx, unit, x, y, now, scale);
+  if (!unit.isCommander && !unit.isSupplyTarget) return;
+  const size = layout.tile * .62 * scale;
+  ctx.save();
+  ctx.translate(x + size * .43, y - size * .43);
+  ctx.fillStyle = unit.isCommander ? '#d7b75d' : '#d4c99e';
+  ctx.strokeStyle = unit.isCommander ? '#5c3427' : '#35453b';
+  ctx.lineWidth = Math.max(1.2, layout.tile * .025);
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(7, layout.tile * .13), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = unit.isCommander ? '#5c3427' : '#35453b';
+  ctx.font = `900 ${Math.max(8, layout.tile * .15)}px Georgia`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(unit.isCommander ? '★' : '▣', 0, .5);
+  ctx.restore();
+};
