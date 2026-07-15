@@ -38,7 +38,8 @@ const APP_PARTS = [
   './runtime/app-06.txt',
   './runtime/app-07.txt',
   './runtime/app-08.txt',
-  './runtime/app-09.txt'
+  './runtime/app-09.txt',
+  './runtime/app-10.txt'
 ];
 
 async function loadText(path) {
