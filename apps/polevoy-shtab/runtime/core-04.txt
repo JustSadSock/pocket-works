@@ -42,7 +42,10 @@ export function evaluateBattle(battle) {
     ? ((battle.mission.holdProgress || 0) >= (battle.mission.target || 1) ? 'victory' : null)
     : evaluateMissionState(battle);
   if (missionResult) return missionResult;
-  if (battle.turn > battle.turnLimit) return missionTimeoutOutcome(battle, playerAlive, enemyAlive);
+  if (battle.turn > battle.turnLimit) {
+    if (battle.mission?.type === 'hold') return (battle.mission.holdProgress || 0) >= (battle.mission.target || 1) ? 'victory' : 'defeat';
+    return missionTimeoutOutcome(battle, playerAlive, enemyAlive);
+  }
   return null;
 }
 
