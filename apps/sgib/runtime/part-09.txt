@@ -144,15 +144,26 @@ function drawEntity(entity, point = entity, alpha = 1) {
   else drawInk(entity, point, alpha);
 }
 
+function drawSettledPaperScene() {
+  [...state.layers]
+    .sort((a, b) => (a.depth || 0) - (b.depth || 0))
+    .forEach((layer) => drawPaperPolygon(layer.polygon, layer));
+  drawCreases();
+  state.entities.forEach((entity) => drawEntity(entity));
+}
+
 function drawPaperScene() {
-  if (state.gesture?.line) {
-    drawFoldPreview(state.gesture.line, state.gesture.angle, state.gesture.valid);
+  const gesture = state.gesture;
+  if (gesture?.line && gesture.previewReady) {
+    drawFoldPreview(gesture.line, gesture.angle, gesture.valid);
   } else if (state.animation) {
     drawFoldPreview(state.animation.line, state.animation.angle, true);
   } else {
-    [...state.layers].sort((a, b) => (a.depth || 0) - (b.depth || 0)).forEach((layer) => drawPaperPolygon(layer.polygon, layer));
-    drawCreases();
-    state.entities.forEach((entity) => drawEntity(entity));
+    drawSettledPaperScene();
+    if (gesture?.line) {
+      drawFoldGuide(gesture.line, false);
+      drawGestureArrow(gesture.start, gesture.current, false);
+    }
   }
   drawHintGesture();
   drawEffects();
