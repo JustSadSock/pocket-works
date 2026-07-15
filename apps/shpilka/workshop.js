@@ -2,7 +2,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 const workshop = createWorkshopMode({
   appName: 'ШПИЛЬКА',
-  version: '2.8.2',
+  version: '2.9.0',
   storageNamespace: 'pocket-works:shpilka',
   cachePrefix: 'shpilka-',
   onReset() {
@@ -11,6 +11,7 @@ const workshop = createWorkshopMode({
     localStorage.removeItem('pocket-works:shpilka:prefs:v1');
     localStorage.removeItem('pocket-works:shpilka:geometry:v24');
     localStorage.removeItem('pocket-works:shpilka:career:v26');
+    localStorage.removeItem('pocket-works:shpilka:cosmetics:v1');
     window.location.reload();
   }
 });
