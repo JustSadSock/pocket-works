@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'sgib-';
-const CACHE_NAME = 'sgib-v1.1.6';
-const APP_VERSION = '1.1.6';
+const CACHE_NAME = 'sgib-v1.1.7';
+const APP_VERSION = '1.1.7';
 const RELEASE_DATE = '2026-07-15';
-const CACHE_PROTOCOL = 4;
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Касания не используют нестабильные screenX/screenY и ручной capture в WebKit.',
-  'Жест проходит фазы tracking, armed и preview; бумага не поднимается преждевременно.',
-  'Одиночные аномальные скачки координат игнорируются.',
-  'Порог и минимальная длительность жеста защищают от случайного сгиба.'
+  'Игровой код полностью возвращён к первоначальному релизу СГИБ 1.0.0.',
+  'Восстановлены исходные обработка жеста, предпросмотр сгиба и правила совпадений.',
+  'Удалены изменения версий 1.1.0–1.1.6.',
+  'Создан новый offline-кеш для принудительной доставки rollback.'
 ];
 const APP_SHELL = [
   './',
@@ -82,24 +82,14 @@ async function precacheFreshShell() {
   );
 }
 
-function cacheKeyFor(requestUrl, canonicalUrl) {
-  return requestUrl.searchParams.get('v') === APP_VERSION
-    ? requestUrl.href
-    : canonicalUrl;
-}
-
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
-  const requestUrl = new URL(request.url);
-  const cacheKey = cacheKeyFor(requestUrl, canonicalUrl);
   try {
     const response = await fetchFresh(request);
     const cache = await caches.open(CACHE_NAME);
-    await cache.put(cacheKey, response.clone());
+    await cache.put(canonicalUrl, response.clone());
     return response;
   } catch {
-    const exact = await caches.match(cacheKey);
-    if (exact) return exact;
-    return caches.match(fallbackUrl);
+    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
   }
 }
 
@@ -142,12 +132,5 @@ self.addEventListener('fetch', (event) => {
   }
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
   if (!canonicalUrl) return;
-
-  const requestedVersion = requestUrl.searchParams.get('v');
-  if (requestedVersion && requestedVersion !== APP_VERSION) {
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
-    return;
-  }
-
-  event.respondWith(networkFirstFresh(event.request, canonicalUrl, canonicalUrl));
+  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
 });
