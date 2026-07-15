@@ -1,0 +1,181 @@
+    terrain,
+    objectives,
+    units,
+    command: commandPerTurn(campaign),
+    maxCommand: commandPerTurn(campaign),
+    playerResolve: 100,
+    enemyResolve: clamp(82 + campaign.stage * 3, 82, 120),
+    playerObjective: 0,
+    enemyObjective: 0,
+    doctrineUsed: false,
+    fireBonus: 0,
+    actionCounter: 0,
+    log: [`Бой ${campaign.stage}. ${WEATHER[weather].name}.`],
+    result: null,
+  };
+}
+
+export function commandPerTurn(campaign) {
+  return 5 + (campaign.upgrades?.signal || 0);
+}
+
+export function getTerrain(battle, row, col) {
+  return TERRAIN[battle.terrain[cellIndex(row, col)]];
+}
+
+export function getUnitAt(battle, row, col) {
+  return battle.units.find((unit) => !unit.routed && unit.hp > 0 && unit.row === row && unit.col === col) || null;
+}
+
+export function getUnit(battle, id) {
+  return battle.units.find((unit) => unit.id === id) || null;
+}
+
+export function unitMove(unit, campaign) {
+  let move = UNIT_TYPES[unit.type].move;
+  if (campaign.doctrine === 'maneuver' && unit.side === 'player' && (unit.type === 'scout' || unit.type === 'cavalry')) move += 1;
+  return move;
+}
+
+export function unitRange(unit, battle) {
+  let range = UNIT_TYPES[unit.type].range;
+  if (battle.weather === 'fog' && unit.type === 'artillery') range = Math.max(2, range - 1);
+  return range;
+}
+
+export function movementCost(battle, campaign, unit, row, col) {
+  const terrainKey = battle.terrain[cellIndex(row, col)];
+  let cost = TERRAIN[terrainKey].move;
+  if ((campaign.upgrades?.engineers || 0) > 0 && (terrainKey === 'forest' || terrainKey === 'ruins')) cost = Math.max(1, cost - 1);
+  if (battle.weather === 'rain' && terrainKey === 'marsh') cost += 1;
+  if (unit.type === 'cavalry' && terrainKey === 'marsh') cost += 1;
+  return cost;
+}
+
+export function reachableCells(battle, campaign, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.acted || unit.routed || unit.side !== 'player') return [];
+  const budget = unitMove(unit, campaign);
+  const startKey = `${unit.row},${unit.col}`;
+  const costs = new Map([[startKey, 0]]);
+  const queue = [{ row: unit.row, col: unit.col, cost: 0 }];
+  while (queue.length) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift();
+    for (const next of neighbors(current)) {
+      const occupant = getUnitAt(battle, next.row, next.col);
+      if (occupant && occupant.id !== unit.id) continue;
+      const nextCost = current.cost + movementCost(battle, campaign, unit, next.row, next.col);
+      const key = `${next.row},${next.col}`;
+      if (nextCost > budget || (costs.has(key) && costs.get(key) <= nextCost)) continue;
+      costs.set(key, nextCost);
+      queue.push({ ...next, cost: nextCost });
+    }
+  }
+  return [...costs.entries()]
+    .filter(([key]) => key !== startKey)
+    .map(([key, cost]) => {
+      const [row, col] = key.split(',').map(Number);
+      return { row, col, cost };
+    });
+}
+
+export function attackableUnits(battle, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.acted || unit.routed) return [];
+  const spec = UNIT_TYPES[unit.type];
+  const range = unitRange(unit, battle);
+  return battle.units.filter((target) => {
+    if (target.side === unit.side || target.routed || target.hp <= 0) return false;
+    const distance = manhattan(unit, target);
+    return distance >= spec.minRange && distance <= range;
+  });
+}
+
+function deterministicRoll(battle, tag) {
+  return seededRandom(hashSeed(battle.seed, battle.turn, battle.actionCounter, tag))();
+}
+
+function damageBonus(campaign, battle, attacker) {
+  let bonus = 0;
+  if (attacker.side === 'player') {
+    if (attacker.type === 'artillery') bonus += campaign.upgrades?.batteries || 0;
+    if (attacker.type === 'line' || attacker.type === 'scout') bonus += campaign.upgrades?.sharpshooters || 0;
+    if (campaign.doctrine === 'fire' && (attacker.type === 'artillery' || attacker.type === 'line')) bonus += 1;
+    bonus += battle.fireBonus || 0;
+  }
+  return bonus;
+}
+
+function moraleLoss(campaign, defender, damage, routed = false) {
+  const reduction = defender.side === 'player' ? (campaign.upgrades?.standards || 0) * 0.2 : 0;
+  return Math.round((damage * 8 + (routed ? 10 : 0)) * (1 - clamp(reduction, 0, 0.4)));
+}
+
+function adjacentAllies(battle, side, target) {
+  return battle.units.filter((unit) => unit.side === side && !unit.routed && unit.hp > 0 && manhattan(unit, target) === 1).length;
+}
+
+export function moveUnit(battle, campaign, unitId, row, col, side = 'player') {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.side !== side || unit.acted || unit.routed) return { ok: false, reason: 'Отряд недоступен.' };
+  const reachable = side === 'player'
+    ? reachableCells(battle, campaign, unitId)
+    : reachableCellsForEnemy(battle, campaign, unitId);
+  const destination = reachable.find((cell) => cell.row === row && cell.col === col);
+  if (!destination) return { ok: false, reason: 'Клетка вне марша.' };
+  if (side === 'player' && battle.command < 1) return { ok: false, reason: 'Не хватает приказов.' };
+  const from = { row: unit.row, col: unit.col };
+  unit.row = row;
+  unit.col = col;
+  unit.acted = true;
+  unit.entrenched = 0;
+  unit.supply = clamp(unit.supply - 4 - destination.cost, 0, unit.maxSupply);
+  if (side === 'player') battle.command -= 1;
+  battle.actionCounter += 1;
+  battle.log.push(`${UNIT_TYPES[unit.type].name}: марш.`);
+  return { ok: true, kind: 'move', unitId, from, to: { row, col } };
+}
+
+function reachableCellsForEnemy(battle, campaign, unitId) {
+  const unit = getUnit(battle, unitId);
+  if (!unit || unit.acted || unit.routed) return [];
+  const budget = unitMove(unit, { ...campaign, doctrine: 'none' });
+  const startKey = `${unit.row},${unit.col}`;
+  const costs = new Map([[startKey, 0]]);
+  const queue = [{ row: unit.row, col: unit.col, cost: 0 }];
+  while (queue.length) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift();
+    for (const next of neighbors(current)) {
+      const occupant = getUnitAt(battle, next.row, next.col);
+      if (occupant && occupant.id !== unit.id) continue;
+      const nextCost = current.cost + movementCost(battle, campaign, unit, next.row, next.col);
+      const key = `${next.row},${next.col}`;
+      if (nextCost > budget || (costs.has(key) && costs.get(key) <= nextCost)) continue;
+      costs.set(key, nextCost);
+      queue.push({ ...next, cost: nextCost });
+    }
+  }
+  return [...costs.entries()].filter(([key]) => key !== startKey).map(([key, cost]) => {
+    const [row, col] = key.split(',').map(Number);
+    return { row, col, cost };
+  });
+}
+
+export function attackUnit(battle, campaign, attackerId, targetId, side = 'player') {
+  const attacker = getUnit(battle, attackerId);
+  const target = getUnit(battle, targetId);
+  if (!attacker || !target || attacker.side !== side || target.side === side || attacker.acted || attacker.routed || target.routed) return { ok: false, reason: 'Атака невозможна.' };
+  if (!attackableUnits(battle, attackerId).some((unit) => unit.id === targetId)) return { ok: false, reason: 'Цель вне досягаемости.' };
+  if (side === 'player' && battle.command < 1) return { ok: false, reason: 'Не хватает приказов.' };
+
+  const spec = UNIT_TYPES[attacker.type];
+  const targetTerrain = getTerrain(battle, target.row, target.col);
+  const roll = deterministicRoll(battle, `${attacker.id}:${target.id}`);
+  const flank = adjacentAllies(battle, attacker.side, target) >= 2 ? 1 : 0;
+  const supplyPenalty = attacker.supply < 25 ? 2 : attacker.supply < 45 ? 1 : 0;
+  const moraleBonus = attacker.morale >= 90 ? 1 : attacker.morale < 35 ? -1 : 0;
+  let weatherPenalty = battle.weather === 'rain' && attacker.type === 'artillery' ? 1 : 0;
+  const variance = roll < 0.18 ? -1 : roll > 0.84 ? 1 : 0;
+  const raw = spec.attack + damageBonus(camp
