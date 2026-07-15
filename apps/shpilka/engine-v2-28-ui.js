@@ -56,4 +56,13 @@ function shp28BuildUi() {
   if (routeTools) routeTools.setAttribute('data-collapsed-tools', 'true');
 }
 
+if (typeof shp27StoredFinishRace === 'function') {
+  const shp28BaseStoredFinishRace = shp27StoredFinishRace;
+  shp27StoredFinishRace = function shp28StoredFinishRace() {
+    shp28BaseStoredFinishRace();
+    const championshipActive = typeof shp26ChampionshipRaceActive !== 'undefined' && shp26ChampionshipRaceActive;
+    if (!championshipActive) restartButtonFinish.textContent = 'ЕЩЁ РАЗ';
+  };
+}
+
 shp28BuildUi();
