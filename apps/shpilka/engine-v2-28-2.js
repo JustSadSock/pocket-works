@@ -462,7 +462,7 @@ function shp282UpdateRaceAdvisory() {
 
   if (shp28Jump && jumpGap > 0 && jumpGap < 560) {
     const speed = Math.round(Math.abs(player?.forwardSpeed || 0) * 0.56);
-    const target = 300;
+    const target = 200;
     advisory.dataset.tone = speed < target && jumpGap < 280 ? 'danger' : 'jump';
     if (title) title.textContent = 'РАЗРЫВ ТРАССЫ';
     if (meta) meta.textContent = `${Math.round(jumpGap)} М · НУЖНО ≈ ${target} КМ/Ч · СЕЙЧАС ${speed}`;
