@@ -90,11 +90,27 @@ function updateEffects(deltaSeconds) {
   state.pulses = state.pulses.filter((pulse) => pulse.age < pulse.life);
 }
 
+function recoverStaleInteractions(now) {
+  const gesture = state.gesture;
+  const lastGestureEvent = gesture?.lastEventAt || gesture?.startedAt;
+  if (gesture && Number.isFinite(lastGestureEvent) && now - lastGestureEvent > GESTURE_STALE_MS) {
+    cancelGesture();
+    showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
+  }
+
+  const animation = state.animation;
+  const animationStartedAt = animation?.startedAt;
+  if (animation && Number.isFinite(animationStartedAt) && now - animationStartedAt > ANIMATION_STALE_MS) {
+    recoverFailedFold(new Error('Fold animation watchdog expired'));
+  }
+}
+
 function render(now) {
   const frameNow = Number.isFinite(now) ? now : performance.now();
   try {
     const deltaSeconds = clamp((frameNow - lastFrameTime) / 1000, 0, 0.05);
     lastFrameTime = frameNow;
+    recoverStaleInteractions(frameNow);
     updateAnimation(frameNow);
     updateEffects(deltaSeconds);
     resizeCanvas();
@@ -120,15 +136,21 @@ function render(now) {
 }
 
 function bindControls() {
-  canvas.addEventListener('pointerdown', beginGesture);
-  canvas.addEventListener('pointermove', moveGesture);
-  canvas.addEventListener('pointerup', endGesture);
-  canvas.addEventListener('pointercancel', cancelGesture);
+  canvas.addEventListener('pointerdown', beginGesture, { passive: false });
+  canvas.addEventListener('pointermove', moveGesture, { passive: false });
+  canvas.addEventListener('pointerup', endGesture, { passive: false });
+  canvas.addEventListener('pointercancel', cancelGesture, { passive: false });
+  canvas.addEventListener('lostpointercapture', (event) => {
+    if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
+    if (cancelGesture(event)) {
+      showHint(state.level?.hint || 'Потяни по листу и отпусти', true);
+    }
+  });
 
   // Safari may release capture before the element-level pointerup handler completes.
   // Window fallbacks finish or cancel the same gesture; duplicate bubbled events are harmless.
-  window.addEventListener('pointerup', endGesture);
-  window.addEventListener('pointercancel', cancelGesture);
+  window.addEventListener('pointerup', endGesture, { passive: false });
+  window.addEventListener('pointercancel', cancelGesture, { passive: false });
 
   dom.continueBtn.addEventListener('click', () => {
     pressFeedback();
