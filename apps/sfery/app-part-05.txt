@@ -1,0 +1,155 @@
+
+function renderSettings() {
+  const pairs = [
+    [ui.soundToggle, state.settings.sound],
+    [ui.hapticToggle, state.settings.haptic],
+    [ui.motionToggle, state.settings.motion]
+  ];
+  for (const [button, enabled] of pairs) {
+    button.classList.toggle('is-off', !enabled);
+    button.querySelector('em').textContent = enabled ? 'Вкл' : 'Выкл';
+    button.setAttribute('aria-pressed', String(enabled));
+  }
+  document.documentElement.classList.toggle('motion-off', !state.settings.motion);
+  ui.bestValue.textContent = state.best;
+}
+
+function toggleSetting(key) {
+  state.settings[key] = !state.settings[key];
+  if (key === 'sound' && state.settings.sound) ensureAudio();
+  renderSettings();
+  saveState();
+  playTone('tap');
+}
+
+function beginDrag(actionId, event) {
+  if (resolutionLocked || !ACTIONS[actionId]) return;
+  dragState = {
+    actionId,
+    startX: event.clientX,
+    startY: event.clientY,
+    x: event.clientX,
+    y: event.clientY,
+    moved: false,
+    targetId: null
+  };
+  ui.dragToken.textContent = ACTIONS[actionId].label;
+  ui.dragToken.style.color = ACTIONS[actionId].color;
+  ui.dragToken.style.left = `${event.clientX}px`;
+  ui.dragToken.style.top = `${event.clientY}px`;
+  ui.dragToken.classList.add('is-active');
+  selectedAction = actionId;
+  selectVisualAction(actionId);
+}
+
+function selectVisualAction(actionId) {
+  for (const button of ui.actionDock.querySelectorAll('.action-token')) {
+    button.classList.toggle('is-selected', button.dataset.action === actionId);
+  }
+  ui.selectionHint.textContent = `Наведите ${ACTIONS[actionId].label.toLowerCase()} на державу`;
+  ui.selectionHint.classList.add('is-active');
+}
+
+function updateDrag(event) {
+  if (!dragState) return;
+  dragState.x = event.clientX;
+  dragState.y = event.clientY;
+  dragState.moved ||= Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY) > 8;
+  ui.dragToken.style.left = `${event.clientX}px`;
+  ui.dragToken.style.top = `${event.clientY}px`;
+  ui.dragToken.style.transform = `translate(-50%, -50%) rotate(${Math.max(-9, Math.min(9, (event.clientX - dragState.startX) * 0.05))}deg)`;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-region]');
+  const targetId = target?.dataset.region;
+  dragState.targetId = targetId && targetId !== 'veya' ? targetId : null;
+  for (const group of ui.regionLayer.querySelectorAll('.region')) {
+    group.classList.toggle('is-selected', group.dataset.region === dragState.targetId);
+  }
+}
+
+function endDrag(cancelled = false) {
+  if (!dragState) return;
+  const finished = dragState;
+  dragState = null;
+  ui.dragToken.classList.remove('is-active');
+  ui.dragToken.style.removeProperty('transform');
+  for (const group of ui.regionLayer.querySelectorAll('.region')) group.classList.remove('is-selected');
+  if (!cancelled && finished.moved && finished.targetId) {
+    resolveAction(finished.actionId, finished.targetId);
+    return;
+  }
+  selectedAction = finished.actionId;
+  selectVisualAction(finished.actionId);
+  if (cancelled) showToast('Перетаскивание отменено');
+}
+
+function bindActions() {
+  for (const button of ui.actionDock.querySelectorAll('.action-token')) {
+    const actionId = button.dataset.action;
+    bindPointerGesture(button, {
+      onStart: (event) => beginDrag(actionId, event),
+      onMove: (event) => updateDrag(event),
+      onEnd: () => endDrag(false),
+      onCancel: () => endDrag(true)
+    });
+    button.addEventListener('click', (event) => {
+      if (event.detail === 0) selectAction(actionId);
+    });
+  }
+}
+
+function bindUi() {
+  ui.startButton.addEventListener('click', startCampaign);
+  ui.resumeButton.addEventListener('click', resumeCampaign);
+  ui.settingsButton.addEventListener('click', showSettings);
+  ui.pauseSettingsButton.addEventListener('click', showSettings);
+  ui.rulesButton.addEventListener('click', () => { ui.tutorialOverlay.hidden = false; });
+  ui.tutorialDoneButton.addEventListener('click', () => {
+    state.seenTutorial = true;
+    ui.tutorialOverlay.hidden = true;
+    saveState();
+    playTone('tap');
+  });
+  ui.pauseButton.addEventListener('click', () => {
+    ui.pauseTurn.textContent = state.turn;
+    ui.pauseScore.textContent = state.score;
+    ui.pauseOverlay.hidden = false;
+    saveState();
+  });
+  ui.continueButton.addEventListener('click', () => { ui.pauseOverlay.hidden = true; });
+  ui.restartButton.addEventListener('click', startCampaign);
+  ui.nextTurnButton.addEventListener('click', advanceTurn);
+  ui.againButton.addEventListener('click', startCampaign);
+  ui.resultMenuButton.addEventListener('click', returnToMenu);
+  ui.settingsBackdrop.addEventListener('click', hideSettings);
+  ui.closeSettingsButton.addEventListener('click', hideSettings);
+  ui.soundToggle.addEventListener('click', () => toggleSetting('sound'));
+  ui.hapticToggle.addEventListener('click', () => toggleSetting('haptic'));
+  ui.motionToggle.addEventListener('click', () => toggleSetting('motion'));
+  ui.clearBestButton.addEventListener('click', () => {
+    state.best = 0;
+    renderSettings();
+    saveState();
+    showToast('Рекорд сброшен');
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveState();
+  });
+  window.addEventListener('pagehide', saveState);
+  window.addEventListener('appupdateavailable', saveState);
+}
+
+function init() {
+  const stored = readStored();
+  if (stored) state = stored;
+  currentCrisis = state.crisis;
+  buildMap();
+  bindActions();
+  bindUi();
+  renderSettings();
+  updateResumeButton();
+  renderState();
+  ui.pauseButton.hidden = true;
+}
+
+init();
