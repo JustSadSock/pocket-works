@@ -1,9 +1,6 @@
-export const CHUNK_SIZE = 24;
-export const TREASURE_TYPES = Object.freeze({
-  relic: { label: 'Реликт', value: 30, weight: 0.58 },
-  archive: { label: 'Архив', value: 70, weight: 0.3 },
-  idol: { label: 'Идол', value: 150, weight: 0.12 },
-});
+export const CHUNK_SIZE = 28;
+export const BASE_RADIUS = 7;
+export const PLAYER_RADIUS = 0.82;
 
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -11,6 +8,10 @@ export function clamp(value, min, max) {
 
 export function lerp(from, to, amount) {
   return from + (to - from) * amount;
+}
+
+export function distance2D(a, b) {
+  return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
 export function mulberry32(seed) {
@@ -24,13 +25,14 @@ export function mulberry32(seed) {
   };
 }
 
-export function hash2D(seed, x, z) {
-  let value = seed ^ Math.imul(x, 0x9e3779b1) ^ Math.imul(z, 0x85ebca77);
+export function hash32(seed, x, z, salt = 0) {
+  let value = (seed ^ Math.imul(x, 0x45d9f3b) ^ Math.imul(z, 0x119de1f3) ^ salt) >>> 0;
   value ^= value >>> 16;
   value = Math.imul(value, 0x7feb352d);
   value ^= value >>> 15;
   value = Math.imul(value, 0x846ca68b);
-  return (value ^ (value >>> 16)) >>> 0;
+  value ^= value >>> 16;
+  return value >>> 0;
 }
 
 export function chunkCoordinate(value) {
@@ -41,281 +43,318 @@ export function chunkKey(cx, cz) {
   return `${cx}:${cz}`;
 }
 
-function chooseTreasure(random) {
-  const roll = random();
-  if (roll < TREASURE_TYPES.idol.weight) return 'idol';
-  if (roll < TREASURE_TYPES.idol.weight + TREASURE_TYPES.archive.weight) return 'archive';
-  return 'relic';
-}
-
-function overlapsObstacle(x, z, radius, obstacles) {
-  return obstacles.some((obstacle) => {
-    if (obstacle.kind === 'circle') {
-      return Math.hypot(x - obstacle.x, z - obstacle.z) < radius + obstacle.radius + 0.8;
-    }
-    const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.halfW, 0);
-    const dz = Math.max(Math.abs(z - obstacle.z) - obstacle.halfD, 0);
-    return Math.hypot(dx, dz) < radius + 0.7;
-  });
-}
-
-function safePoint(random, originX, originZ, obstacles, margin = 2.2) {
-  for (let attempt = 0; attempt < 18; attempt += 1) {
-    const x = originX + (random() * 2 - 1) * (CHUNK_SIZE * 0.42);
-    const z = originZ + (random() * 2 - 1) * (CHUNK_SIZE * 0.42);
-    if (!overlapsObstacle(x, z, margin, obstacles) && Math.hypot(x, z) > 7) return { x, z };
-  }
-  return { x: originX, z: originZ };
-}
-
-export function generateChunk(seed, cx, cz) {
-  const random = mulberry32(hash2D(seed, cx, cz));
-  const originX = cx * CHUNK_SIZE;
-  const originZ = cz * CHUNK_SIZE;
-  const isBase = cx === 0 && cz === 0;
-  const obstacles = [];
-  const decorations = [];
-  const pickups = [];
-
-  const pillarCount = isBase ? 2 : 3 + Math.floor(random() * 4);
-  for (let index = 0; index < pillarCount; index += 1) {
-    const radius = 1.1 + random() * 1.45;
-    const point = safePoint(random, originX, originZ, obstacles, radius + 0.6);
-    obstacles.push({
-      id: `${cx}:${cz}:pillar:${index}`,
-      kind: 'circle',
-      visual: random() < 0.56 ? 'pillar' : 'rock',
-      x: point.x,
-      z: point.z,
-      radius,
-      height: 2.3 + random() * 4.6,
-      rotation: random() * Math.PI,
-    });
-  }
-
-  const wallCount = isBase ? 0 : 1 + Math.floor(random() * 3);
-  for (let index = 0; index < wallCount; index += 1) {
-    const horizontal = random() < 0.5;
-    const halfW = horizontal ? 2.8 + random() * 3.1 : 0.55 + random() * 0.35;
-    const halfD = horizontal ? 0.55 + random() * 0.35 : 2.8 + random() * 3.1;
-    const point = safePoint(random, originX, originZ, obstacles, Math.max(halfW, halfD));
-    obstacles.push({
-      id: `${cx}:${cz}:wall:${index}`,
-      kind: 'aabb',
-      visual: 'wall',
-      x: point.x,
-      z: point.z,
-      halfW,
-      halfD,
-      height: 2.1 + random() * 2.9,
-      rotation: 0,
-    });
-  }
-
-  const archCount = isBase ? 0 : Math.floor(random() * 3);
-  for (let index = 0; index < archCount; index += 1) {
-    const point = safePoint(random, originX, originZ, obstacles, 1.5);
-    decorations.push({
-      id: `${cx}:${cz}:arch:${index}`,
-      type: 'arch',
-      x: point.x,
-      z: point.z,
-      rotation: random() < 0.5 ? 0 : Math.PI / 2,
-      scale: 0.8 + random() * 0.7,
-    });
-  }
-
-  if (!isBase && random() < 0.82) {
-    const amount = random() < 0.18 ? 2 : 1;
-    for (let index = 0; index < amount; index += 1) {
-      const point = safePoint(random, originX, originZ, obstacles, 1.15);
-      const treasureType = chooseTreasure(random);
-      pickups.push({
-        id: `${cx}:${cz}:treasure:${index}`,
-        type: 'treasure',
-        treasureType,
-        value: TREASURE_TYPES[treasureType].value,
-        x: point.x,
-        z: point.z,
-        rotation: random() * Math.PI * 2,
-      });
-    }
-  }
-
-  if (!isBase && random() < 0.28) {
-    const point = safePoint(random, originX, originZ, obstacles, 1.1);
-    pickups.push({
-      id: `${cx}:${cz}:oxygen`,
-      type: 'oxygen',
-      x: point.x,
-      z: point.z,
-      rotation: random() * Math.PI * 2,
-    });
-  }
-
-  return {
-    key: chunkKey(cx, cz),
-    cx,
-    cz,
-    originX,
-    originZ,
-    isBase,
-    floorVariant: Math.floor(random() * 3),
-    obstacles,
-    decorations,
-    pickups,
-  };
-}
-
-export function circleVsCircle(ax, az, ar, bx, bz, br) {
-  const dx = ax - bx;
-  const dz = az - bz;
-  const radius = ar + br;
+function circleIntersectsBox(x, z, radius, wall) {
+  const nearestX = clamp(x, wall.x - wall.w / 2, wall.x + wall.w / 2);
+  const nearestZ = clamp(z, wall.z - wall.d / 2, wall.z + wall.d / 2);
+  const dx = x - nearestX;
+  const dz = z - nearestZ;
   return dx * dx + dz * dz < radius * radius;
 }
 
-export function resolveCircleObstacle(player, radius, obstacle) {
-  if (obstacle.kind === 'circle') {
-    const dx = player.x - obstacle.x;
-    const dz = player.z - obstacle.z;
-    const target = radius + obstacle.radius;
-    const distance = Math.hypot(dx, dz);
-    if (distance >= target) return { x: player.x, z: player.z, hit: false };
-    const safeDistance = distance || 0.0001;
-    return {
-      x: obstacle.x + (dx / safeDistance) * target,
-      z: obstacle.z + (dz / safeDistance) * target,
-      hit: true,
-    };
+function positionClear(x, z, walls, radius = 2) {
+  return !walls.some((wall) => circleIntersectsBox(x, z, radius, wall));
+}
+
+function nearBase(x, z, padding = 0) {
+  return Math.hypot(x, z) < 11 + padding;
+}
+
+export function generateChunk(seed, cx, cz, wreck = null) {
+  const random = mulberry32(hash32(seed, cx, cz, 0x13));
+  const centerX = cx * CHUNK_SIZE;
+  const centerZ = cz * CHUNK_SIZE;
+  const walls = [];
+  const decor = [];
+  const count = 3 + Math.floor(random() * 4);
+
+  for (let index = 0; index < count; index += 1) {
+    const w = 3.4 + random() * 5.8;
+    const d = 2.6 + random() * 5.2;
+    const x = centerX + (random() - 0.5) * (CHUNK_SIZE - w - 3);
+    const z = centerZ + (random() - 0.5) * (CHUNK_SIZE - d - 3);
+    if (nearBase(x, z, Math.max(w, d) * 0.55)) continue;
+    if (Math.abs(x) < w / 2 + 5.4 && z + d / 2 > -34 && z - d / 2 < -6) continue;
+    if (walls.some((wall) => Math.abs(wall.x - x) < (wall.w + w) * 0.58 && Math.abs(wall.z - z) < (wall.d + d) * 0.58)) continue;
+    walls.push({
+      id: `wall:${cx}:${cz}:${index}`,
+      x,
+      z,
+      w,
+      d,
+      h: 2.5 + random() * 7.5,
+      yaw: (random() - 0.5) * 0.18,
+      kind: random() < 0.42 ? 'stone' : 'ruin',
+    });
   }
 
-  const nearestX = clamp(player.x, obstacle.x - obstacle.halfW, obstacle.x + obstacle.halfW);
-  const nearestZ = clamp(player.z, obstacle.z - obstacle.halfD, obstacle.z + obstacle.halfD);
-  const dx = player.x - nearestX;
-  const dz = player.z - nearestZ;
-  const distance = Math.hypot(dx, dz);
-  if (distance >= radius) return { x: player.x, z: player.z, hit: false };
-
-  if (distance > 0.0001) {
-    return {
-      x: nearestX + (dx / distance) * radius,
-      z: nearestZ + (dz / distance) * radius,
-      hit: true,
-    };
+  const pillarCount = 1 + Math.floor(random() * 3);
+  for (let index = 0; index < pillarCount; index += 1) {
+    const x = centerX + (random() - 0.5) * 22;
+    const z = centerZ + (random() - 0.5) * 22;
+    if (nearBase(x, z, 4) || (Math.abs(x) < 7.4 && z < -6 && z > -34) || !positionClear(x, z, walls, 1.5)) continue;
+    decor.push({ id: `pillar:${cx}:${cz}:${index}`, x, z, h: 3 + random() * 8, spin: random() * Math.PI });
   }
 
-  const left = Math.abs(player.x - (obstacle.x - obstacle.halfW));
-  const right = Math.abs((obstacle.x + obstacle.halfW) - player.x);
-  const top = Math.abs(player.z - (obstacle.z - obstacle.halfD));
-  const bottom = Math.abs((obstacle.z + obstacle.halfD) - player.z);
-  const minimum = Math.min(left, right, top, bottom);
-  if (minimum === left) return { x: obstacle.x - obstacle.halfW - radius, z: player.z, hit: true };
-  if (minimum === right) return { x: obstacle.x + obstacle.halfW + radius, z: player.z, hit: true };
-  if (minimum === top) return { x: player.x, z: obstacle.z - obstacle.halfD - radius, hit: true };
-  return { x: player.x, z: obstacle.z + obstacle.halfD + radius, hit: true };
+  const pickups = [];
+  if (cx === 0 && cz === -1) {
+    pickups.push({ id: 'starter-relic', type: 'relic', x: 0, z: -20, value: 30, guaranteed: true });
+  }
+
+  const distanceFromBase = Math.hypot(centerX, centerZ);
+  const lootChance = distanceFromBase < 18 ? 0 : 0.52;
+  if (random() < lootChance) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const x = centerX + (random() - 0.5) * 21;
+      const z = centerZ + (random() - 0.5) * 21;
+      if (nearBase(x, z, 8) || !positionClear(x, z, walls, 2.1)) continue;
+      const roll = random();
+      const type = roll < 0.61 ? 'relic' : roll < 0.9 ? 'archive' : 'idol';
+      pickups.push({ id: `loot:${cx}:${cz}`, type, x, z, value: lootValue(type) });
+      break;
+    }
+  }
+
+  if (random() < 0.3 && distanceFromBase > 24) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const x = centerX + (random() - 0.5) * 20;
+      const z = centerZ + (random() - 0.5) * 20;
+      if (!positionClear(x, z, walls, 1.8)) continue;
+      pickups.push({ id: `oxygen:${cx}:${cz}`, type: 'oxygen', x, z, value: 0 });
+      break;
+    }
+  }
+
+  if (wreck && chunkCoordinate(wreck.x) === cx && chunkCoordinate(wreck.z) === cz) {
+    pickups.push({ id: 'black-box', type: 'wreck', x: wreck.x, z: wreck.z, value: wreck.item?.value || 30, item: wreck.item });
+  }
+
+  return { cx, cz, walls, decor, pickups };
 }
 
-export function movementNoise(inputMagnitude, quietDriveLevel = 0) {
-  const reduction = clamp(1 - quietDriveLevel * 0.16, 0.55, 1);
-  const thresholded = Math.max(0, inputMagnitude - 0.28);
-  return thresholded * thresholded * reduction;
+export function lootValue(type) {
+  if (type === 'idol') return 150;
+  if (type === 'archive') return 70;
+  if (type === 'relic') return 30;
+  return 0;
 }
 
-export function cargoValue(cargo) {
-  return (Array.isArray(cargo) ? cargo : []).reduce((total, item) => total + (Number(item?.value) || 0), 0);
+export function lootLabel(type) {
+  if (type === 'idol') return 'ИДОЛ';
+  if (type === 'archive') return 'АРХИВ';
+  if (type === 'relic') return 'РЕЛИКТ';
+  if (type === 'wreck') return 'ЧЁРНЫЙ ЯЩИК';
+  return 'МОДУЛЬ';
 }
 
-export function distanceToBase(player) {
-  return Math.hypot(Number(player?.x) || 0, Number(player?.z) || 0);
+function pushOutCircleFromWall(position, radius, wall) {
+  const minX = wall.x - wall.w / 2;
+  const maxX = wall.x + wall.w / 2;
+  const minZ = wall.z - wall.d / 2;
+  const maxZ = wall.z + wall.d / 2;
+  const nearestX = clamp(position.x, minX, maxX);
+  const nearestZ = clamp(position.z, minZ, maxZ);
+  let dx = position.x - nearestX;
+  let dz = position.z - nearestZ;
+  let distance = Math.hypot(dx, dz);
+
+  if (distance >= radius) return false;
+  if (distance < 0.0001) {
+    const options = [
+      { amount: Math.abs(position.x - minX), x: minX - radius, z: position.z },
+      { amount: Math.abs(maxX - position.x), x: maxX + radius, z: position.z },
+      { amount: Math.abs(position.z - minZ), x: position.x, z: minZ - radius },
+      { amount: Math.abs(maxZ - position.z), x: position.x, z: maxZ + radius },
+    ].sort((a, b) => a.amount - b.amount);
+    position.x = options[0].x;
+    position.z = options[0].z;
+    return true;
+  }
+
+  const overlap = radius - distance;
+  dx /= distance;
+  dz /= distance;
+  position.x += dx * overlap;
+  position.z += dz * overlap;
+  return true;
 }
 
-export function canExtract(player, cargo, speed) {
-  return distanceToBase(player) <= 3.6 && Array.isArray(cargo) && cargo.length > 0 && speed <= 1.35;
+export function moveWithCollisions(position, delta, walls, radius = PLAYER_RADIUS) {
+  const distance = Math.hypot(delta.x, delta.z);
+  const steps = Math.max(1, Math.ceil(distance / 0.45));
+  const next = { x: position.x, z: position.z };
+  let collided = false;
+  for (let step = 0; step < steps; step += 1) {
+    next.x += delta.x / steps;
+    next.z += delta.z / steps;
+    for (const wall of walls) collided = pushOutCircleFromWall(next, radius, wall) || collided;
+  }
+  return { ...next, collided };
 }
 
-export function listenerStep(listener, target, dt, intensity = 1) {
-  const dx = target.x - listener.x;
-  const dz = target.z - listener.z;
-  const distance = Math.hypot(dx, dz) || 1;
-  const speed = clamp(1.1 + intensity * 1.75, 1.1, 4.8);
-  return {
-    ...listener,
-    x: listener.x + (dx / distance) * speed * dt,
-    z: listener.z + (dz / distance) * speed * dt,
-    heading: Math.atan2(dx, -dz),
-  };
+export function cargoCapacity(upgrades = {}) {
+  return 3 + clamp(Math.floor(upgrades.cargo || 0), 0, 2);
 }
 
-export function upgradeCost(kind, currentLevel) {
+export function maxHull(upgrades = {}) {
+  return 4 + clamp(Math.floor(upgrades.hull || 0), 0, 2);
+}
+
+export function engineNoiseFactor(upgrades = {}) {
+  return Math.pow(0.78, clamp(Math.floor(upgrades.propeller || 0), 0, 2));
+}
+
+export function upgradeCost(type, level) {
   const costs = {
-    quiet: [90, 220],
-    hull: [120, 280],
-    cargo: [140, 320],
+    propeller: [100, 240],
+    hull: [140, 320],
+    cargo: [180, 380],
   };
-  const table = costs[kind];
-  if (!table || currentLevel >= table.length) return null;
-  return table[currentLevel];
+  return costs[type]?.[level] ?? null;
 }
 
-export function sanitizeProfile(value) {
-  const source = value && typeof value === 'object' ? value : {};
-  const upgrades = source.upgrades && typeof source.upgrades === 'object' ? source.upgrades : {};
-  const wreck = source.wreck && typeof source.wreck === 'object' && Number.isFinite(source.wreck.x) && Number.isFinite(source.wreck.z)
-    ? {
-        seed: Number.isInteger(source.wreck.seed) ? source.wreck.seed >>> 0 : 1,
-        x: clamp(source.wreck.x, -100000, 100000),
-        z: clamp(source.wreck.z, -100000, 100000),
-        item: source.wreck.item && typeof source.wreck.item === 'object' ? source.wreck.item : null,
-      }
-    : null;
+export function attentionSpawnReady({ elapsed, distanceFromBase, cargoCount, attention, successes = 0 }) {
+  const grace = successes === 0 ? 82 : 52;
+  return elapsed >= grace && cargoCount > 0 && distanceFromBase > 28 && attention >= 62;
+}
+
+export function updateAttention(current, { dt, throttle, sonar = false, impact = false, pickup = false, noiseFactor = 1 }) {
+  let next = current;
+  next += Math.max(0, throttle - 0.58) * 6.4 * noiseFactor * dt;
+  next -= (throttle < 0.22 ? 5.4 : 2.4) * dt;
+  if (sonar) next += 23;
+  if (impact) next += 12;
+  if (pickup) next += 7;
+  return clamp(next, 0, 100);
+}
+
+export function createListener(x, z, now = 0) {
   return {
-    credits: clamp(Math.floor(Number(source.credits) || 0), 0, 9999999),
-    expeditions: clamp(Math.floor(Number(source.expeditions) || 0), 0, 999999),
-    successful: clamp(Math.floor(Number(source.successful) || 0), 0, 999999),
-    bestValue: clamp(Math.floor(Number(source.bestValue) || 0), 0, 9999999),
-    totalArtifacts: clamp(Math.floor(Number(source.totalArtifacts) || 0), 0, 999999),
-    upgrades: {
-      quiet: clamp(Math.floor(Number(upgrades.quiet) || 0), 0, 2),
-      hull: clamp(Math.floor(Number(upgrades.hull) || 0), 0, 2),
-      cargo: clamp(Math.floor(Number(upgrades.cargo) || 0), 0, 2),
-    },
-    wreck,
+    x,
+    z,
+    state: 'investigate',
+    targetX: x,
+    targetZ: z,
+    lastHeardAt: now,
+    stateTime: 0,
+    phase: 0,
+    hitCooldown: 0,
   };
+}
+
+export function stepListener(listener, context, dt) {
+  if (!listener) return { listener: null, hit: false };
+  const next = { ...listener, stateTime: listener.stateTime + dt, hitCooldown: Math.max(0, listener.hitCooldown - dt), phase: listener.phase + dt };
+  const player = context.player;
+  const baseDistance = Math.hypot(next.x, next.z);
+  const noise = context.noise;
+
+  if (baseDistance < BASE_RADIUS + 5) {
+    next.state = 'retreat';
+    next.stateTime = 0;
+  }
+
+  if (noise && noise.age < 7) {
+    const noiseDistance = Math.hypot(next.x - noise.x, next.z - noise.z);
+    const hearingRadius = 12 + noise.strength * 0.48;
+    if (noiseDistance <= hearingRadius) {
+      next.targetX = noise.x;
+      next.targetZ = noise.z;
+      next.lastHeardAt = context.elapsed;
+      if (next.state !== 'flee') next.state = 'investigate';
+      next.stateTime = 0;
+    }
+  }
+
+  if (next.state !== 'flee' && context.elapsed - next.lastHeardAt > 12) {
+    next.state = 'retreat';
+    next.stateTime = 0;
+  }
+
+  let speed = 2.15;
+  let targetX = next.targetX;
+  let targetZ = next.targetZ;
+
+  if (next.state === 'search') {
+    speed = 1.35;
+    const radius = 4.2;
+    targetX = next.targetX + Math.cos(next.phase * 0.72) * radius;
+    targetZ = next.targetZ + Math.sin(next.phase * 0.72) * radius;
+    if (next.stateTime > 8) {
+      next.state = 'retreat';
+      next.stateTime = 0;
+    }
+  } else if (next.state === 'retreat') {
+    speed = 3.1;
+    const dx = next.x - player.x;
+    const dz = next.z - player.z;
+    const length = Math.hypot(dx, dz) || 1;
+    targetX = next.x + (dx / length) * 30;
+    targetZ = next.z + (dz / length) * 30;
+  } else if (next.state === 'flee') {
+    speed = 4.1;
+    targetX = next.targetX;
+    targetZ = next.targetZ;
+    if (next.stateTime > 6) {
+      next.state = 'retreat';
+      next.stateTime = 0;
+    }
+  }
+
+  const dx = targetX - next.x;
+  const dz = targetZ - next.z;
+  const length = Math.hypot(dx, dz);
+  if (length > 0.05) {
+    next.x += (dx / length) * speed * dt;
+    next.z += (dz / length) * speed * dt;
+  }
+
+  if (next.state === 'investigate' && length < 1.3) {
+    next.state = 'search';
+    next.stateTime = 0;
+  }
+
+  const distanceToPlayer = Math.hypot(next.x - player.x, next.z - player.z);
+  let hit = false;
+  if ((next.state === 'investigate' || next.state === 'search') && distanceToPlayer < 1.55 && next.hitCooldown <= 0 && context.playerInvulnerability <= 0) {
+    hit = true;
+    const awayX = next.x - player.x;
+    const awayZ = next.z - player.z;
+    const awayLength = Math.hypot(awayX, awayZ) || 1;
+    next.state = 'flee';
+    next.stateTime = 0;
+    next.hitCooldown = 10;
+    next.targetX = next.x + (awayX / awayLength) * 24;
+    next.targetZ = next.z + (awayZ / awayLength) * 24;
+  }
+
+  const despawn = next.state === 'retreat' && distanceToPlayer > 58 && next.stateTime > 5;
+  return { listener: despawn ? null : next, hit };
+}
+
+export function canExtract({ cargoCount, distanceFromBase, speed, hold }) {
+  if (cargoCount <= 0 || distanceFromBase > BASE_RADIUS - 1.5 || speed > 0.48) return 0;
+  return hold;
 }
 
 export function sanitizeSavedRun(value) {
-  if (!value || typeof value !== 'object') return null;
-  if (!Number.isFinite(value.seed) || !Number.isFinite(value.oxygen) || !Number.isFinite(value.hull)) return null;
-  const cargo = Array.isArray(value.cargo)
-    ? value.cargo.slice(0, 8).filter((item) => item && typeof item.treasureType === 'string' && Number.isFinite(item.value))
-    : [];
-  const collected = Array.isArray(value.collected)
-    ? value.collected.slice(0, 1200).filter((id) => typeof id === 'string')
-    : [];
+  if (!value || typeof value !== 'object' || value.schema !== 3) return null;
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.z) || !Number.isFinite(value.oxygen)) return null;
   return {
-    seed: value.seed >>> 0,
-    player: {
-      x: clamp(Number(value.player?.x) || 0, -100000, 100000),
-      z: clamp(Number(value.player?.z) || 0, -100000, 100000),
-      heading: Number(value.player?.heading) || 0,
-    },
-    oxygen: clamp(Number(value.oxygen) || 1, 1, 100),
-    hull: clamp(Math.round(Number(value.hull) || 1), 1, 8),
+    schema: 3,
+    seed: Number.isInteger(value.seed) ? value.seed >>> 0 : 1,
+    x: clamp(value.x, -100000, 100000),
+    z: clamp(value.z, -100000, 100000),
+    vx: clamp(Number(value.vx) || 0, -8, 8),
+    vz: clamp(Number(value.vz) || 0, -8, 8),
+    heading: Number(value.heading) || 0,
+    oxygen: clamp(value.oxygen, 1, 100),
+    hull: clamp(Math.floor(value.hull || 1), 1, 8),
     sonar: clamp(Number(value.sonar) || 0, 0, 100),
-    cargo,
-    collected,
-    elapsed: clamp(Number(value.elapsed) || 0, 0, 60 * 60 * 12),
-    distanceTravelled: clamp(Number(value.distanceTravelled) || 0, 0, 1000000),
-    maxRange: clamp(Number(value.maxRange) || 0, 0, 1000000),
-    attention: clamp(Number(value.attention) || 0, 0, 3),
-    listener: value.listener && typeof value.listener === 'object'
-      ? {
-          active: Boolean(value.listener.active),
-          x: clamp(Number(value.listener.x) || 0, -100000, 100000),
-          z: clamp(Number(value.listener.z) || 0, -100000, 100000),
-          heading: Number(value.listener.heading) || 0,
-        }
-      : null,
-    startedAt: Number.isFinite(value.startedAt) ? value.startedAt : Date.now(),
+    elapsed: clamp(Number(value.elapsed) || 0, 0, 86400),
+    attention: clamp(Number(value.attention) || 0, 0, 100),
+    cargo: Array.isArray(value.cargo) ? value.cargo.slice(0, 5).filter((item) => item && typeof item.type === 'string') : [],
+    collected: Array.isArray(value.collected) ? value.collected.slice(0, 1000).filter((id) => typeof id === 'string') : [],
+    listener: value.listener && Number.isFinite(value.listener.x) && Number.isFinite(value.listener.z) ? value.listener : null,
+    savedAt: Number(value.savedAt) || Date.now(),
   };
 }
