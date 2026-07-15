@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "fifty-hz",
+  "name": "50 ГЦ",
+  "shortName": "50 ГЦ",
+  "description": "Симулятор диспетчера подстанции: управляй рубильниками, держи частоту сети и проведи город через утренний пик.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-15",
+  "releaseDateTime": "2026-07-15T19:40:00Z",
+  "changelog": [
+    "Добавлена законченная трёхминутная смена с динамическим спросом, аварийными событиями, рейтингом и локальным рекордом.",
+    "Реализованы физические рубильники районов, перетаскиваемый регулятор генератора, аварийный аккумулятор и аналоговая частотная шкала.",
+    "Приложение сохраняет активную смену и настройки, работает офлайн, поддерживает звук, вибрацию, reduced motion и Workshop Mode."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#d26f3f",
+  "backgroundColor": "#c9c5ad",
+  "themeColor": "#2e3c37",
+  "orientation": "portrait",
+  "cacheName": "fifty-hz-v1.0.0-p1",
+  "storageNamespace": "pocket-works:fifty-hz",
+  "tags": ["PWA", "offline", "game", "simulator", "electricity", "grid", "management", "strategy", "one-thumb", "audio", "haptics", "resume", "workshop"],
+  "order": 87
+}

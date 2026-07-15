@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2e3c37">
+  <meta name="description" content="50 ГЦ — симулятор диспетчера городской подстанции.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="50 ГЦ">
+  <title>50 ГЦ</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a href="../../" data-app-control data-native-press>Pocket Works</a>
+      <div class="station-mark"><i></i><strong>50 ГЦ</strong><span>ПС-17</span></div>
+      <button id="pauseButton" type="button" data-native-press hidden>Пауза</button>
+    </header>
+
+    <section class="game" id="gameScreen" aria-label="Пульт подстанции" hidden>
+      <div class="event-strip" id="eventStrip" data-tone="idle" aria-live="polite">
+        <span class="event-lamp"></span>
+        <div><b id="eventTitle">Сеть спокойна</b><small id="eventDetail">Следи за стрелкой и температурой</small></div>
+        <time id="eventTime"></time>
+      </div>
+
+      <section class="meter-bank" data-ui>
+        <div class="frequency-meter" aria-label="Частота сети">
+          <div class="meter-face">
+            <span class="tick t0">47</span><span class="tick t1">49</span><span class="tick t2">50</span><span class="tick t3">51</span><span class="tick t4">53</span>
+            <div class="safe-arc"></div>
+            <div class="needle" id="frequencyNeedle"></div>
+            <div class="needle-cap"></div>
+            <strong id="frequencyValue">50.00</strong><small>ГЦ</small>
+          </div>
+        </div>
+        <div class="side-gauges">
+          <div class="bar-gauge"><span>ТЕМП.</span><div><i id="heatFill"></i></div><b id="heatValue">34°</b></div>
+          <div class="bar-gauge"><span>РЕЗЕРВ</span><div><i id="batteryFill"></i></div><b id="batteryValue">100%</b></div>
+        </div>
+      </section>
+
+      <section class="dispatch-board">
+        <div class="supply-column">
+          <div class="engraving">ГЕНЕРАТОР</div>
+          <div class="supply-readout"><b id="supplyValue">91</b><span>МВт</span></div>
+          <div class="throttle-track" id="throttleTrack" data-gesture-surface data-block-callout aria-label="Регулятор мощности генератора" role="slider" aria-valuemin="42" aria-valuemax="128" aria-valuenow="91" tabindex="0">
+            <div class="track-scale"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="throttle-slot"></div>
+            <button type="button" id="throttleKnob" class="throttle-knob" aria-label="Перетащить регулятор мощности"><span></span></button>
+          </div>
+          <button type="button" id="batteryButton" class="battery-button" data-native-press>
+            <span class="guard"></span><b>РЕЗЕРВ</b><small id="batteryButtonHint">+24 МВт · 10 сек</small>
+          </button>
+        </div>
+
+        <div class="feeders" id="feeders">
+          <article class="feeder" data-key="hospital" data-mode="2">
+            <header><span class="pilot"></span><div><b>БОЛЬНИЦА</b><small>приоритет I</small></div><em><span data-demand>34</span> МВт</em></header>
+            <button type="button" class="knife-switch" data-feeder="hospital" data-native-press aria-label="Режим питания больницы">
+              <span class="rail"><i class="contact c2"></i><i class="contact c1"></i><i class="contact c0"></i></span><span class="handle"><i></i></span>
+            </button>
+            <footer><span>ОТКЛ</span><span>ЭКО</span><span>ПОЛН</span></footer>
+          </article>
+          <article class="feeder" data-key="metro" data-mode="2">
+            <header><span class="pilot"></span><div><b>МЕТРО</b><small>приоритет II</small></div><em><span data-demand>26</span> МВт</em></header>
+            <button type="button" class="knife-switch" data-feeder="metro" data-native-press aria-label="Режим питания метро">
+              <span class="rail"><i class="contact c2"></i><i class="contact c1"></i><i class="contact c0"></i></span><span class="handle"><i></i></span>
+            </button>
+            <footer><span>ОТКЛ</span><span>ЭКО</span><span>ПОЛН</span></footer>
+          </article>
+          <article class="feeder" data-key="homes" data-mode="1">
+            <header><span class="pilot"></span><div><b>ДОМА</b><small>приоритет III</small></div><em><span data-demand>31</span> МВт</em></header>
+            <button type="button" class="knife-switch" data-feeder="homes" data-native-press aria-label="Режим питания жилого сектора">
+              <span class="rail"><i class="contact c2"></i><i class="contact c1"></i><i class="contact c0"></i></span><span class="handle"><i></i></span>
+            </button>
+            <footer><span>ОТКЛ</span><span>ЭКО</span><span>ПОЛН</span></footer>
+          </article>
+        </div>
+      </section>
+
+      <section class="shift-status" data-ui>
+        <div><span>СМЕНА</span><b id="clockValue">06:00</b></div>
+        <div class="shift-progress"><i id="shiftProgress"></i></div>
+        <div><span>ОЧКИ</span><b id="scoreValue">0</b></div>
+      </section>
+      <section class="health-row" data-ui>
+        <div><span>СЕТЬ</span><b id="integrityValue">100</b><i><em id="integrityFill"></em></i></div>
+        <div><span>ДОВЕРИЕ</span><b id="trustValue">100</b><i><em id="trustFill"></em></i></div>
+      </section>
+    </section>
+
+    <section class="overlay start-overlay" id="startOverlay" data-ui>
+      <div class="hero-panel" aria-hidden="true">
+        <div class="hero-meter"><i></i><b>50</b><span>ГЦ</span></div>
+        <div class="hero-switches"><i></i><i></i><i></i></div>
+        <div class="hero-lamps"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="start-copy">
+        <p>СИМУЛЯТОР ДИСПЕТЧЕРА</p>
+        <h1>Держи<br>частоту.</h1>
+        <span>Три района, один генератор и утренний пик. Крути мощность, режь нагрузку рубильниками и не дай городу погаснуть.</span>
+      </div>
+      <div class="start-actions">
+        <button id="startButton" type="button" class="main-action" data-native-press><b>Принять смену</b><small>3 минуты · процедурные аварии</small></button>
+        <button id="resumeButton" type="button" class="resume-action" data-native-press hidden><b>Продолжить смену</b><small id="resumeMeta">сохранённый пульт</small></button>
+        <div class="utility-row">
+          <button id="settingsButton" type="button" data-native-press>Настройки</button>
+          <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+          <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay tutorial-overlay" id="tutorialOverlay" data-ui hidden>
+      <div class="tutorial-panel">
+        <p>ПЕРВЫЕ 20 СЕКУНД</p>
+        <h2>Стрелка — главный начальник.</h2>
+        <ol>
+          <li><b>Тяни регулятор</b> генератора вверх и вниз.</li>
+          <li><b>Нажимай рубильники</b>: полное питание → экономия → отключение.</li>
+          <li>Держи частоту около <b>50 Гц</b>. Резерв спасает пик, но долго заряжается.</li>
+        </ol>
+        <button id="tutorialDoneButton" type="button" class="main-action" data-native-press>Пульт понятен</button>
+      </div>
+    </section>
+
+    <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
+      <div class="pause-panel">
+        <p>ПУЛЬТ ЗАБЛОКИРОВАН</p><h2>Смена на паузе</h2>
+        <div class="pause-stats"><span>Время <b id="pauseTime">06:00</b></span><span>Очки <b id="pauseScore">0</b></span></div>
+        <button id="continueButton" type="button" class="main-action" data-native-press>Вернуться к пульту</button>
+        <button id="pauseSettingsButton" type="button" class="secondary-action" data-native-press>Настройки</button>
+        <button id="restartButton" type="button" class="secondary-action" data-native-press>Начать смену заново</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay panel-overlay" id="resultOverlay" data-ui hidden>
+      <div class="result-panel">
+        <div class="grade" id="resultGrade">Б</div>
+        <p id="resultKicker">СМЕНА ЗАКРЫТА</p><h2 id="resultTitle">Город пережил пик</h2>
+        <div class="result-grid"><span>Очки <b id="resultScore">0</b></span><span>Сеть <b id="resultIntegrity">0</b></span><span>Доверие <b id="resultTrust">0</b></span></div>
+        <p class="result-note" id="resultNote">Новый рекорд.</p>
+        <button id="againButton" type="button" class="main-action" data-native-press>Ещё одна смена</button>
+        <button id="resultMenuButton" type="button" class="secondary-action" data-native-press>Главное меню</button>
+        <a href="../../" class="panel-link" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet-layer" id="settingsLayer" data-ui hidden>
+      <button class="sheet-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
+      <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header><div><p>ПС-17</p><h2 id="settingsTitle">Настройки</h2></div><button id="closeSettingsButton" type="button" data-native-press>Закрыть</button></header>
+        <button class="setting-row" id="soundToggle" type="button" data-native-press><span><b>Звук</b><small>Щелчки, гул и сигнал тревоги</small></span><em>Вкл</em></button>
+        <button class="setting-row" id="hapticToggle" type="button" data-native-press><span><b>Вибрация</b><small>Отдача рубильников и аварий</small></span><em>Вкл</em></button>
+        <button class="setting-row" id="motionToggle" type="button" data-native-press><span><b>Движение</b><small>Стрелка, лампы и механика</small></span><em>Вкл</em></button>
+        <div class="best-row"><span>Лучший счёт</span><b id="bestValue">0</b></div>
+        <button id="clearBestButton" type="button" class="danger-action" data-native-press>Сбросить рекорд</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="50 ГЦ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
