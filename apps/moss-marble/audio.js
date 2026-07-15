@@ -130,7 +130,7 @@ export class AudioGarden {
   }
 
   ambientTick(dt) {
-    if (!this.enabled || !this.context) return;
+    if (!this.enabled || !this.context || this.context.state !== 'running') return;
     this.ambientTimer -= dt;
     if (this.ambientTimer > 0) return;
     this.ambientTimer = 2.8 + Math.random() * 4.6;

@@ -1,6 +1,6 @@
 import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
-import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
+import { createBall, isBallStopped, predictShot, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -58,8 +58,10 @@ let keyboardAngle = 0;
 let overviewUiKey = '';
 let lastBallMovingState = '';
 let invalidAimAt = 0;
+let lastAimPreviewAt = 0;
+let lastInactiveRenderAt = 0;
 
-const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
+const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0, preview: [], previewOutcome: null };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
 function loadSave() {
@@ -132,9 +134,10 @@ function closeConfirmation() {
   if (focus?.isConnected) window.requestAnimationFrame(() => focus.focus({ preventScroll: true }));
 }
 
-function setMode(next) {
+function setMode(next, { focus = true } = {}) {
   mode = next;
   document.body.dataset.mode = next;
+  const playing = next === 'playing';
   const map = { menu: 'menuScreen', holes: 'holesScreen', code: 'codeScreen', confirm: 'confirmScreen', paused: 'pauseScreen', result: 'resultScreen', finish: 'finishScreen' };
   const activeId = map[next] || '';
   document.querySelectorAll('.screen').forEach((screen) => {
@@ -143,14 +146,27 @@ function setMode(next) {
     screen.inert = !active;
     screen.setAttribute('aria-hidden', String(!active));
   });
+  [canvas, document.querySelector('.scorebar'), $('overviewBtn')].forEach((element) => {
+    if (!element) return;
+    element.inert = !playing;
+    element.setAttribute('aria-hidden', String(!playing));
+  });
   if (next !== 'playing') {
     cancelAim();
     livingTerrain.cancelOverview();
   }
+  if (next === 'paused') syncPauseContext();
   syncOverviewControl();
+  if (!focus) return;
   const focusId = { menu: 'continueBtn', holes: 'holesCloseBtn', code: 'runCodeInput', confirm: 'confirmAcceptBtn', paused: 'resumeBtn', result: $('nextBtn').hidden ? 'retryBtn' : 'nextBtn', finish: 'againBtn' }[next];
   if (next === 'playing') window.requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
   else if (focusId) window.requestAnimationFrame(() => $(focusId)?.focus?.({ preventScroll: true }));
+}
+
+function syncPauseContext() {
+  $('pauseContext').textContent = endlessActive
+    ? `${formatRunCode(level.endless?.seed || save.endlessRun?.seed)} · секция ${level.section} · ${strokes} ${strokeWord(strokes)}`
+    : `Лунка ${levelIndex + 1} · ${strokes} ${strokeWord(strokes)} · пар ${level.par}`;
 }
 
 function syncOverviewControl() {
@@ -362,11 +378,26 @@ function startEndless({ fresh = false, seed = null } = {}) {
   preparePlayingLevel({ checkpoint: run.checkpoint, checkpointStrokes: run.currentStrokes });
 }
 
-function openCodeScreen() {
+function openCodeScreen(seed = null, { focus = true } = {}) {
   const run = normalizeEndlessRun(save.endlessRun);
-  $('runCodeInput').value = run ? formatRunCode(run.seed) : '';
+  $('runCodeInput').value = seed ? formatRunCode(seed) : run ? formatRunCode(run.seed) : '';
   $('codeError').textContent = '';
-  setMode('code');
+  setMode('code', { focus });
+}
+
+function sharedRouteUrl(seed) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('route', formatRunCode(seed));
+  url.hash = '';
+  return url.toString();
+}
+
+function clearSharedRoute() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('route')) return;
+  url.searchParams.delete('route');
+  window.history.replaceState(null, '', url);
 }
 
 function startCodeRoute() {
@@ -378,6 +409,7 @@ function startCodeRoute() {
   }
   const launch = () => {
     $('codeError').textContent = '';
+    clearSharedRoute();
     startEndless({ fresh: true, seed });
     showToast(`Маршрут ${formatRunCode(seed)}`);
   };
@@ -405,19 +437,33 @@ async function shareRunCode() {
   }
   const code = formatRunCode(seed);
   const text = `Moss & Marble · маршрут ${code}`;
-  try {
-    if (navigator.share) await navigator.share({ title: 'Moss & Marble', text });
-    else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
-    else {
-      const input = $('runCodeInput');
-      input.value = code;
-      input.select();
-      document.execCommand('copy');
-      input.setSelectionRange(code.length, code.length);
+  const url = sharedRouteUrl(seed);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Moss & Marble', text, url });
+      showToast('Маршрут передан');
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
     }
-    showToast(navigator.share ? 'Код готов к отправке' : `Код ${code} скопирован`);
-  } catch (error) {
-    if (error?.name !== 'AbortError') $('codeError').textContent = `Код маршрута: ${code}`;
+  }
+  const sharedText = `${text}\n${url}`;
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(sharedText);
+    else {
+      const copy = document.createElement('textarea');
+      copy.value = sharedText;
+      copy.setAttribute('readonly', '');
+      copy.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.append(copy);
+      copy.select();
+      const copied = document.execCommand('copy');
+      copy.remove();
+      if (!copied) throw new Error('Copy command was rejected');
+    }
+    showToast(`Ссылка на ${code} скопирована`);
+  } catch {
+    $('codeError').textContent = `Код маршрута: ${code}`;
   }
 }
 
@@ -471,6 +517,7 @@ function retryResult() {
 }
 
 function openMenu() {
+  if (mode === 'code') clearSharedRoute();
   saveActiveCheckpoint();
   setMode('menu');
   syncMenu();
@@ -517,6 +564,8 @@ function beginAim(event) {
   aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
+  aim.preview = [];
+  aim.previewOutcome = null;
   syncAimMeter();
   try { canvas.setPointerCapture(event.pointerId); } catch {}
 }
@@ -540,6 +589,22 @@ function moveAim(event) {
   aim.power = shaped;
   aim.vx = unitX * shaped * 1780;
   aim.vy = unitY * shaped * 1780;
+  refreshAimPreview();
+  syncAimMeter();
+}
+
+function refreshAimPreview(force = false) {
+  if (!aim.active || aim.power <= .055) {
+    aim.preview = [];
+    aim.previewOutcome = null;
+    return;
+  }
+  const now = performance.now();
+  if (!force && now - lastAimPreviewAt < 52) return;
+  lastAimPreviewAt = now;
+  const prediction = predictShot(ball, level, aim.vx, aim.vy, elapsed);
+  aim.preview = prediction.points;
+  aim.previewOutcome = prediction.outcome;
   syncAimMeter();
 }
 
@@ -573,7 +638,14 @@ function finishAim(event, cancelled = false) {
 
 function syncAimMeter() {
   const meter = $('powerGauge');
-  if (meter) meter.style.setProperty('--aim-power', String(Math.max(0, Math.min(1, aim.power))));
+  if (meter) {
+    const value = Math.round(Math.max(0, Math.min(1, aim.power)) * 100);
+    meter.style.setProperty('--aim-power', String(value / 100));
+    meter.dataset.outcome = aim.previewOutcome || '';
+    meter.setAttribute('aria-valuenow', String(value));
+    meter.setAttribute('aria-valuetext', `${value}%`);
+    meter.setAttribute('aria-hidden', String(!aim.active));
+  }
   document.body.dataset.aiming = String(aim.active);
 }
 
@@ -583,6 +655,8 @@ function cancelAim() {
   aim.vx = 0;
   aim.vy = 0;
   aim.power = 0;
+  aim.preview = [];
+  aim.previewOutcome = null;
   syncAimMeter();
 }
 
@@ -804,6 +878,7 @@ function updateKeyboardAim() {
   aim.power = power;
   aim.vx = Math.cos(keyboardAngle) * power * 1780;
   aim.vy = Math.sin(keyboardAngle) * power * 1780;
+  refreshAimPreview(true);
   syncAimMeter();
 }
 
@@ -963,6 +1038,16 @@ function frame(now) {
   elapsed += dt;
   audio.ambientTick(dt);
 
+  if (document.hidden) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (mode !== 'playing' && lastInactiveRenderAt > 0 && now - lastInactiveRenderAt < 1000 / 30) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (mode !== 'playing') lastInactiveRenderAt = now;
+
   if (mode === 'playing') {
     if (waterResetTimer > 0) {
       waterResetTimer -= dt;
@@ -985,6 +1070,7 @@ function frame(now) {
   }
 
   audio.rollTick(ball, mode === 'playing' && waterResetTimer <= 0);
+  if (aim.active) refreshAimPreview();
 
   const movingState = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
   if (movingState !== lastBallMovingState) {
@@ -1022,7 +1108,9 @@ audio.setEnabled(save.sound);
 if (save.tilt) attachTilt();
 syncMenu();
 syncHeader();
-setMode('menu');
+setMode('menu', { focus: false });
+const sharedRouteSeed = parseRunCode(new URL(window.location.href).searchParams.get('route'));
+if (sharedRouteSeed) openCodeScreen(sharedRouteSeed, { focus: false });
 requestAnimationFrame(frame);
 
 window.__MOSS_MARBLE__ = {

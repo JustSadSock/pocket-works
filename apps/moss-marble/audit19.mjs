@@ -1,7 +1,7 @@
 import { LEVELS } from './levels.js';
 import { compileCourse19, inspectCourse19 } from './course19.js';
 import { formatRunCode, generateEndlessLevel, inspectEndlessLevel, parseRunCode } from './procedural.js';
-import { createBall, stepBall, strikeBall } from './physics.js';
+import { BALL_RADIUS, createBall, predictShot, stepBall, strikeBall } from './physics.js';
 import {
   campaignSegmentTotal,
   checkpointCampaignRun,
@@ -45,6 +45,35 @@ for (const source of LEVELS.filter((level) => [1, 6, 8].includes(level.id))) {
     const right = level.course18.field.heightAt(mound.x + mound.cos * epsilon, mound.y + mound.sin * epsilon);
     assert(Math.abs(right - left) < 1, `campaign ${source.id}: asymmetric mound seam`);
   }
+}
+
+const predictionLevel = compileCourse19(LEVELS[0]);
+const predictionBall = createBall(predictionLevel.start, predictionLevel);
+const predictionSnapshot = JSON.stringify(predictionBall);
+const prediction = predictShot(predictionBall, predictionLevel, 920, -510, 4.2);
+const repeatedPrediction = predictShot(predictionBall, predictionLevel, 920, -510, 4.2);
+assert(prediction.points.length >= 3, 'prediction: guide is too short');
+assert(prediction.points.every((point) => [point.x, point.y, point.z].every(Number.isFinite)), 'prediction: non-finite guide point');
+assert(JSON.stringify(prediction) === JSON.stringify(repeatedPrediction), 'prediction: guide is nondeterministic');
+assert(JSON.stringify(predictionBall) === predictionSnapshot, 'prediction: mutated the real ball');
+const cupDx = predictionLevel.hole.x - predictionLevel.start.x;
+const cupDy = predictionLevel.hole.y - predictionLevel.start.y;
+const cupDistance = Math.hypot(cupDx, cupDy);
+const cupUnit = { x: cupDx / cupDistance, y: cupDy / cupDistance };
+const cupPredictionBall = createBall({ x: predictionLevel.hole.x - cupUnit.x * 38, y: predictionLevel.hole.y - cupUnit.y * 38 }, predictionLevel);
+const cupPrediction = predictShot(cupPredictionBall, predictionLevel, cupUnit.x * 250, cupUnit.y * 250, 0, { duration: .8 });
+assert(cupPrediction.outcome === 'cup', 'prediction: cup outcome was not detected');
+const waterPredictionLevel = compileCourse19(LEVELS[4]);
+const waterDx = waterPredictionLevel.hole.x - waterPredictionLevel.start.x;
+const waterDy = waterPredictionLevel.hole.y - waterPredictionLevel.start.y;
+const waterDistance = Math.hypot(waterDx, waterDy);
+const waterPrediction = predictShot(createBall(waterPredictionLevel.start, waterPredictionLevel), waterPredictionLevel, waterDx / waterDistance * 1780, waterDy / waterDistance * 1780, 0, { duration: .8 });
+assert(waterPrediction.outcome === 'water', 'prediction: water outcome was not detected');
+const raisedLandform = predictionLevel.course18.field.landforms.find((feature) => feature.kind === 'mound' && feature.height > 0);
+if (raisedLandform) {
+  const raisedBall = createBall({ x: raisedLandform.x, y: raisedLandform.y }, predictionLevel);
+  const expectedGround = predictionLevel.course18.field.heightAt(raisedLandform.x, raisedLandform.y);
+  assert(Math.abs(raisedBall.z - (expectedGround + BALL_RADIUS)) < .001 && raisedBall.z > BALL_RADIUS, 'height: ball ignored raised terrain');
 }
 
 for (const seed of [1, 2, 3, 5, 8, 13, 17, 21, 34, 55, 89, 144, 233, 50291, 0xDEADBEEF]) {
@@ -117,4 +146,4 @@ if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);
 }
-console.log('Moss & Marble 1.10 audit passed');
+console.log('Moss & Marble 1.11 audit passed');

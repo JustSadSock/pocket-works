@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="./styles14.css?v=1.4.0">
   <link rel="stylesheet" href="./styles15.css?v=1.5.0">
   <link rel="stylesheet" href="./styles16.css?v=1.6.0">
-  <link rel="stylesheet" href="./styles161.css?v=1.10.0">
+  <link rel="stylesheet" href="./styles161.css?v=1.11.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -42,7 +42,7 @@
     </button>
 
     <div class="aim-hint" id="aimHint" data-ui>Потяни назад · отпусти</div>
-    <div class="power-gauge" id="powerGauge" data-ui aria-hidden="true"><span><i></i></span><b>Сила</b></div>
+    <div class="power-gauge" id="powerGauge" data-ui role="meter" aria-label="Сила удара" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true"><span><i></i></span><b>Сила</b></div>
     <div class="surface-note" id="surfaceNote" data-ui role="status" aria-live="polite"></div>
 
     <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
@@ -100,6 +100,7 @@
       <div class="pause-sheet">
         <p class="eyebrow">Мяч подождёт</p>
         <h2 id="pauseTitle">Пауза</h2>
+        <p class="pause-context" id="pauseContext">Лунка 1 · 0 ударов · пар 6</p>
         <button class="primary-action compact" type="button" id="resumeBtn" data-native-press><span>Продолжить</span><small>Вернуться к удару</small></button>
         <button class="paper-action" type="button" id="restartBtn" data-native-press>Начать лунку заново</button>
         <div class="settings-row">
@@ -153,8 +154,8 @@
     <div class="toast" id="toast" data-ui role="status"></div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.10.0"></script>
-  <script type="module" src="./camera-intro-guard.js?v=1.10.0"></script>
-  <script type="module" src="./app.js?v=1.10.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.11.0"></script>
+  <script type="module" src="./camera-intro-guard.js?v=1.11.0"></script>
+  <script type="module" src="./app.js?v=1.11.0"></script>
 </body>
 </html>

@@ -59,6 +59,18 @@
   transition: height .04s linear;
 }
 
+.power-gauge[data-outcome="water"] i {
+  background: linear-gradient(0deg, #7aa99b, #b5ded3);
+}
+
+.power-gauge[data-outcome="cup"] i {
+  background: linear-gradient(0deg, #9c773d, #ead184);
+}
+
+.power-gauge[data-outcome="tunnel-blocked"] i {
+  background: linear-gradient(0deg, #956f4f, #d5aa75);
+}
+
 .power-gauge b {
   color: rgba(242, 237, 214, .72);
   font-size: .49rem;
@@ -135,6 +147,22 @@ body[data-aiming="true"] .power-gauge {
 .paper-dialog .primary-action,
 .paper-dialog .paper-action { margin-top: 9px; }
 .paper-dialog .paper-link { display: block; margin-top: 18px; }
+
+@media (max-width: 719px) {
+  .menu-copy h1 {
+    gap: .08em;
+    font-size: clamp(2.3rem, 12.25vw, 5.5rem);
+  }
+}
+
+.pause-context {
+  margin: -3px 0 17px;
+  color: var(--ink-soft);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
 
 .code-field {
   display: grid;
