@@ -1,0 +1,21 @@
+{
+  "id": "/apps/khrebet/",
+  "name": "ХРЕБЕТ",
+  "short_name": "ХРЕБЕТ",
+  "description": "Процедурный 3D-полёт в вингсьюте: режь горный воздух, ныряй в узкие пролёты и держи серию, пока камень не окажется быстрее.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#d6d7cf",
+  "theme_color": "#172020",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
