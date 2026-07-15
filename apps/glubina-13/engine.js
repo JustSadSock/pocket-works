@@ -1,7 +1,7 @@
 const TAU = Math.PI * 2;
 
 function mat4Identity() {
-  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1]);
+  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 }
 
 function mat4Multiply(a, b) {
