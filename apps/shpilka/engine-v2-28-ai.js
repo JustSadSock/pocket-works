@@ -22,9 +22,9 @@ shp27UpdateMildError = function shp28UpdateMildError(car, dt, tune, preview) {
 
   const roll = shp25Random(car);
   car.shp28MistakeKind = roll < 0.38 ? 'late' : roll < 0.76 ? 'wide' : 'snap';
-  car.shp28MistakeTotal = car.shp28MistakeKind === 'late'
-    ? lerp(0.70, 1.05, shp25Random(car))
-    : lerp(0.48, 0.82, shp25Random(car));
+  if (car.shp28MistakeKind === 'late') car.shp28MistakeTotal = lerp(0.70, 1.05, shp25Random(car));
+  else if (car.shp28MistakeKind === 'wide') car.shp28MistakeTotal = lerp(0.62, 0.98, shp25Random(car));
+  else car.shp28MistakeTotal = lerp(0.42, 0.68, shp25Random(car));
   car.shp27ErrorTimer = car.shp28MistakeTotal;
   car.shp27ErrorSide = car.shp28MistakeKind === 'wide'
     ? -(Math.sign(preview.signed) || (shp25Random(car) > 0.5 ? 1 : -1))
