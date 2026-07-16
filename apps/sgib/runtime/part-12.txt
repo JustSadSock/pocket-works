@@ -3,8 +3,13 @@
   dom.pauseBtn.addEventListener('click', () => { pressFeedback(); pauseGame(); });
   dom.resumeBtn.addEventListener('click', () => { pressFeedback(); resumeGame(); });
   dom.restartBtn.addEventListener('click', () => { pressFeedback(); restartCurrent(); });
+  dom.guidePauseBtn.addEventListener('click', () => { pressFeedback(); openGuide('pauseScreen'); });
   dom.pauseMenuBtn.addEventListener('click', () => { pressFeedback(); returnToMenu(); });
   dom.undoBtn.addEventListener('click', () => { pressFeedback(); undoFold(); });
+
+  dom.closeGuideBtn.addEventListener('click', () => { pressFeedback(); closeGuide(); });
+  dom.guideBackBtn.addEventListener('click', () => { pressFeedback(); closeGuide(); });
+  dom.guidePracticeBtn.addEventListener('click', () => { pressFeedback(); startCampaign(0); });
 
   dom.nextBtn.addEventListener('click', () => {
     pressFeedback();
@@ -38,15 +43,35 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       cancelGesture();
+      stopRenderLoop();
       audio.context?.suspend().catch(() => {});
+    } else {
+      resizeCanvas();
+      startRenderLoop();
     }
   });
+  window.addEventListener('pagehide', () => {
+    cancelGesture();
+    stopRenderLoop();
+  });
+  window.addEventListener('pageshow', () => {
+    resizeCanvas();
+    startRenderLoop();
+  });
   window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 50));
+  window.addEventListener('orientationchange', () => {
+    cancelGesture();
+    setTimeout(() => {
+      resizeCanvas();
+      startRenderLoop();
+    }, 80);
+  });
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.mode !== 'menu') {
-      if (state.screen === 'pauseScreen') resumeGame();
-      else if (!state.screen) pauseGame();
+    if (event.key === 'Escape') {
+      if (state.screen === 'guideScreen') closeGuide();
+      else if (state.screen === 'levelsScreen') showScreen('menuScreen');
+      else if (state.mode !== 'menu' && state.screen === 'pauseScreen') resumeGame();
+      else if (state.mode !== 'menu' && !state.screen) pauseGame();
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
       event.preventDefault();
@@ -58,13 +83,13 @@
 function collectDom() {
   const ids = [
     'app', 'paperCanvas', 'gameHud', 'modeLabel', 'levelTitle', 'foldCounter', 'pauseBtn', 'undoBtn',
-    'gestureHint', 'gestureHintText', 'menuScreen', 'continueBtn', 'continueLabel', 'continueMeta',
-    'levelsBtn', 'progressMeta', 'endlessBtn', 'endlessMeta', 'soundMenuBtn', 'levelsScreen',
-    'closeLevelsBtn', 'levelGrid', 'pauseScreen', 'resumeBtn', 'restartBtn', 'soundPauseBtn',
-    'hapticsPauseBtn', 'pauseMenuBtn', 'resultScreen', 'resultStamp', 'resultTitle', 'resultCopy',
-    'resultFolds', 'resultUnit', 'nextBtn', 'nextLabel', 'nextMeta', 'resultRetryBtn', 'resultMenuBtn',
-    'failScreen', 'failCopy', 'failRetryBtn', 'failUndoBtn', 'failMenuBtn', 'errorScreen', 'errorCopy',
-    'reloadBtn', 'toast'
+    'foldStatus', 'gestureHint', 'gestureHintText', 'menuScreen', 'continueBtn', 'continueLabel', 'continueMeta',
+    'levelsBtn', 'progressMeta', 'guideBtn', 'endlessBtn', 'endlessMeta', 'soundMenuBtn', 'levelsScreen',
+    'closeLevelsBtn', 'levelGrid', 'guideScreen', 'closeGuideBtn', 'guidePracticeBtn', 'guideBackBtn',
+    'pauseScreen', 'resumeBtn', 'restartBtn', 'guidePauseBtn', 'soundPauseBtn', 'hapticsPauseBtn',
+    'pauseMenuBtn', 'resultScreen', 'resultStamp', 'resultTitle', 'resultCopy', 'resultFolds', 'resultUnit',
+    'nextBtn', 'nextLabel', 'nextMeta', 'resultRetryBtn', 'resultMenuBtn', 'failScreen', 'failCopy',
+    'failRetryBtn', 'failUndoBtn', 'failMenuBtn', 'errorScreen', 'errorCopy', 'reloadBtn', 'toast'
   ];
   for (const id of ids) {
     const element = document.getElementById(id);
