@@ -59,18 +59,6 @@
   transition: height .04s linear;
 }
 
-.power-gauge[data-outcome="water"] i {
-  background: linear-gradient(0deg, #7aa99b, #b5ded3);
-}
-
-.power-gauge[data-outcome="cup"] i {
-  background: linear-gradient(0deg, #9c773d, #ead184);
-}
-
-.power-gauge[data-outcome="tunnel-blocked"] i {
-  background: linear-gradient(0deg, #956f4f, #d5aa75);
-}
-
 .power-gauge b {
   color: rgba(242, 237, 214, .72);
   font-size: .49rem;

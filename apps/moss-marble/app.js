@@ -1,6 +1,6 @@
 import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
-import { createBall, isBallStopped, predictShot, stepBall, strikeBall } from './physics.js';
+import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
@@ -58,10 +58,9 @@ let keyboardAngle = 0;
 let overviewUiKey = '';
 let lastBallMovingState = '';
 let invalidAimAt = 0;
-let lastAimPreviewAt = 0;
 let lastInactiveRenderAt = 0;
 
-const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0, preview: [], previewOutcome: null };
+const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
 function loadSave() {
@@ -564,8 +563,6 @@ function beginAim(event) {
   aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
-  aim.preview = [];
-  aim.previewOutcome = null;
   syncAimMeter();
   try { canvas.setPointerCapture(event.pointerId); } catch {}
 }
@@ -589,22 +586,6 @@ function moveAim(event) {
   aim.power = shaped;
   aim.vx = unitX * shaped * 1780;
   aim.vy = unitY * shaped * 1780;
-  refreshAimPreview();
-  syncAimMeter();
-}
-
-function refreshAimPreview(force = false) {
-  if (!aim.active || aim.power <= .055) {
-    aim.preview = [];
-    aim.previewOutcome = null;
-    return;
-  }
-  const now = performance.now();
-  if (!force && now - lastAimPreviewAt < 52) return;
-  lastAimPreviewAt = now;
-  const prediction = predictShot(ball, level, aim.vx, aim.vy, elapsed);
-  aim.preview = prediction.points;
-  aim.previewOutcome = prediction.outcome;
   syncAimMeter();
 }
 
@@ -641,7 +622,6 @@ function syncAimMeter() {
   if (meter) {
     const value = Math.round(Math.max(0, Math.min(1, aim.power)) * 100);
     meter.style.setProperty('--aim-power', String(value / 100));
-    meter.dataset.outcome = aim.previewOutcome || '';
     meter.setAttribute('aria-valuenow', String(value));
     meter.setAttribute('aria-valuetext', `${value}%`);
     meter.setAttribute('aria-hidden', String(!aim.active));
@@ -655,8 +635,6 @@ function cancelAim() {
   aim.vx = 0;
   aim.vy = 0;
   aim.power = 0;
-  aim.preview = [];
-  aim.previewOutcome = null;
   syncAimMeter();
 }
 
@@ -878,7 +856,6 @@ function updateKeyboardAim() {
   aim.power = power;
   aim.vx = Math.cos(keyboardAngle) * power * 1780;
   aim.vy = Math.sin(keyboardAngle) * power * 1780;
-  refreshAimPreview(true);
   syncAimMeter();
 }
 
@@ -1070,7 +1047,6 @@ function frame(now) {
   }
 
   audio.rollTick(ball, mode === 'playing' && waterResetTimer <= 0);
-  if (aim.active) refreshAimPreview();
 
   const movingState = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
   if (movingState !== lastBallMovingState) {

@@ -1020,34 +1020,21 @@ class WebGLDiorama {
 
     if (aim.active && !ball.sunk) {
       const center = this.ballScreenPoint(ball);
-      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
-        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
-        : null;
       const worldLength = 95 + aim.power * 250;
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
-      const fallbackEnd = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
-      const guide = predicted || [center, fallbackEnd];
-      const end = guide.at(-1);
-      const outcomeColor = aim.previewOutcome === 'water' ? '169,215,208' : aim.previewOutcome === 'cup' ? '227,201,118' : aim.previewOutcome === 'tunnel-blocked' ? '210,169,116' : '244,238,205';
+      const end = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
       ctx.save();
-      ctx.strokeStyle = `rgba(${outcomeColor},.78)`;
+      ctx.strokeStyle = 'rgba(244,238,205,.78)';
       ctx.lineWidth = 1.25;
       ctx.setLineDash([2, 8]);
-      ctx.beginPath();
-      guide.forEach((point, index) => {
-        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(end.x, end.y); ctx.stroke();
       ctx.setLineDash([]);
-      for (let index = 1; index < guide.length; index += 1) {
-        const t = index / Math.max(1, guide.length - 1);
-        ctx.fillStyle = `rgba(${outcomeColor},${.30 + t * .52})`;
-        ctx.beginPath(); ctx.arc(guide[index].x, guide[index].y, 1.35 + t * 1.8, 0, TAU); ctx.fill();
+      const dots = 5;
+      for (let index = 1; index <= dots; index += 1) {
+        const t = index / dots;
+        ctx.fillStyle = `rgba(244,238,205,${.34 + t * .5})`;
+        ctx.beginPath(); ctx.arc(lerp(center.x, end.x, t), lerp(center.y, end.y, t), 1.5 + t * 1.7, 0, TAU); ctx.fill();
       }
-      ctx.strokeStyle = `rgba(${outcomeColor},.68)`;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(end.x, end.y, 5.5, 0, TAU); ctx.stroke();
       ctx.restore();
     }
 
@@ -1324,22 +1311,9 @@ class CanvasFallback {
     if (aim.active) {
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
       const length = 95 + aim.power * 250;
-      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
-        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
-        : null;
       const end = this.worldToScreen(ball.x + aim.vx / speed * length, ball.y + aim.vy / speed * length, 2);
-      const guide = predicted || [bp, end];
-      const color = aim.previewOutcome === 'water' ? '#a9d7d0' : aim.previewOutcome === 'cup' ? '#e3c976' : aim.previewOutcome === 'tunnel-blocked' ? '#d2a974' : '#eee9d4';
-      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
-      ctx.beginPath();
-      guide.forEach((point, index) => {
-        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const last = guide.at(-1);
-      ctx.beginPath(); ctx.arc(last.x, last.y, 5, 0, TAU); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.strokeStyle = '#eee9d4'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
+      ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(end.x, end.y); ctx.stroke(); ctx.restore();
     }
   }
 }
