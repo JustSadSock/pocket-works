@@ -631,7 +631,7 @@ void main() {
     return;
   }
   if (vMaterial > .5 && vMaterial < 1.5) {
-    float tufts = valueNoise(vWorld.xy * .075);
+    float tufts = noise2(floor(vWorld.xy * .075));
     float grain = noise2(floor(vWorld.xy * .42));
     float blades = sin(vWorld.x * .38 + sin(vWorld.y * .27)) * .5 + .5;
     base *= .82 + tufts * .15 + grain * .09 + blades * .035;
@@ -645,7 +645,7 @@ void main() {
     rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * 1.25);
     spec *= 2.15;
   } else if (vMaterial > 6.5 && vMaterial < 7.5) {
-    float mossCloud = valueNoise(vWorld.xy * .055);
+    float mossCloud = noise2(floor(vWorld.xy * .055));
     float mossFine = noise2(floor(vWorld.xy * .22));
     base *= .72 + mossCloud * .28 + mossFine * .13;
     rim *= 1.35;
@@ -675,8 +675,10 @@ void main() {
     lit *= brushed;
     lit += spec * vec3(1.0, .86, .48) * 1.72 + rim * base * .20;
   } else {
-    float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
-    lit *= .94 + mineral * .08;
+    if (vMaterial < .5) {
+      float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
+      lit *= .94 + mineral * .08;
+    }
     lit += spec * vec3(.92, .88, .68) * .40 + rim * base * .11;
   }
   outColor = vec4(lit, alpha);
