@@ -11,19 +11,19 @@ import {
 } from './game-core.js';
 import {
   boxGeometry,
-  finGeometry,
   flatGeometry,
   octaGeometry,
-  propellerGeometry,
+  paperKeelGeometry,
+  paperWingGeometry,
   ribbonGeometry,
   rockGeometry,
-  wingGeometry,
+  roughPrismGeometry,
 } from './engine.js';
 
 const SIGNAL = [0.94, 0.31, 0.13];
-const SIGNAL_HOT = [1, 0.56, 0.2];
-const AIRFRAME = [0.92, 0.25, 0.08];
-const FUSELAGE = [0.68, 0.16, 0.055];
+const PAPER = [0.91, 0.9, 0.82];
+const PAPER_SHADE = [0.73, 0.72, 0.66];
+const PAPER_INK = [0.82, 0.23, 0.105];
 
 const BIOMES = Object.freeze({
   alpine: {
@@ -281,16 +281,17 @@ export class RidgeWorld {
     this.chunks = new Map();
     this.passed = new Set();
     this.grazed = new Set();
-    this.thrustVisual = 0;
-    this.propellerAngle = 0;
+    this.foldVisual = 0;
     this.impactPulse = 0;
+    this.impactZone = 'fold';
     this.box = boxGeometry();
     this.octa = octaGeometry();
-    this.wing = wingGeometry();
-    this.fin = finGeometry();
-    this.propeller = propellerGeometry();
+    this.leftPaperWing = paperWingGeometry(1);
+    this.rightPaperWing = paperWingGeometry(-1);
+    this.paperKeel = paperKeelGeometry();
     this.ribbon = ribbonGeometry();
     this.rocks = Array.from({ length: 8 }, (_, index) => rockGeometry(6 + (index % 3), this.seed + index * 149 + 1));
+    this.slabs = Array.from({ length: 6 }, (_, index) => roughPrismGeometry(this.seed + index * 211 + 17));
     this.particleSeeds = [];
     const random = mulberry32(this.seed ^ 0xf3a719);
     for (let index = 0; index < 240; index += 1) {
@@ -305,17 +306,13 @@ export class RidgeWorld {
   }
 
   createAircraft() {
-    this.aircraftWing = this.engine.createMesh(this.wing, { color: AIRFRAME, material: 3.2, emissive: 0.1, doubleSided: true });
-    this.aircraftTail = this.engine.createMesh(this.wing, { color: AIRFRAME, material: 3.2, scale: [0.42, 0.72, 0.42], doubleSided: true });
-    this.aircraftBody = this.engine.createMesh(this.box, { color: FUSELAGE, material: 3.1, emissive: 0.05, scale: [0.22, 0.19, 1.02] });
-    this.aircraftStripe = this.engine.createMesh(this.box, { color: [0.86, 0.83, 0.71], material: 3.1, emissive: 0.06, scale: [0.225, 0.035, 0.42] });
-    this.aircraftNose = this.engine.createMesh(this.octa, { color: AIRFRAME, material: 3.1, scale: [0.24, 0.2, 0.38] });
-    this.aircraftCockpit = this.engine.createMesh(this.octa, { color: [0.09, 0.19, 0.21], material: 0, scale: [0.2, 0.16, 0.34] });
-    this.aircraftFin = this.engine.createMesh(this.fin, { color: AIRFRAME, material: 3.2, doubleSided: true });
-    this.aircraftPropeller = this.engine.createMesh(this.propeller, { color: [0.11, 0.12, 0.11], material: 0, alpha: 0.68, doubleSided: true });
-    this.leftLight = this.engine.createMesh(this.octa, { color: [0.95, 0.1, 0.06], material: 3.1, emissive: 1, scale: [0.075, 0.075, 0.075] });
-    this.rightLight = this.engine.createMesh(this.octa, { color: [0.1, 0.9, 0.48], material: 3.1, emissive: 1, scale: [0.075, 0.075, 0.075] });
-    this.exhaust = this.engine.createMesh(this.box, { color: SIGNAL_HOT, material: 3.1, emissive: 1.2, alpha: 0, scale: [0.065, 0.055, 0.4] });
+    this.paperLeft = this.engine.createMesh(this.leftPaperWing, { color: PAPER, material: 3.75, emissive: 0.04, doubleSided: true });
+    this.paperRight = this.engine.createMesh(this.rightPaperWing, { color: PAPER, material: 3.75, emissive: 0.04, doubleSided: true });
+    this.paperKeelMesh = this.engine.createMesh(this.paperKeel, { color: PAPER_SHADE, material: 3.72, doubleSided: true });
+    this.paperFold = this.engine.createMesh(this.box, { color: PAPER_INK, material: 3.2, emissive: 0.06, scale: [0.035, 0.035, 1.18] });
+    this.paperNose = this.engine.createMesh(this.octa, { color: PAPER, material: 3.7, scale: [0.095, 0.075, 0.18], doubleSided: true });
+    this.leftMark = this.engine.createMesh(this.box, { color: PAPER_INK, material: 3.2, emissive: 0.04, scale: [0.26, 0.018, 0.035] });
+    this.rightMark = this.engine.createMesh(this.box, { color: PAPER_INK, material: 3.2, emissive: 0.04, scale: [0.26, 0.018, 0.035] });
   }
 
   reset(seed, consumed = {}) {
@@ -324,7 +321,7 @@ export class RidgeWorld {
     this.seed = seed >>> 0;
     this.passed = new Set(consumed.passed || []);
     this.grazed = new Set(consumed.grazed || []);
-    this.thrustVisual = 0;
+    this.foldVisual = 0;
     this.impactPulse = 0;
   }
 
@@ -338,8 +335,9 @@ export class RidgeWorld {
     return visualProfile(z, this.seed);
   }
 
-  markImpact() {
+  markImpact(zone = 'fold') {
     this.impactPulse = 1;
+    this.impactZone = zone;
   }
 
   createGateMeshes(gate) {
@@ -366,6 +364,41 @@ export class RidgeWorld {
 
   createObstacleMeshes(obstacle, ordinal) {
     const profile = visualProfile(obstacle.z, this.seed);
+    if (obstacle.kind === 'boulder') {
+      return [this.engine.createMesh(this.rocks[ordinal % this.rocks.length], {
+        position: [obstacle.x, obstacle.y - obstacle.radius, obstacle.z],
+        rotation: [obstacle.spin * 0.13, obstacle.spin, obstacle.spin * 0.07],
+        scale: [obstacle.radius, obstacle.radius * 2, obstacle.radius],
+        color: colorShift(profile.dark, 0.035),
+        material: 2,
+        doubleSided: true,
+      })];
+    }
+
+    if (['beam', 'pillar', 'shelf', 'cable'].includes(obstacle.kind)) {
+      const cable = obstacle.kind === 'cable';
+      const mesh = this.engine.createMesh(cable ? this.box : this.slabs[ordinal % this.slabs.length], {
+        position: [obstacle.x, obstacle.y, obstacle.z],
+        scale: [obstacle.halfX, obstacle.halfY, obstacle.halfZ],
+        color: cable ? [0.16, 0.16, 0.14] : colorShift(profile.dark, obstacle.kind === 'shelf' ? 0.015 : -0.018),
+        material: cable ? 3.1 : 2,
+        emissive: cable ? 0.04 : 0,
+      });
+      const meshes = [mesh];
+      if (cable) {
+        for (const side of [-0.68, 0, 0.68]) {
+          meshes.push(this.engine.createMesh(this.octa, {
+            position: [obstacle.x + obstacle.halfX * side, obstacle.y, obstacle.z - obstacle.halfZ * 1.4],
+            scale: [0.12, 0.12, 0.12],
+            color: SIGNAL,
+            material: 3.1,
+            emissive: 0.7,
+          }));
+        }
+      }
+      return meshes;
+    }
+
     const rock = this.engine.createMesh(this.rocks[ordinal % this.rocks.length], {
       position: [obstacle.x, obstacle.baseY, obstacle.z],
       rotation: [obstacle.lean, obstacle.spin, obstacle.lean * 0.5],
@@ -474,57 +507,72 @@ export class RidgeWorld {
     return { gates, obstacles };
   }
 
+  segmentAt(z) {
+    const index = Math.floor(z / CHUNK_LENGTH);
+    return this.chunks.get(index)?.plan || createChunkPlan(index, this.seed);
+  }
+
   placeAircraftPart(mesh, state, rotation, offset, extraRotation = null) {
     const transformed = rotateOffset(offset, rotation);
     mesh.position = [state.x + transformed[0], state.y + transformed[1], state.z + transformed[2]];
     mesh.rotation = extraRotation || [...rotation];
   }
 
-  updateAircraft(state, boosted, flowing, delta, time) {
-    this.thrustVisual = damp(this.thrustVisual, boosted || flowing ? 1 : 0, boosted ? 9 : 5, delta);
-    this.propellerAngle = (this.propellerAngle + delta * (28 + state.speed * 0.78 + this.thrustVisual * 30)) % (Math.PI * 2);
+  updateAircraft(state, folded, flowing, delta, time, damage = null) {
+    this.foldVisual = damp(this.foldVisual, folded ? 1 : 0, folded ? 8.5 : 5.8, delta);
     this.impactPulse = damp(this.impactPulse, 0, 5.4, delta);
     const yaw = -state.vx * 0.015;
     const rotation = [-state.pitch, yaw, state.bank];
-    const bob = Math.sin(state.z * 0.032) * 0.025;
+    const stallFlutter = (state.stall || 0) * Math.sin(time * 18 + state.z * 0.09);
+    const bob = Math.sin(state.z * 0.032) * 0.018 + stallFlutter * 0.035;
     const aircraftState = { ...state, y: state.y + bob };
+    const leftHealth = clamp((damage?.leftWing ?? 100) / 100, 0, 1);
+    const rightHealth = clamp((damage?.rightWing ?? 100) / 100, 0, 1);
+    const noseHealth = clamp((damage?.nose ?? 100) / 100, 0, 1);
+    const foldHealth = clamp((damage?.fold ?? 100) / 100, 0, 1);
+    const leftLoss = 1 - leftHealth;
+    const rightLoss = 1 - rightHealth;
+    const foldAngle = this.foldVisual * 0.62;
+    const flutter = stallFlutter * 0.08 + Math.sin(time * (9 + state.speed * 0.18)) * (leftLoss + rightLoss) * 0.025;
+    const leftRotation = [rotation[0] + leftLoss * 0.04, rotation[1], rotation[2] - foldAngle - leftLoss * 0.16 + flutter];
+    const rightRotation = [rotation[0] + rightLoss * 0.04, rotation[1], rotation[2] + foldAngle + rightLoss * 0.16 - flutter];
 
-    this.placeAircraftPart(this.aircraftWing, aircraftState, rotation, [0, 0, -0.02]);
-    this.placeAircraftPart(this.aircraftTail, aircraftState, rotation, [0, 0.04, -0.76]);
-    this.placeAircraftPart(this.aircraftBody, aircraftState, rotation, [0, 0.05, 0]);
-    this.placeAircraftPart(this.aircraftStripe, aircraftState, rotation, [0, 0.235, -0.2]);
-    this.placeAircraftPart(this.aircraftNose, aircraftState, rotation, [0, 0.04, 0.94]);
-    this.placeAircraftPart(this.aircraftCockpit, aircraftState, rotation, [0, 0.24, 0.2]);
-    this.placeAircraftPart(this.aircraftFin, aircraftState, rotation, [0, 0.12, -0.69]);
-    this.placeAircraftPart(this.aircraftPropeller, aircraftState, rotation, [0, 0.04, 1.31], [rotation[0], rotation[1], rotation[2] + this.propellerAngle]);
-    this.placeAircraftPart(this.leftLight, aircraftState, rotation, [-1.38, 0.02, -0.24]);
-    this.placeAircraftPart(this.rightLight, aircraftState, rotation, [1.38, 0.02, -0.24]);
-    this.placeAircraftPart(this.exhaust, aircraftState, rotation, [0, 0.03, -1.12]);
+    this.placeAircraftPart(this.paperLeft, aircraftState, rotation, [0, 0, 0], leftRotation);
+    this.placeAircraftPart(this.paperRight, aircraftState, rotation, [0, 0, 0], rightRotation);
+    this.placeAircraftPart(this.paperKeelMesh, aircraftState, rotation, [0, -0.015, 0]);
+    this.placeAircraftPart(this.paperFold, aircraftState, rotation, [0, 0.035, -0.02]);
+    this.placeAircraftPart(this.paperNose, aircraftState, rotation, [0, -0.005 - (1 - noseHealth) * 0.05, 1.45]);
+    this.placeAircraftPart(this.leftMark, aircraftState, rotation, [0.57, 0.045, -0.08], leftRotation);
+    this.placeAircraftPart(this.rightMark, aircraftState, rotation, [-0.57, 0.045, -0.08], rightRotation);
 
-    const blink = 0.74 + Math.sin(time * 8.2) * 0.26;
-    this.leftLight.emissive = 0.8 + blink * 0.8;
-    this.rightLight.emissive = 0.8 + (1 - blink * 0.35) * 0.8;
-    this.aircraftWing.emissive = flowing ? 0.38 : 0.07 + this.impactPulse * 0.55;
-    this.aircraftTail.emissive = this.aircraftWing.emissive;
-    this.aircraftBody.color = this.impactPulse > 0.14 ? mixColor(FUSELAGE, SIGNAL_HOT, this.impactPulse * 0.55) : [...FUSELAGE];
-    this.aircraftStripe.emissive = 0.06 + this.impactPulse * 0.7;
-    this.aircraftPropeller.alpha = 0.52 + this.thrustVisual * 0.26;
-    this.exhaust.alpha = this.thrustVisual * 0.7;
-    this.exhaust.scale = [0.055 + this.thrustVisual * 0.025, 0.045 + this.thrustVisual * 0.018, 0.18 + this.thrustVisual * 0.78];
-    this.exhaust.emissive = 0.8 + this.thrustVisual * 1.1;
+    this.paperLeft.scale = [0.78 + leftHealth * 0.22, 1, 0.94 + leftHealth * 0.06];
+    this.paperRight.scale = [0.78 + rightHealth * 0.22, 1, 0.94 + rightHealth * 0.06];
+    this.paperNose.scale = [0.095 + noseHealth * 0.005, 0.055 + noseHealth * 0.02, 0.12 + noseHealth * 0.06];
+    this.paperKeelMesh.scale = [1, 0.66 + foldHealth * 0.34, 1];
+    this.leftMark.alpha = 0.35 + leftHealth * 0.65;
+    this.rightMark.alpha = 0.35 + rightHealth * 0.65;
+    const impactGlow = this.impactPulse * 0.48;
+    this.paperLeft.color = this.impactZone === 'leftWing' ? mixColor(PAPER, PAPER_INK, impactGlow) : colorShift(PAPER, -leftLoss * 0.14);
+    this.paperRight.color = this.impactZone === 'rightWing' ? mixColor(PAPER, PAPER_INK, impactGlow) : colorShift(PAPER, -rightLoss * 0.14);
+    this.paperNose.color = this.impactZone === 'nose' ? mixColor(PAPER, PAPER_INK, impactGlow) : colorShift(PAPER, -(1 - noseHealth) * 0.16);
+    this.paperKeelMesh.color = this.impactZone === 'fold' ? mixColor(PAPER_SHADE, PAPER_INK, impactGlow) : colorShift(PAPER_SHADE, -(1 - foldHealth) * 0.12);
+    const emissive = flowing ? 0.3 : 0.035 + this.impactPulse * 0.35;
+    this.paperLeft.emissive = emissive;
+    this.paperRight.emissive = emissive;
+    this.paperFold.emissive = 0.06 + this.impactPulse * 0.52;
   }
 
-  updateAmbient(state, time, effects, flowing, boosted) {
+  updateAmbient(state, time, effects, flowing, folded) {
     if (!effects) {
       this.engine.particles.visible = false;
       return;
     }
     this.engine.particles.visible = true;
-    const amount = flowing ? 235 : boosted ? 190 : 145;
+    const amount = flowing ? 235 : folded ? 190 : 145;
     const points = [];
     for (let index = 0; index < amount; index += 1) {
       const source = this.particleSeeds[index];
-      const travel = time * (state.speed * (flowing ? 1.45 : boosted ? 0.92 : 0.58));
+      const travel = time * (state.speed * (flowing ? 1.45 : folded ? 0.92 : 0.58));
       const forward = ((source.phase - travel) % 190 + 190) % 190 - 28;
       points.push([
         state.x + source.x + Math.sin(time * 0.7 + source.sway) * 1.2,
@@ -533,8 +581,8 @@ export class RidgeWorld {
       ]);
     }
     const profile = visualProfile(state.z, this.seed);
-    this.engine.particles.size = flowing ? 4.5 : boosted ? 3.7 : 3;
-    this.engine.particles.alpha = flowing ? 0.76 : boosted ? 0.5 : 0.34;
+    this.engine.particles.size = flowing ? 4.5 : folded ? 3.7 : 3;
+    this.engine.particles.alpha = flowing ? 0.76 : folded ? 0.5 : 0.34;
     this.engine.particles.color = flowing ? [1, 0.45, 0.16] : mixColor([0.9, 0.88, 0.78], profile.cap, 0.34);
     this.engine.particles.update(points);
   }
@@ -556,10 +604,10 @@ export class RidgeWorld {
   }
 
   update(state, options) {
-    const { delta, time, boosted = options.folded, flowing, effects } = options;
+    const { delta, time, folded = options.boosted, flowing, effects, damage = null } = options;
     this.updateChunks(state.z);
-    this.updateAircraft(state, Boolean(boosted), flowing, delta, time);
-    this.updateAmbient(state, time, effects, flowing, Boolean(boosted));
+    this.updateAircraft(state, Boolean(folded), flowing, delta, time, damage);
+    this.updateAmbient(state, time, effects, flowing, Boolean(folded));
     this.updateDecoration(time);
   }
 }

@@ -199,6 +199,29 @@ export function rockGeometry(sides = 7, seed = 1) {
   return flatGeometry(triangles);
 }
 
+export function roughPrismGeometry(seed = 1) {
+  let value = seed >>> 0;
+  const random = () => {
+    value = Math.imul(value ^ (value >>> 15), 1 | value);
+    value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+  const outline = [
+    [-0.78, -1], [0.78, -1], [1, -0.72], [1, 0.72],
+    [0.78, 1], [-0.78, 1], [-1, 0.72], [-1, -0.72],
+  ];
+  const bottom = outline.map(([x, z]) => [x * (0.92 + random() * 0.08), -1, z * (0.92 + random() * 0.08)]);
+  const top = outline.map(([x, z]) => [x * (0.88 + random() * 0.12), 1, z * (0.88 + random() * 0.12)]);
+  const triangles = [];
+  for (let index = 0; index < outline.length; index += 1) {
+    const next = (index + 1) % outline.length;
+    addQuad(triangles, bottom[index], bottom[next], top[next], top[index]);
+    triangles.push(0, -1, 0, ...bottom[next], ...bottom[index]);
+    triangles.push(0, 1, 0, ...top[index], ...top[next]);
+  }
+  return flatGeometry(triangles);
+}
+
 export function wingGeometry() {
   const top = 0.055;
   const bottom = -0.055;
@@ -235,6 +258,49 @@ export function wingGeometry() {
     );
   }
   return flatGeometry(triangles);
+}
+
+export function paperWingGeometry(side = 1) {
+  const direction = side < 0 ? -1 : 1;
+  const top = 0.025;
+  const bottom = -0.025;
+  const nose = [0, top, 1.52];
+  const shoulder = [direction * 0.22, top, 0.28];
+  const tip = [direction * 1.62, top, -0.48];
+  const tail = [0, top, -1.08];
+  const noseBottom = [0, bottom, 1.52];
+  const shoulderBottom = [direction * 0.22, bottom, 0.28];
+  const tipBottom = [direction * 1.62, bottom, -0.48];
+  const tailBottom = [0, bottom, -1.08];
+  const triangles = [];
+  if (direction > 0) {
+    triangles.push(...nose, ...shoulder, ...tip, ...nose, ...tip, ...tail);
+    triangles.push(...noseBottom, ...tipBottom, ...shoulderBottom, ...noseBottom, ...tailBottom, ...tipBottom);
+  } else {
+    triangles.push(...nose, ...tip, ...shoulder, ...nose, ...tail, ...tip);
+    triangles.push(...noseBottom, ...shoulderBottom, ...tipBottom, ...noseBottom, ...tipBottom, ...tailBottom);
+  }
+  addQuad(triangles, noseBottom, nose, shoulder, shoulderBottom);
+  addQuad(triangles, shoulderBottom, shoulder, tip, tipBottom);
+  addQuad(triangles, tipBottom, tip, tail, tailBottom);
+  addQuad(triangles, tailBottom, tail, nose, noseBottom);
+  return flatGeometry(triangles);
+}
+
+export function paperKeelGeometry() {
+  const left = -0.025;
+  const right = 0.025;
+  const front = [0, -0.02, 1.5];
+  const rear = [0, -0.02, -1.06];
+  const keel = [0, -0.52, -0.46];
+  return flatGeometry([
+    left, front[1], front[2], left, rear[1], rear[2], left, keel[1], keel[2],
+    right, front[1], front[2], right, keel[1], keel[2], right, rear[1], rear[2],
+    left, front[1], front[2], right, front[1], front[2], right, keel[1], keel[2],
+    left, front[1], front[2], right, keel[1], keel[2], left, keel[1], keel[2],
+    left, rear[1], rear[2], left, keel[1], keel[2], right, keel[1], keel[2],
+    left, rear[1], rear[2], right, keel[1], keel[2], right, rear[1], rear[2],
+  ]);
 }
 
 export function finGeometry() {
