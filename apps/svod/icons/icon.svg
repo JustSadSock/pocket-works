@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="СВОД">
+  <rect width="512" height="512" fill="#173f52"/>
+  <path d="M0 52h512M0 460h512M52 0v512M460 0v512" stroke="#ede6d2" stroke-opacity=".18" stroke-width="3"/>
+  <g transform="translate(256 256) rotate(-8)" fill="none" stroke="#ede6d2">
+    <circle r="180" stroke-width="42" stroke-dasharray="102 20 102 20 102 20 102 20 102 20"/>
+    <circle r="122" stroke-width="34" stroke-dasharray="65 17 65 17 65 17 65 17 65 17" transform="rotate(18)"/>
+    <circle r="72" stroke-width="28" stroke-dasharray="36 14 36 14 36 14 36 14 36 14" transform="rotate(-13)"/>
+  </g>
+  <path d="M256 73v83M256 356v83" stroke="#df6537" stroke-width="18"/>
+  <path d="m240 58 16-20 16 20-16 20zM240 454l16-20 16 20-16 20z" fill="#df6537"/>
+  <circle cx="256" cy="256" r="35" fill="#df6537" stroke="#ede6d2" stroke-width="12"/>
+  <circle cx="256" cy="256" r="10" fill="#173f52"/>
+</svg>

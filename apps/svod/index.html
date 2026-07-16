@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#173f52">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СВОД">
+  <meta name="description" content="Стратегия о последнем кольцевом городе.">
+  <title>СВОД</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas">
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="view start-view is-active" id="start-view" aria-labelledby="start-title">
+      <header class="start-mast" data-ui>
+        <span class="wordmark">POCKET WORKS / 088</span>
+        <span class="release-mark">ХРОНИКА 0.1</span>
+      </header>
+
+      <div class="hero-machine" aria-hidden="true">
+        <span class="hero-orbit orbit-a"></span>
+        <span class="hero-orbit orbit-b"></span>
+        <span class="hero-orbit orbit-c"></span>
+        <span class="hero-axis"></span>
+        <span class="hero-storm storm-a"></span>
+        <span class="hero-storm storm-b"></span>
+        <span class="hero-core"></span>
+      </div>
+
+      <div class="start-copy">
+        <p class="eyebrow">ПОСЛЕДНИЙ КОЛЬЦЕВОЙ ГОРОД</p>
+        <h1 id="start-title">СВОД</h1>
+        <p class="start-lede">Крути районы. Замыкай воду, ток и труд. Построй три великих проекта до Белой бури.</p>
+      </div>
+
+      <div class="archive-strip" id="archive-strip" aria-live="polite">
+        <span>АРХИВ ПУСТ</span>
+        <span>ГОРОД ЖДЁТ ПЕРВОГО ЗАПУСКА</span>
+      </div>
+
+      <div class="start-actions" data-ui>
+        <button class="primary-command" id="continue-button" type="button" data-native-press hidden>
+          <span>Продолжить хронику</span>
+          <small id="continue-detail">Цикл 1 из 12</small>
+        </button>
+        <button class="primary-command is-ink" id="new-game-button" type="button" data-native-press>
+          <span>Новый Свод</span>
+          <small>Процедурная хроника на 12 циклов</small>
+        </button>
+        <button class="text-command" id="rules-button" type="button" data-native-press>Как держится город</button>
+      </div>
+
+      <footer class="start-footer" data-ui>
+        <a href="../../" data-app-control data-native-press>← В Pocket Works</a>
+        <button type="button" id="start-settings-button" data-native-press>Звук и отклик</button>
+        <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </footer>
+    </section>
+
+    <section class="view setup-view" id="setup-view" aria-labelledby="setup-title" hidden>
+      <header class="subhead" data-ui>
+        <button class="back-command" id="setup-back-button" type="button" data-native-press>← Назад</button>
+        <span>НОВАЯ ХРОНИКА</span>
+        <span>01 / 03</span>
+      </header>
+
+      <div class="setup-intro">
+        <p class="eyebrow">УЧРЕДИТЕЛЬНАЯ ХАРТИЯ</p>
+        <h2 id="setup-title">Кто скрепил кольца?</h2>
+        <p>Хартия меняет старт и одно фундаментальное правило. Остальное придётся вырвать у бури руками.</p>
+      </div>
+
+      <div class="charter-list" id="charter-list" role="radiogroup" aria-label="Выбор хартии">
+        <button class="charter-option is-selected" type="button" role="radio" aria-checked="true" data-charter="water" data-native-press>
+          <span class="charter-number">I</span>
+          <span class="charter-copy"><strong>Водный союз</strong><small>Больше пайка; теплицы производят щедрее.</small></span>
+          <span class="charter-seal">В</span>
+        </button>
+        <button class="charter-option" type="button" role="radio" aria-checked="false" data-charter="guild" data-native-press>
+          <span class="charter-number">II</span>
+          <span class="charter-copy"><strong>Цеховой пакт</strong><small>Больше деталей; первый поворот мастерских бесплатен.</small></span>
+          <span class="charter-seal">Ц</span>
+        </button>
+        <button class="charter-option" type="button" role="radio" aria-checked="false" data-charter="civic" data-native-press>
+          <span class="charter-number">III</span>
+          <span class="charter-copy"><strong>Вольные кварталы</strong><small>Больше сцепления и мандата; советы сильнее.</small></span>
+          <span class="charter-seal">К</span>
+        </button>
+      </div>
+
+      <div class="seed-plate" data-ui>
+        <div>
+          <span>КОД ГОРОДА</span>
+          <strong id="seed-label">SVOD01</strong>
+        </div>
+        <button id="shuffle-seed-button" type="button" data-native-press>Сменить карту</button>
+      </div>
+
+      <div class="setup-launch" data-ui>
+        <p id="replace-warning" hidden>Новая хроника заменит текущее сохранение.</p>
+        <button class="launch-command" id="launch-button" type="button" data-native-press>
+          Зажечь центральный привод
+          <span>→</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="view game-view" id="game-view" aria-label="Игровая хроника" hidden>
+      <header class="game-head" data-ui>
+        <button class="head-command" id="pause-button" type="button" data-native-press>Пауза</button>
+        <div class="cycle-mark">
+          <span>ЦИКЛ</span>
+          <strong><b id="cycle-value">01</b><i>/12</i></strong>
+        </div>
+        <button class="head-command sound-command" id="quick-sound-button" type="button" data-native-press aria-pressed="true">Звук: да</button>
+      </header>
+
+      <section class="city-ledger" aria-label="Состояние города" data-ui>
+        <div class="ledger-stock" data-stock="rations">
+          <span class="stock-mark mark-rations"></span>
+          <small>ПАЁК</small>
+          <strong id="rations-value">0</strong>
+          <i id="rations-delta">+0</i>
+        </div>
+        <div class="ledger-stock" data-stock="parts">
+          <span class="stock-mark mark-parts"></span>
+          <small>ДЕТАЛИ</small>
+          <strong id="parts-value">0</strong>
+          <i id="parts-delta">+0</i>
+        </div>
+        <div class="ledger-stock" data-stock="mandate">
+          <span class="stock-mark mark-mandate"></span>
+          <small>МАНДАТ</small>
+          <strong id="mandate-value">0</strong>
+          <i id="mandate-delta">+0</i>
+        </div>
+        <div class="ledger-vitals">
+          <div><span>ЦЕЛОСТНОСТЬ</span><strong id="integrity-value">0</strong></div>
+          <div class="vital-track"><i id="integrity-track"></i></div>
+          <div><span>СЦЕПЛЕНИЕ</span><strong id="cohesion-value">0</strong></div>
+          <div class="vital-track is-cohesion"><i id="cohesion-track"></i></div>
+        </div>
+      </section>
+
+      <div class="game-layout">
+        <section class="board-column" aria-labelledby="board-heading">
+          <div class="forecast-strip" id="forecast-strip" data-ui>
+            <span class="forecast-signal"></span>
+            <div><small id="forecast-kicker">ПРОГНОЗ ФРОНТА</small><strong id="forecast-text">Под ударом 2 луча</strong></div>
+            <b id="command-value">3 КОМ.</b>
+          </div>
+
+          <div class="board-frame" id="board-frame">
+            <h2 id="board-heading" class="visually-hidden">Кольцевая карта города</h2>
+            <canvas id="strategy-board" width="720" height="720" role="img" aria-label="Три вращающихся кольца города" data-gesture-surface data-touch-action="none" data-block-callout></canvas>
+            <div class="board-corner corner-nw"></div>
+            <div class="board-corner corner-se"></div>
+          </div>
+
+          <div class="chain-readout" id="chain-readout" aria-live="polite" data-ui>
+            <span><b id="partial-chain-value">0</b> рабочих линий</span>
+            <span><b id="full-chain-value">0</b> полных цепей</span>
+            <span><b id="shield-value">0</b> щитов</span>
+          </div>
+
+          <div class="ring-console" data-ui>
+            <button class="rotate-command" id="rotate-left-button" type="button" data-native-press aria-label="Повернуть выбранное кольцо против часовой стрелки">↶</button>
+            <div class="ring-selector" id="ring-selector" role="radiogroup" aria-label="Выбранное кольцо">
+              <button type="button" role="radio" aria-checked="true" class="is-selected" data-ring="0" data-native-press>I</button>
+              <button type="button" role="radio" aria-checked="false" data-ring="1" data-native-press>II</button>
+              <button type="button" role="radio" aria-checked="false" data-ring="2" data-native-press>III</button>
+            </div>
+            <div class="ring-console-copy">
+              <small>ВЫБРАНО КОЛЬЦО</small>
+              <strong id="selected-ring-name">Внутренний привод</strong>
+            </div>
+            <button class="rotate-command" id="rotate-right-button" type="button" data-native-press aria-label="Повернуть выбранное кольцо по часовой стрелке">↷</button>
+          </div>
+        </section>
+
+        <aside class="decision-column" data-ui>
+          <section class="sector-dossier" id="sector-dossier">
+            <div class="dossier-index"><span id="sector-ring-label">КОЛЬЦО I</span><b id="sector-spoke-label">ЛУЧ 01</b></div>
+            <div class="dossier-title"><h3 id="sector-name">Конденсер</h3><span id="sector-condition">ЦЕЛ</span></div>
+            <p id="sector-description">Подаёт воду наружу.</p>
+            <div class="dossier-flow" id="sector-flow">Выход: вода</div>
+          </section>
+
+          <section class="project-progress" aria-label="Прогресс великих проектов">
+            <div><span>ВЕЛИКИЕ ПРОЕКТЫ</span><strong id="project-count">0 / 3</strong></div>
+            <div class="project-notches" id="project-notches"><i></i><i></i><i></i></div>
+          </section>
+
+          <div class="turn-actions">
+            <button class="city-action" id="city-action-button" type="button" data-native-press>
+              <span><small>ОДНО ДЕЛО ЗА ЦИКЛ</small><strong id="city-action-label">Проект или приказ</strong></span>
+              <b>+</b>
+            </button>
+            <button class="resolve-action" id="resolve-button" type="button" data-native-press>
+              <span><small>ПРОИЗВОДСТВО → БУРЯ</small><strong>Завершить цикл</strong></span>
+              <b>→</b>
+            </button>
+          </div>
+
+          <p class="gesture-hint">Проведи по кольцу или используй стрелки. Один сектор поворота стоит одну команду.</p>
+        </aside>
+      </div>
+
+      <footer class="game-foot" data-ui>
+        <span id="seed-game-label">КОД SVOD01</span>
+        <button type="button" id="game-workshop-button" data-native-press>Workshop</button>
+      </footer>
+    </section>
+
+    <section class="view completion-view" id="completion-view" aria-labelledby="completion-title" hidden>
+      <header class="completion-head" data-ui>
+        <span>ФИНАЛЬНАЯ ЗАПИСЬ</span>
+        <span id="completion-seed">КОД SVOD01</span>
+      </header>
+      <div class="completion-emblem" id="completion-emblem" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+      <div class="completion-copy">
+        <p class="eyebrow" id="completion-eyebrow">БЕЛАЯ БУРЯ ПРОШЛА</p>
+        <h2 id="completion-title">Свод выстоял.</h2>
+        <p id="completion-reason">Три великих проекта замкнули город.</p>
+      </div>
+      <dl class="completion-ledger" id="completion-ledger"></dl>
+      <div class="completion-actions" data-ui>
+        <button class="primary-command is-ink" id="again-button" type="button" data-native-press><span>Новая хроника</span><small>Другой город, те же жестокие законы</small></button>
+        <button class="text-command" id="completion-menu-button" type="button" data-native-press>В главное меню</button>
+        <a href="../../" data-app-control data-native-press>← В Pocket Works</a>
+        <button type="button" id="completion-workshop-button" data-native-press>Workshop</button>
+      </div>
+    </section>
+  </main>
+
+  <section class="sheet-layer" id="sheet-layer" aria-hidden="true" hidden>
+    <button class="sheet-backdrop" type="button" id="sheet-backdrop" aria-label="Закрыть окно"></button>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+      <div id="sheet-content"></div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <p class="visually-hidden" id="game-live" aria-live="assertive"></p>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="СВОД"
+    data-app-version="0.1.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
