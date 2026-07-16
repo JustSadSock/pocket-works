@@ -520,6 +520,59 @@ export function evaluateBoard(state, offsets = state.offsets) {
   return result;
 }
 
+export function createTutorialScenario() {
+  let best = null;
+
+  for (let attempt = 1; attempt <= 192; attempt += 1) {
+    const state = createGame(`DRILL${String(attempt).padStart(3, '0')}`, 'water');
+    for (const sector of state.rings.flat()) sector.damage = 0;
+    state.resources = { rations: 30, parts: 30, mandate: 30 };
+    state.integrity = 100;
+    state.cohesion = 90;
+
+    const before = evaluateBoard(state);
+    for (let ring = 0; ring < RING_COUNT; ring += 1) {
+      for (const steps of [-1, 1]) {
+        const offsets = [...state.offsets];
+        offsets[ring] = modulo(offsets[ring] + steps);
+        const after = evaluateBoard(state, offsets);
+        const fullGain = after.fullChains.length - before.fullChains.length;
+        const shieldGain = after.shieldSpokes.length - before.shieldSpokes.length;
+        const partialGain = after.partialChains.length - before.partialChains.length;
+        if (fullGain < 1) continue;
+
+        const score = fullGain * 100 + shieldGain * 25 + partialGain * 4 - ring;
+        if (!best || score > best.score) {
+          best = { state, ring, steps, before, after, score };
+        }
+      }
+    }
+    if (best?.after.shieldSpokes.length > best.before.shieldSpokes.length) break;
+  }
+
+  if (!best) throw new Error('Не удалось собрать учебную карту.');
+  const newShield = best.after.shieldSpokes.find((spoke) => !best.before.shieldSpokes.includes(spoke));
+  const newChain = best.after.fullChains.find(({ spoke }) => (
+    !best.before.fullChains.some((entry) => entry.spoke === spoke)
+  ));
+  best.state.stormTargets = [newShield ?? newChain?.spoke ?? best.after.fullChains[0].spoke];
+
+  return {
+    game: best.state,
+    move: { ring: best.ring, steps: best.steps },
+    before: {
+      partialChains: best.before.partialChains.length,
+      fullChains: best.before.fullChains.length,
+      shields: best.before.shieldSpokes.length
+    },
+    after: {
+      partialChains: best.after.partialChains.length,
+      fullChains: best.after.fullChains.length,
+      shields: best.after.shieldSpokes.length
+    }
+  };
+}
+
 export function rotationCost(state, ring, steps) {
   const distance = Math.abs(Math.trunc(steps));
   if (distance === 0) return 0;

@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'svod-';
-const CACHE_NAME = 'svod-v0.1.0';
-const APP_VERSION = '0.1.0';
+const CACHE_NAME = 'svod-v0.2.0';
+const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-07-16';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
+  'Добавлены интерактивная учебная тревога, подробный полевой устав и контекстные подсказки первой хроники.',
   'Первый игровой релиз: процедурный кольцевой город, ресурсные цепи, буря, проекты, указы и локальное сохранение кампании.'
 ];
 const APP_SHELL = [

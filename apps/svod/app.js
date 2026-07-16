@@ -20,6 +20,7 @@ import {
   buildProject,
   chainAt,
   createGame,
+  createTutorialScenario,
   describeForecast,
   enactOrder,
   evaluateBoard,
@@ -40,7 +41,7 @@ import {
 installMobileRuntime();
 
 const STORAGE_NAMESPACE = 'pocket-works:svod';
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.2.0';
 const DEFAULT_SETTINGS = Object.freeze({
   sound: true,
   haptics: true,
@@ -50,7 +51,8 @@ const DEFAULT_PROFILE = Object.freeze({
   runs: 0,
   wins: 0,
   bestIntegrity: 0,
-  lastSeed: null
+  lastSeed: null,
+  tutorialComplete: false
 });
 
 const storage = createVersionedStore({
@@ -84,11 +86,13 @@ const elements = {
   startView: $('#start-view'),
   setupView: $('#setup-view'),
   gameView: $('#game-view'),
+  cityLedger: $('.city-ledger'),
   completionView: $('#completion-view'),
   archiveStrip: $('#archive-strip'),
   continueButton: $('#continue-button'),
   continueDetail: $('#continue-detail'),
   newGameButton: $('#new-game-button'),
+  tutorialButton: $('#tutorial-button'),
   rulesButton: $('#rules-button'),
   startSettingsButton: $('#start-settings-button'),
   setupBackButton: $('#setup-back-button'),
@@ -98,6 +102,7 @@ const elements = {
   replaceWarning: $('#replace-warning'),
   charterOptions: $$('.charter-option'),
   pauseButton: $('#pause-button'),
+  gameRulesButton: $('#game-rules-button'),
   quickSoundButton: $('#quick-sound-button'),
   cycleValue: $('#cycle-value'),
   rationsValue: $('#rations-value'),
@@ -113,6 +118,8 @@ const elements = {
   forecastKicker: $('#forecast-kicker'),
   forecastText: $('#forecast-text'),
   commandValue: $('#command-value'),
+  turnBrief: $('#turn-brief'),
+  turnBriefText: $('#turn-brief-text'),
   canvas: $('#strategy-board'),
   boardFrame: $('#board-frame'),
   partialChains: $('#partial-chain-value'),
@@ -148,6 +155,13 @@ const elements = {
   sheetBackdrop: $('#sheet-backdrop'),
   sheet: $('#sheet'),
   sheetContent: $('#sheet-content'),
+  tutorialCoach: $('#tutorial-coach'),
+  tutorialProgress: $('#tutorial-progress'),
+  tutorialKicker: $('#tutorial-kicker'),
+  tutorialTitle: $('#tutorial-title'),
+  tutorialText: $('#tutorial-text'),
+  tutorialNext: $('#tutorial-next-button'),
+  tutorialExit: $('#tutorial-exit-button'),
   toast: $('#toast'),
   gameLive: $('#game-live')
 };
@@ -158,6 +172,8 @@ const workshop = createWorkshopMode({
   cachePrefix: 'svod-',
   storageNamespace: STORAGE_NAMESPACE,
   onReset() {
+    tutorial = null;
+    document.body.classList.remove('is-tutorial');
     game = null;
     settings = { ...DEFAULT_SETTINGS };
     profile = { ...DEFAULT_PROFILE };
@@ -176,10 +192,12 @@ let setupCharter = 'water';
 let setupSeed = makeSeed();
 let selectedRing = 0;
 let selectedSectorUid = null;
+let tutorial = null;
 let sheetMode = null;
 let sheetDismissible = true;
 let sheetLastFocus = null;
 let actionTab = 'projects';
+let rulesTab = 'turn';
 let toastTimer = 0;
 let boardVisible = false;
 let animationFrame = 0;
@@ -207,7 +225,7 @@ function makeSeed() {
 }
 
 function saveGame() {
-  storage.patch({ game, settings, profile });
+  storage.patch({ game: tutorial?.active ? tutorial.returnGame : game, settings, profile });
 }
 
 function persistSettings() {
@@ -267,12 +285,14 @@ function switchView(name) {
 }
 
 function showStart() {
+  if (tutorial?.active) restoreTutorialGame();
   closeSheet(true);
   renderStart();
   switchView('start');
 }
 
 function openSetup() {
+  if (tutorial?.active) restoreTutorialGame();
   closeSheet(true);
   setupSeed = makeSeed();
   setupCharter = 'water';
@@ -356,6 +376,9 @@ function renderStart() {
   } else {
     elements.archiveStrip.innerHTML = '<span>АРХИВ ПУСТ</span><span>ГОРОД ЖДЁТ ПЕРВОГО ЗАПУСКА</span>';
   }
+  elements.tutorialButton.classList.toggle('is-complete', Boolean(profile.tutorialComplete));
+  elements.tutorialButton.querySelector('b').textContent = profile.tutorialComplete ? 'Повторить обучение' : 'Учебная тревога';
+  elements.tutorialButton.querySelector('i').textContent = profile.tutorialComplete ? 'ПРОЙДЕНО ✓' : 'РЕКОМЕНДУЕТСЯ';
   persistSettings();
 }
 
@@ -422,6 +445,18 @@ function previewOffsets() {
   return offsets;
 }
 
+function tacticalBrief(evaluation) {
+  if (tutorial?.active) return 'Учебная тревога не портит сохранённую хронику. Выполняй действие в оранжевой рамке.';
+  const threatened = game.stormTargets.map((spoke) => spoke + 1).join(', ');
+  const exposed = game.stormTargets.filter((spoke) => !evaluation.shieldSpokes.includes(spoke));
+  if (evaluation.partialChains.length === 0) return 'Нет рабочих мастерских: совмести воду с Теплицей, ток с Цехом или труд с Гильдией.';
+  if (evaluation.fullChains.length === 0) return 'Мастерские уже работают. Теперь совмести их продукт с подходящим внешним сектором.';
+  if (exposed.length > 0 && game.resources.parts >= 2 && !game.actionUsed) return `Луч${exposed.length > 1 ? 'и' : ''} ${exposed.map((spoke) => spoke + 1).join(', ')} открыт${exposed.length > 1 ? 'ы' : ''}. Бастион или приказ «Распорки» уменьшит урон.`;
+  if (exposed.length === 0) return `Прогноз ${threatened}: все удары прикрыты. Можно заняться производством или проектом.`;
+  if (game.actionUsed) return 'Городское дело исполнено. Проверь ожидаемый паёк и нажимай «Завершить цикл».';
+  return 'Цепи дают ресурсы только после завершения цикла. До этого числа с плюсом показывают прогноз производства.';
+}
+
 function renderGameUI(offsets = game?.offsets) {
   if (!game) return;
   const evaluation = evaluateBoard(game, offsets || game.offsets);
@@ -442,6 +477,7 @@ function renderGameUI(offsets = game?.offsets) {
   elements.forecastKicker.textContent = game.cycle === TOTAL_CYCLES ? 'БЕЛАЯ БУРЯ' : 'ПРОГНОЗ ФРОНТА';
   elements.forecastText.textContent = describeForecast(game).replace(/^.*?: /, '');
   elements.commandValue.textContent = `${game.command} КОМ.`;
+  elements.turnBriefText.textContent = tacticalBrief(evaluation);
   elements.partialChains.textContent = evaluation.partialChains.length;
   elements.fullChains.textContent = evaluation.fullChains.length;
   elements.shieldValue.textContent = evaluation.shieldSpokes.length;
@@ -468,11 +504,26 @@ function launchNewGame() {
   sound('success');
   buzz([8, 24, 10]);
   showGame();
-  if (profile.runs === 1) openRulesSheet(true);
+  if (profile.runs === 1 && !profile.tutorialComplete) openRulesSheet('turn');
 }
 
 function performRotation(ring, steps, fromDrag = false) {
   if (!game) return;
+  if (tutorial?.active && tutorial.step === 2) {
+    const expected = tutorial.scenario.move;
+    if (ring !== expected.ring || steps !== expected.steps) {
+      boardMotion.drag = null;
+      renderGameUI();
+      showToast(`В обучении нужен один поворот кольца ${['I', 'II', 'III'][expected.ring]} ${expected.steps > 0 ? '↷' : '↶'}.`, true);
+      return;
+    }
+  }
+  if (tutorial?.active && tutorial.step !== 2) {
+    boardMotion.drag = null;
+    renderGameUI();
+    showToast('Сейчас следуй подсказке обучения.', true);
+    return;
+  }
   const result = rotateRing(game, ring, steps);
   if (!result.ok) {
     sound('error');
@@ -495,6 +546,7 @@ function performRotation(ring, steps, fromDrag = false) {
   renderGameUI();
   const evaluation = evaluateBoard(game);
   announce(`${RING_NAMES[ring]} повёрнут. Полных цепей: ${evaluation.fullChains.length}. Команд осталось: ${game.command}.`);
+  if (tutorial?.active && tutorial.step === 2) advanceTutorial(3);
 }
 
 function selectRing(ring) {
@@ -629,19 +681,212 @@ function sheetHeader(kicker, title, close = true) {
   `;
 }
 
-function openRulesSheet(firstRun = false) {
-  openSheet('rules', `
-    ${sheetHeader(firstRun ? 'ПЕРВЫЙ ЗАПУСК' : 'ПОЛЕВОЙ УСТАВ', 'Как держится Свод')}
-    <p class="sheet-intro">В каждом цикле у тебя три команды, одно городское дело и заранее известный фронт бури.</p>
-    <div class="chain-example" aria-label="Пример полной цепи">
-      <span>КОНДЕНСЕР<br>вода</span><b>→</b><span>ТЕПЛИЦА<br>пища</span><b>→</b><span>КВАРТАЛ<br>запас</span>
+function rulesBody(tab = rulesTab) {
+  const tabs = `
+    <div class="rule-tabs" role="tablist" aria-label="Разделы правил">
+      <button type="button" role="tab" data-rule-tab="turn" class="${tab === 'turn' ? 'is-selected' : ''}" aria-selected="${tab === 'turn'}">Ход</button>
+      <button type="button" role="tab" data-rule-tab="chains" class="${tab === 'chains' ? 'is-selected' : ''}" aria-selected="${tab === 'chains'}">Цепи</button>
+      <button type="button" role="tab" data-rule-tab="storm" class="${tab === 'storm' ? 'is-selected' : ''}" aria-selected="${tab === 'storm'}">Буря и победа</button>
+    </div>`;
+
+  if (tab === 'chains') {
+    return `${tabs}
+      <p class="sheet-intro"><b>Луч</b> — это три сектора на одной радиальной линии. Цепь работает слева направо: внутреннее кольцо → мастерские → внешний город.</p>
+      <div class="chain-matrix" aria-label="Все правильные производственные цепи">
+        <div class="chain-row is-water"><span><b>КОНДЕНСЕР</b><small>даёт воду</small></span><i>→</i><span><b>ТЕПЛИЦА</b><small>делает паёк</small></span><i>→</i><span><b>КВАРТАЛ</b><small>паёк + сцепление</small></span></div>
+        <div class="chain-row is-power"><span><b>ДИНАМО</b><small>даёт ток</small></span><i>→</i><span><b>ЦЕХ</b><small>делает детали</small></span><i>→</i><span><b>БАСТИОН</b><small>щит на этом луче</small></span></div>
+        <div class="chain-row is-labor"><span><b>ФОРУМ</b><small>даёт труд</small></span><i>→</i><span><b>ГИЛЬДИЯ</b><small>делает мандат</small></span><i>→</i><span><b>СОВЕТ</b><small>мандат + сцепление</small></span></div>
+      </div>
+      <p class="rule-note"><b>Рабочая линия</b> соединяет первые два кольца и уже производит ресурс. <b>Полная цепь</b> подключает ещё и внешний сектор, поэтому даёт дополнительный эффект.</p>`;
+  }
+
+  if (tab === 'storm') {
+    return `${tabs}
+      <div class="rule-goal"><b>3/12</b><span><strong>Три проекта до двенадцатого цикла</strong><small>А затем пережить Белую бурю, сохранив целостность и сцепление выше нуля.</small></span></div>
+      <div class="rule-legend">
+        <article><b>ОРАНЖ.</b><span><strong>Прогноз виден заранее</strong><small>Оранжевые метки на ободе показывают лучи, которые будут атакованы после производства.</small></span></article>
+        <article><b>ЩИТ</b><span><strong>Динамо → Цех → Бастион</strong><small>Полная цепь Бастиона полностью блокирует удар на своём луче.</small></span></article>
+        <article><b>ИЗНОС</b><span><strong>Повреждение ослабляет выход</strong><small>Первое повреждение снижает производство. Второе разбивает сектор и обрывает цепь до ремонта.</small></span></article>
+        <article><b>ГОЛОД</b><span><strong>Паёк расходуется каждый цикл</strong><small>Если произведённого и накопленного пайка не хватает, падают сцепление и целостность.</small></span></article>
+        <article><b>ПОРАЖ.</b><span><strong>Ноль по любой шкале — конец</strong><small>Хроника также считается проигранной, если к финалу готово меньше трёх великих проектов.</small></span></article>
+      </div>`;
+  }
+
+  return `${tabs}
+    <div class="rule-goal"><b>12</b><span><strong>Задача хроники</strong><small>За 12 циклов построить минимум 3 великих проекта и не дать целостности или сцеплению упасть до нуля.</small></span></div>
+    <div class="turn-sequence">
+      <article><b>01 · КРУТИ</b><strong>До 3 команд</strong><p>Один сектор поворота обычно стоит одну команду. Можно крутить любое кольцо.</p></article>
+      <article><b>02 · РЕШИ</b><strong>Одно дело</strong><p>Либо построить великий проект, либо отдать один разовый приказ.</p></article>
+      <article><b>03 · ЗАПУСТИ</b><strong>Заверши цикл</strong><p>Сначала сработают цепи и расходуется паёк, потом ударит буря.</p></article>
     </div>
-    <div class="rule-stack">
-      <article class="rule-block"><span class="rule-number">01</span><div><h3>Совмещай входы и выходы</h3><p>Внутреннее кольцо даёт воду, ток или труд. Мастерские превращают поток в паёк, детали или мандат. Внешний город завершает цепь.</p></div></article>
-      <article class="rule-block"><span class="rule-number">02</span><div><h3>Смотри, куда придёт буря</h3><p>Работающий Бастион полностью закрывает свой луч. Белая стена позже научит его прикрывать и соседей.</p></div></article>
-      <article class="rule-block"><span class="rule-number">03</span><div><h3>Построй три великих проекта</h3><p>После двенадцатого цикла приходит Белая буря. Без трёх завершённых проектов даже целый город считается неготовым.</p></div></article>
+    <p class="rule-note">Числа <b>+N</b> возле ресурсов — прогноз этого цикла, а не уже полученный запас. Ресурсы начисляются только после кнопки «Завершить цикл».</p>`;
+}
+
+function rulesHtml(tab = rulesTab) {
+  return `
+    ${sheetHeader('ПОЛЕВОЙ УСТАВ', 'Свод без тумана')}
+    ${rulesBody(tab)}
+    <button class="rules-tutorial-link" type="button" data-rules-tutorial data-native-press>Пройти интерактивное обучение · 3 минуты</button>
+    <button class="sheet-continue" type="button" data-sheet-close data-native-press><span>Вернуться к городу</span><b>→</b></button>`;
+}
+
+function openRulesSheet(tab = 'turn') {
+  rulesTab = tab;
+  openSheet('rules', rulesHtml(tab));
+}
+
+function rerenderRulesSheet() {
+  elements.sheetContent.innerHTML = rulesHtml(rulesTab);
+}
+
+function clearTutorialFocus() {
+  for (const node of $$('.is-tutorial-focus')) node.classList.remove('is-tutorial-focus');
+}
+
+function focusTutorial(...nodes) {
+  clearTutorialFocus();
+  for (const node of nodes.filter(Boolean)) node.classList.add('is-tutorial-focus');
+}
+
+function renderTutorialCoach() {
+  if (!tutorial?.active) {
+    elements.tutorialCoach.hidden = true;
+    clearTutorialFocus();
+    return;
+  }
+
+  const { step, scenario } = tutorial;
+  const roman = ['I', 'II', 'III'][scenario.move.ring];
+  const arrow = scenario.move.steps > 0 ? '↷' : '↶';
+  const protectedTarget = evaluateBoard(game).shieldSpokes.includes(game.stormTargets[0]);
+  const steps = [
+    {
+      kicker: 'УЧЕБНАЯ ТРЕВОГА · БЕЗ РИСКА',
+      title: 'Что вообще нужно сделать',
+      text: '<p>Хроника длится <b>12 циклов</b>. Чтобы победить, построй <b>3 великих проекта</b> и сохрани обе шкалы — целостность и сцепление — выше нуля.</p>',
+      next: 'Разобрать карту →',
+      focus: [elements.cityLedger]
+    },
+    {
+      kicker: 'КАРТА ГОРОДА',
+      title: 'Один луч — одна цепь',
+      text: '<p>Читай карту от центра наружу. Внутренний сектор даёт поток, средний превращает его в ресурс, внешний добавляет особый эффект.</p><div class="coach-mini-chain"><span>ИСТОЧНИК</span><i>→</i><span>МАСТЕРСКАЯ</span><i>→</i><span>ГОРОД</span></div>',
+      next: 'Собрать цепь →',
+      focus: [elements.boardFrame, $('#chain-readout')]
+    },
+    {
+      kicker: 'ТВОЁ ДЕЙСТВИЕ',
+      title: `Поверни кольцо ${roman} ${arrow}`,
+      text: `<p>Выбери кольцо <b>${roman}</b> и нажми подсвеченную стрелку <b>${arrow}</b> один раз. Полных цепей станет ${scenario.after.fullChains} вместо ${scenario.before.fullChains}.</p>`,
+      next: `Нажми ${arrow} на поле`,
+      locked: true,
+      focus: [scenario.move.steps > 0 ? elements.rotateRight : elements.rotateLeft, elements.ringButtons[scenario.move.ring]]
+    },
+    {
+      kicker: 'ПРОИЗВОДСТВО СОБРАНО',
+      title: 'Числа с плюсом — прогноз',
+      text: `<p>Рабочих линий: <b>${scenario.after.partialChains}</b>, полных цепей: <b>${scenario.after.fullChains}</b>. Ресурсы пока не выданы: они поступят только при завершении цикла.</p>`,
+      next: 'Проверить бурю →',
+      focus: [elements.cityLedger, $('#chain-readout')]
+    },
+    {
+      kicker: 'ПРОГНОЗ БУРИ',
+      title: `Под ударом луч ${game.stormTargets[0] + 1}`,
+      text: `<p>Оранжевая метка на ободе показывает будущий удар. ${protectedTarget ? '<b>Этот луч уже закрыт Бастионом:</b> цепь Динамо → Цех → Бастион создаёт щит.' : 'Неприкрытый луч получит урон. Щит создаёт цепь Динамо → Цех → Бастион.'}</p>`,
+      next: 'Принять решение →',
+      focus: [$('#forecast-strip'), elements.boardFrame]
+    },
+    {
+      kicker: 'ОДНО ДЕЛО ЗА ЦИКЛ',
+      title: 'Построй первый проект',
+      text: '<p>Повороты тратят команды, но <b>проект или приказ</b> использует отдельный слот. Открой «Проект или приказ» и выбери <b>Кольцевой привод 01</b>.</p>',
+      next: 'Открой проекты внизу',
+      locked: true,
+      focus: [elements.cityActionButton]
+    },
+    {
+      kicker: 'ПОСЛЕДНИЙ ШАГ',
+      title: 'Запусти расчёт цикла',
+      text: '<p>Кнопка выполняет порядок: <b>производство → расход пайка → буря</b>. Прогноз позволяет всё проверить до нажатия.</p>',
+      next: 'Нажми «Завершить цикл»',
+      locked: true,
+      focus: [elements.resolveButton]
+    }
+  ];
+  const current = steps[step] || steps[0];
+  focusTutorial(...current.focus);
+  elements.tutorialCoach.hidden = false;
+  elements.tutorialCoach.dataset.placement = step === 2 ? 'top' : 'bottom';
+  elements.tutorialCoach.style.setProperty('--coach-progress', `${((step + 1) / steps.length) * 100}%`);
+  elements.tutorialProgress.textContent = `ОБУЧЕНИЕ ${step + 1} / ${steps.length}`;
+  elements.tutorialKicker.textContent = current.kicker;
+  elements.tutorialTitle.textContent = current.title;
+  elements.tutorialText.innerHTML = current.text;
+  elements.tutorialNext.textContent = current.next;
+  elements.tutorialNext.disabled = Boolean(current.locked);
+}
+
+function advanceTutorial(nextStep = tutorial?.step + 1) {
+  if (!tutorial?.active) return;
+  tutorial.step = nextStep;
+  renderGameUI();
+  renderTutorialCoach();
+}
+
+function restoreTutorialGame() {
+  if (!tutorial?.active) return;
+  const returnGame = tutorial.returnGame;
+  tutorial = null;
+  game = returnGame;
+  document.body.classList.remove('is-tutorial');
+  elements.tutorialCoach.hidden = true;
+  clearTutorialFocus();
+  storage.patch({ game, settings, profile });
+}
+
+function exitTutorial() {
+  restoreTutorialGame();
+  showStart();
+  showToast('Учебная тревога закрыта. Её можно повторить из главного меню.');
+}
+
+function finishTutorial() {
+  if (!tutorial?.active) return;
+  profile.tutorialComplete = true;
+  restoreTutorialGame();
+  showStart();
+  openSheet('tutorial-complete', `
+    ${sheetHeader('УЧЕБНАЯ ТРЕВОГА ЗАВЕРШЕНА', 'Теперь Свод читается')}
+    <div class="rule-goal"><b>✓</b><span><strong>Ты прошёл полный цикл</strong><small>Собрал цепь, прочитал прогноз, построил проект и увидел расчёт бури. Реальная хроника использует те же правила, но карта и события будут другими.</small></span></div>
+    <button class="sheet-continue" type="button" data-start-campaign data-native-press><span>Начать настоящую хронику</span><b>→</b></button>
+    <button class="rules-tutorial-link" type="button" data-sheet-close data-native-press>Остаться в главном меню</button>
+  `);
+}
+
+function startTutorial() {
+  audio.unlock();
+  const scenario = createTutorialScenario();
+  const returnGame = tutorial?.active ? tutorial.returnGame : game;
+  tutorial = { active: true, step: 0, scenario, returnGame };
+  game = scenario.game;
+  selectedRing = scenario.move.ring;
+  selectedSectorUid = sectorAt(game, selectedRing, 0).uid;
+  document.body.classList.add('is-tutorial');
+  closeSheet(true);
+  sound('success');
+  showGame();
+  renderTutorialCoach();
+}
+
+function openFirstRunChoice() {
+  openSheet('first-run', `
+    ${sheetHeader('ПЕРВЫЙ ЗАПУСК', 'Сначала понять или сразу выживать?')}
+    <p class="sheet-intro">Свод проще один раз потрогать, чем читать как инструкцию к реактору. Учебная тревога занимает около трёх минут и не трогает сохранение.</p>
+    <div class="pause-actions">
+      <button class="sheet-menu-command is-primary" type="button" data-start-tutorial data-native-press><span>Пройти учебную тревогу</span><b>3 МИН</b></button>
+      <button class="sheet-menu-command" type="button" data-start-campaign data-native-press><span>Сразу начать хронику</span><b>→</b></button>
+      <button class="sheet-menu-command" type="button" data-open-rules data-native-press><span>Сначала прочитать правила</span><b>↗</b></button>
     </div>
-    <button class="sheet-continue" type="button" data-sheet-close data-native-press><span>${firstRun ? 'К кольцам' : 'Понятно'}</span><b>→</b></button>
   `);
 }
 
@@ -662,11 +907,25 @@ function openSettingsSheet() {
 }
 
 function openPauseSheet() {
+  if (tutorial?.active) {
+    openSheet('tutorial-pause', `
+      ${sheetHeader('УЧЕБНАЯ ТРЕВОГА', 'Пауза в обучении')}
+      <p class="sheet-intro">Учебная карта не заменяет и не повреждает сохранённую хронику.</p>
+      <div class="pause-actions">
+        <button class="sheet-menu-command is-primary" type="button" data-pause-resume data-native-press><span>Продолжить обучение</span><b>→</b></button>
+        <button class="sheet-menu-command" type="button" data-open-rules data-native-press><span>Открыть полные правила</span><b>↗</b></button>
+        <button class="sheet-menu-command is-danger" type="button" data-tutorial-exit data-native-press><span>Выйти из обучения</span><b>⌂</b></button>
+      </div>
+    `);
+    return;
+  }
   openSheet('pause', `
     ${sheetHeader('ХРОНИКА ПРИОСТАНОВЛЕНА', `Цикл ${game.cycle} / ${TOTAL_CYCLES}`)}
     <p class="sheet-intro">Состояние уже сохранено. Буря терпеливо подождёт — редкое проявление воспитания.</p>
     <div class="pause-actions">
       <button class="sheet-menu-command is-primary" type="button" data-pause-resume data-native-press><span>Продолжить</span><b>→</b></button>
+      <button class="sheet-menu-command" type="button" data-open-rules data-native-press><span>Правила и схемы</span><b>↗</b></button>
+      <button class="sheet-menu-command" type="button" data-start-tutorial data-native-press><span>Повторить обучение</span><b>3 МИН</b></button>
       <button class="sheet-menu-command" type="button" data-pause-settings data-native-press><span>Звук и отклик</span><b>↗</b></button>
       <button class="sheet-menu-command" type="button" data-workshop-open data-native-press><span>Открыть Workshop</span><b>↗</b></button>
       <button class="sheet-menu-command" type="button" data-pause-menu data-native-press><span>В главное меню</span><b>⌂</b></button>
@@ -688,16 +947,18 @@ function actionSheetBody() {
   const tabs = `
     <div class="action-tabs" role="tablist">
       <button type="button" role="tab" data-action-tab="projects" class="${actionTab === 'projects' ? 'is-selected' : ''}" aria-selected="${actionTab === 'projects'}" data-native-press>Великие проекты</button>
-      <button type="button" role="tab" data-action-tab="orders" class="${actionTab === 'orders' ? 'is-selected' : ''}" aria-selected="${actionTab === 'orders'}" data-native-press>Разовый приказ</button>
+      <button type="button" role="tab" data-action-tab="orders" class="${actionTab === 'orders' ? 'is-selected' : ''}" aria-selected="${actionTab === 'orders'}" ${tutorial?.active ? 'disabled' : ''} data-native-press>Разовый приказ</button>
     </div>`;
 
   if (actionTab === 'projects') {
     const cards = PROJECTS.map((project) => {
       const built = game.projects.includes(project.id);
       const availability = projectAvailability(game, project.id);
-      const reason = built ? 'Завершён' : availability.ok ? 'Начать' : availability.reason;
+      const tutorialAllows = !tutorial?.active || tutorial.step !== 5 || project.id === 'ring-drive';
+      const enabled = availability.ok && tutorialAllows;
+      const reason = built ? 'Завершён' : !tutorialAllows ? 'Учебная цель: проект 01' : availability.ok ? 'Начать' : availability.reason;
       return `
-        <button class="project-card ${built ? 'is-built' : ''}" type="button" data-project="${project.id}" ${availability.ok ? '' : 'disabled'} data-native-press>
+        <button class="project-card ${built ? 'is-built' : ''} ${tutorial?.active && project.id === 'ring-drive' ? 'is-tutorial-project' : ''}" type="button" data-project="${project.id}" ${enabled ? '' : 'disabled'} data-native-press>
           <span class="project-numeral">${project.numeral}</span>
           <span class="project-copy"><strong>${project.name}</strong><small>${project.description}</small></span>
           <span class="project-cost">${built ? 'ГОТОВ' : formatCost(project.cost)}<br>${reason}</span>
@@ -719,10 +980,11 @@ function actionSheetBody() {
 }
 
 function openActionSheet(tab = actionTab) {
-  actionTab = tab;
+  actionTab = tutorial?.active && tutorial.step === 5 ? 'projects' : tab;
   openSheet('action', `
     ${sheetHeader('ОДНО ДЕЛО ЗА ЦИКЛ', game.actionUsed ? 'Дело уже исполнено' : 'Решение города')}
     <p class="sheet-intro">Проект и приказ используют один слот. Повороты колец — отдельные команды.</p>
+    ${tutorial?.active ? '<p class="rule-note"><b>Учебная цель:</b> выбери «Кольцевой привод 01». Он увеличивает число команд в следующих циклах.</p>' : ''}
     ${actionSheetBody()}
   `);
 }
@@ -731,6 +993,7 @@ function rerenderActionSheet() {
   elements.sheetContent.innerHTML = `
     ${sheetHeader('ОДНО ДЕЛО ЗА ЦИКЛ', game.actionUsed ? 'Дело уже исполнено' : 'Решение города')}
     <p class="sheet-intro">Проект и приказ используют один слот. Повороты колец — отдельные команды.</p>
+    ${tutorial?.active ? '<p class="rule-note"><b>Учебная цель:</b> выбери «Кольцевой привод 01».</p>' : ''}
     ${actionSheetBody()}
   `;
 }
@@ -743,7 +1006,9 @@ function resolutionHtml() {
     const result = blocked ? 'Щит удержал' : adjacent ? `Стена: −${attack.damage}` : `Урон −${attack.damage}`;
     return `<li class="${blocked ? 'is-blocked' : ''}"><b>${String(attack.spoke + 1).padStart(2, '0')}</b><span>${attack.sector}${attack.sectorWorsened ? ' · повреждён' : ''}</span><i>${result}</i></li>`;
   }).join('');
-  const nextLabel = game.phase === 'complete'
+  const nextLabel = tutorial?.active
+    ? 'Завершить обучение'
+    : game.phase === 'complete'
     ? 'Финальная запись'
     : game.pendingEvent
       ? 'Принять последствия'
@@ -758,6 +1023,7 @@ function resolutionHtml() {
       </div>
       ${resolution.shortage > 0 ? `<p class="sheet-intro">Городу не хватило ${resolution.shortage} пайка. Сцепление и целостность просели.</p>` : `<p class="sheet-intro">Полных цепей: ${resolution.fullChains}. Город потребил ${resolution.consumption} пайка.</p>`}
       <ol class="attack-list">${attacks}</ol>
+      ${tutorial?.active ? '<div class="tutorial-resolution-note"><strong>Вот и весь порядок цикла.</strong><p>Сначала цепи добавили ресурсы, затем город съел паёк, потом прогноз превратился в удар. В настоящей хронике перед этой кнопкой всегда проверяй плюсы ресурсов и оранжевые лучи.</p></div>' : ''}
     </div>
     <button class="sheet-continue" type="button" data-resolution-next data-native-press><span>${nextLabel}</span><b>→</b></button>
   `;
@@ -786,6 +1052,10 @@ function openEventSheet() {
 
 function handleResolveCycle() {
   if (!game) return;
+  if (tutorial?.active && tutorial.step !== 6) {
+    showToast('Сначала выполни текущий шаг обучения.', true);
+    return;
+  }
   const result = resolveCycle(game);
   if (!result.ok) {
     showToast(result.reason, true);
@@ -800,6 +1070,11 @@ function handleResolveCycle() {
 }
 
 function handleResolutionNext() {
+  if (tutorial?.active) {
+    closeSheet(true);
+    finishTutorial();
+    return;
+  }
   if (game.phase === 'complete') {
     showCompletion();
     return;
@@ -840,6 +1115,10 @@ function handleEventChoice(choiceId) {
 }
 
 function handleProject(projectId) {
+  if (tutorial?.active && (tutorial.step !== 5 || projectId !== 'ring-drive')) {
+    showToast('В обучении построй «Кольцевой привод 01».', true);
+    return;
+  }
   const result = buildProject(game, projectId);
   if (!result.ok) {
     showToast(result.reason, true);
@@ -851,9 +1130,14 @@ function handleProject(projectId) {
   sound('success');
   buzz([8, 26, 8]);
   showToast(`${result.project.name} завершён. Проектов: ${game.projects.length}/3.`);
+  if (tutorial?.active) advanceTutorial(6);
 }
 
 function handleOrder(orderId) {
+  if (tutorial?.active) {
+    showToast('Приказы разберём в хронике. Сейчас нужен первый проект.', true);
+    return;
+  }
   const result = enactOrder(game, orderId, { uid: selectedSectorUid });
   if (!result.ok) {
     showToast(result.reason, true);
@@ -885,8 +1169,13 @@ elements.continueButton.addEventListener('click', () => {
   audio.unlock();
   game?.phase === 'complete' ? showCompletion() : showGame();
 });
-elements.newGameButton.addEventListener('click', openSetup);
-elements.rulesButton.addEventListener('click', () => openRulesSheet(false));
+elements.newGameButton.addEventListener('click', () => {
+  if (!profile.tutorialComplete && profile.runs === 0) openFirstRunChoice();
+  else openSetup();
+});
+elements.tutorialButton.addEventListener('click', startTutorial);
+elements.rulesButton.addEventListener('click', () => openRulesSheet('turn'));
+elements.gameRulesButton.addEventListener('click', () => openRulesSheet('turn'));
 elements.startSettingsButton.addEventListener('click', openSettingsSheet);
 elements.setupBackButton.addEventListener('click', showStart);
 elements.shuffleSeedButton.addEventListener('click', () => {
@@ -924,12 +1213,29 @@ elements.againButton.addEventListener('click', openSetup);
 elements.completionMenuButton.addEventListener('click', showStart);
 elements.gameWorkshopButton.addEventListener('click', () => workshop.open());
 elements.completionWorkshopButton.addEventListener('click', () => workshop.open());
+elements.tutorialNext.addEventListener('click', () => {
+  if (!tutorial?.active || elements.tutorialNext.disabled) return;
+  advanceTutorial();
+});
+elements.tutorialExit.addEventListener('click', exitTutorial);
 
 elements.sheetBackdrop.addEventListener('click', () => closeSheet());
 elements.sheetContent.addEventListener('click', (event) => {
   const target = event.target.closest('button, a');
   if (!target) return;
   if (target.matches('[data-sheet-close]')) closeSheet();
+  if (target.matches('[data-rule-tab]')) {
+    rulesTab = target.dataset.ruleTab;
+    rerenderRulesSheet();
+    elements.sheet.scrollTop = 0;
+  }
+  if (target.matches('[data-rules-tutorial], [data-start-tutorial]')) startTutorial();
+  if (target.matches('[data-start-campaign]')) {
+    closeSheet(true);
+    openSetup();
+  }
+  if (target.matches('[data-open-rules]')) openRulesSheet('turn');
+  if (target.matches('[data-tutorial-exit]')) exitTutorial();
   if (target.matches('[data-setting]')) toggleSetting(target.dataset.setting);
   if (target.matches('[data-pause-resume]')) closeSheet();
   if (target.matches('[data-pause-settings]')) openSettingsSheet();
@@ -961,6 +1267,9 @@ window.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('appdatareset', () => {
+  tutorial = null;
+  document.body.classList.remove('is-tutorial');
+  elements.tutorialCoach.hidden = true;
   game = null;
   profile = { ...DEFAULT_PROFILE };
   settings = { ...DEFAULT_SETTINGS };
