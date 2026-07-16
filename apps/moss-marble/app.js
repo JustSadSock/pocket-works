@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.13.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 

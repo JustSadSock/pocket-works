@@ -102,7 +102,82 @@ export class CoursePolishLayer {
     }
     const waterMasks = (field.masks || []).filter((mask) => mask.type === 'water' && Number.isFinite(mask.x));
     const sandMasks = (field.masks || []).filter((mask) => mask.type === 'sand' && Number.isFinite(mask.x));
-    return { details, waterMasks, sandMasks };
+    const landmarks = [.18, .55, .84].map((t, index) => {
+      const sample = routeSample(level.centerline, t);
+      const side = index % 2 ? 1 : -1;
+      const offset = 150 + hashNoise(index, seed, 43) * 52;
+      return {
+        x: sample.x + sample.nx * side * offset,
+        y: sample.y + sample.ny * side * offset,
+        size: 28 + hashNoise(index, seed, 47) * 14,
+        phase: hashNoise(index, seed, 53) * TAU
+      };
+    });
+    return { details, waterMasks, sandMasks, landmarks };
+  }
+
+  drawLandmark(ctx, landmark, motif, accent, field, time) {
+    const z = field.heightAt(landmark.x, landmark.y) + .58;
+    const point = this.renderer.worldToScreen(landmark.x, landmark.y, z);
+    const size = clamp(landmark.size * this.renderer.scale, 7, 22);
+    if (point.x < -size * 2 || point.x > this.width + size * 2 || point.y < -size * 2 || point.y > this.height + size * 2) return;
+    const pulse = this.reducedMotion ? .5 : .5 + Math.sin(time * .9 + landmark.phase) * .5;
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = clamp(size * .075, .75, 1.4);
+    ctx.strokeStyle = `rgba(${accent},${.34 + pulse * .16})`;
+    ctx.fillStyle = `rgba(${accent},${.07 + pulse * .035})`;
+
+    if (motif === 'cup') {
+      ctx.beginPath(); ctx.ellipse(0, size * .30, size * .66, size * .18, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-size * .42, -size * .18); ctx.quadraticCurveTo(-size * .34, size * .23, 0, size * .24); ctx.quadraticCurveTo(size * .34, size * .23, size * .42, -size * .18); ctx.stroke();
+      ctx.beginPath(); ctx.arc(size * .44, 0, size * .23, -Math.PI * .56, Math.PI * .56); ctx.stroke();
+    } else if (motif === 'fern' || motif === 'leaf') {
+      ctx.beginPath(); ctx.moveTo(-size * .38, size * .48); ctx.quadraticCurveTo(-size * .08, 0, size * .34, -size * .50); ctx.stroke();
+      for (let index = 1; index <= 5; index += 1) {
+        const t = index / 6;
+        const x = lerp(-size * .30, size * .27, t);
+        const y = lerp(size * .36, -size * .40, t);
+        const spread = size * (.25 - t * .11);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - spread, y - size * .13); ctx.moveTo(x, y); ctx.lineTo(x + spread, y + size * .13); ctx.stroke();
+      }
+    } else if (motif === 'dial') {
+      ctx.beginPath(); ctx.arc(0, 0, size * .48, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, size * .33, 0, TAU); ctx.stroke();
+      for (let index = 0; index < 8; index += 1) {
+        const angle = index / 8 * TAU;
+        ctx.beginPath(); ctx.moveTo(Math.cos(angle) * size * .38, Math.sin(angle) * size * .38); ctx.lineTo(Math.cos(angle) * size * .47, Math.sin(angle) * size * .47); ctx.stroke();
+      }
+      const angle = landmark.phase + (this.reducedMotion ? 0 : time * .18);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(angle) * size * .28, Math.sin(angle) * size * .28); ctx.stroke();
+    } else if (motif === 'spoon') {
+      ctx.save(); ctx.rotate(-.42);
+      ctx.beginPath(); ctx.ellipse(0, -size * .24, size * .24, size * .34, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, size * .08); ctx.lineTo(0, size * .66); ctx.stroke();
+      ctx.restore();
+    } else if (motif === 'pane') {
+      ctx.save(); ctx.rotate(-.12);
+      ctx.strokeRect(-size * .42, -size * .52, size * .84, size * 1.04);
+      ctx.fillRect(-size * .34, -size * .43, size * .10, size * .72);
+      ctx.beginPath(); ctx.moveTo(-size * .42, size * .14); ctx.lineTo(size * .42, -size * .16); ctx.stroke();
+      ctx.restore();
+    } else if (motif === 'lantern') {
+      const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * .9);
+      glow.addColorStop(0, `rgba(${accent},${.16 + pulse * .12})`); glow.addColorStop(1, `rgba(${accent},0)`);
+      ctx.fillStyle = glow; ctx.fillRect(-size, -size, size * 2, size * 2);
+      ctx.strokeStyle = `rgba(${accent},${.42 + pulse * .18})`;
+      ctx.beginPath(); ctx.moveTo(-size * .18, -size * .45); ctx.quadraticCurveTo(0, -size * .68, size * .18, -size * .45); ctx.stroke();
+      ctx.strokeRect(-size * .31, -size * .42, size * .62, size * .84);
+      ctx.fillStyle = `rgba(${accent},${.58 + pulse * .30})`; ctx.beginPath(); ctx.arc(0, size * .06, size * .075, 0, TAU); ctx.fill();
+    } else {
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.beginPath(); ctx.ellipse(0, size * .30, size * (.28 + ring * .16), size * (.07 + ring * .025), 0, 0, TAU); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(0, -size * .56); ctx.bezierCurveTo(size * .34, -size * .14, size * .26, size * .12, 0, size * .24); ctx.bezierCurveTo(-size * .26, size * .12, -size * .34, -size * .14, 0, -size * .56); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
   }
 
   pathWorld(points, field, zOffset = .5) {
@@ -137,6 +212,8 @@ export class CoursePolishLayer {
     const sandAccent = terrainTint(terrain.sandLight, 'rgba(246,220,159,.13)', .14);
     const grassAccent = terrainTint(terrain.grassLight, 'rgba(102,143,75,.26)', .28);
     const mossAccent = terrainTint(terrain.mossLight, 'rgba(78,126,66,.30)', .31);
+    const motif = level.visual?.motif || 'drop';
+    const motifAccent = level.visual?.accent || '205,224,180';
 
     for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
       const mask = cache.waterMasks[maskIndex];
@@ -168,6 +245,8 @@ export class CoursePolishLayer {
         ctx.stroke();
       }
     }
+
+    for (const landmark of cache.landmarks) this.drawLandmark(ctx, landmark, motif, motifAccent, field, time);
 
     for (const detail of cache.details) {
       if (ball && Math.hypot(detail.x - ball.x, detail.y - ball.y) < 58) continue;

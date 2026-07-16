@@ -320,7 +320,7 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addOutwardCurb(builder, a, b, centroid, width, height, tint) {
+function addOutwardCurb(builder, a, b, centroid, width, height, tint, sideTint = C.stoneDark) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -332,9 +332,9 @@ function addOutwardCurb(builder, a, b, centroid, width, height, tint) {
   const outerB = { x: b.x + nx * width, y: b.y + ny * width };
   const p = (point, z) => [point.x, point.y, z];
   builder.quad(p(a, height), p(b, height), p(outerB, height), p(outerA, height), tint, 0, [0, 0, 1]);
-  builder.quad(p(a, 0), p(a, height), p(outerA, height), p(outerA, 0), C.stoneDark, 0);
-  builder.quad(p(b, 0), p(outerB, 0), p(outerB, height), p(b, height), C.stoneDark, 0);
-  builder.quad(p(outerA, 0), p(outerA, height), p(outerB, height), p(outerB, 0), C.stoneDark, 0);
+  builder.quad(p(a, 0), p(a, height), p(outerA, height), p(outerA, 0), sideTint, 0);
+  builder.quad(p(b, 0), p(outerB, 0), p(outerB, height), p(b, height), sideTint, 0);
+  builder.quad(p(outerA, 0), p(outerA, height), p(outerB, height), p(outerB, 0), sideTint, 0);
 }
 
 function addRock(builder, obstacle) {
@@ -483,6 +483,7 @@ function addBoardScene(level) {
   const opaque = new MeshBuilder();
   const shadows = new MeshBuilder();
   const transparent = new MeshBuilder();
+  const materials = { ...C, ...(level.visual?.materials || {}) };
   const centroid = level.outline.reduce((sum, point) => ({ x: sum.x + point.x / level.outline.length, y: sum.y + point.y / level.outline.length }), { x: 0, y: 0 });
 
   const shadowOutline = level.outline.map((point) => ({ x: point.x + 18, y: point.y + 34 }));
@@ -502,8 +503,8 @@ function addBoardScene(level) {
       const t1 = (piece + 1) / pieces - inset;
       const start = { x: lerp(a.x, b.x, t0), y: lerp(a.y, b.y, t0) };
       const end = { x: lerp(a.x, b.x, t1), y: lerp(a.y, b.y, t1) };
-      const tint = hashNoise(index, piece, level.id) > .5 ? C.stone : C.stoneLight;
-      addOutwardCurb(opaque, start, end, centroid, 18, 16 + hashNoise(index, piece, 9) * 3, tint);
+      const tint = hashNoise(index, piece, level.id) > .5 ? materials.stone : materials.stoneLight;
+      addOutwardCurb(opaque, start, end, centroid, 18, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark);
     }
   }
 
@@ -602,6 +603,16 @@ out vec4 outColor;
 float noise2(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
+float valueNoise(vec2 p) {
+  vec2 cell = floor(p);
+  vec2 local = fract(p);
+  local = local * local * (3.0 - 2.0 * local);
+  float a = noise2(cell);
+  float b = noise2(cell + vec2(1.0, 0.0));
+  float c = noise2(cell + vec2(0.0, 1.0));
+  float d = noise2(cell + vec2(1.0, 1.0));
+  return mix(mix(a, b, local.x), mix(c, d, local.x), local.y);
+}
 void main() {
   if (vMaterial > .5 && vMaterial < 1.5 && distance(vWorld.xy, uHole.xy) < uHole.z) discard;
   vec3 n = normalize(vNormal);
@@ -609,6 +620,7 @@ void main() {
   vec3 viewDir = normalize(vec3(0.0, -.76, .65));
   float diffuse = max(dot(n, lightDir), 0.0);
   float back = max(dot(n, -lightDir), 0.0);
+  float sky = n.z * .5 + .5;
   float rim = pow(1.0 - abs(dot(n, viewDir)), 2.3);
   float spec = pow(max(dot(reflect(-lightDir, n), viewDir), 0.0), vMaterial > 3.5 && vMaterial < 4.5 ? 24.0 : 48.0);
   vec3 base = vColor.rgb;
@@ -619,33 +631,55 @@ void main() {
     return;
   }
   if (vMaterial > .5 && vMaterial < 1.5) {
-    float grain = noise2(floor(vWorld.xy * .38));
+    float tufts = noise2(floor(vWorld.xy * .075));
+    float grain = noise2(floor(vWorld.xy * .42));
     float blades = sin(vWorld.x * .38 + sin(vWorld.y * .27)) * .5 + .5;
-    base *= .88 + grain * .15 + blades * .035;
+    base *= .82 + tufts * .15 + grain * .09 + blades * .035;
+    base += vec3(.018, .025, .008) * max(0.0, sky - .72);
   } else if (vMaterial > 5.5 && vMaterial < 6.5) {
-    float wave = sin(vWorld.x * .10 + uTime * 1.7) * sin(vWorld.y * .075 - uTime * 1.15);
-    base += vec3(.04, .09, .08) * wave;
-    spec *= 1.8;
+    float waveA = sin(vWorld.x * .105 + vWorld.y * .045 + uTime * 1.35);
+    float waveB = sin(vWorld.y * .082 - vWorld.x * .032 - uTime * 1.05);
+    float wave = waveA * waveB;
+    float caustic = smoothstep(.72, .98, sin(vWorld.x * .061 + waveB * 1.2 + uTime) * .5 + .5);
+    base += vec3(.025, .085, .078) * wave + vec3(.06, .13, .105) * caustic;
+    rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * 1.25);
+    spec *= 2.15;
   } else if (vMaterial > 6.5 && vMaterial < 7.5) {
-    float moss = noise2(floor(vWorld.xy * .18));
-    base *= .82 + moss * .28;
+    float mossCloud = noise2(floor(vWorld.xy * .055));
+    float mossFine = noise2(floor(vWorld.xy * .22));
+    base *= .72 + mossCloud * .28 + mossFine * .13;
+    rim *= 1.35;
   } else if (vMaterial > 7.5 && vMaterial < 8.5) {
-    float sand = noise2(floor(vWorld.xy * .32));
-    base *= .90 + sand * .18;
+    float dunes = sin(vWorld.x * .047 + sin(vWorld.y * .026) * 1.8) * .5 + .5;
+    float grains = noise2(floor(vWorld.xy * .37));
+    base *= .82 + dunes * .09 + grains * .16;
+    base += vec3(.025, .018, .006) * sky;
   } else if (vMaterial > 8.5 && vMaterial < 9.5) {
     base *= .52 + diffuse * .22;
     outColor = vec4(base, alpha);
     return;
   }
 
-  vec3 lit = base * (.44 + diffuse * .64 + back * .08);
+  vec3 warmKey = vec3(1.025, .985, .88);
+  vec3 coolFill = vec3(.72, .90, .86);
+  vec3 lit = base * warmKey * (.34 + diffuse * .66 + sky * .09);
+  lit += base * coolFill * (back * .08 + (1.0 - sky) * .035);
   if (vMaterial > 1.5 && vMaterial < 2.5) {
-    lit = mix(lit, vec3(.78, .96, .89), rim * .58) + spec * vec3(.95, .98, .82) * 1.35;
-    alpha *= .68 + rim * .28;
+    float glassNoise = valueNoise(vWorld.xy * .08 + vWorld.z * .035);
+    float fresnel = pow(1.0 - abs(dot(n, viewDir)), 2.0);
+    lit = mix(lit, vec3(.72, .94, .87), fresnel * .68);
+    lit += spec * vec3(1.0, .96, .72) * 1.72 + vec3(.025, .08, .06) * glassNoise;
+    alpha *= .60 + fresnel * .37;
   } else if (vMaterial > 3.5 && vMaterial < 4.5) {
-    lit += spec * vec3(1.0, .88, .55) * 1.5 + rim * base * .18;
+    float brushed = .84 + sin((vWorld.x + vWorld.y) * .82) * .06 + valueNoise(vWorld.xy * .13) * .10;
+    lit *= brushed;
+    lit += spec * vec3(1.0, .86, .48) * 1.72 + rim * base * .20;
   } else {
-    lit += spec * vec3(.92, .88, .68) * .42 + rim * base * .10;
+    if (vMaterial < .5) {
+      float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
+      lit *= .94 + mineral * .08;
+    }
+    lit += spec * vec3(.92, .88, .68) * .40 + rim * base * .11;
   }
   outColor = vec4(lit, alpha);
 }`;
