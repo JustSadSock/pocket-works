@@ -1,0 +1,21 @@
+{
+  "id": "/apps/svod/",
+  "name": "СВОД",
+  "short_name": "СВОД",
+  "description": "Стратегия о последнем кольцевом городе: вращай районы, собирай ресурсные цепи и удерживай Свод против стеклянных бурь.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#ede6d2",
+  "theme_color": "#173f52",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
