@@ -22,6 +22,7 @@ import {
   stepFlight,
   sweptAirframeClearance,
   sweptObstacleClearance,
+  virtualStickInput,
 } from './game-core.js';
 import { RidgeWorld } from './world.js';
 
@@ -69,18 +70,32 @@ const course = courseAt(0, seed);
 normal.x = folded.x = pulled.x = course.center;
 normal.y = folded.y = pulled.y = course.floor + 18;
 let maxPullStall = 0;
-for (let index = 0; index < 180; index += 1) {
+let maxPulledY = pulled.y;
+let minPulledSpeed = pulled.speed;
+for (let index = 0; index < 540; index += 1) {
   stepFlight(normal, { x: 0, y: 0, folded: false, sensitivity: 1 }, 1 / 60, course, 0);
   stepFlight(folded, { x: 0, y: 0, folded: true, sensitivity: 1 }, 1 / 60, course, 0);
   stepFlight(pulled, { x: 0, y: -1, folded: false, sensitivity: 1 }, 1 / 60, course, 0);
   maxPullStall = Math.max(maxPullStall, pulled.stall);
+  maxPulledY = Math.max(maxPulledY, pulled.y);
+  minPulledSpeed = Math.min(minPulledSpeed, pulled.speed);
 }
 assert.ok(folded.speed > normal.speed + 5, 'folded wings must exchange altitude for speed');
 assert.ok(folded.y < normal.y - 18, 'folded wings must materially reduce lift');
-assert.ok(pulled.y > normal.y + 5, 'pulling up must create lift before the stall');
-assert.ok(pulled.speed < normal.speed - 3, 'climbing must spend kinetic energy');
+assert.ok(maxPulledY > course.floor + 23, 'pulling up must create lift before the stall');
+assert.ok(minPulledSpeed < normal.speed - 3, 'climbing must spend kinetic energy');
 assert.ok(maxPullStall > 0.35, 'sustained excessive angle of attack must cause a stall');
 assert.ok(normal.z > 60, 'a normal flight must move forward');
+
+const steadyGlide = createFlightState();
+steadyGlide.x = course.center;
+steadyGlide.y = course.floor + 18.5;
+const steadyStartY = steadyGlide.y;
+for (let index = 0; index < 600; index += 1) {
+  stepFlight(steadyGlide, { x: 0, y: 0, flightAssist: true }, 1 / 60, course, 0);
+}
+assert.ok(steadyGlide.y > steadyStartY - 2.5, 'ridge airflow must keep a neutral paper plane on a safe shallow glide for at least ten seconds');
+assert.ok(steadyGlide.speed > 27, 'neutral ridge flight must not bleed speed and fall immediately');
 
 const asymmetric = createFlightState();
 asymmetric.x = course.center;
@@ -97,7 +112,26 @@ const steerRight = createFlightState();
 for (let index = 0; index < 60; index += 1) {
   stepFlight(steerRight, { x: 1, y: 0, boosted: false, sensitivity: 1 }, 1 / 60, course, 0);
 }
-assert.ok(steerRight.vx < -2.5, 'screen-right input must move toward camera-right (-world X)');
+assert.ok(steerRight.vx > 2.5, 'screen-right input must move toward the player-visible right side');
+
+assert.deepEqual(virtualStickInput(2, 2, 390, 844), { x: 0, y: 0 }, 'tiny finger jitter must stay inside the stick deadzone');
+const shortTouchMove = virtualStickInput(22, 0, 390, 844);
+assert.ok(shortTouchMove.x > 0.3 && shortTouchMove.x < 0.5, 'a short phone gesture must create a useful steering command');
+const fullDesktopMove = virtualStickInput(150, 0, 1280, 720);
+assert.equal(fullDesktopMove.x, 1, 'desktop steering must reach full authority without a very long drag');
+
+const assistedRelease = createFlightState();
+const manualRelease = createFlightState();
+for (let index = 0; index < 60; index += 1) {
+  stepFlight(assistedRelease, { x: 1, y: 0, flightAssist: true }, 1 / 60, course, 0);
+  stepFlight(manualRelease, { x: 1, y: 0, flightAssist: false }, 1 / 60, course, 0);
+}
+for (let index = 0; index < 90; index += 1) {
+  stepFlight(assistedRelease, { x: 0, y: 0, flightAssist: true }, 1 / 60, course, 0);
+  stepFlight(manualRelease, { x: 0, y: 0, flightAssist: false }, 1 / 60, course, 0);
+}
+assert.ok(Math.abs(assistedRelease.bank) < 0.01, 'flight assist must level the paper plane after releasing the controls');
+assert.ok(Math.abs(assistedRelease.vx) < Math.abs(manualRelease.vx) * 0.5, 'flight assist must stop unwanted lateral drift quickly');
 
 const safe = { x: course.center, y: course.floor + 8, z: 0 };
 assert.ok(canyonClearance(safe, course).minimum > 5, 'initial flight corridor must be safe');
@@ -153,6 +187,7 @@ assert.equal(profile.flights, 0);
 assert.equal(profile.bestDistance, 900);
 assert.equal(profile.settings.sound, false);
 assert.equal(profile.settings.sensitivity, 1);
+assert.equal(profile.settings.flightAssist, true);
 assert.equal(profile.savedRun, null);
 
 const saved = sanitizeSavedRun({

@@ -9,19 +9,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ХРЕБЕТ">
   <title>ХРЕБЕТ</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.2.0">
-  <link rel="icon" href="./icons/icon.svg?v=1.2.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.2.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.2.1">
+  <link rel="icon" href="./icons/icon.svg?v=1.2.1" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.2.1">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=1.2.0">
+  <link rel="stylesheet" href="./styles.css?v=1.2.1">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
     <section class="flight-stage" id="flightStage" data-gesture-surface data-block-callout aria-label="Полёт над горным разломом">
       <div class="sky-sun" aria-hidden="true"></div>
-      <canvas id="worldCanvas" role="application" aria-label="Трёхмерный горный разлом. Веди бумажный самолётик пальцем или стрелками."></canvas>
+      <canvas id="worldCanvas" role="application" aria-label="Трёхмерный горный разлом. Зажми экран и веди бумажный самолётик небольшими движениями пальца; также доступны стрелки и WASD."></canvas>
       <div class="atmosphere" aria-hidden="true"></div>
       <div class="speed-lines" id="speedLines" aria-hidden="true"></div>
       <div class="boost-vignette" id="boostVignette" aria-hidden="true"></div>
@@ -126,7 +126,7 @@
           <header><span>ПЕРЕД ВЫЛЕТОМ / 01</span><button type="button" id="briefingClose" data-native-press>Закрыть</button></header>
           <h2>Бумага летит по воздуху,<br>а не по рельсам.</h2>
           <div class="briefing-grid">
-            <article><b>01</b><span><strong>МЕНЯЙ УГОЛ АТАКИ</strong>Вверх — больше подъёмной силы и меньше скорости. Вниз — разгон за счёт высоты.</span></article>
+            <article><b>01</b><span><strong>ВЕДИ МАЛЫМИ ДВИЖЕНИЯМИ</strong>Зажми экран: короткое движение в сторону задаёт крен, вверх или вниз — высоту. Отпускание плавно выравнивает самолётик.</span></article>
             <article><b>02</b><span><strong>СКЛАДЫВАЙ КРЫЛЬЯ</strong>Удерживай кнопку, чтобы уменьшить сопротивление и нырнуть. Раскройся заранее для выхода.</span></article>
             <article><b>03</b><span><strong>ЧИТАЙ ПРЕПЯТСТВИЯ</strong>Иглы, арки, полки, валуны и тонкие растяжки требуют разных линий и высоты.</span></article>
             <article><b>04</b><span><strong>БЕРЕГИ КАЖДУЮ ЧАСТЬ</strong>Надрыв крыла тянет в сторону, смятый нос тормозит, повреждённый сгиб вызывает сваливание.</span></article>
@@ -173,6 +173,7 @@
           <button type="button" class="setting-row" id="soundSetting" data-native-press><span><b>Ветер, шелест бумаги и сигналы</b><small>Процедурный звук без загруженных файлов</small></span><i>ВКЛ</i></button>
           <button type="button" class="setting-row" id="hapticSetting" data-native-press><span><b>Вибрация</b><small>Касания ворот и камня, если устройство умеет</small></span><i>ВКЛ</i></button>
           <button type="button" class="setting-row" id="sensitivitySetting" data-native-press><span><b>Чувствительность</b><small>Насколько быстро самолётик меняет крен и угол атаки</small></span><i>ОБЫЧНАЯ</i></button>
+          <button type="button" class="setting-row" id="assistSetting" data-native-press><span><b>Стабилизация полёта</b><small>Быстрее гасит боковой снос и выравнивает самолётик после отпускания</small></span><i>ВКЛ</i></button>
           <button type="button" class="setting-row" id="effectsSetting" data-native-press><span><b>Воздушные частицы</b><small>Можно убрать на уставшем телефоне</small></span><i>ПОЛНО</i></button>
           <div class="settings-record"><span>Лучшая дальность <b id="settingsBestDistance">0 м</b></span><span>Лучший счёт <b id="settingsBestScore">0</b></span></div>
           <button type="button" class="reset-records" id="resetButton" data-native-press>Сбросить рекорды</button>
@@ -187,8 +188,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ХРЕБЕТ"
-    data-app-version="1.2.0"
+    data-app-version="1.2.1"
   ></script>
-  <script src="./app.js?v=1.2.0" type="module"></script>
+  <script src="./app.js?v=1.2.1" type="module"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@ import {
   sanitizeSavedRun,
   stepFlight,
   sweptAirframeClearance,
+  virtualStickInput,
 } from './game-core.js';
 import { RidgeEngine } from './engine.js';
 import { RidgeWorld } from './world.js';
@@ -117,6 +118,7 @@ const elements = {
   soundSetting: byId('soundSetting'),
   hapticSetting: byId('hapticSetting'),
   sensitivitySetting: byId('sensitivitySetting'),
+  assistSetting: byId('assistSetting'),
   effectsSetting: byId('effectsSetting'),
   settingsBestDistance: byId('settingsBestDistance'),
   settingsBestScore: byId('settingsBestScore'),
@@ -173,6 +175,8 @@ const input = {
   startY: 0,
   x: 0,
   y: 0,
+  controlX: 0,
+  controlY: 0,
   folded: false,
   keys: new Set(),
 };
@@ -218,6 +222,8 @@ function syncSettingsUi() {
   elements.hapticSetting.dataset.off = String(!settings.haptics);
   const sensitivityLabel = settings.sensitivity === 0.75 ? 'МЯГКАЯ' : settings.sensitivity === 1.25 ? 'ОСТРАЯ' : 'ОБЫЧНАЯ';
   elements.sensitivitySetting.querySelector('i').textContent = sensitivityLabel;
+  elements.assistSetting.querySelector('i').textContent = settings.flightAssist ? 'ВКЛ' : 'ВЫКЛ';
+  elements.assistSetting.dataset.off = String(!settings.flightAssist);
   elements.effectsSetting.querySelector('i').textContent = settings.effects ? 'ПОЛНО' : 'МАЛО';
   elements.effectsSetting.dataset.off = String(!settings.effects);
   if (engine) engine.dprLimit = settings.effects ? 1.7 : 1.2;
@@ -255,8 +261,14 @@ function clearInput() {
   input.pointerId = null;
   input.x = 0;
   input.y = 0;
+  input.controlX = 0;
+  input.controlY = 0;
   input.folded = false;
   input.keys.clear();
+  elements.stage.style.setProperty('--steer-x', '0px');
+  elements.stage.style.setProperty('--steer-y', '0px');
+  elements.steerCursor.style.setProperty('--stick-x', '0px');
+  elements.steerCursor.style.setProperty('--stick-y', '0px');
   elements.steerCursor.classList.remove('is-visible');
   elements.diveButton.classList.remove('is-held');
   elements.stage.classList.remove('is-boosting');
@@ -269,7 +281,7 @@ function createRun(mode, seed, saved = null) {
   const initialCourse = courseAt(flight.z, seed);
   if (!restored) {
     flight.x = initialCourse.center;
-    flight.y = initialCourse.floor + 13.5;
+    flight.y = initialCourse.floor + 18.5;
   }
   return {
     seed: seed >>> 0,
@@ -700,17 +712,26 @@ function updateRun(delta, time) {
   const previousState = { ...state };
   const keyboardX = (input.keys.has('ArrowRight') || input.keys.has('KeyD') ? 1 : 0) - (input.keys.has('ArrowLeft') || input.keys.has('KeyA') ? 1 : 0);
   const keyboardY = (input.keys.has('ArrowDown') || input.keys.has('KeyS') ? 1 : 0) - (input.keys.has('ArrowUp') || input.keys.has('KeyW') ? 1 : 0);
-  const steeringX = keyboardX || input.x;
-  const steeringY = keyboardY || input.y;
+  const targetX = keyboardX || input.x;
+  const targetY = keyboardY || input.y;
+  const inputResponse = keyboardX || keyboardY ? 9.5 : 12.5;
+  const recenterResponse = 15;
+  input.controlX = damp(input.controlX, targetX, targetX ? inputResponse : recenterResponse, delta);
+  input.controlY = damp(input.controlY, targetY, targetY ? inputResponse : recenterResponse, delta);
+  if (Math.abs(input.controlX) < 0.002) input.controlX = 0;
+  if (Math.abs(input.controlY) < 0.002) input.controlY = 0;
+  elements.stage.style.setProperty('--steer-x', `${input.controlX * 18}px`);
+  elements.stage.style.setProperty('--steer-y', `${input.controlY * 13}px`);
   const folded = input.folded || input.keys.has('Space');
   const difficulty = progressDifficulty(state.z);
   const course = courseAt(state.z, run.seed);
   stepFlight(state, {
-    x: steeringX,
-    y: steeringY,
+    x: input.controlX,
+    y: input.controlY,
     folded,
     damage: run.damage,
     sensitivity: profile.settings.sensitivity,
+    flightAssist: profile.settings.flightAssist,
   }, delta, course, difficulty);
 
   if (run.flowTime > 0) {
@@ -819,7 +840,7 @@ function updateCamera(state, delta, flowing, folded, demo = false) {
     ty: state.y + 0.12 + state.vy * 0.1,
     tz: state.z + 15 + speedPull * 5,
     fov: (flowing ? Math.PI * 0.455 : folded ? Math.PI * 0.41 : Math.PI * 0.37),
-    roll: clamp(state.bank * 0.2, -0.13, 0.13),
+    roll: clamp(state.bank * 0.11, -0.075, 0.075),
   };
   const cameraSmooth = demo ? 1.8 : 5.6;
   cameraState.x = damp(cameraState.x, desired.x, cameraSmooth, delta);
@@ -945,6 +966,12 @@ function pointerCoordinates(event) {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top, width: rect.width, height: rect.height };
 }
 
+function virtualStick(point) {
+  const dx = point.x - input.startX;
+  const dy = point.y - input.startY;
+  return virtualStickInput(dx, dy, point.width, point.height);
+}
+
 elements.canvas.addEventListener('pointerdown', (event) => {
   if (phase !== 'running' || input.pointerId !== null) return;
   if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -958,6 +985,8 @@ elements.canvas.addEventListener('pointerdown', (event) => {
   elements.canvas.setPointerCapture?.(event.pointerId);
   elements.steerCursor.style.left = `${point.x}px`;
   elements.steerCursor.style.top = `${point.y}px`;
+  elements.steerCursor.style.setProperty('--stick-x', '0px');
+  elements.steerCursor.style.setProperty('--stick-y', '0px');
   elements.steerCursor.classList.add('is-visible');
 });
 
@@ -965,10 +994,11 @@ elements.canvas.addEventListener('pointermove', (event) => {
   if (phase !== 'running' || input.pointerId !== event.pointerId) return;
   event.preventDefault();
   const point = pointerCoordinates(event);
-  input.x = clamp((point.x - input.startX) / Math.max(70, point.width * 0.24), -1, 1);
-  input.y = clamp((point.y - input.startY) / Math.max(70, point.height * 0.27), -1, 1);
-  elements.steerCursor.style.left = `${point.x}px`;
-  elements.steerCursor.style.top = `${point.y}px`;
+  const stick = virtualStick(point);
+  input.x = stick.x;
+  input.y = stick.y;
+  elements.steerCursor.style.setProperty('--stick-x', `${stick.x * 29}px`);
+  elements.steerCursor.style.setProperty('--stick-y', `${stick.y * 29}px`);
 });
 
 function endSteering(event) {
@@ -976,6 +1006,8 @@ function endSteering(event) {
   input.pointerId = null;
   input.x = 0;
   input.y = 0;
+  elements.steerCursor.style.setProperty('--stick-x', '0px');
+  elements.steerCursor.style.setProperty('--stick-y', '0px');
   elements.steerCursor.classList.remove('is-visible');
   try { elements.canvas.releasePointerCapture?.(event.pointerId); } catch { /* capture already gone */ }
 }
@@ -1073,6 +1105,12 @@ elements.sensitivitySetting.addEventListener('click', () => {
   syncSettingsUi();
   audio.event('ui');
 });
+elements.assistSetting.addEventListener('click', () => {
+  profile.settings.flightAssist = !profile.settings.flightAssist;
+  persistProfile();
+  syncSettingsUi();
+  audio.event('ui');
+});
 elements.effectsSetting.addEventListener('click', () => {
   profile.settings.effects = !profile.settings.effects;
   persistProfile();
@@ -1120,7 +1158,7 @@ elements.canvas.addEventListener('webglcontextlost', (event) => {
 
 createWorkshopMode({
   appName: 'ХРЕБЕТ',
-  version: '1.2.0',
+  version: '1.2.1',
   cachePrefix: 'khrebet-',
   storageNamespace: 'pocket-works:khrebet',
   onReset() {
