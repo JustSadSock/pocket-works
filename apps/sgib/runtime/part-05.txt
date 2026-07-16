@@ -5,8 +5,11 @@
 
 function pointerToLogical(event) {
   const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  const clientX = Number(event.clientX);
+  const clientY = Number(event.clientY);
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY) || !Number.isFinite(view.scale) || view.scale <= 0) return null;
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
   return {
     x: (x - view.offsetX) / view.scale,
     y: (y - view.offsetY) / view.scale
@@ -14,51 +17,127 @@ function pointerToLogical(event) {
 }
 
 function pointOnPaper(point) {
-  return state.layers.some((layer) => pointInPolygon(point, layer.polygon));
+  return Boolean(point) && state.layers.some((layer) => pointInPolygon(point, layer.polygon));
+}
+
+function setFoldStatus(mode) {
+  if (!dom.foldStatus) return;
+  if (mode === 'hidden') {
+    dom.foldStatus.dataset.mode = 'hidden';
+    dom.foldStatus.classList.remove('is-visible', 'is-ready', 'is-invalid');
+    return;
+  }
+  if (dom.foldStatus.dataset.mode === mode) return;
+  dom.foldStatus.dataset.mode = mode;
+  dom.foldStatus.classList.add('is-visible');
+  dom.foldStatus.classList.toggle('is-ready', mode === 'ready');
+  dom.foldStatus.classList.toggle('is-invalid', mode === 'invalid');
+  dom.foldStatus.textContent = mode === 'ready' ? 'Отпусти — сгиб готов' : 'Проведи дальше';
+}
+
+function safeCapturePointer(pointerId) {
+  try {
+    if (!canvas.hasPointerCapture?.(pointerId)) canvas.setPointerCapture?.(pointerId);
+    return Boolean(canvas.hasPointerCapture?.(pointerId));
+  } catch {
+    return false;
+  }
+}
+
+function safeReleasePointer(pointerId) {
+  try {
+    if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture?.(pointerId);
+  } catch {
+    // Safari can invalidate capture between pointerup and lostpointercapture.
+  }
 }
 
 function beginGesture(event) {
+  if (event.isPrimary === false || (Number.isFinite(event.button) && event.button !== 0)) return;
   if (state.mode === 'menu' || state.screen || state.animation || state.resolved || state.paused) return;
   const point = pointerToLogical(event);
   if (!pointOnPaper(point)) {
+    setFoldStatus('hidden');
     showToast('Начни жест на бумаге');
     return;
   }
+  if (event.cancelable) event.preventDefault();
   audio.unlock();
+  const timestamp = Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
   state.gesture = {
     pointerId: event.pointerId,
+    pointerType: event.pointerType || 'touch',
     start: point,
     current: point,
     line: null,
     angle: 0,
-    valid: false
+    valid: false,
+    moved: false,
+    captured: safeCapturePointer(event.pointerId),
+    lastClientX: Number(event.clientX),
+    lastClientY: Number(event.clientY),
+    lastEventTime: timestamp,
+    pendingJump: null
   };
   state.lastInputAt = performance.now();
   hideHint();
-  canvas.setPointerCapture?.(event.pointerId);
+  setFoldStatus('hidden');
 }
 
 function moveGesture(event) {
-  if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
-  const point = pointerToLogical(event);
-  const line = lineFromGesture(state.gesture.start, point);
-  state.gesture.current = point;
-  state.gesture.line = line;
-  if (!line) return;
-  state.gesture.angle = clamp(line.length / 260, 0, 0.96) * Math.PI;
-  state.gesture.valid = validateFold(line);
+  const gesture = state.gesture;
+  if (!gesture || gesture.pointerId !== event.pointerId) return;
+  if (event.cancelable) event.preventDefault();
+  const samples = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [];
+  const sample = samples.length ? samples[samples.length - 1] : event;
+  const clientX = Number(sample.clientX);
+  const clientY = Number(sample.clientY);
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
+
+  const timestamp = Number.isFinite(sample.timeStamp) ? sample.timeStamp : performance.now();
+  const elapsed = Math.max(1, timestamp - gesture.lastEventTime);
+  const deltaCss = Math.hypot(clientX - gesture.lastClientX, clientY - gesture.lastClientY);
+  const jumpLimit = 110 + Math.min(180, elapsed * 1.7);
+  if (gesture.moved && deltaCss > jumpLimit) {
+    const pending = gesture.pendingJump;
+    if (!pending || Math.hypot(clientX - pending.x, clientY - pending.y) > 54) {
+      gesture.pendingJump = { x: clientX, y: clientY };
+      return;
+    }
+  }
+  gesture.pendingJump = null;
+  gesture.lastClientX = clientX;
+  gesture.lastClientY = clientY;
+  gesture.lastEventTime = timestamp;
+
+  const point = pointerToLogical(sample);
+  if (!point) return;
+  const line = lineFromGesture(gesture.start, point);
+  gesture.current = point;
+  gesture.line = line;
+  if (!line) {
+    setFoldStatus('hidden');
+    return;
+  }
+  const previewProgress = clamp((line.length - 18) / 205, 0, 1);
+  gesture.angle = (0.05 + 0.93 * (1 - Math.pow(1 - previewProgress, 3))) * Math.PI;
+  gesture.valid = validateFold(line);
+  gesture.moved = gesture.moved || line.length > 18;
+  setFoldStatus(line.length < 70 ? 'invalid' : gesture.valid ? 'ready' : 'invalid');
 }
 
 function endGesture(event) {
   if (!state.gesture || state.gesture.pointerId !== event.pointerId) return;
-  canvas.releasePointerCapture?.(event.pointerId);
+  moveGesture(event);
   const gesture = state.gesture;
+  safeReleasePointer(event.pointerId);
   state.gesture = null;
   state.lastInputAt = performance.now();
+  setFoldStatus('hidden');
   if (!gesture.line || !gesture.valid) {
     audio.invalid();
     vibrate(14);
-    showToast(gesture.line?.length > 80 ? 'Сгиб должен пересечь лист' : 'Потяни дальше');
+    showToast(gesture.line?.length > 80 ? 'Линия должна пересечь лист' : 'Потяни дальше');
     return;
   }
   commitFold(gesture.line, gesture.angle);
@@ -66,11 +145,14 @@ function endGesture(event) {
 
 function cancelGesture(event) {
   if (!state.gesture || (event && state.gesture.pointerId !== event.pointerId)) return;
+  const pointerId = state.gesture.pointerId;
   state.gesture = null;
+  safeReleasePointer(pointerId);
+  setFoldStatus('hidden');
 }
 
 function validateFold(line) {
-  if (!line || line.length < 105) return false;
+  if (!line || !Number.isFinite(line.length) || line.length < 105) return false;
   let totalArea = 0;
   let movingArea = 0;
   let stationaryArea = 0;
@@ -91,13 +173,14 @@ function commitFold(line, currentAngle) {
   state.history.push(cloneSnapshot());
   state.animation = {
     line,
-    fromAngle: clamp(currentAngle, 0.12 * Math.PI, 0.95 * Math.PI),
+    fromAngle: clamp(currentAngle, 0.12 * Math.PI, 0.98 * Math.PI),
     angle: currentAngle,
     startedAt: performance.now(),
-    duration: REDUCED_MOTION ? 60 : 390,
+    duration: REDUCED_MOTION ? 60 : 360,
     applied: false
   };
   state.lastInputAt = performance.now();
+  setFoldStatus('hidden');
   audio.fold();
   vibrate(8);
   updateHud();

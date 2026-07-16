@@ -47,9 +47,11 @@ let view = { scale: 1, offsetX: 0, offsetY: 0, dpr: 1, width: 1, height: 1 };
 let deskTexture;
 let paperTexture;
 let rafId = 0;
+let rendering = false;
 let lastFrameTime = performance.now();
 let toastTimer = 0;
 let completionTimer = 0;
+let guideReturnScreen = 'menuScreen';
 
 const dom = {};
 const state = {

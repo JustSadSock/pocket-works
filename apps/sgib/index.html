@@ -15,7 +15,8 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=1.1.7">
+  <link rel="stylesheet" href="./styles.css?v=1.2.0">
+  <link rel="stylesheet" href="./final.css?v=1.2.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -33,6 +34,8 @@
       </div>
       <button class="binding-tab" type="button" id="undoBtn" data-native-press disabled>Отменить</button>
     </header>
+
+    <div class="fold-status" id="foldStatus" data-ui role="status" aria-live="polite">Проведи дальше</div>
 
     <div class="gesture-hint" id="gestureHint" data-ui>
       <i aria-hidden="true"></i>
@@ -59,6 +62,9 @@
           <button class="paper-cut" type="button" id="levelsBtn" data-native-press>
             <span>Выбрать лист</span><small id="progressMeta">Открыт 1 из 10</small>
           </button>
+          <button class="paper-cut" type="button" id="guideBtn" data-native-press>
+            <span>Как складывать</span><small>Правило жеста и совпадений</small>
+          </button>
           <button class="paper-cut" type="button" id="endlessBtn" data-native-press>
             <span>Бесконечная стопка</span><small id="endlessMeta">Лучший ряд: 0</small>
           </button>
@@ -82,12 +88,41 @@
       </div>
     </section>
 
+    <section class="screen guide-screen" id="guideScreen" data-ui aria-labelledby="guideTitle">
+      <div class="guide-sheet">
+        <header>
+          <div><p>Инструкция на полях</p><h2 id="guideTitle">Один жест — один сгиб</h2></div>
+          <button class="close-cut" type="button" id="closeGuideBtn" data-native-press>Закрыть</button>
+        </header>
+        <div class="guide-steps">
+          <article class="guide-step">
+            <div class="guide-diagram guide-diagram--pair" aria-hidden="true"></div>
+            <div><strong>1. Найди пару</strong><p>Тёмная капля должна лечь на пустой тиснёный круг. Две капли тоже гасят друг друга.</p></div>
+          </article>
+          <article class="guide-step">
+            <div class="guide-diagram guide-diagram--drag" aria-hidden="true"></div>
+            <div><strong>2. Потяни по бумаге</strong><p>Начни на листе и веди палец от подвижной отметки к её паре. Середина жеста становится осью сгиба.</p></div>
+          </article>
+          <article class="guide-step">
+            <div class="guide-diagram guide-diagram--release" aria-hidden="true"></div>
+            <div><strong>3. Отпусти на зелёном</strong><p>Зелёная линия означает, что сгиб пересекает бумагу и обе стороны достаточно велики. Красный жест не тратит ход.</p></div>
+          </article>
+        </div>
+        <p class="guide-note">Направление важно: поднимается та сторона листа, с которой начался жест. Последний сгиб всегда можно отменить.</p>
+        <div class="guide-actions">
+          <button class="primary-cut" type="button" id="guidePracticeBtn" data-native-press><span>Открыть учебный лист</span><small>Первая линия · без штрафа</small></button>
+          <button class="paper-cut" type="button" id="guideBackBtn" data-native-press><span>Вернуться</span><small>Продолжить с прежнего места</small></button>
+        </div>
+      </div>
+    </section>
+
     <section class="screen pause-screen" id="pauseScreen" data-ui aria-labelledby="pauseTitle">
       <div class="pause-board">
         <p class="stamp">ЛИСТ ЗАФИКСИРОВАН</p>
         <h2 id="pauseTitle">Пауза</h2>
         <button class="primary-cut" type="button" id="resumeBtn" data-native-press><span>Продолжить</span><small>Вернуться к сгибу</small></button>
         <button class="paper-cut" type="button" id="restartBtn" data-native-press><span>Начать лист заново</span><small>Без штрафа</small></button>
+        <button class="paper-cut" type="button" id="guidePauseBtn" data-native-press><span>Как складывать</span><small>Правило жеста и совпадений</small></button>
         <div class="switch-row">
           <button class="text-toggle" type="button" id="soundPauseBtn" data-native-press aria-pressed="true">Звук: вкл</button>
           <button class="text-toggle" type="button" id="hapticsPauseBtn" data-native-press aria-pressed="true">Отдача: вкл</button>
@@ -144,8 +179,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="СГИБ"
-    data-app-version="1.1.7"
+    data-app-version="1.2.0"
   ></script>
-  <script type="module" src="./app.js?v=1.1.7"></script>
+  <script type="module" src="./app.js?v=1.2.0"></script>
 </body>
 </html>
