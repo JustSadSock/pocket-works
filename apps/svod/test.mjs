@@ -6,6 +6,7 @@ import {
   applyEventChoice,
   buildProject,
   createGame,
+  createTutorialScenario,
   evaluateBoard,
   getCurrentEvent,
   isValidGame,
@@ -30,6 +31,13 @@ const commandBefore = guildGame.command;
 assert.equal(rotateRing(guildGame, 1, 1).ok, true);
 assert.equal(guildGame.command, commandBefore, 'guild charter makes the first middle-ring step free');
 assert.equal(rotateRing(guildGame, 1, 1).cost, 1);
+
+const tutorial = createTutorialScenario();
+assert.equal(isValidGame(tutorial.game), true);
+assert.equal(tutorial.after.fullChains > tutorial.before.fullChains, true, 'tutorial move must visibly complete a new chain');
+assert.equal(Math.abs(tutorial.move.steps), 1, 'tutorial must require exactly one rotation step');
+assert.equal(rotateRing(tutorial.game, tutorial.move.ring, tutorial.move.steps).ok, true);
+assert.equal(evaluateBoard(tutorial.game).fullChains.length, tutorial.after.fullChains);
 
 const projectGame = createGame('BUILD1', 'civic');
 projectGame.resources = { rations: 30, parts: 30, mandate: 30 };
