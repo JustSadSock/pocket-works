@@ -1,0 +1,12 @@
+{
+  "name": "ПЕПЕЛЬНИК — Pocket Works",
+  "short_name": "ПЕПЕЛЬНИК",
+  "description": "Вертикальная пиксельная RPG-рогалик о мёртвом рыцаре.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17130f",
+  "theme_color": "#17130f",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
