@@ -1,5 +1,36 @@
+  const validateCatalog = () => {
+    if (!Array.isArray(LEVELS) || LEVELS.length !== 10) throw new Error('Каталог листов повреждён');
+    LEVELS.forEach((level, levelIndex) => {
+      if (!level || typeof level.title !== 'string' || !Number.isInteger(level.maxFolds) || level.maxFolds < 1) {
+        throw new Error(`Некорректный лист ${levelIndex + 1}`);
+      }
+      const entries = level.entities || [];
+      if (entries.length % 2 !== 0) throw new Error(`Нечётное число отметок на листе ${levelIndex + 1}`);
+      for (const entry of entries) {
+        const [type, x, y] = entry;
+        if (!['ink', 'void'].includes(type) || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) {
+          throw new Error(`Некорректная отметка на листе ${levelIndex + 1}`);
+        }
+      }
+      for (const group of level.groups || []) {
+        if (!Array.isArray(group.from) || !Array.isArray(group.to) || !Array.isArray(group.points) || !group.points.length) {
+          throw new Error(`Некорректная группа на листе ${levelIndex + 1}`);
+        }
+        const line = lineFromGesture(normalizedPoint(...group.from), normalizedPoint(...group.to));
+        if (!line || line.length < 40) throw new Error(`Некорректная ось на листе ${levelIndex + 1}`);
+      }
+      const entities = buildEntities(level);
+      if (!entities.length || entities.length % 2 !== 0) throw new Error(`Лист ${levelIndex + 1} не содержит решаемых пар`);
+    });
+    for (let index = 0; index < 12; index += 1) {
+      const level = buildEndlessLevel(17017 + index * 104729, index);
+      if (!level.entities.length || level.entities.length % 2 !== 0) throw new Error('Генератор стопки вернул повреждённый лист');
+    }
+  };
+
   installMobileRuntime();
   collectDom();
+  validateCatalog();
   store = createVersionedStore({
     namespace: STORAGE_NAMESPACE,
     version: 1,
@@ -26,10 +57,13 @@
   watchConnectivity((online) => {
     document.documentElement.dataset.network = online ? 'online' : 'offline';
   });
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('СГИБ unhandled rejection', event.reason);
+    if (state.animation) recoverFailedFold(event.reason);
+  });
   updateMenu();
   resizeCanvas();
-  cancelAnimationFrame(rafId);
-  rafId = requestAnimationFrame(render);
+  startRenderLoop();
 }
 
 boot().catch((error) => {
