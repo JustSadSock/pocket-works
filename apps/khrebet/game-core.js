@@ -332,14 +332,15 @@ export function stepFlight(state, input, delta, course, difficulty = 0) {
   const damage = damageFactors(input.damage);
   const rightIntent = -clamp(input.x || 0, -1, 1);
   const climbIntent = -clamp(input.y || 0, -1, 1);
+  const verticalIntent = Math.sign(climbIntent) * Math.abs(climbIntent) ** 1.35;
   const controlAuthority = damage.control * (folded ? 0.43 : 1) * sensitivity;
   const flightAngle = Math.atan2(state.vy, Math.max(6, state.speed));
   const lowSpeed = clamp((20 - state.speed) / 7, 0, 1);
   const neutralPitch = -0.02 - lowSpeed * 0.09;
-  const pitchRange = 0.31;
+  const pitchRange = verticalIntent >= 0 ? 0.31 : 0.15;
   const pitchTarget = folded
-    ? -0.34 + climbIntent * 0.055 * controlAuthority
-    : neutralPitch + climbIntent * pitchRange * controlAuthority;
+    ? -0.34 + verticalIntent * 0.055 * controlAuthority
+    : neutralPitch + verticalIntent * pitchRange * controlAuthority;
   const forcedNoseDown = (state.stall || 0) * 0.27;
   const pitchResponse = folded ? 4.1 : flightAssist ? 5.8 : 5.3;
   const targetPitchRate = (pitchTarget - forcedNoseDown - state.pitch) * pitchResponse;
@@ -358,7 +359,8 @@ export function stepFlight(state, input, delta, course, difficulty = 0) {
   const lift = 9.81 * dynamicPressure * wingArea * liftCoefficient;
   const bankLift = lift * Math.cos(state.bank);
   const ridgeUpdraft = (folded ? 0.18 : 0.55) * damage.lift * (1 - state.stall * 0.72);
-  state.vy += (bankLift + ridgeUpdraft - 9.81) * dt;
+  const paperVerticalDrag = folded ? 0.12 : 0.62 * (0.78 + damage.lift * 0.22);
+  state.vy += (bankLift + ridgeUpdraft - 9.81 - state.vy * paperVerticalDrag) * dt;
 
   const inducedDrag = Math.max(0, liftCoefficient - 0.78) ** 2 * 0.92;
   const dragCoefficient = (folded ? 0.00072 : 0.00098) * damage.drag;

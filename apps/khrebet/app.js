@@ -1158,7 +1158,7 @@ elements.canvas.addEventListener('webglcontextlost', (event) => {
 
 createWorkshopMode({
   appName: 'ХРЕБЕТ',
-  version: '1.2.1',
+  version: '1.2.2',
   cachePrefix: 'khrebet-',
   storageNamespace: 'pocket-works:khrebet',
   onReset() {

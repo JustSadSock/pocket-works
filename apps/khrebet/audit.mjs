@@ -97,6 +97,30 @@ for (let index = 0; index < 600; index += 1) {
 assert.ok(steadyGlide.y > steadyStartY - 2.5, 'ridge airflow must keep a neutral paper plane on a safe shallow glide for at least ten seconds');
 assert.ok(steadyGlide.speed > 27, 'neutral ridge flight must not bleed speed and fall immediately');
 
+const phoneVerticalCommand = virtualStickInput(0, 40, 844, 390).y;
+const gentleDescent = createFlightState();
+gentleDescent.x = course.center;
+gentleDescent.y = course.floor + 18.5;
+const gentleStartY = gentleDescent.y;
+for (let index = 0; index < 300; index += 1) {
+  stepFlight(gentleDescent, { x: 0, y: phoneVerticalCommand, flightAssist: true }, 1 / 60, course, 0);
+}
+assert.ok(gentleDescent.y > gentleStartY - 6, 'a short downward phone gesture must produce a shallow descent instead of an immediate dive');
+assert.ok(gentleDescent.vy > -1.5, 'the open paper wing must damp vertical speed during a shallow descent');
+
+const recoveredDescent = createFlightState();
+recoveredDescent.x = course.center;
+recoveredDescent.y = course.floor + 18.5;
+const recoveryStartY = recoveredDescent.y;
+for (let index = 0; index < 180; index += 1) {
+  stepFlight(recoveredDescent, { x: 0, y: phoneVerticalCommand, flightAssist: true }, 1 / 60, course, 0);
+}
+for (let index = 0; index < 180; index += 1) {
+  stepFlight(recoveredDescent, { x: 0, y: -phoneVerticalCommand, flightAssist: true }, 1 / 60, course, 0);
+}
+assert.ok(recoveredDescent.y > recoveryStartY + 1, 'the paper plane must recover altitude after a shallow descent');
+assert.ok(recoveredDescent.vy > 1.5, 'pulling up after a descent must promptly reverse the vertical velocity');
+
 const asymmetric = createFlightState();
 asymmetric.x = course.center;
 asymmetric.y = course.floor + 18;
