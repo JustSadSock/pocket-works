@@ -5,47 +5,56 @@ const route = (...points) => points.map(([x, y]) => ({ x, y }));
 const VISUALS = {
   rainGarden: {
     skyTop: '#405748', skyMid: '#1f382c', skyBottom: '#0b1711',
-    glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', rain: 1, flora: 'fern',
+    glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', rain: 1, flora: 'fern', motif: 'drop', accent: '205,224,180',
+    materials: { stone: [.42,.45,.39,1], stoneLight: [.64,.65,.54,1], stoneDark: [.15,.19,.16,1], wood: [.37,.25,.13,1], woodLight: [.63,.44,.23,1], woodTop: [.55,.36,.18,1], soil: [.17,.13,.08,1], leaf: [.22,.44,.20,1], flower: [.84,.82,.60,1], rockMoss: [.24,.43,.20,1] },
     terrain: { grass: [.34,.49,.25,1], grassLight: [.52,.64,.34,1], grassDry: [.45,.51,.27,1], moss: [.15,.34,.17,1], mossLight: [.30,.49,.24,1], sand: [.69,.55,.30,1], sandLight: [.87,.73,.44,1], water: [.13,.39,.40,.88], waterLight: [.29,.58,.56,.88] }
   },
   porcelain: {
     skyTop: '#536258', skyMid: '#2c4038', skyBottom: '#101b16',
-    glow: '223,231,197', beam: '232,236,202', pollen: '218,226,188', mist: '170,197,181', rain: .45, flora: 'clover',
+    glow: '223,231,197', beam: '232,236,202', pollen: '218,226,188', mist: '170,197,181', rain: .45, flora: 'clover', motif: 'cup', accent: '224,229,204',
+    materials: { stone: [.58,.60,.54,1], stoneLight: [.82,.82,.70,1], stoneDark: [.25,.29,.26,1], wood: [.43,.31,.18,1], woodLight: [.68,.51,.30,1], woodTop: [.62,.46,.27,1], soil: [.22,.17,.11,1], leaf: [.30,.48,.28,1], flower: [.91,.88,.68,1], rockMoss: [.34,.48,.28,1] },
     terrain: { grass: [.40,.52,.32,1], grassLight: [.62,.68,.45,1], grassDry: [.52,.55,.33,1], moss: [.19,.36,.23,1], mossLight: [.37,.53,.34,1], sand: [.76,.66,.44,1], sandLight: [.91,.82,.60,1], water: [.25,.48,.50,.88], waterLight: [.42,.66,.65,.88] }
   },
   deepMoss: {
     skyTop: '#29493b', skyMid: '#17352a', skyBottom: '#07140e',
-    glow: '185,214,153', beam: '198,222,162', pollen: '174,208,133', mist: '93,153,119', rain: .75, flora: 'fern',
+    glow: '185,214,153', beam: '198,222,162', pollen: '174,208,133', mist: '93,153,119', rain: .75, flora: 'fern', motif: 'fern', accent: '158,203,131',
+    materials: { stone: [.31,.38,.33,1], stoneLight: [.49,.55,.43,1], stoneDark: [.10,.16,.13,1], wood: [.28,.20,.11,1], woodLight: [.49,.36,.19,1], woodTop: [.42,.31,.16,1], soil: [.12,.11,.07,1], leaf: [.13,.38,.18,1], flower: [.68,.78,.48,1], rockMoss: [.12,.39,.18,1] },
     terrain: { grass: [.25,.43,.22,1], grassLight: [.43,.58,.31,1], grassDry: [.37,.45,.23,1], moss: [.08,.28,.15,1], mossLight: [.20,.44,.23,1], sand: [.62,.51,.29,1], sandLight: [.79,.67,.40,1], water: [.12,.35,.38,.88], waterLight: [.25,.53,.52,.88] }
   },
   brass: {
     skyTop: '#5b5b3f', skyMid: '#3a4028', skyBottom: '#15190d',
-    glow: '244,205,120', beam: '247,214,132', pollen: '229,184,91', mist: '161,166,105', rain: .25, flora: 'thyme',
+    glow: '244,205,120', beam: '247,214,132', pollen: '229,184,91', mist: '161,166,105', rain: .25, flora: 'thyme', motif: 'dial', accent: '224,181,91',
+    materials: { stone: [.48,.43,.30,1], stoneLight: [.70,.62,.39,1], stoneDark: [.21,.20,.13,1], wood: [.40,.25,.11,1], woodLight: [.66,.45,.20,1], woodTop: [.58,.37,.16,1], soil: [.20,.15,.07,1], leaf: [.34,.43,.17,1], flower: [.90,.70,.31,1], rockMoss: [.30,.40,.15,1] },
     terrain: { grass: [.40,.49,.24,1], grassLight: [.62,.63,.32,1], grassDry: [.55,.49,.22,1], moss: [.22,.35,.16,1], mossLight: [.39,.48,.22,1], sand: [.78,.59,.30,1], sandLight: [.93,.73,.40,1], water: [.19,.41,.39,.88], waterLight: [.35,.59,.53,.88] }
   },
   storm: {
     skyTop: '#304e50', skyMid: '#183638', skyBottom: '#081619',
-    glow: '177,220,211', beam: '188,225,216', pollen: '168,207,190', mist: '95,164,161', rain: 1.55, flora: 'reed',
+    glow: '177,220,211', beam: '188,225,216', pollen: '168,207,190', mist: '95,164,161', rain: 1.55, flora: 'reed', motif: 'ripple', accent: '152,211,208',
+    materials: { stone: [.31,.40,.39,1], stoneLight: [.49,.59,.55,1], stoneDark: [.10,.17,.17,1], wood: [.29,.24,.16,1], woodLight: [.48,.41,.28,1], woodTop: [.42,.35,.24,1], soil: [.12,.14,.11,1], leaf: [.16,.37,.27,1], flower: [.65,.82,.72,1], rockMoss: [.16,.39,.27,1] },
     terrain: { grass: [.27,.43,.30,1], grassLight: [.46,.59,.39,1], grassDry: [.38,.46,.31,1], moss: [.12,.30,.20,1], mossLight: [.25,.45,.31,1], sand: [.60,.55,.35,1], sandLight: [.78,.72,.48,1], water: [.10,.39,.45,.90], waterLight: [.20,.61,.65,.90] }
   },
   sugar: {
     skyTop: '#5b6447', skyMid: '#364229', skyBottom: '#131b0f',
-    glow: '244,224,169', beam: '248,230,176', pollen: '235,215,154', mist: '168,185,127', rain: .35, flora: 'clover',
+    glow: '244,224,169', beam: '248,230,176', pollen: '235,215,154', mist: '168,185,127', rain: .35, flora: 'clover', motif: 'spoon', accent: '235,219,171',
+    materials: { stone: [.58,.55,.42,1], stoneLight: [.80,.75,.57,1], stoneDark: [.26,.27,.20,1], wood: [.43,.30,.15,1], woodLight: [.70,.52,.28,1], woodTop: [.62,.44,.23,1], soil: [.23,.18,.10,1], leaf: [.32,.48,.20,1], flower: [.93,.86,.63,1], rockMoss: [.34,.48,.20,1] },
     terrain: { grass: [.43,.52,.28,1], grassLight: [.66,.69,.38,1], grassDry: [.56,.54,.27,1], moss: [.23,.39,.18,1], mossLight: [.41,.53,.26,1], sand: [.78,.65,.41,1], sandLight: [.92,.81,.57,1], water: [.20,.43,.40,.88], waterLight: [.36,.60,.54,.88] }
   },
   shade: {
     skyTop: '#2f4934', skyMid: '#183020', skyBottom: '#08130c',
-    glow: '196,211,145', beam: '206,218,151', pollen: '185,204,128', mist: '83,137,93', rain: .65, flora: 'fern',
+    glow: '196,211,145', beam: '206,218,151', pollen: '185,204,128', mist: '83,137,93', rain: .65, flora: 'fern', motif: 'leaf', accent: '145,180,104',
+    materials: { stone: [.27,.33,.27,1], stoneLight: [.43,.49,.36,1], stoneDark: [.08,.13,.10,1], wood: [.25,.18,.10,1], woodLight: [.44,.32,.17,1], woodTop: [.38,.28,.14,1], soil: [.11,.10,.06,1], leaf: [.10,.31,.13,1], flower: [.62,.72,.40,1], rockMoss: [.10,.32,.13,1] },
     terrain: { grass: [.24,.40,.20,1], grassLight: [.40,.55,.28,1], grassDry: [.34,.42,.20,1], moss: [.09,.27,.12,1], mossLight: [.19,.41,.19,1], sand: [.64,.52,.29,1], sandLight: [.80,.67,.39,1], water: [.11,.33,.34,.88], waterLight: [.23,.51,.47,.88] }
   },
   gallery: {
     skyTop: '#3a5551', skyMid: '#203b38', skyBottom: '#0a1715',
-    glow: '190,229,211', beam: '204,236,219', pollen: '181,218,195', mist: '105,167,153', rain: .55, flora: 'reed',
+    glow: '190,229,211', beam: '204,236,219', pollen: '181,218,195', mist: '105,167,153', rain: .55, flora: 'reed', motif: 'pane', accent: '183,226,211',
+    materials: { stone: [.37,.44,.42,1], stoneLight: [.57,.64,.58,1], stoneDark: [.12,.18,.17,1], wood: [.32,.25,.16,1], woodLight: [.53,.43,.28,1], woodTop: [.47,.37,.24,1], soil: [.14,.14,.10,1], leaf: [.18,.40,.28,1], flower: [.72,.86,.72,1], rockMoss: [.18,.41,.28,1] },
     terrain: { grass: [.31,.47,.31,1], grassLight: [.49,.63,.43,1], grassDry: [.41,.49,.31,1], moss: [.13,.31,.20,1], mossLight: [.27,.47,.32,1], sand: [.67,.58,.38,1], sandLight: [.84,.75,.52,1], water: [.12,.38,.43,.90], waterLight: [.24,.59,.62,.90] }
   },
   firefly: {
     skyTop: '#2b4141', skyMid: '#182d2b', skyBottom: '#07110f',
-    glow: '218,193,112', beam: '226,203,122', pollen: '232,202,91', mist: '89,132,111', rain: .30, flora: 'thyme',
+    glow: '218,193,112', beam: '226,203,122', pollen: '232,202,91', mist: '89,132,111', rain: .30, flora: 'thyme', motif: 'lantern', accent: '232,202,91',
+    materials: { stone: [.25,.31,.30,1], stoneLight: [.39,.47,.42,1], stoneDark: [.07,.11,.10,1], wood: [.30,.20,.10,1], woodLight: [.51,.35,.16,1], woodTop: [.44,.29,.13,1], soil: [.10,.09,.05,1], leaf: [.12,.28,.16,1], flower: [.90,.75,.31,1], rockMoss: [.11,.29,.15,1] },
     terrain: { grass: [.25,.38,.24,1], grassLight: [.40,.50,.30,1], grassDry: [.37,.39,.20,1], moss: [.08,.23,.13,1], mossLight: [.18,.35,.19,1], sand: [.70,.53,.25,1], sandLight: [.90,.70,.33,1], water: [.10,.27,.34,.92], waterLight: [.20,.46,.49,.92] }
   }
 };

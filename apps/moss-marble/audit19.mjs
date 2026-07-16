@@ -17,6 +17,7 @@ import {
 } from './state.js';
 
 const failures = [];
+const visualMotifs = new Set();
 const assert = (condition, message) => { if (!condition) failures.push(message); };
 const pointInPolygon = (point, polygon) => {
   let inside = false;
@@ -90,8 +91,14 @@ for (const source of LEVELS) {
   const visual = source.visual;
   assert(visual && /^#[0-9a-f]{6}$/i.test(visual.skyTop) && /^#[0-9a-f]{6}$/i.test(visual.skyBottom), `campaign ${source.id}: invalid atmosphere palette`);
   assert(Number.isFinite(visual?.rain) && visual.rain >= 0 && visual.rain <= 1.6, `campaign ${source.id}: invalid rain density`);
+  assert(typeof visual?.motif === 'string' && visual.motif.length > 0, `campaign ${source.id}: missing visual motif`);
+  assert(/^\d{1,3},\d{1,3},\d{1,3}$/.test(visual?.accent || ''), `campaign ${source.id}: invalid motif accent`);
+  visualMotifs.add(visual?.motif);
   for (const [name, value] of Object.entries(visual?.terrain || {})) {
     assert(Array.isArray(value) && value.length === 4 && value.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 1), `campaign ${source.id}: invalid terrain color ${name}`);
+  }
+  for (const [name, value] of Object.entries(visual?.materials || {})) {
+    assert(Array.isArray(value) && value.length === 4 && value.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 1), `campaign ${source.id}: invalid material color ${name}`);
   }
   const level = compileCourse19(source);
   const report = inspectCourse19(level);
@@ -104,6 +111,7 @@ for (const source of LEVELS) {
     assert(outlineDistanceToPoint(level.outline, obstacle) >= obstacle.r * .6, `campaign ${source.id}: prop ${index} clipped by route edge`);
   }
 }
+assert(visualMotifs.size === LEVELS.length, `campaign: expected ${LEVELS.length} unique visual motifs, received ${visualMotifs.size}`);
 
 for (const source of LEVELS.filter((level) => [1, 6, 8].includes(level.id))) {
   const level = compileCourse19(source);
@@ -193,4 +201,4 @@ if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);
 }
-console.log('Moss & Marble 1.12 audit passed');
+console.log('Moss & Marble 1.13 audit passed');

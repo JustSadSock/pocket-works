@@ -320,7 +320,7 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addOutwardCurb(builder, a, b, centroid, width, height, tint) {
+function addOutwardCurb(builder, a, b, centroid, width, height, tint, sideTint = C.stoneDark) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -332,9 +332,9 @@ function addOutwardCurb(builder, a, b, centroid, width, height, tint) {
   const outerB = { x: b.x + nx * width, y: b.y + ny * width };
   const p = (point, z) => [point.x, point.y, z];
   builder.quad(p(a, height), p(b, height), p(outerB, height), p(outerA, height), tint, 0, [0, 0, 1]);
-  builder.quad(p(a, 0), p(a, height), p(outerA, height), p(outerA, 0), C.stoneDark, 0);
-  builder.quad(p(b, 0), p(outerB, 0), p(outerB, height), p(b, height), C.stoneDark, 0);
-  builder.quad(p(outerA, 0), p(outerA, height), p(outerB, height), p(outerB, 0), C.stoneDark, 0);
+  builder.quad(p(a, 0), p(a, height), p(outerA, height), p(outerA, 0), sideTint, 0);
+  builder.quad(p(b, 0), p(outerB, 0), p(outerB, height), p(b, height), sideTint, 0);
+  builder.quad(p(outerA, 0), p(outerA, height), p(outerB, height), p(outerB, 0), sideTint, 0);
 }
 
 function addRock(builder, obstacle) {
@@ -483,6 +483,7 @@ function addBoardScene(level) {
   const opaque = new MeshBuilder();
   const shadows = new MeshBuilder();
   const transparent = new MeshBuilder();
+  const materials = { ...C, ...(level.visual?.materials || {}) };
   const centroid = level.outline.reduce((sum, point) => ({ x: sum.x + point.x / level.outline.length, y: sum.y + point.y / level.outline.length }), { x: 0, y: 0 });
 
   const shadowOutline = level.outline.map((point) => ({ x: point.x + 18, y: point.y + 34 }));
@@ -502,8 +503,8 @@ function addBoardScene(level) {
       const t1 = (piece + 1) / pieces - inset;
       const start = { x: lerp(a.x, b.x, t0), y: lerp(a.y, b.y, t0) };
       const end = { x: lerp(a.x, b.x, t1), y: lerp(a.y, b.y, t1) };
-      const tint = hashNoise(index, piece, level.id) > .5 ? C.stone : C.stoneLight;
-      addOutwardCurb(opaque, start, end, centroid, 18, 16 + hashNoise(index, piece, 9) * 3, tint);
+      const tint = hashNoise(index, piece, level.id) > .5 ? materials.stone : materials.stoneLight;
+      addOutwardCurb(opaque, start, end, centroid, 18, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark);
     }
   }
 

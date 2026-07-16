@@ -18,8 +18,13 @@ const C = {
   woodLight: [.63, .43, .21, 1],
   woodTop: [.55, .35, .17, 1],
   leaf: [.23, .44, .20, 1],
-  flower: [.84, .82, .60, 1]
+  flower: [.84, .82, .60, 1],
+  rockMoss: [.23, .42, .20, 1]
 };
+
+function paletteFor(level) {
+  return { ...C, ...(level?.visual?.materials || {}) };
+}
 
 function noise(x, y = 0, seed = 0) {
   const value = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
@@ -92,7 +97,7 @@ function cylinder(mesh, options) {
   disc(mesh, x, y, z1, r1, r1, topTint, material, segments);
 }
 
-function lowPolyRock(mesh, shadows, level, prop, part, seed) {
+function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
   const x = prop.x + Number(part?.x || 0);
   const y = prop.y + Number(part?.y || 0);
   const radius = Number(part?.r || prop.r || 48);
@@ -113,27 +118,37 @@ function lowPolyRock(mesh, shadows, level, prop, part, seed) {
   for (let ringIndex = 0; ringIndex < rings; ringIndex += 1) {
     for (let index = 0; index < segments; index += 1) {
       const next = (index + 1) % segments;
-      mesh.quad(points[ringIndex][index], points[ringIndex][next], points[ringIndex + 1][next], points[ringIndex + 1][index], (index + ringIndex) % 3 === 0 ? C.stoneLight : C.stone, 0);
+      mesh.quad(points[ringIndex][index], points[ringIndex][next], points[ringIndex + 1][next], points[ringIndex + 1][index], (index + ringIndex) % 3 === 0 ? palette.stoneLight : palette.stone, 0);
     }
+  }
+  const apex = [
+    x + (noise(seed, 29) - .5) * radius * .10,
+    y + (noise(seed, 31) - .5) * radius * .10,
+    ground + radius * .98
+  ];
+  for (let index = 0; index < segments; index += 1) {
+    const next = (index + 1) % segments;
+    const tint = index % 4 === 0 ? palette.rockMoss : palette.stoneLight;
+    mesh.triangle(points.at(-1)[index], points.at(-1)[next], apex, tint, 0);
   }
   disc(shadows, x + radius * .08, y + radius * .14, ground + .12, radius * 1.08, radius * .72, C.shadowStrong, 3, 20);
 }
 
-function stump(mesh, shadows, level, prop, seed) {
+function stump(mesh, shadows, level, prop, seed, palette) {
   const ground = terrainHeightAt(level, prop.x, prop.y);
   const radius = prop.r || 56;
   const height = prop.height || radius * 1.15;
   cylinder(mesh, {
     x: prop.x, y: prop.y, z0: ground, z1: ground + height,
-    r0: radius, r1: radius * .88, tint: C.wood, topTint: C.woodTop,
+    r0: radius, r1: radius * .88, tint: palette.wood, topTint: palette.woodTop,
     material: 0, segments: 18, irregular: .10, seed
   });
-  ring(mesh, prop.x, prop.y, ground + height + .18, radius * .25, radius * .62, C.woodLight, 0, 20);
-  ring(mesh, prop.x, prop.y, ground + height + .24, radius * .63, radius * .67, C.wood, 0, 20);
+  ring(mesh, prop.x, prop.y, ground + height + .18, radius * .25, radius * .62, palette.woodLight, 0, 20);
+  ring(mesh, prop.x, prop.y, ground + height + .24, radius * .63, radius * .67, palette.wood, 0, 20);
   disc(shadows, prop.x + 5, prop.y + 9, ground + .12, radius * 1.12, radius * .72, C.shadowStrong, 3, 22);
 }
 
-function barrierBox(mesh, shadows, level, wall) {
+function barrierBox(mesh, shadows, level, wall, palette) {
   const dx = wall.bx - wall.ax;
   const dy = wall.by - wall.ay;
   const length = Math.hypot(dx, dy) || 1;
@@ -150,8 +165,8 @@ function barrierBox(mesh, shadows, level, wall) {
   const at1 = [a1[0], a1[1], zA + height];
   const bt0 = [b0[0], b0[1], zB + height];
   const bt1 = [b1[0], b1[1], zB + height];
-  const sideTint = wall.material === 'stone' ? C.stone : C.wood;
-  const topTint = wall.material === 'stone' ? C.stoneLight : C.woodLight;
+  const sideTint = wall.material === 'stone' ? palette.stone : palette.wood;
+  const topTint = wall.material === 'stone' ? palette.stoneLight : palette.woodLight;
   mesh.quad(at0, at1, bt1, bt0, topTint, 0);
   mesh.quad(a0, b0, bt0, at0, sideTint, 0);
   mesh.quad(a1, at1, bt1, b1, sideTint, 0);
@@ -170,7 +185,7 @@ function barrierBox(mesh, shadows, level, wall) {
       const p1 = [x - nx / wall.thickness * across, y - ny / wall.thickness * across, z];
       const forwardX = dx / length * 2;
       const forwardY = dy / length * 2;
-      mesh.quad(p0, p1, [p1[0] + forwardX, p1[1] + forwardY, z], [p0[0] + forwardX, p0[1] + forwardY, z], C.wood, 0, [0, 0, 1]);
+      mesh.quad(p0, p1, [p1[0] + forwardX, p1[1] + forwardY, z], [p0[0] + forwardX, p0[1] + forwardY, z], palette.wood, 0, [0, 0, 1]);
     }
   }
 }
@@ -181,7 +196,7 @@ function portalPoint(endpoint, lateral, z, depth) {
   return [endpoint.x + nx * lateral + endpoint.axisX * depth, endpoint.y + ny * lateral + endpoint.axisY * depth, z];
 }
 
-function portal(mesh, shadows, level, endpoint, seed) {
+function portal(mesh, shadows, level, endpoint, seed, palette) {
   const ground = terrainHeightAt(level, endpoint.x, endpoint.y);
   const width = endpoint.width || 82;
   const radius = width * .52;
@@ -195,32 +210,32 @@ function portal(mesh, shadows, level, endpoint, seed) {
     const outerB = portalPoint(endpoint, Math.cos(b) * radius, ground + Math.sin(b) * radius, 0);
     const innerA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, 0);
     const innerB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, 0);
-    mesh.quad(outerA, outerB, innerB, innerA, index % 3 ? C.stone : C.stoneLight, 0);
+    mesh.quad(outerA, outerB, innerB, innerA, index % 3 ? palette.stone : palette.stoneLight, 0);
     const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth);
     const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth);
-    mesh.quad(innerA, innerB, backB, backA, C.stoneDark, 9);
+    mesh.quad(innerA, innerB, backB, backA, palette.stoneDark, 9);
   }
   mesh.quad(
     portalPoint(endpoint, -inner, ground + .4, -10),
     portalPoint(endpoint, inner, ground + .4, -10),
     portalPoint(endpoint, inner * .82, ground + .4, depth),
     portalPoint(endpoint, -inner * .82, ground + .4, depth),
-    C.stone, 0, [0, 0, 1]
+    palette.stone, 0, [0, 0, 1]
   );
   disc(shadows, endpoint.x + 5, endpoint.y + 9, ground + .1, radius * 1.10, radius * .65, C.shadowStrong, 3, 22);
 }
 
-function hole(mesh, shadows, level) {
+function hole(mesh, shadows, level, palette) {
   const ground = terrainHeightAt(level, level.hole.x, level.hole.y);
   const radius = level.hole.r;
   const depth = Math.max(30, level.hole.depth || 64);
   disc(mesh, level.hole.x, level.hole.y, ground - depth, radius * .92, radius * .92, C.cup, 9, 28);
   cylinder(mesh, { x: level.hole.x, y: level.hole.y, z0: ground - depth, z1: ground - .8, r0: radius * .92, r1: radius * .92, tint: C.cup, topTint: C.cup, material: 9, segments: 28 });
-  ring(mesh, level.hole.x, level.hole.y, ground + .20, radius * .98, radius + 7, C.soil, 0, 30);
+  ring(mesh, level.hole.x, level.hole.y, ground + .20, radius * .98, radius + 7, palette.soil, 0, 30);
   disc(shadows, level.hole.x + 2, level.hole.y + 2, ground + .12, radius * 1.1, radius * .7, C.shadowStrong, 3, 24);
 }
 
-function details(mesh, level, seed) {
+function details(mesh, level, seed, palette) {
   const centerline = level.centerline || [];
   if (centerline.length < 2) return;
   for (let index = 0; index < 34; index += 1) {
@@ -242,7 +257,7 @@ function details(mesh, level, seed) {
     const ground = terrainHeightAt(level, x, y);
     const height = 7 + noise(index, seed, 73) * 10;
     const width = 2.2 + noise(index, seed, 77) * 2.4;
-    mesh.triangle([x - width, y, ground + .2], [x + width, y, ground + .2], [x + nx * 2, y + ny * 2, ground + height], index % 7 === 0 ? C.flower : C.leaf, 0);
+    mesh.triangle([x - width, y, ground + .2], [x + width, y, ground + .2], [x + nx * 2, y + ny * 2, ground + height], index % 7 === 0 ? palette.flower : palette.leaf, 0);
   }
 }
 
@@ -251,21 +266,22 @@ function build(level) {
   const shadows = new Mesh();
   const transparent = new Mesh();
   const seed = Number(level.id) || 18;
-  hole(opaque, shadows, level);
-  for (const wall of level.course18.barriers || []) barrierBox(opaque, shadows, level, wall);
+  const palette = paletteFor(level);
+  hole(opaque, shadows, level, palette);
+  for (const wall of level.course18.barriers || []) barrierBox(opaque, shadows, level, wall, palette);
   for (let index = 0; index < (level.course18.props || []).length; index += 1) {
     const prop = level.course18.props[index];
-    if (prop.kind === 'stump') stump(opaque, shadows, level, prop, seed + index * 31);
+    if (prop.kind === 'stump') stump(opaque, shadows, level, prop, seed + index * 31, palette);
     else if (prop.kind === 'rockCluster') {
-      for (let partIndex = 0; partIndex < (prop.parts || []).length; partIndex += 1) lowPolyRock(opaque, shadows, level, prop, prop.parts[partIndex], seed + index * 37 + partIndex * 11);
-    } else lowPolyRock(opaque, shadows, level, prop, null, seed + index * 37);
+      for (let partIndex = 0; partIndex < (prop.parts || []).length; partIndex += 1) lowPolyRock(opaque, shadows, level, prop, prop.parts[partIndex], seed + index * 37 + partIndex * 11, palette);
+    } else lowPolyRock(opaque, shadows, level, prop, null, seed + index * 37, palette);
   }
   for (let index = 0; index < (level.course18.tunnelVisuals || []).length; index += 1) {
     const tunnel = level.course18.tunnelVisuals[index];
-    portal(opaque, shadows, level, tunnel.entry, seed + index * 53);
-    portal(opaque, shadows, level, tunnel.exit, seed + index * 53 + 19);
+    portal(opaque, shadows, level, tunnel.entry, seed + index * 53, palette);
+    portal(opaque, shadows, level, tunnel.exit, seed + index * 53 + 19, palette);
   }
-  details(opaque, level, seed);
+  details(opaque, level, seed, palette);
   return { opaque: opaque.array(), shadows: shadows.array(), transparent: transparent.array() };
 }
 

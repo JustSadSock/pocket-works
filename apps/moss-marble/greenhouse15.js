@@ -3,7 +3,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
 const DEFAULT_VISUAL = Object.freeze({
   skyTop: '#405748', skyMid: '#1f382c', skyBottom: '#0b1711',
-  glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', flora: 'fern'
+  glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', flora: 'fern', motif: 'drop', accent: '205,224,180'
 });
 
 function visualTheme(level) {
@@ -170,6 +170,7 @@ export class LivingGreenhouseLayer {
     ctx.fillRect(0, 0, width, height * .86);
 
     this.drawGreenhouseFrame(ctx, time, theme);
+    this.drawThemeLandmark(ctx, time, theme);
     this.drawDistantPlants(ctx, time, theme);
     if (this.quality > .55) this.drawCondensation(ctx, time);
     this.drawFloorMist(ctx, time, mode, theme);
@@ -233,6 +234,70 @@ export class LivingGreenhouseLayer {
       ctx.lineTo(startX - spread, height * .82);
       ctx.closePath();
       ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawThemeLandmark(ctx, time, theme) {
+    const { width, height } = this;
+    const x = width * .16 + (this.renderer.parallaxX || 0) * 9;
+    const y = height * .23 + (this.renderer.parallaxY || 0) * 4;
+    const size = clamp(Math.min(width, height) * .12, 48, 112);
+    const pulse = this.reducedMotion ? .5 : .5 + Math.sin(time * .55) * .5;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = tint(theme.accent, .12 + pulse * .035);
+    ctx.fillStyle = tint(theme.accent, .035 + pulse * .018);
+    ctx.lineWidth = Math.max(1, size * .014);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (theme.motif === 'cup') {
+      ctx.beginPath(); ctx.ellipse(0, size * .30, size * .62, size * .16, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-size * .40, -size * .17); ctx.quadraticCurveTo(-size * .34, size * .23, 0, size * .24); ctx.quadraticCurveTo(size * .34, size * .23, size * .40, -size * .17); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(size * .43, 0, size * .22, size * .28, 0, -Math.PI * .55, Math.PI * .55); ctx.stroke();
+    } else if (theme.motif === 'fern' || theme.motif === 'leaf') {
+      ctx.beginPath(); ctx.moveTo(-size * .34, size * .48); ctx.quadraticCurveTo(-size * .05, 0, size * .30, -size * .48); ctx.stroke();
+      for (let index = 0; index < 6; index += 1) {
+        const t = (index + 1) / 7;
+        const px = lerp(-size * .29, size * .25, t);
+        const py = lerp(size * .40, -size * .40, t);
+        const spread = size * (.24 - t * .10);
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.quadraticCurveTo(px - spread, py - size * .02, px - spread * .78, py - size * .17); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.quadraticCurveTo(px + spread, py + size * .02, px + spread * .78, py + size * .17); ctx.stroke();
+      }
+    } else if (theme.motif === 'dial') {
+      ctx.beginPath(); ctx.arc(0, 0, size * .46, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, size * .31, 0, TAU); ctx.stroke();
+      for (let index = 0; index < 10; index += 1) {
+        const angle = index / 10 * TAU;
+        ctx.beginPath(); ctx.moveTo(Math.cos(angle) * size * .36, Math.sin(angle) * size * .36); ctx.lineTo(Math.cos(angle) * size * .44, Math.sin(angle) * size * .44); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(-1.1 + pulse * .18) * size * .28, Math.sin(-1.1 + pulse * .18) * size * .28); ctx.stroke();
+    } else if (theme.motif === 'spoon') {
+      ctx.save(); ctx.rotate(-.48);
+      ctx.beginPath(); ctx.ellipse(0, -size * .23, size * .24, size * .34, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, size * .08); ctx.quadraticCurveTo(size * .025, size * .35, 0, size * .62); ctx.stroke();
+      ctx.restore();
+    } else if (theme.motif === 'pane') {
+      ctx.save(); ctx.rotate(-.10);
+      ctx.strokeRect(-size * .43, -size * .48, size * .86, size * .96);
+      ctx.beginPath(); ctx.moveTo(-size * .43, size * .08); ctx.lineTo(size * .43, -size * .18); ctx.moveTo(-size * .12, -size * .48); ctx.lineTo(size * .16, size * .48); ctx.stroke();
+      ctx.fillRect(-size * .37, -size * .42, size * .13, size * .72);
+      ctx.restore();
+    } else if (theme.motif === 'lantern') {
+      const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * .58);
+      glow.addColorStop(0, tint(theme.accent, .15 + pulse * .08)); glow.addColorStop(1, tint(theme.accent, 0));
+      ctx.fillStyle = glow; ctx.fillRect(-size, -size, size * 2, size * 2);
+      ctx.strokeStyle = tint(theme.accent, .18);
+      ctx.beginPath(); ctx.moveTo(-size * .18, -size * .48); ctx.quadraticCurveTo(0, -size * .68, size * .18, -size * .48); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(-size * .32, -size * .44, size * .64, size * .88, size * .15); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = tint(theme.accent, .32 + pulse * .15); ctx.beginPath(); ctx.arc(0, size * .05, size * .065, 0, TAU); ctx.fill();
+    } else {
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.beginPath(); ctx.ellipse(0, size * .34, size * (.22 + ring * .15), size * (.055 + ring * .025), 0, 0, TAU); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(0, -size * .52); ctx.bezierCurveTo(size * .34, -size * .12, size * .26, size * .13, 0, size * .23); ctx.bezierCurveTo(-size * .26, size * .13, -size * .34, -size * .12, 0, -size * .52); ctx.fill(); ctx.stroke();
     }
     ctx.restore();
   }
