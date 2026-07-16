@@ -21,6 +21,19 @@ export function damp(current, target, smoothing, delta) {
   return lerp(current, target, 1 - Math.exp(-smoothing * delta));
 }
 
+export function virtualStickInput(dx, dy, width, height) {
+  const distance = Math.hypot(dx, dy);
+  const radius = clamp(Math.min(width, height) * 0.18, 64, 126);
+  const deadzone = 0.055;
+  if (distance < radius * deadzone) return { x: 0, y: 0 };
+  const normalized = clamp((distance / radius - deadzone) / (1 - deadzone), 0, 1);
+  const response = normalized ** 0.82;
+  return {
+    x: dx / Math.max(1, distance) * response,
+    y: dy / Math.max(1, distance) * response,
+  };
+}
+
 export function mulberry32(seed) {
   let value = seed >>> 0;
   return () => {
@@ -315,19 +328,22 @@ export function stepFlight(state, input, delta, course, difficulty = 0) {
   const dt = clamp(delta, 0, 0.05);
   const sensitivity = clamp(input.sensitivity || 1, 0.6, 1.5);
   const folded = Boolean(input.folded ?? input.boosted);
+  const flightAssist = input.flightAssist !== false;
   const damage = damageFactors(input.damage);
-  const rightIntent = clamp(input.x || 0, -1, 1);
+  const rightIntent = -clamp(input.x || 0, -1, 1);
   const climbIntent = -clamp(input.y || 0, -1, 1);
   const controlAuthority = damage.control * (folded ? 0.43 : 1) * sensitivity;
   const flightAngle = Math.atan2(state.vy, Math.max(6, state.speed));
   const lowSpeed = clamp((20 - state.speed) / 7, 0, 1);
   const neutralPitch = -0.02 - lowSpeed * 0.09;
+  const pitchRange = 0.31;
   const pitchTarget = folded
     ? -0.34 + climbIntent * 0.055 * controlAuthority
-    : neutralPitch + climbIntent * 0.31 * controlAuthority;
+    : neutralPitch + climbIntent * pitchRange * controlAuthority;
   const forcedNoseDown = (state.stall || 0) * 0.27;
-  const targetPitchRate = (pitchTarget - forcedNoseDown - state.pitch) * (folded ? 4.1 : 5.3);
-  state.pitchRate = damp(state.pitchRate || 0, targetPitchRate, folded ? 3.1 : 4.4, dt);
+  const pitchResponse = folded ? 4.1 : flightAssist ? 5.8 : 5.3;
+  const targetPitchRate = (pitchTarget - forcedNoseDown - state.pitch) * pitchResponse;
+  state.pitchRate = damp(state.pitchRate || 0, targetPitchRate, folded ? 3.1 : flightAssist ? 5.2 : 4.4, dt);
   state.pitch = clamp(state.pitch + state.pitchRate * dt, -0.52, 0.34);
 
   const rawAoa = state.pitch - flightAngle;
@@ -337,27 +353,34 @@ export function stepFlight(state, input, delta, course, difficulty = 0) {
   state.angleOfAttack = damp(state.angleOfAttack || 0, rawAoa, 7, dt);
 
   const wingArea = damage.lift * (folded ? 0.34 : 1);
-  const liftCoefficient = clamp(0.86 + state.angleOfAttack * 2.75, 0.08, 1.58) * (1 - state.stall * 0.74);
+  const liftCoefficient = clamp(0.96 + state.angleOfAttack * 2.75, 0.08, 1.58) * (1 - state.stall * 0.74);
   const dynamicPressure = Math.pow(state.speed / 28, 2);
   const lift = 9.81 * dynamicPressure * wingArea * liftCoefficient;
   const bankLift = lift * Math.cos(state.bank);
-  state.vy += (bankLift - 9.81) * dt;
+  const ridgeUpdraft = (folded ? 0.18 : 0.55) * damage.lift * (1 - state.stall * 0.72);
+  state.vy += (bankLift + ridgeUpdraft - 9.81) * dt;
 
-  const inducedDrag = Math.max(0, liftCoefficient - 0.72) ** 2 * 1.9;
-  const dragCoefficient = (folded ? 0.00105 : 0.00142) * damage.drag;
-  const drag = 0.16 + state.speed * state.speed * dragCoefficient + inducedDrag + state.stall * 3.8;
+  const inducedDrag = Math.max(0, liftCoefficient - 0.78) ** 2 * 0.92;
+  const dragCoefficient = (folded ? 0.00072 : 0.00098) * damage.drag;
+  const drag = 0.1 + state.speed * state.speed * dragCoefficient + inducedDrag + state.stall * 3.8;
   const gravityAlongPath = -9.81 * Math.sin(flightAngle);
-  state.speed = clamp(state.speed + (gravityAlongPath - drag) * dt, 8.5, 58);
+  const ridgeDrive = (folded ? 0 : 0.82) * damage.lift * (1 - state.stall * 0.86);
+  state.speed = clamp(state.speed + (gravityAlongPath + ridgeDrive - drag) * dt, 8.5, 58);
 
   const stallWobble = state.stall * Math.sin(state.z * 0.19 + state.speed * 0.07) * 0.13;
-  const targetBank = clamp(rightIntent * 0.72 * controlAuthority + damage.rollBias + stallWobble, -0.93, 0.93);
-  const targetRollRate = (targetBank - state.bank) * (folded ? 3.3 : 5.8);
-  state.rollRate = damp(state.rollRate || 0, targetRollRate, folded ? 2.5 : 4.5, dt);
+  const assistedDamageBias = damage.rollBias * (flightAssist ? 0.76 : 1);
+  const bankRange = flightAssist ? 0.66 : 0.72;
+  const targetBank = clamp(rightIntent * bankRange * controlAuthority + assistedDamageBias + stallWobble, -0.93, 0.93);
+  const targetRollRate = (targetBank - state.bank) * (folded ? 3.3 : flightAssist ? 6.8 : 5.8);
+  state.rollRate = damp(state.rollRate || 0, targetRollRate, folded ? 2.5 : flightAssist ? 5.8 : 4.5, dt);
   state.bank = clamp(state.bank + state.rollRate * dt, -1.08, 1.08);
 
   const lateralLift = -Math.sin(state.bank) * lift * 0.76;
   const windPush = course.wind * (0.36 + difficulty * 0.24);
-  state.vx += (lateralLift + windPush - state.vx * (folded ? 0.32 : 0.48)) * dt;
+  const releasedDamping = flightAssist ? 1.08 : 0.48;
+  const steeringDamping = flightAssist ? 0.66 : 0.48;
+  const lateralDamping = folded ? 0.38 : releasedDamping + (steeringDamping - releasedDamping) * Math.abs(rightIntent);
+  state.vx += (lateralLift + windPush - state.vx * lateralDamping) * dt;
   state.vx = clamp(state.vx, -18, 18);
 
   state.x += state.vx * dt;
@@ -508,6 +531,7 @@ const PROFILE_DEFAULTS = Object.freeze({
     sound: true,
     haptics: true,
     sensitivity: 1,
+    flightAssist: true,
     effects: true,
   },
   savedRun: null,
@@ -583,6 +607,7 @@ export function sanitizeProfile(value) {
       sound: settings.sound !== false,
       haptics: settings.haptics !== false,
       sensitivity: [0.75, 1, 1.25].includes(settings.sensitivity) ? settings.sensitivity : 1,
+      flightAssist: settings.flightAssist !== false,
       effects: settings.effects !== false,
     },
     savedRun: sanitizeSavedRun(source.savedRun),

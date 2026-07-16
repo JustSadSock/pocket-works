@@ -408,9 +408,10 @@ a:focus-visible {
   display: flex;
   gap: 7px;
   align-items: center;
-  transform: translate(-50%, -50%);
+  transform: translate(calc(-50% + var(--steer-x, 0px)), calc(-50% + var(--steer-y, 0px)));
   opacity: .63;
   pointer-events: none;
+  transition: transform 90ms ease-out;
 }
 
 .flight-reticle i { display: block; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, var(--ink)); }
@@ -443,17 +444,32 @@ a:focus-visible {
   z-index: 8;
   top: 50%;
   left: 50%;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(23,32,32,.22);
+  width: 86px;
+  height: 86px;
+  border: 1px dashed rgba(23,32,32,.32);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,231,220,.2) 0 22%, transparent 23%);
   transform: translate(-50%, -50%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+  box-shadow: 0 0 0 1px rgba(232,231,220,.2), inset 0 0 22px rgba(23,32,32,.06);
+  transition: opacity 120ms ease;
 }
 
-.steer-cursor.is-visible { opacity: .7; }
-.steer-cursor i { position: absolute; inset: 13px; border: 1px solid var(--signal); }
+.steer-cursor::after { position: absolute; inset: 50% auto auto 50%; width: 5px; height: 5px; border: 1px solid rgba(23,32,32,.45); transform: translate(-50%, -50%) rotate(45deg); content: ""; }
+.steer-cursor.is-visible { opacity: .82; }
+.steer-cursor i {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--signal-deep);
+  background: rgba(239,106,60,.28);
+  box-shadow: 0 0 12px rgba(239,106,60,.38);
+  transform: translate(var(--stick-x, 0px), var(--stick-y, 0px)) rotate(45deg);
+  transition: transform 55ms linear;
+}
 
 .proximity-frame {
   position: absolute;
