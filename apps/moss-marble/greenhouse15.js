@@ -385,11 +385,97 @@ export class LivingGreenhouseLayer {
     ctx.clearRect(0, 0, this.width, this.height);
     this.drawGroundingFringe(ctx, level, time);
     this.drawGlassArchitecture(ctx, level, time);
+    this.drawReadabilityCues(ctx, level, ball, aim, time, mode, speed, theme);
     this.drawFlag(ctx, level, time);
     this.drawVines(ctx, time, mode);
     this.drawPollen(ctx, time, speed, theme);
     this.drawPulses(ctx, dt);
     this.drawVignette(ctx, mode);
+  }
+
+  traceGroundRing(ctx, field, x, y, radius, ground, lift = .9, count = 36) {
+    ctx.beginPath();
+    for (let index = 0; index <= count; index += 1) {
+      const angle = index / count * TAU;
+      const wx = x + Math.cos(angle) * radius;
+      const wy = y + Math.sin(angle) * radius;
+      const z = Number.isFinite(ground) ? ground : (field?.heightAt?.(wx, wy) || 0);
+      const point = this.renderer.worldToScreen(wx, wy, z + lift);
+      if (index) ctx.lineTo(point.x, point.y);
+      else ctx.moveTo(point.x, point.y);
+    }
+  }
+
+  drawReadabilityCues(ctx, level, ball, aim, time, mode, speed, theme) {
+    if (mode !== 'playing' || !this.renderer.worldToScreen || !level?.hole || !ball) return;
+    const field = level.course18?.field;
+    const hole = level.hole;
+    const holeGround = field?.heightAt?.(hole.x, hole.y) || 0;
+    const holeBase = this.renderer.worldToScreen(hole.x, hole.y, holeGround + 1.2);
+    const holeTop = this.renderer.worldToScreen(hole.x, hole.y, holeGround + 78);
+    const holeOnScreen = holeBase.x > -70 && holeBase.x < this.width + 70 && holeBase.y > -80 && holeBase.y < this.height + 80;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (holeOnScreen) {
+      const pulse = this.reducedMotion ? .5 : .5 + Math.sin(time * 1.25 + hole.x * .004) * .5;
+      this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.15);
+      ctx.strokeStyle = 'rgba(4,16,10,.66)';
+      ctx.lineWidth = 3.4;
+      ctx.stroke();
+      this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.35);
+      ctx.setLineDash([4, 7]);
+      ctx.lineDashOffset = this.reducedMotion ? 0 : -time * 3.5;
+      ctx.strokeStyle = tint(theme.beam, .58 + pulse * .16);
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const beacon = ctx.createLinearGradient(holeBase.x, holeBase.y, holeTop.x, holeTop.y);
+      beacon.addColorStop(0, tint(theme.beam, 0));
+      beacon.addColorStop(.35, tint(theme.beam, .18));
+      beacon.addColorStop(1, tint(theme.beam, .48 + pulse * .12));
+      ctx.strokeStyle = beacon;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(holeBase.x, holeBase.y);
+      ctx.lineTo(holeTop.x, holeTop.y);
+      ctx.stroke();
+      ctx.fillStyle = tint(theme.beam, .62 + pulse * .16);
+      ctx.beginPath();
+      ctx.arc(holeTop.x, holeTop.y, 1.6 + pulse, 0, TAU);
+      ctx.fill();
+    }
+
+    if (!ball.sunk && !ball.inCup) {
+      const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : (field?.heightAt?.(ball.x, ball.y) || 0);
+      const steady = speed < 8 && !ball.airborne;
+      const visibility = aim?.active ? .88 : steady ? .64 : .24;
+      const cueRadius = 35 + (steady && !this.reducedMotion ? Math.sin(time * 1.7) * 1.5 : 0);
+      this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.1, 32);
+      ctx.strokeStyle = `rgba(2,12,7,${visibility * .72})`;
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+      this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.35, 32);
+      ctx.setLineDash([3, 8]);
+      ctx.lineDashOffset = this.reducedMotion ? 0 : time * 2.2;
+      ctx.strokeStyle = tint(theme.accent, visibility);
+      ctx.lineWidth = 1.15;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const ballZ = Number.isFinite(ball.z) ? ball.z : ground + 22;
+      const center = this.renderer.worldToScreen(ball.x, ball.y, ballZ);
+      const screenRadius = clamp(22 * (this.renderer.scale || 1), 5.5, 22);
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = `rgba(242,255,247,${.28 + visibility * .34})`;
+      ctx.lineWidth = 1.15;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, screenRadius + 1.25, Math.PI * 1.03, Math.PI * 1.63);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   drawGroundingFringe(ctx, level, time) {

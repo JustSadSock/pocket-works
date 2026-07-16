@@ -60,8 +60,8 @@
 }
 
 .power-gauge b {
-  color: rgba(242, 237, 214, .72);
-  font-size: .49rem;
+  color: rgba(250, 244, 219, .86);
+  font-size: .53rem;
   letter-spacing: .15em;
   text-transform: uppercase;
   writing-mode: vertical-rl;
@@ -70,6 +70,78 @@
 body[data-aiming="true"] .power-gauge {
   opacity: 1;
   translate: 0 0;
+}
+
+body[data-mode="playing"] .app-shell::before {
+  content: "";
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(3, 13, 8, .34) 0, rgba(3, 13, 8, .12) 72px, transparent 118px),
+    linear-gradient(0deg, rgba(3, 13, 8, .48) 0, rgba(3, 13, 8, .12) 78px, transparent 132px);
+}
+
+body[data-mode="playing"] .scorebar {
+  color: #faf3d9;
+  filter: drop-shadow(0 2px 3px rgba(1, 8, 4, .72)) drop-shadow(0 5px 16px rgba(1, 8, 4, .32));
+}
+
+body[data-mode="playing"] .score-cluster {
+  min-width: min(100%, 248px);
+  border-top-color: rgba(250, 243, 215, .48);
+  border-bottom-color: rgba(250, 243, 215, .26);
+  background: linear-gradient(90deg, transparent, rgba(8, 24, 15, .28) 15%, rgba(8, 24, 15, .42) 50%, rgba(8, 24, 15, .28) 85%, transparent);
+}
+
+body[data-mode="playing"] .score-cluster span {
+  font-size: .57rem;
+  opacity: .82;
+}
+
+body[data-mode="playing"] .score-cluster strong {
+  font-size: 1.12rem;
+  text-shadow: 0 1px 5px rgba(1, 8, 4, .55);
+}
+
+body[data-mode="playing"] .score-cluster i {
+  background: linear-gradient(transparent, rgba(250, 243, 215, .5), transparent);
+}
+
+body[data-mode="playing"] .text-control,
+body[data-mode="playing"] .sound-control {
+  border-color: rgba(245, 238, 208, .64);
+  background: rgba(8, 26, 16, .45);
+  box-shadow: inset 0 0 0 1px rgba(22, 36, 27, .38), 0 8px 20px rgba(2, 10, 6, .24);
+}
+
+body[data-mode="playing"] .aim-hint {
+  color: rgba(252, 246, 219, .96);
+  font-size: .67rem;
+  letter-spacing: .15em;
+  text-shadow: 0 2px 4px rgba(1, 8, 4, .9), 0 4px 14px rgba(1, 8, 4, .5);
+  background: linear-gradient(90deg, transparent, rgba(5, 20, 12, .3) 22%, rgba(5, 20, 12, .42) 50%, rgba(5, 20, 12, .3) 78%, transparent);
+}
+
+body[data-mode="playing"] .aim-hint::before,
+body[data-mode="playing"] .aim-hint::after {
+  background: linear-gradient(90deg, transparent, rgba(250, 243, 215, .76));
+}
+
+body[data-mode="playing"] .overview-control {
+  min-height: 44px;
+  border-color: rgba(245, 238, 208, .64);
+  background: rgba(8, 26, 16, .66);
+  color: rgba(252, 246, 219, .96);
+  box-shadow: 0 9px 24px rgba(2, 10, 6, .34), inset 0 0 0 1px rgba(22, 36, 27, .34);
+}
+
+body[data-mode="playing"] .surface-note {
+  border-color: rgba(245, 238, 208, .42);
+  background: rgba(10, 31, 19, .86);
+  color: #faf3d9;
+  box-shadow: 0 8px 24px rgba(2, 10, 6, .28);
 }
 
 .hole-pot .hole-map {
@@ -98,6 +170,23 @@ body[data-aiming="true"] .power-gauge {
   stroke: var(--map-route, rgba(222, 220, 171, .72));
   stroke-width: 5.4;
 }
+
+.hole-map .map-surface {
+  stroke-width: .8;
+  opacity: .76;
+}
+
+.hole-map .map-surface.is-segment {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.hole-map .map-water { fill: var(--map-water, rgba(86,160,155,.72)); stroke: rgba(218, 242, 226, .72); }
+.hole-map .map-sand { fill: var(--map-sand, rgba(219,187,112,.72)); stroke: rgba(250, 232, 175, .68); }
+.hole-map .map-moss { fill: var(--map-moss, rgba(74,124,66,.72)); stroke: rgba(190, 219, 157, .54); }
+.hole-map line.map-water { stroke: var(--map-water, rgba(86,160,155,.72)); }
+.hole-map line.map-sand { stroke: var(--map-sand, rgba(219,187,112,.72)); }
+.hole-map line.map-moss { stroke: var(--map-moss, rgba(74,124,66,.72)); }
 
 .hole-map .map-obstacle { fill: var(--map-obstacle, #28372d); stroke: rgba(229, 220, 177, .42); stroke-width: .8; }
 .hole-map .map-start { fill: #e0c66f; stroke: #26382c; stroke-width: 1; }
@@ -140,6 +229,19 @@ body[data-aiming="true"] .power-gauge {
   .menu-copy h1 {
     gap: .08em;
     font-size: clamp(2.3rem, 12.25vw, 5.5rem);
+  }
+}
+
+@media (max-width: 430px) {
+  body[data-mode="playing"] .score-cluster {
+    min-width: min(100%, 238px);
+    padding-inline: 8px;
+    gap: 9px;
+  }
+
+  body[data-mode="playing"] .overview-control {
+    height: 44px;
+    font-size: .61rem;
   }
 }
 

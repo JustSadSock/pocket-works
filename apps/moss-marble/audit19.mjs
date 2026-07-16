@@ -106,6 +106,11 @@ for (const source of LEVELS) {
   assert(level.__course19 === true, `campaign ${source.id}: compiler marker`);
   assert(level.course18?.triangleCount >= 0 && level.course18.triangleCount <= 12000, `campaign ${source.id}: triangle budget`);
   assert(level.course18?.field?.surfaceAt, `campaign ${source.id}: field contract`);
+  for (const [index, mask] of (level.course18?.field?.masks || []).entries()) {
+    assert(['water', 'sand', 'moss'].includes(mask.type), `campaign ${source.id}: surface ${index} has unsupported type`);
+    assert(Number(mask.width) > 0, `campaign ${source.id}: surface ${index} has invalid width`);
+    assert(mask.a && mask.b || Number.isFinite(mask.x) && Number.isFinite(mask.y) && Number(mask.length) > 0, `campaign ${source.id}: surface ${index} has invalid readability geometry`);
+  }
   for (const [index, obstacle] of (level.obstacles || []).entries()) {
     assert(pointInPolygon(obstacle, level.outline), `campaign ${source.id}: prop ${index} outside route`);
     assert(outlineDistanceToPoint(level.outline, obstacle) >= obstacle.r * .6, `campaign ${source.id}: prop ${index} clipped by route edge`);
@@ -201,4 +206,4 @@ if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);
 }
-console.log('Moss & Marble 1.13 audit passed');
+console.log('Moss & Marble 1.14 audit passed');
