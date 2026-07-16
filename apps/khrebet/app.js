@@ -2,25 +2,27 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 import {
-  AIRCRAFT_CORE_RADIUS,
   RUN_SAVE_VERSION,
+  airframeCanyonClearance,
   awardScore,
-  canyonClearance,
   clamp,
   comboMultiplier,
   courseAt,
   createFlightState,
   dailySeed,
+  damageIntegrity,
   damp,
   freshProfile,
   gateHit,
+  impactSeverity,
   lerp,
   progressDifficulty,
   routeCode,
+  sanitizeDamage,
   sanitizeProfile,
   sanitizeSavedRun,
   stepFlight,
-  sweptObstacleClearance,
+  sweptAirframeClearance,
 } from './game-core.js';
 import { RidgeEngine } from './engine.js';
 import { RidgeWorld } from './world.js';
@@ -48,6 +50,11 @@ const elements = {
   integrityBlock: document.querySelector('.integrity-block'),
   integrityFill: byId('integrityFill'),
   integrityValue: byId('integrityValue'),
+  damageLeft: byId('damageLeft'),
+  damageRight: byId('damageRight'),
+  damageNose: byId('damageNose'),
+  damageFold: byId('damageFold'),
+  stallWarning: byId('stallWarning'),
   scoreValue: byId('scoreValue'),
   comboBlock: byId('comboBlock'),
   comboLabel: byId('comboLabel'),
@@ -166,7 +173,7 @@ const input = {
   startY: 0,
   x: 0,
   y: 0,
-  boosted: false,
+  folded: false,
   keys: new Set(),
 };
 
@@ -180,9 +187,10 @@ function setHidden(element, hidden) {
 }
 
 function setFlightChrome(visible) {
-  for (const element of [elements.flightHeader, elements.flightHud, elements.speedTape, elements.diveButton]) {
+  for (const element of [elements.flightHeader, elements.flightHud, elements.speedTape, elements.diveButton, elements.stallWarning]) {
     setHidden(element, !visible);
   }
+  if (!visible) elements.stallWarning?.classList.remove('is-visible');
   elements.reticle.style.display = visible ? '' : 'none';
   elements.proximityFrame.style.display = visible ? '' : 'none';
 }
@@ -247,7 +255,7 @@ function clearInput() {
   input.pointerId = null;
   input.x = 0;
   input.y = 0;
-  input.boosted = false;
+  input.folded = false;
   input.keys.clear();
   elements.steerCursor.classList.remove('is-visible');
   elements.diveButton.classList.remove('is-held');
@@ -257,6 +265,7 @@ function clearInput() {
 function createRun(mode, seed, saved = null) {
   const restored = saved ? sanitizeSavedRun(saved) : null;
   const flight = restored ? { ...restored.flight } : createFlightState();
+  const damage = sanitizeDamage(restored?.damage);
   const initialCourse = courseAt(flight.z, seed);
   if (!restored) {
     flight.x = initialCourse.center;
@@ -267,7 +276,8 @@ function createRun(mode, seed, saved = null) {
     mode,
     flight,
     score: restored?.score || 0,
-    integrity: restored?.integrity || 100,
+    damage,
+    integrity: damageIntegrity(damage),
     flow: restored?.flow || 0,
     flowTime: restored?.flowTime || 0,
     combo: restored?.combo || 1,
@@ -281,7 +291,9 @@ function createRun(mode, seed, saved = null) {
     lastSaveTime: 0,
     altitudeWarningZone: -1,
     biomeZone: -1,
-    wasBoosted: false,
+    segmentZone: -1,
+    wasFolded: false,
+    wasStalling: false,
   };
 }
 
@@ -293,6 +305,7 @@ function serialiseRun() {
     mode: run.mode,
     flight: { ...run.flight },
     score: Math.floor(run.score),
+    damage: { ...run.damage },
     integrity: run.integrity,
     flow: run.flow,
     flowTime: run.flowTime,
@@ -412,19 +425,34 @@ function enterMenu(options = {}) {
 
 const crashCopy = {
   floor: {
-    kicker: 'СНЕГ ОКАЗАЛСЯ БЛИЖЕ',
-    title: 'Рельеф победил.',
-    note: 'Набрать скорость на пикировании — хорошая идея. Вспомнить выйти из него — ещё лучше.',
+    kicker: 'ЖЁСТКАЯ ПОСАДКА БЕЗ ПОСАДКИ',
+    title: 'Бумага встретила камень.',
+    note: 'Сложенные крылья хорошо разгоняют самолётик, но почти не создают подъёмной силы.',
   },
   wall: {
     kicker: 'КОНТАКТ С РЕЛЬЕФОМ',
-    title: 'Гора не уступила.',
-    note: 'Самолёт задел стену разлома. Рамка близости предупреждала, но гора оказалась убедительнее.',
+    title: 'Сгиб не выдержал.',
+    note: 'Касание крылом ещё можно пережить. Удар центральным сгибом о склон — обычно уже нет.',
   },
   needle: {
     kicker: 'СКАЛЬНАЯ ИГЛА / ПРЯМОЕ ПОПАДАНИЕ',
     title: 'Очень точный промах.',
     note: 'Игла стояла там тысячи лет. Сложно обвинить её в резком манёвре.',
+  },
+  boulder: {
+    kicker: 'КАМЕННЫЙ ДОЖДЬ / ПРЯМОЕ ПОПАДАНИЕ',
+    title: 'Камень оказался тяжелее.',
+    note: 'Подвешенные валуны читаются по тени и силуэту. Нос бумажного самолётика — плохой таран.',
+  },
+  cable: {
+    kicker: 'СТАРАЯ РАСТЯЖКА / РАЗРЕЗ КРЫЛА',
+    title: 'Кромка распустилась.',
+    note: 'Тонкие тросы наносят меньше общего урона, но легко режут край крыла и портят баланс.',
+  },
+  beam: {
+    kicker: 'КАМЕННАЯ КОНСТРУКЦИЯ / УДАР',
+    title: 'Проём был чуть в стороне.',
+    note: 'Арки и нависающие полки оставляют честный проход, но не прощают удара носом или сгибом.',
   },
 };
 
@@ -498,28 +526,54 @@ function addReward(base, flowGain, title, subtitle, type = 'near') {
   }
 }
 
-function applyDamage(amount, reason) {
+const damageCopy = {
+  leftWing: ['ЗАМЯТО ЛЕВОЕ КРЫЛО', 'НАДРЫВ ЛЕВОГО КРЫЛА', 'ЛЕВАЯ КРОМКА РАЗРУШЕНА'],
+  rightWing: ['ЗАМЯТО ПРАВОЕ КРЫЛО', 'НАДРЫВ ПРАВОГО КРЫЛА', 'ПРАВАЯ КРОМКА РАЗРУШЕНА'],
+  nose: ['СМЯТ НОС', 'НОС РАЗМОЧАЛЕН', 'НОСОВАЯ СКЛАДКА РАЗРУШЕНА'],
+  fold: ['ПРОДАВЛЕН СГИБ', 'ЦЕНТРАЛЬНЫЙ СГИБ ЛОПНУЛ', 'КАРКАС ПОТЕРЯН'],
+};
+
+function applyDamage({ amount, zone = 'fold', reason = 'wall', source = 'terrain' }) {
   if (!run) return false;
   const now = performance.now() / 1000;
-  if (now - run.lastDamageTime < 0.72) return false;
+  if (now - run.lastDamageTime < 0.46) return false;
   run.lastDamageTime = now;
-  const flowing = run.flowTime > 0;
-  run.integrity = Math.max(0, run.integrity - amount * (flowing ? 0.62 : 1));
+  const target = Object.hasOwn(run.damage, zone) ? zone : 'fold';
+  const previous = run.damage[target];
+  run.damage[target] = Math.max(0, previous - amount);
+  if (target === 'leftWing' || target === 'rightWing') {
+    run.damage.fold = Math.max(0, run.damage.fold - amount * 0.12);
+  } else if (target === 'nose') {
+    run.damage.fold = Math.max(0, run.damage.fold - amount * 0.18);
+  }
+  run.integrity = damageIntegrity(run.damage);
   run.flow = Math.max(0, run.flow - 28);
   run.flowTime = Math.max(0, run.flowTime - 1.4);
   run.combo = 1;
   run.comboTime = 0;
-  run.flight.speed = Math.max(18, run.flight.speed - 8);
-  shake = Math.min(1.25, shake + 0.82);
+  const speedLoss = target === 'nose' ? amount * 0.18 : target === 'fold' ? amount * 0.12 : amount * 0.065;
+  run.flight.speed = Math.max(10, run.flight.speed - speedLoss);
+  if (target === 'leftWing') run.flight.rollRate -= 0.24 + amount * 0.012;
+  if (target === 'rightWing') run.flight.rollRate += 0.24 + amount * 0.012;
+  if (target === 'nose') run.flight.pitchRate -= 0.18 + amount * 0.009;
+  if (target === 'fold') run.flight.stall = Math.min(1, run.flight.stall + amount * 0.012);
+  shake = Math.min(1.35, shake + 0.34 + amount / 46);
   pulse(elements.impactFlash);
-  audio.event('hit');
-  haptic([24, 34, 18]);
-  if (run.integrity <= 0) {
+  audio.event(amount < 15 ? 'hit-light' : amount >= 34 ? 'hit-heavy' : 'hit', clamp(amount / 42, 0.25, 1));
+  haptic(amount < 15 ? 12 : amount < 32 ? [18, 28, 14] : [30, 32, 24, 36, 18]);
+  world.markImpact(target);
+
+  const fatal = run.damage.fold <= 0 || run.damage.nose <= 0 ||
+    (run.damage.leftWing <= 3 && run.damage.rightWing <= 3) || run.integrity <= 7;
+  if (fatal) {
     finishRun(reason);
     return true;
   }
-  world.markImpact();
-  showCallout('КОРПУС ПОВРЕЖДЁН', `${Math.ceil(run.integrity)}% прочности`);
+
+  const ratio = run.damage[target] / 100;
+  const tier = ratio <= 0.22 ? 2 : ratio <= 0.58 ? 1 : 0;
+  const material = source === 'cable' ? 'режущий контакт' : source === 'boulder' ? 'тяжёлый удар' : amount < 15 ? 'касание' : 'жёсткий контакт';
+  showCallout(damageCopy[target][tier], `−${Math.round(previous - run.damage[target])}% · ${material}`);
   return true;
 }
 
@@ -529,7 +583,7 @@ function updateProximity(clearance, obstacleDistance = Infinity) {
   elements.proximityLeft.style.opacity = String(wallOpacity(clearance.left));
   elements.proximityRight.style.opacity = String(wallOpacity(clearance.right));
   elements.proximityFloor.style.opacity = String(wallOpacity(clearance.floor));
-  const danger = Math.min(clearance.minimum - AIRCRAFT_CORE_RADIUS, obstacleDistance);
+  const danger = Math.min(clearance.minimum, obstacleDistance);
   elements.proximityFrame.classList.toggle('is-danger', danger < 0.8);
   elements.proximityFrame.classList.toggle('is-close', danger >= 0.8 && danger < 1.8);
 }
@@ -538,22 +592,24 @@ function checkCourseEvents(previousState) {
   if (!run || phase !== 'running') return null;
   const state = run.flight;
   const course = courseAt(state.z, run.seed);
-  const clearance = canyonClearance(state, course);
+  const clearance = airframeCanyonClearance(state, course);
 
-  if (clearance.minimum < AIRCRAFT_CORE_RADIUS) {
-    let reason = 'wall';
-    if (clearance.floor <= clearance.left && clearance.floor <= clearance.right) {
-      reason = 'floor';
-      state.y = course.floor + 1.1 + AIRCRAFT_CORE_RADIUS;
-      state.vy = Math.max(2.8, Math.abs(state.vy) * 0.28);
-    } else if (clearance.left < clearance.right) {
-      state.x = course.center - course.width + AIRCRAFT_CORE_RADIUS;
-      state.vx = Math.abs(state.vx) * 0.32 + 1.8;
+  if (clearance.minimum < 0) {
+    const reason = clearance.side === 'floor' ? 'floor' : 'wall';
+    const penetration = Math.max(0.05, -clearance.minimum + 0.05);
+    if (clearance.side === 'floor') {
+      state.y += penetration;
+      state.vy = Math.max(1.4, Math.abs(state.vy) * 0.22);
+    } else if (clearance.side === 'left') {
+      state.x += penetration;
+      state.vx = Math.abs(state.vx) * 0.28 + 1.2;
     } else {
-      state.x = course.center + course.width - AIRCRAFT_CORE_RADIUS;
-      state.vx = -Math.abs(state.vx) * 0.32 - 1.8;
+      state.x -= penetration;
+      state.vx = -Math.abs(state.vx) * 0.28 - 1.2;
     }
-    applyDamage(38, reason);
+    const normalEnergy = clearance.side === 'floor' ? Math.abs(previousState.vy) : Math.abs(previousState.vx);
+    const amount = impactSeverity(state.speed + normalEnergy * 1.8, clearance.minimum, clearance.zone, { hardness: 0.82 });
+    applyDamage({ amount, zone: clearance.zone, reason, source: 'terrain' });
     if (phase !== 'running') return null;
   }
 
@@ -577,7 +633,6 @@ function checkCourseEvents(previousState) {
     world.markGate(gate.id);
     if (hit) {
       run.gates += 1;
-      run.integrity = Math.min(100, run.integrity + 2.5);
       addReward(115, 19, 'СТВОР ПРОЙДЕН', `серия ×${run.combo + 1}`, 'gate');
     } else if (run.combo > 1) {
       run.combo = 1;
@@ -586,29 +641,45 @@ function checkCourseEvents(previousState) {
   }
 
   for (const obstacle of nearby.obstacles) {
-    const contact = sweptObstacleClearance(previousState, state, obstacle);
+    const contact = sweptAirframeClearance(previousState, state, obstacle);
     const obstacleDistance = contact.clearance;
     nearestObstacle = Math.min(nearestObstacle, obstacleDistance);
     if (obstacleDistance < 0) {
       const side = contact.x >= obstacle.x ? 1 : -1;
-      state.x += side * Math.max(0.48, Math.abs(obstacleDistance) + 0.24);
-      state.vx += side * 4.2;
-      state.y += 0.22;
-      if (applyDamage(46, 'needle') && phase !== 'running') return null;
+      const soft = obstacle.kind === 'cable';
+      state.x += side * Math.max(soft ? 0.16 : 0.34, Math.abs(obstacleDistance) + 0.12);
+      state.vx += side * (soft ? 1.4 : 3.1);
+      state.y += soft ? 0.06 : 0.16;
+      const amount = impactSeverity(state.speed, obstacleDistance, contact.zone, obstacle);
+      const reason = obstacle.kind === 'boulder'
+        ? 'boulder'
+        : obstacle.kind === 'cable'
+          ? 'cable'
+          : obstacle.kind === 'needle'
+            ? 'needle'
+            : 'beam';
+      if (applyDamage({ amount, zone: contact.zone, reason, source: obstacle.kind }) && phase !== 'running') return null;
     } else if (
       previousState.z <= obstacle.z + 1.3 && state.z >= obstacle.z - 1.3 &&
-      obstacleDistance < 2.2 &&
+      obstacleDistance < (obstacle.kind === 'cable' ? 1.15 : 2.2) &&
       !run.grazed.has(obstacle.id)
     ) {
       run.grazed.add(obstacle.id);
       world.markGrazed(obstacle.id);
       run.nearMisses += 1;
-      addReward(82, 12, 'В ПОЛУМЕТРЕ', `скальная игла · серия ×${run.combo + 1}`);
+      const obstacleLabel = obstacle.kind === 'cable'
+        ? 'растяжка'
+        : obstacle.kind === 'boulder'
+          ? 'валун'
+          : obstacle.kind === 'needle'
+            ? 'скальная игла'
+            : 'каменная кромка';
+      addReward(82, 12, 'НА ТОЛЩИНУ БУМАГИ', `${obstacleLabel} · серия ×${run.combo + 1}`);
     }
   }
 
-  const closestWall = Math.min(clearance.left, clearance.right, clearance.floor);
-  if (closestWall > AIRCRAFT_CORE_RADIUS + 0.12 && closestWall < 2.35 && state.speed > 29) {
+  const closestWall = clearance.minimum;
+  if (closestWall > 0.12 && closestWall < 2.15 && state.speed > 27) {
     const side = clearance.floor <= clearance.left && clearance.floor <= clearance.right
       ? 'f'
       : clearance.left < clearance.right ? 'l' : 'r';
@@ -631,13 +702,14 @@ function updateRun(delta, time) {
   const keyboardY = (input.keys.has('ArrowDown') || input.keys.has('KeyS') ? 1 : 0) - (input.keys.has('ArrowUp') || input.keys.has('KeyW') ? 1 : 0);
   const steeringX = keyboardX || input.x;
   const steeringY = keyboardY || input.y;
-  const boosted = input.boosted || input.keys.has('Space');
+  const folded = input.folded || input.keys.has('Space');
   const difficulty = progressDifficulty(state.z);
   const course = courseAt(state.z, run.seed);
   stepFlight(state, {
     x: steeringX,
     y: steeringY,
-    boosted,
+    folded,
+    damage: run.damage,
     sensitivity: profile.settings.sensitivity,
   }, delta, course, difficulty);
 
@@ -658,21 +730,33 @@ function updateRun(delta, time) {
     if (run.biomeZone >= 0) showCallout(visual.label, 'новый участок маршрута');
     run.biomeZone = visual.zone;
   }
-  if (boosted && !run.wasBoosted) audio.event('boost');
-  run.wasBoosted = boosted;
+  const segment = world.segmentAt(state.z);
+  if (segment.index !== run.segmentZone) {
+    if (run.segmentZone >= 0 && segment.setpiece !== 'open') showCallout(segment.setpieceLabel, 'новое препятствие');
+    run.segmentZone = segment.index;
+  }
+  const stalling = state.stall > 0.56;
+  if (stalling && !run.wasStalling) {
+    showCallout('СВАЛИВАНИЕ', 'опусти нос и верни скорость');
+    audio.event('stall');
+  }
+  run.wasStalling = stalling;
+  if (folded && !run.wasFolded) audio.event('fold');
+  run.wasFolded = folded;
   run.score += state.speed * delta * 0.72 * comboMultiplier(run.combo) * (flowing ? 2 : 1);
   world.update(state, {
     delta,
     time,
-    boosted,
+    folded,
     flowing,
+    damage: run.damage,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
-  updateCamera(state, delta, flowing, boosted);
+  updateCamera(state, delta, flowing, folded);
   updateMood(state.z, delta);
-  updateHud(boosted);
+  updateHud(folded);
   updateProximity(proximity?.clearance, proximity?.nearestObstacle);
-  audio.update(state.speed, boosted, flowing);
+  audio.update(state.speed, folded, flowing, 1 - run.integrity / 100, stalling);
 
   if (time - run.lastSaveTime > 2.2) {
     run.lastSaveTime = time;
@@ -699,8 +783,9 @@ function updateDemo(delta, time) {
   world.update(demoFlight, {
     delta,
     time,
-    boosted: false,
+    folded: false,
     flowing: false,
+    damage: null,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
   const targetState = { ...demoFlight, x: lerp(demoFlight.x, ahead.center, 0.12) };
@@ -714,8 +799,9 @@ function updateStaticWorld(delta, time) {
   world.update(run.flight, {
     delta,
     time,
-    boosted: false,
+    folded: false,
     flowing: false,
+    damage: run.damage,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
   updateCamera(run.flight, delta, false, false);
@@ -723,7 +809,7 @@ function updateStaticWorld(delta, time) {
   audio.update(0, false, false);
 }
 
-function updateCamera(state, delta, flowing, boosted, demo = false) {
+function updateCamera(state, delta, flowing, folded, demo = false) {
   const speedPull = clamp((state.speed - 26) / 24, 0, 1);
   const desired = {
     x: state.x - state.vx * 0.045,
@@ -732,7 +818,7 @@ function updateCamera(state, delta, flowing, boosted, demo = false) {
     tx: state.x + state.vx * 0.11,
     ty: state.y + 0.12 + state.vy * 0.1,
     tz: state.z + 15 + speedPull * 5,
-    fov: (flowing ? Math.PI * 0.455 : boosted ? Math.PI * 0.41 : Math.PI * 0.37),
+    fov: (flowing ? Math.PI * 0.455 : folded ? Math.PI * 0.41 : Math.PI * 0.37),
     roll: clamp(state.bank * 0.2, -0.13, 0.13),
   };
   const cameraSmooth = demo ? 1.8 : 5.6;
@@ -789,7 +875,7 @@ function updateMood(distance, delta) {
   elements.sun.style.opacity = String(visual.id === 'basalt' ? 0.38 : 0.72);
 }
 
-function updateHud(boosted) {
+function updateHud(folded) {
   if (!run) return;
   const distance = Math.max(0, Math.floor(run.flight.z));
   const integrity = Math.ceil(run.integrity);
@@ -799,6 +885,19 @@ function updateHud(boosted) {
   elements.integrityValue.textContent = String(integrity);
   elements.integrityFill.style.height = `${run.integrity}%`;
   elements.integrityBlock.classList.toggle('is-critical', run.integrity <= 30);
+  const damageEntries = [
+    [elements.damageLeft, run.damage.leftWing],
+    [elements.damageNose, run.damage.nose],
+    [elements.damageFold, run.damage.fold],
+    [elements.damageRight, run.damage.rightWing],
+  ];
+  for (const [element, value] of damageEntries) {
+    if (!element) continue;
+    element.style.setProperty('--health', `${value}%`);
+    element.dataset.state = value <= 25 ? 'critical' : value <= 58 ? 'damaged' : 'good';
+    element.querySelector('b').textContent = String(Math.ceil(value));
+  }
+  elements.stallWarning?.classList.toggle('is-visible', run.flight.stall > 0.56);
   elements.scoreValue.textContent = Math.floor(run.score).toString().padStart(6, '0');
   elements.speedValue.textContent = String(Math.round(run.flight.speed * 3.6));
   elements.comboBlock.classList.toggle('is-active', run.combo > 1);
@@ -808,11 +907,11 @@ function updateHud(boosted) {
   elements.flowFill.style.width = `${displayedFlow}%`;
   elements.flowValue.textContent = flowing ? String(Math.ceil(run.flowTime)) : String(Math.floor(run.flow));
   elements.flowBlock.classList.toggle('is-ready', flowing || run.flow >= 82);
-  elements.stage.classList.toggle('is-boosting', boosted && !flowing);
+  elements.stage.classList.toggle('is-boosting', folded && !flowing);
   elements.stage.classList.toggle('is-flowing', flowing);
   elements.diveButton.classList.toggle('is-flow', flowing);
-  elements.diveButton.classList.toggle('is-held', boosted);
-  elements.diveLabel.textContent = flowing ? 'ПРОРЫВ' : boosted ? 'ФОРСАЖ' : 'ФОРСАЖ';
+  elements.diveButton.classList.toggle('is-held', folded);
+  elements.diveLabel.textContent = flowing ? 'ПРОРЫВ' : folded ? 'СЛОЖЕНО' : 'СЛОЖИТЬ';
 }
 
 function failWebGl(error) {
@@ -888,13 +987,13 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 elements.diveButton.addEventListener('pointerdown', (event) => {
   if (phase !== 'running') return;
   event.preventDefault();
-  input.boosted = true;
+  input.folded = true;
   elements.diveButton.classList.add('is-held');
-  elements.diveButton.setPointerCapture?.(event.pointerId);
+  try { elements.diveButton.setPointerCapture?.(event.pointerId); } catch { /* synthetic or already-lost pointer */ }
 });
 
 function endDive(event) {
-  input.boosted = false;
+  input.folded = false;
   elements.diveButton.classList.remove('is-held');
   try { elements.diveButton.releasePointerCapture?.(event.pointerId); } catch { /* no capture */ }
 }
@@ -1021,7 +1120,7 @@ elements.canvas.addEventListener('webglcontextlost', (event) => {
 
 createWorkshopMode({
   appName: 'ХРЕБЕТ',
-  version: '1.1.0',
+  version: '1.2.0',
   cachePrefix: 'khrebet-',
   storageNamespace: 'pocket-works:khrebet',
   onReset() {

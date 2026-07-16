@@ -1,7 +1,14 @@
 export const CHUNK_LENGTH = 48;
 export const START_ALTITUDE = 12;
-export const RUN_SAVE_VERSION = 1;
-export const AIRCRAFT_CORE_RADIUS = 0.34;
+export const RUN_SAVE_VERSION = 2;
+export const AIRCRAFT_CORE_RADIUS = 0.24;
+
+export const DAMAGE_DEFAULTS = Object.freeze({
+  leftWing: 100,
+  rightWing: 100,
+  nose: 100,
+  fold: 100,
+});
 
 export const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 export const lerp = (from, to, amount) => from + (to - from) * amount;
@@ -137,13 +144,100 @@ export function createChunkPlan(index, seed) {
   const obstacles = [];
   const wisps = [];
 
+  const setpieceIds = ['needles', 'arch', 'shelves', 'boulders', 'cables'];
+  const setpiece = index < 2 ? 'open' : setpieceIds[Math.floor(random() * setpieceIds.length)];
+  const setpieceLabels = {
+    open: 'ОТКРЫТЫЙ ПОТОК',
+    needles: 'КАМЕННЫЙ СЛАЛОМ',
+    arch: 'РАЗЛОМАННАЯ АРКА',
+    shelves: 'НАВИСШИЕ ПОЛКИ',
+    boulders: 'КАМЕННЫЙ ДОЖДЬ',
+    cables: 'СТАРЫЕ РАСТЯЖКИ',
+  };
+  let obstacleOrdinal = 0;
+  const nextId = () => `o:${index}:${obstacleOrdinal++}`;
+  const addNeedle = (z, lateral, scale = 1) => {
+    const course = courseAt(z, seed);
+    const radius = (1.05 + random() * (1.05 + difficulty * 0.5)) * scale;
+    obstacles.push({
+      id: nextId(), kind: 'needle', z,
+      x: course.center + lateral * Math.max(3, course.width - radius - 2.4),
+      baseY: course.floor - 0.8,
+      height: (8 + random() * (11 + difficulty * 10)) * scale,
+      radius,
+      lean: (random() - 0.5) * 0.14,
+      spin: random() * Math.PI * 2,
+      hardness: 1,
+    });
+  };
+  const addBoxObstacle = (kind, z, x, y, halfX, halfY, halfZ, extra = {}) => {
+    obstacles.push({
+      id: nextId(), kind, z, x, y, halfX, halfY, halfZ,
+      hardness: kind === 'cable' ? 0.52 : kind === 'pillar' ? 1.08 : 0.94,
+      spin: random() * Math.PI * 2,
+      ...extra,
+    });
+  };
+
+  if (setpiece === 'needles') {
+    const count = difficulty > 0.52 ? 3 : 2;
+    for (let item = 0; item < count; item += 1) {
+      addNeedle(zStart + 10 + item * (26 / Math.max(1, count - 1)), (item % 2 ? 0.58 : -0.58) + (random() - 0.5) * 0.18, 0.9 + item * 0.07);
+    }
+  } else if (setpiece === 'arch') {
+    const z = zStart + 18 + random() * 5;
+    const course = courseAt(z, seed);
+    const openingHalf = clamp(4.5 - difficulty * 0.7, 3.7, 4.5);
+    const openingBottom = course.floor + 2.1;
+    const openingTop = openingBottom + 9.4 - difficulty * 0.9;
+    const pillarHalf = 1.05;
+    const pillarY = course.floor + (openingTop - course.floor) * 0.5;
+    const pillarHeight = (openingTop - course.floor) * 0.5;
+    addBoxObstacle('pillar', z, course.center - openingHalf - pillarHalf, pillarY, pillarHalf, pillarHeight, 1.25, { group: `arch:${index}` });
+    addBoxObstacle('pillar', z, course.center + openingHalf + pillarHalf, pillarY, pillarHalf, pillarHeight, 1.25, { group: `arch:${index}` });
+    addBoxObstacle('beam', z, course.center, openingTop + 1.05, openingHalf + pillarHalf * 2, 1.05, 1.25, { group: `arch:${index}` });
+  } else if (setpiece === 'shelves') {
+    for (const [item, side] of [[0, -1], [1, 1]]) {
+      const z = zStart + 12 + item * 20 + random() * 2;
+      const course = courseAt(z, seed);
+      const reach = course.width * (0.55 + difficulty * 0.08);
+      const halfX = reach * 0.5;
+      const x = course.center + side * (course.width - halfX + 0.3);
+      const y = course.floor + (item ? 12.5 : 7.2) + random() * 1.4;
+      addBoxObstacle('shelf', z, x, y, halfX, 0.72 + random() * 0.5, 1.65, { side });
+    }
+  } else if (setpiece === 'boulders') {
+    const count = 3 + (difficulty > 0.62 ? 1 : 0);
+    for (let item = 0; item < count; item += 1) {
+      const z = zStart + 8 + item * (33 / Math.max(1, count - 1));
+      const course = courseAt(z, seed);
+      const radius = 1.15 + random() * (1.25 + difficulty * 0.5);
+      obstacles.push({
+        id: nextId(), kind: 'boulder', z,
+        x: course.center + (random() * 2 - 1) * course.width * 0.68,
+        y: course.floor + 4.5 + random() * (12 + difficulty * 4),
+        radius,
+        spin: random() * Math.PI * 2,
+        hardness: 0.9,
+      });
+    }
+  } else if (setpiece === 'cables') {
+    for (let item = 0; item < 2 + (difficulty > 0.72 ? 1 : 0); item += 1) {
+      const z = zStart + 11 + item * 13;
+      const course = courseAt(z, seed);
+      const height = item % 2 ? 13.2 : 7.1;
+      addBoxObstacle('cable', z, course.center, course.floor + height, course.width * 0.86, 0.105, 0.14, { cableIndex: item });
+    }
+  }
+
   if (index >= 1 && random() > 0.13) {
-    const z = zStart + 27 + random() * 12;
+    let z = zStart + 38 + random() * 5;
+    if (obstacles.some((obstacle) => Math.abs(obstacle.z - z) < 5.5)) z = zStart + 6;
     const course = courseAt(z, seed);
     const riskBias = random() < 0.34 + difficulty * 0.22 ? (random() < 0.5 ? -1 : 1) : 0;
     const lateral = riskBias
-      ? riskBias * course.width * (0.54 + random() * 0.18)
-      : (random() * 2 - 1) * course.width * 0.48;
+      ? riskBias * course.width * (0.48 + random() * 0.16)
+      : (random() * 2 - 1) * course.width * 0.42;
     gates.push({
       id: `g:${index}`,
       z,
@@ -152,35 +246,6 @@ export function createChunkPlan(index, seed) {
       radius: 4.5 - difficulty * 0.35,
       yaw: (random() - 0.5) * 0.16,
     });
-  }
-
-  const baseCount = index < 2 ? 0 : 1;
-  const obstacleCount = baseCount + (random() < 0.5 + difficulty * 0.34 ? 1 : 0) + (difficulty > 0.58 && random() < 0.32 ? 1 : 0);
-  for (let obstacleIndex = 0; obstacleIndex < obstacleCount; obstacleIndex += 1) {
-    let obstacle;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const z = zStart + 7 + random() * (CHUNK_LENGTH - 13);
-      const course = courseAt(z, seed);
-      const radius = 1.15 + random() * (1.35 + difficulty * 0.7);
-      const x = course.center + (random() * 2 - 1) * Math.max(2, course.width - radius - 2.2);
-      const height = 6.5 + random() * (9 + difficulty * 11);
-      const gate = gates[0];
-      const tooCloseToGate = gate && Math.hypot(x - gate.x, z - gate.z) < gate.radius + radius + 3.5;
-      if (!tooCloseToGate || attempt === 7) {
-        obstacle = {
-          id: `r:${index}:${obstacleIndex}`,
-          z,
-          x,
-          baseY: course.floor - 0.8,
-          height,
-          radius,
-          lean: (random() - 0.5) * 0.16,
-          spin: random() * Math.PI * 2,
-        };
-        break;
-      }
-    }
-    if (obstacle) obstacles.push(obstacle);
   }
 
   const wispCount = 2 + Math.floor(random() * 3);
@@ -196,7 +261,7 @@ export function createChunkPlan(index, seed) {
     });
   }
 
-  return { index, zStart, gates, obstacles, wisps };
+  return { index, zStart, setpiece, setpieceLabel: setpieceLabels[setpiece], gates, obstacles, wisps };
 }
 
 export function createFlightState() {
@@ -208,34 +273,96 @@ export function createFlightState() {
     vy: 0,
     speed: 29,
     bank: 0,
-    pitch: -0.05,
+    pitch: -0.025,
+    rollRate: 0,
+    pitchRate: 0,
+    angleOfAttack: 0,
+    stall: 0,
+  };
+}
+
+export function sanitizeDamage(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    leftWing: clamp(Number(source.leftWing ?? 100) || 0, 0, 100),
+    rightWing: clamp(Number(source.rightWing ?? 100) || 0, 0, 100),
+    nose: clamp(Number(source.nose ?? 100) || 0, 0, 100),
+    fold: clamp(Number(source.fold ?? 100) || 0, 0, 100),
+  };
+}
+
+export function damageIntegrity(value) {
+  const damage = sanitizeDamage(value);
+  return damage.leftWing * 0.28 + damage.rightWing * 0.28 + damage.nose * 0.18 + damage.fold * 0.26;
+}
+
+export function damageFactors(value) {
+  const damage = sanitizeDamage(value);
+  const left = damage.leftWing / 100;
+  const right = damage.rightWing / 100;
+  const fold = damage.fold / 100;
+  const nose = damage.nose / 100;
+  const wingAverage = (left + right) * 0.5;
+  return {
+    lift: clamp(wingAverage * (0.68 + fold * 0.32), 0.13, 1),
+    control: clamp(Math.min(1, wingAverage * 1.12) * (0.58 + fold * 0.42), 0.16, 1),
+    drag: 1 + (1 - nose) * 0.78 + (1 - fold) * 0.48 + Math.abs(left - right) * 0.42,
+    rollBias: clamp((right - left) * 0.52, -0.48, 0.48),
   };
 }
 
 export function stepFlight(state, input, delta, course, difficulty = 0) {
   const dt = clamp(delta, 0, 0.05);
   const sensitivity = clamp(input.sensitivity || 1, 0.6, 1.5);
-  const boosted = Boolean(input.boosted ?? input.folded);
-  // The chase camera looks along +Z, so its visual right points toward -world X.
-  // Input remains screen-relative: dragging right always moves the aircraft right on screen.
-  const lateralTarget = -clamp(input.x || 0, -1, 1) * (10.2 + difficulty * 2.2) * sensitivity;
+  const folded = Boolean(input.folded ?? input.boosted);
+  const damage = damageFactors(input.damage);
+  const rightIntent = clamp(input.x || 0, -1, 1);
   const climbIntent = -clamp(input.y || 0, -1, 1);
-  const verticalTarget = climbIntent * (6.9 + difficulty * 0.4) - (boosted ? 1.35 : 0) + 0.18;
-  const windPush = course.wind * (0.28 + difficulty * 0.24);
+  const controlAuthority = damage.control * (folded ? 0.43 : 1) * sensitivity;
+  const flightAngle = Math.atan2(state.vy, Math.max(6, state.speed));
+  const lowSpeed = clamp((20 - state.speed) / 7, 0, 1);
+  const neutralPitch = -0.02 - lowSpeed * 0.09;
+  const pitchTarget = folded
+    ? -0.34 + climbIntent * 0.055 * controlAuthority
+    : neutralPitch + climbIntent * 0.31 * controlAuthority;
+  const forcedNoseDown = (state.stall || 0) * 0.27;
+  const targetPitchRate = (pitchTarget - forcedNoseDown - state.pitch) * (folded ? 4.1 : 5.3);
+  state.pitchRate = damp(state.pitchRate || 0, targetPitchRate, folded ? 3.1 : 4.4, dt);
+  state.pitch = clamp(state.pitch + state.pitchRate * dt, -0.52, 0.34);
 
-  state.vx = damp(state.vx, lateralTarget + windPush, boosted ? 4.2 : 5.8, dt);
-  state.vy = damp(state.vy, verticalTarget, boosted ? 4.1 : 4.8, dt);
+  const rawAoa = state.pitch - flightAngle;
+  const highAoaStall = smoothstep(0.22, 0.37, rawAoa);
+  const stallTarget = clamp(Math.max(lowSpeed, highAoaStall) + (damage.lift < 0.42 ? 0.18 : 0), 0, 1);
+  state.stall = damp(state.stall || 0, stallTarget, stallTarget > (state.stall || 0) ? 5.2 : 1.8, dt);
+  state.angleOfAttack = damp(state.angleOfAttack || 0, rawAoa, 7, dt);
 
-  const diveGain = clamp(-state.vy, 0, 10) * 0.78;
-  const climbCost = clamp(state.vy, 0, 8) * 0.64;
-  const speedTarget = 28.5 + difficulty * 8.5 + (boosted ? 12.5 : 0) + diveGain - climbCost;
-  state.speed = damp(state.speed, clamp(speedTarget, 21, 55), boosted ? 3.1 : 2.15, dt);
+  const wingArea = damage.lift * (folded ? 0.34 : 1);
+  const liftCoefficient = clamp(0.86 + state.angleOfAttack * 2.75, 0.08, 1.58) * (1 - state.stall * 0.74);
+  const dynamicPressure = Math.pow(state.speed / 28, 2);
+  const lift = 9.81 * dynamicPressure * wingArea * liftCoefficient;
+  const bankLift = lift * Math.cos(state.bank);
+  state.vy += (bankLift - 9.81) * dt;
+
+  const inducedDrag = Math.max(0, liftCoefficient - 0.72) ** 2 * 1.9;
+  const dragCoefficient = (folded ? 0.00105 : 0.00142) * damage.drag;
+  const drag = 0.16 + state.speed * state.speed * dragCoefficient + inducedDrag + state.stall * 3.8;
+  const gravityAlongPath = -9.81 * Math.sin(flightAngle);
+  state.speed = clamp(state.speed + (gravityAlongPath - drag) * dt, 8.5, 58);
+
+  const stallWobble = state.stall * Math.sin(state.z * 0.19 + state.speed * 0.07) * 0.13;
+  const targetBank = clamp(rightIntent * 0.72 * controlAuthority + damage.rollBias + stallWobble, -0.93, 0.93);
+  const targetRollRate = (targetBank - state.bank) * (folded ? 3.3 : 5.8);
+  state.rollRate = damp(state.rollRate || 0, targetRollRate, folded ? 2.5 : 4.5, dt);
+  state.bank = clamp(state.bank + state.rollRate * dt, -1.08, 1.08);
+
+  const lateralLift = -Math.sin(state.bank) * lift * 0.76;
+  const windPush = course.wind * (0.36 + difficulty * 0.24);
+  state.vx += (lateralLift + windPush - state.vx * (folded ? 0.32 : 0.48)) * dt;
+  state.vx = clamp(state.vx, -18, 18);
 
   state.x += state.vx * dt;
   state.y += state.vy * dt;
   state.z += state.speed * dt;
-  state.bank = damp(state.bank, -state.vx * 0.049, 6.2, dt);
-  state.pitch = damp(state.pitch, state.vy * 0.042 - (boosted ? 0.045 : 0), 5.1, dt);
   return state;
 }
 
@@ -247,6 +374,16 @@ export function canyonClearance(state, course) {
 }
 
 export function obstacleClearance(state, obstacle) {
+  if (obstacle.kind === 'boulder') {
+    return Math.hypot(state.x - obstacle.x, state.y - obstacle.y, state.z - obstacle.z) - obstacle.radius;
+  }
+  if (['beam', 'pillar', 'shelf', 'cable'].includes(obstacle.kind)) {
+    const qx = Math.abs(state.x - obstacle.x) - obstacle.halfX;
+    const qy = Math.abs(state.y - obstacle.y) - obstacle.halfY;
+    const qz = Math.abs(state.z - obstacle.z) - obstacle.halfZ;
+    const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0));
+    return outside + Math.min(Math.max(qx, qy, qz), 0);
+  }
   const bottom = obstacle.baseY;
   const top = obstacle.baseY + obstacle.height;
   const heightAmount = clamp((state.y - bottom) / Math.max(0.001, obstacle.height), 0, 1);
@@ -258,25 +395,84 @@ export function obstacleClearance(state, obstacle) {
   return vertical > 0 ? Math.hypot(horizontal, vertical) : horizontal;
 }
 
-export function sweptObstacleClearance(previousState, nextState, obstacle, aircraftRadius = AIRCRAFT_CORE_RADIUS) {
-  const dx = nextState.x - previousState.x;
-  const dz = nextState.z - previousState.z;
-  const lengthSquared = dx * dx + dz * dz;
-  const closest = lengthSquared > 0.000001
-    ? clamp(((obstacle.x - previousState.x) * dx + (obstacle.z - previousState.z) * dz) / lengthSquared, 0, 1)
-    : 1;
-  const candidates = [0, closest, 1];
-  let best = { clearance: Infinity, progress: closest, x: nextState.x, y: nextState.y, z: nextState.z };
+export function airframePoints(state) {
+  const bank = state.bank || 0;
+  const pitch = state.pitch || 0;
+  const wingY = Math.sin(bank) * 0.94;
+  const wingX = Math.cos(bank) * 0.94;
+  return [
+    { zone: 'fold', x: state.x, y: state.y, z: state.z - 0.08, radius: AIRCRAFT_CORE_RADIUS },
+    { zone: 'nose', x: state.x, y: state.y + Math.sin(pitch) * 0.92, z: state.z + Math.cos(pitch) * 0.92, radius: 0.18 },
+    { zone: 'leftWing', x: state.x + wingX, y: state.y + wingY, z: state.z - 0.2, radius: 0.2 },
+    { zone: 'rightWing', x: state.x - wingX, y: state.y - wingY, z: state.z - 0.2, radius: 0.2 },
+  ];
+}
+
+export function airframeCanyonClearance(state, course) {
+  const boundaryLeft = course.center - course.width;
+  const boundaryRight = course.center + course.width;
+  const floorY = course.floor + 1.1;
+  let best = { minimum: Infinity, side: 'floor', zone: 'fold', left: Infinity, right: Infinity, floor: Infinity };
+  for (const point of airframePoints(state)) {
+    const left = point.x - boundaryLeft - point.radius;
+    const right = boundaryRight - point.x - point.radius;
+    const floor = point.y - floorY - point.radius;
+    const minimum = Math.min(left, right, floor);
+    if (minimum < best.minimum) {
+      best = {
+        minimum,
+        side: floor <= left && floor <= right ? 'floor' : left < right ? 'left' : 'right',
+        zone: point.zone,
+        left,
+        right,
+        floor,
+        point,
+      };
+    }
+  }
+  return best;
+}
+
+function sweptPointClearance(previousPoint, nextPoint, obstacle) {
+  const dz = nextPoint.z - previousPoint.z;
+  const crossing = Math.abs(dz) > 0.000001 ? clamp((obstacle.z - previousPoint.z) / dz, 0, 1) : 0.5;
+  const candidates = [0, crossing, 0.5, 1];
+  let best = { clearance: Infinity, progress: crossing, x: nextPoint.x, y: nextPoint.y, z: nextPoint.z };
   for (const progress of candidates) {
     const sample = {
-      x: lerp(previousState.x, nextState.x, progress),
-      y: lerp(previousState.y, nextState.y, progress),
-      z: lerp(previousState.z, nextState.z, progress),
+      x: lerp(previousPoint.x, nextPoint.x, progress),
+      y: lerp(previousPoint.y, nextPoint.y, progress),
+      z: lerp(previousPoint.z, nextPoint.z, progress),
     };
-    const clearance = obstacleClearance(sample, obstacle) - aircraftRadius;
+    const clearance = obstacleClearance(sample, obstacle) - nextPoint.radius;
     if (clearance < best.clearance) best = { clearance, progress, ...sample };
   }
   return best;
+}
+
+export function sweptAirframeClearance(previousState, nextState, obstacle) {
+  const previousPoints = airframePoints(previousState);
+  const nextPoints = airframePoints(nextState);
+  let best = { clearance: Infinity, progress: 1, zone: 'fold', x: nextState.x, y: nextState.y, z: nextState.z };
+  for (let index = 0; index < nextPoints.length; index += 1) {
+    const contact = sweptPointClearance(previousPoints[index], nextPoints[index], obstacle);
+    if (contact.clearance < best.clearance) best = { ...contact, zone: nextPoints[index].zone };
+  }
+  return best;
+}
+
+export function sweptObstacleClearance(previousState, nextState, obstacle, aircraftRadius = AIRCRAFT_CORE_RADIUS) {
+  const previous = { ...previousState, radius: aircraftRadius };
+  const next = { ...nextState, radius: aircraftRadius };
+  return sweptPointClearance(previous, next, obstacle);
+}
+
+export function impactSeverity(speed, penetration, zone, obstacle = {}) {
+  const hardness = Number.isFinite(obstacle.hardness) ? obstacle.hardness : 1;
+  const zoneFactor = zone === 'nose' ? 1.12 : zone === 'fold' ? 0.94 : 0.72;
+  const cableFactor = obstacle.kind === 'cable' && zone.includes('Wing') ? 1.3 : 1;
+  const energy = Math.max(0, speed - 13) * 0.62 + Math.max(0, -penetration) * 11;
+  return clamp(Math.round((4 + energy) * hardness * zoneFactor * cableFactor), 4, 56);
 }
 
 export function gateProgress(previousZ, nextZ, gate) {
@@ -335,6 +531,10 @@ export function sanitizeSavedRun(value) {
     speed: clamp(finite(sourceState.speed, 27), 0, 80),
     bank: clamp(finite(sourceState.bank), -Math.PI, Math.PI),
     pitch: clamp(finite(sourceState.pitch), -Math.PI, Math.PI),
+    rollRate: clamp(finite(sourceState.rollRate), -4, 4),
+    pitchRate: clamp(finite(sourceState.pitchRate), -4, 4),
+    angleOfAttack: clamp(finite(sourceState.angleOfAttack), -1, 1),
+    stall: clamp(finite(sourceState.stall), 0, 1),
   };
   const boundedIds = (list) => Array.isArray(list)
     ? list.filter((item) => typeof item === 'string').slice(-500)
@@ -345,7 +545,8 @@ export function sanitizeSavedRun(value) {
     mode: value.mode,
     flight,
     score: clamp(Math.floor(finite(value.score)), 0, 1000000000),
-    integrity: clamp(finite(value.integrity, 100), 1, 100),
+    damage: sanitizeDamage(value.damage),
+    integrity: damageIntegrity(value.damage),
     flow: clamp(finite(value.flow), 0, 100),
     flowTime: clamp(finite(value.flowTime), 0, 12),
     combo: clamp(Math.floor(finite(value.combo, 1)), 1, 99),

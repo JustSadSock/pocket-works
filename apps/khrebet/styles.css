@@ -339,6 +339,34 @@ a:focus-visible {
 .integrity-track i { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; background: var(--ink); transform-origin: bottom; }
 .integrity-block.is-critical .integrity-track i { background: var(--signal-deep); animation: critical 500ms step-end infinite; }
 
+.paper-status {
+  position: absolute;
+  top: calc(155px + var(--safe-top));
+  left: calc(14px + var(--safe-left));
+  width: 106px;
+  display: grid;
+  gap: 4px;
+  color: var(--ink);
+  font-family: var(--mono);
+  text-shadow: 0 1px 7px rgba(232,231,220,.8);
+}
+
+.paper-status > span {
+  display: grid;
+  grid-template-columns: 42px 1fr 18px;
+  align-items: center;
+  gap: 4px;
+}
+
+.paper-status i { font-size: 5px; font-style: normal; font-weight: 850; letter-spacing: .06em; }
+.paper-status em { position: relative; height: 2px; overflow: hidden; background: rgba(23,32,32,.2); }
+.paper-status em::after { position: absolute; inset: 0; width: var(--health, 100%); background: var(--ink); content: ""; transition: width 180ms ease, background 180ms ease; }
+.paper-status b { font-size: 6px; text-align: right; }
+.paper-status > span[data-state="damaged"] { color: #94452f; }
+.paper-status > span[data-state="damaged"] em::after { background: var(--signal-deep); }
+.paper-status > span[data-state="critical"] { color: #741e18; animation: critical 520ms step-end infinite; }
+.paper-status > span[data-state="critical"] em::after { background: #741e18; }
+
 .score-block { top: calc(74px + var(--safe-top)); right: calc(15px + var(--safe-right)); justify-items: end; gap: 3px; }
 .score-block span,
 .flow-block span { font-size: 7px; letter-spacing: .15em; }
@@ -389,6 +417,26 @@ a:focus-visible {
 .flight-reticle i:last-child { transform: scaleX(-1); }
 .flight-reticle b { width: 5px; height: 5px; border: 1px solid var(--signal-deep); transform: rotate(45deg); box-shadow: 0 0 10px rgba(239,106,60,.34); }
 .flight-stage.is-boosting .flight-reticle { animation: reticle-pulse 620ms ease-in-out infinite alternate; }
+
+.stall-warning {
+  position: absolute;
+  z-index: 18;
+  top: 57%;
+  left: 50%;
+  transform: translate(-50%, 10px);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: #7b1f18;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 1px 10px rgba(232,231,220,.9);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.stall-warning b { font: 900 12px/1 var(--mono); letter-spacing: .13em; }
+.stall-warning span { font: 800 6px/1 var(--mono); letter-spacing: .1em; }
+.stall-warning.is-visible { transform: translate(-50%, 0); opacity: 1; animation: danger-tick 420ms step-end infinite; }
 
 .steer-cursor {
   position: absolute;
