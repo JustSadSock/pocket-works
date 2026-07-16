@@ -1,6 +1,18 @@
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
+const DEFAULT_VISUAL = Object.freeze({
+  skyTop: '#405748', skyMid: '#1f382c', skyBottom: '#0b1711',
+  glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', flora: 'fern'
+});
+
+function visualTheme(level) {
+  return { ...DEFAULT_VISUAL, ...(level?.visual || {}) };
+}
+
+function tint(rgb, alpha) {
+  return `rgba(${rgb},${alpha})`;
+}
 
 function hashNoise(x, y = 0, seed = 0) {
   const value = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
@@ -133,36 +145,37 @@ export class LivingGreenhouseLayer {
     const directional = clamp(((ball?.vx || 0) - (ball?.vy || 0) * .25) / 900, -1, 1);
     this.windTarget = clamp((this.renderer.parallaxX || 0) * .45 + directional * .55, -1, 1);
     this.wind = lerp(this.wind, this.windTarget, 1 - Math.pow(.004, Math.max(dt, 1 / 240)));
-    this.drawBackdrop(level, ball, time, mode);
-    this.drawForeground(level, ball, aim, time, dt, mode, speed);
+    const theme = visualTheme(level);
+    this.drawBackdrop(level, ball, time, mode, theme);
+    this.drawForeground(level, ball, aim, time, dt, mode, speed, theme);
   }
 
-  drawBackdrop(level, ball, time, mode) {
+  drawBackdrop(level, ball, time, mode, theme) {
     const ctx = this.backdropCtx;
     const { width, height } = this;
     ctx.clearRect(0, 0, width, height);
 
     const sky = ctx.createLinearGradient(0, 0, 0, height);
-    sky.addColorStop(0, mode === 'menu' ? '#405748' : '#334b3f');
-    sky.addColorStop(.42, '#1f382c');
-    sky.addColorStop(1, '#0b1711');
+    sky.addColorStop(0, theme.skyTop);
+    sky.addColorStop(.42, theme.skyMid);
+    sky.addColorStop(1, theme.skyBottom);
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, width, height);
 
     const warm = ctx.createRadialGradient(width * .76, height * .06, 0, width * .76, height * .06, width * .72);
-    warm.addColorStop(0, 'rgba(240,224,161,.24)');
-    warm.addColorStop(.34, 'rgba(211,205,145,.08)');
-    warm.addColorStop(1, 'rgba(211,205,145,0)');
+    warm.addColorStop(0, tint(theme.glow, .24));
+    warm.addColorStop(.34, tint(theme.glow, .08));
+    warm.addColorStop(1, tint(theme.glow, 0));
     ctx.fillStyle = warm;
     ctx.fillRect(0, 0, width, height * .86);
 
-    this.drawGreenhouseFrame(ctx, time);
-    this.drawDistantPlants(ctx, time);
+    this.drawGreenhouseFrame(ctx, time, theme);
+    this.drawDistantPlants(ctx, time, theme);
     if (this.quality > .55) this.drawCondensation(ctx, time);
-    this.drawFloorMist(ctx, time, mode);
+    this.drawFloorMist(ctx, time, mode, theme);
   }
 
-  drawGreenhouseFrame(ctx, time) {
+  drawGreenhouseFrame(ctx, time, theme) {
     const { width, height } = this;
     const px = (this.renderer.parallaxX || 0) * 12;
     const py = (this.renderer.parallaxY || 0) * 6;
@@ -210,8 +223,8 @@ export class LivingGreenhouseLayer {
       const startX = width * (.66 + index * .1);
       const spread = width * (.18 + index * .04);
       const beam = ctx.createLinearGradient(startX, 0, startX - spread, height * .8);
-      beam.addColorStop(0, `rgba(243,225,155,${.10 * shaftPulse})`);
-      beam.addColorStop(1, 'rgba(243,225,155,0)');
+      beam.addColorStop(0, tint(theme.beam, .10 * shaftPulse));
+      beam.addColorStop(1, tint(theme.beam, 0));
       ctx.fillStyle = beam;
       ctx.beginPath();
       ctx.moveTo(startX - 22, 0);
@@ -224,7 +237,7 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawDistantPlants(ctx, time) {
+  drawDistantPlants(ctx, time, theme) {
     const { width, height } = this;
     const horizon = height * .48;
     ctx.save();
@@ -234,7 +247,7 @@ export class LivingGreenhouseLayer {
       const baseY = horizon + hashNoise(index, 205) * height * .2;
       const scale = .65 + hashNoise(index, 211) * 1.25;
       const sway = this.reducedMotion ? 0 : Math.sin(time * (.22 + hashNoise(index, 213) * .22) + index) * 4 * scale + this.wind * 3;
-      ctx.strokeStyle = index % 4 === 0 ? 'rgba(64,91,61,.72)' : 'rgba(20,55,35,.78)';
+      ctx.strokeStyle = index % 4 === 0 ? tint(theme.mist, .32) : 'rgba(20,55,35,.78)';
       ctx.lineWidth = 2.4 * scale;
       ctx.beginPath();
       ctx.moveTo(x, baseY + 58 * scale);
@@ -245,7 +258,7 @@ export class LivingGreenhouseLayer {
         const t = (leaf + 1) / (leaves + 1);
         const lx = lerp(x, x + sway, t);
         const ly = lerp(baseY + 58 * scale, baseY - 42 * scale, t);
-        this.drawLeaf(ctx, lx, ly, 10 * scale, (leaf % 2 ? 1 : -1) * (.7 + t * .45), 'rgba(42,83,49,.72)');
+        this.drawLeaf(ctx, lx, ly, 10 * scale, (leaf % 2 ? 1 : -1) * (.7 + t * .45), tint(theme.mist, .30));
       }
     }
     ctx.restore();
@@ -273,7 +286,7 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawFloorMist(ctx, time, mode) {
+  drawFloorMist(ctx, time, mode, theme) {
     const { width, height } = this;
     const mist = ctx.createLinearGradient(0, height * .58, 0, height);
     mist.addColorStop(0, 'rgba(11,25,18,0)');
@@ -289,9 +302,9 @@ export class LivingGreenhouseLayer {
       const y = height * (.72 + index * .055);
       const drift = this.reducedMotion ? 0 : Math.sin(time * .1 + index * 1.7) * 18;
       const band = ctx.createLinearGradient(0, y, width, y);
-      band.addColorStop(0, 'rgba(142,184,154,0)');
-      band.addColorStop(.5, 'rgba(142,184,154,.18)');
-      band.addColorStop(1, 'rgba(142,184,154,0)');
+      band.addColorStop(0, tint(theme.mist, 0));
+      band.addColorStop(.5, tint(theme.mist, .18));
+      band.addColorStop(1, tint(theme.mist, 0));
       ctx.strokeStyle = band;
       ctx.lineWidth = 18 + index * 3;
       ctx.beginPath();
@@ -302,14 +315,14 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawForeground(level, ball, aim, time, dt, mode, speed) {
+  drawForeground(level, ball, aim, time, dt, mode, speed, theme) {
     const ctx = this.foregroundCtx;
     ctx.clearRect(0, 0, this.width, this.height);
     this.drawGroundingFringe(ctx, level, time);
     this.drawGlassArchitecture(ctx, level, time);
     this.drawFlag(ctx, level, time);
     this.drawVines(ctx, time, mode);
-    this.drawPollen(ctx, time, speed);
+    this.drawPollen(ctx, time, speed, theme);
     this.drawPulses(ctx, dt);
     this.drawVignette(ctx, mode);
   }
@@ -510,7 +523,7 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawPollen(ctx, time, speed) {
+  drawPollen(ctx, time, speed, theme) {
     const { width, height } = this;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -522,7 +535,7 @@ export class LivingGreenhouseLayer {
       const y = ((mote.y + motion + Math.sin(time * .31 + mote.phase) * .012) % 1) * height;
       const radius = .7 + mote.depth * 1.45;
       const alpha = .08 + mote.depth * .16 + Math.min(.08, speed / 12000);
-      ctx.fillStyle = `rgba(226,215,145,${alpha})`;
+      ctx.fillStyle = tint(theme.pollen, alpha);
       ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
     }
     ctx.restore();

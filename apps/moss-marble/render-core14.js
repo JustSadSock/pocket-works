@@ -22,6 +22,12 @@ function color(hex, alpha = 1) {
   ];
 }
 
+function cssColor(value, fallback, alphaScale = 1) {
+  if (!Array.isArray(value) || value.length < 3) return fallback;
+  const alpha = clamp((Number.isFinite(value[3]) ? value[3] : 1) * alphaScale, 0, 1);
+  return `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`;
+}
+
 const C = {
   grass: color('#6f8658'),
   grassLight: color('#91a66c'),
@@ -999,13 +1005,17 @@ class WebGLDiorama {
     this.updateParticles(dt);
 
     const horizon = this.height * .48;
+    const rainAmount = clamp(Number(level?.visual?.rain ?? 1), 0, 1.6);
+    const rainCount = Math.min(this.rain.length, Math.round(this.rain.length * Math.min(1, rainAmount)));
+    const rainTint = level?.visual?.mist || '223,239,229';
     ctx.save();
-    for (const drop of this.rain) {
+    for (let index = 0; index < rainCount; index += 1) {
+      const drop = this.rain[index];
       const y = ((drop.y + time * drop.speed * .025) % 1) * horizon;
       const x = drop.x * this.width + this.parallaxX * 7;
-      ctx.strokeStyle = `rgba(223,239,229,${drop.alpha})`;
+      ctx.strokeStyle = `rgba(${rainTint},${drop.alpha * (.72 + rainAmount * .28)})`;
       ctx.lineWidth = .7;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + drop.length); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + drop.length * (.88 + rainAmount * .12)); ctx.stroke();
     }
     ctx.restore();
 
@@ -1172,10 +1182,11 @@ class CanvasFallback {
   }
   drawSurface(feature) {
     const ctx = this.ctx;
+    const terrain = this.terrainPalette || {};
     const palette = {
-      water: ['rgba(35,104,104,.92)', 'rgba(173,225,212,.34)'],
-      sand: ['#b99754', 'rgba(246,220,159,.48)'],
-      moss: ['#315f3a', 'rgba(144,181,102,.36)']
+      water: [cssColor(terrain.water, 'rgba(35,104,104,.92)'), cssColor(terrain.waterLight, 'rgba(173,225,212,.34)', .42)],
+      sand: [cssColor(terrain.sand, '#b99754'), cssColor(terrain.sandLight, 'rgba(246,220,159,.48)', .48)],
+      moss: [cssColor(terrain.moss, '#315f3a'), cssColor(terrain.mossLight, 'rgba(144,181,102,.36)', .42)]
     };
     const colors = palette[feature.type];
     if (!colors) return;
@@ -1269,12 +1280,14 @@ class CanvasFallback {
   draw(level, ball, aim, time = 0) {
     this.resize(); this.fit(level);
     const ctx = this.ctx;
+    const visual = level.visual || {};
+    this.terrainPalette = visual.terrain || {};
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, '#30463b'); gradient.addColorStop(1, '#101d17');
+    gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
-    ctx.fillStyle = '#78945e'; ctx.fill();
-    ctx.strokeStyle = 'rgba(230,222,178,.42)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
+    ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);

@@ -199,6 +199,7 @@ function maskWeight(mask, x, y) {
 }
 
 function buildField(level, blueprint) {
+  const palette = { ...COLORS, ...(level.visual?.terrain || {}) };
   const landforms = (blueprint.landforms || []).map((feature) => resolveFeature(level, feature));
   const masks = (blueprint.surfaces || []).map((feature) => resolveFeature(level, feature));
   const ramps = landforms.filter((feature) => feature.ramp);
@@ -238,8 +239,8 @@ function buildField(level, blueprint) {
   const colorAt = (x, y, height, normal) => {
     const info = surfaceInfoAt(x, y);
     const type = info.weight > .08 ? info.type : 'grass';
-    const base = type === 'sand' ? COLORS.sand : type === 'moss' ? COLORS.moss : type === 'water' ? COLORS.water : COLORS.grass;
-    const light = type === 'sand' ? COLORS.sandLight : type === 'moss' ? COLORS.mossLight : type === 'water' ? COLORS.waterLight : COLORS.grassLight;
+    const base = type === 'sand' ? palette.sand : type === 'moss' ? palette.moss : type === 'water' ? palette.water : palette.grass;
+    const light = type === 'sand' ? palette.sandLight : type === 'moss' ? palette.mossLight : type === 'water' ? palette.waterLight : palette.grassLight;
     const texture = noise(x * .037, y * .037, seed);
     const fine = noise(x * .11, y * .11, seed + 17);
     const variation = clamp(.12 + texture * .22 + fine * .07 + Math.max(0, normal[2] - .84) * .12, 0, .48);
@@ -247,8 +248,8 @@ function buildField(level, blueprint) {
     const cavity = clamp((10 - height) / 18, 0, 1);
     const slopeShade = clamp(.76 + normal[2] * .25 - cavity * .12, .60, 1.06);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
-    if (type === 'grass' && fine > .78) color = mixColor(color, COLORS.grassDry, .14);
-    if (info.weight > 0 && info.weight < 1) color = mixColor(COLORS.grass, color, info.weight);
+    if (type === 'grass' && fine > .78) color = mixColor(color, palette.grassDry, .14);
+    if (info.weight > 0 && info.weight < 1) color = mixColor(palette.grass, color, info.weight);
     return color;
   };
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
@@ -445,7 +446,7 @@ const BLUEPRINTS = {
       { material: 'wood', width: 17, height: 26, points: [{ t: .72, side: -.54 }, { t: .80, side: -.34 }, { t: .87, side: -.12 }] }
     ],
     props: [
-      { kind: 'rockCluster', t: .32, side: -.61, r: 64, parts: [{ x: -18, y: 4, r: 38 }, { x: 25, y: -7, r: 31 }] },
+      { kind: 'rockCluster', t: .32, side: -.35, r: 64, parts: [{ x: -18, y: 4, r: 38 }, { x: 25, y: -7, r: 31 }] },
       { kind: 'stump', t: .55, side: .62, r: 61, height: 72 },
       { kind: 'rockCluster', t: .76, side: -.58, r: 58, parts: [{ x: -16, y: 2, r: 34 }, { x: 22, y: -5, r: 28 }] }
     ]

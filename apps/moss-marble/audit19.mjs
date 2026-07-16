@@ -18,6 +18,49 @@ import {
 
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
+const pointInPolygon = (point, polygon) => {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const a = polygon[index];
+    const b = polygon[previous];
+    if (((a.y > point.y) !== (b.y > point.y)) && point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || 1e-9) + a.x) inside = !inside;
+  }
+  return inside;
+};
+const orientation = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+const pointOnSegment = (point, a, b) => point.x >= Math.min(a.x, b.x) - 1e-7 && point.x <= Math.max(a.x, b.x) + 1e-7 &&
+  point.y >= Math.min(a.y, b.y) - 1e-7 && point.y <= Math.max(a.y, b.y) + 1e-7;
+const segmentsCross = (a, b, c, d) => {
+  const first = orientation(a, b, c);
+  const second = orientation(a, b, d);
+  const third = orientation(c, d, a);
+  const fourth = orientation(c, d, b);
+  if (first * second < -1e-7 && third * fourth < -1e-7) return true;
+  return Math.abs(first) <= 1e-7 && pointOnSegment(c, a, b) ||
+    Math.abs(second) <= 1e-7 && pointOnSegment(d, a, b) ||
+    Math.abs(third) <= 1e-7 && pointOnSegment(a, c, d) ||
+    Math.abs(fourth) <= 1e-7 && pointOnSegment(b, c, d);
+};
+const outlineCrossings = (outline) => {
+  const crossings = [];
+  for (let first = 0; first < outline.length; first += 1) {
+    for (let second = first + 1; second < outline.length; second += 1) {
+      if (second === first + 1 || (first === 0 && second === outline.length - 1)) continue;
+      if (segmentsCross(outline[first], outline[(first + 1) % outline.length], outline[second], outline[(second + 1) % outline.length])) crossings.push([first, second]);
+    }
+  }
+  return crossings;
+};
+const catmullRom = (a, b, c, d, t) => ({
+  x: .5 * ((2 * b.x) + (-a.x + c.x) * t + (2 * a.x - 5 * b.x + 4 * c.x - d.x) * t * t + (-a.x + 3 * b.x - 3 * c.x + d.x) * t * t * t),
+  y: .5 * ((2 * b.y) + (-a.y + c.y) * t + (2 * a.y - 5 * b.y + 4 * c.y - d.y) * t * t + (-a.y + 3 * b.y - 3 * c.y + d.y) * t * t * t)
+});
+const routeSample = (points, progress) => {
+  const scaled = progress * (points.length - 1);
+  const index = Math.min(points.length - 2, Math.floor(scaled));
+  const t = scaled - index;
+  return catmullRom(points[Math.max(0, index - 1)], points[index], points[index + 1], points[Math.min(points.length - 1, index + 2)], t);
+};
 const wallDistanceToPoint = (wall, point) => {
   const dx = wall.bx - wall.ax;
   const dy = wall.by - wall.ay;
@@ -27,14 +70,39 @@ const wallDistanceToPoint = (wall, point) => {
   const y = wall.ay + dy * t;
   return Math.hypot(point.x - x, point.y - y) - Number(wall.thickness || 0) * .5;
 };
+const outlineDistanceToPoint = (outline, point) => Math.min(...outline.map((a, index) => {
+  const b = outline[(index + 1) % outline.length];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq)) : 0;
+  return Math.hypot(point.x - (a.x + dx * t), point.y - (a.y + dy * t));
+}));
 
 for (const source of LEVELS) {
+  const crossings = outlineCrossings(source.outline);
+  assert(!crossings.length, `campaign ${source.id}: outline self-intersections ${JSON.stringify(crossings)}`);
+  assert(pointInPolygon(source.start, source.outline), `campaign ${source.id}: start outside route`);
+  assert(pointInPolygon(source.hole, source.outline), `campaign ${source.id}: hole outside route`);
+  const splineInside = Array.from({ length: 119 }, (_, index) => routeSample(source.centerline, (index + 1) / 120))
+    .every((point) => pointInPolygon(point, source.outline));
+  assert(splineInside, `campaign ${source.id}: spline leaves route outline`);
+  const visual = source.visual;
+  assert(visual && /^#[0-9a-f]{6}$/i.test(visual.skyTop) && /^#[0-9a-f]{6}$/i.test(visual.skyBottom), `campaign ${source.id}: invalid atmosphere palette`);
+  assert(Number.isFinite(visual?.rain) && visual.rain >= 0 && visual.rain <= 1.6, `campaign ${source.id}: invalid rain density`);
+  for (const [name, value] of Object.entries(visual?.terrain || {})) {
+    assert(Array.isArray(value) && value.length === 4 && value.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 1), `campaign ${source.id}: invalid terrain color ${name}`);
+  }
   const level = compileCourse19(source);
   const report = inspectCourse19(level);
   assert(report.ok, `campaign ${source.id}: ${report.issues.join(', ')}`);
   assert(level.__course19 === true, `campaign ${source.id}: compiler marker`);
   assert(level.course18?.triangleCount >= 0 && level.course18.triangleCount <= 12000, `campaign ${source.id}: triangle budget`);
   assert(level.course18?.field?.surfaceAt, `campaign ${source.id}: field contract`);
+  for (const [index, obstacle] of (level.obstacles || []).entries()) {
+    assert(pointInPolygon(obstacle, level.outline), `campaign ${source.id}: prop ${index} outside route`);
+    assert(outlineDistanceToPoint(level.outline, obstacle) >= obstacle.r * .6, `campaign ${source.id}: prop ${index} clipped by route edge`);
+  }
 }
 
 for (const source of LEVELS.filter((level) => [1, 6, 8].includes(level.id))) {
@@ -125,4 +193,4 @@ if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);
 }
-console.log('Moss & Marble 1.11 audit passed');
+console.log('Moss & Marble 1.12 audit passed');

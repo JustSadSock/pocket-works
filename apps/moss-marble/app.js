@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -259,7 +259,16 @@ function holeMapMarkup(item) {
     const radius = Math.max(1.8, Math.min(4.2, obstacle.r * scale * .24));
     return `<circle class="map-obstacle" cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="${radius.toFixed(1)}"/>`;
   }).join('');
-  return `<svg class="hole-map" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
+  const cssColor = (value, fallback, alpha) => Array.isArray(value) && value.length >= 3
+    ? `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`
+    : fallback;
+  const terrain = item.visual?.terrain || {};
+  const mapStyle = [
+    `--map-route:${cssColor(terrain.grassLight, 'rgba(222,220,171,.72)', .82)}`,
+    `--map-route-shadow:${cssColor(terrain.moss, 'rgba(4,16,9,.28)', .48)}`,
+    `--map-obstacle:${cssColor(terrain.moss, '#28372d', 1)}`
+  ].join(';');
+  return `<svg class="hole-map" style="${mapStyle}" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
 }
 
 function renderHoleShelf() {
@@ -269,8 +278,12 @@ function renderHoleShelf() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hole-pot';
+    if (item.name.split(/\s+/).some((word) => word.length > 11)) button.classList.add('has-long-name');
     button.disabled = index >= save.unlocked;
     button.dataset.index = String(index);
+    button.style.setProperty('--hole-sky-top', item.visual?.skyTop || '#486047');
+    button.style.setProperty('--hole-sky-bottom', item.visual?.skyBottom || '#263d31');
+    button.style.setProperty('--hole-glow', `rgba(${item.visual?.glow || '215,207,146'},.22)`);
     if (save.best[index] === 1) button.classList.add('is-perfect');
     const best = save.best[index];
     button.innerHTML = `${holeMapMarkup(item)}<span class="label"><b>${item.id}. ${item.name}</b><small>${button.disabled ? 'Закрыто' : best == null ? `пар ${item.par}` : `лучшее ${best} · пар ${item.par}`}</small></span>`;
