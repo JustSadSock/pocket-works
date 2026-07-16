@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#789bb4">
+  <meta name="description" content="МЕССА — трёхмерная гравитационная игра о комете и небесной машине.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="МЕССА">
+  <title>МЕССА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <section class="world" id="world" data-gesture-surface data-block-callout aria-label="Трёхмерная небесная машина">
+      <div class="sky-depth" aria-hidden="true"><i></i><i></i><i></i></div>
+      <canvas id="worldCanvas" role="application" aria-label="Комета вращается вокруг чёрного солнца. Удерживай палец в мире, чтобы создать сингулярность и искривить орбиту."></canvas>
+      <div class="light-wash" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
+      <div class="gravity-marker" id="gravityMarker" aria-hidden="true"><i></i><b></b><i></i></div>
+      <div class="impact-flash" id="impactFlash" aria-hidden="true"></div>
+      <div class="rewind-wash" id="rewindWash" aria-hidden="true"></div>
+      <div class="awakening" id="awakening" aria-hidden="true"><i></i><b></b><i></i></div>
+
+      <section class="loading" id="loading" data-ui>
+        <div class="loading-orbit" aria-hidden="true"><i></i><b></b><i></i></div>
+        <p>СВОДИМ НЕБЕСА</p>
+        <span id="loadingText">строим гравитационную машину</span>
+      </section>
+
+      <section class="fatal" id="fatal" data-ui hidden>
+        <p>НЕБО НЕ СОБРАЛОСЬ</p>
+        <h1>3D-система не запустилась.</h1>
+        <span id="fatalText">Нужен браузер с поддержкой WebGL. Обнови страницу или открой игру в Safari / Chrome.</span>
+        <button type="button" id="reloadButton" data-native-press>ПЕРЕЗАГРУЗИТЬ</button>
+        <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </section>
+
+      <header class="flight-header" id="flightHeader" data-ui hidden>
+        <div class="brand-lockup"><b>МЕССА</b><span>НЕБЕСНАЯ МАШИНА / № 08</span></div>
+        <div class="voice-counter"><span>ГОЛОС</span><b id="voiceValue">01 / 08</b></div>
+        <button type="button" class="pause-button" id="pauseButton" aria-label="Пауза" data-native-press><i></i><i></i></button>
+      </header>
+
+      <section class="hud" id="hud" data-ui hidden>
+        <div class="stability" aria-label="Устойчивость орбиты">
+          <span>УСТОЙЧИВОСТЬ</span>
+          <div id="stabilityMarks"><i></i><i></i><i></i></div>
+        </div>
+        <div class="score"><span>РЕЗОНАНС</span><b id="scoreValue">000000</b></div>
+        <div class="velocity"><b id="velocityValue">2.84</b><span>ОРБ / С</span></div>
+      </section>
+
+      <div class="target-copy" id="targetCopy" aria-live="polite" data-ui>
+        <span>СЛЕДУЮЩИЙ ГОЛОС</span><b id="targetDistance">—</b>
+      </div>
+
+      <div class="event-callout" id="eventCallout" aria-live="polite" data-ui><b></b><span></span></div>
+
+      <button type="button" class="rewind-button" id="rewindButton" data-ui data-native-press hidden>
+        <span class="rewind-ring"><i id="rewindFill"></i><b>↶</b></span>
+        <span><b>ОТКАТ</b><small id="rewindLabel">42%</small></span>
+      </button>
+
+      <section class="overlay menu-overlay" id="menuOverlay" data-ui>
+        <div class="menu-grid" aria-hidden="true"></div>
+        <header class="menu-meta"><span>POCKET WORKS / GRAVITY INSTRUMENT 01</span><b>∞ : 08</b></header>
+        <div class="menu-title">
+          <p>ТАКТИЛЬНАЯ 3D-ОРБИТА</p>
+          <h1>МЕССА</h1>
+          <h2>Не веди комету.<br>Гни пространство.</h2>
+        </div>
+        <div class="menu-console">
+          <div class="records">
+            <span>ЛУЧШИЙ РЕЗОНАНС <b id="bestScore">0</b></span>
+            <span>СОБРАНО ГОЛОСОВ <b id="bestVoices">0 / 8</b></span>
+            <span>ПРОБУЖДЕНИЙ <b id="winsValue">0</b></span>
+          </div>
+          <button type="button" class="start-action" id="startButton" data-native-press>
+            <span><b>ЗАПУСТИТЬ КОМЕТУ</b><small>новая небесная машина</small></span><i>→</i>
+          </button>
+          <button type="button" class="resume-action" id="resumeButton" data-native-press hidden>
+            <span><b>ПРОДОЛЖИТЬ ОРБИТУ</b><small id="resumeMeta">сохранённая траектория</small></span><i>↗</i>
+          </button>
+          <div class="menu-actions">
+            <button type="button" id="howButton" data-native-press>КАК ЭТО РАБОТАЕТ</button>
+            <button type="button" id="soundButton" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+            <button type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+            <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="overlay briefing-overlay" id="briefingOverlay" data-ui hidden>
+        <article class="briefing-sheet">
+          <header><span>ИНСТРУКЦИЯ / 17 СЕКУНД</span><button type="button" id="briefingClose" data-native-press>ЗАКРЫТЬ</button></header>
+          <h2>Ты не управляешь<br>красной кометой.</h2>
+          <div class="briefing-steps">
+            <div><b>01</b><p><strong>ЗАЖМИ ПАЛЕЦ В ПУСТОТЕ</strong>В этой точке родится маленькая чёрная дыра. Комета начнёт падать к ней.</p></div>
+            <div><b>02</b><p><strong>ПЕРЕТАСКИВАЙ СИНГУЛЯРНОСТЬ</strong>Веди её перед кометой, чтобы вытягивать дугу. Отпусти — останется обычная орбита.</p></div>
+            <div><b>03</b><p><strong>СОБЕРИ ВОСЕМЬ ГОЛОСОВ</strong>Белые монолиты двигаются. Почти коснулся — получишь энергию. Коснулся — потеряешь устойчивость.</p></div>
+            <div><b>04</b><p><strong>НЕ НРАВИТСЯ БУДУЩЕЕ — ОТМОТАЙ</strong>Кнопка «Откат» возвращает комету по настоящему световому следу, если кольцо заряжено.</p></div>
+          </div>
+          <button type="button" class="start-action" id="briefingStart" data-native-press><span><b>Я БОГ, Я ПОНЯЛ</b><small>запустить орбиту</small></span><i>→</i></button>
+        </article>
+      </section>
+
+      <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
+        <article class="panel">
+          <p>ВРЕМЯ ОСТАНОВЛЕНО</p>
+          <h2>Орбита подождёт.</h2>
+          <div class="panel-stats"><span>Голоса <b id="pauseVoices">0 / 8</b></span><span>Резонанс <b id="pauseScore">0</b></span><span>Устойчивость <b id="pauseStability">3 / 3</b></span></div>
+          <button type="button" class="panel-primary" id="continueButton" data-native-press>ПРОДОЛЖИТЬ <b>→</b></button>
+          <button type="button" class="panel-action" id="restartButton" data-native-press>Начать эту машину заново</button>
+          <button type="button" class="panel-action" id="pauseSoundButton" aria-pressed="true" data-native-press>Звук: вкл</button>
+          <button type="button" class="panel-action" data-workshop-trigger data-native-press>Workshop</button>
+          <button type="button" class="panel-action" id="menuButton" data-native-press>Завершить и выйти в меню</button>
+          <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+        </article>
+      </section>
+
+      <section class="overlay result-overlay" id="resultOverlay" data-ui hidden>
+        <article class="result-panel">
+          <p id="resultKicker">ОРБИТА РАЗРУШЕНА</p>
+          <h2 id="resultTitle">Небо пережило тебя.</h2>
+          <div class="result-score"><b id="resultScore">0</b><span>РЕЗОНАНС</span><i id="recordBadge" hidden>НОВЫЙ РЕКОРД</i></div>
+          <div class="result-stats"><span>Голоса <b id="resultVoices">0 / 8</b></span><span>На грани <b id="resultNear">0</b></span><span>Время <b id="resultTime">00:00</b></span></div>
+          <p class="result-note" id="resultNote">Чёрное солнце обычно не принимает апелляции.</p>
+          <button type="button" class="panel-primary" id="againButton" data-native-press>ЕЩЁ РАЗ <b>→</b></button>
+          <button type="button" class="panel-action" id="resultMenuButton" data-native-press>Другая машина</button>
+          <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+        </article>
+      </section>
+
+      <section class="rotate-device" data-ui>
+        <div aria-hidden="true"><i></i><b></b></div>
+        <h2>ПОВЕРНИ ТЕЛЕФОН</h2>
+        <p>Небесная машина не влезает в портрет. У неё, блядь, орбиты.</p>
+        <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕССА" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
