@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "pepelnick",
+  "name": "ПЕПЕЛЬНИК",
+  "shortName": "ПЕПЕЛЬНИК",
+  "description": "Вертикальная пиксельная RPG-рогалик о мёртвом рыцаре, который собирает осколки воли в семи залах Пепельника.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-16",
+  "releaseDateTime": "2026-07-16T19:20:00+03:00",
+  "changelog": [
+    "Семь боевых залов, четыре типа врагов и двухфазный финальный босс.",
+    "Ручное комбо, рывок с неуязвимостью, идеальные уклонения, Воля и казни.",
+    "Восемнадцать реликвий формируют разные билды в каждом забеге.",
+    "Постоянная мета-прогрессия, сохранения, звук, вибрация и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d47835",
+  "backgroundColor": "#17130f",
+  "themeColor": "#17130f",
+  "orientation": "portrait",
+  "cacheName": "pepelnick-v1.0.0",
+  "storageNamespace": "pocket-works:pepelnick",
+  "tags": ["PWA", "offline", "game", "pixel art", "roguelite", "RPG", "boss", "relics", "meta progression", "canvas", "audio", "haptics"],
+  "order": 145
+}
