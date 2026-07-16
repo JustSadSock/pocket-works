@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#17130f">
+<meta name="description" content="ПЕПЕЛЬНИК — вертикальная пиксельная RPG-рогалик для Pocket Works.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ПЕПЕЛЬНИК">
+<title>ПЕПЕЛЬНИК — Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="app" id="app" data-app-shell>
+<canvas id="game" width="240" height="420" aria-label="Пиксельная боевая арена" data-gesture-surface></canvas><div class="scan"></div>
+<header class="top" id="topHud"><div class="brand"><i></i><div><b>ПЕПЕЛЬНИК</b><small>ОСКОЛКИ ВОЛИ</small></div></div><div class="hud"><div class="meter"><label><span>ЖИЗНЬ</span><span id="hpText">0/0</span></label><div class="bar hp"><i id="hpBar"></i></div></div><div class="meter"><label><span>ВОЛЯ</span><span id="willText">0</span></label><div class="bar"><i id="willBar"></i></div></div></div><a class="icon" href="../../" aria-label="В Pocket Works">⌂</a><button class="icon" id="pauseBtn" aria-label="Пауза">Ⅱ</button></header>
+<div class="room" id="roomLabel">ЗАЛ Ⅰ / Ⅶ</div><div class="bossbar" id="bossWrap"><strong><span>ХРАНИТЕЛЬ ПЕПЛА</span><span id="bossPhase">I</span></strong><div class="bar"><i id="bossBar"></i></div></div>
+<div class="controls" id="controls"><div class="stick" id="stick"></div><div class="buttons"><button class="combat" id="dashBtn">РЫВОК</button><button class="combat primary" id="attackBtn">УДАР</button><span class="dashcount" id="dashText">●●</span></div></div>
+<section class="overlay" id="menu"><div class="kicker">PIXEL ROGUELITE / PW-07</div><h1 class="title">ПЕПЕЛЬ<span>НИК</span></h1><p class="lead">Мёртвый рыцарь поднимается из чаши с пеплом. Семь залов. Один Хранитель. Каждая смерть оставляет уголь, а каждый уголь делает следующую попытку чуть менее безнадёжной.</p><div class="menu-art"></div><div class="stats"><span>УГОЛЬ <b id="embers">0</b></span><span>ЛУЧШИЙ ЗАЛ <b id="bestRoom">0</b></span><span>ПОБЕД <b id="wins">0</b></span></div><div class="meta"><button class="upgrade" data-up="vital"><b>КОСТЯНОЙ УЗЕЛ</b><small>+8 начальной жизни</small><em id="vitalCost">12 угля</em></button><button class="upgrade" data-up="edge"><b>ТУПОЕ ЛЕЗВИЕ</b><small>+1 силы удара</small><em id="edgeCost">16 угля</em></button><button class="upgrade" data-up="step"><b>ШАГ В ПЕПЕЛ</b><small>быстрее возврат рывка</small><em id="stepCost">20 угля</em></button></div><div class="actions"><button class="action" id="playBtn"><span>ВОЙТИ В ПЕПЕЛЬНИК</span><span>→</span></button><button class="action secondary" id="rulesBtn"><span>КАК НЕ УМЕРЕТЬ СРАЗУ</span><span>?</span></button></div><div class="foot">WASD / СТРЕЛКИ · J/ENTER УДАР · K/SPACE РЫВОК</div></section>
+<section class="overlay hidden" id="rules"><h2 class="panel-title">Три вещи, пока тебя не размазали</h2><p class="panel-copy"><b>УДАР</b> — ручная серия из трёх взмахов. Третий широкий и сбивает врага.<br><br><b>РЫВОК</b> — короткая неуязвимость. Пройди сквозь удар в последний момент, чтобы получить Волю.<br><br><b>ВОЛЯ</b> — при 30+ следующий удар казнит ослабленного врага. После каждого зала выбирай реликвию и собирай билд.</p><div class="actions"><button class="action" id="rulesPlay"><span>ПОНЯЛ. В ЗАЛ.</span><span>→</span></button><button class="action secondary" id="rulesBack"><span>НАЗАД</span><span>×</span></button></div></section>
+<section class="overlay hidden" id="relicScreen"><div class="kicker" id="relicKicker">ЗАЛ ОЧИЩЕН</div><h2 class="panel-title">Осколок помнит тебя</h2><p class="panel-copy">Возьми одну реликвию. Остальные сгорят, потому что Пепельник — жадная сволочь.</p><div class="relic-grid" id="relicGrid"></div></section>
+<section class="overlay hidden" id="pause"><h2 class="panel-title">Пепел застыл</h2><p class="panel-copy">Можно выдохнуть. Хранитель всё равно никуда не денется.</p><div class="actions"><button class="action" id="resumeBtn"><span>ПРОДОЛЖИТЬ</span><span>→</span></button><button class="action secondary" id="quitBtn"><span>БРОСИТЬ ЗАБЕГ</span><span>×</span></button></div></section>
+<section class="overlay hidden" id="end"><div class="kicker" id="endKicker">ЗАБЕГ ОКОНЧЕН</div><h2 class="panel-title" id="endTitle">Тебя развеяли</h2><p class="panel-copy" id="endCopy"></p><div class="summary"><div><b id="endRoom">0</b><small>ЗАЛ</small></div><div><b id="endKills">0</b><small>ВРАГОВ</small></div><div><b id="endCoal">0</b><small>УГЛЯ</small></div></div><div class="actions"><button class="action" id="againBtn"><span>ЕЩЁ ОДИН ЗАБЕГ</span><span>→</span></button><button class="action secondary" id="menuBtn"><span>В МЕНЮ</span><span>⌂</span></button></div></section>
+<div class="toast" id="toast"></div><section class="fatal" id="fatal"><h2>ПЕПЕЛЬНИК ТРЕСНУЛ</h2><p id="fatalText"></p><button onclick="location.reload()">ПЕРЕЗАПУСТИТЬ</button></section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕПЕЛЬНИК" data-app-version="1.0.0"></script>
+<script src="./game.js"></script>
+</body></html>
