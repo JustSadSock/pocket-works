@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {
+  AIRCRAFT_CORE_RADIUS,
   CHUNK_LENGTH,
   awardScore,
+  biomeAt,
   canyonClearance,
   comboMultiplier,
   courseAt,
@@ -13,6 +15,7 @@ import {
   sanitizeProfile,
   sanitizeSavedRun,
   stepFlight,
+  sweptObstacleClearance,
 } from './game-core.js';
 import { RidgeWorld } from './world.js';
 
@@ -20,6 +23,9 @@ const seed = dailySeed('2026-07-15');
 assert.equal(seed, dailySeed('2026-07-15'), 'daily seed must be deterministic');
 assert.notEqual(seed, dailySeed('2026-07-16'), 'different dates must produce different routes');
 assert.equal(routeCode(seed).length, 7, 'route code must stay compact');
+const biomeIds = new Set(Array.from({ length: 8 }, (_, index) => biomeAt(index * 430 + 20, seed).id));
+assert.ok(biomeIds.size >= 3, 'long routes must contain several distinct biomes');
+assert.deepEqual(biomeAt(900, seed), biomeAt(900, seed), 'biome transitions must be deterministic');
 
 for (let index = -2; index < 180; index += 1) {
   const plan = createChunkPlan(index, seed);
@@ -39,20 +45,42 @@ for (let index = -2; index < 180; index += 1) {
 }
 
 const normal = createFlightState();
-const folded = createFlightState();
+const boosted = createFlightState();
 const course = courseAt(0, seed);
-normal.x = folded.x = course.center;
-normal.y = folded.y = course.floor + 12;
+normal.x = boosted.x = course.center;
+normal.y = boosted.y = course.floor + 12;
 for (let index = 0; index < 180; index += 1) {
-  stepFlight(normal, { x: 0, y: 0, folded: false, sensitivity: 1 }, 1 / 60, course, 0);
-  stepFlight(folded, { x: 0, y: 0, folded: true, sensitivity: 1 }, 1 / 60, course, 0);
+  stepFlight(normal, { x: 0, y: 0, boosted: false, sensitivity: 1 }, 1 / 60, course, 0);
+  stepFlight(boosted, { x: 0, y: 0, boosted: true, sensitivity: 1 }, 1 / 60, course, 0);
 }
-assert.ok(folded.speed > normal.speed + 5, 'folding wings must materially increase speed');
-assert.ok(folded.y < normal.y - 7, 'folding wings must create a dive');
+assert.ok(boosted.speed > normal.speed + 7, 'afterburner must materially increase speed');
+assert.ok(boosted.y < normal.y - 1.5, 'afterburner must create a small, readable nose-down load');
 assert.ok(normal.z > 60, 'a normal flight must move forward');
+
+const steerRight = createFlightState();
+for (let index = 0; index < 60; index += 1) {
+  stepFlight(steerRight, { x: 1, y: 0, boosted: false, sensitivity: 1 }, 1 / 60, course, 0);
+}
+assert.ok(steerRight.vx < -4, 'screen-right input must move toward camera-right (-world X)');
 
 const safe = { x: course.center, y: course.floor + 8, z: 0 };
 assert.ok(canyonClearance(safe, course).minimum > 5, 'initial flight corridor must be safe');
+
+const taperedNeedle = { x: 0, z: 10, baseY: 0, height: 20, radius: 2 };
+const highPass = sweptObstacleClearance(
+  { x: 1.15, y: 18, z: 8 },
+  { x: 1.15, y: 18, z: 12 },
+  taperedNeedle,
+  AIRCRAFT_CORE_RADIUS
+);
+const lowHit = sweptObstacleClearance(
+  { x: 1.15, y: 3, z: 8 },
+  { x: 1.15, y: 3, z: 12 },
+  taperedNeedle,
+  AIRCRAFT_CORE_RADIUS
+);
+assert.ok(highPass.clearance > 0.3, 'needle tip must not keep the invisible radius of its base');
+assert.ok(lowHit.clearance < 0, 'swept collision must still catch a visible low-altitude impact');
 
 const gate = { x: 2, y: 7, z: 10, radius: 4 };
 assert.equal(gateHit({ x: 0, y: 7, z: 9 }, { x: 3, y: 7, z: 11 }, gate), true);
@@ -125,4 +153,4 @@ for (const geometry of collectedGeometry) {
   assert.ok(geometry.normals.every(Number.isFinite), 'terrain normals must stay finite');
 }
 
-console.log('ХРЕБЕТ audit passed: deterministic terrain, finite WebGL geometry, playable corridor, flight physics, gates, scoring and persistence.');
+console.log('ХРЕБЕТ audit passed: deterministic biomes, finite WebGL geometry, screen-relative steering, tapered swept collisions, aircraft physics, gates, scoring and persistence.');

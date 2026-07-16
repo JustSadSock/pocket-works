@@ -4,33 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#172020">
-  <meta name="description" content="ХРЕБЕТ — процедурный 3D-полёт в вингсьюте по горному разлому.">
+  <meta name="description" content="ХРЕБЕТ — процедурная 3D-авиааркада в бесконечном горном разломе.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ХРЕБЕТ">
   <title>ХРЕБЕТ</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
-  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.1.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.1.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.1.0">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.1.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
     <section class="flight-stage" id="flightStage" data-gesture-surface data-block-callout aria-label="Полёт над горным разломом">
       <div class="sky-sun" aria-hidden="true"></div>
-      <canvas id="worldCanvas" role="application" aria-label="Трёхмерный горный разлом. Веди пилота пальцем или стрелками."></canvas>
+      <canvas id="worldCanvas" role="application" aria-label="Трёхмерный горный разлом. Веди самолёт пальцем или стрелками."></canvas>
       <div class="atmosphere" aria-hidden="true"></div>
       <div class="speed-lines" id="speedLines" aria-hidden="true"></div>
+      <div class="boost-vignette" id="boostVignette" aria-hidden="true"></div>
       <div class="impact-flash" id="impactFlash" aria-hidden="true"></div>
       <div class="flow-flash" id="flowFlash" aria-hidden="true"></div>
 
       <div class="loading-state" id="loadingState" data-ui>
         <div class="loading-mark" aria-hidden="true"><i></i><b></b><i></i></div>
         <p>СОБИРАЕМ РЕЛЬЕФ</p>
-        <span id="loadingCopy">проверяем направление ветра</span>
+        <span id="loadingCopy">прогреваем двигатель</span>
       </div>
 
       <div class="webgl-fallback" id="webglFallback" data-ui hidden>
@@ -41,14 +42,14 @@
       </div>
 
       <header class="flight-header" id="flightHeader" data-ui hidden>
-        <div class="run-identity"><span>ХРЕБЕТ</span><b id="modeLabel">СВОБОДНЫЙ ВЕТЕР</b></div>
+        <div class="run-identity"><span>ХРЕБЕТ</span><b id="modeLabel">СВОБОДНЫЙ МАРШРУТ</b><i id="biomeLabel">АЛЬПИЙСКИЙ ХРЕБЕТ</i></div>
         <div class="distance-readout"><b id="distanceValue">0</b><span>МЕТРОВ</span></div>
         <button type="button" class="pause-control" id="pauseButton" data-native-press aria-label="Пауза"><i></i><i></i></button>
       </header>
 
       <section class="flight-hud" id="flightHud" data-ui hidden>
         <div class="integrity-block">
-          <span>КРЫЛО</span>
+          <span>КОРПУС</span>
           <div class="integrity-track"><i id="integrityFill"></i></div>
           <b id="integrityValue">100</b>
         </div>
@@ -67,6 +68,7 @@
 
       <div class="flight-reticle" id="flightReticle" aria-hidden="true"><i></i><b></b><i></i></div>
       <div class="steer-cursor" id="steerCursor" aria-hidden="true"><i></i></div>
+      <div class="proximity-frame" id="proximityFrame" aria-hidden="true"><i id="proximityLeft"></i><i id="proximityRight"></i><i id="proximityFloor"></i></div>
       <div class="event-callout" id="eventCallout" aria-live="polite" data-ui><b></b><span></span></div>
 
       <div class="speed-tape" id="speedTape" data-ui hidden>
@@ -75,17 +77,17 @@
 
       <button type="button" class="dive-control" id="diveButton" data-ui data-native-press hidden>
         <span class="dive-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
-        <b id="diveLabel">СЛОЖИТЬ</b>
+        <b id="diveLabel">ФОРСАЖ</b>
         <small>УДЕРЖИВАЙ</small>
       </button>
 
       <section class="overlay menu-overlay" id="menuOverlay" data-ui>
         <div class="menu-index"><span>PW / FLIGHT 09</span><b>∞</b></div>
         <div class="menu-title">
-          <p>ПРОЦЕДУРНЫЙ 3D-ПОЛЁТ</p>
+          <p>ПРОЦЕДУРНАЯ 3D-АВИААРКАДА</p>
           <h1>ХРЕБЕТ</h1>
           <div class="title-cut" aria-hidden="true"></div>
-          <h2>Камню всё равно,<br>насколько красиво ты летел.</h2>
+          <h2>Маленький самолёт.<br>Очень большие горы.</h2>
         </div>
 
         <div class="launch-console">
@@ -95,7 +97,7 @@
             <span>ВЫЛЕТОВ <b id="flightCount">0</b></span>
           </div>
           <button type="button" class="primary-action" id="startButton" data-native-press>
-            <span>В СВОБОДНЫЙ ВЕТЕР</span><i>случайный маршрут</i><b>→</b>
+            <span>ЗАПУСТИТЬ ДВИГАТЕЛЬ</span><i>случайный маршрут</i><b>→</b>
           </button>
           <button type="button" class="daily-action" id="dailyButton" data-native-press>
             <span><b>МАРШРУТ ДНЯ</b><small id="dailyCode">—</small></span><i>один рельеф для всех попыток</i>
@@ -114,21 +116,21 @@
 
       <section class="overlay briefing-overlay" id="briefingOverlay" data-ui hidden>
         <div class="briefing-sheet">
-          <header><span>ПЕРЕД ПРЫЖКОМ / 01</span><button type="button" id="briefingClose" data-native-press>Закрыть</button></header>
-          <h2>Лети туда,<br>куда смотришь пальцем.</h2>
+          <header><span>ПЕРЕД ВЫЛЕТОМ / 01</span><button type="button" id="briefingClose" data-native-press>Закрыть</button></header>
+          <h2>Самолёт идёт туда,<br>куда ведёшь пальцем.</h2>
           <div class="briefing-grid">
-            <article><b>01</b><span><strong>ВЕДИ ПО ЭКРАНУ</strong>Влево и вправо — крен. Вверх — набор высоты ценой скорости.</span></article>
-            <article><b>02</b><span><strong>УДЕРЖИВАЙ «СЛОЖИТЬ»</strong>Пилот прижимает крылья, ныряет и резко ускоряется.</span></article>
-            <article><b>03</b><span><strong>РЕЖЬ ВОРОТА И СКАЛЫ</strong>Оранжевые створы и близкие пролёты кормят серию и шкалу потока.</span></article>
+            <article><b>01</b><span><strong>ВЕДИ ПО ЭКРАНУ</strong>Вправо — самолёт летит вправо. Вверх — набирает высоту ценой скорости.</span></article>
+            <article><b>02</b><span><strong>УДЕРЖИВАЙ «ФОРСАЖ»</strong>Двигатель даёт резкий прирост скорости и слегка тянет нос вниз.</span></article>
+            <article><b>03</b><span><strong>РЕЖЬ ВОРОТА И СКАЛЫ</strong>Оранжевые створы, огни на законцовках и рамка близости помогают читать габариты.</span></article>
             <article><b>04</b><span><strong>ПОТОК = ПРОРЫВ</strong>Полная шкала на несколько секунд ускоряет время и удваивает добычу очков.</span></article>
           </div>
-          <button type="button" class="primary-action" id="briefingStart" data-native-press><span>ПРЫГНУТЬ</span><i>понял достаточно</i><b>→</b></button>
+          <button type="button" class="primary-action" id="briefingStart" data-native-press><span>ВЫЛЕТЕТЬ</span><i>понял достаточно</i><b>→</b></button>
         </div>
       </section>
 
       <section class="overlay panel-overlay" id="pauseOverlay" data-ui hidden>
         <div class="pause-panel">
-          <p>ВЕТЕР ПОСТАВЛЕН НА ПАУЗУ</p>
+          <p>ДВИГАТЕЛЬ НА ХОЛОСТОМ ХОДУ</p>
           <h2>Передохни.<br>Скалы подождут.</h2>
           <div class="pause-stats"><span>Дальность <b id="pauseDistance">0 м</b></span><span>Счёт <b id="pauseScore">0</b></span><span>Серия <b id="pauseCombo">×1</b></span></div>
           <button type="button" class="primary-action" id="continueButton" data-native-press><span>ПРОДОЛЖИТЬ</span><i>вернуться в поток</i><b>→</b></button>
@@ -161,9 +163,9 @@
         <button type="button" class="settings-backdrop" id="settingsBackdrop" aria-label="Закрыть настройки"></button>
         <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
           <header><div><p>ПАРАМЕТРЫ ПОЛЁТА</p><h2 id="settingsTitle">Настройки</h2></div><button type="button" id="settingsClose" data-native-press>Готово</button></header>
-          <button type="button" class="setting-row" id="soundSetting" data-native-press><span><b>Ветер и сигналы</b><small>Процедурный звук без загруженных файлов</small></span><i>ВКЛ</i></button>
+          <button type="button" class="setting-row" id="soundSetting" data-native-press><span><b>Двигатель, ветер и сигналы</b><small>Процедурный звук без загруженных файлов</small></span><i>ВКЛ</i></button>
           <button type="button" class="setting-row" id="hapticSetting" data-native-press><span><b>Вибрация</b><small>Касания ворот и камня, если устройство умеет</small></span><i>ВКЛ</i></button>
-          <button type="button" class="setting-row" id="sensitivitySetting" data-native-press><span><b>Чувствительность</b><small>Насколько резко пилот следует за пальцем</small></span><i>ОБЫЧНАЯ</i></button>
+          <button type="button" class="setting-row" id="sensitivitySetting" data-native-press><span><b>Чувствительность</b><small>Насколько резко самолёт следует за пальцем</small></span><i>ОБЫЧНАЯ</i></button>
           <button type="button" class="setting-row" id="effectsSetting" data-native-press><span><b>Воздушные частицы</b><small>Можно убрать на уставшем телефоне</small></span><i>ПОЛНО</i></button>
           <div class="settings-record"><span>Лучшая дальность <b id="settingsBestDistance">0 м</b></span><span>Лучший счёт <b id="settingsBestScore">0</b></span></div>
           <button type="button" class="reset-records" id="resetButton" data-native-press>Сбросить рекорды</button>
@@ -178,8 +180,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ХРЕБЕТ"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
-  <script src="./app.js?v=1.0.0" type="module"></script>
+  <script src="./app.js?v=1.1.0" type="module"></script>
 </body>
 </html>

@@ -87,7 +87,25 @@ a:focus-visible {
   background:
     linear-gradient(96deg, transparent 0 58%, rgba(255, 238, 200, .24) 74%, transparent 90%),
     radial-gradient(circle at 72% 31%, rgba(255, 247, 218, .48), transparent 19%);
+  transition: background 900ms ease;
 }
+
+.flight-stage::after {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.05) 50%, transparent 50.2%),
+    repeating-linear-gradient(0deg, rgba(10,18,18,.018) 0 1px, transparent 1px 3px);
+  opacity: .42;
+  mix-blend-mode: soft-light;
+}
+
+.flight-stage[data-biome="ochre"]::before { background: radial-gradient(circle at 74% 34%, rgba(255,178,92,.3), transparent 24%); }
+.flight-stage[data-biome="glacier"]::before { background: linear-gradient(104deg, transparent 25%, rgba(207,250,255,.24) 56%, transparent 78%); }
+.flight-stage[data-biome="basalt"]::before { background: radial-gradient(circle at 70% 34%, rgba(255,103,56,.17), transparent 19%); }
 
 .sky-sun {
   position: absolute;
@@ -122,7 +140,8 @@ a:focus-visible {
     radial-gradient(ellipse at center, transparent 30%, rgba(22, 30, 29, .12) 100%),
     repeating-radial-gradient(circle at 33% 41%, rgba(255,255,255,.026) 0 1px, transparent 1px 4px);
   mix-blend-mode: multiply;
-  opacity: .72;
+  opacity: .62;
+  transition: opacity 300ms ease;
 }
 
 .speed-lines {
@@ -130,15 +149,33 @@ a:focus-visible {
   z-index: 3;
   inset: -20%;
   pointer-events: none;
-  background: repeating-conic-gradient(from 3deg at 50% 52%, transparent 0 5.7deg, rgba(238,238,222,.23) 5.9deg 6deg);
-  mask-image: radial-gradient(circle, transparent 0 18%, #000 45%, transparent 76%);
+  background:
+    repeating-conic-gradient(from 3deg at 50% 52%, transparent 0 5.7deg, rgba(238,238,222,.21) 5.88deg 6deg),
+    repeating-radial-gradient(circle at 50% 52%, transparent 0 15px, rgba(255,255,255,.08) 16px 17px, transparent 18px 29px);
+  mask-image: radial-gradient(circle, transparent 0 17%, #000 42%, transparent 79%);
   opacity: 0;
   transform: scale(.72);
   transition: opacity 180ms ease, transform 220ms ease;
 }
 
-.flight-stage.is-diving .speed-lines { opacity: .23; transform: scale(1.08); }
+.flight-stage.is-boosting .speed-lines { opacity: .3; transform: scale(1.12); animation: rush-soft 720ms linear infinite; }
 .flight-stage.is-flowing .speed-lines { opacity: .58; transform: scale(1.3); animation: rush 440ms linear infinite; }
+
+.boost-vignette {
+  position: absolute;
+  z-index: 3;
+  inset: -10%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 53%, transparent 28%, rgba(239,106,60,.08) 61%, rgba(31,39,37,.28) 100%),
+    linear-gradient(90deg, rgba(239,106,60,.08), transparent 18% 82%, rgba(239,106,60,.08));
+  opacity: 0;
+  transform: scale(1.08);
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.flight-stage.is-boosting .boost-vignette { opacity: .7; transform: scale(1); }
+.flight-stage.is-flowing .boost-vignette { opacity: .92; transform: scale(.96); }
 
 .impact-flash,
 .flow-flash {
@@ -163,6 +200,7 @@ a:focus-visible {
 .flow-flash.is-active { animation: flow-enter 900ms ease-out; }
 
 @keyframes rush { to { transform: scale(1.52) rotate(.3deg); } }
+@keyframes rush-soft { to { transform: scale(1.27) rotate(-.2deg); } }
 @keyframes impact { 0% { opacity: .94; } 100% { opacity: 0; } }
 @keyframes flow-enter { 0% { opacity: 1; } 100% { opacity: 0; transform: scale(.94); } }
 
@@ -244,6 +282,7 @@ a:focus-visible {
 .run-identity { display: grid; gap: 2px; }
 .run-identity span { color: var(--signal); font: 900 15px/1 var(--ui-font); letter-spacing: .08em; }
 .run-identity b { color: rgba(23, 32, 32, .66); font: 700 8px/1 var(--mono); letter-spacing: .15em; }
+.run-identity i { color: rgba(23, 32, 32, .5); font: 750 6px/1 var(--mono); font-style: normal; letter-spacing: .11em; transition: color 400ms ease; }
 
 .distance-readout { display: flex; gap: 7px; align-items: baseline; color: var(--ink); text-shadow: 0 1px 8px rgba(232,231,220,.45); }
 .distance-readout b { font: 800 23px/1 var(--mono); letter-spacing: -.08em; }
@@ -342,12 +381,14 @@ a:focus-visible {
   gap: 7px;
   align-items: center;
   transform: translate(-50%, -50%);
-  opacity: .56;
+  opacity: .63;
   pointer-events: none;
 }
 
-.flight-reticle i { display: block; width: 13px; height: 1px; background: var(--ink); }
-.flight-reticle b { width: 4px; height: 4px; border: 1px solid var(--signal-deep); transform: rotate(45deg); }
+.flight-reticle i { display: block; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, var(--ink)); }
+.flight-reticle i:last-child { transform: scaleX(-1); }
+.flight-reticle b { width: 5px; height: 5px; border: 1px solid var(--signal-deep); transform: rotate(45deg); box-shadow: 0 0 10px rgba(239,106,60,.34); }
+.flight-stage.is-boosting .flight-reticle { animation: reticle-pulse 620ms ease-in-out infinite alternate; }
 
 .steer-cursor {
   position: absolute;
@@ -365,6 +406,46 @@ a:focus-visible {
 
 .steer-cursor.is-visible { opacity: .7; }
 .steer-cursor i { position: absolute; inset: 13px; border: 1px solid var(--signal); }
+
+.proximity-frame {
+  position: absolute;
+  z-index: 10;
+  inset: 9% 7% 8%;
+  pointer-events: none;
+}
+
+.proximity-frame i {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  filter: drop-shadow(0 0 7px rgba(239,106,60,.45));
+  transition: opacity 100ms linear, transform 100ms ease, background 120ms ease;
+}
+
+.proximity-frame i::before,
+.proximity-frame i::after { position: absolute; content: ""; background: inherit; }
+.proximity-frame i:first-child,
+.proximity-frame i:nth-child(2) { top: 38%; width: 2px; height: 26%; background: rgba(239,106,60,.78); }
+.proximity-frame i:first-child { left: 0; }
+.proximity-frame i:nth-child(2) { right: 0; }
+.proximity-frame i:first-child::before,
+.proximity-frame i:nth-child(2)::before { top: 0; width: 14px; height: 2px; }
+.proximity-frame i:first-child::after,
+.proximity-frame i:nth-child(2)::after { bottom: 0; width: 14px; height: 2px; }
+.proximity-frame i:first-child::before,
+.proximity-frame i:first-child::after { left: 0; }
+.proximity-frame i:nth-child(2)::before,
+.proximity-frame i:nth-child(2)::after { right: 0; }
+.proximity-frame i:last-child { left: 42%; bottom: 0; width: 16%; height: 2px; background: rgba(239,106,60,.78); }
+.proximity-frame i:last-child::before,
+.proximity-frame i:last-child::after { bottom: 0; width: 2px; height: 13px; }
+.proximity-frame i:last-child::before { left: 0; }
+.proximity-frame i:last-child::after { right: 0; }
+.proximity-frame.is-close i { filter: drop-shadow(0 0 10px rgba(239,106,60,.64)); }
+.proximity-frame.is-danger i { background: rgba(190,54,28,.96); filter: drop-shadow(0 0 14px rgba(190,54,28,.84)); animation: danger-tick 260ms step-end infinite; }
+
+@keyframes reticle-pulse { to { transform: translate(-50%, -50%) scale(1.12); opacity: .86; } }
+@keyframes danger-tick { 50% { visibility: hidden; } }
 
 .event-callout {
   position: absolute;
@@ -439,7 +520,11 @@ a:focus-visible {
 .dive-glyph i { display: block; width: 4px; height: 10px; background: currentColor; transform: skewY(-25deg); }
 .dive-glyph i:nth-child(2) { height: 14px; }
 .dive-glyph i:nth-child(3) { transform: skewY(25deg); }
+.dive-control.is-held .dive-glyph i { animation: thrust-bars 360ms ease-in-out infinite alternate; }
+.dive-control.is-held .dive-glyph i:nth-child(2) { animation-delay: -120ms; }
+.dive-control.is-held .dive-glyph i:nth-child(3) { animation-delay: -240ms; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes thrust-bars { to { height: 6px; opacity: .5; } }
 
 .overlay {
   position: absolute;
@@ -747,4 +832,5 @@ a:focus-visible {
     transition-duration: .001ms !important;
   }
   .speed-lines { display: none; }
+  .boost-vignette { display: none; }
 }

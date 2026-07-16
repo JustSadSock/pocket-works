@@ -18,6 +18,10 @@ export class WindAudio {
     this.windGain = null;
     this.windFilter = null;
     this.windSource = null;
+    this.engineGain = null;
+    this.engineFilter = null;
+    this.engineOscillator = null;
+    this.engineHarmonic = null;
     this.enabled = true;
     this.unlocked = false;
     this.running = false;
@@ -49,6 +53,26 @@ export class WindAudio {
       this.windGain.gain.value = 0;
       this.windSource.connect(this.windFilter).connect(this.windGain).connect(this.master);
       this.windSource.start();
+
+      this.engineOscillator = this.context.createOscillator();
+      this.engineHarmonic = this.context.createOscillator();
+      this.engineOscillator.type = 'sawtooth';
+      this.engineHarmonic.type = 'triangle';
+      this.engineFilter = this.context.createBiquadFilter();
+      this.engineFilter.type = 'lowpass';
+      this.engineFilter.frequency.value = 820;
+      this.engineFilter.Q.value = 0.72;
+      this.engineGain = this.context.createGain();
+      this.engineGain.gain.value = 0;
+      const fundamentalGain = this.context.createGain();
+      const harmonicGain = this.context.createGain();
+      fundamentalGain.gain.value = 0.72;
+      harmonicGain.gain.value = 0.2;
+      this.engineOscillator.connect(fundamentalGain).connect(this.engineFilter);
+      this.engineHarmonic.connect(harmonicGain).connect(this.engineFilter);
+      this.engineFilter.connect(this.engineGain).connect(this.master);
+      this.engineOscillator.start();
+      this.engineHarmonic.start();
     }
     try {
       await this.context.resume();
@@ -70,15 +94,23 @@ export class WindAudio {
     this.running = Boolean(running);
   }
 
-  update(speed, folded, flowing) {
+  update(speed, boosted, flowing) {
     if (!this.context || !this.windGain || !this.windFilter) return;
     const now = this.context.currentTime;
     const speedAmount = Math.max(0, Math.min(1, (speed - 18) / 34));
     const targetGain = this.running && this.enabled ? 0.025 + speedAmount * 0.11 + (flowing ? 0.055 : 0) : 0;
-    const frequency = 380 + speedAmount * 1380 + (folded ? 260 : 0) + (flowing ? 420 : 0);
+    const frequency = 380 + speedAmount * 1380 + (boosted ? 260 : 0) + (flowing ? 420 : 0);
     this.windGain.gain.setTargetAtTime(targetGain, now, 0.08);
     this.windFilter.frequency.setTargetAtTime(frequency, now, 0.09);
     this.windFilter.Q.setTargetAtTime(flowing ? 0.9 : 0.56, now, 0.11);
+    if (this.engineGain && this.engineOscillator && this.engineHarmonic && this.engineFilter) {
+      const rpm = 58 + speedAmount * 46 + (boosted ? 28 : 0) + (flowing ? 18 : 0);
+      const engineLevel = this.running && this.enabled ? 0.032 + speedAmount * 0.025 + (boosted ? 0.026 : 0) : 0;
+      this.engineOscillator.frequency.setTargetAtTime(rpm, now, 0.055);
+      this.engineHarmonic.frequency.setTargetAtTime(rpm * 2.01, now, 0.06);
+      this.engineFilter.frequency.setTargetAtTime(620 + speedAmount * 740 + (boosted ? 420 : 0), now, 0.075);
+      this.engineGain.gain.setTargetAtTime(engineLevel, now, 0.065);
+    }
   }
 
   tone(options = {}) {
@@ -118,6 +150,8 @@ export class WindAudio {
     } else if (type === 'flow') {
       this.tone({ from: 180, to: 780, duration: 0.62, gain: 0.09, type: 'sawtooth', filter: 2100 });
       window.setTimeout(() => this.tone({ from: 390, to: 1280, duration: 0.44, gain: 0.055, type: 'triangle' }), 80);
+    } else if (type === 'boost') {
+      this.tone({ from: 120, to: 310, duration: 0.2, gain: 0.045, type: 'sawtooth', filter: 920 });
     } else if (type === 'fail') {
       this.tone({ from: 270, to: 72, duration: 0.7, gain: 0.1, type: 'triangle', filter: 1100 });
     }
