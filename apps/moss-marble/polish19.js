@@ -240,15 +240,15 @@ export class CoursePolishLayer {
     const motif = level.visual?.motif || 'drop';
     const motifAccent = level.visual?.accent || '205,224,180';
 
-    const routeOutline = level.course18?.surfaceMesh?.outline || level.outline || [];
+    const routeOutline = level.outline || [];
     if (routeOutline.length > 2) {
-      this.pathWorld([...routeOutline, routeOutline[0]], field, .86);
-      ctx.strokeStyle = 'rgba(3,13,8,.62)';
-      ctx.lineWidth = 4.2;
+      this.pathWorld([...routeOutline, routeOutline[0]], field, 13.2);
+      ctx.strokeStyle = 'rgba(3,13,8,.48)';
+      ctx.lineWidth = 2.7;
       ctx.stroke();
-      this.pathWorld([...routeOutline, routeOutline[0]], field, 1.02);
-      ctx.strokeStyle = terrainTint(terrain.grassLight, 'rgba(202,218,164,.42)', .46);
-      ctx.lineWidth = 1.15;
+      this.pathWorld([...routeOutline, routeOutline[0]], field, 14.2);
+      ctx.strokeStyle = terrainTint(level.visual?.materials?.stoneLight, 'rgba(224,218,184,.42)', .44);
+      ctx.lineWidth = .9;
       ctx.stroke();
     }
 

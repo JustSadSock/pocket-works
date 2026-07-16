@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.14.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -234,11 +234,12 @@ function syncMenu() {
 }
 
 function holeMapMarkup(item) {
+  const visualItem = compileCourse19(item);
   const padding = 8;
   const width = 100;
   const height = 66;
-  const xs = item.centerline.map((point) => point.x);
-  const ys = item.centerline.map((point) => point.y);
+  const xs = visualItem.centerline.map((point) => point.x);
+  const ys = visualItem.centerline.map((point) => point.y);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
@@ -248,16 +249,30 @@ function holeMapMarkup(item) {
     x: padding + (x - minX) * scale,
     y: padding + (y - minY) * scale
   });
-  const route = item.centerline.map((value, index) => {
+  const route = visualItem.centerline.map((value, index) => {
     const mapped = point(value);
     return `${index ? 'L' : 'M'}${mapped.x.toFixed(1)} ${mapped.y.toFixed(1)}`;
   }).join(' ');
-  const start = point(item.start);
-  const hole = point(item.hole);
-  const obstacles = (item.obstacles || []).slice(0, 5).map((obstacle) => {
+  const start = point(visualItem.start);
+  const hole = point(visualItem.hole);
+  const obstacles = (visualItem.course18?.props || visualItem.obstacles || []).slice(0, 5).map((obstacle) => {
     const mapped = point(obstacle);
     const radius = Math.max(1.8, Math.min(4.2, obstacle.r * scale * .24));
     return `<circle class="map-obstacle" cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="${radius.toFixed(1)}"/>`;
+  }).join('');
+  const surfaces = (visualItem.course18?.field?.masks || []).map((mask) => {
+    const className = `map-surface map-${mask.type}`;
+    if (mask.a && mask.b) {
+      const a = point(mask.a);
+      const b = point(mask.b);
+      const strokeWidth = Math.max(3, Math.min(12, mask.width * scale * .72));
+      return `<line class="${className} is-segment" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke-width="${strokeWidth.toFixed(1)}"/>`;
+    }
+    const center = point(mask);
+    const rx = Math.max(2, mask.length * scale * .5);
+    const ry = Math.max(1.5, mask.width * scale * .5);
+    const rotation = (mask.angle || 0) * 180 / Math.PI;
+    return `<ellipse class="${className}" cx="${center.x.toFixed(1)}" cy="${center.y.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" transform="rotate(${rotation.toFixed(1)} ${center.x.toFixed(1)} ${center.y.toFixed(1)})"/>`;
   }).join('');
   const cssColor = (value, fallback, alpha) => Array.isArray(value) && value.length >= 3
     ? `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`
@@ -266,9 +281,12 @@ function holeMapMarkup(item) {
   const mapStyle = [
     `--map-route:${cssColor(terrain.grassLight, 'rgba(222,220,171,.72)', .82)}`,
     `--map-route-shadow:${cssColor(terrain.moss, 'rgba(4,16,9,.28)', .48)}`,
-    `--map-obstacle:${cssColor(terrain.moss, '#28372d', 1)}`
+    `--map-obstacle:${cssColor(terrain.moss, '#28372d', 1)}`,
+    `--map-water:${cssColor(terrain.waterLight, 'rgba(86,160,155,.72)', .76)}`,
+    `--map-sand:${cssColor(terrain.sandLight, 'rgba(219,187,112,.72)', .76)}`,
+    `--map-moss:${cssColor(terrain.mossLight, 'rgba(74,124,66,.72)', .74)}`
   ].join(';');
-  return `<svg class="hole-map" style="${mapStyle}" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
+  return `<svg class="hole-map" style="${mapStyle}" aria-hidden="true" viewBox="0 0 ${width} ${height}">${surfaces}<path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
 }
 
 function renderHoleShelf() {
