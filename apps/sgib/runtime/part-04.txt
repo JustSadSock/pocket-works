@@ -4,9 +4,23 @@
   state.gesture = null;
   state.animation = null;
   state.resolved = false;
+  guideReturnScreen = 'menuScreen';
+  setFoldStatus('hidden');
   setPlaying(false);
   showScreen('menuScreen');
   updateMenu();
+}
+
+function openGuide(returnScreen = 'menuScreen') {
+  guideReturnScreen = returnScreen;
+  cancelGesture();
+  setFoldStatus('hidden');
+  showScreen('guideScreen');
+}
+
+function closeGuide() {
+  const target = guideReturnScreen || (state.mode === 'menu' ? 'menuScreen' : 'pauseScreen');
+  showScreen(target);
 }
 
 function updateMenu() {
