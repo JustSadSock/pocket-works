@@ -13,11 +13,13 @@ const cache = new WeakMap();
 const COLORS = {
   grass: [0.38, 0.52, 0.27, 1],
   grassLight: [0.53, 0.64, 0.35, 1],
+  grassDry: [0.46, 0.51, 0.27, 1],
   moss: [0.17, 0.35, 0.18, 1],
   mossLight: [0.29, 0.47, 0.23, 1],
   sand: [0.73, 0.60, 0.35, 1],
   sandLight: [0.87, 0.75, 0.48, 1],
-  water: [0.19, 0.43, 0.42, 0.82]
+  water: [0.19, 0.43, 0.42, 0.82],
+  waterLight: [0.34, 0.59, 0.56, 0.86]
 };
 
 function clone(value) {
@@ -193,6 +195,7 @@ function maskWeight(mask, x, y) {
 }
 
 function buildField(level, blueprint) {
+  const palette = { ...COLORS, ...(level.visual?.terrain || {}) };
   const landforms = (blueprint.landforms || []).map((feature) => resolveFeature(level, feature));
   const masks = (blueprint.surfaces || []).map((feature) => resolveFeature(level, feature));
   const ramps = landforms.filter((feature) => feature.ramp);
@@ -232,15 +235,17 @@ function buildField(level, blueprint) {
   const colorAt = (x, y, height, normal) => {
     const info = surfaceInfoAt(x, y);
     const type = info.weight > .08 ? info.type : 'grass';
-    const base = type === 'sand' ? COLORS.sand : type === 'moss' ? COLORS.moss : type === 'water' ? COLORS.water : COLORS.grass;
-    const light = type === 'sand' ? COLORS.sandLight : type === 'moss' ? COLORS.mossLight : COLORS.grassLight;
+    const base = type === 'sand' ? palette.sand : type === 'moss' ? palette.moss : type === 'water' ? palette.water : palette.grass;
+    const light = type === 'sand' ? palette.sandLight : type === 'moss' ? palette.mossLight : type === 'water' ? palette.waterLight : palette.grassLight;
     const texture = noise(x * .04, y * .04, seed);
-    const variation = clamp(.16 + texture * .24 + Math.max(0, normal[2] - .84) * .12, 0, .46);
+    const fine = noise(x * .12, y * .12, seed + 17);
+    const variation = clamp(.14 + texture * .22 + fine * .06 + Math.max(0, normal[2] - .84) * .12, 0, .46);
     let color = mixColor(base, light, variation);
     const cavity = clamp((12 - height) / 12, 0, 1);
     const slopeShade = clamp(.78 + normal[2] * .22 - cavity * .12, .62, 1.05);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
-    if (info.weight > 0 && info.weight < 1) color = mixColor(COLORS.grass, color, info.weight);
+    if (type === 'grass' && fine > .78) color = mixColor(color, palette.grassDry, .14);
+    if (info.weight > 0 && info.weight < 1) color = mixColor(palette.grass, color, info.weight);
     return color;
   };
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };

@@ -2,6 +2,54 @@ const rect = (x, y, w, h, extra = {}) => ({ shape: 'rect', x, y, w, h, ...extra 
 const circle = (x, y, r, extra = {}) => ({ shape: 'circle', x, y, r, ...extra });
 const route = (...points) => points.map(([x, y]) => ({ x, y }));
 
+const VISUALS = {
+  rainGarden: {
+    skyTop: '#405748', skyMid: '#1f382c', skyBottom: '#0b1711',
+    glow: '240,224,161', beam: '243,225,155', pollen: '226,215,145', mist: '142,184,154', rain: 1, flora: 'fern',
+    terrain: { grass: [.34,.49,.25,1], grassLight: [.52,.64,.34,1], grassDry: [.45,.51,.27,1], moss: [.15,.34,.17,1], mossLight: [.30,.49,.24,1], sand: [.69,.55,.30,1], sandLight: [.87,.73,.44,1], water: [.13,.39,.40,.88], waterLight: [.29,.58,.56,.88] }
+  },
+  porcelain: {
+    skyTop: '#536258', skyMid: '#2c4038', skyBottom: '#101b16',
+    glow: '223,231,197', beam: '232,236,202', pollen: '218,226,188', mist: '170,197,181', rain: .45, flora: 'clover',
+    terrain: { grass: [.40,.52,.32,1], grassLight: [.62,.68,.45,1], grassDry: [.52,.55,.33,1], moss: [.19,.36,.23,1], mossLight: [.37,.53,.34,1], sand: [.76,.66,.44,1], sandLight: [.91,.82,.60,1], water: [.25,.48,.50,.88], waterLight: [.42,.66,.65,.88] }
+  },
+  deepMoss: {
+    skyTop: '#29493b', skyMid: '#17352a', skyBottom: '#07140e',
+    glow: '185,214,153', beam: '198,222,162', pollen: '174,208,133', mist: '93,153,119', rain: .75, flora: 'fern',
+    terrain: { grass: [.25,.43,.22,1], grassLight: [.43,.58,.31,1], grassDry: [.37,.45,.23,1], moss: [.08,.28,.15,1], mossLight: [.20,.44,.23,1], sand: [.62,.51,.29,1], sandLight: [.79,.67,.40,1], water: [.12,.35,.38,.88], waterLight: [.25,.53,.52,.88] }
+  },
+  brass: {
+    skyTop: '#5b5b3f', skyMid: '#3a4028', skyBottom: '#15190d',
+    glow: '244,205,120', beam: '247,214,132', pollen: '229,184,91', mist: '161,166,105', rain: .25, flora: 'thyme',
+    terrain: { grass: [.40,.49,.24,1], grassLight: [.62,.63,.32,1], grassDry: [.55,.49,.22,1], moss: [.22,.35,.16,1], mossLight: [.39,.48,.22,1], sand: [.78,.59,.30,1], sandLight: [.93,.73,.40,1], water: [.19,.41,.39,.88], waterLight: [.35,.59,.53,.88] }
+  },
+  storm: {
+    skyTop: '#304e50', skyMid: '#183638', skyBottom: '#081619',
+    glow: '177,220,211', beam: '188,225,216', pollen: '168,207,190', mist: '95,164,161', rain: 1.55, flora: 'reed',
+    terrain: { grass: [.27,.43,.30,1], grassLight: [.46,.59,.39,1], grassDry: [.38,.46,.31,1], moss: [.12,.30,.20,1], mossLight: [.25,.45,.31,1], sand: [.60,.55,.35,1], sandLight: [.78,.72,.48,1], water: [.10,.39,.45,.90], waterLight: [.20,.61,.65,.90] }
+  },
+  sugar: {
+    skyTop: '#5b6447', skyMid: '#364229', skyBottom: '#131b0f',
+    glow: '244,224,169', beam: '248,230,176', pollen: '235,215,154', mist: '168,185,127', rain: .35, flora: 'clover',
+    terrain: { grass: [.43,.52,.28,1], grassLight: [.66,.69,.38,1], grassDry: [.56,.54,.27,1], moss: [.23,.39,.18,1], mossLight: [.41,.53,.26,1], sand: [.78,.65,.41,1], sandLight: [.92,.81,.57,1], water: [.20,.43,.40,.88], waterLight: [.36,.60,.54,.88] }
+  },
+  shade: {
+    skyTop: '#2f4934', skyMid: '#183020', skyBottom: '#08130c',
+    glow: '196,211,145', beam: '206,218,151', pollen: '185,204,128', mist: '83,137,93', rain: .65, flora: 'fern',
+    terrain: { grass: [.24,.40,.20,1], grassLight: [.40,.55,.28,1], grassDry: [.34,.42,.20,1], moss: [.09,.27,.12,1], mossLight: [.19,.41,.19,1], sand: [.64,.52,.29,1], sandLight: [.80,.67,.39,1], water: [.11,.33,.34,.88], waterLight: [.23,.51,.47,.88] }
+  },
+  gallery: {
+    skyTop: '#3a5551', skyMid: '#203b38', skyBottom: '#0a1715',
+    glow: '190,229,211', beam: '204,236,219', pollen: '181,218,195', mist: '105,167,153', rain: .55, flora: 'reed',
+    terrain: { grass: [.31,.47,.31,1], grassLight: [.49,.63,.43,1], grassDry: [.41,.49,.31,1], moss: [.13,.31,.20,1], mossLight: [.27,.47,.32,1], sand: [.67,.58,.38,1], sandLight: [.84,.75,.52,1], water: [.12,.38,.43,.90], waterLight: [.24,.59,.62,.90] }
+  },
+  firefly: {
+    skyTop: '#2b4141', skyMid: '#182d2b', skyBottom: '#07110f',
+    glow: '218,193,112', beam: '226,203,122', pollen: '232,202,91', mist: '89,132,111', rain: .30, flora: 'thyme',
+    terrain: { grass: [.25,.38,.24,1], grassLight: [.40,.50,.30,1], grassDry: [.37,.39,.20,1], moss: [.08,.23,.13,1], mossLight: [.18,.35,.19,1], sand: [.70,.53,.25,1], sandLight: [.90,.70,.33,1], water: [.10,.27,.34,.92], waterLight: [.20,.46,.49,.92] }
+  }
+};
+
 function routeOutline(centerline, width = 560) {
   const widths = Array.isArray(width) ? width : centerline.map(() => width);
   const sideA = [];
@@ -49,6 +97,7 @@ export const LEVELS = [
     par: 6,
     centerline: route([230,1170],[560,1010],[430,770],[830,590],[1210,790],[1600,560],[2050,175]),
     width: [560,600,560,630,590,560,520],
+    visual: VISUALS.rainGarden,
     obstacles: [
       circle(620, 870, 70, { material: 'stone' }),
       circle(1110, 660, 78, { material: 'pot' }),
@@ -63,10 +112,11 @@ export const LEVELS = [
   authoredLevel({
     id: 2,
     name: 'Чашечный поворот',
-    note: 'Два широких виража вокруг старой посуды',
-    par: 6,
-    centerline: route([220,1120],[620,1160],[850,870],[650,570],[1080,360],[1510,570],[1800,380],[2180,205]),
-    width: [590,650,610,590,660,600,560,520],
+    note: 'Большая фарфоровая подкова возвращает мяч к той же стене',
+    par: 7,
+    centerline: route([270,1050],[660,1080],[1050,970],[1370,770],[1450,520],[1240,350],[850,280],[500,380],[260,270]),
+    width: [480,540,530,500,480,510,530,480,430],
+    visual: VISUALS.porcelain,
     obstacles: [
       circle(690, 940, 150, { material: 'cup' }),
       circle(1040, 410, 62, { material: 'stone' }),
@@ -81,11 +131,12 @@ export const LEVELS = [
   }),
   authoredLevel({
     id: 3,
-    name: 'Мшистая серпантинная',
+    name: 'Мшистый серпантин',
     note: 'Скорость теряется, направление — нет',
     par: 7,
-    centerline: route([180,1200],[520,980],[840,1110],[1050,790],[850,520],[1220,260],[1580,440],[1900,230],[2220,150]),
-    width: [560,620,590,630,560,620,580,540,500],
+    centerline: route([1120,1190],[700,1100],[420,900],[680,690],[1120,820],[1540,650],[1750,390],[1380,220],[980,150]),
+    width: [330,360,340,370,390,370,340,320,300],
+    visual: VISUALS.deepMoss,
     obstacles: [
       circle(510, 970, 60, { material: 'wood' }),
       circle(910, 910, 66, { material: 'wood' }),
@@ -103,10 +154,11 @@ export const LEVELS = [
   authoredLevel({
     id: 4,
     name: 'Латунная петля',
-    note: 'Длинный маршрут пересекают два честных механизма',
+    note: 'Зеркальная дуга собирает два механизма в один ритм',
     par: 7,
-    centerline: route([240,1170],[610,930],[980,1080],[1180,760],[980,470],[1390,270],[1770,500],[2070,250]),
-    width: [580,620,630,610,570,640,570,510],
+    centerline: route([2050,1120],[1650,1180],[1220,1060],[950,800],[1120,530],[1500,430],[1770,660],[2020,470],[2140,170]),
+    width: [440,490,510,480,460,500,470,430,400],
+    visual: VISUALS.brass,
     obstacles: [
       circle(530, 1010, 64, { material: 'pot' }),
       circle(1120, 610, 62, { material: 'stone' }),
@@ -122,10 +174,11 @@ export const LEVELS = [
   authoredLevel({
     id: 5,
     name: 'Мост над дождём',
-    note: 'Вода ниже поля, стекло — действительно над водой',
+    note: 'Штормовая диагональ ведёт через узкий сухой перешеек',
     par: 7,
-    centerline: route([230,1180],[610,1010],[890,760],[1240,880],[1510,590],[1810,420],[2150,190]),
-    width: [570,620,600,660,600,550,500],
+    centerline: route([2160,1130],[1780,1060],[1450,850],[1160,940],[900,720],[650,540],[780,300],[420,170]),
+    width: [540,590,620,650,600,570,540,500],
+    visual: VISUALS.storm,
     obstacles: [
       circle(540, 1040, 58, { material: 'stone' }),
       circle(1060, 820, 62, { material: 'stone' }),
@@ -146,9 +199,10 @@ export const LEVELS = [
     id: 6,
     name: 'Склоны сахарницы',
     note: 'Высота теперь видна и действительно толкает мяч вниз',
-    par: 7,
-    centerline: route([190,1160],[540,920],[880,1030],[1110,710],[1450,800],[1700,500],[2140,210]),
-    width: [570,620,600,650,610,560,510],
+    par: 8,
+    centerline: route([1050,1190],[600,1080],[420,820],[720,620],[1120,540],[1500,700],[1820,480],[1600,230],[1200,150]),
+    width: [360,400,380,400,430,400,370,350,330],
+    visual: VISUALS.sugar,
     obstacles: [
       circle(600, 910, 82, { material: 'spoon' }),
       circle(1210, 730, 68, { material: 'sugar' }),
@@ -165,9 +219,10 @@ export const LEVELS = [
     id: 7,
     name: 'Две длинные дороги',
     note: 'Короткий рискованный центр или спокойные внешние виражи',
-    par: 7,
-    centerline: route([220,1190],[590,960],[890,1090],[1130,770],[1420,980],[1690,650],[1990,420],[2220,170]),
-    width: [600,660,700,720,680,620,560,500],
+    par: 8,
+    centerline: route([360,250],[270,650],[420,1020],[850,1110],[1400,1060],[1880,830],[2140,510],[2050,190]),
+    width: [500,520,580,650,680,620,560,500],
+    visual: VISUALS.shade,
     obstacles: [
       circle(900, 970, 170, { material: 'pot' }),
       circle(1320, 850, 130, { material: 'cup' }),
@@ -188,8 +243,9 @@ export const LEVELS = [
     name: 'Прыжок через галерею',
     note: 'Разгонись по пандусу или воспользуйся тихим туннелем',
     par: 6,
-    centerline: route([190,1170],[520,990],[820,760],[1160,900],[1460,650],[1790,430],[2160,190]),
-    width: [570,610,590,660,600,550,500],
+    centerline: route([220,1120],[520,900],[820,720],[1100,770],[1370,570],[1640,420],[1910,310],[2180,160]),
+    width: [540,590,580,650,600,560,530,500],
+    visual: VISUALS.gallery,
     obstacles: [
       circle(600, 930, 78, { material: 'stone' }),
       circle(1080, 820, 70, { material: 'wood' }),
@@ -205,11 +261,12 @@ export const LEVELS = [
   }),
   authoredLevel({
     id: 9,
-    name: 'Светлячковый серпантин',
-    note: 'Финальная длинная лунка с высотой, водой и двумя ритмами',
-    par: 8,
-    centerline: route([190,1190],[530,980],[820,1130],[1090,830],[920,560],[1300,330],[1620,560],[1880,350],[2220,150]),
-    width: [580,620,650,620,570,650,600,550,500],
+    name: 'Зигзаг светлячков',
+    note: 'Финальный маршрут меняет направление чаще, чем светлячки',
+    par: 9,
+    centerline: route([220,1160],[650,1040],[1050,1160],[1450,980],[1280,720],[850,620],[650,360],[1040,210],[1450,370],[1810,250],[2200,150]),
+    width: [360,400,420,410,380,400,370,420,390,360,330],
+    visual: VISUALS.firefly,
     obstacles: [
       circle(500, 1010, 62, { material: 'stone' }),
       circle(900, 930, 68, { material: 'stone' }),

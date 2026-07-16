@@ -7,6 +7,11 @@ function hashNoise(x, y = 0, seed = 0) {
   return value - Math.floor(value);
 }
 
+function terrainTint(value, fallback, alpha) {
+  if (!Array.isArray(value) || value.length < 3) return fallback;
+  return `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`;
+}
+
 function routeSample(centerline, progress) {
   if (!centerline?.length) return { x: 0, y: 0, nx: 1, ny: 0 };
   const scaled = clamp(progress, 0, 1) * (centerline.length - 1);
@@ -126,6 +131,12 @@ export class CoursePolishLayer {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    const terrain = level.visual?.terrain || {};
+    const flora = level.visual?.flora || 'fern';
+    const waterAccent = terrainTint(terrain.waterLight, 'rgba(172,224,210,.10)', .11);
+    const sandAccent = terrainTint(terrain.sandLight, 'rgba(246,220,159,.13)', .14);
+    const grassAccent = terrainTint(terrain.grassLight, 'rgba(102,143,75,.26)', .28);
+    const mossAccent = terrainTint(terrain.mossLight, 'rgba(78,126,66,.30)', .31);
 
     for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
       const mask = cache.waterMasks[maskIndex];
@@ -133,10 +144,12 @@ export class CoursePolishLayer {
         const pulse = this.reducedMotion ? 0 : Math.sin(time * 1.35 + maskIndex * 1.7 + ring) * .012;
         const scale = .34 + ring * .14 + pulse;
         this.pathWorld(ellipseWorldPoints(mask, scale, 30), field, .72);
-        ctx.strokeStyle = `rgba(172,224,210,${.08 + ring * .018})`;
+        ctx.globalAlpha = .74 + ring * .09;
+        ctx.strokeStyle = waterAccent;
         ctx.lineWidth = .7 + ring * .14;
         ctx.stroke();
       }
+      ctx.globalAlpha = 1;
     }
 
     for (let maskIndex = 0; maskIndex < cache.sandMasks.length; maskIndex += 1) {
@@ -150,7 +163,7 @@ export class CoursePolishLayer {
         const a = { x: centerX - cos * half, y: centerY - sin * half };
         const b = { x: centerX + cos * half, y: centerY + sin * half };
         this.pathWorld([a, b], field, .55);
-        ctx.strokeStyle = 'rgba(246,220,159,.13)';
+        ctx.strokeStyle = sandAccent;
         ctx.lineWidth = .75;
         ctx.stroke();
       }
@@ -165,7 +178,7 @@ export class CoursePolishLayer {
       if (size < .7 || point.x < -20 || point.x > this.width + 20 || point.y < -20 || point.y > this.height + 20) continue;
       if (detail.surface === 'water') continue;
       if (detail.surface === 'sand') {
-        ctx.strokeStyle = 'rgba(247,225,168,.18)';
+        ctx.strokeStyle = sandAccent;
         ctx.lineWidth = .65;
         ctx.beginPath();
         ctx.moveTo(point.x - size * .8, point.y);
@@ -173,14 +186,48 @@ export class CoursePolishLayer {
         ctx.stroke();
         continue;
       }
-      ctx.strokeStyle = detail.surface === 'moss' ? 'rgba(78,126,66,.30)' : 'rgba(102,143,75,.26)';
+      ctx.strokeStyle = detail.surface === 'moss' ? mossAccent : grassAccent;
       ctx.lineWidth = .65 + detail.size * .18;
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y);
-      ctx.quadraticCurveTo(point.x - size * .18, point.y - size * .55, point.x + detail.lean + sway, point.y - size);
-      ctx.moveTo(point.x, point.y);
-      ctx.quadraticCurveTo(point.x + size * .12, point.y - size * .42, point.x + size * .58 + sway * .5, point.y - size * .76);
-      ctx.stroke();
+      if (flora === 'clover') {
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.quadraticCurveTo(point.x + sway * .2, point.y - size * .48, point.x + sway, point.y - size * .72);
+        ctx.stroke();
+        ctx.fillStyle = detail.surface === 'moss' ? mossAccent : grassAccent;
+        const leaf = Math.max(1, size * .22);
+        for (const [dx, dy] of [[-leaf * .72, 0], [leaf * .72, 0], [0, -leaf * .62]]) {
+          ctx.beginPath();
+          ctx.ellipse(point.x + sway + dx, point.y - size * .76 + dy, leaf, leaf * .72, 0, 0, TAU);
+          ctx.fill();
+        }
+      } else if (flora === 'reed') {
+        ctx.beginPath();
+        ctx.moveTo(point.x - size * .18, point.y);
+        ctx.quadraticCurveTo(point.x - size * .12, point.y - size * .62, point.x + sway, point.y - size * 1.24);
+        ctx.moveTo(point.x + size * .2, point.y);
+        ctx.quadraticCurveTo(point.x + size * .28, point.y - size * .5, point.x + size * .42 + sway * .55, point.y - size * .92);
+        ctx.stroke();
+      } else if (flora === 'thyme') {
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.quadraticCurveTo(point.x + sway * .25, point.y - size * .36, point.x + detail.lean * .35 + sway, point.y - size * .67);
+        for (let branch = 1; branch <= 3; branch += 1) {
+          const y = point.y - size * (.16 + branch * .12);
+          const spread = size * (.22 + branch * .045);
+          ctx.moveTo(point.x, y);
+          ctx.lineTo(point.x - spread, y - size * .13);
+          ctx.moveTo(point.x, y);
+          ctx.lineTo(point.x + spread, y - size * .10);
+        }
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.quadraticCurveTo(point.x - size * .18, point.y - size * .55, point.x + detail.lean + sway, point.y - size);
+        ctx.moveTo(point.x, point.y);
+        ctx.quadraticCurveTo(point.x + size * .12, point.y - size * .42, point.x + size * .58 + sway * .5, point.y - size * .76);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();

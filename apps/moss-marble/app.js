@@ -1,6 +1,6 @@
 import { LEVELS, getLevel } from './levels.js';
 import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from './procedural.js';
-import { createBall, isBallStopped, predictShot, stepBall, strikeBall } from './physics.js';
+import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { compileCourse19 } from './course19.js';
 import { installLivingTerrain } from './experience14.js';
@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -58,10 +58,9 @@ let keyboardAngle = 0;
 let overviewUiKey = '';
 let lastBallMovingState = '';
 let invalidAimAt = 0;
-let lastAimPreviewAt = 0;
 let lastInactiveRenderAt = 0;
 
-const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0, preview: [], previewOutcome: null };
+const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
 
 function loadSave() {
@@ -260,7 +259,16 @@ function holeMapMarkup(item) {
     const radius = Math.max(1.8, Math.min(4.2, obstacle.r * scale * .24));
     return `<circle class="map-obstacle" cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="${radius.toFixed(1)}"/>`;
   }).join('');
-  return `<svg class="hole-map" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
+  const cssColor = (value, fallback, alpha) => Array.isArray(value) && value.length >= 3
+    ? `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`
+    : fallback;
+  const terrain = item.visual?.terrain || {};
+  const mapStyle = [
+    `--map-route:${cssColor(terrain.grassLight, 'rgba(222,220,171,.72)', .82)}`,
+    `--map-route-shadow:${cssColor(terrain.moss, 'rgba(4,16,9,.28)', .48)}`,
+    `--map-obstacle:${cssColor(terrain.moss, '#28372d', 1)}`
+  ].join(';');
+  return `<svg class="hole-map" style="${mapStyle}" aria-hidden="true" viewBox="0 0 ${width} ${height}"><path class="map-route-shadow" d="${route}"/><path class="map-route" d="${route}"/>${obstacles}<circle class="map-start" cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="2.6"/><circle class="map-hole" cx="${hole.x.toFixed(1)}" cy="${hole.y.toFixed(1)}" r="3.3"/></svg>`;
 }
 
 function renderHoleShelf() {
@@ -270,8 +278,12 @@ function renderHoleShelf() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hole-pot';
+    if (item.name.split(/\s+/).some((word) => word.length > 11)) button.classList.add('has-long-name');
     button.disabled = index >= save.unlocked;
     button.dataset.index = String(index);
+    button.style.setProperty('--hole-sky-top', item.visual?.skyTop || '#486047');
+    button.style.setProperty('--hole-sky-bottom', item.visual?.skyBottom || '#263d31');
+    button.style.setProperty('--hole-glow', `rgba(${item.visual?.glow || '215,207,146'},.22)`);
     if (save.best[index] === 1) button.classList.add('is-perfect');
     const best = save.best[index];
     button.innerHTML = `${holeMapMarkup(item)}<span class="label"><b>${item.id}. ${item.name}</b><small>${button.disabled ? 'Закрыто' : best == null ? `пар ${item.par}` : `лучшее ${best} · пар ${item.par}`}</small></span>`;
@@ -564,8 +576,6 @@ function beginAim(event) {
   aim.currentY = point.y;
   aim.vx = 0;
   aim.vy = 0;
-  aim.preview = [];
-  aim.previewOutcome = null;
   syncAimMeter();
   try { canvas.setPointerCapture(event.pointerId); } catch {}
 }
@@ -589,22 +599,6 @@ function moveAim(event) {
   aim.power = shaped;
   aim.vx = unitX * shaped * 1780;
   aim.vy = unitY * shaped * 1780;
-  refreshAimPreview();
-  syncAimMeter();
-}
-
-function refreshAimPreview(force = false) {
-  if (!aim.active || aim.power <= .055) {
-    aim.preview = [];
-    aim.previewOutcome = null;
-    return;
-  }
-  const now = performance.now();
-  if (!force && now - lastAimPreviewAt < 52) return;
-  lastAimPreviewAt = now;
-  const prediction = predictShot(ball, level, aim.vx, aim.vy, elapsed);
-  aim.preview = prediction.points;
-  aim.previewOutcome = prediction.outcome;
   syncAimMeter();
 }
 
@@ -641,7 +635,6 @@ function syncAimMeter() {
   if (meter) {
     const value = Math.round(Math.max(0, Math.min(1, aim.power)) * 100);
     meter.style.setProperty('--aim-power', String(value / 100));
-    meter.dataset.outcome = aim.previewOutcome || '';
     meter.setAttribute('aria-valuenow', String(value));
     meter.setAttribute('aria-valuetext', `${value}%`);
     meter.setAttribute('aria-hidden', String(!aim.active));
@@ -655,8 +648,6 @@ function cancelAim() {
   aim.vx = 0;
   aim.vy = 0;
   aim.power = 0;
-  aim.preview = [];
-  aim.previewOutcome = null;
   syncAimMeter();
 }
 
@@ -878,7 +869,6 @@ function updateKeyboardAim() {
   aim.power = power;
   aim.vx = Math.cos(keyboardAngle) * power * 1780;
   aim.vy = Math.sin(keyboardAngle) * power * 1780;
-  refreshAimPreview(true);
   syncAimMeter();
 }
 
@@ -1070,7 +1060,6 @@ function frame(now) {
   }
 
   audio.rollTick(ball, mode === 'playing' && waterResetTimer <= 0);
-  if (aim.active) refreshAimPreview();
 
   const movingState = String(ball.moving || ball.sunk || ball.airborne || ball.inCup || waterResetTimer > 0);
   if (movingState !== lastBallMovingState) {

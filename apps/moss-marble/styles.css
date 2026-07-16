@@ -433,8 +433,8 @@ h1 small {
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 70% 18%, rgba(215,207,146,.2), transparent 34%),
-    linear-gradient(160deg, #486047 0%, #263d31 72%);
+    radial-gradient(circle at 70% 18%, var(--hole-glow, rgba(215,207,146,.2)), transparent 34%),
+    linear-gradient(160deg, var(--hole-sky-top, #486047) 0%, var(--hole-sky-bottom, #263d31) 72%);
   color: var(--cream);
   box-shadow: 0 12px 21px rgba(44,48,37,.15), inset 0 0 0 1px rgba(255,255,255,.08);
   clip-path: polygon(5px 0, calc(100% - 3px) 0, 100% 5px, calc(100% - 1px) calc(100% - 4px), 5px 100%, 0 calc(100% - 5px));
@@ -485,14 +485,20 @@ h1 small {
   position: relative;
   z-index: 2;
   width: 100%;
-  padding: 8px 5px 3px;
+  padding: 8px 1px 3px;
   border-top: 1px solid rgba(236,229,195,.2);
   text-align: left;
 }
 .hole-pot b {
   display: block;
-  font: 620 .96rem/1.05 "Iowan Old Style", Georgia, serif;
+  font: 620 .88rem/1.02 "Iowan Old Style", Georgia, serif;
   letter-spacing: -.015em;
+  overflow-wrap: anywhere;
+}
+.hole-pot.has-long-name b {
+  font-size: .78rem;
+  line-height: 1;
+  overflow-wrap: anywhere;
 }
 .hole-pot small {
   display: block;

@@ -22,6 +22,12 @@ function color(hex, alpha = 1) {
   ];
 }
 
+function cssColor(value, fallback, alphaScale = 1) {
+  if (!Array.isArray(value) || value.length < 3) return fallback;
+  const alpha = clamp((Number.isFinite(value[3]) ? value[3] : 1) * alphaScale, 0, 1);
+  return `rgba(${Math.round(value[0] * 255)},${Math.round(value[1] * 255)},${Math.round(value[2] * 255)},${alpha})`;
+}
+
 const C = {
   grass: color('#6f8658'),
   grassLight: color('#91a66c'),
@@ -999,13 +1005,17 @@ class WebGLDiorama {
     this.updateParticles(dt);
 
     const horizon = this.height * .48;
+    const rainAmount = clamp(Number(level?.visual?.rain ?? 1), 0, 1.6);
+    const rainCount = Math.min(this.rain.length, Math.round(this.rain.length * Math.min(1, rainAmount)));
+    const rainTint = level?.visual?.mist || '223,239,229';
     ctx.save();
-    for (const drop of this.rain) {
+    for (let index = 0; index < rainCount; index += 1) {
+      const drop = this.rain[index];
       const y = ((drop.y + time * drop.speed * .025) % 1) * horizon;
       const x = drop.x * this.width + this.parallaxX * 7;
-      ctx.strokeStyle = `rgba(223,239,229,${drop.alpha})`;
+      ctx.strokeStyle = `rgba(${rainTint},${drop.alpha * (.72 + rainAmount * .28)})`;
       ctx.lineWidth = .7;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + drop.length); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + drop.length * (.88 + rainAmount * .12)); ctx.stroke();
     }
     ctx.restore();
 
@@ -1020,34 +1030,21 @@ class WebGLDiorama {
 
     if (aim.active && !ball.sunk) {
       const center = this.ballScreenPoint(ball);
-      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
-        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
-        : null;
       const worldLength = 95 + aim.power * 250;
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
-      const fallbackEnd = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
-      const guide = predicted || [center, fallbackEnd];
-      const end = guide.at(-1);
-      const outcomeColor = aim.previewOutcome === 'water' ? '169,215,208' : aim.previewOutcome === 'cup' ? '227,201,118' : aim.previewOutcome === 'tunnel-blocked' ? '210,169,116' : '244,238,205';
+      const end = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
       ctx.save();
-      ctx.strokeStyle = `rgba(${outcomeColor},.78)`;
+      ctx.strokeStyle = 'rgba(244,238,205,.78)';
       ctx.lineWidth = 1.25;
       ctx.setLineDash([2, 8]);
-      ctx.beginPath();
-      guide.forEach((point, index) => {
-        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(end.x, end.y); ctx.stroke();
       ctx.setLineDash([]);
-      for (let index = 1; index < guide.length; index += 1) {
-        const t = index / Math.max(1, guide.length - 1);
-        ctx.fillStyle = `rgba(${outcomeColor},${.30 + t * .52})`;
-        ctx.beginPath(); ctx.arc(guide[index].x, guide[index].y, 1.35 + t * 1.8, 0, TAU); ctx.fill();
+      const dots = 5;
+      for (let index = 1; index <= dots; index += 1) {
+        const t = index / dots;
+        ctx.fillStyle = `rgba(244,238,205,${.34 + t * .5})`;
+        ctx.beginPath(); ctx.arc(lerp(center.x, end.x, t), lerp(center.y, end.y, t), 1.5 + t * 1.7, 0, TAU); ctx.fill();
       }
-      ctx.strokeStyle = `rgba(${outcomeColor},.68)`;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(end.x, end.y, 5.5, 0, TAU); ctx.stroke();
       ctx.restore();
     }
 
@@ -1185,10 +1182,11 @@ class CanvasFallback {
   }
   drawSurface(feature) {
     const ctx = this.ctx;
+    const terrain = this.terrainPalette || {};
     const palette = {
-      water: ['rgba(35,104,104,.92)', 'rgba(173,225,212,.34)'],
-      sand: ['#b99754', 'rgba(246,220,159,.48)'],
-      moss: ['#315f3a', 'rgba(144,181,102,.36)']
+      water: [cssColor(terrain.water, 'rgba(35,104,104,.92)'), cssColor(terrain.waterLight, 'rgba(173,225,212,.34)', .42)],
+      sand: [cssColor(terrain.sand, '#b99754'), cssColor(terrain.sandLight, 'rgba(246,220,159,.48)', .48)],
+      moss: [cssColor(terrain.moss, '#315f3a'), cssColor(terrain.mossLight, 'rgba(144,181,102,.36)', .42)]
     };
     const colors = palette[feature.type];
     if (!colors) return;
@@ -1282,12 +1280,14 @@ class CanvasFallback {
   draw(level, ball, aim, time = 0) {
     this.resize(); this.fit(level);
     const ctx = this.ctx;
+    const visual = level.visual || {};
+    this.terrainPalette = visual.terrain || {};
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, '#30463b'); gradient.addColorStop(1, '#101d17');
+    gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
-    ctx.fillStyle = '#78945e'; ctx.fill();
-    ctx.strokeStyle = 'rgba(230,222,178,.42)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
+    ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);
@@ -1324,22 +1324,9 @@ class CanvasFallback {
     if (aim.active) {
       const speed = Math.hypot(aim.vx, aim.vy) || 1;
       const length = 95 + aim.power * 250;
-      const predicted = Array.isArray(aim.preview) && aim.preview.length > 1
-        ? aim.preview.map((point) => ({ ...this.worldToScreen(point.x, point.y, point.z), breakBefore: point.breakBefore }))
-        : null;
       const end = this.worldToScreen(ball.x + aim.vx / speed * length, ball.y + aim.vy / speed * length, 2);
-      const guide = predicted || [bp, end];
-      const color = aim.previewOutcome === 'water' ? '#a9d7d0' : aim.previewOutcome === 'cup' ? '#e3c976' : aim.previewOutcome === 'tunnel-blocked' ? '#d2a974' : '#eee9d4';
-      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
-      ctx.beginPath();
-      guide.forEach((point, index) => {
-        if (!index || point.breakBefore) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const last = guide.at(-1);
-      ctx.beginPath(); ctx.arc(last.x, last.y, 5, 0, TAU); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.strokeStyle = '#eee9d4'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 7]);
+      ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(end.x, end.y); ctx.stroke(); ctx.restore();
     }
   }
 }
