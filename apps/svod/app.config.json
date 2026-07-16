@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "svod",
+  "name": "СВОД",
+  "shortName": "СВОД",
+  "description": "Стратегия о последнем кольцевом городе: вращай районы, собирай ресурсные цепи и удерживай Свод против стеклянных бурь.",
+  "version": "0.1.0",
+  "releaseDate": "2026-07-16",
+  "releaseDateTime": "2026-07-16T13:00:00+01:00",
+  "changelog": [
+    "Первый игровой релиз: процедурный кольцевой город, ресурсные цепи, буря, проекты, указы и локальное сохранение кампании."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#e26738",
+  "backgroundColor": "#ede6d2",
+  "themeColor": "#173f52",
+  "orientation": "portrait",
+  "cacheName": "svod-v0.1.0",
+  "storageNamespace": "pocket-works:svod",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "strategy",
+    "procedural",
+    "city",
+    "rings",
+    "canvas",
+    "audio",
+    "haptics",
+    "resume",
+    "workshop"
+  ],
+  "order": 88
+}
