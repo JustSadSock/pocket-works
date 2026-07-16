@@ -46,6 +46,23 @@ function drawMenuScene() {
   context.restore();
 }
 
+function recoverFailedFold(error) {
+  console.error('СГИБ fold failed', error);
+  const snapshot = state.history.pop();
+  if (snapshot) restoreSnapshot(snapshot);
+  else {
+    state.animation = null;
+    state.gesture = null;
+  }
+  state.resolved = false;
+  showScreen(null);
+  setFoldStatus('hidden');
+  showHint('Сгиб отменён: проведи линию ещё раз', true);
+  showToast('Сгиб безопасно отменён');
+  audio.invalid();
+  vibrate(18);
+}
+
 function updateAnimation(now) {
   if (!state.animation) return;
   const progress = clamp((now - state.animation.startedAt) / state.animation.duration, 0, 1);
@@ -55,7 +72,11 @@ function updateAnimation(now) {
     state.animation.applied = true;
     const line = state.animation.line;
     state.animation = null;
-    applyFold(line);
+    try {
+      applyFold(line);
+    } catch (error) {
+      recoverFailedFold(error);
+    }
   }
 }
 
@@ -72,24 +93,44 @@ function updateEffects(deltaSeconds) {
   state.pulses = state.pulses.filter((pulse) => pulse.age < pulse.life);
 }
 
-function render(now) {
-  resizeCanvas();
-  beginLogicalFrame();
-  if (state.mode === 'menu') drawMenuScene();
-  else drawPaperScene();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  const deltaSeconds = clamp((now - lastFrameTime) / 1000, 0, 0.05);
-  lastFrameTime = now;
-  updateAnimation(now);
-  updateEffects(deltaSeconds);
+function startRenderLoop() {
+  if (rendering || document.hidden) return;
+  rendering = true;
+  lastFrameTime = performance.now();
+  cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(render);
 }
 
+function stopRenderLoop() {
+  rendering = false;
+  cancelAnimationFrame(rafId);
+  rafId = 0;
+}
+
+function render(now) {
+  if (!rendering) return;
+  try {
+    resizeCanvas();
+    beginLogicalFrame();
+    if (state.mode === 'menu') drawMenuScene();
+    else drawPaperScene();
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    const deltaSeconds = clamp((now - lastFrameTime) / 1000, 0, 0.05);
+    lastFrameTime = now;
+    updateAnimation(now);
+    updateEffects(deltaSeconds);
+  } catch (error) {
+    console.error('СГИБ frame failed', error);
+    if (state.animation) recoverFailedFold(error);
+  }
+  if (rendering) rafId = requestAnimationFrame(render);
+}
+
 function bindControls() {
-  canvas.addEventListener('pointerdown', beginGesture);
-  canvas.addEventListener('pointermove', moveGesture);
-  canvas.addEventListener('pointerup', endGesture);
-  canvas.addEventListener('pointercancel', cancelGesture);
+  canvas.addEventListener('pointerdown', beginGesture, { passive: false });
+  canvas.addEventListener('pointermove', moveGesture, { passive: false });
+  canvas.addEventListener('pointerup', endGesture, { passive: false });
+  canvas.addEventListener('pointercancel', cancelGesture, { passive: false });
   canvas.addEventListener('lostpointercapture', cancelGesture);
 
   dom.continueBtn.addEventListener('click', () => {
@@ -99,6 +140,7 @@ function bindControls() {
   });
   dom.levelsBtn.addEventListener('click', () => { pressFeedback(); buildLevelGrid(); showScreen('levelsScreen'); });
   dom.closeLevelsBtn.addEventListener('click', () => { pressFeedback(); showScreen('menuScreen'); });
+  dom.guideBtn.addEventListener('click', () => { pressFeedback(); openGuide('menuScreen'); });
   dom.endlessBtn.addEventListener('click', () => { pressFeedback(); startEndless(true); });
   dom.soundMenuBtn.addEventListener('click', toggleSound);
   dom.soundPauseBtn.addEventListener('click', toggleSound);
