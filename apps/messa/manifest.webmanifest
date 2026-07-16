@@ -1,0 +1,17 @@
+{
+  "id": "/apps/messa/",
+  "name": "МЕССА",
+  "short_name": "МЕССА",
+  "description": "Трёхмерная гравитационная игра: искривляй орбиту кометы касанием, собирай голоса небесной машины и отматывай собственную траекторию.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#789bb4",
+  "theme_color": "#789bb4",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
