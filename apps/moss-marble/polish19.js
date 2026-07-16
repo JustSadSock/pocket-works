@@ -38,6 +38,30 @@ function ellipseWorldPoints(mask, scale, count = 34) {
   return points;
 }
 
+function capsuleWorldPoints(mask, scale, count = 18) {
+  const dx = mask.b.x - mask.a.x;
+  const dy = mask.b.y - mask.a.y;
+  const axis = Math.atan2(dy, dx);
+  const radius = mask.width * .5 * scale;
+  const points = [];
+  for (let index = 0; index <= count; index += 1) {
+    const angle = axis + Math.PI * .5 + index / count * Math.PI;
+    points.push({ x: mask.a.x + Math.cos(angle) * radius, y: mask.a.y + Math.sin(angle) * radius });
+  }
+  for (let index = 0; index <= count; index += 1) {
+    const angle = axis - Math.PI * .5 + index / count * Math.PI;
+    points.push({ x: mask.b.x + Math.cos(angle) * radius, y: mask.b.y + Math.sin(angle) * radius });
+  }
+  points.push(points[0]);
+  return points;
+}
+
+function maskWorldPoints(mask, scale, count = 34) {
+  return mask.a && mask.b
+    ? capsuleWorldPoints(mask, scale, Math.max(8, Math.floor(count * .5)))
+    : ellipseWorldPoints(mask, scale, count);
+}
+
 export class CoursePolishLayer {
   constructor(canvas, renderer) {
     this.canvas = canvas;
@@ -100,8 +124,9 @@ export class CoursePolishLayer {
         lean: (hashNoise(index, seed, 31) - .5) * 7
       });
     }
-    const waterMasks = (field.masks || []).filter((mask) => mask.type === 'water' && Number.isFinite(mask.x));
-    const sandMasks = (field.masks || []).filter((mask) => mask.type === 'sand' && Number.isFinite(mask.x));
+    const waterMasks = (field.masks || []).filter((mask) => mask.type === 'water');
+    const sandMasks = (field.masks || []).filter((mask) => mask.type === 'sand');
+    const mossMasks = (field.masks || []).filter((mask) => mask.type === 'moss');
     const landmarks = [.18, .55, .84].map((t, index) => {
       const sample = routeSample(level.centerline, t);
       const side = index % 2 ? 1 : -1;
@@ -113,7 +138,7 @@ export class CoursePolishLayer {
         phase: hashNoise(index, seed, 53) * TAU
       };
     });
-    return { details, waterMasks, sandMasks, landmarks };
+    return { details, waterMasks, sandMasks, mossMasks, landmarks };
   }
 
   drawLandmark(ctx, landmark, motif, accent, field, time) {
@@ -215,22 +240,48 @@ export class CoursePolishLayer {
     const motif = level.visual?.motif || 'drop';
     const motifAccent = level.visual?.accent || '205,224,180';
 
+    const routeOutline = level.course18?.surfaceMesh?.outline || level.outline || [];
+    if (routeOutline.length > 2) {
+      this.pathWorld([...routeOutline, routeOutline[0]], field, .86);
+      ctx.strokeStyle = 'rgba(3,13,8,.62)';
+      ctx.lineWidth = 4.2;
+      ctx.stroke();
+      this.pathWorld([...routeOutline, routeOutline[0]], field, 1.02);
+      ctx.strokeStyle = terrainTint(terrain.grassLight, 'rgba(202,218,164,.42)', .46);
+      ctx.lineWidth = 1.15;
+      ctx.stroke();
+    }
+
     for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
       const mask = cache.waterMasks[maskIndex];
       for (let ring = 0; ring < 4; ring += 1) {
         const pulse = this.reducedMotion ? 0 : Math.sin(time * 1.35 + maskIndex * 1.7 + ring) * .012;
         const scale = .34 + ring * .14 + pulse;
-        this.pathWorld(ellipseWorldPoints(mask, scale, 30), field, .72);
+        this.pathWorld(maskWorldPoints(mask, scale, 30), field, .72);
         ctx.globalAlpha = .74 + ring * .09;
         ctx.strokeStyle = waterAccent;
         ctx.lineWidth = .7 + ring * .14;
         ctx.stroke();
       }
+      this.pathWorld(maskWorldPoints(mask, .91, 38), field, .78);
+      ctx.setLineDash([5, 8]);
+      ctx.lineDashOffset = this.reducedMotion ? 0 : -time * 5;
+      ctx.strokeStyle = terrainTint(terrain.waterLight, 'rgba(176,226,214,.28)', .30);
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+      ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     }
 
     for (let maskIndex = 0; maskIndex < cache.sandMasks.length; maskIndex += 1) {
       const mask = cache.sandMasks[maskIndex];
+      this.pathWorld(maskWorldPoints(mask, .90, 38), field, .61);
+      ctx.setLineDash([2, 5]);
+      ctx.strokeStyle = terrainTint(terrain.sandLight, 'rgba(246,220,159,.30)', .34);
+      ctx.lineWidth = 1.15;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (!Number.isFinite(mask.x)) continue;
       const cos = Math.cos((mask.angle || 0) + .45);
       const sin = Math.sin((mask.angle || 0) + .45);
       for (let line = -3; line <= 3; line += 1) {
@@ -244,6 +295,20 @@ export class CoursePolishLayer {
         ctx.lineWidth = .75;
         ctx.stroke();
       }
+    }
+
+    for (let maskIndex = 0; maskIndex < cache.mossMasks.length; maskIndex += 1) {
+      const mask = cache.mossMasks[maskIndex];
+      for (let contour = 0; contour < 3; contour += 1) {
+        this.pathWorld(maskWorldPoints(mask, .44 + contour * .21, 34), field, .66);
+        ctx.setLineDash(contour === 2 ? [1.5, 5.5] : [3, 7]);
+        ctx.lineDashOffset = this.reducedMotion ? contour * 2 : time * (contour % 2 ? 1.2 : -.8);
+        ctx.strokeStyle = terrainTint(terrain.mossLight, 'rgba(117,166,96,.28)', .30 + contour * .035);
+        ctx.lineWidth = contour === 2 ? 1.25 : .8;
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
     }
 
     for (const landmark of cache.landmarks) this.drawLandmark(ctx, landmark, motif, motifAccent, field, time);
