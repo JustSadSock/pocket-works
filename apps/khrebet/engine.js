@@ -200,15 +200,17 @@ export function rockGeometry(sides = 7, seed = 1) {
 }
 
 export function wingGeometry() {
-  const top = 0.04;
-  const bottom = -0.04;
+  const top = 0.055;
+  const bottom = -0.055;
   const outline = [
-    [0, 0, 1.35],
-    [1.58, 0, 0.16],
-    [0.52, 0, -0.45],
-    [0, 0, -1.16],
-    [-0.52, 0, -0.45],
-    [-1.58, 0, 0.16],
+    [0, 0, 0.48],
+    [1.48, 0, -0.12],
+    [1.42, 0, -0.38],
+    [0.2, 0, -0.3],
+    [0, 0, -0.55],
+    [-0.2, 0, -0.3],
+    [-1.42, 0, -0.38],
+    [-1.48, 0, -0.12],
   ];
   const triangles = [];
   for (let index = 1; index < outline.length - 1; index += 1) {
@@ -233,6 +235,45 @@ export function wingGeometry() {
     );
   }
   return flatGeometry(triangles);
+}
+
+export function finGeometry() {
+  const left = -0.045;
+  const right = 0.045;
+  const baseFront = 0.38;
+  const baseBack = -0.5;
+  const top = [0, 0.72, -0.31];
+  const triangles = [];
+  triangles.push(
+    left, 0, baseFront, left, 0, baseBack, left, top[1], top[2],
+    right, 0, baseFront, right, top[1], top[2], right, 0, baseBack
+  );
+  addQuad(triangles,
+    [left, 0, baseFront], [right, 0, baseFront], [right, top[1], top[2]], [left, top[1], top[2]]
+  );
+  addQuad(triangles,
+    [right, 0, baseBack], [left, 0, baseBack], [left, top[1], top[2]], [right, top[1], top[2]]
+  );
+  addQuad(triangles,
+    [left, 0, baseBack], [right, 0, baseBack], [right, 0, baseFront], [left, 0, baseFront]
+  );
+  return flatGeometry(triangles);
+}
+
+export function propellerGeometry() {
+  const blades = [];
+  const z = 0;
+  const addBlade = (x0, y0, x1, y1) => {
+    blades.push(
+      x0, y0, z, x1, y0, z, x1, y1, z,
+      x0, y0, z, x1, y1, z, x0, y1, z,
+      x0, y0, z, x1, y1, z, x1, y0, z,
+      x0, y0, z, x0, y1, z, x1, y1, z
+    );
+  };
+  addBlade(-0.055, -0.78, 0.055, 0.78);
+  addBlade(-0.78, -0.055, 0.78, 0.055);
+  return flatGeometry(blades);
 }
 
 export function ribbonGeometry() {
@@ -327,6 +368,7 @@ export class RidgeEngine {
     this.camera = {
       position: [0, 12, -10],
       target: [0, 10, 15],
+      up: [0, 1, 0],
       fov: Math.PI * 0.38,
     };
     this.fogColor = [0.72, 0.75, 0.72];
@@ -484,7 +526,7 @@ export class RidgeEngine {
   viewProjection() {
     const aspect = this.canvas.width / Math.max(1, this.canvas.height);
     const projection = mat4Perspective(this.camera.fov, aspect, 0.08, 230);
-    const view = mat4LookAt(this.camera.position, this.camera.target);
+    const view = mat4LookAt(this.camera.position, this.camera.target, this.camera.up || [0, 1, 0]);
     return mat4Multiply(projection, view);
   }
 

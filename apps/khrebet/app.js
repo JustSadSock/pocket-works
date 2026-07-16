@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 import {
+  AIRCRAFT_CORE_RADIUS,
   RUN_SAVE_VERSION,
   awardScore,
   canyonClearance,
@@ -14,12 +15,12 @@ import {
   freshProfile,
   gateHit,
   lerp,
-  obstacleClearance,
   progressDifficulty,
   routeCode,
   sanitizeProfile,
   sanitizeSavedRun,
   stepFlight,
+  sweptObstacleClearance,
 } from './game-core.js';
 import { RidgeEngine } from './engine.js';
 import { RidgeWorld } from './world.js';
@@ -42,6 +43,7 @@ const elements = {
   flightHud: byId('flightHud'),
   pauseButton: byId('pauseButton'),
   modeLabel: byId('modeLabel'),
+  biomeLabel: byId('biomeLabel'),
   distanceValue: byId('distanceValue'),
   integrityBlock: document.querySelector('.integrity-block'),
   integrityFill: byId('integrityFill'),
@@ -63,6 +65,11 @@ const elements = {
   diveLabel: byId('diveLabel'),
   impactFlash: byId('impactFlash'),
   flowFlash: byId('flowFlash'),
+  boostVignette: byId('boostVignette'),
+  proximityFrame: byId('proximityFrame'),
+  proximityLeft: byId('proximityLeft'),
+  proximityRight: byId('proximityRight'),
+  proximityFloor: byId('proximityFloor'),
   menu: byId('menuOverlay'),
   bestDistance: byId('bestDistance'),
   bestScore: byId('bestScore'),
@@ -148,7 +155,7 @@ let frameHandle = 0;
 let previousFrame = performance.now();
 let demoTime = 0;
 let demoFlight = createFlightState();
-let cameraState = { x: 0, y: 16, z: -12, tx: 0, ty: 11, tz: 16, fov: Math.PI * 0.38 };
+let cameraState = { x: 0, y: 16, z: -12, tx: 0, ty: 11, tz: 16, fov: Math.PI * 0.38, roll: 0 };
 let shake = 0;
 let resetArmedUntil = 0;
 let runEndedAt = 0;
@@ -159,7 +166,7 @@ const input = {
   startY: 0,
   x: 0,
   y: 0,
-  folded: false,
+  boosted: false,
   keys: new Set(),
 };
 
@@ -177,6 +184,7 @@ function setFlightChrome(visible) {
     setHidden(element, !visible);
   }
   elements.reticle.style.display = visible ? '' : 'none';
+  elements.proximityFrame.style.display = visible ? '' : 'none';
 }
 
 function syncProfileUi() {
@@ -239,10 +247,11 @@ function clearInput() {
   input.pointerId = null;
   input.x = 0;
   input.y = 0;
-  input.folded = false;
+  input.boosted = false;
   input.keys.clear();
   elements.steerCursor.classList.remove('is-visible');
   elements.diveButton.classList.remove('is-held');
+  elements.stage.classList.remove('is-boosting');
 }
 
 function createRun(mode, seed, saved = null) {
@@ -271,6 +280,8 @@ function createRun(mode, seed, saved = null) {
     lastDamageTime: -10,
     lastSaveTime: 0,
     altitudeWarningZone: -1,
+    biomeZone: -1,
+    wasBoosted: false,
   };
 }
 
@@ -315,7 +326,7 @@ function beginRun(mode, seed, saved = null) {
   setHidden(elements.resultOverlay, true);
   closeSettings();
   setFlightChrome(true);
-  elements.modeLabel.textContent = mode === 'daily' ? `ВЕТЕР ДНЯ / ${routeCode(seed)}` : `СВОБОДНЫЙ / ${routeCode(seed)}`;
+  elements.modeLabel.textContent = mode === 'daily' ? `МАРШРУТ ДНЯ / ${routeCode(seed)}` : `СВОБОДНЫЙ / ${routeCode(seed)}`;
   snapCameraTo(run.flight);
   audio.setRunning(true);
   runEndedAt = 0;
@@ -388,6 +399,7 @@ function enterMenu(options = {}) {
   setHidden(elements.pauseOverlay, true);
   setHidden(elements.resultOverlay, true);
   closeSettings();
+  elements.stage.classList.remove('is-flowing', 'is-boosting');
   demoTime = 0;
   demoFlight = createFlightState();
   const demoCourse = courseAt(0, todaySeed);
@@ -407,7 +419,7 @@ const crashCopy = {
   wall: {
     kicker: 'КОНТАКТ С РЕЛЬЕФОМ',
     title: 'Гора не уступила.',
-    note: 'Крыло задело стену разлома. У стены, как выяснилось, было больше крыла.',
+    note: 'Самолёт задел стену разлома. Рамка близости предупреждала, но гора оказалась убедительнее.',
   },
   needle: {
     kicker: 'СКАЛЬНАЯ ИГЛА / ПРЯМОЕ ПОПАДАНИЕ',
@@ -506,31 +518,43 @@ function applyDamage(amount, reason) {
     finishRun(reason);
     return true;
   }
-  showCallout('КРЫЛО ПОВРЕЖДЕНО', `${Math.ceil(run.integrity)}% осталось`);
+  world.markImpact();
+  showCallout('КОРПУС ПОВРЕЖДЁН', `${Math.ceil(run.integrity)}% прочности`);
   return true;
 }
 
+function updateProximity(clearance, obstacleDistance = Infinity) {
+  if (!clearance || !elements.proximityFrame) return;
+  const wallOpacity = (distance) => clamp((3.4 - distance) / 2.7, 0, 1);
+  elements.proximityLeft.style.opacity = String(wallOpacity(clearance.left));
+  elements.proximityRight.style.opacity = String(wallOpacity(clearance.right));
+  elements.proximityFloor.style.opacity = String(wallOpacity(clearance.floor));
+  const danger = Math.min(clearance.minimum - AIRCRAFT_CORE_RADIUS, obstacleDistance);
+  elements.proximityFrame.classList.toggle('is-danger', danger < 0.8);
+  elements.proximityFrame.classList.toggle('is-close', danger >= 0.8 && danger < 1.8);
+}
+
 function checkCourseEvents(previousState) {
-  if (!run || phase !== 'running') return;
+  if (!run || phase !== 'running') return null;
   const state = run.flight;
   const course = courseAt(state.z, run.seed);
   const clearance = canyonClearance(state, course);
 
-  if (clearance.minimum < 0.55) {
+  if (clearance.minimum < AIRCRAFT_CORE_RADIUS) {
     let reason = 'wall';
     if (clearance.floor <= clearance.left && clearance.floor <= clearance.right) {
       reason = 'floor';
-      state.y = course.floor + 1.72;
+      state.y = course.floor + 1.1 + AIRCRAFT_CORE_RADIUS;
       state.vy = Math.max(2.8, Math.abs(state.vy) * 0.28);
     } else if (clearance.left < clearance.right) {
-      state.x = course.center - course.width + 1.05;
+      state.x = course.center - course.width + AIRCRAFT_CORE_RADIUS;
       state.vx = Math.abs(state.vx) * 0.32 + 1.8;
     } else {
-      state.x = course.center + course.width - 1.05;
+      state.x = course.center + course.width - AIRCRAFT_CORE_RADIUS;
       state.vx = -Math.abs(state.vx) * 0.32 - 1.8;
     }
     applyDamage(38, reason);
-    if (phase !== 'running') return;
+    if (phase !== 'running') return null;
   }
 
   const ceiling = course.floor + 40;
@@ -545,6 +569,7 @@ function checkCourseEvents(previousState) {
   }
 
   const nearby = world.nearby(state.z, 12);
+  let nearestObstacle = Infinity;
   for (const gate of nearby.gates) {
     if (run.passed.has(gate.id) || previousState.z > gate.z || state.z < gate.z) continue;
     const hit = gateHit(previousState, state, gate);
@@ -561,16 +586,18 @@ function checkCourseEvents(previousState) {
   }
 
   for (const obstacle of nearby.obstacles) {
-    const obstacleDistance = obstacleClearance(state, obstacle);
-    if (obstacleDistance < 0.62) {
-      const side = state.x >= obstacle.x ? 1 : -1;
-      state.x += side * 1.4;
+    const contact = sweptObstacleClearance(previousState, state, obstacle);
+    const obstacleDistance = contact.clearance;
+    nearestObstacle = Math.min(nearestObstacle, obstacleDistance);
+    if (obstacleDistance < 0) {
+      const side = contact.x >= obstacle.x ? 1 : -1;
+      state.x += side * Math.max(0.48, Math.abs(obstacleDistance) + 0.24);
       state.vx += side * 4.2;
-      state.y += 0.5;
-      if (applyDamage(46, 'needle') && phase !== 'running') return;
+      state.y += 0.22;
+      if (applyDamage(46, 'needle') && phase !== 'running') return null;
     } else if (
-      Math.abs(state.z - obstacle.z) < 2.4 &&
-      obstacleDistance < 2.75 &&
+      previousState.z <= obstacle.z + 1.3 && state.z >= obstacle.z - 1.3 &&
+      obstacleDistance < 2.2 &&
       !run.grazed.has(obstacle.id)
     ) {
       run.grazed.add(obstacle.id);
@@ -581,7 +608,7 @@ function checkCourseEvents(previousState) {
   }
 
   const closestWall = Math.min(clearance.left, clearance.right, clearance.floor);
-  if (closestWall > 0.62 && closestWall < 2.15 && state.speed > 28) {
+  if (closestWall > AIRCRAFT_CORE_RADIUS + 0.12 && closestWall < 2.35 && state.speed > 29) {
     const side = clearance.floor <= clearance.left && clearance.floor <= clearance.right
       ? 'f'
       : clearance.left < clearance.right ? 'l' : 'r';
@@ -593,6 +620,7 @@ function checkCourseEvents(previousState) {
       addReward(48, 7, side === 'f' ? 'БРЕЮЩИЙ ПОЛЁТ' : 'ПО КРОМКЕ', `серия ×${run.combo + 1}`);
     }
   }
+  return { clearance, nearestObstacle };
 }
 
 function updateRun(delta, time) {
@@ -603,13 +631,13 @@ function updateRun(delta, time) {
   const keyboardY = (input.keys.has('ArrowDown') || input.keys.has('KeyS') ? 1 : 0) - (input.keys.has('ArrowUp') || input.keys.has('KeyW') ? 1 : 0);
   const steeringX = keyboardX || input.x;
   const steeringY = keyboardY || input.y;
-  const folded = input.folded || input.keys.has('Space');
+  const boosted = input.boosted || input.keys.has('Space');
   const difficulty = progressDifficulty(state.z);
   const course = courseAt(state.z, run.seed);
   stepFlight(state, {
     x: steeringX,
     y: steeringY,
-    folded,
+    boosted,
     sensitivity: profile.settings.sensitivity,
   }, delta, course, difficulty);
 
@@ -622,21 +650,29 @@ function updateRun(delta, time) {
     if (run.comboTime <= 0) run.combo = 1;
   }
 
-  checkCourseEvents(previousState);
+  const proximity = checkCourseEvents(previousState);
   if (phase !== 'running') return;
   const flowing = run.flowTime > 0;
+  const visual = world.getVisualProfile(state.z);
+  if (visual.zone !== run.biomeZone) {
+    if (run.biomeZone >= 0) showCallout(visual.label, 'новый участок маршрута');
+    run.biomeZone = visual.zone;
+  }
+  if (boosted && !run.wasBoosted) audio.event('boost');
+  run.wasBoosted = boosted;
   run.score += state.speed * delta * 0.72 * comboMultiplier(run.combo) * (flowing ? 2 : 1);
   world.update(state, {
     delta,
     time,
-    folded,
+    boosted,
     flowing,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
-  updateCamera(state, delta, flowing, folded);
+  updateCamera(state, delta, flowing, boosted);
   updateMood(state.z, delta);
-  updateHud(folded);
-  audio.update(state.speed, folded, flowing);
+  updateHud(boosted);
+  updateProximity(proximity?.clearance, proximity?.nearestObstacle);
+  audio.update(state.speed, boosted, flowing);
 
   if (time - run.lastSaveTime > 2.2) {
     run.lastSaveTime = time;
@@ -663,7 +699,7 @@ function updateDemo(delta, time) {
   world.update(demoFlight, {
     delta,
     time,
-    folded: false,
+    boosted: false,
     flowing: false,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
@@ -678,7 +714,7 @@ function updateStaticWorld(delta, time) {
   world.update(run.flight, {
     delta,
     time,
-    folded: false,
+    boosted: false,
     flowing: false,
     effects: profile.settings.effects && !reducedMotion.matches,
   });
@@ -687,16 +723,17 @@ function updateStaticWorld(delta, time) {
   audio.update(0, false, false);
 }
 
-function updateCamera(state, delta, flowing, folded, demo = false) {
+function updateCamera(state, delta, flowing, boosted, demo = false) {
   const speedPull = clamp((state.speed - 26) / 24, 0, 1);
   const desired = {
     x: state.x - state.vx * 0.045,
-    y: state.y + (demo ? 3.8 : 3.25) - state.vy * 0.025,
-    z: state.z - 10.8 - speedPull * 2.4,
+    y: state.y + (demo ? 3.45 : 3.05) - state.vy * 0.025,
+    z: state.z - 9.25 - speedPull * 2.15,
     tx: state.x + state.vx * 0.11,
     ty: state.y + 0.12 + state.vy * 0.1,
     tz: state.z + 15 + speedPull * 5,
-    fov: (flowing ? Math.PI * 0.47 : folded ? Math.PI * 0.425 : Math.PI * 0.385),
+    fov: (flowing ? Math.PI * 0.455 : boosted ? Math.PI * 0.41 : Math.PI * 0.37),
+    roll: clamp(state.bank * 0.2, -0.13, 0.13),
   };
   const cameraSmooth = demo ? 1.8 : 5.6;
   cameraState.x = damp(cameraState.x, desired.x, cameraSmooth, delta);
@@ -706,50 +743,53 @@ function updateCamera(state, delta, flowing, folded, demo = false) {
   cameraState.ty = damp(cameraState.ty, desired.ty, cameraSmooth * 1.15, delta);
   cameraState.tz = damp(cameraState.tz, desired.tz, cameraSmooth * 1.15, delta);
   cameraState.fov = damp(cameraState.fov, desired.fov, 4.2, delta);
+  cameraState.roll = damp(cameraState.roll || 0, desired.roll, demo ? 1.8 : 4.5, delta);
   shake = damp(shake, 0, 7.5, delta);
   const jitterX = (Math.random() - 0.5) * shake;
   const jitterY = (Math.random() - 0.5) * shake;
   engine.camera.position = [cameraState.x + jitterX, cameraState.y + jitterY, cameraState.z];
   engine.camera.target = [cameraState.tx, cameraState.ty, cameraState.tz];
+  engine.camera.up = [Math.sin(cameraState.roll), Math.cos(cameraState.roll), 0];
   engine.camera.fov = cameraState.fov;
 }
 
 function snapCameraTo(state, demo = false) {
   cameraState = {
     x: state.x,
-    y: state.y + (demo ? 3.8 : 3.25),
-    z: state.z - 10.8,
+    y: state.y + (demo ? 3.45 : 3.05),
+    z: state.z - 9.25,
     tx: state.x,
     ty: state.y + 0.12,
     tz: state.z + 15,
-    fov: Math.PI * 0.385,
+    fov: Math.PI * 0.37,
+    roll: 0,
   };
   if (!engine) return;
   engine.camera.position = [cameraState.x, cameraState.y, cameraState.z];
   engine.camera.target = [cameraState.tx, cameraState.ty, cameraState.tz];
+  engine.camera.up = [0, 1, 0];
   engine.camera.fov = cameraState.fov;
 }
 
 function updateMood(distance, delta) {
-  const dusk = clamp((distance - 520) / 1450, 0, 1);
-  const storm = clamp((distance - 1500) / 1900, 0, 1);
-  const targetFog = [
-    lerp(0.72, 0.43, dusk) - storm * 0.08,
-    lerp(0.75, 0.49, dusk) - storm * 0.07,
-    lerp(0.72, 0.5, dusk) - storm * 0.05,
-  ];
+  const visual = world.getVisualProfile(distance);
+  const distanceMood = clamp(distance / 4200, 0, 1);
+  const targetFog = visual.fog.map((channel, index) => channel - distanceMood * (index === 2 ? 0.025 : 0.045));
   for (let index = 0; index < 3; index += 1) {
-    engine.fogColor[index] = damp(engine.fogColor[index], targetFog[index], 0.35, delta);
+    engine.fogColor[index] = damp(engine.fogColor[index], targetFog[index], 0.62, delta);
   }
-  engine.fogNear = lerp(56, 39, dusk);
-  engine.fogFar = lerp(168, 126, dusk);
-  const top = `rgb(${Math.round(lerp(169, 92, dusk))} ${Math.round(lerp(181, 113, dusk))} ${Math.round(lerp(178, 117, dusk))})`;
-  const horizon = `rgb(${Math.round(lerp(215, 160, dusk))} ${Math.round(lerp(216, 166, dusk))} ${Math.round(lerp(207, 165, dusk))})`;
-  elements.stage.style.background = `linear-gradient(180deg, ${top} 0%, ${horizon} 52%, #a9aaa1 100%)`;
-  elements.sun.style.opacity = String(lerp(0.68, 0.14, dusk));
+  engine.fogNear = damp(engine.fogNear, visual.id === 'basalt' ? 34 : visual.id === 'glacier' ? 62 : 52, 0.52, delta);
+  engine.fogFar = damp(engine.fogFar, visual.id === 'basalt' ? 125 : visual.id === 'glacier' ? 185 : 164, 0.52, delta);
+  const rgb = (color) => `rgb(${color.map((channel) => Math.round(channel * 255)).join(' ')})`;
+  elements.stage.style.background = `linear-gradient(180deg, ${rgb(visual.skyTop)} 0%, ${rgb(visual.skyHorizon)} 55%, ${rgb(visual.fog)} 100%)`;
+  elements.stage.dataset.biome = visual.id;
+  elements.biomeLabel.textContent = visual.label;
+  elements.sun.style.background = rgb(visual.sun);
+  elements.sun.style.boxShadow = `0 0 86px color-mix(in srgb, ${rgb(visual.sun)} 54%, transparent)`;
+  elements.sun.style.opacity = String(visual.id === 'basalt' ? 0.38 : 0.72);
 }
 
-function updateHud(folded) {
+function updateHud(boosted) {
   if (!run) return;
   const distance = Math.max(0, Math.floor(run.flight.z));
   const integrity = Math.ceil(run.integrity);
@@ -768,10 +808,11 @@ function updateHud(folded) {
   elements.flowFill.style.width = `${displayedFlow}%`;
   elements.flowValue.textContent = flowing ? String(Math.ceil(run.flowTime)) : String(Math.floor(run.flow));
   elements.flowBlock.classList.toggle('is-ready', flowing || run.flow >= 82);
-  elements.stage.classList.toggle('is-diving', folded && !flowing);
+  elements.stage.classList.toggle('is-boosting', boosted && !flowing);
   elements.stage.classList.toggle('is-flowing', flowing);
   elements.diveButton.classList.toggle('is-flow', flowing);
-  elements.diveLabel.textContent = flowing ? 'ПРОРЫВ' : folded ? 'ПИКЕ' : 'СЛОЖИТЬ';
+  elements.diveButton.classList.toggle('is-held', boosted);
+  elements.diveLabel.textContent = flowing ? 'ПРОРЫВ' : boosted ? 'ФОРСАЖ' : 'ФОРСАЖ';
 }
 
 function failWebGl(error) {
@@ -847,13 +888,13 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 elements.diveButton.addEventListener('pointerdown', (event) => {
   if (phase !== 'running') return;
   event.preventDefault();
-  input.folded = true;
+  input.boosted = true;
   elements.diveButton.classList.add('is-held');
   elements.diveButton.setPointerCapture?.(event.pointerId);
 });
 
 function endDive(event) {
-  input.folded = false;
+  input.boosted = false;
   elements.diveButton.classList.remove('is-held');
   try { elements.diveButton.releasePointerCapture?.(event.pointerId); } catch { /* no capture */ }
 }
@@ -980,7 +1021,7 @@ elements.canvas.addEventListener('webglcontextlost', (event) => {
 
 createWorkshopMode({
   appName: 'ХРЕБЕТ',
-  version: '1.0.0',
+  version: '1.1.0',
   cachePrefix: 'khrebet-',
   storageNamespace: 'pocket-works:khrebet',
   onReset() {

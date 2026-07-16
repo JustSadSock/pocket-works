@@ -1,6 +1,7 @@
 export const CHUNK_LENGTH = 48;
 export const START_ALTITUDE = 12;
 export const RUN_SAVE_VERSION = 1;
+export const AIRCRAFT_CORE_RADIUS = 0.34;
 
 export const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 export const lerp = (from, to, amount) => from + (to - from) * amount;
@@ -59,23 +60,64 @@ export function routeCode(seed) {
   return (seed >>> 0).toString(36).toUpperCase().padStart(7, '0').slice(-7);
 }
 
+const BIOME_IDS = Object.freeze(['alpine', 'ochre', 'glacier', 'basalt']);
+const BIOME_SHAPES = Object.freeze({
+  alpine: { width: 1.08, ridge: 1.06, floor: 0.15, roughness: 1 },
+  ochre: { width: 0.84, ridge: 0.82, floor: -0.45, roughness: 1.28 },
+  glacier: { width: 1.24, ridge: 1.24, floor: 0.65, roughness: 0.72 },
+  basalt: { width: 0.94, ridge: 1.42, floor: -0.8, roughness: 1.42 },
+});
+
+function biomeIdForZone(zone, seed) {
+  if (zone <= 0) return 'alpine';
+  const start = 1 + Math.floor(hashInteger(911, seed ^ 0x6b10d5) * 3);
+  const direction = hashInteger(1931, seed ^ 0x40a76f) > 0.5 ? 1 : 3;
+  const index = (start + (zone - 1) * direction) % BIOME_IDS.length;
+  return BIOME_IDS[index];
+}
+
+export function biomeAt(z, seed) {
+  const zoneLength = 430;
+  const position = Math.max(0, z) / zoneLength;
+  const zone = Math.floor(position);
+  const local = position - zone;
+  const id = biomeIdForZone(zone, seed);
+  const nextId = biomeIdForZone(zone + 1, seed);
+  return {
+    id,
+    nextId,
+    zone,
+    local,
+    blend: smoothstep(0.76, 1, local),
+  };
+}
+
 export function courseAt(z, seed) {
   const seedA = (seed ^ 0x51f15e) >>> 0;
   const seedB = (seed ^ 0xa117c9) >>> 0;
   const seedC = (seed ^ 0x73bd42) >>> 0;
+  const biome = biomeAt(z, seed);
+  const fromShape = BIOME_SHAPES[biome.id];
+  const toShape = BIOME_SHAPES[biome.nextId];
+  const shape = {
+    width: lerp(fromShape.width, toShape.width, biome.blend),
+    ridge: lerp(fromShape.ridge, toShape.ridge, biome.blend),
+    floor: lerp(fromShape.floor, toShape.floor, biome.blend),
+    roughness: lerp(fromShape.roughness, toShape.roughness, biome.blend),
+  };
   const longBend = (noise1d(z * 0.0065, seedA) - 0.5) * 29;
-  const shortBend = (noise1d(z * 0.018 + 41.7, seedB) - 0.5) * 7;
+  const shortBend = (noise1d(z * 0.018 + 41.7, seedB) - 0.5) * (6.3 * shape.roughness);
   const center = longBend + shortBend + Math.sin(z * 0.004 + (seed % 97)) * 3.2;
   const width = clamp(
-    11.4 + noise1d(z * 0.014 + 13.3, seedC) * 6.4 + Math.sin(z * 0.021) * 1.2,
-    10.4,
-    18.6
+    (11.4 + noise1d(z * 0.014 + 13.3, seedC) * 6.4 + Math.sin(z * 0.021) * 1.2) * shape.width,
+    9.8,
+    22.8
   );
-  const floor = -2.3 + (noise1d(z * 0.025 + 67, seedA) - 0.5) * 3.2;
-  const leftRidge = 22 + noise1d(z * 0.016 + 8, seedB) * 21;
-  const rightRidge = 20 + noise1d(z * 0.015 + 88, seedC) * 23;
+  const floor = -2.3 + shape.floor + (noise1d(z * 0.025 + 67, seedA) - 0.5) * (3.2 * shape.roughness);
+  const leftRidge = (22 + noise1d(z * 0.016 + 8, seedB) * 21) * shape.ridge;
+  const rightRidge = (20 + noise1d(z * 0.015 + 88, seedC) * 23) * shape.ridge;
   const wind = (noise1d(z * 0.03 + 101, seedA) - 0.5) * 2;
-  return { center, width, floor, leftRidge, rightRidge, wind };
+  return { center, width, floor, leftRidge, rightRidge, wind, biome };
 }
 
 export function progressDifficulty(distance) {
@@ -164,7 +206,7 @@ export function createFlightState() {
     z: 0,
     vx: 0,
     vy: 0,
-    speed: 27,
+    speed: 29,
     bank: 0,
     pitch: -0.05,
   };
@@ -173,25 +215,27 @@ export function createFlightState() {
 export function stepFlight(state, input, delta, course, difficulty = 0) {
   const dt = clamp(delta, 0, 0.05);
   const sensitivity = clamp(input.sensitivity || 1, 0.6, 1.5);
-  const folded = Boolean(input.folded);
-  const lateralTarget = clamp(input.x || 0, -1, 1) * (9.2 + difficulty * 2.4) * sensitivity;
+  const boosted = Boolean(input.boosted ?? input.folded);
+  // The chase camera looks along +Z, so its visual right points toward -world X.
+  // Input remains screen-relative: dragging right always moves the aircraft right on screen.
+  const lateralTarget = -clamp(input.x || 0, -1, 1) * (10.2 + difficulty * 2.2) * sensitivity;
   const climbIntent = -clamp(input.y || 0, -1, 1);
-  const verticalTarget = climbIntent * (6.4 + difficulty * 0.5) - (folded ? 7.8 : 0) + 0.15;
+  const verticalTarget = climbIntent * (6.9 + difficulty * 0.4) - (boosted ? 1.35 : 0) + 0.18;
   const windPush = course.wind * (0.28 + difficulty * 0.24);
 
-  state.vx = damp(state.vx, lateralTarget + windPush, folded ? 2.6 : 5.8, dt);
-  state.vy = damp(state.vy, verticalTarget, folded ? 3.8 : 4.6, dt);
+  state.vx = damp(state.vx, lateralTarget + windPush, boosted ? 4.2 : 5.8, dt);
+  state.vy = damp(state.vy, verticalTarget, boosted ? 4.1 : 4.8, dt);
 
   const diveGain = clamp(-state.vy, 0, 10) * 0.78;
   const climbCost = clamp(state.vy, 0, 8) * 0.64;
-  const speedTarget = 26.5 + difficulty * 8.5 + (folded ? 9.5 : 0) + diveGain - climbCost;
-  state.speed = damp(state.speed, clamp(speedTarget, 20, 51), 2.15, dt);
+  const speedTarget = 28.5 + difficulty * 8.5 + (boosted ? 12.5 : 0) + diveGain - climbCost;
+  state.speed = damp(state.speed, clamp(speedTarget, 21, 55), boosted ? 3.1 : 2.15, dt);
 
   state.x += state.vx * dt;
   state.y += state.vy * dt;
   state.z += state.speed * dt;
-  state.bank = damp(state.bank, -state.vx * 0.052, 5.7, dt);
-  state.pitch = damp(state.pitch, state.vy * 0.045 - (folded ? 0.18 : 0), 4.8, dt);
+  state.bank = damp(state.bank, -state.vx * 0.049, 6.2, dt);
+  state.pitch = damp(state.pitch, state.vy * 0.042 - (boosted ? 0.045 : 0), 5.1, dt);
   return state;
 }
 
@@ -203,11 +247,36 @@ export function canyonClearance(state, course) {
 }
 
 export function obstacleClearance(state, obstacle) {
-  const horizontal = Math.hypot(state.x - obstacle.x, state.z - obstacle.z) - obstacle.radius;
   const bottom = obstacle.baseY;
   const top = obstacle.baseY + obstacle.height;
+  const heightAmount = clamp((state.y - bottom) / Math.max(0.001, obstacle.height), 0, 1);
+  const lowerProfile = lerp(1.04, 0.66, smoothstep(0, 0.58, heightAmount));
+  const upperProfile = lerp(0.66, 0.07, smoothstep(0.58, 1, heightAmount));
+  const radius = obstacle.radius * (heightAmount <= 0.58 ? lowerProfile : upperProfile);
+  const horizontal = Math.hypot(state.x - obstacle.x, state.z - obstacle.z) - radius;
   const vertical = state.y < bottom ? bottom - state.y : state.y > top ? state.y - top : 0;
   return vertical > 0 ? Math.hypot(horizontal, vertical) : horizontal;
+}
+
+export function sweptObstacleClearance(previousState, nextState, obstacle, aircraftRadius = AIRCRAFT_CORE_RADIUS) {
+  const dx = nextState.x - previousState.x;
+  const dz = nextState.z - previousState.z;
+  const lengthSquared = dx * dx + dz * dz;
+  const closest = lengthSquared > 0.000001
+    ? clamp(((obstacle.x - previousState.x) * dx + (obstacle.z - previousState.z) * dz) / lengthSquared, 0, 1)
+    : 1;
+  const candidates = [0, closest, 1];
+  let best = { clearance: Infinity, progress: closest, x: nextState.x, y: nextState.y, z: nextState.z };
+  for (const progress of candidates) {
+    const sample = {
+      x: lerp(previousState.x, nextState.x, progress),
+      y: lerp(previousState.y, nextState.y, progress),
+      z: lerp(previousState.z, nextState.z, progress),
+    };
+    const clearance = obstacleClearance(sample, obstacle) - aircraftRadius;
+    if (clearance < best.clearance) best = { clearance, progress, ...sample };
+  }
+  return best;
 }
 
 export function gateProgress(previousZ, nextZ, gate) {

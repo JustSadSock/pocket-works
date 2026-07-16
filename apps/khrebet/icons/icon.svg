@@ -1,13 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
   <title id="title">ХРЕБЕТ</title>
-  <desc id="description">Оранжевый вингсьют между двумя светлыми горными гребнями</desc>
+  <desc id="description">Оранжевый самолёт между двумя светлыми горными гребнями</desc>
   <rect width="512" height="512" fill="#172020"/>
   <circle cx="371" cy="139" r="50" fill="#eadcb5" opacity=".82"/>
   <path d="M0 363 85 172l54 81 67-157 58 131 38-59 89 195v149H0Z" fill="#656d68"/>
   <path d="M0 405 86 224l34 65 19-36 28 62 39-219 27 129 31 2 38-59 25 77 64 118 121 37v112H0Z" fill="#bfc1b8"/>
   <path d="m86 224 34 65 19-36 28 62-31-12-18 29-28-46-36 91H13Zm120-128 27 129 31 2-25 31-19-18-13 97-31-50Zm96 72 25 77 64 118-61-83-19 28-31-71Z" fill="#e7e6da"/>
-  <path d="M256 229 364 312l-71-13-37 103-37-103-71 13Z" fill="#ef6a3c"/>
-  <path d="m256 229 17 79-17 94-17-94Z" fill="#8e2f1b"/>
-  <path d="M214 322h84l-11 14h-62Z" fill="#172020" opacity=".6"/>
+  <path d="m256 196 23 67 108 61-8 28-103-25-3 58 41 27-5 18-53-13-53 13-5-18 41-27-3-58-103 25-8-28 108-61Z" fill="#ef6a3c"/>
+  <path d="m256 196 12 73-12 148-12-148Z" fill="#8e2f1b"/>
+  <path d="M244 255h24l-4 52h-16Z" fill="#172020" opacity=".78"/>
+  <circle cx="151" cy="330" r="7" fill="#f04f3c"/>
+  <circle cx="361" cy="330" r="7" fill="#5ee69d"/>
   <path d="M32 455h448" stroke="#ef6a3c" stroke-width="10"/>
 </svg>
