@@ -1,0 +1,25 @@
+{
+  "id": "/apps/turniket/",
+  "name": "ТУРНИКЕТ",
+  "short_name": "ТУРНИКЕТ",
+  "description": "Абстрактная PvP-дуэль 7×7 с односторонними турникетами, которые переворачиваются после прохода.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#eee9dd",
+  "theme_color": "#293033",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
