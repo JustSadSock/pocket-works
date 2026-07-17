@@ -37,7 +37,7 @@
         <div class="home-copy">
           <p class="eyebrow">АБСТРАКТНАЯ ДУЭЛЬ · БЕЗ РАНДОМА</p>
           <h1 id="homeTitle">ОРБИТА</h1>
-          <p class="home-lead">Поставь камень. Поверни кольцо. Соедини центр с краем и удержи цепь.</p>
+          <p class="home-lead">Поставь камень. Поверни кольцо. Объяви вызов и удержи цепь.</p>
         </div>
 
         <div class="home-actions">
@@ -119,15 +119,18 @@
 
     <dialog id="rulesDialog" class="sheet-dialog">
       <form method="dialog" class="dialog-frame">
-        <div class="dialog-header"><div><span class="dialog-kicker">ПРАВИЛА</span><h2>Четыре шага. И всё.</h2></div><button class="dialog-close" value="close" aria-label="Закрыть правила">×</button></div>
+        <div class="dialog-header"><div><span class="dialog-kicker">ПРАВИЛА</span><h2>Шесть правил.</h2></div><button class="dialog-close" value="close" aria-label="Закрыть правила">×</button></div>
         <ol class="rules-list">
           <li><span class="rule-number">01</span><div><strong>Поставьте камень</strong><p>Любая свободная ячейка на любом из четырёх колец.</p></div></li>
-          <li><span class="rule-number">02</span><div><strong>Поверните кольцо</strong><p>Обязательно сдвиньте любое кольцо ровно на один сектор в любую сторону.</p></div></li>
-          <li><span class="rule-number">03</span><div><strong>Объявите вызов</strong><p>Соедините внутреннее и внешнее кольцо. Цепь подсветится, но победа ещё не засчитана.</p></div></li>
-          <li><span class="rule-number">04</span><div><strong>Удержите цепь</strong><p>Соперник получает один полный ход. Если цепь сохранилась после его вращения — вы победили. Защитный ход не объявляет встречный вызов.</p></div></li>
+          <li><span class="rule-number">02</span><div><strong>Поверните кольцо</strong><p>Обязательно сдвиньте любое кольцо ровно на один сектор.</p></div></li>
+          <li><span class="rule-number">03</span><div><strong>Не отменяйте ход</strong><p>Нельзя сразу повернуть то же кольцо обратно. Продолжить его движение в прежнюю сторону можно.</p></div></li>
+          <li><span class="rule-number">04</span><div><strong>Объявите вызов</strong><p>Соедините внутреннее и внешнее кольцо. Цепь подсветится, но победа ещё не засчитана.</p></div></li>
+          <li><span class="rule-number">05</span><div><strong>Удержите цепь</strong><p>Соперник получает полный ход. Если цепь сохранилась после его вращения — вы победили.</p></div></li>
+          <li><span class="rule-number">06</span><div><strong>Переждите разрыв</strong><p>Если вашу цепь разбили, следующий ваш ход тихий: он не может объявить новый вызов.</p></div></li>
         </ol>
-        <div class="pie-rule-copy"><strong>Правило удержания</strong><p>Собранная цепь становится вызовом. Соперник должен разорвать её постановкой и вращением; новую угрозу можно объявить только своим следующим обычным ходом.</p></div>
-        <div class="pie-rule-copy"><strong>Против ИИ</strong><p>Ученик играет с ошибками. Стратег видит прямые угрозы. Оракул проверяет, переживёт ли цепь лучший ответ соперника.</p></div>
+        <div class="pie-rule-copy"><strong>Антиразворот</strong><p>Запрещено только точное обратное вращение того же кольца после хода соперника. Другое кольцо и прежнее направление остаются доступны.</p></div>
+        <div class="pie-rule-copy"><strong>Тихий ход</strong><p>После разрыва вы играете полностью обычный ход, но появившаяся цепь не активируется. Со следующего хода вызовы снова доступны.</p></div>
+        <div class="pie-rule-copy"><strong>Против ИИ</strong><p>Ученик играет с ошибками. Стратег видит прямые угрозы. Оракул учитывает ограничения вращения и проверяет лучший ответ соперника.</p></div>
         <div class="pie-rule-copy"><strong>Правило пирога</strong><p>После первого полного хода второй игрок может забрать цвет первого. ИИ тоже умеет пользоваться обменом.</p></div>
         <button class="dialog-primary" value="close">ПОНЯТНО</button>
       </form>
@@ -160,7 +163,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </div>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОРБИТА" data-app-version="1.2.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОРБИТА" data-app-version="1.3.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
