@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Иконка ТУРНИКЕТ">
+  <rect width="512" height="512" fill="#eee9dd"/>
+  <rect x="48" y="48" width="416" height="416" fill="#d8d0c0" stroke="#293033" stroke-width="24"/>
+  <g fill="#f8f4ea" stroke="#b9b1a3" stroke-width="6">
+    <rect x="96" y="96" width="90" height="90" rx="10"/>
+    <rect x="326" y="96" width="90" height="90" rx="10"/>
+    <rect x="96" y="326" width="90" height="90" rx="10"/>
+    <rect x="326" y="326" width="90" height="90" rx="10"/>
+  </g>
+  <rect x="74" y="240" width="364" height="32" fill="#293033"/>
+  <path d="M142 301l-34-46 34-46h42l-34 46 34 46z" fill="#eee9dd"/>
+  <path d="M370 209l34 46-34 46h-42l34-46-34-46z" fill="#eee9dd"/>
+  <circle cx="141" cy="371" r="42" fill="#db5a3a" stroke="#eee9dd" stroke-width="14"/>
+  <circle cx="371" cy="141" r="42" fill="#297c8a" stroke="#eee9dd" stroke-width="14"/>
+</svg>
