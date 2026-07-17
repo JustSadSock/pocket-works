@@ -1,0 +1,136 @@
+/* 1.4 — valley stories, field medicine and clearer contextual discoveries */
+const UX14={
+  bolts:[],strikes:[],echoes:[],lightningTimer:4.5,eventTimer:0,eventText:'',flash:0,
+  rumble:0,lastWeather:state?.clock?.weather||'clear',landmarkPulse:0
+};
+
+ITEMS.poultice=['ЛЕЧЕБНАЯ ПРИПАРКА','✚','Смола удерживает травы на ране. Быстро возвращает здоровье.'];
+if(!RECIPES.food.some(r=>r.id==='poultice'))RECIPES.food.push({
+  id:'poultice',icon:'✚',name:'ЛЕЧЕБНАЯ ПРИПАРКА',desc:'Полевое лечение. Требует костёр рядом.',
+  cost:{herb:2,fiber:1,resin:1},item:'poultice',requiresFire:true
+});
+if(!DISCOVERIES.some(d=>d[0]==='landmarks14'))DISCOVERIES.push(
+  ['landmarks14','Следы прежних людей','Долина хранит не только руины машины, но и маленькие человеческие попытки здесь выжить.'],
+  ['shrine14','Знак ветра','Камень помнит направление, в котором когда-то было безопасно идти.'],
+  ['scar14','Грозовой шрам','Земля расплавлена так, будто молния ударила снизу.']
+);
+
+function createUxLayer14(){
+  let event=document.querySelector('.valley-event');
+  if(!event){event=document.createElement('div');event.className='valley-event';event.setAttribute('aria-live','polite');$('app').appendChild(event)}
+  return{event}
+}
+const uxLayer14=createUxLayer14();
+function event14(text,duration=2.6){
+  UX14.eventText=text;UX14.eventTimer=duration;uxLayer14.event.textContent=text;
+  uxLayer14.event.classList.remove('show');void uxLayer14.event.offsetWidth;uxLayer14.event.classList.add('show')
+}
+function worldTone14(x,freq=220,d=.1,type='triangle',gain=.012,slide=0,delay=0){
+  const ac=ensureAudio();if(!ac)return;
+  try{const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain(),p=ac.createStereoPanner?ac.createStereoPanner():null;
+    o.type=type;o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),t+d);
+    g.gain.setValueAtTime(Math.max(.0001,gain),t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    if(p){p.pan.value=clamp((x-cam.x)/120,-.85,.85);o.connect(g).connect(p).connect(ac.destination)}else o.connect(g).connect(ac.destination);
+    o.start(t);o.stop(t+d)
+  }catch{}
+}
+const baseSfx14=sfx;
+sfx=function(name){
+  if(!settings.sound)return;
+  if(name==='landmark14'){tone(180,.18,'triangle',.013,160);tone(420,.3,'sine',.009,-90,.1);return}
+  if(name==='poultice14'){noiseSfx(.11,.011,850);tone(250,.16,'triangle',.012,110);return}
+  if(name==='warning14'){tone(105,.08,'square',.011,30);tone(78,.09,'square',.008,-12,.09);return}
+  if(name==='bolt14'){tone(390,.11,'sawtooth',.011,-230);return}
+  if(name==='thunder14'){noiseSfx(.42,.032,420);tone(44,.48,'sine',.018,24);return}
+  if(name==='ground14'){tone(92,.22,'sawtooth',.014,250);tone(310,.32,'triangle',.012,-120,.08);return}
+  baseSfx14(name)
+};
+
+const baseGenerateWorld14=generateWorld;
+generateWorld=function(seed){
+  const w=baseGenerateWorld14(seed);
+  const defs=[
+    {type:'wind_shrine',anchor:[21,35],tiles:[3,6]},
+    {type:'supply_cart',anchor:[67,62],tiles:[2,5,7]},
+    {type:'storm_scar',anchor:[78,27],tiles:[6,7]},
+    {type:'old_camp',anchor:[34,79],tiles:[2,3]}
+  ];
+  for(let i=0;i<defs.length;i++){
+    const def=defs[i];let found=null;
+    for(let r=0;r<20&&!found;r++)for(let oy=-r;oy<=r&&!found;oy++)for(let ox=-r;ox<=r&&!found;ox++){
+      const x=clamp(def.anchor[0]+ox,3,W-4),y=clamp(def.anchor[1]+oy,3,H-4),t=w.tiles[y*W+x];
+      if(!def.tiles.includes(t))continue;
+      const px=x*T+8,py=y*T+8;
+      if(w.objects.some(o=>dist(o.x,o.y,px,py)<18))continue;
+      found=[px,py]
+    }
+    if(found)w.objects.push({id:`v14_${def.type}_${i}`,type:def.type,x:found[0],y:found[1]})
+  }
+  return w
+};
+
+const baseObjectRadius14=objectRadius;
+objectRadius=function(o){
+  if(o.type==='wind_shrine')return 9;if(o.type==='supply_cart')return 10;if(o.type==='storm_scar')return 8;if(o.type==='old_camp')return 10;
+  return baseObjectRadius14(o)
+};
+const baseBlocked14=blocked;
+blocked=function(px,py,forEnemy=false){
+  if(baseBlocked14(px,py,forEnemy))return true;
+  for(const o of activeObjects())if(['wind_shrine','supply_cart','storm_scar','old_camp'].includes(o.type)&&dist(px,py,o.x,o.y)<objectRadius(o)+4)return true;
+  return false
+};
+const baseBlockingObject14=blockingObjectAt12;
+blockingObjectAt12=function(x,y,type){
+  if(baseBlockingObject14(x,y,type))return true;
+  return activeObjects().some(o=>['wind_shrine','supply_cart','storm_scar','old_camp'].includes(o.type)&&dist(x,y,o.x,o.y)<objectRadius(o)+placementRadius12(type)+2)
+};
+function landmarkUsed14(o){return!!state.world.landmarks14?.[o.id]}
+const baseAffinity14=objectAffinity12;
+objectAffinity12=function(o){
+  if(['wind_shrine','supply_cart','storm_scar','old_camp'].includes(o.type))return landmarkUsed14(o)?Infinity:-22;
+  return baseAffinity14(o)
+};
+function completeLandmark14(o){
+  state.world.landmarks14??={};state.world.landmarks14[o.id]=true;discover('landmarks14');gainXp(8);
+  ring(o.x,o.y,'#e4c978',5,36);particleBurst(o.x,o.y,'#d9c07a',18);sfx('landmark14');vibrate([8,24,8]);save()
+}
+function interactLandmark14(o){
+  if(landmarkUsed14(o))return;
+  UX13.pickupOrigin={x:o.x,y:o.y};
+  if(o.type==='wind_shrine'){
+    state.player.maxStamina+=6;state.player.stamina=state.player.maxStamina;discover('shrine14');event14('ЗНАК ВЕТРА · МАКС. СИЛЫ +6');completeLandmark14(o)
+  }else if(o.type==='supply_cart'){
+    addItem('wood',5);addItem('fiber',3);addItem('scrap',2);addItem('berry',2);event14('СТАРЫЙ ОБОЗ · ПРИПАСЫ НАЙДЕНЫ');completeLandmark14(o)
+  }else if(o.type==='storm_scar'){
+    if(state.player.tool!=='pickaxe'){toast('ГРОЗОВОЙ ШРАМ НУЖНО РАСКОЛОТЬ КИРКОЙ');sfx('soft-error');UX13.pickupOrigin=null;return}
+    addItem('crystal',2);addItem('resin',1);addItem('scrap',1);discover('scar14');event14('ГРОЗОВОЙ ШРАМ · КРИСТАЛЛ ИЗВЛЕЧЁН');completeLandmark14(o)
+  }else if(o.type==='old_camp'){
+    addItem('poultice',1);addItem('soup',1);state.player.hp=Math.min(state.player.maxHp,state.player.hp+12);event14('ЗАБРОШЕННЫЙ ЛАГЕРЬ · ЧУЖОЙ ЗАПАС');completeLandmark14(o)
+  }
+  UX13.pickupOrigin=null
+}
+const baseInteractObject14=interactObject;
+interactObject=function(o){
+  if(['wind_shrine','supply_cart','storm_scar','old_camp'].includes(o.type)){interactLandmark14(o);return}
+  baseInteractObject14(o)
+};
+const baseMeta14=actionMeta12;
+actionMeta12=function(t){
+  if(t?.kind==='object'){
+    if(t.ref.type==='wind_shrine')return{icon:'⌁',label:'ПРОЧЕСТЬ'};
+    if(t.ref.type==='supply_cart')return{icon:'▣',label:'ОБЫСКАТЬ'};
+    if(t.ref.type==='storm_scar')return{icon:'◇',label:state.player.tool==='pickaxe'?'РАСКОЛОТЬ':'НУЖНА КИРКА'};
+    if(t.ref.type==='old_camp')return{icon:'△',label:'ОСМОТРЕТЬ'}
+  }
+  return baseMeta14(t)
+};
+
+const baseEat14=eatBest;
+eatBest=function(){
+  if((state.inventory.poultice||0)>0&&state.player.hp<state.player.maxHp*.86){
+    state.inventory.poultice--;state.player.hp=Math.min(state.player.maxHp,state.player.hp+32);state.player.warmth=Math.min(100,state.player.warmth+4);
+    UX14.flash=.22;sfx('poultice14');vibrate([6,18,6]);event14('ПРИПАРКА · ЖИЗНЬ +32');renderInventory();save();return
+  }
+  baseEat14()
+};
