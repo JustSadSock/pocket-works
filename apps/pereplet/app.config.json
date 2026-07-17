@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "pereplet",
+  "name": "ПЕРЕПЛЁТ",
+  "shortName": "ПЕРЕПЛЁТ",
+  "description": "Турнирная абстрактная игра 6×6 о соединении краёв, окружении групп и разрыве чужих нитей.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T19:10:00+02:00",
+  "changelog": [
+    "Первая версия: поле 6×6, захват окружённых групп, запрет повторов и правило перехвата первого хода.",
+    "Добавлены локальная дуэль, три уровня бота, четыре тактических характера и просмотр завершённой партии.",
+    "В приложение встроен отчёт о 540 бот-матчах по 30 конфигурациям правил."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#304a73",
+  "backgroundColor": "#e6ddc8",
+  "themeColor": "#e6ddc8",
+  "orientation": "any",
+  "cacheName": "pereplet-v1.0.0",
+  "storageNamespace": "pocket-works:pereplet",
+  "tags": ["PWA", "offline", "game", "board game", "strategy", "canvas", "AI", "audio"],
+  "order": 74
+}
