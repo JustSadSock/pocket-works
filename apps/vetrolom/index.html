@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#17231b">
+<meta name="description" content="ВЕТРОЛОМ — пиксельная survival RPG-песочница для Pocket Works.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ВЕТРОЛОМ">
+<title>ВЕТРОЛОМ — Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="app" id="app" data-app-shell>
+  <canvas id="game" width="320" height="568" aria-label="Пиксельная долина Ветролома" data-gesture-surface></canvas>
+  <canvas id="mini" width="80" height="80" aria-label="Карта долины"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="hud" id="hud">
+    <div class="identity"><i></i><div><b>ВЕТРОЛОМ</b><small id="regionText">ТИХАЯ НИЗИНА</small></div></div>
+    <div class="meters">
+      <div class="meter hp"><span>ЖИЗНЬ</span><div><i id="hpBar"></i></div><em id="hpText">100</em></div>
+      <div class="meter hunger"><span>СЫТОСТЬ</span><div><i id="hungerBar"></i></div><em id="hungerText">100</em></div>
+      <div class="meter warmth"><span>ТЕПЛО</span><div><i id="warmthBar"></i></div><em id="warmthText">100</em></div>
+      <div class="meter stamina"><span>СИЛЫ</span><div><i id="staminaBar"></i></div><em id="staminaText">100</em></div>
+    </div>
+    <div class="clock"><b id="clockText">ДЕНЬ 1 · 08:00</b><small id="weatherText">ЯСНО</small></div>
+    <a class="square" href="../../" aria-label="Вернуться в Pocket Works">⌂</a>
+    <button class="square" id="pauseBtn" aria-label="Пауза">Ⅱ</button>
+  </header>
+
+  <div class="objective" id="objective"><b>ПЕРВАЯ ЗАДАЧА</b><span id="objectiveText">Собери древесину и камень. Долина не собирается тебя жалеть.</span></div>
+  <div class="prompt" id="prompt"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="quickbar" id="quickbar" aria-label="Инструменты">
+    <button data-tool="hands" class="active"><i>✦</i><span>РУКИ</span></button>
+    <button data-tool="axe" class="locked"><i>⌁</i><span>ТОПОР</span></button>
+    <button data-tool="pickaxe" class="locked"><i>⌃</i><span>КИРКА</span></button>
+    <button data-tool="spear" class="locked"><i>†</i><span>КОПЬЁ</span></button>
+    <button data-tool="hoe" class="locked"><i>┘</i><span>МОТЫГА</span></button>
+  </div>
+
+  <div class="touch" id="touchControls">
+    <div class="stick" id="stick"><i></i></div>
+    <div class="action-stack">
+      <button class="dash" id="dashBtn"><b>↯</b><span>РЫВОК</span></button>
+      <button class="act" id="actionBtn"><b>×</b><span>ДЕЙСТВИЕ</span></button>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button id="inventoryBtn"><i>▦</i><span>РЮКЗАК</span></button>
+    <button id="craftBtn"><i>⚒</i><span>РЕМЕСЛО</span></button>
+    <button id="journalBtn"><i>≡</i><span>ЖУРНАЛ</span></button>
+  </nav>
+
+  <section class="screen menu" id="menu">
+    <div class="menu-top"><a href="../../">POCKET WORKS</a><span>PW-SURVIVAL / 01</span></div>
+    <div class="sigil" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="eyebrow">ПИКСЕЛЬНАЯ SURVIVAL RPG-ПЕСОЧНИЦА</p>
+    <h1>ВЕТРО<span>ЛОМ</span></h1>
+    <p class="lead">Долина пережила климатическую машину, но машина не пережила долину. Здесь дождь приходит стеной, ночь рождает тварей, а старые вышки всё ещё зовут кого-то по имени.</p>
+    <div class="menu-stats">
+      <div><b id="menuDays">0</b><span>ДНЕЙ ПРОЖИТО</span></div>
+      <div><b id="menuTowers">0/3</b><span>ВЫШЕК</span></div>
+      <div><b id="menuLevel">1</b><span>УРОВЕНЬ</span></div>
+    </div>
+    <div class="menu-actions">
+      <button class="main-action" id="continueBtn" hidden><span>ПРОДОЛЖИТЬ ДОЛИНУ</span><b>→</b></button>
+      <button class="main-action" id="newBtn"><span>НОВАЯ ДОЛИНА</span><b>＋</b></button>
+      <button class="secondary-action" id="howBtn"><span>КАК ТУТ НЕ СДОХНУТЬ</span><b>?</b></button>
+    </div>
+    <footer>WASD / СТРЕЛКИ · E ДЕЙСТВИЕ · SPACE РЫВОК · Q ИНСТРУМЕНТ</footer>
+  </section>
+
+  <section class="screen paper hidden" id="how">
+    <div class="paper-head"><span>ПОЛЕВАЯ ПАМЯТКА № 03</span><button data-close="how">×</button></div>
+    <h2>Долина не злая. Ей просто похуй.</h2>
+    <div class="manual-grid">
+      <article><b>01</b><h3>СОБИРАЙ</h3><p>Деревья, камни, ягоды и травы дают основу. Инструменты ускоряют работу и открывают редкие ресурсы.</p></article>
+      <article><b>02</b><h3>НЕ МЁРЗНИ</h3><p>Ночь, дождь и северные пустоши съедают тепло. Костёр спасает, лежанка переносит до утра.</p></article>
+      <article><b>03</b><h3>СТРОЙ</h3><p>Создай костёр, лежанку, сундук и ограды. Мотыга превращает землю в грядку, семена растут несколько дней.</p></article>
+      <article><b>04</b><h3>ИССЛЕДУЙ</h3><p>Три погодные вышки стоят далеко друг от друга. Почини их, затем доберись до Сердца Бури.</p></article>
+    </div>
+    <button class="main-action" id="howPlay"><span>ХВАТИТ БУМАГИ. В ДОЛИНУ.</span><b>→</b></button>
+  </section>
+
+  <section class="screen panel hidden" id="inventory">
+    <div class="panel-head"><div><span>СНАРЯЖЕНИЕ</span><h2>РЮКЗАК</h2></div><button data-close="inventory">×</button></div>
+    <div class="inventory-stats" id="inventoryStats"></div>
+    <div class="inventory-grid" id="inventoryGrid"></div>
+    <div class="inventory-actions"><button id="eatBtn">СЪЕСТЬ ЛУЧШУЮ ЕДУ</button><button id="saveBtn">СОХРАНИТЬСЯ</button></div>
+  </section>
+
+  <section class="screen panel hidden" id="craft">
+    <div class="panel-head"><div><span>ПОЛЕВАЯ МАСТЕРСКАЯ</span><h2>РЕМЕСЛО</h2></div><button data-close="craft">×</button></div>
+    <div class="craft-tabs"><button class="active" data-craft-tab="tools">ИНСТРУМЕНТЫ</button><button data-craft-tab="camp">ЛАГЕРЬ</button><button data-craft-tab="food">ЕДА</button></div>
+    <div class="recipe-list" id="recipeList"></div>
+  </section>
+
+  <section class="screen panel hidden" id="journal">
+    <div class="panel-head"><div><span>ПОЛЕВОЙ АРХИВ</span><h2>ЖУРНАЛ</h2></div><button data-close="journal">×</button></div>
+    <div class="journal-objective" id="journalObjective"></div>
+    <div class="journal-list" id="journalList"></div>
+  </section>
+
+  <section class="screen perk hidden" id="perk">
+    <p class="eyebrow">НОВЫЙ УРОВЕНЬ</p><h2>Долина оставила тебе одно преимущество</h2>
+    <div class="perk-grid" id="perkGrid"></div>
+  </section>
+
+  <section class="screen pause hidden" id="pause">
+    <p class="eyebrow">ВРЕМЯ ОСТАНОВЛЕНО</p><h2>Ветер ждёт</h2><p>Состояние долины сохраняется автоматически. Можно перевести дух, но не слишком обольщайся.</p>
+    <button class="main-action" id="resumeBtn"><span>ПРОДОЛЖИТЬ</span><b>→</b></button>
+    <button class="secondary-action" id="pauseSaveBtn"><span>СОХРАНИТЬСЯ</span><b>▣</b></button>
+    <button class="secondary-action" id="quitBtn"><span>В ГЛАВНОЕ МЕНЮ</span><b>⌂</b></button>
+  </section>
+
+  <section class="screen ending hidden" id="ending">
+    <p class="eyebrow" id="endingKicker">СЕРДЦЕ БУРИ ЗАМОЛЧАЛО</p><h2 id="endingTitle">Долина снова слышит себя</h2>
+    <p id="endingText">Погодная машина погасла. Мир не закончился и не стал добрым — просто теперь его хаос принадлежит ему самому.</p>
+    <div class="ending-stats" id="endingStats"></div>
+    <button class="main-action" id="sandboxBtn"><span>ОСТАТЬСЯ В ПЕСОЧНИЦЕ</span><b>∞</b></button>
+    <button class="secondary-action" id="endingMenuBtn"><span>В ГЛАВНОЕ МЕНЮ</span><b>⌂</b></button>
+  </section>
+
+  <section class="fatal hidden" id="fatal"><h2>ВЕТРОЛОМ ТРЕСНУЛ</h2><p id="fatalText"></p><button onclick="location.reload()">ПЕРЕЗАПУСТИТЬ</button></section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ВЕТРОЛОМ" data-app-version="1.0.0"></script>
+<script src="./app.js"></script>
+</body>
+</html>
