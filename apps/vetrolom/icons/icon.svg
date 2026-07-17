@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ВЕТРОЛОМ">
+  <rect width="512" height="512" rx="76" fill="#111713"/>
+  <path d="M58 386h396v68H58z" fill="#263b2d"/>
+  <path d="M104 386l74-156 46 74 54-166 54 166 42-66 42 148z" fill="#38543f"/>
+  <path d="M256 70v264" stroke="#d6a85f" stroke-width="22"/>
+  <path d="M256 114l-92 62 92 18zm0 70 106 42-106 34zm0 84-76 54 76 12z" fill="#e7c987" stroke="#111713" stroke-width="10" stroke-linejoin="miter"/>
+  <path d="M214 386h84l-12-60h-60z" fill="#8a5c39" stroke="#111713" stroke-width="12"/>
+  <g fill="#9ec47c"><rect x="76" y="414" width="52" height="18"/><rect x="350" y="420" width="84" height="16"/><rect x="152" y="430" width="38" height="14"/></g>
+</svg>
