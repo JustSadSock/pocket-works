@@ -1,0 +1,16 @@
+{
+  "id": "/apps/blazon/",
+  "name": "БЛАЗОН",
+  "short_name": "БЛАЗОН",
+  "description": "Тактическая игра о живой средневековой геральдике: закон тинктур, ересь, симметрия и три великих дома.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#efe2bd",
+  "theme_color": "#efe2bd",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

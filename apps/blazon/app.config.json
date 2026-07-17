@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "blazon",
+  "name": "БЛАЗОН",
+  "shortName": "БЛАЗОН",
+  "description": "Тактическая геральдическая игра, где закон тинктур, положение фигур и симметрия превращают герб в живое оружие.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T21:23:00+03:00",
+  "changelog": [
+    "Первая версия: три игровых дома, три соперника и полный поход с сохранением между дуэлями.",
+    "Закон тинктур, ересь, ординарии, симметрия и семь типов позиционных бонусов напрямую влияют на бой.",
+    "Добавлены тактический бот, пожалования после побед, отключаемый звук, тактильная отдача и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#9f3229",
+  "backgroundColor": "#efe2bd",
+  "themeColor": "#efe2bd",
+  "orientation": "any",
+  "cacheName": "blazon-v1.0.0",
+  "storageNamespace": "pocket-works:blazon",
+  "tags": ["PWA", "offline", "game", "strategy", "heraldry", "medieval", "tactics", "AI", "campaign", "audio", "mobile"],
+  "order": 76
+}
