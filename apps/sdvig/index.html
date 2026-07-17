@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#e6dece">
+  <meta name="description" content="СДВИГ — абстрактная дуэль: вталкивай фишки с краёв, двигай целые линии и первым соедини свои стороны.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="СДВИГ">
+  <title>СДВИГ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app" id="app" data-app-shell>
+    <div class="paper-grain" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <button class="wordmark" id="menuButton" type="button" data-native-press aria-label="Открыть меню">
+        <b>СДВИГ</b><span>ПОЛЕ 5×5</span>
+      </button>
+      <div class="match-score" aria-label="Счёт матча">
+        <span class="score-seat" id="seatZero"><i></i><b id="scoreZero">0</b></span>
+        <em>:</em>
+        <span class="score-seat" id="seatOne"><i></i><b id="scoreOne">0</b></span>
+      </div>
+      <button class="menu-mark" id="pauseButton" type="button" data-native-press aria-label="Пауза"><i></i><i></i><i></i></button>
+    </header>
+
+    <section class="game" aria-label="Игровое поле СДВИГ">
+      <div class="turn-block" aria-live="polite">
+        <span id="roundLabel">РАУНД 1</span>
+        <h1 id="turnLabel">КИНОВАРЬ ДВИГАЕТ</h1>
+        <p id="turnHint">Соедини левый и правый край.</p>
+        <div class="turn-timer" id="turnTimer" hidden><i id="timerFill"></i><b id="timerText">10</b></div>
+      </div>
+
+      <div class="goal-band goal-band--top"><span>КОБАЛЬТ</span><i></i><i></i><i></i><i></i><i></i></div>
+
+      <div class="machine" id="machine" data-gesture-surface data-block-callout>
+        <div class="machine-corner corner-a" aria-hidden="true"><i></i></div>
+        <div class="machine-corner corner-b" aria-hidden="true"><i></i></div>
+        <div class="machine-corner corner-c" aria-hidden="true"><i></i></div>
+        <div class="machine-corner corner-d" aria-hidden="true"><i></i></div>
+
+        <div class="board-stage" id="boardStage" role="application" aria-label="Поле пять на пять. Нажми стрелку у края, чтобы втолкнуть фишку и сдвинуть линию.">
+          <div class="board-cells" id="boardCells" aria-hidden="true"></div>
+          <div class="token-layer" id="tokenLayer" aria-hidden="true"></div>
+          <div class="board-flash" id="boardFlash" aria-hidden="true"></div>
+        </div>
+        <div class="ports" id="ports"></div>
+      </div>
+
+      <div class="goal-band goal-band--bottom"><i></i><i></i><i></i><i></i><i></i><span>КОБАЛЬТ</span></div>
+
+      <div class="rail-copy">
+        <span class="rail-copy__red"><i></i>КИНОВАРЬ: СЛЕВА → НАПРАВО</span>
+        <span class="rail-copy__blue"><i></i>КОБАЛЬТ: СВЕРХУ → ВНИЗ</span>
+      </div>
+
+      <div class="move-log" id="moveLog" aria-label="Последние ходы"></div>
+    </section>
+
+    <section class="pie-strip" id="pieStrip" hidden aria-live="polite">
+      <div><span>ПРАВО ВТОРОГО</span><b id="pieTitle">Забрать первый цвет?</b><p>Первый камень и его цель станут твоими.</p></div>
+      <div class="pie-actions">
+        <button id="keepColorsButton" type="button" data-native-press>ОСТАВИТЬ</button>
+        <button id="swapColorsButton" type="button" data-native-press>ЗАБРАТЬ</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="overlay menu-overlay" id="menuOverlay">
+      <article class="menu-sheet">
+        <header class="menu-header">
+          <span>POCKET WORKS / ABSTRACT DUEL 02</span>
+          <a href="../../" data-shell-exit data-app-control data-native-press>ВЫХОД</a>
+        </header>
+
+        <div class="menu-hero">
+          <div class="hero-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p>ОДИН ХОД ДВИГАЕТ ПЯТЬ КЛЕТОК</p>
+          <h2>СДВИГ</h2>
+          <h3>Строй свою цепь.<br>Ломай чужую геометрию.</h3>
+        </div>
+
+        <div class="menu-controls">
+          <fieldset>
+            <legend>СОПЕРНИК</legend>
+            <div class="choice-row" id="modeChoices">
+              <button type="button" data-value="local" class="is-selected" data-native-press>ДВА ИГРОКА<small>один телефон</small></button>
+              <button type="button" data-value="bot" data-native-press>СТАНОК<small>против ИИ</small></button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>МАТЧ</legend>
+            <div class="compact-row" id="bestOfChoices">
+              <button type="button" data-value="1" data-native-press>1 РАУНД</button>
+              <button type="button" data-value="3" class="is-selected" data-native-press>ДО 2 ПОБЕД</button>
+              <button type="button" data-value="5" data-native-press>ДО 3 ПОБЕД</button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ВРЕМЯ НА ХОД</legend>
+            <div class="compact-row" id="clockChoices">
+              <button type="button" data-value="0" class="is-selected" data-native-press>БЕЗ ЧАСОВ</button>
+              <button type="button" data-value="10" data-native-press>10 СЕК</button>
+              <button type="button" data-value="5" data-native-press>5 СЕК</button>
+            </div>
+          </fieldset>
+
+          <fieldset id="difficultyField" hidden>
+            <legend>СТАНОК</legend>
+            <div class="compact-row" id="difficultyChoices">
+              <button type="button" data-value="cadet" data-native-press>УЧЕБНЫЙ</button>
+              <button type="button" data-value="tactician" class="is-selected" data-native-press>ТАКТИК</button>
+              <button type="button" data-value="predator" data-native-press>ХИЩНИК</button>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="menu-stats">
+          <span>МАТЧЕЙ <b id="matchesStat">0</b></span>
+          <span>ПРОТИВ СТАНКА <b id="botStat">0—0</b></span>
+          <span>СЕРИЯ <b id="streakStat">0</b></span>
+        </div>
+
+        <button class="start-button" id="startButton" type="button" data-native-press><span>НАЧАТЬ МАТЧ</span><i>→</i></button>
+        <button class="resume-button" id="resumeButton" type="button" data-native-press hidden><span>ПРОДОЛЖИТЬ СОХРАНЁННЫЙ МАТЧ</span><i>↗</i></button>
+
+        <div class="menu-links">
+          <button type="button" id="rulesButton" data-native-press>ПРАВИЛА</button>
+          <button type="button" id="soundButton" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+          <button type="button" id="hapticsButton" aria-pressed="true" data-native-press>ВИБРАЦИЯ: ВКЛ</button>
+          <button type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="overlay rules-overlay" id="rulesOverlay" hidden>
+      <article class="rules-sheet">
+        <header><span>ПРАВИЛА / 30 СЕКУНД</span><button type="button" id="rulesCloseButton" data-native-press>ЗАКРЫТЬ</button></header>
+        <h2>Не ставь фишку.<br>Втолкни её.</h2>
+        <div class="rules-grid">
+          <div><b>01</b><p><strong>НАЖМИ СТРЕЛКУ У КРАЯ</strong>Твоя фишка войдёт в строку или колонку. Всё внутри сдвинется на одну клетку.</p></div>
+          <div><b>02</b><p><strong>КРАЙНЯЯ ФИШКА ВЫПАДЕТ</strong>Так можно выкинуть чужой мост — или собственную победу. Игра не нянчится.</p></div>
+          <div><b>03</b><p><strong>СОЕДИНИ СВОИ СТОРОНЫ</strong>Киноварь строит путь слева направо. Кобальт — сверху вниз. Диагонали не считаются.</p></div>
+          <div><b>04</b><p><strong>НЕЛЬЗЯ СРАЗУ ОТМЕНИТЬ ХОД</strong>Ту же линию нельзя тут же толкнуть обратно. Собрал своим ходом чужую цепь — победу получает соперник.</p></div>
+        </div>
+        <div class="pie-rule"><i></i><p><strong>ПРАВИЛО ПИРОГА</strong>После первого хода второй игрок может забрать первый цвет вместе с уже поставленной фишкой.</p></div>
+        <button class="rules-ready" id="rulesReadyButton" type="button" data-native-press>ПОНЯТНО. ДВИГАТЬ.</button>
+      </article>
+    </section>
+
+    <section class="overlay pause-overlay" id="pauseOverlay" hidden>
+      <article class="pause-sheet">
+        <p>МЕХАНИЗМ ОСТАНОВЛЕН</p>
+        <h2>Позиция никуда не денется.</h2>
+        <div class="pause-score"><span id="pauseSeatZero">ИГРОК 1 <b>0</b></span><i>:</i><span id="pauseSeatOne">ИГРОК 2 <b>0</b></span></div>
+        <button class="panel-primary" id="continueButton" type="button" data-native-press>ПРОДОЛЖИТЬ <b>→</b></button>
+        <button class="panel-action" id="pauseRulesButton" type="button" data-native-press>Правила</button>
+        <button class="panel-action" id="pauseSoundButton" type="button" data-native-press>Звук: вкл</button>
+        <button class="panel-action" id="pauseHapticsButton" type="button" data-native-press>Вибрация: вкл</button>
+        <button class="panel-action" data-workshop-trigger data-native-press>Workshop</button>
+        <button class="panel-action" id="returnMenuButton" type="button" data-native-press>Сохранить и выйти в меню</button>
+        <a href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </article>
+    </section>
+
+    <section class="overlay result-overlay" id="resultOverlay" hidden>
+      <article class="result-sheet">
+        <div class="result-stripes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <p id="resultKicker">ЦЕПЬ ЗАМКНУТА</p>
+        <h2 id="resultTitle">Киноварь взяла раунд.</h2>
+        <div class="result-score"><span id="resultScoreZero">0</span><i>:</i><span id="resultScoreOne">0</span></div>
+        <p id="resultNote">Пять клеток. Ноль оправданий.</p>
+        <button class="panel-primary" id="nextRoundButton" type="button" data-native-press>СЛЕДУЮЩИЙ РАУНД <b>→</b></button>
+        <button class="panel-action" id="resultMenuButton" type="button" data-native-press>В меню</button>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СДВИГ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

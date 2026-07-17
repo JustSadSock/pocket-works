@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "sdvig",
+  "name": "СДВИГ",
+  "shortName": "СДВИГ",
+  "description": "Чистая абстрактная PvP-дуэль: вталкивай фишки с краёв, сдвигай целые строки и колонны и первым соедини свои стороны поля 5×5.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T02:40:00Z",
+  "changelog": [
+    "Добавлена локальная дуэль на поле 5×5 с двадцатью направлениями сдвига и запретом немедленного обратного хода.",
+    "Добавлены матчи до одной, двух или трёх побед, правило пирога и опциональные часы на ход.",
+    "Добавлен тренировочный соперник «Станок» с тремя уровнями глубины поиска.",
+    "Добавлены анимации физического сдвига линий, вылетающие фишки, процедурный звук, вибрация, сохранение матча и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d84932",
+  "backgroundColor": "#e6dece",
+  "themeColor": "#e6dece",
+  "orientation": "portrait",
+  "cacheName": "sdvig-v1.0.0",
+  "storageNamespace": "pocket-works:sdvig",
+  "tags": ["PWA", "offline", "game", "abstract strategy", "PvP", "local multiplayer", "board game", "pure skill", "AI opponent", "touch", "audio", "haptics"],
+  "order": 148
+}
