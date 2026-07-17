@@ -3,9 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
-const [index, loader, worker, manifestText, configText, engine] = await Promise.all([
+const [index, loader, loaderCss, worker, manifestText, configText, engine] = await Promise.all([
   read('./index.html'),
   read('./app.js'),
+  read('./styles.css'),
   read('./sw.js'),
   read('./manifest.webmanifest'),
   read('./app.config.json'),
@@ -14,7 +15,7 @@ const [index, loader, worker, manifestText, configText, engine] = await Promise.
 const appPayload = (await Promise.all([0, 1, 2, 3].map((index) => read(`./bundle/app-${index}.txt`)))).join('');
 const cssPayload = (await Promise.all([0, 1, 2].map((index) => read(`./bundle/css-${index}.txt`)))).join('');
 const app = gunzipSync(Buffer.from(appPayload, 'base64')).toString('utf8');
-const css = gunzipSync(Buffer.from(cssPayload, 'base64')).toString('utf8');
+const bundledCss = gunzipSync(Buffer.from(cssPayload, 'base64')).toString('utf8');
 const config = JSON.parse(configText);
 const manifest = JSON.parse(manifestText);
 
@@ -36,9 +37,10 @@ assert(app.includes("preview?.ended?'РАЗРЕЗ'"));
 assert(engine.includes("state.reason = 'split'"));
 assert(engine.includes("state.reason = 'trap'"));
 assert(engine.includes('function resolveCut'));
-assert(css.includes('.hex-cell.is-finisher'));
-assert(css.includes('@keyframes territory-collapse'));
-assert(css.includes('polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)'));
+assert(bundledCss.includes('.hex-cell'));
+assert(loaderCss.includes('.hex-cell.is-finisher'));
+assert(loaderCss.includes('@keyframes territory-collapse'));
+assert(loaderCss.includes('polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)'));
 
 const ids = new Set([...index.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const referencedIds = [...app.matchAll(/byId\('([^']+)'\)/g)].map((match) => match[1]);
