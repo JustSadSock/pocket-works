@@ -9,7 +9,7 @@ const RELEASE_NOTES = [
   'Два независимых финальных прогона по 60 партий дали 62:58 по местам, ноль ничьих и два жизнеспособных способа победы.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './motion.css', './app.js', './motion.js', './engine.js',
+  './', './index.html', './app.config.json', './styles.css', './reserve.css', './motion.css', './app.js', './motion.js', './engine.js', './engine-core.js',
   './manifest.webmanifest', './icons/icon.svg', './BALANCE_AUDIT.md',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
