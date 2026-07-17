@@ -1,0 +1,21 @@
+{
+  "id": "/apps/orbita/",
+  "name": "ОРБИТА",
+  "short_name": "ОРБИТА",
+  "description": "Абстрактная дуэль на четырёх вращающихся кольцах.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#e8e0d1",
+  "theme_color": "#20383a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
