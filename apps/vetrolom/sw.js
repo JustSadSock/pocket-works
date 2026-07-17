@@ -8,7 +8,7 @@ const RELEASE_NOTES=[
   'Новые анимации, погодные эффекты, многослойные звуки и фоновая атмосфера.'
 ];
 const SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
   './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt',
   '../../shared/mobile-runtime.css','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
