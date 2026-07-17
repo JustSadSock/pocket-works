@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "slug": "turniket",
+  "name": "ТУРНИКЕТ",
+  "shortName": "ТУРНИКЕТ",
+  "description": "Абстрактная дуэль о маршрутах: ставьте двусторонние ворота, пропускающие только по стрелке и переворачивающиеся после прохода.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T11:15:00+02:00",
+  "changelog": [
+    "Локальная PvP-дуэль до трёх побед на поле 7×7 без случайности и скрытой информации.",
+    "Двухсекционные односторонние турникеты переворачиваются после каждого прохода и динамически меняют маршруты.",
+    "Сохранение матча, офлайн-режим, адаптивное управление, звук, виброотклик и интерактивные правила."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#db5a3a",
+  "backgroundColor": "#eee9dd",
+  "themeColor": "#293033",
+  "orientation": "portrait",
+  "cacheName": "turniket-v1.0.0",
+  "storageNamespace": "pocket-works:turniket",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "abstract strategy",
+    "local multiplayer",
+    "PvP",
+    "board game",
+    "touch",
+    "audio",
+    "haptics"
+  ],
+  "order": 148
+}
