@@ -1,109 +1,91 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
-  AUGMENTS,
-  CHARGES,
-  HOUSES,
-  OPPONENTS,
-  chooseEnemyAction,
-  chooseReward,
+  BUILD_STEPS,
+  canPlaceElement,
+  choosePatronage,
   createCampaign,
-  finishBattle,
-  generateRewards,
-  isLegalPlacement,
-  playRound,
-  previewAction,
-  rankEnemyActions,
-  restartBattle
+  evaluateHeraldry,
+  isLegalTincture,
+  placeElement,
+  requirementStatus,
+  resolveTrial
 } from '../engine.js';
 
-test('campaign creates a playable first battle with three cards per side', () => {
-  const campaign = createCampaign('lion', 12345);
-  assert.equal(campaign.houseId, HOUSES.lion.id);
-  assert.equal(campaign.stage, 0);
-  assert.equal(campaign.battle.enemy.id, OPPONENTS[0].id);
-  assert.equal(campaign.battle.player.hand.length, 3);
-  assert.equal(campaign.battle.enemy.hand.length, 3);
-  assert.equal(campaign.battle.phase, 'player');
+test('law of tincture separates metals and colours', () => {
+  assert.equal(isLegalTincture('or', 'gules'), true);
+  assert.equal(isLegalTincture('or', 'argent'), false);
+  assert.equal(isLegalTincture('azure', 'gules'), false);
 });
 
-test('rule of tincture rejects metal on metal and color on color', () => {
-  const campaign = createCampaign('lion', 7);
-  const player = campaign.battle.player;
-  assert.equal(isLegalPlacement(player, { kind: 'charge', device: 'lion', tincture: 'or' }, 0), true);
-  assert.equal(isLegalPlacement(player, { kind: 'charge', device: 'lion', tincture: 'azure' }, 0), false);
-  player.ordinary = { kind: 'ordinary', device: 'chief', tincture: 'or' };
-  assert.equal(isLegalPlacement(player, { kind: 'charge', device: 'lion', tincture: 'argent' }, 1), false);
-  assert.equal(isLegalPlacement(player, { kind: 'charge', device: 'lion', tincture: 'azure' }, 1), true);
+test('key is locked until tower or bordure exists', () => {
+  const campaign = createCampaign('lion', 2);
+  assert.equal(requirementStatus(campaign, 'key').ok, false);
+  campaign.board.charges[0] = { id: 'tower-x', device: 'tower', tincture: 'argent' };
+  assert.equal(requirementStatus(campaign, 'key').ok, true);
 });
 
-test('illegal placement gains force but inflicts dishonor damage', () => {
-  const campaign = createCampaign('lion', 9);
-  const battle = campaign.battle;
-  const illegal = { id: 'x', kind: 'charge', device: 'boar', tincture: 'azure' };
-  const legal = { id: 'y', kind: 'charge', device: 'boar', tincture: 'or' };
-  const illegalPreview = previewAction(battle, 'player', illegal, 0);
-  const legalPreview = previewAction(battle, 'player', legal, 0);
-  assert.equal(illegalPreview.legal, false);
-  assert.equal(illegalPreview.selfDamage, 1);
-  assert.ok(illegalPreview.attack > legalPreview.attack);
-  assert.ok(legalPreview.honor > illegalPreview.honor);
+test('placing four elements unlocks one chapter trial instead of combat every turn', () => {
+  const campaign = createCampaign('lion', 4);
+  for (let i = 0; i < BUILD_STEPS; i += 1) {
+    campaign.offer = [{ id: `rose-${i}`, device: 'rose', tincture: i % 2 ? 'argent' : 'or' }];
+    const slot = [0,1,2,4][i];
+    assert.equal(placeElement(campaign, `rose-${i}`, slot).ok, true);
+  }
+  assert.equal(campaign.pendingTrial, true);
+  assert.equal(campaign.history.filter((x) => x.kind === 'trial').length, 0);
 });
 
-test('a complete round advances turn and draws a new hand', () => {
-  const campaign = createCampaign('stag', 42);
-  const battle = campaign.battle;
-  const playerCard = battle.player.hand[0];
-  const target = playerCard.kind === 'ordinary' ? 'ordinary' : 3;
-  const enemyChoice = chooseEnemyAction(battle);
-  const result = playRound(battle, playerCard.id, target, enemyChoice);
+test('tower and key activate gatekeeper combination', () => {
+  const campaign = createCampaign('stag', 8);
+  campaign.board.charges[0] = { id: 'tower', device: 'tower', tincture: 'argent' };
+  campaign.board.charges[1] = { id: 'key', device: 'key', tincture: 'or' };
+  const result = evaluateHeraldry(campaign);
+  assert.ok(result.combos.some((x) => x.id === 'gatekeeper'));
+});
+
+test('dragon scandal is reduced by chain combination', () => {
+  const campaign = createCampaign('raven', 9);
+  campaign.board.charges[0] = { id: 'dragon', device: 'dragon', tincture: 'or' };
+  const before = evaluateHeraldry(campaign).scandal;
+  campaign.board.ornaments.push({ id: 'chain', device: 'chain', tincture: null });
+  const after = evaluateHeraldry(campaign).scandal;
+  assert.ok(after < before);
+});
+
+test('an unavailable slot cannot accept a charge', () => {
+  const campaign = createCampaign('lion', 10);
+  campaign.offer = [{ id: 'lion-2', device: 'lion', tincture: 'argent' }];
+  assert.equal(canPlaceElement(campaign, campaign.offer[0], 3).ok, false);
+});
+
+test('trial resolves only after chapter build and opens patronage', () => {
+  const campaign = createCampaign('lion', 11);
+  campaign.pendingTrial = true;
+  campaign.step = BUILD_STEPS;
+  campaign.board.charges[0] = { id: 'sword', device: 'sword', tincture: 'argent' };
+  campaign.board.charges[1] = { id: 'cross', device: 'cross', tincture: 'or' };
+  const result = resolveTrial(campaign, 'charge');
   assert.equal(result.ok, true);
-  assert.equal(result.battle.turn, 2);
-  assert.equal(result.battle.history.length, 1);
-  assert.equal(result.battle.player.hand.length, 3);
-  assert.equal(result.battle.enemy.hand.length, 3);
+  assert.equal(campaign.pendingTrial, false);
+  assert.equal(campaign.pendingPatronage || campaign.failed, true);
 });
 
-test('AI ranks every card-target combination and returns a legal action', () => {
-  const campaign = createCampaign('raven', 101);
-  const battle = campaign.battle;
-  const ranked = rankEnemyActions(battle);
-  assert.ok(ranked.length >= 3);
-  const choice = chooseEnemyAction(battle);
-  assert.ok(battle.enemy.hand.some((card) => card.id === choice.cardId));
+test('patronage advances to the next chapter', () => {
+  const campaign = createCampaign('lion', 12);
+  campaign.pendingPatronage = true;
+  campaign.patronageOffer = ['enamel'];
+  assert.equal(choosePatronage(campaign, 'enamel'), true);
+  assert.equal(campaign.chapter, 1);
+  assert.ok(campaign.offer.length === 3);
 });
 
-test('victory produces rewards and chosen reward starts next opponent', () => {
-  let campaign = createCampaign('lion', 555);
-  campaign.battle.winner = 'player';
-  campaign.battle.phase = 'reward';
-  campaign = finishBattle(campaign, campaign.battle);
-  assert.equal(campaign.victories, 1);
-  assert.equal(campaign.rewards.length, 3);
-  const reward = campaign.rewards[0];
-  assert.ok(AUGMENTS[reward]);
-  campaign = chooseReward(campaign, reward);
-  assert.equal(campaign.stage, 1);
-  assert.ok(campaign.augments.includes(reward));
-  assert.equal(campaign.battle.enemy.id, OPPONENTS[1].id);
-});
-
-test('restart keeps campaign identity and augment list', () => {
-  let campaign = createCampaign('stag', 77);
-  const generated = generateRewards(campaign);
-  campaign.rewards = generated.rewards;
-  campaign = chooseReward(campaign, campaign.rewards[0]);
-  const before = [...campaign.augments];
-  campaign.battle.turn = 5;
-  const restarted = restartBattle(campaign);
-  assert.equal(restarted.stage, campaign.stage);
-  assert.deepEqual(restarted.augments, before);
-  assert.equal(restarted.battle.turn, 1);
-  assert.equal(restarted.battle.player.renown, restarted.battle.player.maxRenown);
-});
-
-test('charge catalogue retains distinct tactical identities', () => {
-  assert.ok(CHARGES.boar.attack > CHARGES.tower.attack);
-  assert.ok(CHARGES.tower.guard > CHARGES.lion.guard);
-  assert.ok(CHARGES.fleur.honor > CHARGES.boar.honor);
+test('a full shield evolves by replacing non-founder charges', () => {
+  const campaign = createCampaign('lion', 15);
+  campaign.board.charges = campaign.board.charges.map((entry, index) => entry || { id: `rose-${index}`, device: 'rose', tincture: 'argent' });
+  campaign.offer = [{ id: 'sword-new', device: 'sword', tincture: 'argent' }];
+  assert.equal(canPlaceElement(campaign, campaign.offer[0], 0).ok, true);
+  assert.equal(placeElement(campaign, 'sword-new', 0).ok, true);
+  assert.equal(campaign.board.charges[0].device, 'sword');
+  assert.equal(campaign.board.charges[3].founder, true);
 });
