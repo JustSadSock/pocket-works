@@ -1,5 +1,5 @@
 const CACHE = 'blazon-v2.0.0';
-const ASSETS = ['./','./index.html','./styles.css','./app.js','./engine.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/storage.js','../../shared/pwa-utils.js'];
+const ASSETS = ['./','./index.html','./styles.css','./styles/base.css','./styles/menu.css','./styles/game.css','./styles/cards.css','./styles/dialogs.css','./styles/responsive.css','./app.js','./engine.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/storage.js','../../shared/pwa-utils.js'];
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('blazon-') && key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (event) => {
