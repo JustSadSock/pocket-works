@@ -1,0 +1,16 @@
+{
+  "id": "/apps/hemline/",
+  "name": "ШОВ",
+  "short_name": "ШОВ",
+  "description": "Тактическая дуэль на гекс-сетке: соедини края, зажимай пары и меняй позицию двумя сдвигами.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e8dfc8",
+  "theme_color": "#e8dfc8",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
