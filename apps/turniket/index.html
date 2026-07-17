@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#293033">
+  <meta name="description" content="ТУРНИКЕТ — абстрактная PvP-дуэль с односторонними воротами, которые переворачиваются после прохода.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ТУРНИКЕТ">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <title>ТУРНИКЕТ</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="shelf-link" href="../../" aria-label="Вернуться в Pocket Works">← <span>ПОЛКА</span></a>
+      <div class="wordmark" aria-label="ТУРНИКЕТ">ТУРНИКЕТ</div>
+      <button id="settingsButton" class="topbar-button" type="button" aria-label="Открыть настройки">≡</button>
+    </header>
+
+    <main>
+      <section id="homeScreen" class="screen home-screen" aria-labelledby="homeTitle">
+        <div class="hero-board" aria-hidden="true">
+          <div class="hero-grid"></div>
+          <span class="hero-pawn hero-pawn-a">I</span>
+          <span class="hero-pawn hero-pawn-b">II</span>
+          <span class="hero-gate hero-gate-a"><i>↑</i><i>↑</i></span>
+          <span class="hero-gate hero-gate-b"><i>→</i><i>→</i></span>
+          <span class="hero-route"></span>
+        </div>
+
+        <div class="home-copy">
+          <p class="kicker">АБСТРАКТНАЯ ДУЭЛЬ · 2 ИГРОКА</p>
+          <h1 id="homeTitle">ТУРНИКЕТ</h1>
+          <p class="home-lead">Иди к чужому краю. Ставь односторонние ворота. Прошёл — развернул их против следующего.</p>
+        </div>
+
+        <div class="home-actions">
+          <button id="continueButton" class="action-button primary" type="button" hidden>
+            <span>ПРОДОЛЖИТЬ</span>
+            <small id="continueMeta"></small>
+          </button>
+          <button id="newMatchButton" class="action-button primary" type="button">
+            <span>НОВЫЙ МАТЧ</span>
+            <small>7×7 · до трёх побед · одно устройство</small>
+          </button>
+          <button id="rulesButton" class="action-button secondary" type="button">КАК ИГРАТЬ</button>
+        </div>
+
+        <div class="rule-strip" aria-label="Краткие правила">
+          <div><b>1</b><span>Двигай фишку</span></div>
+          <div><b>2</b><span>Ставь ворота</span></div>
+          <div><b>3</b><span>Меняй потоки</span></div>
+        </div>
+        <p class="home-footnote">БЕЗ РАНДОМА · БЕЗ СКРЫТОЙ ИНФОРМАЦИИ · БЕЗ ОТМАЗОК</p>
+      </section>
+
+      <section id="gameScreen" class="screen game-screen" hidden aria-label="Игровой матч">
+        <div class="scoreboard" aria-label="Счёт матча">
+          <div id="player0Panel" class="player-panel" data-player="0">
+            <div class="player-name"><span class="pawn-chip pawn-chip-a">I</span><strong>ИГРОК 1</strong></div>
+            <div id="score0" class="score-pips" aria-label="Победы игрока 1"></div>
+            <span id="gates0" class="gate-count">7 турникетов</span>
+          </div>
+          <div class="round-box"><span>РАУНД</span><strong id="roundNumber">1</strong></div>
+          <div id="player1Panel" class="player-panel player-panel-right" data-player="1">
+            <div class="player-name"><strong>ИГРОК 2</strong><span class="pawn-chip pawn-chip-b">II</span></div>
+            <div id="score1" class="score-pips" aria-label="Победы игрока 2"></div>
+            <span id="gates1" class="gate-count">7 турникетов</span>
+          </div>
+        </div>
+
+        <div class="turn-banner">
+          <div id="turnDot" class="turn-dot"></div>
+          <div>
+            <p id="turnTitle">ХОД ИГРОКА 1</p>
+            <span id="turnHint" aria-live="polite">Выберите клетку или поставьте ворота</span>
+          </div>
+        </div>
+
+        <div id="boardFrame" class="board-frame">
+          <svg id="board" viewBox="0 0 700 700" role="group" aria-label="Поле ТУРНИКЕТ 7 на 7"></svg>
+        </div>
+
+        <div class="mode-switch" role="group" aria-label="Выбор действия">
+          <button id="moveModeButton" class="mode-button active" type="button" aria-pressed="true">
+            <span class="mode-icon">●</span>
+            <span><strong>ХОД</strong><small>переместить фишку</small></span>
+          </button>
+          <button id="gateModeButton" class="mode-button" type="button" aria-pressed="false">
+            <span class="mode-icon gate-icon">⇥</span>
+            <span><strong>ВОРОТА</strong><small id="gateModeMeta">осталось 7</small></span>
+          </button>
+        </div>
+
+        <div id="placementPanel" class="placement-panel" hidden>
+          <div class="placement-copy">
+            <span id="placementKicker">ВЫБЕРИТЕ ЩЕЛЬ НА ПОЛЕ</span>
+            <strong id="placementDirection">Направление появится здесь</strong>
+          </div>
+          <div class="placement-actions">
+            <button id="rotateGateButton" type="button" disabled>РАЗВЕРНУТЬ</button>
+            <button id="cancelGateButton" type="button" disabled>ОТМЕНА</button>
+            <button id="confirmGateButton" class="confirm" type="button" disabled>ПОСТАВИТЬ</button>
+          </div>
+        </div>
+
+        <p id="lastAction" class="last-action" aria-live="polite">Игрок 1 начинает снизу</p>
+      </section>
+    </main>
+
+    <dialog id="rulesDialog" class="sheet-dialog">
+      <form method="dialog" class="dialog-frame">
+        <div class="dialog-header">
+          <div><span class="dialog-kicker">ПРАВИЛА</span><h2>Три действия. Ноль случайности.</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть правила">×</button>
+        </div>
+
+        <ol class="rules-list">
+          <li>
+            <span class="rule-number">01</span>
+            <div><strong>Доберитесь до противоположного края</strong><p>Игрок 1 идёт снизу вверх, Игрок 2 — сверху вниз. За ход можно передвинуть фишку на соседнюю клетку.</p></div>
+          </li>
+          <li>
+            <span class="rule-number">02</span>
+            <div><strong>Или поставьте турникет</strong><p>Он занимает две щели, пропускает только по стрелке и не может полностью уничтожить маршрут к цели.</p></div>
+          </li>
+          <li>
+            <span class="rule-number">03</span>
+            <div><strong>Каждый проход переворачивает ворота</strong><p>То, что помогло вам сейчас, на следующем ходу может открыть путь сопернику. В этом вся мясорубка.</p></div>
+          </li>
+        </ol>
+
+        <div class="gate-demo" aria-label="Схема работы турникета">
+          <div class="demo-cell"></div><div class="demo-cell"></div>
+          <div class="demo-gate"><span>↑</span><span>↑</span></div>
+          <div class="demo-cell"></div><div class="demo-cell"></div>
+          <p>После прохода обе стрелки развернутся вниз.</p>
+        </div>
+
+        <div class="rule-notes">
+          <p><strong>Столкновение:</strong> соперника можно перепрыгнуть. Если прямой прыжок закрыт, разрешён обход по диагонали.</p>
+          <p><strong>Победа:</strong> достигните чужого края или оставьте соперника без допустимого хода.</p>
+        </div>
+        <button class="dialog-primary" value="close">ПОНЯТНО</button>
+      </form>
+    </dialog>
+
+    <dialog id="settingsDialog" class="sheet-dialog compact-dialog">
+      <form method="dialog" class="dialog-frame">
+        <div class="dialog-header">
+          <div><span class="dialog-kicker">ТУРНИКЕТ</span><h2>Настройки</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть настройки">×</button>
+        </div>
+        <label class="setting-row">
+          <span><strong>Звук</strong><small>Шаги, щелчки механизма и победный сигнал</small></span>
+          <input id="soundToggle" type="checkbox" checked>
+          <i class="switch" aria-hidden="true"></i>
+        </label>
+        <label class="setting-row">
+          <span><strong>Вибрация</strong><small>Короткий отклик на ход, ошибку и переворот</small></span>
+          <input id="hapticsToggle" type="checkbox" checked>
+          <i class="switch" aria-hidden="true"></i>
+        </label>
+        <div class="settings-actions">
+          <button id="restartRoundButton" type="button">ПЕРЕИГРАТЬ РАУНД</button>
+          <button id="openRulesFromSettings" type="button">ОТКРЫТЬ ПРАВИЛА</button>
+          <button id="resetMatchButton" class="danger" type="button">СБРОСИТЬ МАТЧ</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="resultOverlay" class="result-overlay" hidden>
+      <div class="result-gates" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="result-content">
+        <p id="resultKicker">РАУНД ЗАВЕРШЁН</p>
+        <h2 id="resultTitle">ИГРОК 1</h2>
+        <p id="resultText">Достиг противоположного края.</p>
+        <div id="resultScore" class="result-score">1 : 0</div>
+        <button id="nextRoundButton" class="result-primary" type="button">СЛЕДУЮЩИЙ РАУНД</button>
+        <button id="resultHomeButton" class="result-secondary" type="button">В МЕНЮ</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
