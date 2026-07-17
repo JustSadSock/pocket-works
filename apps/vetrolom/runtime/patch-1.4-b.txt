@@ -1,0 +1,80 @@
+/* 1.4 — readable enemy intent, storm strikes and denser combat feedback */
+function hurtPlayer14(amount,x,y,kind='hit'){
+  const p=state.player;if(p.invuln>0)return false;
+  p.hp-=amount;p.invuln=.72;cam.shake=kind==='lightning'?7:4;cam.kick=kind==='lightning'?-0.11:-.06;screenFlash=Math.max(screenFlash,kind==='lightning'?.46:.28);
+  floater(p.x,p.y-11,`-${amount}`,'#ff8b6e');ring(p.x,p.y,kind==='lightning'?'#e7d5aa':'#c65e4f',5,40);sfx(kind==='lightning'?'thunder14':'hurt');vibrate(kind==='lightning'?[30,20,45]:[22,22,18]);
+  if(kind==='lightning')p.warmth=Math.max(0,p.warmth-12);return true
+}
+function spawnBolt14(e){
+  const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy)||1;
+  UX14.bolts.push({x:e.x,y:e.y-4,vx:dx/d*54,vy:dy/d*54,t:2.2,trail:0});e.boltFlash=.24;e.boltCd=2.1+Math.random()*1.25;
+  worldTone14(e.x,420,.12,'sawtooth',.012,-240);sfx('bolt14')
+}
+function scheduleStrike14(){
+  let point=null;
+  for(let i=0;i<18&&!point;i++){
+    const a=Math.random()*TAU,r=34+Math.random()*78,x=state.player.x+Math.cos(a)*r,y=state.player.y+Math.sin(a)*r;
+    if(isLand(x,y))point={x,y}
+  }
+  if(point){UX14.strikes.push({x:point.x,y:point.y,t:.92,hit:false,grounded:false});worldTone14(point.x,78,.18,'sine',.009,30);sfx('warning14')}
+}
+function strikeImpact14(s){
+  const lamps=activeLanterns13(),lamp=lamps.find(l=>dist(l.x,l.y,s.x,s.y)<58);s.grounded=!!lamp;s.hit=true;s.t=.34;UX14.flash=.7;screenFlash=Math.max(screenFlash,.4);
+  if(lamp){
+    lamp.chargeAnim=performance.now();ring(lamp.x,lamp.y,'#f0d982',8,74);for(const e of [...enemies])if(e.type==='wisp'&&dist(e.x,e.y,lamp.x,lamp.y)<72){e.hp-=18;e.hit=.24;particleBurst(e.x,e.y,'#e4cf78',10);if(e.hp<=0)killEnemy(e)}
+    sfx('ground14');if(!state.world.groundedStorm14||state.world.groundedStorm14!==state.clock.day){state.world.groundedStorm14=state.clock.day;event14('ФОНАРЬ ЗАЗЕМЛИЛ МОЛНИЮ')}
+  }else{
+    sfx('thunder14');if(dist(state.player.x,state.player.y,s.x,s.y)<17)hurtPlayer14(16,s.x,s.y,'lightning')
+  }
+  for(let i=0;i<24;i++)particles.push({x:s.x+(Math.random()-.5)*9,y:s.y-2,vx:(Math.random()-.5)*55,vy:-20-Math.random()*45,t:.25+Math.random()*.45,color:i%3?'#e9dda8':'#a7c8c1',size:1+Math.random()*2})
+}
+
+const baseChooseWeather14=chooseWeather;
+chooseWeather=function(){
+  const before=state.clock.weather;baseChooseWeather14();const next=state.clock.weather;UX14.lastWeather=next;
+  if(next==='storm'){UX14.lightningTimer=3.5+Math.random()*3;event14('ГРОЗОВОЙ ФРОНТ · СВЕТ ПРИТЯГИВАЕТ РАЗРЯД')}
+  else if(next==='fog')event14('ТУМАН СЕЛ НА ДОЛИНУ');
+  else if(next==='rain'&&before!=='rain')event14('ДОЖДЬ ПРИШЁЛ С ЗАПАДА');
+  else if(next==='clear'&&before!=='clear')event14('НЕБО ПРОЯСНЯЕТСЯ')
+};
+
+const baseUpdateEnemies14=updateEnemies;
+updateEnemies=function(dt){
+  for(const e of enemies){
+    if(e.type==='crawler'&&!e.windup&&e.attack<=0&&dist(e.x,e.y,state.player.x,state.player.y)<19){
+      e.windup=.36;e.telegraph=.36;e.attack=.62;e.vx=1e-6;e.vy=0;worldTone14(e.x,112,.07,'square',.008,24)
+    }
+    if(e.windup>0){e.vx=1e-6;e.vy=0}
+    if(e.type==='wisp'){e.boltCd=(e.boltCd??(1.2+Math.random()))-dt;e.boltFlash=Math.max(0,(e.boltFlash||0)-dt)}
+  }
+  baseUpdateEnemies14(dt);
+  for(const e of [...enemies]){
+    if(e.windup>0){
+      e.windup-=dt;e.telegraph=Math.max(0,e.windup);
+      if(e.windup<=0){const d=dist(e.x,e.y,state.player.x,state.player.y);if(d<22)hurtPlayer14(e.damage+2,e.x,e.y,'bite');e.windup=0;e.telegraph=0;e.attack=1.25;e.vx=e.vy=0}
+    }
+    if(e.type==='wisp'&&e.boltCd<=0){const d=dist(e.x,e.y,state.player.x,state.player.y);if(d>30&&d<105)spawnBolt14(e);else e.boltCd=.5}
+  }
+};
+
+const baseKillEnemy14=killEnemy;
+killEnemy=function(e){UX14.echoes.push({x:e.x,y:e.y,type:e.type,t:.65});baseKillEnemy14(e)};
+
+const baseUpdate14=update;
+update=function(dt){
+  baseUpdate14(dt);if(!state||paused)return;
+  UX14.eventTimer=Math.max(0,UX14.eventTimer-dt);if(UX14.eventTimer<=0)uxLayer14.event.classList.remove('show');
+  UX14.flash=Math.max(0,UX14.flash-dt*2.3);UX14.rumble=Math.max(0,UX14.rumble-dt);
+  for(const e of UX14.echoes)e.t-=dt;UX14.echoes=UX14.echoes.filter(e=>e.t>0);
+  for(const b of UX14.bolts){
+    b.t-=dt;b.trail+=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
+    if(!isLand(b.x,b.y)||blocked(b.x,b.y,true)){b.t=0;particleBurst(b.x,b.y,'#8fc2bd',4);continue}
+    if(dist(b.x,b.y,state.player.x,state.player.y)<7){if(hurtPlayer14(9,b.x,b.y,'bolt')){particleBurst(b.x,b.y,'#a9d3cc',9);ring(b.x,b.y,'#a4d0c9',3,32)}b.t=0}
+  }
+  UX14.bolts=UX14.bolts.filter(b=>b.t>0);
+  if(state.clock.weather==='storm'){
+    UX14.lightningTimer-=dt;if(UX14.lightningTimer<=0){scheduleStrike14();UX14.lightningTimer=5+Math.random()*6}
+  }else UX14.lightningTimer=Math.min(5,UX14.lightningTimer+dt*.5);
+  for(const s of UX14.strikes){s.t-=dt;if(!s.hit&&s.t<=0)strikeImpact14(s)}
+  UX14.strikes=UX14.strikes.filter(s=>s.t>0);
+};
