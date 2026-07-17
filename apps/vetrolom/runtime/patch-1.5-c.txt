@@ -1,0 +1,57 @@
+/* 1.5 — atmospheric motion, layered light and restrained screen finishing */
+function spawnMote15(){
+  if(VIS15.reduced||VIS15.motes.length>(VIS15.lowPower?18:34))return;const t=tileAtPx(state.player.x,state.player.y),w=state.clock.weather,a=Math.random()*TAU,r=55+Math.random()*105;
+  let kind='leaf',color='#88a76d',speed=7,size=1;if(t===6){kind='snow';color='#e4eee8';speed=4}else if(t===4){kind='seed';color='#b8c88e';speed=3}else if(t===5){kind='dust';color='#c7a477';speed=9}else if(t===7){kind='ash';color='#979b8e';speed=5}else if(isNight()){kind='glow';color='#d6d876';speed=2}
+  if(w==='rain'||w==='storm')return;
+  VIS15.motes.push({x:state.player.x+Math.cos(a)*r,y:state.player.y+Math.sin(a)*r,vx:(Math.random()-.5)*speed+Math.sin(VIS15.gust)*speed*.5,vy:kind==='snow'?2+Math.random()*3:kind==='dust'?-1-Math.random()*2:(Math.random()-.5)*speed*.35,t:4+Math.random()*5,max:9,color,size,kind,spin:Math.random()*TAU})
+}
+const baseUpdate15=update;
+update=function(dt){
+  baseUpdate15(dt);if(!state||paused)return;VIS15.gust+=dt*(state.clock.weather==='storm'?2.1:.72);VIS15.lastRipple-=dt;
+  if(Math.random()<dt*(VIS15.lowPower?1.2:2.4))spawnMote15();
+  for(const m of VIS15.motes){m.t-=dt;m.spin+=dt*2;m.x+=m.vx*dt;m.y+=m.vy*dt;if(m.kind==='leaf'||m.kind==='seed')m.x+=Math.sin(VIS15.gust+m.spin)*dt*3;if(m.kind==='glow')m.y+=Math.sin(VIS15.gust*2+m.spin)*dt*2}
+  VIS15.motes=VIS15.motes.filter(m=>m.t>0&&dist(m.x,m.y,state.player.x,state.player.y)<190);
+  if((state.clock.weather==='rain'||state.clock.weather==='storm')&&VIS15.lastRipple<=0){VIS15.lastRipple=VIS15.lowPower ? .19 : .1;for(let i=0;i<(state.clock.weather==='storm'?2:1);i++){const a=Math.random()*TAU,r=18+Math.random()*92,x=state.player.x+Math.cos(a)*r,y=state.player.y+Math.sin(a)*r;if(isLand(x,y))VIS15.ripples.push({x,y,t:.36,max:.36})}}
+  for(const r of VIS15.ripples)r.t-=dt;VIS15.ripples=VIS15.ripples.filter(r=>r.t>0)
+};
+
+const baseDrawEffects15=drawEffects;
+drawEffects=function(ox,oy){
+  ctx.save();for(const r of VIS15.ripples){const x=Math.round(r.x+ox),y=Math.round(r.y+oy),p=1-r.t/r.max;ctx.globalAlpha=(1-p)*.3;ctx.strokeStyle='#c5d8cf';ctx.beginPath();ctx.ellipse(x,y,2+p*5,1+p*2,0,0,TAU);ctx.stroke()}ctx.restore();
+  baseDrawEffects15(ox,oy);ctx.save();
+  for(const m of VIS15.motes){const x=Math.round(m.x+ox),y=Math.round(m.y+oy),fade=clamp(Math.min(m.t,9-m.t),0,1);ctx.globalAlpha=fade*(m.kind==='glow'?.55:.38);ctx.fillStyle=m.color;
+    if(m.kind==='leaf'){ctx.fillRect(x,y,2,1);ctx.fillRect(x+(Math.sin(m.spin)>0?1:-1),y+1,1,1)}
+    else if(m.kind==='snow'){ctx.fillRect(x,y,1,1);if(!VIS15.lowPower)ctx.fillRect(x-1,y,3,1)}
+    else if(m.kind==='dust'||m.kind==='ash')ctx.fillRect(x,y,1,1);
+    else if(m.kind==='seed'){ctx.fillRect(x,y,1,2);ctx.fillRect(x+1,y-1,1,1)}
+    else{ctx.fillRect(x,y,2,2);ctx.globalAlpha*=.25;ctx.fillRect(x-2,y,6,1);ctx.fillRect(x,y-2,1,6)}
+  }ctx.restore()
+};
+
+const baseDrawLight15=drawLight;
+drawLight=function(cw,ch,ox,oy){
+  baseDrawLight15(cw,ch,ox,oy);ctx.save();ctx.globalCompositeOperation='lighter';const night=isNight(),weather=state.clock.weather;
+  for(const s of state.world.structures)if(s.type==='campfire'){
+    const x=s.x+ox,y=s.y+oy-5,r=night?56:weather==='fog'?43:30,g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,'rgba(255,207,112,.18)');g.addColorStop(.35,'rgba(225,134,58,.08)');g.addColorStop(1,'rgba(213,100,40,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2)
+  }
+  if(!night&&weather==='clear'){
+    const s=sunVector15(),g=ctx.createLinearGradient(0,0,cw,ch);g.addColorStop(0,`rgba(255,231,177,${.025*s.strength})`);g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch)
+  }ctx.restore()
+};
+
+const baseDrawWeather15=drawWeather;
+drawWeather=function(cw,ch){
+  baseDrawWeather15(cw,ch);const time=performance.now()*.001,w=state.clock.weather;ctx.save();
+  if(w==='fog'){ctx.globalAlpha=.055;ctx.fillStyle='#d9e1d7';for(let i=0;i<5;i++){const y=((i*79+time*(4+i))%(ch+70))-35;ctx.fillRect(-20,y,cw+40,8+i%2*5)}}
+  if(w==='storm'){ctx.globalAlpha=.08;ctx.fillStyle='#cbd7d3';const shift=(time*38)%90;for(let i=-1;i<6;i++)ctx.fillRect(i*90+shift-90,0,15,ch)}
+  ctx.restore()
+};
+
+const baseRender15=render;
+render=function(){
+  baseRender15();if(!state)return;const dpr=game._dpr||1,cssW=game.width/dpr,cssH=game.height/dpr,tile=tileAtPx(state.player.x,state.player.y),h=state.clock.time/60;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);
+  const biomeColors=['40,75,74','132,122,82','70,104,65','38,73,47','56,83,68','119,85,51','126,145,136','62,65,60'];ctx.fillStyle=`rgba(${biomeColors[tile]},.018)`;ctx.fillRect(0,0,cssW,cssH);
+  if(!VIS15.lowPower){ctx.globalAlpha=.035;ctx.fillStyle='#f2e6bd';const seed=((performance.now()/120)|0)%4;for(let y=seed;y<cssH;y+=4)for(let x=(y+seed)%5;x<cssW;x+=5)ctx.fillRect(x,y,1,1)}
+  const top=h<6||h>19?.12:.06,grad=ctx.createLinearGradient(0,0,0,cssH);grad.addColorStop(0,`rgba(3,9,7,${top})`);grad.addColorStop(.24,'rgba(0,0,0,0)');grad.addColorStop(.78,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(2,7,5,.08)');ctx.globalAlpha=1;ctx.fillStyle=grad;ctx.fillRect(0,0,cssW,cssH);
+  ctx.restore()
+};
