@@ -3,6 +3,7 @@ import {
   createGame,
   declineSwap,
   isBoardEmpty,
+  isRotationAllowed,
   matchWinner,
   nextRound,
   placeStone,
@@ -134,6 +135,13 @@ function attemptPlacement(ring, sector) {
 
 async function animateRotation(ring, direction, { ai = false } = {}) {
   if (rotating || state.phase !== 'rotate') return false;
+  if (!isRotationAllowed(state, ring, direction)) {
+    feedback.invalid();
+    feedback.haptic([12, 35, 12]);
+    showToast('Нельзя сразу отменять вращение соперника');
+    renderRotationControls(state, prefs, { selectedRing: ring, enabled: humanCanAct() });
+    return false;
+  }
   rotating = true;
   selectedRing = ring;
   renderRotationControls(state, prefs, { selectedRing, enabled: false });

@@ -3,6 +3,7 @@ import {
   SECTORS,
   colorForTurn,
   findWinningPath,
+  isRotationAllowed,
   placeStone,
   rotateRing,
   swapSides
@@ -29,6 +30,22 @@ function neighbors(ring, sector) {
 
 function boardKey(board) {
   return board.flat().map((cell) => cell === null ? '-' : cell).join('');
+}
+
+function latestRotationKey(state) {
+  const turn = [...state.history].reverse().find((entry) => entry.type === 'turn');
+  return turn ? `${turn.rotatedRing}:${turn.direction}` : '-';
+}
+
+function resultKey(state) {
+  return [
+    boardKey(state.board),
+    state.challengeColor ?? '-',
+    state.challengeCooldownColor ?? '-',
+    state.winnerSeat ?? '-',
+    state.turnSeat,
+    latestRotationKey(state)
+  ].join(':');
 }
 
 function entryCost(cell, color) {
@@ -136,8 +153,19 @@ export function evaluatePosition(state, perspectiveSeat) {
   const opponentComponent = componentStats(state.board, opponentColor);
   const ownStructure = structuralScore(state.board, ownColor);
   const opponentStructure = structuralScore(state.board, opponentColor);
+  const challengeScore = state.challengeColor === ownColor
+    ? 180_000
+    : state.challengeColor === opponentColor
+      ? -180_000
+      : 0;
+  const cooldownScore = state.challengeCooldownColor === ownColor
+    ? -85
+    : state.challengeCooldownColor === opponentColor
+      ? 85
+      : 0;
 
   return (
+    challengeScore + cooldownScore +
     (opponentCost - ownCost) * 92 +
     (ownComponent.largestSpan - opponentComponent.largestSpan) * 42 +
     (ownComponent.largestSize - opponentComponent.largestSize) * 11 +
@@ -160,8 +188,9 @@ export function generateLegalTurns(state) {
       const placed = placeStone(state, ring, sector);
       for (let rotatedRing = 0; rotatedRing < RINGS; rotatedRing += 1) {
         for (const direction of DIRECTIONS) {
+          if (!isRotationAllowed(placed, rotatedRing, direction)) continue;
           const nextState = rotateRing(placed, rotatedRing, direction);
-          const key = `${boardKey(nextState.board)}:${nextState.winnerSeat ?? '-'}:${nextState.turnSeat}`;
+          const key = resultKey(nextState);
           if (seen.has(key)) continue;
           seen.add(key);
           results.push({ ring, sector, rotatedRing, direction, state: nextState });
@@ -179,6 +208,7 @@ export function chooseAiRotation(state, difficulty = 'medium') {
   const candidates = [];
   for (let rotatedRing = 0; rotatedRing < RINGS; rotatedRing += 1) {
     for (const direction of DIRECTIONS) {
+      if (!isRotationAllowed(state, rotatedRing, direction)) continue;
       const nextState = rotateRing(state, rotatedRing, direction);
       candidates.push({
         rotatedRing,
@@ -249,9 +279,7 @@ export function chooseAiTurn(state, difficulty = 'medium') {
   if (winningMove) return winningMove;
 
   if (difficulty === 'easy') {
-    for (const candidate of candidates) {
-      candidate.score = evaluatePosition(candidate.state, seat);
-    }
+    for (const candidate of candidates) candidate.score = evaluatePosition(candidate.state, seat);
     candidates.sort((left, right) => right.score - left.score);
     return pickWithNoise(candidates, Math.max(6, Math.ceil(candidates.length * 0.28)), 180);
   }
