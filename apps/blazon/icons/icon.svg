@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="92" fill="#efe2bd"/>
-  <path d="M92 72h328v202c0 92-55 151-164 194C147 425 92 366 92 274V72z" fill="#9f3229" stroke="#211f19" stroke-width="24" stroke-linejoin="miter"/>
-  <path d="M256 78h158v190c0 80-45 132-158 177V78z" fill="#274d78"/>
-  <path d="M256 116c-49 55-61 104-34 145-44-30-91-17-101 25 44-7 67 23 69 73h45v31h-41l30 65h64l30-65h-41v-31h45c2-50 25-80 69-73-10-42-57-55-101-25 27-41 15-90-34-145z" fill="#d7aa32" stroke="#211f19" stroke-width="10" stroke-linejoin="miter"/>
-  <path d="M108 94h296M113 287h286" stroke="#f7ebcf" stroke-width="7" opacity=".35"/>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0e2b9"/><stop offset="1" stop-color="#b79963"/></linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#b64839"/><stop offset="1" stop-color="#6f1d19"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="13" flood-opacity=".35"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#paper)"/>
+  <path d="M95 65h322v196c0 101-57 171-161 215C152 432 95 362 95 261V65Z" fill="url(#red)" stroke="#5c321d" stroke-width="18" filter="url(#shadow)"/>
+  <path d="M256 96c35 18 47 49 31 83 39 14 58 49 43 88-25-25-52-30-80-18l-17 33 47 43-30 75h-56l17-78-45-32-39 33 27 77h-55l-31-84 42-91-40-31 19-39 55 32 48-23 17-48 47-20Zm-40 98-35 23 31 31 35-27-31-27Z" fill="#d7aa42"/>
+  <path d="M145 182c-57-4-85-34-90-86 48 4 82 25 103 64" fill="none" stroke="#d7aa42" stroke-width="26" stroke-linecap="square"/>
+  <path d="m149 85 107-50 107 50-18 45H167l-18-45Z" fill="#c69a3d" stroke="#64451f" stroke-width="12"/>
 </svg>

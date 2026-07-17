@@ -1,16 +1,13 @@
 {
-  "id": "/apps/blazon/",
-  "name": "БЛАЗОН",
+  "name": "БЛАЗОН — Наследие знамени",
   "short_name": "БЛАЗОН",
-  "description": "Тактическая игра о живой средневековой геральдике: закон тинктур, ересь, симметрия и три великих дома.",
+  "description": "Геральдический роуглайт о создании живого герба и судьбе средневекового рода.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#efe2bd",
-  "theme_color": "#efe2bd",
-  "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
-  ]
+  "background_color": "#d9c89f",
+  "theme_color": "#d8c79e",
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
