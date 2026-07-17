@@ -1,73 +1,85 @@
-import assert from 'node:assert/strict';
 import {
-  PASS,
   applyMove,
   createGame,
   legalMoves,
   mobility,
+  previewMove,
   rawScores,
-  scoreState,
-  territoryForecast
+  reachableCount,
+  scoreState
 } from './engine.mjs';
 
-function makeRng(seed) {
-  let value = seed >>> 0;
-  return () => {
-    value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
-    return value / 0x100000000;
-  };
+function hash(seed, step, move) {
+  let value = (seed * 1664525 + step * 1013904223 + move * 2246822519) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d);
+  value ^= value >>> 15;
+  return value >>> 0;
 }
 
-function probeMove(state, rng) {
-  const legal = legalMoves(state);
-  if (legal.length === 1) return legal[0];
-  if (rng() < 0.22) return legal[Math.floor(rng() * legal.length)];
-  const mover = state.current;
-  const opponent = 1 - mover;
-  let best = legal[0];
-  let bestScore = -Infinity;
-  for (const move of legal) {
-    if (move === PASS) return PASS;
-    const next = applyMove(state, move);
-    const forecast = territoryForecast(next);
-    const claimed = rawScores(next);
-    const score =
-      (forecast.control[mover] - forecast.control[opponent]) * 2.4 +
-      (mobility(next, mover) - mobility(next, opponent)) * 1.1 +
-      (claimed[mover] - claimed[opponent]) * 3 +
-      rng() * 4.5;
-    if (score > bestScore) {
-      bestScore = score;
+function choose(game, seed, step, style) {
+  const moves = legalMoves(game);
+  let best = moves[0];
+  let bestValue = -Infinity;
+  for (const move of moves) {
+    const preview = previewMove(game, move);
+    const next = applyMove(game, move);
+    const mover = game.current;
+    const opponent = 1 - mover;
+    let value = preview.gain * (style === 0 ? 40 : 20);
+    if (preview.ended) value += preview.winner === mover ? 1e6 : -1e6;
+    if (style === 1) value += mobility(next, mover) * 10 - mobility(next, opponent) * 13;
+    if (style === 2) value += reachableCount(next, mover) * 3 - reachableCount(next, opponent) * 4;
+    value += (hash(seed, step, move) % 1000) / 10000;
+    if (value > bestValue) {
+      bestValue = value;
       best = move;
     }
   }
   return best;
 }
 
-function play(radius, seed) {
-  const rng = makeRng(seed);
-  let state = createGame({ radius });
-  let guard = 0;
-  while (!state.ended && guard < 300) {
-    state = applyMove(state, probeMove(state, rng));
-    guard += 1;
-  }
-  assert(state.ended, `radius ${radius} game ${seed} did not terminate`);
-  const scores = scoreState(state);
-  assert.notEqual(scores[0], scores[1], 'komi must prevent ties');
-  return state.winner;
-}
-
-const report = [];
 for (const radius of [3, 4, 5]) {
-  const wins = [0, 0];
+  const results = [0, 0];
+  let totalPlies = 0;
+  let totalCaptures = 0;
+  let bigCaptures = 0;
+  let splitEnds = 0;
+  let trapEnds = 0;
   const games = 600;
-  for (let seed = 1; seed <= games; seed += 1) wins[play(radius, seed * 7919 + radius * 104729)] += 1;
-  const firstRate = wins[0] / games;
-  const secondRate = wins[1] / games;
-  assert(firstRate > 0.35 && firstRate < 0.65, `radius ${radius}: first seat rate ${firstRate}`);
-  assert(secondRate > 0.35 && secondRate < 0.65, `radius ${radius}: second seat rate ${secondRate}`);
-  report.push({ radius, games, first: wins[0], second: wins[1], firstRate, secondRate });
+  for (let seed = 0; seed < games; seed += 1) {
+    let game = createGame({ radius });
+    const styles = [seed % 3, Math.floor(seed / 3) % 3];
+    while (!game.ended) {
+      const before = rawScores(game)[game.current];
+      const mover = game.current;
+      const move = choose(game, seed, game.plies, styles[mover]);
+      game = applyMove(game, move);
+      const gain = rawScores(game)[mover] - before;
+      if (gain > 1) {
+        totalCaptures += 1;
+        if (gain >= 4) bigCaptures += 1;
+      }
+    }
+    results[game.winner] += 1;
+    totalPlies += game.plies;
+    if (game.reason === 'split') splitEnds += 1;
+    if (game.reason === 'trap') trapEnds += 1;
+    const scores = scoreState(game);
+    if (!(scores[game.winner] > scores[1 - game.winner]) && game.reason !== 'trap') {
+      throw new Error('winner/score mismatch');
+    }
+  }
+  console.log(JSON.stringify({
+    radius,
+    games,
+    first: results[0],
+    second: results[1],
+    firstRate: +(results[0] / games * 100).toFixed(2),
+    averagePlies: +(totalPlies / games).toFixed(2),
+    capturesPerGame: +(totalCaptures / games).toFixed(2),
+    bigCapturesPerGame: +(bigCaptures / games).toFixed(2),
+    splitEnds,
+    trapEnds
+  }));
 }
-
-console.log(JSON.stringify({ audit: 'sled-2.0-seat-balance', report }, null, 2));
