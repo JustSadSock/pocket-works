@@ -1,4 +1,4 @@
-import { MATCH_TARGET, colorForTurn, matchWinner } from './engine.js';
+import { MATCH_TARGET, colorForTurn, isRotationAllowed, matchWinner } from './engine.js';
 import { AI_LEVELS } from './ai.js';
 import { ROMAN } from './board.js';
 
@@ -101,6 +101,7 @@ export function renderScore(state, prefs) {
 
 export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
   const color = colorForTurn(state);
+  const quietTurn = state.challengeColor === null && state.challengeCooldownColor === color;
   dom.turnStone.classList.toggle('color-1', color === 1);
   if (state.phase === 'round-over') dom.turnLabel.textContent = 'РАУНД ЗАВЕРШЁН';
   else if (aiThinking || (prefs.mode === 'ai' && state.turnSeat === 1)) dom.turnLabel.textContent = 'ХОД ОРБИТЫ';
@@ -108,15 +109,25 @@ export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
 
   const challengeName = state.challengeColor === null ? null : COLOR_NAMES[state.challengeColor].toLowerCase();
   if (aiThinking) {
-    dom.phaseLabel.textContent = challengeName ? 'ИИ ищет разрыв цепи' : 'ИИ просчитывает вращения';
+    dom.phaseLabel.textContent = challengeName
+      ? 'ИИ ищет разрыв цепи'
+      : quietTurn
+        ? 'ИИ делает тихий ход'
+        : 'ИИ просчитывает вращения';
   } else if (state.phase === 'place') {
     dom.phaseLabel.textContent = challengeName
       ? `Разорвите ${challengeName} цепь за один ход`
       : state.canSwap
         ? 'Выберите сторону или поставьте камень'
-        : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
+        : quietTurn
+          ? 'Тихий ход: новая цепь пока не станет вызовом'
+          : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
   } else if (state.phase === 'rotate') {
-    dom.phaseLabel.textContent = challengeName ? 'Поверните кольцо и разорвите цепь' : 'Теперь поверните любое кольцо';
+    dom.phaseLabel.textContent = challengeName
+      ? 'Поверните кольцо и разорвите цепь'
+      : quietTurn
+        ? 'Поверните кольцо · этот ход не объявляет вызов'
+        : 'Теперь поверните любое кольцо';
   } else if (state.draw) dom.phaseLabel.textContent = 'Поле заполнено без удержанной цепи';
   else dom.phaseLabel.textContent = 'Цепь выдержала полный ответ соперника';
 
@@ -128,19 +139,26 @@ export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
   }
 
   dom.aiStatus.hidden = !aiThinking;
-  dom.aiStatusText.textContent = state.challengeColor === null
-    ? `${AI_LEVELS[prefs.difficulty].label} перебирает варианты`
-    : `${AI_LEVELS[prefs.difficulty].label} ищет разрыв`;
+  dom.aiStatusText.textContent = state.challengeColor !== null
+    ? `${AI_LEVELS[prefs.difficulty].label} ищет разрыв`
+    : quietTurn
+      ? `${AI_LEVELS[prefs.difficulty].label} перестраивает орбиту`
+      : `${AI_LEVELS[prefs.difficulty].label} перебирает варианты`;
 }
 
 export function renderRotationControls(state, prefs, { selectedRing, enabled }) {
+  const ccwAllowed = enabled && isRotationAllowed(state, selectedRing, -1);
+  const cwAllowed = enabled && isRotationAllowed(state, selectedRing, 1);
   dom.rotationPanel.classList.toggle('enabled', enabled);
+  dom.rotationPanel.classList.toggle('ko-restricted', enabled && (!ccwAllowed || !cwAllowed));
   dom.ringChoices.forEach((button, ring) => {
     button.setAttribute('aria-pressed', String(ring === selectedRing));
     button.disabled = !enabled;
   });
-  dom.rotateCcw.disabled = !enabled;
-  dom.rotateCw.disabled = !enabled;
+  dom.rotateCcw.disabled = !ccwAllowed;
+  dom.rotateCw.disabled = !cwAllowed;
+  dom.rotateCcw.title = enabled && !ccwAllowed ? 'Нельзя сразу отменять прошлое вращение' : '';
+  dom.rotateCw.title = enabled && !cwAllowed ? 'Нельзя сразу отменять прошлое вращение' : '';
   dom.selectedRingLabel.textContent = ROMAN[selectedRing];
   dom.gestureHint.hidden = !enabled || prefs.gestureHintSeen;
 }
@@ -148,6 +166,11 @@ export function renderRotationControls(state, prefs, { selectedRing, enabled }) 
 export function renderLastMove(state, prefs) {
   if (state.challengeColor !== null) {
     dom.lastMove.textContent = `ВЫЗОВ · ${COLOR_NAMES[state.challengeColor]} ЦЕПЬ ДОЛЖНА ПЕРЕЖИТЬ ОТВЕТ`;
+    return;
+  }
+  const currentColor = colorForTurn(state);
+  if (state.challengeCooldownColor === currentColor && state.phase !== 'round-over') {
+    dom.lastMove.textContent = 'ТИХИЙ ХОД · ПОСЛЕ РАЗРЫВА НОВЫЙ ВЫЗОВ ПРОПУСКАЕТСЯ';
     return;
   }
   const last = state.history.at(-1);
