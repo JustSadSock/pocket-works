@@ -1,0 +1,14 @@
+{
+  "id": "/apps/kordon/",
+  "name": "КОРДОН",
+  "short_name": "КОРДОН",
+  "description": "Тактическая дуэль на 37 гексах: окружайте бойцов, возвращайте пленных и удерживайте две из трёх разнесённых сигнальных точек.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#e7dfcf",
+  "theme_color": "#273b3d",
+  "icons": [{"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}
