@@ -1,0 +1,20 @@
+/* 1.2 — contextual targeting, dense building and calmer motion */
+.prompt{display:none!important}
+.toast{left:12px;right:auto;top:auto;bottom:calc(var(--safe-bottom) + 132px);max-width:min(210px,54vw);transform:translate(-8px,0) scale(.96);padding:7px 9px;font-size:8px;line-height:1.3;text-align:left;box-shadow:3px 3px 0 #11171399;border-width:1px}
+.toast.show{transform:translate(0,0) scale(1);animation:radio-note-in .2s cubic-bezier(.2,.9,.25,1)}
+.action-stack .act{transition:transform .12s cubic-bezier(.2,.8,.2,1),filter .15s,border-color .15s,outline-color .15s,background .15s}
+.action-stack .act.has-target{filter:brightness(1.08);box-shadow:0 4px 0 #0a0e0b,0 0 0 4px #d6a85f20;animation:target-ready 1.55s ease-in-out infinite}
+.action-stack .act.has-target b{transform:scale(1.08)}
+.action-stack .act.invalid{background:#9b5144;color:#f8e5c3;outline-color:#d86b59;border-color:#2b1714;animation:invalid-target .22s linear}
+.action-stack .act span{max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity .12s}
+.app.building .quickbar{border-color:#e1bf73;box-shadow:3px 3px 0 #0b100c,0 0 0 3px #d6a85f18}
+.app.building .tabs{opacity:.72}
+.quickbar,.tabs,.touch,.objective,#mini{will-change:transform,opacity}
+.stick i{transition:box-shadow .14s,background .14s}
+.stick:active i{background:#eddaa4;box-shadow:0 3px 0 #080c09,0 0 0 4px #d6a85f1f}
+@keyframes radio-note-in{from{opacity:0;transform:translate(-10px,0) scale(.96)}to{opacity:1;transform:none}}
+@keyframes target-ready{50%{box-shadow:0 4px 0 #0a0e0b,0 0 0 6px #d6a85f0f}}
+@keyframes invalid-target{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+@media(max-height:650px) and (orientation:portrait){.toast{bottom:calc(var(--safe-bottom) + 118px);max-width:48vw}.action-stack .act span{font-size:6px}}
+@media(orientation:landscape) and (max-height:560px){.toast{left:14px;bottom:calc(var(--safe-bottom) + 96px);max-width:190px}.app.building .quickbar{opacity:1}}
+@media(prefers-reduced-motion:reduce){.action-stack .act.has-target,.action-stack .act.invalid,.toast.show{animation:none!important}}
