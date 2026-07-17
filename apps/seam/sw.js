@@ -1,10 +1,10 @@
 const CACHE_PREFIX='seam-';
-const CACHE_NAME='seam-v2.2.0-p7';
-const APP_VERSION='2.2.0';
-const UPDATE_VERSION='2.2.0-hotfix.2';
+const CACHE_NAME='seam-v2.2.1-p1';
+const APP_VERSION='2.2.1';
+const UPDATE_VERSION='2.2.1';
 const RELEASE_DATE='2026-07-18';
-const CACHE_PROTOCOL=7;
-const RELEASE_NOTES=['Fixed the board module syntax error that prevented the entire application from starting.','Menu, rules and start buttons now bind after a successful module import.','A direct module-import regression test now protects the startup path.'];
+const CACHE_PROTOCOL=1;
+const RELEASE_NOTES=['Fixed the board module syntax error that prevented the entire application from starting.','Menu, rules and start buttons now bind after a successful module import.','Runtime URLs and the offline cache were renewed so the broken 2.2.0 files cannot be reused.'];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./reserve.css','./motion.css','./app.js','./app-part-1.js','./app-part-2a.js','./app-part-2b.js','./app-part-3a1.js','./app-part-3a2.js','./app-part-3b.js','./app-part-4.js','./app-part-5.js','./board-view.js','./motion.js','./engine.js','./engine-core.js','./manifest.webmanifest','./icons/icon.svg','./BALANCE_AUDIT.md','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js'];
 const ROOT=new URL('./',self.registration.scope);
 const BUILD=`${APP_VERSION}-p${CACHE_PROTOCOL}`;
