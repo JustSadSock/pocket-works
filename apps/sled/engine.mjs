@@ -11,7 +11,6 @@ export const DIFFICULTIES = Object.freeze({
   architect: { label: 'Архитектор', maxDepth: 8, budgetMs: 900 }
 });
 
-const EXIT_FOR_GOAL = Object.freeze({ north: 'EXIT_N', south: 'EXIT_S' });
 const GOAL_FOR_EXIT = Object.freeze({ EXIT_N: 'north', EXIT_S: 'south' });
 const STEP_MOVES = Object.freeze(['N', 'E', 'S', 'W']);
 const TIMEOUT = Symbol('search-timeout');
@@ -20,14 +19,15 @@ export function createGame(options = {}) {
   const size = normalizeSize(options.size);
   const center = Math.floor(size / 2);
   return {
-    schema: 1,
+    schema: 2,
     size,
     x: center,
     y: center,
+    cracked: 0n,
     burned: 0n,
     current: 0,
     goals: ['north', 'south'],
-    pieRule: options.pieRule !== false,
+    pieRule: options.pieRule === true,
     plies: 0,
     swapAvailable: false,
     swapUsed: false,
@@ -58,6 +58,12 @@ export function isBurned(state, x, y) {
   return (state.burned & bit) !== 0n;
 }
 
+export function isCracked(state, x, y) {
+  if (!isInside(state, x, y)) return false;
+  const bit = 1n << BigInt(tileIndex(state, x, y));
+  return (state.cracked & bit) !== 0n && (state.burned & bit) === 0n;
+}
+
 export function legalMoves(state, options = {}) {
   if (!state || state.ended) return [];
   const includeSwap = options.includeSwap !== false;
@@ -74,7 +80,6 @@ export function legalMoves(state, options = {}) {
   if (ownGoal === 'north' && state.y === 0) moves.unshift('EXIT_N');
   if (ownGoal === 'south' && state.y === state.size - 1) moves.unshift('EXIT_S');
   if (includeSwap && state.swapAvailable && state.current === 1) moves.unshift('SWAP');
-
   return moves;
 }
 
@@ -100,7 +105,7 @@ export function applyMove(state, move) {
 
   const participant = state.current;
   const next = cloneState(state);
-  next.burned |= 1n << BigInt(tileIndex(state, state.x, state.y));
+  damageDeparture(next, state.x, state.y);
   next.plies += 1;
   next.swapAvailable = false;
 
@@ -132,8 +137,17 @@ export function applyMove(state, move) {
     from: { x: state.x, y: state.y },
     to: { x: next.x, y: next.y }
   };
-
   return settleTrapped(next, participant);
+}
+
+function damageDeparture(state, x, y) {
+  const bit = 1n << BigInt(tileIndex(state, x, y));
+  if ((state.cracked & bit) !== 0n) {
+    state.cracked &= ~bit;
+    state.burned |= bit;
+  } else {
+    state.cracked |= bit;
+  }
 }
 
 function settleTrapped(state, previousParticipant) {
@@ -160,6 +174,8 @@ function structuredCloneSafe(value) {
 export function serializeGame(state) {
   return {
     ...state,
+    schema: 2,
+    cracked: state.cracked.toString(16),
     burned: state.burned.toString(16),
     goals: [...state.goals],
     lastMove: state.lastMove ? structuredCloneSafe(state.lastMove) : null
@@ -167,27 +183,31 @@ export function serializeGame(state) {
 }
 
 export function restoreGame(raw) {
-  if (!raw || raw.schema !== 1) return null;
+  if (!raw || ![1, 2].includes(raw.schema)) return null;
   const size = normalizeSize(raw.size);
   const maxBits = BigInt(size * size);
   let burned;
+  let cracked;
   try {
-    burned = BigInt(`0x${String(raw.burned || '0').replace(/^0x/, '') || '0'}`);
+    burned = parseMask(raw.burned);
+    cracked = raw.schema === 2 ? parseMask(raw.cracked) : 0n;
   } catch {
     return null;
   }
-  if (burned < 0n || (burned >> maxBits) !== 0n) return null;
+  if (burned < 0n || cracked < 0n || (burned >> maxBits) !== 0n || (cracked >> maxBits) !== 0n) return null;
+  cracked &= ~burned;
 
   const state = {
-    schema: 1,
+    schema: 2,
     size,
     x: clampInt(raw.x, 0, size - 1),
     y: clampInt(raw.y, 0, size - 1),
+    cracked,
     burned,
     current: raw.current === 1 ? 1 : 0,
     goals: validateGoals(raw.goals),
-    pieRule: raw.pieRule !== false,
-    plies: clampInt(raw.plies, 0, size * size + 2),
+    pieRule: raw.pieRule === true,
+    plies: clampInt(raw.plies, 0, size * size * 2 + 2),
     swapAvailable: Boolean(raw.swapAvailable),
     swapUsed: Boolean(raw.swapUsed),
     ended: Boolean(raw.ended),
@@ -203,10 +223,12 @@ export function restoreGame(raw) {
   return state;
 }
 
+function parseMask(value) {
+  return BigInt(`0x${String(value || '0').replace(/^0x/, '') || '0'}`);
+}
+
 function validateGoals(goals) {
-  if (Array.isArray(goals) && goals.length === 2 && goals.includes('north') && goals.includes('south')) {
-    return [goals[0], goals[1]];
-  }
+  if (Array.isArray(goals) && goals.length === 2 && goals.includes('north') && goals.includes('south')) return [goals[0], goals[1]];
   return ['north', 'south'];
 }
 
@@ -265,7 +287,6 @@ export function shortestPathToGoal(state, participant) {
       tail += 1;
     }
   }
-
   return Infinity;
 }
 
@@ -323,7 +344,6 @@ export function chooseAIMove(state, difficulty = 'tactician') {
       break;
     }
   }
-
   return bestMove || orderMoves(state, legal, root)[0];
 }
 
@@ -359,7 +379,6 @@ function minimax(state, depth, alpha, beta, root, ply, deadline, table) {
   const maximizing = state.current === root;
   let value = maximizing ? -Infinity : Infinity;
   const moves = orderMoves(state, legalMoves(state), root);
-
   for (const move of moves) {
     const child = applyMove(state, move);
     const score = minimax(child, depth - 1, alpha, beta, root, ply + 1, deadline, table);
@@ -372,14 +391,12 @@ function minimax(state, depth, alpha, beta, root, ply, deadline, table) {
     }
     if (beta <= alpha) break;
   }
-
   table.set(key, value);
   return value;
 }
 
 function terminalScore(state, root, ply) {
-  if (state.winner === root) return 100000 - ply * 32;
-  return -100000 + ply * 32;
+  return state.winner === root ? 100000 - ply * 32 : -100000 + ply * 32;
 }
 
 function evaluateState(state, root) {
@@ -391,22 +408,16 @@ function evaluateState(state, root) {
   if (!Number.isFinite(rootPath)) score -= 4200;
   if (!Number.isFinite(opponentPath)) score += 4200;
   if (Number.isFinite(rootPath) && Number.isFinite(opponentPath)) score += (opponentPath - rootPath) * 28;
-
   score += (goalDistance(state, opponent) - goalDistance(state, root)) * 7;
+
   const moves = legalMoves(state, { includeSwap: false }).length;
   score += (state.current === root ? 1 : -1) * moves * 5;
-
   const area = reachableCount(state);
   const parityFavorsRoot = ((area - 1) % 2 === 0) === (state.current === root);
   score += parityFavorsRoot ? 3 : -3;
 
-  if (state.swapAvailable) {
-    const swapped = applyMove(state, 'SWAP');
-    const swappedRootPath = shortestPathToGoal(swapped, root);
-    const currentRootPath = rootPath;
-    if (swappedRootPath < currentRootPath) score += state.current === root ? 12 : -12;
-  }
-
+  const currentBit = 1n << BigInt(tileIndex(state, state.x, state.y));
+  if ((state.cracked & currentBit) !== 0n) score += state.current === root ? -2 : 2;
   return score;
 }
 
@@ -420,10 +431,7 @@ function orderMoves(state, moves, root) {
 
 function moveOrderScore(state, move, root) {
   if (move === 'EXIT_N' || move === 'EXIT_S') return 100000;
-  if (move === 'SWAP') {
-    const swapped = applyMove(state, move);
-    return evaluateState(swapped, root) * (state.current === root ? 1 : -1) + 50;
-  }
+  if (move === 'SWAP') return evaluateState(applyMove(state, move), root) * (state.current === root ? 1 : -1) + 50;
   const next = applyMove(state, move);
   if (next.ended) return next.winner === state.current ? 90000 : -90000;
   const goal = state.goals[state.current];
@@ -440,6 +448,7 @@ function compareMove(a, b) {
 function stateKey(state) {
   return [
     state.size,
+    state.cracked.toString(36),
     state.burned.toString(36),
     state.x,
     state.y,
