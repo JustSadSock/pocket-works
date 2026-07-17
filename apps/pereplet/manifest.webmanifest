@@ -1,0 +1,14 @@
+{
+  "id": "/apps/pereplet/",
+  "name": "ПЕРЕПЛЁТ",
+  "short_name": "ПЕРЕПЛЁТ",
+  "description": "Турнирная абстрактная игра 6×6 о соединении краёв, окружении групп и разрыве чужих нитей.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e6ddc8",
+  "theme_color": "#e6ddc8",
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
