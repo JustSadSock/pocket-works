@@ -5,19 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#20383a">
   <meta name="description" content="ОРБИТА — абстрактная дуэль на вращающихся кольцах.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ОРБИТА">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
   <title>ОРБИТА</title>
 </head>
-<body>
-  <div id="app" class="app-shell">
+<body data-app-preset="game-2d">
+  <div id="app" class="app-shell" data-app-shell data-keyboard-aware>
     <header class="topbar">
       <a class="shelf-link" href="../../" aria-label="Вернуться в Pocket Works">
         <span aria-hidden="true">←</span><span>ПОЛКА</span>
       </a>
       <div class="topbar-title" aria-label="ОРБИТА">ОРБИТА</div>
-      <button id="settingsButton" class="icon-button" type="button" aria-label="Открыть настройки">☰</button>
+      <button id="settingsButton" class="icon-button" type="button" data-native-press aria-label="Открыть настройки">☰</button>
     </header>
 
     <main class="main-stage">
@@ -39,15 +46,15 @@
         </div>
 
         <div class="home-actions">
-          <button id="continueButton" class="action-button primary" type="button" hidden>
+          <button id="continueButton" class="action-button primary" type="button" data-native-press hidden>
             <span>ПРОДОЛЖИТЬ МАТЧ</span>
             <small id="continueMeta"></small>
           </button>
-          <button id="newMatchButton" class="action-button primary" type="button">
+          <button id="newMatchButton" class="action-button primary" type="button" data-native-press>
             <span>НОВЫЙ МАТЧ</span>
             <small>до трёх побед · одно устройство</small>
           </button>
-          <button id="rulesButton" class="action-button secondary" type="button">КАК ИГРАТЬ</button>
+          <button id="rulesButton" class="action-button secondary" type="button" data-native-press>КАК ИГРАТЬ</button>
         </div>
 
         <div class="home-footnote">
@@ -85,8 +92,8 @@
             <p>Игрок 2 может забрать первый цвет. Обмен считается целым ходом.</p>
           </div>
           <div class="pie-actions">
-            <button id="swapButton" type="button">ЗАБРАТЬ СИНИЙ</button>
-            <button id="keepButton" type="button">ОСТАТЬСЯ КРАСНЫМ</button>
+            <button id="swapButton" type="button" data-native-press>ЗАБРАТЬ СИНИЙ</button>
+            <button id="keepButton" type="button" data-native-press>ОСТАТЬСЯ КРАСНЫМ</button>
           </div>
         </div>
 
@@ -97,13 +104,13 @@
 
         <div id="rotationPanel" class="rotation-panel" aria-label="Управление вращением">
           <div class="ring-selector" role="group" aria-label="Выберите кольцо">
-            <button type="button" data-ring-choice="0" aria-pressed="true"><span>I</span><small>ВНУТР.</small></button>
-            <button type="button" data-ring-choice="1" aria-pressed="false"><span>II</span></button>
-            <button type="button" data-ring-choice="2" aria-pressed="false"><span>III</span></button>
-            <button type="button" data-ring-choice="3" aria-pressed="false"><span>IV</span><small>ВНЕШН.</small></button>
+            <button type="button" data-native-press data-ring-choice="0" aria-pressed="true"><span>I</span><small>ВНУТР.</small></button>
+            <button type="button" data-native-press data-ring-choice="1" aria-pressed="false"><span>II</span></button>
+            <button type="button" data-native-press data-ring-choice="2" aria-pressed="false"><span>III</span></button>
+            <button type="button" data-native-press data-ring-choice="3" aria-pressed="false"><span>IV</span><small>ВНЕШН.</small></button>
           </div>
           <div class="rotation-actions">
-            <button id="rotateCcw" class="rotate-button" type="button" aria-label="Повернуть выбранное кольцо против часовой стрелки">
+            <button id="rotateCcw" class="rotate-button" type="button" data-native-press aria-label="Повернуть выбранное кольцо против часовой стрелки">
               <span class="rotate-symbol" aria-hidden="true">↺</span>
               <span>ПРОТИВ</span>
             </button>
@@ -111,7 +118,7 @@
               <small>КОЛЬЦО</small>
               <strong id="selectedRingLabel">I</strong>
             </div>
-            <button id="rotateCw" class="rotate-button" type="button" aria-label="Повернуть выбранное кольцо по часовой стрелке">
+            <button id="rotateCw" class="rotate-button" type="button" data-native-press aria-label="Повернуть выбранное кольцо по часовой стрелке">
               <span class="rotate-symbol" aria-hidden="true">↻</span>
               <span>ПО ЧАСОВОЙ</span>
             </button>
@@ -163,9 +170,10 @@
           <span class="switch" aria-hidden="true"></span>
         </label>
         <div class="settings-actions">
-          <button id="restartRoundButton" type="button">ПЕРЕИГРАТЬ РАУНД</button>
-          <button id="resetMatchButton" class="danger" type="button">СБРОСИТЬ МАТЧ</button>
-          <button id="openRulesFromSettings" type="button">ОТКРЫТЬ ПРАВИЛА</button>
+          <button id="restartRoundButton" type="button" data-native-press>ПЕРЕИГРАТЬ РАУНД</button>
+          <button id="resetMatchButton" class="danger" type="button" data-native-press>СБРОСИТЬ МАТЧ</button>
+          <button type="button" data-workshop-trigger data-native-press>ДИАГНОСТИКА</button>
+          <button id="openRulesFromSettings" type="button" data-native-press>ОТКРЫТЬ ПРАВИЛА</button>
         </div>
       </form>
     </dialog>
@@ -177,14 +185,22 @@
         <h2 id="resultTitle">ИГРОК 1</h2>
         <p id="resultText">Цепь замкнута от центра до края.</p>
         <div id="resultScore" class="result-score">1 : 0</div>
-        <button id="nextRoundButton" class="result-primary" type="button">СЛЕДУЮЩИЙ РАУНД</button>
-        <button id="resultHomeButton" class="result-secondary" type="button">В МЕНЮ</button>
+        <button id="nextRoundButton" class="result-primary" type="button" data-native-press>СЛЕДУЮЩИЙ РАУНД</button>
+        <button id="resultHomeButton" class="result-secondary" type="button" data-native-press>В МЕНЮ</button>
       </div>
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ОРБИТА"
+    data-app-version="1.0.0"
+  ></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
