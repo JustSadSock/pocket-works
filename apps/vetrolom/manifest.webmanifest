@@ -1,0 +1,16 @@
+{
+  "id": "/apps/vetrolom/",
+  "name": "ВЕТРОЛОМ",
+  "short_name": "ВЕТРОЛОМ",
+  "description": "Пиксельная survival RPG-песочница о долине со сломанным климатом.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#111713",
+  "theme_color": "#17231b",
+  "icons": [
+    {"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
