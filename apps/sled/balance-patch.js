@@ -1,16 +1,15 @@
 (() => {
   const STORAGE_KEY = 'pocket-works:sled:profile';
-  const MIGRATION = 'double-fracture-1.1.0';
+  const MIGRATION_KEY = 'pocket-works:sled:migration:double-fracture-1.1.0';
 
   function migrateProfile() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || { version: 1 };
       raw.version = 1;
       raw.lastSetup = { ...(raw.lastSetup || {}), pieRule: false };
-      raw.migrations = Array.isArray(raw.migrations) ? raw.migrations : [];
-      if (!raw.migrations.includes(MIGRATION)) {
+      if (localStorage.getItem(MIGRATION_KEY) !== 'done') {
         raw.savedMatch = null;
-        raw.migrations.push(MIGRATION);
+        localStorage.setItem(MIGRATION_KEY, 'done');
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(raw));
     } catch (error) {
