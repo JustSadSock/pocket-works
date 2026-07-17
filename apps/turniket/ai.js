@@ -141,7 +141,7 @@ function pickWithNoise(scored, rng, spread) {
 
 function opponentReplyScore(next, aiPlayer, replyLimit) {
   if (next.status !== 'playing') return evaluateState(next, aiPlayer);
-  const replies = enumerateAiActions(next, { includeAllGates: false, gateLimit: 34 });
+  const replies = enumerateAiActions(next, { includeAllGates: false, gateLimit: 6 });
   const scoredReplies = scoreActions(next, aiPlayer, replies).slice(-replyLimit);
   if (!scoredReplies.length) return evaluateState(next, aiPlayer);
   return scoredReplies[0].score;
@@ -151,7 +151,7 @@ export function chooseAiAction(state, difficulty = 'strategist', rng = Math.rand
   const aiPlayer = state.turn;
   const allActions = enumerateAiActions(state, {
     includeAllGates: difficulty !== 'oracle',
-    gateLimit: difficulty === 'oracle' ? 46 : 72
+    gateLimit: difficulty === 'oracle' ? 12 : 72
   });
   if (!allActions.length) return null;
 
@@ -169,7 +169,7 @@ export function chooseAiAction(state, difficulty = 'strategist', rng = Math.rand
     return close[Math.floor(rng() * close.length)].action;
   }
 
-  const candidates = scored.slice(0, 28);
+  const candidates = scored.slice(0, 6);
   let best = null;
   for (const candidate of candidates) {
     const score = opponentReplyScore(candidate.next, aiPlayer, 1);
