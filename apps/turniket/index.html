@@ -12,31 +12,7 @@
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="./styles.css">
-  <style id="svg-palette-compat">
-    /* WebKit may reject CSS custom properties inside dynamically inserted SVG presentation attributes. */
-    .board > rect:first-child { fill: #d8d0c0; }
-    .board .tile { fill: #f8f4ea; stroke: rgba(41, 48, 51, 0.28); }
-    .board .grid-link { stroke: rgba(41, 48, 51, 0.18); }
-    .board .goal-label { fill: rgba(41, 48, 51, 0.5); }
-    .board .pawn { stroke: #eee9dd; }
-    .board .pawn-a { fill: #db5a3a; }
-    .board .pawn-b { fill: #297c8a; }
-    .board .pawn-label { fill: #ffffff; }
-    .board .move-target { fill: rgba(219, 90, 58, 0.13); stroke: #db5a3a; }
-    .board.player-1 .move-target { fill: rgba(41, 124, 138, 0.13); stroke: #297c8a; }
-    .board .move-target-core { fill: #db5a3a; }
-    .board.player-1 .move-target-core { fill: #297c8a; }
-    .board .last-path { fill: none; stroke: rgba(41, 48, 51, 0.5); }
-    .board .gate-bar { stroke: #343b3d; }
-    .board .gate-cap-a { fill: #db5a3a; }
-    .board .gate-cap-b { fill: #297c8a; }
-    .board .gate-arrow { fill: #eee9dd; }
-    .board .slot-hit { fill: transparent; }
-    .board .slot-mark { stroke: rgba(41, 48, 51, 0.32); }
-    .board .preview .gate-bar { stroke: #db5a3a; }
-    .board.player-1 .preview .gate-bar { stroke: #297c8a; }
-    .board .preview .gate-arrow { fill: #ffffff; }
-  </style>
+  <link rel="stylesheet" href="./ai-mode.css">
   <title>ТУРНИКЕТ</title>
 </head>
 <body>
@@ -59,7 +35,7 @@
         </div>
 
         <div class="home-copy">
-          <p class="kicker">АБСТРАКТНАЯ ДУЭЛЬ · 2 ИГРОКА</p>
+          <p class="kicker">АБСТРАКТНАЯ ДУЭЛЬ · 1–2 ИГРОКА</p>
           <h1 id="homeTitle">ТУРНИКЕТ</h1>
           <p class="home-lead">Иди к чужому краю. Ставь односторонние ворота. Прошёл — развернул их против следующего.</p>
         </div>
@@ -69,10 +45,16 @@
             <span>ПРОДОЛЖИТЬ</span>
             <small id="continueMeta"></small>
           </button>
-          <button id="newMatchButton" class="action-button primary" type="button">
-            <span>НОВЫЙ МАТЧ</span>
-            <small>7×7 · до трёх побед · одно устройство</small>
-          </button>
+          <div class="match-choice">
+            <button id="aiMatchButton" class="action-button primary ai-action" type="button">
+              <span>ПРОТИВ ИИ</span>
+              <small>три сложности · ИИ играет вторым</small>
+            </button>
+            <button id="localMatchButton" class="action-button local-action" type="button">
+              <span>НА ДВОИХ</span>
+              <small>одно устройство · до трёх побед</small>
+            </button>
+          </div>
           <button id="rulesButton" class="action-button secondary" type="button">КАК ИГРАТЬ</button>
         </div>
 
@@ -93,8 +75,8 @@
           </div>
           <div class="round-box"><span>РАУНД</span><strong id="roundNumber">1</strong></div>
           <div id="player1Panel" class="player-panel player-panel-right" data-player="1">
-            <div class="player-name"><strong>ИГРОК 2</strong><span class="pawn-chip pawn-chip-b">II</span></div>
-            <div id="score1" class="score-pips" aria-label="Победы игрока 2"></div>
+            <div class="player-name"><strong id="player1Name">ИГРОК 2</strong><span class="pawn-chip pawn-chip-b">II</span></div>
+            <div id="score1" class="score-pips" aria-label="Победы второго игрока"></div>
             <span id="gates1" class="gate-count">7 турникетов</span>
           </div>
         </div>
@@ -108,6 +90,7 @@
         </div>
 
         <div id="boardFrame" class="board-frame">
+          <div class="thinking-stripe" aria-hidden="true"></div>
           <svg id="board" viewBox="0 0 700 700" role="group" aria-label="Поле ТУРНИКЕТ 7 на 7"></svg>
         </div>
 
@@ -138,6 +121,29 @@
       </section>
     </main>
 
+    <dialog id="difficultyDialog" class="sheet-dialog compact-dialog">
+      <form method="dialog" class="dialog-frame">
+        <div class="dialog-header">
+          <div><span class="dialog-kicker">ПРОТИВ ИИ</span><h2>Выберите характер соперника</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть выбор сложности">×</button>
+        </div>
+        <div class="difficulty-list">
+          <button type="button" data-ai-difficulty="apprentice">
+            <span class="difficulty-index">I</span>
+            <span><strong>УЧЕНИК</strong><small>видит ближайшую выгоду, иногда выбирает неидеальный ход</small></span>
+          </button>
+          <button type="button" data-ai-difficulty="strategist">
+            <span class="difficulty-index">II</span>
+            <span><strong>СТРАТЕГ</strong><small>сравнивает маршруты, мобильность и цену каждого турникета</small></span>
+          </button>
+          <button type="button" data-ai-difficulty="oracle">
+            <span class="difficulty-index">III</span>
+            <span><strong>ОРАКУЛ</strong><small>проверяет лучший ответ человека перед собственным решением</small></span>
+          </button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="rulesDialog" class="sheet-dialog">
       <form method="dialog" class="dialog-frame">
         <div class="dialog-header">
@@ -148,7 +154,7 @@
         <ol class="rules-list">
           <li>
             <span class="rule-number">01</span>
-            <div><strong>Доберитесь до противоположного края</strong><p>Игрок 1 идёт снизу вверх, Игрок 2 — сверху вниз. За ход можно передвинуть фишку на соседнюю клетку.</p></div>
+            <div><strong>Доберитесь до противоположного края</strong><p>Игрок 1 идёт снизу вверх, второй игрок или ИИ — сверху вниз. За ход можно передвинуть фишку на соседнюю клетку.</p></div>
           </li>
           <li>
             <span class="rule-number">02</span>
@@ -156,7 +162,7 @@
           </li>
           <li>
             <span class="rule-number">03</span>
-            <div><strong>Каждый проход переворачивает ворота</strong><p>То, что помогло вам сейчас, на следующем ходу может открыть путь сопернику. В этом вся мясорубка.</p></div>
+            <div><strong>Каждый проход переворачивает ворота</strong><p>То, что помогло вам сейчас, на следующем ходу может открыть путь сопернику.</p></div>
           </li>
         </ol>
 
@@ -192,6 +198,7 @@
           <i class="switch" aria-hidden="true"></i>
         </label>
         <div class="settings-actions">
+          <button id="difficultySettingButton" type="button" hidden>СЛОЖНОСТЬ ИИ</button>
           <button id="restartRoundButton" type="button">ПЕРЕИГРАТЬ РАУНД</button>
           <button id="openRulesFromSettings" type="button">ОТКРЫТЬ ПРАВИЛА</button>
           <button id="resetMatchButton" class="danger" type="button">СБРОСИТЬ МАТЧ</button>
@@ -214,6 +221,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </div>
 
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app-v2.js"></script>
 </body>
 </html>
