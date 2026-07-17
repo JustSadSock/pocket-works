@@ -1,0 +1,21 @@
+{
+  "id": "/apps/faza/",
+  "name": "ФАЗА",
+  "short_name": "ФАЗА",
+  "description": "Абстрактная дуэль о трёх сменяющихся схемах связности, захватах и удержании пути.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e7e0d2",
+  "theme_color": "#e7e0d2",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
