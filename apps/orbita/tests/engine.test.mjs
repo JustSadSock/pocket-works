@@ -4,6 +4,8 @@ import {
   createGame,
   declineSwap,
   findWinningPath,
+  forbiddenRotation,
+  isRotationAllowed,
   nextRound,
   placeStone,
   rotateCells,
@@ -19,12 +21,13 @@ function emptyBoard() {
 
 test('new game starts with an empty four by eight board and no challenge', () => {
   const game = createGame();
-  assert.equal(game.schemaVersion, 2);
+  assert.equal(game.schemaVersion, 3);
   assert.equal(game.board.length, 4);
   assert.ok(game.board.every((ring) => ring.length === 8));
   assert.ok(game.board.flat().every((cell) => cell === null));
   assert.equal(game.phase, 'place');
   assert.equal(game.challengeColor, null);
+  assert.equal(game.challengeCooldownColor, null);
   assert.deepEqual(game.challengePath, []);
 });
 
@@ -44,6 +47,23 @@ test('ring rotation wraps around in both directions', () => {
   const ring = [0, null, 1, null, null, null, null, 1];
   assert.deepEqual(rotateCells(ring, 1), [1, 0, null, 1, null, null, null, null]);
   assert.deepEqual(rotateCells(ring, -1), [null, 1, null, null, null, null, 1, 0]);
+});
+
+test('immediate opposite rotation of the same ring is forbidden', () => {
+  let game = createGame();
+  game = rotateRing(placeStone(game, 1, 2), 1, 1);
+  assert.deepEqual(forbiddenRotation(game), { ring: 1, direction: -1 });
+  game = placeStone(game, 3, 4);
+  assert.equal(isRotationAllowed(game, 1, -1), false);
+  assert.throws(() => rotateRing(game, 1, -1), /отменять вращение/);
+});
+
+test('same direction or another ring remains legal', () => {
+  let game = createGame();
+  game = rotateRing(placeStone(game, 1, 2), 1, 1);
+  const placed = placeStone(game, 3, 4);
+  assert.equal(isRotationAllowed(placed, 1, 1), true);
+  assert.equal(isRotationAllowed(placed, 2, -1), true);
 });
 
 test('radial chain is detected from inner to outer ring', () => {
@@ -97,7 +117,7 @@ test('a challenge wins only after surviving the opponent full turn', () => {
   assert.equal(game.scores[0], 1);
 });
 
-test('breaking a challenge continues the game', () => {
+test('breaking a challenge starts one quiet turn for its owner', () => {
   let game = createGame();
   for (let ring = 0; ring < 4; ring += 1) game.board[ring][0] = 0;
   game.turnSeat = 1;
@@ -107,9 +127,35 @@ test('breaking a challenge continues the game', () => {
   game = rotateRing(game, 2, 1);
   assert.equal(game.winnerSeat, null);
   assert.equal(game.challengeColor, null);
-  assert.deepEqual(game.challengePath, []);
+  assert.equal(game.challengeCooldownColor, 0);
   assert.equal(game.turnSeat, 0);
-  assert.equal(game.phase, 'place');
+});
+
+test('quiet turn cannot announce a challenge and consumes cooldown', () => {
+  let game = createGame();
+  game.board[0][0] = 0;
+  game.board[1][0] = 0;
+  game.board[2][0] = 0;
+  game.challengeCooldownColor = 0;
+  game.history.push({ type: 'turn', move: 1, rotatedRing: 2, direction: 1 });
+  game = placeStone(game, 3, 7);
+  game = rotateRing(game, 3, 1);
+  assert.ok(findWinningPath(game.board, 0).length > 0);
+  assert.equal(game.challengeColor, null);
+  assert.equal(game.challengeCooldownColor, null);
+  assert.equal(game.history.at(-1).quietTurn, true);
+  assert.equal(game.turnSeat, 1);
+});
+
+test('a later ordinary turn may announce a challenge again', () => {
+  let game = createGame();
+  game.board[0][0] = 0;
+  game.board[1][0] = 0;
+  game.board[2][0] = 0;
+  game.challengeCooldownColor = null;
+  game = placeStone(game, 3, 7);
+  game = rotateRing(game, 3, 1);
+  assert.equal(game.challengeColor, 0);
 });
 
 test('a defensive reply cannot announce an immediate counter-challenge', () => {
@@ -128,6 +174,7 @@ test('a defensive reply cannot announce an immediate counter-challenge', () => {
   assert.equal(findWinningPath(game.board, 0).length, 0);
   assert.ok(findWinningPath(game.board, 1).length > 0);
   assert.equal(game.challengeColor, null);
+  assert.equal(game.challengeCooldownColor, 0);
   assert.equal(game.winnerSeat, null);
   assert.equal(game.turnSeat, 0);
 });
@@ -153,14 +200,25 @@ test('declining the pie swap keeps the current player and colors', () => {
   assert.equal(game.turnSeat, 1);
 });
 
+test('version two saves migrate without inventing cooldown', () => {
+  const legacy = createGame();
+  legacy.schemaVersion = 2;
+  delete legacy.challengeCooldownColor;
+  const migrated = validateStoredState(legacy);
+  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.challengeCooldownColor, null);
+});
+
 test('version one saves migrate without inventing an active challenge', () => {
   const legacy = createGame();
   legacy.schemaVersion = 1;
   delete legacy.challengeColor;
   delete legacy.challengePath;
+  delete legacy.challengeCooldownColor;
   const migrated = validateStoredState(legacy);
-  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.schemaVersion, 3);
   assert.equal(migrated.challengeColor, null);
+  assert.equal(migrated.challengeCooldownColor, null);
   assert.deepEqual(migrated.challengePath, []);
 });
 
