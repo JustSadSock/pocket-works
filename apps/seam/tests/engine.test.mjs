@@ -127,3 +127,38 @@ test('all AI levels return a legal move', () => {
     assert.ok(legal.has(JSON.stringify(move)));
   }
 });
+
+test('default center victory needs four supporters and three replies', () => {
+  const game = new AxisGame();
+  assert.equal(game.centerSupport, 4);
+  assert.equal(game.centerReplies, 3);
+  assert.equal(game.reserveEnabled, true);
+});
+
+test('a regular piece pushed off the board enters its owner reserve', () => {
+  const game = custom([
+    [[0, 0], 1], [[1, 0], 1], [[2, 0], 2], [[-1, 1], 1], [[0, -2], 2]
+  ], { 1: [-1, 1], 2: [0, -2] }, PLAYER.AZURE, { radius: 2, reserveEnabled: true });
+  const move = game.legalMovesForSelection([[0, 0], [1, 0]])
+    .find((candidate) => candidate.direction === 0 && candidate.kind === 'push');
+  assert.ok(move);
+  const result = game.applyMove(move);
+  assert.equal(result.ok, true);
+  assert.equal(game.winner, 0);
+  assert.equal(game.reserve[PLAYER.OCHRE], 1);
+  assert.equal(game.cellsFor(PLAYER.OCHRE).length, 1);
+});
+
+test('a reserve fighter redeploys only onto a supported empty home cell', () => {
+  const game = custom([
+    [[0, -2], 1], [[-1, 1], 1], [[0, 2], 2], [[1, -1], 2]
+  ], { 1: [0, -2], 2: [0, 2] }, PLAYER.OCHRE, { radius: 2, reserveEnabled: true });
+  game.reserve[PLAYER.OCHRE] = 1;
+  const legal = game.legalMoves().find((move) => move.kind === 'deploy' && move.destinations[0] === '-1,2');
+  assert.ok(legal);
+  const result = game.applyMove(legal);
+  assert.equal(result.ok, true);
+  assert.equal(result.move.kind, 'deploy');
+  assert.equal(game.valueAt([-1, 2]), PLAYER.OCHRE);
+  assert.equal(game.reserve[PLAYER.OCHRE], 0);
+});
