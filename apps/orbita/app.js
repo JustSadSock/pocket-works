@@ -9,7 +9,7 @@ await import('./game.js');
 
 createWorkshopMode({
   appName: 'ОРБИТА',
-  version: '1.1.0',
+  version: '1.1.1',
   cachePrefix: 'orbita-',
   storageNamespace: 'pocket-works:orbita',
   onReset() {
