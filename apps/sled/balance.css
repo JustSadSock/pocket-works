@@ -1,0 +1,14 @@
+.cell.is-cracked:not(.is-burned){
+  background-color:#c9bca4;
+  background-image:
+    linear-gradient(42deg,transparent 46%,rgba(63,58,47,.58) 47% 49%,transparent 50%),
+    linear-gradient(132deg,transparent 57%,rgba(184,143,71,.72) 58% 60%,transparent 61%);
+  box-shadow:inset 0 0 0 2px rgba(184,143,71,.44),inset 0 2px 0 rgba(255,255,255,.22),inset 0 -2px 0 rgba(32,35,30,.16)
+}
+.cell.is-cracked:not(.is-burned)::before{inset:12%;border:0;background:linear-gradient(67deg,transparent 47%,rgba(43,42,35,.28) 48% 50%,transparent 51%);transform:rotate(calc(var(--burn-tilt,0deg)*.6))}
+.cell.is-cracked.is-legal{background-color:#d7cab1;box-shadow:inset 0 0 0 3px rgba(184,143,71,.88),inset 0 2px 0 rgba(255,255,255,.35)}
+.path-meter b{max-width:165px;font-size:10px;line-height:1.15}
+.fracture-legend{display:flex;gap:12px;align-items:center;margin-top:8px;font-size:9px;letter-spacing:.08em;color:var(--ink-soft)}
+.fracture-legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;background:#c9bca4;border:1px solid var(--gold)}
+.fracture-legend i:last-of-type{background:var(--void);border-color:var(--ink)}
+@media(max-width:540px){.path-meter b{max-width:110px;font-size:8px}}
