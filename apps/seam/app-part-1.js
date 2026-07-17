@@ -59,7 +59,7 @@ reserveStyle.href = './reserve.css?v=2.2.0';
 document.head.append(reserveStyle);
 
 const board = new BoardView(el.boardCanvas, el.boardFrame, {
-  onCell: handleCell,
+  onCell: (cell) => handleCell(cell),
   onMove: (move) => performMove(move)
 });
 
@@ -185,4 +185,3 @@ function silentDeclineSwap() {
   game.swapAvailable = false;
   swapDeclined = true;
 }
-
