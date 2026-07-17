@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ШОВ">
+  <defs>
+    <linearGradient id="cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f2eadc"/><stop offset="1" stop-color="#d9ccb7"/></linearGradient>
+    <radialGradient id="i"><stop stop-color="#587ca5"/><stop offset=".55" stop-color="#294b70"/><stop offset="1" stop-color="#172b43"/></radialGradient>
+    <radialGradient id="v"><stop stop-color="#e28a69"/><stop offset=".55" stop-color="#b65338"/><stop offset="1" stop-color="#78301f"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#cloth)"/>
+  <g stroke="#aa9a80" stroke-width="8" opacity=".7">
+    <path d="M86 140H426M66 220H446M66 300H446M86 380H426"/>
+    <path d="M136 92L216 420M216 92L296 420M296 92L376 420"/>
+  </g>
+  <path d="M86 140H426M86 380H426" stroke="#274466" stroke-width="22" stroke-linecap="round"/>
+  <path d="M86 140L166 380M426 140L346 380" stroke="#b65338" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="216" cy="220" r="42" fill="url(#i)"/>
+  <circle cx="296" cy="300" r="42" fill="url(#v)"/>
+  <circle cx="296" cy="140" r="42" fill="url(#i)"/>
+  <circle cx="216" cy="380" r="42" fill="url(#i)"/>
+</svg>

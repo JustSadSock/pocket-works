@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "seam",
+  "name": "ШОВ",
+  "shortName": "ШОВ",
+  "description": "Абстрактная дуэль 7×7: соединяйте свои края, душите группы по свободам и используйте честное правило обмена.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T17:15:00+02:00",
+  "changelog": [
+    "Первая версия: локальная игра и три уровня компьютерного соперника.",
+    "Правила выбраны после 30 конфигураций, 480 сравнительных и 200 финальных бот-партий.",
+    "Добавлены сохранение, отмена ходов, процедурный звук, вибрация, полный баланс-аудит и PWA-режим."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#274466",
+  "backgroundColor": "#ede5d6",
+  "themeColor": "#e8dfcf",
+  "orientation": "any",
+  "cacheName": "seam-v1.0.0-p2",
+  "storageNamespace": "pocket-works:seam",
+  "tags": ["PWA", "offline", "game", "board game", "strategy", "canvas", "AI", "local multiplayer"],
+  "order": 73
+}

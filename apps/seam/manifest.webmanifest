@@ -1,0 +1,14 @@
+{
+  "id": "/apps/seam/",
+  "name": "ШОВ",
+  "short_name": "ШОВ",
+  "description": "Абстрактная дуэль на соединение сторон и захват групп.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#ede5d6",
+  "theme_color": "#e8dfcf",
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

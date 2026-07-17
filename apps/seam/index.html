@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#e8dfcf">
+  <meta name="description" content="ШОВ — абстрактная дуэль на соединение сторон и захват групп.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ШОВ">
+  <title>ШОВ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a href="../../" class="back-link" data-app-control data-native-press>PW</a>
+      <div class="wordmark"><span class="wordmark-knot"></span><strong>ШОВ</strong><small>абстрактная дуэль</small></div>
+      <button type="button" class="top-action" id="menuButton" data-native-press>Меню</button>
+    </header>
+
+    <section class="start-screen" id="startScreen" data-ui>
+      <div class="hero-weave" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+        <b class="indigo"></b><b class="vermilion"></b><b class="indigo second"></b>
+      </div>
+      <div class="hero-copy">
+        <p>Соедини свои края. Не дай соединиться чужим.</p>
+        <h1>Один камень.<br>Шесть соседей.<br>Дофига последствий.</h1>
+        <span>Группы без свобод снимаются с поля. Побеждает не тот, кто съел больше, а тот, кто первым протянул непрерывный шов.</span>
+      </div>
+
+      <div class="setup-panel">
+        <div class="setup-line">
+          <label>Соперник</label>
+          <div class="segmented" id="modeChoices">
+            <button type="button" class="selected" data-value="ai" data-native-press>Компьютер</button>
+            <button type="button" data-value="local" data-native-press>Вдвоём</button>
+          </div>
+        </div>
+        <div class="setup-line" id="levelLine">
+          <label>Сила</label>
+          <div class="segmented three" id="levelChoices">
+            <button type="button" data-value="calm" data-native-press>Спокойный</button>
+            <button type="button" class="selected" data-value="club" data-native-press>Клубный</button>
+            <button type="button" data-value="sharp" data-native-press>Злой</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="start-button" id="startButton" data-native-press>
+        <span>Начать партию</span><small>Индиго ходит первым</small>
+      </button>
+      <button type="button" class="resume-button hidden" id="resumeButton" data-native-press>
+        <span>Продолжить сохранённую</span><small id="resumeMeta">Ход 1</small>
+      </button>
+      <div class="start-links">
+        <button type="button" id="rulesStartButton" data-native-press>Правила</button>
+        <button type="button" id="auditStartButton" data-native-press>Как выбирались правила</button>
+        <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="game-screen hidden" id="gameScreen">
+      <div class="player-strip vermilion-strip" id="vermilionStrip" data-ui>
+        <span class="player-mark vermilion"></span>
+        <div><strong id="vermilionName">Киноварь</strong><small id="vermilionStatus">Ждёт хода</small></div>
+        <b id="vermilionCaptures">0</b><em>снято</em>
+      </div>
+
+      <div class="board-wrap" id="boardWrap" data-gesture-surface data-block-callout>
+        <canvas id="boardCanvas" role="application" aria-label="Игровое поле ШОВ 7 на 7"></canvas>
+        <div class="thinking hidden" id="thinking"><i></i><span>Соперник прикидывает, где нагадить</span></div>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </div>
+
+      <div class="player-strip indigo-strip" id="indigoStrip" data-ui>
+        <span class="player-mark indigo"></span>
+        <div><strong id="indigoName">Индиго</strong><small id="indigoStatus">Ваш ход</small></div>
+        <b id="indigoCaptures">0</b><em>снято</em>
+      </div>
+
+      <div class="swap-offer hidden" id="swapOffer" data-ui>
+        <div><strong>Правило обмена</strong><small>Второй игрок может забрать первый цвет и стартовый камень.</small></div>
+        <button type="button" id="swapButton" data-native-press>Забрать Индиго</button>
+        <button type="button" id="declineSwapButton" data-native-press>Оставить как есть</button>
+      </div>
+
+      <nav class="action-rail" data-ui>
+        <button type="button" id="undoButton" data-native-press><span>↶</span><small>назад</small></button>
+        <button type="button" class="turn-pill" id="turnPill" disabled><span class="turn-dot indigo"></span><b id="turnLabel">Ход Индиго</b></button>
+        <button type="button" id="rulesButton" data-native-press><span>?</span><small>правила</small></button>
+      </nav>
+    </section>
+
+    <div class="sheet-layer hidden" id="sheetLayer" data-ui>
+      <button type="button" class="sheet-backdrop" id="sheetBackdrop" aria-label="Закрыть"></button>
+      <section class="sheet hidden" id="menuSheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+        <header><div><p>ШОВ</p><h2 id="menuTitle">Партия</h2></div><button type="button" data-close-sheet data-native-press>Закрыть</button></header>
+        <div class="sheet-actions">
+          <button type="button" id="continueButton" data-native-press><b>Продолжить</b><small>Вернуться к полю</small></button>
+          <button type="button" id="newGameButton" data-native-press><b>Новая партия</b><small>Заменит текущую сохранённую позицию</small></button>
+          <button type="button" id="menuRulesButton" data-native-press><b>Правила</b><small>Соединение, свободы, захваты и ко</small></button>
+          <button type="button" id="menuAuditButton" data-native-press><b>Баланс-лаборатория</b><small>30 конфигураций и 680 партий ботов</small></button>
+          <button type="button" class="setting-toggle" id="soundToggle" data-native-press><span><b>Звук</b><small>Процедурные щелчки и натяжение нити</small></span><em>Вкл</em></button>
+          <button type="button" class="setting-toggle" id="hapticToggle" data-native-press><span><b>Вибрация</b><small>Короткая отдача на ход и захват</small></span><em>Вкл</em></button>
+          <button type="button" class="danger-action" id="resignButton" data-native-press><b>Сдаться</b><small>Потребуется второе нажатие</small></button>
+          <a href="../../" data-app-control data-native-press><b>В Pocket Works</b><small>Позиция сохранена</small></a>
+        </div>
+        <button type="button" class="workshop-link" data-workshop-trigger data-native-press>Workshop Mode</button>
+      </section>
+
+      <section class="sheet hidden" id="rulesSheet" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+        <header><div><p>Четыре правила</p><h2 id="rulesTitle">Как играть</h2></div><button type="button" data-close-sheet data-native-press>Готово</button></header>
+        <ol class="rules-list">
+          <li><span>1</span><div><b>Ставьте один камень</b><p>Индиго соединяет верх и низ. Киноварь — левый и правый край.</p></div></li>
+          <li><span>2</span><div><b>Берегите свободы</b><p>Свобода — пустое соседнее место. У камня шесть возможных соседей.</p></div></li>
+          <li><span>3</span><div><b>Душите группы</b><p>Если у связанной группы не осталось свобод, вся группа снимается. Самоубийственный ход запрещён.</p></div></li>
+          <li><span>4</span><div><b>Протяните шов</b><p>Непрерывная цепь между вашими краями завершает партию. Повтор позиции запрещён правилом ко.</p></div></li>
+        </ol>
+        <div class="pie-note"><b>Почему можно обменяться цветами?</b><p>После первого хода второй игрок может забрать Индиго. Это убирает преимущество слишком сильного дебюта: первый игрок вынужден ставить честно, а не в идеальную точку.</p></div>
+      </section>
+
+      <section class="sheet hidden" id="auditSheet" role="dialog" aria-modal="true" aria-labelledby="auditTitle">
+        <header><div><p>Баланс-лаборатория</p><h2 id="auditTitle">Правила не взяты с потолка</h2></div><button type="button" data-close-sheet data-native-press>Закрыть</button></header>
+        <div class="audit-score"><strong>107 : 93</strong><span>победы первого и второго места в финальном прогоне</span></div>
+        <div class="audit-grid">
+          <div><b>30</b><small>наборов правил</small></div>
+          <div><b>680</b><small>бот-партий всего</small></div>
+          <div><b>0%</b><small>ничьих в финале</small></div>
+          <div><b>13,5</b><small>хода в среднем у финальных ботов</small></div>
+        </div>
+        <div class="audit-copy">
+          <p><b>Отброшено:</b> гонка трёх фигур со стенами — до 56% затяжных ничьих; соединение с зажимными захватами — красиво, но некоторые пороги давали первому игроку до 87,5% побед.</p>
+          <p><b>Оставлено:</b> поле 7×7, шесть соседей, захваты по свободам, самоубийство и повтор позиции запрещены, победа только соединением, правило обмена после первого хода.</p>
+          <p><b>Пять стилей:</b> рывок, осада, оборона, форма и баланс. Финальная проверка уже на игровом движке дала 53,5% побед первому месту и разброс стилей от 42,5% до 57,5% — обязательной меты не возникло.</p>
+        </div>
+        <a class="audit-link" href="./BALANCE_AUDIT.md?v=1.0.0" target="_blank" rel="noopener">Открыть полный протокол</a>
+      </section>
+
+      <section class="sheet result-sheet hidden" id="resultSheet" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+        <header><div><p>Шов завершён</p><h2 id="resultTitle">Индиго победил</h2></div><button type="button" data-close-sheet data-native-press>Смотреть поле</button></header>
+        <div class="result-thread"><i></i><span id="resultMark" class="player-mark indigo"></span><i></i></div>
+        <p id="resultText">Цепь соединила верхний и нижний края.</p>
+        <div class="result-actions">
+          <button type="button" id="rematchButton" data-native-press>Реванш</button>
+          <button type="button" id="resultHomeButton" data-native-press>На старт</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШОВ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
