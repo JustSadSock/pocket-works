@@ -1,14 +1,16 @@
 {
   "id": "/apps/seam/",
-  "name": "ШОВ",
-  "short_name": "ШОВ",
-  "description": "Абстрактная дуэль на соединение сторон и захват групп.",
+  "name": "ОСЬ",
+  "short_name": "ОСЬ",
+  "description": "Тактическая дуэль формаций, толчков и борьбы за центр.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#ede5d6",
+  "background_color": "#e8dfcf",
   "theme_color": "#e8dfcf",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
 }
