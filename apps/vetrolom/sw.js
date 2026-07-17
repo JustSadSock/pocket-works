@@ -1,15 +1,15 @@
 const CACHE_PREFIX='vetrolom-';
-const CACHE='vetrolom-v1.2.0';
-const VERSION='1.2.0';
+const CACHE='vetrolom-v1.3.0';
+const VERSION='1.3.0';
 const RELEASE_DATE='2026-07-17';
 const RELEASE_NOTES=[
-  'Плавное движение и камера со стабилизацией пиксельной сетки.',
-  'Контекстное пунктирное выделение вместо мешающих надписей.',
-  'Плотное строительство, автосоединение оград и восьмиугольный рисунок территории.'
+  'Новые находки, источники, смола, еда и штормовой фонарь.',
+  'Умные лагерные действия, лента добычи и более насыщенные взаимодействия.',
+  'Живой свет, ветер, следы, светлячки и биомная звуковая атмосфера.'
 ];
 const SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./polish-1.2.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
-  './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt','./runtime/patch-1.2.txt',
+  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./polish-1.2.css','./polish-1.3.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt','./runtime/patch-1.2.txt','./runtime/patch-1.3-a.txt','./runtime/patch-1.3-b.txt','./runtime/patch-1.3-c.txt',
   '../../shared/mobile-runtime.css','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
