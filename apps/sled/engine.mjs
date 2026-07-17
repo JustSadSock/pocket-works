@@ -11,9 +11,9 @@ export const HEX_DIRECTIONS = Object.freeze({
 });
 
 export const DIFFICULTIES = Object.freeze({
-  cutter: Object.freeze({ label: 'Резчик', maxDepth: 2, budgetMs: 75 }),
-  tactician: Object.freeze({ label: 'Тактик', maxDepth: 4, budgetMs: 260 }),
-  architect: Object.freeze({ label: 'Архитектор', maxDepth: 6, budgetMs: 760 })
+  cutter: Object.freeze({ label: 'Резчик', maxDepth: 2, budgetMs: 90 }),
+  tactician: Object.freeze({ label: 'Тактик', maxDepth: 4, budgetMs: 320 }),
+  architect: Object.freeze({ label: 'Архитектор', maxDepth: 6, budgetMs: 900 })
 });
 
 const DIRECTION_NAMES = Object.freeze(Object.keys(HEX_DIRECTIONS));
@@ -77,12 +77,11 @@ export function createBoard(radiusValue = 4) {
 export function createGame(options = {}) {
   const board = createBoard(options.radius);
   return {
-    schema: 3,
+    schema: 4,
     radius: board.radius,
     positions: [...board.starts],
     claimed: [0n, 0n],
     current: 0,
-    consecutivePasses: 0,
     plies: 0,
     ended: false,
     winner: null,
@@ -97,7 +96,10 @@ export function cloneState(state) {
     ...state,
     positions: [...state.positions],
     claimed: [...state.claimed],
-    lastMove: state.lastMove ? JSON.parse(JSON.stringify(state.lastMove)) : null
+    lastMove: state.lastMove ? {
+      ...state.lastMove,
+      captured: [...(state.lastMove.captured || [])]
+    } : null
   };
 }
 
@@ -124,9 +126,7 @@ export function legalDestinations(state, participant = state.current) {
 }
 
 export function legalMoves(state) {
-  if (!state || state.ended) return [];
-  const destinations = legalDestinations(state, state.current);
-  return destinations.length ? destinations : [PASS];
+  return legalDestinations(state, state.current);
 }
 
 export function directionForMove(state, participant, destination) {
@@ -145,49 +145,126 @@ export function neighborInDirection(state, participant, direction) {
 
 export function applyMove(state, move) {
   if (!state || state.ended) throw new Error('Партия уже закончена.');
-  const legal = legalMoves(state);
-  if (!legal.includes(move)) throw new Error('Недопустимый ход.');
+  if (!legalMoves(state).includes(move)) throw new Error('Недопустимый ход.');
 
   const next = cloneState(state);
   const participant = state.current;
-
-  if (move === PASS) {
-    next.plies += 1;
-    next.consecutivePasses += 1;
-    next.lastMove = {
-      type: 'pass',
-      participant,
-      from: state.positions[participant],
-      to: null
-    };
-    if (next.consecutivePasses >= 2) return settleByScore(next);
-    next.current = 1 - participant;
-    return next;
-  }
-
   const from = state.positions[participant];
-  const bit = 1n << BigInt(from);
-  next.claimed[participant] |= bit;
+  const beforeScore = rawScores(state)[participant];
+  next.claimed[participant] |= 1n << BigInt(from);
   next.positions[participant] = move;
   next.current = 1 - participant;
-  next.consecutivePasses = 0;
   next.plies += 1;
   next.lastMove = {
     type: 'step',
     participant,
     direction: directionForMove(state, participant, move),
     from,
-    to: move
+    to: move,
+    captured: []
   };
+
+  resolveCut(next, participant);
+  next.lastMove.gain = rawScores(next)[participant] - beforeScore;
   return next;
 }
 
-function settleByScore(state) {
-  const scores = scoreState(state);
-  state.ended = true;
-  state.winner = scores[0] > scores[1] ? 0 : 1;
-  state.reason = 'territory';
-  return state;
+function resolveCut(state, mover) {
+  const board = createBoard(state.radius);
+  const components = openComponents(state);
+  const componentByIndex = new Int16Array(board.count);
+  componentByIndex.fill(-1);
+  components.forEach((component, componentIndex) => {
+    for (const index of component) componentByIndex[index] = componentIndex;
+  });
+
+  const stoneComponents = state.positions.map((index) => componentByIndex[index]);
+  const captured = [];
+
+  components.forEach((component, componentIndex) => {
+    if (componentIndex === stoneComponents[0] || componentIndex === stoneComponents[1]) return;
+    claimCells(state, mover, component, captured);
+  });
+
+  if (stoneComponents[0] !== stoneComponents[1]) {
+    const firstRegion = components[stoneComponents[0]] || [];
+    const secondRegion = components[stoneComponents[1]] || [];
+    claimCells(state, 0, firstRegion, captured);
+    claimCells(state, 1, secondRegion, captured);
+    state.ended = true;
+    state.reason = 'split';
+    const scores = scoreState(state);
+    state.winner = scores[0] > scores[1] ? 0 : 1;
+    state.lastMove.captured = captured;
+    return;
+  }
+
+  if (legalDestinations(state, state.current).length === 0) {
+    claimAllOpen(state, mover, captured);
+    state.ended = true;
+    state.reason = 'trap';
+    state.winner = mover;
+  }
+
+  state.lastMove.captured = captured;
+}
+
+function claimCells(state, owner, cells, captured) {
+  for (const index of cells) {
+    if (index === state.positions[0] || index === state.positions[1] || isClaimed(state, index)) continue;
+    state.claimed[owner] |= 1n << BigInt(index);
+    captured.push(index);
+  }
+}
+
+function claimAllOpen(state, owner, captured) {
+  const board = createBoard(state.radius);
+  for (let index = 0; index < board.count; index += 1) {
+    if (index === state.positions[0] || index === state.positions[1] || isClaimed(state, index)) continue;
+    state.claimed[owner] |= 1n << BigInt(index);
+    captured.push(index);
+  }
+}
+
+function openComponents(state) {
+  const board = createBoard(state.radius);
+  const seen = new Uint8Array(board.count);
+  const components = [];
+
+  for (let start = 0; start < board.count; start += 1) {
+    if (seen[start] || isClaimed(state, start)) continue;
+    const component = [];
+    const queue = [start];
+    seen[start] = 1;
+    for (let head = 0; head < queue.length; head += 1) {
+      const index = queue[head];
+      component.push(index);
+      for (const next of board.neighbors[index]) {
+        if (next < 0 || seen[next] || isClaimed(state, next)) continue;
+        seen[next] = 1;
+        queue.push(next);
+      }
+    }
+    components.push(component);
+  }
+  return components;
+}
+
+export function previewMove(state, move) {
+  if (!state || state.ended || !legalMoves(state).includes(move)) return null;
+  const mover = state.current;
+  const before = rawScores(state);
+  const next = applyMove(state, move);
+  const after = rawScores(next);
+  return {
+    move,
+    gain: after[mover] - before[mover],
+    captured: [...(next.lastMove?.captured || [])],
+    ended: next.ended,
+    reason: next.reason,
+    winner: next.winner,
+    scores: scoreState(next)
+  };
 }
 
 export function forceTimeLoss(state, loser) {
@@ -274,15 +351,18 @@ export function territoryForecast(state) {
 export function serializeGame(state) {
   return {
     ...state,
-    schema: 3,
+    schema: 4,
     positions: [...state.positions],
     claimed: state.claimed.map((mask) => mask.toString(16)),
-    lastMove: state.lastMove ? JSON.parse(JSON.stringify(state.lastMove)) : null
+    lastMove: state.lastMove ? {
+      ...state.lastMove,
+      captured: [...(state.lastMove.captured || [])]
+    } : null
   };
 }
 
 export function restoreGame(raw) {
-  if (!raw || raw.schema !== 3) return null;
+  if (!raw || raw.schema !== 4) return null;
   const board = createBoard(raw.radius);
   let claimed;
   try {
@@ -299,17 +379,21 @@ export function restoreGame(raw) {
   if (positions[0] === positions[1]) return null;
 
   const state = {
-    schema: 3,
+    schema: 4,
     radius: board.radius,
     positions,
     claimed,
     current: raw.current === 1 ? 1 : 0,
-    consecutivePasses: clampInt(raw.consecutivePasses, 0, 2),
-    plies: clampInt(raw.plies, 0, board.count * 2 + 2),
+    plies: clampInt(raw.plies, 0, board.count * 2),
     ended: Boolean(raw.ended),
     winner: raw.winner === 0 || raw.winner === 1 ? raw.winner : null,
-    reason: ['territory', 'time'].includes(raw.reason) ? raw.reason : null,
-    lastMove: raw.lastMove && typeof raw.lastMove === 'object' ? raw.lastMove : null,
+    reason: ['split', 'trap', 'time'].includes(raw.reason) ? raw.reason : null,
+    lastMove: raw.lastMove && typeof raw.lastMove === 'object' ? {
+      ...raw.lastMove,
+      captured: Array.isArray(raw.lastMove.captured)
+        ? raw.lastMove.captured.filter((index) => Number.isInteger(index) && index >= 0 && index < board.count)
+        : []
+    } : null,
     komi: Number.isFinite(Number(raw.komi)) ? Number(raw.komi) : KOMI
   };
 
@@ -410,11 +494,11 @@ function evaluateState(state, root) {
   const forecast = territoryForecast(state);
   const reachable = [reachableCount(state, 0), reachableCount(state, 1)];
   const mobilityValues = [mobility(state, 0), mobility(state, 1)];
-  let value = (scores[root] - scores[opponent]) * 120;
-  value += (forecast.control[root] - forecast.control[opponent]) * 13;
-  value += (reachable[root] - reachable[opponent]) * 3;
-  value += (mobilityValues[root] - mobilityValues[opponent]) * 7;
-  value += (state.current === root ? 1 : -1) * 2;
+  let value = (scores[root] - scores[opponent]) * 210;
+  value += (forecast.control[root] - forecast.control[opponent]) * 18;
+  value += (reachable[root] - reachable[opponent]) * 5;
+  value += (mobilityValues[root] - mobilityValues[opponent]) * 12;
+  value += (state.current === root ? 1 : -1) * 3;
   return value;
 }
 
@@ -427,15 +511,15 @@ function orderMoves(state, moves, root) {
 }
 
 function moveOrderScore(state, move, root) {
-  if (move === PASS) return -100000;
-  const next = applyMove(state, move);
-  return evaluateState(next, root) * (state.current === root ? 1 : -1);
+  const preview = previewMove(state, move);
+  if (!preview) return -Infinity;
+  if (preview.ended) return preview.winner === root ? 1_000_000 : -1_000_000;
+  const perspective = state.current === root ? 1 : -1;
+  return preview.gain * 500 * perspective + evaluateState(applyMove(state, move), root);
 }
 
 function compareMove(a, b) {
   if (b == null) return -1;
-  if (a === PASS) return 1;
-  if (b === PASS) return -1;
   return Number(a) - Number(b);
 }
 
@@ -446,8 +530,7 @@ function stateKey(state) {
     state.positions[1],
     state.claimed[0].toString(36),
     state.claimed[1].toString(36),
-    state.current,
-    state.consecutivePasses
+    state.current
   ].join(':');
 }
 
