@@ -1,9 +1,10 @@
 const CACHE_PREFIX='seam-';
-const CACHE_NAME='seam-v2.2.0-p5';
+const CACHE_NAME='seam-v2.2.0-p6';
 const APP_VERSION='2.2.0';
-const RELEASE_DATE='2026-07-17';
-const CACHE_PROTOCOL=5;
-const RELEASE_NOTES=['Reserve and reinforcement added.','Center now needs four supporters and three replies.','Two 60-game audits finished 62:58 with no draws.'];
+const UPDATE_VERSION='2.2.0-hotfix.1';
+const RELEASE_DATE='2026-07-18';
+const CACHE_PROTOCOL=6;
+const RELEASE_NOTES=['Menu and start-screen buttons now respond immediately.','The runtime bootstrap no longer resolves later callbacks too early.','A startup regression test now covers the complete loader order.'];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./reserve.css','./motion.css','./app.js','./app-part-1.js','./app-part-2a.js','./app-part-2b.js','./app-part-3a1.js','./app-part-3a2.js','./app-part-3b.js','./app-part-4.js','./app-part-5.js','./board-view.js','./motion.js','./engine.js','./engine-core.js','./manifest.webmanifest','./icons/icon.svg','./BALANCE_AUDIT.md','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js'];
 const ROOT=new URL('./',self.registration.scope);
 const BUILD=`${APP_VERSION}-p${CACHE_PROTOCOL}`;
@@ -12,5 +13,5 @@ const fresh=async input=>{const url=new URL(input instanceof Request?input.url:i
 const networkFirst=async(request,key,fallback=key)=>{try{const response=await fresh(request);(await caches.open(CACHE_NAME)).put(key,response.clone());return response}catch{return(await caches.match(key))||caches.match(fallback)}};
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all([...new Set(KEYS.values())].map(async url=>cache.put(url,await fresh(url))))})()));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
-self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:UPDATE_VERSION,appVersion:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==self.location.origin)return;if(event.request.mode==='navigate'){event.respondWith(networkFirst(event.request,ROOT.href,ROOT.href));return}const key=KEYS.get(url.pathname);if(key)event.respondWith(networkFirst(event.request,key,ROOT.href))});
