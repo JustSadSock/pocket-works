@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#e6ddc8">
+  <meta name="description" content="ПЕРЕПЛЁТ — турнирная абстрактная игра о соединении краёв, окружении и разрыве чужих нитей.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ПЕРЕПЛЁТ">
+  <title>ПЕРЕПЛЁТ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="app" data-app-shell>
+  <header class="topbar" data-ui>
+    <a class="home-button" href="../../" aria-label="Вернуться в Pocket Works">PW</a>
+    <div class="brand"><span>ТУРНИРНАЯ ИГРА / 6×6</span><b>ПЕРЕПЛЁТ</b></div>
+    <button class="icon-button" id="soundBtn" type="button" aria-label="Переключить звук">ЗВУК</button>
+  </header>
+
+  <section class="screen menu-screen active" id="menuScreen" aria-labelledby="menuTitle">
+    <div class="loom-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+    <p class="eyebrow">СОЕДИНИ СВОИ КРАЯ. РАЗОРВИ ЧУЖУЮ НИТЬ.</p>
+    <h1 id="menuTitle">ПЕРЕПЛЁТ</h1>
+    <p class="lead">Один ход — один узел. Победа — непрерывная линия между своими краями. Окружённые группы распускаются.</p>
+    <div class="menu-actions">
+      <button class="action primary" id="botModeBtn" type="button"><span>ИГРА С БОТОМ</span><b>→</b></button>
+      <button class="action" id="localModeBtn" type="button"><span>ДУЭЛЬ НА ОДНОМ ЭКРАНЕ</span><b>↔</b></button>
+      <button class="action continue" id="continueBtn" type="button" hidden><span>ПРОДОЛЖИТЬ ПАРТИЮ</span><b>▣</b></button>
+    </div>
+    <nav class="text-nav" aria-label="Дополнительные разделы">
+      <button id="rulesBtn" type="button">Правила</button>
+      <button id="labBtn" type="button">Лаборатория баланса</button>
+    </nav>
+    <div class="menu-record" id="menuRecord">Матчей против бота: 0</div>
+  </section>
+
+  <section class="screen setup-screen" id="setupScreen" aria-labelledby="setupTitle">
+    <button class="back-link" data-back="menu" type="button">← МЕНЮ</button>
+    <p class="eyebrow">НАСТРОЙКА СОПЕРНИКА</p>
+    <h2 id="setupTitle">Как будет думать станок</h2>
+    <div class="selector" id="difficultySelector" aria-label="Сложность">
+      <button data-difficulty="sparring" type="button"><b>СПАРРИНГ</b><span>Ошибается и пробует разные ходы</span></button>
+      <button data-difficulty="club" class="selected" type="button"><b>КЛУБ</b><span>Видит угрозы и строит план</span></button>
+      <button data-difficulty="master" type="button"><b>ТУРНИР</b><span>Считает ответы и наказывает слабости</span></button>
+    </div>
+    <div class="selector compact" id="styleSelector" aria-label="Стиль бота">
+      <button data-style="weave" type="button"><b>ПЛЕТЕЛЬЩИК</b><span>Гонка</span></button>
+      <button data-style="cut" type="button"><b>РЕЗЧИК</b><span>Атака</span></button>
+      <button data-style="guard" type="button"><b>СТРАЖ</b><span>Оборона</span></button>
+      <button data-style="adaptive" class="selected" type="button"><b>СТАНОК</b><span>Адаптивный</span></button>
+    </div>
+    <div class="first-move">
+      <span>Первый узел</span>
+      <button id="humanFirstBtn" class="selected" type="button">МОЙ</button>
+      <button id="botFirstBtn" type="button">БОТА</button>
+    </div>
+    <button class="action primary setup-start" id="startBotBtn" type="button"><span>НАЧАТЬ ПАРТИЮ</span><b>→</b></button>
+  </section>
+
+  <section class="screen game-screen" id="gameScreen" aria-labelledby="gameStatus">
+    <div class="match-strip">
+      <div class="player-thread indigo" id="indigoThread"><span>СЛЕВА → НАПРАВО</span><b id="indigoName">ИНДИГО</b><em id="indigoCaptures">0 срезано</em></div>
+      <div class="turn-seal" id="turnSeal"><span>ХОД</span><b id="turnNumber">1</b></div>
+      <div class="player-thread cinnabar" id="cinnabarThread"><span>СВЕРХУ → ВНИЗ</span><b id="cinnabarName">КИНОВАРЬ</b><em id="cinnabarCaptures">0 срезано</em></div>
+    </div>
+    <div class="status-line" id="gameStatus" aria-live="polite">Поставь первый узел</div>
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="boardCanvas" aria-label="Игровое поле шесть на шесть" role="img"></canvas>
+      <div class="thinking" id="thinking" hidden><i></i><span>СТАНОК СЧИТАЕТ НИТИ</span></div>
+    </div>
+    <div class="game-controls">
+      <button id="gameRulesBtn" type="button">ПРАВИЛА</button>
+      <button id="resignBtn" type="button">СДАТЬСЯ</button>
+      <button id="restartBtn" type="button">РЕСТАРТ</button>
+    </div>
+  </section>
+
+  <section class="screen article-screen" id="rulesScreen" aria-labelledby="rulesTitle">
+    <button class="back-link" data-back="previous" type="button">← НАЗАД</button>
+    <p class="eyebrow">ПРАВИЛА ЗА 90 СЕКУНД</p>
+    <h2 id="rulesTitle">Четыре вещи. Остальное — уже война.</h2>
+    <div class="rules-grid">
+      <article><b>01</b><h3>СВОИ КРАЯ</h3><p>Индиго соединяет левый и правый край. Киноварь — верхний и нижний. Учитываются только касания по сторонам.</p><div class="rule-glyph horizontal"></div></article>
+      <article><b>02</b><h3>ОДИН УЗЕЛ</h3><p>В ход ставится один узел на свободную клетку. Диагональ не соединяет группы — хитрый угол ещё не мост.</p><div class="rule-glyph knot"></div></article>
+      <article><b>03</b><h3>ОКРУЖЕНИЕ</h3><p>Группа без единой соседней пустой клетки распускается целиком. Захват открывает проходы и меняет темп партии.</p><div class="rule-glyph capture"></div></article>
+      <article><b>04</b><h3>БЕЗ ПЕТЕЛЬ</h3><p>Нельзя задушить собственную группу без захвата и нельзя вернуть поле в уже бывшее положение. После первого хода второй игрок может забрать сторону.</p><div class="rule-glyph repeat"></div></article>
+    </div>
+    <button class="action primary" id="rulesPlayBtn" type="button"><span>ПОНЯТНО. К ДОСКЕ.</span><b>→</b></button>
+  </section>
+
+  <section class="screen article-screen lab-screen" id="labScreen" aria-labelledby="labTitle">
+    <button class="back-link" data-back="menu" type="button">← МЕНЮ</button>
+    <p class="eyebrow">БОТ ПРОТИВ БОТА / 17 ИЮЛЯ 2026</p>
+    <h2 id="labTitle">Механика прошла через мясорубку, а не через вдохновение в три ночи.</h2>
+    <div class="lab-hero">
+      <div><b>540</b><span>автоматических партий</span></div>
+      <div><b>30</b><span>конфигураций правил</span></div>
+      <div><b>3</b><span>семейства концепций</span></div>
+    </div>
+    <div class="lab-table" role="table" aria-label="Финалисты тестирования">
+      <div class="lab-row head" role="row"><span>Концепция</span><span>1-й игрок</span><span>Ничьи</span><span>Ходы</span></div>
+      <div class="lab-row winner" role="row"><span><b>ПЕРЕПЛЁТ 6×6</b><small>соединение + окружение</small></span><span>51,7%</span><span>0%</span><span>29,1</span></div>
+      <div class="lab-row" role="row"><span><b>ШЛЮЗ 5×5</b><small>две фигуры + стены</small></span><span>50%</span><span>5%</span><span>41,1</span></div>
+      <div class="lab-row" role="row"><span><b>ФРОНТ 7×7</b><small>каскадное давление</small></span><span>50%</span><span>5%</span><span>30,5</span></div>
+    </div>
+    <div class="lab-notes">
+      <article><h3>Почему победил Переплёт</h3><p>Нулевые ничьи, короткая турнирная партия и 56 разных первых четырёх ходов в 60 финальных матчах. Стены душили агрессию, а каскадные перевороты хуже читались глазами.</p></article>
+      <article><h3>Какие стили выжили</h3><p>Гонщик строил кратчайший путь, резчик охотился за группами, защитник ломал маршрут соперника. Ни один стиль не оказался бесполезной декоративной хренью.</p></article>
+    </div>
+  </section>
+
+  <div class="modal" id="swapModal" hidden role="dialog" aria-modal="true" aria-labelledby="swapTitle">
+    <div class="modal-sheet">
+      <span>ПРАВИЛО ПЕРЕХВАТА</span>
+      <h2 id="swapTitle">Забрать первый узел себе?</h2>
+      <p>Ты поменяешься сторонами с соперником. Поле не меняется, а следующий ход всё равно делает Киноварь.</p>
+      <div><button id="declineSwapBtn" type="button">ОСТАВИТЬ СТОРОНЫ</button><button id="acceptSwapBtn" class="primary" type="button">ЗАБРАТЬ СТОРОНУ</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-sheet compact-sheet">
+      <span>ПОДТВЕРЖДЕНИЕ</span><h2 id="confirmTitle">Закончить партию?</h2><p id="confirmText">Текущая позиция будет потеряна.</p>
+      <div><button id="confirmCancelBtn" type="button">ОТМЕНА</button><button id="confirmOkBtn" class="danger" type="button">ПОДТВЕРДИТЬ</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="resultModal" hidden role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="result-sheet">
+      <span id="resultKicker">НИТЬ ЗАМКНУЛАСЬ</span><h2 id="resultTitle">Победа Индиго</h2><p id="resultText"></p>
+      <div class="result-stats"><div><b id="resultTurns">0</b><span>ХОДОВ</span></div><div><b id="resultCaptures">0</b><span>ЗАХВАТОВ</span></div></div>
+      <div class="replay-controls"><button id="replayPrevBtn" type="button">←</button><input id="replaySlider" type="range" min="0" max="0" value="0" aria-label="Ход повтора"><button id="replayNextBtn" type="button">→</button><span id="replayLabel">ФИНАЛ</span></div>
+      <button class="action primary" id="rematchBtn" type="button"><span>РЕВАНШ</span><b>↻</b></button>
+      <button class="action" id="resultMenuBtn" type="button"><span>В МЕНЮ</span><b>⌂</b></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕПЛЁТ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
