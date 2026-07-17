@@ -8,8 +8,8 @@ import {
 
 installMobileRuntime();
 
-const VERSION = '2.0.0';
-const STORAGE_KEY = 'pocket-works:seam:v2';
+const VERSION = '2.2.0';
+const STORAGE_KEY = 'pocket-works:seam:v3';
 const SETTINGS_KEY = 'pocket-works:seam:settings:v2';
 const TUTORIAL_KEY = 'pocket-works:seam:tutorial:v2';
 const $ = (selector) => document.querySelector(selector);
@@ -19,6 +19,7 @@ const elements = {
   modeChoices: $('#modeChoices'), levelChoices: $('#levelChoices'), levelLine: $('#levelLine'), menuButton: $('#menuButton'),
   board: $('#boardCanvas'), boardFrame: $('#boardFrame'), boardCaption: $('#boardCaption'), thinking: $('#thinking'), thinkingText: $('#thinkingText'), toast: $('#toast'), tutorialCard: $('#tutorialCard'),
   azureStrip: $('#azureStrip'), ochreStrip: $('#ochreStrip'), azureName: $('#azureName'), ochreName: $('#ochreName'), azureStatus: $('#azureStatus'), ochreStatus: $('#ochreStatus'), azurePieces: $('#azurePieces'), ochrePieces: $('#ochrePieces'),
+  azureReserve: $('#azureReserve'), ochreReserve: $('#ochreReserve'), azureReserveButton: $('#azureReserveButton'), ochreReserveButton: $('#ochreReserveButton'),
   swapOffer: $('#swapOffer'), swapButton: $('#swapButton'), declineSwapButton: $('#declineSwapButton'),
   turnPill: $('#turnPill'), turnLabel: $('#turnLabel'), clearButton: $('#clearButton'), undoButton: $('#undoButton'), rulesButton: $('#rulesButton'),
   rulesStartButton: $('#rulesStartButton'), auditStartButton: $('#auditStartButton'), sheetLayer: $('#sheetLayer'), sheetBackdrop: $('#sheetBackdrop'), menuSheet: $('#menuSheet'), rulesSheet: $('#rulesSheet'), auditSheet: $('#auditSheet'), resultSheet: $('#resultSheet'),
@@ -45,6 +46,7 @@ let aiStyle = 'balanced';
 let aiBusy = false;
 let swapDeclined = false;
 let selected = [];
+let deploymentMode = false;
 let geometry = null;
 let moveHandles = [];
 let particles = [];
@@ -87,6 +89,7 @@ function restore(entry) {
   aiStyle = entry.aiStyle || 'balanced';
   swapDeclined = Boolean(entry.swapDeclined);
   selected = [];
+  deploymentMode = false;
 }
 
 function saveGame() {
@@ -144,6 +147,7 @@ function startGame({ alternate = false } = {}) {
   aiBusy = false;
   swapDeclined = false;
   selected = [];
+  deploymentMode = false;
   particles = [];
   saveGame();
   showGame();
@@ -204,7 +208,13 @@ function performMove(move, actor = 'human') {
     return;
   }
   selected = [];
-  if (result.move.kind === 'push') {
+  deploymentMode = false;
+  elements.boardFrame.classList.remove('deploy-mode');
+  if (result.move.kind === 'deploy') {
+    playSound('deploy', result.player);
+    buzz('move');
+    showToast('Подкрепление вернулось в строй');
+  } else if (result.move.kind === 'push') {
     elements.boardFrame.classList.remove('push-kick');
     void elements.boardFrame.offsetWidth;
     elements.boardFrame.classList.add('push-kick');
@@ -239,6 +249,7 @@ function maybeAI() {
   if (!game || mode !== 'ai' || game.winner || aiBusy || actorSeat() !== 2) return;
   aiBusy = true;
   selected = [];
+  deploymentMode = false;
   elements.thinkingText.textContent = STYLE_THINKING[aiStyle];
   elements.thinking.classList.remove('hidden');
   render();
@@ -289,6 +300,7 @@ function claimOpening() {
   seatForColor = { 1: seatForColor[2], 2: seatForColor[1] };
   swapDeclined = true;
   selected = [];
+  deploymentMode = false;
   playSound('swap');
   buzz('push');
   saveGame();
@@ -314,12 +326,24 @@ function undo() {
   game.winner = 0;
   game.winReason = '';
   selected = [];
+  deploymentMode = false;
   saveGame();
   render();
 }
 
 function clearSelection() {
   selected = [];
+  deploymentMode = false;
+  elements.boardFrame.classList.remove('deploy-mode');
+  render();
+}
+
+function toggleDeployment(player) {
+  if (!game || !humanCanAct() || game.turn !== player || game.reserve[player] <= 0) return;
+  selected = [];
+  deploymentMode = !deploymentMode;
+  elements.boardFrame.classList.toggle('deploy-mode', deploymentMode);
+  if (deploymentMode) showToast('Выберите подсвеченную клетку домашнего края');
   render();
 }
 
@@ -345,13 +369,19 @@ function render() {
   elements.azureStatus.textContent = statusFor(PLAYER.AZURE);
   elements.ochreStatus.textContent = statusFor(PLAYER.OCHRE);
   elements.azurePieces.textContent = game.cellsFor(PLAYER.AZURE).length;
-  elements.ochrePieces.textContent = game.cellsFor(PLAYER.OCHRE).length;
+  elements.ochrePieces.textContent = game.celsFor(PLAYER.OCHRE).length;
+  elements.azureReserve.textContent = game.reserve[PLAYER.AZURE];
+  elements.ochreReserve.textContent = game.reserve[PLAYER.OCHRE];
+  elements.azureReserveButton.disabled = !humanCanAct() || game.turn !== PLAYER.AZURE || game.reserve[PLAYER.AZURE] <= 0;
+  elements.ochreReserveButton.disabled = !humanCanAct() || game.turn !== PLAYER.OCHRE || game.reserve[PLAYER.OCHRE] <= 0;
+  elements.azureReserveButton.classList.toggle('ready', deploymentMode && game.turn === PLAYER.AZURE);
+  elements.ochreReserveButton.classList.toggle('ready', deploymentMode && game.turn === PLAYER.OCHRE);
   elements.azureStrip.classList.toggle('active', !game.winner && game.turn === PLAYER.AZURE);
   elements.ochreStrip.classList.toggle('active', !game.winner && game.turn === PLAYER.OCHRE);
-  elements.turnLabel.textContent = game.winner ? 'Дуэль окончена' : `Ход ${PLAYER_NAME[game.turn]}`;
+  elements.turnLabel.textContent = game.winner ? 'Дуэль токончена' : `Ход ${PLAYER_NAME[game.turn]}`;
   elements.turnPill.querySelector('.turn-dot').className = `turn-dot ${PLAYER_CLASS[game.turn]}`;
   elements.undoButton.disabled = snapshots.length === 0 || aiBusy;
-  elements.clearButton.disabled = selected.length === 0 || aiBusy;
+  elements.clearButton.disabled = selected.length === 0 && !deploymentMode || aiBusy;
 
   const canSwap = game.canClaimOpening() && !swapDeclined && humanCanAct();
   elements.swapOffer.classList.toggle('hidden', !canSwap);
@@ -369,15 +399,22 @@ function updateCaption() {
     elements.boardCaption.textContent = STYLE_NAMES[aiStyle];
     return;
   }
+  if (!humanCanAct()) {
+    elements.boardCaption.textContent = 'Ждём соперника';
+    return;
+  }
+  if (deploymentMode) {
+    const count = game.deploymentCells(game.turn).length;
+    elements.boardCaption.textContent = count
+      ? `�одкрепление: выберите одну из ${count} клеток домашнего края`
+      : 'Нет поддержанной клетки для возвращения бойца';
+    return;
+  }
   if (game.centerClaim) {
     const isOurs = mode === 'local' || seatForColor[game.centerClaim.player] === 1;
     elements.boardCaption.textContent = isOurs
       ? `Удержите Ось: пережито ${game.centerClaim.replies} из ${game.centerReplies} ответов`
       : `Сорвите Ось: соперник пережил ${game.centerClaim.replies} из ${game.centerReplies} ответов`;
-    return;
-  }
-  if (!humanCanAct()) {
-    elements.boardCaption.textContent = 'Ждём соперника';
     return;
   }
   if (!selected.length) {
@@ -452,6 +489,12 @@ function handlePointer(point) {
     return;
   }
   const key = coordKey(cell);
+  if (deploymentMode) {
+    const move = game.legalMoves().find((candidate) => candidate.kind === 'deploy' && candidate.destinations?.[0] === key);
+    if (move) performMove(move);
+    else showToast('Подкреплению нужна свободная клетка рядом со своим бойцом');
+    return;
+  }
   if (game.valueAt(cell) !== game.turn) {
     clearSelection();
     return;
@@ -548,6 +591,9 @@ function drawBoard(time = performance.now()) {
   ctx.strokeStyle = 'rgba(61,55,45,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
 
   const cells = boardCells(game.radius);
+  const deploymentKeys = deploymentMode && humanCanAct()
+    ? new Set(game.deploymentCells(game.turn).map(coordKey))
+    : new Set();
   ctx.lineWidth = 1;
   for (const cell of cells) {
     const origin = pixelFor(cell);
@@ -567,7 +613,12 @@ function drawBoard(time = performance.now()) {
     drawHex(ctx, pixel.x, pixel.y, size * .45);
     ctx.fillStyle = homeAzure ? 'rgba(49,95,122,.09)' : homeOchre ? 'rgba(182,107,49,.1)' : 'rgba(239,232,218,.42)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(44,47,44,.14)'; ctx.stroke();
+    ctx.strokeStyle = deploymentKeys.has(coordKey(cell)) ? 'rgba(157,122,67,.95)' : 'rgba(44,47,44,.14)';
+    ctx.lineWidth = deploymentKeys.has(coordKey(cell)) ? 3 : 1;
+    ctx.stroke();
+    if (deploymentKeys.has(coordKey(cell))) {
+      ctx.beginPath(); ctx.arc(pixel.x, pixel.y, size * .22, 0, Math.PI * 2); ctx.fillStyle = 'rgba(157,122,67,.28)'; ctx.fill();
+    }
     ctx.beginPath(); ctx.arc(pixel.x, pixel.y, size * .08, 0, Math.PI * 2); ctx.fillStyle = 'rgba(69,63,53,.16)'; ctx.fill();
   }
 
@@ -584,8 +635,9 @@ function drawBoard(time = performance.now()) {
     ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
     for (let index = 0; index < game.centerReplies; index += 1) {
       ctx.beginPath();
-      const start = -Math.PI / 2 + index * Math.PI;
-      ctx.arc(0, 0, size * .7, start, start + (game.centerClaim.replies > index ? .72 : .28) * Math.PI);
+      const segment = Math.PI * 2 / game.centerReplies;
+      const start = -Math.PI / 2 + index * segment;
+      ctx.arc(0, 0, size * .7, start, start + (game.centerClaim.replies > index ? .78 : .3) * segment);
       ctx.stroke();
     }
     ctx.restore();
@@ -593,7 +645,7 @@ function drawBoard(time = performance.now()) {
 
   for (const [key, player] of Object.entries(game.board)) drawPiece(ctx, parseCoordKey(key), player, time);
 
-  if (selected.length && humanCanAct()) {
+  if (selected.length && humanCanAct() && !deploymentMode) {
     const moves = game.legalMovesForSelection(selected.map(parseCoordKey));
     if (moves.length) {
       const pixels = selected.map((key) => pixelFor(parseCoordKey(key)));
@@ -683,7 +735,7 @@ function showResult() {
     elements.resultText.textContent = 'Иногда лучший тактический манёвр — прекратить позор вовремя.';
   } else {
     elements.resultReason.textContent = 'Ось удержана';
-    elements.resultText.textContent = 'Корень в центре с поддержкой пережил два полных ответных хода.';
+    elements.resultText.textContent = 'Корень в центре с четырьмя союзниками пережил три полных ответных хода.';
   }
   openSheet(elements.resultSheet);
 }
@@ -751,6 +803,7 @@ function playSound(kind, player = PLAYER.AZURE) {
   if (kind === 'slide') { tone(base * .82, .12, .026, 'triangle'); tone(base * 1.05, .09, .018, 'sine', .06); }
   if (kind === 'push') { tone(92, .12, .05, 'square'); tone(150, .08, .028, 'triangle', .04); }
   if (kind === 'eject') { tone(72, .2, .07, 'sawtooth'); tone(220, .08, .025, 'triangle', .08); }
+  if (kind === 'deploy') { tone(base * .72, .11, .03, 'triangle'); tone(base * 1.18, .09, .02, 'sine', .055); }
   if (kind === 'claim') { tone(330, .22, .035, 'sine'); tone(495, .25, .025, 'sine', .08); }
   if (kind === 'swap') { tone(150, .12, .03, 'triangle'); tone(230, .13, .03, 'triangle', .08); }
   if (kind === 'win') { [262, 330, 392, 523].forEach((frequency, index) => tone(frequency, .38, .028, 'sine', index * .07)); }
@@ -787,6 +840,8 @@ elements.swapButton.addEventListener('click', claimOpening);
 elements.declineSwapButton.addEventListener('click', declineOpening);
 elements.undoButton.addEventListener('click', undo);
 elements.clearButton.addEventListener('click', clearSelection);
+elements.azureReserveButton.addEventListener('click', () => toggleDeployment(PLAYER.AZURE));
+elements.ochreReserveButton.addEventListener('click', () => toggleDeployment(PLAYER.OCHRE));
 elements.resignButton.addEventListener('click', resign);
 elements.rematchButton.addEventListener('click', () => { closeSheets(); startGame({ alternate: true }); });
 elements.resultHomeButton.addEventListener('click', showStart);

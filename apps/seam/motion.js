@@ -1,3 +1,8 @@
+const reserveStyle = document.createElement('link');
+reserveStyle.rel = 'stylesheet';
+reserveStyle.href = './reserve.css?v=2.2.0';
+document.head.append(reserveStyle);
+
 const boardFrame = document.querySelector('#boardFrame');
 const board = document.querySelector('#boardCanvas');
 const thinking = document.querySelector('#thinking');
