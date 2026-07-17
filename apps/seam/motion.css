@@ -1,0 +1,238 @@
+/* ОСЬ 2.1 — motion layer. Keeps the board visible while the AI thinks. */
+.board-frame {
+  isolation: isolate;
+  perspective: 900px;
+}
+
+/* The old blocking loader becomes a compact, non-interactive HUD chip. */
+.thinking {
+  inset: 10px 10px auto auto !important;
+  width: auto !important;
+  min-width: 176px;
+  max-width: min(72%, 310px);
+  min-height: 34px;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px !important;
+  padding: 7px 11px 7px 9px;
+  border: 1px solid rgba(232, 223, 207, .22);
+  background: rgba(35, 43, 44, .88) !important;
+  color: #f0e8da;
+  box-shadow: 0 8px 24px rgba(27, 31, 31, .18);
+  backdrop-filter: blur(8px) saturate(.9) !important;
+  pointer-events: none;
+  place-content: initial !important;
+  justify-items: initial !important;
+  border-radius: 0;
+  transform-origin: 100% 0;
+  animation: thinking-chip-in .22s cubic-bezier(.2,.8,.25,1) both;
+}
+.thinking.hidden { display: none !important; }
+.thinking i {
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 auto;
+  border-width: 1.5px !important;
+  border-color: rgba(240,232,218,.22) !important;
+  border-top-color: #d7b16d !important;
+  box-shadow: 0 0 0 3px rgba(215,177,109,.06);
+}
+.thinking span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+  letter-spacing: .035em !important;
+}
+@keyframes thinking-chip-in {
+  from { opacity: 0; transform: translateY(-7px) scale(.96); }
+}
+
+.motion-layer {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.motion-layer canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.motion-ghost-old {
+  transform-origin: var(--ghost-x, 50%) var(--ghost-y, 50%);
+  animation: ghost-old-out .38s cubic-bezier(.16,.8,.28,1) both;
+}
+.motion-ghost-new {
+  mix-blend-mode: screen;
+  transform-origin: var(--ghost-x, 50%) var(--ghost-y, 50%);
+  animation: ghost-new-in .42s cubic-bezier(.18,.82,.2,1) both;
+}
+@keyframes ghost-old-out {
+  from { opacity: .72; filter: blur(0); transform: translate(0,0) scale(1); }
+  to { opacity: 0; filter: blur(2px); transform: translate(var(--ghost-dx, 0px), var(--ghost-dy, 0px)) scale(.96); }
+}
+@keyframes ghost-new-in {
+  0% { opacity: 0; filter: blur(5px) brightness(1.55); transform: scale(.88); }
+  48% { opacity: .46; }
+  100% { opacity: 0; filter: blur(0) brightness(1); transform: scale(1.08); }
+}
+
+.front-scan {
+  position: absolute;
+  inset: 7% 5%;
+  opacity: 0;
+  transition: opacity .18s;
+}
+.front-scan::before,
+.front-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(8% 0,92% 0,100% 50%,92% 100%,8% 100%,0 50%);
+  border: 1px solid rgba(215,177,109,.24);
+  background:
+    linear-gradient(115deg, transparent 0 43%, rgba(215,177,109,.13) 48%, transparent 53%) 0 0 / 220% 100% no-repeat;
+  animation: front-scan 1.55s linear infinite;
+}
+.front-scan::after {
+  inset: 8%;
+  opacity: .5;
+  animation-duration: 2.2s;
+  animation-direction: reverse;
+}
+.board-frame.is-thinking .front-scan { opacity: 1; }
+.board-frame.is-thinking #boardCanvas {
+  animation: board-breathe 1.7s ease-in-out infinite;
+}
+@keyframes front-scan { to { background-position: -220% 0; } }
+@keyframes board-breathe { 50% { filter: saturate(1.055) contrast(1.015); } }
+
+.turn-sweep {
+  position: absolute;
+  left: -24%;
+  top: -35%;
+  width: 38%;
+  height: 170%;
+  opacity: 0;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,248,231,.22), transparent);
+}
+.board-frame.turn-transition .turn-sweep { animation: turn-sweep .48s ease-out; }
+@keyframes turn-sweep {
+  0% { opacity: 0; transform: translateX(0) rotate(18deg); }
+  24% { opacity: .72; }
+  100% { opacity: 0; transform: translateX(390%) rotate(18deg); }
+}
+
+.impact-ring {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 2px solid rgba(222,184,116,.82);
+  border-radius: 50%;
+  opacity: 0;
+}
+.impact-ring.play { animation: impact-ring .55s cubic-bezier(.1,.7,.2,1) both; }
+@keyframes impact-ring {
+  0% { opacity: .92; transform: scale(.45); box-shadow: 0 0 0 0 rgba(222,184,116,.3); }
+  100% { opacity: 0; transform: scale(5.4); box-shadow: 0 0 0 13px rgba(222,184,116,0); }
+}
+
+.edge-shard {
+  position: absolute;
+  width: 5px;
+  height: 2px;
+  background: var(--shard-color, #d7b16d);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--shard-color, #d7b16d) 65%, transparent);
+  animation: edge-shard .62s cubic-bezier(.18,.72,.25,1) both;
+}
+@keyframes edge-shard {
+  to { opacity: 0; transform: translate(var(--sx), var(--sy)) rotate(var(--sr)) scale(.2); }
+}
+
+.player-strip {
+  transition: opacity .24s, transform .34s cubic-bezier(.16,.8,.25,1), background-color .3s;
+}
+.player-strip.active {
+  transform: translateX(3px);
+  background: linear-gradient(90deg, rgba(255,255,255,.17), transparent 58%);
+}
+.player-strip.active .player-mark { animation: active-piece .52s cubic-bezier(.18,.8,.25,1); }
+@keyframes active-piece {
+  0% { transform: scale(.78) rotate(-10deg); filter: brightness(1.4); }
+  58% { transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+
+.turn-pill.turn-pulse { animation: turn-pill-pulse .48s ease-out; }
+@keyframes turn-pill-pulse {
+  0% { background: rgba(215,177,109,.24); }
+  100% { background: transparent; }
+}
+
+.player-strip > b.counter-drop { animation: counter-drop .5s cubic-bezier(.18,.8,.25,1); }
+@keyframes counter-drop {
+  0% { transform: translateY(-7px) scale(1.35); color: #9f4d31; }
+  56% { transform: translateY(2px) scale(.93); }
+  100% { transform: none; }
+}
+
+.board-frame.axis-alert::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: clamp(64px, 21vw, 112px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(215,177,109,.38);
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 28px rgba(215,177,109,.14), inset 0 0 18px rgba(215,177,109,.11);
+  pointer-events: none;
+  animation: axis-alert 1.35s ease-in-out infinite;
+}
+@keyframes axis-alert {
+  50% { opacity: .45; transform: translate(-50%,-50%) scale(1.13); }
+}
+
+.board-frame.push-kick { animation: push-kick-rich .34s cubic-bezier(.14,.72,.2,1) !important; }
+@keyframes push-kick-rich {
+  0% { transform: translateX(0) rotateZ(0); filter: contrast(1); }
+  24% { transform: translateX(5px) rotateZ(.18deg); filter: contrast(1.08); }
+  48% { transform: translateX(-3px) rotateZ(-.12deg); }
+  76% { transform: translateX(1px); }
+  100% { transform: none; filter: none; }
+}
+
+@media (max-width: 390px) {
+  .thinking { min-width: 0; max-width: calc(100% - 20px); }
+  .thinking span { max-width: 190px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking,
+  .thinking i,
+  .board-frame.is-thinking #boardCanvas,
+  .front-scan::before,
+  .front-scan::after,
+  .motion-ghost-old,
+  .motion-ghost-new,
+  .turn-sweep,
+  .impact-ring,
+  .edge-shard,
+  .player-strip.active .player-mark,
+  .turn-pill.turn-pulse,
+  .player-strip > b.counter-drop,
+  .board-frame.axis-alert::after,
+  .board-frame.push-kick { animation: none !important; }
+  .front-scan { display: none; }
+}
