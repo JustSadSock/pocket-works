@@ -11,7 +11,7 @@ function seatColorsForStarter(starterSeat) {
 
 export function createGame() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     board: emptyBoard(),
     phase: 'place',
     round: 1,
@@ -25,6 +25,7 @@ export function createGame() {
     pieResolved: false,
     challengeColor: null,
     challengePath: [],
+    challengeCooldownColor: null,
     winnerSeat: null,
     winnerColor: null,
     winPath: [],
@@ -55,11 +56,29 @@ function assertCell(ring, sector) {
   if (!Number.isInteger(sector) || sector < 0 || sector >= SECTORS) throw new Error('Некорректный сектор');
 }
 
+function latestTurn(state) {
+  return [...state.history].reverse().find((entry) => entry.type === 'turn') || null;
+}
+
+export function forbiddenRotation(state) {
+  const previous = latestTurn(state);
+  if (!previous) return null;
+  return { ring: previous.rotatedRing, direction: -previous.direction };
+}
+
+export function isRotationAllowed(state, ring, direction) {
+  if (!Number.isInteger(ring) || ring < 0 || ring >= RINGS) return false;
+  if (direction !== 1 && direction !== -1) return false;
+  const forbidden = forbiddenRotation(state);
+  return !forbidden || forbidden.ring !== ring || forbidden.direction !== direction;
+}
+
 function finishRound(next, color, path) {
   const winnerSeat = seatForColor(next, color);
   next.phase = 'round-over';
   next.challengeColor = null;
   next.challengePath = [];
+  next.challengeCooldownColor = null;
   next.winnerSeat = winnerSeat;
   next.winnerColor = color;
   next.winPath = path;
@@ -72,6 +91,7 @@ function finishDraw(next) {
   next.phase = 'round-over';
   next.challengeColor = null;
   next.challengePath = [];
+  next.challengeCooldownColor = null;
   next.draw = true;
   next.canSwap = false;
   return next;
@@ -109,11 +129,13 @@ export function rotateRing(state, ring, direction) {
   if (!Number.isInteger(ring) || ring < 0 || ring >= RINGS) throw new Error('Некорректное кольцо');
   if (direction !== 1 && direction !== -1) throw new Error('Некорректное направление');
   if (state.phase !== 'rotate' || !state.pendingPlacement) throw new Error('Сначала поставьте камень');
+  if (!isRotationAllowed(state, ring, direction)) throw new Error('Нельзя сразу отменять вращение соперника');
 
   const next = clone(state);
   const actingSeat = next.turnSeat;
   const actingColor = colorForTurn(next);
   const defendingColor = next.challengeColor;
+  const quietTurn = next.challengeCooldownColor === actingColor;
   const placement = { ...next.pendingPlacement };
 
   next.board[ring] = rotateCells(next.board[ring], direction);
@@ -127,7 +149,8 @@ export function rotateRing(state, ring, direction) {
     placed: placement,
     rotatedRing: ring,
     direction,
-    defendedChallenge: defendingColor
+    defendedChallenge: defendingColor,
+    quietTurn
   });
   next.pendingPlacement = null;
   next.winPath = [];
@@ -136,13 +159,14 @@ export function rotateRing(state, ring, direction) {
     const survivingPath = findWinningPath(next.board, defendingColor);
     if (survivingPath.length) return finishRound(next, defendingColor, survivingPath);
 
-    // Защитный ход только отбивает вызов: встречная цепь должна дождаться
-    // следующего обычного хода своего владельца.
     next.challengeColor = null;
     next.challengePath = [];
+    next.challengeCooldownColor = defendingColor;
   } else {
     const path = findWinningPath(next.board, actingColor);
-    if (path.length) {
+    if (quietTurn) {
+      next.challengeCooldownColor = null;
+    } else if (path.length) {
       next.challengeColor = actingColor;
       next.challengePath = path;
     }
@@ -267,12 +291,13 @@ export function findWinningPath(board, color) {
 }
 
 function migrateStoredState(value) {
-  if (value?.schemaVersion === 2) return clone(value);
-  if (value?.schemaVersion !== 1) return null;
+  if (value?.schemaVersion === 3) return clone(value);
+  if (value?.schemaVersion !== 1 && value?.schemaVersion !== 2) return null;
   const migrated = clone(value);
-  migrated.schemaVersion = 2;
-  migrated.challengeColor = null;
-  migrated.challengePath = [];
+  migrated.schemaVersion = 3;
+  if (!Object.hasOwn(migrated, 'challengeColor')) migrated.challengeColor = null;
+  if (!Array.isArray(migrated.challengePath)) migrated.challengePath = [];
+  migrated.challengeCooldownColor = null;
   if (migrated.phase !== 'round-over') migrated.winPath = [];
   return migrated;
 }
@@ -287,6 +312,7 @@ export function validateStoredState(value) {
   if (![0, 1].includes(migrated.turnSeat) || !Array.isArray(migrated.seatColors)) return null;
   if (!Array.isArray(migrated.scores) || migrated.scores.length !== 2) return null;
   if (![null, 0, 1].includes(migrated.challengeColor)) return null;
+  if (![null, 0, 1].includes(migrated.challengeCooldownColor)) return null;
   if (!Array.isArray(migrated.challengePath)) return null;
   return migrated;
 }
