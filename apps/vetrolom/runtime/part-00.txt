@@ -1,0 +1,63 @@
+(()=>{'use strict';
+const NS='pocket-works:vetrolom';
+const SAVE_KEY=`${NS}:save-v1`;
+const SETTINGS_KEY=`${NS}:settings`;
+const W=96,H=96,T=16;
+const TAU=Math.PI*2;
+const $=id=>document.getElementById(id);
+const game=$('game'),ctx=game.getContext('2d',{alpha:false});
+const mini=$('mini'),mctx=mini.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;mctx.imageSmoothingEnabled=false;
+const ui={hud:$('hud'),menu:$('menu'),how:$('how'),inventory:$('inventory'),craft:$('craft'),journal:$('journal'),perk:$('perk'),pause:$('pause'),ending:$('ending'),fatal:$('fatal'),toast:$('toast'),prompt:$('prompt'),objective:$('objective'),objectiveText:$('objectiveText'),regionText:$('regionText'),clockText:$('clockText'),weatherText:$('weatherText'),hpBar:$('hpBar'),hungerBar:$('hungerBar'),warmthBar:$('warmthBar'),staminaBar:$('staminaBar'),hpText:$('hpText'),hungerText:$('hungerText'),warmthText:$('warmthText'),staminaText:$('staminaText'),quickbar:$('quickbar'),touch:$('touchControls'),tabs:$('tabs'),mini};
+const screens=['menu','how','inventory','craft','journal','perk','pause','ending'];
+const tileNames=['ВОДА','БЕРЕГ','ТИХАЯ НИЗИНА','СОСНОВЫЙ БОР','МОКРЫЕ ТОПИ','РЫЖИЕ ПУСТОШИ','БЕЛЫЙ КРАЙ','СТАРЫЕ РУИНЫ'];
+const tileColors=['#284c4c','#8d875f','#52714c','#304f38','#465f4f','#796345','#89988a','#55584e'];
+const ITEMS={wood:['ДРЕВЕСИНА','▥','Сухая древесина для инструментов и лагеря.'],stone:['КАМЕНЬ','◆','Основа инструментов и построек.'],fiber:['ВОЛОКНО','≋','Трава, кора и болотный тростник.'],berry:['ЯГОДЫ','●','Немного еды. Иногда — семена.'],herb:['ТРАВЫ','♣','Горькие лечебные растения.'],seed:['СЕМЕНА','·','Посади на обработанной земле.'],root:['КОРНЕПЛОД','◒','Урожай с грядки. Хорошо насыщает.'],scrap:['СТАРЫЙ ЛОМ','⌗','Остатки погодной машины.'],crystal:['ГРОЗОВОЙ КРИСТАЛЛ','◇','Редкая руда из холодных земель.'],soup:['ПОХЛЁБКА','◉','Горячая еда. Возвращает силы и здоровье.'],campfire:['КОСТЁР','△','Источник тепла и место для готовки.'],bed:['ЛЕЖАНКА','▰','Позволяет переждать ночь.'],chest:['СУНДУК','▣','Хранит основные ресурсы.'],fence:['ОГРАДА','╫','Задерживает ночных тварей.']};
+const TOOLS={hands:{name:'РУКИ',power:1,damage:4},axe:{name:'ТОПОР',power:4,damage:7},pickaxe:{name:'КИРКА',power:4,damage:8},spear:{name:'КОПЬЁ',power:2,damage:13},hoe:{name:'МОТЫГА',power:1,damage:3}};
+const BIOME_DISC={2:['Тихая низина','Мягкая земля, ягоды и редкие деревья. Лучшее место, чтобы вспомнить, как дышать.'],3:['Сосновый бор','Древесины много. Видимости мало. Ночью между стволами кто-то считает твои шаги.'],4:['Мокрые топи','Волокно и лечебные травы растут быстро, а тепло уходит ещё быстрее.'],5:['Рыжие пустоши','Камень, руда и сухой ветер. Воды почти нет, зато горизонт честный.'],6:['Белый край','Холодная земля с грозовыми кристаллами. Без костра здесь долго не протянуть.'],7:['Старые руины','Обломки климатической сети. Лом, ржавчина и очень плохие воспоминания.']};
+const DISCOVERIES=[['first_steps','Первые следы','Ты вошёл в долину и почему-то решил, что это хорошая идея.'],['axe','Топор','Дерево теперь спорит с тобой значительно меньше.'],['pickaxe','Кирка','Камень и редкая руда стали доступнее.'],['spear','Копьё','Ночные твари наконец получили формальный повод держаться подальше.'],['camp','Первый лагерь','Огонь, лежанка и место, которое почти можно назвать домом.'],['farm','Живая земля','Обработанная почва принимает семена даже под сломанным небом.'],['tower1','Первая вышка','Сеть снова услышала один из своих узлов.'],['tower2','Вторая вышка','Ветер меняет направление. Сердце Бури начинает просыпаться.'],['tower3','Третья вышка','Три сигнала сходятся в центре долины.'],['heart','Сердце Бури','Машина остановлена. Долина остаётся дикой, но теперь по собственной воле.']];
+const RECIPES={
+ tools:[
+  {id:'axe',icon:'⌁',name:'КАМЕННЫЙ ТОПОР',desc:'Быстро рубит деревья.',cost:{wood:6,stone:3,fiber:2},tool:'axe'},
+  {id:'pickaxe',icon:'⌃',name:'КАМЕННАЯ КИРКА',desc:'Камень, руда и кристаллы.',cost:{wood:5,stone:7,fiber:2},tool:'pickaxe'},
+  {id:'spear',icon:'†',name:'КОПЬЁ БУРИ',desc:'Длинный удар по ночным тварям.',cost:{wood:7,stone:3,fiber:4},tool:'spear'},
+  {id:'hoe',icon:'┘',name:'МОТЫГА',desc:'Создаёт грядки и сажает семена.',cost:{wood:5,stone:3,fiber:2},tool:'hoe'}],
+ camp:[
+  {id:'campfire',icon:'△',name:'КОСТЁР',desc:'Размести на земле. Греет и открывает готовку.',cost:{wood:8,stone:5},build:'campfire'},
+  {id:'bed',icon:'▰',name:'ЛЕЖАНКА',desc:'Сон до утра, если рядом не воют твари.',cost:{fiber:8,wood:5},build:'bed'},
+  {id:'chest',icon:'▣',name:'СУНДУК',desc:'Одним действием складывает или возвращает ресурсы.',cost:{wood:12,fiber:3},build:'chest'},
+  {id:'fence',icon:'╫',name:'ОГРАДА ×3',desc:'Три секции, которые не пропускают врагов.',cost:{wood:7,fiber:2},build:'fence',amount:3}],
+ food:[
+  {id:'soup',icon:'◉',name:'ПОХЛЁБКА',desc:'Требует костёр рядом. +45 сытости, +12 жизни.',cost:{berry:3,herb:1,root:1},item:'soup'},
+  {id:'seed',icon:'·',name:'СЕМЕНА ×2',desc:'Размять спелые ягоды и выбрать семена.',cost:{berry:2},item:'seed',amount:2},
+  {id:'ration',icon:'◒',name:'СУХОЙ ПАЁК',desc:'Корнеплод и ягоды: простая еда без костра.',cost:{root:1,berry:2},consume:true}]
+};
+const PERKS=[
+ {id:'hardy',icon:'♥',name:'ЖИЛИСТЫЙ',desc:'+20 к максимуму жизни.',apply:s=>{s.player.maxHp+=20;s.player.hp+=20}},
+ {id:'forager',icon:'♣',name:'СБОРЩИК',desc:'+30% добычи с природных ресурсов.',apply:s=>s.perks.gather+=.3},
+ {id:'runner',icon:'↯',name:'ЛЁГКИЙ ШАГ',desc:'+12% скорости и быстрее восстановление сил.',apply:s=>{s.perks.speed+=.12;s.perks.stamina+=.2}},
+ {id:'warm',icon:'△',name:'ТЁПЛАЯ КРОВЬ',desc:'Холод отнимает тепло на 30% медленнее.',apply:s=>s.perks.cold+=.3},
+ {id:'stomach',icon:'◉',name:'ДОЛГИЙ ГОЛОД',desc:'Сытость уходит на 25% медленнее.',apply:s=>s.perks.hunger+=.25},
+ {id:'fighter',icon:'†',name:'ОСТРОЕ ДВИЖЕНИЕ',desc:'+4 урона всеми атаками.',apply:s=>s.perks.damage+=4},
+ {id:'lucky',icon:'◇',name:'ГРОЗОВАЯ УДАЧА',desc:'20% шанс на дополнительный ресурс.',apply:s=>s.perks.luck+=.2}
+];
+let state=null,world=null,running=false,paused=false,last=0,autosave=0,enemyClock=3,miniClock=0,toastTimer=0,confirmNewUntil=0,craftTab='tools';
+let cam={x:0,y:0,shake:0};
+let input={keys:new Set(),stickX:0,stickY:0};
+let enemies=[],particles=[],floaters=[];
+let audioCtx=null;
+let settings=loadSettings();
+
+function loadSettings(){try{return Object.assign({sound:true,haptics:true},JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{return{sound:true,haptics:true}}}
+function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}catch{}updateSettingButtons()}
+function vibrate(pattern){if(settings.haptics&&navigator.vibrate)navigator.vibrate(pattern)}
+function tone(freq=220,d=.07,type='square',gain=.025,slide=0){if(!settings.sound)return;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),audioCtx.currentTime+d);g.gain.setValueAtTime(gain,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+d);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+d)}catch{}}
+function hash(x,y,s){let n=(x*374761393+y*668265263+s*1442695041)|0;n=(n^(n>>>13))*1274126177;n^=n>>>16;return(n>>>0)/4294967295}
+function smooth(t){return t*t*(3-2*t)}
+function noise(x,y,s){const x0=Math.floor(x),y0=Math.floor(y),fx=smooth(x-x0),fy=smooth(y-y0);const a=hash(x0,y0,s),b=hash(x0+1,y0,s),c=hash(x0,y0+1,s),d=hash(x0+1,y0+1,s);return a+(b-a)*fx+(c-a)*fy+((a-b-c+d)*fx*fy)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by)}
+function key(x,y){return `${x},${y}`}
+function randSeed(){return ((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0)||7319}
+function defaultState(seed=randSeed()){
+ return{v:1,seed,created:Date.now(),player:{x:48*T+8,y:56*T+8,dir:'up',hp:100,maxHp:100,hunger:86,warmth:88,stamina:100,maxStamina:100,level:1,xp:0,nextXp:24,tool:'hands',build:null,invuln:0,dash:0,dashX:0,dashY:-1},inventory:{wood:0,stone:0,fiber:0,berry:3,herb:0,seed:2,root:0,scrap:0,crystal:0,soup:0,campfi
