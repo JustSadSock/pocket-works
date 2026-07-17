@@ -2,15 +2,24 @@
   "id": "/apps/seam/",
   "name": "ОСЬ",
   "short_name": "ОСЬ",
-  "description": "Тактическая дуэль формаций, толчков и борьбы за центр.",
+  "description": "Тактическая дуэль формаций, толчков, резерва и борьбы за центр.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#e8dfcf",
   "theme_color": "#e8dfcf",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
