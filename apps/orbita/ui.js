@@ -5,52 +5,58 @@ import { ROMAN } from './board.js';
 const COLOR_NAMES = ['СИНИЙ', 'КРАСНЫЙ'];
 let toastTimer = null;
 
+function required(selector) {
+  const element = document.querySelector(selector);
+  if (!element) throw new Error(`ОРБИТА: отсутствует элемент ${selector}`);
+  return element;
+}
+
 export const dom = {
-  home: document.querySelector('#homeScreen'),
-  game: document.querySelector('#gameScreen'),
-  board: document.querySelector('#board'),
-  aiMatch: document.querySelector('#aiMatchButton'),
-  localMatch: document.querySelector('#localMatchButton'),
-  continueButton: document.querySelector('#continueButton'),
-  continueMeta: document.querySelector('#continueMeta'),
-  rulesButton: document.querySelector('#rulesButton'),
-  settingsButton: document.querySelector('#settingsButton'),
-  rulesDialog: document.querySelector('#rulesDialog'),
-  settingsDialog: document.querySelector('#settingsDialog'),
-  soundToggle: document.querySelector('#soundToggle'),
-  hapticsToggle: document.querySelector('#hapticsToggle'),
-  difficultySelect: document.querySelector('#difficultySelect'),
+  home: required('#homeScreen'),
+  game: required('#gameScreen'),
+  board: required('#board'),
+  aiMatch: required('#aiMatchButton'),
+  localMatch: required('#localMatchButton'),
+  continueButton: required('#continueButton'),
+  continueMeta: required('#continueMeta'),
+  rulesButton: required('#rulesButton'),
+  settingsButton: required('#settingsButton'),
+  rulesDialog: required('#rulesDialog'),
+  settingsDialog: required('#settingsDialog'),
+  soundToggle: required('#soundToggle'),
+  hapticsToggle: required('#hapticsToggle'),
+  difficultySelect: required('#difficultySelect'),
   difficultyButtons: [...document.querySelectorAll('[data-difficulty]')],
-  restartRound: document.querySelector('#restartRoundButton'),
-  resetMatch: document.querySelector('#resetMatchButton'),
-  openRulesFromSettings: document.querySelector('#openRulesFromSettings'),
-  seatPanels: [document.querySelector('#seat0Panel'), document.querySelector('#seat1Panel')],
-  seatNames: [document.querySelector('#seat0Name'), document.querySelector('#seat1Name')],
-  roundNumber: document.querySelector('#roundNumber'),
-  modeBadge: document.querySelector('#modeBadge'),
-  turnStone: document.querySelector('#turnStone'),
-  turnLabel: document.querySelector('#turnLabel'),
-  phaseLabel: document.querySelector('#phaseLabel'),
-  pieBanner: document.querySelector('#pieBanner'),
-  swapButton: document.querySelector('#swapButton'),
-  keepButton: document.querySelector('#keepButton'),
-  rotationPanel: document.querySelector('#rotationPanel'),
+  restartRound: required('#restartRoundButton'),
+  resetMatch: required('#resetMatchButton'),
+  openRulesFromSettings: required('#openRulesFromSettings'),
+  seatPanels: [required('#seat0Panel'), required('#seat1Panel')],
+  seatNames: [required('#seat0Name'), required('#seat1Name')],
+  roundNumber: required('#roundNumber'),
+  modeBadge: required('#modeBadge'),
+  turnStone: required('#turnStone'),
+  turnLabel: required('#turnLabel'),
+  phaseLabel: required('#phaseLabel'),
+  pieBanner: required('#pieBanner'),
+  swapButton: required('#swapButton'),
+  keepButton: required('#keepButton'),
+  rotationPanel: required('#rotationPanel'),
   ringChoices: [...document.querySelectorAll('[data-ring-choice]')],
-  rotateCcw: document.querySelector('#rotateCcw'),
-  rotateCw: document.querySelector('#rotateCw'),
-  selectedRingLabel: document.querySelector('#selectedRingLabel'),
-  gestureHint: document.querySelector('#gestureHint'),
-  lastMove: document.querySelector('#lastMove'),
-  aiStatus: document.querySelector('#aiStatus'),
-  aiStatusText: document.querySelector('#aiStatusText'),
-  result: document.querySelector('#resultOverlay'),
-  resultKicker: document.querySelector('#resultKicker'),
-  resultTitle: document.querySelector('#resultTitle'),
-  resultText: document.querySelector('#resultText'),
-  resultScore: document.querySelector('#resultScore'),
-  nextRound: document.querySelector('#nextRoundButton'),
-  resultHome: document.querySelector('#resultHomeButton'),
-  toast: document.querySelector('#toast')
+  rotateCcw: required('#rotateCcw'),
+  rotateCw: required('#rotateCw'),
+  selectedRingLabel: required('#selectedRingLabel'),
+  gestureHint: required('#gestureHint'),
+  lastMove: required('#lastMove'),
+  aiStatus: required('#aiStatus'),
+  aiStatusText: required('#aiStatusText'),
+  result: required('#resultOverlay'),
+  resultKicker: required('#resultKicker'),
+  resultTitle: required('#resultTitle'),
+  resultText: required('#resultText'),
+  resultScore: required('#resultScore'),
+  nextRound: required('#nextRoundButton'),
+  resultHome: required('#resultHomeButton'),
+  toast: required('#toast')
 };
 
 export function playerName(prefs, seat) {
@@ -71,13 +77,17 @@ export function renderDifficultyControls(prefs) {
     button.setAttribute('aria-pressed', String(button.dataset.difficulty === prefs.difficulty));
   });
   dom.difficultySelect.value = prefs.difficulty;
-  dom.aiMatch.querySelector('small').textContent = `${AI_LEVELS[prefs.difficulty].label.toLowerCase()} · матч до трёх побед`;
+  const subtitle = dom.aiMatch.querySelector('small');
+  if (subtitle) subtitle.textContent = `${AI_LEVELS[prefs.difficulty].label.toLowerCase()} · матч до трёх побед`;
 }
 
 export function renderScore(state, prefs) {
   dom.roundNumber.textContent = String(state.round);
   dom.modeBadge.textContent = prefs.mode === 'ai' ? AI_LEVELS[prefs.difficulty].label : 'НА ДВОИХ';
-  dom.seatNames.forEach((node, seat) => { node.textContent = playerName(prefs, seat); });
+  dom.seatNames.forEach((node, seat) => {
+    node.textContent = playerName(prefs, seat);
+  });
+
   dom.seatPanels.forEach((panel, seat) => {
     panel.dataset.color = String(state.seatColors[seat]);
     panel.classList.toggle('active', state.phase !== 'round-over' && state.turnSeat === seat);
@@ -95,13 +105,17 @@ export function renderScore(state, prefs) {
 export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
   const color = colorForTurn(state);
   dom.turnStone.classList.toggle('color-1', color === 1);
+
   if (state.phase === 'round-over') dom.turnLabel.textContent = 'РАУНД ЗАВЕРШЁН';
   else if (aiThinking || (prefs.mode === 'ai' && state.turnSeat === 1)) dom.turnLabel.textContent = 'ХОД ОРБИТЫ';
   else dom.turnLabel.textContent = `ХОД ${playerName(prefs, state.turnSeat)}`;
 
   if (aiThinking) dom.phaseLabel.textContent = 'ИИ просчитывает вращения';
-  else if (state.phase === 'place') dom.phaseLabel.textContent = state.canSwap ? 'Выберите сторону или поставьте камень' : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
-  else if (state.phase === 'rotate') dom.phaseLabel.textContent = 'Теперь поверните любое кольцо';
+  else if (state.phase === 'place') {
+    dom.phaseLabel.textContent = state.canSwap
+      ? 'Выберите сторону или поставьте камень'
+      : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
+  } else if (state.phase === 'rotate') dom.phaseLabel.textContent = 'Теперь поверните любое кольцо';
   else if (state.draw) dom.phaseLabel.textContent = 'Свободных ячеек не осталось';
   else dom.phaseLabel.textContent = 'Цепь соединяет внутреннее и внешнее кольцо';
 
@@ -164,13 +178,26 @@ export function renderResult(state, prefs) {
       ? 'Машина забрала три раунда. Неприятно, зато честно.'
       : 'Три победы. Матч взят.';
   } else {
-    dom.resultKicker.textContent = 'ЦЕПЬ ЗАМКНУ�(�$	��K��\�[]K�^�۝[�H^Y\��[YJ�Y���[��\�N�K��\�[^�^�۝[�H	���ԗӐSQT���]K��[��\���ܗ_H4a�,�-t`�4/�`4/�b4dt.�4/�`�4,�/t`�`�`4-t/t/t-t,�/�4.�/�.�c4a�,4.�4,�/t-tb4/t-t/4`˘B���K��\�[��ܙK�^�۝[�H	��]K���ܙ\��_H�	��]K���ܙ\��W_X�K��^��[��^�۝[�HX]��X]OOH�[�	�'t'�$�*�&H4'4$4(�)I��	�(t&�%t%4(�+�*t&4&H4(4$4(�'t%	��K��\�[�Y[�H�[�N�]\��	��]K���[�N���]K��[��\��X]N���]K���ܙ\˚��[�	�I�_N���]K��]�XB��^ܝ�[��[ۈ����\�
-Y\��Y�JH�[��˘�X\�[Y[�]
-�\�[Y\�N�K��\��^�۝[�HY\��Y�N�K��\��Y[�H�[�N�\�[Y\�H�[��˜�][Y[�]
+    dom.resultKicker.textContent = 'ЦЕПЬ ЗАМКНУТА';
+    dom.resultTitle.textContent = playerName(prefs, winner);
+    dom.resultText.textContent = `${COLOR_NAMES[state.winnerColor]} цвет прошёл от внутреннего кольца к внешнему.`;
+  }
 
+  dom.resultScore.textContent = `${state.scores[0]} : ${state.scores[1]}`;
+  dom.nextRound.textContent = matchSeat !== null ? 'НОВЫЙ МАТЧ' : 'СЛЕДУЮЩИЙ РАУНД';
+  dom.result.hidden = false;
+  return `${state.round}:${state.winnerSeat}:${state.scores.join('-')}:${state.draw}`;
+}
 
-HO���K��\��Y[�H�YN�KN
-NB��^ܝ�[��[ۈ�[�X[��X[��HY�
-YX[�˛�[�HX[�˜���[�[
+export function openDialog(dialog) {
+  if (!dialog.open) dialog.showModal();
+}
 
-NB
+export function showToast(message) {
+  window.clearTimeout(toastTimer);
+  dom.toast.textContent = message;
+  dom.toast.hidden = false;
+  toastTimer = window.setTimeout(() => {
+    dom.toast.hidden = true;
+  }, 1800);
+}
