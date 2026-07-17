@@ -194,3 +194,40 @@
 @media (prefers-reduced-motion: reduce) {
   .ai-pulse::after { animation: none; }
 }
+
+/* 1.2 — объявленная цепь должна пережить полный ответ. */
+.board .challenge-path {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 11 8;
+  opacity: .78;
+  pointer-events: none;
+  animation: challenge-flow 1.05s linear infinite;
+}
+
+.board .challenge-path.color-0 { stroke: var(--blue); }
+.board .challenge-path.color-1 { stroke: var(--red); }
+.board .board-cell.challenged .stone {
+  stroke-width: 7;
+  animation: challenge-stone .7s ease-in-out infinite alternate;
+}
+
+.board .board-cell.challenged .cell-well {
+  stroke: var(--bronze);
+  stroke-width: 3;
+}
+
+@keyframes challenge-flow {
+  to { stroke-dashoffset: -38; }
+}
+
+@keyframes challenge-stone {
+  to { transform: scale(1.09); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board .challenge-path,
+  .board .board-cell.challenged .stone { animation: none; }
+}

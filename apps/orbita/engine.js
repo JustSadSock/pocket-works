@@ -11,7 +11,7 @@ function seatColorsForStarter(starterSeat) {
 
 export function createGame() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     board: emptyBoard(),
     phase: 'place',
     round: 1,
@@ -23,6 +23,8 @@ export function createGame() {
     pendingPlacement: null,
     canSwap: false,
     pieResolved: false,
+    challengeColor: null,
+    challengePath: [],
     winnerSeat: null,
     winnerColor: null,
     winPath: [],
@@ -35,6 +37,11 @@ export function colorForTurn(state) {
   return state.seatColors[state.turnSeat];
 }
 
+export function seatForColor(state, color) {
+  const seat = state.seatColors.indexOf(color);
+  return seat === -1 ? null : seat;
+}
+
 export function isBoardEmpty(board) {
   return board.every((ring) => ring.every((cell) => cell === null));
 }
@@ -44,12 +51,30 @@ export function boardIsFull(board) {
 }
 
 function assertCell(ring, sector) {
-  if (!Number.isInteger(ring) || ring < 0 || ring >= RINGS) {
-    throw new Error('Некорректное кольцо');
-  }
-  if (!Number.isInteger(sector) || sector < 0 || sector >= SECTORS) {
-    throw new Error('Некорректный сектор');
-  }
+  if (!Number.isInteger(ring) || ring < 0 || ring >= RINGS) throw new Error('Некорректное кольцо');
+  if (!Number.isInteger(sector) || sector < 0 || sector >= SECTORS) throw new Error('Некорректный сектор');
+}
+
+function finishRound(next, color, path) {
+  const winnerSeat = seatForColor(next, color);
+  next.phase = 'round-over';
+  next.challengeColor = null;
+  next.challengePath = [];
+  next.winnerSeat = winnerSeat;
+  next.winnerColor = color;
+  next.winPath = path;
+  next.scores[winnerSeat] += 1;
+  next.canSwap = false;
+  return next;
+}
+
+function finishDraw(next) {
+  next.phase = 'round-over';
+  next.challengeColor = null;
+  next.challengePath = [];
+  next.draw = true;
+  next.canSwap = false;
+  return next;
 }
 
 export function placeStone(state, ring, sector) {
@@ -88,11 +113,11 @@ export function rotateRing(state, ring, direction) {
   const next = clone(state);
   const actingSeat = next.turnSeat;
   const actingColor = colorForTurn(next);
+  const defendingColor = next.challengeColor;
   const placement = { ...next.pendingPlacement };
+
   next.board[ring] = rotateCells(next.board[ring], direction);
-  if (placement.ring === ring) {
-    placement.sector = (placement.sector + direction + SECTORS) % SECTORS;
-  }
+  if (placement.ring === ring) placement.sector = (placement.sector + direction + SECTORS) % SECTORS;
 
   next.history.push({
     type: 'turn',
@@ -101,26 +126,31 @@ export function rotateRing(state, ring, direction) {
     color: actingColor,
     placed: placement,
     rotatedRing: ring,
-    direction
+    direction,
+    defendedChallenge: defendingColor
   });
   next.pendingPlacement = null;
+  next.winPath = [];
 
-  const path = findWinningPath(next.board, actingColor);
-  if (path.length) {
-    next.phase = 'round-over';
-    next.winnerSeat = actingSeat;
-    next.winnerColor = actingColor;
-    next.winPath = path;
-    next.scores[actingSeat] += 1;
-    next.canSwap = false;
-    return next;
+  if (defendingColor !== null) {
+    const survivingPath = findWinningPath(next.board, defendingColor);
+    if (survivingPath.length) return finishRound(next, defendingColor, survivingPath);
+
+    // Защитный ход только отбивает вызов: встречная цепь должна дождаться
+    // следующего обычного хода своего владельца.
+    next.challengeColor = null;
+    next.challengePath = [];
+  } else {
+    const path = findWinningPath(next.board, actingColor);
+    if (path.length) {
+      next.challengeColor = actingColor;
+      next.challengePath = path;
+    }
   }
 
   if (boardIsFull(next.board)) {
-    next.phase = 'round-over';
-    next.draw = true;
-    next.canSwap = false;
-    return next;
+    if (next.challengeColor !== null) return finishRound(next, next.challengeColor, next.challengePath);
+    return finishDraw(next);
   }
 
   next.turnSeat = 1 - next.turnSeat;
@@ -133,9 +163,7 @@ export function rotateRing(state, ring, direction) {
 }
 
 export function swapSides(state) {
-  if (state.phase !== 'place' || !state.canSwap || state.pieResolved) {
-    throw new Error('Обмен сторонами недоступен');
-  }
+  if (state.phase !== 'place' || !state.canSwap || state.pieResolved) throw new Error('Обмен сторонами недоступен');
   const next = clone(state);
   const swappingSeat = next.turnSeat;
   next.seatColors.reverse();
@@ -148,9 +176,7 @@ export function swapSides(state) {
 }
 
 export function declineSwap(state) {
-  if (state.phase !== 'place' || !state.canSwap || state.pieResolved) {
-    throw new Error('Выбор стороны уже сделан');
-  }
+  if (state.phase !== 'place' || !state.canSwap || state.pieResolved) throw new Error('Выбор стороны уже сделан');
   const next = clone(state);
   next.canSwap = false;
   next.pieResolved = true;
@@ -240,13 +266,27 @@ export function findWinningPath(board, color) {
   return [];
 }
 
+function migrateStoredState(value) {
+  if (value?.schemaVersion === 2) return clone(value);
+  if (value?.schemaVersion !== 1) return null;
+  const migrated = clone(value);
+  migrated.schemaVersion = 2;
+  migrated.challengeColor = null;
+  migrated.challengePath = [];
+  if (migrated.phase !== 'round-over') migrated.winPath = [];
+  return migrated;
+}
+
 export function validateStoredState(value) {
-  if (!value || typeof value !== 'object' || value.schemaVersion !== 1) return null;
-  if (!Array.isArray(value.board) || value.board.length !== RINGS) return null;
-  if (!value.board.every((ring) => Array.isArray(ring) && ring.length === SECTORS)) return null;
-  if (!value.board.flat().every((cell) => cell === null || cell === 0 || cell === 1)) return null;
-  if (!['place', 'rotate', 'round-over'].includes(value.phase)) return null;
-  if (![0, 1].includes(value.turnSeat) || !Array.isArray(value.seatColors)) return null;
-  if (!Array.isArray(value.scores) || value.scores.length !== 2) return null;
-  return clone(value);
+  const migrated = migrateStoredState(value);
+  if (!migrated || typeof migrated !== 'object') return null;
+  if (!Array.isArray(migrated.board) || migrated.board.length !== RINGS) return null;
+  if (!migrated.board.every((ring) => Array.isArray(ring) && ring.length === SECTORS)) return null;
+  if (!migrated.board.flat().every((cell) => cell === null || cell === 0 || cell === 1)) return null;
+  if (!['place', 'rotate', 'round-over'].includes(migrated.phase)) return null;
+  if (![0, 1].includes(migrated.turnSeat) || !Array.isArray(migrated.seatColors)) return null;
+  if (!Array.isArray(migrated.scores) || migrated.scores.length !== 2) return null;
+  if (![null, 0, 1].includes(migrated.challengeColor)) return null;
+  if (!Array.isArray(migrated.challengePath)) return null;
+  return migrated;
 }

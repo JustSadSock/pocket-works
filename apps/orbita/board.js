@@ -76,6 +76,7 @@ export function renderBoard(board, state, { canPlace, locked }) {
   board.classList.toggle('phase-rotate', state.phase === 'rotate');
   board.classList.toggle('ai-locked', locked);
   const winnerKeys = new Set(state.winPath.map((cell) => `${cell.ring}:${cell.sector}`));
+  const challengeKeys = new Set(state.challengePath.map((cell) => `${cell.ring}:${cell.sector}`));
 
   board.querySelectorAll('[data-cell]').forEach((cell) => {
     const ring = Number(cell.dataset.ring);
@@ -85,6 +86,7 @@ export function renderBoard(board, state, { canPlace, locked }) {
     cell.classList.toggle('available', value === null && canPlace);
     cell.classList.toggle('pending', Boolean(pending));
     cell.classList.toggle('winner', winnerKeys.has(`${ring}:${sector}`));
+    cell.classList.toggle('challenged', challengeKeys.has(`${ring}:${sector}`));
     cell.setAttribute('aria-disabled', String(!(value === null && canPlace)));
     cell.querySelectorAll('.stone, .stone-core, .stone-shadow').forEach((node) => node.remove());
     if (value !== null) {
@@ -94,7 +96,15 @@ export function renderBoard(board, state, { canPlace, locked }) {
     }
   });
 
-  board.querySelectorAll('.win-path').forEach((node) => node.remove());
+  board.querySelectorAll('.win-path, .challenge-path').forEach((node) => node.remove());
+  if (state.challengePath.length > 1 && state.challengeColor !== null) {
+    const challenge = createSvg('path', {
+      class: `challenge-path color-${state.challengeColor}`,
+      d: winPathData(state.challengePath)
+    });
+    board.insertBefore(challenge, board.querySelector('.center-spindle'));
+  }
+
   if (state.winPath.length > 1 && state.winnerColor !== null) {
     const path = createSvg('path', {
       class: `win-path color-${state.winnerColor}`,

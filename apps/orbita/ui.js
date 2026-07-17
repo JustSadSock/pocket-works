@@ -84,10 +84,7 @@ export function renderDifficultyControls(prefs) {
 export function renderScore(state, prefs) {
   dom.roundNumber.textContent = String(state.round);
   dom.modeBadge.textContent = prefs.mode === 'ai' ? AI_LEVELS[prefs.difficulty].label : 'НА ДВОИХ';
-  dom.seatNames.forEach((node, seat) => {
-    node.textContent = playerName(prefs, seat);
-  });
-
+  dom.seatNames.forEach((node, seat) => { node.textContent = playerName(prefs, seat); });
   dom.seatPanels.forEach((panel, seat) => {
     panel.dataset.color = String(state.seatColors[seat]);
     panel.classList.toggle('active', state.phase !== 'round-over' && state.turnSeat === seat);
@@ -105,19 +102,23 @@ export function renderScore(state, prefs) {
 export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
   const color = colorForTurn(state);
   dom.turnStone.classList.toggle('color-1', color === 1);
-
   if (state.phase === 'round-over') dom.turnLabel.textContent = 'РАУНД ЗАВЕРШЁН';
   else if (aiThinking || (prefs.mode === 'ai' && state.turnSeat === 1)) dom.turnLabel.textContent = 'ХОД ОРБИТЫ';
   else dom.turnLabel.textContent = `ХОД ${playerName(prefs, state.turnSeat)}`;
 
-  if (aiThinking) dom.phaseLabel.textContent = 'ИИ просчитывает вращения';
-  else if (state.phase === 'place') {
-    dom.phaseLabel.textContent = state.canSwap
-      ? 'Выберите сторону или поставьте камень'
-      : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
-  } else if (state.phase === 'rotate') dom.phaseLabel.textContent = 'Теперь поверните любое кольцо';
-  else if (state.draw) dom.phaseLabel.textContent = 'Свободных ячеек не осталось';
-  else dom.phaseLabel.textContent = 'Цепь соединяет внутреннее и внешнее кольцо';
+  const challengeName = state.challengeColor === null ? null : COLOR_NAMES[state.challengeColor].toLowerCase();
+  if (aiThinking) {
+    dom.phaseLabel.textContent = challengeName ? 'ИИ ищет разрыв цепи' : 'ИИ просчитывает вращения';
+  } else if (state.phase === 'place') {
+    dom.phaseLabel.textContent = challengeName
+      ? `Разорвите ${challengeName} цепь за один ход`
+      : state.canSwap
+        ? 'Выберите сторону или поставьте камень'
+        : `Поставьте ${COLOR_NAMES[color].toLowerCase()} камень`;
+  } else if (state.phase === 'rotate') {
+    dom.phaseLabel.textContent = challengeName ? 'Поверните кольцо и разорвите цепь' : 'Теперь поверните любое кольцо';
+  } else if (state.draw) dom.phaseLabel.textContent = 'Поле заполнено без удержанной цепи';
+  else dom.phaseLabel.textContent = 'Цепь выдержала полный ответ соперника';
 
   const showPie = state.canSwap && humanCanAct;
   dom.pieBanner.hidden = !showPie;
@@ -127,7 +128,9 @@ export function renderTurn(state, prefs, { aiThinking, humanCanAct }) {
   }
 
   dom.aiStatus.hidden = !aiThinking;
-  dom.aiStatusText.textContent = `${AI_LEVELS[prefs.difficulty].label} перебирает варианты`;
+  dom.aiStatusText.textContent = state.challengeColor === null
+    ? `${AI_LEVELS[prefs.difficulty].label} перебирает варианты`
+    : `${AI_LEVELS[prefs.difficulty].label} ищет разрыв`;
 }
 
 export function renderRotationControls(state, prefs, { selectedRing, enabled }) {
@@ -143,6 +146,10 @@ export function renderRotationControls(state, prefs, { selectedRing, enabled }) 
 }
 
 export function renderLastMove(state, prefs) {
+  if (state.challengeColor !== null) {
+    dom.lastMove.textContent = `ВЫЗОВ · ${COLOR_NAMES[state.challengeColor]} ЦЕПЬ ДОЛЖНА ПЕРЕЖИТЬ ОТВЕТ`;
+    return;
+  }
   const last = state.history.at(-1);
   if (!last) {
     dom.lastMove.textContent = `Первый ход — у ${playerName(prefs, state.starterSeat).toLowerCase()}`;
@@ -170,7 +177,7 @@ export function renderResult(state, prefs) {
   if (state.draw) {
     dom.resultKicker.textContent = 'РАУНД ЗАВЕРШЁН';
     dom.resultTitle.textContent = 'НИЧЬЯ';
-    dom.resultText.textContent = 'Поле заполнено, но ни одна цепь не дошла до края.';
+    dom.resultText.textContent = 'Поле заполнено, но ни одна цепь не пережила ответ соперника.';
   } else if (matchSeat !== null) {
     dom.resultKicker.textContent = 'МАТЧ ЗАВЕРШЁН';
     dom.resultTitle.textContent = playerName(prefs, matchSeat);
@@ -178,9 +185,9 @@ export function renderResult(state, prefs) {
       ? 'Машина забрала три раунда. Неприятно, зато честно.'
       : 'Три победы. Матч взят.';
   } else {
-    dom.resultKicker.textContent = 'ЦЕПЬ ЗАМКНУТА';
+    dom.resultKicker.textContent = 'ЦЕПЬ УДЕРЖАНА';
     dom.resultTitle.textContent = playerName(prefs, winner);
-    dom.resultText.textContent = `${COLOR_NAMES[state.winnerColor]} цвет прошёл от внутреннего кольца к внешнему.`;
+    dom.resultText.textContent = `${COLOR_NAMES[state.winnerColor]} цепь выдержала полный ход соперника.`;
   }
 
   dom.resultScore.textContent = `${state.scores[0]} : ${state.scores[1]}`;
@@ -189,15 +196,13 @@ export function renderResult(state, prefs) {
   return `${state.round}:${state.winnerSeat}:${state.scores.join('-')}:${state.draw}`;
 }
 
-export function openDialog(dialog) {
-  if (!dialog.open) dialog.showModal();
-}
-
 export function showToast(message) {
   window.clearTimeout(toastTimer);
   dom.toast.textContent = message;
   dom.toast.hidden = false;
-  toastTimer = window.setTimeout(() => {
-    dom.toast.hidden = true;
-  }, 1800);
+  toastTimer = window.setTimeout(() => { dom.toast.hidden = true; }, 1800);
+}
+
+export function openDialog(dialog) {
+  if (!dialog.open) dialog.showModal();
 }
