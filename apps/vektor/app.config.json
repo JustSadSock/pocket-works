@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "vektor",
+  "name": "ВЕКТОР",
+  "shortName": "ВЕКТОР",
+  "description": "Математически выверенная абстрактная дуэль без случайности: скользи по прямой и оставь соперника без хода.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T12:00:00+03:00",
+  "changelog": [
+    "Первый релиз: локальная дуэль и игра против машины на поле 6×6.",
+    "Добавлено правило обмена сторон после дебюта для компенсации первого хода.",
+    "Три уровня AI используют мобильность, контроль территории и поиск ловушек.",
+    "Партия сохраняется локально и полностью работает офлайн после первого запуска."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#2457ff",
+  "backgroundColor": "#f0ede4",
+  "themeColor": "#f0ede4",
+  "orientation": "any",
+  "cacheName": "vektor-v1.0.0",
+  "storageNamespace": "pocket-works:vektor",
+  "tags": ["PWA", "offline", "game", "abstract", "strategy", "pvp", "ai", "perfect-information"],
+  "order": 92
+}

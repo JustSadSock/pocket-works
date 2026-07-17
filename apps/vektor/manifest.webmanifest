@@ -1,0 +1,15 @@
+{
+  "name": "ВЕКТОР — абстрактная дуэль",
+  "short_name": "ВЕКТОР",
+  "description": "Скользи по прямой, уничтожай покинутые клетки и оставь соперника без хода.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f0ede4",
+  "theme_color": "#f0ede4",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f0ede4">
+  <meta name="description" content="ВЕКТОР — чистая абстрактная дуэль: скользи по прямой, уничтожай покинутые клетки и оставь соперника без хода.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ВЕКТОР">
+  <title>ВЕКТОР — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app" id="app" data-app-shell>
+    <section class="screen menu-screen is-active" id="menuScreen" aria-labelledby="appTitle">
+      <header class="menu-index"><span>PW / ABSTRACT 07</span><b>ZERO RANDOMNESS</b></header>
+      <div class="menu-core">
+        <div class="title-lockup">
+          <div class="vector-glyph" aria-hidden="true"><i></i><b></b><em></em></div>
+          <div><p>ОДНА ЛИНИЯ · ОДИН РАЗРЫВ</p><h1 id="appTitle">ВЕКТОР</h1></div>
+        </div>
+        <p class="lead">Скользи по горизонтали, вертикали или диагонали. Клетка позади проваливается навсегда. Побеждает тот, кто оставил соперника без хода.</p>
+        <div class="menu-actions">
+          <button class="action action--primary" id="localButton" type="button" data-native-press><span><b>ДУЭЛЬ НА ОДНОМ ЭКРАНЕ</b><small>два игрока · правило обмена сторон</small></span><i>01</i></button>
+          <button class="action" id="aiButton" type="button" data-native-press><span><b>ПРОТИВ МАШИНЫ</b><small>поиск, территория и ловушки</small></span><i>02</i></button>
+          <button class="action action--resume" id="resumeButton" type="button" hidden data-native-press><span><b>ПРОДОЛЖИТЬ ПОЗИЦИЮ</b><small id="resumeMeta">ход 0 · поле 6×6</small></span><i>↺</i></button>
+        </div>
+      </div>
+      <div class="menu-board" aria-hidden="true">
+        <div class="demo-grid"><i class="demo-piece demo-piece--blue"></i><i class="demo-piece demo-piece--orange"></i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+        <span>36 КЛЕТОК / ДО 34 ХОДОВ / 0 СЛУЧАЙНОСТИ</span>
+      </div>
+      <footer class="menu-footer"><button id="rulesButton" type="button" data-native-press>ПРАВИЛА</button><button id="soundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button><a href="../../" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a></footer>
+    </section>
+
+    <section class="screen setup-screen" id="setupScreen" hidden aria-labelledby="setupTitle">
+      <header class="sheet-head"><button id="setupBackButton" type="button" data-native-press>←</button><div><span id="setupKicker">ДУЭЛЬ</span><h2 id="setupTitle">Настройка матча</h2></div></header>
+      <div class="setup-body">
+        <div class="setup-diagram" aria-hidden="true"><div class="ray ray-a"></div><div class="ray ray-b"></div><i></i><b></b></div>
+        <fieldset id="difficultyField" hidden><legend>Сила машины</legend><div class="segmented" id="difficultyChoices"><button type="button" data-value="impulse" data-native-press><b>Импульс</b><small>ошибается</small></button><button type="button" data-value="vector" class="is-selected" data-native-press><b>Вектор</b><small>основной</small></button><button type="button" data-value="theorem" data-native-press><b>Теорема</b><small>глубокий поиск</small></button></div></fieldset>
+        <fieldset id="firstMoveField" hidden><legend>Первый ход</legend><div class="segmented segmented--two" id="firstMoveChoices"><button type="button" data-value="human" class="is-selected" data-native-press><b>Ты</b><small>за синий</small></button><button type="button" data-value="ai" data-native-press><b>Машина</b><small>ты решаешь обмен</small></button></div></fieldset>
+        <article class="math-note"><span>PIE RULE</span><h3>Первый ход нельзя присвоить бесплатно</h3><p>После дебюта второй игрок может забрать синюю фигуру и отдать оранжевую сопернику. Поэтому первый вынужден ставить честную позицию.</p></article>
+      </div>
+      <button class="start-button" id="startButton" type="button" data-native-press><span>НАЧАТЬ МАТЧ</span><b>→</b></button>
+    </section>
+
+    <section class="screen rules-screen" id="rulesScreen" hidden aria-labelledby="rulesTitle">
+      <header class="sheet-head"><button id="rulesBackButton" type="button" data-native-press>←</button><div><span>ЧЕТЫРЕ ПУНКТА</span><h2 id="rulesTitle">Правила без бухгалтерии</h2></div></header>
+      <div class="rules-stack">
+        <article><span>01</span><div class="rule-icon rule-icon--slide"><i></i><b></b></div><div><h3>Скользи по прямой</h3><p>Фигура идёт на любое число свободных клеток по горизонтали, вертикали или диагонали. Перепрыгивать нельзя.</p></div></article>
+        <article><span>02</span><div class="rule-icon rule-icon--void"><i></i><b></b></div><div><h3>Сжигай мост</h3><p>Клетка, с которой ты ушёл, исчезает для обоих. Каждый ход необратимо меняет геометрию поля.</p></div></article>
+        <article><span>03</span><div class="rule-icon rule-icon--trap"><i></i><b></b><em></em></div><div><h3>Запри соперника</h3><p>Если в начале хода у фигуры нет ни одного направления, её владелец проиграл. Ничьих и циклов нет.</p></div></article>
+        <article><span>04</span><div class="rule-icon rule-icon--swap"><i></i><b></b></div><div><h3>Второй может сменить сторону</h3><p>После первого хода второй выбирает: оставить цвета или забрать синюю позицию. Это режет преимущество дебюта.</p></div></article>
+      </div>
+      <div class="proof-strip"><b>КОНЕЧНОСТЬ</b><span>каждый ход удаляет одну клетку</span><b>≤ 34</b><span>ходов до неизбежного конца</span></div>
+      <button class="start-button" id="rulesPlayButton" type="button" data-native-press><span>К НАСТРОЙКЕ</span><b>→</b></button>
+    </section>
+
+    <section class="screen game-screen" id="gameScreen" hidden>
+      <header class="game-head" data-ui><button class="pause-button" id="pauseButton" type="button" aria-label="Пауза" data-native-press><i></i><i></i></button><div class="turn-block"><span id="turnMeta">ХОД 01</span><strong id="turnLabel">ИГРОК 1 · СИНИЙ</strong></div><div class="mobility-block"><span>ВАРИАНТЫ</span><b id="mobilityValue">0</b></div></header>
+      <div class="board-zone" id="boardZone">
+        <div class="axis axis--x" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span></div>
+        <div class="axis axis--y" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+        <div class="board-shell" id="boardShell"><div class="board" id="board" role="grid" aria-label="Игровое поле ВЕКТОР"></div><button class="piece piece--blue" id="piece0" type="button" aria-label="Синяя фигура"><i></i></button><button class="piece piece--orange" id="piece1" type="button" aria-label="Оранжевая фигура"><i></i></button><div class="drag-target" id="dragTarget" aria-hidden="true"></div></div>
+        <div class="board-legend"><span><i class="legend-blue"></i><b id="blueOwner">ИГРОК 1</b></span><span><i class="legend-orange"></i><b id="orangeOwner">ИГРОК 2</b></span></div>
+      </div>
+      <footer class="game-foot" data-ui><p id="gameHint">Выбери подсвеченную клетку или протяни фигуру по лучу.</p><div class="progress-line"><i id="progressBar"></i></div><span id="positionCode">V00 / 36</span></footer>
+      <div class="thinking" id="thinking" hidden><i></i><span id="thinkingText">МАШИНА СЧИТАЕТ ЛУЧИ</span></div>
+    </section>
+
+    <section class="overlay swap-overlay" id="swapOverlay" hidden aria-labelledby="swapTitle" data-ui><article><span>ПРАВИЛО ОБМЕНА</span><h2 id="swapTitle">Забрать синюю позицию?</h2><p id="swapCopy">Ты станешь владельцем синей фигуры. Следующим ходит тот, кому достанется оранжевая.</p><div class="swap-visual"><i></i><b>⇄</b><em></em></div><button class="overlay-primary" id="acceptSwapButton" type="button" data-native-press>ЗАБРАТЬ СИНЮЮ</button><button id="declineSwapButton" type="button" data-native-press>Оставить стороны</button></article></section>
+    <section class="overlay" id="pauseOverlay" hidden aria-labelledby="pauseTitle" data-ui><article><span>ПОЗИЦИЯ СОХРАНЕНА</span><h2 id="pauseTitle">Пауза</h2><div class="pause-data"><b id="pauseMove">Ход 0</b><b id="pauseMobility">0 вариантов</b></div><button class="overlay-primary" id="continueButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button><button id="restartButton" type="button" data-native-press>Начать заново</button><button id="pauseSoundButton" type="button" data-native-press>Звук: вкл</button><button id="hapticsButton" type="button" data-native-press>Отдача: вкл</button><button id="quitButton" type="button" data-native-press>В главное меню</button><a href="../../" data-shell-exit data-app-control data-native-press>В Pocket Works</a></article></section>
+    <section class="overlay result-overlay" id="resultOverlay" hidden aria-labelledby="resultTitle" data-ui><article><span id="resultKicker">ВЕКТОР ОБОРВАН</span><h2 id="resultTitle">Игрок 1 победил</h2><p id="resultCopy">У соперника не осталось ни одного допустимого луча.</p><div class="result-grid"><div><span>ХОДОВ</span><b id="resultMoves">0</b></div><div><span>ОСТАЛОСЬ ЛУЧЕЙ</span><b id="resultMobility">0</b></div><div><span>ВРЕМЯ</span><b id="resultTime">00:00</b></div></div><button class="overlay-primary" id="againButton" type="button" data-native-press>РЕВАНШ</button><button id="resultSetupButton" type="button" data-native-press>Изменить настройки</button><button id="resultMenuButton" type="button" data-native-press>В главное меню</button></article></section>
+    <section class="overlay" id="confirmOverlay" hidden aria-labelledby="confirmTitle" data-ui><article><span>НЕОБРАТИМО</span><h2 id="confirmTitle">Стереть позицию?</h2><p>Поле вернётся к стартовой симметрии.</p><button class="overlay-primary" id="confirmRestartButton" type="button" data-native-press>СТЕРЕТЬ</button><button id="cancelRestartButton" type="button" data-native-press>Отмена</button></article></section>
+    <section class="overlay" id="errorOverlay" hidden aria-labelledby="errorTitle" data-ui><article><span>СБОЙ ВЫЧИСЛЕНИЯ</span><h2 id="errorTitle">Игра не запустилась</h2><p id="errorCopy">Перезагрузи приложение. Сохранение останется на месте.</p><button class="overlay-primary" id="reloadButton" type="button" data-native-press>ПЕРЕЗАГРУЗИТЬ</button><a href="../../" data-shell-exit data-app-control data-native-press>В Pocket Works</a></article></section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ВЕКТОР" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
