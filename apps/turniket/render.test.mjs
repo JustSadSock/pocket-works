@@ -8,7 +8,8 @@ for (const literal of [
   'fill="${COLORS.tile}"',
   'fill="${targetColor}"',
   'fill="${fill}"',
-  'stroke="${COLORS.gate}"',
+  'const barColor = preview ?',
+  'stroke="${barColor}"',
   'fill="#ffffff"'
 ]) {
   assert.ok(source.includes(literal), `renderer must include literal SVG attribute template: ${literal}`);
