@@ -1,0 +1,82 @@
+/* 1.4 — landmarks, storm readability and final visual cohesion */
+const baseRefreshTarget14=refreshTarget12;
+refreshTarget12=function(dt=0){
+  baseRefreshTarget14(dt);const btn=$('actionBtn'),t=UX12.target;
+  btn?.classList.remove('context-landmark','context-danger');
+  if(t?.kind==='object'&&['wind_shrine','supply_cart','storm_scar','old_camp'].includes(t.ref.type))btn?.classList.add('context-landmark');
+  if(t?.kind==='object'&&t.ref.type==='storm_scar'&&state.player.tool!=='pickaxe')btn?.classList.add('context-danger')
+};
+const baseUpdateVisual14=update;
+update=function(dt){baseUpdateVisual14(dt);if(!state)return;$('app').classList.toggle('lightning-warning',UX14.strikes.some(s=>!s.hit));UX14.landmarkPulse+=dt};
+
+const baseDrawTerrain14=drawTerrain;
+drawTerrain=function(ox,oy,cw,ch){
+  baseDrawTerrain14(ox,oy,cw,ch);const time=performance.now()*.001,w=state.clock.weather;
+  if(w==='clear'||w==='fog'){
+    ctx.save();ctx.globalAlpha=w==='fog'?.035:.022;ctx.fillStyle=w==='fog'?'#d7dfd1':'#26382d';ctx.translate(((time*7)%90)-90,0);ctx.rotate(-.13);
+    for(let i=-2;i<8;i++)ctx.fillRect(i*74,-60,22,ch+150);ctx.restore()
+  }
+};
+
+function drawLandmark14(o,x,y){
+  const used=landmarkUsed14(o),time=performance.now()*.001,pulse=.5+.5*Math.sin(time*2.1+o.x*.01);ctx.save();
+  if(o.type==='wind_shrine'){
+    ctx.fillStyle='#3a403a';ctx.fillRect(x-8,y-3,16,10);ctx.fillStyle='#77786a';ctx.fillRect(x-5,y-19,10,18);ctx.fillStyle=used?'#6a6757':'#d5b964';ctx.fillRect(x-1,y-16,2,9);ctx.fillRect(x-5,y-12,10,2);
+    if(!used){ctx.globalAlpha=.16+.1*pulse;ctx.strokeStyle='#e8ce78';ctx.beginPath();ctx.arc(x,y-11,10+pulse*2,0,TAU);ctx.stroke()}
+  }else if(o.type==='supply_cart'){
+    ctx.fillStyle='#49372a';ctx.fillRect(x-10,y-8,20,9);ctx.fillStyle=used?'#65492e':'#8c6038';ctx.fillRect(x-8,y-12,16,6);ctx.fillStyle='#272a25';ctx.fillRect(x-9,y,5,5);ctx.fillRect(x+4,y,5,5);ctx.fillStyle='#b18a50';ctx.fillRect(x-1,y-10,3,8)
+  }else if(o.type==='storm_scar'){
+    ctx.fillStyle='#272c2b';ctx.fillRect(x-9,y-4,18,8);ctx.fillStyle=used?'#59594f':'#7fa8a3';ctx.fillRect(x-5,y-7,4,5);ctx.fillRect(x+1,y-10,3,8);ctx.fillRect(x+5,y-5,2,4);
+    if(!used){ctx.globalAlpha=.24+.18*pulse;ctx.strokeStyle='#b3ddd6';ctx.beginPath();ctx.arc(x,y-3,8+pulse*3,0,TAU);ctx.stroke()}
+  }else if(o.type==='old_camp'){
+    ctx.fillStyle='#4d3828';ctx.fillRect(x-10,y-3,20,5);ctx.fillStyle='#797858';ctx.fillRect(x-8,y-9,13,7);ctx.fillStyle=used?'#4a4b42':'#b45f43';ctx.fillRect(x+5,y-8,5,5);ctx.fillStyle='#2d302b';ctx.fillRect(x-1,y-12,2,10)
+  }
+  ctx.restore()
+}
+const baseDrawObjects14=drawObjects;
+drawObjects=function(ox,oy,cw,ch){
+  baseDrawObjects14(ox,oy,cw,ch);
+  for(const o of activeObjects())if(['wind_shrine','supply_cart','storm_scar','old_camp'].includes(o.type)){
+    const x=Math.round(o.x+ox),y=Math.round(o.y+oy);if(x>-30&&y>-40&&x<cw+30&&y<ch+40)drawLandmark14(o,x,y)
+  }
+};
+
+const baseDrawStructures14=drawStructures;
+drawStructures=function(ox,oy){
+  baseDrawStructures14(ox,oy);const now=performance.now();
+  for(const s of state.world.structures)if(s.type==='lantern'&&s.chargeAnim&&now-s.chargeAnim<520){
+    const x=Math.round(s.x+ox),y=Math.round(s.y+oy-5),t=clamp((now-s.chargeAnim)/520,0,1);ctx.save();ctx.globalAlpha=1-t;ctx.strokeStyle='#fff0a4';ctx.lineWidth=1;
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(x,y,7+i*6+t*8,0,TAU);ctx.stroke()}ctx.restore()
+  }
+};
+
+const baseDrawEnemies14=drawEnemies;
+drawEnemies=function(ox,oy){
+  baseDrawEnemies14(ox,oy);const time=performance.now()*.001;
+  for(const e of enemies){const x=Math.round(e.x+ox),y=Math.round(e.y+oy);
+    if(e.windup>0){const t=clamp(e.windup/.36,0,1);ctx.save();ctx.globalAlpha=.35+.45*(1-t);ctx.strokeStyle='#e0a36e';ctx.setLineDash([2,2]);ctx.beginPath();ctx.arc(x,y,10+(1-t)*5,0,TAU);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f0c37a';ctx.fillRect(x-2,y-8,4,2);ctx.restore()}
+    if(e.type==='wisp'&&e.boltFlash>0){ctx.save();ctx.globalAlpha=clamp(e.boltFlash/.24,0,1);ctx.fillStyle='#d9f0e5';ctx.fillRect(x-6,y-10,12,12);ctx.strokeStyle='#9bd4cd';ctx.beginPath();ctx.arc(x,y-4,10+Math.sin(time*8)*2,0,TAU);ctx.stroke();ctx.restore()}
+  }
+};
+
+const baseDrawEffects14=drawEffects;
+drawEffects=function(ox,oy){
+  baseDrawEffects14(ox,oy);ctx.save();
+  for(const e of UX14.echoes){ctx.globalAlpha=clamp(e.t/.65,0,.36);ctx.fillStyle=e.type==='wisp'?'#8dc5bf':'#3c342d';const x=Math.round(e.x+ox),y=Math.round(e.y+oy+(1-e.t/.65)*5);ctx.fillRect(x-6,y-6,12,10);ctx.fillRect(x-3,y-10,6,4)}
+  for(const b of UX14.bolts){const x=Math.round(b.x+ox),y=Math.round(b.y+oy),len=Math.hypot(b.vx,b.vy)||1,nx=b.vx/len,ny=b.vy/len;ctx.globalAlpha=clamp(b.t/2.2,0,1);ctx.strokeStyle='#8bc7c1';ctx.beginPath();ctx.moveTo(x-nx*8,y-ny*8);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle='#d9f1e8';ctx.fillRect(x-1,y-1,3,3)}
+  for(const s of UX14.strikes){const x=Math.round(s.x+ox),y=Math.round(s.y+oy);
+    if(!s.hit){const t=clamp(s.t/.92,0,1),r=7+(1-t)*12;ctx.globalAlpha=.28+.52*(1-t);ctx.strokeStyle='#e9d893';ctx.setLineDash([2,2]);ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#e6d59a55';ctx.fillRect(x-1,y-1,3,3)}
+    else{ctx.globalAlpha=clamp(s.t/.34,0,1);ctx.strokeStyle=s.grounded?'#f4df84':'#d9e6db';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+6,y-120);ctx.lineTo(x-3,y-78);ctx.lineTo(x+4,y-51);ctx.lineTo(x-2,y-23);ctx.lineTo(x,y);ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=s.grounded?'#f1ce69':'#a9c9c3';ctx.beginPath();ctx.arc(x,y,8+(1-s.t/.34)*24,0,TAU);ctx.stroke()}
+  }
+  ctx.restore()
+};
+
+const baseRender14=render;
+render=function(){
+  baseRender14();if(!state)return;const dpr=game._dpr||1,cssW=game.width/dpr,cssH=game.height/dpr;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(UX14.flash>0){ctx.fillStyle=`rgba(239,226,180,${UX14.flash*.12})`;ctx.fillRect(0,0,cssW,cssH)}
+  if(UX14.strikes.some(s=>!s.hit)){const vignette=ctx.createRadialGradient(cssW*.5,cssH*.48,cssW*.18,cssW*.5,cssH*.48,Math.max(cssW,cssH)*.68);vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(209,186,115,.075)');ctx.fillStyle=vignette;ctx.fillRect(0,0,cssW,cssH)}
+  ctx.restore()
+};
+
+createUxLayer14();refreshTarget12();
