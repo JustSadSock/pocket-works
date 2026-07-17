@@ -1,0 +1,49 @@
+@media (max-width: 760px) {
+  .game-screen { overflow-y: auto; }
+  .heraldry-stage { grid-template-columns: 1fr; min-height: 430px; padding: 0 8px; }
+  .house-ledger { position: absolute; top: 6px; width: 120px; z-index: 15; background: rgba(230,214,174,.77); padding: 7px; border: 1px solid rgba(67,45,23,.36); }
+  .left-ledger { left: 8px; }
+  .right-ledger { right: 8px; }
+  .house-ledger p { font-size: 13px; }
+  .house-ledger div { font-size: 8px; padding: 3px 0; }
+  .house-ledger b { font-size: 10px; }
+  .armorial { height: 420px; width: min(360px, 100%); }
+  .offer-grid { gap: 5px; padding: 7px; }
+  .element-card { min-height: 202px; padding: 7px 5px; }
+  .element-figure { width: 58px; height: 58px; }
+  .element-card strong { font-size: 16px; }
+  .element-card em { font-size: 11px; }
+  .element-card small { font-size: 7px; }
+  .mini-stats { gap: 5px; font-size: 8px; }
+}
+
+@media (max-width: 480px) {
+  .menu-composition { width: 180px; margin-top: 2vh; }
+  .menu-copy h1 { font-size: 64px; }
+  .menu-copy span { font-size: 17px; }
+  .heraldry-stage { min-height: 390px; }
+  .armorial { transform: scale(.9); transform-origin: center top; margin-bottom: -40px; }
+  .shield-frame { width: 214px; height: 246px; }
+  .house-ledger { top: 0; width: 106px; }
+  .house-ledger p { display: none; }
+  .chronicle-node span { font-size: 7px; }
+  .offer-panel > header { align-items: flex-start; }
+  .offer-panel h2 { font-size: 16px; }
+  .offer-panel header button { max-width: 92px; line-height: 1.2; }
+  .element-card { min-height: 194px; }
+  .element-card strong { font-size: 15px; }
+  .element-card em { font-size: 10px; }
+  .element-card small { min-height: 30px; }
+  .card-type { font-size: 6px; }
+  .selection-bar span { max-width: 48vw; }
+  .codex-grid { grid-template-columns: 1fr; }
+  .command-grid, .patronage-grid { grid-template-columns: 1fr; }
+  .command-grid button { min-height: 72px; }
+  .patronage-card { min-height: 130px; }
+  .ending-stats { grid-template-columns: 1fr 1fr; }
+  .ending-actions { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
