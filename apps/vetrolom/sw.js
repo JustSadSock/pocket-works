@@ -1,14 +1,14 @@
 const CACHE_PREFIX='vetrolom-';
-const CACHE='vetrolom-v1.0.0';
-const VERSION='1.0.0';
+const CACHE='vetrolom-v1.1.0';
+const VERSION='1.1.0';
 const RELEASE_DATE='2026-07-17';
 const RELEASE_NOTES=[
-  'Процедурная долина с шестью биомами, погодой, сменой суток и руинами.',
-  'Выживание, ремесло, строительство лагеря, земледелие и локальные сохранения.',
-  'Три погодные вышки, Сердце Бури, RPG-перки, ночные существа и свободная песочница.'
+  'Приближённая камера с мягким упреждением по направлению движения.',
+  'Переразложенный мобильный HUD без пересечений управления и навигации.',
+  'Новые анимации, погодные эффекты, многослойные звуки и фоновая атмосфера.'
 ];
 const SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
   './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt',
   '../../shared/mobile-runtime.css','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
