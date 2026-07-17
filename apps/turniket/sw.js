@@ -1,19 +1,23 @@
 const CACHE_PREFIX = 'turniket-';
-const CACHE_NAME = 'turniket-v1.0.1';
-const APP_VERSION = '1.0.1';
+const CACHE_NAME = 'turniket-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-17';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Исправлено чёрное игровое поле в WebKit и iOS при первом запуске матча.',
-  'Палитра динамического SVG теперь имеет явный совместимый резервный слой без CSS-переменных.'
+  'Поле полностью переведено на буквальные SVG-цвета и больше не зависит от поддержки CSS-переменных в WebKit.',
+  'Добавлена одиночная игра против ИИ с уровнями Ученик, Стратег и Оракул.',
+  'ИИ умеет двигаться, ставить и разворачивать турникеты, видеть немедленные победы и оценивать лучший ответ игрока.',
+  'Режим, сложность, счёт и незавершённая партия сохраняются офлайн.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
-  './app.js',
+  './ai-mode.css',
+  './app-v2.js',
   './game.js',
+  './ai.js',
   './manifest.webmanifest',
   './icons/icon.svg'
 ];
