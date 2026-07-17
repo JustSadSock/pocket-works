@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#e8dfc8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ШОВ">
+  <title>ШОВ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="screen screen-menu is-active" id="menu-screen" aria-labelledby="app-title">
+      <div class="menu-grain" aria-hidden="true"></div>
+      <header class="menu-top" data-ui>
+        <a class="text-link" href="../../" data-app-control data-native-press>В Pocket Works</a>
+        <button class="icon-button" id="sound-button" type="button" aria-label="Звук" data-native-press>Звук: вкл</button>
+      </header>
+
+      <div class="hero-mark" aria-hidden="true">
+        <svg viewBox="0 0 160 160" role="presentation">
+          <path d="M27 121C50 81 67 52 80 29c13 23 30 52 53 92" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>
+          <path d="M38 75h84M48 97h64" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+          <circle cx="38" cy="75" r="10"/><circle cx="122" cy="75" r="10"/><circle cx="48" cy="97" r="10"/><circle cx="112" cy="97" r="10"/>
+        </svg>
+      </div>
+
+      <div class="menu-copy">
+        <p class="eyebrow">Абстрактная дуэль</p>
+        <h1 id="app-title">ШОВ</h1>
+        <p class="lead">Соедини свои края. Забирай пары в зажим. Два раза за партию можно сдвинуть уже поставленный камень.</p>
+      </div>
+
+      <div class="mode-stack" data-ui>
+        <button class="primary-action" id="play-ai-button" type="button" data-native-press>
+          <span>Против бота</span><small id="persona-caption">Ткач · сбалансированный</small>
+        </button>
+        <button class="secondary-action" id="play-local-button" type="button" data-native-press>
+          <span>Два игрока</span><small>На одном устройстве</small>
+        </button>
+        <div class="menu-row">
+          <button class="text-button" id="rules-button" type="button" data-native-press>Правила</button>
+          <button class="text-button workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        </div>
+      </div>
+
+      <section class="persona-panel" aria-labelledby="persona-title">
+        <div class="panel-heading">
+          <p class="eyebrow" id="persona-title">Характер бота</p>
+          <span>Меняет стиль, не силу правил</span>
+        </div>
+        <div class="persona-grid" id="persona-grid" data-ui></div>
+      </section>
+
+      <footer class="menu-footer">v1.0.0 · офлайн · поле 8×8</footer>
+    </section>
+
+    <section class="screen screen-game" id="game-screen" aria-label="Игровое поле">
+      <header class="game-topbar" data-ui>
+        <button class="text-button" id="pause-button" type="button" data-native-press>Пауза</button>
+        <div class="match-title">
+          <strong id="mode-label">Против Ткача</strong>
+          <span id="round-label">Партия</span>
+        </div>
+        <button class="text-button" id="game-rules-button" type="button" data-native-press>Правила</button>
+      </header>
+
+      <section class="score-ribbon" data-ui>
+        <article class="player-score player-one" id="player-one-card">
+          <div><span class="score-dot"></span><strong id="player-one-name">Ты</strong></div>
+          <small>верх ↕ низ</small>
+          <div class="reserve-line"><span id="p1-shifts">2</span> сдвига · <span id="p1-captures">0</span> снято</div>
+        </article>
+        <div class="turn-needle" aria-live="polite"><span id="turn-text">Твой ход</span></div>
+        <article class="player-score player-two" id="player-two-card">
+          <div><span class="score-dot"></span><strong id="player-two-name">Ткач</strong></div>
+          <small>лево ↔ право</small>
+          <div class="reserve-line"><span id="p2-shifts">2</span> сдвига · <span id="p2-captures">0</span> снято</div>
+        </article>
+      </section>
+
+      <div class="board-wrap" id="board-wrap" data-gesture-surface data-touch-action="none" data-block-callout>
+        <canvas id="board" aria-label="Гексагональное поле 8 на 8"></canvas>
+        <div class="thinking-indicator" id="thinking-indicator" hidden>
+          <span></span><span></span><span></span>
+          <b>Бот ищет шов</b>
+        </div>
+      </div>
+
+      <p class="game-status" id="game-status" aria-live="polite">Поставь камень и начни маршрут.</p>
+
+      <nav class="action-bar" data-ui>
+        <button class="tool-button is-active" id="place-mode-button" type="button" data-native-press>
+          <span class="tool-glyph">●</span><b>Поставить</b><small>Новый камень</small>
+        </button>
+        <button class="tool-button" id="shift-mode-button" type="button" data-native-press>
+          <span class="tool-glyph">↗</span><b>Сдвинуть</b><small id="shift-caption">Осталось 2</small>
+        </button>
+        <button class="claim-button" id="claim-button" type="button" hidden data-native-press>
+          <b>Перехватить</b><small>Забрать первый камень</small>
+        </button>
+      </nav>
+    </section>
+
+    <dialog class="sheet" id="rules-dialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header><div><p class="eyebrow">Как играть</p><h2>Четыре правила</h2></div><button class="close-button" data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+      <ol class="rules-list">
+        <li><b>Соедини края.</b><span>Охра строит путь сверху вниз. Индиго — слева направо. Соседство по шести сторонам гекса.</span></li>
+        <li><b>Зажми ровно пару.</b><span>Два чужих камня между твоими по прямой снимаются. Один или три не снимаются.</span></li>
+        <li><b>Два сдвига.</b><span>Вместо постановки передвинь свой камень в соседнюю пустую клетку. Сдвиг тоже может захватить пару.</span></li>
+        <li><b>Перехват открытия.</b><span>После первого хода второй игрок может перекрасить этот камень в свой цвет и вернуть ход сопернику.</span></li>
+      </ol>
+      <div class="rule-example" aria-hidden="true"><i class="ochre"></i><i class="indigo"></i><i class="indigo"></i><i class="ochre"></i><span>пара снимается</span></div>
+      <button class="primary-action compact" data-close-dialog type="button" data-native-press>Понятно</button>
+    </dialog>
+
+    <dialog class="sheet pause-sheet" id="pause-dialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <p class="eyebrow">Пауза</p><h2>Партия сохранена</h2>
+      <p>Можно закрыть приложение и вернуться позже: позиция останется на месте.</p>
+      <button class="primary-action compact" id="resume-button" type="button" data-native-press>Продолжить</button>
+      <button class="secondary-action compact" id="restart-button" type="button" data-native-press>Начать заново</button>
+      <a class="secondary-action compact link-action" href="../../" data-app-control data-native-press>В Pocket Works</a>
+      <button class="text-button workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </dialog>
+
+    <dialog class="result-sheet" id="result-dialog">
+      <div class="result-emblem" id="result-emblem" aria-hidden="true"></div>
+      <p class="eyebrow" id="result-kicker">Путь замкнут</p>
+      <h2 id="result-title">Победа</h2>
+      <p id="result-copy">Твой шов дошёл до края.</p>
+      <div class="result-stats"><span><b id="result-moves">0</b> ходов</span><span><b id="result-captures">0</b> снято</span><span><b id="result-shifts">0</b> сдвигов</span></div>
+      <button class="primary-action compact" id="rematch-button" type="button" data-native-press>Реванш</button>
+      <button class="secondary-action compact" id="menu-button" type="button" data-native-press>В меню</button>
+      <a class="text-link result-link" href="../../" data-app-control data-native-press>В Pocket Works</a>
+    </dialog>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШОВ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
