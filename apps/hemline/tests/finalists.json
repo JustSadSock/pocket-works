@@ -1,0 +1,52 @@
+[
+  {
+    "name": "FINAL-A-8-exact2-2shift-swap",
+    "size": 8,
+    "shifts": 2,
+    "capture_max": 2,
+    "capture_single": false,
+    "swap": true,
+    "games": 64,
+    "first_win": 0.469,
+    "avg_turns": 35.3,
+    "p90_turns": 55,
+    "avg_caps": 11.31,
+    "avg_shifts": 2.34,
+    "opening_diversity": 1.0,
+    "comeback": 0.297,
+    "style_rates": {
+      "rush": 0.469,
+      "guard": 0.562,
+      "hunter": 0.562,
+      "weaver": 0.406
+    },
+    "style_spread": 0.066,
+    "decision_gap": 285.84,
+    "score": 75.6
+  },
+  {
+    "name": "FINAL-B-7-exact2-3shift-swap",
+    "size": 7,
+    "shifts": 3,
+    "capture_max": 2,
+    "capture_single": false,
+    "swap": true,
+    "games": 64,
+    "first_win": 0.469,
+    "avg_turns": 25.7,
+    "p90_turns": 37,
+    "avg_caps": 6.5,
+    "avg_shifts": 1.75,
+    "opening_diversity": 1.0,
+    "comeback": 0.219,
+    "style_rates": {
+      "rush": 0.469,
+      "guard": 0.562,
+      "hunter": 0.469,
+      "weaver": 0.5
+    },
+    "style_spread": 0.038,
+    "decision_gap": 392.45,
+    "score": 71.6
+  }
+]
