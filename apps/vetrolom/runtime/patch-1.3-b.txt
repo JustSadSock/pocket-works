@@ -1,0 +1,85 @@
+const baseCraft13=craft;
+craft=function(recipe){if(recipe.requiresFire&&!nearbyCampfire(58)){toast('НУЖЕН КОСТЁР РЯДОМ');sfx('soft-error');return}baseCraft13(recipe)};
+renderCraft=function(){
+  if(!state)return;for(const b of document.querySelectorAll('[data-craft-tab]'))b.classList.toggle('active',b.dataset.craftTab===craftTab);
+  const box=$('recipeList');box.innerHTML='';for(const r of RECIPES[craftTab]){
+    const fireOk=!r.requiresFire&&r.id!=='soup'||nearbyCampfire(58),ready=hasCost(r.cost)&&fireOk&&!(r.tool&&state.tools[r.tool]);
+    const b=document.createElement('button');b.className=`recipe ${ready?'ready':''}`;b.innerHTML=`<i>${r.icon}</i><span><b>${r.name}</b><small>${r.desc}</small></span><em>${r.tool&&state.tools[r.tool]?'СОЗДАНО':formatCost(r.cost)}</em>`;b.onclick=()=>craft(r);box.appendChild(b)
+  }
+};
+const baseEat13=eatBest;
+eatBest=function(){
+  if((state.inventory.skewer||0)>0){state.inventory.skewer--;state.player.hunger=Math.min(100,state.player.hunger+30);state.player.warmth=Math.min(100,state.player.warmth+8);state.player.stamina=Math.min(state.player.maxStamina,state.player.stamina+12);sfx('eat');renderInventory();save();return}
+  if((state.inventory.mushroom||0)>0&&(state.inventory.root||0)+(state.inventory.berry||0)+(state.inventory.herb||0)===0){state.inventory.mushroom--;state.player.hunger=Math.min(100,state.player.hunger+7);state.player.hp=Math.max(1,state.player.hp-2);toast('СЫРОЙ ГРИБ. СЪЕДОБНО, НО ЗРЯ.');sfx('eat');renderInventory();save();return}
+  baseEat13()
+};
+
+function canCookCamp13(){return(state.inventory.mushroom||0)>=2&&state.player.hunger<88}
+function daytime13(){const h=state.clock.time/60;return h>5.5&&h<19}
+const baseInteractStructure13=interactStructure;
+interactStructure=function(s){
+  if(s.type==='campfire'&&canCookCamp13()){
+    state.inventory.mushroom-=2;state.player.hunger=Math.min(100,state.player.hunger+22);state.player.warmth=Math.min(100,state.player.warmth+10);state.player.stamina=Math.min(state.player.maxStamina,state.player.stamina+8);s.cookAnim=performance.now();for(let i=0;i<18;i++)particles.push({x:s.x+(Math.random()-.5)*9,y:s.y-6,vx:(Math.random()-.5)*12,vy:-12-Math.random()*20,t:.35+Math.random()*.4,color:i%3?'#d9904f':'#f0c66d',size:1+Math.random()*2});sfx('cook13');vibrate([7,18,7]);whisper13('ГРИБЫ НА УГЛЯХ · СЫТОСТЬ +22');save();return
+  }
+  if(s.type==='bed'&&daytime13()){
+    state.clock.time=Math.min(1140,state.clock.time+75);state.player.stamina=state.player.maxStamina;state.player.hp=Math.min(state.player.maxHp,state.player.hp+8);state.player.warmth=Math.min(100,state.player.warmth+5);state.player.hunger=Math.max(0,state.player.hunger-5);UX13.screenGlow=.32;sfx('rest13');whisper13('КОРОТКИЙ ОТДЫХ · 75 МИНУТ');save();return
+  }
+  if(s.type==='lantern'){
+    s.active=s.active===false;ring(s.x,s.y,s.active?'#e8cf7b':'#6e674e',4,30);sfx('lantern13');vibrate(7);save();return
+  }
+  if(s.type==='chest')s.openAnim=performance.now();baseInteractStructure13(s)
+};
+const baseMeta13=actionMeta12;
+actionMeta12=function(t){
+  if(t?.kind==='object'&&t.ref.type==='spring')return{icon:'≈',label:'НАПИТЬСЯ'};
+  if(t?.kind==='object'&&t.ref.type==='mushroom')return{icon:'◔',label:'СОБРАТЬ'};
+  if(t?.kind==='object'&&t.ref.type==='wildflower')return{icon:'✿',label:'СОРВАТЬ'};
+  if(t?.kind==='object'&&t.ref.type==='fallen_log')return{icon:'⌁',label:state.player.tool==='axe'?'РАЗРУБИТЬ':'РАЗОБРАТЬ'};
+  if(t?.kind==='structure'&&t.ref.type==='campfire')return{icon:canCookCamp13()?'◉':'△',label:canCookCamp13()?'ЖАРИТЬ':'ГРЕТЬСЯ'};
+  if(t?.kind==='structure'&&t.ref.type==='bed')return{icon:'▰',label:daytime13()?'ОТДОХНУТЬ':'СПАТЬ'};
+  if(t?.kind==='structure'&&t.ref.type==='lantern')return{icon:'✧',label:t.ref.active===false?'ЗАЖЕЧЬ':'ПОГАСИТЬ'};
+  return baseMeta13(t)
+};
+const baseRefreshTarget13=refreshTarget12;
+refreshTarget12=function(dt=0){
+  baseRefreshTarget13(dt);const btn=$('actionBtn'),t=UX12.target;btn?.classList.remove('context-warm','context-cook','context-rest','context-light');
+  if(t?.kind==='structure'&&t.ref.type==='campfire')btn?.classList.add(canCookCamp13()?'context-cook':'context-warm');
+  if(t?.kind==='structure'&&t.ref.type==='bed')btn?.classList.add('context-rest');
+  if(t?.kind==='structure'&&t.ref.type==='lantern')btn?.classList.add('context-light')
+};
+const basePlaceBuild13=placeBuild;
+placeBuild=function(){const type=state.player.build,result=basePlaceBuild13();if(result&&type==='lantern'){const s=state.world.structures[state.world.structures.length-1];s.active=true;discover('lantern13');sfx('lantern13')}return result};
+
+function activeLanterns13(){return state.world.structures.filter(s=>s.type==='lantern'&&s.active!==false)}
+const baseUpdateEnemies13=updateEnemies;
+updateEnemies=function(dt){
+  baseUpdateEnemies13(dt);const lights=activeLanterns13();if(!lights.length)return;
+  for(const e of [...enemies])if(e.type==='wisp')for(const lamp of lights){const dx=e.x-lamp.x,dy=e.y-lamp.y,d=Math.hypot(dx,dy)||1;if(d<58){const force=(58-d)/58;e.vx+=(dx/d)*45*force;e.vy+=(dy/d)*45*force;e.hp-=dt*5;if(Math.random()<dt*5)particles.push({x:e.x+(Math.random()-.5)*6,y:e.y+(Math.random()-.5)*6,vx:(dx/d)*9,vy:(dy/d)*9,t:.25,color:'#d7ca7b',size:1});if(e.hp<=0){killEnemy(e);break}}}
+};
+
+const baseUpdate13=update;
+update=function(dt){
+  baseUpdate13(dt);if(!state||paused)return;UX13.windPhase+=dt;UX13.screenGlow=Math.max(0,UX13.screenGlow-dt*.7);
+  const p=state.player;
+  if(p.moving&&p.dash<=0&&dist(p.x,p.y,UX13.lastStepX,UX13.lastStepY)>9){UX13.lastStepX=p.x;UX13.lastStepY=p.y;UX13.footprints.push({x:p.x,y:p.y+6,dir:p.dir,t:5.5})}
+  for(const f of UX13.footprints)f.t-=dt;UX13.footprints=UX13.footprints.filter(f=>f.t>0).slice(-34);
+  for(const o of UX13.lootOrbs){o.t+=dt;if(o.delay>0){o.delay-=dt;continue}const dx=p.x-o.x,dy=p.y-7-o.y,d=Math.hypot(dx,dy)||1;o.vx+=(dx/d)*180*dt;o.vy+=(dy/d)*180*dt;o.vx*=Math.pow(.08,dt);o.vy*=Math.pow(.08,dt);o.x+=o.vx*dt;o.y+=o.vy*dt;if(d<5)o.t=99}
+  UX13.lootOrbs=UX13.lootOrbs.filter(o=>o.t<2.3&&o.t!==99);
+  UX13.ambientTimer-=dt;if(UX13.ambientTimer<=0){UX13.ambientTimer=4.5+Math.random()*7;playBiomeAmbience13()}
+  UX13.heartbeat-=dt;if(p.hp/p.maxHp<.28&&UX13.heartbeat<=0){UX13.heartbeat=.9;tone(62,.09,'sine',.014,-8);tone(56,.1,'sine',.009,-5,.12)}
+  const tile=tileAtPx(p.x,p.y);if(tile!==UX13.biome){UX13.biome=tile;if(tile>=2)whisper13(tileNames[tile])}
+  ui.hud.classList.toggle('low-health',p.hp/p.maxHp<.28);ui.hud.classList.toggle('low-warmth',p.warmth<25);$('app').classList.toggle('night-lit',isNight());$('app').classList.toggle('storm-lit',state.clock.weather==='storm');
+  if(!UX13.bird&&Math.random()<dt*.015&&!isNight()&&state.clock.weather==='clear')UX13.bird={x:-30,y:40+Math.random()*120,v:55+Math.random()*35,t:7};
+  if(UX13.bird){UX13.bird.x+=UX13.bird.v*dt;UX13.bird.t-=dt;if(UX13.bird.t<=0||UX13.bird.x>innerWidth+40)UX13.bird=null}
+};
+function playBiomeAmbience13(){
+  if(!settings.sound||!state)return;const tile=tileAtPx(state.player.x,state.player.y),w=state.clock.weather;
+  if(w==='storm'){noiseSfx(.22,.008,480);if(Math.random()<.24)tone(48,.5,'sine',.008,20);return}
+  if(w==='rain'){noiseSfx(.16,.005,980);return}
+  if(tile===3){noiseSfx(.11,.004,520);if(Math.random()<.35)tone(135,.16,'sine',.005,-35)}
+  else if(tile===4){tone(210+Math.random()*40,.035,'sine',.004,-20);tone(150,.05,'triangle',.003,35,.08)}
+  else if(tile===5){noiseSfx(.18,.004,360)}
+  else if(tile===6){tone(420,.22,'sine',.004,-160)}
+  else if(tile===7){if(Math.random()<.5)tone(92,.16,'triangle',.004,20);else noiseSfx(.08,.004,680)}
+  else if(Math.random()<.42)tone(640+Math.random()*160,.035,'sine',.003,-80)
+}

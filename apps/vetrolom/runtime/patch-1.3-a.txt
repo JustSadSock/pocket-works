@@ -1,0 +1,132 @@
+/* 1.3 — living valley, denser content, richer feedback and contextual camp actions */
+const UX13={
+  pickupOrigin:null,lootOrbs:[],footprints:[],ambientTimer:1.5,heartbeat:0,biome:-1,
+  windPhase:0,bird:null,screenGlow:0,lastStepX:0,lastStepY:0
+};
+
+ITEMS.mushroom=['ЛЕСНОЙ ГРИБ','◔','Сырой гриб. Лучше поджарить у костра.'];
+ITEMS.resin=['СМОЛА','◆','Редкая древесная смола для света и механизмов.'];
+ITEMS.skewer=['ГРИБЫ НА УГЛЯХ','◉','Тёплая еда с дымным запахом.'];
+ITEMS.lantern=['ШТОРМОВОЙ ФОНАРЬ','✧','Светит в непогоду и отталкивает грозовых духов.'];
+if(!RECIPES.food.some(r=>r.id==='skewer'))RECIPES.food.unshift({id:'skewer',icon:'◉',name:'ГРИБЫ НА УГЛЯХ',desc:'Быстрая еда. Требует костёр рядом.',cost:{mushroom:2,wood:1},item:'skewer',requiresFire:true});
+if(!RECIPES.camp.some(r=>r.id==='lantern'))RECIPES.camp.push({id:'lantern',icon:'✧',name:'ШТОРМОВОЙ ФОНАРЬ',desc:'Освещает лагерь и отталкивает грозовых духов.',cost:{wood:5,scrap:2,resin:2,crystal:1},build:'lantern'});
+if(!DISCOVERIES.some(d=>d[0]==='forage13'))DISCOVERIES.push(
+  ['forage13','Тихая пища','Грибы, цветы и валежник делают долину менее пустой — и немного менее голодной.'],
+  ['spring13','Чистый источник','Под камнем всё ещё течёт вода, которую машина не успела испортить.'],
+  ['lantern13','Штормовой фонарь','Кристалл удерживает мягкий свет и не нравится грозовым духам.']
+);
+
+function createUxLayer13(){
+  let feed=document.querySelector('.loot-feed');
+  if(!feed){feed=document.createElement('div');feed.className='loot-feed';feed.setAttribute('aria-live','polite');$('app').appendChild(feed)}
+  let whisper=document.querySelector('.biome-whisper');
+  if(!whisper){whisper=document.createElement('div');whisper.className='biome-whisper';$('app').appendChild(whisper)}
+  return{feed,whisper}
+}
+const uxLayer13=createUxLayer13();
+
+function showLoot13(id,n){
+  if(!n||!ITEMS[id])return;
+  const note=document.createElement('div');note.className='loot-note';note.innerHTML=`<i>${ITEMS[id][1]}</i><span><b>+${n}</b> ${ITEMS[id][0]}</span>`;
+  uxLayer13.feed.prepend(note);
+  while(uxLayer13.feed.children.length>4)uxLayer13.feed.lastElementChild.remove();
+  setTimeout(()=>note.classList.add('out'),1450);setTimeout(()=>note.remove(),1760)
+}
+function whisper13(text){uxLayer13.whisper.textContent=text;uxLayer13.whisper.classList.remove('show');void uxLayer13.whisper.offsetWidth;uxLayer13.whisper.classList.add('show')}
+function spawnLootOrbs13(id,n,origin){
+  const count=Math.min(6,Math.max(1,n));
+  for(let i=0;i<count;i++)UX13.lootOrbs.push({
+    x:(origin?.x??state.player.x)+(Math.random()-.5)*8,
+    y:(origin?.y??state.player.y-8)+(Math.random()-.5)*6,
+    vx:(Math.random()-.5)*22,vy:-18-Math.random()*18,t:0,delay:i*.035,
+    color:id==='mushroom'?'#d8a98b':id==='resin'?'#e4b85d':id==='crystal'?'#9bd0ca':id==='wood'?'#9b7049':'#d7c98e'
+  })
+}
+const baseAddItem13=addItem;
+addItem=function(id,n){
+  state.inventory[id]=(state.inventory[id]||0)+n;
+  if(n>0){showLoot13(id,n);spawnLootOrbs13(id,n,UX13.pickupOrigin);sfx('pickup')}
+};
+
+const baseSfx13=sfx;
+sfx=function(name){
+  if(!settings.sound)return;
+  if(name==='pickup'){tone(520,.045,'triangle',.009,120);return}
+  if(name==='forage'){noiseSfx(.055,.012,1180);tone(310,.065,'triangle',.012,45);return}
+  if(name==='water13'){noiseSfx(.24,.014,1250);tone(310,.2,'sine',.009,-70);return}
+  if(name==='cook13'){noiseSfx(.16,.018,560);tone(190,.09,'triangle',.014,90);tone(315,.12,'triangle',.011,80,.08);return}
+  if(name==='rest13'){tone(210,.28,'sine',.01,-95);tone(155,.32,'sine',.008,-50,.11);return}
+  if(name==='lantern13'){tone(145,.22,'sine',.013,180);tone(290,.28,'triangle',.012,170,.08);return}
+  if(name==='resin13'){tone(390,.09,'triangle',.012,110);tone(610,.08,'sine',.009,-90,.06);return}
+  if(name==='rare13'){tone(260,.12,'triangle',.016,190);tone(520,.2,'sine',.012,220,.08);return}
+  baseSfx13(name)
+};
+
+const baseGenerateWorld13=generateWorld;
+generateWorld=function(seed){
+  const w=baseGenerateWorld13(seed);let extra=0;
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
+    const t=w.tiles[y*W+x],r=hash(x,y,seed+1301);if(t<2||dist(x,y,48,56)<5)continue;
+    let type=null;
+    if((t===3||t===4)&&r<.013)type='mushroom';
+    else if((t===2||t===3)&&r>.985)type='fallen_log';
+    else if((t===2||t===4)&&r>.973&&r<.98)type='wildflower';
+    if(type){const px=x*T+8+(hash(x,y,seed+1302)-.5)*4,py=y*T+8+(hash(x,y,seed+1303)-.5)*4;if(!w.objects.some(o=>dist(o.x,o.y,px,py)<10)){w.objects.push({id:`v13_${type}_${x}_${y}`,type,x:px,y:py});extra++}}
+  }
+  const springCandidates=[[24,28],[66,34],[29,73],[81,61],[55,84],[13,52]];
+  for(let i=0;i<springCandidates.length;i++){
+    let [sx,sy]=springCandidates[i];let found=null;
+    for(let r=0;r<9&&!found;r++)for(let oy=-r;oy<=r&&!found;oy++)for(let ox=-r;ox<=r&&!found;ox++){
+      const x=clamp(sx+ox,2,W-3),y=clamp(sy+oy,2,H-3),t=w.tiles[y*W+x];
+      if(t>=2&&t!==7&&!w.objects.some(o=>dist(o.x/T,o.y/T,x,y)<1.2))found=[x,y]
+    }
+    if(found){const [x,y]=found;w.objects.push({id:`v13_spring_${i}`,type:'spring',x:x*T+8,y:y*T+8})}
+  }
+  return w
+};
+
+const baseObjectRadius13=objectRadius;
+objectRadius=function(o){if(o.type==='spring')return 7;if(o.type==='fallen_log')return 7;if(o.type==='mushroom'||o.type==='wildflower')return 3;return baseObjectRadius13(o)};
+const baseStructureRadius13=structureRadius;
+structureRadius=function(s){if(s.type==='lantern')return 5;return baseStructureRadius13(s)};
+const basePlacementRadius13=placementRadius12;
+placementRadius12=function(type){if(type==='lantern')return 4;return basePlacementRadius13(type)};
+const baseGhost13=drawGhostStructure12;
+drawGhostStructure12=function(target,x,y,valid){
+  if(target.type!=='lantern'){baseGhost13(target,x,y,valid);return}
+  ctx.save();ctx.globalAlpha=.48;ctx.fillStyle=valid?'#f3d98e':'#c45d4e';ctx.fillRect(x-4,y-7,8,11);ctx.fillRect(x-1,y-14,2,8);ctx.fillRect(x-6,y+3,12,2);ctx.restore()
+};
+
+const baseAffinity13=objectAffinity12;
+objectAffinity12=function(o){
+  if(o.type==='spring')return-18;
+  if(o.type==='mushroom'||o.type==='wildflower')return state.player.tool==='hands'?-16:4;
+  if(o.type==='fallen_log')return state.player.tool==='axe'?-16:state.player.tool==='hands'?-4:8;
+  return baseAffinity13(o)
+};
+
+function collectSmall13(o){
+  if(state.player.stamina<2){toast('НЕТ СИЛ');return}
+  state.player.stamina-=2;state.player.attackAnim=.16;cam.kick=.025;UX13.pickupOrigin={x:o.x,y:o.y};
+  if(o.type==='mushroom'){addItem('mushroom',1+(hash(cellOf12(o.x),cellOf12(o.y),state.seed+1310)>.72?1:0));particleBurst(o.x,o.y,'#c99a79',7);discover('forage13')}
+  if(o.type==='wildflower'){addItem('herb',1);if(Math.random()<.35)addItem('fiber',1);particleBurst(o.x,o.y,'#d2bd72',7);discover('forage13')}
+  if(o.type==='fallen_log'){addItem('wood',state.player.tool==='axe'?4:2);if(Math.random()<.55)addItem('fiber',1);if(state.player.tool==='axe'&&Math.random()<.35){addItem('resin',1);sfx('resin13')}particleBurst(o.x,o.y,'#8c6544',10);discover('forage13')}
+  UX13.pickupOrigin=null;state.world.removed.push(o.id);ring(o.x,o.y,'#d9c98c',3,25);sfx(o.type==='fallen_log'?'wood':'forage');vibrate(7);gainXp(1);save()
+}
+function useSpring13(o){
+  state.world.springDays??={};const used=state.world.springDays[o.id]===state.clock.day;
+  UX13.pickupOrigin={x:o.x,y:o.y};
+  if(!used){state.world.springDays[o.id]=state.clock.day;state.player.stamina=Math.min(state.player.maxStamina,state.player.stamina+42);state.player.warmth=Math.min(100,state.player.warmth+8);state.player.hp=Math.min(state.player.maxHp,state.player.hp+5);discover('spring13');showLoot13('herb',0);whisper13('ХОЛОДНАЯ ВОДА · СИЛЫ ВОЗВРАЩЕНЫ');save()}
+  else{state.player.stamina=Math.min(state.player.maxStamina,state.player.stamina+8);whisper13('ИСТОЧНИКУ НУЖНО ВРЕМЯ')}
+  UX13.pickupOrigin=null;for(let i=0;i<14;i++)particles.push({x:o.x+(Math.random()-.5)*12,y:o.y+(Math.random()-.5)*5,vx:(Math.random()-.5)*10,vy:-8-Math.random()*12,t:.35+Math.random()*.35,color:'#9ec8c2',size:1+Math.random()*1.5});ring(o.x,o.y,'#a5d1ca',4,26);sfx('water13');vibrate(5)
+}
+const baseInteractObject13=interactObject;
+interactObject=function(o){
+  if(o.type==='spring'){useSpring13(o);return}
+  if(o.type==='mushroom'||o.type==='wildflower'||o.type==='fallen_log'){collectSmall13(o);return}
+  const wasRemoved=state.world.removed.includes(o.id);UX13.pickupOrigin={x:o.x,y:o.y};baseInteractObject13(o);const removedNow=!wasRemoved&&state.world.removed.includes(o.id);
+  if(removedNow&&o.type==='tree'&&state.player.tool==='axe'&&hash(cellOf12(o.x),cellOf12(o.y),state.seed+state.clock.day*17)>.72){addItem('resin',1);sfx('resin13')}
+  UX13.pickupOrigin=null
+};
+const baseKillEnemy13=killEnemy;
+killEnemy=function(e){UX13.pickupOrigin={x:e.x,y:e.y};baseKillEnemy13(e);UX13.pickupOrigin=null};
