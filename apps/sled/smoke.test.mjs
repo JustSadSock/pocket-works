@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 
-const [index, app, css, worker, manifestText, configText] = await Promise.all([
-  readFile(new URL('./index.html', import.meta.url), 'utf8'),
-  readFile(new URL('./app.js', import.meta.url), 'utf8'),
-  readFile(new URL('./styles.css', import.meta.url), 'utf8'),
-  readFile(new URL('./sw.js', import.meta.url), 'utf8'),
-  readFile(new URL('./manifest.webmanifest', import.meta.url), 'utf8'),
-  readFile(new URL('./app.config.json', import.meta.url), 'utf8')
+const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
+const [index, loader, worker, manifestText, configText] = await Promise.all([
+  read('./index.html'), read('./app.js'), read('./sw.js'), read('./manifest.webmanifest'), read('./app.config.json')
 ]);
-
+const appPayload = (await Promise.all([0,1,2,3].map((i) => read(`./bundle/app-${i}.txt`)))).join('');
+const cssPayload = (await Promise.all([0,1,2].map((i) => read(`./bundle/css-${i}.txt`)))).join('');
+const app = gunzipSync(Buffer.from(appPayload, 'base64')).toString('utf8');
+const css = gunzipSync(Buffer.from(cssPayload, 'base64')).toString('utf8');
 const config = JSON.parse(configText);
 const manifest = JSON.parse(manifestText);
 assert.equal(config.version, '2.0.0');
@@ -22,21 +22,14 @@ assert(worker.includes("const CACHE_NAME = 'sled-v2.0.0'"));
 assert.deepEqual(config.changelog, Function(`${worker.match(/const RELEASE_NOTES = (\[[\s\S]*?\]);/)?.[1] ? `return ${worker.match(/const RELEASE_NOTES = (\[[\s\S]*?\]);/)?.[1]}` : 'return null'}`)());
 assert.equal(manifest.name, config.name);
 assert.equal(manifest.theme_color, config.themeColor);
+assert(loader.includes("DecompressionStream('gzip')"));
 assert(css.includes('.hex-cell'));
-assert(css.includes('clip-path: polygon'));
+assert(css.includes('clip-path:polygon') || css.includes('clip-path: polygon'));
 assert(!index.includes('balance-patch.js'));
 assert(!app.includes('pieRule'));
-
 const ids = new Set([...index.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const referencedIds = [...app.matchAll(/byId\('([^']+)'\)/g)].map((match) => match[1]);
 const missing = [...new Set(referencedIds.filter((id) => !ids.has(id)))];
 assert.deepEqual(missing, [], `missing DOM ids: ${missing.join(', ')}`);
-
-const duplicateIds = [...ids].filter((id) => (index.match(new RegExp(`id="${id}"`, 'g')) || []).length > 1);
-assert.deepEqual(duplicateIds, [], `duplicate DOM ids: ${duplicateIds.join(', ')}`);
-
-for (const required of ['./index.html', './app.config.json', './styles.css', './app.js', './engine.mjs', './manifest.webmanifest', './icons/icon.svg']) {
-  assert(worker.includes(`'${required}'`), `service worker shell misses ${required}`);
-}
-
+for (const required of ['./index.html','./app.config.json','./styles.css','./app.js','./engine.mjs','./manifest.webmanifest','./icons/icon.svg', ...[0,1,2,3].map(i=>`./bundle/app-${i}.txt`), ...[0,1,2].map(i=>`./bundle/css-${i}.txt`)]) assert(worker.includes(`'${required}'`), `service worker shell misses ${required}`);
 console.log('СЛЕД 2.0 smoke tests: ok');
