@@ -1,0 +1,62 @@
+re:0,bed:0,chest:0,fence:0},tools:{hands:true,axe:false,pickaxe:false,spear:false,hoe:false},world:{removed:[],damage:{},structures:[],soil:[],towerStates:{t1:false,t2:false,t3:false},won:false},clock:{day:1,time:480,weather:'clear',weatherLeft:130},stats:{kills:0,steps:0,crafted:0,harvests:0},discoveries:['first_steps'],biomes:[2],perks:{gather:0,speed:0,stamina:0,cold:0,hunger:0,damage:0,luck:0},meta:{playSeconds:0}};
+}
+function generateWorld(seed){
+ const tiles=new Uint8Array(W*H),objects=[];
+ const ruinCenters=[[18,72],[77,22],[76,76],[48,44]];
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  let h=noise(x*.075,y*.075,seed)+noise(x*.19,y*.19,seed+9)*.25;
+  const m=noise(x*.06+20,y*.06-4,seed+33),temp=1-y/H+noise(x*.035,y*.035,seed+51)*.25;
+  let t=2;if(h<.28)t=0;else if(h<.34)t=1;else if(temp<.24)t=6;else if(m>.68)t=4;else if(m>.51)t=3;else if(m<.3)t=5;
+  for(const [rx,ry] of ruinCenters)if(Math.hypot(x-rx,y-ry)<8+hash(rx,ry,seed)*4&&h>=.32)t=7;
+  tiles[y*W+x]=t;
+ }
+ function paintLand(cx,cy,r,t=2){for(let y=Math.max(0,cy-r);y<=Math.min(H-1,cy+r);y++)for(let x=Math.max(0,cx-r);x<=Math.min(W-1,cx+r);x++)if(Math.hypot(x-cx,y-cy)<=r)tiles[y*W+x]=t}
+ paintLand(48,56,7,2);paintLand(16,18,4,7);paintLand(79,22,4,7);paintLand(73,78,4,7);paintLand(48,44,6,7);
+ let id=0;
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+  const t=tiles[y*W+x],r=hash(x,y,seed+101);if(t<2||dist(x,y,48,56)<6)continue;
+  if([[16,18],[79,22],[73,78],[48,44]].some(p=>dist(x,y,p[0],p[1])<4))continue;
+  let type=null;
+  if(t===2){if(r<.055)type='tree';else if(r<.13)type='bush';else if(r<.17)type='herb';else if(r<.185)type='rock'}
+  if(t===3){if(r<.2)type='tree';else if(r<.235)type='bush';else if(r<.255)type='herb'}
+  if(t===4){if(r<.11)type='reed';else if(r<.16)type='herb';else if(r<.19)type='bush';else if(r<.205)type='tree'}
+  if(t===5){if(r<.11)type='rock';else if(r<.145)type='ore';else if(r<.16)type='bush'}
+  if(t===6){if(r<.1)type='rock';else if(r<.14)type='crystal';else if(r<.165)type='tree'}
+  if(t===7){if(r<.075)type='scrap';else if(r<.125)type='rock';else if(r<.145)type='tree'}
+  if(type)objects.push({id:`o${id++}`,type,x:x*T+8+(hash(x,y,seed+3)-.5)*5,y:y*T+8+(hash(x,y,seed+4)-.5)*5});
+ }
+ const starter=[['tree',43,56],['tree',53,58],['rock',45,51],['rock',51,62],['bush',44,61],['bush',54,54],['herb',50,50],['reed',55,60]];
+ for(const [type,x,y] of starter)objects.push({id:`o${id++}`,type,x:x*T+8,y:y*T+8});
+ objects.push({id:'t1',type:'tower',x:16*T+8,y:18*T+8},{id:'t2',type:'tower',x:79*T+8,y:22*T+8},{id:'t3',type:'tower',x:73*T+8,y:78*T+8},{id:'heart',type:'heart',x:48*T+8,y:44*T+8});
+ return{tiles,objects,seed};
+}
+function getSave(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const s=JSON.parse(raw);if(!s||s.v!==1||!s.player||!s.world)return null;return s}catch{return null}}
+function save(show=false){if(!state)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));if(show)toast('ДОЛИНА СОХРАНЕНА')}catch(e){toast('СОХРАНЕНИЕ НЕ ПОМЕСТИЛОСЬ');console.error(e)}}
+function removeSave(){try{localStorage.removeItem(SAVE_KEY)}catch{}}
+function hasSave(){return!!getSave()}
+function showScreen(id){for(const s of screens)$(s).classList.toggle('hidden',s!==id);const gameUi=id==='';ui.hud.classList.toggle('hidden',!gameUi);ui.quickbar.classList.toggle('hidden',!gameUi);ui.touch.classList.toggle('hidden',!gameUi);ui.tabs.classList.toggle('hidden',!gameUi);ui.objective.classList.toggle('hidden',!gameUi);ui.mini.classList.toggle('hidden',!gameUi);if(id)paused=id!=='menu'&&id!=='how';else paused=false}
+function enterGame(s){state=s;world=generateWorld(state.seed);enemies=[];particles=[];floaters=[];running=true;paused=false;cam.x=state.player.x;cam.y=state.player.y;showScreen('');updateAllUI();discoverBiome();last=performance.now();requestAnimationFrame(loop);tone(164,.13,'triangle',.035,80)}
+function newGame(){removeSave();enterGame(defaultState())}
+function continueGame(){const s=getSave();if(s)enterGame(s);else newGame()}
+function menu(){running=false;paused=true;showScreen('menu');refreshMenu()}
+function refreshMenu(){const s=getSave();$('continueBtn').hidden=!s;if(s){$('menuDays').textContent=Math.max(0,s.clock.day-1);$('menuTowers').textContent=`${Object.values(s.world.towerStates).filter(Boolean).length}/3`;$('menuLevel').textContent=s.player.level}else{$('menuDays').textContent='0';$('menuTowers').textContent='0/3';$('menuLevel').textContent='1'}}
+function toast(text){ui.toast.textContent=text;ui.toast.classList.add('show');toastTimer=2.2}
+function floater(x,y,text,color='#f0d58b'){floaters.push({x,y,text,color,t:1})}
+function particleBurst(x,y,color,n=8){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*38,vy:(Math.random()-.8)*38,t:.45+Math.random()*.35,color,size:1+Math.random()*2})}
+function tileAtPx(px,py){const x=Math.floor(px/T),y=Math.floor(py/T);if(x<0||y<0||x>=W||y>=H)return 0;return world.tiles[y*W+x]}
+function isLand(px,py){return tileAtPx(px,py)>=1}
+function activeObjects(){const removed=new Set(state.world.removed);return world.objects.filter(o=>!removed.has(o.id))}
+function objectRadius(o){return o.type==='tree'?7:o.type==='tower'?11:o.type==='heart'?13:o.type==='rock'||o.type==='ore'||o.type==='crystal'?6:4}
+function structureRadius(s){return s.type==='fence'?7:s.type==='campfire'?5:8}
+function blocked(px,py,forEnemy=false){if(!isLand(px,py))return true;for(const o of world.objects){if(state.world.removed.includes(o.id))continue;if(['tree','rock','ore','crystal','tower','heart'].includes(o.type)&&dist(px,py,o.x,o.y)<objectRadius(o)+5)return true}for(const s of state.world.structures){if(s.type==='campfire'||s.type==='soil')continue;if(dist(px,py,s.x,s.y)<structureRadius(s)+5)return true}return false}
+function moveEntity(e,dx,dy){const nx=e.x+dx,ny=e.y+dy;if(!blocked(nx,e.y,e.enemy)){e.x=nx}if(!blocked(e.x,ny,e.enemy)){e.y=ny}}
+function facingVector(){const d=state.player.dir;return d==='left'?[-1,0]:d==='right'?[1,0]:d==='down'?[0,1]:[0,-1]}
+function updateDirection(x,y){if(Math.abs(x)>Math.abs(y))state.player.dir=x<0?'left':'right';else if(Math.abs(y)>.1)state.player.dir=y<0?'up':'down'}
+function doDash(){if(!running||paused||state.player.dash>0||state.player.stamina<24)return;const [fx,fy]=facingVector();state.player.dash=.2;state.player.dashX=fx;state.player.dashY=fy;state.player.invuln=.35;state.player.stamina-=24;for(let i=0;i<5;i++)particles.push({x:state.player.x-fx*i*2,y:state.player.y-fy*i*2,vx:0,vy:0,t:.3,color:'#d7c992',size:3});tone(330,.09,'sawtooth',.025,-180);vibrate(12)}
+function nearbyCampfire(radius=48){return state.world.structures.some(s=>s.type==='campfire'&&dist(state.player.x,state.player.y,s.x,s.y)<radius)}
+function nearStructure(radius=25){let best=null,bd=radius;for(const s of state.world.structures){const d=dist(state.player.x,state.player.y,s.x,s.y);if(d<bd){bd=d;best=s}}return best}
+function nearObject(radius=27){let best=null,bd=radius;for(const o of world.objects){if(state.world.removed.includes(o.id))continue;const d=dist(state.player.x,state.player.y,o.x,o.y);if(d<bd){bd=d;best=o}}return best}
+function nearEnemy(radius=34){let best=null,bd=radius;for(const e of enemies){const d=dist(state.player.x,state.player.y,e.x,e.y);if(d<bd){bd=d;best=e}}return best}
+function soilAt(tx,ty){return state.world.soil.find(s=>s.x===tx&&s.y===ty)}
+function doAction(){if(!running||paused)return;const p=state.player;if(p.build){placeBuild();return}const enemy=nearEnemy(p.tool==='spear'?42:29);if(enemy){attack(enemy);return}const o=nearObject();if(o){interactObject(o);return}const s=nearStructure();if(s){interactStructure(s);return}if(p.tool==='hoe'){farmAction();return}attack(null)}
+function attack(target){const p=state.player;if(p.stamina<6){toast('НЕТ СИЛ НА УДАР');return}p.stamina-=6;const [fx,fy]=facingVector();const range=p.tool==='spear'?38:25,damage=(TOOLS[p.tool]?.damage||4)+state.perks.damage;tone(p.tool==='spear'?150:95,.07,'square',.025,60);let hits=0;for(const e of enemies){const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);if(d>range)continue;const dot=(dx/d)*fx+(dy/d)*fy;if(dot>.05){e.hp-=damage;e.hit=.18;e.vx=fx*45;e.vy=fy*45;floater(e.x,e.y,`-${Math.round(damage)}`,'#ef9d77');particleBurst(e.x,e.y,'#b85f4b',6);hits++;if(e.hp<=0)killEnemy(e)}}if(!hits){particles.push({x:p.x+fx*15,y:p.y+fy*15,vx:fx*15,vy:fy*15,t:.15,colo
