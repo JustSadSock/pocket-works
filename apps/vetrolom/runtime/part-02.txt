@@ -1,23 +1,45 @@
-r:'#e8d18d',size:3})}vibrate(hits?[18,20,8]:6)}
-function killEnemy(e){const i=enemies.indexOf(e);if(i>=0)enemies.splice(i,1);state.stats.kills++;addItem(e.type==='wisp'?'crystal':'fiber',1);gainXp(e.type==='wisp'?12:8);tone(70,.16,'sawtooth',.035,-30);particleBurst(e.x,e.y,e.type==='wisp'?'#91c8c3':'#7d6c4c',14)}
-function resourceInfo(type){return{
- tree:{need:'axe',hp:state.player.tool==='axe'?2:7,loot:{wood:[4,7],fiber:[0,2]}},rock:{need:'pickaxe',hp:state.player.tool==='pickaxe'?2:9,loot:{stone:[4,7]}},ore:{need:'pickaxe',hp:3,strict:true,loot:{stone:[2,4],scrap:[1,2]}},crystal:{need:'pickaxe',hp:4,strict:true,loot:{stone:[1,3],crystal:[1,2]}},bush:{hp:1,loot:{berry:[2,4],seed:[0,1]}},herb:{hp:1,loot:{herb:[1,3],fiber:[0,1]}},reed:{hp:1,loot:{fiber:[2,4],herb:[0,1]}},scrap:{hp:1,loot:{scrap:[1,3],stone:[0,1]}}
- }[type]}
-function interactObject(o){if(o.type==='tower'){repairTower(o);return}if(o.type==='heart'){activateHeart();return}const info=resourceInfo(o.type);if(!info)return;const tool=state.player.tool;if(info.strict&&tool!==info.need){toast(`НУЖЕН ${TOOLS[info.need].name}`);tone(70,.07,'square',.02);vibrate(20);return}if(state.player.stamina<4){toast('НЕТ СИЛ');return}state.player.stamina-=4;const required=info.hp;const hits=(state.world.damage[o.id]||0)+1;state.world.damage[o.id]=hits;particleBurst(o.x,o.y,o.type==='tree'?'#77563a':'#8a8876',4);tone(o.type==='tree'?100:150,.05,'square',.025,25);cam.shake=2;floater(o.x,o.y,`${hits}/${required}`,'#d9cc9d');if(hits<required)return;state.world.removed.push(o.id);delete state.world.damage[o.id];for(const [item,range] of Object.entries(info.loot)){let n=range[0]+Math.floor(Math.random()*(range[1]-range[0]+1));n=Math.max(0,Math.round(n*(1+state.perks.gather)));if(Math.random()<state.perks.luck)n++;if(n)addItem(item,n)}gainXp(2);particleBurst(o.x,o.y,o.type==='tree'?'#596f45':'#b0a37b',10);updateObjective();save()}
-function addItem(id,n){state.inventory[id]=(state.inventory[id]||0)+n;if(n>0)floater(state.player.x,state.player.y-12,`+${n} ${ITEMS[id]?.[0]||id}`)}
-function hasCost(cost){return Object.entries(cost).every(([id,n])=>(state.inventory[id]||0)>=n)}
-function payCost(cost){for(const [id,n] of Object.entries(cost))state.inventory[id]-=n}
-function formatCost(cost){return Object.entries(cost).map(([id,n])=>`${ITEMS[id]?.[0]||id} ${n}`).join(' · ')}
-function repairTower(o){const repaired=state.world.towerStates[o.id];if(repaired){toast('ВЫШКА УЖЕ РАБОТАЕТ');return}const cost={wood:8,stone:6,fiber:4,scrap:2};if(!hasCost(cost)){toast(`НУЖНО: ${formatCost(cost)}`);return}payCost(cost);state.world.towerStates[o.id]=true;const count=towerCount();discover(`tower${count}`);gainXp(30);particleBurst(o.x,o.y,'#e3bf68',30);tone(90,.6,'sawtooth',.04,420);vibrate([20,30,20,30,50]);toast(`ВЫШКА ${count}/3 ВОССТАНОВЛЕНА`);updateObjective();save()}
-function towerCount(){return Object.values(state.world.towerStates).filter(Boolean).length}
-function activateHeart(){if(towerCount()<3){toast(`СЕТЬ МОЛЧИТ: ВЫШКИ ${towerCount()}/3`);return}if(state.world.won){toast('СЕРДЦЕ БУРИ УЖЕ СПИТ');return}state.world.won=true;discover('heart');gainXp(60);save();showEnd(true)}
-function interactStructure(s){if(s.type==='campfire'){state.player.warmth=Math.min(100,state.player.warmth+12);toast('ОГОНЬ ВОЗВРАЩАЕТ ТЕПЛО');tone(120,.12,'triangle',.02,60);return}if(s.type==='bed'){const hour=state.clock.time/60;if(hour<19&&hour>5){toast('СЛИШКОМ РАНО СПАТЬ');return}if(enemies.some(e=>dist(e.x,e.y,s.x,s.y)<100)){toast('РЯДОМ ТВАРИ');return}state.clock.day++;state.clock.time=420;state.player.hp=Math.min(state.player.maxHp,state.player.hp+40);state.player.hunger=Math.max(15,state.player.hunger-18);state.player.warmth=85;enemies=[];growCrops();toast('ТЫ ПРОСПАЛ ДО УТРА');tone(180,.25,'sine',.02,-80);save();return}if(s.type==='chest'){s.store??={};const stored=Object.values(s.store).some(Boolean);const ids=['wood','stone','fiber','scrap','crystal'];if(stored){for(const id of ids){addItem(id,s.store[id]||0);s.store[id]=0}toast('СУНДУК ОПУСТОШЁН')}else{let any=false;for(const id of ids){const n=state.inventory[id]||0;if(n){s.store[id]=n;state.inventory[id]=0;any=true}}toast(any?'РЕСУРСЫ УБРАНЫ В СУНДУК':'НЕЧЕГО СКЛАДЫВАТЬ')}save()}}
-function farmAction(){const [fx,fy]=facingVector(),tx=Math.floor((state.player.x+fx*T)/T),ty=Math.floor((state.player.y+fy*T)/T);if(tx<0||ty<0||tx>=W||ty>=H||world.tiles[ty*W+tx]<2){toast('ЗДЕСЬ НЕ ПОЛУЧИТСЯ ГРЯДКА');return}const soil=soilAt(tx,ty);if(!soil){state.world.soil.push({x:tx,y:ty,planted:false,day:0});discover('farm');toast('ЗЕМЛЯ ОБРАБОТАНА');particleBurst(tx*T+8,ty*T+8,'#765333',8);tone(90,.08,'square',.02);save();return}if(!soil.planted){if((state.inventory.seed||0)<1){toast('НУЖНЫ СЕМЕНА');return}state.inventory.seed--;soil.planted=true;soil.day=state.clock.day;toast('СЕМЕНА ПОСАЖЕНЫ');save();return}if(state.clock.day-soil.day>=2){soil.planted=false;addItem('root',3+Math.floor(Math.random()*3));addItem('seed',1);state.stats.harvests++;toast('УРОЖАЙ СОБРАН');tone(360,.12,'triangle',.03,120);save()}else toast(`ДО УРОЖАЯ: ${2-(state.clock.day-soil.day)} ДН.`)}
-function growCrops(){for(const s of state.world.soil)if(s.planted&&state.clock.day-s.day>=2){} }
-function placeBuild(){const p=state.player,type=p.build;if((state.inventory[type]||0)<1){p.build=null;toast('ПОСТРОЙКА ЗАКОНЧИЛАСЬ');return}const [fx,fy]=facingVector(),x=Math.floor((p.x+fx*T*1.45)/T)*T+8,y=Math.floor((p.y+fy*T*1.45)/T)*T+8;if(!isLand(x,y)||blocked(x,y)){toast('ЗДЕСЬ НЕТ МЕСТА');vibrate(20);return}if(state.world.structures.some(s=>dist(x,y,s.x,s.y)<18)){toast('СЛИШКОМ БЛИЗКО К ДРУГОЙ ПОСТРОЙКЕ');return}state.inventory[type]--;state.world.structures.push({id:`s${Date.now()}${Math.random()}`,type,x,y,store:{}});particleBurst(x,y,type==='campfire'?'#e2a44e':'#9a7348',16);tone(110,.18,'square',.035,100);vibrate([15,25,15]);if(type==='campfire')discover('camp');toast(`${ITEMS[type][0]} УСТАНОВЛЕН`);if((state.inventory[type]||0)<=0)p.build=null;updateObjective();save()}
-function gainXp(n){const p=state.player;p.xp+=n;while(p.xp>=p.nextXp){p.xp-=p.nextXp;p.level++;p.nextXp=Math.round(p.nextXp*1.42+8);openPerk();break}}
-function openPerk(){paused=true;const picks=[...PERKS].sort(()=>Math.random()-.5).slice(0,3);const box=$('perkGrid');box.innerHTML='';for(const perk of picks){const b=document.createElement('button');b.className='perk-card';b.innerHTML=`<i>${perk.icon}</i><b>${perk.name}</b><small>${perk.desc}</small>`;b.onclick=()=>{perk.apply(state);tone(280,.3,'triangle',.04,320);vibrate([20,30,40]);showScreen('');updateAllUI();save()};box.appendChild(b)}showScreen('perk')}
-function discover(id){if(!state.discoveries.includes(id)){state.discoveries.push(id);toast(`ЗАПИСЬ В ЖУРНАЛЕ: ${DISCOVERIES.find(d=>d[0]===id)?.[1]||id}`)}}
-function discoverBiome(){const t=tileAtPx(state.player.x,state.player.y);if(t>=2&&!state.biomes.includes(t)){state.biomes.push(t);toast(`ОТКРЫТО: ${tileNames[t]}`);tone(240,.18,'triangle',.025,120)}ui.regionText.textContent=tileNames[t]||'ДОЛИНА'}
-function craft(recipe){if(recipe.tool&&state.tools[recipe.tool]){toast('УЖЕ СОЗДАНО');return}if(recipe.id==='soup'&&!nearbyCampfire(58)){toast('НУЖЕН КОСТЁР РЯДОМ');return}if(!hasCost(recipe.cost)){toast(`НЕ ХВАТАЕТ: ${formatCost(recipe.cost)}`);return}payCost(recipe.cost);if(recipe.tool){state.tools[recipe.tool]=true;state.player.tool=recipe.tool;discover(recipe.tool)}else if(recipe.build){state.inventory[recipe.build]=(state.inventory[recipe.build]||0)+(recipe.amount||1);state.player.build=recipe.build;toast(`ВЫБЕРИ МЕСТО: ${ITEMS[recipe.build][0]}`);showScreen('')}else if(recipe.consume){state.player.hunger=Math.min(100,state.player.hunger+32);state.player.hp=Math.min(state.player.maxHp,state.player.hp+4)}else addItem(recipe.item,recipe.amount||1);state.stats.crafted++;gainXp(4);tone(190,.18,'square',.03,160);vibrate(12);renderCraft();updateQuickbar();save()}
-function eatBest(){const p=state.player;if((state.inventory.soup||0)>0){state.inventory.soup--;p.hunger=Math.min(100,p.hunger+45);p.hp=Math.min(p.maxHp,p.hp+12);p.warmth=Math.min(100,p.warmth+10);toast('ГОРЯЧАЯ ПОХЛЁБКА')}else if((state.inventory.root||0)>0){state.inventory.root--;p.hunger=Math.min(100,p.hunger+22);toast('СЫРОЙ КОРНЕПЛОД. БЫВАЛО ХУЖЕ')}else if((state.inventory.berry||0)>0){state.inventory.berry--;p.hunger=Math.min
+  for(const [rx,ry] of ruinCenters)if(Math.hypot(x-rx,y-ry)<8+hash(rx,ry,seed)*4&&h>=.32)t=7;
+  tiles[y*W+x]=t;
+ }
+ function paintLand(cx,cy,r,t=2){for(let y=Math.max(0,cy-r);y<=Math.min(H-1,cy+r);y++)for(let x=Math.max(0,cx-r);x<=Math.min(W-1,cx+r);x++)if(Math.hypot(x-cx,y-cy)<=r)tiles[y*W+x]=t}
+ paintLand(48,56,7,2);paintLand(16,18,4,7);paintLand(79,22,4,7);paintLand(73,78,4,7);paintLand(48,44,6,7);
+ let id=0;
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+  const t=tiles[y*W+x],r=hash(x,y,seed+101);if(t<2||dist(x,y,48,56)<6)continue;
+  if([[16,18],[79,22],[73,78],[48,44]].some(p=>dist(x,y,p[0],p[1])<4))continue;
+  let type=null;
+  if(t===2){if(r<.055)type='tree';else if(r<.13)type='bush';else if(r<.17)type='herb';else if(r<.185)type='rock'}
+  if(t===3){if(r<.2)type='tree';else if(r<.235)type='bush';else if(r<.255)type='herb'}
+  if(t===4){if(r<.11)type='reed';else if(r<.16)type='herb';else if(r<.19)type='bush';else if(r<.205)type='tree'}
+  if(t===5){if(r<.11)type='rock';else if(r<.145)type='ore';else if(r<.16)type='bush'}
+  if(t===6){if(r<.1)type='rock';else if(r<.14)type='crystal';else if(r<.165)type='tree'}
+  if(t===7){if(r<.075)type='scrap';else if(r<.125)type='rock';else if(r<.145)type='tree'}
+  if(type)objects.push({id:`o${id++}`,type,x:x*T+8+(hash(x,y,seed+3)-.5)*5,y:y*T+8+(hash(x,y,seed+4)-.5)*5});
+ }
+ const starter=[['tree',43,56],['tree',53,58],['rock',45,51],['rock',51,62],['bush',44,61],['bush',54,54],['herb',50,50],['reed',55,60]];
+ for(const [type,x,y] of starter)objects.push({id:`o${id++}`,type,x:x*T+8,y:y*T+8});
+ objects.push({id:'t1',type:'tower',x:16*T+8,y:18*T+8},{id:'t2',type:'tower',x:79*T+8,y:22*T+8},{id:'t3',type:'tower',x:73*T+8,y:78*T+8},{id:'heart',type:'heart',x:48*T+8,y:44*T+8});
+ return{tiles,objects,seed};
+}
+function getSave(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const s=JSON.parse(raw);if(!s||s.v!==1||!s.player||!s.world)return null;return s}catch{return null}}
+function save(show=false){if(!state)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));if(show)toast('ДОЛИНА СОХРАНЕНА')}catch(e){toast('СОХРАНЕНИЕ НЕ ПОМЕСТИЛОСЬ');console.error(e)}}
+function removeSave(){try{localStorage.removeItem(SAVE_KEY)}catch{}}
+function hasSave(){return!!getSave()}
+function showScreen(id){for(const s of screens)$(s).classList.toggle('hidden',s!==id);const gameUi=id==='';ui.hud.classList.toggle('hidden',!gameUi);ui.quickbar.classList.toggle('hidden',!gameUi);ui.touch.classList.toggle('hidden',!gameUi);ui.tabs.classList.toggle('hidden',!gameUi);ui.objective.classList.toggle('hidden',!gameUi);ui.mini.classList.toggle('hidden',!gameUi);if(id)paused=id!=='menu'&&id!=='how';else paused=false;if(id&&id!=='menu')sfx('panel')}
+function enterGame(s){state=s;world=generateWorld(state.seed);enemies=[];particles=[];floaters=[];rings=[];running=true;paused=false;cam.x=state.player.x;cam.y=state.player.y;cam.zoom=baseZoom();cam.kick=0;showScreen('');updateAllUI();discoverBiome();last=performance.now();requestAnimationFrame(loop);tone(164,.13,'triangle',.035,80)}
+function newGame(){removeSave();enterGame(defaultState())}
+function continueGame(){const s=getSave();if(s)enterGame(s);else newGame()}
+function menu(){running=false;paused=true;showScreen('menu');refreshMenu()}
+function refreshMenu(){const s=getSave();$('continueBtn').hidden=!s;if(s){$('menuDays').textContent=Math.max(0,s.clock.day-1);$('menuTowers').textContent=`${Object.values(s.world.towerStates).filter(Boolean).length}/3`;$('menuLevel').textContent=s.player.level}else{$('menuDays').textContent='0';$('menuTowers').textContent='0/3';$('menuLevel').textContent='1'}}
+function toast(text){ui.toast.textContent=text;ui.toast.classList.add('show');toastTimer=2.2}
+function floater(x,y,text,color='#f0d58b'){floaters.push({x,y,text,color,t:1})}
+function particleBurst(x,y,color,n=8){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*38,vy:(Math.random()-.8)*38,t:.45+Math.random()*.35,color,size:1+Math.random()*2})}
+function ring(x,y,color='#e6c977',r=4,speed=34){rings.push({x,y,color,r,t:.38,speed})}
+function tileAtPx(px,py){const x=Math.floor(px/T),y=Math.floor(py/T);if(x<0||y<0||x>=W||y>=H)return 0;return world.tiles[y*W+x]}
+function isLand(px,py){return tileAtPx(px,py)>=1}
+function activeObjects(){const removed=new Set(state.world.removed);return world.objects.filter(o=>!removed.has(o.id))}
+function objectRadius(o){return o.type==='tree'?7:o.type==='tower'?11:o.type==='heart'?13:o.type==='rock'||o.type==='ore'||o.type==='crystal'?6:4}
+function structureRadius(s){return s.type==='fence'?7:s.type==='campfire'?5:8}
+function blocked(px,py,forEnemy=false){if(!isLand(px,py))return true;for(const o of world.objects){if(state.world.removed.includes(o.id))continue;if(['tree','rock','ore','crystal','tower','heart'].includes(o.type)&&dist(px,py,o.x,o.y)<objectRadius(o)+5)return true}for(const s of state.world.structures){if(s.type==='campfire'||s.type==='soil')continue;if(dist(px,py,s.x,s.y)<structureRadius(s)+5)return true}return false}
+function moveEntity(e,dx,dy){const nx=e.x+dx,ny=e.y+dy;if(!blocked(nx,e.y,e.enemy)){e.x=nx}if(!blocked(e.x,ny,e.enemy)){e.y=ny}}
+function facingVector(){const d=state.player.dir;return d==='left'?[-1,0]:d==='right'?[1,0]:d==='down'?[0,1]:[0,-1]}
