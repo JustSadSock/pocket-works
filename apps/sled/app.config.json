@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "sled",
+  "name": "СЛЕД",
+  "shortName": "СЛЕД",
+  "description": "Чистая соревновательная игра об одном общем камне: двигайся к своему краю, уничтожай клетки за собой и запирай соперника.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T04:10:00+02:00",
+  "changelog": [
+    "Добавлена законченная дуэль для двух игроков на одном экране и режим против машины с тремя уровнями поиска.",
+    "Реализованы поля 7×7, 9×9 и 11×11, правило обмена, победа выходом или блокировкой и часы без лимита, 3+2 и 10 минут.",
+    "Добавлены прямые касания, свайпы, клавиатура, тактильные анимации сгорающих клеток, процедурные звуки и вибрация.",
+    "Партия, настройки и статистика сохраняются локально; приложение устанавливается, работает офлайн и поддерживает Workshop mode."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#0c9b93",
+  "backgroundColor": "#e8e0cf",
+  "themeColor": "#e8e0cf",
+  "orientation": "any",
+  "cacheName": "sled-v1.0.0",
+  "storageNamespace": "pocket-works:sled",
+  "tags": ["PWA", "offline", "game", "strategy", "abstract", "duel", "local multiplayer", "AI", "pure skill", "board game", "touch", "keyboard", "audio", "haptics"],
+  "order": 147
+}
