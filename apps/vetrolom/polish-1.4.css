@@ -1,0 +1,13 @@
+/* 1.4 — compact world events, landmark context and storm readability */
+.valley-event{position:absolute;z-index:15;left:50%;top:calc(var(--safe-top) + 56px);transform:translate(-50%,-7px);max-width:min(340px,70vw);padding:6px 10px;background:#111914d9;border-top:1px solid #d6a85f;border-bottom:1px solid #75684b;color:#e9d9ac;font-size:7px;letter-spacing:1.1px;text-align:center;opacity:0;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.valley-event.show{animation:event-14 2.65s ease both}
+.action-stack .act.context-landmark{background:#c6aa69;color:#111713;box-shadow:0 4px 0 #0a0e0b,0 0 0 4px #d6a85f22}
+.action-stack .act.context-danger{background:#985148;color:#f5e6c6;outline-color:#c86a58}
+.app.lightning-warning .clock small{color:#f0d98e;animation:weather-warning-14 .55s ease-in-out infinite}
+.app.lightning-warning .grain{opacity:.07}
+@keyframes event-14{0%{opacity:0;transform:translate(-50%,-8px) scale(.97)}10%,78%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,4px) scale(.98)}}
+@keyframes weather-warning-14{50%{filter:brightness(1.55);text-shadow:0 0 6px #e8c96f}}
+@media(max-width:680px){.valley-event{top:calc(var(--safe-top) + 51px);max-width:62vw;font-size:6px}}
+@media(max-height:650px) and (orientation:portrait){.valley-event{top:calc(var(--safe-top) + 44px);max-width:54vw}}
+@media(orientation:landscape) and (max-height:560px){.valley-event{left:43%;top:calc(var(--safe-top) + 47px);max-width:36vw}}
+@media(prefers-reduced-motion:reduce){.valley-event.show,.app.lightning-warning .clock small{animation:none!important}}
