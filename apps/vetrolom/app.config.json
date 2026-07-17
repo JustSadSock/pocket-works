@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "slug": "vetrolom",
+  "name": "ВЕТРОЛОМ",
+  "shortName": "ВЕТРОЛОМ",
+  "description": "Пиксельная survival RPG-песочница о долине со сломанным климатом: исследование, ремесло, лагерь, земледелие и древняя погодная машина.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-17",
+  "releaseDateTime": "2026-07-17T02:40:00+02:00",
+  "changelog": [
+    "Процедурная долина 96×96 клеток с шестью биомами, руинами, погодой и сменой суток.",
+    "Полный цикл выживания: голод, тепло, здоровье, выносливость, сбор ресурсов и готовка.",
+    "Ремесло, строительство лагеря, сундуки, ограды, грядки, посадка и рост урожая.",
+    "Три погодные вышки, Сердце Бури, ночные существа, RPG-уровни и выбор перков.",
+    "Мобильное управление, клавиатура, звук, вибрация, локальные сохранения и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d6a85f",
+  "backgroundColor": "#111713",
+  "themeColor": "#17231b",
+  "orientation": "any",
+  "cacheName": "vetrolom-v1.0.0",
+  "storageNamespace": "pocket-works:vetrolom",
+  "tags": ["PWA", "offline", "game", "pixel art", "survival", "RPG", "sandbox", "exploration", "crafting", "building", "farming", "procedural world", "weather", "day night", "canvas", "audio", "haptics"],
+  "order": 146
+}
