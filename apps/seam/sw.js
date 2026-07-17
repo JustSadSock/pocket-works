@@ -1,15 +1,15 @@
 const CACHE_PREFIX = 'seam-';
-const CACHE_NAME = 'seam-v2.0.0-p3';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'seam-v2.1.0-p4';
+const APP_VERSION = '2.1.0';
 const RELEASE_DATE = '2026-07-17';
-const CACHE_PROTOCOL = 3;
+const CACHE_PROTOCOL = 4;
 const RELEASE_NOTES = [
-  'Полностью новая концепция: формации, толчки, Корни и борьба за центр.',
-  'Пять доктрин ИИ, локальная дуэль, сохранение, отмена, звук и вибрация.',
-  'Правила прошли 12 конфигураций и финальный стресс-тест игрового движка.'
+  'Экран ожидания компьютера заменён компактным статусом, который не закрывает поле.',
+  'Добавлены анимации перемещения формаций, толчков, вылета, смены хода и удержания центра.',
+  'Motion-слой учитывает системное уменьшение движения и не меняет проверенную игровую механику.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js', './engine.js',
+  './', './index.html', './app.config.json', './styles.css', './motion.css', './app.js', './motion.js', './engine.js',
   './manifest.webmanifest', './icons/icon.svg', './BALANCE_AUDIT.md',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
