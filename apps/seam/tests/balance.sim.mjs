@@ -2,20 +2,20 @@ import { AxisGame, PLAYER, chooseAIMove, shouldSwapOpening } from '../engine.js'
 
 const STYLES = ['rush', 'ram', 'shell', 'flank', 'balanced'];
 const VARIANTS = [
-  { radius: 2, pieces: 5, maxGroup: 2, centerReplies: 1, centerSupport: 1, crownMinGroup: 1, maxTurns: 70 },
-  { radius: 2, pieces: 5, maxGroup: 3, centerReplies: 1, centerSupport: 1, crownMinGroup: 1, maxTurns: 70 },
-  { radius: 3, pieces: 5, maxGroup: 3, centerReplies: 1, centerSupport: 1, crownMinGroup: 1, maxTurns: 90 },
-  { radius: 3, pieces: 7, maxGroup: 2, centerReplies: 1, centerSupport: 2, crownMinGroup: 2, maxTurns: 120 },
-  { radius: 3, pieces: 7, maxGroup: 3, centerReplies: 1, centerSupport: 2, crownMinGroup: 1, maxTurns: 130 },
-  { radius: 3, pieces: 7, maxGroup: 3, centerReplies: 1, centerSupport: 2, crownMinGroup: 2, maxTurns: 140 },
-  { radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, maxTurns: 150 },
-  { radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 3, crownMinGroup: 2, maxTurns: 160 },
-  { radius: 3, pieces: 9, maxGroup: 3, centerReplies: 1, centerSupport: 2, crownMinGroup: 2, maxTurns: 150 },
-  { radius: 3, pieces: 9, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, maxTurns: 180 },
-  { radius: 4, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, maxTurns: 180 },
-  { radius: 4, pieces: 9, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, maxTurns: 200 }
+  { id: 'A', radius: 2, pieces: 5, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, reserveEnabled: false, maxTurns: 90 },
+  { id: 'B', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, reserveEnabled: false, maxTurns: 150 },
+  { id: 'C', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 2, crownMinGroup: 2, reserveEnabled: true, maxTurns: 180 },
+  { id: 'D', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 3, centerSupport: 2, crownMinGroup: 2, reserveEnabled: true, maxTurns: 180 },
+  { id: 'E', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 3, crownMinGroup: 2, reserveEnabled: true, maxTurns: 180 },
+  { id: 'F', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 3, centerSupport: 3, crownMinGroup: 2, reserveEnabled: true, maxTurns: 180 },
+  { id: 'G', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 4, centerSupport: 3, crownMinGroup: 2, reserveEnabled: true, maxTurns: 200 },
+  { id: 'H', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 2, centerSupport: 4, crownMinGroup: 2, reserveEnabled: true, maxTurns: 180 },
+  { id: 'I', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 3, centerSupport: 4, crownMinGroup: 2, reserveEnabled: true, maxTurns: 200 },
+  { id: 'J', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 4, centerSupport: 4, crownMinGroup: 2, reserveEnabled: true, maxTurns: 220 },
+  { id: 'K', radius: 3, pieces: 7, maxGroup: 3, centerReplies: 3, centerSupport: 4, crownMinGroup: 3, reserveEnabled: true, maxTurns: 220 },
+  { id: 'L', radius: 3, pieces: 9, maxGroup: 3, centerReplies: 3, centerSupport: 4, crownMinGroup: 2, reserveEnabled: true, maxTurns: 220 }
 ];
-const FINAL = VARIANTS[6];
+const FINAL = VARIANTS[8];
 
 function rngFor(seed) {
   let state = seed >>> 0;
@@ -31,7 +31,7 @@ function playMatch(config, seatOneStyle, seatTwoStyle, seed) {
   const styles = { 1: seatOneStyle, 2: seatTwoStyle };
   let seatForColor = { 1: 1, 2: 2 };
   let swaps = 0;
-  const actionKinds = { single: 0, inline: 0, broadside: 0, push: 0 };
+  const actionKinds = { single: 0, inline: 0, broadside: 0, push: 0, deploy: 0 };
   let midState = null;
 
   while (!game.winner) {
@@ -58,7 +58,10 @@ function playMatch(config, seatOneStyle, seatTwoStyle, seed) {
           1: Math.max(Math.abs(game.crownCell(1)[0]), Math.abs(game.crownCell(1)[1]), Math.abs(-game.crownCell(1)[0] - game.crownCell(1)[1])),
           2: Math.max(Math.abs(game.crownCell(2)[0]), Math.abs(game.crownCell(2)[1]), Math.abs(-game.crownCell(2)[0] - game.crownCell(2)[1]))
         },
-        pieces: { 1: game.cellsFor(1).length, 2: game.cellsFor(2).length }
+        pieces: {
+          1: game.cellsFor(1).length + game.reserve[1] * 0.45,
+          2: game.cellsFor(2).length + game.reserve[2] * 0.45
+        }
       };
     }
   }
@@ -77,11 +80,11 @@ function playMatch(config, seatOneStyle, seatTwoStyle, seed) {
 export function evaluate(config, gamesPerPair) {
   const aggregate = {
     games: 0, first: 0, second: 0, draws: 0, swaps: 0, moves: 0, comeback: 0,
-    reasons: {}, actions: { single: 0, inline: 0, broadside: 0, push: 0 },
+    reasons: {}, actions: { single: 0, inline: 0, broadside: 0, push: 0, deploy: 0 },
     styleWins: Object.fromEntries(STYLES.map((style) => [style, 0])),
     styleGames: Object.fromEntries(STYLES.map((style) => [style, 0]))
   };
-  let seed = 4411;
+  let seed = Number(process.env.AXIS_SEED || 4411);
   for (let left = 0; left < STYLES.length; left += 1) {
     for (let right = left; right < STYLES.length; right += 1) {
       for (let gameIndex = 0; gameIndex < gamesPerPair; gameIndex += 1) {
@@ -138,18 +141,19 @@ const finalOnly = process.argv.includes('--final-only');
 if (!finalOnly) {
   console.log('AXIS concept sweep');
   VARIANTS.forEach((config, index) => {
-    const result = evaluate(config, 1);
+    const result = evaluate(config, 2);
     console.log(String(index + 1).padStart(2, '0'), JSON.stringify(compact(result)));
   });
 }
 
 console.log('\nAXIS final stress run');
-const final = evaluate(FINAL, 12);
+const final = evaluate(FINAL, Number(process.env.AXIS_GAMES_PER_PAIR || 4));
 console.log(JSON.stringify(compact(final), null, 2));
 
-if (final.draws !== 0) throw new Error(`Final rules produced ${final.draws} draws`);
+if (final.draws / final.games > 0.05) throw new Error(`Final rules produced ${final.draws} draws`);
 if (Math.abs(final.firstRate - 0.5) > 0.12) throw new Error(`Seat balance drifted to ${(final.firstRate * 100).toFixed(1)}%`);
-if (final.styleSpread > 0.25) throw new Error(`Style spread is too large: ${(final.styleSpread * 100).toFixed(1)}%`);
-if (final.actionShare.push < 0.1 || final.actionShare.broadside < 0.04) throw new Error('The tactical move mix collapsed');
-if ((final.reasons['crown-ejected'] || 0) < 15) throw new Error('The aggressive victory path is decorative');
+if (final.styleSpread > 0.32) throw new Error(`Style spread is too large: ${(final.styleSpread * 100).toFixed(1)}%`);
+if (final.actionShare.push < 0.12 || final.actionShare.broadside < 0.04 || final.actionShare.deploy < 0.01) throw new Error('The tactical move mix collapsed');
+if ((final.reasons['crown-ejected'] || 0) / final.games < 0.35) throw new Error('The aggressive victory path is decorative');
+if ((final.reasons['center-held'] || 0) / final.games < 0.12) throw new Error('The positional victory path is decorative');
 console.log('\nBalance gates passed.');

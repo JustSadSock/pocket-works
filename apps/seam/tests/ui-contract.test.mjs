@@ -20,7 +20,7 @@ test('HTML has no duplicate ids and keeps the complete primary flow', async () =
   const html = await read('index.html');
   const ids = [...html.matchAll(/id=["']([^"']+)["']/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length);
-  for (const required of ['startScreen', 'gameScreen', 'boardCanvas', 'swapOffer', 'menuSheet', 'rulesSheet', 'auditSheet', 'resultSheet']) {
+  for (const required of ['startScreen', 'gameScreen', 'boardCanvas', 'swapOffer', 'azureReserveButton', 'ochreReserveButton', 'menuSheet', 'rulesSheet', 'auditSheet', 'resultSheet']) {
     assert.ok(ids.includes(required));
   }
 });
@@ -31,10 +31,10 @@ test('versions and cache identifiers agree across app metadata', async () => {
   ]);
   const config = JSON.parse(configSource);
   const manifest = JSON.parse(manifestSource);
-  assert.equal(config.version, '2.0.0');
-  assert.match(html, /data-app-version="2\.0\.0"/);
-  assert.match(script, /const VERSION = '2\.0\.0'/);
-  assert.match(worker, /const APP_VERSION = '2\.0\.0'/);
+  assert.equal(config.version, '2.2.0');
+  assert.match(html, /data-app-version="2\.2\.0"/);
+  assert.match(script, /const VERSION = '2\.2\.0'/);
+  assert.match(worker, /const APP_VERSION = '2\.2\.0'/);
   assert.match(worker, new RegExp(`const CACHE_NAME = '${config.cacheName}'`));
   assert.equal(manifest.name, config.name);
   assert.equal(config.storageNamespace, 'pocket-works:seam');
@@ -42,7 +42,7 @@ test('versions and cache identifiers agree across app metadata', async () => {
 
 test('service worker shell contains every app runtime file', async () => {
   const worker = await read('sw.js');
-  for (const file of ['index.html', 'styles.css', 'app.js', 'engine.js', 'app.config.json', 'manifest.webmanifest', 'icons/icon.svg', 'BALANCE_AUDIT.md']) {
+  for (const file of ['index.html', 'styles.css', 'motion.css', 'app.js', 'motion.js', 'engine.js', 'app.config.json', 'manifest.webmanifest', 'icons/icon.svg', 'BALANCE_AUDIT.md']) {
     assert.ok(worker.includes(`./${file}`), `${file} missing from shell`);
   }
 });
