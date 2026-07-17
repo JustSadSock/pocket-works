@@ -1,0 +1,17 @@
+{
+  "id": "/apps/sled/",
+  "name": "СЛЕД",
+  "short_name": "СЛЕД",
+  "description": "Чистая соревновательная игра об одном общем камне: двигайся к своему краю, уничтожай клетки за собой и запирай соперника.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8e0cf",
+  "theme_color": "#e8e0cf",
+  "lang": "ru",
+  "categories": ["games", "strategy", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
