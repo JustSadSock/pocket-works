@@ -9,14 +9,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ОСЬ">
   <title>ОСЬ — Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=2.1.0">
-  <link rel="icon" href="./icons/icon.svg?v=2.1.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/update-manager.css?v=2.1.0">
-  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=2.1.0">
-  <link rel="stylesheet" href="./styles.css?v=2.1.0">
-  <link rel="stylesheet" href="./motion.css?v=2.1.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=2.2.0">
+  <link rel="icon" href="./icons/icon.svg?v=2.2.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=2.2.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=2.2.0">
+  <link rel="stylesheet" href="./styles.css?v=2.2.0">
+  <link rel="stylesheet" href="./motion.css?v=2.2.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
@@ -36,7 +36,7 @@
       <div class="hero-copy">
         <p>Сдвигай строй. Ломай чужой.</p>
         <h1>Поле маленькое.<br>Фронт — нет.</h1>
-        <span>Двигай линии из одной–трёх фишек. Более длинная формация толкает короткую. Проведи Корень к центру или выбей вражеский за край.</span>
+        <span>Двигай линии из одной–трёх фишек, толкай короткие строи и возвращай выбитых бойцов через домашний край. Проведи Корень к центру или выбей вражеский за поле.</span>
       </div>
 
       <div class="setup-panel">
@@ -74,7 +74,8 @@
       <div class="player-strip ochre-strip" id="ochreStrip" data-ui>
         <span class="player-mark ochre"><i></i></span>
         <div><strong id="ochreName">Охра</strong><small id="ochreStatus">Ждёт хода</small></div>
-        <b id="ochrePieces">7</b><em>в строю</em>
+        <div class="force-count"><b id="ochrePieces">7</b><em>строй</em></div>
+        <button type="button" class="reserve-control" id="ochreReserveButton" data-native-press><b id="ochreReserve">0</b><em>резерв</em></button>
       </div>
 
       <div class="board-frame" id="boardFrame" data-gesture-surface data-block-callout>
@@ -92,7 +93,8 @@
       <div class="player-strip azure-strip" id="azureStrip" data-ui>
         <span class="player-mark azure"><i></i></span>
         <div><strong id="azureName">Лазурь</strong><small id="azureStatus">Ваш ход</small></div>
-        <b id="azurePieces">7</b><em>в строю</em>
+        <div class="force-count"><b id="azurePieces">7</b><em>строй</em></div>
+        <button type="button" class="reserve-control" id="azureReserveButton" data-native-press><b id="azureReserve">0</b><em>резерв</em></button>
       </div>
 
       <div class="swap-offer hidden" id="swapOffer" data-ui>
@@ -118,7 +120,7 @@
           <button type="button" id="continueButton" data-native-press><b>Продолжить</b><small>Вернуться к строю</small></button>
           <button type="button" id="newGameButton" data-native-press><b>Новая дуэль</b><small>Заменит текущее сохранение</small></button>
           <button type="button" id="menuRulesButton" data-native-press><b>Правила</b><small>Линии, толчки, Корень и центр</small></button>
-          <button type="button" id="menuAuditButton" data-native-press><b>Лаборатория правил</b><small>12 конфигураций и финальный стресс-тест</small></button>
+          <button type="button" id="menuAuditButton" data-native-press><b>Лаборатория правил</b><small>12 конфигураций и два независимых стресс-теста</small></button>
           <button type="button" class="setting-toggle" id="soundToggle" data-native-press><span><b>Звук</b><small>Керамика, скольжение и удар</small></span><em>Вкл</em></button>
           <button type="button" class="setting-toggle" id="hapticToggle" data-native-press><span><b>Вибрация</b><small>Отдача на движение и толчок</small></span><em>Вкл</em></button>
           <button type="button" class="danger-action" id="resignButton" data-native-press><b>Сдаться</b><small>Потребуется второе нажатие</small></button>
@@ -128,38 +130,39 @@
       </section>
 
       <section class="sheet hidden" id="rulesSheet" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
-        <header><div><p>Пять правил</p><h2 id="rulesTitle">Как играть</h2></div><button type="button" data-close-sheet data-native-press>Готово</button></header>
+        <header><div><p>Шесть правил</p><h2 id="rulesTitle">Как играть</h2></div><button type="button" data-close-sheet data-native-press>Готово</button></header>
         <ol class="rules-list">
           <li><span>1</span><div><b>Сдвигайте строй</b><p>За ход переместите на соседнюю позицию одну фишку или прямую линию из двух–трёх своих фишек.</p></div></li>
           <li><span>2</span><div><b>Двигайтесь вдоль или боком</b><p>Линия может шагнуть вдоль своей оси или целиком сместиться вбок, если все места свободны.</p></div></li>
           <li><span>3</span><div><b>Толкайте меньших</b><p>Две фишки толкают одну. Три толкают одну или две. Равные линии не сдвигаются.</p></div></li>
-          <li><span>4</span><div><b>Берегите Корень</b><p>Фишка с меткой Корня не ходит одна. Если её вытолкнули за край — партия проиграна.</p></div></li>
-          <li><span>5</span><div><b>Займите Ось</b><p>Второй путь к победе: Корень на центре с двумя соседними союзниками должен выдержать два ответных хода.</p></div></li>
+          <li><span>4</span><div><b>Возвращайте выбитых</b><p>Обычный боец за краем уходит в резерв. Вместо движения верните его на свободную поддержанную клетку своего домашнего края.</p></div></li>
+          <li><span>5</span><div><b>Берегите Корень</b><p>Фишка с меткой Корня не ходит одна и не возвращается из резерва. Если её вытолкнули за край — партия проиграна.</p></div></li>
+          <li><span>6</span><div><b>Займите Ось</b><p>Второй путь к победе: Корень на центре с четырьмя соседними союзниками должен выдержать три ответных хода.</p></div></li>
         </ol>
         <div class="pie-note"><b>Обмен после первого хода</b><p>Второй игрок может забрать первый цвет и его дебют. Поэтому первый ход должен быть сильным, но не наглым до уголовки.</p></div>
       </section>
 
       <section class="sheet hidden" id="auditSheet" role="dialog" aria-modal="true" aria-labelledby="auditTitle">
         <header><div><p>Лаборатория правил</p><h2 id="auditTitle">Баланс — не единственная метрика</h2></div><button type="button" data-close-sheet data-native-press>Закрыть</button></header>
-        <div class="audit-score"><strong>96 : 84</strong><span>первое и второе место в 180 партиях финального JS-движка</span></div>
+        <div class="audit-score"><strong>62 : 58</strong><span>первое и второе место в двух независимых пакетах по 60 партий</span></div>
         <div class="audit-grid">
-          <div><b>12</b><small>конфигураций поля</small></div>
+          <div><b>12</b><small>конфигураций текущего движка</small></div>
           <div><b>0</b><small>ничьих в финале</small></div>
-          <div><b>18,8</b><small>хода в среднем</small></div>
-          <div><b>15,3%</b><small>разброс стилей</small></div>
+          <div><b>40,4</b><small>хода в среднем</small></div>
+          <div><b>18,8%</b><small>совокупный разброс стилей</small></div>
         </div>
         <div class="audit-copy">
-          <p><b>Проверяли не только винрейт:</b> долю толчков и боковых перестроений, два способа победы, камбэки, длину партий, разнообразие дебютов и матчи пяти разных доктрин.</p>
-          <p><b>Отброшено:</b> маленькое поле превращало всё в драку без плана; большое — в затяжной марш. Мгновенный центр убивал таран. Свободный Корень превращал игру в тупой спринт.</p>
-          <p><b>Финал:</b> 17,9% ходов — толчки, 13,8% — боковые перестроения, 22 победы выбиванием Корня. Рывок, таран, крепость, фланг и баланс остаются рабочими, а не декоративными названиями.</p>
+          <p><b>Проверяли не только винрейт:</b> два способа победы, толчки, боковые перестроения, возврат резерва, камбэки, длину партий и матчи пяти доктрин на независимых seed-наборах.</p>
+          <p><b>Исправлено после версии 2.1:</b> старый центр забирал 158 из 180 побед. Теперь для него нужны четыре союзника и три выдержанных ответа, а обычные потери можно вернуть через домашний край.</p>
+          <p><b>Финал:</b> 78 побед выбиванием Корня и 42 удержанием центра; 26,3% ходов — толчки, около 4% — подкрепления, четверть побед стала камбэками. Совокупные винрейты доктрин лежат примерно между 42% и 60%.</p>
         </div>
-        <a class="audit-link" href="./BALANCE_AUDIT.md?v=2.1.0" target="_blank" rel="noopener">Открыть полный протокол</a>
+        <a class="audit-link" href="./BALANCE_AUDIT.md?v=2.2.0" target="_blank" rel="noopener">Открыть полный протокол</a>
       </section>
 
       <section class="sheet result-sheet hidden" id="resultSheet" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
         <header><div><p>Дуэль окончена</p><h2 id="resultTitle">Лазурь победила</h2></div><button type="button" data-close-sheet data-native-press>Смотреть поле</button></header>
         <div class="result-emblem"><span id="resultMark" class="player-mark azure"><i></i></span><b id="resultReason">Ось удержана</b></div>
-        <p id="resultText">Корень пережил два ответных хода в центре строя.</p>
+        <p id="resultText">Корень с четырьмя союзниками пережил три ответных хода.</p>
         <div class="result-actions">
           <button type="button" class="primary" id="rematchButton" data-native-press>Ещё дуэль</button>
           <button type="button" id="resultHomeButton" data-native-press>На главный экран</button>
@@ -168,8 +171,8 @@
     </div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОСЬ" data-app-version="2.1.0"></script>
-  <script type="module" src="./app.js?v=2.1.0"></script>
-  <script type="module" src="./motion.js?v=2.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОСЬ" data-app-version="2.2.0"></script>
+  <script type="module" src="./app.js?v=2.2.0"></script>
+  <script type="module" src="./motion.js?v=2.2.0"></script>
 </body>
 </html>
