@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#e8e0cf">
-  <meta name="description" content="СЛЕД — чистая соревновательная игра об одном общем камне и поле с двойным изломом клеток.">
+  <meta name="description" content="СЛЕД — дуэль за территорию на шестиугольном поле. Два камня, шесть направлений и ни одной случайности.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="СЛЕД">
@@ -15,26 +15,34 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=1.1.0">
-  <link rel="stylesheet" href="./balance.css?v=1.1.0">
+  <link rel="stylesheet" href="./styles.css?v=2.0.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
     <div class="paper-grain" aria-hidden="true"></div>
 
     <section class="screen menu-screen is-active" id="menuScreen" aria-labelledby="appTitle">
-      <header class="serial-line"><span>POCKET WORKS / DUEL 01</span><b>БЕЗ СЛУЧАЙНОСТИ</b></header>
+      <header class="serial-line"><span>POCKET WORKS / ABSTRACT 02</span><b>ШЕСТЬ НАПРАВЛЕНИЙ</b></header>
       <div class="menu-layout">
         <div class="brand-block">
-          <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
-          <div><p>Один камень. Два выхода.</p><h1 id="appTitle">СЛЕД</h1></div>
+          <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b><em></em></div>
+          <div>
+            <p>Два камня. Одно поле.</p>
+            <h1 id="appTitle">СЛЕД</h1>
+          </div>
         </div>
-        <p class="menu-lead">Уходя впервые, ты трескаешь клетку. Уходя второй раз — уничтожаешь её. Путь можно развернуть, но за возврат придётся заплатить полем.</p>
+        <p class="menu-lead">Двигай свой камень по сотам. Каждая покинутая клетка становится твоим очком и стеной для обоих. Когда ходить больше некуда — считают территорию.</p>
 
         <div class="menu-actions">
-          <button class="cut-button cut-button--primary" type="button" id="duelButton" data-native-press><span><strong>ДУЭЛЬ НА ОДНОМ ЭКРАНЕ</strong><small>передавайте телефон после каждого хода</small></span><b>↗</b></button>
-          <button class="cut-button" type="button" id="aiButton" data-native-press><span><strong>ПРОТИВ МАШИНЫ</strong><small>три уровня поиска без поддавков</small></span><b>→</b></button>
-          <button class="cut-button cut-button--resume" type="button" id="resumeButton" data-native-press hidden><span><strong>ПРОДОЛЖИТЬ ПАРТИЮ</strong><small id="resumeMeta">9×9 · ход 12</small></span><b>↺</b></button>
+          <button class="cut-button cut-button--primary" type="button" id="duelButton" data-native-press>
+            <span><strong>ДУЭЛЬ НА ОДНОМ ЭКРАНЕ</strong><small>чистая позиционная драка без случайности</small></span><b>↗</b>
+          </button>
+          <button class="cut-button" type="button" id="aiButton" data-native-press>
+            <span><strong>ПРОТИВ МАШИНЫ</strong><small>три уровня поиска и никакой жалости</small></span><b>→</b>
+          </button>
+          <button class="cut-button cut-button--resume" type="button" id="resumeButton" data-native-press hidden>
+            <span><strong>ПРОДОЛЖИТЬ РАЗДЕЛ</strong><small id="resumeMeta">61 клетка · ход 12</small></span><b>↺</b>
+          </button>
         </div>
 
         <div class="ledger" aria-label="Статистика">
@@ -55,16 +63,16 @@
     <section class="screen setup-screen" id="setupScreen" aria-labelledby="setupTitle" hidden>
       <header class="sheet-header">
         <button type="button" id="setupBackButton" data-native-press>← НАЗАД</button>
-        <div><span id="setupKicker">ЛОКАЛЬНАЯ ДУЭЛЬ</span><h2 id="setupTitle">Настрой поле</h2></div>
+        <div><span id="setupKicker">ЛОКАЛЬНАЯ ДУЭЛЬ</span><h2 id="setupTitle">Выбери масштаб</h2></div>
       </header>
 
       <div class="setup-grid">
         <fieldset>
-          <legend>Размер</legend>
-          <div class="choice-strip" id="sizeChoices">
-            <button type="button" data-value="7" data-native-press><b>7×7</b><small>2–5 минут</small></button>
-            <button type="button" data-value="9" class="is-selected" data-native-press><b>9×9</b><small>основной</small></button>
-            <button type="button" data-value="11" data-native-press><b>11×11</b><small>глубоко</small></button>
+          <legend>Поле</legend>
+          <div class="choice-strip" id="radiusChoices">
+            <button type="button" data-value="3" data-native-press><b>37</b><small>быстрый разрез</small></button>
+            <button type="button" data-value="4" class="is-selected" data-native-press><b>61</b><small>основное поле</small></button>
+            <button type="button" data-value="5" data-native-press><b>91</b><small>долгая война</small></button>
           </div>
         </fieldset>
 
@@ -80,76 +88,87 @@
         <fieldset class="ai-field" id="aiField" hidden>
           <legend>Сила машины</legend>
           <div class="choice-strip" id="difficultyChoices">
-            <button type="button" data-value="cutter" data-native-press><b>Резчик</b><small>видит рядом</small></button>
-            <button type="button" data-value="tactician" class="is-selected" data-native-press><b>Тактик</b><small>ищет ловушки</small></button>
-            <button type="button" data-value="architect" data-native-press><b>Архитектор</b><small>думает глубже</small></button>
+            <button type="button" data-value="cutter" data-native-press><b>Резчик</b><small>смотрит рядом</small></button>
+            <button type="button" data-value="tactician" class="is-selected" data-native-press><b>Тактик</b><small>делит поле</small></button>
+            <button type="button" data-value="architect" data-native-press><b>Архитектор</b><small>видит глубже</small></button>
           </div>
         </fieldset>
 
-        <div class="switch-line" hidden>
-          <div><strong>Правило обмена</strong><small>отключено: двойной излом уже даёт ответ на первый ход</small></div>
-          <button type="button" class="switch" id="pieRuleButton" aria-pressed="false" data-native-press><i></i><span>ВЫКЛ</span></button>
+        <div class="switch-line ai-field" id="firstMoveField" hidden>
+          <div><strong>Первый ход человека</strong><small>второй игрок получает 0,5 очка коми — как компенсацию темпа</small></div>
+          <button type="button" class="switch is-on" id="humanFirstButton" aria-pressed="true" data-native-press><i></i><span>ДА</span></button>
         </div>
 
-        <div class="switch-line ai-field" id="firstMoveField" hidden>
-          <div><strong>Первый ход человека</strong><small>выключи, чтобы машина открыла партию</small></div>
-          <button type="button" class="switch is-on" id="humanFirstButton" aria-pressed="true" data-native-press><i></i><span>ДА</span></button>
+        <div class="komi-note">
+          <b>КОМИ +0,5 ВТОРОМУ</b>
+          <p>Пол-очка убирает ничьи и компенсирует первый ход. Это не бонус за красивые глаза, а та же математика, которой балансируют го.</p>
         </div>
       </div>
 
       <div class="setup-preview" aria-hidden="true">
-        <div class="preview-goal preview-goal--north"></div>
-        <div class="preview-board"><i></i><i></i><b></b><i></i><i></i></div>
-        <div class="preview-goal preview-goal--south"></div>
+        <div class="mini-hexes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b></b><em></em></div>
       </div>
 
-      <button class="start-match" type="button" id="startMatchButton" data-native-press><span>НАЧАТЬ ПАРТИЮ</span><b>→</b></button>
+      <button class="start-match" type="button" id="startMatchButton" data-native-press><span>НАЧАТЬ РАЗДЕЛ</span><b>→</b></button>
     </section>
 
     <section class="screen rules-screen" id="rulesScreen" aria-labelledby="rulesTitle" hidden>
       <header class="sheet-header">
         <button type="button" id="rulesBackButton" data-native-press>← НАЗАД</button>
-        <div><span>20 СЕКУНД</span><h2 id="rulesTitle">Всё правило</h2></div>
+        <div><span>20 СЕКУНД</span><h2 id="rulesTitle">Теперь это другая игра</h2></div>
       </header>
 
       <div class="rules-list">
-        <article><div class="rule-figure rule-figure--move" aria-hidden="true"><i></i><b></b></div><div><span>01</span><h3>Передвинь общий камень</h3><p>На одну соседнюю клетку по вертикали или горизонтали. По диагонали нельзя.</p></div></article>
-        <article><div class="rule-figure rule-figure--burn" aria-hidden="true"><i></i><b></b></div><div><span>02</span><h3>Клетка ломается в два этапа</h3><p>После первого ухода она трескается, но остаётся проходимой. После второго — проваливается навсегда.</p></div></article>
-        <article><div class="rule-figure rule-figure--goal" aria-hidden="true"><i></i><b></b></div><div><span>03</span><h3>Выведи камень через свой край</h3><p>Бирюзовый игрок выходит сверху, коралловый — снизу. Чужой край тебя не выпускает.</p></div></article>
-        <article><div class="rule-figure rule-figure--trap" aria-hidden="true"><i></i><b></b><em></em></div><div><span>04</span><h3>Или запри соперника</h3><p>Если ему некуда ходить, ты победил. Случайности, скрытой информации и компенсаций нет.</p></div></article>
+        <article><div class="rule-figure rule-figure--two" aria-hidden="true"><i></i><b></b></div><div><span>01</span><h3>У каждого свой камень</h3><p>Бирюзовый и коралловый больше не толкают один общий жетон. Каждый строит собственный маршрут.</p></div></article>
+        <article><div class="rule-figure rule-figure--hex" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><b></b></div><div><span>02</span><h3>Шесть соседей</h3><p>Ходи на любую соседнюю соту. Диагональных лазеек и прямых коридоров больше нет — поле ветвится во все стороны.</p></div></article>
+        <article><div class="rule-figure rule-figure--claim" aria-hidden="true"><i></i><b></b><em></em></div><div><span>03</span><h3>Уход превращает клетку в стену</h3><p>Покинутая сота приносит тебе одно очко и навсегда закрывается для обоих игроков.</p></div></article>
+        <article><div class="rule-figure rule-figure--score" aria-hidden="true"><strong>12</strong><b>:</b><em>11½</em></div><div><span>04</span><h3>Два паса — подсчёт</h3><p>Если ходов нет, игрок автоматически пасует. После двух пасов подряд побеждает тот, кто отрезал больше клеток.</p></div></article>
       </div>
 
-      <div class="pie-note"><b>ЗАЧЕМ ДВОЙНОЙ ИЗЛОМ</b><p>Раньше первый шаг запрещал движение назад, поэтому направление открытия фактически решало партию. Теперь соперник может развернуть камень через треснувшую клетку, но второй проход уничтожит её.</p><div class="fracture-legend"><span><i></i>треснула</span><span><i></i>провалилась</span></div></div>
+      <div class="pie-note"><b>ПОЧЕМУ ЭТО НЕ ПРЕЖНЯЯ ХУЙНЯ</b><p>Первый ход больше не задаёт направление общему камню. Игроки режут одно пространство двумя независимыми следами, а пол-очка коми компенсирует темп. Побеждает не сторона, а тот, кто точнее разделил поле.</p></div>
       <button class="cut-button cut-button--primary" type="button" id="rulesPlayButton" data-native-press><span><strong>СЫГРАТЬ</strong><small>открыть настройки дуэли</small></span><b>→</b></button>
     </section>
 
     <section class="screen game-screen" id="gameScreen" hidden>
       <header class="game-header" data-ui>
         <button class="pause-key" type="button" id="pauseButton" aria-label="Пауза" data-native-press><i></i><i></i></button>
-        <div class="turn-readout"><span id="turnKicker">ХОД 01</span><strong id="turnLabel">ИГРОК 1 · К ВЕРХУ</strong></div>
-        <div class="clock-bank" id="clockBank"><div id="clock0"><span>1</span><b>∞</b></div><div id="clock1"><span>2</span><b>∞</b></div></div>
+        <div class="turn-readout">
+          <span id="turnKicker">ХОД 01</span>
+          <strong id="turnLabel">ИГРОК 1 · БИРЮЗОВЫЙ</strong>
+        </div>
+        <div class="score-bank" id="scoreBank">
+          <div id="score0"><span>1</span><b>0</b><small id="clock0">∞</small></div>
+          <div id="score1"><span>2</span><b>0,5</b><small id="clock1">∞</small></div>
+        </div>
       </header>
 
       <div class="game-stage" id="gameStage" data-gesture-surface data-block-callout>
-        <button type="button" class="goal-rail goal-rail--north" id="northExitButton" data-move="EXIT_N" data-native-press disabled><span>БИРЮЗОВЫЙ ВЫХОД</span><b>↑ ВЫЙТИ</b></button>
-        <div class="board-frame" id="boardFrame"><div class="board" id="board" role="grid" aria-label="Игровое поле СЛЕД"></div><div class="stone" id="stone" aria-hidden="true"><i></i></div><div class="move-echo" id="moveEcho" aria-hidden="true"></div></div>
-        <button type="button" class="goal-rail goal-rail--south" id="southExitButton" data-move="EXIT_S" data-native-press disabled><span>КОРАЛЛОВЫЙ ВЫХОД</span><b>ВЫЙТИ ↓</b></button>
+        <div class="board-caption board-caption--top"><span>СВОБОДНО</span><b id="freeCountTop">59</b></div>
+        <div class="board-frame" id="boardFrame">
+          <div class="board" id="board" role="grid" aria-label="Шестиугольное игровое поле СЛЕД"></div>
+          <div class="stone stone--first" id="stone0" aria-label="Бирюзовый камень"><i></i></div>
+          <div class="stone stone--second" id="stone1" aria-label="Коралловый камень"><i></i></div>
+          <div class="cut-echo" id="cutEcho" aria-hidden="true"></div>
+        </div>
+        <div class="board-caption board-caption--bottom"><span>КОМИ ВТОРОМУ</span><b>+0,5</b></div>
       </div>
 
-      <div class="swap-banner" id="swapBanner" data-ui hidden><div><span>ПРАВИЛО ОБМЕНА</span><strong>Ход нравится? Забери бирюзовую сторону.</strong></div><button type="button" id="swapButton" data-native-press>ПОМЕНЯТЬСЯ ЦЕЛЯМИ</button></div>
+      <div class="pass-banner" id="passBanner" data-ui hidden><span>ХОДОВ НЕТ</span><strong id="passCopy">Автоматический пас</strong></div>
 
       <footer class="game-footer" data-ui>
-        <div class="path-meter"><span>СОСТОЯНИЕ ПОЛЯ</span><b id="burnedCount">0 сожжено · 0 треснуло</b></div>
-        <p id="gameHint">Тапни соседнюю клетку или смахни камень.</p>
+        <div class="territory-meter"><span>ТЕРРИТОРИЯ</span><b id="territoryCount">0 : 0,5</b></div>
+        <p id="gameHint">Тапни соседнюю соту или смахни активный камень.</p>
         <div class="connection-mark" id="connectionMark" aria-label="Офлайн готов"><i></i><span>ОФЛАЙН</span></div>
       </footer>
-      <div class="thinking" id="thinking" data-ui hidden><i></i><span>МАШИНА РЕЖЕТ ВАРИАНТЫ</span></div>
+
+      <div class="thinking" id="thinking" data-ui hidden><i></i><span>МАШИНА ДЕЛИТ ПОЛЕ</span></div>
     </section>
 
     <section class="overlay" id="pauseOverlay" hidden data-ui aria-labelledby="pauseTitle">
       <article class="panel">
-        <p>ПАРТИЯ ЗАФИКСИРОВАНА</p><h2 id="pauseTitle">Пауза</h2>
-        <div class="panel-summary"><span id="pauseMode">Дуэль</span><b id="pauseTurn">Ход 1</b><span id="pauseBoard">9×9</span></div>
+        <p>ПОЗИЦИЯ ЗАФИКСИРОВАНА</p>
+        <h2 id="pauseTitle">Пауза</h2>
+        <div class="panel-summary"><span id="pauseMode">Дуэль</span><b id="pauseTurn">Ход 1</b><span id="pauseBoard">61 клетка</span></div>
         <button class="panel-primary" type="button" id="continueButton" data-native-press>ПРОДОЛЖИТЬ <b>→</b></button>
         <button type="button" id="restartButton" data-native-press>Начать заново</button>
         <button type="button" id="pauseSoundButton" aria-pressed="true" data-native-press>Звук: вкл</button>
@@ -162,9 +181,15 @@
 
     <section class="overlay result-overlay" id="resultOverlay" hidden data-ui aria-labelledby="resultTitle">
       <article class="result-panel">
-        <div class="result-path" id="resultPath" aria-hidden="true"><i></i><i></i><b></b><i></i></div>
-        <p id="resultKicker">ВЫХОД НАЙДЕН</p><h2 id="resultTitle">Игрок 1 победил</h2><p id="resultCopy">Камень вышел через бирюзовый край.</p>
-        <div class="result-stats"><div><span>ХОДОВ</span><b id="resultMoves">0</b></div><div><span>ПОЛЕ</span><b id="resultBoard">9×9</b></div><div><span>ВРЕМЯ</span><b id="resultTime">00:00</b></div></div>
+        <div class="result-map" id="resultMap" aria-hidden="true"><i></i><i></i><i></i><b></b><em></em><i></i><i></i></div>
+        <p id="resultKicker">ПОЛЕ РАЗДЕЛЕНО</p>
+        <h2 id="resultTitle">Игрок 1 победил</h2>
+        <p id="resultCopy">Бирюзовый след забрал больше территории.</p>
+        <div class="result-stats">
+          <div><span>СЧЁТ</span><b id="resultScore">0 : 0,5</b></div>
+          <div><span>ХОДОВ</span><b id="resultMoves">0</b></div>
+          <div><span>ВРЕМЯ</span><b id="resultTime">00:00</b></div>
+        </div>
         <button class="panel-primary" type="button" id="againButton" data-native-press>РЕВАНШ <b>→</b></button>
         <button type="button" id="resultSetupButton" data-native-press>Изменить настройки</button>
         <button type="button" id="resultMenuButton" data-native-press>В главное меню</button>
@@ -172,18 +197,29 @@
     </section>
 
     <section class="overlay confirm-overlay" id="confirmOverlay" hidden data-ui aria-labelledby="confirmTitle">
-      <article class="panel panel--confirm"><p>НЕОБРАТИМО</p><h2 id="confirmTitle">Стереть текущую партию?</h2><span>Поле и часы вернутся к первому ходу.</span><button class="panel-primary" type="button" id="confirmRestartButton" data-native-press>СТЕРЕТЬ И НАЧАТЬ <b>↺</b></button><button type="button" id="cancelRestartButton" data-native-press>Отмена</button></article>
+      <article class="panel panel--confirm">
+        <p>НЕОБРАТИМО</p>
+        <h2 id="confirmTitle">Стереть текущий раздел?</h2>
+        <span>Все занятые соты и часы вернутся к началу.</span>
+        <button class="panel-primary" type="button" id="confirmRestartButton" data-native-press>СТЕРЕТЬ И НАЧАТЬ <b>↺</b></button>
+        <button type="button" id="cancelRestartButton" data-native-press>Отмена</button>
+      </article>
     </section>
 
     <section class="overlay error-overlay" id="errorOverlay" hidden data-ui aria-labelledby="errorTitle">
-      <article class="panel"><p>СЛЕД ОБОРВАЛСЯ</p><h2 id="errorTitle">Игра не запустилась</h2><span id="errorCopy">Перезагрузи приложение. Статистика сохранится.</span><button class="panel-primary" type="button" id="reloadButton" data-native-press>ПЕРЕЗАГРУЗИТЬ <b>↺</b></button><a href="../../" data-shell-exit data-app-control data-native-press>В Pocket Works</a></article>
+      <article class="panel">
+        <p>СЛЕД ОБОРВАЛСЯ</p>
+        <h2 id="errorTitle">Игра не запустилась</h2>
+        <span id="errorCopy">Перезагрузи приложение. Статистика сохранится.</span>
+        <button class="panel-primary" type="button" id="reloadButton" data-native-press>ПЕРЕЗАГРУЗИТЬ <b>↺</b></button>
+        <a href="../../" data-shell-exit data-app-control data-native-press>В Pocket Works</a>
+      </article>
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СЛЕД" data-app-version="1.1.0"></script>
-  <script src="./balance-patch.js?v=1.1.0"></script>
-  <script type="module" src="./app.js?v=1.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СЛЕД" data-app-version="2.0.0"></script>
+  <script type="module" src="./app.js?v=2.0.0"></script>
 </body>
 </html>
