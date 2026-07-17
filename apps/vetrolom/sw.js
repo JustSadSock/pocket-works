@@ -1,15 +1,15 @@
 const CACHE_PREFIX='vetrolom-';
-const CACHE='vetrolom-v1.1.0';
-const VERSION='1.1.0';
+const CACHE='vetrolom-v1.2.0';
+const VERSION='1.2.0';
 const RELEASE_DATE='2026-07-17';
 const RELEASE_NOTES=[
-  'Приближённая камера с мягким упреждением по направлению движения.',
-  'Переразложенный мобильный HUD без пересечений управления и навигации.',
-  'Новые анимации, погодные эффекты, многослойные звуки и фоновая атмосфера.'
+  'Плавное движение и камера со стабилизацией пиксельной сетки.',
+  'Контекстное пунктирное выделение вместо мешающих надписей.',
+  'Плотное строительство, автосоединение оград и восьмиугольный рисунок территории.'
 ];
 const SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
-  './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt',
+  './','./index.html','./app.config.json','./styles.css','./polish-1.1.css','./polish-1.2.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './runtime/part-00.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./runtime/part-05.txt','./runtime/patch-1.2.txt',
   '../../shared/mobile-runtime.css','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
