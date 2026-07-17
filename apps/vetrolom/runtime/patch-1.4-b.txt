@@ -1,7 +1,7 @@
 /* 1.4 — readable enemy intent, storm strikes and denser combat feedback */
 function hurtPlayer14(amount,x,y,kind='hit'){
   const p=state.player;if(p.invuln>0)return false;
-  p.hp-=amount;p.invuln=.72;cam.shake=kind==='lightning'?7:4;cam.kick=kind==='lightning'?-.11:-.06;screenFlash=Math.max(screenFlash,kind==='lightning'?.46:.28);
+  p.hp-=amount;p.invuln=.72;cam.shake=kind==='lightning'?7:4;cam.kick=kind==='lightning'?-0.11:-.06;screenFlash=Math.max(screenFlash,kind==='lightning'?.46:.28);
   floater(p.x,p.y-11,`-${amount}`,'#ff8b6e');ring(p.x,p.y,kind==='lightning'?'#e7d5aa':'#c65e4f',5,40);sfx(kind==='lightning'?'thunder14':'hurt');vibrate(kind==='lightning'?[30,20,45]:[22,22,18]);
   if(kind==='lightning')p.warmth=Math.max(0,p.warmth-12);return true
 }
