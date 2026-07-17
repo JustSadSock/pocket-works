@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "СДВИГ",
+  "short_name": "СДВИГ",
+  "description": "Абстрактная дуэль на поле 5×5: вталкивай свои фишки с краёв и соединяй противоположные стороны.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6dece",
+  "theme_color": "#e6dece",
+  "categories": ["games", "strategy"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
