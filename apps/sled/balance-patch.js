@@ -18,7 +18,7 @@
   }
 
   function installStyles() {
-    if (document.querySelector('link[data-sled-balance]')) return;
+    if (document.querySelector('link[href*="balance.css"]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = './balance.css?v=1.1.0';
@@ -89,6 +89,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     rewriteCopy();
     syncBoardDamage();
-    window.setInterval(syncBoardDamage, 90);
+    window.setInterval(syncBoardDamage, 120);
   });
 })();
