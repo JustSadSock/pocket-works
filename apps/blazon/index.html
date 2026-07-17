@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#efe2bd">
+  <meta name="description" content="БЛАЗОН — тактическая игра, где правила средневековой геральдики превращают герб в живое оружие.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="БЛАЗОН">
+  <title>БЛАЗОН</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <svg class="symbol-library" aria-hidden="true">
+    <defs>
+      <symbol id="sigil-lion" viewBox="0 0 100 100">
+        <path d="M62 15c8 2 13 9 11 17 8 2 13 8 13 16-6-4-12-5-18-3l-5 8 8 11-7 20H53l3-17-12-8-8 9 5 16H29l-7-18 10-21-8-8 4-9 13 8 10-6 5-12 6-3zm-6 20-8 4 6 8 8-4-6-8z" fill="currentColor"/>
+        <path d="M35 32c-11 0-18-6-20-15 10 0 17 4 22 11" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="square"/>
+      </symbol>
+      <symbol id="sigil-eagle" viewBox="0 0 100 100">
+        <path d="M50 21 60 9l4 18 26-13-9 27 12 8-25 7 15 26-28-15-5 24-5-24-28 15 15-26-25-7 12-8-9-27 26 13 4-18 10 12z" fill="currentColor"/>
+        <circle cx="54" cy="25" r="3" fill="var(--sigil-eye, #201d18)"/>
+      </symbol>
+      <symbol id="sigil-tower" viewBox="0 0 100 100">
+        <path d="M18 18h15v12h10V18h14v12h10V18h15v23l-9 7v34H27V48l-9-7V18zm22 38v26h20V56c0-8-20-8-20 0z" fill="currentColor"/>
+        <path d="M31 45h38M28 70h44" fill="none" stroke="var(--sigil-eye, #201d18)" stroke-width="5"/>
+      </symbol>
+      <symbol id="sigil-stag" viewBox="0 0 100 100">
+        <path d="M40 33c-7-8-7-17-3-25l8 15 5-17 5 17 8-15c4 8 4 17-3 25l8 8-5 14v24L50 92 37 79V55l-5-14 8-8zm10 9-8 6 8 8 8-8-8-6z" fill="currentColor"/>
+        <path d="M36 22 22 12m14 17-18 1m46-8 14-10M64 29l18 1" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square"/>
+      </symbol>
+      <symbol id="sigil-boar" viewBox="0 0 100 100">
+        <path d="M17 53 29 30l25-9 25 11 8 17-8 24-25 9-27-7-10-22zm62-4 13-8-6 16-7-8z" fill="currentColor"/>
+        <path d="M28 35 19 20l19 9M31 72 24 89m44-17 7 17" fill="none" stroke="currentColor" stroke-width="7"/>
+        <circle cx="68" cy="43" r="4" fill="var(--sigil-eye, #201d18)"/>
+      </symbol>
+      <symbol id="sigil-fleur" viewBox="0 0 100 100">
+        <path d="M50 7c-13 15-17 27-8 38-12-14-26-12-31 1 13-2 18 8 20 20h13v9H31l8 18h22l8-18H56v-9h13c2-12 7-22 20-20-5-13-19-15-31-1 9-11 5-23-8-38z" fill="currentColor"/>
+      </symbol>
+      <symbol id="sigil-cross" viewBox="0 0 100 100">
+        <path d="M39 8h22v29h31v24H61v31H39V61H8V37h31V8z" fill="currentColor"/>
+      </symbol>
+      <symbol id="sigil-dragon" viewBox="0 0 100 100">
+        <path d="M66 14 56 30 42 17l-1 18-18-4 12 15-18 7 20 6-9 18 20-10 2 23 10-19 17 14-5-21 17-4-16-12 10-16-19 5 2-22z" fill="currentColor"/>
+        <path d="M54 43c15-6 25 2 30 10-11-3-18 1-21 10" fill="none" stroke="currentColor" stroke-width="7"/>
+        <circle cx="61" cy="35" r="3" fill="var(--sigil-eye, #201d18)"/>
+      </symbol>
+      <symbol id="sigil-key" viewBox="0 0 100 100">
+        <path d="M31 12a22 22 0 1 0 15 38l12 12-8 8 9 9 8-8 8 8 11-11-36-36A22 22 0 0 0 31 12zm0 13a9 9 0 1 1 0 18 9 9 0 0 1 0-18z" fill="currentColor"/>
+      </symbol>
+      <symbol id="sigil-rose" viewBox="0 0 100 100">
+        <path d="M50 12c10-9 22 1 19 13 14-4 23 9 15 20 13 6 10 22-3 26 3 14-12 23-23 14-8 11-25 5-25-9-14 1-20-15-10-24-10-9-3-25 11-25-1-14 15-21 25-15z" fill="currentColor"/>
+        <circle cx="50" cy="50" r="14" fill="var(--sigil-eye, #201d18)"/>
+      </symbol>
+      <symbol id="sigil-crown" viewBox="0 0 100 100">
+        <path d="M14 29 35 45 50 17l15 28 21-16-8 47H22l-8-47zm12 53h48v10H26V82z" fill="currentColor"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <main class="app-shell" data-app-shell>
+    <section class="screen menu-screen is-active" id="menuScreen" aria-labelledby="appTitle">
+      <div class="vellum-noise" aria-hidden="true"></div>
+      <header class="menu-bar" data-ui>
+        <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+        <button type="button" id="soundButton" data-native-press>Звук: вкл</button>
+      </header>
+
+      <div class="menu-emblem" id="menuEmblem" aria-hidden="true"></div>
+      <div class="menu-title">
+        <p>Геральдическая тактика</p>
+        <h1 id="appTitle">БЛАЗОН</h1>
+        <span>Закон делает герб славным. Ересь — опасным.</span>
+      </div>
+
+      <div class="campaign-strip" id="campaignStrip" data-ui hidden>
+        <span id="campaignHouse">Дом</span>
+        <b id="campaignProgress">1 / 3</b>
+        <small id="campaignOpponent">Следующий соперник</small>
+      </div>
+
+      <div class="menu-actions" data-ui>
+        <button class="action-primary" id="continueButton" type="button" data-native-press hidden>
+          <span>Продолжить поход</span><small id="continueCaption">Дуэль сохранена</small><b>→</b>
+        </button>
+        <button class="action-primary" id="newCampaignButton" type="button" data-native-press>
+          <span>Поднять знамя</span><small>Три великих дома ждут суда</small><b>→</b>
+        </button>
+        <div class="menu-action-row">
+          <button type="button" id="rulesButton" data-native-press>Как воевать</button>
+          <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+        </div>
+      </div>
+
+      <div class="law-ribbon">
+        <i></i><span>МЕТАЛЛ НА ЦВЕТЕ · ЦВЕТ НА МЕТАЛЛЕ</span><i></i>
+      </div>
+      <footer>v1.0.0 · офлайн · одна рука</footer>
+    </section>
+
+    <section class="screen game-screen" id="gameScreen" aria-label="Геральдическая дуэль">
+      <header class="battle-bar" data-ui>
+        <button type="button" id="pauseButton" data-native-press>Пауза</button>
+        <div><strong id="opponentName">Дом соперника</strong><span id="roundLabel">Ход 1 / 7</span></div>
+        <button type="button" id="gameRulesButton" data-native-press>Закон</button>
+      </header>
+
+      <section class="enemy-panel">
+        <div class="combatant-copy enemy-copy">
+          <p id="enemyMotto">Девиз соперника</p>
+          <div class="renown-line"><span>СЛАВА</span><div><i id="enemyRenownFill"></i></div><b id="enemyRenown">22</b></div>
+          <div class="battle-stats"><span>Щит <b id="enemyGuard">0</b></span><span>Честь <b id="enemyHonor">0</b></span><span>Ярость <b id="enemyFury">0</b></span></div>
+        </div>
+        <div class="shield-frame enemy-shield-frame" id="enemyShieldFrame">
+          <svg class="coat-shield" id="enemyShield" viewBox="0 0 100 112" aria-label="Герб соперника"></svg>
+        </div>
+      </section>
+
+      <div class="clash-ribbon" id="clashRibbon" aria-live="polite" data-state="ready">
+        <span id="clashEnemy">Соперник ждёт</span><i></i><b id="clashCenter">ВЫБЕРИ ФИГУРУ</b><i></i><span id="clashPlayer">Твой ход</span>
+      </div>
+
+      <section class="player-panel">
+        <div class="shield-frame player-shield-frame" id="playerShieldFrame" data-gesture-surface data-touch-action="manipulation" data-block-callout>
+          <svg class="coat-shield" id="playerShield" viewBox="0 0 100 112" aria-label="Твой герб"></svg>
+          <div class="shield-targets" id="shieldTargets" data-ui></div>
+          <button class="ordinary-target" id="ordinaryTarget" type="button" data-native-press hidden>Наложить на поле</button>
+        </div>
+        <div class="combatant-copy player-copy">
+          <p id="playerHouseName">Твой дом</p>
+          <div class="renown-line"><span>СЛАВА</span><div><i id="playerRenownFill"></i></div><b id="playerRenown">24</b></div>
+          <div class="battle-stats"><span>Щит <b id="playerGuard">0</b></span><span>Честь <b id="playerHonor">0</b></span><span>Ярость <b id="playerFury">0</b></span></div>
+          <div class="augment-line" id="augmentLine">Без пожалований</div>
+        </div>
+      </section>
+
+      <p class="placement-hint" id="placementHint" aria-live="polite">Выбери фигуру из руки.</p>
+      <section class="hand" id="hand" aria-label="Геральдические фигуры в руке" data-ui></section>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+
+    <dialog class="sheet house-sheet" id="houseDialog">
+      <header><div><p>Выбор дома</p><h2>Кем тебя запомнят?</h2></div><button type="button" data-close-dialog aria-label="Закрыть">×</button></header>
+      <div class="house-grid" id="houseGrid"></div>
+      <p class="sheet-note">Поле герба меняет законность каждой фигуры. Пассив дома — стиль, а не выбор сложности.</p>
+    </dialog>
+
+    <dialog class="sheet rules-sheet" id="rulesDialog">
+      <header><div><p>Краткий трактат</p><h2>Герб — это поле боя</h2></div><button type="button" data-close-dialog aria-label="Закрыть">×</button></header>
+      <ol class="rules-list">
+        <li><b>Соблюдай закон тинктур.</b><span>Металл кладётся на цвет, цвет — на металл. Законный ход даёт честь. Ересь даёт +2 натиск, но ранит собственную славу.</span></li>
+        <li><b>Место меняет смысл.</b><span>Глава щита усиливает натиск, подножие — защиту, сердце — честь. Полосы и кресты меняют слой под фигурой.</span></li>
+        <li><b>Строй симметрию.</b><span>Парные фигуры по краям щита создают строй. Совпадающая фигура сильнее, единая ливрея почётнее.</span></li>
+        <li><b>Переживи семь ходов.</b><span>Сломай славу соперника раньше или выиграй суд герольдов по славе, щиту и чести.</span></li>
+      </ol>
+      <div class="tincture-example" aria-hidden="true">
+        <span class="field-color"><i class="metal"></i><b>ЗАКОН</b></span>
+        <span class="field-color"><i class="color"></i><b>ЕРЕСЬ</b></span>
+      </div>
+      <button type="button" class="action-primary compact" data-close-dialog data-native-press><span>Понял закон</span><b>✓</b></button>
+    </dialog>
+
+    <dialog class="sheet pause-sheet" id="pauseDialog">
+      <header><div><p>Пауза</p><h2>Герольды замолчали</h2></div></header>
+      <p>Поход сохранён целиком: щиты, рука, пожалования и текущий соперник останутся на месте.</p>
+      <button type="button" class="action-primary compact" id="resumeButton" data-native-press><span>Продолжить дуэль</span><b>→</b></button>
+      <button type="button" class="action-secondary compact" id="restartBattleButton" data-native-press>Начать эту дуэль заново</button>
+      <button type="button" class="action-secondary compact" id="pauseMenuButton" data-native-press>В главное меню</button>
+      <a class="sheet-link" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      <button type="button" class="sheet-link button-link" data-workshop-trigger data-native-press>Workshop</button>
+    </dialog>
+
+    <dialog class="sheet reward-sheet" id="rewardDialog">
+      <header><div><p>Пожалование</p><h2>Победа меняет герб</h2></div></header>
+      <p>Выбери один знак. Он останется с домом до конца похода.</p>
+      <div class="reward-grid" id="rewardGrid"></div>
+    </dialog>
+
+    <dialog class="result-sheet" id="resultDialog">
+      <div class="result-seal" id="resultSeal" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#sigil-crown"></use></svg></div>
+      <p id="resultKicker">Суд герольдов</p>
+      <h2 id="resultTitle">Знамя устояло</h2>
+      <p id="resultCopy">Дуэль завершена.</p>
+      <div class="result-stats">
+        <span><b id="resultVictories">0</b> побед</span>
+        <span><b id="resultHonor">0</b> чести</span>
+        <span><b id="resultAugments">0</b> знаков</span>
+      </div>
+      <button type="button" class="action-primary compact" id="resultPrimaryButton" data-native-press><span>Продолжить</span><b>→</b></button>
+      <button type="button" class="action-secondary compact" id="resultMenuButton" data-native-press>В главное меню</button>
+      <a class="sheet-link" href="../../" data-app-control data-native-press>В Pocket Works</a>
+    </dialog>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="БЛАЗОН" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
