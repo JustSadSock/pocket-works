@@ -1,634 +1,428 @@
-export const APP_STATE_VERSION = 1;
-export const SLOT_COUNT = 7;
-
+export const APP_STATE_VERSION = 2;
+export const BUILD_STEPS = 4;
 export const SLOT_META = [
-  { id: 0, key: 'chief-left', label: 'левый верх', row: 'chief', column: 'left', x: 29, y: 31 },
-  { id: 1, key: 'chief', label: 'глава', row: 'chief', column: 'center', x: 50, y: 25 },
-  { id: 2, key: 'chief-right', label: 'правый верх', row: 'chief', column: 'right', x: 71, y: 31 },
-  { id: 3, key: 'heart', label: 'сердце', row: 'heart', column: 'center', x: 50, y: 50 },
-  { id: 4, key: 'base-left', label: 'левое подножие', row: 'base', column: 'left', x: 34, y: 67 },
-  { id: 5, key: 'base', label: 'подножие', row: 'base', column: 'center', x: 50, y: 76 },
-  { id: 6, key: 'base-right', label: 'правое подножие', row: 'base', column: 'right', x: 66, y: 67 }
+  { id: 0, key: 'chief-left', label: 'левый верх', x: 30, y: 31 },
+  { id: 1, key: 'chief', label: 'глава', x: 50, y: 24 },
+  { id: 2, key: 'chief-right', label: 'правый верх', x: 70, y: 31 },
+  { id: 3, key: 'heart', label: 'сердце', x: 50, y: 50 },
+  { id: 4, key: 'base-left', label: 'левое подножие', x: 34, y: 70 },
+  { id: 5, key: 'base', label: 'подножие', x: 50, y: 80 },
+  { id: 6, key: 'base-right', label: 'правое подножие', x: 66, y: 70 }
 ];
 
-export const MIRROR_SLOT = [2, 1, 0, 3, 6, 5, 4];
-
 export const TINCTURES = {
-  or: { id: 'or', name: 'золото', short: 'ОР', class: 'metal', color: '#d7aa32', ink: '#3a2910' },
-  argent: { id: 'argent', name: 'серебро', short: 'АР', class: 'metal', color: '#e8e1d1', ink: '#252728' },
-  gules: { id: 'gules', name: 'червлень', short: 'ГУ', class: 'color', color: '#a9342d', ink: '#fff2d6' },
-  azure: { id: 'azure', name: 'лазурь', short: 'АЗ', class: 'color', color: '#244f83', ink: '#f4ebcf' },
-  vert: { id: 'vert', name: 'зелень', short: 'ВЕ', class: 'color', color: '#2f6a4b', ink: '#f4ebcf' },
-  sable: { id: 'sable', name: 'чернь', short: 'СА', class: 'color', color: '#252a2b', ink: '#f4ebcf' },
-  purpure: { id: 'purpure', name: 'пурпур', short: 'ПУ', class: 'color', color: '#6c3d68', ink: '#f4ebcf' }
-};
-
-export const CHARGES = {
-  lion: { id: 'lion', name: 'Лев', verb: 'рычит', attack: 4, guard: 0, honor: 0, heal: 0, pierce: 0, tags: ['beast', 'assault'] },
-  eagle: { id: 'eagle', name: 'Орёл', verb: 'падает с высоты', attack: 3, guard: 1, honor: 0, heal: 0, pierce: 1, tags: ['bird', 'assault'] },
-  tower: { id: 'tower', name: 'Башня', verb: 'поднимает стены', attack: 1, guard: 4, honor: 0, heal: 0, pierce: 0, tags: ['fortress', 'guard'] },
-  stag: { id: 'stag', name: 'Олень', verb: 'ведёт через чащу', attack: 2, guard: 2, honor: 0, heal: 1, pierce: 0, tags: ['beast', 'balance'] },
-  boar: { id: 'boar', name: 'Вепрь', verb: 'ломает строй', attack: 5, guard: 0, honor: 0, heal: 0, pierce: 0, tags: ['beast', 'fury'] },
-  fleur: { id: 'fleur', name: 'Лилия', verb: 'возвышает род', attack: 1, guard: 1, honor: 2, heal: 0, pierce: 0, tags: ['flower', 'honor'] },
-  cross: { id: 'cross', name: 'Крест', verb: 'держит клятву', attack: 2, guard: 2, honor: 1, heal: 1, pierce: 0, tags: ['sacred', 'balance'] },
-  dragon: { id: 'dragon', name: 'Дракон', verb: 'жжёт знамёна', attack: 4, guard: 1, honor: 0, heal: 0, pierce: 1, tags: ['monster', 'assault'] },
-  key: { id: 'key', name: 'Ключ', verb: 'отпирает строй', attack: 2, guard: 1, honor: 1, heal: 0, pierce: 2, tags: ['device', 'tactic'] },
-  rose: { id: 'rose', name: 'Роза', verb: 'скрепляет союз', attack: 1, guard: 2, honor: 1, heal: 1, pierce: 0, tags: ['flower', 'balance'] }
-};
-
-export const ORDINARIES = {
-  pale: { id: 'pale', name: 'Столб', verb: 'собирает середину', slots: [1, 3, 5], attack: 1, guard: 1, honor: 1, role: 'balanced' },
-  bend: { id: 'bend', name: 'Перевязь', verb: 'ведёт удар по диагонали', slots: [0, 3, 6], attack: 2, guard: 0, honor: 0, role: 'assault' },
-  chevron: { id: 'chevron', name: 'Стропило', verb: 'подпирает подножие', slots: [4, 5, 6], attack: 0, guard: 3, honor: 0, role: 'guard' },
-  chief: { id: 'chief', name: 'Глава', verb: 'венчает щит', slots: [0, 1, 2], attack: 1, guard: 1, honor: 1, role: 'honor' },
-  saltire: { id: 'saltire', name: 'Косой крест', verb: 'сводит четыре угла', slots: [0, 2, 3, 4, 6], attack: 1, guard: 1, honor: 1, role: 'balanced' },
-  bordure: { id: 'bordure', name: 'Кайма', verb: 'замыкает границу', slots: [0, 1, 2, 3, 4, 5, 6], attack: 0, guard: 2, honor: 1, role: 'guard' }
+  or: { id: 'or', name: 'золото', class: 'metal', color: '#d8ad42', ink: '#2a1a08' },
+  argent: { id: 'argent', name: 'серебро', class: 'metal', color: '#e8e1d1', ink: '#252321' },
+  gules: { id: 'gules', name: 'червлень', class: 'color', color: '#9f302b', ink: '#fff4d9' },
+  azure: { id: 'azure', name: 'лазурь', class: 'color', color: '#214a78', ink: '#fff4d9' },
+  vert: { id: 'vert', name: 'зелень', class: 'color', color: '#315f45', ink: '#fff4d9' },
+  sable: { id: 'sable', name: 'чернь', class: 'color', color: '#242524', ink: '#fff4d9' },
+  purpure: { id: 'purpure', name: 'пурпур', class: 'color', color: '#663e66', ink: '#fff4d9' }
 };
 
 export const HOUSES = {
-  lion: {
-    id: 'lion', name: 'Дом Алого Льва', short: 'АЛЫЙ ЛЕВ', field: 'gules', charge: 'lion',
-    motto: 'Первым в пролом', passive: 'Атакующие фигуры в главе щита получают +1 натиск.',
-    passiveId: 'vanguard'
-  },
-  stag: {
-    id: 'stag', name: 'Дом Зелёного Оленя', short: 'ЗЕЛЁНЫЙ ОЛЕНЬ', field: 'vert', charge: 'stag',
-    motto: 'Тише корней, крепче дуба', passive: 'Каждая вторая законная фигура лечит ещё 1 славу.',
-    passiveId: 'renewal'
-  },
-  raven: {
-    id: 'raven', name: 'Дом Лазурного Ворона', short: 'ЛАЗУРНЫЙ ВОРОН', field: 'azure', charge: 'eagle',
-    motto: 'Видим раньше', passive: 'Фигуры в центральной колонне получают +1 честь и +1 пробитие.',
-    passiveId: 'foresight'
-  }
+  lion: { id: 'lion', name: 'Дом Алого Льва', field: 'gules', founder: 'lion', motto: 'Первым в пролом', gift: 'vanguard', detail: 'Первый зверь в каждой главе получает +2 натиска.' },
+  stag: { id: 'stag', name: 'Дом Зелёного Оленя', field: 'vert', founder: 'stag', motto: 'Корни помнят', gift: 'roots', detail: 'Законные фигуры дают ещё +1 достоинство.' },
+  raven: { id: 'raven', name: 'Дом Лазурного Ворона', field: 'azure', founder: 'eagle', motto: 'Видим прежде', gift: 'foresight', detail: 'Комбинации с птицами дают +2 хитрости.' }
 };
 
-export const OPPONENTS = [
-  {
-    id: 'boar', name: 'Дом Чёрного Вепря', short: 'ЧЁРНЫЙ ВЕПРЬ', field: 'sable', charge: 'boar',
-    motto: 'Закон пишут выжившие', passive: 'Еретические фигуры получают ещё +1 натиск.', passiveId: 'heresy',
-    style: 'aggressive', maxRenown: 22
-  },
-  {
-    id: 'tower', name: 'Дом Серебряной Башни', short: 'СЕРЕБРЯНАЯ БАШНЯ', field: 'gules', charge: 'tower',
-    motto: 'Стоим, пока мир рушится', passive: 'Защитные фигуры в подножии дают +1 щит.', passiveId: 'bastion',
-    style: 'defensive', maxRenown: 25
-  },
-  {
-    id: 'eagle', name: 'Дом Золотого Орла', short: 'ЗОЛОТОЙ ОРЁЛ', field: 'purpure', charge: 'eagle',
-    motto: 'Высота судит всех', passive: 'Законные фигуры с пробитием получают +1 натиск.', passiveId: 'dominion',
-    style: 'honorable', maxRenown: 27
-  }
+export const ELEMENTS = {
+  pale: { id: 'pale', type: 'ordinary', name: 'Столб', blazon: 'столб', rarity: 'common', tags: ['formation'], power: 1, ward: 2, prestige: 1, slots: [1,3,5] },
+  bend: { id: 'bend', type: 'ordinary', name: 'Перевязь', blazon: 'перевязь', rarity: 'common', tags: ['formation'], power: 2, ward: 1, prestige: 0, slots: [0,3,6] },
+  chief: { id: 'chief', type: 'ordinary', name: 'Глава', blazon: 'глава', rarity: 'common', tags: ['formation'], power: 0, ward: 1, prestige: 3, slots: [0,1,2] },
+  chevron: { id: 'chevron', type: 'ordinary', name: 'Стропило', blazon: 'стропило', rarity: 'uncommon', tags: ['formation'], power: 1, ward: 3, prestige: 1, slots: [4,5,6] },
+  bordure: { id: 'bordure', type: 'ordinary', name: 'Кайма', blazon: 'кайма', rarity: 'uncommon', tags: ['formation','boundary'], power: 0, ward: 4, prestige: 1, slots: [0,1,2,3,4,5,6] },
+
+  lion: { id: 'lion', type: 'charge', name: 'Лев', blazon: 'лев восстающий', rarity: 'common', tags: ['beast','assault','royal'], power: 4, ward: 0, prestige: 1 },
+  eagle: { id: 'eagle', type: 'charge', name: 'Орёл', blazon: 'орёл распластанный', rarity: 'common', tags: ['bird','assault','sky'], power: 3, ward: 1, prestige: 1 },
+  tower: { id: 'tower', type: 'charge', name: 'Башня', blazon: 'башня о трёх зубцах', rarity: 'common', tags: ['fortress','city'], power: 1, ward: 5, prestige: 1 },
+  stag: { id: 'stag', type: 'charge', name: 'Олень', blazon: 'олень шествующий', rarity: 'common', tags: ['beast','wild'], power: 2, ward: 2, prestige: 2 },
+  rose: { id: 'rose', type: 'charge', name: 'Роза', blazon: 'роза пятилистная', rarity: 'common', tags: ['flower','union'], power: 0, ward: 1, prestige: 3 },
+  cross: { id: 'cross', type: 'charge', name: 'Крест', blazon: 'крест уширенный', rarity: 'common', tags: ['sacred','oath'], power: 2, ward: 2, prestige: 2 },
+  sword: { id: 'sword', type: 'charge', name: 'Меч', blazon: 'меч остриём вверх', rarity: 'uncommon', tags: ['weapon','assault'], power: 5, ward: 0, prestige: 0 },
+  key: { id: 'key', type: 'charge', name: 'Ключ', blazon: 'ключ бородкой наружу', rarity: 'uncommon', tags: ['device','city'], power: 1, ward: 1, prestige: 2, requires: { any: ['tower','bordure'], text: 'Нужна башня или кайма: ключ обязан что-то отпирать.' } },
+  sun: { id: 'sun', type: 'charge', name: 'Солнце', blazon: 'солнце в славе', rarity: 'uncommon', tags: ['sky','sacred'], power: 2, ward: 0, prestige: 4, requires: { any: ['eagle','crown'], text: 'Нужен орёл или корона: солнце должно быть знаком высшей власти.' } },
+  dragon: { id: 'dragon', type: 'charge', name: 'Дракон', blazon: 'дракон крылатый', rarity: 'rare', tags: ['monster','assault'], power: 8, ward: 1, prestige: -2, scandal: 2 },
+  serpent: { id: 'serpent', type: 'charge', name: 'Змей', blazon: 'змей кольцом', rarity: 'rare', tags: ['monster','secret'], power: 4, ward: 1, prestige: 0, scandal: 1 },
+  fleur: { id: 'fleur', type: 'charge', name: 'Лилия', blazon: 'лилия', rarity: 'uncommon', tags: ['flower','royal'], power: 1, ward: 1, prestige: 4 },
+
+  helmet: { id: 'helmet', type: 'ornament', name: 'Турнирный шлем', blazon: 'шлем впрямь', rarity: 'common', tags: ['rank'], power: 0, ward: 2, prestige: 2 },
+  crown: { id: 'crown', type: 'ornament', name: 'Корона достоинства', blazon: 'корона о пяти листьях', rarity: 'rare', tags: ['rank','royal'], power: 2, ward: 0, prestige: 5, requires: { any: ['helmet'], minPrestige: 7, text: 'Нужен шлем или 7 достоинства.' } },
+  chain: { id: 'chain', type: 'ornament', name: 'Цепь усмирения', blazon: 'цепь вокруг щита', rarity: 'uncommon', tags: ['order'], power: 0, ward: 3, prestige: 2, requires: { any: ['dragon','serpent'], text: 'Цепь имеет смысл только рядом с чудовищем.' } },
+  supporters: { id: 'supporters', type: 'ornament', name: 'Щитодержатели', blazon: 'два зверя-щитодержателя', rarity: 'rare', tags: ['rank','beast'], power: 3, ward: 3, prestige: 3, requires: { tagCount: ['beast', 2], text: 'Нужны два зверя в щите.' } },
+  mantle: { id: 'mantle', type: 'ornament', name: 'Княжеская мантия', blazon: 'мантия с горностаем', rarity: 'rare', tags: ['rank'], power: 0, ward: 5, prestige: 4, requires: { any: ['crown'], text: 'Мантия полагается только коронованному гербу.' } },
+  motto_gate: { id: 'motto_gate', type: 'motto', name: '«Врата знают своих»', blazon: 'девиз на ленте', rarity: 'uncommon', tags: ['motto','city'], power: 1, ward: 2, prestige: 3, requires: { all: ['tower','key'], text: 'Девиз открывается связкой Башня + Ключ.' } },
+  motto_flame: { id: 'motto_flame', type: 'motto', name: '«Пламя подчинено крови»', blazon: 'девиз на ленте', rarity: 'rare', tags: ['motto','monster'], power: 4, ward: 0, prestige: 1, requires: { all: ['dragon','chain'], text: 'Нужны Дракон и Цепь.' } },
+  motto_union: { id: 'motto_union', type: 'motto', name: '«Две крови — один щит»', blazon: 'девиз на ленте', rarity: 'rare', tags: ['motto','union'], power: 1, ward: 1, prestige: 5, requires: { any: ['rose'], tagCount: ['beast', 2], text: 'Нужна Роза и два разных зверя.' } }
+};
+
+export const COMBINATIONS = [
+  { id: 'gatekeeper', name: 'Хранитель врат', requires: ['tower','key'], detail: 'Башня получает ключ и перестаёт быть просто кирпичом.', power: 2, ward: 5, prestige: 2 },
+  { id: 'march-wall', name: 'Пограничная марка', requires: ['bordure','tower','key'], detail: 'Кайма становится границей, башня — заставой, ключ — правом прохода.', power: 2, ward: 7, prestige: 3 },
+  { id: 'crowned-beast', name: 'Коронованный зверь', requiresTags: ['beast'], requires: ['crown'], detail: 'Зверь объявляет притязание на престол.', power: 5, ward: 0, prestige: 4 },
+  { id: 'bound-wyrm', name: 'Зверь в цепях', requiresAny: ['dragon','serpent'], requires: ['chain'], detail: 'Чудовище больше не пожирает честь рода.', power: 6, ward: 4, prestige: 2, scandal: -3 },
+  { id: 'two-bloods', name: 'Союз двух кровей', requires: ['rose'], requiresDistinctBeasts: 2, detail: 'Роза связывает две воинские линии.', power: 3, ward: 2, prestige: 6 },
+  { id: 'high-dominion', name: 'Высшее владычество', requires: ['eagle','sun','crown'], detail: 'Небо, свет и право власти сходятся в одной формуле.', power: 5, ward: 1, prestige: 7 },
+  { id: 'crusader', name: 'Меч клятвы', requires: ['cross','sword'], detail: 'Клятва направляет оружие, а не наоборот.', power: 7, ward: 2, prestige: 2 },
+  { id: 'three-lions', name: 'Три льва похода', count: ['lion',3], detail: 'Фигура превращается в династическую программу.', power: 8, ward: 0, prestige: 4 }
 ];
 
-export const AUGMENTS = {
-  crown: { id: 'crown', name: 'Корона достоинства', detail: 'Законная фигура в сердце щита получает +2 натиск.' },
-  mantle: { id: 'mantle', name: 'Мантия рода', detail: 'Первый полученный в каждой дуэли урон уменьшается на 2.' },
-  motto: { id: 'motto', name: 'Боевой девиз', detail: 'Когда ход приносит 2+ чести, восстанови 1 славу.' },
-  standard: { id: 'standard', name: 'Большой штандарт', detail: 'Начинай каждую дуэль с 3 щита.' },
-  spur: { id: 'spur', name: 'Золотая шпора', detail: 'Первая атакующая фигура в главе получает +2 натиск.' },
-  seal: { id: 'seal', name: 'Тайная печать', detail: 'Первая ересь в дуэли не ранит собственный род.' },
-  chain: { id: 'chain', name: 'Цепь вассалов', detail: 'Башни, кресты и защитные фигуры получают +1 щит.' }
+export const TRIALS = [
+  { id: 'tourney', name: 'Турнир трёх копий', type: 'power', opponent: 'Дом Чёрного Вепря', field: 'sable', sigil: 'boar', threshold: 18, copy: 'Знать смотрит не на обещания, а на то, кто останется в седле.' },
+  { id: 'siege', name: 'Осада Серебряных ворот', type: 'ward', opponent: 'Дом Серебряной Башни', field: 'gules', sigil: 'tower', threshold: 27, copy: 'Герб должен выдержать голод, подкоп и третью ночь под огнём.' },
+  { id: 'court', name: 'Суд двенадцати герольдов', type: 'prestige', opponent: 'Капитул Золотой Лилии', field: 'purpure', sigil: 'fleur', threshold: 34, copy: 'Здесь ересь не убивает сразу. Она просто становится доказательством.' },
+  { id: 'war', name: 'Война великих знамён', type: 'total', opponent: 'Имперский Золотой Орёл', field: 'azure', sigil: 'eagle', threshold: 53, copy: 'Последний герб останется не рисунком, а законом нового порядка.' }
+];
+
+export const PATRONAGE = {
+  enamel: { id: 'enamel', name: 'Эмаль мастера Лоренцо', detail: 'Все законные фигуры дают +1 достоинство.' },
+  iron: { id: 'iron', name: 'Железо маршала', detail: 'Первая комбинация в испытании даёт +3 натиска.' },
+  archive: { id: 'archive', name: 'Архив старых прав', detail: 'Требования одного элемента можно игнорировать в каждой главе.' },
+  relic: { id: 'relic', name: 'Реликварий клятв', detail: 'Кресты и девизы дают +2 защиты.' },
+  blackbook: { id: 'blackbook', name: 'Чёрный гербовник', detail: 'Ересь даёт ещё +2 натиска, но +1 скандал.' },
+  compass: { id: 'compass', name: 'Циркуль герольда', detail: 'Заполненная формация ординария даёт двойной бонус.' }
 };
 
-const CHARGE_IDS = Object.keys(CHARGES);
-const ORDINARY_IDS = Object.keys(ORDINARIES);
-const METALS = Object.values(TINCTURES).filter((item) => item.class === 'metal').map((item) => item.id);
-const COLORS = Object.values(TINCTURES).filter((item) => item.class === 'color').map((item) => item.id);
+const ELEMENT_IDS = Object.keys(ELEMENTS);
+const TINCTURE_IDS = Object.keys(TINCTURES);
 
-function clone(value) {
-  return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+function clone(value) { return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value)); }
+export function normalizeSeed(seed) { const n = Number(seed); return Number.isFinite(n) ? (Math.abs(Math.floor(n)) || 1) >>> 0 : 1; }
+function random(state) { state.rng = (Math.imul(state.rng, 1664525) + 1013904223) >>> 0; return state.rng / 4294967296; }
+function pick(state, list) { return list[Math.floor(random(state) * list.length)] ?? list[0]; }
+function shuffle(state, list) { const copy = [...list]; for (let i = copy.length - 1; i > 0; i--) { const j = Math.floor(random(state) * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; } return copy; }
+function unique(list) { return [...new Set(list)]; }
+
+export function allPlacedIds(board) {
+  return [board.ordinary?.device, ...board.charges.map((x) => x?.device), ...board.ornaments.map((x) => x.device), board.motto?.device].filter(Boolean);
 }
 
-export function normalizeSeed(seed) {
-  const numeric = Number(seed);
-  if (Number.isFinite(numeric) && numeric > 0) return Math.floor(numeric) >>> 0;
-  return (Date.now() ^ 0x9e3779b9) >>> 0;
+function allPlacedElements(board) {
+  const items = [];
+  if (board.ordinary) items.push(board.ordinary);
+  board.charges.forEach((item) => item && items.push(item));
+  board.ornaments.forEach((item) => items.push(item));
+  if (board.motto) items.push(board.motto);
+  return items;
 }
 
-function randomFrom(state) {
-  state.rng = (Math.imul(state.rng, 1664525) + 1013904223) >>> 0;
-  return state.rng / 4294967296;
+function tagCount(board, tag) {
+  return allPlacedElements(board).filter((item) => ELEMENTS[item.device]?.tags?.includes(tag)).length;
 }
 
-function pick(state, items) {
-  return items[Math.floor(randomFrom(state) * items.length)] ?? items[0];
+function distinctBeastCount(board) {
+  return unique(board.charges.filter(Boolean).filter((item) => ELEMENTS[item.device]?.tags?.includes('beast')).map((item) => item.device)).length;
 }
 
-function shuffled(state, items) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(randomFrom(state) * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
+export function requirementStatus(campaign, device) {
+  const def = ELEMENTS[device];
+  const requirement = def?.requires;
+  if (!requirement) return { ok: true, text: '' };
+  if (campaign.chapterBypassAvailable && campaign.patronage.includes('archive')) return { ok: true, bypass: true, text: 'Архив позволяет один раз обойти требование.' };
+  const ids = allPlacedIds(campaign.board);
+  const prestige = evaluateHeraldry(campaign).prestige;
+  const checks = [];
+  if (requirement.all) checks.push(requirement.all.every((id) => ids.includes(id)));
+  if (requirement.any) checks.push(requirement.any.some((id) => ids.includes(id)) || (requirement.minPrestige ? prestige >= requirement.minPrestige : false));
+  else if (requirement.minPrestige) checks.push(prestige >= requirement.minPrestige);
+  if (requirement.tagCount) checks.push(tagCount(campaign.board, requirement.tagCount[0]) >= requirement.tagCount[1]);
+  return { ok: checks.every(Boolean), text: requirement.text || 'Условия не выполнены.' };
 }
 
-function combatantFromHouse(house, maxRenown, augments = []) {
-  return {
-    id: house.id,
-    name: house.name,
-    short: house.short,
-    field: house.field,
-    charge: house.charge,
-    motto: house.motto,
-    passive: house.passive,
-    passiveId: house.passiveId,
-    style: house.style || 'balanced',
-    maxRenown,
-    renown: maxRenown,
-    guard: augments.includes('standard') ? 3 : 0,
-    honor: 0,
-    fury: 0,
-    legalStreak: 0,
-    legalCount: 0,
-    board: Array(SLOT_COUNT).fill(null),
-    ordinary: null,
-    hand: [],
-    augments: [...augments],
-    used: { mantle: false, spur: false, seal: false }
-  };
+export function isLegalTincture(foreground, background) {
+  const a = TINCTURES[foreground]; const b = TINCTURES[background];
+  if (!a || !b) return true;
+  return a.class !== b.class;
+}
+
+export function backgroundAtSlot(board, slot) {
+  if (board.ordinary && ELEMENTS[board.ordinary.device]?.slots?.includes(slot)) return board.ordinary.tincture;
+  return board.field;
+}
+
+export function availableSlots(campaign, item) {
+  if (!item || ELEMENTS[item.device]?.type !== 'charge') return [];
+  const free = SLOT_META.filter((slot) => !campaign.board.charges[slot.id]).map((slot) => slot.id);
+  if (free.length) return free;
+  return SLOT_META.filter((slot) => !campaign.board.charges[slot.id]?.founder).map((slot) => slot.id);
+}
+
+function makeItem(state, device) {
+  const def = ELEMENTS[device];
+  const tincture = def.type === 'ornament' || def.type === 'motto' ? null : pick(state, TINCTURE_IDS);
+  return { id: `${device}-${state.chapter}-${state.step}-${Math.floor(random(state) * 1e7).toString(36)}`, device, tincture };
+}
+
+function structurallyAvailable(campaign, id) {
+  const def = ELEMENTS[id];
+  if (def.type === 'ordinary') return !campaign.board.ordinary;
+  if (def.type === 'charge') return campaign.board.charges.some((slot) => !slot || !slot.founder);
+  if (def.type === 'ornament') return !campaign.board.ornaments.some((item) => item.device === id);
+  if (def.type === 'motto') return !campaign.board.motto;
+  return true;
+}
+
+function weightedPool(campaign) {
+  const chapter = campaign.chapter;
+  return ELEMENT_IDS.filter((id) => {
+    const rarity = ELEMENTS[id].rarity;
+    const unlocked = rarity === 'rare' ? chapter >= 1 : true;
+    return unlocked && structurallyAvailable(campaign, id);
+  });
+}
+
+export function generateOffer(campaign) {
+  if (campaign.pendingTrial || campaign.pendingPatronage || campaign.completed || campaign.failed) return [];
+  const state = clone(campaign);
+  const pool = shuffle(state, weightedPool(state));
+  const placed = allPlacedIds(state.board);
+  const preferred = pool.sort((a, b) => {
+    const ar = requirementStatus(state, a).ok ? 0 : 1;
+    const br = requirementStatus(state, b).ok ? 0 : 1;
+    const ad = placed.includes(a) ? 1 : 0;
+    const bd = placed.includes(b) ? 1 : 0;
+    return ar - br || ad - bd;
+  });
+  const picked = unique(preferred).slice(0, 3).map((id) => makeItem(state, id));
+  campaign.rng = state.rng;
+  campaign.offer = picked;
+  return clone(picked);
 }
 
 export function createCampaign(houseId = 'lion', seed = Date.now()) {
   const house = HOUSES[houseId] || HOUSES.lion;
+  const rng = normalizeSeed(seed);
   const campaign = {
     version: APP_STATE_VERSION,
-    id: `campaign-${normalizeSeed(seed).toString(36)}`,
-    seed: normalizeSeed(seed),
-    rng: normalizeSeed(seed),
+    id: `blazon-${rng.toString(36)}`,
     houseId: house.id,
-    stage: 0,
-    victories: 0,
-    augments: [],
+    rng,
+    chapter: 0,
+    step: 0,
+    integrity: 3,
+    renown: 0,
+    scandalHistory: 0,
+    patronage: [],
+    scars: [],
+    board: {
+      field: house.field,
+      ordinary: null,
+      charges: Array(7).fill(null),
+      ornaments: [],
+      motto: null
+    },
+    offer: [],
+    history: [],
+    pendingTrial: false,
+    pendingPatronage: false,
+    chapterBypassAvailable: true,
     completed: false,
-    startedAt: Date.now(),
-    battle: null,
-    rewards: []
+    failed: false,
+    lastTrial: null,
+    startedAt: Date.now()
   };
-  campaign.battle = createBattle(campaign);
-  return campaign;
-}
-
-export function createBattle(campaign) {
-  const source = clone(campaign);
-  const playerHouse = HOUSES[source.houseId] || HOUSES.lion;
-  const opponent = OPPONENTS[Math.min(source.stage, OPPONENTS.length - 1)];
-  const battle = {
-    version: APP_STATE_VERSION,
-    seed: source.rng,
-    rng: source.rng,
-    stage: source.stage,
-    turn: 1,
-    maxTurns: 7,
-    phase: 'player',
-    winner: null,
-    resultReason: null,
-    player: combatantFromHouse(playerHouse, 24, source.augments),
-    enemy: combatantFromHouse(opponent, opponent.maxRenown, []),
-    lastClash: null,
-    history: []
-  };
-  battle.player.hand = drawHand(battle, 'player');
-  battle.enemy.hand = drawHand(battle, 'enemy');
-  source.rng = battle.rng;
-  return battle;
-}
-
-function nextCardId(state, side, kind, device) {
-  const token = Math.floor(randomFrom(state) * 0xffffff).toString(36).padStart(4, '0');
-  return `${side}-${state.turn}-${kind}-${device}-${token}`;
-}
-
-function oppositeTincturePool(underTincture, legal) {
-  const underClass = TINCTURES[underTincture]?.class || 'color';
-  if (legal) return underClass === 'metal' ? COLORS : METALS;
-  return underClass === 'metal' ? METALS : COLORS;
-}
-
-function makeChargeCard(state, side, legalIntent) {
-  const owner = state[side];
-  const chargeId = pick(state, CHARGE_IDS);
-  const under = owner.field;
-  const tincture = pick(state, oppositeTincturePool(under, legalIntent));
-  return {
-    id: nextCardId(state, side, 'charge', chargeId),
-    kind: 'charge',
-    device: chargeId,
-    tincture,
-    legalIntent
-  };
-}
-
-function makeOrdinaryCard(state, side, legalIntent) {
-  const owner = state[side];
-  const ordinaryId = pick(state, ORDINARY_IDS);
-  const tincture = pick(state, oppositeTincturePool(owner.field, legalIntent));
-  return {
-    id: nextCardId(state, side, 'ordinary', ordinaryId),
-    kind: 'ordinary',
-    device: ordinaryId,
-    tincture,
-    legalIntent
-  };
-}
-
-export function drawHand(state, side) {
-  const legalPattern = shuffled(state, [true, true, false]);
-  const hand = legalPattern.map((legalIntent, index) => {
-    const ordinaryChance = index === 2 ? 0.42 : 0.2;
-    return randomFrom(state) < ordinaryChance
-      ? makeOrdinaryCard(state, side, legalIntent)
-      : makeChargeCard(state, side, legalIntent);
-  });
-  if (!hand.some((card) => card.kind === 'charge')) hand[0] = makeChargeCard(state, side, true);
-  return hand;
-}
-
-export function cardDefinition(card) {
-  return card?.kind === 'ordinary' ? ORDINARIES[card.device] : CHARGES[card?.device];
-}
-
-export function ordinaryCovers(ordinary, slot) {
-  if (!ordinary || !Number.isInteger(slot)) return false;
-  return ORDINARIES[ordinary.device]?.slots.includes(slot) || false;
-}
-
-export function underTinctureFor(combatant, card, slot = null) {
-  if (card.kind === 'ordinary') return combatant.field;
-  if (combatant.ordinary && ordinaryCovers(combatant.ordinary, slot)) return combatant.ordinary.tincture;
-  return combatant.field;
-}
-
-export function isLegalPlacement(combatant, card, slot = null) {
-  const under = underTinctureFor(combatant, card, slot);
-  return TINCTURES[under]?.class !== TINCTURES[card.tincture]?.class;
-}
-
-export function validTargets(battle, side, card) {
-  if (!battle || !card) return [];
-  if (card.kind === 'ordinary') return ['ordinary'];
-  return SLOT_META.map((slot) => slot.id);
-}
-
-function placementSnapshot(combatant, card, slot) {
-  const next = clone(combatant);
-  if (card.kind === 'ordinary') next.ordinary = clone(card);
-  else next.board[slot] = clone(card);
-  return next;
-}
-
-function symmetryBonus(combatant, card, slot) {
-  if (card.kind !== 'charge') return { attack: 0, guard: 0, honor: 0, label: null };
-  const mirror = MIRROR_SLOT[slot];
-  if (mirror === slot) return { attack: 0, guard: 0, honor: 0, label: null };
-  const other = combatant.board[mirror];
-  if (!other || other.kind !== 'charge') return { attack: 0, guard: 0, honor: 0, label: null };
-  const sameDevice = other.device === card.device;
-  const sameClass = TINCTURES[other.tincture]?.class === TINCTURES[card.tincture]?.class;
-  if (sameDevice) return { attack: 2, guard: 2, honor: 0, label: 'Парные фигуры' };
-  if (sameClass) return { attack: 0, guard: 1, honor: 1, label: 'Единая ливрея' };
-  return { attack: 1, guard: 1, honor: 0, label: 'Зеркальный строй' };
-}
-
-function ordinarySynergy(combatant, card, slot) {
-  if (card.kind !== 'charge' || !combatant.ordinary || !ordinaryCovers(combatant.ordinary, slot)) {
-    return { attack: 0, guard: 0, honor: 0, label: null };
-  }
-  const ordinary = ORDINARIES[combatant.ordinary.device];
-  if (ordinary.role === 'assault') return { attack: 2, guard: 0, honor: 0, label: ordinary.name };
-  if (ordinary.role === 'guard') return { attack: 0, guard: 2, honor: 0, label: ordinary.name };
-  if (ordinary.role === 'honor') return { attack: 1, guard: 0, honor: 1, label: ordinary.name };
-  return { attack: 1, guard: 1, honor: 0, label: ordinary.name };
-}
-
-function housePassiveBonus(combatant, card, slot, legal) {
-  const bonus = { attack: 0, guard: 0, honor: 0, heal: 0, pierce: 0, label: null };
-  const def = cardDefinition(card);
-  if (combatant.passiveId === 'vanguard' && card.kind === 'charge' && SLOT_META[slot]?.row === 'chief' && def.tags.includes('assault')) {
-    bonus.attack += 1; bonus.label = 'Передовой строй';
-  }
-  if (combatant.passiveId === 'renewal' && legal && (combatant.legalCount + 1) % 2 === 0) {
-    bonus.heal += 1; bonus.label = 'Возвращение весны';
-  }
-  if (combatant.passiveId === 'foresight' && card.kind === 'charge' && SLOT_META[slot]?.column === 'center') {
-    bonus.honor += 1; bonus.pierce += 1; bonus.label = 'Предвидение';
-  }
-  if (combatant.passiveId === 'heresy' && !legal) {
-    bonus.attack += 1; bonus.label = 'Закон выживших';
-  }
-  if (combatant.passiveId === 'bastion' && card.kind === 'charge' && SLOT_META[slot]?.row === 'base' && def.tags.includes('guard')) {
-    bonus.guard += 1; bonus.label = 'Каменное подножие';
-  }
-  if (combatant.passiveId === 'dominion' && legal && def.pierce > 0) {
-    bonus.attack += 1; bonus.label = 'Господство высоты';
-  }
-  return bonus;
-}
-
-function augmentBonus(combatant, card, slot, legal, def) {
-  const bonus = { attack: 0, guard: 0, honor: 0, heal: 0, pierce: 0, selfDamageReduction: 0, labels: [] };
-  if (combatant.augments.includes('crown') && legal && slot === 3 && card.kind === 'charge') {
-    bonus.attack += 2; bonus.labels.push('Корона достоинства');
-  }
-  if (combatant.augments.includes('motto') && legal && (def.honor || 0) + 2 >= 2) {
-    bonus.heal += 1; bonus.labels.push('Боевой девиз');
-  }
-  if (combatant.augments.includes('spur') && !combatant.used.spur && card.kind === 'charge' && SLOT_META[slot]?.row === 'chief' && def.tags.includes('assault')) {
-    bonus.attack += 2; bonus.labels.push('Золотая шпора');
-  }
-  if (combatant.augments.includes('seal') && !combatant.used.seal && !legal) {
-    bonus.selfDamageReduction = 1; bonus.labels.push('Тайная печать');
-  }
-  if (combatant.augments.includes('chain') && (def.tags?.includes('guard') || card.device === 'tower' || card.device === 'cross')) {
-    bonus.guard += 1; bonus.labels.push('Цепь вассалов');
-  }
-  return bonus;
-}
-
-export function previewAction(battle, side, card, target) {
-  const combatant = battle[side];
-  if (!combatant || !card) return null;
-  const slot = card.kind === 'ordinary' ? null : Number(target);
-  const legal = isLegalPlacement(combatant, card, slot);
-  const def = cardDefinition(card);
-  const symmetry = symmetryBonus(combatant, card, slot);
-  const ordinary = ordinarySynergy(combatant, card, slot);
-  const passive = housePassiveBonus(combatant, card, slot, legal);
-  const augment = augmentBonus(combatant, card, slot, legal, def);
-  let attack = def.attack || 0;
-  let guard = def.guard || 0;
-  let honor = def.honor || 0;
-  let heal = def.heal || 0;
-  let pierce = def.pierce || 0;
-  const labels = [];
-
-  if (card.kind === 'charge') {
-    if (SLOT_META[slot]?.row === 'chief') attack += 1;
-    if (SLOT_META[slot]?.row === 'base') guard += 1;
-    if (slot === 3) honor += 1;
-  }
-
-  if (legal) {
-    honor += 2;
-  } else {
-    attack += 2;
-  }
-
-  attack += symmetry.attack + ordinary.attack + passive.attack + augment.attack;
-  guard += symmetry.guard + ordinary.guard + passive.guard + augment.guard;
-  honor += symmetry.honor + ordinary.honor + passive.honor + augment.honor;
-  heal += passive.heal + augment.heal;
-  pierce += passive.pierce + augment.pierce;
-  if (symmetry.label) labels.push(symmetry.label);
-  if (ordinary.label) labels.push(ordinary.label);
-  if (passive.label) labels.push(passive.label);
-  labels.push(...augment.labels);
-
-  const projectedStreak = legal ? combatant.legalStreak + 1 : 0;
-  if (projectedStreak > 0 && projectedStreak % 3 === 0) {
-    attack += 2;
-    guard += 2;
-    labels.push('Тройная согласованность');
-  }
-
-  return {
-    side,
-    card: clone(card),
-    target: card.kind === 'ordinary' ? 'ordinary' : slot,
-    legal,
-    underTincture: underTinctureFor(combatant, card, slot),
-    attack,
-    guard,
-    honor,
-    heal,
-    pierce,
-    selfDamage: legal ? 0 : Math.max(0, 1 - augment.selfDamageReduction),
-    labels,
-    description: `${def.name} ${def.verb}`
-  };
-}
-
-function consumeAugments(combatant, action) {
-  if (combatant.augments.includes('spur') && action.labels.includes('Золотая шпора')) combatant.used.spur = true;
-  if (combatant.augments.includes('seal') && action.labels.includes('Тайная печать')) combatant.used.seal = true;
-}
-
-function applyPlacement(combatant, card, target, action) {
-  if (card.kind === 'ordinary') combatant.ordinary = clone(card);
-  else combatant.board[target] = clone(card);
-  combatant.legalStreak = action.legal ? combatant.legalStreak + 1 : 0;
-  combatant.legalCount += action.legal ? 1 : 0;
-  combatant.honor = Math.max(0, combatant.honor + action.honor);
-  combatant.fury = Math.max(0, combatant.fury + (action.legal ? 0 : 2));
-  consumeAugments(combatant, action);
-}
-
-function absorbAttack(defender, incoming, pierce) {
-  const pierced = Math.min(incoming, Math.max(0, pierce));
-  const blockable = Math.max(0, incoming - pierced);
-  const absorbed = Math.min(defender.guard, blockable);
-  defender.guard -= absorbed;
-  return pierced + Math.max(0, blockable - absorbed);
-}
-
-function applyMantle(defender, damage) {
-  if (!defender.augments.includes('mantle') || defender.used.mantle || damage <= 0) return damage;
-  defender.used.mantle = true;
-  return Math.max(0, damage - 2);
-}
-
-function battleScore(combatant) {
-  return combatant.renown * 3 + combatant.guard + combatant.honor * 2 - combatant.fury;
-}
-
-function determineWinner(battle) {
-  if (battle.player.renown <= 0 && battle.enemy.renown <= 0) {
-    const playerScore = battleScore(battle.player);
-    const enemyScore = battleScore(battle.enemy);
-    battle.winner = playerScore >= enemyScore ? 'player' : 'enemy';
-    battle.resultReason = 'mutual-fall';
-    return;
-  }
-  if (battle.enemy.renown <= 0) {
-    battle.winner = 'player'; battle.resultReason = 'broken-banner'; return;
-  }
-  if (battle.player.renown <= 0) {
-    battle.winner = 'enemy'; battle.resultReason = 'broken-banner'; return;
-  }
-  if (battle.turn > battle.maxTurns) {
-    const playerScore = battleScore(battle.player);
-    const enemyScore = battleScore(battle.enemy);
-    battle.winner = playerScore >= enemyScore ? 'player' : 'enemy';
-    battle.resultReason = 'judgement';
-  }
-}
-
-function resolveRound(battle, playerAction, enemyAction) {
-  const player = battle.player;
-  const enemy = battle.enemy;
-
-  player.guard = Math.min(14, player.guard + playerAction.guard);
-  enemy.guard = Math.min(14, enemy.guard + enemyAction.guard);
-
-  let damageToEnemy = absorbAttack(enemy, playerAction.attack, playerAction.pierce);
-  let damageToPlayer = absorbAttack(player, enemyAction.attack, enemyAction.pierce);
-  damageToEnemy = applyMantle(enemy, damageToEnemy);
-  damageToPlayer = applyMantle(player, damageToPlayer);
-
-  player.renown = Math.min(player.maxRenown, player.renown - damageToPlayer - playerAction.selfDamage + playerAction.heal);
-  enemy.renown = Math.min(enemy.maxRenown, enemy.renown - damageToEnemy - enemyAction.selfDamage + enemyAction.heal);
-
-  battle.lastClash = {
-    turn: battle.turn,
-    player: playerAction,
-    enemy: enemyAction,
-    damageToEnemy,
-    damageToPlayer,
-    playerRenown: player.renown,
-    enemyRenown: enemy.renown
-  };
-  battle.history.push(clone(battle.lastClash));
-  battle.turn += 1;
-  determineWinner(battle);
-  if (battle.winner) {
-    battle.phase = battle.winner === 'player' ? 'reward' : 'result';
-    return;
-  }
-  player.hand = drawHand(battle, 'player');
-  enemy.hand = drawHand(battle, 'enemy');
-  battle.phase = 'player';
-}
-
-export function playRound(battleInput, playerCardId, playerTarget, enemyChoice) {
-  const battle = clone(battleInput);
-  if (battle.winner || battle.phase !== 'player') return { ok: false, error: 'Ход сейчас недоступен.', battle: battleInput };
-  const playerCard = battle.player.hand.find((card) => card.id === playerCardId);
-  if (!playerCard) return { ok: false, error: 'Фигура больше не находится в руке.', battle: battleInput };
-  const playerTargets = validTargets(battle, 'player', playerCard);
-  if (!playerTargets.includes(playerCard.kind === 'ordinary' ? 'ordinary' : Number(playerTarget))) {
-    return { ok: false, error: 'Эту фигуру нельзя поставить сюда.', battle: battleInput };
-  }
-  const enemyCard = battle.enemy.hand.find((card) => card.id === enemyChoice?.cardId);
-  if (!enemyCard) return { ok: false, error: 'Соперник не выбрал фигуру.', battle: battleInput };
-  const enemyTarget = enemyCard.kind === 'ordinary' ? 'ordinary' : Number(enemyChoice.target);
-  if (!validTargets(battle, 'enemy', enemyCard).includes(enemyTarget)) {
-    return { ok: false, error: 'Соперник выбрал невозможную позицию.', battle: battleInput };
-  }
-
-  const playerAction = previewAction(battle, 'player', playerCard, playerTarget);
-  const enemyAction = previewAction(battle, 'enemy', enemyCard, enemyTarget);
-  applyPlacement(battle.player, playerCard, playerCard.kind === 'ordinary' ? null : Number(playerTarget), playerAction);
-  applyPlacement(battle.enemy, enemyCard, enemyCard.kind === 'ordinary' ? null : enemyTarget, enemyAction);
-  battle.player.hand = battle.player.hand.filter((card) => card.id !== playerCard.id);
-  battle.enemy.hand = battle.enemy.hand.filter((card) => card.id !== enemyCard.id);
-  resolveRound(battle, playerAction, enemyAction);
-  return { ok: true, battle, playerAction, enemyAction, clash: battle.lastClash };
-}
-
-export function rankEnemyActions(battle) {
-  const enemy = battle.enemy;
-  const weights = {
-    aggressive: { attack: 2.2, guard: 0.7, honor: 0.45, heal: 0.8, legal: 0.2, illegal: 1.0 },
-    defensive: { attack: 1.1, guard: 1.9, honor: 0.7, heal: 1.3, legal: 1.0, illegal: -0.8 },
-    honorable: { attack: 1.5, guard: 1.2, honor: 1.5, heal: 1.0, legal: 2.0, illegal: -1.8 },
-    balanced: { attack: 1.6, guard: 1.3, honor: 0.9, heal: 1.0, legal: 1.0, illegal: -0.5 }
-  }[enemy.style] || { attack: 1.6, guard: 1.3, honor: 0.9, heal: 1.0, legal: 1.0, illegal: -0.5 };
-
-  const actions = [];
-  for (const card of enemy.hand) {
-    for (const target of validTargets(battle, 'enemy', card)) {
-      const action = previewAction(battle, 'enemy', card, target);
-      const potentialDamage = Math.max(0, action.attack - Math.max(0, battle.player.guard - action.pierce));
-      const lethal = potentialDamage >= battle.player.renown ? 1000 : 0;
-      const score =
-        action.attack * weights.attack +
-        action.guard * weights.guard +
-        action.honor * weights.honor +
-        action.heal * weights.heal +
-        (action.legal ? weights.legal : weights.illegal) +
-        action.labels.length * 0.4 +
-        lethal;
-      actions.push({ cardId: card.id, target, action, score });
-    }
-  }
-  return actions.sort((a, b) => b.score - a.score);
-}
-
-export function chooseEnemyAction(battleInput) {
-  const battle = clone(battleInput);
-  const ranked = rankEnemyActions(battle);
-  if (!ranked.length) return null;
-  const pool = ranked.slice(0, Math.min(3, ranked.length));
-  const choice = pool[Math.floor(randomFrom(battle) ** 1.8 * pool.length)] || pool[0];
-  battleInput.rng = battle.rng;
-  return { cardId: choice.cardId, target: choice.target };
-}
-
-function rewardPool(campaign) {
-  const owned = new Set(campaign.augments);
-  return Object.keys(AUGMENTS).filter((id) => !owned.has(id));
-}
-
-export function generateRewards(campaignInput, count = 3) {
-  const campaign = clone(campaignInput);
-  const pool = shuffled(campaign, rewardPool(campaign));
-  return { rewards: pool.slice(0, Math.min(count, pool.length)), rng: campaign.rng };
-}
-
-export function finishBattle(campaignInput, battleInput) {
-  const campaign = clone(campaignInput);
-  const battle = clone(battleInput);
-  campaign.battle = battle;
-  campaign.rng = battle.rng;
-  if (battle.winner !== 'player') return campaign;
-  campaign.victories += 1;
-  if (campaign.stage >= OPPONENTS.length - 1) {
-    campaign.completed = true;
-    campaign.battle.phase = 'complete';
-    campaign.rewards = [];
-    return campaign;
-  }
-  const generated = generateRewards(campaign, 3);
-  campaign.rng = generated.rng;
-  campaign.rewards = generated.rewards;
-  return campaign;
-}
-
-export function chooseReward(campaignInput, rewardId) {
-  const campaign = clone(campaignInput);
-  if (!campaign.rewards.includes(rewardId) || campaign.completed) return campaign;
-  campaign.augments.push(rewardId);
-  campaign.stage += 1;
-  campaign.rewards = [];
-  campaign.battle = createBattle(campaign);
-  campaign.rng = campaign.battle.rng;
-  return campaign;
-}
-
-export function restartBattle(campaignInput) {
-  const campaign = clone(campaignInput);
-  campaign.battle = createBattle(campaign);
-  campaign.rng = campaign.battle.rng;
-  campaign.rewards = [];
+  campaign.board.charges[3] = { id: `founder-${house.founder}`, device: house.founder, tincture: house.field === 'gules' ? 'or' : 'argent', founder: true };
+  generateOffer(campaign);
   return campaign;
 }
 
 export function hydrateCampaign(value) {
-  if (!value || value.version !== APP_STATE_VERSION || !HOUSES[value.houseId]) return null;
-  if (!Array.isArray(value.augments) || !value.battle) return null;
-  return clone(value);
+  if (!value || value.version !== APP_STATE_VERSION) return null;
+  const campaign = clone(value);
+  campaign.board.charges = Array.from({ length: 7 }, (_, i) => campaign.board.charges?.[i] || null);
+  campaign.board.ornaments ||= [];
+  campaign.patronage ||= [];
+  campaign.scars ||= [];
+  campaign.history ||= [];
+  campaign.offer ||= [];
+  if (!campaign.offer.length && !campaign.pendingTrial && !campaign.pendingPatronage && !campaign.completed && !campaign.failed) generateOffer(campaign);
+  return campaign;
+}
+
+export function canPlaceElement(campaign, item, slot = null) {
+  const def = ELEMENTS[item?.device];
+  if (!def) return { ok: false, reason: 'Неизвестный элемент.' };
+  const requirement = requirementStatus(campaign, item.device);
+  if (!requirement.ok) return { ok: false, reason: requirement.text };
+  if (def.type === 'ordinary' && campaign.board.ordinary) return { ok: false, reason: 'На щите уже есть главный ординарий.' };
+  if (def.type === 'charge') {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 7) return { ok: false, reason: 'Выбери место на щите.' };
+    const occupied = campaign.board.charges[slot];
+    const freeExists = campaign.board.charges.some((entry) => !entry);
+    if (occupied?.founder) return { ok: false, reason: 'Сердце щита хранит знак основателя.' };
+    if (occupied && freeExists) return { ok: false, reason: 'Пока есть свободные места, фигуры не заменяют друг друга.' };
+  }
+  if (def.type === 'ornament' && campaign.board.ornaments.some((x) => x.device === item.device)) return { ok: false, reason: 'Такое украшение уже пожаловано.' };
+  if (def.type === 'motto' && campaign.board.motto) return { ok: false, reason: 'У рода уже есть девиз.' };
+  return { ok: true, bypass: requirement.bypass };
+}
+
+export function placeElement(campaign, itemId, slot = null) {
+  const item = campaign.offer.find((x) => x.id === itemId);
+  if (!item) return { ok: false, reason: 'Этого пожалования больше нет.' };
+  const verdict = canPlaceElement(campaign, item, slot);
+  if (!verdict.ok) return verdict;
+  const def = ELEMENTS[item.device];
+  if (verdict.bypass) campaign.chapterBypassAvailable = false;
+  if (def.type === 'ordinary') campaign.board.ordinary = clone(item);
+  if (def.type === 'charge') {
+    const replaced = campaign.board.charges[slot];
+    campaign.board.charges[slot] = clone(item);
+    if (replaced) campaign.history.push({ kind: 'replace', chapter: campaign.chapter, step: campaign.step, removed: clone(replaced), item: clone(item), slot });
+  }
+  if (def.type === 'ornament') campaign.board.ornaments.push(clone(item));
+  if (def.type === 'motto') campaign.board.motto = clone(item);
+  campaign.history.push({ kind: 'place', chapter: campaign.chapter, step: campaign.step, item: clone(item), slot });
+  campaign.step += 1;
+  campaign.offer = [];
+  const evaluation = evaluateHeraldry(campaign);
+  campaign.scandalHistory = Math.max(campaign.scandalHistory, evaluation.scandal);
+  if (campaign.step >= BUILD_STEPS) campaign.pendingTrial = true;
+  else generateOffer(campaign);
+  return { ok: true, evaluation, pendingTrial: campaign.pendingTrial };
+}
+
+export function rejectOffer(campaign) {
+  if (!campaign.offer.length || campaign.pendingTrial) return false;
+  campaign.renown = Math.max(0, campaign.renown - 1);
+  generateOffer(campaign);
+  return true;
+}
+
+function combinationActive(board, combo) {
+  const ids = allPlacedIds(board);
+  if (combo.requires && !combo.requires.every((id) => ids.includes(id))) return false;
+  if (combo.requiresAny && !combo.requiresAny.some((id) => ids.includes(id))) return false;
+  if (combo.requiresTags && !combo.requiresTags.every((tag) => tagCount(board, tag) > 0)) return false;
+  if (combo.requiresDistinctBeasts && distinctBeastCount(board) < combo.requiresDistinctBeasts) return false;
+  if (combo.count && ids.filter((id) => id === combo.count[0]).length < combo.count[1]) return false;
+  return true;
+}
+
+export function evaluateHeraldry(campaign) {
+  const board = campaign.board;
+  const house = HOUSES[campaign.houseId] || HOUSES.lion;
+  let power = 0; let ward = 0; let prestige = 0; let scandal = 0; let legalCount = 0;
+  const notes = [];
+  const items = allPlacedElements(board);
+  items.forEach((item) => {
+    const def = ELEMENTS[item.device];
+    power += def.power || 0; ward += def.ward || 0; prestige += def.prestige || 0; scandal += def.scandal || 0;
+    if (def.type === 'charge' || def.type === 'ordinary') {
+      const background = def.type === 'ordinary' ? board.field : backgroundAtSlot(board, board.charges.indexOf(item));
+      const legal = isLegalTincture(item.tincture, background);
+      if (legal) { legalCount += 1; prestige += campaign.patronage.includes('enamel') ? 2 : 1; if (house.gift === 'roots') prestige += 1; }
+      else { power += campaign.patronage.includes('blackbook') ? 4 : 2; scandal += campaign.patronage.includes('blackbook') ? 2 : 1; notes.push(`${def.name}: нарушение закона тинктур`); }
+    }
+  });
+
+  const combos = COMBINATIONS.filter((combo) => combinationActive(board, combo)).map((combo) => {
+    power += combo.power || 0; ward += combo.ward || 0; prestige += combo.prestige || 0; scandal += combo.scandal || 0;
+    if (campaign.patronage.includes('iron')) power += 3;
+    if (house.gift === 'foresight' && (combo.requires?.includes('eagle') || combo.id === 'high-dominion')) prestige += 2;
+    return clone(combo);
+  });
+
+  if (board.ordinary) {
+    const def = ELEMENTS[board.ordinary.device];
+    const occupied = def.slots.filter((slot) => board.charges[slot]).length;
+    if (occupied >= Math.min(3, def.slots.length)) {
+      const multiplier = campaign.patronage.includes('compass') ? 2 : 1;
+      power += (def.power || 0) * multiplier;
+      ward += (def.ward || 0) * multiplier;
+      prestige += (def.prestige || 0) * multiplier;
+      notes.push(`Формация «${def.name}» заполнена`);
+    }
+  }
+
+  if (house.gift === 'vanguard') {
+    const firstBeast = board.charges.find((item) => item && ELEMENTS[item.device]?.tags?.includes('beast'));
+    if (firstBeast) power += 2;
+  }
+  if (campaign.patronage.includes('relic')) {
+    const sacred = items.filter((item) => item.device === 'cross' || ELEMENTS[item.device]?.type === 'motto').length;
+    ward += sacred * 2;
+  }
+  scandal = Math.max(0, scandal);
+  const total = power + ward + prestige - scandal * 2;
+  return { power, ward, prestige, scandal, legalCount, total, combos, notes };
+}
+
+export function currentTrial(campaign) { return TRIALS[Math.min(campaign.chapter, TRIALS.length - 1)]; }
+
+export function trialPreview(campaign) {
+  const trial = currentTrial(campaign);
+  const stats = evaluateHeraldry(campaign);
+  const weights = trial.type === 'power' ? [1.5,.5,.5] : trial.type === 'ward' ? [.5,1.5,.5] : trial.type === 'prestige' ? [.4,.5,1.6] : [1,1,1];
+  const base = stats.power * weights[0] + stats.ward * weights[1] + stats.prestige * weights[2] - stats.scandal * (trial.type === 'prestige' ? 4 : 2);
+  return { trial, stats, base: Math.round(base), threshold: trial.threshold };
+}
+
+export function resolveTrial(campaign, command = 'oath') {
+  if (!campaign.pendingTrial) return { ok: false, reason: 'Испытание ещё не началось.' };
+  const preview = trialPreview(campaign);
+  const commandBonus = {
+    charge: preview.stats.power >= preview.stats.ward ? 6 : 2,
+    hold: preview.stats.ward >= preview.stats.power ? 6 : 2,
+    oath: preview.stats.prestige >= preview.stats.scandal * 3 ? 6 : -1
+  }[command] ?? 0;
+  const score = preview.base + commandBonus;
+  const won = score >= preview.threshold;
+  const phases = [
+    { title: 'Оглашение', text: campaign.board.motto ? `${ELEMENTS[campaign.board.motto.device].name} произнесён перед строем.` : 'Род выходит без девиза; говорит только композиция щита.', value: preview.stats.prestige },
+    { title: 'Построение', text: campaign.board.ordinary ? `${ELEMENTS[campaign.board.ordinary.device].name} связывает фигуры в единый порядок.` : 'Фигуры действуют без ординария и общей оси.', value: preview.stats.ward },
+    { title: 'Выход фигур', text: preview.stats.combos.length ? preview.stats.combos.map((x) => x.name).join(' · ') : 'Ни одна формула не завершена; каждый знак сражается отдельно.', value: preview.stats.power },
+    { title: 'Суд знамени', text: won ? 'Герб признан сильнее требования испытания.' : 'Композиция ломается в решающий момент и оставляет шрам в хронике.', value: score }
+  ];
+
+  campaign.pendingTrial = false;
+  campaign.lastTrial = { chapter: campaign.chapter, command, score, threshold: preview.threshold, won, phases, trialId: preview.trial.id };
+  campaign.history.push({ kind: 'trial', ...clone(campaign.lastTrial) });
+  if (won) { campaign.renown += 5 + preview.stats.combos.length * 2; }
+  else {
+    campaign.integrity -= 1;
+    campaign.scars.push({ chapter: campaign.chapter, name: preview.trial.name, penalty: 'Потеряна одна целостность рода.' });
+  }
+
+  if (campaign.integrity <= 0) {
+    campaign.failed = true;
+  } else if (campaign.chapter >= TRIALS.length - 1) {
+    campaign.completed = won;
+    if (!won) campaign.failed = true;
+  } else {
+    campaign.pendingPatronage = true;
+    campaign.patronageOffer = shuffle(campaign, Object.keys(PATRONAGE).filter((id) => !campaign.patronage.includes(id))).slice(0, 3);
+  }
+  return { ok: true, won, score, phases, trial: preview.trial, completed: campaign.completed, failed: campaign.failed };
+}
+
+export function choosePatronage(campaign, id) {
+  if (!campaign.pendingPatronage || !campaign.patronageOffer?.includes(id)) return false;
+  campaign.patronage.push(id);
+  campaign.pendingPatronage = false;
+  campaign.patronageOffer = [];
+  campaign.chapter += 1;
+  campaign.step = 0;
+  campaign.chapterBypassAvailable = true;
+  generateOffer(campaign);
+  return true;
 }
 
 export function campaignSummary(campaign) {
   if (!campaign) return null;
-  const opponent = OPPONENTS[Math.min(campaign.stage, OPPONENTS.length - 1)];
+  const evaluation = evaluateHeraldry(campaign);
   return {
-    house: HOUSES[campaign.houseId],
-    opponent,
-    stage: campaign.stage,
-    victories: campaign.victories,
+    house: HOUSES[campaign.houseId]?.name,
+    chapter: campaign.chapter + 1,
+    step: campaign.step,
+    integrity: campaign.integrity,
+    renown: campaign.renown,
+    combinations: evaluation.combos.length,
+    power: evaluation.power,
+    ward: evaluation.ward,
+    prestige: evaluation.prestige,
+    scandal: evaluation.scandal,
     completed: campaign.completed,
-    augments: campaign.augments.map((id) => AUGMENTS[id]).filter(Boolean)
+    failed: campaign.failed
   };
 }
