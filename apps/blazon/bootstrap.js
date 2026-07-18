@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const BUILD='5.4.1';
+  const BUILD='5.4.2';
   const inputStyle=document.createElement('style');
   inputStyle.textContent=`
     .menu-landscape,.menu-standard,.menu-copy,.symbol-library{pointer-events:none!important}
