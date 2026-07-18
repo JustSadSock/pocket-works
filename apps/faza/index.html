@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./clarity.css">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell data-fullscreen-app>
@@ -28,7 +29,7 @@
         <div class="title-lockup">
           <p class="eyebrow">АБСТРАКТНАЯ ДУЭЛЬ / 2 ИГРОКА</p>
           <h1 id="app-title">ФАЗА</h1>
-          <p class="menu-lead">Ставь камень. Выбирай, какие связи существуют сейчас. Отсекай группы и удерживай путь через поле.</p>
+          <p class="menu-lead">Ставь камень, затем выключай одну ось соседства. Разрезай группы, забирай воздух и удерживай путь через поле.</p>
         </div>
 
         <div class="phase-emblem" aria-hidden="true">
@@ -59,7 +60,7 @@
       <footer class="menu-footer" data-ui>
         <button class="text-control" type="button" data-open="lab" data-native-press>Баланс и тесты</button>
         <button class="text-control" type="button" data-workshop-trigger data-native-press>Workshop</button>
-        <span>v1.0.0</span>
+        <span>v1.1.0</span>
       </footer>
     </section>
 
@@ -73,8 +74,8 @@
             <small><b data-captures="1">0</b>/5 захватов</small>
           </div>
           <div class="phase-readout">
-            <span>Фаза</span>
-            <strong id="phase-name">Горизонт</strong>
+            <span>Не соседи</span>
+            <strong id="phase-name">Без ↔</strong>
             <small id="turn-counter">Ход 1</small>
           </div>
           <div class="player-score player-two" data-player-panel="2">
@@ -97,22 +98,13 @@
         <div class="turn-copy">
           <p class="turn-kicker" id="turn-kicker">ХОД СИНЕГО</p>
           <h2 id="turn-title">Поставьте камень</h2>
-          <p id="turn-detail">После выбора клетки переключите фазу связности.</p>
+          <p id="turn-detail">После клетки выберите ось, по которой соседства временно не работают.</p>
         </div>
 
-        <div class="phase-picker" id="phase-picker" aria-label="Выбор фазы">
-          <button type="button" data-phase="0" data-native-press>
-            <span class="phase-glyph glyph-0" aria-hidden="true"></span>
-            <b>I</b><small>Горизонт</small>
-          </button>
-          <button type="button" data-phase="1" data-native-press>
-            <span class="phase-glyph glyph-1" aria-hidden="true"></span>
-            <b>II</b><small>Косая</small>
-          </button>
-          <button type="button" data-phase="2" data-native-press>
-            <span class="phase-glyph glyph-2" aria-hidden="true"></span>
-            <b>III</b><small>Диагональ</small>
-          </button>
+        <div class="phase-picker" id="phase-picker" aria-label="Выбор выключенной оси">
+          <button type="button" data-phase="0" data-native-press><span class="phase-axis">↔</span><span><b>Без ↔</b><small>Отключает горизонталь</small></span></button>
+          <button type="button" data-phase="1" data-native-press><span class="phase-axis">↗</span><span><b>Без ↗</b><small>Отключает восходящую</small></span></button>
+          <button type="button" data-phase="2" data-native-press><span class="phase-axis">↘</span><span><b>Без ↘</b><small>Отключает нисходящую</small></span></button>
         </div>
 
         <div class="game-actions">
@@ -164,20 +156,20 @@
       <button class="overlay-backdrop" type="button" data-close aria-label="Закрыть"></button>
       <div class="sheet rules-sheet" role="dialog" aria-modal="true" aria-labelledby="rules-title">
         <header class="sheet-head">
-          <div><p>ПЯТЬ ПРАВИЛ</p><h2 id="rules-title">Как работает ФАЗА</h2></div>
+          <div><p>ГЛАВНОЕ ПРАВИЛО</p><h2 id="rules-title">Фаза — это разрез соседства</h2></div>
           <button class="close-button" type="button" data-close data-native-press aria-label="Закрыть">×</button>
         </header>
         <ol class="rule-list">
-          <li><b>Поставьте один камень.</b><span>Свободная клетка, без перемещения старых камней.</span></li>
-          <li><b>Выберите фазу I, II или III.</b><span>Одна пара направлений выключается. Светлые перемычки показывают, кто сейчас соединён.</span></li>
-          <li><b>Группа без свободной соседней клетки снимается.</b><span>Сначала снимаются чужие группы. Самозахват запрещён.</span></li>
-          <li><b>Победа — 5 захватов или удержанный путь.</b><span>Синий соединяет левый и правый край, охра — верхний правый и нижний левый. Путь должен пережить ответ соперника.</span></li>
-          <li><b>После первого хода второй игрок может обменяться сторонами.</b><span>Это гасит преимущество сильного дебюта и делает серии честнее.</span></li>
+          <li><b>Камни не двигаются.</b><span>На ходу вы ставите один новый камень, затем выбираете, какая ось соседства не работает.</span></li>
+          <li><b>«Без ↔» значит буквально: пары слева и справа не соседи.</b><span>Они не склеиваются в группу, не делятся дыханием и не продолжают путь. Правило действует сразу для обоих цветов.</span></li>
+          <li><b>Каждый следующий ход может включить другую ось.</b><span>Поэтому одна и та же расстановка распадается на разные группы в «Без ↔», «Без ↗» и «Без ↘».</span></li>
+          <li><b>Чужая группа без свободной активной соседней клетки снимается.</b><span>Сначала снимаются чужие камни. Самозахват запрещён.</span></li>
+          <li><b>Победа — пять захватов или удержанный путь.</b><span>Путь должен существовать в выбранной фазе и пережить ответ соперника.</span></li>
         </ol>
         <div class="phase-legend">
-          <div><span class="phase-glyph glyph-0"></span><b>I</b><small>нет горизонтальных связей</small></div>
-          <div><span class="phase-glyph glyph-1"></span><b>II</b><small>нет восходящей диагонали</small></div>
-          <div><span class="phase-glyph glyph-2"></span><b>III</b><small>нет нисходящей диагонали</small></div>
+          <div><span class="phase-axis">↔</span><b>Без ↔</b><small>лево и право не соседи</small></div>
+          <div><span class="phase-axis">↗</span><b>Без ↗</b><small>восходящая ось не работает</small></div>
+          <div><span class="phase-axis">↘</span><b>Без ↘</b><small>нисходящая ось не работает</small></div>
         </div>
       </div>
     </section>
@@ -249,7 +241,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ФАЗА"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
