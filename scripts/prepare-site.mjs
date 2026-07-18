@@ -60,7 +60,7 @@ function stampJavaScript(source,config,relativePath){
   if(config.slug==='blazon'&&relativePath==='progression-engine.js'){
     output=output.replace(/['"]\.\/engine\.js\?core=[^'"]+['"]/,'\'./core-engine.js?pw_release='+config.version+'\'');
   }
-  return output;
+  return `/* pocket-works-release:${config.slug}@${config.version}:${relativePath} */\n${output}`;
 }
 
 async function walkFiles(directory,prefix=''){
@@ -77,7 +77,7 @@ async function stampRelease(destination,config){
   const html=await readFile(indexPath,'utf8');
   await writeFile(indexPath,stampHtml(html,config),'utf8');
   for(const relative of await walkFiles(destination)){
-    if(!relative.endsWith('.js')||relative==='sw.js')continue;
+    if(!relative.endsWith('.js'))continue;
     const file=path.join(destination,relative),source=await readFile(file,'utf8');
     await writeFile(file,stampJavaScript(source,config,relative),'utf8');
   }
