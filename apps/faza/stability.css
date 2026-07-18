@@ -1,0 +1,252 @@
+/* Motion stability hotfix — v1.1.1
+   Board geometry must never animate or resize between move stages. */
+
+.board-stage {
+  contain: layout paint;
+}
+
+.board {
+  padding-top: 0 !important;
+  min-height: 0 !important;
+  transform: none !important;
+  transform-origin: center !important;
+}
+
+/* The decision console always occupies the same height. Hidden states keep
+   their slot, so opening a preview cannot squeeze or move the board. */
+.turn-console {
+  min-block-size: 312px;
+  overflow: hidden;
+}
+
+.turn-copy {
+  min-block-size: 62px;
+}
+
+.turn-copy h2 {
+  min-block-size: 1.35em;
+  margin-bottom: 2px;
+}
+
+.turn-copy p:last-child {
+  min-block-size: 2.35em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.phase-picker {
+  block-size: 70px;
+}
+
+.phase-picker button {
+  block-size: 70px;
+  min-height: 70px;
+  transform: none !important;
+}
+
+.phase-card-copy small {
+  min-block-size: 2.3em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.move-impact {
+  min-block-size: 86px;
+  max-block-size: 86px;
+  overflow: hidden;
+  transition: opacity 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.move-impact[hidden] {
+  display: block !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.confirm-move {
+  block-size: 48px;
+  min-height: 48px;
+  transform: none !important;
+  transition: opacity 140ms ease, background-color 140ms ease;
+}
+
+.confirm-move[hidden] {
+  display: block !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.game-actions {
+  min-block-size: 40px;
+}
+
+/* Re-rendering the SVG must not restart transforms. State changes are shown
+   with stroke, opacity and fill only; coordinates and scale stay fixed. */
+.board .cell-shape,
+.board .cell.is-preview .cell-shape,
+.board .grid-link,
+.board .stone-link,
+.board .broken-link,
+.board .cut-mark,
+.board .liberty-dot,
+.board .stone,
+.board .stone.is-new,
+.board .stone.is-path,
+.board .stone.ai-focus,
+.board .stone.will-capture,
+.board.is-committing .stone.will-capture {
+  transform: none !important;
+  animation: none !important;
+}
+
+.board .cell-shape {
+  transition: fill 120ms ease, stroke 120ms ease, opacity 120ms ease !important;
+}
+
+.board .cell.is-preview .cell-shape {
+  fill: #f6f1e8;
+  stroke: #20272a;
+  stroke-width: 3;
+}
+
+.board .grid-link,
+.board .stone-link,
+.board .broken-link,
+.board .cut-mark,
+.board .liberty-dot,
+.board .stone {
+  transition: opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease, fill 180ms ease !important;
+}
+
+.board.is-previewing .grid-link.is-changing {
+  opacity: .5;
+  stroke: #262b2d;
+}
+
+.board .stone-link.will-form {
+  opacity: .82;
+  stroke-width: 13;
+}
+
+.board .broken-link.will-break {
+  opacity: .58;
+}
+
+.board .cut-mark.will-break {
+  opacity: 1;
+}
+
+.board .liberty-dot {
+  opacity: .92;
+}
+
+.board .stone.is-new {
+  stroke-width: 6;
+  filter: drop-shadow(0 0 7px rgba(255, 250, 232, .85));
+}
+
+.board .stone.is-path {
+  stroke: #fff8e8;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 7px rgba(255, 250, 232, .7));
+}
+
+.board .stone.ai-focus {
+  stroke-width: 7;
+  filter: drop-shadow(0 0 9px rgba(255, 250, 232, .9));
+}
+
+.board .stone.will-capture {
+  opacity: .78;
+  stroke: #20272a;
+  stroke-width: 7;
+  stroke-dasharray: 4 4;
+}
+
+.board.is-committing .stone.will-capture {
+  opacity: .08;
+}
+
+.phase-picker button.is-selected-phase {
+  transform: none !important;
+  box-shadow: inset 0 -4px 0 var(--ink);
+}
+
+@media (max-height: 760px) and (orientation: portrait) {
+  .turn-console {
+    min-block-size: 246px;
+  }
+
+  .turn-copy {
+    min-block-size: 38px;
+  }
+
+  .turn-copy h2 {
+    min-block-size: 1.25em;
+  }
+
+  .phase-picker,
+  .phase-picker button {
+    block-size: 54px;
+    min-height: 54px;
+  }
+
+  .move-impact {
+    min-block-size: 54px;
+    max-block-size: 54px;
+  }
+
+  .confirm-move {
+    block-size: 42px;
+    min-height: 42px;
+  }
+
+  .game-actions {
+    min-block-size: 34px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .turn-console {
+    min-block-size: 0;
+    overflow: auto;
+  }
+
+  .turn-copy {
+    min-block-size: 50px;
+  }
+
+  .phase-picker {
+    block-size: auto;
+  }
+
+  .phase-picker button {
+    block-size: 58px;
+    min-height: 58px;
+  }
+
+  .move-impact {
+    min-block-size: 62px;
+    max-block-size: 62px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .move-impact,
+  .confirm-move,
+  .board .cell-shape,
+  .board .grid-link,
+  .board .stone-link,
+  .board .broken-link,
+  .board .cut-mark,
+  .board .liberty-dot,
+  .board .stone {
+    transition: none !important;
+  }
+}
