@@ -1,13 +1,10 @@
 {
-  "name": "БЛАЗОН — Наследие знамени",
-  "short_name": "БЛАЗОН",
-  "description": "Геральдический роуглайт о создании живого герба и судьбе средневекового рода.",
-  "id": "./",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "any",
-  "background_color": "#d9c89f",
-  "theme_color": "#d8c79e",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "name":"БЛАЗОН: Доктрина",
+  "short_name":"БЛАЗОН",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#171b17",
+  "theme_color":"#171b17",
+  "orientation":"any",
+  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
