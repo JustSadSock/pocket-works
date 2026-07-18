@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.8.2';
-const APP_VERSION = '0.8.2';
-const RELEASE_DATE = '2026-07-13';
-const CACHE_PROTOCOL = 2;
+const CACHE_NAME = 'pocket-works-launcher-v0.8.3';
+const APP_VERSION = '0.8.3';
+const RELEASE_DATE = '2026-07-18';
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'The Update button now checks and installs updates for every registered application, not only the shelf registry.',
-  'Application updates are activated only after their new Service Worker finishes downloading; failed downloads leave the previous offline cache active.',
-  'Update progress and partial failures are reported per application without sacrificing offline availability.',
-  'Updated-time ordering now compares real timestamps, including timezone offsets, instead of lexicographic date strings.'
+  'A stalled application can no longer freeze the repository-wide Update queue.',
+  'Registration, update, installation and activation now have named hard timeouts; failed applications are skipped while the queue continues.',
+  'The progress line shows the application and stage that are currently running, and the final report names skipped applications.',
+  'The launcher shell upgrades old 0.8.2 asset keys to 0.8.3 on navigation.'
 ];
 const APP_SHELL = [
   './',
@@ -25,6 +25,7 @@ const APP_SHELL = [
   './shared/mobile-runtime.js',
   './shared/update-manager.css',
   './shared/update-manager.js',
+  './shared/update-queue.js',
   './shared/view-transition-guard.js',
   './shared/app-icon-previews.css',
   './shared/app-icon-previews.js',
@@ -35,12 +36,10 @@ const APP_SHELL = [
 const SCOPE_URL = new URL('./', self.registration.scope);
 const APPLICATIONS_PATH = new URL('./apps/', SCOPE_URL).pathname;
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
-const SHELL_KEYS = new Map(
-  APP_SHELL.map((entry) => {
-    const url = new URL(entry, SCOPE_URL);
-    return [url.pathname, url.href];
-  })
-);
+const SHELL_KEYS = new Map(APP_SHELL.map((entry) => {
+  const url = new URL(entry, SCOPE_URL);
+  return [url.pathname, url.href];
+}));
 
 function buildNetworkUrl(input) {
   const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
@@ -54,27 +53,45 @@ async function fetchFresh(input) {
     credentials: 'same-origin',
     redirect: 'follow'
   });
+  if (!response || !response.ok) throw new Error(`Fresh launcher request failed: ${response?.status || 'network'}`);
+  return response;
+}
 
-  if (!response || !response.ok) {
-    throw new Error(`Fresh launcher request failed: ${response?.status || 'network'}`);
+function upgradeIndexHtml(html) {
+  return html
+    .replaceAll('0.8.2', APP_VERSION)
+    .replaceAll('v=0.8.2', `v=${APP_VERSION}`);
+}
+
+async function freshShellResponse(input) {
+  const sourceUrl = input instanceof Request ? input.url : new URL(input, SCOPE_URL).href;
+  const response = await fetchFresh(input);
+  if (new URL(sourceUrl).pathname.endsWith('/index.html') || new URL(sourceUrl).pathname === SCOPE_URL.pathname) {
+    const type = response.headers.get('content-type') || '';
+    if (type.includes('text/html')) {
+      const headers = new Headers(response.headers);
+      headers.set('cache-control', 'no-store');
+      return new Response(upgradeIndexHtml(await response.text()), {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
+    }
   }
-
   return response;
 }
 
 async function precacheFreshShell() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all(
-    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
-      const response = await fetchFresh(canonicalUrl);
-      await cache.put(canonicalUrl, response);
-    })
-  );
+  await Promise.all([...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+    const response = await freshShellResponse(canonicalUrl);
+    await cache.put(canonicalUrl, response);
+  }));
 }
 
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
   try {
-    const response = await fetchFresh(request);
+    const response = await freshShellResponse(canonicalUrl === SCOPE_URL.href ? canonicalUrl : request);
     const cache = await caches.open(CACHE_NAME);
     await cache.put(canonicalUrl, response.clone());
     return response;
@@ -97,39 +114,27 @@ self.addEventListener('message', (event) => {
       cacheName: CACHE_NAME
     });
   }
-
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(caches.keys()
+    .then((keys) => Promise.all(keys
+      .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+      .map((key) => caches.delete(key))))
+    .then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
-
-  // Application directories own their own lifecycle and caches. The root worker
-  // must never become a second stale cache in front of them.
   if (requestUrl.pathname.startsWith(APPLICATIONS_PATH)) return;
-
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
-
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
   if (!canonicalUrl) return;
-
   event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
 });
