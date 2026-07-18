@@ -11,7 +11,7 @@ if(typeof window!=='undefined'&&!window[PATCH_FLAG]){
   const nativeRect=HTMLCanvasElement.prototype.getBoundingClientRect;
   const depth=new WeakMap();
   const labelFrame={bucket:-1,values:new Set()};
-  const coarse=matchMedia?.('(pointer:coarse)')?.matches??false;
+  const coarse=globalThis.matchMedia?.('(pointer:coarse)')?.matches??false;
   const battleResolutionScale=coarse?.75:.9;
 
   HTMLCanvasElement.prototype.getBoundingClientRect=function(){
