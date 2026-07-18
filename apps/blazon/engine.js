@@ -1,24 +1,7 @@
-const BUILD='5.3.0';
+const BUILD='5.4.0';
 const isCore=new URL(import.meta.url).searchParams.has('core');
-
-if(!isCore&&typeof document!=='undefined'){
-  const enhancements=[
-    './menu-input-hotfix.js',
-    './critical-readability.js',
-    './progression-art.js',
-    './progression-runtime.js',
-    './armorial-composition-runtime.js',
-    './release-indicator.js'
-  ];
-  queueMicrotask(()=>{
-    for(const path of enhancements){
-      import(`${path}?v=${BUILD}`).catch(error=>console.warn(`[БЛАЗОН] optional module failed: ${path}`,error));
-    }
-  });
-}
-
-const selected=await import(isCore?`./core-engine.js?v=${BUILD}`:`./progression-engine.js?v=${BUILD}`);
-const clarity=await import(`./combat-clarity.js?v=${BUILD}`);
+const selected=await import(isCore?`./core-engine.js?pw_release=${BUILD}`:`./progression-engine.js?pw_release=${BUILD}`);
+const clarity=await import(`./combat-clarity.js?pw_release=${BUILD}`);
 
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;

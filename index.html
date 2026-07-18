@@ -8,23 +8,23 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.9.0">
+  <meta name="pocket-works-build" content="0.9.1">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.9.0">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.9.0" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.9.0">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.9.0">
-  <link rel="stylesheet" href="./styles.css?v=0.9.0">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.9.0">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.9.0">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.9.0">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.9.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.9.1">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.9.1" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.9.1">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.9.1">
+  <link rel="stylesheet" href="./styles.css?v=0.9.1">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.9.1">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.9.1">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.9.1">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.9.1">
 </head>
 <body>
   <div class="shelf-atmosphere" aria-hidden="true"><span></span><span></span><span></span></div>
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
-      <div class="brand-lockup"><p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.9.0</p><h1>Pocket<br>Works</h1></div>
+      <div class="brand-lockup"><p class="eyebrow">PERSONAL SOFTWARE SHELF / 0.9.1</p><h1>Pocket<br>Works</h1></div>
       <div class="system-rail" aria-label="Shelf status">
         <p><span class="status-light" id="network-light" aria-hidden="true"></span><strong id="network-status">online</strong></p>
         <p><span>mode</span><strong id="display-mode">browser</strong></p>
@@ -74,12 +74,13 @@
       <button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button><a class="app-entry__open" data-action="open" data-native-press aria-label="Open application">↗</a>
     </article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.9.0" data-update-manager data-service-worker="./sw.js?v=0.9.0" data-app-name="Pocket Works" data-app-version="0.9.0"></script>
-  <script src="./shared/view-transition-guard.js?v=0.9.0" type="module"></script>
-  <script src="./app.js?v=0.9.0" type="module"></script>
-  <script src="./launcher-update-all-v2.js?v=0.9.0" type="module"></script>
-  <script src="./launcher-sync.js?v=0.9.0" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.9.0" type="module"></script>
-  <script src="./shared/app-icon-previews.js?v=0.9.0" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.9.1" data-update-manager data-service-worker="./sw.js?build=0.9.1" data-app-name="Pocket Works" data-app-version="0.9.1"></script>
+  <script src="./shared/view-transition-guard.js?v=0.9.1" type="module"></script>
+  <script src="./app.js?v=0.9.1" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.9.1" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.9.1" type="module"></script>
+  <script src="./launcher-sync.js?v=0.9.1" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.9.1" type="module"></script>
+  <script src="./shared/app-icon-previews.js?v=0.9.1" type="module"></script>
 </body>
 </html>
