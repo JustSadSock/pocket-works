@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#171b17">
-  <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, управляемая красивым геральдическим гербом.">
+  <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, где отдельные воины образуют живой геральдический строй.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>БЛАЗОН: Доктрина</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=3.1.0">
-  <link rel="icon" href="./icons/icon.svg?v=3.1.0" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest?v=4.3.0">
+  <link rel="icon" href="./icons/icon.svg?v=4.3.0" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=3.1.0">
+  <link rel="stylesheet" href="./styles.css?v=4.3.0">
 </head>
 <body data-fullscreen-app>
   <svg class="symbol-library" aria-hidden="true">
@@ -49,11 +49,7 @@
         <circle cx="71" cy="28" r="3" fill="var(--detail,#171713)"/>
       </symbol>
       <symbol id="charge-rose" viewBox="0 0 120 120">
-        <g fill="currentColor">
-          <path d="M60 12c17-10 29 8 20 22 18-4 27 15 15 28 15 10 6 31-12 30-2 18-24 22-34 7-14 12-33-1-28-18-18-5-19-27-3-35-8-16 10-31 25-22 4-18 25-22 34-7 1-10 5-18 13-25Z"/>
-          <circle cx="60" cy="60" r="18" fill="var(--detail,#171713)"/>
-          <circle cx="60" cy="60" r="8"/>
-        </g>
+        <g fill="currentColor"><path d="M60 12c17-10 29 8 20 22 18-4 27 15 15 28 15 10 6 31-12 30-2 18-24 22-34 7-14 12-33-1-28-18-18-5-19-27-3-35-8-16 10-31 25-22 4-18 25-22 34-7 1-10 5-18 13-25Z"/><circle cx="60" cy="60" r="18" fill="var(--detail,#171713)"/><circle cx="60" cy="60" r="8"/></g>
         <path d="M60 37v46M37 60h46M44 44l32 32M76 44 44 76" stroke="currentColor" stroke-width="3.5" opacity=".38"/>
       </symbol>
       <symbol id="charge-key" viewBox="0 0 120 120">
@@ -72,8 +68,7 @@
       </symbol>
       <symbol id="charge-helmet" viewBox="0 0 120 120">
         <path d="M28 103V50c0-27 21-42 46-35 23 7 30 30 21 51l-21 37H28Zm18-22h30l11-20H46v20Zm0-36h44c-4-14-13-20-26-20-11 0-17 7-18 20Z" fill="currentColor"/>
-        <path d="M40 108h49" stroke="currentColor" stroke-width="9"/>
-        <path d="M47 62h39" stroke="var(--detail,#2c2821)" stroke-width="4" opacity=".5"/>
+        <path d="M40 108h49" stroke="currentColor" stroke-width="9"/><path d="M47 62h39" stroke="var(--detail,#2c2821)" stroke-width="4" opacity=".5"/>
       </symbol>
     </defs>
   </svg>
@@ -83,47 +78,33 @@
       <div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div>
       <header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header>
       <div class="menu-standard" aria-hidden="true"><div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div></div>
-      <div class="menu-copy"><p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Герб задаёт не только правила армии, но и её лицо: щиты, табарды, знамя и цветовой строй.</span></div>
+      <div class="menu-copy"><p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Герб задаёт правила армии, а отдельные воины превращают их в живой фронт.</span></div>
       <div class="menu-actions">
         <button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button>
         <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Четыре геральдические школы</small><b>→</b></button>
         <div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div>
       </div>
-      <footer>v3.1 · heraldic identity · равные армии</footer>
+      <footer>v4.3 · battle reading</footer>
     </section>
 
     <section class="screen doctrine-screen" id="doctrineScreen">
       <header class="folio-header"><button id="doctrineMenuButton" type="button">Меню</button><div><span id="battleIndexLabel">БИТВА I ИЗ VI</span><strong>Совет перед полем</strong></div><button id="codexButton" type="button">Правила</button></header>
       <div class="doctrine-layout">
-        <section class="armorial-column player-column">
-          <div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2><em id="playerSchoolName">Рыцарская школа</em></div>
-          <div class="full-achievement" id="playerAchievement"></div>
-          <div class="doctrine-ledger" id="playerLedger"></div>
-        </section>
-        <section class="battle-order">
-          <div class="battle-seal"><b id="integrityMarks">◆◆◆</b><span>целостность рода</span></div>
-          <div class="equality-mark"><span>32</span><i>ратника</i><b>=</b><span>32</span></div>
-          <div class="equality-mark"><span>16</span><i>лучников</i><b>=</b><span>16</span></div>
-          <p>Одинаковое оружие, здоровье и численность. Разница — только в правилах поведения.</p>
-          <button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button>
-        </section>
-        <section class="armorial-column enemy-column">
-          <div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2><em id="enemySchoolName">Имперская школа</em></div>
-          <div class="full-achievement enemy-achievement" id="enemyAchievement"></div>
-          <div class="doctrine-ledger" id="enemyLedger"></div>
-        </section>
+        <section class="armorial-column player-column"><div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2><em id="playerSchoolName">Рыцарская школа</em></div><div class="full-achievement" id="playerAchievement"></div><div class="doctrine-ledger" id="playerLedger"></div></section>
+        <section class="battle-order"><div class="battle-seal"><b id="integrityMarks">◆◆◆</b><span>целостность рода</span></div><div class="equality-mark"><span>32</span><i>ратника</i><b>=</b><span>32</span></div><div class="equality-mark"><span>16</span><i>лучников</i><b>=</b><span>16</span></div><p>Одинаковое оружие, здоровье и численность. Разница — только в правилах поведения.</p><button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button></section>
+        <section class="armorial-column enemy-column"><div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2><em id="enemySchoolName">Имперская школа</em></div><div class="full-achievement enemy-achievement" id="enemyAchievement"></div><div class="doctrine-ledger" id="enemyLedger"></div></section>
       </div>
     </section>
 
     <section class="screen battle-screen" id="battleScreen">
       <header class="battle-header"><button id="leaveBattleButton" type="button">Прервать</button><div><span id="battleClock">00:00</span><strong>ПОЛЕВАЯ БИТВА</strong></div><div class="speed-controls"><button data-speed="1" class="is-active">×1</button><button data-speed="2">×2</button><button data-speed="4">×4</button></div></header>
       <section class="battlefield-wrap">
-        <canvas id="battleCanvas" width="1000" height="600" aria-label="Автономное сражение двух равных армий"></canvas>
-        <div class="battle-hud player-hud"><div id="hudPlayerShield"></div><span>ТВОЙ СТРОЙ</span><b id="playerFormation">4 / 4</b></div>
-        <div class="battle-hud enemy-hud"><div id="hudEnemyShield"></div><span>ВРАЖЕСКИЙ СТРОЙ</span><b id="enemyFormation">4 / 4</b></div>
+        <canvas id="battleCanvas" width="720" height="1120" aria-label="Автономное сражение двух равных армий"></canvas>
+        <div class="battle-hud player-hud"><div id="hudPlayerShield"></div><span>ТВОИ ВОИНЫ</span><b id="playerFormation">48</b></div>
+        <div class="battle-hud enemy-hud"><div id="hudEnemyShield"></div><span>ВРАЖЕСКИЕ</span><b id="enemyFormation">48</b></div>
         <div class="rule-flash" id="ruleFlash" aria-live="polite"></div>
       </section>
-      <footer class="battle-footer"><span>Захват знамени или распад трёх отрядов завершает битву.</span><button id="pauseSimulationButton" type="button">Пауза</button></footer>
+      <footer class="battle-footer"><span hidden></span><button id="pauseSimulationButton" type="button">Пауза</button></footer>
     </section>
   </main>
 
@@ -137,30 +118,20 @@
   <dialog class="sheet rules-sheet" id="rulesDialog">
     <header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код и облик армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
     <div class="rules-three">
-      <article><b>1</b><div><h3>До боя</h3><p>Поле и ординарий задают механику, форму щита и композиционную школу.</p></div></article>
-      <article><b>2</b><div><h3>В бою</h3><p>Ратники несут главную фигуру на щитах, лучники — вторичный знак и акцент.</p></div></article>
-      <article><b>3</b><div><h3>После боя</h3><p>Новый слой перестраивает весь герб, а не приклеивает очередную иконку.</p></div></article>
+      <article><b>1</b><div><h3>До боя</h3><p>Поле и ординарий задают замысел, форму построения и внешний язык рода.</p></div></article>
+      <article><b>2</b><div><h3>В бою</h3><p>Отряд выбирает цель, но каждый воин сам занимает место, держит соседа и вступает в контакт.</p></div></article>
+      <article><b>3</b><div><h3>После боя</h3><p>Новый слой меняет поведение армии и перестраивает весь герб.</p></div></article>
     </div>
   </dialog>
 
   <dialog class="sheet result-sheet" id="resultDialog">
     <header><div><p id="resultEyebrow">БИТВА ЗАВЕРШЕНА</p><h2 id="resultTitle">Знамя устояло</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
-    <div class="result-measures" id="resultMeasures"></div>
-    <div class="tactical-log"><h3>Решающие срабатывания</h3><div id="decisiveEvents"></div></div>
-    <div class="result-actions"><button id="replayButton" type="button">Повторить тот же бой</button><button class="primary-button" id="continueResultButton" type="button"><span>Продолжить поход</span><small>Изменить доктрину</small><b>→</b></button></div>
+    <div class="result-measures" id="resultMeasures"></div><div class="tactical-log"><h3>Решающие срабатывания</h3><div id="decisiveEvents"></div></div><div class="result-actions"><button id="replayButton" type="button">Повторить тот же бой</button><button class="primary-button" id="continueResultButton" type="button"><span>Продолжить поход</span><small>Изменить доктрину</small><b>→</b></button></div>
   </dialog>
 
-  <dialog class="sheet reward-sheet" id="rewardDialog">
-    <header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header>
-    <div class="reward-grid" id="rewardGrid"></div>
-  </dialog>
+  <dialog class="sheet reward-sheet" id="rewardDialog"><header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header><div class="reward-grid" id="rewardGrid"></div></dialog>
+  <dialog class="sheet ending-sheet" id="endingDialog"><div class="ending-standard" id="endingAchievement"></div><p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span><div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div></dialog>
 
-  <dialog class="sheet ending-sheet" id="endingDialog">
-    <div class="ending-standard" id="endingAchievement"></div>
-    <p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span>
-    <div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div>
-  </dialog>
-
-  <script type="module" src="./app.js?v=3.1.0"></script>
+  <script type="module" src="./app.js?v=4.3.0"></script>
 </body>
 </html>
