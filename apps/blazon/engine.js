@@ -1,9 +1,10 @@
 const isCore=new URL(import.meta.url).searchParams.has('core');
 if(!isCore&&typeof document!=='undefined'){
+  await import('./menu-input-hotfix.js');
   await import('./critical-readability.js');
   await import('./progression-art.js');
   await import('./progression-runtime.js');
-  await import('./armorial-composition-runtime.js');
+  import('./armorial-composition-runtime.js').catch(error=>console.error('[Blazon] armorial composition disabled:',error));
 }
 const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
 const clarity=await import('./combat-clarity.js');
