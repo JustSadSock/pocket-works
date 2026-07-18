@@ -1,4 +1,5 @@
 import {
+  CAPTURE_TARGET,
   PHASES,
   applyMove,
   cloneState,
@@ -13,43 +14,84 @@ import {
 export const AI_STYLES = Object.freeze({
   architect: {
     name: 'Архитектор',
-    description: 'Строит цепи, устойчивые сразу в нескольких фазах.',
-    weights: { connection: 3.2, capture: 1.25, defense: 1.5, liberties: 1.1, center: 0.35, resilience: 2.2 }
+    description: 'Строит устойчивые цепи, но не отдаёт бесплатные захваты.',
+    weights: { connection: 3.2, capture: 1.8, pressure: 1.35, defense: 1.65, liberties: 1.1, center: 0.35, resilience: 2.2 }
   },
   surgeon: {
     name: 'Хирург',
-    description: 'Ищет фазу, в которой чужая группа внезапно остаётся без воздуха.',
-    weights: { connection: 1.7, capture: 3.15, defense: 1.45, liberties: 1.55, center: 0.2, resilience: 0.8 }
+    description: 'Душит группы, создаёт фазовые ловушки и добивает при первой возможности.',
+    weights: { connection: 1.65, capture: 4.6, pressure: 3.45, defense: 1.65, liberties: 1.45, center: 0.18, resilience: 0.8 }
   },
   warden: {
     name: 'Страж',
-    description: 'Ломает угрозы, множит свободы и заставляет атаковать неудобно.',
-    weights: { connection: 1.8, capture: 1.35, defense: 3.05, liberties: 2.1, center: 0.25, resilience: 1.35 }
+    description: 'Закрывает свои слабости, ломает угрозы и отвечает контрзахватом.',
+    weights: { connection: 1.8, capture: 2.15, pressure: 1.55, defense: 3.25, liberties: 2.15, center: 0.24, resilience: 1.4 }
   },
   adaptive: {
     name: 'Адаптивный',
-    description: 'Меняет план по позиции: гонка, захват или вязкая оборона.',
-    weights: { connection: 2.35, capture: 2.1, defense: 2.25, liberties: 1.55, center: 0.3, resilience: 1.55 }
+    description: 'Переключается между путём и охотой, предпочитая конкретное тактическое преимущество.',
+    weights: { connection: 2.3, capture: 3.0, pressure: 2.35, defense: 2.45, liberties: 1.5, center: 0.28, resilience: 1.5 }
   }
 });
 
 export const AI_LEVELS = Object.freeze({
-  novice: { name: 'Ученик', description: 'Видит немедленные угрозы, но часто выбирает живой, неидеальный ход.' },
-  tactician: { name: 'Тактик', description: 'Проверяет все ходы и уверенно наказывает одноходовые ошибки.' },
-  oracle: { name: 'Оракул', description: 'Сравнивает лучшие ответы соперника и играет заметно жёстче.' }
+  novice: { name: 'Ученик', description: 'Берёт очевидные камни и видит прямые угрозы, но играет неровно.' },
+  tactician: { name: 'Тактик', description: 'Приоритетно захватывает, создаёт удушение и проверяет немедленный ответ.' },
+  oracle: { name: 'Оракул', description: 'Сравнивает жёсткие ответы соперника и избегает красивых, но проигрывающих атак.' }
 });
 
 function styleConfig(style) {
   return AI_STYLES[style] || AI_STYLES.adaptive;
 }
 
-function vulnerableGroups(state, player) {
-  return getGroups(state.board, state.phase, player)
-    .filter((group) => getLiberties(state.board, state.phase, group).size <= 1)
-    .reduce((sum, group) => sum + group.size, 0);
+function currentHealth(state, player) {
+  const report = { atariStones: 0, crampedStones: 0, liberties: 0, groups: 0 };
+  for (const group of getGroups(state.board, state.phase, player)) {
+    const liberties = getLiberties(state.board, state.phase, group).size;
+    report.groups += 1;
+    report.liberties += liberties;
+    if (liberties === 1) report.atariStones += group.size;
+    else if (liberties === 2) report.crampedStones += group.size;
+  }
+  return report;
 }
 
-export function evaluateState(state, player, style = 'adaptive') {
+function phaseFragility(state, player) {
+  const report = { zero: 0, atari: 0, cramped: 0, exposedPhases: 0 };
+  for (const phase of PHASES) {
+    let exposed = false;
+    for (const group of getGroups(state.board, phase.id, player)) {
+      const liberties = getLiberties(state.board, phase.id, group).size;
+      if (liberties === 0) {
+        report.zero += group.size;
+        exposed = true;
+      } else if (liberties === 1) {
+        report.atari += group.size;
+        exposed = true;
+      } else if (liberties === 2) {
+        report.cramped += Math.min(group.size, 3);
+      }
+    }
+    if (exposed) report.exposedPhases += 1;
+  }
+  return report;
+}
+
+function pressureValue(report) {
+  return report.zero * 11 + report.atari * 4.2 + report.cramped * 0.7 + report.exposedPhases * 2.5;
+}
+
+export function analyzeTacticalState(state, player) {
+  const opponent = otherPlayer(player);
+  return {
+    ownHealth: currentHealth(state, player),
+    enemyHealth: currentHealth(state, opponent),
+    ownFragility: phaseFragility(state, player),
+    enemyFragility: phaseFragility(state, opponent)
+  };
+}
+
+export function evaluateState(state, player, style = 'adaptive', tacticalReport = null) {
   const opponent = otherPlayer(player);
   if (state.winner === player) return 1_000_000 - state.turn;
   if (state.winner === opponent) return -1_000_000 + state.turn;
@@ -59,25 +101,27 @@ export function evaluateState(state, player, style = 'adaptive') {
   const enemy = summarizePosition(state, opponent);
   const weights = styleConfig(style).weights;
   const captureLead = state.captures[player] - state.captures[opponent];
-  const ownVulnerable = vulnerableGroups(state, player);
-  const enemyVulnerable = vulnerableGroups(state, opponent);
-  const pending = (state.pending[player] ? 24 : 0) - (state.pending[opponent] ? 30 : 0);
+  const tactical = tacticalReport || analyzeTacticalState(state, player);
+  const pending = (state.pending[player] ? 34 : 0) - (state.pending[opponent] ? 42 : 0);
   const phaseBreadth = PHASES.reduce((sum, phase) => {
     const probe = cloneState(state);
     probe.phase = phase.id;
     const report = summarizePosition(probe, player);
     return sum + Math.max(0, 4 - report.ownDistance);
   }, 0);
+  const pressureLead = pressureValue(tactical.enemyFragility) - pressureValue(tactical.ownFragility);
+  const currentAtariLead = tactical.enemyHealth.atariStones - tactical.ownHealth.atariStones;
 
   return (
-    (-own.ownDistance) * 3.2 * weights.connection +
-    captureLead * 15 * weights.capture +
-    own.enemyDistance * 1.8 * weights.defense +
-    (own.ownLiberties - enemy.ownLiberties) * 0.42 * weights.liberties +
-    (enemyVulnerable - ownVulnerable) * 2.7 * weights.capture +
+    (-own.ownDistance) * 3.25 * weights.connection +
+    captureLead * 24 * weights.capture +
+    own.enemyDistance * 1.9 * weights.defense +
+    (own.ownLiberties - enemy.ownLiberties) * 0.38 * weights.liberties +
+    currentAtariLead * 4.8 * weights.pressure +
+    pressureLead * 1.55 * weights.pressure +
     own.center * weights.center +
-    (own.resilience - enemy.resilience) * 3.2 * weights.resilience +
-    phaseBreadth * 0.55 * weights.resilience +
+    (own.resilience - enemy.resilience) * 3.1 * weights.resilience +
+    phaseBreadth * 0.5 * weights.resilience +
     pending
   );
 }
@@ -96,15 +140,81 @@ function normalizeForSearch(state) {
   return resolveSwap(state, false).state;
 }
 
+function candidateFeatures(before, next, player, beforeTactical, afterTactical) {
+  const opponent = otherPlayer(player);
+  const captured = next.captures[player] - before.captures[player];
+  return {
+    captured,
+    winning: next.winner === player,
+    losing: next.winner === opponent,
+    brokePath: Boolean(before.pending[opponent] && !next.pending[opponent]),
+    madePath: Boolean(!before.pending[player] && next.pending[player]),
+    enemyAtariGain: afterTactical.enemyHealth.atariStones - beforeTactical.enemyHealth.atariStones,
+    ownAtariSaved: beforeTactical.ownHealth.atariStones - afterTactical.ownHealth.atariStones,
+    pressureGain: pressureValue(afterTactical.enemyFragility) - pressureValue(beforeTactical.enemyFragility),
+    selfPressureChange: pressureValue(beforeTactical.ownFragility) - pressureValue(afterTactical.ownFragility)
+  };
+}
+
+function tacticalBonus(features, weights, capturesBefore) {
+  const captureProgress = capturesBefore + features.captured;
+  const captureFinish = captureProgress >= CAPTURE_TARGET ? 500_000 : captureProgress === CAPTURE_TARGET - 1 ? features.captured * 55 : 0;
+  return (
+    features.captured * 72 * weights.capture +
+    features.captured * features.captured * 22 * weights.capture +
+    captureFinish +
+    Math.max(0, features.enemyAtariGain) * 9 * weights.pressure +
+    Math.max(0, features.pressureGain) * 3.2 * weights.pressure +
+    Math.max(0, features.ownAtariSaved) * 12 * weights.defense +
+    Math.max(0, features.selfPressureChange) * 2.6 * weights.defense +
+    (features.brokePath ? 95 * weights.defense : 0) +
+    (features.madePath ? 54 * weights.connection : 0) -
+    Math.max(0, -features.ownAtariSaved) * 10 * weights.defense -
+    Math.max(0, -features.selfPressureChange) * 2.4 * weights.defense
+  );
+}
+
 function scoreMoves(state, player, style, moves) {
+  const weights = styleConfig(style).weights;
+  const beforeTactical = analyzeTacticalState(state, player);
   return moves.map((move) => {
     const result = applyMove(state, move);
+    if (!result.ok) return null;
     const next = normalizeForSearch(result.state);
+    const afterTactical = analyzeTacticalState(next, player);
+    const features = candidateFeatures(state, next, player, beforeTactical, afterTactical);
     return {
       move,
       state: next,
-      score: evaluateState(next, player, style)
+      features,
+      score: evaluateState(next, player, style, afterTactical) + tacticalBonus(features, weights, state.captures[player])
     };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+}
+
+function bestImmediateReply(state, protectedPlayer, style) {
+  if (state.winner || state.draw) return { winning: false, captured: 0, score: 0 };
+  const replyPlayer = state.current;
+  const moves = getLegalMoves(state);
+  let worst = { winning: false, captured: 0, score: 0 };
+  for (const move of moves) {
+    const result = applyMove(state, move);
+    if (!result.ok) continue;
+    const captured = result.state.captures[replyPlayer] - state.captures[replyPlayer];
+    const winning = result.state.winner === replyPlayer;
+    const endangered = currentHealth(result.state, protectedPlayer).atariStones;
+    const score = (winning ? 1_000_000 : 0) + captured * 105 + endangered * 8 + (result.state.pending[replyPlayer] ? 24 : 0);
+    if (score > worst.score) worst = { winning, captured, score };
+  }
+  return worst;
+}
+
+function enrichReplyRisk(scored, player, style) {
+  const weights = styleConfig(style).weights;
+  return scored.map((candidate) => {
+    const reply = bestImmediateReply(candidate.state, player, style);
+    const penalty = (reply.winning ? 700_000 : 0) + reply.captured * 82 * weights.defense + reply.score * 0.06 * weights.defense;
+    return { ...candidate, reply, score: candidate.score - penalty };
   }).sort((a, b) => b.score - a.score);
 }
 
@@ -120,6 +230,23 @@ function weightedTop(scored, count, rng) {
   return top[0].move;
 }
 
+function preferConcreteCapture(scored, margin = 28) {
+  if (!scored.length) return null;
+  const best = scored[0];
+  const capture = scored.find((candidate) => candidate.features.captured > 0 && !candidate.reply?.winning);
+  if (capture && capture.score >= best.score - margin) return capture;
+  return best;
+}
+
+function tacticalCandidatePool(state, scored) {
+  const opponent = otherPlayer(state.current);
+  const urgent = Boolean(state.pending[opponent] || state.captures[opponent] >= 4 || currentHealth(state, state.current).atariStones > 0);
+  if (urgent) return scored;
+  const critical = scored.filter((candidate) => candidate.features.winning || candidate.features.captured > 0 || candidate.features.brokePath);
+  const top = scored.slice(0, 18);
+  return [...new Map([...critical, ...top].map((candidate) => [`${candidate.move.cell}/${candidate.move.phase}`, candidate])).values()];
+}
+
 export function chooseMove(state, options = {}) {
   const level = options.level || 'tactician';
   const style = options.style || 'adaptive';
@@ -127,34 +254,53 @@ export function chooseMove(state, options = {}) {
   const legal = getLegalMoves(state);
   if (!legal.length) return null;
   const player = state.current;
+  const scored = scoreMoves(state, player, style, legal);
+  const winning = scored.filter((candidate) => candidate.features.winning);
+  if (winning.length) return winning[0].move;
 
   if (level === 'novice') {
-    const sample = shuffled(legal, rng).slice(0, Math.min(24, legal.length));
-    return weightedTop(scoreMoves(state, player, style, sample), 8, rng);
+    const captures = scored.filter((candidate) => candidate.features.captured > 0);
+    if (captures.length) return weightedTop(captures, Math.min(4, captures.length), rng);
+    const sampleKeys = new Set(shuffled(scored, rng).slice(0, Math.min(28, scored.length)).map((candidate) => `${candidate.move.cell}/${candidate.move.phase}`));
+    const sample = scored.filter((candidate) => sampleKeys.has(`${candidate.move.cell}/${candidate.move.phase}`));
+    return weightedTop(sample, 8, rng);
   }
 
-  const scored = scoreMoves(state, player, style, legal);
-  if (level === 'tactician') return weightedTop(scored, 3, rng);
+  const pool = tacticalCandidatePool(state, scored);
+  const withRisk = enrichReplyRisk(pool, player, style);
+  const safe = withRisk.some((candidate) => !candidate.reply.winning)
+    ? withRisk.filter((candidate) => !candidate.reply.winning)
+    : withRisk;
 
-  const finalists = scored.slice(0, Math.min(12, scored.length));
+  if (level === 'tactician') return preferConcreteCapture(safe, 82)?.move || safe[0].move;
+
+  const finalists = safe.slice(0, Math.min(8, safe.length));
   const searched = finalists.map((candidate) => {
     if (candidate.state.winner || candidate.state.draw) return candidate;
-    const replies = getLegalMoves(candidate.state);
-    if (!replies.length) return candidate;
-    const replySample = scoreMoves(
-      candidate.state,
-      candidate.state.current,
-      style,
-      shuffled(replies, rng).slice(0, Math.min(20, replies.length))
-    ).slice(0, 5);
+    const replyPlayer = candidate.state.current;
+    const legalReplies = getLegalMoves(candidate.state);
+    const quickReplies = legalReplies.map((move) => {
+      const result = applyMove(candidate.state, move);
+      if (!result.ok) return null;
+      const captured = result.state.captures[replyPlayer] - candidate.state.captures[replyPlayer];
+      const winning = result.state.winner === replyPlayer;
+      const position = summarizePosition(result.state, replyPlayer);
+      const priority = (winning ? 1_000_000 : 0) + captured * 120 - position.ownDistance * 7 + position.enemyDistance * 3 + (result.state.pending[replyPlayer] ? 26 : 0);
+      return { state: result.state, captured, winning, priority };
+    }).filter(Boolean).sort((a, b) => b.priority - a.priority);
+    const replyPool = [
+      ...quickReplies.filter((reply) => reply.winning || reply.captured > 0),
+      ...quickReplies.slice(0, 14)
+    ].filter((reply, index, array) => array.indexOf(reply) === index);
     let worstForPlayer = Infinity;
-    for (const reply of replySample) {
-      worstForPlayer = Math.min(worstForPlayer, evaluateState(reply.state, player, style));
+    for (const reply of replyPool) {
+      const horizon = evaluateState(reply.state, player, style) - reply.captured * 46 * styleConfig(style).weights.defense;
+      worstForPlayer = Math.min(worstForPlayer, horizon);
     }
-    return { ...candidate, score: candidate.score * 0.35 + worstForPlayer * 0.65 };
+    return { ...candidate, score: candidate.score * 0.38 + worstForPlayer * 0.62 };
   }).sort((a, b) => b.score - a.score);
 
-  return weightedTop(searched, 2, rng);
+  return preferConcreteCapture(searched, 68)?.move || searched[0].move;
 }
 
 export function shouldSwap(state, options = {}) {
