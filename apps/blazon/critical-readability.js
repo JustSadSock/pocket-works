@@ -9,7 +9,6 @@ if(typeof window!=='undefined'&&!window[PATCH_FLAG]){
   const nativeRestore=proto.restore;
   const nativeRotate=proto.rotate;
   const nativeRect=HTMLCanvasElement.prototype.getBoundingClientRect;
-  const depth=new WeakMap();
   const labelFrame={bucket:-1,values:new Set()};
   const coarse=globalThis.matchMedia?.('(pointer:coarse)')?.matches??false;
   const battleResolutionScale=coarse?.75:.9;
@@ -21,10 +20,17 @@ if(typeof window!=='undefined'&&!window[PATCH_FLAG]){
     return{x:rect.x,y:rect.y,left:rect.left,top:rect.top,right:rect.left+width,bottom:rect.top+height,width,height,toJSON:()=>({x:rect.x,y:rect.y,width,height,top:rect.top,right:rect.left+width,bottom:rect.top+height,left:rect.left})};
   };
 
-  proto.save=function(){depth.set(this,(depth.get(this)||0)+1);return nativeSave.call(this);};
-  proto.restore=function(){const result=nativeRestore.call(this);depth.set(this,Math.max(0,(depth.get(this)||0)-1));return result;};
+  proto.save=function(){
+    if(this.canvas?.id==='battleCanvas')this.__blazonSaveDepth=(this.__blazonSaveDepth||0)+1;
+    return nativeSave.call(this);
+  };
+  proto.restore=function(){
+    const result=nativeRestore.call(this);
+    if(this.canvas?.id==='battleCanvas')this.__blazonSaveDepth=Math.max(0,(this.__blazonSaveDepth||0)-1);
+    return result;
+  };
   proto.rotate=function(angle){
-    if(this.canvas?.id==='battleCanvas'&&depth.get(this)===2&&Math.abs(angle-Math.PI)<.000001)return;
+    if(this.canvas?.id==='battleCanvas'&&this.__blazonSaveDepth===2&&Math.abs(angle-Math.PI)<.000001)return;
     return nativeRotate.call(this,angle);
   };
 
