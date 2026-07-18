@@ -9,6 +9,30 @@ function injectStyles() {
   document.head.append(link);
 }
 
+function injectControlSafety() {
+  if (document.querySelector('style[data-faza-control-safety]')) return;
+  const style = document.createElement('style');
+  style.dataset.fazaControlSafety = '';
+  style.textContent = `
+    @media (max-width: 760px), (orientation: landscape) and (max-height: 640px) {
+      .turn-console { position: relative; }
+      .turn-stepper { padding-right: 98px; }
+      .game-actions {
+        display: flex !important;
+        position: absolute;
+        z-index: 4;
+        top: 4px;
+        right: 10px;
+        min-block-size: 24px;
+        border: 0;
+      }
+      .game-actions .text-control { min-height: 24px; font-size: .52rem; }
+      .game-actions .text-control:last-child { display: none; }
+    }
+  `;
+  document.head.append(style);
+}
+
 function buildMiniBoard() {
   const emblem = document.querySelector('.phase-emblem');
   if (!emblem) return;
@@ -125,6 +149,7 @@ function observeState() {
 }
 
 injectStyles();
+injectControlSafety();
 document.documentElement.dataset.fazaInterface = '2';
 decorateMenu();
 decorateGame();
