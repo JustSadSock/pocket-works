@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const BUILD='5.4.1';
+  const BUILD='5.4.2';
   const inputStyle=document.createElement('style');
   inputStyle.textContent=`
     .menu-landscape,.menu-standard,.menu-copy,.symbol-library{pointer-events:none!important}
@@ -41,7 +41,8 @@
   }
 
   const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('startup timeout')),15000));
-  Promise.race([import(`./app.js?pw_release=${BUILD}`),timeout]).then(()=>{
+  const critical=import(`./critical-readability.js?pw_release=${BUILD}`).catch(error=>console.warn('[БЛАЗОН] critical readability',error));
+  Promise.race([Promise.all([critical,import(`./app.js?pw_release=${BUILD}`)]),timeout]).then(()=>{
     requestAnimationFrame(()=>setTimeout(()=>{
       controls.forEach(control=>control.removeAttribute('aria-busy'));
       document.documentElement.dataset.blazonReady=BUILD;
@@ -50,7 +51,6 @@
       window.dispatchEvent(new CustomEvent('blazon:ready',{detail:{version:BUILD}}));
 
       const enhancements=[
-        'critical-readability.js',
         'progression-art.js',
         'progression-runtime.js',
         'armorial-composition-runtime.js',
