@@ -12,6 +12,13 @@ const parts = [
   './game-part-5.js',
   './game-part-6.js',
   './game-part-7.js',
+  './combat-v2-1.js',
+  './combat-v2-2.js',
+  './combat-v2-3.js',
+  './combat-v2-4.js',
+  './combat-v2-5.js',
+  './combat-v2-6.js',
+  './combat-v2-run.js',
   './game-part-8.js'
 ];
 
@@ -26,6 +33,9 @@ try {
       document.head.append(script);
     });
   }
+  if (!globalThis.__RAT_COMBAT_V2_READY) {
+    throw globalThis.__RAT_COMBAT_V2_ERROR || new Error('Новая модель боя не загрузилась');
+  }
 } catch (error) {
   console.error('[РАТЬ] startup failed', error);
   document.querySelector('[data-app-shell]').innerHTML = `
@@ -36,4 +46,5 @@ try {
     </section>`;
 } finally {
   delete globalThis.__RAT_DEPS__;
+  delete globalThis.__RAT_COMBAT_V2_ERROR;
 }
