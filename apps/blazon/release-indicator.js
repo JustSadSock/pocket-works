@@ -8,5 +8,8 @@
   apply();
   const observer=new MutationObserver(apply);
   observer.observe(document.body,{childList:true,subtree:true});
+  if('serviceWorker'in navigator){
+    navigator.serviceWorker.register(`./sw.js?build=${BUILD}`,{updateViaCache:'none'}).then(registration=>registration.update()).catch(error=>console.warn('[БЛАЗОН] service worker update failed',error));
+  }
   window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});
 })();
