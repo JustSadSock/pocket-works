@@ -1,11 +1,32 @@
-const PATCH_FLAG=Symbol.for('blazon.critical-readability.v1');
+const PATCH_FLAG=Symbol.for('blazon.critical-readability.v2');
 if(typeof window!=='undefined'&&!window[PATCH_FLAG]){
   window[PATCH_FLAG]=true;
   const WORLD_WIDTH=720,WORLD_HEIGHT=1120;
   const proto=CanvasRenderingContext2D.prototype;
   const nativeSetTransform=proto.setTransform;
   const nativeFillText=proto.fillText;
+  const nativeSave=proto.save;
+  const nativeRestore=proto.restore;
+  const nativeRotate=proto.rotate;
+  const nativeRect=HTMLCanvasElement.prototype.getBoundingClientRect;
+  const depth=new WeakMap();
   const labelFrame={bucket:-1,values:new Set()};
+  const coarse=matchMedia?.('(pointer:coarse)')?.matches??false;
+  const battleResolutionScale=coarse?.75:.9;
+
+  HTMLCanvasElement.prototype.getBoundingClientRect=function(){
+    const rect=nativeRect.call(this);
+    if(this.id!=='battleCanvas'||rect.width<=0||rect.height<=0)return rect;
+    const width=rect.width*battleResolutionScale,height=rect.height*battleResolutionScale;
+    return{x:rect.x,y:rect.y,left:rect.left,top:rect.top,right:rect.left+width,bottom:rect.top+height,width,height,toJSON:()=>({x:rect.x,y:rect.y,width,height,top:rect.top,right:rect.left+width,bottom:rect.top+height,left:rect.left})};
+  };
+
+  proto.save=function(){depth.set(this,(depth.get(this)||0)+1);return nativeSave.call(this);};
+  proto.restore=function(){const result=nativeRestore.call(this);depth.set(this,Math.max(0,(depth.get(this)||0)-1));return result;};
+  proto.rotate=function(angle){
+    if(this.canvas?.id==='battleCanvas'&&depth.get(this)===2&&Math.abs(angle-Math.PI)<.000001)return;
+    return nativeRotate.call(this,angle);
+  };
 
   proto.setTransform=function(a,b,c,d,e,f){
     const canvas=this.canvas;
