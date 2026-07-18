@@ -1,6 +1,11 @@
 const isCore=new URL(import.meta.url).searchParams.has('core');
-if(!isCore&&typeof document!=='undefined'){await import('./progression-art.js');await import('./progression-runtime.js');}
+if(!isCore&&typeof document!=='undefined'){
+  await import('./critical-readability.js');
+  await import('./progression-art.js');
+  await import('./progression-runtime.js');
+}
 const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
+const clarity=await import('./combat-clarity.js');
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;
 export const WORLD_WIDTH=selected.WORLD_WIDTH;
@@ -25,9 +30,9 @@ export const generateOffers=selected.generateOffers;
 export const applyOffer=selected.applyOffer;
 export const prepareBattle=selected.prepareBattle;
 export const recordBattle=selected.recordBattle;
-export const createBattleState=selected.createBattleState;
-export const stepBattle=selected.stepBattle;
+export const createBattleState=(...args)=>clarity.createBattleState(selected.createBattleState,...args);
+export const stepBattle=(state,dt)=>clarity.stepBattle(selected.stepBattle,state,dt);
 export const summarizeBattle=selected.summarizeBattle;
-export const simulateBattle=selected.simulateBattle;
+export const simulateBattle=(a,b,seed=1,max=110)=>clarity.simulateBattle(selected.createBattleState,selected.stepBattle,selected.summarizeBattle,a,b,seed,max);
 export const randomDoctrine=selected.randomDoctrine;
-export const botAudit=selected.botAudit;
+export const botAudit=(iterations=100,seed=1)=>clarity.botAudit(selected.randomDoctrine,selected.createBattleState,selected.stepBattle,selected.summarizeBattle,iterations,seed);
