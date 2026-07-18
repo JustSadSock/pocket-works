@@ -2,11 +2,13 @@ const CACHE_PREFIX = 'vetrolom-';
 const CACHE_NAME = 'vetrolom-v1.5.1';
 const APP_VERSION = '1.5.1';
 const RELEASE_DATE = '2026-07-18';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
+const FETCH_TIMEOUT = 15_000;
+const PRECACHE_CONCURRENCY = 4;
 const RELEASE_NOTES = [
   'Исправлено ручное обновление ВЕТРОЛОМА через лаунчер Pocket Works.',
   'Новая версия больше не перехватывает активацию Service Worker до команды лаунчера.',
-  'Файлы релиза загружаются напрямую из сети, без примеси старого HTTP-кэша.'
+  'Загрузка каждого shell-файла ограничена по времени и больше не может навсегда удерживать общую очередь обновления.'
 ];
 
 const APP_SHELL = [
@@ -45,12 +47,10 @@ const APP_SHELL = [
 
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
-const SHELL_KEYS = new Map(
-  APP_SHELL.map((entry) => {
-    const url = new URL(entry, SCOPE_URL);
-    return [url.pathname, url.href];
-  })
-);
+const SHELL_KEYS = new Map(APP_SHELL.map((entry) => {
+  const url = new URL(entry, SCOPE_URL);
+  return [url.pathname, url.href];
+}));
 
 function buildNetworkUrl(input) {
   const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
@@ -59,27 +59,46 @@ function buildNetworkUrl(input) {
 }
 
 async function fetchFresh(input) {
-  const response = await fetch(buildNetworkUrl(input), {
-    cache: 'no-store',
-    credentials: 'same-origin',
-    redirect: 'follow'
-  });
-
-  if (!response || !response.ok) {
-    throw new Error(`Fresh application request failed: ${response?.status || 'network'}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  try {
+    const response = await fetch(buildNetworkUrl(input), {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    if (!response || !response.ok) {
+      throw new Error(`Fresh application request failed: ${response?.status || 'network'}`);
+    }
+    return response;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`Fresh application request timed out after ${FETCH_TIMEOUT / 1000}s`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
+}
 
-  return response;
+async function mapWithConcurrency(items, concurrency, handler) {
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      await handler(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
 }
 
 async function precacheFreshShell() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all(
-    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
-      const response = await fetchFresh(canonicalUrl);
-      await cache.put(canonicalUrl, response);
-    })
-  );
+  const urls = [...new Set(SHELL_KEYS.values())];
+  await mapWithConcurrency(urls, PRECACHE_CONCURRENCY, async (canonicalUrl) => {
+    const response = await fetchFresh(canonicalUrl);
+    await cache.put(canonicalUrl, response);
+  });
 }
 
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
@@ -107,33 +126,25 @@ self.addEventListener('message', (event) => {
       cacheName: CACHE_NAME
     });
   }
-
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(caches.keys()
+    .then((keys) => Promise.all(keys
+      .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+      .map((key) => caches.delete(key))))
+    .then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
-
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
   }
-
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
   if (!canonicalUrl) return;
   event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
