@@ -33,6 +33,9 @@ try {
       document.head.append(script);
     });
   }
+  if (!globalThis.__RAT_COMBAT_V2_READY) {
+    throw globalThis.__RAT_COMBAT_V2_ERROR || new Error('Новая модель боя не загрузилась');
+  }
 } catch (error) {
   console.error('[РАТЬ] startup failed', error);
   document.querySelector('[data-app-shell]').innerHTML = `
@@ -43,4 +46,5 @@ try {
     </section>`;
 } finally {
   delete globalThis.__RAT_DEPS__;
+  delete globalThis.__RAT_COMBAT_V2_ERROR;
 }
