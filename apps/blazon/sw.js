@@ -46,7 +46,7 @@ async function networkFirst(request){
     cache.put(request,response.clone()).catch(()=>{});
     return response;
   }
-  return(await caches.match(request))||(await caches.match('./index.html'));
+  return(await caches.match(request,{ignoreSearch:true}))||Response.error();
 }
 
 async function navigationResponse(request){
@@ -79,5 +79,5 @@ self.addEventListener('fetch',event=>{
     event.respondWith(networkFirst(event.request));
     return;
   }
-  event.respondWith(caches.match(event.request).then(hit=>hit||networkFirst(event.request)));
+  event.respondWith(caches.match(event.request,{ignoreSearch:true}).then(hit=>hit||networkFirst(event.request)));
 });
