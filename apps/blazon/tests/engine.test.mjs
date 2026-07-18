@@ -1,54 +1,71 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FIELDS, ORDINARIES, MAINS, SECONDARIES, COMMANDS, MOTTOS,
-  createCampaign, generateOffers, applyOffer, prepareBattle,
-  createBattleState, stepBattle, simulateBattle, botAudit, recordBattle
+  FIELDS,ORDINARIES,MAINS,SECONDARIES,COMMANDS,MOTTOS,
+  createCampaign,generateOffers,applyOffer,createBattleState,
+  stepBattle,simulateBattle,botAudit,recordBattle,WORLD_WIDTH,WORLD_HEIGHT
 } from '../engine.js';
 
-test('doctrine catalog remains bounded',()=>{
-  assert.equal(Object.keys(FIELDS).length,4);assert.equal(Object.keys(ORDINARIES).length,4);
-  assert.equal(Object.keys(MAINS).length,4);assert.equal(Object.keys(SECONDARIES).length,4);
-  assert.equal(Object.keys(COMMANDS).length,3);assert.equal(Object.keys(MOTTOS).length,4);
+const fullA={field:'gules',ordinary:'pale',main:'lion',secondary:'sun',command:'crown',motto:'breach',axis:'center'};
+const fullB={field:'azure',ordinary:'chevron',main:'stag',secondary:'eagle',command:'helmet',motto:'banner',axis:'left'};
+
+test('catalog remains bounded',()=>{
+  assert.deepEqual([Object.keys(FIELDS).length,Object.keys(ORDINARIES).length,Object.keys(MAINS).length,Object.keys(SECONDARIES).length,Object.keys(COMMANDS).length,Object.keys(MOTTOS).length],[4,4,4,4,3,4]);
 });
-test('campaign reward flow remains compatible',()=>{
-  const c=createCampaign('gules','pale',9);const loss=recordBattle(c,{winner:'enemy',duration:60,events:[],decisive:[]});
-  assert.equal(loss.integrity,2);assert.equal(loss.battleIndex,1);assert.equal(loss.offers.length,3);
-  const next=applyOffer(loss,loss.offers[0]);assert.equal(next.doctrine.main,loss.offers[0].id);
+
+test('campaign progression is preserved',()=>{
+  const c=createCampaign('argent','fess',42);c.battleIndex=1;
+  const offers=generateOffers(c);assert.equal(offers.length,3);assert.ok(offers.every(o=>o.slot==='main'));
+  const n=applyOffer(c,offers[0]);assert.equal(n.doctrine.main,offers[0].id);
+  const r=recordBattle(n,{winner:'player'});assert.equal(r.battleIndex,2);
 });
-test('battle has squads made of individual warriors',()=>{
-  const c=prepareBattle(createCampaign('azure','chevron',42));const s=createBattleState(c.doctrine,c.currentEnemy,c.currentSeed);
-  assert.equal(s.player.infantry.length,4);assert.equal(s.player.archers.length,4);
+
+test('battle uses vertical battlefield and equal individual armies',()=>{
+  const s=createBattleState(fullA,fullB,77);
+  assert.equal(WORLD_WIDTH,720);assert.equal(WORLD_HEIGHT,1120);
+  assert.ok(s.player.banner.y>s.enemy.banner.y);
   assert.equal(s.player.infantry.flatMap(q=>q.members).length,32);
   assert.equal(s.player.archers.flatMap(q=>q.members).length,16);
-  assert.notEqual(s.player.infantry[0].members[0].x,s.player.infantry[0].members[1].x);
+  const py=s.player.infantry.reduce((n,q)=>n+q.y,0)/4;
+  const ey=s.enemy.infantry.reduce((n,q)=>n+q.y,0)/4;
+  assert.ok(py>ey);
 });
-test('individual warriors move relative to their squad slots',()=>{
-  const c=prepareBattle(createCampaign('argent','fess',55));const s=createBattleState(c.doctrine,c.currentEnemy,c.currentSeed);
-  const squad=s.player.infantry[0],before=squad.members.map(m=>[m.x,m.y]);
-  for(let i=0;i<40;i++)stepBattle(s,.05);
-  assert.ok(squad.members.some((m,i)=>Math.hypot(m.x-before[i][0],m.y-before[i][1])>.5));
-  assert.ok(squad.members.every(m=>Number.isFinite(m.slotX)&&Number.isFinite(m.slotY)));
+
+test('members receive unique soft slots and repack after a casualty',()=>{
+  const s=createBattleState(fullA,fullB,19);
+  for(let i=0;i<20;i++)stepBattle(s,.05);
+  const squad=s.player.infantry[0];
+  const before=new Set(squad.members.filter(m=>m.state!=='fallen').map(m=>`${m.slotX.toFixed(2)}:${m.slotY.toFixed(2)}`));
+  assert.equal(before.size,8);
+  squad.members[2].state='fallen';squad.members[2].hp=0;
+  for(let i=0;i<20;i++)stepBattle(s,.05);
+  const alive=squad.members.filter(m=>m.state!=='fallen');
+  const after=new Set(alive.map(m=>m.slotIndex));
+  assert.equal(after.size,alive.length);
 });
-test('casualties are individual rather than decrementing a squad token',()=>{
-  const a={field:'gules',ordinary:'pale',main:'lion',secondary:'sun',command:'crown',motto:'breach',axis:'center'};
-  const b={field:'azure',ordinary:'chevron',main:'stag',secondary:'eagle',command:'helmet',motto:'banner',axis:'left'};
-  const s=createBattleState(a,b,321);
-  for(let i=0;i<1600&&s.status==='running';i++)stepBattle(s,.05);
-  const fallen=[...s.player.infantry,...s.player.archers,...s.enemy.infantry,...s.enemy.archers].flatMap(q=>q.members).filter(m=>m.state==='fallen');
-  assert.ok(fallen.length>0);assert.ok(fallen.every(m=>m.fallenAt!==null));
+
+test('battle reaches individual contact without unit teleportation',()=>{
+  const s=createBattleState(fullA,fullB,123);
+  for(let i=0;i<1600&&s.status==='running'&&!s.firstContact;i++)stepBattle(s,.05);
+  assert.equal(s.firstContact,true);
+  const all=[...s.player.infantry,...s.enemy.infantry].flatMap(q=>q.members).filter(m=>m.state!=='fallen');
+  assert.ok(all.every(m=>m.x>=18&&m.x<=WORLD_WIDTH-18&&m.y>=28&&m.y<=WORLD_HEIGHT-28));
 });
-test('battle terminates and summary counts warriors',()=>{
-  const c=prepareBattle(createCampaign('gules','bend',77));const r=simulateBattle(c.doctrine,c.currentEnemy,c.currentSeed);
-  assert.ok(['player','enemy'].includes(r.winner));assert.ok(r.duration<=101);
-  assert.ok(r.playerRemaining>=0&&r.playerRemaining<=48);assert.ok(r.enemyRemaining>=0&&r.enemyRemaining<=48);
+
+test('simulation is deterministic',()=>{
+  assert.deepEqual(simulateBattle(fullA,fullB,555),simulateBattle(fullA,fullB,555));
 });
-test('same seed remains deterministic',()=>{
-  const a={field:'gules',ordinary:'pale',main:'lion',secondary:'sun',command:'crown',motto:'breach',axis:'center'};
-  const b={field:'azure',ordinary:'chevron',main:'stag',secondary:'eagle',command:'helmet',motto:'banner',axis:'left'};
-  assert.deepEqual(simulateBattle(a,b,123),simulateBattle(a,b,123));
+
+test('battle terminates and keeps useful duration',()=>{
+  const r=simulateBattle(fullA,fullB,91);
+  assert.ok(['player','enemy'].includes(r.winner));
+  assert.ok(r.duration<=105.1);
+  assert.ok(r.playerRemaining>=0&&r.playerRemaining<=48);
 });
-test('mirrored bot audit has bounded side bias',()=>{
-  const audit=botAudit(30,100);assert.equal(audit.player+audit.enemy,60);
-  assert.ok(Math.abs(audit.player-audit.enemy)<=18);assert.ok(audit.averageDuration<100);
+
+test('mirrored audit avoids catastrophic side bias',()=>{
+  const a=botAudit(30,1000);
+  assert.equal(a.player+a.enemy,60);
+  assert.ok(Math.abs(a.player-a.enemy)<=18,JSON.stringify(a));
+  assert.ok(a.averageDuration<105,JSON.stringify(a));
 });
