@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#26352e">
+  <meta name="description" content="РАТЬ — живая тактическая дуэль маленьких армий. Стройте полки, наблюдайте за отдельными бойцами и вмешивайтесь ровно настолько, насколько хотите.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="РАТЬ">
+  <title>РАТЬ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app data-app-preset="game-2d">
+  <main class="app-shell" data-app-shell>
+    <section id="homeScreen" class="screen home-screen" data-ui aria-labelledby="homeTitle">
+      <header class="topbar home-topbar">
+        <a class="shelf-link" href="../../" data-shell-exit data-app-control data-native-press>← POCKET WORKS</a>
+        <button id="homeSettingsButton" class="text-button" type="button" data-native-press>НАСТРОЙКИ</button>
+      </header>
+
+      <div class="home-battle" aria-hidden="true">
+        <canvas id="homeCanvas"></canvas>
+        <div class="home-vignette"></div>
+      </div>
+
+      <div class="home-copy">
+        <p class="eyebrow">ЖИВАЯ ТАКТИКА · ОТДЕЛЬНЫЕ БОЙЦЫ · ТРИ ПОЛКА</p>
+        <h1 id="homeTitle">РАТЬ</h1>
+        <p class="lead">Ты строишь армию. Они пытаются не испортить план.</p>
+      </div>
+
+      <div class="home-actions">
+        <button id="newBattleButton" class="action action-primary" type="button" data-native-press>
+          <span>СОБРАТЬ АРМИЮ</span>
+          <small>три полка против полевого ИИ</small>
+        </button>
+        <button id="quickBattleButton" class="action action-secondary" type="button" data-native-press>
+          <span>БЫСТРЫЙ БОЙ</span>
+          <small>случайный строй с обеих сторон</small>
+        </button>
+        <button id="rulesButton" class="action action-ghost" type="button" data-native-press>КАК ЭТО РАБОТАЕТ</button>
+        <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </div>
+
+      <footer class="home-footer">
+        <span>3 ТИПА ВОЙСК</span>
+        <span>ДО 144 БОЙЦОВ</span>
+        <span>БЕЗ МИКРОКОНТРОЛЯ</span>
+      </footer>
+    </section>
+
+    <section id="setupScreen" class="screen setup-screen" hidden aria-labelledby="setupTitle">
+      <header class="topbar setup-topbar" data-ui>
+        <button id="setupBackButton" class="text-button" type="button" data-native-press>← НАЗАД</button>
+        <div>
+          <small>ПЕРЕД БОЕМ</small>
+          <strong id="setupTitle">ПОСТРОЕНИЕ</strong>
+        </div>
+        <button id="randomizeButton" class="text-button" type="button" data-native-press>СЛУЧАЙНО</button>
+      </header>
+
+      <div class="setup-intro" data-ui>
+        <p>Перетащи полки на левый фланг, центр и правый фланг. Нажми на полк, чтобы сменить строй.</p>
+      </div>
+
+      <div id="formationBoard" class="formation-board" data-gesture-surface data-block-callout>
+        <div class="enemy-edge" aria-hidden="true">
+          <span>РАЗВЕДКА ВИДИТ ТОЛЬКО СИЛУЭТЫ</span>
+          <i></i><i></i><i></i>
+        </div>
+        <div class="deployment-grid" id="deploymentGrid">
+          <button class="deployment-slot" type="button" data-slot="left" aria-label="Левый фланг"></button>
+          <button class="deployment-slot" type="button" data-slot="center" aria-label="Центр"></button>
+          <button class="deployment-slot" type="button" data-slot="right" aria-label="Правый фланг"></button>
+        </div>
+        <div class="player-edge" aria-hidden="true">ВАШ РУБЕЖ</div>
+      </div>
+
+      <div class="regiment-dock" id="regimentDock" data-ui aria-label="Ваши полки"></div>
+
+      <div class="setup-footer" data-ui>
+        <div class="setup-summary">
+          <span><b id="armyCount">72</b> бойца</span>
+          <span><b id="setupBalance">ровный</b> строй</span>
+        </div>
+        <button id="startBattleButton" class="action action-primary" type="button" data-native-press>
+          <span>НАЧАТЬ СРАЖЕНИЕ</span>
+          <small>приказы можно менять прямо в бою</small>
+        </button>
+      </div>
+    </section>
+
+    <section id="battleScreen" class="screen battle-screen" hidden aria-label="Поле боя РАТЬ">
+      <header class="battle-header" data-ui>
+        <a class="shelf-mark" href="../../" data-shell-exit data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+        <div class="side-readout side-player">
+          <strong id="playerAlive">72</strong>
+          <small>ВАШИ</small>
+        </div>
+        <div class="battle-title">
+          <strong>РАТЬ</strong>
+          <small id="battleClock">00:00</small>
+        </div>
+        <div class="side-readout side-enemy">
+          <strong id="enemyAlive">72</strong>
+          <small>ВРАГ</small>
+        </div>
+        <button id="pauseButton" class="header-button" type="button" data-native-press>ПАУЗА</button>
+      </header>
+
+      <div class="morale-strip" data-ui aria-label="Соотношение сил">
+        <i id="moralePlayer"></i>
+        <i id="moraleEnemy"></i>
+      </div>
+
+      <div id="battlefieldWrap" class="battlefield-wrap" data-gesture-surface data-block-callout>
+        <canvas id="battleCanvas" aria-label="Живое сражение двух армий"></canvas>
+        <div class="battlefield-grain" aria-hidden="true"></div>
+        <div id="orderHint" class="order-hint" hidden>ВЫБЕРИ ПОЛК, ЗАТЕМ ТОЧКУ НА ПОЛЕ</div>
+        <div id="battleToast" class="battle-toast" aria-live="polite"></div>
+      </div>
+
+      <div class="regiment-bar" id="regimentBar" data-ui aria-label="Ваши полки"></div>
+
+      <div class="command-deck" data-ui>
+        <div class="command-heading">
+          <div>
+            <small>СПОСОБ КОМАНДОВАНИЯ</small>
+            <strong id="modeTitle">РЕДКИЕ ПРИКАЗЫ</strong>
+          </div>
+          <span id="commandCharge" class="command-charge" aria-label="Готовность приказа"><i></i></span>
+        </div>
+        <div class="mode-switch" role="group" aria-label="Способ командования">
+          <button type="button" data-command-mode="observe" aria-pressed="false">НАБЛЮДАТЬ</button>
+          <button type="button" data-command-mode="orders" aria-pressed="true">ПРИКАЗЫ</button>
+          <button type="button" data-command-mode="flags" aria-pressed="false">ФЛАГИ</button>
+        </div>
+        <p id="modeDescription" class="mode-description">Раз в несколько секунд можно перенаправить один выбранный полк.</p>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="result-screen" hidden data-ui aria-labelledby="resultTitle">
+      <div class="result-banner" id="resultBanner">
+        <span id="resultEyebrow">СРАЖЕНИЕ ОКОНЧЕНО</span>
+        <h2 id="resultTitle">ПОБЕДА</h2>
+        <p id="resultText"></p>
+      </div>
+      <div class="result-stats">
+        <div><small>ВЫЖИЛО</small><strong id="resultSurvivors">0</strong></div>
+        <div><small>ДЛИТЕЛЬНОСТЬ</small><strong id="resultTime">00:00</strong></div>
+        <div><small>ПРИКАЗОВ</small><strong id="resultOrders">0</strong></div>
+      </div>
+      <button id="rematchButton" class="action action-primary" type="button" data-native-press>РЕВАНШ</button>
+      <button id="resultSetupButton" class="action action-secondary" type="button" data-native-press>ИЗМЕНИТЬ СТРОЙ</button>
+      <button id="resultMenuButton" class="action action-ghost" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
+      <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+    </section>
+
+    <dialog id="rulesDialog" class="sheet-dialog">
+      <form method="dialog" class="dialog-frame">
+        <header class="dialog-header">
+          <div><span>ПОЛЕВОЙ УСТАВ</span><h2>Планируй полками. Смотри, как дерутся люди.</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть">×</button>
+        </header>
+        <ol class="rules-list">
+          <li><span>01</span><div><strong>Сначала поставь три полка</strong><p>Мечники, копейщики и лучники можно менять местами и перестраивать в линию, клин или рассыпной строй.</p></div></li>
+          <li><span>02</span><div><strong>Каждый боец живёт отдельно</strong><p>Он ищет цель, держит дистанцию, бьёт, пугается, отступает и может потерять связь со своим полком.</p></div></li>
+          <li><span>03</span><div><strong>Командование можно сменить в любой момент</strong><p>Наблюдение — никакого вмешательства. Приказы — редкое перенаправление. Флаги — свободное ведение каждого полка.</p></div></li>
+          <li><span>04</span><div><strong>Контрпики простые</strong><p>Копья ломают мечников, мечники догоняют лучников, лучники расстреливают плотные копья.</p></div></li>
+        </ol>
+        <button class="dialog-primary" value="close" data-native-press>ПОНЯТНО</button>
+      </form>
+    </dialog>
+
+    <dialog id="pauseDialog" class="sheet-dialog">
+      <form method="dialog" class="dialog-frame">
+        <header class="dialog-header">
+          <div><span>СРАЖЕНИЕ ОСТАНОВЛЕНО</span><h2>Пауза</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть">×</button>
+        </header>
+        <button id="resumeButton" class="dialog-primary" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button id="pauseSettingsButton" class="dialog-secondary" type="button" data-native-press>НАСТРОЙКИ</button>
+        <button id="restartButton" class="dialog-secondary" type="button" data-native-press>НАЧАТЬ БОЙ ЗАНОВО</button>
+        <button id="quitBattleButton" class="dialog-secondary danger" type="button" data-native-press>ЗАВЕРШИТЬ И В МЕНЮ</button>
+        <button class="dialog-secondary" type="button" data-workshop-trigger data-native-press>ДИАГНОСТИКА</button>
+        <a class="dialog-exit" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </form>
+    </dialog>
+
+    <dialog id="settingsDialog" class="sheet-dialog">
+      <form method="dialog" class="dialog-frame">
+        <header class="dialog-header">
+          <div><span>ПОЛЕВОЙ НАБОР</span><h2>Настройки</h2></div>
+          <button class="dialog-close" value="close" aria-label="Закрыть">×</button>
+        </header>
+        <label class="setting-row">
+          <span><strong>Звук</strong><small>Удары, тетивы и барабан</small></span>
+          <input id="soundToggle" type="checkbox" checked>
+          <i aria-hidden="true"></i>
+        </label>
+        <label class="setting-row">
+          <span><strong>Вибрация</strong><small>Короткий отклик на приказ</small></span>
+          <input id="hapticsToggle" type="checkbox" checked>
+          <i aria-hidden="true"></i>
+        </label>
+        <label class="select-row">
+          <span><strong>Темп боя</strong><small>Меняет скорость, не силу сторон</small></span>
+          <select id="speedSelect">
+            <option value="0.85">Неторопливо</option>
+            <option value="1" selected>Нормально</option>
+            <option value="1.18">Быстро</option>
+          </select>
+        </label>
+        <label class="select-row">
+          <span><strong>Сложность ИИ</strong><small>Решительность и частота перегруппировок</small></span>
+          <select id="difficultySelect">
+            <option value="soft">Новобранец</option>
+            <option value="standard" selected>Капитан</option>
+            <option value="hard">Воевода</option>
+          </select>
+        </label>
+        <button class="dialog-primary" value="close" data-native-press>ГОТОВО</button>
+      </form>
+    </dialog>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="РАТЬ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

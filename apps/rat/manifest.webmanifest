@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "РАТЬ",
+  "short_name": "РАТЬ",
+  "description": "Живая тактическая дуэль маленьких армий с предбоевым построением и переключаемыми способами командования.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#26352e",
+  "theme_color": "#26352e",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
