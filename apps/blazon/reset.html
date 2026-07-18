@@ -26,11 +26,19 @@
       await Promise.all(keys.filter(key=>key.startsWith('blazon-')).map(key=>caches.delete(key)));
     }
     sessionStorage.setItem('blazon-recovered-build',BUILD);
-    status.textContent='Кэш очищен. Запускаю единую версию…';
+    status.textContent='Кэш очищен. Получаю цельную версию 5.3.0…';
+    const source=new URL('./index.html',location.href);
+    source.searchParams.set('build',BUILD);
+    source.searchParams.set('recovered',Date.now().toString(36));
+    const response=await fetch(source.href,{cache:'no-store'});
+    if(!response.ok)throw new Error(`index ${response.status}`);
+    let html=await response.text();
+    html=html.replaceAll('v=4.3.0',`v=${BUILD}`).replace('<footer>v4.3 · battle reading</footer>',`<footer>v${BUILD} · recovery build · единый кэш</footer>`);
     const target=new URL('./',location.href);target.searchParams.set('build',BUILD);target.searchParams.set('recovered',Date.now().toString(36));
-    location.replace(target.href);
+    history.replaceState(null,'',target.href);
+    document.open();document.write(html);document.close();
   }catch(error){
-    console.error(error);status.textContent='Не удалось очистить кэш автоматически. Закрой вкладку и открой эту страницу ещё раз.';
+    console.error(error);status.textContent='Не удалось получить свежую версию. Закрой вкладку и открой эту страницу ещё раз.';
   }
 })();
 </script></body></html>
