@@ -4,60 +4,77 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#171b17">
-  <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, управляемая языком геральдики.">
+  <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, управляемая красивым геральдическим гербом.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>БЛАЗОН: Доктрина</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=3.0.0">
-  <link rel="icon" href="./icons/icon.svg?v=3.0.0" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest?v=3.1.0">
+  <link rel="icon" href="./icons/icon.svg?v=3.1.0" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=3.0.0">
+  <link rel="stylesheet" href="./styles.css?v=3.1.0">
 </head>
 <body data-fullscreen-app>
   <svg class="symbol-library" aria-hidden="true">
     <defs>
       <symbol id="charge-lion" viewBox="0 0 120 120">
-        <path d="M79 13c12 4 18 15 14 27 11 4 17 13 15 25-8-6-16-8-25-4l-5 11 13 11-8 25H67l4-23-13-10-12 10 7 23H36l-9-25 12-28-10-10 6-12 16 10 14-7 5-15 9-8Z" fill="currentColor"/>
-        <path d="M48 40C31 38 20 29 19 13c14 1 25 7 31 19M38 75l-16 24M76 80l16 21" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="square"/>
-        <path d="m71 42-11 7 10 10 11-9-10-8Z" fill="var(--detail,#171713)"/>
+        <path d="M73 8c15 2 24 15 19 29 13 4 20 15 16 29-7-8-16-11-28-6l-5 12 15 12-9 25H64l5-22-14-11-12 10 8 23H34l-10-27 14-27-12-10 7-13 15 10 13-7 4-18 8-9Z" fill="currentColor"/>
+        <path d="M49 40C31 40 20 30 18 13c14 1 26 7 33 20M38 78 20 104M76 82l18 22M69 88l-2 22" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="square"/>
+        <path d="m70 38-12 8 11 10 12-9-11-9Z" fill="var(--detail,#171713)"/>
+        <path d="M82 24c5-7 13-9 20-5-6 2-9 6-10 12" fill="none" stroke="currentColor" stroke-width="5"/>
       </symbol>
       <symbol id="charge-boar" viewBox="0 0 120 120">
-        <path d="m14 66 17-35 33-13 32 14 13 26-10 31-34 13-37-10-14-26Zm84-8 18-10-9 22-9-12Z" fill="currentColor"/>
-        <path d="M32 37 19 15l25 12M35 92l-8 19m58-19 8 19" fill="none" stroke="currentColor" stroke-width="9"/>
-        <circle cx="84" cy="51" r="5" fill="var(--detail,#171713)"/>
-        <path d="M91 68c7 3 12 2 17-3" fill="none" stroke="var(--detail,#171713)" stroke-width="4"/>
+        <path d="M16 65 31 34l31-15 31 10 16 24-7 31-31 17-38-7-17-29Zm82-9 18-9-9 22-9-13Z" fill="currentColor"/>
+        <path d="M32 37 19 16l24 11M36 92l-9 19m59-21 8 18" fill="none" stroke="currentColor" stroke-width="8"/>
+        <path d="M88 66c8 4 14 3 20-3" fill="none" stroke="var(--detail,#171713)" stroke-width="4"/>
+        <circle cx="82" cy="49" r="4.5" fill="var(--detail,#171713)"/>
+        <path d="M46 29c6-8 14-9 20-4" fill="none" stroke="var(--detail,#171713)" stroke-width="4" opacity=".45"/>
       </symbol>
       <symbol id="charge-tower" viewBox="0 0 120 120">
-        <path d="M16 17h21v17h13V17h20v17h13V17h21v34L94 61v44H26V61L16 51V17Zm30 57v31h28V74c0-13-28-13-28 0Z" fill="currentColor"/>
-        <path d="M32 57h56M27 91h66M39 41v12m21-12v12m21-12v12" fill="none" stroke="var(--detail,#171713)" stroke-width="5"/>
+        <path d="M12 27h21V15h16v12h22V15h16v12h21v29l-10 7v43H22V63l-10-7V27Zm31 47v32h34V74c0-15-34-15-34 0Z" fill="currentColor"/>
+        <path d="M23 59h74M29 91h62M39 42v12m21-12v12m21-12v12" fill="none" stroke="var(--detail,#171713)" stroke-width="5"/>
+        <path d="M53 74c0-6 14-6 14 0v32H53Z" fill="var(--detail,#171713)" opacity=".55"/>
       </symbol>
       <symbol id="charge-stag" viewBox="0 0 120 120">
-        <path d="M48 40c-9-11-9-24-3-35l10 22 5-25 7 25 10-22c6 11 6 24-3 35l11 11-7 20v29l-18 18-18-18V71l-7-20 13-11Zm12 13-12 8 12 12 12-12-12-8Z" fill="currentColor"/>
-        <path d="M43 27 25 12m18 24-25 1m59-10 18-15M77 36l25 1" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="square"/>
-        <circle cx="54" cy="61" r="3" fill="var(--detail,#171713)"/><circle cx="68" cy="61" r="3" fill="var(--detail,#171713)"/>
+        <path d="M25 77c6-17 20-28 37-28h14l11-13 11 5-7 18c8 9 9 22 3 34H78l-5-17-17 2-7 29H34l4-32-13 2Z" fill="currentColor"/>
+        <path d="M82 40c-3-14 1-26 12-35M84 31l-12-13m16 7 15-11M93 46c4-13 11-22 22-27M96 36l15-4" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="square"/>
+        <path d="M44 76 28 99m48-23 14 27" fill="none" stroke="currentColor" stroke-width="8"/>
+        <circle cx="88" cy="47" r="3" fill="var(--detail,#171713)"/>
       </symbol>
       <symbol id="charge-eagle" viewBox="0 0 120 120">
-        <path d="M55 34C42 20 24 14 5 15l15 12-16 3 19 11-16 7 25 8-13 10 29 5 12-24-5-13Zm10 0c13-14 31-20 50-19l-15 12 16 3-19 11 16 7-25 8 13 10-29 5-12-24 5-13Z" fill="currentColor"/>
-        <path d="M50 37c-5 12-3 29 4 41l-13 29 19-10 19 10-13-29c7-12 9-29 4-41L60 28 50 37Z" fill="currentColor"/>
-        <path d="M61 27c5-8 14-9 21-4l-10 5 11 4-15 7-7-12Z" fill="currentColor"/>
-        <circle cx="70" cy="27" r="3" fill="var(--detail,#171713)"/>
-        <path d="m52 94-13 17 21-9 21 9-13-17" fill="none" stroke="currentColor" stroke-width="6"/>
+        <path d="M57 36C43 20 24 13 4 15l16 12-17 4 20 11-16 8 26 8-14 10 31 6 10-27-3-11Zm6 0c14-16 33-23 53-21l-16 12 17 4-20 11 16 8-26 8 14 10-31 6-10-27 3-11Z" fill="currentColor"/>
+        <path d="M50 38c-5 13-3 31 4 44l-14 27 20-10 20 10-14-27c7-13 9-31 4-44L60 29 50 38Z" fill="currentColor"/>
+        <path d="M61 28c5-8 15-10 22-4l-10 5 11 4-16 7-7-12Z" fill="currentColor"/>
+        <circle cx="71" cy="28" r="3" fill="var(--detail,#171713)"/>
       </symbol>
       <symbol id="charge-rose" viewBox="0 0 120 120">
-        <path d="M60 10c13-11 28 1 24 17 17-5 29 11 18 24 16 7 13 27-4 32 4 17-15 28-29 17-10 14-30 7-30-10-18 1-25-18-13-29-13-11-4-31 13-31-1-17 19-27 31-17Z" fill="currentColor"/>
-        <circle cx="60" cy="60" r="17" fill="var(--detail,#171713)"/><path d="M60 38v44M38 60h44" stroke="currentColor" stroke-width="4" opacity=".45"/>
+        <g fill="currentColor">
+          <path d="M60 12c17-10 29 8 20 22 18-4 27 15 15 28 15 10 6 31-12 30-2 18-24 22-34 7-14 12-33-1-28-18-18-5-19-27-3-35-8-16 10-31 25-22 4-18 25-22 34-7 1-10 5-18 13-25Z"/>
+          <circle cx="60" cy="60" r="18" fill="var(--detail,#171713)"/>
+          <circle cx="60" cy="60" r="8"/>
+        </g>
+        <path d="M60 37v46M37 60h46M44 44l32 32M76 44 44 76" stroke="currentColor" stroke-width="3.5" opacity=".38"/>
       </symbol>
       <symbol id="charge-key" viewBox="0 0 120 120">
-        <path d="M37 11a27 27 0 1 0 19 47l15 15-10 10 11 11 10-10 10 10 15-15-45-45a27 27 0 0 0-25-23Zm0 17a11 11 0 1 1 0 22 11 11 0 0 1 0-22Z" fill="currentColor"/>
+        <path d="M34 12a25 25 0 1 0 19 41l18 18-9 9 10 10 9-9 10 10 16-16-45-45A25 25 0 0 0 34 12Zm0 16a10 10 0 1 1 0 20 10 10 0 0 1 0-20Z" fill="currentColor"/>
+        <path d="M58 66 91 33" fill="none" stroke="currentColor" stroke-width="7" opacity=".48"/>
       </symbol>
       <symbol id="charge-sun" viewBox="0 0 120 120">
-        <path d="m60 3 10 25 19-18-2 27 27-4-19 21 24 10-26 8 17 22-27-5 1 27-18-20-11 25-8-26-21 18 4-27-27 2 20-20L-1 57l27-7L10 27l27 5-1-27 18 20L60 3Z" fill="currentColor"/>
-        <circle cx="60" cy="60" r="23" fill="var(--detail,#171713)"/>
+        <path d="m60 3 9 25 20-17-3 27 27-4-20 21 25 9-26 9 17 21-27-4 2 27-19-20-10 25-9-26-20 18 3-27-27 3 20-20-25-10 26-8L10 27l27 5-1-27 19 20L60 3Z" fill="currentColor"/>
+        <circle cx="60" cy="60" r="24" fill="var(--detail,#171713)"/>
+        <path d="M48 58c7-6 17-6 24 0M52 70c5 4 11 4 16 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
       </symbol>
-      <symbol id="charge-crown" viewBox="0 0 120 120"><path d="m12 39 28 20 20-39 20 39 28-20-11 58H23L12 39Zm17 66h62v11H29v-11Z" fill="currentColor"/><circle cx="12" cy="37" r="6" fill="currentColor"/><circle cx="60" cy="17" r="6" fill="currentColor"/><circle cx="108" cy="37" r="6" fill="currentColor"/></symbol>
-      <symbol id="charge-helmet" viewBox="0 0 120 120"><path d="M30 101V49c0-25 20-40 44-34 22 6 29 28 21 49l-21 37H30Zm17-22h29l11-19H47v19Zm0-35h43c-4-13-13-19-25-19-11 0-17 7-18 19Z" fill="currentColor"/><path d="M42 106h45" stroke="currentColor" stroke-width="9"/></symbol>
+      <symbol id="charge-crown" viewBox="0 0 120 120">
+        <path d="m12 39 28 20 20-39 20 39 28-20-11 58H23L12 39Zm17 66h62v11H29v-11Z" fill="currentColor"/>
+        <path d="M28 82h64" stroke="var(--detail,#342410)" stroke-width="5" opacity=".55"/>
+        <circle cx="12" cy="37" r="6" fill="currentColor"/><circle cx="60" cy="17" r="6" fill="currentColor"/><circle cx="108" cy="37" r="6" fill="currentColor"/>
+      </symbol>
+      <symbol id="charge-helmet" viewBox="0 0 120 120">
+        <path d="M28 103V50c0-27 21-42 46-35 23 7 30 30 21 51l-21 37H28Zm18-22h30l11-20H46v20Zm0-36h44c-4-14-13-20-26-20-11 0-17 7-18 20Z" fill="currentColor"/>
+        <path d="M40 108h49" stroke="currentColor" stroke-width="9"/>
+        <path d="M47 62h39" stroke="var(--detail,#2c2821)" stroke-width="4" opacity=".5"/>
+      </symbol>
     </defs>
   </svg>
 
@@ -65,26 +82,21 @@
     <section class="screen menu-screen is-active" id="menuScreen">
       <div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div>
       <header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header>
-      <div class="menu-standard" aria-hidden="true">
-        <div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div>
-      </div>
-      <div class="menu-copy">
-        <p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2>
-        <span>Ты не командуешь в бою. Ты заранее решаешь, как армия будет думать.</span>
-      </div>
+      <div class="menu-standard" aria-hidden="true"><div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div></div>
+      <div class="menu-copy"><p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Герб задаёт не только правила армии, но и её лицо: щиты, табарды, знамя и цветовой строй.</span></div>
       <div class="menu-actions">
         <button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button>
-        <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Ратники · лучники · одно знамя</small><b>→</b></button>
+        <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Четыре геральдические школы</small><b>→</b></button>
         <div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div>
       </div>
-      <footer>v3.0 · равные армии · никаких приказов после начала</footer>
+      <footer>v3.1 · heraldic identity · равные армии</footer>
     </section>
 
     <section class="screen doctrine-screen" id="doctrineScreen">
       <header class="folio-header"><button id="doctrineMenuButton" type="button">Меню</button><div><span id="battleIndexLabel">БИТВА I ИЗ VI</span><strong>Совет перед полем</strong></div><button id="codexButton" type="button">Правила</button></header>
       <div class="doctrine-layout">
         <section class="armorial-column player-column">
-          <div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2></div>
+          <div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2><em id="playerSchoolName">Рыцарская школа</em></div>
           <div class="full-achievement" id="playerAchievement"></div>
           <div class="doctrine-ledger" id="playerLedger"></div>
         </section>
@@ -96,7 +108,7 @@
           <button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button>
         </section>
         <section class="armorial-column enemy-column">
-          <div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2></div>
+          <div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2><em id="enemySchoolName">Имперская школа</em></div>
           <div class="full-achievement enemy-achievement" id="enemyAchievement"></div>
           <div class="doctrine-ledger" id="enemyLedger"></div>
         </section>
@@ -116,18 +128,18 @@
   </main>
 
   <dialog class="sheet setup-sheet" id="setupDialog">
-    <header><div><p>ОСНОВА ДОКТРИНЫ</p><h2>Задай темперамент и строй</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
-    <section><h3>Поле · как армия принимает решения</h3><div class="choice-grid field-grid" id="fieldChoices"></div></section>
-    <section><h3>Ординарий · как армия выходит на поле</h3><div class="choice-grid ordinary-grid" id="ordinaryChoices"></div></section>
+    <header><div><p>ОСНОВА ДОКТРИНЫ</p><h2>Задай темперамент и геральдическую школу</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <section><h3>Поле · три роли цвета</h3><div class="choice-grid field-grid" id="fieldChoices"></div></section>
+    <section><h3>Ординарий · строй и визуальная школа</h3><div class="choice-grid ordinary-grid" id="ordinaryChoices"></div></section>
     <button class="primary-button seal-setup" id="sealSetupButton" type="button" disabled><span>Скрепить первый устав</span><small>Оба слоя обязательны</small><b>→</b></button>
   </dialog>
 
   <dialog class="sheet rules-sheet" id="rulesDialog">
-    <header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код и облик армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
     <div class="rules-three">
-      <article><b>1</b><div><h3>До боя</h3><p>Собери шесть слоёв доктрины и прочитай герб противника.</p></div></article>
-      <article><b>2</b><div><h3>В бою</h3><p>Армии равны. Ратники и лучники исполняют герб без твоих приказов.</p></div></article>
-      <article><b>3</b><div><h3>После боя</h3><p>Смотри, какие правила реально сработали, и меняй следующий слой.</p></div></article>
+      <article><b>1</b><div><h3>До боя</h3><p>Поле и ординарий задают механику, форму щита и композиционную школу.</p></div></article>
+      <article><b>2</b><div><h3>В бою</h3><p>Ратники несут главную фигуру на щитах, лучники — вторичный знак и акцент.</p></div></article>
+      <article><b>3</b><div><h3>После боя</h3><p>Новый слой перестраивает весь герб, а не приклеивает очередную иконку.</p></div></article>
     </div>
   </dialog>
 
@@ -145,10 +157,10 @@
 
   <dialog class="sheet ending-sheet" id="endingDialog">
     <div class="ending-standard" id="endingAchievement"></div>
-    <p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется только реальными победами и сохранённой целостностью.</span>
-    <div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другие решения</small><b>→</b></button></div>
+    <p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span>
+    <div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div>
   </dialog>
 
-  <script type="module" src="./app.js?v=3.0.0"></script>
+  <script type="module" src="./app.js?v=3.1.0"></script>
 </body>
 </html>
