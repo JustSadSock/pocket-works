@@ -12,11 +12,11 @@ function state(){
   return{time:1,events:[],effects:[],impact:0,player:{infantry:[squad('player',[p1,p2])],archers:[]},enemy:{infantry:[squad('enemy',[e1,e2])],archers:[]}};
 }
 
-test('orientation is fixed by army side, not movement vector',()=>{
-  const s=state();s.player.infantry[0].members[0].facingY=1;s.enemy.infantry[0].members[0].facingY=-1;
+test('warriors remain visually upright for both movement directions',()=>{
+  const s=state();s.player.infantry[0].members[0].facingY=1;s.enemy.infantry[0].members[0].facingY=1;
   applyCombatClarity(s);
   assert.equal(s.player.infantry[0].members[0].facingY,-1);
-  assert.equal(s.enemy.infantry[0].members[0].facingY,1);
+  assert.equal(s.enemy.infantry[0].members[0].facingY,-1);
 });
 
 test('opposing warriors cannot occupy the same front cell',()=>{
@@ -30,7 +30,7 @@ test('volley events create readable impact feedback',()=>{
   assert.ok(s.effects.length>=1);assert.ok(s.impact>=.11);
 });
 
-test('wrapper calls base step and keeps clarity active',()=>{
+test('wrapper calls base step and restores upright rendering',()=>{
   const s=state();const base=value=>{value.time+=.05;value.player.infantry[0].members[0].facingY=1;};
   stepBattle(base,s,.05);
   assert.equal(s.time,1.05);assert.equal(s.player.infantry[0].members[0].facingY,-1);
