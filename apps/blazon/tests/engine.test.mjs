@@ -1,91 +1,98 @@
-import assert from 'node:assert/strict';
 import test from 'node:test';
+import assert from 'node:assert/strict';
 import {
-  BUILD_STEPS,
-  canPlaceElement,
-  choosePatronage,
-  createCampaign,
-  evaluateHeraldry,
-  isLegalTincture,
-  placeElement,
-  requirementStatus,
-  resolveTrial
+  FIELDS, ORDINARIES, MAINS, SECONDARIES, COMMANDS, MOTTOS,
+  createCampaign, generateOffers, applyOffer, prepareBattle, createBattleState,
+  stepBattle, simulateBattle, botAudit, doctrineLayers, recordBattle
 } from '../engine.js';
 
-test('law of tincture separates metals and colours', () => {
-  assert.equal(isLegalTincture('or', 'gules'), true);
-  assert.equal(isLegalTincture('or', 'argent'), false);
-  assert.equal(isLegalTincture('azure', 'gules'), false);
+test('catalog has intentionally bounded doctrine space', () => {
+  assert.equal(Object.keys(FIELDS).length, 4);
+  assert.equal(Object.keys(ORDINARIES).length, 4);
+  assert.equal(Object.keys(MAINS).length, 4);
+  assert.equal(Object.keys(SECONDARIES).length, 4);
+  assert.equal(Object.keys(COMMANDS).length, 3);
+  assert.equal(Object.keys(MOTTOS).length, 4);
 });
 
-test('key is locked until tower or bordure exists', () => {
-  const campaign = createCampaign('lion', 2);
-  assert.equal(requirementStatus(campaign, 'key').ok, false);
-  campaign.board.charges[0] = { id: 'tower-x', device: 'tower', tincture: 'argent' };
-  assert.equal(requirementStatus(campaign, 'key').ok, true);
+test('campaign starts with field and ordinary only', () => {
+  const c = createCampaign('azure', 'chevron', 42);
+  assert.equal(c.doctrine.field, 'azure');
+  assert.equal(c.doctrine.ordinary, 'chevron');
+  assert.equal(c.doctrine.main, null);
+  assert.equal(doctrineLayers(c.doctrine).length, 6);
 });
 
-test('placing four elements unlocks one chapter trial instead of combat every turn', () => {
-  const campaign = createCampaign('lion', 4);
-  for (let i = 0; i < BUILD_STEPS; i += 1) {
-    campaign.offer = [{ id: `rose-${i}`, device: 'rose', tincture: i % 2 ? 'argent' : 'or' }];
-    const slot = [0,1,2,4][i];
-    assert.equal(placeElement(campaign, `rose-${i}`, slot).ok, true);
+test('first reward offers main figures', () => {
+  const c = createCampaign('gules', 'pale', 9);
+  c.battleIndex = 1;
+  const offers = generateOffers(c);
+  assert.equal(offers.length, 3);
+  assert.ok(offers.every((o) => o.slot === 'main'));
+});
+
+test('offer changes only its doctrine layer', () => {
+  const c = createCampaign('gules', 'pale', 9);
+  c.battleIndex = 1;
+  const offer = generateOffers(c)[0];
+  const next = applyOffer(c, offer);
+  assert.equal(next.doctrine[offer.slot], offer.id);
+  assert.equal(next.doctrine.field, 'gules');
+});
+
+test('battle contains equal armies with infantry and archers', () => {
+  const c = prepareBattle(createCampaign('argent', 'fess', 55));
+  const state = createBattleState(c.doctrine, c.currentEnemy, c.currentSeed);
+  assert.equal(state.player.infantry.length, 4);
+  assert.equal(state.player.archers.length, 4);
+  assert.equal(state.player.infantry.reduce((s, q) => s + q.strength, 0), 32);
+  assert.equal(state.player.archers.reduce((s, q) => s + q.strength, 0), 16);
+  assert.equal(state.enemy.infantry.reduce((s, q) => s + q.strength, 0), 32);
+});
+
+test('battle advances and terminates', () => {
+  const c = prepareBattle(createCampaign('gules', 'bend', 77));
+  const state = createBattleState(c.doctrine, c.currentEnemy, c.currentSeed);
+  for (let i = 0; i < 1200 && state.status === 'running'; i++) stepBattle(state, 0.1);
+  assert.equal(state.status, 'finished');
+  assert.ok(['player', 'enemy'].includes(state.winner));
+  assert.ok(state.time <= 96);
+});
+
+test('simulation is deterministic for same seed', () => {
+  const a = { field:'gules', ordinary:'pale', main:'lion', secondary:'sun', command:'crown', motto:'breach', axis:'center' };
+  const b = { field:'azure', ordinary:'chevron', main:'stag', secondary:'eagle', command:'helmet', motto:'banner', axis:'left' };
+  assert.deepEqual(simulateBattle(a,b,123), simulateBattle(a,b,123));
+});
+
+test('campaign records loss and progresses to reward', () => {
+  const c = createCampaign('gules', 'pale', 2);
+  const next = recordBattle(c, { winner:'enemy', duration:60, events:[], decisive:[] });
+  assert.equal(next.integrity, 2);
+  assert.equal(next.battleIndex, 1);
+  assert.equal(next.phase, 'reward');
+  assert.equal(next.offers.length, 3);
+});
+
+test('six battle campaign unlocks layers in intended order', () => {
+  let c = createCampaign('gules', 'pale', 81);
+  const expected = ['main', 'secondary', 'command', 'motto'];
+  for (let battle = 0; battle < 5; battle++) {
+    c = recordBattle(c, { winner: 'player', duration: 50, events: [], decisive: [] });
+    if (c.completed) break;
+    assert.equal(c.offers.length, 3);
+    if (battle < 4) assert.ok(c.offers.every((o) => o.slot === expected[battle]));
+    if (battle === 4) assert.ok(c.offers.every((o) => o.revision));
+    c = applyOffer(c, c.offers[0]);
   }
-  assert.equal(campaign.pendingTrial, true);
-  assert.equal(campaign.history.filter((x) => x.kind === 'trial').length, 0);
+  c = recordBattle(c, { winner: 'player', duration: 50, events: [], decisive: [] });
+  assert.equal(c.completed, true);
+  assert.equal(c.victories, 6);
 });
 
-test('tower and key activate gatekeeper combination', () => {
-  const campaign = createCampaign('stag', 8);
-  campaign.board.charges[0] = { id: 'tower', device: 'tower', tincture: 'argent' };
-  campaign.board.charges[1] = { id: 'key', device: 'key', tincture: 'or' };
-  const result = evaluateHeraldry(campaign);
-  assert.ok(result.combos.some((x) => x.id === 'gatekeeper'));
-});
-
-test('dragon scandal is reduced by chain combination', () => {
-  const campaign = createCampaign('raven', 9);
-  campaign.board.charges[0] = { id: 'dragon', device: 'dragon', tincture: 'or' };
-  const before = evaluateHeraldry(campaign).scandal;
-  campaign.board.ornaments.push({ id: 'chain', device: 'chain', tincture: null });
-  const after = evaluateHeraldry(campaign).scandal;
-  assert.ok(after < before);
-});
-
-test('an unavailable slot cannot accept a charge', () => {
-  const campaign = createCampaign('lion', 10);
-  campaign.offer = [{ id: 'lion-2', device: 'lion', tincture: 'argent' }];
-  assert.equal(canPlaceElement(campaign, campaign.offer[0], 3).ok, false);
-});
-
-test('trial resolves only after chapter build and opens patronage', () => {
-  const campaign = createCampaign('lion', 11);
-  campaign.pendingTrial = true;
-  campaign.step = BUILD_STEPS;
-  campaign.board.charges[0] = { id: 'sword', device: 'sword', tincture: 'argent' };
-  campaign.board.charges[1] = { id: 'cross', device: 'cross', tincture: 'or' };
-  const result = resolveTrial(campaign, 'charge');
-  assert.equal(result.ok, true);
-  assert.equal(campaign.pendingTrial, false);
-  assert.equal(campaign.pendingPatronage || campaign.failed, true);
-});
-
-test('patronage advances to the next chapter', () => {
-  const campaign = createCampaign('lion', 12);
-  campaign.pendingPatronage = true;
-  campaign.patronageOffer = ['enamel'];
-  assert.equal(choosePatronage(campaign, 'enamel'), true);
-  assert.equal(campaign.chapter, 1);
-  assert.ok(campaign.offer.length === 3);
-});
-
-test('a full shield evolves by replacing non-founder charges', () => {
-  const campaign = createCampaign('lion', 15);
-  campaign.board.charges = campaign.board.charges.map((entry, index) => entry || { id: `rose-${index}`, device: 'rose', tincture: 'argent' });
-  campaign.offer = [{ id: 'sword-new', device: 'sword', tincture: 'argent' }];
-  assert.equal(canPlaceElement(campaign, campaign.offer[0], 0).ok, true);
-  assert.equal(placeElement(campaign, 'sword-new', 0).ok, true);
-  assert.equal(campaign.board.charges[0].device, 'sword');
-  assert.equal(campaign.board.charges[3].founder, true);
+test('mirrored bot audit has no side bias explosion', () => {
+  const audit = botAudit(20, 100);
+  assert.equal(audit.player + audit.enemy, 40);
+  assert.ok(Math.abs(audit.player - audit.enemy) <= 12);
+  assert.ok(audit.averageDuration < 95);
 });
