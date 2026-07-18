@@ -1,7 +1,11 @@
 const BUILD='5.4.0';
 const CACHE_NAME='blazon-v5.4.0';
 const CACHE=CACHE_NAME;
-const REQUIRED=['./','./index.html','./styles.css','./living-battle.css','./app.js','./bootstrap.js','./engine.js','./core-engine.js','./progression-engine.js','./combat-clarity.js','./heraldry.js','./manifest.webmanifest','./icons/icon.svg'];
+const REQUIRED=[
+  './','./index.html','./styles.css','./living-battle.css','./app.js','./bootstrap.js','./engine.js','./core-engine.js','./progression-engine.js','./combat-clarity.js','./heraldry.js','./manifest.webmanifest','./icons/icon.svg',
+  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/pwa-utils.js',
+  '../../shared/capabilities/storage.js','../../shared/capabilities/diagnostics.js','../../shared/capabilities/device.js','../../shared/capabilities/transfer.js'
+];
 const OPTIONAL=['./armorial-progression.css','./armorial-composition.css','./menu-input-hotfix.js','./critical-readability.js','./progression-art.js','./progression-runtime.js','./armorial-composition-runtime.js','./release-indicator.js','./reset.html'];
 const RELEASE_NOTES=['Функциональное ядро и обработчики кнопок запускаются раньше необязательных геральдических эффектов.','Движок больше не импортирует UI-runtime и не может потерять меню из-за ошибки декоративного модуля.','Bootstrap показывает явное восстановление вместо визуально живого, но неработающего главного экрана.','HTML, entry-script и внутренние JavaScript-импорты публикуются с единым ключом версии 5.4.0.','Service worker устанавливает обязательное ядро атомарно и не считает неполный набор файлов рабочим релизом.'];
 
