@@ -1,13 +1,25 @@
+const BUILD='5.3.0';
 const isCore=new URL(import.meta.url).searchParams.has('core');
+
 if(!isCore&&typeof document!=='undefined'){
-  await import('./menu-input-hotfix.js');
-  await import('./critical-readability.js');
-  await import('./progression-art.js');
-  await import('./progression-runtime.js');
-  import('./armorial-composition-runtime.js').catch(error=>console.error('[Blazon] armorial composition disabled:',error));
+  const enhancements=[
+    './menu-input-hotfix.js',
+    './critical-readability.js',
+    './progression-art.js',
+    './progression-runtime.js',
+    './armorial-composition-runtime.js',
+    './release-indicator.js'
+  ];
+  queueMicrotask(()=>{
+    for(const path of enhancements){
+      import(`${path}?v=${BUILD}`).catch(error=>console.warn(`[БЛАЗОН] optional module failed: ${path}`,error));
+    }
+  });
 }
-const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
-const clarity=await import('./combat-clarity.js');
+
+const selected=await import(isCore?`./core-engine.js?v=${BUILD}`:`./progression-engine.js?v=${BUILD}`);
+const clarity=await import(`./combat-clarity.js?v=${BUILD}`);
+
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;
 export const WORLD_WIDTH=selected.WORLD_WIDTH;
