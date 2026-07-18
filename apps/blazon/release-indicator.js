@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const BUILD='5.4.2';
+  const BUILD='5.5.0';
   const apply=()=>{
     const footer=document.querySelector('.menu-screen footer');
     if(footer&&document.documentElement.dataset.blazonReady)footer.textContent=`v${BUILD} · меню готово`;
