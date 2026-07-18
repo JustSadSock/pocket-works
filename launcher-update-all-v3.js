@@ -59,11 +59,20 @@ function waitForWorkerState(worker,accepted,timeout){
   });
 }
 
+async function waitForInstallCandidate(registration){
+  if(registration.installing||registration.waiting)return registration.installing||registration.waiting;
+  return new Promise(resolve=>{
+    const finish=()=>{clearTimeout(timer);registration.removeEventListener('updatefound',inspect);resolve(registration.installing||registration.waiting||null)};
+    const inspect=()=>registration.installing&&finish();
+    const timer=setTimeout(finish,2400);
+    registration.addEventListener('updatefound',inspect);
+  });
+}
+
 async function settleInstallation(registration){
-  let installing=registration.installing;
-  if(!installing){await wait(100);installing=registration.installing}
-  if(!installing)return;
-  const state=await waitForWorkerState(installing,['installed','activated','redundant'],INSTALL_TIMEOUT);
+  const candidate=await waitForInstallCandidate(registration);
+  if(!candidate||candidate===registration.waiting)return;
+  const state=await waitForWorkerState(candidate,['installed','activated','redundant'],INSTALL_TIMEOUT);
   if(state==='redundant')throw new Error('new worker became redundant while downloading');
 }
 
@@ -95,19 +104,23 @@ async function verifyServerRelease(app,scopeUrl){
   const configUrl=new URL('app.config.json',scopeUrl);configUrl.searchParams.set('__pw_verify',nonce);
   const releaseUrl=new URL('release.json',scopeUrl);releaseUrl.searchParams.set('__pw_verify',nonce);
   const indexUrl=new URL(scopeUrl.href);indexUrl.searchParams.set('pw_release',app.version);indexUrl.searchParams.set('__pw_verify',nonce);
-  const [configResponse,releaseResponse,indexResponse]=await Promise.all([
+  const workerUrl=new URL('sw.js',scopeUrl);workerUrl.searchParams.set('pw_release',app.version);workerUrl.searchParams.set('__pw_verify',nonce);
+  const [configResponse,releaseResponse,indexResponse,workerResponse]=await Promise.all([
     fetch(configUrl,{cache:'no-store',headers:{'cache-control':'no-cache'}}),
     fetch(releaseUrl,{cache:'no-store',headers:{'cache-control':'no-cache'}}),
-    fetch(indexUrl,{cache:'no-store',headers:{'cache-control':'no-cache'}})
+    fetch(indexUrl,{cache:'no-store',headers:{'cache-control':'no-cache'}}),
+    fetch(workerUrl,{cache:'no-store',headers:{'cache-control':'no-cache'}})
   ]);
   if(!configResponse.ok)throw new Error(`config verification HTTP ${configResponse.status}`);
   if(!releaseResponse.ok)throw new Error(`release manifest HTTP ${releaseResponse.status}`);
   if(!indexResponse.ok)throw new Error(`entry verification HTTP ${indexResponse.status}`);
-  const [config,release,index]=await Promise.all([configResponse.json(),releaseResponse.json(),indexResponse.text()]);
+  if(!workerResponse.ok)throw new Error(`worker verification HTTP ${workerResponse.status}`);
+  const [config,release,index,workerSource]=await Promise.all([configResponse.json(),releaseResponse.json(),indexResponse.text(),workerResponse.text()]);
   if(config.version!==app.version)throw new Error(`server config is v${config.version||'unknown'}, registry expects v${app.version}`);
   if(release.version!==app.version)throw new Error(`release manifest is v${release.version||'unknown'}, registry expects v${app.version}`);
   const stamped=index.includes(`name="pocket-works-release" content="${app.version}"`)||index.includes(`data-pw-release="${app.version}"`);
   if(!stamped)throw new Error(`entry document is not stamped v${app.version}`);
+  if(!workerSource.includes(`pocket-works-release:${app.slug}@${app.version}:sw.js`))throw new Error(`worker script is not stamped v${app.version}`);
   return app.version;
 }
 
@@ -125,6 +138,8 @@ async function updateApplicationCore(app,onStage){
   onStage('activation');
   const downloadedInfo=await activateWaitingWorker(registration,app.version);
   const activeWorker=await waitForRegistrationActive(registration);
+  const activeRelease=new URL(activeWorker.scriptURL).searchParams.get('pw_release');
+  if(activeRelease!==app.version)throw new Error(`active worker belongs to ${activeRelease||'an unstamped release'}, expected ${app.version}`);
   const activeInfo=await workerInfo(activeWorker)||downloadedInfo;
   if(activeInfo?.version&&activeInfo.version!==app.version)throw new Error(`activated v${activeInfo.version}; registry expects v${app.version}`);
   onStage('verification');
