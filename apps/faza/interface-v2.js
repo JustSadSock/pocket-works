@@ -29,6 +29,16 @@ function injectControlSafety() {
       .game-actions .text-control { min-height: 24px; font-size: .52rem; }
       .game-actions .text-control:last-child { display: none; }
     }
+    @media (orientation: landscape) and (max-height: 640px) {
+      .turn-console {
+        gap: 4px;
+        grid-template-rows: 24px 40px minmax(120px, 1fr) 40px 38px;
+      }
+      .turn-copy p:last-child { display: none; }
+      .phase-picker button { min-height: 38px; }
+      .impact-metrics small { display: none; }
+      .confirm-move { min-height: 38px; block-size: 38px; }
+    }
   `;
   document.head.append(style);
 }
