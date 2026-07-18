@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#263c37">
+  <meta name="description" content="ЛИНИИ ВЕТРА — стратегическая roguelite-кампания о бумажной курьерской службе.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ВЕТЕР">
+  <title>ЛИНИИ ВЕТРА</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <a class="shell-link" href="../../" aria-label="Вернуться в Pocket Works">PW</a>
+      <div class="brand"><span>БУМАЖНАЯ КУРЬЕРСКАЯ СЛУЖБА</span><b>ЛИНИИ ВЕТРА</b></div>
+      <div class="day-mark"><span>ДЕНЬ</span><b id="dayValue">1 / 7</b></div>
+      <button class="icon-button" id="soundButton" type="button" aria-label="Выключить звук">ЗВУК</button>
+      <button class="icon-button" id="pauseButton" type="button" aria-label="Пауза" hidden>II</button>
+    </header>
+
+    <section class="screen map-screen is-active" id="mapScreen" aria-labelledby="mapTitle">
+      <div class="map-copy">
+        <p>ОПЕРАТИВНАЯ КАРТА</p>
+        <h1 id="mapTitle">Три просьбы.<br>Один самолётик.</h1>
+        <span>Каждая доставка усиливает одну сторону. Воздуха на всех не хватит.</span>
+      </div>
+      <div class="map-wrap">
+        <canvas id="mapCanvas" aria-label="Карта маршрутов и поселений"></canvas>
+        <div class="weather-legend" aria-hidden="true"><span><i class="wind"></i>поток</span><span><i class="rain"></i>дождь</span><span><i class="thermal"></i>восходящий</span></div>
+      </div>
+      <aside class="mission-board" aria-label="Доступные доставки">
+        <div class="resource-strip">
+          <span>ЗАПАСЫ <b id="suppliesValue">4</b></span>
+          <span>ДОСТАВЛЕНО <b id="deliveredValue">0</b></span>
+          <span>ПОТЕРЯНО <b id="lostValue">0</b></span>
+        </div>
+        <div class="missions" id="missionList"></div>
+        <button class="primary-button" id="prepareButton" type="button" disabled>
+          <span>В МАСТЕРСКУЮ</span><small id="prepareHint">выбери маршрут</small><b>→</b>
+        </button>
+      </aside>
+      <div class="influence" id="influencePanel" aria-label="Влияние сторон"></div>
+    </section>
+
+    <section class="screen workshop-screen" id="workshopScreen" aria-labelledby="workshopTitle" hidden>
+      <div class="workshop-left">
+        <button class="text-button back-button" id="backToMapButton" type="button">← карта</button>
+        <p>МАСТЕРСКАЯ / НАСТРОЙКА СГИБОВ</p>
+        <h1 id="workshopTitle">Не улучшай самолёт.<br>Подстрой его под маршрут.</h1>
+        <div class="plane-table" id="planeTable" aria-label="Вид бумажного самолётика сверху">
+          <div class="paper-plane" id="paperPlane" aria-hidden="true">
+            <i class="left-wing"></i><i class="right-wing"></i><i class="spine"></i><i class="ballast"></i>
+          </div>
+          <div class="table-wind" id="tableWind"></div>
+        </div>
+      </div>
+      <div class="workshop-panel">
+        <div class="mission-ticket" id="missionTicket"></div>
+        <label class="control-row">
+          <span><b>РАЗМАХ КРЫЛЬЕВ</b><small>больше подъёма, меньше скорости</small></span>
+          <input id="wingInput" type="range" min="25" max="90" value="58">
+          <output id="wingOutput">58</output>
+        </label>
+        <label class="control-row">
+          <span><b>БАЛЛАСТ В НОСУ</b><small>устойчивее, но тяжелее выйти вверх</small></span>
+          <input id="ballastInput" type="range" min="15" max="85" value="42">
+          <output id="ballastOutput">42</output>
+        </label>
+        <label class="control-row">
+          <span><b>БОКОВОЙ ИЗГИБ</b><small>компенсирует ветер, требует внимания</small></span>
+          <input id="creaseInput" type="range" min="-45" max="45" value="0">
+          <output id="creaseOutput">0</output>
+        </label>
+        <fieldset class="finish-control">
+          <legend>ПОКРЫТИЕ БУМАГИ</legend>
+          <button type="button" data-finish="dry" class="is-active"><b>СУХАЯ</b><small>легче и живее</small></button>
+          <button type="button" data-finish="wax"><b>ВОСК</b><small>переживает дождь</small></button>
+        </fieldset>
+        <div class="stats-grid" id="statsGrid"></div>
+        <button class="primary-button" id="toLaunchButton" type="button"><span>НА СТОЛ ЗАПУСКА</span><small>проверить ветер</small><b>→</b></button>
+      </div>
+    </section>
+
+    <section class="screen launch-screen" id="launchScreen" aria-labelledby="launchTitle" hidden>
+      <canvas id="flightCanvas" aria-label="Полёт бумажного самолётика"></canvas>
+      <div class="launch-instruction" id="launchInstruction">
+        <p>СТОЛ ЗАПУСКА</p>
+        <h1 id="launchTitle">Потяни самолётик назад.<br>Отпусти — и маршрут начнётся.</h1>
+        <span>Направление тяги задаёт угол. Сильнее натяжение — выше стартовая скорость.</span>
+      </div>
+      <div class="flight-hud" id="flightHud" hidden>
+        <div><span>ДИСТАНЦИЯ</span><b id="distanceValue">0</b><small id="distanceTotal">/ 0 м</small></div>
+        <div><span>ФОРМА</span><b id="integrityValue">100</b><small>%</small></div>
+        <div><span>БУМАГА</span><b id="waterValue">СУХАЯ</b></div>
+        <div><span>ВЕТЕР</span><b id="windValue">→ 0</b></div>
+      </div>
+      <div class="trim-guide" id="trimGuide" hidden><i></i><span>Веди от точки касания: вверх/вниз — нос, влево/вправо — груз</span></div>
+      <button class="abort-button" id="abortButton" type="button">Отменить вылет</button>
+    </section>
+
+    <section class="screen report-screen" id="reportScreen" aria-labelledby="reportTitle" hidden>
+      <div class="report-sheet">
+        <p id="reportKicker">МАРШРУТ ЗАВЕРШЁН</p>
+        <h1 id="reportTitle">Доставка принята.</h1>
+        <div class="report-score"><b id="reportScore">0</b><span>ОЧКОВ МАРШРУТА</span></div>
+        <div class="report-grid" id="reportGrid"></div>
+        <blockquote id="reportQuote"></blockquote>
+        <button class="primary-button" id="nextDayButton" type="button"><span>СЛЕДУЮЩИЙ ДЕНЬ</span><small>карта уже изменилась</small><b>→</b></button>
+      </div>
+    </section>
+
+    <section class="screen ending-screen" id="endingScreen" aria-labelledby="endingTitle" hidden>
+      <canvas id="endingCanvas" aria-hidden="true"></canvas>
+      <div class="ending-sheet">
+        <p>СЕДЬМОЙ ДЕНЬ / ИТОГ</p>
+        <h1 id="endingTitle">Нейтральное небо</h1>
+        <span id="endingText"></span>
+        <div class="ending-stats" id="endingStats"></div>
+        <button class="primary-button" id="newCampaignButton" type="button"><span>НОВАЯ КАМПАНИЯ</span><small>другая неделя, другие ветра</small><b>↻</b></button>
+        <a class="text-button" href="../../">Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay tutorial-overlay" id="tutorialOverlay" hidden>
+      <div class="tutorial-card">
+        <p>ПЕРЕД ПЕРВЫМ ВЫЛЕТОМ</p>
+        <h2>Здесь нельзя выиграть одним идеальным билдом.</h2>
+        <ol>
+          <li><b>Выбирай последствия.</b><span>За день проходит одна доставка. Остальные просьбы сгорают.</span></li>
+          <li><b>Складывай под погоду.</b><span>Крылья, балласт, изгиб и покрытие меняют физику полёта.</span></li>
+          <li><b>Не управляй как истребителем.</b><span>Малыми жестами помогай бумаге держаться в потоке.</span></li>
+        </ol>
+        <button class="primary-button" id="tutorialButton" type="button"><span>ОТКРЫТЬ КАРТУ</span><small>понял достаточно</small><b>→</b></button>
+      </div>
+    </section>
+
+    <section class="overlay pause-overlay" id="pauseOverlay" hidden>
+      <div class="pause-card">
+        <p>ПОЛЁТ ЗАФИКСИРОВАН</p>
+        <h2>Ветер подождёт.</h2>
+        <button class="primary-button" id="resumeButton" type="button"><span>ПРОДОЛЖИТЬ</span><small>вернуться в поток</small><b>→</b></button>
+        <button class="text-button" id="restartFlightButton" type="button">Перезапустить маршрут</button>
+        <button class="text-button" id="leaveFlightButton" type="button">Вернуться в мастерскую</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
