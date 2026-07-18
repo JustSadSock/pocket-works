@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FIELDS,ORDINARIES,MAINS,SECONDARIES,COMMANDS,MOTTOS,
-  createCampaign,generateOffers,applyOffer,createBattleState,
-  stepBattle,simulateBattle,botAudit,recordBattle,WORLD_WIDTH,WORLD_HEIGHT
+  createCampaign,generateOffers,applyOffer,prepareBattle,createBattleState,
+  stepBattle,simulateBattle,summarizeBattle,botAudit,recordBattle,WORLD_WIDTH,WORLD_HEIGHT
 } from '../engine.js';
 
 const fullA={field:'gules',ordinary:'pale',main:'lion',secondary:'sun',command:'crown',motto:'breach',axis:'center'};
@@ -68,4 +68,33 @@ test('mirrored audit avoids catastrophic side bias',()=>{
   assert.equal(a.player+a.enemy,60);
   assert.ok(Math.abs(a.player-a.enemy)<=18,JSON.stringify(a));
   assert.ok(a.averageDuration<105,JSON.stringify(a));
+});
+
+test('archers release coordinated volleys instead of isolated cooldown shots',()=>{
+  const a={field:'gules',ordinary:'fess',main:'lion',secondary:'sun',command:'crown',motto:'volley',axis:'center'};
+  const b={field:'argent',ordinary:'chevron',main:'tower',secondary:'rose',command:'helmet',motto:'banner',axis:'center'};
+  const s=createBattleState(a,b,808);
+  for(let i=0;i<900&&s.status==='running';i++)stepBattle(s,.05);
+  const volleys=s.events.filter(e=>e.rule==='volley'&&e.side==='player');
+  assert.ok(volleys.length>0);
+  assert.ok(s.metrics.player.volleys>0);
+  assert.ok(s.arrows.some(a=>a.volleyId)||s.metrics.player.arrowHits>0);
+});
+
+test('battle captures replay snapshots and key moments for result reading',()=>{
+  const a={field:'azure',ordinary:'bend',main:'boar',secondary:'eagle',command:'helmet',motto:'breach',axis:'left'};
+  const b={field:'sable',ordinary:'pale',main:'tower',secondary:'sun',command:'chain',motto:'together',axis:'center'};
+  const s=createBattleState(a,b,909);
+  for(let i=0;i<2200&&s.status==='running';i++)stepBattle(s,.05);
+  const summary=summarizeBattle(s);
+  assert.ok(summary.replay.length>10);
+  assert.ok(summary.moments.length>=2);
+  assert.ok(summary.analysis.length>=2);
+  assert.ok(summary.analysis.every(item=>item.title&&item.summary));
+});
+
+test('campaign persistence strips heavy replay frames',()=>{
+  const c=createCampaign('gules','pale',12);
+  const next=recordBattle(c,{winner:'player',duration:42,replay:[{time:1,units:[1,2,3]}],analysis:[],moments:[],events:[],decisive:[]});
+  assert.equal(next.lastResult.replay,undefined);
 });
