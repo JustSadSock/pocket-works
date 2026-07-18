@@ -1,0 +1,379 @@
+{
+  "generatedAt": "2026-07-17T23:33:26.366Z",
+  "engine": "КОРДОН 1.0.0 shipping JavaScript engine and AI",
+  "methodology": "12 configurations; 64 games per configuration; ordered 4×4 AI style matrix; four deterministic seeds; standard search depth.",
+  "totalGames": 768,
+  "selected": {
+    "id": "wide7-six",
+    "note": "финал: разнесённые сигналы и честная смена",
+    "rules": {
+      "units": 6,
+      "targetScore": 7,
+      "captureThreshold": 2,
+      "supportLimit": 1,
+      "signalLayout": "wide",
+      "redeploy": true,
+      "alternatingInitiative": true,
+      "pairedVictory": true
+    },
+    "games": 64,
+    "player0WinRate": 0.438,
+    "player1WinRate": 0.563,
+    "drawRate": 0,
+    "averageActions": 38.63,
+    "averageRounds": 19.31,
+    "averageCaptures": 3.88,
+    "comebackRate": 0.344,
+    "styleWinRates": {
+      "adaptive": 0.531,
+      "assault": 0.5,
+      "formation": 0.563,
+      "frontier": 0.406
+    },
+    "score": 87.61
+  },
+  "strongestByFormula": "permanent-capture",
+  "variants": [
+    {
+      "id": "line7-six",
+      "note": "финал: победа после честной смены",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true,
+        "pairedVictory": true
+      },
+      "games": 64,
+      "player0WinRate": 0.391,
+      "player1WinRate": 0.609,
+      "drawRate": 0,
+      "averageActions": 34.75,
+      "averageRounds": 17.38,
+      "averageCaptures": 4.3,
+      "comebackRate": 0.094,
+      "styleWinRates": {
+        "adaptive": 0.563,
+        "assault": 0.594,
+        "formation": 0.375,
+        "frontier": 0.469
+      },
+      "score": 82.4
+    },
+    {
+      "id": "line7-unpaired",
+      "note": "победа сразу при 7",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true,
+        "pairedVictory": false
+      },
+      "games": 64,
+      "player0WinRate": 0.391,
+      "player1WinRate": 0.609,
+      "drawRate": 0,
+      "averageActions": 33.53,
+      "averageRounds": 16.77,
+      "averageCaptures": 4.22,
+      "comebackRate": 0.094,
+      "styleWinRates": {
+        "adaptive": 0.563,
+        "assault": 0.594,
+        "formation": 0.375,
+        "frontier": 0.469
+      },
+      "score": 81.98
+    },
+    {
+      "id": "line8-six",
+      "note": "восемь очков",
+      "rules": {
+        "units": 6,
+        "targetScore": 8,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true,
+        "pairedVictory": true
+      },
+      "games": 64,
+      "player0WinRate": 0.359,
+      "player1WinRate": 0.641,
+      "drawRate": 0,
+      "averageActions": 37.38,
+      "averageRounds": 18.69,
+      "averageCaptures": 4.69,
+      "comebackRate": 0.125,
+      "styleWinRates": {
+        "adaptive": 0.563,
+        "assault": 0.594,
+        "formation": 0.406,
+        "frontier": 0.438
+      },
+      "score": 79.93
+    },
+    {
+      "id": "line7-five",
+      "note": "пять фигур",
+      "rules": {
+        "units": 5,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true,
+        "pairedVictory": true
+      },
+      "games": 64,
+      "player0WinRate": 0.438,
+      "player1WinRate": 0.563,
+      "drawRate": 0,
+      "averageActions": 35.31,
+      "averageRounds": 17.66,
+      "averageCaptures": 3.61,
+      "comebackRate": 0.109,
+      "styleWinRates": {
+        "adaptive": 0.625,
+        "assault": 0.594,
+        "formation": 0.406,
+        "frontier": 0.375
+      },
+      "score": 85.52
+    },
+    {
+      "id": "triangle7-six",
+      "note": "треугольные сигналы",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "triangle",
+        "redeploy": true,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.375,
+      "player1WinRate": 0.594,
+      "drawRate": 0.031,
+      "averageActions": 53.91,
+      "averageRounds": 26.94,
+      "averageCaptures": 5.89,
+      "comebackRate": 0.188,
+      "styleWinRates": {
+        "adaptive": 0.531,
+        "assault": 0.438,
+        "formation": 0.406,
+        "frontier": 0.563
+      },
+      "score": 74.61
+    },
+    {
+      "id": "wide7-six",
+      "note": "финал: разнесённые сигналы и честная смена",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "wide",
+        "redeploy": true,
+        "alternatingInitiative": true,
+        "pairedVictory": true
+      },
+      "games": 64,
+      "player0WinRate": 0.438,
+      "player1WinRate": 0.563,
+      "drawRate": 0,
+      "averageActions": 38.63,
+      "averageRounds": 19.31,
+      "averageCaptures": 3.88,
+      "comebackRate": 0.344,
+      "styleWinRates": {
+        "adaptive": 0.531,
+        "assault": 0.5,
+        "formation": 0.563,
+        "frontier": 0.406
+      },
+      "score": 87.61
+    },
+    {
+      "id": "fixed-initiative",
+      "note": "первый ход всегда у стороны 0",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": false
+      },
+      "games": 64,
+      "player0WinRate": 0.422,
+      "player1WinRate": 0.578,
+      "drawRate": 0,
+      "averageActions": 31.13,
+      "averageRounds": 15.56,
+      "averageCaptures": 3.72,
+      "comebackRate": 0.016,
+      "styleWinRates": {
+        "adaptive": 0.594,
+        "assault": 0.5,
+        "formation": 0.469,
+        "frontier": 0.438
+      },
+      "score": 86.15
+    },
+    {
+      "id": "permanent-capture",
+      "note": "пленные не возвращаются",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": false,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.516,
+      "player1WinRate": 0.484,
+      "drawRate": 0,
+      "averageActions": 33.11,
+      "averageRounds": 16.38,
+      "averageCaptures": 4.64,
+      "comebackRate": 0.078,
+      "styleWinRates": {
+        "adaptive": 0.531,
+        "assault": 0.531,
+        "formation": 0.406,
+        "frontier": 0.531
+      },
+      "score": 93.56
+    },
+    {
+      "id": "strict-support",
+      "note": "захват только без союзной поддержки",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 0,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.547,
+      "player1WinRate": 0.453,
+      "drawRate": 0,
+      "averageActions": 28.13,
+      "averageRounds": 14.06,
+      "averageCaptures": 0.92,
+      "comebackRate": 0,
+      "styleWinRates": {
+        "adaptive": 0.594,
+        "assault": 0.594,
+        "formation": 0.313,
+        "frontier": 0.5
+      },
+      "score": 83.54
+    },
+    {
+      "id": "triple-capture",
+      "note": "для плена нужны трое",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 3,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.375,
+      "player1WinRate": 0.625,
+      "drawRate": 0,
+      "averageActions": 29.19,
+      "averageRounds": 14.59,
+      "averageCaptures": 1.08,
+      "comebackRate": 0.016,
+      "styleWinRates": {
+        "adaptive": 0.719,
+        "assault": 0.719,
+        "formation": 0.281,
+        "frontier": 0.281
+      },
+      "score": 71.39
+    },
+    {
+      "id": "line9-six",
+      "note": "длинная партия",
+      "rules": {
+        "units": 6,
+        "targetScore": 9,
+        "captureThreshold": 2,
+        "supportLimit": 1,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.359,
+      "player1WinRate": 0.641,
+      "drawRate": 0,
+      "averageActions": 39.88,
+      "averageRounds": 19.94,
+      "averageCaptures": 4.98,
+      "comebackRate": 0.125,
+      "styleWinRates": {
+        "adaptive": 0.563,
+        "assault": 0.594,
+        "formation": 0.406,
+        "frontier": 0.438
+      },
+      "score": 79.06
+    },
+    {
+      "id": "line7-seven",
+      "note": "плотное поле",
+      "rules": {
+        "units": 6,
+        "targetScore": 7,
+        "captureThreshold": 2,
+        "supportLimit": 2,
+        "signalLayout": "line",
+        "redeploy": true,
+        "alternatingInitiative": true
+      },
+      "games": 64,
+      "player0WinRate": 0.469,
+      "player1WinRate": 0.531,
+      "drawRate": 0,
+      "averageActions": 39.25,
+      "averageRounds": 19.63,
+      "averageCaptures": 6.56,
+      "comebackRate": 0.094,
+      "styleWinRates": {
+        "adaptive": 0.594,
+        "assault": 0.594,
+        "formation": 0.406,
+        "frontier": 0.406
+      },
+      "score": 89.12
+    }
+  ]
+}
