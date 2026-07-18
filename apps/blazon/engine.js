@@ -3,6 +3,7 @@ if(!isCore&&typeof document!=='undefined'){
   await import('./critical-readability.js');
   await import('./progression-art.js');
   await import('./progression-runtime.js');
+  await import('./armorial-composition-runtime.js');
 }
 const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
 const clarity=await import('./combat-clarity.js');
