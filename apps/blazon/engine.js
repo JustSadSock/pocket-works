@@ -1,6 +1,7 @@
 const BUILD='5.3.0';
+const isCore=new URL(import.meta.url).searchParams.has('core');
 
-if(typeof document!=='undefined'){
+if(!isCore&&typeof document!=='undefined'){
   const enhancements=[
     './menu-input-hotfix.js',
     './critical-readability.js',
@@ -16,7 +17,6 @@ if(typeof document!=='undefined'){
   });
 }
 
-const isCore=new URL(import.meta.url).searchParams.has('core');
 const selected=await import(isCore?`./core-engine.js?v=${BUILD}`:`./progression-engine.js?v=${BUILD}`);
 const clarity=await import(`./combat-clarity.js?v=${BUILD}`);
 
