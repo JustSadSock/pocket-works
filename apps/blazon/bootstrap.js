@@ -28,6 +28,7 @@
   ]).then(()=>{
     buttons.forEach(button=>button.removeAttribute('aria-busy'));
     document.documentElement.dataset.blazonReady=BUILD;
+    globalThis.__POCKET_WORKS_RELEASE__?.markReady?.();
     if(footer)footer.textContent=`v${BUILD} · coherent release · меню готово`;
     const enhancements=['menu-input-hotfix.js','critical-readability.js','progression-art.js','progression-runtime.js','armorial-composition-runtime.js','release-indicator.js'];
     queueMicrotask(()=>enhancements.forEach(path=>import(`./${path}?pw_release=${BUILD}`).catch(error=>console.warn(`[БЛАЗОН] optional ${path}`,error))));
