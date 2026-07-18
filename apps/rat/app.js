@@ -12,6 +12,13 @@ const parts = [
   './game-part-5.js',
   './game-part-6.js',
   './game-part-7.js',
+  './combat-v2-1.js',
+  './combat-v2-2.js',
+  './combat-v2-3.js',
+  './combat-v2-4.js',
+  './combat-v2-5.js',
+  './combat-v2-6.js',
+  './combat-v2-run.js',
   './game-part-8.js'
 ];
 
