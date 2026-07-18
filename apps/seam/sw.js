@@ -1,10 +1,10 @@
 const CACHE_PREFIX='seam-';
-const CACHE_NAME='seam-v2.2.0-p8';
+const CACHE_NAME='seam-v2.2.0-p9';
 const APP_VERSION='2.2.0';
-const UPDATE_VERSION='2.2.0-visual.1';
+const UPDATE_VERSION='2.2.0-visual.2';
 const RELEASE_DATE='2026-07-18';
-const CACHE_PROTOCOL=8;
-const RELEASE_NOTES=['Поле переработано в визуальный язык тактического стола: объёмные фишки, латунная Ось и более выразительный центр.','Выбранные фишки теперь визуально связываются в единый строй, а шаг и таран получили разные маркеры движения.','Улучшены активные панели игроков, резерв, стартовый экран, меню и читаемость на узких и горизонтальных экранах.'];
+const CACHE_PROTOCOL=9;
+const RELEASE_NOTES=['Согласован угол фактуры тактического стола с геометрией поля: подложка теперь читается в той же ориентации, что и сам шестиугольник.','Фон доски и латунная ось приведены к одной системе углов, поэтому поле больше не спорит само с собой.','Выпущен новый visual build и офлайн-кэш p9, чтобы исправленная подложка сразу заменила предыдущую.'];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./visual.css','./reserve.css','./motion.css','./app.js','./app-part-1.js','./app-part-2a.js','./app-part-2b.js','./app-part-3a1.js','./app-part-3a2.js','./app-part-3b.js','./app-part-4.js','./app-part-5.js','./board-view.js','./motion.js','./engine.js','./engine-core.js','./manifest.webmanifest','./icons/icon.svg','./BALANCE_AUDIT.md','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js'];
 const ROOT=new URL('./',self.registration.scope);
 const BUILD=`${APP_VERSION}-p${CACHE_PROTOCOL}`;
