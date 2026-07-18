@@ -41,8 +41,63 @@
   color: #11120f;
 }
 
+.pw-update-progress {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .035em;
+}
+
+.pw-update-progress[hidden] {
+  display: none;
+}
+
+.pw-update-progress__copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pw-update-progress__copy strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: color-mix(in srgb, currentColor 76%, transparent);
+}
+
+.pw-update-progress__copy span {
+  flex: 0 0 auto;
+  color: var(--accent, #c8ff45);
+  font-variant-numeric: tabular-nums;
+}
+
+.pw-update-progress__track {
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+
+.pw-update-progress__track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent, #c8ff45);
+  transition: width 180ms ease;
+}
+
 @media (max-width: 560px) {
   .launcher-release-digest .app-update-prompt__actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-update-progress__track i {
+    transition: none;
   }
 }

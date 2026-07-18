@@ -1,29 +1,57 @@
 (()=>{
-  const FLAG=Symbol.for('blazon.armorial-composition.v2');
+  'use strict';
+  const FLAG=Symbol.for('blazon.armorial-composition.v5.4.1');
   if(globalThis[FLAG]||typeof document==='undefined')return;
   globalThis[FLAG]=true;
-  try{
-    const style=document.createElement('link');style.rel='stylesheet';style.href='./armorial-composition.css?v=5.2.1';document.head.append(style);
-    let observer,pending=false;
-    function decorate(){
-      for(const svg of document.querySelectorAll('svg.achievement')){
-        const clip=svg.querySelector('clipPath[id]')?.id;
-        if(clip)for(const charge of svg.querySelectorAll('.charge-main,.charge-secondary'))charge.setAttribute('clip-path',`url(#${clip})`);
-        const main=svg.querySelector('.charge-main use')?.getAttribute('href')?.replace('#charge-','')||'none';
-        const secondary=svg.querySelector('.charge-secondary use')?.getAttribute('href')?.replace('#charge-','')||'none';
-        svg.dataset.main=main;svg.dataset.secondary=secondary;
-        svg.classList.toggle('has-secondary',secondary!=='none');
-        svg.classList.toggle('has-command',Boolean(svg.querySelector('.external-mark,.achievement-chain')));
-        const motto=svg.querySelector('.motto-copy');
-        const hasMotto=Boolean(motto&&motto.textContent.trim()&&motto.textContent.trim()!=='—'&&motto.style.display!=='none');
-        svg.classList.toggle('has-motto',hasMotto);
-        for(const node of svg.querySelectorAll('.charge-main,.charge-secondary'))node.setAttribute('vector-effect','non-scaling-stroke');
-        svg.querySelector('.command-helmet')?.classList.add('command-balanced');
-        svg.querySelector('.command-crown')?.classList.add('command-balanced');
+
+  const style=document.createElement('link');
+  style.rel='stylesheet';
+  style.href='./armorial-composition.css?pw_release=5.4.1';
+  document.head.append(style);
+
+  function decorate(){
+    for(const svg of document.querySelectorAll('svg.achievement')){
+      const clip=svg.querySelector('clipPath[id]')?.id;
+      if(clip){
+        const value=`url(#${clip})`;
+        for(const charge of svg.querySelectorAll('.charge-main,.charge-secondary')){
+          if(charge.getAttribute('clip-path')!==value)charge.setAttribute('clip-path',value);
+        }
       }
-      const footer=document.querySelector('.menu-screen footer');if(footer)footer.textContent='v5.2.1 · menu hotfix';
+      const main=svg.querySelector('.charge-main use')?.getAttribute('href')?.replace('#charge-','')||'none';
+      const secondary=svg.querySelector('.charge-secondary use')?.getAttribute('href')?.replace('#charge-','')||'none';
+      if(svg.dataset.main!==main)svg.dataset.main=main;
+      if(svg.dataset.secondary!==secondary)svg.dataset.secondary=secondary;
+      svg.classList.toggle('has-secondary',secondary!=='none');
+      svg.classList.toggle('has-command',Boolean(svg.querySelector('.external-mark,.achievement-chain')));
+      const motto=svg.querySelector('.motto-copy');
+      const hasMotto=Boolean(motto&&motto.textContent.trim()&&motto.textContent.trim()!=='—'&&motto.style.display!=='none');
+      svg.classList.toggle('has-motto',hasMotto);
+      for(const node of svg.querySelectorAll('.charge-main,.charge-secondary')){
+        if(node.getAttribute('vector-effect')!=='non-scaling-stroke')node.setAttribute('vector-effect','non-scaling-stroke');
+      }
+      svg.querySelector('.command-helmet')?.classList.add('command-balanced');
+      svg.querySelector('.command-crown')?.classList.add('command-balanced');
     }
-    function sync(){if(pending)return;pending=true;queueMicrotask(()=>{pending=false;observer?.disconnect();decorate();observer?.observe(document.body,{childList:true,subtree:true});});}
-    observer=new MutationObserver(sync);observer.observe(document.body,{childList:true,subtree:true});sync();
-  }catch(error){console.error('[Blazon] armorial decoration disabled:',error);}
+  }
+
+  let frame=0;
+  function schedule(){
+    if(frame)return;
+    frame=requestAnimationFrame(()=>{
+      frame=0;
+      decorate();
+    });
+  }
+
+  const observer=new MutationObserver(schedule);
+  for(const id of ['menuHeraldry','playerAchievement','enemyAchievement','rewardGrid','endingAchievement']){
+    const root=document.getElementById(id);
+    if(root)observer.observe(root,{childList:true,subtree:true});
+  }
+  schedule();
+  window.addEventListener('pagehide',()=>{
+    observer.disconnect();
+    if(frame)cancelAnimationFrame(frame);
+  },{once:true});
 })();

@@ -2,10 +2,10 @@
   "name":"БЛАЗОН: Доктрина",
   "short_name":"БЛАЗОН",
   "id":"./",
-  "start_url":"./?pw_release=5.4.0",
+  "start_url":"./?pw_release=5.4.1",
   "display":"standalone",
   "background_color":"#171b17",
   "theme_color":"#171b17",
   "orientation":"portrait",
-  "icons":[{"src":"./icons/icon.svg?pw_release=5.4.0","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons":[{"src":"./icons/icon.svg?pw_release=5.4.1","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
