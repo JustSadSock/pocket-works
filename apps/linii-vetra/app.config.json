@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "linii-vetra",
+  "name": "ЛИНИИ ВЕТРА",
+  "shortName": "ВЕТЕР",
+  "description": "Камерная стратегическая roguelite-кампания о бумажной курьерской службе: выбирай, кому помочь, складывай самолётик и проводи его через живые воздушные маршруты.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-18",
+  "releaseDateTime": "2026-07-18T16:30:00+02:00",
+  "changelog": [
+    "Полная семидневная кампания с тремя конкурирующими сторонами и финалом, зависящим от доставок.",
+    "Физический полёт бумажного самолётика с ветром, восходящими потоками, дождём, деформацией и столкновениями.",
+    "Мастерская с реальным влиянием размаха крыльев, балласта, изгиба и покрытия бумаги на поведение самолёта.",
+    "Офлайн-режим, локальное сохранение кампании, сенсорное управление, клавиатура, звук и виброотклик."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#2f6c6a",
+  "backgroundColor": "#e9dfc8",
+  "themeColor": "#263c37",
+  "orientation": "landscape",
+  "cacheName": "linii-vetra-v1.0.0",
+  "storageNamespace": "pocket-works:linii-vetra",
+  "tags": ["PWA", "offline", "game", "strategy", "roguelite", "paper plane", "physics", "wind", "campaign", "canvas", "audio", "haptics", "mobile"],
+  "order": 94
+}
