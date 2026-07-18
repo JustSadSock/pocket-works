@@ -3,175 +3,152 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#d8c79e">
-  <meta name="description" content="БЛАЗОН — прогрессивный геральдический роуглайт о создании живого герба и судьбе средневекового рода.">
+  <meta name="theme-color" content="#171b17">
+  <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, управляемая языком геральдики.">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="БЛАЗОН">
-  <title>БЛАЗОН — Наследие знамени</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=2.0.0">
-  <link rel="icon" href="./icons/icon.svg?v=2.0.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=2.0.0">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>БЛАЗОН: Доктрина</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=3.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=3.0.0" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=2.0.0">
+  <link rel="stylesheet" href="./styles.css?v=3.0.0">
 </head>
 <body data-fullscreen-app>
   <svg class="symbol-library" aria-hidden="true">
     <defs>
-      <filter id="ink-rough"><feTurbulence baseFrequency=".035" numOctaves="2" seed="7" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale=".7"/></filter>
-      <symbol id="sigil-lion" viewBox="0 0 100 100"><path d="M67 12c9 5 12 13 8 22 10 4 15 13 11 23-6-7-13-8-20-5l-4 8 12 11-8 19H52l4-20-11-8-10 8 7 20H28l-8-22 11-23-10-8 5-10 14 8 12-6 4-12 11-5Zm-10 25-9 6 8 8 9-7-8-7Z" fill="currentColor"/><path d="M39 34C24 33 17 26 16 13c12 1 21 6 26 16" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="square"/></symbol>
-      <symbol id="sigil-eagle" viewBox="0 0 100 100"><path d="m50 18 10-12 4 19 27-13-10 28 13 8-26 7 15 28-28-16-5 26-5-26-28 16 15-28-26-7 13-8L9 12l27 13 4-19 10 12Z" fill="currentColor"/><circle cx="55" cy="24" r="3" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-tower" viewBox="0 0 100 100"><path d="M17 17h16v13h10V17h14v13h10V17h16v25l-9 7v35H26V49l-9-7V17Zm23 39v28h20V56c0-9-20-9-20 0Z" fill="currentColor"/><path d="M29 46h42M27 72h46" fill="none" stroke="var(--sigil-eye,#211a13)" stroke-width="4"/></symbol>
-      <symbol id="sigil-stag" viewBox="0 0 100 100"><path d="M40 34c-7-9-7-18-2-27l8 17 4-19 5 19 8-17c5 9 5 18-2 27l8 8-5 15v23L50 94 36 80V57l-5-15 9-8Zm10 9-9 6 9 9 9-9-9-6Z" fill="currentColor"/><path d="M36 22 21 11m15 19-19 1m47-9 15-11M64 30l19 1" fill="none" stroke="currentColor" stroke-width="6"/></symbol>
-      <symbol id="sigil-boar" viewBox="0 0 100 100"><path d="m16 54 13-25 26-9 25 12 8 18-9 24-24 8-28-7-11-21Zm63-4 14-8-7 17-7-9Z" fill="currentColor"/><path d="M29 35 19 19l20 9M31 72l-7 18m45-18 7 18" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="68" cy="43" r="4" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-rose" viewBox="0 0 100 100"><path d="M50 11c11-9 23 1 20 14 14-4 24 9 15 20 14 6 11 23-3 27 3 14-13 23-24 14-8 12-25 6-25-9-15 1-21-15-11-24-11-9-3-26 11-26-1-14 16-22 26-16Z" fill="currentColor"/><circle cx="50" cy="50" r="14" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-cross" viewBox="0 0 100 100"><path d="M38 8h24v29h30v25H62v30H38V62H8V37h30V8Z" fill="currentColor"/></symbol>
-      <symbol id="sigil-sword" viewBox="0 0 100 100"><path d="m50 5 10 17-5 49 14 7-4 9-15-7-15 7-4-9 14-7-5-49L50 5Z" fill="currentColor"/><path d="M38 71h24" stroke="var(--sigil-eye,#211a13)" stroke-width="5"/></symbol>
-      <symbol id="sigil-key" viewBox="0 0 100 100"><path d="M31 11a22 22 0 1 0 16 38l12 12-8 8 9 9 8-8 8 8 12-12-37-37a22 22 0 0 0-20-18Zm0 14a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z" fill="currentColor"/></symbol>
-      <symbol id="sigil-sun" viewBox="0 0 100 100"><path d="m50 4 8 20 16-14-2 22 22-3-15 17 20 8-21 7 13 18-22-4 1 22-15-16-9 20-7-21-17 14 3-22-22 2 16-16-20-9 22-6L8 24l22 4-1-22 15 16 6-18Z" fill="currentColor"/><circle cx="50" cy="50" r="18" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-dragon" viewBox="0 0 100 100"><path d="m67 12-11 17-14-13-1 19-19-4 13 16-19 7 21 6-10 19 21-11 2 24 11-20 17 15-5-22 18-4-17-13 11-17-20 5 2-24Z" fill="currentColor"/><path d="M54 43c16-7 27 2 32 11-12-3-19 1-22 11" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="61" cy="34" r="3" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-serpent" viewBox="0 0 100 100"><path d="M67 15c17 10 17 32 1 41-12 7-25-2-22-13 2-9 14-10 19-3-2-13-22-13-28-1-9 18 11 31 25 23 9-5 13-14 12-23 15 12 10 36-8 44-25 11-54-7-51-34 2-23 25-38 47-31 7 2 13 6 18 11Z" fill="currentColor"/><circle cx="73" cy="23" r="3" fill="var(--sigil-eye,#211a13)"/></symbol>
-      <symbol id="sigil-fleur" viewBox="0 0 100 100"><path d="M50 6c-14 16-18 29-8 40-13-14-27-12-33 2 14-2 19 8 21 21h14v9H31l8 17h22l8-17H56v-9h14c2-13 7-23 21-21-6-14-20-16-33-2 10-11 6-24-8-40Z" fill="currentColor"/></symbol>
-      <symbol id="sigil-helmet" viewBox="0 0 100 100"><path d="M27 79V38C27 18 43 7 62 12c17 5 22 22 17 39l-18 28H27Zm13-17h22l9-15H40v15Zm0-27h34c-3-10-10-15-20-15-8 0-13 5-14 15Z" fill="currentColor"/><path d="M36 83h35" stroke="currentColor" stroke-width="7"/></symbol>
-      <symbol id="sigil-crown" viewBox="0 0 100 100"><path d="m12 30 23 17 15-31 15 31 23-17-9 49H21l-9-49Zm14 55h48v9H26v-9Z" fill="currentColor"/></symbol>
+      <symbol id="charge-lion" viewBox="0 0 120 120">
+        <path d="M79 13c12 4 18 15 14 27 11 4 17 13 15 25-8-6-16-8-25-4l-5 11 13 11-8 25H67l4-23-13-10-12 10 7 23H36l-9-25 12-28-10-10 6-12 16 10 14-7 5-15 9-8Z" fill="currentColor"/>
+        <path d="M48 40C31 38 20 29 19 13c14 1 25 7 31 19M38 75l-16 24M76 80l16 21" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="square"/>
+        <path d="m71 42-11 7 10 10 11-9-10-8Z" fill="var(--detail,#171713)"/>
+      </symbol>
+      <symbol id="charge-boar" viewBox="0 0 120 120">
+        <path d="m14 66 17-35 33-13 32 14 13 26-10 31-34 13-37-10-14-26Zm84-8 18-10-9 22-9-12Z" fill="currentColor"/>
+        <path d="M32 37 19 15l25 12M35 92l-8 19m58-19 8 19" fill="none" stroke="currentColor" stroke-width="9"/>
+        <circle cx="84" cy="51" r="5" fill="var(--detail,#171713)"/>
+        <path d="M91 68c7 3 12 2 17-3" fill="none" stroke="var(--detail,#171713)" stroke-width="4"/>
+      </symbol>
+      <symbol id="charge-tower" viewBox="0 0 120 120">
+        <path d="M16 17h21v17h13V17h20v17h13V17h21v34L94 61v44H26V61L16 51V17Zm30 57v31h28V74c0-13-28-13-28 0Z" fill="currentColor"/>
+        <path d="M32 57h56M27 91h66M39 41v12m21-12v12m21-12v12" fill="none" stroke="var(--detail,#171713)" stroke-width="5"/>
+      </symbol>
+      <symbol id="charge-stag" viewBox="0 0 120 120">
+        <path d="M48 40c-9-11-9-24-3-35l10 22 5-25 7 25 10-22c6 11 6 24-3 35l11 11-7 20v29l-18 18-18-18V71l-7-20 13-11Zm12 13-12 8 12 12 12-12-12-8Z" fill="currentColor"/>
+        <path d="M43 27 25 12m18 24-25 1m59-10 18-15M77 36l25 1" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="square"/>
+        <circle cx="54" cy="61" r="3" fill="var(--detail,#171713)"/><circle cx="68" cy="61" r="3" fill="var(--detail,#171713)"/>
+      </symbol>
+      <symbol id="charge-eagle" viewBox="0 0 120 120">
+        <path d="M55 34C42 20 24 14 5 15l15 12-16 3 19 11-16 7 25 8-13 10 29 5 12-24-5-13Zm10 0c13-14 31-20 50-19l-15 12 16 3-19 11 16 7-25 8 13 10-29 5-12-24 5-13Z" fill="currentColor"/>
+        <path d="M50 37c-5 12-3 29 4 41l-13 29 19-10 19 10-13-29c7-12 9-29 4-41L60 28 50 37Z" fill="currentColor"/>
+        <path d="M61 27c5-8 14-9 21-4l-10 5 11 4-15 7-7-12Z" fill="currentColor"/>
+        <circle cx="70" cy="27" r="3" fill="var(--detail,#171713)"/>
+        <path d="m52 94-13 17 21-9 21 9-13-17" fill="none" stroke="currentColor" stroke-width="6"/>
+      </symbol>
+      <symbol id="charge-rose" viewBox="0 0 120 120">
+        <path d="M60 10c13-11 28 1 24 17 17-5 29 11 18 24 16 7 13 27-4 32 4 17-15 28-29 17-10 14-30 7-30-10-18 1-25-18-13-29-13-11-4-31 13-31-1-17 19-27 31-17Z" fill="currentColor"/>
+        <circle cx="60" cy="60" r="17" fill="var(--detail,#171713)"/><path d="M60 38v44M38 60h44" stroke="currentColor" stroke-width="4" opacity=".45"/>
+      </symbol>
+      <symbol id="charge-key" viewBox="0 0 120 120">
+        <path d="M37 11a27 27 0 1 0 19 47l15 15-10 10 11 11 10-10 10 10 15-15-45-45a27 27 0 0 0-25-23Zm0 17a11 11 0 1 1 0 22 11 11 0 0 1 0-22Z" fill="currentColor"/>
+      </symbol>
+      <symbol id="charge-sun" viewBox="0 0 120 120">
+        <path d="m60 3 10 25 19-18-2 27 27-4-19 21 24 10-26 8 17 22-27-5 1 27-18-20-11 25-8-26-21 18 4-27-27 2 20-20L-1 57l27-7L10 27l27 5-1-27 18 20L60 3Z" fill="currentColor"/>
+        <circle cx="60" cy="60" r="23" fill="var(--detail,#171713)"/>
+      </symbol>
+      <symbol id="charge-crown" viewBox="0 0 120 120"><path d="m12 39 28 20 20-39 20 39 28-20-11 58H23L12 39Zm17 66h62v11H29v-11Z" fill="currentColor"/><circle cx="12" cy="37" r="6" fill="currentColor"/><circle cx="60" cy="17" r="6" fill="currentColor"/><circle cx="108" cy="37" r="6" fill="currentColor"/></symbol>
+      <symbol id="charge-helmet" viewBox="0 0 120 120"><path d="M30 101V49c0-25 20-40 44-34 22 6 29 28 21 49l-21 37H30Zm17-22h29l11-19H47v19Zm0-35h43c-4-13-13-19-25-19-11 0-17 7-18 19Z" fill="currentColor"/><path d="M42 106h45" stroke="currentColor" stroke-width="9"/></symbol>
     </defs>
   </svg>
 
   <main class="app-shell" data-app-shell>
-    <section class="screen menu-screen is-active" id="menuScreen" aria-labelledby="appTitle">
-      <div class="parchment-grain" aria-hidden="true"></div>
-      <header class="top-rail" data-ui>
-        <a href="../../" data-app-control data-native-press>← Pocket Works</a>
-        <button type="button" id="soundButton" data-native-press>Звук: вкл</button>
-      </header>
-      <div class="menu-composition" aria-hidden="true">
-        <div class="menu-mantle"></div>
-        <svg viewBox="0 0 100 100"><use href="#sigil-crown"></use></svg>
-        <div class="menu-shield"><svg viewBox="0 0 100 112"><path d="M8 6h84v49c0 26-15 44-42 55C23 99 8 81 8 55V6Z"/><g><use href="#sigil-lion"></use></g></svg></div>
+    <section class="screen menu-screen is-active" id="menuScreen">
+      <div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div>
+      <header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header>
+      <div class="menu-standard" aria-hidden="true">
+        <div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div>
       </div>
       <div class="menu-copy">
-        <p>Геральдический роуглайт</p>
-        <h1 id="appTitle">БЛАЗОН</h1>
-        <h2>Наследие знамени</h2>
-        <span>Не собирай бонусы. Создай символ, который станет законом рода.</span>
+        <p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2>
+        <span>Ты не командуешь в бою. Ты заранее решаешь, как армия будет думать.</span>
       </div>
-      <div class="menu-actions" data-ui>
-        <button class="primary-action" id="continueButton" type="button" data-native-press hidden><span>Продолжить хронику</span><small id="continueCaption">Глава I</small><b>→</b></button>
-        <button class="primary-action" id="newCampaignButton" type="button" data-native-press><span>Основать род</span><small>Четыре главы · одна династия</small><b>→</b></button>
-        <div class="secondary-actions"><button id="rulesButton" type="button" data-native-press>Как устроен герб</button><button type="button" data-workshop-trigger data-native-press>Workshop</button></div>
+      <div class="menu-actions">
+        <button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button>
+        <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Ратники · лучники · одно знамя</small><b>→</b></button>
+        <div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div>
       </div>
-      <footer>v2.0 · офлайн · сохранение хроники</footer>
+      <footer>v3.0 · равные армии · никаких приказов после начала</footer>
     </section>
 
-    <section class="screen game-screen" id="gameScreen" aria-label="Хроника рода">
-      <header class="game-header" data-ui>
-        <button id="pauseButton" type="button" data-native-press>Пауза</button>
-        <div><span id="chapterEyebrow">ГЛАВА I</span><strong id="chapterTitle">Земля без имени</strong></div>
-        <button id="codexButton" type="button" data-native-press>Кодекс</button>
-      </header>
+    <section class="screen doctrine-screen" id="doctrineScreen">
+      <header class="folio-header"><button id="doctrineMenuButton" type="button">Меню</button><div><span id="battleIndexLabel">БИТВА I ИЗ VI</span><strong>Совет перед полем</strong></div><button id="codexButton" type="button">Правила</button></header>
+      <div class="doctrine-layout">
+        <section class="armorial-column player-column">
+          <div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2></div>
+          <div class="full-achievement" id="playerAchievement"></div>
+          <div class="doctrine-ledger" id="playerLedger"></div>
+        </section>
+        <section class="battle-order">
+          <div class="battle-seal"><b id="integrityMarks">◆◆◆</b><span>целостность рода</span></div>
+          <div class="equality-mark"><span>32</span><i>ратника</i><b>=</b><span>32</span></div>
+          <div class="equality-mark"><span>16</span><i>лучников</i><b>=</b><span>16</span></div>
+          <p>Одинаковое оружие, здоровье и численность. Разница — только в правилах поведения.</p>
+          <button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button>
+        </section>
+        <section class="armorial-column enemy-column">
+          <div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2></div>
+          <div class="full-achievement enemy-achievement" id="enemyAchievement"></div>
+          <div class="doctrine-ledger" id="enemyLedger"></div>
+        </section>
+      </div>
+    </section>
 
-      <section class="chronicle-track" id="chronicleTrack" aria-label="Путь главы" data-ui></section>
-
-      <section class="heraldry-stage">
-        <aside class="house-ledger left-ledger">
-          <p>Состояние рода</p>
-          <div><span>Целостность</span><b id="integrityValue">◆◆◆</b></div>
-          <div><span>Слава</span><b id="renownValue">0</b></div>
-          <div><span>Покровители</span><b id="patronageValue">0</b></div>
-        </aside>
-
-        <div class="armorial" id="armorial" aria-label="Полный герб рода">
-          <div class="mantle" id="mantle" aria-hidden="true"><i></i><i></i></div>
-          <svg class="crest crown-crest" id="crownCrest" viewBox="0 0 100 100" aria-hidden="true"><use href="#sigil-crown"></use></svg>
-          <svg class="crest helmet-crest" id="helmetCrest" viewBox="0 0 100 100" aria-hidden="true"><use href="#sigil-helmet"></use></svg>
-          <div class="supporter supporter-left" id="supporterLeft" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#sigil-lion"></use></svg></div>
-          <div class="supporter supporter-right" id="supporterRight" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#sigil-stag"></use></svg></div>
-          <div class="chain-ring" id="chainRing" aria-hidden="true"></div>
-          <div class="shield-frame" id="shieldFrame" data-gesture-surface data-touch-action="manipulation" data-block-callout>
-            <svg class="coat-shield" id="playerShield" viewBox="0 0 100 112" aria-label="Щит рода"></svg>
-            <div class="shield-targets" id="shieldTargets" data-ui></div>
-          </div>
-          <div class="motto-ribbon" id="mottoRibbon"><span id="mottoText">—</span></div>
-        </div>
-
-        <aside class="house-ledger right-ledger">
-          <p>Сила герба</p>
-          <div><span>Натиск</span><b id="powerValue">0</b></div>
-          <div><span>Защита</span><b id="wardValue">0</b></div>
-          <div><span>Достоинство</span><b id="prestigeValue">0</b></div>
-          <div class="scandal-stat"><span>Скандал</span><b id="scandalValue">0</b></div>
-        </aside>
+    <section class="screen battle-screen" id="battleScreen">
+      <header class="battle-header"><button id="leaveBattleButton" type="button">Прервать</button><div><span id="battleClock">00:00</span><strong>ПОЛЕВАЯ БИТВА</strong></div><div class="speed-controls"><button data-speed="1" class="is-active">×1</button><button data-speed="2">×2</button><button data-speed="4">×4</button></div></header>
+      <section class="battlefield-wrap">
+        <canvas id="battleCanvas" width="1000" height="600" aria-label="Автономное сражение двух равных армий"></canvas>
+        <div class="battle-hud player-hud"><div id="hudPlayerShield"></div><span>ТВОЙ СТРОЙ</span><b id="playerFormation">4 / 4</b></div>
+        <div class="battle-hud enemy-hud"><div id="hudEnemyShield"></div><span>ВРАЖЕСКИЙ СТРОЙ</span><b id="enemyFormation">4 / 4</b></div>
+        <div class="rule-flash" id="ruleFlash" aria-live="polite"></div>
       </section>
-
-      <section class="formula-ledger" data-ui>
-        <header><div><p>Гербовая грамматика</p><h2 id="formulaTitle">Незавершённая формула</h2></div><button id="formulaButton" type="button" data-native-press>Все связи</button></header>
-        <div class="formula-list" id="formulaList"><span>Соедини элементы так, чтобы герб начал означать больше суммы частей.</span></div>
-      </section>
-
-      <section class="offer-panel" id="offerPanel" data-ui>
-        <header><div><p id="eventEyebrow">ПОЖАЛОВАНИЕ I</p><h2 id="eventTitle">Герольд разворачивает свитки</h2></div><button id="rejectButton" type="button" data-native-press>Сменить за −1 славы</button></header>
-        <div class="offer-grid" id="offerGrid"></div>
-        <div class="selection-bar" id="selectionBar" hidden><div><strong id="selectionName">Элемент</strong><span id="selectionDetail">Описание</span></div><button id="sealButton" type="button" data-native-press>Внести в герб</button></div>
-      </section>
-
-      <button class="trial-banner" id="trialButton" type="button" data-native-press hidden><span>Герб завершён для этой главы</span><strong id="trialButtonTitle">Пройти испытание</strong><b>→</b></button>
-      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <footer class="battle-footer"><span>Захват знамени или распад трёх отрядов завершает битву.</span><button id="pauseSimulationButton" type="button">Пауза</button></footer>
     </section>
   </main>
 
-  <dialog class="sheet house-sheet" id="houseDialog">
-    <header><div><p>Основание рода</p><h2>Какой знак станет первой строкой хроники?</h2></div><button type="button" data-close-dialog aria-label="Закрыть">×</button></header>
-    <div class="house-grid" id="houseGrid"></div>
+  <dialog class="sheet setup-sheet" id="setupDialog">
+    <header><div><p>ОСНОВА ДОКТРИНЫ</p><h2>Задай темперамент и строй</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <section><h3>Поле · как армия принимает решения</h3><div class="choice-grid field-grid" id="fieldChoices"></div></section>
+    <section><h3>Ординарий · как армия выходит на поле</h3><div class="choice-grid ordinary-grid" id="ordinaryChoices"></div></section>
+    <button class="primary-button seal-setup" id="sealSetupButton" type="button" disabled><span>Скрепить первый устав</span><small>Оба слоя обязательны</small><b>→</b></button>
   </dialog>
 
-  <dialog class="sheet codex-sheet" id="codexDialog">
-    <header><div><p>Кодекс герольда</p><h2>Герб — это грамматика власти</h2></div><button type="button" data-close-dialog aria-label="Закрыть">×</button></header>
-    <div class="codex-grid">
-      <article><b>1</b><h3>Четыре пожалования</h3><p>В течение главы ты собираешь герб. Никакой драки после каждого значка.</p></article>
-      <article><b>2</b><h3>Зависимости</h3><p>Ключ требует башню, корона — право, цепь — чудовище. Закрытые элементы показывают, чего не хватает.</p></article>
-      <article><b>3</b><h3>Закон тинктур</h3><p>Металл на цвете и цвет на металле дают достоинство. Нарушение создаёт силу и скандал.</p></article>
-      <article><b>4</b><h3>Формулы</h3><p>Башня + ключ образуют Хранителя врат. Дракон + цепь — Зверя в цепях. Это отдельные механики и визуальные состояния.</p></article>
-      <article><b>5</b><h3>Большое испытание</h3><p>После сборки весь герб проходит турнир, осаду, суд или войну знамён. Ты выбираешь единственный приказ.</p></article>
-      <article><b>6</b><h3>Наследие</h3><p>Победы дают покровителей. Поражения оставляют шрамы и отнимают целостность рода.</p></article>
+  <dialog class="sheet rules-sheet" id="rulesDialog">
+    <header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <div class="rules-three">
+      <article><b>1</b><div><h3>До боя</h3><p>Собери шесть слоёв доктрины и прочитай герб противника.</p></div></article>
+      <article><b>2</b><div><h3>В бою</h3><p>Армии равны. Ратники и лучники исполняют герб без твоих приказов.</p></div></article>
+      <article><b>3</b><div><h3>После боя</h3><p>Смотри, какие правила реально сработали, и меняй следующий слой.</p></div></article>
     </div>
   </dialog>
 
-  <dialog class="sheet trial-sheet" id="trialDialog">
-    <header><div><p id="trialEyebrow">ИСПЫТАНИЕ</p><h2 id="trialTitle">Турнир трёх копий</h2></div><button type="button" data-close-dialog aria-label="Закрыть">×</button></header>
-    <div class="trial-opponent"><div class="opponent-shield"><svg id="opponentShield" viewBox="0 0 100 112"></svg></div><div><strong id="trialOpponent">Дом соперника</strong><p id="trialCopy">Описание испытания.</p><span>Требование <b id="trialThreshold">18</b></span></div></div>
-    <div class="trial-preview"><div><span>Твой расчёт</span><b id="trialScore">0</b></div><i></i><div><span>Необходимый</span><b id="trialNeed">18</b></div></div>
-    <div class="command-grid" id="commandGrid">
-      <button type="button" data-command="charge" data-native-press><b>Выпустить фигуры</b><span>Ставка на натиск</span></button>
-      <button type="button" data-command="hold" data-native-press><b>Удержать строй</b><span>Ставка на защиту</span></button>
-      <button type="button" data-command="oath" data-native-press><b>Призвать право</b><span>Ставка на достоинство</span></button>
-    </div>
-    <div class="trial-phases" id="trialPhases" hidden></div>
-    <button class="primary-action trial-continue" id="trialContinue" type="button" data-native-press hidden><span>Продолжить хронику</span><small id="trialResultCopy">Пожалование ждёт</small><b>→</b></button>
+  <dialog class="sheet result-sheet" id="resultDialog">
+    <header><div><p id="resultEyebrow">БИТВА ЗАВЕРШЕНА</p><h2 id="resultTitle">Знамя устояло</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <div class="result-measures" id="resultMeasures"></div>
+    <div class="tactical-log"><h3>Решающие срабатывания</h3><div id="decisiveEvents"></div></div>
+    <div class="result-actions"><button id="replayButton" type="button">Повторить тот же бой</button><button class="primary-button" id="continueResultButton" type="button"><span>Продолжить поход</span><small>Изменить доктрину</small><b>→</b></button></div>
   </dialog>
 
-  <dialog class="sheet patronage-sheet" id="patronageDialog">
-    <header><div><p>После испытания</p><h2>Кто встанет за твоим знаменем?</h2></div></header>
-    <div class="patronage-grid" id="patronageGrid"></div>
+  <dialog class="sheet reward-sheet" id="rewardDialog">
+    <header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header>
+    <div class="reward-grid" id="rewardGrid"></div>
   </dialog>
 
   <dialog class="sheet ending-sheet" id="endingDialog">
-    <div class="ending-seal" id="endingSeal">✦</div>
-    <p id="endingEyebrow">ХРОНИКА ЗАВЕРШЕНА</p>
-    <h2 id="endingTitle">Род пережил войну знамён</h2>
-    <span id="endingCopy">Описание финала.</span>
-    <div class="ending-stats" id="endingStats"></div>
-    <div class="ending-actions"><button id="endingMenuButton" type="button" data-native-press>В зал хроник</button><button class="primary-action" id="endingRestartButton" type="button" data-native-press><span>Основать новый род</span><small>Другой знак, другая судьба</small><b>→</b></button></div>
+    <div class="ending-standard" id="endingAchievement"></div>
+    <p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется только реальными победами и сохранённой целостностью.</span>
+    <div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другие решения</small><b>→</b></button></div>
   </dialog>
 
-  <dialog class="sheet pause-sheet" id="pauseDialog">
-    <p>Хроника сохранена</p><h2>Знамя останется поднятым</h2>
-    <button id="resumeButton" type="button" data-native-press>Продолжить</button>
-    <button id="menuButton" type="button" data-native-press>В главное меню</button>
-    <a href="../../" data-app-control>В Pocket Works</a>
-  </dialog>
-
-  <script type="module" src="./app.js?v=2.0.0"></script>
+  <script type="module" src="./app.js?v=3.0.0"></script>
 </body>
 </html>
