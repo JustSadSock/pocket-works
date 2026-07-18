@@ -1,7 +1,7 @@
 const BUILD='5.5.0';
 const isCore=new URL(import.meta.url).searchParams.has('core');
 const selected=await import(isCore?`./spatial-core-engine.js?pw_release=${BUILD}`:`./progression-engine.js?pw_release=${BUILD}`);
-const clarity=await import(`./combat-clarity.js?pw_release=${BUILD}`);
+const clarity=isCore?null:await import(`./combat-clarity.js?pw_release=${BUILD}`);
 
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;
@@ -27,9 +27,9 @@ export const generateOffers=selected.generateOffers;
 export const applyOffer=selected.applyOffer;
 export const prepareBattle=selected.prepareBattle;
 export const recordBattle=selected.recordBattle;
-export const createBattleState=(...args)=>clarity.createBattleState(selected.createBattleState,...args);
-export const stepBattle=(state,dt)=>clarity.stepBattle(selected.stepBattle,state,dt);
+export const createBattleState=isCore?selected.createBattleState:(...args)=>clarity.createBattleState(selected.createBattleState,...args);
+export const stepBattle=isCore?selected.stepBattle:(state,dt)=>clarity.stepBattle(selected.stepBattle,state,dt);
 export const summarizeBattle=selected.summarizeBattle;
-export const simulateBattle=(a,b,seed=1,max=110)=>clarity.simulateBattle(selected.createBattleState,selected.stepBattle,selected.summarizeBattle,a,b,seed,max);
+export const simulateBattle=isCore?selected.simulateBattle:(a,b,seed=1,max=110)=>clarity.simulateBattle(selected.createBattleState,selected.stepBattle,selected.summarizeBattle,a,b,seed,max);
 export const randomDoctrine=selected.randomDoctrine;
-export const botAudit=(iterations=100,seed=1)=>clarity.botAudit(selected.randomDoctrine,selected.createBattleState,selected.stepBattle,selected.summarizeBattle,iterations,seed);
+export const botAudit=isCore?selected.botAudit:(iterations=100,seed=1)=>clarity.botAudit(selected.randomDoctrine,selected.createBattleState,selected.stepBattle,selected.summarizeBattle,iterations,seed);
