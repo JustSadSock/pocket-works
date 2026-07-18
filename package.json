@@ -3,7 +3,9 @@
   "version": "0.9.1",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/[!_]*"],
+  "workspaces": [
+    "apps/[!_]*"
+  ],
   "scripts": {
     "new:app": "node scripts/new-app.mjs",
     "registry:build": "node scripts/build-registry.mjs --output=dist-site/apps.json",
@@ -33,7 +35,7 @@
     "validate:quality": "node scripts/validate-quality-gates.mjs",
     "validate:pipeline": "node scripts/validate-deploy-pipeline.mjs",
     "validate:scope": "node scripts/validate-change-scope.mjs",
-    "validate:scripts": "node --check app.js && node --check launcher-update-all.js && node --check launcher-update-all-v2.js && node --check launcher-update-all-v3.js && node --check launcher-release-links.js && node --check launcher-sync.js && node --check shared/release-guard.js && node --check shared/app-icon-previews.js && node --check shared/launcher-list-motion.js && node --check shared/view-transition-guard.js && node --check shared/workshop-mode.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/validate-release-coherence.mjs",
+    "validate:scripts": "node --check app.js && node --check launcher-update-all.js && node --check launcher-update-all-v2.js && node --check launcher-update-all-v3.js && node --check launcher-release-links.js && node --check launcher-sync.js && node --check shared/release-guard.js && node --check shared/app-icon-previews.js && node --check shared/launcher-list-motion.js && node --check shared/view-transition-guard.js && node --check shared/workshop-mode.js && node --check shared/capabilities/motion.js && node --check shared/capabilities/storage.js && node --check shared/capabilities/transfer.js && node --check shared/capabilities/audio.js && node --check shared/capabilities/device.js && node --check shared/capabilities/diagnostics.js && node --check scripts/app-config.mjs && node --check scripts/build-registry.mjs && node --check scripts/new-app.mjs && node --check scripts/presets.mjs && node --check scripts/enhanced-presets.mjs && node --check scripts/build-enhanced.mjs && node --check scripts/test-enhanced.mjs && node --check scripts/promote-enhanced-build.mjs && node --check scripts/prepare-sente-engine.mjs && node --check scripts/sente-gnugo-node.mjs && node --check scripts/audit-sente-gnugo.mjs && node --check scripts/audit-shpilka-2-3.mjs && node --check scripts/audit-shpilka-2-4.mjs && node --check scripts/audit-shpilka-2-5.mjs && node --check scripts/audit-shpilka-2-6.mjs && node --check scripts/audit-shpilka-2-7.mjs && node --check scripts/audit-shpilka-2-7-1.mjs && node --check scripts/audit-shpilka-2-7-2.mjs && node --check scripts/audit-shpilka-2-8-final.mjs && node --check scripts/audit-shpilka-2-9.mjs && node --check scripts/audit-moss-marble-1-2.mjs && node --check scripts/audit-moss-marble-1-3.mjs && node --check scripts/audit-moss-marble-1-4.mjs && node --check scripts/audit-moss-marble-1-4-1.mjs && node --check scripts/prepare-site.mjs && node --check scripts/validate-site.mjs && node --check scripts/validate-deploy-pipeline.mjs && node --check scripts/validate-change-scope.mjs && node --check scripts/serve-site.mjs && node --check scripts/test-forge.mjs && node --check scripts/validate-app-configs.mjs && node --check scripts/validate-update-contract.mjs && node --check scripts/validate-update-watchdog.mjs && node --check scripts/validate-release-coherence.mjs && node --check scripts/validate-launcher.mjs && node --check scripts/validate-capabilities.mjs && node --check scripts/validate-enhanced.mjs && node --check scripts/validate-quality-gates.mjs",
     "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities && npm run validate:enhanced && npm run validate:quality && npm run validate:pipeline",
     "test:forge:quick": "node scripts/test-forge.mjs",
     "test:forge:enhanced": "node scripts/test-enhanced-forge.mjs",
@@ -56,5 +58,7 @@
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.0"
   },
-  "engines": {"node": ">=22.12"}
+  "engines": {
+    "node": ">=22.12"
+  }
 }
