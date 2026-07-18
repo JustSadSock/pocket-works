@@ -1,5 +1,5 @@
 const isCore=new URL(import.meta.url).searchParams.has('core');
-if(!isCore&&typeof document!=='undefined')await import('./progression-runtime.js');
+if(!isCore&&typeof document!=='undefined'){await import('./progression-art.js');await import('./progression-runtime.js');}
 const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;
