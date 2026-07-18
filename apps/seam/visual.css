@@ -61,8 +61,15 @@ body::before {
 .force-count b, .reserve-control b { text-shadow: 0 1px rgba(255,255,255,.55); }
 .reserve-control { position: relative; background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(91,75,52,.05)); box-shadow: inset 0 1px rgba(255,255,255,.4); }
 .reserve-control:not(:disabled)::after { content: "+"; position: absolute; right: 3px; top: 1px; color: var(--brass); font-weight: 900; font-size: 10px; }
-.board-frame { margin: 0 6px; border-left: 1px solid rgba(49,43,33,.25); border-right: 1px solid rgba(49,43,33,.25); background: radial-gradient(circle at 50% 42%, rgba(247,240,226,.75), transparent 42%), linear-gradient(145deg, #d8ccb8, #c2b295); box-shadow: inset 0 0 0 6px rgba(255,255,255,.10), inset 0 0 44px rgba(68,51,29,.16), 0 7px 20px rgba(55,43,27,.10); }
-.board-frame::before { background: linear-gradient(90deg, transparent 49.8%, rgba(167,126,60,.12) 50%, transparent 50.2%), radial-gradient(circle at center, transparent 33%, rgba(74,57,36,.09) 100%), repeating-linear-gradient(120deg, transparent 0 18px, rgba(54,48,39,.026) 18px 19px); }
+.board-frame { margin: 0 6px; border-left: 1px solid rgba(49,43,33,.25); border-right: 1px solid rgba(49,43,33,.25); background: linear-gradient(180deg, #ded1bc, #c9b89b 70%, #c3b090); box-shadow: inset 0 0 0 6px rgba(255,255,255,.10), inset 0 0 44px rgba(68,51,29,.16), 0 7px 20px rgba(55,43,27,.10); }
+.board-frame::before {
+  opacity: .98;
+  background:
+    linear-gradient(30deg, transparent 0 47.2%, rgba(209,170,98,.10) 49.1%, rgba(255,248,231,.15) 50%, rgba(167,126,60,.11) 50.9%, transparent 52.8%),
+    repeating-linear-gradient(30deg, rgba(255,255,255,.085) 0 9px, transparent 9px 34px),
+    repeating-linear-gradient(150deg, rgba(83,66,44,.055) 0 1px, transparent 1px 24px),
+    radial-gradient(circle at center, transparent 34%, rgba(67,52,34,.10) 100%);
+}
 .board-frame::after { content: ""; position: absolute; inset: 9px; pointer-events: none; border: 1px solid rgba(255,255,255,.20); clip-path: polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%); z-index: 3; }
 .board-frame.deploy-mode { box-shadow: inset 0 0 0 3px rgba(209,170,98,.70), inset 0 0 45px rgba(167,126,60,.18); }
 .board-caption { bottom: 10px; border-color: rgba(50,46,38,.25); background: linear-gradient(180deg, rgba(245,239,228,.95), rgba(226,216,199,.95)); box-shadow: 0 7px 18px rgba(44,36,25,.15), inset 0 1px rgba(255,255,255,.7); letter-spacing: .025em; }
@@ -89,6 +96,13 @@ body::before {
   .hero-board { min-height: 194px; }
   .hero-piece { width: 34px; height: 34px; }
   .player-strip { padding-inline: 11px; gap: 7px; }
+  .board-frame::before {
+    background:
+      linear-gradient(30deg, transparent 0 47.5%, rgba(209,170,98,.09) 49.2%, rgba(255,248,231,.13) 50%, rgba(167,126,60,.10) 50.8%, transparent 52.5%),
+      repeating-linear-gradient(30deg, rgba(255,255,255,.08) 0 8px, transparent 8px 24px),
+      repeating-linear-gradient(150deg, rgba(83,66,44,.05) 0 1px, transparent 1px 18px),
+      radial-gradient(circle at center, transparent 34%, rgba(67,52,34,.09) 100%);
+  }
 }
 @media (orientation: landscape) and (max-height: 620px) {
   .board-frame { margin: 0; }
