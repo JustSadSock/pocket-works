@@ -6,11 +6,25 @@
   if(!declared)return;
 
   const releaseKey=`pocket-works:release-reload:${slug}:${declared}`;
+  const observedKey='pocket-works:observed-releases:v1';
   const buildUrl=(version=declared)=>{
     const url=new URL(location.href);
     url.searchParams.set('pw_release',version);
     return url;
   };
+
+  function rememberActive(phase='document'){
+    try{
+      const observed=JSON.parse(localStorage.getItem(observedKey)||'{}');
+      observed[slug]={version:declared,phase,at:Date.now()};
+      localStorage.setItem(observedKey,JSON.stringify(observed));
+    }catch{}
+    try{
+      const channel=new BroadcastChannel('pocket-works-release');
+      channel.postMessage({type:'APP_RELEASE_ACTIVE',slug,version:declared,phase,url:location.href,at:Date.now()});
+      channel.close();
+    }catch{}
+  }
 
   function probeLiveVersion(){
     try{
@@ -65,13 +79,9 @@
   let meta=document.querySelector('meta[name="pocket-works-release"]');
   if(!meta){meta=document.createElement('meta');meta.name='pocket-works-release';document.head.append(meta);}
   meta.content=declared;
-  globalThis.__POCKET_WORKS_RELEASE__={slug,version:declared,verified:true};
-
-  try{
-    const channel=new BroadcastChannel('pocket-works-release');
-    channel.postMessage({type:'APP_RELEASE_ACTIVE',slug,version:declared,url:location.href,at:Date.now()});
-    window.addEventListener('pagehide',()=>channel.close(),{once:true});
-  }catch{}
+  globalThis.__POCKET_WORKS_RELEASE__={slug,version:declared,verified:true,markReady:()=>rememberActive('runtime')};
+  rememberActive('document');
+  window.addEventListener('load',()=>rememberActive('loaded'),{once:true});
 
   if('serviceWorker'in navigator){
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
