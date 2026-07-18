@@ -1,511 +1,121 @@
-export const VERSION = 3;
+export const VERSION = 4;
 export const BATTLE_COUNT = 6;
 
 export const TINCTURES = {
-  gules: { id: 'gules', name: 'Червлень', color: '#982f35', contrast: '#f2d37d', ink: '#f8e7bd' },
-  azure: { id: 'azure', name: 'Лазурь', color: '#214f83', contrast: '#e9ddd0', ink: '#f4ebdb' },
-  argent: { id: 'argent', name: 'Серебро', color: '#e6e0d2', contrast: '#8e2730', ink: '#211e1a' },
-  sable: { id: 'sable', name: 'Чернь', color: '#202522', contrast: '#d6ad48', ink: '#f4e5bd' }
+  gules: { id:'gules', name:'Червлень', color:'#982f35', contrast:'#f2d37d', ink:'#f8e7bd' },
+  azure: { id:'azure', name:'Лазурь', color:'#214f83', contrast:'#e9ddd0', ink:'#f4ebdb' },
+  argent: { id:'argent', name:'Серебро', color:'#e6e0d2', contrast:'#8e2730', ink:'#211e1a' },
+  sable: { id:'sable', name:'Чернь', color:'#202522', contrast:'#d6ad48', ink:'#f4e5bd' }
 };
-
 export const FIELDS = {
-  gules: { id: 'gules', name: 'Червлень', epithet: 'Обязательство', summary: 'Вступивший в бой отряд доводит атаку до конца.', principle: 'pressure', detail: 'Меньше метаний, больше риска пропустить угрозу на фланге.' },
-  azure: { id: 'azure', name: 'Лазурь', epithet: 'Переоценка', summary: 'Отряды регулярно ищут более выгодную цель и маршрут.', principle: 'adaptation', detail: 'Гибкая армия, но её давление легче сбить.' },
-  argent: { id: 'argent', name: 'Серебро', epithet: 'Связность', summary: 'Отряды предпочитают сохранять взаимную поддержку.', principle: 'cohesion', detail: 'Строй трудно разорвать, но он склонен уплотняться.' },
-  sable: { id: 'sable', name: 'Чернь', epithet: 'Скрытый резерв', summary: 'Часть войск ждёт, пока враг раскроет главный удар.', principle: 'reserve', detail: 'Сильный ответ ценой более тонкой первой линии.' }
+  gules:{id:'gules',name:'Червлень',epithet:'Обязательство',summary:'Вступивший в бой отряд доводит атаку до конца.',principle:'pressure',detail:'Меньше метаний, больше риска пропустить угрозу на фланге.'},
+  azure:{id:'azure',name:'Лазурь',epithet:'Переоценка',summary:'Отряды регулярно ищут более выгодную цель и маршрут.',principle:'adaptation',detail:'Гибкая армия, но её давление легче сбить.'},
+  argent:{id:'argent',name:'Серебро',epithet:'Связность',summary:'Отряды предпочитают сохранять взаимную поддержку.',principle:'cohesion',detail:'Строй трудно разорвать, но он склонен уплотняться.'},
+  sable:{id:'sable',name:'Чернь',epithet:'Скрытый резерв',summary:'Часть войск ждёт, пока враг раскроет главный удар.',principle:'reserve',detail:'Сильный ответ ценой более тонкой первой линии.'}
 };
-
 export const ORDINARIES = {
-  pale: { id: 'pale', name: 'Столб', summary: 'Узкий глубокий центр и подача резервов по оси.', principle: 'pressure' },
-  fess: { id: 'fess', name: 'Пояс', summary: 'Две широкие линии, способные сменять друг друга.', principle: 'cohesion' },
-  bend: { id: 'bend', name: 'Перевязь', summary: 'Косой удар: одно крыло входит в бой раньше.', principle: 'adaptation' },
-  chevron: { id: 'chevron', name: 'Стропило', summary: 'Вогнутый фронт принимает врага и закрывает крылья.', principle: 'cohesion' }
+  pale:{id:'pale',name:'Столб',summary:'Узкий глубокий центр и подача резервов по оси.',principle:'pressure'},
+  fess:{id:'fess',name:'Пояс',summary:'Две широкие линии, способные сменять друг друга.',principle:'cohesion'},
+  bend:{id:'bend',name:'Перевязь',summary:'Косой удар: одно крыло входит в бой раньше.',principle:'adaptation'},
+  chevron:{id:'chevron',name:'Стропило',summary:'Вогнутый фронт принимает врага и закрывает крылья.',principle:'cohesion'}
 };
-
 export const MAINS = {
-  lion: { id: 'lion', name: 'Лев', summary: 'Два ближайших отряда совместно уничтожают одну цель.', principle: 'pressure' },
-  boar: { id: 'boar', name: 'Вепрь', summary: 'После разрыва строя ратники идут в глубину, а не вязнут по краям.', principle: 'breach' },
-  tower: { id: 'tower', name: 'Башня', summary: 'Удержанные позиции становятся точками повторного сбора.', principle: 'recovery' },
-  stag: { id: 'stag', name: 'Олень', summary: 'Уступающий отряд отходит к союзнику и возвращается вместе с ним.', principle: 'adaptation' }
+  lion:{id:'lion',name:'Лев',summary:'Два ближайших отряда совместно уничтожают одну цель.',principle:'pressure'},
+  boar:{id:'boar',name:'Вепрь',summary:'После разрыва строя ратники идут в глубину, а не вязнут по краям.',principle:'breach'},
+  tower:{id:'tower',name:'Башня',summary:'Удержанные позиции становятся точками повторного сбора.',principle:'recovery'},
+  stag:{id:'stag',name:'Олень',summary:'Уступающий отряд отходит к союзнику и возвращается вместе с ним.',principle:'adaptation'}
 };
-
 export const SECONDARIES = {
-  eagle: { id: 'eagle', name: 'Орёл', summary: 'Лучники ищут изолированные цели и свободные сектора стрельбы.', principle: 'adaptation' },
-  rose: { id: 'rose', name: 'Роза', summary: 'Каждое отделение лучников следует за своим отрядом ратников.', principle: 'cohesion' },
-  key: { id: 'key', name: 'Ключ', summary: 'Лучники смещаются к пролому и ведут огонь в его глубину.', principle: 'breach' },
-  sun: { id: 'sun', name: 'Солнце', summary: 'Свободные лучники сосредотачивают залп на одной пошатнувшейся цели.', principle: 'pressure' }
+  eagle:{id:'eagle',name:'Орёл',summary:'Лучники ищут изолированные цели и свободные сектора стрельбы.',principle:'adaptation'},
+  rose:{id:'rose',name:'Роза',summary:'Каждое отделение лучников следует за своим отрядом ратников.',principle:'cohesion'},
+  key:{id:'key',name:'Ключ',summary:'Лучники смещаются к пролому и ведут огонь в его глубину.',principle:'breach'},
+  sun:{id:'sun',name:'Солнце',summary:'Свободные лучники сосредотачивают залп на одной пошатнувшейся цели.',principle:'pressure'}
 };
-
 export const COMMANDS = {
-  crown: { id: 'crown', name: 'Корона', summary: 'Один ведущий отряд задаёт соседям цель и направление.', principle: 'cohesion' },
-  helmet: { id: 'helmet', name: 'Шлем', summary: 'Первые двадцать секунд армия следует заранее выбранной оси удара.', principle: 'pressure' },
-  chain: { id: 'chain', name: 'Цепь ордена', summary: 'Главный инстинкт ждёт первого кризиса и не срабатывает преждевременно.', principle: 'reserve' }
+  crown:{id:'crown',name:'Корона',summary:'Один ведущий отряд задаёт соседям цель и направление.',principle:'cohesion'},
+  helmet:{id:'helmet',name:'Шлем',summary:'Первые двадцать секунд армия следует заранее выбранной оси удара.',principle:'pressure'},
+  chain:{id:'chain',name:'Цепь ордена',summary:'Главный инстинкт ждёт первого кризиса и не срабатывает преждевременно.',principle:'reserve'}
 };
-
 export const MOTTOS = {
-  breach: { id: 'breach', name: 'IN RUPTURAM', label: 'В пролом', summary: 'Первый свободный резерв немедленно входит в открывшийся разрыв.', principle: 'breach' },
-  banner: { id: 'banner', name: 'SIGNUM PRIMUM', label: 'Знамя прежде', summary: 'При угрозе знамени два ближайших отряда бросают текущие задачи.', principle: 'recovery' },
-  together: { id: 'together', name: 'UNA STAMUS', label: 'Стать вместе', summary: 'Два пошатнувшихся отряда сходятся и образуют новую линию.', principle: 'cohesion' },
-  volley: { id: 'volley', name: 'ULTIMA SAGITTA', label: 'Последний залп', summary: 'Перед первым общим отходом лучники дают единый залп.', principle: 'pressure' }
+  breach:{id:'breach',name:'IN RUPTURAM',label:'В пролом',summary:'Первый свободный резерв немедленно входит в открывшийся разрыв.',principle:'breach'},
+  banner:{id:'banner',name:'SIGNUM PRIMUM',label:'Знамя прежде',summary:'При угрозе знамени два ближайших отряда бросают текущие задачи.',principle:'recovery'},
+  together:{id:'together',name:'UNA STAMUS',label:'Стать вместе',summary:'Два пошатнувшихся отряда сходятся и образуют новую линию.',principle:'cohesion'},
+  volley:{id:'volley',name:'ULTIMA SAGITTA',label:'Последний залп',summary:'Перед первым общим отходом лучники дают единый залп.',principle:'pressure'}
 };
+export const SLOT_ORDER = ['main','secondary','command','motto'];
+export const CATALOGS = {field:FIELDS,ordinary:ORDINARIES,main:MAINS,secondary:SECONDARIES,command:COMMANDS,motto:MOTTOS};
 
-export const SLOT_ORDER = ['main', 'secondary', 'command', 'motto'];
-export const CATALOGS = { field: FIELDS, ordinary: ORDINARIES, main: MAINS, secondary: SECONDARIES, command: COMMANDS, motto: MOTTOS };
+function clone(v){return typeof structuredClone==='function'?structuredClone(v):JSON.parse(JSON.stringify(v));}
+export function normalizeSeed(seed){const n=Number(seed);return Number.isFinite(n)?(Math.abs(Math.floor(n))||1)>>>0:(Date.now()>>>0);}
+function rand(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/4294967296;}
+function pick(s,a){return a[Math.floor(rand(s)*a.length)]??a[0];}
+function shuffled(s,a){const o=[...a];for(let i=o.length-1;i>0;i--){const j=Math.floor(rand(s)*(i+1));[o[i],o[j]]=[o[j],o[i]];}return o;}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
-function clone(value) { return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value)); }
-export function normalizeSeed(seed) { const n = Number(seed); return Number.isFinite(n) ? (Math.abs(Math.floor(n)) || 1) >>> 0 : (Date.now() >>> 0); }
-function rand(state) { state.rng = (Math.imul(state.rng, 1664525) + 1013904223) >>> 0; return state.rng / 4294967296; }
-function pick(state, items) { return items[Math.floor(rand(state) * items.length)] ?? items[0]; }
-function shuffled(state, items) { const out = [...items]; for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rand(state) * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; } return out; }
+export function emptyDoctrine(field='gules',ordinary='pale'){return{field,ordinary,main:null,secondary:null,command:null,motto:null,axis:'center'};}
+export function createCampaign(field='gules',ordinary='pale',seed=Date.now()){
+  const s=normalizeSeed(seed);return{version:VERSION,seed:s,rng:s,battleIndex:0,integrity:3,victories:0,doctrine:emptyDoctrine(field,ordinary),phase:'briefing',completed:false,currentEnemy:null,currentSeed:null,lastResult:null,offers:[],revisionSlot:null};
+}
+export function hydrateCampaign(value){if(!value||!value.doctrine)return null;const c=clone(value);c.version=VERSION;c.integrity=clamp(Number(c.integrity)||0,0,3);c.battleIndex=clamp(Number(c.battleIndex)||0,0,BATTLE_COUNT-1);return c;}
+export function doctrineLayers(d){return['field','ordinary','main','secondary','command','motto'].map(slot=>({slot,id:d[slot],definition:d[slot]?CATALOGS[slot][d[slot]]:null}));}
+export function doctrineName(d){return`${d.main?MAINS[d.main].name:'Безымянное знамя'} · ${FIELDS[d.field]?.epithet||''}`;}
+export function nextUpgradeSlot(c){if(c.battleIndex>=1&&c.battleIndex<=SLOT_ORDER.length)return SLOT_ORDER[c.battleIndex-1];if(c.battleIndex===5)return'revision';return null;}
+export function generateOffers(c){const slot=nextUpgradeSlot(c);if(!slot)return[];if(slot!=='revision')return shuffled(c,Object.keys(CATALOGS[slot])).slice(0,3).map(id=>({slot,id,definition:CATALOGS[slot][id],replaces:c.doctrine[slot]||null}));const out=[];for(const key of shuffled(c,['field','ordinary','main','secondary'].filter(k=>c.doctrine[k]))){const id=shuffled(c,Object.keys(CATALOGS[key]).filter(v=>v!==c.doctrine[key]))[0];if(id)out.push({slot:key,id,definition:CATALOGS[key][id],replaces:c.doctrine[key],revision:true});if(out.length===3)break;}return out;}
+export function applyOffer(c,o){const n=clone(c);n.doctrine[o.slot]=o.id;n.offers=[];n.phase='briefing';n.lastResult=null;return n;}
+function doctrineForStage(s,stage){const d=emptyDoctrine(pick(s,Object.keys(FIELDS)),pick(s,Object.keys(ORDINARIES)));if(stage>=1)d.main=pick(s,Object.keys(MAINS));if(stage>=2)d.secondary=pick(s,Object.keys(SECONDARIES));if(stage>=3)d.command=pick(s,Object.keys(COMMANDS));if(stage>=4)d.motto=pick(s,Object.keys(MOTTOS));d.axis=pick(s,['left','center','right']);return d;}
+export function prepareBattle(c){const n=clone(c);if(!n.currentEnemy)n.currentEnemy=doctrineForStage(n,n.battleIndex);if(!n.currentSeed)n.currentSeed=(n.seed^Math.imul(n.battleIndex+1,0x9e3779b9))>>>0;n.phase='briefing';return n;}
+export function recordBattle(c,result){const n=clone(c);n.lastResult=clone(result);n.currentEnemy=null;n.currentSeed=null;if(result.winner==='player')n.victories++;else n.integrity--;if(n.integrity<=0||n.battleIndex>=BATTLE_COUNT-1){n.completed=true;n.phase='ending';return n;}n.battleIndex++;n.phase='reward';n.offers=generateOffers(n);return n;}
 
-export function emptyDoctrine(field = 'gules', ordinary = 'pale') {
-  return { field, ordinary, main: null, secondary: null, command: null, motto: null, axis: 'center' };
-}
+const SIDE_DIR={player:1,enemy:-1};
+const FORMATIONS={pale:[34,2,-30,-62],fess:[20,20,-25,-25],bend:[54,18,-18,-54],chevron:[44,-18,-18,44]};
+function formationPositions(side,ordinary){const dir=SIDE_DIR[side],base=side==='player'?235:765,ys=[150,250,350,450],xs=FORMATIONS[ordinary]||[0,0,0,0];return ys.map((y,i)=>({x:base+dir*xs[i],y}));}
+function makeMember(state,squad,index){const infantry=squad.type==='infantry',rows=infantry?4:2,depth=Math.floor(index/rows),lane=index%rows;const lateral=(lane-(rows-1)/2)*(infantry?13:18),forward=(depth-.5)*(infantry?13:17)*SIDE_DIR[squad.side];return{id:`${squad.id}-m${index}`,squadId:squad.id,side:squad.side,type:squad.type,index,x:squad.x+forward+(rand(state)-.5)*2,y:squad.y+lateral+(rand(state)-.5)*2,vx:0,vy:0,hp:1,morale:1,state:'forming',targetId:null,cooldown:rand(state)*(infantry?.8:1.8),phase:rand(state)*Math.PI*2,hitFlash:0,fallenAt:null,facing:SIDE_DIR[squad.side],slotX:0,slotY:0};}
+function makeSquad(state,side,type,index,p,doctrine){const dir=SIDE_DIR[side],archer=type==='archer';const squad={id:`${side}-${archer?'a':'i'}${index}`,side,type,index,x:p.x-(archer?dir*92:0),y:p.y,formX:p.x-(archer?dir*92:0),formY:p.y,goalX:p.x,goalY:p.y,homeX:p.x,homeY:p.y,state:archer?'support':'advance',targetSquadId:null,leader:!archer&&index===1,reserve:doctrine.field==='sable'&&index===3,anchor:null,broken:false,breakAnnounced:false,morale:1,strength:archer?4:8,maxStrength:archer?4:8,rethink:rand(state)*.45,engaged:false,holdTime:0,pairedId:`${side}-i${index}`,lastRule:'ordinary',members:[]};const count=archer?4:8;for(let i=0;i<count;i++)squad.members.push(makeMember(state,squad,i));return squad;}
+function makeArmy(state,side,doctrine){const p=formationPositions(side,doctrine.ordinary);return{side,doctrine:clone(doctrine),infantry:p.map((q,i)=>makeSquad(state,side,'infantry',i,q,doctrine)),archers:p.map((q,i)=>makeSquad(state,side,'archer',i,q,doctrine)),banner:{x:side==='player'?105:895,y:300,capture:0},brokenCount:0,mottoUsed:false,crisis:false,globalRetreat:false,opening:true,focusSquadId:null};}
+export function createBattleState(playerDoctrine,enemyDoctrine,seed=1){const state={version:2,rng:normalizeSeed(seed),time:0,status:'running',winner:null,player:null,enemy:null,events:[],arrows:[],effects:[],decisive:[],impact:0};state.player=makeArmy(state,'player',playerDoctrine);state.enemy=makeArmy(state,'enemy',enemyDoctrine);event(state,'both','deployment','Знамёна подняты. Воины занимают места в строю.');return state;}
+function event(state,side,rule,text){const e={time:state.time,side,rule,text};state.events.push(e);if(!['movement','casualty'].includes(rule)){state.decisive.push(e);if(state.decisive.length>10)state.decisive.shift();}}
+function own(state,side){return side==='player'?state.player:state.enemy;}
+function foe(state,side){return side==='player'?state.enemy:state.player;}
+function allSquads(army){return[...army.infantry,...army.archers];}
+function allMembers(army){return allSquads(army).flatMap(s=>s.members);}
+function livingMember(m){return m.state!=='fallen'&&m.hp>0;}
+function combatMember(m){return livingMember(m)&&m.state!=='rout';}
+function livingSquad(s){return s.members.some(livingMember)&&!s.broken;}
+function squadById(state,id){for(const a of[state.player,state.enemy])for(const s of allSquads(a))if(s.id===id)return s;return null;}
+function memberById(state,id){for(const a of[state.player,state.enemy])for(const s of allSquads(a))for(const m of s.members)if(m.id===id)return m;return null;}
+function nearest(list,source,predicate=()=>true){let best=null,bestD=Infinity;for(const item of list){if(!predicate(item))continue;const d=distance(item,source);if(d<bestD){best=item;bestD=d;}}return best;}
+function activeMain(army){return army.doctrine.main&&!(army.doctrine.command==='chain'&&!army.crisis)?army.doctrine.main:null;}
+function squadSupport(army,squad,radius=145){return army.infantry.filter(s=>s!==squad&&livingSquad(s)&&distance(s,squad)<radius).length;}
+function gapInfo(enemy){const live=enemy.infantry.filter(livingSquad).sort((a,b)=>a.y-b.y);if(live.length<2)return{open:true,x:enemy.banner.x,y:300,size:300};let best={size:0,y:300};const edges=[70,...live.map(s=>s.y),530];for(let i=1;i<edges.length;i++){const size=edges[i]-edges[i-1];if(size>best.size)best={size,y:(edges[i]+edges[i-1])/2};}return{open:live.length<3||best.size>138,x:live.reduce((n,s)=>n+s.x,0)/live.length,y:best.y,size:best.size};}
+function threatNearBanner(state,army){return foe(state,army.side).infantry.some(s=>livingSquad(s)&&distance(s,army.banner)<150);}
 
-export function createCampaign(field = 'gules', ordinary = 'pale', seed = Date.now()) {
-  const s = normalizeSeed(seed);
-  return {
-    version: VERSION, seed: s, rng: s, battleIndex: 0, integrity: 3, victories: 0,
-    doctrine: emptyDoctrine(field, ordinary), phase: 'briefing', completed: false,
-    currentEnemy: null, currentSeed: null, lastResult: null, offers: [], revisionSlot: null
-  };
-}
+function applyMotto(state,army){if(!army.doctrine.motto||army.mottoUsed)return;const motto=army.doctrine.motto,enemy=foe(state,army.side);if(motto==='banner'&&threatNearBanner(state,army)){for(const s of army.infantry.filter(livingSquad).sort((a,b)=>distance(a,army.banner)-distance(b,army.banner)).slice(0,2)){s.state='defend-banner';s.targetSquadId=null;}army.mottoUsed=true;event(state,army.side,'motto','«Знамя прежде»: два отряда разворачиваются к древку.');}if(motto==='together'){const shaken=army.infantry.filter(s=>livingSquad(s)&&s.morale<.45);if(shaken.length>=2){const point={x:(shaken[0].x+shaken[1].x)/2,y:(shaken[0].y+shaken[1].y)/2};for(const s of shaken.slice(0,2)){s.state='join';s.goalX=point.x;s.goalY=point.y;}army.mottoUsed=true;event(state,army.side,'motto','«Стать вместе»: редеющие ряды сходятся в новую линию.');}}const gap=gapInfo(enemy);if(motto==='breach'&&gap.open){const reserve=army.infantry.find(s=>livingSquad(s)&&(s.reserve||s.index===3));if(reserve){reserve.reserve=false;reserve.state='breach';reserve.goalX=gap.x+SIDE_DIR[army.side]*110;reserve.goalY=gap.y;army.mottoUsed=true;event(state,army.side,'motto','«В пролом»: резерв устремляется между разорванными рядами.');}}if(motto==='volley'&&army.globalRetreat){for(const s of army.archers)for(const m of s.members)if(livingMember(m))m.cooldown=0;army.mottoUsed=true;event(state,army.side,'motto','«Последний залп»: лучники выпускают стрелы перед отходом.');}}
 
-export function hydrateCampaign(value) {
-  if (!value || value.version !== VERSION || !value.doctrine) return null;
-  const campaign = clone(value);
-  campaign.integrity = Math.max(0, Math.min(3, Number(campaign.integrity) || 0));
-  campaign.battleIndex = Math.max(0, Math.min(BATTLE_COUNT - 1, Number(campaign.battleIndex) || 0));
-  return campaign;
-}
+function chooseInfantryTarget(state,army,squad){const enemy=foe(state,army.side),live=enemy.infantry.filter(livingSquad);if(!live.length)return null;if(army.doctrine.field==='gules'&&squad.targetSquadId){const locked=squadById(state,squad.targetSquadId);if(locked&&livingSquad(locked))return locked;}if(army.doctrine.command==='crown'&&!squad.leader){const leader=army.infantry.find(s=>s.leader&&livingSquad(s));if(leader?.targetSquadId){const t=squadById(state,leader.targetSquadId);if(t&&livingSquad(t))return t;}}if(activeMain(army)==='lion'){const counts=new Map();for(const ally of army.infantry)if(ally.targetSquadId)counts.set(ally.targetSquadId,(counts.get(ally.targetSquadId)||0)+1);return[...live].sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||a.morale-b.morale||distance(squad,a)-distance(squad,b))[0];}if(army.doctrine.field==='azure')return[...live].sort((a,b)=>squadSupport(enemy,a)-squadSupport(enemy,b)||a.morale-b.morale||distance(squad,a)-distance(squad,b))[0];return nearest(live,squad);}
+function chooseArcherTarget(state,army,squad){const enemy=foe(state,army.side),live=enemy.infantry.filter(livingSquad);if(!live.length)return null;if(army.doctrine.secondary==='sun'){if(army.focusSquadId){const f=squadById(state,army.focusSquadId);if(f&&livingSquad(f))return f;}const f=[...live].sort((a,b)=>a.morale-b.morale||a.strength-b.strength)[0];army.focusSquadId=f.id;return f;}if(army.doctrine.secondary==='eagle')return[...live].sort((a,b)=>squadSupport(enemy,a)-squadSupport(enemy,b)||a.morale-b.morale)[0];const gap=gapInfo(enemy);if(army.doctrine.secondary==='key'&&gap.open)return[...live].sort((a,b)=>Math.abs(a.y-gap.y)-Math.abs(b.y-gap.y))[0];return nearest(live,squad);}
 
-export function doctrineLayers(doctrine) {
-  return ['field', 'ordinary', 'main', 'secondary', 'command', 'motto'].map((slot) => ({ slot, id: doctrine[slot], definition: doctrine[slot] ? CATALOGS[slot][doctrine[slot]] : null }));
-}
+function updateSquadMetrics(state,army,squad){const alive=squad.members.filter(livingMember),active=alive.filter(m=>m.state!=='rout');squad.strength=alive.length;if(active.length){squad.x=active.reduce((n,m)=>n+m.x,0)/active.length;squad.y=active.reduce((n,m)=>n+m.y,0)/active.length;}const avg=alive.length?alive.reduce((n,m)=>n+m.morale,0)/alive.length:0;const casualty=alive.length/squad.maxStrength;squad.morale=clamp(avg*.65+casualty*.35,0,1);const routing=alive.filter(m=>m.state==='rout').length;squad.broken=alive.length===0||(squad.type==='infantry'&&(active.length<2||squad.morale<.12||routing>alive.length*.66));if(squad.broken&&!squad.breakAnnounced){squad.breakAnnounced=true;event(state,army.side,'break',`Отряд ${squad.index+1} рассыпался на отдельных бегущих воинов.`);}}
+function updateArmyState(state,army){for(const s of allSquads(army))updateSquadMetrics(state,army,s);army.brokenCount=army.infantry.filter(s=>s.broken).length;if(army.brokenCount&&!army.crisis){army.crisis=true;event(state,army.side,'crisis','Первый отряд потерял строй: удержанные правила раскрыты.');}army.globalRetreat=army.brokenCount>=2;}
+function advanceFormCenter(squad,dt){const dx=squad.goalX-squad.formX,dy=squad.goalY-squad.formY,d=Math.hypot(dx,dy)||1;const speed=squad.type==='infantry'?(squad.state==='breach'?27:20):17;const step=Math.min(d,speed*dt);squad.formX+=dx/d*step;squad.formY+=dy/d*step;}
+function assignGoals(state,army,squad,dt){squad.rethink-=dt;if(squad.rethink>0)return;squad.rethink=army.doctrine.field==='azure'?.55:1.05;const enemy=foe(state,army.side),dir=SIDE_DIR[army.side];if(squad.broken){squad.state='rout';squad.goalX=army.banner.x-dir*25;squad.goalY=army.banner.y+(squad.index-1.5)*28;return;}if(squad.reserve){const trigger=army.crisis||enemy.infantry.some(s=>livingSquad(s)&&((army.side==='player'&&s.x<590)||(army.side==='enemy'&&s.x>410)));if(!trigger){squad.goalX=squad.homeX-dir*65;squad.goalY=squad.homeY;return;}squad.reserve=false;event(state,army.side,'field','Скрытый резерв вступает отдельными рядами.');}if(squad.type==='archer'){const target=chooseArcherTarget(state,army,squad);squad.targetSquadId=target?.id||null;if(army.doctrine.secondary==='rose'){const pair=squadById(state,squad.pairedId);if(pair&&livingSquad(pair)){squad.goalX=pair.formX-dir*105;squad.goalY=pair.formY;return;}}const gap=gapInfo(enemy);if(army.doctrine.secondary==='key'&&gap.open){squad.goalX=gap.x-dir*165;squad.goalY=gap.y;return;}if(army.doctrine.secondary==='eagle'){squad.goalX=squad.homeX+dir*Math.min(120,state.time*2.2);squad.goalY=squad.index<2?95+squad.index*62:505-(3-squad.index)*62;return;}const front=army.infantry[squad.index];squad.goalX=(front?.formX??squad.homeX)-dir*105;squad.goalY=front?.formY??squad.homeY;return;}if(squad.state==='defend-banner'){squad.goalX=army.banner.x+dir*65;squad.goalY=army.banner.y+(squad.index-1.5)*28;if(distance(squad,army.banner)<90)squad.state='advance';return;}if(squad.state==='join'&&distance(squad,{x:squad.goalX,y:squad.goalY})<38){squad.state='advance';for(const m of squad.members)if(livingMember(m))m.morale=Math.min(1,m.morale+.16);}if(activeMain(army)==='stag'){const localEnemy=enemy.infantry.filter(s=>livingSquad(s)&&distance(s,squad)<110).length;if(localEnemy>squadSupport(army,squad,115)+1){const ally=nearest(army.infantry,squad,s=>s!==squad&&livingSquad(s));if(ally){squad.goalX=ally.formX-dir*48;squad.goalY=ally.formY;squad.lastRule='main';return;}}}const gap=gapInfo(enemy);if((activeMain(army)==='boar'||squad.state==='breach')&&gap.open){squad.goalX=gap.x+dir*120;squad.goalY=gap.y;squad.lastRule=squad.state==='breach'?'motto':'main';return;}if(army.doctrine.field==='argent'){const ally=nearest(army.infantry,squad,s=>s!==squad&&livingSquad(s));if(ally&&distance(ally,squad)>155){squad.goalX=ally.formX-dir*30;squad.goalY=ally.formY;squad.lastRule='field';return;}}const target=chooseInfantryTarget(state,army,squad);squad.targetSquadId=target?.id||null;if(!target){squad.goalX=enemy.banner.x-dir*35;squad.goalY=enemy.banner.y;return;}let ty=target.y;if(army.doctrine.command==='helmet'&&state.time<20){const axis=army.doctrine.axis==='left'?165:army.doctrine.axis==='right'?435:300;ty=axis*.7+target.y*.3;squad.lastRule='command';}squad.goalX=target.x-dir*30;squad.goalY=ty;}
 
-export function doctrineName(doctrine) {
-  const main = doctrine.main ? MAINS[doctrine.main].name : 'Безымянное знамя';
-  const field = FIELDS[doctrine.field]?.epithet || '';
-  return `${main} · ${field}`;
-}
+function formationSlot(squad,member,aliveIndex,aliveCount){const dir=SIDE_DIR[squad.side],inf=squad.type==='infantry';let rows=inf?4:2;if(squad.state==='rout')rows=inf?3:2;const depth=Math.floor(aliveIndex/rows),lane=aliveIndex%rows;let lateral=(lane-(Math.min(rows,aliveCount)-1)/2)*(inf?13.5:19);let forward=(depth-(Math.ceil(aliveCount/rows)-1)/2)*(inf?13.5:18)*dir;if(squad.state==='breach'){lateral*=.72;forward+=(Math.abs(lane-(rows-1)/2)*-5)*dir;}if(squad.doctrineField==='argent')lateral*=.88;return{x:squad.formX+forward,y:squad.formY+lateral};}
+function steer(member,target,maxSpeed,dt){const dx=target.x-member.x,dy=target.y-member.y,d=Math.hypot(dx,dy)||1;const desiredX=dx/d*maxSpeed,desiredY=dy/d*maxSpeed;const accel=7.5;member.vx+=(desiredX-member.vx)*Math.min(1,accel*dt);member.vy+=(desiredY-member.vy)*Math.min(1,accel*dt);member.x+=member.vx*dt;member.y+=member.vy*dt;member.facing=Math.abs(member.vx)>.3?Math.sign(member.vx):member.facing;}
+function separation(member,allies){let sx=0,sy=0;for(const other of allies){if(other===member||!combatMember(other))continue;const dx=member.x-other.x,dy=member.y-other.y,d2=dx*dx+dy*dy;if(d2>0&&d2<115){const d=Math.sqrt(d2),f=(10.7-d)/10.7;sx+=dx/d*f;sy+=dy/d*f;}}member.vx+=sx*.75;member.vy+=sy*.75;}
+function nearestEnemyMember(enemy,member,max=Infinity){return nearest(allMembers(enemy),member,m=>combatMember(m)&&distance(m,member)<=max);}
+function killMember(state,target,attackerSide){if(target.state==='fallen')return;target.hp=0;target.state='fallen';target.vx=0;target.vy=0;target.fallenAt=state.time;state.effects.push({type:'fall',x:target.x,y:target.y,side:target.side,life:1.2});state.impact=Math.min(1,state.impact+.16);if(rand(state)<.12)event(state,attackerSide,'casualty','Воин пал в разрыве строя.');}
+function melee(state,member,target,dt){member.cooldown-=dt;if(distance(member,target)>12.5){steer(member,target,23,dt);return;}member.vx*=.68;member.vy*=.68;member.state='fighting';member.facing=Math.sign(target.x-member.x)||member.facing;if(member.cooldown<=0){const fatigue=1+Math.max(0,state.time-48)/75;const damage=(.050+rand(state)*.030)*fatigue;target.hp-=damage;target.morale-=(.010+rand(state)*.010)*fatigue;target.hitFlash=.18;const dx=target.x-member.x,dy=target.y-member.y,d=Math.hypot(dx,dy)||1;target.vx+=dx/d*5.5;target.vy+=dy/d*5.5;member.cooldown=.74+rand(state)*.30;state.effects.push({type:'hit',x:(member.x+target.x)/2,y:(member.y+target.y)/2,life:.22});state.impact=Math.min(1,state.impact+.035);if(target.hp<=0)killMember(state,target,member.side);}}
+function updateInfantryMember(state,army,squad,member,slot,allies,dt){if(!livingMember(member))return;member.hitFlash=Math.max(0,member.hitFlash-dt);member.phase+=dt*(4+Math.hypot(member.vx,member.vy)*.07);if(squad.broken||member.morale<.09){member.state='rout';const offset=(member.index-(squad.maxStrength-1)/2)*7;steer(member,{x:army.banner.x-SIDE_DIR[army.side]*35,y:army.banner.y+offset},27,dt);member.morale=Math.min(.35,member.morale+.018*dt);return;}const enemy=foe(state,army.side);const local=nearestEnemyMember(enemy,member,35);if(local){melee(state,member,local,dt);separation(member,allies);return;}member.state='forming';steer(member,slot,squad.state==='breach'?27:21,dt);separation(member,allies);}
+function fireArrow(state,member,target){const duration=clamp(distance(member,target)/260,.36,.9);state.arrows.push({side:member.side,x1:member.x,y1:member.y-7,x2:target.x,y2:target.y-5,targetId:target.id,life:duration,duration});member.cooldown=1.65+rand(state)*.55;member.state='shooting';}
+function updateArcherMember(state,army,squad,member,slot,allies,dt){if(!livingMember(member))return;member.hitFlash=Math.max(0,member.hitFlash-dt);member.cooldown-=dt;member.phase+=dt*(3+Math.hypot(member.vx,member.vy)*.06);if(squad.broken||member.morale<.08){member.state='rout';steer(member,{x:army.banner.x-SIDE_DIR[army.side]*45,y:army.banner.y+(member.index-1.5)*10},26,dt);return;}const enemy=foe(state,army.side),threat=nearestEnemyMember(enemy,member,70);if(threat){member.state='evade';steer(member,{x:member.x-SIDE_DIR[army.side]*80,y:clamp(member.y+(member.y<threat.y?-35:35),50,550)},25,dt);member.morale-=.018*dt;separation(member,allies);return;}const targetSquad=squadById(state,squad.targetSquadId);let target=null;if(targetSquad)target=nearest(targetSquad.members,member,m=>combatMember(m)&&distance(m,member)<300);if(target&&member.cooldown<=0)fireArrow(state,member,target);else if(!target||distance(member,slot)>22){member.state='forming';steer(member,slot,18,dt);}else{member.vx*=.84;member.vy*=.84;}separation(member,allies);}
+function updateSquadMembers(state,army,squad,dt){advanceFormCenter(squad,dt);const alive=squad.members.filter(combatMember);squad.doctrineField=army.doctrine.field;for(let i=0;i<alive.length;i++){const m=alive[i],slot=formationSlot(squad,m,i,alive.length);m.slotX=slot.x;m.slotY=slot.y;if(squad.type==='infantry')updateInfantryMember(state,army,squad,m,slot,allMembers(army),dt);else updateArcherMember(state,army,squad,m,slot,allMembers(army),dt);}if(activeMain(army)==='tower'&&squad.type==='infantry'&&!squad.anchor&&state.time>8&&distance(squad,{x:squad.homeX,y:squad.homeY})>42){squad.holdTime+=dt;if(squad.holdTime>2.2){squad.anchor={x:squad.x,y:squad.y};event(state,army.side,'main','Башня закрепила место, вокруг которого воины могут снова сомкнуться.');}}}
+function updateArrows(state,dt){for(const arrow of state.arrows){arrow.life-=dt;if(arrow.life<=0&&!arrow.resolved){arrow.resolved=true;const target=memberById(state,arrow.targetId);if(target&&combatMember(target)){const fatigue=1+Math.max(0,state.time-50)/85;target.hp-=(.038+rand(state)*.028)*fatigue;target.morale-=(.008+rand(state)*.008)*fatigue;target.hitFlash=.15;state.effects.push({type:'arrow-hit',x:target.x,y:target.y,life:.24});if(target.hp<=0)killMember(state,target,arrow.side);}}}state.arrows=state.arrows.filter(a=>a.life>-.05);}
+function updateEffects(state,dt){for(const e of state.effects)e.life-=dt;state.effects=state.effects.filter(e=>e.life>0);state.impact=Math.max(0,state.impact-dt*.7);}
+function updateCapture(state,attackers,defenders,dt){const atk=attackers.infantry.flatMap(s=>s.members).filter(m=>combatMember(m)&&distance(m,defenders.banner)<48);const def=defenders.infantry.flatMap(s=>s.members).filter(m=>combatMember(m)&&distance(m,defenders.banner)<105);if(atk.length&&!def.length)defenders.banner.capture+=dt*(.75+atk.length*.08);else defenders.banner.capture=Math.max(0,defenders.banner.capture-dt*.65);}
 
-export function nextUpgradeSlot(campaign) {
-  if (campaign.battleIndex >= 1 && campaign.battleIndex <= SLOT_ORDER.length) return SLOT_ORDER[campaign.battleIndex - 1];
-  if (campaign.battleIndex === 5) return 'revision';
-  return null;
-}
-
-export function generateOffers(campaign) {
-  const state = campaign;
-  const slot = nextUpgradeSlot(campaign);
-  if (!slot) return [];
-  if (slot !== 'revision') {
-    const ids = Object.keys(CATALOGS[slot]);
-    return shuffled(state, ids).slice(0, 3).map((id) => ({ slot, id, definition: CATALOGS[slot][id], replaces: campaign.doctrine[slot] || null }));
-  }
-  const replaceable = ['field', 'ordinary', 'main', 'secondary'].filter((key) => campaign.doctrine[key]);
-  const candidates = [];
-  for (const key of shuffled(state, replaceable)) {
-    const alternatives = shuffled(state, Object.keys(CATALOGS[key]).filter((id) => id !== campaign.doctrine[key]));
-    if (alternatives[0]) candidates.push({ slot: key, id: alternatives[0], definition: CATALOGS[key][alternatives[0]], replaces: campaign.doctrine[key], revision: true });
-    if (candidates.length >= 3) break;
-  }
-  return candidates;
-}
-
-export function applyOffer(campaign, offer) {
-  const next = clone(campaign);
-  next.doctrine[offer.slot] = offer.id;
-  next.offers = [];
-  next.phase = 'briefing';
-  next.lastResult = null;
-  return next;
-}
-
-function doctrineForStage(state, stage) {
-  const doctrine = emptyDoctrine(pick(state, Object.keys(FIELDS)), pick(state, Object.keys(ORDINARIES)));
-  if (stage >= 1) doctrine.main = pick(state, Object.keys(MAINS));
-  if (stage >= 2) doctrine.secondary = pick(state, Object.keys(SECONDARIES));
-  if (stage >= 3) doctrine.command = pick(state, Object.keys(COMMANDS));
-  if (stage >= 4) doctrine.motto = pick(state, Object.keys(MOTTOS));
-  doctrine.axis = pick(state, ['left', 'center', 'right']);
-  return doctrine;
-}
-
-export function prepareBattle(campaign) {
-  const next = clone(campaign);
-  if (!next.currentEnemy) next.currentEnemy = doctrineForStage(next, next.battleIndex);
-  if (!next.currentSeed) next.currentSeed = (next.seed ^ Math.imul(next.battleIndex + 1, 0x9e3779b9)) >>> 0;
-  next.phase = 'briefing';
-  return next;
-}
-
-export function recordBattle(campaign, result) {
-  const next = clone(campaign);
-  next.lastResult = clone(result);
-  next.currentEnemy = null;
-  next.currentSeed = null;
-  if (result.winner === 'player') next.victories += 1;
-  else next.integrity -= 1;
-  if (next.integrity <= 0 || next.battleIndex >= BATTLE_COUNT - 1) {
-    next.completed = true;
-    next.phase = 'ending';
-    return next;
-  }
-  next.battleIndex += 1;
-  next.phase = 'reward';
-  next.offers = generateOffers(next);
-  return next;
-}
-
-const FIELD_W = 1000;
-const FIELD_H = 600;
-const SIDE_SIGN = { player: 1, enemy: -1 };
-
-function formationPositions(side, ordinary) {
-  const dir = SIDE_SIGN[side];
-  const baseX = side === 'player' ? 235 : 765;
-  const ys = [150, 250, 350, 450];
-  let xs;
-  switch (ordinary) {
-    case 'pale': xs = [baseX + dir * 34, baseX + dir * 2, baseX - dir * 30, baseX - dir * 62]; break;
-    case 'fess': xs = [baseX + dir * 20, baseX + dir * 20, baseX - dir * 25, baseX - dir * 25]; break;
-    case 'bend': xs = [baseX + dir * 54, baseX + dir * 18, baseX - dir * 18, baseX - dir * 54]; break;
-    case 'chevron': xs = [baseX + dir * 44, baseX - dir * 18, baseX - dir * 18, baseX + dir * 44]; break;
-    default: xs = [baseX, baseX, baseX, baseX];
-  }
-  return ys.map((y, i) => ({ x: xs[i], y }));
-}
-
-function createArmy(side, doctrine) {
-  const positions = formationPositions(side, doctrine.ordinary);
-  const dir = SIDE_SIGN[side];
-  const infantry = positions.map((p, i) => ({
-    id: `${side}-i${i}`, side, type: 'infantry', index: i, x: p.x, y: p.y, homeX: p.x, homeY: p.y,
-    strength: 8, morale: 1, state: 'advance', targetId: null, lockedTarget: null, anchor: null,
-    cooldown: 0, retarget: 0, rally: 0, breach: false, leader: i === 1, reserve: doctrine.field === 'sable' && i === 3,
-    lastRule: 'ordinary'
-  }));
-  const archers = positions.map((p, i) => ({
-    id: `${side}-a${i}`, side, type: 'archer', index: i, x: p.x - dir * 88, y: p.y, homeX: p.x - dir * 88, homeY: p.y,
-    strength: 4, morale: 1, state: 'support', targetId: null, cooldown: 0.4 + i * 0.25, retarget: 0,
-    reserve: doctrine.field === 'sable' && i === 3, pairedId: `${side}-i${i}`, lastRule: 'ordinary'
-  }));
-  return { side, doctrine: clone(doctrine), infantry, archers, banner: { x: side === 'player' ? 105 : 895, y: 300, capture: 0 }, brokenCount: 0, mottoUsed: false, crisis: false };
-}
-
-export function createBattleState(playerDoctrine, enemyDoctrine, seed = 1) {
-  const state = {
-    version: 1, rng: normalizeSeed(seed), time: 0, status: 'running', winner: null,
-    player: createArmy('player', playerDoctrine), enemy: createArmy('enemy', enemyDoctrine),
-    events: [], arrows: [], decisive: [], globalRetreat: { player: false, enemy: false }
-  };
-  event(state, 'both', 'deployment', 'Знамёна подняты. Доктрины вступили в силу.');
-  return state;
-}
-
-function event(state, side, rule, text) {
-  const item = { time: state.time, side, rule, text };
-  state.events.push(item);
-  if (rule !== 'movement' && state.decisive.length < 8) state.decisive.push(item);
-}
-function enemyArmy(state, side) { return side === 'player' ? state.enemy : state.player; }
-function ownArmy(state, side) { return side === 'player' ? state.player : state.enemy; }
-function living(squad) { return squad.strength > 0.15 && squad.morale > 0.05; }
-function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-function moveToward(squad, target, speed, dt) {
-  const dx = target.x - squad.x, dy = target.y - squad.y, d = Math.hypot(dx, dy) || 1;
-  squad.x += dx / d * Math.min(d, speed * dt); squad.y += dy / d * Math.min(d, speed * dt);
-}
-function nearest(list, source, predicate = living) {
-  let best = null, bestD = Infinity;
-  for (const item of list) { if (!predicate(item)) continue; const d = dist(source, item); if (d < bestD) { best = item; bestD = d; } }
-  return best;
-}
-function findById(state, id) {
-  for (const army of [state.player, state.enemy]) for (const squad of [...army.infantry, ...army.archers]) if (squad.id === id) return squad;
-  return null;
-}
-function activeMain(army) { return army.doctrine.main && !(army.doctrine.command === 'chain' && !army.crisis) ? army.doctrine.main : null; }
-function threatNearBanner(state, army) { return enemyArmy(state, army.side).infantry.some((s) => living(s) && dist(s, army.banner) < 150); }
-function gapExists(enemy) {
-  const live = enemy.infantry.filter(living).sort((a, b) => a.y - b.y);
-  if (live.length < 3) return true;
-  for (let i = 1; i < live.length; i++) if (Math.abs(live[i].y - live[i - 1].y) > 135) return true;
-  return false;
-}
-function gapPoint(enemy) {
-  const live = enemy.infantry.filter(living).sort((a, b) => a.y - b.y);
-  if (live.length < 2) return { x: enemy.banner.x, y: 300 };
-  let best = { size: 0, y: 300 };
-  const bounds = [75, ...live.map((s) => s.y), 525];
-  for (let i = 1; i < bounds.length; i++) { const size = bounds[i] - bounds[i - 1]; if (size > best.size) best = { size, y: (bounds[i] + bounds[i - 1]) / 2 }; }
-  const frontline = live.reduce((sum, s) => sum + s.x, 0) / live.length;
-  return { x: frontline, y: best.y };
-}
-function supportCount(army, squad, radius = 125) { return army.infantry.filter((s) => s !== squad && living(s) && dist(s, squad) < radius).length; }
-function nearbyEnemies(enemy, squad, radius = 95) { return enemy.infantry.filter((s) => living(s) && dist(s, squad) < radius).length; }
-
-function applyMotto(state, army) {
-  if (!army.doctrine.motto || army.mottoUsed) return;
-  const motto = army.doctrine.motto;
-  if (motto === 'banner' && threatNearBanner(state, army)) {
-    const defenders = army.infantry.filter(living).sort((a, b) => dist(a, army.banner) - dist(b, army.banner)).slice(0, 2);
-    for (const s of defenders) { s.state = 'defend-banner'; s.targetId = null; s.lastRule = 'motto'; }
-    army.mottoUsed = true; event(state, army.side, 'motto', '«Знамя прежде»: два отряда возвращаются к знамени.');
-  }
-  if (motto === 'together') {
-    const shaken = army.infantry.filter((s) => living(s) && s.morale < 0.38);
-    if (shaken.length >= 2) {
-      const point = { x: (shaken[0].x + shaken[1].x) / 2, y: (shaken[0].y + shaken[1].y) / 2 };
-      for (const s of shaken.slice(0, 2)) { s.state = 'join'; s.joinPoint = point; s.lastRule = 'motto'; }
-      army.mottoUsed = true; event(state, army.side, 'motto', '«Стать вместе»: пошатнувшиеся отряды сходятся в новую линию.');
-    }
-  }
-  if (motto === 'breach' && gapExists(enemyArmy(state, army.side))) {
-    const reserve = army.infantry.find((s) => living(s) && (s.reserve || s.index === 3));
-    if (reserve) {
-      reserve.reserve = false; reserve.state = 'breach'; reserve.breachPoint = gapPoint(enemyArmy(state, army.side)); reserve.lastRule = 'motto';
-      army.mottoUsed = true; event(state, army.side, 'motto', '«В пролом»: резерв направлен в разрыв строя.');
-    }
-  }
-  if (motto === 'volley' && state.globalRetreat[army.side]) {
-    for (const a of army.archers.filter(living)) a.cooldown = 0;
-    army.mottoUsed = true; event(state, army.side, 'motto', '«Последний залп»: лучники стреляют перед отходом.');
-  }
-}
-
-function chooseInfantryTarget(state, army, squad) {
-  const enemy = enemyArmy(state, army.side);
-  const doctrine = army.doctrine;
-  if (squad.state === 'defend-banner') return nearest(enemy.infantry, squad);
-  if (doctrine.field === 'gules' && squad.lockedTarget) {
-    const locked = findById(state, squad.lockedTarget); if (locked && living(locked)) return locked;
-  }
-  if (doctrine.command === 'crown' && !squad.leader) {
-    const leader = army.infantry.find((s) => s.leader && living(s));
-    if (leader?.targetId) { const target = findById(state, leader.targetId); if (target && living(target)) return target; }
-  }
-  if (activeMain(army) === 'lion') {
-    const allyTargetCounts = new Map();
-    for (const ally of army.infantry) if (ally.targetId) allyTargetCounts.set(ally.targetId, (allyTargetCounts.get(ally.targetId) || 0) + 1);
-    const focused = [...enemy.infantry].filter(living).sort((a, b) => (allyTargetCounts.get(b.id) || 0) - (allyTargetCounts.get(a.id) || 0) || dist(squad, a) - dist(squad, b))[0];
-    if (focused) return focused;
-  }
-  if (doctrine.field === 'azure') {
-    return [...enemy.infantry].filter(living).sort((a, b) => (supportCount(enemy, a) - supportCount(enemy, b)) || dist(squad, a) - dist(squad, b))[0] || null;
-  }
-  return nearest(enemy.infantry, squad);
-}
-
-function updateInfantry(state, army, squad, dt) {
-  if (!living(squad)) return;
-  const enemy = enemyArmy(state, army.side);
-  const doctrine = army.doctrine;
-  const dir = SIDE_SIGN[army.side];
-  squad.cooldown -= dt; squad.retarget -= dt;
-  if (squad.reserve) {
-    const trigger = enemy.infantry.some((s) => living(s) && ((army.side === 'player' && s.x < 570) || (army.side === 'enemy' && s.x > 430))) || army.crisis;
-    if (!trigger) { moveToward(squad, { x: squad.homeX - dir * 55, y: squad.homeY }, 13, dt); squad.lastRule = 'field'; return; }
-    squad.reserve = false; event(state, army.side, 'field', 'Скрытый резерв вступил в бой.');
-  }
-  if (squad.state === 'defend-banner') {
-    moveToward(squad, army.banner, 24, dt);
-    if (dist(squad, army.banner) < 70) squad.state = 'advance';
-    return;
-  }
-  if (squad.state === 'join' && squad.joinPoint) {
-    moveToward(squad, squad.joinPoint, 20, dt);
-    if (dist(squad, squad.joinPoint) < 20) { squad.morale = Math.min(0.65, squad.morale + 0.18); squad.state = 'advance'; }
-    return;
-  }
-  if (squad.state === 'rout') {
-    const rallyTarget = activeMain(army) === 'tower' && squad.anchor ? squad.anchor : army.banner;
-    moveToward(squad, rallyTarget, 28, dt);
-    if (dist(squad, rallyTarget) < 55) { squad.rally += dt; if (squad.rally > 3.2) { squad.morale = 0.34; squad.state = 'advance'; squad.rally = 0; event(state, army.side, 'recovery', 'Разбитый отряд собрался под знаком герба.'); } }
-    return;
-  }
-  if (activeMain(army) === 'stag' && nearbyEnemies(enemy, squad, 95) > supportCount(army, squad, 105) + 1) {
-    const ally = nearest(army.infantry, squad, (s) => s !== squad && living(s));
-    if (ally) { moveToward(squad, { x: ally.x - dir * 35, y: ally.y }, 22, dt); squad.lastRule = 'main'; return; }
-  }
-  if ((activeMain(army) === 'boar' || squad.state === 'breach') && gapExists(enemy)) {
-    const gp = squad.breachPoint || gapPoint(enemy);
-    moveToward(squad, { x: gp.x + dir * 80, y: gp.y }, 22, dt); squad.lastRule = squad.state === 'breach' ? 'motto' : 'main';
-    if ((army.side === 'player' && squad.x > gp.x + 45) || (army.side === 'enemy' && squad.x < gp.x - 45)) moveToward(squad, enemy.banner, 24, dt);
-  }
-  if (doctrine.field === 'argent') {
-    const ally = nearest(army.infantry, squad, (s) => s !== squad && living(s));
-    if (ally && dist(ally, squad) > 150) { moveToward(squad, ally, 17, dt); squad.lastRule = 'field'; return; }
-  }
-  let target = squad.targetId ? findById(state, squad.targetId) : null;
-  if (!target || !living(target) || squad.retarget <= 0) {
-    target = chooseInfantryTarget(state, army, squad);
-    squad.targetId = target?.id || null; squad.retarget = doctrine.field === 'azure' ? 1.2 : 2.8;
-    if (doctrine.field === 'gules' && target) squad.lockedTarget = target.id;
-  }
-  if (!target) { moveToward(squad, enemy.banner, 18, dt); return; }
-  const d = dist(squad, target);
-  if (d > 42) {
-    let destination = target;
-    if (doctrine.command === 'helmet' && state.time < 20) {
-      const axisY = doctrine.axis === 'left' ? 170 : doctrine.axis === 'right' ? 430 : 300;
-      destination = { x: target.x, y: axisY * 0.65 + target.y * 0.35 }; squad.lastRule = 'command';
-    }
-    moveToward(squad, destination, 20, dt);
-  } else if (squad.cooldown <= 0) {
-    const fatigue = 1 + Math.max(0, state.time - 50) / 30;
-    const power = 0.0038 * squad.strength * (0.65 + squad.morale * 0.35) * fatigue;
-    target.morale -= power;
-    if (rand(state) < 0.18 + squad.strength * 0.006) target.strength -= 0.28 + rand(state) * 0.22;
-    squad.cooldown = 0.62;
-    squad.morale = Math.min(1, squad.morale + 0.008);
-  }
-  if (activeMain(army) === 'tower' && !squad.anchor && state.time > 8 && dist(squad, { x: squad.homeX, y: squad.homeY }) > 45) {
-    squad.anchor = { x: squad.x, y: squad.y }; event(state, army.side, 'main', 'Башня закрепила новую точку сбора.');
-  }
-}
-
-function clearShot(army, archer, target) {
-  for (const ally of army.infantry) {
-    if (!living(ally)) continue;
-    const total = dist(archer, target);
-    const d1 = dist(archer, ally), d2 = dist(ally, target);
-    if (Math.abs((d1 + d2) - total) < 30 && d1 < total) return false;
-  }
-  return true;
-}
-function chooseArcherTarget(state, army, archer) {
-  const enemy = enemyArmy(state, army.side);
-  let candidates = enemy.infantry.filter((s) => living(s) && dist(archer, s) < 285 && clearShot(army, archer, s));
-  if (!candidates.length) return null;
-  const secondary = army.doctrine.secondary;
-  if (secondary === 'sun') return candidates.sort((a, b) => a.morale - b.morale || a.strength - b.strength)[0];
-  if (secondary === 'eagle') return candidates.sort((a, b) => supportCount(enemy, a) - supportCount(enemy, b) || a.morale - b.morale)[0];
-  if (secondary === 'key' && gapExists(enemy)) {
-    const gp = gapPoint(enemy); return candidates.sort((a, b) => Math.abs(a.y - gp.y) - Math.abs(b.y - gp.y))[0];
-  }
-  return candidates.sort((a, b) => dist(archer, a) - dist(archer, b))[0];
-}
-function updateArcher(state, army, archer, dt) {
-  if (!living(archer)) return;
-  const enemy = enemyArmy(state, army.side);
-  const dir = SIDE_SIGN[army.side];
-  archer.cooldown -= dt; archer.retarget -= dt;
-  if (archer.reserve) {
-    if (!army.crisis && !gapExists(enemy)) { moveToward(archer, { x: archer.homeX - dir * 40, y: archer.homeY }, 12, dt); return; }
-    archer.reserve = false;
-  }
-  const close = nearest(enemy.infantry, archer);
-  if (close && dist(close, archer) < 72) {
-    moveToward(archer, { x: archer.x - dir * 90, y: clamp(archer.y + (archer.y < close.y ? -40 : 40), 55, 545) }, 25, dt);
-    archer.morale -= 0.015 * dt; archer.lastRule = 'base'; return;
-  }
-  if (army.doctrine.secondary === 'rose') {
-    const pair = findById(state, archer.pairedId);
-    if (pair && living(pair)) {
-      const desired = { x: pair.x - dir * 95, y: pair.y };
-      if (dist(archer, desired) > 34) { moveToward(archer, desired, 17, dt); archer.lastRule = 'secondary'; }
-    }
-  } else if (army.doctrine.secondary === 'eagle') {
-    const target = chooseArcherTarget(state, army, archer);
-    if (!target) {
-      const flankY = archer.index < 2 ? 80 + archer.index * 55 : 520 - (3 - archer.index) * 55;
-      moveToward(archer, { x: archer.x + dir * 6, y: flankY }, 14, dt); archer.lastRule = 'secondary';
-    }
-  } else if (army.doctrine.secondary === 'key' && gapExists(enemy)) {
-    const gp = gapPoint(enemy); moveToward(archer, { x: gp.x - dir * 150, y: gp.y }, 16, dt); archer.lastRule = 'secondary';
-  }
-  let target = archer.targetId ? findById(state, archer.targetId) : null;
-  if (!target || !living(target) || archer.retarget <= 0 || !clearShot(army, archer, target)) {
-    target = chooseArcherTarget(state, army, archer); archer.targetId = target?.id || null; archer.retarget = army.doctrine.secondary === 'eagle' ? 0.9 : 1.6;
-  }
-  if (target && archer.cooldown <= 0) {
-    const fatigue = 1 + Math.max(0, state.time - 50) / 35;
-    target.morale -= 0.0042 * archer.strength * fatigue;
-    if (rand(state) < 0.11 + archer.strength * 0.008) target.strength -= 0.18 + rand(state) * 0.15;
-    archer.cooldown = 1.65;
-    state.arrows.push({ side: army.side, x1: archer.x, y1: archer.y, x2: target.x, y2: target.y, life: 0.34 });
-  }
-}
-
-function resolveMorale(state, army) {
-  let broken = 0;
-  for (const s of army.infantry) {
-    s.strength = clamp(s.strength, 0, 8); s.morale = clamp(s.morale, 0, 1);
-    if (s.strength <= 0.2 || s.morale <= 0.08) {
-      broken++;
-      if (s.state !== 'rout' && s.strength > 0.2) { s.state = 'rout'; s.targetId = null; s.lockedTarget = null; s.rally = 0; event(state, army.side, 'break', `Отряд ${s.index + 1} потерял строй.`); }
-    }
-  }
-  army.brokenCount = broken;
-  if (broken > 0 && !army.crisis) { army.crisis = true; event(state, army.side, 'crisis', 'Первый кризис раскрыл удержанные правила доктрины.'); }
-  if (broken >= 2) state.globalRetreat[army.side] = true;
-}
-function updateCapture(state, army, enemy, dt) {
-  const attackers = army.infantry.filter((s) => living(s) && s.state !== 'rout' && dist(s, enemy.banner) < 48);
-  const defenders = enemy.infantry.filter((s) => living(s) && s.state !== 'rout' && dist(s, enemy.banner) < 105);
-  if (attackers.length && !defenders.length) enemy.banner.capture += dt;
-  else enemy.banner.capture = Math.max(0, enemy.banner.capture - dt * 0.7);
-}
-
-export function stepBattle(state, dt = 0.1) {
-  if (!state || state.status !== 'running') return state;
-  dt = Math.min(0.2, Math.max(0.02, dt)); state.time += dt;
-  for (const army of [state.player, state.enemy]) applyMotto(state, army);
-  for (const army of [state.player, state.enemy]) {
-    for (const squad of army.infantry) updateInfantry(state, army, squad, dt);
-    for (const archer of army.archers) updateArcher(state, army, archer, dt);
-  }
-  for (const arrow of state.arrows) arrow.life -= dt;
-  state.arrows = state.arrows.filter((a) => a.life > 0);
-  resolveMorale(state, state.player); resolveMorale(state, state.enemy);
-  updateCapture(state, state.player, state.enemy, dt); updateCapture(state, state.enemy, state.player, dt);
-  let winner = null;
-  if (state.enemy.banner.capture >= 3 || state.enemy.brokenCount >= 3) winner = 'player';
-  if (state.player.banner.capture >= 3 || state.player.brokenCount >= 3) winner = winner ? (state.player.banner.capture < state.enemy.banner.capture ? 'player' : 'enemy') : 'enemy';
-  if (!winner && state.time >= 95) {
-    const p = state.player.infantry.reduce((s, q) => s + q.strength * q.morale, 0) + (3 - state.player.banner.capture);
-    const e = state.enemy.infantry.reduce((s, q) => s + q.strength * q.morale, 0) + (3 - state.enemy.banner.capture);
-    winner = p >= e ? 'player' : 'enemy';
-  }
-  if (winner) { state.status = 'finished'; state.winner = winner; event(state, winner, 'victory', winner === 'player' ? 'Вражеский строй окончательно разрушен.' : 'Твой строй окончательно разрушен.'); }
-  return state;
-}
-
-export function simulateBattle(playerDoctrine, enemyDoctrine, seed = 1, maxSeconds = 100) {
-  const state = createBattleState(playerDoctrine, enemyDoctrine, seed);
-  while (state.status === 'running' && state.time < maxSeconds) stepBattle(state, 0.1);
-  return summarizeBattle(state);
-}
-
-export function summarizeBattle(state) {
-  const squadScore = (army) => army.infantry.reduce((sum, s) => sum + Math.max(0, s.strength) * Math.max(0, s.morale), 0);
-  return {
-    winner: state.winner, duration: Math.round(state.time * 10) / 10,
-    playerRemaining: Math.round(squadScore(state.player) * 10) / 10,
-    enemyRemaining: Math.round(squadScore(state.enemy) * 10) / 10,
-    playerBroken: state.player.brokenCount, enemyBroken: state.enemy.brokenCount,
-    events: state.events.slice(-18), decisive: state.decisive.slice(-5), seed: state.rng
-  };
-}
-
-export function randomDoctrine(seed = 1, completeness = 4) {
-  const state = { rng: normalizeSeed(seed) };
-  return doctrineForStage(state, completeness);
-}
-
-export function botAudit(iterations = 100, seed = 1) {
-  const results = { player: 0, enemy: 0, averageDuration: 0, timeouts: 0 };
-  for (let i = 0; i < iterations; i++) {
-    const a = randomDoctrine(seed + i * 31, 4); const b = randomDoctrine(seed + i * 31 + 7, 4);
-    const r1 = simulateBattle(a, b, seed + i * 97); const r2 = simulateBattle(b, a, seed + i * 97);
-    results[r1.winner]++; results[r2.winner]++;
-    results.averageDuration += r1.duration + r2.duration;
-    if (r1.duration >= 95) results.timeouts++;
-    if (r2.duration >= 95) results.timeouts++;
-  }
-  results.averageDuration = Math.round(results.averageDuration / (iterations * 2) * 10) / 10;
-  return results;
-}
+export function stepBattle(state,dt=.05){if(!state||state.status!=='running')return state;dt=clamp(dt,.02,.12);state.time+=dt;for(const army of[state.player,state.enemy])applyMotto(state,army);for(const army of[state.player,state.enemy])for(const squad of allSquads(army))assignGoals(state,army,squad,dt);for(const army of[state.player,state.enemy])for(const squad of allSquads(army))updateSquadMembers(state,army,squad,dt);updateArrows(state,dt);updateEffects(state,dt);updateArmyState(state,state.player);updateArmyState(state,state.enemy);updateCapture(state,state.player,state.enemy,dt);updateCapture(state,state.enemy,state.player,dt);let winner=null;if(state.enemy.banner.capture>=3||state.enemy.brokenCount>=3)winner='player';if(state.player.banner.capture>=3||state.player.brokenCount>=3)winner=winner?(state.player.banner.capture<state.enemy.banner.capture?'player':'enemy'):'enemy';if(!winner&&state.time>=100){const score=a=>allMembers(a).filter(livingMember).reduce((n,m)=>n+m.hp*(.5+.5*m.morale),0)+(3-a.banner.capture)*2;winner=score(state.player)>=score(state.enemy)?'player':'enemy';}if(winner){state.status='finished';state.winner=winner;event(state,winner,'victory',winner==='player'?'Вражеская линия рассыпалась между отдельными схватками.':'Твоя линия рассыпалась между отдельными схватками.');}return state;}
+export function summarizeBattle(state){const remaining=a=>allMembers(a).filter(livingMember).length;return{winner:state.winner,duration:Math.round(state.time*10)/10,playerRemaining:remaining(state.player),enemyRemaining:remaining(state.enemy),playerBroken:state.player.brokenCount,enemyBroken:state.enemy.brokenCount,events:state.events.slice(-20),decisive:state.decisive.slice(-6),seed:state.rng};}
+export function simulateBattle(a,b,seed=1,max=105){const s=createBattleState(a,b,seed);while(s.status==='running'&&s.time<max)stepBattle(s,.05);return summarizeBattle(s);}
+export function randomDoctrine(seed=1,stage=4){const s={rng:normalizeSeed(seed)};return doctrineForStage(s,stage);}
+export function botAudit(iterations=100,seed=1){const r={player:0,enemy:0,averageDuration:0,timeouts:0};for(let i=0;i<iterations;i++){const a=randomDoctrine(seed+i*31,4),b=randomDoctrine(seed+i*31+7,4),r1=simulateBattle(a,b,seed+i*97),r2=simulateBattle(b,a,seed+i*97);r[r1.winner]++;r[r2.winner==='player'?'enemy':'player']++;r.averageDuration+=r1.duration+r2.duration;if(r1.duration>=100)r.timeouts++;if(r2.duration>=100)r.timeouts++;}r.averageDuration=Math.round(r.averageDuration/(iterations*2)*10)/10;return r;}
