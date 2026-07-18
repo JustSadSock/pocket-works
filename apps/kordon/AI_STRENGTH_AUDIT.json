@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-07-18T00:41:58.655Z",
+  "matchup": "KORDON 1.1 Marshal vs exact KORDON 1.0 Marshal reference",
+  "auditIterationsPerMove": 180,
+  "releaseIterationsPerMove": 600,
+  "games": 6,
+  "wins": 6,
+  "legacyWins": 0,
+  "draws": 0,
+  "winRate": 1,
+  "meanThinkingMs": 127,
+  "elapsedMs": 29123,
+  "details": [
+    {"game": 1, "newSide": 0, "newStyle": "adaptive", "legacyStyle": "assault", "result": "new", "score": [7, 2], "actions": 36, "meanThinkingMs": 135},
+    {"game": 2, "newSide": 1, "newStyle": "assault", "legacyStyle": "formation", "result": "new", "score": [0, 8], "actions": 32, "meanThinkingMs": 144},
+    {"game": 3, "newSide": 0, "newStyle": "formation", "legacyStyle": "frontier", "result": "new", "score": [7, 5], "actions": 144, "meanThinkingMs": 113},
+    {"game": 4, "newSide": 1, "newStyle": "frontier", "legacyStyle": "adaptive", "result": "new", "score": [2, 8], "actions": 40, "meanThinkingMs": 141},
+    {"game": 5, "newSide": 0, "newStyle": "adaptive", "legacyStyle": "assault", "result": "new", "score": [8, 3], "actions": 56, "meanThinkingMs": 122},
+    {"game": 6, "newSide": 1, "newStyle": "assault", "legacyStyle": "formation", "result": "new", "score": [1, 8], "actions": 84, "meanThinkingMs": 109}
+  ]
+}

@@ -11,7 +11,7 @@ test('all game DOM bindings exist exactly once', () => {
   const html = read('index.html');
   const game = read('game.js');
   const bindings = game.slice(0, game.indexOf('defaultPrefs='));
-  const ids = [...bindings.matchAll(/[\"']#([A-Za-z][A-Za-z0-9_-]*)[\#']/g)].map((match) => match[1]);
+  const ids = [...bindings.matchAll(/["']#([A-Za-z][A-Za-z0-9_-]*)["']/g)].map((match) => match[1]);
   assert.ok(ids.length >= 30);
   for (const id of ids) {
     const count = (html.match(new RegExp(`id=["']${id}["']`, 'g')) || []).length;
@@ -42,12 +42,12 @@ test('manifest, app config and service worker release identity match', () => {
   const sw = read('sw.js');
   assert.equal(config.slug, 'kordon');
   assert.equal(config.runtime, 'quick');
-  assert.equal(config.version, '1.0.0');
-  assert.equal(config.cacheName, 'kordon-v1.0.0');
+  assert.equal(config.version, '1.1.0');
+  assert.equal(config.cacheName, 'kordon-v1.1.0');
   assert.equal(config.storageNamespace, 'pocket-works:kordon');
   assert.equal(manifest.id, '/apps/kordon/');
-  assert.ok(sw.includes("const CACHE_NAME = 'kordon-v1.0.0'"));
-  assert.ok(sw.includes("const APP_VERSION = '1.0.0'"));
+  assert.ok(sw.includes("const CACHE_NAME = 'kordon-v1.1.0'"));
+  assert.ok(sw.includes("const APP_VERSION = '1.1.0'"));
 });
 
 test('finished UI avoids browser prompts and remote dependencies', () => {

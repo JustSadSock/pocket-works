@@ -1,156 +1,39 @@
-import {
-  applyAction,
-  cloneState,
-  currentPlayer,
-  hexDistance,
-  legalActions,
-  makeBoard,
-  neighborsOf,
-  parseCoord,
-  signalCells,
-  signalControl
-} from './engine.js';
+import { currentPlayer, legalActions, makeBoard, neighborsOf, parseCoord, signalCells, signalControl, applyAction, hexDistance, cloneState } from './engine.js';
 
-const STYLE_WEIGHTS = Object.freeze({
-  adaptive: { score: 16, control: 7, distance: 1.1, support: 0.7, pressure: 0.55, danger: 0.8, material: 0.9, spread: 0.08 },
-  assault: { score: 14, control: 5, distance: 0.9, support: 0.45, pressure: 1.15, danger: 0.95, material: 1.25, spread: -0.03 },
-  formation: { score: 15, control: 6, distance: 0.95, support: 1.25, pressure: 0.45, danger: 1.15, material: 0.9, spread: 0.18 },
-  frontier: { score: 15, control: 5.5, distance: 0.8, support: 0.95, pressure: 0.35, danger: 1.35, material: 0.8, spread: -0.05 }
+const STYLE_WEIGHTS=Object.freeze({
+ adaptive:{control:1,attack:1,formation:1,safety:1,mobility:1},
+ assault:{control:.9,attack:1.35,formation:.82,safety:.9,mobility:1.05},
+ formation:{control:1.02,attack:.88,formation:1.38,safety:1.08,mobility:.92},
+ frontier:{control:1.15,attack:.82,formation:1.12,safety:1.32,mobility:.9}
 });
-
-export const AI_STYLES = Object.freeze([
-  { id: 'adaptive', name: 'МАНЁВР', note: 'переключается между центром и охотой' },
-  { id: 'assault', name: 'НАТИСК', note: 'ищет вилки и пленных' },
-  { id: 'formation', name: 'СТРОЙ', note: 'держит связные группы' },
-  { id: 'frontier', name: 'РУБЕЖ', note: 'бережёт фигуры и душит центр' }
-]);
-
-export function evaluateState(state, player, style = 'adaptive') {
-  if (state.winner === player) return 1_000_000;
-  if (state.winner === 1 - player) return -1_000_000;
-  if (state.winner === -1) return 0;
-
-  const weights = STYLE_WEIGHTS[style] || STYLE_WEIGHTS.adaptive;
-  const boardSet = new Set(makeBoard(state.rules.radius));
-  const signals = signalCells(state.rules.signalLayout).map(parseCoord);
-  const control = signalControl(state);
-  const own = new Set(state.positions[player]);
-  const enemy = new Set(state.positions[1 - player]);
-
-  const distance = [...own].reduce((sum, cell) => {
-    const coord = parseCoord(cell);
-    return sum + Math.min(...signals.map((signal) => hexDistance(coord, signal)));
-  }, 0);
-  const enemyDistance = [...enemy].reduce((sum, cell) => {
-    const coord = parseCoord(cell);
-    return sum + Math.min(...signals.map((signal) => hexDistance(coord, signal)));
-  }, 0);
-
-  let support = 0;
-  let pressure = 0;
-  let danger = 0;
-  for (const cell of own) {
-    const adjacent = neighborsOf(cell, boardSet);
-    support += adjacent.filter((neighbor) => own.has(neighbor)).length;
-    const attackers = adjacent.filter((neighbor) => enemy.has(neighbor)).length;
-    const friends = adjacent.filter((neighbor) => own.has(neighbor)).length;
-    if (attackers >= state.rules.captureThreshold - 1 && friends <= state.rules.supportLimit) danger += 1;
-  }
-  for (const cell of enemy) {
-    pressure += neighborsOf(cell, boardSet).filter((neighbor) => own.has(neighbor)).length;
-  }
-  support /= 2;
-
-  let spread = 0;
-  const ownArray = [...own].map(parseCoord);
-  for (let i = 0; i < ownArray.length; i += 1) {
-    for (let j = i + 1; j < ownArray.length; j += 1) spread += hexDistance(ownArray[i], ownArray[j]);
-  }
-
-  const scoreGap = state.score[player] - state.score[1 - player];
-  const controlGap = control[player] - control[1 - player];
-  const materialGap = (state.positions[player].length - state.reserve[player])
-    - (state.positions[1 - player].length - state.reserve[1 - player]);
-
-  return (
-    weights.score * scoreGap
-    + weights.control * controlGap
-    - weights.distance * distance
-    + 0.28 * enemyDistance
-    + weights.support * support
-    + weights.pressure * pressure
-    - weights.danger * danger
-    + weights.material * materialGap
-    - weights.spread * spread
-  );
-}
-
-function scoreAction(state, action, player, style) {
-  const next = applyAction(state, action, { skipValidation: true });
-  let score = evaluateState(next, player, style);
-  score += next.lastCaptured.length * (style === 'assault' ? 5.5 : 3.2);
-  if (action.type === 'redeploy') score += style === 'formation' ? 1.2 : 0.35;
-  const before = signalControl(state)[player];
-  const after = signalControl(next)[player];
-  score += (after - before) * 4;
-  return { action, state: next, score };
-}
-
-export function rankActions(state, style = 'adaptive') {
-  const player = currentPlayer(state);
-  return legalActions(state)
-    .map((action) => scoreAction(state, action, player, style))
-    .sort((a, b) => b.score - a.score);
-}
-
-export function chooseAction(state, options = {}) {
-  const style = STYLE_WEIGHTS[options.style] ? options.style : 'adaptive';
-  const difficulty = options.difficulty || 'standard';
-  const random = options.random || Math.random;
-  const player = currentPlayer(state);
-  const ranked = rankActions(state, style);
-  if (!ranked.length) return null;
-
-  if (difficulty === 'cadet') {
-    const poolSize = Math.max(2, Math.ceil(ranked.length * 0.42));
-    const pool = ranked.slice(0, poolSize);
-    return pool[Math.floor(random() * pool.length)].action;
-  }
-
-  if (difficulty === 'standard') {
-    const pool = ranked.slice(0, Math.min(4, ranked.length));
-    const weighted = pool.map((entry, index) => ({ entry, weight: Math.max(1, 6 - index * 1.6) }));
-    const total = weighted.reduce((sum, item) => sum + item.weight, 0);
-    let roll = random() * total;
-    for (const item of weighted) {
-      roll -= item.weight;
-      if (roll <= 0) return item.entry.action;
-    }
-    return pool[0].action;
-  }
-
-  const candidates = ranked.slice(0, Math.min(14, ranked.length));
-  let best = null;
-  for (const candidate of candidates) {
-    if (candidate.state.winner === player) return candidate.action;
-    const replies = rankActions(candidate.state, style).slice(0, 10);
-    const worstReply = replies.length
-      ? Math.min(...replies.map((reply) => evaluateState(reply.state, player, style)))
-      : evaluateState(candidate.state, player, style);
-    const value = candidate.score * 0.45 + worstReply * 0.55;
-    if (!best || value > best.value) best = { action: candidate.action, value };
-  }
-  return best?.action || ranked[0].action;
-}
-
-export function seededRandom(seed = 1) {
-  let value = seed >>> 0;
-  return () => {
-    value = (value * 1664525 + 1013904223) >>> 0;
-    return value / 0x100000000;
-  };
-}
-
-export function cloneForAnalysis(state) {
-  return cloneState(state);
-}
+export const AI_STYLES=Object.freeze([
+{id:'adaptive',name:'МАНЁВР',note:'переключается между центром и охотой'},
+{id:'assault',name:'НАТИСК',note:'ищет вилки и пленных'},
+{id:'formation',name:'СТРОЙ',note:'держит связные группы'},
+{id:'frontier',name:'РУБЕЖ',note:'бережёт фигуры и душит центр'}]);
+const CACHE=new Map();
+const BIT_INDEX=new Map(Array.from({length:64},(_,i)=>[1n<<BigInt(i),i]));
+function context(state){const k=`${state.rules.radius}:${state.rules.signalLayout}:${state.rules.units}`;if(CACHE.has(k))return CACHE.get(k);const cells=makeBoard(state.rules.radius),idx=new Map(cells.map((c,i)=>[c,i])),bit=i=>1n<<BigInt(i),boardSet=new Set(cells),neighbors=cells.map(c=>neighborsOf(c,boardSet).map(n=>idx.get(n))),neighborMasks=neighbors.map(a=>a.reduce((m,i)=>m|bit(i),0n)),signals=signalCells(state.rules.signalLayout),signalIndices=signals.map(s=>idx.get(s)),signalMask=signalIndices.reduce((m,i)=>m|bit(i),0n),home=[['0,-3','1,-3','2,-3','3,-3','0,-2','1,-2'],['0,3','-1,3','-2,3','-3,3','0,2','-1,2']].map(row=>row.slice(0,state.rules.units).map(c=>idx.get(c)).filter(Number.isInteger)),distToSignal=cells.map(c=>Math.min(...signals.map(s=>hexDistance(parseCoord(c),parseCoord(s))))),distanceMatrix=cells.map(a=>cells.map(b=>hexDistance(parseCoord(a),parseCoord(b))));const out={cells,idx,bit,neighbors,neighborMasks,signalIndices,signalMask,home,distToSignal,distanceMatrix};CACHE.set(k,out);return out}
+function popcount(x){let n=0;while(x){x&=x-1n;n++}return n}
+function eachBit(bits,fn){while(bits){const lsb=bits&-bits;fn(BIT_INDEX.get(lsb));bits^=lsb}}
+function toCompact(state,ctx){let b0=0n,b1=0n;for(const c of state.positions[0])b0|=ctx.bit(ctx.idx.get(c));for(const c of state.positions[1])b1|=ctx.bit(ctx.idx.get(c));return{b:[b0,b1],r:[...state.reserve],s:[...state.score],round:state.round,phase:state.phase,actions:state.actionCount,winner:state.winner,lastCaptured:0}}
+function cp(s){const starter=s.round%2;return s.phase===0?starter:1-starter}
+function control(s,ctx,p){return popcount(s.b[p]&ctx.signalMask)}
+function compactActions(s,ctx,rules){if(s.winner!==null)return[];const p=cp(s),occ=s.b[0]|s.b[1],empty=((1n<<BigInt(ctx.cells.length))-1n)^occ,out=[];eachBit(s.b[p],from=>{const targets=ctx.neighborMasks[from]&empty;eachBit(targets,to=>out.push({type:0,from,to}))});if(rules.redeploy&&s.r[p]>0)for(const to of ctx.home[p])if((empty&ctx.bit(to))!==0n)out.push({type:1,to});return out}
+function applyCompact(input,a,ctx,rules){const s={b:[...input.b],r:[...input.r],s:[...input.s],round:input.round,phase:input.phase,actions:input.actions,winner:input.winner,lastCaptured:0};const p=cp(s),o=1-p;if(a.type===0){s.b[p]&=~ctx.bit(a.from);s.b[p]|=ctx.bit(a.to)}else{s.r[p]--;s.b[p]|=ctx.bit(a.to)}let victims=0n;eachBit(s.b[o],cell=>{const attackers=popcount(ctx.neighborMasks[cell]&s.b[p]),support=popcount(ctx.neighborMasks[cell]&s.b[o]);if(attackers>=rules.captureThreshold&&support<=rules.supportLimit)victims|=ctx.bit(cell)});if(victims){s.b[o]&=~victims;if(rules.redeploy)s.r[o]+=popcount(victims);s.lastCaptured=popcount(victims)}s.actions++;if(s.phase===0)s.phase=1;else{s.phase=0;if(control(s,ctx,0)>=2)s.s[0]++;if(control(s,ctx,1)>=2)s.s[1]++;s.round++;const target=s.s[0]>=rules.targetScore||s.s[1]>=rules.targetScore,fair=!rules.pairedVictory||s.round%2===0;if(target&&fair&&s.s[0]!==s.s[1])s.winner=s.s[0]>s.s[1]?0:1}if(s.actions>=rules.maxActions&&s.winner===null){const rank=p=>[s.s[p],control(s,ctx,p),popcount(s.b[p]),-s.r[p]],a0=rank(0),a1=rank(1);let cmp=0;for(let i=0;i<a0.length;i++)if(a0[i]!==a1[i]){cmp=a0[i]-a1[i];break}s.winner=cmp>0?0:cmp<0?1:-1}if(s.winner===null&&compactActions(s,ctx,rules).length===0)s.winner=1-cp(s);return s}
+function mobility(s,ctx,p){const occ=s.b[0]|s.b[1];let n=0;eachBit(s.b[p],i=>n+=popcount(ctx.neighborMasks[i]&~occ));if(s.r[p]>0)for(const i of ctx.home[p])if((occ&ctx.bit(i))===0n)n++;return n}
+function evaluateCompact(s,root,style,ctx,rules){if(s.winner===root)return 10_000_000-s.actions;if(s.winner===1-root)return-10_000_000+s.actions;if(s.winner===-1)return 0;const legacy={adaptive:{score:16,control:7,distance:1.1,support:.7,pressure:.55,danger:.8,material:.9,spread:.08},assault:{score:14,control:5,distance:.9,support:.45,pressure:1.15,danger:.95,material:1.25,spread:-.03},formation:{score:15,control:6,distance:.95,support:1.25,pressure:.45,danger:1.15,material:.9,spread:.18},frontier:{score:15,control:5.5,distance:.8,support:.95,pressure:.35,danger:1.35,material:.8,spread:-.05}};const w=legacy[style]||legacy.adaptive;let ownDistance=0,enemyDistance=0,support=0,pressure=0,danger=0,spread=0;const ownIndices=[];eachBit(s.b[root],i=>{ownIndices.push(i);ownDistance+=ctx.distToSignal[i];const friends=popcount(ctx.neighborMasks[i]&s.b[root]),attackers=popcount(ctx.neighborMasks[i]&s.b[1-root]);support+=friends;if(attackers>=rules.captureThreshold-1&&friends<=rules.supportLimit)danger++});eachBit(s.b[1-root],i=>{enemyDistance+=ctx.distToSignal[i];pressure+=popcount(ctx.neighborMasks[i]&s.b[root])});support/=2;for(let i=0;i<ownIndices.length;i++)for(let j=i+1;j<ownIndices.length;j++)spread+=ctx.distanceMatrix[ownIndices[i]][ownIndices[j]];const scoreGap=s.s[root]-s.s[1-root],controlGap=control(s,ctx,root)-control(s,ctx,1-root),materialGap=(popcount(s.b[root])-s.r[root])-(popcount(s.b[1-root])-s.r[1-root]);return w.score*scoreGap+w.control*controlGap-w.distance*ownDistance+.28*enemyDistance+w.support*support+w.pressure*pressure-w.danger*danger+w.material*materialGap-w.spread*spread}
+function key(s,d,ext){return`${s.b[0].toString(36)}:${s.b[1].toString(36)}:${s.r}:${s.s}:${s.round%2}:${s.phase}:${s.actions}:${d}:${ext}`}
+function order(s,ctx,rules,root,style,maximizing){const c0=[control(s,ctx,0),control(s,ctx,1)],arr=compactActions(s,ctx,rules).map(a=>{const n=applyCompact(s,a,ctx,rules);let v=evaluateCompact(n,root,style,ctx,rules)*.06+n.lastCaptured*260+((n.s[root]-s.s[root])-(n.s[1-root]-s.s[1-root]))*340+((control(n,ctx,root)-c0[root])-(control(n,ctx,1-root)-c0[1-root]))*42;if(n.winner===root)v+=1e9;if(n.winner===1-root)v-=1e9;return{a,n,v}});arr.sort((x,y)=>maximizing?y.v-x.v:x.v-y.v);return arr}
+function search(s,depth,alpha,beta,C,ext=1){C.nodes++;if(C.nodes>C.budget){C.abort=true;return evaluateCompact(s,C.root,C.style,C.ctx,C.rules)}if(s.winner!==null)return evaluateCompact(s,C.root,C.style,C.ctx,C.rules);const extend=depth<=0&&ext>0&&s.phase===1;if(depth<=0&&!extend)return evaluateCompact(s,C.root,C.style,C.ctx,C.rules);const cacheKey=key(s,depth,ext),cached=C.tt.get(cacheKey);if(cached!==undefined)return cached;const maximizing=cp(s)===C.root,width=C.widths[Math.min(C.ply,C.widths.length-1)],actions=order(s,C.ctx,C.rules,C.root,C.style,maximizing).slice(0,width);if(!actions.length)return evaluateCompact(s,C.root,C.style,C.ctx,C.rules);let value=maximizing?-Infinity:Infinity,cut=false;C.ply++;for(const candidate of actions){const child=search(candidate.n,extend?0:depth-1,alpha,beta,C,extend?ext-1:ext);if(C.abort){C.ply--;return child}if(maximizing){value=Math.max(value,child);alpha=Math.max(alpha,value)}else{value=Math.min(value,child);beta=Math.min(beta,value)}if(beta<=alpha){cut=true;break}}C.ply--;if(!cut)C.tt.set(cacheKey,value);return value}
+function fromCompactAction(a,ctx){return a.type===0?{type:'move',from:ctx.cells[a.from],to:ctx.cells[a.to]}:{type:'redeploy',to:ctx.cells[a.to]}}
+function searchBest(state,style){const ctx=context(state),compact=toCompact(state,ctx),root=cp(compact),profile={depth:3,budget:12000,rootWidth:18,widths:[14,12,10,8]},roots=order(compact,ctx,state.rules,root,style,true).slice(0,profile.rootWidth);if(!roots.length)return null;const win=roots.find(x=>x.n.winner===root);if(win)return fromCompactAction(win.a,ctx);let best=roots[0].a,previous=new Map(roots.map(x=>[x.a,x.v])),baseline=null;for(let depth=2;depth<=profile.depth;depth++){const sorted=[...roots].sort((a,b)=>(previous.get(b.a)||0)-(previous.get(a.a)||0)),C={root,style,ctx,rules:state.rules,budget:profile.budget,nodes:0,abort:false,tt:new Map(),widths:profile.widths,ply:0},values=new Map();let roundBest=sorted[0].a,roundValue=-Infinity;for(const candidate of sorted){const value=search(candidate.n,depth-1,-Infinity,Infinity,C,1);if(C.abort)break;values.set(candidate.a,value);const combined=value+(baseline?.get(candidate.a)||0)*.42;if(combined>roundValue){roundValue=combined;roundBest=candidate.a}}if(C.abort||values.size!==sorted.length)break;if(depth===2)baseline=new Map(values);best=roundBest;previous=values}return fromCompactAction(best,ctx)}
+export function evaluateState(state,player,style='adaptive'){const ctx=context(state);return evaluateCompact(toCompact(state,ctx),player,style,ctx,state.rules)}
+export function rankActions(state,style='adaptive'){const player=currentPlayer(state);return legalActions(state).map(action=>{const next=applyAction(state,action,{skipValidation:true});return{action,state:next,score:evaluateState(next,player,style)+next.lastCaptured.length*4}}).sort((a,b)=>b.score-a.score)}
+function weighted(pool,random){const weights=pool.map((_,i)=>Math.max(1,7-i*1.8)),total=weights.reduce((a,b)=>a+b,0);let roll=random()*total;for(let i=0;i<pool.length;i++){roll-=weights[i];if(roll<=0)return pool[i].action}return pool[0].action}
+export function chooseAction(state,options={}){const style=STYLE_WEIGHTS[options.style]?options.style:'adaptive',difficulty=options.difficulty||'standard',random=options.random||Math.random,ranked=rankActions(state,style);if(!ranked.length)return null;if(difficulty==='cadet')return weighted(ranked.slice(0,Math.max(3,Math.ceil(ranked.length*.34))),random);if(difficulty==='marshal')return chooseMctsAction(state,{style,random,iterations:options.iterations||600})||ranked[0].action;return searchBest(state,style)||ranked[0].action}
+export function seededRandom(seed=1){let value=seed>>>0;return()=>{value=(value*1664525+1013904223)>>>0;return value/0x100000000}}
+export function cloneForAnalysis(state){return cloneState(state)}
+export function chooseMctsAction(state,options={}){const style=STYLE_WEIGHTS[options.style]?options.style:'adaptive',random=options.random||Math.random,iterations=options.iterations||600,ctx=context(state),compact=toCompact(state,ctx),rootPlayer=cp(compact),root=makeMctsNode(compact,null,null,ctx,state.rules);if(!root.untried.length)return null;const immediateWin=root.untried.find(action=>applyCompact(compact,action,ctx,state.rules).winner===rootPlayer);if(immediateWin)return fromCompactAction(immediateWin,ctx);for(let iteration=0;iteration<iterations;iteration++){let node=root;while(!node.untried.length&&node.children.length){const maximizing=cp(node.state)===rootPlayer;let bestChild=null,bestUct=-Infinity;for(const child of node.children){const mean=child.value/Math.max(1,child.visits),explore=Math.sqrt(Math.log(Math.max(2,node.visits))/Math.max(1,child.visits)),uct=(maximizing?mean:-mean)+1.18*explore;if(uct>bestUct){bestUct=uct;bestChild=child}}node=bestChild}if(node.untried.length){const index=Math.floor(random()*node.untried.length),action=node.untried.splice(index,1)[0],child=makeMctsNode(applyCompact(node.state,action,ctx,state.rules),node,action,ctx,state.rules);node.children.push(child);node=child}const result=rolloutCompact(node.state,rootPlayer,style,ctx,state.rules,random,60);while(node){node.visits++;node.value+=result;node=node.parent}}root.children.sort((a,b)=>b.visits-a.visits||(b.value/b.visits)-(a.value/a.visits));return fromCompactAction(root.children[0]?.action||root.untried[0],ctx)}
+function makeMctsNode(state,parent,action,ctx,rules){return{state,parent,action,children:[],untried:compactActions(state,ctx,rules),visits:0,value:0}}
+function rolloutCompact(input,rootPlayer,style,ctx,rules,random,limit){let state=input;for(let step=0;step<limit&&state.winner===null;step++){const actions=compactActions(state,ctx,rules);if(!actions.length)break;const mover=cp(state),beforeScore=[...state.s],beforeControl=[control(state,ctx,0),control(state,ctx,1)],preselected=actions.map(action=>{const destination=action.to,signalBias=(ctx.signalMask&ctx.bit(destination))!==0n?44:0,support=popcount(ctx.neighborMasks[destination]&state.b[mover]);let captureBias=0;eachBit(ctx.neighborMasks[destination]&state.b[1-mover],victim=>{const currentAttackers=popcount(ctx.neighborMasks[victim]&state.b[mover]),movedFromVictim=action.type===0&&(ctx.neighborMasks[victim]&ctx.bit(action.from))!==0n?1:0;if(currentAttackers-movedFromVictim+1>=rules.captureThreshold)captureBias+=70});return{action,pre:signalBias+captureBias+support*4-ctx.distToSignal[destination]*5+(action.type===1?2:0)}}).sort((a,b)=>b.pre-a.pre),shortlist=preselected.slice(0,Math.min(8,preselected.length));while(shortlist.length<Math.min(12,preselected.length)){const pick=preselected[Math.floor(random()*preselected.length)];if(!shortlist.includes(pick))shortlist.push(pick)}const candidates=shortlist.map(({action})=>{const next=applyCompact(state,action,ctx,rules),scoreDelta=(next.s[mover]-beforeScore[mover])-(next.s[1-mover]-beforeScore[1-mover]),controlDelta=(control(next,ctx,mover)-beforeControl[mover])-(control(next,ctx,1-mover)-beforeControl[1-mover]),destinationDistance=ctx.distToSignal[action.to],support=popcount(ctx.neighborMasks[action.to]&next.b[mover]),value=(next.winner===mover?1_000_000:0)+scoreDelta*500+next.lastCaptured*150+controlDelta*34-destinationDistance*3+support*2+evaluateCompact(next,mover,style,ctx,rules)*.035;return{next,value}}).sort((a,b)=>b.value-a.value),pick=random()<.82?0:Math.floor(random()*Math.min(3,candidates.length));state=candidates[pick].next}if(state.winner===rootPlayer)return 1;if(state.winner===1-rootPlayer)return-1;if(state.winner===-1)return 0;return Math.max(-.9,Math.min(.9,evaluateCompact(state,rootPlayer,style,ctx,rules)/120))}

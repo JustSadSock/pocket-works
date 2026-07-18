@@ -9,7 +9,7 @@ await import('./game.js');
 
 createWorkshopMode({
   appName: 'КОРДОН',
-  version: '1.0.0',
+  version: '1.1.0',
   cachePrefix: 'kordon-',
   storageNamespace: STORAGE_NAMESPACE,
   onReset() {
