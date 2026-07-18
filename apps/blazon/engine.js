@@ -1,4 +1,6 @@
-const selected=await import(new URL(import.meta.url).searchParams.has('core')?'./core-engine.js':'./progression-engine.js');
+const isCore=new URL(import.meta.url).searchParams.has('core');
+if(!isCore)await import('./progression-runtime.js');
+const selected=await import(isCore?'./core-engine.js':'./progression-engine.js');
 export const VERSION=selected.VERSION;
 export const BATTLE_COUNT=selected.BATTLE_COUNT;
 export const WORLD_WIDTH=selected.WORLD_WIDTH;
