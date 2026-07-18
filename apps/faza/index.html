@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#e7e0d2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ФАЗА">
+  <title>ФАЗА</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="screen menu-screen is-active" id="menu-screen" aria-labelledby="app-title">
+      <header class="menu-mast" data-ui>
+        <a class="launcher-link" href="../../" data-app-control data-native-press>← В Pocket Works</a>
+        <button class="text-control" type="button" data-open="rules" data-native-press>Правила</button>
+      </header>
+
+      <div class="menu-hero">
+        <div class="title-lockup">
+          <p class="eyebrow">АБСТРАКТНАЯ ДУЭЛЬ / 2 ИГРОКА</p>
+          <h1 id="app-title">ФАЗА</h1>
+          <p class="menu-lead">Ставь камень. Выбирай, какие связи существуют сейчас. Отсекай группы и удерживай путь через поле.</p>
+        </div>
+
+        <div class="phase-emblem" aria-hidden="true">
+          <span class="emblem-ring"></span>
+          <span class="emblem-axis axis-a"></span>
+          <span class="emblem-axis axis-b"></span>
+          <span class="emblem-axis axis-c"></span>
+          <i class="emblem-stone stone-blue"></i>
+          <i class="emblem-stone stone-clay"></i>
+          <i class="emblem-stone stone-blue small"></i>
+        </div>
+      </div>
+
+      <nav class="menu-actions" aria-label="Начать игру" data-ui>
+        <button class="primary-action" type="button" data-mode="ai" data-native-press>
+          <span>Против машины</span>
+          <small>4 характера · 3 уровня</small>
+        </button>
+        <button class="primary-action secondary" type="button" data-mode="local" data-native-press>
+          <span>Локальная дуэль</span>
+          <small>Один экран · серии до 3 побед</small>
+        </button>
+        <button class="continue-action" id="continue-button" type="button" hidden data-native-press>
+          Продолжить незавершённую партию
+        </button>
+      </nav>
+
+      <footer class="menu-footer" data-ui>
+        <button class="text-control" type="button" data-open="lab" data-native-press>Баланс и тесты</button>
+        <button class="text-control" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <span>v1.0.0</span>
+      </footer>
+    </section>
+
+    <section class="screen game-screen" id="game-screen" aria-label="Игровая партия" hidden>
+      <header class="game-topbar" data-ui>
+        <button class="icon-button" id="pause-button" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+        <div class="score-strip" aria-live="polite">
+          <div class="player-score player-one" data-player-panel="1">
+            <span class="score-name" data-player-name="1">Игрок A</span>
+            <strong data-series-score="1">0</strong>
+            <small><b data-captures="1">0</b>/5 захватов</small>
+          </div>
+          <div class="phase-readout">
+            <span>Фаза</span>
+            <strong id="phase-name">Горизонт</strong>
+            <small id="turn-counter">Ход 1</small>
+          </div>
+          <div class="player-score player-two" data-player-panel="2">
+            <span class="score-name" data-player-name="2">Игрок B</span>
+            <strong data-series-score="2">0</strong>
+            <small><b data-captures="2">0</b>/5 захватов</small>
+          </div>
+        </div>
+        <button class="icon-button" id="sound-button" type="button" aria-label="Звук" aria-pressed="true" data-native-press>♪</button>
+      </header>
+
+      <section class="board-stage" data-gesture-surface data-block-callout>
+        <div class="goal-label goal-blue">СИНИЙ ПУТЬ</div>
+        <div class="goal-label goal-clay">ОХРОВЫЙ ПУТЬ</div>
+        <svg id="board" class="board" viewBox="0 0 720 670" role="grid" aria-label="Поле ФАЗЫ"></svg>
+        <div class="board-toast" id="board-toast" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="turn-console" data-ui>
+        <div class="turn-copy">
+          <p class="turn-kicker" id="turn-kicker">ХОД СИНЕГО</p>
+          <h2 id="turn-title">Поставьте камень</h2>
+          <p id="turn-detail">После выбора клетки переключите фазу связности.</p>
+        </div>
+
+        <div class="phase-picker" id="phase-picker" aria-label="Выбор фазы">
+          <button type="button" data-phase="0" data-native-press>
+            <span class="phase-glyph glyph-0" aria-hidden="true"></span>
+            <b>I</b><small>Горизонт</small>
+          </button>
+          <button type="button" data-phase="1" data-native-press>
+            <span class="phase-glyph glyph-1" aria-hidden="true"></span>
+            <b>II</b><small>Косая</small>
+          </button>
+          <button type="button" data-phase="2" data-native-press>
+            <span class="phase-glyph glyph-2" aria-hidden="true"></span>
+            <b>III</b><small>Диагональ</small>
+          </button>
+        </div>
+
+        <div class="game-actions">
+          <button class="text-control" id="cancel-cell" type="button" hidden data-native-press>Сменить клетку</button>
+          <button class="text-control" type="button" data-open="rules" data-native-press>Как играть</button>
+        </div>
+      </section>
+
+      <div class="swap-banner" id="swap-banner" hidden data-ui>
+        <div>
+          <span>ПРАВИЛО ОБМЕНА</span>
+          <strong>Забрать первый цвет?</strong>
+          <p>Стороны поменяются, а первый камень останется на поле.</p>
+        </div>
+        <button type="button" data-swap="yes" data-native-press>Поменяться</button>
+        <button type="button" data-swap="no" data-native-press>Оставить</button>
+      </div>
+    </section>
+
+    <section class="overlay" id="setup-overlay" aria-hidden="true">
+      <button class="overlay-backdrop" type="button" data-close aria-label="Закрыть"></button>
+      <div class="sheet setup-sheet" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+        <header class="sheet-head">
+          <div><p>НОВАЯ СЕРИЯ</p><h2 id="setup-title">Настройка</h2></div>
+          <button class="close-button" type="button" data-close data-native-press aria-label="Закрыть">×</button>
+        </header>
+
+        <div class="setup-section ai-only">
+          <h3>Характер машины</h3>
+          <div class="choice-list" id="style-choices"></div>
+        </div>
+        <div class="setup-section ai-only">
+          <h3>Сила</h3>
+          <div class="segmented" id="level-choices"></div>
+        </div>
+        <div class="setup-section">
+          <h3>Длина серии</h3>
+          <div class="segmented" id="series-choices">
+            <button type="button" data-series="1" data-native-press>1 победа</button>
+            <button type="button" data-series="2" data-native-press>2 победы</button>
+            <button type="button" data-series="3" data-native-press>3 победы</button>
+          </div>
+        </div>
+        <button class="sheet-primary" id="start-button" type="button" data-native-press>Начать серию</button>
+      </div>
+    </section>
+
+    <section class="overlay" id="rules-overlay" aria-hidden="true">
+      <button class="overlay-backdrop" type="button" data-close aria-label="Закрыть"></button>
+      <div class="sheet rules-sheet" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+        <header class="sheet-head">
+          <div><p>ПЯТЬ ПРАВИЛ</p><h2 id="rules-title">Как работает ФАЗА</h2></div>
+          <button class="close-button" type="button" data-close data-native-press aria-label="Закрыть">×</button>
+        </header>
+        <ol class="rule-list">
+          <li><b>Поставьте один камень.</b><span>Свободная клетка, без перемещения старых камней.</span></li>
+          <li><b>Выберите фазу I, II или III.</b><span>Одна пара направлений выключается. Светлые перемычки показывают, кто сейчас соединён.</span></li>
+          <li><b>Группа без свободной соседней клетки снимается.</b><span>Сначала снимаются чужие группы. Самозахват запрещён.</span></li>
+          <li><b>Победа — 5 захватов или удержанный путь.</b><span>Синий соединяет левый и правый край, охра — верхний правый и нижний левый. Путь должен пережить ответ соперника.</span></li>
+          <li><b>После первого хода второй игрок может обменяться сторонами.</b><span>Это гасит преимущество сильного дебюта и делает серии честнее.</span></li>
+        </ol>
+        <div class="phase-legend">
+          <div><span class="phase-glyph glyph-0"></span><b>I</b><small>нет горизонтальных связей</small></div>
+          <div><span class="phase-glyph glyph-1"></span><b>II</b><small>нет восходящей диагонали</small></div>
+          <div><span class="phase-glyph glyph-2"></span><b>III</b><small>нет нисходящей диагонали</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay" id="lab-overlay" aria-hidden="true">
+      <button class="overlay-backdrop" type="button" data-close aria-label="Закрыть"></button>
+      <div class="sheet lab-sheet" role="dialog" aria-modal="true" aria-labelledby="lab-title">
+        <header class="sheet-head">
+          <div><p>БОТ ПРОТИВ БОТА</p><h2 id="lab-title">Почему выбрана эта версия</h2></div>
+          <button class="close-button" type="button" data-close data-native-press aria-label="Закрыть">×</button>
+        </header>
+        <p class="lab-intro">Проверено 40 конфигураций в четырёх семействах и более 2 600 партий. Оценивались баланс хода, ничьи, длина, разнообразие дебютов и отсутствие одной обязательной стратегии.</p>
+        <div class="lab-table" role="table" aria-label="Результаты концепций">
+          <div class="lab-row lab-head" role="row"><span>Семейство</span><span>Лучший балл</span><span>Вердикт</span></div>
+          <div class="lab-row" role="row"><b>Подвижные ворота</b><span>.866</span><small>слишком много тупиков</small></div>
+          <div class="lab-row" role="row"><b>Вращаемые кольца</b><span>.881</span><small>сильная идея, но уже есть ОРБИТА</small></div>
+          <div class="lab-row" role="row"><b>Толчок на гексе</b><span>.948</span><small>агрессивный бот стал метой</small></div>
+          <div class="lab-row selected" role="row"><b>Три фазы связности</b><span>.953</span><small>выбрано</small></div>
+        </div>
+        <div class="lab-metrics">
+          <div><strong>27.8</strong><span>хода в среднем</span></div>
+          <div><strong>0.5%</strong><span>ничьих в финальном пакете</span></div>
+          <div><strong>98%</strong><span>уникальных шестиходовых дебютов</span></div>
+          <div><strong>50–64%</strong><span>винрейт сильных стилей</span></div>
+        </div>
+        <p class="lab-note">Детальный пакет выявил преимущество первого цвета без компенсации. Поэтому правило обмена встроено в обычную игру, а в сериях право первого хода автоматически чередуется.</p>
+      </div>
+    </section>
+
+    <section class="overlay" id="pause-overlay" aria-hidden="true">
+      <button class="overlay-backdrop" type="button" data-close aria-label="Продолжить"></button>
+      <div class="sheet compact-sheet" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <header class="sheet-head"><div><p>ПАУЗА</p><h2 id="pause-title">Партия сохранена</h2></div></header>
+        <button class="sheet-primary" type="button" data-close data-native-press>Продолжить</button>
+        <button class="sheet-secondary" type="button" data-open="rules" data-native-press>Правила</button>
+        <button class="sheet-secondary" id="restart-round" type="button" data-native-press>Начать раунд заново</button>
+        <button class="sheet-secondary" id="new-match" type="button" data-native-press>Новая серия</button>
+        <a class="sheet-secondary link-button" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay" id="confirm-overlay" aria-hidden="true">
+      <button class="overlay-backdrop" type="button" data-close aria-label="Отмена"></button>
+      <div class="sheet compact-sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <header class="sheet-head"><div><p>ПОДТВЕРЖДЕНИЕ</p><h2 id="confirm-title">Стереть текущий раунд?</h2></div></header>
+        <p class="confirm-copy">Счёт серии сохранится, позиция этого раунда исчезнет.</p>
+        <button class="danger-button" id="confirm-restart" type="button" data-native-press>Да, начать заново</button>
+        <button class="sheet-secondary" type="button" data-close data-native-press>Отмена</button>
+      </div>
+    </section>
+
+    <section class="overlay" id="result-overlay" aria-hidden="true">
+      <div class="sheet result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-title">
+        <div class="result-mark" id="result-mark" aria-hidden="true"></div>
+        <p id="result-kicker">РАУНД ЗАВЕРШЁН</p>
+        <h2 id="result-title">Победа</h2>
+        <p id="result-detail"></p>
+        <div class="result-score" id="result-score"></div>
+        <button class="sheet-primary" id="next-round" type="button" data-native-press>Следующий раунд</button>
+        <button class="sheet-secondary" id="result-new-match" type="button" data-native-press>Новая серия</button>
+        <a class="sheet-secondary link-button" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ФАЗА"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

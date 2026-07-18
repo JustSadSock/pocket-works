@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 import { AxisGame, PLAYER, coordKey, parseCoordKey, lineBetween, chooseAIMove, shouldSwapOpening } from './engine.js';
-import { BoardView } from './board-view.js';
+import { BoardView } from './board-view.js?v=2.2.0-hotfix.2';
 const VERSION='2.2.0';
 globalThis.__AXIS_DEPS={installMobileRuntime,createWorkshopMode,watchConnectivity,AxisGame,PLAYER,coordKey,parseCoordKey,lineBetween,chooseAIMove,shouldSwapOpening,BoardView};
 const PARTS=['1','2a','2b','3a1','3a2','3b','4','5'];

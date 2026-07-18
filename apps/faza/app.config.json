@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "faza",
+  "name": "ФАЗА",
+  "shortName": "ФАЗА",
+  "description": "Турнирная абстрактная дуэль: ставьте камни, переключайте три схемы связности, отсекайте группы и удерживайте путь через поле.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-18",
+  "releaseDateTime": "2026-07-18T01:45:00+02:00",
+  "changelog": [
+    "Первый релиз: локальная дуэль и одиночная игра против четырёх характеров ИИ.",
+    "Финальные правила выбраны после сравнения 40 конфигураций и более 2 600 бот-партий.",
+    "Добавлены три фазы связности, захват групп без свобод, удерживаемый путь и турнирное правило обмена сторон.",
+    "Серии, незавершённая партия, звук и настройки сохраняются локально; приложение полностью работает офлайн."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#315f80",
+  "backgroundColor": "#e7e0d2",
+  "themeColor": "#e7e0d2",
+  "orientation": "any",
+  "cacheName": "faza-v1.0.0",
+  "storageNamespace": "pocket-works:faza",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "abstract strategy",
+    "board game",
+    "AI",
+    "local multiplayer",
+    "PvP",
+    "pure skill",
+    "hex",
+    "connectivity",
+    "capture",
+    "touch",
+    "audio",
+    "haptics"
+  ],
+  "order": 149
+}
