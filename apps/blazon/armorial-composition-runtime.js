@@ -17,6 +17,7 @@
       const helmet=svg.querySelector('.command-helmet');if(helmet)helmet.classList.add('command-balanced');
       const crown=svg.querySelector('.command-crown');if(crown)crown.classList.add('command-balanced');
     }
+    const footer=document.querySelector('.menu-screen footer');if(footer)footer.textContent='v5.2 · armorial composition · ручная геральдика';
   }
   function sync(){if(pending)return;pending=true;queueMicrotask(()=>{pending=false;observer?.disconnect();decorate();observer?.observe(document.body,{childList:true,subtree:true});});}
   observer=new MutationObserver(sync);observer.observe(document.body,{childList:true,subtree:true});sync();
