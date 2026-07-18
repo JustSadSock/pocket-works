@@ -1,13 +1,13 @@
 const CACHE_PREFIX = 'kordon-';
-const CACHE_NAME = 'kordon-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'kordon-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-18';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Добавлена тактическая дуэль на 37 гексах с шестью бойцами у каждой стороны.',
-  'Реализованы локальное окружение, возврат пленных, смена инициативы и честная пара раундов.',
-  'Добавлены четыре характера ИИ, три глубины поиска, локальная игра на двоих и сохранение партии.',
-  'В релиз включены отчёты концептуальных и бот-бот тестов правил.'
+  'Маршал переведён с одношаговой оценки на состязательный Monte Carlo-поиск с 600 симуляциями на ход.',
+  'Тактик получил быстрый alpha-beta-поиск на компактной битовой доске.',
+  'Поиск учитывает смену инициативы и доводит анализ до начисления очков.',
+  'Добавлены тест матч-пойнта и аудит силы против точной копии ИИ версии 1.0.'
 ];
 const APP_SHELL = [
   './',
@@ -24,6 +24,8 @@ const APP_SHELL = [
   './CONCEPT_LAB.md',
   './AI_AUDIT.md',
   './AI_AUDIT.json',
+  './AI_STRENGTH_AUDIT.md',
+  './AI_STRENGTH_AUDIT.json',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
   '../../shared/mobile-runtime.js',
@@ -88,7 +90,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({
+    event.ports?.[0].postMessage({
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
       releaseNotes: RELEASE_NOTES,
