@@ -5,6 +5,14 @@ const APP_SHELL = [
   './index.html',
   './styles.css',
   './app.js',
+  './game-part-1.js',
+  './game-part-2.js',
+  './game-part-3.js',
+  './game-part-4.js',
+  './game-part-5.js',
+  './game-part-6.js',
+  './game-part-7.js',
+  './game-part-8.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
@@ -12,8 +20,7 @@ const APP_SHELL = [
   '../../shared/update-manager.css',
   '../../shared/update-manager.js',
   '../../shared/workshop-mode.css',
-  '../../shared/workshop-mode.js',
-  '../../shared/capabilities/storage.js'
+  '../../shared/workshop-mode.js'
 ];
 
 self.addEventListener('install', (event) => {
