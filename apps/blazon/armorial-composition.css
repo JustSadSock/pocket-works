@@ -1,0 +1,19 @@
+/* Armorial Composition Pass v5.2 */
+.achievement .charge-main,.achievement .charge-secondary{paint-order:stroke fill;stroke:var(--charge-outline);stroke-width:1.35px;stroke-linejoin:round;filter:drop-shadow(0 1.4px 1px rgba(0,0,0,.22))}
+.achievement .charge-secondary{stroke-width:1px;filter:drop-shadow(0 1px .7px rgba(0,0,0,.18))}
+.achievement[data-main^="tower"] .charge-main{stroke-width:1.7px}
+.achievement[data-main^="boar"] .charge-main{stroke-width:1.15px}
+.achievement .achievement-inner{opacity:.56}
+.achievement .ordinary{filter:drop-shadow(0 1px .6px rgba(0,0,0,.18))}
+.achievement .ordinary-highlight{opacity:.07}
+.achievement .command-balanced{filter:drop-shadow(0 2px 1px rgba(0,0,0,.26))}
+.achievement .command-helmet.command-balanced{transform-box:fill-box;transform-origin:center;transform:scale(.9) translateY(4px)}
+.achievement .command-crown.command-balanced{transform-box:fill-box;transform-origin:center;transform:scale(.92) translateY(3px)}
+.achievement .crest-plume{transform:translateY(4px) scale(.88);transform-origin:60px 14px}
+.achievement-chain{stroke-width:2.2;opacity:.88}
+.achievement.has-motto .motto-scroll{filter:drop-shadow(0 2px 1px rgba(0,0,0,.24))}
+.achievement:not(.has-motto) .motto-scroll,.achievement:not(.has-motto) .motto-copy{display:none}
+.achievement.has-secondary .charge-main{filter:drop-shadow(0 1.6px 1.2px rgba(0,0,0,.25))}
+.reward-card-preview .achievement{max-height:150px}
+.full-achievement .achievement{overflow:visible}
+@media(max-width:620px){.achievement .charge-main{stroke-width:1.5px}.achievement .charge-secondary{stroke-width:1.1px}}
