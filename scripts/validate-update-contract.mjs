@@ -25,6 +25,17 @@ function staticArray(source, name) {
   try { return Function(`"use strict"; return (${match[1]});`)(); } catch { return null; }
 }
 
+function eventListenerBlock(source, eventName) {
+  const startPattern = new RegExp(String.raw`(?:self\.)?addEventListener\(\s*['"]${eventName}['"]`);
+  const start = source.search(startPattern);
+  if (start < 0) return '';
+
+  const nextPattern = /(?:self\.)?addEventListener\(\s*['"][^'"]+['"]/g;
+  nextPattern.lastIndex = start + 1;
+  const next = nextPattern.exec(source);
+  return source.slice(start, next?.index ?? source.length);
+}
+
 function validateMetadata(source, label, expected) {
   const version = staticString(source, 'APP_VERSION');
   const releaseDate = staticString(source, 'RELEASE_DATE');
@@ -42,7 +53,7 @@ function validateMetadata(source, label, expected) {
 
 function validateQuickWorker(source, label, expected) {
   requireIncludes(source, ["addEventListener('message'", 'GET_UPDATE_INFO', 'SKIP_WAITING', 'event.ports', '../../shared/update-manager.css', '../../shared/update-manager.js'], label);
-  const installBlock = source.match(/addEventListener\(['"]install['"][\s\S]*?\n\}\);/)?.[0] || '';
+  const installBlock = eventListenerBlock(source, 'install');
   if (installBlock.includes('skipWaiting')) fail(`${label} must not activate a new worker automatically during install`);
   validateMetadata(source, label, expected);
 }
@@ -121,7 +132,7 @@ for (const config of configs) {
   } else {
     const index = await read(`${directory}/index.html`);
     const worker = await read(`${directory}/sw.js`);
-    requireIncludes(index, ['../../shared/update-manager.css', '../../shared/update-manager.js', 'data-update-manager', `data-app-name="${config.name}"`, 'data-app-version='], `${directory}/index.html`);
+    requireIncludes(index, ['../../shared/update-manager.css', '../../shared/update-manager.js', 'data-update-manager', `data-app-name="${config.name}"`, `data-app-version="${config.version}"`], `${directory}/index.html`);
     requireIncludes(worker, ["'./app.config.json'"], `${directory}/sw.js`);
     validateQuickWorker(worker, `${directory}/sw.js`, config);
   }

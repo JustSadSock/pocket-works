@@ -3,7 +3,7 @@ const coreParts=['part-00.txt','part-01.txt','part-02.txt','part-03.txt','part-0
 const patchNames=['patch-1.2.txt','patch-1.3-a.txt','patch-1.3-b.txt','patch-1.3-c.txt','patch-1.4-a.txt','patch-1.4-b.txt','patch-1.4-c.txt','patch-1.5-a.txt','patch-1.5-b.txt','patch-1.5-c.txt'];
 const root='./runtime/';
 const manager=document.querySelector('script[data-update-manager]');
-if(manager)manager.dataset.appVersion='1.5.0';
+if(manager)manager.dataset.appVersion='1.5.1';
 for(const href of ['./polish-1.3.css','./polish-1.4.css','./polish-1.5.css'])if(!document.querySelector(`link[href="${href}"]`)){
   const style=document.createElement('link');style.rel='stylesheet';style.href=href;document.head.appendChild(style);
 }
