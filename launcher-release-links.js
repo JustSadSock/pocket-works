@@ -22,7 +22,7 @@
       const url=new URL(anchor.getAttribute('href')||`./apps/${slug}/`,location.href);
       url.searchParams.set('pw_release',version);
       url.searchParams.set('pw_source','launcher');
-      anchor.href=url.href;
+      if(anchor.href!==url.href)anchor.href=url.href;
     }catch{}
   }
 
@@ -32,7 +32,8 @@
     meta.dataset.pwBase ||= meta.textContent;
     const actual=observed[slug]?.version,downloaded=verified[slug]?.version;
     const state=actual===expected?`active v${actual}`:downloaded===expected?`ready v${downloaded} · reopen to apply`:`available v${expected}`;
-    meta.textContent=`${meta.dataset.pwBase} / ${state}`;
+    const next=`${meta.dataset.pwBase} / ${state}`;
+    if(meta.textContent!==next)meta.textContent=next;
   }
 
   function rewrite(root=document){
@@ -42,9 +43,11 @@
 
   readState();
   rewrite();
+  let queued=false;
+  const queueRewrite=()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;rewrite();});};
   const observer=new MutationObserver(records=>{
     for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)rewrite(node);
-    rewrite();
+    queueRewrite();
   });
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['href','data-slug']});
 
