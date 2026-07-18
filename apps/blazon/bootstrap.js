@@ -1,6 +1,9 @@
 (()=>{
   'use strict';
   const BUILD='5.4.0';
+  const inputStyle=document.createElement('style');
+  inputStyle.textContent='.menu-landscape,.menu-standard,.menu-copy,.symbol-library{pointer-events:none!important}.menu-actions,.topbar,.menu-screen footer{position:relative!important;z-index:40!important;pointer-events:auto!important}.menu-actions button,.topbar button,.topbar a{pointer-events:auto!important;touch-action:manipulation!important}';
+  document.head.append(inputStyle);
   const buttons=[...document.querySelectorAll('.menu-actions button,.topbar button')];
   const footer=document.querySelector('.menu-screen footer');
   if(footer)footer.textContent=`v${BUILD} · coherent release · запуск ядра`;
@@ -30,7 +33,7 @@
     document.documentElement.dataset.blazonReady=BUILD;
     globalThis.__POCKET_WORKS_RELEASE__?.markReady?.();
     if(footer)footer.textContent=`v${BUILD} · coherent release · меню готово`;
-    const enhancements=['menu-input-hotfix.js','critical-readability.js','progression-art.js','progression-runtime.js','armorial-composition-runtime.js','release-indicator.js'];
+    const enhancements=['critical-readability.js','progression-art.js','progression-runtime.js','armorial-composition-runtime.js','release-indicator.js'];
     queueMicrotask(()=>enhancements.forEach(path=>import(`./${path}?pw_release=${BUILD}`).catch(error=>console.warn(`[БЛАЗОН] optional ${path}`,error))));
     window.dispatchEvent(new CustomEvent('blazon:ready',{detail:{version:BUILD}}));
   }).catch(fatal);
