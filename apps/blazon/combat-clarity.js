@@ -1,33 +1,44 @@
 const FORWARD={player:-1,enemy:1};
+const HEAVY_STEP=.1;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const living=member=>member&&member.state!=='fallen'&&member.hp>0;
 const active=member=>living(member)&&member.state!=='rout';
 const squads=army=>[...(army?.infantry||[]),...(army?.archers||[])];
-const members=army=>squads(army).flatMap(squad=>squad.members||[]);
+const memberCache=new WeakMap();
+const members=army=>{
+  if(!army)return[];
+  let list=memberCache.get(army);
+  if(!list){list=squads(army).flatMap(squad=>squad.members||[]);memberCache.set(army,list);}
+  return list;
+};
 const hash=value=>{let h=2166136261;for(const char of String(value)){h^=char.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
 
 function initialise(state){
   if(!state||state.__combatClarity)return state;
-  state.__combatClarity={eventCursor:state.events?.length||0};
+  state.__combatClarity={eventCursor:state.events?.length||0,heavyClock:0};
   for(const army of[state.player,state.enemy])for(const squad of squads(army))for(const member of squad.members||[]){
     const seed=hash(member.id);
     member.clarityJitterX=((seed&255)/255-.5)*5.2;
     member.clarityJitterY=(((seed>>>8)&255)/255-.5)*3.4;
-    member.facingY=FORWARD[member.side]||member.facingY||-1;
+    member.facingY=-1;
     member.visualRank=member.index<Math.ceil((squad.maxStrength||squad.members.length)/2)?'front':'rear';
   }
   return state;
 }
 
+function keepWarriorsUpright(state){
+  for(const army of[state.player,state.enemy])for(const member of members(army))member.facingY=-1;
+}
+
 function separateFriendly(army){
-  const list=members(army).filter(active);
-  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
-    const a=list[i],b=list[j];
-    if(a.squadId!==b.squadId)continue;
-    const dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||.001,min=a.type==='archer'?18:16;
-    if(d>=min)continue;
-    const push=(min-d)*.23,nx=dx/d,ny=dy/d;
-    a.x+=nx*push;a.y+=ny*push;b.x-=nx*push;b.y-=ny*push;
+  for(const squad of squads(army)){
+    const list=(squad.members||[]).filter(active);
+    for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+      const a=list[i],b=list[j],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,min=a.type==='archer'?18:16;
+      if(d2<=0||d2>=min*min)continue;
+      const d=Math.sqrt(d2),push=(min-d)*.23,nx=dx/d,ny=dy/d;
+      a.x+=nx*push;a.y+=ny*push;b.x-=nx*push;b.y-=ny*push;
+    }
   }
 }
 
@@ -35,8 +46,8 @@ function stabiliseFront(state){
   const player=members(state.player).filter(member=>active(member)&&member.type==='infantry');
   const enemy=members(state.enemy).filter(member=>active(member)&&member.type==='infantry');
   for(const p of player)for(const e of enemy){
-    const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy);
-    if(d>28)continue;
+    const dx=p.x-e.x,dy=p.y-e.y,d2=dx*dx+dy*dy;
+    if(d2>784)continue;
     const desiredY=15;
     if(p.y-e.y<desiredY){const push=(desiredY-(p.y-e.y))*.36;p.y+=push;e.y-=push;}
     if(Math.abs(dx)<11){const direction=(hash(p.id+e.id)&1)?1:-1,push=(11-Math.abs(dx))*.18;p.x+=direction*push;e.x-=direction*push;}
@@ -46,9 +57,11 @@ function stabiliseFront(state){
 
 function limitDogpiles(state){
   for(const army of[state.player,state.enemy]){
-    const attackers=members(army).filter(member=>active(member)&&member.type==='infantry'&&member.targetId);
     const byTarget=new Map();
-    for(const member of attackers){const list=byTarget.get(member.targetId)||[];list.push(member);byTarget.set(member.targetId,list);}
+    for(const member of members(army)){
+      if(!active(member)||member.type!=='infantry'||!member.targetId)continue;
+      const list=byTarget.get(member.targetId)||[];list.push(member);byTarget.set(member.targetId,list);
+    }
     for(const list of byTarget.values())if(list.length>2){
       list.sort((a,b)=>a.index-b.index);
       for(const member of list.slice(2)){member.targetId=null;member.vx+=(member.index%2?1:-1)*2.1;}
@@ -58,7 +71,6 @@ function limitDogpiles(state){
 
 function addFormationLife(state){
   for(const army of[state.player,state.enemy])for(const squad of squads(army))for(const member of squad.members||[]){
-    member.facingY=FORWARD[member.side]||member.facingY||-1;
     if(!active(member)||member.state==='fighting'||member.state==='drawing'||member.state==='shooting')continue;
     const tx=(member.slotX||member.x)+(member.clarityJitterX||0)+Math.sin(state.time*1.7+member.phase)*.75;
     const ty=(member.slotY||member.y)+(member.clarityJitterY||0);
@@ -84,15 +96,23 @@ function emphasiseVolleys(state){
   }
 }
 
-export function applyCombatClarity(state){
+export function applyCombatClarity(state,dt=.05){
   initialise(state);
-  separateFriendly(state.player);separateFriendly(state.enemy);
-  stabiliseFront(state);limitDogpiles(state);addFormationLife(state);emphasiseVolleys(state);
+  keepWarriorsUpright(state);
+  addFormationLife(state);
+  const clarity=state.__combatClarity;
+  clarity.heavyClock-=dt;
+  if(clarity.heavyClock<=0){
+    clarity.heavyClock+=HEAVY_STEP;
+    separateFriendly(state.player);separateFriendly(state.enemy);
+    stabiliseFront(state);limitDogpiles(state);
+  }
+  emphasiseVolleys(state);
   return state;
 }
 
 export function createBattleState(baseCreate,...args){return initialise(baseCreate(...args));}
-export function stepBattle(baseStep,state,dt=.05){baseStep(state,dt);return applyCombatClarity(state);}
+export function stepBattle(baseStep,state,dt=.05){baseStep(state,dt);return applyCombatClarity(state,dt);}
 export function simulateBattle(baseCreate,baseStep,baseSummarize,a,b,seed=1,max=110){
   const state=createBattleState(baseCreate,a,b,seed,{captureReplay:false});
   while(state.status==='running'&&state.time<max)stepBattle(baseStep,state,.05);
