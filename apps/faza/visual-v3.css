@@ -1,0 +1,118 @@
+/* Tactical instrument layer — v1.3.0. Geometry remains fixed. */
+:root {
+  --turn-accent: var(--blue);
+  --turn-accent-dark: var(--blue-dark);
+  --board-ivory: #f3ecdf;
+  --graphite: #293235;
+  --signal-gold: #c99b39;
+}
+:root[data-faza-turn="2"] { --turn-accent: var(--clay); --turn-accent-dark: var(--clay-dark); }
+
+.phase-emblem.concept-board { isolation: isolate; overflow: hidden; }
+.concept-board svg { max-width: 330px; }
+.concept-grid polygon { fill: rgba(222,213,198,.72); stroke: rgba(65,70,68,.42); stroke-width: 1.2; }
+.concept-axis-links line { stroke: var(--blue); stroke-width: 10; stroke-linecap: round; opacity: .72; transition: opacity 160ms ease, stroke 160ms ease, stroke-width 160ms ease, stroke-dasharray 160ms ease; }
+.concept-board[data-phase="0"] [data-concept-link="0"],
+.concept-board[data-phase="1"] [data-concept-link="1"],
+.concept-board[data-phase="2"] [data-concept-link="2"] { stroke: var(--ink); stroke-width: 5; stroke-dasharray: 8 13; opacity: .24; }
+.concept-stones circle { stroke: var(--board-ivory); stroke-width: 4; }
+.concept-stones .blue { fill: var(--blue); }
+.concept-stones .clay { fill: var(--clay); }
+.concept-stones .ghost { opacity: .68; stroke-dasharray: 4 5; }
+.concept-cut { pointer-events: none; }
+.concept-cut circle { fill: var(--board-ivory); stroke: var(--ink); stroke-width: 1.5; }
+.concept-cut path { fill: none; stroke: var(--ink); stroke-width: 2.2; }
+.concept-board[data-phase="0"] .concept-cut { transform: translate(0,0); }
+.concept-board[data-phase="1"] .concept-cut { transform: translate(0,-18px); }
+.concept-board[data-phase="2"] .concept-cut { transform: translate(0,18px); }
+.concept-axis-row { gap: 0; }
+.concept-axis-row button { min-height: 36px; border: 0; border-right: 1px solid rgba(31,40,43,.17); background: transparent; color: var(--ink); font-size: 1.12rem; font-weight: 900; cursor: pointer; }
+.concept-axis-row button:last-child { border-right: 0; }
+.concept-axis-row button[aria-pressed="true"] { background: var(--ink); color: var(--paper-light); text-decoration: line-through; }
+.primary-action::after { content: attr(data-index); position: absolute; right: 17px; top: 14px; font-size: .52rem; letter-spacing: .14em; opacity: .55; }
+
+.player-score { grid-template-rows: auto auto auto; }
+.capture-track { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; }
+.capture-track i { display: block; height: 3px; background: rgba(31,40,43,.14); }
+.player-one .capture-track i.is-filled { background: var(--blue); }
+.player-two .capture-track i.is-filled { background: var(--clay); }
+.player-score.is-current .capture-track i:not(.is-filled) { background: color-mix(in srgb, var(--turn-accent) 22%, transparent); }
+
+.phase-compass { position: absolute; z-index: 0; width: min(76vmin, 590px); aspect-ratio: 1; pointer-events: none; opacity: .72; }
+.phase-compass::before,
+.phase-compass::after { content: ""; position: absolute; inset: 3%; clip-path: polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0 50%); background: rgba(31,40,43,.045); }
+.phase-compass::after { inset: 8%; background: var(--paper); }
+.phase-compass i { position: absolute; z-index: 1; left: 8%; top: calc(50% - .5px); width: 84%; height: 1px; background: rgba(31,40,43,.1); transform-origin: center; }
+.phase-compass [data-compass-axis="1"] { transform: rotate(-60deg); }
+.phase-compass [data-compass-axis="2"] { transform: rotate(60deg); }
+.board-stage[data-closed-axis="0"] .phase-compass [data-compass-axis="0"],
+.board-stage[data-closed-axis="1"] .phase-compass [data-compass-axis="1"],
+.board-stage[data-closed-axis="2"] .phase-compass [data-compass-axis="2"] { height: 2px; background: repeating-linear-gradient(90deg, rgba(31,40,43,.28) 0 5px, transparent 5px 13px); }
+.phase-compass span { position: absolute; z-index: 2; inset: 14%; border: 1px solid rgba(31,40,43,.06); clip-path: polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0 50%); }
+.board { position: relative; z-index: 2; }
+
+.position-radar { position: absolute; z-index: 7; left: 10px; top: 10px; min-height: 30px; display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(245,239,228,.84); border-bottom: 1px solid rgba(31,40,43,.28); color: var(--muted); pointer-events: none; }
+.position-radar .radar-mark { width: 8px; height: 8px; border: 1px solid currentColor; }
+.position-radar b { font-size: .47rem; letter-spacing: .12em; color: var(--ink); }
+.position-radar em { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; font-size: .52rem; }
+.position-radar[data-tone="pressure"] { color: var(--clay-dark); }
+.position-radar[data-tone="pressure"] .radar-mark { background: var(--clay); border-color: var(--clay); }
+.position-radar[data-tone="capture"] { color: #6d2d20; border-color: var(--clay-dark); background: rgba(250,235,225,.92); }
+.position-radar[data-tone="capture"] .radar-mark { background: var(--clay-dark); border-color: var(--clay-dark); }
+.position-radar[data-tone="path"] { color: #84651c; }
+.position-radar[data-tone="path"] .radar-mark { background: var(--signal-gold); border-color: var(--signal-gold); }
+.position-radar[data-tone="preview"] { color: var(--turn-accent-dark); }
+.position-radar[data-tone="preview"] .radar-mark { background: var(--turn-accent); border-color: var(--turn-accent); }
+
+.phase-picker .phase-axis { position: relative; border: 0; }
+.phase-picker .phase-axis .axis-line { position: absolute; left: 4px; top: calc(50% - 1px); width: 26px; height: 2px; background: currentColor; opacity: .34; transform-origin: center; }
+.phase-picker .phase-axis .axis-line-1 { transform: rotate(-60deg); }
+.phase-picker .phase-axis .axis-line-2 { transform: rotate(60deg); }
+.phase-picker [data-phase="0"] .axis-line-0,
+.phase-picker [data-phase="1"] .axis-line-1,
+.phase-picker [data-phase="2"] .axis-line-2 { opacity: .12; background: repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 8px); }
+.phase-picker .phase-axis b { position: absolute; inset: 0; display: grid; place-items: center; font-size: .72rem; font-weight: 800; opacity: .78; }
+.phase-picker button.is-selected-phase .phase-axis .axis-line { opacity: .64; }
+.phase-picker button.is-selected-phase .phase-axis b { color: var(--signal-gold); opacity: 1; }
+.phase-picker button.is-selected-phase { background: var(--turn-accent-dark); }
+.confirm-move { background: var(--turn-accent-dark); }
+
+.board .stone.player-1 { fill: #326c94; }
+.board .stone.player-2 { fill: #bd6541; }
+.board .stone { stroke: #f8f0e1; stroke-width: 3; filter: drop-shadow(0 2px 1px rgba(31,40,43,.24)); }
+.board .stone.is-threat:not(.will-capture) { stroke: var(--clay-dark); stroke-width: 6; stroke-dasharray: 2 5; filter: drop-shadow(0 0 4px rgba(121,57,35,.24)); }
+.board .stone.will-capture { fill: #a64f34; stroke: #4d2018; stroke-width: 7; opacity: .62; }
+.board .liberty-dot { fill: var(--board-ivory); stroke-width: 3; }
+.board .stone-link { opacity: .58; }
+.board .stone-link.player-1 { stroke: #326c94; }
+.board .stone-link.player-2 { stroke: #bd6541; }
+.board .cut-mark circle { fill: var(--board-ivory); }
+.board .cell.is-legal .cell-shape { stroke: color-mix(in srgb, var(--turn-accent) 38%, #7f827e); }
+.board .cell.is-preview .cell-shape { stroke: var(--turn-accent-dark); }
+
+@media (max-width: 760px) {
+  .position-radar { top: 46px; left: 8px; min-height: 24px; padding: 3px 6px; }
+  .position-radar b { display: none; }
+  .position-radar em { max-width: 150px; font-size: .47rem; }
+  .phase-compass { width: min(92vw, 560px); }
+  .capture-track { gap: 2px; margin-top: 2px; }
+  .capture-track i { height: 2px; }
+  .concept-board svg { max-width: 270px; }
+}
+
+@media (max-height: 760px) and (orientation: portrait) {
+  .position-radar { display: none; }
+  .capture-track { margin-top: 1px; }
+}
+
+@media (orientation: landscape) and (max-height: 640px) {
+  .position-radar { top: 6px; left: 6px; min-height: 22px; padding: 2px 5px; }
+  .position-radar b { display: none; }
+  .position-radar em { max-width: 145px; font-size: .45rem; }
+  .phase-compass { width: min(66vh, 520px); }
+  .capture-track { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concept-axis-links line { transition: none; }
+}
