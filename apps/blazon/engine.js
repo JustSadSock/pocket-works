@@ -158,6 +158,8 @@ export function recordBattle(campaign, result) {
   return next;
 }
 
+const FIELD_W = 1000;
+const FIELD_H = 600;
 const SIDE_SIGN = { player: 1, enemy: -1 };
 
 function formationPositions(side, ordinary) {
@@ -172,7 +174,7 @@ function formationPositions(side, ordinary) {
     case 'chevron': xs = [baseX + dir * 44, baseX - dir * 18, baseX - dir * 18, baseX + dir * 44]; break;
     default: xs = [baseX, baseX, baseX, baseX];
   }
-  return ys.map((y) => ({ x: xs.shift(), y }));
+  return ys.map((y, i) => ({ x: xs[i], y }));
 }
 
 function createArmy(side, doctrine) {
@@ -208,6 +210,7 @@ function event(state, side, rule, text) {
   if (rule !== 'movement' && state.decisive.length < 8) state.decisive.push(item);
 }
 function enemyArmy(state, side) { return side === 'player' ? state.enemy : state.player; }
+function ownArmy(state, side) { return side === 'player' ? state.player : state.enemy; }
 function living(squad) { return squad.strength > 0.15 && squad.morale > 0.05; }
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -224,7 +227,7 @@ function findById(state, id) {
   for (const army of [state.player, state.enemy]) for (const squad of [...army.infantry, ...army.archers]) if (squad.id === id) return squad;
   return null;
 }
-function activeMain(army) { return army.doctrine.main && !(army.doctrine.command === 'chain' && !army.crisis); }
+function activeMain(army) { return army.doctrine.main && !(army.doctrine.command === 'chain' && !army.crisis) ? army.doctrine.main : null; }
 function threatNearBanner(state, army) { return enemyArmy(state, army.side).infantry.some((s) => living(s) && dist(s, army.banner) < 150); }
 function gapExists(enemy) {
   const live = enemy.infantry.filter(living).sort((a, b) => a.y - b.y);
@@ -352,7 +355,8 @@ function updateInfantry(state, army, squad, dt) {
     }
     moveToward(squad, destination, 20, dt);
   } else if (squad.cooldown <= 0) {
-    const power = 0.0038 * squad.strength * (0.65 + squad.morale * 0.35);
+    const fatigue = 1 + Math.max(0, state.time - 50) / 30;
+    const power = 0.0038 * squad.strength * (0.65 + squad.morale * 0.35) * fatigue;
     target.morale -= power;
     if (rand(state) < 0.18 + squad.strength * 0.006) target.strength -= 0.28 + rand(state) * 0.22;
     squad.cooldown = 0.62;
@@ -374,7 +378,7 @@ function clearShot(army, archer, target) {
 }
 function chooseArcherTarget(state, army, archer) {
   const enemy = enemyArmy(state, army.side);
-  const candidates = enemy.infantry.filter((s) => living(s) && dist(archer, s) < 285 && clearShot(army, archer, s));
+  let candidates = enemy.infantry.filter((s) => living(s) && dist(archer, s) < 285 && clearShot(army, archer, s));
   if (!candidates.length) return null;
   const secondary = army.doctrine.secondary;
   if (secondary === 'sun') return candidates.sort((a, b) => a.morale - b.morale || a.strength - b.strength)[0];
@@ -418,7 +422,8 @@ function updateArcher(state, army, archer, dt) {
     target = chooseArcherTarget(state, army, archer); archer.targetId = target?.id || null; archer.retarget = army.doctrine.secondary === 'eagle' ? 0.9 : 1.6;
   }
   if (target && archer.cooldown <= 0) {
-    target.morale -= 0.0042 * archer.strength;
+    const fatigue = 1 + Math.max(0, state.time - 50) / 35;
+    target.morale -= 0.0042 * archer.strength * fatigue;
     if (rand(state) < 0.11 + archer.strength * 0.008) target.strength -= 0.18 + rand(state) * 0.15;
     archer.cooldown = 1.65;
     state.arrows.push({ side: army.side, x1: archer.x, y1: archer.y, x2: target.x, y2: target.y, life: 0.34 });
