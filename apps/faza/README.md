@@ -20,6 +20,10 @@
 
 Ход ИИ воспроизводится в три читаемых этапа: клетка, выбранная выключенная ось с объяснением, применение захватов.
 
+## Стабильность интерфейса
+
+Начиная с версии 1.1.1 поле не меняет размер при открытии предпросмотра и не запускает заново масштабирование старых SVG-элементов. Пространство под анализ и подтверждение зарезервировано постоянно; игровые состояния меняются только цветом, толщиной и прозрачностью.
+
 ## Проверка
 
 ```bash
@@ -27,8 +31,10 @@ node --check apps/faza/game.js
 node --check apps/faza/ai.js
 node --check apps/faza/app.js
 node --check apps/faza/app-v2.js
+node --check apps/faza/sw.js
 node apps/faza/tests/audit.mjs
 node apps/faza/tests/clarity-contract.mjs
+node apps/faza/tests/stability-contract.mjs
 ```
 
 Отчёт о 40 конфигурациях и более 2 600 бот-партий находится в `DESIGN-AUDIT.md` и встроен в экран «Баланс и тесты».
@@ -36,6 +42,6 @@ node apps/faza/tests/clarity-contract.mjs
 ## Хранение и офлайн
 
 - namespace: `pocket-works:faza`;
-- cache: `faza-v1.1.0`;
+- cache: `faza-v1.1.1`;
 - состояние серии, незавершённая партия и настройки сохраняются локально;
 - все игровые и общие runtime-файлы входят в Service Worker shell.
