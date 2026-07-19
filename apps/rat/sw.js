@@ -37,6 +37,7 @@ const APP_SHELL = [
   './shell-ui-v4.js',
   './shell-ui-v4-fix.js',
   './screen-redesign-v5.js',
+  './screen-redesign-v5-fix.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
