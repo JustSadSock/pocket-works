@@ -32,7 +32,8 @@ const criticalParts = [
 ];
 
 const enhancements = [
-  { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', label: 'экран построения' }
+  { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', label: 'экран построения' },
+  { src: './setup-redesign-v6-recovery.js', ready: '__RAT_SETUP_RECOVERY_READY', label: 'восстановление экрана построения' }
 ];
 
 function appendScript(src) {
