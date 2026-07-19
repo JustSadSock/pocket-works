@@ -2,7 +2,7 @@ const { installMobileRuntime, createWorkshopMode, watchConnectivity } = globalTh
 
 installMobileRuntime();
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.2.0';
 const STORAGE_KEY = 'pocket-works:ars-machina:blueprint';
 const PREFS_KEY = 'pocket-works:ars-machina:prefs';
 const GROUND_Y = 640;
@@ -40,6 +40,10 @@ const ui = {
   inspectMinus: document.querySelector('#inspectMinus'),
   inspectPlus: document.querySelector('#inspectPlus'),
   inspectDelete: document.querySelector('#inspectDelete'),
+  inspectLayerDown: document.querySelector('#inspectLayerDown'),
+  inspectLayerLabel: document.querySelector('#inspectLayerLabel'),
+  inspectLayerUp: document.querySelector('#inspectLayerUp'),
+  inspectCycle: document.querySelector('#inspectCycle'),
   toast: document.querySelector('#toast'),
   fireButton: document.querySelector('#fireButton'),
   winchInButton: document.querySelector('#winchInButton'),
@@ -50,8 +54,10 @@ const TOOL_GROUPS = {
   frame: [
     ['select', 'Выбор', 'select'],
     ['pan', 'Ладонь', 'pan'],
-    ['node', 'Шарнир', 'node'],
+    ['node', 'Узел', 'node'],
     ['beam', 'Балка', 'beam'],
+    ['hinge', 'Шарнир', 'hinge'],
+    ['weld', 'Скоба', 'weld'],
     ['anchor', 'Опора', 'anchor']
   ],
   drive: [
@@ -70,13 +76,17 @@ const TOOL_GROUPS = {
   ],
   utility: [
     ['select', 'Выбор', 'select'],
+    ['layers', 'Слои', 'layers'],
     ['pan', 'Ладонь', 'pan'],
     ['erase', 'Ластик', 'erase']
   ]
 };
 
 const NAMES = {
-  node: ['Узел', 'Шарнир'],
+  node: ['Узел', 'Свободный узел'],
+  mount: ['Точка крепления', 'Узел на балке'],
+  hinge: ['Соединение', 'Подвижный шарнир'],
+  weld: ['Соединение', 'Неподвижная скоба'],
   beam: ['Связь', 'Дубовая балка'],
   rope: ['Связь', 'Пеньковый трос'],
   spring: ['Связь', 'Пружинящая связка'],
@@ -111,11 +121,13 @@ const state = {
   category: 'frame',
   tool: 'select',
   pendingNodeId: null,
+  pendingJointTarget: null,
   selection: null,
   nodes: [],
   constraints: [],
   rotors: [],
   attachments: [],
+  joints: [],
   camera: { x: 480, y: 360, zoom: 1 },
   drive: 0,
   simTime: 0,
@@ -124,7 +136,8 @@ const state = {
   undo: [],
   redo: [],
   initialSnapshot: null,
-  dirty: false
+  dirty: false,
+  hitCycle: null
 };
 
 function nextId(prefix) {
@@ -171,17 +184,170 @@ function constraintById(id) {
   return state.constraints.find((constraint) => constraint.id === id) || null;
 }
 
+function jointById(id) {
+  return state.joints.find((joint) => joint.id === id) || null;
+}
+
+function beamById(id) {
+  const beam = constraintById(id);
+  return beam?.type === 'beam' ? beam : null;
+}
+
+function normalizeAngle(value) {
+  let angle = value;
+  while (angle > Math.PI) angle -= TAU;
+  while (angle < -Math.PI) angle += TAU;
+  return angle;
+}
+
+function itemLayer(item) {
+  return Number.isFinite(item?.layer) ? item.layer : 0;
+}
+
+function selectionLayer(selection = state.selection) {
+  const selected = getSelectedFor(selection);
+  return itemLayer(selected);
+}
+
+function projectPointToBeam(world, beam) {
+  const a = nodeById(beam?.a);
+  const b = nodeById(beam?.b);
+  if (!a || !b) return null;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared ? clamp(((world.x - a.x) * dx + (world.y - a.y) * dy) / lengthSquared, 0, 1) : 0;
+  const point = { x: a.x + dx * t, y: a.y + dy * t };
+  return { t, point, distance: Math.hypot(world.x - point.x, world.y - point.y) };
+}
+
+function syncMountNode(node, exact = false) {
+  if (!node?.mount) return false;
+  const beam = beamById(node.mount.beamId);
+  const projection = projectPointToBeam(node, beam);
+  if (!beam || !projection) return false;
+  const a = nodeById(beam.a);
+  const b = nodeById(beam.b);
+  const t = clamp(node.mount.t, 0, 1);
+  const x = a.x + (b.x - a.x) * t;
+  const y = a.y + (b.y - a.y) * t;
+  if (exact) {
+    node.x = x;
+    node.y = y;
+    node.px = x;
+    node.py = y;
+  }
+  return true;
+}
+
+function syncAllMounts(exact = false) {
+  for (const node of state.nodes) syncMountNode(node, exact);
+}
+
+function mountNodeOnBeam(beam, world, options = {}) {
+  const projection = projectPointToBeam(world, beam);
+  if (!projection) return null;
+  const a = nodeById(beam.a);
+  const b = nodeById(beam.b);
+  const endpointThreshold = Math.min(.08, 14 / Math.max(40, distance(a, b)));
+  if (projection.t <= endpointThreshold) return a;
+  if (projection.t >= 1 - endpointThreshold) return b;
+  const existing = state.nodes.find((node) => node.mount?.beamId === beam.id && Math.abs(node.mount.t - projection.t) < .025);
+  if (existing) return existing;
+  return createNode(projection.point.x, projection.point.y, {
+    role: 'mount',
+    mass: .75,
+    radius: 5,
+    layer: options.layer ?? itemLayer(beam) + 1,
+    mount: { beamId: beam.id, t: projection.t }
+  });
+}
+
+function beamHitsAt(world, radius = 16 / state.camera.zoom, excludeId = null) {
+  return state.constraints
+    .filter((constraint) => constraint.type === 'beam' && constraint.id !== excludeId)
+    .map((beam) => ({ beam, projection: projectPointToBeam(world, beam) }))
+    .filter((hit) => hit.projection && hit.projection.distance <= radius)
+    .sort((left, right) => itemLayer(right.beam) - itemLayer(left.beam) || left.projection.distance - right.projection.distance);
+}
+
+function connectionPointAt(world, { create = true, excludeBeamId = null, preferBeam = false } = {}) {
+  const nearbyNode = findNodeAt(world, 16 / state.camera.zoom, { includeMounts: true });
+  const beamHit = beamHitsAt(world, 15 / state.camera.zoom, excludeBeamId)[0] || null;
+  if (nearbyNode && !preferBeam) {
+    const beam = state.constraints.find((constraint) => constraint.type === 'beam' && constraint.id !== excludeBeamId && (constraint.a === nearbyNode.id || constraint.b === nearbyNode.id));
+    return { node: nearbyNode, beamId: beam?.id || nearbyNode.mount?.beamId || null };
+  }
+  if (beamHit) {
+    const node = create ? mountNodeOnBeam(beamHit.beam, beamHit.projection.point) : null;
+    return node ? { node, beamId: beamHit.beam.id } : null;
+  }
+  if (nearbyNode) {
+    const beam = state.constraints.find((constraint) => constraint.type === 'beam' && constraint.id !== excludeBeamId && (constraint.a === nearbyNode.id || constraint.b === nearbyNode.id));
+    return { node: nearbyNode, beamId: beam?.id || nearbyNode.mount?.beamId || null };
+  }
+  if (!create) return null;
+  const node = createNode(world.x, world.y);
+  return { node, beamId: null };
+}
+
+function createJoint(type, first, second) {
+  if (!first?.node || !second?.node || !first.beamId || !second.beamId || first.beamId === second.beamId) return null;
+  const a = first.node;
+  const b = second.node;
+  const gap = distance(a, b);
+  if (gap > 28) {
+    if (!b.fixed && !b.mount) {
+      b.x = a.x;
+      b.y = a.y;
+      b.px = a.x;
+      b.py = a.y;
+    } else {
+      return null;
+    }
+  }
+  const beamA = beamById(first.beamId);
+  const beamB = beamById(second.beamId);
+  if (!beamA || !beamB) return null;
+  const angleA = Math.atan2(nodeById(beamA.b).y - nodeById(beamA.a).y, nodeById(beamA.b).x - nodeById(beamA.a).x);
+  const angleB = Math.atan2(nodeById(beamB.b).y - nodeById(beamB.a).y, nodeById(beamB.b).x - nodeById(beamB.a).x);
+  const existing = state.joints.find((joint) => joint.beamA === beamA.id && joint.beamB === beamB.id && joint.a === a.id && joint.b === b.id)
+    || state.joints.find((joint) => joint.beamA === beamB.id && joint.beamB === beamA.id && joint.a === b.id && joint.b === a.id);
+  if (existing) {
+    existing.type = type;
+    existing.targetAngle = normalizeAngle(angleB - angleA);
+    return existing;
+  }
+  const joint = {
+    id: nextId(type),
+    type,
+    a: a.id,
+    b: b.id,
+    beamA: beamA.id,
+    beamB: beamB.id,
+    targetAngle: normalizeAngle(angleB - angleA),
+    stiffness: type === 'weld' ? .34 : 1,
+    layer: Math.max(itemLayer(beamA), itemLayer(beamB), itemLayer(a), itemLayer(b)) + 1
+  };
+  state.joints.push(joint);
+  return joint;
+}
+
 function createNode(x, y, options = {}) {
+  const px = options.snap === false ? x : snap(x);
+  const py = options.snap === false ? y : snap(y);
   const node = {
     id: nextId('node'),
-    x: snap(x),
-    y: snap(y),
-    px: snap(x),
-    py: snap(y),
+    x: px,
+    y: py,
+    px,
+    py,
     fixed: Boolean(options.fixed),
     mass: options.mass || 1,
     radius: options.radius || 6,
-    role: options.role || 'node'
+    role: options.role || 'node',
+    layer: options.layer ?? 0,
+    mount: options.mount ? { beamId: options.mount.beamId, t: clamp(options.mount.t, 0, 1) } : null
   };
   state.nodes.push(node);
   return node;
@@ -204,7 +370,8 @@ function createConstraint(type, aId, bId, options = {}) {
     maxLength: options.maxLength ?? natural,
     stiffness: options.stiffness ?? (type === 'spring' ? 0.11 : 1),
     active: options.active ?? true,
-    width: options.width ?? (type === 'beam' ? 10 : 3)
+    width: options.width ?? (type === 'beam' ? 10 : 3),
+    layer: options.layer ?? Math.max(itemLayer(a), itemLayer(b))
   };
   state.constraints.push(constraint);
   return constraint;
@@ -220,7 +387,8 @@ function createRotor(type, nodeId, options = {}) {
     radius: options.radius ?? ({ wheel: 42, gear: 30, winch: 24, pulley: 20 }[type] || 28),
     angle: options.angle || 0,
     omega: options.omega || 0,
-    teeth: options.teeth || Math.max(8, Math.round((options.radius || 30) / 3))
+    teeth: options.teeth || Math.max(8, Math.round((options.radius || 30) / 3)),
+    layer: options.layer ?? itemLayer(node) + 1
   };
   state.rotors.push(rotor);
   return rotor;
@@ -234,7 +402,8 @@ function createAttachment(type, nodeId, options = {}) {
     type,
     nodeId,
     amount: options.amount ?? (type === 'weight' ? 10 : type === 'motor' ? 1.6 : 1),
-    hostId: options.hostId || null
+    hostId: options.hostId || null,
+    layer: options.layer ?? itemLayer(node) + 1
   };
   state.attachments.push(attachment);
   if (type === 'weight') node.mass = Math.max(node.mass, attachment.amount);
@@ -251,8 +420,11 @@ function clearWorld() {
   state.constraints = [];
   state.rotors = [];
   state.attachments = [];
+  state.joints = [];
   state.selection = null;
   state.pendingNodeId = null;
+  state.pendingJointTarget = null;
+  state.hitCycle = null;
   state.drive = 0;
   state.simTime = 0;
   fireCountdown = -1;
@@ -321,26 +493,30 @@ function buildBlank() {
 
 function serializeModel() {
   return {
-    version: 1,
+    version: 2,
     idCounter,
     nodes: state.nodes,
     constraints: state.constraints,
     rotors: state.rotors,
     attachments: state.attachments,
+    joints: state.joints,
     camera: state.camera
   };
 }
 
 function applyModel(model, { resetHistory = false } = {}) {
-  if (!model || model.version !== 1 || !Array.isArray(model.nodes) || !Array.isArray(model.constraints)) throw new Error('Неподдерживаемый чертёж');
-  state.nodes = deepClone(model.nodes);
-  state.constraints = deepClone(model.constraints);
-  state.rotors = deepClone(model.rotors || []);
-  state.attachments = deepClone(model.attachments || []);
+  if (!model || ![1, 2].includes(model.version) || !Array.isArray(model.nodes) || !Array.isArray(model.constraints)) throw new Error('Неподдерживаемый чертёж');
+  state.nodes = deepClone(model.nodes).map((node) => ({ layer: 0, mount: null, ...node }));
+  state.constraints = deepClone(model.constraints).map((constraint) => ({ layer: 0, ...constraint }));
+  state.rotors = deepClone(model.rotors || []).map((rotor) => ({ layer: 1, ...rotor }));
+  state.attachments = deepClone(model.attachments || []).map((attachment) => ({ layer: 1, ...attachment }));
+  state.joints = deepClone(model.joints || []).map((joint) => ({ layer: 2, stiffness: joint.type === 'weld' ? .34 : 1, ...joint }));
   state.camera = { x: 480, y: 360, zoom: 1, ...(model.camera || {}) };
   idCounter = Math.max(Number(model.idCounter) || 1, inferNextId());
   state.selection = null;
   state.pendingNodeId = null;
+  state.pendingJointTarget = null;
+  state.hitCycle = null;
   state.mode = 'build';
   state.drive = 0;
   state.simTime = 0;
@@ -349,13 +525,14 @@ function applyModel(model, { resetHistory = false } = {}) {
     state.undo = [];
     state.redo = [];
   }
+  syncAllMounts(true);
   resetVelocities();
   updateModeUI();
   updateInspector();
 }
 
 function inferNextId() {
-  const ids = [...state.nodes, ...state.constraints, ...state.rotors, ...state.attachments]
+  const ids = [...state.nodes, ...state.constraints, ...state.rotors, ...state.attachments, ...state.joints]
     .map((item) => Number(String(item.id).split('-').at(-1)))
     .filter(Number.isFinite);
   return ids.length ? Math.max(...ids) + 1 : 1;
@@ -409,83 +586,3 @@ function undo() {
   updateHistoryButtons();
   clickSound(260, .035);
 }
-
-function redo() {
-  if (!state.redo.length || state.mode !== 'build') return;
-  state.undo.push(snapshot());
-  const model = JSON.parse(state.redo.pop());
-  applyModel(model);
-  saveSoon();
-  updateHistoryButtons();
-  clickSound(330, .035);
-}
-
-function updateHistoryButtons() {
-  ui.undoButton.disabled = !state.undo.length || state.mode !== 'build';
-  ui.redoButton.disabled = !state.redo.length || state.mode !== 'build';
-}
-
-function resetVelocities() {
-  for (const node of state.nodes) {
-    node.px = node.x;
-    node.py = node.y;
-  }
-  for (const rotor of state.rotors) rotor.omega = 0;
-}
-
-function setTool(tool) {
-  state.tool = tool;
-  state.pendingNodeId = null;
-  state.selection = null;
-  renderTools();
-  updateInspector();
-  const copy = {
-    select: 'Коснись детали. Узлы можно перетаскивать.',
-    pan: 'Тяни поле, чтобы перемещать камеру.',
-    node: 'Коснись сетки, чтобы поставить шарнир.',
-    beam: 'Выбери два узла для жёсткой балки.',
-    rope: 'Выбери два узла для троса.',
-    spring: 'Выбери два узла для пружины.',
-    latch: 'Выбери два узла. Защёлка разомкнётся по «Спуску».',
-    wheel: 'Коснись узла или сетки, чтобы поставить колесо.',
-    gear: 'Шестерни сцепляются при касании зубьев.',
-    motor: 'Поставь ворот на ось колеса или шестерни.',
-    winch: 'Тросы, подключённые к барабану, можно подтягивать.',
-    pulley: 'Пассивный блок для построения канатной трассы.',
-    anchor: 'Коснись узла, чтобы закрепить его в мире.',
-    weight: 'Утяжели узел и получи противовес.',
-    payload: 'Коснись узла на метательной руке.',
-    erase: 'Коснись детали, чтобы удалить её.'
-  };
-  setYardNote(copy[tool] || 'Выбери деталь');
-  clickSound(220, .025);
-}
-
-function renderTools() {
-  ui.toolRail.innerHTML = '';
-  for (const [tool, label, icon] of TOOL_GROUPS[state.category]) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `tool${state.tool === tool ? ' active' : ''}`;
-    button.dataset.tool = tool;
-    button.dataset.nativePress = '';
-    button.innerHTML = `<span class="tool-icon icon-${icon}" aria-hidden="true"></span><span class="tool-label">${label}</span>`;
-    button.addEventListener('click', () => setTool(tool));
-    ui.toolRail.append(button);
-  }
-}
-
-function setCategory(category) {
-  state.category = category;
-  document.querySelectorAll('.category').forEach((button) => button.classList.toggle('active', button.dataset.category === category));
-  if (!TOOL_GROUPS[category].some(([tool]) => tool === state.tool)) state.tool = TOOL_GROUPS[category][0][0];
-  renderTools();
-}
-
-function updateModeUI() {
-  const running = state.mode === 'run';
-  ui.buildDock.hidden = running;
-  ui.runDock.hidden = !running;
-  ui.modeLabel.textContent = running ? 'испытательный двор' : 'чертёжный двор';
-  ui.blueprintsButton.disabled = running;
-  document.querySelector('.history-controls').hidden = running;
