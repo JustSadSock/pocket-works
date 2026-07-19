@@ -1,6 +1,6 @@
-const BUILD='5.8.0';
+const BUILD='5.9.0';
 const RELEASE_DATE='2026-07-19';
-const CACHE_NAME='blazon-v5.8.0';
+const CACHE_NAME='blazon-v5.9.0';
 const CACHE=CACHE_NAME;
 const FINGERPRINT=new URL(self.location.href).searchParams.get('pw_fp')||'';
 const REQUIRED=[
@@ -16,16 +16,16 @@ const OPTIONAL=[
   './progression-runtime.js','./armorial-composition-runtime.js','./release-indicator.js','./reset.html'
 ];
 const RELEASE_NOTES=[
-  'Экран доктрины превращён в походную книгу с отдельным уставом рода, разведдонесением противника, печатями и более ясной иерархией слоёв.',
-  'Награды после боя прямо показывают, какой слой герба и поведения армии будет изменён.',
-  'Боевой интерфейс получил командную ленту с численностью, состоянием строя, угрозой знамени, фазой боя и балансом фронта.',
-  'Срабатывания доктрин собраны в компактную очередь и сопровождаются отметками на поле.',
-  'Экран результата, мобильная компоновка, безопасные зоны и режим уменьшенных анимаций окончательно унифицированы.'
+  'Создание первого устава разбито на четыре компактных этапа вместо одного длинного свитка.',
+  'Черновик устава показывает выбранные поле, строй, основателя и школу, а также оставшиеся решения.',
+  'Карточки вариантов переработаны для мобильного экрана и требуют значительно меньше прокрутки.',
+  'Печать первого устава выполняется поэтапно: интерфейс успевает показать переход до тяжёлой подготовки похода.',
+  'На время печати приостанавливается наблюдение за SVG-композициями; при ошибке интерфейс автоматически восстанавливается.'
 ];
 async function fetchRelease(path,timeout=12000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);try{const url=new URL(path,self.registration.scope);url.searchParams.set('pw_release',BUILD);if(FINGERPRINT)url.searchParams.set('pw_fp',FINGERPRINT);const response=await fetch(url,{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response;}finally{clearTimeout(timer);}}
 async function put(cache,path){const response=await fetchRelease(path);await cache.put(path,response);}
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.all(REQUIRED.map(path=>put(cache,path)));await Promise.allSettled(OPTIONAL.map(path=>put(cache,path)));await self.skipWaiting();})()));
-self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:BUILD,fingerprint:FINGERPRINT,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheName:CACHE,cacheProtocol:5});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0].postMessage({version:BUILD,fingerprint:FINGERPRINT,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheName:CACHE,cacheProtocol:5});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('blazon-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 async function networkFirst(request,fallback='./index.html'){try{const response=await fetch(new Request(request,{cache:'no-store'}));if(response.ok){const cache=await caches.open(CACHE);cache.put(request,response.clone()).catch(()=>{});return response;}}catch{}return(await caches.match(request,{ignoreSearch:true}))||(await caches.match(fallback,{ignoreSearch:true}))||Response.error();}
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==location.origin)return;if(event.request.mode==='navigate'){event.respondWith(networkFirst(event.request,'./index.html'));return;}if(['script','style','worker','manifest'].includes(event.request.destination)||/\.(?:js|css|webmanifest|json)$/i.test(url.pathname)){event.respondWith(networkFirst(event.request));return;}event.respondWith(caches.match(event.request,{ignoreSearch:true}).then(hit=>hit||networkFirst(event.request)));});
