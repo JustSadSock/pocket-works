@@ -8,6 +8,7 @@ function battleLoop(now) {
     updateBattleHud(dt);
   }
   drawBattle(simulation, battleCtx, battleCanvas, false);
+  globalThis.drawCommandOverlay?.(simulation, battleCtx, battleCanvas);
   if (simulation.finished && currentScreen === 'battle') endBattle();
 }
 
@@ -67,14 +68,19 @@ $('#rematchButton').addEventListener('click', () => startBattle());
 $('#resultSetupButton').addEventListener('click', () => showScreen('setup'));
 $('#resultMenuButton').addEventListener('click', () => showScreen('home'));
 
-$$('[data-command-mode]').forEach((button) => button.addEventListener('click', () => setCommandMode(button.dataset.commandMode)));
-
 battleCanvas.addEventListener('pointerdown', (event) => {
-  if (!simulation || battlePaused || commandMode === 'observe') return;
-  audio.unlock();
-  const point = screenToWorld(battleCanvas, simulation.metrics, event.clientX, event.clientY);
-  issueBattleOrder(point);
+  if (globalThis.beginCommandGesture?.(event)) event.preventDefault();
 });
+battleCanvas.addEventListener('pointermove', (event) => {
+  if (globalThis.moveCommandGesture?.(event)) event.preventDefault();
+});
+battleCanvas.addEventListener('pointerup', (event) => {
+  if (globalThis.endCommandGesture?.(event, false)) event.preventDefault();
+});
+battleCanvas.addEventListener('pointercancel', (event) => {
+  globalThis.endCommandGesture?.(event, true);
+});
+battleCanvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
 $('#soundToggle').addEventListener('change', (event) => {
   persistent.settings.sound = event.target.checked;
@@ -117,6 +123,7 @@ style.textContent = `
   .setup-mini{position:absolute;inset:0;display:block}.setup-mini i{position:absolute;width:7px;height:10px;margin:-4px 0 0 -3px;border-radius:50% 50% 42% 42%;background:var(--unit-color);box-shadow:0 2px 0 rgba(24,34,28,.28)}.setup-mini b{position:absolute;left:0;right:0;top:7px;text-align:center;color:rgba(255,255,255,.8);font-size:8px;letter-spacing:.08em}.deployment-slot:has(.setup-mini)::before{display:none}`;
 document.head.appendChild(style);
 
+globalThis.installCommandUI?.();
 syncSettingsUI();
 renderSetup();
 showScreen('home');
