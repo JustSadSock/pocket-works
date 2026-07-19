@@ -1,0 +1,84 @@
+// ARS MACHINA 1.5 — predictable joint completion and readable hand drive.
+const baseApplySelectedJointModeV15Final = applySelectedJointModeV15;
+applySelectedJointModeV15 = function applySelectedJointModeAndFinishV15(mode) {
+  const changed = baseApplySelectedJointModeV15Final(mode);
+  if (changed) {
+    state.pendingJointTarget = null;
+    updateInspector();
+  }
+  return changed;
+};
+
+const baseDrawMotorV15 = drawMotor;
+drawMotor = function drawReadableHandDriveV15(point, amount, zoom) {
+  const size = clamp(24 * zoom, 16, 34);
+  const powered = state.mode === 'run' && Math.abs(state.drive) > .01;
+  const angle = powered ? state.simTime * state.drive * (2.4 + amount * .55) : -.35;
+  ctx.save();
+  ctx.translate(point.x, point.y - size * .92);
+
+  const body = ctx.createLinearGradient(-size, -size, size, size);
+  body.addColorStop(0, '#b17a3e');
+  body.addColorStop(.52, '#704522');
+  body.addColorStop(1, '#3a281b');
+  ctx.fillStyle = body;
+  ctx.strokeStyle = '#251d16';
+  ctx.lineWidth = Math.max(2.5, size * .11);
+  ctx.beginPath();
+  ctx.roundRect(-size * .72, -size * .48, size * 1.44, size * .96, size * .14);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(247,218,153,.42)';
+  ctx.lineWidth = Math.max(1, size * .045);
+  ctx.beginPath();
+  ctx.moveTo(-size * .52, -size * .27);
+  ctx.lineTo(size * .42, -size * .27);
+  ctx.stroke();
+
+  ctx.fillStyle = powered ? '#d6a950' : '#9a7a49';
+  ctx.strokeStyle = '#31251b';
+  ctx.lineWidth = Math.max(2, size * .08);
+  ctx.beginPath();
+  ctx.arc(0, 0, size * .27, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(angle);
+  ctx.strokeStyle = powered ? '#e0b65e' : '#b28a4b';
+  ctx.lineWidth = Math.max(3, size * .12);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(size * .16, 0);
+  ctx.lineTo(size * 1.02, 0);
+  ctx.stroke();
+  ctx.fillStyle = '#49301e';
+  ctx.strokeStyle = '#d1a45a';
+  ctx.lineWidth = Math.max(1.5, size * .055);
+  ctx.beginPath();
+  ctx.arc(size * 1.12, 0, size * .18, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = '#f0d49a';
+  ctx.font = `900 ${Math.max(7, size * .29)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${Math.max(1, Math.round(amount / .8))}×`, 0, size * .02);
+
+  if (powered) {
+    ctx.strokeStyle = 'rgba(225,171,70,.58)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.lineDashOffset = -state.simTime * 20;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * .92, -1.2, 1.2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+};
+
+updateInspector();
