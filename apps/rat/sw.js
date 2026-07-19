@@ -34,6 +34,7 @@ const APP_SHELL = [
   './battle-ui-v3-fix.js',
   './game-part-8.js',
   './shell-ui-v4.js',
+  './shell-ui-v4-fix.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
