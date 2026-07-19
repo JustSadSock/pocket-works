@@ -1,0 +1,22 @@
+/* ARS MACHINA 1.5 — unified mounting language */
+.icon-joint::before {
+  width: 29px;
+  height: 29px;
+  border: 4px solid currentColor;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px #473422;
+}
+.icon-joint::after {
+  width: 13px;
+  height: 13px;
+  border: 3px solid currentColor;
+  transform: rotate(45deg) translate(7px, -7px);
+  background: #473422;
+}
+.tool.active .icon-joint::before { box-shadow: inset 0 0 0 5px #77522c; }
+.tool.active .icon-joint::after { background: #77522c; }
+.joint-readout { color: #254f68; border-left: 3px solid #b6863e; }
+html[data-ars-machina-version="1.5.0"] .tool.active[data-tool="joint"] {
+  background: linear-gradient(145deg, #80572d, #654321);
+}
+html[data-ars-machina-version="1.5.0"] .inspector strong { letter-spacing: .01em; }
