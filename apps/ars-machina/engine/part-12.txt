@@ -1,0 +1,6 @@
+// ARS MACHINA 1.5 — final visual pass after layered rendering.
+const baseDrawLayeredSceneV15 = drawLayeredScene;
+drawLayeredScene = function drawLayeredSceneWithMeshV15() {
+  baseDrawLayeredSceneV15();
+  drawGearMeshFeedbackV15();
+};
