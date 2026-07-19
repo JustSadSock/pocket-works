@@ -149,40 +149,39 @@ handleBuildTap = function enhancedHandleBuildTap(world) {
   setYardNote('Балки соединены общим подвижным шарниром.', 1800);
 };
 
-const baseMovePointer = movePointer;
-movePointer = function enhancedMovePointer(event) {
-  baseMovePointer(event);
+canvas.addEventListener('pointermove', () => {
   if (state.mode !== 'build' || state.tool !== 'select' || !state.drag?.nodeId || !state.gesture?.moved) {
     mergeTargetId = null;
     return;
   }
   const node = nodeById(state.drag.nodeId);
   mergeTargetId = node ? findMergeTarget(node, 26 / state.camera.zoom)?.id || null : null;
-};
+});
 
-const baseEndPointer = endPointer;
-endPointer = function enhancedEndPointer(event) {
+canvas.addEventListener('pointerup', () => {
   const draggedId = state.drag?.nodeId || null;
   const targetId = mergeTargetId;
   const moved = Boolean(state.gesture?.moved);
-  baseEndPointer(event);
   mergeTargetId = null;
-
   if (!draggedId || !targetId || !moved || state.mode !== 'build') return;
-  const merged = mergeNodes(targetId, draggedId, { place: 'remove' });
-  if (!merged) return;
-  selectThing({ kind: 'node', id: merged.id });
-  saveSoon();
-  heavySound(165, .075);
-  vibrate([9, 16, 12]);
-  setYardNote('Концы защёлкнулись в общий шарнир.', 1600);
-};
 
-const baseCancelPointer = cancelPointer;
-cancelPointer = function enhancedCancelPointer(event) {
+  queueMicrotask(() => {
+    const merged = mergeNodes(targetId, draggedId, { place: 'remove' });
+    if (!merged) return;
+    selectThing({ kind: 'node', id: merged.id });
+    saveSoon();
+    heavySound(165, .075);
+    vibrate([9, 16, 12]);
+    setYardNote('Концы защёлкнулись в общий шарнир.', 1600);
+  });
+}, { capture: true });
+
+canvas.addEventListener('pointercancel', () => {
   mergeTargetId = null;
-  baseCancelPointer(event);
-};
+}, { capture: true });
+canvas.addEventListener('lostpointercapture', () => {
+  mergeTargetId = null;
+}, { capture: true });
 
 const baseDrawPending = drawPending;
 drawPending = function enhancedDrawPending() {
