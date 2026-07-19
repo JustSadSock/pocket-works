@@ -1,0 +1,487 @@
+// ARS MACHINA 1.4 — mobile palette, explicit ratios, actuator and model exchange.
+Object.assign(NAMES, {
+  actuator: ['Управление', 'Винтовой толкатель']
+});
+
+if (!TOOL_GROUPS.controls.some(([tool]) => tool === 'actuator')) {
+  TOOL_GROUPS.controls.splice(3, 0, ['actuator', 'Толкатель', 'actuator']);
+}
+
+const LIBRARY_KEY = 'pocket-works:ars-machina:library';
+const CURRENT_MODEL_KEY = 'pocket-works:ars-machina:current-model';
+const SHARE_PREFIX = 'am=';
+const ROTOR_SIZE_PRESETS = [24, 36, 50, 68, 88];
+const RATIO_PRESETS = [[1, 1], [1, 2], [1, 3], [2, 1], [3, 1]];
+let palettePage = 0;
+let lastPalettePageSize = 0;
+let paletteNav = null;
+let inspectorExtra = null;
+let currentModel = loadCurrentModelIdentity();
+let pendingIncomingPackage = null;
+let deleteArmedId = null;
+let deleteArmTimer = 0;
+
+function safeText(value, fallback = '') {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+}
+
+function slugify(value) {
+  return safeText(value, 'ars-machina-model')
+    .toLowerCase()
+    .replace(/[^a-z0-9а-яёіїєґ._-]+/giu, '-')
+    .replace(/^-+|-+$/g, '') || 'ars-machina-model';
+}
+
+function loadCurrentModelIdentity() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CURRENT_MODEL_KEY) || 'null');
+    if (value && typeof value === 'object') return { id: value.id || null, name: safeText(value.name, 'Новая модель') };
+  } catch {}
+  return { id: null, name: 'Новая модель' };
+}
+
+function persistCurrentModelIdentity() {
+  localStorage.setItem(CURRENT_MODEL_KEY, JSON.stringify(currentModel));
+}
+
+function setCurrentModelIdentity(id, name) {
+  currentModel = { id: id || null, name: safeText(name, 'Новая модель') };
+  persistCurrentModelIdentity();
+  const input = document.querySelector('#modelNameInput');
+  if (input) input.value = currentModel.name;
+}
+
+function readLibrary() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]');
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((entry) => entry && entry.id && entry.model && Array.isArray(entry.model.nodes) && Array.isArray(entry.model.constraints));
+  } catch {
+    return [];
+  }
+}
+
+function writeLibrary(entries) {
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(entries.slice(0, 40)));
+}
+
+function modelStats(model) {
+  const rotors = Array.isArray(model?.rotors) ? model.rotors.length : 0;
+  const controls = Array.isArray(model?.attachments)
+    ? model.attachments.filter((item) => ['motor', 'clutch', 'brake', 'ratchet', 'lever'].includes(item.type)).length + (model.constraints || []).filter((item) => item.type === 'actuator').length
+    : 0;
+  return {
+    nodes: Array.isArray(model?.nodes) ? model.nodes.length : 0,
+    links: Array.isArray(model?.constraints) ? model.constraints.length : 0,
+    rotors,
+    controls
+  };
+}
+
+function makeLibraryEntry(name, model = serializeModel(), id = null) {
+  const now = new Date().toISOString();
+  return {
+    id: id || `model-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    name: safeText(name, 'Новая модель'),
+    updatedAt: now,
+    appVersion: '1.4.0',
+    model: deepClone(model)
+  };
+}
+
+function saveCurrentToLibrary({ asCopy = false, quiet = false } = {}) {
+  const entries = readLibrary();
+  const requestedName = safeText(document.querySelector('#modelNameInput')?.value, currentModel.name || 'Новая модель');
+  let entry = null;
+  if (!asCopy && currentModel.id) entry = entries.find((item) => item.id === currentModel.id) || null;
+  if (entry) {
+    entry.name = requestedName;
+    entry.updatedAt = new Date().toISOString();
+    entry.appVersion = '1.4.0';
+    entry.model = deepClone(serializeModel());
+  } else {
+    let uniqueName = requestedName;
+    if (asCopy || entries.some((item) => item.name === uniqueName)) {
+      let suffix = 2;
+      while (entries.some((item) => item.name === `${requestedName} ${suffix}`)) suffix += 1;
+      uniqueName = entries.some((item) => item.name === requestedName) ? `${requestedName} ${suffix}` : requestedName;
+    }
+    entry = makeLibraryEntry(uniqueName);
+    entries.unshift(entry);
+  }
+  entries.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  try {
+    writeLibrary(entries);
+  } catch {
+    showToast('Не хватило памяти для сохранения');
+    return null;
+  }
+  setCurrentModelIdentity(entry.id, entry.name);
+  renderLibraryList();
+  if (!quiet) {
+    showToast(asCopy ? 'Копия сохранена' : 'Модель сохранена');
+    heavySound(230, .055);
+    vibrate(9);
+  }
+  return entry;
+}
+
+function openLibraryEntry(id) {
+  const entry = readLibrary().find((item) => item.id === id);
+  if (!entry) return showToast('Модель не найдена');
+  try {
+    pushUndo();
+    applyModel(deepClone(entry.model));
+    setCurrentModelIdentity(entry.id, entry.name);
+    state.dirty = true;
+    saveNow();
+    closeBlueprints();
+    frameConstruction();
+    setYardNote(`Открыта модель «${entry.name}».`, 1800);
+    heavySound(150, .08);
+  } catch {
+    if (state.undo.length) state.undo.pop();
+    showToast('Модель повреждена');
+  }
+}
+
+function deleteLibraryEntry(id, button) {
+  if (deleteArmedId !== id) {
+    deleteArmedId = id;
+    button.textContent = 'Точно удалить?';
+    button.classList.add('armed');
+    clearTimeout(deleteArmTimer);
+    deleteArmTimer = setTimeout(() => {
+      deleteArmedId = null;
+      renderLibraryList();
+    }, 2600);
+    return;
+  }
+  clearTimeout(deleteArmTimer);
+  deleteArmedId = null;
+  const entries = readLibrary().filter((item) => item.id !== id);
+  writeLibrary(entries);
+  if (currentModel.id === id) setCurrentModelIdentity(null, currentModel.name);
+  renderLibraryList();
+  showToast('Модель удалена');
+  snapSound();
+}
+
+function packageModel(name, model = serializeModel()) {
+  return {
+    app: 'ars-machina',
+    format: 1,
+    appVersion: '1.4.0',
+    name: safeText(name, 'Модель ARS MACHINA'),
+    createdAt: new Date().toISOString(),
+    model: deepClone(model)
+  };
+}
+
+function validateModel(model) {
+  return Boolean(model && [1, 2].includes(model.version) && Array.isArray(model.nodes) && Array.isArray(model.constraints));
+}
+
+function normalizeImportedPackage(value) {
+  if (validateModel(value)) return packageModel('Импортированная модель', value);
+  if (value?.app === 'ars-machina' && value.format === 1 && validateModel(value.model)) {
+    return { ...value, name: safeText(value.name, 'Импортированная модель') };
+  }
+  throw new TypeError('Это не модель ARS MACHINA');
+}
+
+function bytesToBase64Url(bytes) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function encodeSharePackage(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  if (bytes.length >= 6000 && 'CompressionStream' in window) {
+    try {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+      const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+      return `g.${bytesToBase64Url(compressed)}`;
+    } catch {}
+  }
+  return `j.${bytesToBase64Url(bytes)}`;
+}
+
+async function decodeSharePackage(token) {
+  const separator = token.indexOf('.');
+  if (separator < 1) throw new Error('Неверная ссылка');
+  const mode = token.slice(0, separator);
+  let bytes = base64UrlToBytes(token.slice(separator + 1));
+  if (mode === 'g') {
+    if (!('DecompressionStream' in window)) throw new Error('Устройство не поддерживает сжатую ссылку');
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  } else if (mode !== 'j') {
+    throw new Error('Неизвестный формат ссылки');
+  }
+  return normalizeImportedPackage(JSON.parse(new TextDecoder().decode(bytes)));
+}
+
+async function copyTextFallback(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.readOnly = true;
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.append(area);
+  area.select();
+  const copied = document.execCommand('copy');
+  area.remove();
+  return copied;
+}
+
+function downloadPackage(value) {
+  const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${slugify(value.name)}.arsmachina.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
+
+function pickModelFile() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json,.arsmachina';
+    input.hidden = true;
+    document.body.append(input);
+    input.addEventListener('change', async () => {
+      try {
+        const file = input.files?.[0];
+        if (!file) return resolve(null);
+        if (file.size > 5_000_000) throw new RangeError('Файл слишком большой');
+        resolve(normalizeImportedPackage(JSON.parse(await file.text())));
+      } catch (error) {
+        reject(error);
+      } finally {
+        input.remove();
+      }
+    }, { once: true });
+    input.click();
+  });
+}
+
+async function sharePackage(value) {
+  const token = await encodeSharePackage(value);
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = `${SHARE_PREFIX}${token}`;
+  const file = new File([`${JSON.stringify(value, null, 2)}\n`], `${slugify(value.name)}.arsmachina.json`, { type: 'application/json' });
+  try {
+    if (url.href.length <= 24000 && navigator.share) {
+      await navigator.share({ title: value.name, text: 'Модель ARS MACHINA', url: url.href });
+      return;
+    }
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: value.name, text: 'Модель ARS MACHINA', files: [file] });
+      return;
+    }
+    if (url.href.length <= 24000) {
+      await copyTextFallback(url.href);
+      showToast('Ссылка скопирована');
+      return;
+    }
+    downloadPackage(value);
+    showToast('Файл модели сохранён');
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    try {
+      await copyTextFallback(url.href);
+      showToast('Ссылка скопирована');
+    } catch {
+      downloadPackage(value);
+    }
+  }
+}
+
+async function shareCurrentModel() {
+  const requestedName = safeText(document.querySelector('#modelNameInput')?.value, currentModel.name);
+  const entry = saveCurrentToLibrary({ quiet: true });
+  await sharePackage(packageModel(entry?.name || requestedName, entry?.model || serializeModel()));
+}
+
+async function importModelFromFile() {
+  try {
+    const value = await pickModelFile();
+    if (!value) return;
+    const entry = makeLibraryEntry(value.name, value.model);
+    const entries = readLibrary();
+    entries.unshift(entry);
+    writeLibrary(entries);
+    setCurrentModelIdentity(entry.id, entry.name);
+    pushUndo();
+    applyModel(deepClone(entry.model));
+    state.dirty = true;
+    saveNow();
+    renderLibraryList();
+    closeBlueprints();
+    frameConstruction();
+    setYardNote(`Импортирована модель «${entry.name}».`, 1900);
+    heavySound(155, .08);
+  } catch (error) {
+    showToast(error?.message || 'Не удалось импортировать модель');
+    invalidFeedback('Файл модели не распознан');
+  }
+}
+
+function installModelLibraryUI() {
+  const sheet = document.querySelector('.blueprint-sheet');
+  const presets = sheet?.querySelector('.blueprint-list');
+  if (!sheet || !presets || sheet.querySelector('.model-workspace')) return;
+  sheet.querySelector('header small').textContent = 'МАСТЕРСКАЯ МОДЕЛЕЙ';
+  sheet.querySelector('h2').textContent = 'Модели и чертежи';
+  ui.blueprintsButton.setAttribute('aria-label', 'Модели и чертежи');
+
+  const workspace = document.createElement('section');
+  workspace.className = 'model-workspace';
+  workspace.innerHTML = `
+    <label class="model-name-field">
+      <span>Название текущей модели</span>
+      <input id="modelNameInput" maxlength="48" autocomplete="off" value="${currentModel.name.replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]))}">
+    </label>
+    <div class="model-action-grid">
+      <button id="saveModelButton" class="primary" type="button" data-native-press>Сохранить</button>
+      <button id="shareModelButton" type="button" data-native-press>Поделиться</button>
+      <button id="saveCopyButton" type="button" data-native-press>Новая копия</button>
+      <button id="importModelButton" type="button" data-native-press>Импорт</button>
+    </div>
+    <div id="incomingModelCard" class="incoming-model" hidden></div>
+  `;
+
+  const savedSection = document.createElement('section');
+  savedSection.className = 'saved-models-section';
+  savedSection.innerHTML = '<div class="sheet-section-title"><b>Мои модели</b><small>Хранятся на этом устройстве</small></div><div id="savedModelList" class="saved-model-list"></div>';
+
+  const presetTitle = document.createElement('div');
+  presetTitle.className = 'sheet-section-title preset-title';
+  presetTitle.innerHTML = '<b>Готовые чертежи</b><small>Открываются как новая модель</small>';
+
+  presets.before(workspace, savedSection, presetTitle);
+  sheet.querySelector('.sheet-foot').textContent = 'Текущая работа сохраняется автоматически. «Сохранить» добавляет именованную версию в библиотеку.';
+
+  document.querySelector('#modelNameInput').addEventListener('input', (event) => {
+    currentModel.name = safeText(event.target.value, 'Новая модель');
+    persistCurrentModelIdentity();
+  });
+  document.querySelector('#saveModelButton').addEventListener('click', () => saveCurrentToLibrary());
+  document.querySelector('#saveCopyButton').addEventListener('click', () => saveCurrentToLibrary({ asCopy: true }));
+  document.querySelector('#shareModelButton').addEventListener('click', shareCurrentModel);
+  document.querySelector('#importModelButton').addEventListener('click', importModelFromFile);
+  ui.blueprintsButton.addEventListener('click', renderLibraryList);
+  renderLibraryList();
+}
+
+function renderLibraryList() {
+  const host = document.querySelector('#savedModelList');
+  if (!host) return;
+  const entries = readLibrary();
+  host.innerHTML = '';
+  if (!entries.length) {
+    host.innerHTML = '<div class="empty-library"><b>Пока пусто</b><span>Назови модель и нажми «Сохранить».</span></div>';
+    return;
+  }
+  for (const entry of entries) {
+    const stats = modelStats(entry.model);
+    const card = document.createElement('article');
+    card.className = `saved-model-card${entry.id === currentModel.id ? ' current' : ''}`;
+    card.innerHTML = `
+      <button class="saved-model-main" type="button" data-native-press>
+        <span class="model-glyph" aria-hidden="true">⌘</span>
+        <span><b></b><small>${stats.links} связей · ${stats.rotors} вращений · ${stats.controls} управления</small></span>
+      </button>
+      <div class="saved-model-actions">
+        <button type="button" data-action="share" aria-label="Поделиться" data-native-press>↗</button>
+        <button type="button" data-action="delete" aria-label="Удалить" data-native-press>×</button>
+      </div>
+    `;
+    card.querySelector('.saved-model-main b').textContent = entry.name;
+    card.querySelector('.saved-model-main').addEventListener('click', () => openLibraryEntry(entry.id));
+    card.querySelector('[data-action="share"]').addEventListener('click', () => sharePackage(packageModel(entry.name, entry.model)));
+    card.querySelector('[data-action="delete"]').addEventListener('click', (event) => deleteLibraryEntry(entry.id, event.currentTarget));
+    host.append(card);
+  }
+}
+
+function renderIncomingCard() {
+  const card = document.querySelector('#incomingModelCard');
+  if (!card) return;
+  if (!pendingIncomingPackage) {
+    card.hidden = true;
+    card.innerHTML = '';
+    return;
+  }
+  const stats = modelStats(pendingIncomingPackage.model);
+  card.hidden = false;
+  card.innerHTML = `
+    <div><small>ПОЛУЧЕНА МОДЕЛЬ</small><b></b><span>${stats.links} связей · ${stats.rotors} вращений</span></div>
+    <div><button class="primary" data-action="open" type="button" data-native-press>Открыть и сохранить</button><button data-action="dismiss" type="button" data-native-press>Не сейчас</button></div>
+  `;
+  card.querySelector('b').textContent = pendingIncomingPackage.name;
+  card.querySelector('[data-action="open"]').addEventListener('click', () => {
+    try {
+      const entry = makeLibraryEntry(pendingIncomingPackage.name, pendingIncomingPackage.model);
+      const entries = readLibrary();
+      entries.unshift(entry);
+      writeLibrary(entries);
+      setCurrentModelIdentity(entry.id, entry.name);
+      pushUndo();
+      applyModel(deepClone(entry.model));
+      state.dirty = true;
+      saveNow();
+      pendingIncomingPackage = null;
+      renderIncomingCard();
+      renderLibraryList();
+      closeBlueprints();
+      frameConstruction();
+      setYardNote(`Получена модель «${entry.name}».`, 1900);
+      heavySound(160, .09);
+    } catch {
+      showToast('Не удалось сохранить полученную модель');
+    }
+  });
+  card.querySelector('[data-action="dismiss"]').addEventListener('click', () => {
+    pendingIncomingPackage = null;
+    renderIncomingCard();
+  });
+}
+
+async function inspectIncomingShare() {
+  if (!location.hash.startsWith(`#${SHARE_PREFIX}`)) return;
+  const token = location.hash.slice(SHARE_PREFIX.length + 1);
+  history.replaceState(null, '', `${location.pathname}${location.search}`);
+  try {
+    pendingIncomingPackage = await decodeSharePackage(token);
+    renderIncomingCard();
+    openBlueprints();
+    setYardNote('Получена модель. Открой её из меню моделей.', 2200);
+  } catch (error) {
+    showToast(error?.message || 'Ссылка модели повреждена');
+  }
+}
