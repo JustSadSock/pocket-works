@@ -1,0 +1,436 @@
+  ui.inspector.hidden = running || !state.selection;
+  updateHistoryButtons();
+  if (running) setYardNote('Механизм ожил. Привод, лебёдка и спуск — внизу.', 2200);
+}
+
+function enterRunMode() {
+  if (state.mode === 'run') return;
+  saveNow();
+  state.initialSnapshot = snapshot();
+  state.mode = 'run';
+  state.pendingNodeId = null;
+  state.selection = null;
+  state.drive = 0;
+  state.simTime = 0;
+  fireCountdown = -1;
+  activeWinchDirection = 0;
+  resetVelocities();
+  updateDriveButtons();
+  updateModeUI();
+  heavySound();
+}
+
+function returnToBuild() {
+  if (state.mode !== 'run') return;
+  try {
+    applyModel(JSON.parse(state.initialSnapshot || snapshot()));
+  } catch {
+    state.mode = 'build';
+  }
+  state.initialSnapshot = null;
+  state.mode = 'build';
+  updateModeUI();
+  setYardNote('Испытание завершено. Чертёж восстановлен.', 1800);
+  clickSound(210, .05);
+}
+
+function triggerFire() {
+  if (state.mode !== 'run') return;
+  let count = 0;
+  for (const constraint of state.constraints) {
+    if (constraint.type === 'latch' && constraint.active) {
+      constraint.active = false;
+      count += 1;
+    }
+  }
+  const payloadLocks = state.constraints.filter((item) => item.type === 'payloadLock' && item.active);
+  if (payloadLocks.length) fireCountdown = count ? .62 : .05;
+  ui.fireButton.classList.add('active');
+  setTimeout(() => ui.fireButton.classList.remove('active'), 180);
+  if (count || payloadLocks.length) {
+    snapSound();
+    vibrate([18, 24, 28]);
+    setYardNote(count ? 'Защёлка открыта. Снаряд удержится до замаха.' : 'Снаряд освобождён.', 1300);
+  } else {
+    setYardNote('В конструкции нет заряженной защёлки.', 1400);
+    clickSound(130, .04);
+  }
+}
+
+function releasePayloads() {
+  let released = 0;
+  for (const constraint of state.constraints) {
+    if (constraint.type === 'payloadLock' && constraint.active) {
+      constraint.active = false;
+      released += 1;
+    }
+  }
+  if (released) {
+    heavySound(520, .09);
+    setYardNote('Снаряд свободен.', 900);
+  }
+}
+
+function setDrive(value) {
+  state.drive = value;
+  updateDriveButtons();
+  clickSound(value ? 300 + value * 40 : 180, .04);
+  vibrate(9);
+}
+
+function updateDriveButtons() {
+  document.querySelectorAll('[data-drive]').forEach((button) => button.classList.toggle('active', Number(button.dataset.drive) === state.drive));
+}
+
+function setYardNote(text, fadeAfter = 2600) {
+  ui.yardNote.textContent = text;
+  ui.yardNote.classList.remove('faded');
+  clearTimeout(ui.yardNote._timer);
+  if (fadeAfter) ui.yardNote._timer = setTimeout(() => ui.yardNote.classList.add('faded'), fadeAfter);
+}
+
+function showToast(message) {
+  ui.toast.textContent = message;
+  ui.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1700);
+}
+
+function ensureAudio() {
+  if (!prefs.sound) return null;
+  if (!audioContext) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+    audioContext = new AudioCtor();
+  }
+  if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+  return audioContext;
+}
+
+function clickSound(frequency = 260, duration = .035) {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const oscillator = ac.createOscillator();
+  const gain = ac.createGain();
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(frequency, ac.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(60, frequency * .72), ac.currentTime + duration);
+  gain.gain.setValueAtTime(.035, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + duration);
+  oscillator.connect(gain).connect(ac.destination);
+  oscillator.start();
+  oscillator.stop(ac.currentTime + duration);
+}
+
+function heavySound(frequency = 115, duration = .12) {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const oscillator = ac.createOscillator();
+  const gain = ac.createGain();
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(frequency, ac.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(55, ac.currentTime + duration);
+  gain.gain.setValueAtTime(.04, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + duration);
+  oscillator.connect(gain).connect(ac.destination);
+  oscillator.start();
+  oscillator.stop(ac.currentTime + duration);
+}
+
+function snapSound() {
+  clickSound(760, .055);
+  setTimeout(() => clickSound(180, .08), 28);
+}
+
+function vibrate(pattern = 8) {
+  if ('vibrate' in navigator) navigator.vibrate(pattern);
+}
+
+function worldToScreen(x, y) {
+  return {
+    x: (x - state.camera.x) * state.camera.zoom + width / 2,
+    y: (y - state.camera.y) * state.camera.zoom + height / 2
+  };
+}
+
+function screenToWorld(x, y) {
+  return {
+    x: (x - width / 2) / state.camera.zoom + state.camera.x,
+    y: (y - height / 2) / state.camera.zoom + state.camera.y
+  };
+}
+
+function canvasPoint(event) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  width = Math.max(1, rect.width);
+  height = Math.max(1, rect.height);
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelWidth = Math.round(width * dpr);
+  const pixelHeight = Math.round(height * dpr);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function findNodeAt(world, radius = 18 / state.camera.zoom) {
+  let best = null;
+  let bestDistance = radius;
+  for (const node of state.nodes) {
+    const d = Math.hypot(node.x - world.x, node.y - world.y);
+    if (d < bestDistance) {
+      best = node;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+function distanceToSegment(point, a, b) {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = point.x - a.x;
+  const wy = point.y - a.y;
+  const lengthSquared = vx * vx + vy * vy;
+  const t = lengthSquared ? clamp((wx * vx + wy * vy) / lengthSquared, 0, 1) : 0;
+  return Math.hypot(point.x - (a.x + vx * t), point.y - (a.y + vy * t));
+}
+
+function findThingAt(world) {
+  let bestRotor = null;
+  let rotorDistance = Infinity;
+  for (const rotor of state.rotors) {
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    const d = Math.abs(Math.hypot(world.x - node.x, world.y - node.y) - rotor.radius);
+    if (d < Math.max(12, rotor.radius * .35) && d < rotorDistance) {
+      bestRotor = rotor;
+      rotorDistance = d;
+    }
+  }
+  if (bestRotor) return { kind: 'rotor', id: bestRotor.id };
+
+  const node = findNodeAt(world, 21 / state.camera.zoom);
+  if (node) {
+    const attachment = state.attachments.find((item) => item.nodeId === node.id && ['weight', 'motor', 'payload'].includes(item.type));
+    if (attachment) return { kind: 'attachment', id: attachment.id };
+    return { kind: 'node', id: node.id };
+  }
+
+  let bestConstraint = null;
+  let bestDistance = 12 / state.camera.zoom;
+  for (const constraint of state.constraints) {
+    if (!constraint.active && state.mode === 'run') continue;
+    const a = nodeById(constraint.a);
+    const b = nodeById(constraint.b);
+    if (!a || !b) continue;
+    const d = distanceToSegment(world, a, b);
+    if (d < bestDistance) {
+      bestConstraint = constraint;
+      bestDistance = d;
+    }
+  }
+  return bestConstraint ? { kind: 'constraint', id: bestConstraint.id } : null;
+}
+
+function selectThing(selection) {
+  state.selection = selection;
+  updateInspector();
+}
+
+function updateInspector() {
+  if (!state.selection || state.mode !== 'build') {
+    ui.inspector.hidden = true;
+    return;
+  }
+  const selected = getSelected();
+  if (!selected) {
+    state.selection = null;
+    ui.inspector.hidden = true;
+    return;
+  }
+  ui.inspector.hidden = false;
+  let type = selected.type || 'node';
+  if (state.selection.kind === 'node') type = selected.role === 'payload' ? 'payload' : 'node';
+  const [kind, name] = NAMES[type] || ['Деталь', type];
+  ui.inspectorKind.textContent = kind;
+  ui.inspectorName.textContent = name;
+  ui.inspectValue.textContent = inspectorValue(selected, type);
+  const adjustable = state.selection.kind !== 'constraint' || selected.type === 'spring';
+  ui.inspectMinus.disabled = !adjustable;
+  ui.inspectPlus.disabled = !adjustable;
+}
+
+function getSelected() {
+  if (!state.selection) return null;
+  if (state.selection.kind === 'node') return nodeById(state.selection.id);
+  if (state.selection.kind === 'rotor') return rotorById(state.selection.id);
+  if (state.selection.kind === 'attachment') return attachmentById(state.selection.id);
+  if (state.selection.kind === 'constraint') return constraintById(state.selection.id);
+  return null;
+}
+
+function inspectorValue(selected, type) {
+  if (state.selection.kind === 'rotor') return `Ø ${Math.round(selected.radius * 2)}`;
+  if (state.selection.kind === 'node') return selected.fixed ? 'закреплён' : `масса ${selected.mass.toFixed(1)}`;
+  if (state.selection.kind === 'attachment') {
+    if (type === 'motor') return `сила ${selected.amount.toFixed(1)}`;
+    if (type === 'weight') return `масса ${selected.amount.toFixed(0)}`;
+    return 'заряжен';
+  }
+  if (state.selection.kind === 'constraint' && type === 'spring') return `длина ${Math.round(selected.length)}`;
+  return `длина ${Math.round(selected.length || 0)}`;
+}
+
+function adjustSelection(direction) {
+  const selected = getSelected();
+  if (!selected) return;
+  pushUndo();
+  if (state.selection.kind === 'rotor') {
+    selected.radius = clamp(selected.radius + direction * 6, 14, 90);
+    selected.teeth = Math.max(8, Math.round(selected.radius / 3));
+  } else if (state.selection.kind === 'node') {
+    selected.mass = clamp(selected.mass + direction, .5, 24);
+    const weight = state.attachments.find((item) => item.nodeId === selected.id && item.type === 'weight');
+    if (weight) weight.amount = selected.mass;
+  } else if (state.selection.kind === 'attachment') {
+    if (selected.type === 'motor') selected.amount = clamp(selected.amount + direction * .2, .4, 4);
+    if (selected.type === 'weight') {
+      selected.amount = clamp(selected.amount + direction * 2, 2, 30);
+      const node = nodeById(selected.nodeId);
+      if (node) node.mass = selected.amount;
+    }
+  } else if (state.selection.kind === 'constraint' && selected.type === 'spring') {
+    selected.length = clamp(selected.length + direction * 12, 24, 500);
+  }
+  updateInspector();
+  saveSoon();
+  clickSound(direction > 0 ? 350 : 240, .03);
+}
+
+function removeSelection() {
+  if (!state.selection) return;
+  pushUndo();
+  removeThing(state.selection);
+  state.selection = null;
+  updateInspector();
+  saveSoon();
+  snapSound();
+}
+
+function removeThing(selection) {
+  if (!selection) return;
+  if (selection.kind === 'node') {
+    const id = selection.id;
+    state.nodes = state.nodes.filter((node) => node.id !== id);
+    state.constraints = state.constraints.filter((constraint) => constraint.a !== id && constraint.b !== id);
+    state.rotors = state.rotors.filter((rotor) => rotor.nodeId !== id);
+    state.attachments = state.attachments.filter((item) => item.nodeId !== id && item.hostId !== id);
+  } else if (selection.kind === 'constraint') {
+    state.constraints = state.constraints.filter((item) => item.id !== selection.id);
+  } else if (selection.kind === 'rotor') {
+    state.rotors = state.rotors.filter((item) => item.id !== selection.id);
+  } else if (selection.kind === 'attachment') {
+    const target = attachmentById(selection.id);
+    if (target?.type === 'weight') {
+      const node = nodeById(target.nodeId);
+      if (node) node.mass = 1;
+    }
+    if (target?.type === 'payload') {
+      removeThing({ kind: 'node', id: target.nodeId });
+      return;
+    }
+    state.attachments = state.attachments.filter((item) => item.id !== selection.id);
+  }
+}
+
+function resolveOrCreateNode(world) {
+  return findNodeAt(world) || createNode(world.x, world.y);
+}
+
+function handleBuildTap(world) {
+  if (state.tool === 'select') {
+    selectThing(findThingAt(world));
+    return;
+  }
+  if (state.tool === 'erase') {
+    const thing = findThingAt(world);
+    if (!thing) return invalidFeedback('Здесь нечего стирать');
+    pushUndo();
+    removeThing(thing);
+    saveSoon();
+    snapSound();
+    return;
+  }
+  if (state.tool === 'node') {
+    pushUndo();
+    const node = createNode(world.x, world.y);
+    selectThing({ kind: 'node', id: node.id });
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+  if (['beam', 'rope', 'spring', 'latch'].includes(state.tool)) {
+    let node = findNodeAt(world);
+    if (!state.pendingNodeId) {
+      if (!node) {
+        pushUndo();
+        node = createNode(world.x, world.y);
+        saveSoon();
+      }
+      state.pendingNodeId = node.id;
+      setYardNote('Первый узел выбран. Укажи второй.');
+      clickSound(320, .025);
+      return;
+    }
+    if (node && state.pendingNodeId === node.id) return invalidFeedback('Нужен другой узел');
+    pushUndo();
+    if (!node) node = createNode(world.x, world.y);
+    const type = state.tool;
+    const constraint = createConstraint(type, state.pendingNodeId, node.id, {
+      stiffness: type === 'spring' ? .11 : 1,
+      width: type === 'beam' ? 10 : 3
+    });
+    state.pendingNodeId = null;
+    if (constraint) {
+      selectThing({ kind: 'constraint', id: constraint.id });
+      saveSoon();
+      placedFeedback();
+      setYardNote(type === 'latch' ? 'Защёлка готова. Она откроется по «Спуску».' : 'Связь установлена.', 1500);
+    }
+    return;
+  }
+
+  pushUndo();
+  const node = resolveOrCreateNode(world);
+  let selection = { kind: 'node', id: node.id };
+  if (['wheel', 'gear', 'winch', 'pulley'].includes(state.tool)) {
+    const rotor = createRotor(state.tool, node.id);
+    selection = { kind: 'rotor', id: rotor.id };
+  } else if (state.tool === 'motor') {
+    const existingRotor = state.rotors.some((rotor) => rotor.nodeId === node.id);
+    if (!existingRotor) createRotor('gear', node.id, { radius: 24 });
+    const motor = createAttachment('motor', node.id, { amount: 1.6 });
+    selection = { kind: 'attachment', id: motor.id };
+  } else if (state.tool === 'weight') {
+    const existing = state.attachments.find((item) => item.nodeId === node.id && item.type === 'weight');
+    if (existing) {
+      existing.amount = clamp(existing.amount + 4, 2, 30);
+      node.mass = existing.amount;
+      selection = { kind: 'attachment', id: existing.id };
+    } else {
+      const weight = createAttachment('weight', node.id, { amount: 10 });
+      selection = { kind: 'attachment', id: weight.id };
+    }
+  } else if (state.tool === 'anchor') {
+    node.fixed = !node.fixed;
+    node.px = node.x;
+    node.py = node.y;
+    selection = { kind: 'node', id: node.id };
+  } else if (state.tool === 'payload') {
