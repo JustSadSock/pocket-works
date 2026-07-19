@@ -1,0 +1,38 @@
+/* ARS MACHINA 1.2 — beam mounts, joints and layer inspection */
+.inspector { gap: 8px; }
+.inspector-actions { grid-template-columns: 42px minmax(48px, 1fr) 42px 42px auto; }
+.inspector .cycle { font-size: 22px; color: var(--blueprint); }
+.inspector-layer {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px 72px 38px minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid rgba(77,58,31,.22);
+}
+.inspector-layer button { min-height: 32px; }
+.inspector-layer span { text-align: center; font: 800 10px ui-monospace, monospace; color: var(--blueprint); }
+.inspector-layer small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #756344; font-size: 9px; }
+.icon-hinge::before { width: 25px; height: 25px; border: 4px solid currentColor; border-radius: 50%; box-shadow: inset 0 0 0 5px #473422; }
+.active .icon-hinge::before { box-shadow: inset 0 0 0 5px #77522c; }
+.icon-hinge::after { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.icon-weld::before { width: 25px; height: 25px; border: 3px solid currentColor; transform: rotate(45deg); }
+.icon-weld::after { width: 27px; height: 3px; background: currentColor; transform: rotate(45deg); }
+.icon-layers::before { content: "≋"; font: 900 34px/1 Georgia, serif; transform: rotate(-8deg); }
+body:has(.tool.active .icon-layers) .yard-note { border-color: #315f78; color: #173c50; }
+
+@media (max-width: 680px) {
+  .topbar { grid-template-columns: 44px minmax(0,1fr) auto; gap: 6px; padding-left: 6px; padding-right: 6px; }
+  .shelf-link { width: 44px; min-width: 44px; padding: 0; font-size: 0; }
+  .shelf-link::before { content: "←"; font-size: 21px; }
+  .identity { gap: 0; }
+  .identity b { font-size: 12px; letter-spacing: .045em; }
+  .identity small { font-size: 8px; letter-spacing: .09em; }
+  .top-actions { gap: 4px; }
+  .top-actions button, .top-actions .square-button { width: 38px; min-width: 38px; min-height: 38px; }
+  .inspector { left: 7px; right: 7px; }
+  .inspector-actions { grid-template-columns: 38px minmax(42px, 1fr) 38px 38px auto; }
+  .inspector-layer { grid-template-columns: 34px 62px 34px minmax(0,1fr); }
+}

@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./enhancements.css">
 </head>
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app>
@@ -52,10 +53,17 @@
           <strong id="inspectorName">Балка</strong>
         </div>
         <div class="inspector-actions">
-          <button id="inspectMinus" type="button" data-native-press>−</button>
+          <button id="inspectMinus" type="button" aria-label="Уменьшить параметр" data-native-press>−</button>
           <span id="inspectValue">—</span>
-          <button id="inspectPlus" type="button" data-native-press>＋</button>
+          <button id="inspectPlus" type="button" aria-label="Увеличить параметр" data-native-press>＋</button>
+          <button id="inspectCycle" class="cycle" type="button" aria-label="Выбрать следующий объект под точкой" data-native-press>≋</button>
           <button id="inspectDelete" class="danger" type="button" data-native-press>Удалить</button>
+        </div>
+        <div class="inspector-layer">
+          <button id="inspectLayerDown" type="button" aria-label="Опустить слой" data-native-press>↓</button>
+          <span id="inspectLayerLabel">слой 0</span>
+          <button id="inspectLayerUp" type="button" aria-label="Поднять слой" data-native-press>↑</button>
+          <small>Режим «Слои» просвечивает перекрытия</small>
         </div>
       </aside>
     </section>
@@ -123,7 +131,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ARS MACHINA"
-    data-app-version="1.1.0"
+    data-app-version="1.2.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>

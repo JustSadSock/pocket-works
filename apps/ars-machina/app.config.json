@@ -5,14 +5,14 @@
   "name": "ARS MACHINA",
   "shortName": "ARS MACHINA",
   "description": "Средневековая 2D-песочница для сборки работающих машин из балок, колёс, шестерён, тросов, пружин и лебёдок.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "releaseDate": "2026-07-19",
-  "releaseDateTime": "2026-07-19T16:58:30+03:00",
+  "releaseDateTime": "2026-07-19T17:45:00+03:00",
   "changelog": [
-    "Инструмент «Шарнир» теперь соединяет концы уже построенных балок двумя касаниями.",
-    "Концы балок автоматически сливаются в общий узел при перетаскивании одного на другой.",
-    "Во время стыковки появляется заметная зелёная зона захвата и тактильное подтверждение.",
-    "Новый модуль соединений включён в офлайн-кэш приложения."
+    "Балкам добавлены монтажные точки по всей длине: колёса, тросы и новые балки крепятся не только к концам.",
+    "Готовые балки соединяются подвижным шарниром или неподвижной скобой, сохраняющей исходный угол.",
+    "Режим «Слои» просвечивает перекрытия, перебирает детали под пальцем и меняет порядок отрисовки.",
+    "Монтажные точки перемещаются вдоль балки без удаления установленных механизмов; автосцепление концов из версии 1.1 сохранено."
   ],
   "status": "active",
   "preset": "canvas",
@@ -20,8 +20,8 @@
   "backgroundColor": "#34271c",
   "themeColor": "#2c241b",
   "orientation": "any",
-  "cacheName": "ars-machina-v1.1.0-p2",
+  "cacheName": "ars-machina-v1.2.0-p2",
   "storageNamespace": "pocket-works:ars-machina",
-  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ropes", "springs", "vehicles", "catapult", "canvas", "mobile", "workshop"],
+  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ropes", "springs", "vehicles", "catapult", "canvas", "mobile", "workshop", "joints", "layers", "weld", "mounts"],
   "order": 96
 }

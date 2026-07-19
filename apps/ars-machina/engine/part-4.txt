@@ -1,3 +1,116 @@
+function drawBackground() {
+  ctx.fillStyle = '#e6d5ad';
+  ctx.fillRect(0, 0, width, height);
+  const zoom = state.camera.zoom;
+  const major = GRID * zoom;
+  if (major > 6) {
+    const origin = worldToScreen(0, 0);
+    ctx.lineWidth = 1;
+    for (let x = ((origin.x % major) + major) % major; x < width; x += major) {
+      const worldX = Math.round(screenToWorld(x, 0).x / GRID);
+      ctx.strokeStyle = worldX % 5 === 0 ? 'rgba(41,78,96,.19)' : 'rgba(41,78,96,.08)';
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    }
+    for (let y = ((origin.y % major) + major) % major; y < height; y += major) {
+      const worldY = Math.round(screenToWorld(0, y).y / GRID);
+      ctx.strokeStyle = worldY % 5 === 0 ? 'rgba(41,78,96,.19)' : 'rgba(41,78,96,.08)';
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+  }
+  const wash = ctx.createLinearGradient(0, 0, 0, height);
+  wash.addColorStop(0, 'rgba(255,249,224,.18)');
+  wash.addColorStop(1, 'rgba(104,72,35,.1)');
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function drawGround() {
+  const left = screenToWorld(0, 0).x - 60;
+  const right = screenToWorld(width, 0).x + 60;
+  const a = worldToScreen(left, GROUND_Y);
+  const b = worldToScreen(right, GROUND_Y);
+  if (a.y < -30 || a.y > height + 40) return;
+  ctx.fillStyle = '#6f5a38';
+  ctx.fillRect(0, a.y, width, height - a.y + 2);
+  ctx.strokeStyle = '#3e3424';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, a.y); ctx.lineTo(width, b.y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(238,221,173,.22)';
+  ctx.lineWidth = 1;
+  for (let x = -30; x < width + 50; x += 54) {
+    ctx.beginPath();
+    ctx.moveTo(x, a.y + 12);
+    ctx.lineTo(x + 42, a.y + 12);
+    ctx.lineTo(x + 48, a.y + 29);
+    ctx.lineTo(x + 6, a.y + 29);
+    ctx.closePath();
+    ctx.stroke();
+  }
+}
+
+function drawConstraints(layer = null) {
+  for (const constraint of state.constraints) {
+    if (layer !== null && itemLayer(constraint) !== layer) continue;
+    if (!constraint.active && state.mode === 'run') continue;
+    const aNode = nodeById(constraint.a);
+    const bNode = nodeById(constraint.b);
+    if (!aNode || !bNode) continue;
+    const a = worldToScreen(aNode.x, aNode.y);
+    const b = worldToScreen(bNode.x, bNode.y);
+    if (constraint.type === 'beam') drawBeam(a, b, constraint.width * state.camera.zoom);
+    else if (constraint.type === 'rope') drawRope(a, b, constraint, aNode, bNode);
+    else if (constraint.type === 'spring') drawSpring(a, b, constraint);
+    else if (constraint.type === 'latch') drawLatch(a, b);
+    else if (constraint.type === 'payloadLock') drawPayloadLock(a, b);
+  }
+}
+
+function drawBeam(a, b, thickness) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#5e3d25';
+  ctx.lineWidth = clamp(thickness + 4, 5, 19);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#a47743';
+  ctx.lineWidth = clamp(thickness, 3, 15);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(245,213,149,.34)';
+  ctx.lineWidth = Math.max(1, thickness * .16);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y - thickness * .12); ctx.lineTo(b.x, b.y - thickness * .12); ctx.stroke();
+  ctx.restore();
+}
+
+function drawRope(a, b, constraint, aNode, bNode) {
+  const current = distance(aNode, bNode);
+  const slack = clamp((constraint.maxLength - current) * state.camera.zoom * .55, 0, 60);
+  const controlX = (a.x + b.x) / 2;
+  const controlY = (a.y + b.y) / 2 + slack;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#4a3824';
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(controlX, controlY, b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#b89a61';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(controlX, controlY, b.x, b.y); ctx.stroke();
+  ctx.restore();
+}
+
+function drawSpring(a, b, constraint) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const coils = clamp(Math.round(length / 18), 5, 18);
+  ctx.save();
+  ctx.strokeStyle = '#687078';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  for (let i = 1; i < coils; i += 1) {
+    const t = i / coils;
     const amplitude = (i % 2 ? 7 : -7) * Math.min(1, state.camera.zoom);
     ctx.lineTo(a.x + dx * t + nx * amplitude, a.y + dy * t + ny * amplitude);
   }
@@ -34,8 +147,9 @@ function drawPayloadLock(a, b) {
   ctx.restore();
 }
 
-function drawRotors() {
+function drawRotors(layer = null) {
   for (const rotor of state.rotors) {
+    if (layer !== null && itemLayer(rotor) !== layer) continue;
     const node = nodeById(rotor.nodeId);
     if (!node) continue;
     const center = worldToScreen(node.x, node.y);
@@ -131,8 +245,9 @@ function drawPulley(center, radius, angle) {
   ctx.restore();
 }
 
-function drawNodesAndAttachments() {
+function drawNodesAndAttachments(layer = null) {
   for (const node of state.nodes) {
+    if (layer !== null && itemLayer(node) !== layer) continue;
     const p = worldToScreen(node.x, node.y);
     const attachments = state.attachments.filter((item) => item.nodeId === node.id);
     const weight = attachments.find((item) => item.type === 'weight');
@@ -146,12 +261,19 @@ function drawNodesAndAttachments() {
 }
 
 function drawNode(point, node) {
-  const radius = clamp(6 * state.camera.zoom, 3.5, 8);
+  const radius = clamp((node.mount ? 5 : 6) * state.camera.zoom, 3.5, 8);
   ctx.save();
-  ctx.fillStyle = node.fixed ? '#2c5970' : '#282522';
-  ctx.strokeStyle = node.fixed ? '#d2b76e' : '#d7b266';
+  ctx.fillStyle = node.fixed ? '#2c5970' : node.mount ? '#d7b266' : '#282522';
+  ctx.strokeStyle = node.fixed ? '#d2b76e' : node.mount ? '#3a2c1e' : '#d7b266';
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  if (node.mount) {
+    ctx.translate(point.x, point.y);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+    ctx.strokeRect(-radius, -radius, radius * 2, radius * 2);
+  } else {
+    ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  }
   if (node.fixed) {
     ctx.strokeStyle = '#2c5970';
     ctx.lineWidth = 2;
@@ -160,6 +282,33 @@ function drawNode(point, node) {
     }
   }
   ctx.restore();
+}
+
+function drawJoints(layer = null, overlay = false) {
+  for (const joint of state.joints) {
+    if (layer !== null && itemLayer(joint) !== layer) continue;
+    const a = nodeById(joint.a);
+    const b = nodeById(joint.b);
+    if (!a || !b) continue;
+    const p = worldToScreen((a.x + b.x) / 2, (a.y + b.y) / 2);
+    const size = overlay ? 11 : 8;
+    ctx.save();
+    ctx.lineWidth = overlay ? 3 : 2;
+    ctx.strokeStyle = joint.type === 'weld' ? '#6d3529' : '#254f68';
+    ctx.fillStyle = joint.type === 'weld' ? '#d5a34e' : '#e8d39a';
+    if (joint.type === 'weld') {
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-size, -size, size * 2, size * 2);
+      ctx.strokeRect(-size, -size, size * 2, size * 2);
+      ctx.beginPath(); ctx.moveTo(-size * .65, 0); ctx.lineTo(size * .65, 0); ctx.moveTo(0, -size * .65); ctx.lineTo(0, size * .65); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#254f68';
+      ctx.beginPath(); ctx.arc(p.x, p.y, size * .32, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 function drawWeight(point, amount, zoom) {
@@ -250,17 +399,23 @@ function drawSelection() {
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
     }
+  } else if (state.selection.kind === 'joint') {
+    const point = selectionWorld();
+    if (point) {
+      const p = worldToScreen(point.x, point.y);
+      ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, TAU); ctx.stroke();
+    }
   }
   ctx.restore();
 }
 
 function drawPending() {
-  if (!state.pendingNodeId || state.mode !== 'build') return;
-  const node = nodeById(state.pendingNodeId);
-  if (!node) return;
+  let node = state.pendingNodeId ? nodeById(state.pendingNodeId) : null;
+  if (!node && state.pendingJointTarget) node = nodeById(state.pendingJointTarget.nodeId);
+  if (!node || state.mode !== 'build') return;
   const p = worldToScreen(node.x, node.y);
   ctx.save();
-  ctx.strokeStyle = '#b06b29';
+  ctx.strokeStyle = state.pendingJointTarget ? '#2a617d' : '#b06b29';
   ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(p.x, p.y, 15 + Math.sin(performance.now() / 120) * 2, 0, TAU); ctx.stroke();
   ctx.restore();
@@ -300,6 +455,11 @@ function loadBlueprint(name) {
 }
 
 function bindUI() {
+  document.addEventListener('pointerdown', () => {
+    if (!firstInteraction) return;
+    firstInteraction = false;
+    ensureAudio();
+  }, { capture: true });
   document.querySelectorAll('.category').forEach((button) => button.addEventListener('click', () => setCategory(button.dataset.category)));
   ui.runButton.addEventListener('click', enterRunMode);
   ui.backToBuildButton.addEventListener('click', returnToBuild);
@@ -317,6 +477,9 @@ function bindUI() {
   ui.inspectMinus.addEventListener('click', () => adjustSelection(-1));
   ui.inspectPlus.addEventListener('click', () => adjustSelection(1));
   ui.inspectDelete.addEventListener('click', removeSelection);
+  ui.inspectLayerDown.addEventListener('click', () => adjustLayer(-1));
+  ui.inspectLayerUp.addEventListener('click', () => adjustLayer(1));
+  ui.inspectCycle.addEventListener('click', cycleSelected);
   ui.soundButton.addEventListener('click', () => {
     prefs.sound = !prefs.sound;
     persistPrefs();
