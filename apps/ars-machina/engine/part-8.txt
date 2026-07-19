@@ -1,0 +1,352 @@
+function palettePageSize() {
+  if (matchMedia('(max-height: 650px) and (orientation: landscape)').matches) return 5;
+  return matchMedia('(max-width: 360px)').matches ? 8 : 10;
+}
+
+function installPaletteNavigation() {
+  if (paletteNav) return;
+  paletteNav = document.createElement('div');
+  paletteNav.className = 'palette-nav';
+  paletteNav.innerHTML = '<button type="button" data-palette="prev" aria-label="Предыдущая страница" data-native-press>‹</button><span id="palettePageLabel">1 / 1</span><button type="button" data-palette="next" aria-label="Следующая страница" data-native-press>›</button>';
+  ui.toolRail.after(paletteNav);
+  paletteNav.querySelector('[data-palette="prev"]').addEventListener('click', () => movePalette(-1));
+  paletteNav.querySelector('[data-palette="next"]').addEventListener('click', () => movePalette(1));
+  ui.toolRail.addEventListener('scroll', () => {
+    const width = Math.max(1, ui.toolRail.clientWidth);
+    const next = Math.round(ui.toolRail.scrollLeft / width);
+    if (next !== palettePage) {
+      palettePage = next;
+      updatePaletteNavigation();
+    }
+  }, { passive: true });
+}
+
+function updatePaletteNavigation() {
+  if (!paletteNav) return;
+  const pages = ui.toolRail.querySelectorAll('.tool-page').length || 1;
+  palettePage = clamp(palettePage, 0, pages - 1);
+  paletteNav.hidden = pages <= 1;
+  paletteNav.querySelector('#palettePageLabel').textContent = `${palettePage + 1} / ${pages}`;
+  paletteNav.querySelector('[data-palette="prev"]').disabled = palettePage <= 0;
+  paletteNav.querySelector('[data-palette="next"]').disabled = palettePage >= pages - 1;
+}
+
+function movePalette(direction) {
+  const pages = ui.toolRail.querySelectorAll('.tool-page').length || 1;
+  palettePage = clamp(palettePage + direction, 0, pages - 1);
+  ui.toolRail.scrollTo({ left: palettePage * ui.toolRail.clientWidth, behavior: 'smooth' });
+  updatePaletteNavigation();
+  clickSound(direction > 0 ? 390 : 240, .025);
+}
+
+renderTools = function renderPagedTools() {
+  installPaletteNavigation();
+  ui.toolRail.innerHTML = '';
+  const tools = TOOL_GROUPS[state.category] || [];
+  const pageSize = palettePageSize();
+  lastPalettePageSize = pageSize;
+  const activeIndex = Math.max(0, tools.findIndex(([tool]) => tool === state.tool));
+  palettePage = Math.floor(activeIndex / pageSize);
+  for (let pageIndex = 0; pageIndex < Math.max(1, Math.ceil(tools.length / pageSize)); pageIndex += 1) {
+    const page = document.createElement('div');
+    page.className = 'tool-page';
+    page.dataset.page = String(pageIndex);
+    for (const [tool, label, icon] of tools.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `tool${state.tool === tool ? ' active' : ''}`;
+      button.dataset.tool = tool;
+      button.dataset.nativePress = '';
+      button.innerHTML = `<span class="tool-icon icon-${icon}" aria-hidden="true"></span><span class="tool-label">${label}</span>`;
+      button.addEventListener('click', () => setTool(tool));
+      page.append(button);
+    }
+    ui.toolRail.append(page);
+  }
+  requestAnimationFrame(() => {
+    ui.toolRail.scrollLeft = palettePage * ui.toolRail.clientWidth;
+    updatePaletteNavigation();
+  });
+};
+
+const baseSetCategoryV14 = setCategory;
+setCategory = function setPagedCategory(category) {
+  palettePage = 0;
+  baseSetCategoryV14(category);
+  const tab = document.querySelector(`.category[data-category="${category}"]`);
+  tab?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+};
+
+const baseSetToolV14 = setTool;
+setTool = function setPredictableTool(tool) {
+  const hadPending = Boolean(state.pendingNodeId || state.pendingJointTarget || pendingTransmissionNodeId);
+  const same = state.tool === tool;
+  baseSetToolV14(tool);
+  if (same && hadPending) setYardNote('Незавершённое соединение отменено.', 1100);
+  if (tool === 'actuator') setYardNote('Выбери две точки. Контур A или B будет выдвигать и возвращать толкатель.');
+};
+
+function installInspectorExtras() {
+  if (inspectorExtra) return;
+  inspectorExtra = document.createElement('div');
+  inspectorExtra.id = 'inspectExtra';
+  inspectorExtra.className = 'inspect-extra';
+  ui.inspector.append(inspectorExtra);
+}
+
+function closestMeshedGear(gear) {
+  const node = nodeById(gear?.nodeId);
+  if (!node) return null;
+  let best = null;
+  let error = Infinity;
+  for (const candidate of state.rotors) {
+    if (candidate.type !== 'gear' || candidate.id === gear.id || candidate.nodeId === gear.nodeId) continue;
+    const otherNode = nodeById(candidate.nodeId);
+    if (!otherNode) continue;
+    const meshError = Math.abs(distance(node, otherNode) - (gear.radius + candidate.radius));
+    if (meshError < 13 && meshError < error) {
+      best = candidate;
+      error = meshError;
+    }
+  }
+  return best;
+}
+
+function transmissionRatioData(transmission) {
+  const driverIsB = transmission?.driver === 'b';
+  const driverNodeId = driverIsB ? transmission.b : transmission.a;
+  const outputNodeId = driverIsB ? transmission.a : transmission.b;
+  const driverRotor = shaftRotor(driverNodeId);
+  const outputRotor = shaftRotor(outputNodeId);
+  if (!driverRotor || !outputRotor) return null;
+  const sizeRatio = outputRotor.radius / Math.max(1, driverRotor.radius);
+  const speedRatio = driverRotor.radius / Math.max(1, outputRotor.radius);
+  return { driverIsB, driverNodeId, outputNodeId, driverRotor, outputRotor, sizeRatio, speedRatio };
+}
+
+function ratioLabel(transmission) {
+  const data = transmissionRatioData(transmission);
+  if (!data) return 'Передаточное число недоступно';
+  const from = data.driverIsB ? 'B' : 'A';
+  const to = data.driverIsB ? 'A' : 'B';
+  const direction = transmission.type === 'belt' && transmission.crossed ? 'обратное' : 'прямое';
+  return `${from}→${to} · 1:${data.sizeRatio.toFixed(2)} · выход ${data.speedRatio.toFixed(2)}× · ${direction}`;
+}
+
+function applyRotorSize(rotor, radius) {
+  rotor.radius = clamp(radius, 14, 90);
+  rotor.teeth = Math.max(8, Math.round(rotor.radius / 3));
+}
+
+function applyTransmissionRatio(transmission, numerator, denominator) {
+  const data = transmissionRatioData(transmission);
+  if (!data) return false;
+  let driverRadius = data.driverRotor.radius;
+  let outputRadius = driverRadius * denominator / numerator;
+  if (outputRadius > 90) {
+    outputRadius = 90;
+    driverRadius = outputRadius * numerator / denominator;
+  }
+  if (outputRadius < 14) {
+    outputRadius = 14;
+    driverRadius = outputRadius * numerator / denominator;
+  }
+  applyRotorSize(data.driverRotor, driverRadius);
+  applyRotorSize(data.outputRotor, outputRadius);
+  return true;
+}
+
+function mutateSelected(mutator, note = '') {
+  const selected = getSelected();
+  if (!selected) return;
+  pushUndo();
+  const changed = mutator(selected);
+  if (changed === false) {
+    if (state.undo.length) state.undo.pop();
+    updateHistoryButtons();
+    return;
+  }
+  updateInspector();
+  saveSoon();
+  clickSound(350, .035);
+  vibrate(7);
+  if (note) setYardNote(note, 1300);
+}
+
+function segmentedButtons(items, active, action) {
+  const wrap = document.createElement('div');
+  wrap.className = 'inspect-segments';
+  for (const item of items) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = item.label;
+    button.classList.toggle('active', item.value === active);
+    button.dataset.nativePress = '';
+    button.addEventListener('click', () => action(item.value));
+    wrap.append(button);
+  }
+  return wrap;
+}
+
+function appendInspectRow(label, content) {
+  const row = document.createElement('div');
+  row.className = 'inspect-row';
+  const title = document.createElement('span');
+  title.className = 'inspect-row-label';
+  title.textContent = label;
+  row.append(title, content);
+  inspectorExtra.append(row);
+}
+
+function renderInspectorExtras() {
+  installInspectorExtras();
+  inspectorExtra.innerHTML = '';
+  if (ui.inspector.hidden || !state.selection) return;
+  const selected = getSelected();
+  if (!selected) return;
+  const type = selected.type || (selected.mount ? 'mount' : 'node');
+
+  if (state.selection.kind === 'rotor') {
+    const nearest = ROTOR_SIZE_PRESETS.reduce((best, radius) => Math.abs(radius - selected.radius) < Math.abs(best - selected.radius) ? radius : best, ROTOR_SIZE_PRESETS[0]);
+    appendInspectRow('Размер', segmentedButtons(
+      ROTOR_SIZE_PRESETS.map((value, index) => ({ value, label: ['XS', 'S', 'M', 'L', 'XL'][index] })),
+      nearest,
+      (value) => mutateSelected((rotor) => { applyRotorSize(rotor, value); }, `Размер: Ø ${value * 2}`)
+    ));
+    const info = document.createElement('div');
+    info.className = 'inspect-readout';
+    if (type === 'gear') {
+      const peer = closestMeshedGear(selected);
+      info.textContent = peer
+        ? `${selected.teeth} зубьев · зацепление 1:${(peer.radius / selected.radius).toFixed(2)} · сосед ${selected.radius / peer.radius < 1 ? 'медленнее' : 'быстрее'}`
+        : `${selected.teeth} зубьев · сейчас не зацеплена`;
+    } else {
+      info.textContent = `Диаметр ${Math.round(selected.radius * 2)} · слой ${itemLayer(selected)}`;
+    }
+    appendInspectRow('Параметры', info);
+  }
+
+  if (state.selection.kind === 'constraint' && ['belt', 'chain'].includes(type)) {
+    const readout = document.createElement('div');
+    readout.className = 'inspect-readout ratio-readout';
+    readout.textContent = ratioLabel(selected);
+    appendInspectRow('Передача', readout);
+    appendInspectRow('Число', segmentedButtons(
+      RATIO_PRESETS.map(([a, b]) => ({ value: `${a}:${b}`, label: `${a}:${b}` })),
+      '',
+      (value) => {
+        const [a, b] = value.split(':').map(Number);
+        mutateSelected((transmission) => applyTransmissionRatio(transmission, a, b), `Передаточное число ${value}`);
+      }
+    ));
+    const driver = segmentedButtons([
+      { value: 'a', label: 'A ведущий' },
+      { value: 'b', label: 'B ведущий' }
+    ], selected.driver === 'b' ? 'b' : 'a', (value) => mutateSelected((transmission) => { transmission.driver = value; }, 'Ведущий вал изменён'));
+    appendInspectRow('Ведущий', driver);
+    if (type === 'belt') {
+      appendInspectRow('Укладка', segmentedButtons([
+        { value: false, label: 'Обычная' },
+        { value: true, label: 'Крестом' }
+      ], Boolean(selected.crossed), (value) => mutateSelected((transmission) => { transmission.crossed = value; }, value ? 'Направление выхода изменено' : 'Обычная укладка ремня')));
+    }
+  }
+
+  if (state.selection.kind === 'constraint' && type === 'spring') {
+    const options = [
+      { value: .06, label: 'Мягкая' },
+      { value: .11, label: 'Средняя' },
+      { value: .22, label: 'Жёсткая' },
+      { value: .4, label: 'Очень' }
+    ];
+    const nearest = options.reduce((best, option) => Math.abs(option.value - selected.stiffness) < Math.abs(best.value - selected.stiffness) ? option : best, options[0]).value;
+    appendInspectRow('Жёсткость', segmentedButtons(options, nearest, (value) => mutateSelected((spring) => { spring.stiffness = value; }, 'Жёсткость пружины изменена')));
+  }
+
+  if (state.selection.kind === 'constraint' && type === 'beam') {
+    const widths = [{ value: 6, label: 'Тонкая' }, { value: 10, label: 'Средняя' }, { value: 15, label: 'Толстая' }];
+    const nearest = widths.reduce((best, option) => Math.abs(option.value - selected.width) < Math.abs(best.value - selected.width) ? option : best, widths[0]).value;
+    appendInspectRow('Сечение', segmentedButtons(widths, nearest, (value) => mutateSelected((beam) => { beam.width = value; }, 'Сечение балки изменено')));
+  }
+
+  if (state.selection.kind === 'constraint' && type === 'actuator') {
+    const stroke = Math.round(((selected.maxLength || selected.length * 1.75) / Math.max(1, selected.minLength || selected.length) - 1) * 100);
+    const info = document.createElement('div');
+    info.className = 'inspect-readout';
+    info.textContent = `Ход ${stroke}% · контур ${controlChannel(selected)}`;
+    appendInspectRow('Толкатель', info);
+    appendInspectRow('Ход', segmentedButtons([
+      { value: .25, label: '25%' }, { value: .5, label: '50%' }, { value: .75, label: '75%' }, { value: 1, label: '100%' }
+    ], Math.round((stroke / 100) * 4) / 4, (value) => mutateSelected((actuator) => {
+      actuator.minLength = actuator.minLength || actuator.length;
+      actuator.maxLength = actuator.minLength * (1 + value);
+      actuator.stroke = value;
+    }, `Ход толкателя ${Math.round(value * 100)}%`)));
+    appendInspectRow('Контур', segmentedButtons([
+      { value: 'A', label: 'A' }, { value: 'B', label: 'B' }
+    ], controlChannel(selected), (value) => mutateSelected((actuator) => { actuator.channel = value; }, `Толкатель назначен на ${value}`)));
+  }
+
+  if (state.selection.kind === 'attachment' && type === 'motor') {
+    appendInspectRow('Мощность', segmentedButtons([
+      { value: .8, label: '1×' }, { value: 1.6, label: '2×' }, { value: 2.4, label: '3×' }, { value: 3.4, label: '4×' }
+    ], [0.8, 1.6, 2.4, 3.4].reduce((best, value) => Math.abs(value - selected.amount) < Math.abs(best - selected.amount) ? value : best, .8), (value) => mutateSelected((motor) => { motor.amount = value; }, `Мощность ${Math.round(value / .8)}×`)));
+  }
+
+  if (state.selection.kind === 'attachment' && type === 'weight') {
+    appendInspectRow('Масса', segmentedButtons([
+      { value: 4, label: '4' }, { value: 10, label: '10' }, { value: 18, label: '18' }, { value: 30, label: '30' }
+    ], [4, 10, 18, 30].reduce((best, value) => Math.abs(value - selected.amount) < Math.abs(best - selected.amount) ? value : best, 4), (value) => mutateSelected((weight) => {
+      weight.amount = value;
+      const node = nodeById(weight.nodeId);
+      if (node) node.mass = value;
+    }, `Масса ${value}`)));
+  }
+
+  if (state.selection.kind === 'attachment' && ['clutch', 'brake', 'lever'].includes(type)) {
+    appendInspectRow('Контур', segmentedButtons([
+      { value: 'A', label: 'A' }, { value: 'B', label: 'B' }
+    ], controlChannel(selected), (value) => mutateSelected((attachment) => { attachment.channel = value; }, `Назначен контур ${value}`)));
+  }
+
+  if (state.selection.kind === 'attachment' && type === 'ratchet') {
+    appendInspectRow('Направление', segmentedButtons([
+      { value: -1, label: '← Влево' }, { value: 1, label: 'Вправо →' }
+    ], selected.direction === -1 ? -1 : 1, (value) => mutateSelected((ratchet) => { ratchet.direction = value; }, 'Направление храповика изменено')));
+  }
+}
+
+const baseUpdateInspectorV14 = updateInspector;
+updateInspector = function updateDetailedInspector() {
+  baseUpdateInspectorV14();
+  renderInspectorExtras();
+};
+
+const baseInspectorValueV14 = inspectorValue;
+inspectorValue = function clearInspectorValue(selected, type) {
+  if (state.selection?.kind === 'constraint' && ['belt', 'chain'].includes(type)) return ratioLabel(selected);
+  if (state.selection?.kind === 'constraint' && type === 'actuator') {
+    const current = Math.round(selected.length || 0);
+    const maximum = Math.round(selected.maxLength || current);
+    return `${current} → ${maximum}`;
+  }
+  if (state.selection?.kind === 'rotor' && type === 'gear') return `Ø ${Math.round(selected.radius * 2)} · ${selected.teeth} зубьев`;
+  return baseInspectorValueV14(selected, type);
+};
+
+const baseAdjustSelectionV14 = adjustSelection;
+adjustSelection = function adjustExpandedSelection(direction) {
+  const selected = getSelected();
+  if (state.selection?.kind === 'constraint' && selected?.type === 'actuator') {
+    pushUndo();
+    selected.minLength = selected.minLength || selected.length;
+    selected.stroke = clamp((selected.stroke || .75) + direction * .1, .2, 1.5);
+    selected.maxLength = selected.minLength * (1 + selected.stroke);
+    updateInspector();
+    saveSoon();
+    clickSound(direction > 0 ? 370 : 230, .035);
+    return;
+  }
+  baseAdjustSelectionV14(direction);
+};
+

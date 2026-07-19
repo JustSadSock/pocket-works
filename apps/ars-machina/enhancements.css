@@ -1,4 +1,4 @@
-/* ARS MACHINA 1.3 — mounts, layers, transmissions and mechanical controls */
+/* ARS MACHINA 1.4 — predictable mobile palette, detailed inspector and model library */
 .inspector { gap: 8px; }
 .inspector-actions { grid-template-columns: 42px minmax(48px, 1fr) 42px 42px auto; }
 .inspector .cycle { font-size: 22px; color: var(--blueprint); }
@@ -28,7 +28,7 @@ body:has(.tool.active .icon-layers) .yard-note { border-color: #315f78; color: #
   box-shadow: inset 0 0 0 3px #473422, 0 0 0 2px currentColor;
 }
 .active .icon-flywheel::before { box-shadow: inset 0 0 0 3px #77522c, 0 0 0 2px currentColor; }
-.icon-flywheel::after { width: 5px; height: 30px; background: currentColor; transform: rotate(45deg); box-shadow: 0 0 0 0 currentColor; }
+.icon-flywheel::after { width: 5px; height: 30px; background: currentColor; transform: rotate(45deg); }
 .icon-rack::before { width: 39px; height: 9px; border: 3px solid currentColor; transform: rotate(-10deg); }
 .icon-rack::after {
   width: 39px; height: 7px; transform: translateY(-8px) rotate(-10deg);
@@ -47,6 +47,130 @@ body:has(.tool.active .icon-layers) .yard-note { border-color: #315f78; color: #
 .icon-ratchet::after { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 16px solid currentColor; }
 .icon-lever::before { width: 7px; height: 31px; background: currentColor; transform: rotate(25deg); border-radius: 4px; }
 .icon-lever::after { width: 14px; height: 14px; border-radius: 50%; background: currentColor; transform: translate(7px,-12px); }
+.icon-actuator::before { width: 40px; height: 12px; border: 4px solid currentColor; border-radius: 7px; transform: rotate(-18deg); }
+.icon-actuator::after { width: 23px; height: 5px; background: repeating-linear-gradient(90deg,currentColor 0 3px,transparent 3px 6px); transform: translate(8px,-4px) rotate(-18deg); }
+
+.category-tabs,
+.tool-rail {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+}
+.category-tabs { padding-right: 14px; scroll-padding-inline: 12px; }
+.tool-rail {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.tool-page {
+  min-width: 100%;
+  width: 100%;
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 72px;
+  align-content: start;
+  gap: 7px;
+  padding: 8px 9px 6px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.tool-page .tool {
+  min-width: 0;
+  width: 100%;
+  min-height: 72px;
+  padding: 6px 4px 5px;
+  grid-template-rows: 38px auto;
+}
+.palette-nav {
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: 0 9px 5px;
+  color: #cdbb96;
+}
+.palette-nav button {
+  min-height: 28px;
+  border: 1px solid rgba(239,216,169,.24);
+  border-radius: 5px;
+  background: #473422;
+  color: #f1dfbb;
+  font-size: 22px;
+  line-height: 1;
+}
+.palette-nav button:disabled { opacity: .28; }
+.palette-nav span { text-align: center; font: 800 10px ui-monospace, monospace; letter-spacing: .12em; }
+
+.inspector {
+  display: grid;
+  top: auto;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  width: auto;
+  max-height: min(58vh, 470px);
+  overflow: auto;
+  z-index: 15;
+  border-left-width: 4px;
+  border-radius: 7px;
+  box-shadow: 0 8px 28px rgba(44,31,18,.25);
+}
+body:has(.inspector:not([hidden])) .zoom-controls { opacity: .18; pointer-events: none; }
+.inspect-extra { display: grid; gap: 7px; padding-top: 7px; border-top: 1px solid rgba(77,58,31,.22); }
+.inspect-row { min-width: 0; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 7px; align-items: center; }
+.inspect-row-label { text-align: left !important; color: #6a5636 !important; font: 800 9px ui-monospace, monospace !important; text-transform: uppercase; letter-spacing: .08em; }
+.inspect-segments { min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+.inspect-segments::-webkit-scrollbar { display: none; }
+.inspect-segments button {
+  flex: 1 0 auto;
+  min-width: 42px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.inspect-segments button.active { background: #2f5669; border-color: #244657; color: #fff2cf; box-shadow: inset 0 0 0 1px #d0b36e; }
+.inspect-readout { min-width: 0; padding: 7px 8px; border: 1px solid rgba(83,65,39,.28); background: rgba(255,249,225,.42); color: #4f422e; font: 750 10px/1.3 ui-monospace, monospace; overflow-wrap: anywhere; }
+.ratio-readout { color: #244c63; }
+
+.model-workspace { display: grid; gap: 9px; margin-bottom: 15px; padding: 10px; border: 1px solid #8d7449; border-left: 5px solid var(--brass); background: rgba(246,232,198,.78); }
+.model-name-field { display: grid; gap: 5px; }
+.model-name-field span { color: #5b4b34; font: 800 9px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.model-name-field input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #8b734b; border-radius: 4px; background: #fff4d6; color: #2c241b; font: 750 15px ui-rounded, system-ui, sans-serif; }
+.model-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
+.model-action-grid button,
+.incoming-model button { min-height: 42px; border: 1px solid #8b734b; border-radius: 5px; background: #ddc797; color: #2c241b; font-weight: 750; }
+.model-action-grid .primary,
+.incoming-model .primary { background: #9a642a; border-color: #6e421f; color: #fff3d4; }
+.sheet-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 2px 8px; }
+.sheet-section-title b { color: #2c241b; font: 800 15px Georgia, serif; }
+.sheet-section-title small { color: #6e5c3f; font-size: 9px; }
+.preset-title { margin-top: 16px; }
+.saved-model-list { display: grid; gap: 7px; }
+.saved-model-card { display: grid; grid-template-columns: minmax(0,1fr) auto; border: 1px solid #94794d; border-left: 4px solid #725b39; background: rgba(246,232,198,.72); }
+.saved-model-card.current { border-left-color: var(--blueprint); box-shadow: inset 0 0 0 1px rgba(36,76,99,.2); }
+.saved-model-main { min-width: 0; min-height: 64px; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 8px; padding: 7px 8px; border: 0; background: transparent; text-align: left; }
+.saved-model-main > span:last-child { min-width: 0; display: grid; gap: 3px; }
+.saved-model-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 14px Georgia, serif; }
+.saved-model-main small { color: #6e5c3f; font-size: 9px; line-height: 1.25; }
+.model-glyph { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid var(--blueprint); color: var(--blueprint); font-size: 18px; transform: rotate(-3deg); }
+.saved-model-actions { display: grid; grid-template-columns: 42px; border-left: 1px solid rgba(85,66,39,.2); }
+.saved-model-actions button { border: 0; border-bottom: 1px solid rgba(85,66,39,.2); background: rgba(222,202,156,.68); font-size: 18px; }
+.saved-model-actions button:last-child { border-bottom: 0; color: var(--danger); }
+.saved-model-actions button.armed { min-width: 112px; padding: 0 8px; color: #fff5e2; background: var(--danger); font-size: 10px; }
+.empty-library { display: grid; gap: 3px; padding: 13px; border: 1px dashed #92784c; color: #6d5a3e; text-align: center; }
+.empty-library b { font: 800 14px Georgia, serif; color: #403523; }
+.empty-library span { font-size: 10px; }
+.incoming-model { display: grid; gap: 8px; padding: 10px; border: 2px solid #315f78; background: #e3d6ae; }
+.incoming-model > div:first-child { display: grid; gap: 2px; }
+.incoming-model small { color: #315f78; font: 900 9px ui-monospace, monospace; letter-spacing: .12em; }
+.incoming-model b { font: 800 16px Georgia, serif; }
+.incoming-model span { color: #68583d; font-size: 10px; }
+.incoming-model > div:last-child { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 
 .run-dock { grid-template-columns: auto minmax(230px,1fr) minmax(150px,.7fr) minmax(230px,1fr); }
 .channel-group { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -78,19 +202,41 @@ body:has(.tool.active .icon-layers) .yard-note { border-color: #315f78; color: #
   .identity small { font-size: 8px; letter-spacing: .09em; }
   .top-actions { gap: 4px; }
   .top-actions button, .top-actions .square-button { width: 38px; min-width: 38px; min-height: 38px; }
-  .inspector { left: 7px; right: 7px; }
+  .dock-head { grid-template-columns: minmax(0,1fr); overflow: visible; }
+  .category-tabs { width: 100%; padding-inline: 4px; }
+  .category { flex: 1 1 0; min-width: 68px; padding-inline: 5px; font-size: 10px; }
+  .run-button {
+    position: absolute;
+    right: 8px;
+    top: -53px;
+    min-width: 132px;
+    min-height: 44px;
+    margin: 0;
+    z-index: 4;
+    box-shadow: 2px 4px 0 rgba(49,31,15,.28);
+  }
+  body:has(#buildDock:not([hidden])) .zoom-controls { bottom: 62px; }
   .inspector-actions { grid-template-columns: 38px minmax(42px, 1fr) 38px 38px auto; }
   .inspector-layer { grid-template-columns: 34px 62px 34px minmax(0,1fr); }
+  .inspect-row { grid-template-columns: 66px minmax(0,1fr); }
   .run-dock {
-    min-height: 206px;
+    min-height: 176px;
     grid-template-columns: 1fr;
     grid-template-areas: "stop" "drive" "channels" "mechanisms";
     gap: 5px;
   }
-  .run-dock button { min-height: 40px; font-size: 10px; }
+  .run-dock button { min-height: 38px; font-size: 10px; }
   .channel-group { grid-template-columns: repeat(2,1fr); }
+  .blueprint-sheet { padding-left: 10px; padding-right: 10px; }
+}
+
+@media (max-width: 360px) {
+  .tool-page { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-height: 650px) and (orientation: landscape) {
+  .tool-page { grid-auto-rows: 62px; grid-template-columns: repeat(5,minmax(0,1fr)); }
+  .tool-page .tool { min-height: 62px; grid-template-rows: 31px auto; }
+  .palette-nav { display: none; }
   .run-dock { min-height: 104px; grid-template-columns: auto minmax(0,1fr) minmax(130px,.55fr) minmax(0,1fr); grid-template-areas: "stop drive channels mechanisms"; }
 }

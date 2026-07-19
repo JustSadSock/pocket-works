@@ -4,15 +4,15 @@
   "slug": "ars-machina",
   "name": "ARS MACHINA",
   "shortName": "ARS MACHINA",
-  "description": "Средневековая 2D-песочница для сборки работающих машин из балок, передач, шестерён, реек, ремней, цепей и механических органов управления.",
-  "version": "1.3.0",
+  "description": "Мобильная 2D-песочница для сборки и обмена работающими механизмами с шестернями, передачами, приводами и настраиваемыми деталями.",
+  "version": "1.4.0",
   "releaseDate": "2026-07-19",
-  "releaseDateTime": "2026-07-19T20:40:00+03:00",
+  "releaseDateTime": "2026-07-19T21:45:00+03:00",
   "changelog": [
-    "Добавлены зубчатые рейки с направляющей физикой и преобразованием вращения шестерни в поступательное движение.",
-    "Появились ременные и цепные передачи между любыми валами; ремень поддерживает обычную и перекрёстную укладку.",
-    "Добавлены маховик, управляемая муфта, колодочный тормоз, храповик и физический командный рычаг.",
-    "Испытательный двор получил два независимых контура A и B и новый готовый трансмиссионный стенд."
+    "Панель деталей стала постраничной и двухрядной: все элементы привода доступны без скрытого бесконечного скролла, а категории всегда видны.",
+    "Инспектор получил понятные именованные настройки размеров, мощности, жёсткости, каналов и реальных передаточных чисел.",
+    "Добавлена библиотека моделей с именованными сохранениями, копиями, импортом и отправкой модели одной ссылкой или файлом.",
+    "Добавлен винтовой толкатель; установка моторов, муфт, тормозов и храповиков стала предсказуемой и больше не создаёт скрытые детали."
   ],
   "status": "active",
   "preset": "canvas",
@@ -20,8 +20,8 @@
   "backgroundColor": "#34271c",
   "themeColor": "#2c241b",
   "orientation": "any",
-  "cacheName": "ars-machina-v1.3.0-p2",
+  "cacheName": "ars-machina-v1.4.0-p3",
   "storageNamespace": "pocket-works:ars-machina",
-  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "rack and pinion", "belts", "chains", "flywheel", "clutch", "brake", "ratchet", "controls", "ropes", "springs", "vehicles", "catapult", "canvas", "mobile", "workshop", "joints", "layers", "weld", "mounts"],
+  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ratios", "rack and pinion", "belts", "chains", "flywheel", "clutch", "brake", "ratchet", "actuator", "controls", "model library", "sharing", "import", "export", "canvas", "mobile", "workshop", "joints", "layers", "mounts"],
   "order": 96
 }
