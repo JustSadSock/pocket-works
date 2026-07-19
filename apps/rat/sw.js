@@ -23,6 +23,7 @@ const APP_SHELL = [
   './command-system-v2.js',
   './command-system-v2-fix.js',
   './battle-ui-v3.js',
+  './battle-ui-v3-fix.js',
   './game-part-8.js',
   './manifest.webmanifest',
   './icons/icon.svg',
