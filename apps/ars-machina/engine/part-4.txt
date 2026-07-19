@@ -1,0 +1,439 @@
+    const amplitude = (i % 2 ? 7 : -7) * Math.min(1, state.camera.zoom);
+    ctx.lineTo(a.x + dx * t + nx * amplitude, a.y + dy * t + ny * amplitude);
+  }
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  if (distance(nodeById(constraint.a), nodeById(constraint.b)) > constraint.length * 1.2) {
+    ctx.strokeStyle = 'rgba(141,53,43,.45)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLatch(a, b) {
+  ctx.save();
+  ctx.strokeStyle = '#2d3335';
+  ctx.lineWidth = 6;
+  ctx.setLineDash([10, 5]);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.setLineDash([]);
+  const midX = (a.x + b.x) / 2;
+  const midY = (a.y + b.y) / 2;
+  ctx.fillStyle = '#b6863e';
+  ctx.fillRect(midX - 7, midY - 7, 14, 14);
+  ctx.restore();
+}
+
+function drawPayloadLock(a, b) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(112,82,42,.72)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([3, 4]);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.restore();
+}
+
+function drawRotors() {
+  for (const rotor of state.rotors) {
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    const center = worldToScreen(node.x, node.y);
+    const radius = rotor.radius * state.camera.zoom;
+    if (rotor.type === 'wheel') drawWheel(center, radius, rotor.angle);
+    else if (rotor.type === 'gear') drawGear(center, radius, rotor.angle, rotor.teeth);
+    else if (rotor.type === 'winch') drawWinch(center, radius, rotor.angle);
+    else if (rotor.type === 'pulley') drawPulley(center, radius, rotor.angle);
+  }
+}
+
+function drawWheel(center, radius, angle) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#6d4728';
+  ctx.strokeStyle = '#2d2117';
+  ctx.lineWidth = clamp(radius * .16, 4, 9);
+  ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#c28e4e';
+  ctx.lineWidth = clamp(radius * .08, 2, 5);
+  for (let i = 0; i < 8; i += 1) {
+    ctx.rotate(TAU / 8);
+    ctx.beginPath(); ctx.moveTo(radius * .18, 0); ctx.lineTo(radius * .82, 0); ctx.stroke();
+  }
+  ctx.fillStyle = '#2f2b28';
+  ctx.beginPath(); ctx.arc(0, 0, Math.max(5, radius * .18), 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawGear(center, radius, angle, teeth) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+  const count = clamp(teeth, 8, 28);
+  const inner = radius * .83;
+  ctx.beginPath();
+  for (let i = 0; i < count * 2; i += 1) {
+    const a = i / (count * 2) * TAU;
+    const r = i % 2 ? inner : radius;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#b88743';
+  ctx.strokeStyle = '#4a3420';
+  ctx.lineWidth = Math.max(2, radius * .08);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#4a3420';
+  ctx.beginPath(); ctx.arc(0, 0, radius * .22, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#6d4d2d';
+  ctx.lineWidth = Math.max(2, radius * .09);
+  for (let i = 0; i < 6; i += 1) {
+    ctx.rotate(TAU / 6);
+    ctx.beginPath(); ctx.moveTo(radius * .27, 0); ctx.lineTo(radius * .67, 0); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawWinch(center, radius, angle) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#81552f';
+  ctx.strokeStyle = '#2f251d';
+  ctx.lineWidth = 4;
+  ctx.fillRect(-radius * .7, -radius * .65, radius * 1.4, radius * 1.3);
+  ctx.strokeRect(-radius * .7, -radius * .65, radius * 1.4, radius * 1.3);
+  ctx.strokeStyle = '#d0aa68';
+  ctx.lineWidth = 2;
+  for (let y = -radius * .48; y < radius * .52; y += Math.max(5, radius * .18)) {
+    ctx.beginPath(); ctx.moveTo(-radius * .65, y); ctx.lineTo(radius * .65, y); ctx.stroke();
+  }
+  ctx.fillStyle = '#2e2925';
+  ctx.beginPath(); ctx.arc(0, 0, radius * .18, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawPulley(center, radius, angle) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#7d633d';
+  ctx.strokeStyle = '#30281d';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#d6bb7e';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, radius * .62, 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#2f2a25';
+  ctx.beginPath(); ctx.arc(0, 0, radius * .2, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawNodesAndAttachments() {
+  for (const node of state.nodes) {
+    const p = worldToScreen(node.x, node.y);
+    const attachments = state.attachments.filter((item) => item.nodeId === node.id);
+    const weight = attachments.find((item) => item.type === 'weight');
+    const motor = attachments.find((item) => item.type === 'motor');
+    const payload = attachments.find((item) => item.type === 'payload');
+    if (weight) drawWeight(p, weight.amount, state.camera.zoom);
+    if (motor) drawMotor(p, motor.amount, state.camera.zoom);
+    if (payload || node.role === 'payload') drawPayload(p, node.radius * state.camera.zoom);
+    drawNode(p, node);
+  }
+}
+
+function drawNode(point, node) {
+  const radius = clamp(6 * state.camera.zoom, 3.5, 8);
+  ctx.save();
+  ctx.fillStyle = node.fixed ? '#2c5970' : '#282522';
+  ctx.strokeStyle = node.fixed ? '#d2b76e' : '#d7b266';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  if (node.fixed) {
+    ctx.strokeStyle = '#2c5970';
+    ctx.lineWidth = 2;
+    for (let i = -2; i <= 2; i += 1) {
+      ctx.beginPath(); ctx.moveTo(point.x - 13 + i * 6, point.y + 10); ctx.lineTo(point.x - 18 + i * 6, point.y + 18); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawWeight(point, amount, zoom) {
+  const size = clamp((12 + amount * .65) * zoom, 10, 30);
+  ctx.save();
+  ctx.translate(point.x, point.y + size * .55);
+  ctx.fillStyle = '#4a4c4b';
+  ctx.strokeStyle = '#211f1c';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-size * .55, -size * .45);
+  ctx.lineTo(size * .55, -size * .45);
+  ctx.lineTo(size * .72, size * .52);
+  ctx.lineTo(-size * .72, size * .52);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d2b66f';
+  ctx.font = `700 ${Math.max(8, size * .42)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(amount), 0, size * .08);
+  ctx.restore();
+}
+
+function drawMotor(point, amount, zoom) {
+  const size = clamp(22 * zoom, 14, 30);
+  ctx.save();
+  ctx.translate(point.x, point.y - size * .9);
+  ctx.fillStyle = '#6b4a2e';
+  ctx.strokeStyle = '#29221b';
+  ctx.lineWidth = 3;
+  ctx.fillRect(-size * .65, -size * .45, size * 1.3, size * .9);
+  ctx.strokeRect(-size * .65, -size * .45, size * 1.3, size * .9);
+  ctx.fillStyle = '#d5b66d';
+  ctx.font = `900 ${Math.max(9, size * .5)}px Georgia, serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('M', 0, 1);
+  ctx.strokeStyle = '#d5b66d';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(size * .65, -size * .2); ctx.lineTo(size * 1.1, -size * .55); ctx.stroke();
+  ctx.beginPath(); ctx.arc(size * 1.25, -size * .68, Math.max(3, amount * 2), 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+function drawPayload(point, radius) {
+  const r = clamp(radius || 12, 8, 24);
+  ctx.save();
+  ctx.fillStyle = '#55534d';
+  ctx.strokeStyle = '#292724';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(point.x, point.y, r, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(224,213,181,.34)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(point.x - r * .22, point.y - r * .24, r * .46, Math.PI, Math.PI * 1.7); ctx.stroke();
+  ctx.restore();
+}
+
+function drawSelection() {
+  if (!state.selection || state.mode !== 'build') return;
+  const selected = getSelected();
+  if (!selected) return;
+  ctx.save();
+  ctx.strokeStyle = '#2a617d';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  if (state.selection.kind === 'node') {
+    const p = worldToScreen(selected.x, selected.y);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, TAU); ctx.stroke();
+  } else if (state.selection.kind === 'rotor') {
+    const node = nodeById(selected.nodeId);
+    if (node) {
+      const p = worldToScreen(node.x, node.y);
+      ctx.beginPath(); ctx.arc(p.x, p.y, selected.radius * state.camera.zoom + 8, 0, TAU); ctx.stroke();
+    }
+  } else if (state.selection.kind === 'attachment') {
+    const node = nodeById(selected.nodeId);
+    if (node) {
+      const p = worldToScreen(node.x, node.y);
+      ctx.strokeRect(p.x - 24, p.y - 24, 48, 48);
+    }
+  } else if (state.selection.kind === 'constraint') {
+    const a = nodeById(selected.a);
+    const b = nodeById(selected.b);
+    if (a && b) {
+      const pa = worldToScreen(a.x, a.y);
+      const pb = worldToScreen(b.x, b.y);
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawPending() {
+  if (!state.pendingNodeId || state.mode !== 'build') return;
+  const node = nodeById(state.pendingNodeId);
+  if (!node) return;
+  const p = worldToScreen(node.x, node.y);
+  ctx.save();
+  ctx.strokeStyle = '#b06b29';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(p.x, p.y, 15 + Math.sin(performance.now() / 120) * 2, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+function loop(now) {
+  const dt = Math.min(34, now - lastTime || 16.67);
+  lastTime = now;
+  if (!hidden) {
+    simulate(dt);
+    render();
+  }
+  frameHandle = requestAnimationFrame(loop);
+}
+
+function openBlueprints() {
+  ui.blueprintSheet.hidden = false;
+  clickSound(280, .04);
+}
+
+function closeBlueprints() {
+  ui.blueprintSheet.hidden = true;
+}
+
+function loadBlueprint(name) {
+  pushUndo();
+  if (name === 'cart') buildCart();
+  else if (name === 'trebuchet') buildTrebuchet();
+  else buildBlank();
+  closeBlueprints();
+  saveSoon();
+  updateInspector();
+  updateHistoryButtons();
+  setYardNote(name === 'blank' ? 'Чистый двор готов.' : 'Чертёж загружен. Можно разбирать и перестраивать.', 2100);
+  heavySound(140, .09);
+  vibrate(14);
+}
+
+function bindUI() {
+  document.querySelectorAll('.category').forEach((button) => button.addEventListener('click', () => setCategory(button.dataset.category)));
+  ui.runButton.addEventListener('click', enterRunMode);
+  ui.backToBuildButton.addEventListener('click', returnToBuild);
+  ui.blueprintsButton.addEventListener('click', openBlueprints);
+  ui.closeBlueprints.addEventListener('click', closeBlueprints);
+  ui.blueprintSheet.addEventListener('click', (event) => {
+    if (event.target === ui.blueprintSheet) closeBlueprints();
+  });
+  document.querySelectorAll('[data-blueprint]').forEach((button) => button.addEventListener('click', () => loadBlueprint(button.dataset.blueprint)));
+  ui.undoButton.addEventListener('click', undo);
+  ui.redoButton.addEventListener('click', redo);
+  ui.zoomInButton.addEventListener('click', () => zoomBy(1.18));
+  ui.zoomOutButton.addEventListener('click', () => zoomBy(1 / 1.18));
+  ui.homeButton.addEventListener('click', frameConstruction);
+  ui.inspectMinus.addEventListener('click', () => adjustSelection(-1));
+  ui.inspectPlus.addEventListener('click', () => adjustSelection(1));
+  ui.inspectDelete.addEventListener('click', removeSelection);
+  ui.soundButton.addEventListener('click', () => {
+    prefs.sound = !prefs.sound;
+    persistPrefs();
+    updateSoundButton();
+    if (prefs.sound) clickSound(420, .06);
+    else showToast('Звук выключен');
+  });
+  document.querySelectorAll('[data-drive]').forEach((button) => button.addEventListener('click', () => setDrive(Number(button.dataset.drive))));
+  ui.fireButton.addEventListener('click', triggerFire);
+  for (const [button, direction] of [[ui.winchInButton, 1], [ui.winchOutButton, -1]]) {
+    const start = (event) => {
+      event.preventDefault();
+      activeWinchDirection = direction;
+      button.classList.add('active');
+      clickSound(direction > 0 ? 350 : 240, .04);
+    };
+    const stop = () => {
+      if (activeWinchDirection === direction) activeWinchDirection = 0;
+      button.classList.remove('active');
+    };
+    button.addEventListener('pointerdown', start);
+    button.addEventListener('pointerup', stop);
+    button.addEventListener('pointercancel', stop);
+    button.addEventListener('lostpointercapture', stop);
+  }
+
+  canvas.addEventListener('pointerdown', beginPointer);
+  canvas.addEventListener('pointermove', movePointer);
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', cancelPointer);
+  canvas.addEventListener('lostpointercapture', cancelPointer);
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const before = screenToWorld(event.offsetX, event.offsetY);
+    state.camera.zoom = clamp(state.camera.zoom * Math.exp(-event.deltaY * .001), .42, 2.4);
+    const after = screenToWorld(event.offsetX, event.offsetY);
+    state.camera.x += before.x - after.x;
+    state.camera.y += before.y - after.y;
+  }, { passive: false });
+
+  window.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) redo(); else undo();
+    }
+    if (event.key === 'Escape') {
+      if (!ui.blueprintSheet.hidden) closeBlueprints();
+      else if (state.mode === 'run') returnToBuild();
+      else setTool('select');
+    }
+    if (state.mode === 'run') {
+      if (event.key === 'ArrowLeft') setDrive(-1);
+      if (event.key === 'ArrowRight') setDrive(1);
+      if (event.key === 'ArrowDown') setDrive(0);
+      if (event.code === 'Space') {
+        event.preventDefault();
+        triggerFire();
+      }
+    }
+  });
+
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('pagehide', saveNow);
+  document.addEventListener('visibilitychange', () => {
+    hidden = document.hidden;
+    if (hidden) {
+      saveNow();
+      activeWinchDirection = 0;
+    } else {
+      lastTime = performance.now();
+    }
+  });
+}
+
+function updateSoundButton() {
+  ui.soundButton.textContent = prefs.sound ? '♪' : '×';
+  ui.soundButton.setAttribute('aria-label', prefs.sound ? 'Выключить звук' : 'Включить звук');
+}
+
+createWorkshopMode({
+  appName: 'ARS MACHINA',
+  version: APP_VERSION,
+  cachePrefix: 'ars-machina-',
+  storageNamespace: 'pocket-works:ars-machina',
+  onReset() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PREFS_KEY);
+    prefs.sound = true;
+    state.undo = [];
+    state.redo = [];
+    buildBlank();
+    saveSoon();
+    updateSoundButton();
+    updateHistoryButtons();
+    setYardNote('Данные ARS MACHINA очищены.', 1800);
+  }
+});
+
+watchConnectivity((online) => {
+  document.documentElement.dataset.network = online ? 'online' : 'offline';
+});
+
+bindUI();
+renderTools();
+updateSoundButton();
+updateModeUI();
+resizeCanvas();
+
+if (!loadSaved()) {
+  buildCart();
+  state.undo = [];
+  state.redo = [];
+  state.dirty = true;
+  saveNow();
+  openBlueprints();
+} else {
+  setYardNote('Последний чертёж восстановлен.', 1600);
+}
+
+frameHandle = requestAnimationFrame(loop);
