@@ -1,0 +1,330 @@
+// ARS MACHINA 1.5 — readable mechanical visuals.
+function radialMetalV15(inner, outer, light, dark) {
+  const gradient = ctx.createRadialGradient(-outer * .28, -outer * .32, inner, 0, 0, outer);
+  gradient.addColorStop(0, light);
+  gradient.addColorStop(.58, dark);
+  gradient.addColorStop(1, '#251d15');
+  return gradient;
+}
+
+function drawShaftHubV15(radius, node) {
+  const rigid = nodeJointModeV15(node) === 'rigid';
+  ctx.save();
+  ctx.lineWidth = Math.max(2, radius * .07);
+  if (rigid) {
+    const size = Math.max(6, radius * .24);
+    ctx.fillStyle = '#6f4827';
+    ctx.strokeStyle = '#ead39a';
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-size, -size, size * 2, size * 2);
+    ctx.strokeRect(-size, -size, size * 2, size * 2);
+    ctx.fillStyle = '#241d17';
+    for (const [x, y] of [[-.55, -.55], [.55, -.55], [.55, .55], [-.55, .55]]) {
+      ctx.beginPath();
+      ctx.arc(x * size, y * size, Math.max(1.5, size * .16), 0, TAU);
+      ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = '#25221f';
+    ctx.strokeStyle = '#e0bd70';
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(5, radius * .21), 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#75613d';
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(2, radius * .09), 0, TAU);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawEnhancedGearV15(center, radius, rotor, node) {
+  const count = clamp(rotor.teeth || Math.round(radius / 3), 8, 34);
+  const root = radius * .79;
+  const valley = radius * .87;
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(rotor.angle);
+  ctx.beginPath();
+  for (let i = 0; i < count * 4; i += 1) {
+    const angle = i / (count * 4) * TAU;
+    const phase = i % 4;
+    const r = phase === 1 || phase === 2 ? radius : phase === 0 ? valley : root;
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
+    if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = radialMetalV15(radius * .12, radius, '#e0b764', '#9a642f');
+  ctx.strokeStyle = '#49301d';
+  ctx.lineWidth = Math.max(2, radius * .075);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,229,166,.38)';
+  ctx.lineWidth = Math.max(1, radius * .025);
+  ctx.beginPath(); ctx.arc(0, 0, root * .86, 0, TAU); ctx.stroke();
+  const spokes = count >= 20 ? 6 : 5;
+  ctx.strokeStyle = '#674321';
+  ctx.lineWidth = Math.max(3, radius * .11);
+  for (let i = 0; i < spokes; i += 1) {
+    ctx.rotate(TAU / spokes);
+    ctx.beginPath(); ctx.moveTo(radius * .23, 0); ctx.lineTo(radius * .67, 0); ctx.stroke();
+  }
+  drawShaftHubV15(radius, node);
+  ctx.restore();
+}
+
+function drawEnhancedWheelV15(center, radius, rotor, node) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(rotor.angle);
+  ctx.fillStyle = radialMetalV15(radius * .12, radius, '#b98243', '#684120');
+  ctx.strokeStyle = '#211912';
+  ctx.lineWidth = Math.max(5, radius * .15);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .92, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#bd8745';
+  ctx.lineWidth = Math.max(3, radius * .08);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .72, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = '#d0a15d';
+  ctx.lineWidth = Math.max(2, radius * .065);
+  for (let i = 0; i < 8; i += 1) {
+    ctx.rotate(TAU / 8);
+    ctx.beginPath(); ctx.moveTo(radius * .22, 0); ctx.lineTo(radius * .7, 0); ctx.stroke();
+  }
+  drawShaftHubV15(radius, node);
+  ctx.restore();
+}
+
+function drawEnhancedWinchV15(center, radius, rotor, node) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(rotor.angle);
+  const body = radius * .72;
+  ctx.fillStyle = radialMetalV15(radius * .12, radius, '#b77d3f', '#68401f');
+  ctx.strokeStyle = '#2a2018';
+  ctx.lineWidth = Math.max(3, radius * .12);
+  ctx.fillRect(-body, -radius * .58, body * 2, radius * 1.16);
+  ctx.strokeRect(-body, -radius * .58, body * 2, radius * 1.16);
+  ctx.fillStyle = '#3f3022';
+  ctx.fillRect(-radius * .94, -radius * .73, radius * .22, radius * 1.46);
+  ctx.fillRect(radius * .72, -radius * .73, radius * .22, radius * 1.46);
+  ctx.strokeStyle = '#d5b06a';
+  ctx.lineWidth = Math.max(1.5, radius * .055);
+  for (let x = -body * .72; x <= body * .72; x += Math.max(5, radius * .18)) {
+    ctx.beginPath(); ctx.moveTo(x, -radius * .52); ctx.lineTo(x + radius * .14, radius * .52); ctx.stroke();
+  }
+  ctx.strokeStyle = '#c88f48';
+  ctx.lineWidth = Math.max(3, radius * .1);
+  ctx.beginPath(); ctx.moveTo(radius * .1, -radius * .08); ctx.lineTo(radius * .92, -radius * .78); ctx.stroke();
+  ctx.fillStyle = '#d8b368';
+  ctx.beginPath(); ctx.arc(radius * .98, -radius * .84, Math.max(3, radius * .13), 0, TAU); ctx.fill();
+  drawShaftHubV15(radius, node);
+  ctx.restore();
+}
+
+function drawEnhancedPulleyV15(center, radius, rotor, node) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(rotor.angle);
+  ctx.fillStyle = radialMetalV15(radius * .1, radius, '#c09a58', '#6f5430');
+  ctx.strokeStyle = '#2b241b';
+  ctx.lineWidth = Math.max(3, radius * .12);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .92, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#ead29a';
+  ctx.lineWidth = Math.max(2, radius * .07);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .66, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = '#3c2f20';
+  ctx.lineWidth = Math.max(3, radius * .15);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .82, Math.PI * .15, Math.PI * .85); ctx.stroke();
+  drawShaftHubV15(radius, node);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.strokeStyle = '#40372c';
+  ctx.lineWidth = Math.max(3, radius * .11);
+  ctx.beginPath(); ctx.arc(0, -radius * .55, radius * .62, Math.PI, 0); ctx.stroke();
+  ctx.restore();
+}
+
+function drawEnhancedFlywheelV15(center, radius, rotor, node) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(rotor.angle);
+  ctx.fillStyle = radialMetalV15(radius * .15, radius, '#77736a', '#393733');
+  ctx.strokeStyle = '#1d1c19';
+  ctx.lineWidth = Math.max(6, radius * .2);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .9, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#c49b53';
+  ctx.lineWidth = Math.max(2, radius * .065);
+  for (let i = 0; i < 6; i += 1) {
+    ctx.rotate(TAU / 6);
+    ctx.beginPath(); ctx.moveTo(radius * .22, 0); ctx.lineTo(radius * .7, 0); ctx.stroke();
+  }
+  drawShaftHubV15(radius, node);
+  ctx.restore();
+}
+
+function meshedPairsV15() {
+  const gears = state.rotors.filter((rotor) => rotor.type === 'gear');
+  const pairs = [];
+  for (let i = 0; i < gears.length; i += 1) {
+    for (let j = i + 1; j < gears.length; j += 1) {
+      const a = gears[i];
+      const b = gears[j];
+      const nodeA = nodeById(a.nodeId);
+      const nodeB = nodeById(b.nodeId);
+      if (!nodeA || !nodeB || a.nodeId === b.nodeId) continue;
+      const error = Math.abs(distance(nodeA, nodeB) - (a.radius + b.radius));
+      if (error <= 10) pairs.push({ a, b, nodeA, nodeB });
+    }
+  }
+  return pairs;
+}
+
+function drawGearMeshFeedbackV15() {
+  for (const pair of meshedPairsV15()) {
+    const total = pair.a.radius + pair.b.radius || 1;
+    const contact = {
+      x: pair.nodeA.x + (pair.nodeB.x - pair.nodeA.x) * (pair.a.radius / total),
+      y: pair.nodeA.y + (pair.nodeB.y - pair.nodeA.y) * (pair.a.radius / total)
+    };
+    const point = worldToScreen(contact.x, contact.y);
+    const active = state.mode === 'run' && (Math.abs(pair.a.omega) + Math.abs(pair.b.omega) > .004);
+    ctx.save();
+    ctx.strokeStyle = active ? 'rgba(244,190,78,.92)' : 'rgba(46,91,113,.5)';
+    ctx.fillStyle = active ? 'rgba(244,190,78,.2)' : 'rgba(46,91,113,.12)';
+    ctx.lineWidth = active ? 3 : 2;
+    ctx.beginPath(); ctx.arc(point.x, point.y, active ? 7 + Math.sin(state.simTime * 12) * 2 : 5, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+const baseDrawRotorsV15 = drawRotors;
+drawRotors = function drawReadableRotorsV15(layer = null) {
+  for (const rotor of state.rotors) {
+    if (layer !== null && itemLayer(rotor) !== layer) continue;
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    const center = worldToScreen(node.x, node.y);
+    const radius = rotor.radius * state.camera.zoom;
+    if (rotor.type === 'gear') drawEnhancedGearV15(center, radius, rotor, node);
+    else if (rotor.type === 'wheel') drawEnhancedWheelV15(center, radius, rotor, node);
+    else if (rotor.type === 'winch') drawEnhancedWinchV15(center, radius, rotor, node);
+    else if (rotor.type === 'pulley') drawEnhancedPulleyV15(center, radius, rotor, node);
+    else if (rotor.type === 'flywheel') drawEnhancedFlywheelV15(center, radius, rotor, node);
+    else baseDrawRotorsV15(layer);
+  }
+  if (layer === null) drawGearMeshFeedbackV15();
+};
+
+const baseDrawNodeV15 = drawNode;
+drawNode = function drawUnifiedNodeV15(point, node) {
+  const rigid = nodeJointModeV15(node) === 'rigid';
+  const radius = clamp((node.mount ? 6 : 7) * state.camera.zoom, 4, 10);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  if (node.fixed) {
+    ctx.fillStyle = '#244f68';
+    ctx.strokeStyle = '#e1c172';
+    ctx.lineWidth = 2;
+    ctx.fillRect(-radius * 1.15, -radius * .8, radius * 2.3, radius * 1.6);
+    ctx.strokeRect(-radius * 1.15, -radius * .8, radius * 2.3, radius * 1.6);
+    ctx.fillStyle = '#171c1f';
+    ctx.beginPath(); ctx.arc(-radius * .65, 0, 1.8, 0, TAU); ctx.arc(radius * .65, 0, 1.8, 0, TAU); ctx.fill();
+  } else if (rigid) {
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = '#9f6f32';
+    ctx.strokeStyle = '#332317';
+    ctx.lineWidth = 2.4;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+    ctx.strokeRect(-radius, -radius, radius * 2, radius * 2);
+    ctx.strokeStyle = '#f0d69a';
+    ctx.beginPath(); ctx.moveTo(-radius * .62, 0); ctx.lineTo(radius * .62, 0); ctx.moveTo(0, -radius * .62); ctx.lineTo(0, radius * .62); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#27231f';
+    ctx.strokeStyle = '#dab86d';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#5d4b30';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, radius * .42, 0, TAU); ctx.stroke();
+  }
+  ctx.restore();
+};
+
+const baseDrawTransmissionV15 = drawTransmission;
+drawTransmission = function drawLivingTransmissionV15(a, b, transmission) {
+  const nodeA = nodeById(transmission.a);
+  const nodeB = nodeById(transmission.b);
+  const rotorA = shaftRotor(transmission.a);
+  const rotorB = shaftRotor(transmission.b);
+  if (!nodeA || !nodeB || !rotorA || !rotorB) return baseDrawTransmissionV15(a, b, transmission);
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const offset = clamp(Math.min(rotorA.radius, rotorB.radius) * state.camera.zoom * .35, 5, 15);
+  const enabled = transmissionEnabled(transmission);
+  const sign = transmission.type === 'belt' && transmission.crossed ? -1 : 1;
+  const speed = (rotorA.omega + rotorB.omega) * 52;
+  ctx.save();
+  ctx.globalAlpha = enabled ? 1 : .32;
+  ctx.strokeStyle = transmission.type === 'chain' ? '#363b3d' : '#5c3a23';
+  ctx.lineWidth = transmission.type === 'chain' ? 5 : 7;
+  ctx.setLineDash(transmission.type === 'chain' ? [7, 5] : [18, 6]);
+  ctx.lineDashOffset = state.mode === 'run' ? -state.simTime * speed : 0;
+  ctx.beginPath();
+  ctx.moveTo(a.x + nx * offset, a.y + ny * offset);
+  ctx.lineTo(b.x + nx * offset * sign, b.y + ny * offset * sign);
+  ctx.moveTo(a.x - nx * offset, a.y - ny * offset);
+  ctx.lineTo(b.x - nx * offset * sign, b.y - ny * offset * sign);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = transmission.type === 'chain' ? '#a7a59b' : '#c39a63';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(a.x + nx * offset, a.y + ny * offset);
+  ctx.lineTo(b.x + nx * offset * sign, b.y + ny * offset * sign);
+  ctx.stroke();
+  if (enabled && state.mode === 'run') {
+    const t = .5 + Math.sin(state.simTime * 3) * .08;
+    const x = a.x + dx * t;
+    const y = a.y + dy * t;
+    const dir = Math.sign(rotorA.omega || 1);
+    ctx.translate(x, y);
+    ctx.rotate(Math.atan2(dy, dx));
+    ctx.fillStyle = '#e6bd6c';
+    ctx.beginPath();
+    ctx.moveTo(8 * dir, 0); ctx.lineTo(-5 * dir, -5); ctx.lineTo(-5 * dir, 5); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+};
+
+const baseDrawPendingV15 = drawPending;
+drawPending = function drawUnifiedPendingV15() {
+  baseDrawPendingV15();
+  if (state.mode !== 'build' || state.tool !== 'joint') return;
+  const target = state.pendingJointTarget ? nodeById(state.pendingJointTarget.nodeId) : null;
+  if (!target) return;
+  const point = worldToScreen(target.x, target.y);
+  const text = nodeJointModeV15(target) === 'rigid' ? 'ЖЁСТКО' : 'СВОБОДНО';
+  ctx.save();
+  ctx.font = '900 9px ui-monospace, monospace';
+  const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = 'rgba(37,32,22,.92)';
+  ctx.strokeStyle = '#d8b264';
+  ctx.fillRect(point.x - w / 2, point.y - 34, w, 18);
+  ctx.strokeRect(point.x - w / 2, point.y - 34, w, 18);
+  ctx.fillStyle = '#f2dfb5';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, point.x, point.y - 25);
+  ctx.restore();
+};
+
+normalizeJointStateV15();
+if (['node', 'hinge', 'weld'].includes(state.tool)) state.tool = 'joint';
+document.documentElement.dataset.arsMachinaVersion = '1.5.0';
+renderTools();
+updateInspector();

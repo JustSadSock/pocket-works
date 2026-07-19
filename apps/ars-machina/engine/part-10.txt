@@ -1,0 +1,356 @@
+// ARS MACHINA 1.5 — unified joints and readable mechanical visuals.
+Object.assign(NAMES, {
+  node: ['Крепление', 'Свободное крепление'],
+  mount: ['Крепление', 'Крепление на балке'],
+  hinge: ['Крепление', 'Свободное крепление'],
+  weld: ['Крепление', 'Жёсткое крепление'],
+  joint: ['Крепление', 'Универсальное крепление']
+});
+
+const FRAME_TOOL_ORDER_V15 = ['select', 'pan', 'joint', 'beam', 'anchor'];
+const FRAME_TOOL_DEFINITIONS_V15 = {
+  select: ['select', 'Выбор', 'select'],
+  pan: ['pan', 'Ладонь', 'pan'],
+  joint: ['joint', 'Крепление', 'joint'],
+  beam: ['beam', 'Балка', 'beam'],
+  anchor: ['anchor', 'Опора', 'anchor']
+};
+TOOL_GROUPS.frame = FRAME_TOOL_ORDER_V15.map((tool) => FRAME_TOOL_DEFINITIONS_V15[tool]);
+
+function beamAngleV15(beam) {
+  const a = nodeById(beam?.a);
+  const b = nodeById(beam?.b);
+  return a && b ? Math.atan2(b.y - a.y, b.x - a.x) : 0;
+}
+
+function beamPreviousAngleV15(beam) {
+  const a = nodeById(beam?.a);
+  const b = nodeById(beam?.b);
+  return a && b ? Math.atan2((b.py ?? b.y) - (a.py ?? a.y), (b.px ?? b.x) - (a.px ?? a.x)) : beamAngleV15(beam);
+}
+
+function incidentBeamsV15(node) {
+  if (!node) return [];
+  const ids = new Set();
+  if (node.mount?.beamId && beamById(node.mount.beamId)) ids.add(node.mount.beamId);
+  for (const beam of state.constraints) {
+    if (beam.type === 'beam' && (beam.a === node.id || beam.b === node.id)) ids.add(beam.id);
+  }
+  return [...ids].map(beamById).filter(Boolean);
+}
+
+function carrierBeamV15(node) {
+  if (!node) return null;
+  const mounted = beamById(node.mount?.beamId);
+  if (mounted) return mounted;
+  return incidentBeamsV15(node)[0] || null;
+}
+
+function jointTouchesNodeV15(joint, nodeId) {
+  return joint?.a === nodeId || joint?.b === nodeId;
+}
+
+function nodeJointModeV15(node) {
+  if (!node) return 'free';
+  if (node.jointMode === 'rigid') return 'rigid';
+  const weld = state.joints.some((joint) => joint.type === 'weld' && jointTouchesNodeV15(joint, node.id));
+  return weld ? 'rigid' : 'free';
+}
+
+function normalizeJointStateV15() {
+  for (const node of state.nodes) {
+    if (node.jointMode !== 'rigid' && node.jointMode !== 'free') node.jointMode = nodeJointModeV15(node);
+  }
+  for (const joint of state.joints) {
+    if (joint.type === 'weld') {
+      const a = nodeById(joint.a);
+      const b = nodeById(joint.b);
+      if (a) a.jointMode = 'rigid';
+      if (b) b.jointMode = 'rigid';
+    }
+  }
+  for (const node of state.nodes) syncRotorLocksForNodeV15(node);
+}
+
+function removeLocalWeldsV15(node, beams) {
+  const beamIds = new Set(beams.map((beam) => beam.id));
+  state.joints = state.joints.filter((joint) => {
+    if (joint.type !== 'weld' || !jointTouchesNodeV15(joint, node.id)) return true;
+    return !(beamIds.has(joint.beamA) && beamIds.has(joint.beamB));
+  });
+}
+
+function syncRotorLocksForNodeV15(node) {
+  if (!node) return;
+  const rigid = nodeJointModeV15(node) === 'rigid';
+  for (const rotor of state.rotors.filter((item) => item.nodeId === node.id)) {
+    if (!rigid) {
+      delete rotor.lockedToBeamId;
+      delete rotor.lockOffset;
+      delete rotor.lockWorldAngle;
+      continue;
+    }
+    const carrier = carrierBeamV15(node);
+    if (carrier) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+      delete rotor.lockWorldAngle;
+    } else {
+      rotor.lockedToBeamId = null;
+      rotor.lockWorldAngle = rotor.angle;
+    }
+    rotor.omega = 0;
+  }
+}
+
+function setNodeJointModeV15(node, mode) {
+  if (!node) return false;
+  const next = mode === 'rigid' ? 'rigid' : 'free';
+  const beams = incidentBeamsV15(node);
+  removeLocalWeldsV15(node, beams);
+  node.jointMode = next;
+  if (next === 'rigid' && beams.length > 1) {
+    for (let i = 0; i < beams.length; i += 1) {
+      for (let j = i + 1; j < beams.length; j += 1) {
+        const joint = createJoint('weld', { node, beamId: beams[i].id }, { node, beamId: beams[j].id });
+        if (joint) {
+          joint.a = node.id;
+          joint.b = node.id;
+          joint.type = 'weld';
+          joint.stiffness = .46;
+          joint.targetAngle = normalizeAngle(beamAngleV15(beams[j]) - beamAngleV15(beams[i]));
+        }
+      }
+    }
+  }
+  syncRotorLocksForNodeV15(node);
+  return true;
+}
+
+function setJointObjectModeV15(joint, mode) {
+  if (!joint) return false;
+  const rigid = mode === 'rigid';
+  joint.type = rigid ? 'weld' : 'hinge';
+  joint.stiffness = rigid ? .46 : 1;
+  const beamA = beamById(joint.beamA);
+  const beamB = beamById(joint.beamB);
+  if (beamA && beamB) joint.targetAngle = normalizeAngle(beamAngleV15(beamB) - beamAngleV15(beamA));
+  const a = nodeById(joint.a);
+  const b = nodeById(joint.b);
+  for (const node of [a, b]) {
+    if (!node) continue;
+    node.jointMode = state.joints.some((item) => item.type === 'weld' && jointTouchesNodeV15(item, node.id)) ? 'rigid' : 'free';
+    syncRotorLocksForNodeV15(node);
+  }
+  return true;
+}
+
+function selectedJointContextV15() {
+  const selected = getSelected();
+  if (!selected || !state.selection) return null;
+  if (state.selection.kind === 'node') return { kind: 'node', node: selected, mode: nodeJointModeV15(selected) };
+  if (state.selection.kind === 'joint') return { kind: 'joint', joint: selected, mode: selected.type === 'weld' ? 'rigid' : 'free' };
+  if (state.selection.kind === 'rotor') {
+    const node = nodeById(selected.nodeId);
+    return node ? { kind: 'rotor', rotor: selected, node, mode: nodeJointModeV15(node) } : null;
+  }
+  return null;
+}
+
+function applySelectedJointModeV15(mode) {
+  const context = selectedJointContextV15();
+  if (!context) return false;
+  pushUndo();
+  const changed = context.kind === 'joint'
+    ? setJointObjectModeV15(context.joint, mode)
+    : setNodeJointModeV15(context.node, mode);
+  if (!changed) {
+    if (state.undo.length) state.undo.pop();
+    updateHistoryButtons();
+    return false;
+  }
+  updateInspector();
+  saveSoon();
+  heavySound(mode === 'rigid' ? 165 : 310, .055);
+  vibrate(mode === 'rigid' ? [8, 14, 10] : 8);
+  setYardNote(mode === 'rigid' ? 'Крепление жёсткое: балки и вал зафиксированы.' : 'Крепление свободное: балки и вал могут вращаться.', 1700);
+  return true;
+}
+
+function beamTargetV15(world, excludeBeamId = null) {
+  const hit = beamHitsAt(world, 18 / state.camera.zoom, excludeBeamId)[0];
+  if (!hit) return null;
+  const node = mountNodeOnBeam(hit.beam, hit.projection.point);
+  return node ? { node, beamId: hit.beam.id } : null;
+}
+
+function selectUnifiedPointV15(node, note = '') {
+  if (!node) return;
+  selectThing({ kind: 'node', id: node.id });
+  updateInspector();
+  if (note) setYardNote(note, 1600);
+}
+
+const baseHandleBuildTapV15 = handleBuildTap;
+handleBuildTap = function handleUnifiedJointTap(world) {
+  if (state.tool !== 'joint') return baseHandleBuildTapV15(world);
+
+  const directNode = findNodeAt(world, 18 / state.camera.zoom, { includeMounts: true });
+  const hits = beamHitsAt(world, 18 / state.camera.zoom);
+
+  if (!state.pendingJointTarget && hits.length >= 2) {
+    pushUndo();
+    const first = beamTargetV15(hits[0].projection.point);
+    const second = beamTargetV15(hits[1].projection.point, hits[0].beam.id);
+    const joint = first && second ? createJoint('hinge', first, second) : null;
+    if (!joint) {
+      if (state.undo.length) state.undo.pop();
+      updateHistoryButtons();
+      return invalidFeedback('Не удалось соединить балки в этой точке');
+    }
+    first.node.jointMode = 'free';
+    second.node.jointMode = 'free';
+    selectThing({ kind: 'joint', id: joint.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote('Свободное крепление создано. Тип меняется в инспекторе.', 1800);
+    return;
+  }
+
+  if (state.pendingJointTarget) {
+    const first = {
+      node: nodeById(state.pendingJointTarget.nodeId),
+      beamId: state.pendingJointTarget.beamId
+    };
+    const second = beamTargetV15(world, first.beamId);
+    if (!second) {
+      if (directNode?.id === first.node?.id) {
+        state.pendingJointTarget = null;
+        selectUnifiedPointV15(directNode, 'Крепление выбрано. Тип меняется ниже.');
+        return;
+      }
+      return invalidFeedback('Коснись второй балки или повторно — чтобы закончить');
+    }
+    const joint = createJoint('hinge', first, second);
+    state.pendingJointTarget = null;
+    if (!joint) return invalidFeedback('Балки должны касаться одной точки');
+    first.node.jointMode = 'free';
+    second.node.jointMode = 'free';
+    selectThing({ kind: 'joint', id: joint.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote('Свободное крепление создано. В инспекторе его можно сделать жёстким.', 1800);
+    return;
+  }
+
+  if (directNode) {
+    const carrier = carrierBeamV15(directNode);
+    selectUnifiedPointV15(directNode, nodeJointModeV15(directNode) === 'rigid' ? 'Жёсткое крепление выбрано.' : 'Свободное крепление выбрано.');
+    if (carrier) state.pendingJointTarget = { nodeId: directNode.id, beamId: carrier.id };
+    return;
+  }
+
+  if (hits.length) {
+    pushUndo();
+    const target = beamTargetV15(world);
+    if (!target) {
+      if (state.undo.length) state.undo.pop();
+      updateHistoryButtons();
+      return invalidFeedback('Не удалось поставить крепление');
+    }
+    target.node.jointMode = 'free';
+    state.pendingJointTarget = { nodeId: target.node.id, beamId: target.beamId };
+    selectUnifiedPointV15(target.node, 'Крепление поставлено. Коснись второй балки, чтобы соединить их.');
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+
+  pushUndo();
+  const node = createNode(world.x, world.y);
+  node.jointMode = 'free';
+  selectUnifiedPointV15(node, 'Свободное крепление поставлено.');
+  saveSoon();
+  placedFeedback();
+};
+
+const baseSetToolV15 = setTool;
+setTool = function setUnifiedToolV15(tool) {
+  const mapped = ['node', 'hinge', 'weld'].includes(tool) ? 'joint' : tool;
+  baseSetToolV15(mapped);
+  if (mapped === 'joint') setYardNote('Коснись точки или балки. Крепление можно сделать свободным или жёстким в инспекторе.');
+};
+
+const baseApplyModelV15 = applyModel;
+applyModel = function applyUnifiedModelV15(model, options = {}) {
+  baseApplyModelV15(model, options);
+  normalizeJointStateV15();
+  if (['node', 'hinge', 'weld'].includes(state.tool)) state.tool = 'joint';
+  renderTools();
+  updateInspector();
+};
+
+const baseRenderInspectorExtrasV15 = renderInspectorExtras;
+renderInspectorExtras = function renderUnifiedInspectorExtrasV15() {
+  baseRenderInspectorExtrasV15();
+  if (!inspectorExtra || ui.inspector.hidden) return;
+  const context = selectedJointContextV15();
+  if (!context) return;
+  const mode = context.mode === 'rigid' ? 'rigid' : 'free';
+  appendInspectRow('Крепление', segmentedButtons([
+    { value: 'free', label: 'Свободное' },
+    { value: 'rigid', label: 'Жёсткое' }
+  ], mode, applySelectedJointModeV15));
+  const readout = document.createElement('div');
+  readout.className = 'inspect-readout joint-readout';
+  const node = context.node || nodeById(context.rotor?.nodeId) || nodeById(context.joint?.a);
+  const beams = incidentBeamsV15(node);
+  const rotorCount = node ? state.rotors.filter((rotor) => rotor.nodeId === node.id).length : 0;
+  readout.textContent = mode === 'rigid'
+    ? `${beams.length || 0} балок · ${rotorCount} валов · вращение связано с рамой`
+    : `${beams.length || 0} балок · ${rotorCount} валов · свободное вращение`;
+  appendInspectRow('Состояние', readout);
+};
+
+const baseInspectorValueV15 = inspectorValue;
+inspectorValue = function unifiedInspectorValueV15(selected, type) {
+  if (state.selection?.kind === 'node') return nodeJointModeV15(selected) === 'rigid' ? 'жёсткое' : 'свободное';
+  if (state.selection?.kind === 'joint') return selected.type === 'weld' ? 'жёсткое' : 'свободное';
+  if (state.selection?.kind === 'rotor') {
+    const node = nodeById(selected.nodeId);
+    const suffix = nodeJointModeV15(node) === 'rigid' ? ' · вал жёсткий' : ' · вал свободный';
+    return `${baseInspectorValueV15(selected, type)}${suffix}`;
+  }
+  return baseInspectorValueV15(selected, type);
+};
+
+function enforceLockedRotorV15(rotor, step) {
+  const node = nodeById(rotor?.nodeId);
+  if (!node || nodeJointModeV15(node) !== 'rigid') return false;
+  const carrier = carrierBeamV15(node);
+  if (carrier) {
+    if (rotor.lockedToBeamId !== carrier.id || !Number.isFinite(rotor.lockOffset)) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+    }
+    rotor.angle = beamAngleV15(carrier) + rotor.lockOffset;
+    rotor.omega = normalizeAngle(beamAngleV15(carrier) - beamPreviousAngleV15(carrier)) / Math.max(.35, step);
+  } else {
+    if (!Number.isFinite(rotor.lockWorldAngle)) rotor.lockWorldAngle = rotor.angle;
+    rotor.angle = rotor.lockWorldAngle;
+    rotor.omega = 0;
+  }
+  return true;
+}
+
+const baseDriveRotorsV15 = driveRotors;
+driveRotors = function driveRespectingRigidShaftsV15(step) {
+  baseDriveRotorsV15(step);
+  for (const rotor of state.rotors) enforceLockedRotorV15(rotor, step);
+};
+
+const baseUpdateRotorAnglesV15 = updateRotorAngles;
+updateRotorAngles = function updateLockedRotorsV15(step) {
+  baseUpdateRotorAnglesV15(step);
+  for (const rotor of state.rotors) enforceLockedRotorV15(rotor, step);
+};
