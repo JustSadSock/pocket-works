@@ -1,10 +1,10 @@
-const BUILD='5.7.0';
+const BUILD='5.8.0';
 const RELEASE_DATE='2026-07-19';
-const CACHE_NAME='blazon-v5.7.0';
+const CACHE_NAME='blazon-v5.8.0';
 const CACHE=CACHE_NAME;
 const FINGERPRINT=new URL(self.location.href).searchParams.get('pw_fp')||'';
 const REQUIRED=[
-  './','./index.html','./styles.css','./war-council.css','./heraldry-v2.css','./living-battle.css',
+  './','./index.html','./styles.css','./war-council.css','./heraldry-v2.css','./campaign-command.css','./living-battle.css',
   './app.js','./banner-system.js','./war-council-runtime.js','./bootstrap.js','./engine.js','./core-engine.js','./spatial-core-engine.js','./progression-engine.js','./combat-clarity.js','./heraldry.js',
   './manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css',
@@ -16,11 +16,11 @@ const OPTIONAL=[
   './progression-runtime.js','./armorial-composition-runtime.js','./release-indicator.js','./reset.html'
 ];
 const RELEASE_NOTES=[
-  'Четыре геральдические школы получили собственные конструкции знамён: имперский гонфалон, городской штандарт, рыцарское раздвоенное знамя и северный вымпел.',
-  'Полотнища получили складки, швы, укреплённые края, различный крой и мягкую деформацию ткани вместо плоских прямоугольников.',
-  'Лев, вепрь, олень, башня, орёл, роза, ключ, солнце, корона и шлем полностью перерисованы в едином стиле средневековой ксилографии.',
-  'Для боя добавлены отдельные упрощённые силуэты, поэтому символы остаются читаемыми на маленьких щитах и движущихся знамёнах.',
-  'Новые знамёна используются в главном меню, на экране доктрины, в наградах, HUD и непосредственно на поле боя.'
+  'Экран доктрины превращён в походную книгу с отдельным уставом рода, разведдонесением противника, печатями и более ясной иерархией слоёв.',
+  'Награды после боя прямо показывают, какой слой герба и поведения армии будет изменён.',
+  'Боевой интерфейс получил командную ленту с численностью, состоянием строя, угрозой знамени, фазой боя и балансом фронта.',
+  'Срабатывания доктрин собраны в компактную очередь и сопровождаются отметками на поле.',
+  'Экран результата, мобильная компоновка, безопасные зоны и режим уменьшенных анимаций окончательно унифицированы.'
 ];
 async function fetchRelease(path,timeout=12000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);try{const url=new URL(path,self.registration.scope);url.searchParams.set('pw_release',BUILD);if(FINGERPRINT)url.searchParams.set('pw_fp',FINGERPRINT);const response=await fetch(url,{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response;}finally{clearTimeout(timer);}}
 async function put(cache,path){const response=await fetchRelease(path);await cache.put(path,response);}
