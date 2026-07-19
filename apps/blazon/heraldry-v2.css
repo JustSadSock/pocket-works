@@ -1,0 +1,62 @@
+/* БЛАЗОН 5.7 — Living Standards
+   Four textile constructions and a single woodcut language for every heraldic charge. */
+
+:root{
+  --standard-bronze:#b89550;
+  --standard-thread:rgba(242,224,169,.34);
+  --standard-shadow:rgba(0,0,0,.52);
+}
+
+/* Woodcut charges */
+.symbol-library .woodcut-body{fill:currentColor;stroke:var(--charge-outline,var(--detail,#17130e));stroke-width:2.2;stroke-linejoin:round;paint-order:stroke fill}
+.symbol-library .woodcut-cut{fill:none;stroke:var(--detail,#17130e);stroke-width:3.1;stroke-linecap:round;stroke-linejoin:round;opacity:.72}
+.symbol-library .woodcut-fine{fill:none;stroke:var(--detail,#17130e);stroke-width:1.75;stroke-linecap:round;opacity:.48}
+.symbol-library .woodcut-void{fill:var(--detail,#17130e)}
+.charge-main{stroke-width:1.2!important;filter:drop-shadow(0 3px 1px rgba(0,0,0,.34))}
+.charge-secondary{stroke-width:2.4!important;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))}
+.achievement-grain{mix-blend-mode:soft-light;opacity:.86}
+
+/* Menu standard construction */
+.menu-standard{isolation:isolate}
+.menu-standard .standard-pole{z-index:1;border:1px solid rgba(20,10,5,.62);box-shadow:inset 1px 0 rgba(255,224,153,.28),4px 9px 15px rgba(0,0,0,.38)}
+.menu-standard .standard-crossbar{z-index:2;background:linear-gradient(180deg,#d0ad64,#6f4b21 42%,#2b190d 100%);border:1px solid #1b0f08;box-shadow:0 4px 6px rgba(0,0,0,.46),inset 0 1px rgba(255,236,181,.28)}
+.menu-standard .standard-cloth{z-index:3;overflow:hidden;transform-origin:0 0;filter:drop-shadow(10px 16px 12px rgba(0,0,0,.46));transition:clip-path .35s ease,border-radius .35s ease}
+.menu-standard .standard-cloth::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.3),transparent 9%,rgba(255,241,194,.13) 23%,rgba(0,0,0,.18) 43%,rgba(255,240,188,.11) 61%,rgba(0,0,0,.24) 82%,transparent),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,rgba(0,0,0,.035) 1px 3px);mix-blend-mode:soft-light}
+.menu-standard .standard-cloth::after{content:"";position:absolute;inset:5px;z-index:4;pointer-events:none;border:1px dashed var(--standard-thread);clip-path:inherit;opacity:.74}
+.menu-standard .standard-cloth>div{position:relative;z-index:2;filter:drop-shadow(0 4px 2px rgba(0,0,0,.24))}
+.menu-standard[data-standard-school="imperial"] .standard-cloth{clip-path:polygon(0 0,100% 0,100% 76%,84% 100%,68% 79%,51% 100%,34% 79%,17% 100%,0 76%);border-radius:2px 2px 0 0}
+.menu-standard[data-standard-school="civic"] .standard-cloth{clip-path:polygon(0 0,100% 0,100% 91%,80% 87%,61% 93%,42% 88%,22% 94%,0 89%);border-radius:1px}
+.menu-standard[data-standard-school="knightly"] .standard-cloth{clip-path:polygon(0 0,100% 0,100% 79%,73% 100%,49% 78%,24% 100%,0 82%);border-radius:2px 2px 0 0}
+.menu-standard[data-standard-school="northern"] .standard-cloth{clip-path:polygon(0 0,100% 10%,100% 44%,69% 69%,36% 84%,0 79%);border-radius:1px}
+.menu-standard[data-standard-school="imperial"] .standard-finial{clip-path:polygon(50% 0,62% 33%,100% 39%,69% 60%,78% 100%,50% 75%,22% 100%,31% 60%,0 39%,38% 33%);background:linear-gradient(#f0d992,#8b6327);color:transparent}
+.menu-standard[data-standard-school="civic"] .standard-finial{font-size:0;background:linear-gradient(#d8bd78,#70501f);clip-path:polygon(8% 23%,27% 23%,27% 6%,43% 6%,43% 23%,58% 23%,58% 6%,74% 6%,74% 23%,93% 23%,88% 68%,64% 91%,35% 91%,12% 68%)}
+.menu-standard[data-standard-school="knightly"] .standard-finial{font-size:0;background:linear-gradient(90deg,#68471e,#e2c57f,#634119);clip-path:polygon(50% 0,73% 45%,58% 43%,63% 100%,37% 100%,42% 43%,27% 45%)}
+.menu-standard[data-standard-school="northern"] .standard-finial{font-size:0;background:linear-gradient(#c7aa67,#503515);clip-path:polygon(8% 18%,43% 26%,64% 3%,65% 32%,94% 44%,68% 53%,63% 94%,40% 63%,9% 73%,31% 48%)}
+
+/* Textile grounds behind formal achievements */
+.full-achievement,.reward-card-preview,.ending-standard,.battle-hud>div{isolation:isolate}
+.full-achievement.has-heraldic-standard::before,.reward-card-preview.has-heraldic-standard::before,.ending-standard.has-heraldic-standard::before{content:"";position:absolute;z-index:-2;left:8%;right:8%;top:8%;bottom:4%;background:linear-gradient(100deg,rgba(0,0,0,.24),rgba(255,244,202,.06) 24%,rgba(0,0,0,.17) 49%,rgba(255,244,202,.08) 69%,rgba(0,0,0,.25)),linear-gradient(135deg,#5c1e25,#2d0d11);border:2px solid rgba(184,145,67,.64);filter:drop-shadow(0 13px 12px rgba(0,0,0,.32))}
+.full-achievement.has-heraldic-standard::after,.reward-card-preview.has-heraldic-standard::after,.ending-standard.has-heraldic-standard::after{content:"";position:absolute;z-index:-1;left:11%;right:11%;top:11%;bottom:7%;pointer-events:none;border:1px dashed rgba(236,213,156,.3);background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(255,255,255,.018) 5px 6px)}
+[data-standard-school="imperial"].has-heraldic-standard::before{clip-path:polygon(0 0,100% 0,100% 78%,84% 100%,68% 80%,50% 100%,32% 80%,16% 100%,0 78%)}
+[data-standard-school="civic"].has-heraldic-standard::before{clip-path:polygon(0 0,100% 0,100% 91%,80% 87%,61% 93%,42% 88%,22% 94%,0 89%)}
+[data-standard-school="knightly"].has-heraldic-standard::before{clip-path:polygon(0 0,100% 0,100% 79%,73% 100%,49% 78%,24% 100%,0 82%)}
+[data-standard-school="northern"].has-heraldic-standard::before{clip-path:polygon(0 0,100% 7%,100% 45%,69% 70%,36% 86%,0 80%)}
+.full-achievement.has-heraldic-standard>svg,.ending-standard.has-heraldic-standard>svg{position:relative;z-index:1;transform:scale(.9);transform-origin:center}
+.reward-card-preview.has-heraldic-standard{position:relative}
+.reward-card-preview.has-heraldic-standard>svg{position:relative;z-index:1;transform:scale(.88)}
+
+/* School-specific material language */
+[data-standard-school="imperial"].has-heraldic-standard::before{background:linear-gradient(90deg,rgba(0,0,0,.28),transparent 17%,rgba(255,229,155,.14) 34%,rgba(0,0,0,.2) 58%,rgba(255,229,155,.08) 74%,rgba(0,0,0,.32)),linear-gradient(#6f2029,#3a0e15)}
+[data-standard-school="civic"].has-heraldic-standard::before{background:linear-gradient(90deg,rgba(0,0,0,.24),transparent 22%,rgba(255,239,193,.11) 41%,rgba(0,0,0,.2) 65%,transparent),linear-gradient(#304c61,#152735)}
+[data-standard-school="knightly"].has-heraldic-standard::before{background:linear-gradient(90deg,rgba(0,0,0,.31),transparent 19%,rgba(255,237,188,.12) 42%,rgba(0,0,0,.18) 64%,rgba(0,0,0,.28)),linear-gradient(#74242b,#351013)}
+[data-standard-school="northern"].has-heraldic-standard::before{background:linear-gradient(90deg,rgba(0,0,0,.36),transparent 21%,rgba(255,241,207,.08) 45%,rgba(0,0,0,.27) 72%),linear-gradient(#3f4942,#171f1b);border-color:rgba(209,195,157,.48)}
+
+/* Compact achievements keep a readable silhouette rather than microscopic linework */
+.battle-hud .achievement .woodcut-cut,.battle-hud .achievement .woodcut-fine{display:none}
+.battle-hud .charge-main{stroke-width:2.8!important}
+.battle-hud>div.has-heraldic-standard::before{content:"";position:absolute;inset:2px;z-index:-1;background:linear-gradient(135deg,rgba(195,157,79,.18),rgba(0,0,0,.2));clip-path:polygon(8% 0,92% 0,88% 76%,50% 100%,12% 76%)}
+
+@keyframes standard-breathe{0%,100%{transform:skewY(-.35deg) scaleX(1)}50%{transform:skewY(.45deg) scaleX(.988)}}
+@media(prefers-reduced-motion:no-preference){.menu-standard .standard-cloth{animation:standard-breathe 5.8s ease-in-out infinite;transform-origin:left top}.menu-standard[data-standard-school="northern"] .standard-cloth{animation-duration:4.9s}}
+@media(max-width:620px){.full-achievement.has-heraldic-standard::before{left:2%;right:2%;top:5%;bottom:2%}.full-achievement.has-heraldic-standard>svg{transform:scale(.94)}.reward-card-preview.has-heraldic-standard::before{left:3%;right:3%}}
+@media(prefers-reduced-motion:reduce){.menu-standard .standard-cloth{animation:none!important}}
