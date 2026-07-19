@@ -19,6 +19,7 @@ const parts = [
   './combat-v2-5.js',
   './combat-v2-6.js',
   './combat-v2-run.js',
+  './command-system-v2.js',
   './game-part-8.js'
 ];
 
@@ -35,6 +36,9 @@ try {
   }
   if (!globalThis.__RAT_COMBAT_V2_READY) {
     throw globalThis.__RAT_COMBAT_V2_ERROR || new Error('Новая модель боя не загрузилась');
+  }
+  if (!globalThis.__RAT_COMMAND_TEST__) {
+    throw new Error('Система тактов командования не загрузилась');
   }
 } catch (error) {
   console.error('[РАТЬ] startup failed', error);
