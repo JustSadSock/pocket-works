@@ -1,0 +1,491 @@
+const { installMobileRuntime, createWorkshopMode, watchConnectivity } = globalThis.__arsMachinaShared;
+
+installMobileRuntime();
+
+const APP_VERSION = '1.0.0';
+const STORAGE_KEY = 'pocket-works:ars-machina:blueprint';
+const PREFS_KEY = 'pocket-works:ars-machina:prefs';
+const GROUND_Y = 640;
+const GRID = 24;
+const TAU = Math.PI * 2;
+const canvas = document.querySelector('#world');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+function deepClone(value) {
+  if (typeof structuredClone === 'function') return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
+
+const ui = {
+  modeLabel: document.querySelector('#modeLabel'),
+  yardNote: document.querySelector('#yardNote'),
+  toolRail: document.querySelector('#toolRail'),
+  buildDock: document.querySelector('#buildDock'),
+  runDock: document.querySelector('#runDock'),
+  runButton: document.querySelector('#runButton'),
+  backToBuildButton: document.querySelector('#backToBuildButton'),
+  blueprintsButton: document.querySelector('#blueprintsButton'),
+  blueprintSheet: document.querySelector('#blueprintSheet'),
+  closeBlueprints: document.querySelector('#closeBlueprints'),
+  soundButton: document.querySelector('#soundButton'),
+  undoButton: document.querySelector('#undoButton'),
+  redoButton: document.querySelector('#redoButton'),
+  zoomInButton: document.querySelector('#zoomInButton'),
+  zoomOutButton: document.querySelector('#zoomOutButton'),
+  homeButton: document.querySelector('#homeButton'),
+  inspector: document.querySelector('#inspector'),
+  inspectorKind: document.querySelector('#inspectorKind'),
+  inspectorName: document.querySelector('#inspectorName'),
+  inspectValue: document.querySelector('#inspectValue'),
+  inspectMinus: document.querySelector('#inspectMinus'),
+  inspectPlus: document.querySelector('#inspectPlus'),
+  inspectDelete: document.querySelector('#inspectDelete'),
+  toast: document.querySelector('#toast'),
+  fireButton: document.querySelector('#fireButton'),
+  winchInButton: document.querySelector('#winchInButton'),
+  winchOutButton: document.querySelector('#winchOutButton')
+};
+
+const TOOL_GROUPS = {
+  frame: [
+    ['select', 'Выбор', 'select'],
+    ['pan', 'Ладонь', 'pan'],
+    ['node', 'Шарнир', 'node'],
+    ['beam', 'Балка', 'beam'],
+    ['anchor', 'Опора', 'anchor']
+  ],
+  drive: [
+    ['wheel', 'Колесо', 'wheel'],
+    ['gear', 'Шестерня', 'gear'],
+    ['motor', 'Мотор', 'motor'],
+    ['winch', 'Лебёдка', 'winch'],
+    ['pulley', 'Блок', 'pulley']
+  ],
+  rigging: [
+    ['rope', 'Трос', 'rope'],
+    ['spring', 'Пружина', 'spring'],
+    ['latch', 'Защёлка', 'latch'],
+    ['weight', 'Груз', 'weight'],
+    ['payload', 'Снаряд', 'payload']
+  ],
+  utility: [
+    ['select', 'Выбор', 'select'],
+    ['pan', 'Ладонь', 'pan'],
+    ['erase', 'Ластик', 'erase']
+  ]
+};
+
+const NAMES = {
+  node: ['Узел', 'Шарнир'],
+  beam: ['Связь', 'Дубовая балка'],
+  rope: ['Связь', 'Пеньковый трос'],
+  spring: ['Связь', 'Пружинящая связка'],
+  latch: ['Механизм', 'Спусковая защёлка'],
+  payloadLock: ['Механизм', 'Ложемент снаряда'],
+  wheel: ['Вращение', 'Деревянное колесо'],
+  gear: ['Вращение', 'Зубчатое колесо'],
+  winch: ['Вращение', 'Лебёдочный барабан'],
+  pulley: ['Вращение', 'Канатный блок'],
+  motor: ['Привод', 'Ручной ворот'],
+  weight: ['Нагрузка', 'Противовес'],
+  payload: ['Нагрузка', 'Каменный снаряд']
+};
+
+let idCounter = 1;
+let frameHandle = 0;
+let lastTime = performance.now();
+let width = 1;
+let height = 1;
+let dpr = 1;
+let toastTimer = 0;
+let saveTimer = 0;
+let audioContext = null;
+let firstInteraction = true;
+let fireCountdown = -1;
+let activeWinchDirection = 0;
+let hidden = document.hidden;
+
+const prefs = loadPrefs();
+const state = {
+  mode: 'build',
+  category: 'frame',
+  tool: 'select',
+  pendingNodeId: null,
+  selection: null,
+  nodes: [],
+  constraints: [],
+  rotors: [],
+  attachments: [],
+  camera: { x: 480, y: 360, zoom: 1 },
+  drive: 0,
+  simTime: 0,
+  drag: null,
+  gesture: null,
+  undo: [],
+  redo: [],
+  initialSnapshot: null,
+  dirty: false
+};
+
+function nextId(prefix) {
+  return `${prefix}-${idCounter++}`;
+}
+
+function loadPrefs() {
+  try {
+    return { sound: true, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') };
+  } catch {
+    return { sound: true };
+  }
+}
+
+function persistPrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
+function snap(value, step = GRID / 2) {
+  return Math.round(value / step) * step;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function distance(a, b) {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+function nodeById(id) {
+  return state.nodes.find((node) => node.id === id) || null;
+}
+
+function rotorById(id) {
+  return state.rotors.find((rotor) => rotor.id === id) || null;
+}
+
+function attachmentById(id) {
+  return state.attachments.find((item) => item.id === id) || null;
+}
+
+function constraintById(id) {
+  return state.constraints.find((constraint) => constraint.id === id) || null;
+}
+
+function createNode(x, y, options = {}) {
+  const node = {
+    id: nextId('node'),
+    x: snap(x),
+    y: snap(y),
+    px: snap(x),
+    py: snap(y),
+    fixed: Boolean(options.fixed),
+    mass: options.mass || 1,
+    radius: options.radius || 6,
+    role: options.role || 'node'
+  };
+  state.nodes.push(node);
+  return node;
+}
+
+function createConstraint(type, aId, bId, options = {}) {
+  const a = nodeById(aId);
+  const b = nodeById(bId);
+  if (!a || !b || aId === bId) return null;
+  const existing = state.constraints.find((item) => item.a === aId && item.b === bId && item.type === type)
+    || state.constraints.find((item) => item.a === bId && item.b === aId && item.type === type);
+  if (existing) return existing;
+  const natural = distance(a, b);
+  const constraint = {
+    id: nextId(type),
+    type,
+    a: aId,
+    b: bId,
+    length: options.length ?? natural,
+    maxLength: options.maxLength ?? natural,
+    stiffness: options.stiffness ?? (type === 'spring' ? 0.11 : 1),
+    active: options.active ?? true,
+    width: options.width ?? (type === 'beam' ? 10 : 3)
+  };
+  state.constraints.push(constraint);
+  return constraint;
+}
+
+function createRotor(type, nodeId, options = {}) {
+  const node = nodeById(nodeId);
+  if (!node) return null;
+  const rotor = {
+    id: nextId(type),
+    type,
+    nodeId,
+    radius: options.radius ?? ({ wheel: 42, gear: 30, winch: 24, pulley: 20 }[type] || 28),
+    angle: options.angle || 0,
+    omega: options.omega || 0,
+    teeth: options.teeth || Math.max(8, Math.round((options.radius || 30) / 3))
+  };
+  state.rotors.push(rotor);
+  return rotor;
+}
+
+function createAttachment(type, nodeId, options = {}) {
+  const node = nodeById(nodeId);
+  if (!node) return null;
+  const attachment = {
+    id: nextId(type),
+    type,
+    nodeId,
+    amount: options.amount ?? (type === 'weight' ? 10 : type === 'motor' ? 1.6 : 1),
+    hostId: options.hostId || null
+  };
+  state.attachments.push(attachment);
+  if (type === 'weight') node.mass = Math.max(node.mass, attachment.amount);
+  if (type === 'payload') {
+    node.role = 'payload';
+    node.radius = 14;
+    node.mass = Math.max(node.mass, 3.5);
+  }
+  return attachment;
+}
+
+function clearWorld() {
+  state.nodes = [];
+  state.constraints = [];
+  state.rotors = [];
+  state.attachments = [];
+  state.selection = null;
+  state.pendingNodeId = null;
+  state.drive = 0;
+  state.simTime = 0;
+  fireCountdown = -1;
+}
+
+function addBeam(a, b) {
+  return createConstraint('beam', a.id, b.id, { stiffness: 1, width: 10 });
+}
+
+function buildCart() {
+  clearWorld();
+  const left = createNode(340, 520);
+  const right = createNode(560, 520);
+  const topLeft = createNode(375, 455);
+  const topRight = createNode(525, 455);
+  addBeam(left, right);
+  addBeam(left, topLeft);
+  addBeam(topLeft, topRight);
+  addBeam(topRight, right);
+  addBeam(topLeft, right);
+  addBeam(left, topRight);
+  createRotor('wheel', left.id, { radius: 48 });
+  createRotor('wheel', right.id, { radius: 48 });
+  createRotor('gear', left.id, { radius: 28 });
+  createRotor('gear', right.id, { radius: 28 });
+  createAttachment('motor', left.id, { amount: 1.8 });
+  createAttachment('motor', right.id, { amount: 1.8 });
+  const ballast = createNode(450, 440, { mass: 6 });
+  addBeam(topLeft, ballast);
+  addBeam(ballast, topRight);
+  createAttachment('weight', ballast.id, { amount: 6 });
+  state.camera = { x: 450, y: 390, zoom: 1.03 };
+}
+
+function buildTrebuchet() {
+  clearWorld();
+  const baseL = createNode(300, 560);
+  const baseR = createNode(650, 560);
+  const pivot = createNode(470, 425);
+  const footL = createNode(400, 560);
+  const footR = createNode(540, 560);
+  addBeam(baseL, baseR);
+  addBeam(footL, pivot);
+  addBeam(footR, pivot);
+  addBeam(baseL, pivot);
+  addBeam(baseR, pivot);
+  const weight = createNode(350, 330, { mass: 14, radius: 11 });
+  const armTip = createNode(690, 555);
+  addBeam(weight, pivot);
+  addBeam(pivot, armTip);
+  createAttachment('weight', weight.id, { amount: 14 });
+  const latch = createConstraint('latch', armTip.id, baseR.id, { stiffness: 1, active: true });
+  latch.length = distance(armTip, baseR);
+  const projectile = createNode(714, 534, { mass: 3.5, radius: 14, role: 'payload' });
+  createAttachment('payload', projectile.id, { hostId: armTip.id });
+  createConstraint('payloadLock', armTip.id, projectile.id, { stiffness: 1, active: true, length: distance(armTip, projectile) });
+  createRotor('wheel', baseL.id, { radius: 34 });
+  createRotor('wheel', baseR.id, { radius: 34 });
+  state.camera = { x: 490, y: 390, zoom: .92 };
+}
+
+function buildBlank() {
+  clearWorld();
+  state.camera = { x: 480, y: 360, zoom: 1 };
+}
+
+function serializeModel() {
+  return {
+    version: 1,
+    idCounter,
+    nodes: state.nodes,
+    constraints: state.constraints,
+    rotors: state.rotors,
+    attachments: state.attachments,
+    camera: state.camera
+  };
+}
+
+function applyModel(model, { resetHistory = false } = {}) {
+  if (!model || model.version !== 1 || !Array.isArray(model.nodes) || !Array.isArray(model.constraints)) throw new Error('Неподдерживаемый чертёж');
+  state.nodes = deepClone(model.nodes);
+  state.constraints = deepClone(model.constraints);
+  state.rotors = deepClone(model.rotors || []);
+  state.attachments = deepClone(model.attachments || []);
+  state.camera = { x: 480, y: 360, zoom: 1, ...(model.camera || {}) };
+  idCounter = Math.max(Number(model.idCounter) || 1, inferNextId());
+  state.selection = null;
+  state.pendingNodeId = null;
+  state.mode = 'build';
+  state.drive = 0;
+  state.simTime = 0;
+  fireCountdown = -1;
+  if (resetHistory) {
+    state.undo = [];
+    state.redo = [];
+  }
+  resetVelocities();
+  updateModeUI();
+  updateInspector();
+}
+
+function inferNextId() {
+  const ids = [...state.nodes, ...state.constraints, ...state.rotors, ...state.attachments]
+    .map((item) => Number(String(item.id).split('-').at(-1)))
+    .filter(Number.isFinite);
+  return ids.length ? Math.max(...ids) + 1 : 1;
+}
+
+function saveSoon() {
+  state.dirty = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 240);
+}
+
+function saveNow() {
+  if (!state.dirty) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeModel()));
+    state.dirty = false;
+  } catch {
+    showToast('Не удалось сохранить чертёж');
+  }
+}
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    applyModel(JSON.parse(raw), { resetHistory: true });
+    return true;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return false;
+  }
+}
+
+function snapshot() {
+  return JSON.stringify(serializeModel());
+}
+
+function pushUndo() {
+  state.undo.push(snapshot());
+  if (state.undo.length > 50) state.undo.shift();
+  state.redo = [];
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (!state.undo.length || state.mode !== 'build') return;
+  state.redo.push(snapshot());
+  const model = JSON.parse(state.undo.pop());
+  applyModel(model);
+  saveSoon();
+  updateHistoryButtons();
+  clickSound(260, .035);
+}
+
+function redo() {
+  if (!state.redo.length || state.mode !== 'build') return;
+  state.undo.push(snapshot());
+  const model = JSON.parse(state.redo.pop());
+  applyModel(model);
+  saveSoon();
+  updateHistoryButtons();
+  clickSound(330, .035);
+}
+
+function updateHistoryButtons() {
+  ui.undoButton.disabled = !state.undo.length || state.mode !== 'build';
+  ui.redoButton.disabled = !state.redo.length || state.mode !== 'build';
+}
+
+function resetVelocities() {
+  for (const node of state.nodes) {
+    node.px = node.x;
+    node.py = node.y;
+  }
+  for (const rotor of state.rotors) rotor.omega = 0;
+}
+
+function setTool(tool) {
+  state.tool = tool;
+  state.pendingNodeId = null;
+  state.selection = null;
+  renderTools();
+  updateInspector();
+  const copy = {
+    select: 'Коснись детали. Узлы можно перетаскивать.',
+    pan: 'Тяни поле, чтобы перемещать камеру.',
+    node: 'Коснись сетки, чтобы поставить шарнир.',
+    beam: 'Выбери два узла для жёсткой балки.',
+    rope: 'Выбери два узла для троса.',
+    spring: 'Выбери два узла для пружины.',
+    latch: 'Выбери два узла. Защёлка разомкнётся по «Спуску».',
+    wheel: 'Коснись узла или сетки, чтобы поставить колесо.',
+    gear: 'Шестерни сцепляются при касании зубьев.',
+    motor: 'Поставь ворот на ось колеса или шестерни.',
+    winch: 'Тросы, подключённые к барабану, можно подтягивать.',
+    pulley: 'Пассивный блок для построения канатной трассы.',
+    anchor: 'Коснись узла, чтобы закрепить его в мире.',
+    weight: 'Утяжели узел и получи противовес.',
+    payload: 'Коснись узла на метательной руке.',
+    erase: 'Коснись детали, чтобы удалить её.'
+  };
+  setYardNote(copy[tool] || 'Выбери деталь');
+  clickSound(220, .025);
+}
+
+function renderTools() {
+  ui.toolRail.innerHTML = '';
+  for (const [tool, label, icon] of TOOL_GROUPS[state.category]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `tool${state.tool === tool ? ' active' : ''}`;
+    button.dataset.tool = tool;
+    button.dataset.nativePress = '';
+    button.innerHTML = `<span class="tool-icon icon-${icon}" aria-hidden="true"></span><span class="tool-label">${label}</span>`;
+    button.addEventListener('click', () => setTool(tool));
+    ui.toolRail.append(button);
+  }
+}
+
+function setCategory(category) {
+  state.category = category;
+  document.querySelectorAll('.category').forEach((button) => button.classList.toggle('active', button.dataset.category === category));
+  if (!TOOL_GROUPS[category].some(([tool]) => tool === state.tool)) state.tool = TOOL_GROUPS[category][0][0];
+  renderTools();
+}
+
+function updateModeUI() {
+  const running = state.mode === 'run';
+  ui.buildDock.hidden = running;
+  ui.runDock.hidden = !running;
+  ui.modeLabel.textContent = running ? 'испытательный двор' : 'чертёжный двор';
+  ui.blueprintsButton.disabled = running;
+  document.querySelector('.history-controls').hidden = running;
