@@ -73,6 +73,7 @@
         <div class="category-tabs" role="tablist" aria-label="Категории деталей">
           <button class="category active" data-category="frame" type="button" data-native-press>Каркас</button>
           <button class="category" data-category="drive" type="button" data-native-press>Привод</button>
+          <button class="category" data-category="controls" type="button" data-native-press>Управление</button>
           <button class="category" data-category="rigging" type="button" data-native-press>Оснастка</button>
           <button class="category" data-category="utility" type="button" data-native-press>Особое</button>
         </div>
@@ -87,6 +88,10 @@
         <button class="run-control" data-drive="-1" type="button" data-native-press>◀ Назад</button>
         <button class="run-control" data-drive="0" type="button" data-native-press>Тормоз</button>
         <button class="run-control" data-drive="1" type="button" data-native-press>Вперёд ▶</button>
+      </div>
+      <div class="run-group channel-group" aria-label="Контуры управления">
+        <button class="run-control channel-control" data-channel="A" type="button" aria-pressed="false" data-native-press>КОНТУР A</button>
+        <button class="run-control channel-control" data-channel="B" type="button" aria-pressed="false" data-native-press>КОНТУР B</button>
       </div>
       <div class="run-group" aria-label="Механизмы">
         <button id="winchOutButton" class="run-control" type="button" data-native-press>Лебёдка −</button>
@@ -113,6 +118,10 @@
             <span class="blueprint-sketch trebuchet-sketch" aria-hidden="true"></span>
             <span><b>Малый требушет</b><small>Противовес, защёлка и снаряд. Нажми «Спуск».</small></span>
           </button>
+          <button class="blueprint" data-blueprint="transmission" type="button" data-native-press>
+            <span class="blueprint-sketch transmission-sketch" aria-hidden="true"></span>
+            <span><b>Трансмиссионный стенд</b><small>Ремень, муфта A, тормоз B, маховик, храповик и зубчатая рейка.</small></span>
+          </button>
           <button class="blueprint" data-blueprint="blank" type="button" data-native-press>
             <span class="blueprint-sketch blank-sketch" aria-hidden="true"></span>
             <span><b>Чистый двор</b><small>Пустая сетка и полный ящик деталей.</small></span>
@@ -131,7 +140,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ARS MACHINA"
-    data-app-version="1.2.0"
+    data-app-version="1.3.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
