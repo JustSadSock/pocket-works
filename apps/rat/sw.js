@@ -20,6 +20,7 @@ const APP_SHELL = [
   './combat-v2-6.js',
   './combat-v2-run.js',
   './command-system-v2.js',
+  './command-system-v2-fix.js',
   './game-part-8.js',
   './manifest.webmanifest',
   './icons/icon.svg',
