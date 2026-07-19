@@ -19,7 +19,8 @@ const parts = [
   './engine/part-9.txt',
   './engine/part-10.txt',
   './engine/part-11.txt',
-  './engine/part-12.txt'
+  './engine/part-12.txt',
+  './engine/part-13.txt'
 ];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем чертёжный двор…';
