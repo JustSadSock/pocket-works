@@ -28,7 +28,7 @@ let tickHandle=0;
 
 function installPressStates(scope=document){
   for(const control of $$('button,.topbar a',scope)){
-    if(control.dataset.pressReady)return;
+    if(control.dataset.pressReady)continue;
     control.dataset.pressReady='true';
     control.addEventListener('pointerdown',()=>control.classList.add('is-pressed'),{passive:true});
     const release=()=>control.classList.remove('is-pressed');
@@ -246,7 +246,7 @@ function decorateResult(){
   const won=/вражес|побед|устояло/i.test(title)&&!/твой фронт/i.test(title);
   dialog.dataset.verdict=won?'victory':'defeat';
   if(!$('.battle-verdict',dialog))dialog.querySelector('header')?.insertAdjacentHTML('afterend','<div class="battle-verdict"><i></i><div><span>ПОЛЕВАЯ ВЕДОМОСТЬ</span><b id="battleVerdictCopy"></b></div><i></i></div>');
-  const copy=$('#battleVerdictCopy');if(copy)copy.textContent=won?'Устав выдержал проверку полем':'Устав потребует пересмотра';
+  const copy=$('#battleVerdictCopy');const verdict=won?'Устав выдержал проверку полем':'Устав потребует пересмотра';if(copy&&copy.textContent!==verdict)copy.textContent=verdict;
   $$('#resultMeasures>div').forEach((item,index)=>item.style.setProperty('--measure-index',index));
 }
 
