@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'rat-';
-const CACHE_NAME = 'rat-v1.2.0';
+const CACHE_NAME = 'rat-v1.3.0';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './battle-ui-v3.css',
   './app.js',
   './game-part-1.js',
   './game-part-2.js',
@@ -21,6 +22,8 @@ const APP_SHELL = [
   './combat-v2-run.js',
   './command-system-v2.js',
   './command-system-v2-fix.js',
+  './battle-ui-v3.js',
+  './battle-ui-v3-fix.js',
   './game-part-8.js',
   './manifest.webmanifest',
   './icons/icon.svg',
