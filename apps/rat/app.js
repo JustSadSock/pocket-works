@@ -4,7 +4,8 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 globalThis.__RAT_DEPS__ = { createWorkshopMode };
 
-const parts = [
+const BUILD_VERSION = '1.6.1';
+const criticalParts = [
   './game-part-1.js',
   './game-part-2.js',
   './game-part-3.js',
@@ -27,21 +28,35 @@ const parts = [
   './shell-ui-v4.js',
   './shell-ui-v4-fix.js',
   './screen-redesign-v5.js',
-  './screen-redesign-v5-fix.js',
-  './setup-redesign-v6.js'
+  './screen-redesign-v5-fix.js'
 ];
 
-try {
-  for (const src of parts) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = false;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error(`Не удалось загрузить ${src}`));
-      document.head.append(script);
-    });
+const enhancements = [
+  { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', label: 'экран построения' },
+  { src: './setup-redesign-v6-recovery.js', ready: '__RAT_SETUP_RECOVERY_READY', label: 'восстановление экрана построения' }
+];
+
+function appendScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = false;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Не удалось загрузить ${src}`));
+    document.head.append(script);
+  });
+}
+
+async function loadFreshWithFallback(src) {
+  try {
+    await appendScript(`${src}?v=${BUILD_VERSION}`);
+  } catch (freshError) {
+    console.warn('[РАТЬ] fresh asset unavailable, trying cached copy', src, freshError);
+    await appendScript(src);
   }
+}
+
+function assertCoreReady() {
   if (!globalThis.__RAT_COMBAT_V2_READY) {
     throw globalThis.__RAT_COMBAT_V2_ERROR || new Error('Новая модель боя не загрузилась');
   }
@@ -57,17 +72,49 @@ try {
   if (!globalThis.__RAT_SCREEN_V5_READY || !globalThis.__RAT_SCREEN_V5_FIXED) {
     throw new Error('Новая композиция экранов не загрузилась полностью');
   }
-  if (!globalThis.__RAT_SETUP_V6_READY) {
-    throw new Error('Новый экран построения не загрузился полностью');
+}
+
+function showStartupFailure(error) {
+  console.error('[РАТЬ] startup failed', error);
+  const shell = document.querySelector('[data-app-shell]');
+  if (!shell) return;
+  shell.innerHTML = `
+    <section style="min-height:100dvh;display:grid;place-content:center;gap:14px;padding:24px;background:#26352e;color:#f4ead0;text-align:center">
+      <strong style="font:700 34px Georgia,serif">РАТЬ НЕ СОБРАЛАСЬ</strong>
+      <span style="max-width:360px;line-height:1.45">Не удалось запустить ядро игры. Сохранённая расстановка не удалена.</span>
+      <button id="ratCacheRepair" type="button" style="min-height:48px;padding:12px 18px;border:1px solid #e4c987;background:#c66a3f;color:#fff4dc;font-weight:900">ОЧИСТИТЬ КЭШ И ПОВТОРИТЬ</button>
+      <a href="../../" data-app-control style="color:#e4c987;font-weight:800">ВЫЙТИ В POCKET WORKS</a>
+      <small style="opacity:.48">${String(error?.message || error || 'неизвестная ошибка')}</small>
+    </section>`;
+  document.querySelector('#ratCacheRepair')?.addEventListener('click', async () => {
+    try {
+      const registrations = await navigator.serviceWorker?.getRegistrations?.() || [];
+      await Promise.all(registrations.filter((registration) => registration.scope.includes('/apps/rat/')).map((registration) => registration.unregister()));
+      const names = await caches?.keys?.() || [];
+      await Promise.all(names.filter((name) => name.startsWith('rat-')).map((name) => caches.delete(name)));
+    } finally {
+      location.reload();
+    }
+  });
+}
+
+try {
+  for (const src of criticalParts) await loadFreshWithFallback(src);
+  assertCoreReady();
+
+  for (const enhancement of enhancements) {
+    try {
+      await loadFreshWithFallback(enhancement.src);
+      if (!globalThis[enhancement.ready]) {
+        throw globalThis.__RAT_SETUP_V6_ERROR || new Error(`${enhancement.label} не подтвердил готовность`);
+      }
+    } catch (error) {
+      console.error(`[РАТЬ] optional ${enhancement.label} disabled; using previous interface`, error);
+      document.documentElement.dataset.ratEnhancementFallback = 'true';
+    }
   }
 } catch (error) {
-  console.error('[РАТЬ] startup failed', error);
-  document.querySelector('[data-app-shell]').innerHTML = `
-    <section style="min-height:100dvh;display:grid;place-content:center;gap:16px;padding:24px;background:#26352e;color:#f4ead0;text-align:center">
-      <strong style="font:700 34px Georgia,serif">РАТЬ НЕ СОБРАЛАСЬ</strong>
-      <span>Файлы сражения загрузились не полностью. Обновите приложение.</span>
-      <a href="../../" data-app-control style="color:#e4c987;font-weight:800">ВЫЙТИ В POCKET WORKS</a>
-    </section>`;
+  showStartupFailure(error);
 } finally {
   delete globalThis.__RAT_DEPS__;
   delete globalThis.__RAT_COMBAT_V2_ERROR;
