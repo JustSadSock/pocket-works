@@ -1,4 +1,4 @@
-const BUILD='5.5.0';
+const BUILD='5.7.0';
 const isCore=new URL(import.meta.url).searchParams.has('core');
 const selected=await import(isCore?`./spatial-core-engine.js?pw_release=${BUILD}`:`./progression-engine.js?pw_release=${BUILD}`);
 const clarity=isCore?null:await import(`./combat-clarity.js?pw_release=${BUILD}`);
@@ -27,8 +27,9 @@ export const generateOffers=selected.generateOffers;
 export const applyOffer=selected.applyOffer;
 export const prepareBattle=selected.prepareBattle;
 export const recordBattle=selected.recordBattle;
-export const createBattleState=isCore?selected.createBattleState:(...args)=>clarity.createBattleState(selected.createBattleState,...args);
-export const stepBattle=isCore?selected.stepBattle:(state,dt)=>clarity.stepBattle(selected.stepBattle,state,dt);
+function exposeBattle(state){try{globalThis.__blazonBattleState=state;}catch{}return state;}
+export const createBattleState=isCore?((...args)=>exposeBattle(selected.createBattleState(...args))):((...args)=>exposeBattle(clarity.createBattleState(selected.createBattleState,...args)));
+export const stepBattle=isCore?((state,dt)=>exposeBattle(selected.stepBattle(state,dt))):((state,dt)=>exposeBattle(clarity.stepBattle(selected.stepBattle,state,dt)));
 export const summarizeBattle=selected.summarizeBattle;
 export const simulateBattle=isCore?selected.simulateBattle:(a,b,seed=1,max=110)=>clarity.simulateBattle(selected.createBattleState,selected.stepBattle,selected.summarizeBattle,a,b,seed,max);
 export const randomDoctrine=selected.randomDoctrine;
