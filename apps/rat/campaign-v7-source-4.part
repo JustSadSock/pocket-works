@@ -1,0 +1,115 @@
+] = Math.max(0, this.objectiveProgress[0] - dt * .2);
+        }
+        if (this.objectiveProgress[0] >= 24 || this.objectiveProgress[1] >= 24) {
+          this.finished = true;
+          this.winner = this.objectiveProgress[0] >= 24 ? 0 : 1;
+        }
+      }
+      if (this.scenarioId === 'breakthrough') {
+        const player = this.units.filter((unit) => unit.team === 0 && !unit.dead && !unit.retreating && unit.y < 105).length;
+        const enemy = this.units.filter((unit) => unit.team === 1 && !unit.dead && !unit.retreating && unit.y > 1075).length;
+        this.objectiveProgress = [player, enemy];
+        if (player >= 6 || enemy >= 6) {
+          this.finished = true;
+          this.winner = player >= 6 ? 0 : 1;
+        }
+      }
+    }
+  };
+
+  function enemyAppearance(index) {
+    return appearanceFor(index, 1);
+  }
+
+  createEnemySetup = function createEnemySetupV7() {
+    const pool = ['swords', 'spears', 'archers', 'shields', 'axes', 'cavalry'];
+    const selected = [];
+    for (let index = 0; index < 5; index++) {
+      let type = choose(pool);
+      const repeats = selected.filter((item) => item === type).length;
+      if (repeats >= 2) type = choose(pool.filter((candidate) => selected.filter((item) => item === candidate).length < 2));
+      selected.push(type);
+    }
+    return SLOTS.map((slot, index) => ({
+      id: `enemy-${index}`,
+      type: selected[index],
+      slot,
+      formation: choose(FORMATIONS),
+      appearance: enemyAppearance(index)
+    }));
+  };
+
+  randomizePlayerSetup = function randomizePlayerSetupV7() {
+    armyState.setup = armyState.setup.map((config, index) => ({
+      ...config,
+      id: `reg-${index}`,
+      slot: SLOTS[index],
+      type: choose(TYPES),
+      formation: choose(FORMATIONS),
+      appearance: Math.random() < .35 ? appearanceFor(Math.floor(Math.random() * COLORS.length)) : config.appearance
+    }));
+    saveArmy();
+    renderSetup();
+  };
+
+  const baseUnitPalette = unitPalette;
+  unitPalette = function unitPaletteV7(unit) {
+    const fallback = baseUnitPalette(unit);
+    const appearance = unit.regiment?.appearance;
+    if (!appearance) return fallback;
+    const primary = appearance.primary;
+    return {
+      ...fallback,
+      cloth: primary,
+      clothLight: shade(primary, 35),
+      clothDark: shade(primary, -45),
+      metal: unit.type === 'spears' || unit.type === 'axes' ? '#d3bd79' : fallback.metal
+    };
+  };
+
+  function drawHorse(ctx, unit) {
+    const scale = perspectiveScale(unit.y);
+    const primary = unit.regiment?.appearance?.primary || '#8b744c';
+    ctx.save();
+    ctx.translate(Math.round(unit.x), Math.round(unit.y + 5));
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#202820';
+    ctx.fillRect(-15, -7, 30, 14);
+    ctx.fillRect(9, -14, 11, 10);
+    ctx.fillRect(-12, 6, 5, 13);
+    ctx.fillRect(7, 6, 5, 13);
+    ctx.fillStyle = '#74563b';
+    ctx.fillRect(-13, -5, 26, 10);
+    ctx.fillRect(10, -12, 8, 8);
+    ctx.fillStyle = shade(primary, -25);
+    ctx.fillRect(-7, -8, 15, 5);
+    ctx.restore();
+  }
+
+  function drawEquipmentOverlay(ctx, unit) {
+    if (unit.dead) return;
+    const scale = perspectiveScale(unit.y);
+    const primary = unit.regiment?.appearance?.primary || '#c9653e';
+    const emblem = unit.regiment?.appearance?.emblem || '◆';
+    ctx.save();
+    ctx.translate(Math.round(unit.x), Math.round(unit.y + (unit.type === 'cavalry' ? -8 : 0)));
+    ctx.scale(scale, scale);
+    ctx.rotate(unit.facing + Math.PI / 2);
+    if (unit.type === 'shields') {
+      ctx.fillStyle = '#202820';
+      ctx.fillRect(-13, -9, 10, 18);
+      ctx.fillStyle = shade(primary, 12);
+      ctx.fillRect(-11, -7, 7, 14);
+      ctx.fillStyle = '#e2c875';
+      ctx.font = '8px serif';
+      ctx.fillText(emblem, -11, 3);
+    }
+    if (unit.type === 'axes') {
+      ctx.fillStyle = '#5a3f2a';
+      ctx.fillRect(6, -18, 3, 24);
+      ctx.fillStyle = '#c0c6bb';
+      ctx.fillRect(1, -20, 13, 6);
+      ctx.fillRect(10, -17, 7, 4);
+    }
+    if (unit.type === 'cavalry') {
+    

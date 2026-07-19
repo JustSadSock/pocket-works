@@ -1,0 +1,56 @@
+  ctx.fillStyle = '#5a3f2a';
+      ctx.fillRect(8, -22, 3, 29);
+      ctx.fillStyle = '#d3bd79';
+      ctx.fillRect(5, -25, 9, 5);
+    }
+    ctx.restore();
+  }
+
+  const baseDrawUnit = globalThis.drawUnit;
+  globalThis.drawUnit = function drawUnitV7(ctx, unit, time, demo) {
+    const originalType = unit.type;
+    if (originalType === 'cavalry' && !unit.dead) drawHorse(ctx, unit);
+    if (originalType === 'shields' || originalType === 'axes' || originalType === 'cavalry') unit.type = 'swords';
+    if (originalType === 'cavalry') {
+      ctx.save();
+      ctx.translate(0, -8);
+      baseDrawUnit(ctx, unit, time, demo);
+      ctx.restore();
+    } else {
+      baseDrawUnit(ctx, unit, time, demo);
+    }
+    unit.type = originalType;
+    drawEquipmentOverlay(ctx, unit);
+  };
+  drawUnit = globalThis.drawUnit;
+
+  drawBanner = function drawBannerV7(ctx, regiment, time, demo) {
+    if (!regiment.aliveUnits().length) return;
+    const center = regiment.center();
+    const scale = perspectiveScale(center.y);
+    const appearance = regiment.appearance || appearanceFor(regiment.slotIndex, regiment.team);
+    const primary = appearance.primary;
+    const edge = shade(primary, -55);
+    const light = shade(primary, 38);
+    const flutter = Math.round(2 * Math.sin(5 * time + regiment.bannerPhase) * (demo ? 1.2 : 1));
+    ctx.save();
+    ctx.translate(Math.round(center.x), Math.round(center.y - 13));
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(25,31,26,.28)';
+    ctx.fillRect(-5, 12, 13, 4);
+    ctx.fillStyle = '#3e3024';
+    ctx.fillRect(-1, -34, 3, 49);
+    ctx.fillStyle = edge;
+    ctx.fillRect(2, -32, 27 + flutter, 17);
+    ctx.fillStyle = primary;
+    ctx.fillRect(4, -30, 23 + flutter, 13);
+    ctx.fillStyle = light;
+    ctx.fillRect(4, -30, 17 + flutter, 3);
+    ctx.fillStyle = appearance.secondary || '#e2c875';
+    ctx.font = '10px serif';
+    ctx.fillText(appearance.emblem || '◆', 9, -20);
+    ctx.restore();
+  };
+  globalThis.drawBanner = drawBanner;
+
+  const baseDr

@@ -1,0 +1,88 @@
+50, bridgeW: 150 },
+      { type: 'forest', x: 150, y: 410, r: 92 },
+      { type: 'forest', x: 750, y: 760, r: 92 }
+    ];
+    if (id === 'breakthrough') return [
+      { type: 'forest', x: 210, y: 470, r: 120 },
+      { type: 'forest', x: 690, y: 710, r: 118 },
+      { type: 'mud', x: 450, y: 610, rx: 145, ry: 90 }
+    ];
+    return [
+      { type: 'forest', x: 180, y: 560, r: 95 },
+      { type: 'mud', x: 680, y: 650, rx: 120, ry: 72 }
+    ];
+  }
+
+  function inCircle(unit, zone) {
+    return Math.hypot(unit.x - zone.x, unit.y - zone.y) <= zone.r;
+  }
+
+  function zoneAt(sim, unit, type) {
+    return sim.terrainZones?.find((zone) => {
+      if (type && zone.type !== type) return false;
+      if (zone.type === 'forest' || zone.type === 'hill') return inCircle(unit, zone);
+      if (zone.type === 'mud') return Math.abs(unit.x - zone.x) <= zone.rx && Math.abs(unit.y - zone.y) <= zone.ry;
+      if (zone.type === 'river') {
+        const insideBand = unit.y >= zone.y && unit.y <= zone.y + zone.h;
+        const onBridge = Math.abs(unit.x - zone.bridgeX) <= zone.bridgeW / 2;
+        return insideBand && !onBridge;
+      }
+      return false;
+    });
+  }
+
+  const BaseSimulation = Simulation;
+  Simulation = class ScenarioSimulationV7 extends BaseSimulation {
+    constructor(playerSetup, enemySetup, demo = false) {
+      super(playerSetup, enemySetup, demo);
+      this.scenarioId = demo ? 'clash' : resolveScenario();
+      this.scenario = SCENARIOS[this.scenarioId];
+      this.terrainZones = demo ? [] : makeZones(this.scenarioId);
+      this.objectiveProgress = [0, 0];
+      this.objectiveTarget = this.scenarioId === 'hill' ? 24 : this.scenarioId === 'breakthrough' ? 6 : 0;
+    }
+    moveUnit(unit, target, dt, speedFactor) {
+      let factor = 1;
+      const terrain = zoneAt(this, unit);
+      if (terrain?.type === 'forest') factor *= unit.type === 'cavalry' ? .5 : .78;
+      if (terrain?.type === 'mud') factor *= unit.type === 'cavalry' ? .48 : .68;
+      if (terrain?.type === 'river') factor *= unit.type === 'cavalry' ? .34 : .46;
+      return BaseSimulation.prototype.moveUnit.call(this, unit, target, dt, speedFactor * factor);
+    }
+    fireArrow(attacker, target) {
+      const before = this.projectiles.length;
+      BaseSimulation.prototype.fireArrow.call(this, attacker, target);
+      const arrow = this.projectiles.length > before ? this.projectiles[this.projectiles.length - 1] : null;
+      if (!arrow) return;
+      if (zoneAt(this, attacker, 'hill')) arrow.damage *= 1.24;
+      if (zoneAt(this, target, 'forest')) arrow.damage *= .7;
+    }
+    damageUnit(unit, damage, attacker) {
+      let adjusted = damage;
+      if (unit.type === 'shields' && attacker?.type === 'archers') adjusted *= .48;
+      if (zoneAt(this, unit, 'forest') && attacker?.type === 'archers') adjusted *= .78;
+      if (attacker?.type === 'cavalry' && Math.hypot(attacker.vx, attacker.vy) > 42 && this.time - attacker.chargeAt > 4.2) {
+        adjusted *= 1.65;
+        attacker.chargeAt = this.time;
+        this.spawnImpact?.(unit.x, unit.y, attacker.team, 8);
+      }
+      BaseSimulation.prototype.damageUnit.call(this, unit, adjusted, attacker);
+    }
+    update(dt) {
+      const scaled = Math.min(.04, dt) * Number(persistent.settings.speed || 1);
+      BaseSimulation.prototype.update.call(this, dt);
+      if (!this.finished) this.updateObjective(scaled);
+    }
+    updateObjective(dt) {
+      if (this.scenarioId === 'hill') {
+        const hill = this.terrainZones.find((zone) => zone.type === 'hill');
+        const counts = [0, 0];
+        this.units.forEach((unit) => {
+          if (!unit.dead && !unit.retreating && inCircle(unit, hill)) counts[unit.team]++;
+        });
+        if (counts[0] > counts[1] + 1) {
+          this.objectiveProgress[0] += dt;
+          this.objectiveProgress[1] = Math.max(0, this.objectiveProgress[1] - dt * .2);
+        } else if (counts[1] > counts[0] + 1) {
+          this.objectiveProgress[1] += dt;
+          this.objectiveProgress[0

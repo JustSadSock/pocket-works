@@ -1,0 +1,43 @@
+uerySelector('#scenarioHudV7');
+    if (!hud || !simulation?.scenarioId) return;
+    const scenario = SCENARIOS[simulation.scenarioId];
+    hud.querySelector('b').textContent = scenario.label;
+    let text = scenario.description;
+    let progress = 0;
+    if (simulation.scenarioId === 'hill') {
+      const own = simulation.objectiveProgress[0];
+      const enemy = simulation.objectiveProgress[1];
+      text = `${Math.floor(own)}/24 · враг ${Math.floor(enemy)}/24`;
+      progress = own / 24;
+    }
+    if (simulation.scenarioId === 'breakthrough') {
+      text = `${simulation.objectiveProgress[0]}/6 прошли · враг ${simulation.objectiveProgress[1]}/6`;
+      progress = simulation.objectiveProgress[0] / 6;
+    }
+    hud.querySelector('span').textContent = text;
+    hud.querySelector('em').style.transform = `scaleX(${clamp(progress, 0, 1)})`;
+    hud.classList.toggle('has-progress', simulation.scenarioId === 'hill' || simulation.scenarioId === 'breakthrough');
+  }
+
+  function renderHomeArmy() {
+    const host = document.querySelector('#homeOrderUnitsV5');
+    if (!host) return;
+    host.innerHTML = armyState.setup.map((config) => `<article data-type="${config.type}" style="--regiment:${config.appearance.primary}"><span>${TYPE_ICONS[config.type]}</span><div><strong>${TYPE_DATA[config.type].short}</strong><small>${SLOT_SHORT[config.slot]} · ${config.appearance.emblem}</small></div><b>${TYPE_DATA[config.type].count}</b></article>`).join('');
+  }
+
+  const baseRenderSetup = renderSetup;
+  renderSetup = function renderSetupV7() {
+    persistent.setup = structuredClone(armyState.setup);
+    baseRenderSetup();
+    renderBuilder();
+  };
+
+  const baseShowScreen = showScreen;
+  showScreen = function showScreenCampaignV7(name) {
+    baseShowScreen(name);
+    if (name === 'setup') requestAnimationFrame(renderBuilder);
+    if (name === 'home') requestAnimationFrame(renderHomeArmy);
+    if (name === 'battle') requestAnimationFrame(updateScenarioHud);
+  };
+
+  const baseUpdateBattleHud =

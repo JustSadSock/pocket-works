@@ -1,0 +1,41 @@
+ aria-label="Цвет полка" aria-pressed="${color === config.appearance.primary}" style="--swatch:${color}"></button>`).join('');
+    colors.querySelectorAll('[data-color]').forEach((button) => button.addEventListener('click', () => {
+      config.appearance.primary = button.dataset.color;
+      config.appearance.secondary = shade(button.dataset.color, 44);
+      saveArmy();
+      audio.click();
+      renderBuilder();
+    }));
+
+    const emblems = document.querySelector('#emblemPickerV7');
+    emblems.innerHTML = EMBLEMS.map((emblem) => `<button type="button" data-emblem="${emblem}" aria-pressed="${emblem === config.appearance.emblem}">${emblem}</button>`).join('');
+    emblems.querySelectorAll('[data-emblem]').forEach((button) => button.addEventListener('click', () => {
+      config.appearance.emblem = button.dataset.emblem;
+      saveArmy();
+      audio.click();
+      renderBuilder();
+    }));
+  }
+
+  function renderBuilder() {
+    if (!document.querySelector('#armyBuilderV7')) return;
+    renderScenarios();
+    renderSlots();
+    renderEditor();
+    const start = document.querySelector('#startBattleButton');
+    const scenario = SCENARIOS[armyState.scenario];
+    if (start) start.innerHTML = `<span>НАЧАТЬ СРАЖЕНИЕ</span><small>${scenario.label.toLowerCase()} · ${armyState.setup.reduce((sum, item) => sum + TYPE_DATA[item.type].count, 0)} бойцов</small>`;
+    const random = document.querySelector('#randomizeButton');
+    if (random) random.textContent = '↻ НОВАЯ АРМИЯ';
+    const briefing = document.querySelector('.deployment-v7 > header small');
+    if (briefing) briefing.textContent = scenario.description;
+  }
+
+  function installScenarioHud() {
+    const wrap = document.querySelector('#battlefieldWrap');
+    if (!wrap || document.querySelector('#scenarioHudV7')) return;
+    wrap.insertAdjacentHTML('beforeend', `<div id="scenarioHudV7" class="scenario-hud-v7"><b></b><span></span><i><em></em></i></div>`);
+  }
+
+  function updateScenarioHud() {
+    const hud = document.q

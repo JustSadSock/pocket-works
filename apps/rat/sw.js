@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'rat-';
-const CACHE_NAME = 'rat-v1.6.1';
-const APP_VERSION = '1.6.1';
+const CACHE_NAME = 'rat-v2.0.0';
+const APP_VERSION = '2.0.0';
 const RELEASE_NOTES = [
-  'Исправлен аварийный запуск после обновления экрана построения.',
-  'Новый экран построения теперь является необязательным улучшением: при ошибке игра откатывается на предыдущий рабочий интерфейс.',
-  'Скрипты и стили загружаются по network-first стратегии, чтобы старый app.js не смешивался с новыми файлами.',
-  'Добавлена безопасная очистка кэша без удаления сохранённой расстановки.'
+  'Армия расширена до пяти полков; типы войск можно повторять и свободно комбинировать.',
+  'Добавлены щитоносцы, секирники и конница с понятными сильными и слабыми сторонами.',
+  'Появились полевой бой, удержание холма, переправа и прорыв с лесом, грязью, рекой и высотой.',
+  'Цвет и знак каждого полка настраиваются отдельно и сохраняются между сражениями.'
 ];
 const APP_SHELL = [
   './',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './shell-ui-v4.css',
   './screen-redesign-v5.css',
   './setup-redesign-v6.css',
+  './campaign-v7.css',
   './app.js',
   './game-part-1.js',
   './game-part-2.js',
@@ -41,6 +42,20 @@ const APP_SHELL = [
   './screen-redesign-v5-fix.js',
   './setup-redesign-v6.js',
   './setup-redesign-v6-recovery.js',
+  './campaign-v7.js',
+  './campaign-v7-source-1.part',
+  './campaign-v7-source-2.part',
+  './campaign-v7-source-3.part',
+  './campaign-v7-source-4.part',
+  './campaign-v7-source-5.part',
+  './campaign-v7-source-6.part',
+  './campaign-v7-source-7.part',
+  './campaign-v7-source-8.part',
+  './campaign-v7-source-9.part',
+  './campaign-v7-source-13.part',
+  './campaign-v7-source-12.part',
+  './campaign-v7-source-11.part',
+  './campaign-v7-source-10.part',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

@@ -1,0 +1,80 @@
+(() => {
+  'use strict';
+
+  const VERSION = '2.0.0';
+  const ARMY_KEY = 'pocket-works:rat:army-v7';
+  const SLOTS = ['farLeft', 'left', 'center', 'right', 'farRight'];
+  const SLOT_LABELS = {
+    farLeft: 'КРАЙ ЛЕВА', left: 'ЛЕВО', center: 'ЦЕНТР', right: 'ПРАВО', farRight: 'КРАЙ ПРАВА'
+  };
+  const SLOT_SHORT = { farLeft: 'Л1', left: 'Л2', center: 'Ц', right: 'П2', farRight: 'П1' };
+  const TYPES = ['swords', 'spears', 'archers', 'shields', 'axes', 'cavalry'];
+  const TYPE_ICONS = { swords: '⚔', spears: '↟', archers: '➶', shields: '⬒', axes: '◆', cavalry: '♞' };
+  const TYPE_ROLES = {
+    swords: 'быстрый универсальный натиск',
+    spears: 'останавливают конницу и держат фронт',
+    archers: 'дальний огонь, уязвимы в ближнем бою',
+    shields: 'медленная стена против стрел',
+    axes: 'ломают щиты и плотный строй',
+    cavalry: 'быстрый удар, боится копий'
+  };
+  const COLORS = ['#c9653e', '#b94f4f', '#8b5e9d', '#39737a', '#6f8a4d', '#c18a3d', '#ded2b5'];
+  const EMBLEMS = ['◆', '✦', '▲', '☼', '✚', '⌁'];
+  const SCENARIOS = {
+    random: { label: 'СЛУЧАЙНО', short: '?', description: 'каждый бой — другая задача и местность' },
+    clash: { label: 'ПОЛЕВОЙ БОЙ', short: '⚔', description: 'сломить вражескую армию' },
+    hill: { label: 'ХОЛМ', short: '△', description: 'удерживать высоту 24 секунды' },
+    crossing: { label: 'ПЕРЕПРАВА', short: '═', description: 'продавить мост или медленный брод' },
+    breakthrough: { label: 'ПРОРЫВ', short: '↑', description: 'провести шесть бойцов за вражеский рубеж' }
+  };
+
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = `./campaign-v7.css?v=${VERSION}`;
+  css.dataset.ratCampaign = VERSION;
+  document.head.appendChild(css);
+
+  Object.assign(TYPE_DATA, {
+    swords: { ...TYPE_DATA.swords, count: 18 },
+    spears: { ...TYPE_DATA.spears, count: 18 },
+    archers: { ...TYPE_DATA.archers, count: 16 },
+    shields: { label: 'ЩИТОНОСЦЫ', short: 'ЩИТЫ', glyph: '⬒', count: 16, hp: 10.4, speed: 44, range: 24, damage: .5, color: '#47747b' },
+    axes: { label: 'СЕКИРНИКИ', short: 'СЕКИРЫ', glyph: '◆', count: 16, hp: 7.5, speed: 57, range: 27, damage: .91, color: '#a65f47' },
+    cavalry: { label: 'КОННИЦА', short: 'КОННИЦА', glyph: '♞', count: 10, hp: 9.5, speed: 96, range: 31, damage: .96, color: '#8c7446' }
+  });
+  Object.assign(SLOT_X, { farLeft: 105, left: 278, center: 450, right: 622, farRight: 795 });
+
+  function shade(hex, amount) {
+    const clean = String(hex || '#777777').replace('#', '');
+    const value = Number.parseInt(clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean, 16);
+    const clampByte = (n) => Math.max(0, Math.min(255, n));
+    const r = clampByte((value >> 16) + amount);
+    const g = clampByte(((value >> 8) & 255) + amount);
+    const b = clampByte((value & 255) + amount);
+    return `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  function appearanceFor(index, team = 0) {
+    if (team === 1) {
+      const enemy = ['#3f6079', '#526a85', '#394f68', '#596076', '#405b72'];
+      return { primary: enemy[index % enemy.length], secondary: '#d0bd85', emblem: EMBLEMS[(index + 2) % EMBLEMS.length] };
+    }
+    const primary = COLORS[index % COLORS.length];
+    return { primary, secondary: shade(primary, 44), emblem: EMBLEMS[index % EMBLEMS.length] };
+  }
+
+  function normalizeAppearance(value, index, team = 0) {
+    const fallback = appearanceFor(index, team);
+    return {
+      primary: COLORS.includes(value?.primary) || /^#[0-9a-f]{6}$/i.test(value?.primary || '') ? value.primary : fallback.primary,
+      secondary: /^#[0-9a-f]{6}$/i.test(value?.secondary || '') ? value.secondary : fallback.secondary,
+      emblem: EMBLEMS.includes(value?.emblem) ? value.emblem : fallback.emblem
+    };
+  }
+
+  function fallbackArmy() {
+    const seed = [
+      ['shields', 'line'], ['spears', 'line'], ['swords', 'wedge'], ['archers', 'loose'], ['cavalry', 'wedge']
+    ];
+    return SLOTS.map((slot, index) => ({
+      id:

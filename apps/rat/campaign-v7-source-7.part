@@ -1,0 +1,49 @@
+ound;
+
+  const baseDrawObjectives = drawObjectives;
+  drawObjectives = function drawScenarioObjectives(ctx, sim, demo) {
+    baseDrawObjectives(ctx, sim, demo);
+    if (demo || !sim.scenarioId) return;
+    ctx.save();
+    if (sim.scenarioId === 'hill') {
+      const hill = sim.terrainZones.find((zone) => zone.type === 'hill');
+      ctx.strokeStyle = '#f0d47e';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([14, 10]);
+      ctx.beginPath();
+      ctx.arc(hill.x, hill.y, hill.r - 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (sim.scenarioId === 'breakthrough') {
+      ctx.fillStyle = 'rgba(240,212,126,.55)';
+      ctx.fillRect(0, 96, WORLD.width, 5);
+      ctx.fillStyle = 'rgba(134,171,199,.45)';
+      ctx.fillRect(0, 1079, WORLD.width, 5);
+    }
+    ctx.restore();
+  };
+  globalThis.drawObjectives = drawObjectives;
+
+  function tinySoldiers(config, count = 9) {
+    const points = formationOffsets(count, config.formation, -1);
+    return points.map((point, index) => `<i data-kind="${config.type}" style="left:${50 + point.x * .28}%;top:${52 + point.y * .28}%;--i:${index}"><b></b><em></em></i>`).join('');
+  }
+
+  function installBuilder() {
+    const setup = screens.setup;
+    if (!setup || setup.dataset.campaignV7) return;
+    setup.dataset.campaignV7 = 'true';
+    setup.querySelector('#setupWorkbenchV6')?.setAttribute('hidden', '');
+    setup.querySelector('.setup-stage-v4')?.setAttribute('hidden', '');
+    setup.querySelector('.setup-roster-v4')?.setAttribute('hidden', '');
+    setup.querySelector('.setup-intro')?.setAttribute('hidden', '');
+
+    const footer = setup.querySelector('.setup-footer');
+    if (!footer) return;
+    const builder = document.createElement('section');
+    builder.id = 'armyBuilderV7';
+    builder.className = 'army-builder-v7';
+    builder.innerHTML = `
+      <div class="scenario-picker-v7" id="scenarioPickerV7"></div>
+      <section class="deployment-v7">
+        <header><span>ПЯТЬ ПОЛКОВ</span><small>выбери любой слот · типы можно пов

@@ -1,0 +1,40 @@
+TION_LABELS[config.formation]}</small></span>
+        <i class="slot-banner-v7">${config.appearance.emblem}</i>
+      </button>`;
+    }).join('');
+    host.querySelectorAll('[data-army-index]').forEach((button) => button.addEventListener('click', () => {
+      activeIndex = Number(button.dataset.armyIndex);
+      audio.click();
+      renderBuilder();
+    }));
+  }
+
+  function renderEditor() {
+    const config = armyState.setup[activeIndex];
+    const data = TYPE_DATA[config.type];
+    const head = document.querySelector('#regimentEditorHeadV7');
+    if (!head) return;
+    head.parentElement?.style.setProperty('--regiment-color', config.appearance.primary);
+    head.innerHTML = `<div><small>${SLOT_LABELS[config.slot]}</small><strong>${data.label}</strong><span>${TYPE_ROLES[config.type]}</span></div><b>${data.count}</b>`;
+
+    const types = document.querySelector('#typePickerV7');
+    types.innerHTML = TYPES.map((type) => `<button type="button" data-type="${type}" aria-pressed="${type === config.type}"><b>${TYPE_ICONS[type]}</b><span>${TYPE_DATA[type].short}</span></button>`).join('');
+    types.querySelectorAll('[data-type]').forEach((button) => button.addEventListener('click', () => {
+      config.type = button.dataset.type;
+      saveArmy();
+      audio.click();
+      vibrate(8);
+      renderBuilder();
+    }));
+
+    const formations = document.querySelector('#formationPickerV7');
+    formations.innerHTML = FORMATIONS.map((formation) => `<button type="button" data-formation="${formation}" aria-pressed="${formation === config.formation}">${FORMATION_LABELS[formation]}</button>`).join('');
+    formations.querySelectorAll('[data-formation]').forEach((button) => button.addEventListener('click', () => {
+      config.formation = button.dataset.formation;
+      saveArmy();
+      audio.click();
+      renderBuilder();
+    }));
+
+    const colors = document.querySelector('#colorPickerV7');
+    colors.innerHTML = COLORS.map((color) => `<button type="button" data-color="${color}"
