@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const FLAG=Symbol.for('blazon.progression-runtime.v5.9.0');
+  const FLAG=Symbol.for('blazon.progression-runtime.v5.9.1');
   if(globalThis[FLAG]||typeof document==='undefined')return;
   globalThis[FLAG]=true;
 
@@ -35,7 +35,7 @@
 
   const style=document.createElement('link');
   style.rel='stylesheet';
-  style.href='./armorial-progression.css?pw_release=5.9.0';
+  style.href='./armorial-progression.css?pw_release=5.9.1';
   document.head.append(style);
 
   let activeStep=0;
@@ -192,36 +192,50 @@
   function scheduleSync(){if(frame||sealing)return;frame=requestAnimationFrame(()=>{frame=0;sync();});}
   function observeRoots(){
     observer?.disconnect();observer=new MutationObserver(scheduleSync);
-    for(const id of ['setupDialog','menuHeraldry','playerAchievement','enemyAchievement','rewardGrid','endingAchievement']){const root=document.getElementById(id);if(root)observer.observe(root,{childList:true,subtree:true});}
+    for(const id of ['setupDialog','menuHeraldry','playerAchievement','enemyAchievement','rewardGrid','endingAchievement']){
+      const root=document.getElementById(id);if(root)observer.observe(root,{childList:true,subtree:true});
+    }
   }
 
-  function failSeal(message='Не удалось открыть совет перед полем'){
-    clearTimeout(sealWatchdog);sealing=false;observeRoots();
-    const dialog=$('#setupDialog'),button=$('#sealSetupButton');dialog?.classList.remove('is-sealing');
-    if(button){button.disabled=false;setText(button.querySelector('span'),'Скрепить первый устав');setText(button.querySelector('small'),message);}
-    updateSeal();
+  function finishSeal(){
+    clearTimeout(sealWatchdog);sealWatchdog=0;sealing=false;
+    const dialog=$('#setupDialog');dialog?.classList.remove('is-sealing');
+    observeRoots();
+    if(dialog?.open)updateSeal();
   }
 
-  function stageSeal(event){
+  function failSeal(message='Печать не сработала — нажми ещё раз'){
+    const dialog=$('#setupDialog'),button=$('#sealSetupButton');
+    finishSeal();
+    if(button){button.disabled=false;button.removeAttribute('aria-busy');setText(button.querySelector('span'),'Скрепить первый устав');setText(button.querySelector('small'),message);}
+  }
+
+  // app.js owns campaign creation. We only show transition state and let the same
+  // trusted click continue to its native listener. Synthetic re-clicking deadlocked iOS.
+  function allowNativeSeal(event){
     const button=event.target.closest('#sealSetupButton');if(!button)return false;
-    if(sealing)return false;
-    if(!steps.every((_,index)=>isComplete(index))){event.preventDefault();event.stopImmediatePropagation();activeStep=firstIncomplete();updateSeal();return true;}
-    event.preventDefault();event.stopImmediatePropagation();sealing=true;observer?.disconnect();
-    const dialog=$('#setupDialog');dialog?.classList.add('is-sealing');button.disabled=true;
-    setText(button.querySelector('span'),'Ставим печать…');setText(button.querySelector('small'),'Подготавливаем совет перед полем');
-    sealWatchdog=setTimeout(()=>failSeal(),5000);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      try{
-        button.disabled=false;button.click();
-        setTimeout(()=>{clearTimeout(sealWatchdog);sealing=false;dialog?.classList.remove('is-sealing');observeRoots();},350);
-      }catch(error){console.error('[БЛАЗОН] seal setup failed',error);failSeal();}
-    }));
-    return true;
+    if(sealing){event.preventDefault();event.stopImmediatePropagation();return true;}
+    if(!steps.every((_,index)=>isComplete(index))){
+      event.preventDefault();event.stopImmediatePropagation();activeStep=firstIncomplete();updateSeal();return true;
+    }
+    sealing=true;observer?.disconnect();
+    const dialog=$('#setupDialog');dialog?.classList.add('is-sealing');
+    button.setAttribute('aria-busy','true');
+    setText(button.querySelector('span'),'Ставим печать…');setText(button.querySelector('small'),'Открываем совет перед полем');
+    sealWatchdog=setTimeout(()=>{
+      button.removeAttribute('aria-busy');
+      if(dialog?.open)failSeal();else finishSeal();
+    },1800);
+    return false;
   }
 
   installSymbols();sync();observeRoots();
+  $('#setupDialog')?.addEventListener('close',()=>{const button=$('#sealSetupButton');button?.removeAttribute('aria-busy');finishSeal();});
+  window.addEventListener('error',()=>{if(sealing)failSeal('Ошибка при создании устава — повтори печать');});
+  window.addEventListener('unhandledrejection',()=>{if(sealing)failSeal('Ошибка при создании устава — повтори печать');});
+
   document.addEventListener('click',event=>{
-    if(event.target.closest('#sealSetupButton')&&stageSeal(event))return;
+    if(event.target.closest('#sealSetupButton')&&allowNativeSeal(event))return;
     const go=event.target.closest('[data-setup-go]');if(go){activeStep=Number(go.dataset.setupGo);renderStep();return;}
     const founder=event.target.closest('[data-v5-founder]');const school=event.target.closest('[data-v5-school]');
     if(founder){globalThis.__blazonFounder=founder.dataset.v5Founder;renderFounderCards();updateSeal();advanceAfter(2);}
@@ -230,5 +244,6 @@
     if(event.target.closest('[data-field]'))requestAnimationFrame(()=>{updateSeal();advanceAfter(0);});
     if(event.target.closest('[data-ordinary-choice]'))requestAnimationFrame(()=>{updateSeal();advanceAfter(1);});
   },true);
+
   window.addEventListener('pagehide',()=>{observer?.disconnect();if(frame)cancelAnimationFrame(frame);clearTimeout(sealWatchdog);},{once:true});
 })();
