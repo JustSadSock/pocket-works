@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#171b17">
+  <meta name="theme-color" content="#0c1510">
   <meta name="description" content="БЛАЗОН: Доктрина — автономная полевая битва, где отдельные воины образуют живой геральдический строй.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>БЛАЗОН: Доктрина</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=4.3.0">
-  <link rel="icon" href="./icons/icon.svg?v=4.3.0" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.6.0">
+  <link rel="icon" href="./icons/icon.svg?v=5.6.0" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=4.3.0">
+  <link rel="stylesheet" href="./styles.css?v=5.6.0">
+  <link rel="stylesheet" href="./war-council.css?v=5.6.0">
 </head>
 <body data-fullscreen-app>
   <svg class="symbol-library" aria-hidden="true">
@@ -78,13 +79,13 @@
       <div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div>
       <header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header>
       <div class="menu-standard" aria-hidden="true"><div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div></div>
-      <div class="menu-copy"><p>Автономная военная доктрина</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Герб задаёт правила армии, а отдельные воины превращают их в живой фронт.</span></div>
+      <div class="menu-copy"><p>Походный устав живого фронта</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Начертай герб рода. Его фигуры станут приказами, а приказ — судьбой армии.</span></div>
       <div class="menu-actions">
         <button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button>
         <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Четыре геральдические школы</small><b>→</b></button>
         <div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div>
       </div>
-      <footer>v4.3 · battle reading</footer>
+      <footer>v5.6.0 · war council</footer>
     </section>
 
     <section class="screen doctrine-screen" id="doctrineScreen">
@@ -132,6 +133,7 @@
   <dialog class="sheet reward-sheet" id="rewardDialog"><header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header><div class="reward-grid" id="rewardGrid"></div></dialog>
   <dialog class="sheet ending-sheet" id="endingDialog"><div class="ending-standard" id="endingAchievement"></div><p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span><div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div></dialog>
 
-  <script type="module" src="./app.js?v=4.3.0"></script>
+  <script type="module" src="./app.js?v=5.6.0"></script>
+  <script type="module" src="./war-council-runtime.js?v=5.6.0"></script>
 </body>
 </html>
