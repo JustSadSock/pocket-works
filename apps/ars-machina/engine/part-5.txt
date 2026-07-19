@@ -1,0 +1,203 @@
+// ARS MACHINA 1.1 — practical hinge joining for finished constructions.
+let mergeTargetId = null;
+
+function findMergeTarget(node, radius = 24 / state.camera.zoom) {
+  let best = null;
+  let bestDistance = radius;
+  for (const candidate of state.nodes) {
+    if (candidate.id === node.id) continue;
+    const d = Math.hypot(candidate.x - node.x, candidate.y - node.y);
+    if (d < bestDistance) {
+      best = candidate;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+function dedupeMergedConstraints() {
+  const seen = new Set();
+  state.constraints = state.constraints.filter((constraint) => {
+    if (!nodeById(constraint.a) || !nodeById(constraint.b) || constraint.a === constraint.b) return false;
+    const ends = [constraint.a, constraint.b].sort().join('|');
+    const key = `${constraint.type}|${ends}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function dedupeMergedRotors(nodeId) {
+  const byType = new Map();
+  state.rotors = state.rotors.filter((rotor) => {
+    if (rotor.nodeId !== nodeId) return true;
+    const existing = byType.get(rotor.type);
+    if (!existing) {
+      byType.set(rotor.type, rotor);
+      return true;
+    }
+    existing.radius = Math.max(existing.radius, rotor.radius);
+    existing.teeth = Math.max(existing.teeth || 0, rotor.teeth || 0);
+    existing.omega = (existing.omega + rotor.omega) / 2;
+    return false;
+  });
+}
+
+function mergeNodes(keepId, removeId, { place = 'midpoint' } = {}) {
+  const keep = nodeById(keepId);
+  const remove = nodeById(removeId);
+  if (!keep || !remove || keep.id === remove.id) return null;
+
+  if (place === 'midpoint') {
+    keep.x = snap((keep.x + remove.x) / 2, GRID / 4);
+    keep.y = snap((keep.y + remove.y) / 2, GRID / 4);
+  } else if (place === 'remove') {
+    keep.x = remove.x;
+    keep.y = remove.y;
+  }
+  keep.px = keep.x;
+  keep.py = keep.y;
+  keep.fixed = keep.fixed || remove.fixed;
+  keep.mass = Math.max(.5, (keep.mass || 1) + (remove.mass || 1) - 1);
+  keep.radius = Math.max(keep.radius || 6, remove.radius || 6);
+  if (remove.role === 'payload') keep.role = 'payload';
+
+  for (const constraint of state.constraints) {
+    if (constraint.a === remove.id) constraint.a = keep.id;
+    if (constraint.b === remove.id) constraint.b = keep.id;
+  }
+  for (const rotor of state.rotors) if (rotor.nodeId === remove.id) rotor.nodeId = keep.id;
+  for (const attachment of state.attachments) {
+    if (attachment.nodeId === remove.id) attachment.nodeId = keep.id;
+    if (attachment.hostId === remove.id) attachment.hostId = keep.id;
+  }
+
+  state.nodes = state.nodes.filter((node) => node.id !== remove.id);
+  dedupeMergedConstraints();
+  dedupeMergedRotors(keep.id);
+
+  const weights = state.attachments.filter((item) => item.nodeId === keep.id && item.type === 'weight');
+  if (weights.length > 1) {
+    const primary = weights[0];
+    primary.amount = weights.reduce((sum, item) => sum + item.amount, 0);
+    const duplicateIds = new Set(weights.slice(1).map((item) => item.id));
+    state.attachments = state.attachments.filter((item) => !duplicateIds.has(item.id));
+    keep.mass = primary.amount;
+  }
+
+  return keep;
+}
+
+const baseSetTool = setTool;
+setTool = function enhancedSetTool(tool) {
+  mergeTargetId = null;
+  baseSetTool(tool);
+  if (tool === 'node') {
+    setYardNote('Коснись двух готовых концов — они сольются в подвижный шарнир. Пустое место создаёт новый узел.');
+  }
+};
+
+const baseHandleBuildTap = handleBuildTap;
+handleBuildTap = function enhancedHandleBuildTap(world) {
+  if (state.tool !== 'node') return baseHandleBuildTap(world);
+
+  const node = findNodeAt(world);
+  if (!node) {
+    pushUndo();
+    const created = createNode(world.x, world.y);
+    state.pendingNodeId = null;
+    selectThing({ kind: 'node', id: created.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote('Новый шарнир поставлен.', 1200);
+    return;
+  }
+
+  if (!state.pendingNodeId) {
+    state.pendingNodeId = node.id;
+    selectThing({ kind: 'node', id: node.id });
+    setYardNote('Первый конец выбран. Коснись второго конца балки.');
+    clickSound(360, .035);
+    vibrate(7);
+    return;
+  }
+
+  if (state.pendingNodeId === node.id) {
+    state.pendingNodeId = null;
+    setYardNote('Выбор шарнира отменён.', 1000);
+    clickSound(180, .03);
+    return;
+  }
+
+  const first = nodeById(state.pendingNodeId);
+  if (!first) {
+    state.pendingNodeId = null;
+    return invalidFeedback('Первый узел уже исчез');
+  }
+  if (distance(first, node) > GRID * 4) {
+    return invalidFeedback('Концы слишком далеко. Подведи их ближе или перетащи один на другой.');
+  }
+
+  pushUndo();
+  const merged = mergeNodes(first.id, node.id);
+  state.pendingNodeId = null;
+  if (!merged) return invalidFeedback('Не удалось собрать шарнир');
+  selectThing({ kind: 'node', id: merged.id });
+  saveSoon();
+  heavySound(170, .08);
+  vibrate([10, 18, 14]);
+  setYardNote('Балки соединены общим подвижным шарниром.', 1800);
+};
+
+canvas.addEventListener('pointermove', () => {
+  if (state.mode !== 'build' || state.tool !== 'select' || !state.drag?.nodeId || !state.gesture?.moved) {
+    mergeTargetId = null;
+    return;
+  }
+  const node = nodeById(state.drag.nodeId);
+  mergeTargetId = node ? findMergeTarget(node, 26 / state.camera.zoom)?.id || null : null;
+});
+
+canvas.addEventListener('pointerup', () => {
+  const draggedId = state.drag?.nodeId || null;
+  const targetId = mergeTargetId;
+  const moved = Boolean(state.gesture?.moved);
+  mergeTargetId = null;
+  if (!draggedId || !targetId || !moved || state.mode !== 'build') return;
+
+  queueMicrotask(() => {
+    const merged = mergeNodes(targetId, draggedId, { place: 'remove' });
+    if (!merged) return;
+    selectThing({ kind: 'node', id: merged.id });
+    saveSoon();
+    heavySound(165, .075);
+    vibrate([9, 16, 12]);
+    setYardNote('Концы защёлкнулись в общий шарнир.', 1600);
+  });
+}, { capture: true });
+
+canvas.addEventListener('pointercancel', () => {
+  mergeTargetId = null;
+}, { capture: true });
+canvas.addEventListener('lostpointercapture', () => {
+  mergeTargetId = null;
+}, { capture: true });
+
+const baseDrawPending = drawPending;
+drawPending = function enhancedDrawPending() {
+  baseDrawPending();
+  if (!mergeTargetId || state.mode !== 'build') return;
+  const node = nodeById(mergeTargetId);
+  if (!node) return;
+  const point = worldToScreen(node.x, node.y);
+  const pulse = 20 + Math.sin(performance.now() / 90) * 3;
+  ctx.save();
+  ctx.strokeStyle = '#4f8f67';
+  ctx.fillStyle = 'rgba(79,143,103,.18)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, pulse, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+};

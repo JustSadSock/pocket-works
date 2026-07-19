@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 
-const parts = ['./engine/part-1.txt', './engine/part-2.txt', './engine/part-3.txt', './engine/part-4.txt'];
+const parts = ['./engine/part-1.txt', './engine/part-2.txt', './engine/part-3.txt', './engine/part-4.txt', './engine/part-5.txt'];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем чертёжный двор…';
 
