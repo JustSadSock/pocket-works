@@ -27,16 +27,19 @@ requireToken('prepare','canonicalFingerprint','production fingerprinting');
 requireToken('prepare','fingerprints.get(app.slug)','registry fingerprinting');
 requireToken('blazonBootstrap','requestAnimationFrame','Blazon startup boundary');
 requireToken('progressionRuntime','requestAnimationFrame','Blazon progression runtime');
+requireToken('progressionRuntime','allowNativeSeal','Blazon native seal transition');
+requireToken('progressionRuntime',"addEventListener('close'",'Blazon seal cleanup');
 requireToken('compositionRuntime','requestAnimationFrame','Blazon composition runtime');
 
 if(files.updater.includes('verifyServerRelease'))errors.push('Updater must not reread HTML, config and worker source per application');
 if(files.guard.includes('XMLHttpRequest'))errors.push('Release guard must not block startup with synchronous XHR');
 if(files.progressionRuntime.includes('queueMicrotask'))errors.push('Progression runtime must not create a microtask mutation loop');
+if(files.progressionRuntime.includes('button.click()'))errors.push('Progression runtime must not recursively synthesize the charter seal click');
 if(files.compositionRuntime.includes('queueMicrotask'))errors.push('Composition runtime must not create a microtask mutation loop');
 if(files.progressionRuntime.includes("observe(document.body"))errors.push('Progression runtime must observe only owned containers');
 if(files.compositionRuntime.includes("observe(document.body"))errors.push('Composition runtime must observe only owned containers');
-if(files.progressionRuntime.includes(".menu-screen footer"))errors.push('Progression runtime must not rewrite the release footer');
-if(files.compositionRuntime.includes(".menu-screen footer"))errors.push('Composition runtime must not rewrite the release footer');
+if(files.progressionRuntime.includes('.menu-screen footer'))errors.push('Progression runtime must not rewrite the release footer');
+if(files.compositionRuntime.includes('.menu-screen footer'))errors.push('Composition runtime must not rewrite the release footer');
 if(files.blazonEngine.includes('menu-input-hotfix.js'))errors.push('Blazon engine must not load optional UI modules');
 
 if(errors.length){
