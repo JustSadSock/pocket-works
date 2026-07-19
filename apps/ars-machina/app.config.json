@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "ars-machina",
+  "name": "ARS MACHINA",
+  "shortName": "ARS MACHINA",
+  "description": "Средневековая 2D-песочница для сборки работающих машин из балок, колёс, шестерён, тросов, пружин и лебёдок.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-19",
+  "releaseDateTime": "2026-07-19T13:30:00+03:00",
+  "changelog": [
+    "Запущен полноценный мобильный конструктор с сеточным монтажом и физическим режимом испытаний.",
+    "Добавлены балки, шарниры, опоры, колёса, шестерни, моторы, блоки, тросы, пружины, лебёдки, противовесы, защёлки и снаряды.",
+    "Встроены редактируемые стартовые чертежи зубчатой телеги и малого требушета.",
+    "Чертёж автоматически сохраняется, поддерживает отмену действий и работает офлайн."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#b6863e",
+  "backgroundColor": "#34271c",
+  "themeColor": "#2c241b",
+  "orientation": "any",
+  "cacheName": "ars-machina-v1.0.0-p2",
+  "storageNamespace": "pocket-works:ars-machina",
+  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ropes", "springs", "vehicles", "catapult", "canvas", "mobile", "workshop"],
+  "order": 96
+}
