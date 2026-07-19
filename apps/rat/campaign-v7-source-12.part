@@ -1,0 +1,40 @@
+ updateBattleHud;
+  updateBattleHud = function updateBattleHudV7(dt) {
+    baseUpdateBattleHud(dt);
+    updateScenarioHud();
+    const icon = document.querySelector('#selectedIcon');
+    if (icon && selectedRegiment) icon.textContent = TYPE_ICONS[selectedRegiment.type] || '◆';
+  };
+
+  const baseRenderRegimentBar = renderRegimentBar;
+  renderRegimentBar = function renderRegimentBarV7() {
+    baseRenderRegimentBar();
+    document.querySelectorAll('#regimentBar .regiment-button[data-type]').forEach((button) => {
+      const regiment = simulation?.regiments.find((item) => item.id === button.dataset.regimentId);
+      const emblem = button.querySelector('.regiment-emblem');
+      if (regiment && emblem) emblem.firstChild.textContent = TYPE_ICONS[regiment.type] || '◆';
+      button.style.setProperty('--regiment-color', regiment?.appearance?.primary || '#c9653e');
+    });
+  };
+
+  const baseEndBattle = endBattle;
+  endBattle = function endBattleV7() {
+    const ended = simulation;
+    baseEndBattle();
+    requestAnimationFrame(() => {
+      if (!ended) return;
+      document.querySelectorAll('#resultReportV4 .result-regiments-v4 article[data-type]').forEach((article) => {
+        const type = article.dataset.type;
+        const icon = article.querySelector(':scope > span');
+        if (icon) icon.textContent = TYPE_ICONS[type] || '◆';
+      });
+      const text = document.querySelector('#resultText');
+      if (text && ended.scenarioId) text.textContent += ` Задача: ${SCENARIOS[ended.scenarioId].label.toLowerCase()}.`;
+    });
+  };
+
+  function updateManualV7() {
+    const list = document.querySelector('.manual-frame-v4 .rules-list');
+    if (list) list.innerHTML = `
+      <li><span>01</span><div><strong>Собери пять полков</strong><p>Типы можно повторять. Выбирай состав под задачу, а не по обязательному шаблону.</p></div></li>
+      <li><span>02</span><div><strong>Смотри на задачу боя</strong><p>Разгром, удержание холма, переправа и прорыв требуют разных построений.</p></div

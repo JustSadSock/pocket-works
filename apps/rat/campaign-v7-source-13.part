@@ -1,0 +1,24 @@
+></li>
+      <li><span>03</span><div><strong>Рельеф работает без меню</strong><p>Лес закрывает от стрел и тормозит конницу, грязь и брод замедляют движение, холм усиливает лучников.</p></div></li>
+      <li><span>04</span><div><strong>Приказы остаются редкими</strong><p>Выбирай полк прямо на поле и веди его жестом. Состав и местность создают тактику, а не новые кнопки.</p></div></li>`;
+    const troops = document.querySelector('[data-manual-panel="troops"]');
+    if (troops) troops.innerHTML = TYPES.map((type) => `<article data-type="${type}"><span>${TYPE_ICONS[type]}</span><div><strong>${TYPE_DATA[type].label}</strong><p>${TYPE_ROLES[type]}</p></div><b>${TYPE_DATA[type].count}</b></article>`).join('') + `<div class="counter-ring-v4"><span>КОПЬЯ › КОННИЦА</span><span>СЕКИРЫ › ЩИТЫ</span><span>МЕЧИ › ЛУКИ</span></div>`;
+    const kicker = document.querySelector('#rulesDialog .dialog-header span');
+    if (kicker) kicker.textContent = 'ПОЛЕВОЙ УСТАВ · 2.0';
+  }
+
+  installBuilder();
+  installScenarioHud();
+  renderHomeArmy();
+  updateManualV7();
+  const footerVersion = document.querySelector('.home-footer span:first-child');
+  if (footerVersion) footerVersion.textContent = 'РАТЬ · 2.0';
+  const settingsBuild = document.querySelector('.settings-build-v4 b');
+  if (settingsBuild) settingsBuild.textContent = 'BUILD 2.0.0';
+  const setupTitle = document.querySelector('#setupTitle');
+  if (setupTitle) setupTitle.textContent = 'СБОР РАТИ';
+  const updateScript = document.querySelector('script[data-update-manager]');
+  if (updateScript) updateScript.dataset.appVersion = VERSION;
+  document.body.dataset.ratCampaign = 'v7';
+  globalThis.__RAT_CAMPAIGN_V7_READY = true;
+})();

@@ -1,0 +1,40 @@
+торять</small></header>
+        <div id="deploymentSlotsV7" class="deployment-slots-v7"></div>
+      </section>
+      <section class="regiment-editor-v7">
+        <header id="regimentEditorHeadV7"></header>
+        <div class="type-picker-v7" id="typePickerV7"></div>
+        <div class="editor-grid-v7">
+          <div><small>СТРОЙ</small><div id="formationPickerV7" class="formation-picker-v7"></div></div>
+          <div><small>ЦВЕТ</small><div id="colorPickerV7" class="color-picker-v7"></div></div>
+          <div><small>ЗНАМЯ</small><div id="emblemPickerV7" class="emblem-picker-v7"></div></div>
+        </div>
+      </section>`;
+    footer.before(builder);
+    footer.classList.add('setup-footer-v7');
+    const summary = footer.querySelector('.setup-summary');
+    if (summary) summary.hidden = true;
+    renderBuilder();
+  }
+
+  function renderScenarios() {
+    const host = document.querySelector('#scenarioPickerV7');
+    if (!host) return;
+    host.innerHTML = Object.entries(SCENARIOS).map(([id, item]) => `<button type="button" data-scenario="${id}" aria-pressed="${armyState.scenario === id}"><b>${item.short}</b><span>${item.label}</span></button>`).join('');
+    host.querySelectorAll('[data-scenario]').forEach((button) => button.addEventListener('click', () => {
+      armyState.scenario = button.dataset.scenario;
+      saveArmy();
+      audio.click();
+      renderBuilder();
+    }));
+  }
+
+  function renderSlots() {
+    const host = document.querySelector('#deploymentSlotsV7');
+    if (!host) return;
+    host.innerHTML = armyState.setup.map((config, index) => {
+      const data = TYPE_DATA[config.type];
+      return `<button type="button" data-army-index="${index}" aria-pressed="${index === activeIndex}" style="--regiment:${config.appearance.primary}">
+        <span class="slot-code-v7">${SLOT_SHORT[config.slot]}</span>
+        <span class="soldier-group-v7">${tinySoldiers(config)}</span>
+        <span class="slot-caption-v7"><strong>${data.short}</strong><small>${FORMA

@@ -1,0 +1,104 @@
+ `reg-${index}`,
+      type: seed[index][0],
+      slot,
+      formation: seed[index][1],
+      appearance: appearanceFor(index)
+    }));
+  }
+
+  function migrateOldArmy(oldSetup) {
+    const defaults = fallbackArmy();
+    if (!Array.isArray(oldSetup) || !oldSetup.length) return defaults;
+    const oldBySlot = new Map(oldSetup.map((item) => [item.slot, item]));
+    return SLOTS.map((slot, index) => {
+      const legacySlot = slot === 'farLeft' || slot === 'farRight' ? null : oldBySlot.get(slot);
+      const source = legacySlot || defaults[index];
+      return {
+        id: `reg-${index}`,
+        type: TYPES.includes(source.type) ? source.type : defaults[index].type,
+        slot,
+        formation: FORMATIONS.includes(source.formation) ? source.formation : defaults[index].formation,
+        appearance: normalizeAppearance(source.appearance, index)
+      };
+    });
+  }
+
+  function loadArmyState() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ARMY_KEY) || 'null');
+      if (!parsed || !Array.isArray(parsed.setup) || parsed.setup.length !== 5) {
+        return { setup: migrateOldArmy(persistent.setup), scenario: 'random' };
+      }
+      return {
+        setup: SLOTS.map((slot, index) => {
+          const source = parsed.setup[index] || {};
+          return {
+            id: `reg-${index}`,
+            type: TYPES.includes(source.type) ? source.type : fallbackArmy()[index].type,
+            slot,
+            formation: FORMATIONS.includes(source.formation) ? source.formation : 'line',
+            appearance: normalizeAppearance(source.appearance, index)
+          };
+        }),
+        scenario: SCENARIOS[parsed.scenario] ? parsed.scenario : 'random'
+      };
+    } catch {
+      return { setup: migrateOldArmy(persistent.setup), scenario: 'random' };
+    }
+  }
+
+  let armyState = loadArmyState();
+  let activeIndex = 2;
+
+  function saveArmy() {
+    localStorage.setItem(ARMY_KEY, JSON.stringify(armyState));
+    persistent.setup = structuredClone(armyState.setup);
+    persistent.scenario = armyState.scenario;
+    saveState();
+  }
+
+  persistent.setup = structuredClone(armyState.setup);
+  persistent.scenario = armyState.scenario;
+  saveArmy();
+
+  const baseMatchup = matchupMultiplier;
+  matchupMultiplier = function matchupV7(attacker, defender) {
+    if (attacker === 'spears' && defender === 'cavalry') return 1.62;
+    if (attacker === 'cavalry' && defender === 'spears') return .62;
+    if (attacker === 'cavalry' && defender === 'archers') return 1.38;
+    if (attacker === 'archers' && defender === 'cavalry') return .78;
+    if (attacker === 'axes' && defender === 'shields') return 1.42;
+    if (attacker === 'shields' && defender === 'axes') return .72;
+    if (attacker === 'archers' && defender === 'shields') return .58;
+    if (attacker === 'shields' && defender === 'archers') return 1.1;
+    return baseMatchup(attacker, defender);
+  };
+
+  const BaseRegiment = Regiment;
+  Regiment = class RegimentV7 extends BaseRegiment {
+    constructor(config, team, slotIndex) {
+      super(config, team, slotIndex);
+      this.appearance = normalizeAppearance(config.appearance, slotIndex, team);
+      this.units.forEach((unit) => {
+        unit.originalType = config.type;
+        unit.chargeAt = -99;
+        if (config.type === 'shields') { unit.radius = 11.5; unit.mass = 1.45; }
+        if (config.type === 'axes') { unit.radius = 10.7; unit.mass = 1.15; }
+        if (config.type === 'cavalry') { unit.radius = 14.5; unit.mass = 1.75; }
+      });
+    }
+  };
+
+  function resolveScenario() {
+    if (armyState.scenario !== 'random') return armyState.scenario;
+    return choose(['clash', 'hill', 'crossing', 'breakthrough']);
+  }
+
+  function makeZones(id) {
+    if (id === 'hill') return [
+      { type: 'hill', x: 450, y: 590, r: 126 },
+      { type: 'forest', x: 175, y: 520, r: 105 },
+      { type: 'forest', x: 725, y: 675, r: 100 }
+    ];
+    if (id === 'crossing') return [
+      { type: 'river', x: 0, y: 520, w: 900, h: 150, bridgeX: 4

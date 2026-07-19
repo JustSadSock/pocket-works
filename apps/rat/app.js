@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 globalThis.__RAT_DEPS__ = { createWorkshopMode };
 
-const BUILD_VERSION = '1.6.1';
+const BUILD_VERSION = '2.0.0';
 const criticalParts = [
   './game-part-1.js',
   './game-part-2.js',
@@ -32,8 +32,9 @@ const criticalParts = [
 ];
 
 const enhancements = [
-  { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', label: 'экран построения' },
-  { src: './setup-redesign-v6-recovery.js', ready: '__RAT_SETUP_RECOVERY_READY', label: 'восстановление экрана построения' }
+  { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', error: '__RAT_SETUP_V6_ERROR', label: 'экран построения' },
+  { src: './setup-redesign-v6-recovery.js', ready: '__RAT_SETUP_RECOVERY_READY', label: 'восстановление экрана построения' },
+  { src: './campaign-v7.js', promise: '__RAT_CAMPAIGN_V7_PROMISE', ready: '__RAT_CAMPAIGN_V7_READY', error: '__RAT_CAMPAIGN_V7_ERROR', label: 'тактическое разнообразие' }
 ];
 
 function appendScript(src) {
@@ -81,7 +82,7 @@ function showStartupFailure(error) {
   shell.innerHTML = `
     <section style="min-height:100dvh;display:grid;place-content:center;gap:14px;padding:24px;background:#26352e;color:#f4ead0;text-align:center">
       <strong style="font:700 34px Georgia,serif">РАТЬ НЕ СОБРАЛАСЬ</strong>
-      <span style="max-width:360px;line-height:1.45">Не удалось запустить ядро игры. Сохранённая расстановка не удалена.</span>
+      <span style="max-width:360px;line-height:1.45">Не удалось запустить ядро игры. Сохранённая армия не удалена.</span>
       <button id="ratCacheRepair" type="button" style="min-height:48px;padding:12px 18px;border:1px solid #e4c987;background:#c66a3f;color:#fff4dc;font-weight:900">ОЧИСТИТЬ КЭШ И ПОВТОРИТЬ</button>
       <a href="../../" data-app-control style="color:#e4c987;font-weight:800">ВЫЙТИ В POCKET WORKS</a>
       <small style="opacity:.48">${String(error?.message || error || 'неизвестная ошибка')}</small>
@@ -105,8 +106,11 @@ try {
   for (const enhancement of enhancements) {
     try {
       await loadFreshWithFallback(enhancement.src);
+      if (enhancement.promise && globalThis[enhancement.promise]) {
+        await globalThis[enhancement.promise];
+      }
       if (!globalThis[enhancement.ready]) {
-        throw globalThis.__RAT_SETUP_V6_ERROR || new Error(`${enhancement.label} не подтвердил готовность`);
+        throw globalThis[enhancement.error] || new Error(`${enhancement.label} не подтвердил готовность`);
       }
     } catch (error) {
       console.error(`[РАТЬ] optional ${enhancement.label} disabled; using previous interface`, error);
