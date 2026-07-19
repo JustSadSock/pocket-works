@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2c241b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ARS MACHINA">
+  <title>ARS MACHINA</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="shelf-link" href="../../" data-app-control data-native-press>← Полка</a>
+      <div class="identity" aria-label="ARS MACHINA">
+        <span class="identity-mark" aria-hidden="true">AM</span>
+        <span><b>ARS MACHINA</b><small id="modeLabel">чертёжный двор</small></span>
+      </div>
+      <div class="top-actions">
+        <button id="blueprintsButton" type="button" data-native-press>Чертежи</button>
+        <button id="soundButton" class="square-button" type="button" aria-label="Звук" data-native-press>♪</button>
+        <button id="workshopButton" class="square-button" type="button" aria-label="Workshop" data-workshop-trigger data-native-press>⋮</button>
+      </div>
+    </header>
+
+    <section class="yard" aria-label="Поле механической песочницы">
+      <canvas id="world" data-gesture-surface data-touch-action="none" data-block-callout></canvas>
+      <div class="yard-note" id="yardNote" data-ui>Выбери деталь и коснись сетки</div>
+
+      <div class="history-controls" data-ui>
+        <button id="undoButton" class="square-button" type="button" aria-label="Отменить" data-native-press>↶</button>
+        <button id="redoButton" class="square-button" type="button" aria-label="Повторить" data-native-press>↷</button>
+      </div>
+
+      <div class="zoom-controls" data-ui>
+        <button id="zoomInButton" class="square-button" type="button" aria-label="Приблизить" data-native-press>＋</button>
+        <button id="zoomOutButton" class="square-button" type="button" aria-label="Отдалить" data-native-press>−</button>
+        <button id="homeButton" class="square-button" type="button" aria-label="Показать конструкцию" data-native-press>⌂</button>
+      </div>
+
+      <aside id="inspector" class="inspector" data-ui hidden>
+        <div>
+          <small id="inspectorKind">Деталь</small>
+          <strong id="inspectorName">Балка</strong>
+        </div>
+        <div class="inspector-actions">
+          <button id="inspectMinus" type="button" data-native-press>−</button>
+          <span id="inspectValue">—</span>
+          <button id="inspectPlus" type="button" data-native-press>＋</button>
+          <button id="inspectDelete" class="danger" type="button" data-native-press>Удалить</button>
+        </div>
+      </aside>
+    </section>
+
+    <section id="buildDock" class="build-dock" data-ui>
+      <div class="dock-head">
+        <div class="category-tabs" role="tablist" aria-label="Категории деталей">
+          <button class="category active" data-category="frame" type="button" data-native-press>Каркас</button>
+          <button class="category" data-category="drive" type="button" data-native-press>Привод</button>
+          <button class="category" data-category="rigging" type="button" data-native-press>Оснастка</button>
+          <button class="category" data-category="utility" type="button" data-native-press>Особое</button>
+        </div>
+        <button id="runButton" class="run-button" type="button" data-native-press><span>▶</span> Испытать</button>
+      </div>
+      <div id="toolRail" class="tool-rail" aria-label="Детали конструктора"></div>
+    </section>
+
+    <section id="runDock" class="run-dock" data-ui hidden>
+      <button id="backToBuildButton" class="stop-button" type="button" data-native-press>■ В мастерскую</button>
+      <div class="run-group" aria-label="Привод">
+        <button class="run-control" data-drive="-1" type="button" data-native-press>◀ Назад</button>
+        <button class="run-control" data-drive="0" type="button" data-native-press>Тормоз</button>
+        <button class="run-control" data-drive="1" type="button" data-native-press>Вперёд ▶</button>
+      </div>
+      <div class="run-group" aria-label="Механизмы">
+        <button id="winchOutButton" class="run-control" type="button" data-native-press>Лебёдка −</button>
+        <button id="fireButton" class="fire-button" type="button" data-native-press>СПУСК</button>
+        <button id="winchInButton" class="run-control" type="button" data-native-press>Лебёдка ＋</button>
+      </div>
+    </section>
+
+    <div id="blueprintSheet" class="sheet-backdrop" data-ui hidden>
+      <section class="blueprint-sheet" role="dialog" aria-modal="true" aria-labelledby="blueprintTitle">
+        <header>
+          <div>
+            <small>КНИГА ЧЕРТЕЖЕЙ</small>
+            <h2 id="blueprintTitle">С чего начать</h2>
+          </div>
+          <button id="closeBlueprints" class="square-button" type="button" aria-label="Закрыть" data-native-press>×</button>
+        </header>
+        <div class="blueprint-list">
+          <button class="blueprint" data-blueprint="cart" type="button" data-native-press>
+            <span class="blueprint-sketch cart-sketch" aria-hidden="true"></span>
+            <span><b>Зубчатая телега</b><small>Рама, колёса, мотор и передача. Уже едет.</small></span>
+          </button>
+          <button class="blueprint" data-blueprint="trebuchet" type="button" data-native-press>
+            <span class="blueprint-sketch trebuchet-sketch" aria-hidden="true"></span>
+            <span><b>Малый требушет</b><small>Противовес, защёлка и снаряд. Нажми «Спуск».</small></span>
+          </button>
+          <button class="blueprint" data-blueprint="blank" type="button" data-native-press>
+            <span class="blueprint-sketch blank-sketch" aria-hidden="true"></span>
+            <span><b>Чистый двор</b><small>Пустая сетка и полный ящик деталей.</small></span>
+          </button>
+        </div>
+        <p class="sheet-foot">Текущий чертёж сохраняется автоматически на устройстве.</p>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ARS MACHINA"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
