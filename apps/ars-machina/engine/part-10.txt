@@ -69,6 +69,7 @@ function normalizeJointStateV15() {
       if (b) b.jointMode = 'rigid';
     }
   }
+  for (const node of state.nodes) syncRotorLocksForNodeV15(node);
 }
 
 function removeLocalWeldsV15(node, beams) {
@@ -77,6 +78,29 @@ function removeLocalWeldsV15(node, beams) {
     if (joint.type !== 'weld' || !jointTouchesNodeV15(joint, node.id)) return true;
     return !(beamIds.has(joint.beamA) && beamIds.has(joint.beamB));
   });
+}
+
+function syncRotorLocksForNodeV15(node) {
+  if (!node) return;
+  const rigid = nodeJointModeV15(node) === 'rigid';
+  for (const rotor of state.rotors.filter((item) => item.nodeId === node.id)) {
+    if (!rigid) {
+      delete rotor.lockedToBeamId;
+      delete rotor.lockOffset;
+      delete rotor.lockWorldAngle;
+      continue;
+    }
+    const carrier = carrierBeamV15(node);
+    if (carrier) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+      delete rotor.lockWorldAngle;
+    } else {
+      rotor.lockedToBeamId = null;
+      rotor.lockWorldAngle = rotor.angle;
+    }
+    rotor.omega = 0;
+  }
 }
 
 function setNodeJointModeV15(node, mode) {
@@ -99,24 +123,7 @@ function setNodeJointModeV15(node, mode) {
       }
     }
   }
-  for (const rotor of state.rotors.filter((item) => item.nodeId === node.id)) {
-    if (next === 'free') {
-      delete rotor.lockedToBeamId;
-      delete rotor.lockOffset;
-      delete rotor.lockWorldAngle;
-    } else {
-      const carrier = carrierBeamV15(node);
-      if (carrier) {
-        rotor.lockedToBeamId = carrier.id;
-        rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
-        delete rotor.lockWorldAngle;
-      } else {
-        rotor.lockedToBeamId = null;
-        rotor.lockWorldAngle = rotor.angle;
-      }
-      rotor.omega = 0;
-    }
-  }
+  syncRotorLocksForNodeV15(node);
   return true;
 }
 
@@ -130,8 +137,11 @@ function setJointObjectModeV15(joint, mode) {
   if (beamA && beamB) joint.targetAngle = normalizeAngle(beamAngleV15(beamB) - beamAngleV15(beamA));
   const a = nodeById(joint.a);
   const b = nodeById(joint.b);
-  if (a) a.jointMode = rigid ? 'rigid' : 'free';
-  if (b) b.jointMode = rigid ? 'rigid' : 'free';
+  for (const node of [a, b]) {
+    if (!node) continue;
+    node.jointMode = state.joints.some((item) => item.type === 'weld' && jointTouchesNodeV15(item, node.id)) ? 'rigid' : 'free';
+    syncRotorLocksForNodeV15(node);
+  }
   return true;
 }
 
@@ -314,26 +324,33 @@ inspectorValue = function unifiedInspectorValueV15(selected, type) {
   return baseInspectorValueV15(selected, type);
 };
 
+function enforceLockedRotorV15(rotor, step) {
+  const node = nodeById(rotor?.nodeId);
+  if (!node || nodeJointModeV15(node) !== 'rigid') return false;
+  const carrier = carrierBeamV15(node);
+  if (carrier) {
+    if (rotor.lockedToBeamId !== carrier.id || !Number.isFinite(rotor.lockOffset)) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+    }
+    rotor.angle = beamAngleV15(carrier) + rotor.lockOffset;
+    rotor.omega = normalizeAngle(beamAngleV15(carrier) - beamPreviousAngleV15(carrier)) / Math.max(.35, step);
+  } else {
+    if (!Number.isFinite(rotor.lockWorldAngle)) rotor.lockWorldAngle = rotor.angle;
+    rotor.angle = rotor.lockWorldAngle;
+    rotor.omega = 0;
+  }
+  return true;
+}
+
+const baseDriveRotorsV15 = driveRotors;
+driveRotors = function driveRespectingRigidShaftsV15(step) {
+  baseDriveRotorsV15(step);
+  for (const rotor of state.rotors) enforceLockedRotorV15(rotor, step);
+};
+
 const baseUpdateRotorAnglesV15 = updateRotorAngles;
 updateRotorAngles = function updateLockedRotorsV15(step) {
   baseUpdateRotorAnglesV15(step);
-  for (const rotor of state.rotors) {
-    const node = nodeById(rotor.nodeId);
-    if (!node || nodeJointModeV15(node) !== 'rigid') continue;
-    const carrier = carrierBeamV15(node);
-    const previous = rotor.angle;
-    if (carrier) {
-      if (rotor.lockedToBeamId !== carrier.id || !Number.isFinite(rotor.lockOffset)) {
-        rotor.lockedToBeamId = carrier.id;
-        rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
-      }
-      const target = beamAngleV15(carrier) + rotor.lockOffset;
-      rotor.angle = target;
-      rotor.omega = normalizeAngle(beamAngleV15(carrier) - beamPreviousAngleV15(carrier)) / Math.max(.35, step);
-    } else {
-      if (!Number.isFinite(rotor.lockWorldAngle)) rotor.lockWorldAngle = rotor.angle;
-      rotor.angle = rotor.lockWorldAngle;
-      rotor.omega = normalizeAngle(rotor.angle - previous) / Math.max(.35, step);
-    }
-  }
+  for (const rotor of state.rotors) enforceLockedRotorV15(rotor, step);
 };
