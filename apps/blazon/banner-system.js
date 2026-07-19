@@ -40,7 +40,7 @@ function patchBattleBanner(){
   context.__blazonStandardPatched=true;
 
   const original={};
-  for(const name of['save','restore','beginPath','moveTo','lineTo','quadraticCurveTo','bezierCurveTo','closePath','fill','stroke','drawImage'])original[name]=context[name].bind(context);
+  for(const name of['save','restore','beginPath','moveTo','lineTo','quadraticCurveTo','bezierCurveTo','closePath','clip','fill','stroke','drawImage'])original[name]=context[name].bind(context);
   let internal=false,depth=0,ops=[],bannerDepth=0,suppressLegacyStroke=false;
 
   const call=(name,...args)=>{internal=true;try{return original[name](...args);}finally{internal=false;}};
