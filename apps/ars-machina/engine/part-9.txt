@@ -1,0 +1,244 @@
+const baseCreateRotorV14 = createRotor;
+createRotor = function createUniqueRotor(type, nodeId, options = {}) {
+  const existing = state.rotors.find((rotor) => rotor.nodeId === nodeId && rotor.type === type);
+  if (existing && !options.allowDuplicate) {
+    if (Number.isFinite(options.radius)) applyRotorSize(existing, options.radius);
+    existing.layer = Math.max(itemLayer(existing), options.layer ?? itemLayer(existing));
+    return existing;
+  }
+  return baseCreateRotorV14(type, nodeId, options);
+};
+
+const baseCreateAttachmentV14 = createAttachment;
+createAttachment = function createUniqueAttachment(type, nodeId, options = {}) {
+  const uniqueTypes = new Set(['motor', 'clutch', 'brake', 'ratchet', 'lever']);
+  const existing = uniqueTypes.has(type) ? state.attachments.find((item) => item.nodeId === nodeId && item.type === type) : null;
+  if (existing && !options.allowDuplicate) return existing;
+  return baseCreateAttachmentV14(type, nodeId, options);
+};
+
+function createActuator(a, b) {
+  const actuator = createConstraint('actuator', a.id, b.id, { stiffness: .92, width: 12, layer: Math.max(itemLayer(a), itemLayer(b)) + 1 });
+  if (!actuator) return null;
+  actuator.minLength = actuator.length;
+  actuator.stroke = .75;
+  actuator.maxLength = actuator.minLength * 1.75;
+  actuator.speed = 1.35;
+  actuator.channel = 'A';
+  return actuator;
+}
+
+const baseHandleBuildTapV14 = handleBuildTap;
+handleBuildTap = function handleReliableBuildTap(world) {
+  if (state.tool === 'actuator') {
+    if (!state.pendingNodeId) pushUndo();
+    const target = connectionPointAt(world, { create: true });
+    if (!target?.node) return invalidFeedback('Не удалось поставить крепление толкателя');
+    if (!state.pendingNodeId) {
+      state.pendingNodeId = target.node.id;
+      setYardNote('Первое крепление выбрано. Укажи второе.');
+      clickSound(320, .025);
+      saveSoon();
+      return;
+    }
+    if (state.pendingNodeId === target.node.id) return invalidFeedback('Толкателю нужна длина');
+    const first = nodeById(state.pendingNodeId);
+    const actuator = createActuator(first, target.node);
+    state.pendingNodeId = null;
+    if (!actuator) return invalidFeedback('Не удалось установить толкатель');
+    selectThing({ kind: 'constraint', id: actuator.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote('Толкатель готов. Контур A выдвигает его.', 1600);
+    return;
+  }
+
+  if (['clutch', 'brake', 'ratchet'].includes(state.tool)) {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Эта деталь ставится только на готовый вал');
+    const existing = state.attachments.find((item) => item.nodeId === target.node.id && item.type === state.tool);
+    if (existing) {
+      selectThing({ kind: 'attachment', id: existing.id });
+      setYardNote('Такая деталь уже стоит на валу.', 1100);
+      return;
+    }
+    pushUndo();
+    const attachment = createAttachment(state.tool, target.node.id, { amount: 1, layer: itemLayer(target.rotor) + 1 });
+    attachment.channel = 'A';
+    if (attachment.type === 'ratchet') attachment.direction = 1;
+    selectThing({ kind: 'attachment', id: attachment.id });
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+
+  if (['wheel', 'gear', 'winch', 'pulley', 'flywheel'].includes(state.tool)) {
+    const target = rotorTargetAt(world);
+    const existing = target && state.rotors.find((rotor) => rotor.nodeId === target.node.id && rotor.type === state.tool);
+    if (existing) {
+      selectThing({ kind: 'rotor', id: existing.id });
+      setYardNote('Эта деталь уже установлена. Размер меняется в инспекторе.', 1300);
+      return;
+    }
+  }
+
+  if (state.tool === 'motor') {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Мотор ставится только на готовый вал');
+    const existing = state.attachments.find((item) => item.nodeId === target.node.id && item.type === 'motor');
+    if (existing) {
+      selectThing({ kind: 'attachment', id: existing.id });
+      setYardNote('Мотор уже стоит на валу. Мощность меняется в инспекторе.', 1300);
+      return;
+    }
+    pushUndo();
+    const motor = createAttachment('motor', target.node.id, { amount: 1.6, layer: itemLayer(target.rotor) + 1 });
+    selectThing({ kind: 'attachment', id: motor.id });
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+
+  baseHandleBuildTapV14(world);
+};
+
+function updateActuators(dt) {
+  const step = clamp(dt / 16.6667, .35, 1.7);
+  for (const actuator of state.constraints.filter((constraint) => constraint.type === 'actuator' && constraint.active)) {
+    actuator.minLength = actuator.minLength || actuator.length;
+    actuator.maxLength = actuator.maxLength || actuator.minLength * 1.75;
+    const target = channelActive(controlChannel(actuator)) ? actuator.maxLength : actuator.minLength;
+    const speed = clamp(actuator.speed || 1.35, .3, 4) * step;
+    actuator.length += clamp(target - actuator.length, -speed, speed);
+  }
+}
+
+const baseSimulateV14 = simulate;
+simulate = function simulateWithActuators(dt) {
+  if (state.mode === 'run') updateActuators(dt);
+  baseSimulateV14(dt);
+};
+
+function drawActuator(a, b, actuator) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const centerX = (a.x + b.x) / 2;
+  const centerY = (a.y + b.y) / 2;
+  const active = channelActive(controlChannel(actuator));
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#2d2c29';
+  ctx.lineWidth = 13;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(centerX, centerY); ctx.stroke();
+  ctx.strokeStyle = active ? '#c09043' : '#82745d';
+  ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#ead4a0';
+  ctx.lineWidth = 2;
+  for (let offset = -length * .22; offset < length * .22; offset += 10) {
+    const x = centerX + ux * offset;
+    const y = centerY + uy * offset;
+    ctx.beginPath();
+    ctx.moveTo(x - uy * 5, y + ux * 5);
+    ctx.lineTo(x + uy * 5, y - ux * 5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = active ? '#b6863e' : '#3f5360';
+  ctx.beginPath(); ctx.arc(centerX, centerY, 7, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f3e1b6';
+  ctx.font = '900 8px ui-monospace, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(controlChannel(actuator), centerX, centerY + .5);
+  ctx.restore();
+}
+
+const baseDrawConstraintsV14 = drawConstraints;
+drawConstraints = function drawConstraintsWithActuator(layer = null) {
+  baseDrawConstraintsV14(layer);
+  for (const constraint of state.constraints) {
+    if (constraint.type !== 'actuator' || (layer !== null && itemLayer(constraint) !== layer)) continue;
+    if (!constraint.active && state.mode === 'run') continue;
+    const aNode = nodeById(constraint.a);
+    const bNode = nodeById(constraint.b);
+    if (!aNode || !bNode) continue;
+    drawActuator(worldToScreen(aNode.x, aNode.y), worldToScreen(bNode.x, bNode.y), constraint);
+  }
+};
+
+const baseDrawSelectionV14 = drawSelection;
+drawSelection = function drawRatioSelection() {
+  baseDrawSelectionV14();
+  if (state.mode !== 'build' || !state.selection) return;
+  const selected = getSelected();
+  let text = '';
+  let point = null;
+  if (state.selection.kind === 'constraint' && ['belt', 'chain'].includes(selected?.type)) {
+    text = ratioLabel(selected);
+    point = selectionWorld();
+  } else if (state.selection.kind === 'rotor' && selected?.type === 'gear') {
+    const peer = closestMeshedGear(selected);
+    const node = nodeById(selected.nodeId);
+    const peerNode = nodeById(peer?.nodeId);
+    if (peer && node && peerNode) {
+      text = `1:${(peer.radius / selected.radius).toFixed(2)} · выход ${(selected.radius / peer.radius).toFixed(2)}×`;
+      point = { x: (node.x + peerNode.x) / 2, y: (node.y + peerNode.y) / 2 };
+    }
+  }
+  if (!text || !point) return;
+  const screen = worldToScreen(point.x, point.y);
+  ctx.save();
+  ctx.font = '800 10px ui-monospace, monospace';
+  const badgeWidth = Math.min(260, ctx.measureText(text).width + 16);
+  const x = clamp(screen.x - badgeWidth / 2, 8, Math.max(8, width - badgeWidth - 8));
+  const y = screen.y - 34;
+  ctx.fillStyle = 'rgba(37,32,22,.9)';
+  ctx.strokeStyle = '#d1aa5e';
+  ctx.lineWidth = 1;
+  ctx.fillRect(x, y, badgeWidth, 24);
+  ctx.strokeRect(x, y, badgeWidth, 24);
+  ctx.fillStyle = '#f2dfb4';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + badgeWidth / 2, y + 12, badgeWidth - 10);
+  ctx.restore();
+};
+
+const baseUpdateSoundButtonV14 = updateSoundButton;
+updateSoundButton = function updateUnambiguousSoundButton() {
+  baseUpdateSoundButtonV14();
+  ui.soundButton.textContent = prefs.sound ? '♪' : '♪̸';
+  ui.soundButton.title = prefs.sound ? 'Звук включён' : 'Звук выключен';
+};
+
+const baseLoadBlueprintV14 = loadBlueprint;
+loadBlueprint = function loadBlueprintAsNewModel(name) {
+  const names = {
+    cart: 'Зубчатая телега',
+    trebuchet: 'Малый требушет',
+    transmission: 'Трансмиссионный стенд',
+    blank: 'Новая модель'
+  };
+  setCurrentModelIdentity(null, names[name] || 'Новая модель');
+  baseLoadBlueprintV14(name);
+};
+
+function addActuatorIconStylesHint() {
+  document.documentElement.dataset.arsMachinaVersion = '1.4.0';
+}
+
+window.addEventListener?.('resize', () => {
+  const nextSize = palettePageSize();
+  if (nextSize !== lastPalettePageSize) renderTools();
+});
+
+installModelLibraryUI();
+installPaletteNavigation();
+installInspectorExtras();
+renderTools();
+renderLibraryList();
+renderInspectorExtras();
+addActuatorIconStylesHint();
+updateSoundButton();
+inspectIncomingShare();
