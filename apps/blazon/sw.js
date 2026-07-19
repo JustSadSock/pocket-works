@@ -1,11 +1,11 @@
-const BUILD='5.5.0';
+const BUILD='5.6.0';
 const RELEASE_DATE='2026-07-19';
-const CACHE_NAME='blazon-v5.5.0';
+const CACHE_NAME='blazon-v5.6.0';
 const CACHE=CACHE_NAME;
 const FINGERPRINT=new URL(self.location.href).searchParams.get('pw_fp')||'';
 const REQUIRED=[
-  './','./index.html','./styles.css','./living-battle.css',
-  './app.js','./bootstrap.js','./engine.js','./core-engine.js','./spatial-core-engine.js','./progression-engine.js','./combat-clarity.js','./heraldry.js',
+  './','./index.html','./styles.css','./war-council.css','./living-battle.css',
+  './app.js','./war-council-runtime.js','./bootstrap.js','./engine.js','./core-engine.js','./spatial-core-engine.js','./progression-engine.js','./combat-clarity.js','./heraldry.js',
   './manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css',
   '../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/pwa-utils.js',
@@ -16,11 +16,11 @@ const OPTIONAL=[
   './progression-runtime.js','./armorial-composition-runtime.js','./release-indicator.js','./reset.html'
 ];
 const RELEASE_NOTES=[
-  'Боевой поиск, столкновения, мораль и захват знамени переведены на пространственную сетку.',
-  'Фон поля и малые геральдические фигуры кэшируются вместо повторной отрисовки с нуля.',
-  'Палитры армий и стабильные списки бойцов переиспользуются на протяжении всего боя.',
-  'При тяжёлом кадре эффекты, стрелы, подписи, тени и дрожание камеры автоматически упрощаются.',
-  'После стабилизации устройство само возвращает полную детализацию.'
+  'Главное меню превращено в походный военный штаб с тёмной тканью шатра, деревянным столом, локальным светом и материальным знаменем.',
+  'Создан единый визуальный фундамент из старой бронзы, почерневшего дерева, кожи, воска и приглушённого пергамента.',
+  'Основные, вторичные и малые кнопки получили физическую глубину, швы, металлические кромки и полноценные состояния нажатия и фокуса.',
+  'Экран доктрины, окна выбора и базовый боевой интерфейс приведены к более тёмному и цельному средневековому языку.',
+  'Добавлены тихие микроанимации знамени, световые блики и адаптация композиции для мобильных и широких экранов.'
 ];
 
 async function fetchRelease(path,timeout=12000){
