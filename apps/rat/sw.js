@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'rat-';
-const CACHE_NAME = 'rat-v1.6.0';
-const APP_VERSION = '1.6.0';
+const CACHE_NAME = 'rat-v1.6.1';
+const APP_VERSION = '1.6.1';
 const RELEASE_NOTES = [
-  'Экран построения полностью пересобран вокруг большого поля расстановки и одного выбранного полка.',
-  'Абстрактные точки на схеме заменены пиксельными солдатами с разным оружием для мечников, копейщиков и лучников.',
-  'Полки выбираются компактной нижней лентой, а строй и позиция меняются в одном общем блоке без дублирования интерфейса.',
-  'Добавлены четыре готовые схемы построения: ровная, центр, левый удар и оборона.'
+  'Исправлен аварийный запуск после обновления экрана построения.',
+  'Новый экран построения теперь является необязательным улучшением: при ошибке игра откатывается на предыдущий рабочий интерфейс.',
+  'Скрипты и стили загружаются по network-first стратегии, чтобы старый app.js не смешивался с новыми файлами.',
+  'Добавлена безопасная очистка кэша без удаления сохранённой расстановки.'
 ];
 const APP_SHELL = [
   './',
@@ -40,6 +40,7 @@ const APP_SHELL = [
   './screen-redesign-v5.js',
   './screen-redesign-v5-fix.js',
   './setup-redesign-v6.js',
+  './setup-redesign-v6-recovery.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
@@ -51,7 +52,11 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -72,14 +77,36 @@ self.addEventListener('message', (event) => {
   }
 });
 
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response && response.status === 200 && response.type !== 'opaque') cache.put(request, response.clone());
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response && response.status === 200 && response.type !== 'opaque') {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const destination = event.request.destination;
+  const isAppCode = destination === 'script' || destination === 'style' || destination === 'document' || event.request.mode === 'navigate';
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      if (!response || response.status !== 200 || response.type === 'opaque') return response;
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-      return response;
-    }).catch(() => caches.match('./index.html')))
+    (isAppCode ? networkFirst(event.request) : cacheFirst(event.request))
+      .catch(() => caches.match('./index.html'))
   );
 });
