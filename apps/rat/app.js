@@ -27,7 +27,8 @@ const parts = [
   './shell-ui-v4.js',
   './shell-ui-v4-fix.js',
   './screen-redesign-v5.js',
-  './screen-redesign-v5-fix.js'
+  './screen-redesign-v5-fix.js',
+  './setup-redesign-v6.js'
 ];
 
 try {
@@ -55,6 +56,9 @@ try {
   }
   if (!globalThis.__RAT_SCREEN_V5_READY || !globalThis.__RAT_SCREEN_V5_FIXED) {
     throw new Error('Новая композиция экранов не загрузилась полностью');
+  }
+  if (!globalThis.__RAT_SETUP_V6_READY) {
+    throw new Error('Новый экран построения не загрузился полностью');
   }
 } catch (error) {
   console.error('[РАТЬ] startup failed', error);
