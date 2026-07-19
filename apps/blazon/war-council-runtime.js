@@ -9,6 +9,8 @@ if(standard&&!standard.querySelector('.standard-crossbar')){
 
 const footer=document.querySelector('.menu-screen footer');
 if(footer)footer.textContent=`v${RELEASE} · war council`;
+const workshopTitle=document.querySelector('.workshop-mode #workshop-title');
+if(workshopTitle)workshopTitle.textContent=workshopTitle.textContent.replace(/5\.5\.0\b/,RELEASE);
 
 const controls=[...document.querySelectorAll('button,.topbar a')];
 for(const control of controls){
@@ -36,11 +38,9 @@ if(menu&&!reduceMotion.matches){
   },{passive:true});
 }
 
-const observer=new MutationObserver(()=>{
-  const continueButton=document.querySelector('#continueButton');
-  if(menu)menu.classList.toggle('has-campaign',Boolean(continueButton&&!continueButton.hidden));
-});
-observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','class']});
-observer.takeRecords();
 const continueButton=document.querySelector('#continueButton');
-if(menu)menu.classList.toggle('has-campaign',Boolean(continueButton&&!continueButton.hidden));
+const syncCampaignState=()=>{
+  if(menu)menu.classList.toggle('has-campaign',Boolean(continueButton&&!continueButton.hidden));
+};
+if(continueButton)new MutationObserver(syncCampaignState).observe(continueButton,{attributes:true,attributeFilter:['hidden']});
+syncCampaignState();
