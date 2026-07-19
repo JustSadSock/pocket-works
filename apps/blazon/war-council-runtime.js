@@ -1,4 +1,4 @@
-const RELEASE='5.6.0';
+const RELEASE='5.7.0';
 const root=document.documentElement;
 root.dataset.blazonArt='war-council';
 
@@ -8,9 +8,9 @@ if(standard&&!standard.querySelector('.standard-crossbar')){
 }
 
 const footer=document.querySelector('.menu-screen footer');
-if(footer)footer.textContent=`v${RELEASE} · war council`;
+if(footer&&!footer.textContent.includes('living standards'))footer.textContent=`v${RELEASE} · living standards`;
 const workshopTitle=document.querySelector('.workshop-mode #workshop-title');
-if(workshopTitle)workshopTitle.textContent=workshopTitle.textContent.replace(/5\.5\.0\b/,RELEASE);
+if(workshopTitle)workshopTitle.textContent=workshopTitle.textContent.replace(/5\.[0-9]+\.[0-9]+\b/,RELEASE);
 
 const controls=[...document.querySelectorAll('button,.topbar a')];
 for(const control of controls){
