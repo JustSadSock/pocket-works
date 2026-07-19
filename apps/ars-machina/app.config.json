@@ -4,15 +4,15 @@
   "slug": "ars-machina",
   "name": "ARS MACHINA",
   "shortName": "ARS MACHINA",
-  "description": "Мобильная 2D-песочница для сборки и обмена работающими механизмами с шестернями, передачами, приводами и настраиваемыми деталями.",
-  "version": "1.4.0",
+  "description": "Мобильная 2D-песочница для сборки и обмена механизмами с едиными свободными и жёсткими креплениями, передачами и наглядной механикой.",
+  "version": "1.5.0",
   "releaseDate": "2026-07-19",
-  "releaseDateTime": "2026-07-19T21:45:00+03:00",
+  "releaseDateTime": "2026-07-19T23:35:00+03:00",
   "changelog": [
-    "Панель деталей стала постраничной и двухрядной: все элементы привода доступны без скрытого бесконечного скролла, а категории всегда видны.",
-    "Инспектор получил понятные именованные настройки размеров, мощности, жёсткости, каналов и реальных передаточных чисел.",
-    "Добавлена библиотека моделей с именованными сохранениями, копиями, импортом и отправкой модели одной ссылкой или файлом.",
-    "Добавлен винтовой толкатель; установка моторов, муфт, тормозов и храповиков стала предсказуемой и больше не создаёт скрытые детали."
+    "Узел, шарнир и скоба объединены в один инструмент «Крепление» с режимами «Свободное» и «Жёсткое».",
+    "Жёсткое крепление фиксирует угол соединённых балок и блокирует вращение установленного на этом валу колеса, шестерни, барабана или маховика относительно рамы.",
+    "Инспектор позволяет менять тип крепления прямо у выбранного узла, соединения или вращающейся детали без перестройки конструкции.",
+    "Шестерни, колёса, лебёдки, блоки, маховики, ремни и цепи получили более читаемый механический визуал, состояние вала и анимацию передачи движения."
   ],
   "status": "active",
   "preset": "canvas",
@@ -20,8 +20,8 @@
   "backgroundColor": "#34271c",
   "themeColor": "#2c241b",
   "orientation": "any",
-  "cacheName": "ars-machina-v1.4.0-p3",
+  "cacheName": "ars-machina-v1.5.0-p4",
   "storageNamespace": "pocket-works:ars-machina",
-  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ratios", "rack and pinion", "belts", "chains", "flywheel", "clutch", "brake", "ratchet", "actuator", "controls", "model library", "sharing", "import", "export", "canvas", "mobile", "workshop", "joints", "layers", "mounts"],
+  "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "medieval", "construction", "gears", "ratios", "rack and pinion", "belts", "chains", "flywheel", "clutch", "brake", "ratchet", "actuator", "controls", "model library", "sharing", "canvas", "mobile", "unified joints", "rigid axle", "free axle", "mounts"],
   "order": 96
 }
