@@ -1,5 +1,12 @@
 const CACHE_PREFIX = 'rat-';
 const CACHE_NAME = 'rat-v1.4.0';
+const APP_VERSION = '1.4.0';
+const RELEASE_NOTES = [
+  'Главное меню и штабной стол полностью пересобраны.',
+  'Устав, настройки и пауза получили законченный полевой интерфейс.',
+  'После боя теперь показывается ведомость по каждому полку.',
+  'Добавлены адаптации для коротких и узких экранов.'
+];
 const APP_SHELL = [
   './',
   './index.html',
@@ -47,6 +54,16 @@ self.addEventListener('activate', (event) => {
       keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))
     )).then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+  if (event.data?.type === 'GET_UPDATE_INFO') {
+    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseNotes: RELEASE_NOTES });
+  }
 });
 
 self.addEventListener('fetch', (event) => {
