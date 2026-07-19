@@ -1,4 +1,4 @@
-const BUILD='5.7.0';
+const BUILD='5.8.0';
 const isCore=new URL(import.meta.url).searchParams.has('core');
 const selected=await import(isCore?`./spatial-core-engine.js?pw_release=${BUILD}`:`./progression-engine.js?pw_release=${BUILD}`);
 const clarity=isCore?null:await import(`./combat-clarity.js?pw_release=${BUILD}`);

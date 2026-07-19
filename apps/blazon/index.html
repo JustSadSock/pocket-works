@@ -8,39 +8,157 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>БЛАЗОН: Доктрина</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.7.0">
-  <link rel="icon" href="./icons/icon.svg?v=5.7.0" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.8.0">
+  <link rel="icon" href="./icons/icon.svg?v=5.8.0" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=5.7.0">
-  <link rel="stylesheet" href="./war-council.css?v=5.7.0">
-  <link rel="stylesheet" href="./heraldry-v2.css?v=5.7.0">
+  <link rel="stylesheet" href="./styles.css?v=5.8.0">
+  <link rel="stylesheet" href="./war-council.css?v=5.8.0">
+  <link rel="stylesheet" href="./heraldry-v2.css?v=5.8.0">
+  <link rel="stylesheet" href="./campaign-command.css?v=5.8.0">
 </head>
 <body data-fullscreen-app>
   <svg class="symbol-library" aria-hidden="true">
     <defs>
-      <symbol id="charge-lion" viewBox="0 0 120 120"><path class="woodcut-body" d="M67 11c13 0 23 10 21 23 12 0 21 7 24 17-9-4-17-3-24 3l-8 10 13 9-7 15-14-8-8 13 7 21H53l-5-24-12 13 2 16H20l-2-25 18-23-10-13 8-11 14 8 11-8 1-18 7-8Z"/><path class="woodcut-body" d="M45 48C25 45 14 31 17 12c13 2 25 11 31 25l-3 11Z"/><path class="woodcut-body" d="M39 72 18 91l6 17 12-2 3-34ZM71 79l19 18-2 15H73l-2-33Z"/><path class="woodcut-cut" d="M62 30 76 42 65 52M47 59c11-5 22-2 30 6M51 76l13-7M82 28c6-8 14-10 22-5-7 2-11 6-13 13"/><path class="woodcut-fine" d="M34 24c4 8 8 13 15 16M23 91l12 2M78 96l11 2"/><circle class="woodcut-void" cx="75" cy="30" r="3.4"/></symbol>
-      <symbol id="charge-boar" viewBox="0 0 120 120"><path class="woodcut-body" d="M10 63 27 35l31-17 33 8 18 21-4 31-28 22-39-2-24-14-4-21Z"/><path class="woodcut-body" d="m91 43 23-6-10 20 13 9-22 5-9-17 5-11Z"/><path class="woodcut-body" d="M29 36 17 13l25 15-13 8ZM35 91l-4 23h17l6-20-19-3ZM82 91l7 23h17l-8-28-16 5Z"/><path class="woodcut-cut" d="M41 34c13-7 31-6 44 4M35 54c15-6 34-5 51 4M39 76c15 6 31 6 47-1M97 60c7 5 13 4 18-1"/><path class="woodcut-fine" d="m46 30 7 9m8-13 5 10m8-5 5 9"/><circle class="woodcut-void" cx="91" cy="47" r="3.4"/></symbol>
-      <symbol id="charge-tower" viewBox="0 0 120 120"><path class="woodcut-body" d="M11 22h20V10h17v12h24V10h17v12h20v28l-9 8v52H20V58l-9-8V22Z"/><path class="woodcut-void" d="M48 78c0-17 24-17 24 0v32H48V78ZM31 42h12v16H31zM54 42h12v16H54zM77 42h12v16H77z"/><path class="woodcut-cut" d="M21 64h79M21 91h27m24 0h28M26 31h68"/><path class="woodcut-fine" d="M28 69h15m34 0h15M29 99h13m36 0h13M35 23v9m21-9v9m28-9v9"/></symbol>
-      <symbol id="charge-stag" viewBox="0 0 120 120"><path class="woodcut-body" d="M18 76c8-20 24-32 45-31l16 1 9-13 13 4-5 19c10 9 13 23 7 37H84l-8-20-18 3-7 34H34l3-34-19 0Z"/><path class="woodcut-body" d="M82 43c-5-10-3-19 5-27l10 4-4 22-11 1Z"/><path class="woodcut-body" d="M42 74 20 101l7 12h14l5-38-4-1ZM78 75l18 28-3 11H78l-5-38 5-1Z"/><path class="woodcut-cut" d="M89 24C85 12 89 5 99 1M92 18 80 7M95 13l12-9M98 31c5-12 12-19 22-22M101 23l14-2M47 58c13-5 27-4 40 2"/><path class="woodcut-fine" d="M38 100h8m40 2h9M31 78c8 2 15 2 23-1"/><circle class="woodcut-void" cx="92" cy="40" r="3.2"/></symbol>
-      <symbol id="charge-eagle" viewBox="0 0 120 120"><path class="woodcut-body" d="M57 35C45 18 25 9 4 13l16 11-18 5 20 10-17 9 27 7-14 12 31 5 11-27-3-10ZM63 35C75 18 95 9 116 13l-16 11 18 5-20 10 17 9-27 7 14 12-31 5-11-27 3-10Z"/><path class="woodcut-body" d="M50 36c-7 17-5 34 4 48l-15 29 21-10 21 10-15-29c9-14 11-31 4-48L60 27 50 36Z"/><path class="woodcut-body" d="M62 27c6-10 17-12 26-5l-12 6 13 5-19 8-8-14Z"/><path class="woodcut-cut" d="M18 26 47 42M13 42l34 10M18 57l29 4M102 26 73 42M107 42 73 52M102 57l-29 4M51 77h18"/><path class="woodcut-fine" d="m49 101 11-6 11 6M55 48l5 7 5-7"/><circle class="woodcut-void" cx="74" cy="27" r="3"/></symbol>
-      <symbol id="charge-rose" viewBox="0 0 120 120"><path class="woodcut-body" d="M60 8c16-10 31 5 24 21 18-4 30 13 20 28 16 8 11 31-7 34 0 18-22 26-34 12-12 14-34 6-34-12-18-3-23-26-7-34-10-15 2-32 20-28C29 13 44-2 60 8Z"/><path class="woodcut-void" d="M60 37c15 0 25 10 25 23S75 84 60 84 35 73 35 60s10-23 25-23Z"/><path class="woodcut-body" d="M60 46c9 0 15 6 15 14s-6 14-15 14-15-6-15-14 6-14 15-14Z"/><path class="woodcut-cut" d="M60 13v24M93 28 76 44m31 16H84M94 93 76 76M60 108V84M26 93l18-17M13 60h23M27 27l17 17"/><circle class="woodcut-void" cx="60" cy="60" r="6"/></symbol>
-      <symbol id="charge-key" viewBox="0 0 120 120"><path class="woodcut-body" d="M33 8a28 28 0 1 0 20 48l18 18-9 9 10 10 9-9 10 10 21-21-50-50A28 28 0 0 0 33 8Zm0 17a11 11 0 1 1 0 22 11 11 0 0 1 0-22Z"/><path class="woodcut-cut" d="m55 58 38-38M70 75l18-18M84 89l15-15"/><path class="woodcut-fine" d="M18 20c9-9 23-10 34-3M14 47c7 11 19 16 31 13"/></symbol>
-      <symbol id="charge-sun" viewBox="0 0 120 120"><path class="woodcut-body" d="m60 2 9 25 20-18-3 27 28-4-21 21 26 9-27 9 18 21-28-4 3 28-20-21-10 25-9-26-21 18 4-27-28 3 21-20-26-10 27-8L9 26l28 5-2-28 20 21L60 2Z"/><circle class="woodcut-body" cx="60" cy="60" r="25"/><path class="woodcut-cut" d="M47 55c8-6 18-6 26 0M48 69c8 8 16 8 24 0"/><path class="woodcut-fine" d="M44 45c10-9 23-11 34-3M41 81c12 8 27 8 39-1"/><circle class="woodcut-void" cx="51" cy="57" r="2.6"/><circle class="woodcut-void" cx="69" cy="57" r="2.6"/></symbol>
-      <symbol id="charge-crown" viewBox="0 0 120 120"><path class="woodcut-body" d="m9 36 29 22 22-43 22 43 29-22-12 62H21L9 36Zm17 68h68v13H26v-13Z"/><path class="woodcut-cut" d="M24 80h72M31 91h58M38 58l10 17m34-17L72 75M60 29v47"/><circle class="woodcut-body" cx="9" cy="34" r="7"/><circle class="woodcut-body" cx="60" cy="12" r="7"/><circle class="woodcut-body" cx="111" cy="34" r="7"/></symbol>
-      <symbol id="charge-helmet" viewBox="0 0 120 120"><path class="woodcut-body" d="M24 105V51c0-30 23-47 51-39 26 8 35 34 24 58l-21 35H24Zm20-21h32l12-22H44v22Zm0-41h49c-5-15-15-22-29-22-12 0-19 8-20 22Z"/><path class="woodcut-body" d="M38 106h57v11H38z"/><path class="woodcut-cut" d="M45 62h42M45 70h35M61 44v18M76 44v18"/><path class="woodcut-fine" d="M35 50c2-19 13-31 31-35M35 94h43"/></symbol>
+      <symbol id="charge-lion" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M67 11c13 0 23 10 21 23 12 0 21 7 24 17-9-4-17-3-24 3l-8 10 13 9-7 15-14-8-8 13 7 21H53l-5-24-12 13 2 16H20l-2-25 18-23-10-13 8-11 14 8 11-8 1-18 7-8Z"/>
+        <path class="woodcut-body" d="M45 48C25 45 14 31 17 12c13 2 25 11 31 25l-3 11Z"/>
+        <path class="woodcut-body" d="M39 72 18 91l6 17 12-2 3-34ZM71 79l19 18-2 15H73l-2-33Z"/>
+        <path class="woodcut-cut" d="M62 30 76 42 65 52M47 59c11-5 22-2 30 6M51 76l13-7M82 28c6-8 14-10 22-5-7 2-11 6-13 13"/>
+        <path class="woodcut-fine" d="M34 24c4 8 8 13 15 16M23 91l12 2M78 96l11 2"/>
+        <circle class="woodcut-void" cx="75" cy="30" r="3.4"/>
+      </symbol>
+      <symbol id="charge-boar" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M10 63 27 35l31-17 33 8 18 21-4 31-28 22-39-2-24-14-4-21Z"/>
+        <path class="woodcut-body" d="m91 43 23-6-10 20 13 9-22 5-9-17 5-11Z"/>
+        <path class="woodcut-body" d="M29 36 17 13l25 15-13 8ZM35 91l-4 23h17l6-20-19-3ZM82 91l7 23h17l-8-28-16 5Z"/>
+        <path class="woodcut-cut" d="M41 34c13-7 31-6 44 4M35 54c15-6 34-5 51 4M39 76c15 6 31 6 47-1M97 60c7 5 13 4 18-1"/>
+        <path class="woodcut-fine" d="m46 30 7 9m8-13 5 10m8-5 5 9"/>
+        <circle class="woodcut-void" cx="91" cy="47" r="3.4"/>
+      </symbol>
+      <symbol id="charge-tower" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M11 22h20V10h17v12h24V10h17v12h20v28l-9 8v52H20V58l-9-8V22Z"/>
+        <path class="woodcut-void" d="M48 78c0-17 24-17 24 0v32H48V78ZM31 42h12v16H31zM54 42h12v16H54zM77 42h12v16H77z"/>
+        <path class="woodcut-cut" d="M21 64h79M21 91h27m24 0h28M26 31h68"/>
+        <path class="woodcut-fine" d="M28 69h15m34 0h15M29 99h13m36 0h13M35 23v9m21-9v9m28-9v9"/>
+      </symbol>
+      <symbol id="charge-stag" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M18 76c8-20 24-32 45-31l16 1 9-13 13 4-5 19c10 9 13 23 7 37H84l-8-20-18 3-7 34H34l3-34-19 0Z"/>
+        <path class="woodcut-body" d="M82 43c-5-10-3-19 5-27l10 4-4 22-11 1Z"/>
+        <path class="woodcut-body" d="M42 74 20 101l7 12h14l5-38-4-1ZM78 75l18 28-3 11H78l-5-38 5-1Z"/>
+        <path class="woodcut-cut" d="M89 24C85 12 89 5 99 1M92 18 80 7M95 13l12-9M98 31c5-12 12-19 22-22M101 23l14-2M47 58c13-5 27-4 40 2"/>
+        <path class="woodcut-fine" d="M38 100h8m40 2h9M31 78c8 2 15 2 23-1"/>
+        <circle class="woodcut-void" cx="92" cy="40" r="3.2"/>
+      </symbol>
+      <symbol id="charge-eagle" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M57 35C45 18 25 9 4 13l16 11-18 5 20 10-17 9 27 7-14 12 31 5 11-27-3-10ZM63 35C75 18 95 9 116 13l-16 11 18 5-20 10 17 9-27 7 14 12-31 5-11-27 3-10Z"/>
+        <path class="woodcut-body" d="M50 36c-7 17-5 34 4 48l-15 29 21-10 21 10-15-29c9-14 11-31 4-48L60 27 50 36Z"/>
+        <path class="woodcut-body" d="M62 27c6-10 17-12 26-5l-12 6 13 5-19 8-8-14Z"/>
+        <path class="woodcut-cut" d="M18 26 47 42M13 42l34 10M18 57l29 4M102 26 73 42M107 42 73 52M102 57l-29 4M51 77h18"/>
+        <path class="woodcut-fine" d="m49 101 11-6 11 6M55 48l5 7 5-7"/>
+        <circle class="woodcut-void" cx="74" cy="27" r="3"/>
+      </symbol>
+      <symbol id="charge-rose" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M60 8c16-10 31 5 24 21 18-4 30 13 20 28 16 8 11 31-7 34 0 18-22 26-34 12-12 14-34 6-34-12-18-3-23-26-7-34-10-15 2-32 20-28C29 13 44-2 60 8Z"/>
+        <path class="woodcut-void" d="M60 37c15 0 25 10 25 23S75 84 60 84 35 73 35 60s10-23 25-23Z"/>
+        <path class="woodcut-body" d="M60 46c9 0 15 6 15 14s-6 14-15 14-15-6-15-14 6-14 15-14Z"/>
+        <path class="woodcut-cut" d="M60 13v24M93 28 76 44m31 16H84M94 93 76 76M60 108V84M26 93l18-17M13 60h23M27 27l17 17"/>
+        <circle class="woodcut-void" cx="60" cy="60" r="6"/>
+      </symbol>
+      <symbol id="charge-key" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M33 8a28 28 0 1 0 20 48l18 18-9 9 10 10 9-9 10 10 21-21-50-50A28 28 0 0 0 33 8Zm0 17a11 11 0 1 1 0 22 11 11 0 0 1 0-22Z"/>
+        <path class="woodcut-cut" d="m55 58 38-38M70 75l18-18M84 89l15-15"/>
+        <path class="woodcut-fine" d="M18 20c9-9 23-10 34-3M14 47c7 11 19 16 31 13"/>
+      </symbol>
+      <symbol id="charge-sun" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="m60 2 9 25 20-18-3 27 28-4-21 21 26 9-27 9 18 21-28-4 3 28-20-21-10 25-9-26-21 18 4-27-28 3 21-20-26-10 27-8L9 26l28 5-2-28 20 21L60 2Z"/>
+        <circle class="woodcut-body" cx="60" cy="60" r="25"/>
+        <path class="woodcut-cut" d="M47 55c8-6 18-6 26 0M48 69c8 8 16 8 24 0"/>
+        <path class="woodcut-fine" d="M44 45c10-9 23-11 34-3M41 81c12 8 27 8 39-1"/>
+        <circle class="woodcut-void" cx="51" cy="57" r="2.6"/>
+        <circle class="woodcut-void" cx="69" cy="57" r="2.6"/>
+      </symbol>
+      <symbol id="charge-crown" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="m9 36 29 22 22-43 22 43 29-22-12 62H21L9 36Zm17 68h68v13H26v-13Z"/>
+        <path class="woodcut-cut" d="M24 80h72M31 91h58M38 58l10 17m34-17L72 75M60 29v47"/>
+        <circle class="woodcut-body" cx="9" cy="34" r="7"/>
+        <circle class="woodcut-body" cx="60" cy="12" r="7"/>
+        <circle class="woodcut-body" cx="111" cy="34" r="7"/>
+      </symbol>
+      <symbol id="charge-helmet" viewBox="0 0 120 120">
+        <path class="woodcut-body" d="M24 105V51c0-30 23-47 51-39 26 8 35 34 24 58l-21 35H24Zm20-21h32l12-22H44v22Zm0-41h49c-5-15-15-22-29-22-12 0-19 8-20 22Z"/>
+        <path class="woodcut-body" d="M38 106h57v11H38z"/>
+        <path class="woodcut-cut" d="M45 62h42M45 70h35M61 44v18M76 44v18"/>
+        <path class="woodcut-fine" d="M35 50c2-19 13-31 31-35M35 94h43"/>
+      </symbol>
     </defs>
   </svg>
+
   <main class="app-shell" data-app-shell>
-    <section class="screen menu-screen is-active" id="menuScreen"><div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div><header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header><div class="menu-standard" aria-hidden="true"><div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div></div><div class="menu-copy"><p>Походный устав живого фронта</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Начертай герб рода. Его фигуры станут приказами, а приказ — судьбой армии.</span></div><div class="menu-actions"><button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button><button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Четыре геральдические школы</small><b>→</b></button><div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div></div><footer>v5.7.0 · living standards</footer></section>
-    <section class="screen doctrine-screen" id="doctrineScreen"><header class="folio-header"><button id="doctrineMenuButton" type="button">Меню</button><div><span id="battleIndexLabel">БИТВА I ИЗ VI</span><strong>Совет перед полем</strong></div><button id="codexButton" type="button">Правила</button></header><div class="doctrine-layout"><section class="armorial-column player-column"><div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2><em id="playerSchoolName">Рыцарская школа</em></div><div class="full-achievement" id="playerAchievement"></div><div class="doctrine-ledger" id="playerLedger"></div></section><section class="battle-order"><div class="battle-seal"><b id="integrityMarks">◆◆◆</b><span>целостность рода</span></div><div class="equality-mark"><span>32</span><i>ратника</i><b>=</b><span>32</span></div><div class="equality-mark"><span>16</span><i>лучников</i><b>=</b><span>16</span></div><p>Одинаковое оружие, здоровье и численность. Разница — только в правилах поведения.</p><button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button></section><section class="armorial-column enemy-column"><div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2><em id="enemySchoolName">Имперская школа</em></div><div class="full-achievement enemy-achievement" id="enemyAchievement"></div><div class="doctrine-ledger" id="enemyLedger"></div></section></div></section>
-    <section class="screen battle-screen" id="battleScreen"><header class="battle-header"><button id="leaveBattleButton" type="button">Прервать</button><div><span id="battleClock">00:00</span><strong>ПОЛЕВАЯ БИТВА</strong></div><div class="speed-controls"><button data-speed="1" class="is-active">×1</button><button data-speed="2">×2</button><button data-speed="4">×4</button></div></header><section class="battlefield-wrap"><canvas id="battleCanvas" width="720" height="1120" aria-label="Автономное сражение двух равных армий"></canvas><div class="battle-hud player-hud"><div id="hudPlayerShield"></div><span>ТВОИ ВОИНЫ</span><b id="playerFormation">48</b></div><div class="battle-hud enemy-hud"><div id="hudEnemyShield"></div><span>ВРАЖЕСКИЕ</span><b id="enemyFormation">48</b></div><div class="rule-flash" id="ruleFlash" aria-live="polite"></div></section><footer class="battle-footer"><span hidden></span><button id="pauseSimulationButton" type="button">Пауза</button></footer></section>
+    <section class="screen menu-screen is-active" id="menuScreen">
+      <div class="menu-landscape" aria-hidden="true"><i></i><i></i><i></i></div>
+      <header class="topbar"><a href="../../" data-app-control>← Pocket Works</a><button id="soundButton" type="button">Звук: вкл</button></header>
+      <div class="menu-standard" aria-hidden="true"><div class="standard-finial">✦</div><div class="standard-cloth"><div id="menuHeraldry"></div></div><div class="standard-pole"></div></div>
+      <div class="menu-copy"><p>Походный устав живого фронта</p><h1>БЛАЗОН</h1><h2>DOCTRINA</h2><span>Начертай герб рода. Его фигуры станут приказами, а приказ — судьбой армии.</span></div>
+      <div class="menu-actions">
+        <button class="primary-button" id="continueButton" type="button" hidden><span>Продолжить поход</span><small id="continueCaption">Битва II из VI</small><b>→</b></button>
+        <button class="primary-button" id="newButton" type="button"><span>Начертать доктрину</span><small>Четыре геральдические школы</small><b>→</b></button>
+        <div class="minor-actions"><button id="rulesButton" type="button">Кратко о правилах</button><button type="button" data-workshop-trigger>Workshop</button></div>
+      </div>
+      <footer>v5.8.0 · campaign command</footer>
+    </section>
+
+    <section class="screen doctrine-screen" id="doctrineScreen">
+      <header class="folio-header"><button id="doctrineMenuButton" type="button">Меню</button><div><span id="battleIndexLabel">БИТВА I ИЗ VI</span><strong>Совет перед полем</strong></div><button id="codexButton" type="button">Правила</button></header>
+      <div class="doctrine-layout">
+        <section class="armorial-column player-column"><div class="column-heading"><span>ТВОЁ ЗНАМЯ</span><h2 id="playerDoctrineName">Безымянная доктрина</h2><em id="playerSchoolName">Рыцарская школа</em></div><div class="full-achievement" id="playerAchievement"></div><div class="doctrine-ledger" id="playerLedger"></div></section>
+        <section class="battle-order"><div class="battle-seal"><b id="integrityMarks">◆◆◆</b><span>целостность рода</span></div><div class="equality-mark"><span>32</span><i>ратника</i><b>=</b><span>32</span></div><div class="equality-mark"><span>16</span><i>лучников</i><b>=</b><span>16</span></div><p>Одинаковое оружие, здоровье и численность. Разница — только в правилах поведения.</p><button class="war-button" id="startBattleButton" type="button"><span>Поднять знамёна</span><small>После начала приказов не будет</small></button></section>
+        <section class="armorial-column enemy-column"><div class="column-heading"><span>ПРОТИВНИК</span><h2 id="enemyDoctrineName">Неизвестное знамя</h2><em id="enemySchoolName">Имперская школа</em></div><div class="full-achievement enemy-achievement" id="enemyAchievement"></div><div class="doctrine-ledger" id="enemyLedger"></div></section>
+      </div>
+    </section>
+
+    <section class="screen battle-screen" id="battleScreen">
+      <header class="battle-header"><button id="leaveBattleButton" type="button">Прервать</button><div><span id="battleClock">00:00</span><strong>ПОЛЕВАЯ БИТВА</strong></div><div class="speed-controls"><button data-speed="1" class="is-active">×1</button><button data-speed="2">×2</button><button data-speed="4">×4</button></div></header>
+      <section class="battlefield-wrap">
+        <canvas id="battleCanvas" width="720" height="1120" aria-label="Автономное сражение двух равных армий"></canvas>
+        <div class="battle-hud player-hud"><div id="hudPlayerShield"></div><span>ТВОИ ВОИНЫ</span><b id="playerFormation">48</b></div>
+        <div class="battle-hud enemy-hud"><div id="hudEnemyShield"></div><span>ВРАЖЕСКИЕ</span><b id="enemyFormation">48</b></div>
+        <div class="rule-flash" id="ruleFlash" aria-live="polite"></div>
+      </section>
+      <footer class="battle-footer"><span hidden></span><button id="pauseSimulationButton" type="button">Пауза</button></footer>
+    </section>
   </main>
-  <dialog class="sheet setup-sheet" id="setupDialog"><header><div><p>ОСНОВА ДОКТРИНЫ</p><h2>Задай темперамент и геральдическую школу</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header><section><h3>Поле · три роли цвета</h3><div class="choice-grid field-grid" id="fieldChoices"></div></section><section><h3>Ординарий · строй и визуальная школа</h3><div class="choice-grid ordinary-grid" id="ordinaryChoices"></div></section><button class="primary-button seal-setup" id="sealSetupButton" type="button" disabled><span>Скрепить первый устав</span><small>Оба слоя обязательны</small><b>→</b></button></dialog>
-  <dialog class="sheet rules-sheet" id="rulesDialog"><header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код и облик армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header><div class="rules-three"><article><b>1</b><div><h3>До боя</h3><p>Поле и ординарий задают замысел, форму построения и внешний язык рода.</p></div></article><article><b>2</b><div><h3>В бою</h3><p>Отряд выбирает цель, но каждый воин сам занимает место, держит соседа и вступает в контакт.</p></div></article><article><b>3</b><div><h3>После боя</h3><p>Новый слой меняет поведение армии и перестраивает весь герб.</p></div></article></div></dialog>
-  <dialog class="sheet result-sheet" id="resultDialog"><header><div><p id="resultEyebrow">БИТВА ЗАВЕРШЕНА</p><h2 id="resultTitle">Знамя устояло</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header><div class="result-measures" id="resultMeasures"></div><div class="tactical-log"><h3>Решающие срабатывания</h3><div id="decisiveEvents"></div></div><div class="result-actions"><button id="replayButton" type="button">Повторить тот же бой</button><button class="primary-button" id="continueResultButton" type="button"><span>Продолжить поход</span><small>Изменить доктрину</small><b>→</b></button></div></dialog>
-  <dialog class="sheet reward-sheet" id="rewardDialog"><header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header><div class="reward-grid" id="rewardGrid"></div></dialog><dialog class="sheet ending-sheet" id="endingDialog"><div class="ending-standard" id="endingAchievement"></div><p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span><div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div></dialog>
-  <script type="application/json" data-update-manager data-app-version="5.7.0">{}</script><script type="module" src="./banner-system.js?v=5.7.0"></script><script type="module" src="./app.js?v=5.7.0"></script><script type="module" src="./war-council-runtime.js?v=5.7.0"></script>
+
+  <dialog class="sheet setup-sheet" id="setupDialog">
+    <header><div><p>ОСНОВА ДОКТРИНЫ</p><h2>Задай темперамент и геральдическую школу</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <section><h3>Поле · три роли цвета</h3><div class="choice-grid field-grid" id="fieldChoices"></div></section>
+    <section><h3>Ординарий · строй и визуальная школа</h3><div class="choice-grid ordinary-grid" id="ordinaryChoices"></div></section>
+    <button class="primary-button seal-setup" id="sealSetupButton" type="button" disabled><span>Скрепить первый устав</span><small>Оба слоя обязательны</small><b>→</b></button>
+  </dialog>
+
+  <dialog class="sheet rules-sheet" id="rulesDialog">
+    <header><div><p>ТРИ ПРАВИЛА</p><h2>Герб — это код и облик армии</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <div class="rules-three">
+      <article><b>1</b><div><h3>До боя</h3><p>Поле и ординарий задают замысел, форму построения и внешний язык рода.</p></div></article>
+      <article><b>2</b><div><h3>В бою</h3><p>Отряд выбирает цель, но каждый воин сам занимает место, держит соседа и вступает в контакт.</p></div></article>
+      <article><b>3</b><div><h3>После боя</h3><p>Новый слой меняет поведение армии и перестраивает весь герб.</p></div></article>
+    </div>
+  </dialog>
+
+  <dialog class="sheet result-sheet" id="resultDialog">
+    <header><div><p id="resultEyebrow">БИТВА ЗАВЕРШЕНА</p><h2 id="resultTitle">Знамя устояло</h2></div><button data-close-dialog type="button" aria-label="Закрыть">×</button></header>
+    <div class="result-measures" id="resultMeasures"></div>
+    <div class="tactical-log"><h3>Решающие срабатывания</h3><div id="decisiveEvents"></div></div>
+    <div class="result-actions"><button id="replayButton" type="button">Повторить тот же бой</button><button class="primary-button" id="continueResultButton" type="button"><span>Продолжить поход</span><small>Изменить доктрину</small><b>→</b></button></div>
+  </dialog>
+
+  <dialog class="sheet reward-sheet" id="rewardDialog"><header><div><p id="rewardEyebrow">НОВЫЙ СЛОЙ</p><h2 id="rewardTitle">Как армия изменится?</h2></div></header><div class="reward-grid" id="rewardGrid"></div></dialog>
+  <dialog class="sheet ending-sheet" id="endingDialog"><div class="ending-standard" id="endingAchievement"></div><p>ПОХОД ЗАВЕРШЁН</p><h2 id="endingTitle">Доктрина выдержала шесть полей</h2><span id="endingCopy">Итог определяется реальными победами и сохранённой целостностью.</span><div class="ending-actions"><button id="endingMenuButton" type="button">В главное меню</button><button class="primary-button" id="endingRestartButton" type="button"><span>Новая доктрина</span><small>Другой строй, другое лицо</small><b>→</b></button></div></dialog>
+
+  <script type="application/json" data-update-manager data-app-version="5.8.0">{}</script>
+  <script type="module" src="./banner-system.js?v=5.8.0"></script>
+  <script type="module" src="./app.js?v=5.8.0"></script>
+  <script type="module" src="./war-council-runtime.js?v=5.8.0"></script>
 </body>
 </html>
