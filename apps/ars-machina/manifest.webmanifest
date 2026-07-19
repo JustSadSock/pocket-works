@@ -1,0 +1,20 @@
+{
+  "id": "/apps/ars-machina/",
+  "name": "ARS MACHINA",
+  "short_name": "ARS MACHINA",
+  "description": "Средневековая физическая песочница для сборки механизмов.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#34271c",
+  "theme_color": "#2c241b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
