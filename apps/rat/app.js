@@ -25,7 +25,9 @@ const parts = [
   './battle-ui-v3-fix.js',
   './game-part-8.js',
   './shell-ui-v4.js',
-  './shell-ui-v4-fix.js'
+  './shell-ui-v4-fix.js',
+  './screen-redesign-v5.js',
+  './screen-redesign-v5-fix.js'
 ];
 
 try {
@@ -50,6 +52,9 @@ try {
   }
   if (!globalThis.__RAT_SHELL_UI_V4_READY || !globalThis.__RAT_SHELL_UI_V4_FIXED) {
     throw new Error('Интерфейс меню не загрузился полностью');
+  }
+  if (!globalThis.__RAT_SCREEN_V5_READY || !globalThis.__RAT_SCREEN_V5_FIXED) {
+    throw new Error('Новая композиция экранов не загрузилась полностью');
   }
 } catch (error) {
   console.error('[РАТЬ] startup failed', error);
