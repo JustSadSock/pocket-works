@@ -1,0 +1,690 @@
+// ARS MACHINA 1.3 — transmissions, rack-and-pinion and mechanical controls.
+Object.assign(NAMES, {
+  rack: ['Передача', 'Зубчатая рейка'],
+  belt: ['Передача', 'Кожаный ремень'],
+  chain: ['Передача', 'Цепная передача'],
+  flywheel: ['Вращение', 'Тяжёлый маховик'],
+  clutch: ['Управление', 'Размыкающая муфта'],
+  brake: ['Управление', 'Колодочный тормоз'],
+  ratchet: ['Управление', 'Храповик'],
+  lever: ['Управление', 'Командный рычаг']
+});
+
+TOOL_GROUPS.drive.push(
+  ['flywheel', 'Маховик', 'flywheel'],
+  ['rack', 'Рейка', 'rack'],
+  ['belt', 'Ремень', 'belt'],
+  ['chain', 'Цепь', 'chain']
+);
+TOOL_GROUPS.controls = [
+  ['clutch', 'Муфта', 'clutch'],
+  ['brake', 'Тормоз', 'brake'],
+  ['ratchet', 'Храповик', 'ratchet'],
+  ['lever', 'Рычаг', 'lever']
+];
+
+state.channels = { A: false, B: false };
+let pendingTransmissionNodeId = null;
+let runPointer = null;
+
+function controlChannel(item) {
+  return item?.channel === 'B' ? 'B' : 'A';
+}
+
+function channelActive(channel) {
+  return Boolean(state.channels[channel === 'B' ? 'B' : 'A']);
+}
+
+function setChannel(channel, value, source = 'Пульт') {
+  const key = channel === 'B' ? 'B' : 'A';
+  state.channels[key] = Boolean(value);
+  document.querySelectorAll('[data-channel]').forEach((button) => {
+    const active = state.channels[button.dataset.channel === 'B' ? 'B' : 'A'];
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  const stateText = state.channels[key] ? 'включён' : 'выключен';
+  setYardNote(`${source}: контур ${key} ${stateText}.`, 1100);
+  clickSound(state.channels[key] ? 470 : 190, .05);
+  vibrate(state.channels[key] ? [8, 16, 10] : 8);
+}
+
+function toggleChannel(channel, source) {
+  const key = channel === 'B' ? 'B' : 'A';
+  setChannel(key, !state.channels[key], source);
+}
+
+function resetChannels() {
+  state.channels.A = false;
+  state.channels.B = false;
+  document.querySelectorAll('[data-channel]').forEach((button) => {
+    button.classList.remove('active');
+    button.setAttribute('aria-pressed', 'false');
+  });
+}
+
+document.querySelectorAll('[data-channel]').forEach((button) => {
+  button.addEventListener('click', () => toggleChannel(button.dataset.channel, 'Пульт'));
+});
+ui.runButton?.addEventListener('click', resetChannels, { capture: true });
+ui.backToBuildButton?.addEventListener('click', resetChannels, { capture: true });
+
+const baseSetToolV13 = setTool;
+setTool = function setTransmissionTool(tool) {
+  pendingTransmissionNodeId = null;
+  baseSetToolV13(tool);
+  const notes = {
+    flywheel: 'Поставь маховик на вал. Он сгладит рывки и дольше сохранит вращение.',
+    rack: 'Выбери две точки: рейка будет двигаться только вдоль своей оси и сцепляться с шестернями.',
+    belt: 'Выбери два вала. Ремень передаёт вращение мягко; параметр меняет обычную и перекрёстную укладку.',
+    chain: 'Выбери два вала. Цепь почти не проскальзывает и передаёт вращение жёстче ремня.',
+    clutch: 'Поставь муфту на вал передачи. Контур A или B будет соединять и разъединять ремни и цепи.',
+    brake: 'Поставь тормоз на вал. Активный контур A или B резко гасит вращение.',
+    ratchet: 'Поставь храповик на вал. В инспекторе выбери разрешённое направление вращения.',
+    lever: 'Поставь рычаг. Во время испытания коснись его, чтобы переключить назначенный контур.'
+  };
+  if (notes[tool]) setYardNote(notes[tool]);
+};
+
+function rotorTargetAt(world) {
+  let best = null;
+  let bestDistance = 28 / state.camera.zoom;
+  for (const rotor of state.rotors) {
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    const d = distance(world, node);
+    if (d < bestDistance || (Math.abs(d - bestDistance) < .01 && itemLayer(rotor) > itemLayer(best?.rotor))) {
+      best = { rotor, node };
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+function shaftRotor(nodeId) {
+  const priority = ['gear', 'flywheel', 'wheel', 'winch', 'pulley'];
+  for (const type of priority) {
+    const rotor = state.rotors.find((item) => item.nodeId === nodeId && item.type === type);
+    if (rotor) return rotor;
+  }
+  return state.rotors.find((item) => item.nodeId === nodeId) || null;
+}
+
+function createTransmission(type, aId, bId) {
+  if (!aId || !bId || aId === bId) return null;
+  const rotorA = shaftRotor(aId);
+  const rotorB = shaftRotor(bId);
+  if (!rotorA || !rotorB) return null;
+  const transmission = createConstraint(type, aId, bId, {
+    active: true,
+    stiffness: 0,
+    width: type === 'chain' ? 5 : 4,
+    layer: Math.max(itemLayer(rotorA), itemLayer(rotorB)) + 1
+  });
+  if (!transmission) return null;
+  transmission.crossed = false;
+  transmission.strength = type === 'chain' ? .58 : .27;
+  transmission.length = distance(nodeById(aId), nodeById(bId));
+  return transmission;
+}
+
+function createRack(a, b) {
+  const rack = createConstraint('rack', a.id, b.id, {
+    stiffness: 1,
+    width: 13,
+    layer: Math.max(itemLayer(a), itemLayer(b)) + 1
+  });
+  if (!rack) return null;
+  const length = distance(a, b) || 1;
+  rack.axisX = (b.x - a.x) / length;
+  rack.axisY = (b.y - a.y) / length;
+  rack.originX = (a.x + b.x) / 2;
+  rack.originY = (a.y + b.y) / 2;
+  rack.pitch = 13;
+  return rack;
+}
+
+const baseHandleBuildTapV13 = handleBuildTap;
+handleBuildTap = function handleTransmissionTap(world) {
+  if (state.tool === 'rack') {
+    if (!state.pendingNodeId) pushUndo();
+    const target = connectionPointAt(world, { create: true });
+    if (!target?.node) return invalidFeedback('Не удалось поставить конец рейки');
+    if (!state.pendingNodeId) {
+      state.pendingNodeId = target.node.id;
+      saveSoon();
+      setYardNote('Первый конец рейки выбран. Укажи второй.');
+      clickSound(320, .025);
+      return;
+    }
+    if (state.pendingNodeId === target.node.id) return invalidFeedback('Рейке нужна длина');
+    const first = nodeById(state.pendingNodeId);
+    const rack = createRack(first, target.node);
+    state.pendingNodeId = null;
+    if (!rack) return invalidFeedback('Не удалось собрать рейку');
+    selectThing({ kind: 'constraint', id: rack.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote('Рейка установлена. Подведи к ней шестерню.', 1600);
+    return;
+  }
+
+  if (state.tool === 'belt' || state.tool === 'chain') {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Нужно коснуться центра колеса, шестерни или барабана');
+    if (!pendingTransmissionNodeId) {
+      pushUndo();
+      pendingTransmissionNodeId = target.node.id;
+      selectThing({ kind: 'rotor', id: target.rotor.id });
+      setYardNote('Первый вал выбран. Укажи второй вал.');
+      clickSound(330, .03);
+      return;
+    }
+    if (pendingTransmissionNodeId === target.node.id) return invalidFeedback('Нужен другой вал');
+    const type = state.tool;
+    const transmission = createTransmission(type, pendingTransmissionNodeId, target.node.id);
+    pendingTransmissionNodeId = null;
+    if (!transmission) {
+      if (state.undo.length) state.undo.pop();
+      updateHistoryButtons();
+      return invalidFeedback('Передачу между этими валами собрать нельзя');
+    }
+    selectThing({ kind: 'constraint', id: transmission.id });
+    saveSoon();
+    placedFeedback();
+    setYardNote(type === 'chain' ? 'Цепная передача замкнута.' : 'Ремень натянут.', 1500);
+    return;
+  }
+
+  if (state.tool === 'flywheel') {
+    pushUndo();
+    const node = resolveOrCreateNode(world);
+    const flywheel = createRotor('flywheel', node.id, { radius: 42 });
+    flywheel.inertia = 4;
+    selectThing({ kind: 'rotor', id: flywheel.id });
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+
+  if (['clutch', 'brake', 'ratchet', 'lever'].includes(state.tool)) {
+    pushUndo();
+    const node = resolveOrCreateNode(world);
+    if (state.tool !== 'lever' && !shaftRotor(node.id)) createRotor('gear', node.id, { radius: 24 });
+    const attachment = createAttachment(state.tool, node.id, { amount: 1 });
+    attachment.channel = 'A';
+    if (attachment.type === 'ratchet') attachment.direction = 1;
+    selectThing({ kind: 'attachment', id: attachment.id });
+    saveSoon();
+    placedFeedback();
+    return;
+  }
+
+  baseHandleBuildTapV13(world);
+};
+
+function shaftInertia(nodeId) {
+  return state.rotors
+    .filter((rotor) => rotor.nodeId === nodeId && rotor.type === 'flywheel')
+    .reduce((sum, rotor) => sum + clamp(rotor.inertia || 4, 2, 8) - 1, 1);
+}
+
+const baseDriveRotorsV13 = driveRotors;
+driveRotors = function driveWithFlywheels(step) {
+  const before = new Map(state.rotors.map((rotor) => [rotor.id, rotor.omega]));
+  baseDriveRotorsV13(step);
+  for (const rotor of state.rotors) {
+    const inertia = shaftInertia(rotor.nodeId);
+    if (inertia <= 1) continue;
+    const old = before.get(rotor.id) ?? rotor.omega;
+    rotor.omega = old + (rotor.omega - old) / inertia;
+  }
+};
+
+const baseSolveConstraintsV13 = solveConstraints;
+solveConstraints = function solveWithoutFlexibleTransmissions() {
+  const all = state.constraints;
+  state.constraints = all.filter((constraint) => !['belt', 'chain'].includes(constraint.type));
+  try {
+    baseSolveConstraintsV13();
+  } finally {
+    state.constraints = all;
+  }
+  solveRackGuides();
+};
+
+function solveRackGuides() {
+  for (const rack of state.constraints.filter((constraint) => constraint.type === 'rack' && constraint.active)) {
+    const a = nodeById(rack.a);
+    const b = nodeById(rack.b);
+    if (!a || !b) continue;
+    let axisX = Number(rack.axisX);
+    let axisY = Number(rack.axisY);
+    const axisLength = Math.hypot(axisX, axisY) || 1;
+    axisX /= axisLength;
+    axisY /= axisLength;
+    const centerX = (a.x + b.x) / 2;
+    const centerY = (a.y + b.y) / 2;
+    const along = (centerX - rack.originX) * axisX + (centerY - rack.originY) * axisY;
+    const targetCenterX = rack.originX + axisX * along;
+    const targetCenterY = rack.originY + axisY * along;
+    const half = (rack.length || distance(a, b)) / 2;
+    const targets = [
+      { node: a, x: targetCenterX - axisX * half, y: targetCenterY - axisY * half },
+      { node: b, x: targetCenterX + axisX * half, y: targetCenterY + axisY * half }
+    ];
+    for (const target of targets) {
+      if (target.node.fixed || target.node.mount) continue;
+      target.node.x += (target.x - target.node.x) * .78;
+      target.node.y += (target.y - target.node.y) * .78;
+    }
+  }
+}
+
+function transmissionEnabled(constraint) {
+  const clutches = state.attachments.filter((item) => item.type === 'clutch' && (item.nodeId === constraint.a || item.nodeId === constraint.b));
+  if (!clutches.length) return true;
+  return clutches.every((clutch) => channelActive(controlChannel(clutch)));
+}
+
+function solveFlexibleTransmissions(step) {
+  for (const transmission of state.constraints.filter((constraint) => ['belt', 'chain'].includes(constraint.type) && constraint.active)) {
+    if (!transmissionEnabled(transmission)) continue;
+    const rotorA = shaftRotor(transmission.a);
+    const rotorB = shaftRotor(transmission.b);
+    if (!rotorA || !rotorB) continue;
+    const sign = transmission.type === 'belt' && transmission.crossed ? -1 : 1;
+    const ratio = Math.max(.12, rotorA.radius / Math.max(8, rotorB.radius));
+    const strength = clamp(transmission.strength || (transmission.type === 'chain' ? .58 : .27), .08, .75);
+    const targetB = sign * rotorA.omega * ratio;
+    const targetA = sign * rotorB.omega / ratio;
+    rotorB.omega += (targetB - rotorB.omega) * strength * step / shaftInertia(rotorB.nodeId);
+    rotorA.omega += (targetA - rotorA.omega) * strength * .48 * step / shaftInertia(rotorA.nodeId);
+  }
+}
+
+function rackVelocity(rack) {
+  const a = nodeById(rack.a);
+  const b = nodeById(rack.b);
+  if (!a || !b) return 0;
+  const vx = ((a.x - a.px) + (b.x - b.px)) / 2;
+  const vy = ((a.y - a.py) + (b.y - b.py)) / 2;
+  return vx * rack.axisX + vy * rack.axisY;
+}
+
+function solveRackAndPinion(step) {
+  const gears = state.rotors.filter((rotor) => rotor.type === 'gear');
+  for (const rack of state.constraints.filter((constraint) => constraint.type === 'rack' && constraint.active)) {
+    const a = nodeById(rack.a);
+    const b = nodeById(rack.b);
+    if (!a || !b) continue;
+    const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    for (const gear of gears) {
+      const node = nodeById(gear.nodeId);
+      if (!node) continue;
+      const projection = projectPointToBeam(node, rack);
+      if (!projection || projection.t < -.03 || projection.t > 1.03) continue;
+      if (Math.abs(projection.distance - gear.radius) > 15) continue;
+      const side = Math.sign(rack.axisX * (node.y - center.y) - rack.axisY * (node.x - center.x)) || 1;
+      const drive = clamp(-side * gear.omega * gear.radius * .17 * step, -3.2, 3.2);
+      for (const endpoint of [a, b]) {
+        if (endpoint.fixed || endpoint.mount) continue;
+        endpoint.x += rack.axisX * drive;
+        endpoint.y += rack.axisY * drive;
+      }
+      const linear = rackVelocity(rack);
+      const targetOmega = -side * linear / Math.max(10, gear.radius);
+      gear.omega += (targetOmega - gear.omega) * .16 * step / shaftInertia(gear.nodeId);
+    }
+  }
+}
+
+const baseSolveGearCouplingV13 = solveGearCoupling;
+solveGearCoupling = function solveAllTransmissions(step) {
+  const before = new Map(state.rotors.map((rotor) => [rotor.id, rotor.omega]));
+  baseSolveGearCouplingV13(step);
+  solveFlexibleTransmissions(step);
+  solveRackAndPinion(step);
+  for (const rotor of state.rotors) {
+    const inertia = shaftInertia(rotor.nodeId);
+    if (inertia <= 1) continue;
+    const old = before.get(rotor.id) ?? rotor.omega;
+    rotor.omega = old + (rotor.omega - old) / inertia;
+  }
+};
+
+updateRotorAngles = function updateControlledRotors(step) {
+  for (const rotor of state.rotors) {
+    const brake = state.attachments.find((item) => item.type === 'brake' && item.nodeId === rotor.nodeId && channelActive(controlChannel(item)));
+    if (brake) rotor.omega *= Math.pow(.42, step);
+    const ratchet = state.attachments.find((item) => item.type === 'ratchet' && item.nodeId === rotor.nodeId);
+    if (ratchet) {
+      const direction = ratchet.direction === -1 ? -1 : 1;
+      if (rotor.omega * direction < 0) rotor.omega *= .08;
+    }
+    const damping = rotor.type === 'wheel' ? .994 : rotor.type === 'flywheel' ? .9988 : .982;
+    rotor.omega *= Math.pow(damping, step);
+    rotor.angle += rotor.omega * step;
+  }
+};
+
+const baseEnterRunModeV13 = enterRunMode;
+enterRunMode = function enterControlledRunMode() {
+  resetChannels();
+  baseEnterRunModeV13();
+};
+
+const baseReturnToBuildV13 = returnToBuild;
+returnToBuild = function returnFromControlledRun() {
+  resetChannels();
+  baseReturnToBuildV13();
+};
+
+function leverAt(world) {
+  let best = null;
+  let bestDistance = 28 / state.camera.zoom;
+  for (const lever of state.attachments.filter((item) => item.type === 'lever')) {
+    const node = nodeById(lever.nodeId);
+    if (!node) continue;
+    const d = distance(world, node);
+    if (d < bestDistance) {
+      best = lever;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (state.mode !== 'run') return;
+  const point = canvasPoint(event);
+  runPointer = { id: event.pointerId, point };
+});
+
+canvas.addEventListener('pointerup', (event) => {
+  if (state.mode !== 'run' || !runPointer || runPointer.id !== event.pointerId) return;
+  const point = canvasPoint(event);
+  const moved = Math.hypot(point.x - runPointer.point.x, point.y - runPointer.point.y) > 10;
+  runPointer = null;
+  if (moved) return;
+  const world = screenToWorld(point.x, point.y);
+  const lever = leverAt(world);
+  if (lever) toggleChannel(controlChannel(lever), 'Рычаг');
+});
+
+canvas.addEventListener('pointercancel', () => { runPointer = null; });
+
+const baseInspectorValueV13 = inspectorValue;
+inspectorValue = function transmissionInspectorValue(selected, type) {
+  if (state.selection?.kind === 'rotor' && type === 'flywheel') return `инерция ${Math.round(selected.inertia || 4)}`;
+  if (state.selection?.kind === 'constraint' && type === 'belt') return selected.crossed ? 'перекрёстный' : 'обычный';
+  if (state.selection?.kind === 'constraint' && type === 'chain') return 'жёсткое сцепление';
+  if (state.selection?.kind === 'constraint' && type === 'rack') return `шаг ${Math.round(selected.pitch || 13)}`;
+  if (state.selection?.kind === 'attachment' && ['clutch', 'brake', 'lever'].includes(type)) return `контур ${controlChannel(selected)}`;
+  if (state.selection?.kind === 'attachment' && type === 'ratchet') return selected.direction === -1 ? 'только влево' : 'только вправо';
+  return baseInspectorValueV13(selected, type);
+};
+
+const baseUpdateInspectorV13 = updateInspector;
+updateInspector = function updateTransmissionInspector() {
+  baseUpdateInspectorV13();
+  const selected = getSelected();
+  if (!selected || ui.inspector.hidden) return;
+  const custom =
+    (state.selection.kind === 'rotor' && selected.type === 'flywheel') ||
+    (state.selection.kind === 'constraint' && ['belt', 'rack'].includes(selected.type)) ||
+    (state.selection.kind === 'attachment' && ['clutch', 'brake', 'ratchet', 'lever'].includes(selected.type));
+  if (custom) {
+    ui.inspectMinus.disabled = false;
+    ui.inspectPlus.disabled = false;
+  }
+};
+
+const baseAdjustSelectionV13 = adjustSelection;
+adjustSelection = function adjustTransmission(direction) {
+  const selected = getSelected();
+  if (!selected) return;
+  let handled = false;
+  pushUndo();
+  if (state.selection.kind === 'rotor' && selected.type === 'flywheel') {
+    selected.inertia = clamp((selected.inertia || 4) + direction, 2, 8);
+    handled = true;
+  } else if (state.selection.kind === 'constraint' && selected.type === 'belt') {
+    selected.crossed = direction > 0;
+    handled = true;
+  } else if (state.selection.kind === 'constraint' && selected.type === 'rack') {
+    selected.pitch = clamp((selected.pitch || 13) + direction * 2, 7, 23);
+    handled = true;
+  } else if (state.selection.kind === 'attachment' && ['clutch', 'brake', 'lever'].includes(selected.type)) {
+    selected.channel = selected.channel === 'B' ? 'A' : 'B';
+    handled = true;
+  } else if (state.selection.kind === 'attachment' && selected.type === 'ratchet') {
+    selected.direction = selected.direction === -1 ? 1 : -1;
+    handled = true;
+  }
+  if (!handled) {
+    if (state.undo.length) state.undo.pop();
+    return baseAdjustSelectionV13(direction);
+  }
+  updateInspector();
+  saveSoon();
+  clickSound(direction > 0 ? 370 : 230, .035);
+};
+
+function drawRack(a, b, rack) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const pitch = clamp((rack.pitch || 13) * state.camera.zoom, 7, 22);
+  ctx.save();
+  ctx.lineCap = 'square';
+  ctx.strokeStyle = '#3b3329';
+  ctx.lineWidth = 11;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#a9854c';
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#3b3329';
+  ctx.lineWidth = 3;
+  const count = Math.max(2, Math.floor(length / pitch));
+  for (let i = 0; i <= count; i += 1) {
+    const t = i / count;
+    const x = a.x + dx * t;
+    const y = a.y + dy * t;
+    ctx.beginPath();
+    ctx.moveTo(x + nx * 3, y + ny * 3);
+    ctx.lineTo(x + nx * 10, y + ny * 10);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(42,97,125,.35)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([7, 6]);
+  ctx.beginPath(); ctx.moveTo(a.x - dx, a.y - dy); ctx.lineTo(b.x + dx, b.y + dy); ctx.stroke();
+  ctx.restore();
+}
+
+function drawTransmission(a, b, transmission) {
+  const nodeA = nodeById(transmission.a);
+  const nodeB = nodeById(transmission.b);
+  const rotorA = shaftRotor(transmission.a);
+  const rotorB = shaftRotor(transmission.b);
+  if (!nodeA || !nodeB || !rotorA || !rotorB) return;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const offset = clamp(Math.min(rotorA.radius, rotorB.radius) * state.camera.zoom * .35, 5, 15);
+  const enabled = transmissionEnabled(transmission);
+  ctx.save();
+  ctx.globalAlpha = enabled ? 1 : .35;
+  ctx.strokeStyle = transmission.type === 'chain' ? '#4a4b47' : '#604127';
+  ctx.lineWidth = transmission.type === 'chain' ? 5 : 6;
+  if (transmission.type === 'chain') ctx.setLineDash([5, 5]);
+  const sign = transmission.type === 'belt' && transmission.crossed ? -1 : 1;
+  ctx.beginPath();
+  ctx.moveTo(a.x + nx * offset, a.y + ny * offset);
+  ctx.lineTo(b.x + nx * offset * sign, b.y + ny * offset * sign);
+  ctx.moveTo(a.x - nx * offset, a.y - ny * offset);
+  ctx.lineTo(b.x - nx * offset * sign, b.y - ny * offset * sign);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+const baseDrawConstraintsV13 = drawConstraints;
+drawConstraints = function drawAllConstraints(layer = null) {
+  baseDrawConstraintsV13(layer);
+  for (const constraint of state.constraints) {
+    if (layer !== null && itemLayer(constraint) !== layer) continue;
+    if (!constraint.active && state.mode === 'run') continue;
+    if (!['rack', 'belt', 'chain'].includes(constraint.type)) continue;
+    const aNode = nodeById(constraint.a);
+    const bNode = nodeById(constraint.b);
+    if (!aNode || !bNode) continue;
+    const a = worldToScreen(aNode.x, aNode.y);
+    const b = worldToScreen(bNode.x, bNode.y);
+    if (constraint.type === 'rack') drawRack(a, b, constraint);
+    else drawTransmission(a, b, constraint);
+  }
+};
+
+function drawFlywheel(center, radius, angle, inertia) {
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#44413a';
+  ctx.strokeStyle = '#1f1e1a';
+  ctx.lineWidth = clamp(radius * .18, 5, 12);
+  ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#c09a56';
+  ctx.lineWidth = clamp(radius * .08, 2, 6);
+  ctx.beginPath(); ctx.arc(0, 0, radius * .72, 0, TAU); ctx.stroke();
+  for (let i = 0; i < 6; i += 1) {
+    ctx.rotate(TAU / 6);
+    ctx.beginPath(); ctx.moveTo(radius * .2, 0); ctx.lineTo(radius * .66, 0); ctx.stroke();
+  }
+  ctx.fillStyle = '#b88743';
+  ctx.beginPath(); ctx.arc(0, 0, Math.max(5, radius * .2), 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ead6a2';
+  ctx.font = `800 ${clamp(radius * .23, 8, 14)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(Math.round(inertia || 4)), 0, 1);
+  ctx.restore();
+}
+
+const baseDrawRotorsV13 = drawRotors;
+drawRotors = function drawAllRotors(layer = null) {
+  baseDrawRotorsV13(layer);
+  for (const rotor of state.rotors) {
+    if (rotor.type !== 'flywheel' || (layer !== null && itemLayer(rotor) !== layer)) continue;
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    drawFlywheel(worldToScreen(node.x, node.y), rotor.radius * state.camera.zoom, rotor.angle, rotor.inertia);
+  }
+};
+
+function drawControlAttachment(point, attachment) {
+  const active = attachment.type === 'ratchet' || attachment.type === 'lever'
+    ? attachment.type === 'lever' && channelActive(controlChannel(attachment))
+    : channelActive(controlChannel(attachment));
+  const size = clamp(20 * state.camera.zoom, 14, 28);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.fillStyle = active ? '#b6863e' : '#514536';
+  ctx.strokeStyle = '#241d16';
+  ctx.lineWidth = 3;
+  if (attachment.type === 'clutch') {
+    ctx.beginPath(); ctx.arc(-size * .28, 0, size * .42, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(size * .28, 0, size * .42, 0, TAU); ctx.stroke();
+    ctx.fillRect(-size * .14, -size * .42, size * .28, size * .84);
+  } else if (attachment.type === 'brake') {
+    ctx.beginPath(); ctx.arc(0, 0, size * .5, 0, TAU); ctx.stroke();
+    ctx.fillRect(-size * .72, -size * .18, size * .3, size * .36);
+    ctx.fillRect(size * .42, -size * .18, size * .3, size * .36);
+  } else if (attachment.type === 'ratchet') {
+    const direction = attachment.direction === -1 ? -1 : 1;
+    ctx.beginPath(); ctx.arc(0, 0, size * .48, 0, TAU); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-direction * size * .48, -size * .55);
+    ctx.lineTo(direction * size * .58, 0);
+    ctx.lineTo(-direction * size * .48, size * .55);
+    ctx.closePath(); ctx.fill();
+  } else if (attachment.type === 'lever') {
+    ctx.fillRect(-size * .42, size * .28, size * .84, size * .35);
+    ctx.rotate(channelActive(controlChannel(attachment)) ? -.55 : .55);
+    ctx.fillRect(-size * .11, -size * .78, size * .22, size * .9);
+    ctx.beginPath(); ctx.arc(0, -size * .82, size * .22, 0, TAU); ctx.fill();
+  }
+  ctx.fillStyle = '#f2dfb1';
+  ctx.font = `900 ${Math.max(8, size * .36)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(attachment.type === 'ratchet' ? '' : controlChannel(attachment), 0, size * .02);
+  ctx.restore();
+}
+
+const baseDrawNodesAndAttachmentsV13 = drawNodesAndAttachments;
+drawNodesAndAttachments = function drawAllAttachments(layer = null) {
+  baseDrawNodesAndAttachmentsV13(layer);
+  for (const attachment of state.attachments) {
+    if (!['clutch', 'brake', 'ratchet', 'lever'].includes(attachment.type)) continue;
+    if (layer !== null && itemLayer(attachment) !== layer) continue;
+    const node = nodeById(attachment.nodeId);
+    if (!node) continue;
+    drawControlAttachment(worldToScreen(node.x, node.y), attachment);
+  }
+};
+
+function buildTransmissionBench() {
+  clearWorld();
+  const driveShaft = createNode(320, 470, { fixed: true, layer: 1 });
+  const outputShaft = createNode(500, 470, { fixed: true, layer: 1 });
+  const guideA = createNode(410, 400, { layer: 2 });
+  const guideB = createNode(650, 400, { layer: 2 });
+  const leverNode = createNode(265, 370, { fixed: true, layer: 3 });
+  const baseA = createNode(250, 560, { fixed: true });
+  const baseB = createNode(690, 560, { fixed: true });
+  addBeam(baseA, driveShaft);
+  addBeam(driveShaft, outputShaft);
+  addBeam(outputShaft, baseB);
+  addBeam(baseA, baseB);
+  const driveGear = createRotor('gear', driveShaft.id, { radius: 32, layer: 3 });
+  const outputGear = createRotor('gear', outputShaft.id, { radius: 68, layer: 3 });
+  createAttachment('motor', driveShaft.id, { amount: 2.2, layer: 4 });
+  const flywheel = createRotor('flywheel', outputShaft.id, { radius: 48, layer: 2 });
+  flywheel.inertia = 6;
+  const belt = createTransmission('belt', driveShaft.id, outputShaft.id);
+  belt.layer = 2;
+  const clutch = createAttachment('clutch', driveShaft.id, { layer: 5 });
+  clutch.channel = 'A';
+  const brake = createAttachment('brake', outputShaft.id, { layer: 5 });
+  brake.channel = 'B';
+  const ratchet = createAttachment('ratchet', outputShaft.id, { layer: 5 });
+  ratchet.direction = 1;
+  const lever = createAttachment('lever', leverNode.id, { layer: 4 });
+  lever.channel = 'A';
+  const rack = createRack(guideA, guideB);
+  rack.layer = 4;
+  rack.pitch = 13;
+  driveGear.omega = 0;
+  outputGear.omega = 0;
+  state.camera = { x: 470, y: 420, zoom: .94 };
+}
+
+const baseLoadBlueprintV13 = loadBlueprint;
+loadBlueprint = function loadTransmissionBlueprint(name) {
+  if (name !== 'transmission') return baseLoadBlueprintV13(name);
+  pushUndo();
+  buildTransmissionBench();
+  closeBlueprints();
+  saveSoon();
+  updateInspector();
+  updateHistoryButtons();
+  setYardNote('Стенд готов: включи привод, затем контур A; контур B тормозит выходной вал.', 3000);
+  heavySound(145, .1);
+  vibrate(14);
+};
+
+resetChannels();
