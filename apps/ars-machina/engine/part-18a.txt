@@ -1,0 +1,301 @@
+// ARS MACHINA 2.0 — Leonardo construction primitives and placement.
+Object.assign(NAMES, {
+  armor: ['Каркас', 'Клёпаная бронеплита'],
+  wing: ['Аэродинамика', 'Полотняное крыло'],
+  canopy: ['Аэродинамика', 'Парашютный купол'],
+  bow: ['Оснастка', 'Гибкое плечо лука'],
+  mainspring: ['Привод', 'Заводная пружина'],
+  airscrew: ['Привод', 'Воздушный винт Леонардо'],
+  cam: ['Привод', 'Кулачок'],
+  drum: ['Привод', 'Программный барабан'],
+  follower: ['Управление', 'Кулачковый толкатель'],
+  jointServo: ['Управление', 'Привод шарнира'],
+  sequencer: ['Управление', 'Механический секвенсор'],
+  airbag: ['Оснастка', 'Воздушный мешок'],
+  launcher: ['Оснастка', 'Многоствольный метатель'],
+  water: ['Среда', 'Уровень воды']
+});
+
+state.environmentV20 = {
+  waterEnabled: false,
+  waterLevel: 430,
+  airDensity: 1,
+  ...(state.environmentV20 || {})
+};
+state.autoChannelsV20 = { A: false, B: false };
+state.projectilesV20 = [];
+let pendingCamRotorIdV20 = null;
+let pendingJointDriveIdV20 = null;
+
+function insertCodexToolV20(group, definition, afterTool = null) {
+  if (!TOOL_GROUPS[group] || TOOL_GROUPS[group].some(([tool]) => tool === definition[0])) return;
+  const index = afterTool ? TOOL_GROUPS[group].findIndex(([tool]) => tool === afterTool) : -1;
+  TOOL_GROUPS[group].splice(index >= 0 ? index + 1 : TOOL_GROUPS[group].length, 0, definition);
+}
+
+insertCodexToolV20('frame', ['armor', 'Броня', 'armor'], 'beam');
+insertCodexToolV20('drive', ['mainspring', 'Пружина хода', 'mainspring'], 'motor');
+insertCodexToolV20('drive', ['airscrew', 'Винт Леонардо', 'airscrew'], 'propeller');
+insertCodexToolV20('drive', ['cam', 'Кулачок', 'cam'], 'gear');
+insertCodexToolV20('drive', ['drum', 'Барабан', 'drum'], 'cam');
+insertCodexToolV20('controls', ['follower', 'Толкатель кулачка', 'follower'], 'servo');
+insertCodexToolV20('controls', ['jointServo', 'Привод шарнира', 'jointServo'], 'follower');
+insertCodexToolV20('controls', ['sequencer', 'Секвенсор', 'sequencer'], 'jointServo');
+insertCodexToolV20('rigging', ['wing', 'Крыло', 'wing'], 'damper');
+insertCodexToolV20('rigging', ['canopy', 'Купол', 'canopy'], 'wing');
+insertCodexToolV20('rigging', ['bow', 'Плечо лука', 'bow'], 'spring');
+insertCodexToolV20('rigging', ['airbag', 'Воздушный мешок', 'airbag'], 'weight');
+insertCodexToolV20('rigging', ['launcher', 'Метатель', 'launcher'], 'payload');
+insertCodexToolV20('utility', ['water', 'Вода', 'water'], 'layers');
+
+function createSurfaceV20(type, a, b, options = {}) {
+  const surface = createConstraint(type, a.id, b.id, {
+    stiffness: options.stiffness ?? (type === 'armor' ? .96 : type === 'canopy' ? .38 : .68),
+    width: options.width ?? (type === 'armor' ? 22 : 6),
+    layer: options.layer ?? Math.max(itemLayer(a), itemLayer(b)) + 1
+  });
+  if (!surface) return null;
+  surface.area = options.area ?? Math.max(.5, distance(a, b) / 80);
+  surface.chord = options.chord ?? 42;
+  surface.lift = options.lift ?? 1;
+  surface.drag = options.drag ?? (type === 'canopy' ? 1.2 : type === 'armor' ? .12 : .32);
+  surface.restitution = options.restitution ?? .28;
+  surface.restLength = surface.length;
+  return surface;
+}
+
+function createMainspringV20(rotor, options = {}) {
+  if (!rotor) return null;
+  const existing = state.attachments.find((item) => item.type === 'mainspring' && item.rotorId === rotor.id);
+  if (existing) return existing;
+  const spring = createAttachment('mainspring', rotor.nodeId, { amount: options.charge ?? 1, layer: itemLayer(rotor) + 2 });
+  spring.rotorId = rotor.id;
+  spring.charge = clamp(options.charge ?? 1.4, .4, 3);
+  spring.energy = spring.charge;
+  spring.torque = clamp(options.torque ?? 1.5, .4, 3.5);
+  spring.direction = options.direction === -1 ? -1 : 1;
+  spring.auto = options.auto ?? false;
+  spring.channel = options.channel === 'B' ? 'B' : 'A';
+  return spring;
+}
+
+function createCamV20(rotor, options = {}) {
+  if (!rotor) return null;
+  const existing = state.rotors.find((item) => item.type === 'cam' && item.nodeId === rotor.nodeId);
+  if (existing) return existing;
+  const cam = createRotor('cam', rotor.nodeId, { radius: options.radius ?? Math.max(22, rotor.radius * .7), layer: itemLayer(rotor) + 1 });
+  cam.lobes = clamp(Math.round(options.lobes ?? 1), 1, 4);
+  cam.eccentricity = clamp(options.eccentricity ?? .36, .12, .72);
+  cam.mountMode = 'free';
+  return cam;
+}
+
+function createAirscrewV20(rotor, options = {}) {
+  if (!rotor) return null;
+  const existing = state.rotors.find((item) => item.type === 'airscrew' && item.nodeId === rotor.nodeId);
+  if (existing) return existing;
+  const screw = createRotor('airscrew', rotor.nodeId, { radius: options.radius ?? Math.max(46, rotor.radius * 1.45), layer: itemLayer(rotor) + 1 });
+  screw.pitch = clamp(options.pitch ?? 1, .45, 1.8);
+  screw.direction = options.direction === -1 ? -1 : 1;
+  screw.mountMode = 'free';
+  return screw;
+}
+
+function createDrumV20(rotor, options = {}) {
+  if (!rotor) return null;
+  const existing = state.rotors.find((item) => item.type === 'drum' && item.nodeId === rotor.nodeId);
+  if (existing) return existing;
+  const drum = createRotor('drum', rotor.nodeId, { radius: options.radius ?? Math.max(26, rotor.radius * .82), layer: itemLayer(rotor) + 1 });
+  drum.steps = clamp(Math.round(options.steps ?? 8), 4, 16);
+  drum.mountMode = 'free';
+  return drum;
+}
+
+function createCamFollowerV20(cam, node, options = {}) {
+  if (!cam || !node) return null;
+  const follower = createConstraint('camFollower', cam.nodeId, node.id, { stiffness: 0, width: 8, layer: Math.max(itemLayer(cam), itemLayer(node)) + 1 });
+  if (!follower) return null;
+  follower.rotorId = cam.id;
+  follower.stroke = clamp(options.stroke ?? 28, 8, 90);
+  follower.phase = options.phase ?? 0;
+  follower.axisX = options.axisX ?? 1;
+  follower.axisY = options.axisY ?? 0;
+  follower.originX = node.x;
+  follower.originY = node.y;
+  if (node.mount?.sliding) follower.baseT = node.mount.t;
+  return follower;
+}
+
+function createJointServoV20(joint, options = {}) {
+  if (!joint) return null;
+  const existing = state.attachments.find((item) => item.type === 'jointServo' && item.jointId === joint.id);
+  if (existing) return existing;
+  const servo = createAttachment('jointServo', joint.a, { amount: options.strength ?? 1.2, layer: itemLayer(joint) + 1 });
+  servo.jointId = joint.id;
+  servo.channel = options.channel === 'B' ? 'B' : 'A';
+  servo.angleA = joint.targetAngle;
+  servo.angleB = joint.targetAngle + Math.PI / 3;
+  servo.strength = clamp(options.strength ?? 1.2, .4, 2.2);
+  return servo;
+}
+
+function createSequencerV20(drum, options = {}) {
+  if (!drum) return null;
+  const existing = state.attachments.find((item) => item.type === 'sequencer' && item.rotorId === drum.id);
+  if (existing) return existing;
+  const sequence = createAttachment('sequencer', drum.nodeId, { amount: 1, layer: itemLayer(drum) + 2 });
+  sequence.rotorId = drum.id;
+  sequence.pattern = ['alternate', 'pulseA', 'both', 'gallop'].includes(options.pattern) ? options.pattern : 'alternate';
+  sequence.phase = options.phase ?? 0;
+  return sequence;
+}
+
+function createAirbagV20(node, options = {}) {
+  if (!node) return null;
+  const existing = state.attachments.find((item) => item.type === 'airbag' && item.nodeId === node.id);
+  if (existing) return existing;
+  const bag = createAttachment('airbag', node.id, { amount: options.volume ?? 1.4, layer: itemLayer(node) + 2 });
+  bag.volume = clamp(options.volume ?? 1.4, .4, 3);
+  bag.deflated = clamp(options.deflated ?? .22, .05, .5);
+  bag.channel = options.channel === 'B' ? 'B' : 'A';
+  return bag;
+}
+
+function createLauncherV20(node, options = {}) {
+  if (!node) return null;
+  const launcher = createAttachment('launcher', node.id, { amount: options.capacity ?? 1, layer: itemLayer(node) + 2 });
+  launcher.capacity = clamp(Math.round(options.capacity ?? 1), 1, 33);
+  launcher.ammo = launcher.capacity;
+  launcher.volley = clamp(Math.round(options.volley ?? 1), 1, 11);
+  launcher.velocity = clamp(options.velocity ?? 11, 4, 18);
+  launcher.spread = clamp(options.spread ?? .08, 0, .45);
+  launcher.projectileMass = clamp(options.projectileMass ?? 1.4, .5, 8);
+  launcher.angleOffset = options.angleOffset ?? 0;
+  launcher.channel = options.channel === 'B' ? 'B' : 'A';
+  return launcher;
+}
+
+const baseSetToolCodexV20 = setTool;
+setTool = function setCodexToolV20(tool) {
+  pendingCamRotorIdV20 = null;
+  pendingJointDriveIdV20 = null;
+  baseSetToolCodexV20(tool);
+  const notes = {
+    armor: 'Выбери две точки: между ними появится жёсткая клёпаная бронеплита.',
+    wing: 'Выбери две точки каркаса. Полотно создаёт подъём и сопротивление воздуха.',
+    canopy: 'Выбери края купола. Он резко замедляет падение.',
+    bow: 'Выбери концы гибкого плеча. Оно запасает энергию при растяжении.',
+    mainspring: 'Коснись конкретного вала. Заводная пружина отдаёт конечный запас энергии.',
+    airscrew: 'Коснись вала. Спиральный винт создаёт подъём вдоль оси рамы.',
+    cam: 'Коснись вала. Кулачок преобразует вращение в повторяющийся ход.',
+    drum: 'Коснись вала. Программный барабан управляет механической последовательностью.',
+    follower: 'Сначала коснись кулачка, затем каретки или свободной точки.',
+    jointServo: 'Сначала выбери шарнир на поле, затем настрой два положения.',
+    sequencer: 'Коснись программного барабана. Он будет автоматически переключать контуры.',
+    airbag: 'Коснись узла. В воде контур A/B надувает мешок и меняет плавучесть.',
+    launcher: 'Коснись узла или турели. Кнопка «Спуск» выпустит настроенный залп.',
+    water: 'Коснись поля, чтобы провести уровень воды. Повторное касание рядом убирает его.'
+  };
+  if (notes[tool]) setYardNote(notes[tool]);
+};
+
+function twoPointSurfaceTapV20(world, type) {
+  if (!state.pendingNodeId) pushUndo();
+  const target = connectionPointAt(world, { create: true });
+  if (!target?.node) return invalidFeedback('Не удалось поставить крепление');
+  if (!state.pendingNodeId) {
+    state.pendingNodeId = target.node.id;
+    setYardNote('Первая точка выбрана. Укажи вторую.');
+    clickSound(320, .025); saveSoon(); return;
+  }
+  const first = nodeById(state.pendingNodeId);
+  state.pendingNodeId = null;
+  if (!first || first.id === target.node.id) return invalidFeedback('Нужны две разные точки');
+  const item = type === 'bow'
+    ? (() => { const value = createSurfaceV20('bow', first, target.node, { stiffness: .2, width: 7 }); if (value) { value.restLength = value.length; value.maxDraw = value.length * .35; } return value; })()
+    : createSurfaceV20(type, first, target.node);
+  if (!item) return invalidFeedback('Эту деталь здесь поставить нельзя');
+  selectThing({ kind: 'constraint', id: item.id }); saveSoon(); placedFeedback();
+}
+
+const baseHandleBuildTapCodexV20 = handleBuildTap;
+handleBuildTap = function handleCodexBuildTapV20(world) {
+  if (['armor', 'wing', 'canopy', 'bow'].includes(state.tool)) return twoPointSurfaceTapV20(world, state.tool);
+  if (state.tool === 'mainspring' || state.tool === 'airscrew' || state.tool === 'cam' || state.tool === 'drum') {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Эта деталь ставится на существующий вал');
+    pushUndo();
+    const created = state.tool === 'mainspring' ? createMainspringV20(target.rotor)
+      : state.tool === 'airscrew' ? createAirscrewV20(target.rotor)
+      : state.tool === 'cam' ? createCamV20(target.rotor)
+      : createDrumV20(target.rotor);
+    if (!created) { if (state.undo.length) state.undo.pop(); return invalidFeedback('Не удалось установить деталь'); }
+    selectThing({ kind: created.id && rotorById(created.id) ? 'rotor' : 'attachment', id: created.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'follower') {
+    if (!pendingCamRotorIdV20) {
+      const target = rotorTargetAt(world);
+      if (!target || target.rotor.type !== 'cam') return invalidFeedback('Сначала коснись кулачка');
+      pushUndo(); pendingCamRotorIdV20 = target.rotor.id; selectThing({ kind: 'rotor', id: target.rotor.id }); setYardNote('Кулачок выбран. Теперь укажи каретку или точку толкателя.'); return;
+    }
+    const target = connectionPointAt(world, { create: true });
+    const cam = rotorById(pendingCamRotorIdV20); pendingCamRotorIdV20 = null;
+    const follower = target?.node ? createCamFollowerV20(cam, target.node) : null;
+    if (!follower) { if (state.undo.length) state.undo.pop(); return invalidFeedback('Не удалось собрать толкатель'); }
+    selectThing({ kind: 'constraint', id: follower.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'jointServo') {
+    const selection = findThingsAt(world).find((item) => item.selection.kind === 'joint')?.selection;
+    const joint = selection ? jointById(selection.id) : null;
+    if (!joint) return invalidFeedback('Коснись конкретного шарнира');
+    pushUndo(); const servo = createJointServoV20(joint);
+    selectThing({ kind: 'attachment', id: servo.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'sequencer') {
+    const target = rotorTargetAt(world);
+    if (!target || target.rotor.type !== 'drum') return invalidFeedback('Секвенсор ставится на программный барабан');
+    pushUndo(); const sequence = createSequencerV20(target.rotor);
+    selectThing({ kind: 'attachment', id: sequence.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'airbag') {
+    const target = connectionPointAt(world, { create: true });
+    if (!target?.node) return invalidFeedback('Не удалось установить мешок');
+    pushUndo(); const bag = createAirbagV20(target.node);
+    selectThing({ kind: 'attachment', id: bag.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'launcher') {
+    const target = connectionPointAt(world, { create: true });
+    if (!target?.node) return invalidFeedback('Не удалось установить метатель');
+    pushUndo(); const launcher = createLauncherV20(target.node);
+    selectThing({ kind: 'attachment', id: launcher.id }); saveSoon(); placedFeedback(); return;
+  }
+  if (state.tool === 'water') {
+    pushUndo();
+    if (state.environmentV20.waterEnabled && Math.abs(state.environmentV20.waterLevel - world.y) < 22 / state.camera.zoom) {
+      state.environmentV20.waterEnabled = false;
+      setYardNote('Вода убрана.', 1200);
+    } else {
+      state.environmentV20.waterEnabled = true;
+      state.environmentV20.waterLevel = world.y;
+      setYardNote('Уровень воды установлен. Плавучесть зависит от массы и воздушных мешков.', 1800);
+    }
+    saveSoon(); placedFeedback(); return;
+  }
+  baseHandleBuildTapCodexV20(world);
+};
+
+const baseSerializeModelCodexV20 = serializeModel;
+serializeModel = function serializeCodexModelV20() {
+  const model = baseSerializeModelCodexV20();
+  model.environment = deepClone(state.environmentV20);
+  model.codexVersion = 2;
+  return model;
+};
+
+const baseApplyModelCodexV20 = applyModel;
+applyModel = function applyCodexModelV20(model, options = {}) {
+  baseApplyModelCodexV20(model, options);
+  state.environmentV20 = { waterEnabled: false, waterLevel: 430, airDensity: 1, ...(model?.environment || {}) };
+  state.autoChannelsV20 = { A: false, B: false };
+  state.projectilesV20 = [];
+};
