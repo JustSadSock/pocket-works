@@ -17,7 +17,7 @@ const RELEASE_NOTES = [
 
 setCacheNameDetails({ prefix: 'whistle-90', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 const PHASER_CHUNKS = Array.from({ length: 32 }, (_, index) => ({
-  url: `phaser/phaser-runtime-chunk-${index + 1}.js`,
+  url: `phaser/phaser-runtime-chunk-${index + 1}.txt`,
   revision: APP_VERSION
 }));
 
@@ -27,7 +27,7 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'GET_UPDATE_INFO') {
-    event.ports?.[0]?.postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
+    event.ports?.[0].postMessage({ version: APP_VERSION, releaseDate: RELEASE_DATE, releaseNotes: RELEASE_NOTES });
   }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
