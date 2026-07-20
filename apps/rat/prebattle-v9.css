@@ -1,0 +1,183 @@
+body.is-prebattle-v9 #battleScreen {
+  --prebattle-gold: #e5c56f;
+}
+
+body.is-prebattle-v9 #battleClock {
+  color: var(--prebattle-gold);
+}
+
+body.is-prebattle-v9 #battleClock::after {
+  content: " · ПАУЗА";
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+body.is-prebattle-v9 .battlefield-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(229,197,111,.34), inset 0 0 46px rgba(24,34,28,.22);
+}
+
+body.is-prebattle-v9 .scenario-hud-v7 {
+  top: 10px;
+}
+
+.prebattle-deck-v9 {
+  display: grid;
+  gap: 7px;
+  padding: 8px 10px calc(var(--safe-bottom) + 8px);
+  border-top: 1px solid rgba(229,197,111,.25);
+  background: #24332c;
+  color: #f1e7ce;
+}
+
+.prebattle-deck-v9[hidden] {
+  display: none !important;
+}
+
+.prebattle-deck-v9 header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prebattle-deck-v9 header div {
+  display: grid;
+  gap: 1px;
+}
+
+.prebattle-deck-v9 header small {
+  color: #cbb675;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.prebattle-deck-v9 header strong {
+  font: 900 13px Georgia, serif;
+  letter-spacing: .035em;
+}
+
+.prebattle-deck-v9 header > b {
+  min-width: 48px;
+  padding: 6px 8px;
+  border: 1px solid rgba(229,197,111,.35);
+  background: rgba(229,197,111,.08);
+  color: #ecd783;
+  font: 900 15px Georgia, serif;
+  text-align: center;
+}
+
+.prebattle-legend-v9 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.prebattle-legend-v9 span {
+  min-width: 0;
+  padding: 4px 2px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  color: rgba(241,231,206,.48);
+  font-size: 7px;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.prebattle-legend-v9 b {
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(241,231,206,.88);
+  font-size: 7px;
+}
+
+.prebattle-actions-v9 {
+  display: grid;
+  grid-template-columns: minmax(105px, .58fr) minmax(0, 1.42fr);
+  gap: 6px;
+}
+
+#prebattleHoldRestV9 {
+  min-height: 50px;
+  padding: 7px 8px;
+  border: 1px solid rgba(229,197,111,.23);
+  background: rgba(255,255,255,.045);
+  color: #e8dcc0;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .045em;
+}
+
+#prebattleHoldRestV9:disabled {
+  opacity: .35;
+}
+
+#prebattleLaunchV9 {
+  min-height: 50px;
+}
+
+#prebattleLaunchV9:disabled {
+  filter: grayscale(.7);
+  opacity: .48;
+}
+
+#prebattleLaunchV9 small {
+  display: block;
+}
+
+body.is-prebattle-v9 #regimentBar .regiment-button.prebattle-needed-v9 {
+  border-color: rgba(210,104,67,.54);
+  background: rgba(112,54,38,.18);
+}
+
+body.is-prebattle-v9 #regimentBar .regiment-button.prebattle-ready-v9 {
+  border-color: rgba(229,197,111,.62);
+  background: rgba(229,197,111,.11);
+}
+
+body.is-prebattle-v9 #regimentBar .regiment-button.prebattle-ready-v9::after {
+  content: "✓";
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  color: #ead37e;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+body.is-prebattle-v9 #regimentBar .command-word {
+  color: #d8c57f;
+}
+
+@media (max-height: 720px) {
+  .prebattle-deck-v9 {
+    gap: 5px;
+    padding-top: 6px;
+  }
+  .prebattle-legend-v9 {
+    display: none;
+  }
+  .prebattle-deck-v9 header small {
+    display: none;
+  }
+  #prebattleHoldRestV9,
+  #prebattleLaunchV9 {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 390px) {
+  .prebattle-deck-v9 header strong {
+    font-size: 12px;
+  }
+  .prebattle-actions-v9 {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  #prebattleHoldRestV9 {
+    font-size: 7px;
+  }
+}
