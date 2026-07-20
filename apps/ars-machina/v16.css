@@ -1,0 +1,117 @@
+/* ARS MACHINA 1.6 — compact properties, illustrated palette and blueprint previews. */
+.compact-inspector {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: auto;
+  max-height: min(42vh, 360px);
+  padding: 8px;
+  border-left-width: 4px;
+  border-radius: 8px;
+  overflow: auto;
+  transition: max-height .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.compact-inspector.collapsed {
+  max-height: 62px;
+  overflow: hidden;
+  box-shadow: 0 5px 16px rgba(44,31,18,.2);
+}
+.compact-inspector.collapsed .inspector-actions,
+.compact-inspector.collapsed .inspector-layer,
+.compact-inspector.collapsed .inspect-extra { display: none !important; }
+.inspector-heading-v16 {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+}
+.inspector-heading-v16 > span,
+.inspector-heading-v16 > div:first-child { min-width: 0; }
+.inspector-heading-v16 strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inspector-heading-actions-v16 { display: flex; gap: 5px; align-items: center; }
+.inspector-toggle-v16 {
+  min-height: 36px !important;
+  padding: 0 10px;
+  color: #fff3d5;
+  background: #31576a !important;
+  border-color: #24495b !important;
+  font-size: 10px;
+  font-weight: 850;
+}
+.inspector-close-v16 {
+  width: 36px;
+  min-height: 36px !important;
+  color: #6e3027;
+  font-size: 20px;
+}
+.compact-inspector.expanded .inspector-heading-v16 {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(77,58,31,.22);
+}
+.tool-illustrated-v16 {
+  grid-template-rows: 34px auto !important;
+  padding-top: 5px !important;
+}
+.tool-thumbnail-v16 {
+  width: 44px;
+  height: 24px;
+  display: block;
+  image-rendering: auto;
+  filter: drop-shadow(0 2px 1px rgba(18,12,8,.35));
+}
+.tool-illustrated-v16.active .tool-thumbnail-v16 {
+  filter: drop-shadow(0 2px 1px rgba(18,12,8,.35)) drop-shadow(0 0 4px rgba(239,190,91,.28));
+}
+.tool-illustrated-v16 .tool-label { font-size: 9px; }
+.joint-readout { border-left: 3px solid #9d6b31; }
+.blueprint-machine-v16 {
+  position: relative;
+  width: 84px;
+  height: 58px;
+  display: block;
+  border: 1px dashed rgba(36,76,99,.42);
+  background: rgba(36,76,99,.05);
+}
+.blueprint-machine-v16::before,
+.blueprint-machine-v16::after { content: ""; position: absolute; }
+.blueprint-lift-v16::before {
+  left: 18px; top: 5px; width: 46px; height: 46px;
+  border-left: 4px solid var(--blueprint); border-right: 4px solid var(--blueprint);
+}
+.blueprint-lift-v16::after {
+  left: 14px; top: 31px; width: 56px; height: 10px;
+  border: 3px solid var(--blueprint); background: rgba(36,76,99,.08);
+}
+.blueprint-press-v16::before {
+  left: 13px; top: 6px; width: 58px; height: 45px;
+  border: 4px solid var(--blueprint); border-bottom-width: 7px;
+}
+.blueprint-press-v16::after {
+  left: 27px; top: 13px; width: 30px; height: 25px;
+  border-bottom: 7px solid var(--blueprint); border-left: 4px solid var(--blueprint); border-right: 4px solid var(--blueprint);
+}
+.blueprint-drawbridge-v16::before {
+  left: 14px; top: 8px; width: 8px; height: 43px; background: var(--blueprint);
+}
+.blueprint-drawbridge-v16::after {
+  left: 22px; top: 34px; width: 51px; height: 7px; background: var(--blueprint); transform: rotate(-18deg); transform-origin: left center;
+  box-shadow: 16px -19px 0 -2px rgba(36,76,99,.7);
+}
+@media (max-width: 680px) {
+  .compact-inspector { max-height: min(36vh, 300px); }
+  .compact-inspector.collapsed { max-height: 58px; }
+  .inspector-toggle-v16 { padding-inline: 8px; }
+  .tool-page { grid-auto-rows: 68px; }
+  .tool-page .tool { min-height: 68px; }
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .compact-inspector.expanded { max-height: 58vh; }
+  .compact-inspector.collapsed { max-height: 54px; }
+}
