@@ -21,12 +21,13 @@ async function unpack(payload: string, label: string): Promise<string> {
 }
 
 async function loadPhaser(): Promise<unknown> {
-  const importModule = new Function('url', 'return import(url)') as (url: string) => Promise<{ default: string }>;
-  const modules = await Promise.all(Array.from({ length: PHASER_CHUNK_COUNT }, (_, index) => {
-    const url = new URL(`./phaser/phaser-runtime-chunk-${index + 1}.js`, document.baseURI).href;
-    return importModule(url);
+  const chunks = await Promise.all(Array.from({ length: PHASER_CHUNK_COUNT }, async (_, index) => {
+    const url = new URL(`./phaser/phaser-runtime-chunk-${index + 1}.txt`, document.baseURI).href;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Не загружен модуль движка ${index + 1}.`);
+    return response.text();
   }));
-  const engineCode = await unpack(modules.map((module) => module.default).join(''), 'движок матча');
+  const engineCode = await unpack(chunks.join(''), 'движок матча');
   new Function(engineCode)();
   const phaser = (globalThis as typeof globalThis & { Phaser?: unknown }).Phaser;
   if (!phaser) throw new Error('Движок матча распакован, но не запустился.');
