@@ -1,0 +1,152 @@
+// ARS MACHINA 2.0 — ten working folios from the Codice delle Macchine.
+function codexNodeV20(x,y,options={}){return createNode(x,y,{snap:false,...options});}
+function codexBeamV20(a,b,width=9,layer=1){const beam=addBeam(a,b);beam.width=width;beam.layer=layer;return beam;}
+function codexRotorV20(type,node,radius,options={}){const rotor=createRotor(type,node.id,{radius,layer:options.layer??3});rotor.mountMode=options.mountMode||'free';return rotor;}
+function codexJointV20(type,a,b,beamA,beamB){const joint=createJoint(type,{node:a,beamId:beamA.id},{node:b,beamId:beamB.id});if(joint){joint.type=type;joint.targetAngle=normalizeAngle(beamAngleV15(beamB)-beamAngleV15(beamA));joint.limitAngle=Math.PI/2;}return joint;}
+function codexFrameV20(points,edges,width=9){const nodes=points.map(([x,y,o])=>codexNodeV20(x,y,o||{}));for(const [a,b,w=width] of edges)codexBeamV20(nodes[a],nodes[b],w);return nodes;}
+function setCodexCameraV20(x=470,y=400,zoom=.9){state.camera={x,y,zoom};}
+
+function buildLeonardoCartV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1};
+  const [l,r,tl,tr,c]=codexFrameV20([[310,510],[630,510],[350,410],[590,410],[470,445]],[[0,1,14],[0,2],[2,3,12],[3,1],[0,4],[4,1],[2,4],[4,3]]);
+  const wl=codexRotorV20('wheel',l,62),wr=codexRotorV20('wheel',r,62),gl=codexRotorV20('gear',l,28),gr=codexRotorV20('gear',r,28);
+  const chain=createTransmission('chain',gl.id,gr.id);chain.driver='a';
+  const spring=createMainspringV20(gl,{charge:2.2,torque:2.8,auto:true});spring.direction=1;
+  const ratchet=createAttachment('ratchet',l.id,{layer:5});ratchet.direction=1;
+  createSurfaceV20('armor',tl,tr,{width:16,layer:0});
+  setCodexCameraV20(470,420,.92);
+}
+
+function buildAerialScrewV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1.15};
+  const [bl,br,top]=codexFrameV20([[350,515],[590,515],[470,260]],[[0,1,14],[0,2,8],[1,2,8]]);
+  const axle=codexNodeV20(470,380,{mass:1.2});codexBeamV20(top,axle,6);
+  const gear=codexRotorV20('gear',axle,34),screw=createAirscrewV20(gear,{radius:105,pitch:1.55});screw.layer=4;
+  createMainspringV20(gear,{charge:2.4,torque:3.1,auto:true});
+  createSurfaceV20('wing',bl,br,{lift:.45,chord:26,layer:0});
+  setCodexCameraV20(470,380,.86);
+}
+
+function buildOrnithopterV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1.3};
+  const bodyTop=codexNodeV20(470,315,{mass:2}),bodyBottom=codexNodeV20(470,475,{mass:2.8}),leftBody=codexNodeV20(432,350),rightBody=codexNodeV20(508,350);
+  const bodyBeam=codexBeamV20(leftBody,rightBody,12,2);codexBeamV20(bodyTop,bodyBottom,14);codexBeamV20(bodyTop,leftBody);codexBeamV20(bodyTop,rightBody);codexBeamV20(bodyBottom,leftBody);codexBeamV20(bodyBottom,rightBody);
+  const leftRoot=codexNodeV20(432,350,{mass:.6,layer:3}),rightRoot=codexNodeV20(508,350,{mass:.6,layer:3}),leftTip=codexNodeV20(175,330,{mass:.45}),rightTip=codexNodeV20(765,330,{mass:.45});
+  const lb=codexBeamV20(leftRoot,leftTip,7),rb=codexBeamV20(rightRoot,rightTip,7),lj=codexJointV20('hinge',leftBody,leftRoot,bodyBeam,lb),rj=codexJointV20('hinge',rightBody,rightRoot,bodyBeam,rb);
+  createSurfaceV20('wing',leftRoot,leftTip,{lift:1.6,chord:72,area:2.2});const rw=createSurfaceV20('wing',rightRoot,rightTip,{lift:1.6,chord:72,area:2.2});rw.flip=-1;
+  const ls=createJointServoV20(lj,{channel:'A',strength:1.65});ls.angleA=lj.targetAngle+.28;ls.angleB=lj.targetAngle-.46;
+  const rs=createJointServoV20(rj,{channel:'A',strength:1.65});rs.angleA=rj.targetAngle-.28;rs.angleB=rj.targetAngle+.46;
+  const drive=codexRotorV20('gear',bodyTop,28),drum=createDrumV20(drive,{radius:35,steps:8});createSequencerV20(drum,{pattern:'pulseA'});createMainspringV20(drive,{charge:2.2,torque:2.5,auto:true});
+  const tail=codexNodeV20(470,565,{mass:.6});codexBeamV20(bodyBottom,tail,8);createSurfaceV20('wing',bodyBottom,tail,{lift:.35,chord:36});
+  setCodexCameraV20(470,390,.76);
+}
+
+function buildParachuteV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1.15};
+  const left=codexNodeV20(300,215,{mass:.4}),right=codexNodeV20(640,215,{mass:.4}),load=codexNodeV20(470,485,{mass:9,radius:12});
+  const canopy=createSurfaceV20('canopy',left,right,{area:2.4,drag:1.55,stiffness:.42});canopy.chord=90;
+  createConstraint('rope',left.id,load.id,{maxLength:distance(left,load),layer:2});createConstraint('rope',right.id,load.id,{maxLength:distance(right,load),layer:2});createAttachment('weight',load.id,{amount:9});
+  load.py=load.y-4.5;setCodexCameraV20(470,350,.9);
+}
+
+function buildArmoredVehicleV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1};
+  const [l,r,tl,tr,roof]=codexFrameV20([[300,515],[640,515],[345,405],[595,405],[470,315]],[[0,1,14],[0,2],[2,4],[4,3],[3,1],[2,3,12],[0,3],[1,2]]);
+  const wl=codexRotorV20('wheel',l,58),wr=codexRotorV20('wheel',r,58),gl=codexRotorV20('gear',l,30),gr=codexRotorV20('gear',r,30);createTransmission('chain',gl.id,gr.id);createMainspringV20(gl,{charge:2.2,torque:2.8,auto:true});
+  for(const [a,b] of [[l,tl],[tl,roof],[roof,tr],[tr,r],[tl,tr]]){const p=createSurfaceV20('armor',a,b,{width:20});p.thickness=1.4;}
+  createLauncherV20(tl,{capacity:3,volley:1,velocity:10,spread:.08,angleOffset:Math.PI});createLauncherV20(tr,{capacity:3,volley:1,velocity:10,spread:.08});
+  setCodexCameraV20(470,415,.88);
+}
+
+function buildGiantCrossbowV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1};
+  const baseL=codexNodeV20(270,535,{fixed:true}),baseR=codexNodeV20(690,535,{fixed:true}),center=codexNodeV20(470,440,{fixed:true}),left=codexNodeV20(210,300,{mass:1}),right=codexNodeV20(730,300,{mass:1}),front=codexNodeV20(735,440,{mass:2});
+  codexBeamV20(baseL,baseR,14);codexBeamV20(baseL,center,10);codexBeamV20(baseR,center,10);codexBeamV20(center,front,14);
+  const bow=createSurfaceV20('bow',left,right,{stiffness:.3,width:11});bow.restLength=bow.length;createConstraint('rope',left.id,front.id,{maxLength:distance(left,front),layer:2});createConstraint('rope',right.id,front.id,{maxLength:distance(right,front),layer:2});
+  const winch=codexRotorV20('winch',center,36);createAttachment('motor',center.id,{amount:2.6});createConstraint('rope',center.id,front.id,{maxLength:distance(center,front),layer:3});
+  createLauncherV20(front,{capacity:1,volley:1,velocity:16,projectileMass:7});
+  setCodexCameraV20(470,410,.8);
+}
+
+function buildMechanicalKnightV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1};
+  const hip=codexNodeV20(470,485,{fixed:true}),chest=codexNodeV20(470,335,{fixed:true}),neck=codexNodeV20(470,275,{fixed:true});codexBeamV20(hip,chest,16);codexBeamV20(chest,neck,12);
+  const ls=codexNodeV20(420,345,{fixed:true}),rs=codexNodeV20(520,345,{fixed:true}),le=codexNodeV20(335,410,{mass:1}),re=codexNodeV20(605,410,{mass:1}),lh=codexNodeV20(290,500,{mass:.8}),rh=codexNodeV20(650,500,{mass:.8});
+  const torso=codexBeamV20(ls,rs,12),lua=codexBeamV20(ls,le,9),rua=codexBeamV20(rs,re,9),lla=codexBeamV20(le,lh,8),rla=codexBeamV20(re,rh,8);
+  const lj=codexJointV20('hinge',ls,ls,torso,lua),rj=codexJointV20('hinge',rs,rs,torso,rua);createJointServoV20(lj,{channel:'A',strength:1.5});createJointServoV20(rj,{channel:'B',strength:1.5});
+  const drive=codexRotorV20('gear',hip,30),drum=createDrumV20(drive,{radius:40,steps:8});createSequencerV20(drum,{pattern:'alternate'});createMainspringV20(drive,{charge:2.4,torque:2.2,auto:true});
+  codexBeamV20(hip,codexNodeV20(405,570,{fixed:true}),12);codexBeamV20(hip,codexNodeV20(535,570,{fixed:true}),12);createSurfaceV20('armor',ls,rs,{width:22});
+  setCodexCameraV20(470,420,.88);
+}
+
+function buildRevolvingBridgeV20(){
+  clearWorld();state.environmentV20={waterEnabled:true,waterLevel:520,airDensity:1};
+  const towerA=codexNodeV20(275,535,{fixed:true}),towerB=codexNodeV20(275,265,{fixed:true}),pivotA=codexNodeV20(310,445,{fixed:true}),pivotB=codexNodeV20(310,445,{mass:1}),tip=codexNodeV20(735,445,{mass:1.4}),counter=codexNodeV20(195,445,{mass:10});
+  const tower=codexBeamV20(towerA,towerB,16),bridge=codexBeamV20(pivotB,tip,16);codexBeamV20(towerA,pivotA,12);codexBeamV20(pivotB,counter,14);createAttachment('weight',counter.id,{amount:10});
+  const joint=codexJointV20('limit',pivotA,pivotB,tower,bridge);joint.limitAngle=Math.PI*.65;const servo=createJointServoV20(joint,{channel:'A',strength:1.5});servo.angleA=joint.targetAngle;servo.angleB=joint.targetAngle-Math.PI*.48;
+  const winchNode=codexNodeV20(275,305,{fixed:true}),winch=codexRotorV20('winch',winchNode,32);createAttachment('motor',winchNode.id,{amount:2});createConstraint('rope',winchNode.id,tip.id,{maxLength:distance(winchNode,tip),layer:3});
+  setCodexCameraV20(470,410,.82);
+}
+
+function buildDivingSuitV20(){
+  clearWorld();state.environmentV20={waterEnabled:true,waterLevel:285,airDensity:1};
+  const surface=codexNodeV20(270,240,{fixed:true}),head=codexNodeV20(500,360,{mass:1.2}),body=codexNodeV20(500,455,{mass:4}),feet=codexNodeV20(500,555,{mass:8});codexBeamV20(head,body,10);codexBeamV20(body,feet,12);createAttachment('weight',feet.id,{amount:8});
+  const bag=createAirbagV20(body,{volume:2.4,channel:'A'});createConstraint('rope',surface.id,body.id,{maxLength:distance(surface,body)+120,layer:3});const winch=codexRotorV20('winch',surface,30);createAttachment('motor',surface.id,{amount:1.8});
+  const left=codexNodeV20(445,450,{mass:.8}),right=codexNodeV20(555,450,{mass:.8});codexBeamV20(left,body,7);codexBeamV20(body,right,7);createSurfaceV20('armor',left,right,{width:15});
+  setCodexCameraV20(470,410,.92);
+}
+
+function buildOrganGunV20(){
+  clearWorld();state.environmentV20={waterEnabled:false,waterLevel:430,airDensity:1};
+  const baseL=codexNodeV20(300,535,{fixed:true}),baseR=codexNodeV20(640,535,{fixed:true}),pivot=codexNodeV20(470,430,{fixed:true});codexBeamV20(baseL,baseR,15);codexBeamV20(baseL,pivot,11);codexBeamV20(baseR,pivot,11);
+  const turret=codexRotorV20('drum',pivot,48);turret.steps=3;const launcher=createLauncherV20(pivot,{capacity:33,volley:11,velocity:11.5,spread:.28,projectileMass:1.4});launcher.turretRotorId=turret.id;launcher.angleOffset=-.08;
+  const drive=codexRotorV20('gear',pivot,28);createMainspringV20(drive,{charge:1.5,torque:1.2,auto:false,channel:'B'});const servo=createAttachment('servo',pivot.id,{amount:1.2,layer:5});servo.channel='B';servo.angleA=0;servo.angleB=TAU/3;servo.strength=1.2;
+  const shieldL=codexNodeV20(345,390,{fixed:true}),shieldR=codexNodeV20(595,390,{fixed:true});createSurfaceV20('armor',shieldL,shieldR,{width:17});
+  setCodexCameraV20(470,420,.9);
+}
+
+const baseProjectileDirectionFolioV20=projectileDirectionV20;
+projectileDirectionV20=function projectileTurretDirectionV20(launcher){const base=baseProjectileDirectionFolioV20(launcher),turret=rotorById(launcher?.turretRotorId);return base+(turret?.angle||0);};
+
+const CODEX_BLUEPRINTS_V20=[
+  {id:'leo-cart',folio:'I',group:'moto',title:'Самодвижущаяся телега',subtitle:'Заводная пружина, храповик и цепная передача.',builder:buildLeonardoCartV20},
+  {id:'leo-airscrew',folio:'II',group:'volo',title:'Воздушный винт',subtitle:'Спиральный ротор превращает запас пружины в подъём.',builder:buildAerialScrewV20},
+  {id:'leo-ornithopter',folio:'III',group:'volo',title:'Орнитоптер',subtitle:'Полотняные крылья и механическая программа взмахов.',builder:buildOrnithopterV20},
+  {id:'leo-parachute',folio:'IV',group:'volo',title:'Пирамидальный парашют',subtitle:'Купол, растяжки и тяжёлый испытательный груз.',builder:buildParachuteV20},
+  {id:'leo-tank',folio:'V',group:'guerra',title:'Бронированная повозка',subtitle:'Клёпаный панцирь, привод и бортовые метатели.',builder:buildArmoredVehicleV20},
+  {id:'leo-crossbow',folio:'VI',group:'guerra',title:'Гигантский арбалет',subtitle:'Гибкие плечи, тетива, ворот и тяжёлый выстрел.',builder:buildGiantCrossbowV20},
+  {id:'leo-knight',folio:'VII',group:'moto',title:'Механический рыцарь',subtitle:'Программный барабан попеременно двигает плечи.',builder:buildMechanicalKnightV20},
+  {id:'leo-bridge',folio:'VIII',group:'moto',title:'Поворотный мост',subtitle:'Шарнир, противовес, канат и управляемый поворот.',builder:buildRevolvingBridgeV20},
+  {id:'leo-diver',folio:'IX',group:'acqua',title:'Водолазный аппарат',subtitle:'Балласт, воздушный мешок, трос и лебёдка.',builder:buildDivingSuitV20},
+  {id:'leo-organ',folio:'X',group:'guerra',title:'Многоствольный орган',subtitle:'Поворотный барабан и три залпа по одиннадцать.',builder:buildOrganGunV20}
+];
+
+function drawCodexCardV20(canvas,id){
+  const d=Math.min(devicePixelRatio||1,2),w=172,h=132;canvas.width=w*d;canvas.height=h*d;canvas.style.width='86px';canvas.style.height='66px';const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);c.strokeStyle='#5c321e';c.fillStyle='rgba(179,139,80,.2)';c.lineWidth=3;c.lineCap='round';
+  const line=(x1,y1,x2,y2,s=3)=>{c.lineWidth=s;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();},wheel=(x,y,r)=>{c.beginPath();c.arc(x,y,r,0,TAU);c.stroke();for(let i=0;i<6;i++){const a=i/6*TAU;line(x,y,x+Math.cos(a)*r,y+Math.sin(a)*r,1);}};
+  if(id==='leo-cart'||id==='leo-tank'){line(30,82,142,82,8);wheel(48,102,22);wheel(124,102,22);if(id==='leo-tank'){c.beginPath();c.moveTo(35,80);c.lineTo(55,39);c.lineTo(116,30);c.lineTo(143,80);c.closePath();c.stroke();}}
+  else if(id==='leo-airscrew'){line(86,112,86,23,3);for(let i=0;i<5;i++){c.beginPath();c.ellipse(86,90-i*14,18+i*10,6,0,0,TAU);c.stroke();}}
+  else if(id==='leo-ornithopter'){line(86,45,86,108,6);c.beginPath();c.moveTo(86,55);c.quadraticCurveTo(42,20,8,50);c.quadraticCurveTo(45,47,86,55);c.stroke();c.beginPath();c.moveTo(86,55);c.quadraticCurveTo(130,20,164,50);c.quadraticCurveTo(127,47,86,55);c.stroke();}
+  else if(id==='leo-parachute'){c.beginPath();c.moveTo(25,70);c.quadraticCurveTo(86,8,147,70);c.lineTo(86,62);c.closePath();c.stroke();line(25,70,86,115,1);line(147,70,86,115,1);}
+  else if(id==='leo-crossbow'){c.beginPath();c.moveTo(25,20);c.quadraticCurveTo(150,65,25,112);c.stroke();line(25,20,132,65,1);line(25,112,132,65,1);line(50,65,155,65,6);}
+  else if(id==='leo-knight'){line(86,25,86,92,7);line(86,45,43,76,6);line(86,45,129,76,6);line(86,92,60,121,6);line(86,92,112,121,6);c.beginPath();c.arc(86,16,11,0,TAU);c.stroke();}
+  else if(id==='leo-bridge'){line(30,112,30,30,9);line(30,83,150,60,9);line(30,83,90,112,3);}
+  else if(id==='leo-diver'){c.strokeStyle='#536e70';for(let y=25;y<125;y+=18){c.beginPath();for(let x=4;x<168;x+=10)c.lineTo(x,y+Math.sin(x*.25)*4);c.stroke();}c.strokeStyle='#5c321e';c.beginPath();c.arc(88,53,15,0,TAU);c.stroke();line(88,68,88,105,7);line(88,78,57,92,5);line(88,78,119,92,5);}
+  else {line(30,106,145,72,7);for(let i=0;i<5;i++)line(48,42+i*12,143,22+i*10,5);wheel(55,111,15);wheel(125,91,15);}
+}
+
+function installCodexBrowserV20(){
+  const list=document.querySelector('.blueprint-list');if(!list||list.dataset.codexInstalled==='true')return;list.dataset.codexInstalled='true';list.classList.add('codex-list-v20');
+  for(const old of [...list.children])if(old.dataset.blueprint!=='blank')old.classList.add('codex-legacy-hidden-v20');
+  const intro=document.createElement('div');intro.className='codex-intro-v20';intro.innerHTML='<p>Десять рабочих листов. Каждая машина собрана из тех же деталей, которые доступны в мастерской.</p>';
+  const filters=document.createElement('div');filters.className='codex-filter-v20';const groups=[['all','Все'],['moto','Движение'],['volo','Полёт'],['guerra','Военные'],['acqua','Вода']];
+  const applyFilter=(group)=>{filters.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.group===group));list.querySelectorAll('.codex-folio-v20').forEach(card=>card.hidden=group!=='all'&&card.dataset.group!==group);};
+  for(const [group,label]of groups){const button=document.createElement('button');button.type='button';button.dataset.group=group;button.textContent=label;button.addEventListener('click',()=>applyFilter(group));filters.append(button);}list.parentElement.insertBefore(intro,list);list.parentElement.insertBefore(filters,list);
+  const blank=list.querySelector('[data-blueprint="blank"]');
+  for(const definition of CODEX_BLUEPRINTS_V20){const button=document.createElement('button');button.type='button';button.className='blueprint codex-folio-v20';button.dataset.blueprint=definition.id;button.dataset.group=definition.group;button.dataset.nativePress='';const canvas=document.createElement('canvas');const copy=document.createElement('span');copy.innerHTML='<i class="codex-folio-number-v20"></i><b></b><small></small>';copy.querySelector('i').textContent=`Folio ${definition.folio}`;copy.querySelector('b').textContent=definition.title;copy.querySelector('small').textContent=definition.subtitle;button.append(canvas,copy);button.addEventListener('click',()=>loadBlueprint(definition.id));list.insertBefore(button,blank);drawCodexCardV20(canvas,definition.id);}
+  applyFilter('all');
+}
+
+const baseLoadBlueprintCodexV20=loadBlueprint;
+loadBlueprint=function loadCodexFolioV20(name){const definition=CODEX_BLUEPRINTS_V20.find(item=>item.id===name);if(!definition)return baseLoadBlueprintCodexV20(name);pushUndo();definition.builder();setCurrentModelIdentity(null,definition.title);closeBlueprints();saveSoon();updateInspector();updateHistoryButtons();frameConstruction();setYardNote(`Folio ${definition.folio}: ${definition.title}. Нажми «Оживить» и используй контуры A/B или «Спуск».`,3000);heavySound(135,.1);vibrate(14);};
+installCodexBrowserV20();
