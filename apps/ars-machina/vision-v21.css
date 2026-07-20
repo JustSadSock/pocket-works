@@ -1,0 +1,98 @@
+/* ARS MACHINA 2.1 — mechanical vision and readable interaction feedback. */
+.mechanics-vision-button-v21 {
+  position: absolute;
+  z-index: 9;
+  top: 10px;
+  right: 10px;
+  min-width: 66px;
+  min-height: 42px;
+  padding: 4px 8px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(92, 55, 31, .48);
+  border-radius: 4px;
+  background: rgba(229, 207, 153, .91);
+  color: #5b321f;
+  box-shadow: 2px 3px 0 rgba(74, 44, 28, .17);
+  font: 800 9px/1 ui-monospace, monospace;
+  letter-spacing: .08em;
+}
+.mechanics-vision-button-v21 span { font-size: 21px; line-height: 1; }
+.mechanics-vision-button-v21.active {
+  background: #5b321f;
+  color: #ead7a6;
+  border-color: #9b4b35;
+  box-shadow: inset 0 0 0 2px #b48337, 2px 3px 0 rgba(74, 44, 28, .2);
+}
+.mechanics-hud-v21 {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 54px;
+  transform: translateX(-50%);
+  max-width: min(76vw, 540px);
+  padding: 5px 10px;
+  border: 1px solid rgba(91, 50, 31, .32);
+  background: rgba(232, 214, 170, .88);
+  color: #5b321f;
+  box-shadow: 0 2px 7px rgba(73, 45, 25, .12);
+  font: 750 10px/1.3 ui-monospace, monospace;
+  text-align: center;
+  pointer-events: none;
+}
+.mechanics-legend-v21 {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 83px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  padding: 3px 5px;
+  background: rgba(228, 207, 158, .72);
+  border: 1px solid rgba(91, 50, 31, .2);
+  pointer-events: none;
+}
+.mechanics-legend-v21 span {
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  font: 850 8px/1 ui-monospace, monospace;
+  letter-spacing: .05em;
+}
+.mechanics-legend-v21 .energy-v21 { color: #9a6e2d; }
+.mechanics-legend-v21 .channel-a-v21 { color: #9b4b35; }
+.mechanics-legend-v21 .channel-b-v21 { color: #356b70; }
+.mechanics-legend-v21 .force-v21 { color: #5b321f; }
+.interaction-health-v21 { font-weight: 800; }
+.interaction-health-v21.ok { border-left: 4px solid #386a5f; }
+.interaction-health-v21.warning,
+.interaction-health-v21.note { border-left: 4px solid #b17b2e; }
+.interaction-health-v21.error { border-left: 4px solid #9a3029; color: #79251f; }
+.interaction-chain-v21 {
+  border-left: 4px solid #356b70;
+  font-family: ui-monospace, monospace;
+}
+.run-control.auto-active-v21 {
+  border-color: #d1a052 !important;
+  box-shadow: inset 0 0 0 2px rgba(209, 160, 82, .45), 0 0 0 1px rgba(155, 75, 53, .35);
+}
+.channel-control[data-channel="A"].active { background: #854431 !important; }
+.channel-control[data-channel="B"].active { background: #35636a !important; }
+.codex-tutorial-v21 {
+  border-color: rgba(155, 75, 53, .52) !important;
+  background: linear-gradient(100deg, rgba(155, 75, 53, .08), rgba(53, 107, 112, .08)) !important;
+}
+.codex-tutorial-v21 .codex-folio-number-v20 { color: #8c442f; }
+@media (max-width: 680px) {
+  .mechanics-vision-button-v21 { top: 8px; right: 8px; min-width: 58px; min-height: 38px; padding-inline: 6px; }
+  .mechanics-vision-button-v21 b { font-size: 8px; }
+  .mechanics-hud-v21 { top: 50px; max-width: calc(100vw - 20px); font-size: 9px; }
+  .mechanics-legend-v21 { top: 76px; max-width: calc(100vw - 20px); overflow: hidden; }
+  .mechanics-legend-v21 span { font-size: 7px; padding-inline: 4px; }
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .mechanics-hud-v21 { top: 8px; max-width: 56vw; }
+  .mechanics-legend-v21 { display: none; }
+}
