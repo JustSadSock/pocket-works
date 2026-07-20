@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 
-for (const href of ['./joints.css', './v16.css', './codex-v20.css']) {
+for (const href of ['./joints.css', './v16.css', './codex-v20.css', './vision-v21.css']) {
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
   stylesheet.href = href;
@@ -40,7 +40,10 @@ const parts = [
   './engine/part-18b.txt',
   './engine/part-18c.txt',
   './engine/part-19.txt',
-  './engine/part-20.txt'
+  './engine/part-20.txt',
+  './engine/part-21a.txt',
+  './engine/part-21b.txt',
+  './engine/part-21c.txt'
 ];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем Codice delle Macchine…';
@@ -54,7 +57,7 @@ try {
     return response.text();
   }));
   const source = sources.join('\n')
-    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '2.0.0';")
+    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '2.1.0';")
     .replace(
       'localStorage.removeItem(PREFS_KEY);',
       `localStorage.removeItem(PREFS_KEY);\n    localStorage.removeItem('pocket-works:ars-machina:library');\n    localStorage.removeItem('pocket-works:ars-machina:current-model');\n    if (typeof setCurrentModelIdentity === 'function') setCurrentModelIdentity(null, 'Новая модель');\n    if (typeof renderLibraryList === 'function') renderLibraryList();`
