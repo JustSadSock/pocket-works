@@ -1,0 +1,12 @@
+// Keep a rigidly mounted rotor from contaminating a free shaft at the same construction point.
+driveRotors = function driveIndependentShaftsV16(step) {
+  const motors = state.attachments.filter((item) => item.type === 'motor');
+  for (const motor of motors) {
+    const freeRotors = state.rotors.filter((rotor) => rotor.nodeId === motor.nodeId && rotorMountModeV16(rotor) !== 'rigid');
+    if (!freeRotors.length) continue;
+    const target = state.drive * motor.amount * .055;
+    const inertia = Math.max(1, shaftInertia(motor.nodeId));
+    for (const rotor of freeRotors) rotor.omega += (target - rotor.omega) * .22 * step / inertia;
+  }
+  synchronizeShaftsV16();
+};

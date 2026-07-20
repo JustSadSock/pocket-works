@@ -1,0 +1,105 @@
+  const lever = createAttachment('lever', leverNode.id, { layer: 5 }); lever.channel = 'A';
+  state.camera = { x: 500, y: 405, zoom: .94 };
+}
+
+function buildDrawbridgeV16() {
+  clearWorld();
+  const tower = addFixedBeamV16(320, 565, 320, 265, 0);
+  const back = createNode(235, 565, { fixed: true });
+  addBeam(back, tower.a).width = 15; addBeam(back, tower.b).width = 12;
+  const pivotTower = mountNodeOnBeam(tower.beam, { x: 320, y: 455 }, { layer: 2 });
+  const pivotBridge = createNode(pivotTower.x, pivotTower.y, { snap: false, layer: 2 });
+  const tip = createNode(680, 455, { layer: 1 });
+  const bridge = addBeam(pivotBridge, tip); bridge.width = 15; bridge.layer = 1;
+  const joint = createJoint('limit', { node: pivotTower, beamId: tower.beam.id }, { node: pivotBridge, beamId: bridge.id });
+  joint.type = 'limit'; joint.limitAngle = Math.PI * .48; joint.targetAngle = normalizeAngle(beamAngleV15(bridge) - beamAngleV15(tower.beam));
+  const winchNode = createNode(320, 300, { fixed: true, layer: 3 });
+  const winch = createRotor('winch', winchNode.id, { radius: 34, layer: 4 }); winch.mountMode = 'free';
+  createAttachment('motor', winchNode.id, { amount: 2.4, layer: 5 });
+  const rope = createConstraint('rope', winchNode.id, tip.id, { maxLength: distance(winchNode, tip), layer: 3 }); rope.maxLength = distance(winchNode, tip);
+  const damper = createDamperV16(tower.a, tip); damper.damping = .48; damper.maxLength = 520; damper.minLength = 180; damper.layer = 0;
+  state.camera = { x: 465, y: 410, zoom: .88 };
+}
+
+// Replace the old transmission sample with a deterministic chain + rack bench.
+buildTransmissionBench = function buildTransmissionBenchV16() {
+  clearWorld();
+  const baseL = createNode(250, 560, { fixed: true });
+  const baseR = createNode(720, 560, { fixed: true });
+  const driveNode = createNode(330, 430, { fixed: true, layer: 1 });
+  const middleNode = createNode(470, 430, { fixed: true, layer: 1 });
+  const outputNode = createNode(610, 390, { fixed: true, layer: 1 });
+  addBeam(baseL, driveNode); addBeam(driveNode, middleNode); addBeam(middleNode, outputNode); addBeam(outputNode, baseR); addBeam(baseL, baseR).width = 15;
+  const drive = createRotor('gear', driveNode.id, { radius: 28, layer: 3 }); drive.mountMode = 'free';
+  const middle = createRotor('gear', middleNode.id, { radius: 52, layer: 3 }); middle.mountMode = 'free';
+  const output = createRotor('gear', outputNode.id, { radius: 40, layer: 3 }); output.mountMode = 'free';
+  createAttachment('motor', driveNode.id, { amount: 2.4, layer: 5 });
+  const chain = createTransmission('chain', drive.id, middle.id); chain.layer = 2; chain.driver = 'a';
+  const belt = createTransmission('belt', middle.id, output.id); belt.layer = 2; belt.driver = 'a';
+  const clutch = createAttachment('clutch', driveNode.id, { layer: 5 }); clutch.channel = 'A';
+  const brake = createAttachment('brake', outputNode.id, { layer: 5 }); brake.channel = 'B';
+  const rackA = createNode(515, 430, { mass: 2, layer: 4 });
+  const rackB = createNode(705, 430, { mass: 2, layer: 4 });
+  const rack = createRack(rackA, rackB); rack.layer = 4; rack.pitch = 12;
+  const leverNode = createNode(240, 360, { fixed: true, layer: 4 });
+  const lever = createAttachment('lever', leverNode.id, { layer: 5 }); lever.channel = 'A';
+  const flywheel = createRotor('flywheel', middleNode.id, { radius: 44, layer: 2 }); flywheel.inertia = 5; flywheel.mountMode = 'free';
+  state.camera = { x: 490, y: 420, zoom: .9 };
+};
+
+function installBlueprintsV16() {
+  const list = document.querySelector('.blueprint-list');
+  if (!list || list.querySelector('[data-blueprint="lift"]')) return;
+  const definitions = [
+    ['lift', 'Грузовой подъёмник', 'Каретки, толкатель, демпфер и контур A.'],
+    ['press', 'Механический пресс', 'Жёсткая рама, направляющая и управляемая траверса.'],
+    ['drawbridge', 'Подъёмный мост', 'Ограниченный шарнир, лебёдка, трос и демпфер.']
+  ];
+  for (const [id, title, description] of definitions) {
+    const button = document.createElement('button');
+    button.className = 'blueprint blueprint-v16'; button.dataset.blueprint = id; button.type = 'button'; button.dataset.nativePress = '';
+    button.innerHTML = `<span class="blueprint-machine-v16 blueprint-${id}-v16" aria-hidden="true"></span><span><b></b><small></small></span>`;
+    button.querySelector('b').textContent = title; button.querySelector('small').textContent = description;
+    button.addEventListener('click', () => loadBlueprint(id));
+    list.insertBefore(button, list.querySelector('[data-blueprint="blank"]'));
+  }
+}
+
+const baseLoadBlueprintExpansionV16 = loadBlueprint;
+loadBlueprint = function loadExpandedBlueprintV16(name) {
+  if (!['lift', 'press', 'drawbridge'].includes(name)) return baseLoadBlueprintExpansionV16(name);
+  pushUndo();
+  if (name === 'lift') buildLiftV16();
+  else if (name === 'press') buildPressV16();
+  else buildDrawbridgeV16();
+  setCurrentModelIdentity(null, name === 'lift' ? 'Грузовой подъёмник' : name === 'press' ? 'Механический пресс' : 'Подъёмный мост');
+  closeBlueprints(); saveSoon(); updateInspector(); updateHistoryButtons(); frameConstruction();
+  setYardNote(name === 'drawbridge' ? 'Мост готов. Удерживай кнопки лебёдки во время испытания.' : 'Механизм готов. Контур A приводит его в движение.', 2700);
+  heavySound(145, .1); vibrate(14);
+};
+
+const baseMakeLibraryEntryV16 = makeLibraryEntry;
+makeLibraryEntry = function makeVersionedLibraryEntryV16(name, model = serializeModel(), id = null) {
+  const entry = baseMakeLibraryEntryV16(name, model, id);
+  entry.appVersion = APP_VERSION;
+  return entry;
+};
+const basePackageModelV16 = packageModel;
+packageModel = function packageVersionedModelV16(name, model = serializeModel()) {
+  const value = basePackageModelV16(name, model);
+  value.appVersion = APP_VERSION;
+  return value;
+};
+const baseSaveCurrentToLibraryV16 = saveCurrentToLibrary;
+saveCurrentToLibrary = function saveVersionedLibraryV16(options = {}) {
+  const entry = baseSaveCurrentToLibraryV16(options);
+  if (!entry) return entry;
+  const entries = readLibrary();
+  const stored = entries.find((item) => item.id === entry.id);
+  if (stored) { stored.appVersion = APP_VERSION; writeLibrary(entries); }
+  entry.appVersion = APP_VERSION;
+  return entry;
+};
+
+installBlueprintsV16();
+repairConstructionV16();

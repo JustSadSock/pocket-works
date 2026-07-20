@@ -1,0 +1,63 @@
+transmissionRatioData = function explicitTransmissionRatioDataV16(transmission) {
+  const pair = transmissionRotorsV16(transmission);
+  if (!pair) return null;
+  const driverIsB = transmission?.driver === 'b';
+  const driverRotor = driverIsB ? pair.rotorB : pair.rotorA;
+  const outputRotor = driverIsB ? pair.rotorA : pair.rotorB;
+  const sizeRatio = outputRotor.radius / Math.max(1, driverRotor.radius);
+  const speedRatio = driverRotor.radius / Math.max(1, outputRotor.radius);
+  return {
+    driverIsB,
+    driverNodeId: driverRotor.nodeId,
+    outputNodeId: outputRotor.nodeId,
+    driverRotor,
+    outputRotor,
+    sizeRatio,
+    speedRatio
+  };
+};
+
+drawTransmission = function drawExplicitTransmissionV16(a, b, transmission) {
+  const pair = transmissionRotorsV16(transmission);
+  if (!pair) return;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const offset = clamp(Math.min(pair.rotorA.radius, pair.rotorB.radius) * state.camera.zoom * .35, 5, 15);
+  const enabled = transmissionEnabled(transmission);
+  const sign = transmission.type === 'belt' && transmission.crossed ? -1 : 1;
+  const speed = (pair.rotorA.omega + pair.rotorB.omega) * 52;
+  ctx.save();
+  ctx.globalAlpha = enabled ? 1 : .32;
+  ctx.strokeStyle = transmission.type === 'chain' ? '#363b3d' : '#5c3a23';
+  ctx.lineWidth = transmission.type === 'chain' ? 5 : 7;
+  ctx.setLineDash(transmission.type === 'chain' ? [7, 5] : [18, 6]);
+  ctx.lineDashOffset = state.mode === 'run' ? -state.simTime * speed : 0;
+  ctx.beginPath();
+  ctx.moveTo(a.x + nx * offset, a.y + ny * offset);
+  ctx.lineTo(b.x + nx * offset * sign, b.y + ny * offset * sign);
+  ctx.moveTo(a.x - nx * offset, a.y - ny * offset);
+  ctx.lineTo(b.x - nx * offset * sign, b.y - ny * offset * sign);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = transmission.type === 'chain' ? '#a7a59b' : '#c39a63';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(a.x + nx * offset, a.y + ny * offset);
+  ctx.lineTo(b.x + nx * offset * sign, b.y + ny * offset * sign);
+  ctx.stroke();
+  if (enabled && state.mode === 'run') {
+    const t = .5 + Math.sin(state.simTime * 3) * .08;
+    const x = a.x + dx * t;
+    const y = a.y + dy * t;
+    const direction = Math.sign(pair.rotorA.omega || 1);
+    ctx.translate(x, y);
+    ctx.rotate(Math.atan2(dy, dx));
+    ctx.fillStyle = '#e6bd6c';
+    ctx.beginPath();
+    ctx.moveTo(8 * direction, 0); ctx.lineTo(-5 * direction, -5); ctx.lineTo(-5 * direction, 5); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+};

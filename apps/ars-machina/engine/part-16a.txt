@@ -1,0 +1,170 @@
+// ARS MACHINA 1.6 — sliders, dampers, servos and propeller drive.
+Object.assign(NAMES, {
+  slider: ['Каркас', 'Скользящая каретка'],
+  damper: ['Оснастка', 'Гидравлический демпфер'],
+  servo: ['Управление', 'Угловой сервопривод'],
+  propeller: ['Привод', 'Воздушный винт']
+});
+
+function insertToolV16(group, definition, afterTool = null) {
+  if (!TOOL_GROUPS[group] || TOOL_GROUPS[group].some(([tool]) => tool === definition[0])) return;
+  const index = afterTool ? TOOL_GROUPS[group].findIndex(([tool]) => tool === afterTool) : -1;
+  TOOL_GROUPS[group].splice(index >= 0 ? index + 1 : TOOL_GROUPS[group].length, 0, definition);
+}
+
+insertToolV16('frame', ['slider', 'Каретка', 'slider'], 'joint');
+insertToolV16('drive', ['propeller', 'Винт', 'propeller'], 'flywheel');
+insertToolV16('controls', ['servo', 'Серво', 'servo'], 'actuator');
+insertToolV16('rigging', ['damper', 'Демпфер', 'damper'], 'spring');
+
+function createSlidingMountV16(beam, point) {
+  const projection = projectPointToBeam(point, beam);
+  if (!projection || projection.t < .04 || projection.t > .96) return null;
+  let node = state.nodes.find((item) => item.mount?.beamId === beam.id && Math.abs(item.mount.t - projection.t) < .025);
+  if (!node) {
+    node = createNode(projection.point.x, projection.point.y, {
+      role: 'slider', mass: 1.4, radius: 7, layer: itemLayer(beam) + 2,
+      mount: { beamId: beam.id, t: projection.t }
+    });
+  }
+  node.role = 'slider';
+  node.mount.sliding = true;
+  node.mount.minT = Number.isFinite(node.mount.minT) ? node.mount.minT : .04;
+  node.mount.maxT = Number.isFinite(node.mount.maxT) ? node.mount.maxT : .96;
+  return node;
+}
+
+function createDamperV16(a, b) {
+  const damper = createConstraint('damper', a.id, b.id, {
+    stiffness: 0, width: 10, layer: Math.max(itemLayer(a), itemLayer(b)) + 1
+  });
+  if (!damper) return null;
+  damper.restLength = damper.length;
+  damper.minLength = damper.length * .45;
+  damper.maxLength = damper.length * 1.65;
+  damper.damping = .72;
+  return damper;
+}
+
+const baseSetToolExpansionV16 = setTool;
+setTool = function setExpandedToolV16(tool) {
+  baseSetToolExpansionV16(tool);
+  const notes = {
+    slider: 'Коснись балки. Каретка будет свободно ездить вдоль неё во время испытания.',
+    damper: 'Выбери две точки. Демпфер погасит рывки, но не будет работать как пружина.',
+    servo: 'Коснись готового вала. Контур A/B повернёт его на заданный угол.',
+    propeller: 'Коснись готового вала. Воздушный винт создаст тягу вдоль несущей балки.'
+  };
+  if (notes[tool]) setYardNote(notes[tool]);
+};
+
+const baseHandleBuildTapExpansionV16 = handleBuildTap;
+handleBuildTap = function handleExpandedToolTapV16(world) {
+  if (state.tool === 'slider') {
+    const hit = beamHitsAt(world, 18 / state.camera.zoom)[0];
+    if (!hit) return invalidFeedback('Каретка ставится на балку');
+    pushUndo();
+    const node = createSlidingMountV16(hit.beam, hit.projection.point);
+    if (!node) {
+      if (state.undo.length) state.undo.pop(); updateHistoryButtons();
+      return invalidFeedback('Поставь каретку дальше от края балки');
+    }
+    selectThing({ kind: 'node', id: node.id });
+    saveSoon(); placedFeedback();
+    setYardNote('Каретка готова. К ней можно крепить платформу, рычаг или толкатель.', 1700);
+    return;
+  }
+  if (state.tool === 'damper') {
+    if (!state.pendingNodeId) pushUndo();
+    const target = connectionPointAt(world, { create: true });
+    if (!target?.node) return invalidFeedback('Не удалось поставить крепление демпфера');
+    if (!state.pendingNodeId) {
+      state.pendingNodeId = target.node.id;
+      setYardNote('Первое крепление демпфера выбрано. Укажи второе.');
+      clickSound(320, .025); saveSoon(); return;
+    }
+    if (state.pendingNodeId === target.node.id) return invalidFeedback('Демпферу нужна длина');
+    const first = nodeById(state.pendingNodeId);
+    const damper = createDamperV16(first, target.node);
+    state.pendingNodeId = null;
+    if (!damper) return invalidFeedback('Не удалось установить демпфер');
+    selectThing({ kind: 'constraint', id: damper.id }); saveSoon(); placedFeedback();
+    setYardNote('Демпфер установлен. Он гасит колебания и удары.', 1500); return;
+  }
+  if (state.tool === 'servo') {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Сервопривод ставится на готовый вал');
+    const existing = state.attachments.find((item) => item.type === 'servo' && item.nodeId === target.node.id);
+    if (existing) { selectThing({ kind: 'attachment', id: existing.id }); return setYardNote('Сервопривод уже стоит на этом валу.', 1100); }
+    pushUndo();
+    const servo = createAttachment('servo', target.node.id, { amount: 1.5, layer: itemLayer(target.rotor) + 2 });
+    servo.channel = 'A'; servo.angleA = target.rotor.angle; servo.angleB = target.rotor.angle + Math.PI / 2; servo.strength = 1.5;
+    selectThing({ kind: 'attachment', id: servo.id }); saveSoon(); placedFeedback();
+    setYardNote('Серво готово. Контур A повернёт вал на 90°.', 1500); return;
+  }
+  if (state.tool === 'propeller') {
+    const target = rotorTargetAt(world);
+    if (!target) return invalidFeedback('Воздушный винт ставится на готовый вал');
+    const existing = state.rotors.find((rotor) => rotor.type === 'propeller' && rotor.nodeId === target.node.id);
+    if (existing) { selectThing({ kind: 'rotor', id: existing.id }); return setYardNote('Воздушный винт уже стоит на валу.', 1100); }
+    pushUndo();
+    const propeller = createRotor('propeller', target.node.id, { radius: Math.max(32, target.rotor.radius * 1.15), layer: itemLayer(target.rotor) + 1 });
+    propeller.pitch = 1; propeller.direction = 1; propeller.mountMode = 'free';
+    selectThing({ kind: 'rotor', id: propeller.id }); saveSoon(); placedFeedback();
+    setYardNote('Воздушный винт установлен. Вращение создаёт тягу.', 1500); return;
+  }
+  baseHandleBuildTapExpansionV16(world);
+};
+
+function applyDampersV16(step) {
+  for (const damper of state.constraints.filter((item) => item.type === 'damper' && item.active)) {
+    const a = nodeById(damper.a), b = nodeById(damper.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy) || 1;
+    const nx = dx / length, ny = dy / length;
+    const va = nodeVelocityV16(a), vb = nodeVelocityV16(b);
+    const relative = (vb.x - va.x) * nx + (vb.y - va.y) * ny;
+    const strength = clamp(damper.damping || .72, .15, .95) * step;
+    const impulse = relative * strength * .5;
+    addNodeVelocityV16(a, nx * impulse, ny * impulse);
+    addNodeVelocityV16(b, -nx * impulse, -ny * impulse);
+    let boundError = 0;
+    if (length < damper.minLength) boundError = length - damper.minLength;
+    else if (length > damper.maxLength) boundError = length - damper.maxLength;
+    if (boundError) {
+      const correction = clamp(boundError * .18, -3, 3);
+      if (!a.fixed) { a.x += nx * correction * .5; a.y += ny * correction * .5; }
+      if (!b.fixed) { b.x -= nx * correction * .5; b.y -= ny * correction * .5; }
+    }
+  }
+}
+
+function updateServosV16(step) {
+  for (const servo of state.attachments.filter((item) => item.type === 'servo')) {
+    const rotor = shaftRotor(servo.nodeId);
+    if (!rotor || rotorMountModeV16(rotor) === 'rigid') continue;
+    const target = channelActive(controlChannel(servo)) ? servo.angleB : servo.angleA;
+    const error = normalizeAngle(target - rotor.angle);
+    const torque = clamp(error * (servo.strength || 1.5) - rotor.omega * .9, -.18, .18) * step;
+    for (const shaftPart of state.rotors.filter((item) => item.nodeId === servo.nodeId && rotorMountModeV16(item) !== 'rigid')) shaftPart.omega += torque;
+  }
+}
+
+function applyPropellerThrustV16(step) {
+  for (const propeller of state.rotors.filter((rotor) => rotor.type === 'propeller')) {
+    if (rotorMountModeV16(propeller) === 'rigid') continue;
+    const node = nodeById(propeller.nodeId);
+    if (!node) continue;
+    const carrier = carrierBeamV15(node);
+    const angle = carrier ? beamAngleV15(carrier) - Math.PI / 2 : -Math.PI / 2;
+    const magnitude = clamp(propeller.omega * Math.abs(propeller.omega) * propeller.radius * .035 * (propeller.pitch || 1), -1.4, 1.4) * (propeller.direction === -1 ? -1 : 1) * step;
+    const vx = Math.cos(angle) * magnitude, vy = Math.sin(angle) * magnitude;
+    if (carrier) {
+      const endpoints = [nodeById(carrier.a), nodeById(carrier.b)].filter(Boolean);
+      for (const endpoint of endpoints) addNodeVelocityV16(endpoint, vx * .5, vy * .5);
+    } else addNodeVelocityV16(node, vx, vy);
+  }
+}
+
+const baseApplyMachineForcesExpansionV16 = applyMachineForcesV16;
+applyMachineForcesV16 = function applyExpandedMachineForcesV16(step) {

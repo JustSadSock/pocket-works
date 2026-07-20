@@ -1,0 +1,202 @@
+// ARS MACHINA 1.6 — per-connection joints, stable PBD solver and deterministic transmissions.
+let activeHubRotorV16 = null;
+let pendingTransmissionRotorIdV16 = null;
+let stabilityRecoveriesV16 = 0;
+let lastStabilityNoticeV16 = 0;
+
+function jointModeLabelV16(joint) {
+  if (joint?.type === 'weld') return 'Жёсткое';
+  if (joint?.type === 'limit') return 'С ограничителем';
+  return 'Свободное';
+}
+
+function jointsForNodeV16(node) {
+  if (!node) return [];
+  return state.joints.filter((joint) => joint.a === node.id || joint.b === node.id);
+}
+
+function rotorMountModeV16(rotor) {
+  return rotor?.mountMode === 'rigid' ? 'rigid' : 'free';
+}
+
+function normalizeMechanicsV16() {
+  for (const node of state.nodes) {
+    const legacyRigid = node.jointMode === 'rigid';
+    const rotors = state.rotors.filter((rotor) => rotor.nodeId === node.id);
+    for (const rotor of rotors) {
+      if (rotor.mountMode !== 'rigid' && rotor.mountMode !== 'free') rotor.mountMode = legacyRigid ? 'rigid' : 'free';
+    }
+    node.jointMode = 'free';
+  }
+  for (const joint of state.joints) {
+    if (!['hinge', 'weld', 'limit'].includes(joint.type)) joint.type = 'hinge';
+    if (!Number.isFinite(joint.targetAngle)) {
+      const a = beamById(joint.beamA), b = beamById(joint.beamB);
+      joint.targetAngle = normalizeAngle(beamAngleV15(b) - beamAngleV15(a));
+    }
+    if (!Number.isFinite(joint.limitAngle)) joint.limitAngle = Math.PI / 3;
+    joint.stiffness = joint.type === 'weld' ? .42 : joint.type === 'limit' ? .28 : 1;
+  }
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type))) {
+    if (!transmission.rotorAId) transmission.rotorAId = shaftRotor(transmission.a)?.id || null;
+    if (!transmission.rotorBId) transmission.rotorBId = shaftRotor(transmission.b)?.id || null;
+    transmission.driver = transmission.driver === 'b' ? 'b' : 'a';
+  }
+  for (const rack of state.constraints.filter((item) => item.type === 'rack')) {
+    const a = nodeById(rack.a), b = nodeById(rack.b);
+    if (!a || !b) continue;
+    const len = distance(a, b) || 1;
+    if (!Number.isFinite(rack.axisX) || !Number.isFinite(rack.axisY)) {
+      rack.axisX = (b.x - a.x) / len;
+      rack.axisY = (b.y - a.y) / len;
+    }
+    if (!Number.isFinite(rack.originX)) rack.originX = (a.x + b.x) / 2;
+    if (!Number.isFinite(rack.originY)) rack.originY = (a.y + b.y) / 2;
+    if (!Number.isFinite(rack.pitch)) rack.pitch = 13;
+  }
+}
+
+// Disable the old node-global joint editor. Version 1.6 renders per-joint/per-shaft controls below.
+selectedJointContextV15 = function noLegacyJointContextV16() { return null; };
+nodeJointModeV15 = function structuralSummaryV16(node) {
+  const joints = jointsForNodeV16(node);
+  if (!joints.length) return 'free';
+  const rigid = joints.filter((joint) => joint.type === 'weld').length;
+  if (rigid && rigid === joints.length) return 'rigid';
+  return rigid ? 'mixed' : 'free';
+};
+
+function setRotorMountModeV16(rotor, mode) {
+  if (!rotor) return false;
+  rotor.mountMode = mode === 'rigid' ? 'rigid' : 'free';
+  delete rotor.lockedToBeamId;
+  delete rotor.lockOffset;
+  delete rotor.lockWorldAngle;
+  if (rotor.mountMode === 'rigid') {
+    const node = nodeById(rotor.nodeId);
+    const carrier = carrierBeamV15(node);
+    if (carrier) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+    } else {
+      rotor.lockWorldAngle = rotor.angle;
+    }
+    rotor.omega = 0;
+  }
+  return true;
+}
+
+setJointObjectModeV15 = function setPerConnectionModeV16(joint, mode) {
+  if (!joint) return false;
+  joint.type = mode === 'rigid' ? 'weld' : mode === 'limit' ? 'limit' : 'hinge';
+  joint.stiffness = joint.type === 'weld' ? .42 : joint.type === 'limit' ? .28 : 1;
+  const beamA = beamById(joint.beamA), beamB = beamById(joint.beamB);
+  if (beamA && beamB) joint.targetAngle = normalizeAngle(beamAngleV15(beamB) - beamAngleV15(beamA));
+  if (!Number.isFinite(joint.limitAngle)) joint.limitAngle = Math.PI / 3;
+  return true;
+};
+
+function applyJointModeV16(joint, mode) {
+  if (!joint) return;
+  pushUndo();
+  setJointObjectModeV15(joint, mode);
+  state.pendingJointTarget = null;
+  updateInspector();
+  saveSoon();
+  heavySound(mode === 'rigid' ? 150 : mode === 'limit' ? 220 : 330, .05);
+  setYardNote(mode === 'rigid' ? 'Эта пара деталей соединена жёстко.' : mode === 'limit' ? 'Соединение свободно только в заданном диапазоне.' : 'Эта пара деталей вращается свободно.', 1600);
+}
+
+function applyRotorModeV16(rotors, mode) {
+  const list = (Array.isArray(rotors) ? rotors : [rotors]).filter(Boolean);
+  if (!list.length) return;
+  pushUndo();
+  for (const rotor of list) setRotorMountModeV16(rotor, mode);
+  state.pendingJointTarget = null;
+  updateInspector();
+  saveSoon();
+  heavySound(mode === 'rigid' ? 170 : 340, .05);
+  setYardNote(mode === 'rigid' ? 'Вал жёстко связан с несущей деталью.' : 'Вал вращается в подшипнике.', 1500);
+}
+
+function connectionContextV16() {
+  const selected = getSelected();
+  if (!selected || !state.selection) return null;
+  if (state.selection.kind === 'joint') return { kind: 'joint', joint: selected };
+  if (state.selection.kind === 'rotor') return { kind: 'rotor', rotor: selected };
+  if (state.selection.kind === 'node') {
+    return {
+      kind: 'node',
+      node: selected,
+      joints: jointsForNodeV16(selected),
+      rotors: state.rotors.filter((rotor) => rotor.nodeId === selected.id)
+    };
+  }
+  return null;
+}
+
+const baseRenderInspectorExtrasV16 = renderInspectorExtras;
+renderInspectorExtras = function renderPerConnectionInspectorV16() {
+  baseRenderInspectorExtrasV16();
+  if (!inspectorExtra || ui.inspector.hidden) return;
+  const context = connectionContextV16();
+  if (!context) return;
+  if (context.kind === 'joint') {
+    appendInspectRow('Соединение', segmentedButtons([
+      { value: 'free', label: 'Свободное' },
+      { value: 'limit', label: 'Ограничитель' },
+      { value: 'rigid', label: 'Жёсткое' }
+    ], context.joint.type === 'weld' ? 'rigid' : context.joint.type === 'limit' ? 'limit' : 'free', (value) => applyJointModeV16(context.joint, value)));
+    if (context.joint.type === 'limit') {
+      const limits = [30, 60, 90, 135];
+      const current = limits.reduce((best, value) => Math.abs(value - (context.joint.limitAngle || Math.PI / 3) * 180 / Math.PI) < Math.abs(best - (context.joint.limitAngle || Math.PI / 3) * 180 / Math.PI) ? value : best, 60);
+      appendInspectRow('Ход', segmentedButtons(limits.map((value) => ({ value, label: `±${value}°` })), current, (value) => {
+        pushUndo(); context.joint.limitAngle = value * Math.PI / 180; updateInspector(); saveSoon();
+      }));
+    }
+  } else if (context.kind === 'rotor') {
+    appendInspectRow('Посадка', segmentedButtons([
+      { value: 'free', label: 'Подшипник' },
+      { value: 'rigid', label: 'Жёстко' }
+    ], rotorMountModeV16(context.rotor), (value) => applyRotorModeV16(context.rotor, value)));
+  } else if (context.kind === 'node') {
+    if (context.rotors.length) {
+      const allRigid = context.rotors.every((rotor) => rotorMountModeV16(rotor) === 'rigid');
+      appendInspectRow('Валы', segmentedButtons([
+        { value: 'free', label: 'Подшипники' },
+        { value: 'rigid', label: 'Жёстко' }
+      ], allRigid ? 'rigid' : 'free', (value) => applyRotorModeV16(context.rotors, value)));
+    }
+    if (context.joints.length === 1) {
+      const joint = context.joints[0];
+      appendInspectRow('Связь', segmentedButtons([
+        { value: 'free', label: 'Свободная' },
+        { value: 'limit', label: 'С пределом' },
+        { value: 'rigid', label: 'Жёсткая' }
+      ], joint.type === 'weld' ? 'rigid' : joint.type === 'limit' ? 'limit' : 'free', (value) => applyJointModeV16(joint, value)));
+    } else if (context.joints.length > 1) {
+      const readout = document.createElement('div');
+      readout.className = 'inspect-readout';
+      readout.textContent = `${context.joints.length} независимых соединения в одной точке. Они могут иметь разные режимы.`;
+      appendInspectRow('Связи', readout);
+      appendInspectRow('Выбрать', segmentedButtons(context.joints.map((joint, index) => ({
+        value: joint.id,
+        label: `${index + 1} · ${joint.type === 'weld' ? '■' : joint.type === 'limit' ? '◐' : '○'}`
+      })), '', (id) => selectThing({ kind: 'joint', id })));
+    }
+  }
+};
+
+const baseInspectorValueV16 = inspectorValue;
+inspectorValue = function perConnectionInspectorValueV16(selected, type) {
+  if (state.selection?.kind === 'joint') return jointModeLabelV16(selected);
+  if (state.selection?.kind === 'rotor') {
+    const base = baseInspectorValueV16(selected, type).replace(/ · вал (жёсткий|свободный)$/u, '');
+    return `${base} · ${rotorMountModeV16(selected) === 'rigid' ? 'жёсткая посадка' : 'подшипник'}`;
+  }
+  if (state.selection?.kind === 'node') {
+    const joints = jointsForNodeV16(selected);
+    if (joints.length > 1) return `${joints.length} независимых соединения`;
+  }
+  return baseInspectorValueV16(selected, type);
+}

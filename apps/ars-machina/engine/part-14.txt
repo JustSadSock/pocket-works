@@ -1,0 +1,194 @@
+// ARS MACHINA 1.6 — compact inspector and illustrated tool palette.
+let inspectorExpandedV16 = false;
+let inspectorSelectionKeyV16 = '';
+let inspectorToggleV16 = null;
+let inspectorCloseV16 = null;
+
+function selectionKeyV16(selection = state.selection) {
+  return selection ? `${selection.kind}:${selection.id}` : '';
+}
+
+function setInspectorExpandedV16(expanded, { quiet = false } = {}) {
+  inspectorExpandedV16 = Boolean(expanded);
+  ui.inspector.classList.toggle('expanded', inspectorExpandedV16);
+  ui.inspector.classList.toggle('collapsed', !inspectorExpandedV16);
+  if (inspectorToggleV16) {
+    inspectorToggleV16.textContent = inspectorExpandedV16 ? 'Свернуть' : 'Настроить';
+    inspectorToggleV16.setAttribute('aria-expanded', inspectorExpandedV16 ? 'true' : 'false');
+  }
+  if (!quiet) clickSound(inspectorExpandedV16 ? 360 : 220, .025);
+}
+
+function installCompactInspectorV16() {
+  if (ui.inspector.dataset.compactInstalled === 'true') return;
+  ui.inspector.dataset.compactInstalled = 'true';
+  ui.inspector.classList.add('compact-inspector', 'collapsed');
+  const heading = ui.inspector.firstElementChild;
+  heading?.classList.add('inspector-heading-v16');
+  const actions = document.createElement('div');
+  actions.className = 'inspector-heading-actions-v16';
+  inspectorToggleV16 = document.createElement('button');
+  inspectorToggleV16.type = 'button';
+  inspectorToggleV16.className = 'inspector-toggle-v16';
+  inspectorToggleV16.dataset.nativePress = '';
+  inspectorToggleV16.textContent = 'Настроить';
+  inspectorToggleV16.setAttribute('aria-expanded', 'false');
+  inspectorCloseV16 = document.createElement('button');
+  inspectorCloseV16.type = 'button';
+  inspectorCloseV16.className = 'inspector-close-v16';
+  inspectorCloseV16.dataset.nativePress = '';
+  inspectorCloseV16.setAttribute('aria-label', 'Закрыть свойства');
+  inspectorCloseV16.textContent = '×';
+  actions.append(inspectorToggleV16, inspectorCloseV16);
+  heading?.append(actions);
+  inspectorToggleV16.addEventListener('click', () => setInspectorExpandedV16(!inspectorExpandedV16));
+  inspectorCloseV16.addEventListener('click', () => {
+    selectThing(null);
+    setInspectorExpandedV16(false, { quiet: true });
+  });
+}
+
+const baseSelectThingV16 = selectThing;
+selectThing = function selectCompactThingV16(selection) {
+  const previous = selectionKeyV16();
+  baseSelectThingV16(selection);
+  const next = selectionKeyV16();
+  if (next !== previous) setInspectorExpandedV16(false, { quiet: true });
+};
+
+const baseUpdateInspectorV16 = updateInspector;
+updateInspector = function updateCompactInspectorV16() {
+  installCompactInspectorV16();
+  baseUpdateInspectorV16();
+  if (ui.inspector.hidden) return;
+  const key = selectionKeyV16();
+  if (key !== inspectorSelectionKeyV16) {
+    inspectorSelectionKeyV16 = key;
+    setInspectorExpandedV16(false, { quiet: true });
+  }
+  ui.inspector.dataset.selectionKind = state.selection?.kind || '';
+};
+
+const baseBeginPointerV16 = beginPointer;
+beginPointer = function beginPointerCompactV16(event) {
+  baseBeginPointerV16(event);
+  if (state.drag?.nodeId || state.drag?.pan) setInspectorExpandedV16(false, { quiet: true });
+};
+
+function thumbnailContextV16(canvas) {
+  const ratio = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(88 * ratio);
+  canvas.height = Math.round(48 * ratio);
+  canvas.style.width = '44px';
+  canvas.style.height = '24px';
+  const c = canvas.getContext('2d');
+  c.setTransform(ratio, 0, 0, ratio, 0, 0);
+  c.clearRect(0, 0, 88, 48);
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  return c;
+}
+
+function thumbGearV16(c, x, y, r, teeth = 12) {
+  c.save(); c.translate(x, y);
+  c.beginPath();
+  for (let i = 0; i < teeth * 2; i += 1) {
+    const a = i / (teeth * 2) * TAU;
+    const rr = i % 2 ? r * .78 : r;
+    const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+    if (!i) c.moveTo(px, py); else c.lineTo(px, py);
+  }
+  c.closePath();
+  const g = c.createRadialGradient(-r * .25, -r * .3, 1, 0, 0, r);
+  g.addColorStop(0, '#f0ca77'); g.addColorStop(1, '#8a562a');
+  c.fillStyle = g; c.strokeStyle = '#2b2118'; c.lineWidth = 2; c.fill(); c.stroke();
+  c.fillStyle = '#2b2118'; c.beginPath(); c.arc(0, 0, r * .22, 0, TAU); c.fill();
+  c.restore();
+}
+
+function thumbWheelV16(c, x, y, r) {
+  c.save(); c.translate(x, y);
+  c.strokeStyle = '#2b2118'; c.lineWidth = 6; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke();
+  c.strokeStyle = '#bd8545'; c.lineWidth = 3;
+  for (let i = 0; i < 8; i += 1) { c.rotate(TAU / 8); c.beginPath(); c.moveTo(3, 0); c.lineTo(r - 3, 0); c.stroke(); }
+  c.fillStyle = '#d2a45e'; c.beginPath(); c.arc(0, 0, 4, 0, TAU); c.fill();
+  c.restore();
+}
+
+function drawToolThumbnailV16(canvas, tool) {
+  const c = thumbnailContextV16(canvas);
+  const ink = '#f3e3be', dark = '#2b2118', brass = '#c48a40', wood = '#9a6838', steel = '#7d8587';
+  c.strokeStyle = ink; c.fillStyle = ink; c.lineWidth = 3;
+  if (tool === 'gear') thumbGearV16(c, 44, 24, 18, 13);
+  else if (tool === 'wheel') thumbWheelV16(c, 44, 24, 18);
+  else if (tool === 'flywheel') { thumbWheelV16(c, 44, 24, 17); c.strokeStyle = steel; c.lineWidth = 7; c.beginPath(); c.arc(44,24,15,0,TAU); c.stroke(); }
+  else if (tool === 'beam') { c.strokeStyle = dark; c.lineWidth = 12; c.beginPath(); c.moveTo(12,34); c.lineTo(77,14); c.stroke(); c.strokeStyle = wood; c.lineWidth = 7; c.stroke(); }
+  else if (tool === 'joint') { c.strokeStyle = wood; c.lineWidth = 7; c.beginPath(); c.moveTo(9,34); c.lineTo(43,23); c.lineTo(78,10); c.stroke(); c.fillStyle = dark; c.beginPath(); c.arc(43,23,7,0,TAU); c.fill(); c.strokeStyle = '#e5bc68'; c.lineWidth=2; c.stroke(); }
+  else if (tool === 'anchor') { c.fillStyle='#325c70'; c.strokeStyle='#e6c276'; c.lineWidth=2; c.fillRect(25,14,38,22); c.strokeRect(25,14,38,22); c.fillStyle=dark; c.beginPath(); c.arc(34,25,3,0,TAU); c.arc(54,25,3,0,TAU); c.fill(); }
+  else if (tool === 'motor') { c.fillStyle='#493323'; c.strokeStyle='#d4a75a'; c.lineWidth=2; c.fillRect(17,13,41,23); c.strokeRect(17,13,41,23); c.strokeStyle=brass; c.lineWidth=4; c.beginPath(); c.moveTo(58,24); c.lineTo(74,11); c.stroke(); c.fillStyle=brass; c.beginPath(); c.arc(76,9,4,0,TAU); c.fill(); }
+  else if (tool === 'winch') { c.fillStyle=wood; c.strokeStyle=dark; c.lineWidth=3; c.fillRect(24,12,38,24); c.strokeRect(24,12,38,24); c.fillStyle=dark; c.fillRect(18,8,7,32); c.fillRect(62,8,7,32); c.strokeStyle='#d1a35e'; c.lineWidth=2; for(let x=28;x<60;x+=7){c.beginPath();c.moveTo(x,14);c.lineTo(x+5,34);c.stroke();} }
+  else if (tool === 'pulley') { c.strokeStyle=dark;c.lineWidth=5;c.beginPath();c.arc(44,25,15,0,TAU);c.stroke();c.strokeStyle='#d2ae6d';c.lineWidth=3;c.beginPath();c.arc(44,25,10,0,TAU);c.stroke();c.strokeStyle=steel;c.beginPath();c.arc(44,10,10,Math.PI,0);c.stroke(); }
+  else if (tool === 'belt' || tool === 'chain') { thumbWheelV16(c,24,29,10); thumbWheelV16(c,65,18,14); c.strokeStyle=tool==='chain'?'#9ca0a0':'#78482b'; c.lineWidth=tool==='chain'?4:6; if(tool==='chain') c.setLineDash([4,3]); c.beginPath(); c.moveTo(20,19); c.lineTo(60,4); c.moveTo(29,38); c.lineTo(70,32); c.stroke(); }
+  else if (tool === 'rack') { c.fillStyle=steel;c.fillRect(12,25,64,8); c.fillStyle='#d1a35e'; for(let x=14;x<75;x+=8)c.fillRect(x,17,5,9); thumbGearV16(c,45,11,10,9); }
+  else if (tool === 'rope') { c.strokeStyle='#c0a06b';c.lineWidth=4;c.setLineDash([5,3]);c.beginPath();c.moveTo(9,13);c.quadraticCurveTo(44,44,79,13);c.stroke(); }
+  else if (tool === 'spring') { c.strokeStyle=steel;c.lineWidth=3;c.beginPath();c.moveTo(8,24); for(let i=0;i<9;i++) c.lineTo(15+i*8, i%2?13:35); c.lineTo(80,24); c.stroke(); }
+  else if (tool === 'actuator') { c.strokeStyle=dark;c.lineWidth=12;c.beginPath();c.moveTo(10,31);c.lineTo(47,20);c.stroke();c.strokeStyle=brass;c.lineWidth=7;c.beginPath();c.moveTo(45,20);c.lineTo(78,10);c.stroke(); }
+  else if (tool === 'weight') { c.fillStyle='#413a32';c.strokeStyle='#d0a65b';c.lineWidth=2;c.beginPath();c.moveTo(29,10);c.lineTo(59,10);c.lineTo(67,38);c.lineTo(21,38);c.closePath();c.fill();c.stroke(); }
+  else if (tool === 'payload') { c.fillStyle='#655e54';c.strokeStyle='#24211d';c.lineWidth=3;c.beginPath();c.arc(44,24,15,0,TAU);c.fill();c.stroke(); }
+  else if (tool === 'clutch') { c.strokeStyle=ink;c.lineWidth=6;c.beginPath();c.arc(33,24,12,Math.PI/2,Math.PI*1.5);c.stroke();c.beginPath();c.arc(55,24,12,-Math.PI/2,Math.PI/2);c.stroke(); }
+  else if (tool === 'brake') { c.strokeStyle=ink;c.lineWidth=5;c.beginPath();c.arc(44,24,13,0,TAU);c.stroke();c.fillStyle=brass;c.fillRect(18,19,10,10);c.fillRect(60,19,10,10); }
+  else if (tool === 'ratchet') { thumbGearV16(c,44,24,16,10);c.fillStyle=dark;c.beginPath();c.moveTo(42,14);c.lineTo(58,24);c.lineTo(42,34);c.closePath();c.fill(); }
+  else if (tool === 'lever') { c.strokeStyle=brass;c.lineWidth=6;c.beginPath();c.moveTo(35,37);c.lineTo(52,10);c.stroke();c.fillStyle=ink;c.beginPath();c.arc(54,8,6,0,TAU);c.fill(); }
+  else if (tool === 'latch') { c.strokeStyle=steel;c.lineWidth=7;c.beginPath();c.moveTo(14,30);c.lineTo(61,18);c.stroke();c.strokeRect(58,10,15,24); }
+  else if (tool === 'select') { c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(24,7);c.lineTo(24,36);c.lineTo(34,29);c.lineTo(41,42);c.lineTo(47,39);c.lineTo(39,26);c.lineTo(51,25);c.closePath();c.stroke(); }
+  else if (tool === 'pan') { c.fillStyle=ink;c.font='bold 28px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText('✥',44,25); }
+  else if (tool === 'layers') { c.strokeStyle=ink;c.lineWidth=3; for(let i=0;i<3;i++){c.beginPath();c.moveTo(18+i*4,14+i*8);c.lineTo(44,5+i*8);c.lineTo(70-i*4,14+i*8);c.lineTo(44,23+i*8);c.closePath();c.stroke();} }
+  else if (tool === 'erase') { c.fillStyle='#d9c49a';c.strokeStyle=dark;c.lineWidth=2;c.save();c.translate(44,24);c.rotate(-.55);c.fillRect(-18,-10,36,20);c.strokeRect(-18,-10,36,20);c.restore(); }
+  else if (tool === 'damper') { c.strokeStyle=dark;c.lineWidth=10;c.beginPath();c.moveTo(9,30);c.lineTo(46,20);c.stroke();c.strokeStyle=steel;c.lineWidth=6;c.beginPath();c.moveTo(44,20);c.lineTo(78,11);c.stroke(); }
+  else if (tool === 'slider') { c.strokeStyle=wood;c.lineWidth=7;c.beginPath();c.moveTo(9,30);c.lineTo(78,17);c.stroke();c.fillStyle=brass;c.strokeStyle=dark;c.lineWidth=2;c.save();c.translate(45,23);c.rotate(-.18);c.fillRect(-10,-8,20,16);c.strokeRect(-10,-8,20,16);c.restore(); }
+  else if (tool === 'servo') { c.fillStyle='#385264';c.strokeStyle='#d5b46c';c.lineWidth=2;c.fillRect(20,13,36,24);c.strokeRect(20,13,36,24);c.strokeStyle=brass;c.lineWidth=4;c.beginPath();c.moveTo(56,25);c.lineTo(73,12);c.stroke(); }
+  else if (tool === 'propeller') { c.fillStyle=steel;c.save();c.translate(44,24); for(let i=0;i<3;i++){c.rotate(TAU/3);c.beginPath();c.ellipse(0,-12,5,16,.25,0,TAU);c.fill();} c.fillStyle=brass;c.beginPath();c.arc(0,0,5,0,TAU);c.fill();c.restore(); }
+  else { c.strokeStyle=ink;c.lineWidth=3;c.strokeRect(22,10,44,28); }
+}
+
+renderTools = function renderIllustratedPagedToolsV16() {
+  installPaletteNavigation();
+  ui.toolRail.innerHTML = '';
+  const tools = TOOL_GROUPS[state.category] || [];
+  const pageSize = palettePageSize();
+  lastPalettePageSize = pageSize;
+  const activeIndex = Math.max(0, tools.findIndex(([tool]) => tool === state.tool));
+  palettePage = Math.floor(activeIndex / pageSize);
+  const pageCount = Math.max(1, Math.ceil(tools.length / pageSize));
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+    const page = document.createElement('div');
+    page.className = 'tool-page';
+    page.dataset.page = String(pageIndex);
+    for (const [tool, label] of tools.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `tool tool-illustrated-v16${state.tool === tool ? ' active' : ''}`;
+      button.dataset.tool = tool;
+      button.dataset.nativePress = '';
+      const canvasThumb = document.createElement('canvas');
+      canvasThumb.className = 'tool-thumbnail-v16';
+      canvasThumb.setAttribute('aria-hidden', 'true');
+      const text = document.createElement('span');
+      text.className = 'tool-label';
+      text.textContent = label;
+      button.append(canvasThumb, text);
+      button.addEventListener('click', () => setTool(tool));
+      page.append(button);
+      drawToolThumbnailV16(canvasThumb, tool);
+    }
+    ui.toolRail.append(page);
+  }
+  requestAnimationFrame(() => {
+    ui.toolRail.scrollLeft = palettePage * ui.toolRail.clientWidth;
+    updatePaletteNavigation();
+  });
+};
+
+installCompactInspectorV16();
+renderTools();
+updateInspector();
