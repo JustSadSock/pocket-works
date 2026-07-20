@@ -2,10 +2,12 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 
-const visualStyles = document.createElement('link');
-visualStyles.rel = 'stylesheet';
-visualStyles.href = './joints.css';
-document.head.append(visualStyles);
+for (const href of ['./joints.css', './v16.css']) {
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = href;
+  document.head.append(stylesheet);
+}
 
 const parts = [
   './engine/part-1.txt',
@@ -20,7 +22,15 @@ const parts = [
   './engine/part-10.txt',
   './engine/part-11.txt',
   './engine/part-12.txt',
-  './engine/part-13.txt'
+  './engine/part-13.txt',
+  './engine/part-14.txt',
+  './engine/part-15a.txt',
+  './engine/part-15b.txt',
+  './engine/part-15c.txt',
+  './engine/part-16a.txt',
+  './engine/part-16b.txt',
+  './engine/part-17a.txt',
+  './engine/part-17b.txt'
 ];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем чертёжный двор…';
@@ -34,7 +44,7 @@ try {
     return response.text();
   }));
   const source = sources.join('\n')
-    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '1.5.0';")
+    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '1.6.0';")
     .replace(
       'localStorage.removeItem(PREFS_KEY);',
       `localStorage.removeItem(PREFS_KEY);\n    localStorage.removeItem('pocket-works:ars-machina:library');\n    localStorage.removeItem('pocket-works:ars-machina:current-model');\n    if (typeof setCurrentModelIdentity === 'function') setCurrentModelIdentity(null, 'Новая модель');\n    if (typeof renderLibraryList === 'function') renderLibraryList();`
