@@ -23,19 +23,22 @@
   min-width: 0;
   display: grid !important;
   grid-template-columns: minmax(0,1fr) auto;
+  grid-template-areas: "kind actions" "name actions";
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
+  row-gap: 2px;
   margin: 0 !important;
 }
-.inspector-heading-v16 > span,
-.inspector-heading-v16 > div:first-child { min-width: 0; }
-.inspector-heading-v16 strong {
+.inspector-heading-v16 > small { grid-area: kind; min-width: 0; }
+.inspector-heading-v16 > strong {
+  grid-area: name;
+  min-width: 0;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.inspector-heading-actions-v16 { display: flex; gap: 5px; align-items: center; }
+.inspector-heading-actions-v16 { grid-area: actions; display: flex; gap: 5px; align-items: center; }
 .inspector-toggle-v16 {
   min-height: 36px !important;
   padding: 0 10px;
