@@ -1,0 +1,143 @@
+  baseApplyMachineForcesExpansionV16(step);
+  applyDampersV16(step);
+  updateServosV16(step);
+  applyPropellerThrustV16(step);
+};
+
+const baseRenderInspectorExtrasExpansionV16 = renderInspectorExtras;
+renderInspectorExtras = function renderExpandedInspectorV16() {
+  baseRenderInspectorExtrasExpansionV16();
+  if (!inspectorExtra || ui.inspector.hidden) return;
+  const selected = getSelected();
+  if (!selected || !state.selection) return;
+  if (state.selection.kind === 'node' && selected.mount?.sliding) {
+    appendInspectRow('Каретка', segmentedButtons([
+      { value: .3, label: 'Короткий ход' }, { value: .6, label: 'Средний' }, { value: .92, label: 'Вся балка' }
+    ], Math.round(((selected.mount.maxT || .96) - (selected.mount.minT || .04)) * 10) / 10, (span) => {
+      pushUndo(); const center = selected.mount.t; selected.mount.minT = clamp(center - span / 2, .02, .95); selected.mount.maxT = clamp(center + span / 2, .05, .98); updateInspector(); saveSoon();
+    }));
+  }
+  if (state.selection.kind === 'constraint' && selected.type === 'damper') {
+    const options = [{ value: .35, label: 'Мягкий' }, { value: .65, label: 'Средний' }, { value: .88, label: 'Жёсткий' }];
+    const nearest = options.reduce((best, item) => Math.abs(item.value - selected.damping) < Math.abs(best.value - selected.damping) ? item : best, options[1]).value;
+    appendInspectRow('Гашение', segmentedButtons(options, nearest, (value) => { pushUndo(); selected.damping = value; updateInspector(); saveSoon(); }));
+  }
+  if (state.selection.kind === 'attachment' && selected.type === 'servo') {
+    appendInspectRow('Контур', segmentedButtons([{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }], controlChannel(selected), (value) => { pushUndo(); selected.channel = value; updateInspector(); saveSoon(); }));
+    const angles = [30, 60, 90, 180];
+    const current = angles.reduce((best, value) => Math.abs(value - Math.abs(normalizeAngle(selected.angleB - selected.angleA)) * 180 / Math.PI) < Math.abs(best - Math.abs(normalizeAngle(selected.angleB - selected.angleA)) * 180 / Math.PI) ? value : best, 90);
+    appendInspectRow('Угол', segmentedButtons(angles.map((value) => ({ value, label: `${value}°` })), current, (value) => { pushUndo(); selected.angleB = selected.angleA + value * Math.PI / 180; updateInspector(); saveSoon(); }));
+  }
+  if (state.selection.kind === 'rotor' && selected.type === 'propeller') {
+    appendInspectRow('Тяга', segmentedButtons([{ value: .6, label: 'Малая' }, { value: 1, label: 'Средняя' }, { value: 1.5, label: 'Большая' }], selected.pitch || 1, (value) => { pushUndo(); selected.pitch = value; updateInspector(); saveSoon(); }));
+    appendInspectRow('Направление', segmentedButtons([{ value: 1, label: 'Вперёд' }, { value: -1, label: 'Назад' }], selected.direction === -1 ? -1 : 1, (value) => { pushUndo(); selected.direction = value; updateInspector(); saveSoon(); }));
+  }
+};
+
+const baseInspectorValueExpansionV16 = inspectorValue;
+inspectorValue = function expandedInspectorValueV16(selected, type) {
+  if (state.selection?.kind === 'node' && selected.mount?.sliding) return `${Math.round(selected.mount.t * 100)}% · скользит`;
+  if (state.selection?.kind === 'constraint' && type === 'damper') return `гашение ${Math.round((selected.damping || .72) * 100)}%`;
+  if (state.selection?.kind === 'attachment' && type === 'servo') return `контур ${controlChannel(selected)} · ${Math.round(Math.abs(normalizeAngle(selected.angleB - selected.angleA)) * 180 / Math.PI)}°`;
+  if (state.selection?.kind === 'rotor' && type === 'propeller') return `тяга ${(selected.pitch || 1).toFixed(1)}×`;
+  return baseInspectorValueExpansionV16(selected, type);
+};
+
+function drawDamperV16(a, b, damper) {
+  const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length, uy = dy / length;
+  const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  ctx.save(); ctx.lineCap = 'round';
+  ctx.strokeStyle = '#292724'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(center.x, center.y); ctx.stroke();
+  ctx.strokeStyle = '#7e8585'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.strokeStyle = '#d2b36c'; ctx.lineWidth = 2;
+  for (let offset = -length * .16; offset < length * .16; offset += 9) {
+    const x = center.x + ux * offset, y = center.y + uy * offset;
+    ctx.beginPath(); ctx.moveTo(x - uy * 5, y + ux * 5); ctx.lineTo(x + uy * 5, y - ux * 5); ctx.stroke();
+  }
+  ctx.fillStyle = '#34566a'; ctx.beginPath(); ctx.arc(center.x, center.y, 5, 0, TAU); ctx.fill(); ctx.restore();
+}
+
+const baseDrawConstraintsExpansionV16 = drawConstraints;
+drawConstraints = function drawExpandedConstraintsV16(layer = null) {
+  baseDrawConstraintsExpansionV16(layer);
+  for (const constraint of state.constraints) {
+    if (constraint.type !== 'damper' || (layer !== null && itemLayer(constraint) !== layer)) continue;
+    const a = nodeById(constraint.a), b = nodeById(constraint.b);
+    if (a && b) drawDamperV16(worldToScreen(a.x, a.y), worldToScreen(b.x, b.y), constraint);
+  }
+};
+
+function drawPropellerV16(center, radius, rotor, node) {
+  ctx.save(); ctx.translate(center.x, center.y); ctx.rotate(rotor.angle);
+  const gradient = ctx.createLinearGradient(-radius, -radius, radius, radius);
+  gradient.addColorStop(0, '#c7c2b5'); gradient.addColorStop(.55, '#6c7477'); gradient.addColorStop(1, '#303538');
+  ctx.fillStyle = gradient; ctx.strokeStyle = '#252525'; ctx.lineWidth = Math.max(2, radius * .05);
+  for (let i = 0; i < 3; i += 1) {
+    ctx.rotate(TAU / 3); ctx.beginPath(); ctx.ellipse(0, -radius * .48, radius * .18, radius * .52, .24, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  activeHubRotorV16 = rotor; drawShaftHubV15(radius, node); activeHubRotorV16 = null;
+  ctx.restore();
+}
+
+drawRotors = function drawAllExpandedRotorsV16(layer = null) {
+  for (const rotor of state.rotors) {
+    if (layer !== null && itemLayer(rotor) !== layer) continue;
+    const node = nodeById(rotor.nodeId); if (!node) continue;
+    const center = worldToScreen(node.x, node.y), radius = rotor.radius * state.camera.zoom;
+    if (rotor.type === 'gear') drawEnhancedGearV15(center, radius, rotor, node);
+    else if (rotor.type === 'wheel') drawEnhancedWheelV15(center, radius, rotor, node);
+    else if (rotor.type === 'winch') drawEnhancedWinchV15(center, radius, rotor, node);
+    else if (rotor.type === 'pulley') drawEnhancedPulleyV15(center, radius, rotor, node);
+    else if (rotor.type === 'flywheel') drawEnhancedFlywheelV15(center, radius, rotor, node);
+    else if (rotor.type === 'propeller') drawPropellerV16(center, radius, rotor, node);
+  }
+  if (layer === null) drawGearMeshFeedbackV15();
+};
+
+const baseDrawNodeExpansionV16 = drawNode;
+drawNode = function drawSliderNodeV16(point, node) {
+  baseDrawNodeExpansionV16(point, node);
+  if (!node.mount?.sliding) return;
+  const beam = beamById(node.mount.beamId);
+  const angle = beam ? beamAngleV15(beam) : 0;
+  ctx.save(); ctx.translate(point.x, point.y); ctx.rotate(angle);
+  ctx.fillStyle = '#b77c34'; ctx.strokeStyle = '#292118'; ctx.lineWidth = 2;
+  ctx.fillRect(-12, -9, 24, 18); ctx.strokeRect(-12, -9, 24, 18);
+  ctx.fillStyle = '#e4c176'; for (const x of [-7, 7]) { ctx.beginPath(); ctx.arc(x, 0, 2.5, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+
+const baseDrawJointsExpansionV16 = drawJoints;
+drawJoints = function drawLimitedJointsV16(layer = null, overlay = false) {
+  baseDrawJointsExpansionV16(layer, overlay);
+  for (const joint of state.joints) {
+    if (joint.type !== 'limit' || (layer !== null && itemLayer(joint) !== layer)) continue;
+    const a = nodeById(joint.a), b = nodeById(joint.b); if (!a || !b) continue;
+    const p = worldToScreen((a.x + b.x) / 2, (a.y + b.y) / 2);
+    ctx.save(); ctx.strokeStyle = '#b36e2d'; ctx.lineWidth = overlay ? 4 : 3;
+    ctx.beginPath(); ctx.arc(p.x, p.y, overlay ? 14 : 10, -.8, .8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x - 7, p.y - 8); ctx.lineTo(p.x - 2, p.y - 13); ctx.moveTo(p.x + 7, p.y - 8); ctx.lineTo(p.x + 2, p.y - 13); ctx.stroke(); ctx.restore();
+  }
+};
+
+function drawServoV16(point, servo, zoom) {
+  const size = clamp(19 * zoom, 13, 27);
+  ctx.save(); ctx.translate(point.x + size * .8, point.y - size * .9);
+  ctx.fillStyle = channelActive(controlChannel(servo)) ? '#a76e2d' : '#355467'; ctx.strokeStyle = '#e0bd70'; ctx.lineWidth = 2;
+  ctx.fillRect(-size * .7, -size * .45, size * 1.4, size * .9); ctx.strokeRect(-size * .7, -size * .45, size * 1.4, size * .9);
+  ctx.strokeStyle = '#e5c878'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(size * .9, -size * .55); ctx.stroke();
+  ctx.fillStyle = '#f0dfb5'; ctx.font = `900 ${Math.max(7,size*.38)}px ui-monospace`; ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(controlChannel(servo),0,1);ctx.restore();
+}
+
+const baseDrawNodesAttachmentsExpansionV16 = drawNodesAndAttachments;
+drawNodesAndAttachments = function drawExpandedAttachmentsV16(layer = null) {
+  baseDrawNodesAttachmentsExpansionV16(layer);
+  for (const servo of state.attachments.filter((item) => item.type === 'servo')) {
+    if (layer !== null && itemLayer(servo) !== layer) continue;
+    const node = nodeById(servo.nodeId); if (node) drawServoV16(worldToScreen(node.x,node.y), servo, state.camera.zoom);
+  }
+};
+
+renderTools();
+updateInspector();
