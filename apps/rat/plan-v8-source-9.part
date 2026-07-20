@@ -1,0 +1,55 @@
+ = pendingLaunch.scenarioId;
+      this.scenario = SCENARIOS[this.scenarioId];
+      this.terrainZones = structuredClone(pendingLaunch.zones);
+      this.objectiveProgress = [0, 0];
+      this.objectiveTarget = this.scenarioId === 'hill' ? 24 : this.scenarioId === 'breakthrough' ? 6 : 0;
+    }
+  };
+
+  const baseCreateEnemySetup = createEnemySetup;
+  createEnemySetup = function createPlannedEnemySetup() {
+    if (pendingLaunch?.enemySetup) return structuredClone(pendingLaunch.enemySetup);
+    return baseCreateEnemySetup();
+  };
+
+  const baseStartBattle = startBattle;
+  startBattle = function startBattleWithPlan(options = {}) {
+    if (options.quick) {
+      randomizePlayerSetup();
+      const setup = persistent.setup.map((item, index) => ({ ...structuredClone(item), deployment: defaultPosition(index), openingOrder: index === 2 ? 'attack' : 'hold' }));
+      const scenarioId = resolveScenario();
+      persistent.setup = setup;
+      pendingLaunch = { scenarioId, zones: zonesFor(scenarioId), enemySetup: baseCreateEnemySetup(), regiments: setup.map((item) => ({ id: item.id, x: item.deployment.x, y: item.deployment.y, order: item.openingOrder })) };
+      baseStartBattle({ ...options, quick: false });
+      applyOpeningPlan(simulation, pendingLaunch);
+      lastConfirmedPlan = structuredClone(pendingLaunch);
+      pendingLaunch = null;
+      return;
+    }
+    if (options.planned && pendingLaunch) {
+      baseStartBattle(options);
+      applyOpeningPlan(simulation, pendingLaunch);
+      lastConfirmedPlan = structuredClone(pendingLaunch);
+      pendingLaunch = null;
+      return;
+    }
+    if (currentScreen === 'battle' && lastConfirmedPlan) {
+      pendingLaunch = structuredClone(lastConfirmedPlan);
+      persistent.setup = persistent.setup.map((config, index) => {
+        const item = pendingLaunch.regiments[index];
+        return { ...config, deployment: { x: item.x, y: item.y }, openingOrder: item.order };
+      });
+      baseStartBattle({ ...options, planned: true });
+      applyOpeningPlan(simulation, pendingLaunch);
+      pendingLaunch = null;
+      return;
+    }
+    if (currentScreen !== 'setup') showScreen('setup');
+    openPlan();
+  };
+
+  function launchPlannedBattle() {
+    if (!planState) return;
+    savePlan(planState);
+    pendingLaunch = structuredClone(planState);
+    persistent.setup = planState.setup.map((co

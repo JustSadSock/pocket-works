@@ -1,0 +1,49 @@
+    ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(21,49,31,.58)';
+      for (let i = 0; i < 18; i++) {
+        const angle = i * 2.39;
+        const radius = zone.r * (.22 + (i % 5) * .13);
+        const x = zone.x + Math.cos(angle) * radius;
+        const y = zone.y + Math.sin(angle) * radius;
+        ctx.fillRect(x - 5, y - 13, 10, 18);
+      }
+    } else if (zone.type === 'hill') {
+      ctx.fillStyle = 'rgba(209,188,119,.23)';
+      ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(239,220,158,.5)'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(zone.x, zone.y, zone.r * .72, 0, Math.PI * 2); ctx.stroke();
+    } else if (zone.type === 'mud') {
+      ctx.fillStyle = 'rgba(89,67,45,.38)';
+      ctx.beginPath(); ctx.ellipse(zone.x, zone.y, zone.rx, zone.ry, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (zone.type === 'river') {
+      ctx.fillStyle = 'rgba(58,93,106,.72)'; ctx.fillRect(0, zone.y, zone.w, zone.h);
+      ctx.fillStyle = '#b99b68'; ctx.fillRect(zone.bridgeX - zone.bridgeW / 2, zone.y, zone.bridgeW, zone.h);
+      ctx.fillStyle = 'rgba(59,45,32,.35)';
+      for (let y = zone.y + 12; y < zone.y + zone.h; y += 20) ctx.fillRect(zone.bridgeX - zone.bridgeW / 2, y, zone.bridgeW, 5);
+    }
+  }
+
+  function drawOrderPath(item, config) {
+    if (!item || !config) return;
+    let target = { x: item.x, y: item.y };
+    if (item.order === 'attack') target = { x: item.x, y: 545 };
+    if (item.order === 'flank') target = { x: item.x < 450 ? 72 : 828, y: 480 };
+    planCtx.save();
+    planCtx.strokeStyle = config.appearance?.primary || '#e1c16f';
+    planCtx.fillStyle = planCtx.strokeStyle;
+    planCtx.globalAlpha = .82;
+    planCtx.lineWidth = 8;
+    planCtx.setLineDash(item.order === 'hold' ? [8, 8] : [18, 12]);
+    planCtx.beginPath();
+    planCtx.moveTo(item.x, item.y);
+    planCtx.quadraticCurveTo((item.x + target.x) / 2 + (item.order === 'flank' ? (item.x < 450 ? -45 : 45) : 0), (item.y + target.y) / 2, target.x, target.y);
+    planCtx.stroke();
+    planCtx.setLineDash([]);
+    planCtx.font = '900 42px Georgia,serif';
+    planCtx.textAlign = 'center';
+    planCtx.fillText(ORDERS[item.order].glyph, target.x, target.y + 14);
+    planCtx.restore();
+  }
+
+  function drawPlanMap() {
+    if (!planState 

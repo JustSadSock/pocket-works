@@ -1,0 +1,38 @@
+|| !planCanvas || !planCtx) return;
+    const rect = planCanvas.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const width = Math.max(1, Math.round(rect.width * dpr));
+    const height = Math.max(1, Math.round(rect.height * dpr));
+    if (planCanvas.width !== width || planCanvas.height !== height) {
+      planCanvas.width = width; planCanvas.height = height;
+    }
+    planCtx.setTransform(width / WORLD.width, 0, 0, height / WORLD.height, 0, 0);
+    planCtx.fillStyle = '#68765d'; planCtx.fillRect(0, 0, WORLD.width, WORLD.height);
+    planCtx.fillStyle = 'rgba(27,41,32,.16)'; planCtx.fillRect(0, 0, WORLD.width, 300);
+    planCtx.fillStyle = 'rgba(233,216,158,.1)'; planCtx.fillRect(0, DEPLOY.minY - 25, WORLD.width, DEPLOY.maxY - DEPLOY.minY + 50);
+    planCtx.strokeStyle = 'rgba(236,215,148,.55)'; planCtx.lineWidth = 5; planCtx.setLineDash([16, 14]);
+    planCtx.strokeRect(35, DEPLOY.minY - 25, 830, DEPLOY.maxY - DEPLOY.minY + 50); planCtx.setLineDash([]);
+    planState.zones.forEach((zone) => drawZone(planCtx, zone));
+    const active = planFor(activeId);
+    if (active) drawOrderPath(active, configFor(activeId));
+    planCtx.fillStyle = 'rgba(245,231,185,.32)'; planCtx.font = '900 28px system-ui,sans-serif'; planCtx.textAlign = 'center';
+    planCtx.fillText('ВРАЖЕСКИЙ РУБЕЖ', 450, 72);
+  }
+
+  function renderEnemy() {
+    const host = document.querySelector('#planEnemyV8');
+    if (!host || !planState) return;
+    host.innerHTML = planState.enemySetup.map((config) => `<span data-type="${config.type}" title="${TYPE_DATA[config.type]?.label || config.type}">${TYPE_ICONS[config.type] || '◆'}</span>`).join('');
+  }
+
+  function renderTokens() {
+    const host = document.querySelector('#planTokensV8');
+    if (!host || !planState) return;
+    host.innerHTML = planState.regiments.map((item) => {
+      const config = configFor(item.id);
+      const data = TYPE_DATA[config.type];
+      return `<button type="button" class="plan-token-v8" data-plan-id="${item.id}" aria-pressed="${item.id === activeId}" style="--regiment:${config.appearance?.primary || '#c9653e'}">
+        <i>${config.appearance?.emblem || '◆'}</i><b>${TYPE_ICONS[config.type] || '◆'}</b><span>${data.short}</span><small>${ORDERS[item.order].glyph}</small>
+      </button>`;
+    }).join('');
+    host.querySelectorAll('[data-plan-id]')

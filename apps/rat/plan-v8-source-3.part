@@ -1,0 +1,69 @@
+="plan-editor-v8">
+          <div id="planSelectedV8" class="plan-selected-v8"></div>
+          <div id="planOrdersV8" class="plan-orders-v8"></div>
+        </div>
+        <footer class="plan-footer-v8">
+          <button id="planResetV8" class="plan-reset-v8" type="button">СБРОСИТЬ ПЛАН</button>
+          <button id="planLaunchV8" class="action action-primary" type="button"><span>ПОДНЯТЬ ЗНАМЁНА</span><small>полки начнут бой по этому плану</small></button>
+        </footer>
+      </section>`);
+    planScreen = document.querySelector('#battlePlanV8');
+    planCanvas = document.querySelector('#planCanvasV8');
+    planCtx = planCanvas.getContext('2d', { alpha: false });
+    bindPlanEvents();
+  }
+
+  function setSetupLayers(planning) {
+    const setup = document.querySelector('#setupScreen');
+    if (!setup) return;
+    if (planning) {
+      hiddenBeforePlan.clear();
+      [...setup.children].forEach((child) => {
+        if (child === planScreen) child.hidden = false;
+        else {
+          hiddenBeforePlan.set(child, child.hidden);
+          child.hidden = true;
+        }
+      });
+    } else {
+      [...setup.children].forEach((child) => {
+        if (child === planScreen) child.hidden = true;
+        else child.hidden = hiddenBeforePlan.get(child) ?? child.hidden;
+      });
+      hiddenBeforePlan.clear();
+    }
+    setup.classList.toggle('is-planning-v8', planning);
+  }
+
+  function openPlan() {
+    const setup = persistent.setup.map((item) => structuredClone(item));
+    const enemySetup = baseCreateEnemySetup();
+    const scenarioId = resolveScenario();
+    planState = {
+      setup,
+      enemySetup,
+      scenarioId,
+      zones: zonesFor(scenarioId),
+      regiments: readSavedPlan(setup)
+    };
+    activeId = planState.regiments[2]?.id || planState.regiments[0]?.id || null;
+    setSetupLayers(true);
+    renderPlan();
+    audio.click();
+  }
+
+  function closePlan() {
+    setSetupLayers(false);
+    planState = null;
+    dragging = null;
+    requestAnimationFrame(() => renderSetup());
+  }
+
+  function resetPlan() {
+    if (!planState) return;
+    planState.regiments = planState.setup.map((config, index) => ({
+      id: config.id,
+      ...defaultPosition(index),
+      order: index === 2 ? 'attack' : index === 0 || index === 4 ? 'flank' : 'hold'
+    }));
+    activeId = planState.regiments[2]?.id || planState.regiments[0]
