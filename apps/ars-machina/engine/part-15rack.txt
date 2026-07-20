@@ -1,0 +1,25 @@
+// Correct rack-and-pinion impulse: the rack centre and the gear must receive equal and opposite generalized impulses.
+solveRackContactV16 = function solveStableRackContactV16(rack, gear, step) {
+  const a = nodeById(rack.a), b = nodeById(rack.b), gearNode = nodeById(gear.nodeId);
+  if (!a || !b || !gearNode) return;
+  const projection = projectPointToBeam(gearNode, rack);
+  if (!projection || projection.t < -.04 || projection.t > 1.04) return;
+  if (Math.abs(projection.distance - gear.radius) > clamp(gear.radius * .22, 8, 17)) return;
+  const axis = rackAxisV16(rack);
+  const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const side = Math.sign(axis.x * (gearNode.y - center.y) - axis.y * (gearNode.x - center.x)) || 1;
+  const va = nodeVelocityV16(a), vb = nodeVelocityV16(b);
+  const rackVelocity = ((va.x + vb.x) * axis.x + (va.y + vb.y) * axis.y) * .5;
+  const error = rackVelocity + side * gear.omega * gear.radius;
+  const invA = a.fixed || a.mount ? 0 : stableInverseMassV16(a);
+  const invB = b.fixed || b.mount ? 0 : stableInverseMassV16(b);
+  const invRack = (invA + invB) * .25;
+  const inertia = rotorMomentV16(gear);
+  const invGear = Number.isFinite(inertia) ? 1 / inertia : 0;
+  const denominator = invRack + gear.radius * gear.radius * invGear;
+  if (denominator < 1e-8) return;
+  const impulse = -error / denominator * clamp(.58 * step, 0, .9);
+  if (invA) addNodeVelocityV16(a, axis.x * impulse * invA * .5, axis.y * impulse * invA * .5);
+  if (invB) addNodeVelocityV16(b, axis.x * impulse * invB * .5, axis.y * impulse * invB * .5);
+  gear.omega += side * gear.radius * impulse * invGear;
+};
