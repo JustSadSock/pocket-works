@@ -36,13 +36,13 @@ function sequencer(angle, steps, pattern) {
   return { index, a: index % 2 === 0, b: index % 2 === 1 };
 }
 
-function wingForce(a, b, velocity, { flip = -1, camber = .18, lift = 1 } = {}) {
+function wingForce(a, b, velocity, { liftSide = -1, camber = .18, lift = 1 } = {}) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const span = Math.hypot(dx, dy) || 1;
   const geometric = { x: -dy / span, y: dx / span };
   const upward = geometric.y <= 0 ? geometric : { x: -geometric.x, y: -geometric.y };
-  const side = flip === 1 ? -1 : 1;
+  const side = liftSide === 1 ? -1 : 1;
   const normal = { x: upward.x * side, y: upward.y * side };
   const speed = Math.hypot(velocity.x, velocity.y);
   const normalFlow = Math.abs(velocity.x * geometric.x + velocity.y * geometric.y) / speed;
@@ -103,8 +103,8 @@ function risingEdgeSequence(values) {
   const forward = wingForce({ x: 0, y: 0 }, { x: 180, y: 0 }, { x: 6, y: .4 });
   const reversed = wingForce({ x: 180, y: 0 }, { x: 0, y: 0 }, { x: 6, y: .4 });
   assert.ok(forward.y < 0 && reversed.y < 0, 'default wing lift must remain upward when endpoints are reversed');
-  const inverted = wingForce({ x: 0, y: 0 }, { x: 180, y: 0 }, { x: 6, y: .4 }, { flip: 1 });
-  assert.ok(inverted.y > 0, 'the inspector must be able to deliberately invert the lift side');
+  const inverted = wingForce({ x: 0, y: 0 }, { x: 180, y: 0 }, { x: 6, y: .4 }, { liftSide: 1 });
+  assert.ok(inverted.y > 0, 'the inspector must be able to deliberately invert the physical lift side');
 }
 
 {
@@ -129,8 +129,9 @@ const swSource = fs.readFileSync(path.join(appRoot, 'sw.js'), 'utf8');
 const qualitySource = fs.readFileSync(path.join(appRoot, 'engine/part-21a.txt'), 'utf8');
 const visionSource = fs.readFileSync(path.join(appRoot, 'engine/part-21b.txt'), 'utf8');
 const folioSource = fs.readFileSync(path.join(appRoot, 'engine/part-21c.txt'), 'utf8');
+const truthSource = fs.readFileSync(path.join(appRoot, 'engine/part-21d.txt'), 'utf8');
 
-for (const filename of ['part-21a.txt', 'part-21b.txt', 'part-21c.txt']) {
+for (const filename of ['part-21a.txt', 'part-21b.txt', 'part-21c.txt', 'part-21d.txt']) {
   assert.match(appSource, new RegExp(filename.replace('.', '\\.')),
     `${filename} must be loaded by app.js`);
   assert.match(swSource, new RegExp(filename.replace('.', '\\.')),
@@ -147,5 +148,8 @@ assert.match(visionSource, /ПОДЪЁМ/);
 assert.match(folioSource, /buildGiantCrossbowV21/);
 assert.match(folioSource, /interaction-bench/);
 assert.match(folioSource, /Путь силы/);
+assert.match(truthSource, /liftSideV21/);
+assert.match(truthSource, /driverB/);
+assert.match(truthSource, /drawTruthfulTransmissionReadoutsV21/);
 
 console.log('ARS MACHINA 2.1 interaction tests passed');
