@@ -11,6 +11,7 @@ import chunk3 from './runtime-chunk-3';
 import chunk4 from './runtime-chunk-4';
 
 const matchPayload = chunk1 + chunk2 + chunk3 + chunk4;
+const PHASER_CHUNK_COUNT = 32;
 
 async function unpack(payload: string, label: string): Promise<string> {
   if (typeof DecompressionStream === 'undefined') throw new Error(`Этот браузер не может распаковать ${label}.`);
@@ -20,16 +21,11 @@ async function unpack(payload: string, label: string): Promise<string> {
 }
 
 async function loadPhaser(): Promise<unknown> {
-  const modules = await Promise.all([
-    import('./phaser-runtime-chunk-1'),
-    import('./phaser-runtime-chunk-2'),
-    import('./phaser-runtime-chunk-3'),
-    import('./phaser-runtime-chunk-4'),
-    import('./phaser-runtime-chunk-5'),
-    import('./phaser-runtime-chunk-6'),
-    import('./phaser-runtime-chunk-7'),
-    import('./phaser-runtime-chunk-8')
-  ]);
+  const importModule = new Function('url', 'return import(url)') as (url: string) => Promise<{ default: string }>;
+  const modules = await Promise.all(Array.from({ length: PHASER_CHUNK_COUNT }, (_, index) => {
+    const url = new URL(`./phaser/phaser-runtime-chunk-${index + 1}.js`, document.baseURI).href;
+    return importModule(url);
+  }));
   const engineCode = await unpack(modules.map((module) => module.default).join(''), 'движок матча');
   new Function(engineCode)();
   const phaser = (globalThis as typeof globalThis & { Phaser?: unknown }).Phaser;
