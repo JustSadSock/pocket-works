@@ -36,6 +36,7 @@ const APP_SHELL = [
   './engine/part-15hub.txt',
   './engine/part-15b.txt',
   './engine/part-15c.txt',
+  './engine/part-15drive.txt',
   './engine/part-16a.txt',
   './engine/part-16b.txt',
   './engine/part-17a.txt',
