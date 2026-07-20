@@ -14,6 +14,7 @@
   let stateTimer=0;
   let observer=null;
   let finishedSince=0;
+  let resizeFrame=0;
 
   function normalizeRelease(){
     if(document.documentElement.dataset.blazonBuild!==BUILD)document.documentElement.dataset.blazonBuild=BUILD;
@@ -69,6 +70,11 @@
     if(control.matches('#startBattleButton,#replayButton')){resetPauseLabel();resetCommandSurface();}
   }
 
+  function scheduleBattleResize(){
+    const battle=$('#battleScreen');if(!battle?.classList.contains('is-active')||resizeFrame)return;
+    resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;window.dispatchEvent(new Event('resize'));});
+  }
+
   function guardFinishedBattle(){
     const battle=$('#battleScreen');
     if(!battle?.classList.contains('is-active')){finishedSince=0;return;}
@@ -77,7 +83,7 @@
     if(!finishedSince){finishedSince=performance.now();return;}
     if(performance.now()-finishedSince<900)return;
     const mandatory=[...mandatoryDialogs].map(id=>document.getElementById(id)).find(dialog=>dialog?.open);
-    if(!mandatory){
+    if(!mandatory&&$('#resultMeasures')?.children.length){
       const result=$('#resultDialog');
       if(result&&!result.open){try{result.showModal();}catch{}}
     }
@@ -91,15 +97,18 @@
     }catch(error){console.warn('[БЛАЗОН] stability worker refresh failed',error);}
   }
 
-  normalizeRelease();protectMandatoryDialogs();resetPauseLabel();
+  normalizeRelease();protectMandatoryDialogs();resetPauseLabel();scheduleBattleResize();
   document.addEventListener('click',lockAction,true);
-  observer=new MutationObserver(()=>{normalizeRelease();protectMandatoryDialogs();});
+  observer=new MutationObserver(records=>{
+    normalizeRelease();protectMandatoryDialogs();
+    if(records.some(record=>record.type==='attributes'&&record.target.id==='battleScreen'&&record.attributeName==='class'))scheduleBattleResize();
+  });
   observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','open','href']});
   stateTimer=setInterval(()=>{watchBattleState();guardFinishedBattle();},180);
   refreshWorker();
 
   window.addEventListener('pagehide',()=>{
     document.removeEventListener('click',lockAction,true);
-    observer?.disconnect();clearInterval(stateTimer);
+    observer?.disconnect();clearInterval(stateTimer);if(resizeFrame)cancelAnimationFrame(resizeFrame);
   },{once:true});
 })();
