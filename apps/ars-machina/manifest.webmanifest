@@ -2,7 +2,7 @@
   "id": "/apps/ars-machina/",
   "name": "ARS MACHINA — Codice delle Macchine",
   "short_name": "ARS MACHINA",
-  "description": "Механическая песочница в стиле инженерных кодексов Леонардо да Винчи.",
+  "description": "Механическая песочница в стиле кодексов Леонардо с наглядным путём силы, автоматикой, воздухом, водой и проверкой взаимодействий.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
