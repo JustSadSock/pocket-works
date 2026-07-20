@@ -1,0 +1,212 @@
+  return node?.fixed ? 0 : 1 / Math.max(.35, node?.mass || 1);
+}
+
+function boundedCorrectionV16(value, max = 7) {
+  return clamp(value, -max, max);
+}
+
+function integrateStableNodesV16(step) {
+  const gravity = .30 * step * step;
+  const velocityLimit = 9 * Math.max(.55, step);
+  for (const node of state.nodes) {
+    if (node.fixed) { node.px = node.x; node.py = node.y; continue; }
+    let vx = (node.x - node.px) * .986;
+    let vy = (node.y - node.py) * .986;
+    const speed = Math.hypot(vx, vy);
+    if (speed > velocityLimit) { vx *= velocityLimit / speed; vy *= velocityLimit / speed; }
+    node.px = node.x; node.py = node.y;
+    node.x += vx; node.y += vy + gravity;
+  }
+}
+
+function solveStableDistancesV16(iteration, iterations) {
+  for (const constraint of state.constraints) {
+    if (!constraint.active || ['belt', 'chain', 'damper'].includes(constraint.type)) continue;
+    const a = nodeById(constraint.a), b = nodeById(constraint.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy) || .0001;
+    const target = constraint.type === 'rope' ? constraint.maxLength : constraint.length;
+    if (constraint.type === 'rope' && dist <= target) continue;
+    const error = dist - target;
+    const base = constraint.type === 'spring'
+      ? clamp(constraint.stiffness || .11, .015, .55)
+      : constraint.type === 'rope' ? .7 : constraint.type === 'rack' ? .82 : .92;
+    const stiffness = 1 - Math.pow(1 - base, 1 / iterations);
+    const correction = boundedCorrectionV16(error * stiffness, constraint.type === 'spring' ? 3.5 : 6.5);
+    const nx = dx / dist, ny = dy / dist;
+    const invA = stableInverseMassV16(a), invB = stableInverseMassV16(b), total = invA + invB;
+    if (!total) continue;
+    a.x += nx * correction * invA / total; a.y += ny * correction * invA / total;
+    b.x -= nx * correction * invB / total; b.y -= ny * correction * invB / total;
+  }
+}
+
+function solveStableMountsV16() {
+  for (const node of state.nodes) {
+    if (!node.mount) continue;
+    const beam = beamById(node.mount.beamId), a = nodeById(beam?.a), b = nodeById(beam?.b);
+    if (!beam || !a || !b) continue;
+    if (node.mount.sliding) {
+      const projection = projectPointToBeam(node, beam);
+      if (!projection) continue;
+      const minT = Number.isFinite(node.mount.minT) ? node.mount.minT : .03;
+      const maxT = Number.isFinite(node.mount.maxT) ? node.mount.maxT : .97;
+      node.mount.t = clamp(projection.t, minT, maxT);
+    }
+    const t = clamp(node.mount.t, 0, 1);
+    const targetX = a.x + (b.x - a.x) * t, targetY = a.y + (b.y - a.y) * t;
+    let errorX = node.x - targetX, errorY = node.y - targetY;
+    const mag = Math.hypot(errorX, errorY);
+    if (mag > 5) { errorX *= 5 / mag; errorY *= 5 / mag; }
+    const invN = stableInverseMassV16(node), invA = stableInverseMassV16(a), invB = stableInverseMassV16(b);
+    const wa = 1 - t, wb = t;
+    const total = invN + invA * wa * wa + invB * wb * wb;
+    if (!total) continue;
+    const factor = node.mount.sliding ? .62 : .78;
+    node.x -= errorX * invN / total * factor; node.y -= errorY * invN / total * factor;
+    a.x += errorX * invA * wa / total * factor; a.y += errorY * invA * wa / total * factor;
+    b.x += errorX * invB * wb / total * factor; b.y += errorY * invB * wb / total * factor;
+  }
+}
+
+function solveStablePinsV16() {
+  for (const joint of state.joints) {
+    const a = nodeById(joint.a), b = nodeById(joint.b);
+    if (!a || !b || a.id === b.id) continue;
+    let dx = b.x - a.x, dy = b.y - a.y;
+    const mag = Math.hypot(dx, dy);
+    if (mag > 5) { dx *= 5 / mag; dy *= 5 / mag; }
+    const invA = stableInverseMassV16(a), invB = stableInverseMassV16(b), total = invA + invB;
+    if (!total) continue;
+    a.x += dx * invA / total * .78; a.y += dy * invA / total * .78;
+    b.x -= dx * invB / total * .78; b.y -= dy * invB / total * .78;
+  }
+}
+
+function rotateBeamStableV16(beam, pivot, delta) {
+  if (!beam || !Number.isFinite(delta) || Math.abs(delta) < 1e-6) return;
+  const cos = Math.cos(delta), sin = Math.sin(delta);
+  for (const node of [nodeById(beam.a), nodeById(beam.b)]) {
+    if (!node || node.fixed || node.mount) continue;
+    const x = node.x - pivot.x, y = node.y - pivot.y;
+    node.x = pivot.x + x * cos - y * sin;
+    node.y = pivot.y + x * sin + y * cos;
+  }
+}
+
+function solveStableAnglesV16() {
+  for (const joint of state.joints) {
+    if (!['weld', 'limit'].includes(joint.type)) continue;
+    const beamA = beamById(joint.beamA), beamB = beamById(joint.beamB);
+    const nodeA = nodeById(joint.a), nodeB = nodeById(joint.b);
+    if (!beamA || !beamB || !nodeA || !nodeB) continue;
+    const relative = normalizeAngle(beamAngleV15(beamB) - beamAngleV15(beamA));
+    let error = normalizeAngle(relative - joint.targetAngle);
+    if (joint.type === 'limit') {
+      const limit = clamp(joint.limitAngle || Math.PI / 3, Math.PI / 12, Math.PI * .9);
+      if (Math.abs(error) <= limit) continue;
+      error -= Math.sign(error) * limit;
+    }
+    const pivot = { x: (nodeA.x + nodeB.x) / 2, y: (nodeA.y + nodeB.y) / 2 };
+    const delta = clamp(error * (joint.type === 'weld' ? .12 : .08), -.045, .045);
+    rotateBeamStableV16(beamA, pivot, delta * .5);
+    rotateBeamStableV16(beamB, pivot, -delta * .5);
+  }
+}
+
+function solveStableRackGuidesV16() {
+  for (const rack of state.constraints.filter((constraint) => constraint.type === 'rack' && constraint.active)) {
+    const a = nodeById(rack.a), b = nodeById(rack.b);
+    if (!a || !b) continue;
+    const axis = rackAxisV16(rack);
+    const centerX = (a.x + b.x) / 2, centerY = (a.y + b.y) / 2;
+    const along = (centerX - rack.originX) * axis.x + (centerY - rack.originY) * axis.y;
+    const targetCenterX = rack.originX + axis.x * along, targetCenterY = rack.originY + axis.y * along;
+    const half = (rack.length || distance(a, b)) / 2;
+    const targets = [
+      { node: a, x: targetCenterX - axis.x * half, y: targetCenterY - axis.y * half },
+      { node: b, x: targetCenterX + axis.x * half, y: targetCenterY + axis.y * half }
+    ];
+    for (const target of targets) {
+      if (target.node.fixed || target.node.mount) continue;
+      target.node.x += boundedCorrectionV16(target.x - target.node.x, 4) * .55;
+      target.node.y += boundedCorrectionV16(target.y - target.node.y, 4) * .55;
+    }
+  }
+}
+
+function applyMachineForcesV16(step) {}
+function solveExtraMechanicsV16(step) {}
+
+function stabilizeStateV16(previous) {
+  let recovered = false;
+  for (const node of state.nodes) {
+    const old = previous.get(node.id);
+    const invalid = !Number.isFinite(node.x) || !Number.isFinite(node.y) || Math.abs(node.x) > 20000 || Math.abs(node.y) > 20000;
+    if (invalid && old) {
+      node.x = old.x; node.y = old.y; node.px = old.x; node.py = old.y; recovered = true; continue;
+    }
+    let vx = node.x - node.px, vy = node.y - node.py;
+    const speed = Math.hypot(vx, vy);
+    if (speed > 14) { vx *= 14 / speed; vy *= 14 / speed; node.px = node.x - vx; node.py = node.y - vy; }
+  }
+  for (const rotor of state.rotors) {
+    if (!Number.isFinite(rotor.omega) || Math.abs(rotor.omega) > 4) { rotor.omega = clamp(Number.isFinite(rotor.omega) ? rotor.omega : 0, -4, 4); recovered = true; }
+    if (!Number.isFinite(rotor.angle)) { rotor.angle = 0; recovered = true; }
+  }
+  if (recovered) {
+    stabilityRecoveriesV16 += 1;
+    const now = performance.now();
+    if (now - lastStabilityNoticeV16 > 2400) {
+      lastStabilityNoticeV16 = now;
+      setYardNote('Физика погасила нестабильный импульс. Проверь конфликтующие опоры.', 1700);
+    }
+  }
+}
+
+simulate = function simulateStableMechanicsV16(dt) {
+  if (state.mode !== 'run') return;
+  const frameMs = clamp(dt || 16.67, 1, 28);
+  const substeps = clamp(Math.ceil(frameMs / 7), 2, 5);
+  const subMs = frameMs / substeps;
+  const step = subMs / 16.6667;
+  const previous = new Map(state.nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+  state.simTime += frameMs / 1000;
+  if (fireCountdown >= 0) {
+    fireCountdown -= frameMs / 1000;
+    if (fireCountdown <= 0) { fireCountdown = -1; releasePayloads(); }
+  }
+  for (let sub = 0; sub < substeps; sub += 1) {
+    if (typeof updateActuators === 'function') updateActuators(subMs);
+    driveRotors(step);
+    integrateStableNodesV16(step);
+    applyMachineForcesV16(step);
+    const iterations = 12;
+    for (let iteration = 0; iteration < iterations; iteration += 1) {
+      solveStableDistancesV16(iteration, iterations);
+      solveStableMountsV16();
+      solveStablePinsV16();
+      solveStableAnglesV16();
+      solveStableRackGuidesV16();
+      solveExtraMechanicsV16(step);
+      solveWheelGround(step);
+      solveNodeGround();
+    }
+    solveMechanicalTransmissionsV16(step);
+    updateRotorAngles(step);
+    updateWinches(step);
+    stabilizeStateV16(previous);
+  }
+  followRunCamera(step);
+};
+
+const baseApplyModelMechanicsV16 = applyModel;
+applyModel = function applyStableModelV16(model, options = {}) {
+  baseApplyModelMechanicsV16(model, options);
+  normalizeMechanicsV16();
+  updateInspector();
+};
+
+normalizeMechanicsV16();
+updateInspector();
