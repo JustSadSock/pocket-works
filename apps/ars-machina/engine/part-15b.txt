@@ -1,0 +1,219 @@
+;
+
+for (const name of ['drawEnhancedGearV15', 'drawEnhancedWheelV15', 'drawEnhancedWinchV15', 'drawEnhancedPulleyV15', 'drawEnhancedFlywheelV15']) {
+  const original = ({ drawEnhancedGearV15, drawEnhancedWheelV15, drawEnhancedWinchV15, drawEnhancedPulleyV15, drawEnhancedFlywheelV15 })[name];
+  const wrapped = function wrappedRotorDrawV16(center, radius, rotor, node) {
+    activeHubRotorV16 = rotor;
+    try { original(center, radius, rotor, node); } finally { activeHubRotorV16 = null; }
+  };
+  if (name === 'drawEnhancedGearV15') drawEnhancedGearV15 = wrapped;
+  else if (name === 'drawEnhancedWheelV15') drawEnhancedWheelV15 = wrapped;
+  else if (name === 'drawEnhancedWinchV15') drawEnhancedWinchV15 = wrapped;
+  else if (name === 'drawEnhancedPulleyV15') drawEnhancedPulleyV15 = wrapped;
+  else drawEnhancedFlywheelV15 = wrapped;
+}
+
+enforceLockedRotorV15 = function enforceIndependentRotorLockV16(rotor, step) {
+  if (!rotor || rotorMountModeV16(rotor) !== 'rigid') return false;
+  const node = nodeById(rotor.nodeId);
+  if (!node) return false;
+  const carrier = carrierBeamV15(node);
+  if (carrier) {
+    if (rotor.lockedToBeamId !== carrier.id || !Number.isFinite(rotor.lockOffset)) {
+      rotor.lockedToBeamId = carrier.id;
+      rotor.lockOffset = normalizeAngle(rotor.angle - beamAngleV15(carrier));
+    }
+    rotor.angle = beamAngleV15(carrier) + rotor.lockOffset;
+    rotor.omega = normalizeAngle(beamAngleV15(carrier) - beamPreviousAngleV15(carrier)) / Math.max(.25, step);
+  } else {
+    if (!Number.isFinite(rotor.lockWorldAngle)) rotor.lockWorldAngle = rotor.angle;
+    rotor.angle = rotor.lockWorldAngle;
+    rotor.omega = 0;
+  }
+  return true;
+};
+
+rotorTargetAt = function rotorShapeTargetV16(world) {
+  const scale = Math.max(.45, state.camera.zoom);
+  const centerRadius = 18 / scale;
+  const candidates = [];
+  for (const rotor of state.rotors) {
+    const node = nodeById(rotor.nodeId);
+    if (!node) continue;
+    const centerDistance = distance(world, node);
+    const edgeDistance = Math.abs(centerDistance - rotor.radius);
+    if (centerDistance <= centerRadius || edgeDistance <= 14 / scale) {
+      candidates.push({ rotor, node, centerDistance, edgeDistance, layer: itemLayer(rotor) });
+    }
+  }
+  if (!candidates.length) return null;
+  const centered = candidates.filter((item) => item.centerDistance <= centerRadius);
+  const pool = centered.length ? centered : candidates;
+  pool.sort((left, right) => right.layer - left.layer || left.edgeDistance - right.edgeDistance || left.rotor.radius - right.rotor.radius);
+  return { rotor: pool[0].rotor, node: pool[0].node };
+};
+
+function transmissionRotorsV16(transmission) {
+  const rotorA = rotorById(transmission?.rotorAId) || shaftRotor(transmission?.a);
+  const rotorB = rotorById(transmission?.rotorBId) || shaftRotor(transmission?.b);
+  return rotorA && rotorB ? { rotorA, rotorB } : null;
+}
+
+createTransmission = function createExplicitTransmissionV16(type, aRef, bRef) {
+  const rotorA = rotorById(aRef) || shaftRotor(aRef);
+  const rotorB = rotorById(bRef) || shaftRotor(bRef);
+  if (!rotorA || !rotorB || rotorA.id === rotorB.id || rotorA.nodeId === rotorB.nodeId) return null;
+  const transmission = createConstraint(type, rotorA.nodeId, rotorB.nodeId, {
+    active: true, stiffness: 0, width: type === 'chain' ? 5 : 4,
+    layer: Math.max(itemLayer(rotorA), itemLayer(rotorB)) + 1
+  });
+  if (!transmission) return null;
+  transmission.rotorAId = rotorA.id;
+  transmission.rotorBId = rotorB.id;
+  transmission.crossed = Boolean(transmission.crossed);
+  transmission.strength = type === 'chain' ? .92 : .62;
+  transmission.driver = transmission.driver === 'b' ? 'b' : 'a';
+  transmission.length = distance(nodeById(rotorA.nodeId), nodeById(rotorB.nodeId));
+  return transmission;
+};
+
+const baseSetToolMechanicsV16 = setTool;
+setTool = function resetExplicitTransmissionV16(tool) {
+  pendingTransmissionRotorIdV16 = null;
+  baseSetToolMechanicsV16(tool);
+};
+
+const baseHandleBuildTapMechanicsV16 = handleBuildTap;
+handleBuildTap = function handleExplicitTransmissionTapV16(world) {
+  if (!['belt', 'chain'].includes(state.tool)) return baseHandleBuildTapMechanicsV16(world);
+  const target = rotorTargetAt(world);
+  if (!target) return invalidFeedback('Коснись конкретного колеса, шестерни или барабана');
+  if (!pendingTransmissionRotorIdV16) {
+    pushUndo();
+    pendingTransmissionRotorIdV16 = target.rotor.id;
+    selectThing({ kind: 'rotor', id: target.rotor.id });
+    setYardNote('Первый вал выбран. Теперь коснись конкретной детали на втором валу.');
+    clickSound(330, .03);
+    return;
+  }
+  if (pendingTransmissionRotorIdV16 === target.rotor.id) return invalidFeedback('Нужна другая вращающаяся деталь');
+  const transmission = createTransmission(state.tool, pendingTransmissionRotorIdV16, target.rotor.id);
+  pendingTransmissionRotorIdV16 = null;
+  if (!transmission) {
+    if (state.undo.length) state.undo.pop();
+    updateHistoryButtons();
+    return invalidFeedback('Эти детали нельзя связать передачей');
+  }
+  selectThing({ kind: 'constraint', id: transmission.id });
+  saveSoon(); placedFeedback();
+  setYardNote(state.tool === 'chain' ? 'Цепь замкнута на выбранных звёздочках.' : 'Ремень натянут между выбранными шкивами.', 1500);
+};
+
+function rotorMomentV16(rotor) {
+  if (!rotor || rotorMountModeV16(rotor) === 'rigid') return Infinity;
+  const factor = rotor.type === 'flywheel' ? clamp(rotor.inertia || 4, 2, 10) : rotor.type === 'wheel' ? 1.4 : .8;
+  return Math.max(40, rotor.radius * rotor.radius * factor);
+}
+
+function coupleRotorsV16(rotorA, rotorB, sign, strength, step) {
+  if (!rotorA || !rotorB) return;
+  const inertiaA = rotorMomentV16(rotorA), inertiaB = rotorMomentV16(rotorB);
+  const invA = Number.isFinite(inertiaA) ? 1 / inertiaA : 0;
+  const invB = Number.isFinite(inertiaB) ? 1 / inertiaB : 0;
+  const jacA = -sign * rotorA.radius;
+  const jacB = rotorB.radius;
+  const denominator = jacA * jacA * invA + jacB * jacB * invB;
+  if (denominator < 1e-9) return;
+  const error = rotorB.omega * rotorB.radius - sign * rotorA.omega * rotorA.radius;
+  const lambda = -error / denominator * clamp(strength * step, 0, 1);
+  rotorA.omega += invA * jacA * lambda;
+  rotorB.omega += invB * jacB * lambda;
+}
+
+function synchronizeShaftsV16() {
+  const groups = shaftGroups();
+  for (const rotors of groups.values()) {
+    const free = rotors.filter((rotor) => rotorMountModeV16(rotor) !== 'rigid');
+    if (free.length > 1) {
+      const average = free.reduce((sum, rotor) => sum + rotor.omega, 0) / free.length;
+      for (const rotor of free) rotor.omega += (average - rotor.omega) * .82;
+    }
+    for (const rotor of rotors) enforceLockedRotorV15(rotor, 1);
+  }
+}
+
+function gearPairsV16() {
+  const gears = state.rotors.filter((rotor) => rotor.type === 'gear');
+  const pairs = [];
+  for (let i = 0; i < gears.length; i += 1) for (let j = i + 1; j < gears.length; j += 1) {
+    const a = gears[i], b = gears[j];
+    if (a.nodeId === b.nodeId) continue;
+    const na = nodeById(a.nodeId), nb = nodeById(b.nodeId);
+    if (!na || !nb) continue;
+    const tolerance = clamp((a.radius + b.radius) * .08, 5, 12);
+    if (Math.abs(distance(na, nb) - (a.radius + b.radius)) <= tolerance) pairs.push([a, b]);
+  }
+  return pairs;
+}
+
+function rackAxisV16(rack) {
+  const length = Math.hypot(rack.axisX || 0, rack.axisY || 0) || 1;
+  return { x: (rack.axisX || 1) / length, y: (rack.axisY || 0) / length };
+}
+
+function nodeVelocityV16(node) {
+  return { x: node.x - node.px, y: node.y - node.py };
+}
+
+function addNodeVelocityV16(node, vx, vy) {
+  if (!node || node.fixed) return;
+  node.px -= vx;
+  node.py -= vy;
+}
+
+function solveRackContactV16(rack, gear, step) {
+  const a = nodeById(rack.a), b = nodeById(rack.b), gearNode = nodeById(gear.nodeId);
+  if (!a || !b || !gearNode) return;
+  const projection = projectPointToBeam(gearNode, rack);
+  if (!projection || projection.t < -.04 || projection.t > 1.04) return;
+  if (Math.abs(projection.distance - gear.radius) > clamp(gear.radius * .22, 8, 17)) return;
+  const axis = rackAxisV16(rack);
+  const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const side = Math.sign(axis.x * (gearNode.y - center.y) - axis.y * (gearNode.x - center.x)) || 1;
+  const va = nodeVelocityV16(a), vb = nodeVelocityV16(b);
+  const rackVelocity = ((va.x + vb.x) * axis.x + (va.y + vb.y) * axis.y) * .5;
+  const surfaceVelocity = -side * gear.omega * gear.radius;
+  const error = rackVelocity - surfaceVelocity;
+  const movable = Number(!a.fixed && !a.mount) + Number(!b.fixed && !b.mount);
+  const invRack = movable ? movable * .5 : 0;
+  const inertia = rotorMomentV16(gear);
+  const invGear = Number.isFinite(inertia) ? 1 / inertia : 0;
+  const denominator = invRack + gear.radius * gear.radius * invGear;
+  if (denominator < 1e-8) return;
+  const impulse = -error / denominator * clamp(.58 * step, 0, .9);
+  const dv = impulse * .5;
+  if (!a.mount) addNodeVelocityV16(a, axis.x * dv, axis.y * dv);
+  if (!b.mount) addNodeVelocityV16(b, axis.x * dv, axis.y * dv);
+  gear.omega += (-side * gear.radius) * impulse * invGear;
+}
+
+function solveMechanicalTransmissionsV16(step) {
+  for (const [a, b] of gearPairsV16()) coupleRotorsV16(a, b, -1, .76, step);
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type) && item.active)) {
+    if (!transmissionEnabled(transmission)) continue;
+    const pair = transmissionRotorsV16(transmission);
+    if (!pair) continue;
+    const sign = transmission.type === 'belt' && transmission.crossed ? -1 : 1;
+    coupleRotorsV16(pair.rotorA, pair.rotorB, sign, transmission.type === 'chain' ? .92 : .64, step);
+  }
+  for (const rack of state.constraints.filter((item) => item.type === 'rack' && item.active)) {
+    for (const gear of state.rotors.filter((rotor) => rotor.type === 'gear')) solveRackContactV16(rack, gear, step);
+  }
+  synchronizeShaftsV16();
+}
+
+solveGearCoupling = function solveDeterministicTransmissionsV16(step) {
+  solveMechanicalTransmissionsV16(step);
+};
+
+function stableInverseMassV16(node) {
