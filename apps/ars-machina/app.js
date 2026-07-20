@@ -25,6 +25,7 @@ const parts = [
   './engine/part-13.txt',
   './engine/part-14.txt',
   './engine/part-15a.txt',
+  './engine/part-15hub.txt',
   './engine/part-15b.txt',
   './engine/part-15c.txt',
   './engine/part-16a.txt',
