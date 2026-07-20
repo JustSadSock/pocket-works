@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - agent/ars-machina-visual-diagnostics
+  pull_request:
+    paths:
+      - 'apps/ars-machina/**'
+      - '.github/workflows/ars-machina-v21-check.yml'
   workflow_dispatch:
 
 permissions:
