@@ -1,8 +1,8 @@
 {
   "name":"БЛАЗОН: Доктрина",
   "short_name":"БЛАЗОН",
-  "id":"./",
-  "start_url":"./?pw_release=5.10.0",
+  "id":"/apps/blazon/",
+  "start_url":"./",
   "scope":"./",
   "display":"standalone",
   "background_color":"#070d0a",
