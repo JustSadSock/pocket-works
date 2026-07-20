@@ -1,7 +1,6 @@
 import '../../../shared/mobile-runtime.css';
 import '../../../shared/workshop-mode.css';
 import './styles.css';
-import Phaser from 'phaser';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
@@ -11,17 +10,35 @@ import chunk2 from './runtime-chunk-2';
 import chunk3 from './runtime-chunk-3';
 import chunk4 from './runtime-chunk-4';
 
-const payload = chunk1 + chunk2 + chunk3 + chunk4;
+const matchPayload = chunk1 + chunk2 + chunk3 + chunk4;
 
-async function unpackRuntime(): Promise<string> {
-  if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot unpack the offline match engine.');
+async function unpack(payload: string, label: string): Promise<string> {
+  if (typeof DecompressionStream === 'undefined') throw new Error(`Этот браузер не может распаковать ${label}.`);
   const bytes = Uint8Array.from(atob(payload), (character) => character.charCodeAt(0));
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Response(stream).text();
 }
 
+async function loadPhaser(): Promise<unknown> {
+  const modules = await Promise.all([
+    import('./phaser-runtime-chunk-1'),
+    import('./phaser-runtime-chunk-2'),
+    import('./phaser-runtime-chunk-3'),
+    import('./phaser-runtime-chunk-4'),
+    import('./phaser-runtime-chunk-5'),
+    import('./phaser-runtime-chunk-6'),
+    import('./phaser-runtime-chunk-7'),
+    import('./phaser-runtime-chunk-8')
+  ]);
+  const engineCode = await unpack(modules.map((module) => module.default).join(''), 'движок матча');
+  new Function(engineCode)();
+  const phaser = (globalThis as typeof globalThis & { Phaser?: unknown }).Phaser;
+  if (!phaser) throw new Error('Движок матча распакован, но не запустился.');
+  return phaser;
+}
+
 try {
-  const runtime = await unpackRuntime();
+  const [Phaser, runtime] = await Promise.all([loadPhaser(), unpack(matchPayload, 'футбольный симулятор')]);
   const launch = new Function('Phaser', 'installMobileRuntime', 'createWorkshopMode', 'registerEnhancedUpdate', 'core', runtime);
   launch(Phaser, installMobileRuntime, createWorkshopMode, registerEnhancedUpdate, core);
 } catch (error) {
