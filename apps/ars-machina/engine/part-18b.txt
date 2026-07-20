@@ -1,0 +1,323 @@
+// ARS MACHINA 2.0 — air, water, stored energy, cams, automation and projectiles.
+const baseChannelActiveCodexV20 = channelActive;
+channelActive = function channelActiveWithProgramsV20(channel) {
+  const key = channel === 'B' ? 'B' : 'A';
+  return Boolean(baseChannelActiveCodexV20(key) || state.autoChannelsV20?.[key]);
+};
+
+const baseResetChannelsCodexV20 = resetChannels;
+resetChannels = function resetCodexChannelsV20() {
+  baseResetChannelsCodexV20();
+  state.autoChannelsV20 = { A: false, B: false };
+};
+
+function constraintBaseStiffnessV20(constraint) {
+  if (constraint.type === 'spring') return clamp(constraint.stiffness || .11, .015, .48);
+  if (constraint.type === 'bow') return clamp(constraint.stiffness || .2, .04, .4);
+  if (constraint.type === 'canopy') return clamp(constraint.stiffness || .38, .12, .58);
+  if (constraint.type === 'wing') return clamp(constraint.stiffness || .68, .28, .82);
+  if (constraint.type === 'armor') return clamp(constraint.stiffness || .96, .72, .99);
+  if (constraint.type === 'rope') return .7;
+  if (constraint.type === 'rack') return .82;
+  return .92;
+}
+
+solveStableDistancesV16 = function solveCodexDistancesV20(iteration, iterations) {
+  for (const constraint of state.constraints) {
+    if (!constraint.active || ['belt', 'chain', 'damper', 'camFollower'].includes(constraint.type)) continue;
+    const a = nodeById(constraint.a), b = nodeById(constraint.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy) || .0001;
+    const target = constraint.type === 'rope' ? constraint.maxLength
+      : constraint.type === 'bow' ? (constraint.restLength || constraint.length)
+      : constraint.length;
+    if (!Number.isFinite(target)) continue;
+    if (constraint.type === 'rope' && dist <= target) continue;
+    const error = dist - target;
+    const base = constraintBaseStiffnessV20(constraint);
+    const stiffness = 1 - Math.pow(1 - base, 1 / Math.max(1, iterations));
+    const limit = constraint.type === 'spring' || constraint.type === 'bow' ? 3.2 : constraint.type === 'canopy' ? 4.2 : 6.5;
+    const correction = boundedCorrectionV16(error * stiffness, limit);
+    const nx = dx / dist, ny = dy / dist;
+    const invA = stableInverseMassV16(a), invB = stableInverseMassV16(b), total = invA + invB;
+    if (!total) continue;
+    a.x += nx * correction * invA / total; a.y += ny * correction * invA / total;
+    b.x -= nx * correction * invB / total; b.y -= ny * correction * invB / total;
+  }
+};
+
+function updateSequencersV20() {
+  state.autoChannelsV20.A = false;
+  state.autoChannelsV20.B = false;
+  for (const sequence of state.attachments.filter((item) => item.type === 'sequencer')) {
+    const rotor = rotorById(sequence.rotorId) || shaftRotor(sequence.nodeId);
+    if (!rotor) continue;
+    const phase = ((rotor.angle / TAU + (sequence.phase || 0)) % 1 + 1) % 1;
+    if (sequence.pattern === 'pulseA') {
+      state.autoChannelsV20.A ||= phase < .45;
+    } else if (sequence.pattern === 'both') {
+      state.autoChannelsV20.A = true;
+      state.autoChannelsV20.B = true;
+    } else if (sequence.pattern === 'gallop') {
+      const quarter = Math.floor(phase * 4) % 4;
+      state.autoChannelsV20.A ||= quarter === 0 || quarter === 3;
+      state.autoChannelsV20.B ||= quarter === 2 || quarter === 3;
+    } else {
+      state.autoChannelsV20.A ||= phase < .5;
+      state.autoChannelsV20.B ||= phase >= .5;
+    }
+  }
+}
+
+function applyMainspringsV20(step) {
+  for (const spring of state.attachments.filter((item) => item.type === 'mainspring')) {
+    if (!(spring.auto || channelActive(controlChannel(spring))) || (spring.energy || 0) <= 0) continue;
+    const driver = rotorById(spring.rotorId) || shaftRotor(spring.nodeId);
+    if (!driver || rotorMountModeV16(driver) === 'rigid') continue;
+    const energyRatio = clamp((spring.energy || 0) / Math.max(.01, spring.charge || 1), 0, 1);
+    const torque = clamp(spring.torque || 1.5, .4, 3.5) * (.35 + energyRatio * .65) * step;
+    const direction = spring.direction === -1 ? -1 : 1;
+    for (const rotor of state.rotors.filter((item) => item.nodeId === driver.nodeId && rotorMountModeV16(item) !== 'rigid')) {
+      const inertiaScale = clamp(2400 / rotorMomentV16(rotor), .12, 1);
+      rotor.omega += direction * torque * .045 * inertiaScale;
+    }
+    spring.energy = Math.max(0, (spring.energy || 0) - Math.abs(torque) * .0016);
+  }
+}
+
+function averageSurfaceVelocityV20(a, b) {
+  const va = nodeVelocityV16(a), vb = nodeVelocityV16(b);
+  return { x: (va.x + vb.x) * .5, y: (va.y + vb.y) * .5 };
+}
+
+function applyWingAndCanopyForcesV20(step) {
+  for (const surface of state.constraints.filter((item) => ['wing', 'canopy'].includes(item.type) && item.active)) {
+    const a = nodeById(surface.a), b = nodeById(surface.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, span = Math.hypot(dx, dy) || 1;
+    const ux = dx / span, uy = dy / span, nx = -uy, ny = ux;
+    const velocity = averageSurfaceVelocityV20(a, b);
+    if (surface.type === 'wing') {
+      const normalFlow = velocity.x * nx + velocity.y * ny;
+      const lift = clamp(-normalFlow * Math.abs(normalFlow) * span * .0018 * (surface.lift || 1) * (state.environmentV20.airDensity || 1), -1.05, 1.05) * step;
+      const drag = clamp((surface.drag || .32) * .055 * step, 0, .18);
+      for (const node of [a, b]) {
+        addNodeVelocityV16(node, nx * lift * .5 - velocity.x * drag * .5, ny * lift * .5 - velocity.y * drag * .5);
+      }
+    } else {
+      const descending = Math.max(0, velocity.y);
+      const area = Math.max(.6, surface.area || span / 80);
+      const upward = clamp(descending * Math.abs(descending) * area * .075, 0, 1.45) * step;
+      const lateralDrag = clamp((surface.drag || 1.2) * .085 * step, 0, .3);
+      for (const node of [a, b]) addNodeVelocityV16(node, -velocity.x * lateralDrag * .5, -upward * .5 - velocity.y * .025);
+    }
+  }
+}
+
+function applyAirscrewsV20(step) {
+  for (const screw of state.rotors.filter((rotor) => rotor.type === 'airscrew')) {
+    if (rotorMountModeV16(screw) === 'rigid') continue;
+    const node = nodeById(screw.nodeId);
+    if (!node) continue;
+    const carrier = carrierBeamV15(node);
+    const angle = carrier ? beamAngleV15(carrier) - Math.PI / 2 : -Math.PI / 2;
+    const magnitude = clamp(screw.omega * Math.abs(screw.omega) * screw.radius * .055 * (screw.pitch || 1), -1.75, 1.75)
+      * (screw.direction === -1 ? -1 : 1) * step;
+    const vx = Math.cos(angle) * magnitude, vy = Math.sin(angle) * magnitude;
+    if (carrier) {
+      for (const endpoint of [nodeById(carrier.a), nodeById(carrier.b)].filter(Boolean)) addNodeVelocityV16(endpoint, vx * .5, vy * .5);
+    } else addNodeVelocityV16(node, vx, vy);
+  }
+}
+
+function applyWaterV20(step) {
+  if (!state.environmentV20.waterEnabled) return;
+  const level = state.environmentV20.waterLevel;
+  for (const node of state.nodes) {
+    const depth = node.y - level;
+    if (depth <= 0 || node.fixed) continue;
+    const submerged = clamp(depth / 70, 0, 1);
+    const velocity = nodeVelocityV16(node);
+    const bags = state.attachments.filter((item) => item.type === 'airbag' && item.nodeId === node.id);
+    let volume = .15;
+    for (const bag of bags) volume += channelActive(controlChannel(bag)) ? (bag.volume || 1.4) : (bag.deflated || .22);
+    const buoyancy = clamp((volume * .22 - Math.max(.3, node.mass || 1) * .018) * submerged, -.1, .85) * step;
+    const dragX = clamp(-velocity.x * .13 * submerged * step, -.6, .6);
+    const dragY = clamp(-velocity.y * .19 * submerged * step - buoyancy, -1, 1);
+    addNodeVelocityV16(node, dragX, dragY);
+  }
+}
+
+function updateCamFollowersV20() {
+  for (const follower of state.constraints.filter((item) => item.type === 'camFollower' && item.active)) {
+    const cam = rotorById(follower.rotorId), node = nodeById(follower.b);
+    if (!cam || !node) continue;
+    const wave = .5 + .5 * Math.cos(cam.angle * Math.max(1, cam.lobes || 1) + (follower.phase || 0));
+    const offset = (wave - .5) * 2 * (follower.stroke || 24);
+    if (node.mount?.sliding) {
+      const host = beamById(node.mount.beamId);
+      if (!host) continue;
+      if (!Number.isFinite(follower.baseT)) follower.baseT = node.mount.t;
+      const length = Math.max(20, host.length || distance(nodeById(host.a), nodeById(host.b)));
+      const direction = Math.sign((follower.axisX || 1) * (nodeById(host.b).x - nodeById(host.a).x) + (follower.axisY || 0) * (nodeById(host.b).y - nodeById(host.a).y)) || 1;
+      node.mount.t += clamp(follower.baseT + offset / length * direction - node.mount.t, -.018, .018);
+    } else {
+      const targetX = (follower.originX ?? node.x) + (follower.axisX || 1) * offset;
+      const targetY = (follower.originY ?? node.y) + (follower.axisY || 0) * offset;
+      node.x += clamp(targetX - node.x, -2.8, 2.8) * .34;
+      node.y += clamp(targetY - node.y, -2.8, 2.8) * .34;
+    }
+  }
+}
+
+function updateJointServosV20() {
+  for (const servo of state.attachments.filter((item) => item.type === 'jointServo')) {
+    const joint = jointById(servo.jointId);
+    const beamA = beamById(joint?.beamA), beamB = beamById(joint?.beamB);
+    const nodeA = nodeById(joint?.a), nodeB = nodeById(joint?.b);
+    if (!joint || !beamA || !beamB || !nodeA || !nodeB) continue;
+    const target = channelActive(controlChannel(servo)) ? servo.angleB : servo.angleA;
+    const relative = normalizeAngle(beamAngleV15(beamB) - beamAngleV15(beamA));
+    const error = normalizeAngle(relative - target);
+    const pivot = { x: (nodeA.x + nodeB.x) * .5, y: (nodeA.y + nodeB.y) * .5 };
+    const delta = clamp(error * .075 * (servo.strength || 1.2), -.04, .04);
+    rotateBeamStableV16(beamA, pivot, delta * .5);
+    rotateBeamStableV16(beamB, pivot, -delta * .5);
+  }
+}
+
+function projectileDirectionV20(launcher) {
+  const node = nodeById(launcher.nodeId);
+  const carrier = carrierBeamV15(node);
+  return (carrier ? beamAngleV15(carrier) : 0) + (launcher.angleOffset || 0);
+}
+
+function spawnProjectileV20(launcher, angle) {
+  const origin = nodeById(launcher.nodeId);
+  if (!origin) return null;
+  const radius = clamp(5 + (launcher.projectileMass || 2.4) * 1.2, 6, 14);
+  const x = origin.x + Math.cos(angle) * (radius + 24);
+  const y = origin.y + Math.sin(angle) * (radius + 24);
+  const projectile = createNode(x, y, { snap: false, mass: launcher.projectileMass || 2.4, radius, role: 'projectile', layer: itemLayer(launcher) + 2 });
+  createAttachment('payload', projectile.id, { hostId: null, layer: itemLayer(projectile) + 1 });
+  projectile.role = 'projectile';
+  const speed = launcher.velocity || 9;
+  projectile.px = projectile.x - Math.cos(angle) * speed;
+  projectile.py = projectile.y - Math.sin(angle) * speed;
+  state.projectilesV20.push({ nodeId: projectile.id, born: state.simTime, bounces: 0 });
+  return projectile;
+}
+
+function fireLaunchersV20() {
+  if (state.mode !== 'run') return 0;
+  let fired = 0;
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) {
+    const count = Math.min(launcher.volley || 1, launcher.ammo || 0);
+    const baseAngle = projectileDirectionV20(launcher);
+    for (let i = 0; i < count; i += 1) {
+      const centered = count <= 1 ? 0 : i / (count - 1) - .5;
+      const jitter = Math.sin((i + 1) * 12.9898 + state.simTime * 7.1) * .015;
+      spawnProjectileV20(launcher, baseAngle + centered * (launcher.spread || 0) + jitter);
+      fired += 1;
+    }
+    launcher.ammo = Math.max(0, (launcher.ammo || 0) - count);
+  }
+  if (fired) {
+    setYardNote(`Залп: ${fired}.`, 1000);
+    heavySound(72, .13); vibrate([16, 18, 24]);
+  }
+  return fired;
+}
+ui.fireButton?.addEventListener('click', fireLaunchersV20);
+
+function closestPointOnSegmentV20(point, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy || 1;
+  const t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / len2, 0, 1);
+  return { x: a.x + dx * t, y: a.y + dy * t, t };
+}
+
+function collideProjectilesWithArmorV20() {
+  const armor = state.constraints.filter((item) => item.type === 'armor' && item.active);
+  if (!armor.length) return;
+  for (const record of state.projectilesV20) {
+    const projectile = nodeById(record.nodeId);
+    if (!projectile) continue;
+    for (const plate of armor) {
+      const a = nodeById(plate.a), b = nodeById(plate.b);
+      if (!a || !b) continue;
+      const closest = closestPointOnSegmentV20(projectile, a, b);
+      let nx = projectile.x - closest.x, ny = projectile.y - closest.y;
+      let dist = Math.hypot(nx, ny);
+      const threshold = (projectile.radius || 7) + 3 + (plate.thickness || 1) * 2;
+      if (dist >= threshold) continue;
+      if (dist < .001) {
+        const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+        nx = -dy / len; ny = dx / len; dist = 1;
+      } else { nx /= dist; ny /= dist; }
+      const vx = projectile.x - projectile.px, vy = projectile.y - projectile.py;
+      const normalSpeed = vx * nx + vy * ny;
+      if (normalSpeed >= 0) continue;
+      const restitution = .28;
+      const rvx = (vx - (1 + restitution) * normalSpeed * nx) * .72;
+      const rvy = (vy - (1 + restitution) * normalSpeed * ny) * .72;
+      projectile.x += nx * (threshold - dist + .5);
+      projectile.y += ny * (threshold - dist + .5);
+      projectile.px = projectile.x - rvx;
+      projectile.py = projectile.y - rvy;
+      record.bounces = (record.bounces || 0) + 1;
+      break;
+    }
+  }
+}
+
+function cleanupProjectilesV20() {
+  const keep = [];
+  const removeIds = new Set();
+  for (const record of state.projectilesV20) {
+    const node = nodeById(record.nodeId);
+    const expired = !node || state.simTime - record.born > 12 || Math.abs(node.x) > 8000 || node.y > 2500 || (record.bounces || 0) > 4;
+    if (expired) removeIds.add(record.nodeId); else keep.push(record);
+  }
+  if (removeIds.size) {
+    state.nodes = state.nodes.filter((node) => !removeIds.has(node.id));
+    state.attachments = state.attachments.filter((item) => !removeIds.has(item.nodeId));
+    state.constraints = state.constraints.filter((item) => !removeIds.has(item.a) && !removeIds.has(item.b));
+  }
+  state.projectilesV20 = keep;
+}
+
+const baseApplyMachineForcesCodexV20 = applyMachineForcesV16;
+applyMachineForcesV16 = function applyCodexForcesV20(step) {
+  baseApplyMachineForcesCodexV20(step);
+  updateSequencersV20();
+  applyMainspringsV20(step);
+  applyWingAndCanopyForcesV20(step);
+  applyAirscrewsV20(step);
+  applyWaterV20(step);
+  collideProjectilesWithArmorV20();
+  cleanupProjectilesV20();
+};
+
+const baseSolveExtraMechanicsCodexV20 = solveExtraMechanicsV16;
+solveExtraMechanicsV16 = function solveCodexExtraMechanicsV20(step) {
+  baseSolveExtraMechanicsCodexV20(step);
+  updateCamFollowersV20();
+  updateJointServosV20();
+};
+
+const baseEnterRunCodexV20 = enterRunMode;
+enterRunMode = function enterCodexRunV20() {
+  for (const spring of state.attachments.filter((item) => item.type === 'mainspring')) spring.energy = spring.charge || 1;
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) launcher.ammo = launcher.capacity || 1;
+  state.projectilesV20 = [];
+  state.autoChannelsV20 = { A: false, B: false };
+  baseEnterRunCodexV20();
+};
+
+const baseReturnBuildCodexV20 = returnToBuild;
+returnToBuild = function returnFromCodexRunV20() {
+  state.projectilesV20 = [];
+  state.autoChannelsV20 = { A: false, B: false };
+  baseReturnBuildCodexV20();
+};
