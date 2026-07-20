@@ -30,10 +30,12 @@ const parts = [
   './engine/part-15c.txt',
   './engine/part-15drive.txt',
   './engine/part-15rack.txt',
+  './engine/part-15explicit.txt',
   './engine/part-16a.txt',
   './engine/part-16b.txt',
   './engine/part-17a.txt',
-  './engine/part-17b.txt'
+  './engine/part-17b.txt',
+  './engine/part-17repair.txt'
 ];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем чертёжный двор…';
