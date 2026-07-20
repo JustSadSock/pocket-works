@@ -43,7 +43,8 @@ const parts = [
   './engine/part-20.txt',
   './engine/part-21a.txt',
   './engine/part-21b.txt',
-  './engine/part-21c.txt'
+  './engine/part-21c.txt',
+  './engine/part-21d.txt'
 ];
 const status = document.querySelector('#yardNote');
 status.textContent = 'Разворачиваем Codice delle Macchine…';
