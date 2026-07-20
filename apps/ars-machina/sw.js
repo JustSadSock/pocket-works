@@ -55,6 +55,7 @@ const APP_SHELL = [
   './engine/part-21b.txt',
   './engine/part-21c.txt',
   './engine/part-21d.txt',
+  './engine/part-21e.txt',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
