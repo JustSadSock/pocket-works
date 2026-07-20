@@ -23,10 +23,6 @@ export default defineConfig({
         assetFileNames(assetInfo) {
           const name = assetInfo.name || '';
           return name.endsWith('.css') ? 'styles.css' : 'assets/[name]-[hash][extname]';
-        },
-        manualChunks(id) {
-          if (id.includes('/phaser/')) return 'phaser-engine';
-          return undefined;
         }
       }
     }
