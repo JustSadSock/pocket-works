@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/whistle-90",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vitest run --config vite.config.ts && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs whistle-90",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  }
+}

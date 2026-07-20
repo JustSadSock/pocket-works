@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#173f35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СВИСТОК 90">
+  <meta name="pocket-works-build" content="1.0.0">
+  <title>СВИСТОК 90 — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+    <section id="loadingScreen" class="screen loading-screen" data-ui>
+      <div class="loading-icon" aria-hidden="true"><i></i><b></b><span></span></div>
+      <p>СУДЕЙСКАЯ БРИГАДА / 1.0.0</p>
+      <h1>РАЗМЕТКА ПОЛЯ</h1>
+      <div class="progress"><i id="loadingBar"></i></div>
+      <small id="loadingLabel">Проверяем сетку ворот</small>
+    </section>
+
+    <section id="menuScreen" class="screen menu-screen hidden" data-ui>
+      <a class="launcher-link" href="../../" data-app-control>← POCKET WORKS</a>
+      <div class="menu-poster" aria-hidden="true">
+        <div class="poster-field"><i></i><i></i><b>90</b></div>
+        <div class="poster-ball"></div>
+        <div class="poster-var">VAR</div>
+      </div>
+      <div class="menu-copy">
+        <p>VERTICAL FOOTBALL / EDITION 01</p>
+        <h1>СВИСТОК<br><em>90</em></h1>
+        <div>Не карточный менеджер и не пенальти по очереди. Полноценный матч: веди игрока, разрывай линии пасом, лезь в подкат и потом не ной судье.</div>
+      </div>
+      <div class="menu-actions">
+        <button id="startMatch" class="primary-action" type="button" data-native-press><b>БЫСТРЫЙ МАТЧ</b><small>2 ТАЙМА · 7×7 · ОКОЛО 6 МИНУТ</small></button>
+        <div class="split-actions">
+          <button id="startTraining" class="paper-button" type="button" data-native-press>ТРЕНИРОВКА</button>
+          <button id="openSettings" class="paper-button" type="button" data-native-press>НАСТРОЙКИ</button>
+        </div>
+        <div class="career-strip">
+          <span><small>МАТЧИ</small><b id="statMatches">0</b></span>
+          <span><small>ПОБЕДЫ</small><b id="statWins">0</b></span>
+          <span><small>ГОЛЫ</small><b id="statGoals">0</b></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="game-screen hidden">
+      <div id="gameMount" class="game-mount" data-gesture-surface data-block-callout aria-label="Футбольное поле"></div>
+      <div class="paper-noise" aria-hidden="true"></div>
+
+      <header id="scoreboard" class="scoreboard" data-ui>
+        <div class="team-chip home"><i></i><span>БЕРЕГ</span><b id="homeScore">0</b></div>
+        <div class="match-clock"><span id="matchClock">00:00</span><small id="matchPhase">1 ТАЙМ</small></div>
+        <div class="team-chip away"><b id="awayScore">0</b><span>ИСКРА</span><i></i></div>
+        <button id="pauseButton" class="pause-button" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+      </header>
+
+      <div id="eventRibbon" class="event-ribbon hidden" data-ui aria-live="polite"><b></b><span></span></div>
+      <div id="advantageBadge" class="advantage-badge hidden" data-ui>ПРЕИМУЩЕСТВО</div>
+      <div id="chargeMeter" class="charge-meter hidden" data-ui><i></i><span>УДАР</span></div>
+
+      <div id="joystick" class="joystick" data-ui data-gesture-surface data-block-callout>
+        <div class="joystick-ring"><i id="joystickKnob"></i></div><span>ДВИЖЕНИЕ</span>
+      </div>
+      <div class="action-cluster" data-ui>
+        <button id="switchButton" class="action-button switch" type="button" data-native-press><b>↻</b><small>ИГРОК</small></button>
+        <button id="passButton" class="action-button pass" type="button" data-native-press><b>ПАС</b><small id="passHint">ОТБОР</small></button>
+        <button id="shootButton" class="action-button shoot" type="button" data-native-press><b>УДАР</b><small>УДЕРЖИВАЙ</small></button>
+        <button id="dashButton" class="action-button dash" type="button" data-native-press><b>РЫВОК</b><small>СТАМИНА</small></button>
+      </div>
+    </section>
+
+    <section id="varOverlay" class="var-overlay hidden" data-ui>
+      <div class="var-grid"></div>
+      <div class="var-head"><span>VIDEO ASSISTANT REFEREE</span><b id="varClock">CHECK 01.4</b></div>
+      <div class="var-frame">
+        <div class="offside-line"></div>
+        <div class="var-ball"></div>
+        <div class="var-player one"></div>
+        <div class="var-player two"></div>
+      </div>
+      <div id="varVerdict" class="var-verdict">ПРОВЕРКА ЭПИЗОДА</div>
+    </section>
+
+    <section id="tutorialOverlay" class="tutorial-overlay hidden" data-ui>
+      <div class="tutorial-card">
+        <p id="tutorialStep">ШАГ 1 ИЗ 4</p>
+        <h2 id="tutorialTitle">Двигай игрока</h2>
+        <div id="tutorialText">Веди левый джойстик. Выбранный футболист отмечен белым кольцом.</div>
+        <button id="tutorialNext" class="primary-action compact" type="button" data-native-press><b>ПОНЯЛ</b><small>ДАЛЬШЕ</small></button>
+      </div>
+    </section>
+
+    <section id="settingsScreen" class="screen panel-screen hidden" data-ui>
+      <div class="panel-header"><div><p>ДИСПЕТЧЕРСКАЯ</p><h2>Настройки</h2></div><button id="closeSettings" class="close-button" type="button" data-native-press>×</button></div>
+      <div class="setting-row"><span><b>Звук стадиона</b><small>Свисток, удары, трибуны и VAR</small></span><button id="soundToggle" class="state-toggle" type="button" data-native-press>ВКЛ</button></div>
+      <div class="setting-row"><span><b>Вибрация</b><small>Удар, фол, штанга и гол</small></span><button id="hapticsToggle" class="state-toggle" type="button" data-native-press>ВКЛ</button></div>
+      <label class="setting-row slider"><span><b>Помощь при пасе</b><small>Насколько сильно игра ищет открытого адресата</small></span><input id="assistRange" type="range" min="0" max="100" value="72"><output id="assistValue">72%</output></label>
+      <div class="setting-row"><span><b>Камера</b><small>Динамические приближения и ударные акценты</small></span><button id="cameraToggle" class="state-toggle" type="button" data-native-press>ДИНАМ.</button></div>
+      <button class="paper-button wide" type="button" data-workshop-trigger>WORKSHOP MODE / ДИАГНОСТИКА</button>
+      <button id="resetProgress" class="paper-button wide danger" type="button" data-native-press>СБРОСИТЬ СТАТИСТИКУ</button>
+    </section>
+
+    <section id="pauseScreen" class="screen modal-screen hidden" data-ui>
+      <div class="modal-card">
+        <p>МАТЧ ОСТАНОВЛЕН</p>
+        <h2>Пауза</h2>
+        <div class="modal-copy">Игроки замерли, судья делает вид, что всё контролирует.</div>
+        <button id="resumeMatch" class="primary-action compact" type="button" data-native-press><b>ПРОДОЛЖИТЬ</b><small>НА ПОЛЕ</small></button>
+        <button id="substituteButton" class="paper-button wide" type="button" data-native-press>СДЕЛАТЬ ЗАМЕНУ</button>
+        <button id="restartMatch" class="paper-button wide" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
+        <button id="quitMatch" class="paper-button wide" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
+        <a class="paper-button wide link" href="../../" data-app-control>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen result-screen hidden" data-ui>
+      <a class="launcher-link" href="../../" data-app-control>← POCKET WORKS</a>
+      <div class="result-poster"><span id="resultBadge">ФИНАЛЬНЫЙ СВИСТОК</span><h2 id="resultScore">0 : 0</h2><p id="resultTitle">Ничья</p></div>
+      <div class="result-stats">
+        <span><small>ВЛАДЕНИЕ</small><b id="resultPossession">50—50</b></span>
+        <span><small>УДАРЫ</small><b id="resultShots">0—0</b></span>
+        <span><small>ФОЛЫ</small><b id="resultFouls">0—0</b></span>
+        <span><small>КАРТОЧКИ</small><b id="resultCards">0—0</b></span>
+      </div>
+      <button id="playAgain" class="primary-action" type="button" data-native-press><b>РЕВАНШ</b><small>ЕЩЁ ОДИН МАТЧ</small></button>
+      <button id="resultMenu" class="paper-button wide" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
+    </section>
+
+    <div id="confirmReset" class="confirm-sheet hidden" data-ui>
+      <div><p>СБРОСИТЬ СТАТИСТИКУ?</p><span>Матчи, победы и голы будут удалены. Настройки останутся.</span><div><button id="cancelReset" class="paper-button" type="button">ОТМЕНА</button><button id="confirmResetButton" class="paper-button danger" type="button">СБРОСИТЬ</button></div></div>
+    </div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
