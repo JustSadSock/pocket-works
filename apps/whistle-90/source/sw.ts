@@ -16,7 +16,12 @@ const RELEASE_NOTES = [
 ];
 
 setCacheNameDetails({ prefix: 'whistle-90', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
-precacheAndRoute(self.__WB_MANIFEST);
+const PHASER_CHUNKS = Array.from({ length: 32 }, (_, index) => ({
+  url: `phaser/phaser-runtime-chunk-${index + 1}.js`,
+  revision: APP_VERSION
+}));
+
+precacheAndRoute([...self.__WB_MANIFEST, ...PHASER_CHUNKS]);
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
 
