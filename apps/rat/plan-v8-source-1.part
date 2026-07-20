@@ -1,0 +1,65 @@
+(() => {
+  'use strict';
+
+  const VERSION = '2.1.0';
+  const PLAN_KEY = 'pocket-works:rat:plan-v8';
+  const ARMY_KEY = 'pocket-works:rat:army-v7';
+  const ORDERS = {
+    hold: { label: 'ДЕРЖАТЬ', glyph: '■', hint: 'Остаётся на месте и принимает врага рядом.' },
+    attack: { label: 'НАСТУПАТЬ', glyph: '↑', hint: 'Сразу давит ближайший вражеский полк.' },
+    flank: { label: 'ОБХОДИТЬ', glyph: '↷', hint: 'Идёт к внешнему краю и атакует после обхода.' }
+  };
+  const SCENARIOS = {
+    clash: { label: 'ПОЛЕВОЙ БОЙ', description: 'сломить вражескую армию' },
+    hill: { label: 'ХОЛМ', description: 'удерживать высоту 24 секунды' },
+    crossing: { label: 'ПЕРЕПРАВА', description: 'продавить мост или медленный брод' },
+    breakthrough: { label: 'ПРОРЫВ', description: 'провести шесть бойцов за вражеский рубеж' }
+  };
+  const TYPE_ICONS = { swords: '⚔', spears: '↟', archers: '➶', shields: '⬒', axes: '◆', cavalry: '♞' };
+  const DEPLOY = { minX: 64, maxX: 836, minY: 770, maxY: 1040 };
+
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = `./plan-v8.css?v=${VERSION}`;
+  css.dataset.ratPlan = VERSION;
+  document.head.appendChild(css);
+
+  function readArmyState() {
+    try {
+      return JSON.parse(localStorage.getItem(ARMY_KEY) || 'null') || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function defaultPosition(index) {
+    const points = [
+      { x: 110, y: 900 },
+      { x: 280, y: 835 },
+      { x: 450, y: 910 },
+      { x: 620, y: 835 },
+      { x: 790, y: 900 }
+    ];
+    return points[index] || { x: 450, y: 900 };
+  }
+
+  function readSavedPlan(setup) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(PLAN_KEY) || 'null'); } catch {}
+    return setup.map((config, index) => {
+      const old = saved?.regiments?.find((item) => item.id === config.id) || saved?.regiments?.[index];
+      const fallback = defaultPosition(index);
+      return {
+        id: config.id,
+        x: clamp(Number(old?.x) || fallback.x, DEPLOY.minX, DEPLOY.maxX),
+        y: clamp(Number(old?.y) || fallback.y, DEPLOY.minY, DEPLOY.maxY),
+        order: ORDERS[old?.order] ? old.order : index === 2 ? 'attack' : index === 0 || index === 4 ? 'flank' : 'hold'
+      };
+    });
+  }
+
+  function savePlan(plan) {
+    localStorage.setItem(PLAN_KEY, JSON.stringify({ regiments: plan.regiments }));
+  }
+
+  function 

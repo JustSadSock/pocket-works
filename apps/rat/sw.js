@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'rat-';
-const CACHE_NAME = 'rat-v2.0.0';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'rat-v2.1.0';
+const APP_VERSION = '2.1.0';
 const RELEASE_NOTES = [
-  'Армия расширена до пяти полков; типы войск можно повторять и свободно комбинировать.',
-  'Добавлены щитоносцы, секирники и конница с понятными сильными и слабыми сторонами.',
-  'Появились полевой бой, удержание холма, переправа и прорыв с лесом, грязью, рекой и высотой.',
-  'Цвет и знак каждого полка настраиваются отдельно и сохраняются между сражениями.'
+  'Добавлен отдельный предбоевой этап: сначала состав армии, затем план на реальной карте сценария.',
+  'Все пять полков можно свободно расставить внутри своей зоны перед поднятием знамён.',
+  'Каждому полку назначается одно из трёх ясных стартовых действий: держать, наступать или обходить.',
+  'План и позиции сохраняются, используются при повторном бою и не требуют дополнительных кнопок во время сражения.'
 ];
 const APP_SHELL = [
   './',
@@ -16,6 +16,7 @@ const APP_SHELL = [
   './screen-redesign-v5.css',
   './setup-redesign-v6.css',
   './campaign-v7.css',
+  './plan-v8.css',
   './app.js',
   './game-part-1.js',
   './game-part-2.js',
@@ -52,10 +53,21 @@ const APP_SHELL = [
   './campaign-v7-source-7.part',
   './campaign-v7-source-8.part',
   './campaign-v7-source-9.part',
-  './campaign-v7-source-13.part',
-  './campaign-v7-source-12.part',
-  './campaign-v7-source-11.part',
   './campaign-v7-source-10.part',
+  './campaign-v7-source-11.part',
+  './campaign-v7-source-12.part',
+  './campaign-v7-source-13.part',
+  './plan-v8.js',
+  './plan-v8-source-1.part',
+  './plan-v8-source-2.part',
+  './plan-v8-source-3.part',
+  './plan-v8-source-4.part',
+  './plan-v8-source-5.part',
+  './plan-v8-source-6.part',
+  './plan-v8-source-7.part',
+  './plan-v8-source-8.part',
+  './plan-v8-source-9.part',
+  './plan-v8-source-10.part',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

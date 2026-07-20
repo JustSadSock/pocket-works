@@ -1,0 +1,54 @@
+m.teamRegiments(1).filter((enemy) => enemy.activeCount() > 0);
+    if (!enemies.length) return { x: item.x, y: 520 };
+    const nearest = enemies.sort((a, b) => Math.abs(a.center().x - item.x) - Math.abs(b.center().x - item.x))[0];
+    return nearest.center();
+  }
+
+  function applyOpeningPlan(sim, launch) {
+    if (!sim || !launch) return;
+    const commandApi = globalThis.__RAT_COMMAND_TEST__;
+    sim.teamRegiments(0).forEach((regiment) => {
+      const item = launch.regiments.find((entry) => entry.id === regiment.baseId) || launch.regiments[regiment.slotIndex];
+      if (!item) return;
+      const state = commandApi?.ensureCommandState(regiment) || (regiment.commandState ||= {});
+      const point = targetForOrder(sim, regiment, item);
+      state.kind = item.order;
+      state.point = { ...point };
+      state.targetRegiment = item.order === 'attack' ? sim.pickTargetRegiment(regiment) : null;
+      state.age = 0;
+      state.momentum = item.order === 'hold' ? .42 : .34;
+      state.transition = 0;
+      state.autonomous = false;
+      regiment.manualObjective = { ...point };
+      regiment.objective = { ...point };
+      regiment.openingOrder = item.order;
+    });
+    renderRegimentBar();
+    const labels = sim.teamRegiments(0).map((regiment) => ORDERS[regiment.openingOrder]?.label || 'ПЛАН').join(' · ');
+    setTimeout(() => { if (currentScreen === 'battle') showToast(`План принят: ${labels}`); }, 380);
+  }
+
+  const BaseRegiment = Regiment;
+  Regiment = class PlannedRegimentV8 extends BaseRegiment {
+    constructor(config, team, slotIndex) {
+      super(config, team, slotIndex);
+      if (team !== 0 || !config.deployment) return;
+      const dx = config.deployment.x - this.x;
+      const dy = config.deployment.y - this.y;
+      this.x += dx; this.y += dy;
+      this.anchorX += dx; this.anchorY += dy;
+      this.objective = { x: this.x, y: this.y };
+      this.manualObjective = { x: this.x, y: this.y };
+      this.units.forEach((unit) => {
+        unit.x += dx; unit.y += dy;
+        unit.previousX = unit.x; unit.previousY = unit.y;
+      });
+    }
+  };
+
+  const BaseSimulation = Simulation;
+  Simulation = class PlannedSimulationV8 extends BaseSimulation {
+    constructor(playerSetup, enemySetup, demo = false) {
+      super(playerSetup, enemySetup, demo);
+      if (demo || !pendingLaunch) return;
+      this.scenarioId

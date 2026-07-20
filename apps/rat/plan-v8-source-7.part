@@ -1,0 +1,53 @@
+.forEach((button) => button.addEventListener('click', () => {
+      if (dragging) return;
+      activeId = button.dataset.planId;
+      audio.click();
+      renderPlan();
+    }));
+    positionTokens();
+  }
+
+  function positionTokens() {
+    const host = document.querySelector('#planTokensV8');
+    if (!host || !planState) return;
+    const rect = host.getBoundingClientRect();
+    host.querySelectorAll('[data-plan-id]').forEach((button) => {
+      const item = planFor(button.dataset.planId);
+      button.style.left = `${item.x / WORLD.width * rect.width}px`;
+      button.style.top = `${item.y / WORLD.height * rect.height}px`;
+      button.setAttribute('aria-pressed', String(item.id === activeId));
+    });
+  }
+
+  function renderEditor() {
+    const item = planFor(activeId);
+    const config = configFor(activeId);
+    if (!item || !config) return;
+    const data = TYPE_DATA[config.type];
+    const selected = document.querySelector('#planSelectedV8');
+    selected.style.setProperty('--regiment', config.appearance?.primary || '#c9653e');
+    selected.innerHTML = `<span>${config.appearance?.emblem || '◆'}</span><div><small>ВЫБРАННЫЙ ПОЛК</small><strong>${data.label}</strong><p>${ORDERS[item.order].hint}</p></div><b>${data.count}</b>`;
+    const orders = document.querySelector('#planOrdersV8');
+    orders.innerHTML = Object.entries(ORDERS).map(([id, order]) => `<button type="button" data-plan-order="${id}" aria-pressed="${id === item.order}"><b>${order.glyph}</b><span>${order.label}</span></button>`).join('');
+    orders.querySelectorAll('[data-plan-order]').forEach((button) => button.addEventListener('click', () => {
+      item.order = button.dataset.planOrder;
+      savePlan(planState);
+      audio.click(); vibrate(6); renderPlan();
+    }));
+  }
+
+  function renderPlan() {
+    if (!planState) return;
+    const scenario = SCENARIOS[planState.scenarioId];
+    document.querySelector('#planScenarioV8').textContent = scenario.label;
+    document.querySelector('#planScenarioHintV8').textContent = scenario.description;
+    renderEnemy();
+    renderTokens();
+    renderEditor();
+    requestAnimationFrame(drawPlanMap);
+  }
+
+  function targetForOrder(sim, regiment, item) {
+    if (item.order === 'hold') return { x: item.x, y: item.y };
+    if (item.order === 'flank') return { x: item.x < 450 ? 72 : 828, y: 480 };
+    const enemies = si

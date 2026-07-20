@@ -1,0 +1,68 @@
+?.id;
+    renderPlan();
+    vibrate(8);
+  }
+
+  function planFor(id) {
+    return planState?.regiments.find((item) => item.id === id) || null;
+  }
+
+  function configFor(id) {
+    return planState?.setup.find((item) => item.id === id) || null;
+  }
+
+  function worldFromPointer(event) {
+    const rect = planCanvas.getBoundingClientRect();
+    return {
+      x: clamp((event.clientX - rect.left) / rect.width * WORLD.width, DEPLOY.minX, DEPLOY.maxX),
+      y: clamp((event.clientY - rect.top) / rect.height * WORLD.height, DEPLOY.minY, DEPLOY.maxY)
+    };
+  }
+
+  function tokenAtEvent(event) {
+    return event.target.closest?.('[data-plan-id]') || null;
+  }
+
+  function bindPlanEvents() {
+    document.querySelector('#planBackV8').addEventListener('click', closePlan);
+    document.querySelector('#planResetV8').addEventListener('click', resetPlan);
+    document.querySelector('#planLaunchV8').addEventListener('click', launchPlannedBattle);
+    const map = document.querySelector('#planMapV8');
+    map.addEventListener('pointerdown', (event) => {
+      const token = tokenAtEvent(event);
+      if (!token || !planState) return;
+      activeId = token.dataset.planId;
+      dragging = { pointerId: event.pointerId, id: activeId };
+      token.setPointerCapture?.(event.pointerId);
+      token.classList.add('is-dragging');
+      renderEditor();
+      vibrate(5);
+      event.preventDefault();
+    });
+    map.addEventListener('pointermove', (event) => {
+      if (!dragging || dragging.pointerId !== event.pointerId || !planState) return;
+      const item = planFor(dragging.id);
+      const point = worldFromPointer(event);
+      item.x = point.x;
+      item.y = point.y;
+      positionTokens();
+      drawPlanMap();
+      event.preventDefault();
+    });
+    const finish = (event) => {
+      if (!dragging || dragging.pointerId !== event.pointerId) return;
+      document.querySelector(`[data-plan-id="${dragging.id}"]`)?.classList.remove('is-dragging');
+      savePlan(planState);
+      dragging = null;
+      audio.click();
+      renderPlan();
+    };
+    map.addEventListener('pointerup', finish);
+    map.addEventListener('pointercancel', finish);
+    window.addEventListener('resize', () => { if (!planScreen?.hidden) drawPlanMap(); });
+  }
+
+  function drawZone(ctx, zone) {
+    if (zone.type === 'forest') {
+      ctx.fillStyle = 'rgba(34,64,43,.44)';
+  

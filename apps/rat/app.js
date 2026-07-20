@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 globalThis.__RAT_DEPS__ = { createWorkshopMode };
 
-const BUILD_VERSION = '2.0.0';
+const BUILD_VERSION = '2.1.0';
 const criticalParts = [
   './game-part-1.js',
   './game-part-2.js',
@@ -34,7 +34,8 @@ const criticalParts = [
 const enhancements = [
   { src: './setup-redesign-v6.js', ready: '__RAT_SETUP_V6_READY', error: '__RAT_SETUP_V6_ERROR', label: 'экран построения' },
   { src: './setup-redesign-v6-recovery.js', ready: '__RAT_SETUP_RECOVERY_READY', label: 'восстановление экрана построения' },
-  { src: './campaign-v7.js', promise: '__RAT_CAMPAIGN_V7_PROMISE', ready: '__RAT_CAMPAIGN_V7_READY', error: '__RAT_CAMPAIGN_V7_ERROR', label: 'тактическое разнообразие' }
+  { src: './campaign-v7.js', promise: '__RAT_CAMPAIGN_V7_PROMISE', ready: '__RAT_CAMPAIGN_V7_READY', error: '__RAT_CAMPAIGN_V7_ERROR', label: 'тактическое разнообразие' },
+  { src: './plan-v8.js', promise: '__RAT_PLAN_V8_PROMISE', ready: '__RAT_PLAN_V8_READY', error: '__RAT_PLAN_V8_ERROR', label: 'предбоевой план' }
 ];
 
 function appendScript(src) {

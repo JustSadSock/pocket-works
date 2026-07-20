@@ -1,0 +1,49 @@
+nfig, index) => {
+      const item = planState.regiments[index];
+      return { ...structuredClone(config), deployment: { x: item.x, y: item.y }, openingOrder: item.order };
+    });
+    saveState();
+    setSetupLayers(false);
+    baseStartBattle({ planned: true });
+    applyOpeningPlan(simulation, pendingLaunch);
+    lastConfirmedPlan = structuredClone(pendingLaunch);
+    pendingLaunch = null;
+    planState = null;
+  }
+
+  function decorateSetupEntry() {
+    const startButton = document.querySelector('#startBattleButton');
+    if (startButton && !planState) startButton.innerHTML = '<span>СОСТАВИТЬ ПЛАН</span><small>расставить полки и задать первые действия</small>';
+  }
+
+  const renderSetupBeforePlanV8 = renderSetup;
+  renderSetup = function renderSetupWithPlanEntry() {
+    renderSetupBeforePlanV8();
+    requestAnimationFrame(decorateSetupEntry);
+  };
+  const showScreenBeforePlanV8 = showScreen;
+  showScreen = function showScreenWithPlanEntry(name) {
+    showScreenBeforePlanV8(name);
+    if (name === 'setup') requestAnimationFrame(() => requestAnimationFrame(decorateSetupEntry));
+  };
+
+  installPlanScreen();
+  decorateSetupEntry();
+  const intro = document.querySelector('.setup-intro p');
+  if (intro) intro.textContent = 'Сначала собери пять полков. Затем расставь их на карте и задай каждому стартовую задачу.';
+  const manual = document.querySelector('.manual-frame-v4 .rules-list');
+  if (manual?.children?.[1]) {
+    manual.children[1].querySelector('strong').textContent = 'Перед сигналом составь план';
+    manual.children[1].querySelector('p').textContent = 'Расставь пять полков в своей зоне и выбери для каждого: держать место, наступать или обходить.';
+  }
+  const updateScript = document.querySelector('script[data-update-manager]');
+  if (updateScript) updateScript.dataset.appVersion = VERSION;
+  const footerVersion = document.querySelector('.home-footer span:first-child');
+  if (footerVersion) footerVersion.textContent = 'РАТЬ · 2.1';
+  const settingsBuild = document.querySelector('.settings-build-v4 b');
+  if (settingsBuild) settingsBuild.textContent = 'BUILD 2.1.0';
+  const homeEyebrow = document.querySelector('.home-copy .eyebrow');
+  if (homeEyebrow) homeEyebrow.textContent = 'ПЯТЬ ПОЛКОВ · ПЛАН ДО СИГНАЛА · РЕДКИЕ ПРИКАЗЫ';
+  document.body.dataset.ratPlan = 'v8';
+  globalThis.__RAT_PLAN_V8_READY = true;
+})();

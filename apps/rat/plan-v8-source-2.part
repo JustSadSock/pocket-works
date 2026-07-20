@@ -1,0 +1,57 @@
+ resolveScenario() {
+    const selected = readArmyState().scenario || persistent.scenario || 'random';
+    return selected === 'random' ? choose(['clash', 'hill', 'crossing', 'breakthrough']) : selected;
+  }
+
+  function zonesFor(id) {
+    if (id === 'hill') return [
+      { type: 'hill', x: 450, y: 590, r: 126 },
+      { type: 'forest', x: 175, y: 520, r: 105 },
+      { type: 'forest', x: 725, y: 675, r: 100 }
+    ];
+    if (id === 'crossing') return [
+      { type: 'river', x: 0, y: 520, w: 900, h: 150, bridgeX: 450, bridgeW: 150 },
+      { type: 'forest', x: 150, y: 410, r: 92 },
+      { type: 'forest', x: 750, y: 760, r: 92 }
+    ];
+    if (id === 'breakthrough') return [
+      { type: 'forest', x: 210, y: 470, r: 120 },
+      { type: 'forest', x: 690, y: 710, r: 118 },
+      { type: 'mud', x: 450, y: 610, rx: 145, ry: 90 }
+    ];
+    return [
+      { type: 'forest', x: 180, y: 560, r: 95 },
+      { type: 'mud', x: 680, y: 650, rx: 120, ry: 72 }
+    ];
+  }
+
+  let planScreen = null;
+  let planCanvas = null;
+  let planCtx = null;
+  let planState = null;
+  let activeId = null;
+  let dragging = null;
+  let pendingLaunch = null;
+  let lastConfirmedPlan = null;
+  const hiddenBeforePlan = new Map();
+
+  function installPlanScreen() {
+    const setup = document.querySelector('#setupScreen');
+    if (!setup || document.querySelector('#battlePlanV8')) return;
+    setup.insertAdjacentHTML('beforeend', `
+      <section id="battlePlanV8" class="battle-plan-v8" hidden aria-label="План боя">
+        <header class="plan-head-v8">
+          <div><small>ШАГ 2 ИЗ 2</small><strong>ПЛАН БОЯ</strong></div>
+          <button id="planBackV8" type="button">← СОСТАВ</button>
+        </header>
+        <div class="plan-brief-v8">
+          <div><small>ЗАДАЧА</small><strong id="planScenarioV8"></strong><span id="planScenarioHintV8"></span></div>
+          <p>Перетащи полки в светлую зону. Затем выбери, что каждый будет делать после сигнала.</p>
+        </div>
+        <div class="plan-map-v8" id="planMapV8">
+          <canvas id="planCanvasV8" aria-label="Карта предбоевого построения"></canvas>
+          <div class="plan-enemy-v8"><span>РАЗВЕДКА</span><div id="planEnemyV8"></div></div>
+          <div class="plan-deploy-label-v8">ЗОНА РАССТАНОВКИ</div>
+          <div id="planTokensV8" class="plan-tokens-v8"></div>
+        </div>
+        <div class
