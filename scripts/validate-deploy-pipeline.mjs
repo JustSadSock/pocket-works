@@ -17,11 +17,11 @@ const [packageSource, wranglerSource, workflow] = await Promise.all([
 const packageJson = JSON.parse(packageSource);
 const wrangler = JSON.parse(wranglerSource);
 const scripts = packageJson.scripts || {};
-const deployCommand = 'npm run prepare:site && npm run validate:site';
+const deployCommand = 'npm run build:enhanced && npm run prepare:site && npm run validate:site';
 const fullCiCommand = 'npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
 if (scripts['deploy:site'] !== deployCommand) {
-  errors.push(`package.json deploy:site must remain the fast Cloudflare production path: ${deployCommand}`);
+  errors.push(`package.json deploy:site must build Enhanced apps before Cloudflare production assembly: ${deployCommand}`);
 }
 
 if (scripts['ci:full'] !== fullCiCommand) {
@@ -32,7 +32,7 @@ if (scripts['build:site'] !== 'npm run deploy:site') {
   errors.push('package.json build:site must remain an alias of deploy:site');
 }
 
-for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'validate:all', 'test:forge', 'test:enhanced', 'build:enhanced', 'registry:build']) {
+for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'validate:all', 'test:forge', 'test:enhanced', 'registry:build']) {
   if ((scripts['deploy:site'] || '').includes(forbidden)) {
     errors.push(`deploy:site must not include heavy or redundant step ${forbidden}`);
   }
@@ -59,7 +59,7 @@ if (workflow.includes('git add apps.json')) {
 }
 
 if (workflow.includes('npm run deploy:site') || workflow.includes('npm run build:site')) {
-  errors.push('GitHub production validation must not substitute the fast deploy path for ci:full');
+  errors.push('GitHub production validation must not substitute the production deploy path for ci:full');
 }
 
 if (errors.length > 0) {
@@ -68,4 +68,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Deployment pipeline separation is valid: Cloudflare packages dist-site and GitHub CI owns exhaustive validation.');
+console.log('Deployment pipeline is valid: Cloudflare builds Enhanced apps before packaging, while GitHub CI owns exhaustive validation.');
