@@ -3,6 +3,12 @@
 
   const VERSION = '2.1.1';
   const PLAN_KEY = 'pocket-works:rat:plan-v8';
+
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = `./prebattle-v9.css?v=${VERSION}`;
+  css.dataset.ratPrebattle = VERSION;
+  document.head.appendChild(css);
   const COLORS = { attack: '#d96943', hold: '#e5c56f', flank: '#7fb17c', retreat: '#83a8c4' };
   const LABELS = { attack: 'АТАКОВАТЬ', hold: 'ДЕРЖАТЬ', flank: 'ОБОЙТИ', retreat: 'ОТСТУПИТЬ' };
   const GLYPHS = { attack: '×', hold: '■', flank: '↷', retreat: '↓' };
