@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'whistle-90-';
-const CACHE_NAME = 'whistle-90-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'whistle-90-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-07-20';
 const RELEASE_NOTES = [
-  'Полный матч 7×7 с двумя таймами, добавленным временем и статистикой.',
-  'Фолы, преимущество, карточки, удаления, офсайды, штрафные и пенальти.',
-  'Судейская бригада, VAR-повторы, замены, камера и синтезированный звук.'
+  'Исправлен фриз игрового цикла на iPhone и в standalone-режиме.',
+  'Canvas-рендер и таймерный цикл больше не зависят от проблемного mobile RAF.',
+  'Матч автоматически восстанавливается после возврата в приложение.'
 ];
 
 setCacheNameDetails({ prefix: 'whistle-90', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
