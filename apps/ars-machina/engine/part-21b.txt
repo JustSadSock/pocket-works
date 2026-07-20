@@ -1,0 +1,418 @@
+// ARS MACHINA 2.1 — mechanical vision, interaction graph and readable run feedback.
+const VISION_KEY_V21 = 'pocket-works:ars-machina:mechanical-vision';
+state.mechanicsVisionV21 = localStorage.getItem(VISION_KEY_V21) !== 'off';
+let visionButtonV21 = null;
+let visionHudV21 = null;
+let visionLegendV21 = null;
+let lastVisionHudV21 = '';
+
+function installMechanicalVisionV21() {
+  if (visionButtonV21) return;
+  const yard = document.querySelector('.yard');
+  if (!yard) return;
+  visionButtonV21 = document.createElement('button');
+  visionButtonV21.type = 'button';
+  visionButtonV21.className = 'mechanics-vision-button-v21';
+  visionButtonV21.dataset.nativePress = '';
+  visionButtonV21.setAttribute('aria-label', 'Показывать связи и силы');
+  visionButtonV21.innerHTML = '<span aria-hidden="true">⌁</span><b>СВЯЗИ</b>';
+  visionButtonV21.addEventListener('click', () => {
+    state.mechanicsVisionV21 = !state.mechanicsVisionV21;
+    localStorage.setItem(VISION_KEY_V21, state.mechanicsVisionV21 ? 'on' : 'off');
+    updateMechanicalVisionUiV21();
+    clickSound(state.mechanicsVisionV21 ? 410 : 210, .035);
+  });
+  visionHudV21 = document.createElement('div');
+  visionHudV21.className = 'mechanics-hud-v21';
+  visionHudV21.setAttribute('aria-live', 'polite');
+  visionLegendV21 = document.createElement('div');
+  visionLegendV21.className = 'mechanics-legend-v21';
+  visionLegendV21.innerHTML = '<span class="energy-v21">МОМЕНТ</span><span class="channel-a-v21">A</span><span class="channel-b-v21">B</span><span class="force-v21">СИЛА →</span>';
+  yard.append(visionButtonV21, visionHudV21, visionLegendV21);
+  updateMechanicalVisionUiV21();
+}
+
+function updateMechanicalVisionUiV21() {
+  if (!visionButtonV21) return;
+  visionButtonV21.classList.toggle('active', state.mechanicsVisionV21);
+  visionButtonV21.setAttribute('aria-pressed', state.mechanicsVisionV21 ? 'true' : 'false');
+  visionLegendV21.hidden = !state.mechanicsVisionV21;
+  visionHudV21.hidden = !state.mechanicsVisionV21;
+}
+
+function selectedIdsV21() {
+  const ids = new Set();
+  const selected = getSelected();
+  if (!selected || !state.selection) return ids;
+  ids.add(selected.id);
+  if (state.selection.kind === 'node') {
+    for (const item of state.rotors.filter((rotor) => rotor.nodeId === selected.id)) ids.add(item.id);
+    for (const item of state.attachments.filter((attachment) => attachment.nodeId === selected.id)) ids.add(item.id);
+    for (const item of state.joints.filter((joint) => joint.a === selected.id || joint.b === selected.id)) ids.add(item.id);
+  }
+  if (state.selection.kind === 'rotor') {
+    for (const item of state.rotors.filter((rotor) => rotor.nodeId === selected.nodeId)) ids.add(item.id);
+    for (const item of state.attachments.filter((attachment) => attachment.nodeId === selected.nodeId || attachment.rotorId === selected.id)) ids.add(item.id);
+  }
+  if (state.selection.kind === 'joint') {
+    for (const item of state.attachments.filter((attachment) => attachment.jointId === selected.id)) ids.add(item.id);
+  }
+  if (state.selection.kind === 'constraint' && selected.type === 'camFollower') ids.add(selected.rotorId);
+  if (state.selection.kind === 'attachment') {
+    if (selected.rotorId) ids.add(selected.rotorId);
+    if (selected.jointId) ids.add(selected.jointId);
+    ids.add(selected.nodeId);
+  }
+  return ids;
+}
+
+function qualityForSelectionV21() {
+  const ids = selectedIdsV21();
+  const report = refreshQualityReportV21();
+  const error = report.errors.find((item) => item.id && ids.has(item.id));
+  if (error) return { level: 'error', text: error.text };
+  const warning = report.warnings.find((item) => item.id && ids.has(item.id));
+  if (warning) return { level: 'warning', text: warning.text };
+  const note = report.notes.find((item) => item.id && ids.has(item.id));
+  if (note) return { level: 'note', text: note.text };
+  return { level: 'ok', text: 'Связи корректны' };
+}
+
+function componentPointV21(kind, item) {
+  if (!item) return null;
+  if (kind === 'node') return worldToScreen(item.x, item.y);
+  if (kind === 'rotor' || kind === 'attachment') {
+    const node = nodeById(item.nodeId);
+    return node ? worldToScreen(node.x, node.y) : null;
+  }
+  if (kind === 'constraint') {
+    const a = nodeById(item.a), b = nodeById(item.b);
+    return a && b ? worldToScreen((a.x + b.x) * .5, (a.y + b.y) * .5) : null;
+  }
+  if (kind === 'joint') {
+    const a = nodeById(item.a), b = nodeById(item.b);
+    return a && b ? worldToScreen((a.x + b.x) * .5, (a.y + b.y) * .5) : null;
+  }
+  return null;
+}
+
+function linkTargetPointV21(link) {
+  if (link.kind === 'rotor') return componentPointV21('rotor', rotorById(link.id));
+  if (link.kind === 'attachment') return componentPointV21('attachment', attachmentById(link.id));
+  if (link.kind === 'constraint') return componentPointV21('constraint', constraintById(link.id));
+  if (link.kind === 'joint') return componentPointV21('joint', jointById(link.id));
+  if (link.kind === 'node') return componentPointV21('node', nodeById(link.id));
+  return null;
+}
+
+function linksForSelectionV21() {
+  const selected = getSelected();
+  if (!selected || !state.selection) return [];
+  const links = [];
+  const add = (kind, id, label, tone = 'mechanical') => {
+    if (!id || links.some((item) => item.kind === kind && item.id === id && item.label === label)) return;
+    links.push({ kind, id, label, tone });
+  };
+  if (state.selection.kind === 'rotor') {
+    for (const rotor of state.rotors.filter((item) => item.nodeId === selected.nodeId && item.id !== selected.id)) add('rotor', rotor.id, 'ОБЩИЙ ВАЛ');
+    for (const item of state.attachments.filter((attachment) => attachment.nodeId === selected.nodeId || attachment.rotorId === selected.id)) {
+      add('attachment', item.id, item.type === 'mainspring' ? 'ЗАПАС МОМЕНТА' : item.type === 'sequencer' ? 'ПРОГРАММА' : 'УПРАВЛЕНИЕ', item.channel === 'B' ? 'B' : item.channel === 'A' ? 'A' : 'energy');
+    }
+    for (const item of state.constraints.filter((constraint) => constraint.rotorAId === selected.id || constraint.rotorBId === selected.id)) {
+      const otherId = constraint.rotorAId === selected.id ? constraint.rotorBId : constraint.rotorAId;
+      const other = rotorById(otherId);
+      if (other) add('rotor', other.id, constraint.type === 'chain' ? 'ЦЕПЬ' : 'РЕМЕНЬ', 'energy');
+    }
+    for (const item of state.constraints.filter((constraint) => constraint.type === 'camFollower' && constraint.rotorId === selected.id)) add('constraint', item.id, 'КУЛАЧОК → ХОД', 'energy');
+  } else if (state.selection.kind === 'attachment') {
+    if (selected.rotorId) add('rotor', selected.rotorId, selected.type === 'sequencer' ? 'ПРОГРАММНЫЙ БАРАБАН' : 'ВЕДОМЫЙ ВАЛ', 'energy');
+    if (selected.jointId) add('joint', selected.jointId, 'УПРАВЛЯЕМЫЙ ШАРНИР', selected.channel === 'B' ? 'B' : 'A');
+    const node = nodeById(selected.nodeId);
+    if (node) add('node', node.id, selected.type === 'airbag' ? 'ПЛАВУЧЕСТЬ' : selected.type === 'launcher' ? 'НАПРАВЛЕНИЕ ОГНЯ' : 'ТОЧКА УСТАНОВКИ', selected.channel === 'B' ? 'B' : selected.channel === 'A' ? 'A' : 'mechanical');
+  } else if (state.selection.kind === 'constraint') {
+    add('node', selected.a, 'ОПОРА I');
+    add('node', selected.b, 'ОПОРА II');
+    if (selected.type === 'camFollower') add('rotor', selected.rotorId, 'КУЛАЧОК', 'energy');
+  } else if (state.selection.kind === 'joint') {
+    for (const servo of state.attachments.filter((item) => item.type === 'jointServo' && item.jointId === selected.id)) add('attachment', servo.id, `КОНТУР ${controlChannel(servo)}`, controlChannel(servo));
+  } else if (state.selection.kind === 'node') {
+    for (const rotor of state.rotors.filter((item) => item.nodeId === selected.id)) add('rotor', rotor.id, 'ВАЛ');
+    for (const attachment of state.attachments.filter((item) => item.nodeId === selected.id)) add('attachment', attachment.id, NAMES[attachment.type]?.[1] || attachment.type, attachment.channel === 'B' ? 'B' : attachment.channel === 'A' ? 'A' : 'mechanical');
+    for (const joint of state.joints.filter((item) => item.a === selected.id || item.b === selected.id)) add('joint', joint.id, joint.type === 'weld' ? 'ЖЁСТКО' : joint.type === 'limit' ? 'ОГРАНИЧИТЕЛЬ' : 'ШАРНИР');
+  }
+  return links.slice(0, 9);
+}
+
+function interactionSummaryV21() {
+  const selected = getSelected();
+  if (!selected || !state.selection) return 'Ничего не выбрано';
+  if (state.selection.kind === 'rotor') {
+    const shaft = state.rotors.filter((item) => item.nodeId === selected.nodeId).length;
+    const drives = state.attachments.filter((item) => item.nodeId === selected.nodeId || item.rotorId === selected.id).length;
+    const transmissions = state.constraints.filter((item) => item.rotorAId === selected.id || item.rotorBId === selected.id).length;
+    return `${shaft} дет. на валу · ${drives} приводов · ${transmissions} передач`;
+  }
+  if (state.selection.kind === 'attachment') {
+    if (selected.type === 'mainspring') return `вал · запас ${Math.round(clamp((selected.energy ?? selected.charge) / Math.max(.01, selected.charge || 1), 0, 1) * 100)}%`;
+    if (selected.type === 'sequencer') return `барабан · шаг ${(selected.stepIndexV21 || 0) + 1}/${selected.stepCountV21 || 8} · A/B`;
+    if (selected.type === 'airbag') return `контур ${controlChannel(selected)} · вода · подъём`;
+    if (selected.type === 'launcher') return `контур ${controlChannel(selected)} · ${selected.ammo ?? selected.capacity}/${selected.capacity} зарядов`;
+    if (selected.type === 'jointServo') return `контур ${controlChannel(selected)} · конкретный шарнир`;
+  }
+  if (state.selection.kind === 'constraint') {
+    if (selected.type === 'wing') return 'скорость → подъём + сопротивление';
+    if (selected.type === 'canopy') return 'падение → торможение';
+    if (selected.type === 'armor') return 'удар → отражение + потеря энергии';
+    if (selected.type === 'bow') return 'деформация → запас выстрела';
+    if (selected.type === 'camFollower') return 'вращение кулачка → поступательный ход';
+  }
+  return `${linksForSelectionV21().length} прямых взаимодействий`;
+}
+
+function flowColorV21(tone) {
+  if (tone === 'A') return '#9b4b35';
+  if (tone === 'B') return '#356b70';
+  if (tone === 'energy') return '#b48337';
+  return '#5a3825';
+}
+
+function drawArrowHeadV21(x, y, angle, size, color) {
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(angle);
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-size, -size * .55); ctx.lineTo(-size, size * .55); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawFlowLineV21(a, b, label, tone = 'mechanical', dashed = true) {
+  if (!a || !b) return;
+  const color = flowColorV21(tone);
+  const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = .84;
+  ctx.lineWidth = tone === 'A' || tone === 'B' ? 2.8 : 2;
+  if (dashed) ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.setLineDash([]);
+  drawArrowHeadV21(b.x - dx / len * 7, b.y - dy / len * 7, Math.atan2(dy, dx), 7, color);
+  const mx = (a.x + b.x) * .5, my = (a.y + b.y) * .5;
+  ctx.font = '800 9px ui-monospace, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const widthText = ctx.measureText(label).width + 8;
+  ctx.fillStyle = 'rgba(231,211,166,.9)';
+  ctx.fillRect(mx - widthText * .5, my - 15, widthText, 13);
+  ctx.fillStyle = color;
+  ctx.fillText(label, mx, my - 4);
+  ctx.restore();
+}
+
+function drawVectorV21(point, vector, color, label) {
+  if (!point || !vector) return;
+  const magnitude = Math.hypot(vector.x || 0, vector.y || 0);
+  if (magnitude < .015) return;
+  const scale = clamp(20 + magnitude * 32, 22, 66) / magnitude;
+  const end = { x: point.x + vector.x * scale, y: point.y + vector.y * scale };
+  drawFlowLineV21(point, end, label, color, false);
+}
+
+function drawSelectionGraphV21() {
+  if (state.mode !== 'build' || !state.selection) return;
+  const selected = getSelected();
+  const origin = componentPointV21(state.selection.kind, selected);
+  if (!origin) return;
+  for (const link of linksForSelectionV21()) drawFlowLineV21(origin, linkTargetPointV21(link), link.label, link.tone);
+  const quality = qualityForSelectionV21();
+  ctx.save();
+  ctx.strokeStyle = quality.level === 'error' ? '#9a3029' : quality.level === 'warning' ? '#b17b2e' : '#386a5f';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(origin.x, origin.y, 22 + Math.sin(performance.now() / 220) * 2, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+function drawTransmissionReadoutsV21() {
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type) && item.active)) {
+    const pair = transmissionRotorsV16(transmission);
+    if (!pair) continue;
+    const aNode = nodeById(pair.rotorA.nodeId), bNode = nodeById(pair.rotorB.nodeId);
+    if (!aNode || !bNode) continue;
+    const a = worldToScreen(aNode.x, aNode.y), b = worldToScreen(bNode.x, bNode.y);
+    const ratio = pair.rotorB.radius ? pair.rotorA.radius / pair.rotorB.radius : 1;
+    const moving = Math.abs(pair.rotorA.omega) + Math.abs(pair.rotorB.omega) > .025;
+    if (!moving && state.mode === 'run') continue;
+    drawFlowLineV21(a, b, `${transmission.type === 'chain' ? 'ЦЕПЬ' : 'РЕМЕНЬ'} ${ratio.toFixed(2)}×`, 'energy', false);
+  }
+}
+
+function drawRunForcesV21() {
+  if (state.mode !== 'run') return;
+  for (const surface of state.constraints.filter((item) => ['wing', 'canopy'].includes(item.type))) {
+    const a = nodeById(surface.a), b = nodeById(surface.b);
+    if (!a || !b) continue;
+    drawVectorV21(worldToScreen((a.x + b.x) * .5, (a.y + b.y) * .5), surface.forceV21, 'energy', surface.type === 'wing' ? 'ПОДЪЁМ' : 'ТОРМОЖЕНИЕ');
+  }
+  for (const screw of state.rotors.filter((item) => item.type === 'airscrew')) {
+    const node = nodeById(screw.nodeId);
+    if (node) drawVectorV21(worldToScreen(node.x, node.y), screw.forceV21, 'energy', 'ТЯГА');
+  }
+  for (const bag of state.attachments.filter((item) => item.type === 'airbag' && Math.abs(item.buoyancyV21 || 0) > .01)) {
+    const node = nodeById(bag.nodeId);
+    if (node) drawVectorV21(worldToScreen(node.x, node.y), { x: 0, y: -(item.buoyancyV21 || 0) }, controlChannel(bag), 'ПЛАВУЧЕСТЬ');
+  }
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) {
+    const node = nodeById(launcher.nodeId);
+    if (!node) continue;
+    const p = worldToScreen(node.x, node.y);
+    const angle = projectileDirectionV20(launcher);
+    const length = clamp((launcher.velocity || 10) * state.camera.zoom * 5.5, 42, 112);
+    const end = { x: p.x + Math.cos(angle) * length, y: p.y + Math.sin(angle) * length };
+    drawFlowLineV21(p, end, `${launcher.ammo ?? launcher.capacity}/${launcher.capacity}`, controlChannel(launcher), true);
+  }
+  for (const spring of state.attachments.filter((item) => item.type === 'mainspring')) {
+    const node = nodeById(spring.nodeId);
+    if (!node) continue;
+    const p = worldToScreen(node.x, node.y);
+    const ratio = clamp((spring.energy || 0) / Math.max(.01, spring.charge || 1), 0, 1);
+    ctx.save();
+    ctx.strokeStyle = spring.activeV21 ? '#b48337' : '#7a5e3a';
+    ctx.globalAlpha = .8;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 28, -Math.PI / 2, -Math.PI / 2 + TAU * ratio); ctx.stroke();
+    ctx.restore();
+  }
+  for (const sequence of state.attachments.filter((item) => item.type === 'sequencer')) {
+    const node = nodeById(sequence.nodeId);
+    if (!node) continue;
+    const p = worldToScreen(node.x, node.y);
+    drawBadgeV21(p.x + 25, p.y - 25, `${(sequence.stepIndexV21 || 0) + 1}/${sequence.stepCountV21 || 8}`, sequence.outputBV21 ? 'B' : sequence.outputAV21 ? 'A' : 'mechanical');
+  }
+  for (const impact of state.feedbackV21.impacts) {
+    const p = worldToScreen(impact.x, impact.y);
+    const r = 8 + (1 - impact.life) * 18;
+    ctx.save(); ctx.strokeStyle = `rgba(151,67,42,${clamp(impact.life, 0, 1)})`; ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i += 1) { const angle = i / 6 * TAU; ctx.beginPath(); ctx.moveTo(p.x + Math.cos(angle) * r * .25, p.y + Math.sin(angle) * r * .25); ctx.lineTo(p.x + Math.cos(angle) * r, p.y + Math.sin(angle) * r); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
+function drawBadgeV21(x, y, text, tone = 'mechanical') {
+  const color = flowColorV21(tone);
+  ctx.save();
+  ctx.font = '900 9px ui-monospace, monospace';
+  const w = ctx.measureText(text).width + 10;
+  ctx.fillStyle = 'rgba(231,211,166,.94)'; ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.fillRect(x - w * .5, y - 9, w, 18); ctx.strokeRect(x - w * .5, y - 9, w, 18);
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y + .5);
+  ctx.restore();
+}
+
+function drawControlBadgesV21() {
+  const selectedIds = selectedIdsV21();
+  const controlled = state.attachments.filter((item) => ['servo', 'jointServo', 'airbag', 'launcher', 'mainspring', 'clutch', 'brake', 'lever'].includes(item.type));
+  for (const item of controlled) {
+    if (state.mode === 'build' && !selectedIds.has(item.id) && !selectedIds.has(item.nodeId)) continue;
+    const node = nodeById(item.nodeId);
+    if (!node) continue;
+    const p = worldToScreen(node.x, node.y);
+    const channel = controlChannel(item);
+    drawBadgeV21(p.x + 18, p.y + 18, channelActive(channel) ? `${channel}●` : `${channel}○`, channel);
+  }
+}
+
+function drawQualityMarkersV21() {
+  const report = refreshQualityReportV21();
+  for (const [list, tone, glyph] of [[report.errors, 'A', '!'], [report.warnings, 'energy', '△']]) {
+    for (const issue of list) {
+      const item = rotorById(issue.id) || attachmentById(issue.id) || constraintById(issue.id) || jointById(issue.id);
+      const kind = rotorById(issue.id) ? 'rotor' : attachmentById(issue.id) ? 'attachment' : constraintById(issue.id) ? 'constraint' : jointById(issue.id) ? 'joint' : null;
+      const p = kind ? componentPointV21(kind, item) : null;
+      if (p) drawBadgeV21(p.x, p.y - 27, glyph, tone);
+    }
+  }
+}
+
+function updateRunChannelButtonsV21() {
+  document.querySelectorAll('[data-channel]').forEach((button) => {
+    const channel = button.dataset.channel === 'B' ? 'B' : 'A';
+    const active = channelActive(channel);
+    const automatic = Boolean(state.autoChannelsV20?.[channel]);
+    button.classList.toggle('active', active);
+    button.classList.toggle('auto-active-v21', automatic);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function updateVisionHudV21() {
+  if (!visionHudV21 || !state.mechanicsVisionV21) return;
+  let text = '';
+  if (state.mode === 'run') {
+    const springs = state.attachments.filter((item) => item.type === 'mainspring');
+    const energy = springs.length ? Math.round(springs.reduce((sum, item) => sum + clamp((item.energy || 0) / Math.max(.01, item.charge || 1), 0, 1), 0) / springs.length * 100) : null;
+    const ammo = state.attachments.filter((item) => item.type === 'launcher').reduce((sum, item) => sum + (item.ammo || 0), 0);
+    text = `A ${channelActive('A') ? '●' : '○'} · B ${channelActive('B') ? '●' : '○'}${energy === null ? '' : ` · пружины ${energy}%`}${state.attachments.some((item) => item.type === 'launcher') ? ` · зарядов ${ammo}` : ''}`;
+  } else if (state.selection) {
+    const quality = qualityForSelectionV21();
+    text = `${quality.level === 'ok' ? '✓' : quality.level === 'error' ? '!' : '△'} ${interactionSummaryV21()} · ${quality.text}`;
+  } else {
+    const report = refreshQualityReportV21();
+    text = report.errors.length || report.warnings.length ? `Проверка: ${report.errors.length} ошибок · ${report.warnings.length} предупреждений` : 'Коснись детали — покажу, откуда приходит движение и куда оно уходит';
+  }
+  if (text !== lastVisionHudV21) { lastVisionHudV21 = text; visionHudV21.textContent = text; }
+}
+
+const baseRenderInspectorExtrasVisionV21 = renderInspectorExtras;
+renderInspectorExtras = function renderInteractionInspectorV21() {
+  baseRenderInspectorExtrasVisionV21();
+  if (!inspectorExtra || ui.inspector.hidden || !state.selection) return;
+  const quality = qualityForSelectionV21();
+  const health = document.createElement('div');
+  health.className = `inspect-readout interaction-health-v21 ${quality.level}`;
+  health.textContent = `${quality.level === 'ok' ? '✓' : quality.level === 'error' ? '!' : '△'} ${quality.text}`;
+  appendInspectRow('Проверка', health);
+  const chain = document.createElement('div');
+  chain.className = 'inspect-readout interaction-chain-v21';
+  chain.textContent = interactionSummaryV21();
+  appendInspectRow('Взаимодействие', chain);
+  const item = getSelected();
+  if (state.selection.kind === 'constraint' && item?.type === 'wing') {
+    appendInspectRow('Сторона подъёма', segmentedButtons([{ value: -1, label: 'Вверх' }, { value: 1, label: 'Вниз' }], item.flip === 1 ? 1 : -1, (value) => { pushUndo(); item.flip = value; updateInspector(); saveSoon(); }));
+    appendInspectRow('Профиль', segmentedButtons([{ value: .08, label: 'Плоский' }, { value: .18, label: 'Обычный' }, { value: .34, label: 'Выпуклый' }], item.camber ?? .18, (value) => { pushUndo(); item.camber = value; updateInspector(); saveSoon(); }));
+  }
+  if (state.selection.kind === 'constraint' && item?.type === 'bow') {
+    appendInspectRow('Преднатяг', segmentedButtons([{ value: 0, label: 'Нет' }, { value: .45, label: 'Средний' }, { value: .9, label: 'Сильный' }], item.preload || 0, (value) => { pushUndo(); item.preload = value; updateInspector(); saveSoon(); }));
+  }
+  if (state.selection.kind === 'attachment' && ['mainspring', 'launcher'].includes(item?.type)) {
+    appendInspectRow('Контур', segmentedButtons([{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }], controlChannel(item), (value) => { pushUndo(); item.channel = value; updateInspector(); saveSoon(); }));
+  }
+};
+
+const baseUpdateModeVisionV21 = updateModeUI;
+updateModeUI = function updateVisionModeV21() {
+  baseUpdateModeVisionV21();
+  installMechanicalVisionV21();
+  updateMechanicalVisionUiV21();
+  updateRunChannelButtonsV21();
+};
+
+const baseRenderVisionV21 = render;
+render = function renderWithMechanicalVisionV21() {
+  baseRenderVisionV21();
+  installMechanicalVisionV21();
+  updateRunChannelButtonsV21();
+  updateVisionHudV21();
+  if (!state.mechanicsVisionV21) return;
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawSelectionGraphV21();
+  drawTransmissionReadoutsV21();
+  drawRunForcesV21();
+  drawControlBadgesV21();
+  drawQualityMarkersV21();
+  ctx.restore();
+};
+
+installMechanicalVisionV21();
+updateMechanicalVisionUiV21();
+updateVisionHudV21();
+updateInspector();

@@ -1,0 +1,371 @@
+// ARS MACHINA 2.1 — interaction correctness, deterministic shafts and component diagnostics.
+state.feedbackV21 = { impacts: [], launches: [] };
+state.qualityReportV21 = { errors: [], warnings: [], notes: [] };
+
+function freeShaftRotorsV21(nodeId) {
+  return state.rotors.filter((rotor) => rotor.nodeId === nodeId && rotorMountModeV16(rotor) !== 'rigid');
+}
+
+function shaftMomentV21(rotors) {
+  return rotors.reduce((sum, rotor) => {
+    const value = rotorMomentV16(rotor);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}
+
+function shaftOmegaV21(rotors) {
+  const total = shaftMomentV21(rotors);
+  if (total <= 1e-9) return 0;
+  return rotors.reduce((sum, rotor) => sum + rotor.omega * rotorMomentV16(rotor), 0) / total;
+}
+
+synchronizeShaftsV16 = function synchronizePhysicalShaftsV21() {
+  const groups = shaftGroups();
+  for (const rotors of groups.values()) {
+    const free = rotors.filter((rotor) => rotorMountModeV16(rotor) !== 'rigid');
+    if (free.length > 1) {
+      const target = shaftOmegaV21(free);
+      for (const rotor of free) rotor.omega += (target - rotor.omega) * .92;
+    }
+    for (const rotor of rotors) enforceLockedRotorV15(rotor, 1);
+  }
+};
+
+applyMainspringsV20 = function applyShaftMainspringsV21(step) {
+  for (const spring of state.attachments.filter((item) => item.type === 'mainspring')) {
+    const active = Boolean(spring.auto || channelActive(controlChannel(spring)));
+    spring.activeV21 = active && (spring.energy || 0) > 0;
+    spring.outputTorqueV21 = 0;
+    if (!spring.activeV21) continue;
+    const driver = rotorById(spring.rotorId) || shaftRotor(spring.nodeId);
+    if (!driver) continue;
+    const shaft = freeShaftRotorsV21(driver.nodeId);
+    const totalMoment = shaftMomentV21(shaft);
+    if (!shaft.length || totalMoment <= 1e-9) continue;
+    const energyRatio = clamp((spring.energy || 0) / Math.max(.01, spring.charge || 1), 0, 1);
+    const torque = clamp(spring.torque || 1.5, .4, 3.5) * (.34 + energyRatio * .66);
+    const direction = spring.direction === -1 ? -1 : 1;
+    const deltaOmega = clamp(direction * torque * 24 / totalMoment * step, -.12, .12);
+    for (const rotor of shaft) rotor.omega += deltaOmega;
+    spring.outputTorqueV21 = torque * direction;
+    spring.energy = Math.max(0, (spring.energy || 0) - Math.abs(torque) * .00155 * step);
+  }
+};
+
+updateSequencersV20 = function updateIndexedSequencersV21() {
+  state.autoChannelsV20.A = false;
+  state.autoChannelsV20.B = false;
+  for (const sequence of state.attachments.filter((item) => item.type === 'sequencer')) {
+    const rotor = rotorById(sequence.rotorId) || shaftRotor(sequence.nodeId);
+    if (!rotor) continue;
+    const steps = clamp(Math.round(rotor.steps || 8), 4, 16);
+    const phase = ((rotor.angle / TAU + (sequence.phase || 0)) % 1 + 1) % 1;
+    const index = Math.floor(phase * steps) % steps;
+    sequence.stepIndexV21 = index;
+    sequence.stepCountV21 = steps;
+    let a = false;
+    let b = false;
+    if (sequence.pattern === 'pulseA') {
+      a = index === 0;
+    } else if (sequence.pattern === 'both') {
+      a = true; b = true;
+    } else if (sequence.pattern === 'gallop') {
+      const beat = index % 4;
+      a = beat === 0 || beat === 3;
+      b = beat === 2 || beat === 3;
+    } else {
+      a = index % 2 === 0;
+      b = !a;
+    }
+    sequence.outputAV21 = a;
+    sequence.outputBV21 = b;
+    state.autoChannelsV20.A ||= a;
+    state.autoChannelsV20.B ||= b;
+  }
+};
+
+applyWingAndCanopyForcesV20 = function applyReadableAerodynamicsV21(step) {
+  for (const surface of state.constraints.filter((item) => ['wing', 'canopy'].includes(item.type) && item.active)) {
+    const a = nodeById(surface.a), b = nodeById(surface.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, span = Math.hypot(dx, dy) || 1;
+    const ux = dx / span, uy = dy / span;
+    const geometricNormal = { x: -uy, y: ux };
+    const upwardNormal = geometricNormal.y <= 0 ? geometricNormal : { x: -geometricNormal.x, y: -geometricNormal.y };
+    const side = surface.flip === 1 ? -1 : 1;
+    const liftNormal = { x: upwardNormal.x * side, y: upwardNormal.y * side };
+    const velocity = averageSurfaceVelocityV20(a, b);
+    const speed = Math.hypot(velocity.x, velocity.y);
+    surface.forceV21 = { x: 0, y: 0 };
+    if (surface.type === 'wing') {
+      if (speed < .015) continue;
+      const normalFlow = Math.abs(velocity.x * geometricNormal.x + velocity.y * geometricNormal.y) / speed;
+      const camber = clamp(surface.camber ?? .18, 0, .55);
+      const incidence = clamp(normalFlow + camber, .08, 1.35);
+      const magnitude = clamp(speed * speed * span * .00012 * (surface.lift || 1) * (state.environmentV20.airDensity || 1) * incidence, 0, 1.25) * step;
+      const dragFactor = clamp((surface.drag || .32) * .018 * step, 0, .16);
+      const fx = liftNormal.x * magnitude - velocity.x * dragFactor;
+      const fy = liftNormal.y * magnitude - velocity.y * dragFactor;
+      surface.forceV21 = { x: fx, y: fy };
+      for (const node of [a, b]) addNodeVelocityV16(node, fx * .5, fy * .5);
+    } else {
+      const descending = Math.max(0, velocity.y);
+      const area = Math.max(.6, surface.area || span / 80);
+      const upward = clamp(descending * Math.abs(descending) * area * .075, 0, 1.45) * step;
+      const lateralDrag = clamp((surface.drag || 1.2) * .085 * step, 0, .3);
+      const fx = -velocity.x * lateralDrag;
+      const fy = -upward - velocity.y * .025;
+      surface.forceV21 = { x: fx, y: fy };
+      for (const node of [a, b]) addNodeVelocityV16(node, fx * .5, fy * .5);
+    }
+  }
+};
+
+const baseApplyAirscrewsV21 = applyAirscrewsV20;
+applyAirscrewsV20 = function applyMeasuredAirscrewsV21(step) {
+  for (const screw of state.rotors.filter((rotor) => rotor.type === 'airscrew')) screw.forceV21 = { x: 0, y: 0 };
+  baseApplyAirscrewsV21(step);
+  for (const screw of state.rotors.filter((rotor) => rotor.type === 'airscrew')) {
+    if (rotorMountModeV16(screw) === 'rigid') continue;
+    const node = nodeById(screw.nodeId);
+    if (!node) continue;
+    const carrier = carrierBeamV15(node);
+    const angle = carrier ? beamAngleV15(carrier) - Math.PI / 2 : -Math.PI / 2;
+    const magnitude = clamp(screw.omega * Math.abs(screw.omega) * screw.radius * .055 * (screw.pitch || 1), -1.75, 1.75)
+      * (screw.direction === -1 ? -1 : 1) * step;
+    screw.forceV21 = { x: Math.cos(angle) * magnitude, y: Math.sin(angle) * magnitude };
+  }
+};
+
+applyWaterV20 = function applyMeasuredWaterV21(step) {
+  for (const bag of state.attachments.filter((item) => item.type === 'airbag')) bag.buoyancyV21 = 0;
+  if (!state.environmentV20.waterEnabled) return;
+  const level = state.environmentV20.waterLevel;
+  for (const node of state.nodes) {
+    const depth = node.y - level;
+    if (depth <= 0 || node.fixed) continue;
+    const submerged = clamp(depth / 70, 0, 1);
+    const velocity = nodeVelocityV16(node);
+    const bags = state.attachments.filter((item) => item.type === 'airbag' && item.nodeId === node.id);
+    let volume = .14;
+    for (const bag of bags) volume += channelActive(controlChannel(bag)) ? (bag.volume || 1.4) : (bag.deflated || .22);
+    const buoyancy = clamp((volume * .36 - Math.max(.3, node.mass || 1) * .016) * submerged, -.08, 1.05) * step;
+    const dragX = clamp(-velocity.x * .15 * submerged * step, -.68, .68);
+    const dragY = clamp(-velocity.y * .23 * submerged * step - buoyancy, -1.15, 1.15);
+    addNodeVelocityV16(node, dragX, dragY);
+    for (const bag of bags) bag.buoyancyV21 = buoyancy / Math.max(.01, step);
+  }
+};
+
+function bowEnergyV21(origin) {
+  let energy = 0;
+  const bows = [];
+  for (const bow of state.constraints.filter((item) => item.type === 'bow' && item.active)) {
+    const a = nodeById(bow.a), b = nodeById(bow.b);
+    if (!a || !b) continue;
+    const midpoint = { x: (a.x + b.x) * .5, y: (a.y + b.y) * .5 };
+    if (distance(origin, midpoint) > 360) continue;
+    const draw = Math.max(0, distance(a, b) - (bow.restLength || bow.length));
+    const normalized = clamp(draw / Math.max(16, bow.maxDraw || (bow.restLength || bow.length) * .35), 0, 1);
+    const value = clamp((bow.preload || 0) + normalized * normalized * (bow.stiffness || .2) * 3.2, 0, 1.8);
+    if (value > 0) { energy += value; bows.push(bow); }
+  }
+  return { energy: clamp(energy, 0, 2.5), bows };
+}
+
+const baseSpawnProjectileV21 = spawnProjectileV20;
+spawnProjectileV20 = function spawnPoweredProjectileV21(launcher, angle) {
+  const origin = nodeById(launcher.nodeId);
+  const stored = origin ? bowEnergyV21(origin) : { energy: 0, bows: [] };
+  const projectile = baseSpawnProjectileV21(launcher, angle);
+  if (!projectile) return projectile;
+  const boost = 1 + stored.energy * .34;
+  const vx = projectile.x - projectile.px;
+  const vy = projectile.y - projectile.py;
+  projectile.px = projectile.x - vx * boost;
+  projectile.py = projectile.y - vy * boost;
+  for (const bow of stored.bows) {
+    bow.preload = Math.max(0, (bow.preload || 0) * .25);
+    bow.releasePulseV21 = 1;
+  }
+  state.feedbackV21.launches.push({ x: projectile.x, y: projectile.y, life: 1 });
+  return projectile;
+};
+
+collideProjectilesWithArmorV20 = function collideReadableArmorV21() {
+  const armor = state.constraints.filter((item) => item.type === 'armor' && item.active);
+  if (!armor.length) return;
+  for (const record of state.projectilesV20) {
+    const projectile = nodeById(record.nodeId);
+    if (!projectile) continue;
+    for (const plate of armor) {
+      const a = nodeById(plate.a), b = nodeById(plate.b);
+      if (!a || !b) continue;
+      const closest = closestPointOnSegmentV20(projectile, a, b);
+      let nx = projectile.x - closest.x, ny = projectile.y - closest.y;
+      let dist = Math.hypot(nx, ny);
+      const thickness = clamp(plate.thickness || 1, .4, 2);
+      const threshold = (projectile.radius || 7) + 3 + thickness * 2;
+      if (dist >= threshold) continue;
+      if (dist < .001) {
+        const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+        nx = -dy / len; ny = dx / len; dist = 1;
+      } else { nx /= dist; ny /= dist; }
+      const vx = projectile.x - projectile.px, vy = projectile.y - projectile.py;
+      const normalSpeed = vx * nx + vy * ny;
+      if (normalSpeed >= 0) continue;
+      const restitution = clamp(.18 + thickness * .08, .2, .38);
+      const retention = clamp(.74 - thickness * .14 - (projectile.mass || 1) * .012, .28, .68);
+      const rvx = (vx - (1 + restitution) * normalSpeed * nx) * retention;
+      const rvy = (vy - (1 + restitution) * normalSpeed * ny) * retention;
+      projectile.x += nx * (threshold - dist + .5);
+      projectile.y += ny * (threshold - dist + .5);
+      projectile.px = projectile.x - rvx;
+      projectile.py = projectile.y - rvy;
+      record.bounces = (record.bounces || 0) + 1;
+      state.feedbackV21.impacts.push({ x: closest.x, y: closest.y, life: 1, strength: Math.abs(normalSpeed) });
+      plate.impactPulseV21 = 1;
+      break;
+    }
+  }
+};
+
+function fireLauncherV21(launcher) {
+  const count = Math.min(launcher.volley || 1, launcher.ammo || 0);
+  if (!count) return 0;
+  const baseAngle = projectileDirectionV20(launcher);
+  for (let i = 0; i < count; i += 1) {
+    const centered = count <= 1 ? 0 : i / (count - 1) - .5;
+    const jitter = Math.sin((i + 1) * 12.9898 + state.simTime * 7.1) * .015;
+    spawnProjectileV20(launcher, baseAngle + centered * (launcher.spread || 0) + jitter);
+  }
+  launcher.ammo = Math.max(0, (launcher.ammo || 0) - count);
+  launcher.firePulseV21 = 1;
+  return count;
+}
+
+function updateChannelLaunchersV21() {
+  if (state.mode !== 'run') return;
+  let fired = 0;
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) {
+    const active = channelActive(controlChannel(launcher));
+    if (active && !launcher.channelWasActiveV21) fired += fireLauncherV21(launcher);
+    launcher.channelWasActiveV21 = active;
+  }
+  if (fired) {
+    setYardNote(`Автоматический залп: ${fired}.`, 900);
+    heavySound(74, .1);
+  }
+}
+
+function componentIssuesV21() {
+  const errors = [];
+  const warnings = [];
+  const notes = [];
+  const rotorIds = new Set(state.rotors.map((item) => item.id));
+  const jointIds = new Set(state.joints.map((item) => item.id));
+  for (const spring of state.attachments.filter((item) => item.type === 'mainspring')) {
+    const rotor = rotorById(spring.rotorId) || shaftRotor(spring.nodeId);
+    if (!rotor) errors.push({ id: spring.id, text: 'Заводная пружина потеряла вал' });
+    else if (!freeShaftRotorsV21(rotor.nodeId).length) warnings.push({ id: spring.id, text: 'Пружина подключена только к жёстким валам' });
+  }
+  for (const follower of state.constraints.filter((item) => item.type === 'camFollower')) {
+    if (!rotorIds.has(follower.rotorId) || rotorById(follower.rotorId)?.type !== 'cam') errors.push({ id: follower.id, text: 'Толкатель не связан с кулачком' });
+    if (!nodeById(follower.b)) errors.push({ id: follower.id, text: 'Толкатель потерял ведомую точку' });
+  }
+  for (const sequence of state.attachments.filter((item) => item.type === 'sequencer')) {
+    if (!rotorIds.has(sequence.rotorId) || rotorById(sequence.rotorId)?.type !== 'drum') errors.push({ id: sequence.id, text: 'Секвенсор не связан с программным барабаном' });
+  }
+  for (const servo of state.attachments.filter((item) => item.type === 'jointServo')) {
+    if (!jointIds.has(servo.jointId)) errors.push({ id: servo.id, text: 'Привод потерял свой шарнир' });
+  }
+  for (const wing of state.constraints.filter((item) => item.type === 'wing')) {
+    const a = nodeById(wing.a), b = nodeById(wing.b);
+    if (a?.fixed && b?.fixed) warnings.push({ id: wing.id, text: 'Оба края крыла неподвижны' });
+  }
+  for (const screw of state.rotors.filter((item) => item.type === 'airscrew')) {
+    if (rotorMountModeV16(screw) === 'rigid') warnings.push({ id: screw.id, text: 'Воздушный винт жёстко закреплён и не вращается' });
+  }
+  if (state.attachments.some((item) => item.type === 'airbag') && !state.environmentV20.waterEnabled) {
+    notes.push({ id: null, text: 'Воздушные мешки проявят плавучесть только в воде' });
+  }
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) {
+    if (!carrierBeamV15(nodeById(launcher.nodeId))) notes.push({ id: launcher.id, text: 'Метатель направлен вправо, потому что не имеет несущей балки' });
+  }
+  return { errors, warnings, notes };
+}
+
+function refreshQualityReportV21() {
+  state.qualityReportV21 = componentIssuesV21();
+  return state.qualityReportV21;
+}
+
+const baseConstructionWarningsV21 = constructionWarningsV16;
+constructionWarningsV16 = function constructionWarningsWithInteractionsV21() {
+  const warnings = baseConstructionWarningsV21();
+  const report = refreshQualityReportV21();
+  for (const issue of report.errors.slice(0, 3)) warnings.push(issue.text);
+  for (const issue of report.warnings.slice(0, 3)) warnings.push(issue.text);
+  return [...new Set(warnings)];
+};
+
+const baseRepairConstructionV21 = repairConstructionV16;
+repairConstructionV16 = function repairInteractionReferencesV21() {
+  let count = baseRepairConstructionV21();
+  const rotorIds = new Set(state.rotors.map((item) => item.id));
+  const jointIds = new Set(state.joints.map((item) => item.id));
+  state.constraints = state.constraints.filter((item) => {
+    if (item.type === 'camFollower' && (!rotorIds.has(item.rotorId) || rotorById(item.rotorId)?.type !== 'cam')) { count += 1; return false; }
+    return true;
+  });
+  state.attachments = state.attachments.filter((item) => {
+    if (item.type === 'sequencer' && (!rotorIds.has(item.rotorId) || rotorById(item.rotorId)?.type !== 'drum')) { count += 1; return false; }
+    if (item.type === 'jointServo' && !jointIds.has(item.jointId)) { count += 1; return false; }
+    return true;
+  });
+  refreshQualityReportV21();
+  return count;
+};
+
+const baseApplyMachineForcesQualityV21 = applyMachineForcesV16;
+applyMachineForcesV16 = function applyQualityInteractionsV21(step) {
+  baseApplyMachineForcesQualityV21(step);
+  updateChannelLaunchersV21();
+  for (const item of state.constraints) {
+    if (item.releasePulseV21) item.releasePulseV21 = Math.max(0, item.releasePulseV21 - .055 * step);
+    if (item.impactPulseV21) item.impactPulseV21 = Math.max(0, item.impactPulseV21 - .08 * step);
+  }
+  for (const item of state.attachments) if (item.firePulseV21) item.firePulseV21 = Math.max(0, item.firePulseV21 - .09 * step);
+  for (const list of [state.feedbackV21.impacts, state.feedbackV21.launches]) {
+    for (const item of list) item.life -= .06 * step;
+    while (list.length && list[0].life <= 0) list.shift();
+  }
+};
+
+const baseEnterRunQualityV21 = enterRunMode;
+enterRunMode = function enterVerifiedRunV21() {
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) launcher.channelWasActiveV21 = false;
+  const report = refreshQualityReportV21();
+  baseEnterRunQualityV21();
+  const total = report.errors.length + report.warnings.length;
+  if (!total) setYardNote('Проверка завершена: связи, приводы и нагрузки согласованы.', 2100);
+};
+
+const baseApplyModelQualityV21 = applyModel;
+applyModel = function applyQualityModelV21(model, options = {}) {
+  baseApplyModelQualityV21(model, options);
+  state.feedbackV21 = { impacts: [], launches: [] };
+  for (const wing of state.constraints.filter((item) => item.type === 'wing')) {
+    wing.flip = wing.flip === 1 ? 1 : -1;
+    wing.camber = clamp(wing.camber ?? .18, 0, .55);
+  }
+  for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) launcher.channel = launcher.channel === 'B' ? 'B' : 'A';
+  refreshQualityReportV21();
+};
+
+for (const wing of state.constraints.filter((item) => item.type === 'wing')) {
+  wing.flip = wing.flip === 1 ? 1 : -1;
+  wing.camber = clamp(wing.camber ?? .18, 0, .55);
+}
+for (const launcher of state.attachments.filter((item) => item.type === 'launcher')) launcher.channel = launcher.channel === 'B' ? 'B' : 'A';
+refreshQualityReportV21();

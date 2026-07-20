@@ -1,0 +1,129 @@
+// ARS MACHINA 2.1 — repaired folios and a readable interaction laboratory.
+function buildGiantCrossbowV21() {
+  clearWorld();
+  state.environmentV20 = { waterEnabled: false, waterLevel: 430, airDensity: 1 };
+  const baseL = codexNodeV20(245, 555, { fixed: true });
+  const baseR = codexNodeV20(715, 555, { fixed: true });
+  const center = codexNodeV20(470, 455, { fixed: true });
+  const front = codexNodeV20(760, 455, { fixed: true });
+  codexBeamV20(baseL, baseR, 15);
+  codexBeamV20(baseL, center, 11);
+  codexBeamV20(baseR, center, 11);
+  const rail = codexBeamV20(center, front, 15, 1);
+  const carriage = createSlidingMountV16(rail, { x: 585, y: 455 });
+  carriage.mass = 2.2;
+  const leftTip = codexNodeV20(245, 285, { mass: 1.3 });
+  const rightTip = codexNodeV20(695, 285, { mass: 1.3 });
+  const leftArm = createSurfaceV20('bow', center, leftTip, { stiffness: .32, width: 12, layer: 2 });
+  const rightArm = createSurfaceV20('bow', center, rightTip, { stiffness: .32, width: 12, layer: 2 });
+  leftArm.preload = .9; rightArm.preload = .9;
+  leftArm.maxDraw = leftArm.length * .28; rightArm.maxDraw = rightArm.length * .28;
+  createConstraint('rope', leftTip.id, carriage.id, { maxLength: distance(leftTip, carriage), layer: 3 });
+  createConstraint('rope', rightTip.id, carriage.id, { maxLength: distance(rightTip, carriage), layer: 3 });
+  codexRotorV20('winch', center, 38, { layer: 4 });
+  createAttachment('motor', center.id, { amount: 2.4, layer: 5 });
+  createConstraint('rope', center.id, carriage.id, { maxLength: distance(center, carriage), layer: 4 });
+  const launcher = createLauncherV20(carriage, { capacity: 1, volley: 1, velocity: 14.5, projectileMass: 7, channel: 'A' });
+  launcher.angleOffset = 0;
+  const latch = createConstraint('latch', center.id, carriage.id, { stiffness: 1, active: true, layer: 5 });
+  latch.length = distance(center, carriage);
+  setCodexCameraV20(485, 410, .78);
+}
+
+const crossbowFolioV21 = CODEX_BLUEPRINTS_V20.find((item) => item.id === 'leo-crossbow');
+if (crossbowFolioV21) {
+  crossbowFolioV21.builder = buildGiantCrossbowV21;
+  crossbowFolioV21.subtitle = 'Два упругих плеча, каретка, тетива, ворот и тяжёлый болт.';
+}
+
+function buildInteractionBenchV21() {
+  clearWorld();
+  state.environmentV20 = { waterEnabled: false, waterLevel: 430, airDensity: 1 };
+  const floorL = codexNodeV20(220, 560, { fixed: true });
+  const floorR = codexNodeV20(750, 560, { fixed: true });
+  codexBeamV20(floorL, floorR, 15, 0);
+  const driveNode = codexNodeV20(310, 435, { fixed: true, layer: 1 });
+  const programNode = codexNodeV20(485, 435, { fixed: true, layer: 1 });
+  codexBeamV20(floorL, driveNode, 10);
+  codexBeamV20(driveNode, programNode, 10);
+  const driveGear = codexRotorV20('gear', driveNode, 30, { layer: 3 });
+  const programGear = codexRotorV20('gear', programNode, 52, { layer: 3 });
+  createTransmission('chain', driveGear.id, programGear.id);
+  createMainspringV20(driveGear, { charge: 1.8, torque: 2.2, auto: true });
+  const cam = createCamV20(programGear, { radius: 34, lobes: 2, eccentricity: .5 });
+  const drum = createDrumV20(programGear, { radius: 42, steps: 8 });
+  createSequencerV20(drum, { pattern: 'alternate' });
+
+  const railA = codexNodeV20(370, 330, { fixed: true });
+  const railB = codexNodeV20(675, 330, { fixed: true });
+  const rail = codexBeamV20(railA, railB, 11, 1);
+  const slider = createSlidingMountV16(rail, { x: 530, y: 330 });
+  createCamFollowerV20(cam, slider, { stroke: 58, axisX: 1, axisY: 0 });
+  const pressHead = codexNodeV20(530, 265, { mass: 2, layer: 3 });
+  codexBeamV20(slider, pressHead, 12, 3);
+
+  const pivotA = codexNodeV20(680, 500, { fixed: true, layer: 2 });
+  const pivotB = codexNodeV20(680, 500, { mass: 1, layer: 2 });
+  const towerTop = codexNodeV20(680, 375, { fixed: true });
+  const armTip = codexNodeV20(780, 445, { mass: 1 });
+  const tower = codexBeamV20(pivotA, towerTop, 12, 1);
+  const arm = codexBeamV20(pivotB, armTip, 10, 3);
+  const joint = codexJointV20('limit', pivotA, pivotB, tower, arm);
+  joint.limitAngle = Math.PI * .7;
+  const jointDrive = createJointServoV20(joint, { channel: 'B', strength: 1.5 });
+  jointDrive.angleA = joint.targetAngle - .35;
+  jointDrive.angleB = joint.targetAngle + .55;
+  const launcher = createLauncherV20(armTip, { capacity: 3, volley: 1, velocity: 8, channel: 'A' });
+  launcher.angleOffset = -.15;
+  setCodexCameraV20(500, 420, .86);
+}
+
+function drawInteractionBenchCardV21(canvas) {
+  const d = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = 172 * d; canvas.height = 132 * d;
+  canvas.style.width = '86px'; canvas.style.height = '66px';
+  const c = canvas.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
+  c.strokeStyle = '#5c321e'; c.fillStyle = '#b48a52'; c.lineWidth = 3; c.lineCap = 'round';
+  const wheel = (x, y, r) => { c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke(); for (let i = 0; i < 6; i += 1) { const a = i / 6 * TAU; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); c.stroke(); } };
+  wheel(42, 88, 21); wheel(96, 88, 31);
+  c.setLineDash([5, 4]); c.beginPath(); c.moveTo(42, 65); c.lineTo(96, 55); c.moveTo(42, 111); c.lineTo(96, 119); c.stroke(); c.setLineDash([]);
+  c.beginPath(); c.ellipse(96, 88, 22, 14, -.4, 0, TAU); c.stroke();
+  c.lineWidth = 7; c.beginPath(); c.moveTo(118, 84); c.lineTo(154, 52); c.stroke();
+  c.fillStyle = '#9b4b35'; c.beginPath(); c.arc(136, 35, 7, 0, TAU); c.fill();
+  c.fillStyle = '#356b70'; c.beginPath(); c.arc(155, 35, 7, 0, TAU); c.fill();
+}
+
+function installInteractionBenchFolioV21() {
+  const list = document.querySelector('.blueprint-list');
+  if (!list || list.querySelector('[data-blueprint="interaction-bench"]')) return;
+  const blank = list.querySelector('[data-blueprint="blank"]');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'blueprint codex-folio-v20 codex-tutorial-v21';
+  button.dataset.blueprint = 'interaction-bench';
+  button.dataset.group = 'moto';
+  button.dataset.nativePress = '';
+  const canvas = document.createElement('canvas');
+  const copy = document.createElement('span');
+  copy.innerHTML = '<i class="codex-folio-number-v20">Tavola di prova</i><b>Путь силы</b><small>Пружина → цепь → кулачок → каретка; барабан → A/B → рычаг и метатель.</small>';
+  button.append(canvas, copy);
+  button.addEventListener('click', () => loadBlueprint('interaction-bench'));
+  list.insertBefore(button, blank);
+  drawInteractionBenchCardV21(canvas);
+}
+
+const baseLoadBlueprintBenchV21 = loadBlueprint;
+loadBlueprint = function loadInteractionBenchV21(name) {
+  if (name !== 'interaction-bench') return baseLoadBlueprintBenchV21(name);
+  pushUndo();
+  buildInteractionBenchV21();
+  setCurrentModelIdentity(null, 'Путь силы');
+  closeBlueprints(); saveSoon(); updateInspector(); updateHistoryButtons(); frameConstruction();
+  state.mechanicsVisionV21 = true;
+  localStorage.setItem(VISION_KEY_V21, 'on');
+  updateMechanicalVisionUiV21();
+  setYardNote('Tavola di prova: включи испытание. Стрелки покажут путь момента, силы и команд A/B.', 3200);
+  heavySound(145, .1); vibrate(14);
+};
+
+installInteractionBenchFolioV21();

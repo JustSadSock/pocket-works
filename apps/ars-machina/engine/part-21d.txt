@@ -1,0 +1,166 @@
+// ARS MACHINA 2.1 — physical lift side and truthful flow direction.
+applyWingAndCanopyForcesV20 = function applyPhysicalAerodynamicsV21(step) {
+  for (const surface of state.constraints.filter((item) => ['wing', 'canopy'].includes(item.type) && item.active)) {
+    const a = nodeById(surface.a), b = nodeById(surface.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, span = Math.hypot(dx, dy) || 1;
+    const geometricNormal = { x: -dy / span, y: dx / span };
+    const upwardNormal = geometricNormal.y <= 0 ? geometricNormal : { x: -geometricNormal.x, y: -geometricNormal.y };
+    const liftSide = surface.liftSideV21 === 1 ? -1 : 1;
+    const liftNormal = { x: upwardNormal.x * liftSide, y: upwardNormal.y * liftSide };
+    const velocity = averageSurfaceVelocityV20(a, b);
+    const speed = Math.hypot(velocity.x, velocity.y);
+    surface.forceV21 = { x: 0, y: 0 };
+    if (surface.type === 'wing') {
+      if (speed < .015) continue;
+      const normalFlow = Math.abs(velocity.x * geometricNormal.x + velocity.y * geometricNormal.y) / speed;
+      const camber = clamp(surface.camber ?? .18, 0, .55);
+      const incidence = clamp(normalFlow + camber, .08, 1.35);
+      const magnitude = clamp(speed * speed * span * .00012 * (surface.lift || 1) * (state.environmentV20.airDensity || 1) * incidence, 0, 1.25) * step;
+      const dragFactor = clamp((surface.drag || .32) * .018 * step, 0, .16);
+      const fx = liftNormal.x * magnitude - velocity.x * dragFactor;
+      const fy = liftNormal.y * magnitude - velocity.y * dragFactor;
+      surface.forceV21 = { x: fx, y: fy };
+      for (const node of [a, b]) addNodeVelocityV16(node, fx * .5, fy * .5);
+    } else {
+      const descending = Math.max(0, velocity.y);
+      const area = Math.max(.6, surface.area || span / 80);
+      const upward = clamp(descending * Math.abs(descending) * area * .075, 0, 1.45) * step;
+      const lateralDrag = clamp((surface.drag || 1.2) * .085 * step, 0, .3);
+      const fx = -velocity.x * lateralDrag;
+      const fy = -upward - velocity.y * .025;
+      surface.forceV21 = { x: fx, y: fy };
+      for (const node of [a, b]) addNodeVelocityV16(node, fx * .5, fy * .5);
+    }
+  }
+};
+
+const baseApplyModelLiftV21 = applyModel;
+applyModel = function applyLiftSideModelV21(model, options = {}) {
+  const visualFlips = new Map((model?.constraints || []).filter((item) => item.type === 'wing' && Object.prototype.hasOwnProperty.call(item, 'flip')).map((item) => [item.id, item.flip]));
+  baseApplyModelLiftV21(model, options);
+  for (const wing of state.constraints.filter((item) => item.type === 'wing')) {
+    wing.liftSideV21 = wing.liftSideV21 === 1 ? 1 : -1;
+    if (visualFlips.has(wing.id)) wing.flip = visualFlips.get(wing.id);
+    else delete wing.flip;
+  }
+};
+
+for (const wing of state.constraints.filter((item) => item.type === 'wing')) wing.liftSideV21 = wing.liftSideV21 === 1 ? 1 : -1;
+
+function replaceLiftSideInspectorV21() {
+  if (!inspectorExtra || state.selection?.kind !== 'constraint') return;
+  const wing = getSelected();
+  if (!wing || wing.type !== 'wing') return;
+  for (const row of inspectorExtra.children) {
+    const label = row.firstElementChild?.textContent?.trim();
+    if (label !== 'Сторона подъёма') continue;
+    const control = segmentedButtons([
+      { value: -1, label: 'Вверх' },
+      { value: 1, label: 'Вниз' }
+    ], wing.liftSideV21 === 1 ? 1 : -1, (value) => {
+      pushUndo(); wing.liftSideV21 = value; updateInspector(); saveSoon();
+    });
+    row.lastElementChild?.replaceWith(control);
+  }
+}
+
+const baseRenderInspectorLiftV21 = renderInspectorExtras;
+renderInspectorExtras = function renderPhysicalLiftInspectorV21() {
+  baseRenderInspectorLiftV21();
+  replaceLiftSideInspectorV21();
+};
+
+function addLinkV21(links, kind, id, label, tone = 'mechanical', direction = 'out') {
+  if (!id || links.some((item) => item.kind === kind && item.id === id && item.label === label)) return;
+  links.push({ kind, id, label, tone, direction });
+}
+
+linksForSelectionV21 = function truthfulLinksForSelectionV21() {
+  const selected = getSelected();
+  if (!selected || !state.selection) return [];
+  const links = [];
+  if (state.selection.kind === 'rotor') {
+    for (const rotor of state.rotors.filter((item) => item.nodeId === selected.nodeId && item.id !== selected.id)) addLinkV21(links, 'rotor', rotor.id, 'ОБЩИЙ ВАЛ', 'mechanical', 'neutral');
+    for (const item of state.attachments.filter((attachment) => attachment.nodeId === selected.nodeId || attachment.rotorId === selected.id)) {
+      if (item.type === 'mainspring' || item.type === 'motor') addLinkV21(links, 'attachment', item.id, item.type === 'mainspring' ? 'ЗАПАС МОМЕНТА' : 'ПРИВОД', 'energy', 'in');
+      else if (item.type === 'sequencer') addLinkV21(links, 'attachment', item.id, 'ПРОГРАММА', item.channel === 'B' ? 'B' : item.channel === 'A' ? 'A' : 'energy', 'out');
+      else addLinkV21(links, 'attachment', item.id, 'УПРАВЛЕНИЕ', item.channel === 'B' ? 'B' : item.channel === 'A' ? 'A' : 'mechanical', 'in');
+    }
+    for (const item of state.constraints.filter((constraint) => constraint.rotorAId === selected.id || constraint.rotorBId === selected.id)) {
+      const selectedIsA = item.rotorAId === selected.id;
+      const selectedIsDriver = (item.driver === 'b') ? !selectedIsA : selectedIsA;
+      const other = rotorById(selectedIsA ? item.rotorBId : item.rotorAId);
+      if (other) addLinkV21(links, 'rotor', other.id, `${selectedIsDriver ? 'ВЫХОД' : 'ВХОД'} ${item.type === 'chain' ? 'ЦЕПИ' : 'РЕМНЯ'}`, 'energy', selectedIsDriver ? 'out' : 'in');
+    }
+    for (const item of state.constraints.filter((constraint) => constraint.type === 'camFollower' && constraint.rotorId === selected.id)) addLinkV21(links, 'constraint', item.id, 'КУЛАЧОК → ХОД', 'energy', 'out');
+  } else if (state.selection.kind === 'attachment') {
+    if (selected.rotorId) addLinkV21(links, 'rotor', selected.rotorId, selected.type === 'sequencer' ? 'ПРОГРАММНЫЙ БАРАБАН' : 'ВЕДОМЫЙ ВАЛ', 'energy', selected.type === 'sequencer' ? 'in' : 'out');
+    if (selected.jointId) addLinkV21(links, 'joint', selected.jointId, 'УПРАВЛЯЕМЫЙ ШАРНИР', selected.channel === 'B' ? 'B' : 'A', 'out');
+    const node = nodeById(selected.nodeId);
+    if (node) addLinkV21(links, 'node', node.id, selected.type === 'airbag' ? 'ПЛАВУЧЕСТЬ' : selected.type === 'launcher' ? 'НАПРАВЛЕНИЕ ОГНЯ' : 'ТОЧКА УСТАНОВКИ', selected.channel === 'B' ? 'B' : selected.channel === 'A' ? 'A' : 'mechanical', 'out');
+  } else if (state.selection.kind === 'constraint') {
+    addLinkV21(links, 'node', selected.a, 'ОПОРА I', 'mechanical', 'neutral');
+    addLinkV21(links, 'node', selected.b, 'ОПОРА II', 'mechanical', 'neutral');
+    if (selected.type === 'camFollower') addLinkV21(links, 'rotor', selected.rotorId, 'КУЛАЧОК', 'energy', 'in');
+  } else if (state.selection.kind === 'joint') {
+    for (const servo of state.attachments.filter((item) => item.type === 'jointServo' && item.jointId === selected.id)) addLinkV21(links, 'attachment', servo.id, `КОНТУР ${controlChannel(servo)}`, controlChannel(servo), 'in');
+  } else if (state.selection.kind === 'node') {
+    for (const rotor of state.rotors.filter((item) => item.nodeId === selected.id)) addLinkV21(links, 'rotor', rotor.id, 'ВАЛ', 'mechanical', 'neutral');
+    for (const attachment of state.attachments.filter((item) => item.nodeId === selected.id)) addLinkV21(links, 'attachment', attachment.id, NAMES[attachment.type]?.[1] || attachment.type, attachment.channel === 'B' ? 'B' : attachment.channel === 'A' ? 'A' : 'mechanical', ['motor', 'mainspring'].includes(attachment.type) ? 'in' : 'out');
+    for (const joint of state.joints.filter((item) => item.a === selected.id || item.b === selected.id)) addLinkV21(links, 'joint', joint.id, joint.type === 'weld' ? 'ЖЁСТКО' : joint.type === 'limit' ? 'ОГРАНИЧИТЕЛЬ' : 'ШАРНИР', 'mechanical', 'neutral');
+  }
+  return links.slice(0, 9);
+};
+
+function drawNeutralRelationV21(a, b, label) {
+  if (!a || !b) return;
+  const color = flowColorV21('mechanical');
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.globalAlpha = .72; ctx.lineWidth = 1.8; ctx.setLineDash([3, 4]);
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+  const mx = (a.x + b.x) * .5, my = (a.y + b.y) * .5;
+  ctx.font = '800 9px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const w = ctx.measureText(label).width + 8;
+  ctx.fillStyle = 'rgba(231,211,166,.9)'; ctx.fillRect(mx - w * .5, my - 15, w, 13);
+  ctx.fillStyle = color; ctx.fillText(label, mx, my - 4); ctx.restore();
+}
+
+drawSelectionGraphV21 = function drawTruthfulSelectionGraphV21() {
+  if (state.mode !== 'build' || !state.selection) return;
+  const selected = getSelected();
+  const origin = componentPointV21(state.selection.kind, selected);
+  if (!origin) return;
+  for (const link of linksForSelectionV21()) {
+    const target = linkTargetPointV21(link);
+    if (link.direction === 'neutral') drawNeutralRelationV21(origin, target, link.label);
+    else if (link.direction === 'in') drawFlowLineV21(target, origin, link.label, link.tone);
+    else drawFlowLineV21(origin, target, link.label, link.tone);
+  }
+  const quality = qualityForSelectionV21();
+  ctx.save();
+  ctx.strokeStyle = quality.level === 'error' ? '#9a3029' : quality.level === 'warning' ? '#b17b2e' : '#386a5f';
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(origin.x, origin.y, 22 + Math.sin(performance.now() / 220) * 2, 0, TAU); ctx.stroke(); ctx.restore();
+};
+
+drawTransmissionReadoutsV21 = function drawTruthfulTransmissionReadoutsV21() {
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type) && item.active)) {
+    const pair = transmissionRotorsV16(transmission);
+    if (!pair) continue;
+    const aNode = nodeById(pair.rotorA.nodeId), bNode = nodeById(pair.rotorB.nodeId);
+    if (!aNode || !bNode) continue;
+    const pa = worldToScreen(aNode.x, aNode.y), pb = worldToScreen(bNode.x, bNode.y);
+    const driverB = transmission.driver === 'b';
+    const input = driverB ? pair.rotorB : pair.rotorA;
+    const output = driverB ? pair.rotorA : pair.rotorB;
+    const from = driverB ? pb : pa;
+    const to = driverB ? pa : pb;
+    const ratio = output.radius ? input.radius / output.radius : 1;
+    const moving = Math.abs(pair.rotorA.omega) + Math.abs(pair.rotorB.omega) > .025;
+    if (!moving && state.mode === 'run') continue;
+    const reversal = transmission.type === 'belt' && transmission.crossed ? ' · обр.' : '';
+    drawFlowLineV21(from, to, `${transmission.type === 'chain' ? 'ЦЕПЬ' : 'РЕМЕНЬ'} ${ratio.toFixed(2)}×${reversal}`, 'energy', false);
+  }
+};
+
+updateInspector();

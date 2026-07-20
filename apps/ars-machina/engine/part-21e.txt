@@ -1,0 +1,40 @@
+// ARS MACHINA 2.1 — final runtime state and post-repair verification.
+const baseEnterRunFinalV21 = enterRunMode;
+enterRunMode = function enterFinalVerifiedRunV21() {
+  state.feedbackV21 = { impacts: [], launches: [] };
+  baseEnterRunFinalV21();
+  const report = refreshQualityReportV21();
+  if (report.errors.length) {
+    setYardNote(`Проверка: ${report.errors[0].text}. Открой «Связи» и выбери отмеченную деталь.`, 3200);
+  } else if (report.warnings.length) {
+    setYardNote(`Механизм запущен с предупреждением: ${report.warnings[0].text}.`, 2800);
+  } else {
+    setYardNote('Проверка завершена: связи, приводы и нагрузки согласованы.', 2100);
+  }
+};
+
+const baseReturnBuildFinalV21 = returnToBuild;
+returnToBuild = function returnFromVerifiedRunV21() {
+  baseReturnBuildFinalV21();
+  state.feedbackV21 = { impacts: [], launches: [] };
+  refreshQualityReportV21();
+  updateVisionHudV21();
+};
+
+const baseClearWorldFinalV21 = clearWorld;
+clearWorld = function clearVerifiedWorldV21() {
+  baseClearWorldFinalV21();
+  state.feedbackV21 = { impacts: [], launches: [] };
+  state.qualityReportV21 = { errors: [], warnings: [], notes: [] };
+};
+
+document.documentElement.dataset.arsMachinaVersion = '2.1.0';
+document.body.dataset.mechanicalVision = state.mechanicsVisionV21 ? 'on' : 'off';
+const baseUpdateVisionUiFinalV21 = updateMechanicalVisionUiV21;
+updateMechanicalVisionUiV21 = function updateFinalVisionUiV21() {
+  baseUpdateVisionUiFinalV21();
+  document.body.dataset.mechanicalVision = state.mechanicsVisionV21 ? 'on' : 'off';
+};
+
+refreshQualityReportV21();
+updateMechanicalVisionUiV21();
