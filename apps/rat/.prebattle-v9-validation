@@ -1,0 +1,7 @@
+prebattle-v9 smoke test: passed
+- real battle screen created before start
+- battlePaused=true and simulation.time=0
+- five free opening orders required
+- launch unlocks at 5/5
+- battle starts from 00:00
+- quick battle delegates unchanged
