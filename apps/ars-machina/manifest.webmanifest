@@ -1,14 +1,14 @@
 {
   "id": "/apps/ars-machina/",
-  "name": "ARS MACHINA",
+  "name": "ARS MACHINA — Codice delle Macchine",
   "short_name": "ARS MACHINA",
-  "description": "Средневековая физическая песочница для сборки механизмов.",
+  "description": "Механическая песочница в стиле инженерных кодексов Леонардо да Винчи.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#34271c",
-  "theme_color": "#2c241b",
+  "background_color": "#2c2017",
+  "theme_color": "#2c2017",
   "icons": [
     {
       "src": "./icons/icon.svg",
