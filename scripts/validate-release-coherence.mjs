@@ -5,6 +5,7 @@ const files={
   updater:await readFile('launcher-update-all-v3.js','utf8'),
   links:await readFile('launcher-release-links.js','utf8'),
   guard:await readFile('shared/release-guard.js','utf8'),
+  updateManager:await readFile('shared/update-manager.js','utf8'),
   prepare:await readFile('scripts/prepare-site.mjs','utf8'),
   blazonEngine:await readFile('apps/blazon/engine.js','utf8'),
   blazonBootstrap:await readFile('apps/blazon/bootstrap.js','utf8'),
@@ -22,6 +23,8 @@ requireToken('updater','pw-update-progress','update progress');
 requireToken('links','fingerprint','versioned launch links');
 requireToken('guard','checkLatest','release guard');
 requireToken('guard','release.json','release guard');
+requireToken('updateManager','__POCKET_WORKS_RELEASE__','managed update handoff');
+requireToken('updateManager','getRegistration','managed update handoff');
 requireToken('prepare','createHash','production fingerprinting');
 requireToken('prepare','canonicalFingerprint','production fingerprinting');
 requireToken('prepare','fingerprints.get(app.slug)','registry fingerprinting');
@@ -31,6 +34,9 @@ requireToken('progressionRuntime','allowNativeSeal','Blazon native seal transiti
 requireToken('progressionRuntime',"addEventListener('close'",'Blazon seal cleanup');
 requireToken('compositionRuntime','requestAnimationFrame','Blazon composition runtime');
 
+const guardedHandoff=files.updateManager.indexOf('__POCKET_WORKS_RELEASE__');
+const directRegistration=files.updateManager.indexOf('navigator.serviceWorker.register(path)');
+if(guardedHandoff<0||directRegistration<0||guardedHandoff>directRegistration)errors.push('Managed update handoff must run before direct Service Worker registration');
 if(files.updater.includes('verifyServerRelease'))errors.push('Updater must not reread HTML, config and worker source per application');
 if(files.guard.includes('XMLHttpRequest'))errors.push('Release guard must not block startup with synchronous XHR');
 if(files.progressionRuntime.includes('queueMicrotask'))errors.push('Progression runtime must not create a microtask mutation loop');
@@ -46,4 +52,4 @@ if(errors.length){
   console.error(errors.join('\n'));
   process.exit(1);
 }
-console.log('Fingerprint release and Blazon event-loop coherence contracts passed.');
+console.log('Fingerprint release, managed update handoff and Blazon event-loop coherence contracts passed.');

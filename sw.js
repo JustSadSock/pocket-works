@@ -1,13 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.2';
-const APP_VERSION = '0.9.2';
-const RELEASE_DATE = '2026-07-18';
-const CACHE_PROTOCOL = 5;
+const CACHE_NAME = 'pocket-works-launcher-v0.9.3';
+const APP_VERSION = '0.9.3';
+const RELEASE_DATE = '2026-07-20';
+const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'Update compares one SHA-256 release fingerprint per application instead of downloading and rereading entry files.',
-  'Unchanged applications are skipped immediately; only changed fingerprints install a new Service Worker.',
-  'The launcher now shows checking, downloading, installing and activating stages with a visible progress bar.',
-  'БЛАЗОН no longer freezes the event loop through mutually-triggering decorative observers.'
+  'Production applications no longer start a second unversioned Service Worker update flow.',
+  'Pocket Works and the release guard are now the single update authority for installed applications.',
+  'Obsolete in-app update panels are suppressed without blocking the application interface.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',

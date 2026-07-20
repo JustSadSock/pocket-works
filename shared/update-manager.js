@@ -198,6 +198,50 @@ export async function registerManagedServiceWorker(options = {}) {
 
   const receiptKey = storageKey(UPDATE_RECEIPT_PREFIX, path);
   const seenKey = storageKey(UPDATE_SEEN_PREFIX, path);
+  const coherentRelease = globalThis.__POCKET_WORKS_RELEASE__;
+
+  if (coherentRelease?.verified) {
+    document
+      .querySelectorAll('[data-app-update-prompt], [data-app-update-receipt]')
+      .forEach((element) => element.remove());
+    removeStoredValue(receiptKey);
+
+    const targetUrl = new URL(path, window.location.href).href;
+    let registration = null;
+
+    const resolveRegistration = async () => {
+      try {
+        registration ||= await navigator.serviceWorker.getRegistration(targetUrl);
+      } catch {
+        registration = null;
+      }
+      return registration;
+    };
+
+    const check = async () => {
+      const guardedRegistration = await resolveRegistration();
+      if (!guardedRegistration) return false;
+      try {
+        await guardedRegistration.update();
+        return true;
+      } catch (error) {
+        console.warn(`${appName} guarded update check failed`, error);
+        return false;
+      }
+    };
+
+    await resolveRegistration();
+    return {
+      get registration() {
+        return registration;
+      },
+      check,
+      apply: async () => false,
+      getWaitingInfo: () => null,
+      destroy() {}
+    };
+  }
+
   const registration = await navigator.serviceWorker.register(path);
   const activeInfo = await workerInfo(navigator.serviceWorker.controller || registration.active);
   const currentVersion = activeInfo?.version || configuredVersion;
