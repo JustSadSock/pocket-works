@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#2c241b">
+  <meta name="theme-color" content="#2c2017">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ARS MACHINA">
@@ -22,11 +22,11 @@
     <header class="topbar" data-ui>
       <a class="shelf-link" href="../../" data-app-control data-native-press>← Полка</a>
       <div class="identity" aria-label="ARS MACHINA">
-        <span class="identity-mark" aria-hidden="true">AM</span>
-        <span><b>ARS MACHINA</b><small id="modeLabel">чертёжный двор</small></span>
+        <span class="identity-mark" aria-hidden="true">LDV</span>
+        <span><b>ARS MACHINA</b><small id="modeLabel">codice delle macchine</small></span>
       </div>
       <div class="top-actions">
-        <button id="blueprintsButton" type="button" data-native-press>Чертежи</button>
+        <button id="blueprintsButton" type="button" data-native-press>Кодекс</button>
         <button id="soundButton" class="square-button" type="button" aria-label="Звук" data-native-press>♪</button>
         <button id="workshopButton" class="square-button" type="button" aria-label="Workshop" data-workshop-trigger data-native-press>⋮</button>
       </div>
@@ -34,7 +34,7 @@
 
     <section class="yard" aria-label="Поле механической песочницы">
       <canvas id="world" data-gesture-surface data-touch-action="none" data-block-callout></canvas>
-      <div class="yard-note" id="yardNote" data-ui>Выбери деталь и коснись сетки</div>
+      <div class="yard-note" id="yardNote" data-ui>Выбери деталь и коснись пергамента</div>
 
       <div class="history-controls" data-ui>
         <button id="undoButton" class="square-button" type="button" aria-label="Отменить" data-native-press>↶</button>
@@ -77,7 +77,7 @@
           <button class="category" data-category="rigging" type="button" data-native-press>Оснастка</button>
           <button class="category" data-category="utility" type="button" data-native-press>Особое</button>
         </div>
-        <button id="runButton" class="run-button" type="button" data-native-press><span>▶</span> Испытать</button>
+        <button id="runButton" class="run-button" type="button" data-native-press><span>▶</span> Оживить</button>
       </div>
       <div id="toolRail" class="tool-rail" aria-label="Детали конструктора"></div>
     </section>
@@ -104,8 +104,8 @@
       <section class="blueprint-sheet" role="dialog" aria-modal="true" aria-labelledby="blueprintTitle">
         <header>
           <div>
-            <small>КНИГА ЧЕРТЕЖЕЙ</small>
-            <h2 id="blueprintTitle">С чего начать</h2>
+            <small>DIECI FOGLI · МАШИНЫ ЛЕОНАРДО</small>
+            <h2 id="blueprintTitle">Codice delle Macchine</h2>
           </div>
           <button id="closeBlueprints" class="square-button" type="button" aria-label="Закрыть" data-native-press>×</button>
         </header>
@@ -124,10 +124,10 @@
           </button>
           <button class="blueprint" data-blueprint="blank" type="button" data-native-press>
             <span class="blueprint-sketch blank-sketch" aria-hidden="true"></span>
-            <span><b>Чистый двор</b><small>Пустая сетка и полный ящик деталей.</small></span>
+            <span><b>Чистый лист</b><small>Пустой пергамент и полный ящик деталей.</small></span>
           </button>
         </div>
-        <p class="sheet-foot">Текущий чертёж сохраняется автоматически на устройстве.</p>
+        <p class="sheet-foot">Текущий лист сохраняется автоматически на устройстве.</p>
       </section>
     </div>
 
@@ -140,7 +140,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ARS MACHINA"
-    data-app-version="1.6.0"
+    data-app-version="2.0.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
