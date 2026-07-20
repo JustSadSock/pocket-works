@@ -1,0 +1,25 @@
+const baseRepairConstructionV16 = repairConstructionV16;
+repairConstructionV16 = function repairFilteredTopologyV16() {
+  let repaired = baseRepairConstructionV16();
+  const nodeIds = new Set(state.nodes.map((node) => node.id));
+  const beamIds = new Set(state.constraints.filter((item) => item.type === 'beam').map((item) => item.id));
+  const rotorIds = new Set(state.rotors.map((rotor) => rotor.id));
+  const beforeJoints = state.joints.length;
+  state.joints = state.joints.filter((joint) => beamIds.has(joint.beamA) && beamIds.has(joint.beamB) && nodeIds.has(joint.a) && nodeIds.has(joint.b));
+  repaired += beforeJoints - state.joints.length;
+  for (const node of state.nodes) {
+    if (node.mount && !beamIds.has(node.mount.beamId)) { node.mount = null; node.role = 'node'; repaired += 1; }
+  }
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type))) {
+    if (!rotorIds.has(transmission.rotorAId)) transmission.rotorAId = shaftRotor(transmission.a)?.id || null;
+    if (!rotorIds.has(transmission.rotorBId)) transmission.rotorBId = shaftRotor(transmission.b)?.id || null;
+    if (!transmission.rotorAId || !transmission.rotorBId) {
+      if (transmission.active) repaired += 1;
+      transmission.active = false;
+    }
+  }
+  normalizeMechanicsV16();
+  return repaired;
+};
+
+repairConstructionV16();
