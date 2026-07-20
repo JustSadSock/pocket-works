@@ -1,0 +1,125 @@
+// ARS MACHINA 1.6 — construction audit and new working blueprints.
+function repairConstructionV16() {
+  let repaired = 0;
+  const nodeIds = new Set(state.nodes.map((node) => node.id));
+  const beamIds = new Set(state.constraints.filter((item) => item.type === 'beam').map((item) => item.id));
+  const rotorIds = new Set(state.rotors.map((rotor) => rotor.id));
+
+  const uniqueConstraints = new Map();
+  state.constraints = state.constraints.filter((constraint) => {
+    if (!nodeIds.has(constraint.a) || !nodeIds.has(constraint.b) || constraint.a === constraint.b) { repaired += 1; return false; }
+    if (!Number.isFinite(constraint.length) || constraint.length < 4) {
+      const a = nodeById(constraint.a), b = nodeById(constraint.b);
+      constraint.length = a && b ? Math.max(4, distance(a, b)) : 24;
+      constraint.maxLength = Math.max(constraint.maxLength || 0, constraint.length);
+      repaired += 1;
+    }
+    const unordered = constraint.a < constraint.b ? `${constraint.a}|${constraint.b}` : `${constraint.b}|${constraint.a}`;
+    const key = `${constraint.type}|${unordered}`;
+    if (uniqueConstraints.has(key) && !['rope', 'spring', 'damper'].includes(constraint.type)) { repaired += 1; return false; }
+    uniqueConstraints.set(key, constraint.id);
+    return true;
+  });
+
+  state.rotors = state.rotors.filter((rotor) => {
+    const valid = nodeIds.has(rotor.nodeId) && Number.isFinite(rotor.radius) && rotor.radius >= 10;
+    if (!valid) repaired += 1;
+    return valid;
+  });
+  state.attachments = state.attachments.filter((item) => {
+    const valid = nodeIds.has(item.nodeId);
+    if (!valid) repaired += 1;
+    return valid;
+  });
+  state.joints = state.joints.filter((joint) => {
+    const valid = beamIds.has(joint.beamA) && beamIds.has(joint.beamB) && nodeIds.has(joint.a) && nodeIds.has(joint.b) && joint.beamA !== joint.beamB;
+    if (!valid) repaired += 1;
+    return valid;
+  });
+
+  for (const transmission of state.constraints.filter((item) => ['belt', 'chain'].includes(item.type))) {
+    if (!rotorIds.has(transmission.rotorAId)) transmission.rotorAId = shaftRotor(transmission.a)?.id || null;
+    if (!rotorIds.has(transmission.rotorBId)) transmission.rotorBId = shaftRotor(transmission.b)?.id || null;
+    if (!transmission.rotorAId || !transmission.rotorBId) { transmission.active = false; repaired += 1; }
+  }
+  for (const node of state.nodes) {
+    if (node.mount && !beamIds.has(node.mount.beamId)) { node.mount = null; node.role = 'node'; repaired += 1; }
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) { node.x = 480; node.y = 360; node.px = node.x; node.py = node.y; repaired += 1; }
+  }
+  normalizeMechanicsV16();
+  return repaired;
+}
+
+function constructionWarningsV16() {
+  const warnings = [];
+  const isolated = state.nodes.filter((node) => !state.constraints.some((item) => item.a === node.id || item.b === node.id) && !state.rotors.some((rotor) => rotor.nodeId === node.id) && !state.attachments.some((item) => item.nodeId === node.id));
+  if (isolated.length > 3) warnings.push(`${isolated.length} несвязанных точек`);
+  const freeMass = state.nodes.filter((node) => !node.fixed && !node.mount).reduce((sum, node) => sum + (node.mass || 1), 0);
+  const anchors = state.nodes.filter((node) => node.fixed).length;
+  if (!anchors && freeMass > 35) warnings.push('тяжёлая конструкция не имеет опор');
+  const extremeSprings = state.constraints.filter((item) => item.type === 'spring' && (item.stiffness || .11) > .42).length;
+  if (extremeSprings) warnings.push(`${extremeSprings} слишком жёстких пружин`);
+  const inactiveTransmissions = state.constraints.filter((item) => ['belt', 'chain'].includes(item.type) && !item.active).length;
+  if (inactiveTransmissions) warnings.push(`${inactiveTransmissions} разорванных передач`);
+  return warnings;
+}
+
+const baseEnterRunAuditV16 = enterRunMode;
+enterRunMode = function enterAuditedRunV16() {
+  if (state.mode === 'run') return;
+  const repaired = repairConstructionV16();
+  const warnings = constructionWarningsV16();
+  if (repaired) { state.dirty = true; saveNow(); }
+  baseEnterRunAuditV16();
+  if (repaired || warnings.length) {
+    const parts = [];
+    if (repaired) parts.push(`исправлено: ${repaired}`);
+    if (warnings.length) parts.push(warnings.join(', '));
+    setYardNote(`Проверка механизма — ${parts.join('; ')}.`, 2800);
+  }
+};
+
+function addFixedBeamV16(ax, ay, bx, by, layer = 0) {
+  const a = createNode(ax, ay, { fixed: true, layer });
+  const b = createNode(bx, by, { fixed: true, layer });
+  const beam = addBeam(a, b); beam.layer = layer;
+  return { a, b, beam };
+}
+
+function buildLiftV16() {
+  clearWorld();
+  const left = addFixedBeamV16(340, 565, 340, 265, 0);
+  const right = addFixedBeamV16(560, 565, 560, 265, 0);
+  addBeam(left.a, right.a).width = 15;
+  addBeam(left.b, right.b).width = 15;
+  const slideL = createSlidingMountV16(left.beam, { x: 340, y: 475 });
+  const slideR = createSlidingMountV16(right.beam, { x: 560, y: 475 });
+  slideL.layer = 3; slideR.layer = 3;
+  const platform = addBeam(slideL, slideR); platform.width = 15; platform.layer = 2;
+  const actuator = createActuator(left.a, slideL); actuator.channel = 'A'; actuator.stroke = 1.5; actuator.maxLength = actuator.minLength * 2.5; actuator.layer = 4;
+  const damper = createDamperV16(right.a, slideR); damper.damping = .82; damper.layer = 3;
+  const leverNode = createNode(635, 520, { fixed: true, layer: 4 });
+  const lever = createAttachment('lever', leverNode.id, { layer: 5 }); lever.channel = 'A';
+  const cargo = createNode(450, 445, { mass: 12, layer: 4 });
+  addBeam(slideL, cargo); addBeam(cargo, slideR);
+  createAttachment('weight', cargo.id, { amount: 12, layer: 5 });
+  state.camera = { x: 470, y: 415, zoom: .98 };
+}
+
+function buildPressV16() {
+  clearWorld();
+  const left = addFixedBeamV16(315, 565, 315, 250, 0);
+  const right = addFixedBeamV16(625, 565, 625, 250, 0);
+  addBeam(left.a, right.a).width = 15;
+  addBeam(left.b, right.b).width = 15;
+  const guide = addFixedBeamV16(470, 275, 470, 535, 1);
+  const slider = createSlidingMountV16(guide.beam, { x: 470, y: 365 });
+  const platenL = createNode(385, 410, { layer: 3 });
+  const platenR = createNode(555, 410, { layer: 3 });
+  addBeam(platenL, slider).width = 15; addBeam(slider, platenR).width = 15; addBeam(platenL, platenR).width = 15;
+  const actuator = createActuator(guide.a, slider); actuator.channel = 'A'; actuator.stroke = 1.1; actuator.maxLength = actuator.minLength * 2.1; actuator.layer = 4;
+  const damperL = createDamperV16(left.b, platenL); damperL.damping = .78;
+  const damperR = createDamperV16(right.b, platenR); damperR.damping = .78;
+  const block = createNode(470, 520, { mass: 18, radius: 10, layer: 2 });
+  createAttachment('weight', block.id, { amount: 18, layer: 3 });
+  const leverNode = createNode(690, 500, { fixed: true, layer: 4 });
