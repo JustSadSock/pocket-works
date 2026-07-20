@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const BUILD='5.9.1';
+  const BUILD='5.10.0';
   const inputStyle=document.createElement('style');
   inputStyle.textContent=`
     .menu-landscape,.menu-standard,.menu-copy,.symbol-library{pointer-events:none!important}
@@ -36,7 +36,7 @@
   Promise.race([Promise.all([critical,import(`./app.js?pw_release=${BUILD}`)]),timeout]).then(()=>{
     requestAnimationFrame(()=>setTimeout(()=>{
       controls.forEach(control=>control.removeAttribute('aria-busy'));document.documentElement.dataset.blazonReady=BUILD;globalThis.__POCKET_WORKS_RELEASE__?.markReady?.();if(footer)footer.textContent=`v${BUILD} · меню готово`;window.dispatchEvent(new CustomEvent('blazon:ready',{detail:{version:BUILD}}));
-      const enhancements=['progression-art.js','progression-runtime.js','armorial-composition-runtime.js','release-indicator.js'];
+      const enhancements=['progression-art.js','progression-runtime.js','armorial-composition-runtime.js','release-indicator.js','stability-runtime.js'];
       (async()=>{for(const path of enhancements){try{await import(`./${path}?pw_release=${BUILD}`)}catch(error){console.warn(`[БЛАЗОН] optional ${path}`,error)}await new Promise(resolve=>requestAnimationFrame(resolve));}})();
     },0));
   }).catch(fatal);

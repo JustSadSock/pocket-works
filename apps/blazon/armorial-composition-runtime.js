@@ -1,12 +1,12 @@
 (()=>{
   'use strict';
-  const FLAG=Symbol.for('blazon.armorial-composition.v5.5.0');
+  const FLAG=Symbol.for('blazon.armorial-composition.v5.10.0');
   if(globalThis[FLAG]||typeof document==='undefined')return;
   globalThis[FLAG]=true;
 
   const style=document.createElement('link');
   style.rel='stylesheet';
-  style.href='./armorial-composition.css?pw_release=5.5.0';
+  style.href='./armorial-composition.css?pw_release=5.10.0';
   document.head.append(style);
 
   function decorate(){
