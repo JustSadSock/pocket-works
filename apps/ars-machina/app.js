@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 
-for (const href of ['./joints.css', './v16.css']) {
+for (const href of ['./joints.css', './v16.css', './codex-v20.css']) {
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
   stylesheet.href = href;
@@ -35,10 +35,15 @@ const parts = [
   './engine/part-16b.txt',
   './engine/part-17a.txt',
   './engine/part-17b.txt',
-  './engine/part-17repair.txt'
+  './engine/part-17repair.txt',
+  './engine/part-18a.txt',
+  './engine/part-18b.txt',
+  './engine/part-18c.txt',
+  './engine/part-19.txt',
+  './engine/part-20.txt'
 ];
 const status = document.querySelector('#yardNote');
-status.textContent = 'Разворачиваем чертёжный двор…';
+status.textContent = 'Разворачиваем Codice delle Macchine…';
 
 globalThis.__arsMachinaShared = { installMobileRuntime, createWorkshopMode, watchConnectivity };
 let moduleUrl = '';
@@ -49,7 +54,7 @@ try {
     return response.text();
   }));
   const source = sources.join('\n')
-    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '1.6.0';")
+    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '2.0.0';")
     .replace(
       'localStorage.removeItem(PREFS_KEY);',
       `localStorage.removeItem(PREFS_KEY);\n    localStorage.removeItem('pocket-works:ars-machina:library');\n    localStorage.removeItem('pocket-works:ars-machina:current-model');\n    if (typeof setCurrentModelIdentity === 'function') setCurrentModelIdentity(null, 'Новая модель');\n    if (typeof renderLibraryList === 'function') renderLibraryList();`
