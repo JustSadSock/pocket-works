@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#173c42">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ОТТИСК">
+  <title>ОТТИСК</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="game-2d" data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="press-room" id="press-room" data-gesture-surface data-touch-action="none" aria-label="Игровое поле ОТТИСК">
+      <canvas id="press-canvas" aria-hidden="true"></canvas>
+      <div class="paper-noise" aria-hidden="true"></div>
+
+      <header class="topbar" data-ui>
+        <a class="back-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+        <div class="brand" aria-label="ОТТИСК">
+          <span class="brand-number" id="edition-label">ТИРАЖ 01</span>
+          <strong>ОТТИСК</strong>
+        </div>
+        <button class="icon-button" id="sound-toggle" type="button" data-native-press aria-pressed="true" aria-label="Выключить звук">ЗВУК</button>
+      </header>
+
+      <div class="scoreboard" data-ui aria-live="polite">
+        <div>
+          <span>СЛОЙ</span>
+          <strong id="layer-label">1 / 3</strong>
+        </div>
+        <div>
+          <span>ОТТИСК</span>
+          <strong id="print-label">1 / 8</strong>
+        </div>
+        <div>
+          <span>СЕРИЯ</span>
+          <strong id="combo-label">×1</strong>
+        </div>
+      </div>
+
+      <div class="registration-hint" id="registration-hint" data-ui>
+        <span class="hint-mark" aria-hidden="true"></span>
+        <span id="hint-copy">Тапни, когда метки совпадут</span>
+      </div>
+
+      <div class="feedback" id="feedback" data-ui aria-live="polite" hidden>
+        <strong id="feedback-title">ТОЧНО</strong>
+        <span id="feedback-copy">92% совмещения</span>
+      </div>
+
+      <section class="intro-panel" id="intro-panel" data-ui>
+        <p class="intro-kicker">РИЗОГРАФИЧЕСКАЯ ЗАЛИПАЛКА</p>
+        <h1>Три цвета.<br>Один тап.</h1>
+        <p>Лови каждый движущийся слой в центре. Идеально — хорошо. Криво — тоже красиво, просто типография опять была пьяна.</p>
+        <button class="primary-button" id="start-button" type="button" data-native-press>
+          <span>ПЕЧАТАТЬ</span>
+          <span aria-hidden="true">●</span>
+        </button>
+        <a class="intro-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </section>
+
+      <section class="edition-panel" id="edition-panel" data-ui hidden>
+        <p class="intro-kicker">ТИРАЖ ГОТОВ</p>
+        <h2 id="edition-title">ХОРОШАЯ РЕГИСТРАЦИЯ</h2>
+        <div class="edition-score">
+          <strong id="edition-score">0</strong>
+          <span>очков</span>
+        </div>
+        <p id="edition-summary">8 оттисков. Лучший серия ×1.</p>
+        <button class="primary-button" id="next-edition-button" type="button" data-native-press>
+          <span>ЕЩЁ ТИРАЖ</span>
+          <span aria-hidden="true">↻</span>
+        </button>
+        <button class="secondary-button" id="reset-progress-button" type="button" data-native-press>Сбросить прогресс</button>
+      </section>
+
+      <footer class="bottom-strip" data-ui>
+        <span id="best-label">РЕКОРД 0000</span>
+        <button class="workshop-trigger workshop-trigger--ottisk" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <span id="palette-label">ПАЛИТРА 01</span>
+      </footer>
+
+      <div class="fatal-error" id="fatal-error" data-ui hidden>
+        <p>ПЕЧАТНЫЙ СТАНОК ВСТАЛ</p>
+        <strong>Canvas недоступен</strong>
+        <span>Обнови страницу или открой приложение в современном браузере.</span>
+        <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ОТТИСК"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
