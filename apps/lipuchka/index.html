@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2e5c5b">
+  <meta name="description" content="ЛИПУЧКА — тактильная игра про липкий валик и очень серьёзную борьбу с катышками.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ЛИПУЧКА">
+  <title>ЛИПУЧКА</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body>
+  <main class="app" id="app" aria-label="Игра ЛИПУЧКА">
+    <canvas id="gameCanvas" role="application" aria-label="Ткань и липкий валик"></canvas>
+
+    <header class="topbar">
+      <a class="back" href="../../" aria-label="Вернуться в Pocket Works">PW</a>
+      <div class="brand">
+        <strong>ЛИПУЧКА</strong>
+        <span id="statusText">Готовим ткань…</span>
+      </div>
+      <button class="icon-button" id="soundButton" type="button" aria-label="Выключить звук">♪</button>
+    </header>
+
+    <section class="score-strip" aria-label="Прогресс">
+      <div><span>Ткань</span><strong id="levelValue">1</strong></div>
+      <div class="progress-track" aria-hidden="true"><i id="progressFill"></i></div>
+      <div class="fluff"><span>Ворс</span><strong id="fluffValue">0</strong></div>
+    </section>
+
+    <div class="combo" id="comboBadge" aria-live="polite">×1</div>
+    <div class="hint" id="hint">Веди пальцем. Валик едет чуть выше, чтобы его было видно.</div>
+
+    <button class="peel-button" id="peelButton" type="button" hidden>
+      <span>Снять слой</span><small>потяни вверх или нажми</small>
+    </button>
+
+    <button class="workshop-button" id="workshopButton" type="button">
+      <span>Мастерская</span><strong id="workshopDot" hidden>+</strong>
+    </button>
+
+    <section class="sheet" id="workshopSheet" aria-labelledby="workshopTitle" hidden>
+      <button class="sheet-backdrop" id="sheetBackdrop" type="button" aria-label="Закрыть мастерскую"></button>
+      <div class="sheet-panel">
+        <header>
+          <div><span>Постоянные улучшения</span><h2 id="workshopTitle">Мастерская</h2></div>
+          <button id="closeWorkshop" type="button">Готово</button>
+        </header>
+        <div class="upgrade-list">
+          <button class="upgrade" data-upgrade="width" type="button">
+            <span><b>Ширина валика</b><small>меньше бессмысленных движений</small></span>
+            <em><i id="widthLevel">0</i><strong id="widthCost">60</strong></em>
+          </button>
+          <button class="upgrade" data-upgrade="glue" type="button">
+            <span><b>Липкость</b><small>подбирает ворс чуть дальше</small></span>
+            <em><i id="glueLevel">0</i><strong id="glueCost">75</strong></em>
+          </button>
+          <button class="upgrade" data-upgrade="auto" type="button">
+            <span><b>Автопилот</b><small>умнее катается, пока ты тупишь</small></span>
+            <em><i id="autoLevel">0</i><strong id="autoCost">90</strong></em>
+          </button>
+        </div>
+        <div class="settings-row">
+          <button id="hapticButton" type="button"><span>Вибрация</span><strong>Вкл</strong></button>
+          <button id="motionButton" type="button"><span>Анимации</span><strong>Вкл</strong></button>
+        </div>
+        <p class="sheet-note">Никаких поражений, энергии и рекламы. Просто катай эту хрень.</p>
+      </div>
+    </section>
+
+    <div class="peel-strip" id="peelStrip" aria-hidden="true"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="fatal" id="fatal" hidden>
+      <strong>Валик зажевало.</strong>
+      <span>Перезагрузи приложение — прогресс уже сохранён.</span>
+      <button type="button" onclick="location.reload()">Перезагрузить</button>
+    </div>
+  </main>
+
+  <noscript>Для этой бессмысленной, но важной уборки нужен JavaScript.</noscript>
+  <script src="./app.js?v=1.0.0" defer></script>
+</body>
+</html>
