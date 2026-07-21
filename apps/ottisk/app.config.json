@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "ottisk",
+  "name": "ОТТИСК",
+  "shortName": "ОТТИСК",
+  "description": "Однопальцевая ризографическая залипалка: лови движущиеся красочные слои, собирай серии точных совмещений и печатай красивые несовершенные тиражи.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-22",
+  "releaseDateTime": "2026-07-22T00:03:00+02:00",
+  "changelog": [
+    "Собран полный цикл из трёх движущихся красочных форм, восьми оттисков и финала тиража.",
+    "Добавлены серии точного совмещения, мягкий режим без поражения, локальное сохранение и разблокировка палитр.",
+    "Реализованы процедурные ризографические мотивы, бумажная фактура, синтезированный звук, вибрация и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#ef5b45",
+  "backgroundColor": "#eee6d4",
+  "themeColor": "#173c42",
+  "orientation": "portrait",
+  "cacheName": "ottisk-v1.0.0",
+  "storageNamespace": "pocket-works:ottisk",
+  "tags": ["PWA", "offline", "game", "casual", "one-thumb", "canvas", "risograph", "procedural art", "audio", "haptics", "portrait"],
+  "order": 96
+}
