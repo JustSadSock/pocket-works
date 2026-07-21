@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "moss-pocket",
+  "name": "МОХ",
+  "shortName": "МОХ",
+  "description": "Живая карманная экосистема: собирай росу, выращивай колонию и выбирай мутации.",
+  "version": "0.1.0",
+  "releaseDate": "2026-07-21",
+  "releaseDateTime": "2026-07-21T22:48:21.635Z",
+  "changelog": [
+    "Первая версия карманной экосистемы."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#9bab73",
+  "backgroundColor": "#20261c",
+  "themeColor": "#20261c",
+  "orientation": "portrait",
+  "cacheName": "moss-pocket-v0.1.0",
+  "storageNamespace": "pocket-works:moss-pocket",
+  "tags": [
+    "interactive",
+    "gesture",
+    "offline"
+  ],
+  "order": 84
+}

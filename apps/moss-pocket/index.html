@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#20261c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="МОХ">
+  <title>МОХ — карманная экосистема</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell game-shell loading" data-app-shell data-fullscreen-app>
+    <section class="loading-screen" aria-live="polite"><span class="loader-leaf">⌁</span><p>Мох просыпается</p></section>
+    <div class="ambient ambient-left" aria-hidden="true"></div>
+    <div class="ambient ambient-right" aria-hidden="true"></div>
+    <section class="game" aria-label="МОХ — карманная экосистема" hidden>
+      <header class="topbar" data-ui>
+        <a class="launcher-button" href="../../" data-app-control data-native-press>POCKET</a>
+        <div class="brand"><h1>МОХ</h1><span id="colony-label">КОЛОНИЯ 01</span></div>
+        <div class="resources"><span class="dew-icon"></span><strong id="dew-value">18</strong><small>РОСА</small></div>
+        <button class="round-button" id="settings-button" type="button" aria-label="Открыть настройки" data-native-press>•••</button>
+      </header>
+
+      <div class="field-wrap">
+        <div class="moss-field colony-1" id="moss-field" role="application" aria-label="Живая колония. Нажимай и проводи пальцем, чтобы собирать росу" data-gesture-surface data-touch-action="none" data-block-callout>
+          <div class="shade"></div>
+          <div id="tufts" aria-hidden="true"></div>
+          <div id="idle-drops" aria-hidden="true"></div>
+          <div id="trail" aria-hidden="true"></div>
+          <div id="ripples" aria-hidden="true"></div>
+          <div class="field-copy"><span class="status-dot"></span><p id="notice">Проведи каплю по мху</p></div>
+          <div class="combo" id="combo" hidden>×2</div>
+        </div>
+      </div>
+
+      <section class="growth-panel" id="growth-panel" aria-label="Рост колонии 12 процентов" data-ui>
+        <div class="growth-label"><span>РОСТ</span><strong id="growth-value">12%</strong></div>
+        <div class="growth-track"><i id="growth-fill" style="width:12%"></i></div>
+        <div class="actions">
+          <button class="rain-button" id="rain-button" type="button" data-native-press><span>☂</span><b>ПОЗВАТЬ ДОЖДЬ</b><small>−25 росы · +22 роста</small></button>
+          <div class="mutation-count"><span id="mutation-count">0</span><small>МУТАЦИЙ</small></div>
+        </div>
+      </section>
+      <footer data-ui><span id="offline-note">растёт, даже когда закрыто</span><i></i></footer>
+
+      <div class="overlay mutation-overlay" id="mutation-overlay" role="dialog" aria-modal="true" aria-labelledby="mutation-title" hidden>
+        <div class="mutation-sheet">
+          <span class="eyebrow" id="mutation-eyebrow">КОЛОНИЯ 01 СОЗРЕЛА</span>
+          <h2 id="mutation-title">Выбери, кем она станет</h2>
+          <p>Выбор навсегда изменит ритм этой экосистемы.</p>
+          <div class="mutation-grid" id="mutation-grid"></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="info-overlay" role="dialog" aria-modal="true" aria-label="Настройки" hidden>
+        <div class="info-sheet">
+          <button class="close" id="settings-close" type="button" aria-label="Закрыть" data-native-press>×</button>
+          <span class="eyebrow">КАРМАННАЯ ЭКОСИСТЕМА</span>
+          <h2>Мох не требует внимания.<br>Но любит его.</h2>
+          <p>Проводи пальцем по чаше, собирай росу и заполняй шкалу роста. Дождь ускоряет цикл. В конце каждого цикла колония получает настоящую мутацию.</p>
+          <button class="setting" id="sound-button" type="button" data-native-press><span>Тихие звуки</span><i class="on" id="sound-state">ВКЛ</i></button>
+          <a class="pocket-link" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+          <button class="reset" id="reset-button" type="button" data-native-press>Вырастить заново</button>
+        </div>
+      </div>
+
+      <div class="overlay confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+        <div class="confirm-sheet">
+          <span class="eyebrow">НОВАЯ ПОЧВА</span>
+          <h2 id="confirm-title">Вырастить всё заново?</h2>
+          <p>Текущая колония и её мутации исчезнут.</p>
+          <div class="confirm-actions">
+            <button id="reset-cancel" type="button" data-native-press>Оставить</button>
+            <button class="danger" id="reset-confirm" type="button" data-native-press>Начать заново</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

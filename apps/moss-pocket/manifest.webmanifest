@@ -1,0 +1,25 @@
+{
+  "id": "/apps/moss-pocket/",
+  "name": "МОХ",
+  "short_name": "МОХ",
+  "description": "Живая карманная экосистема: собирай росу, выращивай колонию и выбирай мутации.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#20261c",
+  "theme_color": "#20261c",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

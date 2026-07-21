@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="МОХ">
+  <rect width="512" height="512" rx="112" fill="#20261c"/>
+  <path d="M88 366C112 244 184 169 274 143c-23 58-3 111 58 139-47 57-126 90-244 84Z" fill="#718857"/>
+  <path d="M424 374c-27-102-78-160-151-183 19 72-19 137-89 178 75 39 164 42 240 5Z" fill="#a6b978"/>
+  <path d="M173 332c49-33 82-83 99-149-69 36-111 94-126 173Z" fill="#d1d9ad" opacity=".72"/>
+  <circle cx="340" cy="124" r="46" fill="#c8e1db"/>
+  <circle cx="326" cy="109" r="13" fill="#fff" opacity=".9"/>
+</svg>
