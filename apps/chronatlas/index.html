@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#233f46">
+  <meta name="description" content="ХРОНОАТЛАС — историческая и политическая география на интерактивной карте.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ХРОНОАТЛАС">
+  <title>ХРОНОАТЛАС — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell>
+    <section class="boot" aria-live="polite">
+      <div class="boot-orbit"><span></span><i></i></div>
+      <p>РАЗВОРАЧИВАЕМ КАРТУ ВРЕМЕНИ</p>
+    </section>
+  </main>
+  <button type="button" hidden data-workshop-trigger data-native-press>Workshop</button>
+  <noscript>Для работы ХРОНОАТЛАСА нужен JavaScript.</noscript>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ХРОНОАТЛАС" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

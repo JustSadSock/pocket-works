@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "chronatlas",
+  "name": "ХРОНОАТЛАС",
+  "shortName": "ХРОНОАТЛАС",
+  "description": "Интерактивный тренажёр политической и исторической географии на живой карте мира.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-22",
+  "releaseDateTime": "2026-07-22T02:45:00Z",
+  "changelog": [
+    "Добавлены восемь исторических срезов от 500 года до н. э. до современности.",
+    "Добавлены задания по державам, регионам, городам и столицам прямо на карте.",
+    "Добавлены серии, уровни мастерства, сохранение прогресса и исторические пояснения.",
+    "Добавлены жесты масштабирования, перелёты камеры, звук, тактильная отдача и офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#d8683a",
+  "backgroundColor": "#e7dfca",
+  "themeColor": "#233f46",
+  "orientation": "any",
+  "cacheName": "chronatlas-v1.0.0",
+  "storageNamespace": "pocket-works:chronatlas",
+  "tags": ["PWA", "offline", "education", "geography", "history", "map"],
+  "order": 14
+}
