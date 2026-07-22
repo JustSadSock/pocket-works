@@ -1,9 +1,9 @@
 const CACHE_PREFIX='chronatlas-';
-const CACHE_NAME='chronatlas-v1.0.0';
-const APP_VERSION='1.0.0';
+const CACHE_NAME='chronatlas-v2.0.0';
+const APP_VERSION='2.0.0';
 const RELEASE_DATE='2026-07-22';
-const RELEASE_NOTES=['Восемь эпох от 500 года до н. э.','Задания по державам, регионам, городам и столицам','Сохранение прогресса и полностью офлайн-режим'];
-const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./data.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+const RELEASE_NOTES=['Настоящая бумажная карта Natural Earth','Три детальных политических среза','4 520 провинций и 2 173 города'];
+const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./atlas-data.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL))));
 self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
