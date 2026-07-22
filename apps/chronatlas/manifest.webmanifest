@@ -1,0 +1,14 @@
+{
+  "id": "/apps/chronatlas/",
+  "name": "ХРОНОАТЛАС",
+  "short_name": "ХРОНОАТЛАС",
+  "description": "Интерактивный тренажёр политической и исторической географии на живой карте мира.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e7dfca",
+  "theme_color": "#233f46",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
