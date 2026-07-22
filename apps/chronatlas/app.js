@@ -1,227 +1,288 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
-import { ERAS, REGIONS, CITIES, CAPITALS, POLITY_COLORS, FACTS, ownerAt } from './data.js';
+import { ATLAS_DATA } from './atlas-data.js';
 
 installMobileRuntime();
 
-const STORAGE_KEY='pocket-works:chronatlas:state';
-const MODES={
-  territory:{label:'Державы',hint:'Нажми на любую территорию этой державы.'},
-  region:{label:'Регионы',hint:'Найди выделенный историко-географический регион.'},
-  city:{label:'Города',hint:'Нажми на точку города. Подпись появится после ответа.'},
-  capital:{label:'Столицы',hint:'Выбери город, который был столицей в эту эпоху.'}
-};
-const defaults={visited:false,era:4,mode:'territory',sound:true,progress:{},streak:0,bestStreak:0};
+const STORAGE_KEY='pocket-works:chronatlas:state-v2';
+const WORLD={x:0,y:0,w:1000,h:500};
+const MODES={country:'СТРАНЫ',province:'ПРОВИНЦИИ',city:'ГОРОДА'};
+const DEFAULTS={era:2026,mode:'country',score:0,total:0,streak:0,best:0,sound:true,seenIntro:false};
 let state=loadState();
 let question=null;
 let locked=false;
-let questionNumber=0;
-let lastTarget='';
-let toastTimer=0;
-let audioContext=null;
-let viewBox={x:0,y:35,w:1000,h:460};
+let view={...WORLD};
 let drag=null;
+let audio=null;
+let toastTimer=0;
 
 const app=document.querySelector('#app');
+const $=(selector,root=document)=>root.querySelector(selector);
+const $$=(selector,root=document)=>[...root.querySelectorAll(selector)];
+const esc=(value)=>String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const rand=(array)=>array[Math.floor(Math.random()*array.length)];
+const groupBy=(array,keyFn)=>array.reduce((map,item)=>{const key=keyFn(item);if(!map.has(key))map.set(key,[]);map.get(key).push(item);return map;},new Map());
+const countryByIso3=new Map(ATLAS_DATA.countries.map(country=>[country.iso3,country]));
+const countryByIso2=new Map(ATLAS_DATA.countries.map(country=>[country.iso2,country]));
+const provincesByCountry=groupBy(ATLAS_DATA.provinces,province=>province.iso3);
+const citiesByCountry=groupBy(ATLAS_DATA.cities,city=>city.iso2);
 
-function loadState(){
-  try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return {...defaults,...raw,progress:raw.progress||{}};}catch{return {...defaults};}
-}
+function loadState(){try{return {...DEFAULTS,...JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')};}catch{return {...DEFAULTS};}}
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
-const escapeHtml=(value)=>String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const regionById=(id)=>REGIONS.find(region=>region.id===id);
-const cityById=(id)=>CITIES.find(city=>city.id===id);
-const eraProgress=()=>state.progress[state.era]||{correct:0,total:0,best:0};
-const mastery=()=>{const p=eraProgress();return p.total?Math.min(100,Math.round((p.correct/p.total)*70+Math.min(p.total,30))):0;};
-const rand=(items)=>items[Math.floor(Math.random()*items.length)];
 
 function renderShell(){
   app.innerHTML=`
-    <section class="atlas" aria-label="Хроноатлас">
-      <header class="topbar" data-ui>
-        <a class="back" href="../../" data-app-control data-native-press aria-label="Назад в Pocket Works">←</a>
-        <div class="brand"><strong>ХРОНОАТЛАС</strong><span>КАРТА ВРЕМЕНИ</span></div>
-        <div class="top-stats">
-          <div class="stat"><b id="scoreStat">0 / 0</b><small>ТОЧНОСТЬ</small></div>
-          <div class="stat"><b id="streakStat">${state.streak}</b><small>СЕРИЯ</small></div>
-          <button class="icon-button" id="soundButton" data-native-press aria-label="Переключить звук"><span class="sound-state">${state.sound?'♪':'×'}</span></button>
-          <button class="icon-button" id="settingsButton" data-native-press aria-label="Настройки">⚙</button>
-        </div>
+    <main class="atlas-shell" data-app-shell data-fullscreen-app>
+      <header class="masthead" data-ui>
+        <a class="library-link" href="../../" data-app-control data-native-press>← POCKET WORKS</a>
+        <div class="wordmark"><b>ХРОНОАТЛАС</b><span>ПОЛИТИЧЕСКАЯ ГЕОГРАФИЯ</span></div>
+        <button class="sound-button" id="soundButton" data-native-press aria-label="Звук">${state.sound?'♪':'×'}</button>
       </header>
-      <aside class="rail" data-ui>
-        <p class="rail-label">ЛИНИЯ ВРЕМЕНИ</p>
-        <div class="eras">${ERAS.map((era,index)=>`<button class="era ${index===state.era?'active':''}" data-era="${index}" data-native-press><b>${era.label}</b><span>${era.title}</span></button>`).join('')}</div>
-        <div class="rail-foot"><div class="mastery-track"><div class="mastery-fill"></div></div><p><span id="masteryText">0%</span> ОСВОЕНО<br>В ЭТОЙ ЭПОХЕ</p></div>
-      </aside>
-      <section class="workspace">
-        <div class="map-column">
-          <nav class="mode-strip" aria-label="Режим заданий" data-ui>${Object.entries(MODES).map(([id,mode])=>`<button class="mode ${id===state.mode?'active':''}" data-mode="${id}" data-native-press>${mode.label}</button>`).join('')}</nav>
-          <div class="map-wrap" id="mapWrap" data-gesture-surface data-block-callout>
-            <svg class="world-map" id="worldMap" viewBox="0 35 1000 460" role="img" aria-label="Интерактивная карта мира">
-              <text class="ocean-label" x="295" y="185">АТЛАНТИКА</text><text class="ocean-label" x="698" y="390">ИНДИЙСКИЙ ОКЕАН</text>
-              <g id="regionsLayer"></g><g id="labelsLayer"></g><g id="citiesLayer"></g>
-            </svg>
-            <div class="map-tools" data-ui><button class="zoom-button" data-zoom="in" data-native-press aria-label="Приблизить">＋</button><button class="zoom-button" data-zoom="out" data-native-press aria-label="Отдалить">−</button><button class="zoom-button" data-zoom="reset" data-native-press aria-label="Показать весь мир">⌂</button></div>
-            <div class="map-note">Тяни карту · двойное нажатие приближает</div><div class="map-toast" id="mapToast"></div>
+
+      <section class="atlas-body">
+        <aside class="folio" data-ui>
+          <div class="folio-top">
+            <span class="folio-number">ЛИСТ Ⅲ</span>
+            <h1 id="eraTitle"></h1>
+            <p id="eraNote"></p>
           </div>
-        </div>
-        <aside class="quiz" aria-live="polite">
-          <p class="era-kicker" id="eraKicker"></p><h2 class="era-title" id="eraTitle"></h2><p class="era-note" id="eraNote"></p><div class="divider"></div>
-          <div class="question-index"><span id="modeLabel"></span><span id="questionCount"></span></div>
-          <h3 class="question" id="questionText"></h3><p class="hint" id="hintText"></p>
-          <div class="feedback hidden" id="feedback"><div class="feedback-card" id="feedbackCard"><b id="feedbackTitle"></b><p id="feedbackText"></p></div><button class="next" id="nextButton" data-native-press>СЛЕДУЮЩАЯ ТОЧКА →</button></div>
+          <nav class="era-tabs" aria-label="Дата карты">
+            ${[1600,1914,2026].map(year=>`<button class="era-tab" data-era="${year}" data-native-press><b>${year}</b><span>${ATLAS_DATA.eras[year].title}</span></button>`).join('')}
+          </nav>
+          <div class="ledger">
+            <span>АРХИВ</span><b>${ATLAS_DATA.meta.countryCount} стран</b>
+            <b>${ATLAS_DATA.meta.provinceCount.toLocaleString('ru-RU')} провинций</b>
+            <b>${ATLAS_DATA.meta.cityCount.toLocaleString('ru-RU')} городов</b>
+          </div>
         </aside>
+
+        <section class="map-desk">
+          <div class="map-toolbar" data-ui>
+            <nav class="mode-tabs">${Object.entries(MODES).map(([id,label])=>`<button data-mode="${id}" data-native-press>${label}</button>`).join('')}</nav>
+            <label class="search"><span>⌕</span><input id="countrySearch" type="search" inputmode="search" autocomplete="off" placeholder="Найти страну…"><div class="search-results hidden" id="searchResults"></div></label>
+          </div>
+
+          <div class="map-frame" id="mapFrame" data-gesture-surface data-block-callout>
+            <div class="loading-map" id="loadingMap"><i></i><span>РАЗВОРАЧИВАЕМ КАРТУ</span></div>
+            <svg id="worldMap" class="world-map" viewBox="0 0 1000 500" role="img" aria-label="Интерактивная политическая карта мира">
+              <defs><filter id="ink"><feTurbulence baseFrequency=".8" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale=".35"/></filter></defs>
+              <path class="sphere" d="M18 42 Q500 -8 982 42 L982 458 Q500 508 18 458 Z"/>
+              <g class="graticule" aria-hidden="true">${gridLines()}</g>
+              <g id="countriesLayer"></g><g id="unitsLayer"></g><g id="citiesLayer"></g><g id="labelsLayer"></g>
+            </svg>
+            <div class="compass" aria-hidden="true"><b>С</b><i></i></div>
+            <div class="map-scale" aria-hidden="true"><i></i><span>НАТУРАЛЬНАЯ ПРОЕКЦИЯ ЗЕМЛИ</span></div>
+            <div class="map-controls" data-ui><button data-zoom="in" data-native-press>＋</button><button data-zoom="out" data-native-press>−</button><button data-zoom="reset" data-native-press>⌂</button></div>
+            <div class="map-toast" id="mapToast"></div>
+          </div>
+
+          <section class="quiz-slip" aria-live="polite">
+            <div class="question-meta"><span id="questionKind"></span><b id="questionCount"></b></div>
+            <div class="question-copy"><p id="questionLead"></p><h2 id="questionText"></h2></div>
+            <div class="score"><span>ТОЧНОСТЬ</span><b id="scoreValue">—</b><span>СЕРИЯ</span><b id="streakValue">${state.streak}</b></div>
+            <button class="next-button hidden" id="nextButton" data-native-press>СЛЕДУЮЩАЯ →</button>
+          </section>
+        </section>
       </section>
-    </section>
-    <div class="settings hidden" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="settings-panel"><div class="settings-head"><h2 id="settingsTitle">Настройки атласа</h2><button class="icon-button" id="closeSettings" data-native-press aria-label="Закрыть">×</button></div>
-      <div class="settings-row"><div><b>Звуки карты</b><br><small>Тихие сигналы ответа</small></div><button id="settingsSound" data-native-press>${state.sound?'ВКЛ':'ВЫКЛ'}</button></div>
-      <div class="settings-row"><div><b>Прогресс</b><br><small id="totalProgress"></small></div></div>
-      <button class="danger" id="resetProgress" data-native-press>СБРОСИТЬ ПРОГРЕСС</button></div>
+    </main>
+    <div class="intro ${state.seenIntro?'hidden':''}" id="intro" role="dialog" aria-modal="true">
+      <div class="intro-map" aria-hidden="true"></div>
+      <div class="intro-sheet">
+        <span>КАРТОГРАФИЧЕСКИЙ КАБИНЕТ № 03</span>
+        <h2>Границы — это<br><em>временная краска.</em></h2>
+        <p>Три настоящих политических среза, тысячи провинций и минимум десять ключевых городов для каждого полноценного государства. Ответы находятся только на карте.</p>
+        <button id="startButton" data-native-press>РАЗВЕРНУТЬ АТЛАС</button>
+        <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
     </div>`;
   bindUI();
-  renderEra();
-  if(!state.visited)renderOnboarding();else nextQuestion();
+  setEra(state.era,false);
+  requestAnimationFrame(()=>$('#loadingMap')?.classList.add('done'));
 }
 
-function renderOnboarding(){
-  const layer=REGIONS.map((region,i)=>`<polygon points="${region.points}" fill="${Object.values(POLITY_COLORS)[i%18]}" stroke="#233f46" stroke-width="2"/>`).join('');
-  app.insertAdjacentHTML('beforeend',`<section class="onboarding" id="onboarding">
-    <div class="onboard-map"><svg viewBox="0 35 1000 460" aria-hidden="true"><g opacity=".82">${layer}</g><path class="route-line" d="M145 230 C310 80 485 300 610 210 S820 120 925 200"/></svg></div>
-    <div class="onboard-copy"><span class="eyebrow">ПОЛИТИЧЕСКАЯ ГЕОГРАФИЯ · 2500 ЛЕТ</span><h1>Мир меняет<span>границы.</span></h1><p>Не угадывай ответы в списке. Ищи державы, регионы и города там, где они действительно находились — на карте.</p><div class="onboard-actions"><button class="start" id="startButton" data-native-press>РАЗВЕРНУТЬ АТЛАС</button><a href="../../" data-app-control>В Pocket Works</a></div><div class="mini-legend">8 ЭПОХ · 44 РЕГИОНА · 73 ГОРОДА · ОФЛАЙН</div></div></section>`);
-  document.querySelector('#startButton').addEventListener('click',()=>{state.visited=true;saveState();playTone(true);document.querySelector('#onboarding').remove();nextQuestion();});
+function gridLines(){
+  const vertical=Array.from({length:11},(_,i)=>`<path d="M${45+i*91} 28 Q${500+(i-5)*12} 250 ${45+i*91} 472"/>`).join('');
+  const horizontal=Array.from({length:7},(_,i)=>`<path d="M22 ${58+i*64} Q500 ${42+i*69} 978 ${58+i*64}"/>`).join('');
+  return vertical+horizontal;
 }
 
 function bindUI(){
-  document.querySelectorAll('[data-era]').forEach(button=>button.addEventListener('click',()=>setEra(Number(button.dataset.era))));
-  document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
-  document.querySelector('#nextButton').addEventListener('click',nextQuestion);
-  document.querySelector('#soundButton').addEventListener('click',toggleSound);
-  document.querySelector('#settingsButton').addEventListener('click',openSettings);
-  document.querySelector('#closeSettings').addEventListener('click',closeSettings);
-  document.querySelector('#settings').addEventListener('click',event=>{if(event.target.id==='settings')closeSettings();});
-  document.querySelector('#settingsSound').addEventListener('click',toggleSound);
-  document.querySelector('#resetProgress').addEventListener('click',resetProgress);
-  document.querySelectorAll('[data-zoom]').forEach(button=>button.addEventListener('click',()=>zoomMap(button.dataset.zoom)));
+  $$('[data-era]').forEach(button=>button.addEventListener('click',()=>setEra(Number(button.dataset.era))));
+  $$('[data-mode]').forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
+  $$('[data-zoom]').forEach(button=>button.addEventListener('click',()=>zoom(button.dataset.zoom)));
+  $('#nextButton').addEventListener('click',nextQuestion);
+  $('#soundButton').addEventListener('click',toggleSound);
+  $('#startButton')?.addEventListener('click',()=>{state.seenIntro=true;saveState();$('#intro').classList.add('leaving');setTimeout(()=>$('#intro').remove(),360);tone(true);});
+  $('#countrySearch').addEventListener('input',searchCountries);
+  $('#countrySearch').addEventListener('keydown',event=>{if(event.key==='Escape'){event.currentTarget.value='';$('#searchResults').classList.add('hidden');event.currentTarget.blur();}});
   bindMapGestures();
 }
 
-function renderEra(){
-  const era=ERAS[state.era];
-  document.querySelector('#eraKicker').textContent=era.year<0?`${Math.abs(era.year)} ГОД ДО Н. Э.`:`${era.year} ГОД`;
-  document.querySelector('#eraTitle').textContent=era.title;
-  document.querySelector('#eraNote').textContent=era.note;
-  document.querySelectorAll('[data-era]').forEach((button,index)=>button.classList.toggle('active',index===state.era));
-  document.querySelectorAll('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===state.mode));
-  renderMap();updateStats();
+function setEra(year,ask=true){
+  state.era=year;saveState();view={...WORLD};updateView();
+  $$('[data-era]').forEach(button=>button.classList.toggle('active',Number(button.dataset.era)===year));
+  const era=ATLAS_DATA.eras[year];$('#eraTitle').textContent=year;$('#eraNote').textContent=era.note;
+  renderMap();if(ask)paperFlip();nextQuestion();
+}
+
+function setMode(mode){
+  state.mode=mode;saveState();locked=false;
+  $$('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===mode));
+  renderMap();nextQuestion();
 }
 
 function renderMap(){
-  const regionLayer=document.querySelector('#regionsLayer');
-  regionLayer.innerHTML=REGIONS.map(region=>{const owner=ownerAt(region.id,state.era);return `<polygon class="region" tabindex="0" role="button" aria-label="${escapeHtml(region.name)}" data-region="${region.id}" points="${region.points}" fill="${POLITY_COLORS[owner]||'#8b8170'}"><title>${escapeHtml(region.name)} — ${escapeHtml(owner)}</title></polygon>`;}).join('');
-  regionLayer.querySelectorAll('.region').forEach(node=>{node.addEventListener('click',()=>answerRegion(node.dataset.region));node.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();answerRegion(node.dataset.region);}});});
-  renderLabels();
-  const active=CITIES.filter(city=>city.from<=state.era);
-  const citiesLayer=document.querySelector('#citiesLayer');
-  citiesLayer.innerHTML=active.map(city=>`<g class="city" tabindex="0" role="button" aria-label="${escapeHtml(city.name)}" data-city="${city.id}" transform="translate(${city.x} ${city.y})"><circle class="city-hit" r="13"/><circle class="city-core" r="3.4"/><text class="city-name" x="7" y="-7">${escapeHtml(city.name)}</text></g>`).join('');
-  citiesLayer.querySelectorAll('.city').forEach(node=>{node.addEventListener('click',event=>{event.stopPropagation();answerCity(node.dataset.city);});node.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();answerCity(node.dataset.city);}});});
+  const modern=state.era===2026;
+  $('#countriesLayer').innerHTML=ATLAS_DATA.countries.map(country=>`<path class="country ${modern?'interactive':''}" data-country="${country.iso3}" d="${country.path}" style="--fill:${country.color}"/>`).join('');
+  if(modern&&state.mode==='province'){
+    $('#unitsLayer').innerHTML=ATLAS_DATA.provinces.map(unit=>`<path class="unit province interactive" data-unit="${unit.id}" data-country="${unit.iso3}" d="${unit.path}"/>`).join('');
+  }else if(!modern){
+    $('#countriesLayer').innerHTML='';
+    $('#unitsLayer').innerHTML=ATLAS_DATA.eras[state.era].units.map(unit=>`<path class="unit history interactive" data-unit="${unit.id}" d="${unit.path}" style="--fill:${unit.color}"/>`).join('');
+  }else $('#unitsLayer').innerHTML='';
+  $('#citiesLayer').innerHTML='';$('#labelsLayer').innerHTML='';
+  $$('.interactive').forEach(node=>node.addEventListener('click',mapClick));
+  $$('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===state.mode));
 }
-
-function renderLabels(){
-  const groups=new Map();
-  REGIONS.forEach(region=>{const owner=ownerAt(region.id,state.era);const pts=region.points.split(' ').map(pair=>pair.split(',').map(Number));const center={x:pts.reduce((a,p)=>a+p[0],0)/pts.length,y:pts.reduce((a,p)=>a+p[1],0)/pts.length};const group=groups.get(owner)||[];group.push(center);groups.set(owner,group);});
-  const labels=[...groups.entries()].filter(([owner,points])=>points.length>1&&owner!=='Независимые народы').map(([owner,points])=>{const x=points.reduce((a,p)=>a+p.x,0)/points.length;const y=points.reduce((a,p)=>a+p.y,0)/points.length;const short=owner.replace(/ \(.+\)/,'').replace('Колониальные владения ','').replace(' империя','');return `<text class="map-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${escapeHtml(short.toUpperCase())}</text>`;});
-  document.querySelector('#labelsLayer').innerHTML=labels.join('');
-}
-
-function setEra(index){
-  if(index===state.era)return;state.era=index;state.streak=0;saveState();question=null;locked=false;questionNumber=0;viewBox={x:0,y:35,w:1000,h:460};renderEra();updateViewBox();nextQuestion();playTone(true,260);if(innerWidth<900)document.querySelector(`[data-era="${index}"]`).scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-}
-function setMode(mode){if(mode===state.mode)return;state.mode=mode;state.streak=0;saveState();questionNumber=0;renderEra();nextQuestion();}
 
 function nextQuestion(){
-  locked=false;questionNumber+=1;
-  document.querySelector('#feedback').classList.add('hidden');
-  document.querySelectorAll('.correct,.wrong,.dim,.reveal,.target').forEach(node=>node.classList.remove('correct','wrong','dim','reveal','target'));
-  const mode=state.mode;
-  if(mode==='territory'){
-    const owners=[...new Set(REGIONS.map(region=>ownerAt(region.id,state.era)))].filter(owner=>owner!=='Независимые народы');
-    let target=rand(owners.filter(owner=>owner!==lastTarget));question={mode,target};
-    setQuestion(`Найди державу <em>${escapeHtml(target)}</em>`);
-  }else if(mode==='region'){
-    const target=rand(REGIONS.filter(region=>region.id!==lastTarget));question={mode,target:target.id,label:target.name};
-    setQuestion(`Где находится <em>${escapeHtml(target.name)}</em>?`);
-  }else if(mode==='city'){
-    const candidates=CITIES.filter(city=>city.from<=state.era&&city.id!==lastTarget);const target=rand(candidates);question={mode,target:target.id,label:target.name};
-    setQuestion(`Покажи город <em>${escapeHtml(target.name)}</em>`);
+  locked=false;clearMarks();$('#nextButton').classList.add('hidden');
+  const era=ATLAS_DATA.eras[state.era];
+  if(state.mode==='country'){
+    if(state.era===2026){
+      const candidates=ATLAS_DATA.countries.filter(country=>country.cities>=10&&country.path.length>24);
+      const target=rand(candidates);question={mode:'country',target:target.iso3,label:target.name,country:target};
+      setQuestion('НАЙДИ СТРАНУ',target.name,'Нажми на её территорию');
+    }else{
+      const groups=groupBy(era.units,unit=>unit.polity);
+      const candidates=[...groups].filter(([,units])=>units.some(unit=>unit.path.length>35));
+      const [polity,units]=rand(candidates);question={mode:'country',target:polity,label:polity,units};
+      setQuestion(`ДЕРЖАВА · ${state.era}`,polity,'Нажми на любую её территорию');
+    }
+    $('#citiesLayer').innerHTML='';
+  }else if(state.mode==='province'){
+    if(state.era===2026){
+      const country=rand(ATLAS_DATA.countries.filter(item=>(provincesByCountry.get(item.iso3)?.length||0)>=2));
+      const target=rand(provincesByCountry.get(country.iso3));question={mode:'province',target:target.id,label:target.name,country};
+      setQuestion(country.name.toUpperCase(),target.name,`Найди ${target.type.toLowerCase()} на карте`);focusCountry(country.iso3,.82);
+    }else{
+      const candidates=era.units.filter(unit=>unit.name!==unit.polity&&unit.path.length>20);
+      const target=rand(candidates.length?candidates:era.units);question={mode:'province',target:target.id,label:target.name,polity:target.polity};
+      setQuestion(target.polity.toUpperCase(),target.name,'Найди владение или историческую область');focusUnit(target.id,.76);
+    }
+    $('#citiesLayer').innerHTML='';
   }else{
-    const candidates=CAPITALS.filter(item=>item.era===state.era&&item.city!==lastTarget);const target=rand(candidates);question={mode,target:target.city,label:cityById(target.city)?.name,polity:target.polity};
-    setQuestion(`Выбери столицу: <em>${escapeHtml(target.polity)}</em>`);
+    if(state.era===2026){
+      const country=rand(ATLAS_DATA.countries.filter(item=>(citiesByCountry.get(item.iso2)?.length||0)>=10));
+      const cities=(citiesByCountry.get(country.iso2)||[]).slice(0,10);const target=rand(cities);
+      question={mode:'city',target:target.id,label:target.name,country,cities};
+      setQuestion(country.name.toUpperCase(),target.name,'Нажми на точку города');renderCities(cities);focusCountry(country.iso3,.78);
+    }else{
+      const ownerKey=state.era===1600?'owner1600':'owner1914';
+      const groups=groupBy(ATLAS_DATA.cities.filter(city=>city[ownerKey]),city=>city[ownerKey]);
+      const candidates=[...groups].filter(([,cities])=>cities.length>=10);
+      const [polity,allCities]=rand(candidates);const cities=allCities.sort((a,b)=>Number(b.capital)-Number(a.capital)||b.pop-a.pop).slice(0,10);const target=rand(cities);
+      question={mode:'city',target:target.id,label:target.name,polity,cities};
+      setQuestion(`${polity.toUpperCase()} · ${state.era}`,target.name,'Нажми на точку города');renderCities(cities);focusHistoricalPolity(polity);
+    }
   }
-  lastTarget=question.target;
-  document.querySelector('#questionCount').textContent=`ТОЧКА ${String(questionNumber).padStart(2,'0')}`;
 }
 
-function setQuestion(html){document.querySelector('#modeLabel').textContent=MODES[state.mode].label.toUpperCase();document.querySelector('#questionText').innerHTML=html;document.querySelector('#hintText').textContent=MODES[state.mode].hint;}
-
-function answerRegion(regionId){
-  if(locked)return;
-  if(question.mode==='city'||question.mode==='capital'){showToast(`${regionById(regionId).name}: нажимай на точку города`);return;}
-  const owner=ownerAt(regionId,state.era);const correct=question.mode==='territory'?owner===question.target:regionId===question.target;
-  const correctIds=question.mode==='territory'?REGIONS.filter(region=>ownerAt(region.id,state.era)===question.target).map(region=>region.id):[question.target];
-  finishAnswer(correct,{clickedRegion:regionId,correctRegions:correctIds,answerLabel:question.mode==='territory'?owner:regionById(regionId).name});
+function setQuestion(kind,text,lead){
+  $('#questionKind').textContent=kind;$('#questionText').textContent=text;$('#questionLead').textContent=lead;
+  $('#questionCount').textContent=`ВОПРОС ${String(state.total+1).padStart(3,'0')}`;updateScore();
 }
 
-function answerCity(cityId){
-  if(locked)return;
-  if(question.mode==='territory'||question.mode==='region'){const city=cityById(cityId);showToast(`${city.name} · ${ownerAt(city.region,state.era)}`);return;}
-  finishAnswer(cityId===question.target,{clickedCity:cityId,correctCity:question.target,answerLabel:cityById(cityId).name});
+function renderCities(cities){
+  $('#citiesLayer').innerHTML=cities.map(city=>`<g class="city interactive" data-city="${city.id}" transform="translate(${city.x} ${city.y})"><circle r="5.2"/><circle class="city-core" r="1.7"/><text x="7" y="-5">${esc(city.name)}</text></g>`).join('');
+  $$('.city').forEach(node=>node.addEventListener('click',mapClick));
 }
 
-function finishAnswer(correct,details){
-  locked=true;
-  const progress=state.progress[state.era]||{correct:0,total:0,best:0};progress.total+=1;
-  if(correct){progress.correct+=1;state.streak+=1;state.bestStreak=Math.max(state.bestStreak,state.streak);progress.best=Math.max(progress.best,state.streak);}else state.streak=0;
-  state.progress[state.era]=progress;saveState();updateStats();playTone(correct);if(navigator.vibrate)navigator.vibrate(correct?18:[28,40,28]);
-  document.querySelectorAll('.region').forEach(node=>{if(details.correctRegions?.includes(node.dataset.region))node.classList.add('correct');else if(details.clickedRegion===node.dataset.region&&!correct)node.classList.add('wrong');if(!correct&&details.correctRegions&&!details.correctRegions.includes(node.dataset.region))node.classList.add('dim');});
-  document.querySelectorAll('.city').forEach(node=>{if(node.dataset.city===details.correctCity)node.classList.add('correct','reveal');else if(node.dataset.city===details.clickedCity&&!correct)node.classList.add('wrong','reveal');});
-  const targetOwner=question.mode==='territory'?question.target:question.mode==='region'?ownerAt(question.target,state.era):question.mode==='city'?ownerAt(cityById(question.target).region,state.era):question.polity;
-  const targetLabel=question.mode==='territory'?question.target:question.mode==='region'?question.label:question.label;
-  showFeedback(correct,targetLabel,details.answerLabel,targetOwner);
+function mapClick(event){
+  event.stopPropagation();if(locked)return;
+  const node=event.currentTarget;let correct=false,answer='';
+  if(question.mode==='city'){
+    const id=node.dataset.city;if(!id){toast('Нужна точка города, а не вся страна');return;}
+    const city=ATLAS_DATA.cities.find(item=>item.id===id);answer=city?.name||'';correct=id===question.target;
+    node.classList.add(correct?'correct':'wrong');const target=$(`[data-city="${question.target}"]`);target?.classList.add('correct','reveal');
+  }else if(state.era===2026&&question.mode==='country'){
+    const iso3=node.dataset.country;const country=countryByIso3.get(iso3);answer=country?.name||'';correct=iso3===question.target;
+    node.classList.add(correct?'correct':'wrong');$(`[data-country="${question.target}"]`)?.classList.add('correct');
+  }else{
+    const id=node.dataset.unit;if(!id){toast('Выбери область внутри карты');return;}
+    const unit=state.era===2026?ATLAS_DATA.provinces.find(item=>item.id===id):ATLAS_DATA.eras[state.era].units.find(item=>item.id===id);
+    answer=question.mode==='country'?unit?.polity:unit?.name;
+    correct=question.mode==='country'?unit?.polity===question.target:id===question.target;
+    node.classList.add(correct?'correct':'wrong');
+    if(question.mode==='country')$$('[data-unit]').filter(el=>{const u=ATLAS_DATA.eras[state.era].units.find(item=>item.id===el.dataset.unit);return u?.polity===question.target;}).forEach(el=>el.classList.add('correct'));
+    else $(`[data-unit="${question.target}"]`)?.classList.add('correct');
+  }
+  finish(correct,answer);
 }
 
-function showFeedback(correct,targetLabel,answerLabel,targetOwner){
-  const box=document.querySelector('#feedback');const card=document.querySelector('#feedbackCard');box.classList.remove('hidden');card.className=`feedback-card ${correct?'success':'error'}`;
-  document.querySelector('#feedbackTitle').textContent=correct?(state.streak>=3?`ТОЧНО · СЕРИЯ ${state.streak}`:'ВЕРНО'):'НЕ ТУДА';
-  const fact=FACTS[targetOwner];
-  document.querySelector('#feedbackText').textContent=correct?(fact||`${targetLabel} отмечено на карте эпохи.`):`Ты выбрал: ${answerLabel}. Правильный ответ — ${targetLabel}.${fact?' '+fact:''}`;
+function finish(correct,answer){
+  locked=true;state.total+=1;if(correct){state.score+=1;state.streak+=1;state.best=Math.max(state.best,state.streak);}else state.streak=0;saveState();updateScore();tone(correct);
+  if(navigator.vibrate)navigator.vibrate(correct?18:[24,40,24]);
+  $('#questionLead').textContent=correct?(state.streak>=3?`ТОЧНО · СЕРИЯ ${state.streak}`:'ВЕРНО'):`НЕ ТУДА · ${answer||'другая область'}`;
+  $('#questionText').textContent=correct?question.label:`Правильно: ${question.label}`;$('#nextButton').classList.remove('hidden');
+  if(correct&&question.country)showCountryLabel(question.country);
 }
 
-function updateStats(){const p=eraProgress();document.querySelector('#scoreStat').textContent=p.total?`${Math.round(p.correct/p.total*100)}%`:'0 / 0';document.querySelector('#streakStat').textContent=state.streak;document.querySelector('.mastery-fill').style.width=`${mastery()}%`;document.querySelector('#masteryText').textContent=`${mastery()}%`;}
+function showCountryLabel(country){
+  const cities=(citiesByCountry.get(country.iso2)||[]).slice(0,10);
+  $('#labelsLayer').innerHTML=`<g class="country-callout" transform="translate(${country.cx} ${country.cy})"><rect x="-68" y="-24" width="136" height="42" rx="2"/><text y="-7">${esc(country.name)}</text><text class="small" y="8">${country.provinces} пров. · ${cities.length} городов</text></g>`;
+}
 
-function showToast(text){const toast=document.querySelector('#mapToast');toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),1500);}
-function toggleSound(){state.sound=!state.sound;saveState();document.querySelectorAll('.sound-state').forEach(node=>node.textContent=state.sound?'♪':'×');const settingsButton=document.querySelector('#settingsSound');if(settingsButton)settingsButton.textContent=state.sound?'ВКЛ':'ВЫКЛ';if(state.sound)playTone(true,420);}
-function playTone(correct,frequency){if(!state.sound)return;try{audioContext ||= new AudioContext();const osc=audioContext.createOscillator();const gain=audioContext.createGain();osc.type=correct?'sine':'triangle';osc.frequency.setValueAtTime(frequency||(correct?520:170),audioContext.currentTime);if(correct)osc.frequency.exponentialRampToValueAtTime((frequency||520)*1.35,audioContext.currentTime+.09);gain.gain.setValueAtTime(.0001,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.055,audioContext.currentTime+.01);gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+.14);osc.connect(gain).connect(audioContext.destination);osc.start();osc.stop(audioContext.currentTime+.15);}catch{}}
+function updateScore(){
+  $('#scoreValue').textContent=state.total?`${Math.round(state.score/state.total*100)}%`:'—';$('#streakValue').textContent=state.streak;
+}
 
-function openSettings(){const total=Object.values(state.progress).reduce((sum,p)=>sum+p.total,0);document.querySelector('#totalProgress').textContent=`${total} ответов · лучшая серия ${state.bestStreak}`;document.querySelector('#settings').classList.remove('hidden');}
-function closeSettings(){document.querySelector('#settings').classList.add('hidden');document.querySelector('#resetProgress').textContent='СБРОСИТЬ ПРОГРЕСС';document.querySelector('#resetProgress').dataset.confirm='';}
-function resetProgress(event){const button=event.currentTarget;if(button.dataset.confirm!=='yes'){button.dataset.confirm='yes';button.textContent='НАЖМИ ЕЩЁ РАЗ ДЛЯ СБРОСА';return;}state.progress={};state.streak=0;state.bestStreak=0;saveState();updateStats();closeSettings();showToast('Прогресс сброшен');}
+function clearMarks(){$$('.correct,.wrong,.reveal').forEach(node=>node.classList.remove('correct','wrong','reveal'));$('#labelsLayer').innerHTML='';}
+function toast(text){const node=$('#mapToast');node.textContent=text;node.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.classList.remove('show'),1700);}
+function toggleSound(){state.sound=!state.sound;saveState();$('#soundButton').textContent=state.sound?'♪':'×';if(state.sound)tone(true,430);}
+function tone(correct,frequency){if(!state.sound)return;try{audio ||= new AudioContext();const osc=audio.createOscillator(),gain=audio.createGain();osc.type=correct?'sine':'triangle';osc.frequency.setValueAtTime(frequency||(correct?510:150),audio.currentTime);if(correct)osc.frequency.exponentialRampToValueAtTime((frequency||510)*1.25,audio.currentTime+.09);gain.gain.setValueAtTime(.0001,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.04,audio.currentTime+.012);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.15);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+.16);}catch{}}
 
-function updateViewBox(){document.querySelector('#worldMap').setAttribute('viewBox',`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);}
-function zoomMap(action,center){
-  if(action==='reset'){viewBox={x:0,y:35,w:1000,h:460};updateViewBox();return;}
-  const factor=action==='in'?.72:1.38;const newW=Math.max(280,Math.min(1000,viewBox.w*factor));const newH=newW*.46;const cx=center?.x??viewBox.x+viewBox.w/2;const cy=center?.y??viewBox.y+viewBox.h/2;viewBox.x=Math.max(0,Math.min(1000-newW,cx-newW/2));viewBox.y=Math.max(35,Math.min(495-newH,cy-newH/2));viewBox.w=newW;viewBox.h=newH;updateViewBox();}
+function searchCountries(event){
+  const input=event.currentTarget;const query=input.value.trim().toLocaleLowerCase('ru');const results=$('#searchResults');
+  if(query.length<2){results.classList.add('hidden');return;}
+  const matches=ATLAS_DATA.countries.filter(country=>country.name.toLocaleLowerCase('ru').includes(query)||country.nameEn.toLowerCase().includes(query)).slice(0,7);
+  results.innerHTML=matches.length?matches.map(country=>`<button data-find="${country.iso3}"><b>${esc(country.name)}</b><span>${country.provinces} провинций · ${country.cities} городов</span></button>`).join(''):'<p>Ничего не нашли</p>';
+  results.classList.remove('hidden');$$('[data-find]',results).forEach(button=>button.addEventListener('click',()=>{const country=countryByIso3.get(button.dataset.find);input.value=country.name;results.classList.add('hidden');if(state.era!==2026)setEra(2026);requestAnimationFrame(()=>{focusCountry(country.iso3,.72);showCountryLabel(country);toast(`${country.name}: ${country.provinces} провинций, ${country.cities} городов`);});}));
+}
+
+function focusCountry(iso3,padding=.8){
+  const node=$(`[data-country="${iso3}"]`);if(!node)return;focusBBox(node.getBBox(),padding);
+}
+function focusUnit(id,padding=.75){const node=$(`[data-unit="${id}"]`);if(node)focusBBox(node.getBBox(),padding);}
+function focusHistoricalPolity(polity){
+  const ids=new Set(ATLAS_DATA.eras[state.era].units.filter(unit=>unit.polity===polity).map(unit=>unit.id));
+  const boxes=$$('[data-unit]').filter(node=>ids.has(node.dataset.unit)).map(node=>node.getBBox());
+  if(!boxes.length)return;const x=Math.min(...boxes.map(box=>box.x)),y=Math.min(...boxes.map(box=>box.y)),right=Math.max(...boxes.map(box=>box.x+box.width)),bottom=Math.max(...boxes.map(box=>box.y+box.height));focusBBox({x,y,width:right-x,height:bottom-y},.78);
+}
+function focusBBox(box,padding){
+  const targetW=Math.min(1000,Math.max(90,box.width/Math.max(.2,padding)*2.1));const targetH=Math.min(500,Math.max(70,box.height/Math.max(.2,padding)*2.1));
+  const ratio=2;view.w=Math.max(targetW,targetH*ratio);view.h=view.w/ratio;view.x=clamp(box.x+box.width/2-view.w/2,0,1000-view.w);view.y=clamp(box.y+box.height/2-view.h/2,0,500-view.h);updateView();
+}
+function zoom(action,center){
+  if(action==='reset'){view={...WORLD};updateView();return;}
+  const factor=action==='in'?.7:1.42;const w=clamp(view.w*factor,75,1000),h=w/2;const cx=center?.x??view.x+view.w/2,cy=center?.y??view.y+view.h/2;view={x:clamp(cx-w/2,0,1000-w),y:clamp(cy-h/2,0,500-h),w,h};updateView();
+}
+function updateView(){$('#worldMap')?.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);}
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+
 function bindMapGestures(){
-  const wrap=document.querySelector('#mapWrap');let lastTap=0;
-  wrap.addEventListener('pointerdown',event=>{if(event.target.closest('.map-tools')||event.target.closest('.city'))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,vx:viewBox.x,vy:viewBox.y,moved:false};wrap.setPointerCapture(event.pointerId);wrap.classList.add('dragging');});
-  wrap.addEventListener('pointermove',event=>{if(!drag||drag.id!==event.pointerId)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>5)drag.moved=true;if(!drag.moved)return;const sx=viewBox.w/wrap.clientWidth,sy=viewBox.h/wrap.clientHeight;viewBox.x=Math.max(0,Math.min(1000-viewBox.w,drag.vx-dx*sx));viewBox.y=Math.max(35,Math.min(495-viewBox.h,drag.vy-dy*sy));updateViewBox();});
-  const end=event=>{if(!drag||drag.id!==event.pointerId)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');if(moved){event.preventDefault();event.stopPropagation();}};
-  wrap.addEventListener('pointerup',end,true);wrap.addEventListener('pointercancel',end,true);
-  wrap.addEventListener('dblclick',event=>{const rect=wrap.getBoundingClientRect();const center={x:viewBox.x+(event.clientX-rect.left)/rect.width*viewBox.w,y:viewBox.y+(event.clientY-rect.top)/rect.height*viewBox.h};zoomMap('in',center);});
-  wrap.addEventListener('touchend',()=>{const now=Date.now();if(now-lastTap<280)zoomMap('in');lastTap=now;},{passive:true});
+  const frame=$('#mapFrame');
+  frame.addEventListener('pointerdown',event=>{if(event.target.closest('.map-controls,.search'))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:view.x,startY:view.y,moved:false};frame.setPointerCapture(event.pointerId);frame.classList.add('dragging');});
+  frame.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>6)drag.moved=true;if(!drag.moved)return;view.x=clamp(drag.startX-dx*view.w/frame.clientWidth,0,1000-view.w);view.y=clamp(drag.startY-dy*view.h/frame.clientHeight,0,500-view.h);updateView();});
+  const end=event=>{if(!drag||event.pointerId!==drag.id)return;const moved=drag.moved;drag=null;frame.classList.remove('dragging');if(moved){event.preventDefault();event.stopPropagation();}};
+  frame.addEventListener('pointerup',end,true);frame.addEventListener('pointercancel',end,true);
+  frame.addEventListener('dblclick',event=>{const rect=frame.getBoundingClientRect();zoom('in',{x:view.x+(event.clientX-rect.left)/rect.width*view.w,y:view.y+(event.clientY-rect.top)/rect.height*view.h});});
 }
 
-createWorkshopMode({appName:'ХРОНОАТЛАС',version:'1.0.0',cachePrefix:'chronatlas-',storageNamespace:'pocket-works:chronatlas',onReset(){localStorage.removeItem(STORAGE_KEY);state={...defaults};renderShell();}});
-window.addEventListener('appdatareset',()=>{localStorage.removeItem(STORAGE_KEY);state={...defaults};renderShell();});
+function paperFlip(){const frame=$('#mapFrame');frame.classList.remove('turning');void frame.offsetWidth;frame.classList.add('turning');}
 
-setTimeout(renderShell,420);
+createWorkshopMode({appName:'ХРОНОАТЛАС',version:'2.0.0',cachePrefix:'chronatlas-',storageNamespace:'pocket-works:chronatlas',onReset(){localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();}});
+window.addEventListener('appdatareset',()=>{localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();});
+
+renderShell();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
