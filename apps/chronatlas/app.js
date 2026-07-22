@@ -88,7 +88,7 @@ function renderOnboarding(){
   const layer=REGIONS.map((region,i)=>`<polygon points="${region.points}" fill="${Object.values(POLITY_COLORS)[i%18]}" stroke="#233f46" stroke-width="2"/>`).join('');
   app.insertAdjacentHTML('beforeend',`<section class="onboarding" id="onboarding">
     <div class="onboard-map"><svg viewBox="0 35 1000 460" aria-hidden="true"><g opacity=".82">${layer}</g><path class="route-line" d="M145 230 C310 80 485 300 610 210 S820 120 925 200"/></svg></div>
-    <div class="onboard-copy"><span class="eyebrow">ПОЛИТИЧЕСКАЯ ГЕОГРАФИЯ · 2500 ЛЕТ</span><h1>Мир меняет<span>границы.</span></h1><p>Не угадывай ответы в списке. Ищи державы, регионы и города там, где они действительно находились — на карте.</p><div class="onboard-actions"><button class="start" id="startButton" data-native-press>РАЗВЕРНУТЬ АТЛАС</button><a href="../../" data-app-control>В Pocket Works</a></div><div class="mini-legend">8 ЭПОХ · 44 РЕГИОНА · 74 ГОРОДА · ОФЛАЙН</div></div></section>`);
+    <div class="onboard-copy"><span class="eyebrow">ПОЛИТИЧЕСКАЯ ГЕОГРАФИЯ · 2500 ЛЕТ</span><h1>Мир меняет<span>границы.</span></h1><p>Не угадывай ответы в списке. Ищи державы, регионы и города там, где они действительно находились — на карте.</p><div class="onboard-actions"><button class="start" id="startButton" data-native-press>РАЗВЕРНУТЬ АТЛАС</button><a href="../../" data-app-control>В Pocket Works</a></div><div class="mini-legend">8 ЭПОХ · 44 РЕГИОНА · 73 ГОРОДА · ОФЛАЙН</div></div></section>`);
   document.querySelector('#startButton').addEventListener('click',()=>{state.visited=true;saveState();playTone(true);document.querySelector('#onboarding').remove();nextQuestion();});
 }
 
