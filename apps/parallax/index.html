@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#eee9dc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ПАРАЛЛАКС">
+  <title>ПАРАЛЛАКС</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="game-2d" data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="instrument" id="instrument" data-gesture-surface data-touch-action="none" aria-label="Игровое поле ПАРАЛЛАКС">
+      <canvas id="game-canvas" aria-label="Двухслойное игровое поле"></canvas>
+      <div class="paper-grain" aria-hidden="true"></div>
+
+      <header class="topbar" data-ui>
+        <a class="back-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+        <button class="level-button" id="level-button" type="button" data-native-press aria-label="Открыть выбор уровней">
+          <span id="chapter-label">I · СДВИГ</span>
+          <strong id="level-label">01 / 18</strong>
+        </button>
+        <button class="icon-button" id="menu-button" type="button" data-native-press aria-label="Открыть настройки">•••</button>
+      </header>
+
+      <aside class="objective" id="objective" data-ui aria-live="polite">
+        <span class="objective-dot" aria-hidden="true"></span>
+        <span id="objective-copy">Собери фрагмент и войди в апертуру</span>
+      </aside>
+
+      <div class="toast" id="toast" data-ui aria-live="polite" hidden></div>
+
+      <footer class="control-deck" data-ui>
+        <div class="move-actions">
+          <button class="text-button" id="undo-button" type="button" data-native-press>НАЗАД</button>
+          <button class="text-button" id="reset-button" type="button" data-native-press>СБРОС</button>
+          <button class="text-button" id="hint-button" type="button" data-native-press>НАМЁК</button>
+        </div>
+        <div class="dpad" aria-label="Управление искрой">
+          <button type="button" data-dir="up" data-native-press aria-label="Двигаться вверх">↑</button>
+          <button type="button" data-dir="left" data-native-press aria-label="Двигаться влево">←</button>
+          <span class="dpad-core" aria-hidden="true"></span>
+          <button type="button" data-dir="right" data-native-press aria-label="Двигаться вправо">→</button>
+          <button type="button" data-dir="down" data-native-press aria-label="Двигаться вниз">↓</button>
+        </div>
+        <div class="move-counter" aria-live="polite">
+          <span>ХОДЫ</span>
+          <strong id="move-label">00</strong>
+          <small id="par-label">ПАР 04</small>
+        </div>
+      </footer>
+
+      <section class="screen home-screen" id="home-screen" data-ui>
+        <div class="home-mark" aria-hidden="true">
+          <span class="home-orbit home-orbit--a"></span>
+          <span class="home-orbit home-orbit--b"></span>
+          <span class="home-lens"></span>
+          <span class="home-spark"></span>
+        </div>
+        <p class="eyebrow">ОПТИЧЕСКАЯ ЛОГИКА / POCKET WORKS</p>
+        <h1>ПАРАЛЛАКС</h1>
+        <p class="home-copy">Две реальности наложены друг на друга. Таскай линзу, меняй локальные стены и запускай искру свайпом. Геометрия врёт, но хотя бы последовательно.</p>
+        <div class="home-actions">
+          <button class="primary-button" id="continue-button" type="button" data-native-press>НАЧАТЬ НАБЛЮДЕНИЕ</button>
+          <button class="secondary-button" id="home-levels-button" type="button" data-native-press>ВЫБРАТЬ УРОВЕНЬ</button>
+        </div>
+        <div class="home-foot">
+          <span id="progress-label">0 / 18 завершено</span>
+          <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        </div>
+      </section>
+
+      <section class="screen modal-screen" id="levels-screen" data-ui hidden>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">КАРТА НАБЛЮДЕНИЙ</p>
+            <h2>Уровни</h2>
+          </div>
+          <button class="close-button" type="button" data-close="levels-screen" data-native-press aria-label="Закрыть">×</button>
+        </div>
+        <div class="level-grid" id="level-grid"></div>
+      </section>
+
+      <section class="screen modal-screen settings-screen" id="settings-screen" data-ui hidden>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">КАЛИБРОВКА</p>
+            <h2>Настройки</h2>
+          </div>
+          <button class="close-button" type="button" data-close="settings-screen" data-native-press aria-label="Закрыть">×</button>
+        </div>
+        <div class="setting-row">
+          <div><strong>Звук</strong><span>Короткие синтетические сигналы</span></div>
+          <button class="toggle" id="sound-toggle" type="button" data-native-press aria-pressed="true"><span></span></button>
+        </div>
+        <div class="setting-row">
+          <div><strong>Вибрация</strong><span>Удары, ошибки и фиксация линзы</span></div>
+          <button class="toggle" id="haptics-toggle" type="button" data-native-press aria-pressed="true"><span></span></button>
+        </div>
+        <div class="legend">
+          <h3>Как читать поле</h3>
+          <p><i class="legend-chip legend-chip--blue"></i> Синяя реальность работает снаружи линзы.</p>
+          <p><i class="legend-chip legend-chip--coral"></i> Коралловая реальность работает внутри линзы.</p>
+          <p><i class="legend-chip legend-chip--mirror"></i> Зеркала меняют направление скольжения.</p>
+        </div>
+        <button class="danger-button" id="wipe-button" type="button" data-native-press>СБРОСИТЬ ВЕСЬ ПРОГРЕСС</button>
+      </section>
+
+      <section class="screen complete-screen" id="complete-screen" data-ui hidden>
+        <div class="complete-glyph" aria-hidden="true"><span></span></div>
+        <p class="eyebrow">КОНТУР СВЁЛСЯ</p>
+        <h2 id="complete-title">Наблюдение завершено</h2>
+        <div class="result-line">
+          <div><span>ХОДЫ</span><strong id="result-moves">04</strong></div>
+          <div><span>ПАР</span><strong id="result-par">04</strong></div>
+          <div><span>ТОЧНОСТЬ</span><strong id="result-grade">A</strong></div>
+        </div>
+        <p id="complete-copy">Реальности временно согласились друг с другом.</p>
+        <button class="primary-button" id="next-button" type="button" data-native-press>СЛЕДУЮЩИЙ УРОВЕНЬ</button>
+        <button class="secondary-button" id="replay-button" type="button" data-native-press>ПОВТОРИТЬ</button>
+      </section>
+
+      <div class="fatal-error" id="fatal-error" data-ui hidden>
+        <p>ОПТИКА РАЗБИТА</p>
+        <strong>Canvas недоступен</strong>
+        <span>Открой приложение в современном браузере.</span>
+        <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПАРАЛЛАКС"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
