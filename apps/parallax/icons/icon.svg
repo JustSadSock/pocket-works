@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ПАРАЛЛАКС">
+  <rect width="512" height="512" rx="92" fill="#eee9dc"/>
+  <path d="M84 116h344v280H84z" fill="none" stroke="#182327" stroke-width="18"/>
+  <path d="M120 156h104v104H120zM288 252h104v104H288z" fill="#196c83"/>
+  <path d="M288 156h104v104H288zM120 252h104v104H120z" fill="#df5f4f"/>
+  <circle cx="256" cy="256" r="132" fill="#eee9dc" fill-opacity=".22" stroke="#182327" stroke-width="18"/>
+  <circle cx="246" cy="256" r="34" fill="#196c83"/>
+  <circle cx="266" cy="256" r="34" fill="#df5f4f"/>
+  <circle cx="256" cy="256" r="22" fill="#eee9dc" stroke="#182327" stroke-width="12"/>
+  <path d="M256 102v28M256 382v28M102 256h28M382 256h28" stroke="#182327" stroke-width="14" stroke-linecap="square"/>
+</svg>
