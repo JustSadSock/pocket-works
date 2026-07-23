@@ -18,6 +18,7 @@ function loadClassic(source) {
 
 try {
   await loadClassic('./game-core.js');
+  await loadClassic('./game-navigation.js');
   await loadClassic('./game-runtime.js');
 } catch (error) {
   console.error(error);
