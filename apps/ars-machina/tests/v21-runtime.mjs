@@ -16,11 +16,11 @@ const cachedParts = [...sw.matchAll(/\.\/engine\/(part-[^']+\.txt)/g)].map((matc
 assert.deepEqual(cachedParts, loadedParts, 'loader and offline cache must contain the same ordered engine parts');
 assert.equal(new Set(loadedParts).size, loadedParts.length, 'engine modules must not be loaded twice');
 assert.ok(loadedParts.indexOf('part-21e.txt') < loadedParts.indexOf('part-22.txt'), '2.1 post-repair verification must run before later UX layers');
-assert.match(app, /APP_VERSION = '2\.2\.0'/);
-assert.match(sw, /APP_VERSION = '2\.2\.0'/);
-assert.match(html, /data-app-version="2\.2\.0"/);
-assert.equal(config.version, '2.2.0');
-assert.equal(config.cacheName, 'ars-machina-v2.2.0-p1');
+assert.match(app, /APP_VERSION = '2\.2\.1'/);
+assert.match(sw, /APP_VERSION = '2\.2\.1'/);
+assert.match(html, /data-app-version="2\.2\.1"/);
+assert.equal(config.version, '2.2.1');
+assert.equal(config.cacheName, 'ars-machina-v2.2.1-p1');
 assert.match(finalRuntime, /enterFinalVerifiedRunV21/);
 assert.match(finalRuntime, /dataset\.arsMachinaVersion = '2\.1\.0'/);
 assert.match(finalRuntime, /updateFinalVisionUiV21/);

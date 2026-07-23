@@ -1,5 +1,5 @@
 // ARS MACHINA 2.2 — construction grammar, contextual tools, guided learning and test lab.
-document.documentElement.dataset.arsMachinaVersion = '2.2.0';
+document.documentElement.dataset.arsMachinaVersion = '2.2.1';
 
 const UX_KEY_V22 = 'pocket-works:ars-machina:ux-v22';
 const GUIDE_KEY_V22 = 'pocket-works:ars-machina:force-path-v22';

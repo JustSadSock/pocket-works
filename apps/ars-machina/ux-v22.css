@@ -1,10 +1,22 @@
 /* ARS MACHINA 2.2 — readable construction language and test controls. */
+.app-shell,
+.topbar,
+.yard,
+.build-dock {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
 .build-dock {
   position: relative;
+  overflow: hidden;
   transition: transform .22s ease;
 }
 
 .parts-drawer-bar-v22 {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 6px;
@@ -81,6 +93,9 @@
 .build-dock:not(.drawer-collapsed-v22) .parts-drawer-toggle-v22::before { content: "▾"; }
 
 #toolRail.tool-rail-v22 {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   display: flex;
   gap: 7px;
   overflow-x: auto;
@@ -308,6 +323,22 @@
 
 @media (max-width: 680px) {
   .parts-drawer-bar-v22 { grid-template-columns: auto minmax(0, 1fr) 42px 42px; }
+  .dock-head,
+  .category-tabs {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .category-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+  }
+  .category {
+    min-width: 0;
+    width: auto;
+    padding-inline: 2px;
+  }
   .guide-toggle-v22 { width: 42px; min-width: 42px; font-size: 0 !important; }
   .guide-toggle-v22::before { content: "?"; font-size: 15px; }
   .parts-drawer-toggle-v22 { min-width: 62px; font-size: 0 !important; }

@@ -14,11 +14,11 @@ const config = JSON.parse(configText);
 
 assert.match(app, /'\.\/engine\/part-22\.txt'/, '2.2 runtime layer must load');
 assert.match(app, /'\.\/ux-v22\.css'/, '2.2 styles must load');
-assert.match(app, /APP_VERSION = '2\.2\.0'/, 'assembled runtime must receive the 2.2 version');
-assert.match(index, /data-app-version="2\.2\.0"/);
-assert.equal(config.version, '2.2.0');
-assert.equal(config.cacheName, 'ars-machina-v2.2.0-p1');
-assert.match(sw, /const APP_VERSION = '2\.2\.0'/);
+assert.match(app, /APP_VERSION = '2\.2\.1'/, 'assembled runtime must receive the 2.2.1 version');
+assert.match(index, /data-app-version="2\.2\.1"/);
+assert.equal(config.version, '2.2.1');
+assert.equal(config.cacheName, 'ars-machina-v2.2.1-p1');
+assert.match(sw, /const APP_VERSION = '2\.2\.1'/);
 assert.match(sw, /'\.\/engine\/part-22\.txt'/);
 assert.match(sw, /'\.\/ux-v22\.css'/);
 
@@ -41,6 +41,9 @@ assert.match(ux, /VISION_LAYERS_V22/, 'diagnostics must expose independent layer
 
 assert.match(css, /\.context-tools-v22/);
 assert.match(css, /\.run-lab-v22/);
+assert.match(css, /\.app-shell,[\s\S]*?min-width:\s*0/, 'shell grid children must be allowed to shrink to the viewport');
+assert.match(css, /\.build-dock\s*\{[\s\S]*?overflow:\s*hidden/, 'the parts dock must not widen the page');
+assert.match(css, /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/, 'all five mobile categories must fit the viewport');
 assert.match(css, /prefers-reduced-motion/);
 
 console.log('ARS MACHINA 2.2 UX tests passed');
