@@ -12,7 +12,11 @@ let state=loadState();
 let question=null;
 let locked=false;
 let view={...WORLD};
-let drag=null;
+const pointers=new Map();
+const historicalCityCache=new Map();
+const parsedPathCache=new Map();
+let gesture=null;
+let suppressClickUntil=0;
 let audio=null;
 let toastTimer=0;
 
@@ -26,6 +30,15 @@ const countryByIso3=new Map(ATLAS_DATA.countries.map(country=>[country.iso3,coun
 const countryByIso2=new Map(ATLAS_DATA.countries.map(country=>[country.iso2,country]));
 const provincesByCountry=groupBy(ATLAS_DATA.provinces,province=>province.iso3);
 const citiesByCountry=groupBy(ATLAS_DATA.cities,city=>city.iso2);
+const LOCAL_NAMES={
+  'France':'Франция','French Empire':'Французская империя','British Empire':'Британская империя',
+  'Russian Empire':'Российская империя','German Empire':'Германская империя',
+  'Ottoman Empire':'Османская империя','Holy Roman Empire':'Священная Римская империя',
+  'Spanish Empire':'Испанская империя','Portuguese Empire':'Португальская империя',
+  'Mughal Empire':'Империя Великих Моголов','Ming Chinese Empire':'Империя Мин',
+  'Empire of Japan':'Японская империя','United States':'США','Italy':'Италия',
+  'Spain':'Испания','Belgium':'Бельгия','Switzerland':'Швейцария'
+};
 
 function loadState(){try{return {...DEFAULTS,...JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')};}catch{return {...DEFAULTS};}}
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
@@ -72,7 +85,8 @@ function renderShell(){
             </svg>
             <div class="compass" aria-hidden="true"><b>С</b><i></i></div>
             <div class="map-scale" aria-hidden="true"><i></i><span>НАТУРАЛЬНАЯ ПРОЕКЦИЯ ЗЕМЛИ</span></div>
-            <div class="map-controls" data-ui><button data-zoom="in" data-native-press>＋</button><button data-zoom="out" data-native-press>−</button><button data-zoom="reset" data-native-press>⌂</button></div>
+            <div class="gesture-hint" data-ui>ДВИГАЙ · МАСШТАБИРУЙ ДВУМЯ ПАЛЬЦАМИ</div>
+            <div class="map-controls" data-ui><button data-zoom="in" data-native-press aria-label="Приблизить">＋</button><button data-zoom="out" data-native-press aria-label="Отдалить">−</button><button data-zoom="reset" data-native-press aria-label="Показать весь мир">⌂</button></div>
             <div class="map-toast" id="mapToast"></div>
           </div>
 
@@ -122,13 +136,19 @@ function setEra(year,ask=true){
   state.era=year;saveState();view={...WORLD};updateView();
   $$('[data-era]').forEach(button=>button.classList.toggle('active',Number(button.dataset.era)===year));
   const era=ATLAS_DATA.eras[year];$('#eraTitle').textContent=year;$('#eraNote').textContent=era.note;
-  renderMap();if(ask)paperFlip();nextQuestion();
+  updateModeLabels();renderMap();if(ask)paperFlip();nextQuestion();
 }
 
 function setMode(mode){
   state.mode=mode;saveState();locked=false;
+  view={...WORLD};updateView();
   $$('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===mode));
   renderMap();nextQuestion();
+}
+
+function updateModeLabels(){
+  const provinceButton=$('[data-mode="province"]');
+  if(provinceButton)provinceButton.textContent=state.era===2026?'ПРОВИНЦИИ':'ОБЛАСТИ';
 }
 
 function renderMap(){
@@ -143,6 +163,7 @@ function renderMap(){
   $('#citiesLayer').innerHTML='';$('#labelsLayer').innerHTML='';
   $$('.interactive').forEach(node=>node.addEventListener('click',mapClick));
   $$('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===state.mode));
+  if(!modern)renderHistoricalLabels();
 }
 
 function nextQuestion(){
@@ -155,9 +176,9 @@ function nextQuestion(){
       setQuestion('НАЙДИ СТРАНУ',target.name,'Нажми на её территорию');
     }else{
       const groups=groupBy(era.units,unit=>unit.polity);
-      const candidates=[...groups].filter(([,units])=>units.some(unit=>unit.path.length>35));
-      const [polity,units]=rand(candidates);question={mode:'country',target:polity,label:polity,units};
-      setQuestion(`ДЕРЖАВА · ${state.era}`,polity,'Нажми на любую её территорию');
+      const candidates=[...groups].filter(([polity,units])=>isNamed(polity)&&units.some(unit=>unit.path.length>35));
+      const [polity,units]=rand(candidates);question={mode:'country',target:polity,label:displayName(polity),units};
+      setQuestion(`ДЕРЖАВА · ${state.era}`,displayName(polity),'Нажми на любую её территорию');
     }
     $('#citiesLayer').innerHTML='';
   }else if(state.mode==='province'){
@@ -166,9 +187,9 @@ function nextQuestion(){
       const target=rand(provincesByCountry.get(country.iso3));question={mode:'province',target:target.id,label:target.name,country};
       setQuestion(country.name.toUpperCase(),target.name,`Найди ${target.type.toLowerCase()} на карте`);focusCountry(country.iso3,.82);
     }else{
-      const candidates=era.units.filter(unit=>unit.name!==unit.polity&&unit.path.length>20);
-      const target=rand(candidates.length?candidates:era.units);question={mode:'province',target:target.id,label:target.name,polity:target.polity};
-      setQuestion(target.polity.toUpperCase(),target.name,'Найди владение или историческую область');focusUnit(target.id,.76);
+      const candidates=era.units.filter(unit=>isNamed(unit.name)&&isNamed(unit.polity)&&unit.name!==unit.polity&&unit.path.length>20);
+      const target=rand(candidates.length?candidates:era.units);question={mode:'province',target:target.id,label:displayName(target.name),polity:target.polity};
+      setQuestion(displayName(target.polity).toUpperCase(),displayName(target.name),'Найди владение или историческую область');focusUnit(target.id,.76);
     }
     $('#citiesLayer').innerHTML='';
   }else{
@@ -178,12 +199,20 @@ function nextQuestion(){
       question={mode:'city',target:target.id,label:target.name,country,cities};
       setQuestion(country.name.toUpperCase(),target.name,'Нажми на точку города');renderCities(cities);focusCountry(country.iso3,.78);
     }else{
-      const ownerKey=state.era===1600?'owner1600':'owner1914';
-      const groups=groupBy(ATLAS_DATA.cities.filter(city=>city[ownerKey]),city=>city[ownerKey]);
-      const candidates=[...groups].filter(([,cities])=>cities.length>=10);
-      const [polity,allCities]=rand(candidates);const cities=allCities.sort((a,b)=>Number(b.capital)-Number(a.capital)||b.pop-a.pop).slice(0,10);const target=rand(cities);
+      const groups=groupBy(era.units.filter(unit=>isNamed(unit.polity)),unit=>unit.polity);
+      const likely=[...groups].filter(([,units])=>units.some(unit=>unit.path.length>120));
+      let choice=null;
+      for(const entry of shuffle(likely)){
+        const cities=citiesForHistoricalPolity(entry[0],entry[1]);
+        if(cities.length>=4){choice=[entry[0],cities];break;}
+      }
+      if(!choice){
+        state.mode='country';saveState();updateModeLabels();renderMap();toast('Для этой карты доступны державы и области');nextQuestion();return;
+      }
+      const [polity,allCities]=choice;
+      const cities=[...allCities].sort((a,b)=>Number(b.capital)-Number(a.capital)||b.pop-a.pop).slice(0,10);const target=rand(cities);
       question={mode:'city',target:target.id,label:target.name,polity,cities};
-      setQuestion(`${polity.toUpperCase()} · ${state.era}`,target.name,'Нажми на точку города');renderCities(cities);focusHistoricalPolity(polity);
+      setQuestion(`${displayName(polity).toUpperCase()} · ${state.era}`,target.name,'Нажми на точку города');renderCities(cities);focusHistoricalPolity(polity);
     }
   }
 }
@@ -194,8 +223,18 @@ function setQuestion(kind,text,lead){
 }
 
 function renderCities(cities){
-  $('#citiesLayer').innerHTML=cities.map(city=>`<g class="city interactive" data-city="${city.id}" transform="translate(${city.x} ${city.y})"><circle r="5.2"/><circle class="city-core" r="1.7"/><text x="7" y="-5">${esc(city.name)}</text></g>`).join('');
+  $('#citiesLayer').innerHTML=cities.map(city=>`<g class="city interactive" data-city="${city.id}" transform="translate(${city.x} ${city.y})"><circle class="city-hit" r="12"/><circle r="5.2"/><circle class="city-core" r="1.7"/><text x="7" y="-5">${esc(city.name)}</text></g>`).join('');
   $$('.city').forEach(node=>node.addEventListener('click',mapClick));
+}
+
+function renderHistoricalLabels(){
+  const groups=groupBy(ATLAS_DATA.eras[state.era].units.filter(unit=>isNamed(unit.polity)),unit=>unit.polity);
+  const labels=[...groups].map(([polity,units])=>{
+    const anchor=[...units].sort((a,b)=>b.path.length-a.path.length)[0];
+    return {polity,anchor,size:units.reduce((sum,unit)=>sum+unit.path.length,0)};
+  }).filter(item=>item.anchor.path.length>180||item.size>520)
+    .sort((a,b)=>Number(b.polity==='France')-Number(a.polity==='France')||b.size-a.size).slice(0,34);
+  $('#labelsLayer').innerHTML=labels.map(({polity,anchor})=>`<text class="historical-label" x="${anchor.cx}" y="${anchor.cy}">${esc(displayName(polity))}</text>`).join('');
 }
 
 function mapClick(event){
@@ -237,7 +276,10 @@ function updateScore(){
   $('#scoreValue').textContent=state.total?`${Math.round(state.score/state.total*100)}%`:'—';$('#streakValue').textContent=state.streak;
 }
 
-function clearMarks(){$$('.correct,.wrong,.reveal').forEach(node=>node.classList.remove('correct','wrong','reveal'));$('#labelsLayer').innerHTML='';}
+function clearMarks(){
+  $$('.correct,.wrong,.reveal').forEach(node=>node.classList.remove('correct','wrong','reveal'));
+  if(state.era===2026)$('#labelsLayer').innerHTML='';else renderHistoricalLabels();
+}
 function toast(text){const node=$('#mapToast');node.textContent=text;node.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.classList.remove('show'),1700);}
 function toggleSound(){state.sound=!state.sound;saveState();$('#soundButton').textContent=state.sound?'♪':'×';if(state.sound)tone(true,430);}
 function tone(correct,frequency){if(!state.sound)return;try{audio ||= new AudioContext();const osc=audio.createOscillator(),gain=audio.createGain();osc.type=correct?'sine':'triangle';osc.frequency.setValueAtTime(frequency||(correct?510:150),audio.currentTime);if(correct)osc.frequency.exponentialRampToValueAtTime((frequency||510)*1.25,audio.currentTime+.09);gain.gain.setValueAtTime(.0001,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.04,audio.currentTime+.012);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.15);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+.16);}catch{}}
@@ -272,16 +314,91 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
 function bindMapGestures(){
   const frame=$('#mapFrame');
-  frame.addEventListener('pointerdown',event=>{if(event.target.closest('.map-controls,.search'))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,startX:view.x,startY:view.y,moved:false};frame.setPointerCapture(event.pointerId);frame.classList.add('dragging');});
-  frame.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>6)drag.moved=true;if(!drag.moved)return;view.x=clamp(drag.startX-dx*view.w/frame.clientWidth,0,1000-view.w);view.y=clamp(drag.startY-dy*view.h/frame.clientHeight,0,500-view.h);updateView();});
-  const end=event=>{if(!drag||event.pointerId!==drag.id)return;const moved=drag.moved;drag=null;frame.classList.remove('dragging');if(moved){event.preventDefault();event.stopPropagation();}};
-  frame.addEventListener('pointerup',end,true);frame.addEventListener('pointercancel',end,true);
+  const point=event=>({x:event.clientX,y:event.clientY});
+  const begin=()=>{
+    const active=[...pointers.values()];
+    if(active.length===1){
+      gesture={kind:'pan',startView:{...view},start:{...active[0]},moved:false};
+    }else if(active.length>=2){
+      const [a,b]=active;const center={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      const rect=frame.getBoundingClientRect();
+      gesture={kind:'pinch',startView:{...view},distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),center,
+        world:{x:view.x+(center.x-rect.left)/rect.width*view.w,y:view.y+(center.y-rect.top)/rect.height*view.h},moved:true};
+      frame.classList.add('pinching');
+    }
+  };
+  frame.addEventListener('pointerdown',event=>{
+    if(event.target.closest('.map-controls,.search'))return;
+    pointers.set(event.pointerId,point(event));frame.setPointerCapture?.(event.pointerId);begin();frame.classList.add('dragging');
+  });
+  frame.addEventListener('pointermove',event=>{
+    if(!pointers.has(event.pointerId))return;
+    pointers.set(event.pointerId,point(event));
+    const active=[...pointers.values()];
+    if(active.length>=2){
+      if(gesture?.kind!=='pinch')begin();
+      const [a,b]=active;const distance=Math.max(1,Math.hypot(a.x-b.x,a.y-b.y));
+      const center={x:(a.x+b.x)/2,y:(a.y+b.y)/2};const rect=frame.getBoundingClientRect();
+      const w=clamp(gesture.startView.w*gesture.distance/distance,55,1000),h=w/2;
+      view={x:clamp(gesture.world.x-(center.x-rect.left)/rect.width*w,0,1000-w),y:clamp(gesture.world.y-(center.y-rect.top)/rect.height*h,0,500-h),w,h};
+      updateView();return;
+    }
+    if(!gesture||gesture.kind!=='pan'||!active.length)return;
+    const current=active[0],dx=current.x-gesture.start.x,dy=current.y-gesture.start.y;
+    if(Math.hypot(dx,dy)>7)gesture.moved=true;if(!gesture.moved)return;
+    view.x=clamp(gesture.startView.x-dx*gesture.startView.w/frame.clientWidth,0,1000-view.w);
+    view.y=clamp(gesture.startView.y-dy*gesture.startView.h/frame.clientHeight,0,500-view.h);updateView();
+  });
+  const end=event=>{
+    if(!pointers.has(event.pointerId))return;
+    const moved=gesture?.moved||gesture?.kind==='pinch';
+    pointers.delete(event.pointerId);
+    if(moved)suppressClickUntil=performance.now()+260;
+    frame.classList.remove('pinching');
+    if(pointers.size)begin();else{gesture=null;frame.classList.remove('dragging');}
+  };
+  frame.addEventListener('pointerup',end);frame.addEventListener('pointercancel',end);frame.addEventListener('lostpointercapture',end);
+  frame.addEventListener('click',event=>{if(performance.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},true);
   frame.addEventListener('dblclick',event=>{const rect=frame.getBoundingClientRect();zoom('in',{x:view.x+(event.clientX-rect.left)/rect.width*view.w,y:view.y+(event.clientY-rect.top)/rect.height*view.h});});
 }
 
+function citiesForHistoricalPolity(polity,units){
+  const key=`${state.era}:${polity}`;if(historicalCityCache.has(key))return historicalCityCache.get(key);
+  const shapes=units.flatMap(unit=>parsePath(unit.path));
+  const cities=ATLAS_DATA.cities.filter(city=>shapes.some(shape=>pointInShape(city.x,city.y,shape)));
+  historicalCityCache.set(key,cities);return cities;
+}
+
+function parsePath(path){
+  if(parsedPathCache.has(path))return parsedPathCache.get(path);
+  const tokens=path.match(/[MLZ]|-?\d+(?:\.\d+)?/gi)||[],shapes=[];let shape=null;
+  for(let i=0;i<tokens.length;){
+    const token=tokens[i++];
+    if(token==='M'||token==='L'){
+      const x=Number(tokens[i++]),y=Number(tokens[i++]);
+      if(token==='M'){shape=[];shapes.push(shape);}shape?.push({x,y});
+    }
+  }
+  parsedPathCache.set(path,shapes);return shapes;
+}
+
+function pointInShape(x,y,shape){
+  if(shape.length<3)return false;
+  let inside=false;
+  for(let i=0,j=shape.length-1;i<shape.length;j=i++){
+    const a=shape[i],b=shape[j];
+    if(((a.y>y)!==(b.y>y))&&(x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x))inside=!inside;
+  }
+  return inside;
+}
+
+function displayName(name){return LOCAL_NAMES[name]||name;}
+function isNamed(name){return Boolean(name&&name!=='Без названия'&&name!=='Unnamed');}
+function shuffle(items){return [...items].sort(()=>Math.random()-.5);}
+
 function paperFlip(){const frame=$('#mapFrame');frame.classList.remove('turning');void frame.offsetWidth;frame.classList.add('turning');}
 
-createWorkshopMode({appName:'ХРОНОАТЛАС',version:'2.0.0',cachePrefix:'chronatlas-',storageNamespace:'pocket-works:chronatlas',onReset(){localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();}});
+createWorkshopMode({appName:'ХРОНОАТЛАС',version:'2.1.0',cachePrefix:'chronatlas-',storageNamespace:'pocket-works:chronatlas',onReset(){localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();}});
 window.addEventListener('appdatareset',()=>{localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();});
 
 renderShell();
