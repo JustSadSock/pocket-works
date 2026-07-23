@@ -15,14 +15,14 @@ const loadedParts = [...app.matchAll(/\.\/engine\/(part-[^']+\.txt)/g)].map((mat
 const cachedParts = [...sw.matchAll(/\.\/engine\/(part-[^']+\.txt)/g)].map((match) => match[1]);
 assert.deepEqual(cachedParts, loadedParts, 'loader and offline cache must contain the same ordered engine parts');
 assert.equal(new Set(loadedParts).size, loadedParts.length, 'engine modules must not be loaded twice');
-assert.equal(loadedParts.at(-1), 'part-21e.txt', 'final post-repair verification must run last');
-assert.match(app, /APP_VERSION = '2\.1\.0'/);
-assert.match(sw, /APP_VERSION = '2\.1\.0'/);
-assert.match(html, /data-app-version="2\.1\.0"/);
-assert.equal(config.version, '2.1.0');
-assert.equal(config.cacheName, 'ars-machina-v2.1.0-p7');
+assert.ok(loadedParts.indexOf('part-21e.txt') < loadedParts.indexOf('part-22.txt'), '2.1 post-repair verification must run before later UX layers');
+assert.match(app, /APP_VERSION = '2\.2\.0'/);
+assert.match(sw, /APP_VERSION = '2\.2\.0'/);
+assert.match(html, /data-app-version="2\.2\.0"/);
+assert.equal(config.version, '2.2.0');
+assert.equal(config.cacheName, 'ars-machina-v2.2.0-p1');
 assert.match(finalRuntime, /enterFinalVerifiedRunV21/);
 assert.match(finalRuntime, /dataset\.arsMachinaVersion = '2\.1\.0'/);
 assert.match(finalRuntime, /updateFinalVisionUiV21/);
 
-console.log(`ARS MACHINA 2.1 runtime parity passed: ${loadedParts.length} engine modules`);
+console.log(`ARS MACHINA 2.1 compatibility parity passed inside 2.2: ${loadedParts.length} engine modules`);
