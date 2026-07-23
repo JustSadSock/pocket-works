@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ПЕТЛЯ">
+  <rect width="512" height="512" rx="92" fill="#efe6d2"/>
+  <path d="M104 256a152 152 0 1 1 46 109" fill="none" stroke="#18313a" stroke-width="42" stroke-linecap="square"/>
+  <path d="M104 256a152 152 0 0 1 238-125" fill="none" stroke="#cf644f" stroke-width="42" stroke-dasharray="42 28" stroke-linecap="round"/>
+  <path d="M148 365 78 360l28-64" fill="#cf644f" stroke="#18313a" stroke-width="16" stroke-linejoin="miter"/>
+  <circle cx="256" cy="256" r="68" fill="#18313a"/>
+  <circle cx="256" cy="256" r="36" fill="#efe6d2"/>
+  <path d="M256 256 309 211" stroke="#18313a" stroke-width="18" stroke-linecap="square"/>
+  <circle cx="358" cy="338" r="34" fill="#efe6d2" stroke="#2f7a72" stroke-width="16" stroke-dasharray="16 10"/>
+</svg>
