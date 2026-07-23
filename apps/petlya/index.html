@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#18313a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПЕТЛЯ">
+  <title>ПЕТЛЯ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive" data-fullscreen-app>
+  <main class="app-shell" id="app-shell" data-app-shell data-fullscreen-app>
+    <section class="screen menu-screen is-active" id="menu-screen" aria-labelledby="menu-title">
+      <header class="menu-top" data-ui>
+        <a class="text-link" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        <button class="sound-button" type="button" data-sound-toggle data-native-press aria-pressed="true">Звук</button>
+      </header>
+
+      <div class="menu-composition">
+        <div class="clock-mark" aria-hidden="true">
+          <span class="clock-ring ring-one"></span>
+          <span class="clock-ring ring-two"></span>
+          <span class="clock-hand"></span>
+          <span class="demo-token token-now"></span>
+          <span class="demo-token token-echo echo-a"></span>
+          <span class="demo-token token-echo echo-b"></span>
+        </div>
+        <p class="eyebrow">АРХИВ ДВИЖЕНИЙ · 18 КАМЕР</p>
+        <h1 id="menu-title">ПЕТЛЯ</h1>
+        <p class="menu-copy">Записывай маршруты. Отматывай время. Заставляй прошлые версии себя держать мир открытым, пока настоящее идёт дальше.</p>
+      </div>
+
+      <div class="menu-actions" data-ui>
+        <button class="primary-action" id="continue-button" type="button" data-native-press>
+          <span id="continue-label">НАЧАТЬ ЗАПИСЬ</span>
+          <span class="button-mark" aria-hidden="true">↻</span>
+        </button>
+        <button class="secondary-action" id="archive-button" type="button" data-native-press>Открыть архив уровней</button>
+        <button class="secondary-action" id="help-button" type="button" data-native-press>Как работает петля</button>
+      </div>
+
+      <div class="progress-tape" data-ui>
+        <div><span>ЗАВЕРШЕНО</span><strong id="menu-progress">0 / 18</strong></div>
+        <div><span>ТЕКУЩАЯ ГЛАВА</span><strong id="menu-chapter">I · ОТПЕЧАТКИ</strong></div>
+        <div class="network-state"><span class="network-dot"></span><strong id="network-label">ОФЛАЙН ГОТОВ</strong></div>
+      </div>
+
+      <footer class="menu-footer" data-ui>
+        <button class="workshop-trigger workshop-trigger--petlya" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <span>v1.0.0</span>
+      </footer>
+    </section>
+
+    <section class="screen archive-screen" id="archive-screen" aria-labelledby="archive-title" hidden>
+      <header class="archive-top" data-ui>
+        <button class="text-button" id="archive-back" type="button" data-native-press>← Назад</button>
+        <div>
+          <span>КАТАЛОГ ПЕТЕЛЬ</span>
+          <strong id="archive-summary">0 из 18</strong>
+        </div>
+        <button class="sound-button" type="button" data-sound-toggle data-native-press aria-pressed="true">Звук</button>
+      </header>
+      <div class="archive-heading">
+        <p class="eyebrow">ДЕЛО № 07—24</p>
+        <h2 id="archive-title">АРХИВ</h2>
+        <p>Каждая камера — отдельная задача. Три метки получает решение без лишних перезаписей.</p>
+      </div>
+      <div class="chapter-list" id="chapter-list" data-ui></div>
+    </section>
+
+    <section class="screen game-screen" id="game-screen" aria-label="Игровой экран" hidden>
+      <header class="game-top" data-ui>
+        <button class="text-button" id="pause-button" type="button" data-native-press>Пауза</button>
+        <div class="level-heading">
+          <span id="level-kicker">КАМЕРА 01 · I</span>
+          <strong id="level-title">ПЕРВЫЙ ШАГ</strong>
+        </div>
+        <button class="sound-button compact" type="button" data-sound-toggle data-native-press aria-pressed="true">Звук</button>
+      </header>
+
+      <div class="status-rail" data-ui aria-live="polite">
+        <div><span>ТАКТ</span><strong id="beat-label">0 / 4</strong></div>
+        <div><span>ЗАПИСИ</span><strong id="echo-label">0 / 1</strong></div>
+        <div class="seal-status" id="seal-status" aria-label="Состояние печатей"></div>
+      </div>
+
+      <section class="board-stage" id="board-stage" data-gesture-surface data-touch-action="none" data-block-callout aria-label="Поле головоломки">
+        <div class="board" id="board">
+          <svg class="trail-layer" id="trail-layer" aria-hidden="true"></svg>
+          <div class="cell-layer" id="cell-layer" aria-hidden="true"></div>
+          <div class="actor-layer" id="actor-layer" aria-hidden="true"></div>
+          <div class="rewind-sweep" aria-hidden="true"></div>
+        </div>
+        <div class="board-feedback" id="board-feedback" role="status" aria-live="polite" hidden></div>
+      </section>
+
+      <div class="hint-strip" id="hint-strip" data-ui>
+        <span class="hint-index">ПОДСКАЗКА</span>
+        <p id="hint-copy">Проведи пальцем вправо или нажми стрелку.</p>
+      </div>
+
+      <div class="timeline" id="timeline" data-ui aria-label="Лента текущего цикла"></div>
+
+      <div class="command-deck" data-ui>
+        <div class="side-commands">
+          <button class="small-command" id="undo-button" type="button" data-native-press>Отменить</button>
+          <button class="small-command" id="erase-echo-button" type="button" data-native-press>Стереть эхо</button>
+        </div>
+        <div class="dpad" aria-label="Управление движением">
+          <button class="move-button up" type="button" data-move="U" data-native-press aria-label="Вверх">↑</button>
+          <button class="move-button left" type="button" data-move="L" data-native-press aria-label="Влево">←</button>
+          <button class="move-button wait" type="button" data-move="W" data-native-press aria-label="Ждать один такт">•</button>
+          <button class="move-button right" type="button" data-move="R" data-native-press aria-label="Вправо">→</button>
+          <button class="move-button down" type="button" data-move="D" data-native-press aria-label="Вниз">↓</button>
+        </div>
+        <button class="record-button" id="record-button" type="button" data-native-press>
+          <span>ЗАПИСАТЬ</span>
+          <small>И ОТМОТАТЬ</small>
+        </button>
+      </div>
+    </section>
+
+    <section class="sheet" id="pause-sheet" data-ui hidden aria-labelledby="pause-title">
+      <div class="sheet-panel">
+        <p class="eyebrow">ВРЕМЯ ОСТАНОВЛЕНО</p>
+        <h2 id="pause-title">ПАУЗА</h2>
+        <button class="primary-action" id="resume-button" type="button" data-native-press>Продолжить</button>
+        <button class="sheet-action" id="restart-button" type="button" data-native-press>Начать камеру заново</button>
+        <button class="sheet-action" id="pause-archive-button" type="button" data-native-press>Открыть архив</button>
+        <button class="sheet-action" id="pause-help-button" type="button" data-native-press>Правила</button>
+        <button class="workshop-trigger workshop-trigger--petlya" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <a class="sheet-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet" id="help-sheet" data-ui hidden aria-labelledby="help-title">
+      <div class="sheet-panel help-panel">
+        <button class="sheet-close" id="help-close" type="button" data-native-press>Закрыть</button>
+        <p class="eyebrow">КРАТКОЕ ДЕЛОПРОИЗВОДСТВО</p>
+        <h2 id="help-title">КАК РАБОТАЕТ ПЕТЛЯ</h2>
+        <ol class="rule-list">
+          <li><span>01</span><p>Сделай маршрут стрелками или свайпами. Один ход — один такт.</p></li>
+          <li><span>02</span><p>Нажми «Записать». Время вернётся к старту, а маршрут станет эхом.</p></li>
+          <li><span>03</span><p>На следующем цикле эхо повторит всё одновременно с тобой.</p></li>
+          <li><span>04</span><p>Удерживай печати, открывай затворы и войди в выход, когда все нужные знаки активны.</p></li>
+        </ol>
+        <div class="legend">
+          <div><span class="legend-plate normal"></span><p><strong>Сплошная печать</strong> реагирует на тебя и на эхо.</p></div>
+          <div><span class="legend-plate ghost"></span><p><strong>Пунктирная печать</strong> реагирует только на записанное эхо.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sheet" id="win-sheet" data-ui hidden aria-labelledby="win-title">
+      <div class="sheet-panel win-panel">
+        <p class="eyebrow">КАМЕРА ЗАКРЫТА</p>
+        <div class="win-stamp" id="win-stamp" aria-hidden="true">✦ ✦ ✦</div>
+        <h2 id="win-title">ЧИСТАЯ ПЕТЛЯ</h2>
+        <p id="win-copy">Одна запись. Ни одного лишнего витка.</p>
+        <div class="win-stats">
+          <div><span>ЗАПИСЕЙ</span><strong id="win-recordings">1</strong></div>
+          <div><span>ПАР</span><strong id="win-par">1</strong></div>
+          <div><span>ЛУЧШИЙ</span><strong id="win-best">1</strong></div>
+        </div>
+        <button class="primary-action" id="next-button" type="button" data-native-press>Следующая камера</button>
+        <button class="sheet-action" id="replay-button" type="button" data-native-press>Повторить</button>
+        <button class="sheet-action" id="win-archive-button" type="button" data-native-press>Открыть архив</button>
+        <a class="sheet-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet confirm-sheet" id="confirm-sheet" data-ui hidden aria-labelledby="confirm-title">
+      <div class="sheet-panel confirm-panel">
+        <p class="eyebrow">ПОДТВЕРЖДЕНИЕ</p>
+        <h2 id="confirm-title">СТЕРЕТЬ ПЕТЛЮ?</h2>
+        <p id="confirm-copy">Текущая запись и все эха этой камеры исчезнут.</p>
+        <button class="danger-action" id="confirm-accept" type="button" data-native-press>Стереть</button>
+        <button class="sheet-action" id="confirm-cancel" type="button" data-native-press>Отмена</button>
+      </div>
+    </section>
+
+    <div class="fatal-error" id="fatal-error" data-ui hidden>
+      <strong>АРХИВ ПОВРЕЖДЁН</strong>
+      <p>Игра не смогла собрать уровень. Обнови страницу или вернись в Pocket Works.</p>
+      <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+    </div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПЕТЛЯ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
