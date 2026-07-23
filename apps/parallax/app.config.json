@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "parallax",
+  "name": "ПАРАЛЛАКС",
+  "shortName": "ПАРАЛЛАКС",
+  "description": "Оптическая puzzle-игра о двух наложенных реальностях: перемещайте линзу, меняйте локальную геометрию и проводите искру через стены и зеркала.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-24",
+  "releaseDateTime": "2026-07-24T18:30:00+02:00",
+  "changelog": [
+    "Выпущена законченная кампания из 18 уровней в трёх главах с уникальной механикой локального переключения реальности через перетаскиваемую линзу.",
+    "Добавлены скользящее движение, фрагменты, апертуры, два типа фазовых стен и зеркала, меняющие направление маршрута.",
+    "Реализованы выбор уровней, рекорды по ходам, undo, подсказки, сохранение прогресса, звук, вибрация, клавиатура, touch-управление и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#df5f4f",
+  "backgroundColor": "#eee9dc",
+  "themeColor": "#eee9dc",
+  "orientation": "portrait",
+  "cacheName": "parallax-v1.0.0",
+  "storageNamespace": "pocket-works:parallax",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "puzzle",
+    "logic",
+    "spatial reasoning",
+    "canvas",
+    "touch",
+    "one-thumb",
+    "audio",
+    "haptics",
+    "portrait"
+  ],
+  "order": 98
+}

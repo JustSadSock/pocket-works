@@ -1,0 +1,21 @@
+{
+  "id": "/apps/parallax/",
+  "name": "ПАРАЛЛАКС",
+  "short_name": "ПАРАЛЛАКС",
+  "description": "Оптическая puzzle-игра о двух наложенных реальностях.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#eee9dc",
+  "theme_color": "#eee9dc",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
