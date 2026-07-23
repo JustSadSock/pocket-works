@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#075a88">
+  <meta name="description" content="СПАНЧ: Пузырьковый Переполох — яркая мини-игра для одного пальца.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СПАНЧ">
+  <title>СПАНЧ: Пузырьковый Переполох — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app data-app-preset="game-2d">
+  <main class="app-shell" data-app-shell>
+    <canvas id="gameCanvas" aria-label="Игровое поле Пузырькового Переполоха"></canvas>
+
+    <header class="game-hud" data-ui>
+      <a class="shell-exit" href="../../" data-shell-exit data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+      <div class="score-box">
+        <small>ОЧКИ</small>
+        <strong id="scoreValue">0</strong>
+      </div>
+      <div class="combo-box" id="comboBox" aria-live="polite">
+        <small>КОМБО</small>
+        <strong id="comboValue">×1</strong>
+      </div>
+      <div class="hud-actions">
+        <button id="soundButton" class="icon-button" type="button" data-native-press aria-label="Выключить звук">♪</button>
+        <button id="pauseButton" class="icon-button" type="button" data-native-press aria-label="Пауза">Ⅱ</button>
+      </div>
+    </header>
+
+    <div class="life-strip" id="lifeStrip" data-ui aria-label="Три жизни">
+      <span>♥</span><span>♥</span><span>♥</span>
+    </div>
+
+    <div class="power-strip" id="powerStrip" data-ui hidden>
+      <span>ЗОЛОТАЯ ЛОПАТКА</span><i></i>
+    </div>
+
+    <section id="startScreen" class="screen start-screen" data-ui aria-labelledby="gameTitle">
+      <div class="sea-sticker" aria-hidden="true">
+        <span class="sticker-eye sticker-eye-left"></span>
+        <span class="sticker-eye sticker-eye-right"></span>
+        <span class="sticker-smile"></span>
+        <i></i><i></i><i></i>
+      </div>
+      <p class="eyebrow">БИКИНИ-БОТТОМ · ОДИН ПАЛЕЦ · МНОГО ПУЗЫРЕЙ</p>
+      <h1 id="gameTitle"><span>СПАНЧ</span><b>Пузырьковый<br>Переполох</b></h1>
+      <p class="start-copy">Лови крабсбургеры и пузыри. Медузам — вежливое «нет, спасибо».</p>
+
+      <div class="best-card">
+        <span>ЛУЧШИЙ РЕЗУЛЬТАТ ЯСИ</span>
+        <strong id="bestValue">0</strong>
+      </div>
+
+      <button id="startButton" class="primary-button" type="button" data-native-press>
+        <span>НАЧАТЬ ПЕРЕПОЛОХ</span>
+        <small>двигай пальцем влево и вправо</small>
+      </button>
+
+      <div class="rules-row" aria-label="Правила">
+        <div><b class="rule-icon patty-icon"></b><span>+ очки</span></div>
+        <div><b class="rule-icon bubble-icon"></b><span>+ комбо</span></div>
+        <div><b class="rule-icon jelly-icon"></b><span>− жизнь</span></div>
+      </div>
+
+      <div class="start-links">
+        <a href="../../" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a>
+        <button type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+      </div>
+    </section>
+
+    <section id="gameOverScreen" class="screen result-screen" data-ui hidden aria-labelledby="resultTitle">
+      <p class="eyebrow">СМЕНА ЗАКОНЧЕНА</p>
+      <h2 id="resultTitle">Медузы победили.<br><span>Временно.</span></h2>
+      <div class="result-score">
+        <small>РЕЗУЛЬТАТ</small>
+        <strong id="resultScore">0</strong>
+        <span id="recordBadge" hidden>НОВЫЙ РЕКОРД</span>
+      </div>
+      <div class="result-grid">
+        <div><small>ЛУЧШЕЕ КОМБО</small><b id="resultCombo">×1</b></div>
+        <div><small>КРАБСБУРГЕРОВ</small><b id="resultPatties">0</b></div>
+      </div>
+      <button id="restartButton" class="primary-button" type="button" data-native-press>
+        <span>ЕЩЁ РАЗ</span><small>сейчас точно без глупостей</small>
+      </button>
+      <button id="menuButton" class="secondary-button" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
+    </section>
+
+    <dialog id="pauseDialog" class="pause-dialog">
+      <div class="pause-card" data-ui>
+        <p class="eyebrow">ПЕРЕПОЛОХ ПРИОСТАНОВЛЕН</p>
+        <h2>Пауза</h2>
+        <p>Спанч стоит очень тихо и делает вид, что медузы его не видят.</p>
+        <button id="resumeButton" class="primary-button compact" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button id="pauseRestartButton" class="secondary-button" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
+        <button id="quitButton" class="secondary-button danger" type="button" data-native-press>ЗАКОНЧИТЬ СМЕНУ</button>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast" data-ui aria-live="polite"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="СПАНЧ: Пузырьковый Переполох"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
