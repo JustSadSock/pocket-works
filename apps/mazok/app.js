@@ -9,11 +9,13 @@ import { watchConnectivity } from '../../shared/pwa-utils.js';
 import {
   PAPER_COLORS,
   TOOL_DEFS,
+  brushSizeInDocument,
   clamp,
   createDrawingDocument,
   distance,
   drawStrokeRange,
   drawingCountLabel,
+  floodFillContext,
   isValidDrawing,
   makeId,
   normalizeHexColor,
@@ -24,8 +26,10 @@ import {
 import { openDrawingDatabase } from './drawing-db.js';
 
 const APP_NAME = 'МАЗОК';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const STORAGE_NAMESPACE = 'pocket-works:mazok';
+const THUMBNAIL_RENDER_VERSION = 2;
+const FILL_TOLERANCE = 26;
 const COLOR_PALETTE = [
   '#20211f', '#f7f1e5', '#2455d6', '#ef5b49', '#f2bd3f',
   '#16856f', '#7d4ad8', '#e65e99', '#824c34', '#7c8794',
@@ -76,6 +80,7 @@ const elements = {
   sizeRange: $('#sizeRange'),
   sizeOutput: $('#sizeOutput'),
   largeSizePreview: $('#largeSizePreview'),
+  sizeControl: $('#sizeControl'),
   colorSheet: $('#colorSheet'),
   colorGrid: $('#colorGrid'),
   customColor: $('#customColor'),
@@ -100,6 +105,7 @@ const elements = {
   acceptConfirm: $('#acceptConfirm'),
   toast: $('#toast'),
   toastText: $('#toast span'),
+  fillBloom: $('#fillBloom'),
   fatal: $('#fatalState'),
   fatalCopy: $('#fatalCopy'),
   reloadButton: $('#reloadButton')
@@ -116,7 +122,7 @@ const preferences = createVersionedStore({
     previousTool: 'ink',
     color: '#20211f',
     recentColors: DEFAULT_RECENTS,
-    sizes: { pencil: 8, ink: 14, marker: 38, eraser: 34 },
+    sizes: { pencil: 8, ink: 14, marker: 38, fill: 1, eraser: 34 },
     paper: PAPER_COLORS[0],
     activeDrawingId: null,
     onboarded: false
@@ -139,6 +145,7 @@ let redoStack = [];
 let displayBox = { width: 1, height: 1, dpr: 1 };
 let view = { zoom: 1, panX: 0, panY: 0, fitScale: 1 };
 let renderFrame = 0;
+let viewAnimationFrame = 0;
 let pointers = new Map();
 let pinch = null;
 let suppressDrawingUntilClear = false;
@@ -153,6 +160,34 @@ let renameTargetId = null;
 let confirmCallback = null;
 let galleryObjectUrls = [];
 let persistentStorageRequested = false;
+const animationTimers = new WeakMap();
+
+function restartAnimation(element, className, duration = 360) {
+  if (!element) return;
+  window.clearTimeout(animationTimers.get(element));
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+  const timer = window.setTimeout(() => {
+    element.classList.remove(className);
+    animationTimers.delete(element);
+  }, duration);
+  animationTimers.set(element, timer);
+}
+
+function animateScreenEntry(screen, direction) {
+  if (!screen) return;
+  screen.dataset.entry = direction;
+  restartAnimation(screen, 'is-entering', 440);
+}
+
+function animateFillBloom(clientX, clientY, color) {
+  const rect = elements.canvas.getBoundingClientRect();
+  elements.fillBloom.style.setProperty('--fill-x', `${clientX - rect.left}px`);
+  elements.fillBloom.style.setProperty('--fill-y', `${clientY - rect.top}px`);
+  elements.fillBloom.style.setProperty('--fill-color', normalizeHexColor(color));
+  restartAnimation(elements.fillBloom, 'is-active', 560);
+}
 
 function cloneValue(value) {
   return typeof structuredClone === 'function'
@@ -212,6 +247,7 @@ function setTool(tool) {
   else if (current !== 'eraser') patch.previousTool = current;
   preferences.patch(patch);
   syncToolInterface();
+  if (tool !== current) restartAnimation(elements.toolButton, 'is-tool-changing', 300);
 }
 
 function setSize(value) {
@@ -229,15 +265,21 @@ function rememberColor(color) {
     .filter((entry) => normalizeHexColor(entry) !== normalized);
   preferences.patch({ color: normalized, recentColors: [normalized, ...recents].slice(0, 5) });
   syncColorInterface();
+  restartAnimation(elements.colorButton, 'is-color-changing', 300);
 }
 
 function syncToolInterface() {
   const tool = selectedTool();
   const definition = TOOL_DEFS[tool];
+  const isFill = tool === 'fill';
   elements.toolIcon.setAttribute('href', `#${definition.icon}`);
   elements.toolName.textContent = definition.label;
   elements.eraserButton.classList.toggle('is-active', tool === 'eraser');
   elements.toolButton.classList.toggle('is-eraser', tool === 'eraser');
+  elements.toolButton.classList.toggle('is-fill', isFill);
+  elements.thumbPalette.classList.toggle('is-fill', isFill);
+  elements.sizeButton.hidden = isFill;
+  elements.sizeControl.hidden = isFill;
   for (const button of $$('[data-tool]', elements.toolGrid)) {
     const active = button.dataset.tool === tool;
     button.classList.toggle('is-active', active);
@@ -302,6 +344,7 @@ function renderPaperColors() {
       preferences.set('paper', color);
       renderPaperColors();
       scheduleRender();
+      restartAnimation(elements.canvas, 'is-paper-changing', 340);
       markDirty();
     });
     const active = currentDrawing?.background === color;
@@ -396,7 +439,7 @@ function ensureDocumentSurfaces() {
   strokeCanvas.width = currentDrawing.width;
   strokeCanvas.height = currentDrawing.height;
   strokeContext = strokeCanvas.getContext('2d', { alpha: true, desynchronized: true });
-  replayStrokes(documentContext, currentDrawing.strokes, currentDrawing.width, currentDrawing.height);
+  replayStrokes(documentContext, currentDrawing.strokes, currentDrawing.width, currentDrawing.height, currentDrawing.background);
 }
 
 function resizeDisplayCanvas() {
@@ -482,7 +525,12 @@ function renderDisplay() {
   context.fillStyle = currentDrawing.background;
   context.fillRect(0, 0, currentDrawing.width, currentDrawing.height);
   context.drawImage(documentCanvas, 0, 0);
-  if (currentStroke && currentStroke.tool !== 'eraser') context.drawImage(strokeCanvas, 0, 0);
+  if (currentStroke && currentStroke.tool !== 'eraser' && currentStroke.tool !== 'fill') {
+    context.save();
+    context.globalAlpha = TOOL_DEFS[currentStroke.tool].opacity;
+    context.drawImage(strokeCanvas, 0, 0);
+    context.restore();
+  }
   context.lineWidth = 1 / scale;
   context.strokeStyle = 'rgba(50, 45, 38, .14)';
   context.strokeRect(0, 0, currentDrawing.width, currentDrawing.height);
@@ -518,13 +566,13 @@ function beginStroke(event) {
   const documentPoint = screenToDocument(event.clientX, event.clientY);
   if (!pointInsideDocument(documentPoint)) return;
   const tool = selectedTool();
-  const scale = currentDocumentScale();
   const point = pointerSample(event);
   currentStroke = {
     id: makeId('stroke'),
     tool,
     color: selectedColor(),
-    size: selectedSize(tool) / scale,
+    size: tool === 'fill' ? 1 : brushSizeInDocument(selectedSize(tool), currentDrawing.width),
+    tolerance: tool === 'fill' ? FILL_TOLERANCE : undefined,
     seed: Math.floor(Math.random() * 0xffffffff),
     points: [point]
   };
@@ -537,7 +585,7 @@ function beginStroke(event) {
     eraserBackup.getContext('2d').drawImage(documentCanvas, 0, 0);
     drawStrokeRange(documentContext, currentStroke, 0);
   } else {
-    const opacity = tool === 'marker' ? 1 : TOOL_DEFS[tool].opacity;
+    const opacity = TOOL_DEFS[tool].opacity < 1 ? 1 : TOOL_DEFS[tool].opacity;
     drawStrokeRange(strokeContext, currentStroke, 0, { opacity });
   }
   renderedPointCount = 1;
@@ -550,6 +598,10 @@ function appendPointerEvent(event, isFinal = false) {
   const raw = screenToDocument(event.clientX, event.clientY);
   if (!pointInsideDocument(raw, currentStroke.size * 1.5)) return;
   const point = pointerSample(event, isFinal);
+  if (currentStroke.tool === 'fill') {
+    currentStroke.points[0] = point;
+    return;
+  }
   const previous = currentStroke.points.at(-1);
   if (!isFinal && distance(point, previous) < Math.max(0.35, currentStroke.size * 0.025)) return;
   currentStroke.points.push(point);
@@ -557,7 +609,7 @@ function appendPointerEvent(event, isFinal = false) {
   if (currentStroke.tool === 'eraser') {
     drawStrokeRange(documentContext, currentStroke, start);
   } else {
-    const opacity = currentStroke.tool === 'marker' ? 1 : TOOL_DEFS[currentStroke.tool].opacity;
+    const opacity = TOOL_DEFS[currentStroke.tool].opacity < 1 ? 1 : TOOL_DEFS[currentStroke.tool].opacity;
     drawStrokeRange(strokeContext, currentStroke, start, { opacity });
   }
   renderedPointCount = currentStroke.points.length;
@@ -569,20 +621,7 @@ function moveStroke(event) {
   scheduleRender();
 }
 
-function finishStroke(event) {
-  if (!currentStroke) return;
-  appendPointerEvent(event, true);
-  const stroke = currentStroke;
-  const tolerance = Math.max(0.45, stroke.size * 0.018);
-  stroke.points = simplifyPoints(stroke.points, tolerance);
-
-  if (stroke.tool !== 'eraser') {
-    documentContext.save();
-    documentContext.globalAlpha = stroke.tool === 'marker' ? TOOL_DEFS.marker.opacity : 1;
-    documentContext.drawImage(strokeCanvas, 0, 0);
-    documentContext.restore();
-  }
-
+function commitCurrentAction(stroke) {
   currentDrawing.strokes.push(stroke);
   redoStack = [];
   currentStroke = null;
@@ -595,6 +634,54 @@ function finishStroke(event) {
   markDirty();
   requestPersistentStorage();
   scheduleRender();
+}
+
+function finishStroke(event) {
+  if (!currentStroke) return;
+  appendPointerEvent(event, true);
+  const stroke = currentStroke;
+
+  if (stroke.tool === 'fill') {
+    let changed = 0;
+    try {
+      changed = floodFillContext(
+        documentContext,
+        stroke,
+        currentDrawing.width,
+        currentDrawing.height,
+        currentDrawing.background
+      );
+    } catch (error) {
+      console.warn('Fill action failed', error);
+      currentStroke = null;
+      elements.editor.classList.remove('is-drawing');
+      showToast('Заливка не сработала', 'error');
+      scheduleRender();
+      return;
+    }
+    if (changed === 0) {
+      currentStroke = null;
+      elements.editor.classList.remove('is-drawing');
+      showToast('Здесь уже этот цвет');
+      scheduleRender();
+      return;
+    }
+    animateFillBloom(event.clientX, event.clientY, stroke.color);
+    commitCurrentAction(stroke);
+    return;
+  }
+
+  const tolerance = Math.max(0.45, stroke.size * 0.018);
+  stroke.points = simplifyPoints(stroke.points, tolerance);
+
+  if (stroke.tool !== 'eraser') {
+    documentContext.save();
+    documentContext.globalAlpha = TOOL_DEFS[stroke.tool].opacity;
+    documentContext.drawImage(strokeCanvas, 0, 0);
+    documentContext.restore();
+  }
+
+  commitCurrentAction(stroke);
 }
 
 function cancelStroke() {
@@ -647,6 +734,8 @@ function movePinch() {
 function handlePointerDown(event) {
   if (event.button !== 0 && event.pointerType === 'mouse') return;
   event.preventDefault();
+  if (viewAnimationFrame) cancelAnimationFrame(viewAnimationFrame);
+  viewAnimationFrame = 0;
   capturePointer(elements.canvas, event.pointerId);
   pointers.set(event.pointerId, event);
   if (pointers.size === 1) beginStroke(event);
@@ -678,17 +767,37 @@ function finishPointer(event, cancelled = false) {
   else finishStroke(event);
 }
 
-function resetView() {
-  view.zoom = 1;
-  view.panX = 0;
-  view.panY = 0;
-  clampView();
-  scheduleRender();
+function resetView(animated = false) {
+  if (viewAnimationFrame) cancelAnimationFrame(viewAnimationFrame);
+  viewAnimationFrame = 0;
+  if (!animated) {
+    view.zoom = 1;
+    view.panX = 0;
+    view.panY = 0;
+    clampView();
+    scheduleRender();
+    return;
+  }
+
+  const from = { zoom: view.zoom, panX: view.panX, panY: view.panY };
+  const startedAt = performance.now();
+  const tick = (now) => {
+    const progress = clamp((now - startedAt) / 240, 0, 1);
+    const eased = 1 - (1 - progress) ** 3;
+    view.zoom = from.zoom + (1 - from.zoom) * eased;
+    view.panX = from.panX * (1 - eased);
+    view.panY = from.panY * (1 - eased);
+    clampView();
+    scheduleRender();
+    if (progress < 1) viewAnimationFrame = requestAnimationFrame(tick);
+    else viewAnimationFrame = 0;
+  };
+  viewAnimationFrame = requestAnimationFrame(tick);
 }
 
 function rebuildDocument() {
   if (!currentDrawing || !documentContext) return;
-  replayStrokes(documentContext, currentDrawing.strokes, currentDrawing.width, currentDrawing.height);
+  replayStrokes(documentContext, currentDrawing.strokes, currentDrawing.width, currentDrawing.height, currentDrawing.background);
   scheduleRender();
 }
 
@@ -698,6 +807,7 @@ function undo() {
   rebuildDocument();
   updateHistoryButtons();
   markDirty();
+  restartAnimation(elements.canvas, 'is-history-changing', 240);
 }
 
 function redo() {
@@ -706,6 +816,7 @@ function redo() {
   rebuildDocument();
   updateHistoryButtons();
   markDirty();
+  restartAnimation(elements.canvas, 'is-history-changing', 240);
 }
 
 function makeSnapshot(drawing = currentDrawing) {
@@ -723,12 +834,11 @@ function renderDrawingToCanvas(drawing, maximumWidth = drawing.width) {
   context.fillStyle = drawing.background;
   context.fillRect(0, 0, canvas.width, canvas.height);
   const paint = document.createElement('canvas');
-  paint.width = canvas.width;
-  paint.height = canvas.height;
+  paint.width = drawing.width;
+  paint.height = drawing.height;
   const paintContext = paint.getContext('2d', { alpha: true });
-  paintContext.scale(scale, scale);
-  for (const stroke of drawing.strokes) drawStrokeRange(paintContext, stroke, 0);
-  context.drawImage(paint, 0, 0);
+  replayStrokes(paintContext, drawing.strokes, drawing.width, drawing.height, drawing.background);
+  context.drawImage(paint, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
@@ -785,7 +895,10 @@ function queueSave(withThumbnail = false) {
 
   saveQueue = saveQueue.then(async () => {
     try {
-      if (withThumbnail) snapshot.thumbnail = await makeThumbnail(snapshot);
+      if (withThumbnail) {
+        snapshot.thumbnail = await makeThumbnail(snapshot);
+        snapshot.thumbnailRenderVersion = THUMBNAIL_RENDER_VERSION;
+      }
       await database.put(snapshot);
       if (currentDrawing?.id === drawingId && revision >= savedRevision) {
         if (snapshot.thumbnail) currentDrawing.thumbnail = snapshot.thumbnail;
@@ -821,8 +934,15 @@ function formatDate(iso) {
 }
 
 async function thumbnailUrl(drawing) {
-  let blob = drawing.thumbnail instanceof Blob ? drawing.thumbnail : null;
-  if (!blob) blob = await makeThumbnail(drawing);
+  let blob = drawing.thumbnailRenderVersion === THUMBNAIL_RENDER_VERSION && drawing.thumbnail instanceof Blob
+    ? drawing.thumbnail
+    : null;
+  if (!blob) {
+    blob = await makeThumbnail(drawing);
+    drawing.thumbnail = blob;
+    drawing.thumbnailRenderVersion = THUMBNAIL_RENDER_VERSION;
+    database?.put(drawing).catch(() => {});
+  }
   const url = URL.createObjectURL(blob);
   galleryObjectUrls.push(url);
   return url;
@@ -832,6 +952,8 @@ function drawingCard(drawing, index) {
   const article = document.createElement('article');
   article.className = 'drawing-card';
   article.style.setProperty('--tilt', `${[-1.1, 0.6, -0.35, 0.9][index % 4]}deg`);
+  article.style.setProperty('--card-index', String(index));
+  article.style.setProperty('--card-delay', `${Math.min(index, 6) * 45}ms`);
 
   const open = document.createElement('button');
   open.type = 'button';
@@ -892,7 +1014,9 @@ async function showGallery() {
   closeSheet();
   elements.editor.hidden = true;
   elements.gallery.hidden = false;
+  elements.startup.hidden = true;
   elements.app.dataset.screen = 'gallery';
+  animateScreenEntry(elements.gallery, 'back');
   await renderGallery();
 }
 
@@ -913,6 +1037,7 @@ async function showEditor(drawing) {
   elements.editor.hidden = false;
   elements.app.dataset.screen = 'editor';
   elements.startup.hidden = true;
+  animateScreenEntry(elements.editor, 'forward');
   requestAnimationFrame(resizeDisplayCanvas);
 }
 
@@ -1137,7 +1262,7 @@ function wireInterface() {
     if (selectedTool() === 'eraser') setTool(preferences.get('previousTool', 'ink'));
     else setTool('eraser');
   });
-  elements.zoomReset.addEventListener('click', resetView);
+  elements.zoomReset.addEventListener('click', () => resetView(true));
   elements.dismissHint.addEventListener('click', () => {
     preferences.set('onboarded', true);
     elements.gestureHint.classList.add('is-dismissed');
@@ -1239,16 +1364,8 @@ async function start() {
       document.documentElement.dataset.network = online ? 'online' : 'offline';
     });
 
-    const all = (await database.getAll()).filter(isValidDrawing).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-    const activeId = preferences.get('activeDrawingId');
-    let drawing = all.find((entry) => entry.id === activeId) || all[0];
-    if (!drawing) {
-      drawing = createDrawingDocument(window.innerWidth, window.innerHeight, { background: preferences.get('paper', PAPER_COLORS[0]) });
-      await database.put(drawing);
-    }
     if (preferences.get('onboarded', false)) elements.gestureHint.classList.add('is-dismissed');
-    await showEditor(drawing);
-    requestAnimationFrame(resizeDisplayCanvas);
+    await showGallery();
   } catch (error) {
     fail(error);
   }

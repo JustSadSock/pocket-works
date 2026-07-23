@@ -27,6 +27,7 @@
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="m4 20 4.2-1 11.7-11.7-3.2-3.2L5 15.8 4 20Zm11.2-14.4 3.2 3.2M8.2 19 5 15.8"/></symbol>
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4M4 16l4 4"/></symbol>
     <symbol id="i-marker" viewBox="0 0 24 24"><path d="m5 15 9.7-9.7a2 2 0 0 1 2.8 0l1.2 1.2a2 2 0 0 1 0 2.8L9 19H5v-4Zm7-7 4 4M3 21h12"/></symbol>
+    <symbol id="i-fill" viewBox="0 0 24 24"><path d="m4 13 9-9 7 7-9 9-7-7Zm5-5 7 7M19 15s-2 2.4-2 3.5a2 2 0 0 0 4 0C21 17.4 19 15 19 15Z"/></symbol>
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m4.2 14.5 8.7-9.6a2 2 0 0 1 2.9-.1l3.4 3.1a2 2 0 0 1 .1 2.9L11 20H7.7l-3.4-3.1a1.7 1.7 0 0 1-.1-2.4ZM10 20h10M8 11l6 5.5"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
@@ -52,6 +53,8 @@
         role="img"
         aria-label="Холст. Рисуйте одним пальцем, двумя пальцами перемещайте и масштабируйте."
       ></canvas>
+
+      <div class="fill-bloom" id="fillBloom" aria-hidden="true"></div>
 
       <div class="startup-state" id="startupState" aria-live="polite">
         <i></i><span>Достаём чистый лист…</span>
@@ -156,8 +159,9 @@
           <button type="button" data-tool="ink" data-native-press><svg><use href="#i-pen"></use></svg><strong>Чернила</strong><span>чистая линия</span></button>
           <button type="button" data-tool="marker" data-native-press><svg><use href="#i-marker"></use></svg><strong>Маркер</strong><span>полупрозрачный</span></button>
           <button type="button" data-tool="eraser" data-native-press><svg><use href="#i-eraser"></use></svg><strong>Ластик</strong><span>без крошек</span></button>
+          <button type="button" data-tool="fill" data-native-press><svg><use href="#i-fill"></use></svg><strong>Заливка</strong><span>цвет внутри границ</span></button>
         </div>
-        <label class="size-control" for="sizeRange">
+        <label class="size-control" id="sizeControl" for="sizeRange">
           <span><b>Толщина</b><output id="sizeOutput">14</output></span>
           <input id="sizeRange" type="range" min="2" max="72" step="1" value="14">
           <i id="largeSizePreview"></i>
@@ -240,7 +244,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="МАЗОК"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
