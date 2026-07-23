@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#24231f">
+  <meta name="description" content="МАЗОК — полноэкранная пальцевая рисовалка с живыми кистями, автосохранением и локальной галереей.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="МАЗОК">
@@ -16,26 +17,221 @@
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body data-app-preset="canvas">
-  <main class="app-shell" data-app-shell data-keyboard-aware>
-    <header class="app-header" data-ui>
-      <p class="app-kicker">Canvas / POCKET WORKS</p>
-      <h1>МАЗОК</h1>
-      <p class="selectable-content">Пальцевая рисовалка с большим холстом, живыми кистями, автосохранением и галереей, которая не съедает рисунки после обновления.</p>
-    </header>
+<body>
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M5 12h8a6 6 0 0 1 6 6"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 7 5 5-5 5m4-5h-8a6 6 0 0 0-6 6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M5 13v7h14v-7"/></symbol>
+    <symbol id="i-brush" viewBox="0 0 24 24"><path d="m14.5 15.5 6-10a2.1 2.1 0 0 0-3-2.8l-8.1 7.5M14.5 15.5c-.2-3.3-2-5.1-5.1-5.3-2.2.8-3.1 2.7-2.8 5.5.2 2.3-1.2 3.8-3.6 4.5 5.9 2 10.8.4 11.5-4.7Z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m4 20 4.2-1 11.7-11.7-3.2-3.2L5 15.8 4 20Zm11.2-14.4 3.2 3.2M8.2 19 5 15.8"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4M4 16l4 4"/></symbol>
+    <symbol id="i-marker" viewBox="0 0 24 24"><path d="m5 15 9.7-9.7a2 2 0 0 1 2.8 0l1.2 1.2a2 2 0 0 1 0 2.8L9 19H5v-4Zm7-7 4 4M3 21h12"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m4.2 14.5 8.7-9.6a2 2 0 0 1 2.9-.1l3.4 3.1a2 2 0 0 1 .1 2.9L11 20H7.7l-3.4-3.1a1.7 1.7 0 0 1-.1-2.4ZM10 20h10M8 11l6 5.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M8 8h11v11H8zM5 16H4V5h11v1"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></symbol>
+    <symbol id="i-duplicate" viewBox="0 0 24 24"><path d="M8 8h11v11H8zM5 16H4V5h11v1M13.5 11v5M11 13.5h5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3m2 0-1 13H8L7 7m3 4v5m4-5v5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  </svg>
 
-    <section class="stage" aria-labelledby="stage-title">
-      <h2 id="stage-title">Draw directly into a device-scaled canvas.</h2>
-      <canvas class="forge-canvas" id="forge-canvas" data-gesture-surface data-block-callout></canvas>
-      <button id="primary-action" type="button" data-native-press>Clear canvas</button>
-      <output id="status" aria-live="polite">Ready</output>
+  <main class="app-shell" id="app" data-app-shell data-fullscreen-app>
+    <section class="editor-screen screen" id="editorScreen" aria-label="Редактор рисунка">
+      <canvas
+        class="drawing-canvas"
+        id="drawingCanvas"
+        data-gesture-surface
+        data-touch-action="none"
+        data-block-callout
+        role="img"
+        aria-label="Холст. Рисуйте одним пальцем, двумя пальцами перемещайте и масштабируйте."
+      ></canvas>
+
+      <div class="startup-state" id="startupState" aria-live="polite">
+        <i></i><span>Достаём чистый лист…</span>
+      </div>
+
+      <header class="editor-bar" data-ui>
+        <button class="library-button pressable" id="libraryButton" type="button" data-native-press>
+          <svg><use href="#i-grid"></use></svg><span>Рисунки</span>
+        </button>
+
+        <button class="document-status pressable" id="titleButton" type="button" data-native-press aria-label="Переименовать рисунок">
+          <strong id="documentTitle">Без названия</strong>
+          <span id="saveStatus"><i></i>Сохранено</span>
+        </button>
+
+        <nav class="history-actions" aria-label="История и экспорт">
+          <button class="icon-button pressable" id="undoButton" type="button" data-native-press aria-label="Отменить" disabled>
+            <svg><use href="#i-undo"></use></svg>
+          </button>
+          <button class="icon-button pressable" id="redoButton" type="button" data-native-press aria-label="Повторить" disabled>
+            <svg><use href="#i-redo"></use></svg>
+          </button>
+          <button class="icon-button pressable share-main" id="shareButton" type="button" data-native-press aria-label="Сохранить или отправить">
+            <svg><use href="#i-share"></use></svg>
+          </button>
+        </nav>
+      </header>
+
+      <aside class="gesture-hint" id="gestureHint" data-ui>
+        <span><b>Один палец</b> рисует</span><i></i><span><b>Два</b> двигают и приближают</span>
+        <button id="dismissHint" type="button" aria-label="Скрыть подсказку"><svg><use href="#i-close"></use></svg></button>
+      </aside>
+
+      <button class="zoom-reset pressable" id="zoomReset" type="button" data-native-press hidden>100%</button>
+
+      <section class="thumb-palette" id="thumbPalette" data-ui aria-label="Инструменты рисования">
+        <button class="tool-button pressable" id="toolButton" type="button" data-native-press>
+          <svg id="toolIcon"><use href="#i-pen"></use></svg>
+          <span id="toolName">Чернила</span>
+        </button>
+
+        <button class="size-button pressable" id="sizeButton" type="button" data-native-press aria-label="Толщина линии">
+          <i id="sizePreview"></i><span id="sizeValue">14</span>
+        </button>
+
+        <div class="quick-colors" id="quickColors" role="group" aria-label="Быстрые цвета"></div>
+
+        <button class="color-button pressable" id="colorButton" type="button" data-native-press aria-label="Все цвета">
+          <span id="colorPreview"></span><i></i>
+        </button>
+
+        <button class="eraser-button pressable" id="eraserButton" type="button" data-native-press aria-label="Ластик">
+          <svg><use href="#i-eraser"></use></svg>
+        </button>
+      </section>
+
+      <button class="focus-exit pressable" id="focusExit" type="button" data-native-press hidden>Готово</button>
     </section>
 
-    <footer data-ui>
-      <span>mazok</span>
-      <span>v0.1.0 · active</span>
-      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
-    </footer>
+    <section class="gallery-screen screen" id="galleryScreen" aria-labelledby="galleryTitle" hidden>
+      <header class="gallery-header" data-ui>
+        <a class="pocket-link pressable" href="../../" data-app-control data-native-press>← Pocket Works</a>
+        <div>
+          <p>Твоя локальная мастерская</p>
+          <h1 id="galleryTitle">МАЗОК</h1>
+        </div>
+        <button class="new-drawing pressable" id="newDrawingButton" type="button" data-native-press>
+          <svg><use href="#i-plus"></use></svg><span>Новый лист</span>
+        </button>
+      </header>
+
+      <div class="gallery-copy">
+        <strong id="galleryCount">0 рисунков</strong>
+        <span>Всё сохранено на этом устройстве и работает без сети.</span>
+      </div>
+
+      <div class="gallery-grid" id="galleryGrid" aria-live="polite"></div>
+
+      <section class="empty-gallery" id="emptyGallery" hidden>
+        <div class="empty-paper" aria-hidden="true"><i></i><i></i><i></i></div>
+        <h2>Пока чисто. Даже подозрительно.</h2>
+        <p>Создай лист и испорть эту безупречность первым мазком.</p>
+        <button class="primary-button pressable" id="emptyNewButton" type="button" data-native-press>Начать рисовать</button>
+      </section>
+
+      <footer class="gallery-footer" data-ui>
+        <span>Рисунки хранятся локально</span>
+        <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Диагностика</button>
+      </footer>
+    </section>
+
+    <div class="sheet-layer" id="sheetLayer" hidden>
+      <button class="sheet-backdrop" id="sheetBackdrop" type="button" aria-label="Закрыть панель"></button>
+
+      <section class="bottom-sheet tool-sheet" id="toolSheet" role="dialog" aria-modal="true" aria-labelledby="toolSheetTitle" hidden>
+        <header class="sheet-header">
+          <div><span>Чем рисуем</span><h2 id="toolSheetTitle">Инструмент</h2></div>
+          <button class="done-button pressable" type="button" data-close-sheet data-native-press>Готово</button>
+        </header>
+        <div class="tool-grid" id="toolGrid">
+          <button type="button" data-tool="pencil" data-native-press><svg><use href="#i-pencil"></use></svg><strong>Карандаш</strong><span>живой и мягкий</span></button>
+          <button type="button" data-tool="ink" data-native-press><svg><use href="#i-pen"></use></svg><strong>Чернила</strong><span>чистая линия</span></button>
+          <button type="button" data-tool="marker" data-native-press><svg><use href="#i-marker"></use></svg><strong>Маркер</strong><span>полупрозрачный</span></button>
+          <button type="button" data-tool="eraser" data-native-press><svg><use href="#i-eraser"></use></svg><strong>Ластик</strong><span>без крошек</span></button>
+        </div>
+        <label class="size-control" for="sizeRange">
+          <span><b>Толщина</b><output id="sizeOutput">14</output></span>
+          <input id="sizeRange" type="range" min="2" max="72" step="1" value="14">
+          <i id="largeSizePreview"></i>
+        </label>
+      </section>
+
+      <section class="bottom-sheet color-sheet" id="colorSheet" role="dialog" aria-modal="true" aria-labelledby="colorSheetTitle" hidden>
+        <header class="sheet-header">
+          <div><span>Настроение линии</span><h2 id="colorSheetTitle">Цвет</h2></div>
+          <button class="done-button pressable" type="button" data-close-sheet data-native-press>Готово</button>
+        </header>
+        <div class="color-grid" id="colorGrid" role="group" aria-label="Палитра цветов"></div>
+        <label class="custom-color pressable" data-native-press>
+          <input id="customColor" type="color" value="#2455d6" aria-label="Выбрать свой цвет">
+          <span><b>Свой цвет</b><small>Откроется системная палитра</small></span>
+          <svg><use href="#i-chevron"></use></svg>
+        </label>
+        <div class="paper-options">
+          <span>Цвет листа</span>
+          <div id="paperColors" role="group" aria-label="Цвет листа"></div>
+        </div>
+      </section>
+
+      <section class="bottom-sheet actions-sheet" id="actionsSheet" role="dialog" aria-modal="true" aria-labelledby="actionsSheetTitle" hidden>
+        <header class="sheet-header compact">
+          <div><span id="actionsKicker">Рисунок сохранён</span><h2 id="actionsSheetTitle">Поделиться</h2></div>
+          <button class="close-button pressable" type="button" data-close-sheet data-native-press aria-label="Закрыть"><svg><use href="#i-close"></use></svg></button>
+        </header>
+        <div class="export-actions">
+          <button type="button" id="copyAction" data-native-press><svg><use href="#i-copy"></use></svg><span><b>Копировать PNG</b><small>Вставь в чат или заметку</small></span></button>
+          <button type="button" id="nativeShareAction" data-native-press><svg><use href="#i-share"></use></svg><span><b>Отправить</b><small>Через системное меню</small></span></button>
+          <button type="button" id="downloadAction" data-native-press><svg><use href="#i-download"></use></svg><span><b>Сохранить PNG</b><small>В файлы или загрузки</small></span></button>
+        </div>
+        <div class="secondary-actions">
+          <button type="button" id="focusAction" data-native-press><svg><use href="#i-expand"></use></svg><span>Холст на весь экран</span></button>
+          <button type="button" id="renameAction" data-native-press><svg><use href="#i-edit"></use></svg><span>Переименовать</span></button>
+          <button type="button" id="duplicateAction" data-native-press><svg><use href="#i-duplicate"></use></svg><span>Создать копию</span></button>
+          <button class="danger" type="button" id="clearAction" data-native-press><svg><use href="#i-trash"></use></svg><span>Очистить лист</span></button>
+        </div>
+      </section>
+
+      <section class="bottom-sheet rename-sheet" id="renameSheet" role="dialog" aria-modal="true" aria-labelledby="renameTitle" hidden>
+        <header class="sheet-header">
+          <div><span>Подпись на обороте</span><h2 id="renameTitle">Название</h2></div>
+          <button class="done-button pressable" id="saveTitleButton" type="button" data-native-press>Сохранить</button>
+        </header>
+        <label class="title-input-wrap">
+          <span>Название рисунка</span>
+          <input id="titleInput" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" placeholder="Без названия" data-selectable>
+        </label>
+      </section>
+
+      <section class="bottom-sheet confirm-sheet" id="confirmSheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmCopy" hidden>
+        <div class="confirm-mark"><svg><use href="#i-trash"></use></svg></div>
+        <h2 id="confirmTitle">Удалить рисунок?</h2>
+        <p id="confirmCopy">Вернуть его уже не получится.</p>
+        <div>
+          <button class="secondary-button pressable" id="cancelConfirm" type="button" data-native-press>Отмена</button>
+          <button class="danger-button pressable" id="acceptConfirm" type="button" data-native-press>Удалить</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <svg><use href="#i-check"></use></svg><span></span>
+    </div>
+
+    <div class="fatal-state" id="fatalState" hidden>
+      <span>Что-то пошло криво</span>
+      <h2>Лист зажевало.</h2>
+      <p id="fatalCopy">Перезапусти приложение. Уже сохранённые рисунки останутся на месте.</p>
+      <button class="primary-button pressable" type="button" id="reloadButton" data-native-press>Перезапустить</button>
+      <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+    </div>
   </main>
 
   <script
@@ -44,7 +240,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="МАЗОК"
-    data-app-version="0.1.0"
+    data-app-version="1.0.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
