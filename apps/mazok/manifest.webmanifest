@@ -1,0 +1,25 @@
+{
+  "id": "/apps/mazok/",
+  "name": "МАЗОК",
+  "short_name": "МАЗОК",
+  "description": "Пальцевая рисовалка с большим холстом, живыми кистями, автосохранением и галереей, которая не съедает рисунки после обновления.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#d8d0c3",
+  "theme_color": "#24231f",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

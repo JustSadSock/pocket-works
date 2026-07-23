@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="МАЗОК">
+  <rect width="512" height="512" fill="#f2bd3f"/>
+  <path d="M105 80c79-16 179-10 295 8l25 337c-123 10-239 13-349 0L105 80Z" fill="#fffaf0" stroke="#20211f" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M147 195c62-51 127-53 195-6" fill="none" stroke="#2455d6" stroke-width="41" stroke-linecap="round"/>
+  <path d="M159 280c72-36 139-31 201 16" fill="none" stroke="#ef5b49" stroke-width="47" stroke-linecap="round"/>
+  <path d="M168 355c50-18 94-14 132 9" fill="none" stroke="#16856f" stroke-width="30" stroke-linecap="round"/>
+  <path d="m360 84 45-8 8 47-23 40-22-20-8-59Z" fill="#20211f"/>
+</svg>
