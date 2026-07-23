@@ -1,0 +1,21 @@
+{
+  "id": "/apps/bubble-bob/",
+  "name": "СПАНЧ: Пузырьковый Переполох",
+  "short_name": "СПАНЧ",
+  "description": "Яркая мини-игра про ловлю крабсбургеров, пузырей и побег от медуз.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#075a88",
+  "theme_color": "#075a88",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
