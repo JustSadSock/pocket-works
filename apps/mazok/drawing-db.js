@@ -1,5 +1,6 @@
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const DRAWING_STORE = 'drawings';
+const VERSION_STORE = 'versions';
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -27,6 +28,11 @@ export async function openDrawingDatabase(namespace) {
     if (!database.objectStoreNames.contains(DRAWING_STORE)) {
       const store = database.createObjectStore(DRAWING_STORE, { keyPath: 'id' });
       store.createIndex('updatedAt', 'updatedAt');
+    }
+    if (!database.objectStoreNames.contains(VERSION_STORE)) {
+      const store = database.createObjectStore(VERSION_STORE, { keyPath: 'id' });
+      store.createIndex('drawingId', 'drawingId');
+      store.createIndex('createdAt', 'createdAt');
     }
   });
 
@@ -56,15 +62,49 @@ export async function openDrawingDatabase(namespace) {
       return drawing.id;
     },
 
+    async putVersion(version) {
+      const transaction = database.transaction(VERSION_STORE, 'readwrite', { durability: 'relaxed' });
+      transaction.objectStore(VERSION_STORE).put(version);
+      await transactionDone(transaction);
+      return version.id;
+    },
+
+    async getVersions(drawingId) {
+      const transaction = database.transaction(VERSION_STORE, 'readonly');
+      const index = transaction.objectStore(VERSION_STORE).index('drawingId');
+      const versions = await requestResult(index.getAll(IDBKeyRange.only(drawingId)));
+      return versions.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    },
+
+    async pruneVersions(drawingId, maximum = 10) {
+      const transaction = database.transaction(VERSION_STORE, 'readwrite');
+      const store = transaction.objectStore(VERSION_STORE);
+      const versions = await requestResult(store.index('drawingId').getAll(IDBKeyRange.only(drawingId)));
+      versions
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(Math.max(1, Number(maximum) || 10))
+        .forEach((version) => store.delete(version.id));
+      await transactionDone(transaction);
+    },
+
     async remove(id) {
-      const transaction = database.transaction(DRAWING_STORE, 'readwrite');
+      const transaction = database.transaction([DRAWING_STORE, VERSION_STORE], 'readwrite');
       transaction.objectStore(DRAWING_STORE).delete(id);
+      const versionStore = transaction.objectStore(VERSION_STORE);
+      const request = versionStore.index('drawingId').openKeyCursor(IDBKeyRange.only(id));
+      request.addEventListener('success', () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        versionStore.delete(cursor.primaryKey);
+        cursor.continue();
+      });
       await transactionDone(transaction);
     },
 
     async clear() {
-      const transaction = database.transaction(DRAWING_STORE, 'readwrite');
+      const transaction = database.transaction([DRAWING_STORE, VERSION_STORE], 'readwrite');
       transaction.objectStore(DRAWING_STORE).clear();
+      transaction.objectStore(VERSION_STORE).clear();
       await transactionDone(transaction);
     },
 
