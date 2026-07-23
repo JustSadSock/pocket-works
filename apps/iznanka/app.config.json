@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "slug": "iznanka",
+  "name": "ИЗНАНКА",
+  "shortName": "ИЗНАНКА",
+  "description": "Большая сюжетная пиксельная action-RPG о городе, сшитом из двух реальностей: живой ткани и мёртвой изнанки.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-23",
+  "releaseDateTime": "2026-07-23T12:00:00+02:00",
+  "changelog": [
+    "Пять связанных областей, сюжетная кампания, побочные задания и три разных финала.",
+    "Переключение двух слоёв мира меняет проходы, врагов, NPC, ресурсы и свойства атак.",
+    "Боевая система с комбо, рывком, иглой, метками слоя и разрывами между реальностями.",
+    "Четыре босса, девять постоянных улучшений, реликвии, сундуки, святилища и прокачка.",
+    "Полное сенсорное управление, клавиатура, звук, вибрация, сохранения и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d8b45b",
+  "backgroundColor": "#171a18",
+  "themeColor": "#171a18",
+  "orientation": "portrait",
+  "cacheName": "iznanka-v1.0.0",
+  "storageNamespace": "pocket-works:iznanka",
+  "tags": ["PWA", "offline", "game", "pixel art", "RPG", "action RPG", "story", "bosses", "quests", "dual world", "canvas", "audio", "haptics"],
+  "order": 146
+}
