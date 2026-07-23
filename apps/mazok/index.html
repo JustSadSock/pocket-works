@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#24231f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="МАЗОК">
+  <title>МАЗОК</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas">
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="app-header" data-ui>
+      <p class="app-kicker">Canvas / POCKET WORKS</p>
+      <h1>МАЗОК</h1>
+      <p class="selectable-content">Пальцевая рисовалка с большим холстом, живыми кистями, автосохранением и галереей, которая не съедает рисунки после обновления.</p>
+    </header>
+
+    <section class="stage" aria-labelledby="stage-title">
+      <h2 id="stage-title">Draw directly into a device-scaled canvas.</h2>
+      <canvas class="forge-canvas" id="forge-canvas" data-gesture-surface data-block-callout></canvas>
+      <button id="primary-action" type="button" data-native-press>Clear canvas</button>
+      <output id="status" aria-live="polite">Ready</output>
+    </section>
+
+    <footer data-ui>
+      <span>mazok</span>
+      <span>v0.1.0 · active</span>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </footer>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="МАЗОК"
+    data-app-version="0.1.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

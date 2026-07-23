@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "mazok",
+  "name": "МАЗОК",
+  "shortName": "МАЗОК",
+  "description": "Пальцевая рисовалка с большим холстом, живыми кистями, автосохранением и галереей, которая не съедает рисунки после обновления.",
+  "version": "0.1.0",
+  "releaseDate": "2026-07-23",
+  "releaseDateTime": "2026-07-23T00:04:59.626Z",
+  "changelog": [
+    "Первый выпуск: полноэкранный холст, четыре инструмента, жесты масштаба, история действий, автосохранение, галерея и экспорт PNG."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#2455d6",
+  "backgroundColor": "#d8d0c3",
+  "themeColor": "#24231f",
+  "orientation": "any",
+  "cacheName": "mazok-v0.1.0",
+  "storageNamespace": "pocket-works:mazok",
+  "tags": [
+    "canvas",
+    "drawing",
+    "offline"
+  ],
+  "order": 26
+}

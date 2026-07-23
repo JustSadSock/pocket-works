@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="МАЗОК">
+  <rect width="512" height="512" fill="#d8d0c3"/>
+  <path d="M64 64h384v384H64z" fill="none" stroke="#2455d6" stroke-width="22"/>
+  <path d="M96 352 256 96l160 256-160 64z" fill="#2455d6" opacity=".92"/>
+  <text x="256" y="318" text-anchor="middle" fill="#d8d0c3" font-family="system-ui,sans-serif" font-size="112" font-weight="900">М</text>
+</svg>
