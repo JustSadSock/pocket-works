@@ -1,0 +1,16 @@
+{
+  "id": "/apps/iznanka/",
+  "name": "ИЗНАНКА",
+  "short_name": "ИЗНАНКА",
+  "description": "Сюжетная пиксельная action-RPG о двух слоях одного погибающего города.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#171a18",
+  "theme_color": "#171a18",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
