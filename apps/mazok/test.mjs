@@ -163,13 +163,13 @@ const html = await readFile(new URL('index.html', appRoot), 'utf8');
 const application = await readFile(new URL('app.js', appRoot), 'utf8');
 const styles = await readFile(new URL('styles.css', appRoot), 'utf8');
 
-assert.equal(config.version, '1.2.0');
-assert.equal(config.cacheName, 'mazok-v1.2.0');
+assert.equal(config.version, '1.2.1');
+assert.equal(config.cacheName, 'mazok-v1.2.1');
 assert.equal(manifest.description, config.description);
 assert.equal(manifest.orientation, config.orientation);
-assert.match(html, /data-app-version="1\.2\.0"/);
+assert.match(html, /data-app-version="1\.2\.1"/);
 assert.match(html, /data-tool="fill"/);
-assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v1\.2\.0'/);
+assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v1\.2\.1'/);
 assert.match(serviceWorker, /'\.\/drawing-core\.js'/);
 assert.match(serviceWorker, /'\.\/drawing-db\.js'/);
 assert.doesNotMatch(application, /\b(?:alert|confirm|prompt)\s*\(/);
@@ -179,6 +179,16 @@ assert.match(application, /replayStrokesScaled/);
 assert.match(application, /requestIdleCallback/);
 assert.match(styles, /--palette-bottom:\s*max\(2px,\s*calc\(var\(--device-safe-bottom\)\s*-\s*30px\)\)/);
 assert.match(styles, /\.thumb-palette\s*\{[\s\S]*?bottom:\s*var\(--palette-bottom\)/);
+assert.match(
+  styles,
+  /\.app-shell\s*\{[\s\S]*?inset:\s*0;[\s\S]*?height:\s*auto;[\s\S]*?min-height:\s*100%/,
+  'the fixed app shell must fill the layout viewport instead of reusing a shortened visual viewport height'
+);
+assert.match(
+  styles,
+  /html\.is-app-keyboard-open\s+\.app-shell\s*\{[\s\S]*?bottom:\s*auto;[\s\S]*?height:\s*var\(--app-viewport-height/,
+  'the keyboard state must still follow the visual viewport'
+);
 
 const shellBlock = serviceWorker.match(/const APP_SHELL = \[([\s\S]*?)\];/)?.[1] || '';
 const shellEntries = [...shellBlock.matchAll(/'([^']+)'/g)].map((match) => match[1]);
