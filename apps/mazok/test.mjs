@@ -1,20 +1,31 @@
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import 'fake-indexeddb/auto';
 import {
   brushSizeInDocument,
   clamp,
+  colorVariants,
   createDrawingDocument,
   drawStrokeRange,
+  drawingActionCount,
   drawingCountLabel,
   fitDrawingScale,
   floodFillPixels,
   isValidDrawing,
+  normalizeDrawingDocument,
   normalizeHexColor,
+  recognizeShape,
   safeFileStem,
+  selectStrokeIds,
+  selectionBounds,
   simplifyPoints,
+  transformStroke,
+  usedDrawingColors,
   widthForPoint
 } from './drawing-core.js';
+import { openDrawingDatabase } from './drawing-db.js';
+import { makeTimelapsePlan } from './timelapse.js';
 
 assert.equal(clamp(12, 0, 10), 10);
 assert.equal(clamp(-2, 0, 10), 0);
@@ -27,35 +38,111 @@ assert.ok(nearFit >= 390 / 1200 && nearFit >= 844 / 2596);
 assert.equal(fitDrawingScale(390, 844, 1200, 1500), 390 / 1200);
 
 const drawing = createDrawingDocument(390, 844, { background: '#ffffff' });
-assert.equal(drawing.schema, 1);
+assert.equal(drawing.schema, 2);
 assert.equal(drawing.width, 1200);
 assert.ok(drawing.height > drawing.width * 2);
 assert.equal(drawing.background, '#ffffff');
+assert.equal(drawing.layers.length, 1);
 assert.ok(isValidDrawing(drawing));
 
-drawing.strokes.push({
+const baseLayer = drawing.layers[0];
+baseLayer.strokes.push({
   id: 'stroke-test',
   tool: 'ink',
   color: '#2455d6',
   size: 20,
   seed: 4,
+  seq: 1,
   points: [
     { x: 20, y: 30, p: 0.2, t: 0 },
     { x: 80, y: 90, p: 0.7, t: 16 }
   ]
 });
 assert.ok(isValidDrawing(drawing));
-assert.ok(widthForPoint(drawing.strokes[0], drawing.strokes[0].points[1]) > 20);
+assert.ok(widthForPoint(baseLayer.strokes[0], baseLayer.strokes[0].points[1]) > 20);
 
-drawing.strokes.push({
+baseLayer.strokes.push({
   id: 'fill-test',
   tool: 'fill',
   color: '#ef5b49',
   size: 1,
+  seq: 2,
   tolerance: 26,
   points: [{ x: 40, y: 50, p: 0.5, t: 20 }]
 });
 assert.ok(isValidDrawing(drawing));
+assert.equal(drawingActionCount(drawing), 2);
+assert.deepEqual(usedDrawingColors(drawing), ['#2455d6', '#ef5b49']);
+
+const legacy = {
+  schema: 1,
+  id: 'drawing-legacy',
+  title: 'Старый рисунок',
+  createdAt: drawing.createdAt,
+  updatedAt: drawing.updatedAt,
+  width: drawing.width,
+  height: drawing.height,
+  background: drawing.background,
+  strokes: structuredClone(baseLayer.strokes),
+  thumbnail: null
+};
+assert.ok(isValidDrawing(legacy));
+const migrated = normalizeDrawingDocument(legacy);
+assert.equal(migrated.schema, 2);
+assert.equal(migrated.layers.length, 1);
+assert.equal(migrated.layers[0].strokes.length, 2);
+assert.ok(isValidDrawing(migrated));
+
+const infinite = createDrawingDocument(390, 844, { canvasMode: 'infinite' });
+assert.equal(infinite.canvasMode, 'infinite');
+infinite.layers[0].strokes.push({
+  id: 'far-away',
+  tool: 'ink',
+  color: '#20211f',
+  size: 18,
+  seq: 1,
+  points: [{ x: -8000, y: 12000, p: 0.5, t: 1 }, { x: -7900, y: 12100, p: 0.5, t: 2 }]
+});
+assert.ok(isValidDrawing(infinite));
+
+const lineShape = recognizeShape({
+  tool: 'ink',
+  size: 12,
+  points: Array.from({ length: 12 }, (_, index) => ({ x: index * 20, y: index * 1.2, p: 0.5, t: index }))
+});
+assert.equal(lineShape?.type, 'line');
+
+const rectanglePoints = [];
+for (let index = 0; index <= 8; index += 1) rectanglePoints.push({ x: index * 25, y: 0, p: 0.5, t: rectanglePoints.length });
+for (let index = 1; index <= 5; index += 1) rectanglePoints.push({ x: 200, y: index * 24, p: 0.5, t: rectanglePoints.length });
+for (let index = 1; index <= 8; index += 1) rectanglePoints.push({ x: 200 - index * 25, y: 120, p: 0.5, t: rectanglePoints.length });
+for (let index = 1; index <= 5; index += 1) rectanglePoints.push({ x: 0, y: 120 - index * 24, p: 0.5, t: rectanglePoints.length });
+assert.equal(recognizeShape({ tool: 'ink', size: 12, points: rectanglePoints })?.type, 'rectangle');
+
+const ellipsePoints = Array.from({ length: 33 }, (_, index) => {
+  const angle = Math.PI * 2 * index / 32;
+  return { x: 110 + Math.cos(angle) * 90, y: 90 + Math.sin(angle) * 60, p: 0.5, t: index };
+});
+assert.equal(recognizeShape({ tool: 'pencil', size: 10, points: ellipsePoints })?.type, 'ellipse');
+
+const selectionSource = [
+  { id: 'inside', tool: 'ink', color: '#20211f', size: 10, points: [{ x: 20, y: 20 }, { x: 80, y: 80 }] },
+  { id: 'outside', tool: 'ink', color: '#20211f', size: 10, points: [{ x: 220, y: 220 }, { x: 280, y: 280 }] }
+];
+const polygon = [{ x: 0, y: 0 }, { x: 120, y: 0 }, { x: 120, y: 120 }, { x: 0, y: 120 }];
+assert.deepEqual(selectStrokeIds(selectionSource, polygon), ['inside']);
+const selectedBox = selectionBounds(selectionSource, ['inside']);
+assert.ok(selectedBox.width > 60 && selectedBox.height > 60);
+const moved = transformStroke(selectionSource[0], { translateX: 100, translateY: -20, scale: 2, originX: 50, originY: 50 });
+assert.equal(moved.points[0].x, 90);
+assert.equal(moved.points[0].y, -30);
+assert.equal(moved.size, 20);
+assert.equal(colorVariants('#2455d6').length, 5);
+
+const timelapsePlan = makeTimelapsePlan(drawing);
+assert.equal(timelapsePlan.actionCount, 2);
+assert.equal(timelapsePlan.cutoffs[0], 0);
+assert.equal(timelapsePlan.cutoffs.at(-1), 2);
 
 const markerContext = {
   strokes: 0,
@@ -146,7 +233,7 @@ assert.deepEqual(simplified[0], line[0]);
 assert.deepEqual(simplified.at(-1), line.at(-1));
 
 const damaged = structuredClone(drawing);
-damaged.strokes[0].points[0].x = Number.NaN;
+damaged.layers[0].strokes[0].points[0].x = Number.NaN;
 assert.equal(isValidDrawing(damaged), false);
 
 assert.equal(drawingCountLabel(1), '1 рисунок');
@@ -154,6 +241,27 @@ assert.equal(drawingCountLabel(3), '3 рисунка');
 assert.equal(drawingCountLabel(12), '12 рисунков');
 assert.equal(drawingCountLabel(25), '25 рисунков');
 assert.equal(safeFileStem(' Мой / первый: мазок! '), 'мой-первый-мазок');
+
+const versionDatabase = await openDrawingDatabase(`pocket-works:mazok:test:${Date.now()}`);
+await versionDatabase.put(structuredClone(drawing));
+for (let index = 0; index < 12; index += 1) {
+  await versionDatabase.putVersion({
+    id: `version-${index}`,
+    drawingId: drawing.id,
+    createdAt: new Date(Date.UTC(2026, 6, 23, 12, index)).toISOString(),
+    label: `Версия ${index}`,
+    actionCount: index,
+    snapshot: {}
+  });
+}
+await versionDatabase.pruneVersions(drawing.id, 10);
+const versions = await versionDatabase.getVersions(drawing.id);
+assert.equal(versions.length, 10);
+assert.equal(versions[0].id, 'version-11');
+assert.equal(versions.at(-1).id, 'version-2');
+await versionDatabase.remove(drawing.id);
+assert.equal((await versionDatabase.getVersions(drawing.id)).length, 0);
+versionDatabase.close();
 
 const appRoot = new URL('./', import.meta.url);
 const config = JSON.parse(await readFile(new URL('app.config.json', appRoot), 'utf8'));
@@ -163,19 +271,26 @@ const html = await readFile(new URL('index.html', appRoot), 'utf8');
 const application = await readFile(new URL('app.js', appRoot), 'utf8');
 const styles = await readFile(new URL('styles.css', appRoot), 'utf8');
 
-assert.equal(config.version, '1.2.1');
-assert.equal(config.cacheName, 'mazok-v1.2.1');
+assert.equal(config.version, '2.0.0');
+assert.equal(config.cacheName, 'mazok-v2.0.0');
 assert.equal(manifest.description, config.description);
 assert.equal(manifest.orientation, config.orientation);
-assert.match(html, /data-app-version="1\.2\.1"/);
+assert.match(html, /data-app-version="2\.0\.0"/);
 assert.match(html, /data-tool="fill"/);
-assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v1\.2\.1'/);
+assert.match(html, /data-tool="select"/);
+assert.match(html, /id="layersSheet"/);
+assert.match(html, /id="versionsSheet"/);
+assert.match(html, /id="timelapseSheet"/);
+assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v2\.0\.0'/);
 assert.match(serviceWorker, /'\.\/drawing-core\.js'/);
 assert.match(serviceWorker, /'\.\/drawing-db\.js'/);
+assert.match(serviceWorker, /'\.\/timelapse\.js'/);
+assert.match(serviceWorker, /'\.\/vendor\/gifenc\.esm\.js'/);
 assert.doesNotMatch(application, /\b(?:alert|confirm|prompt)\s*\(/);
 assert.match(application, /brushSizeInDocument\(selectedSize\(tool\), currentDrawing\.width\)/);
 assert.match(application, /await showGallery\(\)/);
-assert.match(application, /replayStrokesScaled/);
+assert.match(application, /normalizeDrawingDocument/);
+assert.match(application, /encodeTimelapseGif/);
 assert.match(application, /requestIdleCallback/);
 assert.match(styles, /--palette-bottom:\s*max\(2px,\s*calc\(var\(--device-safe-bottom\)\s*-\s*30px\)\)/);
 assert.match(styles, /\.thumb-palette\s*\{[\s\S]*?bottom:\s*var\(--palette-bottom\)/);

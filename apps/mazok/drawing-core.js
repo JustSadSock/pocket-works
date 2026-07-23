@@ -3,7 +3,8 @@ export const TOOL_DEFS = Object.freeze({
   ink: Object.freeze({ label: 'Чернила', icon: 'i-pen', min: 2, max: 52, defaultSize: 14, opacity: 1 }),
   marker: Object.freeze({ label: 'Маркер', icon: 'i-marker', min: 8, max: 96, defaultSize: 38, opacity: 0.28 }),
   fill: Object.freeze({ label: 'Заливка', icon: 'i-fill', min: 1, max: 1, defaultSize: 1, opacity: 1 }),
-  eraser: Object.freeze({ label: 'Ластик', icon: 'i-eraser', min: 8, max: 120, defaultSize: 34, opacity: 1 })
+  eraser: Object.freeze({ label: 'Ластик', icon: 'i-eraser', min: 8, max: 120, defaultSize: 34, opacity: 1 }),
+  select: Object.freeze({ label: 'Выделение', icon: 'i-lasso', min: 1, max: 1, defaultSize: 1, opacity: 1 })
 });
 
 export const PAPER_COLORS = Object.freeze(['#fffaf0', '#ffffff', '#f4eadf', '#e9f1ef']);
@@ -62,20 +63,36 @@ export function createDrawingDocument(viewportWidth, viewportHeight, options = {
   const safeWidth = Math.max(280, Number(viewportWidth) || 390);
   const safeHeight = Math.max(420, Number(viewportHeight) || 760);
   const aspect = clamp(safeHeight / safeWidth, 0.72, 2.35);
-  const height = Math.round(width * aspect);
+  const canvasMode = options.canvasMode === 'infinite' ? 'infinite' : 'sheet';
+  const height = canvasMode === 'infinite' ? width : Math.round(width * aspect);
   const timestamp = new Date().toISOString();
+  const layer = createDrawingLayer('Слой 1');
 
   return {
-    schema: 1,
+    schema: 2,
     id: makeId(),
     title: options.title || 'Без названия',
     createdAt: timestamp,
     updatedAt: timestamp,
     width,
     height,
+    canvasMode,
     background: PAPER_COLORS.includes(options.background) ? options.background : PAPER_COLORS[0],
-    strokes: [],
+    layers: [layer],
+    activeLayerId: layer.id,
+    nextSequence: 1,
+    versionedAt: null,
     thumbnail: null
+  };
+}
+
+export function createDrawingLayer(name = 'Новый слой') {
+  return {
+    id: makeId('layer'),
+    name: String(name || 'Новый слой').slice(0, 32),
+    visible: true,
+    opacity: 1,
+    strokes: []
   };
 }
 
@@ -112,28 +129,113 @@ export function simplifyPoints(points, tolerance = 0.75) {
   return points.filter((_, index) => keep[index]);
 }
 
-function finitePoint(point, width, height) {
-  return point && Number.isFinite(point.x) && Number.isFinite(point.y)
-    && point.x >= -width * 0.05 && point.x <= width * 1.05
+function finitePoint(point, width, height, canvasMode = 'sheet') {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+  if (canvasMode === 'infinite') {
+    return Math.abs(point.x) <= 1_000_000 && Math.abs(point.y) <= 1_000_000;
+  }
+  return point.x >= -width * 0.05 && point.x <= width * 1.05
     && point.y >= -height * 0.05 && point.y <= height * 1.05;
 }
 
-export function isValidDrawing(value) {
-  if (!value || value.schema !== 1 || typeof value.id !== 'string' || value.id.length > 160) return false;
+function isValidStroke(stroke, width, height, canvasMode) {
+  if (!stroke || !TOOL_DEFS[stroke.tool] || stroke.tool === 'select' || !Array.isArray(stroke.points)) return false;
+  if (stroke.points.length < 1 || stroke.points.length > 12_000) return false;
+  if (stroke.tool === 'fill' && (stroke.points.length !== 1 || canvasMode === 'infinite')) return false;
+  if (!Number.isFinite(stroke.size) || stroke.size < 0.1 || stroke.size > 4000) return false;
+  if (stroke.tool !== 'eraser' && !/^#[0-9a-f]{6}$/i.test(stroke.color || '')) return false;
+  if (stroke.shape && !['line', 'rectangle', 'ellipse'].includes(stroke.shape)) return false;
+  return stroke.points.every((point) => finitePoint(point, width, height, canvasMode));
+}
+
+function isValidBaseDocument(value) {
+  if (!value || typeof value.id !== 'string' || value.id.length > 160) return false;
   if (!Number.isFinite(value.width) || !Number.isFinite(value.height)) return false;
   if (value.width < 240 || value.width > 4096 || value.height < 240 || value.height > 8192) return false;
-  if (!Array.isArray(value.strokes) || value.strokes.length > 5000) return false;
   if (typeof value.title !== 'string' || value.title.length > 80) return false;
   if (!/^#[0-9a-f]{6}$/i.test(value.background || '')) return false;
+  return true;
+}
 
-  return value.strokes.every((stroke) => {
-    if (!stroke || !TOOL_DEFS[stroke.tool] || !Array.isArray(stroke.points)) return false;
-    if (stroke.points.length < 1 || stroke.points.length > 12_000) return false;
-    if (stroke.tool === 'fill' && stroke.points.length !== 1) return false;
-    if (!Number.isFinite(stroke.size) || stroke.size < 0.1 || stroke.size > 1000) return false;
-    if (stroke.tool !== 'eraser' && !/^#[0-9a-f]{6}$/i.test(stroke.color || '')) return false;
-    return stroke.points.every((point) => finitePoint(point, value.width, value.height));
-  });
+export function isValidDrawing(value) {
+  if (!isValidBaseDocument(value)) return false;
+  if (value.schema === 1) {
+    return Array.isArray(value.strokes)
+      && value.strokes.length <= 5000
+      && value.strokes.every((stroke) => isValidStroke(stroke, value.width, value.height, 'sheet'));
+  }
+  if (value.schema !== 2 || !['sheet', 'infinite'].includes(value.canvasMode)) return false;
+  if (!Array.isArray(value.layers) || value.layers.length < 1 || value.layers.length > 5) return false;
+  const ids = new Set();
+  let strokeCount = 0;
+  for (const layer of value.layers) {
+    if (!layer || typeof layer.id !== 'string' || ids.has(layer.id)) return false;
+    if (typeof layer.name !== 'string' || layer.name.length > 32) return false;
+    if (typeof layer.visible !== 'boolean' || !Number.isFinite(layer.opacity) || layer.opacity < 0 || layer.opacity > 1) return false;
+    if (!Array.isArray(layer.strokes)) return false;
+    ids.add(layer.id);
+    strokeCount += layer.strokes.length;
+    if (strokeCount > 8000) return false;
+    if (!layer.strokes.every((stroke) => isValidStroke(stroke, value.width, value.height, value.canvasMode))) return false;
+  }
+  return ids.has(value.activeLayerId);
+}
+
+export function normalizeDrawingDocument(value) {
+  if (!isValidDrawing(value)) return null;
+  if (value.schema === 2) {
+    const layers = value.layers.map((layer, layerIndex) => ({
+      ...layer,
+      name: String(layer.name || `Слой ${layerIndex + 1}`).slice(0, 32),
+      visible: layer.visible !== false,
+      opacity: clamp(Number(layer.opacity), 0, 1),
+      strokes: layer.strokes.map((stroke, strokeIndex) => ({
+        ...stroke,
+        seq: Number.isFinite(stroke.seq) ? stroke.seq : strokeIndex + 1
+      }))
+    }));
+    const largestSequence = layers.reduce(
+      (maximum, layer) => Math.max(maximum, ...layer.strokes.map((stroke) => Number(stroke.seq) || 0)),
+      0
+    );
+    return {
+      ...value,
+      layers,
+      activeLayerId: layers.some((layer) => layer.id === value.activeLayerId) ? value.activeLayerId : layers.at(-1).id,
+      nextSequence: Math.max(largestSequence + 1, Number(value.nextSequence) || 1),
+      versionedAt: typeof value.versionedAt === 'string' ? value.versionedAt : null
+    };
+  }
+
+  const layer = createDrawingLayer('Слой 1');
+  layer.id = `layer-${value.id}`;
+  layer.strokes = value.strokes.map((stroke, index) => ({
+    ...stroke,
+    seq: index + 1,
+    createdAt: stroke.createdAt || value.updatedAt || value.createdAt
+  }));
+  return {
+    ...value,
+    schema: 2,
+    canvasMode: 'sheet',
+    layers: [layer],
+    activeLayerId: layer.id,
+    nextSequence: layer.strokes.length + 1,
+    versionedAt: null,
+    strokes: undefined
+  };
+}
+
+export function drawingLayers(drawing) {
+  if (drawing?.schema === 2 && Array.isArray(drawing.layers)) return drawing.layers;
+  if (drawing?.schema === 1 && Array.isArray(drawing.strokes)) {
+    return [{ id: `layer-${drawing.id}`, name: 'Слой 1', visible: true, opacity: 1, strokes: drawing.strokes }];
+  }
+  return [];
+}
+
+export function drawingActionCount(drawing) {
+  return drawingLayers(drawing).reduce((total, layer) => total + layer.strokes.length, 0);
 }
 
 function pressureOf(point) {
@@ -519,6 +621,351 @@ export function replayStrokesScaled(
     drawStrokeRange(context, stroke, 0);
     context.restore();
   }
+}
+
+export function replayDrawingScaled(context, drawing, targetWidth, targetHeight, options = {}) {
+  const layers = drawingLayers(drawing);
+  const maximumSequence = Number.isFinite(options.maxSequence) ? options.maxSequence : Number.POSITIVE_INFINITY;
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, targetWidth, targetHeight);
+  context.restore();
+
+  let replayLayer = null;
+  for (const layer of layers) {
+    if (!layer.visible && !options.includeHidden) continue;
+    replayLayer ||= createReplayLayer(targetWidth, targetHeight);
+    if (!replayLayer) {
+      replayStrokesScaled(
+        context,
+        layer.strokes.filter((stroke) => (Number(stroke.seq) || 0) <= maximumSequence),
+        drawing.width,
+        drawing.height,
+        targetWidth,
+        targetHeight,
+        drawing.background
+      );
+      continue;
+    }
+    replayStrokesScaled(
+      replayLayer.context,
+      layer.strokes.filter((stroke) => (Number(stroke.seq) || 0) <= maximumSequence),
+      drawing.width,
+      drawing.height,
+      targetWidth,
+      targetHeight,
+      drawing.background
+    );
+    context.save();
+    context.globalAlpha = clamp(Number(layer.opacity), 0, 1);
+    context.drawImage(replayLayer.canvas, 0, 0);
+    context.restore();
+  }
+}
+
+export function strokeBounds(stroke) {
+  if (!stroke?.points?.length) return null;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const point of stroke.points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  const padding = Math.max(1, Number(stroke.size) || 1) * 0.58;
+  return {
+    minX: minX - padding,
+    minY: minY - padding,
+    maxX: maxX + padding,
+    maxY: maxY + padding,
+    width: Math.max(1, maxX - minX + padding * 2),
+    height: Math.max(1, maxY - minY + padding * 2)
+  };
+}
+
+export function mergeBounds(boundsList, fallback = null) {
+  const valid = (boundsList || []).filter(Boolean);
+  if (!valid.length) return fallback;
+  const minX = Math.min(...valid.map((bounds) => bounds.minX));
+  const minY = Math.min(...valid.map((bounds) => bounds.minY));
+  const maxX = Math.max(...valid.map((bounds) => bounds.maxX));
+  const maxY = Math.max(...valid.map((bounds) => bounds.maxY));
+  return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+}
+
+export function drawingContentBounds(drawing, options = {}) {
+  const bounds = [];
+  for (const layer of drawingLayers(drawing)) {
+    if (!layer.visible && !options.includeHidden) continue;
+    for (const stroke of layer.strokes) {
+      if (stroke.tool === 'eraser' || stroke.tool === 'fill') continue;
+      if (Number.isFinite(options.maxSequence) && (Number(stroke.seq) || 0) > options.maxSequence) continue;
+      bounds.push(strokeBounds(stroke));
+    }
+  }
+  const fallbackSize = Math.max(240, Math.min(drawing?.width || 1200, drawing?.height || 1200));
+  return mergeBounds(bounds, {
+    minX: (drawing?.width || fallbackSize) * 0.5 - fallbackSize * 0.5,
+    minY: (drawing?.height || fallbackSize) * 0.5 - fallbackSize * 0.5,
+    maxX: (drawing?.width || fallbackSize) * 0.5 + fallbackSize * 0.5,
+    maxY: (drawing?.height || fallbackSize) * 0.5 + fallbackSize * 0.5,
+    width: fallbackSize,
+    height: fallbackSize
+  });
+}
+
+export function replayDrawingRegion(context, drawing, bounds, targetWidth, targetHeight, options = {}) {
+  const safeBounds = bounds || drawingContentBounds(drawing, options);
+  const padding = Math.max(0, Number(options.padding) || 0);
+  const sourceWidth = Math.max(1, safeBounds.width + padding * 2);
+  const sourceHeight = Math.max(1, safeBounds.height + padding * 2);
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const offsetX = (targetWidth - safeBounds.width * scale) * 0.5 - safeBounds.minX * scale;
+  const offsetY = (targetHeight - safeBounds.height * scale) * 0.5 - safeBounds.minY * scale;
+  const maximumSequence = Number.isFinite(options.maxSequence) ? options.maxSequence : Number.POSITIVE_INFINITY;
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, targetWidth, targetHeight);
+  context.restore();
+
+  let replayLayer = null;
+  for (const layer of drawingLayers(drawing)) {
+    if (!layer.visible && !options.includeHidden) continue;
+    replayLayer ||= createReplayLayer(targetWidth, targetHeight);
+    if (!replayLayer) continue;
+    const layerContext = replayLayer.context;
+    layerContext.setTransform(1, 0, 0, 1, 0, 0);
+    layerContext.clearRect(0, 0, targetWidth, targetHeight);
+    layerContext.save();
+    layerContext.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+    for (const stroke of layer.strokes) {
+      if ((Number(stroke.seq) || 0) > maximumSequence || stroke.tool === 'fill') continue;
+      drawStrokeRange(layerContext, stroke, 0);
+    }
+    layerContext.restore();
+    context.save();
+    context.globalAlpha = clamp(Number(layer.opacity), 0, 1);
+    context.drawImage(replayLayer.canvas, 0, 0);
+    context.restore();
+  }
+}
+
+function pathLength(points) {
+  let length = 0;
+  for (let index = 1; index < points.length; index += 1) length += distance(points[index - 1], points[index]);
+  return length;
+}
+
+function makeEllipsePoints(bounds, count = 48) {
+  const centerX = (bounds.minX + bounds.maxX) * 0.5;
+  const centerY = (bounds.minY + bounds.maxY) * 0.5;
+  const radiusX = Math.max(1, bounds.width * 0.5);
+  const radiusY = Math.max(1, bounds.height * 0.5);
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const angle = Math.PI * 2 * index / count;
+    return {
+      x: centerX + Math.cos(angle) * radiusX,
+      y: centerY + Math.sin(angle) * radiusY,
+      p: 0.5,
+      t: index
+    };
+  });
+}
+
+function makeRectanglePoints(bounds) {
+  return [
+    { x: bounds.minX, y: bounds.minY, p: 0.5, t: 0 },
+    { x: bounds.maxX, y: bounds.minY, p: 0.5, t: 1 },
+    { x: bounds.maxX, y: bounds.maxY, p: 0.5, t: 2 },
+    { x: bounds.minX, y: bounds.maxY, p: 0.5, t: 3 },
+    { x: bounds.minX, y: bounds.minY, p: 0.5, t: 4 }
+  ];
+}
+
+export function recognizeShape(stroke) {
+  const points = stroke?.points || [];
+  if (points.length < 4 || !['pencil', 'ink', 'marker'].includes(stroke.tool)) return null;
+  const rawBounds = strokeBounds({ ...stroke, size: 0 });
+  if (!rawBounds) return null;
+  const diagonal = Math.hypot(rawBounds.width, rawBounds.height);
+  if (diagonal < Math.max(24, stroke.size * 1.8)) return null;
+  const first = points[0];
+  const last = points.at(-1);
+  const direct = distance(first, last);
+  const traveled = pathLength(points);
+  let maximumLineError = 0;
+  for (const point of points) maximumLineError = Math.max(maximumLineError, pointSegmentDistance(point, first, last));
+  if (direct / Math.max(1, traveled) > 0.88 && maximumLineError < Math.max(stroke.size * 0.7, direct * 0.055)) {
+    return {
+      type: 'line',
+      label: 'Линия',
+      points: [
+        { ...first, p: 0.5 },
+        { ...last, p: 0.5, t: Math.max(Number(first.t) + 1, Number(last.t) || 1) }
+      ]
+    };
+  }
+
+  const closed = direct < diagonal * 0.28;
+  if (!closed || points.length < 8 || rawBounds.width < stroke.size || rawBounds.height < stroke.size) return null;
+
+  let rectangleError = 0;
+  let ellipseError = 0;
+  const centerX = (rawBounds.minX + rawBounds.maxX) * 0.5;
+  const centerY = (rawBounds.minY + rawBounds.maxY) * 0.5;
+  const radiusX = Math.max(1, rawBounds.width * 0.5);
+  const radiusY = Math.max(1, rawBounds.height * 0.5);
+  const touchedSides = [false, false, false, false];
+  for (const point of points) {
+    const sideDistances = [
+      Math.abs(point.x - rawBounds.minX),
+      Math.abs(point.x - rawBounds.maxX),
+      Math.abs(point.y - rawBounds.minY),
+      Math.abs(point.y - rawBounds.maxY)
+    ];
+    const closestSide = Math.min(...sideDistances);
+    rectangleError += closestSide / Math.max(1, diagonal);
+    const sideIndex = sideDistances.indexOf(closestSide);
+    if (closestSide < diagonal * 0.11) touchedSides[sideIndex] = true;
+    const normalizedRadius = Math.hypot((point.x - centerX) / radiusX, (point.y - centerY) / radiusY);
+    ellipseError += Math.abs(1 - normalizedRadius);
+  }
+  rectangleError /= points.length;
+  ellipseError /= points.length;
+
+  if (touchedSides.every(Boolean) && rectangleError < 0.075 && rectangleError < ellipseError * 0.82) {
+    return { type: 'rectangle', label: 'Прямоугольник', points: makeRectanglePoints(rawBounds) };
+  }
+  if (ellipseError < 0.24) {
+    return { type: 'ellipse', label: rawBounds.width / rawBounds.height > 0.86 && rawBounds.width / rawBounds.height < 1.16 ? 'Круг' : 'Овал', points: makeEllipsePoints(rawBounds) };
+  }
+  return null;
+}
+
+export function pointInPolygon(point, polygon) {
+  if (!point || !Array.isArray(polygon) || polygon.length < 3) return false;
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const a = polygon[index];
+    const b = polygon[previous];
+    const crosses = (a.y > point.y) !== (b.y > point.y)
+      && point.x < (b.x - a.x) * (point.y - a.y) / ((b.y - a.y) || Number.EPSILON) + a.x;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+export function selectStrokeIds(strokes, polygon) {
+  if (!Array.isArray(strokes) || !Array.isArray(polygon) || polygon.length < 3) return [];
+  const polygonBounds = mergeBounds([{
+    minX: Math.min(...polygon.map((point) => point.x)),
+    minY: Math.min(...polygon.map((point) => point.y)),
+    maxX: Math.max(...polygon.map((point) => point.x)),
+    maxY: Math.max(...polygon.map((point) => point.y)),
+    width: Math.max(...polygon.map((point) => point.x)) - Math.min(...polygon.map((point) => point.x)),
+    height: Math.max(...polygon.map((point) => point.y)) - Math.min(...polygon.map((point) => point.y))
+  }]);
+  return strokes.filter((stroke) => {
+    const bounds = strokeBounds(stroke);
+    if (!bounds || bounds.maxX < polygonBounds.minX || bounds.minX > polygonBounds.maxX
+      || bounds.maxY < polygonBounds.minY || bounds.minY > polygonBounds.maxY) return false;
+    if (stroke.points.some((point) => pointInPolygon(point, polygon))) return true;
+    const center = { x: (bounds.minX + bounds.maxX) * 0.5, y: (bounds.minY + bounds.maxY) * 0.5 };
+    return pointInPolygon(center, polygon)
+      || polygon.some((point) => point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY);
+  }).map((stroke) => stroke.id);
+}
+
+export function selectionBounds(strokes, ids) {
+  const selected = new Set(ids || []);
+  return mergeBounds((strokes || []).filter((stroke) => selected.has(stroke.id)).map(strokeBounds));
+}
+
+export function transformStroke(stroke, transform = {}) {
+  const originX = Number(transform.originX) || 0;
+  const originY = Number(transform.originY) || 0;
+  const translateX = Number(transform.translateX) || 0;
+  const translateY = Number(transform.translateY) || 0;
+  const scale = clamp(Number(transform.scale) || 1, 0.08, 16);
+  const rotation = Number(transform.rotation) || 0;
+  const cosine = Math.cos(rotation);
+  const sine = Math.sin(rotation);
+  return {
+    ...stroke,
+    size: Math.max(0.1, stroke.size * Math.abs(scale)),
+    points: stroke.points.map((point) => {
+      const localX = (point.x - originX) * scale;
+      const localY = (point.y - originY) * scale;
+      return {
+        ...point,
+        x: originX + localX * cosine - localY * sine + translateX,
+        y: originY + localX * sine + localY * cosine + translateY
+      };
+    })
+  };
+}
+
+function hexToHsl(value) {
+  const [redByte, greenByte, blueByte] = rgbFromHex(value);
+  const red = redByte / 255;
+  const green = greenByte / 255;
+  const blue = blueByte / 255;
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const lightness = (maximum + minimum) * 0.5;
+  const delta = maximum - minimum;
+  if (delta === 0) return [0, 0, lightness];
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  let hue = maximum === red
+    ? ((green - blue) / delta) % 6
+    : maximum === green
+      ? (blue - red) / delta + 2
+      : (red - green) / delta + 4;
+  hue = (hue * 60 + 360) % 360;
+  return [hue, saturation, lightness];
+}
+
+function hslToHex(hue, saturation, lightness) {
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const segment = ((hue % 360) + 360) % 360 / 60;
+  const secondary = chroma * (1 - Math.abs(segment % 2 - 1));
+  const pair = segment < 1 ? [chroma, secondary, 0]
+    : segment < 2 ? [secondary, chroma, 0]
+      : segment < 3 ? [0, chroma, secondary]
+        : segment < 4 ? [0, secondary, chroma]
+          : segment < 5 ? [secondary, 0, chroma]
+            : [chroma, 0, secondary];
+  const match = lightness - chroma * 0.5;
+  return `#${pair.map((channel) => Math.round((channel + match) * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+export function colorVariants(value) {
+  const [hue, saturation, lightness] = hexToHsl(value);
+  return [
+    hslToHex(hue, clamp(saturation * 0.9, 0, 1), clamp(lightness + 0.2, 0.08, 0.94)),
+    hslToHex(hue, clamp(saturation * 1.05, 0, 1), clamp(lightness - 0.18, 0.06, 0.9)),
+    hslToHex(hue + 180, clamp(Math.max(0.36, saturation), 0, 1), clamp(1 - lightness * 0.45, 0.28, 0.76)),
+    hslToHex(hue + 32, saturation, lightness),
+    hslToHex(hue - 32, saturation, lightness)
+  ].filter((color, index, all) => color !== normalizeHexColor(value) && all.indexOf(color) === index);
+}
+
+export function usedDrawingColors(drawing, limit = 8) {
+  const counts = new Map();
+  for (const layer of drawingLayers(drawing)) {
+    for (const stroke of layer.strokes) {
+      if (stroke.tool === 'eraser') continue;
+      const color = normalizeHexColor(stroke.color);
+      counts.set(color, (counts.get(color) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, Math.max(1, limit))
+    .map(([color]) => color);
 }
 
 export function safeFileStem(title) {
