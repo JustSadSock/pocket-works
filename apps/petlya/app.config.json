@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "petlya",
+  "name": "ПЕТЛЯ",
+  "shortName": "ПЕТЛЯ",
+  "description": "Необычная головоломка про запись маршрутов: отматывай время, координируй собственные эха, удерживай печати и открывай затворы.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-24",
+  "releaseDateTime": "2026-07-24T18:30:00+02:00",
+  "changelog": [
+    "Добавлена кампания из 18 проверенных временных головоломок в трёх главах.",
+    "Реализованы запись маршрутов, одновременное воспроизведение до трёх эхо, печати, цветные затворы и призрачные переключатели.",
+    "Добавлены архив уровней, рейтинг решений, точное сохранение сессии, свайпы, экранные кнопки, звук, вибрация и полноценная офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#cf644f",
+  "backgroundColor": "#efe6d2",
+  "themeColor": "#18313a",
+  "orientation": "portrait",
+  "cacheName": "petlya-v1.0.0",
+  "storageNamespace": "pocket-works:petlya",
+  "tags": ["PWA", "offline", "game", "puzzle", "time loop", "strategy", "grid", "touch", "audio", "haptics", "portrait"],
+  "order": 114
+}
