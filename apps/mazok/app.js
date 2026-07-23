@@ -28,7 +28,7 @@ import {
 import { openDrawingDatabase } from './drawing-db.js';
 
 const APP_NAME = 'МАЗОК';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const STORAGE_NAMESPACE = 'pocket-works:mazok';
 const THUMBNAIL_RENDER_VERSION = 3;
 const FILL_TOLERANCE = 18;

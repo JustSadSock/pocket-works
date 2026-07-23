@@ -89,10 +89,29 @@ svg {
   position: fixed;
   inset: 0;
   width: 100%;
-  height: var(--app-viewport-height, 100dvh);
+  /*
+   * The shared runtime variable follows the visual viewport. In iOS webviews
+   * that viewport can already exclude the host's top chrome, even though this
+   * fixed shell starts below it. Giving the shell that shortened height leaves
+   * the same amount of dead space at the bottom. Let the fixed top/bottom
+   * anchors fill the layout viewport instead.
+   */
+  height: auto;
+  min-height: 100%;
   overflow: hidden;
   background: var(--studio);
   isolation: isolate;
+}
+
+/*
+ * While the software keyboard is open, the visual viewport is the useful
+ * surface again. Keeping this exception preserves the rename sheet behaviour
+ * without shortening the normal gallery or drawing screen.
+ */
+html.is-app-keyboard-open .app-shell {
+  bottom: auto;
+  height: var(--app-viewport-height, 100dvh);
+  min-height: var(--app-viewport-height, 100dvh);
 }
 
 .screen {

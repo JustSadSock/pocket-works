@@ -26,8 +26,8 @@
 ## Identity
 
 - Slug: `mazok`
-- Version: `1.2.0`
-- Cache: `mazok-v1.2.0`
+- Version: `1.2.1`
+- Cache: `mazok-v1.2.1`
 - Storage: `pocket-works:mazok`
 - Orientation: `any`
 - Runtime: Quick PWA / canvas
