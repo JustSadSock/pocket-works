@@ -60,7 +60,7 @@ try {
     return response.text();
   }));
   const source = sources.join('\n')
-    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '2.2.0';")
+    .replace("const APP_VERSION = '1.2.0';", "const APP_VERSION = '2.2.1';")
     .replace(
       'localStorage.removeItem(PREFS_KEY);',
       `localStorage.removeItem(PREFS_KEY);\n    localStorage.removeItem('pocket-works:ars-machina:library');\n    localStorage.removeItem('pocket-works:ars-machina:current-model');\n    if (typeof setCurrentModelIdentity === 'function') setCurrentModelIdentity(null, 'Новая модель');\n    if (typeof renderLibraryList === 'function') renderLibraryList();`

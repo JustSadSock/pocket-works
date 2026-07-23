@@ -5,10 +5,11 @@
   "name": "ARS MACHINA",
   "shortName": "ARS MACHINA",
   "description": "Большая мобильная механическая песочница в стиле кодексов Леонардо с наглядным путём силы, проверкой связей, воздухом, водой, автоматикой и сложными машинами.",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "releaseDate": "2026-07-23",
-  "releaseDateTime": "2026-07-23T15:20:00+01:00",
+  "releaseDateTime": "2026-07-23T15:45:00+01:00",
   "changelog": [
+    "Исправлена мобильная ширина мастерской: нижний ящик больше не растягивает оболочку за правый край, а пять категорий всегда помещаются на экране.",
     "Новый ящик деталей объединяет поиск по назначению, категории, недавние и избранные инструменты без постраничной навигации.",
     "Допустимые узлы, валы и шарниры подсвечиваются прямо на поле; незавершённая связь получает живой предпросмотр.",
     "Тап по выбранному узлу, валу или шарниру открывает совместимые контекстные действия без похода по каталогу.",
@@ -22,7 +23,7 @@
   "backgroundColor": "#2c2017",
   "themeColor": "#2c2017",
   "orientation": "any",
-  "cacheName": "ars-machina-v2.2.0-p1",
+  "cacheName": "ars-machina-v2.2.1-p1",
   "storageNamespace": "pocket-works:ars-machina",
   "tags": ["PWA", "offline", "game", "sandbox", "physics", "engineering", "Leonardo da Vinci", "Codex", "Renaissance", "construction", "gears", "cams", "program drum", "mainspring", "ornithopter", "parachute", "aerial screw", "buoyancy", "water", "armor", "projectiles", "crossbow", "mechanical knight", "automaton", "mechanical vision", "force visualization", "interaction diagnostics", "control channels", "model library", "sharing", "canvas", "mobile", "stable physics", "complex machines"],
   "order": 96
