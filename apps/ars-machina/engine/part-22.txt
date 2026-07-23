@@ -1,0 +1,703 @@
+// ARS MACHINA 2.2 — construction grammar, contextual tools, guided learning and test lab.
+document.documentElement.dataset.arsMachinaVersion = '2.2.0';
+
+const UX_KEY_V22 = 'pocket-works:ars-machina:ux-v22';
+const GUIDE_KEY_V22 = 'pocket-works:ars-machina:force-path-v22';
+const VISION_LAYER_KEY_V22 = 'pocket-works:ars-machina:vision-layer-v22';
+const TOOL_PURPOSES_V22 = {
+  select: 'выбрать изменить свойства',
+  pan: 'двигать камеру поле',
+  node: 'точка узел крепление',
+  slider: 'каретка скольжение по балке',
+  beam: 'рама каркас соединить точки',
+  armor: 'защита плита броня',
+  hinge: 'свободный поворот соединение',
+  limit: 'ограничитель угла шарнира',
+  weld: 'жёсткое соединение фиксация',
+  anchor: 'неподвижная опора закрепить',
+  wheel: 'ехать вращение вал',
+  gear: 'передача момент скорость шестерня',
+  motor: 'источник вращения привод',
+  mainspring: 'энергия завод пружина хода',
+  cam: 'кулачок вращение в ход',
+  drum: 'программа барабан такты',
+  winch: 'поднять груз намотать',
+  pulley: 'блок трос направление',
+  flywheel: 'маховик инерция',
+  propeller: 'тяга воздушный винт',
+  airscrew: 'подъём винт леонардо',
+  belt: 'ремень передача между валами',
+  chain: 'цепь передача между валами',
+  rack: 'рейка вращение в движение',
+  clutch: 'муфта включить контур',
+  brake: 'тормоз остановить контур',
+  ratchet: 'храповик одно направление',
+  actuator: 'линейный толкатель контур',
+  servo: 'вращение по контуру',
+  follower: 'кулачок толкатель каретка',
+  jointServo: 'управлять шарниром контур',
+  sequencer: 'автоматика программа A B',
+  rope: 'трос связь натяжение',
+  spring: 'упругость связь',
+  damper: 'гасить колебания амортизатор',
+  wing: 'полёт подъёмная сила',
+  canopy: 'парашют торможение воздух',
+  bow: 'лук запас энергии выстрел',
+  latch: 'защёлка спуск',
+  weight: 'масса груз противовес',
+  payload: 'снаряд камень',
+  launcher: 'стрелять метатель залп',
+  airbag: 'вода плавучесть мешок',
+  water: 'уровень воды среда',
+  layers: 'слои перекрытия',
+  erase: 'удалить ластик'
+};
+
+let uxPrefsV22 = { drawerOpen: true, filter: 'category', favourites: [], recent: [] };
+try {
+  uxPrefsV22 = { ...uxPrefsV22, ...JSON.parse(localStorage.getItem(UX_KEY_V22) || '{}') };
+} catch {}
+uxPrefsV22.favourites = Array.isArray(uxPrefsV22.favourites) ? uxPrefsV22.favourites.slice(0, 20) : [];
+uxPrefsV22.recent = Array.isArray(uxPrefsV22.recent) ? uxPrefsV22.recent.slice(0, 8) : [];
+
+function persistUxV22() {
+  localStorage.setItem(UX_KEY_V22, JSON.stringify(uxPrefsV22));
+}
+
+function allToolDefinitionsV22() {
+  const seen = new Set();
+  const list = [];
+  for (const [category, tools] of Object.entries(TOOL_GROUPS)) {
+    for (const definition of tools) {
+      if (seen.has(definition[0])) continue;
+      seen.add(definition[0]);
+      list.push({ category, definition });
+    }
+  }
+  return list;
+}
+
+function toolDefinitionV22(tool) {
+  return allToolDefinitionsV22().find((item) => item.definition[0] === tool) || null;
+}
+
+let partsBarV22 = null;
+let partsSearchV22 = null;
+let partsFavouriteFilterV22 = null;
+let guideToggleV22 = null;
+
+function installPartsDrawerV22() {
+  if (partsBarV22) return;
+  partsBarV22 = document.createElement('div');
+  partsBarV22.className = 'parts-drawer-bar-v22';
+  partsBarV22.innerHTML = `
+    <button class="parts-drawer-toggle-v22" type="button" data-native-press aria-expanded="true">Ящик</button>
+    <input class="parts-search-v22" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="Найти деталь по названию или назначению" placeholder="Что сделать? Например: поднять">
+    <button class="parts-filter-v22" type="button" data-native-press aria-label="Показывать избранные инструменты" aria-pressed="false">★</button>
+    <button class="guide-toggle-v22" type="button" data-native-press aria-label="Показать Путь силы" aria-pressed="false">Путь силы</button>
+  `;
+  ui.buildDock.prepend(partsBarV22);
+  partsSearchV22 = partsBarV22.querySelector('.parts-search-v22');
+  partsFavouriteFilterV22 = partsBarV22.querySelector('.parts-filter-v22');
+  guideToggleV22 = partsBarV22.querySelector('.guide-toggle-v22');
+  partsBarV22.querySelector('.parts-drawer-toggle-v22').addEventListener('click', () => {
+    uxPrefsV22.drawerOpen = !uxPrefsV22.drawerOpen;
+    persistUxV22();
+    updatePartsDrawerV22();
+  });
+  partsSearchV22.addEventListener('input', () => {
+    uxPrefsV22.filter = partsSearchV22.value.trim() ? 'search' : 'category';
+    partsFavouriteFilterV22.classList.remove('active');
+    renderTools();
+  });
+  partsSearchV22.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    partsSearchV22.value = '';
+    partsSearchV22.blur();
+    uxPrefsV22.filter = 'category';
+    renderTools();
+  });
+  partsFavouriteFilterV22.addEventListener('click', () => {
+    uxPrefsV22.filter = uxPrefsV22.filter === 'favourites' ? 'category' : 'favourites';
+    if (uxPrefsV22.filter === 'favourites') partsSearchV22.value = '';
+    renderTools();
+  });
+  guideToggleV22.addEventListener('click', () => setGuideOpenV22(!guideOpenV22));
+  updatePartsDrawerV22();
+}
+
+function updatePartsDrawerV22() {
+  if (!partsBarV22) return;
+  ui.buildDock.classList.toggle('drawer-collapsed-v22', !uxPrefsV22.drawerOpen);
+  const toggle = partsBarV22.querySelector('.parts-drawer-toggle-v22');
+  toggle.setAttribute('aria-expanded', uxPrefsV22.drawerOpen ? 'true' : 'false');
+  partsFavouriteFilterV22.classList.toggle('active', uxPrefsV22.filter === 'favourites');
+  partsFavouriteFilterV22.setAttribute('aria-pressed', uxPrefsV22.filter === 'favourites' ? 'true' : 'false');
+  guideToggleV22.classList.toggle('active', guideOpenV22);
+  guideToggleV22.setAttribute('aria-pressed', guideOpenV22 ? 'true' : 'false');
+}
+
+function matchingToolsV22() {
+  const all = allToolDefinitionsV22();
+  const query = (partsSearchV22?.value || '').trim().toLocaleLowerCase('ru');
+  if (query) {
+    return all.filter(({ definition }) => {
+      const [tool, label] = definition;
+      return `${label} ${TOOL_PURPOSES_V22[tool] || ''}`.toLocaleLowerCase('ru').includes(query);
+    });
+  }
+  if (uxPrefsV22.filter === 'favourites') {
+    return uxPrefsV22.favourites.map(toolDefinitionV22).filter(Boolean);
+  }
+  const categoryTools = all.filter((item) => item.category === state.category);
+  const recent = uxPrefsV22.recent
+    .map(toolDefinitionV22)
+    .filter((item) => item && item.category === state.category);
+  const recentIds = new Set(recent.map((item) => item.definition[0]));
+  return [...recent, ...categoryTools.filter((item) => !recentIds.has(item.definition[0]))];
+}
+
+renderTools = function renderReadableToolDrawerV22() {
+  installPartsDrawerV22();
+  updatePartsDrawerV22();
+  ui.toolRail.classList.add('tool-rail-v22');
+  ui.toolRail.innerHTML = '';
+  const oldNavigation = ui.toolRail.parentElement?.querySelector('.palette-nav');
+  if (oldNavigation) oldNavigation.hidden = true;
+  const tools = matchingToolsV22();
+  if (!tools.length) {
+    const empty = document.createElement('div');
+    empty.className = 'tool-empty-v22';
+    empty.textContent = uxPrefsV22.filter === 'favourites'
+      ? 'Избранного пока нет. Нажми звезду на нужной детали.'
+      : 'Ничего не найдено. Попробуй действие: «вращение», «поднять», «автоматика».';
+    ui.toolRail.append(empty);
+    return;
+  }
+  for (const { definition } of tools) {
+    const [tool, label, icon] = definition;
+    const card = document.createElement('div');
+    card.className = 'tool-card-v22';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `tool${state.tool === tool ? ' active' : ''}`;
+    button.dataset.tool = tool;
+    button.dataset.nativePress = '';
+    button.setAttribute('aria-label', `${label}. ${TOOL_PURPOSES_V22[tool] || ''}`.trim());
+    button.innerHTML = `<span class="tool-icon icon-${icon}" aria-hidden="true"></span><span class="tool-label">${label}</span>`;
+    button.addEventListener('click', () => setTool(tool));
+    const favourite = document.createElement('button');
+    favourite.type = 'button';
+    favourite.className = `tool-favourite-v22${uxPrefsV22.favourites.includes(tool) ? ' active' : ''}`;
+    favourite.dataset.nativePress = '';
+    favourite.setAttribute('aria-label', `${uxPrefsV22.favourites.includes(tool) ? 'Убрать из' : 'Добавить в'} избранное: ${label}`);
+    favourite.setAttribute('aria-pressed', uxPrefsV22.favourites.includes(tool) ? 'true' : 'false');
+    favourite.textContent = uxPrefsV22.favourites.includes(tool) ? '★' : '☆';
+    favourite.addEventListener('click', () => {
+      if (uxPrefsV22.favourites.includes(tool)) uxPrefsV22.favourites = uxPrefsV22.favourites.filter((item) => item !== tool);
+      else uxPrefsV22.favourites = [tool, ...uxPrefsV22.favourites].slice(0, 20);
+      persistUxV22();
+      renderTools();
+      clickSound(uxPrefsV22.favourites.includes(tool) ? 480 : 220, .03);
+    });
+    card.append(button, favourite);
+    ui.toolRail.append(card);
+  }
+}
+
+const baseSetToolUxV22 = setTool;
+setTool = function setRememberedToolV22(tool) {
+  if (!['select', 'pan', 'layers', 'erase'].includes(tool)) {
+    uxPrefsV22.recent = [tool, ...uxPrefsV22.recent.filter((item) => item !== tool)].slice(0, 8);
+    persistUxV22();
+  }
+  hideContextToolsV22();
+  baseSetToolUxV22(tool);
+};
+
+const baseSetCategoryUxV22 = setCategory;
+setCategory = function setDrawerCategoryV22(category) {
+  uxPrefsV22.filter = 'category';
+  if (partsSearchV22) partsSearchV22.value = '';
+  baseSetCategoryUxV22(category);
+};
+
+let contextToolsV22 = null;
+const CONTEXT_TOOLS_V22 = {
+  node: ['beam', 'wheel', 'gear', 'motor', 'weight', 'launcher'],
+  rotor: ['mainspring', 'cam', 'drum', 'airscrew', 'belt', 'chain'],
+  joint: ['jointServo'],
+  beam: ['slider', 'hinge', 'weld', 'armor', 'wing', 'rope']
+};
+
+function installContextToolsV22() {
+  if (contextToolsV22) return;
+  contextToolsV22 = document.createElement('div');
+  contextToolsV22.className = 'context-tools-v22';
+  contextToolsV22.hidden = true;
+  document.querySelector('.yard').append(contextToolsV22);
+}
+
+function contextKeyV22() {
+  if (!state.selection) return null;
+  const selected = getSelected();
+  if (!selected) return null;
+  if (state.selection.kind === 'constraint' && selected.type === 'beam') return 'beam';
+  return state.selection.kind;
+}
+
+function showContextToolsV22() {
+  installContextToolsV22();
+  if (state.mode !== 'build' || state.tool !== 'select' || !state.selection) return hideContextToolsV22();
+  const key = contextKeyV22();
+  const tools = CONTEXT_TOOLS_V22[key] || [];
+  const point = selectionWorld();
+  if (!point || !tools.length) return hideContextToolsV22();
+  contextToolsV22.innerHTML = `<div class="context-tools-title-v22">${key === 'rotor' ? 'НА ЭТОТ ВАЛ' : key === 'joint' ? 'ДЛЯ ЭТОГО ШАРНИРА' : key === 'beam' ? 'НА ЭТУ БАЛКУ' : 'ИЗ ЭТОГО УЗЛА'}</div>`;
+  for (const tool of tools) {
+    const item = toolDefinitionV22(tool);
+    if (!item) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.nativePress = '';
+    button.textContent = item.definition[1];
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const target = { ...point };
+      setCategory(item.category);
+      setTool(tool);
+      requestAnimationFrame(() => handleBuildTap(target));
+    });
+    contextToolsV22.append(button);
+  }
+  positionContextToolsV22();
+  contextToolsV22.hidden = false;
+}
+
+function positionContextToolsV22() {
+  if (!contextToolsV22 || contextToolsV22.hidden) return;
+  const point = selectionWorld();
+  if (!point) return hideContextToolsV22();
+  const screen = worldToScreen(point.x, point.y);
+  const yard = document.querySelector('.yard');
+  const halfWidth = Math.min(150, Math.max(80, yard.clientWidth / 2 - 10));
+  contextToolsV22.style.left = `${clamp(screen.x, halfWidth + 6, yard.clientWidth - halfWidth - 6)}px`;
+  contextToolsV22.style.top = `${clamp(screen.y, 118, yard.clientHeight - 12)}px`;
+}
+
+function hideContextToolsV22() {
+  if (contextToolsV22) contextToolsV22.hidden = true;
+}
+
+const baseSelectThingUxV22 = selectThing;
+selectThing = function selectWithContextV22(selection) {
+  baseSelectThingUxV22(selection);
+  if (selection && state.tool === 'select') requestAnimationFrame(showContextToolsV22);
+  else hideContextToolsV22();
+};
+
+let pointerWorldV22 = null;
+canvas.addEventListener('pointerdown', (event) => {
+  const point = canvasPoint(event);
+  pointerWorldV22 = screenToWorld(point.x, point.y);
+}, { passive: true });
+canvas.addEventListener('pointermove', (event) => {
+  const point = canvasPoint(event);
+  pointerWorldV22 = screenToWorld(point.x, point.y);
+}, { passive: true });
+canvas.addEventListener('pointerleave', () => { pointerWorldV22 = null; }, { passive: true });
+
+const TWO_POINT_TOOLS_V22 = new Set(['beam', 'armor', 'hinge', 'limit', 'weld', 'rope', 'spring', 'damper', 'wing', 'canopy', 'bow', 'actuator']);
+const NODE_TOOLS_V22 = new Set(['node', 'anchor', 'weight', 'payload', 'launcher', 'airbag', 'slider']);
+const SHAFT_TOOLS_V22 = new Set(['wheel', 'gear', 'motor', 'winch', 'pulley', 'flywheel', 'propeller', 'mainspring', 'airscrew', 'cam', 'drum', 'brake', 'clutch', 'ratchet']);
+const TRANSMISSION_TOOLS_V22 = new Set(['belt', 'chain', 'rack']);
+
+function activeTargetTypeV22() {
+  if (TWO_POINT_TOOLS_V22.has(state.tool)) return 'node';
+  if (NODE_TOOLS_V22.has(state.tool)) return 'node';
+  if (SHAFT_TOOLS_V22.has(state.tool) || TRANSMISSION_TOOLS_V22.has(state.tool)) return 'shaft';
+  if (state.tool === 'jointServo') return 'joint';
+  if (state.tool === 'follower') return pendingCamRotorIdV20 ? 'node' : 'cam';
+  if (state.tool === 'sequencer') return 'drum';
+  return null;
+}
+
+function drawTargetRingV22(point, radius, label, strong = false) {
+  ctx.save();
+  ctx.strokeStyle = strong ? '#9b4b35' : '#41736b';
+  ctx.fillStyle = strong ? 'rgba(155,75,53,.14)' : 'rgba(65,115,107,.12)';
+  ctx.lineWidth = strong ? 3 : 2;
+  ctx.setLineDash(strong ? [] : [4, 4]);
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, radius, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (label) {
+    ctx.font = '800 8px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = strong ? '#843e2d' : '#315e58';
+    ctx.fillText(label, point.x, point.y - radius - 3);
+  }
+  ctx.restore();
+}
+
+function drawCompatibleTargetsV22() {
+  if (state.mode !== 'build') return;
+  const targetType = activeTargetTypeV22();
+  if (!targetType) return;
+  const pulse = 1.5 + Math.sin(performance.now() / 180) * 1.5;
+  if (targetType === 'node') {
+    for (const node of state.nodes) {
+      const point = worldToScreen(node.x, node.y);
+      drawTargetRingV22(point, 10 + pulse, node.id === state.pendingNodeId ? 'ПЕРВАЯ' : '', node.id === state.pendingNodeId);
+    }
+  } else if (targetType === 'joint') {
+    for (const joint of state.joints) {
+      const a = nodeById(joint.a), b = nodeById(joint.b);
+      if (a && b) drawTargetRingV22(worldToScreen((a.x + b.x) * .5, (a.y + b.y) * .5), 13 + pulse, 'ШАРНИР');
+    }
+  } else {
+    const rotors = targetType === 'cam'
+      ? state.rotors.filter((item) => item.type === 'cam')
+      : targetType === 'drum'
+        ? state.rotors.filter((item) => item.type === 'drum')
+        : state.rotors;
+    for (const rotor of rotors) {
+      const node = nodeById(rotor.nodeId);
+      if (node) drawTargetRingV22(worldToScreen(node.x, node.y), clamp(rotor.radius * state.camera.zoom + 8, 15, 54), targetType === 'shaft' ? 'ВАЛ' : targetType.toUpperCase());
+    }
+  }
+  const pendingNode = state.pendingNodeId ? nodeById(state.pendingNodeId) : null;
+  if (pendingNode && pointerWorldV22) {
+    const a = worldToScreen(pendingNode.x, pendingNode.y);
+    const b = worldToScreen(pointerWorldV22.x, pointerWorldV22.y);
+    ctx.save();
+    ctx.strokeStyle = '#a85a36';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    drawArrowHeadV21(b.x, b.y, Math.atan2(b.y - a.y, b.x - a.x), 8, '#a85a36');
+    ctx.restore();
+  }
+}
+
+let guideProgressV22 = new Set();
+let guideOpenV22 = true;
+try {
+  const storedGuide = JSON.parse(localStorage.getItem(GUIDE_KEY_V22) || '{}');
+  guideProgressV22 = new Set(Array.isArray(storedGuide.completed) ? storedGuide.completed : []);
+  guideOpenV22 = storedGuide.open !== false;
+} catch {}
+let guideCardV22 = null;
+let lastGuideSignatureV22 = '';
+const GUIDE_TASKS_V22 = [
+  { id: 'beam', title: 'Создай путь силы', text: 'Поставь два узла и соедини их балкой.', category: 'frame', tool: 'beam' },
+  { id: 'rotor', title: 'Добавь вращение', text: 'Поставь колесо или шестерню на любой узел.', category: 'drive', tool: 'gear' },
+  { id: 'power', title: 'Подай энергию', text: 'Добавь на вал ворот или заводную пружину.', category: 'drive', tool: 'mainspring' },
+  { id: 'transmission', title: 'Передай момент', text: 'Сцепи две шестерни либо соедини два вала ремнём или цепью.', category: 'drive', tool: 'gear' },
+  { id: 'test', title: 'Испытай механизм', text: 'Оживи конструкцию и дай ей поработать хотя бы полторы секунды.', category: 'drive', tool: null }
+];
+
+function persistGuideV22() {
+  localStorage.setItem(GUIDE_KEY_V22, JSON.stringify({ completed: [...guideProgressV22], open: guideOpenV22 }));
+}
+
+function setGuideOpenV22(open) {
+  guideOpenV22 = Boolean(open);
+  persistGuideV22();
+  installGuideV22();
+  guideCardV22.hidden = !guideOpenV22;
+  updatePartsDrawerV22();
+  renderGuideV22(true);
+}
+
+function installGuideV22() {
+  if (guideCardV22) return;
+  guideCardV22 = document.createElement('aside');
+  guideCardV22.className = 'guide-card-v22';
+  guideCardV22.setAttribute('aria-live', 'polite');
+  document.querySelector('.yard').append(guideCardV22);
+  guideCardV22.addEventListener('click', (event) => {
+    if (event.target.closest('.guide-close-v22')) return setGuideOpenV22(false);
+    if (!event.target.closest('.guide-next-v22')) return;
+    const task = GUIDE_TASKS_V22.find((item) => !guideProgressV22.has(item.id));
+    if (!task) {
+      setGuideOpenV22(false);
+      showToast('Путь силы пройден');
+      return;
+    }
+    if (task.id === 'test') {
+      ui.runButton.click();
+      return;
+    }
+    setCategory(task.category);
+    setTool(task.tool);
+    uxPrefsV22.drawerOpen = true;
+    updatePartsDrawerV22();
+  });
+}
+
+function hasTransmissionV22() {
+  if (state.constraints.some((item) => ['belt', 'chain', 'rack'].includes(item.type))) return true;
+  return state.rotors.some((rotor) => rotor.type === 'gear' && closestMeshedGear(rotor));
+}
+
+function evaluateGuideV22() {
+  const tests = {
+    beam: state.constraints.some((item) => item.type === 'beam'),
+    rotor: state.rotors.some((item) => ['wheel', 'gear'].includes(item.type)),
+    power: state.attachments.some((item) => ['motor', 'mainspring'].includes(item.type)),
+    transmission: hasTransmissionV22(),
+    test: state.mode === 'run' && state.simTime >= 1.5
+  };
+  let changed = false;
+  for (const [id, complete] of Object.entries(tests)) {
+    if (complete && !guideProgressV22.has(id)) {
+      guideProgressV22.add(id);
+      changed = true;
+    }
+  }
+  if (changed) {
+    persistGuideV22();
+    const count = guideProgressV22.size;
+    clickSound(count >= GUIDE_TASKS_V22.length ? 620 : 460, count >= GUIDE_TASKS_V22.length ? .12 : .045);
+    vibrate(count >= GUIDE_TASKS_V22.length ? [18, 35, 24] : 10);
+  }
+  renderGuideV22(changed);
+}
+
+function renderGuideV22(force = false) {
+  installGuideV22();
+  guideCardV22.hidden = !guideOpenV22 || state.mode !== 'build';
+  const next = GUIDE_TASKS_V22.find((item) => !guideProgressV22.has(item.id));
+  const signature = `${guideOpenV22}:${state.mode}:${[...guideProgressV22].sort().join(',')}:${next?.id || 'complete'}`;
+  if (!force && signature === lastGuideSignatureV22) return;
+  lastGuideSignatureV22 = signature;
+  guideCardV22.classList.toggle('complete', !next);
+  guideCardV22.innerHTML = `
+    <div class="guide-head-v22"><span>ПУТЬ СИЛЫ · ${guideProgressV22.size}/${GUIDE_TASKS_V22.length}</span><button class="guide-close-v22" type="button" data-native-press aria-label="Скрыть обучение">×</button></div>
+    <div class="guide-body-v22">
+      <div class="guide-progress-v22">${GUIDE_TASKS_V22.map((item) => `<i class="${guideProgressV22.has(item.id) ? 'done' : ''}"></i>`).join('')}</div>
+      <strong>${next?.title || 'Механизм заговорил'}</strong>
+      <p>${next?.text || 'Ты собрал и испытал рабочую цепочку. Все детали по-прежнему открыты — теперь ломай физику осознанно.'}</p>
+      <button class="guide-next-v22" type="button" data-native-press>${next ? (next.id === 'test' ? 'Оживить конструкцию' : `Выбрать: ${toolDefinitionV22(next.tool)?.definition[1] || 'инструмент'}`) : 'Завершить'}</button>
+    </div>
+  `;
+}
+
+let runPausedV22 = false;
+let runSpeedV22 = 1;
+let runAccumulatorV22 = 0;
+let runLabV22 = null;
+
+function installRunLabV22() {
+  if (runLabV22) return;
+  ui.runDock.classList.add('run-lab-enabled-v22');
+  runLabV22 = document.createElement('div');
+  runLabV22.className = 'run-lab-v22';
+  runLabV22.innerHTML = `
+    <button class="pause-v22" type="button" data-native-press aria-label="Пауза" aria-pressed="false">Ⅱ</button>
+    <button class="step-v22" type="button" data-native-press>ШАГ</button>
+    <button class="speed-v22" data-speed=".25" type="button" data-native-press>0,25×</button>
+    <button class="speed-v22 active" data-speed="1" type="button" data-native-press>1×</button>
+    <button class="speed-v22" data-speed="2" type="button" data-native-press>2×</button>
+    <button class="reset-v22" type="button" data-native-press>↺ СНАЧАЛА</button>
+  `;
+  ui.runDock.prepend(runLabV22);
+  runLabV22.querySelector('.pause-v22').addEventListener('click', () => {
+    runPausedV22 = !runPausedV22;
+    runAccumulatorV22 = 0;
+    updateRunLabV22();
+    clickSound(runPausedV22 ? 210 : 390, .035);
+  });
+  runLabV22.querySelector('.step-v22').addEventListener('click', () => {
+    if (state.mode !== 'run') return;
+    runPausedV22 = true;
+    runAccumulatorV22 = 0;
+    baseSimulateUxV22(16.6667);
+    evaluateGuideV22();
+    updateRunLabV22();
+    clickSound(330, .02);
+  });
+  runLabV22.querySelectorAll('.speed-v22').forEach((button) => button.addEventListener('click', () => {
+    runSpeedV22 = Number(button.dataset.speed) || 1;
+    runPausedV22 = false;
+    runAccumulatorV22 = 0;
+    updateRunLabV22();
+    clickSound(300 + runSpeedV22 * 80, .03);
+  }));
+  runLabV22.querySelector('.reset-v22').addEventListener('click', () => {
+    if (state.mode !== 'run') return;
+    returnToBuild();
+    enterRunMode();
+    runPausedV22 = false;
+    updateRunLabV22();
+    setYardNote('Испытание начато заново.', 1100);
+  });
+  updateRunLabV22();
+}
+
+function updateRunLabV22() {
+  if (!runLabV22) return;
+  const pause = runLabV22.querySelector('.pause-v22');
+  pause.classList.toggle('active', runPausedV22);
+  pause.textContent = runPausedV22 ? '▶' : 'Ⅱ';
+  pause.setAttribute('aria-label', runPausedV22 ? 'Продолжить' : 'Пауза');
+  pause.setAttribute('aria-pressed', runPausedV22 ? 'true' : 'false');
+  runLabV22.querySelector('.step-v22').disabled = state.mode !== 'run';
+  runLabV22.querySelectorAll('.speed-v22').forEach((button) => button.classList.toggle('active', Number(button.dataset.speed) === runSpeedV22 && !runPausedV22));
+  ui.runDock.classList.toggle('paused-v22', runPausedV22);
+}
+
+const baseSimulateUxV22 = simulate;
+simulate = function simulateWithLabV22(dt) {
+  if (state.mode !== 'run' || runPausedV22) return;
+  const quantum = 1000 / 60;
+  runAccumulatorV22 += Math.min(50, dt) * runSpeedV22;
+  let steps = 0;
+  while (runAccumulatorV22 >= quantum && steps < 6) {
+    baseSimulateUxV22(quantum);
+    runAccumulatorV22 -= quantum;
+    steps += 1;
+  }
+  if (steps === 6) runAccumulatorV22 = 0;
+  evaluateGuideV22();
+};
+
+const baseEnterRunUxV22 = enterRunMode;
+enterRunMode = function enterRunLabV22() {
+  runPausedV22 = false;
+  runAccumulatorV22 = 0;
+  baseEnterRunUxV22();
+  installRunLabV22();
+  updateRunLabV22();
+  hideContextToolsV22();
+};
+
+const baseReturnBuildUxV22 = returnToBuild;
+returnToBuild = function returnFromRunLabV22() {
+  baseReturnBuildUxV22();
+  runPausedV22 = false;
+  runAccumulatorV22 = 0;
+  updateRunLabV22();
+  renderGuideV22(true);
+};
+
+state.visionLayerV22 = localStorage.getItem(VISION_LAYER_KEY_V22) || 'all';
+let visionLayersV22 = null;
+const VISION_LAYERS_V22 = [
+  ['all', 'ВСЁ'],
+  ['motion', 'ДВИЖЕНИЕ'],
+  ['energy', 'ЭНЕРГИЯ'],
+  ['control', 'A / B'],
+  ['forces', 'СИЛЫ'],
+  ['check', 'ПРОВЕРКА']
+];
+
+function installVisionLayersV22() {
+  if (visionLayersV22) return;
+  installMechanicalVisionV21();
+  visionLayersV22 = document.createElement('div');
+  visionLayersV22.className = 'vision-layers-v22';
+  for (const [value, label] of VISION_LAYERS_V22) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.visionLayer = value;
+    button.dataset.nativePress = '';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      state.visionLayerV22 = value;
+      state.mechanicsVisionV21 = true;
+      localStorage.setItem(VISION_LAYER_KEY_V22, value);
+      localStorage.setItem(VISION_KEY_V21, 'on');
+      updateMechanicalVisionUiV21();
+      clickSound(360, .025);
+    });
+    visionLayersV22.append(button);
+  }
+  document.querySelector('.yard').append(visionLayersV22);
+  updateVisionLayersV22();
+}
+
+function updateVisionLayersV22() {
+  if (!visionLayersV22) return;
+  visionLayersV22.hidden = !state.mechanicsVisionV21;
+  visionLayersV22.querySelectorAll('button').forEach((button) => button.classList.toggle('active', button.dataset.visionLayer === state.visionLayerV22));
+  document.querySelector('.yard').dataset.visionLayers = state.mechanicsVisionV21 ? 'on' : 'off';
+}
+
+const baseUpdateVisionUiUxV22 = updateMechanicalVisionUiV21;
+updateMechanicalVisionUiV21 = function updateLayeredVisionUiV22() {
+  baseUpdateVisionUiUxV22();
+  installVisionLayersV22();
+  updateVisionLayersV22();
+};
+
+const baseLinksUxV22 = linksForSelectionV21;
+linksForSelectionV21 = function filteredSelectionLinksV22() {
+  const links = baseLinksUxV22();
+  if (state.visionLayerV22 === 'control') return links.filter((item) => item.tone === 'A' || item.tone === 'B');
+  if (state.visionLayerV22 === 'energy') return links.filter((item) => item.tone === 'energy');
+  if (state.visionLayerV22 === 'motion') return links.filter((item) => !['A', 'B', 'energy'].includes(item.tone));
+  return links;
+};
+
+const baseDrawSelectionUxV22 = drawSelectionGraphV21;
+drawSelectionGraphV21 = function drawLayerSelectionV22() {
+  if (['all', 'motion', 'energy', 'control'].includes(state.visionLayerV22)) baseDrawSelectionUxV22();
+};
+const baseDrawTransmissionUxV22 = drawTransmissionReadoutsV21;
+drawTransmissionReadoutsV21 = function drawLayerTransmissionsV22() {
+  if (['all', 'energy'].includes(state.visionLayerV22)) baseDrawTransmissionUxV22();
+};
+const baseDrawForcesUxV22 = drawRunForcesV21;
+drawRunForcesV21 = function drawLayerForcesV22() {
+  if (['all', 'forces'].includes(state.visionLayerV22)) baseDrawForcesUxV22();
+};
+const baseDrawControlUxV22 = drawControlBadgesV21;
+drawControlBadgesV21 = function drawLayerControlV22() {
+  if (['all', 'control'].includes(state.visionLayerV22)) baseDrawControlUxV22();
+};
+const baseDrawQualityUxV22 = drawQualityMarkersV21;
+drawQualityMarkersV21 = function drawLayerQualityV22() {
+  if (['all', 'check'].includes(state.visionLayerV22)) baseDrawQualityUxV22();
+};
+
+const baseUpdateModeUxV22 = updateModeUI;
+updateModeUI = function updateUxModeV22() {
+  baseUpdateModeUxV22();
+  installPartsDrawerV22();
+  installRunLabV22();
+  installVisionLayersV22();
+  updatePartsDrawerV22();
+  updateRunLabV22();
+  updateVisionLayersV22();
+  renderGuideV22(true);
+  if (state.mode !== 'build') hideContextToolsV22();
+};
+
+const baseRenderUxV22 = render;
+render = function renderConstructionGrammarV22() {
+  baseRenderUxV22();
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawCompatibleTargetsV22();
+  ctx.restore();
+  positionContextToolsV22();
+  evaluateGuideV22();
+};
+
+installPartsDrawerV22();
+installContextToolsV22();
+installGuideV22();
+installRunLabV22();
+installVisionLayersV22();
+updateModeUI();
+renderTools();
+renderGuideV22(true);
