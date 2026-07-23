@@ -15,21 +15,24 @@ import {
   distance,
   drawStrokeRange,
   drawingCountLabel,
+  fitDrawingScale,
   floodFillContext,
   isValidDrawing,
   makeId,
   normalizeHexColor,
   replayStrokes,
+  replayStrokesScaled,
   safeFileStem,
   simplifyPoints
 } from './drawing-core.js';
 import { openDrawingDatabase } from './drawing-db.js';
 
 const APP_NAME = 'МАЗОК';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const STORAGE_NAMESPACE = 'pocket-works:mazok';
-const THUMBNAIL_RENDER_VERSION = 2;
-const FILL_TOLERANCE = 26;
+const THUMBNAIL_RENDER_VERSION = 3;
+const FILL_TOLERANCE = 18;
+const FILL_EDGE_TOLERANCE = 148;
 const COLOR_PALETTE = [
   '#20211f', '#f7f1e5', '#2455d6', '#ef5b49', '#f2bd3f',
   '#16856f', '#7d4ad8', '#e65e99', '#824c34', '#7c8794',
@@ -159,6 +162,10 @@ let actionsTargetCache = null;
 let renameTargetId = null;
 let confirmCallback = null;
 let galleryObjectUrls = [];
+let galleryGeneration = 0;
+let pendingThumbnailJobs = [];
+let thumbnailWorkerRunning = false;
+let openingDrawingId = null;
 let persistentStorageRequested = false;
 const animationTimers = new WeakMap();
 
@@ -427,18 +434,29 @@ function currentDocumentScale() {
   return Math.max(0.001, view.fitScale * view.zoom);
 }
 
+function releaseCanvas(canvas) {
+  if (!canvas) return;
+  canvas.width = 1;
+  canvas.height = 1;
+}
+
 function ensureDocumentSurfaces() {
   if (!currentDrawing) return;
+  releaseCanvas(documentCanvas);
+  releaseCanvas(strokeCanvas);
+  releaseCanvas(eraserBackup);
   documentCanvas = document.createElement('canvas');
   documentCanvas.width = currentDrawing.width;
   documentCanvas.height = currentDrawing.height;
   documentContext = documentCanvas.getContext('2d', { alpha: true, desynchronized: true });
+  if (!documentContext) throw new Error('Could not create the drawing surface');
   documentContext.imageSmoothingEnabled = true;
 
   strokeCanvas = document.createElement('canvas');
   strokeCanvas.width = currentDrawing.width;
   strokeCanvas.height = currentDrawing.height;
   strokeContext = strokeCanvas.getContext('2d', { alpha: true, desynchronized: true });
+  if (!strokeContext) throw new Error('Could not create the stroke surface');
   replayStrokes(documentContext, currentDrawing.strokes, currentDrawing.width, currentDrawing.height, currentDrawing.background);
 }
 
@@ -454,9 +472,11 @@ function resizeDisplayCanvas() {
   }
   displayBox = { width: rect.width, height: rect.height, dpr };
   if (currentDrawing) {
-    view.fitScale = Math.min(
-      Math.max(1, rect.width - 14) / currentDrawing.width,
-      Math.max(1, rect.height - 14) / currentDrawing.height
+    view.fitScale = fitDrawingScale(
+      rect.width,
+      rect.height,
+      currentDrawing.width,
+      currentDrawing.height
     );
     clampView();
   }
@@ -573,6 +593,7 @@ function beginStroke(event) {
     color: selectedColor(),
     size: tool === 'fill' ? 1 : brushSizeInDocument(selectedSize(tool), currentDrawing.width),
     tolerance: tool === 'fill' ? FILL_TOLERANCE : undefined,
+    edgeTolerance: tool === 'fill' ? FILL_EDGE_TOLERANCE : undefined,
     seed: Math.floor(Math.random() * 0xffffffff),
     points: [point]
   };
@@ -833,12 +854,26 @@ function renderDrawingToCanvas(drawing, maximumWidth = drawing.width) {
   const context = canvas.getContext('2d', { alpha: false });
   context.fillStyle = drawing.background;
   context.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (drawing.id === currentDrawing?.id && documentCanvas) {
+    context.drawImage(documentCanvas, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
   const paint = document.createElement('canvas');
-  paint.width = drawing.width;
-  paint.height = drawing.height;
+  paint.width = canvas.width;
+  paint.height = canvas.height;
   const paintContext = paint.getContext('2d', { alpha: true });
-  replayStrokes(paintContext, drawing.strokes, drawing.width, drawing.height, drawing.background);
-  context.drawImage(paint, 0, 0, canvas.width, canvas.height);
+  replayStrokesScaled(
+    paintContext,
+    drawing.strokes,
+    drawing.width,
+    drawing.height,
+    paint.width,
+    paint.height,
+    drawing.background
+  );
+  context.drawImage(paint, 0, 0);
   return canvas;
 }
 
@@ -927,28 +962,75 @@ function revokeGalleryUrls() {
   galleryObjectUrls = [];
 }
 
+function invalidateGalleryJobs() {
+  galleryGeneration += 1;
+  pendingThumbnailJobs = [];
+}
+
+function waitForIdleWork() {
+  return new Promise((resolve) => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => resolve(), { timeout: 700 });
+      return;
+    }
+    window.setTimeout(resolve, 140);
+  });
+}
+
+function attachThumbnail(preview, article, blob) {
+  if (!(blob instanceof Blob)) return;
+  const url = URL.createObjectURL(blob);
+  galleryObjectUrls.push(url);
+  const image = document.createElement('img');
+  image.alt = '';
+  image.decoding = 'async';
+  image.addEventListener('load', () => {
+    if (article.isConnected) preview.classList.add('is-ready');
+  }, { once: true });
+  image.addEventListener('error', () => {
+    if (article.isConnected) preview.classList.add('has-error');
+  }, { once: true });
+  image.src = url;
+  preview.append(image);
+}
+
+function startThumbnailWorker() {
+  if (thumbnailWorkerRunning) return;
+  thumbnailWorkerRunning = true;
+  void (async () => {
+    while (pendingThumbnailJobs.length) {
+      const job = pendingThumbnailJobs.shift();
+      await waitForIdleWork();
+      if (job.generation !== galleryGeneration || !job.article.isConnected || openingDrawingId) continue;
+
+      try {
+        const blob = await makeThumbnail(job.drawing);
+        if (job.generation !== galleryGeneration || !job.article.isConnected || openingDrawingId) continue;
+        attachThumbnail(job.preview, job.article, blob);
+
+        const latest = await database?.get(job.drawing.id);
+        if (!latest || latest.updatedAt !== job.drawing.updatedAt || job.generation !== galleryGeneration) continue;
+        latest.thumbnail = blob;
+        latest.thumbnailRenderVersion = THUMBNAIL_RENDER_VERSION;
+        await database.put(latest);
+      } catch (error) {
+        console.warn('Could not build gallery preview', error);
+        if (job.article.isConnected) job.preview.classList.add('has-error');
+      }
+    }
+  })().finally(() => {
+    thumbnailWorkerRunning = false;
+    if (pendingThumbnailJobs.length) startThumbnailWorker();
+  });
+}
+
 function formatDate(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'Недавно';
   return new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
-async function thumbnailUrl(drawing) {
-  let blob = drawing.thumbnailRenderVersion === THUMBNAIL_RENDER_VERSION && drawing.thumbnail instanceof Blob
-    ? drawing.thumbnail
-    : null;
-  if (!blob) {
-    blob = await makeThumbnail(drawing);
-    drawing.thumbnail = blob;
-    drawing.thumbnailRenderVersion = THUMBNAIL_RENDER_VERSION;
-    database?.put(drawing).catch(() => {});
-  }
-  const url = URL.createObjectURL(blob);
-  galleryObjectUrls.push(url);
-  return url;
-}
-
-function drawingCard(drawing, index) {
+function drawingCard(drawing, index, generation, thumbnailJobs) {
   const article = document.createElement('article');
   article.className = 'drawing-card';
   article.style.setProperty('--tilt', `${[-1.1, 0.6, -0.35, 0.9][index % 4]}deg`);
@@ -976,7 +1058,7 @@ function drawingCard(drawing, index) {
   date.textContent = formatDate(drawing.updatedAt);
   caption.append(title, date);
   open.append(caption);
-  open.addEventListener('click', () => openDrawing(drawing.id));
+  open.addEventListener('click', () => openDrawing(drawing.id, article));
 
   const more = document.createElement('button');
   more.type = 'button';
@@ -987,47 +1069,54 @@ function drawingCard(drawing, index) {
   more.addEventListener('click', () => openActionsSheet(drawing.id, drawing));
 
   article.append(open, more);
-  thumbnailUrl(drawing).then((url) => {
-    if (!article.isConnected) return;
-    const image = document.createElement('img');
-    image.alt = '';
-    image.src = url;
-    image.addEventListener('load', () => preview.classList.add('is-ready'), { once: true });
-    preview.append(image);
-  }).catch(() => preview.classList.add('has-error'));
+  if (drawing.thumbnail instanceof Blob) attachThumbnail(preview, article, drawing.thumbnail);
+  else thumbnailJobs.push({ drawing, article, preview, generation });
   return article;
 }
 
 async function renderGallery() {
   if (!database) return;
+  const generation = ++galleryGeneration;
   revokeGalleryUrls();
   const all = (await database.getAll()).filter(isValidDrawing).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  if (generation !== galleryGeneration) return;
+  const thumbnailJobs = [];
   elements.galleryCount.textContent = drawingCountLabel(all.length);
-  elements.galleryGrid.replaceChildren(...all.map(drawingCard));
+  elements.galleryGrid.replaceChildren(...all.map((drawing, index) => drawingCard(drawing, index, generation, thumbnailJobs)));
   elements.emptyGallery.hidden = all.length > 0;
   elements.galleryGrid.hidden = all.length === 0;
+  pendingThumbnailJobs.push(...thumbnailJobs);
+  startThumbnailWorker();
 }
 
 async function showGallery() {
   cancelStroke();
   await saveNow();
   closeSheet();
+  openingDrawingId = null;
+  elements.gallery.classList.remove('is-opening');
+  await renderGallery();
   elements.editor.hidden = true;
   elements.gallery.hidden = false;
   elements.startup.hidden = true;
   elements.app.dataset.screen = 'gallery';
   animateScreenEntry(elements.gallery, 'back');
-  await renderGallery();
 }
 
 async function showEditor(drawing) {
   if (!isValidDrawing(drawing)) throw new Error('Drawing data is damaged');
+  const canReuseSurface = Boolean(
+    documentCanvas
+    && currentDrawing?.id === drawing.id
+    && currentDrawing.updatedAt === drawing.updatedAt
+    && currentDrawing.strokes.length === drawing.strokes.length
+  );
   currentDrawing = drawing;
   redoStack = [];
   saveRevision = 0;
   savedRevision = 0;
   preferences.set('activeDrawingId', drawing.id);
-  ensureDocumentSurfaces();
+  if (!canReuseSurface) ensureDocumentSurfaces();
   resetView();
   elements.documentTitle.textContent = drawing.title || 'Без названия';
   setSaveStatus('Сохранено', 'saved');
@@ -1035,28 +1124,47 @@ async function showEditor(drawing) {
   renderPaperColors();
   elements.gallery.hidden = true;
   elements.editor.hidden = false;
+  invalidateGalleryJobs();
+  revokeGalleryUrls();
   elements.app.dataset.screen = 'editor';
   elements.startup.hidden = true;
   animateScreenEntry(elements.editor, 'forward');
   requestAnimationFrame(resizeDisplayCanvas);
 }
 
-async function openDrawing(id) {
+function waitForNextPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+async function openDrawing(id, article = null) {
+  if (openingDrawingId) return;
+  openingDrawingId = id;
+  invalidateGalleryJobs();
+  elements.gallery.classList.add('is-opening');
+  article?.classList.add('is-opening');
+  article?.querySelector('.drawing-open')?.setAttribute('aria-busy', 'true');
   try {
     await saveNow();
+    await waitForNextPaint();
     const drawing = await database.get(id);
     if (!isValidDrawing(drawing)) throw new Error('Drawing could not be loaded');
     await showEditor(drawing);
   } catch (error) {
     console.warn(error);
     showToast('Не удалось открыть рисунок', 'error');
+  } finally {
+    openingDrawingId = null;
+    elements.gallery.classList.remove('is-opening');
+    article?.classList.remove('is-opening');
+    article?.querySelector('.drawing-open')?.removeAttribute('aria-busy');
   }
 }
 
 async function createNewDrawing() {
   try {
     await saveNow();
-    const drawing = createDrawingDocument(window.innerWidth, window.innerHeight, { background: preferences.get('paper', PAPER_COLORS[0]) });
+    const viewport = runtime.getViewportState();
+    const drawing = createDrawingDocument(viewport.width, viewport.height, { background: preferences.get('paper', PAPER_COLORS[0]) });
     await database.put(drawing);
     requestPersistentStorage();
     await showEditor(drawing);

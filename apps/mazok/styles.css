@@ -12,7 +12,9 @@
   --green: #16856f;
   --safe-top: max(10px, var(--app-safe-top, env(safe-area-inset-top)));
   --safe-right: max(10px, var(--app-safe-right, env(safe-area-inset-right)));
-  --safe-bottom: max(6px, calc(var(--app-safe-bottom, env(safe-area-inset-bottom)) - 12px));
+  --device-safe-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom));
+  --safe-bottom: max(10px, var(--device-safe-bottom));
+  --palette-bottom: max(2px, calc(var(--device-safe-bottom) - 30px));
   --safe-left: max(10px, var(--app-safe-left, env(safe-area-inset-left)));
   --workshop-bg: #f5efe4;
   --workshop-fg: var(--ink);
@@ -139,7 +141,7 @@ svg {
   inset: 0;
   display: block;
   width: 100%;
-  height: 100%;
+  height: calc(100% + 1px);
   touch-action: none;
   cursor: crosshair;
   -webkit-user-select: none;
@@ -348,7 +350,7 @@ svg {
   position: absolute;
   z-index: 4;
   left: var(--safe-left);
-  bottom: calc(var(--safe-bottom) + 90px);
+  bottom: calc(var(--palette-bottom) + 80px);
   min-width: 52px;
   min-height: 40px;
   padding: 0 10px;
@@ -365,7 +367,7 @@ svg {
   position: absolute;
   z-index: 5;
   left: 50%;
-  bottom: var(--safe-bottom);
+  bottom: var(--palette-bottom);
   display: grid;
   grid-template-columns: 62px 44px minmax(102px, 1fr) 44px 46px;
   align-items: center;
@@ -675,12 +677,49 @@ svg {
 .drawing-card:nth-child(3n)::before { background: rgba(46,145,109,.43); transform: translateX(-50%) rotate(-3deg); }
 .drawing-card:has(.drawing-open.is-pressed) { transform: rotate(0) scale(.985); }
 
+.gallery-screen.is-opening .drawing-card:not(.is-opening) {
+  opacity: .48;
+  pointer-events: none;
+  transform: rotate(var(--tilt)) scale(.985);
+}
+
+.drawing-card.is-opening {
+  z-index: 4;
+  transform: rotate(0) scale(.985);
+}
+
 .drawing-open {
+  position: relative;
   width: 100%;
   padding: 8px 8px 10px;
   text-align: left;
   background: #fffaf0;
   box-shadow: 0 7px 17px rgba(49,41,30,.16), 0 0 0 1px rgba(32,33,31,.1);
+}
+
+.drawing-card.is-opening .drawing-open::after {
+  content: "Открываем…";
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  left: 50%;
+  min-height: 34px;
+  padding: 0 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--ink);
+  box-shadow: 3px 3px 0 var(--yellow);
+  color: white;
+  font-size: .65rem;
+  font-weight: 780;
+  letter-spacing: .02em;
+  transform: translateX(-50%);
+  animation: opening-pulse 700ms ease-in-out infinite alternate;
+}
+
+@keyframes opening-pulse {
+  to { transform: translateX(-50%) translateY(2px); filter: brightness(1.15); }
 }
 
 .drawing-preview {
@@ -1143,7 +1182,7 @@ input[type="range"] { min-height: 36px; touch-action: pan-x; }
   .library-button,
   .icon-button,
   .document-status { min-height: 42px; height: 42px; }
-  .thumb-palette { left: auto; right: var(--safe-right); bottom: var(--safe-bottom); width: min(520px, calc(100% - 90px)); transform: none; }
+  .thumb-palette { left: auto; right: var(--safe-right); bottom: var(--palette-bottom); width: min(520px, calc(100% - 90px)); transform: none; }
   .editor-screen.is-focus .thumb-palette { transform: translateY(28px); }
   .gallery-header { min-height: 170px; padding-top: calc(var(--safe-top) + 40px); }
   .drawing-preview { max-height: 230px; }

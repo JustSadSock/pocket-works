@@ -37,6 +37,26 @@ export function brushSizeInDocument(size, drawingWidth, referenceWidth = 390) {
   return safeSize * safeDrawingWidth / safeReferenceWidth;
 }
 
+export function fitDrawingScale(containerWidth, containerHeight, drawingWidth, drawingHeight, coverThreshold = 1.045) {
+  const safeContainerWidth = Math.max(1, Number(containerWidth) || 1);
+  const safeContainerHeight = Math.max(1, Number(containerHeight) || 1);
+  const safeDrawingWidth = Math.max(1, Number(drawingWidth) || 1);
+  const safeDrawingHeight = Math.max(1, Number(drawingHeight) || 1);
+  const contain = Math.min(
+    safeContainerWidth / safeDrawingWidth,
+    safeContainerHeight / safeDrawingHeight
+  );
+  const cover = Math.max(
+    safeContainerWidth / safeDrawingWidth,
+    safeContainerHeight / safeDrawingHeight
+  );
+
+  // Mobile browser chrome can change the visual viewport by a few pixels after
+  // a sheet is created. Cover that tiny mismatch instead of leaving a dead
+  // strip, but keep a normal contain fit after rotation or on another device.
+  return cover / contain <= Math.max(1, Number(coverThreshold) || 1.045) ? cover : contain;
+}
+
 export function createDrawingDocument(viewportWidth, viewportHeight, options = {}) {
   const width = 1200;
   const safeWidth = Math.max(280, Number(viewportWidth) || 390);
@@ -232,6 +252,90 @@ function compositeChannel(source, alpha, background) {
   return Math.round((source * alpha + background * (255 - alpha)) / 255);
 }
 
+function pixelColor(pixels, index, background) {
+  const offset = index * 4;
+  const alpha = pixels[offset + 3];
+  return [
+    compositeChannel(pixels[offset], alpha, background[0]),
+    compositeChannel(pixels[offset + 1], alpha, background[1]),
+    compositeChannel(pixels[offset + 2], alpha, background[2])
+  ];
+}
+
+function colorDistance(a, b) {
+  return Math.max(
+    Math.abs(a[0] - b[0]),
+    Math.abs(a[1] - b[1]),
+    Math.abs(a[2] - b[2])
+  );
+}
+
+function pixelMatches(pixels, index, background, target, tolerance) {
+  const offset = index * 4;
+  const alpha = pixels[offset + 3];
+  return Math.max(
+    Math.abs(compositeChannel(pixels[offset], alpha, background[0]) - target[0]),
+    Math.abs(compositeChannel(pixels[offset + 1], alpha, background[1]) - target[1]),
+    Math.abs(compositeChannel(pixels[offset + 2], alpha, background[2]) - target[2])
+  ) <= tolerance;
+}
+
+function replacePixel(pixels, index, color) {
+  const offset = index * 4;
+  pixels[offset] = color[0];
+  pixels[offset + 1] = color[1];
+  pixels[offset + 2] = color[2];
+  pixels[offset + 3] = 255;
+}
+
+function targetComponentCoverage(visible, target) {
+  let maximumScale = Number.POSITIVE_INFINITY;
+  let hasDirection = false;
+  for (let channel = 0; channel < 3; channel += 1) {
+    const delta = visible[channel] - target[channel];
+    if (Math.abs(delta) < 0.5) continue;
+    hasDirection = true;
+    const boundary = delta < 0 ? 0 : 255;
+    maximumScale = Math.min(maximumScale, (boundary - target[channel]) / delta);
+  }
+  if (!hasDirection || !Number.isFinite(maximumScale) || maximumScale <= 1) return 0;
+  return clamp(1 - 1 / maximumScale, 0, 1);
+}
+
+function paintUnderEdge(pixels, index, fill, target, targetLayerAlpha, background, edgeTolerance) {
+  const offset = index * 4;
+  const alpha = pixels[offset + 3];
+
+  if (alpha < 255) {
+    // Canvas keeps anti-aliased contour pixels translucent. Put the fill under
+    // that coverage instead of stopping before it and exposing paper-coloured
+    // fringe. The contour colour itself stays untouched.
+    pixels[offset] = compositeChannel(pixels[offset], alpha, fill[0]);
+    pixels[offset + 1] = compositeChannel(pixels[offset + 1], alpha, fill[1]);
+    pixels[offset + 2] = compositeChannel(pixels[offset + 2], alpha, fill[2]);
+    pixels[offset + 3] = 255;
+    return;
+  }
+
+  // On the first fill an opaque neighbour is the contour itself. Only use soft
+  // replacement when the selected region was already opaque (for example when
+  // recolouring an earlier fill).
+  if (targetLayerAlpha < 255) return;
+
+  const visible = pixelColor(pixels, index, background);
+  const distanceFromTarget = colorDistance(visible, target);
+  if (distanceFromTarget >= edgeTolerance) return;
+  const edgeGuard = clamp(
+    (edgeTolerance - distanceFromTarget) / Math.max(1, edgeTolerance * 0.12),
+    0,
+    1
+  );
+  const coverage = targetComponentCoverage(visible, target) * edgeGuard;
+  pixels[offset] = clamp(Math.round(visible[0] + (fill[0] - target[0]) * coverage), 0, 255);
+  pixels[offset + 1] = clamp(Math.round(visible[1] + (fill[1] - target[1]) * coverage), 0, 255);
+  pixels[offset + 2] = clamp(Math.round(visible[2] + (fill[2] - target[2]) * coverage), 0, 255);
+}
+
 export function floodFillPixels(
   pixels,
   width,
@@ -240,7 +344,8 @@ export function floodFillPixels(
   startY,
   fillColor,
   backgroundColor = PAPER_COLORS[0],
-  tolerance = 26
+  tolerance = 18,
+  edgeTolerance = 148
 ) {
   const safeWidth = Math.max(0, Math.floor(Number(width) || 0));
   const safeHeight = Math.max(0, Math.floor(Number(height) || 0));
@@ -252,53 +357,39 @@ export function floodFillPixels(
   const start = y * safeWidth + x;
   const background = rgbFromHex(backgroundColor);
   const fill = rgbFromHex(fillColor);
-  const targetOffset = start * 4;
-  const targetAlpha = pixels[targetOffset + 3];
-  const target = [
-    compositeChannel(pixels[targetOffset], targetAlpha, background[0]),
-    compositeChannel(pixels[targetOffset + 1], targetAlpha, background[1]),
-    compositeChannel(pixels[targetOffset + 2], targetAlpha, background[2])
-  ];
+  const targetLayerAlpha = pixels[start * 4 + 3];
+  const target = pixelColor(pixels, start, background);
   const limit = clamp(Math.round(Number(tolerance) || 0), 0, 255);
+  const softLimit = clamp(Math.max(limit + 1, Math.round(Number(edgeTolerance) || 148)), 1, 255);
 
-  if (Math.max(
-    Math.abs(target[0] - fill[0]),
-    Math.abs(target[1] - fill[1]),
-    Math.abs(target[2] - fill[2])
-  ) <= 1) return 0;
+  if (colorDistance(target, fill) <= 1) return 0;
 
-  const visited = new Uint8Array(total);
-  const stack = new Int32Array(total);
-  let stackSize = 1;
-  let changed = 0;
-  stack[0] = start;
-  visited[start] = 1;
+  // 0 = unseen, 1 = rejected, 2 = connected fill region, 3 = one-pixel
+  // antialias fringe. A typed queue keeps memory bounded on tall phone pages.
+  const state = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let head = 0;
+  let tail = 1;
+  queue[0] = start;
+  state[start] = 2;
 
   const matches = (index) => {
-    const offset = index * 4;
-    const alpha = pixels[offset + 3];
-    return Math.max(
-      Math.abs(compositeChannel(pixels[offset], alpha, background[0]) - target[0]),
-      Math.abs(compositeChannel(pixels[offset + 1], alpha, background[1]) - target[1]),
-      Math.abs(compositeChannel(pixels[offset + 2], alpha, background[2]) - target[2])
-    ) <= limit;
+    return pixelMatches(pixels, index, background, target, limit);
   };
 
   const visit = (index) => {
-    if (visited[index]) return;
-    visited[index] = 1;
-    if (matches(index)) stack[stackSize++] = index;
+    if (state[index]) return;
+    if (matches(index)) {
+      state[index] = 2;
+      queue[tail++] = index;
+    } else {
+      state[index] = 1;
+    }
   };
 
-  while (stackSize > 0) {
-    const index = stack[--stackSize];
-    const offset = index * 4;
-    pixels[offset] = fill[0];
-    pixels[offset + 1] = fill[1];
-    pixels[offset + 2] = fill[2];
-    pixels[offset + 3] = 255;
-    changed += 1;
-
+  while (head < tail) {
+    const index = queue[head++];
+    replacePixel(pixels, index, fill);
     const column = index % safeWidth;
     if (column > 0) visit(index - 1);
     if (column + 1 < safeWidth) visit(index + 1);
@@ -306,7 +397,38 @@ export function floodFillPixels(
     if (index + safeWidth < total) visit(index + safeWidth);
   }
 
-  return changed;
+  const regionSize = tail;
+  const addEdge = (index) => {
+    if (state[index] === 2 || state[index] === 3) return;
+    state[index] = 3;
+    queue[tail++] = index;
+  };
+
+  // Expand exactly one pixel under the antialiased contour. It removes the
+  // familiar white halo without allowing the fill to jump across the line.
+  for (let cursor = 0; cursor < regionSize; cursor += 1) {
+    const index = queue[cursor];
+    const column = index % safeWidth;
+    const row = Math.floor(index / safeWidth);
+    if (column > 0) addEdge(index - 1);
+    if (column + 1 < safeWidth) addEdge(index + 1);
+    if (row > 0) {
+      addEdge(index - safeWidth);
+      if (column > 0) addEdge(index - safeWidth - 1);
+      if (column + 1 < safeWidth) addEdge(index - safeWidth + 1);
+    }
+    if (row + 1 < safeHeight) {
+      addEdge(index + safeWidth);
+      if (column > 0) addEdge(index + safeWidth - 1);
+      if (column + 1 < safeWidth) addEdge(index + safeWidth + 1);
+    }
+  }
+
+  for (let cursor = regionSize; cursor < tail; cursor += 1) {
+    paintUnderEdge(pixels, queue[cursor], fill, target, targetLayerAlpha, background, softLimit);
+  }
+
+  return regionSize;
 }
 
 export function floodFillContext(context, stroke, width, height, backgroundColor = PAPER_COLORS[0]) {
@@ -321,7 +443,8 @@ export function floodFillContext(context, stroke, width, height, backgroundColor
     point.y,
     stroke.color,
     backgroundColor,
-    stroke.tolerance
+    stroke.tolerance,
+    stroke.edgeTolerance
   );
   if (changed > 0) context.putImageData(image, 0, 0);
   return changed;
@@ -342,24 +465,48 @@ function createReplayLayer(width, height) {
 }
 
 export function replayStrokes(context, strokes, width, height, backgroundColor = PAPER_COLORS[0]) {
+  return replayStrokesScaled(context, strokes, width, height, width, height, backgroundColor);
+}
+
+export function replayStrokesScaled(
+  context,
+  strokes,
+  sourceWidth,
+  sourceHeight,
+  targetWidth,
+  targetHeight,
+  backgroundColor = PAPER_COLORS[0]
+) {
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
-  context.clearRect(0, 0, width, height);
+  context.clearRect(0, 0, targetWidth, targetHeight);
   context.restore();
+  const scaleX = Math.max(0.0001, targetWidth / Math.max(1, sourceWidth));
+  const scaleY = Math.max(0.0001, targetHeight / Math.max(1, sourceHeight));
   let replayLayer = null;
   for (const stroke of strokes || []) {
     if (stroke.tool === 'fill') {
-      floodFillContext(context, stroke, width, height, backgroundColor);
+      floodFillContext(context, {
+        ...stroke,
+        points: stroke.points.map((point) => ({
+          ...point,
+          x: point.x * scaleX,
+          y: point.y * scaleY
+        }))
+      }, targetWidth, targetHeight, backgroundColor);
       continue;
     }
 
     const opacity = TOOL_DEFS[stroke.tool]?.opacity ?? 1;
     if (opacity < 1) {
-      replayLayer ||= createReplayLayer(width, height);
+      replayLayer ||= createReplayLayer(targetWidth, targetHeight);
       if (replayLayer) {
         replayLayer.context.setTransform(1, 0, 0, 1, 0, 0);
-        replayLayer.context.clearRect(0, 0, width, height);
+        replayLayer.context.clearRect(0, 0, targetWidth, targetHeight);
+        replayLayer.context.save();
+        replayLayer.context.scale(scaleX, scaleY);
         drawStrokeRange(replayLayer.context, stroke, 0, { opacity: 1 });
+        replayLayer.context.restore();
         context.save();
         context.globalAlpha = opacity;
         context.drawImage(replayLayer.canvas, 0, 0);
@@ -367,7 +514,10 @@ export function replayStrokes(context, strokes, width, height, backgroundColor =
         continue;
       }
     }
+    context.save();
+    context.scale(scaleX, scaleY);
     drawStrokeRange(context, stroke, 0);
+    context.restore();
   }
 }
 
