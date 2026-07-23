@@ -17,6 +17,7 @@ const APP_SHELL = [
   './styles-game.css',
   './app.js',
   './game-core.js',
+  './game-navigation.js',
   './game-runtime.js',
   './levels.js',
   './manifest.webmanifest',
