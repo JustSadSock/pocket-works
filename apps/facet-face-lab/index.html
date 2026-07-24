@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f1ede4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FACET">
+  <meta name="description" content="Локальный анализ геометрии и фотопрезентации лица с оценкой неопределённости.">
+  <title>FACET — анализ лица</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="topbar" data-ui>
+      <a class="home-link" href="../../" aria-label="Вернуться в Pocket Works" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+        <span>Pocket Works</span>
+      </a>
+      <div class="top-actions">
+        <button class="text-button" id="history-open" type="button" data-native-press>История</button>
+        <button class="text-button" id="method-open" type="button" data-native-press>Метод</button>
+        <button class="workshop-trigger text-button" type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </div>
+    </header>
+
+    <section class="intro" aria-labelledby="app-title">
+      <div class="intro-mark" aria-hidden="true">
+        <span>478</span>
+        <small>точек</small>
+      </div>
+      <div>
+        <p class="eyebrow">ON-DEVICE FACE ANALYSIS · v1.0</p>
+        <h1 id="app-title">FACET</h1>
+        <p class="intro-copy">Не «детектор красоты», а осторожная оценка геометрической регулярности лица с проверкой качества кадра и честным интервалом неопределённости.</p>
+      </div>
+    </section>
+
+    <section class="ethics-strip" aria-label="Ограничения метода">
+      <div><strong>Локально</strong><span>фото не загружается</span></div>
+      <div><strong>Без профайлинга</strong><span>не определяет пол, возраст и происхождение</span></div>
+      <div><strong>Не вердикт</strong><span>вкус и контекст сильнее одной формулы</span></div>
+    </section>
+
+    <section class="consent-panel ruled-panel" id="consent-panel">
+      <div class="section-index">01</div>
+      <div class="section-body">
+        <h2>Перед анализом</h2>
+        <p>Используй свою фотографию или снимок человека, который согласился на анализ. Сервис хранит только числовую историю — само изображение удаляется из памяти после закрытия приложения.</p>
+        <label class="consent-check">
+          <input type="checkbox" id="consent-check">
+          <span class="check-box" aria-hidden="true"></span>
+          <span>У меня есть право использовать это фото, и я понимаю ограничения оценки.</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="capture-panel ruled-panel is-locked" id="capture-panel" aria-labelledby="capture-title">
+      <div class="section-index">02</div>
+      <div class="section-body">
+        <div class="section-heading">
+          <div>
+            <h2 id="capture-title">Кадр</h2>
+            <p>Фронтально, без фильтров, с мягким светом. Нейтральное выражение повышает надёжность геометрии.</p>
+          </div>
+          <span class="model-status" id="model-status" data-status="idle"><i></i><span>модель не загружена</span></span>
+        </div>
+
+        <div class="capture-actions">
+          <button class="primary-action" id="camera-open" type="button" disabled data-native-press>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v10H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+            Снять
+          </button>
+          <label class="secondary-action" id="upload-label" aria-disabled="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5"/></svg>
+            Выбрать фото
+            <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" disabled>
+          </label>
+        </div>
+
+        <div class="photo-stage" id="photo-stage" data-state="empty">
+          <div class="empty-photo" id="empty-photo">
+            <div class="face-guide" aria-hidden="true">
+              <span class="guide-v"></span><span class="guide-h"></span>
+              <span class="guide-eye left"></span><span class="guide-eye right"></span>
+            </div>
+            <p>Лицо должно занимать примерно половину высоты кадра</p>
+          </div>
+          <img id="source-image" alt="Выбранное для анализа лицо" hidden>
+          <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+          <button class="replace-photo" id="replace-photo" type="button" hidden data-native-press>Заменить фото</button>
+          <div class="scan-line" aria-hidden="true"></div>
+        </div>
+
+        <div class="quality-preview" id="quality-preview" hidden>
+          <div class="quality-head">
+            <span>Предварительная проверка</span>
+            <strong id="quality-live-label">ожидание анализа</strong>
+          </div>
+          <div class="quality-grid" id="quality-grid"></div>
+        </div>
+
+        <button class="analyze-action" id="analyze-button" type="button" disabled data-native-press>
+          <span class="analyze-label">Провести анализ</span>
+          <span class="analyze-progress" aria-hidden="true"></span>
+        </button>
+        <p class="first-load-note">Первый запуск загружает открытую модель MediaPipe (~4 МБ). Расчёт выполняется на устройстве; фотография никуда не отправляется.</p>
+      </div>
+    </section>
+
+    <section class="result-panel ruled-panel" id="result-panel" hidden aria-labelledby="result-title">
+      <div class="section-index">03</div>
+      <div class="section-body">
+        <div class="result-heading">
+          <div>
+            <p class="eyebrow">ОРИЕНТИРОВОЧНАЯ ЭСТЕТИЧЕСКАЯ ОЦЕНКА</p>
+            <h2 id="result-title">Структурный индекс привлекательности</h2>
+          </div>
+          <button class="icon-button" id="share-result" type="button" aria-label="Поделиться результатом" data-native-press>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"/></svg>
+          </button>
+        </div>
+
+        <div class="score-plate">
+          <div class="score-main">
+            <span class="score-value" id="score-value">—</span>
+            <span class="score-denominator">/100</span>
+          </div>
+          <div class="score-interval">
+            <span>правдоподобный диапазон</span>
+            <strong id="score-interval">—</strong>
+          </div>
+          <div class="reliability-stamp" id="reliability-stamp">
+            <span>надёжность кадра</span>
+            <strong>—</strong>
+          </div>
+        </div>
+
+        <p class="result-caveat">Это не процентиль и не объективная «красота». Число показывает, насколько измеренные пропорции согласуются с широкой нейтральной моделью; индивидуальные и культурные оценки могут отличаться намного сильнее.</p>
+
+        <div class="metric-list" id="metric-list"></div>
+
+        <div class="result-columns">
+          <section class="finding-block">
+            <p class="block-label">Наиболее согласованные признаки</p>
+            <ol id="strong-list"></ol>
+          </section>
+          <section class="finding-block">
+            <p class="block-label">Наиболее индивидуальные признаки</p>
+            <ol id="distinctive-list"></ol>
+          </section>
+        </div>
+
+        <section class="quality-report" id="quality-report">
+          <div class="quality-report-head">
+            <div>
+              <p class="block-label">Качество фотографии</p>
+              <strong id="presentation-score">—</strong>
+            </div>
+            <span id="quality-report-caption">—</span>
+          </div>
+          <div id="issue-list" class="issue-list"></div>
+        </section>
+
+        <div class="result-actions">
+          <button class="secondary-action button-reset" id="reanalyze-button" type="button" data-native-press>Другой кадр</button>
+          <button class="primary-action" id="method-from-result" type="button" data-native-press>Как это считается</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="app-footer" data-ui>
+      <span>FACET · v1.0.0</span>
+      <span>Локальная обработка · 2026</span>
+    </footer>
+  </main>
+
+  <dialog class="sheet" id="camera-dialog">
+    <div class="sheet-shell camera-shell">
+      <header class="sheet-header">
+        <div><span class="eyebrow">КАМЕРА</span><h2>Совмести лицо с контуром</h2></div>
+        <button class="icon-button" id="camera-close" type="button" aria-label="Закрыть камеру" data-native-press>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="camera-view">
+        <video id="camera-video" playsinline muted></video>
+        <canvas id="camera-guide" aria-hidden="true"></canvas>
+        <div class="camera-message" id="camera-message">Разреши доступ к камере</div>
+      </div>
+      <div class="camera-controls">
+        <button class="camera-flip" id="camera-flip" type="button" aria-label="Переключить камеру" data-native-press>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h10a4 4 0 0 1 4 4v1M4 8l3-3M4 8l3 3M20 16H10a4 4 0 0 1-4-4v-1m14 5-3-3m3 3-3 3"/></svg>
+        </button>
+        <button class="shutter" id="camera-capture" type="button" aria-label="Сделать снимок" disabled data-native-press><span></span></button>
+        <span class="camera-spacer"></span>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="sheet" id="method-dialog">
+    <div class="sheet-shell reading-shell">
+      <header class="sheet-header sticky">
+        <div><span class="eyebrow">МЕТОДОЛОГИЯ</span><h2>Что FACET действительно измеряет</h2></div>
+        <button class="icon-button dialog-close" type="button" aria-label="Закрыть методологию" data-dialog-close data-native-press>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <article class="method-copy selectable-content">
+        <section>
+          <h3>Научная позиция</h3>
+          <p>Не существует одной подтверждённой формулы привлекательности. Исследования находят связи с усреднённостью формы, согласованностью пропорций и иногда симметрией, но эти признаки объясняют лишь часть разброса человеческих оценок. Новые работы отдельно предупреждают, что эффект симметрии может исчезать после учёта других факторов.</p>
+        </section>
+        <section>
+          <h3>Что входит в индекс</h3>
+          <dl class="method-weights">
+            <div><dt>45%</dt><dd><strong>Пропорциональная регулярность</strong><span>Восемь безразмерных отношений сравниваются с широкими, а не «идеальными», интервалами.</span></dd></div>
+            <div><dt>35%</dt><dd><strong>Координация признаков</strong><span>Согласованность размеров парных зон и центровка носа, рта и подбородка.</span></dd></div>
+            <div><dt>20%</dt><dd><strong>Билатеральный баланс</strong><span>Робастная медиана расхождений выбранных пар точек после компенсации наклона.</span></dd></div>
+          </dl>
+          <p>Качество фото не улучшает индекс лица: оно только расширяет или сужает интервал неопределённости. Весовые коэффициенты — прозрачная инженерная модель, а не клинически валидированный диагностический коэффициент; результат не является популяционным процентилем.</p>
+        </section>
+        <section>
+          <h3>Защита от ложной точности</h3>
+          <ul>
+            <li>Оценка блокируется при нескольких лицах, сильном повороте, смазе, пересвете или слишком маленьком лице.</li>
+            <li>Минимальный интервал составляет ±10 пунктов даже при отличном кадре.</li>
+            <li>Нет определения пола, возраста, этничности, здоровья или личности.</li>
+            <li>Нет «золотого сечения»: его популярность значительно выше доказательной базы.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Техническая основа</h3>
+          <p>FACET использует MediaPipe Face Landmarker и 478 трёхмерных ориентиров лица. Модель загружается из официального хранилища Google, а изображение анализируется в браузере.</p>
+        </section>
+        <section>
+          <h3>Ключевые источники</h3>
+          <ol class="sources-list">
+            <li><a href="https://doi.org/10.1037/0033-2909.126.3.390" target="_blank" rel="noreferrer">Langlois et al., 2000 — мета-анализ исследований привлекательности</a></li>
+            <li><a href="https://doi.org/10.1098/rstb.2010.0404" target="_blank" rel="noreferrer">Little, Jones & DeBruine, 2011 — обзор эволюционных исследований лица</a></li>
+            <li><a href="https://doi.org/10.1177/0956797611419169" target="_blank" rel="noreferrer">Said & Todorov, 2011 — статистическая модель привлекательности</a></li>
+            <li><a href="https://doi.org/10.1038/s41598-025-86974-0" target="_blank" rel="noreferrer">Lee et al., 2025 — независимый вклад усреднённости, симметрии и диморфизма</a></li>
+            <li><a href="https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js" target="_blank" rel="noreferrer">Google AI Edge — документация Face Landmarker для Web</a></li>
+          </ol>
+        </section>
+      </article>
+    </div>
+  </dialog>
+
+  <dialog class="sheet" id="history-dialog">
+    <div class="sheet-shell reading-shell">
+      <header class="sheet-header sticky">
+        <div><span class="eyebrow">ЛОКАЛЬНАЯ ИСТОРИЯ</span><h2>Предыдущие измерения</h2></div>
+        <button class="icon-button dialog-close" type="button" aria-label="Закрыть историю" data-dialog-close data-native-press>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="history-toolbar">
+        <p>Сохраняются только числа и дата. Фотографии не записываются.</p>
+        <button class="danger-text" id="history-clear" type="button" data-native-press>Очистить</button>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <canvas id="work-canvas" hidden></canvas>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="FACET — анализ лица"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
