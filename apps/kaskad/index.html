@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#efe9dc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="KASKAD">
+  <title>KASKAD — визуальная лаборатория симуляций</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="launcher-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <button class="scene-name" id="scene-name" type="button" data-native-press aria-label="Переименовать сцену">
+        <span class="scene-name__eyebrow">KASKAD / СЦЕНА</span>
+        <span class="scene-name__value" id="scene-name-value">Клон-камера</span>
+      </button>
+      <div class="top-actions">
+        <button class="icon-button" id="undo-button" type="button" data-native-press aria-label="Отменить изменение" title="Отменить">↶</button>
+        <button class="icon-button" id="export-button" type="button" data-native-press aria-label="Экспортировать сцену" title="Экспорт">⇩</button>
+        <button class="icon-button" id="more-button" type="button" data-native-press aria-label="Файлы и настройки" title="Файлы">•••</button>
+      </div>
+    </header>
+
+    <section class="stage-wrap" id="stage-wrap" data-gesture-surface data-block-callout>
+      <canvas id="sim-canvas" aria-label="Полотно физической симуляции"></canvas>
+      <div class="stage-grain" aria-hidden="true"></div>
+      <div class="stage-hud" data-ui>
+        <span id="particle-count">1 объект</span>
+        <span id="fps-readout">60 FPS</span>
+        <span id="event-readout">0 событий/с</span>
+      </div>
+      <div class="stage-empty" id="stage-empty" hidden>
+        <strong>Арена пуста</strong>
+        <span>Коснись поля или добавь стартовые объекты в разделе «Виды».</span>
+      </div>
+      <button class="stage-add" id="stage-add" type="button" data-native-press aria-label="Добавить объект в центр">＋</button>
+      <div class="recording-badge" id="recording-badge" hidden><i></i> запись</div>
+    </section>
+
+    <section class="transport" data-ui>
+      <button class="transport-main" id="play-button" type="button" data-native-press aria-label="Пауза">
+        <span id="play-icon">Ⅱ</span>
+      </button>
+      <button class="transport-button" id="step-button" type="button" data-native-press>КАДР</button>
+      <button class="transport-button speed-button" id="speed-button" type="button" data-native-press><span id="speed-value">1×</span> СКОРОСТЬ</button>
+      <div class="timeline-rail" aria-hidden="true"><span id="timeline-fill"></span></div>
+      <button class="transport-button" id="reset-button" type="button" data-native-press>СБРОС</button>
+      <button class="record-button" id="record-button" type="button" data-native-press aria-label="Начать запись"><i></i><span>REC</span></button>
+    </section>
+
+    <section class="workbench" data-ui>
+      <nav class="tabs" aria-label="Разделы конструктора">
+        <button class="tab is-active" type="button" data-tab="scene" data-native-press>Сцена</button>
+        <button class="tab" type="button" data-tab="species" data-native-press>Виды</button>
+        <button class="tab" type="button" data-tab="fields" data-native-press>Поля</button>
+        <button class="tab" type="button" data-tab="rules" data-native-press>Правила</button>
+      </nav>
+      <div class="panel-scroll" id="panel-scroll" data-touch-action="pan-y">
+        <div id="panel-content"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <section class="sheet" id="editor-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheet-title" data-ui data-keyboard-aware>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <header class="sheet-header">
+      <div>
+        <p id="sheet-kicker">РЕДАКТОР</p>
+        <h2 id="sheet-title">Параметры</h2>
+      </div>
+      <button class="icon-button sheet-close" id="sheet-close" type="button" data-native-press aria-label="Закрыть">×</button>
+    </header>
+    <div class="sheet-body" id="sheet-body" data-touch-action="pan-y"></div>
+    <footer class="sheet-footer" id="sheet-footer"></footer>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <input id="import-input" type="file" accept="application/json,.json" hidden>
+  <button id="workshop-trigger" type="button" data-workshop-trigger hidden>Workshop</button>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="KASKAD"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
