@@ -1,4 +1,9 @@
 // FACET v1.5 compact runtime bundle.
+const contourStyles = document.createElement('link');
+contourStyles.rel = 'stylesheet';
+contourStyles.href = new URL('./v15.css', import.meta.url).href;
+document.head.append(contourStyles);
+
 const partUrls = [0, 1, 2, 3].map((index) => new URL(`./facet-v15-bundle-${index}.txt`, import.meta.url));
 const encoded = (await Promise.all(partUrls.map(async (url) => {
   const response = await fetch(url, { cache: 'force-cache' });
@@ -20,3 +25,14 @@ try {
 } finally {
   URL.revokeObjectURL(moduleUrl);
 }
+
+const heroCopy = document.querySelector('.hero > p:last-child');
+if (heroCopy) heroCopy.textContent = 'Три кадра, устойчивые ориентиры и отдельная пиксельная проверка волос и кожи.';
+const footerVersion = document.querySelector('.app-footer span:first-child');
+if (footerVersion) footerVersion.textContent = 'FACET v1.5';
+const methodCopy = document.querySelector('.method-copy');
+if (methodCopy) methodCopy.innerHTML = `
+  <section><h3>Контуры</h3><p>Глаза, губы, брови, нос и нижняя часть лица строятся по полным соединениям Face Landmarker. Верхняя дуга лицевой сетки не считается линией роста волос.</p></section>
+  <section><h3>Вертикальные кадры</h3><p>До измерений координаты переводятся в изотропное пространство с учётом реального соотношения сторон. Портретный кадр больше не растягивает высоту лица и наклон черт.</p></section>
+  <section><h3>Волосы и лоб</h3><p>Линия роста волос показывается только при уверенном результате отдельной пиксельной сегментации волос и кожи. Иначе верхний контур не дорисовывается и форма лица помечается предварительной.</p></section>
+  <section><h3>Три кадра</h3><p>Ориентиры трёх снимков совмещаются по глазам и усредняются медианой. Нестабильные сегменты становятся пунктирными или не показываются, а пограничная форма лица выводится как сочетание двух типов.</p></section>`;
