@@ -1,0 +1,203 @@
+tate.moved = true;
+  if (distance > 12 && now - pointerState.emittedAt > 28) {
+    const scale = 1000 / elapsed;
+    spawnFromGesture(point, { vx: dx * scale * 0.62, vy: dy * scale * 0.62 });
+    pointerState.emittedAt = now;
+  }
+  pointerState.last = point;
+  pointerState.lastAt = now;
+});
+
+function endPointer(event) {
+  if (!pointerState || pointerState.id !== event.pointerId) return;
+  pointerState = null;
+  try { canvas.releasePointerCapture(event.pointerId); } catch { /* pointer may already be released */ }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('lostpointercapture', () => { pointerState = null; });
+
+panelContent.addEventListener('click', (event) => {
+  const target = event.target.closest('button, [data-action]');
+  if (!target) return;
+  if (target.dataset.template) applyStarter(target.dataset.template);
+  else if (target.dataset.boundary) commitScene((draft) => { draft.boundary = target.dataset.boundary; }, { restart: true });
+  else if (target.dataset.toggleScene) {
+    const key = target.dataset.toggleScene;
+    commitScene((draft) => { draft[key] = !draft[key]; }, { render: true });
+    if (key === 'sound' && scene.sound) {
+      try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)(); audioContext.resume?.(); } catch { /* optional */ }
+    }
+  }
+  else if (target.hasAttribute('data-add-species')) openSpeciesEditor();
+  else if (target.dataset.editSpecies) openSpeciesEditor(target.dataset.editSpecies);
+  else if (target.hasAttribute('data-add-field')) openFieldEditor();
+  else if (target.dataset.editField) openFieldEditor(target.dataset.editField);
+  else if (target.hasAttribute('data-add-rule')) openRuleEditor();
+  else if (target.dataset.editRule) openRuleEditor(target.dataset.editRule);
+});
+
+panelContent.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!input.matches('[data-scene-range]')) return;
+  const key = input.dataset.sceneRange;
+  const value = key === 'maxParticles' ? Math.round(Number(input.value)) : Number(input.value);
+  scene[key] = value;
+  const output = input.parentElement.querySelector('output');
+  output.textContent = key === 'trails' ? `${Math.round(value * 100)}%` : String(value);
+  scheduleSave();
+  if (key === 'maxParticles' && particles.length > value) particles.length = value;
+});
+
+sheetBody.addEventListener('input', (event) => {
+  const input = event.target;
+  if (input.matches('input[type="range"]')) updateRangeOutput(input);
+  if (input.closest('#rule-form')) updateRulePreview();
+});
+
+sheetBody.addEventListener('change', (event) => {
+  const input = event.target;
+  if (input.name === 'type' && input.closest('#field-form')) {
+    document.querySelector('#field-description').textContent = FIELD_DEFS[input.value].description;
+    if (document.querySelector('#field-form').elements.name.value === 'Новое поле') document.querySelector('#field-form').elements.name.value = FIELD_DEFS[input.value].label;
+  }
+  if (input.closest('#rule-form') && ['trigger', 'condition', 'action'].includes(input.name)) updateRuleEditorVisibility();
+});
+
+sheet.addEventListener('click', (event) => {
+  const target = event.target.closest('button');
+  if (!target) return;
+  if (target.hasAttribute('data-close-sheet')) closeSheet();
+  else if (target.dataset.formToggle) {
+    const form = target.closest('form');
+    const checkbox = form.elements[target.dataset.formToggle];
+    checkbox.checked = !checkbox.checked;
+    target.classList.toggle('is-on', checkbox.checked);
+  }
+  else if (target.dataset.saveSpecies) saveSpeciesFromSheet(target);
+  else if (target.dataset.saveField) saveFieldFromSheet(target);
+  else if (target.dataset.saveRule) saveRuleFromSheet(target);
+  else if (target.dataset.deleteCurrent) deleteCurrent(target.dataset.deleteCurrent);
+  else if (target.dataset.setDrawing) {
+    const id = target.dataset.setDrawing;
+    if (!scene.species.some((item) => item.id === id)) {
+      showToast('Сначала сохрани новый вид');
+      return;
+    }
+    commitScene((draft) => { draft.selectedSpecies = id; });
+    closeSheet();
+    showToast(`Активный вид: ${getSpecies(id).name}`);
+  }
+  else if (target.hasAttribute('data-save-name')) {
+    const value = document.querySelector('#rename-form').elements.name.value.trim();
+    if (!value) { showToast('Название не может быть пустым'); return; }
+    commitScene((draft) => { draft.name = value; });
+    closeSheet();
+  }
+  else if (target.dataset.fileAction === 'export') exportScene();
+  else if (target.dataset.fileAction === 'import') importInput.click();
+  else if (target.dataset.fileAction === 'shot') takeScreenshot();
+  else if (target.dataset.fileAction === 'record') { closeSheet(); toggleRecording(); }
+  else if (target.dataset.fileAction === 'workshop') { closeSheet(); document.querySelector('#workshop-trigger')?.click(); }
+  else if (target.hasAttribute('data-clear-design')) clearDesign();
+});
+
+sheetBackdrop.addEventListener('click', closeSheet);
+document.querySelector('#sheet-close').addEventListener('click', closeSheet);
+document.querySelector('#scene-name').addEventListener('click', openRenameSheet);
+document.querySelector('#more-button').addEventListener('click', openFilesSheet);
+document.querySelector('#export-button').addEventListener('click', exportScene);
+document.querySelector('#stage-add').addEventListener('click', () => spawnFromGesture({ x: viewport.width / 2, y: viewport.height / 2 }));
+
+for (const tab of document.querySelectorAll('.tab')) {
+  tab.addEventListener('click', () => {
+    activeTab = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach((item) => item.classList.toggle('is-active', item === tab));
+    panelScroll.scrollTop = 0;
+    renderPanel();
+  });
+}
+
+playButton.addEventListener('click', () => {
+  running = !running;
+  updateSceneChrome();
+  haptic(6);
+});
+
+document.querySelector('#step-button').addEventListener('click', () => {
+  running = false;
+  forceSingleStep = true;
+  updateSceneChrome();
+});
+
+document.querySelector('#speed-button').addEventListener('click', () => {
+  const index = SPEED_STEPS.indexOf(scene.speed);
+  scene.speed = SPEED_STEPS[(index + 1) % SPEED_STEPS.length];
+  scheduleSave();
+  updateSceneChrome();
+  showToast(`Скорость симуляции: ${scene.speed}×`);
+});
+
+document.querySelector('#reset-button').addEventListener('click', () => {
+  resetSimulation();
+  showToast('Симуляция возвращена к стартовому состоянию');
+  haptic([5, 25, 5]);
+});
+
+recordButton.addEventListener('click', toggleRecording);
+
+undoButton.addEventListener('click', () => {
+  const previous = undoStack.pop();
+  if (!previous) return;
+  scene = normalizeScene(previous);
+  scheduleSave();
+  updateSceneChrome();
+  resetSimulation();
+  renderPanel();
+  showToast('Изменение отменено');
+});
+
+importInput.addEventListener('change', () => {
+  const [file] = importInput.files || [];
+  if (file) importSceneFile(file);
+  importInput.value = '';
+});
+
+window.addEventListener('resize', resizeCanvas, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 120), { passive: true });
+document.addEventListener('visibilitychange', () => {
+  lastFrameAt = performance.now();
+  if (document.hidden && mediaRecorder?.state === 'recording') mediaRecorder.stop();
+});
+window.addEventListener('pagehide', () => storage.set('scene', scene));
+window.addEventListener('appdatareset', () => {
+  undoStack = [];
+  scene = starterClone();
+  updateSceneChrome();
+  resetSimulation();
+  renderPanel();
+});
+
+createWorkshopMode({
+  appName: 'KASKAD',
+  version: APP_VERSION,
+  cachePrefix: 'kaskad-',
+  storageNamespace: STORAGE_NAMESPACE,
+  onReset() {
+    storage.reset();
+    window.dispatchEvent(new CustomEvent('appdatareset'));
+  }
+});
+
+watchConnectivity((online) => {
+  document.documentElement.dataset.network = online ? 'online' : 'offline';
+});
+
+updateSceneChrome();
+renderPanel();
+resizeCanvas();
+resetSimulation();
+requestAnimationFrame((now) => {
+  lastFrameAt = now;
+  requestAnimationFrame(frame);
+});

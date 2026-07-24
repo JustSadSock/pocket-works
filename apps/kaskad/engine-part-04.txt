@@ -1,0 +1,227 @@
+s-on' : ''}" data-toggle-scene="sound" data-native-press aria-label="Переключить звук"></button>
+      </div>
+    </div>`;
+}
+
+function renderSpeciesPanel() {
+  const cards = scene.species.map((item) => `
+    <button class="item-card" type="button" data-edit-species="${escapeHtml(item.id)}" data-native-press>
+      <span class="item-swatch" style="background:${item.color}"></span>
+      <span class="item-copy"><strong>${escapeHtml(item.name)}</strong><span>${item.count} старт · r${item.radius} · ${Math.round(item.speed)} px/с</span></span>
+      <span class="item-meta">${item.id === scene.selectedSpecies ? 'РИСУЕМ' : 'ИЗМЕНИТЬ'}</span>
+    </button>`).join('');
+  return `
+    <div class="panel-heading">
+      <div><h2>Виды объектов</h2><p>Каждый вид имеет собственный цвет, массу, упругость, размер и стартовую популяцию.</p></div>
+      <button class="add-button" type="button" data-add-species data-native-press ${scene.species.length >= MAX_SPECIES ? 'disabled' : ''}>＋ ВИД</button>
+    </div>
+    <div class="item-list">${cards}</div>`;
+}
+
+function renderFieldsPanel() {
+  const cards = scene.fields.map((field) => {
+    const def = FIELD_DEFS[field.type];
+    return `
+      <button class="item-card ${field.enabled ? '' : 'is-disabled'}" type="button" data-edit-field="${escapeHtml(field.id)}" data-native-press>
+        <span class="item-icon">${def.icon}</span>
+        <span class="item-copy"><strong>${escapeHtml(field.name)}</strong><span>${def.label} · сила ${field.strength.toFixed(2)}</span></span>
+        <span class="item-meta">${field.enabled ? 'ВКЛ' : 'ВЫКЛ'}</span>
+      </button>`;
+  }).join('');
+  return `
+    <div class="panel-heading">
+      <div><h2>Поля</h2><p>Поля действуют постоянно и могут накладываться друг на друга. Один объект одновременно чувствует ветер, вихрь, притяжение и цветовую химию.</p></div>
+      <button class="add-button" type="button" data-add-field data-native-press ${scene.fields.length >= MAX_FIELDS ? 'disabled' : ''}>＋ ПОЛЕ</button>
+    </div>
+    <div class="item-list">${cards || '<div class="empty-card">Полей пока нет. Добавь гравитацию, вихрь или цветовое сродство.</div>'}</div>`;
+}
+
+function ruleSentence(rule) {
+  const trigger = TRIGGER_DEFS[rule.trigger].short;
+  const source = getSpeciesLabel(rule.source);
+  const action = ACTION_DEFS[rule.action].label.toLowerCase();
+  const output = ['spawn', 'split', 'transform', 'burst'].includes(rule.action) ? ` → ${getSpeciesLabel(rule.outputSpecies)}` : '';
+  return `${trigger} · ${source} · ${action}${output}`;
+}
+
+function renderRulesPanel() {
+  const cards = scene.rules.map((rule, index) => `
+    <button class="item-card rule-card ${rule.enabled ? '' : 'is-disabled'}" type="button" data-edit-rule="${escapeHtml(rule.id)}" data-native-press>
+      <span class="rule-number">${String(index + 1).padStart(2, '0')}</span>
+      <span class="item-copy"><strong>${escapeHtml(rule.name)}</strong><span class="rule-sentence">${escapeHtml(ruleSentence(rule))}</span></span>
+      <span class="item-meta">${Math.round(rule.chance * 100)}%</span>
+    </button>`).join('');
+  return `
+    <div class="panel-heading">
+      <div><h2>Событийные правила</h2><p>Формула одна: событие → участники → условие → действие. Комбинации дают каскады, экосистемы, сортировки, цепные реакции и визуальные машины.</p></div>
+      <button class="add-button" type="button" data-add-rule data-native-press ${scene.rules.length >= MAX_RULES ? 'disabled' : ''}>＋ ПРАВИЛО</button>
+    </div>
+    <div class="item-list">${cards || '<div class="empty-card">Сейчас система живёт только по физике. Добавь правило, чтобы столкновения начали что-то менять.</div>'}</div>`;
+}
+
+function openSheet({ kicker = 'РЕДАКТОР', title = 'Параметры', body = '', footer = '' }) {
+  sheetKicker.textContent = kicker;
+  sheetTitle.textContent = title;
+  sheetBody.innerHTML = body;
+  sheetFooter.innerHTML = footer;
+  sheet.hidden = false;
+  sheetBackdrop.hidden = false;
+  document.body.dataset.sheetOpen = 'true';
+  requestAnimationFrame(() => sheet.querySelector('input, select, button')?.focus({ preventScroll: true }));
+}
+
+function closeSheet() {
+  sheet.hidden = true;
+  sheetBackdrop.hidden = true;
+  document.body.dataset.sheetOpen = 'false';
+  sheetBody.innerHTML = '';
+  sheetFooter.innerHTML = '';
+}
+
+function openSpeciesEditor(speciesId = null) {
+  const existing = speciesId ? scene.species.find((item) => item.id === speciesId) : null;
+  const draft = existing ? deepClone(existing) : {
+    id: uid('species'), name: `Вид ${scene.species.length + 1}`, color: PALETTE[scene.species.length % PALETTE.length],
+    radius: 8, mass: 1, bounce: 0.95, drag: 0.004, count: 12, speed: 110
+  };
+  const deleteButton = existing && scene.species.length > 1 ? `<button class="danger-button" type="button" data-delete-current="species" data-native-press>Удалить</button>` : '';
+  openSheet({
+    kicker: existing ? 'ВИД ОБЪЕКТА' : 'НОВЫЙ ВИД',
+    title: draft.name,
+    body: `
+      <form class="form-grid" id="species-form">
+        <label class="form-field"><span>Название</span><input name="name" type="text" maxlength="28" value="${escapeHtml(draft.name)}"></label>
+        <label class="form-field"><span>Цвет</span><input name="color" type="color" value="${draft.color}"></label>
+        <div class="form-columns">
+          ${rangeField('radius', 'Радиус', draft.radius, 2, 36, 1, ' px')}
+          ${rangeField('count', 'Стартовое число', draft.count, 0, 180, 1, '')}
+          ${rangeField('speed', 'Начальная скорость', draft.speed, 0, 500, 5, ' px/с')}
+          ${rangeField('mass', 'Масса', draft.mass, 0.1, 8, 0.1, '×')}
+          ${rangeField('bounce', 'Упругость', draft.bounce, 0.2, 1.25, 0.01, '×')}
+          ${rangeField('drag', 'Сопротивление', draft.drag, 0, 0.06, 0.001, '')}
+        </div>
+        <p class="form-note">Кнопка «рисовать» делает этот вид активным для касаний и жестов по арене.</p>
+      </form>`,
+    footer: `${deleteButton}<button class="ghost-button" type="button" data-set-drawing="${draft.id}" data-native-press>Рисовать этим</button><button class="primary-button" type="button" data-save-species="${draft.id}" data-existing="${existing ? '1' : '0'}" data-native-press>Сохранить</button>`
+  });
+}
+
+function rangeField(name, label, value, min, max, step, suffix = '') {
+  const shown = step < 0.01 ? Number(value).toFixed(3) : step < 1 ? Number(value).toFixed(2) : Math.round(Number(value));
+  return `<label class="form-field"><span class="form-range-head"><span>${label}</span><output data-output-for="${name}">${shown}${suffix}</output></span><input name="${name}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-suffix="${suffix}"></label>`;
+}
+
+function openFieldEditor(fieldId = null) {
+  const existing = fieldId ? scene.fields.find((item) => item.id === fieldId) : null;
+  const draft = existing ? deepClone(existing) : {
+    id: uid('field'), name: 'Новое поле', type: 'gravity', enabled: true, strength: 0.7, x: 0.5, y: 0.5, radius: 1, frequency: 1
+  };
+  const typeOptions = Object.entries(FIELD_DEFS).map(([key, def]) => `<option value="${key}"${draft.type === key ? ' selected' : ''}>${def.label}</option>`).join('');
+  openSheet({
+    kicker: existing ? 'СИЛОВОЕ ПОЛЕ' : 'НОВОЕ ПОЛЕ',
+    title: draft.name,
+    body: `
+      <form class="form-grid" id="field-form">
+        <label class="form-field"><span>Название</span><input name="name" type="text" maxlength="36" value="${escapeHtml(draft.name)}"></label>
+        <label class="form-field"><span>Тип поля</span><select name="type">${typeOptions}</select></label>
+        <label class="control-row"><span class="control-row__copy"><strong>Поле активно</strong><span>Можно временно выключить, не удаляя настройку.</span></span><input name="enabled" type="checkbox" ${draft.enabled ? 'checked' : ''} hidden><button class="toggle ${draft.enabled ? 'is-on' : ''}" type="button" data-form-toggle="enabled" data-native-press></button></label>
+        <div class="form-columns">
+          ${rangeField('strength', 'Сила', draft.strength, -4, 4, 0.05, '×')}
+          ${rangeField('radius', 'Радиус влияния', draft.radius, 0.1, 1.5, 0.05, '×')}
+          ${rangeField('x', 'Позиция X', draft.x, 0, 1, 0.01, '')}
+          ${rangeField('y', 'Позиция Y', draft.y, 0, 1, 0.01, '')}
+          ${rangeField('frequency', 'Частота / угол', draft.frequency, 0.1, 6, 0.1, '')}
+        </div>
+        <p class="form-note" id="field-description">${FIELD_DEFS[draft.type].description}</p>
+      </form>`,
+    footer: `${existing ? '<button class="danger-button" type="button" data-delete-current="field" data-native-press>Удалить</button>' : ''}<button class="primary-button" type="button" data-save-field="${draft.id}" data-existing="${existing ? '1' : '0'}" data-native-press>Сохранить</button>`
+  });
+}
+
+function conditionThresholdConfig(condition) {
+  if (condition === 'speedAbove') return { min: 0, max: 500, step: 5, suffix: ' px/с', defaultValue: 80 };
+  if (condition === 'populationBelow') return { min: 1, max: 500, step: 1, suffix: '', defaultValue: 120 };
+  if (condition === 'ageAbove') return { min: 0, max: 30, step: 0.5, suffix: ' с', defaultValue: 3 };
+  if (condition === 'sameHue' || condition === 'oppositeHue') return { min: 0.02, max: 1, step: 0.02, suffix: '', defaultValue: condition === 'sameHue' ? 0.18 : 0.6 };
+  return { min: 0, max: 1, step: 0.1, suffix: '', defaultValue: 0 };
+}
+
+function openRuleEditor(ruleId = null) {
+  const existing = ruleId ? scene.rules.find((item) => item.id === ruleId) : null;
+  const draft = existing ? deepClone(existing) : normalizeRule({
+    id: uid('rule'), name: 'Новое правило', trigger: 'wall', source: 'any', target: 'any', condition: 'always',
+    threshold: 80, chance: 1, cooldown: 0.05, action: 'spawn', outputSpecies: 'same', amount: 1, value: 0.5, interval: 1
+  });
+  const triggerOptions = Object.entries(TRIGGER_DEFS).map(([key, def]) => `<option value="${key}"${draft.trigger === key ? ' selected' : ''}>${def.label}</option>`).join('');
+  const conditionOptions = Object.entries(CONDITION_DEFS).map(([key, def]) => `<option value="${key}"${draft.condition === key ? ' selected' : ''}>${def.label}</option>`).join('');
+  const actionOptions = Object.entries(ACTION_DEFS).map(([key, def]) => `<option value="${key}"${draft.action === key ? ' selected' : ''}>${def.label}</option>`).join('');
+  const threshold = conditionThresholdConfig(draft.condition);
+  openSheet({
+    kicker: existing ? 'СОБЫТИЕ → ДЕЙСТВИЕ' : 'НОВОЕ ПРАВИЛО',
+    title: draft.name,
+    body: `
+      <form class="form-grid" id="rule-form">
+        <label class="form-field"><span>Название</span><input name="name" type="text" maxlength="44" value="${escapeHtml(draft.name)}"></label>
+        <label class="control-row"><span class="control-row__copy"><strong>Правило активно</strong><span>Выключенное правило остаётся в схеме.</span></span><input name="enabled" type="checkbox" ${draft.enabled ? 'checked' : ''} hidden><button class="toggle ${draft.enabled ? 'is-on' : ''}" type="button" data-form-toggle="enabled" data-native-press></button></label>
+        <div class="form-columns">
+          <label class="form-field"><span>Событие</span><select name="trigger">${triggerOptions}</select></label>
+          <label class="form-field"><span>Главный участник</span><select name="source">${speciesOptions(draft.source, true, false)}</select></label>
+          <label class="form-field" data-target-field><span>Второй участник</span><select name="target">${speciesOptions(draft.target, true, false)}</select></label>
+          <label class="form-field"><span>Условие</span><select name="condition">${conditionOptions}</select></label>
+        </div>
+        <div data-threshold-wrap>${rangeField('threshold', 'Порог условия', draft.threshold, threshold.min, threshold.max, threshold.step, threshold.suffix)}</div>
+        <div class="form-columns">
+          ${rangeField('chance', 'Вероятность', draft.chance, 0, 1, 0.01, '')}
+          ${rangeField('cooldown', 'Пауза правила', draft.cooldown, 0, 5, 0.01, ' с')}
+          ${rangeField('interval', 'Интервал таймера', draft.interval, 0.1, 30, 0.1, ' с')}
+        </div>
+        <label class="form-field"><span>Действие</span><select name="action">${actionOptions}</select></label>
+        <div class="form-columns">
+          <label class="form-field" data-output-species-field><span>Результирующий вид</span><select name="outputSpecies">${speciesOptions(draft.outputSpecies, false, true)}</select></label>
+          <label class="form-field" data-output-field-field><span>Поле</span><select name="outputField">${fieldOptions(draft.outputField, true)}</select></label>
+          ${rangeField('amount', 'Количество', draft.amount, 1, 24, 1, '')}
+          ${rangeField('value', 'Сила действия', draft.value, -0.9, 4, 0.05, '×')}
+        </div>
+        <div class="action-preview" id="rule-preview"></div>
+      </form>`,
+    footer: `${existing ? '<button class="danger-button" type="button" data-delete-current="rule" data-native-press>Удалить</button>' : ''}<button class="primary-button" type="button" data-save-rule="${draft.id}" data-existing="${existing ? '1' : '0'}" data-native-press>Сохранить</button>`
+  });
+  updateRuleEditorVisibility();
+}
+
+function updateRuleEditorVisibility() {
+  const form = document.querySelector('#rule-form');
+  if (!form) return;
+  const trigger = form.elements.trigger.value;
+  const condition = form.elements.condition.value;
+  const action = form.elements.action.value;
+  const targetField = form.querySelector('[data-target-field]');
+  const outputSpeciesField = form.querySelector('[data-output-species-field]');
+  const outputFieldField = form.querySelector('[data-output-field-field]');
+  const thresholdWrap = form.querySelector('[data-threshold-wrap]');
+  targetField.hidden = trigger !== 'collision';
+  outputSpeciesField.hidden = !['spawn', 'split', 'transform', 'burst'].includes(action);
+  outputFieldField.hidden = action !== 'toggleField';
+  thresholdWrap.hidden = condition === 'always';
+  const intervalInput = form.elements.interval.closest('.form-field');
+  intervalInput.hidden = trigger !== 'interval';
+
+  const thresholdConfig = conditionThresholdConfig(condition);
+  const thresholdInput = form.elements.threshold;
+  if (thresholdInput) {
+    thresholdInput.min = thresholdConfig.min;
+    thresholdInput.max = thresholdConfig.max;
+    thresholdInput.step = thresholdConfig.step;
+    thresholdInput.dataset.suffix = thresholdConfig.suffix;
+    if (Number(thresholdInput.value) < thresholdConfig.min || Number(thresholdInput.value) > thresholdConfig.max) thresholdInput.value = thresholdConfig.defaultValue;
+    updateRangeOutput(thresholdInput);
+  }
+  updateRulePreview();
+}
+
+function updateRulePreview() {
+  const form = document.querySelector('#rule-form');
+  const preview = document.querySelector('#rule-preview');
+  if (!form || !preview) return;
+  const trigger = TRIGGER_DEFS[form.elements.trigger.value]?.label || 'Событие';
+  const source 

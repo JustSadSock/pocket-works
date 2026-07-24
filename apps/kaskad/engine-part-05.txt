@@ -1,0 +1,370 @@
+= getSpeciesLabel(form.elements.source.value);
+  const action = ACTION_DEFS[form.elements.action.value]?.label || 'действие';
+  const chance = Math.round(Number(form.elements.chance.value) * 100);
+  const condition = CONDITION_DEFS[form.elements.condition.value]?.label.toLowerCase() || 'всегда';
+  preview.innerHTML = `<b>${escapeHtml(trigger)}</b>: ${escapeHtml(source)} → ${escapeHtml(action.toLowerCase())}. Условие: ${escapeHtml(condition)}. Шанс: ${chance}%.`;
+}
+
+function openRenameSheet() {
+  openSheet({
+    kicker: 'СЦЕНА',
+    title: 'Название',
+    body: `<form class="form-grid" id="rename-form"><label class="form-field"><span>Название сцены</span><input name="name" type="text" maxlength="40" value="${escapeHtml(scene.name)}"></label></form>`,
+    footer: '<button class="primary-button" type="button" data-save-name data-native-press>Сохранить</button>'
+  });
+}
+
+function openFilesSheet() {
+  openSheet({
+    kicker: 'ФАЙЛЫ И ЗАХВАТ',
+    title: scene.name,
+    body: `
+      <div class="file-actions">
+        <button class="file-action" type="button" data-file-action="export" data-native-press><span class="item-icon">⇩</span><span><strong>Экспорт сцены</strong><span>JSON со всеми видами, полями и правилами.</span></span><b>JSON</b></button>
+        <button class="file-action" type="button" data-file-action="import" data-native-press><span class="item-icon">⇧</span><span><strong>Импорт сцены</strong><span>Загрузить ранее сохранённую систему.</span></span><b>JSON</b></button>
+        <button class="file-action" type="button" data-file-action="shot" data-native-press><span class="item-icon">▣</span><span><strong>Снимок кадра</strong><span>Сохранить текущую композицию в PNG.</span></span><b>PNG</b></button>
+        <button class="file-action" type="button" data-file-action="record" data-native-press><span class="item-icon">●</span><span><strong>${mediaRecorder?.state === 'recording' ? 'Остановить запись' : 'Записать движение'}</strong><span>Видео непосредственно с полотна симуляции.</span></span><b>WEBM</b></button>
+        <button class="file-action" type="button" data-file-action="workshop" data-native-press><span class="item-icon">⌁</span><span><strong>Workshop</strong><span>Обновления, хранилище и диагностика приложения.</span></span><b>СИСТЕМА</b></button>
+      </div>
+      <p class="form-note" style="margin-top:12px">Сцена сохраняется локально автоматически. Видео зависит от поддержки MediaRecorder; при отсутствии записи будет сделан PNG-кадр.</p>`,
+    footer: '<button class="danger-button" type="button" data-clear-design data-native-press>Очистить схему</button><button class="ghost-button" type="button" data-close-sheet data-native-press>Готово</button>'
+  });
+}
+
+function askConfirm({ title, message, confirmLabel = 'Продолжить', danger = false, onConfirm }) {
+  openSheet({
+    kicker: 'ПОДТВЕРЖДЕНИЕ',
+    title,
+    body: `<p class="form-note">${escapeHtml(message)}</p>`,
+    footer: `<button class="ghost-button" type="button" data-close-sheet data-native-press>Отмена</button><button class="${danger ? 'danger-button' : 'primary-button'}" type="button" data-confirm-action data-native-press>${escapeHtml(confirmLabel)}</button>`
+  });
+  sheetFooter.querySelector('[data-confirm-action]').addEventListener('click', () => {
+    closeSheet();
+    onConfirm();
+  }, { once: true });
+}
+
+function readRangeNumber(form, name) {
+  return Number(form.elements[name]?.value);
+}
+
+function saveSpeciesFromSheet(button) {
+  const form = document.querySelector('#species-form');
+  if (!form) return;
+  const id = button.dataset.saveSpecies;
+  const existing = button.dataset.existing === '1';
+  const next = normalizeSpecies({
+    id,
+    name: form.elements.name.value.trim() || 'Безымянный вид',
+    color: form.elements.color.value,
+    radius: readRangeNumber(form, 'radius'),
+    count: readRangeNumber(form, 'count'),
+    speed: readRangeNumber(form, 'speed'),
+    mass: readRangeNumber(form, 'mass'),
+    bounce: readRangeNumber(form, 'bounce'),
+    drag: readRangeNumber(form, 'drag')
+  }, scene.species.length);
+  commitScene((draft) => {
+    if (existing) {
+      const index = draft.species.findIndex((item) => item.id === id);
+      if (index >= 0) draft.species[index] = next;
+    } else {
+      draft.species.push(next);
+      draft.selectedSpecies = next.id;
+    }
+  }, { restart: true });
+  closeSheet();
+  showToast(existing ? 'Вид обновлён' : 'Вид добавлен');
+}
+
+function saveFieldFromSheet(button) {
+  const form = document.querySelector('#field-form');
+  if (!form) return;
+  const id = button.dataset.saveField;
+  const existing = button.dataset.existing === '1';
+  const next = normalizeField({
+    id,
+    name: form.elements.name.value.trim() || FIELD_DEFS[form.elements.type.value].label,
+    type: form.elements.type.value,
+    enabled: form.elements.enabled.checked,
+    strength: readRangeNumber(form, 'strength'),
+    radius: readRangeNumber(form, 'radius'),
+    x: readRangeNumber(form, 'x'),
+    y: readRangeNumber(form, 'y'),
+    frequency: readRangeNumber(form, 'frequency')
+  }, scene.fields.length);
+  commitScene((draft) => {
+    if (existing) {
+      const index = draft.fields.findIndex((item) => item.id === id);
+      if (index >= 0) draft.fields[index] = next;
+    } else draft.fields.push(next);
+  });
+  closeSheet();
+  showToast(existing ? 'Поле обновлено' : 'Поле добавлено');
+}
+
+function saveRuleFromSheet(button) {
+  const form = document.querySelector('#rule-form');
+  if (!form) return;
+  const id = button.dataset.saveRule;
+  const existing = button.dataset.existing === '1';
+  const next = normalizeRule({
+    id,
+    name: form.elements.name.value.trim() || 'Новое правило',
+    enabled: form.elements.enabled.checked,
+    trigger: form.elements.trigger.value,
+    source: form.elements.source.value,
+    target: form.elements.target.value,
+    condition: form.elements.condition.value,
+    threshold: readRangeNumber(form, 'threshold'),
+    chance: readRangeNumber(form, 'chance'),
+    cooldown: readRangeNumber(form, 'cooldown'),
+    interval: readRangeNumber(form, 'interval'),
+    action: form.elements.action.value,
+    outputSpecies: form.elements.outputSpecies.value,
+    outputField: form.elements.outputField.value,
+    amount: readRangeNumber(form, 'amount'),
+    value: readRangeNumber(form, 'value')
+  });
+  commitScene((draft) => {
+    if (existing) {
+      const index = draft.rules.findIndex((item) => item.id === id);
+      if (index >= 0) draft.rules[index] = next;
+    } else draft.rules.push(next);
+  });
+  ruleLastTriggered.delete(id);
+  intervalSchedule.delete(id);
+  closeSheet();
+  showToast(existing ? 'Правило обновлено' : 'Правило добавлено');
+}
+
+function deleteCurrent(kind) {
+  if (kind === 'species') {
+    const saveButton = sheetFooter.querySelector('[data-save-species]');
+    const id = saveButton?.dataset.saveSpecies;
+    const item = scene.species.find((species) => species.id === id);
+    if (!item) return;
+    askConfirm({
+      title: `Удалить «${item.name}»?`,
+      message: 'Правила, которые ссылались на этот вид, будут переключены на «любой» или «тот же».',
+      confirmLabel: 'Удалить вид',
+      danger: true,
+      onConfirm() {
+        commitScene((draft) => {
+          draft.species = draft.species.filter((species) => species.id !== id);
+          if (draft.selectedSpecies === id) draft.selectedSpecies = draft.species[0].id;
+          for (const rule of draft.rules) {
+            if (rule.source === id) rule.source = 'any';
+            if (rule.target === id) rule.target = 'any';
+            if (rule.outputSpecies === id) rule.outputSpecies = 'same';
+          }
+        }, { restart: true });
+        showToast('Вид удалён');
+      }
+    });
+  } else if (kind === 'field') {
+    const id = sheetFooter.querySelector('[data-save-field]')?.dataset.saveField;
+    const item = scene.fields.find((field) => field.id === id);
+    if (!item) return;
+    askConfirm({
+      title: `Удалить «${item.name}»?`,
+      message: 'Правила переключения этого поля будут использовать первое доступное поле.',
+      confirmLabel: 'Удалить поле',
+      danger: true,
+      onConfirm() {
+        commitScene((draft) => {
+          draft.fields = draft.fields.filter((field) => field.id !== id);
+          for (const rule of draft.rules) if (rule.outputField === id) rule.outputField = 'any';
+        });
+        showToast('Поле удалено');
+      }
+    });
+  } else if (kind === 'rule') {
+    const id = sheetFooter.querySelector('[data-save-rule]')?.dataset.saveRule;
+    const item = scene.rules.find((rule) => rule.id === id);
+    if (!item) return;
+    askConfirm({
+      title: `Удалить «${item.name}»?`,
+      message: 'Физика сцены останется, но это событие больше не будет запускать действие.',
+      confirmLabel: 'Удалить правило',
+      danger: true,
+      onConfirm() {
+        commitScene((draft) => { draft.rules = draft.rules.filter((rule) => rule.id !== id); });
+        showToast('Правило удалено');
+      }
+    });
+  }
+}
+
+function updateRangeOutput(input) {
+  const form = input.closest('form');
+  const output = form?.querySelector(`[data-output-for="${CSS.escape(input.name)}"]`);
+  if (!output) return;
+  const step = Number(input.step);
+  const value = step < 0.01 ? Number(input.value).toFixed(3) : step < 1 ? Number(input.value).toFixed(2) : Math.round(Number(input.value));
+  output.textContent = `${value}${input.dataset.suffix || ''}`;
+}
+
+function exportScene() {
+  const payload = {
+    schema: 'kaskad-scene',
+    version: 1,
+    appVersion: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    scene
+  };
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `${safeFilename(scene.name)}.kaskad.json`);
+  showToast('Сцена экспортирована');
+}
+
+function importSceneFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(String(reader.result));
+      if (payload?.schema !== 'kaskad-scene' || !payload.scene) throw new Error('Неверный формат KASKAD');
+      const imported = normalizeScene(payload.scene);
+      pushUndo();
+      scene = imported;
+      scheduleSave();
+      updateSceneChrome();
+      resetSimulation();
+      renderPanel();
+      closeSheet();
+      showToast('Сцена импортирована');
+    } catch (error) {
+      showToast(error.message || 'Не удалось прочитать файл', 3200);
+    }
+  };
+  reader.onerror = () => showToast('Не удалось прочитать файл', 3200);
+  reader.readAsText(file);
+}
+
+function takeScreenshot() {
+  canvas.toBlob((blob) => {
+    if (!blob) { showToast('Снимок не поддерживается'); return; }
+    downloadBlob(blob, `${safeFilename(scene.name)}-${Date.now()}.png`);
+    showToast('Кадр сохранён');
+  }, 'image/png');
+}
+
+function toggleRecording() {
+  if (mediaRecorder?.state === 'recording') {
+    mediaRecorder.stop();
+    return;
+  }
+  if (!canvas.captureStream || typeof MediaRecorder === 'undefined') {
+    showToast('Видео не поддерживается — сохраняю кадр');
+    takeScreenshot();
+    return;
+  }
+  try {
+    const stream = canvas.captureStream(60);
+    const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported?.(type)) || '';
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5_000_000 } : undefined);
+    recordingChunks = [];
+    mediaRecorder.ondataavailable = (event) => { if (event.data?.size) recordingChunks.push(event.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordingChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+      if (blob.size > 0) downloadBlob(blob, `${safeFilename(scene.name)}-${Date.now()}.webm`);
+      recordingBadge.hidden = true;
+      recordButton.classList.remove('is-recording');
+      recordButton.querySelector('span').textContent = 'REC';
+      showToast(`Запись сохранена · ${Math.max(1, Math.round((performance.now() - recordingStartedAt) / 1000))} с`);
+      mediaRecorder = null;
+      recordingChunks = [];
+    };
+    mediaRecorder.start(250);
+    recordingStartedAt = performance.now();
+    recordingBadge.hidden = false;
+    recordButton.classList.add('is-recording');
+    recordButton.querySelector('span').textContent = 'STOP';
+    showToast('Запись началась');
+  } catch {
+    showToast('Видео не запустилось — сохраняю кадр');
+    takeScreenshot();
+  }
+}
+
+function clearDesign() {
+  askConfirm({
+    title: 'Очистить схему?',
+    message: 'Останется один базовый вид без полей и правил. Текущую сцену можно заранее экспортировать.',
+    confirmLabel: 'Очистить',
+    danger: true,
+    onConfirm() {
+      const blank = starterClone();
+      blank.name = 'Чистая система';
+      blank.species[0].count = 12;
+      blank.rules = [];
+      pushUndo();
+      scene = blank;
+      scheduleSave();
+      updateSceneChrome();
+      resetSimulation();
+      renderPanel();
+      showToast('Схема очищена');
+    }
+  });
+}
+
+function applyStarter(key) {
+  const starter = STARTERS[key];
+  if (!starter) return;
+  askConfirm({
+    title: `Открыть «${starter.label}»?`,
+    message: 'Текущая схема будет заменена. Её можно вернуть одной отменой.',
+    confirmLabel: 'Открыть сцену',
+    onConfirm() {
+      pushUndo();
+      scene = normalizeScene(starter.build());
+      scheduleSave();
+      updateSceneChrome();
+      resetSimulation();
+      renderPanel();
+      showToast(`Загружено: ${starter.label}`);
+    }
+  });
+}
+
+function canvasPoint(event) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+}
+
+function spawnFromGesture(point, velocity = null) {
+  const species = getSpecies(scene.selectedSpecies);
+  const particle = spawnParticle(species.id, {
+    x: point.x,
+    y: point.y,
+    vx: velocity?.vx,
+    vy: velocity?.vy,
+    speed: velocity ? Math.hypot(velocity.vx, velocity.vy) : species.speed
+  });
+  if (particle) {
+    emitEvent('tap', { source: particle, target: null, x: point.x, y: point.y, speed: Math.hypot(particle.vx, particle.vy) });
+    addEffect(point.x, point.y, species.color, 15);
+  } else showToast(`Достигнут лимит: ${scene.maxParticles}`);
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 && event.pointerType === 'mouse') return;
+  event.preventDefault();
+  canvas.setPointerCapture(event.pointerId);
+  const point = canvasPoint(event);
+  pointerState = { id: event.pointerId, start: point, last: point, lastAt: performance.now(), moved: false, emittedAt: 0 };
+  spawnFromGesture(point);
+  haptic(5);
+});
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!pointerState || pointerState.id !== event.pointerId) return;
+  event.preventDefault();
+  const point = canvasPoint(event);
+  const now = performance.now();
+  const dx = point.x - pointerState.last.x;
+  const dy = point.y - pointerState.last.y;
+  const distance = Math.hypot(dx, dy);
+  const elapsed = Math.max(8, now - pointerState.lastAt);
+  if (distance > 8) pointerS
