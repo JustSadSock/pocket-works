@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe4">
+  <meta name="description" content="СОВПАЛО — точный интерактивный калькулятор парадокса дней рождения.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="СОВПАЛО">
+  <title>СОВПАЛО — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">
+        <span aria-hidden="true">←</span>
+        <span>Приложения</span>
+      </a>
+      <div class="brand" aria-label="СОВПАЛО">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <strong>СОВПАЛО</strong>
+      </div>
+      <button class="info-button" id="infoButton" type="button" data-native-press aria-label="Как считаются вероятности">i</button>
+    </header>
+
+    <div class="scroll-area" id="scrollArea">
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="hero-copy">
+          <p class="eyebrow">ПАРАДОКС ДНЕЙ РОЖДЕНИЯ / 365 ДНЕЙ</p>
+          <h1 id="heroTitle">Сколько людей в комнате?</h1>
+          <div class="people-control" data-ui>
+            <button class="step-button" id="decreaseButton" type="button" data-native-press aria-label="Уменьшить количество людей">−</button>
+            <label class="people-input-wrap">
+              <input id="peopleInput" type="number" min="2" max="1000" step="1" inputmode="numeric" enterkeyhint="done" aria-label="Количество людей">
+              <span id="peopleWord">человека</span>
+            </label>
+            <button class="step-button" id="increaseButton" type="button" data-native-press aria-label="Увеличить количество людей">+</button>
+          </div>
+          <label class="range-wrap" for="peopleRange">
+            <span>2</span>
+            <input id="peopleRange" type="range" min="0" max="1000" step="1" value="143" data-touch-action="pan-x">
+            <span>1000</span>
+          </label>
+        </div>
+
+        <div class="probability-stamp" id="probabilityStamp" aria-live="polite">
+          <div class="stamp-core">
+            <strong id="mainProbability">50,73%</strong>
+            <span>хотя бы одно<br>совпадение</span>
+          </div>
+          <span class="stamp-notch notch-a"></span>
+          <span class="stamp-notch notch-b"></span>
+          <span class="stamp-notch notch-c"></span>
+        </div>
+
+        <p class="hero-note" id="heroNote">Уже при 23 людях шанс переваливает за половину.</p>
+      </section>
+
+      <section class="ledger" aria-labelledby="eventsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="section-index">01 / СОБЫТИЯ</p>
+            <h2 id="eventsTitle">Что именно может совпасть</h2>
+          </div>
+          <span class="exact-badge">ТОЧНО</span>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-symbol cluster-three" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="metric-copy"><strong>Хотя бы одна тройка</strong><span>Три человека или больше делят одну дату</span></div>
+          <b id="tripleProbability">1,27%</b>
+        </div>
+        <div class="metric-row">
+          <div class="metric-symbol double-pair" aria-hidden="true"><span><i></i><i></i></span><span><i></i><i></i></span></div>
+          <div class="metric-copy"><strong>Две разные общие даты</strong><span>Например, одна пара в марте и другая в октябре</span></div>
+          <b id="twoDatesProbability">11,54%</b>
+        </div>
+        <div class="metric-row">
+          <div class="metric-symbol cluster-four" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="metric-copy"><strong>Хотя бы одна четвёрка</strong><span>Четыре человека или больше в один день</span></div>
+          <b id="quartetProbability">0,02%</b>
+        </div>
+        <p class="expectation-line" id="expectationLine">В среднем в такой группе будет 0,66 даты с несколькими именинниками.</p>
+      </section>
+
+      <section class="sample-section" aria-labelledby="sampleTitle">
+        <div class="section-heading inverse">
+          <div>
+            <p class="section-index">02 / ОДИН БРОСОК</p>
+            <h2 id="sampleTitle">Как мог бы выглядеть один год</h2>
+          </div>
+          <button class="shuffle-button" id="shuffleButton" type="button" data-native-press>
+            <span aria-hidden="true">↻</span>
+            Перебросить
+          </button>
+        </div>
+        <p class="sample-caption">Каждая клетка — день. Это только наглядный случай; проценты выше рассчитаны комбинаторно.</p>
+        <div class="year-grid" id="yearGrid" aria-hidden="true"></div>
+        <div class="sample-key" aria-hidden="true">
+          <span><i class="key-one"></i>1 человек</span>
+          <span><i class="key-two"></i>пара</span>
+          <span><i class="key-three"></i>тройка</span>
+          <span><i class="key-four"></i>4+</span>
+        </div>
+        <p class="sample-result" id="sampleResult" aria-live="polite"></p>
+      </section>
+
+      <section class="scenarios-section" aria-labelledby="scenariosTitle">
+        <div class="section-heading">
+          <div>
+            <p class="section-index">03 / ТОЧНЫЕ РАСКЛАДЫ</p>
+            <h2 id="scenariosTitle">Не «хотя бы», а ровно так</h2>
+          </div>
+          <span class="scenario-count" id="scenarioCount">8 вариантов</span>
+        </div>
+        <p class="section-intro">Список сам поднимает вероятные структуры наверх. Во всех строках неуказанные люди имеют уникальные даты.</p>
+        <div class="scenario-list" id="scenarioList"></div>
+        <button class="more-button" id="moreButton" type="button" data-native-press>
+          <span id="moreButtonLabel">Показать редкие расклады</span>
+          <span aria-hidden="true">↓</span>
+        </button>
+      </section>
+
+      <footer class="app-footer" data-ui>
+        <span>365 равновероятных дней · без 29 февраля</span>
+        <span id="networkStatus">офлайн готово</span>
+        <button class="footer-workshop" type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </footer>
+    </div>
+  </main>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden>
+    <section class="bottom-sheet" id="bottomSheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" tabindex="-1">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header" data-ui>
+        <div><p id="sheetKicker">СПРАВКА</p><h2 id="sheetTitle">Как считаем</h2></div>
+        <button class="sheet-close" id="sheetClose" type="button" data-native-press aria-label="Закрыть">×</button>
+      </header>
+      <div class="sheet-content" id="sheetContent"></div>
+      <div class="sheet-actions" id="sheetActions" data-ui></div>
+    </section>
+  </div>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СОВПАЛО" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
