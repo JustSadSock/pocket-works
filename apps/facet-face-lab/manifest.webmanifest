@@ -1,14 +1,20 @@
 {
   "id": "/apps/facet-face-lab/",
-  "name": "FACET",
+  "name": "FACET — анализ лица",
   "short_name": "FACET",
-  "description": "Локальная оценка привлекательности лица с подробным разбором пропорций.",
+  "description": "Визуальный анализ геометрии, типажа и пропорций лица.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
-  "orientation": "portrait",
   "background_color": "#f3efe6",
   "theme_color": "#f3efe6",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
