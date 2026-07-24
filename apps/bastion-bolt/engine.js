@@ -12,7 +12,7 @@ export const len3 = a => Math.hypot(a[0],a[1],a[2]);
 export const norm3 = a => { const l=len3(a)||1; return [a[0]/l,a[1]/l,a[2]/l]; };
 export const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 
-export function mat4Identity(){ return new Float32Array([1,0,0,0,0,1,0,0,0,1,0,0,0,1]); }
+export function mat4Identity(){ return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]); }
 export function mat4Multiply(a,b){
   const o=new Float32Array(16);
   for(let c=0;c<4;c++) for(let r=0;r<4;r++) o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
