@@ -4,504 +4,70 @@ import { watchConnectivity } from '../../shared/pwa-utils.js';
 import { createRenderer } from './game-draw.js';
 
 export function startBubbleBob() {
-  const STORAGE_NAMESPACE = 'pocket-works:bubble-bob';
-  const store = createVersionedStore({
-    namespace: STORAGE_NAMESPACE,
-    version: 1,
-    defaults: {
-      best: 0,
-      sound: true,
-      games: 0,
-      totalPatties: 0
-    }
-  });
-
-  const canvas = document.querySelector('#gameCanvas');
-  const ctx = canvas.getContext('2d', { alpha: false });
-  const startScreen = document.querySelector('#startScreen');
-  const gameOverScreen = document.querySelector('#gameOverScreen');
-  const pauseDialog = document.querySelector('#pauseDialog');
-  const scoreValue = document.querySelector('#scoreValue');
-  const comboValue = document.querySelector('#comboValue');
-  const comboBox = document.querySelector('#comboBox');
-  const bestValue = document.querySelector('#bestValue');
-  const lifeStrip = document.querySelector('#lifeStrip');
-  const powerStrip = document.querySelector('#powerStrip');
-  const powerBar = powerStrip.querySelector('i');
-  const resultScore = document.querySelector('#resultScore');
-  const resultCombo = document.querySelector('#resultCombo');
-  const resultPatties = document.querySelector('#resultPatties');
-  const recordBadge = document.querySelector('#recordBadge');
-  const soundButton = document.querySelector('#soundButton');
-  const pauseButton = document.querySelector('#pauseButton');
-  const toastElement = document.querySelector('#toast');
-
-  const TAU = Math.PI * 2;
-  const state = {
-    mode: 'menu',
-    paused: false,
-    score: 0,
-    combo: 0,
-    bestCombo: 1,
-    lives: 3,
-    patties: 0,
-    time: 0,
-    spawnClock: 0,
-    nextSpawn: 0.78,
-    shieldUntil: 0,
-    shake: 0,
-    flash: 0,
-    sound: store.get('sound', true),
-    pointerActive: false,
-    keyboardDirection: 0
-  };
-
-  let viewWidth = 390;
-  let viewHeight = 844;
-  let dpr = 1;
-  let lastFrame = performance.now();
-  let audioContext = null;
-  let toastTimer = 0;
-
-  const player = {
-    x: 195,
-    targetX: 195,
-    y: 720,
-    width: 66,
-    height: 84,
-    tilt: 0,
-    squash: 0,
-    invulnerableUntil: 0
-  };
-
-  const entities = [];
-  const particles = [];
-  const floaters = [];
-  const backgroundBubbles = Array.from({ length: 18 }, (_, index) => ({
-    x: (index * 73) % 390,
-    y: (index * 137) % 844,
-    r: 4 + (index % 5) * 2.4,
-    speed: 7 + (index % 4) * 4,
-    drift: index * 0.9
-  }));
-
-  const flowerShapes = [
-    { x: .13, y: .19, size: 24, rotation: .1, alpha: .12 },
-    { x: .82, y: .27, size: 34, rotation: .6, alpha: .1 },
-    { x: .64, y: .54, size: 19, rotation: .2, alpha: .09 },
-    { x: .22, y: .68, size: 29, rotation: .9, alpha: .08 }
+  const NS='pocket-works:bubble-bob';
+  const store=createVersionedStore({namespace:NS,version:2,defaults:{best:0,sound:true,games:0,totalPatties:0,missionsDone:0},migrations:{1:data=>({...data,missionsDone:0})}});
+  const $=s=>document.querySelector(s);
+  const canvas=$('#gameCanvas'),ctx=canvas.getContext('2d',{alpha:false});
+  const ui={start:$('#startScreen'),over:$('#gameOverScreen'),pause:$('#pauseDialog'),score:$('#scoreValue'),combo:$('#comboValue'),comboBox:$('#comboBox'),best:$('#bestValue'),lives:$('#lifeStrip'),power:$('#powerStrip'),powerBar:$('#powerStrip i'),result:$('#resultScore'),resultCombo:$('#resultCombo'),resultPatties:$('#resultPatties'),record:$('#recordBadge'),sound:$('#soundButton'),pauseBtn:$('#pauseButton'),toast:$('#toast'),mission:$('#missionHud'),missionText:$('#missionText'),missionBar:$('#missionBar'),resultMission:$('#resultMission')};
+  const TAU=Math.PI*2, clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), random=(a,b)=>a+Math.random()*(b-a), ease=(a,b,s,dt)=>a+(b-a)*(1-Math.exp(-s*dt));
+  const missions=[
+    {id:'patties',label:'Поймай 18 крабсбургеров',goal:18,test:s=>s.patties},
+    {id:'combo',label:'Дойди до комбо ×2',goal:2,test:s=>s.bestCombo},
+    {id:'bubbles',label:'Лопни 24 пузыря',goal:24,test:s=>s.bubbles},
+    {id:'survive',label:'Продержись 55 секунд',goal:55,test:s=>s.time},
+    {id:'dash',label:'Сбей волной 8 медуз',goal:8,test:s=>s.jelliesBlasted}
   ];
+  const state={mode:'menu',paused:false,score:0,combo:0,bestCombo:1,lives:3,patties:0,bubbles:0,jelliesBlasted:0,time:0,spawnClock:0,nextSpawn:.65,shieldUntil:0,slowUntil:0,feverUntil:0,burstCharge:0,shake:0,flash:0,sound:store.get('sound',true),pointer:false,key:0,mission:null,missionDone:false};
+  let W=390,H=844,dpr=1,last=performance.now(),audio=null,toastTimer=0,pointerDownAt=0,pointerStartX=0;
+  const player={x:195,targetX:195,y:720,width:70,height:88,tilt:0,squash:0,invulnerableUntil:0,armSwing:0};
+  const entities=[],particles=[],floaters=[],waves=[];
+  const bg=Array.from({length:22},(_,i)=>({x:(i*73)%390,y:(i*137)%844,r:4+(i%5)*2.4,speed:7+(i%4)*4,drift:i*.9}));
+  const flowers=[{x:.13,y:.19,size:24,rotation:.1,alpha:.12},{x:.82,y:.27,size:34,rotation:.6,alpha:.1},{x:.64,y:.54,size:19,rotation:.2,alpha:.09},{x:.22,y:.68,size:29,rotation:.9,alpha:.08}];
 
-  function resizeCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    viewWidth = Math.max(320, rect.width);
-    viewHeight = Math.max(520, rect.height);
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(viewWidth * dpr);
-    canvas.height = Math.round(viewHeight * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    player.y = viewHeight - Math.max(84, viewHeight * .105);
-    player.x = clamp(player.x, 44, viewWidth - 44);
-    player.targetX = clamp(player.targetX, 44, viewWidth - 44);
-  }
-
-  function clamp(value, minimum, maximum) {
-    return Math.max(minimum, Math.min(maximum, value));
-  }
-
-  function random(minimum, maximum) {
-    return minimum + Math.random() * (maximum - minimum);
-  }
-
-  function ease(current, target, speed, dt) {
-    return current + (target - current) * (1 - Math.exp(-speed * dt));
-  }
-
-  function setSound(enabled) {
-    state.sound = Boolean(enabled);
-    store.set('sound', state.sound);
-    soundButton.textContent = state.sound ? '♪' : '×';
-    soundButton.setAttribute('aria-label', state.sound ? 'Выключить звук' : 'Включить звук');
-  }
-
-  function unlockAudio() {
-    if (!state.sound) return;
-    const AudioEngine = window.AudioContext || window.webkitAudioContext;
-    if (!AudioEngine) return;
-    if (!audioContext) audioContext = new AudioEngine();
-    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
-  }
-
-  function tone(frequency, duration = .08, type = 'sine', volume = .045, slide = 0) {
-    if (!state.sound) return;
-    unlockAudio();
-    if (!audioContext) return;
-    const now = audioContext.currentTime;
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, now);
-    if (slide) oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, frequency + slide), now + duration);
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(volume, now + .01);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
-    oscillator.connect(gain).connect(audioContext.destination);
-    oscillator.start(now);
-    oscillator.stop(now + duration + .02);
-  }
-
-  function haptic(pattern) {
-    if ('vibrate' in navigator) navigator.vibrate(pattern);
-  }
-
-  function showToast(message) {
-    window.clearTimeout(toastTimer);
-    toastElement.textContent = message;
-    toastElement.classList.add('is-visible');
-    toastTimer = window.setTimeout(() => toastElement.classList.remove('is-visible'), 1100);
-  }
-
-  function updateHud() {
-    scoreValue.textContent = Math.floor(state.score).toLocaleString('ru-RU');
-    const multiplier = comboMultiplier();
-    comboValue.textContent = `×${multiplier.toFixed(multiplier % 1 ? 1 : 0)}`;
-    [...lifeStrip.children].forEach((heart, index) => heart.classList.toggle('is-lost', index >= state.lives));
-    const shieldRemaining = Math.max(0, state.shieldUntil - state.time);
-    powerStrip.hidden = shieldRemaining <= 0;
-    if (shieldRemaining > 0) powerBar.style.transform = `scaleX(${shieldRemaining / 6})`;
-  }
-
-  function pulseCombo() {
-    comboBox.classList.remove('is-hot');
-    void comboBox.offsetWidth;
-    comboBox.classList.add('is-hot');
-  }
-
-  function comboMultiplier() {
-    return Math.min(3, 1 + Math.floor(state.combo / 5) * .25);
-  }
-
-  function startGame() {
-    unlockAudio();
-    Object.assign(state, {
-      mode: 'playing', paused: false, score: 0, combo: 0, bestCombo: 1,
-      lives: 3, patties: 0, time: 0, spawnClock: 0, nextSpawn: .7,
-      shieldUntil: 0, shake: 0, flash: 0
-    });
-    entities.length = 0;
-    particles.length = 0;
-    floaters.length = 0;
-    Object.assign(player, {
-      x: viewWidth / 2, targetX: viewWidth / 2, tilt: 0, squash: 0, invulnerableUntil: 0
-    });
-    startScreen.hidden = true;
-    gameOverScreen.hidden = true;
-    pauseButton.disabled = false;
-    updateHud();
-    tone(392, .08, 'square', .035, 170);
-    window.setTimeout(() => tone(659, .12, 'square', .035, 140), 80);
-  }
-
-  function returnToMenu() {
-    state.mode = 'menu';
-    state.paused = false;
-    entities.length = particles.length = floaters.length = 0;
-    gameOverScreen.hidden = true;
-    startScreen.hidden = false;
-    pauseButton.disabled = true;
-    bestValue.textContent = store.get('best', 0).toLocaleString('ru-RU');
-    updateHud();
-  }
-
-  function finishGame() {
-    if (state.mode !== 'playing') return;
-    state.mode = 'gameover';
-    state.paused = false;
-    pauseButton.disabled = true;
-    const finalScore = Math.floor(state.score);
-    const previousBest = store.get('best', 0);
-    const isRecord = finalScore > previousBest;
-    store.patch({
-      best: Math.max(previousBest, finalScore),
-      games: store.get('games', 0) + 1,
-      totalPatties: store.get('totalPatties', 0) + state.patties
-    });
-    resultScore.textContent = finalScore.toLocaleString('ru-RU');
-    resultCombo.textContent = `×${state.bestCombo.toFixed(state.bestCombo % 1 ? 1 : 0)}`;
-    resultPatties.textContent = String(state.patties);
-    recordBadge.hidden = !isRecord;
-    bestValue.textContent = Math.max(previousBest, finalScore).toLocaleString('ru-RU');
-    gameOverScreen.hidden = false;
-    tone(280, .18, 'sawtooth', .04, -90);
-    window.setTimeout(() => tone(160, .28, 'triangle', .035, -70), 120);
-    haptic([70, 50, 120]);
-  }
-
-  function pauseGame() {
-    if (state.mode !== 'playing' || state.paused) return;
-    state.paused = true;
-    if (!pauseDialog.open) pauseDialog.showModal();
-  }
-
-  function resumeGame() {
-    if (pauseDialog.open) pauseDialog.close();
-    state.paused = false;
-    lastFrame = performance.now();
-  }
-
-  function spawnEntity() {
-    const difficulty = Math.min(1, state.time / 75);
-    const roll = Math.random();
-    let type = 'patty';
-    if (roll < .18 + difficulty * .06) type = 'jelly';
-    else if (roll < .46) type = 'bubble';
-    else if (roll > .97 && state.time > 8 && state.shieldUntil <= state.time) type = 'spatula';
-
-    const radius = type === 'jelly' ? 25 : type === 'patty' ? 22 : type === 'spatula' ? 20 : 18;
-    const baseSpeed = 135 + difficulty * 135;
-    entities.push({
-      type,
-      x: random(radius + 8, viewWidth - radius - 8),
-      y: -radius - 16,
-      radius,
-      speed: baseSpeed * random(.88, 1.18) * (type === 'bubble' ? .8 : 1),
-      spin: random(-2.2, 2.2),
-      rotation: random(0, TAU),
-      phase: random(0, TAU),
-      caught: false
-    });
-  }
-
-  function collides(entity) {
-    const box = {
-      left: player.x - player.width * .34,
-      right: player.x + player.width * .34,
-      top: player.y - player.height * .42,
-      bottom: player.y + player.height * .43
-    };
-    const dx = entity.x - clamp(entity.x, box.left, box.right);
-    const dy = entity.y - clamp(entity.y, box.top, box.bottom);
-    return dx * dx + dy * dy < entity.radius * entity.radius * .72;
-  }
-
-  function catchEntity(entity) {
-    entity.caught = true;
-    if (entity.type === 'jelly') {
-      hitPlayer();
-      burst(entity.x, entity.y, '#ff7ca9', 15, 150);
-      return;
-    }
-    if (entity.type === 'spatula') {
-      state.shieldUntil = state.time + 6;
-      state.combo += 2;
-      burst(entity.x, entity.y, '#ffd83d', 20, 190);
-      addFloater(entity.x, entity.y, 'ЩИТ!', '#ffd83d');
-      tone(520, .12, 'square', .04, 410);
-      haptic(35);
-      showToast('Золотая лопатка: медузы временно идут лесом');
-      updateHud();
-      return;
-    }
-
-    state.combo += 1;
-    const multiplier = comboMultiplier();
-    state.bestCombo = Math.max(state.bestCombo, multiplier);
-    const basePoints = entity.type === 'patty' ? 10 : 4;
-    const earned = Math.round(basePoints * multiplier);
-    state.score += earned;
-    if (entity.type === 'patty') state.patties += 1;
-    burst(entity.x, entity.y, entity.type === 'patty' ? '#ffd83d' : '#c9f6ff', entity.type === 'patty' ? 12 : 8, 120);
-    addFloater(entity.x, entity.y, `+${earned}`, entity.type === 'patty' ? '#ffd83d' : '#e9fbff');
-    player.squash = entity.type === 'patty' ? .28 : .16;
-    tone(entity.type === 'patty' ? 430 + Math.min(state.combo, 18) * 12 : 700, .07, entity.type === 'patty' ? 'square' : 'sine', .035, 90);
-    haptic(entity.type === 'patty' ? 16 : 8);
-    pulseCombo();
-    updateHud();
-  }
-
-  function hitPlayer() {
-    if (state.shieldUntil > state.time) {
-      state.score += 12;
-      addFloater(player.x, player.y - 55, 'ОТБИТО!', '#ffd83d');
-      tone(180, .08, 'square', .04, 360);
-      state.shake = .2;
-      haptic(22);
-      return;
-    }
-    if (player.invulnerableUntil > state.time) return;
-    player.invulnerableUntil = state.time + 1.15;
-    state.lives -= 1;
-    state.combo = 0;
-    state.shake = .45;
-    state.flash = .35;
-    addFloater(player.x, player.y - 56, 'АЙ!', '#ff8ba9');
-    tone(170, .18, 'sawtooth', .05, -80);
-    haptic([70, 40, 70]);
-    updateHud();
-    if (state.lives <= 0) window.setTimeout(finishGame, 250);
-  }
-
-  function burst(x, y, color, amount, speed) {
-    for (let index = 0; index < amount; index += 1) {
-      const angle = random(0, TAU);
-      const velocity = random(speed * .35, speed);
-      particles.push({
-        x, y,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        life: random(.38, .72), maxLife: .72,
-        size: random(2.5, 7), color
-      });
-    }
-  }
-
-  function addFloater(x, y, text, color) {
-    floaters.push({ x, y, text, color, life: .8, maxLife: .8 });
-  }
-
-  function update(dt) {
-    state.time += dt;
-    state.spawnClock += dt;
-    state.shake = Math.max(0, state.shake - dt * 2.4);
-    state.flash = Math.max(0, state.flash - dt * 2.8);
-    player.squash = ease(player.squash, 0, 8, dt);
-    if (state.keyboardDirection) player.targetX += state.keyboardDirection * 300 * dt;
-    player.targetX = clamp(player.targetX, 38, viewWidth - 38);
-    const previousX = player.x;
-    player.x = ease(player.x, player.targetX, 15, dt);
-    player.tilt = ease(player.tilt, clamp((player.x - previousX) * .035, -.18, .18), 10, dt);
-
-    const difficulty = Math.min(1, state.time / 75);
-    if (state.spawnClock >= state.nextSpawn) {
-      state.spawnClock = 0;
-      spawnEntity();
-      state.nextSpawn = random(.48, .82) * (1 - difficulty * .34);
-    }
-
-    for (let index = entities.length - 1; index >= 0; index -= 1) {
-      const entity = entities[index];
-      entity.y += entity.speed * dt;
-      entity.rotation += entity.spin * dt;
-      entity.phase += dt * 3;
-      if (!entity.caught && collides(entity)) catchEntity(entity);
-      if (entity.caught || entity.y - entity.radius > viewHeight + 20) {
-        if (!entity.caught && entity.type === 'patty' && state.combo > 0) state.combo = 0;
-        entities.splice(index, 1);
-      }
-    }
-
-    for (let index = particles.length - 1; index >= 0; index -= 1) {
-      const particle = particles[index];
-      particle.life -= dt;
-      particle.vy += 170 * dt;
-      particle.x += particle.vx * dt;
-      particle.y += particle.vy * dt;
-      if (particle.life <= 0) particles.splice(index, 1);
-    }
-    for (let index = floaters.length - 1; index >= 0; index -= 1) {
-      const floater = floaters[index];
-      floater.life -= dt;
-      floater.y -= 45 * dt;
-      if (floater.life <= 0) floaters.splice(index, 1);
-    }
-    backgroundBubbles.forEach((bubble) => {
-      bubble.y -= bubble.speed * dt;
-      bubble.x += Math.sin(state.time * .7 + bubble.drift) * 2.2 * dt;
-      if (bubble.y < -20) {
-        bubble.y = viewHeight + random(10, 120);
-        bubble.x = random(10, viewWidth - 10);
-      }
-    });
-    updateHud();
-  }
-
-  const renderer = createRenderer(ctx, () => ({
-    viewWidth, viewHeight, state, player, entities, particles, floaters,
-    backgroundBubbles, flowerShapes
-  }));
-
-  function frame(now) {
-    const dt = Math.min(.035, Math.max(0, (now - lastFrame) / 1000));
-    lastFrame = now;
-    if (state.mode === 'playing' && !state.paused) update(dt);
-    else backgroundBubbles.forEach((bubble) => {
-      bubble.y -= bubble.speed * dt * .35;
-      if (bubble.y < -20) bubble.y = viewHeight + random(10, 90);
-    });
-    renderer.draw();
-    requestAnimationFrame(frame);
-  }
-
-  function setPointerTarget(event) {
-    const rect = canvas.getBoundingClientRect();
-    player.targetX = clamp(event.clientX - rect.left, 38, rect.width - 38);
-  }
-
-  canvas.addEventListener('pointerdown', (event) => {
-    if (state.mode !== 'playing' || state.paused) return;
-    state.pointerActive = true;
-    canvas.setPointerCapture?.(event.pointerId);
-    setPointerTarget(event);
-    unlockAudio();
-  });
-  canvas.addEventListener('pointermove', (event) => {
-    if (state.pointerActive && state.mode === 'playing' && !state.paused) setPointerTarget(event);
-  });
-  canvas.addEventListener('pointerup', () => { state.pointerActive = false; });
-  canvas.addEventListener('pointercancel', () => { state.pointerActive = false; });
-
-  window.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') state.keyboardDirection = -1;
-    if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') state.keyboardDirection = 1;
-    if (event.key === 'Escape' && state.mode === 'playing') state.paused ? resumeGame() : pauseGame();
-  });
-  window.addEventListener('keyup', (event) => {
-    if (['ArrowLeft', 'ArrowRight', 'a', 'd', 'A', 'D'].includes(event.key)) state.keyboardDirection = 0;
-  });
-  window.addEventListener('resize', resizeCanvas, { passive: true });
-  window.addEventListener('orientationchange', () => window.setTimeout(resizeCanvas, 180), { passive: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden && state.mode === 'playing' && !state.paused) pauseGame();
-  });
-
-  soundButton.addEventListener('click', () => {
-    setSound(!state.sound);
-    if (state.sound) tone(620, .08, 'sine', .035, 120);
-  });
-  pauseButton.addEventListener('click', pauseGame);
-  document.querySelector('#startButton').addEventListener('click', startGame);
-  document.querySelector('#restartButton').addEventListener('click', startGame);
-  document.querySelector('#menuButton').addEventListener('click', returnToMenu);
-  document.querySelector('#resumeButton').addEventListener('click', resumeGame);
-  document.querySelector('#pauseRestartButton').addEventListener('click', () => { resumeGame(); startGame(); });
-  document.querySelector('#quitButton').addEventListener('click', () => { resumeGame(); finishGame(); });
-  pauseDialog.addEventListener('cancel', (event) => { event.preventDefault(); resumeGame(); });
-
-  window.addEventListener('appdatareset', () => {
-    bestValue.textContent = '0';
-    setSound(true);
-    showToast('Рекорд сброшен');
-  });
-
-  createWorkshopMode({
-    appName: 'СПАНЧ: Пузырьковый Переполох',
-    version: '1.0.0',
-    cachePrefix: 'bubble-bob-',
-    storageNamespace: STORAGE_NAMESPACE,
-    onReset() {
-      store.reset();
-      window.dispatchEvent(new CustomEvent('appdatareset'));
-    }
-  });
-
-  watchConnectivity((online) => {
-    document.documentElement.dataset.network = online ? 'online' : 'offline';
-  });
-
-  setSound(state.sound);
-  bestValue.textContent = store.get('best', 0).toLocaleString('ru-RU');
-  pauseButton.disabled = true;
-  resizeCanvas();
-  updateHud();
-  requestAnimationFrame(frame);
+  function resize(){const r=canvas.getBoundingClientRect();W=Math.max(320,r.width);H=Math.max(520,r.height);dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);player.y=H-Math.max(88,H*.105);player.x=clamp(player.x,46,W-46);player.targetX=clamp(player.targetX,46,W-46)}
+  function setSound(v){state.sound=!!v;store.set('sound',state.sound);ui.sound.textContent=state.sound?'♪':'×';ui.sound.setAttribute('aria-label',state.sound?'Выключить звук':'Включить звук')}
+  function unlock(){if(!state.sound)return;const A=window.AudioContext||window.webkitAudioContext;if(!A)return;if(!audio)audio=new A();if(audio.state==='suspended')audio.resume().catch(()=>{})}
+  function tone(f,d=.08,type='sine',vol=.04,slide=0){if(!state.sound)return;unlock();if(!audio)return;const n=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(f,n);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),n+d);g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(vol,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+d);o.connect(g).connect(audio.destination);o.start(n);o.stop(n+d+.02)}
+  const haptic=p=>'vibrate'in navigator&&navigator.vibrate(p);
+  function toast(t){clearTimeout(toastTimer);ui.toast.textContent=t;ui.toast.classList.add('is-visible');toastTimer=setTimeout(()=>ui.toast.classList.remove('is-visible'),1200)}
+  const mult=()=>Math.min(4,1+Math.floor(state.combo/5)*.25+(state.feverUntil>state.time?1:0));
+  function missionValue(){return state.mission?state.mission.test(state):0}
+  function hud(){ui.score.textContent=Math.floor(state.score).toLocaleString('ru-RU');const m=mult();ui.combo.textContent=`×${m.toFixed(m%1?1:0)}`;[...ui.lives.children].forEach((x,i)=>x.classList.toggle('is-lost',i>=state.lives));const shield=Math.max(0,state.shieldUntil-state.time);ui.power.hidden=shield<=0&&state.burstCharge<1;if(shield>0){ui.power.firstElementChild.textContent='ЗОЛОТАЯ ЛОПАТКА';ui.powerBar.style.transform=`scaleX(${shield/7})`}else{ui.power.firstElementChild.textContent='ПУЗЫРЬКОВАЯ ВОЛНА';ui.powerBar.style.transform=`scaleX(${state.burstCharge})`}if(state.mission){const v=Math.min(state.mission.goal,missionValue());ui.missionText.textContent=state.missionDone?'ЗАДАНИЕ ВЫПОЛНЕНО':state.mission.label;ui.missionBar.style.transform=`scaleX(${v/state.mission.goal})`;ui.mission.classList.toggle('done',state.missionDone)}}
+  function chooseMission(){const recent=store.get('lastMission','');const pool=missions.filter(m=>m.id!==recent);state.mission=pool[Math.floor(Math.random()*pool.length)];store.set('lastMission',state.mission.id)}
+  function checkMission(){if(state.missionDone||!state.mission)return;if(missionValue()>=state.mission.goal){state.missionDone=true;state.score+=250;state.feverUntil=Math.max(state.feverUntil,state.time+8);store.set('missionsDone',store.get('missionsDone',0)+1);toast('Задание выполнено: БЕЗУМИЕ ×2!');floater(player.x,player.y-90,'+250','#fff36b');tone(520,.1,'square',.04,400);haptic([30,30,60])}}
+  function startGame(){unlock();Object.assign(state,{mode:'playing',paused:false,score:0,combo:0,bestCombo:1,lives:3,patties:0,bubbles:0,jelliesBlasted:0,time:0,spawnClock:0,nextSpawn:.58,shieldUntil:0,slowUntil:0,feverUntil:0,burstCharge:0,shake:0,flash:0,missionDone:false});chooseMission();entities.length=particles.length=floaters.length=waves.length=0;Object.assign(player,{x:W/2,targetX:W/2,tilt:0,squash:0,invulnerableUntil:0,armSwing:0});ui.start.hidden=true;ui.over.hidden=true;ui.pauseBtn.disabled=false;hud();tone(392,.08,'square',.035,170);setTimeout(()=>tone(659,.12,'square',.035,140),80)}
+  function menu(){state.mode='menu';state.paused=false;entities.length=particles.length=floaters.length=waves.length=0;ui.over.hidden=true;ui.start.hidden=false;ui.pauseBtn.disabled=true;ui.best.textContent=store.get('best',0).toLocaleString('ru-RU');hud()}
+  function finish(){if(state.mode!=='playing')return;state.mode='gameover';state.paused=false;ui.pauseBtn.disabled=true;const score=Math.floor(state.score),best=store.get('best',0),record=score>best;store.patch({best:Math.max(best,score),games:store.get('games',0)+1,totalPatties:store.get('totalPatties',0)+state.patties});ui.result.textContent=score.toLocaleString('ru-RU');ui.resultCombo.textContent=`×${state.bestCombo.toFixed(state.bestCombo%1?1:0)}`;ui.resultPatties.textContent=state.patties;ui.resultMission.textContent=state.missionDone?'ВЫПОЛНЕНО':'НЕ УСПЕЛА';ui.record.hidden=!record;ui.best.textContent=Math.max(best,score).toLocaleString('ru-RU');ui.over.hidden=false;tone(280,.18,'sawtooth',.04,-90);setTimeout(()=>tone(160,.28,'triangle',.035,-70),120);haptic([70,50,120])}
+  function pause(){if(state.mode!=='playing'||state.paused)return;state.paused=true;if(!ui.pause.open)ui.pause.showModal()}
+  function resume(){if(ui.pause.open)ui.pause.close();state.paused=false;last=performance.now()}
+  function spawn(type=null,x=null){const diff=Math.min(1,state.time/70),roll=Math.random();if(!type){type='patty';if(roll<.18+diff*.08)type='jelly';else if(roll<.39)type='bubble';else if(roll<.44)type='chum';else if(roll>.965&&state.time>8&&state.shieldUntil<=state.time)type='spatula';else if(roll>.91&&state.time>12)type='rainbow'}const radius={jelly:25,patty:22,bubble:18,spatula:20,chum:21,rainbow:23}[type];const base=150+diff*150;entities.push({type,x:x??random(radius+8,W-radius-8),y:-radius-16,radius,speed:base*random(.88,1.2)*(type==='bubble'?.78:1),spin:random(-2.3,2.3),rotation:random(0,TAU),phase:random(0,TAU),caught:false})}
+  function collision(e){const b={left:player.x-player.width*.36,right:player.x+player.width*.36,top:player.y-player.height*.46,bottom:player.y+player.height*.46},dx=e.x-clamp(e.x,b.left,b.right),dy=e.y-clamp(e.y,b.top,b.bottom);return dx*dx+dy*dy<e.radius*e.radius*.76}
+  function catchEntity(e){e.caught=true;if(e.type==='jelly'){hit();burst(e.x,e.y,'#ff7ca9',15,160);return}if(e.type==='spatula'){state.shieldUntil=state.time+7;state.combo+=2;burst(e.x,e.y,'#ffd83d',20,200);floater(e.x,e.y,'ЩИТ!','#ffd83d');tone(520,.12,'square',.04,410);toast('Лопатка отбивает медуз и даёт очки');haptic(35);hud();return}if(e.type==='chum'){state.slowUntil=state.time+4;state.combo=0;state.score=Math.max(0,state.score-20);burst(e.x,e.y,'#7fa56c',12,100);floater(e.x,e.y,'ФУ! −20','#b9d888');tone(130,.18,'sawtooth',.04,-40);toast('Ведро помоев: управление стало вязким');return}
+    state.combo++;const m=mult();state.bestCombo=Math.max(state.bestCombo,m);let pts=e.type==='patty'?10:e.type==='rainbow'?45:5;if(e.type==='rainbow'){state.feverUntil=state.time+7;toast('Радужный бургер: двойное безумие!')}const earned=Math.round(pts*m);state.score+=earned;if(e.type==='patty'||e.type==='rainbow')state.patties++;if(e.type==='bubble'){state.bubbles++;state.burstCharge=clamp(state.burstCharge+.12,0,1)}burst(e.x,e.y,e.type==='rainbow'?'#fff36b':e.type==='patty'?'#ffd83d':'#c9f6ff',e.type==='rainbow'?22:e.type==='patty'?12:8,140);floater(e.x,e.y,`+${earned}`,e.type==='rainbow'?'#fff36b':e.type==='patty'?'#ffd83d':'#e9fbff');player.squash=e.type==='patty'?.28:.16;player.armSwing=.8;tone(e.type==='rainbow'?780:e.type==='patty'?430+Math.min(state.combo,18)*12:700,.07,'square',.035,100);haptic(e.type==='patty'?16:8);ui.comboBox.classList.remove('is-hot');void ui.comboBox.offsetWidth;ui.comboBox.classList.add('is-hot');checkMission();hud()}
+  function hit(){if(state.shieldUntil>state.time){state.score+=15;floater(player.x,player.y-55,'ОТБИТО!','#ffd83d');tone(180,.08,'square',.04,360);state.shake=.2;haptic(22);return}if(player.invulnerableUntil>state.time)return;player.invulnerableUntil=state.time+1.15;state.lives--;state.combo=0;state.burstCharge=clamp(state.burstCharge+.18,0,1);state.shake=.45;state.flash=.35;floater(player.x,player.y-56,'АЙ!','#ff8ba9');tone(170,.18,'sawtooth',.05,-80);haptic([70,40,70]);hud();if(state.lives<=0)setTimeout(finish,250)}
+  function activateBurst(){if(state.mode!=='playing'||state.paused||state.burstCharge<1)return;state.burstCharge=0;waves.push({x:player.x,y:player.y-8,r:18,life:.55,maxLife:.55});let hitCount=0;for(const e of entities){if(e.type==='jelly'&&!e.caught&&Math.hypot(e.x-player.x,e.y-player.y)<230){e.caught=true;hitCount++;state.jelliesBlasted++;state.score+=25;burst(e.x,e.y,'#bff7ff',16,220);floater(e.x,e.y,'СМЫТО!','#e9fbff')}}state.shake=.3;player.armSwing=1;toast(hitCount?`Пузырьковая волна: ${hitCount} медуз смыто`:'Волна ушла в красивое никуда');tone(220,.24,'sine',.05,680);haptic([25,20,45]);checkMission();hud()}
+  function burst(x,y,color,n,speed){for(let i=0;i<n;i++){const a=random(0,TAU),v=random(speed*.35,speed);particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:random(.38,.72),maxLife:.72,size:random(2.5,7),color})}}
+  function floater(x,y,text,color){floaters.push({x,y,text,color,life:.8,maxLife:.8})}
+  function update(dt){state.time+=dt;state.spawnClock+=dt;state.shake=Math.max(0,state.shake-dt*2.4);state.flash=Math.max(0,state.flash-dt*2.8);player.squash=ease(player.squash,0,8,dt);player.armSwing=ease(player.armSwing,0,5,dt);const moveSpeed=state.slowUntil>state.time?145:320;if(state.key)player.targetX+=state.key*moveSpeed*dt;player.targetX=clamp(player.targetX,40,W-40);const px=player.x;player.x=ease(player.x,player.targetX,state.slowUntil>state.time?5:16,dt);player.tilt=ease(player.tilt,clamp((player.x-px)*.04,-.2,.2),10,dt);
+    const diff=Math.min(1,state.time/70);if(state.spawnClock>=state.nextSpawn){state.spawnClock=0;spawn();state.nextSpawn=random(.35,.7)*(1-diff*.32);if(state.feverUntil>state.time&&Math.random()<.45)spawn(Math.random()<.65?'bubble':'patty')}
+    for(let i=entities.length-1;i>=0;i--){const e=entities[i];e.y+=e.speed*dt;e.rotation+=e.spin*dt;e.phase+=dt*3;if(!e.caught&&collision(e))catchEntity(e);if(e.caught||e.y-e.radius>H+20){if(!e.caught&&(e.type==='patty'||e.type==='rainbow')&&state.combo>0)state.combo=0;entities.splice(i,1)}}
+    for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.vy+=170*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.life<=0)particles.splice(i,1)}
+    for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.life-=dt;f.y-=45*dt;if(f.life<=0)floaters.splice(i,1)}
+    for(let i=waves.length-1;i>=0;i--){waves[i].life-=dt;waves[i].r+=520*dt;if(waves[i].life<=0)waves.splice(i,1)}
+    bg.forEach(b=>{b.y-=b.speed*dt;b.x+=Math.sin(state.time*.7+b.drift)*2.2*dt;if(b.y<-20){b.y=H+random(10,120);b.x=random(10,W-10)}});checkMission();hud()}
+  const renderer=createRenderer(ctx,()=>({viewWidth:W,viewHeight:H,state,player,entities,particles,floaters,waves,backgroundBubbles:bg,flowerShapes:flowers}));
+  function frame(now){const dt=Math.min(.035,Math.max(0,(now-last)/1000));last=now;if(state.mode==='playing'&&!state.paused)update(dt);else bg.forEach(b=>{b.y-=b.speed*dt*.35;if(b.y<-20)b.y=H+random(10,90)});renderer.draw();requestAnimationFrame(frame)}
+  function target(e){const r=canvas.getBoundingClientRect();player.targetX=clamp(e.clientX-r.left,40,r.width-40)}
+  canvas.addEventListener('pointerdown',e=>{if(state.mode!=='playing'||state.paused)return;state.pointer=true;pointerDownAt=performance.now();pointerStartX=e.clientX;canvas.setPointerCapture?.(e.pointerId);target(e);unlock()});
+  canvas.addEventListener('pointermove',e=>{if(state.pointer&&state.mode==='playing'&&!state.paused)target(e)});
+  canvas.addEventListener('pointerup',e=>{if(state.pointer&&performance.now()-pointerDownAt<220&&Math.abs(e.clientX-pointerStartX)<18)activateBurst();state.pointer=false});
+  canvas.addEventListener('pointercancel',()=>state.pointer=false);
+  addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')state.key=-1;if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')state.key=1;if(e.key===' '){e.preventDefault();activateBurst()}if(e.key==='Escape'&&state.mode==='playing')(state.paused?resume:pause)()});
+  addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','a','d','A','D'].includes(e.key))state.key=0});
+  addEventListener('resize',resize,{passive:true});addEventListener('orientationchange',()=>setTimeout(resize,180),{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.mode==='playing'&&!state.paused)pause()});
+  ui.sound.addEventListener('click',()=>{setSound(!state.sound);if(state.sound)tone(620,.08,'sine',.035,120)});ui.pauseBtn.addEventListener('click',pause);$('#startButton').addEventListener('click',startGame);$('#restartButton').addEventListener('click',startGame);$('#menuButton').addEventListener('click',menu);$('#resumeButton').addEventListener('click',resume);$('#pauseRestartButton').addEventListener('click',()=>{resume();startGame()});$('#quitButton').addEventListener('click',()=>{resume();finish()});ui.pause.addEventListener('cancel',e=>{e.preventDefault();resume()});
+  addEventListener('appdatareset',()=>{ui.best.textContent='0';setSound(true);toast('Рекорд сброшен')});
+  createWorkshopMode({appName:'СПАНЧ: Пузырьковый Переполох',version:'1.1.0',cachePrefix:'bubble-bob-',storageNamespace:NS,onReset(){store.reset();dispatchEvent(new CustomEvent('appdatareset'))}});
+  watchConnectivity(online=>document.documentElement.dataset.network=online?'online':'offline');
+  setSound(state.sound);ui.best.textContent=store.get('best',0).toLocaleString('ru-RU');ui.pauseBtn.disabled=true;resize();hud();requestAnimationFrame(frame);
 }
