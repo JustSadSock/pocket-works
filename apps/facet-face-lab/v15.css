@@ -1,0 +1,4 @@
+.atlas-outline-line { fill: none; stroke: rgba(32,79,116,.58); stroke-width: 1.7; }
+.atlas-hairline { fill: none; stroke: var(--ochre); stroke-width: 1.8; stroke-dasharray: 6 5; }
+.atlas-note { fill: var(--muted); font: 650 7.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .01em; }
+.atlas-hairline.is-active, .atlas-outline-line.is-active { stroke-width: 3; stroke: var(--ochre); }
