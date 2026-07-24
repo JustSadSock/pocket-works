@@ -2,7 +2,7 @@
   "id": "/apps/facet-face-lab/",
   "name": "FACET",
   "short_name": "FACET",
-  "description": "Оценка привлекательности лица по трём фронтальным кадрам.",
+  "description": "Локальная оценка привлекательности лица с подробным разбором пропорций.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,5 +10,5 @@
   "orientation": "portrait",
   "background_color": "#f3efe6",
   "theme_color": "#f3efe6",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
