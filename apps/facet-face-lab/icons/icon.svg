@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FACET">
+  <rect width="512" height="512" rx="96" fill="#f1ede4"/>
+  <path d="M256 74c-94 0-154 73-154 176 0 112 64 188 154 188s154-76 154-188C410 147 350 74 256 74Z" fill="none" stroke="#17242f" stroke-width="22"/>
+  <path d="M256 84v344M112 252h288" stroke="#245a86" stroke-width="10" stroke-dasharray="20 16" opacity=".9"/>
+  <path d="M170 214c22-17 47-18 70-2M342 214c-22-17-47-18-70-2M219 320c24 13 50 13 74 0" fill="none" stroke="#17242f" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="202" cy="232" r="11" fill="#e2ad3c"/>
+  <circle cx="310" cy="232" r="11" fill="#e2ad3c"/>
+  <path d="M92 118h72M348 118h72M92 394h72M348 394h72" stroke="#245a86" stroke-width="14" stroke-linecap="round"/>
+</svg>
