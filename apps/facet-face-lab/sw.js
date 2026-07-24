@@ -1,12 +1,16 @@
 const CACHE_PREFIX = 'facet-face-lab-';
-const CACHE_NAME = 'facet-face-lab-v1.4.0';
-const APP_VERSION = '1.4.0';
+const CACHE_NAME = 'facet-face-lab-v1.5.0';
+const APP_VERSION = '1.5.0';
 const CORE = [
   './',
   './index.html',
   './styles.css',
+  './v15.css',
   './app.js',
-  './analysis-engine.js',
+  './facet-v15-bundle-0.txt',
+  './facet-v15-bundle-1.txt',
+  './facet-v15-bundle-2.txt',
+  './facet-v15-bundle-3.txt',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
