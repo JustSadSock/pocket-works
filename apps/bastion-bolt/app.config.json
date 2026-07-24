@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "bastion-bolt",
+  "name": "БАСТИОН: БАЛЛИСТА",
+  "shortName": "БАСТИОН",
+  "description": "Вертикальная 3D-осада: настрой баллисту, выбери боеприпас и разрушай ворота, стены и башни средневекового замка.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-24",
+  "releaseDateTime": "2026-07-24T22:45:00+02:00",
+  "changelog": [
+    "Первая полноценная версия мобильной 3D-осады с процедурным замком и детализированной баллистой.",
+    "Четыре типа боеприпасов, ветер, баллистическая траектория, кинематографические камеры и зональные разрушения.",
+    "Пыль, дым, огонь, обломки, следы попаданий, локальное сохранение статистики и офлайн-режим после первого запуска."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#c46f35",
+  "backgroundColor": "#171914",
+  "themeColor": "#25251d",
+  "orientation": "portrait",
+  "cacheName": "bastion-bolt-v1.0.0",
+  "storageNamespace": "pocket-works:bastion-bolt",
+  "tags": ["PWA", "offline", "game", "3d", "webgl", "portrait", "mobile", "ballista", "castle", "siege", "physics", "destruction", "audio", "haptics"],
+  "order": 96
+}
