@@ -21,6 +21,7 @@ try {
   const failed = responses.find((response) => !response.ok);
   if (failed) throw new Error(`Не удалось загрузить движок: ${failed.status}`);
   const parts = await Promise.all(responses.map((response) => response.text()));
+  if (parts[1]?.endsWith('2;') && parts[2]?.startsWith('2;')) parts[1] = parts[1].slice(0, -2);
   const prelude = 'const { createVersionedStore, createWorkshopMode, watchConnectivity } = window.__KASKAD_DEPS__;\n';
   const moduleUrl = URL.createObjectURL(new Blob([prelude, ...parts], { type: 'text/javascript' }));
   try {
