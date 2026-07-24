@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="БАСТИОН">
   <title>БАСТИОН: БАЛЛИСТА</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.1.0">
-  <link rel="icon" href="./icons/icon.svg?v=1.1.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.1.0">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.1.0">
-  <link rel="stylesheet" href="./styles.css?v=1.1.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.2.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.2.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.2.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.2.0">
+  <link rel="stylesheet" href="./styles.css?v=1.2.0">
 </head>
 <body data-fullscreen-app>
   <main class="siege-shell" data-app-shell>
@@ -35,7 +35,7 @@
 
       <header class="topbar" id="topbar" hidden>
         <a class="back" href="../../" data-app-control aria-label="Вернуться в Pocket Works">‹</a>
-        <div class="identity"><span>ОСАДА / СЕКТОР 04</span><b>БАСТИОН</b></div>
+        <div class="identity"><span>ОСАДА / ОПЕРАЦИЯ 12</span><b>БАСТИОН</b></div>
         <button class="sound" id="soundButton" type="button" aria-label="Звук"><i></i><i></i><i></i></button>
       </header>
 
@@ -54,11 +54,11 @@
       <div class="shot-callout" id="shotCallout" aria-live="polite"><b></b><span></span></div>
 
       <section class="intro" id="intro">
-        <div class="intro-index"><span>PW / SIEGE 18</span><b>1</b></div>
+        <div class="intro-index"><span>PW / SIEGE 18</span><b>3</b></div>
         <div class="intro-copy">
-          <p>МОБИЛЬНАЯ 3D-ОСАДА</p>
+          <p>ТАКТИЧЕСКАЯ 3D-ОСАДА</p>
           <h1>БАСТИОН</h1>
-          <h2>Один выстрел.<br>Три тонны чужих проблем.</h2>
+          <h2>Боезапас конечен.<br>Камень — почти нет.</h2>
         </div>
         <div class="intro-actions">
           <div class="records">
@@ -66,8 +66,8 @@
             <span>РАЗРУШЕНО <b id="destroyedCount">0</b></span>
             <span>ВЫСТРЕЛОВ <b id="shotCount">0</b></span>
           </div>
-          <button class="primary" id="startButton" type="button"><span>НАЧАТЬ ОСАДУ</span><small>зарядить расчёт</small><b>→</b></button>
-          <button class="secondary" id="briefButton" type="button">Как стрелять</button>
+          <button class="primary" id="startButton" type="button"><span>НАЧАТЬ ОСАДУ</span><small>три рубежа, один расчёт</small><b>→</b></button>
+          <button class="secondary" id="briefButton" type="button">Полевая памятка</button>
           <a class="secondary" href="../../" data-app-control>В Pocket Works</a>
         </div>
       </section>
@@ -75,11 +75,11 @@
       <section class="brief" id="brief" hidden>
         <div class="brief-sheet">
           <header><span>ПОЛЕВАЯ ПАМЯТКА</span><button id="briefClose" type="button">Закрыть</button></header>
-          <h2>Наводи не цифрами,<br>а глазами.</h2>
-          <article><b>01</b><span><strong>ВЫБЕРИ УЗЕЛ</strong>Коснись ворот, стены или башни. Прицел и карточка покажут выбранную цель.</span></article>
-          <article><b>02</b><span><strong>СВЕДИ ПАРАМЕТРЫ</strong>Сила отвечает за дальность, угол — за дугу, горизонт — за поправку. Ветер реально сносит снаряд.</span></article>
-          <article><b>03</b><span><strong>СМЕНИ БОЕПРИПАС</strong>Тяжёлый болт ломает камень, зажигательный жжёт дерево, камень даёт большую зону удара.</span></article>
-          <button class="primary" id="briefStart" type="button"><span>К БАЛЛИСТЕ</span><small>понял достаточно</small><b>→</b></button>
+          <h2>Не просто попади.<br>Разбери крепость.</h2>
+          <article><b>01</b><span><strong>ЛОМАЙ ОПОРЫ</strong>Коснись ворот, башни или донжона. Нижние секции держат верхние и могут вызвать каскадный обвал.</span></article>
+          <article><b>02</b><span><strong>СЧИТАЙ БОЕЗАПАС</strong>Тяжёлые болты крошат камень, огонь уничтожает дерево, камень ломает большую область. Снаряды не бесконечны.</span></article>
+          <article><b>03</b><span><strong>НЕ ДАВАЙ ПРИСТРЕЛЯТЬСЯ</strong>Защитники регулярно отвечают залпами. Повреждённая баллиста медленнее заряжается и теряет точность.</span></article>
+          <button class="primary" id="briefStart" type="button"><span>К БАЛЛИСТЕ</span><small>ворота сами не рухнут</small><b>→</b></button>
         </div>
       </section>
 
@@ -99,11 +99,11 @@
           <div class="split-controls">
             <label class="meter">
               <span><b>УГОЛ</b><output id="angleOut">19°</output></span>
-              <input id="angle" type="range" min="5" max="42" value="19" step="1">
+              <input id="angle" type="range" min="4" max="45" value="19" step="1">
             </label>
             <label class="meter">
               <span><b>ГОРИЗОНТ</b><output id="yawOut">0.0°</output></span>
-              <input id="yaw" type="range" min="-14" max="14" value="0" step="0.5">
+              <input id="yaw" type="range" min="-18" max="18" value="0" step="0.5">
             </label>
           </div>
           <div class="action-row">
@@ -126,11 +126,11 @@
             <span>Отклонение <b id="resultError">—</b></span>
           </div>
           <button class="primary" id="reloadButton" type="button"><span>ПЕРЕЗАРЯДИТЬ</span><small>следующий выстрел</small><b>→</b></button>
-          <button class="secondary" id="resultReset" type="button">Восстановить замок</button>
+          <button class="secondary" id="resultReset" type="button">Начать осаду заново</button>
         </div>
       </section>
     </section>
   </main>
-  <script type="module" src="./app.js?v=1.1.0"></script>
+  <script type="module" src="./app.js?v=1.2.0"></script>
 </body>
 </html>
