@@ -88,7 +88,9 @@ export function normalizeLandmarks(landmarks) {
 
   const leftEye = landmarks[33];
   const rightEye = landmarks[263];
-  const angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+  let angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+  if (angle > Math.PI / 2) angle -= Math.PI;
+  else if (angle < -Math.PI / 2) angle += Math.PI;
   const cos = Math.cos(-angle);
   const sin = Math.sin(-angle);
   const origin = {
