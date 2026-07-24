@@ -1,0 +1,367 @@
+const APP_VERSION = '1.0.0';
+const STORAGE_NAMESPACE = 'pocket-works:kaskad';
+const MAX_SPECIES = 8;
+const MAX_FIELDS = 10;
+const MAX_RULES = 16;
+const SPEED_STEPS = [0.25, 0.5, 1, 2, 4];
+const PALETTE = ['#ff5c35', '#3fc9c0', '#f2c84b', '#7d72f2', '#ef6ca8', '#87c95a', '#f08b38', '#56a7e8'];
+
+const FIELD_DEFS = {
+  gravity: { label: 'Гравитация', icon: '↓', description: 'Постоянно тянет все объекты вниз или вверх.' },
+  attractor: { label: 'Точка притяжения', icon: '◎', description: 'Стягивает или выталкивает объекты из выбранной точки.' },
+  vortex: { label: 'Вихрь', icon: '↻', description: 'Закручивает движение вокруг центра поля.' },
+  wind: { label: 'Ветер', icon: '→', description: 'Толкает всю систему в выбранном направлении.' },
+  turbulence: { label: 'Турбулентность', icon: '≈', description: 'Добавляет живой, непредсказуемый шум.' },
+  hue: { label: 'Цветовое сродство', icon: '◒', description: 'Похожие цвета отталкиваются, далёкие по кругу — притягиваются.' }
+};
+
+const TRIGGER_DEFS = {
+  wall: { label: 'Удар о стену', short: 'СТЕНА' },
+  collision: { label: 'Столкновение объектов', short: 'СТЫК' },
+  interval: { label: 'Через интервал', short: 'ТАЙМЕР' },
+  tap: { label: 'Касание арены', short: 'КАСАНИЕ' }
+};
+
+const CONDITION_DEFS = {
+  always: { label: 'Всегда' },
+  speedAbove: { label: 'Скорость выше порога' },
+  populationBelow: { label: 'Объектов меньше порога' },
+  ageAbove: { label: 'Возраст объекта выше порога' },
+  sameHue: { label: 'Цвета похожи' },
+  oppositeHue: { label: 'Цвета далеко друг от друга' }
+};
+
+const ACTION_DEFS = {
+  spawn: { label: 'Создать объекты' },
+  split: { label: 'Расщепить объект' },
+  transform: { label: 'Превратить в другой вид' },
+  destroy: { label: 'Уничтожить объект' },
+  accelerate: { label: 'Ускорить объект' },
+  resize: { label: 'Изменить размер' },
+  burst: { label: 'Создать радиальный выброс' },
+  toggleField: { label: 'Переключить поле' }
+};
+
+const canvas = document.querySelector('#sim-canvas');
+const stageWrap = document.querySelector('#stage-wrap');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const panelContent = document.querySelector('#panel-content');
+const panelScroll = document.querySelector('#panel-scroll');
+const sceneNameValue = document.querySelector('#scene-name-value');
+const particleCountEl = document.querySelector('#particle-count');
+const fpsReadout = document.querySelector('#fps-readout');
+const eventReadout = document.querySelector('#event-readout');
+const stageEmpty = document.querySelector('#stage-empty');
+const playButton = document.querySelector('#play-button');
+const playIcon = document.querySelector('#play-icon');
+const speedValue = document.querySelector('#speed-value');
+const timelineFill = document.querySelector('#timeline-fill');
+const undoButton = document.querySelector('#undo-button');
+const sheet = document.querySelector('#editor-sheet');
+const sheetBackdrop = document.querySelector('#sheet-backdrop');
+const sheetKicker = document.querySelector('#sheet-kicker');
+const sheetTitle = document.querySelector('#sheet-title');
+const sheetBody = document.querySelector('#sheet-body');
+const sheetFooter = document.querySelector('#sheet-footer');
+const toastEl = document.querySelector('#toast');
+const importInput = document.querySelector('#import-input');
+const recordingBadge = document.querySelector('#recording-badge');
+const recordButton = document.querySelector('#record-button');
+
+let viewport = { width: 0, height: 0, dpr: 1 };
+let qualityScale = 1;
+let activeTab = 'scene';
+let running = true;
+let simTime = 0;
+let lastFrameAt = performance.now();
+let lastHudAt = performance.now();
+let frameCounter = 0;
+let measuredFps = 60;
+let lowFpsSeconds = 0;
+let eventCounter = 0;
+let eventRate = 0;
+let nextParticleId = 1;
+let particles = [];
+let effects = [];
+let currentContacts = new Set();
+let ruleLastTriggered = new Map();
+let intervalSchedule = new Map();
+let undoStack = [];
+let toastTimer = 0;
+let saveTimer = 0;
+let audioContext = null;
+let lastSoundAt = 0;
+let mediaRecorder = null;
+let recordingChunks = [];
+let recordingStartedAt = 0;
+let pointerState = null;
+let forceSingleStep = false;
+let lastCanvasFill = '';
+
+function uid(prefix = 'id') {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function numberOr(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function safeFilename(name) {
+  return String(name || 'kaskad-scene')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '') || 'kaskad-scene';
+}
+
+function hexToRgb(hex) {
+  const cleaned = String(hex).replace('#', '');
+  const full = cleaned.length === 3 ? cleaned.split('').map((char) => char + char).join('') : cleaned;
+  const number = Number.parseInt(full, 16);
+  if (!Number.isFinite(number)) return { r: 255, g: 255, b: 255 };
+  return { r: (number >> 16) & 255, g: (number >> 8) & 255, b: number & 255 };
+}
+
+function hexToHue(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  if (delta === 0) return 0;
+  let hue;
+  if (max === rn) hue = ((gn - bn) / delta) % 6;
+  else if (max === gn) hue = (bn - rn) / delta + 2;
+  else hue = (rn - gn) / delta + 4;
+  return ((hue * 60) + 360) % 360;
+}
+
+function hueDistance(a, b) {
+  const diff = Math.abs(a - b) % 360;
+  return Math.min(diff, 360 - diff) / 180;
+}
+
+function starterClone() {
+  return {
+    schema: 1,
+    id: uid('scene'),
+    name: 'Клон-камера',
+    boundary: 'circle',
+    background: '#11130f',
+    trails: 0.12,
+    collisions: true,
+    maxParticles: 180,
+    speed: 1,
+    sound: false,
+    selectedSpecies: 'spark',
+    species: [
+      { id: 'spark', name: 'Искра', color: '#ff5c35', radius: 10, mass: 1, bounce: 1.01, drag: 0.001, count: 1, speed: 255 }
+    ],
+    fields: [],
+    rules: [
+      {
+        id: uid('rule'), name: 'Касание размножает', enabled: true, trigger: 'wall', source: 'any', target: 'any',
+        condition: 'populationBelow', threshold: 160, chance: 1, cooldown: 0.035,
+        action: 'spawn', outputSpecies: 'same', outputField: 'any', amount: 1, value: 0.45, interval: 1
+      }
+    ]
+  };
+}
+
+function starterChromatic() {
+  return {
+    schema: 1,
+    id: uid('scene'),
+    name: 'Хроматическая стая',
+    boundary: 'box',
+    background: '#101412',
+    trails: 0.2,
+    collisions: true,
+    maxParticles: 220,
+    speed: 1,
+    sound: false,
+    selectedSpecies: 'coral',
+    species: [
+      { id: 'coral', name: 'Коралл', color: '#ff5c35', radius: 7, mass: 1, bounce: 0.96, drag: 0.004, count: 18, speed: 85 },
+      { id: 'mint', name: 'Мята', color: '#3fc9c0', radius: 7, mass: 1, bounce: 0.96, drag: 0.004, count: 18, speed: 85 },
+      { id: 'sun', name: 'Солнце', color: '#f2c84b', radius: 7, mass: 1, bounce: 0.96, drag: 0.004, count: 18, speed: 85 },
+      { id: 'violet', name: 'Фиолет', color: '#7d72f2', radius: 7, mass: 1, bounce: 0.96, drag: 0.004, count: 18, speed: 85 }
+    ],
+    fields: [
+      { id: uid('field'), name: 'Цветовая химия', type: 'hue', enabled: true, strength: 1.35, x: 0.5, y: 0.5, radius: 1, frequency: 1 },
+      { id: uid('field'), name: 'Мягкий вихрь', type: 'vortex', enabled: true, strength: 0.18, x: 0.5, y: 0.5, radius: 1, frequency: 1 }
+    ],
+    rules: []
+  };
+}
+
+function starterOrbit() {
+  return {
+    schema: 1,
+    id: uid('scene'),
+    name: 'Орбитальный дождь',
+    boundary: 'circle',
+    background: '#11130f',
+    trails: 0.32,
+    collisions: true,
+    maxParticles: 200,
+    speed: 1,
+    sound: false,
+    selectedSpecies: 'drop',
+    species: [
+      { id: 'drop', name: 'Капля', color: '#56a7e8', radius: 6, mass: 0.8, bounce: 0.92, drag: 0.006, count: 42, speed: 115 },
+      { id: 'core', name: 'Ядро', color: '#f2c84b', radius: 11, mass: 2.4, bounce: 0.86, drag: 0.008, count: 4, speed: 45 },
+      { id: 'ember', name: 'Осколок', color: '#ff5c35', radius: 4, mass: 0.45, bounce: 1.02, drag: 0.003, count: 0, speed: 180 }
+    ],
+    fields: [
+      { id: uid('field'), name: 'Центральная масса', type: 'attractor', enabled: true, strength: 1.45, x: 0.5, y: 0.5, radius: 1, frequency: 1 },
+      { id: uid('field'), name: 'Орбитальный сдвиг', type: 'vortex', enabled: true, strength: 0.75, x: 0.5, y: 0.5, radius: 1, frequency: 1 },
+      { id: uid('field'), name: 'Дрожь', type: 'turbulence', enabled: true, strength: 0.16, x: 0.5, y: 0.5, radius: 1, frequency: 1.4 }
+    ],
+    rules: [
+      {
+        id: uid('rule'), name: 'Ядро выбивает осколки', enabled: true, trigger: 'collision', source: 'core', target: 'drop',
+        condition: 'speedAbove', threshold: 75, chance: 0.55, cooldown: 0.08,
+        action: 'burst', outputSpecies: 'ember', outputField: 'any', amount: 3, value: 1.2, interval: 1
+      },
+      {
+        id: uid('rule'), name: 'Осколок затухает', enabled: true, trigger: 'interval', source: 'ember', target: 'any',
+        condition: 'ageAbove', threshold: 4, chance: 1, cooldown: 0.1,
+        action: 'destroy', outputSpecies: 'same', outputField: 'any', amount: 1, value: 0.5, interval: 0.5
+      }
+    ]
+  };
+}
+
+const STARTERS = {
+  clone: { label: 'Клон-камера', description: 'Каждый удар о стену создаёт ещё один объект.', accent: '#ff5c35', build: starterClone },
+  chromatic: { label: 'Хроматическая стая', description: 'Похожие цвета расходятся, далёкие собираются.', accent: '#3fc9c0', build: starterChromatic },
+  orbit: { label: 'Орбитальный дождь', description: 'Вихрь, притяжение и столкновения рождают осколки.', accent: '#f2c84b', build: starterOrbit }
+};
+
+function normalizeSpecies(raw, index) {
+  return {
+    id: typeof raw?.id === 'string' ? raw.id : uid('species'),
+    name: typeof raw?.name === 'string' ? raw.name.slice(0, 28) : `Вид ${index + 1}`,
+    color: /^#[0-9a-f]{6}$/i.test(raw?.color || '') ? raw.color : PALETTE[index % PALETTE.length],
+    radius: clamp(numberOr(raw?.radius, 8), 2, 36),
+    mass: clamp(numberOr(raw?.mass, 1), 0.1, 8),
+    bounce: clamp(numberOr(raw?.bounce, 0.95), 0.2, 1.25),
+    drag: clamp(numberOr(raw?.drag, 0.004), 0, 0.06),
+    count: clamp(Math.round(numberOr(raw?.count, 0)), 0, 300),
+    speed: clamp(numberOr(raw?.speed, 100), 0, 500)
+  };
+}
+
+function normalizeRule(raw) {
+  return {
+    id: typeof raw?.id === 'string' ? raw.id : uid('rule'),
+    name: typeof raw?.name === 'string' ? raw.name.slice(0, 44) : 'Новое правило',
+    enabled: raw?.enabled !== false,
+    trigger: TRIGGER_DEFS[raw?.trigger] ? raw.trigger : 'wall',
+    source: typeof raw?.source === 'string' ? raw.source : 'any',
+    target: typeof raw?.target === 'string' ? raw.target : 'any',
+    condition: CONDITION_DEFS[raw?.condition] ? raw.condition : 'always',
+    threshold: numberOr(raw?.threshold, 1),
+    chance: clamp(numberOr(raw?.chance, 1), 0, 1),
+    cooldown: clamp(numberOr(raw?.cooldown, 0), 0, 10),
+    action: ACTION_DEFS[raw?.action] ? raw.action : 'spawn',
+    outputSpecies: typeof raw?.outputSpecies === 'string' ? raw.outputSpecies : 'same',
+    outputField: typeof raw?.outputField === 'string' ? raw.outputField : 'any',
+    amount: clamp(Math.round(numberOr(raw?.amount, 1)), 1, 24),
+    value: clamp(numberOr(raw?.value, 0.5), -4, 4),
+    interval: clamp(numberOr(raw?.interval, 1), 0.1, 30)
+  };
+}
+
+function normalizeField(raw, index) {
+  return {
+    id: typeof raw?.id === 'string' ? raw.id : uid('field'),
+    name: typeof raw?.name === 'string' ? raw.name.slice(0, 36) : FIELD_DEFS[raw?.type]?.label || `Поле ${index + 1}`,
+    type: FIELD_DEFS[raw?.type] ? raw.type : 'gravity',
+    enabled: raw?.enabled !== false,
+    strength: clamp(numberOr(raw?.strength, 0.5), -4, 4),
+    x: clamp(numberOr(raw?.x, 0.5), 0, 1),
+    y: clamp(numberOr(raw?.y, 0.5), 0, 1),
+    radius: clamp(numberOr(raw?.radius, 1), 0.1, 1.5),
+    frequency: clamp(numberOr(raw?.frequency, 1), 0.1, 6)
+  };
+}
+
+function normalizeScene(raw) {
+  const fallback = starterClone();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fallback;
+  const species = Array.isArray(raw.species) ? raw.species.slice(0, MAX_SPECIES).map(normalizeSpecies) : fallback.species;
+  if (species.length === 0) species.push(normalizeSpecies({}, 0));
+  const scene = {
+    schema: 1,
+    id: typeof raw.id === 'string' ? raw.id : uid('scene'),
+    name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 40) : fallback.name,
+    boundary: raw.boundary === 'box' ? 'box' : 'circle',
+    background: /^#[0-9a-f]{6}$/i.test(raw.background || '') ? raw.background : fallback.background,
+    trails: clamp(numberOr(raw.trails, 0), 0, 0.92),
+    collisions: raw.collisions !== false,
+    maxParticles: clamp(Math.round(Number(raw.maxParticles) || 180), 20, 500),
+    speed: SPEED_STEPS.includes(Number(raw.speed)) ? Number(raw.speed) : 1,
+    sound: raw.sound === true,
+    selectedSpecies: typeof raw.selectedSpecies === 'string' ? raw.selectedSpecies : species[0].id,
+    species,
+    fields: Array.isArray(raw.fields) ? raw.fields.slice(0, MAX_FIELDS).map(normalizeField) : [],
+    rules: Array.isArray(raw.rules) ? raw.rules.slice(0, MAX_RULES).map(normalizeRule) : []
+  };
+  if (!scene.species.some((item) => item.id === scene.selectedSpecies)) scene.selectedSpecies = scene.species[0].id;
+  const speciesIds = new Set(scene.species.map((item) => item.id));
+  for (const rule of scene.rules) {
+    if (rule.source !== 'any' && !speciesIds.has(rule.source)) rule.source = 'any';
+    if (rule.target !== 'any' && !speciesIds.has(rule.target)) rule.target = 'any';
+    if (rule.outputSpecies !== 'same' && !speciesIds.has(rule.outputSpecies)) rule.outputSpecies = 'same';
+    if (rule.outputField !== 'any' && !scene.fields.some((field) => field.id === rule.outputField)) rule.outputField = 'any';
+  }
+  return scene;
+}
+
+const storage = createVersionedStore({
+  namespace: STORAGE_NAMESPACE,
+  version: 1,
+  defaults: { scene: starterClone() },
+  validate(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) && value.scene && typeof value.scene === 'object';
+  }
+});
+
+let scene = normalizeScene(storage.get('scene', starterClone()));
+
+function pushUndo(snapshot = scene) {
+  undoStack.push(deepClone(snapshot));
+  if (undoStack.leng
