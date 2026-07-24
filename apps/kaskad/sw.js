@@ -10,6 +10,7 @@ const RELEASE_NOTES = [
 ];
 const APP_SHELL = [
   './', './index.html', './app.config.json', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './README.md',
+  './engine-part-01.txt', './engine-part-02.txt', './engine-part-03.txt', './engine-part-04.txt', './engine-part-05.txt', './engine-part-06.txt',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js',
