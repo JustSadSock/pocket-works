@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "facet-face-lab",
+  "name": "FACET — анализ лица",
+  "shortName": "FACET",
+  "description": "Локальный анализ геометрии и фотопрезентации лица с оценкой неопределённости.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-24",
+  "releaseDateTime": "2026-07-24T18:45:00+02:00",
+  "changelog": [
+    "Первый релиз: локальный Face Landmarker, строгая проверка качества кадра, интервальная оценка и методология с источниками."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#245a86",
+  "backgroundColor": "#f1ede4",
+  "themeColor": "#f1ede4",
+  "orientation": "portrait",
+  "cacheName": "facet-face-lab-v1.0.0",
+  "storageNamespace": "pocket-works:facet-face-lab",
+  "tags": ["analysis", "camera", "science", "privacy"],
+  "order": 118
+}
