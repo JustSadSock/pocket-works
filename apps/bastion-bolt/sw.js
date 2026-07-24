@@ -1,6 +1,6 @@
 const CACHE = 'bastion-bolt-v1.0.0';
 const PREFIX = 'bastion-bolt-';
-const ASSETS = ['./','./index.html','./styles.css','./app.js','./engine.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
+const ASSETS = ['./','./index.html','./styles.css','./app.js','./engine.js','./scene.js','./game.js','./audio.js','./config.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(PREFIX) && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', event => {
