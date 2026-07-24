@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#25251d">
+  <meta name="description" content="БАСТИОН: БАЛЛИСТА — вертикальная 3D-игра про осаду средневекового замка.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="БАСТИОН">
+  <title>БАСТИОН: БАЛЛИСТА</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="siege-shell" data-app-shell>
+    <section class="stage" id="stage" aria-label="Трёхмерная сцена осады">
+      <canvas id="world" role="application" aria-label="Баллиста перед средневековым замком. Проводите пальцем по сцене для тонкой наводки."></canvas>
+      <div class="sky-grain" aria-hidden="true"></div>
+      <div class="impact-flash" id="impactFlash" aria-hidden="true"></div>
+      <div class="loading" id="loading">
+        <div class="loader-mark"><i></i><b></b><i></i></div>
+        <strong>РАЗВОРАЧИВАЕМ ОСАДУ</strong>
+        <span id="loadingText">ставим баллисту на грязный грунт</span>
+      </div>
+      <section class="fallback" id="fallback" hidden>
+        <p>ОСАДА СОРВАНА</p>
+        <h1>WebGL не запустился.</h1>
+        <span>Открой игру в свежем Safari или Chrome. Без 3D тут останется только очень дорогая деревянная табуретка.</span>
+        <a href="../../" data-app-control>В Pocket Works</a>
+      </section>
+
+      <header class="topbar" id="topbar" hidden>
+        <a class="back" href="../../" data-app-control aria-label="Вернуться в Pocket Works">‹</a>
+        <div class="identity"><span>ОСАДА / СЕКТОР 04</span><b>БАСТИОН</b></div>
+        <button class="sound" id="soundButton" type="button" aria-label="Звук"><i></i><i></i><i></i></button>
+      </header>
+
+      <aside class="target-card" id="targetCard" hidden>
+        <span>ЦЕЛЬ</span>
+        <b id="targetName">ВОРОТА</b>
+        <div><i id="targetHealth"></i></div>
+        <small id="targetStatus">ЦЕЛЫ</small>
+      </aside>
+
+      <div class="wind-card" id="windCard" hidden>
+        <span>ВЕТЕР</span><b id="windValue">2.4</b><small>М/С</small><i id="windArrow">→</i>
+      </div>
+
+      <div class="reticle" id="reticle" hidden aria-hidden="true"><i></i><b></b><i></i><span id="rangeLabel">118 м</span></div>
+      <div class="shot-callout" id="shotCallout" aria-live="polite"><b></b><span></span></div>
+
+      <section class="intro" id="intro">
+        <div class="intro-index"><span>PW / SIEGE 18</span><b>1</b></div>
+        <div class="intro-copy">
+          <p>МОБИЛЬНАЯ 3D-ОСАДА</p>
+          <h1>БАСТИОН</h1>
+          <h2>Один выстрел.<br>Три тонны чужих проблем.</h2>
+        </div>
+        <div class="intro-actions">
+          <div class="records">
+            <span>ЛУЧШИЙ УДАР <b id="bestHit">0</b></span>
+            <span>РАЗРУШЕНО <b id="destroyedCount">0</b></span>
+            <span>ВЫСТРЕЛОВ <b id="shotCount">0</b></span>
+          </div>
+          <button class="primary" id="startButton" type="button"><span>НАЧАТЬ ОСАДУ</span><small>зарядить расчёт</small><b>→</b></button>
+          <button class="secondary" id="briefButton" type="button">Как стрелять</button>
+          <a class="secondary" href="../../" data-app-control>В Pocket Works</a>
+        </div>
+      </section>
+
+      <section class="brief" id="brief" hidden>
+        <div class="brief-sheet">
+          <header><span>ПОЛЕВАЯ ПАМЯТКА</span><button id="briefClose" type="button">Закрыть</button></header>
+          <h2>Наводи не цифрами,<br>а глазами.</h2>
+          <article><b>01</b><span><strong>ВЫБЕРИ УЗЕЛ</strong>Коснись ворот, стены или башни. Прицел и карточка покажут выбранную цель.</span></article>
+          <article><b>02</b><span><strong>СВЕДИ ПАРАМЕТРЫ</strong>Сила отвечает за дальность, угол — за дугу, горизонт — за поправку. Ветер реально сносит снаряд.</span></article>
+          <article><b>03</b><span><strong>СМЕНИ БОЕПРИПАС</strong>Тяжёлый болт ломает камень, зажигательный жжёт дерево, камень даёт большую зону удара.</span></article>
+          <button class="primary" id="briefStart" type="button"><span>К БАЛЛИСТЕ</span><small>понял достаточно</small><b>→</b></button>
+        </div>
+      </section>
+
+      <section class="controls" id="controls" hidden>
+        <div class="ammo-row" id="ammoRow" role="radiogroup" aria-label="Тип снаряда">
+          <button type="button" data-ammo="bolt" aria-checked="true"><i class="bolt-icon"></i><span>БОЛТ</span><small>точность</small></button>
+          <button type="button" data-ammo="heavy" aria-checked="false"><i class="heavy-icon"></i><span>ТЯЖЁЛЫЙ</span><small>камень</small></button>
+          <button type="button" data-ammo="fire" aria-checked="false"><i class="fire-icon"></i><span>ОГОНЬ</span><small>дерево</small></button>
+          <button type="button" data-ammo="stone" aria-checked="false"><i class="stone-icon"></i><span>КАМЕНЬ</span><small>область</small></button>
+        </div>
+
+        <div class="control-deck">
+          <label class="meter power-meter">
+            <span><b>НАТЯЖЕНИЕ</b><output id="powerOut">74%</output></span>
+            <input id="power" type="range" min="35" max="100" value="74" step="1">
+          </label>
+          <div class="split-controls">
+            <label class="meter">
+              <span><b>УГОЛ</b><output id="angleOut">19°</output></span>
+              <input id="angle" type="range" min="5" max="42" value="19" step="1">
+            </label>
+            <label class="meter">
+              <span><b>ГОРИЗОНТ</b><output id="yawOut">0.0°</output></span>
+              <input id="yaw" type="range" min="-14" max="14" value="0" step="0.5">
+            </label>
+          </div>
+          <div class="action-row">
+            <button class="reset" id="resetButton" type="button"><i>↺</i><span>СБРОС</span></button>
+            <button class="fire" id="fireButton" type="button"><i></i><span>ВЫСТРЕЛ</span><small id="fireHint">болт заряжен</small></button>
+            <button class="camera" id="cameraButton" type="button"><i></i><span>КАМЕРА</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="result" id="result" hidden>
+        <div class="result-panel">
+          <p id="resultKicker">ПОПАДАНИЕ</p>
+          <h2 id="resultTitle">Камень помнит.</h2>
+          <div class="result-damage"><b id="damageValue">0</b><span>УРОНА</span></div>
+          <div class="result-grid">
+            <span>Узел <b id="resultTarget">—</b></span>
+            <span>Дистанция <b id="resultDistance">—</b></span>
+            <span>Время полёта <b id="resultTime">—</b></span>
+            <span>Отклонение <b id="resultError">—</b></span>
+          </div>
+          <button class="primary" id="reloadButton" type="button"><span>ПЕРЕЗАРЯДИТЬ</span><small>следующий выстрел</small><b>→</b></button>
+          <button class="secondary" id="resultReset" type="button">Восстановить замок</button>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="./app.js?v=1.0.0"></script>
+</body>
+</html>
