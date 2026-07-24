@@ -2,13 +2,13 @@
   "id": "/apps/facet-face-lab/",
   "name": "FACET — анализ лица",
   "short_name": "FACET",
-  "description": "Визуальный анализ геометрии, типажа и пропорций лица.",
+  "description": "Анализ привлекательности и типажа лица по серии из трёх проверенных кадров.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f3efe6",
   "theme_color": "#f3efe6",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "./icons/icon.svg",
