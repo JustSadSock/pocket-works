@@ -1,0 +1,366 @@
+2;
+  const outputSpecies = outputSpeciesForRule(rule, source);
+  const amount = clamp(rule.amount, 1, 24);
+
+  if (rule.action === 'spawn') {
+    for (let index = 0; index < amount; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      spawnParticle(outputSpecies, {
+        x: x + Math.cos(angle) * 3,
+        y: y + Math.sin(angle) * 3,
+        angle,
+        speed: getSpecies(outputSpecies).speed * (0.65 + Math.random() * 0.8)
+      });
+    }
+  } else if (rule.action === 'split' && source) {
+    const childRadius = clamp(source.r * 0.68, 2, 50);
+    source.dead = true;
+    for (let index = 0; index < Math.max(2, amount); index += 1) {
+      const angle = Math.PI * 2 * index / Math.max(2, amount) + Math.random() * 0.18;
+      spawnParticle(outputSpecies, { x, y, angle, radius: childRadius, speed: Math.max(70, Math.hypot(source.vx, source.vy) * 0.85 + 50) });
+    }
+  } else if (rule.action === 'transform' && source) {
+    const nextSpecies = getSpecies(outputSpecies);
+    source.speciesId = nextSpecies.id;
+    source.r = nextSpecies.radius;
+    source.tint = null;
+  } else if (rule.action === 'destroy' && source) {
+    source.dead = true;
+    if (amount > 1 && target) target.dead = true;
+  } else if (rule.action === 'accelerate' && source) {
+    const multiplier = clamp(1 + rule.value, 0.05, 5);
+    source.vx *= multiplier;
+    source.vy *= multiplier;
+    if (target && amount > 1) { target.vx *= multiplier; target.vy *= multiplier; }
+  } else if (rule.action === 'resize' && source) {
+    const multiplier = clamp(1 + rule.value, 0.2, 3);
+    source.r = clamp(source.r * multiplier, 2, 50);
+  } else if (rule.action === 'burst') {
+    for (let index = 0; index < amount; index += 1) {
+      const angle = Math.PI * 2 * index / amount + Math.random() * 0.12;
+      spawnParticle(outputSpecies, { x, y, angle, speed: getSpecies(outputSpecies).speed * clamp(1 + rule.value, 0.3, 4) });
+    }
+  } else if (rule.action === 'toggleField') {
+    const field = rule.outputField === 'any'
+      ? scene.fields.find((item) => item.enabled) || scene.fields[0]
+      : scene.fields.find((item) => item.id === rule.outputField);
+    if (field) {
+      field.enabled = !field.enabled;
+      scheduleSave();
+      if (activeTab === 'fields') renderPanel();
+    }
+  }
+  addEffect(x, y, getSpecies(outputSpecies)?.color || '#ffffff', 20 + amount);
+}
+
+function processIntervalRules() {
+  for (const rule of scene.rules) {
+    if (!rule.enabled || rule.trigger !== 'interval') continue;
+    const nextAt = intervalSchedule.get(rule.id) ?? 0;
+    if (simTime < nextAt) continue;
+    intervalSchedule.set(rule.id, simTime + rule.interval);
+    const candidates = rule.source === 'any'
+      ? particles.filter((particle) => !particle.dead)
+      : particles.filter((particle) => !particle.dead && particle.speciesId === rule.source);
+    const source = candidates[Math.floor(Math.random() * candidates.length)] || null;
+    emitEvent('interval', {
+      source,
+      target: null,
+      x: source?.x ?? viewport.width / 2,
+      y: source?.y ?? viewport.height / 2,
+      speed: source ? Math.hypot(source.vx, source.vy) : 0
+    });
+  }
+}
+
+function simulate(dt) {
+  simTime += dt;
+  applyFields(dt);
+  for (const particle of particles) {
+    if (particle.dead) continue;
+    const species = getSpecies(particle.speciesId);
+    const dragFactor = Math.max(0, 1 - species.drag * 60 * dt);
+    particle.vx *= dragFactor;
+    particle.vy *= dragFactor;
+    const speed = Math.hypot(particle.vx, particle.vy);
+    const maxSpeed = 920;
+    if (speed > maxSpeed) {
+      particle.vx = particle.vx / speed * maxSpeed;
+      particle.vy = particle.vy / speed * maxSpeed;
+    }
+    particle.x += particle.vx * dt;
+    particle.y += particle.vy * dt;
+    particle.age += dt;
+    constrainParticle(particle, true);
+  }
+  resolveParticleCollisions();
+  processIntervalRules();
+  particles = particles.filter((particle) => !particle.dead);
+  for (const effect of effects) effect.age += dt;
+  effects = effects.filter((effect) => effect.age < effect.life);
+}
+
+function drawGrid() {
+  const spacing = Math.max(28, Math.round(Math.min(viewport.width, viewport.height) / 9));
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.035)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = spacing; x < viewport.width; x += spacing) { ctx.moveTo(x, 0); ctx.lineTo(x, viewport.height); }
+  for (let y = spacing; y < viewport.height; y += spacing) { ctx.moveTo(0, y); ctx.lineTo(viewport.width, y); }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBoundary() {
+  const bounds = getBoundary();
+  ctx.save();
+  ctx.strokeStyle = 'rgba(247,241,229,.72)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([3, 7]);
+  if (bounds.type === 'circle') {
+    ctx.beginPath();
+    ctx.arc(bounds.cx, bounds.cy, bounds.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(247,241,229,.1)';
+    ctx.beginPath();
+    ctx.arc(bounds.cx, bounds.cy, Math.max(1, bounds.radius - 8), 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.strokeRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+  }
+  ctx.restore();
+}
+
+function drawFields() {
+  const visible = scene.fields.filter((field) => field.enabled && ['attractor', 'vortex'].includes(field.type));
+  if (visible.length === 0) return;
+  ctx.save();
+  for (const field of visible) {
+    const x = viewport.width * field.x;
+    const y = viewport.height * field.y;
+    const radius = Math.max(22, Math.min(viewport.width, viewport.height) * field.radius * 0.16);
+    ctx.strokeStyle = field.type === 'vortex' ? 'rgba(63,201,192,.22)' : 'rgba(242,200,75,.22)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 8]);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y);
+    ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawParticles() {
+  const detailed = particles.length < 150;
+  for (const particle of particles) {
+    const species = getSpecies(particle.speciesId);
+    const color = particle.tint || species.color;
+    if (detailed) {
+      const gradient = ctx.createRadialGradient(
+        particle.x - particle.r * 0.28,
+        particle.y - particle.r * 0.34,
+        particle.r * 0.08,
+        particle.x,
+        particle.y,
+        particle.r
+      );
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.16, color);
+      gradient.addColorStop(1, color);
+      ctx.fillStyle = gradient;
+    } else {
+      ctx.fillStyle = color;
+    }
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
+    ctx.fill();
+    if (detailed && particle.r > 7) {
+      ctx.strokeStyle = 'rgba(255,255,255,.28)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+  }
+}
+
+function drawEffects() {
+  ctx.save();
+  for (const effect of effects) {
+    const progress = effect.age / effect.life;
+    ctx.globalAlpha = 1 - progress;
+    ctx.strokeStyle = effect.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(effect.x, effect.y, effect.size * (0.35 + progress), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function draw() {
+  const { r, g, b } = hexToRgb(scene.background);
+  if (lastCanvasFill !== scene.background || scene.trails <= 0.01 || forceSingleStep) {
+    ctx.fillStyle = scene.background;
+    ctx.fillRect(0, 0, viewport.width, viewport.height);
+    lastCanvasFill = scene.background;
+  } else {
+    const alpha = clamp(1 - scene.trails, 0.035, 0.95);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.fillRect(0, 0, viewport.width, viewport.height);
+  }
+  drawGrid();
+  drawFields();
+  drawBoundary();
+  drawParticles();
+  drawEffects();
+}
+
+function updateHud(force = false) {
+  const now = performance.now();
+  if (!force && now - lastHudAt < 500) return;
+  const elapsed = Math.max(0.001, (now - lastHudAt) / 1000);
+  measuredFps = Math.round(frameCounter / elapsed);
+  eventRate = Math.round(eventCounter / elapsed);
+  frameCounter = 0;
+  eventCounter = 0;
+  lastHudAt = now;
+  particleCountEl.textContent = `${particles.length} ${particles.length === 1 ? 'объект' : particles.length < 5 ? 'объекта' : 'объектов'}`;
+  fpsReadout.textContent = `${measuredFps || 0} FPS`;
+  eventReadout.textContent = `${eventRate} событий/с`;
+  stageEmpty.hidden = particles.length !== 0;
+
+  if (measuredFps > 0 && measuredFps < 42 && running) lowFpsSeconds += elapsed;
+  else lowFpsSeconds = Math.max(0, lowFpsSeconds - elapsed * 0.5);
+  if (lowFpsSeconds > 2.5 && qualityScale > 0.68) {
+    qualityScale = 0.68;
+    lowFpsSeconds = 0;
+    resizeCanvas();
+    showToast('Качество прорисовки снижено, физика сохранена');
+  }
+}
+
+function frame(now) {
+  const realDt = clamp((now - lastFrameAt) / 1000, 0, 0.034);
+  lastFrameAt = now;
+  if (running || forceSingleStep) {
+    const speed = scene.speed;
+    const targetDt = forceSingleStep ? 1 / 60 : realDt * speed;
+    const substeps = clamp(Math.ceil(targetDt / (1 / 90)), 1, 6);
+    const stepDt = targetDt / substeps;
+    for (let index = 0; index < substeps; index += 1) simulate(stepDt);
+    forceSingleStep = false;
+  }
+  draw();
+  frameCounter += 1;
+  timelineFill.style.width = `${(simTime % 10) * 10}%`;
+  updateHud();
+  requestAnimationFrame(frame);
+}
+
+function resizeCanvas() {
+  const rect = stageWrap.getBoundingClientRect();
+  const oldWidth = viewport.width || rect.width;
+  const oldHeight = viewport.height || rect.height;
+  viewport.width = Math.max(1, rect.width);
+  viewport.height = Math.max(1, rect.height);
+  viewport.dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1)) * qualityScale;
+  canvas.width = Math.round(viewport.width * viewport.dpr);
+  canvas.height = Math.round(viewport.height * viewport.dpr);
+  ctx.setTransform(viewport.dpr, 0, 0, viewport.dpr, 0, 0);
+  if (particles.length > 0 && oldWidth > 0 && oldHeight > 0) {
+    const scaleX = viewport.width / oldWidth;
+    const scaleY = viewport.height / oldHeight;
+    for (const particle of particles) {
+      particle.x *= scaleX;
+      particle.y *= scaleY;
+      constrainParticle(particle, false);
+    }
+  }
+  lastCanvasFill = '';
+}
+
+function playCollisionSound(particle, speed) {
+  if (!scene.sound || speed < 22) return;
+  const now = performance.now();
+  if (now - lastSoundAt < 42) return;
+  lastSoundAt = now;
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume();
+    const species = getSpecies(particle.speciesId);
+    const hue = hexToHue(particle.tint || species.color);
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 180 + hue * 1.25 + Math.min(220, speed * 0.25);
+    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(Math.min(0.045, 0.012 + speed / 9000), audioContext.currentTime + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.07);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.075);
+  } catch { /* audio is optional */ }
+}
+
+function speciesOptions(selected, includeAny = false, includeSame = false) {
+  const options = [];
+  if (includeAny) options.push(`<option value="any"${selected === 'any' ? ' selected' : ''}>Любой вид</option>`);
+  if (includeSame) options.push(`<option value="same"${selected === 'same' ? ' selected' : ''}>Тот же вид</option>`);
+  for (const item of scene.species) {
+    options.push(`<option value="${escapeHtml(item.id)}"${selected === item.id ? ' selected' : ''}>${escapeHtml(item.name)}</option>`);
+  }
+  return options.join('');
+}
+
+function fieldOptions(selected, includeAny = true) {
+  const options = [];
+  if (includeAny) options.push(`<option value="any"${selected === 'any' ? ' selected' : ''}>Первое доступное поле</option>`);
+  for (const field of scene.fields) {
+    options.push(`<option value="${escapeHtml(field.id)}"${selected === field.id ? ' selected' : ''}>${escapeHtml(field.name)}</option>`);
+  }
+  return options.join('');
+}
+
+function renderPanel() {
+  const renderers = { scene: renderScenePanel, species: renderSpeciesPanel, fields: renderFieldsPanel, rules: renderRulesPanel };
+  panelContent.innerHTML = renderers[activeTab]();
+}
+
+function renderScenePanel() {
+  const templates = Object.entries(STARTERS).map(([key, starter]) => `
+    <button class="template-card" type="button" data-template="${key}" data-native-press style="--template-accent:${starter.accent}">
+      <strong>${starter.label}</strong><span>${starter.description}</span>
+    </button>`).join('');
+  return `
+    <div class="panel-heading">
+      <div><h2>Собери систему</h2><p>Три стартовые сцены — только отправные точки. Настоящая вариативность живёт в сочетании видов, полей и правил.</p></div>
+    </div>
+    <div class="template-strip">${templates}</div>
+    <div class="control-group">
+      <div class="control-row">
+        <div class="control-row__copy"><strong>Граница арены</strong><span>Круг даёт концентрические рикошеты, коробка — читаемые оси.</span></div>
+        <div class="segmented">
+          <button type="button" data-boundary="circle" class="${scene.boundary === 'circle' ? 'is-active' : ''}" data-native-press>КРУГ</button>
+          <button type="button" data-boundary="box" class="${scene.boundary === 'box' ? 'is-active' : ''}" data-native-press>РАМКА</button>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-row__copy"><strong>Столкновения объектов</strong><span>Физические удары и правила на контакте.</span></div>
+        <button type="button" class="toggle ${scene.collisions ? 'is-on' : ''}" data-toggle-scene="collisions" data-native-press aria-label="Переключить столкновения"></button>
+      </div>
+      <div class="control-row">
+        <div class="control-row__copy"><strong>След движения</strong><span>Чем выше, тем дольше остаётся рисунок траекторий.</span></div>
+        <label class="range-inline"><input type="range" min="0" max="0.9" step="0.02" value="${scene.trails}" data-scene-range="trails"><output>${Math.round(scene.trails * 100)}%</output></label>
+      </div>
+      <div class="control-row">
+        <div class="control-row__copy"><strong>Лимит объектов</strong><span>Жёсткий предохранитель от бесконечных цепных реакций.</span></div>
+        <label class="range-inline"><input type="range" min="20" max="500" step="10" value="${scene.maxParticles}" data-scene-range="maxParticles"><output>${scene.maxParticles}</output></label>
+      </div>
+      <div class="control-row">
+        <div class="control-row__copy"><strong>Звук столкновений</strong><span>Тихий синтез по цвету и силе удара.</span></div>
+        <button type="button" class="toggle ${scene.sound ? 'i
