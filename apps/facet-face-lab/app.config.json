@@ -4,13 +4,13 @@
   "slug": "facet-face-lab",
   "name": "FACET",
   "shortName": "FACET",
-  "description": "Локальная оценка привлекательности лица с контролем перекрытий, качества кадра и подробным разбором пропорций.",
-  "version": "1.2.0",
+  "description": "Локальный анализ привлекательности и типажа лица с визуальной картой контуров и пропорций.",
+  "version": "1.3.0",
   "releaseDate": "2026-07-24",
-  "releaseDateTime": "2026-07-24T23:35:00+02:00",
+  "releaseDateTime": "2026-07-24T23:58:00+02:00",
   "changelog": [
-    "Один кадр теперь достаточен, ещё два необязательны для проверки повторяемости.",
-    "Исправлен зум камеры, добавлена проверка перекрытия волосами и подробный анализ черт."
+    "Фронтальная камера по умолчанию открывается в обычном формате 1× и избегает Ultra Wide, когда браузер сообщает тип объектива.",
+    "Добавлены интерактивная карта лица, радар зон, визуальные шкалы и определение формы лица, глаз, бровей, носа, губ и челюсти."
   ],
   "status": "active",
   "preset": "interactive",
@@ -18,8 +18,13 @@
   "backgroundColor": "#f3efe6",
   "themeColor": "#f3efe6",
   "orientation": "portrait",
-  "cacheName": "facet-face-lab-v1.2.0",
+  "cacheName": "facet-face-lab-v1.3.0",
   "storageNamespace": "pocket-works:facet-face-lab",
-  "tags": ["analysis", "camera", "science", "privacy"],
+  "tags": [
+    "analysis",
+    "camera",
+    "science",
+    "privacy"
+  ],
   "order": 118
 }
