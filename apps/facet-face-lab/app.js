@@ -3,809 +3,339 @@ import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
 import {
-  blendshapeMap,
-  boundingBoxFromLandmarks,
-  computeGeometryProfile,
-  computeImageQuality,
-  createAssessment,
-  qualityGate
+  blendshapeMap, boundingBoxFromLandmarks, combineAssessments,
+  computeGeometryProfile, computeImageQuality, createScanAssessment,
+  qualityGate, ratingLabel
 } from './analysis-engine.js';
 
 installMobileRuntime();
 
-const APP_NAME = 'FACET — анализ лица';
-const APP_VERSION = '1.0.0';
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-const WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
-const MODULE_URLS = [
+const APP_VERSION = '1.1.0';
+const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
+const MODULES = [
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/+esm',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs'
 ];
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
-const MAX_HISTORY = 24;
-
+const REQUIRED = 3;
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-
-const elements = {
-  consentCheck: $('#consent-check'),
-  capturePanel: $('#capture-panel'),
-  cameraOpen: $('#camera-open'),
-  fileInput: $('#file-input'),
-  uploadLabel: $('#upload-label'),
-  photoStage: $('#photo-stage'),
-  emptyPhoto: $('#empty-photo'),
-  sourceImage: $('#source-image'),
-  overlayCanvas: $('#overlay-canvas'),
-  replacePhoto: $('#replace-photo'),
-  analyzeButton: $('#analyze-button'),
-  analyzeLabel: $('.analyze-label'),
-  modelStatus: $('#model-status'),
-  qualityPreview: $('#quality-preview'),
-  qualityGrid: $('#quality-grid'),
-  qualityLiveLabel: $('#quality-live-label'),
-  resultPanel: $('#result-panel'),
-  scoreValue: $('#score-value'),
-  scoreInterval: $('#score-interval'),
-  reliabilityStamp: $('#reliability-stamp'),
-  metricList: $('#metric-list'),
-  strongList: $('#strong-list'),
-  distinctiveList: $('#distinctive-list'),
-  presentationScore: $('#presentation-score'),
-  qualityCaption: $('#quality-report-caption'),
-  issueList: $('#issue-list'),
-  shareResult: $('#share-result'),
-  reanalyzeButton: $('#reanalyze-button'),
-  methodOpen: $('#method-open'),
-  methodFromResult: $('#method-from-result'),
-  methodDialog: $('#method-dialog'),
-  historyOpen: $('#history-open'),
-  historyDialog: $('#history-dialog'),
-  historyList: $('#history-list'),
-  historyClear: $('#history-clear'),
-  cameraDialog: $('#camera-dialog'),
-  cameraClose: $('#camera-close'),
-  cameraVideo: $('#camera-video'),
-  cameraGuide: $('#camera-guide'),
-  cameraMessage: $('#camera-message'),
-  cameraCapture: $('#camera-capture'),
-  cameraFlip: $('#camera-flip'),
-  workCanvas: $('#work-canvas'),
-  toast: $('#toast')
-};
+const el = Object.fromEntries(Object.entries({
+  consent: 'consent-check', capture: 'capture-panel', cameraOpen: 'camera-open', file: 'file-input', upload: 'upload-label',
+  stage: 'photo-stage', empty: 'empty-photo', image: 'source-image', overlay: 'overlay-canvas', replace: 'replace-photo',
+  analyze: 'analyze-button', analyzeLabel: 'analyze-label', model: 'model-status', quality: 'quality-row', progress: 'scan-progress',
+  counter: 'scan-counter', result: 'result-panel', resultMode: 'result-mode', score: 'score-value', range: 'score-range',
+  label: 'score-label', reliability: 'reliability-value', consistency: 'consistency-value', typicality: 'typicality-value',
+  metrics: 'metric-list', issues: 'issue-list', add: 'add-scan', reset: 'reset-session', share: 'share-result', method: 'method-open',
+  methodDialog: 'method-dialog', history: 'history-open', historyDialog: 'history-dialog', historyList: 'history-list',
+  historyClear: 'history-clear', cameraDialog: 'camera-dialog', cameraClose: 'camera-close', video: 'camera-video',
+  cameraGuide: 'camera-guide', cameraMessage: 'camera-message', shutter: 'camera-capture', cameraFlip: 'camera-flip',
+  work: 'work-canvas', toast: 'toast'
+}).map(([key, id]) => [key, document.getElementById(id)]));
 
 const store = createVersionedStore({
-  namespace: 'pocket-works:facet-face-lab',
-  version: 1,
-  defaults: {
-    consented: false,
-    history: [],
-    saveHistory: true,
-    haptics: true
-  },
-  validate(value) {
-    return Boolean(value && typeof value === 'object' && Array.isArray(value.history));
-  }
+  namespace: 'pocket-works:facet-face-lab', version: 2,
+  defaults: { consented: false, history: [], haptics: true },
+  migrations: { 1: (data) => ({ consented: Boolean(data?.consented), history: [], haptics: data?.haptics !== false }) },
+  validate: (value) => Boolean(value && typeof value === 'object' && Array.isArray(value.history))
 });
 
-let objectUrl = null;
-let faceLandmarker = null;
+let online = navigator.onLine;
+let landmarker = null;
 let modelPromise = null;
-let currentLandmarks = null;
-let currentAssessment = null;
-let currentQuality = null;
-let currentFaceBox = null;
+let imageUrl = null;
+let landmarks = null;
 let cameraStream = null;
 let cameraFacing = 'user';
+let scans = [];
+let hashes = [];
+let combined = null;
+let finalized = false;
 let toastTimer = 0;
-let online = navigator.onLine;
 
 createWorkshopMode({
-  appName: APP_NAME,
-  version: APP_VERSION,
-  cachePrefix: 'facet-face-lab-',
-  storageNamespace: 'pocket-works:facet-face-lab',
-  onReset() {
-    store.reset();
-    resetPhoto();
-    applyConsent(false);
-    renderHistory();
-  }
+  appName: 'FACET', version: APP_VERSION, cachePrefix: 'facet-face-lab-', storageNamespace: 'pocket-works:facet-face-lab',
+  onReset: () => { store.reset(); resetAll(); setConsent(false); renderHistory(); }
+});
+watchConnectivity((value) => {
+  online = value;
+  document.documentElement.dataset.network = value ? 'online' : 'offline';
+  if (!landmarker) setModel(value ? 'idle' : 'error', value ? 'модель не загружена' : 'нужна сеть');
 });
 
-watchConnectivity((isOnline) => {
-  online = isOnline;
-  document.documentElement.dataset.network = online ? 'online' : 'offline';
-  if (!online && !faceLandmarker) setModelStatus('error', 'нужна сеть для первого запуска');
-  if (online && !faceLandmarker && elements.modelStatus.dataset.status === 'error') setModelStatus('idle', 'модель не загружена');
-});
-
-function haptic(pattern = 12) {
-  if (store.get('haptics', true) && navigator.vibrate) navigator.vibrate(pattern);
-}
-
-function showToast(message, duration = 3200) {
+function vibrate(pattern = 10) { if (store.get('haptics', true) && navigator.vibrate) navigator.vibrate(pattern); }
+function toast(message, time = 3600) {
   clearTimeout(toastTimer);
-  elements.toast.textContent = message;
-  elements.toast.classList.add('is-visible');
-  toastTimer = window.setTimeout(() => elements.toast.classList.remove('is-visible'), duration);
+  el.toast.textContent = message;
+  el.toast.classList.add('is-visible');
+  toastTimer = setTimeout(() => el.toast.classList.remove('is-visible'), time);
 }
-
-function setModelStatus(status, text) {
-  elements.modelStatus.dataset.status = status;
-  $('span', elements.modelStatus).textContent = text;
+function setModel(state, text) { el.model.dataset.status = state; $('span', el.model).textContent = text; }
+function openDialog(dialog) { dialog.showModal ? (!dialog.open && dialog.showModal()) : dialog.setAttribute('open', ''); }
+function closeDialog(dialog) { dialog.close && dialog.open ? dialog.close() : dialog.removeAttribute('open'); }
+function setConsent(value) {
+  el.consent.checked = value;
+  el.capture.classList.toggle('is-locked', !value);
+  el.cameraOpen.disabled = !value;
+  el.file.disabled = !value;
+  el.upload.setAttribute('aria-disabled', String(!value));
 }
-
-function setLoading(isLoading, label = 'Провести анализ') {
-  elements.analyzeButton.classList.toggle('is-loading', isLoading);
-  elements.analyzeButton.disabled = isLoading || !elements.sourceImage.src;
-  elements.analyzeLabel.textContent = isLoading ? label : 'Провести анализ';
-  elements.photoStage.dataset.state = isLoading ? 'scanning' : (currentLandmarks ? 'analyzed' : elements.sourceImage.src ? 'ready' : 'empty');
+function loading(value, label = 'Анализировать кадр') {
+  el.analyze.disabled = value || !el.image.src;
+  el.analyze.classList.toggle('is-loading', value);
+  el.analyzeLabel.textContent = label;
+  el.stage.dataset.state = value ? 'scanning' : el.image.src ? 'ready' : 'empty';
 }
-
-function applyConsent(consented) {
-  elements.consentCheck.checked = consented;
-  elements.capturePanel.classList.toggle('is-locked', !consented);
-  elements.cameraOpen.disabled = !consented;
-  elements.fileInput.disabled = !consented;
-  elements.uploadLabel.setAttribute('aria-disabled', String(!consented));
-}
-
-function safeDialogOpen(dialog) {
-  if (typeof dialog.showModal === 'function') {
-    if (!dialog.open) dialog.showModal();
-  } else {
-    dialog.setAttribute('open', '');
-  }
-}
-
-function safeDialogClose(dialog) {
-  if (typeof dialog.close === 'function' && dialog.open) dialog.close();
-  else dialog.removeAttribute('open');
-}
-
-function timeoutPromise(promise, milliseconds, message) {
+function timeout(promise, ms, message) {
   let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = window.setTimeout(() => reject(new Error(message)), milliseconds);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); })])
+    .finally(() => clearTimeout(timer));
 }
 
-async function importVisionModule() {
-  let lastError = null;
-  for (const url of MODULE_URLS) {
-    try {
-      const module = await timeoutPromise(import(url), 22000, 'Загрузка библиотеки превысила лимит времени');
-      if (module.FaceLandmarker && module.FilesetResolver) return module;
-      throw new Error('Модуль MediaPipe загружен без ожидаемых экспортов');
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError || new Error('Не удалось загрузить MediaPipe');
-}
-
-async function ensureModel() {
-  if (faceLandmarker) return faceLandmarker;
+async function getModel() {
+  if (landmarker) return landmarker;
   if (modelPromise) return modelPromise;
-  if (!online) throw new Error('Первый запуск модели требует подключения к интернету');
-
-  setModelStatus('loading', 'загрузка модели');
+  if (!online) throw new Error('Первый запуск требует интернет');
+  setModel('loading', 'загрузка модели');
   modelPromise = (async () => {
-    const { FaceLandmarker, FilesetResolver } = await importVisionModule();
-    const vision = await timeoutPromise(
-      FilesetResolver.forVisionTasks(WASM_ROOT),
-      26000,
-      'Не удалось подготовить вычислительное ядро'
-    );
-    faceLandmarker = await timeoutPromise(
-      FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: MODEL_URL,
-          delegate: 'CPU'
-        },
-        runningMode: 'IMAGE',
-        numFaces: 2,
-        minFaceDetectionConfidence: 0.65,
-        minFacePresenceConfidence: 0.65,
-        minTrackingConfidence: 0.65,
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: false
-      }),
-      42000,
-      'Загрузка модели лица превысила лимит времени'
-    );
-    setModelStatus('ready', 'модель готова');
-    return faceLandmarker;
-  })().catch((error) => {
-    faceLandmarker = null;
-    modelPromise = null;
-    setModelStatus('error', 'ошибка загрузки');
-    throw error;
-  });
+    let visionModule;
+    let lastError;
+    for (const url of MODULES) {
+      try {
+        const candidate = await timeout(import(url), 22000, 'Не удалось загрузить библиотеку');
+        if (candidate.FaceLandmarker && candidate.FilesetResolver) { visionModule = candidate; break; }
+      } catch (error) { lastError = error; }
+    }
+    if (!visionModule) throw lastError || new Error('MediaPipe недоступен');
+    const vision = await timeout(visionModule.FilesetResolver.forVisionTasks(WASM), 26000, 'Ошибка вычислительного ядра');
+    landmarker = await timeout(visionModule.FaceLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: MODEL, delegate: 'CPU' }, runningMode: 'IMAGE', numFaces: 2,
+      minFaceDetectionConfidence: .70, minFacePresenceConfidence: .70, minTrackingConfidence: .70,
+      outputFaceBlendshapes: true, outputFacialTransformationMatrixes: false
+    }), 42000, 'Модель загружается слишком долго');
+    setModel('ready', 'готова');
+    return landmarker;
+  })().catch((error) => { landmarker = null; modelPromise = null; setModel('error', 'ошибка'); throw error; });
   return modelPromise;
 }
 
-function clearObjectUrl() {
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = null;
-}
-
+function clearOverlay() { el.overlay.getContext('2d').clearRect(0, 0, el.overlay.width, el.overlay.height); }
 function resetPhoto() {
-  clearObjectUrl();
-  currentLandmarks = null;
-  currentAssessment = null;
-  currentQuality = null;
-  currentFaceBox = null;
-  elements.sourceImage.removeAttribute('src');
-  elements.sourceImage.hidden = true;
-  elements.emptyPhoto.hidden = false;
-  elements.replacePhoto.hidden = true;
-  elements.analyzeButton.disabled = true;
-  elements.photoStage.dataset.state = 'empty';
-  elements.qualityPreview.hidden = true;
-  elements.resultPanel.hidden = true;
-  elements.fileInput.value = '';
+  if (imageUrl) URL.revokeObjectURL(imageUrl);
+  imageUrl = null; landmarks = null;
+  el.image.removeAttribute('src'); el.image.hidden = true; el.empty.hidden = false; el.replace.hidden = true;
+  el.analyze.disabled = true; el.stage.dataset.state = 'empty'; el.quality.hidden = true; el.file.value = '';
   clearOverlay();
 }
-
-function drawImageToWorkCanvas(maxDimension = 1024) {
-  const image = elements.sourceImage;
-  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
-  elements.workCanvas.width = width;
-  elements.workCanvas.height = height;
-  const context = elements.workCanvas.getContext('2d', { willReadFrequently: true });
-  context.clearRect(0, 0, width, height);
-  context.drawImage(image, 0, 0, width, height);
+function resetAll() {
+  scans = []; hashes = []; combined = null; finalized = false; el.result.hidden = true; resetPhoto(); renderProgress();
+}
+function renderProgress() {
+  el.counter.textContent = `${scans.length}/${REQUIRED}`;
+  $$('.scan-dot', el.progress).forEach((dot, index) => {
+    dot.classList.toggle('is-done', index < scans.length);
+    dot.classList.toggle('is-current', index === scans.length && scans.length < REQUIRED);
+  });
+}
+function drawToCanvas(max = 960) {
+  const scale = Math.min(1, max / Math.max(el.image.naturalWidth, el.image.naturalHeight));
+  el.work.width = Math.max(1, Math.round(el.image.naturalWidth * scale));
+  el.work.height = Math.max(1, Math.round(el.image.naturalHeight * scale));
+  const context = el.work.getContext('2d', { willReadFrequently: true });
+  context.clearRect(0, 0, el.work.width, el.work.height);
+  context.drawImage(el.image, 0, 0, el.work.width, el.work.height);
   return context;
 }
-
-function basicPhotoChecks() {
-  const context = drawImageToWorkCanvas(720);
-  const { width, height } = elements.workCanvas;
-  const imageData = context.getImageData(0, 0, width, height);
-  const data = imageData.data;
-  const step = Math.max(4, Math.floor(data.length / 180000) * 4);
-  let count = 0;
-  let sum = 0;
-  let sumSq = 0;
-  let clipping = 0;
-  for (let index = 0; index < data.length; index += step) {
-    const gray = data[index] * .2126 + data[index + 1] * .7152 + data[index + 2] * .0722;
-    count += 1;
-    sum += gray;
-    sumSq += gray * gray;
-    if (gray < 10 || gray > 245) clipping += 1;
-  }
-  const mean = sum / Math.max(1, count);
-  const contrast = Math.sqrt(Math.max(0, sumSq / Math.max(1, count) - mean * mean));
-  const resolution = Math.min(elements.sourceImage.naturalWidth, elements.sourceImage.naturalHeight);
-  const items = [
-    { label: 'Разрешение', value: `${elements.sourceImage.naturalWidth}×${elements.sourceImage.naturalHeight}`, state: resolution >= 720 ? 'good' : resolution >= 480 ? 'warn' : 'bad' },
-    { label: 'Экспозиция', value: mean > 55 && mean < 210 ? 'норма' : 'проверь свет', state: mean > 55 && mean < 210 ? 'good' : 'warn' },
-    { label: 'Контраст', value: contrast > 28 ? 'достаточный' : 'низкий', state: contrast > 28 ? 'good' : 'warn' },
-    { label: 'Пересвет', value: clipping / Math.max(1, count) < .12 ? 'минимальный' : 'заметный', state: clipping / Math.max(1, count) < .12 ? 'good' : 'warn' }
-  ];
-  renderQualityGrid(items);
-  elements.qualityLiveLabel.textContent = 'готово к геометрии';
-  elements.qualityPreview.hidden = false;
+function mirrorCanvas(source) {
+  const canvas = document.createElement('canvas'); canvas.width = source.width; canvas.height = source.height;
+  const context = canvas.getContext('2d'); context.translate(canvas.width, 0); context.scale(-1, 1); context.drawImage(source, 0, 0);
+  return canvas;
 }
-
-function renderQualityGrid(items) {
-  elements.qualityGrid.replaceChildren(...items.map((item) => {
-    const node = document.createElement('div');
-    node.className = 'quality-item';
-    node.dataset.state = item.state;
-    const label = document.createElement('span');
-    label.textContent = item.label;
-    const value = document.createElement('strong');
-    value.textContent = item.value;
-    node.append(label, value);
-    return node;
-  }));
+function imageHash(source) {
+  const canvas = document.createElement('canvas'); canvas.width = 9; canvas.height = 8;
+  const context = canvas.getContext('2d', { willReadFrequently: true }); context.drawImage(source, 0, 0, 9, 8);
+  const data = context.getImageData(0, 0, 9, 8).data;
+  const gray = (i) => data[i] * .2126 + data[i + 1] * .7152 + data[i + 2] * .0722;
+  let result = '';
+  for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
+    const left = (y * 9 + x) * 4; result += gray(left) < gray(left + 4) ? '1' : '0';
+  }
+  return result;
 }
-
-async function loadBlob(blob) {
-  if (!blob) return;
-  if (blob.size > MAX_FILE_BYTES) {
-    showToast('Файл слишком большой. Максимум — 20 МБ.');
-    return;
-  }
-  if (blob.type && !blob.type.startsWith('image/')) {
-    showToast('Нужен файл изображения.');
-    return;
-  }
-
-  resetPhoto();
-  objectUrl = URL.createObjectURL(blob);
-  elements.sourceImage.src = objectUrl;
-
+function hashDistance(a, b) { let total = Math.abs(a.length - b.length); for (let i = 0; i < Math.min(a.length, b.length); i += 1) total += a[i] !== b[i]; return total; }
+function chip(label, value, good) {
+  const node = document.createElement('div'); node.className = 'quality-chip'; node.dataset.state = good ? 'good' : 'warn';
+  const name = document.createElement('span'); name.textContent = label;
+  const score = document.createElement('strong'); score.textContent = value;
+  node.append(name, score); return node;
+}
+function basicQuality() {
+  const context = drawToCanvas(720); const data = context.getImageData(0, 0, el.work.width, el.work.height).data;
+  const step = Math.max(4, Math.floor(data.length / 150000) * 4); let n = 0; let sum = 0; let squares = 0;
+  for (let i = 0; i < data.length; i += step) { const g = data[i] * .2126 + data[i + 1] * .7152 + data[i + 2] * .0722; n += 1; sum += g; squares += g * g; }
+  const light = sum / Math.max(1, n); const contrast = Math.sqrt(Math.max(0, squares / Math.max(1, n) - light * light));
+  const resolution = Math.min(el.image.naturalWidth, el.image.naturalHeight);
+  el.quality.hidden = false;
+  el.quality.replaceChildren(
+    chip('Размер', resolution >= 720 ? 'хороший' : resolution >= 480 ? 'допустимый' : 'низкий', resolution >= 480),
+    chip('Свет', light > 48 && light < 215 ? 'норма' : 'проверь', light > 42 && light < 225),
+    chip('Контраст', contrast > 24 ? 'норма' : 'низкий', contrast > 20)
+  );
+}
+async function loadPhoto(file) {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) return toast('Максимальный размер фото — 20 МБ.');
+  if (file.type && !file.type.startsWith('image/')) return toast('Нужен файл изображения.');
+  resetPhoto(); imageUrl = URL.createObjectURL(file); el.image.src = imageUrl;
   try {
-    const decodeImage = typeof elements.sourceImage.decode === 'function'
-      ? elements.sourceImage.decode()
-      : new Promise((resolve, reject) => {
-          elements.sourceImage.addEventListener('load', resolve, { once: true });
-          elements.sourceImage.addEventListener('error', reject, { once: true });
-        });
-    await timeoutPromise(decodeImage, 15000, 'Браузер не смог декодировать изображение');
-  } catch (error) {
-    resetPhoto();
-    showToast('Формат изображения не поддерживается. Экспортируй фото в JPEG или PNG.');
-    return;
-  }
-
-  if (Math.min(elements.sourceImage.naturalWidth, elements.sourceImage.naturalHeight) < 360) {
-    showToast('Слишком маленькое изображение: желательно хотя бы 720 пикселей по короткой стороне.');
-  }
-  currentLandmarks = null;
-  currentAssessment = null;
-  currentQuality = null;
-  currentFaceBox = null;
-  elements.emptyPhoto.hidden = true;
-  elements.sourceImage.hidden = false;
-  elements.replacePhoto.hidden = false;
-  elements.analyzeButton.disabled = false;
-  elements.photoStage.dataset.state = 'ready';
-  elements.resultPanel.hidden = true;
-  basicPhotoChecks();
-  requestAnimationFrame(drawOverlay);
-  haptic(10);
-}
-
-function getContainRect() {
-  const stageRect = elements.photoStage.getBoundingClientRect();
-  const image = elements.sourceImage;
-  if (!image.naturalWidth || !image.naturalHeight) return null;
-  const scale = Math.min(stageRect.width / image.naturalWidth, stageRect.height / image.naturalHeight);
-  const width = image.naturalWidth * scale;
-  const height = image.naturalHeight * scale;
-  return {
-    x: (stageRect.width - width) / 2,
-    y: (stageRect.height - height) / 2,
-    width,
-    height,
-    stageWidth: stageRect.width,
-    stageHeight: stageRect.height
-  };
-}
-
-function clearOverlay() {
-  const canvas = elements.overlayCanvas;
-  const context = canvas.getContext('2d');
-  context.clearRect(0, 0, canvas.width, canvas.height);
+    if (el.image.decode) await el.image.decode();
+    else await new Promise((resolve, reject) => { el.image.onload = resolve; el.image.onerror = reject; });
+    el.image.hidden = false; el.empty.hidden = true; el.replace.hidden = false; el.stage.dataset.state = 'ready'; el.analyze.disabled = false;
+    basicQuality(); vibrate();
+  } catch { resetPhoto(); toast('Не удалось прочитать фото. Попробуй JPEG или PNG.'); }
 }
 
 function drawOverlay() {
-  const canvas = elements.overlayCanvas;
-  const rect = getContainRect();
-  if (!rect) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.max(1, Math.round(rect.stageWidth * dpr));
-  canvas.height = Math.max(1, Math.round(rect.stageHeight * dpr));
-  canvas.style.width = `${rect.stageWidth}px`;
-  canvas.style.height = `${rect.stageHeight}px`;
-  const context = canvas.getContext('2d');
-  context.setTransform(dpr, 0, 0, dpr, 0, 0);
-  context.clearRect(0, 0, rect.stageWidth, rect.stageHeight);
-  if (!currentLandmarks) return;
-
-  const point = (index) => ({
-    x: rect.x + currentLandmarks[index].x * rect.width,
-    y: rect.y + currentLandmarks[index].y * rect.height
-  });
-  const paths = [
-    [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109, 10],
-    [33, 160, 158, 133, 153, 144, 33],
-    [263, 387, 385, 362, 380, 373, 263],
-    [61, 40, 37, 0, 267, 270, 291, 321, 314, 17, 84, 91, 61]
-  ];
-
-  context.lineWidth = 1.15;
-  context.strokeStyle = 'rgba(226,173,60,.92)';
-  context.fillStyle = 'rgba(36,90,134,.95)';
-  for (const path of paths) {
-    context.beginPath();
-    path.forEach((index, position) => {
-      const p = point(index);
-      if (position === 0) context.moveTo(p.x, p.y);
-      else context.lineTo(p.x, p.y);
-    });
-    context.stroke();
+  clearOverlay(); if (!landmarks || el.image.hidden) return;
+  const rect = el.stage.getBoundingClientRect(); if (!rect.width) return;
+  const dpr = Math.min(2, devicePixelRatio || 1); el.overlay.width = rect.width * dpr; el.overlay.height = rect.height * dpr;
+  const context = el.overlay.getContext('2d'); context.scale(dpr, dpr);
+  const imageRatio = el.image.naturalWidth / el.image.naturalHeight; const stageRatio = rect.width / rect.height;
+  const shownHeight = imageRatio > stageRatio ? rect.height : rect.width / imageRatio;
+  const shownWidth = imageRatio > stageRatio ? rect.height * imageRatio : rect.width;
+  const offsetX = (rect.width - shownWidth) / 2; const offsetY = (rect.height - shownHeight) / 2;
+  context.fillStyle = 'rgba(32,79,116,.82)';
+  for (const index of [10,152,33,133,362,263,98,327,61,291,234,454]) {
+    const point = landmarks[index]; context.beginPath(); context.arc(offsetX + point.x * shownWidth, offsetY + point.y * shownHeight, 2.2, 0, Math.PI * 2); context.fill();
   }
-
-  const keyPoints = [10, 152, 234, 454, 33, 133, 362, 263, 1, 98, 327, 61, 291, 70, 300];
-  for (const index of keyPoints) {
-    const p = point(index);
-    context.beginPath();
-    context.arc(p.x, p.y, 2.25, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  const top = point(10);
-  const chin = point(152);
-  context.setLineDash([7, 6]);
-  context.strokeStyle = 'rgba(36,90,134,.72)';
-  context.beginPath();
-  context.moveTo(top.x, top.y - 12);
-  context.lineTo(chin.x, chin.y + 12);
-  context.stroke();
-  context.setLineDash([]);
 }
-
 function drawCameraGuide() {
-  const canvas = elements.cameraGuide;
-  const rect = canvas.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  const context = canvas.getContext('2d');
-  context.scale(dpr, dpr);
-  context.clearRect(0, 0, rect.width, rect.height);
-  const cx = rect.width / 2;
-  const cy = rect.height * .45;
-  const rx = Math.min(rect.width * .28, rect.height * .22);
-  const ry = rx * 1.35;
-  context.strokeStyle = 'rgba(255,255,255,.8)';
-  context.lineWidth = 1.5;
-  context.setLineDash([10, 8]);
-  context.beginPath();
-  context.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  context.stroke();
-  context.setLineDash([]);
-  context.strokeStyle = 'rgba(226,173,60,.9)';
-  context.beginPath();
-  context.moveTo(cx - rx * 1.25, cy - ry * .16);
-  context.lineTo(cx + rx * 1.25, cy - ry * .16);
-  context.stroke();
-  context.beginPath();
-  context.moveTo(cx, cy - ry * 1.1);
-  context.lineTo(cx, cy + ry * 1.1);
-  context.stroke();
+  const rect = el.cameraGuide.getBoundingClientRect(); if (!rect.width) return;
+  const dpr = Math.min(2, devicePixelRatio || 1); el.cameraGuide.width = rect.width * dpr; el.cameraGuide.height = rect.height * dpr;
+  const context = el.cameraGuide.getContext('2d'); context.scale(dpr, dpr); context.clearRect(0, 0, rect.width, rect.height);
+  const cx = rect.width / 2; const cy = rect.height * .45; const rx = Math.min(rect.width * .28, rect.height * .22); const ry = rx * 1.35;
+  context.strokeStyle = 'rgba(255,255,255,.86)'; context.lineWidth = 1.5; context.setLineDash([9,7]); context.beginPath(); context.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); context.stroke();
+  context.setLineDash([]); context.strokeStyle = 'rgba(235,185,72,.92)'; context.beginPath(); context.moveTo(cx-rx*1.2, cy-ry*.16); context.lineTo(cx+rx*1.2, cy-ry*.16); context.stroke();
 }
-
 async function startCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('Эта версия браузера не даёт приложению доступ к камере. Выбери фото из галереи.');
-    return;
-  }
-  safeDialogOpen(elements.cameraDialog);
-  elements.cameraCapture.disabled = true;
-  elements.cameraMessage.textContent = 'Запрашиваю доступ к камере…';
-  stopCamera();
+  if (!navigator.mediaDevices?.getUserMedia) return toast('Камера недоступна. Выбери фото из галереи.');
+  openDialog(el.cameraDialog); stopCamera(); el.shutter.disabled = true; el.cameraMessage.textContent = 'Запрашиваю доступ…';
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: cameraFacing },
-        width: { ideal: 1280 },
-        height: { ideal: 1600 }
-      }
-    });
-    elements.cameraVideo.srcObject = cameraStream;
-    await elements.cameraVideo.play();
-    elements.cameraVideo.style.transform = cameraFacing === 'user' ? 'scaleX(-1)' : 'none';
-    elements.cameraCapture.disabled = false;
-    elements.cameraMessage.textContent = 'Смотри прямо в объектив · мягкий свет · без фильтров';
-    requestAnimationFrame(drawCameraGuide);
-  } catch (error) {
-    elements.cameraMessage.textContent = 'Камера недоступна. Проверь разрешение в настройках браузера.';
-    elements.cameraCapture.disabled = true;
-  }
+    cameraStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1280 }, height: { ideal: 1600 } } });
+    el.video.srcObject = cameraStream; await el.video.play(); el.video.style.transform = cameraFacing === 'user' ? 'scaleX(-1)' : 'none';
+    el.shutter.disabled = false; el.cameraMessage.textContent = 'Прямо · нейтрально · мягкий свет'; requestAnimationFrame(drawCameraGuide);
+  } catch { el.cameraMessage.textContent = 'Нет доступа к камере'; }
+}
+function stopCamera() { if (cameraStream) for (const track of cameraStream.getTracks()) track.stop(); cameraStream = null; el.video.srcObject = null; }
+async function takePhoto() {
+  if (!cameraStream || !el.video.videoWidth) return;
+  const scale = Math.min(1, 1440 / el.video.videoWidth); el.work.width = Math.round(el.video.videoWidth * scale); el.work.height = Math.round(el.video.videoHeight * scale);
+  const context = el.work.getContext('2d'); if (cameraFacing === 'user') { context.translate(el.work.width, 0); context.scale(-1, 1); }
+  context.drawImage(el.video, 0, 0, el.work.width, el.work.height);
+  const blob = await new Promise((resolve) => el.work.toBlob(resolve, 'image/jpeg', .92)); stopCamera(); closeDialog(el.cameraDialog); if (blob) loadPhoto(blob);
 }
 
-function stopCamera() {
-  if (cameraStream) {
-    for (const track of cameraStream.getTracks()) track.stop();
-  }
-  cameraStream = null;
-  elements.cameraVideo.srcObject = null;
-}
-
-async function captureCameraFrame() {
-  if (!cameraStream || !elements.cameraVideo.videoWidth) return;
-  const video = elements.cameraVideo;
-  const maxWidth = 1440;
-  const scale = Math.min(1, maxWidth / video.videoWidth);
-  const width = Math.round(video.videoWidth * scale);
-  const height = Math.round(video.videoHeight * scale);
-  const canvas = elements.workCanvas;
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-  if (cameraFacing === 'user') {
-    context.translate(width, 0);
-    context.scale(-1, 1);
-  }
-  context.drawImage(video, 0, 0, width, height);
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .92));
-  stopCamera();
-  safeDialogClose(elements.cameraDialog);
-  if (blob) await loadBlob(blob);
-}
-
-function resultError(message, details = '') {
-  elements.qualityLiveLabel.textContent = 'кадр отклонён';
-  if (details) showToast(`${message} ${details}`, 4600);
-  else showToast(message, 4600);
-  haptic([20, 40, 20]);
-}
-
-function qualityGridAfterAnalysis(quality) {
-  const state = (value) => value >= 72 ? 'good' : value >= 48 ? 'warn' : 'bad';
-  renderQualityGrid([
-    { label: 'Резкость', value: Math.round(quality.metrics.sharpness), state: state(quality.metrics.sharpness) },
-    { label: 'Освещение', value: Math.round((quality.metrics.exposure + quality.metrics.clipping) / 2), state: state((quality.metrics.exposure + quality.metrics.clipping) / 2) },
-    { label: 'Фронтальность', value: Math.round(quality.metrics.frontal), state: state(quality.metrics.frontal) },
-    { label: 'Надёжность', value: Math.round(quality.reliability), state: state(quality.reliability) }
-  ]);
-  elements.qualityLiveLabel.textContent = quality.reliability >= 76 ? 'надёжный кадр' : quality.reliability >= 58 ? 'допустимый кадр' : 'кадр отклонён';
-}
-
-async function analyzeCurrentPhoto() {
-  if (!elements.sourceImage.src) return;
-  setLoading(true, 'Подготовка модели…');
-  elements.resultPanel.hidden = true;
-  currentLandmarks = null;
-  clearOverlay();
-
-  try {
-    const model = await ensureModel();
-    setLoading(true, 'Поиск ориентиров…');
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    const result = model.detect(elements.sourceImage);
-    const faces = result.faceLandmarks || [];
-    if (faces.length === 0) {
-      resultError('Лицо не найдено.', 'Убери фильтры, увеличь лицо в кадре и попробуй снова.');
-      return;
-    }
-    if (faces.length > 1) {
-      resultError('В кадре найдено несколько лиц.', 'FACET анализирует только одного человека за раз.');
-      return;
-    }
-
-    currentLandmarks = faces[0];
-    currentFaceBox = boundingBoxFromLandmarks(currentLandmarks);
-    const geometry = computeGeometryProfile(currentLandmarks);
-    const categories = result.faceBlendshapes?.[0]?.categories || [];
-    const shapes = blendshapeMap(categories);
-    const context = drawImageToWorkCanvas(960);
-    const imageData = context.getImageData(0, 0, elements.workCanvas.width, elements.workCanvas.height);
-    currentQuality = computeImageQuality(imageData, currentFaceBox, geometry, shapes);
-    qualityGridAfterAnalysis(currentQuality);
-    drawOverlay();
-
-    const gate = qualityGate(currentQuality);
-    if (!gate.pass) {
-      resultError(gate.reason, currentQuality.issues[0]?.fix || 'Сделай новый снимок.');
-      return;
-    }
-
-    currentAssessment = createAssessment(geometry, currentQuality);
-    renderAssessment(currentAssessment);
-    saveAssessment(currentAssessment);
-    elements.photoStage.dataset.state = 'analyzed';
-    elements.resultPanel.hidden = false;
-    haptic([12, 30, 18]);
-    window.setTimeout(() => elements.resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
-  } catch (error) {
-    console.error('FACET analysis failed', error);
-    resultError('Анализ не выполнен.', error?.message || 'Неизвестная ошибка модели.');
-  } finally {
-    setLoading(false);
-  }
-}
-
-function metricRow(label, value) {
-  const row = document.createElement('div');
-  row.className = 'metric-row';
-  const name = document.createElement('span');
-  name.textContent = label;
-  const track = document.createElement('div');
-  track.className = 'metric-track';
-  const fill = document.createElement('div');
-  fill.className = 'metric-fill';
-  track.append(fill);
-  const score = document.createElement('strong');
-  score.textContent = String(value);
-  row.append(name, track, score);
-  requestAnimationFrame(() => { fill.style.width = `${value}%`; });
-  return row;
-}
-
-function renderFeatureList(target, items) {
-  target.replaceChildren(...items.map((item) => {
-    const li = document.createElement('li');
-    const text = document.createElement('span');
-    text.textContent = item.label;
-    const score = document.createElement('strong');
-    score.textContent = `${item.score}/100`;
-    li.append(text, score);
-    return li;
-  }));
-}
-
-function renderAssessment(assessment) {
-  elements.scoreValue.textContent = String(assessment.pointEstimate);
-  elements.scoreInterval.textContent = `${assessment.interval[0]}–${assessment.interval[1]}`;
-  elements.reliabilityStamp.dataset.level = assessment.reliability >= 82 ? 'high' : assessment.reliability >= 66 ? 'medium' : 'low';
-  $('strong', elements.reliabilityStamp).textContent = `${assessment.reliability}/100 · ${assessment.reliabilityLabel}`;
-  elements.metricList.replaceChildren(
-    metricRow('Пропорциональная регулярность', assessment.components.proportionalRegularity),
-    metricRow('Координация признаков', assessment.components.featureCoordination),
-    metricRow('Билатеральный баланс', assessment.components.bilateralBalance)
+function fail(message, detail = '') { toast(detail ? `${message}. ${detail}` : message, 4300); vibrate([18,35,18]); }
+function renderQuality(quality) {
+  el.quality.hidden = false;
+  el.quality.replaceChildren(
+    chip('Резкость', String(Math.round(quality.metrics.sharpness)), quality.metrics.sharpness >= 72),
+    chip('Фронтальность', String(Math.round(quality.metrics.frontal)), quality.metrics.frontal >= 72),
+    chip('Надёжность', String(Math.round(quality.reliability)), quality.reliability >= 68)
   );
-  renderFeatureList(elements.strongList, assessment.strongest);
-  renderFeatureList(elements.distinctiveList, assessment.mostDistinctive);
-  elements.presentationScore.textContent = `${assessment.presentationScore}/100`;
-  elements.qualityCaption.textContent = assessment.reliability >= 82
-    ? 'Кадр подходит для повторяемого измерения.'
-    : 'Кадр допустим, но повтор с более ровным светом может изменить результат.';
-
-  if (assessment.issues.length === 0) {
-    const row = document.createElement('div');
-    row.className = 'issue-row';
-    row.dataset.severity = 'ok';
-    row.innerHTML = '<i></i><div><strong>Критических проблем не найдено</strong><span>Ракурс, свет и резкость прошли автоматическую проверку.</span></div>';
-    elements.issueList.replaceChildren(row);
-  } else {
-    elements.issueList.replaceChildren(...assessment.issues.slice(0, 4).map((issue) => {
-      const row = document.createElement('div');
-      row.className = 'issue-row';
-      row.dataset.severity = issue.severity;
-      const dot = document.createElement('i');
-      const copy = document.createElement('div');
-      const title = document.createElement('strong');
-      title.textContent = issue.title;
-      const fix = document.createElement('span');
-      fix.textContent = issue.fix;
-      copy.append(title, fix);
-      row.append(dot, copy);
-      return row;
-    }));
-  }
+}
+async function analyze() {
+  if (!el.image.src || finalized) return;
+  loading(true, 'Подготовка…'); landmarks = null; clearOverlay();
+  try {
+    const model = await getModel(); const context = drawToCanvas(); const hash = imageHash(el.work);
+    if (hashes.some((known) => hashDistance(hash, known) < 7)) return fail('Этот кадр почти совпадает с предыдущим', 'Пересними фото.');
+    loading(true, 'Проверка лица…'); await new Promise(requestAnimationFrame);
+    const result = model.detect(el.work); const faces = result.faceLandmarks || [];
+    if (!faces.length) return fail('Лицо не найдено', 'Увеличь лицо и убери фильтры.');
+    if (faces.length > 1) return fail('В кадре несколько лиц');
+    landmarks = faces[0]; const geometry = computeGeometryProfile(landmarks); const faceBox = boundingBoxFromLandmarks(landmarks);
+    loading(true, 'Проверка стабильности…');
+    const mirrored = model.detect(mirrorCanvas(el.work)); let mirrorDelta = .42;
+    if (mirrored.faceLandmarks?.length === 1) mirrorDelta = Math.abs(geometry.rating - computeGeometryProfile(mirrored.faceLandmarks[0]).rating);
+    const quality = computeImageQuality(
+      context.getImageData(0, 0, el.work.width, el.work.height), faceBox, geometry,
+      blendshapeMap(result.faceBlendshapes?.[0]?.categories || []), mirrorDelta
+    );
+    renderQuality(quality); drawOverlay(); const gate = qualityGate(quality);
+    if (!gate.pass) return fail(gate.reason, quality.issues[0]?.fix || 'Пересними кадр.');
+    scans.push(createScanAssessment(geometry, quality)); hashes.push(hash); combined = combineAssessments(scans);
+    renderProgress(); renderResult(); el.result.hidden = false; el.stage.dataset.state = 'analyzed';
+    if (scans.length >= REQUIRED) finish(); else vibrate([10,24,14]);
+    setTimeout(() => el.result.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  } catch (error) { console.error('FACET analysis failed', error); fail('Анализ не выполнен', error?.message || 'Ошибка модели.'); }
+  finally { loading(false); }
 }
 
-function saveAssessment(assessment) {
-  if (!store.get('saveHistory', true)) return;
+function metric(label, value) {
+  const row = document.createElement('div'); row.className = 'metric-row';
+  const name = document.createElement('span'); name.textContent = label;
+  const track = document.createElement('div'); track.className = 'metric-track'; const fill = document.createElement('div'); fill.className = 'metric-fill'; track.append(fill);
+  const score = document.createElement('strong'); score.textContent = value; row.append(name, track, score);
+  requestAnimationFrame(() => { fill.style.width = `${Math.min(100, value)}%`; }); return row;
+}
+function renderResult() {
+  const done = finalized || combined.scanCount >= REQUIRED;
+  el.resultMode.textContent = done ? 'ИТОГ · 3 КАДРА' : `ПРЕДВАРИТЕЛЬНО · ${combined.scanCount}/${REQUIRED}`;
+  el.score.textContent = combined.rating.toFixed(1); el.range.textContent = `${combined.interval[0].toFixed(1)}–${combined.interval[1].toFixed(1)}`;
+  el.label.textContent = ratingLabel(combined.rating); el.reliability.textContent = `${combined.reliability}%`;
+  el.consistency.textContent = done ? `${combined.consistency}%` : '—'; el.typicality.textContent = `${combined.typicalityPercentile}%`;
+  el.metrics.replaceChildren(metric('Типичность пропорций', combined.typicalityPercentile), metric('Координация черт', combined.coordinationScore), metric('Левый / правый баланс', combined.symmetryScore));
+  const unique = []; const seen = new Set();
+  for (const issue of combined.issues || []) if (!seen.has(issue.key)) { seen.add(issue.key); unique.push(issue); }
+  if (!unique.length) { const row = document.createElement('div'); row.className = 'issue-row is-ok'; row.textContent = 'Кадр прошёл проверку.'; el.issues.replaceChildren(row); }
+  else el.issues.replaceChildren(...unique.slice(0,2).map((issue) => { const row = document.createElement('div'); row.className = 'issue-row'; row.innerHTML = `<strong>${issue.title}</strong><span>${issue.fix}</span>`; return row; }));
+  el.add.hidden = done; el.share.hidden = !done; el.reset.textContent = done ? 'Новый анализ' : 'Начать заново';
+}
+function finish() {
+  if (!combined || finalized || scans.length < REQUIRED) return;
+  finalized = true; combined = combineAssessments(scans); saveResult(); renderResult(); vibrate([12,28,18]);
+}
+function saveResult() {
   const history = store.get('history', []);
-  history.unshift({
-    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    createdAt: new Date().toISOString(),
-    score: assessment.pointEstimate,
-    interval: assessment.interval,
-    reliability: assessment.reliability,
-    components: assessment.components
-  });
-  store.set('history', history.slice(0, MAX_HISTORY));
-  renderHistory();
+  history.unshift({ id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, createdAt: new Date().toISOString(), rating: +combined.rating.toFixed(2), interval: combined.interval.map((v) => +v.toFixed(2)), scanCount: combined.scanCount, reliability: combined.reliability, consistency: combined.consistency });
+  store.set('history', history.slice(0, 24)); renderHistory();
 }
-
-function formatDate(iso) {
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-}
-
+function dateLabel(iso) { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); }
 function renderHistory() {
-  const history = store.get('history', []);
-  elements.historyClear.disabled = history.length === 0;
-  if (history.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'history-empty';
-    empty.textContent = 'Измерений пока нет.';
-    elements.historyList.replaceChildren(empty);
-    return;
-  }
-  elements.historyList.replaceChildren(...history.map((entry) => {
-    const item = document.createElement('article');
-    item.className = 'history-item';
-    const score = document.createElement('div');
-    score.className = 'history-score';
-    score.textContent = String(entry.score);
-    const meta = document.createElement('div');
-    meta.className = 'history-meta';
-    const title = document.createElement('strong');
-    title.textContent = `Надёжность ${entry.reliability}/100`;
-    const date = document.createElement('span');
-    date.textContent = formatDate(entry.createdAt);
-    meta.append(title, date);
-    const range = document.createElement('div');
-    range.className = 'history-range';
-    range.textContent = `${entry.interval[0]}–${entry.interval[1]}`;
-    item.append(score, meta, range);
+  const history = store.get('history', []); el.historyClear.disabled = !history.length;
+  if (!history.length) { const empty = document.createElement('div'); empty.className = 'history-empty'; empty.textContent = 'История пуста.'; el.historyList.replaceChildren(empty); return; }
+  el.historyList.replaceChildren(...history.map((entry) => {
+    const item = document.createElement('article'); item.className = 'history-item';
+    item.innerHTML = `<div class="history-score">${Number(entry.rating).toFixed(1)}</div><div class="history-meta"><strong>3 кадра</strong><span>${dateLabel(entry.createdAt)}</span></div><div class="history-range">${entry.interval[0].toFixed(1)}–${entry.interval[1].toFixed(1)}</div>`;
     return item;
   }));
 }
-
-async function shareAssessment() {
-  if (!currentAssessment) return;
-  const text = `FACET: структурный индекс ${currentAssessment.pointEstimate}/100, диапазон ${currentAssessment.interval[0]}–${currentAssessment.interval[1]}, надёжность кадра ${currentAssessment.reliability}/100. Это не процентиль и не объективный вердикт.`;
-  try {
-    if (navigator.share) await navigator.share({ title: 'Результат FACET', text });
-    else {
-      await navigator.clipboard.writeText(text);
-      showToast('Результат скопирован.');
-    }
-  } catch (error) {
-    if (error?.name !== 'AbortError') showToast('Не удалось поделиться результатом.');
-  }
+async function share() {
+  if (!combined || !finalized) return;
+  const text = `FACET: ${combined.rating.toFixed(1)}/5, диапазон ${combined.interval[0].toFixed(1)}–${combined.interval[1].toFixed(1)}, 3 кадра.`;
+  try { if (navigator.share) await navigator.share({ title: 'FACET', text }); else { await navigator.clipboard.writeText(text); toast('Результат скопирован.'); } }
+  catch (error) { if (error?.name !== 'AbortError') toast('Не удалось поделиться.'); }
 }
 
-function openMethod() { safeDialogOpen(elements.methodDialog); }
-function openHistory() { renderHistory(); safeDialogOpen(elements.historyDialog); }
+el.consent.addEventListener('change', () => { store.set('consented', el.consent.checked); setConsent(el.consent.checked); });
+el.file.addEventListener('change', () => loadPhoto(el.file.files?.[0]));
+el.cameraOpen.addEventListener('click', startCamera);
+el.cameraClose.addEventListener('click', () => { stopCamera(); closeDialog(el.cameraDialog); });
+el.shutter.addEventListener('click', takePhoto);
+el.cameraFlip.addEventListener('click', async () => { cameraFacing = cameraFacing === 'user' ? 'environment' : 'user'; await startCamera(); });
+el.cameraDialog.addEventListener('close', stopCamera); el.cameraDialog.addEventListener('cancel', stopCamera);
+el.replace.addEventListener('click', () => el.file.click()); el.analyze.addEventListener('click', analyze);
+el.add.addEventListener('click', () => { resetPhoto(); el.result.hidden = true; el.capture.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+el.reset.addEventListener('click', () => { resetAll(); el.capture.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+el.share.addEventListener('click', share); el.method.addEventListener('click', () => openDialog(el.methodDialog));
+el.history.addEventListener('click', () => { renderHistory(); openDialog(el.historyDialog); });
+el.historyClear.addEventListener('click', () => { if (store.get('history', []).length && confirm('Удалить историю?')) { store.set('history', []); renderHistory(); } });
+$$('[data-dialog-close]').forEach((button) => button.addEventListener('click', () => closeDialog(button.closest('dialog'))));
+for (const dialog of [el.methodDialog, el.historyDialog]) dialog.addEventListener('click', (event) => { if (event.target === dialog) closeDialog(dialog); });
+window.addEventListener('resize', () => { drawOverlay(); if (el.cameraDialog.open) drawCameraGuide(); });
+if ('ResizeObserver' in window) new ResizeObserver(drawOverlay).observe(el.stage);
+document.addEventListener('visibilitychange', () => { if (document.hidden && el.cameraDialog.open) { stopCamera(); closeDialog(el.cameraDialog); } });
+window.addEventListener('appdatareset', () => { store.reset(); resetAll(); setConsent(false); renderHistory(); });
 
-elements.consentCheck.addEventListener('change', () => {
-  const consented = elements.consentCheck.checked;
-  store.set('consented', consented);
-  applyConsent(consented);
-  if (consented) haptic(10);
-});
-
-elements.fileInput.addEventListener('change', async () => {
-  const file = elements.fileInput.files?.[0];
-  await loadBlob(file);
-});
-
-elements.cameraOpen.addEventListener('click', startCamera);
-elements.cameraClose.addEventListener('click', () => { stopCamera(); safeDialogClose(elements.cameraDialog); });
-elements.cameraCapture.addEventListener('click', captureCameraFrame);
-elements.cameraFlip.addEventListener('click', async () => {
-  cameraFacing = cameraFacing === 'user' ? 'environment' : 'user';
-  await startCamera();
-});
-elements.cameraDialog.addEventListener('close', stopCamera);
-elements.cameraDialog.addEventListener('cancel', stopCamera);
-
-elements.replacePhoto.addEventListener('click', () => elements.fileInput.click());
-elements.reanalyzeButton.addEventListener('click', () => {
-  resetPhoto();
-  elements.capturePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
-elements.analyzeButton.addEventListener('click', analyzeCurrentPhoto);
-elements.shareResult.addEventListener('click', shareAssessment);
-elements.methodOpen.addEventListener('click', openMethod);
-elements.methodFromResult.addEventListener('click', openMethod);
-elements.historyOpen.addEventListener('click', openHistory);
-$$('[data-dialog-close]').forEach((button) => button.addEventListener('click', () => safeDialogClose(button.closest('dialog'))));
-
-elements.historyClear.addEventListener('click', () => {
-  if (!store.get('history', []).length) return;
-  if (!window.confirm('Удалить всю локальную историю измерений?')) return;
-  store.set('history', []);
-  renderHistory();
-  showToast('История очищена.');
-});
-
-for (const dialog of [elements.methodDialog, elements.historyDialog]) {
-  dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) safeDialogClose(dialog);
-  });
-}
-
-window.addEventListener('resize', () => {
-  drawOverlay();
-  if (elements.cameraDialog.open) drawCameraGuide();
-});
-if ('ResizeObserver' in window) {
-  new ResizeObserver(drawOverlay).observe(elements.photoStage);
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && elements.cameraDialog.open) {
-    stopCamera();
-    safeDialogClose(elements.cameraDialog);
-  }
-});
-
-window.addEventListener('appdatareset', () => {
-  store.reset();
-  resetPhoto();
-  applyConsent(false);
-  renderHistory();
-});
-
-applyConsent(store.get('consented', false));
-renderHistory();
-setModelStatus(online ? 'idle' : 'error', online ? 'модель не загружена' : 'нужна сеть для первого запуска');
+setConsent(store.get('consented', false)); renderProgress(); renderHistory(); setModel(online ? 'idle' : 'error', online ? 'модель не загружена' : 'нужна сеть');
