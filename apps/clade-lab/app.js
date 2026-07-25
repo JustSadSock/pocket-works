@@ -2,54 +2,75 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { watchConnectivity } from '../../shared/pwa-utils.js';
-import payload01 from './engine-shard-01.js';
-import payload02 from './engine-shard-02.js';
-import payload03 from './engine-shard-03.js';
-import payload04 from './engine-shard-04.js';
-import payload05 from './engine-shard-05.js';
-import payload06 from './engine-shard-06.js';
-import payload07 from './engine-shard-07.js';
-import payload08 from './engine-shard-08.js';
-import payload09 from './engine-shard-09.js';
+import shard01 from './engine-shard-01.js';
+import shard02 from './engine-shard-02.js';
+import shard03 from './engine-shard-03.js';
+import shard04 from './engine-shard-04.js';
+import shard05 from './engine-shard-05.js';
+import shard06 from './engine-shard-06.js';
+import shard07 from './engine-shard-07.js';
+import shard08 from './engine-shard-08.js';
+import shard09 from './engine-shard-09.js';
+
+const APP_VERSION = '2.0.0';
+const STORAGE_NAMESPACE = 'pocket-works:clade-lab';
+const CACHE_PREFIX = 'clade-lab-';
 
 installMobileRuntime();
 
-const WORKSHOP_CONTRACT = Object.freeze({
-  cachePrefix: 'clade-lab-',
-  storageNamespace: 'pocket-works:clade-lab'
+const storage = createVersionedStore({
+  namespace: STORAGE_NAMESPACE,
+  version: 2,
+  defaults: { worldV2: null },
+  validate(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  }
 });
 
-function showFatalError(error) {
-  console.error(error);
-  const loading = document.querySelector('#loadingScreen');
-  if (!loading) return;
-  loading.classList.remove('is-hidden');
-  loading.innerHTML = `
-    <div class="loading-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-    <p>Лаборатория не смогла запустить симуляцию.</p>
-    <button type="button" data-native-press>Перезапустить</button>
-  `;
-  loading.querySelector('button')?.addEventListener('click', () => window.location.reload());
-}
-
-async function unpackEngine() {
-  if (typeof DecompressionStream !== 'function') {
-    throw new Error('This browser does not support the offline simulation decoder.');
+createWorkshopMode({
+  appName: 'КЛАДА',
+  version: APP_VERSION,
+  cachePrefix: 'clade-lab-',
+  storageNamespace: STORAGE_NAMESPACE,
+  onReset() {
+    storage.reset();
+    window.dispatchEvent(new CustomEvent('appdatareset'));
   }
-  const encoded = [payload01, payload02, payload03, payload04, payload05, payload06, payload07, payload08, payload09].join('');
-  const binary = atob(encoded);
+});
+
+watchConnectivity((online) => {
+  document.documentElement.dataset.network = online ? 'online' : 'offline';
+});
+
+function decodeBase64(value) {
+  const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  const source = await new Response(stream).text();
-  const start = new Function(
-    'createVersionedStore',
-    'createWorkshopMode',
-    'watchConnectivity',
-    `${source}\n//# sourceURL=clade-lab-engine.js`
-  );
-  start(createVersionedStore, createWorkshopMode, watchConnectivity);
+  return bytes;
 }
 
-void WORKSHOP_CONTRACT;
-unpackEngine().catch(showFatalError);
+async function inflateEngine() {
+  if (typeof DecompressionStream !== 'function') throw new Error('Браузер не поддерживает распаковку локального движка.');
+  const compressed = decodeBase64([shard01, shard02, shard03, shard04, shard05, shard06, shard07, shard08, shard09].join(''));
+  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+}
+
+async function boot() {
+  const loading = document.querySelector('#loadingScreen');
+  try {
+    const source = await inflateEngine();
+    const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+    try {
+      const engine = await import(url);
+      await engine.start({ storage, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    console.error('КЛАДА не запустилась', error);
+    if (loading) loading.innerHTML = '<div class="loading-error"><b>Лаборатория не запустилась</b><p>Данные сохранены. Перезапустите приложение или очистите данные через Workshop.</p><button type="button" data-workshop-trigger data-native-press>Открыть Workshop</button></div>';
+  }
+}
+
+boot();
