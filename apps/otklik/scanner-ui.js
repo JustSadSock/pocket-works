@@ -360,7 +360,7 @@ async function loadPhoto(event) {
   stopCamera();
   try {
     photoBitmap?.close?.();
-    photoBitmap = await createImageBitmap(file);
+    photoBitmap = await decodeImageFile(file);
     photoNatural = { width: photoBitmap.width, height: photoBitmap.height };
     editPoints = clone(DEFAULT_POLYGON);
     selectedCorner = 0;
@@ -371,6 +371,17 @@ async function loadPhoto(event) {
   } finally {
     event.target.value = '';
   }
+}
+
+function decodeImageFile(file) {
+  if (typeof createImageBitmap === 'function') return createImageBitmap(file);
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image decode failed')); };
+    image.src = url;
+  });
 }
 
 function clearPhoto() {
