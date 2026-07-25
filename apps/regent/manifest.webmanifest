@@ -1,0 +1,20 @@
+{
+  "id": "/apps/regent/",
+  "name": "РЕГЕНТ",
+  "short_name": "РЕГЕНТ",
+  "description": "Ставь указы прямо на карту и удержи вымышленную федерацию от распада.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8dfc8",
+  "theme_color": "#d8c9a7",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
