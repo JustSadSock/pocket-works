@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#191918">
+  <meta name="description" content="КАРКАС — тренажёр рисунка на бумаге с генератором задач, таймером этапов и архивом работ.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КАРКАС">
+  <title>КАРКАС</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <div class="boot" id="boot" aria-live="polite"><span></span><b>РАЗМЕЧАЕМ ЛИСТ</b></div>
+
+    <section class="workspace" id="workspace" hidden>
+      <header class="topbar" data-ui>
+        <a href="../../" class="pocket-link" data-app-control data-native-press>POCKET</a>
+        <div class="brand" aria-label="КАРКАС">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 3v26M6 16h7m0 0L24 5M13 16l12 12"/><path class="blue" d="m22 3 7 7-3 3-7-7z"/></svg>
+          <strong>КАРКАС</strong>
+        </div>
+        <button class="top-action" id="settingsButton" type="button" data-native-press aria-label="Настройки">НАСТРОЙКА</button>
+      </header>
+
+      <section class="screen home-screen" id="homeScreen" aria-label="Конструктор задания">
+        <div class="resume-strip" id="resumeStrip" hidden>
+          <div><span>СЕССИЯ НА ПАУЗЕ</span><b id="resumeTitle">Продолжить работу</b></div>
+          <button id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        </div>
+
+        <div class="desk-heading" data-ui>
+          <div><span id="dailyLabel">ЗАДАЧА ДНЯ</span><h1>Собери рисунок,<br>которого ещё не было</h1></div>
+          <button class="shuffle-all" id="shuffleAll" type="button" data-native-press aria-label="Перемешать все барабаны"><i></i><b>ПЕРЕМЕШАТЬ</b></button>
+        </div>
+
+        <section class="press" aria-label="Генератор задания">
+          <div class="registration-marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <article class="reel" data-reel="motif" data-gesture-surface data-touch-action="none" data-block-callout tabindex="0" role="button" aria-label="Объект задания. Проведите вверх или вниз, чтобы изменить">
+            <header><span>01 / ЧТО</span><button type="button" class="lock" data-lock="motif" aria-label="Зафиксировать объект" data-native-press><i></i></button></header>
+            <div class="reel-window"><p class="ghost prev"></p><strong></strong><p class="ghost next"></p></div>
+            <footer>СВАЙП ИЛИ КАСАНИЕ</footer>
+          </article>
+          <article class="reel" data-reel="twist" data-gesture-surface data-touch-action="none" data-block-callout tabindex="0" role="button" aria-label="Смысловой переворот. Проведите вверх или вниз, чтобы изменить">
+            <header><span>02 / ЧТО С НИМ</span><button type="button" class="lock" data-lock="twist" aria-label="Зафиксировать переворот" data-native-press><i></i></button></header>
+            <div class="reel-window"><p class="ghost prev"></p><strong></strong><p class="ghost next"></p></div>
+            <footer>СВАЙП ИЛИ КАСАНИЕ</footer>
+          </article>
+          <article class="reel" data-reel="rule" data-gesture-surface data-touch-action="none" data-block-callout tabindex="0" role="button" aria-label="Техническое ограничение. Проведите вверх или вниз, чтобы изменить">
+            <header><span>03 / КАК</span><button type="button" class="lock" data-lock="rule" aria-label="Зафиксировать правило" data-native-press><i></i></button></header>
+            <div class="reel-window"><p class="ghost prev"></p><strong></strong><p class="ghost next"></p></div>
+            <footer>СВАЙП ИЛИ КАСАНИЕ</footer>
+          </article>
+        </section>
+
+        <section class="brief-card" id="briefCard" aria-live="polite">
+          <div class="brief-number">БРИФ <b id="briefCode">#000</b></div>
+          <div class="brief-copy"><span>НАРИСУЙ</span><h2 id="briefTitle"></h2><p id="briefRule"></p></div>
+          <div class="brief-diagram" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </section>
+
+        <section class="duration-row" aria-label="Длительность практики" data-ui>
+          <div><span>РЕЖИМ</span><b>Сколько есть сил</b></div>
+          <div class="duration-options" id="durationOptions">
+            <button type="button" data-duration="12" data-native-press><b>12</b><small>БЫСТРО</small></button>
+            <button type="button" data-duration="22" data-native-press><b>22</b><small>НОРМА</small></button>
+            <button type="button" data-duration="35" data-native-press><b>35</b><small>ГЛУБОКО</small></button>
+          </div>
+        </section>
+
+        <button class="start-button" id="startButton" type="button" data-native-press><span>НАЧАТЬ НА БУМАГЕ</span><i>→</i></button>
+      </section>
+
+      <section class="screen session-screen" id="sessionScreen" hidden aria-label="Сессия рисования">
+        <header class="session-header" data-ui>
+          <button id="sessionBack" type="button" data-native-press>НА СТОЛ</button>
+          <div><span id="sessionStep">ЭТАП 1 / 4</span><b id="sessionMaterial">КАРАНДАШ</b></div>
+          <button id="pauseButton" type="button" data-native-press>ПАУЗА</button>
+        </header>
+
+        <section class="session-board">
+          <div class="phase-index" id="phaseIndex">01</div>
+          <div class="phase-copy"><span id="phaseKicker">РАЗОГРЕВ</span><h2 id="phaseTitle"></h2><p id="phaseInstruction"></p></div>
+          <div class="phase-visual" id="phaseVisual" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </section>
+
+        <section class="timer-zone" aria-label="Таймер этапа">
+          <div class="timer-ring" id="timerRing"><div><strong id="timerValue">02:00</strong><span id="timerLabel">ДО СЛЕДУЮЩЕГО ЭТАПА</span></div></div>
+          <div class="phase-track" id="phaseTrack" aria-label="Прогресс сессии"></div>
+        </section>
+
+        <section class="session-brief">
+          <span>ТЕКУЩИЙ БРИФ</span>
+          <b id="sessionBriefTitle"></b>
+          <p id="sessionBriefRule"></p>
+        </section>
+
+        <div class="session-actions" data-ui>
+          <button id="tipButton" type="button" data-native-press>ПОДКИНУТЬ ПОДСКАЗКУ</button>
+          <button id="skipPhase" type="button" data-native-press>ЭТАП ГОТОВ →</button>
+        </div>
+        <div class="tip-strip" id="tipStrip" hidden><span>ПОДСКАЗКА</span><p id="tipText"></p><button id="tipClose" type="button" aria-label="Закрыть подсказку">×</button></div>
+      </section>
+
+      <section class="screen review-screen" id="reviewScreen" hidden aria-label="Разбор работы">
+        <header class="review-header" data-ui><span>РАБОТА ЗАКОНЧЕНА</span><h1>Не хвали себя.<br>Разбери.</h1></header>
+        <section class="review-brief"><span>БРИФ</span><b id="reviewBrief"></b><p id="reviewRule"></p></section>
+        <section class="score-sheet" id="scoreSheet" aria-label="Самооценка навыков"></section>
+        <section class="photo-zone" id="photoZone">
+          <input id="photoInput" type="file" accept="image/*" capture="environment" hidden>
+          <button id="photoButton" type="button" data-native-press><span class="photo-mark"></span><b>СФОТОГРАФИРОВАТЬ РАБОТУ</b><small>необязательно · хранится только на устройстве</small></button>
+          <img id="photoPreview" alt="Фотография законченной работы" hidden>
+          <button id="removePhoto" type="button" hidden data-native-press>УБРАТЬ ФОТО</button>
+        </section>
+        <button class="save-review" id="saveReview" type="button" data-native-press disabled><span>СОХРАНИТЬ РАЗБОР</span><i>→</i></button>
+      </section>
+
+      <section class="screen progress-screen" id="progressScreen" hidden aria-label="Прогресс">
+        <header class="section-header"><span>НЕ ОЦЕНКА. НАПРАВЛЕНИЕ.</span><h1>Что реально<br>прокачивается</h1></header>
+        <section class="progress-summary" id="progressSummary"></section>
+        <section class="skill-board" id="skillBoard"></section>
+        <section class="next-focus" id="nextFocus"></section>
+      </section>
+
+      <section class="screen archive-screen" id="archiveScreen" hidden aria-label="Архив работ">
+        <header class="section-header"><span>БЕЗ ИДЕАЛЬНЫХ СКЕТЧБУКОВ</span><h1>Следы работы</h1></header>
+        <div class="archive-grid" id="archiveGrid"></div>
+      </section>
+
+      <nav class="bottom-nav" id="bottomNav" aria-label="Разделы приложения" data-ui>
+        <button type="button" data-screen="home" class="active" data-native-press><i class="nav-build"></i><span>ЗАДАЧА</span></button>
+        <button type="button" data-screen="progress" data-native-press><i class="nav-progress"></i><span>ПРОГРЕСС</span></button>
+        <button type="button" data-screen="archive" data-native-press><i class="nav-archive"></i><span>АРХИВ</span></button>
+      </nav>
+    </section>
+
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+    <aside class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+      <button class="sheet-close" id="settingsClose" type="button" aria-label="Закрыть" data-native-press>×</button>
+      <span>КАРКАС / 1.0</span><h2 id="settingsTitle">Инструменты</h2>
+      <p>Приложение предполагает бумагу, механический карандаш и лайнер. Экран тут не холст — он суфлёр и таймер.</p>
+      <button class="setting-line" id="soundToggle" type="button" data-native-press><span>ТИХИЕ ЗВУКИ</span><b id="soundState">ВКЛ</b></button>
+      <button class="setting-line" type="button" data-workshop-trigger data-native-press><span>МАСТЕРСКАЯ</span><b>ДАННЫЕ</b></button>
+      <a href="../../" class="setting-line" data-app-control data-native-press><span>POCKET WORKS</span><b>ВЫЙТИ</b></a>
+      <button class="setting-line danger" id="resetData" type="button" data-native-press><span>СБРОСИТЬ ПРОГРЕСС</span><b>НАЧИСТО</b></button>
+    </aside>
+
+    <div class="confirm-dialog" id="confirmDialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+      <span>НЕОБРАТИМОЕ ДЕЙСТВИЕ</span><h2 id="confirmTitle"></h2><p id="confirmCopy"></p>
+      <div><button id="confirmCancel" type="button" data-native-press>ОТМЕНА</button><button id="confirmAccept" type="button" data-native-press>ПОДТВЕРДИТЬ</button></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАРКАС" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
