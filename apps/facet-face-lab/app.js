@@ -15,6 +15,12 @@ async function readCompressedText(path) {
   return new Response(stream).text();
 }
 
+async function readText(path) {
+  const response = await fetch(new URL(path, import.meta.url), { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`FACET asset unavailable: ${response.status}`);
+  return response.text();
+}
+
 async function moduleUrlFromCompressed(path) {
   const source = await readCompressedText(path);
   return URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
@@ -48,6 +54,7 @@ const { ${engineExports.join(', ')} } = __facetEngine;
 ${appSource}`;
 source = source.replace(/const APP_VERSION = ['"]1\.5\.0['"];?/, "const APP_VERSION = '1.7.0';");
 source += `\n${await readCompressedText('./patch-v17.txt')}\n`;
+source += `\n${await readText('./rating-v17.js')}\n`;
 
 const featureUrl = await moduleUrlFromCompressed('./feature-engine-v17.txt');
 const parserUrl = await moduleUrlFromCompressed('./face-parser-v17.txt');
