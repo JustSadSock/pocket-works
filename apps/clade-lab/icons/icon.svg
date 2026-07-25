@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">КЛАДА</title>
+  <desc id="desc">Ветвящееся древо эволюции внутри лабораторной чашки</desc>
+  <rect width="512" height="512" rx="112" fill="#e8e0cc"/>
+  <circle cx="256" cy="256" r="184" fill="#f5f0e2" stroke="#26332d" stroke-width="18"/>
+  <circle cx="256" cy="256" r="153" fill="none" stroke="#26332d" stroke-opacity=".18" stroke-width="5"/>
+  <path d="M256 350V244M256 272L177 190M256 285L340 191M256 238L257 153" fill="none" stroke="#26332d" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 350c-34 0-62-13-62-29s28-29 62-29 62 13 62 29-28 29-62 29Z" fill="#26332d"/>
+  <g stroke="#26332d" stroke-width="13">
+    <path d="M132 161c15-29 48-40 74-25 26 14 34 48 18 76-16 27-50 37-76 21-26-15-31-45-16-72Z" fill="#e45f3f"/>
+    <path d="M305 136c27-18 62-8 77 19 15 27 6 61-21 77-26 16-61 8-77-19-16-28-6-60 21-77Z" fill="#2d7d79"/>
+    <path d="M219 109c12-27 43-40 69-29 27 12 40 43 28 70-12 27-42 39-69 28-27-11-40-42-28-69Z" fill="#b8c843"/>
+  </g>
+  <g fill="#26332d">
+    <circle cx="174" cy="181" r="11"/>
+    <circle cx="339" cy="182" r="11"/>
+    <circle cx="267" cy="129" r="11"/>
+  </g>
+</svg>
