@@ -1,0 +1,164 @@
+.cells.forEach((cell) => {
+    if (!cell.land) return;
+    const ownerState = cell.owner >= 0 ? getState(targetWorld, cell.owner) : null;
+    const roadGrowth = cell.road ? 0.035 : 0;
+    const stabilityFactor = ownerState ? clamp(ownerState.stability / 100, 0.25, 1.1) : 0.5;
+    const capacity = 2.2 + cell.fertility * 7.6 + (cell.road ? 1.2 : 0);
+    const growth = (0.025 + cell.fertility * 0.035 + roadGrowth) * stabilityFactor;
+    cell.pop = clamp(cell.pop + cell.pop * growth * (1 - cell.pop / capacity), 0.03, 12);
+    if (cell.ridge) cell.pop *= 0.994;
+  });
+
+  recalculateStates(targetWorld);
+  activeStates(targetWorld).forEach((state) => {
+    const sizeStrain = Math.max(0, state.size - 28) * 0.025;
+    const ageStrain = Math.max(0, targetWorld.year - state.founded - 110) * 0.0012;
+    const roadCells = targetWorld.cells.filter((cell) => cell.owner === state.id && cell.road).length;
+    const cohesion = roadCells / Math.max(1, state.size) * 0.28;
+    state.stability = clamp(state.stability + (random() - 0.5) * 1.7 + cohesion - sizeStrain - ageStrain, 10, 100);
+  });
+
+  const order = Array.from({ length: targetWorld.cells.length }, (_, index) => index).sort(() => random() - 0.5);
+  const changes = [];
+  for (const index of order) {
+    const cell = targetWorld.cells[index];
+    if (!cell.land || cell.ridge) continue;
+    const neighborOwners = [...new Set(neighborIndices(index).map((n) => targetWorld.cells[n].owner).filter((owner) => owner >= 0))];
+    if (neighborOwners.length === 0) continue;
+
+    let bestOwner = cell.owner;
+    let bestScore = -Infinity;
+    let currentScore = -Infinity;
+    for (const owner of neighborOwners) {
+      const state = getState(targetWorld, owner);
+      if (!state) continue;
+      const source = neighborIndices(index).find((n) => targetWorld.cells[n].owner === owner) ?? state.capital;
+      const score = stateInfluence(targetWorld, state, source, index) + random() * 1.5;
+      if (owner === cell.owner) currentScore = score;
+      if (score > bestScore) {
+        bestScore = score;
+        bestOwner = owner;
+      }
+    }
+
+    if (cell.owner < 0) {
+      if (bestOwner >= 0 && bestScore > 1.8 && random() < 0.17) changes.push([index, bestOwner]);
+    } else if (bestOwner !== cell.owner) {
+      const defender = getState(targetWorld, cell.owner);
+      if (!defender) {
+        changes.push([index, bestOwner]);
+      } else {
+        const weakness = (100 - defender.stability) * 0.012;
+        if (bestScore > currentScore + 1.4 - weakness && random() < 0.065) changes.push([index, bestOwner]);
+      }
+    }
+  }
+
+  changes.slice(0, 12).forEach(([index, owner]) => {
+    const cell = targetWorld.cells[index];
+    cell.owner = owner;
+    cell.pop *= 0.86;
+  });
+
+  if (targetWorld.year % 18 === 0) {
+    const unstable = activeStates(targetWorld).filter((state) => state.size >= 18 && state.stability < 42);
+    if (unstable.length && random() < 0.72) {
+      const state = unstable[Math.floor(random() * unstable.length)];
+      const candidates = targetWorld.cells.map((cell, index) => cell.owner === state.id && index !== state.capital ? index : -1).filter((index) => index >= 0).sort((a, b) => distanceCells(state.capital, b) - distanceCells(state.capital, a));
+      const center = candidates[Math.floor(random() * Math.min(8, candidates.length))];
+      if (center !== undefined) schismAt(targetWorld, center, false, random);
+    }
+  }
+
+  if (targetWorld.year % 34 === 0 && activeStates(targetWorld).length < 5) {
+    const neutral = targetWorld.cells.map((cell, index) => cell.land && cell.owner < 0 && !cell.ridge ? index : -1).filter((index) => index >= 0);
+    if (neutral.length) {
+      const center = neutral[Math.floor(random() * neutral.length)];
+      const state = createStateAt(targetWorld, center, 1, random, false);
+      if (state) addEvent(targetWorld, `${state.name} поднялся на ничейной земле.`);
+    }
+  }
+
+  if (targetWorld.year % 52 === 0) {
+    const states = activeStates(targetWorld);
+    if (states.length) {
+      const state = states[Math.floor(random() * states.length)];
+      if (random() < 0.5) {
+        state.stability = clamp(state.stability + 14, 10, 100);
+        addEvent(targetWorld, `${state.name} вошёл в золотое поколение.`);
+      } else {
+        state.stability = clamp(state.stability - 18, 10, 100);
+        addEvent(targetWorld, `${state.name} погряз в династическом споре.`);
+      }
+    }
+  }
+
+  recalculateStates(targetWorld);
+  if (targetWorld.year >= targetWorld.horizon && !targetWorld.completed) {
+    targetWorld.playing = false;
+    targetWorld.completed = true;
+    if (targetWorld === world) showCompletion();
+  }
+}
+
+function schismAt(targetWorld, centerIndex, userAction = true, random = mulberry32(Date.now())) {
+  const centerCell = targetWorld.cells[centerIndex];
+  const parent = getState(targetWorld, centerCell?.owner);
+  if (!centerCell?.land || !parent || parent.size < 11 || centerIndex === parent.capital) return null;
+
+  const targetSize = clamp(Math.floor(parent.size * (0.22 + random() * 0.16)), 4, 18);
+  const region = [];
+  const queue = [centerIndex];
+  const visited = new Set([centerIndex]);
+  while (queue.length && region.length < targetSize) {
+    const index = queue.shift();
+    if (targetWorld.cells[index].owner !== parent.id || index === parent.capital) continue;
+    region.push(index);
+    neighborIndices(index).sort(() => random() - 0.5).forEach((neighbor) => {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    });
+  }
+  if (region.length < 4) return null;
+
+  const id = targetWorld.nextStateId++;
+  const state = {
+    id,
+    name: makeName(random),
+    color: STATE_COLORS[(id - 1) % STATE_COLORS.length],
+    capital: centerIndex,
+    stability: clamp(parent.stability + 12, 35, 88),
+    temper: 0.85 + random() * 0.75,
+    founded: targetWorld.year,
+    alive: true,
+    size: 0,
+    population: 0,
+    peak: 0
+  };
+  targetWorld.states.push(state);
+  targetWorld.born += 1;
+  region.forEach((index) => { targetWorld.cells[index].owner = id; });
+  parent.stability = clamp(parent.stability - 15, 10, 100);
+  if (userAction) targetWorld.actions += 1;
+  addEvent(targetWorld, `${state.name} отделился от державы ${parent.name}.`);
+  recalculateStates(targetWorld);
+  return state;
+}
+
+function crisisAt(targetWorld, centerIndex, userAction = true) {
+  const center = coords(centerIndex);
+  const affected = new Set();
+  targetWorld.cells.forEach((cell, index) => {
+    if (!cell.land) return;
+    const point = coords(index);
+    const distance = Math.hypot(point.x - center.x, point.y - center.y);
+    if (distance > 4.2) return;
+    const force = 1 - distance / 4.2;
+    cell.pop = Math.max(0.03, cell.pop * (1 - force * 0.58));
+    if (cell.owner >= 0) affected.add(cell.owner);
+  });
+  affected.forEach((id) => {
+    const state = getState(targetWorld, id);
+    if (state) s
