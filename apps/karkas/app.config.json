@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "karkas",
+  "name": "КАРКАС",
+  "shortName": "КАРКАС",
+  "description": "Тренажёр рисунка на бумаге: собирает небанальные задания, ведёт от карандашного каркаса к уверенному лайнеру и отслеживает реальные работы.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T03:45:00+02:00",
+  "changelog": [
+    "Первый выпуск: генератор задач из объекта, смыслового переворота и технического ограничения.",
+    "Добавлены сессии на 12, 22 и 35 минут с отдельными этапами для механического карандаша и лайнера.",
+    "Работы можно сфотографировать, оценить по пяти навыкам и сохранить в локальный архив.",
+    "Активная сессия, прогресс, звук и история переживают закрытие приложения и работают офлайн."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#2757d9",
+  "backgroundColor": "#e8e0d3",
+  "themeColor": "#191918",
+  "orientation": "portrait",
+  "cacheName": "karkas-v1.0.0",
+  "storageNamespace": "pocket-works:karkas",
+  "tags": [
+    "drawing",
+    "paper",
+    "pencil",
+    "liner",
+    "creativity",
+    "practice",
+    "timer",
+    "prompts",
+    "offline",
+    "camera",
+    "progress"
+  ],
+  "order": 27
+}
