@@ -1,0 +1,207 @@
+/* КЛАДА 3.0 — ecological cards and network surfaces. */
+.population-group-dot { background: #7b668d; }
+.live-readout { flex-wrap: wrap; max-width: calc(100% - 132px); }
+.ecology-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  margin: 10px 0;
+  background: rgba(255,255,255,.12);
+}
+.ecology-facts > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.ecology-facts > div:nth-child(2n) { border-right: 0; }
+.ecology-facts > div:nth-last-child(-n+2) { border-bottom: 0; }
+.ecology-facts small,
+.section-label span,
+.world-stat-strip small {
+  display: block;
+  color: var(--muted);
+  font-size: 7px;
+  letter-spacing: .13em;
+  margin-bottom: 4px;
+}
+.ecology-facts strong {
+  display: block;
+  font-family: ui-serif, Georgia, serif;
+  font-size: 14px;
+  line-height: 1.18;
+}
+.ecology-facts span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.3;
+}
+.ecology-note {
+  padding: 10px 11px;
+  margin: 9px 0;
+  border-left: 3px solid var(--moss-dark);
+  background: rgba(85,123,88,.08);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.species-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(120px, .85fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+.species-hero canvas {
+  display: block;
+  width: 100%;
+  max-height: 140px;
+  background: #dfe2cd;
+  border: 1px solid rgba(31,42,36,.18);
+}
+.species-hero small {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+.species-hero p {
+  margin: 7px 0 0;
+  font-size: 10px;
+  line-height: 1.42;
+}
+.range-map { margin: 12px 0 9px; }
+.range-map canvas {
+  display: block;
+  width: 100%;
+  height: 128px;
+  border: 1px solid var(--line);
+  image-rendering: auto;
+}
+.section-label {
+  min-height: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.section-label span { margin: 0; }
+.section-label b {
+  max-width: 70%;
+  font-size: 9px;
+  text-align: right;
+  color: var(--moss-dark);
+}
+.population-list {
+  border-top: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.population-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 32px 34px;
+  align-items: center;
+  min-height: 48px;
+  gap: 7px;
+  border-bottom: 1px solid var(--line);
+}
+.population-row strong {
+  display: block;
+  font-family: ui-serif, Georgia, serif;
+  font-size: 14px;
+}
+.population-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 8px;
+}
+.population-row b {
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.population-row em {
+  font-style: normal;
+  font-size: 9px;
+  text-align: right;
+  color: var(--moss-dark);
+}
+.ecology-empty {
+  padding: 14px 0;
+  color: var(--muted);
+  font-size: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.foodweb-list {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+.foodweb-row {
+  min-height: 65px;
+  display: grid;
+  grid-template-columns: 9px minmax(96px,.8fr) minmax(130px,1.2fr);
+  align-items: center;
+  gap: 9px;
+  padding: 7px 3px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+.foodweb-row:active { background: rgba(85,123,88,.1); }
+.foodweb-row > i {
+  width: 5px;
+  height: 38px;
+  background: hsl(var(--species-hue) 34% 38%);
+}
+.foodweb-row span { min-width: 0; }
+.foodweb-row strong {
+  display: block;
+  font-family: ui-serif, Georgia, serif;
+  font-size: 14px;
+}
+.foodweb-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+.foodweb-row em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+.world-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--line);
+  margin-top: 12px;
+}
+.world-stat-strip span {
+  padding: 8px 5px;
+  text-align: center;
+  border-right: 1px solid var(--line);
+}
+.world-stat-strip span:last-child { border-right: 0; }
+.world-stat-strip b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 390px) {
+  .species-hero { grid-template-columns: 1fr; }
+  .species-hero canvas { max-height: 122px; }
+  .ecology-facts { grid-template-columns: 1fr; }
+  .ecology-facts > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line) !important;
+  }
+  .ecology-facts > div:last-child { border-bottom: 0 !important; }
+  .foodweb-row { grid-template-columns: 7px minmax(86px,.75fr) minmax(112px,1.25fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foodweb-row:active { transform: none; }
+}
