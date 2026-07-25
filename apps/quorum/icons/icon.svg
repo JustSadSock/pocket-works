@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="КВОРУМ">
+  <rect width="512" height="512" rx="96" fill="#24352f"/>
+  <path d="M72 357c0-101 82-183 184-183s184 82 184 183" fill="none" stroke="#e8dfcd" stroke-width="34" stroke-linecap="round"/>
+  <path d="M117 355c0-76 62-138 139-138s139 62 139 138" fill="none" stroke="#b99150" stroke-width="28" stroke-linecap="round" stroke-dasharray="18 18"/>
+  <path d="M177 355c0-44 35-79 79-79s79 35 79 79" fill="none" stroke="#e8dfcd" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="256" cy="356" r="48" fill="#8c3d32" stroke="#e8dfcd" stroke-width="16"/>
+  <path d="M256 331v50M231 356h50" stroke="#e8dfcd" stroke-width="12" stroke-linecap="round"/>
+  <path d="M119 137h274" stroke="#b99150" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="148" cy="137" r="20" fill="#e8dfcd"/>
+  <circle cx="217" cy="137" r="20" fill="#e8dfcd"/>
+  <circle cx="286" cy="137" r="20" fill="#8c3d32"/>
+  <circle cx="355" cy="137" r="20" fill="#e8dfcd"/>
+</svg>
