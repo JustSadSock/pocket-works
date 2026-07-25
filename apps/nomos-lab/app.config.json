@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "nomos-lab",
+  "name": "НОМОС",
+  "shortName": "НОМОС",
+  "description": "Живая лаборатория возникновения государств: меняйте законы общества, рисуйте ресурсы и кризисы на карте и наблюдайте, как рождаются империи, торговые сети, расколы и революции.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T14:30:00+02:00",
+  "changelog": [
+    "Создана автономная симуляция возникновения государств с экспансией, торговлей, войнами и распадами.",
+    "Добавлены инструменты прямого вмешательства, общественные законы и четыре режима карты.",
+    "Летопись сохраняет ключевые эпохи и позволяет восстанавливать прошлое состояние мира.",
+    "Интерфейс адаптирован под вертикальный телефон, касания, safe-area и офлайн-работу."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#a6422f",
+  "backgroundColor": "#e7dcc0",
+  "themeColor": "#27231d",
+  "orientation": "portrait",
+  "cacheName": "nomos-lab-v1.0.0",
+  "storageNamespace": "pocket-works:nomos-lab",
+  "tags": ["PWA", "offline", "simulation", "history", "sandbox", "complex systems", "map", "touch", "canvas", "audio"],
+  "order": 154
+}
