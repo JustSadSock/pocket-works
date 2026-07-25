@@ -1,0 +1,13 @@
+{
+  "id": "/apps/nomos-lab/",
+  "name": "НОМОС — лаборатория государств",
+  "short_name": "НОМОС",
+  "description": "Живая лаборатория возникновения государств и общественных систем.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e7dcc0",
+  "theme_color": "#27231d",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
