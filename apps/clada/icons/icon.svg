@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="КЛАДА">
-  <rect width="512" height="512" rx="88" fill="#e7e1cf"/>
-  <circle cx="256" cy="256" r="184" fill="#d9ddc6" stroke="#1f2a24" stroke-width="18"/>
-  <path d="M256 406V270M256 332c-64-9-104-47-118-108 66-10 111 27 118 108ZM256 359c64-8 108-44 124-103-65-13-113 22-124 103ZM256 282c-43-30-48-83-5-135 48 48 49 100 5 135Z" fill="none" stroke="#36513b" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="256" cy="266" r="17" fill="#9a5946"/>
-  <circle cx="170" cy="214" r="12" fill="#557b58"/>
-  <circle cx="356" cy="242" r="12" fill="#557b58"/>
-</svg>
