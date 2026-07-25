@@ -6,7 +6,7 @@ import { watchConnectivity } from '../../shared/pwa-utils.js';
 installMobileRuntime();
 
 const APP_VERSION = '1.0.0';
-const NAMESPACE = 'pocket-works:karkas';
+const STORAGE_NAMESPACE = 'pocket-works:karkas';
 const MOTIFS = [
   { name: 'старый ботинок', hint: 'потёртости, швы, вес и характер формы' },
   { name: 'чайник', hint: 'носик, ручка и корпус как три спорящие массы' },
@@ -122,7 +122,7 @@ const defaults = {
 };
 
 const store = createVersionedStore({
-  namespace: NAMESPACE,
+  namespace: STORAGE_NAMESPACE,
   version: 1,
   defaults,
   validate(value) {
@@ -134,7 +134,7 @@ createWorkshopMode({
   appName: 'КАРКАС',
   version: APP_VERSION,
   cachePrefix: 'karkas-',
-  storageNamespace: NAMESPACE,
+  storageNamespace: STORAGE_NAMESPACE,
   onReset() {
     store.reset();
     window.location.reload();
