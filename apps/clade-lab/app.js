@@ -14,6 +14,11 @@ import payload09 from './engine-shard-09.js';
 
 installMobileRuntime();
 
+const WORKSHOP_CONTRACT = Object.freeze({
+  cachePrefix: 'clade-lab-',
+  storageNamespace: 'pocket-works:clade-lab'
+});
+
 function showFatalError(error) {
   console.error(error);
   const loading = document.querySelector('#loadingScreen');
@@ -46,4 +51,5 @@ async function unpackEngine() {
   start(createVersionedStore, createWorkshopMode, watchConnectivity);
 }
 
+void WORKSHOP_CONTRACT;
 unpackEngine().catch(showFatalError);
