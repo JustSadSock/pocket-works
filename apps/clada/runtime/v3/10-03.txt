@@ -1,0 +1,97 @@
+
+    const counts = {};
+    let population = 0;
+    for (const lineage of lineages) {
+      if (lineage.species.born > generation) continue;
+      if (lineage.species.extinct !== null && lineage.species.extinct <= generation) continue;
+      const age = Math.max(0, generation - lineage.species.born);
+      const count = Math.max(2, Math.round(lineage.capacity * clamp(age / 18, .2, 1) * (.75 + Math.sin(generation * .11 + lineage.species.id) * .18)));
+      counts[lineage.species.id] = count;
+      population += count;
+    }
+    const representatives = [];
+    for (const lineage of lineages) {
+      if (!counts[lineage.species.id]) continue;
+      const point = preferredPoint(lineage.species.centroid);
+      for (let index = 0; index < Math.min(3, counts[lineage.species.id]); index += 1) {
+        representatives.push({
+          id: lineage.species.id * 10000 + generation * 10 + index,
+          x: clamp(point.x + (livingHash(state.terrainSeed, lineage.species.id, generation, index) - .5) * .08, .03, .97),
+          y: clamp(point.y + (livingHash(state.terrainSeed, generation, lineage.species.id, index + 9) - .5) * .08, .04, .96),
+          vx: 0, vy: 0, energy: 9, age: 400, generation,
+          speciesId: lineage.species.id, genome: deepClone(lineage.species.centroid), lifeStage: 'adult'
+        });
+      }
+    }
+    state.history.push({
+      generation, env: deepClone(state.env), population, counts, organisms: representatives,
+      populations: [], season: generation % 12,
+      event: state.events.find((event) => event.generation === generation) || null
+    });
+  }
+}
+
+function buildMatureBiosphere(seed) {
+  const prehistory = seed === 'rift' ? 196 : seed === 'red' ? 178 : 164;
+  state.prehistoryEnd = prehistory;
+  state.generation = prehistory;
+  state.step = prehistory * GENERATION_STEPS;
+  const founderGenome = makeGenome();
+  founderGenome.waterAffinity = seed === 'red' ? .46 : .22;
+  founderGenome.moisture = seed === 'rift' ? .38 : .58;
+  const founder = createHistoricalSpecies(founderGenome, null, 0, { peak: 58, niche: 'founder' });
+  const niches = seed === 'rift'
+    ? ['grazer', 'hunter', 'burrower', 'amphibian', 'scavenger', 'filterer', 'browser']
+    : seed === 'red'
+      ? ['filterer', 'amphibian', 'hunter', 'scavenger', 'grazer', 'browser', 'flyer', 'burrower']
+      : ['grazer', 'browser', 'hunter', 'scavenger', 'filterer', 'amphibian', 'burrower', 'flyer'];
+  const lineages = [{ species: founder, capacity: 22 }];
+  let previous = founder;
+  niches.forEach((niche, index) => {
+    const born = 18 + index * Math.floor((prehistory - 42) / niches.length) + Math.floor(randomRange(-4, 5));
+    const genome = nicheGenome(index % 3 === 0 ? founderGenome : previous.centroid, niche, .62);
+    const parent = index < 2 ? founder : lineages[1 + Math.floor((index - 1) / 2)]?.species || previous;
+    const species = createHistoricalSpecies(genome, parent.id, born, { peak: 18 + Math.floor(random() * 34), niche });
+    lineages.push({ species, capacity: niche === 'hunter' ? 9 : niche === 'scavenger' ? 10 : 13 + Math.floor(random() * 13) });
+    state.events.push({ generation: born, type: 'speciation', speciesId: species.id, text: `Возник ${species.common}` });
+    previous = species;
+  });
+  const extinctCount = 2 + (seed === 'rift' ? 1 : 0);
+  for (let index = 0; index < extinctCount; index += 1) {
+    const parent = lineages[1 + index]?.species || founder;
+    const born = 25 + index * 29;
+    const extinct = Math.min(prehistory - 18, born + 28 + Math.floor(random() * 34));
+    const genome = nicheGenome(parent.centroid, index % 2 ? 'browser' : 'amphibian', .36);
+    const species = createHistoricalSpecies(genome, parent.id, born, { extinct, peak: 11 + index * 5, cause: index % 2 ? 'смена климата' : 'конкуренция', niche: 'extinct' });
+    lineages.push({ species, capacity: 9 });
+    state.events.push({ generation: born, type: 'speciation', speciesId: species.id, text: `Возник ${species.common}` });
+    state.events.push({ generation: extinct, type: 'extinction', speciesId: species.id, text: `Исчез ${species.common}` });
+  }
+  founder.extinct = Math.round(prehistory * .58);
+  founder.cause = 'расхождение дочерних линий';
+  state.events.push({ generation: founder.extinct, type: 'extinction', speciesId: founder.id, text: `Исчез ${founder.common}` });
+  historyFromLineages(prehistory, lineages);
+  const active = lineages.filter((lineage) => lineage.species.extinct === null);
+  for (const lineage of active) spawnPopulation(lineage.species, lineage.capacity);
+}
+
+function buildPrimordialBiosphere(seed) {
+  state.prehistoryEnd = 24;
+  state.generation = 24;
+  state.step = 24 * GENERATION_STEPS;
+  const founderGenome = makeGenome();
+  const founder = createHistoricalSpecies(nicheGenome(founderGenome, 'filterer', .34), null, 0, { peak: 40, niche: 'filterer' });
+  const shore = createHistoricalSpecies(nicheGenome(founderGenome, 'amphibian', .42), founder.id, 9, { peak: 26, niche: 'amphibian' });
+  const grazer = createHistoricalSpecies(nicheGenome(founderGenome, 'grazer', .4), founder.id, 15, { peak: 22, niche: 'grazer' });
+  const lineages = [{ species: founder, capacity: 16 }, { species: shore, capacity: 14 }, { species: grazer, capacity: 15 }];
+  state.events.push({ generation: 9, type: 'speciation', speciesId: shore.id, text: `Возник ${shore.common}` });
+  state.events.push({ generation: 15, type: 'speciation', speciesId: grazer.id, text: `Возник ${grazer.common}` });
+  historyFromLineages(24, lineages);
+  for (const lineage of lineages) spawnPopulation(lineage.species, lineage.capacity);
+}
+
+function initializeResources() {
+  state.plants = createLivingPlants(state.seed === 'garden' ? 150 : state.seed === 'rift' ? 112 : 132);
+  state.microResources = Array.from({ length: 54 }, () => {
+    const point = preferredPoint({ ...makeGenome(), waterAffinity: .96, moisture: .9 });
+    return { x: point.x, y: point.y, en
