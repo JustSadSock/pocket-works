@@ -2,16 +2,17 @@
   "schemaVersion": 1,
   "runtime": "quick",
   "slug": "emergence-lab",
-  "name": "Emergence Lab",
-  "shortName": "Emergence Lab",
-  "description": "A touch-first laboratory for breeding complex motion from a handful of visual interaction rules.",
-  "version": "1.0.0",
+  "name": "Лаборатория эмерджентности",
+  "shortName": "Эмерджентность",
+  "description": "Лаборатория сложных систем: ресурсы, наследование, естественный отбор и визуальные правила без кода.",
+  "version": "1.1.0",
   "releaseDate": "2026-07-25",
-  "releaseDateTime": "2026-07-25T12:00:05Z",
+  "releaseDateTime": "2026-07-25T13:20:00+02:00",
   "changelog": [
-    "Introduced a live multi-species particle laboratory with five behavior cassettes and direct field tools.",
-    "Added visual rule sliders, bounded mutation, undo, population life cycles and per-specimen cause tracing.",
-    "Added persistent worlds, offline installation, adaptive mobile layout and Workshop diagnostics."
+    "Полностью переведён интерфейс приложения на русский язык.",
+    "Добавлены ресурсы, энергетический обмен и реальная стоимость движения.",
+    "Добавлены наследуемые скорость, дальность восприятия, экономность и плодовитость с мутациями у потомков.",
+    "Добавлены визуализации энергии и поколений, а инспектор теперь показывает геном организма."
   ],
   "status": "active",
   "preset": "canvas",
@@ -19,8 +20,8 @@
   "backgroundColor": "#ece5d2",
   "themeColor": "#ece5d2",
   "orientation": "any",
-  "cacheName": "emergence-lab-v1.0.0",
+  "cacheName": "emergence-lab-v1.1.0",
   "storageNamespace": "pocket-works:emergence-lab",
-  "tags": ["simulation", "emergence", "particles", "laboratory", "canvas", "offline"],
+  "tags": ["simulation", "evolution", "genetics", "natural selection", "particles", "laboratory", "canvas", "offline"],
   "order": 18
 }
