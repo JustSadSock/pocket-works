@@ -66,10 +66,10 @@ for (const patch of ['./ux-v18-00.txt', './ux-v18-01.txt', './ux-v18-02.txt']) {
   source += `\n${await readText(patch)}\n`;
 }
 source += `\n${await readCompressedParts([
-  './protocol-v19-0.txt',
-  './protocol-v19-1.txt',
-  './protocol-v19-2.txt',
-  './protocol-v19-3.txt'
+  './protocol-v19-p00.txt', './protocol-v19-p01.txt', './protocol-v19-p02.txt',
+  './protocol-v19-p03.txt', './protocol-v19-p04.txt', './protocol-v19-p05.txt',
+  './protocol-v19-p06.txt', './protocol-v19-p07.txt', './protocol-v19-p08.txt',
+  './protocol-v19-p09.txt', './protocol-v19-p10.txt', './protocol-v19-p11.txt'
 ])}\n`;
 source += `\n${await readCompressedText('./ux-v19.txt')}\n`;
 
