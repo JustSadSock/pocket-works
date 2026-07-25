@@ -239,6 +239,8 @@ function stabilityRepairLegacyGenome(genome) {
 
 function migrateStabilityState() {
   if (!state) return;
+  stabilityMemberCacheStep = -1;
+  stabilityMemberCache = new Map();
   const repairingLegacyDrift = state.stabilityModel !== STABILITY_MODEL_VERSION && state.generation > 24;
   state.stabilityModel = STABILITY_MODEL_VERSION;
   const migrateGenome = repairingLegacyDrift ? stabilityRepairLegacyGenome : stabilityExpressGenome;
@@ -254,6 +256,7 @@ migrateLivingState = function stableMigrateLivingState() {
 
 buildWorld = function stableBuildWorld(seed = 'garden') {
   stabilityLegacyBuildWorld(seed);
+  state.stabilityModel = STABILITY_MODEL_VERSION;
   migrateStabilityState();
   saveState();
 };
