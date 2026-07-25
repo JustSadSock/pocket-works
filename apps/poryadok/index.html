@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#e8e1d1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ПОРЯДОК">
+  <meta name="description" content="Интерактивная лаборатория масштаба от протона до наблюдаемой Вселенной.">
+  <title>ПОРЯДОК</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="launcher-link" href="../../" data-app-control data-native-press>В Pocket Works</a>
+      <div class="brand" aria-label="ПОРЯДОК — лаборатория масштаба">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div><strong>ПОРЯДОК</strong><small id="contextLabel">человеческий масштаб</small></div>
+      </div>
+      <button class="round-button" id="settingsButton" type="button" aria-label="Настройки" data-native-press>•••</button>
+    </header>
+
+    <section class="screen scale-screen is-active" id="scaleScreen" aria-labelledby="scaleTitle">
+      <div class="scale-readout" data-ui>
+        <div>
+          <small id="scaleGroup">ЧЕЛОВЕК</small>
+          <strong id="scaleTitle">1 метр</strong>
+        </div>
+        <button class="jump-button" id="jumpButton" type="button" data-native-press>К объекту</button>
+      </div>
+
+      <div class="stage-wrap" id="stageWrap">
+        <canvas id="scaleCanvas" data-gesture-surface data-touch-action="none" data-block-callout aria-label="Интерактивная логарифмическая шкала объектов"></canvas>
+        <div class="stage-reticle" aria-hidden="true"><i></i><span></span><b></b></div>
+        <div class="stage-hint" id="stageHint" data-ui>Тяни шкалу · щипок меняет порядок</div>
+      </div>
+
+      <div class="scale-controls" data-ui>
+        <button type="button" id="smallerButton" data-native-press><span aria-hidden="true">−</span><b>Меньше</b></button>
+        <div class="order-meter" aria-label="Текущий порядок величины">
+          <span id="orderExponent">10⁰ м</span>
+          <i><b id="orderProgress"></b></i>
+        </div>
+        <button type="button" id="largerButton" data-native-press><span aria-hidden="true">+</span><b>Больше</b></button>
+      </div>
+
+      <article class="specimen" id="specimenPanel" data-ui>
+        <div class="specimen-index" id="specimenIndex">13 / 34</div>
+        <div class="specimen-copy">
+          <small id="specimenGroup">ЧЕЛОВЕК</small>
+          <h1 id="specimenName">Человек</h1>
+          <p id="specimenSize">1,75 м</p>
+        </div>
+        <button class="pin-button" id="pinButton" type="button" data-native-press aria-pressed="true">
+          <span aria-hidden="true"></span><b>Закреплён</b>
+        </button>
+        <p class="specimen-note" id="specimenNote">Средний человеческий рост, удобная точка отсчёта для повседневного масштаба.</p>
+        <div class="neighbor-strip">
+          <button type="button" id="previousObjectButton" data-native-press><small>Меньше</small><strong id="previousObjectName">Ладонь</strong></button>
+          <button type="button" id="nextObjectButton" data-native-press><small>Больше</small><strong id="nextObjectName">Автобус</strong></button>
+        </div>
+      </article>
+    </section>
+
+    <section class="screen compare-screen" id="compareScreen" hidden aria-labelledby="compareTitle">
+      <header class="section-head" data-ui>
+        <div><small>ИЗМЕРИТЕЛЬНЫЙ СТЕНД</small><h1 id="compareTitle">Сравнение</h1></div>
+        <button class="text-button" id="clearPinsButton" type="button" data-native-press>Сбросить</button>
+      </header>
+      <div class="compare-summary" id="compareSummary" data-ui></div>
+      <div class="compare-rack" id="compareRack" data-ui></div>
+      <div class="compare-empty" id="compareEmpty" hidden>
+        <span aria-hidden="true"></span>
+        <strong>Нужны два объекта</strong>
+        <p>Закрепи их на шкале. ПОРЯДОК не станет сравнивать пустоту с пустотой — это уже философия, а не метрология.</p>
+        <button type="button" data-open-scale data-native-press>Вернуться к шкале</button>
+      </div>
+    </section>
+
+    <section class="screen matter-screen" id="matterScreen" hidden aria-labelledby="matterTitle">
+      <header class="section-head" data-ui>
+        <div><small>ОДИНАКОВАЯ МАССА</small><h1 id="matterTitle">Материалы</h1></div>
+        <div class="mass-readout"><strong id="massValue">10 кг</strong><small>каждый куб</small></div>
+      </header>
+      <div class="mass-control" data-ui>
+        <span>1 г</span>
+        <input id="massSlider" type="range" min="-3" max="3" step="0.01" value="1" aria-label="Масса каждого куба">
+        <span>1 т</span>
+      </div>
+      <div class="material-stage" id="materialStage">
+        <canvas id="materialCanvas" aria-label="Сравнение кубов материалов одинаковой массы"></canvas>
+      </div>
+      <article class="material-detail" id="materialDetail" data-ui>
+        <div><small id="materialDensity">22 590 кг/м³</small><h2 id="materialName">Осмий</h2></div>
+        <strong id="materialSide">7,62 см</strong>
+        <p id="materialNote">Самый плотный из устойчивых элементов при обычных условиях.</p>
+      </article>
+      <div class="material-list" id="materialList" data-ui></div>
+    </section>
+
+    <nav class="bottom-nav" data-ui aria-label="Разделы приложения">
+      <button class="nav-button is-active" type="button" data-screen="scale" data-native-press>
+        <span class="nav-glyph scale-glyph" aria-hidden="true"></span><b>Шкала</b>
+      </button>
+      <button class="nav-button" type="button" data-screen="compare" data-native-press>
+        <span class="nav-glyph compare-glyph" aria-hidden="true"></span><b>Сравнить</b><i id="pinCountBadge">2</i>
+      </button>
+      <button class="nav-button" type="button" data-screen="matter" data-native-press>
+        <span class="nav-glyph matter-glyph" aria-hidden="true"></span><b>Материя</b>
+      </button>
+    </nav>
+
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+    <section class="bottom-sheet object-sheet" id="objectSheet" hidden aria-labelledby="objectSheetTitle" data-ui data-keyboard-aware>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header">
+        <div><small>КАТАЛОГ МАСШТАБА</small><h2 id="objectSheetTitle">Перейти к объекту</h2></div>
+        <button class="round-button" type="button" data-close-sheet aria-label="Закрыть" data-native-press>×</button>
+      </header>
+      <div class="object-search-wrap">
+        <input id="objectSearch" type="search" placeholder="Атом, человек, Земля…" autocomplete="off" enterkeyhint="search" aria-label="Поиск объекта">
+      </div>
+      <div class="object-catalog" id="objectCatalog"></div>
+    </section>
+
+    <section class="bottom-sheet" id="settingsSheet" hidden aria-labelledby="settingsTitle" data-ui>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header">
+        <div><small>ПРИБОР</small><h2 id="settingsTitle">Настройки</h2></div>
+        <button class="round-button" type="button" data-close-sheet aria-label="Закрыть" data-native-press>×</button>
+      </header>
+      <div class="sheet-body">
+        <label class="toggle-row"><span><strong>Тихий звук</strong><small>Щелчки степеней и фиксация объектов.</small></span><input id="soundToggle" type="checkbox" checked></label>
+        <label class="toggle-row"><span><strong>Вибрация</strong><small>Короткий отклик при переходе порядка и закреплении.</small></span><input id="hapticsToggle" type="checkbox" checked></label>
+        <button class="sheet-action" id="showGuideButton" type="button" data-native-press>Показать управление</button>
+        <button class="sheet-action workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <button class="sheet-action danger" id="resetButton" type="button" data-native-press>Сбросить лабораторию</button>
+        <div class="about-block selectable-content">
+          <strong>О данных</strong>
+          <p>Размеры округлены до характерных значений. Материальный стенд рассчитывает сторону куба из массы и плотности прямо на устройстве.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal guide-modal" id="guideModal" hidden aria-labelledby="guideTitle" data-ui>
+      <div class="modal-card">
+        <small>ПЕРВЫЕ ДЕСЯТЬ СЕКУНД</small>
+        <h2 id="guideTitle">Трогай масштаб</h2>
+        <div class="gesture-demo" aria-hidden="true"><i></i><span></span><b></b></div>
+        <ol>
+          <li><span>1</span><p><strong>Тяни вбок</strong> — двигайся по логарифмической шкале.</p></li>
+          <li><span>2</span><p><strong>Разводи пальцы</strong> — проваливайся к меньшим объектам. Своди — уходи к большим.</p></li>
+          <li><span>3</span><p><strong>Закрепляй</strong> объекты, чтобы столкнуть их на стенде сравнения.</p></li>
+        </ol>
+        <button class="primary-button" id="startButton" type="button" data-native-press>Начать с человека</button>
+      </div>
+    </section>
+
+    <section class="modal" id="resetModal" hidden aria-labelledby="resetTitle" data-ui>
+      <div class="modal-card compact-modal">
+        <small>СБРОС</small>
+        <h2 id="resetTitle">Вернуть исходный порядок?</h2>
+        <p>Текущий масштаб, закрепления и настройки будут забыты.</p>
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" data-close-modal data-native-press>Оставить</button>
+          <button type="button" class="danger-button" id="confirmResetButton" data-native-press>Сбросить</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПОРЯДОК"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "poryadok",
+  "name": "ПОРЯДОК",
+  "shortName": "ПОРЯДОК",
+  "description": "Интерактивная лаборатория масштаба: путешествие от протона до наблюдаемой Вселенной, сравнение объектов и кубы материалов одинаковой массы.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T18:35:00+02:00",
+  "changelog": [
+    "Добавлена непрерывная шкала от протона до наблюдаемой Вселенной с перетаскиванием, щипком и точными переходами между объектами.",
+    "Добавлен стенд сравнения закреплённых объектов с отношениями размеров и наглядной логарифмической раскладкой.",
+    "Добавлена лаборатория одинаковой массы для восьми материалов: от аэрогеля до осмия, с реальными размерами кубов.",
+    "Добавлены локальное сохранение, офлайн-режим, тихий звук, вибрация, обучение и Workshop Mode."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#235b66",
+  "backgroundColor": "#e8e1d1",
+  "themeColor": "#e8e1d1",
+  "orientation": "portrait",
+  "cacheName": "poryadok-v1.0.0-p1",
+  "storageNamespace": "pocket-works:poryadok",
+  "tags": ["PWA", "offline", "laboratory", "scale", "science", "physics", "comparison", "materials", "density", "canvas", "touch", "pinch", "education", "utility"],
+  "order": 75
+}
