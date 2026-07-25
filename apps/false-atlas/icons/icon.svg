@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ложный Атлас">
+  <defs>
+    <radialGradient id="paper" cx="42%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#ead9aa"/>
+      <stop offset="1" stop-color="#b99558"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="13" stdDeviation="13" flood-color="#120e0b" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="#2b241d"/>
+  <path d="M91 78 253 55l171 36-16 165 22 151-169 44-171-36 19-163z" fill="url(#paper)" stroke="#d7bd7d" stroke-width="9" filter="url(#shadow)"/>
+  <path d="M127 157c59-40 111 5 155-20 45-26 86-12 111 17M130 261c66-38 103 12 164-15 35-16 69-3 99 18M150 354c67-24 113 14 181-13" fill="none" stroke="#4f5a47" stroke-width="12" stroke-linecap="round" opacity=".72"/>
+  <circle cx="269" cy="242" r="82" fill="#9e3528" stroke="#6f211c" stroke-width="12" filter="url(#shadow)"/>
+  <circle cx="269" cy="242" r="59" fill="none" stroke="#d8a96f" stroke-width="6" stroke-dasharray="9 10"/>
+  <path d="m269 177 18 45 49 4-38 31 11 48-40-26-41 26 12-48-39-31 50-4z" fill="#ead9aa"/>
+  <path d="M190 366c33-25 63-21 95-4 31 17 57 16 86-4" fill="none" stroke="#9e3528" stroke-width="10" stroke-linecap="round"/>
+</svg>
