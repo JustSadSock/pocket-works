@@ -4,12 +4,13 @@ function onPointerDown(event) {
   canvas.setPointerCapture?.(event.pointerId);
   const point = pointerPosition(event);
   const now = performance.now();
-  state.pointer = { id: event.pointerId, sx: point.x, sy: point.y, x: point.x, y: point.y, px: point.x, py: point.y, time: now, lastTime: now, bodyId: null, moved: false };
+  state.pointer = { id: event.pointerId, sx: point.x, sy: point.y, x: point.x, y: point.y, px: point.x, py: point.y, time: now, lastTime: now, bodyId: null, fieldId: null, moved: false };
   gestureHint.style.opacity = '.25';
 
   if (state.tool === 'hand') {
     const body = findBodyAt(point.x, point.y, 7);
     if (body) {
+      pushHistory();
       state.selectedId = body.id;
       state.pointer.bodyId = body.id;
       state.pointer.offsetX = point.x - body.x;
@@ -24,10 +25,10 @@ function onPointerDown(event) {
       updateInspector();
       if (field) {
         pushHistory();
-        field.polarity *= -1;
-        showToast(field.polarity > 0 ? 'ПОЛЕ ПРИТЯГИВАЕТ' : 'ПОЛЕ ОТТАЛКИВАЕТ');
-        pulseHaptic([8, 20, 8]);
-        scheduleSave();
+        state.pointer.fieldId = field.id;
+        state.pointer.offsetX = point.x - field.x;
+        state.pointer.offsetY = point.y - field.y;
+        sound('tap');
       }
     }
   } else if (state.tool === 'erase') {
@@ -61,6 +62,13 @@ function onPointerMove(event) {
       body.y = clamp(point.y - pointer.offsetY, -80, state.worldHeight + 80);
       body.vx = (point.x - pointer.px) / pointer.dt * 1000;
       body.vy = (point.y - pointer.py) / pointer.dt * 1000;
+      body.damageGrace = .08;
+    }
+  } else if (state.tool === 'hand' && pointer.fieldId) {
+    const field = state.fields.find(item => item.id === pointer.fieldId);
+    if (field) {
+      field.x = clamp(point.x - pointer.offsetX, 0, state.worldWidth);
+      field.y = clamp(point.y - pointer.offsetY, 0, state.worldHeight);
     }
   } else if (state.preview) {
     state.preview.x2 = point.x;
@@ -83,6 +91,19 @@ function onPointerUp(event) {
       body.vy = clamp(body.vy, -1800, 1800);
       body.av += clamp(dx * .012, -5, 5);
       pulseHaptic();
+      scheduleSave();
+    }
+  } else if (state.tool === 'hand' && pointer.fieldId) {
+    const field = state.fields.find(item => item.id === pointer.fieldId);
+    if (field) {
+      if (!pointer.moved) {
+        field.polarity *= -1;
+        showToast(field.polarity > 0 ? 'ПОЛЕ ПРИТЯГИВАЕТ' : 'ПОЛЕ ОТТАЛКИВАЕТ');
+        pulseHaptic([8, 20, 8]);
+      } else {
+        showToast('ПОЛЕ ПЕРЕМЕЩЕНО', 900);
+        pulseHaptic();
+      }
       scheduleSave();
     }
   } else if (state.tool === 'circle' || state.tool === 'box') {
@@ -108,7 +129,7 @@ function onPointerUp(event) {
       pushHistory();
       const body = createBody('box', (pointer.sx + point.x) / 2, (pointer.sy + point.y) / 2, {
         w: distance,
-        h: 14,
+        h: clamp(10 + state.spawnSize * 5, 12, 20),
         angle: Math.atan2(dy, dx),
         material: state.material,
         pinned: true
@@ -122,7 +143,7 @@ function onPointerUp(event) {
     finishConstraint(point.x, point.y);
   } else if (state.tool === 'field') {
     pushHistory();
-    const radius = clamp(distance || 78, 48, 190);
+    const radius = clamp(distance || 78, 48, 220);
     state.fields.push({ id: id('f'), x: pointer.sx, y: pointer.sy, radius, strength: 1250, polarity: state.fieldPolarity });
     sound('link');
     pulseHaptic([8, 24, 8]);
@@ -170,14 +191,15 @@ function finishConstraint(x, y) {
     type: state.tool,
     bodyA: startBody?.id || endBody.id,
     bodyB: startBody ? (endBody?.id || null) : null,
-    ax: startBody ? null : null,
-    ay: startBody ? null : null,
     bx: startBody ? (endBody ? null : x) : state.linkStart.x,
     by: startBody ? (endBody ? null : y) : state.linkStart.y,
     rest,
     stiffness: state.tool === 'rope' ? .72 : .22,
     damping: state.tool === 'rope' ? .04 : .12,
-    tension: 0
+    tension: 0,
+    fatigue: 0,
+    breakLimit: state.tool === 'rope' ? .5 : .92,
+    broken: false
   });
   sound('link');
   pulseHaptic([8, 18, 8]);
@@ -226,26 +248,28 @@ function eraseAt(x, y) {
 function applyImpulse(x, y, dx, dy) {
   const distance = Math.hypot(dx, dy);
   const directional = distance > 10;
-  const radius = clamp(86 + distance * .35, 86, 190);
+  const radius = clamp(86 + distance * .35, 86, 205);
   const direction = normalize(dx || 1, dy || 0);
   pushHistory();
   let hit = 0;
   for (const body of state.bodies) {
-    if (!body.invMass) continue;
     const ox = body.x - x;
     const oy = body.y - y;
     const d = Math.hypot(ox, oy);
     if (d > radius) continue;
     const falloff = 1 - d / radius;
     const radial = normalize(ox || 1, oy || 0);
-    const fx = directional ? direction.x * 1150 * falloff + radial.x * 330 * falloff : radial.x * 1450 * falloff;
-    const fy = directional ? direction.y * 1150 * falloff + radial.y * 330 * falloff : radial.y * 1450 * falloff;
-    body.vx += fx;
-    body.vy += fy;
-    body.av += (Math.random() - .5) * 8 * falloff;
+    if (body.invMass) {
+      const fx = directional ? direction.x * 1150 * falloff + radial.x * 330 * falloff : radial.x * 1450 * falloff;
+      const fy = directional ? direction.y * 1150 * falloff + radial.y * 330 * falloff : radial.y * 1450 * falloff;
+      body.vx += fx;
+      body.vy += fy;
+      body.av += (Math.random() - .5) * 8 * falloff;
+    }
+    registerDamage(body, (directional ? 420 : 650) * falloff, body.x, body.y);
     hit++;
   }
-  state.bursts.push({ x, y, radius: 12, maxRadius: radius, life: 1, polarity: directional ? 0 : -1 });
+  state.bursts.push({ x, y, radius: 12, maxRadius: radius, life: 1, color: '#c85a34', kind: 'impact' });
   sound('blast', Math.min(1, hit / 8));
   pulseHaptic([18, 24, 28]);
   showToast(hit ? `ИМПУЛЬС ПОЛУЧИЛИ: ${hit}` : 'УДАР УШЁЛ В ПУСТОТУ');
@@ -266,4 +290,3 @@ function constraintEndpoints(constraint) {
   if (constraint.bodyB && !bodyB) return null;
   return { ax: bodyA.x, ay: bodyA.y, bx: bodyB ? bodyB.x : constraint.bx, by: bodyB ? bodyB.y : constraint.by };
 }
-
