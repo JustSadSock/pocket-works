@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#26342f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПАЛИМПСЕСТ">
+  <title>ПАЛИМПСЕСТ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas" data-fullscreen-app>
+  <main class="app-shell" id="app" data-app-shell data-fullscreen-app>
+    <section class="screen menu-screen is-active" id="menu-screen" aria-labelledby="menu-title">
+      <header class="menu-top" data-ui>
+        <a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        <button class="ink-button" id="sound-menu" type="button" data-sound-toggle data-native-press aria-pressed="true">Звук</button>
+      </header>
+
+      <div class="menu-map" aria-hidden="true">
+        <canvas id="menu-canvas"></canvas>
+        <div class="map-seal">P·W<br><span>MMXXVI</span></div>
+      </div>
+
+      <div class="title-block">
+        <p class="kicker">МАШИНА НЕСЛУЧИВШЕЙСЯ ИСТОРИИ</p>
+        <h1 id="menu-title">ПАЛИМПСЕСТ</h1>
+        <p>Ты не правитель. Ты — рука на полях истории.</p>
+      </div>
+
+      <div class="scenario-strip" data-ui aria-label="Сценарии">
+        <button class="scenario" type="button" data-scenario="wild" data-native-press>
+          <span class="scenario-mark mark-wild" aria-hidden="true"></span>
+          <strong>ДИКИЙ ВЕК</strong>
+          <small>Семь молодых держав</small>
+        </button>
+        <button class="scenario" type="button" data-scenario="crowns" data-native-press>
+          <span class="scenario-mark mark-crowns" aria-hidden="true"></span>
+          <strong>ДВЕ КОРОНЫ</strong>
+          <small>Два гиганта и окраины</small>
+        </button>
+        <button class="scenario" type="button" data-scenario="passes" data-native-press>
+          <span class="scenario-mark mark-passes" aria-hidden="true"></span>
+          <strong>ПЕРЕВАЛЫ</strong>
+          <small>Горы режут континент</small>
+        </button>
+      </div>
+
+      <button class="continue-button" id="continue-button" type="button" data-native-press hidden>
+        <span>ПРОДОЛЖИТЬ ЛЕТОПИСЬ</span>
+        <small id="continue-copy">Год 0 · эпоха не завершена</small>
+      </button>
+
+      <footer class="menu-footer" data-ui>
+        <button class="workshop-trigger workshop-trigger--palimpsest" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <span>v1.0.0</span>
+      </footer>
+    </section>
+
+    <section class="screen world-screen" id="world-screen" aria-label="Карта мира" hidden>
+      <header class="world-top" data-ui>
+        <button class="top-button" id="pause-button" type="button" data-native-press>Пауза</button>
+        <div class="year-block">
+          <span id="era-label">I ЭПОХА</span>
+          <strong id="year-label">ГОД 0</strong>
+        </div>
+        <button class="top-button" id="sound-world" type="button" data-sound-toggle data-native-press aria-pressed="true">Звук</button>
+      </header>
+
+      <div class="chronicle-tape" id="chronicle-tape" data-ui aria-live="polite">
+        <span class="event-year">0</span>
+        <p>Чернила коснулись чистой карты.</p>
+      </div>
+
+      <section class="map-stage" id="map-stage" data-gesture-surface data-touch-action="none" data-block-callout aria-label="Интерактивная политическая карта">
+        <canvas id="world-canvas"></canvas>
+        <div class="map-feedback" id="map-feedback" role="status" aria-live="polite" hidden></div>
+        <div class="state-label" id="state-label" hidden>
+          <strong id="state-name">АРДЕН</strong>
+          <span id="state-facts">12 земель · устойчивость 73</span>
+        </div>
+      </section>
+
+      <div class="time-ruler" data-ui>
+        <div class="ruler-track"><span id="ruler-fill"></span></div>
+        <div class="ruler-labels"><span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span></div>
+      </div>
+
+      <div class="control-deck" data-ui>
+        <div class="transport">
+          <button class="play-button" id="play-button" type="button" data-native-press aria-label="Запустить время">▶</button>
+          <button class="speed-button" id="speed-button" type="button" data-native-press>×1</button>
+          <div class="world-counts" aria-live="polite">
+            <span><b id="state-count">0</b> держав</span>
+            <span><b id="city-count">0</b> столиц</span>
+          </div>
+          <button class="help-button" id="help-button" type="button" data-native-press>?</button>
+        </div>
+
+        <div class="tools" id="tools" aria-label="Инструменты вмешательства">
+          <button class="tool is-active" type="button" data-tool="observe" data-native-press><span class="tool-icon eye"></span><small>Смотреть</small></button>
+          <button class="tool" type="button" data-tool="found" data-native-press><span class="tool-icon capital"></span><small>Столица</small></button>
+          <button class="tool" type="button" data-tool="road" data-native-press><span class="tool-icon road"></span><small>Дорога</small></button>
+          <button class="tool" type="button" data-tool="ridge" data-native-press><span class="tool-icon ridge"></span><small>Хребет</small></button>
+          <button class="tool" type="button" data-tool="schism" data-native-press><span class="tool-icon schism"></span><small>Раскол</small></button>
+          <button class="tool" type="button" data-tool="crisis" data-native-press><span class="tool-icon crisis"></span><small>Кризис</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sheet" id="pause-sheet" data-ui hidden aria-labelledby="pause-title">
+      <div class="sheet-panel">
+        <p class="kicker">ЛЕТОПИСЬ ПРИОСТАНОВЛЕНА</p>
+        <h2 id="pause-title">ПАУЗА</h2>
+        <div class="sheet-stats">
+          <div><span>ГОД</span><strong id="pause-year">0</strong></div>
+          <div><span>ДЕРЖАВ</span><strong id="pause-states">0</strong></div>
+          <div><span>ВМЕШАТЕЛЬСТВ</span><strong id="pause-actions">0</strong></div>
+        </div>
+        <button class="primary-sheet" id="resume-button" type="button" data-native-press>Продолжить</button>
+        <button class="sheet-action" id="save-button" type="button" data-native-press>Сохранить сейчас</button>
+        <button class="sheet-action" id="restart-button" type="button" data-native-press>Начать новый мир</button>
+        <button class="workshop-trigger workshop-trigger--palimpsest" type="button" data-workshop-trigger data-native-press>Workshop</button>
+        <a class="sheet-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet" id="help-sheet" data-ui hidden aria-labelledby="help-title">
+      <div class="sheet-panel help-panel">
+        <button class="sheet-close" id="help-close" type="button" data-native-press>Закрыть</button>
+        <p class="kicker">ПЯТЬ ШТРИХОВ К КАРТЕ</p>
+        <h2 id="help-title">КАК ВМЕШИВАТЬСЯ</h2>
+        <div class="rules">
+          <p><span class="rule-symbol capital"></span><b>Столица</b> создаёт новую державу или переворачивает окраину.</p>
+          <p><span class="rule-symbol road"></span><b>Дорога</b> ускоряет рост, связь и экспансию вдоль маршрута.</p>
+          <p><span class="rule-symbol ridge"></span><b>Хребет</b> тормозит армии и режет старые империи на куски.</p>
+          <p><span class="rule-symbol schism"></span><b>Раскол</b> отделяет регион большой державы в новое государство.</p>
+          <p><span class="rule-symbol crisis"></span><b>Кризис</b> бьёт по населению и устойчивости вокруг точки.</p>
+        </div>
+        <p class="help-note">Нажимай для точечных вмешательств. Дороги и хребты рисуются пальцем. Время можно остановить в любой момент.</p>
+      </div>
+    </section>
+
+    <section class="sheet" id="complete-sheet" data-ui hidden aria-labelledby="complete-title">
+      <div class="sheet-panel archive-panel">
+        <p class="kicker">ПЯТЬ ВЕКОВ ЗАПЕЧАТАНЫ</p>
+        <h2 id="complete-title">ЭПОХА ЗАВЕРШЕНА</h2>
+        <div class="archive-seal" aria-hidden="true">500</div>
+        <p id="complete-copy">Карта пережила войны, расколы и чужую руку.</p>
+        <div class="sheet-stats archive-stats">
+          <div><span>РОЖДЕНО</span><strong id="born-count">0</strong></div>
+          <div><span>ПАЛО</span><strong id="fallen-count">0</strong></div>
+          <div><span>ВМЕШАТЕЛЬСТВ</span><strong id="action-count">0</strong></div>
+        </div>
+        <div class="greatest-state"><span>КРУПНЕЙШАЯ ДЕРЖАВА</span><strong id="greatest-name">—</strong><small id="greatest-size">0 земель</small></div>
+        <button class="primary-sheet" id="continue-era" type="button" data-native-press>Продолжить до 1000 года</button>
+        <button class="sheet-action" id="new-world-button" type="button" data-native-press>Создать новый мир</button>
+        <a class="sheet-exit" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet confirm-sheet" id="confirm-sheet" data-ui hidden aria-labelledby="confirm-title">
+      <div class="sheet-panel">
+        <p class="kicker">ЧИСТЫЙ ЛИСТ</p>
+        <h2 id="confirm-title">СТЕРЕТЬ ЭТУ ИСТОРИЮ?</h2>
+        <p>Текущий мир исчезнет. Отменить это будет нельзя.</p>
+        <button class="danger-sheet" id="confirm-reset" type="button" data-native-press>Стереть и вернуться</button>
+        <button class="sheet-action" id="confirm-cancel" type="button" data-native-press>Отмена</button>
+      </div>
+    </section>
+
+    <div class="fatal-error" id="fatal-error" data-ui hidden>
+      <strong>ЧЕРНИЛА РАСТЕКЛИСЬ</strong>
+      <p>Мир не удалось собрать. Перезагрузи приложение или вернись в Pocket Works.</p>
+      <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+    </div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПАЛИМПСЕСТ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
