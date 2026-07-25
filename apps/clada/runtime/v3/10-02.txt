@@ -1,0 +1,130 @@
+tion habitatFitness(genome, terrain) {
+  enrichGenome(genome);
+  const waterMismatch = terrain.water ? 1 - genome.waterAffinity : genome.waterAffinity * .72;
+  const moistureMismatch = Math.abs(terrain.moisture - genome.moisture);
+  const altitudeMismatch = Math.abs(terrain.elevation - genome.altitude);
+  const thermalMismatch = Math.abs(terrain.temperature - genome.thermal);
+  return clamp(1 - waterMismatch * .72 - moistureMismatch * .22 - altitudeMismatch * .17 - thermalMismatch * .36, .02, 1);
+}
+
+function livingBaseState(seed = 'garden') {
+  const next = livingLegacyBaseState(seed);
+  next.modelVersion = 3;
+  next.originMode = LIVING.originMode;
+  next.terrainSeed = [...seed].reduce((sum, char) => hashNumber(sum + char.charCodeAt(0) * 31), 98431);
+  next.prehistoryEnd = 0;
+  next.season = 0;
+  next.populations = [];
+  next.nextPopulationId = 1;
+  next.carrion = [];
+  next.microResources = [];
+  next.interactions = {};
+  next.populationEvents = [];
+  next.statistics = { births: 0, deaths: 0, hybrids: 0, speciations: 0 };
+  next.mortality = {};
+  return next;
+}
+baseState = livingBaseState;
+
+function createLivingPlants(count = 120) {
+  const plants = [];
+  let guard = 0;
+  while (plants.length < count && guard < count * 12) {
+    guard += 1;
+    const x = randomRange(.025, .975);
+    const y = randomRange(.04, .96);
+    const terrain = terrainAt(x, y);
+    if (terrain.water && random() > .24) continue;
+    plants.push({
+      x, y, energy: randomRange(.45, 3.4), phase: randomRange(0, TAU),
+      kind: terrain.water ? 3 : terrain.moisture > .62 ? 0 : terrain.moisture < .3 ? 1 : 2,
+      foodType: terrain.water ? 'micro' : terrain.moisture < .34 ? 'seed' : 'leaf'
+    });
+  }
+  return plants;
+}
+createPlants = createLivingPlants;
+
+function createHistoricalSpecies(genome, parentId, born, extras = {}) {
+  const id = state.nextSpeciesId++;
+  const names = speciesNames(id, genome);
+  const species = {
+    id, parentId, born, extinct: extras.extinct ?? null,
+    name: names.scientific, common: names.common, hue: genome.hue, diet: genome.diet,
+    centroid: deepClone(genome), peak: extras.peak || 1, lastSeen: extras.extinct ?? state.generation,
+    cause: extras.cause || null, trend: 0, niche: extras.niche || null,
+    habitat: extras.habitat || null, hybrid: Boolean(extras.hybrid), hybridParentId: extras.hybridParentId || null
+  };
+  state.species.push(species);
+  return species;
+}
+
+function nicheGenome(base, niche, strength = .55) {
+  const genome = makeGenome(base, .16);
+  const targets = {
+    grazer: { plantDiet: .92, preyDiet: .05, carrionDiet: .12, size: 1.02, social: .72, cooperation: .65, waterAffinity: .08, speed: 1.05 },
+    browser: { plantDiet: .88, preyDiet: .08, size: 1.28, armor: .42, parentalCare: .52, moisture: .58 },
+    hunter: { plantDiet: .08, preyDiet: .92, carrionDiet: .32, diet: .88, speed: 1.25, brain: .68, territory: .62, ambush: .58, brood: .27 },
+    scavenger: { plantDiet: .18, preyDiet: .42, carrionDiet: .93, toxinResistance: .72, brain: .54, territory: .38 },
+    filterer: { plantDiet: .12, preyDiet: .08, filterDiet: .94, waterAffinity: .92, aquatic: .91, fins: .82, size: .72, brood: .76 },
+    amphibian: { plantDiet: .48, preyDiet: .45, waterAffinity: .58, moisture: .82, limbs: .64, fins: .42, parentalCare: .44 },
+    burrower: { plantDiet: .62, preyDiet: .16, burrow: .88, size: .61, vision: .48, armor: .32, nocturnal: .68 },
+    flyer: { plantDiet: .36, preyDiet: .58, wing: .88, speed: 1.42, armor: .12, size: .58, display: .72, mateChoice: .78 }
+  }[niche] || {};
+  for (const [key, value] of Object.entries(targets)) genome[key] = lerp(genome[key] ?? value, value, strength);
+  if (niche === 'filterer') genome.hue = 196;
+  if (niche === 'hunter') genome.hue = 18;
+  if (niche === 'flyer') genome.hue = 42;
+  return applyTradeoffs(genome);
+}
+
+function preferredPoint(genome, regionHint = null) {
+  let best = { score: -1, x: .5, y: .5 };
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const x = randomRange(.04, .96);
+    const y = randomRange(.05, .95);
+    const terrain = terrainAt(x, y);
+    let score = habitatFitness(genome, terrain) + random() * .16;
+    if (regionHint && terrain.region === regionHint) score += .28;
+    if (score > best.score) best = { score, x, y, region: terrain.region };
+  }
+  return best;
+}
+
+function createPopulation(speciesId, region, centroid, status = 'stable', founded = state.generation) {
+  const population = {
+    id: state.nextPopulationId++, speciesId, region, centroid: deepClone(centroid),
+    founded, lastSeen: state.generation, isolation: 0, divergence: 0,
+    size: 0, trend: 0, status, previousSize: 0
+  };
+  state.populations.push(population);
+  return population;
+}
+
+function spawnPopulation(species, amount, regionHint = null, generation = state.generation) {
+  const point = preferredPoint(species.centroid, regionHint);
+  const population = createPopulation(species.id, point.region, species.centroid, 'stable', species.born);
+  for (let index = 0; index < amount && state.organisms.length < MAX_ORGANISMS; index += 1) {
+    const angle = randomRange(0, TAU);
+    const radius = randomRange(.004, .07);
+    const genome = makeGenome(species.centroid, .07);
+    const organism = makeOrganism({
+      x: point.x + Math.cos(angle) * radius,
+      y: point.y + Math.sin(angle) * radius,
+      genome, speciesId: species.id, generation, energy: randomRange(11.5, 16)
+    });
+    organism.populationId = population.id;
+    organism.homeRegion = point.region;
+    organism.sex = genome.reproStrategy < .18 ? 'none' : random() < .5 ? 'f' : 'm';
+    organism.lifeStage = organism.age < 150 ? 'juvenile' : 'adult';
+    state.organisms.push(organism);
+  }
+  population.size = amount;
+  population.previousSize = amount;
+  return population;
+}
+
+function historyFromLineages(prehistory, lineages) {
+  state.history = [];
+  const interval = Math.max(4, Math.ceil(prehistory / 34));
+  for (let generation = 0; generation <= prehistory; generation += interval) {
