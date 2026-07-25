@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'facet-face-lab-';
-const CACHE_NAME = 'facet-face-lab-v1.9.0';
-const APP_VERSION = '1.9.0';
+const CACHE_NAME = 'facet-face-lab-v1.9.1';
+const APP_VERSION = '1.9.1';
 const BUNDLE_PARTS = ['00', '01', '02', '03', '04', '05', '06a', '06b', '07', '08', '09', '10']
   .map((name) => `./facet-v15-c-${name}.txt`);
 const PROTOCOL_PARTS = Array.from({ length: 12 }, (_, index) => `./protocol-v19-p${String(index).padStart(2, '0')}.txt`);
@@ -13,6 +13,7 @@ const CORE = [
   './v18-00.css',
   './v18-01.css',
   './v19.css',
+  './v191.css',
   './app.js',
   './patch-v17.txt',
   './rating-v17.js',
@@ -23,6 +24,7 @@ const CORE = [
   './ux-v18-02.txt',
   ...PROTOCOL_PARTS,
   './ux-v19.txt',
+  './ux-v191.js',
   ...BUNDLE_PARTS,
   './manifest.webmanifest',
   './icons/icon.svg',
