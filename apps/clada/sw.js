@@ -1,17 +1,19 @@
 const CACHE_PREFIX = 'clada-';
-const CACHE_NAME = 'clada-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'clada-v2.1.0';
+const APP_VERSION = '2.1.0';
 const RELEASE_DATE = '2026-07-25';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Автономная экосистема с наследованием, мутациями, отбором и видообразованием.',
-  'Режимы мира, филогенетического древа и ископаемых слоёв.',
-  'Катаклизмы, заселение, геномная линза, сохранение и экспорт миров.'
+  'Добавлено плавное масштабирование двумя пальцами и перемещение камеры отдельно для живого мира и филогенетического древа.',
+  'Геном расширен морфологией, покровами, конечностями, органами чувств, средой обитания, терморегуляцией и поведением.',
+  'Добавлены половое размножение, рекомбинация, совместимость близких видов, гибридная плодовитость и гибридные связи на древе.',
+  'Виды получили различимый внешний облик, портреты в карточках, биотопы, морфологические группы и более логичные названия.'
 ];
 const APP_SHELL = [
   './', './index.html', './app.config.json', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop-delegate.js',
   './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
   './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js',
+  './runtime/09-advanced-loader.js', './runtime/advanced-runtime.b64',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js', '../../shared/capabilities/audio.js', '../../shared/capabilities/device.js', '../../shared/capabilities/diagnostics.js'
