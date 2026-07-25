@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#ded8ca">
+<meta name="description" content="КАУЗА — интерактивная лаборатория причинных систем и контрфактических шоков.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>КАУЗА — Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app" data-app-shell data-fullscreen-app>
+<header class="top" data-ui><a class="key" href="../../" aria-label="Назад" data-app-control><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></a><div class="identity"><small>КАУЗА / ПРИЧИННАЯ ЛАБОРАТОРИЯ</small><strong id="modelTitle"></strong></div><div class="tick" id="tick">T000</div><button class="key" id="sound" aria-label="Звук"><svg viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="M17 9c1.5 1.7 1.5 4.3 0 6"/></svg></button><button class="key" id="menuBtn" aria-label="Меню"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></button></header>
+<section class="outcome" data-ui><div class="outcome-copy"><small>ГЛАВНЫЙ РЕЗУЛЬТАТ</small><strong id="outcomeName"></strong></div><div class="meter" id="meter"><i></i></div><output id="outcomeValue"></output><span class="stability" id="stability"></span></section>
+<section class="stage" id="stage" data-gesture-surface data-block-callout><svg class="edges" id="edges"><defs><marker id="arrowP" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#174f69"/></marker><marker id="arrowN" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#a2432f"/></marker></defs><g id="edgePaths"></g></svg><div class="nodes" id="nodes"></div><div class="hint">ТЯНИ УЗЕЛ ВВЕРХ ИЛИ ВНИЗ</div></section>
+<section class="transport" data-ui><div class="transport-main"><button class="play" id="play"><i class="play-icon"></i><b id="playLabel">ПУСК</b></button><button class="step" id="step"><span>+1</span><b>ШАГ</b></button><div class="speeds" id="speeds"><button data-speed=".5">½</button><button data-speed="1" aria-pressed="true">1</button><button data-speed="2">2</button></div><button id="reset" aria-label="Сброс"><b>↺</b></button></div><div class="tools"><button class="tool" id="add"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v8M8 12h8"/></svg>ФАКТОР</button><button class="tool" id="scan"><svg viewBox="0 0 24 24"><path d="M4 18 9 7l4 8 3-5 4 8M3 20h18"/></svg>РЫЧАГИ</button><button class="tool" id="trace"><svg viewBox="0 0 24 24"><path d="M3 16c3-7 5 3 8-4s5 6 10-4M3 20h18"/></svg>ТРАССА</button><button class="tool" data-workshop-trigger><svg viewBox="0 0 24 24"><path d="M14 6a4 4 0 0 0-5 5L4 16l4 4 5-5a4 4 0 0 0 5-5l-3 3-4-4 3-3Z"/></svg>СЕРВИС</button></div></section>
+<div class="banner" id="banner" hidden><span id="bannerText"></span><button id="cancelConnect">ОТМЕНА</button></div><div class="backdrop" id="backdrop" hidden></div><section class="sheet" id="sheet" hidden role="dialog" aria-modal="true"><div class="grip"></div><header><div><small id="sheetKicker"></small><h2 id="sheetTitle"></h2></div><button class="close" id="closeSheet">×</button></header><div class="sheet-body" id="sheetBody" data-keyboard-aware></div></section>
+<section class="intro" id="intro" hidden><button class="intro-close" id="introClose">×</button><div class="intro-copy"><small>POCKET WORKS / СИСТЕМНОЕ МЫШЛЕНИЕ</small><h1>КАУЗА</h1><p>Тяни фактор вверх или вниз. Смотри, где система выдержит, где уйдёт в разнос и что на самом деле является рычагом.</p></div><div class="intro-presets"><button data-preset="revolution"><b>01</b><span>Империя перед разломом</span></button><button data-preset="ai"><b>02</b><span>Гонка сильного ИИ</span></button><button data-preset="trade"><b>03</b><span>Распад торговой сети</span></button></div><button class="intro-start" id="introStart">ОТКРЫТЬ ЛАБОРАТОРИЮ</button></section><div class="toast" id="toast" hidden></div><input id="importInput" type="file" accept="application/json,.json" hidden>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАУЗА" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+<script type="module" src="./workshop-delegate.js"></script>
+</body></html>
