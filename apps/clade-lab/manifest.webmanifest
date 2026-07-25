@@ -2,20 +2,15 @@
   "id": "/apps/clade-lab/",
   "name": "КЛАДА",
   "short_name": "КЛАДА",
-  "description": "Живая лаборатория эволюции: рисуйте давление отбора прямо в чашке Петри, наблюдайте наследование признаков, появление хищников, новых видов и линий происхождения.",
+  "description": "Эволюционная лаборатория с масштабируемой живой средой и филогенетическим древом: наследование сложной морфологии, экологические ниши, гибридизация близких видов и массовые вымирания.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#e8e0cc",
-  "theme_color": "#26332d",
+  "background_color": "#e9e2d2",
+  "theme_color": "#25332d",
   "icons": [
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
 }

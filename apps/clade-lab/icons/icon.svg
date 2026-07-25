@@ -1,19 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">КЛАДА</title>
-  <desc id="desc">Ветвящееся древо эволюции внутри лабораторной чашки</desc>
-  <rect width="512" height="512" rx="112" fill="#e8e0cc"/>
-  <circle cx="256" cy="256" r="184" fill="#f5f0e2" stroke="#26332d" stroke-width="18"/>
-  <circle cx="256" cy="256" r="153" fill="none" stroke="#26332d" stroke-opacity=".18" stroke-width="5"/>
-  <path d="M256 350V244M256 272L177 190M256 285L340 191M256 238L257 153" fill="none" stroke="#26332d" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M256 350c-34 0-62-13-62-29s28-29 62-29 62 13 62 29-28 29-62 29Z" fill="#26332d"/>
-  <g stroke="#26332d" stroke-width="13">
-    <path d="M132 161c15-29 48-40 74-25 26 14 34 48 18 76-16 27-50 37-76 21-26-15-31-45-16-72Z" fill="#e45f3f"/>
-    <path d="M305 136c27-18 62-8 77 19 15 27 6 61-21 77-26 16-61 8-77-19-16-28-6-60 21-77Z" fill="#2d7d79"/>
-    <path d="M219 109c12-27 43-40 69-29 27 12 40 43 28 70-12 27-42 39-69 28-27-11-40-42-28-69Z" fill="#b8c843"/>
-  </g>
-  <g fill="#26332d">
-    <circle cx="174" cy="181" r="11"/>
-    <circle cx="339" cy="182" r="11"/>
-    <circle cx="267" cy="129" r="11"/>
-  </g>
+  <title id="title">КЛАДА</title><desc id="desc">Филогенетическое древо, образованное разными организмами</desc>
+  <rect width="512" height="512" rx="92" fill="#25332d"/>
+  <circle cx="256" cy="258" r="190" fill="#e9e2d2"/>
+  <path d="M256 407V294M256 332C213 310 190 276 182 226M256 352C306 329 335 292 350 238M256 303C247 259 255 214 279 171" fill="none" stroke="#365d49" stroke-width="24" stroke-linecap="round"/>
+  <path d="M182 226c-42 1-73-19-91-59 43-10 78 8 91 59Z" fill="#719663" stroke="#25332d" stroke-width="9"/>
+  <path d="M350 238c46-7 81 8 105 45-41 17-79 2-105-45Z" fill="#b6664b" stroke="#25332d" stroke-width="9"/>
+  <path d="M279 171c-10-42 2-78 36-108 25 36 14 77-36 108Z" fill="#548594" stroke="#25332d" stroke-width="9"/>
+  <g fill="#25332d"><circle cx="181" cy="226" r="13"/><circle cx="350" cy="238" r="13"/><circle cx="279" cy="171" r="13"/></g>
+  <g transform="translate(117 154) rotate(-18)"><ellipse rx="25" ry="13" fill="#e9e2d2"/><path d="M-17-8-32-22M-3-11-9-31M13-8 28-22M-17 8-32 22M-3 11-9 31M13 8 28 22" stroke="#25332d" stroke-width="7" stroke-linecap="round"/></g>
+  <g transform="translate(402 286) rotate(10)"><ellipse rx="31" ry="17" fill="#e9e2d2"/><path d="M-30 0-52 8M28 0 52-5" stroke="#25332d" stroke-width="8" stroke-linecap="round"/><circle cx="18" cy="-5" r="4" fill="#25332d"/></g>
+  <g transform="translate(320 91) rotate(-35)"><ellipse rx="28" ry="13" fill="#e9e2d2"/><path d="M-10 0-36-28 5-8M-10 0-24 31 8 8" fill="#719663" stroke="#25332d" stroke-width="6" stroke-linejoin="round"/></g>
 </svg>
