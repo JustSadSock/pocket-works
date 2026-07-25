@@ -1,0 +1,177 @@
+}
+
+function diversityFlowRate(population) {
+  const bucket = state.diversificationFlow?.populations?.[population.id] || { within: 0, cross: 0, hybrid: 0 };
+  const total = bucket.within + bucket.cross + bucket.hybrid;
+  return total ? (bucket.cross + bucket.hybrid * .65) / total : 0;
+}
+
+updatePopulationStructure = function diversityUpdatePopulationStructure() {
+  const groups = new Map();
+  for (const organism of state.organisms) {
+    const descriptor = diversityGroupKey(organism);
+    if (!groups.has(descriptor.key)) groups.set(descriptor.key, { ...descriptor, speciesId: organism.speciesId, members: [] });
+    groups.get(descriptor.key).members.push(organism);
+  }
+
+  for (const [key, group] of [...groups]) {
+    if (group.members.length >= 3) continue;
+    const candidates = [...groups.values()].filter((candidate) => candidate !== group && candidate.speciesId === group.speciesId && candidate.members.length >= 3);
+    if (!candidates.length) continue;
+    const centroid = livingCentroid(group.members);
+    const target = candidates.sort((a, b) => DIV.nicheDistance(centroid, livingCentroid(a.members)) - DIV.nicheDistance(centroid, livingCentroid(b.members)))[0];
+    for (const organism of group.members) {
+      organism.homeRegion = target.region;
+      organism.regionTenure = 0;
+      target.members.push(organism);
+    }
+    groups.delete(key);
+  }
+
+  const seen = new Set();
+  const membersByPopulation = new Map();
+  for (const group of groups.values()) {
+    let population = state.populations.find((entry) => entry.speciesId === group.speciesId && entry.region === group.region && entry.ecotype === group.ecotype && entry.status !== 'absorbed' && entry.status !== 'extinct');
+    if (!population) {
+      population = createPopulation(group.speciesId, group.region, group.members[0].genome, 'forming', state.generation);
+      population.ecotype = group.ecotype;
+      population.adaptiveRole = DIV.roleOf(group.members[0].genome);
+    }
+    diversityInitializePopulation(population, group.members[0].genome);
+    seen.add(population.id);
+    membersByPopulation.set(population.id, group.members);
+    population.previousSize = population.size || 0;
+    population.size = group.members.length;
+    population.trend = population.size - population.previousSize;
+    population.lastSeen = state.generation;
+    population.centroid = livingCentroid(group.members);
+    population.center = diversityGroupCenter(group.members);
+    population.ecotype = group.ecotype;
+    for (const organism of group.members) {
+      organism.populationId = population.id;
+      organism.homeRegion = group.region;
+    }
+  }
+
+  for (const population of state.populations) {
+    if (!seen.has(population.id) && population.status !== 'absorbed') {
+      population.size = 0;
+      if (state.generation - population.lastSeen > 4) population.status = 'extinct';
+    }
+  }
+
+  const candidates = [];
+  const activeBySpecies = new Map();
+  for (const population of state.populations) {
+    if (!seen.has(population.id) || population.size <= 0) continue;
+    if (!activeBySpecies.has(population.speciesId)) activeBySpecies.set(population.speciesId, []);
+    activeBySpecies.get(population.speciesId).push(population);
+  }
+
+  for (const [speciesId, populations] of activeBySpecies) {
+    const species = state.species.find((entry) => entry.id === speciesId);
+    if (!species) continue;
+    diversityInitializeSpecies(species);
+    for (const population of populations) {
+      const members = membersByPopulation.get(population.id) || [];
+      const otherMembers = populations.filter((entry) => entry.id !== population.id).flatMap((entry) => membersByPopulation.get(entry.id) || []);
+      const reference = otherMembers.length >= 4 ? livingCentroid(otherMembers) : species.lineageAnchor;
+      population.divergence = reference ? genomeDistance(population.centroid, reference) : 0;
+      population.ecologicalDivergence = reference ? DIV.nicheDistance(population.centroid, reference) : 0;
+      const otherPopulations = populations.filter((entry) => entry.id !== population.id);
+      const nearest = [...otherPopulations].sort((a, b) => diversityDistanceBetweenPopulations(population, a) - diversityDistanceBetweenPopulations(population, b))[0] || null;
+      population.spatialIsolation = nearest ? diversityDistanceBetweenPopulations(population, nearest) : 0;
+      population.barrier = nearest ? diversityRegionBarrier(population.region, nearest.region) : 0;
+      const currentFlow = diversityFlowRate(population);
+      population.geneFlowEMA = lerp(population.geneFlowEMA || 0, currentFlow, .3);
+      const separation = otherMembers.length >= 4 && (population.spatialIsolation > .15 || population.ecologicalDivergence > .075 || population.barrier > .4);
+      population.isolationAge = separation && population.geneFlowEMA < .24
+        ? (population.isolationAge || 0) + 1
+        : Math.max(0, (population.isolationAge || 0) - (population.geneFlowEMA > .35 ? 3 : 1));
+      const assortative = clamp((population.centroid.mateChoice || 0) * (.58 + population.ecologicalDivergence * 1.4));
+      const decision = DIV.speciationDecision({
+        size: population.size,
+        age: state.generation - population.founded,
+        isolationAge: population.isolationAge,
+        genetic: population.divergence,
+        ecological: population.ecologicalDivergence,
+        spatial: population.spatialIsolation,
+        barrier: population.barrier,
+        geneFlow: population.geneFlowEMA,
+        assortative,
+        opportunity: clamp((4 - state.species.filter((entry) => entry.extinct === null).length) / 4)
+      });
+      population.reproductiveIsolation = decision.isolation;
+      population.isolation = population.isolationAge;
+      population.speciationProgress = clamp(decision.isolation / .68);
+      population.status = decision.isolation >= .58 ? 'diverging' : population.isolationAge >= 6 ? 'diverging' : population.size < 4 ? 'fragile' : 'stable';
+      const livingRichness = state.species.filter((entry) => entry.extinct === null).length;
+      const richnessMinSize = 6 + Math.floor(Math.max(0, livingRichness - 10) / 3);
+      const lineageReady = state.generation - (species.lastSpeciationGeneration ?? species.born ?? 0) >= 16;
+      const globalReady = state.generation - (state.lastSpeciationGeneration ?? -999) >= 2;
+      if (decision.promote && otherMembers.length >= 4 && population.size >= richnessMinSize && lineageReady && globalReady) candidates.push({ population, members, decision, speciesId });
+    }
+  }
+
+  const promotedParents = new Set();
+  candidates.sort((a, b) => b.decision.isolation - a.decision.isolation);
+  for (const candidate of candidates) {
+    if (promotedParents.has(candidate.speciesId) || candidate.members.length < 5) continue;
+    const oldSpeciesId = candidate.population.speciesId;
+    diversityLegacyPromotePopulation(candidate.population, candidate.members);
+    if (candidate.population.speciesId === oldSpeciesId) continue;
+    const species = state.species.find((entry) => entry.id === candidate.population.speciesId);
+    const parentSpecies = state.species.find((entry) => entry.id === oldSpeciesId);
+    if (parentSpecies) parentSpecies.lastSpeciationGeneration = state.generation;
+    state.lastSpeciationGeneration = state.generation;
+    if (species) {
+      species.lastSpeciationGeneration = state.generation;
+      species.lineageAnchor = deepClone(candidate.population.centroid);
+      species.speciationMode = candidate.decision.mode;
+      species.reproductiveIsolationAtBirth = candidate.decision.isolation;
+    }
+    candidate.population.anchor = deepClone(candidate.population.centroid);
+    candidate.population.isolationAge = 0;
+    candidate.population.geneFlowEMA = 0;
+    candidate.population.speciationMode = candidate.decision.mode;
+    promotedParents.add(oldSpeciesId);
+  }
+
+  state.populations = state.populations.filter((population) => population.status !== 'extinct' || state.generation - population.lastSeen < 24).slice(-160);
+  state.diversificationFlow = { generation: state.generation, populations: {} };
+  diversityAssignAdaptiveRoles();
+};
+
+
+if (diversityLegacyPopulationRows) livingPopulationRows = function diversityPopulationRows(speciesId) {
+  const populations = state.populations.filter((population) => population.speciesId === speciesId && population.size > 0).sort((a, b) => b.size - a.size);
+  if (!populations.length) return '<div class="empty-mini">Локальные популяции не сохранились.</div>';
+  const roleNames = { plant: 'растительноядная ниша', prey: 'охотничья ниша', carrion: 'падальная ниша', filter: 'фильтрация' };
+  return populations.map((population) => {
+    const terrain = terrainAt(Number(population.region[0]) / 4 + .12, Number(population.region[1]) / 3 + .16);
+    const progress = Math.round(clamp(population.speciationProgress || 0) * 100);
+    const flow = Math.round(clamp(population.geneFlowEMA || 0) * 100);
+    const status = progress >= 85 ? 'почти отдельный вид' : progress >= 52 ? 'репродуктивно расходится' : population.status === 'diverging' ? 'расходится' : population.status === 'fragile' ? 'уязвима' : 'стабильна';
+    const role = roleNames[population.adaptiveRole] || 'смешанная ниша';
+    return `<div class="population-row"><i style="background:${livingBiomeColor(terrain)}"></i><span><b>${safeText(BIOME_NAMES[terrain.biome] || terrain.biome)}</b><small>${status} · ${role} · изоляция ${progress}% · поток генов ${flow}%</small></span><output>${population.size}</output></div>`;
+  }).join('');
+};
+
+simulateStep = function diversitySimulationStep() {
+  diversityApplyFrequencySelection();
+  diversityLegacySimulateStep();
+  diversityCommunityCacheStep = -1;
+};
+
+migrateLivingState = function diversityMigrateLivingState() {
+  diversityLegacyMigrateLivingState();
+  diversityMigrateState();
+};
+
+buildWorld = function diversityBuildWorld(seed = 'garden') {
+  diversityLegacyBuildWorld(seed);
+  diversityMigrateState();
+  saveState();
+};
+
+diversityMigrateState();

@@ -1,0 +1,180 @@
+/* КЛАДА 3.1 — устойчивое разнообразие, адаптивная радиация и настоящее видообразование. */
+const DIVERSITY_MODEL_VERSION = 1;
+const DIV = globalThis.CladaDiversificationCore;
+const diversityLegacyMigrateLivingState = migrateLivingState;
+const diversityLegacyBuildWorld = buildWorld;
+const diversityLegacyPopulationAt = livingPopulationAt;
+const diversityLegacyCanMate = livingCanMate;
+const diversityLegacySpatialIndex = livingSpatialIndex;
+const diversityLegacyApplyBehavior = livingApplyBehavior;
+const diversityLegacyReproduce = reproduce;
+const diversityLegacyFindResources = livingFindResources;
+const diversityLegacyFeed = livingFeed;
+const diversityLegacySimulateStep = simulateStep;
+const diversityLegacyPromotePopulation = livingPromotePopulation;
+const diversityLegacyPopulationRows = typeof livingPopulationRows === 'function' ? livingPopulationRows : null;
+let diversityCommunityCacheStep = -1;
+let diversityCommunityCache = null;
+
+function diversityPopulation(populationId) {
+  return state.populations.find((population) => population.id === populationId) || null;
+}
+
+function diversityRegionBarrier(left, right) {
+  if (!left || !right || left === right) return 0;
+  const a = left.at(-1), b = right.at(-1);
+  if (a === 'M' || b === 'M') return .9;
+  const water = new Set(['W', 'E']);
+  if (water.has(a) !== water.has(b)) return .68;
+  if (water.has(a) && water.has(b) && a !== b) return .52;
+  if (a === 'C' || b === 'C') return .22;
+  return .14;
+}
+
+function diversityDistanceBetweenPopulations(a, b) {
+  if (!a?.center || !b?.center) return a?.region === b?.region ? 0 : .3;
+  return Math.hypot(a.center.x - b.center.x, a.center.y - b.center.y);
+}
+
+function diversityFlowBucket(populationId) {
+  state.diversificationFlow ||= { generation: state.generation, populations: {} };
+  state.diversificationFlow.populations[populationId] ||= { within: 0, cross: 0, hybrid: 0 };
+  return state.diversificationFlow.populations[populationId];
+}
+
+function diversityRecordMating(parent, mate) {
+  if (!parent?.populationId || !mate?.populationId) return;
+  const samePopulation = parent.populationId === mate.populationId;
+  const sameSpecies = parent.speciesId === mate.speciesId;
+  for (const organism of [parent, mate]) {
+    const bucket = diversityFlowBucket(organism.populationId);
+    if (samePopulation) bucket.within += 1;
+    else if (sameSpecies) bucket.cross += 1;
+    else bucket.hybrid += 1;
+  }
+}
+
+function diversityViableRoles(terrain) {
+  return terrain?.water ? ['filter', 'prey', 'carrion', 'plant'] : ['plant', 'prey', 'carrion'];
+}
+
+function diversityInitializePopulation(population, sampleGenome = population?.centroid) {
+  if (!population || !sampleGenome) return population;
+  const terrain = population.center ? terrainAt(population.center.x, population.center.y) : null;
+  population.ecotype ||= DIV.ecotypeKey(sampleGenome, terrain);
+  population.adaptiveRole ||= DIV.roleOf(sampleGenome);
+  population.anchor ||= deepClone(sampleGenome);
+  population.founded ??= state.generation;
+  population.isolationAge ??= population.isolation || 0;
+  population.geneFlowEMA ??= 0;
+  population.ecologicalDivergence ??= 0;
+  population.reproductiveIsolation ??= 0;
+  population.center ||= null;
+  population.speciationMode ||= null;
+  return population;
+}
+
+function diversityInitializeSpecies(species) {
+  if (!species?.centroid) return species;
+  species.lineageAnchor ||= deepClone(species.centroid);
+  species.diversificationModel = DIVERSITY_MODEL_VERSION;
+  species.originNiche ||= DIV.ecotypeKey(species.lineageAnchor);
+  return species;
+}
+
+function diversityAssignAdaptiveRoles() {
+  const bySpecies = new Map();
+  for (const population of state.populations) {
+    if (population.status === 'extinct' || population.status === 'absorbed') continue;
+    if (!bySpecies.has(population.speciesId)) bySpecies.set(population.speciesId, []);
+    bySpecies.get(population.speciesId).push(population);
+  }
+  for (const populations of bySpecies.values()) {
+    if (populations.length < 2) continue;
+    populations.sort((a, b) => (b.size || 0) - (a.size || 0));
+    const used = new Map();
+    for (let index = 0; index < populations.length; index += 1) {
+      const population = populations[index];
+      const terrain = population.center ? terrainAt(population.center.x, population.center.y) : null;
+      const viable = diversityViableRoles(terrain);
+      const current = population.adaptiveRole || DIV.roleOf(population.centroid);
+      if (population.adaptiveRoleAssigned && viable.includes(current)) {
+        population.adaptiveRole = current;
+      } else if (index === 0 || !viable.includes(current) || random() > .58) {
+        population.adaptiveRole = viable.includes(current) ? current : viable[0];
+      } else {
+        population.adaptiveRole = [...viable].sort((a, b) => (used.get(a) || 0) - (used.get(b) || 0))[0];
+      }
+      population.adaptiveRoleAssigned = true;
+      used.set(population.adaptiveRole, (used.get(population.adaptiveRole) || 0) + 1);
+    }
+  }
+}
+
+function diversityMigrateState() {
+  if (!state) return;
+  state.diversificationModel = DIVERSITY_MODEL_VERSION;
+  state.diversificationFlow ||= { generation: state.generation, populations: {} };
+  for (const species of state.species || []) diversityInitializeSpecies(species);
+  for (const population of state.populations || []) diversityInitializePopulation(population);
+  diversityAssignAdaptiveRoles();
+}
+
+function diversityRoleTargets(role) {
+  return {
+    plant: { plantDiet: .88, preyDiet: .08, carrionDiet: .17, filterDiet: .04, diet: .16 },
+    prey: { plantDiet: .08, preyDiet: .88, carrionDiet: .28, filterDiet: .03, diet: .84, speed: 1.18, brain: .63 },
+    carrion: { plantDiet: .16, preyDiet: .38, carrionDiet: .9, filterDiet: .02, diet: .58, toxinResistance: .72 },
+    filter: { plantDiet: .1, preyDiet: .07, carrionDiet: .12, filterDiet: .92, diet: .22, waterAffinity: .9, fins: .76 }
+  }[role] || {};
+}
+
+function diversityAdaptiveTarget(population, terrain, genome) {
+  const role = population?.adaptiveRole || DIV.roleOf(genome);
+  const target = {
+    ...diversityRoleTargets(role),
+    thermal: terrain.temperature,
+    moisture: terrain.water ? .88 : terrain.moisture,
+    altitude: terrain.elevation,
+    waterAffinity: terrain.water ? .88 : terrain.coast ? .45 : .1
+  };
+  if (terrain.water) Object.assign(target, { aquatic: .82, fins: Math.max(target.fins || 0, .68), fur: .12 });
+  if (terrain.biome === 'highland' || terrain.biome === 'snow') Object.assign(target, { fur: .72, stamina: .68 });
+  if (terrain.biome === 'desert') Object.assign(target, { moisture: .18, nocturnal: .7, burrow: .66 });
+  return target;
+}
+
+function diversityBiasGenome(genome, target, rate) {
+  if (!genome || !target) return genome;
+  const raw = typeof stabilityRaw === 'function' ? stabilityRaw(genome) : genome;
+  for (const [key, value] of Object.entries(target)) {
+    if (!Number.isFinite(value) || !Number.isFinite(raw[key])) continue;
+    raw[key] = lerp(raw[key], value, rate);
+  }
+  if (typeof stabilityExpressGenome === 'function') stabilityExpressGenome(genome);
+  else for (const [key, value] of Object.entries(raw)) genome[key] = value;
+  return genome;
+}
+
+livingPopulationAt = function diversityPopulationAt(speciesId, region, genome) {
+  const regionType = String(region || '').at(-1);
+  const terrain = { water: regionType === 'W' || regionType === 'E', moisture: regionType === 'C' ? .72 : .45, elevation: regionType === 'M' ? .82 : .42 };
+  const ecotype = DIV.ecotypeKey(genome, terrain);
+  let population = state.populations.find((entry) => entry.speciesId === speciesId && entry.region === region && entry.ecotype === ecotype && entry.status !== 'absorbed' && entry.status !== 'extinct');
+  if (!population) {
+    population = createPopulation(speciesId, region, genome, 'forming', state.generation);
+    population.ecotype = ecotype;
+    population.adaptiveRole = DIV.roleOf(genome);
+    diversityInitializePopulation(population, genome);
+  }
+  return population;
+};
+
+livingCanMate = function diversityCanMate(a, b) {
+  let score = diversityLegacyCanMate(a, b);
+  if (!score) return 0;
+  const aPopulation = diversityPopulation(a.populationId);
+  const bPopulation = diversityPopulation(b.populationId);
+  if (!aPopulation || !bPopulation) return score;
+  if (a.speciesId === b.speciesId && aPopulation.id !== bPopulation.id) {
+    const ecological = DIV.nicheDistance(a.genome, b.genome);
