@@ -1,10 +1,11 @@
 function drawField(field) {
   const positive = field.polarity > 0;
+  const selected = state.pointer?.fieldId === field.id;
   ctx.save();
   ctx.translate(field.x, field.y);
   ctx.strokeStyle = positive ? '#1c6380' : '#c85a34';
   ctx.fillStyle = positive ? 'rgba(28,99,128,.08)' : 'rgba(200,90,52,.08)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = selected ? 2.8 : 1.5;
   ctx.setLineDash([5, 7]);
   ctx.beginPath(); ctx.arc(0, 0, field.radius, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.setLineDash([]);
@@ -13,9 +14,13 @@ function drawField(field) {
     ctx.beginPath(); ctx.arc(0, 0, field.radius * ring, 0, TAU); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  ctx.lineWidth = 2.2;
-  ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
+  ctx.lineWidth = selected ? 3.2 : 2.2;
+  ctx.beginPath(); ctx.arc(0, 0, selected ? 11 : 8, 0, TAU); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); if (positive) { ctx.moveTo(0, -4); ctx.lineTo(0, 4); } ctx.stroke();
+  if (selected) {
+    ctx.globalAlpha = .55;
+    ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -23,11 +28,12 @@ function drawConstraint(constraint) {
   const endpoints = constraintEndpoints(constraint);
   if (!endpoints) return;
   const tension = clamp(Math.abs(constraint.tension || 0), 0, 1);
+  const fatigue = clamp(constraint.fatigue || 0, 0, 1);
   ctx.save();
-  ctx.strokeStyle = state.stress ? `rgb(${Math.round(48 + 185 * tension)},${Math.round(99 - 35 * tension)},${Math.round(128 - 75 * tension)})` : '#394346';
-  ctx.lineWidth = state.stress ? 2 + tension * 3 : 2;
+  ctx.strokeStyle = state.stress ? `rgb(${Math.round(48 + 190 * Math.max(tension, fatigue))},${Math.round(99 - 42 * Math.max(tension, fatigue))},${Math.round(128 - 82 * Math.max(tension, fatigue))})` : '#394346';
+  ctx.lineWidth = state.stress ? 2 + Math.max(tension, fatigue) * 3 : 2;
   if (constraint.type === 'rope') {
-    ctx.setLineDash([4, 4]);
+    ctx.setLineDash(fatigue > .7 ? [2, 5] : [4, 4]);
     ctx.beginPath(); ctx.moveTo(endpoints.ax, endpoints.ay); ctx.lineTo(endpoints.bx, endpoints.by); ctx.stroke();
   } else {
     const dx = endpoints.bx - endpoints.ax, dy = endpoints.by - endpoints.ay;
@@ -37,7 +43,7 @@ function drawConstraint(constraint) {
     ctx.beginPath(); ctx.moveTo(endpoints.ax, endpoints.ay);
     for (let i = 1; i < segments; i++) {
       const t = i / segments;
-      const offset = (i % 2 ? 1 : -1) * 6;
+      const offset = (i % 2 ? 1 : -1) * (6 + fatigue * 2);
       ctx.lineTo(endpoints.ax + dx * t + px * offset, endpoints.ay + dy * t + py * offset);
     }
     ctx.lineTo(endpoints.bx, endpoints.by); ctx.stroke();
@@ -49,15 +55,47 @@ function drawConstraint(constraint) {
   ctx.restore();
 }
 
+function bodySeed(body) {
+  let value = 0;
+  for (let i = 0; i < body.id.length; i++) value = (value * 31 + body.id.charCodeAt(i)) >>> 0;
+  return value;
+}
+
+function drawCracks(body) {
+  const damage = clamp(body.damage || 0, 0, 1);
+  if (damage < .09) return;
+  const seed = bodySeed(body);
+  const count = damage > .72 ? 4 : damage > .38 ? 3 : 2;
+  const reach = body.shape === 'circle' ? body.r * .78 : Math.min(body.w, body.h) * .46;
+  ctx.save();
+  ctx.strokeStyle = MATERIALS[body.material].edge;
+  ctx.globalAlpha = .35 + damage * .55;
+  ctx.lineWidth = 1 + damage * 1.2;
+  for (let i = 0; i < count; i++) {
+    const angle = ((seed % 360) * Math.PI / 180) + i * (TAU / count) + ((seed >> (i + 1)) % 13) * .025;
+    const startX = Math.cos(angle + 1.5) * reach * .08;
+    const startY = Math.sin(angle + 1.5) * reach * .08;
+    const midX = Math.cos(angle) * reach * .48;
+    const midY = Math.sin(angle) * reach * .48;
+    const endX = Math.cos(angle + (i % 2 ? .18 : -.16)) * reach;
+    const endY = Math.sin(angle + (i % 2 ? .18 : -.16)) * reach;
+    ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(midX, midY); ctx.lineTo(endX, endY); ctx.stroke();
+    if (damage > .55) {
+      ctx.beginPath(); ctx.moveTo(midX, midY); ctx.lineTo(midX + Math.cos(angle + 1.1) * reach * .28, midY + Math.sin(angle + 1.1) * reach * .28); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 function drawBody(body) {
   const material = MATERIALS[body.material];
+  const damage = clamp(body.damage || 0, 0, 1);
   ctx.save();
   ctx.translate(body.x, body.y);
   ctx.rotate(body.angle);
   ctx.fillStyle = material.color;
-  ctx.strokeStyle = material.edge;
-  ctx.lineWidth = body.id === state.selectedId ? 4 : 2;
-  if (body.id === state.selectedId) { ctx.shadowColor = '#f5efdf'; ctx.shadowBlur = 0; }
+  ctx.strokeStyle = state.stress && damage > .05 ? `rgb(${Math.round(98 + damage * 140)},${Math.round(65 - damage * 24)},${Math.round(38 - damage * 12)})` : material.edge;
+  ctx.lineWidth = body.id === state.selectedId ? 4 : 2 + damage * .8;
   ctx.beginPath();
   if (body.shape === 'circle') ctx.arc(0, 0, body.r, 0, TAU);
   else ctx.rect(-body.w / 2, -body.h / 2, body.w, body.h);
@@ -88,11 +126,21 @@ function drawBody(body) {
     for (let i=0;i<5;i++){ const a=i*1.7; const r=body.shape==='circle'?body.r*.45:Math.min(body.w,body.h)*.32; ctx.beginPath(); ctx.arc(Math.cos(a)*r,Math.sin(a)*r,2.2,0,TAU); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
+  drawCracks(body);
   if (body.pinned) {
     ctx.strokeStyle = '#232a2c'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(-6,-6); ctx.lineTo(6,6); ctx.moveTo(6,-6); ctx.lineTo(-6,6); ctx.stroke();
   }
   ctx.restore();
+
+  if (body.id === state.selectedId && state.destruction) {
+    const width = clamp(body.shape === 'circle' ? body.r * 1.6 : body.w * .75, 28, 76);
+    const y = body.y - (body.shape === 'circle' ? body.r : Math.hypot(body.w, body.h) / 2) - 13;
+    ctx.save();
+    ctx.fillStyle = 'rgba(35,42,44,.18)'; ctx.fillRect(body.x - width / 2, y, width, 4);
+    ctx.fillStyle = damage < .55 ? '#1c6380' : '#c85a34'; ctx.fillRect(body.x - width / 2, y, width * (1 - damage), 4);
+    ctx.restore();
+  }
 
   if (state.stress && body.invMass) {
     const speed = Math.hypot(body.vx, body.vy);
@@ -117,24 +165,25 @@ function drawPreview() {
   if (!preview) return;
   const dx = preview.x2 - preview.x1, dy = preview.y2 - preview.y1;
   const distance = Math.hypot(dx, dy);
+  const size = state.spawnSize;
   ctx.save();
   ctx.strokeStyle = preview.type === 'impulse' ? '#c85a34' : '#1c6380';
   ctx.fillStyle = 'rgba(28,99,128,.12)';
   ctx.lineWidth = 2;
   ctx.setLineDash([6,5]);
   if (preview.type === 'circle') {
-    ctx.beginPath(); ctx.arc(preview.x1, preview.y1, 22, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(preview.x1, preview.y1, 22 * size, 0, TAU); ctx.fill(); ctx.stroke();
     if (distance > 5) drawArrow(preview.x1, preview.y1, preview.x2, preview.y2, '#1c6380');
   } else if (preview.type === 'box') {
-    ctx.save(); ctx.translate(preview.x1,preview.y1); ctx.rotate(Math.atan2(dy,dx)*.22); ctx.beginPath(); ctx.rect(-23,-17,46,34); ctx.fill(); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.translate(preview.x1,preview.y1); ctx.rotate(Math.atan2(dy,dx)*.22); ctx.beginPath(); ctx.rect(-23*size,-17*size,46*size,34*size); ctx.fill(); ctx.stroke(); ctx.restore();
     if (distance > 5) drawArrow(preview.x1, preview.y1, preview.x2, preview.y2, '#1c6380');
   } else if (preview.type === 'wall') {
-    ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(preview.x1,preview.y1); ctx.lineTo(preview.x2,preview.y2); ctx.stroke();
+    ctx.lineWidth = clamp(10 + size * 5, 12, 20); ctx.beginPath(); ctx.moveTo(preview.x1,preview.y1); ctx.lineTo(preview.x2,preview.y2); ctx.stroke();
   } else if (preview.type === 'field') {
-    ctx.beginPath(); ctx.arc(preview.x1,preview.y1,clamp(distance||78,48,190),0,TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(preview.x1,preview.y1,clamp(distance||78,48,220),0,TAU); ctx.fill(); ctx.stroke();
   } else if (preview.type === 'impulse') {
     ctx.setLineDash([]); drawArrow(preview.x1,preview.y1,preview.x2,preview.y2,'#c85a34');
-    ctx.globalAlpha=.28;ctx.beginPath();ctx.arc(preview.x1,preview.y1,clamp(86+distance*.35,86,190),0,TAU);ctx.stroke();
+    ctx.globalAlpha=.28;ctx.beginPath();ctx.arc(preview.x1,preview.y1,clamp(86+distance*.35,86,205),0,TAU);ctx.stroke();
   } else {
     ctx.beginPath(); ctx.moveTo(preview.x1,preview.y1); ctx.lineTo(preview.x2,preview.y2); ctx.stroke();
   }
@@ -148,7 +197,19 @@ function render() {
   for (const constraint of state.constraints) drawConstraint(constraint);
   for (const body of state.bodies) drawBody(body);
   for (const burst of state.bursts) {
-    ctx.save(); ctx.globalAlpha = burst.life; ctx.strokeStyle = '#c85a34'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(burst.x,burst.y,burst.radius,0,TAU); ctx.stroke(); ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = burst.life;
+    ctx.strokeStyle = burst.color || '#c85a34';
+    ctx.lineWidth = burst.kind === 'break' ? 3.5 : 2.5;
+    if (burst.kind === 'snap') ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.arc(burst.x,burst.y,burst.radius,0,TAU); ctx.stroke();
+    if (burst.kind === 'break') {
+      for (let i = 0; i < 6; i++) {
+        const angle = i / 6 * TAU;
+        ctx.beginPath(); ctx.moveTo(burst.x + Math.cos(angle) * burst.radius * .45, burst.y + Math.sin(angle) * burst.radius * .45); ctx.lineTo(burst.x + Math.cos(angle) * burst.radius, burst.y + Math.sin(angle) * burst.radius); ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
   drawPreview();
 }
@@ -158,9 +219,9 @@ function frame(now) {
   state.lastTime = now;
   if (!state.paused) {
     state.accumulator += elapsed * state.speed;
-    const step = 1 / 120;
+    const step = 1 / 150;
     let iterations = 0;
-    while (state.accumulator >= step && iterations < 8) {
+    while (state.accumulator >= step && iterations < 10) {
       simulate(step);
       state.accumulator -= step;
       iterations++;
