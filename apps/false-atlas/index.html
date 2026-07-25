@@ -15,105 +15,51 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./map-controls.css">
+  <link rel="stylesheet" href="./overlays.css">
 </head>
 <body>
   <main class="atlas-shell" data-app-shell data-fullscreen-app>
     <header class="topbar" data-ui>
-      <a class="brass-button home-button" href="../../" aria-label="Вернуться в Pocket Works" data-native-press>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5M9 12h11"/></svg>
-      </a>
-      <div class="campaign-strip" aria-label="Ход кампании">
-        <div class="banner-lives" id="banner-lives" aria-label="Сохранённые знамёна"></div>
-        <div class="night-track" id="night-track" aria-label="Ночи кампании"></div>
-      </div>
+      <a class="brass-button home-button" href="../../" aria-label="Вернуться в Pocket Works" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5M9 12h11"/></svg></a>
+      <div class="campaign-strip" aria-label="Ход кампании"><div class="banner-lives" id="banner-lives" aria-label="Сохранённые знамёна"></div><div class="night-track" id="night-track" aria-label="Ночи кампании"></div></div>
       <button class="brass-button sound-button" id="sound-button" type="button" aria-label="Выключить звук" aria-pressed="true" data-native-press>
         <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M16 9c1.5 1.7 1.5 4.3 0 6M18.5 6.5c3 3.1 3 7.9 0 11"/></svg>
         <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m17 9 5 5m0-5-5 5"/></svg>
       </button>
     </header>
-
     <section class="table" aria-label="Карта кампании">
       <div class="map-frame" id="map-frame">
-        <div class="map-paper" id="map-paper">
-          <canvas id="map-canvas" aria-hidden="true"></canvas>
-          <div class="map-vignette" aria-hidden="true"></div>
-          <div class="city-layer" id="city-layer"></div>
-          <div class="drop-halo" id="drop-halo" hidden></div>
-          <div class="truth-flash" id="truth-flash" hidden></div>
-        </div>
+        <div class="map-paper" id="map-paper"><canvas id="map-canvas" aria-hidden="true"></canvas><div class="map-vignette" aria-hidden="true"></div><div class="city-layer" id="city-layer"></div><div class="drop-halo" id="drop-halo" hidden></div><div class="truth-flash" id="truth-flash" hidden></div></div>
         <aside class="tool-rack" aria-label="Инструменты">
-          <button class="tool lens-tool" id="lens-tool" type="button" aria-label="Линза проверки" data-tool="lens" data-native-press>
-            <span class="lens-glass" aria-hidden="true"></span>
-            <span class="tool-count" id="lens-count">3</span>
-          </button>
-          <button class="tool shield-tool" id="shield-tool" type="button" aria-label="Защитная печать" data-tool="shield" data-native-press>
-            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 52 15v16c0 13-8 22-20 28C20 53 12 44 12 31V15l20-8Z"/><path d="M32 18v27M21 29h22"/></svg>
-          </button>
+          <button class="tool lens-tool" id="lens-tool" type="button" aria-label="Линза проверки" data-tool="lens" data-native-press><span class="lens-glass" aria-hidden="true"></span><span class="tool-count" id="lens-count">3</span></button>
+          <button class="tool shield-tool" id="shield-tool" type="button" aria-label="Защитная печать" data-tool="shield" data-native-press><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 52 15v16c0 13-8 22-20 28C20 53 12 44 12 31V15l20-8Z"/><path d="M32 18v27M21 29h22"/></svg></button>
         </aside>
       </div>
-
       <section class="source-dock" id="source-dock" aria-label="Источники донесений">
-        <button class="source-seal scout" type="button" data-source="scout" aria-label="Следопыт" aria-pressed="true" data-native-press>
-          <span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 42c8-19 24-29 44-29-6 9-7 18-3 28-12-4-24-4-41 1Z"/><path d="M18 45c11-8 20-16 29-27M29 36l-3-12M37 29l9 2"/></svg></span>
-          <span class="trust-ring" aria-hidden="true"></span>
-        </button>
-        <button class="source-seal merchant" type="button" data-source="merchant" aria-label="Купец" aria-pressed="true" data-native-press>
-          <span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="20"/><path d="M24 23h13c7 0 8 9 1 10H27c-7 0-6 9 1 9h13M32 17v30"/></svg></span>
-          <span class="trust-ring" aria-hidden="true"></span>
-        </button>
-        <button class="source-seal bell" type="button" data-source="bell" aria-label="Звонарь" aria-pressed="true" data-native-press>
-          <span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 43h28l-5-8V25c0-7-4-13-9-13s-9 6-9 13v10l-5 8Z"/><path d="M26 47c2 7 10 7 12 0M15 43h34"/></svg></span>
-          <span class="trust-ring" aria-hidden="true"></span>
-        </button>
+        <button class="source-seal scout" type="button" data-source="scout" aria-label="Следопыт" aria-pressed="true" data-native-press><span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 42c8-19 24-29 44-29-6 9-7 18-3 28-12-4-24-4-41 1Z"/><path d="M18 45c11-8 20-16 29-27M29 36l-3-12M37 29l9 2"/></svg></span><span class="trust-ring" aria-hidden="true"></span></button>
+        <button class="source-seal merchant" type="button" data-source="merchant" aria-label="Купец" aria-pressed="true" data-native-press><span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="20"/><path d="M24 23h13c7 0 8 9 1 10H27c-7 0-6 9 1 9h13M32 17v30"/></svg></span><span class="trust-ring" aria-hidden="true"></span></button>
+        <button class="source-seal bell" type="button" data-source="bell" aria-label="Звонарь" aria-pressed="true" data-native-press><span class="seal-face"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 43h28l-5-8V25c0-7-4-13-9-13s-9 6-9 13v10l-5 8Z"/><path d="M26 47c2 7 10 7 12 0M15 43h34"/></svg></span><span class="trust-ring" aria-hidden="true"></span></button>
       </section>
-
-      <button class="commit-seal" id="commit-seal" type="button" aria-label="Скрепить приказ и завершить ночь" disabled data-native-press>
-        <span class="commit-rim" aria-hidden="true"></span>
-        <svg viewBox="0 0 80 80" aria-hidden="true"><path d="M23 42 35 54 59 27"/></svg>
-      </button>
+      <button class="commit-seal" id="commit-seal" type="button" aria-label="Скрепить приказ и завершить ночь" disabled data-native-press><span class="commit-rim" aria-hidden="true"></span><svg viewBox="0 0 80 80" aria-hidden="true"><path d="M23 42 35 54 59 27"/></svg></button>
     </section>
-
-    <div class="gesture-lesson" id="gesture-lesson" hidden aria-live="polite">
-      <div class="lesson-token" id="lesson-token" aria-hidden="true"></div>
-      <div class="lesson-target" id="lesson-target" aria-hidden="true"></div>
-    </div>
-
+    <div class="gesture-lesson" id="gesture-lesson" hidden aria-live="polite"><div class="lesson-token" id="lesson-token" aria-hidden="true"></div><div class="lesson-target" id="lesson-target" aria-hidden="true"></div></div>
     <section class="intro-screen" id="intro-screen" aria-labelledby="intro-title">
-      <div class="intro-map" aria-hidden="true">
-        <span class="fold fold-a"></span><span class="fold fold-b"></span><span class="fold fold-c"></span>
-        <span class="ink-road road-a"></span><span class="ink-road road-b"></span><span class="ink-road road-c"></span>
-        <span class="intro-city city-a"></span><span class="intro-city city-b"></span><span class="intro-city city-c"></span>
-      </div>
-      <div class="intro-copy">
-        <p class="eyebrow">POCKET WORKS</p>
-        <h1 id="intro-title">ЛОЖНЫЙ<br>АТЛАС</h1>
-        <p class="intro-symbols" aria-label="Слух, проверка, защита">
-          <span>?</span><i></i><span class="symbol-eye"></span><i></i><span class="symbol-shield"></span>
-        </p>
-      </div>
-      <button class="start-seal" id="start-button" type="button" data-native-press>
-        <span class="start-label" id="start-label">НАЧАТЬ</span>
-        <span class="start-mark" aria-hidden="true">A</span>
-      </button>
+      <div class="intro-map" aria-hidden="true"><span class="fold fold-a"></span><span class="fold fold-b"></span><span class="fold fold-c"></span><span class="ink-road road-a"></span><span class="ink-road road-b"></span><span class="ink-road road-c"></span><span class="intro-city city-a"></span><span class="intro-city city-b"></span><span class="intro-city city-c"></span></div>
+      <div class="intro-copy"><p class="eyebrow">POCKET WORKS</p><h1 id="intro-title">ЛОЖНЫЙ<br>АТЛАС</h1><p class="intro-symbols" aria-label="Слух, проверка, защита"><span>?</span><i></i><span class="symbol-eye"></span><i></i><span class="symbol-shield"></span></p></div>
+      <button class="start-seal" id="start-button" type="button" data-native-press><span class="start-label" id="start-label">НАЧАТЬ</span><span class="start-mark" aria-hidden="true">A</span></button>
       <button class="new-campaign-link" id="new-campaign-button" type="button" hidden>Новая кампания</button>
     </section>
-
     <section class="result-screen" id="result-screen" hidden aria-labelledby="result-title">
-      <div class="result-paper">
-        <div class="result-emblem" id="result-emblem" aria-hidden="true"></div>
-        <p class="eyebrow">КАРТА ЗАКРЫТА</p>
-        <h2 id="result-title">ГРАНИЦА<br>УСТОЯЛА</h2>
-        <div class="result-score" id="result-score" aria-label="Итог кампании"></div>
-        <button class="result-seal" id="result-button" type="button" data-native-press>
-          <svg viewBox="0 0 80 80" aria-hidden="true"><path d="M55 27c-8-8-22-9-31 0-8 8-8 21 0 29 9 9 23 8 31 0M54 18v18H36"/></svg>
-        </button>
-      </div>
+      <div class="result-paper"><div class="result-emblem" id="result-emblem" aria-hidden="true"></div><p class="eyebrow">КАРТА ЗАКРЫТА</p><h2 id="result-title">ГРАНИЦА<br>УСТОЯЛА</h2><div class="result-score" id="result-score" aria-label="Итог кампании"></div><button class="result-seal" id="result-button" type="button" data-native-press><svg viewBox="0 0 80 80" aria-hidden="true"><path d="M55 27c-8-8-22-9-31 0-8 8-8 21 0 29 9 9 23 8 31 0M54 18v18H36"/></svg></button></div>
     </section>
-
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   </main>
-
   <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛОЖНЫЙ АТЛАС" data-app-version="1.0.0"></script>
-  <script src="./app.js" type="module"></script>
+  <script src="./app.js"></script>
+  <script src="./interactions.js"></script>
+  <script src="./engine.js"></script>
+  <script src="./render.js"></script>
+  <script src="./bootstrap.js"></script>
 </body>
 </html>
