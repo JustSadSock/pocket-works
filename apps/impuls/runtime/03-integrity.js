@@ -76,7 +76,7 @@ restoreWorld = function restoreWorldSafe(snapshot, rescale = true) {
     ? safeSnapshot.constraints.filter(constraint => {
         if (!constraint || !['rope', 'spring'].includes(constraint.type)) return false;
         if (constraint.bodyB) return true;
-        return Number.isFinite(Number(constraint.bx)) && Number.isFinite(Number(constraint.by));
+        return constraint.bx != null && constraint.by != null && Number.isFinite(Number(constraint.bx)) && Number.isFinite(Number(constraint.by));
       })
     : [];
   return restoreWorldBase(safeSnapshot, rescale);
