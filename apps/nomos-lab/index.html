@@ -1,0 +1,24 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#27231d"><title>НОМОС</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><link rel="stylesheet" href="./styles.css"></head><body>
+<div class="app">
+<header><a class="back" href="../../" aria-label="В Pocket Works">←</a><div class="brand"><i></i><b>НОМОС</b><span id="year">год 1</span></div><button id="sound" aria-label="Звук">◖</button></header>
+<main>
+<section class="map"><canvas id="canvas"></canvas><div class="grain"></div>
+<nav class="modes"><button data-mode="political" class="on">Границы</button><button data-mode="wealth">Достаток</button><button data-mode="culture">Культуры</button><button data-mode="unrest">Напряжение</button></nav>
+<nav class="tools"><button data-tool="inspect" class="on"><b>⌖</b><small>Смотреть</small></button><button data-tool="seed"><b>●</b><small>Очаг</small></button><button data-tool="grain"><b>≋</b><small>Пища</small></button><button data-tool="ore"><b>◆</b><small>Руда</small></button><button data-tool="mountain"><b>⌃</b><small>Горы</small></button><button data-tool="crisis" class="danger"><b>×</b><small>Кризис</small></button></nav>
+<aside id="inspector"><button id="closeInspector">×</button><p>ГОСУДАРСТВО</p><h2 id="iname">—</h2><div class="age"><i id="isigil"></i><span id="iage">—</span></div><dl><div><dt>люди</dt><dd id="ipop">—</dd></div><div><dt>земля</dt><dd id="iland">—</dd></div><div><dt>казна</dt><dd id="iwealth">—</dd></div><div><dt>связность</dt><dd id="icohesion">—</dd></div></dl><span id="inote"></span></aside>
+<div id="hint">Проведи по карте выбранным инструментом</div><div id="toast"></div></section>
+<section class="ticker"><i></i><p id="ticker">Мир готов. Запусти время или вмешайся в карту.</p></section>
+</main>
+<footer><button id="world"><b>↻</b><small>Мир</small></button><button id="laws"><b>§</b><small>Законы</small></button><button id="play" class="play">▶</button><button id="speed"><b>×1</b><small>Скорость</small></button><button id="chronicle"><b>⌛</b><small>Летопись</small></button></footer>
+</div>
+<div id="scrim" hidden></div>
+<section class="sheet" id="lawsSheet" hidden><div class="handle"></div><div class="sheetHead"><div><p>ОБЩИЕ УСЛОВИЯ</p><h2>Законы мира</h2></div><button data-close>×</button></div><em>Каждый закон меняет решения всех обществ со следующего года.</em>
+<label><span><b>Вертикаль</b><small>Быстрее экспансия, но дальние земли чаще бунтуют.</small></span><input id="centralization" type="range" min="0" max="100"><output></output></label>
+<label><span><b>Обмен</b><small>Больше торговли, меньше войн и мягче культурные границы.</small></span><input id="exchange" type="range" min="0" max="100"><output></output></label>
+<label><span><b>Насилие</b><small>Захваты быстрее, государства крупнее и живут короче.</small></span><input id="violence" type="range" min="0" max="100"><output></output></label>
+<label><span><b>Память</b><small>Культуры устойчивее, но новые порядки принимаются медленнее.</small></span><input id="memory" type="range" min="0" max="100"><output></output></label>
+<button id="seal" class="primary">Скрепить законы печатью</button></section>
+<section class="sheet" id="worldSheet" hidden><div class="handle"></div><div class="sheetHead"><div><p>НОВЫЙ ЭКСПЕРИМЕНТ</p><h2>Форма мира</h2></div><button data-close>×</button></div><div class="presets"><button data-preset="river"><i>≋</i><span><b>Речные царства</b><small>Плодородные долины и борьба за узкие коридоры.</small></span></button><button data-preset="archipelago"><i>◌</i><span><b>Архипелаг</b><small>Торговля важнее фронта, проливы решают судьбу держав.</small></span></button><button data-preset="powder"><i>※</i><span><b>Пороховой погреб</b><small>Девять обществ рядом. История сразу ведёт себя как мудак.</small></span></button><button data-preset="blank"><i>□</i><span><b>Чистый лист</b><small>Только рельеф. Поставь очаги сам.</small></span></button></div></section>
+<section class="sheet" id="chronicleSheet" hidden><div class="handle"></div><div class="sheetHead"><div><p>СОХРАНЁННЫЕ ЭПОХИ</p><h2>Летопись</h2></div><button data-close>×</button></div><div id="summary"></div><div id="epochs"></div><button id="export" class="secondary">Сохранить карту как изображение</button></section>
+<section id="onboarding" hidden><div class="hero"><i></i><i></i><i></i></div><p>КАРМАННАЯ ЛАБОРАТОРИЯ</p><h1>Государства здесь никто не строит.<br>Они заводятся сами.</h1><span>Рисуй условия, меняй законы и наблюдай последствия. Никакой победы — только история, которая постоянно идёт не по плану.</span><button id="start">Начать эксперимент</button></section>
+<script type="module" src="./app.js"></script></body></html>
