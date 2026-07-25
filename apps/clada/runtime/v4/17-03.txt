@@ -1,0 +1,258 @@
+function metaRecordHistory() {
+  const meta = metaEnsureState();
+  if (state.history.at(-1)?.generation === state.generation) state.history.pop();
+  const summary = META.summarize(meta);
+  const counts = {};
+  for (const species of meta.species) {
+    if (species.extinct || (species.abundance || 0) < .5) continue;
+    counts[species.id] = Math.round(species.abundance || 0);
+  }
+  state.history.push({
+    generation: state.generation, env: deepClone(state.env), population: Math.round(summary.abundance), counts,
+    organisms: state.organisms.slice(0, 180).map(snapshotOrganism), populations: deepClone(state.populations),
+    season: state.season, ecology: { macro: true, guilds: deepClone(summary.guilds), occupiedPatches: summary.occupiedPatches },
+    event: state.events.at(-1)?.generation === state.generation ? deepClone(state.events.at(-1)) : null
+  });
+  if (state.history.length > MAX_HISTORY) state.history.splice(0, state.history.length - MAX_HISTORY);
+  state.fossilIndex = null;
+  if (state.generation % 5 === 0 || !state.macroTimeline.length) {
+    state.macroTimeline.push({
+      g: state.generation, n: Math.round(summary.abundance), s: summary.richness, d: summary.demes,
+      p: summary.occupiedPatches, guilds: Object.fromEntries(Object.entries(summary.guilds).map(([key, value]) => [key, Math.round(value)]))
+    });
+    state.macroTimeline = state.macroTimeline.slice(-180);
+  }
+}
+
+function metaFinalizeGeneration() {
+  const meta = metaEnsureState();
+  if (!meta) return;
+  metaSyncVisibleTraitsIntoCommunity();
+  meta.env = deepClone(state.env);
+  const { proposals } = META.advance(meta);
+  state.generation = meta.generation;
+  state.rng = meta.rng;
+  for (const proposal of proposals) metaCreateAppSpecies(proposal);
+  metaSyncSpeciesRecords();
+  metaSyncPopulationRecords();
+  metaReconcileRepresentatives();
+  metaSyncPopulationRecords();
+  state.interactions = Object.fromEntries(Object.entries(state.interactions || {}).map(([speciesId, bucket]) => [speciesId, {
+    prey: Object.fromEntries(Object.entries(bucket.prey || {}).map(([key, value]) => [key, value * .82])),
+    predators: Object.fromEntries(Object.entries(bucket.predators || {}).map(([key, value]) => [key, value * .82])),
+    competitors: Object.fromEntries(Object.entries(bucket.competitors || {}).map(([key, value]) => [key, value * .82])),
+    plants: (bucket.plants || 0) * .82, carrion: (bucket.carrion || 0) * .82, filter: (bucket.filter || 0) * .82
+  }]));
+  metaRecordHistory();
+  updateTimeline();
+  updateReadouts();
+  saveState();
+}
+
+finalizeGeneration = metaFinalizeGeneration;
+
+function metaProtectAndGuideRepresentatives() {
+  const meta = state.metacommunity;
+  if (!meta) return;
+  const counts = new Map();
+  for (const organism of state.organisms) {
+    const deme = metaDemeForOrganism(organism);
+    if (!deme) continue;
+    organism.macroDemeId = deme.id;
+    counts.set(deme.id, (counts.get(deme.id) || 0) + 1);
+  }
+  for (const organism of state.organisms) {
+    const deme = metaDemeForOrganism(organism);
+    if (!deme) continue;
+    const patch = metaPatchById(deme.patchId);
+    if (!patch) continue;
+    if ((counts.get(deme.id) || 0) <= 2 && deme.abundance > 1.2) {
+      organism.energy = Math.max(organism.energy, 2.8);
+      organism.age = Math.min(organism.age, 2050);
+      if (organism.cause === 'голод' || organism.cause?.includes('среда')) organism.cause = null;
+    }
+    const dx = patch.x - organism.x, dy = patch.y - organism.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > .16) {
+      organism.vx += dx / (distance || 1) * .000035;
+      organism.vy += dy / (distance || 1) * .000035;
+    }
+  }
+}
+
+simulateStep = function metaSimulationStep() {
+  metaProtectAndGuideRepresentatives();
+  metaLegacySimulateStep();
+  if (state.step - metaLastSoftStep >= 44) {
+    metaLastSoftStep = state.step;
+    metaReconcileRepresentatives({ soft: true });
+  }
+};
+
+function metaCompactTraits(traits) {
+  const keys = ['thermal', 'moisture', 'altitude', 'water', 'size', 'speed', 'prey', 'plant', 'filter', 'carrion', 'nocturnal', 'migration', 'fertility', 'parentalCare', 'armor', 'social'];
+  return Object.fromEntries(keys.map((key) => [key, metaRound(traits?.[key])]).filter(([, value]) => value !== 0));
+}
+
+function buildCompactDiagnostic() {
+  const meta = metaEnsureState();
+  const summary = META.summarize(meta);
+  return {
+    schema: 'clada-diagnostic-v1', app: 'КЛАДА', version: META_APP_VERSION,
+    world: {
+      seed: state.seed, originMode: state.originMode || LIVING.originMode, generation: state.generation,
+      rng: meta.rng, terrainSeed: state.terrainSeed, env: deepClone(state.env), shock: state.shock ? { type: state.shock.type, strength: metaRound(state.shock.strength) } : null
+    },
+    summary: {
+      abundance: Math.round(summary.abundance), richness: summary.richness, demes: summary.demes,
+      occupiedPatches: summary.occupiedPatches, guilds: Object.fromEntries(Object.entries(summary.guilds).map(([key, value]) => [key, Math.round(value)])),
+      visualRepresentatives: state.organisms.length, metrics: deepClone(meta.metrics)
+    },
+    replay: { commands: (state.commandLog || []).slice(-240) },
+    species: meta.species.map((species) => ({
+      id: species.id, parent: species.parentId ?? null, born: species.born, extinct: Boolean(species.extinct),
+      extinctGeneration: species.extinctGeneration ?? null, guild: species.guild, abundance: metaRound(species.abundance),
+      extinctionDebt: species.extinctionDebt || 0, traits: metaCompactTraits(species.traits), anchor: metaCompactTraits(species.anchor)
+    })),
+    demes: meta.demes.filter((deme) => deme.abundance > .02).map((deme) => ({
+      id: deme.id, species: deme.speciesId, patch: deme.patchId, guild: deme.guild,
+      n: metaRound(deme.abundance), k: metaRound(deme.carryingCapacity), trend: metaRound(deme.trend), age: deme.age,
+      isolation: metaRound(deme.isolation), isolationAge: deme.isolationAge || 0, geneFlow: metaRound(deme.geneFlow),
+      compatibility: metaRound(deme.compatibility), food: metaRound(deme.foodRatio), predation: metaRound(deme.predationLoss), traits: metaCompactTraits(deme.traits)
+    })),
+    patches: meta.patches.map((patch) => ({
+      id: patch.id, biome: patch.biome, water: patch.water ? 1 : 0, coast: patch.coast ? 1 : 0,
+      t: metaRound(patch.temperature), m: metaRound(patch.moisture), e: metaRound(patch.elevation),
+      resources: Object.fromEntries(Object.entries(meta.resources[patch.id] || {}).map(([key, value]) => [key, metaRound(value, 1)]))
+    })),
+    timeline: (state.macroTimeline || []).slice(-180),
+    events: meta.events.slice(-160),
+    mortality: state.mortality || {}
+  };
+}
+
+async function exportCompactDiagnostic() {
+  const payload = JSON.stringify(buildCompactDiagnostic());
+  const fileName = `clada-diagnostic-g${state.generation}.cdiag.json`;
+  const blob = new Blob([payload], { type: 'application/json' });
+  const file = typeof File === 'function' ? new File([blob], fileName, { type: 'application/json' }) : null;
+  try {
+    if (file && navigator.canShare?.({ files: [file] }) && navigator.share) {
+      await navigator.share({ title: `КЛАДА — поколение ${state.generation}`, text: 'Компактная диагностика мира КЛАДЫ', files: [file] });
+      showToast('Диагностика подготовлена');
+      return;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url; anchor.download = fileName; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+  showToast(`Диагностика экспортирована · ${Math.ceil(payload.length / 1024)} КБ`);
+}
+
+function metaRecordCommand(type, data = {}) {
+  if (!state) return;
+  state.commandLog ||= [];
+  state.commandLog.push({ g: state.generation, type, ...data });
+  state.commandLog = state.commandLog.slice(-240);
+}
+
+openMenuSheet = function metaOpenMenuSheet() {
+  metaLegacyOpenMenuSheet();
+  const exportButton = sheetBody.querySelector('[data-menu="export"]');
+  if (exportButton && !sheetBody.querySelector('[data-menu="diagnostic"]')) {
+    exportButton.insertAdjacentHTML('afterend', '<button type="button" data-menu="diagnostic"><strong>Диагностика для анализа</strong><span>компактный JSON</span></button>');
+  }
+};
+
+sheetBody.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-menu="diagnostic"]');
+  if (!button) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  exportCompactDiagnostic();
+}, true);
+
+for (const [input, key] of [[temperatureInput, 'temperature'], [foodInput, 'food'], [mutationInput, 'mutation']]) {
+  input.addEventListener('change', () => metaRecordCommand('environment', { key, value: metaRound(state.env[key]) }));
+}
+
+applyCataclysm = function metaApplyCataclysm(type) {
+  metaRecordCommand('cataclysm', { value: type });
+  return metaLegacyApplyCataclysm(type);
+};
+
+seedAt = function metaSeedAt(x = randomRange(.18, .82), y = randomRange(.18, .82), amount = 10) {
+  const beforeIds = new Set(state.organisms.map((organism) => organism.id));
+  const result = metaLegacySeedAt(x, y, amount);
+  metaRecordCommand('introduction', { x: metaRound(x), y: metaRound(y), amount });
+  const meta = metaEnsureState();
+  const newcomers = state.organisms.filter((organism) => !beforeIds.has(organism.id));
+  const groups = new Map();
+  for (const organism of newcomers) {
+    const appSpecies = state.species.find((species) => species.id === organism.speciesId);
+    const patchId = metaPatchIdAt(organism.x, organism.y);
+    const guild = META.guildFromGenome(organism.genome, appSpecies?.niche);
+    const key = `${organism.speciesId}:${patchId}:${guild}`;
+    if (!groups.has(key)) groups.set(key, { speciesId: organism.speciesId, patchId, guild, members: [] });
+    groups.get(key).members.push(organism);
+    if (!meta.species.some((species) => species.id === organism.speciesId) && appSpecies) {
+      const traits = metaTraitsFromGenome(appSpecies.centroid);
+      meta.species.push({ id: appSpecies.id, parentId: appSpecies.parentId, born: state.generation, extinct: false, guild, traits: deepClone(traits), anchor: deepClone(traits), niche: guild, extinctionDebt: 0, lastSpeciationGeneration: state.generation });
+    }
+  }
+  for (const group of groups.values()) {
+    let deme = meta.demes.find((entry) => entry.speciesId === group.speciesId && entry.patchId === group.patchId && entry.guild === group.guild && entry.abundance > 0);
+    const traits = metaTraitsFromGenome(livingCentroid(group.members));
+    if (!deme) {
+      deme = { id: meta.nextDemeId++, speciesId: group.speciesId, patchId: group.patchId, guild: group.guild, abundance: 0, age: 0, traits: deepClone(traits), anchor: deepClone(traits), isolation: 0, isolationAge: 0, geneFlow: 0, lowYears: 0, founded: state.generation };
+      meta.demes.push(deme);
+    }
+    deme.abundance += Math.max(2.5, group.members.length * 1.55);
+    for (const organism of group.members) organism.macroDemeId = deme.id;
+  }
+  metaSyncSpeciesRecords();
+  metaSyncPopulationRecords();
+  metaReconcileRepresentatives();
+  saveState();
+  return result;
+};
+
+updateReadouts = function metaUpdateReadouts() {
+  metaLegacyUpdateReadouts();
+  if (!state?.metacommunity || state.fossilIndex !== null) return;
+  const summary = META.summarize(state.metacommunity);
+  populationOutput.textContent = String(Math.round(summary.abundance));
+  speciesOutput.textContent = String(summary.richness);
+  const populationChip = document.querySelector('#populationCountChip');
+  if (populationChip) populationChip.textContent = String(summary.demes);
+};
+
+migrateLivingState = function metaMigrateLivingState() {
+  metaLegacyMigrateLivingState();
+  metaEnsureState();
+  metaSyncSpeciesRecords();
+  metaSyncPopulationRecords();
+  metaReconcileRepresentatives();
+};
+
+buildWorld = function metaBuildWorld(seed = 'garden') {
+  metaLegacyBuildWorld(seed);
+  state.commandLog = [{ g: state.generation, type: 'world-created', seed, originMode: state.originMode || LIVING.originMode }];
+  state.macroTimeline = [];
+  state.metacommunity = metaBuildCommunityFromState();
+  metaSyncSpeciesRecords();
+  metaSyncPopulationRecords();
+  metaReconcileRepresentatives();
+  metaRecordHistory();
+  syncAllUI();
+  saveState();
+};
+
+metaEnsureState();
+metaSyncSpeciesRecords();
+metaSyncPopulationRecords();
+metaReconcileRepresentatives();
+updateReadouts();
+saveState();
