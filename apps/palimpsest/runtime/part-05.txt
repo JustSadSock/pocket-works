@@ -1,0 +1,203 @@
+onst rect = elements.canvas.getBoundingClientRect();
+  const x = clamp(event.clientX - rect.left, 0, rect.width - 0.01);
+  const y = clamp(event.clientY - rect.top, 0, rect.height - 0.01);
+  const col = clamp(Math.floor(x / rect.width * COLS), 0, COLS - 1);
+  const row = clamp(Math.floor(y / rect.height * ROWS), 0, ROWS - 1);
+  return cellIndex(col, row);
+}
+
+function showFeedback(message) {
+  clearTimeout(feedbackTimer);
+  elements.mapFeedback.textContent = message;
+  elements.mapFeedback.hidden = false;
+  feedbackTimer = window.setTimeout(() => { elements.mapFeedback.hidden = true; }, 1500);
+}
+
+function haptic(pattern = 12) {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    // Progressive enhancement only.
+  }
+}
+
+function ensureAudio() {
+  if (!soundEnabled) return null;
+  if (!audioContext) {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return null;
+    audioContext = new Context();
+  }
+  if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+  return audioContext;
+}
+
+function playTone(kind = 'tap') {
+  const context = ensureAudio();
+  if (!context) return;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = kind === 'crisis' ? 'sawtooth' : 'sine';
+  const frequency = kind === 'start' ? 220 : kind === 'success' ? 330 : kind === 'crisis' ? 95 : 160;
+  oscillator.frequency.setValueAtTime(frequency, context.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(60, frequency * 0.72), context.currentTime + 0.11);
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(kind === 'crisis' ? 0.026 : 0.018, context.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.12);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.13);
+}
+
+function updateSoundUI() {
+  document.querySelectorAll('[data-sound-toggle]').forEach((button) => {
+    button.textContent = soundEnabled ? 'Звук' : 'Тишина';
+    button.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+  });
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  updateSoundUI();
+  if (soundEnabled) playTone('tap');
+  saveWorld(false);
+}
+
+function handleToolAt(index, isDrag = false) {
+  if (!world) return;
+  const cell = world.cells[index];
+  if (!cell) return;
+
+  if (activeTool === 'observe') {
+    world.selectedStateId = cell.owner >= 0 ? cell.owner : null;
+    updateSelectedState();
+    if (cell.owner < 0 && !isDrag) showFeedback(cell.land ? 'Ничейная земля' : 'Море');
+    return;
+  }
+
+  if (activeTool === 'road') {
+    if (applyRoad(index)) {
+      renderWorld();
+      if (!isDrag) playTone('tap');
+    }
+    return;
+  }
+
+  if (activeTool === 'ridge') {
+    if (applyRidge(index)) {
+      renderWorld();
+      if (!isDrag) playTone('tap');
+    }
+    return;
+  }
+
+  if (isDrag) return;
+
+  if (activeTool === 'found') {
+    if (!cell.land || cell.ridge) {
+      showFeedback('Столице нужна пригодная суша');
+      haptic([20, 30, 20]);
+      return;
+    }
+    const random = mulberry32(world.seed + world.year * 113 + world.actions * 101 + index);
+    const state = createStateAt(world, index, 1, random, true);
+    if (state) {
+      world.selectedStateId = state.id;
+      recalculateStates(world);
+      playTone('success');
+      haptic(18);
+    }
+  } else if (activeTool === 'schism') {
+    const result = schismAt(world, index, true, mulberry32(world.seed + world.year * 71 + index));
+    if (!result) {
+      showFeedback('Нужна крупная держава и точка вдали от столицы');
+      haptic([18, 25, 18]);
+      return;
+    }
+    world.selectedStateId = result.id;
+    playTone('success');
+    haptic(24);
+  } else if (activeTool === 'crisis') {
+    if (!cell.land) {
+      showFeedback('Кризис растворился в море');
+      return;
+    }
+    crisisAt(world, index, true);
+    playTone('crisis');
+    haptic([25, 35, 35]);
+  }
+
+  updateUI();
+  renderWorld();
+  scheduleSave();
+}
+
+function finishDrawAction() {
+  if (!pointerState?.changed || !world) return;
+  world.actions += 1;
+  if (activeTool === 'road') addEvent(world, 'Новая дорога связала далёкие земли.');
+  if (activeTool === 'ridge') addEvent(world, 'На карте поднялся новый горный хребет.');
+  haptic(14);
+  scheduleSave();
+  updateUI();
+}
+
+function onPointerDown(event) {
+  if (!world || event.button !== 0) return;
+  elements.canvas.setPointerCapture?.(event.pointerId);
+  const index = canvasPointToIndex(event);
+  pointerState = { pointerId: event.pointerId, lastIndex: index, changed: false };
+  if (activeTool === 'road' || activeTool === 'ridge') {
+    const before = activeTool === 'road' ? world.cells[index].road : world.cells[index].ridge;
+    handleToolAt(index, false);
+    const after = activeTool === 'road' ? world.cells[index].road : world.cells[index].ridge;
+    pointerState.changed = before !== after;
+  } else {
+    handleToolAt(index, false);
+  }
+  event.preventDefault();
+}
+
+function onPointerMove(event) {
+  if (!pointerState || event.pointerId !== pointerState.pointerId || !world) return;
+  if (activeTool !== 'road' && activeTool !== 'ridge') return;
+  const index = canvasPointToIndex(event);
+  if (index === pointerState.lastIndex) return;
+  pointerState.lastIndex = index;
+  const before = activeTool === 'road' ? world.cells[index].road : world.cells[index].ridge;
+  handleToolAt(index, true);
+  const after = activeTool === 'road' ? world.cells[index].road : world.cells[index].ridge;
+  pointerState.changed ||= before !== after;
+  event.preventDefault();
+}
+
+function onPointerEnd(event) {
+  if (!pointerState || event.pointerId !== pointerState.pointerId) return;
+  finishDrawAction();
+  try { elements.canvas.releasePointerCapture?.(event.pointerId); } catch {}
+  pointerState = null;
+}
+
+function openPause() {
+  if (!world) return;
+  world.playing = false;
+  updateUI();
+  elements.pauseYear.textContent = world.year;
+  elements.pauseStates.textContent = activeStates(world).length;
+  elements.pauseActions.textContent = world.actions;
+  elements.pauseSheet.hidden = false;
+  saveWorld(false);
+}
+
+function showCompletion() {
+  if (!world) return;
+  world.playing = false;
+  const states = [...activeStates(world)].sort((a, b) => b.size - a.size);
+  const greatest = states[0];
+  elements.bornCount.textContent = world.born;
+  elements.fallenCount.textContent = world.fallen;
+  elements.actionCount.textContent = world.actions;
+  elements.greatestName.textContent = greatest?.name || 'НИКТО';
+  elements.greatestSize.textContent = `${greatest?.size || 0} земель`;
+  elements.completeCopy.textContent = states.length
+    ? `К финалу уцелело ${states.length} держав. Карта запомнила
