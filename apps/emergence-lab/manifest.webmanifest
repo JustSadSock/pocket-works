@@ -1,0 +1,21 @@
+{
+  "id": "/apps/emergence-lab/",
+  "name": "Emergence Lab",
+  "short_name": "Emergence Lab",
+  "description": "A touch-first laboratory for breeding complex motion from visual interaction rules.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#ece5d2",
+  "theme_color": "#ece5d2",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
