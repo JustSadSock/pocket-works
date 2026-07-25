@@ -1,0 +1,221 @@
+tate.stability = clamp(state.stability - 12, 10, 100);
+  });
+  if (userAction) targetWorld.actions += 1;
+  addEvent(targetWorld, `Кризис прошёл через ${Math.max(1, affected.size)} держав${affected.size === 1 ? 'у' : 'ы'}.`);
+}
+
+function applyRoad(index) {
+  const cell = world.cells[index];
+  if (!cell?.land || cell.ridge) return false;
+  if (!cell.road) {
+    cell.road = true;
+    cell.pop = Math.min(12, cell.pop + 0.24);
+    return true;
+  }
+  return false;
+}
+
+function applyRidge(index) {
+  const cell = world.cells[index];
+  if (!cell?.land || cell.road) return false;
+  if (!cell.ridge) {
+    cell.ridge = true;
+    cell.elevation = Math.max(cell.elevation, 0.82);
+    cell.fertility *= 0.42;
+    cell.pop *= 0.7;
+    return true;
+  }
+  return false;
+}
+
+function serializeWorld(targetWorld) {
+  return {
+    schema: 1,
+    seed: targetWorld.seed,
+    scenario: targetWorld.scenario,
+    year: targetWorld.year,
+    horizon: targetWorld.horizon,
+    cells: targetWorld.cells,
+    states: targetWorld.states,
+    nextStateId: targetWorld.nextStateId,
+    born: targetWorld.born,
+    fallen: targetWorld.fallen,
+    actions: targetWorld.actions,
+    selectedStateId: targetWorld.selectedStateId,
+    event: targetWorld.event,
+    recentEvents: targetWorld.recentEvents,
+    completed: targetWorld.completed
+  };
+}
+
+function hydrateWorld(data) {
+  if (!data || data.schema !== 1 || !Array.isArray(data.cells) || data.cells.length !== COLS * ROWS || !Array.isArray(data.states)) {
+    throw new Error('Invalid saved world');
+  }
+  return {
+    ...data,
+    playing: false,
+    vertices: makeVertices(data.seed)
+  };
+}
+
+function saveWorld(showMessage = false) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ soundEnabled, speedIndex }));
+    if (!world) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeWorld(world)));
+    if (showMessage) showFeedback('Летопись сохранена');
+  } catch (error) {
+    console.warn('Failed to save Palimpsest world', error);
+    if (showMessage) showFeedback('Не удалось сохранить мир');
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => saveWorld(false), 450);
+}
+
+function loadSavedWorld() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return hydrateWorld(JSON.parse(raw));
+  } catch (error) {
+    console.warn('Discarding invalid Palimpsest save', error);
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function loadSettings() {
+  try {
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    soundEnabled = settings.soundEnabled !== false;
+    speedIndex = Number.isInteger(settings.speedIndex) ? clamp(settings.speedIndex, 0, SPEEDS.length - 1) : 0;
+  } catch {
+    soundEnabled = true;
+    speedIndex = 0;
+  }
+}
+
+function clearWorld() {
+  world = null;
+  localStorage.removeItem(STORAGE_KEY);
+  updateContinueButton();
+}
+
+function updateContinueButton() {
+  const saved = world || loadSavedWorld();
+  if (saved && saved.year > 0 && !saved.completed) {
+    elements.continueButton.hidden = false;
+    elements.continueCopy.textContent = `Год ${saved.year} · ${activeStates(saved).length} держав`;
+  } else {
+    elements.continueButton.hidden = true;
+  }
+}
+
+function showScreen(screen) {
+  [elements.menuScreen, elements.worldScreen].forEach((item) => {
+    item.classList.toggle('is-active', item === screen);
+    item.hidden = item !== screen;
+  });
+}
+
+function openWorld(targetWorld) {
+  world = targetWorld;
+  world.playing = false;
+  world.completed = world.year >= world.horizon;
+  showScreen(elements.worldScreen);
+  elements.pauseSheet.hidden = true;
+  elements.helpSheet.hidden = true;
+  elements.completeSheet.hidden = true;
+  elements.confirmSheet.hidden = true;
+  activeTool = 'observe';
+  updateToolUI();
+  updateUI();
+  resizeCanvas();
+  renderWorld();
+  scheduleSave();
+}
+
+function returnToMenu() {
+  if (world) {
+    world.playing = false;
+    saveWorld(false);
+  }
+  [elements.pauseSheet, elements.helpSheet, elements.completeSheet, elements.confirmSheet].forEach((sheet) => { sheet.hidden = true; });
+  showScreen(elements.menuScreen);
+  updateContinueButton();
+}
+
+function startScenario(scenario) {
+  const seed = Math.floor(Date.now() % 2147483647) ^ Math.floor(Math.random() * 1000000);
+  openWorld(makeBaseWorld(seed, scenario));
+  playTone('start');
+}
+
+function updateToolUI() {
+  elements.tools.querySelectorAll('[data-tool]').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.tool === activeTool);
+    button.setAttribute('aria-pressed', button.dataset.tool === activeTool ? 'true' : 'false');
+  });
+}
+
+function updateEventTape() {
+  if (!world?.event) return;
+  elements.eventYear.textContent = world.event.year;
+  elements.eventCopy.textContent = world.event.text;
+}
+
+function eraForYear(year) {
+  if (year < 100) return 'I ЭПОХА';
+  if (year < 200) return 'II ЭПОХА';
+  if (year < 300) return 'III ЭПОХА';
+  if (year < 400) return 'IV ЭПОХА';
+  if (year < 500) return 'V ЭПОХА';
+  return 'ПОСЛЕ ЛЕТОПИСИ';
+}
+
+function updateSelectedState() {
+  const state = getState(world, world?.selectedStateId);
+  if (!state) {
+    elements.stateLabel.hidden = true;
+    return;
+  }
+  elements.stateLabel.hidden = false;
+  elements.stateLabel.style.setProperty('--state-color', state.color);
+  elements.stateName.textContent = state.name;
+  elements.stateFacts.textContent = `${state.size} земель · устойчивость ${Math.round(state.stability)} · возраст ${world.year - state.founded}`;
+}
+
+function updateUI() {
+  if (!world) return;
+  const states = activeStates(world);
+  elements.yearLabel.textContent = `ГОД ${world.year}`;
+  elements.eraLabel.textContent = eraForYear(world.year);
+  elements.rulerFill.style.width = `${clamp(world.year / world.horizon * 100, 0, 100)}%`;
+  elements.stateCount.textContent = states.length;
+  elements.cityCount.textContent = states.length;
+  elements.playButton.textContent = world.playing ? 'Ⅱ' : '▶';
+  elements.playButton.classList.toggle('is-playing', world.playing);
+  elements.playButton.setAttribute('aria-label', world.playing ? 'Остановить время' : 'Запустить время');
+  elements.speedButton.textContent = `×${SPEEDS[speedIndex]}`;
+  updateEventTape();
+  updateSelectedState();
+}
+
+function resizeCanvas() {
+  if (!world || elements.worldScreen.hidden) return;
+  const rect = elements.mapStage.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  elements.canvas.width = Math.round(rect.width * dpr);
+  elements.canvas.height = Math.round(rect.height * dpr);
+  elements.canvas.style.width = `${rect.width}px`;
+  elements.canvas.style.height = `${rect.height}px`;
+  mapMetrics = {
+    width: rect.width,
+    height: rect.height,
+    dpr,
+    ce
