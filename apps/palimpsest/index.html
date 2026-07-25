@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#2b2a24">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПАЛИМПСЕСТ">
+  <title>ПАЛИМПСЕСТ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" data-app-control data-native-press>В Pocket Works</a>
+      <div class="identity" aria-label="ПАЛИМПСЕСТ — лаборатория альтернативной истории">
+        <span class="identity-mark" aria-hidden="true"></span>
+        <strong>ПАЛИМПСЕСТ</strong>
+      </div>
+      <button class="icon-button" id="settingsButton" type="button" data-native-press aria-label="Законы мира">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M7 14v6"/></svg>
+      </button>
+    </header>
+
+    <section class="workspace">
+      <div class="map-column">
+        <div class="map-head" data-ui>
+          <div>
+            <span class="eyebrow">ГОД</span>
+            <strong id="yearValue">1100</strong>
+          </div>
+          <div class="branch-readout">
+            <span class="eyebrow">ВЕТВЬ</span>
+            <strong id="branchValue">1</strong>
+          </div>
+          <button class="map-tool" id="resetViewButton" type="button" data-native-press>Вся карта</button>
+        </div>
+
+        <div class="map-frame" id="mapFrame" data-gesture-surface data-touch-action="none" data-block-callout>
+          <canvas id="mapCanvas" aria-label="Процедурная политическая карта. Коснитесь державы, чтобы выбрать её."></canvas>
+          <div class="map-empty" id="mapEmpty" hidden>Карта повреждена. Создайте новую хронику.</div>
+          <div class="gesture-hint" id="gestureHint">Коснитесь державы · сведите пальцы для масштаба</div>
+          <div class="zoom-stack" data-ui>
+            <button type="button" id="zoomInButton" aria-label="Приблизить" data-native-press>+</button>
+            <button type="button" id="zoomOutButton" aria-label="Отдалить" data-native-press>−</button>
+          </div>
+        </div>
+
+        <div class="timeline" aria-label="Лента истории" data-ui>
+          <div class="timeline-labels"><span>Прошлое</span><span>Коснитесь года, чтобы переписать будущее</span></div>
+          <div class="timeline-track" id="timelineTrack"></div>
+        </div>
+      </div>
+
+      <aside class="control-column" data-ui>
+        <section class="state-strip" id="stateStrip" aria-live="polite">
+          <div class="state-title-row">
+            <span class="state-swatch" id="stateSwatch"></span>
+            <div>
+              <span class="eyebrow">ВЫБРАНА ДЕРЖАВА</span>
+              <h1 id="stateName">—</h1>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div><span>Земли</span><strong id="areaValue">0</strong></div>
+            <div><span>Армия</span><strong id="armyValue">0</strong></div>
+            <div><span>Устойчивость</span><strong id="stabilityValue">0</strong></div>
+            <div><span>Влияние</span><strong id="influenceValue">0</strong></div>
+          </div>
+        </section>
+
+        <section class="interventions" aria-labelledby="interventionTitle">
+          <div class="section-title-row">
+            <div>
+              <span class="eyebrow">ОДНО ВМЕШАТЕЛЬСТВО</span>
+              <h2 id="interventionTitle">Сломайте ход истории</h2>
+            </div>
+            <span class="seal-status" id="sealStatus">ГОТОВО</span>
+          </div>
+          <div class="intervention-grid">
+            <button class="intervention" type="button" data-action="patronage" data-native-press>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 4.7 5.2.8-3.8 3.7.9 5.3-4.6-2.5-4.6 2.5.9-5.3-3.8-3.7 5.2-.8z"/></svg>
+              <span><strong>Покровительство</strong><small>усилить державу</small></span>
+            </button>
+            <button class="intervention" type="button" data-action="unrest" data-native-press>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l4-14 3 6 3-5 4 13M7 15h10"/></svg>
+              <span><strong>Поднять смуту</strong><small>расшатать власть</small></span>
+            </button>
+            <button class="intervention" type="button" data-action="trade" data-native-press>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h12l-3-3M20 16H8l3 3M16 5l4 3-4 3M8 13l-4 3 4 3"/></svg>
+              <span><strong>Открыть путь</strong><small>богатство и связи</small></span>
+            </button>
+            <button class="intervention" type="button" data-action="claim" data-native-press>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4m0 1h11l-2 4 2 4H6"/></svg>
+              <span><strong>Дать притязание</strong><small>толкнуть к экспансии</small></span>
+            </button>
+          </div>
+          <p class="action-feedback" id="actionFeedback" aria-live="polite">Выберите державу и поставьте на ней сургучную печать.</p>
+        </section>
+
+        <button class="advance-button" id="advanceButton" type="button" data-native-press>
+          <span>ПРОПУСТИТЬ ДЕСЯТИЛЕТИЕ</span>
+          <strong id="advanceYear">→ 1110</strong>
+        </button>
+
+        <section class="chronicle" aria-labelledby="chronicleTitle">
+          <div class="section-title-row compact">
+            <h2 id="chronicleTitle">Последние строки</h2>
+            <button class="text-button" id="newWorldButton" type="button" data-native-press>Новая хроника</button>
+          </div>
+          <ol id="chronicleList"></ol>
+        </section>
+      </aside>
+    </section>
+
+    <section class="sheet" id="settingsSheet" hidden aria-labelledby="settingsTitle">
+      <button class="sheet-scrim" type="button" data-sheet-close aria-label="Закрыть"></button>
+      <div class="sheet-panel" data-ui>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="section-title-row">
+          <div>
+            <span class="eyebrow">ЗАКОНЫ МИРА</span>
+            <h2 id="settingsTitle">Что толкает историю</h2>
+          </div>
+          <button class="icon-button" type="button" data-sheet-close data-native-press aria-label="Закрыть">×</button>
+        </div>
+        <label class="law-control" for="warLaw">
+          <span><strong>Война</strong><small>частота нападений и скорость передела границ</small></span>
+          <output id="warLawValue">58%</output>
+          <input id="warLaw" type="range" min="10" max="100" step="1" value="58">
+        </label>
+        <label class="law-control" for="revoltLaw">
+          <span><strong>Смута</strong><small>вероятность распада нестабильных держав</small></span>
+          <output id="revoltLawValue">48%</output>
+          <input id="revoltLaw" type="range" min="10" max="100" step="1" value="48">
+        </label>
+        <label class="law-control" for="tradeLaw">
+          <span><strong>Торговля</strong><small>доходы и естественное сближение соседей</small></span>
+          <output id="tradeLawValue">55%</output>
+          <input id="tradeLaw" type="range" min="10" max="100" step="1" value="55">
+        </label>
+        <label class="sound-row form-check form-switch" for="soundToggle">
+          <input class="form-check-input" id="soundToggle" type="checkbox" checked>
+          <span class="form-check-label">Тихие звуки печати и хода</span>
+        </label>
+        <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </div>
+    </section>
+
+    <section class="modal" id="confirmModal" hidden aria-labelledby="confirmTitle">
+      <div class="modal-panel" data-ui>
+        <span class="modal-seal" aria-hidden="true"></span>
+        <span class="eyebrow">НЕОБРАТИМО</span>
+        <h2 id="confirmTitle">Сжечь эту летопись?</h2>
+        <p>Текущая карта и все её ветви будут заменены новым миром.</p>
+        <div class="modal-actions">
+          <button type="button" id="cancelNewWorld" data-native-press>Оставить</button>
+          <button type="button" id="confirmNewWorld" class="danger" data-native-press>Создать новую</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal" id="milestoneModal" hidden aria-labelledby="milestoneTitle">
+      <div class="modal-panel era-panel" data-ui>
+        <span class="eyebrow">120 ЛЕТ ПРОШЛО</span>
+        <h2 id="milestoneTitle">Эпоха закончена</h2>
+        <div class="era-summary" id="eraSummary"></div>
+        <div class="modal-actions stacked">
+          <button type="button" id="continueEra" class="primary" data-native-press>Продолжить в новую эпоху</button>
+          <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПАЛИМПСЕСТ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

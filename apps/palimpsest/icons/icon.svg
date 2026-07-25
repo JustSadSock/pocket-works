@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Сложенная карта с раздваивающейся красной линией истории">
+  <rect width="512" height="512" rx="92" fill="#2b2a24"/>
+  <path d="M82 104l108-34 126 38 114-34v330l-114 34-126-38-108 34z" fill="#e7dfcd" stroke="#171612" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M190 70v330M316 108v330" fill="none" stroke="#8c816d" stroke-width="13" opacity=".72"/>
+  <path d="M118 180c54 22 92 5 126 28s30 61 78 75c34 10 72-10 104-4" fill="none" stroke="#5d7465" stroke-width="28" stroke-linecap="round" opacity=".84"/>
+  <path d="M116 343c78-40 105-72 148-76 54-5 71 45 136 73" fill="none" stroke="#a67a3e" stroke-width="25" stroke-linecap="round" opacity=".84"/>
+  <path d="M250 139v104c0 42-28 64-64 88M250 243c0 42 28 64 70 91" fill="none" stroke="#9f352b" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="250" cy="139" r="29" fill="#9f352b" stroke="#d6a276" stroke-width="9"/>
+</svg>
