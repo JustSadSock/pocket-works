@@ -36,15 +36,15 @@ const importInput = document.querySelector('#importInput');
 const STORAGE_KEY = 'pocket-works:impuls:state:v1';
 const PREFS_KEY = 'pocket-works:impuls:prefs:v1';
 const INTRO_KEY = 'pocket-works:impuls:intro:v1';
-const MAX_BODIES = 150;
+const MAX_BODIES = 180;
 const TAU = Math.PI * 2;
 
 const MATERIALS = {
-  wood: { name: 'ДЕРЕВО', color: '#b98547', edge: '#624126', density: .72, restitution: .22, friction: .62, gravityScale: 1 },
-  steel: { name: 'СТАЛЬ', color: '#6c7a7c', edge: '#2b3436', density: 2.4, restitution: .08, friction: .42, gravityScale: 1 },
-  rubber: { name: 'РЕЗИНА', color: '#d46040', edge: '#73301f', density: .9, restitution: .82, friction: .88, gravityScale: 1 },
-  ice: { name: 'ЛЁД', color: '#b7d8db', edge: '#4b7a80', density: .78, restitution: .18, friction: .035, gravityScale: 1 },
-  foam: { name: 'ПЕНА', color: '#e9d58a', edge: '#8a773c', density: .22, restitution: .48, friction: .5, gravityScale: .34 }
+  wood: { name: 'ДЕРЕВО', color: '#b98547', edge: '#624126', density: .72, restitution: .22, friction: .62, gravityScale: 1, strength: 560, breakMin: 82 },
+  steel: { name: 'СТАЛЬ', color: '#6c7a7c', edge: '#2b3436', density: 2.4, restitution: .08, friction: .42, gravityScale: 1, strength: 2050, breakMin: 190 },
+  rubber: { name: 'РЕЗИНА', color: '#d46040', edge: '#73301f', density: .9, restitution: .82, friction: .88, gravityScale: 1, strength: 1550, breakMin: 145 },
+  ice: { name: 'ЛЁД', color: '#b7d8db', edge: '#4b7a80', density: .78, restitution: .18, friction: .035, gravityScale: 1, strength: 245, breakMin: 42 },
+  foam: { name: 'ПЕНА', color: '#e9d58a', edge: '#8a773c', density: .22, restitution: .48, friction: .5, gravityScale: .34, strength: 125, breakMin: 24 }
 };
 const MATERIAL_KEYS = Object.keys(MATERIALS);
 
@@ -56,6 +56,8 @@ const state = {
   tool: 'hand',
   material: 'wood',
   fieldPolarity: 1,
+  spawnSize: 1,
+  destruction: true,
   paused: false,
   speed: 1,
   gravity: 980,
@@ -75,7 +77,9 @@ const state = {
   saveTimer: 0,
   audio: null,
   collisionSoundAt: 0,
+  breakSoundAt: 0,
   introScene: 'bridge',
+  currentScene: 'bridge',
   initialised: false,
   pausedByVisibility: false
 };
@@ -87,6 +91,7 @@ const dot = (ax, ay, bx, by) => ax * bx + ay * by;
 const normalize = (x, y) => { const l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l, length: l }; };
 const rotate = (x, y, angle) => ({ x: x * Math.cos(angle) - y * Math.sin(angle), y: x * Math.sin(angle) + y * Math.cos(angle) });
 const id = prefix => `${prefix}-${state.nextId++}`;
+const finite = value => Number.isFinite(Number(value));
 
 function showToast(message, duration = 1500) {
   toastEl.textContent = message;
@@ -119,13 +124,14 @@ function sound(type = 'tap', strength = .5) {
     spawn: [260, .045, 'triangle'],
     link: [340, .07, 'sine'],
     blast: [75, .16, 'sawtooth'],
+    break: [95 + strength * 70, .09, 'square'],
     collision: [110 + strength * 130, .025, 'triangle']
   };
   const [frequency, duration, wave] = presets[type] || presets.tap;
   oscillator.type = wave;
   oscillator.frequency.setValueAtTime(frequency, now);
-  if (type === 'blast') oscillator.frequency.exponentialRampToValueAtTime(34, now + duration);
-  gain.gain.setValueAtTime(Math.min(.09, .025 + strength * .04), now);
+  if (type === 'blast' || type === 'break') oscillator.frequency.exponentialRampToValueAtTime(Math.max(32, frequency * .38), now + duration);
+  gain.gain.setValueAtTime(Math.min(.1, .025 + strength * .045), now);
   gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
   oscillator.connect(gain).connect(audio.destination);
   oscillator.start(now);
@@ -139,10 +145,11 @@ function bodyMass(shape, geometry, materialKey) {
 }
 
 function createBody(shape, x, y, options = {}) {
-  const material = options.material || state.material;
+  const material = MATERIALS[options.material] ? options.material : state.material;
+  const scale = clamp(Number(options.scale ?? state.spawnSize) || 1, .5, 2);
   const geometry = shape === 'circle'
-    ? { r: options.r || 22 }
-    : { w: options.w || 46, h: options.h || 34 };
+    ? { r: options.r || 22 * scale }
+    : { w: options.w || 46 * scale, h: options.h || 34 * scale };
   const mass = bodyMass(shape, geometry, material);
   const inertia = shape === 'circle'
     ? .5 * mass * geometry.r * geometry.r
@@ -166,7 +173,10 @@ function createBody(shape, x, y, options = {}) {
     invInertia: pinned ? 0 : 1 / inertia,
     pinned,
     sleeping: false,
-    customGravity: options.customGravity ?? null
+    customGravity: options.customGravity ?? null,
+    damage: clamp(Number(options.damage) || 0, 0, 1.8),
+    fractureDepth: clamp(Number(options.fractureDepth) || 0, 0, 3),
+    damageGrace: Math.max(0, Number(options.damageGrace) || 0)
   };
 }
 
@@ -218,6 +228,7 @@ function snapshotWorld() {
     constraints: clone(state.constraints),
     fields: clone(state.fields),
     nextId: state.nextId,
+    currentScene: state.currentScene,
     worldWidth: state.worldWidth,
     worldHeight: state.worldHeight
   };
@@ -227,17 +238,49 @@ function restoreWorld(snapshot, rescale = true) {
   if (!snapshot || !Array.isArray(snapshot.bodies)) return false;
   const sx = rescale && snapshot.worldWidth ? state.worldWidth / snapshot.worldWidth : 1;
   const sy = rescale && snapshot.worldHeight ? state.worldHeight / snapshot.worldHeight : 1;
-  state.bodies = clone(snapshot.bodies).map(body => ({ ...body, x: body.x * sx, y: body.y * sy, vx: body.vx * sx, vy: body.vy * sy }));
-  state.constraints = clone(snapshot.constraints || []).map(constraint => ({
+  const restoredBodies = clone(snapshot.bodies)
+    .filter(body => body && ['circle', 'box'].includes(body.shape) && finite(body.x) && finite(body.y) && MATERIALS[body.material])
+    .slice(0, MAX_BODIES)
+    .map(body => {
+      const safe = {
+        ...body,
+        x: Number(body.x) * sx,
+        y: Number(body.y) * sy,
+        vx: finite(body.vx) ? Number(body.vx) * sx : 0,
+        vy: finite(body.vy) ? Number(body.vy) * sy : 0,
+        angle: finite(body.angle) ? Number(body.angle) : 0,
+        av: finite(body.av) ? Number(body.av) : 0,
+        damage: clamp(Number(body.damage) || 0, 0, 1.8),
+        fractureDepth: clamp(Number(body.fractureDepth) || 0, 0, 3),
+        damageGrace: 0
+      };
+      if (safe.shape === 'circle') safe.r = clamp(Number(safe.r) || 22, 5, 160);
+      else { safe.w = clamp(Number(safe.w) || 46, 8, 420); safe.h = clamp(Number(safe.h) || 34, 8, 220); }
+      refreshBodyPhysics(safe);
+      return safe;
+    });
+  const ids = new Set(restoredBodies.map(body => body.id));
+  state.bodies = restoredBodies;
+  state.constraints = clone(snapshot.constraints || []).filter(constraint => constraint && ids.has(constraint.bodyA) && (!constraint.bodyB || ids.has(constraint.bodyB))).map(constraint => ({
     ...constraint,
-    rest: constraint.rest * Math.min(sx, sy),
-    ax: constraint.ax == null ? null : constraint.ax * sx,
-    ay: constraint.ay == null ? null : constraint.ay * sy,
-    bx: constraint.bx == null ? null : constraint.bx * sx,
-    by: constraint.by == null ? null : constraint.by * sy
+    rest: clamp((Number(constraint.rest) || 24) * Math.min(sx, sy), 4, 1000),
+    bx: constraint.bx == null ? null : Number(constraint.bx) * sx,
+    by: constraint.by == null ? null : Number(constraint.by) * sy,
+    tension: 0,
+    fatigue: clamp(Number(constraint.fatigue) || 0, 0, 1.5),
+    broken: false,
+    breakLimit: Number(constraint.breakLimit) || (constraint.type === 'rope' ? .5 : .92)
   }));
-  state.fields = clone(snapshot.fields || []).map(field => ({ ...field, x: field.x * sx, y: field.y * sy, radius: field.radius * Math.min(sx, sy) }));
+  state.fields = clone(snapshot.fields || []).filter(field => field && finite(field.x) && finite(field.y)).map(field => ({
+    ...field,
+    x: Number(field.x) * sx,
+    y: Number(field.y) * sy,
+    radius: clamp((Number(field.radius) || 80) * Math.min(sx, sy), 32, 320),
+    strength: clamp(Number(field.strength) || 1250, 200, 3200),
+    polarity: field.polarity === -1 ? -1 : 1
+  }));
   state.nextId = Math.max(snapshot.nextId || 1, state.bodies.length + state.constraints.length + state.fields.length + 1);
+  state.currentScene = typeof snapshot.currentScene === 'string' ? snapshot.currentScene : 'custom';
   state.selectedId = null;
   updateInspector();
   updateStats();
@@ -260,7 +303,9 @@ function saveWorld() {
       stress: state.stress,
       sound: state.sound,
       haptics: state.haptics,
-      fieldPolarity: state.fieldPolarity
+      fieldPolarity: state.fieldPolarity,
+      spawnSize: state.spawnSize,
+      destruction: state.destruction
     }));
   } catch (error) {
     console.warn('Не удалось сохранить мир', error);
@@ -278,6 +323,8 @@ function loadSavedWorld() {
       state.sound = prefs.sound !== false;
       state.haptics = prefs.haptics !== false;
       state.fieldPolarity = prefs.fieldPolarity === -1 ? -1 : 1;
+      state.spawnSize = clamp(Number(prefs.spawnSize) || 1, .55, 1.8);
+      state.destruction = prefs.destruction !== false;
     }
     const snapshot = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     return snapshot && restoreWorld(snapshot, true);
@@ -344,7 +391,7 @@ function setTool(tool, fromRepeatedTap = false) {
     button.setAttribute('aria-pressed', String(active));
   });
   const hints = {
-    hand: 'ТАЩИ И БРОСАЙ ТЕЛА', circle: 'ПРОВЕДИ, ЧТОБЫ ЗАПУСТИТЬ ШАР', box: 'ПРОВЕДИ, ЧТОБЫ ЗАПУСТИТЬ БЛОК',
+    hand: 'ТАЩИ ТЕЛА И ЦЕНТРЫ ПОЛЕЙ', circle: 'ПРОВЕДИ, ЧТОБЫ ЗАПУСТИТЬ ШАР', box: 'ПРОВЕДИ, ЧТОБЫ ЗАПУСТИТЬ БЛОК',
     wall: 'ПРОВЕДИ БАЛКУ', rope: 'СОЕДИНИ ДВЕ ТОЧКИ ТРОСОМ', spring: 'СОЕДИНИ ДВЕ ТОЧКИ ПРУЖИНОЙ',
     field: 'РАСТЯНИ РАДИУС ПОЛЯ', impulse: 'ПРОВЕДИ НАПРАВЛЕНИЕ УДАРА', erase: 'КОСНИСЬ, ЧТОБЫ СТЕРЕТЬ'
   };
@@ -357,4 +404,3 @@ function pointerPosition(event) {
   const rect = canvas.getBoundingClientRect();
   return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
-
