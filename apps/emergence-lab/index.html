@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="theme-color" content="#ece5d2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Emergence Lab">
-  <title>Emergence Lab</title>
+  <meta name="apple-mobile-web-app-title" content="Лаборатория эмерджентности">
+  <title>Лаборатория эмерджентности</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
@@ -20,151 +20,34 @@
   <main class="app-shell" data-app-shell>
     <header class="lab-bar" data-ui>
       <a class="back-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
-      <div class="brand-lockup">
-        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-        <div>
-          <p>GENERATIVE SYSTEMS / LIVE</p>
-          <h1>Emergence Lab</h1>
-        </div>
-      </div>
-      <div class="header-actions">
-        <span class="network-state" id="network-state"><i></i><span>offline ready</span></span>
-        <button class="text-button" type="button" data-workshop-trigger data-native-press>Workshop</button>
-      </div>
+      <div class="brand-lockup"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div><p>СЛОЖНЫЕ СИСТЕМЫ / В РЕАЛЬНОМ ВРЕМЕНИ</p><h1>Лаборатория эмерджентности</h1></div></div>
+      <div class="header-actions"><span class="network-state" id="network-state"><i></i><span>готово офлайн</span></span><button class="text-button" type="button" data-workshop-trigger data-native-press>Диагностика</button></div>
     </header>
-
-    <section class="lab-stage" id="lab-stage" aria-label="Interactive emergence simulation">
-      <canvas id="world" data-gesture-surface data-block-callout aria-label="Particle simulation field"></canvas>
-
-      <div class="loading-state" id="loading-state" role="status" aria-live="polite">
-        <span class="loading-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
-        <strong>Calibrating field</strong>
+    <section class="lab-stage" id="lab-stage" aria-label="Интерактивная симуляция эмерджентного поведения">
+      <canvas id="world" data-gesture-surface data-block-callout aria-label="Поле симуляции"></canvas>
+      <div class="loading-state" id="loading-state" role="status" aria-live="polite"><span class="loading-glyph" aria-hidden="true"><i></i><i></i><i></i></span><strong>Калибровка среды</strong></div>
+      <div class="field-hud" data-ui><div><span>популяция</span><strong id="population-readout">0</strong></div><div><span>ресурсы</span><strong id="food-readout">0</strong></div><div><span>время</span><strong id="time-readout">0.0</strong></div><div><span>кадры</span><strong id="fps-readout">—</strong></div></div>
+      <div class="species-key" aria-label="Численность видов" data-ui><span class="species-a"><i></i><b id="species-a-count">0</b></span><span class="species-b"><i></i><b id="species-b-count">0</b></span><span class="species-c"><i></i><b id="species-c-count">0</b></span></div>
+      <div class="tool-rail" role="toolbar" aria-label="Инструменты поля" data-ui>
+        <button type="button" data-tool="pull" aria-pressed="true" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg><span>Тянуть</span></button>
+        <button type="button" data-tool="push" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 3 3m9 9 9-9m-9 9-9 9m9-9 9 9"/><path d="M7 3H3v4M17 3h4v4M3 17v4h4M21 17v4h-4"/></svg><span>Толкать</span></button>
+        <button type="button" data-tool="seed" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9"/><path d="M12 13c-5 0-7-3-7-7 5 0 7 3 7 7Zm0-3c4 0 6-2.5 6-6-4 0-6 2.5-6 6Z"/></svg><span>Заселить</span></button>
+        <button type="button" data-tool="food" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 3 5 5 5 9a5 5 0 0 1-10 0c0-4 2-6 5-9Z"/><path d="M9 15c1.5 1 4.5 1 6 0"/></svg><span>Ресурс</span></button>
+        <button type="button" data-tool="erase" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 15 9-9 7 7-7 7H8Z"/><path d="M11 20h10"/></svg><span>Стереть</span></button>
+        <button type="button" data-tool="inspect" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></svg><span>Причина</span></button>
       </div>
-
-      <div class="field-hud" data-ui>
-        <div><span>population</span><strong id="population-readout">0</strong></div>
-        <div><span>time</span><strong id="time-readout">0.0</strong></div>
-        <div><span>fps</span><strong id="fps-readout">—</strong></div>
-      </div>
-
-      <div class="species-key" aria-label="Species counts" data-ui>
-        <span class="species-a"><i></i><b id="species-a-count">0</b></span>
-        <span class="species-b"><i></i><b id="species-b-count">0</b></span>
-        <span class="species-c"><i></i><b id="species-c-count">0</b></span>
-      </div>
-
-      <div class="tool-rail" role="toolbar" aria-label="Field tools" data-ui>
-        <button type="button" data-tool="pull" aria-pressed="true" data-native-press>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
-          <span>Pull</span>
-        </button>
-        <button type="button" data-tool="push" aria-pressed="false" data-native-press>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 3 3m9 9 9-9m-9 9-9 9m9-9 9 9"/><path d="M7 3H3v4M17 3h4v4M3 17v4h4M21 17v4h-4"/></svg>
-          <span>Push</span>
-        </button>
-        <button type="button" data-tool="seed" aria-pressed="false" data-native-press>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9"/><path d="M12 13c-5 0-7-3-7-7 5 0 7 3 7 7Zm0-3c4 0 6-2.5 6-6-4 0-6 2.5-6 6Z"/></svg>
-          <span>Seed</span>
-        </button>
-        <button type="button" data-tool="erase" aria-pressed="false" data-native-press>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 15 9-9 7 7-7 7H8Z"/><path d="M11 20h10"/></svg>
-          <span>Erase</span>
-        </button>
-        <button type="button" data-tool="inspect" aria-pressed="false" data-native-press>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></svg>
-          <span>Cause</span>
-        </button>
-      </div>
-
-      <div class="empty-state" id="empty-state" hidden>
-        <p>The dish is empty.</p>
-        <button type="button" id="seed-colony-button" data-native-press>Seed a colony</button>
-      </div>
-
-      <aside class="inspector" id="inspector" aria-hidden="true" data-ui>
-        <header>
-          <div>
-            <p>CAUSE TRACE</p>
-            <h2 id="inspect-title">Specimen</h2>
-          </div>
-          <button type="button" id="close-inspector" aria-label="Close cause trace" data-native-press>×</button>
-        </header>
-        <dl>
-          <div><dt>age</dt><dd id="inspect-age">—</dd></div>
-          <div><dt>energy</dt><dd id="inspect-energy">—</dd></div>
-          <div><dt>neighbors</dt><dd id="inspect-neighbors">—</dd></div>
-        </dl>
-        <p id="inspect-reason">Tap a specimen to trace its strongest forces.</p>
-      </aside>
-
+      <div class="empty-state" id="empty-state" hidden><p>Среда опустела.</p><button type="button" id="seed-colony-button" data-native-press>Создать популяцию</button></div>
+      <aside class="inspector" id="inspector" aria-hidden="true" data-ui><header><div><p>ЦЕПОЧКА ПРИЧИН</p><h2 id="inspect-title">Организм</h2></div><button type="button" id="close-inspector" aria-label="Закрыть инспектор" data-native-press>×</button></header><dl><div><dt>возраст</dt><dd id="inspect-age">—</dd></div><div><dt>энергия</dt><dd id="inspect-energy">—</dd></div><div><dt>соседи</dt><dd id="inspect-neighbors">—</dd></div><div><dt>поколение</dt><dd id="inspect-generation">—</dd></div><div><dt>скорость</dt><dd id="inspect-speed">—</dd></div><div><dt>зрение</dt><dd id="inspect-sense">—</dd></div></dl><p id="inspect-reason">Нажмите на организм, чтобы увидеть сильнейшее воздействие и его наследуемые признаки.</p></aside>
       <div class="mutation-flash" id="mutation-flash" aria-hidden="true"></div>
     </section>
-
-    <aside class="rule-bench" aria-label="Simulation rules" data-ui>
-      <section class="preset-section">
-        <div class="section-heading">
-          <div>
-            <p>BEHAVIOR CASSETTES</p>
-            <h2 id="active-preset-name">Colony</h2>
-          </div>
-          <button class="undo-button" id="undo-button" type="button" disabled data-native-press>Undo</button>
-        </div>
-        <div class="preset-rail" role="list" aria-label="Behavior presets">
-          <button type="button" data-preset="colony" aria-pressed="true" data-native-press><i></i>Colony</button>
-          <button type="button" data-preset="orbit" aria-pressed="false" data-native-press><i></i>Orbit</button>
-          <button type="button" data-preset="territory" aria-pressed="false" data-native-press><i></i>Territory</button>
-          <button type="button" data-preset="cycle" aria-pressed="false" data-native-press><i></i>Cycle</button>
-          <button type="button" data-preset="crystal" aria-pressed="false" data-native-press><i></i>Crystal</button>
-        </div>
-      </section>
-
-      <section class="transport" aria-label="Simulation transport">
-        <div class="transport-row">
-          <button class="transport-button" id="pause-button" type="button" data-native-press><span aria-hidden="true">Ⅱ</span><b>Pause</b></button>
-          <button class="transport-button" id="step-button" type="button" disabled data-native-press><span aria-hidden="true">›</span><b>Step</b></button>
-          <button class="transport-button" id="speed-button" type="button" data-native-press><span id="speed-glyph">1×</span><b>Speed</b></button>
-          <button class="transport-button" id="life-toggle" type="button" aria-pressed="true" data-native-press><span aria-hidden="true">◌</span><b>Life on</b></button>
-        </div>
-        <button class="mutation-button" id="mutation-button" type="button" data-native-press>
-          <span class="mutation-icon" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span><b>Mutate rules</b><small>bounded random variation</small></span>
-        </button>
-        <button class="new-dish-button" id="new-dish-button" type="button" data-native-press>New dish</button>
-      </section>
-
-      <section class="rule-grid" aria-label="Custom rule controls">
-        <label>
-          <span><b>Kin</b><output id="kin-output">attract 58</output></span>
-          <input id="kin-input" type="range" min="-100" max="100" step="1" value="58">
-        </label>
-        <label>
-          <span><b>Others</b><output id="stranger-output">repel 18</output></span>
-          <input id="stranger-input" type="range" min="-100" max="100" step="1" value="-18">
-        </label>
-        <label>
-          <span><b>Reach</b><output id="reach-output">70 px</output></span>
-          <input id="reach-input" type="range" min="34" max="124" step="1" value="70">
-        </label>
-        <label>
-          <span><b>Spin</b><output id="swirl-output">clockwise 8</output></span>
-          <input id="swirl-input" type="range" min="-100" max="100" step="1" value="8">
-        </label>
-      </section>
-
-
+    <aside class="rule-bench" aria-label="Правила симуляции" data-ui>
+      <section class="preset-section"><div class="section-heading"><div><p>КАССЕТЫ ПОВЕДЕНИЯ</p><h2 id="active-preset-name">Колония</h2></div><button class="undo-button" id="undo-button" type="button" disabled data-native-press>Отменить</button></div><div class="preset-rail" role="list" aria-label="Готовые наборы поведения"><button type="button" data-preset="colony" aria-pressed="true" data-native-press><i></i>Колония</button><button type="button" data-preset="orbit" aria-pressed="false" data-native-press><i></i>Орбиты</button><button type="button" data-preset="territory" aria-pressed="false" data-native-press><i></i>Территории</button><button type="button" data-preset="cycle" aria-pressed="false" data-native-press><i></i>Цикл</button><button type="button" data-preset="crystal" aria-pressed="false" data-native-press><i></i>Кристалл</button></div></section>
+      <section class="transport" aria-label="Управление временем"><div class="transport-row"><button class="transport-button" id="pause-button" type="button" data-native-press><span aria-hidden="true">Ⅱ</span><b>Пауза</b></button><button class="transport-button" id="step-button" type="button" disabled data-native-press><span aria-hidden="true">›</span><b>Шаг</b></button><button class="transport-button" id="speed-button" type="button" data-native-press><span id="speed-glyph">1×</span><b>Скорость</b></button><button class="transport-button" id="life-toggle" type="button" aria-pressed="true" data-native-press><span aria-hidden="true">◌</span><b>Отбор вкл.</b></button><button class="transport-button" id="view-button" type="button" data-native-press><span id="view-glyph">●</span><b>Виды</b></button></div><button class="mutation-button" id="mutation-button" type="button" data-native-press><span class="mutation-icon" aria-hidden="true"><i></i><i></i><i></i></span><span><b>Мутировать правила</b><small>ограниченная случайная вариация</small></span></button><button class="new-dish-button" id="new-dish-button" type="button" data-native-press>Новая среда</button></section>
+      <section class="rule-grid" aria-label="Настройка правил"><label><span><b>Свои</b><output id="kin-output">притяжение 58</output></span><input id="kin-input" type="range" min="-100" max="100" step="1" value="58"></label><label><span><b>Чужие</b><output id="stranger-output">отталкивание 18</output></span><input id="stranger-input" type="range" min="-100" max="100" step="1" value="-18"></label><label><span><b>Дальность</b><output id="reach-output">70 пкс</output></span><input id="reach-input" type="range" min="34" max="124" step="1" value="70"></label><label><span><b>Вращение</b><output id="swirl-output">по часовой 8</output></span><input id="swirl-input" type="range" min="-100" max="100" step="1" value="8"></label></section>
     </aside>
   </main>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <script
-    type="module"
-    src="../../shared/update-manager.js"
-    data-update-manager
-    data-service-worker="./sw.js"
-    data-app-name="Emergence Lab"
-    data-app-version="1.0.0"
-  ></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Лаборатория эмерджентности" data-app-version="1.1.0"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 {
   "id": "/apps/emergence-lab/",
-  "name": "Emergence Lab",
-  "short_name": "Emergence Lab",
-  "description": "A touch-first laboratory for breeding complex motion from visual interaction rules.",
+  "name": "Лаборатория эмерджентности",
+  "short_name": "Эмерджентность",
+  "description": "Лаборатория сложных систем с ресурсами, генетикой и естественным отбором.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,12 +10,6 @@
   "orientation": "any",
   "background_color": "#ece5d2",
   "theme_color": "#ece5d2",
-  "icons": [
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "lang": "ru",
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
