@@ -1,0 +1,39 @@
+te.step;
+    bucket.plants += bite;
+  }
+  if (resources.carrion && resources.carrionDistance < (.009 + genome.size * .004) ** 2 && genome.carrionDiet > .16) {
+    const bite = Math.min(resources.carrion.energy, (.12 + genome.size * .13) * genome.carrionDiet);
+    resources.carrion.energy -= bite;
+    organism.energy += bite * (1.05 + genome.toxinResistance * .32);
+    organism.lastMeal = state.step;
+    bucket.carrion += bite;
+  }
+  if (resources.prey && resources.preyDistance < (.007 + genome.size * .005) ** 2 && genome.preyDiet > .2) {
+    const packBonus = 1 + genome.cooperation * .22;
+    const damage = (.045 + genome.size * .085) * genome.preyDiet * packBonus * (1 + genome.ambush * .18) * (1.08 - resources.prey.genome.armor * .52);
+    resources.prey.energy -= damage;
+    organism.energy += damage * .7;
+    organism.lastMeal = state.step;
+    livingIncrement(bucket.prey, resources.prey.speciesId, damage);
+    livingIncrement(interactionBucket(resources.prey.speciesId).predators, organism.speciesId, damage);
+    if (resources.prey.energy <= 0) resources.prey.cause = 'хищничество';
+  }
+  const terrain = terrainAt(organism.x, organism.y);
+  if (terrain.water && genome.filterDiet > .22) {
+    const micro = resourceIndex.micro.nearby(organism.x, organism.y, .05).find((entry) => entry.energy > .1 && distanceSq(organism.x, organism.y, entry.x, entry.y) < .045 ** 2);
+    if (micro) {
+      const bite = Math.min(micro.energy, .015 + genome.filterDiet * .035);
+      micro.energy -= bite;
+      organism.energy += bite * 1.8;
+      bucket.filter += bite;
+    }
+  }
+}
+
+function livingMovementAndCost(organism) {
+  const genome = organism.genome;
+  const terrain = terrainAt(organism.x, organism.y);
+  const fitness = habitatFitness(genome, terrain);
+  const dayPhase = (state.step % GENERATION_STEPS) / GENERATION_STEPS;
+  const activePhase = genome.nocturnal > .55 ? (dayPhase > .55 || dayPhase < .12) : (dayPhase > .08 && dayPhase < .72);
+  const activity = activePhase
