@@ -1,16 +1,16 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.3';
-const APP_VERSION = '0.9.3';
-const RELEASE_DATE = '2026-07-20';
+const CACHE_NAME = 'pocket-works-launcher-v0.9.4';
+const APP_VERSION = '0.9.4';
+const RELEASE_DATE = '2026-07-25';
 const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'Production applications no longer start a second unversioned Service Worker update flow.',
-  'Pocket Works and the release guard are now the single update authority for installed applications.',
-  'Obsolete in-app update panels are suppressed without blocking the application interface.'
+  'Newly released applications now escape stale Saved, Opened, Offline and Lab filters automatically.',
+  'The launcher clears an active search, switches to All and focuses the newest application after registry sync.',
+  'The new-app visibility guard is cached as part of the offline launcher shell.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
-  './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
+  './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
   './shared/pocket-works-icon.svg', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
