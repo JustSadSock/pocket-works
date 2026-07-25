@@ -1,0 +1,211 @@
+tyNoise * 0.72 - Math.max(0, elevation - 0.68) * 0.8, 0.12, 1) : 0;
+      cells.push({
+        land,
+        elevation: clamp(elevation, 0, 1),
+        fertility,
+        owner: -1,
+        pop: land ? 0.25 + random() * 0.5 : 0,
+        road: false,
+        ridge: false
+      });
+    }
+  }
+
+  const created = {
+    schema: 1,
+    seed,
+    scenario,
+    year: 0,
+    horizon: 500,
+    playing: false,
+    cells,
+    states: [],
+    nextStateId: 1,
+    born: 0,
+    fallen: 0,
+    actions: 0,
+    selectedStateId: null,
+    event: { year: 0, text: 'Чернила коснулись чистой карты.' },
+    recentEvents: [],
+    completed: false,
+    vertices: makeVertices(seed)
+  };
+
+  if (scenario === 'passes') {
+    for (let y = 1; y < ROWS - 1; y += 1) {
+      const x = Math.floor(COLS * 0.5 + Math.sin(y * 0.55) * 2.2);
+      for (let dx = -1; dx <= 1; dx += 1) {
+        const index = cellIndex(clamp(x + dx, 0, COLS - 1), y);
+        if (created.cells[index].land) {
+          created.cells[index].ridge = true;
+          created.cells[index].elevation = Math.max(created.cells[index].elevation, 0.82);
+          created.cells[index].fertility *= 0.42;
+        }
+      }
+    }
+  }
+
+  const landIndices = cells.map((cell, index) => cell.land ? index : -1).filter((index) => index >= 0);
+  if (landIndices.length < 120) throw new Error('Procedural map produced too little land.');
+
+  const candidates = landIndices.filter((index) => {
+    const { x, y } = coords(index);
+    return x > 2 && x < COLS - 3 && y > 2 && y < ROWS - 3 && !cells[index].ridge;
+  });
+
+  function separatedPick(existing, filter = () => true) {
+    const shuffled = [...candidates].sort(() => random() - 0.5);
+    return shuffled.find((index) => filter(index) && existing.every((other) => distanceCells(index, other) > 5.3));
+  }
+
+  if (scenario === 'wild') {
+    const picks = [];
+    for (let i = 0; i < 7; i += 1) {
+      const pick = separatedPick(picks);
+      if (pick !== undefined) {
+        picks.push(pick);
+        createStateAt(created, pick, 2, random, false);
+      }
+    }
+  } else if (scenario === 'crowns') {
+    const picks = [];
+    const left = separatedPick(picks, (index) => coords(index).x < COLS * 0.38);
+    if (left !== undefined) picks.push(left);
+    const right = separatedPick(picks, (index) => coords(index).x > COLS * 0.62);
+    if (right !== undefined) picks.push(right);
+    picks.forEach((pick) => createStateAt(created, pick, 4, random, false));
+    for (let i = 0; i < 3; i += 1) {
+      const pick = separatedPick(picks);
+      if (pick !== undefined) {
+        picks.push(pick);
+        createStateAt(created, pick, 1, random, false);
+      }
+    }
+  } else {
+    const picks = [];
+    for (let i = 0; i < 8; i += 1) {
+      const side = i % 2;
+      const pick = separatedPick(picks, (index) => side ? coords(index).x > COLS * 0.57 : coords(index).x < COLS * 0.43);
+      if (pick !== undefined) {
+        picks.push(pick);
+        createStateAt(created, pick, 1, random, false);
+      }
+    }
+  }
+
+  recalculateStates(created);
+  return created;
+}
+
+function createStateAt(targetWorld, centerIndex, radius = 1, random = mulberry32(Date.now()), userAction = true) {
+  const centerCell = targetWorld.cells[centerIndex];
+  if (!centerCell?.land || centerCell.ridge) return null;
+  const id = targetWorld.nextStateId++;
+  const color = STATE_COLORS[(id - 1) % STATE_COLORS.length];
+  const state = {
+    id,
+    name: makeName(random),
+    color,
+    capital: centerIndex,
+    stability: 64 + random() * 26,
+    temper: 0.72 + random() * 0.75,
+    founded: targetWorld.year,
+    alive: true,
+    size: 0,
+    population: 0,
+    peak: 0
+  };
+  targetWorld.states.push(state);
+  targetWorld.born += 1;
+
+  const center = coords(centerIndex);
+  for (let y = Math.max(0, center.y - radius); y <= Math.min(ROWS - 1, center.y + radius); y += 1) {
+    for (let x = Math.max(0, center.x - radius); x <= Math.min(COLS - 1, center.x + radius); x += 1) {
+      const index = cellIndex(x, y);
+      const cell = targetWorld.cells[index];
+      if (!cell.land || cell.ridge || Math.hypot(x - center.x, y - center.y) > radius + 0.35) continue;
+      cell.owner = id;
+      cell.pop = Math.max(cell.pop, 0.85 + random() * 0.9);
+    }
+  }
+  centerCell.owner = id;
+  centerCell.pop = Math.max(centerCell.pop, 2.4);
+
+  if (userAction) {
+    targetWorld.actions += 1;
+    addEvent(targetWorld, `${state.name} основан новой столицей.`);
+  }
+  return state;
+}
+
+function recalculateStates(targetWorld) {
+  const stats = new Map();
+  targetWorld.states.forEach((state) => stats.set(state.id, { size: 0, population: 0, maxPop: -1, maxIndex: state.capital }));
+  targetWorld.cells.forEach((cell, index) => {
+    if (cell.owner < 0) return;
+    const stat = stats.get(cell.owner);
+    if (!stat) {
+      cell.owner = -1;
+      return;
+    }
+    stat.size += 1;
+    stat.population += cell.pop;
+    if (cell.pop > stat.maxPop && !cell.ridge) {
+      stat.maxPop = cell.pop;
+      stat.maxIndex = index;
+    }
+  });
+
+  targetWorld.states.forEach((state) => {
+    const stat = stats.get(state.id);
+    if (!stat || stat.size === 0) {
+      if (state.alive) {
+        state.alive = false;
+        targetWorld.fallen += 1;
+        addEvent(targetWorld, `${state.name} исчез с карты.`);
+      }
+      state.size = 0;
+      state.population = 0;
+      return;
+    }
+    state.alive = true;
+    state.size = stat.size;
+    state.population = stat.population;
+    state.peak = Math.max(state.peak || 0, stat.size);
+    if (targetWorld.cells[state.capital]?.owner !== state.id) {
+      state.capital = stat.maxIndex;
+      addEvent(targetWorld, `${state.name} перенёс столицу.`);
+    }
+  });
+}
+
+function addEvent(targetWorld, text) {
+  targetWorld.event = { year: targetWorld.year, text };
+  targetWorld.recentEvents.unshift(targetWorld.event);
+  targetWorld.recentEvents = targetWorld.recentEvents.slice(0, 12);
+  if (targetWorld === world) updateEventTape();
+}
+
+function getState(targetWorld, id) {
+  return targetWorld.states.find((state) => state.id === id && state.alive) || null;
+}
+
+function activeStates(targetWorld) {
+  return targetWorld.states.filter((state) => state.alive && state.size > 0);
+}
+
+function stateInfluence(targetWorld, state, sourceIndex, targetIndex) {
+  const source = targetWorld.cells[sourceIndex];
+  const target = targetWorld.cells[targetIndex];
+  const capitalDistance = distanceCells(state.capital, targetIndex);
+  const terrainCost = target.ridge ? 8 : target.elevation * 2.6;
+  const roadBonus = source.road || target.road ? 2.2 : 0;
+  const stability = clamp(state.stability / 70, 0.35, 1.5);
+  return Math.sqrt(Math.max(0.1, state.population)) * 0.42 * stability * state.temper + source.pop * 0.85 + roadBonus - capitalDistance * 0.10 - terrainCost;
+}
+
+function simulateYear(targetWorld) {
+  targetWorld.year += 1;
+  const random = mulberry32(targetWorld.seed + targetWorld.year * 7919 + targetWorld.actions * 97);
+
+  targetWorld
