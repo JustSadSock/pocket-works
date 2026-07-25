@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "palimpsest",
+  "name": "ПАЛИМПСЕСТ",
+  "shortName": "ПАЛИМПСЕСТ",
+  "description": "Живая лаборатория альтернативной истории: наблюдай за рождением государств и переписывай карту дорогами, хребтами, расколами и кризисами.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T04:20:00+02:00",
+  "changelog": [
+    "Добавлены три процедурных исторических сценария и симуляция на 500 лет.",
+    "Реализованы рост государств, войны, распады, переселение столиц, летопись событий и итоговый архив эпохи.",
+    "Добавлены прямые вмешательства: основание держав, дороги, горные хребты, расколы и региональные кризисы.",
+    "Состояние мира, настройки звука и незавершённая эпоха сохраняются локально и доступны офлайн."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#9b3f2f",
+  "backgroundColor": "#d8cfb9",
+  "themeColor": "#26342f",
+  "orientation": "portrait",
+  "cacheName": "palimpsest-v1.0.0",
+  "storageNamespace": "pocket-works:palimpsest",
+  "tags": ["PWA", "offline", "simulation", "strategy", "history", "map", "sandbox", "canvas", "touch", "audio", "portrait"],
+  "order": 118
+}
