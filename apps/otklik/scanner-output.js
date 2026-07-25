@@ -152,6 +152,7 @@ async function importGeometryFromProject(event) {
     const parsed = JSON.parse(await file.text());
     if (parsed?.geometry && validPolygon(parsed.geometry.points)) {
       saveGeometry(parsed.geometry);
+      setTimeout(applyGeometry, 60);
     }
   } catch {
   }
@@ -269,7 +270,12 @@ function pointInPolygon(point, polygon) {
 function installRecommendationLayer() {
   if (!resultSheet) return;
   const observer = new MutationObserver(scheduleRecommendations);
-  observer.observe(resultSheet, { attributes: true, subtree: true, childList: true, characterData: true });
+  observer.observe(resultSheet, { attributes: true, attributeFilter: ['hidden'] });
+  const textOptions = { childList: true, characterData: true, subtree: true };
+  const kicker = $('#resultSheetKicker');
+  const title = $('#resultTitle');
+  if (kicker) observer.observe(kicker, textOptions);
+  if (title) observer.observe(title, textOptions);
   scheduleRecommendations();
 }
 
@@ -288,10 +294,11 @@ function renderRecommendations() {
   const measurement = point?.measurement;
   if (!measurement) return;
   const recommendations = buildRecommendations(measurement, state, index);
-  container.innerHTML = `
+  const markup = `
     <header><small>ЧТО ДЕЛАТЬ</small><strong>${recommendations.headline}</strong></header>
     <ol>${recommendations.items.map((item) => `<li><b>${item.action}</b><span>${item.reason}</span></li>`).join('')}</ol>
   `;
+  if (container.innerHTML !== markup) container.innerHTML = markup;
 }
 
 function buildRecommendations(measurement, state, index) {
