@@ -10,6 +10,8 @@ const RELEASE_NOTES = [
 ];
 const APP_SHELL = [
   './', './index.html', './app.config.json', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop-delegate.js',
+  './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
+  './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js', '../../shared/capabilities/audio.js', '../../shared/capabilities/device.js', '../../shared/capabilities/diagnostics.js'
