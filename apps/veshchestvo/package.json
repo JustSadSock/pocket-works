@@ -1,0 +1,11 @@
+{
+  "name": "@pocket-works/veshchestvo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vitest run --config vite.config.ts && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs veshchestvo",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}
