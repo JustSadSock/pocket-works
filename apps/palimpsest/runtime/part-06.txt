@@ -1,0 +1,178 @@
+ каждую дорогу и каждый раскол.`
+    : 'К финалу на карте не осталось ни одной державы.';
+  elements.completeSheet.hidden = false;
+  updateUI();
+  saveWorld(false);
+  playTone('success');
+}
+
+function frame(now) {
+  const delta = Math.min(100, now - lastFrame);
+  lastFrame = now;
+  if (world && !elements.worldScreen.hidden && world.playing && !document.hidden) {
+    accumulator += delta;
+    const step = TICK_MS[speedIndex];
+    let safety = 0;
+    while (accumulator >= step && safety < 4) {
+      accumulator -= step;
+      simulateYear(world);
+      safety += 1;
+      updateUI();
+      scheduleSave();
+    }
+    renderWorld();
+  }
+  renderPreview(now);
+  frameId = requestAnimationFrame(frame);
+}
+
+function bindEvents() {
+  document.querySelectorAll('[data-sound-toggle]').forEach((button) => button.addEventListener('click', toggleSound));
+  document.querySelectorAll('[data-scenario]').forEach((button) => {
+    button.addEventListener('click', () => startScenario(button.dataset.scenario));
+  });
+
+  elements.continueButton.addEventListener('click', () => {
+    const saved = world || loadSavedWorld();
+    if (saved) openWorld(saved);
+  });
+
+  elements.playButton.addEventListener('click', () => {
+    if (!world) return;
+    if (world.completed) {
+      showCompletion();
+      return;
+    }
+    world.playing = !world.playing;
+    accumulator = 0;
+    updateUI();
+    playTone('tap');
+  });
+
+  elements.speedButton.addEventListener('click', () => {
+    speedIndex = (speedIndex + 1) % SPEEDS.length;
+    accumulator = 0;
+    updateUI();
+    saveWorld(false);
+    playTone('tap');
+  });
+
+  elements.tools.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-tool]');
+    if (!button) return;
+    activeTool = button.dataset.tool;
+    updateToolUI();
+    showFeedback({
+      observe: 'Нажми на державу',
+      found: 'Нажми на сушу',
+      road: 'Проведи дорогу пальцем',
+      ridge: 'Нарисуй горный хребет',
+      schism: 'Нажми на окраину большой державы',
+      crisis: 'Нажми на регион'
+    }[activeTool]);
+    playTone('tap');
+  });
+
+  elements.pauseButton.addEventListener('click', openPause);
+  elements.resumeButton.addEventListener('click', () => {
+    elements.pauseSheet.hidden = true;
+    world.playing = true;
+    accumulator = 0;
+    updateUI();
+  });
+  elements.saveButton.addEventListener('click', () => saveWorld(true));
+  elements.restartButton.addEventListener('click', () => { elements.confirmSheet.hidden = false; });
+  elements.confirmCancel.addEventListener('click', () => { elements.confirmSheet.hidden = true; });
+  elements.confirmReset.addEventListener('click', () => {
+    clearWorld();
+    returnToMenu();
+  });
+
+  elements.helpButton.addEventListener('click', () => {
+    if (world) world.playing = false;
+    updateUI();
+    elements.helpSheet.hidden = false;
+  });
+  elements.helpClose.addEventListener('click', () => { elements.helpSheet.hidden = true; });
+
+  elements.continueEra.addEventListener('click', () => {
+    if (!world) return;
+    world.horizon = 1000;
+    world.completed = false;
+    elements.completeSheet.hidden = true;
+    world.playing = true;
+    accumulator = 0;
+    updateUI();
+    scheduleSave();
+  });
+  elements.newWorldButton.addEventListener('click', () => {
+    clearWorld();
+    returnToMenu();
+  });
+
+  elements.canvas.addEventListener('pointerdown', onPointerDown);
+  elements.canvas.addEventListener('pointermove', onPointerMove);
+  elements.canvas.addEventListener('pointerup', onPointerEnd);
+  elements.canvas.addEventListener('pointercancel', onPointerEnd);
+  elements.canvas.addEventListener('lostpointercapture', onPointerEnd);
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    resizePreview();
+    renderWorld();
+  });
+  window.addEventListener('orientationchange', () => window.setTimeout(() => {
+    resizeCanvas();
+    resizePreview();
+    renderWorld();
+  }, 120));
+
+  document.addEventListener('visibilitychange', () => {
+    if (!world) return;
+    if (document.hidden) {
+      visibilityPaused = world.playing;
+      world.playing = false;
+      saveWorld(false);
+    } else if (visibilityPaused && !world.completed && elements.pauseSheet.hidden && elements.helpSheet.hidden) {
+      world.playing = true;
+      accumulator = 0;
+      visibilityPaused = false;
+    }
+    updateUI();
+  });
+
+  window.addEventListener('pagehide', () => saveWorld(false));
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      if (!elements.confirmSheet.hidden) elements.confirmSheet.hidden = true;
+      else if (!elements.helpSheet.hidden) elements.helpSheet.hidden = true;
+      else if (!elements.pauseSheet.hidden) elements.pauseSheet.hidden = true;
+      else if (!elements.worldScreen.hidden) openPause();
+    }
+  });
+}
+
+function init() {
+  installMobileRuntime();
+  createWorkshopMode({
+    storageNamespace: 'pocket-works:palimpsest',
+    cachePrefix: CACHE_PREFIX
+  });
+  loadSettings();
+  updateSoundUI();
+  world = loadSavedWorld();
+  updateContinueButton();
+  world = null;
+  previewWorld = makeBaseWorld(260725, 'passes');
+  bindEvents();
+  resizePreview();
+  frameId = requestAnimationFrame(frame);
+}
+
+try {
+  init();
+} catch (error) {
+  console.error('PALIMPSEST failed to initialise', error);
+  cancelAnimationFrame(frameId);
+  elements.fatalError.hidden = false;
+}
