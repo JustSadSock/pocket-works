@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "ПАЛИМПСЕСТ",
+  "short_name": "ПАЛИМПСЕСТ",
+  "description": "Процедурная лаборатория альтернативной истории с живыми державами, вмешательствами и ветвящейся летописью.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2b2a24",
+  "theme_color": "#2b2a24",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
