@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "quorum",
+  "name": "КВОРУМ",
+  "shortName": "КВОРУМ",
+  "description": "Тактильная парламентская стратегия: собирайте большинство поправками, не превращая исходный закон в политический труп.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T03:49:00+02:00",
+  "changelog": [
+    "Добавлена шестисессионная кампания с процедурным порядком законопроектов, коалициями и последствиями голосований.",
+    "Поправки можно нажимать или перетаскивать в текст закона; прогноз голосов, целостность и напряжение пересчитываются мгновенно.",
+    "Добавлены локальное сохранение, архив кампании, тихие синтезированные звуки, тактильная обратная связь и офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#8c3d32",
+  "backgroundColor": "#e8dfcd",
+  "themeColor": "#24352f",
+  "orientation": "portrait",
+  "cacheName": "quorum-v1.0.0",
+  "storageNamespace": "pocket-works:quorum",
+  "tags": ["strategy", "politics", "simulation", "coalition", "offline", "touch", "procedural"],
+  "order": 121
+}
