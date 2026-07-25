@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ОТКЛИК">
+  <rect width="512" height="512" rx="92" fill="#d8d1c2"/>
+  <path d="M92 112v292h326" fill="none" stroke="#20211f" stroke-width="30" stroke-linecap="square"/>
+  <path d="M142 354c0-92 74-166 166-166" fill="none" stroke="#245a78" stroke-width="28" stroke-linecap="round"/>
+  <path d="M142 292c0-57 46-103 103-103" fill="none" stroke="#4d8b8a" stroke-width="22" stroke-linecap="round"/>
+  <path d="M142 232c0-24 20-44 44-44" fill="none" stroke="#c28b46" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="142" cy="188" r="22" fill="#a84d3e" stroke="#20211f" stroke-width="12"/>
+  <path d="M308 188c58 0 105 47 105 105" fill="none" stroke="#20211f" stroke-width="16" stroke-dasharray="9 22" stroke-linecap="round" opacity=".72"/>
+</svg>
