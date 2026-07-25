@@ -1,0 +1,17 @@
+{
+  "name": "@pocket-works/prelom",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assemble": "node assemble-source.mjs",
+    "prebuild": "npm run assemble",
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs prelom",
+    "pretest": "npm run assemble",
+    "test": "vitest run --config vite.config.ts",
+    "pretypecheck": "npm run assemble",
+    "typecheck": "tsc --noEmit",
+    "presmoke": "npm run assemble",
+    "smoke": "node tests/smoke.mjs && node tests/physics-smoke.mjs"
+  }
+}

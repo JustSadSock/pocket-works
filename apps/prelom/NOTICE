@@ -1,0 +1,29 @@
+ПРЕЛОМ — notices and third-party attribution
+Copyright 2026 Pocket Works contributors
+
+Ray Optics Simulation
+Project contributors: ricktu288/ray-optics contributors
+Project: https://github.com/ricktu288/ray-optics
+License: Apache License, Version 2.0
+
+This application uses Ray Optics Simulation as a conceptual and algorithmic reference for a 2D geometric-optics simulator. The implementation in ПРЕЛОМ is an independent TypeScript rewrite and does not embed the upstream website, reuse its interface, or redistribute its graphical assets.
+
+Adapted or reimplemented components:
+- iterative ray propagation with bounded branching and bounce limits;
+- geometric intersections between rays and line, circular and polygonal optical boundaries;
+- reflection, Snell refraction and total internal reflection;
+- wavelength-dependent refractive index for visible-light dispersion;
+- partial reflection/transmission and intensity cutoffs;
+- scene serialization concepts for editable optical objects.
+
+Materially changed in ПРЕЛОМ:
+- mobile-first product structure and gestures;
+- object model and scene schema;
+- rendering, visual modes, measurements and heat maps;
+- adaptive quality and time-budget controls;
+- preset experiments, task evaluation and local persistence;
+- all user interface, styling, iconography and copy.
+
+The upstream repository did not contain a NOTICE file when checked on 2026-07-25. This application includes this NOTICE as an additional attribution record.
+
+A copy of Apache License 2.0 is included at licenses/RAY_OPTICS_APACHE-2.0.txt.

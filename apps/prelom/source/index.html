@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#252827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПРЕЛОМ">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <title>ПРЕЛОМ</title>
+</head>
+<body data-fullscreen-app>
+  <main class="lab-shell" id="app" data-app-shell aria-label="Интерактивная лаборатория геометрической оптики">
+    <header class="topbar" data-ui>
+      <button class="brand" id="homeButton" type="button" data-native-press aria-label="Меню приложения">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>ПРЕЛОМ</span>
+      </button>
+      <div class="scene-name" id="sceneName">Радуга в призме</div>
+      <div class="top-actions">
+        <button class="icon-button" id="undoButton" type="button" aria-label="Отменить" disabled>↶</button>
+        <button class="icon-button" id="redoButton" type="button" aria-label="Повторить" disabled>↷</button>
+        <button class="icon-button" id="qualityButton" type="button" aria-label="Качество симуляции">A</button>
+      </div>
+    </header>
+
+    <section class="stage-wrap" id="stageWrap" aria-label="Оптическое поле">
+      <canvas id="labCanvas"></canvas>
+      <div class="stage-status" id="stageStatus" role="status" aria-live="polite"></div>
+      <div class="complexity-warning" id="complexityWarning" hidden>
+        Сцена тяжёлая — детализация снижена
+      </div>
+      <div class="tool-chip" id="toolChip" hidden></div>
+      <div class="task-chip" id="taskChip" hidden>
+        <span id="taskTitle"></span>
+        <button id="taskCheckButton" type="button">Проверить</button>
+      </div>
+      <div class="measurement-card" id="measurementCard" hidden></div>
+      <div class="selection-hud" id="selectionHud" hidden></div>
+    </section>
+
+    <nav class="mode-strip" id="modeStrip" aria-label="Режим визуализации" data-ui>
+      <button type="button" data-mode="rays" class="active">Лучи</button>
+      <button type="button" data-mode="beam">Пучок</button>
+      <button type="button" data-mode="image">Изображение</button>
+      <button type="button" data-mode="intensity">Интенсивность</button>
+      <button type="button" data-mode="spectrum">Спектр</button>
+      <button type="button" data-mode="precision">Точность</button>
+      <button type="button" data-mode="trail">След</button>
+    </nav>
+
+    <nav class="bottom-toolbar" data-ui aria-label="Основные инструменты">
+      <button type="button" id="selectTool" class="tool-button active" data-tool="select">
+        <span aria-hidden="true">⌁</span><small>Выбор</small>
+      </button>
+      <button type="button" id="catalogButton" class="tool-button">
+        <span aria-hidden="true">＋</span><small>Добавить</small>
+      </button>
+      <button type="button" id="measureButton" class="tool-button">
+        <span aria-hidden="true">⌗</span><small>Измерить</small>
+      </button>
+      <button type="button" id="libraryButton" class="tool-button">
+        <span aria-hidden="true">▤</span><small>Сцены</small>
+      </button>
+      <button type="button" id="saveButton" class="tool-button">
+        <span aria-hidden="true">◇</span><small>Сохранить</small>
+      </button>
+    </nav>
+
+    <aside class="sheet catalog-sheet" id="catalogSheet" aria-hidden="true" data-ui>
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div>
+          <p class="engraved">КАТАЛОГ</p>
+          <h2>Оптические элементы</h2>
+        </div>
+        <button type="button" class="close-button" data-close-sheet="catalogSheet" aria-label="Закрыть">×</button>
+      </header>
+      <div class="catalog-tabs" role="tablist">
+        <button class="active" data-catalog-tab="sources" type="button">Источники</button>
+        <button data-catalog-tab="optics" type="button">Оптика</button>
+        <button data-catalog-tab="media" type="button">Среды</button>
+        <button data-catalog-tab="receivers" type="button">Экраны</button>
+      </div>
+      <div class="catalog-grid" id="catalogGrid"></div>
+      <p class="sheet-note">Выберите элемент, затем коснитесь поля. Длинное нажатие по объекту открывает быстрые действия.</p>
+    </aside>
+
+    <aside class="sheet inspector-sheet" id="inspectorSheet" aria-hidden="true" data-ui>
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div>
+          <p class="engraved">ИНСПЕКТОР</p>
+          <h2 id="inspectorTitle">Объект</h2>
+        </div>
+        <button type="button" class="close-button" data-close-sheet="inspectorSheet" aria-label="Закрыть">×</button>
+      </header>
+      <div id="inspectorBody" class="inspector-body"></div>
+      <div class="inspector-actions">
+        <button type="button" id="cloneButton">Клон</button>
+        <button type="button" id="lockButton">Блок</button>
+        <button type="button" id="deleteButton" class="danger">Удалить</button>
+      </div>
+    </aside>
+
+    <aside class="sheet measure-sheet" id="measureSheet" aria-hidden="true" data-ui>
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div>
+          <p class="engraved">ИЗМЕРЕНИЯ</p>
+          <h2>Инструменты</h2>
+        </div>
+        <button type="button" class="close-button" data-close-sheet="measureSheet" aria-label="Закрыть">×</button>
+      </header>
+      <div class="measure-grid" id="measureGrid">
+        <button type="button" data-measure="ruler"><b>↔</b><span>Линейка</span></button>
+        <button type="button" data-measure="protractor"><b>∠</b><span>Транспортир</span></button>
+        <button type="button" data-measure="focus"><b>ƒ</b><span>Фокус</span></button>
+        <button type="button" data-measure="intensity"><b>◉</b><span>Датчик</span></button>
+        <button type="button" data-measure="grid"><b>⌗</b><span>Сетка</span></button>
+        <button type="button" data-measure="angles"><b>α</b><span>Углы лучей</span></button>
+        <button type="button" data-measure="snap"><b>⌖</b><span>Привязка</span></button>
+        <button type="button" data-measure="system"><b>Σ</b><span>Система</span></button>
+      </div>
+    </aside>
+
+    <aside class="sheet library-sheet" id="librarySheet" aria-hidden="true" data-ui>
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div>
+          <p class="engraved">БИБЛИОТЕКА</p>
+          <h2>Сцены и задачи</h2>
+        </div>
+        <button type="button" class="close-button" data-close-sheet="librarySheet" aria-label="Закрыть">×</button>
+      </header>
+      <div class="library-tabs" role="tablist">
+        <button class="active" type="button" data-library-tab="experiments">Эксперименты</button>
+        <button type="button" data-library-tab="tasks">Задачи</button>
+        <button type="button" data-library-tab="saved">Сохранённые</button>
+        <button type="button" data-library-tab="about">О приложении</button>
+      </div>
+      <div class="library-content" id="libraryContent"></div>
+    </aside>
+
+    <aside class="sheet menu-sheet" id="menuSheet" aria-hidden="true" data-ui>
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div>
+          <p class="engraved">ПРЕЛОМ 1.0</p>
+          <h2>Лаборатория</h2>
+        </div>
+        <button type="button" class="close-button" data-close-sheet="menuSheet" aria-label="Закрыть">×</button>
+      </header>
+      <div class="menu-list">
+        <button type="button" id="newSceneButton"><span>Новый эксперимент</span><small>Чистое поле с источником</small></button>
+        <button type="button" id="resetSceneButton"><span>Сбросить сцену</span><small>Вернуть исходное состояние</small></button>
+        <button type="button" id="tutorialButton"><span>Повторить обучение</span><small>Минута поверх живой сцены</small></button>
+        <button type="button" data-workshop-trigger data-native-press><span>Мастерская</span><small>Диагностика, данные и управление приложением</small></button>
+        <button type="button" id="exportButton"><span>Экспорт JSON</span><small>Скачать текущую сцену</small></button>
+        <button type="button" id="importButton"><span>Импорт JSON</span><small>Открыть файл эксперимента</small></button>
+        <input type="file" id="importInput" accept="application/json,.prelom.json" hidden>
+        <label class="toggle-row"><span><b>Звук</b><small>Стекло, металл, фиксаторы</small></span><input id="soundToggle" type="checkbox" checked></label>
+        <label class="toggle-row"><span><b>Вибрация</b><small>Касания и фиксация углов</small></span><input id="hapticToggle" type="checkbox" checked></label>
+      </div>
+    </aside>
+
+    <div class="context-menu" id="contextMenu" hidden data-ui>
+      <button type="button" data-context="inspect">Параметры</button>
+      <button type="button" data-context="clone">Клонировать</button>
+      <button type="button" data-context="lock">Блокировать</button>
+      <button type="button" data-context="delete">Удалить</button>
+    </div>
+
+    <div class="tutorial" id="tutorial" hidden data-ui>
+      <div class="tutorial-focus" id="tutorialFocus"></div>
+      <div class="tutorial-card">
+        <p class="engraved" id="tutorialStepLabel">ШАГ 1 ИЗ 3</p>
+        <h2 id="tutorialTitle">Подвигайте призму</h2>
+        <p id="tutorialText">Потяните стеклянный треугольник. Спектр пересчитается прямо во время движения.</p>
+        <div class="tutorial-actions">
+          <button type="button" id="tutorialSkip">Закрыть</button>
+          <button type="button" id="tutorialNext">Дальше</button>
+        </div>
+      </div>
+    </div>
+
+    <dialog id="confirmDialog" class="lab-dialog">
+      <form method="dialog">
+        <p class="engraved">ПОДТВЕРЖДЕНИЕ</p>
+        <h2 id="confirmTitle">Удалить сцену?</h2>
+        <p id="confirmText">Действие нельзя отменить.</p>
+        <div class="dialog-actions">
+          <button value="cancel">Отмена</button>
+          <button value="confirm" class="danger">Продолжить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="loading-overlay" id="loadingOverlay" hidden data-ui>
+      <div class="loading-optic" aria-hidden="true"></div>
+      <p id="loadingText">Строим траектории…</p>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" data-ui></div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
