@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "regent",
+  "name": "РЕГЕНТ",
+  "shortName": "РЕГЕНТ",
+  "description": "Тактильный симулятор федерации: ставь указы прямо на карту и удержи провинции от распада.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T01:55:00Z",
+  "changelog": [
+    "Introduced a complete twelve-turn federation survival campaign.",
+    "Added five map-stamped decrees with visible target and neighbour cascades.",
+    "Added three scenarios, local saves, procedural crises, sound, haptics and offline support."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#9d2f2f",
+  "backgroundColor": "#e8dfc8",
+  "themeColor": "#d8c9a7",
+  "orientation": "portrait",
+  "cacheName": "regent-v1.0.0",
+  "storageNamespace": "pocket-works:regent",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "strategy",
+    "simulation",
+    "canvas",
+    "workshop"
+  ],
+  "order": 315
+}
