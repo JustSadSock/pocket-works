@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "ИМПУЛЬС — физическая песочница",
+  "short_name": "ИМПУЛЬС",
+  "description": "Мобильный физический стол с телами, связями, силовыми полями и импульсами.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ece5d2",
+  "theme_color": "#ece5d2",
+  "categories": ["games", "education", "utilities"],
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
