@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { BASE_MATERIALS, CATEGORIES, STATE, hexToRgb } from './materials.ts';
-import { MatterEngine, cloneRegion, pasteRegion, clamp, validateCustomMaterial } from './core.ts';
+import { BASE_MATERIALS, CATEGORIES, STATE } from './materials.ts';
+import { MatterEngine, cloneRegion, pasteRegion, clamp, validateCustomMaterial, hexToRgb } from './core.ts';
 import { EXPERIMENTS, TASKS, loadExperiment, loadTask } from './scenes.ts';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, loadAutosave, saveAutosave, listWorlds, saveWorld, deleteWorld, loadCustomMaterials, saveCustomMaterials, downloadJson, readJsonFile, validateImport, dbDelete } from './storage.ts';
 import shard01 from './ui-shard-01.ts';
