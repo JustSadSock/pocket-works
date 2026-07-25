@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=1.1.1">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" data-app-shell>
@@ -47,7 +47,16 @@
     </aside>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Лаборатория эмерджентности" data-app-version="1.1.0"></script>
-  <script src="./app.js" type="module"></script>
+  <script>
+    (() => {
+      const finishLoading = () => document.getElementById('loading-state')?.classList.add('is-hidden');
+      window.__emergenceFinishLoading = finishLoading;
+      window.setTimeout(finishLoading, 1800);
+      window.addEventListener('error', finishLoading, { once: true });
+      window.addEventListener('unhandledrejection', finishLoading, { once: true });
+    })();
+  </script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Лаборатория эмерджентности" data-app-version="1.1.1"></script>
+  <script src="./app.js?v=1.1.1" type="module"></script>
 </body>
 </html>
