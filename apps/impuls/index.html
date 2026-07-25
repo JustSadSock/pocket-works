@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#ece5d2">
+  <meta name="description" content="ИМПУЛЬС — мобильная физическая песочница с телами, тросами, пружинами, полями и разрушительными импульсами.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ИМПУЛЬС">
+  <title>ИМПУЛЬС — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app" data-app-shell data-fullscreen-app>
+  <header class="topbar" data-ui>
+    <a class="square-button back" href="../../" aria-label="Назад" data-app-control>
+      <svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>
+    </a>
+    <div class="identity">
+      <small>ФИЗИЧЕСКИЙ СТОЛ</small>
+      <strong>ИМПУЛЬС</strong>
+    </div>
+    <div class="readout" aria-live="polite">
+      <span><b id="bodyCount">0</b><small>ТЕЛ</small></span>
+      <span><b id="constraintCount">0</b><small>СВЯЗЕЙ</small></span>
+    </div>
+    <button class="square-button" id="pauseButton" type="button" aria-label="Пауза" aria-pressed="false">
+      <span class="pause-glyph"></span>
+    </button>
+    <button class="square-button" id="menuButton" type="button" aria-label="Меню">
+      <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="18" cy="12" r="1.35"/></svg>
+    </button>
+  </header>
+
+  <section class="workspace" id="workspace" data-gesture-surface data-block-callout>
+    <canvas id="world" aria-label="Физическая песочница"></canvas>
+    <div class="paper-grain" aria-hidden="true"></div>
+    <div class="field-note" id="fieldNote" hidden></div>
+    <div class="gesture-hint" id="gestureHint">БРОСЬ ТЕЛО ПАЛЬЦЕМ</div>
+    <div class="link-banner" id="linkBanner" hidden>
+      <span id="linkText">ВЫБЕРИ ВТОРУЮ ТОЧКУ</span>
+      <button id="cancelLink" type="button">ОТМЕНА</button>
+    </div>
+    <div class="inspector" id="inspector" hidden>
+      <button class="material-chip" id="materialChip" type="button"><i></i><span></span></button>
+      <button id="pinButton" type="button" aria-label="Закрепить"><svg viewBox="0 0 24 24"><path d="m8 4 8 8M14 4l6 6-4 1-5 5-1 4-6-6 4-1 5-5 1-4Z"/></svg></button>
+      <button id="duplicateButton" type="button" aria-label="Дублировать"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+      <button id="deleteButton" type="button" aria-label="Удалить"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></button>
+    </div>
+  </section>
+
+  <section class="tool-rack" data-ui>
+    <div class="tool-strip" id="toolStrip" role="toolbar" aria-label="Инструменты">
+      <button class="tool active" type="button" data-tool="hand" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M7 11V6a2 2 0 0 1 4 0v4-6a2 2 0 0 1 4 0v6-4a2 2 0 0 1 4 0v8c0 4-3 7-7 7h-1c-3 0-5-1-7-4l-2-4a2 2 0 0 1 3-2l2 2"/></svg><span>РУКА</span></button>
+      <button class="tool" type="button" data-tool="circle"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg><span>ШАР</span></button>
+      <button class="tool" type="button" data-tool="box"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg><span>БЛОК</span></button>
+      <button class="tool" type="button" data-tool="wall"><svg viewBox="0 0 24 24"><path d="M3 18 20 5M5 20 22 7"/></svg><span>БАЛКА</span></button>
+      <button class="tool" type="button" data-tool="rope"><svg viewBox="0 0 24 24"><path d="M5 6c5 0 4 12 9 12s4-12 5-12"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/></svg><span>ТРОС</span></button>
+      <button class="tool" type="button" data-tool="spring"><svg viewBox="0 0 24 24"><path d="M3 12h3l2-5 4 10 4-10 2 5h3"/></svg><span>ПРУЖИНА</span></button>
+      <button class="tool" type="button" data-tool="field"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>ПОЛЕ</span></button>
+      <button class="tool" type="button" data-tool="impulse"><svg viewBox="0 0 24 24"><path d="m4 14 7-10 1 7 8-1-7 10-1-7-8 1Z"/></svg><span>УДАР</span></button>
+      <button class="tool" type="button" data-tool="erase"><svg viewBox="0 0 24 24"><path d="m4 15 8-9 8 8-6 6H9l-5-5Z"/><path d="m9 20 8-8"/></svg><span>СТЕРЕТЬ</span></button>
+    </div>
+
+    <div class="control-deck">
+      <button class="material-button" id="materialButton" type="button">
+        <i id="materialSwatch"></i><span><small>МАТЕРИАЛ</small><b id="materialName">ДЕРЕВО</b></span><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></svg>
+      </button>
+      <button class="deck-button" id="undoButton" type="button" aria-label="Отменить"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M5 12h8a6 6 0 1 1 0 12"/></svg><span>НАЗАД</span></button>
+      <button class="deck-button" id="stressButton" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 18 8 7l4 8 3-5 6 8M4 21h16"/></svg><span>НАГРУЗКА</span></button>
+      <button class="deck-button danger" id="clearButton" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg><span>СБРОС</span></button>
+    </div>
+  </section>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+  <section class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="grip"></div>
+    <header><div><small id="sheetKicker">НАСТРОЙКА</small><h2 id="sheetTitle">ПАРАМЕТРЫ</h2></div><button class="close-button" id="closeSheet" type="button" aria-label="Закрыть">×</button></header>
+    <div class="sheet-body" id="sheetBody" data-keyboard-aware></div>
+  </section>
+
+  <section class="intro" id="intro" hidden>
+    <div class="intro-mark" aria-hidden="true"><span></span><i></i><b></b></div>
+    <div class="intro-copy"><small>POCKET WORKS / ФИЗИКА ПАЛЬЦАМИ</small><h1>ИМПУЛЬС</h1><p>Строй, связывай и ломай. Здесь палец — кран, катапульта и локальный конец света.</p></div>
+    <div class="scene-grid">
+      <button type="button" data-scene="bridge"><b>01</b><span>ХРУПКИЙ МОСТ</span><small>нагрузи и обрушь</small></button>
+      <button type="button" data-scene="orbit"><b>02</b><span>ОРБИТА</span><small>поле и рой тел</small></button>
+      <button type="button" data-scene="cradle"><b>03</b><span>МАЯТНИКИ</span><small>цепь передачи импульса</small></button>
+      <button type="button" data-scene="empty"><b>04</b><span>ЧИСТЫЙ СТОЛ</span><small>собери свою дичь</small></button>
+    </div>
+    <button class="intro-start" id="introStart" type="button">ОТКРЫТЬ СТОЛ</button>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+  <input id="importInput" type="file" accept="application/json,.json" hidden>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ИМПУЛЬС" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+<script type="module" src="./workshop-delegate.js"></script>
+</body>
+</html>
