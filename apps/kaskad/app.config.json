@@ -5,13 +5,12 @@
   "name": "KASKAD",
   "shortName": "KASKAD",
   "description": "Визуальный конструктор залипательных физических симуляций без единой строки кода.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "releaseDate": "2026-07-25",
-  "releaseDateTime": "2026-07-25T21:00:00+02:00",
+  "releaseDateTime": "2026-07-25T02:45:00+02:00",
   "changelog": [
-    "Создан визуальный конструктор частиц, полей и событийных правил без кода.",
-    "Добавлены круглая и прямоугольная арены, запись видео, экспорт сцен и три стартовые системы.",
-    "Реализованы цветовые силы, порождение, преобразование, разрушение и цепные реакции."
+    "Исправлено закрытие нижних редакторов на iPhone и других WebKit-устройствах.",
+    "Семантическое состояние hidden теперь надёжно скрывает подложки, пустые состояния и индикатор записи."
   ],
   "status": "active",
   "preset": "interactive",
@@ -19,7 +18,7 @@
   "backgroundColor": "#efe9dc",
   "themeColor": "#efe9dc",
   "orientation": "portrait",
-  "cacheName": "kaskad-v1.0.0",
+  "cacheName": "kaskad-v1.0.1",
   "storageNamespace": "pocket-works:kaskad",
   "tags": ["simulation", "physics", "creative", "visual", "particles"],
   "order": 121
