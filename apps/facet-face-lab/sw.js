@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'facet-face-lab-';
-const CACHE_NAME = 'facet-face-lab-v1.8.0';
-const APP_VERSION = '1.8.0';
+const CACHE_NAME = 'facet-face-lab-v1.9.0';
+const APP_VERSION = '1.9.0';
 const BUNDLE_PARTS = ['00', '01', '02', '03', '04', '05', '06a', '06b', '07', '08', '09', '10']
   .map((name) => `./facet-v15-c-${name}.txt`);
 const CORE = [
@@ -11,6 +11,7 @@ const CORE = [
   './v17.css',
   './v18-00.css',
   './v18-01.css',
+  './v19.css',
   './app.js',
   './patch-v17.txt',
   './rating-v17.js',
@@ -19,6 +20,8 @@ const CORE = [
   './ux-v18-00.txt',
   './ux-v18-01.txt',
   './ux-v18-02.txt',
+  './protocol-v19.txt',
+  './ux-v19.txt',
   ...BUNDLE_PARTS,
   './manifest.webmanifest',
   './icons/icon.svg',
