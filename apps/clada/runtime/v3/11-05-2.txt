@@ -1,0 +1,31 @@
+ternatives.length) continue;
+    const [targetKey, targetMembers] = alternatives[0];
+    const targetRegion = targetKey.split(':')[1];
+    for (const organism of members) { organism.homeRegion = targetRegion; organism.regionTenure = 0; }
+    targetMembers.push(...members);
+    groups.delete(key);
+  }
+  const seen = new Set();
+  for (const [key, members] of groups) {
+    const [speciesIdText, region] = key.split(':');
+    const speciesId = Number(speciesIdText);
+    let population = state.populations.find((entry) => entry.speciesId === speciesId && entry.region === region && entry.status !== 'absorbed');
+    if (!population) population = createPopulation(speciesId, region, members[0].genome, 'forming', state.generation);
+    seen.add(population.id);
+    const previousSize = population.size || 0;
+    population.previousSize = previousSize;
+    population.size = members.length;
+    population.trend = members.length - previousSize;
+    population.lastSeen = state.generation;
+    population.centroid = livingCentroid(members);
+    const parentSpecies = state.species.find((species) => species.id === speciesId);
+    population.divergence = parentSpecies ? genomeDistance(population.centroid, parentSpecies.centroid) : 0;
+    const otherRegions = [...groups.keys()].some((otherKey) => otherKey.startsWith(`${speciesId}:`) && otherKey !== key);
+    population.isolation = otherRegions ? population.isolation + 1 : Math.max(0, population.isolation - 2);
+    population.status = population.isolation >= 4 ? 'diverging' : members.length < 4 ? 'fragile' : 'stable';
+    for (const organism of members) { organism.populationId = population.id; organism.homeRegion ||= region; }
+    const threshold = .17 - state.env.mutation * .035;
+    if (population.isolation >= 8 && population.divergence > threshold && members.length >= 5) livingPromotePopulation(population, members);
+  }
+  for (const population of state.populations) {
+    if (!seen.has(population.id) && population.status !== 'absorbed') {

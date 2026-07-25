@@ -1,0 +1,26 @@
+ ? 1 : .48;
+  const wander = .000009 * (1.5 - genome.vision * .27) * activity;
+  organism.vx += Math.cos(organism.id * 2.13 + state.step * .021 + organism.y * 9) * wander;
+  organism.vy += Math.sin(organism.id * 1.71 + state.step * .018 + organism.x * 11) * wander;
+  const terrainSpeed = terrain.water ? lerp(.42, 1.15, genome.waterAffinity) : lerp(1.08, .48, genome.waterAffinity);
+  const maxVelocity = (.00034 + genome.speed * .0005 + genome.stamina * .00008) * terrainSpeed * activity * (1 - genome.ambush * .12);
+  const velocity = Math.hypot(organism.vx, organism.vy) || 1;
+  if (velocity > maxVelocity) { organism.vx = organism.vx / velocity * maxVelocity; organism.vy = organism.vy / velocity * maxVelocity; }
+  organism.vx *= .984; organism.vy *= .984;
+  organism.x += organism.vx; organism.y += organism.vy;
+  if (organism.x < .018 || organism.x > .982) { organism.x = clamp(organism.x, .018, .982); organism.vx *= -1.35; }
+  if (organism.y < .03 || organism.y > .97) { organism.y = clamp(organism.y, .03, .97); organism.vy *= -1.35; }
+
+  const currentTerrain = terrainAt(organism.x, organism.y);
+  const climateMismatch = Math.abs(livingLocalTemperature(organism.x, organism.y) - genome.thermal);
+  const movementCost = (.00145 + genome.speed ** 2 * .00105 + genome.brain * .0005 + genome.wing * .00045 + genome.shell * .00042) * genome.metabolism * activity;
+  const habitatCost = (1 - habitatFitness(genome, currentTerrain)) ** 1.3 * .0065;
+  const climateCost = climateMismatch ** 1.45 * .006 * (1.16 - genome.fur * .24);
+  organism.energy -= movementCost + habitatCost + climateCost + applyShockCost(organism);
+  if (fitness < .2 && organism.energy <= 0) organism.cause = currentTerrain.water ? 'неподходящая водная среда' : 'неподходящая суша';
+}
+
+simulateStep = function livingSimulationStep() {
+  state.step += 1;
+  state.season = Math.floor((state.generation % 12 + (state.step % GENERATION_STEPS) / GENERATION_STEPS) % 12);
+  const births =

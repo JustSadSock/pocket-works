@@ -1,0 +1,144 @@
+/* КЛАДА 3.0 — пищевая сеть, поведение, размножение и постепенное видообразование. */
+const livingLegacySnapshotOrganism = snapshotOrganism;
+const livingLegacyRecordHistory = recordHistory;
+const livingLegacyFinalizeGeneration = finalizeGeneration;
+const livingLegacySeedAt = seedAt;
+
+function interactionBucket(speciesId) {
+  state.interactions[speciesId] ||= { prey: {}, predators: {}, competitors: {}, plants: 0, carrion: 0, filter: 0 };
+  return state.interactions[speciesId];
+}
+
+function livingIncrement(object, key, amount = 1) {
+  object[key] = (object[key] || 0) + amount;
+}
+
+let livingCurrentSpatial = null;
+
+function livingSpatialIndex(cellSize = .09) {
+  const cells = new Map();
+  const key = (x, y) => `${Math.floor(x / cellSize)}:${Math.floor(y / cellSize)}`;
+  for (const organism of state.organisms) {
+    const cellKey = key(organism.x, organism.y);
+    if (!cells.has(cellKey)) cells.set(cellKey, []);
+    cells.get(cellKey).push(organism);
+  }
+  return {
+    nearby(organism, radius = .16) {
+      const result = [];
+      const cx = Math.floor(organism.x / cellSize);
+      const cy = Math.floor(organism.y / cellSize);
+      const extent = Math.ceil(radius / cellSize);
+      for (let dx = -extent; dx <= extent; dx += 1) {
+        for (let dy = -extent; dy <= extent; dy += 1) {
+          const bucket = cells.get(`${cx + dx}:${cy + dy}`);
+          if (bucket) result.push(...bucket);
+        }
+      }
+      return result;
+    }
+  };
+}
+
+function livingLocalTemperature(x, y) {
+  let temperature = terrainAt(x, y).temperature;
+  if (state.shock?.type === 'ice') temperature -= .28 * state.shock.strength;
+  if (state.shock?.type === 'meteor') temperature -= .08 * state.shock.strength;
+  return clamp(temperature);
+}
+localTemperature = function livingTemperature(y) { return livingLocalTemperature(.5, y); };
+
+plantGrowthFactor = function livingPlantGrowth(plant) {
+  const terrain = terrainAt(plant.x, plant.y);
+  const seasonal = .72 + Math.sin((state.season / 12) * TAU + plant.phase) * .22;
+  const climate = clamp(1 - Math.abs(terrain.temperature - .56) * 1.35, .08, 1);
+  const moisture = terrain.water ? .62 : clamp(.25 + terrain.moisture, .18, 1);
+  let factor = state.env.food * climate * moisture * seasonal;
+  if (state.shock?.type === 'drought') factor *= terrain.water ? .72 : .2;
+  if (state.shock?.type === 'red' && terrain.water) factor *= .62;
+  return clamp(factor, .02, 1.3);
+};
+
+
+function livingItemIndex(items, cellSize = .085) {
+  const cells = new Map();
+  for (const item of items) {
+    const key = `${Math.floor(item.x / cellSize)}:${Math.floor(item.y / cellSize)}`;
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(item);
+  }
+  return {
+    nearby(x, y, radius = .16) {
+      const result = [];
+      const cx = Math.floor(x / cellSize), cy = Math.floor(y / cellSize);
+      const extent = Math.ceil(radius / cellSize);
+      for (let dx = -extent; dx <= extent; dx += 1) for (let dy = -extent; dy <= extent; dy += 1) {
+        const bucket = cells.get(`${cx + dx}:${cy + dy}`);
+        if (bucket) result.push(...bucket);
+      }
+      return result;
+    }
+  };
+}
+
+function livingPopulationFor(organism) {
+  return state.populations.find((population) => population.id === organism.populationId) || null;
+}
+
+function livingPopulationAt(speciesId, region, genome) {
+  let population = state.populations.find((entry) => entry.speciesId === speciesId && entry.region === region && entry.status !== 'absorbed');
+  if (!population) population = createPopulation(speciesId, region, genome, 'forming', state.generation);
+  return population;
+}
+
+function livingDietLabel(genome) {
+  enrichGenome(genome);
+  const options = [
+    ['растения', genome.plantDiet], ['живая добыча', genome.preyDiet],
+    ['падаль', genome.carrionDiet], ['фильтрация', genome.filterDiet]
+  ].sort((a, b) => b[1] - a[1]);
+  return options[0][0];
+}
+
+function livingBehaviorLabel(genome) {
+  enrichGenome(genome);
+  if (genome.migration > .7) return 'мигрирующий';
+  if (genome.cooperation > .7) return 'стайный';
+  if (genome.ambush > .68) return 'засадный';
+  if (genome.territory > .68) return 'территориальный';
+  if (genome.burrow > .7) return 'норный';
+  if (genome.nocturnal > .68) return 'ночной';
+  return 'подвижный одиночный';
+}
+
+function livingReproductionLabel(genome) {
+  enrichGenome(genome);
+  if (genome.reproStrategy < .18) return 'бесполое деление';
+  if (genome.reproStrategy < .42) return 'гермафродитное спаривание';
+  if (genome.waterAffinity > .68 && genome.brood > .54) return 'сезонное икрометание';
+  if (genome.parentalCare > .68 && genome.brood < .48) return 'живорождение с заботой';
+  if (genome.brood > .66) return 'массовые кладки';
+  return 'кладка яиц и парное спаривание';
+}
+
+function livingFindResources(organism, neighbors, resourceIndex) {
+  const genome = organism.genome;
+  const senseRadius = .045 + genome.vision * .067 + genome.brain * .018;
+  const senseSq = senseRadius ** 2;
+  let plant = null, plantDistance = senseSq;
+  let prey = null, preyDistance = senseSq;
+  let threat = null, threatDistance = senseSq * .72;
+  let carrion = null, carrionDistance = senseSq;
+
+  if (genome.plantDiet > .16) {
+    for (const candidate of resourceIndex.plants.nearby(organism.x, organism.y, senseRadius)) {
+      if (candidate.energy < .2) continue;
+      const distance = distanceSq(organism.x, organism.y, candidate.x, candidate.y);
+      if (distance < plantDistance) { plant = candidate; plantDistance = distance; }
+    }
+  }
+
+  for (const other of neighbors) {
+    if (other === organism || other.energy <= 0) continue;
+    const distance = distanceSq(organism.x, organism.y, other.x, other.y);
+    const sameSpecies = other.speciesId 

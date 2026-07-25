@@ -1,0 +1,62 @@
+organisms.filter((organism) => organism.speciesId === speciesId);
+  context.fillStyle = '#27382e';
+  for (const organism of members) { context.beginPath(); context.arc(organism.x * width, organism.y * height, 2.2, 0, TAU); context.fill(); }
+}
+
+function livingPortraitGroup(species, canvasElement) {
+  const context = canvasElement.getContext('2d');
+  context.fillStyle = '#dfe2cd'; context.fillRect(0, 0, canvasElement.width, canvasElement.height);
+  const base = { id: species.id, genome: species.centroid };
+  const ancestor = findAncestorSpecies(species);
+  if (ancestor) {
+    context.save(); context.globalAlpha = .13;
+    drawOrganismShape(context, { id: ancestor.id, genome: ancestor.centroid }, 101, 83, 48, 0, true);
+    context.restore();
+  }
+  drawOrganismShape(context, livingDisplayOrganism({ ...base, id: species.id * 3 }, 'f'), 68, 86, 32, -.06, true);
+  drawOrganismShape(context, livingDisplayOrganism({ ...base, id: species.id * 3 + 1 }, 'm'), 128, 88, 27, .08, true);
+  context.save(); context.globalAlpha = .86; drawOrganismShape(context, livingDisplayOrganism({ ...base, id: species.id * 3 + 2 }, 'f', true), 101, 137, 18, 0, true); context.restore();
+}
+
+openSpeciesSheet = function livingOpenSpeciesSheet(species) {
+  if (!species) return;
+  enrichGenome(species.centroid);
+  const members = state.organisms.filter((organism) => organism.speciesId === species.id);
+  const count = members.length, status = livingSpeciesStatus(species, count);
+  const ancestor = findAncestorSpecies(species), secondParent = species.hybridParentId ? livingSpeciesById(species.hybridParentId) : null;
+  const activePopulations = state.populations.filter((population) => population.speciesId === species.id && population.size > 0);
+  const relative = livingClosestRelative(species);
+  const mortality = livingMainMortality(species.id);
+  const regions = new Set(activePopulations.map((population) => population.region)).size;
+  openSheet('ПАСПОРТ ВИДА', species.common, `
+    <div class="species-dashboard">
+      <div class="species-portrait"><canvas id="speciesGroupPortrait" width="196" height="168"></canvas><span class="status-mark ${status.tone}">${status.label}</span></div>
+      <div class="species-overview">
+        <small>${safeText(species.name)} · ВЕТВЬ ${species.id}${species.hybrid ? ' · ГИБРИДНАЯ' : ''}</small>
+        <p>${safeText(ph(species.centroid))}</p>
+        <div class="metric-strip"><b>${count}<small>особей</small></b><b>${activePopulations.length}<small>популяций</small></b><b>${regions}<small>регионов</small></b></div>
+      </div>
+    </div>
+    <section class="field-section"><header><b>РАСПРОСТРАНЕНИЕ</b><span>${safeText(BIOME_NAMES[species.habitat] || 'несколько биомов')}</span></header><canvas class="distribution-map" id="distributionMap" width="360" height="150"></canvas></section>
+    <section class="field-section"><header><b>ЭКОЛОГИЧЕСКАЯ РОЛЬ</b><span>${safeText(species.behavior || livingBehaviorLabel(species.centroid))}</span></header>
+      <div class="ecology-grid"><div><small>ОСНОВНАЯ ПИЩА</small><b>${safeText(species.primaryFood || livingDietLabel(species.centroid))}</b></div><div><small>ГЛАВНАЯ ДОБЫЧА</small><b>${safeText(livingNameById(species.primaryPreyId))}</b></div><div><small>ГЛАВНЫЙ ХИЩНИК</small><b>${safeText(livingNameById(species.primaryPredatorId))}</b></div><div><small>ГЛАВНЫЙ КОНКУРЕНТ</small><b>${safeText(livingNameById(species.primaryCompetitorId))}</b></div><div><small>РАЗМНОЖЕНИЕ</small><b>${safeText(species.reproduction || livingReproductionLabel(species.centroid))}</b></div><div><small>ПОВЕДЕНИЕ</small><b>${safeText(species.behavior || livingBehaviorLabel(species.centroid))}</b></div><div><small>БЛИЖАЙШИЙ РОДСТВЕННИК</small><b>${safeText(relative?.species.common || 'не зафиксирован')}</b></div><div><small>ГЛАВНАЯ ПРИЧИНА СМЕРТИ</small><b>${safeText(mortality)}</b></div></div>
+    </section>
+    <section class="field-section"><header><b>ЛОКАЛЬНЫЕ ПОПУЛЯЦИИ</b><span>новый вид возникает только после изоляции</span></header><div class="population-list">${livingPopulationRows(species.id)}</div></section>
+    <section class="field-section"><header><b>КЛЮЧЕВЫЕ ПРИЗНАКИ</b><span>компромиссы учитываются в расходе энергии</span></header><div class="trait-list">${traitRows(species.centroid)}${extraRows(species.centroid)}</div></section>
+    <div class="lineage-note">${ancestor ? `Предковая ветвь: ${safeText(ancestor.common)}. ` : ''}${secondParent ? `Вторая родительская ветвь: ${safeText(secondParent.common)}. ` : ''}${safeText(evolutionarySummary(species))}${relative ? ` Ближайшая живая ветвь — ${safeText(relative.species.common)}, геномная дистанция ${relative.distance.toFixed(2)}.` : ''}</div>
+  `);
+  requestAnimationFrame(() => {
+    const portrait = document.querySelector('#speciesGroupPortrait'); if (portrait) livingPortraitGroup(species, portrait);
+    const map = document.querySelector('#distributionMap'); if (map) livingDistributionCanvas(species.id, map);
+  });
+};
+
+openGenomeSheet = function livingOpenGenomeSheet(organism) {
+  enrichGenome(organism.genome);
+  const species = livingSpeciesById(organism.speciesId); if (!species) return;
+  const terrain = terrainAt(organism.x, organism.y);
+  const population = livingPopulationFor(organism);
+  const fitness = Math.round(habitatFitness(organism.genome, terrain) * 100);
+  openSheet('ПОЛЕВАЯ КАРТОЧКА', species.common, `
+    <div class="genome-summary"><div class="specimen-portrait"><canvas id="portraitCanvas" width="184" height="184"></canvas></div><div class="specimen-meta">
+      <small>${safeText(species.n

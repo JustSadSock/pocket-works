@@ -1,0 +1,110 @@
+=== organism.speciesId;
+    if (!sameSpecies && genome.preyDiet > .2 && other.genome.size < genome.size * (1.12 + genome.cooperation * .22) && distance < preyDistance) {
+      prey = other; preyDistance = distance;
+    }
+    if (!sameSpecies && other.genome.preyDiet > .42 && other.genome.size > genome.size * .76 && distance < threatDistance) {
+      threat = other; threatDistance = distance;
+    }
+  }
+
+  if (genome.carrionDiet > .18) {
+    for (const corpse of resourceIndex.carrion.nearby(organism.x, organism.y, senseRadius)) {
+      if (corpse.energy < .1) continue;
+      const distance = distanceSq(organism.x, organism.y, corpse.x, corpse.y);
+      if (distance < carrionDistance) { carrion = corpse; carrionDistance = distance; }
+    }
+  }
+  return { plant, plantDistance, prey, preyDistance, threat, threatDistance, carrion, carrionDistance, senseRadius };
+}
+
+function livingApplyBehavior(organism, resources, neighbors) {
+  const genome = organism.genome;
+  if (resources.threat && genome.preyDiet < .82) steerAway(organism, resources.threat, 1.1 + genome.vision * .28 + genome.brain * .2);
+  if (resources.prey && genome.preyDiet > .22) steerToward(organism, resources.prey, .45 + genome.preyDiet * .88 + genome.cooperation * .18);
+  if (resources.carrion && genome.carrionDiet > .22) steerToward(organism, resources.carrion, .38 + genome.carrionDiet * .72);
+  if (resources.plant && genome.plantDiet > .18) steerToward(organism, resources.plant, .34 + genome.plantDiet * .68);
+
+  const socialNeighbors = neighbors.filter((other) => other !== organism && other.speciesId === organism.speciesId && distanceSq(organism.x, organism.y, other.x, other.y) < .045 ** 2);
+  if (socialNeighbors.length && genome.cooperation > .35) {
+    const center = socialNeighbors.reduce((sum, other) => ({ x: sum.x + other.x, y: sum.y + other.y }), { x: 0, y: 0 });
+    center.x /= socialNeighbors.length; center.y /= socialNeighbors.length;
+    steerToward(organism, center, genome.cooperation * .26);
+  }
+  if (socialNeighbors.length && genome.territory > .45) {
+    const intruder = socialNeighbors.find((other) => other.populationId !== organism.populationId);
+    if (intruder) steerAway(organism, intruder, genome.territory * .36);
+  }
+
+  if (genome.migration > .48) {
+    const seasonalTarget = state.season < 6 ? .25 : .75;
+    organism.vy += Math.sign(seasonalTarget - organism.y) * .000012 * genome.migration;
+  }
+  if (genome.burrow > .5 && (state.season === 0 || state.season === 11)) {
+    organism.vx *= .96; organism.vy *= .96;
+  }
+}
+
+function livingCanMate(a, b) {
+  if (a === b || b.energy <= 7 || b.age < 170) return 0;
+  enrichGenome(a.genome); enrichGenome(b.genome);
+  const asexual = a.genome.reproStrategy < .18;
+  if (asexual) return 0;
+  const sexual = a.genome.reproStrategy >= .42;
+  if (sexual && a.sex === b.sex) return 0;
+  const genetic = genomeDistance(a.genome, b.genome);
+  const chromosomeGap = Math.abs(a.genome.chromosome - b.genome.chromosome);
+  const spatial = Math.sqrt(distanceSq(a.x, a.y, b.x, b.y));
+  if (genetic > .76 || chromosomeGap > 1 || spatial > .22) return 0;
+  const habitat = habitatFitness(b.genome, terrainAt(a.x, a.y));
+  const display = .55 + b.genome.display * a.genome.mateChoice * .55;
+  const populationAffinity = a.populationId === b.populationId ? 1 : .72;
+  return clamp(1 - genetic / .8) * clamp(1 - spatial / .23) * (chromosomeGap ? .54 : 1) * habitat * display * populationAffinity;
+}
+
+function livingMixGenome(a, b, mutationScale) {
+  enrichGenome(a); enrichGenome(b);
+  const keys = ['size', 'speed', 'vision', 'metabolism', 'thermal', 'diet', 'armor', 'fertility', 'pattern', ...EXTRA, ...LIVING.genomeKeys];
+  const child = {};
+  for (const key of keys) child[key] = lerp(a[key], b[key], randomRange(.25, .75));
+  const hueDelta = ((b.hue - a.hue + 540) % 360) - 180;
+  child.hue = (a.hue + hueDelta * randomRange(.25, .75) + 360) % 360;
+  child.chromosome = random() < .5 ? a.chromosome : b.chromosome;
+  return makeGenome(child, mutationScale);
+}
+
+decideSpecies = function livingDecideSpecies(childGenome, parent) {
+  const species = state.species.find((entry) => entry.id === parent.speciesId);
+  if (!species) return newSpecies(childGenome, null);
+  enrichGenome(species.centroid);
+  const blend = .0045;
+  for (const key of ['size', 'speed', 'vision', 'metabolism', 'thermal', 'diet', 'armor', 'fertility', 'pattern', ...EXTRA, ...LIVING.genomeKeys]) {
+    species.centroid[key] = lerp(species.centroid[key], childGenome[key], blend);
+  }
+  const hueDelta = ((childGenome.hue - species.centroid.hue + 540) % 360) - 180;
+  species.centroid.hue = (species.centroid.hue + hueDelta * blend + 360) % 360;
+  return parent.speciesId;
+};
+
+reproduce = function livingReproduce(parent) {
+  if (state.organisms.length >= MAX_ORGANISMS || parent.energy <= 0) return;
+  enrichGenome(parent.genome);
+  const nearby = (livingCurrentSpatial || livingSpatialIndex(.1)).nearby(parent, .23);
+  const asexual = parent.genome.reproStrategy < .18;
+  let mate = null;
+  let mateScore = 0;
+  if (!asexual) {
+    for (const candidate of nearby) {
+      const score = livingCanMate(parent, candidate);
+      if (score > mateScore) { mate = candidate; mateScore = score; }
+    }
+    if (!mate || mateScore < .055) return;
+  }
+  const mutationScale = state.env.mutation * (state.shock?.type === 'red' ? 1.35 : 1);
+  const hybrid = Boolean(mate && mate.speciesId !== parent.speciesId);
+  const baseGenome = mate ? livingMixGenome(parent.genome, mate.genome, mutationScale) : makeGenome(parent.genome, mutationScale * 1.18);
+  if (hybrid) baseGenome.fertility *= clamp(.38 + mateScore * .62, .2, .9);
+  const broodSize = Math.max(1, Math.min(4, Math.round(1 + baseGenome.brood * 2.4 - baseGenome.parentalCare * 1.3)));
+  const available = Math.min(broodSize, MAX_ORGANISMS - state.organisms.length);
+  const midpoint = mate ? { x: lerp(parent.x, mate.x, .5), y: lerp(parent.y, mate.y, .5) } : parent;
+  const parentPopulation = livingPopulationFor(parent);
+  

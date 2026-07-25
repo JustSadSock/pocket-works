@@ -1,0 +1,39 @@
+const region = terrainAt(midpoint.x, midpoint.y).region;
+  const population = livingPopulationAt(parent.speciesId, region, baseGenome);
+  if (hybrid) { population.hybrid = true; population.hybridParentId = mate.speciesId; }
+  for (let index = 0; index < available; index += 1) {
+    const genome = index === 0 ? baseGenome : makeGenome(baseGenome, mutationScale * .35);
+    const angle = randomRange(0, TAU);
+    const careBoost = genome.parentalCare * 2.6;
+    const child = makeOrganism({
+      x: midpoint.x + Math.cos(angle) * randomRange(.004, .018),
+      y: midpoint.y + Math.sin(angle) * randomRange(.004, .018),
+      genome, speciesId: parent.speciesId,
+      generation: Math.max(parent.generation, mate?.generation || parent.generation) + 1,
+      energy: 5.8 + careBoost, parentId: parent.id
+    });
+    child.secondParentId = mate?.id || null;
+    child.hybrid = hybrid;
+    child.populationId = population.id;
+    child.homeRegion = region;
+    child.sex = genome.reproStrategy < .18 ? 'none' : random() < .5 ? 'f' : 'm';
+    child.lifeStage = 'juvenile';
+    state.organisms.push(child);
+    state.statistics.births += 1;
+    if (hybrid) state.statistics.hybrids += 1;
+  }
+  const reproductiveCost = .74 + baseGenome.parentalCare * .07 + available * .025;
+  parent.energy *= reproductiveCost;
+  parent.age += 22 + baseGenome.parentalCare * 26;
+  if (mate) { mate.energy *= .8 + baseGenome.parentalCare * .04; mate.age += 14; }
+  if (parentPopulation) parentPopulation.lastSeen = state.generation;
+};
+
+function livingFeed(organism, resources, resourceIndex) {
+  const genome = organism.genome;
+  const bucket = interactionBucket(organism.speciesId);
+  if (resources.plant && resources.plantDistance < (.008 + genome.size * .004) ** 2 && genome.plantDiet > .16) {
+    const bite = Math.min(resources.plant.energy, (.1 + genome.size * .16) * genome.plantDiet);
+    resources.plant.energy -= bite;
+    organism.energy += bite * (1.08 + genome.plantDiet * .42);
+    organism.lastMeal = sta

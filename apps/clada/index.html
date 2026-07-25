@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#e7e1cf">
-  <meta name="description" content="КЛАДА — живая лаборатория естественного отбора, ветвления видов и массовых вымираний.">
+  <meta name="description" content="КЛАДА — живая лаборатория биосфер, пищевых сетей, популяций и видообразования.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="КЛАДА">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./living.css">
 </head>
 <body>
   <main class="app" data-app-shell data-fullscreen-app>
@@ -130,21 +131,25 @@
       <div class="intro-copy">
         <small>POCKET WORKS / ЖИВАЯ ЛЕТОПИСЬ</small>
         <h1>КЛАДА</h1>
-        <p>Меняй среду, не существ. Естественный отбор сам решит, кто станет видом, кто — тупиковой ветвью, а кто переживёт конец света.</p>
+        <p>Открой уже сложившуюся биосферу или раннюю колонию. Виды занимают разные ниши, разделяются географией и зависят друг от друга.</p>
+      </div>
+      <div class="origin-modes" aria-label="Возраст биосферы">
+        <button type="button" data-origin="mature" aria-pressed="true"><b>ЗРЕЛАЯ БИОСФЕРА</b><small>7–10 видов, пищевая сеть и вымершие предки</small></button>
+        <button type="button" data-origin="primordial" aria-pressed="false"><b>ПЕРВИЧНАЯ КОЛОНИЯ</b><small>3 ранних вида и короткая предыстория</small></button>
       </div>
       <div class="world-seeds">
-        <button type="button" data-seed="garden"><b>01</b><span><strong>ЗЕЛЁНЫЙ КОТЁЛ</strong><small>много пищи, мягкий климат</small></span></button>
-        <button type="button" data-seed="rift"><b>02</b><span><strong>ЛЕДЯНОЙ РАЗЛОМ</strong><small>холод, острова ресурсов</small></span></button>
-        <button type="button" data-seed="red"><b>03</b><span><strong>КРАСНЫЙ ПРИЛИВ</strong><small>хищники уже рядом</small></span></button>
+        <button type="button" data-seed="garden"><b>01</b><span><strong>ЗЕЛЁНЫЙ КОТЁЛ</strong><small>леса, луга и мелководья</small></span></button>
+        <button type="button" data-seed="rift"><b>02</b><span><strong>ЛЕДЯНОЙ РАЗЛОМ</strong><small>горы, холод и острова ресурсов</small></span></button>
+        <button type="button" data-seed="red"><b>03</b><span><strong>КРАСНЫЙ ПРИЛИВ</strong><small>тёплые воды, токсины и хищники</small></span></button>
       </div>
-      <button class="intro-start" id="introStart" type="button">ОТКРЫТЬ ОБСЕРВАТОРИЮ</button>
+      <button class="intro-start" id="introStart" type="button">ОТКРЫТЬ БИОСФЕРУ</button>
     </section>
 
     <div class="toast" id="toast" hidden></div>
     <input id="importInput" type="file" accept="application/json,.json" hidden>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КЛАДА" data-app-version="2.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КЛАДА" data-app-version="3.0.0"></script>
   <script type="module" src="./app.js"></script>
   <script type="module" src="./workshop.js"></script>
 </body>
