@@ -7,6 +7,7 @@ const ASSETS = [
   './runtime/01-core.js',
   './runtime/02-input.js',
   './runtime/03-physics.js',
+  './runtime/03-integrity.js',
   './runtime/04-render.js',
   './runtime/05-ui.js',
   './workshop-delegate.js',
