@@ -1,0 +1,172 @@
+      deme.geneFlow ||= 0;
+      deme.lowYears ||= 0;
+      deme.trend ||= 0;
+    }
+    return community;
+  }
+
+  function patchNoise(community, patchId, amplitude = .035) {
+    const seed = hash((community.rng || 1) ^ hash((community.generation + 1) * 193 + String(patchId).split('').reduce((s, c) => s + c.charCodeAt(0), 0)));
+    return ((seed / 4294967296) - .5) * amplitude * 2;
+  }
+
+  function regenerateResources(community) {
+    for (const patch of community.patches) {
+      const base = patchBaseCapacity(patch);
+      const resource = community.resources[patch.id];
+      const season = .86 + Math.sin((community.generation % 12) / 12 * Math.PI * 2 + (patch.x || 0) * 4) * .12;
+      const climate = clamp(1 - Math.abs(patch.temperature - community.env.temperature) * .62, .45, 1.15);
+      const vegetationCap = base * (.45 + community.env.food * 1.1) * climate * season * (patch.water ? .1 : .65 + patch.moisture * .55);
+      const planktonCap = base * (.5 + community.env.food * 1.2) * climate * season * (patch.water ? 1.25 : patch.coast ? .25 : .03);
+      const detritusCap = base * (.28 + community.env.food * .28);
+      resource.vegetation += (vegetationCap - resource.vegetation) * .28;
+      resource.plankton += (planktonCap - resource.plankton) * .34;
+      resource.detritus += (detritusCap - resource.detritus) * .12;
+      resource.vegetation = Math.max(0, resource.vegetation);
+      resource.plankton = Math.max(0, resource.plankton);
+      resource.detritus = Math.max(0, resource.detritus);
+    }
+  }
+
+  function activeDemesInPatch(community, patchId) {
+    return community.demes.filter((d) => d.patchId === patchId && d.abundance > .05);
+  }
+
+  function predatorPressure(community, patch, demes) {
+    const preyDemes = demes.filter((d) => d.guild !== 'predator' && d.abundance > .1);
+    const predators = demes.filter((d) => d.guild === 'predator' && d.abundance > .1);
+    const losses = new Map();
+    const gains = new Map();
+    if (!preyDemes.length || !predators.length) return { losses, gains };
+    const totalPrey = preyDemes.reduce((sum, d) => sum + d.abundance, 0);
+    for (const predator of predators) {
+      const P = predator.abundance;
+      const attack = .2 + predator.traits.speed * .18 + predator.traits.social * .1;
+      const halfSat = 5.5 + predator.traits.size * 7;
+      const interference = .3 + P * .035;
+      const potential = attack * P * totalPrey * totalPrey / (halfSat * halfSat + totalPrey * totalPrey + interference * P * P);
+      let consumed = 0;
+      const weights = preyDemes.map((prey) => {
+        const sizeFit = clamp(1 - Math.max(0, prey.traits.size - predator.traits.size * 1.25), .08, 1);
+        const refuge = clamp((prey.abundance - 2.2) / 9, 0, 1);
+        const switchWeight = prey.abundance * prey.abundance;
+        return { prey, weight: switchWeight * sizeFit * (.18 + refuge * .82) };
+      });
+      const totalWeight = weights.reduce((sum, x) => sum + x.weight, 0) || 1;
+      for (const { prey, weight } of weights) {
+        const share = potential * weight / totalWeight;
+        const cap = Math.max(0, prey.abundance - 1.8) * .2;
+        const kill = Math.min(share, cap);
+        if (kill <= 0) continue;
+        losses.set(prey.id, (losses.get(prey.id) || 0) + kill);
+        consumed += kill;
+      }
+      gains.set(predator.id, consumed * (.7 + predator.traits.fertility * .22));
+    }
+    return { losses, gains };
+  }
+
+  function competitionOverlap(a, b) {
+    if (a === b) return 1;
+    const resourceA = guildResource(a.guild), resourceB = guildResource(b.guild);
+    let resourceOverlap = resourceA === resourceB ? .92 : 0;
+    if (resourceA === 'mixed' || resourceB === 'mixed') resourceOverlap = Math.max(resourceOverlap, .46);
+    if (a.guild === 'predator' && b.guild === 'predator') resourceOverlap = .88;
+    if (a.guild === 'scavenger' && b.guild === 'predator' || a.guild === 'predator' && b.guild === 'scavenger') resourceOverlap = .28;
+    if (!resourceOverlap) return 0;
+    const distance = vectorDistance(a.traits, b.traits);
+    const traitOverlap = Math.exp(-(distance * distance) / .018);
+    return resourceOverlap * (.24 + traitOverlap * .76);
+  }
+
+  function resourceGrowth(community, patch, demes, predation) {
+    const resource = community.resources[patch.id];
+    const demands = { vegetation: 0, plankton: 0, detritus: 0, mixed: 0 };
+    for (const deme of demes) {
+      const type = guildResource(deme.guild);
+      if (type === 'prey') continue;
+      const demand = deme.abundance * (.32 + deme.traits.size * .42);
+      demands[type] = (demands[type] || 0) + demand;
+    }
+    const results = new Map();
+    for (const deme of demes) {
+      const species = community.species.find((s) => s.id === deme.speciesId);
+      const compatibility = habitatCompatibility(deme.traits, patch, deme.guild);
+      const baseK = patchBaseCapacity(patch) * guildCapacityMultiplier(deme.guild) * (.56 + community.env.food * .92) * compatibility;
+      let lambda = .88;
+      let foodRatio = 0;
+      if (deme.guild === 'predator') {
+        const gain = predation.gains.get(deme.id) || 0;
+        foodRatio = clamp(gain / Math.max(.8, deme.abundance * .16), 0, 1.8);
+        lambda = .91 + foodRatio * .34;
+      } else {
+        const type = guildResource(deme.guild);
+        if (type === 'mixed') {
+          const available = resource.vegetation * .55 + resource.plankton * .35 + resource.detritus * .1;
+          foodRatio = clamp(available / Math.max(1, demands.mixed + demands.vegetation * .3 + demands.plankton * .2), 0, 1.8);
+          const used = Math.min(available, deme.abundance * .28);
+          resource.vegetation = Math.max(0, resource.vegetation - used * .55);
+          resource.plankton = Math.max(0, resource.plankton - used * .35);
+          resource.detritus = Math.max(0, resource.detritus - used * .1);
+        } else {
+          const available = resource[type] || 0;
+          foodRatio = clamp(available / Math.max(1, demands[type]), 0, 1.8);
+          const used = Math.min(available, deme.abundance * (.24 + deme.traits.size * .12));
+          resource[type] = Math.max(0, available - used);
+        }
+        const guildLambda = { filterer: 1.24, grazer: 1.18, browser: 1.12, scavenger: 1.08, amphibian: 1.13, burrower: 1.15, flyer: 1.12 }[deme.guild] || 1.12;
+        lambda = .86 + (guildLambda - .86) * clamp(foodRatio, 0, 1.35);
+      }
+      const establishment = community.generation < (deme.establishmentUntil || 0) ? clamp(deme.nicheOpportunity || .5) : 0;
+      const densityK = Math.max(2.5, baseK * (1 + establishment * .16));
+      const N = Math.max(0, deme.abundance);
+      const competitionEquivalent = demes.reduce((sum, other) => sum + Math.max(0, other.abundance) * competitionOverlap(deme, other), 0);
+      const mutationLoad = Math.max(0, community.env.mutation - .78) * .035;
+      const environmental = patchNoise(community, `${patch.id}:${deme.id}`, .045) - mutationLoad;
+      const survival = clamp(.86 + compatibility * .105 + environmental, .69, .99);
+      const recruitLambda = Math.max(.7, lambda + environmental + establishment * .075);
+      let expected = N * recruitLambda / (1 + Math.max(0, recruitLambda - 1) * competitionEquivalent / densityK);
+      expected = expected * survival + N * (1 - survival) * .38;
+      expected -= predation.losses.get(deme.id) || 0;
+      if (N < 2.5 && species && species.sexual !== false) expected *= .86 + N * .045;
+      expected = Math.max(0, expected);
+      results.set(deme.id, { expected, carryingCapacity: densityK, compatibility, foodRatio, predation: predation.losses.get(deme.id) || 0 });
+    }
+    return results;
+  }
+
+  function canUsePatch(deme, patch) {
+    const compatibility = habitatCompatibility(deme.traits, patch, deme.guild);
+    if (deme.guild === 'filterer' && !patch.water) return false;
+    if (deme.guild === 'burrower' && patch.water) return false;
+    if (deme.traits.water > .82 && !patch.water && deme.guild !== 'amphibian' && deme.guild !== 'flyer') return false;
+    if (deme.traits.water < .25 && patch.water && deme.guild !== 'flyer') return false;
+    return compatibility > .16;
+  }
+
+  function dispersalRate(deme) {
+    const base = .003 + deme.traits.migration * .018;
+    const crowd = clamp((deme.abundance - (deme.carryingCapacity || 10) * .72) / Math.max(4, deme.carryingCapacity || 10), 0, 1);
+    return clamp(base + crowd * .022, .002, .05);
+  }
+
+  function adaptDeme(community, deme, patch) {
+    const optimum = patchOptimum(patch, deme.guild);
+    const compatibility = habitatCompatibility(deme.traits, patch, deme.guild);
+    const isolation = clamp(deme.isolation || 0);
+    const rate = .004 + community.env.mutation * .006 + (1 - compatibility) * .012 + isolation * .003;
+    const drift = (.0018 + community.env.mutation * .0032) / Math.sqrt(Math.max(2, deme.abundance));
+    for (const key of Object.keys(optimum)) {
+      const noise = gauss(community) * drift;
+      deme.traits[key] = clamp(lerp(deme.traits[key] ?? optimum[key], optimum[key], rate) + noise);
+    }
+  }
+
+  function mergeDuplicateDemes(community) {
+    const byKey = new Map();
+    for (const deme of [...community.demes]) {
+      if (deme.abundance <= .01) continue;
+      const key = `${deme.speciesId}:${deme.patchId}:${deme.guild}`;
+      const existing = byKey.get(key);
+      if (!existing) { byKey.set(key, deme); continue; }
+      const total = existing.abundance + deme.abundance;
