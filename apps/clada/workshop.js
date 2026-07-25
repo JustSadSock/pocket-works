@@ -4,7 +4,7 @@ const STORAGE_NAMESPACE = 'pocket-works:clada';
 
 createWorkshopMode({
   appName: 'КЛАДА',
-  version: '3.0.1',
+  version: '3.1.0',
   cachePrefix: 'clada-',
   storageNamespace: STORAGE_NAMESPACE,
   onReset: async () => {
