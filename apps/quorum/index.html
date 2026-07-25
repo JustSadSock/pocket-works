@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#24352f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КВОРУМ">
+  <meta name="description" content="Тактильная парламентская стратегия о коалициях, поправках и цене большинства.">
+  <title>КВОРУМ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive">
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="launcher-link" href="../../" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg><span>Pocket Works</span>
+      </a>
+      <div class="top-actions">
+        <button class="text-action" id="rules-open" type="button" data-native-press>Правила</button>
+        <button class="sound-action" id="sound-toggle" type="button" aria-pressed="true" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10v4h4l5 4V6l-5 4H5z"/><path class="sound-wave" d="M17 9.5c1.3 1.4 1.3 3.6 0 5M19.5 7c2.8 2.8 2.8 7.2 0 10"/></svg><span>Звук</span></button>
+        <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </div>
+    </header>
+
+    <div class="drag-dock" id="drag-dock" hidden aria-hidden="true"><span>ОТПУСТИ ЗДЕСЬ</span><strong>Внести поправку в закон</strong></div>
+
+    <section class="screen start-screen is-active" id="start-screen" aria-labelledby="start-title">
+      <div class="start-mark" aria-hidden="true"><div class="mini-chamber"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="wax-seal">31</div></div>
+      <p class="edition-line">ШЕСТЬ СЕССИЙ · ШЕСТЬ ЗАКОНОВ · ОДНА ХРУПКАЯ РЕСПУБЛИКА</p>
+      <h1 id="start-title">КВОРУМ</h1>
+      <p class="start-lead">Собери большинство поправками. Сохрани смысл закона. Не развали страну ради красивой цифры.</p>
+      <div class="rule-strip" aria-label="Краткие правила"><div><strong>31</strong><span>голос для закона</span></div><div><strong>≤3</strong><span>поправки за сессию</span></div><div><strong>3×</strong><span>провал — конец</span></div></div>
+      <div class="start-actions">
+        <button class="primary-action" id="start-new" type="button" data-native-press><span>Открыть первую сессию</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+        <button class="secondary-action" id="continue-campaign" type="button" hidden data-native-press>Продолжить кампанию</button>
+        <button class="ghost-action" id="archive-open" type="button" data-native-press>Архив прежних голосований</button>
+      </div>
+      <div class="start-footnote"><span>Локально</span><span>Без аккаунта</span><span>Офлайн после первого запуска</span></div>
+    </section>
+
+    <section class="screen game-screen" id="game-screen" aria-labelledby="bill-title">
+      <div class="session-rail" data-ui>
+        <div class="session-count"><span>СЕССИЯ</span><strong id="round-value">1 / 6</strong></div>
+        <div class="state-meters">
+          <div class="state-meter" data-kind="legitimacy"><span>Мандат</span><div class="meter-track"><i id="legitimacy-bar"></i></div><strong id="legitimacy-value">64</strong></div>
+          <div class="state-meter" data-kind="stability"><span>Устойчивость</span><div class="meter-track"><i id="stability-bar"></i></div><strong id="stability-value">68</strong></div>
+        </div>
+        <button class="mini-action" id="game-archive-open" type="button" data-native-press>Архив</button>
+      </div>
+
+      <section class="chamber-section" aria-label="Прогноз голосования">
+        <div class="chamber-heading">
+          <div><p class="eyebrow">ПРОГНОЗ ПАЛАТЫ</p><h2><span id="vote-value">—</span><small> / 60</small></h2></div>
+          <div class="majority-status" id="majority-status" data-state="no"><span class="status-dot"></span><strong>Нет большинства</strong><small>нужно ещё <b id="votes-needed">—</b></small></div>
+        </div>
+        <svg id="chamber" viewBox="0 0 360 220" role="img" aria-label="Полукруг парламента на 60 мест">
+          <path class="chamber-rim" d="M32 196A148 148 0 0 1 328 196"/><path class="chamber-rim inner" d="M72 196A108 108 0 0 1 288 196"/><g id="seat-layer"></g>
+          <g class="rostrum" aria-hidden="true"><path d="M145 196h70l-10-34h-50z"/><circle cx="180" cy="177" r="10"/></g><path class="majority-needle" id="majority-needle" d="M180 174L180 48"/>
+        </svg>
+        <div class="faction-legend" id="faction-legend"></div>
+      </section>
+
+      <section class="bill-sheet" id="bill-sheet" data-ui>
+        <header class="bill-header"><div class="bill-code"><span id="bill-code">ЗП–14</span><small>ПРОЕКТ</small></div><div><p class="eyebrow">ПРАВИТЕЛЬСТВЕННАЯ ИНИЦИАТИВА</p><h2 id="bill-title">—</h2><p id="bill-summary">—</p></div></header>
+        <div class="bill-core" id="bill-core" aria-label="Направление законопроекта"></div>
+        <div class="amendment-zone" id="amendment-zone" data-gesture-surface data-touch-action="none"><div class="zone-copy"><span>ПОПРАВКИ К ТЕКСТУ</span><small id="slot-count">0 / 3</small></div><div class="attached-list" id="attached-list"><p class="empty-amendments" id="empty-amendments">Перетащи сюда поправку или нажми на неё</p></div></div>
+        <div class="bill-readout"><div><span>Целостность</span><strong id="integrity-value">100%</strong><div class="thin-meter"><i id="integrity-bar"></i></div></div><div><span>Напряжение</span><strong id="tension-value">—</strong><div class="thin-meter danger"><i id="tension-bar"></i></div></div></div>
+      </section>
+
+      <section class="clause-section" aria-labelledby="clause-title"><div class="section-heading"><div><p class="eyebrow">ТОРГ В КОМИТЕТАХ</p><h2 id="clause-title">Доступные поправки</h2></div><p>Каждая покупает голоса и вырезает кусок исходного закона.</p></div><div class="clause-tray" id="clause-tray"></div></section>
+      <footer class="vote-dock" data-ui><div class="vote-delta" id="vote-delta"><span>После голосования</span><strong id="forecast-delta">Мандат — · Устойчивость —</strong></div><button class="ratify-button" id="ratify-button" type="button" data-native-press><span>Ратифицировать</span><b id="ratify-votes">— голосов</b></button></footer>
+    </section>
+
+    <section class="screen end-screen" id="end-screen" aria-labelledby="end-title">
+      <div class="end-stamp" id="end-grade">КОАЛИЦИЯ</div><p class="edition-line">ИТОГ ПАРЛАМЕНТСКОГО ЦИКЛА</p><h1 id="end-title">Рабочее большинство</h1><p class="end-copy" id="end-copy">—</p>
+      <div class="end-score"><span>ПОЛИТИЧЕСКИЙ СЧЁТ</span><strong id="end-score">0</strong></div>
+      <div class="end-grid"><div><span>Принято</span><strong id="end-passed">0 / 6</strong></div><div><span>Мандат</span><strong id="end-legitimacy">0</strong></div><div><span>Устойчивость</span><strong id="end-stability">0</strong></div><div><span>Лучший счёт</span><strong id="end-best">0</strong></div></div>
+      <div class="start-actions"><button class="primary-action" id="restart-campaign" type="button" data-native-press>Новая республика</button><button class="secondary-action" id="end-archive-open" type="button" data-native-press>Посмотреть архив</button><a class="ghost-action as-link" href="../../" data-native-press>Вернуться в Pocket Works</a></div>
+    </section>
+
+    <dialog class="paper-dialog" id="result-dialog"><div class="dialog-shell result-shell"><button class="dialog-close" type="button" data-dialog-close aria-label="Закрыть" data-native-press>×</button><div class="result-seal" id="result-seal">ПРИНЯТО</div><p class="eyebrow" id="result-code">ЗП–14 · ИТОГ</p><h2 id="result-title">Закон принят</h2><p id="result-copy">—</p><div class="result-vote"><strong id="result-votes">31</strong><span>голосов «за»</span></div><div class="result-consequences"><div><span>Целостность</span><strong id="result-integrity">—</strong></div><div><span>Мандат</span><strong id="result-legitimacy">—</strong></div><div><span>Устойчивость</span><strong id="result-stability">—</strong></div></div><div class="result-factions" id="result-factions"></div><button class="primary-action" id="next-session" type="button" data-native-press>Следующая сессия</button></div></dialog>
+
+    <dialog class="paper-dialog" id="rules-dialog"><div class="dialog-shell reading-shell"><header class="dialog-header"><div><p class="eyebrow">ПРАВИЛА</p><h2>Как не превратить парламент в цирк</h2></div><button class="dialog-close" type="button" data-dialog-close aria-label="Закрыть" data-native-press>×</button></header><ol class="rules-list selectable-content"><li><strong>Собери 31 голос.</strong><span>Кресла светлеют сразу после каждой поправки. Голоса — прогноз, но в этой республике он хотя бы не врёт.</span></li><li><strong>Добавь не больше трёх поправок.</strong><span>Нажми карточку или перетащи её в текст закона. Повторное нажатие снимает поправку.</span></li><li><strong>Следи за целостностью.</strong><span>Можно принять что угодно, если вырезать из закона всё, ради чего он существовал. Мандат это заметит.</span></li><li><strong>Не перегрей палату.</strong><span>Поляризация и грязные сделки режут устойчивость. Три провала голосований завершают кампанию.</span></li><li><strong>Переживи шесть сессий.</strong><span>Сильный итог — минимум пять законов, живой мандат и республика без дымящихся стен.</span></li></ol></div></dialog>
+
+    <dialog class="paper-dialog" id="archive-dialog"><div class="dialog-shell archive-shell"><header class="dialog-header"><div><p class="eyebrow">АРХИВ</p><h2>Протокол голосований</h2></div><button class="dialog-close" type="button" data-dialog-close aria-label="Закрыть" data-native-press>×</button></header><div class="archive-summary" id="archive-summary"></div><div class="archive-list" id="archive-list"></div></div></dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КВОРУМ" data-app-version="1.0.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
