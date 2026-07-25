@@ -1,0 +1,20 @@
+{
+  "id": "/apps/quorum/",
+  "name": "КВОРУМ — парламентская стратегия",
+  "short_name": "КВОРУМ",
+  "description": "Собирайте большинство поправками, сохраняя смысл закона и устойчивость республики.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8dfcd",
+  "theme_color": "#24352f",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
