@@ -143,10 +143,11 @@ export async function collectAppConfigs(root = process.cwd()) {
     const appDirectory = path.join(appsDirectory, entry.name);
     const appEntries = await readdir(appDirectory, { withFileTypes: true });
     const hasConfig = appEntries.some((child) => child.isFile() && child.name === APP_CONFIG_FILE);
+    const isReservation = appEntries.some((child) => child.isFile() && child.name === '.branch-reservation');
 
     if (!hasConfig) {
       const visibleEntries = appEntries.filter((child) => !child.name.startsWith('.'));
-      if (visibleEntries.length === 0) continue;
+      if (isReservation || visibleEntries.length === 0) continue;
 
       errors.push(`${path.join('apps', entry.name, APP_CONFIG_FILE)}: missing ${APP_CONFIG_FILE}`);
       continue;
