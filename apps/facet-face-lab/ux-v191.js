@@ -158,6 +158,21 @@ function __facetV191RefreshStaticCopy() {
   if (captureHint) captureHint.textContent = 'FACET сам покажет направление и сделает кадр только после достижения правильного угла.';
   const sessionReadout = document.getElementById('session-readout');
   if (sessionReadout && /3 кадр/i.test(sessionReadout.textContent)) sessionReadout.textContent = 'Автосъёмка · 5 ракурсов · управляемый поворот головы';
+  const scanCounter = document.getElementById('scan-counter');
+  if (scanCounter && /\/3/.test(scanCounter.textContent)) scanCounter.textContent = '0/5';
+  const cameraCounter = document.getElementById('camera-counter');
+  if (cameraCounter && /\/3/.test(cameraCounter.textContent)) cameraCounter.textContent = '0/5';
+  const protocolItems = document.querySelectorAll('.protocol-strip > div');
+  if (protocolItems.length >= 3) {
+    protocolItems[0].innerHTML = '<strong>5</strong><span>управляемых ракурсов</span>';
+    protocolItems[1].innerHTML = '<strong>≈15°</strong><span>небольшой поворот</span>';
+    protocolItems[2].innerHTML = '<strong>авто</strong><span>снимок при верном угле</span>';
+  }
+  const uploadLabel = document.getElementById('upload-label');
+  if (uploadLabel) {
+    const textNode = [...uploadLabel.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && /Выбрать/.test(node.textContent || ''));
+    if (textNode) textNode.textContent = ' Выбрать 5 фото ';
+  }
   const cameraSeriesText = document.querySelector('.camera-series-bar > span');
   if (cameraSeriesText) cameraSeriesText.textContent = 'не нажимай повторно — следуй подсказке и дождись автоснимка';
   const cameraHeader = document.querySelector('.camera-header h2');
@@ -181,11 +196,12 @@ const __facetV191Observed = [
   document.getElementById('camera-counter'),
   document.getElementById('camera-status'),
   document.getElementById('camera-message'),
-  document.getElementById('camera-capture-label'),
-  document.getElementById('camera-dialog')
+  document.getElementById('camera-capture-label')
 ].filter(Boolean);
 const __facetV191Observer = new MutationObserver(() => requestAnimationFrame(__facetV191UpdateCoach));
 for (const node of __facetV191Observed) __facetV191Observer.observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
+const __facetV191Dialog = document.getElementById('camera-dialog');
+if (__facetV191Dialog) __facetV191Observer.observe(__facetV191Dialog, { attributes: true, attributeFilter: ['open'] });
 
 document.getElementById('camera-capture')?.addEventListener('click', () => {
   const coach = __facetV191BuildCoach();
