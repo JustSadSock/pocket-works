@@ -1,0 +1,170 @@
+    __facetV18Node('span', '', uncertainty.ambiguous ? 'СМЕШАННЫЙ ПРОФИЛЬ' : 'ВЕДУЩАЯ КОНФИГУРАЦИЯ'),
+    __facetV18Node('strong', '', uncertainty.ambiguous && configurations[1] ? `${config.label} × ${configurations[1].label}` : config.label),
+    __facetV18Node('p', '', uncertainty.ambiguous
+      ? 'Два профиля близки по соответствию. Приложение не принуждает лицо к одному типу.'
+      : config.description || 'Этот профиль лучше остальных объясняет совместную работу черт.')
+  );
+  const gauges = __facetV18Node('div', 'facet-v18-gauges');
+  gauges.append(__facetV18Gauge(config.score, 'сочетание'), __facetV18Gauge(uncertainty.stability, 'повторяемость'));
+  lead.append(configCopy, gauges);
+
+  const takeaways = __facetV18Node('div', 'facet-v18-takeaways');
+  const strongestDescriptor = [...descriptors].sort((left, right) => right.salience - left.salience)[0];
+  const weakest = uncertainty.weakest;
+  const cards = [
+    ['Сильнее всего поддерживает', relation?.label || 'Общий ритм черт', relation ? `${relation.score}% · ${relation.note}` : 'Связи между зонами рассчитаны совместно.'],
+    ['Наиболее выраженная черта', strongestDescriptor?.label || 'Композиция лица', strongestDescriptor ? `${strongestDescriptor.classification}; это не плюс и не минус само по себе.` : 'Нет одной доминирующей черты.'],
+    ['Главное ограничение', weakest?.label || 'Неопределённость модели', weakest ? `${Math.min(weakest.confidence, weakest.stability)}% минимальной опоры; вывод показан осторожнее.` : 'Серия достаточно стабильна.']
+  ];
+  for (const [label, value, note] of cards) {
+    const card = __facetV18Node('article');
+    card.append(__facetV18Node('span', '', label), __facetV18Node('strong', '', value), __facetV18Node('p', '', note));
+    takeaways.append(card);
+  }
+
+  section.append(heading, lead, takeaways);
+  return section;
+}
+
+function __facetV18BuildExplanation(relations, configurations, uncertainty) {
+  const section = __facetV18Node('section', 'facet-v18-explanation');
+  section.id = 'facet-v18-explanation';
+  const heading = __facetV18Node('div', 'detail-heading');
+  const titleWrap = __facetV18Node('div');
+  titleWrap.innerHTML = '<p class="section-number">04 · WHY</p><h3>Почему итог именно такой</h3>';
+  heading.append(titleWrap, __facetV18Node('span', '', 'не расстояние до одного идеала'));
+
+  const grid = __facetV18Node('div', 'facet-v18-explanation-grid');
+  const breakdown = __facetV18Node('div', 'facet-v18-breakdown');
+  const advanced = combined?.advanced || {};
+  const relationMean = relations.length ? mean(relations.map((item) => item.score)) : __facetV18Percent(combined?.coordinationScore, 60);
+  breakdown.append(
+    __facetV18MetricRow('Согласованность конфигурации', __facetV18Percent(advanced.configurationScore, combined?.configurationScore, configurations[0]?.score, 60), 'Насколько несколько допустимых сочетаний объясняют весь профиль.'),
+    __facetV18MetricRow('Связи между зонами', relationMean, 'Глаза не оцениваются отдельно от бровей, нос — отдельно от рта и посадки глаз.'),
+    __facetV18MetricRow('Качество измерений', uncertainty.confidence, 'Резкость, фронтальность, видимость и уверенность сегментации.'),
+    __facetV18MetricRow('Повторяемость трёх кадров', uncertainty.stability, 'Насколько одинаково определились признаки в серии.')
+  );
+
+  const configs = __facetV18Node('div', 'facet-v18-config-list');
+  configs.append(__facetV18Node('h4', '', 'Допустимые профили'));
+  configurations.forEach((item, index) => {
+    const row = __facetV18Node('article');
+    const top = __facetV18Node('div');
+    top.append(__facetV18Node('strong', '', item.label), __facetV18Node('span', '', `${item.score}%`));
+    const track = __facetV18Node('i');
+    const fill = __facetV18Node('b');
+    fill.style.width = `${item.score}%`;
+    track.append(fill);
+    row.append(top, track);
+    if (item.description) row.append(__facetV18Node('p', '', item.description));
+    if (index === 0) row.dataset.primary = 'true';
+    configs.append(row);
+  });
+  const note = __facetV18Node('p', 'facet-v18-method-note', 'Выраженная черта не штрафуется автоматически. Итог зависит от того, поддерживают ли её соседние зоны и насколько это сочетание повторяется между кадрами.');
+  grid.append(breakdown, configs);
+  section.append(heading, grid, note);
+  return section;
+}
+
+function __facetV18BuildFeatureExplorer(descriptors) {
+  const section = __facetV18Node('section', 'facet-v18-feature-explorer');
+  section.id = 'facet-v18-feature-explorer';
+  const heading = __facetV18Node('div', 'detail-heading');
+  const titleWrap = __facetV18Node('div');
+  titleWrap.innerHTML = `<p class="section-number">06 · FEATURES</p><h3>${descriptors.length} измеренных признаков</h3>`;
+  heading.append(titleWrap, __facetV18Node('span', '', 'тип · уверенность · повторяемость'));
+
+  const controls = __facetV18Node('div', 'facet-v18-filter-row');
+  const filters = [['all', 'Все'], ['frame', 'Каркас'], ['eyes', 'Глаза'], ['brows', 'Брови'], ['center', 'Нос'], ['mouth', 'Губы'], ['lower', 'Скулы и челюсть'], ['uncertain', 'Требуют осторожности']];
+  filters.forEach(([key, label]) => {
+    const button = __facetV18Node('button', '', label);
+    button.type = 'button';
+    button.dataset.filter = key;
+    button.classList.toggle('is-active', key === __facetV18State.filter);
+    button.addEventListener('click', () => {
+      __facetV18State.filter = key;
+      controls.querySelectorAll('button').forEach((node) => node.classList.toggle('is-active', node === button));
+      grid.querySelectorAll('.facet-v18-feature-card').forEach((card) => {
+        card.hidden = key !== 'all' && (key === 'uncertain' ? Number(card.dataset.confidence) >= 68 : card.dataset.filter !== key);
+      });
+    });
+    controls.append(button);
+  });
+
+  const grid = __facetV18Node('div', 'facet-v18-feature-grid');
+  descriptors.forEach((item) => grid.append(__facetV18DescriptorCard(item)));
+  section.append(heading, controls, grid);
+  return section;
+}
+
+function __facetV18BuildRelations(relations) {
+  if (!relations.length) return null;
+  const section = __facetV18Node('section', 'facet-v18-relations');
+  section.id = 'facet-v18-relations';
+  const heading = __facetV18Node('div', 'detail-heading');
+  const titleWrap = __facetV18Node('div');
+  titleWrap.innerHTML = `<p class="section-number">07 · INTERACTIONS</p><h3>${relations.length} связей между чертами</h3>`;
+  heading.append(titleWrap, __facetV18Node('span', '', 'сочетание важнее отдельного размера'));
+  const grid = __facetV18Node('div', 'facet-v18-relation-grid');
+  relations.forEach((item) => {
+    const card = __facetV18Node('article');
+    const top = __facetV18Node('div');
+    top.append(__facetV18Node('strong', '', item.label), __facetV18Node('span', '', `${item.score}%`));
+    const track = __facetV18Node('i');
+    const fill = __facetV18Node('b');
+    fill.style.width = `${item.score}%`;
+    track.append(fill);
+    card.append(top, track, __facetV18Node('p', '', item.note));
+    grid.append(card);
+  });
+  section.append(heading, grid);
+  return section;
+}
+
+function __facetV18BuildProtocol(descriptors, uncertainty) {
+  const section = __facetV18Node('section', 'facet-v18-protocol');
+  section.id = 'facet-v18-protocol';
+  const heading = __facetV18Node('div', 'detail-heading');
+  const titleWrap = __facetV18Node('div');
+  titleWrap.innerHTML = '<p class="section-number">08 · RELIABILITY</p><h3>Где результат устойчив, а где нет</h3>';
+  heading.append(titleWrap, __facetV18Node('span', '', 'не скрываем слабые измерения'));
+
+  const body = __facetV18Node('div', 'facet-v18-protocol-grid');
+  const summary = __facetV18Node('article', 'facet-v18-protocol-summary');
+  summary.append(
+    __facetV18Gauge(uncertainty.confidence, 'качество данных'),
+    __facetV18Gauge(uncertainty.stability, 'стабильность точек')
+  );
+  const copy = __facetV18Node('div');
+  copy.append(
+    __facetV18Node('strong', '', uncertainty.lowEvidence.length ? `${uncertainty.lowEvidence.length} выводов требуют осторожности` : 'Критически слабых признаков нет'),
+    __facetV18Node('p', '', uncertainty.lowEvidence.length
+      ? 'Они остаются в отчёте, но не должны интерпретироваться как точная классификация.'
+      : 'Большинство признаков согласованно определились в трёх кадрах.')
+  );
+  summary.append(copy);
+
+  const unstable = __facetV18Node('div', 'facet-v18-unstable-list');
+  const sorted = [...descriptors].sort((left, right) => Math.min(left.confidence, left.stability) - Math.min(right.confidence, right.stability)).slice(0, 5);
+  sorted.forEach((item) => {
+    const row = __facetV18Node('div');
+    row.append(
+      __facetV18Node('strong', '', item.label),
+      __facetV18Node('span', '', `${Math.min(item.confidence, item.stability)}% опоры`),
+      __facetV18Node('p', '', item.confidence < item.stability ? 'Ограничивает точность определения границы.' : 'Признак немного меняется между кадрами.')
+    );
+    unstable.append(row);
+  });
+  body.append(summary, unstable);
+  section.append(heading, body);
+  return section;
+}
+
+function __facetV18DepthControl() {
+  const control = __facetV18Node('div', 'facet-v18-depth-control');
+  control.setAttribute('role', 'group');
+  control.setAttribute('aria-label', 'Глубина анализа');
+  [['overview', 'Обзор'], ['full', 'Полный анализ']].forEach(([key, label]) => {
+    const button = __facetV18Node('button', '', label);
+    button.type = 'button';
+    button.classList.toggle('is-active', key === __facetV18State.depth);
