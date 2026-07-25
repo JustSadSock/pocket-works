@@ -3,7 +3,7 @@ const CACHE_NAME = 'causa-v1.0.0';
 const VERSION = '1.0.0';
 const RELEASE = '2026-07-25';
 const FILES = [
-  './', './index.html', './app.config.json', './manifest.webmanifest', './icons/icon.svg', './README.md',
+  './', './index.html', './styles.css', './app.js', './app.config.json', './manifest.webmanifest', './icons/icon.svg', './README.md',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js',
