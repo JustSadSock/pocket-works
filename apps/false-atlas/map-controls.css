@@ -1,0 +1,210 @@
+.source-dock {
+  position: relative;
+  z-index: 10;
+  width: min(310px, calc(100vw - 74px));
+  height: 86px;
+  margin: 2px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 9px 22px 6px;
+  background:
+    linear-gradient(180deg, rgba(130, 98, 59, .2), transparent 30%),
+    linear-gradient(135deg, #4b3525, #251910);
+  clip-path: polygon(3% 12%, 13% 0, 88% 3%, 100% 16%, 97% 90%, 84% 100%, 14% 96%, 0 84%);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 7px 12px rgba(0, 0, 0, .28);
+}
+
+.source-dock::before {
+  content: "";
+  position: absolute;
+  inset: 6px 12px;
+  border-top: 1px solid rgba(221, 180, 108, .22);
+  border-bottom: 1px solid rgba(10, 6, 4, .5);
+  pointer-events: none;
+}
+
+.source-seal {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--paper-light);
+  background: transparent;
+  cursor: pointer;
+  transition: transform .18s ease, opacity .18s ease, filter .18s ease;
+}
+
+.source-seal[aria-pressed="false"] {
+  opacity: .38;
+  filter: saturate(.2);
+  transform: scale(.9);
+}
+
+.source-seal:active {
+  transform: translateY(2px) scale(.95);
+}
+
+.seal-face {
+  position: absolute;
+  inset: 7px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px rgba(43, 21, 13, .44),
+    inset 0 3px 5px rgba(255, 255, 255, .15),
+    0 4px 6px rgba(0, 0, 0, .36);
+}
+
+.scout .seal-face {
+  background: radial-gradient(circle at 35% 28%, #75816d, #4d5848 60%, #30372d);
+}
+
+.merchant .seal-face {
+  background: radial-gradient(circle at 35% 28%, #a2763d, #735127 60%, #422e18);
+}
+
+.bell .seal-face {
+  background: radial-gradient(circle at 35% 28%, #7f6a79, #594755 60%, #332a32);
+}
+
+.seal-face svg {
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trust-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -18deg,
+    var(--trust-1, transparent) 0 8deg, transparent 8deg 54deg,
+    var(--trust-2, transparent) 54deg 62deg, transparent 62deg 108deg,
+    var(--trust-3, transparent) 108deg 116deg, transparent 116deg 162deg,
+    var(--trust-4, transparent) 162deg 170deg, transparent 170deg 216deg,
+    var(--trust-5, transparent) 216deg 224deg, transparent 224deg 270deg,
+    var(--trust-6, transparent) 270deg 278deg, transparent 278deg 360deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 61%, #000 63% 73%, transparent 75%);
+  mask: radial-gradient(circle, transparent 61%, #000 63% 73%, transparent 75%);
+  pointer-events: none;
+}
+
+.source-seal.cracked .seal-face::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 48px;
+  background: #271913;
+  left: 31px;
+  top: 8px;
+  transform: rotate(28deg) skewY(-28deg);
+  clip-path: polygon(50% 0, 100% 28%, 58% 45%, 100% 64%, 34% 100%, 48% 56%, 0 39%);
+  opacity: .7;
+}
+
+.source-seal.correct .seal-face {
+  animation: sealApprove .55s ease both;
+}
+
+.source-seal.wrong .seal-face {
+  animation: sealReject .55s ease both;
+}
+
+.commit-seal {
+  position: relative;
+  z-index: 11;
+  align-self: end;
+  justify-self: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  margin-top: 1px;
+  border-radius: 50%;
+  color: var(--paper-light);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, .19), transparent 19%),
+    radial-gradient(circle, var(--wax-light), var(--wax) 53%, var(--wax-dark) 56% 72%, transparent 74%);
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .5));
+  cursor: pointer;
+  transition: transform .16s ease, opacity .2s ease, filter .2s ease;
+}
+
+.commit-seal::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 2px dashed rgba(235, 196, 153, .7);
+  border-radius: 50%;
+}
+
+.commit-seal svg {
+  position: relative;
+  z-index: 2;
+  width: 43px;
+  height: 43px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.commit-seal:disabled {
+  opacity: .25;
+  filter: grayscale(.6) drop-shadow(0 4px 3px rgba(0, 0, 0, .35));
+  cursor: default;
+}
+
+.commit-seal:not(:disabled) {
+  animation: readyPulse 1.4s ease-in-out infinite;
+}
+
+.commit-seal:not(:disabled):active {
+  animation: none;
+  transform: scale(.87) translateY(4px);
+}
+
+.gesture-lesson {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lesson-token,
+.lesson-target {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+}
+
+.lesson-token {
+  background: radial-gradient(circle at 35% 25%, var(--wax-light), var(--wax) 56%, var(--wax-dark) 59% 70%, transparent 72%);
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .45));
+  animation: lessonDrag 2.5s ease-in-out infinite;
+}
+
+.lesson-token::after {
+  content: "";
+  position: absolute;
+  inset: 18px 21px;
+  background: var(--paper-light);
+  clip-path: polygon(50% 0, 100% 18%, 94% 66%, 50% 100%, 6% 66%, 0 18%);
+}
+
+.lesson-target {
+  border: 2px dashed rgba(244, 226, 174, .9);
+  box-shadow: 0 0 0 7px rgba(158, 53, 40, .18), 0 0 22px rgba(244, 226, 174, .48);
+  animation: lessonTarget 1.15s ease-in-out infinite alternate;
+}
