@@ -1,0 +1,20 @@
+{
+  "name": "ПАЛИМПСЕСТ",
+  "short_name": "ПАЛИМПСЕСТ",
+  "description": "Живая лаборатория альтернативной истории.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#d8cfb9",
+  "theme_color": "#26342f",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
