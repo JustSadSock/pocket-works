@@ -1,0 +1,206 @@
+llW: rect.width / COLS,
+    cellH: rect.height / ROWS
+  };
+}
+
+function pathCell(ctx, x, y, metrics, vertices = world.vertices) {
+  const a = vertices[y][x];
+  const b = vertices[y][x + 1];
+  const c = vertices[y + 1][x + 1];
+  const d = vertices[y + 1][x];
+  ctx.beginPath();
+  ctx.moveTo(a.x * metrics.cellW, a.y * metrics.cellH);
+  ctx.lineTo(b.x * metrics.cellW, b.y * metrics.cellH);
+  ctx.lineTo(c.x * metrics.cellW, c.y * metrics.cellH);
+  ctx.lineTo(d.x * metrics.cellW, d.y * metrics.cellH);
+  ctx.closePath();
+}
+
+function rgba(hex, alpha) {
+  const clean = hex.replace('#', '');
+  const value = Number.parseInt(clean, 16);
+  const r = value >> 16;
+  const g = value >> 8 & 255;
+  const b = value & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderWorld() {
+  if (!world || !mapMetrics) return;
+  const ctx = elements.canvas.getContext('2d');
+  const { width, height, dpr, cellW, cellH } = mapMetrics;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#9eafa9';
+  ctx.fillRect(0, 0, width, height);
+
+  const statesById = new Map(world.states.map((state) => [state.id, state]));
+  for (let y = 0; y < ROWS; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      const index = cellIndex(x, y);
+      const cell = world.cells[index];
+      pathCell(ctx, x, y, mapMetrics);
+      if (!cell.land) {
+        const wave = 158 + Math.round(cell.elevation * 18);
+        ctx.fillStyle = `rgb(${wave - 5},${wave + 11},${wave + 6})`;
+      } else if (cell.owner >= 0 && statesById.get(cell.owner)?.alive) {
+        const state = statesById.get(cell.owner);
+        const alpha = 0.58 + clamp(cell.pop / 12, 0, 1) * 0.18;
+        ctx.fillStyle = rgba(state.color, alpha);
+      } else {
+        const shade = 220 - Math.round(cell.elevation * 24);
+        ctx.fillStyle = `rgb(${shade + 9},${shade + 2},${shade - 13})`;
+      }
+      ctx.fill();
+
+      if (cell.land) {
+        ctx.strokeStyle = 'rgba(38,52,47,.08)';
+        ctx.lineWidth = 0.45;
+        ctx.stroke();
+      }
+
+      if (cell.ridge) {
+        ctx.strokeStyle = 'rgba(52,47,39,.75)';
+        ctx.lineWidth = 1.15;
+        ctx.beginPath();
+        const cx = (x + 0.5) * cellW;
+        const cy = (y + 0.5) * cellH;
+        ctx.moveTo(cx - cellW * 0.34, cy + cellH * 0.23);
+        ctx.lineTo(cx - cellW * 0.08, cy - cellH * 0.26);
+        ctx.lineTo(cx + cellW * 0.16, cy + cellH * 0.12);
+        ctx.lineTo(cx + cellW * 0.38, cy - cellH * 0.21);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  world.cells.forEach((cell, index) => {
+    if (!cell.land || cell.owner < 0) return;
+    const { x, y } = coords(index);
+    const right = x < COLS - 1 ? world.cells[index + 1] : null;
+    const down = y < ROWS - 1 ? world.cells[index + COLS] : null;
+    ctx.strokeStyle = 'rgba(38,52,47,.78)';
+    ctx.lineWidth = 1.35;
+    if (!right || right.owner !== cell.owner) {
+      const a = world.vertices[y][x + 1];
+      const b = world.vertices[y + 1][x + 1];
+      ctx.beginPath();
+      ctx.moveTo(a.x * cellW, a.y * cellH);
+      ctx.lineTo(b.x * cellW, b.y * cellH);
+      ctx.stroke();
+    }
+    if (!down || down.owner !== cell.owner) {
+      const a = world.vertices[y + 1][x];
+      const b = world.vertices[y + 1][x + 1];
+      ctx.beginPath();
+      ctx.moveTo(a.x * cellW, a.y * cellH);
+      ctx.lineTo(b.x * cellW, b.y * cellH);
+      ctx.stroke();
+    }
+  });
+
+  ctx.strokeStyle = 'rgba(154,122,66,.9)';
+  ctx.lineWidth = 1.8;
+  world.cells.forEach((cell, index) => {
+    if (!cell.road) return;
+    const { x, y } = coords(index);
+    const cx = (x + 0.5) * cellW;
+    const cy = (y + 0.5) * cellH;
+    for (const neighbor of neighborIndices(index)) {
+      if (neighbor < index || !world.cells[neighbor].road) continue;
+      const nc = coords(neighbor);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo((nc.x + 0.5) * cellW, (nc.y + 0.5) * cellH);
+      ctx.stroke();
+    }
+  });
+
+  activeStates(world).forEach((state) => {
+    const { x, y } = coords(state.capital);
+    const cx = (x + 0.5) * cellW;
+    const cy = (y + 0.5) * cellH;
+    const size = clamp(Math.min(cellW, cellH) * 0.52, 3.5, 7);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = '#eee5d1';
+    ctx.strokeStyle = '#26342f';
+    ctx.lineWidth = 1.2;
+    ctx.fillRect(-size, -size, size * 2, size * 2);
+    ctx.strokeRect(-size, -size, size * 2, size * 2);
+    ctx.restore();
+    ctx.fillStyle = state.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(1.6, size * 0.38), 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const selected = getState(world, world.selectedStateId);
+  if (selected) {
+    ctx.strokeStyle = selected.color;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 4]);
+    world.cells.forEach((cell, index) => {
+      if (cell.owner !== selected.id) return;
+      const { x, y } = coords(index);
+      pathCell(ctx, x, y, mapMetrics);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+}
+
+function previewTick() {
+  if (!previewWorld) previewWorld = makeBaseWorld(260725, 'passes');
+  simulateYear(previewWorld);
+  if (previewWorld.year > 240) previewWorld = makeBaseWorld(260725, 'passes');
+}
+
+function resizePreview() {
+  const rect = elements.menuCanvas.parentElement.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  elements.menuCanvas.width = Math.round(rect.width * dpr);
+  elements.menuCanvas.height = Math.round(rect.height * dpr);
+  elements.menuCanvas.style.width = `${rect.width}px`;
+  elements.menuCanvas.style.height = `${rect.height}px`;
+}
+
+function renderPreview(now) {
+  const canvas = elements.menuCanvas;
+  if (!canvas.width || elements.menuScreen.hidden) return;
+  if (now - previewLast > 420) {
+    previewTick();
+    previewLast = now;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const dpr = canvas.width / Math.max(1, rect.width);
+  const ctx = canvas.getContext('2d');
+  const metrics = { width: rect.width, height: rect.height, dpr, cellW: rect.width / COLS, cellH: rect.height / ROWS };
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  ctx.fillStyle = '#b6c0b7';
+  ctx.fillRect(0, 0, rect.width, rect.height);
+  const statesById = new Map(previewWorld.states.map((state) => [state.id, state]));
+  for (let y = 0; y < ROWS; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      const cell = previewWorld.cells[cellIndex(x, y)];
+      pathCell(ctx, x, y, metrics, previewWorld.vertices);
+      if (!cell.land) ctx.fillStyle = '#aab7b1';
+      else if (cell.owner >= 0 && statesById.get(cell.owner)?.alive) ctx.fillStyle = rgba(statesById.get(cell.owner).color, .68);
+      else ctx.fillStyle = '#ded4bc';
+      ctx.fill();
+      if (cell.land) {
+        ctx.strokeStyle = 'rgba(38,52,47,.09)';
+        ctx.lineWidth = .4;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function canvasPointToIndex(event) {
+  c
