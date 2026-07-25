@@ -1,0 +1,121 @@
+/* КЛАДА 3.0 — наблюдение за биомами, популяциями и пищевой сетью. */
+const livingLegacyUpdateReadouts = updateReadouts;
+const livingLegacyOpenAboutSheet = openAboutSheet;
+const SEASONS = ['ГЛУБОКАЯ ЗИМА', 'ПОЗДНЯЯ ЗИМА', 'РАННЯЯ ВЕСНА', 'ВЕСНА', 'ПОЗДНЯЯ ВЕСНА', 'РАННЕЕ ЛЕТО', 'ЛЕТО', 'ПОЗДНЕЕ ЛЕТО', 'РАННЯЯ ОСЕНЬ', 'ОСЕНЬ', 'ПОЗДНЯЯ ОСЕНЬ', 'РАННЯЯ ЗИМА'];
+const BIOME_NAMES = { ocean: 'глубокие воды', shallows: 'мелководье', wetland: 'болота', forest: 'влажный лес', grassland: 'луга', scrub: 'сухие кустарники', desert: 'пустошь', highland: 'нагорье', snow: 'снежное плато' };
+
+function livingBiomeColor(terrain) {
+  const base = LIVING.habitatColors[terrain.biome] || '#a8a182';
+  return base;
+}
+
+function livingDrawTerrain(target, width, height, compact = false) {
+  const columns = compact ? 18 : Math.max(18, Math.ceil(width / 28));
+  const rows = compact ? 12 : Math.max(13, Math.ceil(height / 27));
+  const cellWidth = width / columns;
+  const cellHeight = height / rows;
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const x = (column + .5) / columns;
+      const y = (row + .5) / rows;
+      const terrain = terrainAt(x, y);
+      target.fillStyle = livingBiomeColor(terrain);
+      target.globalAlpha = .92 + livingHash(state.terrainSeed, column, row, 8) * .08;
+      target.fillRect(column * cellWidth - .5, row * cellHeight - .5, cellWidth + 1, cellHeight + 1);
+      if (!compact && terrain.elevation > .73 && !terrain.water) {
+        target.strokeStyle = 'rgba(31,42,36,.12)';
+        target.lineWidth = .7;
+        target.beginPath();
+        target.moveTo(column * cellWidth, (row + .75) * cellHeight);
+        target.lineTo((column + .5) * cellWidth, (row + .3) * cellHeight);
+        target.lineTo((column + 1) * cellWidth, (row + .75) * cellHeight);
+        target.stroke();
+      }
+    }
+  }
+  target.globalAlpha = 1;
+}
+
+function livingDrawPlant(plant) {
+  if (plant.energy < .12) return;
+  const x = plant.x * cssWidth, y = plant.y * cssHeight;
+  const size = 1.5 + Math.sqrt(plant.energy) * 2.1;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(plant.phase) * .15);
+  ctx.strokeStyle = plant.kind === 1 ? 'rgba(94,79,48,.52)' : 'rgba(45,79,49,.54)';
+  ctx.fillStyle = plant.kind === 1 ? 'rgba(172,145,76,.5)' : 'rgba(71,112,66,.48)';
+  ctx.lineWidth = .75;
+  ctx.beginPath(); ctx.moveTo(0, size); ctx.lineTo(0, -size * .75); ctx.stroke();
+  ctx.beginPath();
+  if (plant.kind === 1) ctx.arc(0, -size * .65, size * .35, 0, TAU);
+  else {
+    ctx.ellipse(-size * .34, -size * .25, size * .45, size * .2, -.55, 0, TAU);
+    ctx.ellipse(size * .34, -size * .55, size * .45, size * .2, .55, 0, TAU);
+  }
+  ctx.fill(); ctx.stroke(); ctx.restore();
+}
+
+function livingDrawResources() {
+  for (const plant of state.plants) livingDrawPlant(plant);
+  for (const micro of state.microResources) {
+    if (micro.energy < .12) continue;
+    const x = micro.x * cssWidth, y = micro.y * cssHeight;
+    ctx.fillStyle = `rgba(224,229,194,${.18 + micro.energy * .11})`;
+    ctx.beginPath(); ctx.arc(x, y, 1 + micro.energy * .7, 0, TAU); ctx.fill();
+  }
+  for (const corpse of state.carrion) {
+    ctx.fillStyle = 'rgba(107,69,51,.42)';
+    ctx.beginPath(); ctx.ellipse(corpse.x * cssWidth, corpse.y * cssHeight, 2 + corpse.energy, 1.5 + corpse.energy * .5, 0, 0, TAU); ctx.fill();
+  }
+}
+
+
+function livingDisplayOrganism(organism, sexOverride = null, juvenile = false) {
+  const sex = sexOverride || organism.sex;
+  if (!sex || sex === 'none') return organism;
+  const genome = { ...organism.genome };
+  if (sex === 'm') {
+    genome.display = clamp(genome.display + .16);
+    genome.horns = clamp(genome.horns + genome.display * .12);
+    genome.hue = (genome.hue + genome.display * 18 + 360) % 360;
+  } else {
+    genome.size = clamp(genome.size * 1.04, .42, 1.72);
+    genome.camouflage = clamp(genome.camouflage + .05);
+  }
+  if (juvenile) {
+    genome.horns *= .35;
+    genome.display *= .55;
+    genome.fur = clamp(genome.fur + .08);
+  }
+  return { ...organism, sex, genome };
+}
+
+function livingDrawPopulationHalo(organism, x, y, scale) {
+  const population = state.populations.find((entry) => entry.id === organism.populationId);
+  if (!population || population.status === 'stable') return;
+  ctx.strokeStyle = population.status === 'diverging' ? 'rgba(112,74,137,.48)' : 'rgba(154,89,70,.32)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash(population.status === 'diverging' ? [3, 3] : [2, 5]);
+  ctx.beginPath(); ctx.arc(x, y, scale * 1.45, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+}
+
+drawWorld = function livingDrawWorld() {
+  const camera = CAM.world;
+  limit(camera);
+  ctx.save(); ctx.translate(camera.x, camera.y); ctx.scale(camera.zoom, camera.zoom);
+  livingDrawTerrain(ctx, cssWidth, cssHeight);
+  livingDrawResources();
+  renderHits = [];
+  const snapshot = activeSnapshot();
+  const organisms = snapshot?.organisms || state.organisms;
+  const scaleBase = clamp(Math.min(cssWidth, cssHeight) / 42, 5.2, 10.5);
+  for (const organism of organisms) {
+    enrichGenome(organism.genome);
+    const x = organism.x * cssWidth, y = organism.y * cssHeight;
+    const angle = Math.atan2(organism.vy || 0, organism.vx || .001);
+    const juvenileScale = organism.lifeStage === 'juvenile' ? .68 : organism.lifeStage === 'elder' ? .92 : 1;
+    const scale = scaleBase * (.7 + organism.genome.size * .38) * juvenileScale;
+    drawOrganismShape(ctx, livingDisplayOrganism(organism, null, organism.lifeStage === 'juvenile'), x, y, scale, angle);
+    livingDrawPopulationHalo(organism, x, y, scale);
+    if (state.lens && !snapshot) {
+      const terrain = terrainAt(organism.x, organism.y);
+      const fitness = habitatFitness(organism.genome, terrain) * clamp(organism.energy / (
