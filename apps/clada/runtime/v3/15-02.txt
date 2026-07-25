@@ -1,0 +1,180 @@
+    const isolation = Math.max(aPopulation.reproductiveIsolation || 0, bPopulation.reproductiveIsolation || 0);
+    const assortative = clamp(((a.genome.mateChoice || 0) + (b.genome.mateChoice || 0)) * .5);
+    const affinity = clamp(1 - isolation * .72 - ecological * (.42 + assortative * .48), .045, .94);
+    score *= affinity;
+  } else if (aPopulation.id === bPopulation.id) {
+    score *= 1.08;
+  }
+  return score;
+};
+
+livingSpatialIndex = function diversitySpatialIndex(cellSize = .09) {
+  const index = diversityLegacySpatialIndex(cellSize);
+  const legacyNearby = index.nearby;
+  index.nearby = function diversityNearby(organism, radius = .16) {
+    const nearby = legacyNearby(organism, radius);
+    if (radius < .22) return nearby;
+    const population = diversityPopulation(organism.populationId);
+    if (!population || (population.reproductiveIsolation || 0) < .44) return nearby;
+    return nearby.filter((candidate) => {
+      if (candidate.speciesId !== organism.speciesId) return true;
+      if (candidate.populationId === organism.populationId) return true;
+      return distanceSq(organism.x, organism.y, candidate.x, candidate.y) <= .24 ** 2;
+    });
+  };
+  return index;
+};
+
+livingApplyBehavior = function diversityApplyBehavior(organism, resources, neighbors) {
+  diversityLegacyApplyBehavior(organism, resources, neighbors);
+  const population = diversityPopulation(organism.populationId);
+  if (!population || (population.reproductiveIsolation || 0) < .42) return;
+  let nearestOwn = null, nearestOwnDistance = Infinity, nearestForeign = null, nearestForeignDistance = Infinity;
+  for (const candidate of neighbors) {
+    if (candidate === organism || candidate.speciesId !== organism.speciesId) continue;
+    const distance = distanceSq(organism.x, organism.y, candidate.x, candidate.y);
+    if (candidate.populationId === organism.populationId && distance < nearestOwnDistance) {
+      nearestOwn = candidate; nearestOwnDistance = distance;
+    } else if (candidate.populationId !== organism.populationId && distance < nearestForeignDistance) {
+      nearestForeign = candidate; nearestForeignDistance = distance;
+    }
+  }
+  if (nearestOwn && nearestOwnDistance > .025 ** 2) steerToward(organism, nearestOwn, .08 + population.reproductiveIsolation * .16);
+  if (nearestForeign && nearestForeignDistance < .1 ** 2) steerAway(organism, nearestForeign, .08 + population.reproductiveIsolation * .18);
+};
+
+function diversitySpeciesCounts() {
+  if (diversityCommunityCacheStep === state.step && diversityCommunityCache) return diversityCommunityCache.speciesCounts;
+  diversityRefreshCommunityCache();
+  return diversityCommunityCache.speciesCounts;
+}
+
+livingFindResources = function diversityFindResources(organism, neighbors, resourceIndex) {
+  const resources = diversityLegacyFindResources(organism, neighbors, resourceIndex);
+  if (!resources.prey) return resources;
+  const counts = diversitySpeciesCounts();
+  const selectedCount = counts.get(resources.prey.speciesId) || 0;
+  const refugeThreshold = Math.max(4, Math.round(state.organisms.length * .035));
+  if (selectedCount > refugeThreshold) return resources;
+  let alternative = null, alternativeScore = 0;
+  for (const candidate of neighbors) {
+    if (candidate === organism || candidate.energy <= 0 || candidate.speciesId === organism.speciesId) continue;
+    if (candidate.genome.size >= organism.genome.size * (1.12 + organism.genome.cooperation * .22)) continue;
+    const count = counts.get(candidate.speciesId) || 0;
+    if (count <= selectedCount * 1.35) continue;
+    const distance = distanceSq(organism.x, organism.y, candidate.x, candidate.y);
+    if (distance > resources.senseRadius ** 2) continue;
+    const score = count * (1.1 - candidate.genome.armor * .45) / (.002 + Math.sqrt(distance));
+    if (score > alternativeScore) { alternative = candidate; alternativeScore = score; }
+  }
+  if (alternative) {
+    resources.prey = alternative;
+    resources.preyDistance = distanceSq(organism.x, organism.y, alternative.x, alternative.y);
+  } else if (selectedCount <= 2 && random() < .82) {
+    resources.prey = null;
+    resources.preyDistance = Infinity;
+  }
+  return resources;
+};
+
+livingFeed = function diversityFeed(organism, resources, resourceIndex) {
+  const prey = resources.prey;
+  const preyEnergy = prey?.energy ?? 0;
+  const predatorEnergy = organism.energy;
+  diversityLegacyFeed(organism, resources, resourceIndex);
+  if (!prey || preyEnergy <= prey.energy) return;
+  const counts = diversitySpeciesCounts();
+  const refuge = DIV.preyRefuge({
+    prey: counts.get(prey.speciesId) || 0,
+    predators: counts.get(organism.speciesId) || 0,
+    community: state.organisms.length
+  });
+  if (refuge <= 0) return;
+  const damage = preyEnergy - prey.energy;
+  const restored = damage * refuge;
+  prey.energy += restored;
+  organism.energy = Math.max(predatorEnergy, organism.energy - restored * .58);
+  if (prey.energy > 0 && prey.cause === 'хищничество') prey.cause = null;
+};
+
+function diversityRefreshCommunityCache() {
+  const speciesCounts = new Map();
+  const buckets = new Map();
+  for (const organism of state.organisms) {
+    if (organism.energy <= 0) continue;
+    speciesCounts.set(organism.speciesId, (speciesCounts.get(organism.speciesId) || 0) + 1);
+    const terrain = terrainAt(organism.x, organism.y);
+    const key = `${terrain.biome}:${DIV.ecotypeKey(organism.genome, terrain)}`;
+    if (!buckets.has(key)) buckets.set(key, { total: 0, species: new Map(), biome: terrain.biome, role: DIV.roleOf(organism.genome) });
+    const bucket = buckets.get(key);
+    bucket.total += 1;
+    bucket.species.set(organism.speciesId, (bucket.species.get(organism.speciesId) || 0) + 1);
+  }
+  diversityCommunityCacheStep = state.step;
+  diversityCommunityCache = { speciesCounts, buckets };
+}
+
+function diversityCapacity(bucket) {
+  const base = { ocean: 22, shallows: 22, wetland: 20, forest: 25, grassland: 27, scrub: 17, desert: 10, highland: 13, snow: 9 }[bucket.biome] || 16;
+  const role = { plant: 1, prey: .62, carrion: .38, filter: .82 }[bucket.role] || .75;
+  return Math.max(4, base * role * (.58 + state.env.food * .78));
+}
+
+function diversityApplyFrequencySelection() {
+  diversityRefreshCommunityCache();
+  for (const organism of state.organisms) {
+    if (organism.energy <= 0) continue;
+    const terrain = terrainAt(organism.x, organism.y);
+    const key = `${terrain.biome}:${DIV.ecotypeKey(organism.genome, terrain)}`;
+    const bucket = diversityCommunityCache.buckets.get(key);
+    if (!bucket) continue;
+    organism.energy += DIV.frequencyAdjustment({
+      own: bucket.species.get(organism.speciesId) || 0,
+      total: bucket.total,
+      capacity: diversityCapacity(bucket),
+      overlap: .72
+    });
+  }
+}
+
+reproduce = function diversityReproduce(parent) {
+  const before = state.organisms.length;
+  diversityLegacyReproduce(parent);
+  if (state.organisms.length <= before) return;
+  const newborns = state.organisms.slice(before);
+  for (const child of newborns) {
+    const mate = child.secondParentId ? state.organisms.find((organism) => organism.id === child.secondParentId) : null;
+    if (mate) diversityRecordMating(parent, mate);
+    const terrain = terrainAt(child.x, child.y);
+    const population = livingPopulationAt(child.speciesId, terrain.region, child.genome);
+    child.populationId = population.id;
+    child.homeRegion = population.region;
+    diversityInitializePopulation(population, child.genome);
+    const target = diversityAdaptiveTarget(population, terrain, child.genome);
+    const mismatch = 1 - habitatFitness(child.genome, terrain);
+    const roleMismatch = DIV.roleOf(child.genome) === population.adaptiveRole ? 0 : .8;
+    const rate = DIV.adaptiveRate({ mismatch, opportunity: roleMismatch, isolation: population.reproductiveIsolation || 0 });
+    diversityBiasGenome(child.genome, target, rate);
+  }
+};
+
+function diversityGroupKey(organism) {
+  const observed = terrainAt(organism.x, organism.y);
+  organism.homeRegion ||= observed.region;
+  if (observed.region !== organism.homeRegion) {
+    organism.regionTenure = (organism.regionTenure || 0) + 1;
+    const required = organism.genome.migration > .62 ? 2 : organism.genome.migration > .36 ? 3 : 5;
+    if (organism.regionTenure >= required) {
+      organism.homeRegion = observed.region;
+      organism.regionTenure = 0;
+    }
+  } else organism.regionTenure = 0;
+  const ecotype = DIV.ecotypeKey(organism.genome, observed);
+  return { key: `${organism.speciesId}:${organism.homeRegion}:${ecotype}`, region: organism.homeRegion, ecotype };
+}
+
+function diversityGroupCenter(members) {
+  return {
+    x: members.reduce((sum, organism) => sum + organism.x, 0) / members.length,
+    y: members.reduce((sum, organism) => sum + organism.y, 0) / members.length
+  };
