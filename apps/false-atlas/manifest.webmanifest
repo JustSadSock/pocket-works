@@ -1,0 +1,21 @@
+{
+  "id": "/apps/false-atlas/",
+  "name": "ЛОЖНЫЙ АТЛАС",
+  "short_name": "АТЛАС",
+  "description": "Тактильная стратегия о противоречивых донесениях и живой карте.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#2b241d",
+  "theme_color": "#2b241d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
