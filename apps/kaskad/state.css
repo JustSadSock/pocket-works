@@ -1,0 +1,8 @@
+/*
+ * iOS/WebKit can let author-level display rules override the HTML hidden state.
+ * KASKAD uses display:grid/flex on modal and status surfaces, so preserve the
+ * semantic hidden contract explicitly.
+ */
+[hidden] {
+  display: none !important;
+}

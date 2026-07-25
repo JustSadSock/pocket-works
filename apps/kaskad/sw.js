@@ -1,15 +1,14 @@
 const CACHE_PREFIX = 'kaskad-';
-const CACHE_NAME = 'kaskad-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'kaskad-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-07-25';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Создан визуальный конструктор частиц, полей и событийных правил без кода.',
-  'Добавлены круглая и прямоугольная арены, запись видео, экспорт сцен и три стартовые системы.',
-  'Реализованы цветовые силы, порождение, преобразование, разрушение и цепные реакции.'
+  'Исправлено закрытие нижних редакторов на iPhone и других WebKit-устройствах.',
+  'Семантическое состояние hidden теперь надёжно скрывает подложки, пустые состояния и индикатор записи.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './README.md',
+  './', './index.html', './app.config.json', './styles.css', './state.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './README.md',
   './engine-part-01.txt', './engine-part-02.txt', './engine-part-03.txt', './engine-part-04.txt', './engine-part-05.txt', './engine-part-06.txt',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js',
