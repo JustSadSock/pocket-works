@@ -1,0 +1,84 @@
+ (species.extinct === null && species.born < state.generation) {
+      species.extinct = state.generation;
+      species.cause = state.lastDeathCause || (state.shock ? shockLabel(state.shock.type) : 'конкуренция и потеря ниши');
+      state.events.push({ generation: state.generation, type: 'extinction', speciesId: species.id, text: `Исчез ${species.common}` });
+      chord('extinct');
+    }
+  }
+}
+
+snapshotOrganism = function livingSnapshotOrganism(organism) {
+  return {
+    ...livingLegacySnapshotOrganism(organism), populationId: organism.populationId,
+    homeRegion: organism.homeRegion, sex: organism.sex, lifeStage: organism.lifeStage,
+    secondParentId: organism.secondParentId || null, hybrid: Boolean(organism.hybrid)
+  };
+};
+
+recordHistory = function livingRecordHistory(force = false) {
+  const last = state.history.at(-1);
+  if (!force && last?.generation === state.generation) return;
+  const counts = {};
+  for (const organism of state.organisms) counts[organism.speciesId] = (counts[organism.speciesId] || 0) + 1;
+  state.history.push({
+    generation: state.generation, env: deepClone(state.env), population: state.organisms.length,
+    counts, organisms: state.organisms.slice(0, 180).map(snapshotOrganism),
+    populations: deepClone(state.populations.filter((population) => population.size > 0)),
+    season: state.season,
+    ecology: { carrion: state.carrion.length, micro: state.microResources.length, interactions: deepClone(state.interactions) },
+    event: state.events.at(-1)?.generation === state.generation ? deepClone(state.events.at(-1)) : null
+  });
+  if (state.history.length > MAX_HISTORY) state.history.splice(0, state.history.length - MAX_HISTORY);
+  state.fossilIndex = null;
+};
+
+finalizeGeneration = function livingFinalizeGeneration() {
+  updatePopulationStructure();
+  livingUpdateSpeciesMetrics();
+  state.interactions = Object.fromEntries(Object.entries(state.interactions).map(([speciesId, bucket]) => [speciesId, {
+    prey: Object.fromEntries(Object.entries(bucket.prey || {}).map(([key, value]) => [key, value * .82])),
+    predators: Object.fromEntries(Object.entries(bucket.predators || {}).map(([key, value]) => [key, value * .82])),
+    competitors: Object.fromEntries(Object.entries(bucket.competitors || {}).map(([key, value]) => [key, value * .82])),
+    plants: bucket.plants * .82, carrion: bucket.carrion * .82, filter: bucket.filter * .82
+  }]));
+  recordHistory(false);
+  updateTimeline();
+  updateReadouts();
+  saveState();
+};
+
+seedAt = function livingSeedAt(x = randomRange(.18, .82), y = randomRange(.18, .82), amount = 10) {
+  exitFossil();
+  const parent = state.organisms.length ? choose(state.organisms) : null;
+  const base = parent ? makeGenome(parent.genome, .28) : makeGenome();
+  const speciesId = parent?.speciesId ?? newSpecies(base, null);
+  const region = terrainAt(x, y).region;
+  const population = createPopulation(speciesId, region, base, 'introduced', state.generation);
+  for (let index = 0; index < amount && state.organisms.length < MAX_ORGANISMS; index += 1) {
+    const angle = randomRange(0, TAU), radius = randomRange(.002, .034);
+    const genome = makeGenome(base, .11);
+    const organism = makeOrganism({
+      x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius,
+      genome, speciesId, generation: parent ? parent.generation + 1 : 0,
+      energy: randomRange(8, 11), parentId: parent?.id ?? null
+    });
+    organism.populationId = population.id;
+    organism.homeRegion = region;
+    organism.sex = genome.reproStrategy < .18 ? 'none' : random() < .5 ? 'f' : 'm';
+    organism.lifeStage = 'adult';
+    state.organisms.push(organism);
+  }
+  state.seedMode = false;
+  seedButton.setAttribute('aria-pressed', 'false');
+  emptyState.hidden = true;
+  chord('birth'); pulse(16);
+  showToast(`Заселена новая популяция ${state.species.find((species) => species.id === speciesId)?.common}`);
+  updateReadouts(); saveState();
+};
+
+if (state) {
+  migrateLivingState();
+  updatePopulationStructure();
+  livingUpdateSpeciesMetrics();
+  saveState();
+}
