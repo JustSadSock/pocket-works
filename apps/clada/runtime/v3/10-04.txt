@@ -1,0 +1,92 @@
+ergy: randomRange(.7, 2.8), phase: randomRange(0, TAU) };
+  });
+  state.carrion = [];
+}
+
+buildWorld = function livingBuildWorld(seed = 'garden') {
+  state = livingBaseState(seed);
+  if (seed === 'rift') state.env = { temperature: .24, food: .45, mutation: .31 };
+  if (seed === 'red') state.env = { temperature: .67, food: .56, mutation: .29 };
+  initializeResources();
+  if (LIVING.originMode === 'primordial') buildPrimordialBiosphere(seed);
+  else buildMatureBiosphere(seed);
+  state.history.push({
+    generation: state.generation, env: deepClone(state.env), population: state.organisms.length,
+    counts: Object.fromEntries(state.species.map((species) => [species.id, state.organisms.filter((organism) => organism.speciesId === species.id).length]).filter(([, count]) => count > 0)),
+    organisms: state.organisms.slice(0, 180).map(snapshotOrganism), populations: deepClone(state.populations), season: state.season, event: null
+  });
+  state.fossilIndex = null;
+  syncAllUI();
+  saveState();
+};
+
+function migrateLivingState() {
+  if (!state) return;
+  state.modelVersion = 3;
+  state.originMode ||= 'legacy';
+  state.terrainSeed ||= [...String(state.seed || 'garden')].reduce((sum, char) => hashNumber(sum + char.charCodeAt(0) * 31), 98431);
+  state.prehistoryEnd ??= 0;
+  state.season ??= state.generation % 12;
+  state.populations ||= [];
+  state.nextPopulationId ||= Math.max(0, ...state.populations.map((population) => population.id || 0)) + 1;
+  state.carrion ||= [];
+  state.microResources ||= [];
+  state.interactions ||= {};
+  state.populationEvents ||= [];
+  state.statistics ||= { births: 0, deaths: 0, hybrids: 0, speciations: 0 };
+  state.mortality ||= {};
+  for (const species of state.species) {
+    enrichGenome(species.centroid);
+    species.trend ??= 0;
+    species.niche ||= null;
+  }
+  for (const organism of state.organisms) {
+    enrichGenome(organism.genome);
+    organism.sex ||= organism.genome.reproStrategy < .18 ? 'none' : random() < .5 ? 'f' : 'm';
+    organism.lifeStage ||= organism.age < 150 ? 'juvenile' : 'adult';
+    const region = terrainAt(organism.x, organism.y).region;
+    organism.homeRegion ||= region;
+    if (!organism.populationId) {
+      let population = state.populations.find((entry) => entry.speciesId === organism.speciesId && entry.region === region);
+      if (!population) population = createPopulation(organism.speciesId, region, organism.genome, 'legacy', state.generation);
+      organism.populationId = population.id;
+    }
+  }
+  if (!state.microResources.length) {
+    for (let index = 0; index < 36; index += 1) {
+      const x = randomRange(.03, .97), y = randomRange(.04, .96);
+      if (terrainAt(x, y).water) state.microResources.push({ x, y, energy: randomRange(.5, 2), phase: randomRange(0, TAU) });
+    }
+  }
+}
+
+
+const livingLegacyImportWorld = importWorld;
+importWorld = function livingImportWorld(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(String(reader.result));
+      if (!validateImported(payload)) throw new Error('Неверный формат архива');
+      state = payload;
+      state.paused = false;
+      state.view = 'world';
+      state.fossilIndex = null;
+      state.selectedId = null;
+      state.selectedSpeciesId = null;
+      state.seedMode = false;
+      migrateLivingState();
+      closeSheet();
+      syncAllUI();
+      saveState();
+      pulse([12, 25, 12]);
+      showToast(`Мир восстановлен: поколение ${state.generation}`);
+    } catch (error) {
+      showToast(error.message || 'Не удалось прочитать архив', 3000);
+    }
+  };
+  reader.onerror = () => showToast('Ошибка чтения файла', 3000);
+  reader.readAsText(file);
+};
+
+migrateLivingState();
