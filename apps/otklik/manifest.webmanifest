@@ -1,0 +1,21 @@
+{
+  "id": "/apps/otklik/",
+  "name": "ОТКЛИК",
+  "short_name": "ОТКЛИК",
+  "description": "Карманная лаборатория акустики помещения с реальными сравнительными замерами.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#d8d1c2",
+  "theme_color": "#d8d1c2",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
