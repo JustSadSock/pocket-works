@@ -1,0 +1,43 @@
+onst parentSpecies = state.species.find((species) => species.id === population.speciesId);
+  if (!parentSpecies || members.length < 5) return;
+  const newId = newSpecies(population.centroid, parentSpecies.id);
+  const species = state.species.find((entry) => entry.id === newId);
+  species.populationOrigin = population.id;
+  species.hybrid = Boolean(population.hybrid);
+  species.hybridParentId = population.hybridParentId || null;
+  species.habitat = terrainAt(members[0].x, members[0].y).biome;
+  species.niche = livingDietLabel(population.centroid);
+  population.speciesId = newId;
+  population.status = 'species';
+  population.isolation = 0;
+  for (const organism of members) organism.speciesId = newId;
+  state.statistics.speciations += 1;
+  state.populationEvents.push({ generation: state.generation, populationId: population.id, type: 'speciation', speciesId: newId });
+}
+
+function updatePopulationStructure() {
+  const groups = new Map();
+  for (const organism of state.organisms) {
+    const observedRegion = terrainAt(organism.x, organism.y).region;
+    organism.homeRegion ||= observedRegion;
+    if (observedRegion !== organism.homeRegion) {
+      organism.regionTenure = (organism.regionTenure || 0) + 1;
+      if (organism.regionTenure >= 3 && organism.genome.migration > .32) {
+        organism.homeRegion = observedRegion;
+        organism.regionTenure = 0;
+      }
+    } else {
+      organism.regionTenure = 0;
+    }
+    const region = organism.homeRegion;
+    const key = `${organism.speciesId}:${region}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(organism);
+  }
+  for (const [key, members] of [...groups.entries()]) {
+    if (members.length >= 3) continue;
+    const speciesId = key.split(':')[0];
+    const alternatives = [...groups.entries()]
+      .filter(([otherKey, otherMembers]) => otherKey !== key && otherKey.startsWith(`${speciesId}:`) && otherMembers.length >= 3)
+      .sort((left, right) => right[1].length - left[1].length);
+    if (!al
