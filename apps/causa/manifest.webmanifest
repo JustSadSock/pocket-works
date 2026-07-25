@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "КАУЗА — причинная лаборатория",
+  "short_name": "КАУЗА",
+  "description": "Лаборатория причинных систем, обратных связей и контрфактических шоков.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ded8ca",
+  "theme_color": "#ded8ca",
+  "categories": ["education", "utilities", "productivity"],
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
