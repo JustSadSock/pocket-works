@@ -1,0 +1,61 @@
+ame)} · ${organism.sex === 'f' ? 'САМКА' : organism.sex === 'm' ? 'САМЕЦ' : 'БЕСПОЛАЯ ФОРМА'}${organism.hybrid ? ' · ГИБРИД' : ''}</small>
+      <p>Возраст: <b>${Math.floor(organism.age / 22)}</b> сезонов<br>Стадия: <b>${organism.lifeStage === 'juvenile' ? 'молодая особь' : organism.lifeStage === 'elder' ? 'старая особь' : 'взрослая особь'}</b><br>Энергия: <b>${Math.max(0, organism.energy).toFixed(1)}</b></p>
+      <p>Биом: <b>${safeText(BIOME_NAMES[terrain.biome] || terrain.biome)}</b><br>Соответствие среде: <b>${fitness}%</b><br>Популяция: <b>${population?.id || '—'}</b></p>
+    </div></div>
+    <div class="field-section compact"><header><b>ПОВЕДЕНИЕ</b><span>${safeText(livingBehaviorLabel(organism.genome))}</span></header><p>${safeText(ph(organism.genome))} Основная пища: ${safeText(livingDietLabel(organism.genome))}. Стратегия: ${safeText(livingReproductionLabel(organism.genome))}.</p></div>
+    <div class="trait-list">${traitRows(organism.genome)}${extraRows(organism.genome)}</div>
+    <div class="lineage-note">Родитель 1: ${organism.parentId || 'не зафиксирован'}${organism.secondParentId ? `. Родитель 2: ${organism.secondParentId}` : ''}. Хромосомный набор: ${organism.genome.chromosome}.</div>
+  `);
+  requestAnimationFrame(() => {
+    const portrait = document.querySelector('#portraitCanvas'); if (!portrait) return;
+    const context = portrait.getContext('2d'); context.fillStyle = '#dfe2cd'; context.fillRect(0, 0, 184, 184);
+    drawOrganismShape(context, organism, 92, 92, organism.lifeStage === 'juvenile' ? 33 : 46, 0, true);
+  });
+};
+
+openAboutSheet = function livingOpenAboutSheet() {
+  openSheet('О МОДЕЛИ', 'Не один ген, а экосистема', `
+    <div class="lineage-note">КЛАДА моделирует не мгновенные «улучшения», а локальные популяции в разных биомах. Необычная особь не становится видом сама по себе: популяция должна выжить, изолироваться и устойчиво разойтись с предковой линией.</div>
+    <div class="trait-list">
+      <div class="trait"><span>ГЕОГРАФИЯ</span><div>Вода, побережья, высота, влажность и климат разделяют популяции.</div><output>MAP</output></div>
+      <div class="trait"><span>ПИЩЕВАЯ СЕТЬ</span><div>Растения, добыча, падаль и фильтрация связывают судьбы видов.</div><output>WEB</output></div>
+      <div class="trait"><span>ПОПУЛЯЦИЯ</span><div>Новая ветвь требует численности, генетической дистанции и восьми поколений изоляции.</div><output>POP</output></div>
+      <div class="trait"><span>КОМПРОМИСС</span><div>Крылья, мозг, панцирь, забота и яркость повышают энергетическую цену жизни.</div><output>COST</output></div>
+    </div>
+  `);
+};
+
+updateReadouts = function livingUpdateReadouts() {
+  livingLegacyUpdateReadouts();
+  const populationChip = document.querySelector('#populationCountChip');
+  if (populationChip) populationChip.textContent = String(state.populations.filter((population) => population.size > 0).length);
+  const seasonChip = document.querySelector('#seasonChip');
+  if (seasonChip) seasonChip.textContent = SEASONS[state.season]?.replace('РАННЯЯ ', '').replace('ПОЗДНЯЯ ', '') || '—';
+};
+
+function installLivingInterface() {
+  const readout = document.querySelector('#liveReadout');
+  if (readout && !document.querySelector('#populationCountChip')) {
+    readout.insertAdjacentHTML('beforeend', '<span><i class="dot population-group-dot"></i><b id="populationCountChip">0</b> популяций</span><span class="season-readout"><b id="seasonChip">—</b></span>');
+  }
+  const seeds = document.querySelector('.world-seeds');
+  if (seeds && !document.querySelector('.origin-modes')) {
+    seeds.insertAdjacentHTML('beforebegin', `
+      <div class="origin-modes" aria-label="Возраст биосферы">
+        <button type="button" data-origin="mature" aria-pressed="true"><b>ЗРЕЛАЯ БИОСФЕРА</b><small>7–10 видов, пищевая сеть и вымершие предки</small></button>
+        <button type="button" data-origin="primordial" aria-pressed="false"><b>ПЕРВИЧНАЯ КОЛОНИЯ</b><small>3 ранних вида и короткая предыстория</small></button>
+      </div>`);
+  }
+  document.querySelector('.origin-modes')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-origin]'); if (!button) return;
+    LIVING.originMode = button.dataset.origin;
+    document.querySelectorAll('[data-origin]').forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
+    tone(button.dataset.origin === 'mature' ? 370 : 250, .05, .014, 'triangle');
+  });
+  const introParagraph = document.querySelector('.intro-copy p');
+  if (introParagraph) introParagraph.textContent = 'Открой уже сложившуюся биосферу или раннюю колонию. Виды занимают разные ниши, разделяются географией и зависят друг от друга.';
+  updateReadouts();
+  if (!intro.hidden && state?.generation === 0) removeStoredWorld();
+}
+
+installLivingInterface();
