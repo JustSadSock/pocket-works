@@ -1,0 +1,21 @@
+{
+  "id": "/apps/clade-lab/",
+  "name": "КЛАДА — эволюционная лаборатория",
+  "short_name": "КЛАДА",
+  "description": "Живая лаборатория естественного отбора, наследования и видообразования.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e8e0cc",
+  "theme_color": "#26332d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
