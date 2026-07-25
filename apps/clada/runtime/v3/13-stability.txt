@@ -1,0 +1,261 @@
+/* КЛАДА 3.0.1 — долгосрочная генетическая и демографическая устойчивость. */
+const STABILITY_MODEL_VERSION = 1;
+const STABILITY_KEYS = [
+  'size', 'speed', 'vision', 'metabolism', 'thermal', 'diet', 'armor', 'fertility', 'pattern',
+  ...EXTRA, ...LIVING.genomeKeys
+];
+const STABILITY_RANGES = {
+  size: [.42, 1.72], speed: [.28, 1.8], vision: [.25, 1.75], metabolism: [.38, 1.65],
+  thermal: [.04, .96], diet: [0, 1], armor: [0, 1], fertility: [.35, 1.7]
+};
+const stabilityLegacyMigrateLivingState = migrateLivingState;
+const stabilityLegacyBuildWorld = buildWorld;
+const stabilityLegacySpatialIndex = livingSpatialIndex;
+const stabilityLegacyApplyBehavior = livingApplyBehavior;
+const stabilityLegacyReproduce = reproduce;
+const stabilityLegacySimulateStep = simulateStep;
+let stabilityMemberCacheStep = -1;
+let stabilityMemberCache = new Map();
+
+function stabilityRange(key) {
+  return STABILITY_RANGES[key] || [0, 1];
+}
+
+function stabilitySignature(genome) {
+  let value = (genome.hue || 0) * .00017 + (genome.chromosome || 0) * .019;
+  for (let index = 0; index < STABILITY_KEYS.length; index += 1) {
+    value += (Number(genome[STABILITY_KEYS[index]]) || 0) * (index + 3) * .00091;
+  }
+  return Number(value.toFixed(8));
+}
+
+function stabilityInferRaw(genome) {
+  enrichGenome(genome);
+  const raw = {};
+  for (const key of STABILITY_KEYS) raw[key] = Number(genome[key]) || 0;
+  raw.armor = clamp(raw.armor + raw.wing * .08 - raw.shell * .06);
+  raw.speed = clamp(raw.speed + raw.shell * .12 + raw.fur * .025, .28, 1.8);
+  raw.metabolism = clamp(raw.metabolism - raw.wing * .055 - raw.brain * .06 - raw.display * .025, .38, 1.65);
+  raw.fertility = clamp(raw.fertility + raw.parentalCare * .14 + raw.size * .025, .35, 1.7);
+  raw.brood = clamp(raw.brood + raw.parentalCare * .24 - (1 - raw.size / 1.72) * .05);
+  raw.cooperation = clamp(raw.cooperation + raw.territory * .12);
+  genome.geneticBase = raw;
+  genome.geneticHue = Number.isFinite(genome.hue) ? genome.hue : 110;
+  genome.geneticChromosome = Number.isInteger(genome.chromosome) ? genome.chromosome : 2;
+  genome.stabilityModel = STABILITY_MODEL_VERSION;
+  return raw;
+}
+
+function stabilityRaw(genome) {
+  enrichGenome(genome);
+  if (!genome.geneticBase || genome.stabilityModel !== STABILITY_MODEL_VERSION) return stabilityInferRaw(genome);
+  if (Number.isFinite(genome.stabilitySignature) && Math.abs(stabilitySignature(genome) - genome.stabilitySignature) > 1e-7) {
+    return stabilityInferRaw(genome);
+  }
+  return genome.geneticBase;
+}
+
+function stabilityExpressGenome(genome) {
+  const raw = stabilityRaw(genome);
+  for (const key of STABILITY_KEYS) genome[key] = raw[key];
+  genome.hue = ((genome.geneticHue ?? genome.hue ?? 110) + 360) % 360;
+  genome.chromosome = clamp(Math.round(genome.geneticChromosome ?? genome.chromosome ?? 2), 2, 7);
+
+  genome.armor = clamp(raw.armor - raw.wing * .08 + raw.shell * .06);
+  genome.speed = clamp(raw.speed - raw.shell * .12 - raw.fur * .025, .28, 1.8);
+  genome.metabolism = clamp(raw.metabolism + raw.wing * .055 + raw.brain * .06 + raw.display * .025, .38, 1.65);
+  genome.fertility = clamp(raw.fertility - raw.parentalCare * .14 - raw.size * .025, .35, 1.7);
+  genome.brood = clamp(raw.brood - raw.parentalCare * .24 + (1 - raw.size / 1.72) * .05);
+  genome.cooperation = clamp(raw.cooperation - raw.territory * .12);
+  genome.stabilityModel = STABILITY_MODEL_VERSION;
+  genome.stabilitySignature = stabilitySignature(genome);
+  return genome;
+}
+
+makeGenome = function stableMakeGenome(base = null, mutationScale = 0) {
+  if (!base) {
+    const genome = livingLegacyMakeGenome(null, 0);
+    enrichGenome(genome);
+    stabilityInferRaw(genome);
+    return stabilityExpressGenome(genome);
+  }
+
+  const parent = deepClone(base);
+  const parentRaw = stabilityRaw(parent);
+  const child = deepClone(parent);
+  const raw = {};
+  const mutationChance = clamp(.035 + mutationScale * .28, .025, .34);
+  const mutationSigma = .0025 + mutationScale * .018;
+  for (const key of STABILITY_KEYS) {
+    const [min, max] = stabilityRange(key);
+    const value = Number(parentRaw[key]) || 0;
+    raw[key] = random() < mutationChance
+      ? clamp(value + gauss() * mutationSigma * (max - min), min, max)
+      : value;
+  }
+  child.geneticBase = raw;
+  child.geneticHue = parent.geneticHue ?? parent.hue;
+  if (random() < .06 + mutationScale * .28) {
+    child.geneticHue = (child.geneticHue + gauss() * (1.5 + mutationScale * 9) + 360) % 360;
+  }
+  child.geneticChromosome = parent.geneticChromosome ?? parent.chromosome;
+  if (random() < mutationScale * .0015) {
+    child.geneticChromosome = clamp(child.geneticChromosome + (random() < .5 ? -1 : 1), 2, 7);
+  }
+  return stabilityExpressGenome(child);
+};
+
+function stabilitySpeciesMembers(speciesId) {
+  if (stabilityMemberCacheStep !== state.step) {
+    stabilityMemberCacheStep = state.step;
+    stabilityMemberCache = new Map();
+    for (const organism of state.organisms) {
+      if (organism.energy <= 0) continue;
+      if (!stabilityMemberCache.has(organism.speciesId)) stabilityMemberCache.set(organism.speciesId, []);
+      stabilityMemberCache.get(organism.speciesId).push(organism);
+    }
+  }
+  return stabilityMemberCache.get(speciesId) || [];
+}
+
+livingSpatialIndex = function stableSpatialIndex(cellSize = .09) {
+  const index = stabilityLegacySpatialIndex(cellSize);
+  const legacyNearby = index.nearby;
+  index.nearby = function stableNearby(organism, radius = .16) {
+    const nearby = legacyNearby(organism, radius);
+    if (radius < .22) return nearby;
+    const members = stabilitySpeciesMembers(organism.speciesId);
+    if (members.length >= 12) return nearby;
+    const seen = new Set(nearby.map((entry) => entry.id));
+    for (const member of members) if (!seen.has(member.id)) nearby.push(member);
+    return nearby;
+  };
+  return index;
+};
+
+livingCanMate = function stableCanMate(a, b) {
+  if (a === b || !b || b.energy <= 0) return 0;
+  enrichGenome(a.genome); enrichGenome(b.genome);
+  const members = stabilitySpeciesMembers(a.speciesId);
+  const lowDensity = members.length < 12;
+  const minEnergy = lowDensity ? 5.35 : 7;
+  const minAge = lowDensity ? 145 : 170;
+  if (b.energy <= minEnergy || b.age < minAge) return 0;
+  const asexual = a.genome.reproStrategy < .18;
+  if (asexual) return 0;
+  const sexual = a.genome.reproStrategy >= .42;
+  if (sexual && a.sex === b.sex) return 0;
+  const genetic = genomeDistance(a.genome, b.genome);
+  const chromosomeGap = Math.abs(a.genome.chromosome - b.genome.chromosome);
+  const spatial = Math.sqrt(distanceSq(a.x, a.y, b.x, b.y));
+  const sameSpecies = a.speciesId === b.speciesId;
+  const maxDistance = lowDensity && sameSpecies ? .46 : .22;
+  const maxGenetic = sameSpecies ? .84 : .76;
+  if (genetic > maxGenetic || chromosomeGap > 1 || spatial > maxDistance) return 0;
+  const habitat = habitatFitness(b.genome, terrainAt(a.x, a.y));
+  const display = .55 + b.genome.display * a.genome.mateChoice * .55;
+  const populationAffinity = a.populationId === b.populationId ? 1 : lowDensity && sameSpecies ? .9 : .72;
+  const distanceScore = clamp(1 - spatial / (maxDistance + .01));
+  return clamp(1 - genetic / (maxGenetic + .04)) * distanceScore * (chromosomeGap ? .54 : 1) * habitat * display * populationAffinity;
+};
+
+livingApplyBehavior = function stableApplyBehavior(organism, resources, neighbors) {
+  stabilityLegacyApplyBehavior(organism, resources, neighbors);
+  const members = stabilitySpeciesMembers(organism.speciesId);
+  if (members.length < 12 && organism.age > 130) {
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const candidate of members) {
+      if (candidate === organism || candidate.age < 130) continue;
+      const distance = distanceSq(organism.x, organism.y, candidate.x, candidate.y);
+      if (distance < nearestDistance) { nearest = candidate; nearestDistance = distance; }
+    }
+    if (nearest && nearestDistance > .035 ** 2) steerToward(organism, nearest, .16 + (12 - members.length) * .018);
+  }
+};
+
+reproduce = function stableReproduce(parent) {
+  const before = state.organisms.length;
+  stabilityLegacyReproduce(parent);
+  if (state.organisms.length <= before) return;
+  const newborns = state.organisms.slice(before);
+  for (const child of newborns) {
+    stabilityExpressGenome(child.genome);
+    if (child.genome.reproStrategy < .42) continue;
+    const members = stabilitySpeciesMembers(child.speciesId).filter((member) => member !== child);
+    const females = members.filter((member) => member.sex === 'f').length;
+    const males = members.filter((member) => member.sex === 'm').length;
+    if (members.length < 18 && Math.abs(females - males) >= 2 && random() < .78) child.sex = females < males ? 'f' : 'm';
+  }
+};
+
+function stabilityGenerationSupport() {
+  const bySpecies = new Map();
+  for (const organism of state.organisms) {
+    if (!bySpecies.has(organism.speciesId)) bySpecies.set(organism.speciesId, []);
+    bySpecies.get(organism.speciesId).push(organism);
+  }
+  for (const members of bySpecies.values()) {
+    if (members.length < 2 || members.length >= 14) continue;
+    const adults = members.filter((organism) => organism.age > 150 && organism.energy > 0);
+    const sexualAdults = adults.filter((organism) => organism.genome.reproStrategy >= .42);
+    const females = sexualAdults.filter((organism) => organism.sex === 'f');
+    const males = sexualAdults.filter((organism) => organism.sex === 'm');
+    if (sexualAdults.length >= 2 && (!females.length || !males.length)) {
+      const flexible = [...sexualAdults].sort((a, b) => a.genome.reproStrategy - b.genome.reproStrategy || a.age - b.age)[0];
+      if (flexible && flexible.genome.reproStrategy < .78) flexible.sex = females.length ? 'm' : 'f';
+    }
+    for (const organism of adults) {
+      const terrain = terrainAt(organism.x, organism.y);
+      const relief = (14 - members.length) / 14;
+      organism.energy += .22 * relief * habitatFitness(organism.genome, terrain);
+    }
+  }
+}
+
+simulateStep = function stableSimulationStep() {
+  const beforeGeneration = state.generation;
+  const counts = new Map();
+  for (const organism of state.organisms) counts.set(organism.speciesId, (counts.get(organism.speciesId) || 0) + 1);
+  for (const organism of state.organisms) {
+    const count = counts.get(organism.speciesId) || 0;
+    if (count >= 12 || organism.age < 150 || organism.energy <= 0) continue;
+    const terrain = terrainAt(organism.x, organism.y);
+    const relief = (12 - count) / 12;
+    organism.energy += .00125 * relief * habitatFitness(organism.genome, terrain);
+  }
+  stabilityLegacySimulateStep();
+  if (state.generation !== beforeGeneration) stabilityGenerationSupport();
+};
+
+function stabilityRepairLegacyGenome(genome) {
+  const raw = stabilityRaw(genome);
+  raw.fertility = Math.max(raw.fertility, .75);
+  raw.brood = Math.max(raw.brood, .3);
+  raw.speed = Math.max(raw.speed, .58);
+  raw.metabolism = clamp(raw.metabolism, .48, 1.25);
+  return stabilityExpressGenome(genome);
+}
+
+function migrateStabilityState() {
+  if (!state) return;
+  const repairingLegacyDrift = state.stabilityModel !== STABILITY_MODEL_VERSION && state.generation > 24;
+  state.stabilityModel = STABILITY_MODEL_VERSION;
+  const migrateGenome = repairingLegacyDrift ? stabilityRepairLegacyGenome : stabilityExpressGenome;
+  for (const species of state.species || []) migrateGenome(species.centroid);
+  for (const population of state.populations || []) if (population.centroid) migrateGenome(population.centroid);
+  for (const organism of state.organisms || []) migrateGenome(organism.genome);
+}
+
+migrateLivingState = function stableMigrateLivingState() {
+  stabilityLegacyMigrateLivingState();
+  migrateStabilityState();
+};
+
+buildWorld = function stableBuildWorld(seed = 'garden') {
+  stabilityLegacyBuildWorld(seed);
+  migrateStabilityState();
+  saveState();
+};
+
+migrateStabilityState();
