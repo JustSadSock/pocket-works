@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ОТКЛИК">
-  <meta name="description" content="Карманная лаборатория акустики помещения: реальные сравнительные замеры, карта гула, разборчивости и хвоста реверберации.">
+  <meta name="description" content="Карманная лаборатория акустики помещения: реальные сравнительные замеры, карта басового гула, ясности голоса и эха.">
   <title>ОТКЛИК</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./scanner.css">
 </head>
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app>
@@ -35,10 +36,10 @@
 
     <section class="workspace" aria-label="План помещения и измерения">
       <div class="map-toolbar" data-ui>
-        <div class="mode-switch" role="group" aria-label="Режим карты">
-          <button type="button" data-map-mode="clarity" class="is-active" data-native-press>Речь</button>
-          <button type="button" data-map-mode="boom" data-native-press>Гул</button>
-          <button type="button" data-map-mode="decay" data-native-press>Хвост</button>
+        <div class="mode-switch" role="group" aria-label="Что показать на карте">
+          <button type="button" data-map-mode="clarity" class="is-active" data-native-press>Голос</button>
+          <button type="button" data-map-mode="boom" data-native-press>Бас</button>
+          <button type="button" data-map-mode="decay" data-native-press>Эхо</button>
         </div>
         <button class="text-button" id="editRoomButton" type="button" data-native-press>Размеры</button>
       </div>
@@ -84,9 +85,9 @@
           <span class="result-chevron" aria-hidden="true">›</span>
         </button>
         <div class="result-metrics" aria-label="Основные показатели">
-          <div><small>Хвост</small><strong id="metricDecay">—</strong></div>
-          <div><small>Гул</small><strong id="metricBoom">—</strong></div>
-          <div><small>Шум</small><strong id="metricNoise">—</strong></div>
+          <div><small>Эхо</small><strong id="metricDecay">—</strong></div>
+          <div><small>Бас</small><strong id="metricBoom">—</strong></div>
+          <div><small>Фон</small><strong id="metricNoise">—</strong></div>
         </div>
       </section>
     </section>
@@ -127,17 +128,18 @@
       <div class="screen-scroll guide-content selectable-content">
         <div class="guide-hero">
           <span class="guide-wave" aria-hidden="true"></span>
-          <p>ОТКЛИК сравнивает точки одной комнаты. Это не сертифицированный шумомер, а честная полевая лаборатория.</p>
+          <p>Сначала задай форму комнаты, затем сравни несколько точек. ОТКЛИК ищет не «идеальный сертификат», а место, где реально лучше слышно.</p>
         </div>
         <ol class="guide-steps">
-          <li><span>01</span><div><strong>Убери наушники</strong><p>Сигнал должен выйти из динамика телефона и вернуться в его микрофон.</p></div></li>
-          <li><span>02</span><div><strong>Положи телефон</strong><p>Экраном вверх, не в руке и не вплотную к стене. Громкость — примерно 70%.</p></div></li>
-          <li><span>03</span><div><strong>Замри на четыре секунды</strong><p>Приложение запишет фон, прогонит короткий свип и измерит остаточный хвост.</p></div></li>
-          <li><span>04</span><div><strong>Сравни несколько точек</strong><p>Абсолютные цифры приблизительны, относительная разница между точками — главная ценность.</p></div></li>
+          <li><span>01</span><div><strong>Определи форму</strong><p>Нажми «Форма»: обведи план пальцем, сфотографируй схему или запусти AR/LiDAR на поддерживаемом устройстве.</p></div></li>
+          <li><span>02</span><div><strong>Убери наушники</strong><p>Сигнал должен выйти из динамика телефона и вернуться в его микрофон.</p></div></li>
+          <li><span>03</span><div><strong>Положи телефон</strong><p>Экраном вверх, не в руке и не вплотную к стене. Громкость — примерно 70%.</p></div></li>
+          <li><span>04</span><div><strong>Замри на четыре секунды</strong><p>Приложение запишет фон, прогонит короткий свип и измерит, что делает с ним комната.</p></div></li>
+          <li><span>05</span><div><strong>Повтори в других местах</strong><p>Сравнение точек важнее абсолютных цифр. После замера приложение даст конкретное действие, а не шаманство про «акустическую сцену».</p></div></li>
         </ol>
         <div class="accuracy-note">
-          <strong>Что реально считается</strong>
-          <p>Уровень фонового шума, перекос восьми частотных полос, низкочастотный избыток, ранняя/поздняя энергия и оценка времени затухания.</p>
+          <strong>Три простых режима</strong>
+          <p><b>Голос</b> — насколько разборчива речь. <b>Бас</b> — где низкие частоты гудят или проваливаются. <b>Эхо</b> — как долго звук остаётся после сигнала.</p>
         </div>
       </div>
     </section>
@@ -165,14 +167,14 @@
     <section class="bottom-sheet" id="roomSheet" hidden aria-labelledby="roomTitle" data-ui>
       <div class="sheet-handle" aria-hidden="true"></div>
       <header class="sheet-header">
-        <div><small>ГЕОМЕТРИЯ</small><h2 id="roomTitle">Размеры комнаты</h2></div>
+        <div><small>ГАБАРИТЫ</small><h2 id="roomTitle">Размеры комнаты</h2></div>
         <button class="icon-button" type="button" data-close-sheet aria-label="Закрыть" data-native-press>×</button>
       </header>
       <div class="sheet-body room-fields">
-        <label class="dimension-field"><span>Ширина</span><input id="roomWidthInput" type="number" min="1.5" max="30" step="0.1" inputmode="decimal"><b>м</b></label>
-        <label class="dimension-field"><span>Длина</span><input id="roomLengthInput" type="number" min="1.5" max="30" step="0.1" inputmode="decimal"><b>м</b></label>
+        <label class="dimension-field"><span>Ширина габарита</span><input id="roomWidthInput" type="number" min="1.5" max="30" step="0.1" inputmode="decimal"><b>м</b></label>
+        <label class="dimension-field"><span>Длина габарита</span><input id="roomLengthInput" type="number" min="1.5" max="30" step="0.1" inputmode="decimal"><b>м</b></label>
         <label class="dimension-field"><span>Потолок</span><input id="roomHeightInput" type="number" min="1.8" max="8" step="0.1" inputmode="decimal"><b>м</b></label>
-        <p class="field-help">Размеры меняют пропорции плана и расчёт объёма. Форма комнаты пока прямоугольная — без архитектурного фэнтези.</p>
+        <p class="field-help">Это внешний габарит формы. Ниши и скошенные стены задаются через кнопку «Форма» на карте.</p>
         <button class="primary-sheet-button" id="saveRoomButton" type="button" data-native-press>Применить</button>
       </div>
     </section>
@@ -186,20 +188,20 @@
       <div class="sheet-body result-body">
         <div class="score-orbit">
           <span id="resultScore">—</span>
-          <small>индекс речи</small>
+          <small>ясность голоса</small>
         </div>
         <div class="diagnosis" id="diagnosisText"></div>
         <div class="metric-grid">
-          <div><small>Затухание</small><strong id="detailDecay">—</strong><span>ориентир RT</span></div>
-          <div><small>Басовый избыток</small><strong id="detailBoom">—</strong><span>к середине</span></div>
-          <div><small>Фоновый шум</small><strong id="detailNoise">—</strong><span>относительный dBFS</span></div>
-          <div><small>Ранняя энергия</small><strong id="detailClarity">—</strong><span>к поздней</span></div>
+          <div><small>Сколько длится эхо</small><strong id="detailDecay">—</strong><span>после окончания сигнала</span></div>
+          <div><small>Насколько гудит бас</small><strong id="detailBoom">—</strong><span>относительно середины</span></div>
+          <div><small>Насколько тихо вокруг</small><strong id="detailNoise">—</strong><span>относительный уровень</span></div>
+          <div><small>Прямой звук против отражений</small><strong id="detailClarity">—</strong><span>выше — разборчивее</span></div>
         </div>
         <div class="spectrum-panel">
-          <header><strong>Частотный отпечаток</strong><small>относительно середины</small></header>
+          <header><strong>Какие частоты выпирают</strong><small>0 — средний уровень</small></header>
           <div class="spectrum-bars" id="spectrumBars"></div>
         </div>
-        <div class="precision-row"><span>Доверие к замеру</span><strong id="precisionLabel">—</strong></div>
+        <div class="precision-row"><span>Насколько замеру можно верить</span><strong id="precisionLabel">—</strong></div>
         <button class="sheet-action danger" id="deleteMeasurementButton" type="button" data-native-press>Удалить этот замер</button>
       </div>
     </section>
@@ -248,7 +250,7 @@
       <div class="modal-card">
         <small>НЕОБРАТИМО</small>
         <h2 id="confirmClearTitle">Стереть комнату?</h2>
-        <p>Размеры и все замеры исчезнут. Экспорт перед этим — не самая плохая идея.</p>
+        <p>Форма, размеры и все замеры исчезнут. Экспорт перед этим — не самая плохая идея.</p>
         <div class="modal-actions">
           <button type="button" class="secondary-button" data-close-modal data-native-press>Оставить</button>
           <button type="button" class="danger-button" id="confirmClearButton" data-native-press>Стереть</button>
@@ -265,8 +267,12 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ОТКЛИК"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
   <script src="./app.js" type="module"></script>
+  <script src="./scanner-core.js"></script>
+  <script src="./scanner-ui.js"></script>
+  <script src="./scanner-ar.js"></script>
+  <script src="./scanner-output.js"></script>
 </body>
 </html>

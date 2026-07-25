@@ -1,19 +1,24 @@
 const CACHE_PREFIX = 'otklik-';
-const CACHE_NAME = 'otklik-v1.0.0-p2';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'otklik-v1.1.0-p3';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-25';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
-  'Реальный акустический замер через динамик и микрофон телефона.',
-  'Карты разборчивости речи, басового гула и затухания.',
-  'Сравнение точек, частотный отпечаток, локальное сохранение и офлайн.'
+  'Форма комнаты по редактору углов, фото плана или WebXR AR/LiDAR.',
+  'Непрямоугольный контур карты и ограничение точек границами комнаты.',
+  'Понятные режимы Голос, Бас и Эхо с конкретными рекомендациями.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
+  './scanner.css',
   './app.js',
+  './scanner-core.js',
+  './scanner-ui.js',
+  './scanner-ar.js',
+  './scanner-output.js',
   './manifest.webmanifest',
   './README.md',
   './icons/icon.svg',
