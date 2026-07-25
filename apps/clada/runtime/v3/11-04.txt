@@ -1,0 +1,107 @@
+ [];
+  const spatial = livingCurrentSpatial = livingSpatialIndex(.085);
+
+  for (const plant of state.plants) {
+    plant.phase += .025;
+    plant.energy = clamp(plant.energy + .0062 * plantGrowthFactor(plant), 0, 4.5);
+    if (plant.energy < .08 && random() < .0012 * state.env.food) {
+      const replacement = createLivingPlants(1)[0];
+      if (replacement) Object.assign(plant, replacement);
+    }
+  }
+  for (const micro of state.microResources) {
+    micro.phase += .032;
+    micro.energy = clamp(micro.energy + .004 * state.env.food * (.65 + Math.sin(state.season / 12 * TAU) * .2), 0, 3.4);
+    if (!terrainAt(micro.x, micro.y).water) {
+      const point = preferredPoint({ ...makeGenome(), waterAffinity: .98, moisture: .9 });
+      micro.x = point.x; micro.y = point.y;
+    }
+  }
+  for (const corpse of state.carrion) corpse.energy -= .0028;
+  state.carrion = state.carrion.filter((corpse) => corpse.energy > .08).slice(-90);
+  const resourceIndex = {
+    plants: livingItemIndex(state.plants),
+    carrion: livingItemIndex(state.carrion),
+    micro: livingItemIndex(state.microResources)
+  };
+
+  for (const organism of state.organisms) {
+    if (organism.energy <= 0) continue;
+    enrichGenome(organism.genome);
+    organism.age += 1;
+    organism.lifeStage = organism.age < 150 ? 'juvenile' : organism.age > 1500 ? 'elder' : 'adult';
+    const neighbors = spatial.nearby(organism, .17);
+    const resources = livingFindResources(organism, neighbors, resourceIndex);
+    const competitor = neighbors.find((other) => other !== organism && other.speciesId !== organism.speciesId && distanceSq(organism.x, organism.y, other.x, other.y) < .04 ** 2 && Math.abs(other.genome.plantDiet - organism.genome.plantDiet) + Math.abs(other.genome.preyDiet - organism.genome.preyDiet) < .42);
+    if (competitor) {
+      livingIncrement(interactionBucket(organism.speciesId).competitors, competitor.speciesId, .02);
+      livingIncrement(interactionBucket(competitor.speciesId).competitors, organism.speciesId, .02);
+    }
+    livingApplyBehavior(organism, resources, neighbors);
+    livingMovementAndCost(organism);
+    livingFeed(organism, resources, resourceIndex);
+
+    const terrain = terrainAt(organism.x, organism.y);
+    const currentRegion = terrain.region;
+    if (currentRegion !== organism.homeRegion && organism.genome.migration < .44) organism.energy -= .0012;
+    const maxAge = 2250 + (1.45 - organism.genome.metabolism) * 900 + organism.genome.armor * 260 + organism.genome.parentalCare * 110;
+    if (organism.age > maxAge) { organism.energy -= .075; organism.cause ||= 'старение'; }
+    if (organism.energy <= 0) organism.cause ||= 'голод';
+
+    const ambientForage = terrain.water
+      ? organism.genome.filterDiet * .0032 * state.env.food
+      : organism.genome.plantDiet * (.45 + terrain.moisture) * .0021 * state.env.food;
+    organism.energy += ambientForage;
+    const terrainFitness = habitatFitness(organism.genome, terrain);
+    const reproductionThreshold = 6.8 + organism.genome.size * 2.05 + organism.genome.armor * .85 + organism.genome.parentalCare * 1.05;
+    const seasonWindow = .45 + (1 - Math.abs(state.season - 5.5) / 6) * .55;
+    const fertilityChance = .00305 * organism.genome.fertility * terrainFitness * (.72 + seasonWindow * .42);
+    if (organism.energy > reproductionThreshold && organism.age > 185 && random() < fertilityChance) births.push(organism);
+  }
+
+  const capacity = Math.max(0, MAX_ORGANISMS - state.organisms.length);
+  births.slice(0, capacity).forEach(reproduce);
+  const dead = state.organisms.filter((organism) => organism.energy <= 0);
+  if (dead.length) {
+    state.statistics.deaths += dead.length;
+    state.lastDeathCause = dead.at(-1).cause || 'неизвестно';
+    for (const organism of dead) {
+      state.mortality[organism.speciesId] ||= {};
+      livingIncrement(state.mortality[organism.speciesId], organism.cause || 'неизвестно');
+      state.carrion.push({ x: organism.x, y: organism.y, energy: clamp(organism.genome.size * 2.1, .7, 4), speciesId: organism.speciesId, age: 0 });
+      if (random() < .28 && state.plants.length < 170 && !terrainAt(organism.x, organism.y).water) {
+        state.plants.push({ x: organism.x, y: organism.y, energy: .7, phase: randomRange(0, TAU), kind: 2, foodType: 'leaf' });
+      }
+    }
+    state.organisms = state.organisms.filter((organism) => organism.energy > 0);
+    if (state.selectedId && !state.organisms.some((organism) => organism.id === state.selectedId)) clearSelection();
+  }
+
+  if (state.shock) {
+    state.shock.remaining -= 1;
+    state.shock.strength = clamp(state.shock.remaining / state.shock.total, 0, 1);
+    if (state.shock.remaining <= 0) {
+      state.events.push({ generation: state.generation, type: 'recovery', text: 'Среда стабилизировалась' });
+      state.shock = null;
+      showToast('Среда стабилизировалась');
+    }
+  }
+  if (state.step % 22 === 0) updateReadouts();
+  if (state.step % GENERATION_STEPS === 0) { state.generation += 1; finalizeGeneration(); }
+  livingCurrentSpatial = null;
+};
+
+function livingCentroid(organisms) {
+  if (!organisms.length) return null;
+  const centroid = deepClone(organisms[0].genome);
+  const keys = ['size', 'speed', 'vision', 'metabolism', 'thermal', 'diet', 'armor', 'fertility', 'pattern', ...EXTRA, ...LIVING.genomeKeys];
+  for (const key of keys) centroid[key] = organisms.reduce((sum, organism) => sum + organism.genome[key], 0) / organisms.length;
+  const sx = organisms.reduce((sum, organism) => sum + Math.cos(organism.genome.hue / 360 * TAU), 0);
+  const sy = organisms.reduce((sum, organism) => sum + Math.sin(organism.genome.hue / 360 * TAU), 0);
+  centroid.hue = (Math.atan2(sy, sx) / TAU * 360 + 360) % 360;
+  centroid.chromosome = Math.round(organisms.reduce((sum, organism) => sum + organism.genome.chromosome, 0) / organisms.length);
+  return enrichGenome(centroid);
+}
+
+function livingPromotePopulation(population, members) {
+  c
