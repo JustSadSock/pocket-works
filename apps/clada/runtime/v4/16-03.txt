@@ -1,0 +1,172 @@
+      for (const trait of Object.keys(existing.traits)) {
+        existing.traits[trait] = (existing.traits[trait] * existing.abundance + (deme.traits[trait] || 0) * deme.abundance) / total;
+      }
+      existing.abundance = total;
+      existing.age = Math.max(existing.age, deme.age);
+      existing.isolation = Math.max(existing.isolation, deme.isolation);
+      deme.abundance = 0;
+      deme.mergedInto = existing.id;
+    }
+  }
+
+  function landscapeConnectivity(source, target, deme) {
+    if (!source || !target) return 0;
+    const distance = Math.hypot((source.x || 0) - (target.x || 0), (source.y || 0) - (target.y || 0));
+    let value = clamp(1 - distance / .62, .04, 1);
+    if (source.water !== target.water) {
+      if (deme.guild === 'amphibian' || deme.guild === 'flyer') value *= .58;
+      else value *= .04;
+    } else if (source.water && target.water) value *= source.coast || target.coast ? .9 : .72;
+    if (source.biome === 'highland' || target.biome === 'highland') value *= deme.guild === 'flyer' ? .78 : .38;
+    return value;
+  }
+
+  function applyDispersal(community) {
+    const migrants = [];
+    const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    for (const deme of community.demes) {
+      if (deme.abundance < 3.5) continue;
+      const source = patchMap.get(deme.patchId);
+      if (!source) continue;
+      let targets = community.patches
+        .filter((p) => p.id !== source.id && canUsePatch(deme, p))
+        .map((p) => ({ patch: p, connectivity: landscapeConnectivity(source, p, deme) }))
+        .filter((entry) => entry.connectivity > .08);
+      if (!targets.length) continue;
+      const crowd = clamp((deme.abundance - (deme.carryingCapacity || 10) * .68) / Math.max(4, deme.carryingCapacity || 10), 0, 1);
+      const pulseChance = clamp(.008 + deme.traits.migration * .028 + crowd * .045, .006, .085);
+      if (nextRandom(community) > pulseChance) continue;
+      targets.sort((a, b) => {
+        const bScore = habitatCompatibility(deme.traits, b.patch, deme.guild) * b.connectivity;
+        const aScore = habitatCompatibility(deme.traits, a.patch, deme.guild) * a.connectivity;
+        return bScore - aScore;
+      });
+      const pool = targets.slice(0, Math.min(4, targets.length));
+      const targetEntry = pool[Math.floor(nextRandom(community) * pool.length)];
+      const moved = Math.min(deme.abundance * .13, Math.max(.35, deme.abundance * dispersalRate(deme) * (1.8 + nextRandom(community) * 2.8)));
+      if (moved < .28) continue;
+      deme.abundance -= moved;
+      migrants.push({ source, target: targetEntry.patch, deme, abundance: moved, connectivity: targetEntry.connectivity });
+    }
+    for (const move of migrants) {
+      let targetDeme = community.demes.find((d) => d.speciesId === move.deme.speciesId && d.patchId === move.target.id && d.guild === move.deme.guild && d.abundance > 0);
+      if (!targetDeme) {
+        targetDeme = {
+          id: community.nextDemeId++, speciesId: move.deme.speciesId, patchId: move.target.id,
+          guild: move.deme.guild, abundance: 0, age: 0, traits: { ...move.deme.traits }, anchor: { ...move.deme.traits },
+          isolation: 0, geneFlow: .62, lowYears: 0, founded: community.generation, colonizationSource: move.deme.id
+        };
+        community.demes.push(targetDeme);
+        community.metrics.colonizations += 1;
+        community.events.push({ generation: community.generation, type: 'colonization', speciesId: targetDeme.speciesId, patchId: targetDeme.patchId });
+      }
+      const total = targetDeme.abundance + move.abundance;
+      for (const key of Object.keys(targetDeme.traits)) targetDeme.traits[key] = (targetDeme.traits[key] * targetDeme.abundance + move.deme.traits[key] * move.abundance) / total;
+      targetDeme.abundance = total;
+      targetDeme.geneFlow = clamp((targetDeme.geneFlow || 0) * .58 + .28 * move.connectivity);
+      move.deme.geneFlow = clamp((move.deme.geneFlow || 0) * .65 + .08 * move.connectivity);
+    }
+    mergeDuplicateDemes(community);
+  }
+
+  function homogenizeGeneFlow(community) {
+    const bySpecies = new Map();
+    for (const deme of community.demes.filter((d) => d.abundance > .1)) {
+      if (!bySpecies.has(deme.speciesId)) bySpecies.set(deme.speciesId, []);
+      bySpecies.get(deme.speciesId).push(deme);
+    }
+    const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    for (const demes of bySpecies.values()) {
+      for (const deme of demes) {
+        const sourcePatch = patchMap.get(deme.patchId);
+        let flow = 0;
+        for (const other of demes) {
+          if (other === deme) continue;
+          const near = (sourcePatch?.neighbors || []).includes(other.patchId);
+          const samePatch = other.patchId === deme.patchId;
+          if (!near && !samePatch) continue;
+          const similarity = clamp(1 - vectorDistance(deme.traits, other.traits) * 1.8);
+          const connectivity = landscapeConnectivity(sourcePatch, patchMap.get(other.patchId), deme);
+          const exchange = (samePatch ? .045 : .008) * similarity * connectivity * Math.min(1, other.abundance / 8);
+          flow += exchange;
+          for (const key of Object.keys(deme.traits)) deme.traits[key] = lerp(deme.traits[key], other.traits[key], exchange * .08);
+        }
+        deme.geneFlow = clamp((deme.geneFlow || 0) * .76 + flow * .24);
+      }
+    }
+  }
+
+  function guildOpportunity(community, patch, guild) {
+    if ((guild === 'filterer') !== Boolean(patch.water)) return 0;
+    if (guild === 'burrower' && patch.water) return 0;
+    if (guild === 'predator') {
+      const prey = community.demes.filter((d) => d.patchId === patch.id && d.guild !== 'predator' && d.abundance > .2).reduce((sum, d) => sum + d.abundance, 0);
+      return clamp((prey - 10) / 25);
+    }
+    const occupied = community.demes.filter((d) => d.patchId === patch.id && d.guild === guild && d.abundance > 1).reduce((sum, d) => sum + d.abundance, 0);
+    const cap = patchBaseCapacity(patch) * guildCapacityMultiplier(guild);
+    return clamp(1 - occupied / Math.max(4, cap));
+  }
+
+  function seedAdaptiveRadiation(community) {
+    const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    const livingRichness = community.species.filter((s) => !s.extinct && (s.abundance || 0) > .5).length;
+    const candidates = [...community.demes]
+      .filter((d) => d.abundance >= Math.max(8, (d.carryingCapacity || 14) * .42) && d.age >= 8)
+      .sort((a, b) => b.abundance - a.abundance);
+    let created = 0;
+    for (const source of candidates) {
+      if (created >= (livingRichness <= 2 ? 2 : 1)) break;
+      const sourcePatch = patchMap.get(source.patchId);
+      if (!sourcePatch) continue;
+      const allowed = sourcePatch.water
+        ? ['filterer', 'amphibian', 'predator', 'scavenger']
+        : ['grazer', 'browser', 'burrower', 'flyer', 'predator', 'scavenger', 'amphibian'];
+      const options = allowed
+        .filter((guild) => guild !== source.guild)
+        .map((guild) => ({ guild, opportunity: guildOpportunity(community, sourcePatch, guild) }))
+        .filter((entry) => entry.opportunity > .42)
+        .sort((a, b) => b.opportunity - a.opportunity);
+      if (!options.length) continue;
+      const mutation = clamp(community.env.mutation || 0);
+      const rarityBoost = livingRichness <= 2 ? .01 : livingRichness <= 5 ? .0045 : .0014;
+      const chance = rarityBoost + mutation * (livingRichness <= 2 ? .009 : .0032);
+      if (nextRandom(community) > chance) continue;
+      const choice = options[Math.floor(nextRandom(community) * Math.min(3, options.length))];
+      const founder = Math.min(source.abundance * .16, 2.6 + nextRandom(community) * 2.8);
+      if (founder < 2.2) continue;
+      source.abundance -= founder;
+      const traits = { ...source.traits };
+      const optimum = patchOptimum(sourcePatch, choice.guild);
+      for (const key of Object.keys(optimum)) traits[key] = clamp(lerp(traits[key] ?? optimum[key], optimum[key], .48 + choice.opportunity * .18));
+      const existing = community.demes.find((d) => d.speciesId === source.speciesId && d.patchId === source.patchId && d.guild === choice.guild && d.abundance > 0);
+      if (existing) {
+        existing.abundance += founder;
+      } else {
+        community.demes.push({
+          id: community.nextDemeId++, speciesId: source.speciesId, patchId: source.patchId,
+          guild: choice.guild, abundance: founder, age: 0, traits, anchor: { ...traits },
+          isolation: .04, geneFlow: .18, lowYears: 0, founded: community.generation,
+          nicheShiftSource: source.id, nicheOpportunity: choice.opportunity, establishmentUntil: community.generation + 22
+        });
+        community.events.push({ generation: community.generation, type: 'niche-shift', speciesId: source.speciesId, patchId: source.patchId, guild: choice.guild });
+        created += 1;
+      }
+    }
+    mergeDuplicateDemes(community);
+  }
+
+  function speciationProposals(community) {
+    const proposals = [];
+    const bySpecies = new Map();
+    for (const deme of community.demes.filter((d) => d.abundance >= 1)) {
+      if (!bySpecies.has(deme.speciesId)) bySpecies.set(deme.speciesId, []);
+      bySpecies.get(deme.speciesId).push(deme);
+    }
+    const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    const livingSpecies = community.species.filter((s) => !s.extinct).length;
+    for (const [speciesId, demes] of bySpecies) {
+      if (demes.length < 2) continue;
+      const species = community.species.find((s) => s.id === speciesId);
+      if (!species || species.extinct) continue;
+      let best = null;

@@ -1,0 +1,172 @@
+/* КЛАДА 4.0 — метапопуляционная экология и макроэволюция. */
+globalThis.CladaMetacommunityCore = (() => {
+  const MODEL_VERSION = 2;
+  const GUILDS = ['grazer', 'browser', 'predator', 'scavenger', 'filterer', 'amphibian', 'burrower', 'flyer'];
+  const BASAL_GUILDS = new Set(['grazer', 'browser', 'filterer', 'burrower', 'flyer', 'amphibian', 'scavenger']);
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const hash = (value) => {
+    let x = value | 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return x >>> 0;
+  };
+  const nextRandom = (community) => {
+    community.rng = hash(community.rng || 123456789);
+    return community.rng / 4294967296;
+  };
+  const gauss = (community) => {
+    const u = Math.max(1e-8, nextRandom(community));
+    const v = Math.max(1e-8, nextRandom(community));
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
+  };
+
+  function guildFromGenome(genome = {}, niche = '') {
+    const label = String(niche || '').toLowerCase();
+    if (label.includes('filter') || label.includes('фильтр')) return 'filterer';
+    if (label.includes('hunter') || label.includes('хищ') || label.includes('добыч')) return 'predator';
+    if (label.includes('scav') || label.includes('падал')) return 'scavenger';
+    if (label.includes('amph') || label.includes('земнов')) return 'amphibian';
+    if (label.includes('burrow') || label.includes('нор')) return 'burrower';
+    if (label.includes('fly') || label.includes('крыл')) return 'flyer';
+    if (label.includes('browser')) return 'browser';
+    const filter = genome.filterDiet || 0;
+    const prey = genome.preyDiet ?? Math.max(0, ((genome.diet || 0) - .25) * 1.34);
+    const carrion = genome.carrionDiet || 0;
+    const plant = genome.plantDiet ?? Math.max(0, 1 - (genome.diet || 0) * .83);
+    if (filter > .58 && (genome.waterAffinity || genome.aquatic || 0) > .58) return 'filterer';
+    if (prey > .64 && prey > plant * 1.22) return 'predator';
+    if (carrion > .68 && carrion > prey) return 'scavenger';
+    if ((genome.waterAffinity || 0) > .38 && (genome.waterAffinity || 0) < .78) return 'amphibian';
+    if ((genome.burrow || 0) > .64) return 'burrower';
+    if ((genome.wing || 0) > .62) return 'flyer';
+    if ((genome.size || 1) > 1.13) return 'browser';
+    return 'grazer';
+  }
+
+  function traitVector(genome = {}) {
+    return {
+      thermal: clamp(genome.thermal ?? .52),
+      moisture: clamp(genome.moisture ?? .48),
+      altitude: clamp(genome.altitude ?? .35),
+      water: clamp(genome.waterAffinity ?? genome.aquatic ?? 0),
+      size: clamp(((genome.size ?? 1) - .42) / 1.3),
+      speed: clamp(((genome.speed ?? 1) - .28) / 1.52),
+      prey: clamp(genome.preyDiet ?? genome.diet ?? 0),
+      plant: clamp(genome.plantDiet ?? 1 - (genome.diet ?? 0)),
+      filter: clamp(genome.filterDiet ?? 0),
+      carrion: clamp(genome.carrionDiet ?? 0),
+      nocturnal: clamp(genome.nocturnal ?? 0),
+      mateChoice: clamp(genome.mateChoice ?? 0),
+      migration: clamp(genome.migration ?? .45),
+      fertility: clamp((genome.fertility ?? 1) / 1.7),
+      parentalCare: clamp(genome.parentalCare ?? 0),
+      armor: clamp(genome.armor ?? 0),
+      social: clamp(genome.cooperation ?? genome.social ?? 0)
+    };
+  }
+
+  function vectorDistance(a = {}, b = {}) {
+    const weights = {
+      thermal: 1.15, moisture: .75, altitude: .68, water: 1.5, size: .52, speed: .35,
+      prey: 1.18, plant: 1.05, filter: 1.15, carrion: .65, nocturnal: .24,
+      mateChoice: .3, migration: .22, fertility: .18, parentalCare: .18, armor: .2, social: .18
+    };
+    let sum = 0, total = 0;
+    for (const [key, weight] of Object.entries(weights)) {
+      sum += ((a[key] || 0) - (b[key] || 0)) ** 2 * weight;
+      total += weight;
+    }
+    return Math.sqrt(sum / total);
+  }
+
+  function patchOptimum(patch, guild) {
+    const water = patch.water ? .92 : patch.coast ? .42 : .08;
+    const optimum = {
+      thermal: patch.temperature,
+      moisture: patch.water ? .9 : patch.moisture,
+      altitude: patch.elevation,
+      water,
+      size: guild === 'browser' ? .67 : guild === 'predator' ? .55 : guild === 'filterer' ? .24 : guild === 'burrower' ? .18 : .42,
+      speed: guild === 'predator' || guild === 'flyer' ? .65 : guild === 'burrower' ? .28 : .47,
+      prey: guild === 'predator' ? .88 : guild === 'amphibian' ? .42 : guild === 'scavenger' ? .3 : .06,
+      plant: guild === 'grazer' || guild === 'browser' || guild === 'burrower' ? .88 : guild === 'flyer' ? .45 : guild === 'amphibian' ? .42 : .1,
+      filter: guild === 'filterer' ? .92 : .04,
+      carrion: guild === 'scavenger' ? .9 : guild === 'predator' ? .28 : .1,
+      nocturnal: patch.biome === 'desert' ? .68 : guild === 'burrower' ? .58 : .32,
+      mateChoice: guild === 'flyer' ? .68 : .42,
+      migration: guild === 'flyer' || guild === 'amphibian' ? .68 : guild === 'browser' ? .46 : .38,
+      fertility: guild === 'predator' || guild === 'browser' ? .46 : .63,
+      parentalCare: guild === 'predator' || guild === 'browser' ? .62 : .38,
+      armor: guild === 'browser' || guild === 'burrower' ? .48 : .25,
+      social: guild === 'grazer' || guild === 'predator' ? .58 : .35
+    };
+    return optimum;
+  }
+
+  function habitatCompatibility(traits, patch, guild) {
+    const optimum = patchOptimum(patch, guild);
+    const mismatch = vectorDistance(traits, optimum);
+    let hard = 1;
+    if (patch.water && traits.water < .42 && guild !== 'flyer') hard *= .08 + traits.water * .32;
+    if (!patch.water && traits.water > .8 && guild !== 'amphibian' && guild !== 'flyer') hard *= .12 + (1 - traits.water) * .35;
+    if (guild === 'filterer' && !patch.water) hard *= patch.coast ? .25 : .03;
+    if (guild === 'burrower' && patch.water) hard *= .06;
+    return clamp((1 - mismatch * 1.42) * hard, .015, 1);
+  }
+
+  function guildResource(guild) {
+    if (guild === 'filterer') return 'plankton';
+    if (guild === 'scavenger') return 'detritus';
+    if (guild === 'predator') return 'prey';
+    if (guild === 'amphibian') return 'mixed';
+    return 'vegetation';
+  }
+
+  function patchBaseCapacity(patch) {
+    return {
+      ocean: 42, shallows: 48, wetland: 38, forest: 44, grassland: 48,
+      scrub: 29, desert: 18, highland: 22, snow: 15
+    }[patch.biome] || 28;
+  }
+
+  function guildCapacityMultiplier(guild) {
+    return {
+      grazer: 1, browser: .78, predator: .24, scavenger: .34,
+      filterer: 1.08, amphibian: .58, burrower: .62, flyer: .55
+    }[guild] || .6;
+  }
+
+  function ensureCommunity(community) {
+    community.modelVersion = MODEL_VERSION;
+    community.generation ||= 0;
+    community.rng ||= 123456789;
+    community.env ||= { food: .62, mutation: .24, temperature: .52 };
+    community.patches ||= [];
+    community.species ||= [];
+    community.demes ||= [];
+    community.resources ||= {};
+    community.events ||= [];
+    community.nextDemeId ||= Math.max(0, ...community.demes.map((d) => d.id || 0)) + 1;
+    community.metrics ||= { speciations: 0, localExtinctions: 0, colonizations: 0 };
+    for (const patch of community.patches) {
+      const base = patchBaseCapacity(patch);
+      const resource = community.resources[patch.id] ||= {};
+      resource.vegetation ??= base * (.55 + community.env.food * .7) * (patch.water ? .12 : 1);
+      resource.plankton ??= base * (.5 + community.env.food * .82) * (patch.water ? 1.18 : patch.coast ? .32 : .04);
+      resource.detritus ??= base * .22;
+    }
+    for (const species of community.species) {
+      species.traits ||= traitVector(species.genome || species.centroid || {});
+      species.anchor ||= { ...species.traits };
+      species.guild ||= guildFromGenome(species.genome || species.centroid || {}, species.niche);
+      species.extinctionDebt ||= 0;
+      species.lastSpeciationGeneration ??= species.born || 0;
+    }
+    for (const deme of community.demes) {
+      const species = community.species.find((s) => s.id === deme.speciesId);
+      deme.guild ||= species?.guild || 'grazer';
+      deme.traits ||= { ...(species?.traits || traitVector({})) };
+      deme.anchor ||= { ...deme.traits };
+      deme.abundance = Math.max(0, Number(deme.abundance) || 0);
+      deme.age ||= 0;
+      deme.isolation ||= 0;

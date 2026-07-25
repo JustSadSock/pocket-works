@@ -1,0 +1,169 @@
+      for (const deme of demes) {
+        if (deme.abundance < 5.5 || deme.age < 16) continue;
+        const others = demes.filter((d) => d !== deme && d.abundance >= 4);
+        if (!others.length) continue;
+        const nearest = others.sort((a, b) => vectorDistance(deme.traits, a.traits) - vectorDistance(deme.traits, b.traits))[0];
+        const genetic = vectorDistance(deme.traits, species.anchor || species.traits);
+        const ecological = vectorDistance(deme.traits, nearest.traits);
+        const patch = patchMap.get(deme.patchId), otherPatch = patchMap.get(nearest.patchId);
+        const spatial = patch && otherPatch ? Math.hypot((patch.x || 0) - (otherPatch.x || 0), (patch.y || 0) - (otherPatch.y || 0)) : 0;
+        const habitatSplit = Boolean(patch && otherPatch && (patch.water !== otherPatch.water || patch.biome !== otherPatch.biome));
+        const guildSplit = deme.guild !== nearest.guild;
+        const lowFlow = clamp(1 - (deme.geneFlow || 0) * 2.4);
+        const physical = clamp(spatial / .48) * .42 + (habitatSplit ? .34 : 0);
+        const ecologicalSignal = ecological * 1.25 + (guildSplit ? .34 : 0);
+        const signal = genetic * .9 + ecologicalSignal + physical;
+        const separated = lowFlow > .52 && (physical > .2 || ecologicalSignal > .15);
+        deme.isolationAge = separated ? (deme.isolationAge || 0) + 1 : Math.max(0, (deme.isolationAge || 0) - ((deme.geneFlow || 0) > .28 ? 3 : 1));
+        const durationGain = clamp((deme.isolationAge || 0) / 48) * .009;
+        const gain = (Math.max(0, signal - .08) * .018 + durationGain) * lowFlow;
+        const loss = (deme.geneFlow || 0) * .032 + (!separated ? .006 : 0);
+        deme.isolation = clamp((deme.isolation || 0) + gain - loss);
+        deme.divergence = genetic;
+        deme.ecologicalDivergence = ecological;
+        deme.spatialIsolation = spatial;
+        deme.speciationProgress = clamp(deme.isolation / .74);
+        const lineageCooldown = community.generation - (species.lastSpeciationGeneration || species.born || 0);
+        const mode = habitatSplit && spatial > .18 ? 'allopatric' : guildSplit || ecological > .16 ? 'ecological' : 'reproductive';
+        const threshold = livingSpecies <= 2 ? .6 : livingSpecies <= 6 ? .67 : .72;
+        const eligible = deme.isolation >= threshold && (deme.isolationAge || 0) >= (livingSpecies <= 2 ? 18 : 28) && genetic >= .025 && (ecological >= .045 || guildSplit || habitatSplit) && (deme.geneFlow || 0) <= .2 && lineageCooldown >= 28;
+        if (eligible && (!best || deme.isolation > best.isolation)) best = { speciesId, demeId: deme.id, mode, isolation: deme.isolation };
+      }
+      if (best) proposals.push(best);
+    }
+    return proposals.sort((a, b) => b.isolation - a.isolation).slice(0, 1);
+  }
+
+  function applySpeciation(community, proposal, newSpecies) {
+    const deme = community.demes.find((d) => d.id === proposal.demeId);
+    const parent = community.species.find((s) => s.id === proposal.speciesId);
+    if (!deme || !parent) return false;
+    const species = {
+      id: newSpecies.id,
+      parentId: parent.id,
+      born: community.generation,
+      extinct: false,
+      guild: deme.guild,
+      traits: { ...deme.traits },
+      anchor: { ...deme.traits },
+      niche: newSpecies.niche || deme.guild,
+      lastSpeciationGeneration: community.generation,
+      appSpeciesId: newSpecies.id
+    };
+    community.species.push(species);
+    deme.speciesId = species.id;
+    deme.anchor = { ...deme.traits };
+    deme.isolation = 0;
+    deme.isolationAge = 0;
+    deme.geneFlow = 0;
+    deme.age = 0;
+    parent.lastSpeciationGeneration = community.generation;
+    community.metrics.speciations += 1;
+    community.events.push({ generation: community.generation, type: 'speciation', speciesId: species.id, parentId: parent.id, mode: proposal.mode, patchId: deme.patchId });
+    return true;
+  }
+
+  function extinctionAndCleanup(community) {
+    for (const deme of community.demes) {
+      if (deme.abundance < .45) deme.lowYears = (deme.lowYears || 0) + 1;
+      else deme.lowYears = 0;
+      if (deme.lowYears >= 7 && deme.abundance > 0) {
+        deme.abundance = 0;
+        community.metrics.localExtinctions += 1;
+        community.events.push({ generation: community.generation, type: 'local-extinction', speciesId: deme.speciesId, patchId: deme.patchId });
+      }
+    }
+    community.demes = community.demes.filter((d) => d.abundance > .02 || (d.lowYears || 0) < 10);
+    for (const species of community.species) {
+      const abundance = community.demes.filter((d) => d.speciesId === species.id).reduce((sum, d) => sum + d.abundance, 0);
+      species.abundance = abundance;
+      if (abundance < .5) species.extinctionDebt = (species.extinctionDebt || 0) + 1;
+      else species.extinctionDebt = 0;
+      if (!species.extinct && species.extinctionDebt >= 9) {
+        species.extinct = true;
+        species.extinctGeneration = community.generation;
+        community.events.push({ generation: community.generation, type: 'extinction', speciesId: species.id });
+      }
+    }
+  }
+
+  function advance(community) {
+    ensureCommunity(community);
+    community.generation += 1;
+    regenerateResources(community);
+    const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    const updates = new Map();
+    for (const patch of community.patches) {
+      const demes = activeDemesInPatch(community, patch.id);
+      if (!demes.length) continue;
+      const predation = predatorPressure(community, patch, demes);
+      const patchUpdates = resourceGrowth(community, patch, demes, predation);
+      for (const [id, data] of patchUpdates) updates.set(id, data);
+      community.resources[patch.id].detritus += [...predation.losses.values()].reduce((s, x) => s + x, 0) * .32;
+    }
+    for (const deme of community.demes) {
+      const before = deme.abundance;
+      const update = updates.get(deme.id);
+      if (update) {
+        deme.abundance = update.expected;
+        deme.carryingCapacity = update.carryingCapacity;
+        deme.compatibility = update.compatibility;
+        deme.foodRatio = update.foodRatio;
+        deme.predationLoss = update.predation;
+      } else {
+        deme.abundance *= .9;
+      }
+      deme.trend = deme.abundance - before;
+      deme.age += 1;
+      const patch = patchMap.get(deme.patchId);
+      if (patch) adaptDeme(community, deme, patch);
+    }
+    seedAdaptiveRadiation(community);
+    applyDispersal(community);
+    homogenizeGeneFlow(community);
+    mergeDuplicateDemes(community);
+    const proposals = speciationProposals(community);
+    extinctionAndCleanup(community);
+    community.events = community.events.slice(-220);
+    return { proposals };
+  }
+
+  function summarize(community) {
+    ensureCommunity(community);
+    const living = community.species.filter((s) => !s.extinct && (s.abundance || 0) >= .5);
+    const guilds = {};
+    const patches = {};
+    for (const deme of community.demes) {
+      if (deme.abundance <= .05) continue;
+      guilds[deme.guild] = (guilds[deme.guild] || 0) + deme.abundance;
+      patches[deme.patchId] = (patches[deme.patchId] || 0) + deme.abundance;
+    }
+    return {
+      generation: community.generation,
+      richness: living.length,
+      abundance: living.reduce((sum, s) => sum + (s.abundance || 0), 0),
+      demes: community.demes.filter((d) => d.abundance > .05).length,
+      occupiedPatches: Object.keys(patches).length,
+      guilds,
+      patches
+    };
+  }
+
+  return {
+    MODEL_VERSION,
+    GUILDS,
+    BASAL_GUILDS,
+    clamp,
+    lerp,
+    guildFromGenome,
+    traitVector,
+    vectorDistance,
+    patchOptimum,
+    habitatCompatibility,
+    guildOpportunity,
+    ensureCommunity,
+    advance,
+    applySpeciation,
+    summarize
+  };
+})();

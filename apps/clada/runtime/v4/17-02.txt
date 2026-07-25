@@ -1,0 +1,198 @@
+function metaDemeTargetCounts() {
+  const meta = metaEnsureState();
+  if (!meta) return new Map();
+  const active = meta.demes.filter((deme) => deme.abundance > .25).sort((a, b) => b.abundance - a.abundance);
+  const total = active.reduce((sum, deme) => sum + deme.abundance, 0);
+  const budget = Math.min(MAX_ORGANISMS, Math.max(Math.min(active.length, 70), Math.round(Math.sqrt(Math.max(1, total)) * 8)));
+  const selected = active.slice(0, budget);
+  const targets = new Map(selected.map((deme) => [deme.id, 1]));
+  let remaining = Math.max(0, budget - selected.length);
+  const weights = selected.map((deme) => ({ deme, weight: Math.pow(deme.abundance, .68) }));
+  const totalWeight = weights.reduce((sum, entry) => sum + entry.weight, 0) || 1;
+  for (const entry of weights) {
+    const extra = Math.min(18, Math.floor(remaining * entry.weight / totalWeight));
+    targets.set(entry.deme.id, (targets.get(entry.deme.id) || 0) + extra);
+  }
+  let assigned = [...targets.values()].reduce((sum, value) => sum + value, 0);
+  let cursor = 0;
+  while (assigned < budget && weights.length) {
+    const entry = weights[cursor % weights.length];
+    if ((targets.get(entry.deme.id) || 0) < 20) { targets.set(entry.deme.id, targets.get(entry.deme.id) + 1); assigned += 1; }
+    cursor += 1;
+    if (cursor > budget * 30) break;
+  }
+  return targets;
+}
+
+function metaCreateRepresentative(deme, juvenile = false) {
+  const patch = metaPatchById(deme.patchId);
+  const species = state.species.find((entry) => entry.id === deme.speciesId);
+  if (!patch || !species) return null;
+  const point = metaPointInPatch(patch, patch.water || deme.traits.water > .62);
+  const genome = metaGenomeFromTraits(deme.traits, species.centroid);
+  const organism = makeOrganism({
+    x: point.x, y: point.y, genome, speciesId: species.id,
+    generation: Math.max(0, state.generation - Math.floor(randomRange(0, 4))),
+    energy: juvenile ? randomRange(6.5, 9) : randomRange(9, 14)
+  });
+  organism.macroDemeId = deme.id;
+  organism.populationId = deme.appPopulationId || null;
+  organism.homeRegion = patch.region;
+  organism.sex = genome.reproStrategy < .18 ? 'none' : random() < .5 ? 'f' : 'm';
+  organism.lifeStage = juvenile ? 'juvenile' : 'adult';
+  organism.age = juvenile ? randomRange(20, 130) : randomRange(190, 980);
+  return organism;
+}
+
+function metaReconcileRepresentatives({ soft = false } = {}) {
+  if (metaReconciling || !state?.metacommunity) return;
+  metaReconciling = true;
+  try {
+    const targets = metaDemeTargetCounts();
+    const validDemeIds = new Set(targets.keys());
+    const groups = new Map();
+    for (const organism of state.organisms) {
+      const deme = metaDemeForOrganism(organism);
+      if (!deme || !validDemeIds.has(deme.id)) continue;
+      organism.macroDemeId = deme.id;
+      if (!groups.has(deme.id)) groups.set(deme.id, []);
+      groups.get(deme.id).push(organism);
+    }
+    const retained = [];
+    for (const [demeId, target] of targets) {
+      const deme = state.metacommunity.demes.find((entry) => entry.id === demeId);
+      const current = groups.get(demeId) || [];
+      const keep = soft ? current : current.slice(0, target);
+      for (const organism of keep) {
+        const patch = metaPatchById(deme.patchId);
+        organism.speciesId = deme.speciesId;
+        organism.populationId = deme.appPopulationId || organism.populationId;
+        organism.macroDemeId = deme.id;
+        const currentPatch = metaPatchIdAt(organism.x, organism.y);
+        const terrain = terrainAt(organism.x, organism.y);
+        const wrongMedium = Boolean(patch?.water) !== Boolean(terrain.water) && deme.guild !== 'amphibian' && deme.guild !== 'flyer';
+        if (currentPatch !== deme.patchId || wrongMedium) {
+          const point = metaPointInPatch(patch, patch?.water || deme.traits.water > .62);
+          organism.x = point.x; organism.y = point.y;
+          organism.vx *= .15; organism.vy *= .15;
+        }
+        retained.push(organism);
+      }
+      const missing = Math.max(0, target - keep.length);
+      for (let index = 0; index < missing; index += 1) {
+        const organism = metaCreateRepresentative(deme, index % 5 === 0);
+        if (organism) retained.push(organism);
+      }
+    }
+    if (soft) {
+      const retainedIds = new Set(retained.map((organism) => organism.id));
+      for (const organism of state.organisms) {
+        if (retainedIds.has(organism.id)) continue;
+        const deme = metaDemeForOrganism(organism);
+        if (deme && validDemeIds.has(deme.id) && retained.length < MAX_ORGANISMS) retained.push(organism);
+      }
+    }
+    state.organisms = retained.slice(0, MAX_ORGANISMS);
+  } finally {
+    metaReconciling = false;
+  }
+}
+
+function metaSyncVisibleTraitsIntoCommunity() {
+  const meta = metaEnsureState();
+  if (!meta) return;
+  const groups = new Map();
+  for (const organism of state.organisms) {
+    const deme = metaDemeForOrganism(organism);
+    if (!deme) continue;
+    if (!groups.has(deme.id)) groups.set(deme.id, []);
+    groups.get(deme.id).push(organism);
+  }
+  for (const [demeId, members] of groups) {
+    const deme = meta.demes.find((entry) => entry.id === demeId);
+    if (!deme || members.length < 2) continue;
+    const observed = metaTraitsFromGenome(livingCentroid(members));
+    for (const key of Object.keys(deme.traits)) deme.traits[key] = lerp(deme.traits[key], observed[key] ?? deme.traits[key], .035);
+  }
+}
+
+function metaCreateAppSpecies(proposal) {
+  const meta = metaEnsureState();
+  const deme = meta.demes.find((entry) => entry.id === proposal.demeId);
+  const parent = state.species.find((entry) => entry.id === proposal.speciesId);
+  if (!deme || !parent) return null;
+  const genome = metaGenomeFromTraits(deme.traits, parent.centroid);
+  const id = metaLegacyNewSpecies(genome, parent.id);
+  const species = state.species.find((entry) => entry.id === id);
+  if (species) {
+    species.niche = deme.guild;
+    species.habitat = metaPatchById(deme.patchId)?.biome || null;
+    species.speciationMode = proposal.mode;
+    species.lineageAnchor = deepClone(genome);
+  }
+  META.applySpeciation(meta, proposal, { id, niche: deme.guild });
+  return id;
+}
+
+function metaSyncPopulationRecords() {
+  const meta = metaEnsureState();
+  const active = meta.demes.filter((deme) => deme.abundance > .05);
+  const records = [];
+  for (const deme of active) {
+    const patch = metaPatchById(deme.patchId);
+    let id = deme.appPopulationId;
+    if (!id) {
+      id = state.nextPopulationId++;
+      deme.appPopulationId = id;
+    }
+    records.push({
+      id, macroDemeId: deme.id, speciesId: deme.speciesId, region: patch?.region || deme.patchId,
+      patchId: deme.patchId, centroid: metaGenomeFromTraits(deme.traits, state.species.find((species) => species.id === deme.speciesId)?.centroid),
+      founded: deme.founded, lastSeen: state.generation, isolation: deme.isolationAge || 0,
+      divergence: deme.divergence || 0, ecologicalDivergence: deme.ecologicalDivergence || 0,
+      reproductiveIsolation: deme.isolation || 0, speciationProgress: deme.speciationProgress || 0,
+      geneFlowEMA: deme.geneFlow || 0, size: Math.max(1, Math.round(deme.abundance)), macroAbundance: metaRound(deme.abundance),
+      previousSize: Math.max(0, Math.round(deme.abundance - (deme.trend || 0))), trend: metaRound(deme.trend),
+      status: (deme.speciationProgress || 0) >= .78 ? 'diverging' : deme.abundance < 2 ? 'fragile' : 'stable',
+      adaptiveRole: ({ grazer: 'plant', browser: 'plant', predator: 'prey', scavenger: 'carrion', filterer: 'filter', amphibian: 'plant', burrower: 'plant', flyer: 'plant' })[deme.guild] || 'plant',
+      ecotype: `${deme.guild}:${patch?.water ? 'water' : patch?.coast ? 'coast' : 'land'}`,
+      center: { x: patch?.x || .5, y: patch?.y || .5 }, carryingCapacity: metaRound(deme.carryingCapacity),
+      compatibility: metaRound(deme.compatibility), foodRatio: metaRound(deme.foodRatio), predationLoss: metaRound(deme.predationLoss)
+    });
+  }
+  state.populations = records;
+  for (const organism of state.organisms) {
+    const deme = metaDemeForOrganism(organism);
+    if (deme) organism.populationId = deme.appPopulationId;
+  }
+}
+
+function metaSyncSpeciesRecords() {
+  const meta = metaEnsureState();
+  for (const macroSpecies of meta.species) {
+    const appSpecies = state.species.find((entry) => entry.id === macroSpecies.id);
+    if (!appSpecies) continue;
+    const speciesDemes = meta.demes.filter((deme) => deme.speciesId === macroSpecies.id && deme.abundance > .02);
+    const abundance = speciesDemes.reduce((sum, deme) => sum + deme.abundance, 0);
+    if (abundance > 0 && speciesDemes.length) {
+      const traits = {};
+      for (const key of Object.keys(speciesDemes[0].traits)) traits[key] = speciesDemes.reduce((sum, deme) => sum + (deme.traits[key] || 0) * deme.abundance, 0) / abundance;
+      macroSpecies.traits = traits;
+    }
+    macroSpecies.abundance = abundance;
+    appSpecies.currentCount = Math.round(abundance);
+    appSpecies.peak = Math.max(appSpecies.peak || 1, Math.round(abundance));
+    appSpecies.trend = Math.round(meta.demes.filter((deme) => deme.speciesId === macroSpecies.id).reduce((sum, deme) => sum + (deme.trend || 0), 0));
+    appSpecies.centroid = metaGenomeFromTraits(macroSpecies.traits, appSpecies.centroid);
+    appSpecies.niche = macroSpecies.guild;
+    if (!macroSpecies.extinct && abundance >= .5) {
+      appSpecies.extinct = null;
+      appSpecies.lastSeen = state.generation;
+      appSpecies.cause = null;
+    } else if (macroSpecies.extinct && appSpecies.extinct === null) {
+      appSpecies.extinct = macroSpecies.extinctGeneration || state.generation;
+      appSpecies.cause = 'исчезновение всех локальных популяций';
+      state.events.push({ generation: state.generation, type: 'extinction', speciesId: appSpecies.id, text: `Исчез ${appSpecies.common}` });
+    }
+  }
+}
