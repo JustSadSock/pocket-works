@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "causa",
+  "name": "КАУЗА",
+  "shortName": "КАУЗА",
+  "description": "Лаборатория причинных систем: применяет контрфактические шоки, находит петли обратной связи и реальные точки рычага.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-25",
+  "releaseDateTime": "2026-07-25T14:30:00+02:00",
+  "changelog": [
+    "Добавлена интерактивная карта причинных факторов с прямыми шоками через вертикальное перетаскивание.",
+    "Добавлены три полных сценария: распад империи, гонка сильного ИИ и коллапс торговой сети.",
+    "Добавлены редактор факторов и связей, трассировка результата, поиск петель и скан точек рычага.",
+    "Добавлены локальное сохранение, JSON-импорт и экспорт, звук, Workshop Mode и полный офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#174f69",
+  "backgroundColor": "#ded8ca",
+  "themeColor": "#ded8ca",
+  "orientation": "any",
+  "cacheName": "causa-v1.0.0",
+  "storageNamespace": "pocket-works:causa",
+  "tags": ["simulation", "systems", "history", "analysis", "causal", "offline", "workshop"],
+  "order": 44
+}
