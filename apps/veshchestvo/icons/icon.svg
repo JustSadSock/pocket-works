@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eee8dc"/><stop offset="1" stop-color="#c7bfae"/></linearGradient>
+    <radialGradient id="core" cx="42%" cy="34%"><stop stop-color="#ffd18a"/><stop offset=".45" stop-color="#df6b2f"/><stop offset="1" stop-color="#7d3528"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="92" fill="url(#paper)"/>
+  <rect x="44" y="44" width="424" height="424" rx="64" fill="#1c2a2f" stroke="#6f746e" stroke-width="12"/>
+  <path d="M105 112h302v288H105z" fill="#0a1419" stroke="#b8ae9d" stroke-width="8"/>
+  <path d="M116 318c58-46 104-4 146-35 42-31 70-87 134-88v194H116z" fill="#6d726b"/>
+  <path d="M116 347c67-5 95 45 153 8 38-24 74-75 127-59v93H116z" fill="#3a6f91"/>
+  <circle cx="286" cy="265" r="75" fill="url(#core)"/>
+  <path d="M286 144v242M165 265h242" stroke="#f1e3c5" stroke-width="9" stroke-linecap="round" opacity=".8"/>
+  <circle cx="286" cy="265" r="30" fill="#f6c56d" stroke="#2e2520" stroke-width="8"/>
+  <text x="86" y="94" fill="#2d393c" font-family="Georgia,serif" font-size="42" font-weight="700">V</text>
+</svg>

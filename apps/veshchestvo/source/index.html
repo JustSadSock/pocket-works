@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#d8d2c4" />
+  <meta name="description" content="ВЕЩЕСТВО — мобильная лаборатория материалов, реакций и взаимодействующих частиц." />
+  <title>ВЕЩЕСТВО</title>
+  <link rel="icon" href="./icons/icon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-rail">
+      <div class="brand"><span class="brand-mark">V</span><span><b>ВЕЩЕСТВО</b><small id="worldTitle">материальная лаборатория</small></span></div>
+      <div class="top-actions">
+        <button id="undoBtn" title="Отменить">↶</button><button id="redoBtn" title="Повторить">↷</button>
+        <button id="snapshotBtn" title="Снимок">▣</button><button id="libraryBtn" title="Библиотека">☰</button>
+      </div>
+    </header>
+
+    <section id="simFrame" class="sim-frame">
+      <canvas id="world"></canvas><canvas id="effects"></canvas>
+      <div id="taskBadge" class="task-badge" hidden></div>
+      <div id="coach" class="coach" hidden></div>
+      <aside id="sensorPanel" class="sensor-panel" hidden>
+        <b>Датчик</b><span id="sensorReadout">—</span><canvas id="sensorGraph"></canvas>
+      </aside>
+      <div class="layer-badge"><span id="layerLabel">Обычный</span></div>
+      <button id="resetCameraBtn" class="floating-reset" title="Сбросить камеру">⌂</button>
+    </section>
+
+    <section class="control-deck">
+      <div class="time-strip">
+        <button id="rewindBtn" title="Назад на несколько секунд">⏪</button>
+        <button id="playBtn" class="primary">Ⅱ</button>
+        <button id="stepBtn" title="Один шаг">▸·</button>
+        <button id="speedBtn"><span id="speedLabel">×1</span></button>
+        <button id="gravityBtn" title="Повернуть гравитацию">↓</button>
+        <button id="cameraBtn" title="Камера">✥</button>
+      </div>
+
+      <div class="material-head">
+        <button id="inspectorBtn" class="selected-material"><span id="selectedSwatch" class="sample-chip"></span><span><b id="selectedName">Песок</b><small>нажмите для свойств</small></span></button>
+        <label class="brush-control"><span>Ø <b id="brushValue">5</b></span><input id="brushSize" type="range" min="1" max="18" value="5" /></label>
+        <button id="toolsBtn" class="tool-launch"><span id="toolName">Кисть</span><b>⌘</b></button>
+      </div>
+
+      <div class="category-strip" role="tablist">
+        <button data-category="Все" class="active">Все</button><button data-category="Недавние">Недавние</button><button data-category="Избранное">Избранное</button><button data-category="Сыпучие">Сыпучие</button><button data-category="Жидкости">Жидкости</button><button data-category="Газы">Газы</button><button data-category="Твёрдые">Твёрдые</button><button data-category="Биология">Биология</button><button data-category="Пользовательские">Свои</button>
+      </div>
+      <div class="search-line"><input id="materialSearch" type="search" placeholder="Поиск вещества" /><button id="synthesisBtn">СИНТЕЗ +</button></div>
+      <div id="materialTray" class="material-tray"></div>
+      <nav class="bottom-rail">
+        <button id="layersBtn"><b>◫</b><span>Слои</span></button>
+        <button id="copyBtn"><b>⌗</b><span>Копировать</span></button>
+        <button id="pasteBtn"><b>⧉</b><span>Вставить</span></button>
+        <button id="saveBtn"><b>◇</b><span>Сохранить</span></button>
+      </nav>
+    </section>
+  </main>
+
+  <section id="toolsSheet" class="sheet"><div class="sheet-handle"></div><header><div><small>ИНСТРУМЕНТЫ</small><h2>Работа с веществом</h2></div><button data-close="toolsSheet">×</button></header><div id="toolFan" class="tool-fan"></div></section>
+
+  <section id="layersSheet" class="sheet compact"><div class="sheet-handle"></div><header><div><small>АНАЛИТИКА</small><h2>Слой данных</h2></div><button data-close="layersSheet">×</button></header><div class="layer-grid">
+    <button data-layer="normal">Обычный вид</button><button data-layer="temperature">Температура</button><button data-layer="pressure">Давление</button><button data-layer="density">Плотность</button><button data-layer="velocity">Скорость</button><button data-layer="charge">Электрический заряд</button><button data-layer="acidity">Кислотность</button><button data-layer="oxygen">Кислород</button><button data-layer="reaction">Активные реакции</button><button data-layer="strength">Прочность</button>
+  </div></section>
+
+  <section id="inspectorSheet" class="sheet compact"><div class="sheet-handle"></div><header><div><small>ОБРАЗЕЦ</small><h2 id="inspectorTitle">Свойства вещества</h2></div><button data-close="inspectorSheet">×</button></header><div id="inspectorBody" class="inspector-body"></div></section>
+
+  <section id="librarySheet" class="sheet library-sheet"><div class="sheet-handle"></div><header><div><small>БИБЛИОТЕКА</small><h2>Миры и задачи</h2></div><button data-close="librarySheet">×</button></header>
+    <div class="library-tabs"><button class="active" onclick="document.querySelector('#sceneList').scrollIntoView({behavior:'smooth'})">Сцены</button><button onclick="document.querySelector('#taskList').scrollIntoView({behavior:'smooth'})">Задачи</button><button onclick="document.querySelector('#savedList').scrollIntoView({behavior:'smooth'})">Сохранённые</button></div>
+    <h3>Готовые эксперименты</h3><div id="sceneList" class="library-list"></div>
+    <h3>Задачи</h3><div id="taskList" class="library-list"></div>
+    <h3>Мои эксперименты</h3><div id="savedList" class="saved-list"></div>
+    <div class="import-row"><button id="exportBtn">Экспорт мира и веществ</button><button id="importBtn">Импорт</button><input id="importFile" type="file" accept="application/json" hidden /></div>
+    <div class="setting-row"><label><span>Звуки реакций</span><input id="soundToggle" type="checkbox" checked /></label><label><span>Вибрация</span><input id="hapticToggle" type="checkbox" checked /></label></div>
+    <button id="licensesBtn" class="license-link">Лицензии и атрибуция</button>
+  </section>
+
+  <section id="synthesisSheet" class="sheet synthesis-sheet"><div class="sheet-handle"></div><header><div><small>СИНТЕЗ</small><h2>Конструктор вещества</h2></div><button data-close="synthesisSheet">×</button></header>
+    <div class="synthesis-grid">
+      <fieldset><legend>1 · Основа</legend><label>Название<input id="synName" value="Новый материал" maxlength="32" /></label><label>Состояние<select id="synPhase"><option value="powder">Сыпучее</option><option value="liquid">Жидкость</option><option value="gas">Газ</option><option value="solid">Твёрдое</option></select></label><label>Цвет<input id="synColor" type="color" value="#b7895d" /></label><canvas id="synthesisPreview" width="320" height="110"></canvas></fieldset>
+      <fieldset><legend>2 · Механика</legend><label>Плотность<input id="synDensity" type="range" min="0.01" max="10" step="0.01" value="1.2" /></label><label>Вязкость<input id="synViscosity" type="range" min="0" max="1" step="0.01" value="0.2" /></label><label>Сцепление<input id="synCohesion" type="range" min="0" max="1" step="0.01" value="0.2" /></label><label>Сыпучесть<input id="synGranular" type="range" min="0" max="1" step="0.01" value="0.7" /></label><label>Прочность<input id="synStrength" type="range" min="0" max="1" step="0.01" value="0.5" /></label><label>Хрупкость<input id="synBrittleness" type="range" min="0" max="1" step="0.01" value="0.3" /></label></fieldset>
+      <fieldset><legend>3 · Температура</legend><label>Теплоёмкость<input id="synHeatCapacity" type="range" min="0.1" max="5" step="0.1" value="1" /></label><label>Теплопроводность<input id="synConductivity" type="range" min="0" max="1" step="0.01" value="0.1" /></label><label>Плавление °C<input id="synMelt" type="number" value="500" /></label><label>Кипение °C<input id="synBoil" type="number" value="1200" /></label><label>Воспламенение °C<input id="synIgnition" type="number" value="900" /></label><label>Горючесть<input id="synFlammability" type="range" min="0" max="1" step="0.01" value="0" /></label></fieldset>
+      <fieldset><legend>4 · Химия и биология</legend><label>Кислотность<input id="synAcidity" type="range" min="-1" max="1" step="0.05" value="0" /></label><label>Проводимость<input id="synElectrical" type="range" min="0" max="1" step="0.01" value="0" /></label><label>Токсичность<input id="synToxicity" type="range" min="0" max="1" step="0.01" value="0" /></label><label>Рост / размножение<input id="synGrowth" type="range" min="0" max="1" step="0.01" value="0" /></label><label>Прозрачность<input id="synOpacity" type="range" min="0.1" max="1" step="0.05" value="1" /></label><label class="switch"><span>Свечение</span><input id="synGlow" type="checkbox" /></label></fieldset>
+      <fieldset class="rule-editor"><legend>5 · Правило реакции</legend><div class="rule-sentence"><span>Когда касается</span><select id="ruleWith"></select><span>и температура выше</span><input id="ruleTemp" type="number" value="0" /><span>°C, с вероятностью</span><input id="ruleChance" type="number" min="0.01" max="1" step="0.01" value="0.5" /><span>превратить материал в</span><select id="ruleProduct"></select></div><div class="rule-effects"><label>Тепло<input id="ruleHeat" type="number" value="0" /></label><label>Давление<input id="rulePressure" type="number" value="0" /></label><label class="switch"><span>Нужен кислород</span><input id="ruleOxygen" type="checkbox" /></label><label class="switch"><span>Распространяться</span><input id="ruleSpread" type="checkbox" /></label></div></fieldset>
+    </div><p id="synWarning" class="warning" hidden></p><button id="synSave" class="save-synthesis">Сохранить в библиотеку</button>
+  </section>
+
+  <section id="licensesSheet" class="sheet compact"><div class="sheet-handle"></div><header><div><small>ПРАВОВАЯ ИНФОРМАЦИЯ</small><h2>Лицензии</h2></div><button data-close="licensesSheet">×</button></header><article class="license-copy"><p><b>ВЕЩЕСТВО</b> разработано как самостоятельное приложение Pocket Works. Код Sandspiel не копировался; проект использован как архитектурный и продуктовый референс для клеточных симуляций.</p><p><b>Sandspiel</b> © 2018 Max Bittker, лицензия MIT. Полный текст и список изменений находятся в файлах LICENSE и ATTRIBUTION.md приложения.</p></article></section>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script src="./runtime/core.js"></script>
+  <script src="./runtime/runtime-01.js"></script>
+  <script src="./runtime/runtime-02.js"></script>
+  <script src="./runtime/runtime-03.js"></script>
+  <script src="./runtime/runtime-04.js"></script>
+  <script src="./runtime/runtime-05.js"></script>
+  <script src="./runtime/runtime-06.js"></script>
+  <script src="./runtime/runtime-07.js"></script>
+  <script src="./runtime/runtime-08.js"></script>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
