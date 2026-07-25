@@ -1,5 +1,5 @@
-// FACET v1.8 configuration-aware runtime.
-for (const stylesheet of ['./v15.css', './v17.css', './v18-00.css', './v18-01.css']) {
+// FACET v1.9 multiview configuration-aware runtime.
+for (const stylesheet of ['./v15.css', './v17.css', './v18-00.css', './v18-01.css', './v19.css']) {
   const style = document.createElement('link');
   style.rel = 'stylesheet';
   style.href = new URL(stylesheet, import.meta.url).href;
@@ -19,6 +19,13 @@ async function readText(path) {
   const response = await fetch(new URL(path, import.meta.url), { cache: 'force-cache' });
   if (!response.ok) throw new Error(`FACET asset unavailable: ${response.status}`);
   return response.text();
+}
+
+async function readCompressedParts(paths) {
+  const encoded = (await Promise.all(paths.map(readText))).join('');
+  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
 }
 
 async function moduleUrlFromCompressed(path) {
@@ -52,12 +59,19 @@ return { ${engineExports.join(', ')} };
 })();
 const { ${engineExports.join(', ')} } = __facetEngine;
 ${appSource}`;
-source = source.replace(/const APP_VERSION = ['"]1\.5\.0['"];?/, "const APP_VERSION = '1.8.0';");
+source = source.replace(/const APP_VERSION = ['"]1\.5\.0['"];?/, "const APP_VERSION = '1.9.0';");
 source += `\n${await readCompressedText('./patch-v17.txt')}\n`;
 source += `\n${await readText('./rating-v17.js')}\n`;
 for (const patch of ['./ux-v18-00.txt', './ux-v18-01.txt', './ux-v18-02.txt']) {
   source += `\n${await readText(patch)}\n`;
 }
+source += `\n${await readCompressedParts([
+  './protocol-v19-p00.txt', './protocol-v19-p01.txt', './protocol-v19-p02.txt',
+  './protocol-v19-p03.txt', './protocol-v19-p04.txt', './protocol-v19-p05.txt',
+  './protocol-v19-p06.txt', './protocol-v19-p07.txt', './protocol-v19-p08.txt',
+  './protocol-v19-p09.txt', './protocol-v19-p10.txt', './protocol-v19-p11.txt'
+])}\n`;
+source += `\n${await readCompressedText('./ux-v19.txt')}\n`;
 
 const featureUrl = await moduleUrlFromCompressed('./feature-engine-v17.txt');
 const parserUrl = await moduleUrlFromCompressed('./face-parser-v17.txt');

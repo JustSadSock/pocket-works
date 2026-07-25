@@ -1,0 +1,257 @@
+/* FACET v1.9 — multiview protocol and 2.5D evidence */
+.facet-v19-depth-section,
+.facet-v19-abstention {
+  margin-top: clamp(30px, 8vw, 56px);
+  padding-top: clamp(24px, 6vw, 36px);
+  border-top: 1px solid var(--line);
+}
+.facet-v19-depth-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--blue) 7%, var(--surface)), color-mix(in srgb, var(--ochre) 7%, var(--surface)));
+}
+.facet-v19-depth-copy > span {
+  display: block;
+  color: var(--muted);
+  font: 750 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .09em;
+}
+.facet-v19-depth-copy > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(20px, 5vw, 30px);
+  line-height: 1.05;
+}
+.facet-v19-depth-copy > p {
+  max-width: 650px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.facet-v19-depth-gauges {
+  display: flex;
+  gap: 12px;
+}
+.facet-v19-view-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.facet-v19-view-item {
+  min-width: 0;
+  padding: 12px 10px;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+.facet-v19-view-icon {
+  display: grid;
+  width: 38px;
+  height: 42px;
+  margin-bottom: 10px;
+  place-items: center;
+  perspective: 100px;
+}
+.facet-v19-view-icon i {
+  display: block;
+  width: 25px;
+  height: 34px;
+  border: 1.5px solid var(--blue);
+  border-radius: 47% 47% 43% 43%;
+  transition: transform .3s ease;
+}
+.facet-v19-view-item span,
+.facet-v19-view-item small {
+  display: block;
+  color: var(--muted);
+  font: 700 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.facet-v19-view-item strong {
+  display: block;
+  min-height: 31px;
+  margin: 5px 0;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.facet-v19-depth-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, .82fr) minmax(0, 1.18fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+.facet-v19-depth-visual {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+.facet-v19-depth-visual svg {
+  display: block;
+  width: 100%;
+  max-height: 310px;
+}
+.facet-v19-depth-visual > p {
+  margin: 4px 8px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.facet-v19-depth-grid,
+.facet-v19-depth-axis {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+  stroke-width: 1;
+}
+.facet-v19-depth-shape {
+  fill: color-mix(in srgb, var(--blue) 14%, transparent);
+  stroke: var(--blue);
+  stroke-width: 2;
+}
+.facet-v19-depth-dot { fill: var(--ochre); stroke: var(--surface); stroke-width: 1.5; }
+.facet-v19-depth-label {
+  fill: var(--muted);
+  font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.facet-v19-depth-center {
+  fill: var(--ink);
+  font: 800 19px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.facet-v19-depth-center-sub {
+  fill: var(--muted);
+  font: 650 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.facet-v19-depth-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.facet-v19-depth-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+.facet-v19-depth-card > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.facet-v19-depth-card span {
+  color: var(--muted);
+  font: 750 9px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.facet-v19-depth-card small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+.facet-v19-depth-card > strong {
+  display: block;
+  margin-top: 9px;
+  font-size: 15px;
+}
+.facet-v19-depth-card > i {
+  display: block;
+  height: 3px;
+  margin-top: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.facet-v19-depth-card > i b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ochre), var(--blue));
+}
+.facet-v19-depth-card > p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.facet-v19-abstention-lead {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: center;
+  margin-top: 15px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--ochre);
+  background: color-mix(in srgb, var(--ochre) 7%, var(--surface));
+}
+.facet-v19-abstention-lead strong { font-size: 18px; }
+.facet-v19-abstention-lead p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.facet-v19-abstention-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.facet-v19-abstention-list article {
+  position: relative;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+}
+.facet-v19-abstention-list article > strong { display: block; padding-right: 100px; font-size: 13px; }
+.facet-v19-abstention-list article > span {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  color: var(--ochre);
+  font: 750 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+.facet-v19-abstention-list article > p,
+.facet-v19-abstention-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.camera-frame-dots,
+.scan-progress {
+  gap: 5px;
+}
+.camera-frame-dot,
+.scan-dot {
+  transition: transform .2s ease, background .2s ease, opacity .2s ease;
+}
+.session-frames {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.frame-evidence {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow-x: auto;
+}
+.frame-evidence-item {
+  min-width: 150px;
+}
+@media (max-width: 760px) {
+  .facet-v19-depth-summary { grid-template-columns: 1fr; }
+  .facet-v19-depth-gauges { justify-content: flex-start; }
+  .facet-v19-view-rail { display: flex; overflow-x: auto; }
+  .facet-v19-view-item { flex: 0 0 126px; }
+  .facet-v19-depth-layout { grid-template-columns: 1fr; }
+  .facet-v19-depth-metrics { grid-template-columns: 1fr 1fr; }
+  .facet-v19-abstention-lead { grid-template-columns: 1fr; }
+  .facet-v19-abstention-list { grid-template-columns: 1fr; }
+  .session-frames { display: flex; overflow-x: auto; }
+  .session-frame { flex: 0 0 112px; }
+}
+@media (max-width: 480px) {
+  .facet-v19-depth-metrics { grid-template-columns: 1fr; }
+  .facet-v19-depth-gauges { width: 100%; justify-content: space-between; }
+}
