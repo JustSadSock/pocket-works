@@ -4,21 +4,51 @@ contourStyles.rel = 'stylesheet';
 contourStyles.href = new URL('./v15.css', import.meta.url).href;
 document.head.append(contourStyles);
 
-const partUrls = [0, 1, 2, 3].map((index) => new URL(`./facet-v15-bundle-${index}.txt`, import.meta.url));
-const encoded = (await Promise.all(partUrls.map(async (url) => {
+const partNames = ['00', '01', '02', '03', '04', '05', '06a', '06b', '07', '08', '09', '10'];
+const encoded = (await Promise.all(partNames.map(async (name) => {
+  const url = new URL(`./facet-v15-c-${name}.txt`, import.meta.url);
   const response = await fetch(url, { cache: 'force-cache' });
   if (!response.ok) throw new Error(`FACET bundle part unavailable: ${response.status}`);
   return response.text();
 }))).join('');
+
 const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
 const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
 let source = await new Response(stream).text();
+
+// The compressed payload contains the geometry engine followed by the UI runtime.
+// Isolate the engine so its private math helpers cannot collide with UI helpers.
+const runtimeMarker = 'const { installMobileRuntime } = await import("__MOBILE_RUNTIME__");';
+const runtimeOffset = source.indexOf(runtimeMarker);
+if (runtimeOffset < 0) throw new Error('FACET runtime boundary is missing');
+const engineSource = source.slice(0, runtimeOffset);
+const appSource = source.slice(runtimeOffset);
+const engineExports = [
+  'blendshapeMap',
+  'boundingBoxFromLandmarks',
+  'combineAssessments',
+  'computeGeometryProfile',
+  'computeImageQuality',
+  'createScanAssessment',
+  'LANDMARK_GROUPS',
+  'qualityGate',
+  'ratingLabel'
+];
+source = `
+const __facetEngine = (() => {
+${engineSource}
+return { ${engineExports.join(', ')} };
+})();
+const { ${engineExports.join(', ')} } = __facetEngine;
+${appSource}`;
+
 const resolve = (path) => new URL(path, import.meta.url).href;
 source = source
   .replaceAll('__MOBILE_RUNTIME__', resolve('../../shared/mobile-runtime.js'))
   .replaceAll('__STORAGE__', resolve('../../shared/capabilities/storage.js'))
   .replaceAll('__WORKSHOP__', resolve('../../shared/workshop-mode.js'))
   .replaceAll('__PWA_UTILS__', resolve('../../shared/pwa-utils.js'));
+
 const moduleUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
 try {
   await import(moduleUrl);
