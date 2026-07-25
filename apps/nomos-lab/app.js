@@ -10,7 +10,7 @@ const [css,source]=await Promise.all([unpack('./styles-v2.txt'),unpack('./app-v2
 const legacy=document.querySelector('link[href*="styles.css"]');
 if(legacy)legacy.disabled=true;
 const style=document.createElement('style');
-style.dataset.nomosVersion='2.0.0';
+style.dataset.nomosVersion='2.1.0';
 style.textContent=css;
 document.head.append(style);
 const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
