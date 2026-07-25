@@ -1,0 +1,122 @@
+    button.addEventListener('click', () => {
+      __facetV18State.depth = key;
+      el.result.dataset.depth = key;
+      control.querySelectorAll('button').forEach((node) => node.classList.toggle('is-active', node === button));
+      if (key === 'full') document.getElementById('facet-v18-feature-explorer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    control.append(button);
+  });
+  return control;
+}
+
+function __facetV18Render() {
+  if (!combined || !finalized || !el.result) return;
+  el.result.querySelectorAll('[data-facet-v18]').forEach((node) => node.remove());
+  el.result.dataset.depth = __facetV18State.depth;
+
+  const descriptors = __facetV18DescriptorSource();
+  const relations = __facetV18Relations();
+  const configurations = __facetV18Configurations();
+  const uncertainty = __facetV18Uncertainty(descriptors, configurations);
+
+  const depth = __facetV18DepthControl();
+  depth.dataset.facetV18 = 'true';
+  const resultHeading = el.result.querySelector('.result-heading');
+  resultHeading?.append(depth);
+
+  const summary = __facetV18BuildSummary(descriptors, relations, configurations, uncertainty);
+  const explanation = __facetV18BuildExplanation(relations, configurations, uncertainty);
+  const explorer = __facetV18BuildFeatureExplorer(descriptors);
+  const relationSection = __facetV18BuildRelations(relations);
+  const protocol = __facetV18BuildProtocol(descriptors, uncertainty);
+  [summary, explanation, explorer, relationSection, protocol].filter(Boolean).forEach((node) => { node.dataset.facetV18 = 'true'; });
+
+  const scoreBlock = el.result.querySelector('.score-block');
+  scoreBlock?.after(summary, explanation);
+  const visual = el.result.querySelector('.visual-analysis');
+  if (visual) visual.after(explorer, ...(relationSection ? [relationSection] : []), protocol);
+  else el.result.append(explorer, ...(relationSection ? [relationSection] : []), protocol);
+
+  const frameSection = el.result.querySelector('.frame-section');
+  const profileSection = el.result.querySelector('.profile-section');
+  const detailSection = el.result.querySelector('.detail-section');
+  if (frameSection) protocol.after(frameSection);
+  const setNumber = (selector, value) => {
+    const node = el.result.querySelector(selector);
+    if (node) node.textContent = value;
+  };
+  setNumber('.visual-analysis .section-number', '05 · MAP');
+  setNumber('.frame-section .section-number', '09 · EVIDENCE');
+  setNumber('.profile-section .section-number', '10 · PROFILE');
+  setNumber('.detail-section .section-number', '11 · MEASUREMENTS');
+  const typicalityLabel = el.typicality?.previousElementSibling;
+  if (typicalityLabel) typicalityLabel.textContent = 'Центральность';
+  if (el.resultMode) el.resultMode.textContent = 'КОНФИГУРАЦИЯ · 3 КАДРА';
+
+  const stability = el.stabilityNote;
+  if (stability) {
+    stability.textContent = uncertainty.ambiguous
+      ? `Результат устойчив по кадрам, но типаж смешанный: разница двух ведущих конфигураций только ${uncertainty.configMargin} п.п.`
+      : `Итог подтверждён тремя кадрами. Минимальная опора среди показанных признаков — ${uncertainty.weakest ? Math.min(uncertainty.weakest.confidence, uncertainty.weakest.stability) : uncertainty.stability}%.`;
+  }
+}
+
+const __facetV18BaseRenderResult = renderResult;
+renderResult = function renderResultV18() {
+  __facetV18BaseRenderResult();
+  requestAnimationFrame(__facetV18Render);
+};
+
+function __facetV18Report() {
+  const descriptors = __facetV18DescriptorSource();
+  const relations = __facetV18Relations();
+  const configurations = __facetV18Configurations();
+  const uncertainty = __facetV18Uncertainty(descriptors, configurations);
+  const lines = [
+    'FACET v1.8 — конфигурационный отчёт',
+    '',
+    `Итог модели: ${combined.rating.toFixed(1)}/5 (${ratingLabel(combined.rating)}).`,
+    `Диапазон: ${combined.interval[0].toFixed(1)}–${combined.interval[1].toFixed(1)}.`,
+    `Надёжность серии: ${combined.reliability}%. Повторяемость: ${combined.consistency}%.`,
+    '',
+    'КОНФИГУРАЦИИ',
+    ...configurations.map((item, index) => `${index + 1}. ${item.label}: ${item.score}%${item.description ? ` — ${item.description}` : ''}`),
+    '',
+    'КЛЮЧЕВЫЕ СВЯЗИ',
+    ...relations.slice(0, 8).map((item) => `• ${item.label}: ${item.score}% — ${item.note}`),
+    '',
+    `ПРИЗНАКИ (${descriptors.length})`,
+    ...descriptors.map((item) => `• ${item.label}: ${item.classification}; уверенность ${item.confidence}%, повторяемость ${item.stability}%${item.evidence ? ` — ${item.evidence}` : ''}`),
+    '',
+    'ОГРАНИЧЕНИЯ',
+    uncertainty.lowEvidence.length
+      ? `Осторожнее интерпретировать: ${uncertainty.lowEvidence.map((item) => item.label).join(', ')}.`
+      : 'Критически слабых признаков в серии не обнаружено.',
+    'Выраженная черта не считается недостатком сама по себе. Итог описывает согласованность комбинаций, а не близость к одному идеальному лицу.'
+  ];
+  return lines.join('\n');
+}
+
+if (el.share) {
+  const __facetV18Share = el.share.cloneNode(true);
+  el.share.replaceWith(__facetV18Share);
+  el.share = __facetV18Share;
+  el.share.addEventListener('click', async () => {
+    if (!combined || !finalized) return;
+    const text = __facetV18Report();
+    try {
+      if (navigator.share) await navigator.share({ title: 'FACET — полный анализ', text });
+      else {
+        await navigator.clipboard.writeText(text);
+        toast('Полный отчёт скопирован.');
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') toast('Не удалось поделиться отчётом.');
+    }
+  });
+}
+
+const __facetV18Footer = document.querySelector('.app-footer span:first-child');
+if (__facetV18Footer) __facetV18Footer.textContent = 'FACET v1.8';
+const __facetV18Hero = document.querySelector('.hero > p:last-child');
+if (__facetV18Hero) __facetV18Hero.textContent = 'Три кадра. Пятнадцать признаков. Итог по сочетаниям, а не по одному идеалу.';

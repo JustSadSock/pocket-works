@@ -1,0 +1,173 @@
+// FACET v1.8 — layered result experience and uncertainty-first analytics.
+const __facetV18State = { depth: 'overview', filter: 'all' };
+
+function __facetV18Number(...values) {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return 0;
+}
+
+function __facetV18Percent(...values) {
+  return Math.round(clamp(__facetV18Number(...values), 0, 100));
+}
+
+function __facetV18Text(...values) {
+  return values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
+}
+
+function __facetV18Zone(value = '') {
+  const key = String(value).toLowerCase();
+  if (/eye|глаз/.test(key)) return 'eyes';
+  if (/brow|бров/.test(key)) return 'brows';
+  if (/nose|нос|center|центр/.test(key)) return 'center';
+  if (/lip|mouth|губ|рот/.test(key)) return 'mouth';
+  if (/jaw|chin|cheek|челю|подбор|скул/.test(key)) return 'lower';
+  return 'frame';
+}
+
+function __facetV18TraitLookup() {
+  return new Map((combined?.traits || []).map((item) => [item.key, item]));
+}
+
+function __facetV18DescriptorSource() {
+  const advanced = combined?.advanced || {};
+  const candidate = advanced.descriptors || combined?.descriptors || combined?.featureDetails || combined?.traits || [];
+  const source = Array.isArray(candidate) ? candidate : Object.values(candidate || {});
+  const traits = __facetV18TraitLookup();
+  const globalConfidence = __facetV18Percent(advanced.confidence, combined?.reliability, 70);
+  const globalStability = __facetV18Percent(advanced.landmarkStability, combined?.featureStability, combined?.geometryConsistency, combined?.consistency, 70);
+
+  return source.map((item, index) => {
+    const key = item.key || `feature-${index}`;
+    const trait = traits.get(key);
+    const label = __facetV18Text(item.label, item.name, trait?.label, traitTitle?.(key), key);
+    const classification = __facetV18Text(
+      item.classification,
+      item.typeLabel,
+      item.result,
+      item.title,
+      trait?.label,
+      item.level === 'distinctive' ? 'Выраженная особенность' : '',
+      item.level === 'moderate' ? 'Умеренная особенность' : '',
+      'Измерено'
+    );
+    const evidence = __facetV18Text(item.evidence, item.description, trait?.evidence, trait?.description);
+    const confidence = __facetV18Percent(item.confidence, trait?.confidence, globalConfidence);
+    const stability = __facetV18Percent(item.stability, trait?.stability, globalStability);
+    const z = Math.abs(__facetV18Number(item.z, item.signedZ, item.deviation, 0));
+    const salience = __facetV18Percent(item.salience, item.importance, item.weight ? item.weight * 100 : NaN, Math.min(100, 34 + z * 27));
+    const zone = __facetV18Zone(__facetV18Text(item.zone, item.group, item.category, key));
+    const value = __facetV18Text(item.valueText, item.displayValue, evidence);
+    return { key, label, classification, evidence, confidence, stability, salience, zone, value, raw: item };
+  });
+}
+
+function __facetV18Relations() {
+  const advanced = combined?.advanced || {};
+  const candidate = advanced.relations || combined?.interactions || combined?.relations || [];
+  const source = Array.isArray(candidate) ? candidate : Object.values(candidate || {});
+  return source.map((item, index) => ({
+    key: item.key || `relation-${index}`,
+    label: __facetV18Text(item.label, item.name, item.title, `Связь ${index + 1}`),
+    score: __facetV18Percent(item.score, item.coherence, item.compatibility, item.value, 50),
+    note: __facetV18Text(item.note, item.description, item.explanation, item.evidence, 'Согласованность соседних зон.'),
+    zone: __facetV18Zone(__facetV18Text(item.zone, item.key, item.label))
+  })).sort((left, right) => right.score - left.score);
+}
+
+function __facetV18Configurations() {
+  const advanced = combined?.advanced || {};
+  const candidate = advanced.configurations || advanced.families || advanced.archetypes || combined?.configurations || [];
+  const source = Array.isArray(candidate) ? candidate : Object.values(candidate || {});
+  if (source.length) {
+    return source.map((item, index) => ({
+      label: __facetV18Text(item.label, item.name, item.title, `Профиль ${index + 1}`),
+      score: __facetV18Percent(item.score, item.fit, item.compatibility, item.probability ? item.probability * 100 : NaN, index ? 62 : advanced.configurationScore),
+      description: __facetV18Text(item.description, item.note, item.explanation)
+    })).sort((left, right) => right.score - left.score).slice(0, 3);
+  }
+  const strongest = combined?.strongest || [];
+  return [{
+    label: __facetV18Text(strongest[0], advanced.configurationLabel, 'Смешанная конфигурация'),
+    score: __facetV18Percent(advanced.configurationScore, combined?.configurationScore, combined?.coordinationScore, 60),
+    description: 'Не один эталон, а наиболее согласованное сочетание измеренных черт.'
+  }];
+}
+
+function __facetV18Uncertainty(descriptors, configurations) {
+  const advanced = combined?.advanced || {};
+  const confidence = __facetV18Percent(advanced.confidence, combined?.reliability, 70);
+  const stability = __facetV18Percent(advanced.landmarkStability, combined?.featureStability, combined?.geometryConsistency, combined?.consistency, 70);
+  const configMargin = configurations.length > 1 ? Math.max(0, configurations[0].score - configurations[1].score) : 24;
+  const ambiguous = configMargin < 8;
+  const weakest = [...descriptors].sort((left, right) => (left.confidence + left.stability) - (right.confidence + right.stability))[0];
+  const lowEvidence = descriptors.filter((item) => Math.min(item.confidence, item.stability) < 64);
+  return { confidence, stability, configMargin, ambiguous, weakest, lowEvidence };
+}
+
+function __facetV18Node(name, className = '', text = '') {
+  const node = document.createElement(name);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+function __facetV18Gauge(value, label) {
+  const node = __facetV18Node('div', 'facet-v18-gauge');
+  node.style.setProperty('--value', `${clamp(value, 0, 100)}%`);
+  const ring = __facetV18Node('div', 'facet-v18-gauge-ring');
+  ring.append(__facetV18Node('strong', '', `${Math.round(value)}%`));
+  node.append(ring, __facetV18Node('span', '', label));
+  return node;
+}
+
+function __facetV18MetricRow(label, value, note = '') {
+  const row = __facetV18Node('div', 'facet-v18-breakdown-row');
+  const heading = __facetV18Node('div');
+  heading.append(__facetV18Node('strong', '', label), __facetV18Node('span', '', `${Math.round(value)}%`));
+  const track = __facetV18Node('i');
+  const fill = __facetV18Node('b');
+  fill.style.width = `${clamp(value, 0, 100)}%`;
+  track.append(fill);
+  row.append(heading, track);
+  if (note) row.append(__facetV18Node('p', '', note));
+  return row;
+}
+
+function __facetV18DescriptorCard(item) {
+  const card = __facetV18Node('button', 'facet-v18-feature-card');
+  card.type = 'button';
+  card.dataset.zone = item.zone;
+  card.dataset.filter = item.zone;
+  card.dataset.confidence = String(Math.min(item.confidence, item.stability));
+  const top = __facetV18Node('div', 'facet-v18-feature-top');
+  top.append(__facetV18Node('span', '', item.label), __facetV18Node('small', '', `${item.confidence}% увер. · ${item.stability}% повтор`));
+  const title = __facetV18Node('strong', '', item.classification);
+  const meters = __facetV18Node('div', 'facet-v18-mini-meters');
+  meters.innerHTML = `<i title="Уверенность"><b style="width:${item.confidence}%"></b></i><i title="Повторяемость"><b style="width:${item.stability}%"></b></i>`;
+  const evidence = __facetV18Node('p', '', item.evidence || item.value || 'Вывод сформирован по согласованным измерениям трёх кадров.');
+  const badge = __facetV18Node('em', '', item.salience >= 70 ? 'заметная черта' : item.salience >= 48 ? 'умеренная черта' : 'фоновая черта');
+  card.append(top, title, meters, evidence, badge);
+  card.addEventListener('click', () => {
+    const atlasZone = ({ frame: 'outline', lower: 'jaw', mouth: 'lips', center: 'nose' })[item.zone] || item.zone;
+    if (typeof highlightAtlas === 'function') highlightAtlas(atlasZone);
+    el.atlas?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  return card;
+}
+
+function __facetV18BuildSummary(descriptors, relations, configurations, uncertainty) {
+  const section = __facetV18Node('section', 'facet-v18-summary');
+  section.id = 'facet-v18-summary';
+  const heading = __facetV18Node('div', 'detail-heading');
+  const titleWrap = __facetV18Node('div');
+  titleWrap.innerHTML = '<p class="section-number">03 · READOUT</p><h3>Что определило результат</h3>';
+  heading.append(titleWrap, __facetV18Node('span', '', 'сначала вывод, затем доказательства'));
+
+  const lead = __facetV18Node('div', 'facet-v18-lead');
+  const config = configurations[0];
+  const relation = relations[0];
+  const configCopy = __facetV18Node('div', 'facet-v18-lead-copy');
+  configCopy.append(
