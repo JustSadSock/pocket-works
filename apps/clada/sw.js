@@ -1,19 +1,19 @@
 const CACHE_PREFIX = 'clada-';
-const CACHE_NAME = 'clada-v3.0.0';
-const APP_VERSION = '3.0.0';
+const CACHE_NAME = 'clada-v3.0.1';
+const APP_VERSION = '3.0.1';
 const RELEASE_DATE = '2026-07-25';
-const CACHE_PROTOCOL = 4;
+const CACHE_PROTOCOL = 5;
 const RELEASE_NOTES = [
-  'Стартовые миры теперь содержат несколько видов, локальные популяции и записанную предысторию.',
-  'Добавлены биомы, вода, сезонные реки, горы, влажность, высота и географическая изоляция.',
-  'Добавлены пищевая сеть, конкуренция, миграции, стаи, территории, засады, норы и сезонность.',
-  'Виды получают подробные паспорта с картой распространения, демографией, родственниками и причинами смертности.'
+  'Исправлено накопительное вырождение генома: эволюционные компромиссы больше не повторно уменьшают уже выраженные признаки каждого потомка.',
+  'Мутации стали редкими и малыми изменениями отдельных генов вместо обязательного сильного дрейфа всего генома при каждом рождении.',
+  'Малые популяции активнее находят партнёров, сохраняют сбалансированное соотношение полов и получают естественное преимущество от снижения конкуренции.',
+  'Старые миры после 24-го поколения автоматически восстанавливают повреждённые плодовитость, скорость и метаболический диапазон без возрождения уже вымерших видов.'
 ];
 const APP_SHELL = [
   './', './index.html', './app.config.json', './styles.css', './living.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop.js',
   './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
   './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js', './runtime/09-evolution-v2.js',
-  './runtime/v3/10-01.txt', './runtime/v3/10-02.txt', './runtime/v3/10-03.txt', './runtime/v3/10-04.txt', './runtime/v3/11-01.txt', './runtime/v3/11-02.txt', './runtime/v3/11-03-1.txt', './runtime/v3/11-03-2.txt', './runtime/v3/11-03-3.txt', './runtime/v3/11-04.txt', './runtime/v3/11-05-1.txt', './runtime/v3/11-05-2.txt', './runtime/v3/11-05-3.txt', './runtime/v3/11-06.txt', './runtime/v3/12-01.txt', './runtime/v3/12-02.txt', './runtime/v3/12-03.txt', './runtime/v3/12-04.txt', './runtime/v3/12-05.txt',
+  './runtime/v3/10-01.txt', './runtime/v3/10-02.txt', './runtime/v3/10-03.txt', './runtime/v3/10-04.txt', './runtime/v3/11-01.txt', './runtime/v3/11-02.txt', './runtime/v3/11-03-1.txt', './runtime/v3/11-03-2.txt', './runtime/v3/11-03-3.txt', './runtime/v3/11-04.txt', './runtime/v3/11-05-1.txt', './runtime/v3/11-05-2.txt', './runtime/v3/11-05-3.txt', './runtime/v3/11-06.txt', './runtime/v3/12-01.txt', './runtime/v3/12-02.txt', './runtime/v3/12-03.txt', './runtime/v3/12-04.txt', './runtime/v3/12-05.txt', './runtime/v3/13-stability.txt',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js', '../../shared/capabilities/audio.js', '../../shared/capabilities/device.js', '../../shared/capabilities/diagnostics.js'
