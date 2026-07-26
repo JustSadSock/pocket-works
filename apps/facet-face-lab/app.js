@@ -1,5 +1,5 @@
-// FACET v2.0 evidence-calibrated appearance runtime.
-for (const stylesheet of ['./v15.css', './v17.css', './v18-00.css', './v18-01.css', './v19.css', './v191.css', './v20.css']) {
+// FACET v2.1 adaptive appearance runtime.
+for (const stylesheet of ['./v15.css', './v17.css', './v18-00.css', './v18-01.css', './v19.css', './v191.css', './v20.css', './v21.css']) {
   const style = document.createElement('link');
   style.rel = 'stylesheet';
   style.href = new URL(stylesheet, import.meta.url).href;
@@ -59,7 +59,7 @@ return { ${engineExports.join(', ')} };
 })();
 const { ${engineExports.join(', ')} } = __facetEngine;
 ${appSource}`;
-source = source.replace(/const APP_VERSION = ['"]1\.5\.0['"];?/, "const APP_VERSION = '2.0.0';");
+source = source.replace(/const APP_VERSION = ['"]1\.5\.0['"];?/, "const APP_VERSION = '2.1.0';");
 source += `\n${await readCompressedText('./patch-v17.txt')}\n`;
 source += `\n${await readText('./rating-v17.js')}\n`;
 for (const patch of ['./ux-v18-00.txt', './ux-v18-01.txt', './ux-v18-02.txt']) {
@@ -74,6 +74,8 @@ source += `\n${await readCompressedParts([
 source += `\n${await readCompressedText('./ux-v19.txt')}\n`;
 source += `\n${await readText('./ux-v191.js')}\n`;
 source += `\n${await readText('./analysis-v20.js')}\n`;
+source += `\n${await readText('./analysis-v21-core.js')}\n`;
+source += `\n${await readText('./ui-v21.js')}\n`;
 
 const featureUrl = await moduleUrlFromCompressed('./feature-engine-v17.txt');
 const parserUrl = await moduleUrlFromCompressed('./face-parser-v17.txt');
