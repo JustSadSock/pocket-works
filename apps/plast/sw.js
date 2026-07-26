@@ -18,12 +18,21 @@ const APP_SHELL = [
   './app.js',
   './game.js',
   './engine.js',
+  './workshop.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
   '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css',
-  '../../shared/update-manager.js'
+  '../../shared/update-manager.js',
+  '../../shared/workshop-mode.css',
+  '../../shared/workshop-mode.js',
+  '../../shared/capabilities/motion.js',
+  '../../shared/capabilities/storage.js',
+  '../../shared/capabilities/transfer.js',
+  '../../shared/capabilities/audio.js',
+  '../../shared/capabilities/device.js',
+  '../../shared/capabilities/diagnostics.js'
 ];
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
