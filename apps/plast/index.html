@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4e7835">
+  <meta name="description" content="ПЛАСТ — мобильная voxel-песочница для горизонтального телефона.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПЛАСТ">
+  <title>ПЛАСТ</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="game-shell" id="gameShell" data-app-shell>
+    <canvas id="world" aria-label="Трёхмерный кубический мир"></canvas>
+    <div class="pixel-filter" aria-hidden="true"></div>
+    <div class="water-vignette" id="waterVignette" aria-hidden="true"></div>
+    <div class="damage-flash" id="damageFlash" aria-hidden="true"></div>
+
+    <section class="loading-screen" id="loadingScreen" aria-live="polite">
+      <div class="loading-cube" aria-hidden="true"><i></i><b></b><em></em></div>
+      <strong>СОБИРАЕМ МИР</strong>
+      <span id="loadingText">поднимаем рельеф</span>
+      <div class="loading-track"><i id="loadingBar"></i></div>
+    </section>
+
+    <section class="unsupported" id="unsupported" hidden>
+      <h1>3D не запустилось</h1>
+      <p>ПЛАСТ требует WebGL2. Открой приложение в актуальном Safari или Chrome.</p>
+      <a href="../../">Вернуться в Pocket Works</a>
+    </section>
+
+    <section class="title-screen overlay" id="titleScreen" hidden>
+      <div class="title-brand" aria-label="ПЛАСТ">
+        <small>КАРМАННЫЙ VOXEL-МИР</small>
+        <h1>ПЛАСТ</h1>
+        <p>Ломай. Ставь. Исследуй.<br>Мир остаётся твоим.</p>
+      </div>
+      <div class="title-actions">
+        <button class="menu-button primary" id="continueButton" type="button"><b>ПРОДОЛЖИТЬ</b><span id="continueMeta">сохранённый мир</span></button>
+        <button class="menu-button" id="newWorldButton" type="button"><b>НОВЫЙ МИР</b><span>случайный ландшафт</span></button>
+        <button class="menu-button compact" id="titleSettingsButton" type="button"><b>НАСТРОЙКИ</b></button>
+        <a class="menu-button compact" href="../../"><b>POCKET WORKS</b></a>
+      </div>
+      <div class="title-foot">ПРОЦЕДУРНЫЙ МИР · OFFLINE · АВТОСОХРАНЕНИЕ</div>
+    </section>
+
+    <section class="hud" id="hud" hidden>
+      <header class="topbar">
+        <button id="pauseButton" class="square-button pause-button" type="button" aria-label="Пауза"><i></i><i></i></button>
+        <div class="world-label"><b>ПЛАСТ</b><span id="worldSeedLabel">МИР 000000</span></div>
+        <div class="status-cluster">
+          <span id="fpsLabel">60 FPS</span>
+          <span id="coordsLabel">0 · 0 · 0</span>
+        </div>
+      </header>
+
+      <div class="crosshair" id="crosshair" aria-hidden="true"><i></i><b></b></div>
+      <div class="target-label" id="targetLabel" hidden><b>КАМЕНЬ</b><span>2.1 м</span></div>
+      <div class="toast" id="toast" aria-live="polite"></div>
+
+      <div class="left-controls" id="leftControls">
+        <div class="joystick" id="joystick"><i id="joystickKnob"></i></div>
+        <button class="small-action sneak" id="sneakButton" type="button" aria-label="Пригнуться"><i></i></button>
+      </div>
+
+      <div class="right-controls">
+        <button class="round-action jump" id="jumpButton" type="button" aria-label="Прыжок"><i></i></button>
+        <button class="round-action break" id="breakButton" type="button" aria-label="Ломать блок"><i></i><span id="breakProgress"></span></button>
+        <button class="round-action place" id="placeButton" type="button" aria-label="Поставить блок"><i></i></button>
+      </div>
+
+      <div class="hand" id="hand" aria-hidden="true"><i></i><b></b></div>
+
+      <div class="bottom-dock">
+        <button class="inventory-button" id="inventoryButton" type="button" aria-label="Инвентарь"><i></i></button>
+        <div class="hotbar" id="hotbar" role="listbox" aria-label="Быстрый доступ"></div>
+      </div>
+    </section>
+
+    <section class="inventory overlay panel-overlay" id="inventoryPanel" hidden>
+      <div class="panel-card inventory-card">
+        <header><div><small>ТВОРЧЕСКИЙ РЕЖИМ</small><h2>Блоки</h2></div><button id="inventoryClose" type="button">ГОТОВО</button></header>
+        <p>Выбери блок — он попадёт в активный слот.</p>
+        <div class="inventory-grid" id="inventoryGrid"></div>
+      </div>
+    </section>
+
+    <section class="pause overlay panel-overlay" id="pausePanel" hidden>
+      <div class="panel-card pause-card">
+        <header><div><small>МИР НА ПАУЗЕ</small><h2>ПЛАСТ</h2></div><span id="pauseSeed">SEED 0</span></header>
+        <button class="panel-primary" id="resumeButton" type="button">ПРОДОЛЖИТЬ</button>
+        <div class="panel-grid">
+          <button id="saveButton" type="button"><b>СОХРАНИТЬ</b><span>записать мир сейчас</span></button>
+          <button id="timeButton" type="button"><b>СМЕНИТЬ ВРЕМЯ</b><span id="timeButtonMeta">день</span></button>
+          <button id="pauseSettingsButton" type="button"><b>НАСТРОЙКИ</b><span>управление и графика</span></button>
+          <button id="respawnButton" type="button"><b>ВОЗРОДИТЬСЯ</b><span>вернуться к точке старта</span></button>
+        </div>
+        <button class="panel-danger" id="exitButton" type="button">СОХРАНИТЬ И ВЫЙТИ В МЕНЮ</button>
+        <a class="panel-link" href="../../">ВЕРНУТЬСЯ В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="settings overlay panel-overlay" id="settingsPanel" hidden>
+      <div class="panel-card settings-card">
+        <header><div><small>ПАРАМЕТРЫ</small><h2>Настройки</h2></div><button id="settingsClose" type="button">ГОТОВО</button></header>
+        <button class="setting-row" id="sensitivitySetting" type="button"><span><b>Чувствительность обзора</b><small>скорость поворота камеры</small></span><i>СРЕДНЯЯ</i></button>
+        <button class="setting-row" id="renderSetting" type="button"><span><b>Качество изображения</b><small>внутреннее разрешение WebGL</small></span><i>ВЫСОКОЕ</i></button>
+        <button class="setting-row" id="soundSetting" type="button"><span><b>Звуки мира</b><small>шаги, блоки, вода</small></span><i>ВКЛ</i></button>
+        <button class="setting-row" id="hapticSetting" type="button"><span><b>Вибрация</b><small>отклик на действия</small></span><i>ВКЛ</i></button>
+        <button class="setting-row" id="leftHandSetting" type="button"><span><b>Левша</b><small>поменять стороны управления</small></span><i>ВЫКЛ</i></button>
+        <button class="reset-world" id="resetWorldButton" type="button">УДАЛИТЬ СОХРАНЁННЫЙ МИР</button>
+      </div>
+    </section>
+
+    <section class="confirm overlay panel-overlay" id="confirmPanel" hidden>
+      <div class="panel-card confirm-card">
+        <small>НЕОБРАТИМОЕ ДЕЙСТВИЕ</small>
+        <h2>Удалить мир?</h2>
+        <p>Рельеф, постройки и позиция исчезнут. Это не декоративная кнопка, она реально всё снесёт.</p>
+        <button class="panel-danger" id="confirmDelete" type="button">УДАЛИТЬ</button>
+        <button class="panel-primary" id="cancelDelete" type="button">ОТМЕНА</button>
+      </div>
+    </section>
+
+    <div class="rotate-device" id="rotateDevice">
+      <div class="phone-glyph"><i></i></div>
+      <b>ПОВЕРНИ ТЕЛЕФОН</b>
+      <span>ПЛАСТ рассчитан на горизонтальный экран</span>
+    </div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЛАСТ" data-app-version="1.0.0"></script>
+  <script src="./app.js?v=1.0.0" type="module"></script>
+</body>
+</html>
