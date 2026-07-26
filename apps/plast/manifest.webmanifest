@@ -1,0 +1,14 @@
+{
+  "id": "/apps/plast/",
+  "name": "ПЛАСТ",
+  "short_name": "ПЛАСТ",
+  "description": "Оригинальная мобильная voxel-песочница с процедурным миром, добычей и строительством.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#9dccf2",
+  "theme_color": "#182017",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
