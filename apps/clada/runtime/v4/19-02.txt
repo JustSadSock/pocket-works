@@ -87,6 +87,9 @@ function fieldApplyReplayCommand(command) {
   } finally {
     fieldApplyingReplay = false;
   }
+  state.commandLog ||= [];
+  state.commandLog.push({ ...command });
+  state.commandLog = state.commandLog.slice(-240);
 }
 
 function fieldProcessReplay() {
@@ -111,6 +114,7 @@ function fieldStartReplay(bundle) {
   journal.alerts = [];
   journal.replay = { active: true, cursor: 0, commands: bundle.commands.map((entry) => ({ ...entry })).sort((a, b) => a.g - b.g), sourceVersion: bundle.version || null };
   state.commandLog = [{ g: state.generation, type: 'world-created', seed: bundle.seed || 'garden', originMode: LIVING.originMode }];
+  fieldProcessReplay();
   fieldRecordSnapshot(true);
   state.paused = false;
   syncAllUI();
@@ -167,8 +171,8 @@ openMenuSheet = function fieldOpenMenuSheet() {
 
 finalizeGeneration = function fieldFinalizeGeneration() {
   fieldLegacyFinalizeGeneration();
-  fieldRecordSnapshot();
   fieldProcessReplay();
+  fieldRecordSnapshot();
   saveState();
 };
 
