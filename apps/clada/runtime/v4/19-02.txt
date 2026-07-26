@@ -1,0 +1,233 @@
+/* КЛАДА 4.1 — интерфейс полевого журнала, воспроизведение и экспорт. */
+const fieldLegacyFinalizeGeneration = finalizeGeneration;
+const fieldLegacyOpenSpeciesSheet = openSpeciesSheet;
+const fieldLegacyOpenMenuSheet = openMenuSheet;
+const fieldLegacyBuildWorld = buildWorld;
+const fieldLegacyMigrateLivingState = migrateLivingState;
+const fieldLegacyApplyCataclysm = applyCataclysm;
+const fieldLegacySeedAt = seedAt;
+const fieldLegacyBuildCompactDiagnostic = buildCompactDiagnostic;
+let fieldPendingReplayBundle = null;
+
+function fieldDownload(payload, fileName, message) {
+  const source = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+  const blob = new Blob([source], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
+  anchor.href = url; anchor.download = fileName; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+  showToast(`${message} · ${Math.ceil(source.length / 1024)} КБ`);
+}
+
+function fieldBuildReplayBundle() {
+  return FIELD.buildReplayBundle({
+    seed: state.seed,
+    originMode: state.originMode || LIVING.originMode,
+    commands: state.commandLog || [],
+    version: FIELD_APP_VERSION,
+    createdGeneration: state.generation
+  });
+}
+
+buildCompactDiagnostic = function fieldBuildCompactDiagnostic() {
+  const payload = fieldLegacyBuildCompactDiagnostic();
+  payload.version = FIELD_APP_VERSION;
+  payload.journal = {
+    schema: 'clada-field-journal-v1',
+    alerts: fieldEnsureState().alerts.slice(-80),
+    speciesSeries: Object.fromEntries(Object.entries(fieldEnsureState().speciesSeries).map(([id, series]) => [id, FIELD.compactSeries(series, 120)])),
+    replay: fieldBuildReplayBundle()
+  };
+  return payload;
+};
+
+function fieldBuildSpeciesDiagnostic(speciesId) {
+  const base = buildCompactDiagnostic();
+  const related = new Set([Number(speciesId)]);
+  for (const species of base.species) if (species.parent === Number(speciesId) || species.id === Number(speciesId)) related.add(species.id);
+  const focal = state.species.find((entry) => entry.id === Number(speciesId));
+  if (focal?.parentId) related.add(focal.parentId);
+  return {
+    schema: 'clada-species-diagnostic-v1',
+    app: base.app,
+    version: FIELD_APP_VERSION,
+    world: base.world,
+    summary: base.summary,
+    focalSpeciesId: Number(speciesId),
+    explanation: (() => { const value = FIELD.pressureBreakdown(state.metacommunity, speciesId); return { direction: value.direction, headline: value.headline, factors: value.factors }; })(),
+    species: base.species.filter((entry) => related.has(entry.id)),
+    demes: base.demes.filter((entry) => related.has(entry.species)),
+    patches: base.patches,
+    series: FIELD.compactSeries(fieldSpeciesSeries(speciesId), 180),
+    replay: fieldBuildReplayBundle(),
+    events: base.events.filter((event) => related.has(Number(event.speciesId))).slice(-120),
+    mortality: Object.fromEntries(Object.entries(base.mortality || {}).filter(([id]) => related.has(Number(id))))
+  };
+}
+
+function fieldExportSpecies(speciesId) {
+  fieldDownload(fieldBuildSpeciesDiagnostic(speciesId), `clada-species-${speciesId}-g${state.generation}.cdiag.json`, 'Диагностика вида экспортирована');
+}
+
+function fieldExportReplay() {
+  fieldDownload(fieldBuildReplayBundle(), `clada-replay-g${state.generation}.creplay.json`, 'Сценарий эксперимента экспортирован');
+}
+
+function fieldApplyReplayCommand(command) {
+  if (!command) return;
+  fieldApplyingReplay = true;
+  try {
+    if (command.type === 'environment' && ['temperature', 'food', 'mutation'].includes(command.key)) {
+      state.env[command.key] = clamp(Number(command.value));
+      syncPressureUI();
+    } else if (command.type === 'cataclysm' && command.value) {
+      applyCataclysm(command.value);
+    } else if (command.type === 'introduction') {
+      seedAt(Number(command.x) || .5, Number(command.y) || .5, Math.max(1, Number(command.amount) || 10));
+    }
+  } finally {
+    fieldApplyingReplay = false;
+  }
+}
+
+function fieldProcessReplay() {
+  const replay = fieldEnsureState()?.replay;
+  if (!replay?.active) return;
+  while (replay.cursor < replay.commands.length && replay.commands[replay.cursor].g <= state.generation) {
+    fieldApplyReplayCommand(replay.commands[replay.cursor]);
+    replay.cursor += 1;
+  }
+  if (replay.cursor >= replay.commands.length) {
+    replay.active = false;
+    showToast('Воспроизведение завершено');
+  }
+}
+
+function fieldStartReplay(bundle) {
+  if (!bundle || bundle.schema !== 'clada-replay-v1' || !Array.isArray(bundle.commands)) throw new Error('Неверный формат сценария');
+  LIVING.originMode = bundle.originMode === 'primordial' ? 'primordial' : 'mature';
+  fieldLegacyBuildWorld(bundle.seed || 'garden');
+  const journal = fieldEnsureState();
+  journal.speciesSeries = {};
+  journal.alerts = [];
+  journal.replay = { active: true, cursor: 0, commands: bundle.commands.map((entry) => ({ ...entry })).sort((a, b) => a.g - b.g), sourceVersion: bundle.version || null };
+  state.commandLog = [{ g: state.generation, type: 'world-created', seed: bundle.seed || 'garden', originMode: LIVING.originMode }];
+  fieldRecordSnapshot(true);
+  state.paused = false;
+  syncAllUI();
+  saveState();
+  showToast('Эксперимент запущен заново');
+}
+
+function fieldConfirmRepeat() {
+  fieldPendingReplayBundle = fieldBuildReplayBundle();
+  openSheet('ВОСПРОИЗВОДИМЫЙ ЭКСПЕРИМЕНТ', 'Повторить этот мир?', `<div class="lineage-note">Мир будет пересоздан из того же seed, после чего изменения среды, катаклизмы и ручные заселения повторятся в тех же поколениях. Текущее состояние будет заменено.</div><div class="confirm-actions"><button type="button" data-field-action="cancel">ОТМЕНА</button><button type="button" class="primary" data-field-action="repeat-now">ПОВТОРИТЬ</button></div>`);
+}
+
+function fieldWorldOverviewHtml() {
+  const meta = metaEnsureState(); const summary = META.summarize(meta);
+  const declining = meta.species.filter((species) => !species.extinct && (species.abundance || 0) > .5).map((species) => ({ species, pressure: FIELD.pressureBreakdown(meta, species.id) })).sort((a, b) => (a.pressure.snapshot?.trend || 0) - (b.pressure.snapshot?.trend || 0)).slice(0, 5);
+  const recent = fieldEnsureState().alerts.slice(-8).reverse();
+  return `<div class="journal-summary"><div><small>ВСЯ ЧИСЛЕННОСТЬ</small><b>${Math.round(summary.abundance)}</b></div><div><small>ЖИВЫЕ ВИДЫ</small><b>${summary.richness}</b></div><div><small>ЛОКАЛЬНЫЕ ДЕМЫ</small><b>${summary.demes}</b></div><div><small>ЗАНЯТО УЧАСТКОВ</small><b>${summary.occupiedPatches}/12</b></div></div><section class="field-section"><header><b>ТРЕБУЮТ ВНИМАНИЯ</b><span>самые отрицательные тренды</span></header><div class="journal-species-list">${declining.map(({ species, pressure }) => { const app = state.species.find((entry) => entry.id === species.id); return `<button type="button" data-field-species="${species.id}"><i style="background:hsl(${app?.hue || 110} 30% 43%)"></i><span><b>${safeText(app?.common || `Вид ${species.id}`)}</b><small>${safeText(pressure.headline)} · ${pressure.factors[0] ? safeText(pressure.factors[0].label) : 'без выраженного ограничения'}</small></span><output>${Math.round(species.abundance || 0)}</output></button>`; }).join('') || '<div class="empty-mini">Все живые линии стабильны.</div>'}</div></section><section class="field-section"><header><b>ПОЛЕВАЯ ХРОНИКА</b><span>последние события</span></header><div class="journal-events">${recent.map((event) => `<div><b>G${event.g}</b><span>${safeText(event.text)}</span></div>`).join('') || '<div class="empty-mini">Новых событий пока нет.</div>'}</div></section>`;
+}
+
+function fieldReplayHtml() {
+  const commands = (state.commandLog || []).filter((entry) => entry.type !== 'world-created').slice(-40).reverse();
+  return `<div class="journal-actions"><button type="button" data-field-action="repeat"><b>ПОВТОРИТЬ ЭКСПЕРИМЕНТ</b><span>тот же seed и те же действия</span></button><button type="button" data-field-action="export-replay"><b>ЭКСПОРТ СЦЕНАРИЯ</b><span>компактный .creplay.json</span></button><button type="button" data-field-action="import-replay"><b>ИМПОРТ СЦЕНАРИЯ</b><span>запустить чужой эксперимент</span></button></div><section class="field-section"><header><b>ЖУРНАЛ ДЕЙСТВИЙ</b><span>${commands.length} последних команд</span></header><div class="journal-command-list">${commands.map((command) => `<div><b>G${command.g}</b><span>${command.type === 'environment' ? `${safeText(command.key)} → ${Math.round((command.value || 0) * 100)}` : command.type === 'cataclysm' ? `катаклизм: ${safeText(command.value)}` : command.type === 'introduction' ? `заселение ×${command.amount || 10}` : safeText(command.type)}</span></div>`).join('') || '<div class="empty-mini">После создания мира действий не было.</div>'}</div></section>`;
+}
+
+function fieldOpenJournal(panel = 'overview') {
+  const body = panel === 'food'
+    ? '<section class="field-section food-web-section"><header><b>ПИЩЕВАЯ СЕТЬ</b><span>стрелка ведёт от ресурса к потребителю</span></header><canvas id="fieldFoodWeb" width="720" height="460"></canvas><div class="food-legend"><span>Толщина связи отражает доступность ресурса</span><span>Хищники автоматически переключаются на массовую добычу</span></div></section>'
+    : panel === 'replay' ? fieldReplayHtml() : fieldWorldOverviewHtml();
+  openSheet('ПОЛЕВОЙ ЖУРНАЛ', 'Живая причинная карта', `<nav class="journal-tabs"><button type="button" data-field-panel="overview" aria-pressed="${panel === 'overview'}">ОБЗОР</button><button type="button" data-field-panel="food" aria-pressed="${panel === 'food'}">ПИЩЕВАЯ СЕТЬ</button><button type="button" data-field-panel="replay" aria-pressed="${panel === 'replay'}">ЭКСПЕРИМЕНТ</button></nav>${body}`);
+  if (panel === 'food') requestAnimationFrame(() => { const canvas = document.querySelector('#fieldFoodWeb'); if (canvas) fieldDrawFoodWeb(canvas); });
+}
+
+openSpeciesSheet = function fieldOpenSpeciesSheet(species) {
+  if (!species) return;
+  const macro = fieldSpeciesMeta(species.id);
+  const demes = fieldDemes(species.id).sort((a, b) => b.abundance - a.abundance);
+  const abundance = Math.round(demes.reduce((sum, deme) => sum + (deme.abundance || 0), 0));
+  const regions = new Set(demes.map((deme) => deme.patchId)).size;
+  const ancestor = findAncestorSpecies(species);
+  openSheet('ПОЛЕВОЙ ПАСПОРТ', species.common, `<div class="species-dashboard field-passport"><div class="species-portrait"><canvas id="speciesGroupPortrait" width="196" height="168"></canvas><span class="status-mark ${macro?.extinct ? 'dead' : 'alive'}">${macro?.extinct ? 'ВЫМЕР' : 'ЖИВОЙ ВИД'}</span></div><div class="species-overview"><small>${safeText(species.name)} · ВЕТВЬ ${species.id}</small><p>${safeText(ph(species.centroid))}</p><div class="metric-strip"><b>${abundance}<small>особей</small></b><b>${demes.length}<small>дем</small></b><b>${regions}<small>участков</small></b></div></div></div>${fieldPressureHtml(species.id)}<section class="field-section"><header><b>ЧИСЛЕННОСТЬ</b><span>последние ${fieldSpeciesSeries(species.id).length} наблюдений</span></header><canvas class="field-series-chart" id="fieldSpeciesChart" width="720" height="220"></canvas></section><section class="field-section"><header><b>АРЕАЛ И РАССЕЛЕНИЕ</b><span>фиолетовый — расходящиеся демы</span></header><canvas class="field-range-map" id="fieldRangeMap" width="720" height="300"></canvas></section><section class="field-section"><header><b>СТАДИИ РАСХОЖДЕНИЯ</b><span>не каждая локальная форма становится видом</span></header><div class="field-deme-list">${demes.map(fieldDemeHtml).join('') || '<div class="empty-mini">Локальные популяции исчезли.</div>'}</div></section><section class="field-section"><header><b>ЭКОЛОГИЯ И ПРИЗНАКИ</b><span>${safeText(fieldGuildName(macro?.guild || species.niche))}</span></header><div class="trait-list">${traitRows(species.centroid)}${extraRows(species.centroid)}</div></section><div class="journal-actions compact"><button type="button" data-field-action="species-export" data-species-id="${species.id}"><b>ЭКСПОРТ ДИАГНОСТИКИ ВИДА</b><span>маленький машинно-читаемый файл</span></button><button type="button" data-field-panel="food"><b>ОТКРЫТЬ ПИЩЕВУЮ СЕТЬ</b><span>место вида в экосистеме</span></button></div><div class="lineage-note">${ancestor ? `Предковая ветвь: ${safeText(ancestor.common)}. ` : ''}${safeText(evolutionarySummary(species))}</div>`);
+  requestAnimationFrame(() => {
+    const portrait = document.querySelector('#speciesGroupPortrait'); if (portrait) livingPortraitGroup(species, portrait);
+    const chart = document.querySelector('#fieldSpeciesChart'); if (chart) fieldDrawLineChart(chart, species.id);
+    const map = document.querySelector('#fieldRangeMap'); if (map) fieldDrawRangeMap(map, species.id);
+  });
+};
+
+openMenuSheet = function fieldOpenMenuSheet() {
+  fieldLegacyOpenMenuSheet();
+  const diagnostic = sheetBody.querySelector('[data-menu="diagnostic"]');
+  const anchor = diagnostic || sheetBody.querySelector('[data-menu="export"]');
+  if (anchor && !sheetBody.querySelector('[data-field-action="journal"]')) anchor.insertAdjacentHTML('beforebegin', '<button type="button" data-field-action="journal"><strong>Полевой журнал</strong><span>причины и пищевая сеть</span></button>');
+};
+
+finalizeGeneration = function fieldFinalizeGeneration() {
+  fieldLegacyFinalizeGeneration();
+  fieldRecordSnapshot();
+  fieldProcessReplay();
+  saveState();
+};
+
+applyCataclysm = function fieldApplyCataclysm(type) {
+  const before = state.commandLog?.length || 0;
+  const result = fieldLegacyApplyCataclysm(type);
+  if (fieldApplyingReplay && state.commandLog?.length > before) state.commandLog.splice(before);
+  return result;
+};
+
+seedAt = function fieldSeedAt(x, y, amount) {
+  const before = state.commandLog?.length || 0;
+  const result = fieldLegacySeedAt(x, y, amount);
+  if (fieldApplyingReplay && state.commandLog?.length > before) state.commandLog.splice(before);
+  return result;
+};
+
+migrateLivingState = function fieldMigrateLivingState() {
+  fieldLegacyMigrateLivingState();
+  fieldEnsureState();
+  fieldRecordSnapshot(true);
+};
+
+buildWorld = function fieldBuildWorld(seed = 'garden') {
+  fieldLegacyBuildWorld(seed);
+  state.fieldJournal = { version: FIELD_JOURNAL_VERSION, speciesSeries: {}, alerts: [], replay: null, lastEventCursor: 0 };
+  fieldRecordSnapshot(true);
+  saveState();
+};
+
+function fieldInstallInterface() {
+  fieldEnsureState(); fieldRecordSnapshot(true);
+  if (!viewTabs.querySelector('[data-field-journal]')) viewTabs.insertAdjacentHTML('beforeend', '<button type="button" data-field-journal>ЖУРНАЛ</button>');
+  if (!document.querySelector('#fieldReplayInput')) document.querySelector('.app').insertAdjacentHTML('beforeend', '<input id="fieldReplayInput" type="file" accept="application/json,.json,.creplay.json" hidden>');
+  viewTabs.addEventListener('click', (event) => { const button = event.target.closest('[data-field-journal]'); if (!button) return; event.preventDefault(); fieldOpenJournal('overview'); tone(390, .05, .015, 'triangle'); });
+  const replayInput = document.querySelector('#fieldReplayInput');
+  replayInput.addEventListener('change', () => {
+    const file = replayInput.files?.[0]; replayInput.value = ''; if (!file) return;
+    const reader = new FileReader(); reader.onload = () => { try { fieldStartReplay(JSON.parse(String(reader.result))); } catch (error) { showToast(error.message || 'Не удалось открыть сценарий', 3000); } }; reader.readAsText(file);
+  });
+}
+
+sheetBody.addEventListener('click', (event) => {
+  const speciesButton = event.target.closest('[data-field-species]');
+  if (speciesButton) { event.preventDefault(); event.stopImmediatePropagation(); openSpeciesSheet(state.species.find((entry) => entry.id === Number(speciesButton.dataset.fieldSpecies))); return; }
+  const panel = event.target.closest('[data-field-panel]');
+  if (panel) { event.preventDefault(); event.stopImmediatePropagation(); fieldOpenJournal(panel.dataset.fieldPanel); return; }
+  const action = event.target.closest('[data-field-action]');
+  if (!action) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  const name = action.dataset.fieldAction;
+  if (name === 'journal') fieldOpenJournal('overview');
+  else if (name === 'export-replay') fieldExportReplay();
+  else if (name === 'import-replay') document.querySelector('#fieldReplayInput').click();
+  else if (name === 'repeat') fieldConfirmRepeat();
+  else if (name === 'repeat-now') { try { fieldStartReplay(fieldPendingReplayBundle); fieldPendingReplayBundle = null; } catch (error) { showToast(error.message || 'Не удалось повторить эксперимент'); } }
+  else if (name === 'cancel') closeSheet();
+  else if (name === 'species-export') fieldExportSpecies(Number(action.dataset.speciesId));
+}, true);
+
+fieldInstallInterface();
+saveState();
