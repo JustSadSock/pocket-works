@@ -11,7 +11,10 @@ terrainAt = function planetTerrainAt(x, y) {
   const base = planetLegacyTerrainAt(x, y);
   const meta = state?.metacommunity;
   if (!meta?.planet || !PLANET) return base;
-  return PLANET.transformPoint(base, x, y, meta.planet, state.generation || meta.generation || 0);
+  const fossil = Number.isInteger(state?.fossilIndex) ? state.history?.[state.fossilIndex] : null;
+  const planet = fossil?.planet ? { ...meta.planet, ...fossil.planet } : meta.planet;
+  const generation = fossil?.generation ?? state.generation ?? meta.generation ?? 0;
+  return PLANET.transformPoint(base, x, y, planet, generation);
 };
 
 META.advance = function planetAdvanceMetacommunity(community) {
