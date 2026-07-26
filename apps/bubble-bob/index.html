@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#075a88">
-  <meta name="description" content="СПАНЧ: Пузырьковый Переполох — активная аркада для одного пальца с заданиями и случайными событиями.">
+  <meta name="description" content="СПАНЧ: Пузырьковый Переполох — аркада на реакцию с рискованными уклонениями, заданиями и пузырьковой волной.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="СПАНЧ">
@@ -39,13 +39,13 @@
       <div class="sea-sticker" aria-hidden="true"><span class="sticker-eye sticker-eye-left"></span><span class="sticker-eye sticker-eye-right"></span><span class="sticker-smile"></span><i></i><i></i><i></i></div>
       <p class="eyebrow">БИКИНИ-БОТТОМ · КАЖДАЯ СМЕНА ДРУГАЯ</p>
       <h1 id="gameTitle"><span>СПАНЧ</span><b>Пузырьковый<br>Переполох</b></h1>
-      <p class="start-copy">Лови еду, накапливай пузырьковую волну и выполняй случайное задание. Быстрый тап выпускает волну, когда шкала заполнена.</p>
+      <p class="start-copy">Лови еду, выполняй случайное задание и проскальзывай рядом с медузами ради бонуса. Быстрый тап выпускает волну, когда шкала заполнена.</p>
       <div class="best-card"><span>ЛУЧШИЙ РЕЗУЛЬТАТ ЯСИ</span><strong id="bestValue">0</strong></div>
-      <button id="startButton" class="primary-button" type="button" data-native-press><span>НАЧАТЬ НОВУЮ СМЕНУ</span><small>двигай пальцем · тапай для волны</small></button>
+      <button id="startButton" class="primary-button" type="button" data-native-press><span>НАЧАТЬ НОВУЮ СМЕНУ</span><small>двигай пальцем · рискуй · тапай для волны</small></button>
       <div class="rules-row" aria-label="Правила">
         <div><b class="rule-icon patty-icon"></b><span>очки</span></div>
         <div><b class="rule-icon bubble-icon"></b><span>заряд</span></div>
-        <div><b class="rule-icon jelly-icon"></b><span>опасность</span></div>
+        <div><b class="rule-icon jelly-icon"></b><span>риск</span></div>
       </div>
       <div class="start-links"><a href="../../" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a><button type="button" data-workshop-trigger data-native-press>WORKSHOP</button></div>
     </section>
@@ -57,16 +57,16 @@
       <div class="result-grid">
         <div><small>ЛУЧШЕЕ КОМБО</small><b id="resultCombo">×1</b></div>
         <div><small>КРАБСБУРГЕРОВ</small><b id="resultPatties">0</b></div>
-        <div class="mission-result"><small>ЗАДАНИЕ</small><b id="resultMission">НЕ УСПЕЛА</b></div>
+        <div class="mission-result"><small>ЗАДАНИЕ</small><b id="resultMission">НЕ УСПЕЛ</b></div>
       </div>
-      <button id="restartButton" class="primary-button" type="button" data-native-press><span>ЕЩЁ ОДНА СМЕНА</span><small>задание и события поменяются</small></button>
+      <button id="restartButton" class="primary-button" type="button" data-native-press><span>ЕЩЁ ОДНА СМЕНА</span><small>задание и темп поменяются</small></button>
       <button id="menuButton" class="secondary-button" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
     </section>
 
     <dialog id="pauseDialog" class="pause-dialog">
       <div class="pause-card" data-ui>
         <p class="eyebrow">ПЕРЕПОЛОХ ПРИОСТАНОВЛЕН</p><h2>Пауза</h2>
-        <p>Быстрый тап по полю выпускает волну, когда жёлтая шкала заполнена.</p>
+        <p>Близкое уклонение от медузы даёт очки и заряд. Быстрый тап выпускает волну, когда шкала заполнена.</p>
         <button id="resumeButton" class="primary-button compact" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
         <button id="pauseRestartButton" class="secondary-button" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
         <button id="quitButton" class="secondary-button danger" type="button" data-native-press>ЗАКОНЧИТЬ СМЕНУ</button>
@@ -74,7 +74,7 @@
     </dialog>
     <div id="toast" class="toast" data-ui aria-live="polite"></div>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СПАНЧ: Пузырьковый Переполох" data-app-version="1.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СПАНЧ: Пузырьковый Переполох" data-app-version="1.2.0"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>
