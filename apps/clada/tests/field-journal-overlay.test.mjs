@@ -51,9 +51,10 @@ test('field journal overlay installs without mutating metacommunity', () => {
     MAX_ORGANISMS: 260,
     showToast() {}, syncAllUI() {}, syncPressureUI() {}, closeSheet() {}, openSheet() {}, tone() {},
     clamp(value, min = 0, max = 1) { return Math.max(min, Math.min(max, value)); },
-    fieldJournalTestMarker: true
+    fieldJournalTestMarker: true,
+    requestAnimationFrame(callback) { callback(); }
   });
-  const source = ['../runtime/v4/18-field-journal-core.js', '../runtime/v4/19-01.txt', '../runtime/v4/19-02.txt'].map((name) => fs.readFileSync(new URL(name, import.meta.url), 'utf8')).join('\n');
+  const source = ['../runtime/v4/18-field-journal-core.js', '../runtime/v4/19-01.txt', '../runtime/v4/19-02.txt', '../runtime/v4/19-03.txt'].map((name) => fs.readFileSync(new URL(name, import.meta.url), 'utf8')).join('\n');
   vm.runInContext(source, context);
   assert.equal(state.fieldJournal.version, 1);
   assert.equal(state.fieldJournal.speciesSeries[1].length, 1);
