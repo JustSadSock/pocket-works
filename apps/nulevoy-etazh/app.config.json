@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "nulevoy-etazh",
+  "name": "НУЛЕВОЙ ЭТАЖ",
+  "shortName": "ЭТАЖ",
+  "description": "Мобильный FPS о побеге из перестраивающегося бетонного комплекса: три энергоядра, охотящиеся дроны и один лифт наружу.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-26",
+  "releaseDateTime": "2026-07-26T15:20:00+02:00",
+  "changelog": [
+    "Первый полноценный релиз с процедурной ареной, мобильным управлением и боевой системой.",
+    "Добавлены три энергоядра, лифт эвакуации, дроны, аптечки, мини-карта и сохранение рекорда.",
+    "Игра работает офлайн и адаптирована под горизонтальный экран телефона."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#ffcc4d",
+  "backgroundColor": "#171714",
+  "themeColor": "#171714",
+  "orientation": "landscape",
+  "cacheName": "nulevoy-etazh-v1.0.0",
+  "storageNamespace": "pocket-works:nulevoy-etazh",
+  "tags": ["PWA", "offline", "game", "3d", "fps", "raycaster", "mobile", "shooter", "procedural", "haptics"],
+  "order": 96
+}
