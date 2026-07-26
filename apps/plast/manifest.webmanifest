@@ -2,13 +2,13 @@
   "id": "/apps/plast/",
   "name": "ПЛАСТ",
   "short_name": "ПЛАСТ",
-  "description": "Мобильная voxel-песочница с процедурным живым миром, существами, добычей и строительством.",
+  "description": "Мобильная voxel-песочница с процедурным живым миром, добычей, строительством, существами и выживанием.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": [
-    "standalone",
     "fullscreen",
+    "standalone",
     "minimal-ui"
   ],
   "orientation": "landscape",
