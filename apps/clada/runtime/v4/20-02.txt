@@ -1,0 +1,170 @@
+      const previous = { water: Boolean(patch.water), biome: patch.biome, coast: Boolean(patch.coast), elevation: patch.elevation };
+      const next = dynamicPatch(base, planet, generation);
+      Object.assign(patch, next);
+      patch.region = `${patch.id}${next.water ? 'W' : next.coast ? 'C' : next.mountainBarrier ? 'M' : 'L'}`;
+      if (previous.water !== next.water) {
+        const type = next.water ? 'inundation' : 'emergence';
+        planet.metrics[next.water ? 'inundations' : 'emergences'] += 1;
+        const event = { generation, type, patchId: patch.id, text: next.water ? `Море затопило участок ${patch.id}` : `Из моря поднялся участок ${patch.id}` };
+        planet.events.push(event); changes.push(event);
+      } else if (previous.biome !== next.biome) {
+        const event = { generation, type: 'biome-shift', patchId: patch.id, from: previous.biome, to: next.biome, text: `Участок ${patch.id}: ${previous.biome} → ${next.biome}` };
+        planet.events.push(event); changes.push(event);
+      }
+    }
+    const patches = community.patches || [];
+    for (const patch of patches) {
+      patch.island = !patch.water && patches.filter((other) => other.id !== patch.id && Math.abs((other.bx ?? 0) - (patch.bx ?? 0)) <= 1 && Math.abs((other.by ?? 0) - (patch.by ?? 0)) <= 1).every((other) => other.water || other.id === patch.id);
+    }
+    return changes;
+  }
+
+  function currentAlignment(sourceBase, source, target) {
+    const dx = (target.x || 0) - (source.x || 0);
+    const dy = (target.y || 0) - (source.y || 0);
+    const length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length, uy = dy / length;
+    const cx = Math.cos(sourceBase.currentAngle), cy = Math.sin(sourceBase.currentAngle);
+    return clamp((ux * cx + uy * cy + 1) / 2);
+  }
+
+  function routeDescriptor(community, source, target, deme = {}) {
+    const planet = ensurePlanet(community);
+    const sourceBase = planet.patchBase[source.id] || baseRecord(source, planet.seed);
+    const targetBase = planet.patchBase[target.id] || baseRecord(target, planet.seed);
+    const distance = Math.hypot((source.x || 0) - (target.x || 0), (source.y || 0) - (target.y || 0));
+    const adjacent = Math.abs((source.bx ?? 0) - (target.bx ?? 0)) <= 1 && Math.abs((source.by ?? 0) - (target.by ?? 0)) <= 1;
+    const guild = deme.guild || 'grazer';
+    const flyer = guild === 'flyer';
+    const amphibian = guild === 'amphibian';
+    const aquatic = guild === 'filterer' || (deme.traits?.water || 0) > .68;
+    const terrestrial = !aquatic && !amphibian && !flyer;
+    const lowSea = planet.seaLevel < -.08;
+    const highIce = planet.glaciation > .42;
+    const landBridge = lowSea && !source.water && !target.water && distance < .44;
+    const iceBridge = highIce && (source.seaIce || target.seaIce) && distance < .36;
+    const strait = source.water !== target.water && distance < .32;
+    const mountain = Boolean(source.mountainBarrier || target.mountainBarrier);
+    const alignment = source.water && target.water ? currentAlignment(sourceBase, source, target) : 0;
+    const currentAssist = source.water && target.water ? sourceBase.currentStrength * alignment : 0;
+    let modifier = clamp(1 - distance / .72, .025, 1);
+    if (source.water && target.water) {
+      modifier *= aquatic || amphibian || flyer ? .58 + currentAssist * .9 : .035;
+      if (!adjacent && currentAssist < .34) modifier *= .32;
+    } else if (!source.water && !target.water) {
+      modifier *= terrestrial || amphibian || flyer ? 1 : .04;
+      if (mountain) modifier *= flyer ? .76 : amphibian ? .42 : .19;
+      if (!adjacent && !landBridge) modifier *= flyer ? .48 : .12;
+      if (landBridge) modifier *= 1.35;
+    } else {
+      if (flyer) modifier *= .62;
+      else if (amphibian) modifier *= .46;
+      else if (iceBridge) modifier *= .32;
+      else if (strait && (deme.traits?.migration || 0) > .64) modifier *= .12;
+      else modifier *= .018;
+    }
+    if (target.island && terrestrial && !flyer) modifier *= .42;
+    if (iceBridge) modifier *= 1.35;
+    const type = currentAssist > .42 ? 'current' : landBridge ? 'land-bridge' : iceBridge ? 'ice-bridge' : mountain ? 'mountain-pass' : strait ? 'strait' : 'ordinary';
+    return { modifier: clamp(modifier, .002, 1.45), distance, adjacent, landBridge, iceBridge, strait, mountain, currentAssist, type };
+  }
+
+  function rebuildRoutes(community, planet) {
+    planet.routes = {};
+    for (const source of community.patches || []) for (const target of community.patches || []) {
+      if (source === target) continue;
+      const route = routeDescriptor(community, source, target, { guild: source.water ? 'filterer' : 'grazer', traits: { water: source.water ? .9 : .1, migration: .5 } });
+      if (route.modifier > .035) planet.routes[patchKey(source.id, target.id)] = { type: route.type, strength: round(route.modifier), current: round(route.currentAssist), open: route.modifier > .09 };
+    }
+  }
+
+  function prepareGeneration(community) {
+    const planet = ensurePlanet(community);
+    const generation = (Number(community.generation) || 0) + 1;
+    if (planet.lastPreparedGeneration === generation) return { planet, generation, changes: [] };
+    epochTransition(community, planet, generation);
+    const smoothing = .018;
+    planet.climate = lerp(planet.climate, planet.targetClimate, smoothing);
+    planet.humidity = lerp(planet.humidity, planet.targetHumidity, smoothing);
+    planet.seaLevel = lerp(planet.seaLevel, planet.targetSeaLevel, smoothing * .72);
+    planet.glaciation = lerp(planet.glaciation, planet.targetGlaciation, smoothing * .58);
+    planet.tectonics = lerp(planet.tectonics, planet.targetTectonics, smoothing * .32);
+    planet.climate += noiseAt(planet.seed, generation, 71) * .0015;
+    planet.humidity += noiseAt(planet.seed, generation, 73) * .0015;
+    const changes = updatePatches(community, planet, generation);
+    rebuildRoutes(community, planet);
+    planet.lastPreparedGeneration = generation;
+    if (generation % 5 === 0 || !planet.timeline.length) {
+      planet.timeline.push({ g: generation, epoch: epochFor(planet).id, sea: round(planet.seaLevel), climate: round(planet.climate), humidity: round(planet.humidity), ice: round(planet.glaciation), tectonics: round(planet.tectonics), waterPatches: (community.patches || []).filter((patch) => patch.water).length });
+      planet.timeline = planet.timeline.slice(-240);
+    }
+    planet.events = planet.events.slice(-240);
+    return { planet, generation, changes };
+  }
+
+  function connectivityModifier(community, source, target, deme) {
+    return routeDescriptor(community, source, target, deme).modifier;
+  }
+
+  function areLinked(community, source, target, deme) {
+    return connectivityModifier(community, source, target, deme) > .075;
+  }
+
+  function applyHabitatStress(community) {
+    const planet = ensurePlanet(community);
+    const patchMap = new Map((community.patches || []).map((patch) => [patch.id, patch]));
+    for (const deme of community.demes || []) {
+      const patch = patchMap.get(deme.patchId);
+      if (!patch || deme.abundance <= 0) continue;
+      const aquatic = deme.guild === 'filterer' || (deme.traits?.water || 0) > .68;
+      const flexible = deme.guild === 'amphibian' || deme.guild === 'flyer';
+      const mismatch = patch.water ? (!aquatic && !flexible) : (aquatic && !flexible);
+      deme.planetStress = mismatch ? clamp((deme.planetStress || 0) + .13) : Math.max(0, (deme.planetStress || 0) - .08);
+      if (mismatch) {
+        const loss = .035 + Math.min(.12, deme.planetStress * .06);
+        deme.abundance *= 1 - loss;
+        deme.geneFlow = Math.max(0, (deme.geneFlow || 0) - .025);
+      }
+      if (patch.mountainBarrier && deme.guild !== 'flyer') deme.geneFlow = Math.max(0, (deme.geneFlow || 0) * .94);
+    }
+    return planet;
+  }
+
+  function adjustIsolation(community) {
+    const patchMap = new Map((community.patches || []).map((patch) => [patch.id, patch]));
+    const bySpecies = new Map();
+    for (const deme of (community.demes || []).filter((entry) => entry.abundance > .5)) {
+      if (!bySpecies.has(deme.speciesId)) bySpecies.set(deme.speciesId, []);
+      bySpecies.get(deme.speciesId).push(deme);
+    }
+    for (const demes of bySpecies.values()) {
+      for (const deme of demes) {
+        const source = patchMap.get(deme.patchId);
+        let strongestBarrier = 0;
+        let strongestCorridor = 0;
+        for (const other of demes) {
+          if (other === deme) continue;
+          const target = patchMap.get(other.patchId);
+          const route = routeDescriptor(community, source, target, deme);
+          strongestBarrier = Math.max(strongestBarrier, 1 - clamp(route.modifier));
+          strongestCorridor = Math.max(strongestCorridor, clamp(route.modifier));
+        }
+        deme.geographicBarrier = strongestBarrier;
+        deme.corridorStrength = strongestCorridor;
+        if (strongestBarrier > .72 && strongestCorridor < .22) {
+          deme.isolation = clamp((deme.isolation || 0) + .0025 + strongestBarrier * .002);
+          deme.geneFlow = Math.max(0, (deme.geneFlow || 0) * .94 - .002);
+          deme.isolationAge = (deme.isolationAge || 0) + 1;
+        } else if (strongestCorridor > .5) {
+          deme.isolation = Math.max(0, (deme.isolation || 0) - .0035);
+        }
+      }
+      const occupied = new Set(demes.map((deme) => deme.patchId));
+      if (occupied.size >= 5) {
+        const centerBarrier = (community.patches || []).some((patch) => (patch.id === '11' || patch.id === '21') && (patch.mountainBarrier || patch.water));
+        if (centerBarrier) {
+          const sorted = [...demes].sort((a, b) => (a.patchId < b.patchId ? -1 : 1));
+          const terminals = [sorted[0], sorted.at(-1)];
+          for (const terminal of terminals) {
+            terminal.ringTerminal = true;
+            terminal.isolation = clamp((terminal.isolation || 0) + .003);

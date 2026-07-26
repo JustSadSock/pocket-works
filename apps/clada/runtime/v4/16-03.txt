@@ -11,6 +11,8 @@
 
   function landscapeConnectivity(source, target, deme) {
     if (!source || !target) return 0;
+    const planetary = globalThis.CladaLivingPlanetCore?.connectivityModifier?.(communityForConnectivity || null, source, target, deme);
+    if (Number.isFinite(planetary)) return clamp(planetary, .002, 1.45);
     const distance = Math.hypot((source.x || 0) - (target.x || 0), (source.y || 0) - (target.y || 0));
     let value = clamp(1 - distance / .62, .04, 1);
     if (source.water !== target.water) {
@@ -21,9 +23,12 @@
     return value;
   }
 
+  let communityForConnectivity = null;
+
   function applyDispersal(community) {
     const migrants = [];
     const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    communityForConnectivity = community;
     for (const deme of community.demes) {
       if (deme.abundance < 3.5) continue;
       const source = patchMap.get(deme.patchId);
@@ -66,6 +71,7 @@
       targetDeme.geneFlow = clamp((targetDeme.geneFlow || 0) * .58 + .28 * move.connectivity);
       move.deme.geneFlow = clamp((move.deme.geneFlow || 0) * .65 + .08 * move.connectivity);
     }
+    communityForConnectivity = null;
     mergeDuplicateDemes(community);
   }
 
@@ -76,17 +82,20 @@
       bySpecies.get(deme.speciesId).push(deme);
     }
     const patchMap = new Map(community.patches.map((p) => [p.id, p]));
+    communityForConnectivity = community;
     for (const demes of bySpecies.values()) {
       for (const deme of demes) {
         const sourcePatch = patchMap.get(deme.patchId);
         let flow = 0;
         for (const other of demes) {
           if (other === deme) continue;
-          const near = (sourcePatch?.neighbors || []).includes(other.patchId);
+          const targetPatch = patchMap.get(other.patchId);
+          const planetLinked = globalThis.CladaLivingPlanetCore?.areLinked?.(community, sourcePatch, targetPatch, deme) || false;
+          const near = (sourcePatch?.neighbors || []).includes(other.patchId) || planetLinked;
           const samePatch = other.patchId === deme.patchId;
           if (!near && !samePatch) continue;
           const similarity = clamp(1 - vectorDistance(deme.traits, other.traits) * 1.8);
-          const connectivity = landscapeConnectivity(sourcePatch, patchMap.get(other.patchId), deme);
+          const connectivity = landscapeConnectivity(sourcePatch, targetPatch, deme);
           const exchange = (samePatch ? .045 : .008) * similarity * connectivity * Math.min(1, other.abundance / 8);
           flow += exchange;
           for (const key of Object.keys(deme.traits)) deme.traits[key] = lerp(deme.traits[key], other.traits[key], exchange * .08);
@@ -94,6 +103,7 @@
         deme.geneFlow = clamp((deme.geneFlow || 0) * .76 + flow * .24);
       }
     }
+    communityForConnectivity = null;
   }
 
   function guildOpportunity(community, patch, guild) {

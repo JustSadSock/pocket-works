@@ -1,0 +1,170 @@
+/* КЛАДА 4.2 — детерминированная геодинамика, климатические эпохи и биогеография. */
+globalThis.CladaLivingPlanetCore = (() => {
+  const VERSION = 1;
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const round = (value, digits = 3) => {
+    const scale = 10 ** digits;
+    return Math.round((Number(value) || 0) * scale) / scale;
+  };
+  const hash = (value) => {
+    let x = Number(value) | 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return x >>> 0;
+  };
+  const hashString = (value = '') => {
+    let h = 2166136261;
+    for (const char of String(value)) { h ^= char.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  };
+  const randomAt = (seed, salt = 0) => hash(hash(seed) ^ hash(salt)) / 4294967296;
+  const noiseAt = (seed, generation, salt = 0) => randomAt(seed ^ hash(generation * 977), salt) * 2 - 1;
+
+  const EPOCHS = [
+    { id: 'equable', label: 'РАВНОВЕСНАЯ ЭПОХА', climate: 0, humidity: .03, sea: 0, ice: .05, tectonics: .08 },
+    { id: 'greenhouse', label: 'ПАРНИКОВАЯ ЭПОХА', climate: .16, humidity: .08, sea: .12, ice: 0, tectonics: .04 },
+    { id: 'monsoon', label: 'ВЛАЖНАЯ ЭПОХА', climate: .05, humidity: .18, sea: .05, ice: .02, tectonics: .06 },
+    { id: 'arid', label: 'СУХАЯ ЭПОХА', climate: .11, humidity: -.18, sea: -.04, ice: .01, tectonics: .07 },
+    { id: 'glacial', label: 'ЛЕДНИКОВАЯ ЭПОХА', climate: -.18, humidity: -.04, sea: -.15, ice: .62, tectonics: .03 },
+    { id: 'transgression', label: 'МОРСКАЯ ТРАНСГРЕССИЯ', climate: .08, humidity: .1, sea: .18, ice: 0, tectonics: .05 },
+    { id: 'orogeny', label: 'ЭПОХА ГОРООБРАЗОВАНИЯ', climate: -.02, humidity: .01, sea: -.03, ice: .08, tectonics: .42 }
+  ];
+
+  function patchKey(a, b) { return `${a}>${b}`; }
+
+  function epochFor(planet) { return EPOCHS[planet.epochIndex % EPOCHS.length] || EPOCHS[0]; }
+
+  function baseRecord(patch, seed) {
+    const local = hashString(`${seed}:${patch.id}`);
+    return {
+      id: patch.id,
+      x: Number(patch.x) || 0,
+      y: Number(patch.y) || 0,
+      bx: Number.isFinite(patch.bx) ? patch.bx : Math.round((Number(patch.x) || 0) * 4 - .5),
+      by: Number.isFinite(patch.by) ? patch.by : Math.round((Number(patch.y) || 0) * 3 - .5),
+      elevation: clamp(patch.elevation),
+      moisture: clamp(patch.moisture),
+      temperature: clamp(patch.temperature),
+      water: Boolean(patch.water),
+      coast: Boolean(patch.coast),
+      biome: patch.biome || 'grassland',
+      region: patch.region || patch.id,
+      uplift: (randomAt(local, 11) - .5) * .16,
+      subsidence: (randomAt(local, 13) - .5) * .1,
+      volcanic: randomAt(local, 17) > .84 ? .04 + randomAt(local, 19) * .08 : 0,
+      currentAngle: randomAt(local, 23) * Math.PI * 2,
+      currentStrength: .18 + randomAt(local, 29) * .62,
+      rainShadow: (randomAt(local, 31) - .5) * .22,
+      islandBias: randomAt(local, 37)
+    };
+  }
+
+  function ensurePlanet(community) {
+    community.planet ||= {};
+    const seed = Number(community.originSeed) || hashString(community.originSeed || 'clada');
+    const planet = community.planet;
+    if (planet.version !== VERSION) {
+      const startEpoch = hash(seed) % EPOCHS.length;
+      Object.assign(planet, {
+        version: VERSION,
+        seed,
+        epochIndex: startEpoch,
+        epochStart: Number(community.generation) || 0,
+        epochLength: 84 + Math.floor(randomAt(seed, 41) * 72),
+        climate: EPOCHS[startEpoch].climate,
+        targetClimate: EPOCHS[startEpoch].climate,
+        humidity: EPOCHS[startEpoch].humidity,
+        targetHumidity: EPOCHS[startEpoch].humidity,
+        seaLevel: EPOCHS[startEpoch].sea,
+        targetSeaLevel: EPOCHS[startEpoch].sea,
+        glaciation: EPOCHS[startEpoch].ice,
+        targetGlaciation: EPOCHS[startEpoch].ice,
+        tectonics: EPOCHS[startEpoch].tectonics,
+        targetTectonics: EPOCHS[startEpoch].tectonics,
+        patchBase: {}, routes: {}, events: [], timeline: [], lastPreparedGeneration: -1,
+        lastSpeciationPulse: -999, lastHybridGeneration: -999, lastChromosomalGeneration: -999,
+        metrics: { epochChanges: 0, inundations: 0, emergences: 0, corridorColonizations: 0, vicarianceEvents: 0, hybridOrigins: 0, chromosomalSplits: 0 }
+      });
+    }
+    planet.seed ||= seed;
+    planet.patchBase ||= {};
+    planet.routes ||= {};
+    planet.events ||= [];
+    planet.timeline ||= [];
+    planet.metrics ||= { epochChanges: 0, inundations: 0, emergences: 0, corridorColonizations: 0, vicarianceEvents: 0, hybridOrigins: 0, chromosomalSplits: 0 };
+    for (const patch of community.patches || []) {
+      planet.patchBase[patch.id] ||= baseRecord(patch, planet.seed);
+    }
+    return planet;
+  }
+
+  function biomeFor({ water, coast, temperature, moisture, elevation }) {
+    if (water) return elevation < .31 ? 'ocean' : 'shallows';
+    if (temperature < .15) return 'snow';
+    if (elevation > .73) return 'highland';
+    if (moisture > .72) return coast ? 'wetland' : 'forest';
+    if (moisture < .22 && temperature > .56) return 'desert';
+    if (moisture < .39) return 'scrub';
+    return 'grassland';
+  }
+
+  function epochTransition(community, planet, generation) {
+    if (generation < planet.epochStart + planet.epochLength) return null;
+    const previous = epochFor(planet);
+    let nextIndex = Math.floor(randomAt(planet.seed ^ generation, 61) * EPOCHS.length);
+    if (nextIndex === planet.epochIndex) nextIndex = (nextIndex + 1 + (hash(generation) % (EPOCHS.length - 1))) % EPOCHS.length;
+    planet.epochIndex = nextIndex;
+    planet.epochStart = generation;
+    planet.epochLength = 72 + Math.floor(randomAt(planet.seed ^ generation, 67) * 104);
+    const next = epochFor(planet);
+    planet.targetClimate = next.climate;
+    planet.targetHumidity = next.humidity;
+    planet.targetSeaLevel = next.sea;
+    planet.targetGlaciation = next.ice;
+    planet.targetTectonics = next.tectonics;
+    planet.metrics.epochChanges += 1;
+    const event = { generation, type: 'epoch-change', from: previous.id, to: next.id, text: `${previous.label} сменилась: ${next.label}` };
+    planet.events.push(event);
+    return event;
+  }
+
+  function dynamicPatch(base, planet, generation) {
+    const epoch = epochFor(planet);
+    const tectonicWave = Math.sin(generation / 83 + base.x * 4.7 + base.y * 2.9 + planet.seed * .00001);
+    const pulse = planet.tectonics * tectonicWave;
+    const uplift = base.uplift * pulse + base.volcanic * Math.max(0, Math.sin(generation / 117 + base.x * 9));
+    const subsidence = base.subsidence * Math.sin(generation / 151 + base.y * 6);
+    const elevation = clamp(base.elevation + uplift + subsidence, 0, 1);
+    const waterLine = .4 + planet.seaLevel * .22;
+    const water = elevation < waterLine;
+    const coast = !water && elevation < waterLine + .075;
+    const latitude = Math.abs(base.y - .5) * 2;
+    const orbital = Math.sin(generation / 62 + base.y * Math.PI) * .025;
+    const temperature = clamp(base.temperature + planet.climate * .42 + orbital - planet.glaciation * (.07 + latitude * .18) - Math.max(0, elevation - .68) * .22);
+    const coastalMoisture = water ? .24 : coast ? .17 : 0;
+    const monsoon = Math.sin(generation / 24 + base.x * 7) * (.025 + Math.max(0, planet.humidity) * .08);
+    const moisture = clamp(base.moisture + planet.humidity * .62 + coastalMoisture + monsoon - Math.max(0, elevation - .68) * .18 - base.rainShadow * planet.tectonics);
+    const biome = biomeFor({ water, coast, temperature, moisture, elevation });
+    const seaIce = water && temperature < .13 && planet.glaciation > .24;
+    const mountainBarrier = !water && elevation > .72;
+    const productive = clamp(.45 + moisture * .48 + (water ? .08 : 0) - Math.abs(temperature - .52) * .42 - (seaIce ? .24 : 0), .08, 1.25);
+    return { elevation, water, coast, temperature, moisture, biome, seaIce, mountainBarrier, productivity: productive, epoch: epoch.id, waterLine };
+  }
+
+  function transformPoint(baseTerrain, x, y, planet, generation) {
+    const base = {
+      id: `point:${Math.round(x * 1000)}:${Math.round(y * 1000)}`, x, y,
+      elevation: clamp(baseTerrain.elevation), moisture: clamp(baseTerrain.moisture), temperature: clamp(baseTerrain.temperature),
+      water: Boolean(baseTerrain.water), coast: Boolean(baseTerrain.coast), biome: baseTerrain.biome,
+      uplift: (randomAt(planet.seed ^ Math.round(x * 10000), Math.round(y * 10000)) - .5) * .12,
+      subsidence: (randomAt(planet.seed ^ Math.round(y * 10000), Math.round(x * 10000)) - .5) * .07,
+      volcanic: 0,
+      rainShadow: (randomAt(planet.seed, Math.round((x + y) * 10000)) - .5) * .16
+    };
+    return { ...baseTerrain, ...dynamicPatch(base, planet, generation) };
+  }
+
+  function updatePatches(community, planet, generation) {
+    const changes = [];
+    for (const patch of community.patches || []) {
+      const base = planet.patchBase[patch.id] ||= baseRecord(patch, planet.seed);

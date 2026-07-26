@@ -1,0 +1,31 @@
+/* КЛАДА 4.2 — Живая планета */
+.journal-tabs.planet-tabs,.journal-tabs:has([data-field-panel="planet"]){grid-template-columns:repeat(4,minmax(0,1fr))}
+.planet-epoch-badge{position:absolute;right:18px;top:18px;z-index:4;max-width:142px;border:1px solid rgba(31,42,36,.28);border-left:4px solid var(--water);background:rgba(231,225,207,.9);padding:7px 9px;text-align:left;box-shadow:3px 3px 0 rgba(75,119,129,.18);backdrop-filter:blur(4px)}
+.planet-epoch-badge small{display:block;font-size:7px;letter-spacing:.14em;color:var(--muted)}
+.planet-epoch-badge b{display:block;margin:2px 0;font-family:ui-serif,Georgia,serif;font-size:13px;line-height:1.05}
+.planet-epoch-badge span{display:block;font-size:8px;color:var(--muted);font-variant-numeric:tabular-nums}
+.planet-epoch-badge:active{transform:translateY(1px);opacity:.75}
+.planet-hero{position:relative;padding:15px 15px 16px;border:1px solid rgba(31,42,36,.2);background:linear-gradient(135deg,rgba(75,119,129,.14),rgba(154,89,70,.07)),rgba(255,255,255,.13);overflow:hidden}
+.planet-hero::after{content:"";position:absolute;right:-28px;top:-35px;width:120px;height:120px;border:1px solid rgba(75,119,129,.28);border-radius:50%;box-shadow:inset 0 0 0 13px rgba(75,119,129,.05),inset 0 0 0 29px rgba(154,89,70,.035)}
+.planet-hero small{font-size:8px;letter-spacing:.15em;color:var(--water)}
+.planet-hero h3{position:relative;z-index:1;margin:5px 0 6px;max-width:82%;font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;line-height:1}
+.planet-hero p{position:relative;z-index:1;margin:0;max-width:86%;font-size:10px;line-height:1.45;color:#465049}
+.planet-summary{margin-top:10px}
+.planet-map-canvas,.planet-timeline-canvas{display:block;width:100%;height:auto;border:1px solid rgba(31,42,36,.18);background:#dcd6c2;touch-action:pan-y}
+.planet-legend{display:flex;flex-wrap:wrap;gap:8px 13px;padding:8px 2px 0;font-size:8px;color:var(--muted)}
+.planet-legend span{display:inline-flex;align-items:center;gap:5px}
+.planet-legend i{display:inline-block;width:18px;height:3px;background:var(--line)}
+.planet-legend i.current{background:var(--water)}
+.planet-legend i.bridge{background:#765b34}
+.planet-legend i.ice{background:#f6f8ef;border:1px solid #9ea8a4;height:5px}
+.planet-legend i.mountain{height:8px;background:linear-gradient(135deg,transparent 45%,#403b33 46% 54%,transparent 55%),linear-gradient(45deg,transparent 45%,#403b33 46% 54%,transparent 55%)}
+.planet-origin-section{border-left:4px solid var(--water);padding-left:10px}
+.planet-origin-section .ecology-grid{margin-top:8px}
+@media(max-width:420px){
+  .planet-epoch-badge{right:13px;top:13px;max-width:124px;padding:6px 8px}
+  .planet-epoch-badge b{font-size:12px}
+  .planet-hero h3{font-size:23px}
+  .journal-tabs.planet-tabs,.journal-tabs:has([data-field-panel="planet"]){gap:3px}
+  .journal-tabs.planet-tabs button,.journal-tabs:has([data-field-panel="planet"]) button{font-size:8px;padding-inline:2px}
+}
+@media(prefers-reduced-motion:reduce){.planet-epoch-badge{backdrop-filter:none}}
