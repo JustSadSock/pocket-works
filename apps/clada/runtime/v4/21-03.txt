@@ -1,0 +1,200 @@
+/* КЛАДА 4.2 — визуализация геологических эпох, маршрутов и планетарного журнала. */
+const planetLegacyDrawWorld = drawWorld;
+const planetLegacyOpenMenuSheet = openMenuSheet;
+const planetLegacyFieldOpenJournal = typeof fieldOpenJournal === 'function' ? fieldOpenJournal : null;
+const planetLegacyOpenSpeciesSheet = openSpeciesSheet;
+
+function planetModeLabel(mode) {
+  return ({
+    allopatric: 'географическое', ecological: 'экологическое', reproductive: 'репродуктивное',
+    vicariant: 'викарное', peripatric: 'перипатрическое', parapatric: 'парапатрическое',
+    ring: 'кольцевое', hybrid: 'гибридное', chromosomal: 'хромосомное'
+  })[mode] || mode || 'не определено';
+}
+
+function planetRouteLabel(type) {
+  return ({ current: 'морское течение', 'land-bridge': 'сухопутный мост', 'ice-bridge': 'ледовый мост', 'mountain-pass': 'горный проход', strait: 'пролив', ordinary: 'обычный путь' })[type] || type;
+}
+
+function planetEnsureBadge() {
+  let badge = document.querySelector('#planetEpochBadge');
+  if (badge) return badge;
+  badge = document.createElement('button');
+  badge.id = 'planetEpochBadge';
+  badge.className = 'planet-epoch-badge';
+  badge.type = 'button';
+  badge.innerHTML = '<small>ЭПОХА</small><b>—</b><span>уровень моря</span>';
+  document.querySelector('#observatory')?.append(badge);
+  badge.addEventListener('click', () => fieldOpenJournal('planet'));
+  return badge;
+}
+
+function planetUpdateBadge() {
+  const badge = planetEnsureBadge();
+  const meta = state?.metacommunity;
+  if (!badge || !meta?.planet) return;
+  const planet = PLANET.ensurePlanet(meta);
+  const epoch = PLANET.epochFor(planet);
+  badge.querySelector('b').textContent = epoch.label.replace(' ЭПОХА', '').replace('ЭПОХА ', '');
+  const sea = Math.round(planet.seaLevel * 100);
+  badge.querySelector('span').textContent = `море ${sea > 0 ? '+' : ''}${sea} · лёд ${Math.round(planet.glaciation * 100)}%`;
+}
+
+function planetDrawArrow(context, x1, y1, x2, y2, alpha = .45) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length, uy = dy / length;
+  const endX = x1 + dx * .72, endY = y1 + dy * .72;
+  context.strokeStyle = `rgba(52,98,117,${alpha})`;
+  context.fillStyle = `rgba(52,98,117,${alpha})`;
+  context.lineWidth = 1.2;
+  context.beginPath(); context.moveTo(x1, y1); context.quadraticCurveTo((x1 + x2) / 2 - uy * 8, (y1 + y2) / 2 + ux * 8, endX, endY); context.stroke();
+  context.beginPath(); context.moveTo(endX, endY); context.lineTo(endX - ux * 7 - uy * 4, endY - uy * 7 + ux * 4); context.lineTo(endX - ux * 7 + uy * 4, endY - uy * 7 - ux * 4); context.closePath(); context.fill();
+}
+
+function planetDrawWorldOverlay() {
+  const meta = state?.metacommunity;
+  if (!meta?.planet || !state.planetOverlay || state.fossilIndex !== null) return;
+  const patchMap = new Map(meta.patches.map((patch) => [patch.id, patch]));
+  const camera = CAM.world;
+  ctx.save(); ctx.translate(camera.x, camera.y); ctx.scale(camera.zoom, camera.zoom);
+  for (const [key, route] of Object.entries(meta.planet.routes || {})) {
+    if (!route.open || !['current', 'land-bridge', 'ice-bridge'].includes(route.type)) continue;
+    const [sourceId, targetId] = key.split('>');
+    if (route.type !== 'current' && sourceId > targetId) continue;
+    const source = patchMap.get(sourceId), target = patchMap.get(targetId);
+    if (!source || !target) continue;
+    const x1 = source.x * cssWidth, y1 = source.y * cssHeight, x2 = target.x * cssWidth, y2 = target.y * cssHeight;
+    if (route.type === 'current') planetDrawArrow(ctx, x1, y1, x2, y2, .16 + Math.min(.42, route.strength * .32));
+    else {
+      ctx.strokeStyle = route.type === 'ice-bridge' ? 'rgba(240,246,238,.72)' : 'rgba(118,91,52,.52)';
+      ctx.lineWidth = route.type === 'ice-bridge' ? 4 : 2.2;
+      ctx.setLineDash(route.type === 'ice-bridge' ? [7, 5] : [4, 4]);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  for (const patch of meta.patches) {
+    if (!patch.mountainBarrier) continue;
+    const x = patch.x * cssWidth, y = patch.y * cssHeight;
+    ctx.strokeStyle = 'rgba(54,49,42,.42)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 13, y + 8); ctx.lineTo(x - 4, y - 6); ctx.lineTo(x + 1, y + 2); ctx.lineTo(x + 8, y - 9); ctx.lineTo(x + 16, y + 8); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+drawWorld = function planetDrawWorld() {
+  planetLegacyDrawWorld();
+  planetDrawWorldOverlay();
+};
+
+function planetMapColor(patch) {
+  return LIVING.habitatColors[patch.biome] || '#a8a182';
+}
+
+function planetDrawMap(canvas) {
+  const meta = state.metacommunity;
+  if (!meta) return;
+  const context = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  const cellW = width / 4, cellH = height / 3;
+  for (const patch of meta.patches) {
+    const x = (patch.bx || 0) * cellW, y = (patch.by || 0) * cellH;
+    context.fillStyle = planetMapColor(patch); context.fillRect(x + 2, y + 2, cellW - 4, cellH - 4);
+    context.strokeStyle = patch.mountainBarrier ? 'rgba(31,42,36,.8)' : patch.island ? 'rgba(154,89,70,.72)' : 'rgba(31,42,36,.18)';
+    context.lineWidth = patch.mountainBarrier ? 3 : 1; context.strokeRect(x + 2, y + 2, cellW - 4, cellH - 4);
+    if (patch.seaIce) { context.fillStyle = 'rgba(245,248,239,.64)'; context.fillRect(x + 5, y + 5, cellW - 10, cellH - 10); }
+    context.fillStyle = 'rgba(31,42,36,.72)'; context.font = '700 18px ui-sans-serif,system-ui'; context.fillText(patch.id, x + 10, y + 24);
+    context.font = '12px ui-sans-serif,system-ui'; context.fillText(`${Math.round(patch.temperature * 100)}° · ${Math.round(patch.moisture * 100)}%`, x + 10, y + 43);
+  }
+  const patchMap = new Map(meta.patches.map((patch) => [patch.id, patch]));
+  for (const [key, route] of Object.entries(meta.planet.routes || {})) {
+    if (!route.open || !['current', 'land-bridge', 'ice-bridge'].includes(route.type)) continue;
+    const [aId, bId] = key.split('>'); if (route.type !== 'current' && aId > bId) continue;
+    const a = patchMap.get(aId), b = patchMap.get(bId); if (!a || !b) continue;
+    const x1 = (a.bx + .5) * cellW, y1 = (a.by + .5) * cellH, x2 = (b.bx + .5) * cellW, y2 = (b.by + .5) * cellH;
+    if (route.type === 'current') planetDrawArrow(context, x1, y1, x2, y2, .42);
+    else { context.strokeStyle = route.type === 'ice-bridge' ? 'rgba(255,255,255,.88)' : 'rgba(89,63,33,.8)'; context.lineWidth = 5; context.setLineDash([10, 7]); context.beginPath(); context.moveTo(x1, y1); context.lineTo(x2, y2); context.stroke(); context.setLineDash([]); }
+  }
+}
+
+function planetDrawTimeline(canvas) {
+  const planet = PLANET.ensurePlanet(state.metacommunity);
+  const series = planet.timeline || [];
+  const context = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = '#e2dcc9'; context.fillRect(0, 0, width, height);
+  if (series.length < 2) return;
+  const left = 36, right = width - 18, top = 18, bottom = height - 24;
+  const draw = (key, min, max, stroke) => {
+    context.strokeStyle = stroke; context.lineWidth = 3; context.beginPath();
+    series.forEach((entry, index) => { const x = left + index / (series.length - 1) * (right - left); const y = bottom - (entry[key] - min) / (max - min) * (bottom - top); if (!index) context.moveTo(x, y); else context.lineTo(x, y); }); context.stroke();
+  };
+  draw('sea', -.2, .2, '#4b7781'); draw('climate', -.22, .22, '#9a5946'); draw('ice', 0, .7, '#889b9b');
+  context.fillStyle = '#1f2a24'; context.font = '12px ui-sans-serif,system-ui'; context.fillText(`G${series[0].g}`, left, height - 7); context.textAlign = 'right'; context.fillText(`G${series.at(-1).g}`, right, height - 7); context.textAlign = 'left';
+}
+
+
+openSpeciesSheet = function planetOpenSpeciesSheet(species) {
+  planetLegacyOpenSpeciesSheet(species);
+  if (!species || !sheetBody) return;
+  const metaSpecies = state.metacommunity?.species?.find((entry) => entry.id === species.id);
+  const demes = state.metacommunity?.demes?.filter((entry) => entry.speciesId === species.id && entry.abundance > .05) || [];
+  const strongestBarrier = demes.reduce((max, deme) => Math.max(max, deme.geographicBarrier || 0), 0);
+  const strongestCorridor = demes.reduce((max, deme) => Math.max(max, deme.corridorStrength || 0), 0);
+  const routes = [...new Set(demes.map((deme) => deme.planetRouteType).filter(Boolean))];
+  const mode = species.speciationMode || metaSpecies?.speciationMode;
+  const cause = species.geologicalCause || metaSpecies?.geologicalCause;
+  const section = `<section class="field-section planet-origin-section"><header><b>БИОГЕОГРАФИЯ</b><span>${safeText(planetModeLabel(mode))}</span></header><div class="ecology-grid"><div><small>ПРОИСХОЖДЕНИЕ</small><b>${safeText(planetModeLabel(mode))}</b></div><div><small>ГЕОЛОГИЧЕСКАЯ ПРИЧИНА</small><b>${safeText(cause || 'длительное расхождение популяций')}</b></div><div><small>СИЛЬНЕЙШИЙ БАРЬЕР</small><b>${Math.round(strongestBarrier * 100)}%</b></div><div><small>ЛУЧШИЙ КОРИДОР</small><b>${Math.round(strongestCorridor * 100)}%</b></div><div><small>ПУТИ РАССЕЛЕНИЯ</small><b>${safeText(routes.map(planetRouteLabel).join(', ') || 'обычные соседние участки')}</b></div><div><small>ОСТРОВНЫЕ ДЕМЫ</small><b>${demes.filter((deme) => state.metacommunity.patches.find((patch) => patch.id === deme.patchId)?.island).length}</b></div></div></section>`;
+  const exportAction = sheetBody.querySelector('[data-field-action="species-export"]');
+  if (exportAction) exportAction.insertAdjacentHTML('beforebegin', section);
+  else sheetBody.insertAdjacentHTML('beforeend', section);
+};
+
+function planetPanelHtml() {
+  const meta = metaEnsureState(); const planet = PLANET.ensurePlanet(meta); const epoch = PLANET.epochFor(planet);
+  const water = meta.patches.filter((patch) => patch.water).length;
+  const islands = meta.patches.filter((patch) => patch.island).length;
+  const mountains = meta.patches.filter((patch) => patch.mountainBarrier).length;
+  const recent = planet.events.slice(-10).reverse();
+  const routes = Object.values(planet.routes || {}).filter((route) => route.open);
+  return `<nav class="journal-tabs planet-tabs"><button type="button" data-field-panel="overview">ОБЗОР</button><button type="button" data-field-panel="food">ПИЩЕВАЯ СЕТЬ</button><button type="button" data-field-panel="replay">ЭКСПЕРИМЕНТ</button><button type="button" data-field-panel="planet" aria-pressed="true">ПЛАНЕТА</button></nav>
+    <div class="planet-hero"><small>ТЕКУЩАЯ ГЕОЛОГИЧЕСКАЯ ЭПОХА</small><h3>${safeText(epoch.label)}</h3><p>Медленные изменения уровня моря, климата и рельефа перестраивают реальные маршруты расселения и поток генов.</p></div>
+    <div class="journal-summary planet-summary"><div><small>УРОВЕНЬ МОРЯ</small><b>${planet.seaLevel >= 0 ? '+' : ''}${Math.round(planet.seaLevel * 100)}</b></div><div><small>ВОДНЫЕ УЧАСТКИ</small><b>${water}/12</b></div><div><small>ОСТРОВА</small><b>${islands}</b></div><div><small>ГОРНЫЕ БАРЬЕРЫ</small><b>${mountains}</b></div></div>
+    <section class="field-section"><header><b>ДИНАМИЧЕСКАЯ КАРТА</b><span>${routes.length} открытых маршрутов</span></header><canvas id="planetMapCanvas" class="planet-map-canvas" width="720" height="430"></canvas><div class="planet-legend"><span><i class="current"></i> течение</span><span><i class="bridge"></i> сухопутный мост</span><span><i class="ice"></i> ледовый мост</span><span><i class="mountain"></i> горный барьер</span></div></section>
+    <section class="field-section"><header><b>ДОЛГАЯ ИСТОРИЯ</b><span>море · климат · оледенение</span></header><canvas id="planetTimelineCanvas" class="planet-timeline-canvas" width="720" height="220"></canvas></section>
+    <section class="field-section"><header><b>ГЕОЛОГИЧЕСКАЯ ХРОНИКА</b><span>последние события</span></header><div class="journal-events">${recent.map((event) => `<div><b>G${event.generation}</b><span>${safeText(planetEventLabel(event))}</span></div>`).join('') || '<div class="empty-mini">Планета пока не пережила крупного перехода.</div>'}</div></section>
+    <div class="journal-actions"><button type="button" data-planet-action="toggle-overlay"><b>${state.planetOverlay ? 'СКРЫТЬ' : 'ПОКАЗАТЬ'} МАРШРУТЫ НА КАРТЕ</b><span>течения, мосты и горные барьеры</span></button></div>`;
+}
+
+fieldOpenJournal = function planetFieldOpenJournal(panel = 'overview') {
+  if (panel !== 'planet') {
+    planetLegacyFieldOpenJournal?.(panel);
+    const nav = sheetBody.querySelector('.journal-tabs');
+    if (nav && !nav.querySelector('[data-field-panel="planet"]')) nav.insertAdjacentHTML('beforeend', '<button type="button" data-field-panel="planet">ПЛАНЕТА</button>');
+    return;
+  }
+  openSheet('ПОЛЕВОЙ ЖУРНАЛ', 'Живая планета', planetPanelHtml());
+  requestAnimationFrame(() => {
+    const map = document.querySelector('#planetMapCanvas'); if (map) planetDrawMap(map);
+    const timeline = document.querySelector('#planetTimelineCanvas'); if (timeline) planetDrawTimeline(timeline);
+  });
+};
+
+openMenuSheet = function planetOpenMenuSheet() {
+  planetLegacyOpenMenuSheet();
+  const journal = sheetBody.querySelector('[data-field-action="journal"]');
+  if (journal && !sheetBody.querySelector('[data-planet-action="open"]')) journal.insertAdjacentHTML('afterend', '<button type="button" data-planet-action="open"><strong>Живая планета</strong><span>эпохи, море и барьеры</span></button>');
+};
+
+sheetBody.addEventListener('click', (event) => {
+  const action = event.target.closest('[data-planet-action]');
+  if (!action) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  if (action.dataset.planetAction === 'open') fieldOpenJournal('planet');
+  else if (action.dataset.planetAction === 'toggle-overlay') { state.planetOverlay = !state.planetOverlay; saveState(); fieldOpenJournal('planet'); showToast(state.planetOverlay ? 'Маршруты показаны на карте' : 'Маршруты скрыты'); }
+}, true);
+
+planetEnsureBadge();
+planetUpdateBadge();
