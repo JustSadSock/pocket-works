@@ -61,6 +61,11 @@ function planetSyncPopulationRecords() {
 
 finalizeGeneration = function planetFinalizeGeneration() {
   planetLegacyFinalizeGeneration();
+  const planet = planetEnsureState();
+  const historyEntry = state.history?.at(-1);
+  if (planet && historyEntry?.generation === state.generation) {
+    historyEntry.planet = { epochIndex: planet.epochIndex, seaLevel: planet.seaLevel, climate: planet.climate, humidity: planet.humidity, glaciation: planet.glaciation, tectonics: planet.tectonics };
+  }
   planetSyncPopulationRecords();
   planetRecordEvents();
   if (typeof planetUpdateBadge === 'function') planetUpdateBadge();
