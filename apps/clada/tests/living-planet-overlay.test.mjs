@@ -91,3 +91,19 @@ test('hybrid proposal metadata reaches both visible and macro species records', 
   assert.equal(app.speciationMode, 'hybrid');
   assert.equal(macro.hybridParentId, 2);
 });
+
+test('fossil terrain uses the geological snapshot stored with history', () => {
+  const context = makeContext();
+  vm.runInContext(core, context);
+  vm.runInContext(bridge, context);
+  const planet = context.CladaLivingPlanetCore.ensurePlanet(context.state.metacommunity);
+  Object.assign(planet, { seaLevel: .2, climate: .12, humidity: 0, glaciation: 0, tectonics: 0 });
+  context.state.generation = 50;
+  context.state.fossilIndex = null;
+  const present = context.terrainAt(.5, .5);
+  context.state.history = [{ generation: 10, planet: { seaLevel: -.2, climate: -.12, humidity: 0, glaciation: 0, tectonics: 0 } }];
+  context.state.fossilIndex = 0;
+  const fossil = context.terrainAt(.5, .5);
+  assert.notEqual(present.water, fossil.water);
+  assert.ok(present.temperature > fossil.temperature);
+});
