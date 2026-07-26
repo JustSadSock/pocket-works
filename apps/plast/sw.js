@@ -19,6 +19,7 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
+  '../../shared/mobile-runtime.js',
   '../../shared/update-manager.css',
   '../../shared/update-manager.js'
 ];
