@@ -6,6 +6,7 @@ createWorkshopMode({
   cachePrefix: 'plast-',
   storageNamespace: 'pocket-works:plast',
   onReset() {
+    sessionStorage.setItem('pocket-works:plast:reset-on-load', '1');
     localStorage.removeItem('pocket-works:plast:world-v1');
     localStorage.removeItem('pocket-works:plast:settings-v1');
     window.dispatchEvent(new CustomEvent('appdatareset'));
