@@ -31,6 +31,7 @@ test('field journal overlay installs without mutating metacommunity', () => {
     seed: 'garden',
     originMode: 'mature',
     commandLog: [],
+    env: { temperature: .52, food: .62, mutation: .24 },
     metacommunity: {
       species: [{ id: 1, abundance: 12, guild: 'grazer', extinct: false }],
       demes: [{ id: 1, speciesId: 1, abundance: 12, trend: 1, patchId: '00', foodRatio: .9, compatibility: .9, carryingCapacity: 15, geneFlow: .2, isolation: .1 }],
@@ -39,8 +40,8 @@ test('field journal overlay installs without mutating metacommunity', () => {
   };
   const context = vm.createContext({
     globalThis: {}, state, document, viewTabs, sheetBody,
-    finalizeGeneration() {}, openSpeciesSheet() {}, openMenuSheet() {}, buildWorld() {}, migrateLivingState() {},
-    applyCataclysm() {}, seedAt() {}, buildCompactDiagnostic() { return { version: '4.0.0' }; },
+    finalizeGeneration() {}, openSpeciesSheet() {}, openMenuSheet() {}, buildWorld(seed) { state.seed = seed; state.generation = 164; }, migrateLivingState() {},
+    applyCataclysm(type) { state.commandLog.push({ g: state.generation, type: 'cataclysm', value: type }); }, seedAt(x, y, amount) { state.commandLog.push({ g: state.generation, type: 'introduction', x, y, amount }); }, buildCompactDiagnostic() { return { version: '4.0.0' }; },
     saveState() {}, safeText: String, Blob, URL, setTimeout,
     LIVING: { originMode: 'mature', habitatColors: {} },
     META: { summarize() { return { abundance: 12, richness: 1, demes: 1, occupiedPatches: 1, guilds: {} }; } },
@@ -57,4 +58,13 @@ test('field journal overlay installs without mutating metacommunity', () => {
   assert.equal(state.fieldJournal.version, 1);
   assert.equal(state.fieldJournal.speciesSeries[1].length, 1);
   assert.equal(state.metacommunity.demes[0].abundance, 12);
+
+  context.fieldStartReplay({
+    schema: 'clada-replay-v1', seed: 'garden', originMode: 'mature', version: '4.1.0',
+    commands: [{ g: 164, type: 'environment', key: 'food', value: .88 }, { g: 164, type: 'cataclysm', value: 'ice' }]
+  });
+  assert.equal(state.env.food, .88);
+  assert.equal(state.fieldJournal.replay.active, false);
+  assert.equal(state.commandLog.filter((entry) => entry.type === 'environment').length, 1);
+  assert.equal(state.commandLog.filter((entry) => entry.type === 'cataclysm').length, 1);
 });
