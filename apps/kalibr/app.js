@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 createWorkshopMode({
   appName: 'КАЛИБР',
-  version: '1.0.0',
+  version: '2.0.0',
   cachePrefix: 'kalibr-',
   storageNamespace: 'pocket-works:kalibr'
 });
@@ -18,17 +18,25 @@ const loadClassicScript = (source) => new Promise((resolve, reject) => {
   document.head.append(script);
 });
 
+async function loadRuntimePack() {
+  if (!globalThis.DecompressionStream) throw new Error('Браузер не поддерживает распаковку игрового runtime');
+  const parts = await Promise.all([0, 1, 2, 3].map(async (index) => {
+    const response = await fetch(`./game-pack-${index}.txt`);
+    if (!response.ok) throw new Error(`Пакет ${index + 1} недоступен`);
+    return response.text();
+  }));
+  const binary = atob(parts.join('').replace(/\s/g, ''));
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const source = await new Response(stream).text();
+  new Function(source)();
+}
+
 try {
-  for (const source of [
-    './game-part-1.js',
-    './game-part-2.js',
-    './game-part-3.js',
-    './game-part-4.js',
-    './game-part-5.js',
-    './game-part-6.js'
-  ]) await loadClassicScript(source);
+  await loadClassicScript('./game-part-1.js');
+  await loadRuntimePack();
 } catch (error) {
   console.error('КАЛИБР не запустился', error);
   const screen = document.getElementById('menuScreen');
-  if (screen) screen.innerHTML = `<div style="margin:auto;max-width:620px;padding:32px"><p style="color:#f2b84b;font-weight:900">ОШИБКА ЗАПУСКА</p><h1 style="font-size:48px;margin:.2em 0">КАЛИБР НЕ ЗАРЯЖЕН</h1><p>${String(error?.message || error)}</p><button onclick="location.reload()" style="margin-top:20px;padding:14px 22px;border:0;background:#f2b84b;font-weight:900">ПОВТОРИТЬ</button></div>`;
+  if (screen) screen.innerHTML = `<div class="fatal-error"><p>ОШИБКА ЗАПУСКА</p><h1>КАЛИБР НЕ ЗАРЯЖЕН</h1><span>${String(error?.message || error)}</span><button onclick="location.reload()">ПОВТОРИТЬ</button></div>`;
 }

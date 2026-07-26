@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#121719">
+  <meta name="theme-color" content="#0d1417">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="КАЛИБР">
@@ -19,146 +19,119 @@
 <body data-app-preset="canvas" data-fullscreen-app>
   <main class="game-shell" data-app-shell>
     <canvas id="gameCanvas" aria-label="Игровое поле КАЛИБР"></canvas>
-    <canvas id="miniMap" width="150" height="150" aria-hidden="true"></canvas>
-
+    <canvas id="miniMap" width="160" height="160" aria-hidden="true"></canvas>
     <div class="grain" aria-hidden="true"></div>
     <div class="damage-vignette" id="damageVignette" aria-hidden="true"></div>
+    <div class="damage-direction" id="damageDirection" aria-hidden="true"><i></i></div>
     <div class="hit-marker" id="hitMarker" aria-hidden="true"></div>
     <div class="crosshair" id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+    <div class="objective-compass" id="objectiveCompass" hidden aria-hidden="true"><i></i></div>
 
     <header class="hud-top" id="hudTop" hidden>
       <button class="icon-button home-button" id="homeButton" type="button" aria-label="Вернуться в Pocket Works" data-native-press>PW</button>
       <div class="mission-strip">
         <span id="mapLabel">ТЕРРАСА</span>
-        <strong id="objectiveLabel">ЗАЧИСТИТЬ СЕКТОР</strong>
-        <em id="enemyCounter">8 ЦЕЛЕЙ</em>
+        <div><strong id="objectiveLabel">ПРОБИТЬ ПЕРИМЕТР</strong><i><b id="objectiveFill"></b></i></div>
+        <em id="objectiveMeta">6 ЦЕЛЕЙ</em>
       </div>
       <button class="icon-button pause-button" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
     </header>
 
     <section class="hud-bottom" id="hudBottom" hidden>
-      <div class="health-block">
-        <span>СОСТОЯНИЕ</span>
-        <div class="health-track"><i id="healthFill"></i></div>
-        <strong id="healthValue">100</strong>
+      <div class="vitals-block">
+        <div class="vital health"><span>ЗДОРОВЬЕ</span><i><b id="healthFill"></b></i><strong id="healthValue">100</strong></div>
+        <div class="vital armor"><span>БРОНЯ</span><i><b id="armorFill"></b></i><strong id="armorValue">55</strong></div>
       </div>
-      <div class="ammo-block">
-        <span>R-24</span>
-        <strong id="ammoValue">24</strong>
-        <em id="reserveValue">/ 120</em>
-      </div>
+      <div class="streak-block"><span>ДРОН</span><strong id="streakValue">0%</strong></div>
+      <button class="ammo-block" id="ammoBlock" type="button" data-native-press aria-label="Перезарядить оружие">
+        <span id="weaponName">VKT-31</span><strong id="ammoValue">30</strong><em id="reserveValue">/ 150</em>
+      </button>
     </section>
 
     <div class="controls" id="controls" hidden>
-      <div class="move-zone" id="moveZone" aria-label="Зона движения">
-        <div class="stick-base" id="stickBase"><i id="stickKnob"></i></div>
-      </div>
+      <div class="move-zone" id="moveZone" aria-label="Зона движения"><div class="stick-base" id="stickBase"><i id="stickKnob"></i></div></div>
       <div class="look-zone" id="lookZone" aria-label="Зона обзора"></div>
-      <button class="reload-button" id="reloadButton" type="button" data-native-press><span>↻</span><small>ПЕРЕЗАРЯДКА</small></button>
+      <button class="utility-button grenade-button" id="grenadeButton" type="button" data-native-press><span>◆</span><b id="grenadeCount">2</b></button>
+      <button class="utility-button weapon-button" id="weaponButton" type="button" data-native-press>I</button>
+      <button class="support-button" id="supportButton" type="button" disabled data-native-press><span>ДРОН</span><b>УДАР</b></button>
       <button class="fire-button" id="fireButton" type="button" data-native-press><span></span><b>ОГОНЬ</b></button>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="reload-indicator" id="reloadIndicator" hidden><span>ПЕРЕЗАРЯДКА</span><i></i></div>
+    <div class="action-indicator" id="actionIndicator" hidden><span id="actionLabel">ПЕРЕЗАРЯДКА</span><i><b id="actionFill"></b></i></div>
 
     <section class="screen menu-screen" id="menuScreen">
-      <div class="menu-brand">
-        <p>POCKET WORKS / MOBILE FPS</p>
-        <h1>КАЛИБР</h1>
-        <span>ТРИ СЕКТОРА · ОДИН МАГАЗИН · НИКАКИХ МЕЛКИХ КНОПОК</span>
+      <header class="menu-header">
+        <div class="menu-brand"><p>POCKET WORKS / MOBILE FPS</p><h1>КАЛИБР</h1><span>ТАКТИЧЕСКИЕ ОПЕРАЦИИ ДЛЯ ДВУХ БОЛЬШИХ ПАЛЬЦЕВ</span></div>
+        <div class="profile-chip"><span>УРОВЕНЬ</span><strong id="levelValue">01</strong><i><b id="xpFill"></b></i><em id="xpValue">0 / 520 XP</em></div>
+      </header>
+
+      <div class="menu-content">
+        <section class="selector-panel operation-panel">
+          <header><span>01 / ОПЕРАЦИЯ</span><strong id="operationTitle">ГРОМООТВОД / ТЕРРАСА</strong><p id="operationBrief">Пробей внешний периметр, заложи импульсный заряд и удержи антенну до перегрузки.</p></header>
+          <div class="map-selector" aria-label="Выбор операции">
+            <button class="map-card is-selected" type="button" data-map="terrace" data-native-press><span>01</span><div><strong>ГРОМООТВОД</strong><small>Штурм · оборона · эвакуация</small></div><em data-best="terrace">НЕ ПРОЙДЕНО</em></button>
+            <button class="map-card" type="button" data-map="dock" data-native-press><span>02</span><div><strong>ЧЁРНАЯ ВОДА</strong><small>Поиск · тяжёлый оператор</small></div><em data-best="dock">НЕ ПРОЙДЕНО</em></button>
+            <button class="map-card" type="button" data-map="archive" data-native-press><span>03</span><div><strong>НУЛЕВАЯ КОПИЯ</strong><small>Разведка · удержание канала</small></div><em data-best="archive">НЕ ПРОЙДЕНО</em></button>
+          </div>
+        </section>
+
+        <section class="selector-panel loadout-panel">
+          <header><span>02 / КОМПЛЕКТ</span><strong id="loadoutTitle">ШТУРМ · VKT-31</strong><p id="loadoutStats">БРОНЯ · ШТУРМОВАЯ ВИНТОВКА · 2 ГРАНАТЫ</p></header>
+          <div class="loadout-selector" aria-label="Выбор комплекта">
+            <button class="loadout-card is-selected" type="button" data-loadout="assault" data-native-press><i>AR</i><div><strong>ШТУРМ</strong><small>Точный универсал</small></div><em>БРОНЯ</em></button>
+            <button class="loadout-card" type="button" data-loadout="vanguard" data-native-press><i>SMG</i><div><strong>АВАНГАРД</strong><small>Скорость и темп</small></div><em>ТЕМП</em></button>
+            <button class="loadout-card" type="button" data-loadout="breach" data-native-press><i>M-8</i><div><strong>ПРОРЫВ</strong><small>Ближняя дистанция</small></div><em>УДАР</em></button>
+          </div>
+        </section>
       </div>
 
-      <div class="map-selector" id="mapSelector" aria-label="Выбор карты">
-        <button class="map-card is-selected" type="button" data-map="terrace" data-native-press>
-          <span class="map-number">01</span>
-          <div><strong>ТЕРРАСА</strong><small>Открытые линии / средняя дистанция</small></div>
-          <em data-best="terrace">—</em>
-        </button>
-        <button class="map-card" type="button" data-map="dock" data-native-press>
-          <span class="map-number">02</span>
-          <div><strong>СУХОЙ ДОК</strong><small>Коридоры / быстрые контакты</small></div>
-          <em data-best="dock">—</em>
-        </button>
-        <button class="map-card" type="button" data-map="archive" data-native-press>
-          <span class="map-number">03</span>
-          <div><strong>АРХИВ</strong><small>Фланги / симметричная ловушка</small></div>
-          <em data-best="archive">—</em>
-        </button>
-      </div>
-
-      <div class="menu-actions">
+      <footer class="menu-actions">
         <button class="primary-button" id="startButton" type="button" data-native-press><span>НАЧАТЬ ОПЕРАЦИЮ</span><b>→</b></button>
         <button class="text-button" id="settingsButton" type="button" data-native-press>НАСТРОЙКИ</button>
-        <button class="text-button" id="howButton" type="button" data-native-press>УПРАВЛЕНИЕ</button>
+        <button class="text-button" id="howButton" type="button" data-native-press>КАК ИГРАТЬ</button>
         <button class="text-button workshop-trigger" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
-      </div>
+      </footer>
     </section>
 
     <section class="screen briefing-screen" id="briefingScreen" hidden>
       <button class="close-button" id="briefingClose" type="button" data-native-press>×</button>
       <div class="briefing-copy">
-        <p>ПЕРЕД ВХОДОМ</p>
-        <h2>ДВА ПАЛЬЦА.<br>ОДНА ЗАДАЧА.</h2>
+        <p>УПРАВЛЕНИЕ БЕЗ ПИАНИНО НА ЭКРАНЕ</p><h2>ДВИГАЙСЯ.<br>СМОТРИ.<br>СТРЕЛЯЙ.</h2>
         <div class="control-diagram">
-          <div><i class="diagram-stick"></i><strong>ЛЕВАЯ РУКА</strong><span>Двигайся в любом направлении. Стик появляется под пальцем.</span></div>
-          <div><i class="diagram-look"></i><strong>ПРАВАЯ РУКА</strong><span>Веди камерой по всей половине экрана. Прицел мягко цепляется за цель.</span></div>
-          <div><i class="diagram-fire"></i><strong>ОГОНЬ</strong><span>Большая кнопка лежит прямо под большим пальцем. Удерживай для очереди.</span></div>
+          <div><i class="diagram-stick"></i><strong>ДВИЖЕНИЕ</strong><span>Левый палец ставит плавающий стик. Полный наклон автоматически включает бег.</span></div>
+          <div><i class="diagram-look"></i><strong>ОБЗОР</strong><span>Правая половина экрана поворачивает камеру. Рядом с целью движение становится точнее.</span></div>
+          <div><i class="diagram-fire"></i><strong>ОГОНЬ</strong><span>Удерживай большую кнопку. Умный огонь можно включить — тогда достаточно навести прицел.</span></div>
+          <div><i class="diagram-auto"></i><strong>АВТОМАТИКА</strong><span>Подбор, взаимодействие, спринт и пустой магазин обрабатываются без лишних кнопок.</span></div>
         </div>
       </div>
-      <button class="primary-button compact" id="briefingStart" type="button" data-native-press><span>ПОНЯТНО</span><b>→</b></button>
+      <button class="primary-button compact" id="briefingStart" type="button" data-native-press><span>В БОЙ</span><b>→</b></button>
     </section>
 
     <section class="screen pause-screen" id="pauseScreen" hidden>
-      <div class="pause-panel">
-        <p>ОПЕРАЦИЯ ПРИОСТАНОВЛЕНА</p>
-        <h2 id="pauseMap">ТЕРРАСА</h2>
-        <div class="pause-stats"><span>ВРЕМЯ <b id="pauseTime">00:00</b></span><span>ЦЕЛЕЙ <b id="pauseKills">0/8</b></span><span>ТОЧНОСТЬ <b id="pauseAccuracy">0%</b></span></div>
-        <button class="primary-button" id="continueButton" type="button" data-native-press><span>ПРОДОЛЖИТЬ</span><b>→</b></button>
-        <div class="pause-actions">
-          <button class="text-button" id="restartButton" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
-          <button class="text-button" id="pauseSettingsButton" type="button" data-native-press>НАСТРОЙКИ</button>
-          <button class="text-button" id="menuButton" type="button" data-native-press>ВЫЙТИ В МЕНЮ</button>
-        </div>
-      </div>
+      <div class="pause-panel"><p>ОПЕРАЦИЯ ПРИОСТАНОВЛЕНА</p><h2 id="pauseMap">ГРОМООТВОД / ТЕРРАСА</h2><div class="pause-stats"><span>ВРЕМЯ <b id="pauseTime">00:00</b></span><span>УСТРАНЕНО <b id="pauseKills">0</b></span><span>ТОЧНОСТЬ <b id="pauseAccuracy">0%</b></span></div><button class="primary-button" id="continueButton" type="button" data-native-press><span>ПРОДОЛЖИТЬ</span><b>→</b></button><div class="pause-actions"><button class="text-button" id="restartButton" type="button" data-native-press>ЗАНОВО</button><button class="text-button" id="pauseSettingsButton" type="button" data-native-press>НАСТРОЙКИ</button><button class="text-button" id="menuButton" type="button" data-native-press>В МЕНЮ</button></div></div>
     </section>
 
     <section class="screen result-screen" id="resultScreen" hidden>
-      <div class="result-panel">
-        <p id="resultKicker">СЕКТОР ЗАЧИЩЕН</p>
-        <h2 id="resultGrade">A</h2>
-        <div class="result-score"><span>РЕЗУЛЬТАТ</span><strong id="resultScore">8 420</strong></div>
-        <div class="result-grid">
-          <div><span>ВРЕМЯ</span><b id="resultTime">01:42</b></div>
-          <div><span>ТОЧНОСТЬ</span><b id="resultAccuracy">46%</b></div>
-          <div><span>ЗДОРОВЬЕ</span><b id="resultHealth">72</b></div>
-        </div>
-        <p class="record-note" id="recordNote"></p>
-        <button class="primary-button" id="againButton" type="button" data-native-press><span>ЕЩЁ РАЗ</span><b>↻</b></button>
-        <button class="text-button" id="resultMenuButton" type="button" data-native-press>ВЫБРАТЬ ДРУГОЙ СЕКТОР</button>
-      </div>
+      <div class="result-panel"><p id="resultKicker">ОПЕРАЦИЯ ЗАВЕРШЕНА</p><h2 id="resultGrade">A</h2><div class="result-score"><span>РЕЗУЛЬТАТ</span><strong id="resultScore">13 420</strong></div><div class="result-grid"><div><span>ВРЕМЯ</span><b id="resultTime">03:42</b></div><div><span>ТОЧНОСТЬ</span><b id="resultAccuracy">46%</b></div><div><span>ЗДОРОВЬЕ + БРОНЯ</span><b id="resultHealth">72 + 18</b></div><div><span>ОПЫТ</span><b id="resultXp">+420 XP</b></div></div><p class="record-note" id="recordNote"></p><button class="primary-button" id="againButton" type="button" data-native-press><span>ПОВТОРИТЬ</span><b>↻</b></button><button class="text-button" id="resultMenuButton" type="button" data-native-press>ДРУГАЯ ОПЕРАЦИЯ</button></div>
     </section>
 
     <section class="settings-layer" id="settingsLayer" hidden>
       <button class="settings-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
-      <div class="settings-sheet">
-        <header><div><p>ЛИЧНЫЙ ПРОФИЛЬ</p><h2>НАСТРОЙКИ ХВАТА</h2></div><button id="settingsClose" type="button" data-native-press>×</button></header>
-        <label class="range-row"><span><b>ЧУВСТВИТЕЛЬНОСТЬ</b><small>Скорость поворота камеры</small></span><input id="sensitivityRange" type="range" min="0.55" max="1.7" step="0.05"><output id="sensitivityOutput">1.00</output></label>
-        <label class="range-row"><span><b>АВТОДОВЕДЕНИЕ</b><small>Мягко удерживает видимую цель</small></span><input id="assistRange" type="range" min="0" max="1" step="0.1"><output id="assistOutput">0.7</output></label>
+      <div class="settings-sheet"><header><div><p>ПРОФИЛЬ УПРАВЛЕНИЯ</p><h2>НАСТРОЙКИ ХВАТА</h2></div><button id="settingsClose" type="button" data-native-press>×</button></header>
+        <label class="range-row"><span><b>ЧУВСТВИТЕЛЬНОСТЬ</b><small>Скорость свободного поворота камеры</small></span><input id="sensitivityRange" type="range" min="0.55" max="1.7" step="0.05"><output id="sensitivityOutput">1.00</output></label>
+        <label class="range-row"><span><b>ПОМОЩЬ ПРИЦЕЛА</b><small>Замедляет камеру и доводит видимую цель</small></span><input id="assistRange" type="range" min="0" max="1" step="0.05"><output id="assistOutput">0.75</output></label>
+        <button class="toggle-row" id="smartFireToggle" type="button" data-native-press><span><b>УМНЫЙ ОГОНЬ</b><small>Стрелять автоматически после уверенного наведения</small></span><i>ВКЛ</i></button>
         <button class="toggle-row" id="leftHandToggle" type="button" data-native-press><span><b>ЛЕВША</b><small>Поменять зоны хвата местами</small></span><i>ВЫКЛ</i></button>
-        <button class="toggle-row" id="audioToggle" type="button" data-native-press><span><b>ЗВУК</b><small>Выстрелы, шаги и сигналы</small></span><i>ВКЛ</i></button>
-        <button class="toggle-row" id="hapticToggle" type="button" data-native-press><span><b>ОТДАЧА</b><small>Короткая вибрация при попадании</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="audioToggle" type="button" data-native-press><span><b>ЗВУК</b><small>Оружие, сигналы и попадания</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="hapticToggle" type="button" data-native-press><span><b>ТАКТИЛЬНАЯ ОТДАЧА</b><small>Вибрация при выстрелах и уроне</small></span><i>ВКЛ</i></button>
         <button class="toggle-row" id="qualityToggle" type="button" data-native-press><span><b>ДЕТАЛИЗАЦИЯ</b><small>Разрешение рендера и эффекты</small></span><i>ВЫСОКАЯ</i></button>
       </div>
     </section>
 
-    <section class="rotate-screen" id="rotateScreen" hidden>
-      <div class="phone-glyph"><i></i></div>
-      <strong>ПОВЕРНИ ТЕЛЕФОН</strong>
-      <span>КАЛИБР рассчитан на горизонтальный хват.</span>
-    </section>
+    <section class="rotate-screen" id="rotateScreen" hidden><div class="phone-glyph"><i></i></div><strong>ПОВЕРНИ ТЕЛЕФОН</strong><span>КАЛИБР рассчитан на горизонтальный хват.</span></section>
   </main>
-
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАЛИБР" data-app-version="1.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАЛИБР" data-app-version="2.0.0"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

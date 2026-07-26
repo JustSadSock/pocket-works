@@ -4,21 +4,21 @@
   "slug": "kalibr",
   "name": "КАЛИБР",
   "shortName": "КАЛИБР",
-  "description": "Мобильный тактический 3D-шутер с хватовым управлением, мягким автодоведением и тремя проработанными аренами.",
-  "version": "1.0.0",
+  "description": "Полноценный мобильный тактический FPS с тремя операциями, классами оружия, умным управлением и многоэтапными миссиями.",
+  "version": "2.0.0",
   "releaseDate": "2026-07-26",
-  "releaseDateTime": "2026-07-26T22:40:00+02:00",
+  "releaseDateTime": "2026-07-26T17:30:00+02:00",
   "changelog": [
-    "Первый релиз: три карты, противники, оружие, цели, сохранение рекордов и полноценное управление для горизонтального телефона."
+    "Версия 2.0: три многоэтапные операции, три комплекта бойца, вторичное оружие, гранаты, броня, регенерация, четыре типа врагов, ударный дрон, прогрессия и упрощённое мобильное управление."
   ],
   "status": "active",
   "preset": "canvas",
   "accent": "#f2b84b",
-  "backgroundColor": "#121719",
-  "themeColor": "#121719",
+  "backgroundColor": "#0d1417",
+  "themeColor": "#0d1417",
   "orientation": "landscape",
-  "cacheName": "kalibr-v1.0.0",
+  "cacheName": "kalibr-v2.0.0",
   "storageNamespace": "pocket-works:kalibr",
-  "tags": ["game", "shooter", "3d", "landscape", "touch"],
+  "tags": ["game", "shooter", "fps", "3d", "landscape", "touch", "campaign"],
   "order": 78
 }

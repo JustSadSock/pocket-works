@@ -2,14 +2,14 @@
   "id": "/apps/kalibr/",
   "name": "КАЛИБР",
   "short_name": "КАЛИБР",
-  "description": "Мобильный тактический 3D-шутер с хватовым управлением.",
+  "description": "Мобильный тактический FPS с многоэтапными операциями и управлением для горизонтального хвата.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "orientation": "landscape",
-  "background_color": "#121719",
-  "theme_color": "#121719",
+  "background_color": "#0d1417",
+  "theme_color": "#0d1417",
   "icons": [
     {"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
   ]
