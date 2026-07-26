@@ -1,12 +1,20 @@
 {
-  "name":"НУЛЕВОЙ ЭТАЖ",
-  "short_name":"ЭТАЖ",
-  "description":"Мобильный FPS о побеге из перестраивающегося комплекса.",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "orientation":"landscape",
-  "background_color":"#171714",
-  "theme_color":"#171714",
-  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "id": "/apps/nulevoy-etazh/",
+  "name": "НУЛЕВОЙ ЭТАЖ",
+  "short_name": "ЭТАЖ",
+  "description": "Мобильный FPS о побеге из перестраивающегося бетонного комплекса: три энергоядра, охотящиеся дроны и один лифт наружу.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#171714",
+  "theme_color": "#171714",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
