@@ -15,6 +15,7 @@ const APP_SHELL = [
   './app.config.json',
   './styles.css',
   './app.js',
+  './engine.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
