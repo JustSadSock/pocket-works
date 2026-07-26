@@ -4,6 +4,7 @@ const FIELD = globalThis.CladaFieldJournalCore;
 const FIELD_APP_VERSION = '4.1.0';
 let fieldApplyingReplay = false;
 let fieldLastRecordedGeneration = -1;
+let fieldFoodHitRegions = [];
 
 function fieldEnsureState() {
   if (!state) return null;
@@ -183,6 +184,7 @@ function fieldFoodNodes() {
 
 function fieldDrawFoodWeb(canvas) {
   const { resources, nodes } = fieldFoodNodes();
+  fieldFoodHitRegions = [];
   const context = canvas.getContext('2d'); const width = canvas.width, height = canvas.height;
   context.clearRect(0, 0, width, height); context.fillStyle = '#f1ecdc'; context.fillRect(0, 0, width, height);
   const all = [...resources, ...nodes];
@@ -215,6 +217,15 @@ function fieldDrawFoodWeb(canvas) {
     context.fillStyle = resource ? '#9a9b72' : node.guild === 'predator' ? '#7d574e' : node.guild === 'filterer' ? '#557987' : '#507057'; context.fill();
     context.strokeStyle = '#f5f0e1'; context.lineWidth = 2; context.stroke();
     context.fillStyle = '#25352c'; context.font = '700 9px system-ui'; context.textAlign = 'center'; context.fillText(node.label.toUpperCase().slice(0, 15), node.x, node.y + radius + 12);
+    if (!resource) fieldFoodHitRegions.push({ id: node.id, x: node.x, y: node.y, radius: radius + 9 });
   }
   context.textAlign = 'start';
+}
+
+function fieldFoodSpeciesAt(canvas, event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (event.clientX - rect.left) * canvas.width / Math.max(1, rect.width);
+  const y = (event.clientY - rect.top) * canvas.height / Math.max(1, rect.height);
+  const hit = [...fieldFoodHitRegions].reverse().find((entry) => Math.hypot(entry.x - x, entry.y - y) <= entry.radius);
+  return hit?.id ?? null;
 }
