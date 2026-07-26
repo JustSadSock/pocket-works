@@ -15,6 +15,7 @@
   <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
   <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css?v=1.0.0">
   <link rel="stylesheet" href="./styles.css?v=1.0.0">
 </head>
 <body data-fullscreen-app>
@@ -47,6 +48,7 @@
         <button class="menu-button primary" id="continueButton" type="button" data-native-press><b>ПРОДОЛЖИТЬ</b><span id="continueMeta">сохранённый мир</span></button>
         <button class="menu-button" id="newWorldButton" type="button" data-native-press><b>НОВЫЙ МИР</b><span>случайный ландшафт</span></button>
         <button class="menu-button compact" id="titleSettingsButton" type="button" data-native-press><b>НАСТРОЙКИ</b></button>
+        <button class="menu-button compact" type="button" data-workshop-trigger data-native-press><b>WORKSHOP</b></button>
         <a class="menu-button compact" href="../../" data-app-control data-native-press><b>POCKET WORKS</b></a>
       </div>
       <div class="title-foot">ПРОЦЕДУРНЫЙ МИР · OFFLINE · АВТОСОХРАНЕНИЕ</div>
@@ -138,6 +140,7 @@
   </main>
 
   <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЛАСТ" data-app-version="1.0.0"></script>
+  <script type="module" src="./workshop.js?v=1.0.0"></script>
   <script src="./app.js?v=1.0.0" type="module"></script>
 </body>
 </html>
