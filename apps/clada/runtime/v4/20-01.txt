@@ -27,7 +27,7 @@ globalThis.CladaLivingPlanetCore = (() => {
     { id: 'arid', label: 'СУХАЯ ЭПОХА', climate: .11, humidity: -.18, sea: -.04, ice: .01, tectonics: .07 },
     { id: 'glacial', label: 'ЛЕДНИКОВАЯ ЭПОХА', climate: -.18, humidity: -.04, sea: -.15, ice: .62, tectonics: .03 },
     { id: 'transgression', label: 'МОРСКАЯ ТРАНСГРЕССИЯ', climate: .08, humidity: .1, sea: .18, ice: 0, tectonics: .05 },
-    { id: 'orogeny', label: 'ЭПОХА ГОРOОБРАЗОВАНИЯ', climate: -.02, humidity: .01, sea: -.03, ice: .08, tectonics: .42 }
+    { id: 'orogeny', label: 'ЭПОХА ГОРООБРАЗОВАНИЯ', climate: -.02, humidity: .01, sea: -.03, ice: .08, tectonics: .42 }
   ];
 
   function patchKey(a, b) { return `${a}>${b}`; }
