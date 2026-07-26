@@ -1,16 +1,20 @@
 const CACHE_PREFIX = 'plast-';
-const CACHE_NAME = 'plast-v1.0.0-p1';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'plast-v1.1.0-p2';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-07-26';
-const CACHE_PROTOCOL = 1;
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Процедурный voxel-мир с холмами, пещерами, водой, пляжами и деревьями.',
-  'Мобильное управление с обзором пальцем, стиком, прыжком, добычей и строительством.',
-  'Десять материалов, хотбар, инвентарь и локальное сохранение мира.',
-  'Физика игрока, плавание, подсветка цели, анимация руки и процедурные звуки.'
+  'Динамические сутки со звёздами, луной и меняющимся освещением.',
+  'Объёмные овцы, свиньи, коровы и куры с ходьбой и реакцией на игрока.',
+  'Здоровье, сытость, воздух, падения, утопление, еда и возрождение.',
+  'Бег, скрытное движение у края, покачивание камеры и расширение обзора.',
+  'Частицы, трещины при добыче и расширенное автосохранение.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js',
+  './', './index.html', './app.config.json', './styles.css', './living.css',
+  './app-core.js', './app-living-a.js', './app-living-b.js',
+  './app-world-a.js', './app-world-b.js', './app-world-c.js',
+  './app-ui-a.js', './app-ui-b.js', './app.js',
   './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/update-manager.css', '../../shared/update-manager.js'
 ];
