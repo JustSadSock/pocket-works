@@ -1,0 +1,220 @@
+/* КЛАДА 4.1 — данные, графики и карты полевого журнала. */
+const FIELD_JOURNAL_VERSION = 1;
+const FIELD = globalThis.CladaFieldJournalCore;
+const FIELD_APP_VERSION = '4.1.0';
+let fieldApplyingReplay = false;
+let fieldLastRecordedGeneration = -1;
+
+function fieldEnsureState() {
+  if (!state) return null;
+  state.fieldJournal ||= { version: FIELD_JOURNAL_VERSION, speciesSeries: {}, alerts: [], replay: null, lastEventCursor: 0 };
+  state.fieldJournal.version = FIELD_JOURNAL_VERSION;
+  state.fieldJournal.speciesSeries ||= {};
+  state.fieldJournal.alerts ||= [];
+  state.fieldJournal.lastEventCursor ||= 0;
+  return state.fieldJournal;
+}
+
+function fieldSpeciesMeta(speciesId) {
+  return state.metacommunity?.species?.find((entry) => Number(entry.id) === Number(speciesId)) || null;
+}
+
+function fieldDemes(speciesId) {
+  return (state.metacommunity?.demes || []).filter((deme) => Number(deme.speciesId) === Number(speciesId) && (deme.abundance || 0) > .02);
+}
+
+function fieldRecordSnapshot(force = false) {
+  const journal = fieldEnsureState();
+  const meta = state?.metacommunity;
+  if (!journal || !meta || (!force && fieldLastRecordedGeneration === state.generation)) return;
+  fieldLastRecordedGeneration = state.generation;
+  for (const species of meta.species || []) {
+    const snapshot = FIELD.speciesSnapshot(meta, species.id);
+    const series = journal.speciesSeries[species.id] ||= [];
+    const point = {
+      g: state.generation,
+      n: Math.round(snapshot.abundance),
+      d: snapshot.demes.length,
+      p: snapshot.patches,
+      trend: FIELD.round(snapshot.trend, 2),
+      food: FIELD.round(snapshot.meanFood),
+      predation: FIELD.round(snapshot.meanPredation),
+      compatibility: FIELD.round(snapshot.meanCompatibility),
+      flow: FIELD.round(snapshot.meanGeneFlow),
+      isolation: FIELD.round(snapshot.meanIsolation)
+    };
+    if (series.at(-1)?.g === point.g) series[series.length - 1] = point;
+    else series.push(point);
+    journal.speciesSeries[species.id] = FIELD.compactSeries(series.slice(-420), 240);
+  }
+  fieldCaptureAlerts();
+}
+
+function fieldCaptureAlerts() {
+  const journal = fieldEnsureState();
+  const meta = state.metacommunity;
+  if (journal.lastEventCursor > (meta.events || []).length) journal.lastEventCursor = 0;
+  const newEvents = (meta.events || []).slice(journal.lastEventCursor);
+  for (const event of newEvents) {
+    const species = state.species.find((entry) => entry.id === event.speciesId);
+    const text = event.type === 'colonization'
+      ? `${species?.common || 'Вид'} заселил участок ${event.patchId}`
+      : event.type === 'niche-shift'
+        ? `${species?.common || 'Вид'} занял новую нишу: ${fieldGuildName(event.guild)}`
+        : event.type === 'speciation'
+          ? `Возникла новая ветвь ${species?.common || ''}`
+          : event.type === 'local-extinction'
+            ? `${species?.common || 'Популяция'} исчезла на участке ${event.patchId}`
+            : null;
+    if (text) journal.alerts.push({ g: event.generation ?? state.generation, type: event.type, speciesId: event.speciesId ?? null, text });
+  }
+  journal.lastEventCursor = (meta.events || []).length;
+  journal.alerts = journal.alerts.slice(-120);
+}
+
+function fieldGuildName(guild) {
+  return ({ grazer: 'пастбищная', browser: 'листоядная', predator: 'хищная', scavenger: 'падальная', filterer: 'фильтрующая', amphibian: 'прибрежная', burrower: 'норная', flyer: 'летающая' })[guild] || guild || 'смешанная';
+}
+
+function fieldBiomeName(patch) {
+  return BIOME_NAMES?.[patch?.biome] || patch?.biome || 'неизвестный биом';
+}
+
+function fieldPressureHtml(speciesId) {
+  const pressure = FIELD.pressureBreakdown(state.metacommunity, speciesId);
+  const tone = pressure.direction === 'declining' || pressure.direction === 'extinct' ? 'danger' : pressure.direction === 'growing' ? 'good' : 'steady';
+  return `<div class="field-diagnosis ${tone}"><header><span>ПОЧЕМУ?</span><b>${safeText(pressure.headline)}</b></header><div class="pressure-causes">${pressure.factors.map((factor) => `<div class="pressure-cause"><div><span>${safeText(factor.label)}</span><small>${safeText(factor.detail)}</small></div><b>${factor.percent}%</b><i style="--value:${factor.percent}%"></i></div>`).join('')}</div></div>`;
+}
+
+function fieldDemeHtml(deme) {
+  const stage = FIELD.divergenceStage(deme);
+  const patch = metaPatchById(deme.patchId);
+  const blockers = stage.blockers.length ? stage.blockers.join(' · ') : 'условия для отделения почти выполнены';
+  const steps = ['ПОПУЛЯЦИЯ', 'ФОРМА', 'ИЗОЛЯЦИЯ', 'ЭКОТИП', 'ВИД'].map((label, index) => `<i class="${index <= stage.index ? 'active' : ''}"><b>${index + 1}</b><span>${label}</span></i>`).join('');
+  return `<article class="field-deme-card" data-deme-id="${deme.id}"><header><div><small>${safeText(fieldBiomeName(patch))} · участок ${safeText(deme.patchId)}</small><b>${safeText(stage.label)}</b></div><output>${Math.round(deme.abundance || 0)}</output></header><div class="divergence-track">${steps}</div><p>${safeText(stage.description)}</p><dl><div><dt>Поток генов</dt><dd>${Math.round((deme.geneFlow || 0) * 100)}%</dd></div><div><dt>Изоляция</dt><dd>${Math.round((deme.isolation || 0) * 100)}%</dd></div><div><dt>Пища</dt><dd>${Math.round((deme.foodRatio || 0) * 100)}%</dd></div><div><dt>Ёмкость</dt><dd>${Math.round(deme.carryingCapacity || 0)}</dd></div></dl><small class="field-blocker">${safeText(blockers)}</small></article>`;
+}
+
+function fieldSpeciesSeries(speciesId) {
+  return fieldEnsureState()?.speciesSeries?.[speciesId] || [];
+}
+
+function fieldDrawLineChart(canvas, speciesId) {
+  const series = fieldSpeciesSeries(speciesId);
+  const context = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = '#f2eddc'; context.fillRect(0, 0, width, height);
+  context.strokeStyle = 'rgba(39,56,46,.13)'; context.lineWidth = 1;
+  for (let i = 1; i < 4; i += 1) { const y = height * i / 4; context.beginPath(); context.moveTo(28, y); context.lineTo(width - 12, y); context.stroke(); }
+  if (series.length < 2) {
+    context.fillStyle = '#667168'; context.font = '12px system-ui'; context.fillText('Данные появятся после нескольких поколений', 24, height / 2); return;
+  }
+  const minG = series[0].g, maxG = series.at(-1).g || minG + 1;
+  const maxN = Math.max(4, ...series.map((entry) => entry.n));
+  context.strokeStyle = '#355e45'; context.lineWidth = 3; context.lineJoin = 'round'; context.beginPath();
+  series.forEach((entry, index) => {
+    const x = 28 + (width - 42) * (entry.g - minG) / Math.max(1, maxG - minG);
+    const y = height - 18 - (height - 34) * entry.n / maxN;
+    if (!index) context.moveTo(x, y); else context.lineTo(x, y);
+  });
+  context.stroke();
+  const last = series.at(-1);
+  context.fillStyle = '#26372d'; context.font = '700 12px system-ui'; context.fillText(String(last.n), width - 38, 16);
+  context.fillStyle = '#6d756e'; context.font = '10px system-ui'; context.fillText(`G${minG}`, 8, height - 5); context.fillText(`G${maxG}`, width - 44, height - 5);
+}
+
+function fieldPatchRect(patch, width, height) {
+  const gap = 5;
+  const cellW = (width - gap * 5) / 4, cellH = (height - gap * 4) / 3;
+  return { x: gap + patch.bx * (cellW + gap), y: gap + patch.by * (cellH + gap), w: cellW, h: cellH };
+}
+
+function fieldDrawRangeMap(canvas, speciesId) {
+  const meta = metaEnsureState();
+  const context = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  const demes = fieldDemes(speciesId);
+  for (const patch of meta.patches) {
+    const rect = fieldPatchRect(patch, width, height);
+    context.fillStyle = LIVING.habitatColors[patch.biome] || '#a9aa91';
+    context.globalAlpha = .52; context.fillRect(rect.x, rect.y, rect.w, rect.h); context.globalAlpha = 1;
+    context.strokeStyle = 'rgba(31,42,36,.16)'; context.strokeRect(rect.x, rect.y, rect.w, rect.h);
+  }
+  context.save(); context.setLineDash([5, 4]); context.strokeStyle = 'rgba(96,55,122,.62)'; context.lineWidth = 2;
+  for (const deme of demes) {
+    if (!deme.colonizationSource) continue;
+    const source = meta.demes.find((entry) => entry.id === deme.colonizationSource);
+    const sourcePatch = source && metaPatchById(source.patchId), targetPatch = metaPatchById(deme.patchId);
+    if (!sourcePatch || !targetPatch) continue;
+    const a = fieldPatchRect(sourcePatch, width, height), b = fieldPatchRect(targetPatch, width, height);
+    context.beginPath(); context.moveTo(a.x + a.w / 2, a.y + a.h / 2); context.lineTo(b.x + b.w / 2, b.y + b.h / 2); context.stroke();
+  }
+  context.restore();
+  const max = Math.max(1, ...demes.map((deme) => deme.abundance || 0));
+  for (const deme of demes) {
+    const patch = metaPatchById(deme.patchId); if (!patch) continue;
+    const rect = fieldPatchRect(patch, width, height);
+    const stage = FIELD.divergenceStage(deme);
+    const radius = 5 + Math.sqrt((deme.abundance || 0) / max) * 14;
+    context.beginPath(); context.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, radius, 0, Math.PI * 2);
+    context.fillStyle = stage.index >= 2 ? 'rgba(105,62,132,.76)' : 'rgba(35,78,52,.76)'; context.fill();
+    context.strokeStyle = '#f4efdf'; context.lineWidth = 2; context.stroke();
+    context.fillStyle = '#fffdf4'; context.font = '700 10px system-ui'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(String(Math.round(deme.abundance || 0)), rect.x + rect.w / 2, rect.y + rect.h / 2);
+  }
+  context.textAlign = 'start'; context.textBaseline = 'alphabetic';
+}
+
+function fieldFoodNodes() {
+  const meta = metaEnsureState();
+  const living = meta.species.filter((species) => !species.extinct && (species.abundance || 0) > .5);
+  const resources = [
+    { id: 'plants', label: 'РАСТЕНИЯ', guild: 'resource', level: 0 },
+    { id: 'plankton', label: 'ПЛАНКТОН', guild: 'resource', level: 0 },
+    { id: 'carrion', label: 'ПАДАЛЬ', guild: 'resource', level: 0 }
+  ];
+  const nodes = living.map((species) => {
+    const app = state.species.find((entry) => entry.id === species.id);
+    const level = species.guild === 'predator' ? 2 : species.guild === 'scavenger' ? 1.45 : 1;
+    return { id: species.id, label: app?.common || `Вид ${species.id}`, guild: species.guild, abundance: species.abundance || 0, level };
+  });
+  return { meta, resources, nodes };
+}
+
+function fieldDrawFoodWeb(canvas) {
+  const { resources, nodes } = fieldFoodNodes();
+  const context = canvas.getContext('2d'); const width = canvas.width, height = canvas.height;
+  context.clearRect(0, 0, width, height); context.fillStyle = '#f1ecdc'; context.fillRect(0, 0, width, height);
+  const all = [...resources, ...nodes];
+  const byLevel = new Map();
+  for (const node of all) { if (!byLevel.has(node.level)) byLevel.set(node.level, []); byLevel.get(node.level).push(node); }
+  for (const [level, group] of byLevel) group.forEach((node, index) => {
+    node.x = 32 + (width - 64) * (index + 1) / (group.length + 1);
+    node.y = height - 35 - level / 2 * (height - 72);
+  });
+  const edges = [];
+  for (const node of nodes) {
+    if (['grazer', 'browser', 'burrower', 'flyer', 'amphibian'].includes(node.guild)) edges.push(['plants', node.id, .7]);
+    if (node.guild === 'filterer') edges.push(['plankton', node.id, .9]);
+    if (node.guild === 'scavenger') edges.push(['carrion', node.id, .8]);
+    if (node.guild === 'predator') {
+      const prey = nodes.filter((candidate) => candidate.id !== node.id && candidate.guild !== 'predator' && candidate.guild !== 'scavenger').sort((a, b) => b.abundance - a.abundance).slice(0, 4);
+      for (const candidate of prey) edges.push([candidate.id, node.id, Math.min(1, candidate.abundance / Math.max(8, node.abundance))]);
+    }
+  }
+  const map = new Map(all.map((node) => [node.id, node]));
+  for (const [fromId, toId, weight] of edges) {
+    const from = map.get(fromId), to = map.get(toId); if (!from || !to) continue;
+    context.strokeStyle = 'rgba(54,79,62,.28)'; context.lineWidth = 1 + weight * 3; context.beginPath(); context.moveTo(from.x, from.y); context.lineTo(to.x, to.y); context.stroke();
+    const angle = Math.atan2(to.y - from.y, to.x - from.x); const ax = to.x - Math.cos(angle) * 15, ay = to.y - Math.sin(angle) * 15;
+    context.fillStyle = 'rgba(54,79,62,.48)'; context.beginPath(); context.moveTo(ax, ay); context.lineTo(ax - Math.cos(angle - .55) * 7, ay - Math.sin(angle - .55) * 7); context.lineTo(ax - Math.cos(angle + .55) * 7, ay - Math.sin(angle + .55) * 7); context.fill();
+  }
+  for (const node of all) {
+    const resource = node.guild === 'resource'; const radius = resource ? 15 : Math.min(22, 9 + Math.sqrt(node.abundance || 1));
+    context.beginPath(); context.arc(node.x, node.y, radius, 0, Math.PI * 2);
+    context.fillStyle = resource ? '#9a9b72' : node.guild === 'predator' ? '#7d574e' : node.guild === 'filterer' ? '#557987' : '#507057'; context.fill();
+    context.strokeStyle = '#f5f0e1'; context.lineWidth = 2; context.stroke();
+    context.fillStyle = '#25352c'; context.font = '700 9px system-ui'; context.textAlign = 'center'; context.fillText(node.label.toUpperCase().slice(0, 15), node.x, node.y + radius + 12);
+  }
+  context.textAlign = 'start';
+}
