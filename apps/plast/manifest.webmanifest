@@ -1,0 +1,21 @@
+{
+  "id": "/apps/plast/",
+  "name": "ПЛАСТ",
+  "short_name": "ПЛАСТ",
+  "description": "Мобильная voxel-песочница: исследуй процедурный мир, ломай и устанавливай блоки.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#87b8dc",
+  "theme_color": "#4e7835",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
