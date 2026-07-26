@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="FACET">
-  <meta name="description" content="Локальный многовидовой анализ внешности с устойчивыми особенностями, пограничными признаками и визуальным балансом.">
+  <meta name="description" content="Локальный адаптивный анализ внешности с отбором полезных ракурсов, диагностикой перспективы и стабильностью зон лица.">
   <title>FACET</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -32,9 +32,9 @@
     </header>
 
     <section class="hero" aria-labelledby="app-title">
-      <div class="hero-index"><span>5 VIEWS</span><span>EVIDENCE</span><span>LOCAL</span></div>
+      <div class="hero-index"><span>3 CORE</span><span>+2 CHECK</span><span>LOCAL</span></div>
       <h1 id="app-title">FACET</h1>
-      <p>Пять ракурсов. Устойчивые особенности, пограничные признаки и визуальный баланс — без приговора по одному селфи.</p>
+      <p>Три основных ракурса и два контрольных. В расчёт входят только кадры, которые действительно уточняют внешность.</p>
     </section>
 
     <label class="consent-row">
@@ -48,7 +48,7 @@
         <div>
           <p class="section-number">01 · PROTOCOL</p>
           <h2 id="capture-title">Серия</h2>
-          <p class="section-hint" id="capture-hint">FACET сам показывает направление и делает кадр после достижения правильного угла.</p>
+          <p class="section-hint" id="capture-hint">Сними прямо и два небольших поворота. Контрольные фронтальные кадры проверят дистанцию и повторяемость.</p>
         </div>
         <div class="scan-status">
           <div class="scan-progress" id="scan-progress" aria-label="Прогресс серии">
@@ -59,9 +59,9 @@
       </header>
 
       <div class="protocol-strip">
-        <div><strong>5</strong><span>управляемых ракурсов</span></div>
-        <div><strong>≈15°</strong><span>небольшой поворот</span></div>
-        <div><strong>авто</strong><span>снимок при верном угле</span></div>
+        <div><strong>3+2</strong><span>основа и контроль</span></div>
+        <div><strong>перспектива</strong><span>дистанция и углы</span></div>
+        <div><strong>адаптивно</strong><span>лишнее не влияет</span></div>
       </div>
 
       <div class="capture-actions">
@@ -76,7 +76,7 @@
         </label>
       </div>
 
-      <div class="session-readout" id="session-readout">Автосъёмка · 5 ракурсов · управляемый поворот головы</div>
+      <div class="session-readout" id="session-readout">Автосъёмка · 3 основных ракурса + 2 контроля</div>
       <div class="session-frames" id="session-frames"></div>
 
       <div class="photo-stage" id="photo-stage" data-state="empty">
@@ -98,7 +98,7 @@
     <section class="result-panel" id="result-panel" hidden aria-labelledby="result-title">
       <header class="panel-heading result-heading">
         <div><p class="section-number">02 · RESULT</p><h2 id="result-title">Профиль внешности</h2></div>
-        <p class="result-mode" id="result-mode">5 РАКУРСОВ · ЛОКАЛЬНО</p>
+        <p class="result-mode" id="result-mode">АДАПТИВНО · 3–5 РАКУРСОВ</p>
       </header>
 
       <div class="score-block">
@@ -119,7 +119,7 @@
       <section class="frame-section" aria-labelledby="frame-title">
         <div class="detail-heading">
           <div><p class="section-number">03 · EVIDENCE</p><h3 id="frame-title">Пять исходных измерений</h3></div>
-          <span>качество и фактический угол каждого кадра</span>
+          <span>качество, угол и полезность каждого кадра</span>
         </div>
         <div class="frame-evidence" id="frame-evidence"></div>
       </section>
@@ -149,7 +149,7 @@
       <section class="detail-section" aria-labelledby="detail-title">
         <div class="detail-heading">
           <div><p class="section-number">06 · MEASUREMENTS</p><h3 id="detail-title">Черты и пропорции</h3></div>
-          <span>объединённое положение по пяти ракурсам</span>
+          <span>адаптивно объединённые измерения</span>
         </div>
         <div class="feature-detail-list" id="feature-detail-list"></div>
       </section>
@@ -161,13 +161,13 @@
       </div>
     </section>
 
-    <footer class="app-footer" data-ui><span>FACET v2.0.0</span><span>Локальная обработка</span></footer>
+    <footer class="app-footer" data-ui><span>FACET v2.1.0</span><span>Локальная обработка</span></footer>
   </main>
 
   <dialog class="sheet" id="camera-dialog">
     <div class="sheet-shell camera-shell">
       <header class="sheet-header camera-header">
-        <div><p class="eyebrow">КАМЕРА · <span id="camera-lens">ФРОНТАЛЬНАЯ</span></p><h2>Пять управляемых ракурсов</h2></div>
+        <div><p class="eyebrow">КАМЕРА · <span id="camera-lens">ФРОНТАЛЬНАЯ</span></p><h2>Три основных + два контроля</h2></div>
         <button class="icon-button" id="camera-close" type="button" aria-label="Закрыть камеру" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
       </header>
       <div class="camera-view" id="camera-view" data-fov="standard">
@@ -194,9 +194,10 @@
     <div class="sheet-shell reading-shell">
       <header class="sheet-header sticky"><div><p class="eyebrow">МЕТОД</p><h2>Как считается</h2></div><button class="icon-button" type="button" aria-label="Закрыть" data-dialog-close data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <article class="method-copy selectable-content">
-        <section><h3>Что FACET анализирует</h3><p>Приложение измеряет геометрию и взаимное расположение видимых зон лица по пяти управляемым ракурсам. Главный результат — устойчивые особенности и их сочетания, а не одна цифра.</p></section>
-        <section><h3>Четыре уровня уверенности</h3><p>Качество кадра, повторяемость ориентиров, уверенность классификации каждой черты и доля признаков с достаточной опорой показываются отдельно.</p></section>
-        <section><h3>Ограничение</h3><p>2.5D-профиль по RGB-камере является приближением. Экспериментальная оценка восприятия не является объективной мерой красоты и не учитывает стиль, движение, голос, харизму и индивидуальный вкус.</p></section>
+        <section><h3>Адаптивный протокол</h3><p>Три основных ракурса обязательны. Два контрольных используются только тогда, когда улучшают повторяемость или обнаруживают расхождение.</p></section>
+        <section><h3>Коррекция перспективы</h3><p>FACET сравнивает размер лица, положение в кадре, наклон и симметрию поворотов. При слишком близкой камере уверенность чувствительных зон снижается.</p></section>
+        <section><h3>Стабильность зон</h3><p>Контур, глаза, брови, нос, губы и нижняя часть лица проверяются отдельно. Одна нестабильная зона не маскируется общей цифрой.</p></section>
+        <section><h3>Ограничение</h3><p>2.5D-профиль по RGB-камере является приближением. Экспериментальная оценка восприятия не является объективной мерой красоты.</p></section>
         <section class="sources"><h3>Исследовательская основа</h3><a href="https://doi.org/10.1038/s41598-025-86974-0" target="_blank" rel="noreferrer">Lee et al., 2025</a><a href="https://arxiv.org/abs/1801.06345" target="_blank" rel="noreferrer">SCUT-FBP5500</a></section>
       </article>
     </div>
@@ -212,7 +213,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <canvas id="work-canvas" hidden></canvas>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FACET" data-app-version="2.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FACET" data-app-version="2.1.0"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>
