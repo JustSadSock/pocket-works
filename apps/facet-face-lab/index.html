@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="FACET">
-  <meta name="description" content="Локальный анализ привлекательности и геометрического типажа лица по стандартизированной серии из трёх кадров.">
+  <meta name="description" content="Локальный многовидовой анализ внешности с устойчивыми особенностями, пограничными признаками и визуальным балансом.">
   <title>FACET</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -32,9 +32,9 @@
     </header>
 
     <section class="hero" aria-labelledby="app-title">
-      <div class="hero-index"><span>3 FRAMES</span><span>MEDIAN</span><span>LOCAL</span></div>
+      <div class="hero-index"><span>5 VIEWS</span><span>EVIDENCE</span><span>LOCAL</span></div>
       <h1 id="app-title">FACET</h1>
-      <p>Одна автоматическая серия. Три проверенных кадра. Итог появляется только после полного протокола.</p>
+      <p>Пять ракурсов. Устойчивые особенности, пограничные признаки и визуальный баланс — без приговора по одному селфи.</p>
     </section>
 
     <label class="consent-row">
@@ -48,20 +48,20 @@
         <div>
           <p class="section-number">01 · PROTOCOL</p>
           <h2 id="capture-title">Серия</h2>
-          <p class="section-hint" id="capture-hint">Три кадра снимаются автоматически. Между принятыми кадрами проходит не меньше 3 секунд.</p>
+          <p class="section-hint" id="capture-hint">FACET сам показывает направление и делает кадр после достижения правильного угла.</p>
         </div>
         <div class="scan-status">
           <div class="scan-progress" id="scan-progress" aria-label="Прогресс серии">
-            <i class="scan-dot is-current"></i><i class="scan-dot"></i><i class="scan-dot"></i>
+            <i class="scan-dot is-current"></i><i class="scan-dot"></i><i class="scan-dot"></i><i class="scan-dot"></i><i class="scan-dot"></i>
           </div>
-          <strong id="scan-counter">0/3</strong>
+          <strong id="scan-counter">0/5</strong>
         </div>
       </header>
 
       <div class="protocol-strip">
-        <div><strong>3</strong><span>валидных кадра</span></div>
-        <div><strong>≥3 с</strong><span>между кадрами</span></div>
-        <div><strong>медиана</strong><span>вместо лучшего кадра</span></div>
+        <div><strong>5</strong><span>управляемых ракурсов</span></div>
+        <div><strong>≈15°</strong><span>небольшой поворот</span></div>
+        <div><strong>авто</strong><span>снимок при верном угле</span></div>
       </div>
 
       <div class="capture-actions">
@@ -71,12 +71,12 @@
         </button>
         <label class="secondary-button" id="upload-label" aria-disabled="true">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5"/></svg>
-          Выбрать 3 фото
+          Выбрать 5 фото
           <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple disabled>
         </label>
       </div>
 
-      <div class="session-readout" id="session-readout">Автосъёмка · 3 кадра · интервал ≥ 3 с</div>
+      <div class="session-readout" id="session-readout">Автосъёмка · 5 ракурсов · управляемый поворот головы</div>
       <div class="session-frames" id="session-frames"></div>
 
       <div class="photo-stage" id="photo-stage" data-state="empty">
@@ -97,29 +97,29 @@
 
     <section class="result-panel" id="result-panel" hidden aria-labelledby="result-title">
       <header class="panel-heading result-heading">
-        <div><p class="section-number">02 · RESULT</p><h2 id="result-title">Профиль лица</h2></div>
-        <p class="result-mode" id="result-mode">ПРОВЕРЕНО · 3 КАДРА</p>
+        <div><p class="section-number">02 · RESULT</p><h2 id="result-title">Профиль внешности</h2></div>
+        <p class="result-mode" id="result-mode">5 РАКУРСОВ · ЛОКАЛЬНО</p>
       </header>
 
       <div class="score-block">
         <div class="score-main"><strong id="score-value">—</strong><span>/5</span></div>
-        <div class="score-copy"><strong id="score-label">—</strong><span>диапазон <b id="score-range">—</b></span></div>
+        <div class="score-copy"><strong id="score-label">—</strong><span>экспериментальный диапазон <b id="score-range">—</b></span></div>
       </div>
 
       <p class="stability-note" id="stability-note"></p>
 
       <div class="result-stats">
-        <div><span>Надёжность</span><strong id="reliability-value">—</strong></div>
+        <div><span>Качество кадра</span><strong id="reliability-value">—</strong></div>
         <div><span>Повторяемость</span><strong id="consistency-value">—</strong></div>
-        <div><span>Типичность</span><strong id="typicality-value">—</strong></div>
+        <div><span>Центральность</span><strong id="typicality-value">—</strong></div>
         <div><span>Видимость</span><strong id="occlusion-value">—</strong></div>
-        <div><span>Протокол</span><strong id="protocol-value">—</strong></div>
+        <div><span>Ракурсы</span><strong id="protocol-value">—</strong></div>
       </div>
 
       <section class="frame-section" aria-labelledby="frame-title">
         <div class="detail-heading">
-          <div><p class="section-number">03 · EVIDENCE</p><h3 id="frame-title">Три исходных измерения</h3></div>
-          <span>качество и фактический интервал каждого кадра</span>
+          <div><p class="section-number">03 · EVIDENCE</p><h3 id="frame-title">Пять исходных измерений</h3></div>
+          <span>качество и фактический угол каждого кадра</span>
         </div>
         <div class="frame-evidence" id="frame-evidence"></div>
       </section>
@@ -149,7 +149,7 @@
       <section class="detail-section" aria-labelledby="detail-title">
         <div class="detail-heading">
           <div><p class="section-number">06 · MEASUREMENTS</p><h3 id="detail-title">Черты и пропорции</h3></div>
-          <span>медианное положение по трём кадрам</span>
+          <span>объединённое положение по пяти ракурсам</span>
         </div>
         <div class="feature-detail-list" id="feature-detail-list"></div>
       </section>
@@ -161,13 +161,13 @@
       </div>
     </section>
 
-    <footer class="app-footer" data-ui><span>FACET v1.4</span><span>Локальная обработка</span></footer>
+    <footer class="app-footer" data-ui><span>FACET v2.0.0</span><span>Локальная обработка</span></footer>
   </main>
 
   <dialog class="sheet" id="camera-dialog">
     <div class="sheet-shell camera-shell">
       <header class="sheet-header camera-header">
-        <div><p class="eyebrow">КАМЕРА · <span id="camera-lens">ФРОНТАЛЬНАЯ</span></p><h2>Стандартизированная серия</h2></div>
+        <div><p class="eyebrow">КАМЕРА · <span id="camera-lens">ФРОНТАЛЬНАЯ</span></p><h2>Пять управляемых ракурсов</h2></div>
         <button class="icon-button" id="camera-close" type="button" aria-label="Закрыть камеру" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
       </header>
       <div class="camera-view" id="camera-view" data-fov="standard">
@@ -178,9 +178,9 @@
         <p id="camera-message">Разреши доступ к камере</p>
       </div>
       <div class="camera-series-bar">
-        <div class="camera-frame-dots" id="camera-frames"><i class="camera-frame-dot is-current"></i><i class="camera-frame-dot"></i><i class="camera-frame-dot"></i></div>
-        <strong id="camera-counter">0/3</strong>
-        <span>минимум 3 секунды между принятыми кадрами</span>
+        <div class="camera-frame-dots" id="camera-frames"><i class="camera-frame-dot is-current"></i><i class="camera-frame-dot"></i><i class="camera-frame-dot"></i><i class="camera-frame-dot"></i><i class="camera-frame-dot"></i></div>
+        <strong id="camera-counter">0/5</strong>
+        <span>не нажимай повторно — следуй подсказке и дождись автоснимка</span>
       </div>
       <div class="camera-controls">
         <button id="camera-flip" type="button" aria-label="Переключить камеру" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h10a4 4 0 0 1 4 4v1M4 8l3-3M4 8l3 3M20 16H10a4 4 0 0 1-4-4v-1m14 5-3-3m3 3-3 3"/></svg></button>
@@ -194,12 +194,10 @@
     <div class="sheet-shell reading-shell">
       <header class="sheet-header sticky"><div><p class="eyebrow">МЕТОД</p><h2>Как считается</h2></div><button class="icon-button" type="button" aria-label="Закрыть" data-dialog-close data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <article class="method-copy selectable-content">
-        <section><h3>Почему три кадра</h3><p>Один снимок слишком чувствителен к фокусу, микроповороту и работе детектора. Серия использует три независимо проверенных кадра и медиану, поэтому один случайно удачный или неудачный снимок не определяет результат.</p></section>
-        <section><h3>Как проходит серия</h3><p>После одного нажатия приложение само делает три кадра. Между принятыми кадрами проходит не меньше трёх секунд. Смаз, поворот, сильная мимика, перекрытие волосами и неверная дистанция отклоняются и не засчитываются.</p></section>
-        <section><h3>Повторяемость</h3><p>Сравнивается не только итоговая оценка, но и восемь отдельных пропорций. Если контуры заметно плавают между кадрами, показатель повторяемости падает, а диапазон результата расширяется.</p></section>
-        <section><h3>Галерея</h3><p>Для трёх загруженных файлов невозможно достоверно проверить интервал съёмки. Такой результат помечается как частично проверенный и получает более широкий диапазон.</p></section>
-        <section><h3>Ограничение</h3><p>Это оценочная модель геометрии, а не объективная мера красоты. Она не учитывает стиль, движение, голос, выражение в жизни и индивидуальный вкус.</p></section>
-        <section class="sources"><h3>Основа</h3><a href="https://doi.org/10.1038/s41598-025-86974-0" target="_blank" rel="noreferrer">Lee et al., 2025</a><a href="https://arxiv.org/abs/1801.06345" target="_blank" rel="noreferrer">SCUT-FBP5500</a></section>
+        <section><h3>Что FACET анализирует</h3><p>Приложение измеряет геометрию и взаимное расположение видимых зон лица по пяти управляемым ракурсам. Главный результат — устойчивые особенности и их сочетания, а не одна цифра.</p></section>
+        <section><h3>Четыре уровня уверенности</h3><p>Качество кадра, повторяемость ориентиров, уверенность классификации каждой черты и доля признаков с достаточной опорой показываются отдельно.</p></section>
+        <section><h3>Ограничение</h3><p>2.5D-профиль по RGB-камере является приближением. Экспериментальная оценка восприятия не является объективной мерой красоты и не учитывает стиль, движение, голос, харизму и индивидуальный вкус.</p></section>
+        <section class="sources"><h3>Исследовательская основа</h3><a href="https://doi.org/10.1038/s41598-025-86974-0" target="_blank" rel="noreferrer">Lee et al., 2025</a><a href="https://arxiv.org/abs/1801.06345" target="_blank" rel="noreferrer">SCUT-FBP5500</a></section>
       </article>
     </div>
   </dialog>
@@ -214,7 +212,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <canvas id="work-canvas" hidden></canvas>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FACET" data-app-version="1.4.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FACET" data-app-version="2.0.0"></script>
   <script src="./app.js" type="module"></script>
 </body>
 </html>
