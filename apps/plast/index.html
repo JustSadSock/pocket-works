@@ -9,16 +9,18 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ПЛАСТ">
   <title>ПЛАСТ</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
-  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
-  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
-  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.1.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.1.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.1.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.1.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.1.0">
+  <link rel="stylesheet" href="./styles.css?v=1.1.0">
+  <link rel="stylesheet" href="./living.css?v=1.1.0">
 </head>
 <body data-fullscreen-app>
   <main class="app" id="app" data-app-shell>
     <canvas id="world" aria-label="Трёхмерный voxel-мир"></canvas>
+    <canvas id="entities" aria-hidden="true"></canvas>
     <div class="sky-wash" aria-hidden="true"></div>
 
     <section class="boot" id="boot">
@@ -55,7 +57,7 @@
 
     <section class="hud" id="hud" hidden>
       <header class="hud-top">
-        <div class="status-block"><b id="biomeLabel">ЛУГА</b><span id="coordsLabel">0 · 0 · 0</span></div>
+        <div class="status-block"><b id="biomeLabel">ЛУГА</b><span id="coordsLabel">0 · 0 · 0</span><em id="timeLabel">ДЕНЬ 1 · 08:00</em></div>
         <button id="pauseButton" class="square-button pause-button" aria-label="Пауза"><i></i><i></i></button>
       </header>
 
@@ -63,12 +65,19 @@
       <div class="target-label" id="targetLabel" hidden>ЗЕМЛЯ</div>
       <div class="break-ring" id="breakRing" aria-hidden="true"><i id="breakProgress"></i></div>
       <div class="underwater" id="underwater" aria-hidden="true"></div>
+      <div class="sprint-vignette" id="sprintVignette" aria-hidden="true"></div>
       <div class="damage-flash" id="damageFlash" aria-hidden="true"></div>
+      <div class="survival-bars" id="survivalBars">
+        <div class="health-row" id="healthBar" aria-label="Здоровье"></div>
+        <div class="air-row" id="airBar" aria-label="Воздух"></div>
+        <div class="hunger-row" id="hungerBar" aria-label="Сытость"></div>
+      </div>
 
       <div class="touch-look" id="lookZone" aria-label="Обзор"></div>
       <div class="joystick" id="joystick" aria-label="Движение"><i id="joystickKnob"></i></div>
 
       <div class="action-cluster">
+        <button id="crouchButton" class="round-button crouch-button" aria-label="Красться"><span>⌄</span></button>
         <button id="jumpButton" class="round-button jump-button" aria-label="Прыжок"><span>↑</span></button>
         <button id="mineButton" class="round-button mine-button" aria-label="Ломать"><span>◆</span><small>ЛОМАТЬ</small></button>
         <button id="placeButton" class="round-button place-button" aria-label="Ставить"><span>■</span><small>СТАВИТЬ</small></button>
@@ -122,7 +131,15 @@
     </section>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЛАСТ" data-app-version="1.0.0"></script>
-  <script src="./app.js?v=1.0.0" type="module"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЛАСТ" data-app-version="1.1.0"></script>
+  <script src="./app-living-a.js?v=1.1.0"></script>
+  <script src="./app-living-b.js?v=1.1.0"></script>
+  <script src="./app-core.js?v=1.1.0"></script>
+  <script src="./app-world-a.js?v=1.1.0"></script>
+  <script src="./app-world-b.js?v=1.1.0"></script>
+  <script src="./app-world-c.js?v=1.1.0"></script>
+  <script src="./app-ui-a.js?v=1.1.0"></script>
+  <script src="./app-ui-b.js?v=1.1.0"></script>
+  <script src="./app.js?v=1.1.0"></script>
 </body>
 </html>
