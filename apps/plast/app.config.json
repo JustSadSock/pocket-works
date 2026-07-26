@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "plast",
+  "name": "ПЛАСТ",
+  "shortName": "ПЛАСТ",
+  "description": "Оригинальная мобильная voxel-песочница: процедурный мир, добыча, строительство, вода и сохранение.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-26",
+  "releaseDateTime": "2026-07-26T17:30:00+02:00",
+  "changelog": [
+    "Процедурный voxel-мир с холмами, пещерами, водой, пляжами и деревьями.",
+    "Горизонтальное мобильное управление: левый стик, обзор пальцем, прыжок, добыча и установка блоков.",
+    "Десять строительных материалов, хотбар и полноэкранный инвентарь.",
+    "Физика игрока, плавание, столкновения, подсветка выбранного блока и анимация руки.",
+    "Локальное сохранение мира, позиции, настроек и изменений блоков.",
+    "Автономная PWA с оригинальным визуальным стилем и процедурными звуками."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#77b94b",
+  "backgroundColor": "#9dccf2",
+  "themeColor": "#182017",
+  "orientation": "landscape",
+  "cacheName": "plast-v1.0.0-p1",
+  "storageNamespace": "pocket-works:plast",
+  "tags": ["PWA", "offline", "game", "3d", "webgl2", "voxel", "sandbox", "building", "procedural", "mobile", "landscape", "survival", "creative"],
+  "order": 96
+}
