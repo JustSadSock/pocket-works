@@ -1,0 +1,55 @@
+/* КЛАДА 4.2 — подключение живой планеты к метасообществу. */
+const PLANET_MODEL_VERSION = 1;
+const PLANET_APP_VERSION = '4.2.0';
+const PLANET = globalThis.CladaLivingPlanetCore;
+const planetLegacyTerrainAt = terrainAt;
+const planetLegacyMetaAdvance = META.advance;
+const planetLegacyMetaCreateAppSpecies = metaCreateAppSpecies;
+const planetLegacyBuildCompactDiagnostic = buildCompactDiagnostic;
+
+terrainAt = function planetTerrainAt(x, y) {
+  const base = planetLegacyTerrainAt(x, y);
+  const meta = state?.metacommunity;
+  if (!meta?.planet || !PLANET) return base;
+  return PLANET.transformPoint(base, x, y, meta.planet, state.generation || meta.generation || 0);
+};
+
+META.advance = function planetAdvanceMetacommunity(community) {
+  PLANET.ensurePlanet(community);
+  PLANET.prepareGeneration(community);
+  PLANET.applyHabitatStress(community);
+  const result = planetLegacyMetaAdvance(community) || { proposals: [] };
+  PLANET.adjustIsolation(community);
+  PLANET.seedCorridorColonization(community);
+  const normal = PLANET.decorateProposals(community, result.proposals || []);
+  const extra = normal.length ? [] : PLANET.extraProposals(community);
+  return { ...result, proposals: [...normal, ...extra].slice(0, 1) };
+};
+
+metaCreateAppSpecies = function planetCreateAppSpecies(proposal) {
+  const id = planetLegacyMetaCreateAppSpecies(proposal);
+  if (!id) return id;
+  const appSpecies = state.species.find((entry) => entry.id === id);
+  const macroSpecies = state.metacommunity?.species?.find((entry) => entry.id === id);
+  if (appSpecies) {
+    appSpecies.speciationMode = proposal.mode || appSpecies.speciationMode;
+    appSpecies.geologicalCause = proposal.geologicalCause || null;
+    if (proposal.secondParentId) {
+      appSpecies.hybrid = true;
+      appSpecies.hybridParentId = proposal.secondParentId;
+    }
+  }
+  if (macroSpecies) {
+    macroSpecies.speciationMode = proposal.mode || macroSpecies.speciationMode;
+    macroSpecies.geologicalCause = proposal.geologicalCause || null;
+    if (proposal.secondParentId) macroSpecies.hybridParentId = proposal.secondParentId;
+  }
+  return id;
+};
+
+buildCompactDiagnostic = function planetBuildCompactDiagnostic() {
+  const payload = planetLegacyBuildCompactDiagnostic();
+  payload.version = PLANET_APP_VERSION;
+  if (state?.metacommunity) payload.planet = PLANET.compact(state.metacommunity);
+  return payload;
+};
