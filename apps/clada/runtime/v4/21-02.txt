@@ -1,0 +1,93 @@
+/* КЛАДА 4.2 — миграция, события и синхронизация живой планеты. */
+const planetLegacyFinalizeGeneration = finalizeGeneration;
+const planetLegacyBuildWorld = buildWorld;
+const planetLegacyMigrateLivingState = migrateLivingState;
+
+function planetEnsureState() {
+  const meta = metaEnsureState();
+  if (!meta) return null;
+  const planet = PLANET.ensurePlanet(meta);
+  state.planetSeenEvents ||= [];
+  state.planetOverlay ??= true;
+  return planet;
+}
+
+function planetEventLabel(event) {
+  if (!event) return '';
+  if (event.type === 'epoch-change') return event.text || 'Началась новая климатическая эпоха';
+  if (event.type === 'inundation') return `Море затопило регион ${event.patchId}`;
+  if (event.type === 'emergence') return `Появилась новая суша в регионе ${event.patchId}`;
+  if (event.type === 'biome-shift') return `Регион ${event.patchId}: ${BIOME_NAMES?.[event.from] || event.from} → ${BIOME_NAMES?.[event.to] || event.to}`;
+  if (event.type === 'planet-colonization') {
+    const route = ({ current: 'морскому течению', 'land-bridge': 'сухопутному мосту', 'ice-bridge': 'ледовому мосту' })[event.route] || 'новому коридору';
+    return `Вид ${event.speciesId} расселился по ${route}`;
+  }
+  return event.text || event.type;
+}
+
+function planetRecordEvents() {
+  const planet = planetEnsureState();
+  if (!planet) return;
+  const seen = new Set(state.planetSeenEvents || []);
+  for (const event of planet.events) {
+    const key = `${event.generation || 0}:${event.type}:${event.patchId || ''}:${event.speciesId || ''}:${event.to || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const text = planetEventLabel(event);
+    state.events.push({ generation: event.generation || state.generation, type: event.type, speciesId: event.speciesId, text });
+    if (state.fieldJournal?.alerts) state.fieldJournal.alerts.push({ g: event.generation || state.generation, type: event.type, speciesId: event.speciesId || null, text });
+  }
+  state.planetSeenEvents = [...seen].slice(-260);
+  if (state.fieldJournal?.alerts) state.fieldJournal.alerts = state.fieldJournal.alerts.slice(-120);
+}
+
+function planetSyncPopulationRecords() {
+  const meta = state.metacommunity;
+  if (!meta) return;
+  for (const population of state.populations || []) {
+    const deme = meta.demes.find((entry) => entry.id === population.macroDemeId);
+    const patch = meta.patches.find((entry) => entry.id === population.patchId);
+    if (!deme || !patch) continue;
+    population.geographicBarrier = metaRound(deme.geographicBarrier || 0);
+    population.corridorStrength = metaRound(deme.corridorStrength || 0);
+    population.planetStress = metaRound(deme.planetStress || 0);
+    population.island = Boolean(patch.island);
+    population.seaIce = Boolean(patch.seaIce);
+    population.mountainBarrier = Boolean(patch.mountainBarrier);
+    population.planetSpeciationMode = deme.planetSpeciationMode || (deme.ringTerminal ? 'ring' : null);
+    population.colonizationRoute = deme.planetRouteType || null;
+  }
+}
+
+finalizeGeneration = function planetFinalizeGeneration() {
+  planetLegacyFinalizeGeneration();
+  planetSyncPopulationRecords();
+  planetRecordEvents();
+  if (typeof planetUpdateBadge === 'function') planetUpdateBadge();
+  saveState();
+};
+
+buildWorld = function planetBuildWorld(seed = 'garden') {
+  planetLegacyBuildWorld(seed);
+  const planet = planetEnsureState();
+  if (planet) {
+    PLANET.prepareGeneration(state.metacommunity);
+    state.planetSeenEvents = planet.events.map((event) => `${event.generation || 0}:${event.type}:${event.patchId || ''}:${event.speciesId || ''}:${event.to || ''}`).slice(-260);
+  }
+  planetSyncPopulationRecords();
+  if (typeof planetUpdateBadge === 'function') planetUpdateBadge();
+  saveState();
+};
+
+migrateLivingState = function planetMigrateLivingState() {
+  planetLegacyMigrateLivingState();
+  const planet = planetEnsureState();
+  if (planet) {
+    PLANET.prepareGeneration(state.metacommunity);
+    state.planetSeenEvents ||= [];
+  }
+  planetSyncPopulationRecords();
+};
+
+planetEnsureState();
+planetSyncPopulationRecords();
