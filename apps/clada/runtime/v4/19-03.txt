@@ -1,0 +1,17 @@
+/* КЛАДА 4.1 — интерактивные узлы пищевой сети. */
+const fieldJournalBaseOpen = fieldOpenJournal;
+fieldOpenJournal = function fieldInteractiveJournal(panel = 'overview') {
+  fieldJournalBaseOpen(panel);
+  if (panel !== 'food') return;
+  requestAnimationFrame(() => {
+    const canvas = document.querySelector('#fieldFoodWeb');
+    if (!canvas) return;
+    fieldDrawFoodWeb(canvas);
+    canvas.addEventListener('pointerup', (event) => {
+      const speciesId = fieldFoodSpeciesAt(canvas, event);
+      if (speciesId === null) return;
+      const species = state.species.find((entry) => entry.id === Number(speciesId));
+      if (species) openSpeciesSheet(species);
+    });
+  });
+};
