@@ -1,0 +1,241 @@
+/* FACET v2.1 — adaptive validation and perspective diagnostics. */
+.facet-v21-diagnostics {
+  margin-top: 18px;
+  padding: 0;
+}
+
+.facet-v21-diagnostics .detail-heading {
+  margin-bottom: 14px;
+}
+
+.facet-v21-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.facet-v21-protocol-card,
+.facet-v21-perspective-card,
+.facet-v21-zone-card {
+  min-width: 0;
+  padding: 18px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.23);
+}
+
+.facet-v21-protocol-card { grid-column: span 12; }
+.facet-v21-perspective-card,
+.facet-v21-zone-card { grid-column: span 6; }
+
+.facet-v21-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.facet-v21-card-top > span {
+  color: var(--muted);
+  font-size: .67rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.facet-v21-card-top > strong {
+  color: var(--blue-dark);
+  font-size: 1.28rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.facet-v21-protocol-card > p,
+.facet-v21-perspective-card > p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.facet-v21-frame-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.facet-v21-frame-chip {
+  display: flex;
+  min-height: 86px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 11px 10px;
+  background: var(--paper);
+}
+
+.facet-v21-frame-chip span {
+  color: var(--muted);
+  font-size: .65rem;
+  line-height: 1.2;
+}
+
+.facet-v21-frame-chip strong {
+  font-size: .7rem;
+  line-height: 1.2;
+}
+
+.facet-v21-frame-chip small {
+  color: var(--muted);
+  font-size: .61rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.facet-v21-frame-chip.is-used {
+  box-shadow: inset 0 3px 0 var(--blue);
+}
+
+.facet-v21-frame-chip.is-used strong { color: var(--blue-dark); }
+.facet-v21-frame-chip.is-skipped { opacity: .55; }
+.facet-v21-frame-chip.is-skipped strong { font-weight: 600; }
+
+.facet-v21-meter {
+  position: relative;
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  background: var(--paper-deep);
+}
+
+.facet-v21-meter b {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  background: var(--blue);
+  transition: width .45s cubic-bezier(.2,.8,.2,1);
+}
+
+.facet-v21-perspective-card > .facet-v21-meter {
+  margin: 4px 0 12px;
+}
+
+.facet-v21-perspective-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--soft-line);
+}
+
+.facet-v21-perspective-metrics span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.facet-v21-zone-grid {
+  display: grid;
+  gap: 11px;
+}
+
+.facet-v21-zone-grid > div > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.facet-v21-zone-grid span {
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.facet-v21-zone-grid strong {
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.facet-v21-recommendation {
+  position: relative;
+  margin-top: 1px;
+  padding: 20px 20px 20px 24px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  background:
+    linear-gradient(90deg, rgba(32,79,116,.08), transparent 58%),
+    rgba(255,255,255,.22);
+}
+
+.facet-v21-recommendation::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--blue);
+}
+
+.facet-v21-recommendation > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--blue);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.facet-v21-recommendation > strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.facet-v21-recommendation > p {
+  max-width: 600px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.48;
+}
+
+.facet-v21-recommendation > button {
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (max-width: 620px) {
+  .facet-v21-perspective-card,
+  .facet-v21-zone-card { grid-column: span 12; }
+  .facet-v21-frame-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .facet-v21-frame-chip:nth-child(n+4) {
+    min-height: 74px;
+  }
+}
+
+@media (max-width: 420px) {
+  .facet-v21-protocol-card,
+  .facet-v21-perspective-card,
+  .facet-v21-zone-card {
+    padding: 15px;
+  }
+  .facet-v21-frame-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .facet-v21-frame-chip {
+    min-height: 72px;
+  }
+  .facet-v21-recommendation {
+    padding: 18px 16px 18px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facet-v21-meter b { transition: none; }
+}
