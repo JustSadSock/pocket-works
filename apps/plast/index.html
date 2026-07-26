@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#182017">
+  <meta name="description" content="ПЛАСТ — мобильная voxel-песочница с процедурным миром, добычей и строительством.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПЛАСТ">
+  <title>ПЛАСТ</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.0.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app" id="app" data-app-shell>
+    <canvas id="world" aria-label="Трёхмерный voxel-мир"></canvas>
+    <div class="sky-wash" aria-hidden="true"></div>
+
+    <section class="boot" id="boot">
+      <div class="boot-cube" aria-hidden="true"><i></i><b></b><span></span></div>
+      <strong>ФОРМИРУЕМ ПЛАСТЫ</strong>
+      <small id="bootText">поднимаем рельеф</small>
+      <div class="boot-track"><i id="bootFill"></i></div>
+    </section>
+
+    <section class="unsupported" id="unsupported" hidden>
+      <h1>3D не запустилось</h1>
+      <p>ПЛАСТУ нужен браузер с WebGL 2. Открой приложение в актуальном Safari или Chrome.</p>
+      <a href="../../" data-app-control>Вернуться в Pocket Works</a>
+    </section>
+
+    <section class="menu" id="menu" hidden>
+      <header class="brand">
+        <p>POCKET WORKS / VOXEL 12</p>
+        <h1>ПЛАСТ</h1>
+        <span>МИР СОБИРАЕТСЯ<br>ПО ОДНОМУ КУБУ</span>
+      </header>
+      <div class="menu-panel">
+        <div class="world-card">
+          <div class="world-thumb" aria-hidden="true"><i></i><b></b><span></span></div>
+          <div><small>ЛОКАЛЬНЫЙ МИР</small><strong id="worldName">ЗЕЛЁНЫЙ РАЗЛОМ</strong><em id="worldMeta">ещё не создан</em></div>
+        </div>
+        <button class="menu-primary" id="continueButton"><span id="continueLabel">СОЗДАТЬ МИР</span><b>▶</b></button>
+        <button class="menu-secondary" id="newWorldButton">Новый мир</button>
+        <button class="menu-secondary" id="menuSettingsButton">Настройки</button>
+        <a class="menu-link" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+      <footer>ОРИГИНАЛЬНАЯ VOXEL-ПЕСОЧНИЦА · БЕЗ ЧУЖИХ АССЕТОВ</footer>
+    </section>
+
+    <section class="hud" id="hud" hidden>
+      <header class="hud-top">
+        <div class="status-block"><b id="biomeLabel">ЛУГА</b><span id="coordsLabel">0 · 0 · 0</span></div>
+        <button id="pauseButton" class="square-button pause-button" aria-label="Пауза"><i></i><i></i></button>
+      </header>
+
+      <div class="crosshair" id="crosshair" aria-hidden="true"><i></i><b></b></div>
+      <div class="target-label" id="targetLabel" hidden>ЗЕМЛЯ</div>
+      <div class="break-ring" id="breakRing" aria-hidden="true"><i id="breakProgress"></i></div>
+      <div class="underwater" id="underwater" aria-hidden="true"></div>
+      <div class="damage-flash" id="damageFlash" aria-hidden="true"></div>
+
+      <div class="touch-look" id="lookZone" aria-label="Обзор"></div>
+      <div class="joystick" id="joystick" aria-label="Движение"><i id="joystickKnob"></i></div>
+
+      <div class="action-cluster">
+        <button id="jumpButton" class="round-button jump-button" aria-label="Прыжок"><span>↑</span></button>
+        <button id="mineButton" class="round-button mine-button" aria-label="Ломать"><span>◆</span><small>ЛОМАТЬ</small></button>
+        <button id="placeButton" class="round-button place-button" aria-label="Ставить"><span>■</span><small>СТАВИТЬ</small></button>
+      </div>
+
+      <div class="hotbar-wrap">
+        <button id="inventoryButton" class="inventory-button" aria-label="Инвентарь"><i></i><i></i><i></i><i></i></button>
+        <div class="hotbar" id="hotbar" role="toolbar" aria-label="Панель блоков"></div>
+      </div>
+
+      <div class="hand" id="hand" aria-hidden="true"><i id="heldBlock"></i></div>
+      <div class="toast" id="toast" role="status"></div>
+    </section>
+
+    <section class="overlay" id="pauseOverlay" hidden>
+      <div class="panel pause-panel">
+        <p>МИР ПОСТАВЛЕН НА ПАУЗУ</p>
+        <h2>Передохни.<br>Кубы не убегут.</h2>
+        <div class="pause-info"><span>Сид <b id="pauseSeed">—</b></span><span>Изменено блоков <b id="changedCount">0</b></span></div>
+        <button class="panel-primary" id="resumeButton">Продолжить</button>
+        <button class="panel-button" id="pauseSettingsButton">Настройки</button>
+        <button class="panel-button" id="saveExitButton">Сохранить и выйти</button>
+        <a class="panel-link" href="../../" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="overlay inventory-overlay" id="inventoryOverlay" hidden>
+      <div class="inventory-panel">
+        <header><div><p>СТРОИТЕЛЬНЫЙ КАТАЛОГ</p><h2>Инвентарь</h2></div><button id="inventoryClose">Готово</button></header>
+        <div class="inventory-grid" id="inventoryGrid"></div>
+        <footer><span>Коснись блока, чтобы взять его в активный слот.</span><b id="selectedBlockName">Дёрн</b></footer>
+      </div>
+    </section>
+
+    <section class="overlay settings-overlay" id="settingsOverlay" hidden>
+      <div class="settings-panel">
+        <header><div><p>ПАРАМЕТРЫ МИРА</p><h2>Настройки</h2></div><button id="settingsClose">Готово</button></header>
+        <label class="setting-range"><span><b>Чувствительность обзора</b><small>скорость поворота камеры</small></span><input id="sensitivityInput" type="range" min="30" max="130" step="5"><output id="sensitivityOutput">80%</output></label>
+        <label class="setting-range"><span><b>Дальность прорисовки</b><small>меньше — быстрее на старом телефоне</small></span><input id="distanceInput" type="range" min="24" max="72" step="8"><output id="distanceOutput">48</output></label>
+        <button class="setting-toggle" id="soundToggle"><span><b>Звук</b><small>шаги, блоки и вода</small></span><i>ВКЛ</i></button>
+        <button class="setting-toggle" id="hapticToggle"><span><b>Вибрация</b><small>добыча, установка и прыжок</small></span><i>ВКЛ</i></button>
+        <button class="setting-toggle" id="leftHandToggle"><span><b>Левша</b><small>поменять местами стик и действия</small></span><i>ВЫКЛ</i></button>
+        <button class="danger-button" id="eraseWorldButton">Удалить сохранённый мир</button>
+      </div>
+    </section>
+
+    <section class="portrait-gate" id="portraitGate">
+      <div class="rotate-phone" aria-hidden="true"><i></i></div>
+      <b>Поверни телефон</b>
+      <span>ПЛАСТ рассчитан на горизонтальный экран.</span>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЛАСТ" data-app-version="1.0.0"></script>
+  <script src="./app.js?v=1.0.0" type="module"></script>
+</body>
+</html>
