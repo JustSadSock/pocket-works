@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#121719">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КАЛИБР">
+  <title>КАЛИБР</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas" data-fullscreen-app>
+  <main class="game-shell" data-app-shell>
+    <canvas id="gameCanvas" aria-label="Игровое поле КАЛИБР"></canvas>
+    <canvas id="miniMap" width="150" height="150" aria-hidden="true"></canvas>
+
+    <div class="grain" aria-hidden="true"></div>
+    <div class="damage-vignette" id="damageVignette" aria-hidden="true"></div>
+    <div class="hit-marker" id="hitMarker" aria-hidden="true"></div>
+    <div class="crosshair" id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+
+    <header class="hud-top" id="hudTop" hidden>
+      <button class="icon-button home-button" id="homeButton" type="button" aria-label="Вернуться в Pocket Works" data-native-press>PW</button>
+      <div class="mission-strip">
+        <span id="mapLabel">ТЕРРАСА</span>
+        <strong id="objectiveLabel">ЗАЧИСТИТЬ СЕКТОР</strong>
+        <em id="enemyCounter">8 ЦЕЛЕЙ</em>
+      </div>
+      <button class="icon-button pause-button" id="pauseButton" type="button" aria-label="Пауза" data-native-press>Ⅱ</button>
+    </header>
+
+    <section class="hud-bottom" id="hudBottom" hidden>
+      <div class="health-block">
+        <span>СОСТОЯНИЕ</span>
+        <div class="health-track"><i id="healthFill"></i></div>
+        <strong id="healthValue">100</strong>
+      </div>
+      <div class="ammo-block">
+        <span>R-24</span>
+        <strong id="ammoValue">24</strong>
+        <em id="reserveValue">/ 120</em>
+      </div>
+    </section>
+
+    <div class="controls" id="controls" hidden>
+      <div class="move-zone" id="moveZone" aria-label="Зона движения">
+        <div class="stick-base" id="stickBase"><i id="stickKnob"></i></div>
+      </div>
+      <div class="look-zone" id="lookZone" aria-label="Зона обзора"></div>
+      <button class="reload-button" id="reloadButton" type="button" data-native-press><span>↻</span><small>ПЕРЕЗАРЯДКА</small></button>
+      <button class="fire-button" id="fireButton" type="button" data-native-press><span></span><b>ОГОНЬ</b></button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="reload-indicator" id="reloadIndicator" hidden><span>ПЕРЕЗАРЯДКА</span><i></i></div>
+
+    <section class="screen menu-screen" id="menuScreen">
+      <div class="menu-brand">
+        <p>POCKET WORKS / MOBILE FPS</p>
+        <h1>КАЛИБР</h1>
+        <span>ТРИ СЕКТОРА · ОДИН МАГАЗИН · НИКАКИХ МЕЛКИХ КНОПОК</span>
+      </div>
+
+      <div class="map-selector" id="mapSelector" aria-label="Выбор карты">
+        <button class="map-card is-selected" type="button" data-map="terrace" data-native-press>
+          <span class="map-number">01</span>
+          <div><strong>ТЕРРАСА</strong><small>Открытые линии / средняя дистанция</small></div>
+          <em data-best="terrace">—</em>
+        </button>
+        <button class="map-card" type="button" data-map="dock" data-native-press>
+          <span class="map-number">02</span>
+          <div><strong>СУХОЙ ДОК</strong><small>Коридоры / быстрые контакты</small></div>
+          <em data-best="dock">—</em>
+        </button>
+        <button class="map-card" type="button" data-map="archive" data-native-press>
+          <span class="map-number">03</span>
+          <div><strong>АРХИВ</strong><small>Фланги / симметричная ловушка</small></div>
+          <em data-best="archive">—</em>
+        </button>
+      </div>
+
+      <div class="menu-actions">
+        <button class="primary-button" id="startButton" type="button" data-native-press><span>НАЧАТЬ ОПЕРАЦИЮ</span><b>→</b></button>
+        <button class="text-button" id="settingsButton" type="button" data-native-press>НАСТРОЙКИ</button>
+        <button class="text-button" id="howButton" type="button" data-native-press>УПРАВЛЕНИЕ</button>
+        <button class="text-button workshop-trigger" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+      </div>
+    </section>
+
+    <section class="screen briefing-screen" id="briefingScreen" hidden>
+      <button class="close-button" id="briefingClose" type="button" data-native-press>×</button>
+      <div class="briefing-copy">
+        <p>ПЕРЕД ВХОДОМ</p>
+        <h2>ДВА ПАЛЬЦА.<br>ОДНА ЗАДАЧА.</h2>
+        <div class="control-diagram">
+          <div><i class="diagram-stick"></i><strong>ЛЕВАЯ РУКА</strong><span>Двигайся в любом направлении. Стик появляется под пальцем.</span></div>
+          <div><i class="diagram-look"></i><strong>ПРАВАЯ РУКА</strong><span>Веди камерой по всей половине экрана. Прицел мягко цепляется за цель.</span></div>
+          <div><i class="diagram-fire"></i><strong>ОГОНЬ</strong><span>Большая кнопка лежит прямо под большим пальцем. Удерживай для очереди.</span></div>
+        </div>
+      </div>
+      <button class="primary-button compact" id="briefingStart" type="button" data-native-press><span>ПОНЯТНО</span><b>→</b></button>
+    </section>
+
+    <section class="screen pause-screen" id="pauseScreen" hidden>
+      <div class="pause-panel">
+        <p>ОПЕРАЦИЯ ПРИОСТАНОВЛЕНА</p>
+        <h2 id="pauseMap">ТЕРРАСА</h2>
+        <div class="pause-stats"><span>ВРЕМЯ <b id="pauseTime">00:00</b></span><span>ЦЕЛЕЙ <b id="pauseKills">0/8</b></span><span>ТОЧНОСТЬ <b id="pauseAccuracy">0%</b></span></div>
+        <button class="primary-button" id="continueButton" type="button" data-native-press><span>ПРОДОЛЖИТЬ</span><b>→</b></button>
+        <div class="pause-actions">
+          <button class="text-button" id="restartButton" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
+          <button class="text-button" id="pauseSettingsButton" type="button" data-native-press>НАСТРОЙКИ</button>
+          <button class="text-button" id="menuButton" type="button" data-native-press>ВЫЙТИ В МЕНЮ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" hidden>
+      <div class="result-panel">
+        <p id="resultKicker">СЕКТОР ЗАЧИЩЕН</p>
+        <h2 id="resultGrade">A</h2>
+        <div class="result-score"><span>РЕЗУЛЬТАТ</span><strong id="resultScore">8 420</strong></div>
+        <div class="result-grid">
+          <div><span>ВРЕМЯ</span><b id="resultTime">01:42</b></div>
+          <div><span>ТОЧНОСТЬ</span><b id="resultAccuracy">46%</b></div>
+          <div><span>ЗДОРОВЬЕ</span><b id="resultHealth">72</b></div>
+        </div>
+        <p class="record-note" id="recordNote"></p>
+        <button class="primary-button" id="againButton" type="button" data-native-press><span>ЕЩЁ РАЗ</span><b>↻</b></button>
+        <button class="text-button" id="resultMenuButton" type="button" data-native-press>ВЫБРАТЬ ДРУГОЙ СЕКТОР</button>
+      </div>
+    </section>
+
+    <section class="settings-layer" id="settingsLayer" hidden>
+      <button class="settings-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
+      <div class="settings-sheet">
+        <header><div><p>ЛИЧНЫЙ ПРОФИЛЬ</p><h2>НАСТРОЙКИ ХВАТА</h2></div><button id="settingsClose" type="button" data-native-press>×</button></header>
+        <label class="range-row"><span><b>ЧУВСТВИТЕЛЬНОСТЬ</b><small>Скорость поворота камеры</small></span><input id="sensitivityRange" type="range" min="0.55" max="1.7" step="0.05"><output id="sensitivityOutput">1.00</output></label>
+        <label class="range-row"><span><b>АВТОДОВЕДЕНИЕ</b><small>Мягко удерживает видимую цель</small></span><input id="assistRange" type="range" min="0" max="1" step="0.1"><output id="assistOutput">0.7</output></label>
+        <button class="toggle-row" id="leftHandToggle" type="button" data-native-press><span><b>ЛЕВША</b><small>Поменять зоны хвата местами</small></span><i>ВЫКЛ</i></button>
+        <button class="toggle-row" id="audioToggle" type="button" data-native-press><span><b>ЗВУК</b><small>Выстрелы, шаги и сигналы</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="hapticToggle" type="button" data-native-press><span><b>ОТДАЧА</b><small>Короткая вибрация при попадании</small></span><i>ВКЛ</i></button>
+        <button class="toggle-row" id="qualityToggle" type="button" data-native-press><span><b>ДЕТАЛИЗАЦИЯ</b><small>Разрешение рендера и эффекты</small></span><i>ВЫСОКАЯ</i></button>
+      </div>
+    </section>
+
+    <section class="rotate-screen" id="rotateScreen" hidden>
+      <div class="phone-glyph"><i></i></div>
+      <strong>ПОВЕРНИ ТЕЛЕФОН</strong>
+      <span>КАЛИБР рассчитан на горизонтальный хват.</span>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАЛИБР" data-app-version="1.0.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
