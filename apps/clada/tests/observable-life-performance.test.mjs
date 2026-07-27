@@ -22,3 +22,19 @@ test('a migration journey advances continuously and emits arrival instead of a p
   assert.ok(colonist.x > startX && colonist.x < colonist.observationJourney.tx);
   assert.ok(state.observation.events.some((event) => event.type === 'migration'));
 });
+
+test('visual migration duration stays stable across simulation speed multipliers', () => {
+  const slow = makeContext();
+  slow.context.metaReconcileRepresentatives({ soft: false });
+  const slowColonist = slow.state.organisms.find((organism) => organism.macroDemeId === 2);
+  slow.state.speedIndex = 0;
+  slow.context.simulateStep();
+  const slowProgress = slowColonist.observationJourney.progress;
+
+  const fast = makeContext();
+  fast.context.metaReconcileRepresentatives({ soft: false });
+  const fastColonist = fast.state.organisms.find((organism) => organism.macroDemeId === 2);
+  fast.state.speedIndex = 2;
+  for (let i = 0; i < 12; i += 1) fast.context.simulateStep();
+  assert.ok(Math.abs(fastColonist.observationJourney.progress - slowProgress) < 1e-9);
+});
