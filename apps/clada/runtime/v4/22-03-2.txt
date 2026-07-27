@@ -1,0 +1,49 @@
+  for (const bucket of grid.values()) {
+    for (let i = 0; i < bucket.length && emitted < 5; i += 1) for (let j = i + 1; j < bucket.length && emitted < 5; j += 1) {
+      const a = bucket[i], b = bucket[j];
+      if (distanceSq(a.x, a.y, b.x, b.y) > .00018) continue;
+      const classified = OBSERVATION.classifyPair(a, b);
+      if (!classified || OBSERVATION.unit((state.step || 0) + a.id * 31 + b.id * 17, emitted) > .14) continue;
+      observationAddEvent({ type: classified.type, actorId: classified.actor.id, targetId: classified.target.id, speciesId: classified.actor.speciesId, x: classified.actor.x, y: classified.actor.y, x2: classified.target.x, y2: classified.target.y, life: classified.type === 'hunt' ? .9 : .55 });
+      emitted += 1;
+    }
+  }
+}
+
+simulateStep = function observationSimulationStep() {
+  const observation = observationEnsureState();
+  const before = new Map(state.organisms.map((organism) => [organism.id, { x: organism.x, y: organism.y, energy: organism.energy, lastMeal: organism.lastMeal || -1, speciesId: organism.speciesId }]));
+  observationLegacySimulateStep();
+  observation.clock += 1;
+  const dt = 1 / 30;
+  const currentIds = new Set();
+  for (const organism of state.organisms) {
+    currentIds.add(organism.id);
+    observationPrimeRepresentative(organism);
+    const previous = before.get(organism.id);
+    if (!previous) observationAddEvent({ type: 'birth', actorId: organism.id, speciesId: organism.speciesId, x: organism.x, y: organism.y, life: .65 });
+    if (previous && (organism.lastMeal || -1) !== previous.lastMeal && organism.lastMeal === state.step) {
+      const type = (organism.genome?.diet || 0) > .45 ? 'hunt' : 'feeding';
+      const target = type === 'hunt' ? observationNearestTarget(organism, (candidate) => candidate.speciesId !== organism.speciesId) : null;
+      observationAddEvent({ type, actorId: organism.id, targetId: target?.id, speciesId: organism.speciesId, x: organism.x, y: organism.y, x2: target?.x, y2: target?.y, life: .5 });
+    }
+    if (organism.observationJourney) {
+      const journey = organism.observationJourney;
+      journey.progress += 1 / Math.max(1, journey.duration);
+      const point = OBSERVATION.routePoint(journey, journey.progress);
+      organism.x = point.x; organism.y = point.y;
+      organism.vx *= .72; organism.vy *= .72;
+      if (journey.progress >= 1) {
+        organism.x = journey.tx; organism.y = journey.ty;
+        observationAddEvent({ type: 'arrival', actorId: organism.id, speciesId: organism.speciesId, x: organism.x, y: organism.y, life: .75 });
+        organism.observationJourney = null;
+      }
+    }
+    organism.displayX = OBSERVATION.damp(organism.displayX, organism.x, dt, organism.observationJourney ? .055 : .14);
+    organism.displayY = OBSERVATION.damp(organism.displayY, organism.y, dt, organism.observationJourney ? .055 : .14);
+    organism.observationAlpha = OBSERVATION.damp(organism.observationAlpha, organism.observationRetiring ? 0 : 1, dt, organism.observationRetiring ? .18 : .11);
+  }
+  for (const [id, previous] of before) if (!currentIds.has(id)) observationAddEvent({ type: 'death', actorId: id, speciesId: previous.speciesId, x: previous.x, y: previous.y, life: .72 });
+  state.organisms = state.organisms.filter((organism) => !(organism.observationRetiring && organism.observationAlpha < .025));
+  if (state.step % 20 === 0 && observation.quality !== 'low') observationDetectPairs();
+  for (const event of observation.events) event.life -= event.type === 'migration' ? .006 : .025;
