@@ -1,0 +1,169 @@
+(() => {
+'use strict';
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = (a, b, t) => a + (b - a) * ((-Math.cos(Math.PI * t) / 2) + 0.5);
+const wrap = (value, max) => ((value % max) + max) % max;
+const formatTime = (seconds) => {
+  if (!Number.isFinite(seconds)) return '--:--.---';
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds - minutes * 60;
+  return `${String(minutes).padStart(2, '0')}:${rest.toFixed(3).padStart(6, '0')}`;
+};
+const STORAGE = 'pocket-works:redline-vector';
+const SEGMENT_LENGTH = 180;
+const ROAD_WIDTH = 1850;
+const CAMERA_HEIGHT = 930;
+const FOV = 92;
+const CAMERA_DEPTH = 1 / Math.tan((FOV / 2) * Math.PI / 180);
+const PLAYER_Z = CAMERA_HEIGHT * CAMERA_DEPTH;
+const COLORS = {
+  light: { road: '#353840', grass: '#343b35', rumble: '#f6f1dd', lane: 'rgba(255,255,255,.45)' },
+  dark: { road: '#292c33', grass: '#29322e', rumble: '#e54a3a', lane: 'rgba(255,255,255,.28)' },
+  neonLight: { road: '#242632', grass: '#121625', rumble: '#36c9ff', lane: 'rgba(255,255,255,.4)' },
+  neonDark: { road: '#181b25', grass: '#0d1020', rumble: '#ff2d71', lane: 'rgba(255,255,255,.18)' }
+};
+
+const CAR_DEFS = [
+  { id: 'vector-s', name: 'VECTOR S', trait: 'BALANCED', color: '#ff5a36', cost: 0, accel: 0.78, top: 0.77, steer: 0.72, drift: 0.67, grip: 0.78, armor: 0.64, boost: 0.72 },
+  { id: 'kestrel', name: 'KESTREL RX', trait: 'LIGHT DRIFTER', color: '#ffd24a', cost: 1200, accel: 0.86, top: 0.68, steer: 0.9, drift: 0.94, grip: 0.58, armor: 0.42, boost: 0.67 },
+  { id: 'monolith', name: 'MONOLITH 8', trait: 'HEAVY MUSCLE', color: '#9b73ff', cost: 2200, accel: 0.7, top: 0.82, steer: 0.52, drift: 0.55, grip: 0.7, armor: 0.96, boost: 0.62 },
+  { id: 'ion-r', name: 'ION R', trait: 'HIGH VELOCITY', color: '#47d7ff', cost: 3500, accel: 0.82, top: 0.98, steer: 0.62, drift: 0.54, grip: 0.84, armor: 0.48, boost: 0.9 },
+  { id: 'gravel-4', name: 'GRAVEL 4', trait: 'RALLY CONTROL', color: '#77df75', cost: 4800, accel: 0.76, top: 0.72, steer: 0.84, drift: 0.76, grip: 0.9, armor: 0.8, boost: 0.58 }
+];
+
+const TRACK_DEFS = [
+  {
+    id: 'costa', name: 'COSTA VELA', kicker: 'SUNSET COAST', lengthLabel: '4.8 KM', weather: 'DRY', palette: ['#ff9a66', '#6d4b88', '#11213e'],
+    sky: ['#ff9c6e', '#6f4e86', '#172441'], roadType: 'coast', music: [48, 55, 60, 67],
+    art: 'linear-gradient(#ff9f72 0 34%,#725181 35% 55%,#15304e 56%)', overlay: 'radial-gradient(circle at 72% 24%,#ffe7a2 0 4%,transparent 5%),linear-gradient(90deg,transparent 0 48%,rgba(31,74,102,.8) 49%)',
+    sections: [
+      [30, 0, 0], [36, 0.55, 14], [28, -0.8, -10], [22, 0, 22], [44, 1.15, -26], [24, -0.5, 10], [30, -1.2, 0], [22, 0, -16], [42, 0.72, 18], [34, 0, 0]
+    ]
+  },
+  {
+    id: 'pass', name: 'IRON PASS', kicker: 'MOUNTAIN RUN', lengthLabel: '5.5 KM', weather: 'DUST', palette: ['#d76d42', '#5a5f67', '#15191c'],
+    sky: ['#d88455', '#6f6e6c', '#22272b'], roadType: 'mountain', music: [43, 50, 55, 58],
+    art: 'linear-gradient(#b96845 0 34%,#5b6066 35% 51%,#25282a 52%)', overlay: 'linear-gradient(135deg,transparent 0 22%,rgba(48,50,53,.9) 23% 39%,transparent 40%),linear-gradient(45deg,transparent 0 53%,rgba(35,38,42,.88) 54% 72%,transparent 73%)',
+    sections: [
+      [24, 0, 18], [28, 1.1, 32], [26, -1.35, -24], [20, 0, 45], [34, 1.5, -38], [24, -0.75, 15], [26, 0, -48], [36, -1.45, 35], [24, 0.62, -12], [32, 0, 0]
+    ]
+  },
+  {
+    id: 'neon', name: 'NEON DELTA', kicker: 'RAIN CIRCUIT', lengthLabel: '4.3 KM', weather: 'RAIN', palette: ['#1a2248', '#ff2d71', '#36c9ff'],
+    sky: ['#151a38', '#131529', '#070912'], roadType: 'city', music: [45, 52, 57, 64],
+    art: 'linear-gradient(#171c3c 0 38%,#11162a 39% 58%,#080a12 59%)', overlay: 'repeating-linear-gradient(90deg,transparent 0 12%,rgba(255,45,113,.45) 13% 14%,transparent 15% 23%,rgba(54,201,255,.35) 24% 25%)',
+    sections: [
+      [26, 0, 0], [28, -0.7, 8], [22, 1.25, -8], [30, 0, 10], [30, -1.55, -12], [22, 0.5, 5], [28, 1.3, 0], [24, 0, -8], [38, -0.9, 12], [24, 0, 0]
+    ]
+  }
+];
+
+const AI_PERSONALITIES = [
+  { id: 'aggressive', name: 'Rook', pace: 1.01, laneNoise: .24, ram: .85, risk: .55, color: '#ff304f' },
+  { id: 'precise', name: 'Apex', pace: 1.035, laneNoise: .06, ram: .1, risk: .45, color: '#47d7ff' },
+  { id: 'risky', name: 'Moth', pace: 1.025, laneNoise: .18, ram: .25, risk: .95, color: '#ffd24a' },
+  { id: 'defensive', name: 'Bulwark', pace: .995, laneNoise: .1, ram: .42, risk: .25, color: '#9b73ff' },
+  { id: 'inconsistent', name: 'Static', pace: .98, laneNoise: .34, ram: .18, risk: .7, color: '#77df75' },
+  { id: 'precise', name: 'Vanta', pace: 1.02, laneNoise: .08, ram: .15, risk: .5, color: '#f2f3f7' },
+  { id: 'aggressive', name: 'Hex', pace: 1.0, laneNoise: .2, ram: .75, risk: .65, color: '#ff7a3d' }
+];
+
+const DEFAULT_PROFILE = {
+  credits: 0,
+  xp: 0,
+  selectedCar: 'vector-s',
+  unlocked: ['vector-s'],
+  bestTimes: {},
+  ghosts: {},
+  championship: null,
+  settings: { steering: 'buttons', sensitivity: 55, autoAccel: false, gyro: false, music: 55, effects: 80, lowQuality: false, cameraShake: true }
+};
+
+function loadProfile() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE) || '{}');
+    return {
+      ...DEFAULT_PROFILE,
+      ...raw,
+      unlocked: Array.isArray(raw.unlocked) ? raw.unlocked : [...DEFAULT_PROFILE.unlocked],
+      bestTimes: raw.bestTimes || {}, ghosts: raw.ghosts || {},
+      settings: { ...DEFAULT_PROFILE.settings, ...(raw.settings || {}) }
+    };
+  } catch { return structuredClone(DEFAULT_PROFILE); }
+}
+let profile = loadProfile();
+const saveProfile = () => { try { localStorage.setItem(STORAGE, JSON.stringify(profile)); } catch {} };
+const carById = (id) => CAR_DEFS.find(car => car.id === id) || CAR_DEFS[0];
+const trackById = (id) => TRACK_DEFS.find(track => track.id === id) || TRACK_DEFS[0];
+
+function makePoint(x = 0, y = 0, z = 0) {
+  return { world: { x, y, z }, camera: {}, screen: {} };
+}
+
+function buildTrack(def) {
+  const segments = [];
+  let y = 0;
+  let index = 0;
+  for (const [count, curve, hill] of def.sections) {
+    const startY = y;
+    const endY = y + hill * 28;
+    for (let n = 0; n < count; n += 1) {
+      const t = n / Math.max(1, count - 1);
+      const nextY = easeInOut(startY, endY, t);
+      const palette = def.roadType === 'city' ? (index % 2 ? COLORS.neonDark : COLORS.neonLight) : (index % 2 ? COLORS.dark : COLORS.light);
+      segments.push({
+        index,
+        p1: makePoint(0, y, index * SEGMENT_LENGTH),
+        p2: makePoint(0, nextY, (index + 1) * SEGMENT_LENGTH),
+        curve: curve * Math.sin(Math.PI * Math.min(1, (n + 1) / count)),
+        color: palette,
+        tunnel: def.id === 'pass' && ((index > 94 && index < 118) || (index > 210 && index < 229)),
+        boostPad: index % 83 === 47,
+        checkpoint: false,
+        clip: 0
+      });
+      y = nextY;
+      index += 1;
+    }
+  }
+  const checkpointIndexes = [0.25, 0.5, 0.75].map(f => Math.floor(segments.length * f));
+  checkpointIndexes.forEach((cp, cpIndex) => { if (segments[cp]) segments[cp].checkpoint = cpIndex + 1; });
+  return { ...def, segments, length: segments.length * SEGMENT_LENGTH, checkpointIndexes };
+}
+const TRACKS = Object.fromEntries(TRACK_DEFS.map(def => [def.id, buildTrack(def)]));
+
+class AudioSystem {
+  constructor() {
+    this.ctx = null; this.master = null; this.musicGain = null; this.fxGain = null;
+    this.engineLow = null; this.engineHigh = null; this.engineFilter = null; this.engineGain = null;
+    this.skidGain = null; this.noiseSource = null; this.musicTimer = 0; this.step = 0; this.activeTrack = TRACK_DEFS[0];
+  }
+  ensure() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    this.ctx = new Ctx();
+    this.master = this.ctx.createGain(); this.master.gain.value = .7; this.master.connect(this.ctx.destination);
+    this.musicGain = this.ctx.createGain(); this.musicGain.connect(this.master);
+    this.fxGain = this.ctx.createGain(); this.fxGain.connect(this.master);
+    this.engineGain = this.ctx.createGain(); this.engineGain.gain.value = 0; this.engineGain.connect(this.fxGain);
+    this.engineFilter = this.ctx.createBiquadFilter(); this.engineFilter.type = 'lowpass'; this.engineFilter.frequency.value = 800; this.engineFilter.connect(this.engineGain);
+    this.engineLow = this.ctx.createOscillator(); this.engineLow.type = 'sawtooth'; this.engineLow.frequency.value = 55; this.engineLow.connect(this.engineFilter); this.engineLow.start();
+    this.engineHigh = this.ctx.createOscillator(); this.engineHigh.type = 'square'; this.engineHigh.frequency.value = 110; const highGain = this.ctx.createGain(); highGain.gain.value = .12; this.engineHigh.connect(highGain).connect(this.engineFilter); this.engineHigh.start();
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+    const channel = buffer.getChannelData(0); for (let i = 0; i < channel.length; i += 1) channel[i] = Math.random() * 2 - 1;
+    this.noiseSource = this.ctx.createBufferSource(); this.noiseSource.buffer = buffer; this.noiseSource.loop = true;
+    const noiseFilter = this.ctx.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = 1100;
+    this.skidGain = this.ctx.createGain(); this.skidGain.gain.value = 0; this.noiseSource.connect(noiseFilter).connect(this.skidGain).connect(this.fxGain); this.noiseSource.start();
+    this.applyVolumes();
+  }
+  applyVolumes() {
+    if (!this.ctx) return;
+    this.musicGain.gain.setTargetAtTime(profile.settings.music / 100 * .34, this.ctx.currentTime, .05);
+    this.fxGain.gain.setTargetAtTime(profile.settings.effects / 100 * .62, this.ctx.currentTime, .05);
+  }
+  update(speedRatio, throttle, drifting, boosti
