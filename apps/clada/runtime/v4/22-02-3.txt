@@ -1,0 +1,50 @@
+      const missing = Math.max(0, target - current.length);
+      if (missing) missingQueues.push({ deme, current: current.length, remaining: missing, created: 0 });
+      if (current.length > target) {
+        const surplus = current
+          .filter((organism) => organism.id !== state.selectedId && !organism.observationJourney)
+          .sort((a, b) => (a.observationAlpha || 1) - (b.observationAlpha || 1));
+        for (const organism of surplus.slice(0, Math.min(current.length - target, retireLimit - retired))) {
+          organism.observationRetiring = true;
+          organism.observationRetireStep = state.step;
+          retired += 1;
+        }
+      }
+    }
+    missingQueues.sort((a, b) => Number(Boolean(b.deme.colonizationSource || b.deme.nicheShiftSource)) - Number(Boolean(a.deme.colonizationSource || a.deme.nicheShiftSource)) || a.current - b.current || b.deme.abundance - a.deme.abundance);
+    let queueCursor = 0;
+    while (added < addLimit && missingQueues.length) {
+      const entry = missingQueues[queueCursor % missingQueues.length];
+      const organism = metaCreateRepresentative(entry.deme, (entry.created + entry.current) % 6 === 0);
+      if (organism) {
+        observationPrimeRepresentative(organism);
+        const sourceDeme = meta.demes.find((candidate) => candidate.id === (entry.deme.colonizationSource || entry.deme.nicheShiftSource));
+        if (sourceDeme && sourceDeme.id !== entry.deme.id) observationScheduleJourney(organism, entry.deme, sourceDeme);
+        else {
+          const point = observationPointForDeme(entry.deme);
+          organism.x = point.x; organism.y = point.y; organism.displayX = point.x; organism.displayY = point.y;
+          observationAddEvent({ type: 'arrival', actorId: organism.id, speciesId: organism.speciesId, x: organism.x, y: organism.y, life: .8 });
+        }
+        state.organisms.push(organism);
+        added += 1; entry.created += 1; entry.remaining -= 1;
+      } else entry.remaining = 0;
+      if (entry.remaining <= 0) missingQueues.splice(queueCursor % missingQueues.length, 1);
+      else queueCursor += 1;
+    }
+
+    for (const organism of state.organisms) {
+      if (retired >= retireLimit) break;
+      if (activeDemeIds.has(organism.macroDemeId) || organism.id === state.selectedId || organism.observationRetiring) continue;
+      organism.observationRetiring = true;
+      organism.observationRetireStep = state.step;
+      retired += 1;
+    }
+
+    if (immediate) {
+      for (const organism of state.organisms) organism.observationAlpha = 1;
+    }
+  } finally {
+    metaReconciling = false;
+  }
+};
+
