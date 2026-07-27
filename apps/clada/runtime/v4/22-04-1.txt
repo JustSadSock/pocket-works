@@ -1,0 +1,70 @@
+/* КЛАДА 4.3 — малые детальные животные, события и камера наблюдения. */
+const observationLegacyDrawOrganismShape = drawOrganismShape;
+const observationLegacyDrawWorld = drawWorld;
+const observationLegacySelectOrganism = selectOrganism;
+const observationLegacyClearSelection = clearSelection;
+const observationLegacyOpenMenuSheet = openMenuSheet;
+const observationLegacyBuildCompactDiagnostic = buildCompactDiagnostic;
+let observationLastFrameTime = performance.now();
+let observationFrameSamples = [];
+
+function observationDrawMorphology(target, organism, x, y, scale, angle, portrait) {
+  const genome = organism.genome || {};
+  const bodyLength = scale * (1.1 + (genome.size || 1) * .42);
+  const bodyWidth = scale * (.56 + (genome.size || 1) * .2);
+  const aquatic = (genome.waterAffinity || genome.aquatic || 0) > .56;
+  const winged = (genome.wing || 0) > .38;
+  const burrower = (genome.burrow || 0) > .52;
+  const reduced = !portrait && state?.observation?.quality === 'low';
+  target.save();
+  target.translate(x, y); target.rotate(angle);
+  target.strokeStyle = 'rgba(31,42,36,.82)';
+  target.fillStyle = organismColor(genome, portrait ? 45 : 39, .72);
+  target.lineWidth = portrait ? 2.1 : Math.max(.45, scale * .045);
+  target.lineCap = 'round'; target.lineJoin = 'round';
+
+  if (winged && !reduced) {
+    const flap = Math.sin((state.step || 0) * .12 + organism.id * 1.71) * .18;
+    target.globalAlpha *= .62;
+    for (const side of [-1, 1]) {
+      target.beginPath();
+      target.moveTo(-bodyLength * .08, side * bodyWidth * .18);
+      target.quadraticCurveTo(-bodyLength * .02, side * bodyWidth * (1.05 + flap * side), bodyLength * .28, side * bodyWidth * .58);
+      target.quadraticCurveTo(bodyLength * .16, side * bodyWidth * .28, bodyLength * .04, side * bodyWidth * .1);
+      target.fill(); target.stroke();
+    }
+    target.globalAlpha /= .62;
+  }
+
+  if (aquatic) {
+    const fin = bodyWidth * (.32 + (genome.fins || 0) * .35);
+    for (const side of [-1, 1]) {
+      target.beginPath();
+      target.moveTo(-bodyLength * .04, side * bodyWidth * .32);
+      target.lineTo(bodyLength * .12, side * (bodyWidth + fin));
+      target.lineTo(bodyLength * .25, side * bodyWidth * .28);
+      target.closePath(); target.fill(); target.stroke();
+    }
+    target.globalAlpha *= .48;
+    for (let index = 0; index < 3; index += 1) {
+      const gx = bodyLength * (.14 + index * .055);
+      target.beginPath(); target.moveTo(gx, -bodyWidth * .28); target.lineTo(gx - bodyLength * .025, bodyWidth * .28); target.stroke();
+    }
+    target.globalAlpha /= .48;
+  } else {
+    const stride = Math.sin((state.step || 0) * .13 + organism.id * .9) * bodyLength * .055;
+    const legLength = bodyWidth * (.48 + (genome.speed || 1) * .13);
+    const legXs = burrower ? [-.25, .05, .27] : [-.24, .22];
+    for (const [index, fraction] of legXs.entries()) for (const side of [-1, 1]) {
+      const phase = (index + (side > 0 ? 1 : 0)) % 2 ? stride : -stride;
+      const lx = bodyLength * fraction;
+      const ly = side * bodyWidth * .28;
+      target.beginPath(); target.moveTo(lx, ly); target.lineTo(lx + phase, ly + side * legLength); target.lineTo(lx + phase + bodyLength * .08, ly + side * legLength); target.stroke();
+    }
+  }
+
+  if (!reduced && (genome.horns || 0) > .22) {
+    const horn = bodyLength * (.12 + genome.horns * .2);
+    for (const side of [-1, 1]) {
+      target.beginPath();
+      target.moveTo(bodyLength * .31, side * bodyWidth * .25);
