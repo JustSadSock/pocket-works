@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { VoxelWorld } from '../src/world.js';
+import { Player } from '../src/player.js';
+import { createInventory, addItem } from '../src/inventory.js';
+const world=new VoxelWorld(77);world.set(-3,12,9,18);world.functional.set('chest:-3,12,9',{slots:[{id:8,count:4,durability:0}]});
+const player=new Player();player.pos={x:-2.5,y:13,z:9.5};const inventory=createInventory();addItem(inventory,62,1);
+const payload=JSON.parse(JSON.stringify({world:world.serialize(),player:player.serialize(),inventory}));
+const restored=new VoxelWorld(payload.world.seed);restored.apply(payload.world);
+assert.equal(restored.mods.get('-3,12,9'),18);
+assert.equal(restored.functional.get('chest:-3,12,9').slots[0].count,4);
+assert.equal(payload.inventory[0].id,62);
+assert.equal(payload.player.pos.x,-2.5);
+console.log('КРЯЖ save tests passed');

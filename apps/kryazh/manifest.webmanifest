@@ -1,0 +1,14 @@
+{
+  "id": "/apps/kryazh/",
+  "name": "КРЯЖ — Voxel Survival",
+  "short_name": "КРЯЖ",
+  "description": "An original mobile-first voxel survival sandbox with procedural worlds, crafting, creatures and local saves.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#314139",
+  "theme_color": "#53694a",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

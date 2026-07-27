@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "kryazh",
+  "name": "КРЯЖ",
+  "shortName": "КРЯЖ",
+  "description": "Оригинальная мобильная voxel-survival песочница: процедурные миры, добыча, строительство, крафт, голод, существа, пещеры, день и ночь, локальные сохранения и удобное управление для горизонтального телефона.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-27",
+  "releaseDateTime": "2026-07-27T15:30:00+02:00",
+  "changelog": [
+    "Добавлен собственный chunk-based voxel raycaster с динамическим разрешением, детерминированными мирами, девятью биомами, пещерами, рудами, водой, растительностью и постепенной загрузкой чанков.",
+    "Реализован связный survival-цикл: добыча и установка блоков, выпадение предметов, инвентарь, hotbar, рецепты, рабочий верстак, печь, контейнеры, еда, голод, здоровье, кислород, инструменты, броня и смерть с выпадением вещей.",
+    "Добавлены мобильные multi-touch controls, desktop pointer lock, существа с базовым AI, день и ночь, погода, звуки, вибрация, creative mode и производительные настройки.",
+    "Добавлены IndexedDB-сохранения, автосохранение, список миров, дублирование, удаление с подтверждением, импорт и экспорт, восстановление после suspension и полный offline PWA cache."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#e0b95e",
+  "backgroundColor": "#314139",
+  "themeColor": "#53694a",
+  "orientation": "landscape",
+  "cacheName": "kryazh-v1.0.0",
+  "storageNamespace": "pocket-works:kryazh",
+  "tags": ["voxel", "survival", "sandbox", "crafting", "procedural", "3D", "mobile", "offline", "building", "exploration", "landscape", "game"],
+  "order": 13
+}
