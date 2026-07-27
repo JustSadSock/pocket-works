@@ -1,0 +1,59 @@
+<strong>${pts} PTS</strong></div>`).join('')}`;
+}
+function continueChampionship(){if(profile.championship?.complete){profile.credits+=1000;profile.xp+=600;profile.championship=null;saveProfile();toast('VECTOR CUP BONUS · 1000 CR');switchScreen('title');return;}openSetup('championship');}
+
+function handleAction(action) {
+  audio.ensure();
+  const map={openModes:()=>switchScreen('modes'),backTitle:()=>switchScreen('title'),backModes:()=>switchScreen('modes'),openGarage:()=>{state.previousScreen=state.screen;state.garageCar=profile.selectedCar;renderGarage();switchScreen('garage');},openSettings:()=>{state.previousScreen=state.screen;configureSettingsUI();switchScreen('settings');},settingsBack:()=>switchScreen(state.previousScreen||'title'),garageBack:()=>switchScreen(state.previousScreen||'title'),launchRace:startRace,pause:pauseRace,resume:resumeRace,restart:restartRace,quitRace,continueChamp:continueChampionship};
+  map[action]?.();audio.tone(360,.04,'sine',.06);
+}
+
+$$('[data-action]').forEach(button=>button.addEventListener('click',()=>handleAction(button.dataset.action)));
+$$('[data-mode]').forEach(button=>button.addEventListener('click',()=>openSetup(button.dataset.mode)));
+$('#selectCarButton').addEventListener('click',selectGarageCar);
+$('#aiCount').addEventListener('input',event=>{state.aiCount=Number(event.target.value);$('#aiValue').textContent=state.aiCount;});
+$('#lapsControl').addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;state.laps=Number(button.dataset.value);$$('button',$('#lapsControl')).forEach(el=>el.classList.toggle('active',el===button));});
+$('#difficultyControl').addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;state.difficulty=button.dataset.value;$$('button',$('#difficultyControl')).forEach(el=>el.classList.toggle('active',el===button));});
+$$('#settings input').forEach(inputEl=>{const syncSetting=()=>{if(inputEl.id==='sensitivity')$('#sensitivityValue').textContent=`${inputEl.value}%`;if(inputEl.id==='musicVolume')$('#musicValue').textContent=`${inputEl.value}%`;if(inputEl.id==='effectsVolume')$('#effectsValue').textContent=`${inputEl.value}%`;saveSettingsFromUI();};inputEl.addEventListener(inputEl.type==='range'?'input':'change',syncSetting);});
+$('#gyro').addEventListener('change',enableGyro);
+
+function bindControlButton(button) {
+  const key=button.dataset.control;const activePointers=new Set();
+  const on=(event)=>{event.preventDefault();try{button.setPointerCapture?.(event.pointerId);}catch{}activePointers.add(event.pointerId);input[key]=true;button.classList.add('pressed');audio.ensure();};
+  const off=(event)=>{activePointers.delete(event.pointerId);if(!activePointers.size){input[key]=false;button.classList.remove('pressed');}};
+  button.addEventListener('pointerdown',on);button.addEventListener('pointerup',off);button.addEventListener('pointercancel',off);button.addEventListener('lostpointercapture',off);
+}
+$$('[data-control]').forEach(bindControlButton);
+
+const dragSteer=$('#dragSteer');let dragPointer=null,dragCenter=0;
+dragSteer.addEventListener('pointerdown',event=>{dragPointer=event.pointerId;dragCenter=dragSteer.getBoundingClientRect().left+dragSteer.offsetWidth/2;try{dragSteer.setPointerCapture(event.pointerId);}catch{}input.steer=clamp((event.clientX-dragCenter)/(dragSteer.offsetWidth*.42),-1,1);});
+dragSteer.addEventListener('pointermove',event=>{if(event.pointerId===dragPointer)input.steer=clamp((event.clientX-dragCenter)/(dragSteer.offsetWidth*.42),-1,1);});
+const clearDrag=event=>{if(event.pointerId===dragPointer){dragPointer=null;input.steer=0;}};dragSteer.addEventListener('pointerup',clearDrag);dragSteer.addEventListener('pointercancel',clearDrag);
+
+function syncButtonSteer(){if(profile.settings.steering==='buttons')input.steer=(input.right?1:0)-(input.left?1:0);}
+const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'gas',KeyW:'gas',ArrowDown:'brake',KeyS:'brake',Space:'drift',ShiftLeft:'boost',KeyE:'boost'};
+addEventListener('keydown',event=>{const key=keyMap[event.code];if(key){event.preventDefault();input[key]=true;}if(event.code==='Escape'&&state.screen==='race')pauseRace();});
+addEventListener('keyup',event=>{const key=keyMap[event.code];if(key){event.preventDefault();input[key]=false;}});
+
+let previewPointer=null,previewX=0;const preview=$('#carPreview');preview.addEventListener('pointerdown',event=>{previewPointer=event.pointerId;previewX=event.clientX;try{preview.setPointerCapture(event.pointerId);}catch{}});preview.addEventListener('pointermove',event=>{if(event.pointerId!==previewPointer)return;state.previewAngle+=(event.clientX-previewX)*.01;previewX=event.clientX;drawCarPreview(preview,carById(state.garageCar),state.previewAngle);});preview.addEventListener('pointerup',()=>previewPointer=null);preview.addEventListener('pointercancel',()=>previewPointer=null);
+
+document.addEventListener('contextmenu',event=>event.preventDefault());document.addEventListener('touchmove',event=>{if(state.screen==='race')event.preventDefault();},{passive:false});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.screen==='race'&&!state.paused)pauseRace();});
+addEventListener('blur',()=>{if(state.screen==='race'&&!state.paused)pauseRace();});
+
+function frame(now) {
+  const dt=Math.min(.035,Math.max(.001,(now-state.lastTime)/1000));state.lastTime=now;syncButtonSteer();
+  if(state.screen==='race'&&state.race&&!state.paused){updateRace(state.race,dt);renderRace(state.race);}else if(state.screen!=='boot'&&state.screen!=='results'){renderDemo(dt);audio.update(.42,.2,false,false,false);}else if(state.screen==='results'&&state.race){renderRace(state.race);}
+  requestAnimationFrame(frame);
+}
+
+function boot() {
+  const steps=[[18,'Building road geometry…'],[42,'Training rival drivers…'],[67,'Calibrating mobile controls…'],[86,'Warming layered engine audio…'],[100,'GREEN FLAG']];let i=0;
+  const next=()=>{const [progress,label]=steps[i];$('#loadBar').style.width=`${progress}%`;$('#loadLabel').textContent=label;i+=1;if(i<steps.length)setTimeout(next,180);else setTimeout(()=>{switchScreen('title');},320);};next();
+  renderTrackCards();updateSelectedCarUI();configureSettingsUI();updateProfileSummary();
+  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  requestAnimationFrame(frame);
+}
+boot();
+
+})();
