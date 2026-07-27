@@ -1,0 +1,127 @@
+e) * 90; const front = Math.cos(angle);
+  c.shadowColor = 'rgba(0,0,0,.7)'; c.shadowBlur = 22; c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.ellipse(0, 82, 250, 42, 0, 0, Math.PI * 2); c.fill(); c.shadowBlur = 0;
+  c.fillStyle = '#090b10'; c.fillRect(-230 + skew * .14, 22, 72, 92); c.fillRect(158 + skew * .14, 22, 72, 92);
+  c.fillStyle = car.color; c.beginPath(); c.moveTo(-236 + skew * .08, 58); c.quadraticCurveTo(-190 + skew * .45, -55, -72 + skew, -82); c.lineTo(74 + skew, -82); c.quadraticCurveTo(190 + skew * .45, -55, 238 + skew * .08, 58); c.lineTo(196, 102); c.lineTo(-196, 102); c.closePath(); c.fill();
+  c.fillStyle = '#171c25'; c.beginPath(); c.moveTo(-112 + skew * .65, -56); c.lineTo(-58 + skew, -118); c.lineTo(62 + skew, -118); c.lineTo(116 + skew * .65, -56); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(110,205,255,.28)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,.3)'; c.lineWidth = 3; c.stroke();
+  c.fillStyle = '#ff334c'; c.fillRect(-176, 46, 54, 13); c.fillRect(122, 46, 54, 13); c.fillStyle = '#f5f7ff'; c.fillRect(-46, 72, 92, 14);
+  c.fillStyle = 'rgba(255,255,255,.18)'; c.beginPath(); c.moveTo(-190, 16); c.lineTo(190, 16); c.lineTo(158, 35); c.lineTo(-158, 35); c.closePath(); c.fill();
+  c.restore();
+}
+
+function drawSetupPreview() { drawCarPreview($('#setupCarPreview'), carById(profile.selectedCar), -.2, true); }
+
+function configureSettingsUI() {
+  const s = profile.settings;
+  $$('input[name="steerMode"]').forEach(inputEl => { inputEl.checked = inputEl.value === s.steering; });
+  $('#sensitivity').value = s.sensitivity; $('#sensitivityValue').textContent = `${s.sensitivity}%`;
+  $('#autoAccel').checked = s.autoAccel; $('#gyro').checked = s.gyro; $('#musicVolume').value = s.music; $('#effectsVolume').value = s.effects;
+  $('#musicValue').textContent = `${s.music}%`; $('#effectsValue').textContent = `${s.effects}%`; $('#lowQuality').checked = s.lowQuality; $('#cameraShake').checked = s.cameraShake;
+  applyControlMode();
+}
+
+function applyControlMode() {
+  $('#steerButtons').hidden = profile.settings.steering !== 'buttons'; $('#dragSteer').hidden = profile.settings.steering !== 'drag';
+}
+
+function saveSettingsFromUI() {
+  profile.settings.steering = $('input[name="steerMode"]:checked')?.value || 'buttons';
+  profile.settings.sensitivity = Number($('#sensitivity').value); profile.settings.autoAccel = $('#autoAccel').checked; profile.settings.gyro = $('#gyro').checked;
+  profile.settings.music = Number($('#musicVolume').value); profile.settings.effects = Number($('#effectsVolume').value); profile.settings.lowQuality = $('#lowQuality').checked; profile.settings.cameraShake = $('#cameraShake').checked;
+  saveProfile(); applyControlMode(); audio.applyVolumes(); resize();
+}
+
+async function enableGyro() {
+  if (!$('#gyro').checked) return;
+  try {
+    if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (permission !== 'granted') throw new Error('denied');
+    }
+    addEventListener('deviceorientation', event => { input.gyro = clamp((event.gamma || 0) / 28, -1, 1); }, { passive: true });
+    toast('GYRO STEERING READY');
+  } catch { $('#gyro').checked = false; saveSettingsFromUI(); toast('GYRO PERMISSION DENIED'); }
+}
+
+function openSetup(mode) {
+  state.mode = mode;
+  if (mode === 'championship') {
+    if (!profile.championship || profile.championship.complete) profile.championship = { event: 0, points: { player: 0 }, complete: false };
+    state.setupTrack = ['costa', 'pass', 'neon'][profile.championship.event || 0]; state.laps = 2; state.difficulty = 'normal'; state.aiCount = 5;
+  } else if (mode === 'time') { state.aiCount = 0; state.laps = 1; }
+  $('#setupKicker').textContent = mode === 'quick' ? 'QUICK RACE' : mode === 'championship' ? 'VECTOR CUP' : 'TIME TRIAL';
+  $('#setupTitle').textContent = mode === 'quick' ? 'BUILD THE GRID' : mode === 'championship' ? `EVENT ${(profile.championship?.event || 0) + 1} / 3` : 'CHASE THE GHOST';
+  $('#lapsControl').style.display = mode === 'championship' ? 'none' : '';
+  $('#difficultyControl').style.display = mode === 'time' ? 'none' : '';
+  $('#aiRow').style.display = mode === 'time' ? 'none' : '';
+  renderTrackCards(); updateSelectedCarUI(); switchScreen('setup');
+}
+
+function startRace() {
+  audio.ensure();
+  const options = state.mode === 'championship'
+    ? { mode: 'championship', trackId: ['costa','pass','neon'][profile.championship.event], laps: 2, difficulty: 'normal', aiCount: 5 }
+    : { mode: state.mode, trackId: state.setupTrack, laps: state.laps, difficulty: state.difficulty, aiCount: state.mode === 'time' ? 0 : state.aiCount };
+  state.race = createRace(options); state.paused = false; state.particles.length = 0; state.shake = 0;
+  audio.setTrack(state.race.track); audio.startMusic();
+  $('#lapTotal').textContent = state.race.laps; $('#racerCount').textContent = state.race.ai.length + 1; $('#countdown').hidden = false;
+  $('#results').hidden = true; switchScreen('race'); updateHUD();
+}
+
+function restartRace() { $('#results').hidden = true; startRace(); }
+function quitRace() { state.race = null; audio.stopMusic(); switchScreen('title'); }
+function pauseRace() { if (!state.race || state.race.player.finished) return; state.paused = true; $('#pause').hidden = false; audio.update(0,0,false,false,false); }
+function resumeRace() { state.paused = false; $('#pause').hidden = true; state.lastTime = performance.now(); audio.tone(520, .05); }
+
+function project(point, cameraX, cameraY, cameraZ) {
+  const dz = point.world.z - cameraZ;
+  const scale = CAMERA_DEPTH / Math.max(.001, dz);
+  point.camera.x = point.world.x - cameraX; point.camera.y = point.world.y - cameraY; point.camera.z = dz;
+  point.screen.scale = scale; point.screen.x = Math.round((W / 2) + scale * point.camera.x * W / 2); point.screen.y = Math.round((H / 2) - scale * point.camera.y * H / 2); point.screen.w = Math.round(scale * ROAD_WIDTH * W / 2);
+}
+function findSegment(track, z) { return track.segments[Math.floor(wrap(z, track.length) / SEGMENT_LENGTH) % track.segments.length]; }
+function polygon(color, ...points) { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(points[0], points[1]); for (let i = 2; i < points.length; i += 2) ctx.lineTo(points[i], points[i+1]); ctx.closePath(); ctx.fill(); }
+
+function drawBackground(track, cameraCurve, speedRatio) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, H * .62); gradient.addColorStop(0, track.sky[0]); gradient.addColorStop(.55, track.sky[1]); gradient.addColorStop(1, track.sky[2]); ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
+  const horizon = H * .5;
+  if (track.id === 'costa') {
+    ctx.fillStyle = 'rgba(255,235,167,.95)'; ctx.beginPath(); ctx.arc(W * .76 - cameraCurve * 10, H * .2, H * .055, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#173753'; ctx.fillRect(0, horizon - 12, W, H * .2); ctx.fillStyle = 'rgba(255,184,120,.28)'; ctx.fillRect(0, horizon - 7, W, 9);
+    ctx.fillStyle = '#27314a'; polygon('#27314a',0,horizon, W*.2,horizon-H*.13, W*.35,horizon, W*.6,horizon-H*.08, W,horizon, W,H*.65,0,H*.65);
+  } else if (track.id === 'pass') {
+    ctx.fillStyle = '#3c4043'; polygon('#3c4043',0,horizon, W*.12,horizon-H*.22, W*.25,horizon-H*.04, W*.43,horizon-H*.27, W*.59,horizon-H*.02, W*.73,horizon-H*.18, W,horizon-H*.03, W,horizon+80,0,horizon+80);
+    ctx.fillStyle = '#252a2d'; polygon('#252a2d',0,horizon+30,W*.18,horizon-H*.12,W*.37,horizon+25,W*.68,horizon-H*.13,W,horizon+20,W,horizon+100,0,horizon+100);
+  } else {
+    ctx.fillStyle = '#0c1020'; ctx.fillRect(0, horizon-30, W, H*.25);
+    for (let i=0;i<18;i+=1){const bw=W/18+3;const bh=H*(.08+((i*37)%100)/500);ctx.fillStyle=i%3===0?'#171b35':'#11162a';ctx.fillRect(i*bw,horizon-bh,bw-3,bh+20);ctx.fillStyle=i%2?'#ff2d71':'#36c9ff';for(let y=horizon-bh+8;y<horizon-8;y+=14)ctx.fillRect(i*bw+6,y,2,4);}
+  }
+  if (speedRatio > .75) {
+    ctx.strokeStyle = `rgba(255,255,255,${(speedRatio-.75)*.18})`; ctx.lineWidth = 1;
+    for (let i=0;i<12;i+=1){const x=(i*97+state.demoTime*700)%W;const y=H*.12+(i*53)%Math.max(1,H*.5);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-cameraCurve*4,y+H*.07*speedRatio);ctx.stroke();}
+  }
+}
+
+function drawRoadSegment(segment, fog = 1) {
+  const p1 = segment.p1.screen, p2 = segment.p2.screen; if (p2.y >= p1.y || p2.y >= segment.clip) return;
+  const color = segment.color; const rumble1 = p1.w / 5.8, rumble2 = p2.w / 5.8; const lane1 = p1.w / 28, lane2 = p2.w / 28;
+  polygon(color.grass, 0,p2.y, W,p2.y, W,p1.y, 0,p1.y);
+  polygon(color.rumble, p1.x-p1.w-rumble1,p1.y, p1.x-p1.w,p1.y, p2.x-p2.w,p2.y, p2.x-p2.w-rumble2,p2.y);
+  polygon(color.rumble, p1.x+p1.w+rumble1,p1.y, p1.x+p1.w,p1.y, p2.x+p2.w,p2.y, p2.x+p2.w+rumble2,p2.y);
+  polygon(color.road, p1.x-p1.w,p1.y, p1.x+p1.w,p1.y, p2.x+p2.w,p2.y, p2.x-p2.w,p2.y);
+  if (segment.boostPad) {
+    const inner1=p1.w*.55,inner2=p2.w*.55; polygon('rgba(71,215,255,.66)',p1.x-inner1,p1.y,p1.x+inner1,p1.y,p2.x+inner2,p2.y,p2.x-inner2,p2.y);
+  }
+  if (segment.index % 3 === 0) {
+    for (let lane=-1;lane<=1;lane+=2){const lx1=p1.x+lane*p1.w/3;const lx2=p2.x+lane*p2.w/3;polygon(color.lane,lx1-lane1,p1.y,lx1+lane1,p1.y,lx2+lane2,p2.y,lx2-lane2,p2.y);}
+  }
+  if (fog < 1) { ctx.fillStyle=`rgba(20,24,34,${1-fog})`;ctx.fillRect(0,p2.y,W,p1.y-p2.y+1); }
+}
+
+function drawRoadside(track, segment, side) {
+  const p = segment.p2.screen; const scale = p.scale; if (scale <= 0 || p.y < 0 || p.y > H) return;
+  const x = p.x + side * (p.w + 42 * scale * W); const size = clamp(scale * W * 220, 4, H * .55);
+  if (track.id === 'costa') {
+    if (segment.index % 11 !== (side > 0 ? 2 : 7)) return;
+    ctx.strokeStyle='#35251f';ctx.lineWidth=Math.max(2,size*.08);ctx.beginPath();ctx.moveTo(x,p.y);ctx.lineTo(x+side*size*.08,p.y-size*.72);ctx.stroke();
+    ctx.fillStyle='#183e32';for(let i=0;i<5;i+=1){ctx.beginPath();ctx.ellipse(x+side*size*.08+Math.cos(i*1.25)*size*.25,p.y-size*.75+Math.sin(i*1.25)*size*.12,size*.27,size*.08,i*.7,0,Math.PI*2)
