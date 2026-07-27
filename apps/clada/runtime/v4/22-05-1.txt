@@ -1,0 +1,68 @@
+/* КЛАДА 4.3 — интерфейс наблюдения, автокачество и диагностика. */
+function observationEnsureHud() {
+  let hud = document.querySelector('#observationHud');
+  if (hud) return hud;
+  hud = document.createElement('div'); hud.id = 'observationHud'; hud.className = 'observation-hud';
+  hud.innerHTML = '<button type="button" data-observation="events" aria-pressed="true"><b>СОБЫТИЯ</b><span>видимые связи</span></button><button type="button" data-observation="follow" aria-pressed="false"><b>СЛЕДИТЬ</b><span>за выбранной</span></button><output><small>НАБЛЮДЕНИЕ</small><b>живой мир</b></output>';
+  document.querySelector('#observatory')?.append(hud);
+  hud.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-observation]'); if (!button) return;
+    const observation = observationEnsureState();
+    if (button.dataset.observation === 'events') observation.showEvents = !observation.showEvents;
+    if (button.dataset.observation === 'follow') observation.followSelected = !observation.followSelected;
+    observationUpdateHud();
+  });
+  return hud;
+}
+
+function observationUpdateHud() {
+  const hud = observationEnsureHud();
+  const observation = observationEnsureState();
+  if (!hud || !observation) return;
+  const eventsButton = hud.querySelector('[data-observation="events"]');
+  const followButton = hud.querySelector('[data-observation="follow"]');
+  eventsButton?.setAttribute('aria-pressed', String(observation.showEvents));
+  followButton?.setAttribute('aria-pressed', String(observation.followSelected));
+  if (followButton) followButton.disabled = !state.selectedId;
+  const organism = state.organisms.find((entry) => entry.id === state.selectedId);
+  const output = hud.querySelector('output b');
+  if (output) output.textContent = organism ? observationActivityLabel(organism) : `${state.organisms.length} наблюдаемых представителей`;
+}
+
+function observationFollowSelected() {
+  const observation = observationEnsureState();
+  if (!observation?.followSelected || state.view !== 'world' || state.fossilIndex !== null) return;
+  const organism = state.organisms.find((entry) => entry.id === state.selectedId);
+  if (!organism) { observation.followSelected = false; observationUpdateHud(); return; }
+  const camera = CAM.world;
+  const x = (organism.displayX ?? organism.x) * cssWidth;
+  const y = (organism.displayY ?? organism.y) * cssHeight;
+  const targetX = cssWidth * .5 - x * camera.zoom;
+  const targetY = cssHeight * .5 - y * camera.zoom;
+  camera.x = OBSERVATION.damp(camera.x, targetX, 1 / 60, .18);
+  camera.y = OBSERVATION.damp(camera.y, targetY, 1 / 60, .18);
+  limit(camera);
+}
+
+selectOrganism = function observationSelectOrganism(organism) {
+  const result = observationLegacySelectOrganism(organism);
+  if (organism) observationEnsureState().followSelected = true;
+  observationUpdateHud();
+  return result;
+};
+
+clearSelection = function observationClearSelection() {
+  const result = observationLegacyClearSelection();
+  observationEnsureState().followSelected = false;
+  observationUpdateHud();
+  return result;
+};
+
+function observationMonitorFrame(now) {
+  const observation = observationEnsureState();
+  const delta = Math.min(100, now - observationLastFrameTime);
+  observationLastFrameTime = now;
+  if (observation && delta > 0) {
+    observationFrameSamples.push(delta);
+    if (observationFrameSamples.length >= 80) {
+      const sorted = [...observationFrameSamples].sort((a, b) => a - b);
