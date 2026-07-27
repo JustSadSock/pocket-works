@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "redline-vector",
+  "name": "REDLINE VECTOR",
+  "shortName": "REDLINE",
+  "description": "Первое лицо, три стилизованные трассы, аркадный дрифт, умные соперники, чемпионат и гонка с призраком.",
+  "version": "1.0.0",
+  "releaseDate": "2026-07-27",
+  "releaseDateTime": "2026-07-27T12:35:00+02:00",
+  "changelog": [
+    "Первый релиз: три трассы, пять машин, быстрые гонки, чемпионат и заезды на время.",
+    "Добавлены мобильное мультитач-управление, дрифт, нитро, slipstream, адаптивные соперники и локальные рекорды.",
+    "Собственный мобильный псевдо-3D рендерер, кокпит, частицы, синтезированный звук и режим сниженного качества."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#ff5a36",
+  "backgroundColor": "#0b0d13",
+  "themeColor": "#10131c",
+  "orientation": "landscape",
+  "cacheName": "redline-vector-v1.0.0",
+  "storageNamespace": "pocket-works:redline-vector",
+  "tags": ["PWA", "offline", "game", "racing", "first-person", "arcade", "mobile", "canvas", "AI", "championship", "ghost", "audio"],
+  "order": 97
+}

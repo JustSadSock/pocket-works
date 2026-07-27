@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+  <meta name="theme-color" content="#10131c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="REDLINE">
+  <title>REDLINE VECTOR</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas">
+  <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+    <canvas id="game" aria-label="REDLINE VECTOR racing view"></canvas>
+
+    <section id="rotateGate" class="rotate-gate" hidden>
+      <div class="rotate-device">↻</div><strong>Rotate your phone</strong><span>REDLINE VECTOR is built for landscape.</span>
+    </section>
+
+    <section id="boot" class="screen screen-active boot-screen">
+      <div class="boot-mark"><i></i><i></i><i></i></div>
+      <h1>REDLINE<br><span>VECTOR</span></h1>
+      <p>INITIALIZING ROAD SYSTEM</p>
+      <div class="load-track"><i id="loadBar"></i></div>
+      <small id="loadLabel">Synthesizing engine audio…</small>
+    </section>
+
+    <section id="title" class="screen title-screen" hidden>
+      <div class="title-copy">
+        <span class="eyebrow">POCKET WORKS / 097</span>
+        <h1>REDLINE<br><em>VECTOR</em></h1>
+        <p>COAST. CLIFF. NEON.<br>THE ROAD ONLY CARES ABOUT MOMENTUM.</p>
+      </div>
+      <div class="title-actions">
+        <button class="button primary xl" data-action="openModes">START ENGINE <b>→</b></button>
+        <button class="button ghost" data-action="openGarage">GARAGE</button>
+        <button class="button ghost" data-action="openSettings">SETTINGS</button>
+      </div>
+      <footer><a href="../../" data-app-control>← POCKET WORKS</a><span id="profileSummary">ROOKIE / 0 CR</span></footer>
+    </section>
+
+    <section id="modes" class="screen menu-screen" hidden>
+      <header><button class="icon-button" data-action="backTitle">←</button><div><small>SELECT DISCIPLINE</small><h2>RACE MODE</h2></div></header>
+      <div class="mode-grid">
+        <button class="mode-card featured" data-mode="quick"><span>01</span><div><small>FULL GRID</small><h3>QUICK RACE</h3><p>Build a race. Pick every variable.</p></div><b>→</b></button>
+        <button class="mode-card" data-mode="championship"><span>02</span><div><small>THREE EVENTS</small><h3>CHAMPIONSHIP</h3><p>Points, standings, unlocks.</p></div><b>→</b></button>
+        <button class="mode-card" data-mode="time"><span>03</span><div><small>YOU VS YOU</small><h3>TIME TRIAL</h3><p>Chase your saved ghost.</p></div><b>→</b></button>
+      </div>
+    </section>
+
+    <section id="setup" class="screen setup-screen" hidden>
+      <header><button class="icon-button" data-action="backModes">←</button><div><small id="setupKicker">QUICK RACE</small><h2 id="setupTitle">BUILD THE GRID</h2></div><button class="button mini" data-action="openGarage">CAR</button></header>
+      <div class="setup-layout">
+        <div class="track-selector" id="trackSelector"></div>
+        <aside class="race-config">
+          <div class="selected-car"><canvas id="setupCarPreview" width="360" height="170"></canvas><div><small>SELECTED MACHINE</small><strong id="selectedCarName">VECTOR S</strong><span id="selectedCarTrait">BALANCED</span></div></div>
+          <div class="segmented" id="lapsControl"><span>LAPS</span><button data-value="1">1</button><button data-value="2" class="active">2</button><button data-value="3">3</button><button data-value="4">4</button></div>
+          <div class="segmented" id="difficultyControl"><span>AI</span><button data-value="easy">EASY</button><button data-value="normal" class="active">NORMAL</button><button data-value="hard">HARD</button></div>
+          <div class="range-row" id="aiRow"><label>RIVALS <b id="aiValue">5</b></label><input id="aiCount" type="range" min="1" max="7" value="5"></div>
+          <button class="button primary xl" data-action="launchRace">LOAD STARTING GRID <b>→</b></button>
+        </aside>
+      </div>
+    </section>
+
+    <section id="garage" class="screen garage-screen" hidden>
+      <header><button class="icon-button" data-action="garageBack">←</button><div><small>FIVE DISTINCT MACHINES</small><h2>GARAGE</h2></div><span id="garageCredits">0 CR</span></header>
+      <div class="garage-layout">
+        <div class="preview-stage"><canvas id="carPreview" width="720" height="420"></canvas><span>DRAG TO ROTATE</span></div>
+        <aside><div id="carList" class="car-list"></div><div id="carStats" class="car-stats"></div><button id="selectCarButton" class="button primary xl">SELECT MACHINE</button></aside>
+      </div>
+    </section>
+
+    <section id="settings" class="screen settings-screen" hidden>
+      <header><button class="icon-button" data-action="settingsBack">←</button><div><small>INPUT / AUDIO / PERFORMANCE</small><h2>SETTINGS</h2></div></header>
+      <div class="settings-grid">
+        <div class="setting-panel"><h3>STEERING</h3><label class="choice"><span>BUTTONS</span><input type="radio" name="steerMode" value="buttons"><i></i></label><label class="choice"><span>TOUCH DRAG</span><input type="radio" name="steerMode" value="drag"><i></i></label><label>SENSITIVITY <b id="sensitivityValue">55%</b><input id="sensitivity" type="range" min="25" max="100" value="55"></label><label class="toggle"><span>AUTO ACCELERATE</span><input id="autoAccel" type="checkbox"><i></i></label><label class="toggle"><span>GYRO STEERING</span><input id="gyro" type="checkbox"><i></i></label></div>
+        <div class="setting-panel"><h3>AUDIO</h3><label>MUSIC <b id="musicValue">55%</b><input id="musicVolume" type="range" min="0" max="100" value="55"></label><label>EFFECTS <b id="effectsValue">80%</b><input id="effectsVolume" type="range" min="0" max="100" value="80"></label><h3>DISPLAY</h3><label class="toggle"><span>REDUCED QUALITY</span><input id="lowQuality" type="checkbox"><i></i></label><label class="toggle"><span>CAMERA SHAKE</span><input id="cameraShake" type="checkbox" checked><i></i></label></div>
+      </div>
+    </section>
+
+    <section id="raceHud" class="race-hud" hidden>
+      <div class="hud-top"><div class="position"><strong id="positionValue">1</strong><span>/ <b id="racerCount">6</b></span></div><div class="lap"><small>LAP</small><strong><b id="lapValue">1</b>/<span id="lapTotal">2</span></strong></div><div class="race-time" id="raceTime">00:00.000</div><button class="pause-button" data-action="pause">Ⅱ</button></div>
+      <canvas id="minimap" width="240" height="86"></canvas>
+      <div id="wrongWay" class="wrong-way" hidden>WRONG WAY</div>
+      <div id="countdown" class="countdown">3</div>
+      <div id="raceMessage" class="race-message"></div>
+      <div class="speed-block"><strong id="speedValue">000</strong><span>KM/H</span><div class="boost-meter"><i id="boostFill"></i><b>N₂O</b></div></div>
+      <div id="touchControls" class="touch-controls">
+        <div id="steerButtons" class="steer-buttons"><button data-control="left" aria-label="Steer left">‹</button><button data-control="right" aria-label="Steer right">›</button></div>
+        <div id="dragSteer" class="drag-steer" hidden><span>STEER</span><i></i></div>
+        <div class="pedals"><button class="drift" data-control="drift">DRIFT</button><button class="brake" data-control="brake">BRAKE</button><button class="gas" data-control="gas"><i></i></button><button class="boost" data-control="boost">BOOST</button></div>
+      </div>
+    </section>
+
+    <section id="pause" class="overlay" hidden><div class="modal"><small>RACE CONTROL</small><h2>PAUSED</h2><button class="button primary" data-action="resume">RESUME</button><button class="button" data-action="restart">RESTART</button><button class="button" data-action="quitRace">QUIT TO MENU</button></div></section>
+    <section id="results" class="screen results-screen" hidden><div class="results-card"><small id="resultKicker">RACE COMPLETE</small><h2 id="resultHeadline">VICTORY</h2><div id="podium" class="podium"></div><div id="resultStats" class="result-stats"></div><div id="standings" class="standings" hidden></div><div class="result-actions"><button class="button primary" id="continueChampButton" data-action="continueChamp" hidden>NEXT EVENT</button><button class="button primary" data-action="restart">RACE AGAIN</button><button class="button" data-action="quitRace">MAIN MENU</button></div></div></section>
+    <div id="toast" class="toast"></div>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

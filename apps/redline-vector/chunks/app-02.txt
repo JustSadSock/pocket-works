@@ -1,0 +1,161 @@
+ng, racing) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const rpm = 48 + speedRatio * 170 + throttle * 14 + (boosting ? 28 : 0);
+    this.engineLow.frequency.setTargetAtTime(rpm, now, .035);
+    this.engineHigh.frequency.setTargetAtTime(rpm * 2.02, now, .04);
+    this.engineFilter.frequency.setTargetAtTime(480 + speedRatio * 2100 + throttle * 500, now, .06);
+    this.engineGain.gain.setTargetAtTime(racing ? .13 + speedRatio * .12 : .025, now, .08);
+    this.skidGain.gain.setTargetAtTime(drifting ? .16 : 0, now, .04);
+  }
+  tone(freq = 440, duration = .08, type = 'sine', gain = .13) {
+    this.ensure(); if (!this.ctx) return;
+    const osc = this.ctx.createOscillator(); const amp = this.ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime); amp.gain.setValueAtTime(gain, this.ctx.currentTime); amp.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime + duration);
+    osc.connect(amp).connect(this.fxGain); osc.start(); osc.stop(this.ctx.currentTime + duration);
+  }
+  collision(strength = 1) {
+    this.ensure(); if (!this.ctx) return;
+    const osc = this.ctx.createOscillator(); const amp = this.ctx.createGain(); const filter = this.ctx.createBiquadFilter();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(90 + Math.random() * 40, this.ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(28, this.ctx.currentTime + .18);
+    filter.type = 'lowpass'; filter.frequency.value = 500; amp.gain.setValueAtTime(.18 * strength, this.ctx.currentTime); amp.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime + .22);
+    osc.connect(filter).connect(amp).connect(this.fxGain); osc.start(); osc.stop(this.ctx.currentTime + .23);
+  }
+  setTrack(track) { this.activeTrack = track; this.step = 0; }
+  startMusic() {
+    this.ensure(); if (this.musicTimer) return;
+    this.musicTimer = window.setInterval(() => {
+      if (!this.ctx || state.screen !== 'race' || state.paused) return;
+      const notes = this.activeTrack.music || [48, 55, 60, 67];
+      const note = notes[this.step % notes.length] + (this.step % 8 === 7 ? 12 : 0);
+      this.musicNote(note, this.step % 4 === 0 ? .11 : .055);
+      this.step += 1;
+    }, 180);
+  }
+  stopMusic() { clearInterval(this.musicTimer); this.musicTimer = 0; }
+  musicNote(midi, gain) {
+    if (!this.ctx) return;
+    const freq = 440 * 2 ** ((midi - 69) / 12); const osc = this.ctx.createOscillator(); const amp = this.ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq; amp.gain.setValueAtTime(gain, this.ctx.currentTime); amp.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime + .16);
+    osc.connect(amp).connect(this.musicGain); osc.start(); osc.stop(this.ctx.currentTime + .17);
+  }
+}
+const audio = new AudioSystem();
+
+const canvas = $('#game');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const mini = $('#minimap');
+const miniCtx = mini.getContext('2d');
+let W = 1, H = 1, DPR = 1;
+function resize() {
+  DPR = profile.settings.lowQuality ? 1 : Math.min(2, window.devicePixelRatio || 1);
+  W = Math.max(1, innerWidth); H = Math.max(1, innerHeight);
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.imageSmoothingEnabled = true;
+}
+addEventListener('resize', resize, { passive: true });
+addEventListener('orientationchange', () => setTimeout(resize, 120), { passive: true });
+resize();
+
+const input = { left: false, right: false, gas: false, brake: false, drift: false, boost: false, steer: 0, gyro: 0 };
+const state = {
+  screen: 'boot', previousScreen: 'title', mode: 'quick', setupTrack: 'costa', laps: 2, difficulty: 'normal', aiCount: 5,
+  race: null, paused: false, lastTime: performance.now(), demoTime: 0, previewAngle: -.35, garageCar: profile.selectedCar,
+  particles: [], shake: 0, flash: 0, toastTimer: 0
+};
+
+function createRace({ mode = state.mode, trackId = state.setupTrack, laps = state.laps, difficulty = state.difficulty, aiCount = state.aiCount } = {}) {
+  const track = TRACKS[trackId];
+  const carDef = carById(profile.selectedCar);
+  const maxSpeed = 9700 + carDef.top * 3700;
+  const player = {
+    x: 0, z: track.length - PLAYER_Z - SEGMENT_LENGTH * 4, speed: 0, maxSpeed,
+    accel: 4300 + carDef.accel * 2200, brakePower: 8700, decel: 1850, steerStat: carDef.steer,
+    driftStat: carDef.drift, grip: carDef.grip, armor: carDef.armor, boostCap: carDef.boost,
+    boost: .58 + carDef.boost * .32, driftCharge: 0, drifting: false, slipstream: 0,
+    lap: 0, checkpoint: 0, totalProgress: 0, lastZ: 0, wrongWay: 0, finished: false, finishTime: 0,
+    lapStart: 0, bestLap: Infinity, laps: [], collisionCooldown: 0, padCooldown: 0
+  };
+  player.lastZ = player.z;
+  const difficultyPace = { easy: .89, normal: .98, hard: 1.055 }[difficulty] || .98;
+  const ai = [];
+  for (let i = 0; i < aiCount; i += 1) {
+    const personality = AI_PERSONALITIES[i % AI_PERSONALITIES.length];
+    const row = Math.floor(i / 2) + 1;
+    ai.push({
+      id: `ai-${i}`, name: personality.name, personality, color: personality.color,
+      x: (i % 2 ? .48 : -.48) + (Math.random() - .5) * .12,
+      z: wrap(player.z + row * SEGMENT_LENGTH * 2.8, track.length),
+      totalProgress: row * SEGMENT_LENGTH * 2.8, lap: 0,
+      speed: maxSpeed * difficultyPace * personality.pace * (.9 + Math.random() * .07),
+      baseSpeed: maxSpeed * difficultyPace * personality.pace, targetX: 0, think: Math.random() * .6,
+      boost: .35 + Math.random() * .45, boosting: false, finished: false, finishTime: 0, mistake: 0
+    });
+  }
+  const ghostKey = `${trackId}:${carDef.id}`;
+  return {
+    mode, track, carDef, player, ai, laps, difficulty, elapsed: 0, started: false, countdown: 3.55,
+    finishDelay: 0, placements: [], ghost: mode === 'time' ? (profile.ghosts[ghostKey] || []) : [], ghostKey,
+    recording: [], recordTick: 0, raceMessageTimer: 0, championshipEvent: mode === 'championship' ? (profile.championship?.event || 0) : -1
+  };
+}
+
+function switchScreen(id) {
+  $$('.screen').forEach(screen => { screen.hidden = screen.id !== id; screen.classList.toggle('screen-active', screen.id === id); });
+  $('#raceHud').hidden = id !== 'race';
+  state.screen = id;
+  if (id !== 'race') { state.paused = false; $('#pause').hidden = true; }
+  if (id === 'title') updateProfileSummary();
+}
+
+function updateProfileSummary() {
+  const rank = profile.xp >= 5000 ? 'APEX' : profile.xp >= 2200 ? 'PRO' : profile.xp >= 800 ? 'CONTENDER' : 'ROOKIE';
+  $('#profileSummary').textContent = `${rank} / ${profile.credits} CR`;
+}
+
+function toast(text) {
+  const el = $('#toast'); el.textContent = text; el.classList.add('show'); clearTimeout(state.toastTimer); state.toastTimer = setTimeout(() => el.classList.remove('show'), 1700);
+}
+
+function renderTrackCards() {
+  const root = $('#trackSelector'); root.innerHTML = '';
+  TRACK_DEFS.forEach(track => {
+    const button = document.createElement('button'); button.className = `track-card${state.setupTrack === track.id ? ' active' : ''}`; button.dataset.track = track.id;
+    button.innerHTML = `<div class="track-art" style="--track-bg:${track.art};--track-overlay:${track.overlay}"></div><div><small>${track.kicker}</small><strong>${track.name}</strong><span>${track.lengthLabel} · ${track.weather}</span></div>`;
+    button.addEventListener('click', () => { audio.tone(360, .05); state.setupTrack = track.id; renderTrackCards(); drawSetupPreview(); });
+    root.append(button);
+  });
+}
+
+function renderGarage() {
+  $('#garageCredits').textContent = `${profile.credits} CR`;
+  const list = $('#carList'); list.innerHTML = '';
+  CAR_DEFS.forEach((car, i) => {
+    const unlocked = profile.unlocked.includes(car.id); const chip = document.createElement('button');
+    chip.className = `car-chip${state.garageCar === car.id ? ' active' : ''}${unlocked ? '' : ' locked'}`; chip.textContent = unlocked ? String(i + 1).padStart(2, '0') : 'LOCK';
+    chip.addEventListener('click', () => { state.garageCar = car.id; audio.tone(300 + i * 60, .05); renderGarage(); }); list.append(chip);
+  });
+  const car = carById(state.garageCar); const unlocked = profile.unlocked.includes(car.id);
+  $('#carStats').innerHTML = `<h3>${car.name}</h3><p>${car.trait} · ${unlocked ? 'AVAILABLE' : `${car.cost} CR TO UNLOCK`}</p>${['accel','top','steer','drift','grip','armor','boost'].map(key => `<div class="stat"><span>${key.toUpperCase()}</span><div class="stat-track"><i style="width:${Math.round(car[key] * 100)}%"></i></div><b>${Math.round(car[key] * 10)}</b></div>`).join('')}`;
+  const button = $('#selectCarButton'); button.textContent = unlocked ? (profile.selectedCar === car.id ? 'SELECTED' : 'SELECT MACHINE') : `UNLOCK · ${car.cost} CR`;
+  button.disabled = unlocked && profile.selectedCar === car.id;
+  drawCarPreview($('#carPreview'), car, state.previewAngle, true);
+}
+
+function selectGarageCar() {
+  const car = carById(state.garageCar); const unlocked = profile.unlocked.includes(car.id);
+  if (!unlocked) {
+    if (profile.credits < car.cost) { toast(`NEED ${car.cost - profile.credits} MORE CR`); audio.tone(130, .12, 'square'); return; }
+    profile.credits -= car.cost; profile.unlocked.push(car.id); toast(`${car.name} UNLOCKED`);
+  }
+  profile.selectedCar = car.id; saveProfile(); audio.tone(740, .12); renderGarage(); updateSelectedCarUI();
+}
+
+function updateSelectedCarUI() {
+  const car = carById(profile.selectedCar); $('#selectedCarName').textContent = car.name; $('#selectedCarTrait').textContent = car.trait; drawSetupPreview();
+}
+
+function drawCarPreview(target, car, angle = 0, compact = false) {
+  const c = target.getContext('2d'); const w = target.width; const h = target.height; c.clearRect(0, 0, w, h);
+  const cx = w * .5, cy = h * (compact ? .58 : .59); const scale = Math.min(w / 720, h / 390) * (compact ? 1.08 : 1);
+  c.save(); c.translate(cx, cy); c.scale(scale, scale); const skew = Math.sin(angl

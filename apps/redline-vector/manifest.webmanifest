@@ -1,0 +1,13 @@
+{
+  "id": "/apps/redline-vector/",
+  "name": "REDLINE VECTOR",
+  "short_name": "REDLINE",
+  "description": "Первое лицо, три стилизованные трассы, аркадный дрифт, умные соперники, чемпионат и гонка с призраком.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b0d13",
+  "theme_color": "#10131c",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
