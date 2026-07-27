@@ -19,7 +19,8 @@
       if (organism) {
         observationPrimeRepresentative(organism);
         const sourceDeme = meta.demes.find((candidate) => candidate.id === (entry.deme.colonizationSource || entry.deme.nicheShiftSource));
-        if (sourceDeme && sourceDeme.id !== entry.deme.id) observationScheduleJourney(organism, entry.deme, sourceDeme);
+        const recentlyFounded = entry.deme.founded == null || state.generation - entry.deme.founded <= 18 || entry.deme.age <= 18;
+        if (sourceDeme && sourceDeme.id !== entry.deme.id && recentlyFounded) observationScheduleJourney(organism, entry.deme, sourceDeme);
         else {
           const point = observationPointForDeme(entry.deme);
           organism.x = point.x; organism.y = point.y; organism.displayX = point.x; organism.displayY = point.y;
