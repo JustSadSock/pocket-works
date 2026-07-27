@@ -1,0 +1,72 @@
+    point = { x: OBSERVATION.clamp(patch.x + nextScatter.x, .025, .975), y: OBSERVATION.clamp(patch.y + nextScatter.y, .04, .96) };
+  }
+  return point;
+}
+
+function observationAddEvent(event) {
+  const observation = observationEnsureState();
+  if (!observation || !event) return;
+  observation.events.push({ generation: state.generation, life: 1, strength: 1, ...event });
+  observation.events = OBSERVATION.compactEvents(observation.events, observation.quality === 'low' ? 42 : 78, state.generation);
+}
+
+function observationScheduleJourney(organism, deme, sourceDeme = null) {
+  if (!organism || !deme) return;
+  const sourcePoint = sourceDeme ? observationPointForDeme(sourceDeme, true) : { x: organism.x, y: organism.y };
+  const targetPoint = observationPointForDeme(deme);
+  organism.x = sourcePoint.x;
+  organism.y = sourcePoint.y;
+  organism.displayX ??= sourcePoint.x;
+  organism.displayY ??= sourcePoint.y;
+  organism.macroDemeId = deme.id;
+  organism.populationId = deme.appPopulationId || organism.populationId;
+  organism.observationJourney = {
+    sx: sourcePoint.x, sy: sourcePoint.y, tx: targetPoint.x, ty: targetPoint.y,
+    progress: 0, duration: 130 + Math.round(Math.hypot(targetPoint.x - sourcePoint.x, targetPoint.y - sourcePoint.y) * 250),
+    arc: .025 + Math.min(.09, Math.hypot(targetPoint.x - sourcePoint.x, targetPoint.y - sourcePoint.y) * .12),
+    sourcePatchId: sourceDeme?.patchId || null, targetPatchId: deme.patchId, route: deme.planetRouteType || deme.colonizationRoute || 'ordinary'
+  };
+  observationAddEvent({ type: 'migration', actorId: organism.id, speciesId: organism.speciesId, x: sourcePoint.x, y: sourcePoint.y, x2: targetPoint.x, y2: targetPoint.y, route: organism.observationJourney.route, life: 1.5 });
+}
+
+function observationPrimeRepresentative(organism) {
+  if (!organism) return organism;
+  organism.displayX ??= organism.x;
+  organism.displayY ??= organism.y;
+  organism.observationAlpha ??= .06;
+  organism.observationRetiring ??= false;
+  organism.observationBornStep ??= state.step;
+  return organism;
+}
+
+metaReconcileRepresentatives = function observationReconcileRepresentatives({ soft = false, immediate = false } = {}) {
+  if (metaReconciling || !state?.metacommunity) return;
+  metaReconciling = true;
+  try {
+    observationEnsureState();
+    const meta = state.metacommunity;
+    const targets = metaDemeTargetCounts();
+    const activeDemeIds = new Set(targets.keys());
+    const groups = new Map();
+    for (const organism of state.organisms) {
+      observationPrimeRepresentative(organism);
+      const direct = meta.demes.find((deme) => deme.id === organism.macroDemeId && deme.abundance > .02);
+      if (!direct || !activeDemeIds.has(direct.id)) continue;
+      if (!groups.has(direct.id)) groups.set(direct.id, []);
+      groups.get(direct.id).push(organism);
+      organism.speciesId = direct.speciesId;
+      organism.populationId = direct.appPopulationId || organism.populationId;
+      const currentPatchId = metaPatchIdAt(organism.x, organism.y);
+      if (!organism.observationJourney && currentPatchId !== direct.patchId) observationScheduleJourney(organism, direct);
+    }
+
+    const addLimit = immediate ? 48 : soft ? 2 : 7;
+    const retireLimit = immediate ? 80 : soft ? 2 : 7;
+    let added = 0;
+    let retired = 0;
+
+    const missingQueues = [];
+    for (const [demeId, target] of targets) {
+      const deme = meta.demes.find((entry) => entry.id === demeId);
+      if (!deme) continue;
+      const current = (groups.get(demeId) || []).filter((organism) => !organism.observationRetiring);
