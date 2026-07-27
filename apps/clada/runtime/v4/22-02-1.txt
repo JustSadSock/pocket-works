@@ -1,0 +1,82 @@
+/* КЛАДА 4.3 — постоянные представители, плавные миграции и дешёвая летопись. */
+const OBSERVATION_APP_VERSION = '4.3.0';
+const OBSERVATION = globalThis.CladaObservationCore;
+const observationLegacySaveState = saveState;
+const observationLegacySimulateStep = simulateStep;
+const observationLegacyMetaRecordHistory = metaRecordHistory;
+const observationLegacyBuildWorld = buildWorld;
+const observationLegacyMigrateLivingState = migrateLivingState;
+let observationSaveHandle = null;
+let observationSavePending = false;
+
+function observationEnsureState() {
+  if (!state) return null;
+  state.observation ||= {};
+  const observation = state.observation;
+  observation.version = OBSERVATION.VERSION;
+  observation.quality ||= 'balanced';
+  observation.events ||= [];
+  observation.clock ||= 0;
+  observation.followSelected ??= false;
+  observation.showEvents ??= true;
+  observation.mapScale ||= 1.34;
+  observation.frameMs ||= 16.7;
+  observation.lastGenerationCost ||= 0;
+  return observation;
+}
+
+function observationFlushSave() {
+  if (observationSaveHandle !== null) {
+    if (typeof cancelIdleCallback === 'function') cancelIdleCallback(observationSaveHandle);
+    else clearTimeout(observationSaveHandle);
+  }
+  observationSaveHandle = null;
+  if (!observationSavePending) return;
+  observationSavePending = false;
+  observationLegacySaveState();
+}
+
+saveState = function observationDeferredSave(force = false) {
+  if (!state) return;
+  observationSavePending = true;
+  if (force) { observationFlushSave(); return; }
+  if (observationSaveHandle !== null) return;
+  const callback = () => {
+    observationSaveHandle = null;
+    if (!observationSavePending) return;
+    observationSavePending = false;
+    observationLegacySaveState();
+  };
+  observationSaveHandle = typeof requestIdleCallback === 'function'
+    ? requestIdleCallback(callback, { timeout: 900 })
+    : setTimeout(callback, 240);
+};
+
+addEventListener('pagehide', observationFlushSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) observationFlushSave(); });
+
+function observationVisualBudget(meta) {
+  const observation = observationEnsureState();
+  const active = meta.demes.filter((deme) => deme.abundance > .25);
+  const total = active.reduce((sum, deme) => sum + deme.abundance, 0);
+  const modelCap = typeof MAX_ORGANISMS === 'number' ? MAX_ORGANISMS : 220;
+  return Math.min(modelCap, OBSERVATION.qualityBudget(observation.quality, active.length, total));
+}
+
+metaDemeTargetCounts = function observationDemeTargetCounts() {
+  const meta = metaEnsureState();
+  if (!meta) return new Map();
+  return OBSERVATION.allocateTargets(meta.demes, observationVisualBudget(meta));
+};
+
+function observationPointForDeme(deme, source = false) {
+  const meta = state.metacommunity;
+  const patch = meta?.patches?.find((entry) => entry.id === deme?.patchId);
+  if (!patch) return { x: .5, y: .5 };
+  const scatter = OBSERVATION.scatter((deme.id || 1) * 991 + (state.step || 0) + (source ? 37 : 0), .055);
+  let point = { x: OBSERVATION.clamp(patch.x + scatter.x, .025, .975), y: OBSERVATION.clamp(patch.y + scatter.y, .04, .96) };
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    const terrain = terrainAt(point.x, point.y);
+    const wantsWater = patch.water || (deme.traits?.water || 0) > .62;
+    if (Boolean(terrain.water) === Boolean(wantsWater) || deme.guild === 'amphibian' || deme.guild === 'flyer') break;
+    const nextScatter = OBSERVATION.scatter((deme.id || 1) * 1171 + attempt * 83, .07);

@@ -1,0 +1,94 @@
+/* КЛАДА 4.3 — чистое ядро непрерывного наблюдения. */
+globalThis.CladaObservationCore = (() => {
+  const VERSION = 1;
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smoothFactor = (dt, halfLife = .16) => 1 - Math.pow(.5, Math.max(0, dt) / Math.max(.001, halfLife));
+  const damp = (current, target, dt, halfLife = .16) => lerp(Number(current) || 0, Number(target) || 0, smoothFactor(dt, halfLife));
+  const hash = (value) => {
+    let x = Number(value) | 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return x >>> 0;
+  };
+  const unit = (seed, salt = 0) => hash(hash(seed) ^ hash(salt)) / 4294967296;
+
+  function qualityBudget(quality = 'balanced', activeCount = 1, totalAbundance = 1) {
+    const cap = quality === 'high' ? 188 : quality === 'low' ? 108 : 146;
+    const abundanceBudget = Math.round(Math.sqrt(Math.max(1, totalAbundance)) * (quality === 'high' ? 7.3 : quality === 'low' ? 4.8 : 6.1));
+    return Math.max(Math.min(activeCount, cap), Math.min(cap, abundanceBudget));
+  }
+
+  function allocateTargets(demes = [], budget = 140) {
+    const active = demes.filter((deme) => (deme.abundance || 0) > .25).sort((a, b) => (b.abundance || 0) - (a.abundance || 0));
+    const selected = active.slice(0, Math.max(0, budget));
+    const targets = new Map(selected.map((deme) => [deme.id, 1]));
+    let remaining = Math.max(0, budget - selected.length);
+    const weighted = selected.map((deme) => ({ deme, weight: Math.pow(Math.max(.1, deme.abundance || 0), .61) }));
+    const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0) || 1;
+    for (const entry of weighted) {
+      if (!remaining) break;
+      const extra = Math.min(11, Math.floor(remaining * entry.weight / totalWeight));
+      targets.set(entry.deme.id, (targets.get(entry.deme.id) || 0) + extra);
+    }
+    let assigned = [...targets.values()].reduce((sum, value) => sum + value, 0);
+    let cursor = 0;
+    while (assigned < budget && weighted.length && cursor < budget * 18) {
+      const entry = weighted[cursor % weighted.length];
+      const current = targets.get(entry.deme.id) || 0;
+      if (current < 12) { targets.set(entry.deme.id, current + 1); assigned += 1; }
+      cursor += 1;
+    }
+    return targets;
+  }
+
+  function routePoint(journey, progress) {
+    const t = clamp(progress);
+    const ease = t * t * (3 - 2 * t);
+    const x = lerp(journey.sx, journey.tx, ease);
+    const y = lerp(journey.sy, journey.ty, ease);
+    const dx = journey.tx - journey.sx, dy = journey.ty - journey.sy;
+    const length = Math.hypot(dx, dy) || 1;
+    const arc = Math.sin(Math.PI * t) * (journey.arc || .045);
+    return { x: x - dy / length * arc, y: y + dx / length * arc };
+  }
+
+  function compactEvents(events = [], limit = 90, generation = Infinity) {
+    const result = [];
+    const signatures = new Map();
+    for (const event of events) {
+      if (!event) continue;
+      const age = Math.max(0, generation - (event.generation ?? generation));
+      const ttl = event.type === 'migration' ? 18 : event.type === 'birth' ? 5 : 8;
+      if (age > ttl || (event.life ?? 1) <= 0) continue;
+      const signature = `${event.type}:${event.actorId || ''}:${event.targetId || ''}:${Math.round((event.x || 0) * 40)}:${Math.round((event.y || 0) * 30)}`;
+      const previous = signatures.get(signature);
+      if (previous !== undefined && result[previous]) {
+        result[previous].strength = Math.min(3, (result[previous].strength || 1) + (event.strength || 1) * .35);
+        result[previous].life = Math.max(result[previous].life || 0, event.life || 0);
+        continue;
+      }
+      signatures.set(signature, result.length);
+      result.push({ ...event });
+    }
+    return result.slice(-limit);
+  }
+
+  function classifyPair(a, b) {
+    const aDiet = a?.genome?.diet || 0, bDiet = b?.genome?.diet || 0;
+    if (aDiet > .46 && aDiet > bDiet + .18) return { type: 'hunt', actor: a, target: b };
+    if (bDiet > .46 && bDiet > aDiet + .18) return { type: 'hunt', actor: b, target: a };
+    const territory = Math.max(a?.genome?.territory || 0, b?.genome?.territory || 0);
+    if (a?.speciesId !== b?.speciesId && territory > .46) return { type: 'territory', actor: a, target: b };
+    const social = ((a?.genome?.cooperation || a?.genome?.social || 0) + (b?.genome?.cooperation || b?.genome?.social || 0)) / 2;
+    if (a?.speciesId === b?.speciesId && social > .42) return { type: 'social', actor: a, target: b };
+    return null;
+  }
+
+  function scatter(seed, radius = .025) {
+    const angle = unit(seed, 17) * Math.PI * 2;
+    const distance = Math.sqrt(unit(seed, 23)) * radius;
+    return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+  }
+
+  return { VERSION, clamp, lerp, smoothFactor, damp, hash, unit, qualityBudget, allocateTargets, routePoint, compactEvents, classifyPair, scatter };
+})();

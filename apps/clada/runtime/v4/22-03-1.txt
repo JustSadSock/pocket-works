@@ -1,0 +1,68 @@
+/* КЛАДА 4.3 — компактная история и события микросимуляции. */
+function observationSampleOrganisms(limit = 84) {
+  const buckets = new Map();
+  for (const organism of state.organisms) {
+    const key = organism.macroDemeId || `s${organism.speciesId}`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(organism);
+  }
+  const result = [];
+  const queues = [...buckets.values()].sort((a, b) => b.length - a.length);
+  let cursor = 0;
+  while (result.length < limit && queues.length) {
+    const queue = queues[cursor % queues.length];
+    const organism = queue.shift();
+    if (organism) result.push(organism);
+    if (!queue.length) queues.splice(cursor % queues.length, 1);
+    else cursor += 1;
+  }
+  return result;
+}
+
+metaRecordHistory = function observationRecordHistory() {
+  const meta = metaEnsureState();
+  if (!meta) return;
+  if (state.history.at(-1)?.generation === state.generation) state.history.pop();
+  const summary = META.summarize(meta);
+  const counts = {};
+  for (const species of meta.species) if (!species.extinct && (species.abundance || 0) >= .5) counts[species.id] = Math.round(species.abundance || 0);
+  const organisms = observationSampleOrganisms(observationEnsureState().quality === 'low' ? 52 : 84).map(snapshotOrganism);
+  const populations = (state.populations || []).map((population) => ({
+    id: population.id, macroDemeId: population.macroDemeId, speciesId: population.speciesId, patchId: population.patchId,
+    region: population.region, size: population.size, macroAbundance: population.macroAbundance, status: population.status,
+    speciationProgress: population.speciationProgress, geneFlowEMA: population.geneFlowEMA, center: population.center,
+    adaptiveRole: population.adaptiveRole, trend: population.trend, island: population.island, colonizationRoute: population.colonizationRoute
+  }));
+  state.history.push({
+    generation: state.generation, env: { ...state.env }, population: Math.round(summary.abundance), counts, organisms, populations,
+    season: state.season, ecology: { macro: true, guilds: { ...summary.guilds }, occupiedPatches: summary.occupiedPatches },
+    event: state.events.at(-1)?.generation === state.generation ? { ...state.events.at(-1) } : null
+  });
+  if (state.history.length > MAX_HISTORY) state.history.splice(0, state.history.length - MAX_HISTORY);
+  state.fossilIndex = null;
+  state.macroTimeline ||= [];
+  if (state.generation % 5 === 0 || !state.macroTimeline.length) {
+    state.macroTimeline.push({ g: state.generation, n: Math.round(summary.abundance), s: summary.richness, d: summary.demes, p: summary.occupiedPatches, guilds: Object.fromEntries(Object.entries(summary.guilds).map(([key, value]) => [key, Math.round(value)])) });
+    state.macroTimeline = state.macroTimeline.slice(-180);
+  }
+};
+
+function observationNearestTarget(organism, predicate) {
+  let best = null, bestDistance = Infinity;
+  for (const candidate of state.organisms) {
+    if (candidate === organism || !predicate(candidate)) continue;
+    const distance = distanceSq(organism.x, organism.y, candidate.x, candidate.y);
+    if (distance < bestDistance) { best = candidate; bestDistance = distance; }
+  }
+  return best;
+}
+
+function observationDetectPairs() {
+  const grid = new Map();
+  const columns = 14, rows = 10;
+  for (const organism of state.organisms) {
+    const key = `${Math.floor(organism.x * columns)}:${Math.floor(organism.y * rows)}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(organism);
+  }
+  let emitted = 0;

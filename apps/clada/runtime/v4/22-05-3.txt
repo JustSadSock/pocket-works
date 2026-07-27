@@ -1,0 +1,15 @@
+  if (document.querySelector('link[href="./observable-life.css"]')) return;
+  const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = './observable-life.css'; document.head.append(link);
+}
+
+observationInstallStyle();
+const observationInitial = observationEnsureState();
+if (!observationInitial.mapInitialized) {
+  observationInitial.mapInitialized = true;
+  CAM.world.zoom = Math.max(CAM.world.zoom || 1, observationInitial.mapScale);
+  CAM.world.x = cssWidth ? cssWidth * .5 * (1 - CAM.world.zoom) : CAM.world.x;
+  CAM.world.y = cssHeight ? cssHeight * .5 * (1 - CAM.world.zoom) : CAM.world.y;
+  limit(CAM.world);
+}
+observationEnsureHud(); observationUpdateHud();
+requestAnimationFrame(observationMonitorFrame);

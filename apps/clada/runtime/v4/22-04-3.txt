@@ -1,0 +1,40 @@
+      ctx.beginPath(); ctx.moveTo(x - 2, y); ctx.quadraticCurveTo(x + 3, y - 8, x + 7, y - 3); ctx.quadraticCurveTo(x + 2, y + 1, x - 2, y); ctx.fill();
+    }
+    if (event.type === 'birth') { ctx.beginPath(); ctx.arc(x, y, 1.8, 0, TAU); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+function observationDrawEvents() {
+  const observation = observationEnsureState();
+  if (!observation?.showEvents || state.fossilIndex !== null || state.view !== 'world') return;
+  const events = observation.events.slice(-(observation.quality === 'low' ? 22 : 44));
+  const camera = CAM.world;
+  ctx.save(); ctx.translate(camera.x, camera.y); ctx.scale(camera.zoom, camera.zoom);
+  for (const event of events) observationDrawEvent(event, observation.clock);
+  ctx.restore();
+}
+
+function observationUpdateDisplayedPositions() {
+  for (const organism of state.organisms) {
+    organism.displayX ??= organism.x;
+    organism.displayY ??= organism.y;
+  }
+}
+
+drawWorld = function observationDrawWorld() {
+  observationUpdateDisplayedPositions();
+  const original = state.organisms.map((organism) => [organism, organism.x, organism.y]);
+  for (const [organism] of original) { organism.x = organism.displayX; organism.y = organism.displayY; }
+  observationLegacyDrawWorld();
+  for (const [organism, x, y] of original) { organism.x = x; organism.y = y; }
+  observationDrawEvents();
+};
+
+function observationActivityLabel(organism) {
+  if (!organism) return 'наблюдение';
+  if (organism.observationJourney) return 'мигрирует';
+  const recent = observationEnsureState().events.slice().reverse().find((event) => event.actorId === organism.id && event.life > .2);
+  return ({ hunt: 'преследует добычу', feeding: 'кормится', birth: 'новая особь', territory: 'защищает территорию', social: 'держится с группой', arrival: 'осваивает территорию', death: 'исчезла' })[recent?.type] || (organism.energy < 4 ? 'ищет пищу' : 'перемещается по ареалу');
+}
+

@@ -1,0 +1,21 @@
+  observation.events = OBSERVATION.compactEvents(observation.events, observation.quality === 'low' ? 42 : 78, state.generation);
+};
+
+buildWorld = function observationBuildWorld(seed = 'garden') {
+  const result = observationLegacyBuildWorld(seed);
+  observationEnsureState();
+  for (const organism of state.organisms) observationPrimeRepresentative(organism).observationAlpha = 1;
+  metaReconcileRepresentatives({ immediate: true });
+  saveState();
+  return result;
+};
+
+migrateLivingState = function observationMigrateLivingState() {
+  observationLegacyMigrateLivingState();
+  observationEnsureState();
+  for (const organism of state.organisms) observationPrimeRepresentative(organism).observationAlpha = 1;
+  metaReconcileRepresentatives({ immediate: true });
+};
+
+observationEnsureState();
+for (const organism of state?.organisms || []) observationPrimeRepresentative(organism).observationAlpha = 1;

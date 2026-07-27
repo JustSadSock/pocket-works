@@ -1,20 +1,20 @@
 const CACHE_PREFIX = 'clada-';
-const CACHE_NAME = 'clada-v4.2.0';
-const APP_VERSION = '4.2.0';
-const RELEASE_DATE = '2026-07-26';
-const CACHE_PROTOCOL = 9;
+const CACHE_NAME = 'clada-v4.3.0';
+const APP_VERSION = '4.3.0';
+const RELEASE_DATE = '2026-07-27';
+const CACHE_PROTOCOL = 10;
 const RELEASE_NOTES = [
-  'Планета получила медленные климатические и геологические эпохи: уровень моря, оледенение, влажность, рельеф и биомы меняются во времени.',
-  'Течения, проливы, сухопутные и ледовые мосты, острова и горные барьеры теперь напрямую управляют расселением и потоком генов.',
-  'Добавлены викарное, перипатрическое, парапатрическое, кольцевое, гибридное и редкое хромосомное происхождение новых видов.',
-  'В Полевом журнале появился раздел «Планета» с динамической картой, длинной геологической летописью и биогеографией каждого вида.'
+  'Убрана поколенческая пересборка экрана: представители демов сохраняют визуальную идентичность, плавно появляются и исчезают.',
+  'Миграции теперь проходят по видимому маршруту, а кормление, охота, размножение, смерть, социальные и территориальные контакты отмечаются прямо на карте.',
+  'Карта по умолчанию увеличена, животные уменьшены и получили дополнительные морфологические детали.',
+  'Тяжёлые сохранения перенесены в свободные кадры, летопись стала компактнее, а визуальная нагрузка автоматически подстраивается под устройство.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './living.css', './field-journal.css', './living-planet.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop.js',
+  './', './index.html', './app.config.json', './styles.css', './living.css', './field-journal.css', './living-planet.css', './observable-life.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop.js',
   './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
   './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js', './runtime/09-evolution-v2.js',
   './runtime/v3/10-01.txt', './runtime/v3/10-02.txt', './runtime/v3/10-03.txt', './runtime/v3/10-04.txt', './runtime/v3/11-01.txt', './runtime/v3/11-02.txt', './runtime/v3/11-03-1.txt', './runtime/v3/11-03-2.txt', './runtime/v3/11-03-3.txt', './runtime/v3/11-04.txt', './runtime/v3/11-05-1.txt', './runtime/v3/11-05-2.txt', './runtime/v3/11-05-3.txt', './runtime/v3/11-06.txt', './runtime/v3/12-01.txt', './runtime/v3/12-02.txt', './runtime/v3/12-03.txt', './runtime/v3/12-04.txt', './runtime/v3/12-05.txt', './runtime/v3/13-stability.txt', './runtime/v3/14-diversification-core.js', './runtime/v3/15-01.txt', './runtime/v3/15-02.txt', './runtime/v3/15-03.txt',
-  './runtime/v4/16-01.txt', './runtime/v4/16-02.txt', './runtime/v4/16-03.txt', './runtime/v4/16-04.txt', './runtime/v4/17-01.txt', './runtime/v4/17-02.txt', './runtime/v4/17-03.txt', './runtime/v4/18-field-journal-core.js', './runtime/v4/19-01.txt', './runtime/v4/19-02.txt', './runtime/v4/19-03.txt', './runtime/v4/20-01.txt', './runtime/v4/20-02.txt', './runtime/v4/20-03.txt', './runtime/v4/21-01.txt', './runtime/v4/21-02.txt', './runtime/v4/21-03.txt',
+  './runtime/v4/16-01.txt', './runtime/v4/16-02.txt', './runtime/v4/16-03.txt', './runtime/v4/16-04.txt', './runtime/v4/17-01.txt', './runtime/v4/17-02.txt', './runtime/v4/17-03.txt', './runtime/v4/18-field-journal-core.js', './runtime/v4/19-01.txt', './runtime/v4/19-02.txt', './runtime/v4/19-03.txt', './runtime/v4/20-01.txt', './runtime/v4/20-02.txt', './runtime/v4/20-03.txt', './runtime/v4/21-01.txt', './runtime/v4/21-02.txt', './runtime/v4/21-03.txt', './runtime/v4/22-01.txt', './runtime/v4/22-02-1.txt', './runtime/v4/22-02-2.txt', './runtime/v4/22-02-3.txt', './runtime/v4/22-03-1.txt', './runtime/v4/22-03-2.txt', './runtime/v4/22-03-3.txt', './runtime/v4/22-04-1.txt', './runtime/v4/22-04-2.txt', './runtime/v4/22-04-3.txt', './runtime/v4/22-05-1.txt', './runtime/v4/22-05-2.txt', './runtime/v4/22-05-3.txt',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js', '../../shared/capabilities/audio.js', '../../shared/capabilities/device.js', '../../shared/capabilities/diagnostics.js'
