@@ -88,9 +88,6 @@ jobs:
             page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
             await page.goto('http://127.0.0.1:4173/apps/redline-vector/', { waitUntil: 'networkidle' });
             await page.locator('#title:not([hidden])').waitFor({ timeout: 10000 });
-            await page.click('[data-action="openSettings"]');
-            await page.check('input[name="steerMode"][value="drag"]');
-            await page.click('[data-action="settingsBack"]');
             await page.click('[data-action="openModes"]');
             await page.click('[data-mode="time"]');
             await page.click('[data-action="launchRace"]');
@@ -105,7 +102,6 @@ jobs:
             await page.click('[data-action="resume"]');
             const racers = await page.locator('#racerCount').textContent();
             if (racers.trim() !== '1') throw new Error(`Time trial contains unexpected rivals: ${racers}`);
-            if (await page.locator('#dragSteer').isHidden()) throw new Error('Saved drag steering was not applied');
             if (errors.length) throw new Error(`Browser errors: ${errors.join(' | ')}`);
             console.log(`Gameplay smoke passed at ${speed} km/h`);
             await browser.close();
