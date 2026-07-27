@@ -1,0 +1,67 @@
+      target.quadraticCurveTo(bodyLength * .43, side * (bodyWidth * .38 + horn * .45), bodyLength * .5, side * (bodyWidth * .2 + horn));
+      target.stroke();
+    }
+  } else if (!aquatic && !reduced) {
+    for (const side of [-1, 1]) {
+      target.beginPath();
+      target.moveTo(bodyLength * .28, side * bodyWidth * .2);
+      target.lineTo(bodyLength * .36, side * bodyWidth * .48);
+      target.lineTo(bodyLength * .42, side * bodyWidth * .18);
+      target.closePath(); target.fill(); target.stroke();
+    }
+  }
+
+  if (!reduced && (genome.armor || 0) > .48) {
+    target.globalAlpha *= .35;
+    const segments = 3 + Math.floor((genome.armor || 0) * 3);
+    for (let index = 0; index < segments; index += 1) {
+      const sx = OBSERVATION.lerp(-bodyLength * .28, bodyLength * .24, index / Math.max(1, segments - 1));
+      target.beginPath(); target.arc(sx, 0, bodyWidth * .28, -1.05, 1.05); target.stroke();
+    }
+    target.globalAlpha /= .35;
+  }
+  target.restore();
+}
+
+drawOrganismShape = function observationDrawOrganismShape(target, organism, x, y, scale, angle, portrait = false) {
+  const renderScale = portrait ? scale : scale * .61;
+  const alpha = portrait ? 1 : OBSERVATION.clamp(organism.observationAlpha ?? 1);
+  target.save(); target.globalAlpha *= alpha;
+  observationLegacyDrawOrganismShape(target, organism, x, y, renderScale, angle, portrait);
+  observationDrawMorphology(target, organism, x, y, renderScale, angle, portrait);
+  target.restore();
+};
+
+function observationEventColor(type) {
+  return ({ migration: '#4b7781', arrival: '#557b58', birth: '#557b58', feeding: '#71834e', hunt: '#9a5946', territory: '#7b5c42', social: '#6f4a89', death: '#6d655d' })[type] || '#557b58';
+}
+
+function observationDrawEvent(event, clock) {
+  const life = Math.max(0, event.life || 0);
+  if (!life) return;
+  const x = event.x * cssWidth, y = event.y * cssHeight;
+  const x2 = Number.isFinite(event.x2) ? event.x2 * cssWidth : x;
+  const y2 = Number.isFinite(event.y2) ? event.y2 * cssHeight : y;
+  const color = observationEventColor(event.type);
+  ctx.save(); ctx.globalAlpha = Math.min(.86, life * .8);
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.15;
+  if (event.type === 'migration') {
+    const dx = x2 - x, dy = y2 - y, length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length, uy = dy / length;
+    const arc = Math.min(42, length * .18);
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + x2) / 2 - uy * arc, (y + y2) / 2 + ux * arc, x2, y2); ctx.stroke(); ctx.setLineDash([]);
+    const t = ((clock * .012 + (event.actorId || 0) * .17) % 1);
+    const j = { sx: event.x, sy: event.y, tx: event.x2, ty: event.y2, arc: arc / Math.max(cssWidth, cssHeight) };
+    const point = OBSERVATION.routePoint(j, t);
+    ctx.beginPath(); ctx.arc(point.x * cssWidth, point.y * cssHeight, 2.6, 0, TAU); ctx.fill();
+  } else if (event.type === 'hunt' || event.type === 'territory' || event.type === 'social') {
+    ctx.setLineDash(event.type === 'hunt' ? [] : [3, 3]);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + x2) / 2, Math.min(y, y2) - 9, x2, y2); ctx.stroke(); ctx.setLineDash([]);
+    if (event.type === 'hunt') {
+      ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - 5, y2 - 2); ctx.lineTo(x2 - 2, y2 + 5); ctx.closePath(); ctx.fill();
+    }
+  } else {
+    const pulse = 5 + Math.sin(clock * .12 + (event.actorId || 0)) * 2 + (1 - life) * 10;
+    ctx.beginPath(); ctx.arc(x, y, pulse, 0, TAU); ctx.stroke();
+    if (event.type === 'feeding') {
