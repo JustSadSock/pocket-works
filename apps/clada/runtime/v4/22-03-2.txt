@@ -15,7 +15,8 @@ simulateStep = function observationSimulationStep() {
   const before = new Map(state.organisms.map((organism) => [organism.id, { x: organism.x, y: organism.y, energy: organism.energy, lastMeal: organism.lastMeal || -1, speciesId: organism.speciesId }]));
   observationLegacySimulateStep();
   observation.clock += 1;
-  const dt = 1 / 30;
+  const speedFactor = [1, 4, 12][state.speedIndex || 0] || 1;
+  const dt = 1 / (30 * speedFactor);
   const currentIds = new Set();
   for (const organism of state.organisms) {
     currentIds.add(organism.id);
@@ -29,7 +30,7 @@ simulateStep = function observationSimulationStep() {
     }
     if (organism.observationJourney) {
       const journey = organism.observationJourney;
-      journey.progress += 1 / Math.max(1, journey.duration);
+      journey.progress += 1 / Math.max(1, journey.duration * speedFactor);
       const point = OBSERVATION.routePoint(journey, journey.progress);
       organism.x = point.x; organism.y = point.y;
       organism.vx *= .72; organism.vy *= .72;
@@ -46,4 +47,4 @@ simulateStep = function observationSimulationStep() {
   for (const [id, previous] of before) if (!currentIds.has(id)) observationAddEvent({ type: 'death', actorId: id, speciesId: previous.speciesId, x: previous.x, y: previous.y, life: .72 });
   state.organisms = state.organisms.filter((organism) => !(organism.observationRetiring && organism.observationAlpha < .025));
   if (state.step % 20 === 0 && observation.quality !== 'low') observationDetectPairs();
-  for (const event of observation.events) event.life -= event.type === 'migration' ? .006 : .025;
+  for (const event of observation.events) event.life -= (event.type === 'migration' ? .006 : .025) / speedFactor;
