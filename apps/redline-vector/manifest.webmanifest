@@ -2,7 +2,7 @@
   "id": "/apps/redline-vector/",
   "name": "REDLINE VECTOR",
   "short_name": "REDLINE",
-  "description": "First-person mobile arcade racing with drift, boost, AI rivals and three routes.",
+  "description": "Первое лицо, три стилизованные трассы, аркадный дрифт, умные соперники, чемпионат и гонка с призраком.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
