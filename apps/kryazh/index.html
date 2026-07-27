@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#53694a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>КРЯЖ — voxel survival</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app data-ui>
+  <section id="title-screen" class="screen title-screen active">
+    <div class="title-landscape" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <header class="brand"><div class="brand-mark"><span></span><span></span><span></span></div><div><h1>КРЯЖ</h1><p>A living block frontier</p></div></header>
+    <nav class="title-actions">
+      <button id="play-btn" class="primary block-button" data-native-press>PLAY</button>
+      <button id="settings-btn" class="block-button">SETTINGS</button>
+      <button id="about-btn" class="block-button">FIELD NOTES</button>
+      <button id="launcher-title" class="launcher-link">Return to Pocket Works</button>
+    </nav>
+    <footer><span>Procedural survival · offline worlds</span><b>v1.0</b></footer>
+  </section>
+
+  <section id="play-screen" class="screen menu-screen">
+    <header class="menu-header"><button class="back-title square-button" aria-label="Back">‹</button><div><h2>WORLDS</h2><p>Local saves on this device</p></div><button id="import-world-btn" class="text-button">Import</button><input id="import-input" type="file" accept="application/json" hidden></header>
+    <div id="world-list" class="world-list"></div>
+    <button id="new-world-btn" class="new-world-button"><span>＋</span>Create world</button>
+  </section>
+
+  <section id="new-world-screen" class="screen menu-screen form-screen">
+    <header class="menu-header"><button class="back-title square-button">‹</button><div><h2>NEW WORLD</h2><p>Choose the rules, then disappear into them</p></div></header>
+    <div class="form-scroll">
+      <label class="field"><span>World name</span><input id="world-name" value="First Ridge" maxlength="32"></label>
+      <label class="field seed-field"><span>Seed</span><div><input id="world-seed" placeholder="Words or numbers"><button id="random-seed">Random</button></div></label>
+      <fieldset><legend>Mode</legend><label class="choice"><input type="radio" name="mode" value="survival" checked><span><b>Survival</b><small>Gather, craft, eat, fight and respawn</small></span></label><label class="choice"><input type="radio" name="mode" value="creative"><span><b>Creative</b><small>Flight, instant mining and unlimited catalog</small></span></label></fieldset>
+      <label class="field"><span>Difficulty</span><select id="difficulty"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></label>
+      <div class="range-pair"><label><span>Render distance</span><input id="new-render-distance" type="range" min="2" max="6" value="4"><small>4 chunks</small></label><label><span>Simulation distance</span><input id="new-sim-distance" type="range" min="2" max="5" value="3"><small>3 chunks</small></label></div>
+      <div class="world-gen-note"><div class="strata-icon"><i></i><i></i><i></i></div><p><b>Ridge generation</b><br>Gradual biomes, rivers, open water, caves, ore strata, forests, swamps, snow and high ridges.</p></div>
+    </div>
+    <button id="create-world-btn" class="primary create-button">CREATE & ENTER</button>
+  </section>
+
+  <section id="loading-screen" class="screen loading-screen"><div class="loading-cube"><i></i><i></i><i></i></div><h2 id="loading-title">Shaping the ridge</h2><p>Carving caves, setting water and arguing with trees…</p><div class="loading-track"><i id="loading-progress"></i></div></section>
+
+  <section id="game-screen" class="screen game-screen" data-gesture-surface data-block-callout>
+    <canvas id="game-canvas" aria-label="Voxel world"></canvas>
+    <div class="sky-vignette"></div>
+    <div id="crosshair" class="crosshair"><i></i><i></i></div>
+    <div class="hud-top"><div class="status-stack"><div class="meter health"><i id="health-fill"></i><span>♥</span></div><div class="meter hunger"><i id="hunger-fill"></i><span>◆</span></div><div id="oxygen" class="meter oxygen"><i id="oxygen-fill"></i><span>○</span></div></div><div class="world-readout"><b id="time-label">DAY</b><span id="biome-label">Plains</span><small id="coords">0 0 0</small></div><div class="top-buttons"><button id="inventory-btn" aria-label="Inventory">▦</button><button id="pause-btn" aria-label="Pause">Ⅱ</button></div></div>
+    <div id="debug-panel" class="debug-panel"></div>
+    <div id="joystick" class="joystick"><i></i><b id="joystick-knob"></b></div>
+    <div class="action-cluster"><button id="jump-btn" class="action jump"><span>↑</span></button><button id="break-btn" class="action break"><span>◇</span></button><button id="use-btn" class="action use"><span>＋</span></button><button id="crouch-btn" class="action crouch"><span>⌄</span></button></div>
+    <div id="hotbar" class="hotbar"></div>
+  </section>
+
+  <section id="inventory-screen" class="screen overlay-screen inventory-screen">
+    <header><button id="inventory-close" class="square-button">×</button><div><h2 id="inventory-title">PACK</h2><p>Tap a stack, then its destination</p></div></header>
+    <div class="inventory-layout">
+      <aside class="recipe-book"><div class="search-box"><span>⌕</span><input id="recipe-search" placeholder="Recipes"></div><div id="recipe-list" class="recipe-list"></div></aside>
+      <section class="pack-panel"><div id="equipment-grid" class="equipment-grid"></div><div id="inventory-grid" class="inventory-grid"></div></section>
+      <aside id="creative-catalog" class="creative-catalog"><div class="search-box"><span>⌕</span><input id="creative-search" placeholder="Creative catalog"></div><div id="creative-grid" class="creative-grid"></div></aside>
+    </div>
+  </section>
+
+  <section id="furnace-screen" class="screen overlay-screen functional-screen"><header><button id="furnace-close" class="square-button">×</button><div><h2>KILN</h2><p id="furnace-coords"></p></div><b id="fuel-count">Fuel: 0</b></header><div class="functional-layout"><div><h3>Recipes</h3><div id="smelt-list" class="smelt-list"></div></div><div><h3>Burning</h3><div id="job-list" class="job-list"></div></div></div></section>
+  <section id="chest-screen" class="screen overlay-screen chest-screen"><header><button id="chest-close" class="square-button">×</button><div><h2>CRATE</h2><p>Tap to transfer entire stacks</p></div></header><h3>Storage</h3><div id="chest-grid" class="inventory-grid chest-grid"></div><h3>Pack</h3><div id="chest-inventory" class="inventory-grid"></div></section>
+
+  <section id="pause-screen" class="screen pause-screen"><div class="pause-card"><p>WORLD PAUSED</p><h2 id="pause-world-name">World</h2><button id="resume-btn" class="primary block-button">RESUME</button><button id="pause-settings-btn" class="block-button">SETTINGS</button><button id="save-quit-btn" class="block-button">SAVE & QUIT</button><button id="launcher-pause" class="launcher-link">Return to Pocket Works</button></div></section>
+
+  <section id="settings-screen" class="screen menu-screen settings-screen"><header class="menu-header"><button id="settings-close" class="square-button">×</button><div><h2>SETTINGS</h2><p id="settings-context">Global defaults</p></div></header><form id="settings-form" class="settings-scroll">
+    <fieldset><legend>Controls</legend><label class="setting-row"><span>Camera sensitivity</span><input data-setting="sensitivity" type="range" min=".1" max=".8" step=".02"></label><label class="setting-row"><span>Control size</span><input data-setting="controlScale" type="range" min=".8" max="1.3" step=".05"></label><label class="setting-row"><span>Control opacity</span><input data-setting="controlOpacity" type="range" min=".35" max="1" step=".05"></label><label class="toggle-row"><span>Left-handed layout</span><input data-setting="leftHanded" type="checkbox"></label><label class="toggle-row"><span>Vibration</span><input data-setting="vibration" type="checkbox"></label><label class="toggle-row"><span>Split controls</span><input data-setting="splitControls" type="checkbox"></label><label class="toggle-row"><span>Automatic jump</span><input data-setting="autoJump" type="checkbox"></label></fieldset>
+    <fieldset><legend>Graphics</legend><label class="setting-row"><span>Render distance <b id="render-value"></b></span><input data-setting="renderDistance" type="range" min="2" max="6" step="1"></label><label class="setting-row"><span>Internal resolution <b id="quality-value"></b></span><input data-setting="quality" type="range" min=".45" max="1" step=".05"></label><label class="setting-row"><span>Field of view</span><input data-setting="fov" type="range" min="58" max="92" step="1"></label><label class="toggle-row"><span>Dynamic resolution</span><input data-setting="dynamicResolution" type="checkbox"></label><label class="toggle-row"><span>Reduced particles</span><input data-setting="reducedParticles" type="checkbox"></label><label class="toggle-row"><span>Performance panel</span><input data-setting="debug" type="checkbox"></label></fieldset>
+    <fieldset><legend>Audio</legend><label class="toggle-row"><span>Sound</span><input data-setting="sound" type="checkbox"></label><label class="setting-row"><span>Master</span><input data-setting="masterVolume" type="range" min="0" max="1" step=".05"></label><label class="setting-row"><span>Music</span><input data-setting="musicVolume" type="range" min="0" max="1" step=".05"></label><label class="setting-row"><span>Ambience</span><input data-setting="ambienceVolume" type="range" min="0" max="1" step=".05"></label><label class="setting-row"><span>Creatures</span><input data-setting="creaturesVolume" type="range" min="0" max="1" step=".05"></label><label class="setting-row"><span>Effects</span><input data-setting="effectsVolume" type="range" min="0" max="1" step=".05"></label></fieldset>
+  </form></section>
+
+  <section id="death-screen" class="screen death-screen"><div class="death-shard"></div><p>THE RIDGE TOOK ITS DUE</p><h2>You fell.</h2><span id="death-place"></span><button id="respawn-btn" class="primary block-button">RESPAWN</button><button id="death-quit-btn" class="block-button">SAVE & QUIT</button><button id="launcher-death" class="launcher-link">Return to Pocket Works</button></section>
+  <section id="about-screen" class="screen menu-screen about-screen"><header class="menu-header"><button class="back-title square-button">‹</button><div><h2>FIELD NOTES</h2><p>What this world is</p></div></header><div class="about-copy"><div class="brand-mark large"><span></span><span></span><span></span></div><h3>КРЯЖ is an original voxel survival game.</h3><p>It uses its own procedural world, block palette, creatures, UI, software voxel renderer and generated sound. No Minecraft assets, code, textures, models, logos, world data or audio are included.</p><p>The design is intentionally familiar to players of mobile voxel sandboxes: left movement, right look, a nine-slot hotbar, hold-to-mine, tap-to-place, local worlds and recipe-led survival.</p><div class="key-map"><b>Desktop</b><span>WASD · mouse look · Space · Shift · left/right click · E · Esc · 1–9</span></div></div></section>
+  <div id="toast" class="toast"></div>
+  <div id="confirm" class="confirm"><div><h3>Confirm</h3><p id="confirm-text"></p><footer><button id="confirm-cancel">Cancel</button><button id="confirm-ok" class="danger">Delete</button></footer></div></div>
+</main>
+<script type="module" src="./app.js"></script>
+<script>if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));</script>
+</body>
+</html>
