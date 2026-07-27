@@ -33,3 +33,16 @@ test('history stores a compact stratified visual sample', () => {
   assert.ok(state.history[0].organisms.length <= 84);
   assert.equal(state.history[0].population, 32);
 });
+
+test('an old established colony spawns local representatives instead of replaying migration', () => {
+  const { context, state } = makeContext();
+  const colony = state.metacommunity.demes.find((deme) => deme.id === 2);
+  colony.founded = 0;
+  colony.age = 80;
+  state.generation = 100;
+  context.metaReconcileRepresentatives({ soft: false });
+  const representative = state.organisms.find((organism) => organism.macroDemeId === 2);
+  assert.ok(representative);
+  assert.equal(representative.observationJourney, undefined);
+  assert.ok(representative.x > .5);
+});
