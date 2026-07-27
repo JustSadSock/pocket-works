@@ -1,0 +1,87 @@
+name: Validate REDLINE VECTOR
+
+on:
+  pull_request:
+    paths:
+      - "apps/redline-vector/**"
+      - ".github/workflows/redline-vector-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-redline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Compile remote runtime chunks
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import vm from 'node:vm';
+          const files = [1,2,3,4,5,6].map(n => `apps/redline-vector/chunks/app-0${n}.txt`);
+          const source = (await Promise.all(files.map(file => readFile(file, 'utf8')))).join('');
+          new vm.Script(source, { filename: 'redline-vector-runtime.js' });
+          JSON.parse(await readFile('apps/redline-vector/app.config.json', 'utf8'));
+          JSON.parse(await readFile('apps/redline-vector/manifest.webmanifest', 'utf8'));
+          console.log(`Runtime compiled: ${source.length} characters`);
+          NODE
+          node --check apps/redline-vector/app.js
+          node --check apps/redline-vector/sw.js
+
+      - name: Install repository dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate Pocket Works contracts
+        run: |
+          npm run registry:check
+          npm run validate:configs
+          npm run validate
+          npm run validate:mobile
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run landscape mobile gameplay smoke test
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/redline-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          node <<'NODE'
+          const { chromium } = require('@playwright/test');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+            const page = await context.newPage();
+            const errors = [];
+            page.on('pageerror', error => errors.push(String(error)));
+            page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+            await page.goto('http://127.0.0.1:4173/apps/redline-vector/', { waitUntil: 'networkidle' });
+            await page.locator('#title:not([hidden])').waitFor({ timeout: 10000 });
+            await page.click('[data-action="openModes"]');
+            await page.click('[data-mode="time"]');
+            await page.click('[data-action="launchRace"]');
+            await page.locator('#raceHud:not([hidden])').waitFor();
+            await page.keyboard.down('ArrowUp');
+            await page.waitForTimeout(4700);
+            const speed = Number(await page.locator('#speedValue').textContent());
+            if (speed < 80) throw new Error(`Acceleration smoke failed: ${speed} km/h`);
+            await page.keyboard.up('ArrowUp');
+            await page.click('[data-action="pause"]');
+            if (await page.locator('#pause').getAttribute('hidden') !== null) throw new Error('Pause menu did not open');
+            await page.click('[data-action="resume"]');
+            const racers = await page.locator('#racerCount').textContent();
+            if (racers.trim() !== '1') throw new Error(`Time trial contains unexpected rivals: ${racers}`);
+            if (errors.length) throw new Error(`Browser errors: ${errors.join(' | ')}`);
+            console.log(`Gameplay smoke passed at ${speed} km/h`);
+            await browser.close();
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
