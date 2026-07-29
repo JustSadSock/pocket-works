@@ -3,6 +3,7 @@ import { HEROES, HERO_BY_ID, TEAM_UPS, ROLE_TARGETS, TIERS } from './data.js';
 const clamp = (n, a = 0, b = 100) => Math.max(a, Math.min(b, Number(n) || 0));
 const tierWeight = { 'S+': 12, S: 9, A: 5, B: 0, C: -5, D: -10 };
 const roleIndex = { Vanguard: 0, Duelist: 1, Strategist: 2 };
+const roleNames = { Vanguard: 'танка', Duelist: 'дамагера', Strategist: 'саппорта', Flex: 'флекса' };
 
 export function heroRating(hero, prefs = {}) {
   const tier = prefs.tiers?.[hero.id] || hero.tier;
@@ -75,12 +76,12 @@ export function analyzeTeam(ids, prefs = {}) {
   const completeness = picked.length / size;
   const overall = clamp((rating * .30 + balance * .23 + synergy * .17 + sustain * .09 + frontline * .07 + pressure * .07 + control * .04 + mobility * .03) * (.58 + completeness * .42));
   const warnings = [];
-  if (picked.length < size) warnings.push(`${size-picked.length} open slot${size-picked.length === 1 ? '' : 's'}`);
-  if (counts.Strategist < target[2]) warnings.push('low sustain');
-  if (counts.Vanguard < target[0]) warnings.push('thin frontline');
-  if (!tags.control && !tags['area-control']) warnings.push('little crowd control');
-  if ((tags.dive || 0) >= 3 && (tags.sustain || 0) < 1) warnings.push('dive lacks follow-up healing');
-  if ((tags.poke || 0) >= 3 && (tags.frontline || 0) < 1) warnings.push('poke core lacks space');
+  if (picked.length < size) warnings.push(`свободных слотов: ${size-picked.length}`);
+  if (counts.Strategist < target[2]) warnings.push('мало лечения и сейва');
+  if (counts.Vanguard < target[0]) warnings.push('тонкий фронтлайн');
+  if (!tags.control && !tags['area-control']) warnings.push('почти нет контроля');
+  if ((tags.dive || 0) >= 3 && (tags.sustain || 0) < 1) warnings.push('дайв остаётся без последующего лечения');
+  if ((tags.poke || 0) >= 3 && (tags.frontline || 0) < 1) warnings.push('поук-ядру некому создавать пространство');
   return { counts, target, tags, links, official, tactical, rating, balance, synergy, frontline, sustain, pressure, control, mobility, overall, warnings };
 }
 
@@ -115,11 +116,11 @@ export function recommendHeroes(ids, prefs = {}, { limit = 8, size = ids.length 
       const tactical = links.filter(x => x.type === 'tactical').length;
       const reasons = [];
       const roleNeed = roleNeedScore(hero, ids, size);
-      if (roleNeed >= 20) reasons.push(`fills ${hero.role.toLowerCase()} gap`);
-      if (official) reasons.push(`${official} Team-Up${official > 1 ? 's' : ''}`);
-      if (tactical) reasons.push(`${tactical} tactical link${tactical > 1 ? 's' : ''}`);
+      if (roleNeed >= 20) reasons.push(`закрывает нехватку ${roleNames[hero.role] || 'роли'}`);
+      if (official) reasons.push(`активирует Team-Up: ${official}`);
+      if (tactical) reasons.push(`тактических связок: ${tactical}`);
       const diversity = diversityScore(hero, ids);
-      if (diversity >= 7) reasons.push('adds missing tools');
+      if (diversity >= 7) reasons.push('добавляет недостающие инструменты');
       const score = heroRating(hero, prefs) + roleNeed + official * 20 + tactical * 8 + diversity;
       return { hero, score, links, reasons: reasons.slice(0,3) };
     })
@@ -170,7 +171,7 @@ export function exportPayload(state) {
 }
 
 export function normalizeImported(payload) {
-  if (!payload || payload.schema !== 'rival-forge/1') throw new Error('Unsupported file');
+  if (!payload || payload.schema !== 'rival-forge/1') throw new Error('неподдерживаемый формат файла');
   const teamSize = Math.max(1, Math.min(6, Number(payload.teamSize) || 6));
   const team = Array.from({ length: teamSize }, (_,i) => HERO_BY_ID[payload.team?.[i]] ? payload.team[i] : null);
   const locks = Array.from({ length: teamSize }, (_,i) => Boolean(payload.locks?.[i]));
@@ -191,7 +192,7 @@ export function normalizeImported(payload) {
     const size = Math.max(1, Math.min(6, Number(saved?.teamSize) || 6));
     return {
       id: String(saved?.id || `imported-${index}`),
-      name: String(saved?.name || `Imported team ${index + 1}`).slice(0,60),
+      name: String(saved?.name || `Импортированная команда ${index + 1}`).slice(0,60),
       teamSize: size,
       team: Array.from({ length: size }, (_,i) => HERO_BY_ID[saved?.team?.[i]] ? saved.team[i] : null),
       locks: Array.from({ length: size }, (_,i) => Boolean(saved?.locks?.[i])),
