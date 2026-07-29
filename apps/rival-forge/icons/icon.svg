@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#f3efe4"/>
+  <path d="M64 82h384v348H64z" fill="#141518"/>
+  <path d="M64 82h384v62H64z" fill="#d7ff45"/>
+  <path d="M94 174h134v104H94z" fill="#ff4f8b" stroke="#f3efe4" stroke-width="12"/>
+  <path d="M284 174h134v104H284z" fill="#9d65ff" stroke="#f3efe4" stroke-width="12"/>
+  <path d="M94 326h134v74H94z" fill="#2dbf9f" stroke="#f3efe4" stroke-width="12"/>
+  <path d="M284 326h134v74H284z" fill="#ff6b4a" stroke="#f3efe4" stroke-width="12"/>
+  <path d="M228 226h56M256 198v56" stroke="#d7ff45" stroke-width="24" stroke-linecap="square"/>
+  <text x="256" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#141518">RIVAL FORGE</text>
+</svg>
