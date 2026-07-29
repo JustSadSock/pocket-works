@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe4">
+  <meta name="color-scheme" content="light">
+  <title>RIVAL FORGE — конструктор команд</title>
+  <meta name="description" content="Мобильный конструктор команд, Team-Up связок, персонального рейтинга и тирлистов Marvel Rivals.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main id="app" class="app-shell">
+  <header class="topbar">
+    <button class="icon-button back-button" id="backButton" aria-label="Вернуться в Pocket Works"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button>
+    <div class="brand"><span class="brand-mark">RF</span><span><b>RIVAL FORGE</b><small id="snapshotLabel">S9</small></span></div>
+    <div class="header-actions">
+      <button class="icon-button" id="openSavedButton" aria-label="Сохранённые команды"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16l-7-4-7 4z"/></svg></button>
+      <button class="icon-button" id="openMenuButton" aria-label="Меню"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+    </div>
+  </header>
+
+  <section id="builderView" class="view active" data-view="builder">
+    <div class="builder-hero">
+      <div><p class="eyebrow">COMPOSITION WORKBENCH</p><h1>Собери команду,<br><em>а не набор пикч.</em></h1></div>
+      <div class="team-size-control" aria-label="Размер команды"><span>ИГРОКОВ</span><div id="teamSizeButtons"></div></div>
+    </div>
+    <section class="team-board panel-cut">
+      <div class="section-head"><div><span class="section-kicker">ACTIVE SQUAD</span><h2 id="teamTitle">Команда 0/6</h2></div><div class="compact-actions"><button id="clearTeamButton" class="text-button">Очистить</button><button id="saveTeamButton" class="solid-button small">Сохранить</button></div></div>
+      <div id="teamSlots" class="team-slots"></div>
+      <div class="board-actions"><button id="autoCompleteButton" class="primary-command"><span>АВТОДОБОР</span><small>заполнить пустые слоты</small></button><button id="optimizeButton" class="secondary-command"><span>ПЕРЕСОБРАТЬ</span><small>сохранив закреплённых</small></button></div>
+    </section>
+    <section class="analysis-strip" id="analysisStrip"><div class="score-dial"><span id="overallScore">0</span><small>TEAM SCORE</small></div><div class="analysis-copy"><b id="analysisVerdict">Добавь первого героя</b><span id="analysisWarnings">Система оценит роли, темп, синергии и слабые места.</span></div><button class="details-trigger" id="analysisDetailsButton" aria-label="Детальный анализ">→</button></section>
+    <section class="recommendations-section"><div class="section-head"><div><span class="section-kicker">NEXT PICKS</span><h2>Лучшие варианты</h2></div><button class="text-button" id="refreshRecommendationsButton">Пересчитать</button></div><div id="recommendations" class="recommendation-rail"></div></section>
+    <section class="presets-section"><div class="section-head"><div><span class="section-kicker">STARTING POINTS</span><h2>Готовые ядра</h2></div></div><div id="presetRail" class="preset-rail"></div></section>
+  </section>
+
+  <section id="heroesView" class="view" data-view="heroes">
+    <div class="view-header"><div><p class="eyebrow">ROSTER DATABASE</p><h1>Все герои</h1></div><span id="heroCountBadge" class="count-badge">0</span></div>
+    <div class="search-row"><label class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="heroSearch" type="search" placeholder="Имя, стиль, тег…"></label><button class="filter-button" id="heroFilterButton">Фильтры</button></div>
+    <div id="heroRoleTabs" class="segmented role-tabs"></div><div id="heroGrid" class="hero-grid"></div>
+  </section>
+
+  <section id="tiersView" class="view" data-view="tiers">
+    <div class="view-header"><div><p class="eyebrow">PERSONAL META</p><h1>Тирлист</h1></div><button id="resetTiersButton" class="text-button">Сбросить</button></div>
+    <div class="tier-toolbar"><label><span>РОЛЬ</span><select id="tierRoleFilter"><option value="all">Все</option><option>Vanguard</option><option>Duelist</option><option>Strategist</option><option>Flex</option></select></label><label><span>СОРТИРОВКА</span><select id="tierSort"><option value="rating">Личный рейтинг</option><option value="name">По имени</option><option value="difficulty">Сложность</option></select></label></div>
+    <p class="tier-help">Нажми на героя, затем выбери новый тир. Значения сохраняются локально и влияют на рекомендации.</p><div id="tierBoard" class="tier-board"></div>
+  </section>
+
+  <section id="linksView" class="view" data-view="links">
+    <div class="view-header"><div><p class="eyebrow">LINK MATRIX</p><h1>Связки</h1></div><span id="linkCountBadge" class="count-badge">0</span></div>
+    <label class="search-box full"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="linkSearch" type="search" placeholder="Герой или название Team-Up"></label><div id="linkTypeTabs" class="segmented"></div><div id="linkList" class="link-list"></div>
+  </section>
+
+  <nav class="bottom-nav" aria-label="Разделы"><button class="active" data-nav="builder"><span class="nav-icon">⌘</span><small>Команда</small></button><button data-nav="heroes"><span class="nav-icon">◇</span><small>Герои</small></button><button data-nav="tiers"><span class="nav-icon">≡</span><small>Тирлист</small></button><button data-nav="links"><span class="nav-icon">∞</span><small>Связки</small></button></nav>
+  <div id="scrim" class="scrim"></div>
+
+  <aside id="heroSheet" class="sheet hero-sheet" aria-hidden="true"><div class="sheet-handle"></div><button class="sheet-close" data-close-sheet aria-label="Закрыть">×</button><div id="heroSheetContent"></div></aside>
+  <aside id="pickerSheet" class="sheet picker-sheet" aria-hidden="true"><div class="sheet-handle"></div><div class="sheet-title-row"><div><span class="section-kicker">REPLACE SLOT</span><h2 id="pickerTitle">Выбери героя</h2></div><button class="sheet-close static" data-close-sheet>×</button></div><label class="search-box full"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="pickerSearch" type="search" placeholder="Поиск героя"></label><div id="pickerRoleTabs" class="segmented compact"></div><div id="pickerGrid" class="picker-grid"></div></aside>
+  <aside id="analysisSheet" class="sheet analysis-sheet" aria-hidden="true"><div class="sheet-handle"></div><div class="sheet-title-row"><div><span class="section-kicker">TEAM DIAGNOSTIC</span><h2>Разбор состава</h2></div><button class="sheet-close static" data-close-sheet>×</button></div><div id="analysisSheetContent"></div></aside>
+  <aside id="savedSheet" class="sheet saved-sheet" aria-hidden="true"><div class="sheet-handle"></div><div class="sheet-title-row"><div><span class="section-kicker">LOCAL ARCHIVE</span><h2>Сохранённые команды</h2></div><button class="sheet-close static" data-close-sheet>×</button></div><div id="savedTeamsList"></div></aside>
+  <aside id="menuSheet" class="sheet menu-sheet" aria-hidden="true"><div class="sheet-handle"></div><div class="sheet-title-row"><div><span class="section-kicker">RIVAL FORGE</span><h2>Данные и настройки</h2></div><button class="sheet-close static" data-close-sheet>×</button></div><div class="menu-list"><button id="exportButton"><span>Экспортировать данные</span><small>Команды, оценки и тирлист в JSON</small></button><button id="importButton"><span>Импортировать данные</span><small>Восстановить файл Rival Forge</small></button><button id="soundToggle"><span>Звуки интерфейса</span><small id="soundToggleValue">Включены</small></button><button id="resetAllButton" class="danger-row"><span>Сбросить всё</span><small>Удалить локальные оценки и команды</small></button></div><div class="about-block"><b id="aboutSnapshot">Season 9</b><p>Неофициальный фан-инструмент. Изображения персонажей загружаются из публичной базы Rivalskins; права на Marvel Rivals, персонажей и исходные арт-материалы принадлежат Marvel и NetEase.</p><p id="sourceNote"></p></div></aside>
+
+  <input id="importInput" type="file" accept="application/json,.json" hidden><div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="RIVAL FORGE" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
