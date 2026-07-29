@@ -1,0 +1,16 @@
+{
+  "id": "/apps/rival-forge/",
+  "name": "RIVAL FORGE — Team Builder",
+  "short_name": "RIVAL FORGE",
+  "description": "Конструктор команд, Team-Up связок, личных рейтингов и тирлистов Marvel Rivals.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f3efe4",
+  "theme_color": "#141518",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
