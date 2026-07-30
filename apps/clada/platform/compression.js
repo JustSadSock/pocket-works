@@ -2,11 +2,8 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 async function transform(bytes, StreamType, format) {
-  const stream = new StreamType(format);
-  const writer = stream.writable.getWriter();
-  await writer.write(bytes);
-  await writer.close();
-  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  const readable = new Blob([bytes]).stream().pipeThrough(new StreamType(format));
+  return new Uint8Array(await new Response(readable).arrayBuffer());
 }
 
 export async function compressJson(payload) {

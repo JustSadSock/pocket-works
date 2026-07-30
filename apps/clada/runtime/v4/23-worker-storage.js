@@ -2,6 +2,7 @@
 const CLADA_SERVICES = globalThis.CladaRuntimeServices || {};
 const CLADA_STORAGE = CLADA_SERVICES.storage || null;
 const CLADA_SIMULATION = CLADA_SERVICES.simulation || null;
+const CLADA_COMPRESSION = CLADA_SERVICES.compression || null;
 const cladaLegacySaveState = saveState;
 const cladaLegacyRemoveStoredWorld = removeStoredWorld;
 const cladaWorkerLegacySimulateStep = simulateStep;
@@ -99,11 +100,21 @@ if (CLADA_SIMULATION) {
     }
     cladaWorkerPending = true;
     state.runtimeWorkerPending = true;
+    const sourceCommunity = state.metacommunity;
+    const commandCount = state.commandLog?.length || 0;
     const input = deepClone(meta);
 
     CLADA_SIMULATION.advance(input).then((result) => {
       if (!result?.community || result.community.generation !== input.generation + 1) throw new Error('Worker вернул некорректное поколение');
       cladaWorkerLastDuration = Number(result.duration) || 0;
+      if (state.metacommunity !== sourceCommunity) return;
+      if ((state.commandLog?.length || 0) !== commandCount) {
+        const current = metaEnsureState();
+        current.env = deepClone(state.env);
+        const outcome = META.advance(current) || {};
+        cladaApplyMacroOutcome(current, outcome.proposals || []);
+        return;
+      }
       cladaApplyMacroOutcome(result.community, result.proposals);
     }).catch((error) => {
       cladaWorkerFailures += 1;
@@ -123,6 +134,58 @@ if (CLADA_SIMULATION) {
     if (cladaWorkerPending) return;
     cladaWorkerLegacySimulateStep();
   };
+}
+
+if (CLADA_COMPRESSION) {
+  const cladaLegacyOpenMenuSheet = openMenuSheet;
+  openMenuSheet = function cladaArchiveMenuSheet() {
+    cladaLegacyOpenMenuSheet();
+    const exportLabel = sheetBody.querySelector('[data-menu="export"] span');
+    const importLabel = sheetBody.querySelector('[data-menu="import"] span');
+    if (exportLabel) exportLabel.textContent = 'GZIP';
+    if (importLabel) importLabel.textContent = 'GZIP / JSON';
+  };
+
+  exportWorld = async function cladaCompressedExportWorld() {
+    try {
+      const archive = await CLADA_COMPRESSION.compressJson(state);
+      const blob = new Blob([archive.bytes], { type: archive.mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `clada-world-g${state.generation}${archive.extension}`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+      tone(420, .07, .02, 'triangle');
+      showToast(archive.compressed ? 'Сжатый архив мира экспортирован' : 'Архив мира экспортирован');
+    } catch (error) {
+      showToast(error?.message || 'Не удалось экспортировать мир', 3000);
+    }
+  };
+
+  importWorld = async function cladaCompressedImportWorld(file) {
+    try {
+      const payload = await CLADA_COMPRESSION.decompressJson(file);
+      if (!validateImported(payload)) throw new Error('Неверный формат архива');
+      state = payload;
+      state.paused = false;
+      state.view = 'world';
+      state.fossilIndex = null;
+      state.selectedId = null;
+      state.selectedSpeciesId = null;
+      state.seedMode = false;
+      migrateLivingState();
+      closeSheet();
+      syncAllUI();
+      saveState();
+      pulse([12, 25, 12]);
+      showToast(`Мир восстановлен: поколение ${state.generation}`);
+    } catch (error) {
+      showToast(error?.message || 'Не удалось прочитать архив', 3000);
+    }
+  };
+
+  importInput.accept = 'application/json,application/gzip,.json,.gz,.clada';
 }
 
 if (typeof buildCompactDiagnostic === 'function') {
