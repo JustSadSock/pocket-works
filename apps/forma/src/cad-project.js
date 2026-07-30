@@ -1,6 +1,6 @@
 import { tolerantJsonParse, normalizeDocument } from './engine.js';
 import { compileOpenScad, looksLikeScad } from './scad.js';
-import { validateMechanismContract, createContractRepairPacket } from './contract.js';
+import { validateMechanismContract, createContractRepairPacket } from './contract-strict.js';
 
 export const CAD_FORMAT = 'forma-cad-project-1';
 
@@ -158,17 +158,17 @@ The file MUST begin with this metadata comment:
 After the comment, write actual OpenSCAD code. Every physical or separately coloured printable part must have its own module and matching parts[].entry.
 
 Supported OpenSCAD profile:
-- module declarations, variables, arithmetic, arrays/ranges, for, if;
+- module declarations, module parameters/defaults, variables inside modules, arithmetic, arrays/ranges, for, if;
 - cube, sphere, cylinder, polygon;
 - translate, rotate, scale, mirror, color;
 - union, difference, intersection;
 - linear_extrude and rotate_extrude;
 - certified modules forma_spur_gear(teeth,module,thickness,bore,backlash=0.18), forma_ring_gear(teeth,module,thickness,wall,backlash=0.18), forma_planet_carrier(orbit,count,plate_thickness,pin_diameter,pin_height,bore,plate_radius).
-Do NOT use hull, minkowski, text, import, surface, projection, polyhedron, children, external libraries or undefined modules.
+Do NOT use hull, minkowski, text, import, surface, projection, polyhedron, children, external libraries, undefined modules or top-level global variables.
 
 Mechanical contract rules:
 - Mechanical projects MUST declare input/driver, output, fixed members, joints and numeric objectives.
-- Supported joints: fixed, revolute, gearMesh, coaxial, contains, planetary.
+- Supported certified joints: fixed, revolute, gearMesh and planetary. coaxial is accepted only when every referenced part exposes a measurable certified axis. contains is not yet certifiable and will block export.
 - Supported objectives: fixedPart, speedRatio, partCount, noExternalHardware.
 - speedRatio is abs(output angular speed / input angular speed). direction="increase" means output is faster; direction="reduction" means output is slower.
 - gearMesh is accepted only when both parts use certified gear modules, teeth/module match metadata, axes are parallel, and measured centre distance equals module*(teethA+teethB)/2 plus declared clearance.
@@ -179,4 +179,4 @@ Mechanical contract rules:
 
 Before returning the file, calculate every tooth relation, centre distance and ratio direction yourself.`;
 
-export const CAD_GUIDE_MARKDOWN = `# FORMA 2.0 — AI CAD contract\n\nFORMA accepts real OpenSCAD-style source plus a separate functional contract. Geometry and claims are no longer the same thing.\n\n## Core rule\n\nThe AI writes standard CAD code. FORMA compiles the supported profile and independently checks declared mechanical goals. Unsupported syntax or unproved mechanics blocks export.\n\n## Project format\n\nPrefer one .scad file beginning with a FORMA_PROJECT metadata comment. Static objects use contract.mode: static. Moving mechanisms use mechanical with joints and objectives.\n\n## Certified mechanisms\n\nFORMA 2.0 certifies external spur-gear trains and simple planetary sets. It does not certify bevel differentials yet. A differential claim is rejected instead of being replaced by decorative geometry.\n\n## Repair loop\n\nWhen compilation or validation fails, copy the repair packet. It includes exact error codes, required fixes and the original project. Send it back to the AI unchanged and request one corrected raw .scad file.\n`;
+export const CAD_GUIDE_MARKDOWN = `# FORMA 2.0 — AI CAD contract\n\nFORMA accepts real OpenSCAD-style source plus a separate functional contract. Geometry and claims are no longer the same thing.\n\n## Core rule\n\nThe AI writes standard CAD code. FORMA compiles the supported profile and independently checks declared mechanical goals. Unsupported syntax or unproved mechanics blocks export.\n\n## Project format\n\nPrefer one .scad file beginning with a FORMA_PROJECT metadata comment. Static objects use contract.mode: static. Moving mechanisms use mechanical with joints and objectives.\n\n## Certified mechanisms\n\nFORMA 2.0 certifies external spur-gear trains and simple planetary sets. It does not certify bevel differentials or housing containment yet. Those claims are rejected instead of being replaced by decorative geometry.\n\n## Repair loop\n\nWhen compilation or validation fails, copy the repair packet. It includes exact error codes, required fixes and the original project. Send it back to the AI unchanged and request one corrected raw .scad file.\n`;
