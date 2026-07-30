@@ -131,7 +131,7 @@
       generation: trace.generation,
       metrics: { ...trace.metrics },
       patchEffects: { ...trace.patchEffects },
-      cells: trace.cells.map((cell) => ({ id: cell.id, x: cell.x, y: cell.y, patchId: cell.patchId, neighbors: cell.neighbors, biome: cell.biome, dominant: cell.dominant, strength: round(cell.constructionStrength), engineerSpeciesIds: cell.engineerSpeciesIds, state: Object.fromEntries(EFECT_KEYS.map((key) => [key, round(cell.state[key] || 0)])) }),
+      cells: trace.cells.map((cell) => ({ id: cell.id, x: cell.x, y: cell.y, patchId: cell.patchId, neighbors: cell.neighbors, biome: cell.biome, dominant: cell.dominant, strength: round(cell.constructionStrength), engineerSpeciesIds: cell.engineerSpeciesIds, state: Object.fromEntries(EFFECT_KEYS.map((key) => [key, round(cell.state[key] || 0)])) })),
       events: trace.events.slice(-160)
     };
   }
