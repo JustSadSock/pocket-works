@@ -1,8 +1,9 @@
 import { TEAM_UPS } from './data.js';
 import { box,$,saveState,closeSheet,openSheet,setView,clickSound } from './store.js';
-import { renderBuilder,setPlannerMode,setPartySize,placeHero,removeHero,toggleLock,chooseLoadout,applyPreset,clearCurrent,autoFill,optimize } from './builder.js';
+import { renderBuilder,setPlannerMode,setPartySize,placeHero,removeHero,toggleLock,chooseLoadout,optimizeAllLoadouts,applyPreset,clearCurrent,autoFill,optimize,saveVariant,loadVariant,deleteVariant,toggleCompareHero,openCompare } from './builder.js';
 import { renderHeroes,renderTiers,renderLinks,setHeroRole,toggleFavorites,setLinkType } from './catalog.js';
 import { openPicker,setPickerRole,setPickerSearch,pickHero,clearPicker,openHero,renderHeroSheet,addCurrentHero,toggleFavorite,updateHeroPreference,renderAnalysisSheet,saveCurrentTeam,renderSavedTeams,loadSavedTeam,duplicateSaved,deleteSaved,exportData,importData,resetAll,renderMeta } from './sheets.js';
+import { openPlayersSheet,selectEditingPlayer,addPlayer,deletePlayer,updateProfileField,updateProfileColor,openAssignmentSheet,assignPlayer,updatePlayerHeroSkill,togglePlayerHeroBlocked } from './profiles.js';
 
 export function renderAll(){renderBuilder();renderHeroes();renderTiers();renderLinks();renderSavedTeams();renderMeta();setView(box.state.activeView,false);}
 function bindEvents(){
@@ -13,7 +14,7 @@ function bindEvents(){
     if(button.matches('[data-party-size]'))return setPartySize(button.dataset.partySize);
     if(button.matches('[data-pick-slot]'))return openPicker(button.dataset.pickSlot);
     if(button.matches('[data-open-hero]'))return openHero(button.dataset.openHero);
-    if(button.matches('[data-add-hero]')){if(box.activeSheet==='heroSheet')addCurrentHero();else placeHero(button.dataset.addHero);return;}
+    if(button.matches('[data-add-hero]')){const slot=button.dataset.addSlot??null;if(box.activeSheet==='heroSheet')addCurrentHero(slot);else{placeHero(button.dataset.addHero,slot);if(box.activeSheet==='compareSheet')closeSheet(false);}return;}
     if(button.matches('[data-remove-slot]'))return removeHero(Number(button.dataset.removeSlot));
     if(button.matches('[data-lock-slot]'))return toggleLock(Number(button.dataset.lockSlot));
     if(button.matches('[data-set-loadout]')){chooseLoadout(button.dataset.setLoadout);if(box.activeSheet==='heroSheet')renderHeroSheet();return;}
@@ -29,14 +30,28 @@ function bindEvents(){
     if(button.matches('[data-load-team]'))return loadSavedTeam(button.dataset.loadTeam);
     if(button.matches('[data-duplicate-team]'))return duplicateSaved(button.dataset.duplicateTeam);
     if(button.matches('[data-delete-team]'))return deleteSaved(button.dataset.deleteTeam);
+    if(button.matches('[data-assign-player]'))return openAssignmentSheet(button.dataset.assignPlayer);
+    if(button.matches('[data-select-player]'))return assignPlayer(button.dataset.selectPlayer);
+    if(button.matches('[data-edit-player]'))return selectEditingPlayer(button.dataset.editPlayer);
+    if(button.matches('[data-add-player]'))return addPlayer();
+    if(button.matches('[data-delete-player]'))return deletePlayer(button.dataset.deletePlayer);
+    if(button.matches('[data-player-color]'))return updateProfileColor(button.dataset.playerColor);
+    if(button.matches('[data-toggle-player-block]')){togglePlayerHeroBlocked(button.dataset.togglePlayerBlock);return renderHeroSheet();}
+    if(button.matches('[data-load-variant]'))return loadVariant(button.dataset.loadVariant);
+    if(button.matches('[data-delete-variant]'))return deleteVariant(button.dataset.deleteVariant);
+    if(button.matches('[data-compare-hero]'))return toggleCompareHero(button.dataset.compareHero);
+    if(button.id==='openCompareButton')return openCompare();
+    if(button.id==='openPlayersButton')return openPlayersSheet();
     if(button.matches('[data-close-sheet]'))return closeSheet();
   });
+  document.addEventListener('rival-forge:profiles-changed',()=>{renderBuilder();renderSavedTeams();});
   $('#scrim').addEventListener('click',()=>closeSheet());
   $('#backButton').addEventListener('click',()=>{if(box.activeSheet)return closeSheet();if(history.length>1)history.back();else location.href='../../';});
   $('#openSavedButton').addEventListener('click',()=>{renderSavedTeams();openSheet('savedSheet');});
   $('#openMenuButton').addEventListener('click',()=>openSheet('menuSheet'));
   $('#analysisDetailsButton').addEventListener('click',()=>{renderAnalysisSheet();openSheet('analysisSheet');});
   $('#clearTeamButton').addEventListener('click',clearCurrent);$('#saveTeamButton').addEventListener('click',saveCurrentTeam);$('#autoCompleteButton').addEventListener('click',autoFill);$('#optimizeButton').addEventListener('click',optimize);$('#refreshRecommendationsButton').addEventListener('click',()=>{renderBuilder();clickSound();});
+  $('#optimizeLoadoutsButton').addEventListener('click',optimizeAllLoadouts);$('#saveVariantButton').addEventListener('click',saveVariant);
   $('#heroFilterButton').addEventListener('click',toggleFavorites);
   $('#resetTiersButton').addEventListener('click',()=>{if(!confirm('Вернуть исходные тиры всем героям?'))return;box.state.prefs.tiers={};saveState();renderTiers();renderHeroes();renderBuilder();});
   $('#exportButton').addEventListener('click',exportData);$('#importButton').addEventListener('click',()=>$('#importInput').click());$('#resetAllButton').addEventListener('click',()=>resetAll(renderAll));
@@ -47,7 +62,9 @@ function bindEvents(){
   $('#linkSearch').addEventListener('input',event=>{box.state.linkSearch=event.target.value;saveState();renderLinks();});
   $('#tierRoleFilter').addEventListener('change',event=>{box.state.tierRole=event.target.value;saveState();renderTiers();});
   $('#tierSort').addEventListener('change',event=>{box.state.tierSort=event.target.value;saveState();renderTiers();});
-  $('#heroSheet').addEventListener('input',event=>{if(event.target.id==='heroPowerRange'){if($('#powerOutput'))$('#powerOutput').textContent=event.target.value;updateHeroPreference('score',event.target.value);}if(event.target.id==='heroConfidenceRange'){if($('#confidenceOutput'))$('#confidenceOutput').textContent=event.target.value;updateHeroPreference('confidence',event.target.value);}if(event.target.id==='heroNotes')updateHeroPreference('notes',event.target.value);});
+  $('#playersSheet').addEventListener('input',event=>{if(event.target.matches('[data-player-field="name"]'))updateProfileField('name',event.target.value);});
+  $('#playersSheet').addEventListener('change',event=>{if(event.target.matches('[data-player-field]'))updateProfileField(event.target.dataset.playerField,event.target.value);});
+  $('#heroSheet').addEventListener('input',event=>{if(event.target.id==='heroPowerRange'){if($('#powerOutput'))$('#powerOutput').textContent=event.target.value;updateHeroPreference('score',event.target.value);}if(event.target.id==='heroConfidenceRange'){if($('#confidenceOutput'))$('#confidenceOutput').textContent=event.target.value;updateHeroPreference('confidence',event.target.value);}if(event.target.id==='heroNotes')updateHeroPreference('notes',event.target.value);if(event.target.matches('[data-player-skill]'))updatePlayerHeroSkill(event.target.dataset.playerSkill,event.target.dataset.heroId,event.target.value);});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&box.activeSheet)closeSheet();});
 }
 bindEvents();renderAll();
