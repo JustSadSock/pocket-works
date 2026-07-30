@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#1c2928">
-  <meta name="description" content="FORMA превращает FormaCode от нейросети в готовые к 3D-печати модели STL, 3MF, OBJ и GLB.">
+  <meta name="description" content="FORMA компилирует высокоуровневый Blueprint от нейросети в готовые к 3D-печати STL, 3MF, OBJ и GLB.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
@@ -36,8 +36,8 @@
         </div>
         <div id="partList" class="part-list"></div>
         <div class="rail-footer">
-          <button class="rail-action" id="importButton"><span>↥</span><b>Импорт</b><small>.json / .forma</small></button>
-          <button class="rail-action" id="aiKitButton"><span>⌁</span><b>Промт для AI</b><small>копия + памятка</small></button>
+          <button class="rail-action" id="importButton"><span>↥</span><b>Импорт</b><small>.json / .blueprint</small></button>
+          <button class="rail-action" id="aiKitButton"><span>⌁</span><b>Комплект для AI</b><small>Blueprint + repair</small></button>
         </div>
       </aside>
 
@@ -64,7 +64,7 @@
         <div id="emptyStage" class="empty-stage hidden">
           <div class="empty-glyph">◇</div>
           <strong>Здесь появится модель</strong>
-          <span>Импортируйте FormaCode или откройте пример.</span>
+          <span>Импортируйте Blueprint от нейронки или откройте пример.</span>
           <button id="exampleButton" class="primary">Открыть пример</button>
         </div>
         <div class="stage-readout" id="stageReadout">
@@ -144,14 +144,14 @@
 
         <div class="inspector code-inspector" data-inspector-panel="code">
           <div class="code-toolbar">
-            <div><small>FORMACODE 1</small><b id="codeState">валидный код</b></div>
+            <div><small>BLUEPRINT / ADVANCED</small><b id="codeState">валидный код</b></div>
             <button id="formatCodeButton">Форматировать</button>
           </div>
-          <textarea id="codeEditor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+          <textarea id="codeEditor" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Вставьте FormaBlueprint 1"></textarea>
           <div id="codeError" class="code-error hidden"></div>
           <div class="code-actions">
             <button class="secondary" id="copyCodeButton">Копировать</button>
-            <button class="primary" id="applyCodeButton">Собрать из кода</button>
+            <button class="primary" id="applyCodeButton">Скомпилировать и собрать</button>
           </div>
         </div>
       </aside>
@@ -166,15 +166,15 @@
     </nav>
   </div>
 
-  <input id="fileInput" type="file" accept=".json,.forma,.formacode,.txt,application/json,text/plain" hidden>
+  <input id="fileInput" type="file" accept=".json,.blueprint,.forma,.formacode,.txt,application/json,text/plain" hidden>
 
   <dialog id="aiDialog" class="modal">
     <form method="dialog" class="modal-card">
-      <header><div><small>КОМПЛЕКТ ДЛЯ НЕЙРОНКИ</small><strong>Пусть AI пишет модель правильно</strong></div><button value="cancel" aria-label="Закрыть">×</button></header>
+      <header><div><small>КОМПЛЕКТ ДЛЯ НЕЙРОНКИ</small><strong>AI описывает — FORMA проектирует</strong></div><button value="cancel" aria-label="Закрыть">×</button></header>
       <div class="ai-steps">
-        <article><i>1</i><div><b>Скопируйте мастер-промт</b><p>Он объясняет язык, размеры, зазоры и правила печати.</p></div><button type="button" id="copyPromptButton">Копировать</button></article>
-        <article><i>2</i><div><b>Добавьте описание модели</b><p>Назначение, размеры, отверстия, материал и ваш принтер.</p></div></article>
-        <article><i>3</i><div><b>Импортируйте ответ</b><p>Вставьте JSON в код или загрузите файл. Никакого копипаста в CAD.</p></div></article>
+        <article><i>1</i><div><b>Скопируйте Blueprint-промт</b><p>Нейронка задаёт детали, размеры и связи — без ручного рисования зубьев.</p></div><button type="button" id="copyPromptButton">Копировать</button></article>
+        <article><i>2</i><div><b>Добавьте описание модели</b><p>Назначение, движение, габариты, материал и ваш принтер.</p></div></article>
+        <article><i>3</i><div><b>Импортируйте ответ</b><p>FORMA проверит связи и скомпилирует печатную геометрию.</p></div></article>
       </div>
       <div class="prompt-preview" id="promptPreview"></div>
       <footer><button type="button" class="secondary" id="downloadGuideButton">Скачать FORMA-AI-GUIDE.md</button><button value="cancel" class="primary">Готово</button></footer>
@@ -193,6 +193,6 @@
   </dialog>
 
   <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./bootstrap.js"></script>
 </body>
 </html>
