@@ -1,0 +1,21 @@
+{
+  "id": "/apps/chancellery/",
+  "name": "КАНЦЕЛЯРИЯ",
+  "short_name": "КАНЦЕЛЯРИЯ",
+  "description": "Локальный разборщик сохранений Europa Universalis V.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#e7dfc9",
+  "theme_color": "#d9cfb5",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
