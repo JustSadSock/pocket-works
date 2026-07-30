@@ -1,4 +1,8 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { compressJson, decompressJson } from './platform/compression.js';
+import { loadCladaRuntime } from './platform/runtime-loader.js';
+import { createSimulationClient } from './platform/simulation-client.js';
+import { createCladaStorageBridge } from './platform/storage.js';
 
 installMobileRuntime();
 
@@ -10,32 +14,48 @@ for (const href of ['./field-journal.css', './living-planet.css', './observable-
   document.head.append(style);
 }
 
-const runtimeParts = ["./runtime/01-core.js", "./runtime/02-life.js", "./runtime/03-simulation.js", "./runtime/04-history.js", "./runtime/05-inspector.js", "./runtime/06-views.js", "./runtime/07-render.js", "./runtime/08-controls.js", "./runtime/09-evolution-v2.js"];
-const livingRuntimeGroups = [["./runtime/v3/10-01.txt", "./runtime/v3/10-02.txt", "./runtime/v3/10-03.txt", "./runtime/v3/10-04.txt"], ["./runtime/v3/11-01.txt", "./runtime/v3/11-02.txt", "./runtime/v3/11-03-1.txt", "./runtime/v3/11-03-2.txt", "./runtime/v3/11-03-3.txt", "./runtime/v3/11-04.txt", "./runtime/v3/11-05-1.txt", "./runtime/v3/11-05-2.txt", "./runtime/v3/11-05-3.txt", "./runtime/v3/11-06.txt"], ["./runtime/v3/12-01.txt", "./runtime/v3/12-02.txt", "./runtime/v3/12-03.txt", "./runtime/v3/12-04.txt", "./runtime/v3/12-05.txt"], ["./runtime/v3/13-stability.txt"], ["./runtime/v3/14-diversification-core.js"], ["./runtime/v3/15-01.txt", "./runtime/v3/15-02.txt", "./runtime/v3/15-03.txt"], ["./runtime/v4/16-01.txt", "./runtime/v4/16-02.txt", "./runtime/v4/16-03.txt", "./runtime/v4/16-04.txt"], ["./runtime/v4/17-01.txt", "./runtime/v4/17-02.txt", "./runtime/v4/17-03.txt"], ["./runtime/v4/18-field-journal-core.js"], ["./runtime/v4/19-01.txt", "./runtime/v4/19-02.txt", "./runtime/v4/19-03.txt"], ["./runtime/v4/20-01.txt", "./runtime/v4/20-02.txt", "./runtime/v4/20-03.txt"], ["./runtime/v4/21-01.txt", "./runtime/v4/21-02.txt", "./runtime/v4/21-03.txt"], ["./runtime/v4/22-01.txt", "./runtime/v4/22-02-1.txt", "./runtime/v4/22-02-2.txt", "./runtime/v4/22-02-3.txt", "./runtime/v4/22-03-1.txt", "./runtime/v4/22-03-2.txt", "./runtime/v4/22-03-3.txt", "./runtime/v4/22-04-1.txt", "./runtime/v4/22-04-2.txt", "./runtime/v4/22-04-3.txt", "./runtime/v4/22-05-1.txt", "./runtime/v4/22-05-2.txt", "./runtime/v4/22-05-3.txt"]];
+const runtimeParts = [
+  './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
+  './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js', './runtime/09-evolution-v2.js'
+];
+const livingRuntimeGroups = [
+  ['./runtime/v3/10-01.txt', './runtime/v3/10-02.txt', './runtime/v3/10-03.txt', './runtime/v3/10-04.txt'],
+  ['./runtime/v3/11-01.txt', './runtime/v3/11-02.txt', './runtime/v3/11-03-1.txt', './runtime/v3/11-03-2.txt', './runtime/v3/11-03-3.txt', './runtime/v3/11-04.txt', './runtime/v3/11-05-1.txt', './runtime/v3/11-05-2.txt', './runtime/v3/11-05-3.txt', './runtime/v3/11-06.txt'],
+  ['./runtime/v3/12-01.txt', './runtime/v3/12-02.txt', './runtime/v3/12-03.txt', './runtime/v3/12-04.txt', './runtime/v3/12-05.txt'],
+  ['./runtime/v3/13-stability.txt'],
+  ['./runtime/v3/14-diversification-core.js'],
+  ['./runtime/v3/15-01.txt', './runtime/v3/15-02.txt', './runtime/v3/15-03.txt'],
+  ['./runtime/v4/16-01.txt', './runtime/v4/16-02.txt', './runtime/v4/16-03.txt', './runtime/v4/16-04.txt'],
+  ['./runtime/v4/17-01.txt', './runtime/v4/17-02.txt', './runtime/v4/17-03.txt'],
+  ['./runtime/v4/18-field-journal-core.js'],
+  ['./runtime/v4/19-01.txt', './runtime/v4/19-02.txt', './runtime/v4/19-03.txt'],
+  ['./runtime/v4/20-01.txt', './runtime/v4/20-02.txt', './runtime/v4/20-03.txt'],
+  ['./runtime/v4/21-01.txt', './runtime/v4/21-02.txt', './runtime/v4/21-03.txt'],
+  ['./runtime/v4/22-01.txt', './runtime/v4/22-02-1.txt', './runtime/v4/22-02-2.txt', './runtime/v4/22-02-3.txt', './runtime/v4/22-03-1.txt', './runtime/v4/22-03-2.txt', './runtime/v4/22-03-3.txt', './runtime/v4/22-04-1.txt', './runtime/v4/22-04-2.txt', './runtime/v4/22-04-3.txt', './runtime/v4/22-05-1.txt', './runtime/v4/22-05-2.txt', './runtime/v4/22-05-3.txt'],
+  ['./runtime/v4/23-worker-storage.js']
+];
 
-function loadClassicScript(source) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = source;
-    script.onload = () => { script.remove(); resolve(); };
-    script.onerror = () => { script.remove(); reject(new Error(`Не удалось загрузить ${source}`)); };
-    document.head.append(script);
-  });
-}
+const services = {
+  storage: null,
+  simulation: null,
+  compression: { compressJson, decompressJson }
+};
+globalThis.CladaRuntimeServices = services;
 
-async function loadLivingGroup(parts) {
-  const responses = await Promise.all(parts.map((source) => fetch(source, { cache: 'no-store' })));
-  const failed = responses.find((response) => !response.ok);
-  if (failed) throw new Error(`Не удалось загрузить экологический модуль: ${failed.status}`);
-  const source = (await Promise.all(responses.map((response) => response.text()))).join('');
-  const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-  try { await loadClassicScript(blobUrl); }
-  finally { URL.revokeObjectURL(blobUrl); }
+try {
+  services.storage = await createCladaStorageBridge();
+} catch (error) {
+  console.warn('КЛАДА: IndexedDB не запустилась, включён аварийный backend', error);
 }
 
 try {
-  for (const source of runtimeParts) await loadClassicScript(source);
-  for (const group of livingRuntimeGroups) await loadLivingGroup(group);
+  services.simulation = await createSimulationClient();
+} catch (error) {
+  console.warn('КЛАДА: Worker не запустился, модель останется в основном потоке', error);
+}
+
+try {
+  await loadCladaRuntime({ scripts: runtimeParts, groups: livingRuntimeGroups });
 } catch (error) {
   console.error('КЛАДА: ошибка запуска', error);
   const empty = document.querySelector('#emptyState');
@@ -46,3 +66,5 @@ try {
     empty.querySelector('button').hidden = true;
   }
 }
+
+addEventListener('pagehide', () => services.simulation?.terminate?.(), { once: true });
