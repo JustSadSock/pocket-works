@@ -41,7 +41,8 @@
     const totalPrey = preyDemes.reduce((sum, d) => sum + d.abundance, 0);
     for (const predator of predators) {
       const P = predator.abundance;
-      const attack = .2 + predator.traits.speed * .18 + predator.traits.social * .1;
+      const coevolutionAttack = clamp(predator.coevolution?.attackMultiplier ?? 1, .65, 1.5);
+      const attack = (.2 + predator.traits.speed * .18 + predator.traits.social * .1) * coevolutionAttack;
       const halfSat = 5.5 + predator.traits.size * 7;
       const interference = .3 + P * .035;
       const potential = attack * P * totalPrey * totalPrey / (halfSat * halfSat + totalPrey * totalPrey + interference * P * P);
@@ -49,14 +50,15 @@
       const weights = preyDemes.map((prey) => {
         const sizeFit = clamp(1 - Math.max(0, prey.traits.size - predator.traits.size * 1.25), .08, 1);
         const refuge = clamp((prey.abundance - 2.2) / 9, 0, 1);
+        const defense = clamp(prey.coevolution?.defenseMultiplier ?? 1, .72, 1.65);
         const switchWeight = prey.abundance * prey.abundance;
-        return { prey, weight: switchWeight * sizeFit * (.18 + refuge * .82) };
+        return { prey, defense, weight: switchWeight * sizeFit * (.18 + refuge * .82) / defense };
       });
       const totalWeight = weights.reduce((sum, x) => sum + x.weight, 0) || 1;
-      for (const { prey, weight } of weights) {
+      for (const { prey, defense, weight } of weights) {
         const share = potential * weight / totalWeight;
         const cap = Math.max(0, prey.abundance - 1.8) * .2;
-        const kill = Math.min(share, cap);
+        const kill = Math.min(share / Math.sqrt(defense), cap);
         if (kill <= 0) continue;
         losses.set(prey.id, (losses.get(prey.id) || 0) + kill);
         consumed += kill;
@@ -92,7 +94,13 @@
     for (const deme of demes) {
       const species = community.species.find((s) => s.id === deme.speciesId);
       const compatibility = habitatCompatibility(deme.traits, patch, deme.guild);
-      const baseK = patchBaseCapacity(patch) * guildCapacityMultiplier(deme.guild) * (.56 + community.env.food * .92) * compatibility;
+      const coevolution = deme.coevolution || {};
+      const mutualismBenefit = clamp(coevolution.mutualismBenefit || 0);
+      const dependencyCost = clamp(coevolution.dependencyCost || 0);
+      const parasiteCost = clamp(coevolution.parasiteCost || 0, 0, .4);
+      const metabolicCost = clamp(coevolution.metabolicCost || 0, 0, .28);
+      const coevolutionCapacity = clamp(1 + mutualismBenefit * .14 - dependencyCost * .1, .76, 1.18);
+      const baseK = patchBaseCapacity(patch) * guildCapacityMultiplier(deme.guild) * (.56 + community.env.food * .92) * compatibility * coevolutionCapacity;
       let lambda = .88;
       let foodRatio = 0;
       if (deme.guild === 'predator') {
@@ -123,14 +131,23 @@
       const competitionEquivalent = demes.reduce((sum, other) => sum + Math.max(0, other.abundance) * competitionOverlap(deme, other), 0);
       const mutationLoad = Math.max(0, community.env.mutation - .78) * .035;
       const environmental = patchNoise(community, `${patch.id}:${deme.id}`, .045) - mutationLoad;
-      const survival = clamp(.86 + compatibility * .105 + environmental, .69, .99);
-      const recruitLambda = Math.max(.7, lambda + environmental + establishment * .075);
+      const survival = clamp(.86 + compatibility * .105 + environmental + mutualismBenefit * .025 - parasiteCost * .22 - metabolicCost * .2, .62, .99);
+      const recruitLambda = Math.max(.64, lambda + environmental + establishment * .075 + mutualismBenefit * .08 - parasiteCost * .18 - dependencyCost * .12 - metabolicCost * .16);
       let expected = N * recruitLambda / (1 + Math.max(0, recruitLambda - 1) * competitionEquivalent / densityK);
       expected = expected * survival + N * (1 - survival) * .38;
       expected -= predation.losses.get(deme.id) || 0;
       if (N < 2.5 && species && species.sexual !== false) expected *= .86 + N * .045;
       expected = Math.max(0, expected);
-      results.set(deme.id, { expected, carryingCapacity: densityK, compatibility, foodRatio, predation: predation.losses.get(deme.id) || 0 });
+      results.set(deme.id, {
+        expected,
+        carryingCapacity: densityK,
+        compatibility,
+        foodRatio,
+        predation: predation.losses.get(deme.id) || 0,
+        parasiteCost,
+        mutualismBenefit,
+        metabolicCost
+      });
     }
     return results;
   }

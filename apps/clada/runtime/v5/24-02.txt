@@ -1,0 +1,127 @@
+      bottleneckGeneration: null,
+      lastBottleneckGeneration: -999,
+      previousAbundance: Math.max(0, Number(deme.abundance) || 0),
+      parasiteLoad: 0,
+      immuneMemory: 0,
+      lastEpidemicGeneration: -999,
+      alleles: {},
+      history: []
+    };
+    for (const locus of LOCI) {
+      const copied = sourceProfile?.alleles?.[locus.id];
+      if (Array.isArray(copied) && copied.length) {
+        profile.alleles[locus.id] = copied.map((allele) => ({ ...allele, frequency: clamp(allele.frequency + (nextRandom(genetics) - .5) * .12) }));
+        normalizeAlleles(profile.alleles[locus.id]);
+      } else {
+        profile.alleles[locus.id] = [{
+          id: `ancestral-${deme.speciesId}-${locus.id}`,
+          frequency: baseFrequency(deme, locus),
+          effect: 0,
+          originGeneration: Number(community.generation) || 0,
+          sourceNodeId: null,
+          label: `предковый ${locus.label.toLowerCase()}`
+        }];
+      }
+    }
+    const parentIds = sourceProfile?.nodeId ? [sourceProfile.nodeId] : [];
+    const node = recordNode(community, deme, sourceProfile ? 'founder' : 'origin', parentIds, { founder: Boolean(sourceProfile) });
+    for (const alleles of Object.values(profile.alleles)) for (const allele of alleles) if (!allele.sourceNodeId) allele.sourceNodeId = node.id;
+    if (sourceProfile) {
+      genetics.metrics.founderEvents += 1;
+      genetics.events.push({ generation: community.generation, type: 'founder', speciesId: deme.speciesId, demeId: deme.id, patchId: deme.patchId, text: 'Эффект основателя в новой колонии' });
+    }
+    return profile;
+  }
+
+  function ensureCommunity(community) {
+    const genetics = geneticsState(community);
+    community.species ||= [];
+    community.demes ||= [];
+    for (const species of community.species) {
+      species.genetics ||= { version: VERSION, bottlenecks: 0, mutations: 0, founderEvents: 0, lastMutationGeneration: null };
+      species.genetics.version = VERSION;
+    }
+    for (const deme of community.demes) initializeDeme(community, deme);
+    compact(community);
+    return genetics;
+  }
+
+  function normalizeAlleles(alleles) {
+    if (!Array.isArray(alleles) || !alleles.length) return;
+    const positive = alleles.map((allele) => ({ ...allele, frequency: Math.max(.0001, Number(allele.frequency) || 0) }));
+    const total = positive.reduce((sum, allele) => sum + allele.frequency, 0) || 1;
+    alleles.splice(0, alleles.length, ...positive.map((allele) => ({ ...allele, frequency: allele.frequency / total })).sort((a, b) => b.frequency - a.frequency).slice(0, 3));
+    const kept = alleles.reduce((sum, allele) => sum + allele.frequency, 0) || 1;
+    for (const allele of alleles) allele.frequency /= kept;
+  }
+
+  function locusExpression(deme, locusId) {
+    const locus = LOCUS_BY_ID[locusId];
+    const alleles = deme.genetics?.alleles?.[locusId] || [];
+    const baseline = baseFrequency(deme, locus || { trait: '', base: .4, role: '' });
+    const effect = alleles.reduce((sum, allele) => sum + (allele.frequency || 0) * (allele.effect || 0), 0);
+    const diversity = 1 - alleles.reduce((sum, allele) => sum + (allele.frequency || 0) ** 2, 0);
+    return clamp(baseline + effect + diversity * .08, 0, 1);
+  }
+
+  function alleleCost(deme) {
+    return LOCI.reduce((sum, locus) => sum + Math.max(0, locusExpression(deme, locus.id) - .5) * locus.cost, 0);
+  }
+
+  function predatorCoevolution(community, patchDemes) {
+    const predators = patchDemes.filter((deme) => deme.guild === 'predator' && deme.abundance > .2);
+    const prey = patchDemes.filter((deme) => deme.guild !== 'predator' && deme.abundance > .2);
+    for (const predator of predators) {
+      const attack = locusExpression(predator, 'detection') * .38 + locusExpression(predator, 'pursuit') * .35 + locusExpression(predator, 'venom') * .27;
+      let bestPressure = 0;
+      const opponents = [];
+      for (const target of prey) {
+        const defense = locusExpression(target, 'camouflage') * .31 + locusExpression(target, 'evasion') * .36 + locusExpression(target, 'armor') * .33;
+        const abundanceWeight = clamp(target.abundance / 18, .15, 1);
+        const pressure = clamp((attack - defense + .5) * abundanceWeight);
+        bestPressure = Math.max(bestPressure, pressure);
+        opponents.push({ id: target.id, speciesId: target.speciesId, pressure: round(pressure) });
+        target.coevolution.preyPressure = Math.max(target.coevolution.preyPressure || 0, pressure);
+        target.coevolution.defenseMultiplier = Math.max(target.coevolution.defenseMultiplier || 1, 1 + defense * .28 - attack * .12);
+        target.coevolution.opponents.push({ id: predator.id, speciesId: predator.speciesId, type: 'predator', pressure: round(pressure) });
+      }
+      predator.coevolution.predatorPressure = bestPressure;
+      predator.coevolution.attackMultiplier = clamp(.82 + attack * .52 - alleleCost(predator) * .35, .72, 1.34);
+      predator.coevolution.opponents.push(...opponents.map((entry) => ({ ...entry, type: 'prey' })));
+    }
+  }
+
+  function ensurePathogen(community, patch) {
+    const genetics = geneticsState(community);
+    const key = String(patch.id);
+    let strain = genetics.pathogens[key];
+    if (!strain) {
+      strain = genetics.pathogens[key] = {
+        id: genetics.nextStrainId++,
+        patchId: patch.id,
+        antigen: nextRandom(genetics),
+        virulence: .18 + nextRandom(genetics) * .28,
+        transmission: .22 + nextRandom(genetics) * .34,
+        age: 0,
+        prevalence: 0
+      };
+    }
+    return strain;
+  }
+
+  function pathogenCoevolution(community, patch, patchDemes) {
+    const genetics = geneticsState(community);
+    const strain = ensurePathogen(community, patch);
+    strain.age += 1;
+    const hostMass = patchDemes.reduce((sum, deme) => sum + Math.max(0, deme.abundance), 0);
+    if (strain.age % 18 === 0 && nextRandom(genetics) < .32 + clamp(community.env?.mutation || 0) * .28) {
+      strain.antigen = clamp(strain.antigen + gauss(genetics) * .12);
+      strain.virulence = clamp(strain.virulence + gauss(genetics) * .035, .08, .72);
+      strain.transmission = clamp(strain.transmission + gauss(genetics) * .045, .08, .82);
+      genetics.events.push({ generation: community.generation, type: 'strain-shift', patchId: patch.id, strainId: strain.id, text: 'Паразитарный штамм изменил антиген' });
+    }
+    let prevalence = 0;
+    for (const deme of patchDemes) {
+      const immunity = locusExpression(deme, 'immunity');
+      const tolerance = locusExpression(deme, 'tolerance');
+      const density = clamp(deme.abundance / Math.max(6, deme.carryingCapacity || 18));

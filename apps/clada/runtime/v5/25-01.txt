@@ -1,0 +1,75 @@
+/* КЛАДА 5.0 — подключение наследственности к модели и Полевому журналу. */
+const GENETICS_APP_VERSION = '5.0.0';
+const GENETICS = globalThis.CladaGeneticsCore;
+const geneticsLegacyMetaAdvance = META.advance;
+const geneticsLegacyMetaCreateAppSpecies = metaCreateAppSpecies;
+const geneticsLegacyBuildWorld = buildWorld;
+const geneticsLegacyMigrateLivingState = migrateLivingState;
+
+function geneticsEnsureState() {
+  if (!state?.metacommunity || !GENETICS) return null;
+  return GENETICS.ensureCommunity(state.metacommunity);
+}
+
+META.advance = function geneticsAdvanceMetacommunity(community) {
+  GENETICS.ensureCommunity(community);
+  GENETICS.prepareGeneration(community);
+  const result = geneticsLegacyMetaAdvance(community) || { proposals: [] };
+  GENETICS.finalizeGeneration(community);
+  return result;
+};
+
+metaCreateAppSpecies = function geneticsCreateAppSpecies(proposal) {
+  const id = geneticsLegacyMetaCreateAppSpecies(proposal);
+  if (id && state?.metacommunity) GENETICS.recordSpeciation(state.metacommunity, proposal, id);
+  return id;
+};
+
+buildWorld = function geneticsBuildWorld(seed = 'garden') {
+  geneticsLegacyBuildWorld(seed);
+  geneticsEnsureState();
+  saveState();
+};
+
+migrateLivingState = function geneticsMigrateLivingState() {
+  geneticsLegacyMigrateLivingState();
+  geneticsEnsureState();
+};
+
+function geneticsPercent(value) {
+  return Math.round(GENETICS.clamp(value) * 100);
+}
+
+function geneticsSpeciesName(id) {
+  return state.species.find((entry) => Number(entry.id) === Number(id))?.common || `Вид ${id}`;
+}
+
+if (typeof fieldRecordSnapshot === 'function') {
+  const geneticsLegacyFieldRecordSnapshot = fieldRecordSnapshot;
+  fieldRecordSnapshot = function geneticsRecordSnapshot(force = false) {
+    const result = geneticsLegacyFieldRecordSnapshot(force);
+    if (!state?.metacommunity || !state?.fieldJournal?.speciesSeries) return result;
+    for (const species of state.metacommunity.species || []) {
+      const point = state.fieldJournal.speciesSeries?.[species.id]?.at(-1);
+      if (!point || point.g !== state.generation) continue;
+      const summary = GENETICS.summarizeSpecies(state.metacommunity, species.id);
+      point.ne = Math.round(summary.effectivePopulation);
+      point.h = GENETICS.round(summary.heterozygosity);
+      point.f = GENETICS.round(summary.inbreeding);
+      point.parasite = GENETICS.round(summary.parasiteLoad);
+    }
+    return result;
+  };
+}
+
+function geneticsSpeciesHtml(speciesId) {
+  const summary = GENETICS.summarizeSpecies(state.metacommunity, speciesId);
+  const diversityTone = summary.heterozygosity < .24 ? 'danger' : summary.heterozygosity > .58 ? 'good' : 'steady';
+  const inbreedingTone = summary.inbreeding > .46 ? 'danger' : summary.inbreeding < .18 ? 'good' : 'steady';
+  const alleles = summary.topAlleles.map((allele) => `<div class="genetic-allele"><span><b>${safeText(allele.label)}</b><small>${safeText(allele.alleleId)} · возник G${allele.originGeneration}</small></span><output>${Math.round(allele.frequency * 100)}%</output><i style="--value:${Math.round(allele.frequency * 100)}%"></i></div>`).join('');
+  const mutations = summary.mutations.map((mutation) => `<div class="genetic-event"><b>G${mutation.originGeneration}</b><span>${safeText(mutation.label || mutation.locus)}<small>${mutation.effect >= 0 ? '+' : ''}${Math.round((mutation.effect || 0) * 100)} к выраженности</small></span></div>`).join('');
+  const partners = summary.partners.map((link) => {
+    const partnerId = Number(link.speciesA) === Number(speciesId) ? link.speciesB : link.speciesA;
+    return `<div class="genetic-link"><span>${safeText(geneticsSpeciesName(partnerId))}</span><b>${Math.round(link.strength * 100)}%</b><small>участок ${safeText(link.patchId)}</small></div>`;
+  }).join('');
+  const demes = summary.demesDetail.sort((a, b) => b.abundance - a.abundance).slice(0, 8).map((deme) => `<article class="genetic-deme"><header><b>ДЕМА ${deme.id}</b><span>${safeText(deme.patchId)}</span></header><dl><div><dt>Ne</dt><dd>${Math.round(deme.effectivePopulation)}</dd></div><div><dt>Разнообразие</dt><dd>${geneticsPercent(deme.heterozygosity)}%</dd></div><div><dt>Инбридинг</dt><dd>${geneticsPercent(deme.inbreeding)}%</dd></div><div><dt>Паразиты</dt><dd>${geneticsPercent(deme.parasiteLoad)}%</dd></div></dl>${deme.bottleneck > .35 ? `<small class="genetic-warning">след бутылочного горлышка ${geneticsPercent(deme.bottleneck)}%</small>` : ''}</article>`).join('');

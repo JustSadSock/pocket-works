@@ -110,6 +110,9 @@
         deme.compatibility = update.compatibility;
         deme.foodRatio = update.foodRatio;
         deme.predationLoss = update.predation;
+        deme.parasiteCost = update.parasiteCost || 0;
+        deme.mutualismBenefit = update.mutualismBenefit || 0;
+        deme.metabolicCost = update.metabolicCost || 0;
       } else {
         deme.abundance *= .9;
       }

@@ -1,0 +1,118 @@
+      const mismatch = Math.abs((immunity + deme.genetics.immuneMemory * .22) - strain.antigen);
+      const susceptibility = clamp(.25 + mismatch * .75 - immunity * .28);
+      const exposure = strain.transmission * density * susceptibility * clamp(hostMass / 38, .18, 1.25);
+      const previous = deme.genetics.parasiteLoad || 0;
+      const load = clamp(previous * .58 + exposure * .42 - tolerance * .045);
+      deme.genetics.parasiteLoad = load;
+      deme.genetics.immuneMemory = clamp((deme.genetics.immuneMemory || 0) * .92 + (1 - mismatch) * load * .08);
+      const cost = clamp(load * strain.virulence * (1 - tolerance * .55), 0, .32);
+      deme.coevolution.parasiteLoad = load;
+      deme.coevolution.parasiteCost = cost;
+      deme.coevolution.pathogenId = strain.id;
+      prevalence += load * Math.max(0, deme.abundance);
+      if (load > .62 && community.generation - (deme.genetics.lastEpidemicGeneration || -999) >= 12) {
+        deme.genetics.lastEpidemicGeneration = community.generation;
+        genetics.metrics.epidemics += 1;
+        genetics.events.push({ generation: community.generation, type: 'epidemic', speciesId: deme.speciesId, demeId: deme.id, patchId: patch.id, strainId: strain.id, text: 'Эпидемическая волна' });
+      }
+    }
+    strain.prevalence = hostMass > 0 ? prevalence / hostMass : 0;
+  }
+
+  function mutualismCoevolution(community, patchDemes) {
+    const genetics = geneticsState(community);
+    const candidates = patchDemes.filter((deme) => !['predator'].includes(deme.guild) && deme.abundance > 1);
+    const links = [];
+    for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
+      const left = candidates[leftIndex];
+      let best = null;
+      for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
+        const right = candidates[rightIndex];
+        if (left.guild === right.guild || left.speciesId === right.speciesId) continue;
+        const willingness = Math.min(locusExpression(left, 'symbiosis'), locusExpression(right, 'symbiosis'));
+        const cooperation = (locusExpression(left, 'cooperation') + locusExpression(right, 'cooperation')) / 2;
+        const complement = left.guild === 'filterer' || right.guild === 'filterer' ? .72
+          : left.guild === 'scavenger' || right.guild === 'scavenger' ? .58 : .46;
+        const strength = clamp(willingness * .48 + cooperation * .32 + complement * .2 - .34);
+        if (strength > .12 && (!best || strength > best.strength)) best = { right, strength };
+      }
+      const dependency = clamp((locusExpression(left, 'symbiosis') - .68) * 1.8);
+      if (!best) {
+        left.coevolution.dependencyCost = dependency * .14;
+        continue;
+      }
+      const right = best.right;
+      const benefit = best.strength * Math.min(1, Math.sqrt(Math.max(.1, right.abundance) / 8));
+      left.coevolution.mutualismBenefit = Math.max(left.coevolution.mutualismBenefit || 0, benefit);
+      right.coevolution.mutualismBenefit = Math.max(right.coevolution.mutualismBenefit || 0, benefit * .9);
+      left.coevolution.partners.push({ id: right.id, speciesId: right.speciesId, strength: round(best.strength) });
+      right.coevolution.partners.push({ id: left.id, speciesId: left.speciesId, strength: round(best.strength) });
+      links.push({ a: left.id, b: right.id, speciesA: left.speciesId, speciesB: right.speciesId, patchId: left.patchId, strength: round(best.strength) });
+    }
+    genetics.mutualisms.push(...links);
+    if (links.length) genetics.metrics.mutualisms += links.length;
+  }
+
+  function prepareGeneration(community) {
+    ensureCommunity(community);
+    const genetics = geneticsState(community);
+    genetics.mutualisms = [];
+    const active = community.demes.filter((deme) => deme.abundance > .05);
+    for (const deme of active) {
+      initializeDeme(community, deme);
+      deme.coevolution = {
+        attackMultiplier: 1,
+        defenseMultiplier: 1,
+        parasiteLoad: 0,
+        parasiteCost: 0,
+        mutualismBenefit: 0,
+        dependencyCost: 0,
+        metabolicCost: alleleCost(deme),
+        predatorPressure: 0,
+        preyPressure: 0,
+        opponents: [],
+        partners: []
+      };
+    }
+    const byPatch = new Map();
+    for (const deme of active) {
+      if (!byPatch.has(deme.patchId)) byPatch.set(deme.patchId, []);
+      byPatch.get(deme.patchId).push(deme);
+    }
+    for (const [patchId, patchDemes] of byPatch) {
+      const patch = community.patches.find((entry) => String(entry.id) === String(patchId));
+      predatorCoevolution(community, patchDemes);
+      if (patch) pathogenCoevolution(community, patch, patchDemes);
+      mutualismCoevolution(community, patchDemes);
+    }
+    return genetics;
+  }
+
+  function selectionFor(deme, locusId) {
+    const coevolution = deme.coevolution || {};
+    if (['detection', 'pursuit', 'venom'].includes(locusId)) return clamp(coevolution.predatorPressure || 0) * .032;
+    if (['camouflage', 'evasion', 'armor'].includes(locusId)) return clamp(coevolution.preyPressure || 0) * .034;
+    if (['immunity', 'tolerance'].includes(locusId)) return clamp(coevolution.parasiteLoad || 0) * .038;
+    if (['cooperation', 'symbiosis'].includes(locusId)) return clamp(coevolution.mutualismBenefit || 0) * .026 - clamp(coevolution.dependencyCost || 0) * .022;
+    return 0;
+  }
+
+  function driftAndSelect(community, deme) {
+    const genetics = geneticsState(community);
+    const profile = initializeDeme(community, deme);
+    const abundance = Math.max(.1, Number(deme.abundance) || 0);
+    const flow = clamp(deme.geneFlow || 0);
+    const effectivePopulation = Math.max(1.5, abundance * (.52 + flow * .36) * (1 - profile.inbreeding * .28));
+    profile.effectivePopulation = effectivePopulation;
+    profile.heterozygosity = clamp(profile.heterozygosity * (1 - 1 / Math.max(4, 2 * effectivePopulation)) + flow * .012);
+    profile.inbreeding = clamp(profile.inbreeding + (1 - flow) / Math.max(38, effectivePopulation * 26) - flow * .018);
+    profile.founderEffect = clamp((profile.founderEffect || 0) * .965 + (deme.age < 16 ? .018 : 0));
+    genetics.metrics.maxInbreeding = Math.max(genetics.metrics.maxInbreeding || 0, profile.inbreeding);
+
+    for (const locus of LOCI) {
+      const alleles = profile.alleles[locus.id] || [];
+      const selection = selectionFor(deme, locus.id);
+      const driftScale = .018 / Math.sqrt(Math.max(2, effectivePopulation));
+      for (const allele of alleles) {
+        const p = clamp(allele.frequency, .0001, .9999);
+        const directional = selection * (allele.effect >= 0 ? 1 : -.65) * p * (1 - p);
