@@ -4,6 +4,7 @@ import { renderBuilder,setPlannerMode,setPartySize,placeHero,removeHero,toggleLo
 import { renderHeroes,renderTiers,renderLinks,setHeroRole,toggleFavorites,setLinkType } from './catalog.js';
 import { openPicker,setPickerRole,setPickerSearch,pickHero,clearPicker,openHero,renderHeroSheet,addCurrentHero,toggleFavorite,updateHeroPreference,renderAnalysisSheet,saveCurrentTeam,renderSavedTeams,loadSavedTeam,duplicateSaved,deleteSaved,exportData,importData,resetAll,renderMeta } from './sheets.js';
 import { openPlayersSheet,selectEditingPlayer,addPlayer,deletePlayer,updateProfileField,updateProfileColor,openAssignmentSheet,assignPlayer,updatePlayerHeroSkill,togglePlayerHeroBlocked } from './profiles.js';
+import { setMatchContext,openEnemyPicker,setEnemySearch,pickEnemy,clearEnemySlot,clearEnemies,applyReplacement,openMatchLog,saveMatchRecord,renderHistorySheet,deleteMatchRecord,renderLocalMetaSheet } from './match.js';
 
 export function renderAll(){renderBuilder();renderHeroes();renderTiers();renderLinks();renderSavedTeams();renderMeta();setView(box.state.activeView,false);}
 function bindEvents(){
@@ -40,11 +41,23 @@ function bindEvents(){
     if(button.matches('[data-load-variant]'))return loadVariant(button.dataset.loadVariant);
     if(button.matches('[data-delete-variant]'))return deleteVariant(button.dataset.deleteVariant);
     if(button.matches('[data-compare-hero]'))return toggleCompareHero(button.dataset.compareHero);
+    if(button.matches('[data-match-context]')){const[field,value]=button.dataset.matchContext.split(':');return setMatchContext(field,value);}
+    if(button.matches('[data-enemy-slot]'))return openEnemyPicker(button.dataset.enemySlot);
+    if(button.matches('[data-pick-enemy]'))return pickEnemy(button.dataset.pickEnemy);
+    if(button.matches('[data-clear-enemy]'))return clearEnemySlot(button.dataset.clearEnemy);
+    if(button.matches('[data-apply-replacement]'))return applyReplacement(button.dataset.applyReplacement);
+    if(button.matches('[data-delete-match]'))return deleteMatchRecord(button.dataset.deleteMatch);
     if(button.id==='openCompareButton')return openCompare();
     if(button.id==='openPlayersButton')return openPlayersSheet();
+    if(button.id==='clearEnemiesButton')return clearEnemies();
+    if(button.id==='openMatchLogButton')return openMatchLog();
+    if(button.id==='openHistoryButton')return renderHistorySheet();
+    if(button.id==='openLocalMetaButton')return renderLocalMetaSheet();
+    if(button.id==='saveMatchRecordButton')return saveMatchRecord();
     if(button.matches('[data-close-sheet]'))return closeSheet();
   });
   document.addEventListener('rival-forge:profiles-changed',()=>{renderBuilder();renderSavedTeams();});
+  document.addEventListener('rival-forge:match-changed',()=>{renderBuilder();renderSavedTeams();});
   $('#scrim').addEventListener('click',()=>closeSheet());
   $('#backButton').addEventListener('click',()=>{if(box.activeSheet)return closeSheet();if(history.length>1)history.back();else location.href='../../';});
   $('#openSavedButton').addEventListener('click',()=>{renderSavedTeams();openSheet('savedSheet');});
@@ -59,12 +72,15 @@ function bindEvents(){
   $('#importInput').addEventListener('change',event=>event.target.files?.[0]&&importData(event.target.files[0],renderAll));
   $('#heroSearch').addEventListener('input',event=>{box.state.heroSearch=event.target.value;saveState();renderHeroes();});
   $('#pickerSearch').addEventListener('input',event=>setPickerSearch(event.target.value));
+  $('#enemyPickerSearch').addEventListener('input',event=>setEnemySearch(event.target.value));
   $('#linkSearch').addEventListener('input',event=>{box.state.linkSearch=event.target.value;saveState();renderLinks();});
   $('#tierRoleFilter').addEventListener('change',event=>{box.state.tierRole=event.target.value;saveState();renderTiers();});
   $('#tierSort').addEventListener('change',event=>{box.state.tierSort=event.target.value;saveState();renderTiers();});
+  document.addEventListener('change',event=>{if(event.target.id==='matchModeSelect')setMatchContext('mode',event.target.value);if(event.target.id==='matchMapSelect')setMatchContext('mapId',event.target.value);});
   $('#playersSheet').addEventListener('input',event=>{if(event.target.matches('[data-player-field="name"]'))updateProfileField('name',event.target.value);});
   $('#playersSheet').addEventListener('change',event=>{if(event.target.matches('[data-player-field]'))updateProfileField(event.target.dataset.playerField,event.target.value);});
   $('#heroSheet').addEventListener('input',event=>{if(event.target.id==='heroPowerRange'){if($('#powerOutput'))$('#powerOutput').textContent=event.target.value;updateHeroPreference('score',event.target.value);}if(event.target.id==='heroConfidenceRange'){if($('#confidenceOutput'))$('#confidenceOutput').textContent=event.target.value;updateHeroPreference('confidence',event.target.value);}if(event.target.id==='heroNotes')updateHeroPreference('notes',event.target.value);if(event.target.matches('[data-player-skill]'))updatePlayerHeroSkill(event.target.dataset.playerSkill,event.target.dataset.heroId,event.target.value);});
+  $('#matchLogSheet').addEventListener('input',event=>{if(event.target.id==='matchComfort'&&$('#matchComfortOutput'))$('#matchComfortOutput').textContent=event.target.value;});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&box.activeSheet)closeSheet();});
 }
 bindEvents();renderAll();
