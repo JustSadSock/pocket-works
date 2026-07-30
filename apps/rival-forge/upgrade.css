@@ -1,0 +1,26 @@
+/* RIVAL FORGE 1.1 — party planning and selectable Team-Up loadouts */
+.planner-mode-block{margin:-4px 0 14px;padding:10px;border:2px solid var(--ink);background:#fffdf7;box-shadow:5px 5px 0 rgba(20,21,24,.1)}
+.planner-mode-buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.planner-mode-buttons button{min-height:58px;border:1.5px solid var(--ink);background:transparent;padding:8px;text-align:left;display:flex;flex-direction:column;justify-content:center}
+.planner-mode-buttons button.active{background:var(--ink);color:#fff;box-shadow:inset 0 -4px var(--lime)}
+.planner-mode-buttons b{font-size:10px;letter-spacing:.06em}.planner-mode-buttons small{font-size:8px;line-height:1.2;margin-top:4px;color:var(--muted)}
+.planner-mode-buttons button.active small{color:#d7d7d2}
+.party-size-control{display:flex;align-items:center;gap:9px;margin-top:9px}.party-size-control>span{font-size:8px;font-weight:1000;letter-spacing:.12em;white-space:nowrap}
+.party-size-control>div{display:grid;grid-template-columns:repeat(6,minmax(29px,1fr));gap:3px;flex:1}
+.party-size-control button{height:31px;border:1.5px solid var(--ink);background:transparent;font-size:10px;font-weight:950}.party-size-control button.active{background:var(--lime)}
+.mode-explanation{margin:9px 0 0;font-size:9px;line-height:1.35;color:var(--muted)}
+.team-slot.unknown-ally{display:flex;min-height:138px;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-style:dashed;background:repeating-linear-gradient(135deg,rgba(20,21,24,.025) 0 7px,transparent 7px 14px);padding:10px;color:var(--muted)}
+.unknown-glyph{width:39px;height:39px;border:1.5px dashed var(--ink);border-radius:50%;display:grid;place-items:center;color:var(--ink);font-size:19px;font-weight:950;margin-bottom:8px}
+.unknown-ally strong{font-size:8px;letter-spacing:.1em;color:var(--ink)}.unknown-ally span{font-size:10px;font-weight:950;color:var(--violet);margin-top:5px}.unknown-ally small{font-size:7px;margin-top:4px}
+.loadout-section{margin-top:22px}.loadout-help{font-size:9px;color:var(--muted);line-height:1.4;margin:-4px 0 10px}.loadout-plans{display:grid;gap:10px}
+.loadout-plan{border:1.5px solid var(--ink);background:linear-gradient(135deg,var(--role-soft),#fffdf7 56%);padding:9px;box-shadow:4px 4px 0 rgba(20,21,24,.08)}
+.loadout-plan>header{display:flex;align-items:center;gap:8px;margin-bottom:8px}.loadout-plan>header img{width:45px;height:45px;object-fit:contain;border:1px solid var(--ink);background:#fff;border-radius:50%}.loadout-plan>header span{font-size:7px;letter-spacing:.12em;font-weight:950;color:var(--muted)}.loadout-plan h3{font-size:14px;margin:2px 0 0}
+.loadout-options{display:grid;grid-template-columns:1fr;gap:6px}.loadout-option{width:100%;border:1.5px solid var(--ink);background:rgba(255,253,247,.85);padding:8px;display:grid;grid-template-columns:19px 1fr;gap:5px;text-align:left;align-items:start}
+.loadout-option.selected{background:var(--ink);color:#fff;box-shadow:inset 4px 0 var(--lime)}.loadout-option.enhanced{border-color:var(--violet)}.loadout-option.selected.enhanced{box-shadow:inset 4px 0 var(--violet)}
+.loadout-radio{font-size:13px;line-height:1.1}.loadout-option-copy b{display:block;font-size:10px}.loadout-option-copy b i{font-style:normal;font-size:6px;color:var(--ink);background:var(--lime);padding:2px 4px;margin-left:4px;white-space:nowrap}.loadout-option-copy small{display:block;font-size:8px;line-height:1.25;margin-top:4px;color:var(--muted)}.loadout-option.selected small{color:#c9c9c4}.loadout-option-copy em{display:block;font-style:normal;font-size:6.5px;line-height:1.2;margin-top:5px;font-weight:950;letter-spacing:.05em;color:var(--violet)}.loadout-option.selected em{color:var(--lime)}
+.hero-loadout-editor>p{font-size:8px;color:var(--muted);line-height:1.35;margin:5px 0 8px}.hero-loadout-editor .loadout-option{margin-top:5px}
+.link-card.loadout-link{border-left:6px solid var(--pink)}.future-partner{font-size:8px;font-weight:900;border:1px dashed var(--ink);padding:8px;background:var(--paper2)}
+.ally-plan{background:var(--paper2);border:1px solid var(--ink);padding:10px}.ally-plan .role-diagram{margin:7px 0}.ally-plan p{font-size:8px;line-height:1.35;color:var(--muted);margin:6px 0 0}
+@media(min-width:620px){.team-slots{grid-template-columns:repeat(3,minmax(0,1fr))}.loadout-plans{grid-template-columns:repeat(2,minmax(0,1fr))}.loadout-options{grid-template-columns:1fr}.planner-mode-block{display:grid;grid-template-columns:minmax(320px,1fr) auto;column-gap:18px;align-items:center}.mode-explanation{grid-column:1/-1}.party-size-control{margin:0;flex-direction:column;align-items:flex-end}.party-size-control>div{width:210px}}
+@media(min-width:900px){.team-slots{grid-template-columns:repeat(6,minmax(0,1fr))}.team-slot,.team-slot.unknown-ally{min-height:170px}.loadout-plans{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:370px){.planner-mode-buttons{grid-template-columns:1fr}.party-size-control{align-items:flex-start;flex-direction:column}.party-size-control>div{width:100%}.loadout-option-copy b i{display:block;width:max-content;margin:3px 0 0}}
