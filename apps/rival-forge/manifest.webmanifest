@@ -1,8 +1,8 @@
 {
   "id": "/apps/rival-forge/",
-  "name": "RIVAL FORGE — Player Party Builder",
+  "name": "RIVAL FORGE — Match-Aware Team Builder",
   "short_name": "RIVAL FORGE",
-  "description": "Конструктор пати Marvel Rivals с профилями игроков, персональными рекомендациями, Team-Up оптимизацией и вариантами состава.",
+  "description": "Конструктор пати Marvel Rivals с контекстом карты, контрпиками и локальной метой группы.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
