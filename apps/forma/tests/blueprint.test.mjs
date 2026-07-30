@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint.js';
+import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint-runtime.js';
 import { normalizeDocument, compileDocument } from '../src/engine.js';
 
 test('Blueprint compiles Gearfly into gears, frame and cover', () => {
@@ -9,6 +9,7 @@ test('Blueprint compiles Gearfly into gears, frame and cover', () => {
   assert.deepEqual(document.parts.map(p => p.id), ['flywheel', 'thumb', 'frame-base', 'frame-cover']);
   assert.equal(report.gearPairs[0].ratio, 2.8);
   assert.equal(report.gearPairs[0].centerDistance, 20.2);
+  assert.deepEqual(document.parts[0].node.position, [0, 0, 2.5]);
   assert.doesNotThrow(() => normalizeDocument(document));
   assert.doesNotThrow(() => compileDocument(document));
 });
