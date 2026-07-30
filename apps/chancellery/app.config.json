@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "chancellery",
+  "name": "КАНЦЕЛЯРИЯ",
+  "shortName": "КАНЦЕЛЯРИЯ",
+  "description": "Локальный разборщик сохранений Europa Universalis V: паспорт кампании, экономика, армии и диагностика формата.",
+  "version": "0.1.0",
+  "releaseDate": "2026-07-30",
+  "releaseDateTime": "2026-07-30T12:25:00Z",
+  "changelog": [
+    "Added local import for plaintext and ZIP-compressed Europa Universalis V saves.",
+    "Added a streaming Clausewitz parser with campaign metadata, economy, population, army, navy and war extraction.",
+    "Added IndexedDB campaign persistence, duplicate detection, diagnostics and an offline mobile interface."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#315f52",
+  "backgroundColor": "#e7dfc9",
+  "themeColor": "#d9cfb5",
+  "orientation": "portrait",
+  "cacheName": "chancellery-v0.1.0",
+  "storageNamespace": "pocket-works:chancellery",
+  "tags": [
+    "PWA",
+    "offline",
+    "tool",
+    "strategy",
+    "parser",
+    "analysis",
+    "workshop"
+  ],
+  "order": 318
+}

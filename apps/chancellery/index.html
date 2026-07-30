@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#d9cfb5">
+  <meta name="description" content="КАНЦЕЛЯРИЯ — локальный анализатор сохранений Europa Universalis V.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="КАНЦЕЛЯРИЯ">
+  <title>КАНЦЕЛЯРИЯ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar">
+      <a class="back-button" href="../../" aria-label="Вернуться в Pocket Works" data-shell-exit data-app-control data-native-press>←</a>
+      <div class="wordmark">
+        <strong>КАНЦЕЛЯРИЯ</strong>
+        <small>EU5 SAVE OFFICE / 01</small>
+      </div>
+      <button class="archive-button" id="archiveButton" type="button" aria-label="Открыть архив кампаний" data-native-press>
+        <span aria-hidden="true">▤</span>
+        <b id="archiveCount">0</b>
+      </button>
+    </header>
+
+    <section class="workspace" id="startView" aria-labelledby="startTitle">
+      <div class="intake-sheet" id="dropZone" data-gesture-surface>
+        <div class="sheet-spine" aria-hidden="true"></div>
+        <p class="folio">ФОРМА 01 · ПРИЁМ СОХРАНЕНИЯ</p>
+        <img class="intake-icon" src="./icons/icon.svg" alt="" draggable="false">
+        <h1 id="startTitle">Открой кампанию</h1>
+        <p class="lead">Файл остаётся на устройстве. Канцелярия разбирает текстовый или ZIP-сейв EU5 локально и сохраняет паспорт кампании.</p>
+        <input id="fileInput" class="visually-hidden" type="file" accept=".eu5,.zip,.sav,application/zip,application/octet-stream">
+        <button class="primary-action" id="importButton" type="button" data-native-press>
+          <span>ВЫБРАТЬ .EU5</span><i aria-hidden="true">→</i>
+        </button>
+        <p class="drop-hint">На компьютере файл можно бросить прямо сюда</p>
+        <div class="format-ruler" aria-label="Поддерживаемые форматы">
+          <span><b>TXT</b> полностью</span>
+          <span><b>ZIP</b> полностью</span>
+          <span><b>BIN</b> диагностика</span>
+        </div>
+      </div>
+
+      <section class="recent-block" aria-labelledby="recentTitle">
+        <div class="section-heading">
+          <h2 id="recentTitle">Последние дела</h2>
+          <button class="text-button" id="clearButton" type="button" data-native-press hidden>Очистить</button>
+        </div>
+        <div class="recent-list" id="recentList">
+          <p class="empty-note">Архив пуст. Первый импорт создаст локальное дело кампании.</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="workspace dossier-view" id="dossierView" hidden aria-labelledby="countryTitle">
+      <article class="dossier">
+        <header class="dossier-head">
+          <div class="dossier-tab" aria-hidden="true">EU5</div>
+          <div>
+            <p class="folio" id="campaignDate">ДАТА НЕ РАСПОЗНАНА</p>
+            <h1 id="countryTitle">Неизвестная держава</h1>
+            <p class="country-line"><b id="countryTag">—</b><span id="rulerName">Правитель не найден</span></p>
+          </div>
+          <button class="seal-button" id="newImportButton" type="button" data-native-press aria-label="Импортировать другое сохранение">＋</button>
+        </header>
+
+        <div class="confidence-strip" id="confidenceStrip">
+          <span id="confidenceLabel">Проверка структуры</span>
+          <b id="confidenceValue">—</b>
+        </div>
+
+        <nav class="ledger-tabs" aria-label="Разделы паспорта">
+          <button class="is-active" type="button" data-tab="overview" data-native-press>ОБЗОР</button>
+          <button type="button" data-tab="military" data-native-press>ВОЙСКА</button>
+          <button type="button" data-tab="wars" data-native-press>ВОЙНЫ</button>
+          <button type="button" data-tab="file" data-native-press>ФАЙЛ</button>
+        </nav>
+
+        <section class="ledger-page is-active" data-page="overview">
+          <div class="metric-grid" id="economyMetrics"></div>
+          <section class="register-section">
+            <div class="register-heading"><h2>Государство</h2><span>СВОДКА</span></div>
+            <dl class="register-list" id="countryMetrics"></dl>
+          </section>
+          <section class="register-section">
+            <div class="register-heading"><h2>Основные отношения</h2><span>ИЗ СЕЙВА</span></div>
+            <div class="relation-list" id="relationList"></div>
+          </section>
+        </section>
+
+        <section class="ledger-page" data-page="military" hidden>
+          <div class="military-board" id="militaryBoard"></div>
+          <p class="method-note">Силы считаются по найденным армейским и флотским блокам. При неизвестной схеме поле остаётся пустым, а не заполняется красивой государственной ложью.</p>
+        </section>
+
+        <section class="ledger-page" data-page="wars" hidden>
+          <div class="war-list" id="warList"></div>
+        </section>
+
+        <section class="ledger-page" data-page="file" hidden>
+          <dl class="technical-list" id="technicalList"></dl>
+          <section class="warning-sheet" id="warningSheet" hidden>
+            <h2>Замечания парсера</h2>
+            <ul id="warningList"></ul>
+          </section>
+          <div class="file-actions">
+            <button class="secondary-action" id="reparseButton" type="button" data-native-press>ПОВТОРИТЬ РАЗБОР</button>
+            <button class="danger-action" id="deleteButton" type="button" data-native-press>УДАЛИТЬ ДЕЛО</button>
+          </div>
+        </section>
+      </article>
+    </section>
+
+    <section class="loading-layer" id="loadingLayer" hidden aria-live="polite" aria-busy="true">
+      <div class="loading-folder">
+        <div class="folder-tab">ОБРАБОТКА</div>
+        <div class="scan-line" aria-hidden="true"></div>
+        <h2 id="loadingTitle">Читаю файл</h2>
+        <p id="loadingDetail">Проверка контейнера и кодировки…</p>
+        <ol class="progress-list" id="progressList">
+          <li data-step="read">Файл</li>
+          <li data-step="container">Контейнер</li>
+          <li data-step="parse">Структура</li>
+          <li data-step="store">Архив</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="error-layer" id="errorLayer" hidden role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+      <div class="error-sheet">
+        <p class="folio">ОТКАЗ В ПРИЁМЕ</p>
+        <h2 id="errorTitle">Файл не разобран</h2>
+        <p id="errorMessage"></p>
+        <code id="errorCode"></code>
+        <button class="primary-action" id="errorCloseButton" type="button" data-native-press><span>ПОНЯТНО</span><i>×</i></button>
+      </div>
+    </section>
+
+    <aside class="archive-drawer" id="archiveDrawer" hidden aria-label="Архив кампаний">
+      <button class="drawer-scrim" id="drawerScrim" type="button" aria-label="Закрыть архив"></button>
+      <div class="drawer-sheet">
+        <header>
+          <div><p class="folio">ЛОКАЛЬНОЕ ХРАНИЛИЩЕ</p><h2>Архив дел</h2></div>
+          <button class="close-button" id="drawerCloseButton" type="button" data-native-press aria-label="Закрыть">×</button>
+        </header>
+        <div id="drawerList" class="drawer-list"></div>
+      </div>
+    </aside>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <form method="dialog">
+        <p class="folio">ПОДТВЕРЖДЕНИЕ</p>
+        <h2 id="confirmTitle">Удалить дело?</h2>
+        <p id="confirmText">Паспорт и исходный файл будут удалены с этого устройства.</p>
+        <div>
+          <button value="cancel" class="secondary-action" data-native-press>ОТМЕНА</button>
+          <button value="confirm" class="danger-action" data-native-press>УДАЛИТЬ</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="КАНЦЕЛЯРИЯ"
+    data-app-version="0.1.0"
+  ></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
