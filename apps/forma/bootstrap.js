@@ -5,7 +5,7 @@ import {
   formatBlueprintReport,
   looksLikeBlueprintText,
   AI_BLUEPRINT_PROMPT
-} from './src/blueprint.js';
+} from './src/blueprint-runtime.js';
 
 const BLUEPRINT_STORAGE = 'pocket-works:forma:last-blueprint-v1';
 let lastBlueprint = '';
