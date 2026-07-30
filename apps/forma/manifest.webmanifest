@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "FORMA — AI → 3D Print",
+  "short_name": "FORMA",
+  "description": "Превращает FormaCode от нейросети в готовые к 3D-печати модели.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ece8dc",
+  "theme_color": "#1c2928",
+  "orientation": "any",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
