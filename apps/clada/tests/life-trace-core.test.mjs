@@ -114,6 +114,7 @@ test('cell reports expose causal hierarchy and species engineering footprint', (
   assert.ok(impact.effects.length > 0);
 });
 
+
 test('connectivity bridge multiplies planetary links without replacing the planet model', () => {
   const bridgeContext = vm.createContext({ globalThis: null });
   bridgeContext.globalThis = bridgeContext;

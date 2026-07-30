@@ -6,10 +6,10 @@ const source = (await Promise.all([1, 2].map(index => readFile(new URL(`../runti
 
 test('installs the trace renderer, top-level mode and journal tab', () => {
   for (const token of [
-    'data-view="trace"',
+    'data-view=\"trace\"',
     'function drawLifeTrace()',
     "state.view !== 'trace'",
-    'data-field-panel="trace"',
+    'data-field-panel=\"trace\"',
     'СЛЕД ЖИЗНИ',
     'lifeTraceOpenCell',
     'speciesImpact',
