@@ -1,0 +1,145 @@
+/* КЛАДА 5.1 — режим «След жизни», причинная карта и интеграция с журналом. */
+const LIFE_TRACE_APP_VERSION = '5.1.0';
+const LIFE_TRACE = globalThis.CladaLifeTraceCore;
+const LIFE_TRACE_COLORS = {
+  canopy: '#45634c', openness: '#b69a55', soil: '#7d684e', wetland: '#5f8278', reef: '#5d8792',
+  turbidity: '#8b7658', fire: '#a55e43', organic: '#6f5f51', channels: '#527d8b', nutrients: '#718154', trails: '#947b59'
+};
+const LIFE_TRACE_GLYPHS = { canopy: '⌁', openness: '⋯', soil: '≋', wetland: '≈', reef: '✣', turbidity: '∿', fire: '△', organic: '●', channels: '↝', nutrients: '✦', trails: '⌇' };
+const lifeTraceLegacyMetaAdvance = META.advance;
+const lifeTraceLegacyPlanetHabitatStress = typeof PLANET !== 'undefined' ? PLANET.applyHabitatStress : null;
+const lifeTraceLegacyBuildWorld = buildWorld;
+const lifeTraceLegacyMigrateLivingState = migrateLivingState;
+const lifeTraceLegacyDrawWorld = drawWorld;
+const lifeTraceLegacyRender = render;
+const lifeTraceLegacyHandleCanvasTap = handleCanvasTap;
+let lifeTraceSelectedCellId = null;
+
+function lifeTraceEnsureState() {
+  if (!state?.metacommunity || !LIFE_TRACE) return null;
+  return LIFE_TRACE.ensureCommunity(state.metacommunity);
+}
+
+if (typeof PLANET !== 'undefined' && typeof lifeTraceLegacyPlanetHabitatStress === 'function') {
+  PLANET.applyHabitatStress = function lifeTraceApplyHabitatStress(community) {
+    LIFE_TRACE.prepareGeneration(community);
+    return lifeTraceLegacyPlanetHabitatStress.call(PLANET, community);
+  };
+}
+
+META.advance = function lifeTraceAdvanceMetacommunity(community) {
+  LIFE_TRACE.ensureCommunity(community);
+  const result = lifeTraceLegacyMetaAdvance(community) || { proposals: [] };
+  LIFE_TRACE.finalizeGeneration(community);
+  return result;
+};
+
+buildWorld = function lifeTraceBuildWorld(seed = 'garden') {
+  lifeTraceLegacyBuildWorld(seed);
+  lifeTraceEnsureState();
+  saveState();
+};
+
+migrateLivingState = function lifeTraceMigrateLivingState() {
+  lifeTraceLegacyMigrateLivingState();
+  lifeTraceEnsureState();
+};
+
+function lifeTraceSpeciesName(id) {
+  return state.species.find((entry) => Number(entry.id) === Number(id))?.common || `Вид ${id}`;
+}
+
+function lifeTraceBiomeName(biome) {
+  return ({
+    reef: 'рифовая мозаика', burn: 'пожарище', wetland: 'созданное болото', forest: 'сомкнутый полог',
+    grassland: 'открытый луг', scrub: 'кустарниковая мозаика', 'turbid-water': 'мутная вода', ocean: 'океан',
+    shallows: 'мелководье', highland: 'высокогорье', snow: 'снежный пояс', desert: 'сухая область'
+  })[biome] || biome || 'экологическая мозаика';
+}
+
+function lifeTracePercent(value) {
+  return Math.round(LIFE_TRACE.clamp(value) * 100);
+}
+
+function lifeTraceCellPath(context, cell) {
+  if (!cell.polygon?.length) return false;
+  context.beginPath();
+  cell.polygon.forEach(([x, y], index) => {
+    const px = x * cssWidth;
+    const py = y * cssHeight;
+    if (!index) context.moveTo(px, py); else context.lineTo(px, py);
+  });
+  context.closePath();
+  return true;
+}
+
+function lifeTraceBaseColor(cell) {
+  const colors = typeof LIVING !== 'undefined' ? LIVING.habitatColors : {};
+  return colors[cell.baseBiome] || (cell.water ? '#94aaa2' : '#b8b18e');
+}
+
+function lifeTraceDrawCell(context, cell, selected = false) {
+  if (!lifeTraceCellPath(context, cell)) return;
+  context.fillStyle = lifeTraceBaseColor(cell);
+  context.globalAlpha = .88;
+  context.fill();
+  context.globalAlpha = .2 + cell.dominantStrength * .48;
+  context.fillStyle = LIFE_TRACE_COLORS[cell.dominant] || '#657363';
+  context.fill();
+  context.globalAlpha = 1;
+  context.strokeStyle = selected ? '#202d25' : 'rgba(34,48,39,.22)';
+  context.lineWidth = selected ? 2.2 : .75;
+  context.stroke();
+}
+
+function lifeTraceDrawNetwork(trace) {
+  const byId = new Map(trace.cells.map((cell) => [cell.id, cell]));
+  ctx.save();
+  ctx.lineWidth = .75;
+  for (const cell of trace.cells) {
+    if (cell.dominantStrength < .48) continue;
+    for (const neighborId of cell.neighbors) {
+      if (cell.id >= neighborId) continue;
+      const neighbor = byId.get(neighborId);
+      if (!neighbor || neighbor.dominant !== cell.dominant || neighbor.dominantStrength < .48) continue;
+      const strength = Math.min(cell.dominantStrength, neighbor.dominantStrength);
+      ctx.strokeStyle = `${LIFE_TRACE_COLORS[cell.dominant] || '#5b6e5f'}${Math.round((.08 + strength * .22) * 255).toString(16).padStart(2, '0')}`;
+      ctx.beginPath();
+      ctx.moveTo(cell.x * cssWidth, cell.y * cssHeight);
+      ctx.lineTo(neighbor.x * cssWidth, neighbor.y * cssHeight);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawLifeTrace() {
+  const trace = lifeTraceEnsureState();
+  ctx.fillStyle = '#e6dfcb';
+  ctx.fillRect(0, 0, cssWidth, cssHeight);
+  if (!trace) return;
+  renderHits = [];
+  for (const cell of trace.cells) lifeTraceDrawCell(ctx, cell, cell.id === lifeTraceSelectedCellId);
+  lifeTraceDrawNetwork(trace);
+  ctx.save();
+  for (const cell of trace.cells) {
+    if (cell.dominantStrength < .43) continue;
+    const radius = 3.2 + cell.dominantStrength * 4;
+    ctx.fillStyle = 'rgba(245,240,222,.82)';
+    ctx.strokeStyle = LIFE_TRACE_COLORS[cell.dominant] || '#58695c';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cell.x * cssWidth, cell.y * cssHeight, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2d3b31';
+    ctx.font = `700 ${Math.max(8, radius + 2)}px system-ui`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(LIFE_TRACE_GLYPHS[cell.dominant] || '·', cell.x * cssWidth, cell.y * cssHeight + .5);
+    renderHits.push({ type: 'trace-cell', id: cell.id, x: cell.x * cssWidth, y: cell.y * cssHeight, radius: Math.max(15, radius * 2.5) });
+  }
+  ctx.restore();
+  const metrics = trace.metrics;
+  ctx.fillStyle = 'rgba(239,233,213,.88)';
+  ctx.fillRect(10, 10, Math.min(270, cssWidth - 20), 48);
+  ctx.strokeStyle = 'rgba(36,50,40,.18)'; ctx.strokeRect(10, 10, Math.min(270, cssWidth - 20), 48);
+  ctx.fillStyle = '#27372d'; ctx.font = '800 11px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('СЛЕД ЖИЗНИ', 20, 28);
+  ctx.font = '10px system-ui'; ctx.fillStyle = '#667168';

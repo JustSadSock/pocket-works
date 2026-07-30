@@ -1,0 +1,145 @@
+  ctx.fillText(`${metrics.engineeredCells}/${trace.cells.length} ячеек изменены · болота ${metrics.wetlands} · рифы ${metrics.reefs}`, 20, 46);
+  ctx.fillStyle = 'rgba(39,55,45,.64)'; ctx.font = '9px system-ui'; ctx.textAlign = 'right';
+  ctx.fillText('коснись ячейки для причинной цепочки', cssWidth - 12, cssHeight - 12);
+}
+
+function lifeTraceDrawWorldMarks() {
+  if (state.fossilIndex !== null || state.view !== 'world') return;
+  const trace = lifeTraceEnsureState();
+  if (!trace) return;
+  const strongest = [...trace.cells].filter((cell) => cell.dominantStrength >= .58).sort((a, b) => b.dominantStrength - a.dominantStrength).slice(0, 18);
+  ctx.save();
+  ctx.globalAlpha = .32;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const cell of strongest) {
+    const x = cell.x * cssWidth, y = cell.y * cssHeight;
+    ctx.strokeStyle = LIFE_TRACE_COLORS[cell.dominant] || '#5d6f60';
+    ctx.fillStyle = LIFE_TRACE_COLORS[cell.dominant] || '#5d6f60';
+    ctx.lineWidth = .8;
+    if (cell.dominant === 'trails' || cell.dominant === 'channels') {
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x - 8, y + 4); ctx.quadraticCurveTo(x, y - 7, x + 9, y + 2); ctx.stroke(); ctx.setLineDash([]);
+    } else if (cell.dominant === 'fire') {
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y + 4); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x - 4, y + 4); ctx.stroke();
+    } else {
+      ctx.font = '700 11px system-ui'; ctx.fillText(LIFE_TRACE_GLYPHS[cell.dominant] || '·', x, y);
+    }
+  }
+  ctx.restore();
+}
+
+drawWorld = function lifeTraceDrawWorld() {
+  lifeTraceLegacyDrawWorld();
+  lifeTraceDrawWorldMarks();
+};
+
+render = function lifeTraceRender() {
+  if (!state || state.view !== 'trace') return lifeTraceLegacyRender();
+  resizeCanvas();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawLifeTrace();
+};
+
+function lifeTraceEffectRows(report) {
+  return Object.entries(report.state).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([key, value]) => `<div class="life-trace-meter"><span><b>${safeText(LIFE_TRACE.EFFECT_LABELS[key] || key)}</b><small>${safeText(key === report.dominant ? 'главный устойчивый след' : 'сопутствующее изменение')}</small></span><output>${lifeTracePercent(value)}%</output><i style="--value:${lifeTracePercent(value)}%;--trace:${safeText(LIFE_TRACE_COLORS[key] || '#667668')}"></i></div>`).join('');
+}
+
+function lifeTraceHierarchyHtml(node, depth = 0) {
+  if (!node) return '';
+  const children = (node.children || []).map((child) => lifeTraceHierarchyHtml(child, depth + 1)).join('');
+  const label = node.speciesId ? lifeTraceSpeciesName(node.speciesId) : node.label;
+  return `<li style="--depth:${depth}"><span><i></i><b>${safeText(label)}</b><output>${lifeTracePercent(node.value || 0)}%</output></span>${children ? `<ul>${children}</ul>` : ''}</li>`;
+}
+
+function lifeTraceOpenCell(cellId) {
+  const report = LIFE_TRACE.cellReport(state.metacommunity, cellId);
+  if (!report) return;
+  lifeTraceSelectedCellId = cellId;
+  const engineers = report.engineerSpeciesIds.map((id) => `<button type="button" data-field-species="${id}"><span><b>${safeText(lifeTraceSpeciesName(id))}</b><small>вклад в изменение этой ячейки</small></span><output>${lifeTracePercent(report.engineerScores[id] || report.engineerScores[String(id)] || 0)}%</output></button>`).join('');
+  const history = report.history.slice().reverse().map((entry) => `<div><b>G${entry.g}</b><span>${safeText(LIFE_TRACE.EFFECT_LABELS[entry.effect] || entry.effect)} · ${safeText(lifeTraceBiomeName(entry.biome))}</span><output>${lifeTracePercent(entry.strength)}%</output></div>`).join('');
+  openSheet('СЛЕД ЖИЗНИ', `Ячейка ${report.id.slice(1)}`, `<div class="trace-cell-hero"><div><small>УЧАСТОК ${safeText(report.patchId)} · ${report.water ? 'ВОДА' : 'СУША'}</small><b>${safeText(report.dominantLabel)}</b><p>${safeText(lifeTraceBiomeName(report.biome))}</p></div><output>${lifeTracePercent(report.dominantStrength)}%</output></div><section class="field-section"><header><b>ЧТО ИЗМЕНИЛОСЬ</b><span>накопленный след, а не разовое действие</span></header><div class="life-trace-meters">${lifeTraceEffectRows(report)}</div></section><section class="field-section"><header><b>ПРИЧИННАЯ ЦЕПОЧКА</b><span>иерархия влияний и инженеров</span></header><ul class="trace-hierarchy">${lifeTraceHierarchyHtml(report.hierarchy)}</ul></section><section class="field-section"><header><b>ИНЖЕНЕРЫ ЭКОСИСТЕМЫ</b><span>${report.engineerSpeciesIds.length} активных линий</span></header><div class="trace-engineers">${engineers || '<div class="empty-mini">След пока поддерживается самой средой.</div>'}</div></section><section class="field-section"><header><b>ИСТОРИЯ ЯЧЕЙКИ</b><span>последние устойчивые состояния</span></header><div class="trace-history">${history || '<div class="empty-mini">История ещё не накоплена.</div>'}</div></section>`);
+}
+
+handleCanvasTap = function lifeTraceHandleCanvasTap(event) {
+  if (state?.view !== 'trace') return lifeTraceLegacyHandleCanvasTap(event);
+  const point = pointFromEvent(event);
+  const hit = nearestHit(point.px, point.py);
+  if (!hit?.id) return;
+  lifeTraceOpenCell(hit.id);
+  pulse(7);
+};
+
+function lifeTraceOverviewHtml() {
+  const trace = lifeTraceEnsureState();
+  const events = trace.events.slice(-12).reverse();
+  const strongest = [...trace.cells].sort((a, b) => b.dominantStrength - a.dominantStrength).slice(0, 8);
+  return `<div class="journal-summary trace-summary"><div><small>ИЗМЕНЕНО ЯЧЕЕК</small><b>${trace.metrics.engineeredCells}/${trace.cells.length}</b></div><div><small>СОЗДАННЫЕ БОЛОТА</small><b>${trace.metrics.wetlands}</b></div><div><small>РИФОВЫЕ ЯЧЕЙКИ</small><b>${trace.metrics.reefs}</b></div><div><small>ПЕРЕХОДЫ РЕЖИМА</small><b>${trace.metrics.transitions}</b></div></div><section class="field-section"><header><b>САМЫЕ СИЛЬНЫЕ СЛЕДЫ</b><span>динамическая карта состоит из ${trace.cells.length} ячеек</span></header><div class="trace-cell-list">${strongest.map((cell) => `<button type="button" data-trace-cell="${cell.id}"><i style="background:${safeText(LIFE_TRACE_COLORS[cell.dominant] || '#657363')}"></i><span><b>${safeText(LIFE_TRACE.EFFECT_LABELS[cell.dominant] || cell.dominant)}</b><small>${safeText(lifeTraceBiomeName(cell.biome))} · участок ${safeText(cell.patchId)}</small></span><output>${lifeTracePercent(cell.dominantStrength)}%</output></button>`).join('')}</div></section><section class="field-section"><header><b>ХРОНИКА ПЕРЕСТРОЙКИ</b><span>устойчивые переходы ячеек</span></header><div class="journal-events">${events.map((event) => `<div><b>G${event.generation}</b><span>${safeText(event.text)}${event.speciesIds?.length ? `<small>${event.speciesIds.map(lifeTraceSpeciesName).map(safeText).join(' · ')}</small>` : ''}</span></div>`).join('') || '<div class="empty-mini">Биосфера ещё не оставила устойчивых новых структур.</div>'}</div></section>`;
+}
+
+if (typeof fieldOpenJournal === 'function') {
+  const lifeTraceLegacyFieldOpenJournal = fieldOpenJournal;
+  fieldOpenJournal = function lifeTraceOpenJournal(panel = 'overview') {
+    if (panel === 'trace') {
+      openSheet('ПОЛЕВОЙ ЖУРНАЛ', 'Биосфера перестраивает планету', `<nav class="journal-tabs"><button type="button" data-field-panel="overview">ОБЗОР</button><button type="button" data-field-panel="food">ПИЩЕВАЯ СЕТЬ</button><button type="button" data-field-panel="genetics">ГЕНЕТИКА</button><button type="button" data-field-panel="trace" aria-pressed="true">СЛЕД ЖИЗНИ</button><button type="button" data-field-panel="replay">ЭКСПЕРИМЕНТ</button></nav>${lifeTraceOverviewHtml()}`);
+      return;
+    }
+    lifeTraceLegacyFieldOpenJournal(panel);
+    const tabs = sheetBody.querySelector('.journal-tabs');
+    if (tabs && !tabs.querySelector('[data-field-panel="trace"]')) {
+      const replay = tabs.querySelector('[data-field-panel="replay"]');
+      (replay || tabs.lastElementChild)?.insertAdjacentHTML(replay ? 'beforebegin' : 'afterend', '<button type="button" data-field-panel="trace">СЛЕД ЖИЗНИ</button>');
+    }
+  };
+}
+
+if (typeof openSpeciesSheet === 'function') {
+  const lifeTraceLegacyOpenSpeciesSheet = openSpeciesSheet;
+  openSpeciesSheet = function lifeTraceOpenSpeciesSheet(species) {
+    lifeTraceLegacyOpenSpeciesSheet(species);
+    if (!species || !state?.metacommunity || sheetBody.querySelector('.species-life-trace')) return;
+    const impact = LIFE_TRACE.speciesImpact(state.metacommunity, species.id);
+    const effects = impact.effects.map((entry) => `<div class="trace-impact-row"><i style="background:${safeText(LIFE_TRACE_COLORS[entry.effect] || '#657363')}"></i><span><b>${safeText(entry.label)}</b><small>накопленный вклад в ячейки</small></span><output>${lifeTracePercent(entry.score)}</output></div>`).join('');
+    const html = `<section class="field-section species-life-trace"><header><b>ИНЖЕНЕРНЫЙ СЛЕД</b><span>${impact.engineeredCells} устойчиво изменённых ячеек</span></header><div class="trace-impact-grid"><div><small>ЗАТРОНУТО ЯЧЕЕК</small><b>${impact.cells}</b></div><div><small>УСТОЙЧИВЫЙ СЛЕД</small><b>${impact.engineeredCells}</b></div></div><div class="trace-impact-list">${effects || '<div class="empty-mini">Линия пока почти не меняет среду.</div>'}</div></section>`;
+    const actions = sheetBody.querySelector('.journal-actions.compact');
+    if (actions) actions.insertAdjacentHTML('beforebegin', html); else sheetBody.insertAdjacentHTML('beforeend', html);
+  };
+}
+
+if (typeof fieldBuildSpeciesDiagnostic === 'function') {
+  const lifeTraceLegacySpeciesDiagnostic = fieldBuildSpeciesDiagnostic;
+  fieldBuildSpeciesDiagnostic = function lifeTraceSpeciesDiagnostic(speciesId) {
+    const payload = lifeTraceLegacySpeciesDiagnostic(speciesId);
+    payload.lifeTrace = LIFE_TRACE.speciesImpact(state.metacommunity, speciesId);
+    return payload;
+  };
+}
+
+if (typeof buildCompactDiagnostic === 'function') {
+  const lifeTraceLegacyBuildCompactDiagnostic = buildCompactDiagnostic;
+  buildCompactDiagnostic = function lifeTraceCompactDiagnostic() {
+    const payload = lifeTraceLegacyBuildCompactDiagnostic();
+    payload.version = LIFE_TRACE_APP_VERSION;
+    payload.lifeTrace = LIFE_TRACE.compactDiagnostic(state.metacommunity);
+    return payload;
+  };
+}
+
+sheetBody.addEventListener('click', (event) => {
+  const cellButton = event.target.closest('[data-trace-cell]');
+  if (!cellButton) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  lifeTraceOpenCell(cellButton.dataset.traceCell);
+}, true);
+
+function lifeTraceInstallInterface() {
+  lifeTraceEnsureState();
+  if (!viewTabs.querySelector('[data-view="trace"]')) {
+    const journal = viewTabs.querySelector('[data-field-journal]');
+    const button = '<button type="button" data-view="trace" aria-pressed="false">СЛЕД</button>';
+    if (journal) journal.insertAdjacentHTML('beforebegin', button); else viewTabs.insertAdjacentHTML('beforeend', button);
+  }
+}
+
+lifeTraceInstallInterface();
+saveState();

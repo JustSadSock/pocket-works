@@ -1,0 +1,158 @@
+    } else if (deme.guild === 'predator') {
+      effect.canopy += base * .28; effect.openness -= base * .18; effect.trails -= base * .1; effect.nutrients += base * .08;
+    }
+    effect.fire += Math.max(0, effect.openness) * (1 - clamp(deme.traits?.moisture || .4)) * .16 + fertility * .015;
+    return effect;
+  }
+
+  function cellAffinity(cell, deme, phase) {
+    const seed = hash((Number(deme.id) || 1) * 92821 ^ hashString(cell.id) ^ phase * 811);
+    const noise = seed / 4294967296;
+    return .62 + noise * .38;
+  }
+
+  function diffuse(trace, key, amount = .09) {
+    const values = new Map(trace.cells.map((cell) => [cell.id, cell.state[key] || 0]));
+    for (const cell of trace.cells) {
+      if (!cell.neighbors.length) continue;
+      const mean = cell.neighbors.reduce((sum, id) => sum + (values.get(id) || 0), 0) / cell.neighbors.length;
+      cell.state[key] = clamp(lerp(values.get(cell.id) || 0, mean, amount));
+    }
+  }
+
+  function classifyCell(cell) {
+    const state = cell.state;
+    if (cell.water && state.reef > .55) return 'reef';
+    if (state.fire > .52) return 'burn';
+    if ((!cell.water && state.wetland > .58) || (cell.water && state.channels > .62)) return 'wetland';
+    if (!cell.water && state.canopy > .62) return 'forest';
+    if (!cell.water && state.openness > .6) return state.soil > .5 ? 'grassland' : 'scrub';
+    if (cell.water && state.turbidity > .62) return 'turbid-water';
+    return cell.baseBiome || (cell.water ? 'ocean' : 'grassland');
+  }
+
+  function restorePatchBaselines(community, trace) {
+    for (const patch of community.patches || []) {
+      const baseline = trace.pendingBaselines[String(patch.id)];
+      if (!baseline) continue;
+      patch.moisture = baseline.moisture;
+      patch.elevation = baseline.elevation;
+      patch.temperature = baseline.temperature;
+      patch.lifeTraceMobility = baseline.lifeTraceMobility;
+      patch.lifeTraceSummary = baseline.lifeTraceSummary;
+    }
+    trace.pendingBaselines = {};
+  }
+
+  function prepareGeneration(community) {
+    const trace = ensureCommunity(community);
+    trace.pendingBaselines = {};
+    for (const patch of community.patches || []) {
+      const key = String(patch.id);
+      trace.pendingBaselines[key] = {
+        moisture: patch.moisture,
+        elevation: patch.elevation,
+        temperature: patch.temperature,
+        lifeTraceMobility: patch.lifeTraceMobility,
+        lifeTraceSummary: patch.lifeTraceSummary
+      };
+      const effect = trace.patchEffects[key];
+      if (!effect) continue;
+      patch.moisture = clamp((patch.moisture || 0) + effect.moistureDelta, 0, 1);
+      patch.elevation = clamp((patch.elevation || 0) + effect.elevationDelta, 0, 1);
+      patch.lifeTraceMobility = effect.mobility;
+      patch.lifeTraceSummary = effect.summary;
+      const resource = community.resources?.[patch.id];
+      if (resource) {
+        resource.vegetation = Math.max(0, (resource.vegetation || 0) * effect.vegetationMultiplier + effect.detritusAdd * .12);
+        resource.plankton = Math.max(0, (resource.plankton || 0) * effect.planktonMultiplier);
+        resource.detritus = Math.max(0, (resource.detritus || 0) + effect.detritusAdd);
+      }
+    }
+    return trace;
+  }
+
+  function updateCells(community, trace) {
+    const demesByPatch = new Map();
+    for (const deme of community.demes || []) {
+      if (deme.abundance <= .05) continue;
+      const key = String(deme.patchId);
+      if (!demesByPatch.has(key)) demesByPatch.set(key, []);
+      demesByPatch.get(key).push(deme);
+    }
+    const phase = Math.floor((community.generation || 0) / 5);
+    for (const cell of trace.cells) {
+      const patch = (community.patches || []).find((entry) => String(entry.id) === String(cell.patchId));
+      if (patch) { cell.water = Boolean(patch.water); cell.baseBiome = patch.biome || cell.baseBiome; }
+      const base = baseStateForPatch(patch);
+      const oldDominant = cell.dominant;
+      const oldBiome = cell.biome || cell.baseBiome;
+      const totals = Object.fromEntries(EFFECT_KEYS.map((key) => [key, 0]));
+      const engineerScores = {};
+      const engineerEffects = {};
+      for (const deme of demesByPatch.get(String(cell.patchId)) || []) {
+        const affinity = cellAffinity(cell, deme, phase);
+        const effect = effectForDeme(deme);
+        const speciesKey = String(deme.speciesId);
+        const effectBucket = engineerEffects[speciesKey] ||= Object.fromEntries(EFFECT_KEYS.map((key) => [key, 0]));
+        let score = 0;
+        for (const key of EFFECT_KEYS) {
+          const contribution = (effect[key] || 0) * affinity;
+          totals[key] += contribution;
+          effectBucket[key] += contribution;
+          score += Math.abs(contribution);
+        }
+        engineerScores[speciesKey] = (engineerScores[speciesKey] || 0) + score;
+      }
+      const moisture = clamp(patch?.moisture || .4);
+      const dryness = 1 - moisture;
+      const decay = { canopy: .992, openness: .986, soil: .994, wetland: .982, reef: .996, turbidity: .965, fire: .72, organic: .988, channels: .994, nutrients: .965, trails: .982 };
+      for (const key of EFFECT_KEYS) {
+        const target = base[key] + totals[key] * .085;
+        cell.state[key] = clamp((cell.state[key] ?? base[key]) * decay[key] + target * (1 - decay[key]));
+      }
+      cell.state.fire = clamp(cell.state.fire + Math.max(0, cell.state.openness - .54) * dryness * .018 - cell.state.wetland * .02);
+      if (cell.state.fire > .48) {
+        cell.state.canopy = clamp(cell.state.canopy - cell.state.fire * .075);
+        cell.state.organic = clamp(cell.state.organic + cell.state.fire * .035);
+        cell.state.nutrients = clamp(cell.state.nutrients + cell.state.fire * .045);
+      }
+      cell.state.wetland = clamp(cell.state.wetland + cell.state.channels * moisture * .012 - dryness * .005);
+      if (cell.water) {
+        cell.state.reef = clamp(cell.state.reef + Math.max(0, .55 - cell.state.turbidity) * .006);
+        cell.state.turbidity = clamp(cell.state.turbidity + cell.state.organic * .003 - cell.state.reef * .006);
+      } else cell.state.reef = 0;
+      const leadingEngineers = Object.entries(engineerScores).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      cell.engineerScores = Object.fromEntries(leadingEngineers.map(([id, score]) => [id, round(score)]));
+      cell.engineerEffects = Object.fromEntries(leadingEngineers.map(([id]) => [id, Object.fromEntries(EFFECT_KEYS.map((key) => [key, round(engineerEffects[id]?.[key] || 0)]))]));
+      cell.engineerSpeciesIds = leadingEngineers.map(([id]) => Number(id));
+      cell.dominant = dominantEffect(cell.state);
+      const deviation = Math.max(...EFFECT_KEYS.map((key) => Math.abs((cell.state[key] || 0) - (base[key] || 0))));
+      const engineerMass = Object.values(engineerScores).reduce((sum, value) => sum + value, 0);
+      const constructionTarget = clamp(deviation * 2.25 + Math.log1p(engineerMass) * .12 - .08);
+      cell.constructionStrength = clamp(lerp(cell.constructionStrength || 0, constructionTarget, .16));
+      cell.dominantStrength = round(cell.constructionStrength);
+      cell.biome = classifyCell(cell);
+      if ((cell.dominant !== oldDominant || cell.biome !== oldBiome) && cell.constructionStrength >= .42) {
+        trace.metrics.transitions += 1;
+        trace.events.push({
+          generation: community.generation,
+          type: 'life-trace',
+          cellId: cell.id,
+          patchId: cell.patchId,
+          effect: cell.dominant,
+          strength: round(cell.constructionStrength),
+          speciesIds: cell.engineerSpeciesIds.slice(0, 3),
+          text: `${EFFECT_LABELS[cell.dominant] || cell.dominant}: новый устойчивый след`
+        });
+      }
+      if ((community.generation || 0) % 5 === 0 || !cell.history.length) {
+        cell.history.push({ g: community.generation || 0, effect: cell.dominant, strength: round(cell.constructionStrength), biome: cell.biome });
+        cell.history = cell.history.slice(-MAX_CELL_HISTORY);
+      }
+    }
+    for (const key of ['wetland', 'reef', 'organic', 'channels', 'trails']) diffuse(trace, key, key === 'wetland' ? .06 : .08);
+  }
+
+  function aggregatePatchEffects(community, trace) {
+    const effects = {};

@@ -1,0 +1,156 @@
+    for (const patch of community.patches || []) {
+      const cells = trace.cells.filter((cell) => String(cell.patchId) === String(patch.id));
+      if (!cells.length) continue;
+      const mean = (key) => cells.reduce((sum, cell) => sum + (cell.state[key] || 0), 0) / cells.length;
+      const canopy = mean('canopy');
+      const openness = mean('openness');
+      const soil = mean('soil');
+      const wetland = mean('wetland');
+      const reef = mean('reef');
+      const turbidity = mean('turbidity');
+      const fire = mean('fire');
+      const organic = mean('organic');
+      const channels = mean('channels');
+      const nutrients = mean('nutrients');
+      const trails = mean('trails');
+      const dominantCounts = {};
+      for (const cell of cells) dominantCounts[cell.dominant] = (dominantCounts[cell.dominant] || 0) + 1;
+      const summary = Object.entries(dominantCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'soil';
+      effects[String(patch.id)] = {
+        moistureDelta: round((wetland * .07 + soil * .025 + channels * .025 - fire * .08) - .035, 4),
+        elevationDelta: round((reef * .012 + organic * .006 - channels * .006) * (patch.water ? 1 : .4), 4),
+        vegetationMultiplier: round(clamp(.88 + canopy * .16 + nutrients * .13 + soil * .06 - fire * .2 - turbidity * .04, .7, 1.22), 4),
+        planktonMultiplier: round(clamp(.9 + reef * .14 + nutrients * .08 - turbidity * .16, .7, 1.18), 4),
+        detritusAdd: round(clamp(organic * 1.3 + nutrients * .55 + fire * .4, 0, 2.4), 4),
+        mobility: {
+          land: round(clamp(1 + trails * .18 + openness * .07 - wetland * .08 - fire * .05, .82, 1.24), 4),
+          water: round(clamp(1 + channels * .14 + reef * .08 - turbidity * .08, .84, 1.2), 4)
+        },
+        summary,
+        engineeredShare: round(cells.filter((cell) => cell.constructionStrength >= .38).length / cells.length)
+      };
+    }
+    trace.patchEffects = effects;
+  }
+
+  function updateMetrics(trace) {
+    trace.metrics.engineeredCells = trace.cells.filter((cell) => cell.constructionStrength >= .38).length;
+    trace.metrics.wetlands = trace.cells.filter((cell) => cell.biome === 'wetland' && cell.baseBiome !== 'wetland' && cell.constructionStrength >= .38).length;
+    trace.metrics.reefs = trace.cells.filter((cell) => cell.biome === 'reef' && cell.baseBiome !== 'reef' && cell.constructionStrength >= .38).length;
+    trace.metrics.burns = trace.cells.filter((cell) => cell.biome === 'burn' && cell.constructionStrength >= .38).length;
+    trace.metrics.openLand = trace.cells.filter((cell) => ['grassland', 'scrub'].includes(cell.biome) && !['grassland', 'scrub'].includes(cell.baseBiome) && cell.constructionStrength >= .38).length;
+    trace.metrics.forest = trace.cells.filter((cell) => cell.biome === 'forest' && cell.baseBiome !== 'forest' && cell.constructionStrength >= .38).length;
+  }
+
+  function finalizeGeneration(community) {
+    const trace = ensureCommunity(community);
+    restorePatchBaselines(community, trace);
+    updateCells(community, trace);
+    aggregatePatchEffects(community, trace);
+    updateMetrics(trace);
+    trace.generation = community.generation || trace.generation;
+    trace.events = trace.events.slice(-MAX_EVENTS);
+    return trace;
+  }
+
+  function mobilityMultiplier(patch, guild) {
+    const mobility = patch?.lifeTraceMobility;
+    if (!mobility) return 1;
+    return clamp((patch.water || guild === 'filterer' || guild === 'amphibian') ? mobility.water : mobility.land, .75, 1.3);
+  }
+
+  function effectHierarchy(cell) {
+    const root = { id: 'trace', label: 'СЛЕД ЖИЗНИ', value: cell.dominantStrength, children: [] };
+    const active = EFFECT_KEYS.map((key) => ({ key, value: cell.state[key] || 0 })).filter((entry) => entry.value >= .32).sort((a, b) => b.value - a.value).slice(0, 6);
+    for (const entry of active) {
+      const engineers = Object.entries(cell.engineerEffects || {})
+        .map(([speciesId, effects]) => ({ speciesId: Number(speciesId), value: Math.max(0, Number(effects?.[entry.key]) || 0) }))
+        .filter((engineer) => engineer.value > .001)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 4)
+        .map((engineer) => ({ id: `species-${engineer.speciesId}`, speciesId: engineer.speciesId, label: `ВИД ${engineer.speciesId}`, value: round(engineer.value) }));
+      root.children.push({
+        id: entry.key,
+        label: EFFECT_LABELS[entry.key] || entry.key,
+        value: round(entry.value),
+        children: engineers
+      });
+    }
+    return root;
+  }
+
+  function cellReport(community, cellId) {
+    const trace = ensureCommunity(community);
+    const cell = trace.cells.find((entry) => entry.id === cellId);
+    if (!cell) return null;
+    return {
+      id: cell.id,
+      patchId: cell.patchId,
+      x: cell.x,
+      y: cell.y,
+      water: cell.water,
+      biome: cell.biome,
+      dominant: cell.dominant,
+      dominantLabel: EFFECT_LABELS[cell.dominant] || cell.dominant,
+      dominantStrength: round(cell.constructionStrength),
+      state: Object.fromEntries(EFFECT_KEYS.map((key) => [key, round(cell.state[key] || 0)])),
+      engineerSpeciesIds: [...cell.engineerSpeciesIds],
+      engineerScores: { ...cell.engineerScores },
+      engineerEffects: Object.fromEntries(Object.entries(cell.engineerEffects || {}).map(([id, effects]) => [id, { ...effects }])),
+      hierarchy: effectHierarchy(cell),
+      history: cell.history.slice(-16)
+    };
+  }
+
+  function speciesImpact(community, speciesId) {
+    const trace = ensureCommunity(community);
+    const id = Number(speciesId);
+    const cells = trace.cells.filter((cell) => cell.engineerSpeciesIds.includes(id));
+    const effects = {};
+    for (const cell of cells) {
+      const contributions = cell.engineerEffects?.[id] || cell.engineerEffects?.[String(id)] || {};
+      for (const [effect, value] of Object.entries(contributions)) {
+        const positive = Math.max(0, Number(value) || 0);
+        if (positive > 0) effects[effect] = (effects[effect] || 0) + positive * (.45 + cell.constructionStrength * .55);
+      }
+    }
+    return {
+      speciesId: id,
+      cells: cells.length,
+      engineeredCells: cells.filter((cell) => cell.constructionStrength >= .38).length,
+      effects: Object.entries(effects).sort((a, b) => b[1] - a[1]).map(([effect, score]) => ({ effect, label: EFFECT_LABELS[effect] || effect, score: round(score) })).slice(0, 6),
+      strongestCells: cells.sort((a, b) => (b.engineerScores[id] || b.engineerScores[String(id)] || 0) - (a.engineerScores[id] || a.engineerScores[String(id)] || 0)).slice(0, 6).map((cell) => ({ id: cell.id, patchId: cell.patchId, effect: cell.dominant, strength: cell.dominantStrength }))
+    };
+  }
+
+  function compactDiagnostic(community) {
+    const trace = ensureCommunity(community);
+    return {
+      schema: 'clada-life-trace-v1',
+      version: VERSION,
+      generation: trace.generation,
+      metrics: { ...trace.metrics },
+      patchEffects: { ...trace.patchEffects },
+      cells: trace.cells.map((cell) => ({ id: cell.id, x: cell.x, y: cell.y, patchId: cell.patchId, neighbors: cell.neighbors, biome: cell.biome, dominant: cell.dominant, strength: round(cell.constructionStrength), engineerSpeciesIds: cell.engineerSpeciesIds, state: Object.fromEntries(EFECT_KEYS.map((key) => [key, round(cell.state[key] || 0)])) }),
+      events: trace.events.slice(-160)
+    };
+  }
+
+  return {
+    VERSION,
+    CELL_COUNT,
+    EFFECT_KEYS,
+    EFFECT_LABELS,
+    clamp,
+    round,
+    relaxPoints,
+    delaunay,
+    ensureCommunity,
+    prepareGeneration,
+    finalizeGeneration,
+    mobilityMultiplier,
+    cellReport,
+    speciesImpact,
+    compactDiagnostic
+  };
+})();
