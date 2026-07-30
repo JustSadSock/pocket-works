@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#1c2928">
+  <meta name="description" content="FORMA превращает FormaCode от нейросети в готовые к 3D-печати модели STL, 3MF, OBJ и GLB.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>FORMA</title>
+</head>
+<body>
+  <div id="app" class="app-shell" data-panel="model">
+    <header class="topbar">
+      <button class="brand" id="homeButton" aria-label="FORMA">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><b>FORMA</b><small>AI → PRINT</small></span>
+      </button>
+      <div class="project-title-wrap">
+        <input id="projectName" class="project-title" value="Без названия" maxlength="120" aria-label="Название проекта">
+        <span id="saveState" class="save-state">сохранено</span>
+      </div>
+      <div class="top-actions">
+        <button class="tool-button" id="undoButton" title="Отменить" aria-label="Отменить" disabled>↶</button>
+        <button class="tool-button" id="redoButton" title="Вернуть" aria-label="Вернуть" disabled>↷</button>
+        <button class="primary compact" id="buildButton"><span class="build-dot"></span>Собрать</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="rail left-rail" aria-label="Детали модели">
+        <div class="rail-heading">
+          <div><small>СБОРКА</small><strong>Детали</strong></div>
+          <button class="icon-button" id="addPartButton" title="Добавить пустую деталь">＋</button>
+        </div>
+        <div id="partList" class="part-list"></div>
+        <div class="rail-footer">
+          <button class="rail-action" id="importButton"><span>↥</span><b>Импорт</b><small>.json / .forma</small></button>
+          <button class="rail-action" id="aiKitButton"><span>⌁</span><b>Промт для AI</b><small>копия + памятка</small></button>
+        </div>
+      </aside>
+
+      <section class="stage" aria-label="Трёхмерная сцена">
+        <canvas id="viewport"></canvas>
+        <div class="stage-grid-labels"><span>X</span><span>Y</span><span>Z</span></div>
+        <div class="view-toolbar">
+          <button data-view="iso" class="active">3D</button>
+          <button data-view="front">Спереди</button>
+          <button data-view="top">Сверху</button>
+          <button id="fitButton">Вписать</button>
+        </div>
+        <div class="display-toolbar">
+          <button id="wireButton" title="Каркас">⌗</button>
+          <button id="rotateButton" title="Автовращение">◌</button>
+          <button id="snapshotButton" title="Снимок PNG">▣</button>
+        </div>
+        <div id="buildOverlay" class="build-overlay hidden" role="status">
+          <div class="progress-orbit"><i></i><i></i><i></i></div>
+          <strong id="buildStatus">Строим сетку</strong>
+          <span id="buildDetail">Подготовка…</span>
+          <div class="progress-track"><i id="buildProgress"></i></div>
+        </div>
+        <div id="emptyStage" class="empty-stage hidden">
+          <div class="empty-glyph">◇</div>
+          <strong>Здесь появится модель</strong>
+          <span>Импортируйте FormaCode или откройте пример.</span>
+          <button id="exampleButton" class="primary">Открыть пример</button>
+        </div>
+        <div class="stage-readout" id="stageReadout">
+          <span><b id="trianglesReadout">0</b> треуг.</span>
+          <span><b id="dimensionsReadout">0 × 0 × 0</b> мм</span>
+          <span id="qualityReadout" class="status-good">готово</span>
+        </div>
+      </section>
+
+      <aside class="rail right-rail" aria-label="Инструменты печати">
+        <div class="panel-tabs">
+          <button data-inspector="print" class="active">Печать</button>
+          <button data-inspector="edit">Правка</button>
+          <button data-inspector="code">Код</button>
+        </div>
+
+        <div class="inspector active" data-inspector-panel="print">
+          <section class="inspector-section hero-metric">
+            <div class="metric-ring" id="printScoreRing"><b id="printScore">—</b><small>PRINT</small></div>
+            <div><small>ГОТОВНОСТЬ</small><strong id="printVerdict">Соберите модель</strong><p id="printHint">FORMA проверит оболочку, объём и платформу.</p></div>
+          </section>
+          <section class="inspector-section stat-grid">
+            <div><small>РАЗМЕР</small><b id="statSize">—</b></div>
+            <div><small>ОБЪЁМ</small><b id="statVolume">—</b></div>
+            <div><small>PLA</small><b id="statWeight">—</b></div>
+            <div><small>СЕТКА</small><b id="statMesh">—</b></div>
+          </section>
+          <section class="inspector-section checklist" id="printChecklist"></section>
+          <section class="inspector-section detail-control">
+            <label><span><small>ДЕТАЛИЗАЦИЯ</small><b id="detailLabel">46</b></span><input id="detailRange" type="range" min="24" max="80" step="2" value="46"></label>
+            <p>Выше — гладче и тяжелее. Для финального STL обычно достаточно 52–64.</p>
+          </section>
+          <section class="inspector-section export-block">
+            <div class="section-title"><small>ЭКСПОРТ</small><span id="exportPartCount">0 деталей</span></div>
+            <div class="export-grid">
+              <button data-export="3mf"><b>3MF</b><small>цвета + детали</small></button>
+              <button data-export="stl"><b>STL</b><small>универсальная печать</small></button>
+              <button data-export="obj"><b>OBJ</b><small>с MTL-цветами</small></button>
+              <button data-export="glb"><b>GLB</b><small>просмотр и обмен</small></button>
+            </div>
+            <button class="secondary full" id="exportSelectedButton">STL выбранной детали</button>
+          </section>
+        </div>
+
+        <div class="inspector" data-inspector-panel="edit">
+          <section class="inspector-section selected-header">
+            <span class="selected-swatch" id="selectedSwatch"></span>
+            <div><small>ВЫБРАНО</small><strong id="selectedName">Нет детали</strong></div>
+          </section>
+          <section class="inspector-section action-stack">
+            <button id="plateButton"><span>⇩</span><div><b>Поставить на стол</b><small>опустить нижнюю точку до Z = 0</small></div></button>
+            <button id="centerButton"><span>⌖</span><div><b>Центрировать XY</b><small>перенести деталь в центр платформы</small></div></button>
+            <button id="duplicateButton"><span>⧉</span><div><b>Дублировать</b><small>создать отдельную копию</small></div></button>
+          </section>
+          <section class="inspector-section transform-grid">
+            <div class="section-title"><small>ПОВОРОТ 90°</small></div>
+            <button data-rotate-axis="x">X</button><button data-rotate-axis="y">Y</button><button data-rotate-axis="z">Z</button>
+          </section>
+          <section class="inspector-section scale-control">
+            <div class="section-title"><small>МАСШТАБ</small></div>
+            <div class="inline-form"><input id="scaleInput" type="number" value="100" min="1" max="1000" step="1"><span>%</span><button id="scaleButton">Применить</button></div>
+            <button class="secondary full" id="fitBedButton">Вписать в стол 220 × 220 × 250</button>
+          </section>
+          <section class="inspector-section cut-block">
+            <div class="section-title"><small>РАЗРЕЗ</small><span>две печатные детали</span></div>
+            <div class="segment" id="cutAxis"><button data-axis="x">X</button><button data-axis="y">Y</button><button data-axis="z" class="active">Z</button></div>
+            <label class="range-row"><span>Позиция <b id="cutPositionLabel">50%</b></span><input id="cutPosition" type="range" min="5" max="95" value="50"></label>
+            <label class="check-row"><input id="cutPins" type="checkbox"><span><b>Штифты совмещения</b><small>два цилиндрических направляющих</small></span></label>
+            <div id="pinOptions" class="pin-options disabled">
+              <label>Ø штифта<input id="pinDiameter" type="number" value="4" min="1" max="20" step="0.2"></label>
+              <label>Зазор<input id="pinClearance" type="number" value="0.25" min="0.05" max="1.5" step="0.05"></label>
+            </div>
+            <button class="danger-outline full" id="cutButton">Разрезать выбранную деталь</button>
+          </section>
+          <button class="danger-text" id="deletePartButton">Удалить выбранную деталь</button>
+        </div>
+
+        <div class="inspector code-inspector" data-inspector-panel="code">
+          <div class="code-toolbar">
+            <div><small>FORMACODE 1</small><b id="codeState">валидный код</b></div>
+            <button id="formatCodeButton">Форматировать</button>
+          </div>
+          <textarea id="codeEditor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+          <div id="codeError" class="code-error hidden"></div>
+          <div class="code-actions">
+            <button class="secondary" id="copyCodeButton">Копировать</button>
+            <button class="primary" id="applyCodeButton">Собрать из кода</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Разделы">
+      <button data-mobile-panel="model" class="active"><span>◇</span>Модель</button>
+      <button data-mobile-panel="parts"><span>▤</span>Детали</button>
+      <button data-mobile-panel="edit"><span>✂</span>Правка</button>
+      <button data-mobile-panel="code"><span>{ }</span>Код</button>
+      <button data-mobile-panel="print"><span>⇩</span>Экспорт</button>
+    </nav>
+  </div>
+
+  <input id="fileInput" type="file" accept=".json,.forma,.formacode,.txt,application/json,text/plain" hidden>
+
+  <dialog id="aiDialog" class="modal">
+    <form method="dialog" class="modal-card">
+      <header><div><small>КОМПЛЕКТ ДЛЯ НЕЙРОНКИ</small><strong>Пусть AI пишет модель правильно</strong></div><button value="cancel" aria-label="Закрыть">×</button></header>
+      <div class="ai-steps">
+        <article><i>1</i><div><b>Скопируйте мастер-промт</b><p>Он объясняет язык, размеры, зазоры и правила печати.</p></div><button type="button" id="copyPromptButton">Копировать</button></article>
+        <article><i>2</i><div><b>Добавьте описание модели</b><p>Назначение, размеры, отверстия, материал и ваш принтер.</p></div></article>
+        <article><i>3</i><div><b>Импортируйте ответ</b><p>Вставьте JSON в код или загрузите файл. Никакого копипаста в CAD.</p></div></article>
+      </div>
+      <div class="prompt-preview" id="promptPreview"></div>
+      <footer><button type="button" class="secondary" id="downloadGuideButton">Скачать FORMA-AI-GUIDE.md</button><button value="cancel" class="primary">Готово</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="examplesDialog" class="modal examples-modal">
+    <form method="dialog" class="modal-card">
+      <header><div><small>БЫСТРЫЙ СТАРТ</small><strong>Примеры FormaCode</strong></div><button value="cancel">×</button></header>
+      <div class="example-grid">
+        <button type="button" data-example="token"><span class="example-shape token"></span><b>Орбитальный жетон</b><small>3 цвета · отверстия · скругления</small></button>
+        <button type="button" data-example="knob"><span class="example-shape knob"></span><b>Ручка регулятора</b><small>насечки · посадочное отверстие</small></button>
+        <button type="button" data-example="bracket"><span class="example-shape bracket"></span><b>Кронштейн</b><small>функциональная деталь · рёбра</small></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
