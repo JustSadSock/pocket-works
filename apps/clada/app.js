@@ -6,7 +6,7 @@ import { createCladaStorageBridge } from './platform/storage.js';
 
 installMobileRuntime();
 
-for (const href of ['./field-journal.css', './living-planet.css', './observable-life.css', './genetics.css']) {
+for (const href of ['./field-journal.css', './living-planet.css', './observable-life.css', './genetics.css', './life-trace.css']) {
   if (document.querySelector(`link[href="${href}"]`)) continue;
   const style = document.createElement('link');
   style.rel = 'stylesheet';
@@ -34,7 +34,9 @@ const livingRuntimeGroups = [
   ['./runtime/v4/22-01.txt', './runtime/v4/22-02-1.txt', './runtime/v4/22-02-2.txt', './runtime/v4/22-02-3.txt', './runtime/v4/22-03-1.txt', './runtime/v4/22-03-2.txt', './runtime/v4/22-03-3.txt', './runtime/v4/22-04-1.txt', './runtime/v4/22-04-2.txt', './runtime/v4/22-04-3.txt', './runtime/v4/22-05-1.txt', './runtime/v4/22-05-2.txt', './runtime/v4/22-05-3.txt'],
   ['./runtime/v4/23-worker-storage.js'],
   ['./runtime/v5/24-01.txt', './runtime/v5/24-02.txt', './runtime/v5/24-03.txt', './runtime/v5/24-04.txt', './runtime/v5/24-05.txt'],
-  ['./runtime/v5/25-01.txt', './runtime/v5/25-02.txt']
+  ['./runtime/v5/25-01.txt', './runtime/v5/25-02.txt'],
+  ['./runtime/v5/26-01.txt', './runtime/v5/26-02.txt', './runtime/v5/26-03.txt', './runtime/v5/26-04.txt'],
+  ['./runtime/v5/27-01.txt', './runtime/v5/27-02.txt']
 ];
 
 const services = {
