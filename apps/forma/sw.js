@@ -1,5 +1,5 @@
-const CACHE='forma-v1.1.0';
-const ASSETS=['./','./index.html','./styles.css','./bootstrap.js','./app.js','./manifest.webmanifest','./icons/icon.svg','./FORMA-AI-GUIDE.md','./src/blueprint.js','./src/blueprint-runtime.js','./src/engine.js','./src/mesher.js','./src/renderer.js','./src/exporters.js','./src/spec.js','./src/worker.js'];
+const CACHE='forma-v2.0.0';
+const ASSETS=['./','./index.html','./styles.css','./bootstrap.js','./app.js','./manifest.webmanifest','./icons/icon.svg','./FORMA-AI-GUIDE.md','./src/cad-project.js','./src/scad.js','./src/contract.js','./src/contract-strict.js','./src/blueprint.js','./src/blueprint-runtime.js','./src/engine.js','./src/mesher.js','./src/renderer.js','./src/exporters.js','./src/spec.js','./src/worker.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('forma-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

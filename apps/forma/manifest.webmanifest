@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "FORMA — AI → 3D Print",
+  "name": "FORMA — AI CAD → 3D Print",
   "short_name": "FORMA",
-  "description": "Превращает FormaCode от нейросети в готовые к 3D-печати модели.",
+  "description": "Компилирует OpenSCAD-код, проверяет функциональный контракт и экспортирует модели для 3D-печати.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
