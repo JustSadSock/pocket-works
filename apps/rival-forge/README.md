@@ -1,19 +1,27 @@
-# RIVAL FORGE 1.1
+# RIVAL FORGE 1.2
 
 Mobile-first Marvel Rivals planning tool integrated into Pocket Works.
 
-## Planning modes
+## Player-aware planning
 
-- **Party in a 6v6 match** — only the user's party is selected. The remaining slots stay unknown, and the analysis measures whether matchmaking allies can still complete a healthy six-player composition.
-- **Full composition** — all six exact heroes are planned and evaluated.
+- Create up to eight player profiles with primary and backup roles, play style, per-hero skill and excluded heroes.
+- Assign a concrete player to every controlled slot.
+- Recommendations, autocomplete, optimization and team analysis use the assigned player's real hero pool instead of a generic account-wide score.
+- Per-player hero skill is edited directly inside each hero sheet.
 
 ## Team-Up loadouts
 
-Season 9 gives each current hero two selectable Team-Up abilities. Rival Forge stores both options, recommends one for the current party, shows the enhancing partner, and distinguishes base and enhanced states. The Hood is marked as a future/unavailable partner where applicable rather than added as a playable hero.
+Every selected hero keeps two selectable Season 9 Team-Up abilities. Rival Forge can optimize all choices at once, prefers enhanced options with present partners, and keeps base/enhanced state visible.
+
+## Plan branches and comparison
+
+- Save multiple variants of the current build, including heroes, locks, player assignments and Team-Up choices.
+- Saved builds include their variants.
+- Select two recommended heroes to compare personal fit, role value, synergy, difficulty and added toolkit.
 
 ## Persistence
 
-Local state and JSON exports include planner mode, party size, six-slot team data, locked picks, personal ratings, tiers, notes, saved builds and per-hero loadout choices. Version 1.1 imports both `rival-forge/1` and `rival-forge/2` files.
+Local state and JSON exports use `rival-forge/3`. Version 1.2 imports `rival-forge/1`, `rival-forge/2` and `rival-forge/3` files.
 
 ## Tests
 
