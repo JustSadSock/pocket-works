@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="КАНЦЕЛЯРИЯ">
+  <rect width="512" height="512" rx="92" fill="#e7dfc9"/>
+  <path d="M92 78h328v356H92z" fill="#f5eedc" stroke="#243e36" stroke-width="18"/>
+  <path d="M116 105h42v302h-42z" fill="#315f52"/>
+  <path d="M191 142h179M191 198h179M191 254h137M191 310h179" stroke="#8b7658" stroke-width="15" stroke-linecap="square"/>
+  <circle cx="337" cy="353" r="66" fill="#9d4435" stroke="#6d2b22" stroke-width="10"/>
+  <path d="m337 316 11 24 26 3-19 18 5 26-23-13-23 13 5-26-19-18 26-3z" fill="#ead9b8"/>
+</svg>
