@@ -1,35 +1,22 @@
-# RIVAL FORGE
+# RIVAL FORGE 1.1
 
-Мобильный рабочий стол для сборки составов Marvel Rivals внутри Pocket Works.
+Mobile-first Marvel Rivals planning tool integrated into Pocket Works.
 
-## Основной сценарий
+## Planning modes
 
-1. Выбрать размер группы от одного до шести игроков.
-2. Поставить известных героев или загрузить готовое ядро.
-3. Закрепить обязательные пики.
-4. Получить объяснимые рекомендации для свободных слотов либо полностью пересобрать незакреплённую часть состава.
-5. Проверить роли, фронтлайн, лечение, давление, контроль, мобильность и активные связки.
-6. Сохранить состав, отредактировать личные оценки героев и использовать их в следующих рекомендациях.
+- **Party in a 6v6 match** — only the user's party is selected. The remaining slots stay unknown, and the analysis measures whether matchmaking allies can still complete a healthy six-player composition.
+- **Full composition** — all six exact heroes are planned and evaluated.
 
-## Что учитывает рекомендательная модель
+## Team-Up loadouts
 
-- целевое распределение Vanguard / Duelist / Strategist для состава выбранного размера;
-- официальные Team-Up Season 9 и дополнительные тактические пары;
-- недостающие инструменты: фронтлайн, sustain, burst, poke, control, mobility, anti-dive и save;
-- исходную силу героя, пользовательскую оценку, личный тир, уверенность и избранное;
-- отсутствие повторов и закреплённые слоты.
+Season 9 gives each current hero two selectable Team-Up abilities. Rival Forge stores both options, recommends one for the current party, shows the enhancing partner, and distinguishes base and enhanced states. The Hood is marked as a future/unavailable partner where applicable rather than added as a playable hero.
 
-## Данные и изображения
+## Persistence
 
-Ростер и официальные Team-Up зафиксированы для Season 9, patch snapshot 2026-07-23. Портреты загружаются из публичной базы Rivalskins и автоматически заменяются оригинальной типографической заглушкой при отсутствии сети или файла. Пользовательские оценки, заметки и команды хранятся только локально и могут быть экспортированы в JSON.
+Local state and JSON exports include planner mode, party size, six-slot team data, locked picks, personal ratings, tiers, notes, saved builds and per-hero loadout choices. Version 1.1 imports both `rival-forge/1` and `rival-forge/2` files.
 
-RIVAL FORGE — неофициальный фан-инструмент. Marvel Rivals, персонажи и исходные арт-материалы принадлежат соответствующим правообладателям Marvel и NetEase.
-
-## Проверка
+## Tests
 
 ```bash
 node --test apps/rival-forge/tests/core.test.mjs
-node --check apps/rival-forge/app.js
-node --check apps/rival-forge/data.js
-node --check apps/rival-forge/core.js
 ```
