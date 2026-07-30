@@ -1,0 +1,106 @@
+        allele.frequency = clamp(p + directional + gauss(genetics) * driftScale, .0001, .9999);
+      }
+      normalizeAlleles(alleles);
+    }
+
+    const previous = Math.max(.1, Number(profile.previousAbundance) || abundance);
+    const crash = clamp(1 - abundance / previous);
+    profile.bottleneck = clamp((profile.bottleneck || 0) * .74 + crash * .6 + (abundance < 3 ? .24 : 0));
+    const bottleneckCooldown = community.generation - (profile.lastBottleneckGeneration ?? -999);
+    if ((crash > .52 || abundance < 2.4) && profile.bottleneck > .42 && bottleneckCooldown >= 18) {
+      profile.bottleneckGeneration = community.generation;
+      profile.lastBottleneckGeneration = community.generation;
+      profile.heterozygosity = clamp(profile.heterozygosity * (.72 + nextRandom(genetics) * .12));
+      profile.inbreeding = clamp(profile.inbreeding + .08 + nextRandom(genetics) * .06);
+      recordNode(community, deme, 'bottleneck', null, { severity: round(profile.bottleneck), previous: round(previous), current: round(abundance) });
+      genetics.metrics.bottlenecks += 1;
+      const species = community.species.find((entry) => entry.id === deme.speciesId);
+      if (species) species.genetics.bottlenecks = (species.genetics.bottlenecks || 0) + 1;
+      genetics.events.push({ generation: community.generation, type: 'bottleneck', speciesId: deme.speciesId, demeId: deme.id, patchId: deme.patchId, severity: round(profile.bottleneck), text: 'Генетическое бутылочное горлышко' });
+    }
+    profile.previousAbundance = abundance;
+    profile.history.push({ g: community.generation, ne: round(effectivePopulation, 2), h: round(profile.heterozygosity), f: round(profile.inbreeding), p: round(profile.parasiteLoad || 0) });
+    profile.history = profile.history.slice(-80);
+  }
+
+  function geneFlowAlleles(community) {
+    const bySpecies = new Map();
+    for (const deme of community.demes.filter((entry) => entry.abundance > .1)) {
+      if (!bySpecies.has(deme.speciesId)) bySpecies.set(deme.speciesId, []);
+      bySpecies.get(deme.speciesId).push(deme);
+    }
+    for (const demes of bySpecies.values()) {
+      if (demes.length < 2) continue;
+      for (const locus of LOCI) {
+        const alleleIds = new Set();
+        for (const deme of demes) for (const allele of deme.genetics.alleles[locus.id] || []) alleleIds.add(allele.id);
+        const weighted = {};
+        let totalWeight = 0;
+        for (const deme of demes) {
+          const weight = Math.max(.1, deme.abundance);
+          totalWeight += weight;
+          for (const allele of deme.genetics.alleles[locus.id] || []) weighted[allele.id] = (weighted[allele.id] || 0) + allele.frequency * weight;
+        }
+        for (const deme of demes) {
+          const flow = clamp(deme.geneFlow || 0) * .16;
+          if (flow <= .001) continue;
+          const existing = new Map((deme.genetics.alleles[locus.id] || []).map((allele) => [allele.id, allele]));
+          for (const alleleId of alleleIds) {
+            const target = (weighted[alleleId] || 0) / Math.max(1, totalWeight);
+            let allele = existing.get(alleleId);
+            if (!allele && target * flow > .004) {
+              const template = demes.flatMap((entry) => entry.genetics.alleles[locus.id] || []).find((entry) => entry.id === alleleId);
+              allele = template ? { ...template, frequency: .001 } : null;
+              if (allele) deme.genetics.alleles[locus.id].push(allele);
+            }
+            if (allele) allele.frequency += (target - allele.frequency) * flow;
+          }
+          normalizeAlleles(deme.genetics.alleles[locus.id]);
+        }
+      }
+    }
+  }
+
+  function maybeMutate(community) {
+    const genetics = geneticsState(community);
+    const mutationRate = .001 + clamp(community.env?.mutation || 0) * .0065;
+    const candidates = community.demes.filter((deme) => deme.abundance > 1.2);
+    let created = 0;
+    for (const deme of candidates.sort((a, b) => (b.coevolution?.parasiteLoad || 0) + (b.coevolution?.preyPressure || 0) - ((a.coevolution?.parasiteLoad || 0) + (a.coevolution?.preyPressure || 0)))) {
+      if (created >= 2) break;
+      const stress = clamp((deme.coevolution?.parasiteLoad || 0) * .45 + (deme.coevolution?.preyPressure || 0) * .3 + (1 - (deme.compatibility || .7)) * .25);
+      if (nextRandom(genetics) > mutationRate * (1 + stress * 2.2)) continue;
+      const weighted = LOCI.map((locus) => ({ locus, weight: .4 + Math.max(0, selectionFor(deme, locus.id)) * 30 }));
+      const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+      let cursor = nextRandom(genetics) * total;
+      let locus = weighted[0].locus;
+      for (const entry of weighted) { cursor -= entry.weight; if (cursor <= 0) { locus = entry.locus; break; } }
+      const effect = clamp(gauss(genetics) * .08 + selectionFor(deme, locus.id) * .8, -.18, .22);
+      const allele = createAllele(genetics, community, deme, locus, .015 + nextRandom(genetics) * .035, effect);
+      deme.genetics.alleles[locus.id].push(allele);
+      normalizeAlleles(deme.genetics.alleles[locus.id]);
+      recordNode(community, deme, 'mutation', null, { locus: locus.id, alleleId: allele.id });
+      const species = community.species.find((entry) => entry.id === deme.speciesId);
+      if (species) {
+        species.genetics.mutations = (species.genetics.mutations || 0) + 1;
+        species.genetics.lastMutationGeneration = community.generation;
+      }
+      created += 1;
+    }
+  }
+
+  function updateSpeciesSummaries(community) {
+    for (const species of community.species) {
+      const demes = community.demes.filter((deme) => deme.speciesId === species.id && deme.abundance > .05);
+      const total = demes.reduce((sum, deme) => sum + deme.abundance, 0) || 1;
+      species.genetics ||= { version: VERSION };
+      species.genetics.effectivePopulation = round(demes.reduce((sum, deme) => sum + (deme.genetics?.effectivePopulation || 0), 0), 2);
+      species.genetics.heterozygosity = round(demes.reduce((sum, deme) => sum + (deme.genetics?.heterozygosity || 0) * deme.abundance, 0) / total);
+      species.genetics.inbreeding = round(demes.reduce((sum, deme) => sum + (deme.genetics?.inbreeding || 0) * deme.abundance, 0) / total);
+      species.genetics.parasiteLoad = round(demes.reduce((sum, deme) => sum + (deme.genetics?.parasiteLoad || 0) * deme.abundance, 0) / total);
+      species.genetics.founderEffect = round(demes.reduce((sum, deme) => sum + (deme.genetics?.founderEffect || 0) * deme.abundance, 0) / total);
+    }
+  }
+
+  function finalizeGeneration(community) {
+    ensureCommunity(community);

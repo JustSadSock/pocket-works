@@ -1,0 +1,62 @@
+  return `<section class="field-section genetics-section"><header><b>НАСЛЕДСТВЕННАЯ ИСТОРИЯ</b><span>аллели, родство и нагрузка</span></header><div class="genetic-metrics"><div class="${diversityTone}"><small>РАЗНООБРАЗИЕ</small><b>${geneticsPercent(summary.heterozygosity)}%</b><span>ожидаемая гетерозиготность</span></div><div class="${inbreedingTone}"><small>ИНБРИДИНГ</small><b>${geneticsPercent(summary.inbreeding)}%</b><span>родственное скрещивание</span></div><div><small>ЭФФЕКТИВНАЯ N</small><b>${Math.round(summary.effectivePopulation)}</b><span>генетически активная численность</span></div><div class="${summary.parasiteLoad > .48 ? 'danger' : ''}"><small>ПАРАЗИТЫ</small><b>${geneticsPercent(summary.parasiteLoad)}%</b><span>средняя нагрузка</span></div></div><div class="genetic-columns"><div><h4>ДОМИНИРУЮЩИЕ АЛЛЕЛИ</h4>${alleles || '<div class="empty-mini">Аллельные данные ещё формируются.</div>'}</div><div><h4>НОВЫЕ МУТАЦИИ</h4>${mutations || '<div class="empty-mini">Значимых новых аллелей пока нет.</div>'}</div></div>${summary.bottlenecks ? `<div class="lineage-note">Линия пережила бутылочных горлышек: <b>${summary.bottlenecks}</b>. Эффект основателя в современных демах: <b>${geneticsPercent(summary.founderEffect)}%</b>.</div>` : ''}<div class="genetic-columns"><div><h4>СИМБИОТИЧЕСКИЕ СВЯЗИ</h4>${partners || '<div class="empty-mini">Устойчивых взаимовыгодных связей сейчас нет.</div>'}</div><div><h4>ЛОКАЛЬНАЯ ГЕНЕТИКА</h4><div class="genetic-deme-grid">${demes || '<div class="empty-mini">Живые демы отсутствуют.</div>'}</div></div></div></section>`;
+}
+
+function geneticsWorldHtml() {
+  const meta = geneticsEnsureState();
+  const genetics = state.metacommunity.genetics;
+  const species = state.metacommunity.species.filter((entry) => !entry.extinct && (entry.abundance || 0) > .5).map((entry) => ({ entry, summary: GENETICS.summarizeSpecies(state.metacommunity, entry.id) }));
+  const fragile = species.sort((a, b) => (b.summary.inbreeding + b.summary.founderEffect - b.summary.heterozygosity) - (a.summary.inbreeding + a.summary.founderEffect - a.summary.heterozygosity)).slice(0, 6);
+  const events = genetics.events.slice(-12).reverse();
+  const strains = Object.values(genetics.pathogens).sort((a, b) => b.prevalence - a.prevalence).slice(0, 8);
+  return `<div class="journal-summary genetics-summary"><div><small>МУТАЦИИ</small><b>${genetics.metrics.mutations || 0}</b></div><div><small>БУТЫЛОЧНЫЕ ГОРЛЫШКИ</small><b>${genetics.metrics.bottlenecks || 0}</b></div><div><small>ЭПИДЕМИЧЕСКИЕ ВОЛНЫ</small><b>${genetics.metrics.epidemics || 0}</b></div><div><small>СИМБИОЗЫ</small><b>${genetics.mutualisms.length}</b></div></div><section class="field-section"><header><b>ГЕНЕТИЧЕСКИ УЯЗВИМЫЕ ЛИНИИ</b><span>инбридинг, основатели и потеря разнообразия</span></header><div class="journal-species-list">${fragile.map(({ entry, summary }) => `<button type="button" data-field-species="${entry.id}"><i style="background:hsl(${state.species.find((app) => app.id === entry.id)?.hue || 110} 30% 43%)"></i><span><b>${safeText(geneticsSpeciesName(entry.id))}</b><small>H ${geneticsPercent(summary.heterozygosity)}% · F ${geneticsPercent(summary.inbreeding)}% · Ne ${Math.round(summary.effectivePopulation)}</small></span><output>${summary.bottlenecks}</output></button>`).join('') || '<div class="empty-mini">Все линии ещё генетически устойчивы.</div>'}</div></section><section class="field-section"><header><b>ПАРАЗИТАРНЫЕ ШТАММЫ</b><span>невидимые популяционные агенты</span></header><div class="strain-grid">${strains.map((strain) => `<div><b>ШТАММ ${strain.id}</b><span>участок ${safeText(strain.patchId)}</span><output>${geneticsPercent(strain.prevalence)}%</output><small>вирулентность ${geneticsPercent(strain.virulence)} · передача ${geneticsPercent(strain.transmission)}</small></div>`).join('')}</div></section><section class="field-section"><header><b>НАСЛЕДСТВЕННАЯ ХРОНИКА</b><span>последние события</span></header><div class="journal-events">${events.map((event) => `<div><b>G${event.generation}</b><span>${safeText(event.text || event.type)}${event.speciesId ? `<small>${safeText(geneticsSpeciesName(event.speciesId))}</small>` : ''}</span></div>`).join('') || '<div class="empty-mini">Новых наследственных событий пока нет.</div>'}</div></section>`;
+}
+
+if (typeof openSpeciesSheet === 'function') {
+  const geneticsLegacyOpenSpeciesSheet = openSpeciesSheet;
+  openSpeciesSheet = function geneticsOpenSpeciesSheet(species) {
+    geneticsLegacyOpenSpeciesSheet(species);
+    if (!species || !state?.metacommunity || sheetBody.querySelector('.genetics-section')) return;
+    const actions = sheetBody.querySelector('.journal-actions.compact');
+    const html = geneticsSpeciesHtml(species.id);
+    if (actions) actions.insertAdjacentHTML('beforebegin', html);
+    else sheetBody.insertAdjacentHTML('beforeend', html);
+  };
+}
+
+if (typeof fieldOpenJournal === 'function') {
+  const geneticsLegacyFieldOpenJournal = fieldOpenJournal;
+  fieldOpenJournal = function geneticsOpenJournal(panel = 'overview') {
+    if (panel === 'genetics') {
+      openSheet('ПОЛЕВОЙ ЖУРНАЛ', 'Наследственность и коэволюция', `<nav class="journal-tabs"><button type="button" data-field-panel="overview">ОБЗОР</button><button type="button" data-field-panel="food">ПИЩЕВАЯ СЕТЬ</button><button type="button" data-field-panel="genetics" aria-pressed="true">ГЕНЕТИКА</button><button type="button" data-field-panel="replay">ЭКСПЕРИМЕНТ</button></nav>${geneticsWorldHtml()}`);
+      return;
+    }
+    geneticsLegacyFieldOpenJournal(panel);
+    const tabs = sheetBody.querySelector('.journal-tabs');
+    if (tabs && !tabs.querySelector('[data-field-panel="genetics"]')) {
+      const replay = tabs.querySelector('[data-field-panel="replay"]');
+      (replay || tabs.lastElementChild)?.insertAdjacentHTML(replay ? 'beforebegin' : 'afterend', '<button type="button" data-field-panel="genetics">ГЕНЕТИКА</button>');
+    }
+  };
+}
+
+if (typeof fieldBuildSpeciesDiagnostic === 'function') {
+  const geneticsLegacySpeciesDiagnostic = fieldBuildSpeciesDiagnostic;
+  fieldBuildSpeciesDiagnostic = function geneticsSpeciesDiagnostic(speciesId) {
+    const payload = geneticsLegacySpeciesDiagnostic(speciesId);
+    payload.genetics = GENETICS.summarizeSpecies(state.metacommunity, speciesId);
+    return payload;
+  };
+}
+
+if (typeof buildCompactDiagnostic === 'function') {
+  const geneticsLegacyBuildCompactDiagnostic = buildCompactDiagnostic;
+  buildCompactDiagnostic = function geneticsCompactDiagnostic() {
+    const payload = geneticsLegacyBuildCompactDiagnostic();
+    payload.version = GENETICS_APP_VERSION;
+    payload.genetics = GENETICS.compactDiagnostic(state.metacommunity);
+    return payload;
+  };
+}
+
+geneticsEnsureState();
+saveState();

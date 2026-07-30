@@ -1,21 +1,22 @@
 const CACHE_PREFIX = 'clada-';
-const CACHE_NAME = 'clada-v4.4.0';
-const APP_VERSION = '4.4.0';
+const CACHE_NAME = 'clada-v5.0.0';
+const APP_VERSION = '5.0.0';
 const RELEASE_DATE = '2026-07-30';
-const CACHE_PROTOCOL = 11;
+const CACHE_PROTOCOL = 12;
 const RELEASE_NOTES = [
-  'Макроэкологический расчёт поколений вынесен в отдельный Web Worker; при сбое приложение автоматически продолжает работу в основном потоке.',
-  'Миры перенесены из большого localStorage JSON в версионированные IndexedDB-снимки с резервной копией, проверкой целостности и миграцией старых сохранений.',
-  'Загрузчик разделён на небольшие ES-модули, а диагностика теперь показывает состояние Worker, backend хранения и время последнего поколенческого расчёта.',
-  'Добавлен офлайн-совместимый слой gzip-экспорта через CompressionStream и тесты целостности снимков, аварийного восстановления и Worker RPC.'
+  'Добавлена компактная наследственная летопись с узлами происхождения, генеалогическими рёбрами, локусами, аллелями и историей значимых мутаций.',
+  'Демы получили эффективную численность, гетерозиготность, инбридинг, эффект основателя и фиксируемые генетические бутылочные горлышки.',
+  'Добавлена коэволюция хищника и добычи, паразитарные штаммы с иммунным ответом и взаимовыгодные связи с реальной ценой специализации.',
+  'Полевой журнал получил отдельный генетический раздел, наследственные паспорта видов и расширенную диагностику.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './living.css', './field-journal.css', './living-planet.css', './observable-life.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop.js',
+  './', './index.html', './app.config.json', './styles.css', './living.css', './field-journal.css', './living-planet.css', './observable-life.css', './genetics.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './workshop.js',
   './platform/storage-core.js', './platform/storage.js', './platform/compression.js', './platform/worker-rpc.js', './platform/simulation-client.js', './platform/runtime-loader.js', './workers/simulation-worker.js',
   './runtime/01-core.js', './runtime/02-life.js', './runtime/03-simulation.js', './runtime/04-history.js',
   './runtime/05-inspector.js', './runtime/06-views.js', './runtime/07-render.js', './runtime/08-controls.js', './runtime/09-evolution-v2.js',
   './runtime/v3/10-01.txt', './runtime/v3/10-02.txt', './runtime/v3/10-03.txt', './runtime/v3/10-04.txt', './runtime/v3/11-01.txt', './runtime/v3/11-02.txt', './runtime/v3/11-03-1.txt', './runtime/v3/11-03-2.txt', './runtime/v3/11-03-3.txt', './runtime/v3/11-04.txt', './runtime/v3/11-05-1.txt', './runtime/v3/11-05-2.txt', './runtime/v3/11-05-3.txt', './runtime/v3/11-06.txt', './runtime/v3/12-01.txt', './runtime/v3/12-02.txt', './runtime/v3/12-03.txt', './runtime/v3/12-04.txt', './runtime/v3/12-05.txt', './runtime/v3/13-stability.txt', './runtime/v3/14-diversification-core.js', './runtime/v3/15-01.txt', './runtime/v3/15-02.txt', './runtime/v3/15-03.txt',
   './runtime/v4/16-01.txt', './runtime/v4/16-02.txt', './runtime/v4/16-03.txt', './runtime/v4/16-04.txt', './runtime/v4/17-01.txt', './runtime/v4/17-02.txt', './runtime/v4/17-03.txt', './runtime/v4/18-field-journal-core.js', './runtime/v4/19-01.txt', './runtime/v4/19-02.txt', './runtime/v4/19-03.txt', './runtime/v4/20-01.txt', './runtime/v4/20-02.txt', './runtime/v4/20-03.txt', './runtime/v4/21-01.txt', './runtime/v4/21-02.txt', './runtime/v4/21-03.txt', './runtime/v4/22-01.txt', './runtime/v4/22-02-1.txt', './runtime/v4/22-02-2.txt', './runtime/v4/22-02-3.txt', './runtime/v4/22-03-1.txt', './runtime/v4/22-03-2.txt', './runtime/v4/22-03-3.txt', './runtime/v4/22-04-1.txt', './runtime/v4/22-04-2.txt', './runtime/v4/22-04-3.txt', './runtime/v4/22-05-1.txt', './runtime/v4/22-05-2.txt', './runtime/v4/22-05-3.txt', './runtime/v4/23-worker-storage.js',
+  './runtime/v5/24-01.txt', './runtime/v5/24-02.txt', './runtime/v5/24-03.txt', './runtime/v5/24-04.txt', './runtime/v5/24-05.txt', './runtime/v5/25-01.txt', './runtime/v5/25-02.txt',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js',
   '../../shared/workshop-mode.css', '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
   '../../shared/capabilities/transfer.js', '../../shared/capabilities/audio.js', '../../shared/capabilities/device.js', '../../shared/capabilities/diagnostics.js'

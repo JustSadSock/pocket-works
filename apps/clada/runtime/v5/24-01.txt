@@ -1,0 +1,148 @@
+/* КЛАДА 5.0 — компактная наследственность и коэволюция. */
+globalThis.CladaGeneticsCore = (() => {
+  const VERSION = 1;
+  const MAX_NODES = 520;
+  const MAX_EDGES = 860;
+  const MAX_MUTATIONS = 360;
+  const MAX_EVENTS = 260;
+  const LOCI = [
+    { id: 'detection', label: 'ОБНАРУЖЕНИЕ', role: 'attack', trait: 'speed', base: .42, cost: .035 },
+    { id: 'pursuit', label: 'ПРЕСЛЕДОВАНИЕ', role: 'attack', trait: 'speed', base: .4, cost: .045 },
+    { id: 'venom', label: 'ТОКСИН', role: 'attack', trait: 'prey', base: .18, cost: .06 },
+    { id: 'camouflage', label: 'МАСКИРОВКА', role: 'defense', trait: 'nocturnal', base: .36, cost: .035 },
+    { id: 'evasion', label: 'МАНЁВРЕННОСТЬ', role: 'defense', trait: 'speed', base: .42, cost: .045 },
+    { id: 'armor', label: 'ЗАЩИТА', role: 'defense', trait: 'armor', base: .32, cost: .055 },
+    { id: 'immunity', label: 'ИММУНИТЕТ', role: 'host', trait: 'parentalCare', base: .38, cost: .04 },
+    { id: 'tolerance', label: 'ТОЛЕРАНТНОСТЬ', role: 'host', trait: 'fertility', base: .34, cost: .035 },
+    { id: 'cooperation', label: 'КООПЕРАЦИЯ', role: 'mutualism', trait: 'social', base: .38, cost: .035 },
+    { id: 'symbiosis', label: 'СИМБИОЗ', role: 'mutualism', trait: 'social', base: .24, cost: .045 }
+  ];
+  const LOCUS_BY_ID = Object.fromEntries(LOCI.map((locus) => [locus.id, locus]));
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
+  const round = (value, digits = 3) => {
+    const scale = 10 ** digits;
+    return Math.round((Number(value) || 0) * scale) / scale;
+  };
+  const hash = (value) => {
+    let x = Number(value) | 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return x >>> 0;
+  };
+  const hashString = (value = '') => {
+    let h = 2166136261;
+    for (const character of String(value)) { h ^= character.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  };
+  const nextRandom = (genetics) => {
+    genetics.rng = hash(genetics.rng || 0x6d2b79f5);
+    return genetics.rng / 4294967296;
+  };
+  const gauss = (genetics) => {
+    const u = Math.max(1e-8, nextRandom(genetics));
+    const v = Math.max(1e-8, nextRandom(genetics));
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
+  };
+
+  function geneticsState(community) {
+    community.genetics ||= {};
+    const genetics = community.genetics;
+    genetics.version = VERSION;
+    genetics.rng ||= hash((community.rng || 1) ^ hashString(community.originSeed || 'clada') ^ 0x9e3779b9);
+    genetics.nextNodeId ||= Math.max(0, ...(genetics.nodes || []).map((entry) => entry.id || 0)) + 1;
+    genetics.nextAlleleId ||= Math.max(0, ...(genetics.mutations || []).map((entry) => Number(String(entry.alleleId || '').replace(/\D/g, '')) || 0)) + 1;
+    genetics.nextStrainId ||= Math.max(0, ...Object.values(genetics.pathogens || {}).map((entry) => entry.id || 0)) + 1;
+    genetics.nodes ||= [];
+    genetics.edges ||= [];
+    genetics.mutations ||= [];
+    genetics.events ||= [];
+    genetics.pathogens ||= {};
+    genetics.mutualisms ||= [];
+    genetics.metrics ||= {
+      mutations: 0,
+      bottlenecks: 0,
+      epidemics: 0,
+      mutualisms: 0,
+      founderEvents: 0,
+      maxInbreeding: 0
+    };
+    return genetics;
+  }
+
+  function baseFrequency(deme, locus) {
+    const trait = clamp(deme.traits?.[locus.trait] ?? locus.base);
+    const guildBias = deme.guild === 'predator' && locus.role === 'attack' ? .13
+      : deme.guild !== 'predator' && locus.role === 'defense' ? .08
+        : locus.role === 'host' ? .04
+          : locus.role === 'mutualism' && !['predator', 'scavenger'].includes(deme.guild) ? .06 : 0;
+    return clamp(.16 + trait * .58 + guildBias, .08, .92);
+  }
+
+  function createAllele(genetics, community, deme, locus, frequency, effect = null, label = null) {
+    const alleleId = `a${genetics.nextAlleleId++}`;
+    const resolvedEffect = effect == null ? round((nextRandom(genetics) - .5) * .18, 4) : round(effect, 4);
+    const allele = {
+      id: alleleId,
+      frequency: clamp(frequency, .001, .999),
+      effect: resolvedEffect,
+      originGeneration: Number(community.generation) || 0,
+      sourceNodeId: deme.genetics?.nodeId || null,
+      label: label || `${locus.label.toLowerCase()} ${resolvedEffect >= 0 ? '+' : ''}${Math.round(resolvedEffect * 100)}`
+    };
+    genetics.mutations.push({
+      id: genetics.metrics.mutations + 1,
+      alleleId,
+      speciesId: deme.speciesId,
+      demeId: deme.id,
+      nodeId: allele.sourceNodeId,
+      locus: locus.id,
+      effect: allele.effect,
+      originGeneration: allele.originGeneration,
+      label: allele.label
+    });
+    genetics.metrics.mutations += 1;
+    genetics.events.push({
+      generation: allele.originGeneration,
+      type: 'mutation',
+      speciesId: deme.speciesId,
+      demeId: deme.id,
+      locus: locus.id,
+      alleleId,
+      text: `Новый аллель: ${allele.label}`
+    });
+    return allele;
+  }
+
+  function recordNode(community, deme, type = 'sample', parentIds = null, details = {}) {
+    const genetics = geneticsState(community);
+    const previous = deme.genetics?.nodeId || null;
+    const node = {
+      id: genetics.nextNodeId++,
+      generation: Number(community.generation) || 0,
+      demeId: deme.id,
+      speciesId: deme.speciesId,
+      type,
+      patchId: deme.patchId,
+      abundance: round(deme.abundance, 2),
+      ...details
+    };
+    genetics.nodes.push(node);
+    const resolvedParents = Array.isArray(parentIds) ? parentIds.filter(Boolean) : previous ? [previous] : [];
+    for (const parentId of resolvedParents) genetics.edges.push({ parent: parentId, child: node.id, generation: node.generation, weight: round(1 / Math.max(1, resolvedParents.length)) });
+    deme.genetics ||= {};
+    deme.genetics.nodeId = node.id;
+    return node;
+  }
+
+  function initializeDeme(community, deme) {
+    const genetics = geneticsState(community);
+    if (deme.genetics?.version === VERSION && deme.genetics.alleles) return deme.genetics;
+    const source = community.demes?.find((entry) => entry.id === deme.colonizationSource);
+    const sourceProfile = source?.genetics;
+    const profile = deme.genetics = {
+      version: VERSION,
+      nodeId: null,
+      effectivePopulation: Math.max(2, Number(deme.abundance) || 2),
+      heterozygosity: sourceProfile ? clamp(sourceProfile.heterozygosity * (.82 + nextRandom(genetics) * .12), .04, .96) : .58 + nextRandom(genetics) * .22,
+      inbreeding: sourceProfile ? clamp(sourceProfile.inbreeding + .06 + nextRandom(genetics) * .08) : .04 + nextRandom(genetics) * .06,
+      founderEffect: sourceProfile ? .52 + nextRandom(genetics) * .24 : .12,
+      bottleneck: 0,

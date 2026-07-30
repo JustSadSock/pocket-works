@@ -1,0 +1,133 @@
+    for (const deme of community.demes.filter((entry) => entry.abundance > .02)) driftAndSelect(community, deme);
+    geneFlowAlleles(community);
+    maybeMutate(community);
+    updateSpeciesSummaries(community);
+    compact(community);
+    return geneticsState(community);
+  }
+
+  function recordSpeciation(community, proposal, newSpeciesId) {
+    if (!community || !proposal || !newSpeciesId) return null;
+    ensureCommunity(community);
+    const genetics = geneticsState(community);
+    const deme = community.demes.find((entry) => entry.id === proposal.demeId);
+    if (!deme) return null;
+    const oldNode = deme.genetics?.nodeId || null;
+    const secondSpeciesId = proposal.secondParentId || null;
+    const secondNode = secondSpeciesId
+      ? community.demes.filter((entry) => entry.speciesId === secondSpeciesId && entry.genetics?.nodeId).sort((a, b) => b.abundance - a.abundance)[0]?.genetics?.nodeId
+      : null;
+    deme.speciesId = newSpeciesId;
+    const node = recordNode(community, deme, proposal.mode === 'hybrid' ? 'hybrid-speciation' : 'speciation', [oldNode, secondNode].filter(Boolean), { parentSpeciesId: proposal.speciesId, secondParentId: secondSpeciesId, mode: proposal.mode || 'unknown' });
+    const species = community.species.find((entry) => entry.id === newSpeciesId);
+    if (species) species.genetics = { version: VERSION, founderNodeId: node.id, bottlenecks: 0, mutations: 0, founderEvents: 0, lastMutationGeneration: null };
+    genetics.events.push({ generation: community.generation, type: 'genetic-speciation', speciesId: newSpeciesId, parentId: proposal.speciesId, secondParentId: secondSpeciesId, nodeId: node.id, mode: proposal.mode, text: secondSpeciesId ? 'Гибридная наследственная ветвь' : 'Новая наследственная ветвь' });
+    return node;
+  }
+
+  function topAlleles(deme, limit = 4) {
+    const results = [];
+    for (const locus of LOCI) {
+      const alleles = [...(deme.genetics?.alleles?.[locus.id] || [])].sort((a, b) => b.frequency - a.frequency);
+      const selected = alleles[0];
+      if (!selected) continue;
+      results.push({ locus: locus.id, label: locus.label, alleleId: selected.id, frequency: round(selected.frequency), effect: round(selected.effect, 4), originGeneration: selected.originGeneration });
+    }
+    return results.sort((a, b) => Math.abs(b.effect) * b.frequency - Math.abs(a.effect) * a.frequency).slice(0, limit);
+  }
+
+  function summarizeSpecies(community, speciesId) {
+    ensureCommunity(community);
+    const id = Number(speciesId);
+    const species = community.species.find((entry) => Number(entry.id) === id);
+    const demes = community.demes.filter((entry) => Number(entry.speciesId) === id && entry.abundance > .02);
+    const total = demes.reduce((sum, deme) => sum + deme.abundance, 0) || 1;
+    const strongest = demes.sort((a, b) => b.abundance - a.abundance)[0] || null;
+    const mutations = geneticsState(community).mutations.filter((entry) => Number(entry.speciesId) === id).slice(-8).reverse();
+    const partners = geneticsState(community).mutualisms.filter((entry) => Number(entry.speciesA) === id || Number(entry.speciesB) === id).sort((a, b) => b.strength - a.strength).slice(0, 6);
+    return {
+      speciesId: id,
+      abundance: round(total, 1),
+      demes: demes.length,
+      effectivePopulation: round(demes.reduce((sum, deme) => sum + (deme.genetics?.effectivePopulation || 0), 0), 1),
+      heterozygosity: round(demes.reduce((sum, deme) => sum + (deme.genetics?.heterozygosity || 0) * deme.abundance, 0) / total),
+      inbreeding: round(demes.reduce((sum, deme) => sum + (deme.genetics?.inbreeding || 0) * deme.abundance, 0) / total),
+      founderEffect: round(demes.reduce((sum, deme) => sum + (deme.genetics?.founderEffect || 0) * deme.abundance, 0) / total),
+      parasiteLoad: round(demes.reduce((sum, deme) => sum + (deme.genetics?.parasiteLoad || 0) * deme.abundance, 0) / total),
+      bottlenecks: species?.genetics?.bottlenecks || 0,
+      mutations,
+      partners,
+      topAlleles: strongest ? topAlleles(strongest, 5) : [],
+      demesDetail: demes.map((deme) => ({
+        id: deme.id,
+        patchId: deme.patchId,
+        abundance: round(deme.abundance, 1),
+        effectivePopulation: round(deme.genetics?.effectivePopulation, 1),
+        heterozygosity: round(deme.genetics?.heterozygosity),
+        inbreeding: round(deme.genetics?.inbreeding),
+        founderEffect: round(deme.genetics?.founderEffect),
+        bottleneck: round(deme.genetics?.bottleneck),
+        parasiteLoad: round(deme.genetics?.parasiteLoad),
+        nodeId: deme.genetics?.nodeId || null,
+        topAlleles: topAlleles(deme, 3)
+      }))
+    };
+  }
+
+  function compact(community) {
+    const genetics = geneticsState(community);
+    genetics.events = genetics.events.slice(-MAX_EVENTS);
+    genetics.mutations = genetics.mutations.slice(-MAX_MUTATIONS);
+    genetics.mutualisms = genetics.mutualisms.slice(-120);
+    if (genetics.nodes.length > MAX_NODES) {
+      const keep = new Set(genetics.nodes.slice(-MAX_NODES).map((entry) => entry.id));
+      for (const deme of community.demes || []) if (deme.genetics?.nodeId) keep.add(deme.genetics.nodeId);
+      genetics.nodes = genetics.nodes.filter((entry) => keep.has(entry.id)).slice(-MAX_NODES);
+      const retained = new Set(genetics.nodes.map((entry) => entry.id));
+      genetics.edges = genetics.edges.filter((entry) => retained.has(entry.parent) && retained.has(entry.child)).slice(-MAX_EDGES);
+    } else genetics.edges = genetics.edges.slice(-MAX_EDGES);
+    for (const patchId of Object.keys(genetics.pathogens)) {
+      const strain = genetics.pathogens[patchId];
+      strain.prevalence = round(strain.prevalence);
+      strain.antigen = round(strain.antigen);
+      strain.virulence = round(strain.virulence);
+      strain.transmission = round(strain.transmission);
+    }
+    return genetics;
+  }
+
+  function compactDiagnostic(community) {
+    ensureCommunity(community);
+    const genetics = geneticsState(community);
+    return {
+      schema: 'clada-genetics-v1',
+      version: VERSION,
+      metrics: { ...genetics.metrics, maxInbreeding: round(genetics.metrics.maxInbreeding) },
+      nodes: genetics.nodes.slice(-180),
+      edges: genetics.edges.slice(-260),
+      mutations: genetics.mutations.slice(-160),
+      pathogens: Object.values(genetics.pathogens),
+      mutualisms: genetics.mutualisms.slice(-100),
+      events: genetics.events.slice(-160),
+      species: community.species.map((species) => ({ id: species.id, genetics: { ...(species.genetics || {}) } }))
+    };
+  }
+
+  return {
+    VERSION,
+    LOCI,
+    LOCUS_BY_ID,
+    clamp,
+    round,
+    hash,
+    hashString,
+    ensureCommunity,
+    prepareGeneration,
+    finalizeGeneration,
+    recordSpeciation,
+    recordNode,
+    locusExpression,
+    summarizeSpecies,
+    compactDiagnostic
+  };
+})();
