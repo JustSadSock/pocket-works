@@ -1,0 +1,158 @@
+/* КЛАДА 5.1 — конструирование ниш и динамическая экологическая карта. */
+globalThis.CladaLifeTraceCore = (() => {
+  const VERSION = 1;
+  const CELL_COUNT = 64;
+  const MAX_EVENTS = 240;
+  const MAX_CELL_HISTORY = 48;
+  const EFFECT_KEYS = ['canopy', 'openness', 'soil', 'wetland', 'reef', 'turbidity', 'fire', 'organic', 'channels', 'nutrients', 'trails'];
+  const EFFECT_LABELS = {
+    canopy: 'ПОЛОГ', openness: 'ОТКРЫТАЯ ЗЕМЛЯ', soil: 'ПОЧВА', wetland: 'ЗАБОЛАЧИВАНИЕ',
+    reef: 'РИФ', turbidity: 'МУТНОСТЬ', fire: 'ОГОНЬ', organic: 'ОРГАНИЧЕСКИЙ ОСАДОК',
+    channels: 'КАНАЛЫ', nutrients: 'ПИТАТЕЛЬНЫЙ ЦИКЛ', trails: 'ТРОПЫ'
+  };
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
+  const round = (value, digits = 3) => {
+    const scale = 10 ** digits;
+    return Math.round((Number(value) || 0) * scale) / scale;
+  };
+  const hash = (value) => {
+    let x = Number(value) | 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    return x >>> 0;
+  };
+  const hashString = (value = '') => {
+    let h = 2166136261;
+    for (const character of String(value)) { h ^= character.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  };
+  const nextRandom = (trace) => {
+    trace.rng = hash(trace.rng || 0x7f4a7c15);
+    return trace.rng / 4294967296;
+  };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const distanceSq = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+
+  function traceState(community) {
+    community.lifeTrace ||= {};
+    const trace = community.lifeTrace;
+    trace.version = VERSION;
+    trace.rng ||= hash((community.rng || 1) ^ hashString(community.originSeed || 'clada') ^ 0x51f15e);
+    trace.cells ||= [];
+    trace.events ||= [];
+    trace.patchEffects ||= {};
+    trace.metrics ||= { engineeredCells: 0, transitions: 0, wetlands: 0, reefs: 0, burns: 0, openLand: 0, forest: 0 };
+    trace.generation ||= 0;
+    trace.pendingBaselines ||= {};
+    return trace;
+  }
+
+  function initialPoints(trace) {
+    const side = Math.round(Math.sqrt(CELL_COUNT));
+    const points = [];
+    for (let row = 0; row < side; row += 1) for (let column = 0; column < side; column += 1) {
+      const jitterX = (nextRandom(trace) - .5) * .055;
+      const jitterY = (nextRandom(trace) - .5) * .055;
+      points.push({
+        id: points.length,
+        x: clamp((column + .5) / side + jitterX, .025, .975),
+        y: clamp((row + .5) / side + jitterY, .035, .965),
+        anchorX: (column + .5) / side,
+        anchorY: (row + .5) / side
+      });
+    }
+    return points;
+  }
+
+  function relaxPoints(points, iterations = 10) {
+    const minimum = .085;
+    for (let iteration = 0; iteration < iterations; iteration += 1) {
+      const forces = points.map(() => ({ x: 0, y: 0 }));
+      for (let left = 0; left < points.length; left += 1) {
+        const point = points[left];
+        forces[left].x += (point.anchorX - point.x) * .035;
+        forces[left].y += (point.anchorY - point.y) * .035;
+        for (let right = left + 1; right < points.length; right += 1) {
+          const other = points[right];
+          let dx = point.x - other.x;
+          let dy = point.y - other.y;
+          let distance = Math.hypot(dx, dy);
+          if (distance < 1e-5) { dx = .001; dy = 0; distance = .001; }
+          if (distance >= minimum) continue;
+          const strength = (minimum - distance) / minimum * .008;
+          const fx = dx / distance * strength;
+          const fy = dy / distance * strength;
+          forces[left].x += fx; forces[left].y += fy;
+          forces[right].x -= fx; forces[right].y -= fy;
+        }
+      }
+      for (let index = 0; index < points.length; index += 1) {
+        points[index].x = clamp(points[index].x + forces[index].x, .018, .982);
+        points[index].y = clamp(points[index].y + forces[index].y, .028, .972);
+      }
+    }
+    return points;
+  }
+
+  function circumcircle(a, b, c) {
+    const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+    if (Math.abs(d) < 1e-12) return { x: 0, y: 0, r2: Infinity };
+    const aa = a.x * a.x + a.y * a.y;
+    const bb = b.x * b.x + b.y * b.y;
+    const cc = c.x * c.x + c.y * c.y;
+    const x = (aa * (b.y - c.y) + bb * (c.y - a.y) + cc * (a.y - b.y)) / d;
+    const y = (aa * (c.x - b.x) + bb * (a.x - c.x) + cc * (b.x - a.x)) / d;
+    return { x, y, r2: (x - a.x) ** 2 + (y - a.y) ** 2 };
+  }
+
+  function delaunay(points) {
+    const source = points.map((point) => ({ x: point.x, y: point.y }));
+    const superStart = source.length;
+    source.push({ x: -8, y: -5 }, { x: 9, y: -5 }, { x: .5, y: 10 });
+    let triangles = [{ a: superStart, b: superStart + 1, c: superStart + 2, circle: circumcircle(source[superStart], source[superStart + 1], source[superStart + 2]) }];
+    for (let pointIndex = 0; pointIndex < points.length; pointIndex += 1) {
+      const point = source[pointIndex];
+      const bad = [];
+      for (const triangle of triangles) {
+        const dx = point.x - triangle.circle.x;
+        const dy = point.y - triangle.circle.y;
+        if (dx * dx + dy * dy <= triangle.circle.r2 + 1e-10) bad.push(triangle);
+      }
+      const edgeCounts = new Map();
+      const addEdge = (left, right) => {
+        const key = left < right ? `${left}:${right}` : `${right}:${left}`;
+        const entry = edgeCounts.get(key) || { left, right, count: 0 };
+        entry.count += 1;
+        edgeCounts.set(key, entry);
+      };
+      for (const triangle of bad) {
+        addEdge(triangle.a, triangle.b); addEdge(triangle.b, triangle.c); addEdge(triangle.c, triangle.a);
+      }
+      const badSet = new Set(bad);
+      triangles = triangles.filter((triangle) => !badSet.has(triangle));
+      for (const edge of edgeCounts.values()) {
+        if (edge.count !== 1) continue;
+        const triangle = { a: edge.left, b: edge.right, c: pointIndex };
+        triangle.circle = circumcircle(source[triangle.a], source[triangle.b], source[triangle.c]);
+        triangles.push(triangle);
+      }
+    }
+    return triangles.filter((triangle) => triangle.a < points.length && triangle.b < points.length && triangle.c < points.length);
+  }
+
+  function buildNeighbors(points, triangles) {
+    const neighbors = points.map(() => new Set());
+    for (const triangle of triangles) {
+      for (const [left, right] of [[triangle.a, triangle.b], [triangle.b, triangle.c], [triangle.c, triangle.a]]) {
+        neighbors[left].add(right); neighbors[right].add(left);
+      }
+    }
+    for (let index = 0; index < points.length; index += 1) {
+      if (neighbors[index].size >= 3) continue;
+      const nearest = points.map((point, candidate) => ({ candidate, distance: candidate === index ? Infinity : distanceSq(points[index], point) })).sort((a, b) => a.distance - b.distance).slice(0, 4);
+      for (const entry of nearest) { neighbors[index].add(entry.candidate); neighbors[entry.candidate].add(index); }
+    }
+    return neighbors.map((set) => [...set].sort((a, b) => a - b));
+  }
+
+  function clipHalfPlane(polygon, point, neighbor) {
+    if (!polygon.length) return polygon;

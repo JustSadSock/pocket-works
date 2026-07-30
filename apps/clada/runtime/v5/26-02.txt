@@ -1,0 +1,158 @@
+    const middleX = (point.x + neighbor.x) / 2;
+    const middleY = (point.y + neighbor.y) / 2;
+    const normalX = neighbor.x - point.x;
+    const normalY = neighbor.y - point.y;
+    const inside = (vertex) => (vertex[0] - middleX) * normalX + (vertex[1] - middleY) * normalY <= 1e-9;
+    const intersection = (start, end) => {
+      const startValue = (start[0] - middleX) * normalX + (start[1] - middleY) * normalY;
+      const endValue = (end[0] - middleX) * normalX + (end[1] - middleY) * normalY;
+      const denominator = startValue - endValue;
+      const t = Math.abs(denominator) < 1e-12 ? 0 : startValue / denominator;
+      return [lerp(start[0], end[0], t), lerp(start[1], end[1], t)];
+    };
+    const output = [];
+    for (let index = 0; index < polygon.length; index += 1) {
+      const current = polygon[index];
+      const previous = polygon[(index + polygon.length - 1) % polygon.length];
+      const currentInside = inside(current);
+      const previousInside = inside(previous);
+      if (currentInside && !previousInside) output.push(intersection(previous, current));
+      if (currentInside) output.push(current);
+      else if (previousInside) output.push(intersection(previous, current));
+    }
+    return output;
+  }
+
+  function voronoiPolygon(points, neighbors, index) {
+    let polygon = [[.012, .018], [.988, .018], [.988, .982], [.012, .982]];
+    for (const neighborIndex of neighbors[index]) polygon = clipHalfPlane(polygon, points[index], points[neighborIndex]);
+    return polygon.map(([x, y]) => [round(clamp(x, 0, 1), 5), round(clamp(y, 0, 1), 5)]);
+  }
+
+  function nearestPatch(community, point) {
+    return [...(community.patches || [])].sort((a, b) => ((a.x - point.x) ** 2 + (a.y - point.y) ** 2) - ((b.x - point.x) ** 2 + (b.y - point.y) ** 2))[0] || null;
+  }
+
+  function baseStateForPatch(patch) {
+    const water = Boolean(patch?.water);
+    const forest = patch?.biome === 'forest';
+    const wet = patch?.biome === 'wetland';
+    return {
+      canopy: forest ? .68 : water ? .02 : .28 + clamp(patch?.moisture || .4) * .18,
+      openness: forest ? .18 : water ? .04 : .52,
+      soil: water ? .05 : .3 + clamp(patch?.moisture || .4) * .2,
+      wetland: wet ? .72 : water ? .2 : clamp((patch?.moisture || .3) - .45) * .48,
+      reef: water ? .08 : 0,
+      turbidity: water ? .32 : .04,
+      fire: 0,
+      organic: water ? .18 : .22,
+      channels: wet ? .36 : .08,
+      nutrients: .28,
+      trails: .04
+    };
+  }
+
+  function buildCells(community, trace) {
+    const points = relaxPoints(initialPoints(trace));
+    const triangles = delaunay(points);
+    const neighbors = buildNeighbors(points, triangles);
+    trace.cells = points.map((point, index) => {
+      const patch = nearestPatch(community, point);
+      const state = baseStateForPatch(patch);
+      return {
+        id: `c${index}`,
+        x: round(point.x, 5), y: round(point.y, 5),
+        polygon: voronoiPolygon(points, neighbors, index),
+        neighbors: neighbors[index].map((neighbor) => `c${neighbor}`),
+        patchId: patch?.id ?? null,
+        baseBiome: patch?.biome || 'grassland',
+        water: Boolean(patch?.water),
+        state,
+        dominant: dominantEffect(state),
+        dominantStrength: 0,
+        constructionStrength: 0,
+        engineerSpeciesIds: [],
+        engineerScores: {},
+        engineerEffects: {},
+        history: []
+      };
+    });
+    trace.triangles = triangles.map((triangle) => [triangle.a, triangle.b, triangle.c]);
+    trace.geometryVersion = 1;
+  }
+
+  let connectivityBridgeInstalled = false;
+
+  function installConnectivityBridge() {
+    if (connectivityBridgeInstalled) return;
+    const planet = globalThis.CladaLivingPlanetCore;
+    if (!planet || typeof planet.connectivityModifier !== 'function') return;
+    const legacy = planet.connectivityModifier.bind(planet);
+    planet.connectivityModifier = function lifeTraceConnectivityModifier(community, source, target, deme) {
+      const value = legacy(community, source, target, deme);
+      if (!Number.isFinite(value)) return value;
+      const sourceMultiplier = mobilityMultiplier(source, deme?.guild);
+      const targetMultiplier = mobilityMultiplier(target, deme?.guild);
+      return clamp(value * Math.sqrt(sourceMultiplier * targetMultiplier), .002, 1.45);
+    };
+    connectivityBridgeInstalled = true;
+  }
+
+  function ensureCommunity(community) {
+    installConnectivityBridge();
+    const trace = traceState(community);
+    if (trace.cells.length !== CELL_COUNT || trace.geometryVersion !== 1) buildCells(community, trace);
+    const patchIds = new Set((community.patches || []).map((patch) => String(patch.id)));
+    for (const cell of trace.cells) {
+      if (!patchIds.has(String(cell.patchId))) cell.patchId = nearestPatch(community, cell)?.id ?? null;
+      cell.state ||= baseStateForPatch((community.patches || []).find((patch) => String(patch.id) === String(cell.patchId)));
+      cell.history ||= [];
+      cell.engineerSpeciesIds ||= [];
+      cell.engineerScores ||= {};
+      cell.engineerEffects ||= {};
+      cell.constructionStrength = clamp(cell.constructionStrength ?? cell.dominantStrength ?? 0);
+    }
+    return trace;
+  }
+
+  function dominantEffect(state) {
+    const weighted = {
+      canopy: state.canopy,
+      openness: state.openness,
+      soil: state.soil * .94,
+      wetland: state.wetland * 1.12,
+      reef: state.reef * 1.16,
+      turbidity: state.turbidity * .82,
+      fire: state.fire * 1.25,
+      organic: state.organic * .88,
+      channels: state.channels * .92,
+      nutrients: state.nutrients * .82,
+      trails: state.trails * .9
+    };
+    return Object.entries(weighted).sort((a, b) => b[1] - a[1])[0]?.[0] || 'soil';
+  }
+
+  function effectForDeme(deme) {
+    const abundance = Math.log2(1 + Math.max(0, deme.abundance || 0)) / 6;
+    const size = clamp(deme.traits?.size || .4);
+    const social = clamp(deme.traits?.social || .3);
+    const fertility = clamp(deme.traits?.fertility || .45);
+    const armor = clamp(deme.traits?.armor || .2);
+    const density = clamp((deme.abundance || 0) / Math.max(3, deme.carryingCapacity || deme.abundance || 3));
+    const stability = clamp((deme.compatibility ?? .72) * .58 + (1 - Math.abs(density - .72)) * .42, .22, 1);
+    const base = clamp(abundance * (.62 + size * .28 + social * .1) * stability);
+    const effect = Object.fromEntries(EFFECT_KEYS.map((key) => [key, 0]));
+    if (deme.guild === 'grazer') {
+      effect.openness += base * .78; effect.trails += base * (.42 + social * .28); effect.nutrients += base * .25; effect.canopy -= base * .46;
+    } else if (deme.guild === 'browser') {
+      effect.openness += base * .42; effect.trails += base * .26; effect.canopy -= base * .62; effect.organic += base * .22;
+    } else if (deme.guild === 'burrower') {
+      effect.soil += base * (.62 + size * .18); effect.channels += base * .38; effect.wetland += base * .2; effect.nutrients += base * .3;
+    } else if (deme.guild === 'filterer') {
+      effect.reef += base * (.48 + armor * .22); effect.turbidity -= base * .62; effect.organic += base * .28; effect.nutrients += base * .18;
+    } else if (deme.guild === 'amphibian') {
+      effect.wetland += base * .58; effect.channels += base * .52; effect.turbidity += base * .12; effect.organic += base * .2;
+    } else if (deme.guild === 'flyer') {
+      effect.canopy += base * .35; effect.nutrients += base * .18; effect.openness += base * .12; effect.trails += base * .08;
+    } else if (deme.guild === 'scavenger') {
+      effect.organic += base * .58; effect.nutrients += base * .7; effect.soil += base * .15; effect.turbidity -= base * .08;

@@ -1,0 +1,107 @@
+/* КЛАДА 5.1 — интерфейс следа жизни. */
+.trace-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.trace-cell-list,
+.trace-engineers,
+.trace-history,
+.trace-impact-list,
+.life-trace-meters { display: grid; gap: 0; }
+.trace-cell-list button,
+.trace-engineers button,
+.trace-impact-row,
+.trace-history > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 9px 10px;
+  border: 0;
+  border-top: 1px solid rgba(39, 56, 46, .12);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.trace-cell-list button:first-child,
+.trace-engineers button:first-child,
+.trace-impact-row:first-child,
+.trace-history > div:first-child { border-top: 0; }
+.trace-cell-list button > i,
+.trace-impact-row > i { width: 11px; height: 28px; border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(31, 42, 36, .16); }
+.trace-cell-list span,
+.trace-engineers span,
+.trace-impact-row span { min-width: 0; }
+.trace-cell-list b,
+.trace-engineers b,
+.trace-impact-row b { display: block; font: 780 12px/1.2 system-ui; color: #293c31; }
+.trace-cell-list small,
+.trace-engineers small,
+.trace-impact-row small,
+.trace-history span { display: block; margin-top: 3px; font: 10px/1.25 system-ui; color: #707970; }
+.trace-cell-list output,
+.trace-engineers output,
+.trace-impact-row output,
+.trace-history output { font: 800 13px/1 system-ui; color: #526b58; }
+.trace-cell-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(39, 56, 46, .16);
+  background: linear-gradient(135deg, rgba(241, 235, 215, .96), rgba(220, 228, 208, .78));
+}
+.trace-cell-hero small { display: block; font: 800 9px/1 system-ui; letter-spacing: .1em; color: #68736b; }
+.trace-cell-hero b { display: block; margin-top: 6px; font: 850 18px/1.05 system-ui; color: #26392e; }
+.trace-cell-hero p { margin: 5px 0 0; font: 11px/1.3 system-ui; color: #657068; }
+.trace-cell-hero > output { font: 850 32px/1 system-ui; color: #536f5b; }
+.life-trace-meter {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 9px 10px;
+  border-top: 1px solid rgba(39, 56, 46, .12);
+  overflow: hidden;
+}
+.life-trace-meter:first-child { border-top: 0; }
+.life-trace-meter span { min-width: 0; }
+.life-trace-meter b { display: block; font: 780 11px/1.2 system-ui; color: #304438; }
+.life-trace-meter small { display: block; margin-top: 2px; font: 9px/1.2 system-ui; color: #777f78; }
+.life-trace-meter output { font: 800 12px/1 system-ui; color: #435a49; }
+.life-trace-meter > i { position: absolute; left: 0; bottom: 0; width: var(--value); height: 2px; background: var(--trace); }
+.trace-hierarchy,
+.trace-hierarchy ul { list-style: none; margin: 0; padding: 0; }
+.trace-hierarchy li > span {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  margin-left: calc(var(--depth) * 13px);
+  padding: 5px 8px;
+  border-left: 1px solid rgba(72, 95, 78, .24);
+}
+.trace-hierarchy li > span > i { width: 7px; height: 7px; border-radius: 50%; background: #6a816e; box-shadow: 0 0 0 3px rgba(106, 129, 110, .13); }
+.trace-hierarchy li > span > b { min-width: 0; font: 750 11px/1.2 system-ui; color: #304238; }
+.trace-hierarchy li > span > output { font: 800 10px/1 system-ui; color: #6b796f; }
+.trace-impact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 8px; }
+.trace-impact-grid > div { padding: 11px; border: 1px solid rgba(39, 56, 46, .14); background: rgba(241, 235, 216, .7); }
+.trace-impact-grid small { display: block; font: 800 9px/1.15 system-ui; letter-spacing: .08em; color: #717a72; }
+.trace-impact-grid b { display: block; margin-top: 5px; font: 850 22px/1 system-ui; color: #31463a; }
+.trace-history > div { grid-template-columns: 46px minmax(0, 1fr) auto; }
+.trace-history > div > b { font: 800 10px/1 system-ui; color: #6f527c; }
+.view-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.view-tabs button { min-width: 0; font-size: 9px; letter-spacing: .09em; }
+.view-tabs [data-view="trace"] { min-width: 0; }
+
+@media (max-width: 720px) {
+  .trace-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 430px) {
+  .trace-cell-hero > output { font-size: 27px; }
+  .trace-hierarchy li > span { margin-left: calc(var(--depth) * 8px); }
+}

@@ -1,4 +1,4 @@
-/* КЛАДА 5.0 — макроэкология, живая планета и наследственность в отдельном потоке. */
+/* КЛАДА 5.1 — макроэкология, планета, наследственность и след жизни в отдельном потоке. */
 const CORE_PARTS = [
   '../runtime/v4/16-01.txt',
   '../runtime/v4/16-02.txt',
@@ -11,14 +11,18 @@ const CORE_PARTS = [
   '../runtime/v5/24-02.txt',
   '../runtime/v5/24-03.txt',
   '../runtime/v5/24-04.txt',
-  '../runtime/v5/24-05.txt'
+  '../runtime/v5/24-05.txt',
+  '../runtime/v5/26-01.txt',
+  '../runtime/v5/26-02.txt',
+  '../runtime/v5/26-03.txt',
+  '../runtime/v5/26-04.txt'
 ];
 let readyPromise = null;
 const clone = (value) => typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 
 async function ensureCores() {
-  if (globalThis.CladaMetacommunityCore && globalThis.CladaLivingPlanetCore && globalThis.CladaGeneticsCore) {
-    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore, genetics: globalThis.CladaGeneticsCore };
+  if (globalThis.CladaMetacommunityCore && globalThis.CladaLivingPlanetCore && globalThis.CladaGeneticsCore && globalThis.CladaLifeTraceCore) {
+    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore, genetics: globalThis.CladaGeneticsCore, trace: globalThis.CladaLifeTraceCore };
   }
   if (!readyPromise) readyPromise = (async () => {
     const responses = await Promise.all(CORE_PARTS.map((source) => fetch(source, { cache: 'no-store' })));
@@ -28,19 +32,21 @@ async function ensureCores() {
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
     try { importScripts(url); }
     finally { URL.revokeObjectURL(url); }
-    if (!globalThis.CladaMetacommunityCore || !globalThis.CladaLivingPlanetCore || !globalThis.CladaGeneticsCore) {
-      throw new Error('Ядра метасообщества, планеты и наследственности не зарегистрировались');
+    if (!globalThis.CladaMetacommunityCore || !globalThis.CladaLivingPlanetCore || !globalThis.CladaGeneticsCore || !globalThis.CladaLifeTraceCore) {
+      throw new Error('Ядра метасообщества, планеты, наследственности и следа жизни не зарегистрировались');
     }
-    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore, genetics: globalThis.CladaGeneticsCore };
+    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore, genetics: globalThis.CladaGeneticsCore, trace: globalThis.CladaLifeTraceCore };
   })();
   return readyPromise;
 }
 
-function advanceWithPlanet(meta, planet, genetics, community) {
+function advanceWithPlanet(meta, planet, genetics, trace, community) {
+  trace.ensureCommunity(community);
   genetics.ensureCommunity(community);
   genetics.prepareGeneration(community);
   planet.ensurePlanet(community);
   planet.prepareGeneration(community);
+  trace.prepareGeneration(community);
   planet.applyHabitatStress(community);
   const result = meta.advance(community) || { proposals: [] };
   planet.adjustIsolation(community);
@@ -48,35 +54,45 @@ function advanceWithPlanet(meta, planet, genetics, community) {
   const normal = planet.decorateProposals(community, result.proposals || []);
   const extra = normal.length ? [] : planet.extraProposals(community);
   genetics.finalizeGeneration(community);
+  trace.finalizeGeneration(community);
   return { ...result, proposals: [...normal, ...extra].slice(0, 1) };
 }
 
 const methods = {
   async init() {
-    const { meta, planet, genetics } = await ensureCores();
-    return { worker: true, modelVersion: meta.MODEL_VERSION || 2, planetVersion: planet.VERSION || 1, geneticsVersion: genetics.VERSION || 1 };
+    const { meta, planet, genetics, trace } = await ensureCores();
+    return {
+      worker: true,
+      modelVersion: meta.MODEL_VERSION || 2,
+      planetVersion: planet.VERSION || 1,
+      geneticsVersion: genetics.VERSION || 1,
+      lifeTraceVersion: trace.VERSION || 1
+    };
   },
   async advance(input) {
-    const { meta, planet, genetics } = await ensureCores();
+    const { meta, planet, genetics, trace } = await ensureCores();
     const started = performance.now();
     const community = clone(input);
     meta.ensureCommunity(community);
-    const outcome = advanceWithPlanet(meta, planet, genetics, community);
+    const outcome = advanceWithPlanet(meta, planet, genetics, trace, community);
     return {
       community,
       proposals: outcome.proposals || [],
       summary: meta.summarize(community),
       genetics: genetics.compactDiagnostic(community),
+      lifeTrace: trace.compactDiagnostic(community),
       duration: performance.now() - started
     };
   },
   async summarize(input) {
-    const { meta, genetics } = await ensureCores();
+    const { meta, genetics, trace } = await ensureCores();
     const community = clone(input);
     meta.ensureCommunity(community);
     genetics.ensureCommunity(community);
+    trace.ensureCommunity(community);
     const summary = meta.summarize(community);
     summary.genetics = genetics.compactDiagnostic(community);
+    summary.lifeTrace = trace.compactDiagnostic(community);
     return summary;
   }
 };
