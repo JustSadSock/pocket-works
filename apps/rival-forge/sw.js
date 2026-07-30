@@ -1,5 +1,5 @@
-const CACHE='rival-forge-v1.1.0';
-const APP_SHELL=['./','./index.html','./styles.css','./upgrade.css','./app.js','./store.js','./builder.js','./catalog.js','./sheets.js','./data.js','./loadouts.js','./core.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/update-manager.js'];
+const CACHE='rival-forge-v1.2.0';
+const APP_SHELL=['./','./index.html','./styles.css','./upgrade.css','./app.js','./store.js','./builder.js','./profiles.js','./catalog.js','./sheets.js','./data.js','./loadouts.js','./core.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/update-manager.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('rival-forge-')&&key!==CACHE).map(key=>caches.delete(key)))),self.clients.claim()]));});
 self.addEventListener('fetch',event=>{
