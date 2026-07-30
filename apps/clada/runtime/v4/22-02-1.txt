@@ -1,5 +1,5 @@
 /* КЛАДА 4.3 — постоянные представители, плавные миграции и дешёвая летопись. */
-const OBSERVATION_APP_VERSION = '4.3.0';
+const OBSERVATION_APP_VERSION = '4.4.0';
 const OBSERVATION = globalThis.CladaObservationCore;
 const observationLegacySaveState = saveState;
 const observationLegacySimulateStep = simulateStep;
