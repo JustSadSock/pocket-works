@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HERO_BY_ID } from '../data.js';
-import { exportPayload, normalizeImported } from '../core.js';
+import { exportPayload, normalizeImported } from '../state-codec.js';
 import { classifyEnemyPlan, heroContextScore, buildLocalMeta, contextualRecommendations, evaluateMatchPlan, buildDecisionTree } from '../match-core.js';
 
 const diveEnemy=['psylocke','spider-man','venom',null,null,null];
