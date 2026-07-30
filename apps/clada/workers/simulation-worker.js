@@ -1,52 +1,71 @@
-/* КЛАДА 4.4 — макроэкология в отдельном потоке. */
+/* КЛАДА 4.4 — макроэкология и живая планета в отдельном потоке. */
 const CORE_PARTS = [
   '../runtime/v4/16-01.txt',
   '../runtime/v4/16-02.txt',
   '../runtime/v4/16-03.txt',
-  '../runtime/v4/16-04.txt'
+  '../runtime/v4/16-04.txt',
+  '../runtime/v4/20-01.txt',
+  '../runtime/v4/20-02.txt',
+  '../runtime/v4/20-03.txt'
 ];
 let readyPromise = null;
 const clone = (value) => typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 
-async function ensureCore() {
-  if (globalThis.CladaMetacommunityCore) return globalThis.CladaMetacommunityCore;
+async function ensureCores() {
+  if (globalThis.CladaMetacommunityCore && globalThis.CladaLivingPlanetCore) {
+    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore };
+  }
   if (!readyPromise) readyPromise = (async () => {
     const responses = await Promise.all(CORE_PARTS.map((source) => fetch(source, { cache: 'no-store' })));
     const failed = responses.find((response) => !response.ok);
-    if (failed) throw new Error(`Не удалось загрузить ядро метасообщества: ${failed.status}`);
+    if (failed) throw new Error(`Не удалось загрузить ядро симуляции: ${failed.status}`);
     const source = (await Promise.all(responses.map((response) => response.text()))).join('\n');
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
     try { importScripts(url); }
     finally { URL.revokeObjectURL(url); }
-    if (!globalThis.CladaMetacommunityCore) throw new Error('Ядро метасообщества не зарегистрировалось');
-    return globalThis.CladaMetacommunityCore;
+    if (!globalThis.CladaMetacommunityCore || !globalThis.CladaLivingPlanetCore) {
+      throw new Error('Ядра метасообщества и планеты не зарегистрировались');
+    }
+    return { meta: globalThis.CladaMetacommunityCore, planet: globalThis.CladaLivingPlanetCore };
   })();
   return readyPromise;
 }
 
+function advanceWithPlanet(meta, planet, community) {
+  planet.ensurePlanet(community);
+  planet.prepareGeneration(community);
+  planet.applyHabitatStress(community);
+  const result = meta.advance(community) || { proposals: [] };
+  planet.adjustIsolation(community);
+  planet.seedCorridorColonization(community);
+  const normal = planet.decorateProposals(community, result.proposals || []);
+  const extra = normal.length ? [] : planet.extraProposals(community);
+  return { ...result, proposals: [...normal, ...extra].slice(0, 1) };
+}
+
 const methods = {
   async init() {
-    const core = await ensureCore();
-    return { worker: true, modelVersion: core.VERSION || 2 };
+    const { meta, planet } = await ensureCores();
+    return { worker: true, modelVersion: meta.VERSION || 2, planetVersion: planet.VERSION || 1 };
   },
   async advance(input) {
-    const core = await ensureCore();
+    const { meta, planet } = await ensureCores();
     const started = performance.now();
     const community = clone(input);
-    core.ensureCommunity(community);
-    const outcome = core.advance(community) || {};
+    meta.ensureCommunity(community);
+    const outcome = advanceWithPlanet(meta, planet, community);
     return {
       community,
       proposals: outcome.proposals || [],
-      summary: core.summarize(community),
+      summary: meta.summarize(community),
       duration: performance.now() - started
     };
   },
   async summarize(input) {
-    const core = await ensureCore();
+    const { meta } = await ensureCores();
     const community = clone(input);
-    core.ensureCommunity(community);
-    return core.summarize(community);
+    meta.ensureCommunity(community);
+    return meta.summarize(community);
   }
 };
 

@@ -26,6 +26,16 @@ function cladaFlushIndexedSave() {
 }
 
 if (CLADA_STORAGE) {
+  if (typeof observationFlushSave === 'function') {
+    removeEventListener('pagehide', observationFlushSave);
+    if (observationSaveHandle !== null) {
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(observationSaveHandle);
+      else clearTimeout(observationSaveHandle);
+      observationSaveHandle = null;
+    }
+    observationSavePending = false;
+  }
+
   saveState = function cladaIndexedDbSave(force = false) {
     if (!state) return;
     cladaSavePending = true;
