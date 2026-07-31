@@ -5,8 +5,8 @@
   "shortName": "КАНЦЕЛЯРИЯ",
   "description": "Локальный штаб Europa Universalis V: сравнение сохранений, диагностика государства и картограмма территорий.",
   "version": "0.2.0",
-  "releaseDate": "2026-07-31",
-  "releaseDateTime": "2026-07-31T00:05:00Z",
+  "releaseDate": "2026-07-30",
+  "releaseDateTime": "2026-07-30T23:38:00Z",
   "changelog": [
     "Added campaign grouping and side-by-side comparison of any two imported snapshots.",
     "Added causal diagnostics with fires, opportunities and evidence-backed change explanations.",
@@ -22,15 +22,6 @@
   "orientation": "portrait",
   "cacheName": "chancellery-v0.2.0",
   "storageNamespace": "pocket-works:chancellery",
-  "tags": [
-    "PWA",
-    "offline",
-    "tool",
-    "strategy",
-    "parser",
-    "analysis",
-    "map",
-    "workshop"
-  ],
+  "tags": ["PWA", "offline", "tool", "strategy", "parser", "analysis", "map", "workshop"],
   "order": 318
 }
