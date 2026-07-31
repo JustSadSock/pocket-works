@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e151d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ТАКТ">
+  <title>ТАКТ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="game-2d">
+  <main class="app-shell" data-app-shell data-fullscreen-app data-keyboard-aware>
+    <header class="topbar" data-ui>
+      <a class="launcher-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">← <span>Pocket Works</span></a>
+      <div class="brand-lockup" aria-label="ТАКТ">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>ТАКТ</span>
+      </div>
+      <button id="soundToggle" class="icon-button" type="button" data-native-press aria-pressed="true" aria-label="Звук включён">◖))</button>
+    </header>
+
+    <section id="homeScreen" class="screen home-screen" aria-labelledby="homeTitle">
+      <div class="home-hero">
+        <p class="eyebrow"><span class="signal-dot"></span> RECOVERY PROTOCOL 07</p>
+        <h1 id="homeTitle">Не угадывай.<br><em>Программируй.</em></h1>
+        <p class="hero-copy">Станция умирает по тактам. Собери цепочку действий, запусти её и посмотри, как твой план сталкивается с чужим.</p>
+        <div class="hero-schematic" aria-hidden="true">
+          <div class="schematic-orbit orbit-a"></div>
+          <div class="schematic-orbit orbit-b"></div>
+          <div class="schematic-node node-a">A</div>
+          <div class="schematic-node node-b">B</div>
+          <div class="schematic-line line-a"></div>
+          <div class="schematic-line line-b"></div>
+          <div class="schematic-readout"><span>SYNC</span><strong>04:00</strong><small>UNTIL COLLAPSE</small></div>
+        </div>
+      </div>
+
+      <div class="home-actions" data-ui>
+        <button id="newRunButton" class="primary-button" type="button" data-native-press>
+          <span>НОВЫЙ ЗАБЕГ</span><b>↗</b>
+        </button>
+        <button id="continueButton" class="secondary-button" type="button" data-native-press hidden>
+          <span>ПРОДОЛЖИТЬ</span><small id="continueMeta"></small>
+        </button>
+      </div>
+
+      <div class="home-stats" data-ui>
+        <div><span>ЛУЧШЕЕ</span><strong id="bestScore">0000</strong></div>
+        <div><span>ЛОМА СОБРАНО</span><strong id="scrapTotal">000</strong></div>
+        <div><span>ЗАБЕГОВ</span><strong id="runCount">00</strong></div>
+      </div>
+
+      <div class="home-foot" data-ui>
+        <button id="rulesButton" class="text-button" type="button" data-native-press>Как это работает</button>
+        <button id="framesButton" class="text-button" type="button" data-native-press>Корпуса и модули</button>
+      </div>
+    </section>
+
+    <section id="mapScreen" class="screen map-screen" aria-labelledby="mapTitle" hidden>
+      <div class="screen-heading">
+        <div><p class="eyebrow">ROUTE / <span id="mapDepth">01</span>—09</p><h2 id="mapTitle">Карта разлома</h2></div>
+        <div class="run-chip"><span>ЛОМ</span><strong id="mapScrap">0</strong></div>
+      </div>
+      <p class="screen-lead">Каждый узел меняет следующий. Дальний маршрут богаче, но станция не обязана ждать.</p>
+      <div id="routeMap" class="route-map" data-ui></div>
+      <div class="map-legend" data-ui>
+        <span><i class="legend-dot combat"></i> угроза</span>
+        <span><i class="legend-dot salvage"></i> лом</span>
+        <span><i class="legend-dot workshop"></i> мастерская</span>
+        <span><i class="legend-dot anomaly"></i> аномалия</span>
+      </div>
+      <div class="map-loadout" data-ui>
+        <div><span>КОРПУС</span><strong id="mapFrame">SCOUT / L-1</strong></div>
+        <div><span>МОДУЛИ</span><strong id="mapModules">—</strong></div>
+      </div>
+    </section>
+
+    <section id="missionScreen" class="screen mission-screen" aria-labelledby="missionTitle" hidden>
+      <div class="mission-topline" data-ui>
+        <div><p class="eyebrow" id="missionEyebrow">SECTOR 01 / RECOVERY</p><h2 id="missionTitle">Точка разрыва</h2></div>
+        <div class="mission-round"><span>РАУНД</span><strong id="missionRound">01</strong><small>/ 08</small></div>
+      </div>
+      <div class="objective-strip" data-ui>
+        <span class="objective-icon">◇</span>
+        <div><span>ЗАДАЧА</span><strong id="missionObjective">Взломать ядра и уйти через шлюз</strong></div>
+        <b id="missionObjectiveCount">0 / 2</b>
+      </div>
+      <div class="board-wrap">
+        <canvas id="missionCanvas" width="720" height="770" data-gesture-surface aria-label="Тактическое поле станции"></canvas>
+        <div class="board-caption" aria-hidden="true"><span>LIVE TELEMETRY</span><span id="telemetryCode">TKT-0000</span></div>
+      </div>
+      <div id="tutorialOverlay" class="tutorial-overlay" hidden aria-live="polite">
+        <section class="tutorial-card" role="dialog" aria-modal="false" aria-labelledby="tutorialTitle">
+          <div class="tutorial-head">
+            <span id="tutorialStepLabel" class="eyebrow">BOOT / 01</span>
+            <button id="tutorialSkip" class="text-button" type="button" data-native-press>ПРОПУСТИТЬ</button>
+          </div>
+          <h3 id="tutorialTitle">Четыре такта — один план.</h3>
+          <p id="tutorialCopy">Станция уже дала тебе готовый сектор. Сейчас покажу, как читать поле и не отдавать решение случаю.</p>
+          <div id="tutorialProgress" class="tutorial-progress" aria-hidden="true"></div>
+          <button id="tutorialNext" class="primary-button" type="button" data-native-press><span>ДАЛЬШЕ</span><b>↗</b></button>
+        </section>
+      </div>
+      <div id="missionStatus" class="mission-status" aria-live="polite">Выбери дрон и собери четыре такта.</div>
+      <div id="droneDock" class="drone-dock" data-ui></div>
+      <div class="timeline-label" data-ui><span>ЛЕНТА ИСПОЛНЕНИЯ</span><small>4 TAKTS / 1 ОТКЛИК</small></div>
+      <div id="timeline" class="timeline" data-ui></div>
+      <div id="commandTray" class="command-tray" data-ui></div>
+      <div class="mission-actions" data-ui>
+        <button id="clearProgramButton" class="secondary-button" type="button" data-native-press>ОЧИСТИТЬ</button>
+        <button id="executeButton" class="execute-button" type="button" data-native-press>ИСПОЛНИТЬ <b>▶</b></button>
+      </div>
+    </section>
+
+    <section id="eventScreen" class="screen event-screen" aria-labelledby="eventTitle" hidden>
+      <p class="eyebrow" id="eventEyebrow">SIGNAL / UNSTABLE</p>
+      <h2 id="eventTitle">Старый корпус ещё дышит.</h2>
+      <p id="eventCopy" class="screen-lead">В обломках есть полезный металл. Но каждый лишний звук притянет охрану из соседнего сектора.</p>
+      <div id="eventOptions" class="choice-stack" data-ui></div>
+      <div class="event-note"><span>⊙</span><p>Решение необратимо до следующего узла. Иногда лучший ресурс — не тот, который блестит.</p></div>
+    </section>
+
+    <section id="rewardScreen" class="screen reward-screen" aria-labelledby="rewardTitle" hidden>
+      <div class="reward-orbit" aria-hidden="true"><span></span><i></i></div>
+      <p class="eyebrow">PACKAGE / NEW BEHAVIOUR</p>
+      <h2 id="rewardTitle">Станция запомнила<br><em>твой способ думать.</em></h2>
+      <p id="rewardCopy" class="screen-lead">Выбери один модуль. Он меняет не цифры, а правила следующего забега.</p>
+      <div id="rewardOptions" class="module-grid" data-ui></div>
+    </section>
+
+    <section id="endScreen" class="screen end-screen" aria-labelledby="endTitle" hidden>
+      <div class="end-stamp">RUN<br><strong id="endStampNumber">01</strong></div>
+      <p class="eyebrow" id="endEyebrow">SIGNAL LOST / PARTIAL RECOVERY</p>
+      <h2 id="endTitle">Экипаж<br><em>не синхронизирован.</em></h2>
+      <p id="endCopy" class="screen-lead">Станция забрала своё. Но протокол стал умнее.</p>
+      <div class="result-grid" data-ui>
+        <div><span>ОЧКИ</span><strong id="endScore">0000</strong></div>
+        <div><span>ЛОМ</span><strong id="endScrap">000</strong></div>
+        <div><span>УЗЛОВ</span><strong id="endNodes">0 / 9</strong></div>
+        <div><span>МОДУЛЕЙ</span><strong id="endModules">0</strong></div>
+      </div>
+      <div class="end-actions" data-ui>
+        <button id="endNewRunButton" class="primary-button" type="button" data-native-press><span>ЕЩЁ РАЗ</span><b>↗</b></button>
+        <button id="endHomeButton" class="secondary-button" type="button" data-native-press>В МЕНЮ</button>
+      </div>
+    </section>
+
+    <footer class="app-footer" data-ui>
+      <span>TACTICAL RECOVERY SYSTEM</span>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+    </footer>
+  </main>
+
+  <dialog id="rulesDialog" class="app-dialog">
+    <form method="dialog">
+      <button class="dialog-close" value="cancel" aria-label="Закрыть">×</button>
+      <p class="eyebrow">FIELD MANUAL / 01</p>
+      <h2>Как не умереть<br><em>в четыре такта.</em></h2>
+      <ol class="rules-list">
+        <li><b>Выбери дрон.</b><span>Скаут быстрый, грузчик взламывает ядра, страж держит удар.</span></li>
+        <li><b>Собери ленту.</b><span>Выбери слот, команду и соседнюю клетку. Пустые такты станут ожиданием.</span></li>
+        <li><b>Смотри на красное.</b><span>Турели показывают линию огня, охотники — клетку следующего шага.</span></li>
+        <li><b>Не жадничай.</b><span>Нужно взломать ядра и вывести хотя бы один дрон через шлюз.</span></li>
+      </ol>
+      <button class="primary-button dialog-action" value="cancel">ПОНЯТНО</button>
+    </form>
+  </dialog>
+
+  <dialog id="framesDialog" class="app-dialog">
+    <form method="dialog">
+      <button class="dialog-close" value="cancel" aria-label="Закрыть">×</button>
+      <p class="eyebrow">HANGAR / BLUEPRINTS</p>
+      <h2>Корпуса<br><em>и память.</em></h2>
+      <div id="frameCatalog" class="frame-catalog"></div>
+      <button class="secondary-button dialog-action" value="cancel">ЗАКРЫТЬ</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ТАКТ" data-app-version="1.1.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

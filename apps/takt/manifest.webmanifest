@@ -1,0 +1,21 @@
+{
+  "id": "/apps/takt/",
+  "name": "ТАКТ",
+  "short_name": "ТАКТ",
+  "description": "Тактический roguelite о спасательных дронах: собери цепочку команд, переживи одновременное исполнение и вытащи экипаж из рушащейся станции.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0e151d",
+  "theme_color": "#0e151d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
