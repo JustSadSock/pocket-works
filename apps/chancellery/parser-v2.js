@@ -18,7 +18,8 @@ function scalar(value) {
   if (/^(none|null)$/i.test(raw)) return null;
   return raw;
 }
-function number(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }
+function number(value) { const numeric = Number(value); return Number.isFinite(numeric) ? numeric : null; }
+function percent(value) { const numeric = number(value); return numeric !== null && Math.abs(numeric) <= 1 ? numeric * 100 : numeric; }
 function first(object, names) { for (const name of names) if (object?.[name] !== undefined) return object[name]; return undefined; }
 function text(value) { return value == null || typeof value === 'object' ? null : String(value); }
 
@@ -178,7 +179,7 @@ function locationRows(container, playerTag) {
     const owner = text(first(row, ['owner', 'country_owner', 'country', 'controller']));
     return {
       id: String(id), name: text(first(row, ['name', 'display_name'])) || String(id), owner,
-      controller: text(first(row, ['controller'])), control: number(first(row, ['control', 'country_control', 'local_control'])),
+      controller: text(first(row, ['controller'])), control: percent(first(row, ['control', 'country_control', 'local_control'])),
       population: number(first(row, ['population', 'total_population', 'pop_size', 'population_amount'])),
       good: text(first(row, ['good', 'trade_good', 'raw_material', 'resource'])), culture: text(first(row, ['culture', 'dominant_culture'])),
       religion: text(first(row, ['religion', 'dominant_religion'])), market: text(first(row, ['market', 'market_id', 'market_owner'])),
@@ -190,9 +191,9 @@ function locationRows(container, playerTag) {
 }
 function summaryRows(container, type) {
   return childObjects(container).map(([id, row]) => {
-    if (type === 'estate') return { id, name: text(first(row, ['name', 'type'])) || id, power: number(first(row, ['power', 'influence', 'clout'])), satisfaction: number(first(row, ['satisfaction', 'loyalty', 'approval'])) };
+    if (type === 'estate') return { id, name: text(first(row, ['name', 'type'])) || id, power: percent(first(row, ['power', 'influence', 'clout'])), satisfaction: percent(first(row, ['satisfaction', 'loyalty', 'approval'])) };
     if (type === 'market') return { id, name: text(first(row, ['name'])) || id, owner: text(first(row, ['owner', 'country'])), value: number(first(row, ['value', 'market_value', 'size'])) };
-    return { id, amount: number(first(row, ['amount', 'principal', 'value', 'size'])) || 0, interest: number(first(row, ['interest', 'rate'])), lender: text(first(row, ['lender', 'creditor'])) };
+    return { id, amount: number(first(row, ['amount', 'principal', 'value', 'size'])) || 0, interest: percent(first(row, ['interest', 'rate'])), lender: text(first(row, ['lender', 'creditor'])) };
   });
 }
 function counts(list, field) {
