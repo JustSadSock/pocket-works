@@ -1,8 +1,8 @@
 {
   "id": "/apps/chancellery/",
-  "name": "КАНЦЕЛЯРИЯ",
+  "name": "КАНЦЕЛЯРИЯ — штаб EU5",
   "short_name": "КАНЦЕЛЯРИЯ",
-  "description": "Локальный разборщик сохранений Europa Universalis V.",
+  "description": "Локальный анализ сохранений Europa Universalis V: сравнение кампаний, причины изменений и картограмма территорий.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,12 +10,5 @@
   "orientation": "portrait",
   "background_color": "#e7dfc9",
   "theme_color": "#d9cfb5",
-  "icons": [
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
