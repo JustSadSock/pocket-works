@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e5db">
+  <meta name="description" content="РЕБРО — изометрическая головоломка о расстановке вертикальных портальных ворот на рёбрах поля.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="РЕБРО">
+  <title>РЕБРО — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app" id="app" data-app-shell>
+    <header class="topbar">
+      <button class="brand" id="levelsButton" type="button" data-native-press aria-label="Открыть схему уровней">
+        <span>РЕБРО</span>
+        <small id="levelCounter">СХЕМА 01 / 12</small>
+      </button>
+      <div class="topbar__status" aria-live="polite">
+        <i id="statusLamp"></i>
+        <span id="compactStatus">МОНТАЖ</span>
+      </div>
+      <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press aria-label="Выйти в Pocket Works">×</a>
+    </header>
+
+    <section class="mission" aria-labelledby="missionTitle">
+      <div>
+        <p id="missionKicker">КАМЕРА 01</p>
+        <h1 id="missionTitle">ДВА РЕБРА</h1>
+      </div>
+      <p id="missionBrief">Поставь пару ворот поперёк траектории и разверни выход к приёмнику.</p>
+    </section>
+
+    <section class="board-shell" id="boardShell" aria-label="Изометрическое поле с вертикальными портальными воротами">
+      <canvas id="boardCanvas"></canvas>
+      <div class="drag-label" id="dragLabel" hidden></div>
+      <div class="board-badge board-badge--left"><b>ИСТОК</b><span>ИМПУЛЬС</span></div>
+      <div class="board-badge board-badge--right"><b>ПРИЁМ</b><span id="crystalStatus">0 / 0</span></div>
+    </section>
+
+    <section class="readout" aria-live="polite">
+      <div class="readout__line"><span id="runStatus">Выбери ворота и коснись монтажного ребра.</span></div>
+      <div class="readout__meta">
+        <span>ЗАПУСКИ <b id="runsValue">0</b></span>
+        <span>ПОДСКАЗКИ <b id="hintsValue">0</b></span>
+        <span>ЛУЧШЕЕ <b id="bestValue">—</b></span>
+      </div>
+    </section>
+
+    <section class="portal-workbench" aria-label="Портальные ворота">
+      <header>
+        <span>ВЕРТИКАЛЬНЫЕ ВОРОТА</span>
+        <small>перетащи или выбери → ребро</small>
+      </header>
+      <div class="portal-rack" id="portalRack"></div>
+      <div class="portal-actions">
+        <button id="flipButton" type="button" data-native-press disabled><span>РАЗВЕРНУТЬ</span><b>↔</b></button>
+        <button id="removeButton" type="button" data-native-press disabled><span>СНЯТЬ</span><b>↑</b></button>
+      </div>
+    </section>
+
+    <nav class="command-bar" aria-label="Управление схемой">
+      <button class="command command--quiet" id="resetButton" type="button" data-native-press>
+        <span>СБРОС</span><small>очистить ворота</small>
+      </button>
+      <button class="command command--run" id="runButton" type="button" data-native-press>
+        <i></i><span>ПУСК</span><small>проверить маршрут</small>
+      </button>
+      <button class="command command--quiet" id="hintButton" type="button" data-native-press>
+        <span>НАМЁК</span><small>одно верное ребро</small>
+      </button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="overlay intro-overlay" id="introOverlay">
+      <article class="intro-sheet">
+        <p class="serial">POCKET WORKS / SPATIAL PUZZLE 01</p>
+        <div class="intro-mark" aria-hidden="true">
+          <i class="intro-mark__gate intro-mark__gate--a"></i>
+          <i class="intro-mark__beam"></i>
+          <i class="intro-mark__gate intro-mark__gate--b"></i>
+        </div>
+        <h2>ПОРТАЛ — НЕ ПЛИТКА.</h2>
+        <h3>Это ворота, стоящие <em>ребром</em> к полю.</h3>
+        <p class="intro-copy">Расставляй парные рамки на монтажных рёбрах. Импульс входит через плоскость одних ворот и выходит из других в сторону стрелки. Никаких человечков, прыжков и прочей цирковой херни — только геометрия маршрута.</p>
+        <div class="intro-rules">
+          <div><b>01</b><span>Выбери цветные ворота.</span></div>
+          <div><b>02</b><span>Поставь их на светлое ребро.</span></div>
+          <div><b>03</b><span>Разверни выход и нажми «Пуск».</span></div>
+        </div>
+        <button class="primary-panel-button" id="introStartButton" type="button" data-native-press>СОБРАТЬ ПЕРВУЮ СХЕМУ <b>→</b></button>
+      </article>
+    </section>
+
+    <section class="overlay map-overlay" id="mapOverlay" hidden>
+      <article class="map-sheet">
+        <header>
+          <div><p>АРХИВ КАМЕР</p><h2>СХЕМЫ</h2></div>
+          <button id="mapCloseButton" type="button" data-native-press aria-label="Закрыть">×</button>
+        </header>
+        <div class="level-grid" id="levelGrid"></div>
+        <div class="map-settings">
+          <button id="soundButton" type="button" data-native-press>ЗВУК <b>ВКЛ</b></button>
+          <button id="hapticsButton" type="button" data-native-press>ВИБРАЦИЯ <b>ВКЛ</b></button>
+          <button id="clearProgressButton" type="button" data-native-press>СБРОСИТЬ ПРОГРЕСС</button>
+        </div>
+        <a class="shelf-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
+      </article>
+    </section>
+
+    <section class="overlay result-overlay" id="resultOverlay" hidden>
+      <article class="result-sheet">
+        <div class="result-glyph" id="resultGlyph" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p id="resultKicker">МАРШРУТ ЗАМКНУТ</p>
+        <h2 id="resultTitle">Камера пройдена.</h2>
+        <p id="resultCopy">Вертикальная геометрия работает. Кто бы мог подумать.</p>
+        <div class="result-stats">
+          <span>ЗАПУСКИ <b id="resultRuns">1</b></span>
+          <span>ПОДСКАЗКИ <b id="resultHints">0</b></span>
+        </div>
+        <button class="primary-panel-button" id="nextButton" type="button" data-native-press>СЛЕДУЮЩАЯ КАМЕРА <b>→</b></button>
+        <button class="secondary-panel-button" id="replayButton" type="button" data-native-press>ПЕРЕСОБРАТЬ</button>
+        <button class="secondary-panel-button" id="resultMapButton" type="button" data-native-press>К СПИСКУ СХЕМ</button>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РЕБРО" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
