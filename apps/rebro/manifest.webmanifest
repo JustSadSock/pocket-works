@@ -1,0 +1,25 @@
+{
+  "id": "/apps/rebro/",
+  "name": "РЕБРО",
+  "short_name": "РЕБРО",
+  "description": "Изометрическая головоломка о расстановке вертикальных портальных ворот на рёбрах поля: собирай маршрут импульса, разворачивай выходы и замыкай камеры.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9e5db",
+  "theme_color": "#e9e5db",
+  "categories": [
+    "games",
+    "puzzle"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
