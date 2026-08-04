@@ -65,6 +65,7 @@ async function copyText(text){if(navigator.clipboard?.writeText){await navigator
 document.addEventListener('click',async event=>{
  const b=event.target.closest('button,[data-tab]');if(!b)return;
  if(b.dataset.tab){tab=b.dataset.tab;render();return}
+ if(b.hasAttribute('data-modal-close')){close();return}
  if(b.dataset.action==='episode')open('Новый эпизод',episodeForm(state));
  if(b.dataset.action==='checkin')open('Чек-ин состояния',checkinForm());
  if(b.dataset.action==='product')open('Карточка средства',productForm());

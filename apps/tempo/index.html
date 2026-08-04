@@ -13,7 +13,7 @@
 <button data-tab="today" data-native-press class="active"><b>●</b><span>Сегодня</span></button><button data-tab="journal" data-native-press><b>▦</b><span>Журнал</span></button>
 <button data-tab="techniques" data-native-press><b>↻</b><span>Практики</span></button><button data-tab="export" data-native-press><b>⇧</b><span>Экспорт</span></button>
 </nav></main>
-<dialog id="modal"><form method="dialog"><header><button value="cancel" data-native-press>Закрыть</button><strong id="modal-title"></strong><span></span></header><div id="modal-body"></div></form></dialog>
+<dialog id="modal"><div class="modal-shell"><header><button type="button" data-modal-close data-native-press>Закрыть</button><strong id="modal-title"></strong><span></span></header><div id="modal-body"></div></div></dialog>
 <dialog id="confirm"><form method="dialog"><h2>Удалить запись?</h2><p>Действие нельзя отменить.</p><div><button value="cancel" data-native-press>Отмена</button><button value="confirm" class="danger" data-native-press>Удалить</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.0.0"></script>
