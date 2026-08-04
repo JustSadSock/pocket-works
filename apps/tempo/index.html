@@ -5,16 +5,16 @@
 <title>TEMPO</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
-<link rel="stylesheet" href="./styles.css"></head><body>
+<link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./phase2.css"></head><body>
 <main class="app-shell" data-app-shell data-keyboard-aware data-fullscreen-app>
 <header class="top"><a href="../../" data-app-control>Все приложения</a><b><i></i>TEMPO</b><span><button data-workshop-trigger data-native-press aria-label="Workshop">W</button><button data-action="settings" data-native-press aria-label="Настройки">•••</button></span></header>
 <section id="screen"></section>
 <nav class="nav" data-ui>
 <button data-tab="today" data-native-press class="active"><b>●</b><span>Сегодня</span></button><button data-tab="journal" data-native-press><b>▦</b><span>Журнал</span></button>
-<button data-tab="techniques" data-native-press><b>↻</b><span>Практики</span></button><button data-tab="export" data-native-press><b>⇧</b><span>Экспорт</span></button>
+<button data-tab="techniques" data-native-press><b>↻</b><span>Практики</span></button><button data-tab="experiments" data-native-press><b>≋</b><span>Тесты</span></button><button data-tab="export" data-native-press><b>⇧</b><span>Экспорт</span></button>
 </nav></main>
 <dialog id="modal"><div class="modal-shell"><header><button type="button" data-modal-close data-native-press>Закрыть</button><strong id="modal-title"></strong><span></span></header><div id="modal-body"></div></div></dialog>
 <dialog id="confirm"><form method="dialog"><h2>Удалить запись?</h2><p>Действие нельзя отменить.</p><div><button value="cancel" data-native-press>Отмена</button><button value="confirm" class="danger" data-native-press>Удалить</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script></body></html>

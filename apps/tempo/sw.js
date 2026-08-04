@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'tempo-';
-const CACHE_NAME = 'tempo-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'tempo-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-08-04';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Добавлен быстрый журнал эпизодов, самочувствия и контекста без обязательного секундомера.',
-  'Практики stop–start, интервального переключения и аккуратного тестирования средств доступны как пошаговые сессии.',
-  'Календарь, сводка тенденций и Markdown/JSON-экспорт работают полностью локально.'
+  'Добавлены контролируемые эксперименты с базовой и изменённой группами, порогами выборки и предупреждениями о смешанных факторах.',
+  'Появились пользовательские пошаговые протоколы с собственными циклами и паузами.',
+  'Экспорт теперь включает эксперименты, связи с записями, автоматические оценки и пользовательские протоколы.'
 ];
 
 const APP_SHELL = [
@@ -14,10 +14,13 @@ const APP_SHELL = [
   './index.html',
   './app.config.json',
   './styles.css',
+  './phase2.css',
   './app.js',
   './screens.js',
+  './phase2-screens.js',
   './protocols.js',
   './core.js',
+  './phase2.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
