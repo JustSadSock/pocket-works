@@ -1,0 +1,20 @@
+<!doctype html><html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f302c"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="TEMPO">
+<title>TEMPO</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css"></head><body>
+<main class="app-shell" data-app-shell data-keyboard-aware data-fullscreen-app>
+<header class="top"><a href="../../" data-app-control>Все приложения</a><b><i></i>TEMPO</b><span><button data-workshop-trigger aria-label="Workshop">W</button><button data-action="settings" aria-label="Настройки">•••</button></span></header>
+<section id="screen"></section>
+<nav class="nav" data-ui>
+<button data-tab="today" class="active"><b>●</b><span>Сегодня</span></button><button data-tab="journal"><b>▦</b><span>Журнал</span></button>
+<button data-tab="techniques"><b>↻</b><span>Практики</span></button><button data-tab="export"><b>⇧</b><span>Экспорт</span></button>
+</nav></main>
+<dialog id="modal"><form method="dialog"><header><button value="cancel">Закрыть</button><strong id="modal-title"></strong><span></span></header><div id="modal-body"></div></form></dialog>
+<dialog id="confirm"><form method="dialog"><h2>Удалить запись?</h2><p>Действие нельзя отменить.</p><div><button value="cancel">Отмена</button><button value="confirm" class="danger">Удалить</button></div></form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script></body></html>

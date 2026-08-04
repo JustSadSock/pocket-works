@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">TEMPO</title>
+  <desc id="desc">A neutral timing mark formed by an open circle and a red pulse.</desc>
+  <rect width="512" height="512" rx="96" fill="#efe9dd"/>
+  <circle cx="256" cy="256" r="154" fill="none" stroke="#2f302c" stroke-width="34"/>
+  <path d="M110 266h94l25-72 49 145 31-82h93" fill="none" stroke="#d24d35" stroke-width="31" stroke-linecap="square" stroke-linejoin="miter"/>
+  <circle cx="256" cy="256" r="18" fill="#2f302c"/>
+</svg>
