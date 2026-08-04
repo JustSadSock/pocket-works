@@ -85,6 +85,6 @@ document.addEventListener('submit',event=>{if(event.target.id==='entry-form'){ev
 document.addEventListener('change',event=>{if(tab==='export'&&(event.target.name==='range'||event.target.id==='include-notes'))document.querySelector('#preview').value=report()});
 modal.addEventListener('close',()=>clearInterval(timerId));
 confirm.addEventListener('close',()=>{if(confirm.returnValue==='confirm')deleteNow();else pendingDelete=null});
-createWorkshopMode({appName:'TEMPO',version:'1.0.0',cachePrefix:'tempo-',storageNamespace:'pocket-works:tempo',onReset(){state=normalizeState(DEFAULT_STATE);store.reset();render()}});
+createWorkshopMode({appName:'TEMPO',version:'1.0.0',cachePrefix: 'tempo-',storageNamespace: 'pocket-works:tempo',onReset(){state=normalizeState(DEFAULT_STATE);store.reset();render()}});
 watchConnectivity(online=>document.documentElement.dataset.network=online?'online':'offline');
 render();
