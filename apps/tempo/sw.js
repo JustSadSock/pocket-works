@@ -15,6 +15,7 @@ const APP_SHELL = [
   './app.config.json',
   './styles.css',
   './phase2.css',
+  './phase3-boot.css',
   './phase3.css',
   './app.js',
   './screens.js',
