@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "tempo",
+  "name": "TEMPO",
+  "shortName": "TEMPO",
+  "description": "Локальный журнал личных ритмов, практик, экспериментов и самочувствия с удобной навигацией, приватностью, аналитикой и экспортом.",
+  "version": "1.2.0",
+  "releaseDate": "2026-08-04",
+  "releaseDateTime": "2026-08-04T12:30:00+03:00",
+  "changelog": [
+    "Главная страница теперь показывает понятный следующий шаг, быстрый ввод и недельные тренды контроля и удовольствия.",
+    "Журнал получил фильтры, длинные формы стали компактнее, а мобильная навигация — крупнее и понятнее.",
+    "Добавлены печатный PDF, локальный код блокировки и зашифрованные AES-GCM резервные копии с восстановлением."
+  ],
+  "status": "experimental",
+  "preset": "vanilla",
+  "accent": "#d24d35",
+  "backgroundColor": "#efe9dd",
+  "themeColor": "#2f302c",
+  "orientation": "portrait",
+  "cacheName": "tempo-v1.2.0",
+  "storageNamespace": "pocket-works:tempo",
+  "tags": [
+    "journal",
+    "wellbeing",
+    "calendar",
+    "experiments",
+    "techniques",
+    "local-first",
+    "privacy",
+    "backup",
+    "export",
+    "offline",
+    "pwa"
+  ],
+  "order": 52
+}
