@@ -2,11 +2,10 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f302c"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="TEMPO">
-<script>try{const p=JSON.parse(localStorage.getItem('pocket-works:tempo:privacy'));if(p?.pin){document.documentElement.classList.add('tempo-pending-lock');const o=new MutationObserver(()=>{if(document.querySelector('#tempo-lock')){document.documentElement.classList.remove('tempo-pending-lock');o.disconnect()}});o.observe(document,{childList:true,subtree:true})}}catch{}</script>
 <title>TEMPO</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
-<link rel="stylesheet" href="./phase3-boot.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./phase2.css"><link rel="stylesheet" href="./phase3.css"></head><body>
+<link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./phase2.css"><link rel="stylesheet" href="./phase3.css"><link rel="stylesheet" href="./phase4.css"></head><body>
 <main class="app-shell" data-app-shell data-keyboard-aware data-fullscreen-app>
 <header class="top"><a href="../../" data-app-control>Все приложения</a><b><i></i>TEMPO</b><span><button data-workshop-trigger data-native-press aria-label="Workshop">W</button><button data-action="settings" data-native-press aria-label="Настройки">•••</button></span></header>
 <section id="screen"></section>
@@ -17,5 +16,5 @@
 <dialog id="modal"><div class="modal-shell"><header><button type="button" data-modal-close data-native-press>Закрыть</button><strong id="modal-title"></strong><span></span></header><div id="modal-body"></div></div></dialog>
 <dialog id="confirm"><form method="dialog"><h2>Удалить запись?</h2><p>Действие нельзя отменить.</p><div><button value="cancel" data-native-press>Отмена</button><button value="confirm" class="danger" data-native-press>Удалить</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.2.0"></script>
-<script type="module" src="./app.js"></script><script type="module" src="./phase3.js"></script></body></html>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="TEMPO" data-app-version="1.3.0"></script>
+<script type="module" src="./app.js"></script><script type="module" src="./phase3.js"></script><script type="module" src="./phase4.js"></script></body></html>

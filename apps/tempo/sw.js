@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'tempo-';
-const CACHE_NAME = 'tempo-v1.2.0';
-const APP_VERSION = '1.2.0';
-const RELEASE_DATE = '2026-08-04';
+const CACHE_NAME = 'tempo-v1.3.0';
+const APP_VERSION = '1.3.0';
+const RELEASE_DATE = '2026-08-07';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Главная страница теперь показывает понятный следующий шаг, быстрый ввод и недельные тренды контроля и удовольствия.',
-  'Журнал получил фильтры, длинные формы стали компактнее, а мобильная навигация — крупнее и понятнее.',
-  'Добавлены печатный PDF, локальный код блокировки и зашифрованные AES-GCM резервные копии с восстановлением.'
+  'Эпизод теперь можно разбить на последовательность частей с отдельными видами активности и длительностью.',
+  'Для каждой части можно отметить stop–start и другие приёмы, циклы, контроль, удовольствие, напряжение, возбуждение, оргазмы и эякуляции.',
+  'База и изменение эксперимента теперь отмечаются на уровне отдельных частей, а подробная структура попадает в журнал и экспорт.'
 ];
 
 const APP_SHELL = [
@@ -15,16 +15,18 @@ const APP_SHELL = [
   './app.config.json',
   './styles.css',
   './phase2.css',
-  './phase3-boot.css',
   './phase3.css',
+  './phase4.css',
   './app.js',
   './screens.js',
   './phase2-screens.js',
   './phase3.js',
+  './phase4.js',
   './protocols.js',
   './core.js',
   './phase2.js',
   './phase3-core.js',
+  './phase4-core.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
