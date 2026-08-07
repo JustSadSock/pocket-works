@@ -3,6 +3,7 @@ import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import 'fake-indexeddb/auto';
 import {
+  TOOL_DEFS,
   brushSizeInDocument,
   clamp,
   colorVariants,
@@ -23,7 +24,7 @@ import {
   transformStroke,
   usedDrawingColors,
   widthForPoint
-} from './drawing-core.js';
+} from './drawing-core-crayon.js';
 import { openDrawingDatabase } from './drawing-db.js';
 import { makeTimelapsePlan } from './timelapse.js';
 
@@ -36,6 +37,50 @@ assert.ok(Math.abs(brushSizeInDocument(14, 1200) - 43.0769) < 0.001);
 const nearFit = fitDrawingScale(390, 844, 1200, 2596);
 assert.ok(nearFit >= 390 / 1200 && nearFit >= 844 / 2596);
 assert.equal(fitDrawingScale(390, 844, 1200, 1500), 390 / 1200);
+assert.equal(TOOL_DEFS.crayon.label, 'Восковой мелок');
+assert.equal(TOOL_DEFS.crayon.icon, 'i-crayon');
+assert.ok(TOOL_DEFS.crayon.defaultSize >= TOOL_DEFS.crayon.min);
+assert.ok(TOOL_DEFS.crayon.defaultSize <= TOOL_DEFS.crayon.max);
+
+const crayonDrawing = createDrawingDocument(390, 844, { background: '#ffffff' });
+crayonDrawing.layers[0].strokes.push({
+  id: 'wax-test',
+  tool: 'crayon',
+  color: '#e07d2f',
+  size: 34,
+  seed: 90210,
+  seq: 1,
+  points: [
+    { x: 30, y: 60, p: 0.25, t: 0 },
+    { x: 90, y: 85, p: 0.55, t: 16 },
+    { x: 150, y: 76, p: 0.8, t: 32 }
+  ]
+});
+assert.ok(isValidDrawing(crayonDrawing), 'documents with wax crayon strokes must remain valid');
+assert.equal(normalizeDrawingDocument(structuredClone(crayonDrawing)).layers[0].strokes[0].tool, 'crayon');
+assert.ok(widthForPoint(crayonDrawing.layers[0].strokes[0], crayonDrawing.layers[0].strokes[0].points[2]) > 34 * 0.9);
+
+function makeCrayonTraceContext() {
+  return {
+    globalAlpha: 1,
+    commands: [],
+    save() {},
+    restore() {},
+    beginPath() { this.commands.push(['begin']); },
+    moveTo(x, y) { this.commands.push(['move', Number(x.toFixed(3)), Number(y.toFixed(3))]); },
+    lineTo(x, y) { this.commands.push(['line', Number(x.toFixed(3)), Number(y.toFixed(3))]); },
+    stroke() { this.commands.push(['stroke', Number((this.globalAlpha || 0).toFixed(4)), Number((this.lineWidth || 0).toFixed(3))]); },
+    arc(x, y, radius) { this.commands.push(['arc', Number(x.toFixed(3)), Number(y.toFixed(3)), Number(radius.toFixed(3))]); },
+    fill() { this.commands.push(['fill', Number((this.globalAlpha || 0).toFixed(4))]); }
+  };
+}
+const waxTraceA = makeCrayonTraceContext();
+const waxTraceB = makeCrayonTraceContext();
+drawStrokeRange(waxTraceA, crayonDrawing.layers[0].strokes[0], 0);
+drawStrokeRange(waxTraceB, crayonDrawing.layers[0].strokes[0], 0);
+assert.deepEqual(waxTraceA.commands, waxTraceB.commands, 'wax grain must replay deterministically from the saved seed');
+assert.ok(waxTraceA.commands.filter((command) => command[0] === 'stroke').length >= 10, 'wax stroke must contain multiple visible ridges');
+assert.ok(waxTraceA.commands.some((command) => command[0] === 'arc'), 'wax stroke must leave sparse edge crumbs');
 
 const drawing = createDrawingDocument(390, 844, { background: '#ffffff' });
 assert.equal(drawing.schema, 2);
@@ -111,6 +156,12 @@ const lineShape = recognizeShape({
   points: Array.from({ length: 12 }, (_, index) => ({ x: index * 20, y: index * 1.2, p: 0.5, t: index }))
 });
 assert.equal(lineShape?.type, 'line');
+const crayonLineShape = recognizeShape({
+  tool: 'crayon',
+  size: 18,
+  points: Array.from({ length: 12 }, (_, index) => ({ x: index * 20, y: index * 1.2, p: 0.5, t: index }))
+});
+assert.equal(crayonLineShape?.type, 'line');
 
 const rectanglePoints = [];
 for (let index = 0; index <= 8; index += 1) rectanglePoints.push({ x: index * 25, y: 0, p: 0.5, t: rectanglePoints.length });
@@ -271,18 +322,22 @@ const html = await readFile(new URL('index.html', appRoot), 'utf8');
 const application = await readFile(new URL('app.js', appRoot), 'utf8');
 const styles = await readFile(new URL('styles.css', appRoot), 'utf8');
 
-assert.equal(config.version, '2.0.0');
-assert.equal(config.cacheName, 'mazok-v2.0.0');
+assert.equal(config.version, '2.1.0');
+assert.equal(config.cacheName, 'mazok-v2.1.0');
 assert.equal(manifest.description, config.description);
 assert.equal(manifest.orientation, config.orientation);
-assert.match(html, /data-app-version="2\.0\.0"/);
+assert.match(html, /data-app-version="2\.1\.0"/);
+assert.match(html, /data-tool="crayon"/);
+assert.match(html, /id="i-crayon"/);
+assert.match(html, /drawing-core-crayon\.js/);
 assert.match(html, /data-tool="fill"/);
 assert.match(html, /data-tool="select"/);
 assert.match(html, /id="layersSheet"/);
 assert.match(html, /id="versionsSheet"/);
 assert.match(html, /id="timelapseSheet"/);
-assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v2\.0\.0'/);
+assert.match(serviceWorker, /const CACHE_NAME = 'mazok-v2\.1\.0'/);
 assert.match(serviceWorker, /'\.\/drawing-core\.js'/);
+assert.match(serviceWorker, /'\.\/drawing-core-crayon\.js'/);
 assert.match(serviceWorker, /'\.\/drawing-db\.js'/);
 assert.match(serviceWorker, /'\.\/timelapse\.js'/);
 assert.match(serviceWorker, /'\.\/vendor\/gifenc\.esm\.js'/);
