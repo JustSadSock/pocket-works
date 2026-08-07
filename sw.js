@@ -1,12 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.4';
-const APP_VERSION = '0.9.4';
-const RELEASE_DATE = '2026-07-25';
+const CACHE_NAME = 'pocket-works-launcher-v0.9.5';
+const APP_VERSION = '0.9.5';
+const RELEASE_DATE = '2026-08-07';
 const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'Newly released applications now escape stale Saved, Opened, Offline and Lab filters automatically.',
-  'The launcher clears an active search, switches to All and focuses the newest application after registry sync.',
-  'The new-app visibility guard is cached as part of the offline launcher shell.'
+  'Dismissed update notes are now remembered per release instead of reopening every time Pocket Works starts.',
+  'A newer release still appears normally, so the changelog now reflects what actually changed since the last prompt.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
