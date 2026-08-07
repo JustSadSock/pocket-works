@@ -46,6 +46,14 @@ function readStoredJson(key) {
   }
 }
 
+function readStoredValue(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 function writeStoredJson(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -306,11 +314,15 @@ export async function registerManagedServiceWorker(options = {}) {
 
     window.dispatchEvent(new CustomEvent('appupdateavailable', { detail }));
 
-    if (!renderPrompt || Date.now() < snoozedUntil) return;
+    const alreadySeen = Boolean(
+      waitingInfo.version && readStoredValue(seenKey) === waitingInfo.version
+    );
+    if (!renderPrompt || alreadySeen || Date.now() < snoozedUntil) return;
     prompt ||= createUpdatePrompt({
       appName,
       onApply: apply,
       onDismiss: () => {
+        if (waitingInfo?.version) setStoredValue(seenKey, waitingInfo.version);
         snoozedUntil = Date.now() + 60 * 60 * 1000;
       }
     });
