@@ -1,10 +1,11 @@
 import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(path,'utf8');
-const [launcher,index,rootWorker,prepareSite,vetrolomWorker,vetrolomConfig]=await Promise.all([
+const [launcher,index,rootWorker,updateManager,prepareSite,vetrolomWorker,vetrolomConfig]=await Promise.all([
   read('launcher-update-all-v3.js'),
   read('index.html'),
   read('sw.js'),
+  read('shared/update-manager.js'),
   read('scripts/prepare-site.mjs'),
   read('apps/vetrolom/sw.js'),
   read('apps/vetrolom/app.config.json')
@@ -16,6 +17,7 @@ for(const token of ['APP_TIMEOUT','withTimeout(installRelease','timedOut','skipp
   requireToken(launcher,token,'launcher fingerprint updater');
 }
 for(const source of [index,rootWorker,prepareSite])requireToken(source,'launcher-update-all-v3.js','launcher deployment');
+for(const token of ['readStoredValue(seenKey)','alreadySeen','setStoredValue(seenKey, waitingInfo.version)'])requireToken(updateManager,token,'managed update seen-state');
 for(const token of ['createHash','canonicalFingerprint','fingerprints.get(app.slug)'])requireToken(prepareSite,token,'release fingerprint build');
 for(const token of ['AbortController','Promise.allSettled','caches.match(canonical)','RUNTIME_SHELL',"APP_VERSION='1.5.2'"])requireToken(vetrolomWorker,token,'Vetrolom worker');
 
@@ -26,4 +28,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('Fingerprint updater stages, bounded installs and Vetrolom resilient precache are valid.');
+console.log('Fingerprint updater stages, managed update seen-state, bounded installs and Vetrolom resilient precache are valid.');
