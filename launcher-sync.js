@@ -2,10 +2,12 @@ const SHELF_STORAGE_KEY = 'pocket-works:shelf:v1';
 const REGISTRY_CACHE_KEY = 'pocket-works:registry:v1';
 const REGISTRY_HISTORY_KEY = 'pocket-works:registry-history:v2';
 const LAST_DIGEST_KEY = 'pocket-works:last-release-digest:v1';
+const SEEN_DIGESTS_KEY = 'pocket-works:seen-release-digests:v1';
 const MANAGED_RECEIPT_PREFIX = 'pocket-works:managed-update-receipt:v1:';
 const MANAGED_SEEN_PREFIX = 'pocket-works:managed-update-seen:v1:';
 const REGISTRY_CHECK_INTERVAL = 5 * 60 * 1000;
 const REGISTRY_CHECK_COOLDOWN = 45 * 1000;
+const MAX_SEEN_DIGESTS = 80;
 
 const refreshButton = document.querySelector('#refresh-button');
 const deckActions = document.querySelector('.deck-actions');
@@ -40,6 +42,24 @@ function writeJson(key, value) {
   } catch {
     return false;
   }
+}
+
+function readSeenDigests() {
+  const stored = readJson(SEEN_DIGESTS_KEY);
+  return Array.isArray(stored)
+    ? stored.filter((id) => typeof id === 'string').slice(-MAX_SEEN_DIGESTS)
+    : [];
+}
+
+function digestWasSeen(digest) {
+  return Boolean(digest?.id && readSeenDigests().includes(digest.id));
+}
+
+function markDigestSeen(digest) {
+  if (!digest?.id) return;
+  const ids = readSeenDigests().filter((id) => id !== digest.id);
+  ids.push(digest.id);
+  writeJson(SEEN_DIGESTS_KEY, ids.slice(-MAX_SEEN_DIGESTS));
 }
 
 function readRegistryCache() {
@@ -156,9 +176,11 @@ function showDigest(digest) {
 }
 
 function closeDigest(surface) {
+  markDigestSeen(activeDigest);
   surface.classList.remove('is-visible');
   activeDigest = null;
   window.setTimeout(() => {
+    while (digestQueue.length > 0 && digestWasSeen(digestQueue[0])) digestQueue.shift();
     if (digestQueue.length > 0) showDigest(digestQueue.shift());
   }, 180);
 }
@@ -168,8 +190,12 @@ function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
   if (remember) writeJson(LAST_DIGEST_KEY, digest);
   updateWhatsNewButton(digest);
 
+  // Automatic release digests are shown once. The explicit “What's new” button
+  // still opens the latest digest on demand because it calls with remember:false.
+  if (remember && digestWasSeen(digest)) return;
+
   if (activeDigest && !immediate) {
-    if (!digestQueue.some((item) => item.id === digest.id)) digestQueue.push(digest);
+    if (!digestQueue.some((item) => item.id === digest.id) && !digestWasSeen(digest)) digestQueue.push(digest);
     return;
   }
 
