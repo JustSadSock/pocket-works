@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "witness-of-era",
+  "name": "СВИДЕТЕЛЬ ЭПОХИ",
+  "shortName": "СВИДЕТЕЛЬ",
+  "description": "Постироничная игра про псевдоисторические цитаты: соберите невозможную связку так, чтобы она выглядела подозрительно убедительно.",
+  "version": "1.0.0",
+  "releaseDate": "2026-08-12",
+  "releaseDateTime": "2026-08-12T01:56:00+03:00",
+  "changelog": [
+    "Добавлена законченная кампания из четырёх редакционных заданий про анахроничные цитаты.",
+    "Система оценки различает точный постироничный анахронизм и случайный бессвязный бред.",
+    "Добавлены офлайн-режим, локальные рекорды, архив опубликованных карточек и авторские псевдогравюрные портреты."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#3656d4",
+  "backgroundColor": "#d9d4c7",
+  "themeColor": "#171714",
+  "orientation": "portrait",
+  "cacheName": "witness-of-era-v1.0.0",
+  "storageNamespace": "pocket-works:witness-of-era",
+  "tags": ["game", "quotes", "history", "humor", "post-irony", "offline", "single player", "touch"],
+  "order": 176
+}
