@@ -1,4 +1,4 @@
-const CACHE='witness-of-era-v1.0.0';
+const CACHE='witness-of-era-v1.0.1';
 const OWNED=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(OWNED)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('witness-of-era-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});

@@ -17,7 +17,7 @@
 - Slug: `witness-of-era`
 - Runtime: Quick / vanilla HTML, CSS, JavaScript
 - Storage: `pocket-works:witness-of-era`
-- Cache: `witness-of-era-v1.0.0`
+- Cache: `witness-of-era-v1.0.1`
 - Offline-first, без внешних API, библиотек, шрифтов и сетевых ассетов.
 
 ## Проверка
