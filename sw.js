@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.6';
-const APP_VERSION = '0.9.6';
+const CACHE_NAME = 'pocket-works-launcher-v0.9.7';
+const APP_VERSION = '0.9.7';
 const RELEASE_DATE = '2026-08-12';
 const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'Dismissed WHAT’S NEW digests are now stored by digest ID, so old application changes cannot reopen after restart.',
-  'The latest release digest can still be opened manually from What’s new even after its automatic prompt was dismissed.'
+  'WHAT’S NEW now advances from a compact acknowledged release cursor instead of a fragile full-registry history snapshot.',
+  'Legacy oversized registry-history and digest-ledger entries are removed during migration, preventing localStorage quota failures from resurrecting old changes.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
