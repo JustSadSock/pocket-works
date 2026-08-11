@@ -19,7 +19,7 @@ for(const token of ['APP_TIMEOUT','withTimeout(installRelease','timedOut','skipp
 }
 for(const source of [index,rootWorker,prepareSite])requireToken(source,'launcher-update-all-v3.js','launcher deployment');
 for(const token of ['readStoredValue(seenKey)','alreadySeen','setStoredValue(seenKey, waitingInfo.version)'])requireToken(updateManager,token,'managed update seen-state');
-for(const token of ['SEEN_DIGESTS_KEY','markDigestSeen(activeDigest)','remember && digestWasSeen(digest)','remember: false, immediate: true'])requireToken(launcherSync,token,'launcher digest seen-state');
+for(const token of ['RELEASE_CURSOR_KEY','buildReleaseCursor','persistReleaseCursor(closedDigest.releaseCursor)','removeStored(LEGACY_REGISTRY_HISTORY_KEY)','removeStored(LEGACY_SEEN_DIGESTS_KEY)','remember: false, immediate: true'])requireToken(launcherSync,token,'launcher acknowledged-registry cursor');
 for(const token of ['createHash','canonicalFingerprint','fingerprints.get(app.slug)'])requireToken(prepareSite,token,'release fingerprint build');
 for(const token of ['AbortController','Promise.allSettled','caches.match(canonical)','RUNTIME_SHELL',"APP_VERSION='1.5.2'"])requireToken(vetrolomWorker,token,'Vetrolom worker');
 
@@ -30,4 +30,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('Fingerprint updater stages, managed update seen-state, launcher digest seen-state, bounded installs and Vetrolom resilient precache are valid.');
+console.log('Fingerprint updater stages, managed update seen-state, acknowledged registry cursor, bounded installs and Vetrolom resilient precache are valid.');
