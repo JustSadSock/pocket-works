@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.5';
-const APP_VERSION = '0.9.5';
-const RELEASE_DATE = '2026-08-07';
+const CACHE_NAME = 'pocket-works-launcher-v0.9.6';
+const APP_VERSION = '0.9.6';
+const RELEASE_DATE = '2026-08-12';
 const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'Dismissed update notes are now remembered per release instead of reopening every time Pocket Works starts.',
-  'A newer release still appears normally, so the changelog now reflects what actually changed since the last prompt.'
+  'Dismissed WHAT’S NEW digests are now stored by digest ID, so old application changes cannot reopen after restart.',
+  'The latest release digest can still be opened manually from What’s new even after its automatic prompt was dismissed.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
