@@ -1,13 +1,13 @@
 const SHELF_STORAGE_KEY = 'pocket-works:shelf:v1';
 const REGISTRY_CACHE_KEY = 'pocket-works:registry:v1';
-const REGISTRY_HISTORY_KEY = 'pocket-works:registry-history:v2';
+const RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v1';
+const LEGACY_REGISTRY_HISTORY_KEY = 'pocket-works:registry-history:v2';
+const LEGACY_SEEN_DIGESTS_KEY = 'pocket-works:seen-release-digests:v1';
 const LAST_DIGEST_KEY = 'pocket-works:last-release-digest:v1';
-const SEEN_DIGESTS_KEY = 'pocket-works:seen-release-digests:v1';
 const MANAGED_RECEIPT_PREFIX = 'pocket-works:managed-update-receipt:v1:';
 const MANAGED_SEEN_PREFIX = 'pocket-works:managed-update-seen:v1:';
 const REGISTRY_CHECK_INTERVAL = 5 * 60 * 1000;
 const REGISTRY_CHECK_COOLDOWN = 45 * 1000;
-const MAX_SEEN_DIGESTS = 80;
 
 const refreshButton = document.querySelector('#refresh-button');
 const deckActions = document.querySelector('.deck-actions');
@@ -44,22 +44,12 @@ function writeJson(key, value) {
   }
 }
 
-function readSeenDigests() {
-  const stored = readJson(SEEN_DIGESTS_KEY);
-  return Array.isArray(stored)
-    ? stored.filter((id) => typeof id === 'string').slice(-MAX_SEEN_DIGESTS)
-    : [];
-}
-
-function digestWasSeen(digest) {
-  return Boolean(digest?.id && readSeenDigests().includes(digest.id));
-}
-
-function markDigestSeen(digest) {
-  if (!digest?.id) return;
-  const ids = readSeenDigests().filter((id) => id !== digest.id);
-  ids.push(digest.id);
-  writeJson(SEEN_DIGESTS_KEY, ids.slice(-MAX_SEEN_DIGESTS));
+function removeStored(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Storage cleanup is best-effort.
+  }
 }
 
 function readRegistryCache() {
@@ -86,22 +76,84 @@ function registrySignature(app) {
   return [app.version, app.updatedAt, ...app.changelog].join('\u001f');
 }
 
+function hashString(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function releaseToken(app) {
+  return hashString(registrySignature(app));
+}
+
+function buildReleaseCursor(apps) {
+  return Object.fromEntries(
+    normalizeRegistry(apps).map((app) => [app.slug, releaseToken(app)])
+  );
+}
+
+function normalizeReleaseCursor(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([slug, token]) => typeof slug === 'string' && typeof token === 'string')
+  );
+}
+
+function persistReleaseCursor(cursor) {
+  const compact = normalizeReleaseCursor(cursor);
+
+  // The old implementation stored the whole 79+ app registry and giant digest IDs
+  // in localStorage. Remove those first so a near-full origin still has room for the
+  // compact cursor (slug -> short release hash).
+  removeStored(LEGACY_REGISTRY_HISTORY_KEY);
+  removeStored(LEGACY_SEEN_DIGESTS_KEY);
+
+  if (writeJson(RELEASE_CURSOR_KEY, { savedAt: Date.now(), apps: compact })) return true;
+
+  // LAST_DIGEST_KEY is only a convenience for the manual “What's new” button.
+  // If storage is at quota, the release cursor is more important than that history.
+  removeStored(LAST_DIGEST_KEY);
+  return writeJson(RELEASE_CURSOR_KEY, { savedAt: Date.now(), apps: compact });
+}
+
+function readReleaseCursor() {
+  const current = readJson(RELEASE_CURSOR_KEY);
+  const currentApps = normalizeReleaseCursor(current?.apps);
+  if (Object.keys(currentApps).length > 0) return currentApps;
+
+  const legacyApps = readJson(LEGACY_REGISTRY_HISTORY_KEY)?.apps;
+  const migrationSource = Array.isArray(legacyApps) && legacyApps.length > 0
+    ? legacyApps
+    : cachedRegistryAtBoot;
+  const migrated = buildReleaseCursor(migrationSource);
+
+  if (Object.keys(migrated).length > 0) persistReleaseCursor(migrated);
+  else {
+    removeStored(LEGACY_REGISTRY_HISTORY_KEY);
+    removeStored(LEGACY_SEEN_DIGESTS_KEY);
+  }
+  return migrated;
+}
+
 function registryFingerprint(apps) {
   return normalizeRegistry(apps)
     .sort((left, right) => left.slug.localeCompare(right.slug))
-    .map((app) => `${app.slug}:${registrySignature(app)}`)
+    .map((app) => `${app.slug}:${releaseToken(app)}`)
     .join('\u001e');
 }
 
-function diffRegistry(previousApps, nextApps) {
-  const previous = new Map(normalizeRegistry(previousApps).map((app) => [app.slug, app]));
+function diffRegistry(cursor, nextApps) {
+  const previous = normalizeReleaseCursor(cursor);
   const added = [];
   const updated = [];
 
   for (const app of normalizeRegistry(nextApps)) {
-    const earlier = previous.get(app.slug);
+    const earlier = previous[app.slug];
     if (!earlier) added.push(app);
-    else if (registrySignature(earlier) !== registrySignature(app)) updated.push(app);
+    else if (earlier !== releaseToken(app)) updated.push(app);
   }
 
   return { added, updated };
@@ -176,12 +228,20 @@ function showDigest(digest) {
 }
 
 function closeDigest(surface) {
-  markDigestSeen(activeDigest);
+  const closedDigest = activeDigest;
+  if (closedDigest?.kind === 'registry' && closedDigest.releaseCursor) {
+    persistReleaseCursor(closedDigest.releaseCursor);
+  }
+
   surface.classList.remove('is-visible');
   activeDigest = null;
+
+  // Any queued registry digest was calculated against the old cursor. Throw it
+  // away and immediately recalculate from the state the user just acknowledged.
+  digestQueue = digestQueue.filter((digest) => digest.kind !== 'registry');
   window.setTimeout(() => {
-    while (digestQueue.length > 0 && digestWasSeen(digestQueue[0])) digestQueue.shift();
     if (digestQueue.length > 0) showDigest(digestQueue.shift());
+    checkRegistry({ force: true });
   }, 180);
 }
 
@@ -190,12 +250,8 @@ function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
   if (remember) writeJson(LAST_DIGEST_KEY, digest);
   updateWhatsNewButton(digest);
 
-  // Automatic release digests are shown once. The explicit “What's new” button
-  // still opens the latest digest on demand because it calls with remember:false.
-  if (remember && digestWasSeen(digest)) return;
-
   if (activeDigest && !immediate) {
-    if (!digestQueue.some((item) => item.id === digest.id) && !digestWasSeen(digest)) digestQueue.push(digest);
+    if (!digestQueue.some((item) => item.id === digest.id)) digestQueue.push(digest);
     return;
   }
 
@@ -220,7 +276,9 @@ function buildRegistryDigest(changes, nextApps) {
   if (total > 5) notes[4] = `And ${total - 4} more application changes.`;
 
   return {
-    id: `registry:${registryFingerprint(nextApps)}`,
+    id: `registry:${hashString(registryFingerprint(nextApps))}`,
+    kind: 'registry',
+    releaseCursor: buildReleaseCursor(nextApps),
     eyebrow: changes.added.length > 0 ? 'NEW ON THE SHELF' : 'APPLICATIONS UPDATED',
     title: changes.added.length > 0
       ? `${changes.added.length} new application${changes.added.length === 1 ? '' : 's'}`
@@ -255,20 +313,24 @@ async function checkRegistry({ force = false } = {}) {
   if (!force && Date.now() - lastRegistryCheckAt < REGISTRY_CHECK_COOLDOWN) return false;
   if (registryCheckPromise) return registryCheckPromise;
 
-  const baseline = readJson(REGISTRY_HISTORY_KEY)?.apps || cachedRegistryAtBoot;
+  const baseline = readReleaseCursor();
   lastRegistryCheckAt = Date.now();
   registryCheckPromise = (async () => {
     try {
       const nextApps = await fetchLiveRegistry();
       const changes = diffRegistry(baseline, nextApps);
-      writeJson(REGISTRY_HISTORY_KEY, { savedAt: Date.now(), apps: nextApps });
 
       const visibleFingerprint = registryFingerprint(readRegistryCache()?.apps || []);
       const liveFingerprint = registryFingerprint(nextApps);
       if (visibleFingerprint !== liveFingerprint) await requestLauncherRefresh();
 
-      if ((changes.added.length > 0 || changes.updated.length > 0) && baseline.length > 0) {
+      const hasChanges = changes.added.length > 0 || changes.updated.length > 0;
+      if (hasChanges && Object.keys(baseline).length > 0) {
         enqueueDigest(buildRegistryDigest(changes, nextApps));
+      } else if (!hasChanges || Object.keys(baseline).length === 0) {
+        // First launch, successful migration, or a fully caught-up registry.
+        // Persisting here heals missing/corrupt cursors without marking unseen changes read.
+        persistReleaseCursor(buildReleaseCursor(nextApps));
       }
       return true;
     } catch (error) {
@@ -320,6 +382,7 @@ async function showCurrentShellRelease() {
     const releaseNotes = Array.isArray(info.releaseNotes) ? info.releaseNotes.filter((note) => typeof note === 'string') : [];
     enqueueDigest({
       id: `shell:${info.version}`,
+      kind: 'shell',
       eyebrow: 'POCKET WORKS UPDATED',
       title: `Version ${info.version}`,
       notes: releaseNotes.length > 0 ? releaseNotes : ['The launcher shell was updated.'],
