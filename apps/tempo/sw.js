@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'tempo-';
-const CACHE_NAME = 'tempo-v1.3.0';
+const CACHE_NAME = 'tempo-v1.3.0-fix1';
 const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-08-07';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
+  'Исправлено зависание интерфейса после сохранения подробного эпизода с несколькими частями.',
   'Эпизод теперь можно разбить на последовательность частей с отдельными видами активности и длительностью.',
   'Для каждой части можно отметить stop–start и другие приёмы, циклы, контроль, удовольствие, напряжение, возбуждение, оргазмы и эякуляции.',
   'База и изменение эксперимента теперь отмечаются на уровне отдельных частей, а подробная структура попадает в журнал и экспорт.'
@@ -21,6 +22,7 @@ const APP_SHELL = [
   './screens.js',
   './phase2-screens.js',
   './phase3.js',
+  './phase4-observer-hotfix.js',
   './phase4.js',
   './protocols.js',
   './core.js',
