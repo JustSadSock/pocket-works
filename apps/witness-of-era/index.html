@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#171714">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СВИДЕТЕЛЬ">
+  <title>СВИДЕТЕЛЬ ЭПОХИ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="screen intro-screen is-active" id="intro-screen" aria-labelledby="intro-title">
+      <a href="../../" class="launcher-link" data-app-control data-native-press>← В Pocket Works</a>
+      <div class="masthead" aria-hidden="true"><span>АРХИВ № 1453</span><span>ОТДЕЛ ДОСТОВЕРНОСТИ</span></div>
+      <div class="intro-portrait" aria-hidden="true">
+        <svg viewBox="0 0 260 290"><path d="M58 247c6-67 35-103 76-120-28-19-43-48-38-82 6-42 39-68 78-66 48 3 78 40 73 83-3 28-18 50-40 65 39 18 66 55 71 120Z"/><path class="paper-stroke" d="M118 58c17 11 44 12 65 1M124 93c22 13 46 12 69-2M145 126c16 9 33 9 49 0M107 35l-14-29M199 34l22-27"/></svg>
+        <div class="date-stamp">1453</div>
+      </div>
+      <div class="intro-copy">
+        <p class="kicker">Мелкий шрифт важнее истины</p>
+        <h1 id="intro-title">СВИДЕТЕЛЬ<br>ЭПОХИ</h1>
+        <p>Собирай исторические цитаты, которых не было. Задача — не максимальный бред, а <strong>настолько уверенный анахронизм, чтобы кто-то переслал его дальше.</strong></p>
+      </div>
+      <button class="primary-action" id="start-button" type="button" data-native-press>ПРИНЯТЬ РЕДАКЦИЮ</button>
+      <p class="best-line" id="best-line">Лучший архив: —</p>
+    </section>
+
+    <section class="screen game-screen" id="game-screen" aria-labelledby="brief-title">
+      <header class="game-header" data-ui>
+        <button class="text-button" id="pause-button" type="button" data-native-press>Меню</button>
+        <div class="round-mark"><span id="round-label">ДЕЛО 1/4</span><b id="total-score">000</b></div>
+        <button class="text-button" id="archive-button" type="button" data-native-press>Архив</button>
+      </header>
+      <section class="brief-strip">
+        <p>РЕДАКЦИОННОЕ ЗАДАНИЕ</p>
+        <h2 id="brief-title">—</h2>
+        <span id="brief-hint">—</span>
+      </section>
+
+      <section class="quote-card" id="quote-card" aria-label="Собираемая цитата">
+        <div class="portrait-cell" id="portrait-cell"></div>
+        <div class="quote-cell">
+          <div class="big-quote">“</div>
+          <p id="quote-preview"></p>
+          <div class="signature"><strong id="author-preview"></strong><span id="year-preview"></span></div>
+        </div>
+        <div class="source-line" id="source-preview"></div>
+        <div class="copy-noise" aria-hidden="true"></div>
+      </section>
+
+      <section class="composer" aria-label="Редактор цитаты">
+        <button class="slot" type="button" data-slot="author" data-native-press><span>КТО СКАЗАЛ</span><b id="author-slot">—</b></button>
+        <button class="slot quote-slot" type="button" data-slot="quote" data-native-press><span>ЧТО ИМЕННО</span><b id="quote-slot">—</b></button>
+        <div class="year-editor">
+          <span>КОГДА</span>
+          <div class="year-controls">
+            <button id="year-down" type="button" aria-label="Уменьшить год" data-native-press>−</button>
+            <button class="year-value" id="year-value" type="button" data-slot="year" data-native-press>1453</button>
+            <button id="year-up" type="button" aria-label="Увеличить год" data-native-press>+</button>
+          </div>
+        </div>
+        <button class="slot" type="button" data-slot="source" data-native-press><span>ОТКУДА ИЗВЕСТНО</span><b id="source-slot">—</b></button>
+      </section>
+      <button class="publish-button" id="publish-button" type="button" data-native-press>ОПУБЛИКОВАТЬ БЕЗ ПРОВЕРКИ</button>
+    </section>
+
+    <section class="screen result-screen" id="result-screen" aria-labelledby="result-title">
+      <a href="../../" class="launcher-link" data-app-control data-native-press>← В Pocket Works</a>
+      <p class="kicker">Внутренний аудит редакции</p>
+      <h2 id="result-title">—</h2>
+      <div class="result-score"><strong id="result-score">00</strong><span>/100<br>достоверности</span></div>
+      <div class="meters">
+        <div><span>Хронопреступление</span><i><b id="meter-chrono"></b></i></div>
+        <div><span>Серьёзность подачи</span><i><b id="meter-deadpan"></b></i></div>
+        <div><span>Случайный бред</span><i><b id="meter-chaos"></b></i></div>
+      </div>
+      <blockquote id="comment-line"></blockquote>
+      <p class="verdict" id="verdict-line"></p>
+      <button class="primary-action" id="next-button" type="button" data-native-press>СЛЕДУЮЩЕЕ ДЕЛО</button>
+    </section>
+
+    <section class="screen finale-screen" id="finale-screen" aria-labelledby="finale-title">
+      <a href="../../" class="launcher-link" data-app-control data-native-press>← В Pocket Works</a>
+      <div class="final-stamp" id="final-stamp">ПОДЛИННО</div>
+      <p class="kicker">Архив закрыт</p>
+      <h2 id="finale-title">—</h2>
+      <p class="final-score" id="final-score"></p>
+      <p id="final-copy"></p>
+      <button class="primary-action" id="replay-button" type="button" data-native-press>ЕЩЁ ОДНА РЕДАКЦИЯ</button>
+      <button class="secondary-action" id="final-archive-button" type="button" data-native-press>ОТКРЫТЬ АРХИВ</button>
+    </section>
+
+    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+    <section class="choice-sheet" id="choice-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheet-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-head"><h2 id="sheet-title">Выбор</h2><button id="sheet-close" type="button" aria-label="Закрыть" data-native-press>×</button></div>
+      <div class="choice-list" id="choice-list"></div>
+    </section>
+
+    <section class="archive-panel" id="archive-panel" hidden aria-modal="true" role="dialog" aria-labelledby="archive-title">
+      <div class="archive-head"><div><p>ЛИЧНОЕ ДЕЛО</p><h2 id="archive-title">Архив публикаций</h2></div><button id="archive-close" type="button" data-native-press>Закрыть</button></div>
+      <div class="archive-list" id="archive-list"></div>
+      <button class="danger-link" id="archive-clear" type="button" data-native-press>Уничтожить архив</button>
+    </section>
+
+    <section class="pause-panel" id="pause-panel" hidden aria-modal="true" role="dialog" aria-labelledby="pause-title">
+      <p class="kicker">Редакция приостановлена</p>
+      <h2 id="pause-title">Ничего не произошло.<br>Так и запишем.</h2>
+      <button class="primary-action" id="resume-button" type="button" data-native-press>ВЕРНУТЬСЯ К ИСТОЧНИКАМ</button>
+      <a href="../../" class="secondary-action link-action" data-app-control data-native-press>ВЕРНУТЬСЯ В POCKET WORKS</a>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
