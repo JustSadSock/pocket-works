@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Rivals Roulette",
+  "short_name": "Rivals",
+  "description": "Случайный выбор героя Marvel Rivals.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f0e9dc",
+  "theme_color": "#171717",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
