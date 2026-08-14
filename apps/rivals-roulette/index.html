@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#171717">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Rivals Roulette</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="back-link" data-app-control data-native-press href="../../">← Pocket Works</a>
+      <button id="settingsBtn" class="icon-btn" data-native-press aria-label="Настройки">•••</button>
+    </header>
+
+    <section class="stage" aria-labelledby="appTitle">
+      <div class="title-row" data-ui>
+        <div>
+          <p class="eyebrow">MARVEL RIVALS · RANDOM PICK</p>
+          <h1 id="appTitle">Rivals Roulette</h1>
+        </div>
+        <div id="poolCount" class="pool-count">53</div>
+      </div>
+
+      <div class="wheel-wrap" data-ui>
+        <div class="pointer" aria-hidden="true"></div>
+        <div id="wheel" class="wheel" role="img" aria-label="Колесо персонажей">
+          <div class="wheel-rings"></div>
+          <div id="wheelCenter" class="wheel-center">
+            <span class="center-kicker">КРУТИ</span>
+            <strong>R</strong>
+          </div>
+        </div>
+      </div>
+
+      <div id="winner" class="winner" aria-live="polite">
+        <span id="winnerRole" class="winner-role">ВСЕ РОЛИ</span>
+        <strong id="winnerName">Кто выпадет?</strong>
+        <span id="winnerMeta">Выбери фильтр и крути колесо</span>
+      </div>
+
+      <div class="roles" data-ui aria-label="Фильтр ролей">
+        <button class="role active" data-role="all" data-native-press>Все</button>
+        <button class="role" data-role="vanguard" data-native-press>Танк</button>
+        <button class="role" data-role="duelist" data-native-press>Дуэлист</button>
+        <button class="role" data-role="strategist" data-native-press>Стратег</button>
+      </div>
+
+      <button id="spinBtn" class="spin-btn" data-native-press>
+        <span>КРУТИТЬ</span><small id="spinHint">случайный герой</small>
+      </button>
+
+      <div class="quick-tools" data-ui>
+        <button id="noRepeatBtn" class="tool active" data-native-press><span>↻</span><b>Без повторов</b><small id="remainingText">53 осталось</small></button>
+        <button id="seriesBtn" class="tool" data-native-press><span>×3</span><b>Серия</b><small>три героя подряд</small></button>
+        <button id="banBtn" class="tool" data-native-press><span>−</span><b>Бан-лист</b><small id="banCount">0 исключено</small></button>
+      </div>
+
+      <section class="history-block" data-ui>
+        <div class="section-head"><h2>Последние</h2><button id="clearHistoryBtn" data-native-press>Очистить</button></div>
+        <div id="history" class="history"><p class="empty">Здесь появятся результаты колеса.</p></div>
+      </section>
+    </section>
+
+    <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
+    <section id="sheet" class="sheet" hidden data-ui aria-modal="true" role="dialog">
+      <div class="sheet-grab"></div>
+      <div class="sheet-head"><div><p class="eyebrow">НАСТРОЙКИ ПУЛА</p><h2 id="sheetTitle">Бан-лист</h2></div><button id="closeSheetBtn" class="close-btn" data-native-press>Готово</button></div>
+      <div id="sheetContent" class="sheet-content"></div>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
