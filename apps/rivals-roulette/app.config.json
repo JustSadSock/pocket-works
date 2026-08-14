@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "rivals-roulette",
+  "name": "RIVALS ROULETTE",
+  "shortName": "RIVALS",
+  "description": "Колесо случайного героя Marvel Rivals с фильтрами ролей, бан-листом, сериями и режимом без повторов.",
+  "version": "1.0.0",
+  "releaseDate": "2026-08-14",
+  "releaseDateTime": "2026-08-14T23:36:00+03:00",
+  "changelog": [
+    "Первый релиз: 53 героя Marvel Rivals актуального ростера Season 9.5.",
+    "Фильтры Vanguard, Duelist и Strategist, включая мультиролевого Deadpool.",
+    "Добавлены режим без повторов, бан-лист, история выпадений и серия из нескольких выборов."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#ff5a36",
+  "backgroundColor": "#f0e9dc",
+  "themeColor": "#171717",
+  "orientation": "any",
+  "cacheName": "rivals-roulette-v1.0.0",
+  "storageNamespace": "pocket-works:rivals-roulette",
+  "tags": ["marvel rivals", "roulette", "random", "heroes", "game", "offline", "touch", "party"],
+  "order": 84
+}
