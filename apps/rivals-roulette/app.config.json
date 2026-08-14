@@ -14,7 +14,7 @@
     "Добавлены режим без повторов, бан-лист, история выпадений и серия из нескольких выборов."
   ],
   "status": "active",
-  "preset": "game",
+  "preset": "game-2d",
   "accent": "#ff5a36",
   "backgroundColor": "#f0e9dc",
   "themeColor": "#171717",
