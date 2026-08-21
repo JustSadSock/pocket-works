@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "rivals-fit-lab",
+  "name": "RIVALS FIT LAB",
+  "shortName": "FIT LAB",
+  "description": "Адаптивный тест игрового стиля, который подбирает наиболее естественного героя Marvel Rivals и объясняет совпадения и конфликты.",
+  "version": "1.0.0",
+  "releaseDate": "2026-08-22",
+  "releaseDateTime": "2026-08-22T02:21:00+03:00",
+  "changelog": [
+    "Первый релиз: профиль по 13 игровым параметрам для всех 53 героев Season 9.5.",
+    "20 базовых и 6 адаптивных вопросов, которые выбираются для разделения ближайших кандидатов.",
+    "Результат показывает лучший матч, конфликты, топ-10 и лучший вариант в каждой роли."
+  ],
+  "status": "active",
+  "preset": "utility",
+  "accent": "#2f63ff",
+  "backgroundColor": "#f4f1e8",
+  "themeColor": "#f4f1e8",
+  "orientation": "any",
+  "cacheName": "rivals-fit-lab-v1.0.0",
+  "storageNamespace": "pocket-works:rivals-fit-lab",
+  "tags": ["marvel rivals", "heroes", "test", "quiz", "recommendation", "adaptive", "offline", "touch"],
+  "order": 85
+}

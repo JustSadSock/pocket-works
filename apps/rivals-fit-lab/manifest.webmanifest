@@ -1,0 +1,13 @@
+{
+  "name": "Rivals Fit Lab",
+  "short_name": "Fit Lab",
+  "description": "Adaptive Marvel Rivals hero-fit profiler.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1e8",
+  "theme_color": "#f4f1e8",
+  "orientation": "any",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
