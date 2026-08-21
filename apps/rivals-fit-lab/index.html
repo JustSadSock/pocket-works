@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Rivals Fit Lab</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="fit-app" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="back-link" data-app-control data-native-press href="../../">← Pocket Works</a>
+      <div class="progress-wrap" aria-label="Прогресс теста"><div id="progress" class="progress"><i></i></div><span id="progressText">53 героев</span></div>
+    </header>
+    <div id="screen" class="screen" aria-live="polite"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
