@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#17324a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="КВАРТА">
+  <title>КВАРТА</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive" data-fullscreen-app>
+  <main class="app-shell" id="app" data-app-shell data-fullscreen-app>
+    <section class="screen menu-screen is-active" id="menu-screen" aria-labelledby="menu-title">
+      <header class="top-strip" data-ui>
+        <a class="text-control" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+        <button class="text-control" id="menu-sound" type="button" data-native-press>Звук: вкл</button>
+      </header>
+
+      <div class="press-poster" aria-hidden="true">
+        <div class="poster-grid" id="menu-poster"></div>
+        <span class="register-mark mark-a"></span>
+        <span class="register-mark mark-b"></span>
+        <span class="poster-stamp">4×4 / 9 ОСЕЙ</span>
+      </div>
+
+      <div class="menu-copy-block">
+        <p class="kicker">ПЕЧАТНАЯ ГОЛОВОЛОМКА · СЕРИЯ 01</p>
+        <h1 id="menu-title">КВАРТА</h1>
+        <p class="lead">Поворачивай перекрывающиеся блоки 2×2 и собери разрезанный оттиск обратно в цельную печать.</p>
+      </div>
+
+      <div class="menu-actions" data-ui>
+        <button class="primary-action" id="continue-button" type="button" data-native-press>Начать с листа 01</button>
+        <button class="secondary-action" id="levels-button" type="button" data-native-press>Архив листов</button>
+        <button class="secondary-action" id="help-button" type="button" data-native-press>Как крутить квартеты</button>
+      </div>
+
+      <footer class="menu-footer" data-ui>
+        <span><strong id="menu-progress">0</strong> / 20 собрано</span>
+        <span id="menu-best">Лучший лист —</span>
+        <span>v1.0.0</span>
+      </footer>
+    </section>
+
+    <section class="screen levels-screen" id="levels-screen" aria-labelledby="levels-title" hidden>
+      <header class="top-strip" data-ui>
+        <button class="text-control" id="levels-back" type="button" data-native-press>← Главная</button>
+        <button class="text-control" id="levels-sound" type="button" data-native-press>Звук: вкл</button>
+      </header>
+      <div class="section-heading">
+        <p class="kicker">КАТАЛОГ ПЕЧАТНЫХ ФОРМ</p>
+        <h2 id="levels-title">АРХИВ</h2>
+        <p>Каждый лист гарантированно собирается. Следующий открывается после первого успешного оттиска.</p>
+      </div>
+      <div class="chapter-list" id="chapter-list" data-ui></div>
+    </section>
+
+    <section class="screen help-screen" id="help-screen" aria-labelledby="help-title" hidden>
+      <header class="top-strip" data-ui>
+        <button class="text-control" id="help-back" type="button" data-native-press>← Назад</button>
+        <span>ИНСТРУКЦИЯ</span>
+      </header>
+      <div class="help-sheet">
+        <p class="kicker">ОДНО ПРАВИЛО</p>
+        <h2 id="help-title">Крути четверых.</h2>
+        <div class="help-demo" aria-hidden="true">
+          <div class="demo-cell d1"></div><div class="demo-cell d2"></div>
+          <div class="demo-cell d3"></div><div class="demo-cell d4"></div>
+          <span class="demo-rivet">↻</span>
+        </div>
+        <ol>
+          <li><strong>Нажми на заклёпку</strong> между четырьмя фрагментами — квартет повернётся по часовой стрелке.</li>
+          <li><strong>Смахни по заклёпке</strong> вправо или вниз — по часовой; влево или вверх — против.</li>
+          <li><strong>Собери точный образец</strong>, который лежит над полем. Фрагменты не вращаются сами по себе — только меняются местами.</li>
+        </ol>
+        <p class="help-note">Отмена хода не штрафует. Перезапуск возвращает исходную раскладку листа.</p>
+      </div>
+      <div class="help-actions" data-ui>
+        <button class="primary-action" id="help-play" type="button" data-native-press>Открыть первый лист</button>
+        <a class="secondary-action link-action" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="screen game-screen" id="game-screen" aria-label="Игровой экран" hidden>
+      <header class="game-header" data-ui>
+        <button class="text-control" id="pause-button" type="button" data-native-press>Пауза</button>
+        <div class="level-label">
+          <span id="level-kicker">ЛИСТ 01 · ПРИВОДКА</span>
+          <strong id="level-title">ПЕРВАЯ ОСЬ</strong>
+        </div>
+        <button class="text-control" id="game-sound" type="button" data-native-press>Звук: вкл</button>
+      </header>
+
+      <div class="game-workbench">
+        <div class="proof-row" data-ui>
+          <div>
+            <span>ОБРАЗЕЦ</span>
+            <strong>Собери точно</strong>
+          </div>
+          <div class="proof-image" id="proof-image" aria-label="Образец собранной мозаики"></div>
+        </div>
+
+        <div class="board-frame">
+          <span class="frame-note frame-note-a">K-04</span>
+          <span class="frame-note frame-note-b">PRESS</span>
+          <div class="board" id="board" data-gesture-surface data-block-callout aria-label="Игровое поле 4 на 4"></div>
+          <div class="pivot-layer" id="pivot-layer" data-ui></div>
+        </div>
+
+        <div class="status-line" data-ui aria-live="polite">
+          <span>ХОДЫ <strong id="moves-count">0</strong></span>
+          <span>ЛУЧШЕЕ <strong id="best-count">—</strong></span>
+          <span id="gesture-hint">Нажми или смахни по заклёпке</span>
+        </div>
+      </div>
+
+      <nav class="game-controls" data-ui>
+        <button id="undo-button" type="button" data-native-press>Отменить</button>
+        <button id="reset-button" type="button" data-native-press>Сначала</button>
+        <button id="levels-from-game" type="button" data-native-press>Листы</button>
+      </nav>
+    </section>
+
+    <section class="modal-layer" id="pause-modal" hidden aria-labelledby="pause-title">
+      <div class="modal-sheet" data-ui>
+        <p class="kicker">ПЕЧАТЬ ОСТАНОВЛЕНА</p>
+        <h2 id="pause-title">Пауза</h2>
+        <button class="primary-action" id="resume-button" type="button" data-native-press>Продолжить</button>
+        <button class="secondary-action" id="pause-reset" type="button" data-native-press>Начать лист заново</button>
+        <button class="secondary-action" id="pause-levels" type="button" data-native-press>Архив листов</button>
+        <a class="secondary-action link-action" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="modal-layer success-layer" id="success-modal" hidden aria-labelledby="success-title">
+      <div class="modal-sheet success-sheet" data-ui>
+        <div class="success-seal" aria-hidden="true">✓</div>
+        <p class="kicker">ПРИВОДКА СОВПАЛА</p>
+        <h2 id="success-title">Оттиск собран</h2>
+        <p id="success-copy">12 ходов · новый рекорд</p>
+        <button class="primary-action" id="next-button" type="button" data-native-press>Следующий лист</button>
+        <button class="secondary-action" id="replay-button" type="button" data-native-press>Собрать ещё раз</button>
+        <button class="secondary-action" id="success-levels" type="button" data-native-press>Архив листов</button>
+        <a class="secondary-action link-action" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="modal-layer" id="reset-modal" hidden aria-labelledby="reset-title">
+      <div class="modal-sheet" data-ui>
+        <p class="kicker">СБРОС ЛИСТА</p>
+        <h2 id="reset-title">Стереть текущие ходы?</h2>
+        <p>Прогресс этого листа вернётся к исходной раскладке. Уже собранные листы не пострадают.</p>
+        <button class="primary-action danger-action" id="confirm-reset" type="button" data-native-press>Да, начать сначала</button>
+        <button class="secondary-action" id="cancel-reset" type="button" data-native-press>Оставить как есть</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
