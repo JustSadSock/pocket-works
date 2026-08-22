@@ -1,4 +1,4 @@
-const CACHE='rivals-fit-lab-v1.0.0';
+const CACHE='rivals-fit-lab-v1.1.0';
 const PREFIX='rivals-fit-lab-';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./engine.js','./hero-data.js','./questions.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
