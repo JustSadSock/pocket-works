@@ -1,24 +1,30 @@
-# RIVALS FIT LAB
+# RIVALS FIT LAB 1.1
 
-Adaptive Marvel Rivals hero-fit profiler for Pocket Works.
+Offline-first адаптивный тест для Pocket Works, который подбирает героя Marvel Rivals по игровому почерку, а не по текущей силе в мете.
 
-## Product loop
+## Что изменилось в 1.1
 
-1. Twenty broad questions measure thirteen playstyle dimensions: aim dependence, preferred range, mobility, initiative, frontline tolerance, support responsibility, utility, setup, mechanical complexity, tempo, autonomy, burst preference and brawl comfort.
-2. Six precision questions are selected dynamically. The engine looks at the current top eight heroes and chooses the unused question that best separates them on under-measured axes.
-3. The result ranks all 53 Season 9.5 heroes, explains the strongest matches and largest conflicts, shows the top ten, and gives the best candidate for Vanguard, Duelist and Strategist.
+- Тест разбит на пять понятных глав вместо ощущения бесконечной анкеты.
+- Пятиступенчатая шкала теперь явно подписывает «точно A / скорее A / 50/50 / скорее B / точно B».
+- Во время теста показывается живая сигнатура: какие оси уже измерены, какие черты выражены и насколько разошёлся текущий топ-4. Имена героев скрыты до финала, чтобы не создавать bias.
+- Результат показывает топ-3 финалистов и позволяет сравнить любого кандидата с победителем по конкретным дельтам профиля.
+- Лучшие варианты по ролям и топ-10 стали интерактивными и тоже открывают сравнение.
+- Добавлен трёхматчевый протокол: что проверить в игре, чтобы понять, действительно ли герой подходит руками, а не только математически.
+- Можно оставить 20 базовых ответов и заново пройти только 6 адаптивных вопросов.
+- История теперь хранит полноценные снимки прошлых результатов и не стирается при новом тесте.
+- На поддерживаемых устройствах результат можно отправить через системный Share или скопировать.
 
-The score intentionally does not include current tier-list strength or win rate. It models how naturally a hero's play requirements fit the player's stated preferences.
+## Модель
 
-## Data snapshot
+Профиль игрока строится по 13 осям: aim, range, mobility, aggression, frontline, support, utility, setup, mechanics, tempo, autonomy, burst и brawl. 20 базовых вопросов дают широкий профиль, затем 6 вопросов выбираются динамически по разбросу характеристик среди текущего топ-8 кандидатов.
 
-Roster snapshot: Season 9.5, checked against the August 20, 2026 live patch. The Hood is included as the newest Vanguard. Hero vectors are derived from role baselines, curated kit tags, difficulty and per-hero overrides.
+Fit-score намеренно не учитывает tier, win rate или текущую мету. Это инструмент выбора естественного мейна, не прогноз рангового результата.
 
-## Persistence and offline
+## Состояние и офлайн
 
-State is stored under `pocket-works:rivals-fit-lab:state:v1`. The app owns the `rivals-fit-lab-v1.0.0` cache prefix and precaches its files plus the existing Pocket Works mobile runtime.
+Состояние сохраняется в `pocket-works:rivals-fit-lab:state:v1` с обратной совместимостью с первой версией. Service Worker использует изолированный cache namespace `rivals-fit-lab-v1.1.0` и кэширует только файлы приложения и обязательный mobile runtime.
 
-## Tests
+## Проверка движка
 
 ```bash
 node --test apps/rivals-fit-lab/tests/engine.test.mjs
