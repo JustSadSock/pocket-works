@@ -1,10 +1,11 @@
-const CACHE_NAME = 'kvarta-v1.0.0';
+const CACHE_NAME = 'kvarta-v1.1.0';
 const CACHE_PREFIX = 'kvarta-';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './motion.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
