@@ -1,0 +1,21 @@
+{
+  "id": "/apps/kvarta/",
+  "name": "КВАРТА",
+  "short_name": "КВАРТА",
+  "description": "Головоломка про вращение перекрывающихся квартетов 2×2 и сборку печатных мозаик.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#efe7d2",
+  "theme_color": "#17324a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
