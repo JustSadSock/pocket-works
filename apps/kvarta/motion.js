@@ -3,10 +3,10 @@ const board = document.querySelector('#board');
 const pivotLayer = document.querySelector('#pivot-layer');
 const boardFrame = document.querySelector('.board-frame');
 const successModal = document.querySelector('#success-modal');
+let gesture = null;
 
 if (board && pivotLayer && boardFrame) {
   let previous = snapshotBoard();
-  let gesture = null;
 
   const observer = new MutationObserver(() => {
     requestAnimationFrame(() => {
