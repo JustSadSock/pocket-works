@@ -10,6 +10,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -24,6 +25,14 @@
     <div id="screen" class="screen" aria-live="polite"></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="RIVALS FIT LAB"
+    data-app-version="1.1.0"
+  ></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
