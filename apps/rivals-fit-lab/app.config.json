@@ -14,7 +14,7 @@
     "Результат показывает лучший матч, конфликты, топ-10 и лучший вариант в каждой роли."
   ],
   "status": "active",
-  "preset": "utility",
+  "preset": "interactive",
   "accent": "#2f63ff",
   "backgroundColor": "#f4f1e8",
   "themeColor": "#f4f1e8",
