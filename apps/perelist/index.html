@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#26333a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ПЕРЕЛИСТ">
+  <title>ПЕРЕЛИСТ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive">
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="topbar" data-ui>
+      <a class="home-link" href="../../" aria-label="Вернуться в Pocket Works">← Pocket Works</a>
+      <div class="brand" aria-label="ПЕРЕЛИСТ">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <strong>ПЕРЕЛИСТ</strong>
+      </div>
+      <span class="save-state" id="save-state" aria-live="polite">Сохранено</span>
+    </header>
+
+    <section class="notebook" aria-label="Два редактируемых листа">
+      <div class="page-stack" id="page-stack">
+        <div class="pages-track" id="pages-track">
+          <article class="sheet sheet-text" data-page="0" aria-labelledby="text-page-label">
+            <div class="sheet-meta">
+              <span class="sheet-index">01</span>
+              <span id="text-page-label">Текст</span>
+              <span class="sheet-count" id="text-count">0 знаков</span>
+            </div>
+            <label class="sr-only" for="text-input">Текст первого листа</label>
+            <textarea id="text-input" class="page-input text-input" maxlength="5000" placeholder="Напиши что-нибудь…" spellcheck="true" autocapitalize="sentences"></textarea>
+            <p class="sheet-hint">Листай влево →</p>
+          </article>
+
+          <article class="sheet sheet-numbers" data-page="1" aria-labelledby="numbers-page-label">
+            <div class="sheet-meta">
+              <span class="sheet-index">02</span>
+              <span id="numbers-page-label">Числа</span>
+              <span class="sheet-count" id="number-count">0 чисел</span>
+            </div>
+            <label class="sr-only" for="numbers-input">Числа второго листа</label>
+            <textarea id="numbers-input" class="page-input numbers-input" maxlength="2000" inputmode="decimal" placeholder="123&#10;45,6&#10;−7"></textarea>
+            <p class="sheet-hint">← Листай назад</p>
+          </article>
+        </div>
+      </div>
+
+      <nav class="page-tabs" aria-label="Переключение листов" data-ui>
+        <button class="page-tab is-active" type="button" data-page-target="0" aria-current="page">
+          <span class="tab-number">01</span>
+          <span>Текст</span>
+        </button>
+        <div class="page-progress" aria-hidden="true"><span id="progress-fill"></span></div>
+        <button class="page-tab" type="button" data-page-target="1">
+          <span class="tab-number">02</span>
+          <span>Числа</span>
+        </button>
+      </nav>
+    </section>
+
+    <footer class="app-footer" data-ui>
+      <span>Автосохранение · локально на устройстве</span>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </footer>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="ПЕРЕЛИСТ"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
