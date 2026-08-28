@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perelist-v1.0.0';
+const CACHE_NAME = 'perelist-v1.1.0';
 const CACHE_PREFIX = 'perelist-';
 const SHELL = [
   './',
