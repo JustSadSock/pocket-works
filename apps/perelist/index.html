@@ -36,6 +36,40 @@
               <span id="text-page-label">Текст</span>
               <span class="sheet-count" id="text-count">0 знаков</span>
             </div>
+
+            <div class="text-tools" id="text-tools" aria-label="Оформление текста" data-ui>
+              <label class="tool-field font-field" for="text-font">
+                <span>Шрифт</span>
+                <select id="text-font" aria-label="Шрифт текста">
+                  <option value="serif">Книжный</option>
+                  <option value="sans">Простой</option>
+                  <option value="rounded">Мягкий</option>
+                  <option value="mono">Моно</option>
+                </select>
+              </label>
+
+              <label class="tool-field size-field" for="text-size">
+                <span>Размер <output id="text-size-value" for="text-size">28</output></span>
+                <input id="text-size" type="range" min="18" max="56" step="1" value="28" aria-label="Размер текста">
+              </label>
+
+              <div class="format-group" role="group" aria-label="Начертание">
+                <button class="format-button" id="text-bold" type="button" aria-pressed="false" aria-label="Жирный текст"><strong>B</strong></button>
+                <button class="format-button italic-button" id="text-italic" type="button" aria-pressed="false" aria-label="Курсив">I</button>
+              </div>
+
+              <div class="format-group align-group" role="group" aria-label="Выравнивание">
+                <button class="format-button align-button is-active" type="button" data-align="left" aria-pressed="true" aria-label="По левому краю">←</button>
+                <button class="format-button align-button" type="button" data-align="center" aria-pressed="false" aria-label="По центру">↔</button>
+                <button class="format-button align-button" type="button" data-align="right" aria-pressed="false" aria-label="По правому краю">→</button>
+              </div>
+
+              <label class="color-field" for="text-color">
+                <span>Цвет</span>
+                <input id="text-color" type="color" value="#26333a" aria-label="Цвет текста">
+              </label>
+            </div>
+
             <label class="sr-only" for="text-input">Текст первого листа</label>
             <textarea id="text-input" class="page-input text-input" maxlength="5000" placeholder="Напиши что-нибудь…" spellcheck="true" autocapitalize="sentences"></textarea>
             <p class="sheet-hint">Листай влево →</p>
@@ -68,7 +102,10 @@
     </section>
 
     <footer class="app-footer" data-ui>
-      <span>Автосохранение · локально на устройстве</span>
+      <div class="footer-status">
+        <span>Автосохранение · локально</span>
+        <button class="wake-state" id="wake-state" type="button" aria-live="polite">Экран: включаю…</button>
+      </div>
       <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
     </footer>
   </main>
@@ -79,7 +116,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ПЕРЕЛИСТ"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
   <script src="./app.js" type="module"></script>
 </body>
