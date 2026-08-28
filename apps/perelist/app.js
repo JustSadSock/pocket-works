@@ -38,7 +38,7 @@ renderCounts();
 showPage(currentPage, { focus: false, persist: false });
 
 textInput.addEventListener('input', () => {
-  queueSave('text', textInput.value);
+  queueSave();
   renderCounts();
 });
 
@@ -49,7 +49,7 @@ numbersInput.addEventListener('input', () => {
     numbersInput.value = cleaned;
     numbersInput.setSelectionRange(Math.max(0, selection - 1), Math.max(0, selection - 1));
   }
-  queueSave('numbers', numbersInput.value);
+  queueSave();
   renderCounts();
 });
 
@@ -83,6 +83,11 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight') showPage(1, { focus: false });
 });
 
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) flushSave();
+});
+
 function showPage(page, options = {}) {
   currentPage = page === 1 ? 1 : 0;
   track.dataset.page = String(currentPage);
@@ -101,15 +106,23 @@ function showPage(page, options = {}) {
   }
 }
 
-function queueSave(key, value) {
+function queueSave() {
   saveState.textContent = 'Сохраняю…';
   saveState.classList.add('is-saving');
   window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => {
-    const saved = storage.set(key, value);
-    saveState.textContent = saved ? 'Сохранено' : 'Не сохранено';
-    saveState.classList.remove('is-saving');
-  }, 120);
+  saveTimer = window.setTimeout(flushSave, 120);
+}
+
+function flushSave() {
+  window.clearTimeout(saveTimer);
+  saveTimer = 0;
+  const saved = storage.patch({
+    text: textInput.value,
+    numbers: numbersInput.value,
+    page: currentPage
+  });
+  saveState.textContent = saved ? 'Сохранено' : 'Не сохранено';
+  saveState.classList.remove('is-saving');
 }
 
 function renderCounts() {
@@ -136,6 +149,7 @@ createWorkshopMode({
   storageNamespace: 'pocket-works:perelist',
   onReset() {
     window.clearTimeout(saveTimer);
+    saveTimer = 0;
     storage.reset();
     textInput.value = '';
     numbersInput.value = '';
