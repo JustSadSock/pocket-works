@@ -50,6 +50,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .notebook { min-width: 0; display: grid; gap: 12px; }
 .page-stack {
   overflow: hidden;
+  touch-action: pan-y;
   border: 1px solid rgba(38, 51, 58, .18);
   background: var(--desk);
   box-shadow: 0 16px 36px rgba(56, 46, 32, .13);
