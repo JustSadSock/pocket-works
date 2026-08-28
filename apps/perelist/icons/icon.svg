@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ПЕРЕЛИСТ">
+  <rect width="512" height="512" rx="96" fill="#26333a"/>
+  <path d="M118 92h226l50 50v278H118z" fill="#e9f0ef"/>
+  <path d="M344 92v54h50" fill="#c8d7d5"/>
+  <path d="M86 124h226l50 50v246H86z" fill="#f7f0df" stroke="#406b7c" stroke-width="12"/>
+  <path d="M312 124v54h50" fill="#d7cdb8"/>
+  <path d="M134 214h132M134 254h112M134 294h84" stroke="#406b7c" stroke-width="14" stroke-linecap="round" opacity=".75"/>
+  <text x="252" y="382" text-anchor="middle" fill="#26333a" font-family="ui-sans-serif,system-ui,sans-serif" font-size="72" font-weight="850">123</text>
+</svg>
