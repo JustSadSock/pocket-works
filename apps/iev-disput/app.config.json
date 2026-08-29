@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "iev-disput",
+  "name": "ДИСПУТ: ІЕВ",
+  "shortName": "ДИСПУТ",
+  "description": "Дводенний тренажер до комісії з історії економічних вчень: хронологія, персоналії, школи, перехресні зв’язки та усна симуляція комісії.",
+  "version": "1.0.0",
+  "releaseDate": "2026-08-29",
+  "releaseDateTime": "2026-08-29T18:30:00Z",
+  "changelog": [
+    "Створено дводенний план підготовки з автоматичним відстеженням прогресу.",
+    "Додано хронологічну стрічку, довідник персоналій і повний пошук по конспекту.",
+    "Додано режими швидкого відтворення, перехресних питань і трирівневої симуляції комісії.",
+    "Результати, слабкі місця та повторення зберігаються локально й працюють офлайн."
+  ],
+  "status": "stable",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#355f4b",
+  "backgroundColor": "#f1ead9",
+  "themeColor": "#e6ddc8",
+  "orientation": "portrait",
+  "cacheName": "iev-disput-v1.0.0",
+  "storageNamespace": "pocket-works:iev-disput",
+  "tags": ["PWA", "offline", "study", "education", "history", "economics", "quiz", "exam", "ukrainian"],
+  "order": 124
+}
