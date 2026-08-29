@@ -17,30 +17,20 @@
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app>
     <header class="masthead" data-ui>
-      <a class="launcher-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
-      <div class="identity">
-        <span class="kicker">Історія економічних вчень</span>
-        <strong>ДИСПУТ</strong>
-      </div>
-      <button class="readiness" type="button" data-action="show-readiness" data-native-press aria-label="Показати готовність">
-        <span id="readinessValue">0%</span><small>готовність</small>
-      </button>
+      <a class="launcher-link" href="../../" data-native-press>← Pocket Works</a>
+      <div class="identity"><span>ІСТОРІЯ ЕКОНОМІЧНИХ ВЧЕНЬ</span><strong>ДИСПУТ</strong></div>
+      <div class="accuracy"><span id="accuracyValue">0%</span><small>точність</small></div>
     </header>
 
     <section class="workbench" id="workbench" data-selectable aria-live="polite"></section>
 
     <nav class="bottom-ledger" aria-label="Основна навігація" data-ui>
-      <button type="button" data-tab="plan" data-native-press><span>01</span>План</button>
-      <button type="button" data-tab="atlas" data-native-press><span>02</span>Атлас</button>
-      <button type="button" data-tab="trainer" data-native-press><span>03</span>Тренажер</button>
+      <button type="button" data-tab="trainer" data-native-press><span>01</span>Тест</button>
+      <button type="button" data-tab="mistakes" data-native-press><span>02</span>Помилки</button>
+      <button type="button" data-tab="commission" data-native-press><span>03</span>Комісія</button>
       <button type="button" data-tab="notes" data-native-press><span>04</span>Конспект</button>
     </nav>
-
-    <section class="overlay" id="overlay" hidden aria-modal="true" role="dialog">
-      <div class="overlay-scrim" data-action="close-overlay"></div>
-      <article class="overlay-sheet" id="overlaySheet" data-keyboard-aware></article>
-    </section>
-    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
   </main>
   <script
     type="module"
@@ -48,7 +38,7 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ДИСПУТ: ІЕВ"
-    data-app-version="1.0.0"
+    data-app-version="1.1.0"
   ></script>
   <script type="module" src="./app.js"></script>
 </body>
