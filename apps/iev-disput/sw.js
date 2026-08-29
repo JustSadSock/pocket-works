@@ -1,7 +1,7 @@
 const CACHE='iev-disput-v1.0.0';
 const PREFIX='iev-disput-';
 const ASSETS=[
-  './','./index.html','./styles.css','./app.js','./study-data.js','./questions.js','./source-data.js',
+  './','./index.html','./styles.css','./app.js','./study-data.js','./questions.js','./source-loader.js','./source-pack-1.js','./source-pack-2.js','./source-pack-3.js','./source-pack-4.js',
   './manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
