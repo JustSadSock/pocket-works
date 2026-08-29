@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#382318">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Скрипторий">
+  <title>Скрипторий</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <div class="brand-lockup">
+        <strong>СКРИПТОРИЙ</strong>
+        <span id="saveStatus">сохранено</span>
+      </div>
+      <div class="history-controls">
+        <button id="undoBtn" class="icon-button" type="button" aria-label="Отменить" data-native-press>↶</button>
+        <button id="redoBtn" class="icon-button" type="button" aria-label="Повторить" data-native-press>↷</button>
+      </div>
+    </header>
+
+    <section class="workbench">
+      <div class="stage-column">
+        <div class="folio-rail" data-ui>
+          <button id="presetBtn" class="rail-button" type="button" data-native-press>Сюжет</button>
+          <button id="randomBtn" class="rail-button rail-button--accent" type="button" data-native-press>Бросить кости</button>
+          <button id="exportBtn" class="rail-button" type="button" data-native-press>PNG</button>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap" data-gesture-surface data-touch-action="none" data-block-callout>
+          <canvas id="sceneCanvas" width="1000" height="1000" aria-label="Редактируемая средневековая миниатюра"></canvas>
+          <div id="emptyHint" class="canvas-hint" hidden>Коснитесь элемента, чтобы править его</div>
+        </div>
+
+        <div class="selection-bar" id="selectionBar" data-ui>
+          <div class="selection-copy">
+            <span id="selectionKind">Сцена</span>
+            <strong id="selectionName">Ничего не выбрано</strong>
+          </div>
+          <div class="selection-actions" id="selectionActions" hidden>
+            <button type="button" data-action="smaller" data-native-press aria-label="Уменьшить">−</button>
+            <button type="button" data-action="larger" data-native-press aria-label="Увеличить">＋</button>
+            <button type="button" data-action="flip" data-native-press aria-label="Отразить">⇋</button>
+            <button type="button" data-action="delete" class="danger" data-native-press aria-label="Удалить">×</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="toolbox" data-ui data-keyboard-aware>
+        <nav class="tool-tabs" aria-label="Разделы редактора">
+          <button class="tool-tab is-active" type="button" data-tab="scene" data-native-press>Лист</button>
+          <button class="tool-tab" type="button" data-tab="figures" data-native-press>Люди</button>
+          <button class="tool-tab" type="button" data-tab="objects" data-native-press>Вещи</button>
+          <button class="tool-tab" type="button" data-tab="ornament" data-native-press>Орнамент</button>
+          <button class="tool-tab" type="button" data-tab="ink" data-native-press>Краски</button>
+        </nav>
+
+        <div class="tool-scroll">
+          <section class="tool-panel is-active" data-panel="scene">
+            <div class="section-heading"><span>I</span><div><strong>Основа листа</strong><small>Формат и поверхность</small></div></div>
+            <div class="segmented" id="formatChoices" aria-label="Формат листа"></div>
+            <div class="choice-grid" id="backgroundChoices"></div>
+            <div class="section-heading"><span>II</span><div><strong>Рамка</strong><small>Граница миниатюры</small></div></div>
+            <div class="choice-grid choice-grid--compact" id="frameChoices"></div>
+          </section>
+
+          <section class="tool-panel" data-panel="figures">
+            <div class="section-heading"><span>I</span><div><strong>Персонажи</strong><small>До трёх фигур на листе</small></div></div>
+            <div class="stamp-grid" id="figureStamps"></div>
+            <div id="figureEditor" class="editor-block" hidden>
+              <label>Головной убор<select id="headwearSelect"></select></label>
+              <label>Предмет в руке<select id="heldSelect"></select></label>
+              <label>Основной цвет<input id="figureColor" type="color" value="#a52d25"></label>
+            </div>
+          </section>
+
+          <section class="tool-panel" data-panel="objects">
+            <div class="section-heading"><span>I</span><div><strong>Реликвии и декорации</strong><small>Коснитесь, чтобы добавить</small></div></div>
+            <div class="stamp-grid" id="objectStamps"></div>
+          </section>
+
+          <section class="tool-panel" data-panel="ornament">
+            <div class="section-heading"><span>I</span><div><strong>Поля рукописи</strong><small>Декоративный ритм</small></div></div>
+            <div class="choice-grid choice-grid--compact" id="ornamentChoices"></div>
+            <div class="section-heading"><span>II</span><div><strong>Надпись</strong><small>Латинская или любая своя</small></div></div>
+            <label class="text-field">Текст<input id="inscriptionInput" maxlength="42" placeholder="FORTVNA FAVET"></label>
+            <div class="segmented" id="inscriptionPosition"></div>
+          </section>
+
+          <section class="tool-panel" data-panel="ink">
+            <div class="section-heading"><span>I</span><div><strong>Палитра</strong><small>Меняет всю сцену одним нажатием</small></div></div>
+            <div class="palette-list" id="paletteChoices"></div>
+            <div class="section-heading"><span>II</span><div><strong>След мастера</strong><small>Неровность делает сцену живой</small></div></div>
+            <label class="range-field">Толщина контура <output id="lineWeightOutput">6</output><input id="lineWeight" type="range" min="3" max="10" step="1" value="6"></label>
+            <label class="switch-row">Потёртая штукатурка<input id="textureToggle" type="checkbox" checked><span></span></label>
+          </section>
+        </div>
+      </aside>
+    </section>
+
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+    <section class="story-sheet" id="storySheet" role="dialog" aria-modal="true" aria-labelledby="storyTitle" hidden data-ui>
+      <header><div><small>ГОТОВЫЕ КОМПОЗИЦИИ</small><h2 id="storyTitle">Выбрать сюжет</h2></div><button id="closeStoryBtn" type="button" data-native-press aria-label="Закрыть">×</button></header>
+      <div class="story-list" id="storyList"></div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
