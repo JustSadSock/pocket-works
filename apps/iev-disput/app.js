@@ -1,259 +1,405 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
-import { STUDY } from './study-data.js';
-import { QUESTIONS } from './questions.js';
+import { QUIZ_1 } from './quiz-1.js';
+import { QUIZ_2 } from './quiz-2.js';
+import { QUIZ_3 } from './quiz-3.js';
+const QUESTIONS=[...QUIZ_1,...QUIZ_2,...QUIZ_3];
 import { loadSourceSections } from './source-loader.js';
 
 installMobileRuntime();
 
-const STORAGE_KEY='pocket-works:iev-disput:state:v1';
-const $=selector=>document.querySelector(selector);
+const STORAGE_KEY='pocket-works:iev-disput:trainer:v2';
+const $=s=>document.querySelector(s);
 const workbench=$('#workbench');
-const overlay=$('#overlay');
-const overlaySheet=$('#overlaySheet');
-const toastEl=$('#toast');
-const readinessValue=$('#readinessValue');
+const accuracyEl=$('#accuracyValue');
 const tabs=[...document.querySelectorAll('[data-tab]')];
+const toastEl=$('#toast');
 
-const defaults={tab:'plan',atlasMode:'timeline',trainerFilter:'all',planDone:{},grades:{},sessions:0,commissionRuns:0,currentQuestion:null};
-let state=loadState();
-let commission=null;
-let revealCurrent=false;
-let toastTimer=null;
+const defaultState={
+  tab:'trainer',
+  trainerMode:'mixed',
+  trainerLength:10,
+  stats:{},
+  completedSessions:0,
+  bestCommission:0,
+  lastCommission:null,
+  session:null
+};
+
+let state=load();
 let sourceSections=[];
 let sourceLoading=true;
+let toastTimer=null;
 
-function loadState(){
+function cloneDefault(){return JSON.parse(JSON.stringify(defaultState))}
+function load(){
   try{
-    const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
-    if(!parsed||typeof parsed!=='object') return structuredClone(defaults);
-    return {...structuredClone(defaults),...parsed,planDone:validMap(parsed.planDone),grades:validGrades(parsed.grades)};
-  }catch{return structuredClone(defaults)}
+    const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+    if(!raw||typeof raw!=='object') return cloneDefault();
+    return {...cloneDefault(),...raw,stats:raw.stats&&typeof raw.stats==='object'?raw.stats:{},session:validSession(raw.session)?raw.session:null};
+  }catch{return cloneDefault()}
 }
-function validMap(value){return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}
-function validGrades(value){
-  if(!value||typeof value!=='object'||Array.isArray(value)) return {};
-  const out={};
-  for(const [id,list] of Object.entries(value)) if(Array.isArray(list)) out[id]=list.filter(x=>x===0||x===.5||x===1).slice(-12);
-  return out;
-}
+function validSession(s){return s&&typeof s==='object'&&Array.isArray(s.items)&&Number.isInteger(s.index)&&s.index>=0}
 function save(){
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch{}
-  renderReadiness();
+  renderAccuracy();
 }
 function esc(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function normalize(v=''){return String(v).toLocaleLowerCase('uk-UA').normalize('NFD').replace(/\p{Diacritic}/gu,'')}
-function average(list){return list.length?list.reduce((a,b)=>a+b,0)/list.length:0}
-function allGrades(){return Object.values(state.grades).flat()}
-function planProgress(){return STUDY.plan.length?Object.keys(state.planDone).filter(id=>state.planDone[id]).length/STUDY.plan.length:0}
-function readiness(){const grades=allGrades();const knowledge=grades.length?average(grades):0;return Math.round((planProgress()*.38+knowledge*.62)*100)}
-function renderReadiness(){readinessValue.textContent=`${readiness()}%`}
-function lastGrade(id){const arr=state.grades[id]||[];return arr.length?arr[arr.length-1]:null}
-function topicStats(){
-  const map=new Map();
-  QUESTIONS.forEach(q=>{const list=state.grades[q.id]||[];if(!list.length)return;const bucket=map.get(q.topic)||[];bucket.push(...list);map.set(q.topic,bucket)});
-  return [...map].map(([topic,list])=>({topic,score:average(list),attempts:list.length})).sort((a,b)=>a.score-b.score);
+function shuffle(list){
+  const a=[...list];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  return a;
 }
-function weakQuestions(){
-  const attempted=QUESTIONS.filter(q=>{const g=state.grades[q.id]||[];return g.length&&average(g)<.75});
-  return attempted.length?attempted:QUESTIONS.filter(q=>q.level>=2);
+function overall(){
+  const stats=Object.values(state.stats);
+  const seen=stats.reduce((n,x)=>n+(x.seen||0),0);
+  const correct=stats.reduce((n,x)=>n+(x.correct||0),0);
+  return {seen,correct,accuracy:seen?Math.round(correct/seen*100):0};
 }
-function toast(message){
-  clearTimeout(toastTimer);toastEl.textContent=message;toastEl.hidden=false;
-  toastTimer=setTimeout(()=>toastEl.hidden=true,1700);
+function renderAccuracy(){accuracyEl.textContent=`${overall().accuracy}%`}
+function toast(msg){
+  clearTimeout(toastTimer);
+  toastEl.textContent=msg;toastEl.hidden=false;
+  toastTimer=setTimeout(()=>toastEl.hidden=true,1500);
 }
-function haptic(ms=18){if(navigator.vibrate) navigator.vibrate(ms)}
+function haptic(pattern=18){if(navigator.vibrate) navigator.vibrate(pattern)}
+function questionById(id){return QUESTIONS.find(q=>q.id===id)}
 
 function setTab(tab){
-  state.tab=tab;save();closeOverlay();render();
+  if(state.session&&!state.session.finished&&state.session.type==='trainer'&&tab!=='trainer'){
+    state.session=null;
+  }
+  state.tab=tab;save();render();
 }
 function render(){
-  tabs.forEach(btn=>btn.classList.toggle('active',btn.dataset.tab===state.tab));
-  if(state.tab==='plan') renderPlan();
-  else if(state.tab==='atlas') renderAtlas();
-  else if(state.tab==='trainer') renderTrainer();
+  tabs.forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  if(state.tab==='trainer') renderTrainer();
+  else if(state.tab==='mistakes') renderMistakes();
+  else if(state.tab==='commission') renderCommission();
   else renderNotes();
   workbench.scrollTop=0;
 }
 
-function renderPlan(){
-  const done=Object.values(state.planDone).filter(Boolean).length;
-  const grades=allGrades();
-  const weak=topicStats().filter(x=>x.score<.75).length;
-  workbench.innerHTML=`<div class="page">
-    <section class="hero-dossier">
-      <h2>Два дні. Не зубрити — відтворювати.</h2>
-      <p>Твоя задача: на кожну тезу швидко відновлювати п’ять координат — <b>коли, де, школа, хто, що саме</b>. Комісія навмисно ламає лінійну хронологію.</p>
-      <div class="hero-actions">
-        <button class="primary" type="button" data-action="start-commission" data-native-press>Почати комісію</button>
-        <button class="secondary" type="button" data-action="open-weak" data-native-press>Слабкі місця</button>
-      </div>
-    </section>
-    <div class="metric-strip">
-      <div class="metric"><strong>${done}/${STUDY.plan.length}</strong><span>блоків</span></div>
-      <div class="metric"><strong>${grades.length}</strong><span>відповідей</span></div>
-      <div class="metric"><strong>${weak}</strong><span>слабких тем</span></div>
-    </div>
-    ${[1,2].map(day=>renderDay(day)).join('')}
-    <div class="section-label">Правило підготовки</div>
-    <div class="cross-note"><strong>Спочатку скажи вголос. Потім відкривай відповідь.</strong><p>Самооцінка тут не «оцінка знань від ШІ». Це твій чесний журнал відтворення. Якщо вагався між двома авторами — став «частково».</p></div>
-  </div>`;
+function modePool(mode){
+  if(mode==='base') return QUESTIONS.filter(q=>q.level<=2);
+  if(mode==='hard') return QUESTIONS.filter(q=>q.level===3);
+  if(mode==='weak'){
+    const weakIds=Object.entries(state.stats)
+      .filter(([,s])=>(s.wrong||0)>0 && ((s.correct||0)/(s.seen||1))<.75)
+      .map(([id])=>id);
+    return weakIds.length?QUESTIONS.filter(q=>weakIds.includes(q.id)):QUESTIONS.filter(q=>q.level>=2);
+  }
+  return QUESTIONS;
 }
-function renderDay(day){
-  const list=STUDY.plan.filter(x=>x.day===day);const minutes=list.reduce((s,x)=>s+x.minutes,0);const completed=list.filter(x=>state.planDone[x.id]).length;
-  return `<section class="day-block"><div class="day-head"><h2>День ${day}</h2><span>${completed}/${list.length} · ${minutes} хв</span></div>${list.map(task=>`<article class="task ${state.planDone[task.id]?'done':''}">
-    <button class="task-check" type="button" data-action="toggle-task" data-id="${task.id}" aria-label="${state.planDone[task.id]?'Позначити незавершеним':'Позначити завершеним'}" data-native-press>${state.planDone[task.id]?'✓':'○'}</button>
-    <button class="person-row task-copy" style="padding:0;border:0;min-height:38px" type="button" data-action="start-task" data-mode="${task.mode}" data-native-press><span><strong>${esc(task.title)}</strong><span>${esc(task.goal)}</span></span></button>
-    <span class="task-time">${task.minutes} хв</span></article>`).join('')}</section>`;
+function buildItems(pool,count){
+  const chosen=[];
+  let bag=shuffle(pool);
+  while(chosen.length<count && bag.length){
+    chosen.push(bag.shift());
+  }
+  if(chosen.length<count){
+    const refill=shuffle(pool);
+    while(chosen.length<count && refill.length) chosen.push(refill.shift());
+  }
+  return chosen.map(q=>({
+    id:q.id,
+    options:shuffle([q.correct,...q.distractors]),
+    selected:null,
+    answered:false
+  }));
 }
-
-function renderAtlas(){
-  workbench.innerHTML=`<div class="page"><h1 class="page-title">Атлас ідей</h1><p class="page-intro">Не список прізвищ, а карта: час → країна → школа → людина → теза.</p>
-    <div class="mode-tabs">${[['timeline','Хронологія'],['people','Персоналії'],['cross','Перехрестя'],['context','Контекст+']].map(([id,label])=>`<button class="tab-chip ${state.atlasMode===id?'active':''}" type="button" data-action="atlas-mode" data-mode="${id}" data-native-press>${label}</button>`).join('')}</div>
-    <div id="atlasBody"></div></div>`;
-  const body=$('#atlasBody');
-  if(state.atlasMode==='timeline') body.innerHTML=renderTimeline();
-  else if(state.atlasMode==='people') body.innerHTML=renderPeople();
-  else if(state.atlasMode==='cross') body.innerHTML=renderCross();
-  else body.innerHTML=renderContext();
+function startTrainer(mode=state.trainerMode,length=state.trainerLength){
+  const pool=modePool(mode);
+  const count=Math.min(Number(length)||10,pool.length||QUESTIONS.length);
+  state.session={type:'trainer',mode,length:count,index:0,items:buildItems(pool,count),finished:false,startedAt:Date.now()};
+  state.tab='trainer';save();renderTrainer();haptic([18,30,18]);
 }
-function renderTimeline(){return `<div class="timeline">${STUDY.timeline.map(era=>`<article class="era"><span class="period">${esc(era.period)}</span><h3>${esc(era.title)}</h3><div class="place">${esc(era.place)}</div><p>${esc(era.core)}</p>${era.people.length?`<small>${era.people.map(esc).join(' · ')}</small>`:''}</article>`).join('')}</div>`}
-function renderPeople(query=''){
-  const n=normalize(query);const list=STUDY.people.filter(p=>!n||normalize([p.name,p.country,p.school,p.idea,p.hook].join(' ')).includes(n));
-  return `<input class="searchbox" id="peopleSearch" type="search" inputmode="search" autocomplete="off" placeholder="Автор, країна, школа, ідея…" value="${esc(query)}"><div class="person-list" id="peopleResults">${peopleRows(list)}</div>`;
+function startCommission(){
+  const pool=QUESTIONS.filter(q=>q.level>=2);
+  state.session={type:'commission',mode:'commission',length:12,index:0,items:buildItems(pool,12),finished:false,startedAt:Date.now()};
+  state.tab='commission';save();renderCommission();haptic([18,30,18]);
 }
-function peopleRows(list){return list.length?list.map(p=>`<button class="person-row" type="button" data-action="person" data-name="${esc(p.name)}" data-native-press><span><strong>${esc(p.name)}</strong><span>${esc(p.country)} · ${esc(p.school)}</span></span><b>${esc(p.hook)}</b></button>`).join(''):`<div class="empty-state"><strong>Нічого не знайдено</strong><p>Спробуй школу, країну або ключову ідею.</p></div>`}
-function renderCross(country='Франція'){
-  const countries=['Франція','Англія','Німеччина','США','Україна','Італія'];
-  const list=STUDY.people.filter(p=>normalize(p.country).includes(normalize(country)));
-  return `<p class="page-intro">Натисни країну й проговори: <b>хто → коли → яка школа → що відстоював</b>. Саме так ламають лінійну зубріжку.</p><div class="mode-tabs" id="countryTabs">${countries.map(c=>`<button class="country-chip ${c===country?'active':''}" type="button" data-action="country" data-country="${c}" data-native-press>${c}</button>`).join('')}</div><div id="countryResults">${peopleRows(list)}</div>`;
+function answerCurrent(value){
+  const s=state.session;
+  if(!s||s.finished) return;
+  const item=s.items[s.index];
+  if(!item||item.answered) return;
+  const q=questionById(item.id);
+  item.selected=value;
+  item.answered=true;
+  const right=value===q.correct;
+  const stat=state.stats[q.id]||{seen:0,correct:0,wrong:0};
+  stat.seen+=1;
+  if(right) stat.correct+=1; else stat.wrong+=1;
+  stat.last=right?'correct':'wrong';
+  state.stats[q.id]=stat;
+  save();
+  haptic(right?20:[30,40,30]);
+  if(s.type==='commission'){
+    setTimeout(()=>advanceSession(),320);
+  }else{
+    renderTrainer();
+  }
 }
-function renderContext(){return `<div class="cross-note"><strong>Це не конспект.</strong><p>Нижче — зовнішні містки для типових викладацьких добивань. Вони спеціально відокремлені, щоб не підміняти ваш матеріал.</p></div>${STUDY.extraContext.map(x=>`<article class="cross-note"><span class="source-tag">${esc(x.source)}</span><h3>${esc(x.title)}</h3><p>${esc(x.fact)}</p><p><b>Навіщо:</b> ${esc(x.why)}</p></article>`).join('')}`}
+function advanceSession(){
+  const s=state.session;if(!s)return;
+  if(s.index>=s.items.length-1){
+    s.finished=true;
+    state.completedSessions+=1;
+    if(s.type==='commission'){
+      const score=sessionScore(s);
+      state.lastCommission={score,total:s.items.length,at:Date.now()};
+      state.bestCommission=Math.max(state.bestCommission,score);
+    }
+    save();render();
+    return;
+  }
+  s.index+=1;save();render();
+}
+function sessionScore(s){
+  return s.items.filter(item=>{
+    const q=questionById(item.id);
+    return item.answered&&item.selected===q?.correct;
+  }).length;
+}
+function cancelSession(){
+  state.session=null;save();render();
+}
 
 function renderTrainer(){
-  if(!state.currentQuestion||!QUESTIONS.some(q=>q.id===state.currentQuestion)) state.currentQuestion=pickQuestion(state.trainerFilter)?.id||QUESTIONS[0].id;
-  const q=QUESTIONS.find(x=>x.id===state.currentQuestion);
-  const weakCount=topicStats().filter(x=>x.score<.75).length;
-  workbench.innerHTML=`<div class="page"><h1 class="page-title">Усне відтворення</h1><p class="page-intro">Не обирай варіант. Скажи відповідь уголос, відкрий критерії й оціни себе.</p>
-  <div class="mode-tabs">${[['all','Усе'],['hard','Каверзні'],['weak',`Слабкі ${weakCount?`· ${weakCount}`:''}`]].map(([id,label])=>`<button class="tab-chip ${state.trainerFilter===id?'active':''}" type="button" data-action="trainer-filter" data-filter="${id}" data-native-press>${label}</button>`).join('')}</div>
-  ${renderTicket(q,revealCurrent,false)}
-  <button class="text-btn" type="button" data-action="next-question">Інше питання ↻</button>
-  <div class="section-label">Статистика тем</div>${renderWeakStats()}
-  <button class="primary" type="button" data-action="start-commission" style="width:100%;margin-top:12px">Симуляція комісії · 3 питання</button></div>`;
+  const s=state.session;
+  if(s?.type==='trainer'){
+    if(s.finished){renderTrainerResult(s);return}
+    renderQuestion(s,true);return;
+  }
+  const o=overall();
+  workbench.innerHTML=`<div class="page">
+    <section class="intro">
+      <div class="stamp">ТРЕНАЖЕР</div>
+      <h1>Тести замість перечитування</h1>
+      <p>Обери режим і проходь серіями. Після кожної відповіді одразу бачиш правильний варіант і коротке пояснення з конспекту.</p>
+      <div class="summary-grid">
+        <div><strong>${o.seen}</strong><span>відповідей</span></div>
+        <div><strong>${o.accuracy}%</strong><span>точність</span></div>
+        <div><strong>${weakCount()}</strong><span>слабких питань</span></div>
+      </div>
+    </section>
+    <section class="setup">
+      <div class="section-title">Режим</div>
+      <div class="choice-row">
+        ${modeButton('mixed','Змішаний','усі теми')}
+        ${modeButton('base','База','рівні 1–2')}
+        ${modeButton('hard','Каверзні','лише рівень 3')}
+        ${modeButton('weak','Помилки','те, що просідає')}
+      </div>
+      <div class="section-title">Довжина серії</div>
+      <div class="length-row">
+        ${[10,20,30].map(n=>`<button type="button" class="${state.trainerLength===n?'selected':''}" data-action="length" data-length="${n}" data-native-press>${n}</button>`).join('')}
+      </div>
+      <button class="primary wide" type="button" data-action="start-trainer" data-native-press>Почати серію</button>
+    </section>
+    <section class="topic-board">
+      <div class="section-title">Покриття конспекту</div>
+      ${topicRows()}
+    </section>
+  </div>`;
 }
-function renderTicket(q,revealed,inCommission){
-  return `<article class="ticket"><div class="ticket-head"><span class="level">Рівень ${q.level}${q.level===3?' · комісія':''}</span><span class="topic">${esc(q.topic)}</span></div><h2 class="question">${esc(q.q)}</h2>${!revealed?`<button class="primary" type="button" data-action="reveal-${inCommission?'commission':'answer'}" data-native-press>Відкрити критерії відповіді</button>`:`<div class="answer"><ul>${q.a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p class="trap"><b>Пастка:</b> ${esc(q.trap)}</p><div class="grade-row">${[[0,'Ні'],[.5,'Частково'],[1,'Так']].map(([score,label])=>`<button class="grade-btn" type="button" data-action="grade-${inCommission?'commission':'question'}" data-score="${score}" data-id="${q.id}" data-native-press>${label}</button>`).join('')}</div></div>`}</article>`;
+function modeButton(id,label,sub){
+  return `<button type="button" class="mode-card ${state.trainerMode===id?'selected':''}" data-action="mode" data-mode="${id}" data-native-press><strong>${label}</strong><span>${sub}</span></button>`;
 }
-function renderWeakStats(){
-  const stats=topicStats();
-  if(!stats.length) return `<div class="empty-state"><strong>Ще немає даних</strong><p>Після кількох відповідей тут з’являться теми, які реально просідають.</p></div>`;
-  return `<div class="weak-list">${stats.slice(0,8).map(x=>`<div class="weak-item"><strong>${esc(x.topic)}</strong><span>${Math.round(x.score*100)}% · ${x.attempts} відп.</span></div>`).join('')}</div>`;
+function renderQuestion(s,showFeedback){
+  const item=s.items[s.index];
+  const q=questionById(item.id);
+  const score=sessionScore(s);
+  const pct=Math.round((s.index/s.items.length)*100);
+  workbench.innerHTML=`<div class="page quiz-page">
+    <div class="quiz-top">
+      <button class="ghost" type="button" data-action="cancel-session" data-native-press>Завершити</button>
+      <span>${s.index+1} / ${s.items.length}</span>
+      <strong>${score}</strong>
+    </div>
+    <div class="progress-track"><i style="width:${pct}%"></i></div>
+    <article class="question-card">
+      <div class="question-meta"><span>${esc(q.topic)}</span><b>Рівень ${q.level}</b></div>
+      <h2>${esc(q.q)}</h2>
+      <div class="answers">
+        ${item.options.map((opt,i)=>answerButton(opt,i,item,q,showFeedback)).join('')}
+      </div>
+      ${item.answered&&showFeedback?feedbackBlock(q,item):''}
+    </article>
+    ${item.answered&&showFeedback?`<button class="primary wide next" type="button" data-action="next" data-native-press>${s.index===s.items.length-1?'Показати результат':'Наступне питання'}</button>`:''}
+  </div>`;
 }
-function pickQuestion(filter='all',exclude=[]){
-  let pool=QUESTIONS.filter(q=>!exclude.includes(q.id));
-  if(filter==='hard') pool=pool.filter(q=>q.level===3);
-  if(filter==='weak') pool=weakQuestions().filter(q=>!exclude.includes(q.id));
-  if(!pool.length) pool=QUESTIONS.filter(q=>!exclude.includes(q.id));
-  const weights=pool.map(q=>{const g=state.grades[q.id]||[];return g.length?Math.max(.35,1.35-average(g)):1.2});
-  let r=Math.random()*weights.reduce((a,b)=>a+b,0);
-  for(let i=0;i<pool.length;i++){r-=weights[i];if(r<=0)return pool[i]}
-  return pool[0];
+function answerButton(opt,i,item,q,showFeedback){
+  const letter='ABCD'[i];
+  let cls='';
+  if(item.answered&&showFeedback){
+    if(opt===q.correct) cls='right';
+    else if(opt===item.selected) cls='wrong';
+    else cls='muted';
+  }else if(item.selected===opt){cls='selected'}
+  return `<button type="button" class="answer ${cls}" data-action="answer" data-value="${esc(opt)}" ${item.answered?'disabled':''} data-native-press><span>${letter}</span><b>${esc(opt)}</b></button>`;
 }
-function grade(id,score){
-  const list=state.grades[id]||[];list.push(score);state.grades[id]=list.slice(-12);state.sessions++;save();haptic(score===1?22:12);
+function feedbackBlock(q,item){
+  const right=item.selected===q.correct;
+  return `<div class="feedback ${right?'good':'bad'}"><strong>${right?'Правильно':'Помилка'}</strong><p>${esc(q.explain)}</p>${right?'':`<p class="correct-line">Правильна відповідь: <b>${esc(q.correct)}</b></p>`}</div>`;
+}
+function renderTrainerResult(s){
+  const score=sessionScore(s), pct=Math.round(score/s.items.length*100);
+  const wrong=s.items.filter(i=>i.selected!==questionById(i.id)?.correct);
+  workbench.innerHTML=`<div class="page result-page">
+    <section class="result-mark"><span>${pct}%</span><h1>${resultTitle(pct)}</h1><p>${score} правильних із ${s.items.length}</p></section>
+    <div class="result-actions">
+      <button class="primary" type="button" data-action="restart" data-native-press>Ще серія</button>
+      <button class="secondary" type="button" data-action="result-mistakes" data-native-press ${wrong.length?'':'disabled'}>Розібрати ${wrong.length} помилок</button>
+    </div>
+    ${wrong.length?`<section><div class="section-title">Що повторити</div>${wrong.slice(0,8).map(item=>{
+      const q=questionById(item.id);return `<div class="miss-row"><span>${esc(q.topic)}</span><strong>${esc(q.q)}</strong></div>`;
+    }).join('')}</section>`:''}
+  </div>`;
+}
+function resultTitle(pct){
+  if(pct>=90)return 'Можна ускладнювати';
+  if(pct>=75)return 'Добра база';
+  if(pct>=60)return 'Є прогалини';
+  return 'Потрібне повторення';
 }
 
-function startCommission(){
-  const q1=pickFrom(QUESTIONS.filter(q=>q.level<=2));
-  const same=QUESTIONS.filter(q=>q.id!==q1.id&&q.level>=2&&q.topic===q1.topic);
-  const q2=pickFrom(same.length?same:QUESTIONS.filter(q=>q.id!==q1.id&&q.level===2));
-  const cross=QUESTIONS.filter(q=>q.level===3&&q.id!==q1.id&&q.id!==q2.id&&(q.topic==='Перехрестя'||q.topic===q1.topic));
-  const q3=pickFrom(cross.length?cross:QUESTIONS.filter(q=>q.level===3&&q.id!==q1.id&&q.id!==q2.id));
-  commission={ids:[q1.id,q2.id,q3.id],index:0,scores:[],revealed:false};
-  openOverlay(renderCommission());
+function weakCount(){
+  return Object.values(state.stats).filter(s=>(s.wrong||0)>0&&((s.correct||0)/(s.seen||1))<.75).length;
 }
-function pickFrom(list){return list[Math.floor(Math.random()*list.length)]}
+function weakQuestions(){
+  return QUESTIONS.map(q=>({q,s:state.stats[q.id]||null}))
+    .filter(x=>x.s&&(x.s.wrong||0)>0)
+    .sort((a,b)=>{
+      const aa=(a.s.correct||0)/(a.s.seen||1),bb=(b.s.correct||0)/(b.s.seen||1);
+      return aa-bb || (b.s.wrong||0)-(a.s.wrong||0);
+    });
+}
+function renderMistakes(){
+  const weak=weakQuestions();
+  workbench.innerHTML=`<div class="page">
+    <section class="intro compact"><div class="stamp">ПОВТОР</div><h1>Помилки — це черга на повторення</h1><p>Чим частіше помиляєшся у питанні, тим вище воно тут і тим частіше потрапляє в режим «Помилки».</p></section>
+    ${weak.length?`
+      <button class="primary wide" type="button" data-action="start-weak" data-native-press>Тренувати слабкі питання</button>
+      <div class="weak-stack">${weak.map(({q,s})=>{
+        const acc=Math.round((s.correct||0)/(s.seen||1)*100);
+        return `<article class="weak-card"><div><span>${esc(q.topic)} · рівень ${q.level}</span><strong>${esc(q.q)}</strong></div><b>${acc}%</b></article>`;
+      }).join('')}</div>
+      <button class="danger-link" type="button" data-action="reset-stats">Скинути статистику</button>
+    `:`<div class="empty"><strong>Поки чисто</strong><p>Пройди першу серію — сюди автоматично потраплять питання, де були помилки.</p><button class="primary" type="button" data-action="go-trainer">До тренажера</button></div>`}
+  </div>`;
+}
+
 function renderCommission(){
-  if(!commission) return '';
-  if(commission.index>=3){
-    const pct=Math.round(average(commission.scores)*100);const verdict=pct>=84?'Можна йти на комісію':pct>=60?'Основа є — добий слабке':'Ще рано розслаблятися';
-    return `<button class="close-x" type="button" data-action="close-overlay" aria-label="Закрити">×</button><div class="commission-score"><span class="source-tag">Симуляція завершена</span><strong>${pct}%</strong><h2>${verdict}</h2><p>Оцінка базується на трьох твоїх самооцінках. Третє питання завжди складніше й частіше перехресне.</p><button class="primary" type="button" data-action="restart-commission">Ще один білет</button><button class="secondary" type="button" data-action="open-weak" style="margin-top:8px;width:100%">Добити слабкі теми</button></div>`;
+  const s=state.session;
+  if(s?.type==='commission'){
+    if(s.finished){renderCommissionResult(s);return}
+    renderCommissionQuestion(s);return;
   }
-  const q=QUESTIONS.find(x=>x.id===commission.ids[commission.index]);
-  return `<button class="close-x" type="button" data-action="close-overlay" aria-label="Закрити">×</button><span class="source-tag">Комісія · питання ${commission.index+1}/3</span><h2>Відповідай без підказок</h2><div class="commission-progress">${[0,1,2].map(i=>`<span class="${i<commission.index?'done':''}"></span>`).join('')}</div>${renderTicket(q,commission.revealed,true)}`;
+  const last=state.lastCommission;
+  workbench.innerHTML=`<div class="page">
+    <section class="commission-hero">
+      <div class="stamp dark">КОМІСІЯ</div>
+      <h1>12 питань без підказок</h1>
+      <p>Відповідь фіксується одразу. Правильний варіант не показується до завершення — щоб не підлаштовуватися по ходу.</p>
+      <div class="commission-stats">
+        <span>Рекорд <b>${state.bestCommission}/12</b></span>
+        <span>Остання ${last?`<b>${last.score}/${last.total}</b>`:'—'}</span>
+      </div>
+      <button class="primary wide" type="button" data-action="start-commission" data-native-press>Почати симуляцію</button>
+    </section>
+    <div class="cross-note"><strong>Поріг для себе:</strong><p>10–12 — готовий рівень; 8–9 — пройти «Помилки»; ≤7 — ще одна змішана серія перед повторною комісією.</p></div>
+  </div>`;
+}
+function renderCommissionQuestion(s){
+  const item=s.items[s.index],q=questionById(item.id);
+  const pct=Math.round((s.index/s.items.length)*100);
+  workbench.innerHTML=`<div class="page quiz-page commission-mode">
+    <div class="quiz-top"><button class="ghost" type="button" data-action="cancel-session">Вийти</button><span>Комісія · ${s.index+1}/12</span><strong>без підказок</strong></div>
+    <div class="progress-track"><i style="width:${pct}%"></i></div>
+    <article class="question-card">
+      <div class="question-meta"><span>${esc(q.topic)}</span><b>Рівень ${q.level}</b></div>
+      <h2>${esc(q.q)}</h2>
+      <div class="answers">${item.options.map((opt,i)=>answerButton(opt,i,item,q,false)).join('')}</div>
+    </article>
+  </div>`;
+}
+function renderCommissionResult(s){
+  const score=sessionScore(s),pct=Math.round(score/s.items.length*100);
+  const wrong=s.items.filter(i=>i.selected!==questionById(i.id)?.correct);
+  workbench.innerHTML=`<div class="page result-page">
+    <section class="result-mark commission-result"><span>${score}/12</span><h1>${score>=10?'Комісійний рівень':score>=8?'Майже готово':'Ще рано зупинятися'}</h1><p>${pct}% правильних</p></section>
+    <div class="result-actions"><button class="primary" type="button" data-action="start-commission">Повторити</button><button class="secondary" type="button" data-action="commission-review">Розбір ${wrong.length}</button></div>
+    ${wrong.length?`<section><div class="section-title">Розбір</div>${wrong.map(item=>{
+      const q=questionById(item.id);
+      return `<article class="review-card"><span>${esc(q.topic)}</span><h3>${esc(q.q)}</h3><p>Твоя: <b>${esc(item.selected||'—')}</b></p><p class="correct-line">Правильна: <b>${esc(q.correct)}</b></p><small>${esc(q.explain)}</small></article>`;
+    }).join('')}</section>`:'<div class="perfect">12/12. У цій серії помилок немає.</div>'}
+  </div>`;
+}
+
+function topicRows(){
+  const map=new Map();
+  QUESTIONS.forEach(q=>{
+    const v=map.get(q.topic)||{total:0,seen:0,correct:0};
+    v.total++;
+    const s=state.stats[q.id];
+    if(s){v.seen+=s.seen||0;v.correct+=s.correct||0}
+    map.set(q.topic,v);
+  });
+  return [...map].map(([topic,v])=>{
+    const acc=v.seen?Math.round(v.correct/v.seen*100):null;
+    return `<div class="topic-row"><span>${esc(topic)}</span><b>${acc===null?'не розпочато':`${acc}%`}</b><small>${v.total} пит.</small></div>`;
+  }).join('');
 }
 
 function renderNotes(){
-  const body=sourceLoading?`<div class="empty-state"><strong>Розгортаю конспект…</strong><p>Локальна база готується до повнотекстового пошуку.</p></div>`:sourceSections.length?notesSections(sourceSections):`<div class="empty-state"><strong>Повний текст недоступний</strong><p>Тренажер, атлас і питання працюють офлайн. Для цього браузера недоступне розпакування повного конспекту.</p></div>`;
-  workbench.innerHTML=`<div class="page"><h1 class="page-title">Повний конспект</h1><p class="page-intro">Усі абзаци з завантаженого матеріалу. Шукай прізвище, термін, країну, дату або формулювання.</p>${sourceSections.length?`<input class="searchbox" id="notesSearch" type="search" inputmode="search" autocomplete="off" placeholder="Напр. «рента», «Франція», «монополія»">`:''}<div id="notesResults">${body}</div></div>`;
+  workbench.innerHTML=`<div class="page notes-page"><section class="intro compact"><div class="stamp">ДЖЕРЕЛО</div><h1>Повний конспект</h1><p>Пошук по всіх розділах. Тестові питання побудовані на цьому матеріалі.</p></section>
+    <input id="notesSearch" class="search" type="search" autocomplete="off" placeholder="Пошук: Кольбер, рента, інституціоналізм…">
+    <div id="notesResults">${sourceLoading?'<div class="loading">Завантаження конспекту…</div>':renderNoteSections(sourceSections,'')}</div>
+  </div>`;
 }
-function notesSections(sections,query=''){
-  const n=normalize(query);let matches=0;
-  const html=sections.map(section=>{
-    const paras=n?section.paragraphs.filter(p=>normalize(p).includes(n)):section.paragraphs;
-    if(n&&!paras.length&&!normalize(section.title).includes(n)) return '';
-    matches+=paras.length;
-    const shown=n?paras:paras.slice(0,5);
-    const more=!n&&paras.length>5;
-    return `<section class="note-section"><h3>${esc(section.title)}</h3><div class="paragraphs">${shown.map(p=>`<p>${esc(p)}</p>`).join('')}</div>${more?`<details><summary>Показати всі ${paras.length} абзаців</summary><div class="paragraphs">${paras.slice(5).map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>`:''}</section>`;
-  }).join('');
-  return `${n?`<div class="section-label">Знайдено абзаців: ${matches}</div>`:''}${html||`<div class="empty-state"><strong>Збігів немає</strong><p>Спробуй коротше слово або інше написання.</p></div>`}`;
+function norm(v=''){return String(v).toLocaleLowerCase('uk-UA')}
+function renderNoteSections(sections,query){
+  const n=norm(query).trim();
+  const filtered=sections.map(s=>({...s,paragraphs:n?s.paragraphs.filter(p=>norm(p).includes(n)):s.paragraphs}))
+    .filter(s=>!n||norm(s.title).includes(n)||s.paragraphs.length);
+  if(!filtered.length)return '<div class="empty"><strong>Нічого не знайдено</strong><p>Спробуй інше прізвище, школу або термін.</p></div>';
+  return filtered.map(s=>`<details class="note-section" ${n?'open':''}><summary>${esc(s.title)}<span>${s.paragraphs.length}</span></summary><div>${s.paragraphs.map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>`).join('');
 }
 
-function showPerson(name){
-  const p=STUDY.people.find(x=>x.name===name);if(!p)return;
-  openOverlay(`<button class="close-x" type="button" data-action="close-overlay" aria-label="Закрити">×</button><span class="source-tag">Персоналія</span><h2>${esc(p.name)}</h2><dl class="detail-grid"><dt>Країна</dt><dd>${esc(p.country)}</dd><dt>Школа</dt><dd>${esc(p.school)}</dd><dt>Суть</dt><dd>${esc(p.idea)}</dd></dl><div class="memory-hook">Якір: ${esc(p.hook)}</div>`);
+function resetStats(){
+  if(!confirm('Скинути всю статистику відповідей і слабких питань?'))return;
+  state.stats={};state.completedSessions=0;state.bestCommission=0;state.lastCommission=null;state.session=null;save();renderMistakes();toast('Статистику скинуто');
 }
-function showReadiness(){
-  const pct=readiness(),stats=topicStats(),weak=stats.filter(x=>x.score<.75),done=Math.round(planProgress()*100),knowledge=allGrades().length?Math.round(average(allGrades())*100):0;
-  openOverlay(`<button class="close-x" type="button" data-action="close-overlay" aria-label="Закрити">×</button><span class="source-tag">Діагностика</span><h2>Готовність ${pct}%</h2><p>Це не магічний прогноз оцінки. Формула: 38% виконання дводенного плану + 62% твоїх самооцінок усних відповідей.</p><div class="metric-strip"><div class="metric"><strong>${done}%</strong><span>план</span></div><div class="metric"><strong>${knowledge}%</strong><span>відтворення</span></div><div class="metric"><strong>${state.commissionRuns}</strong><span>комісій</span></div></div><div class="section-label">Найслабше</div>${weak.length?`<div class="weak-list">${weak.slice(0,6).map(x=>`<div class="weak-item"><strong>${esc(x.topic)}</strong><span>${Math.round(x.score*100)}%</span></div>`).join('')}</div>`:`<div class="empty-state"><strong>${allGrades().length?'Провалів поки немає':'Даних ще мало'}</strong><p>${allGrades().length?'Продовжуй каверзні питання.':'Відповідай у тренажері, щоб з’явилась діагностика.'}</p></div>`}`);
-}
-function openWeak(){closeOverlay();state.tab='trainer';state.trainerFilter='weak';state.currentQuestion=pickQuestion('weak')?.id||QUESTIONS[0].id;revealCurrent=false;save();render()}
-function startTask(mode){
-  if(mode==='timeline'){state.tab='atlas';state.atlasMode='timeline'}
-  else if(mode==='cross'){state.tab='atlas';state.atlasMode='cross'}
-  else if(mode==='commission'){save();render();startCommission();return}
-  else {state.tab='trainer';state.trainerFilter=mode==='weak'?'weak':'all';state.currentQuestion=pickQuestion(state.trainerFilter)?.id}
-  revealCurrent=false;save();render();
-}
-function openOverlay(html){overlaySheet.innerHTML=html;overlay.hidden=false;document.body.style.overflow='hidden';overlaySheet.scrollTop=0}
-function closeOverlay(){overlay.hidden=true;overlaySheet.innerHTML='';document.body.style.overflow=''}
 
-function handleClick(event){
-  const el=event.target.closest('[data-action],[data-tab]');if(!el)return;
+document.addEventListener('click',event=>{
+  const el=event.target.closest('[data-action],[data-tab]');
+  if(!el)return;
   if(el.dataset.tab){setTab(el.dataset.tab);return}
   const action=el.dataset.action;
-  if(action==='toggle-task'){const id=el.dataset.id;state.planDone[id]=!state.planDone[id];save();renderPlan();toast(state.planDone[id]?'Блок зараховано':'Позначку знято');return}
-  if(action==='start-task'){startTask(el.dataset.mode);return}
-  if(action==='show-readiness'){showReadiness();return}
-  if(action==='start-commission'||action==='restart-commission'){startCommission();return}
-  if(action==='close-overlay'){closeOverlay();return}
-  if(action==='open-weak'){openWeak();return}
-  if(action==='atlas-mode'){state.atlasMode=el.dataset.mode;save();renderAtlas();return}
-  if(action==='person'){showPerson(el.dataset.name);return}
-  if(action==='country'){$('#atlasBody').innerHTML=renderCross(el.dataset.country);return}
-  if(action==='trainer-filter'){state.trainerFilter=el.dataset.filter;state.currentQuestion=pickQuestion(state.trainerFilter)?.id;revealCurrent=false;save();renderTrainer();return}
-  if(action==='reveal-answer'){revealCurrent=true;renderTrainer();return}
-  if(action==='next-question'){state.currentQuestion=pickQuestion(state.trainerFilter,[state.currentQuestion])?.id;revealCurrent=false;save();renderTrainer();return}
-  if(action==='grade-question'){grade(el.dataset.id,Number(el.dataset.score));state.currentQuestion=pickQuestion(state.trainerFilter,[el.dataset.id])?.id;revealCurrent=false;renderTrainer();toast('Самооцінку збережено');return}
-  if(action==='reveal-commission'){commission.revealed=true;overlaySheet.innerHTML=renderCommission();return}
-  if(action==='grade-commission'){
-    const score=Number(el.dataset.score);grade(el.dataset.id,score);commission.scores.push(score);commission.index++;commission.revealed=false;
-    if(commission.index===3){state.commissionRuns++;save()}
-    overlaySheet.innerHTML=renderCommission();return;
-  }
-}
-
-document.addEventListener('click',handleClick);
-document.addEventListener('input',event=>{
-  if(event.target.id==='peopleSearch'){
-    const q=event.target.value;const n=normalize(q);const list=STUDY.people.filter(p=>!n||normalize([p.name,p.country,p.school,p.idea,p.hook].join(' ')).includes(n));$('#peopleResults').innerHTML=peopleRows(list);
-  }
-  if(event.target.id==='notesSearch') $('#notesResults').innerHTML=notesSections(sourceSections,event.target.value);
+  if(action==='mode'){state.trainerMode=el.dataset.mode;save();renderTrainer();return}
+  if(action==='length'){state.trainerLength=Number(el.dataset.length);save();renderTrainer();return}
+  if(action==='start-trainer'){startTrainer();return}
+  if(action==='start-weak'){state.trainerMode='weak';startTrainer('weak',Math.min(20,Math.max(10,modePool('weak').length)));return}
+  if(action==='answer'){answerCurrent(el.dataset.value);return}
+  if(action==='next'){advanceSession();return}
+  if(action==='restart'){state.session=null;startTrainer();return}
+  if(action==='result-mistakes'){state.session=null;state.tab='mistakes';save();renderMistakes();return}
+  if(action==='cancel-session'){cancelSession();return}
+  if(action==='start-commission'){startCommission();return}
+  if(action==='commission-review'){state.session.finished=true;renderCommissionResult(state.session);return}
+  if(action==='reset-stats'){resetStats();return}
+  if(action==='go-trainer'){setTab('trainer');return}
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)closeOverlay()});
+document.addEventListener('input',event=>{
+  if(event.target.id==='notesSearch') $('#notesResults').innerHTML=renderNoteSections(sourceSections,event.target.value);
+});
 window.addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
 
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-loadSourceSections().then(sections=>{sourceSections=sections;sourceLoading=false;if(state.tab==='notes')renderNotes()});
-renderReadiness();render();
+loadSourceSections()
+  .then(sections=>{sourceSections=sections;sourceLoading=false;if(state.tab==='notes')renderNotes()})
+  .catch(()=>{sourceSections=[];sourceLoading=false;if(state.tab==='notes')renderNotes()});
+
+renderAccuracy();
+render();

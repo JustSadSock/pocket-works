@@ -1,22 +1,18 @@
 const CACHE_PREFIX = 'iev-disput-';
-const CACHE_NAME = 'iev-disput-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'iev-disput-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-08-29';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = [
-  'Створено дводенний план підготовки з автоматичним відстеженням прогресу.',
-  'Додано хронологічну стрічку, довідник персоналій і повний пошук по конспекту.',
-  'Додано режими швидкого відтворення, перехресних питань і трирівневої симуляції комісії.',
-  'Результати, слабкі місця та повторення зберігаються локально й працюють офлайн.'
-];
+const RELEASE_NOTES = ["Перебудовано застосунок навколо тестового тренажера з чотирма варіантами відповіді.", "Додано 72 перевірені питання з конспекту трьох рівнів складності та миттєве пояснення відповіді.", "Додано автоматичну чергу помилок, серії на 10/20/30 питань і окремий режим повторення слабких місць.", "Додано симуляцію комісії на 12 питань без підказок із підсумковим розбором."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
   './app.js',
-  './study-data.js',
-  './questions.js',
+  './quiz-1.js',
+  './quiz-2.js',
+  './quiz-3.js',
   './source-loader.js',
   './source-pack-1.js',
   './source-pack-2.js',
@@ -32,12 +28,10 @@ const APP_SHELL = [
 
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
-const SHELL_KEYS = new Map(
-  APP_SHELL.map((entry) => {
-    const url = new URL(entry, SCOPE_URL);
-    return [url.pathname, url.href];
-  })
-);
+const SHELL_KEYS = new Map(APP_SHELL.map((entry) => {
+  const url = new URL(entry, SCOPE_URL);
+  return [url.pathname, url.href];
+}));
 
 function buildNetworkUrl(input) {
   const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
@@ -51,18 +45,16 @@ async function fetchFresh(input) {
     credentials: 'same-origin',
     redirect: 'follow'
   });
-  if (!response || !response.ok) throw new Error(`Fresh application request failed: ${response?.status || 'network'}`);
+  if (!response || !response.ok) throw new Error(`Fresh request failed: ${response?.status || 'network'}`);
   return response;
 }
 
 async function precacheFreshShell() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all(
-    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
-      const response = await fetchFresh(canonicalUrl);
-      await cache.put(canonicalUrl, response);
-    })
-  );
+  await Promise.all([...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+    const response = await fetchFresh(canonicalUrl);
+    await cache.put(canonicalUrl, response);
+  }));
 }
 
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
@@ -96,11 +88,7 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      ))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
