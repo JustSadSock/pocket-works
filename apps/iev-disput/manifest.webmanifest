@@ -1,0 +1,14 @@
+{
+  "id": "/apps/iev-disput/",
+  "name": "ДИСПУТ: ІЕВ",
+  "short_name": "ДИСПУТ",
+  "description": "Дводенний тренажер до комісії з історії економічних вчень: хронологія, персоналії, школи, перехресні зв’язки та усна симуляція комісії.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f1ead9",
+  "theme_color": "#e6ddc8",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
