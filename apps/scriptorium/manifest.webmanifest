@@ -1,0 +1,20 @@
+{
+  "name": "Скрипторий — средневековые миниатюры",
+  "short_name": "Скрипторий",
+  "description": "Редактор средневековых миниатюр и фресок.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#d8bd77",
+  "theme_color": "#382318",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
