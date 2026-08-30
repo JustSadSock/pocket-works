@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./learning.css">
+  <link rel="stylesheet" href="./full-course.css">
 </head>
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app>
@@ -23,7 +24,7 @@
       <div class="accuracy"><span id="cycleValue">0/5</span><small>цикл</small></div>
     </header>
 
-    <section class="workbench" id="workbench" data-selectable aria-live="polite"></section>
+    <section class="workbench" id="workbench" data-selectable aria-live="polite"><div class="page"><div class="loading">Готую повний курс…</div></div></section>
 
     <nav class="bottom-ledger" aria-label="Основна навігація" data-ui>
       <button type="button" data-tab="cycle" data-native-press><span>01</span>Навчання</button>
@@ -39,8 +40,8 @@
     data-update-manager
     data-service-worker="./sw.js"
     data-app-name="ДИСПУТ: ІЕВ"
-    data-app-version="1.2.1"
+    data-app-version="1.3.0"
   ></script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./full-course-entry.js"></script>
 </body>
 </html>
