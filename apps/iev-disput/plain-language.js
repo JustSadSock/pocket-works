@@ -9,10 +9,8 @@ const DIRECT_STUDY_REWRITES=new Map([
   ['надлишок товарів -> розвиток торгівлі','надлишок товарів стимулює розвиток торгівлі'],
   ['перші профспілки купців (формувалися страхові фонди для захисту купців)','купці створюють об’єднання зі страховими фондами для взаємного захисту'],
   ['перші металеві гроші -> стабілізація торгових зв’язків','з’являються перші металеві гроші, що робить торговельні зв’язки стабільнішими'],
-  ['рабство','існує рабство'],
-  ['Пам’ятки економічних вчень','Джерела економічної думки'],
-  ['буддійські та брахманські економічні трактати ->релігійне забарвлення, “економіка жертвоприношення” (праця задля того, щоб','буддійські та брахманські трактати пояснюють господарство через релігійні норми та обов’язки'],
-  ['буддійські та брахманські економічні трактати -> релігійне забарвлення, “економіка жертвоприношення” (праця задля того, щоб','буддійські та брахманські трактати пояснюють господарство через релігійні норми та обов’язки']
+  ['рабство','використовується рабська праця'],
+  ['Пам’ятки економічних вчень','Основні джерела економічної думки']
 ]);
 
 function tidySpaces(value=''){
@@ -30,6 +28,10 @@ function upperFirst(value=''){
   return text?text[0].toLocaleUpperCase('uk-UA')+text.slice(1):text;
 }
 
+function plainKey(value=''){
+  return String(value).toLocaleLowerCase('uk-UA').replace(/[«»“”"'’.,:;!?()—-]/g,' ').replace(/\s+/g,' ').trim();
+}
+
 function simplifyStudyLine(line=''){
   const raw=String(line).trim();
   if(!raw)return'';
@@ -37,21 +39,36 @@ function simplifyStudyLine(line=''){
   let body=raw.replace(/^[•·▪‣-]\s*/, '').trim();
   const direct=DIRECT_STUDY_REWRITES.get(body);
   if(direct) body=direct;
+
+  body=body
+    .replace(/буддійські та брахманські економічні трактати.*«?економіка жертвоприношення»?.*$/i,'Буддійські та брахманські трактати пояснюють господарство через релігійні норми: працю пов’язують із виконанням релігійного обов’язку')
+    .replace(/^перші профспілки купців.*$/i,'Купці створюють об’єднання зі страховими фондами для взаємного захисту')
+    .replace(/^перші металеві гроші.*$/i,'З’являються перші металеві гроші, що робить торговельні зв’язки стабільнішими')
+    .replace(/^здійснюється суднобудування.*$/i,'Розвивається суднобудування, а разом із ним — торгівля')
+    .replace(/^надлишок товарів.*$/i,'Надлишок товарів стимулює розвиток торгівлі');
+
   body=tidySpaces(body)
-    .replace(/^характерні риси$/i,'Ключові риси')
     .replace(/^землеробство$/i,'Основою господарства є землеробство')
-    .replace(/^розвиток ремісництва\s*-\s*/i,'Розвиваються ремесла: ')
+    .replace(/^розвиток ремісництва\s*[-—]\s*/i,'Розвиваються ремесла: ')
     .replace(/^здійснюється\s+/i,'Розвивається ')
     .replace(/^перші\s+/i,'З’являються перші ')
     .replace(/^наявність\s+/i,'Є ')
     .replace(/^відбувається\s+/i,'Відбувається ');
+
+  if(/^характерні риси$/i.test(body))return'';
   body=upperFirst(body);
   if(body&&!/[.!?…»)]$/.test(body))body+='.';
   return `${bullet?'• ':''}${body}`;
 }
 
-function simplifyStudyText(text=''){
-  return String(text).split('\n').map(simplifyStudyLine).filter(Boolean).join('\n');
+function simplifyStudyText(text='',unitTitle=''){
+  const titleKey=plainKey(unitTitle);
+  return String(text).split('\n').map(line=>{
+    const rawBody=line.trim().replace(/^[•·▪‣-]\s*/, '').trim();
+    const key=plainKey(rawBody);
+    if(key.length>5&&titleKey.startsWith(key))return'';
+    return simplifyStudyLine(line);
+  }).filter(Boolean).join('\n');
 }
 
 function simplifyQuestion(text=''){
@@ -73,7 +90,11 @@ function simplifyQuestion(text=''){
     .replace(/^Що характерно для ([^?]+) в конспекті\?$/i,'Що характерно для $1?')
     .replace(/^Який часовий проміжок у конспекті відповідає ([^?]+)\?$/i,'Коли тривав $1?')
     .replace(/^Який інструмент характерний для ([^?]+)\?$/i,'Який інструмент використовує $1?')
-    .replace(/^Яку ранню форму колективного захисту купців згадує .*?\?$/i,'Як купці Стародавньої Індії захищали себе від ризиків?');
+    .replace(/^Яку ранню форму колективного захисту купців згадує .*?\?$/i,'Як купці Стародавньої Індії захищали себе від ризиків?')
+    .replace(/^Що належить до типів ([^?]+) у конспекті\?$/i,'Що належить до типів $1?')
+    .replace(/^Який недолік ([^?]+) прямо названо в конспекті\?$/i,'Який недолік має $1?')
+    .replace(/^Які ([^?]+) прямо згадано в конспекті\?$/i,'Які $1 згадано?')
+    .replace(/^З чим конспект пов’язує ([^?]+)\?$/i,'З чим пов’язане $1?');
   q=q.replace(/\s{2,}/g,' ').replace(/\s+\?/g,'?').trim();
   return upperFirst(q);
 }
@@ -112,7 +133,7 @@ const questionObjects=[];
 for(const q of [...QUIZ_1,...QUIZ_2,...QUIZ_3])questionObjects.push(q);
 for(const list of Object.values(EXTRA_PRACTICE))for(const q of list||[])questionObjects.push(q);
 for(const unit of LEARNING_UNITS){
-  for(const section of unit.sections||[])section.text=simplifyStudyText(section.text);
+  for(const section of unit.sections||[])section.text=simplifyStudyText(section.text,unit.title);
   for(const q of unit.final||[])questionObjects.push(q);
 }
 
@@ -123,4 +144,5 @@ for(const q of questionObjects){
   simplifyQuestionObject(q);
 }
 
-globalThis.__IEV_PLAIN_LANGUAGE__={questions:seen.size,units:LEARNING_UNITS.length};
+const remainingVerbose=[...seen].filter(q=>/за конспектом|у конспекті|який набір ознак|необхідним доповненням/i.test(q.q||''));
+globalThis.__IEV_PLAIN_LANGUAGE__={questions:seen.size,units:LEARNING_UNITS.length,remainingVerbose:remainingVerbose.length};
