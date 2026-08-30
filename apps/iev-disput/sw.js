@@ -1,16 +1,16 @@
 const CACHE_PREFIX='iev-disput-';
-const CACHE_NAME='iev-disput-v1.3.1';
-const APP_VERSION='1.3.1';
+const CACHE_NAME='iev-disput-v1.4.0';
+const APP_VERSION='1.4.0';
 const RELEASE_DATE='2026-08-30';
 const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=[
-  'Переписано формулювання всіх тестових запитань у коротший і простіший навчальний стиль без канцеляриту.',
-  'Спрощено варіанти відповідей і пояснення після тесту, не змінюючи факти та правильні відповіді.',
-  'Навчальні вирізки автоматично очищаються від стрілок, уривчастих записів і незрозумілих конспектних скорочень.',
-  'Окремо виправлено незручні формулювання в блоці про Стародавню Індію та подібні конструкції в інших темах.'
+  'Додано окремий рандомний тренажер по всіх 57 темах курсу.',
+  'Банк містить 570 питань — по 10 на кожну тему — і не повторює питання, доки не закінчиться вся перемішана колода.',
+  'Після помилки показуються правильна відповідь, пояснення помилки та конкретний фрагмент конспекту, на якому ґрунтується питання.',
+  'Помилкові питання зберігаються в окремій черзі для усвідомленого повторення; статистика тренажера не змінює прогрес навчального курсу.'
 ];
 const APP_SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./learning.css','./full-course.css','./app.js','./full-course-entry.js','./plain-language.js','./course-completion-guard.js','./manifest.webmanifest','./icons/icon.svg',
+  './','./index.html','./app.config.json','./styles.css','./learning.css','./full-course.css','./random-trainer.css','./app.js','./full-course-entry.js','./plain-language.js','./random-trainer.js','./course-completion-guard.js','./manifest.webmanifest','./icons/icon.svg',
   './learning-data.js','./learning-extra.js','./learning-expansion.js','./quiz-1.js','./quiz-2.js','./quiz-3.js','./source-loader.js',
   './full-coverage-1.js','./full-coverage-2.js','./full-coverage-3.js','./full-coverage-4.js','./full-coverage-5.js','./full-coverage-6.js','./full-coverage-7.js','./full-coverage-8.js',
   './source-pack-1.js','./source-pack-2.js','./source-pack-3.js','./source-pack-4.js',
