@@ -1,5 +1,6 @@
 (() => {
   const STORAGE_KEY='pocket-works:iev-disput:guided:v3';
+  const REVIEW_CYCLE_KEY='pocket-works:iev-disput:guided:review-cycle';
   const TOTAL_UNITS=14;
 
   function readState(){
@@ -15,9 +16,12 @@
     return Object.values(state?.unitStats||{}).filter(stat=>stat&&Number(stat.attempts)>0).length;
   }
   function courseComplete(state){return attemptedCount(state)>=TOTAL_UNITS}
+  function isExplicitReview(cycle){
+    try{return Boolean(cycle?.id)&&localStorage.getItem(REVIEW_CYCLE_KEY)===cycle.id}catch{return false}
+  }
   function freshAccidentalRepeat(state){
     const cycle=state?.cycle;
-    if(!courseComplete(state)||!cycle||cycle.finalFinished)return false;
+    if(!courseComplete(state)||!cycle||cycle.finalFinished||isExplicitReview(cycle))return false;
     return cycle.phase==='read'&&cycle.unitIndex===0&&cycle.practiceIndex===0&&cycle.unitCorrect===0&&cycle.unitTotal===0&&Object.keys(cycle.unitResults||{}).length===0;
   }
   function migrateAccidentalRepeat(){
@@ -78,6 +82,10 @@
 
     if(button.dataset.action==='review-cycle'){
       button.dataset.action='start-cycle';
+      setTimeout(()=>{
+        const next=readState();
+        if(next?.cycle?.id){try{localStorage.setItem(REVIEW_CYCLE_KEY,next.cycle.id)}catch{}}
+      },0);
     }
   },true);
 
