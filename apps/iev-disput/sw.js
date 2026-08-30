@@ -1,16 +1,16 @@
 const CACHE_PREFIX='iev-disput-';
-const CACHE_NAME='iev-disput-v1.2.0';
-const APP_VERSION='1.2.0';
-const RELEASE_DATE='2026-08-29';
+const CACHE_NAME='iev-disput-v1.2.1';
+const APP_VERSION='1.2.1';
+const RELEASE_DATE='2026-08-30';
 const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=[
-  'Перебудовано основний сценарій у цикл із п’яти послідовних блоків «читання → локальний тест».',
-  'Додано компактні навчальні вирізки, сформовані тільки з вихідного конспекту та прив’язані до конкретних контрольних питань.',
-  'Після п’яти блоків запускається окремий фінальний тест на 10 переформульованих змішаних питань без підказок.',
-  'Додано карту прогресу та автоматичний вибір наступних непройдених або слабких навчальних блоків.'
+  'Виправлено завершення курсу: після проходження всіх 14 блоків застосунок більше не запускає повторення автоматично.',
+  'Після фіналу кнопка наступного циклу показується лише тоді, коли залишилися непройдені блоки.',
+  'Повтор слабких тем винесено в окрему явну дію, щоб повторення не плуталося з продовженням курсу.',
+  'Додано міграцію для вже створеного зайвого циклу повторення без втрати збереженої статистики.'
 ];
 const APP_SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./learning.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './','./index.html','./app.config.json','./styles.css','./learning.css','./app.js','./course-completion-guard.js','./manifest.webmanifest','./icons/icon.svg',
   './learning-data.js','./learning-extra.js','./quiz-1.js','./quiz-2.js','./quiz-3.js','./source-loader.js',
   './source-pack-1.js','./source-pack-2.js','./source-pack-3.js','./source-pack-4.js',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'
