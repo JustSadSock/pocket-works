@@ -8,12 +8,13 @@ const STORAGE_KEY='pocket-works:iev-disput:random-trainer:v1';
 const TARGET_PER_UNIT=10;
 const workbench=document.querySelector('#workbench');
 const ledger=document.querySelector('.bottom-ledger');
+const headerValue=document.querySelector('#cycleValue');
+const headerLabel=headerValue?.parentElement?.querySelector('small');
 const authoredById=new Map([...QUIZ_1,...QUIZ_2,...QUIZ_3].map(q=>[q.id,q]));
 
 const esc=(value='')=>String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const norm=(value='')=>String(value).toLocaleLowerCase('uk-UA').normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const words=(value='')=>new Set(norm(value).split(/\s+/).filter(word=>word.length>3));
-const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
 function hash(input=''){
   let h=2166136261;
@@ -28,7 +29,7 @@ function seededShuffle(items,seedText=''){
 function randomShuffle(items){
   const out=[...items];
   if(globalThis.crypto?.getRandomValues){
-    const values=new Uint32Array(Math.max(1,out.length));crypto.getRandomValues(values);
+    const values=new Uint32Array(Math.max(1,out.length));globalThis.crypto.getRandomValues(values);
     for(let i=out.length-1;i>0;i--){const j=values[i]%(i+1);[out[i],out[j]]=[out[j],out[i]]}
   }else{
     for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
@@ -63,27 +64,31 @@ function overlapScore(a,b){
   for(const word of aw)if(bw.has(word))score++;
   return score;
 }
-function bestFact(unit,query){
-  const facts=UNIT_FACTS.get(unit.id)||[];
-  return [...facts].sort((a,b)=>overlapScore(b.text,query)-overlapScore(a.text,query))[0]||{text:(unit.sections?.[0]?.text||unit.title),section:unit.sections?.[0]?.title||'Конспект'};
-}
 function shortTitle(title=''){
   const value=String(title);return value.length<=64?value:`${value.slice(0,61).trim()}…`;
 }
 
 const UNIT_FACTS=new Map(LEARNING_UNITS.map(unit=>[unit.id,splitFacts(unit)]));
 const GLOBAL_FACTS=LEARNING_UNITS.flatMap(unit=>(UNIT_FACTS.get(unit.id)||[]).map(fact=>({...fact,unitId:unit.id,unitTitle:unit.title})));
+const FACT_ORIGIN=new Map();
+for(const fact of GLOBAL_FACTS){const key=norm(fact.text);if(key&&!FACT_ORIGIN.has(key))FACT_ORIGIN.set(key,fact.unitTitle)}
 
+function bestFact(unit,query){
+  const facts=UNIT_FACTS.get(unit.id)||[];
+  return [...facts].sort((a,b)=>overlapScore(b.text,query)-overlapScore(a.text,query))[0]||{text:cleanFact(unit.sections?.[0]?.text||unit.title),section:unit.sections?.[0]?.title||'Конспект'};
+}
 function distractorFacts(unitId,correct,seed){
   const desiredLength=correct.length;
   const candidates=GLOBAL_FACTS.filter(item=>item.unitId!==unitId&&norm(item.text)!==norm(correct)&&item.text.length>=24&&item.text.length<=260)
     .map(item=>({...item,distance:Math.abs(item.text.length-desiredLength)}))
-    .sort((a,b)=>a.distance-b.distance)
-    .slice(0,Math.min(120,GLOBAL_FACTS.length));
+    .sort((a,b)=>a.distance-b.distance);
   const selected=[];const used=new Set([norm(correct)]);
-  for(const item of seededShuffle(candidates,seed)){
-    const key=norm(item.text);if(!key||used.has(key))continue;
-    used.add(key);selected.push(item);if(selected.length===3)break;
+  const passes=[candidates.slice(0,120),candidates];
+  for(const pass of passes){
+    for(const item of seededShuffle(pass,`${seed}|${selected.length}`)){
+      const key=norm(item.text);if(!key||used.has(key))continue;
+      used.add(key);selected.push(item);if(selected.length===3)return selected;
+    }
   }
   return selected;
 }
@@ -96,6 +101,15 @@ function authoredForUnit(unit){
 }
 function authoredQuestion(unit,q,index){
   const source=bestFact(unit,`${q.q} ${q.correct} ${q.explain||''}`);
+  const distractors=[...(q.distractors||[])].filter(item=>norm(item)!==norm(q.correct)).slice(0,3);
+  const origins={};
+  for(const option of distractors){const origin=FACT_ORIGIN.get(norm(option));if(origin)origins[norm(option)]=origin}
+  if(distractors.length<3){
+    for(const item of distractorFacts(unit.id,q.correct,`${unit.id}|authored|${index}`)){
+      if(distractors.some(option=>norm(option)===norm(item.text)))continue;
+      distractors.push(item.text);origins[norm(item.text)]=item.unitTitle;if(distractors.length===3)break;
+    }
+  }
   return{
     id:`rt-${unit.id}-a-${q.id||index}`,
     unitId:unit.id,
@@ -103,12 +117,12 @@ function authoredQuestion(unit,q,index){
     topic:q.topic||unit.eyebrow||unit.title,
     q:q.q,
     correct:q.correct,
-    distractors:[...(q.distractors||[])].slice(0,3),
+    distractors:distractors.slice(0,3),
     explain:q.explain||`Правильна відповідь: ${q.correct}.`,
     sourceSection:source.section,
     sourceExcerpt:source.text,
     sourceTitle:unit.sourceTitle||unit.title,
-    origins:{}
+    origins
   };
 }
 const PROMPTS=[
@@ -119,11 +133,27 @@ const PROMPTS=[
   (unit,fact)=>`Який факт відповідає розділу «${shortTitle(fact.section)}»?`
 ];
 function generatedQuestion(unit,fact,index,variant=0){
-  const distractors=distractorFacts(unit.id,fact.text,`${unit.id}|${index}|${variant}`);
-  while(distractors.length<3){
-    distractors.push({text:`Інша теза, якої немає в цьому фрагменті №${distractors.length+1}`,unitId:'',unitTitle:'інша тема'});
+  const distractorItems=distractorFacts(unit.id,fact.text,`${unit.id}|${index}|${variant}`);
+  if((index+variant)%3===2){
+    const otherTitles=[];
+    for(const item of distractorItems){if(item.unitTitle!==unit.title&&!otherTitles.includes(item.unitTitle))otherTitles.push(item.unitTitle)}
+    for(const other of LEARNING_UNITS){if(other.id!==unit.id&&!otherTitles.includes(other.title))otherTitles.push(other.title);if(otherTitles.length===3)break}
+    return{
+      id:`rt-${unit.id}-g-${index}-${variant}`,
+      unitId:unit.id,
+      unitTitle:unit.title,
+      topic:unit.eyebrow||unit.title,
+      q:`До якої теми належить цей факт: «${fact.text}»?`,
+      correct:unit.title,
+      distractors:otherTitles.slice(0,3),
+      explain:`Цей факт узято з блоку «${unit.title}».`,
+      sourceSection:fact.section,
+      sourceExcerpt:fact.text,
+      sourceTitle:unit.sourceTitle||unit.title,
+      origins:Object.fromEntries(otherTitles.slice(0,3).map(title=>[norm(title),title]))
+    };
   }
-  const origins=Object.fromEntries(distractors.map(item=>[norm(item.text),item.unitTitle]));
+  const origins=Object.fromEntries(distractorItems.map(item=>[norm(item.text),item.unitTitle]));
   return{
     id:`rt-${unit.id}-g-${index}-${variant}`,
     unitId:unit.id,
@@ -131,7 +161,7 @@ function generatedQuestion(unit,fact,index,variant=0){
     topic:unit.eyebrow||unit.title,
     q:PROMPTS[(index+variant)%PROMPTS.length](unit,fact),
     correct:fact.text,
-    distractors:distractors.map(item=>item.text),
+    distractors:distractorItems.map(item=>item.text).slice(0,3),
     explain:`У цьому блоці треба пам’ятати саме цю тезу: ${fact.text}`,
     sourceSection:fact.section,
     sourceExcerpt:fact.text,
@@ -143,26 +173,28 @@ function buildUnitQuestions(unit){
   const questions=[];const usedQuestionText=new Set();
   for(const [index,q] of authoredForUnit(unit).entries()){
     const item=authoredQuestion(unit,q,index);
+    if(item.distractors.length<3)continue;
     const key=norm(item.q);if(!key||usedQuestionText.has(key))continue;
     questions.push(item);usedQuestionText.add(key);
     if(questions.length>=5)break;
   }
   const facts=UNIT_FACTS.get(unit.id)||[];
   let cursor=0;let guard=0;
-  while(questions.length<TARGET_PER_UNIT&&guard<100){
+  while(questions.length<TARGET_PER_UNIT&&guard<160){
     const fact=facts[cursor%Math.max(1,facts.length)]||bestFact(unit,unit.title);
     const variant=Math.floor(cursor/Math.max(1,facts.length));
     const item=generatedQuestion(unit,fact,cursor,variant);
     const key=norm(item.q);
-    if(key&&!usedQuestionText.has(key)){questions.push(item);usedQuestionText.add(key)}
+    if(item.distractors.length===3&&key&&!usedQuestionText.has(key)){questions.push(item);usedQuestionText.add(key)}
     cursor++;guard++;
   }
   if(questions.length<TARGET_PER_UNIT){
     const fact=bestFact(unit,unit.title);
     while(questions.length<TARGET_PER_UNIT){
       const index=questions.length;
-      const item=generatedQuestion(unit,fact,index,index+7);
+      const item=generatedQuestion(unit,fact,index,index+11);
       item.q=`Що з цього треба пам’ятати про «${shortTitle(unit.title)}»? · ${index+1}`;
+      if(item.distractors.length<3)break;
       questions.push(item);
     }
   }
@@ -171,7 +203,7 @@ function buildUnitQuestions(unit){
 
 export const RANDOM_TRAINER_QUESTIONS=LEARNING_UNITS.flatMap(buildUnitQuestions);
 const QUESTION_BY_ID=new Map(RANDOM_TRAINER_QUESTIONS.map(q=>[q.id,q]));
-const BANK_SIGNATURE=`${LEARNING_UNITS.length}:${RANDOM_TRAINER_QUESTIONS.length}:v1`;
+const BANK_SIGNATURE=`${LEARNING_UNITS.length}:${RANDOM_TRAINER_QUESTIONS.length}:v2`;
 
 const defaults={signature:BANK_SIGNATURE,deck:[],cursor:0,round:1,correct:0,total:0,streak:0,bestStreak:0,mistakes:[],topicStats:{},answer:null,lastQuestionId:null,mode:'all',mistakeDeck:[],mistakeCursor:0};
 function loadState(){
@@ -189,7 +221,7 @@ let active=false;
 
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch{}}
 function freshDeck(){
-  let deck=randomShuffle(RANDOM_TRAINER_QUESTIONS.map(q=>q.id));
+  const deck=randomShuffle(RANDOM_TRAINER_QUESTIONS.map(q=>q.id));
   if(state.lastQuestionId&&deck.length>1&&deck[0]===state.lastQuestionId)[deck[0],deck[1]]=[deck[1],deck[0]];
   state.deck=deck;state.cursor=0;state.round=Math.max(1,(state.round||1)+(state.total?1:0));state.answer=null;save();
 }
@@ -211,10 +243,10 @@ function topicStat(unitId){const value=state.topicStats[unitId];return value&&ty
 function remaining(){return state.mode==='mistakes'?Math.max(0,state.mistakeDeck.length-state.mistakeCursor):Math.max(0,state.deck.length-state.cursor)}
 function accuracy(){return state.total?Math.round(state.correct/state.total*100):0}
 function reasonForWrong(q,selected){
-  const origin=q.origins?.[norm(selected)];
+  const origin=q.origins?.[norm(selected)]||FACT_ORIGIN.get(norm(selected));
   if(origin&&origin!==q.unitTitle)return`Ти вибрав тезу з іншої теми — «${origin}». Тут перевіряється «${q.unitTitle}».`;
   if(norm(selected)===norm(q.correct))return'';
-  return`Обраний варіант не відповідає тезі цього блоку. Для цієї теми в конспекті зафіксовано інший факт.`;
+  return`У цьому фрагменті конспекту такої тези немає. Правильна відповідь спирається на конкретний факт, наведений нижче.`;
 }
 function answer(index){
   if(state.answer)return;
@@ -244,13 +276,15 @@ function renderAnswer(q,option,index){
 function renderFeedback(q){
   const a=state.answer;if(!a)return'';
   const wrong=a.correct?'':`<div class="trainer-error"><span>ДЕ ПОМИЛКА</span><p>${esc(reasonForWrong(q,a.selected))}</p><p><b>Ти обрав:</b> ${esc(a.selected)}</p><p><b>Правильно:</b> ${esc(q.correct)}</p></div>`;
-  return`<section class="trainer-feedback ${a.correct?'good':'bad'}"><header><strong>${a.correct?'Правильно.':'Неправильно.'}</strong><span>${a.correct?'Йдемо далі.':'Розбери помилку зараз.'}</span></header>${wrong}<div class="trainer-explain"><b>Чому:</b><p>${esc(q.explain)}</p></div><details class="trainer-source" ${a.correct?'':'open'}><summary>Конспект · ${esc(q.sourceSection)}</summary><blockquote>${esc(q.sourceExcerpt)}</blockquote><small>${esc(q.sourceTitle)}</small></details></section>`;
+  return`<section class="trainer-feedback ${a.correct?'good':'bad'}"><header><strong>${a.correct?'Правильно.':'Неправильно.'}</strong><span>${a.correct?'Йдемо далі.':'Розбери помилку зараз.'}</span></header>${wrong}<div class="trainer-explain"><b>Чому:</b><p>${esc(q.explain)}</p></div><details class="trainer-source" ${a.correct?'':'open'}><summary>Відсилка до конспекту · ${esc(q.sourceSection)}</summary><blockquote>${esc(q.sourceExcerpt)}</blockquote><small>${esc(q.sourceTitle)}</small></details></section>`;
 }
 function renderTrainer(){
   if(!active||!workbench)return;
-  const q=currentQuestion();if(!q){workbench.innerHTML='<div class="page"><div class="loading">Не вдалося зібрати питання.</div></div>';return}
+  const q=currentQuestion();if(!q){workbench.innerHTML='<div class="page"><div class="loading">Не вдалося зібрати повний банк питань.</div></div>';return}
   const options=optionOrder(q);const unitIndex=Math.max(0,LEARNING_UNITS.findIndex(unit=>unit.id===q.unitId));const stat=topicStat(q.unitId);const answered=Boolean(state.answer);
   workbench.innerHTML=`<div class="page random-trainer-page"><header class="trainer-hero"><div><span class="stamp dark">РАНДОМНИЙ ТРЕНАЖЕР</span><h1>Питання з усього курсу</h1><p>${RANDOM_TRAINER_QUESTIONS.length} питань · по ${TARGET_PER_UNIT} на кожну з ${LEARNING_UNITS.length} тем. Повторів немає, доки не закінчиться вся колода.</p></div><div class="trainer-count"><strong>${remaining()}</strong><span>${state.mode==='mistakes'?'помилок у черзі':'до повтору'}</span></div></header><section class="trainer-stats"><div><b>${accuracy()}%</b><span>точність</span></div><div><b>${state.streak}</b><span>серія</span></div><div><b>${state.mistakes.length}</b><span>помилок</span></div></section><article class="question-card trainer-card"><div class="question-meta"><span>ТЕМА ${unitIndex+1}/${LEARNING_UNITS.length}</span><span>${esc(q.topic)}</span></div><h2>${esc(q.q)}</h2><p class="trainer-topic">${esc(q.unitTitle)} · ${stat.total?Math.round(stat.correct/stat.total*100):'—'}% по темі</p><div class="answers">${options.map((option,index)=>renderAnswer(q,option,index)).join('')}</div>${renderFeedback(q)}</article><div class="trainer-actions">${answered?`<button class="primary wide" type="button" data-trainer-action="next" data-native-press>Наступне випадкове питання</button>`:`<button class="trainer-skip" type="button" data-trainer-action="skip">Пропустити без оцінки</button>`}${state.mode==='mistakes'?`<button class="secondary wide" type="button" data-trainer-action="all">Повернутися до всіх тем</button>`:state.mistakes.length?`<button class="secondary wide" type="button" data-trainer-action="mistakes">Повторити помилки (${state.mistakes.length})</button>`:''}</div></div>`;
+  if(headerValue)headerValue.textContent=state.mode==='mistakes'?String(state.mistakes.length):String(remaining());
+  if(headerLabel)headerLabel.textContent=state.mode==='mistakes'?'помилки':'питань';
   workbench.scrollTop=0;
 }
 function activate(){
@@ -259,7 +293,10 @@ function activate(){
   trainerTab?.classList.add('active');
   renderTrainer();
 }
-function deactivate(){active=false;trainerTab?.classList.remove('active')}
+function deactivate(){
+  active=false;trainerTab?.classList.remove('active');
+  if(headerLabel)headerLabel.textContent='цикл';
+}
 
 let trainerTab=null;
 if(ledger&&workbench){
