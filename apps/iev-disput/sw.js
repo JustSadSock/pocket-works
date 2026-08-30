@@ -1,17 +1,18 @@
 const CACHE_PREFIX='iev-disput-';
-const CACHE_NAME='iev-disput-v1.2.1';
-const APP_VERSION='1.2.1';
+const CACHE_NAME='iev-disput-v1.3.0';
+const APP_VERSION='1.3.0';
 const RELEASE_DATE='2026-08-30';
 const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=[
-  'Виправлено завершення курсу: після проходження всіх 14 блоків застосунок більше не запускає повторення автоматично.',
-  'Після фіналу кнопка наступного циклу показується лише тоді, коли залишилися непройдені блоки.',
-  'Повтор слабких тем винесено в окрему явну дію, щоб повторення не плуталося з продовженням курсу.',
-  'Додано міграцію для вже створеного зайвого циклу повторення без втрати збереженої статистики.'
+  'Розширено курс із 14 оглядових до 57 навчальних блоків без скидання вже збереженого прогресу.',
+  'Додано 43 детальні блоки, що разом покривають усі 15 розділів і 737 змістовних абзаців вихідного конспекту без пропусків.',
+  'Кожен детальний блок збирає текст безпосередньо з відповідного діапазону першоджерела та має власний локальний і фінальний тест.',
+  'Міграція перетворює попереднє завершення 14/14 на базовий прогрес 14/57 та прибирає випадково створений старий цикл повторення.'
 ];
 const APP_SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./learning.css','./app.js','./course-completion-guard.js','./manifest.webmanifest','./icons/icon.svg',
-  './learning-data.js','./learning-extra.js','./quiz-1.js','./quiz-2.js','./quiz-3.js','./source-loader.js',
+  './','./index.html','./app.config.json','./styles.css','./learning.css','./full-course.css','./app.js','./full-course-entry.js','./course-completion-guard.js','./manifest.webmanifest','./icons/icon.svg',
+  './learning-data.js','./learning-extra.js','./learning-expansion.js','./quiz-1.js','./quiz-2.js','./quiz-3.js','./source-loader.js',
+  './full-coverage-1.js','./full-coverage-2.js','./full-coverage-3.js','./full-coverage-4.js','./full-coverage-5.js','./full-coverage-6.js','./full-coverage-7.js','./full-coverage-8.js',
   './source-pack-1.js','./source-pack-2.js','./source-pack-3.js','./source-pack-4.js',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
