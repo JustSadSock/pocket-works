@@ -1,5 +1,14 @@
 const CACHE_PREFIX = 'munchkin-level-forge-';
 const CACHE_NAME = 'munchkin-level-forge-v1.0.0';
+const APP_VERSION = '1.0.0';
+const RELEASE_DATE = '2026-09-01';
+const CACHE_PROTOCOL = 2;
+const RELEASE_NOTES = [
+  'Новый общий уровневый круг на 10 или 20 уровней с отдельными жетонами 2–8 игроков и механическим указателем выбранного игрока.',
+  'Быстрые +/−, прямой выбор уровня, undo, редактирование игроков, полноэкранный столовый режим и локальное сохранение партии.',
+  'Победная сцена с сокровищами, реакцией дракона и синтезированными звуками, которые можно отключить.',
+  'Полностью офлайн PWA с адаптацией под телефон, планшет и десктоп.'
+];
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,11 +18,26 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
-  '../../shared/mobile-runtime.js'
+  '../../shared/mobile-runtime.js',
+  '../../shared/update-manager.css',
+  '../../shared/update-manager.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_UPDATE_INFO') {
+    event.ports?.[0]?.postMessage({
+      version: APP_VERSION,
+      releaseDate: RELEASE_DATE,
+      releaseNotes: RELEASE_NOTES,
+      cacheProtocol: CACHE_PROTOCOL,
+      cacheName: CACHE_NAME
+    });
+  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,10 +46,6 @@ self.addEventListener('activate', (event) => {
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
