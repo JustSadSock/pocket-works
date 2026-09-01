@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "munchkin-level-forge",
+  "name": "MUNCHKIN LEVEL FORGE",
+  "shortName": "MUNCHKIN",
+  "description": "Чрезмерно роскошный тактильный счётчик уровней для 2–8 игроков: общий механический круг, быстрые +/−, Epic 20, undo и локальное сохранение.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-01",
+  "releaseDateTime": "2026-09-01T14:51:00+03:00",
+  "changelog": [
+    "Новый общий уровневый круг на 10 или 20 уровней с отдельными жетонами 2–8 игроков и механическим указателем выбранного игрока.",
+    "Быстрые +/−, прямой выбор уровня, undo, редактирование игроков, полноэкранный столовый режим и локальное сохранение партии.",
+    "Победная сцена с сокровищами, реакцией дракона и синтезированными звуками, которые можно отключить.",
+    "Полностью офлайн PWA с адаптацией под телефон, планшет и десктоп."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#c9923e",
+  "backgroundColor": "#1c120d",
+  "themeColor": "#24150f",
+  "orientation": "any",
+  "cacheName": "munchkin-level-forge-v1.0.0",
+  "storageNamespace": "pocket-works:munchkin-level-forge",
+  "tags": ["munchkin", "level counter", "board game", "party", "offline", "multiplayer", "table", "touch"],
+  "order": 86
+}

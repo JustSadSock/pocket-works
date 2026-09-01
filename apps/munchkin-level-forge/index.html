@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#24150f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Munchkin">
+  <meta name="color-scheme" content="dark">
+  <title>Munchkin Level Forge</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <div class="table-surface" aria-hidden="true"><span class="torch-glow torch-left"></span><span class="torch-glow torch-right"></span><span class="table-scratch scratch-a"></span><span class="table-scratch scratch-b"></span></div>
+
+    <header class="forge-header" data-ui>
+      <a class="back-plaque" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <div class="brand-plaque" aria-label="Munchkin Level Forge"><span class="brand-kicker">LEVEL FORGE</span><strong>MUNCHKIN</strong></div>
+      <div class="header-actions">
+        <button id="muteButton" class="icon-brass" type="button" data-native-press aria-label="Выключить звук" title="Звук">♪</button>
+        <button id="tableButton" class="icon-brass" type="button" data-native-press aria-label="Столовый режим" title="Столовый режим">▣</button>
+        <button id="settingsButton" class="icon-brass" type="button" data-native-press aria-label="Настройки" title="Настройки">⚙</button>
+      </div>
+    </header>
+
+    <section id="gameScreen" class="game-screen" aria-label="Счётчик уровней">
+      <div class="artifact-board" id="artifactBoard">
+        <span class="board-rivet rivet-a" aria-hidden="true"></span><span class="board-rivet rivet-b" aria-hidden="true"></span><span class="board-rivet rivet-c" aria-hidden="true"></span><span class="board-rivet rivet-d" aria-hidden="true"></span>
+
+        <svg class="prop prop-sword" viewBox="0 0 80 220" aria-hidden="true"><defs><linearGradient id="blade" x1="0" x2="1"><stop offset="0" stop-color="#6e7471"/><stop offset=".46" stop-color="#f0e2bd"/><stop offset="1" stop-color="#3f4644"/></linearGradient><linearGradient id="gold" x1="0" x2="1"><stop offset="0" stop-color="#5a3715"/><stop offset=".45" stop-color="#e4b85d"/><stop offset="1" stop-color="#6d4319"/></linearGradient></defs><path d="M36 10 46 10 47 151 31 151Z" fill="url(#blade)" stroke="#211610" stroke-width="4"/><path d="M40 4 50 22 42 18 34 23Z" fill="#d9c394" stroke="#211610" stroke-width="3"/><path d="M13 153 Q40 144 67 153 L62 166 Q40 158 18 166Z" fill="url(#gold)" stroke="#2a190d" stroke-width="4"/><rect x="34" y="162" width="12" height="42" rx="5" fill="#4a2514" stroke="#21110a" stroke-width="4"/><circle cx="40" cy="207" r="10" fill="url(#gold)" stroke="#2a190d" stroke-width="4"/></svg>
+        <svg class="prop prop-horn" viewBox="0 0 180 130" aria-hidden="true"><path d="M20 30 C52 101 113 124 160 81 C111 90 67 66 47 17Z" fill="#b49a67" stroke="#3b2718" stroke-width="8"/><path d="M42 19 C80 47 114 60 163 58 L160 82 C109 87 69 69 20 31Z" fill="none" stroke="#765e37" stroke-width="7" opacity=".65"/><path d="M12 26 Q26 11 49 15 L46 34 Q27 31 18 40Z" fill="#9c6a2e" stroke="#3b2718" stroke-width="6"/></svg>
+
+        <div class="wheel-column">
+          <div id="wheel" class="level-wheel" data-gesture-surface data-touch-action="manipulation" aria-label="Круг уровней">
+            <div class="wheel-rim outer-rim" aria-hidden="true"></div><div class="wheel-rim inner-rim" aria-hidden="true"></div><div class="engraving-ring" aria-hidden="true"></div>
+            <div id="levelMarks" class="level-marks"></div><div id="tokenLayer" class="token-layer" aria-label="Жетоны игроков"></div>
+            <div class="mechanism" aria-hidden="true"><div class="gear gear-a"></div><div class="gear gear-b"></div><div class="pointer-arm" id="pointerArm"><div class="pointer-tip"></div><div class="pointer-spine"></div></div><div class="hub-bolt"></div></div>
+
+            <div id="dragonCrest" class="dragon-crest" aria-hidden="true">
+              <svg viewBox="0 0 260 220" role="presentation"><defs><linearGradient id="dragonSkin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#76924e"/><stop offset=".55" stop-color="#435e32"/><stop offset="1" stop-color="#263b22"/></linearGradient><linearGradient id="chestGold" x1="0" x2="1"><stop offset="0" stop-color="#6d451b"/><stop offset=".5" stop-color="#d7a94e"/><stop offset="1" stop-color="#6b4015"/></linearGradient></defs><ellipse cx="130" cy="184" rx="82" ry="18" fill="#1c1009" opacity=".55"/><path d="M66 168 Q130 126 194 168 L190 199 H70Z" fill="#6f321d" stroke="#2b170d" stroke-width="8"/><path d="M70 168 Q130 137 190 168" fill="none" stroke="url(#chestGold)" stroke-width="11"/><rect x="124" y="164" width="22" height="27" rx="4" fill="url(#chestGold)" stroke="#3b2410" stroke-width="5"/><circle class="treasure-coin coin-one" cx="83" cy="156" r="10" fill="#e0b54d" stroke="#654313" stroke-width="4"/><circle class="treasure-coin coin-two" cx="169" cy="153" r="8" fill="#d6a73e" stroke="#654313" stroke-width="4"/><path d="M92 145 Q45 123 38 76 Q69 95 96 104" fill="url(#dragonSkin)" stroke="#25311d" stroke-width="7"/><path d="M169 144 Q216 123 222 77 Q190 95 165 105" fill="url(#dragonSkin)" stroke="#25311d" stroke-width="7"/><path d="M88 115 Q78 66 110 43 L121 61 Q132 34 144 60 L160 44 Q180 70 168 116 Q158 147 128 154 Q100 147 88 115Z" fill="url(#dragonSkin)" stroke="#25311d" stroke-width="8"/><path d="M101 63 84 37 112 50M154 62l24-25-5 34" fill="#cab678" stroke="#49351f" stroke-width="6" stroke-linecap="round"/><path d="M108 118 Q128 132 149 117 Q145 143 128 146 Q111 142 108 118Z" fill="#241711"/><g class="dragon-eyes"><ellipse cx="111" cy="91" rx="15" ry="12" fill="#e8db90" stroke="#25311d" stroke-width="5"/><ellipse cx="148" cy="91" rx="15" ry="12" fill="#e8db90" stroke="#25311d" stroke-width="5"/><circle class="dragon-pupil left-pupil" cx="113" cy="92" r="5" fill="#17130e"/><circle class="dragon-pupil right-pupil" cx="150" cy="92" r="5" fill="#17130e"/></g><path d="M121 105 Q128 100 136 105" fill="none" stroke="#25311d" stroke-width="5" stroke-linecap="round"/></svg>
+              <span class="crest-label">УРОВЕНЬ</span><strong id="selectedLevelBig">1</strong>
+            </div>
+            <div id="coinBurst" class="coin-burst" aria-hidden="true"></div>
+          </div>
+
+          <div class="selected-console" id="selectedConsole">
+            <button id="minusButton" class="level-lever lever-minus" type="button" data-native-press aria-label="Уменьшить уровень">−</button>
+            <button id="selectedPlayerButton" class="selected-player" type="button" data-native-press aria-label="Выбранный игрок"><span id="selectedToken" class="selected-token"></span><span class="selected-copy"><small>СЕЙЧАС ВЫБРАН</small><strong id="selectedName">Игрок 1</strong></span></button>
+            <button id="plusButton" class="level-lever lever-plus" type="button" data-native-press aria-label="Повысить уровень">+</button>
+          </div>
+        </div>
+
+        <aside class="ledger-column" aria-label="Игроки и управление">
+          <div class="mode-plaque"><span id="modeLabel">Обычная партия</span><strong id="targetLabel">Цель: 10</strong></div>
+          <div id="playerLedger" class="player-ledger" role="list" aria-label="Игроки"></div>
+          <div class="utility-rack"><button id="undoButton" class="utility-button" type="button" data-native-press><span aria-hidden="true">↶</span><strong>Undo</strong><small>Ctrl/⌘ Z</small></button><button id="editPlayersButton" class="utility-button" type="button" data-native-press><span aria-hidden="true">✎</span><strong>Игроки</strong><small>имена / жетоны</small></button></div>
+          <div class="keyboard-legend" aria-hidden="true"><span>1–8 игрок</span><span>←/↓ −1</span><span>→/↑ +1</span></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="homeScreen" class="screen-overlay menu-overlay" hidden><div class="parchment-panel menu-panel"><div class="wax-seal" aria-hidden="true">M</div><p class="panel-kicker">СЧЁТЧИК, КОТОРЫЙ СЛИШКОМ СТАРАЛСЯ</p><h1>Munchkin Level Forge</h1><p>Один общий круг, 2–8 наглых претендентов на десятый уровень и слишком много латуни.</p><div class="menu-actions"><button id="continueButton" class="parchment-action primary" type="button" data-native-press>Продолжить партию</button><button id="newGameButton" class="parchment-action" type="button" data-native-press>Новая партия</button></div><a class="text-return" href="../../" data-app-control>Вернуться в Pocket Works</a></div></section>
+
+    <section id="setupScreen" class="screen-overlay setup-overlay" hidden><div class="parchment-panel setup-panel" data-keyboard-aware>
+      <div class="setup-heading"><div><p class="panel-kicker">БЫСТРАЯ ПОДГОТОВКА</p><h1>Соберите жертв</h1></div><button id="setupBackButton" class="close-rivet" type="button" data-native-press aria-label="Назад">×</button></div>
+      <div class="setup-options"><div class="setup-block count-block"><span class="setup-label">Игроков</span><div class="count-stepper"><button id="playerCountMinus" type="button" data-native-press aria-label="Меньше игроков">−</button><strong id="playerCountValue">4</strong><button id="playerCountPlus" type="button" data-native-press aria-label="Больше игроков">+</button></div></div><fieldset class="setup-block mode-block"><legend class="setup-label">Режим</legend><label class="mode-choice"><input type="radio" name="setupMode" value="normal" checked><span><strong>10</strong><small>обычный</small></span></label><label class="mode-choice"><input type="radio" name="setupMode" value="epic"><span><strong>20</strong><small>Epic</small></span></label></fieldset></div>
+      <div id="setupPlayers" class="setup-players" aria-label="Имена и жетоны"></div>
+      <div class="setup-actions"><button id="quickGameButton" class="parchment-action" type="button" data-native-press>Быстрая партия</button><button id="startGameButton" class="parchment-action primary" type="button" data-native-press>Ковать уровни</button></div>
+    </div></section>
+
+    <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
+    <aside id="settingsSheet" class="settings-sheet" aria-label="Настройки" aria-hidden="true"><div class="sheet-handle" aria-hidden="true"></div><div class="sheet-title"><div><span>МАСТЕРСКАЯ</span><strong>Настройки</strong></div><button id="settingsCloseButton" class="close-rivet" type="button" data-native-press aria-label="Закрыть">×</button></div><button id="soundSetting" class="setting-row" type="button" data-native-press><span><strong>Звуки механизма</strong><small>клики, рычаги и победный шум</small></span><b id="soundSettingValue">Вкл.</b></button><button id="ambientSetting" class="setting-row" type="button" data-native-press><span><strong>Живой стол</strong><small>свет, дракон и мелкие движения</small></span><b id="ambientSettingValue">Вкл.</b></button><div class="setting-row static-row"><span><strong>Режим партии</strong><small>задаётся при старте новой партии</small></span><b id="settingsModeValue">10</b></div><button id="sheetEditPlayers" class="setting-row" type="button" data-native-press><span><strong>Игроки</strong><small>переименовать и сменить жетоны</small></span><b>→</b></button><button id="sheetHomeButton" class="setting-row" type="button" data-native-press><span><strong>В меню</strong><small>партия останется сохранённой</small></span><b>→</b></button><button id="resetButton" class="danger-row" type="button" data-native-press>Сбросить текущую партию</button><a class="sheet-return" href="../../" data-app-control>← Pocket Works</a></aside>
+
+    <section id="editPlayersModal" class="dialog-layer" hidden aria-modal="true" role="dialog" aria-labelledby="editPlayersTitle"><div class="parchment-panel dialog-panel"><div class="setup-heading"><div><p class="panel-kicker">ЖЕТОНЫ</p><h2 id="editPlayersTitle">Игроки</h2></div><button id="editPlayersClose" class="close-rivet" type="button" data-native-press aria-label="Закрыть">×</button></div><div id="editPlayersList" class="setup-players edit-list"></div><button id="savePlayersButton" class="parchment-action primary" type="button" data-native-press>Сохранить</button></div></section>
+
+    <section id="confirmModal" class="dialog-layer" hidden aria-modal="true" role="dialog" aria-labelledby="confirmTitle"><div class="parchment-panel confirm-panel"><div class="skull-stamp" aria-hidden="true">☠︎</div><p class="panel-kicker">ОСТОРОЖНО</p><h2 id="confirmTitle">Сбросить партию?</h2><p id="confirmText">Все текущие уровни будут уничтожены. Красиво, но необратимо.</p><div class="confirm-actions"><button id="confirmCancel" class="parchment-action" type="button" data-native-press>Не надо</button><button id="confirmAccept" class="parchment-action danger" type="button" data-native-press>Да, в топку</button></div></div></section>
+
+    <section id="victoryLayer" class="victory-layer" hidden aria-live="assertive"><div class="victory-rays" aria-hidden="true"></div><div class="victory-banner"><span class="victory-crown" aria-hidden="true">♛</span><p>СОВЕРШЕННО НЕОБХОДИМОЕ ТОРЖЕСТВО</p><h2 id="winnerName">Игрок победил</h2><strong id="winnerLine">Уровень 10. Все остальные могут завидовать.</strong><div class="victory-actions"><button id="victoryDismiss" type="button" data-native-press>Ещё полюбоваться</button><button id="victoryNewGame" type="button" data-native-press>Новая партия</button><a href="../../" data-app-control>Pocket Works</a></div></div></section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div><div id="liveRegion" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="MUNCHKIN LEVEL FORGE" data-app-version="1.0.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
