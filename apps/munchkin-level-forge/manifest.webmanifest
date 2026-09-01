@@ -1,6 +1,6 @@
 {
-  "id": "./",
-  "name": "Munchkin Level Forge",
+  "id": "/apps/munchkin-level-forge/",
+  "name": "MUNCHKIN LEVEL FORGE",
   "short_name": "Munchkin",
   "description": "Тактильный общий счётчик уровней Munchkin для 2–8 игроков.",
   "start_url": "./",
