@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#efeade">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Анатомия власти">
+  <title>Анатомия власти</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="vanilla">
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="app-header" data-ui>
+      <p class="app-kicker">Vanilla / POCKET WORKS</p>
+      <h1>Анатомия власти</h1>
+      <p class="selectable-content">Лаборатория государств: реформы, элиты и две ветви одной истории</p>
+    </header>
+
+    <section class="stage" aria-labelledby="stage-title">
+      <h2 id="stage-title">A clean shell for one focused job.</h2>
+      <button id="primary-action" type="button" data-native-press>Record interaction</button>
+      <output id="status" aria-live="polite">Ready</output>
+    </section>
+
+    <footer data-ui>
+      <span>power-anatomy</span>
+      <span>v0.1.0 · experimental</span>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </footer>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="Анатомия власти"
+    data-app-version="0.1.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

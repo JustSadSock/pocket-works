@@ -1,0 +1,25 @@
+{
+  "id": "/apps/power-anatomy/",
+  "name": "Анатомия власти",
+  "short_name": "Анатомия власти",
+  "description": "Лаборатория государств: реформы, элиты и две ветви одной истории",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#efeade",
+  "theme_color": "#efeade",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
