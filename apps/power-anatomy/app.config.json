@@ -3,24 +3,28 @@
   "runtime": "quick",
   "slug": "power-anatomy",
   "name": "Анатомия власти",
-  "shortName": "Анатомия власти",
+  "shortName": "Анатомия",
   "description": "Лаборатория государств: реформы, элиты и две ветви одной истории",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "releaseDate": "2026-09-05",
   "releaseDateTime": "2026-09-05T21:35:00.592Z",
   "changelog": [
-    "Initial vanilla preset release."
+    "Лаборатория институтов: четыре государства, семь реформ и шесть групп влияния.",
+    "Две ветви истории на одинаковых кризисах, прогнозы и разбор причин.",
+    "Автосохранение, отмена, офлайн и экспорт эксперимента."
   ],
-  "status": "experimental",
+  "status": "active",
   "preset": "vanilla",
   "accent": "#247568",
   "backgroundColor": "#efeade",
   "themeColor": "#efeade",
   "orientation": "any",
-  "cacheName": "power-anatomy-v0.1.0",
+  "cacheName": "power-anatomy-v1.0.0",
   "storageNamespace": "pocket-works:power-anatomy",
   "tags": [
-    "utility",
+    "simulation",
+    "history",
+    "sandbox",
     "offline"
   ],
   "order": 100

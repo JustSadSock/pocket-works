@@ -1,15 +1,18 @@
 const CACHE_PREFIX = 'power-anatomy-';
-const CACHE_NAME = 'power-anatomy-v0.1.0';
-const APP_VERSION = '0.1.0';
+const CACHE_NAME = 'power-anatomy-v1.0.0';
+const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-05';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Initial vanilla preset release."];
+const RELEASE_NOTES = ["Лаборатория институтов: четыре государства, семь реформ и шесть групп влияния.", "Две ветви истории на одинаковых кризисах, прогнозы и разбор причин.", "Автосохранение, отмена, офлайн и экспорт эксперимента."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
   './app.js',
+  './model.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

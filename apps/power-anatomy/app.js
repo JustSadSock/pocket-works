@@ -1,44 +1,54 @@
-import {
-  bindPointerGesture,
-  installMobileRuntime
-} from '../../shared/mobile-runtime.js';
-import { createVersionedStore } from '../../shared/capabilities/storage.js';
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
-import { watchConnectivity } from '../../shared/pwa-utils.js';
-
-// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
+import { POLICIES, METRICS, SCENARIOS, SHOCKS, createState, factions, step, shockAt, clone, validState } from './model.js';
 installMobileRuntime();
-
-const storage = createVersionedStore({
-  namespace: 'pocket-works:power-anatomy',
-  version: 1,
-  defaults: {}
-});
-const status = document.querySelector('#status');
-
-const action = document.querySelector('#primary-action');
-let count = storage.get('interaction-count', 0);
-const render = (prefix = 'Ready') => {
-  status.value = `${prefix} · interactions ${count}`;
-};
-action.addEventListener('click', () => {
-  count += 1;
-  storage.set('interaction-count', count);
-  render('Recorded');
-});
-render();
-
-createWorkshopMode({
-  appName: 'Анатомия власти',
-  version: '0.1.0',
-  cachePrefix: 'power-anatomy-',
-  storageNamespace: 'pocket-works:power-anatomy',
-  onReset() {
-    storage.reset();
-    window.dispatchEvent(new CustomEvent('appdatareset'));
-  }
-});
-
-watchConnectivity((online) => {
-  document.documentElement.dataset.network = online ? 'online' : 'offline';
-});
+// serviceWorker.register('./sw.js') is owned by shared/update-manager.js.
+const $=s=>document.querySelector(s),key='pocket-works:power-anatomy:session:v1';
+const fresh=()=>({version:1,seed:71342,a:createState(),b:null,active:'a',forkYear:null});
+let lab=fresh(),undo=[],metric='stability',chartMetric='prosperity',tab='state',toastTimer,storageError=false;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=x=>Number(x).toFixed(1),signed=x=>(x>=0?'+':'')+num(x),current=()=>lab[lab.active];
+try { const raw=localStorage.getItem(key);if(raw){const x=JSON.parse(raw);if(x.version===1&&Number.isInteger(x.seed)&&validState(x.a)&&(!x.b||validState(x.b)&&x.a.year===x.b.year)&&['a','b'].includes(x.active)&&(x.active!=='b'||x.b)&&(!x.b||Number.isInteger(x.forkYear)&&x.forkYear>=0&&x.forkYear<=x.a.year)){lab=x;}else{throw Error('Invalid state');}} }catch{storageError=true;}
+function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3300);}
+function save(){try{localStorage.setItem(key,JSON.stringify(lab));}catch{toast('Не удалось сохранить. Скачай отчёт, чтобы сохранить эксперимент.');}}
+function remember(){undo.push(clone(lab));if(undo.length>25)undo.shift();}
+function selectedShock(year){return $('#shock').value==='auto'?shockAt(lab.seed,year):$('#shock').value;}
+function prediction(){return step(current(),selectedShock(current().year+1));}
+function showTab(next){tab=next;document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!==tab);document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.setAttribute('aria-pressed',String(b.dataset.tab===tab));});$('.workspace').scrollTop=0;render();}
+function render(){
+const s=current(),f=factions(s);$('#scenario-caption').textContent=SCENARIOS.find(x=>x.id===s.scenario).era;$('#year').textContent=`Год ${String(s.year).padStart(2,'0')}`;document.querySelectorAll('.branch-name').forEach(x=>x.textContent=lab.active.toUpperCase());$('#branch-b').hidden=!lab.b;$('#b-legend').hidden=!lab.b;$('#fork').hidden=!!lab.b;$('#undo').disabled=!undo.length;
+for(const k of ['a','b']){$(`#branch-${k}`).classList.toggle('selected',lab.active===k);$(`#branch-${k}`).setAttribute('aria-pressed',String(lab.active===k));}
+const positions={knowledge:[50,17],prosperity:[81,43],treasury:[70,82],inequality:[29,82],stability:[19,43]};
+$('#organism').innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="#aab4a0" stroke-width=".35"><path d="M50 17L81 43L70 82L29 82L19 43Z"/><path d="M50 17L29 82M50 17L19 43M81 43L19 43M70 82L50 17" stroke-dasharray="1 1.5"/><ellipse cx="50" cy="50" rx="18" ry="18"/></g></svg><div class="core">res publica<br>общее дело</div>`+Object.entries(METRICS).map(([k,[name]])=>`<button class="metric-node ${metric===k?'selected':''}" data-metric="${k}" style="left:${positions[k][0]}%;top:${positions[k][1]}%" aria-pressed="${metric===k}"><small>${name}</small><strong>${Math.round(s.m[k])}</strong><small class="delta">${s.last?signed(s.m[k]-s.last.before[k]):'на старте'}</small></button>`).join('');
+const dissent=f.filter(g=>g.loyalty<40).sort((a,b)=>b.power-a.power);const support=f.reduce((n,g)=>n+g.power*g.loyalty/100,0);
+const title=s.m.stability<25?'Конструкция на грани срыва':s.m.treasury<0?'Идеалы взяты в кредит':dissent.length?`${dissent[0].name} не в восторге`:'Равновесие держится';
+const text=s.m.stability<25?'Низкая устойчивость уже тормозит экономику. Проверь поддержку влиятельных групп и темп реформ.':s.m.treasury<0?'Долг увеличивает расходы и тормозит достаток. В этой модели он не исчезает при смене года.':dissent.length?`${dissent[0].name} контролирует ${Math.round(dissent[0].power)}% влияния при лояльности ${Math.round(dissent[0].loyalty)}. Её интересы входят в расчёт устойчивости.`:`Взвешенная поддержка — ${Math.round(support)} из 100. Но финансовая устойчивость и довольные элиты — разные вещи.`;
+$('#diagnosis').innerHTML=`<strong>${title}</strong>${text}`;
+$('#faction-list').innerHTML=f.map(g=>`<div class="faction-row ${g.loyalty<40?'dissent':''}"><div><strong>${g.name}</strong><small>${Math.round(g.power)}% влияния</small></div><div class="power-track" role="img" aria-label="${g.name}: влияние ${num(g.power)}%, лояльность ${num(g.loyalty)}"><i style="width:${g.power}%"></i></div><span class="loyalty" title="Лояльность">${Math.round(g.loyalty)}</span></div>`).join('');
+renderCauses();for(const k of Object.keys(POLICIES)){$(`#policy-${k}`).value=s.p[k];$(`#value-${k}`).textContent=s.p[k];}renderForecast();if(tab==='experiment')renderExperiment();
+}
+function renderCauses(){const s=current();const result=s.last||prediction().last;$('#cause-title').textContent=`${METRICS[metric][0]}: разбор изменений`;$('#cause-period').textContent=s.last?`ЗА ГОД ${s.year}`:'ПРОГНОЗ НА ГОД 1';$('#cause-desc').textContent=METRICS[metric][2]+' Вклады в пунктах за год, до ограничения шкалы.';$('#cause-list').innerHTML=result.terms[metric].filter(x=>Math.abs(x[1])>.005).map(([label,value])=>`<div class="cause"><span>${esc(label)}</span><b class="${value>=0?'positive':'negative'}">${signed(value)}</b></div>`).join('');}
+function renderForecast(){const s=current(),next=prediction();$('#forecast').innerHTML=`<strong>Следующий год · ${SHOCKS[next.last.shock].name}</strong><div class="forecast-grid">${['prosperity','stability','treasury'].map(k=>`<span>${METRICS[k][0]}<b class="${next.m[k]>=s.m[k]?'positive':'negative'}">${signed(next.m[k]-s.m[k])}</b></span>`).join('')}</div><p class="warning">${next.last.backlash>.1?`Сопротивление темпу реформ: −${num(next.last.backlash)} устойчивости в ближайший год.`:'Передвигай регуляторы: прогноз пересчитывается сразу. Изменения вступят в силу при переходе года.'}</p>`;}
+function renderExperiment(){const s=current();$('#compare-hint').textContent=lab.b?`Развилка в году ${lab.forkYear}. Внешние события совпадают. Меняй реформы A и B отдельно; время идёт синхронно. График хранит последние 200 лет.`:'Раздвоение сохраняет страну в точке выбора. После этого можно сравнить две политики на одинаковых внешних событиях.';
+const histories=lab.b?[lab.a.history,lab.b.history]:[lab.a.history],start=Math.min(...histories.map(h=>h[0].year)),end=Math.max(start+1,s.year);const min=chartMetric==='treasury'?-100:0,max=100;const x=y=>42+(y-start)/(end-start)*720,y=v=>170-(v-min)/(max-min)*150;
+$('#chart').innerHTML=`<svg viewBox="0 0 790 195" role="img" aria-label="${METRICS[chartMetric][0]} по годам; точные текущие значения в таблице"><g font-family="Arial" font-size="10" fill="#626b5e">${[min,(min+max)/2,max].map(v=>`<path d="M42 ${y(v)}H770" stroke="#c9cbb9" stroke-dasharray="3 4"/><text x="4" y="${y(v)+3}">${v}</text>`).join('')}<text x="42" y="190">Год ${start}</text><text x="730" y="190">${s.year}</text></g>${histories.map((h,i)=>`<polyline points="${h.map(p=>`${x(p.year)},${y(p[chartMetric])}`).join(' ')}" fill="none" stroke="${i?'#bb613c':'#247568'}" stroke-width="3" ${i?'stroke-dasharray="7 4"':''}/><circle cx="${x(h.at(-1).year)}" cy="${y(h.at(-1)[chartMetric])}" r="4" fill="${i?'#bb613c':'#247568'}"/>`).join('')}</svg>`;
+$('#comparison').innerHTML=`<table class="comparison-table"><thead><tr><th>Показатель</th><th>A</th>${lab.b?'<th>B</th><th>Разница B − A</th>':''}</tr></thead><tbody>${Object.entries(METRICS).map(([k,[name]])=>`<tr><td>${name}</td><td>${num(lab.a.m[k])}</td>${lab.b?`<td>${num(lab.b.m[k])}</td><td>${signed(lab.b.m[k]-lab.a.m[k])}</td>`:''}</tr>`).join('')}</tbody></table>`;
+$('#journal').innerHTML=s.log.length?s.log.map(r=>`<div class="journal-row"><span class="journal-year">${r.year}</span><div><strong>${esc(r.headline)}</strong><small>${SHOCKS[r.shock].name}. ${SHOCKS[r.shock].desc}</small></div><span>Достаток ${signed(r.delta)}</span></div>`).join(''):'<p class="empty">История ещё не написана. Проживи первый год — здесь появятся события и их последствия.</p>';}
+function advance(count){if(current().year+count>10000){toast('Предел эксперимента — 10 000 лет. Начни новый опыт.');return;}remember();let events=[];for(let i=0;i<count;i++){// Explicit shocks apply to the first year only; subsequent years follow the common seed.
+const sh=i===0?selectedShock(lab.a.year+1):shockAt(lab.seed,lab.a.year+1);lab.a=step(lab.a,sh);if(lab.b)lab.b=step(lab.b,sh);events.push(SHOCKS[sh].name);}
+save();render();toast(count===1?`Год ${current().year}: ${events[0]}`:`Пройдено 5 лет. Последнее событие: ${events.at(-1)}`);}
+$('#policy-list').innerHTML=Object.entries(POLICIES).map(([k,[name,low,high,desc]])=>`<div class="policy"><div class="policy-top"><label for="policy-${k}">${name}</label><output id="value-${k}" for="policy-${k}"></output></div><input type="range" id="policy-${k}" data-policy="${k}" min="0" max="100" step="5"><div class="range-ends"><span>${low}</span><span>${high}</span></div><p>${desc}</p></div>`).join('');
+let editingPolicy=null;$('#policy-list').addEventListener('input',e=>{if(!e.target.dataset.policy)return;if(editingPolicy!==e.target){remember();editingPolicy=e.target;}current().p[e.target.dataset.policy]=Number(e.target.value);$(`#value-${e.target.dataset.policy}`).textContent=e.target.value;$('#undo').disabled=false;renderForecast();save();});$('#policy-list').addEventListener('change',()=>{editingPolicy=null;render();});
+$('#chart-metric').innerHTML=Object.entries(METRICS).map(([k,[name]])=>`<option value="${k}">${name}</option>`).join('');$('#chart-metric').value=chartMetric;$('#chart-metric').addEventListener('change',e=>{chartMetric=e.target.value;renderExperiment();});
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+$('#organism').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(!b)return;metric=b.dataset.metric;document.querySelectorAll('[data-metric]').forEach(n=>{n.classList.toggle('selected',n===b);n.setAttribute('aria-pressed',String(n===b));});renderCauses();$('.causes').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});});
+$('#advance').addEventListener('click',()=>advance(1));$('#advance-five').addEventListener('click',()=>advance(5));$('#undo').addEventListener('click',()=>{if(!undo.length)return;lab=undo.pop();save();render();toast('Последнее действие отменено');});
+$('#fork').addEventListener('click',()=>{if(lab.b)return;remember();lab.b=clone(lab.a);lab.forkYear=lab.a.year;lab.active='b';save();showTab('reforms');toast('Ветвь B создана. Измени реформы и сравни результат.');});for(const k of ['a','b'])$(`#branch-${k}`).addEventListener('click',()=>{if(!lab[k])return;lab.active=k;save();render();});
+$('#shock').addEventListener('change',()=>{renderForecast();if(!current().last)renderCauses();});
+function modal(html){$('#modal-content').innerHTML=html;$('#modal').showModal();}$('#close-modal').addEventListener('click',()=>$('#modal').close());
+$('#scenario').addEventListener('click',()=>modal(`<h2>Начальные условия</h2><p>Четыре вымышленных государства. Выбор начинает новый опыт; прежний можно вернуть кнопкой «Отмена» до перезагрузки.</p>${SCENARIOS.map(s=>`<button class="scenario-choice" data-scenario="${s.id}"><strong>${s.name}</strong><small>${s.desc}</small></button>`).join('')}`));
+$('#modal-content').addEventListener('click',e=>{if(e.target.closest('[data-workshop-trigger]')){$('#modal').close();workshop.open();return;}const b=e.target.closest('[data-scenario]');if(!b)return;remember();lab=fresh();lab.a=createState(b.dataset.scenario);save();$('#modal').close();showTab('state');toast('Новый опыт начат. Предыдущий доступен через «Отмена».');});
+$('#about').addEventListener('click',()=>modal(`<h2>У государства есть анатомия</h2><p class="model-note">Это авторская условная модель для мысленных экспериментов, а не прогноз реальной политики. Коэффициенты выбраны вручную и не откалиброваны по историческим данным.</p><h3>Как провести опыт</h3><p>1. Выбери начальные условия.<br>2. Раздвой историю и измени реформы ветви B.<br>3. Проживи 5–20 лет. В разделе «Эксперимент» сравни обе ветви.</p><h3>Что на самом деле считается</h3><p>Каждый год все изменения вычисляются из состояния на его начало. Семь политик влияют на пять показателей. Знания накапливаются постепенно; резкое изменение политик даёт одноразовый штраф устойчивости. Влияние групп нормируется до 100%, а их лояльность зависит от институтов.</p><p>Устойчивость стремится к взвешенной поддержке групп со скоростью 13% разницы в год. Дополнительно её снижают неравенство выше 55, долг, темп реформ и разрыв между знаниями и свободой.</p><p>Доход казны = налог × 0,19 × (0,5 + достаток / 100) × (1 − налог / 180). Расходы: 1,6 на администрацию, по 0,023–0,024 пункта за единицу бюджетной политики, плюс 3,5% долга. Налоги не могут бесконечно чинить всё.</p><p>Шкалы ограничены 0–100; казна — от −100 до 100. Пределы насыщения упрощают модель: это не бесконечный экономический рост. Здесь нет скрытых бросков переворота и сценария победы. «Институты трещат» — описание показателей, не отдельный режим.</p><h3>Честное сравнение</h3><p>Ветки получают одни и те же внешние события из фиксированного seed 71342. Выбранное событие действует на следующий год обеих ветвей; при +5 лет остальные четыре года следуют обычной последовательности. Исходящие линии на схеме обозначают связи, их численные вклады раскрываются при выборе показателя.</p><p>Сохранение — автоматически на этом устройстве. Отчёт содержит политики, показатели, историю и полное текущее состояние эксперимента. Отмена хранит последние 25 действий до перезагрузки.</p><button data-workshop-trigger class="workshop-link">Диагностика приложения</button>`));
+$('#export').addEventListener('click',()=>{const report={title:'Анатомия власти',model:'1.0.0 — fictional, not empirically calibrated',exportedAt:new Date().toISOString(),...clone(lab)};const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`power-anatomy-year-${lab.a.year}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Отчёт подготовлен для скачивания');});
+const workshop=createWorkshopMode({appName:'Анатомия власти',version:'1.0.0',cachePrefix:'power-anatomy-',storageNamespace:'pocket-works:power-anatomy',onReset(){remember();lab=fresh();save();render();}});
+addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});render();if(storageError)toast('Сохранение не прочитано. Начат новый опыт.');
