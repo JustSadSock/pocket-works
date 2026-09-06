@@ -1,0 +1,17 @@
+{
+  "id": "/apps/toy-lens/",
+  "name": "Toy Lens",
+  "short_name": "Toy Lens",
+  "description": "Локальная tilt-shift студия для фото и видео с эффектом миниатюрного мира.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2efe7",
+  "theme_color": "#f2efe7",
+  "lang": "ru",
+  "categories": ["photo", "video", "utilities", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
