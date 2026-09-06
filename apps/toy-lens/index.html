@@ -100,44 +100,44 @@
         </div>
 
         <label class="control-row">
-          <span><b>Размытие</b><output id="blurValue">18</output></span>
-          <input id="blurInput" type="range" min="0" max="40" value="18" step="1">
+          <span><b>Размытие</b><output id="blurValue">30</output></span>
+          <input id="blurInput" type="range" min="0" max="45" value="30" step="1">
         </label>
         <label class="control-row">
-          <span><b>Резкая зона</b><output id="focusValue">24%</output></span>
-          <input id="focusInput" type="range" min="5" max="55" value="24" step="1">
+          <span><b>Резкая зона</b><output id="focusValue">22%</output></span>
+          <input id="focusInput" type="range" min="5" max="55" value="22" step="1">
         </label>
         <label class="control-row">
-          <span><b>Растушёвка</b><output id="featherValue">16%</output></span>
-          <input id="featherInput" type="range" min="4" max="45" value="16" step="1">
+          <span><b>Переход глубины</b><output id="featherValue">18%</output></span>
+          <input id="featherInput" type="range" min="4" max="45" value="18" step="1">
         </label>
         <label class="control-row">
-          <span><b>Наклон</b><output id="angleValue">0°</output></span>
+          <span><b>Наклон сцены</b><output id="angleValue">0°</output></span>
           <input id="angleInput" type="range" min="-35" max="35" value="0" step="1">
         </label>
 
         <div class="rail-divider"><span>МИНИАТЮРА</span></div>
 
         <label class="control-row">
-          <span><b>Насыщенность</b><output id="saturationValue">128%</output></span>
-          <input id="saturationInput" type="range" min="70" max="180" value="128" step="1">
+          <span><b>Насыщенность</b><output id="saturationValue">142%</output></span>
+          <input id="saturationInput" type="range" min="70" max="190" value="142" step="1">
         </label>
         <label class="control-row">
-          <span><b>Контраст</b><output id="contrastValue">112%</output></span>
-          <input id="contrastInput" type="range" min="80" max="145" value="112" step="1">
+          <span><b>Контраст</b><output id="contrastValue">120%</output></span>
+          <input id="contrastInput" type="range" min="80" max="155" value="120" step="1">
         </label>
         <label class="control-row">
           <span><b>Свет</b><output id="brightnessValue">104%</output></span>
           <input id="brightnessInput" type="range" min="85" max="125" value="104" step="1">
         </label>
         <label class="control-row">
-          <span><b>Виньетка</b><output id="vignetteValue">10%</output></span>
-          <input id="vignetteInput" type="range" min="0" max="35" value="10" step="1">
+          <span><b>Виньетка</b><output id="vignetteValue">14%</output></span>
+          <input id="vignetteInput" type="range" min="0" max="35" value="14" step="1">
         </label>
 
         <button class="preset-button" id="presetButton" type="button">
-          <span>Авто‑миниатюра</span>
-          <small>Вернуть сильный «макетный» профиль</small>
+          <span>Сильная миниатюра</span>
+          <small>Выразительный макетный профиль вместо простого blur</small>
         </button>
       </aside>
     </section>
@@ -149,6 +149,6 @@
   </main>
 
   <script src="./canvas-filter-polyfill.js" defer></script>
-  <script src="./app.js" defer></script>
+  <script src="./app-v2.js" defer></script>
 </body>
 </html>
