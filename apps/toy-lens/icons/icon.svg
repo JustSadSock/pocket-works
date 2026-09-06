@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#f2efe7"/>
+  <rect x="56" y="72" width="400" height="368" rx="44" fill="#171817"/>
+  <rect x="88" y="104" width="336" height="304" rx="28" fill="#d8d4c9"/>
+  <g opacity=".38" filter="url(#b)">
+    <rect x="108" y="126" width="44" height="106" fill="#2a4d47"/>
+    <rect x="160" y="112" width="54" height="120" fill="#c25734"/>
+    <rect x="222" y="136" width="38" height="96" fill="#b9933b"/>
+    <rect x="268" y="118" width="62" height="114" fill="#365b86"/>
+    <rect x="338" y="146" width="50" height="86" fill="#60794b"/>
+  </g>
+  <g>
+    <rect x="108" y="236" width="44" height="122" fill="#2a4d47"/>
+    <rect x="160" y="216" width="54" height="142" fill="#c25734"/>
+    <rect x="222" y="248" width="38" height="110" fill="#b9933b"/>
+    <rect x="268" y="226" width="62" height="132" fill="#365b86"/>
+    <rect x="338" y="254" width="50" height="104" fill="#60794b"/>
+  </g>
+  <path d="M84 226L428 192" stroke="#f05a28" stroke-width="10"/>
+  <path d="M84 302L428 268" stroke="#d8ff57" stroke-width="10"/>
+  <circle cx="256" cy="247" r="23" fill="#d8ff57" stroke="#171817" stroke-width="10"/>
+  <defs><filter id="b"><feGaussianBlur stdDeviation="8"/></filter></defs>
+</svg>
