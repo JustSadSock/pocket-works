@@ -1,11 +1,11 @@
-const CACHE_NAME = 'toy-lens-v1.0.1';
+const CACHE_NAME = 'toy-lens-v1.1.0';
 const CACHE_PREFIX = 'toy-lens-v';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './canvas-filter-polyfill.js',
-  './app.js',
+  './app-v2.js',
   './manifest.webmanifest',
   './icons/icon.svg'
 ];
