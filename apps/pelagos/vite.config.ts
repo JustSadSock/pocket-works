@@ -43,7 +43,7 @@ export default defineConfig({
         id: '/apps/pelagos/',
         name: 'PELAGOS',
         short_name: 'PELAGOS',
-        description: 'Парусный корабль, физические волны и бескрайний океан.',
+        description: 'Премиальная 3D-игра о парусном корабле в открытом море: физические волны, ветер, плавучесть, гребля, погода и портретное управление для iPhone.',
         start_url: './',
         scope: './',
         display: 'standalone',
