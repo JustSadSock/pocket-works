@@ -28,9 +28,9 @@ jobs:
         run: npm run build --workspace @pocket-works/pelagos
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
-      - name: Start preview
+      - name: Start promoted PELAGOS build
         run: |
-          npx vite preview --config apps/pelagos/vite.config.ts --host 127.0.0.1 --port 4173 > /tmp/pelagos-preview.log 2>&1 &
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory apps/pelagos > /tmp/pelagos-preview.log 2>&1 &
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
             sleep 1
