@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "miniature-lab",
+  "name": "Miniature Lab",
+  "shortName": "Miniature Lab",
+  "description": "Локальная miniature / tilt-shift студия для фото и видео с авто-анализом кадра, прогрессивной глубиной и ручной геометрией фокуса.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T00:34:00+03:00",
+  "changelog": [
+    "Первый релиз нового successor-модуля для убедительного miniature-эффекта вместо простого равномерного blur.",
+    "Добавлены режимы Авто, Сцена и Объект; авто-анализ оценивает визуальную концентрацию кадра и сам выбирает геометрию фокуса.",
+    "Размытие строится несколькими уровнями по мере удаления от резкой области, а фокус дополнительно получает локальный контраст и насыщенность.",
+    "Фото и видео обрабатываются локально; есть сравнение с оригиналом, экспорт, офлайн-оболочка и Safari/WebKit fallback для canvas-фильтров."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#f05a28",
+  "backgroundColor": "#f3efe5",
+  "themeColor": "#f3efe5",
+  "orientation": "any",
+  "cacheName": "miniature-lab-v1.0.0",
+  "storageNamespace": "pocket-works:miniature-lab",
+  "tags": ["PWA", "offline", "photo", "video", "tilt-shift", "miniature", "editor", "canvas", "webgl", "webkit", "touch", "export", "utility"],
+  "order": 206
+}
