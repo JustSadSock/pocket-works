@@ -2,6 +2,7 @@ import { TAU, clamp, fbm2, rotate2, smoothstep, valueNoise2 } from './core.js';
 
 export const DESERT_SEED = 1709;
 export const WIND_ANGLE = 0.53;
+export const TERRAIN_CHUNK_SIZE = 42;
 
 function duneWave(phase, asymmetry = 0.23) {
   const s = Math.sin(phase);
@@ -15,7 +16,6 @@ export function terrainHeight(x, z, seed = DESERT_SEED) {
   const warpZ = fbm2(x * 0.0034 - 5.1, z * 0.0034 + 9.6, seed + 7, 4);
   const basin = fbm2(x * 0.0016, z * 0.0016, seed + 3, 4) * 2.15;
 
-  // Wind still gives the desert a dominant direction, but local orientation bends by region.
   const bend = fbm2(x * 0.0022, z * 0.0022, seed + 9, 3) * 0.34;
   const cb = Math.cos(bend), sb = Math.sin(bend);
   const qx = p.x * cb - p.y * sb + warpX * 16;
@@ -29,7 +29,6 @@ export function terrainHeight(x, z, seed = DESERT_SEED) {
   const amplitude = 3.7 + ridgeMask * 4.2 + Math.max(0, regional) * 1.8;
   let macro = duneWave(macroPhase, 0.25) * amplitude;
 
-  // Break long ridges into lobes and saddles instead of endless parallel sine rows.
   const lobe = fbm2(qx * 0.008, qz * 0.005, seed + 23, 3);
   macro *= 0.68 + smoothstep(-0.72, 0.72, lobe) * 0.62;
   macro += Math.sin(qz * 0.052 + qx * 0.024 + warpX * 1.8) * (0.38 + ridgeMask * 0.42);
@@ -43,6 +42,33 @@ export function terrainHeight(x, z, seed = DESERT_SEED) {
   return basin + macro + secondary + cross + lowland;
 }
 
+// Sample the exact piecewise-linear surface produced by buildChunkData. This is
+// intentionally separate from terrainHeight: the controller and IK must stand
+// on the rendered triangles, not on the higher-frequency analytical function.
+export function meshTerrainHeight(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
+  const seg = Math.max(2, segments | 0);
+  const cx = Math.floor(x / chunkSize);
+  const cz = Math.floor(z / chunkSize);
+  const baseX = cx * chunkSize;
+  const baseZ = cz * chunkSize;
+  const cell = chunkSize / seg;
+  const localX = x - baseX;
+  const localZ = z - baseZ;
+  const ix = Math.min(seg - 1, Math.max(0, Math.floor(localX / cell)));
+  const iz = Math.min(seg - 1, Math.max(0, Math.floor(localZ / cell)));
+  const x0 = baseX + ix * cell;
+  const z0 = baseZ + iz * cell;
+  const u = clamp((x - x0) / cell, 0, 1);
+  const v = clamp((z - z0) / cell, 0, 1);
+  const hA = terrainHeight(x0, z0);
+  const hB = terrainHeight(x0 + cell, z0);
+  const hD = terrainHeight(x0, z0 + cell);
+  const hE = terrainHeight(x0 + cell, z0 + cell);
+
+  if (u + v <= 1) return hA * (1 - u - v) + hB * u + hD * v;
+  return hB * (1 - v) + hD * (1 - u) + hE * (u + v - 1);
+}
+
 export function terrainNormal(x, z, step = 0.38) {
   const hx0 = terrainHeight(x - step, z), hx1 = terrainHeight(x + step, z);
   const hz0 = terrainHeight(x, z - step), hz1 = terrainHeight(x, z + step);
@@ -50,6 +76,18 @@ export function terrainNormal(x, z, step = 0.38) {
   const inv = 1 / Math.hypot(nx, ny, nz); nx *= inv; ny *= inv; nz *= inv;
   return { x: nx, y: ny, z: nz };
 }
+
+export function meshTerrainNormal(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
+  const step = Math.max(0.18, chunkSize / Math.max(2, segments | 0) * 0.22);
+  const hx0 = meshTerrainHeight(x - step, z, segments, chunkSize);
+  const hx1 = meshTerrainHeight(x + step, z, segments, chunkSize);
+  const hz0 = meshTerrainHeight(x, z - step, segments, chunkSize);
+  const hz1 = meshTerrainHeight(x, z + step, segments, chunkSize);
+  let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
+  const inv = 1 / Math.hypot(nx, ny, nz); nx *= inv; ny *= inv; nz *= inv;
+  return { x: nx, y: ny, z: nz };
+}
+
 export function terrainSlope(x, z) { return Math.acos(clamp(terrainNormal(x, z).y, -1, 1)); }
 export function downhillDirection(x, z) { const n = terrainNormal(x, z); const len = Math.hypot(n.x, n.z) || 1; return { x: n.x / len, z: n.z / len }; }
 export function sandVariation(x, z) {
