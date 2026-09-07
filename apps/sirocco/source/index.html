@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#c78043" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <title>SIROCCO — Pocket Works</title>
+</head>
+<body data-gesture-surface data-block-callout>
+  <main id="app" class="app-shell" data-app-shell data-fullscreen-app aria-label="SIROCCO desert experience">
+    <canvas id="render-canvas" aria-label="3D пустыня" data-gesture-surface></canvas>
+    <div id="move-zone" class="touch-zone" aria-hidden="true" data-gesture-surface data-touch-action="none"></div>
+    <div id="look-zone" class="touch-zone" aria-hidden="true" data-gesture-surface data-touch-action="none"></div>
+    <div id="joystick-base" aria-hidden="true"><div id="joystick-knob"></div></div>
+    <header id="hud" data-ui><div class="brand"><span class="brand-mark"></span><span>SIROCCO</span></div><div id="quality-label">AUTO · Medium</div></header>
+    <div id="reticle" aria-hidden="true"></div>
+    <button id="menu-button" class="icon-button" type="button" aria-label="Открыть настройки" data-native-press><span></span><span></span></button>
+
+    <section id="loading" class="screen-layer" aria-live="polite" data-ui>
+      <div class="loading-content"><div class="sun-glyph"><i></i></div><p class="eyebrow">POCKET WORKS / DESERT RUNTIME</p><h1>SIROCCO</h1><p id="loading-text">Поднимаем ветер…</p><div class="loading-track"><div id="loading-bar"></div></div></div>
+    </section>
+
+    <section id="enter" class="screen-layer enter" hidden data-ui>
+      <button id="enter-button" type="button" data-native-press><span>Коснись пустыни</span><small>слева — шаг · справа — взгляд</small></button>
+      <button id="start-exit-button" class="start-exit" type="button" data-native-press>Вернуться в Pocket Works</button>
+    </section>
+
+    <section id="rotate" class="screen-layer rotate" hidden data-ui><div class="rotate-phone" aria-hidden="true"></div><strong>Поверни iPhone</strong><span>SIROCCO рассчитан на горизонтальный экран</span></section>
+
+    <section id="menu" class="screen-layer menu" hidden aria-label="Настройки SIROCCO" data-ui>
+      <div class="menu-sheet">
+        <div class="menu-head"><div><p>SIROCCO</p><h2>Параметры прогулки</h2></div><button id="resume-button" class="close-button" type="button" aria-label="Закрыть настройки" data-native-press>×</button></div>
+        <label class="setting-row"><span><b>Качество</b><small>автоматически подстраивается под FPS</small></span><select id="quality-select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+        <label class="setting-row slider-row"><span><b>Чувствительность</b><small>поворот камеры</small></span><input id="sensitivity" type="range" min="0.45" max="1.8" step="0.05" value="1" /></label>
+        <label class="setting-row switch-row"><span><b>Звук пустыни</b><small>ветер и шаги</small></span><input id="sound-toggle" type="checkbox" checked /><i></i></label>
+        <button id="exit-button" class="exit-button" type="button" data-native-press>Вернуться в Pocket Works</button>
+      </div>
+    </section>
+
+    <section id="error-screen" class="screen-layer error" hidden data-ui><div><p>SIROCCO не смог запустить WebGL-сцену.</p><code id="error-text"></code><button id="reload-button" type="button" data-native-press>Перезапустить</button></div></section>
+
+    <aside id="debug-panel" hidden data-ui><strong>SIROCCO / DEV</strong><pre id="debug-stats"></pre><label><input type="checkbox" data-debug="wireframe" /> wireframe terrain</label><label><input type="checkbox" data-debug="chunks" /> chunk boundaries</label><label><input type="checkbox" data-debug="ik" /> foot IK targets</label><label><input type="checkbox" data-debug="footprints" checked /> footprint geometry</label><label><input type="checkbox" data-debug="normals" /> surface normals</label><label><input type="checkbox" data-debug="lod" /> LOD overlay</label><label><input type="checkbox" data-debug="rays" /> collision ray</label></aside>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
