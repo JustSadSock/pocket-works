@@ -170,9 +170,14 @@ export class SiroccoGame {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
         const down = steep ? this.sandSurface.downhill(landing.globalX, landing.globalZ) : null;
-        this.particles.kick(landing.position, landing.yaw, steep ? 1.14 : 0.52, down);
+        this.particles.kick(landing.position, landing.yaw, steep ? 1.14 : 0.62, down);
         this.audio.footstep(0.72 + Math.min(0.28, this.controller.speed * 0.08));
       }
+
+      const downhill = groundState.sliding > 0.10
+        ? this.sandSurface.downhill(this.controller.globalX, this.controller.globalZ)
+        : null;
+      this.particles.trail(dt, this.controller.localPosition, this.controller.bodyYaw, groundState.sliding, downhill);
 
       const dirtySand = this.sand.consumeDirtyBounds();
       if (dirtySand) {
