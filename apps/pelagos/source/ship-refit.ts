@@ -11,14 +11,8 @@ import { clamp, sampleWave, smoothTo } from './core';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
-type HullStation = {
-  z: number;
-  beam: number;
-  sheer: number;
-  keel: number;
-};
+type HullStation = { z: number; beam: number; sheer: number; keel: number };
 
-// A continuous cutter-like hull: broad amidships, fine entry, modest counter stern and real freeboard.
 const HULL_STATIONS: readonly HullStation[] = [
   { z: -4.65, beam: 0.86, sheer: 0.92, keel: -1.00 },
   { z: -4.15, beam: 1.12, sheer: 0.82, keel: -1.20 },
@@ -42,6 +36,17 @@ function registerShadowCaster(world: OceanWorld, mesh: Mesh): void {
     getShadowGenerator?: () => { addShadowCaster: (mesh: Mesh, includeDescendants?: boolean) => void } | null;
   } | null;
   sun?.getShadowGenerator?.()?.addShadowCaster(mesh, false);
+}
+
+function tuneSurfaceMaterial(material: Material | null, kind: 'hull' | 'deck'): void {
+  if (!(material instanceof StandardMaterial)) return;
+  material.backFaceCulling = false;
+  material.twoSidedLighting = true;
+  // The sail can shadow most of the deck at once. A tiny indirect component keeps wood readable
+  // without flattening the directional lighting or removing the actual shadow.
+  material.emissiveColor = kind === 'deck'
+    ? new Color3(0.060, 0.038, 0.018)
+    : new Color3(0.018, 0.008, 0.003);
 }
 
 function buildHull(world: OceanWorld, material: Material | null): Mesh {
@@ -93,14 +98,20 @@ function buildHull(world: OceanWorld, material: Material | null): Mesh {
   const closeEnd = (stationIndex: number, reverse: boolean) => {
     const station = HULL_STATIONS[stationIndex];
     const center = positions.length / 3;
+    const first = stationIndex * ring;
+    const last = first + ring - 1;
     positions.push(0, station.sheer - 0.58, station.z);
     uvs.push(0.5, stationIndex === 0 ? 0 : 5.4);
     for (let j = 0; j < ring - 1; j += 1) {
-      const a = stationIndex * ring + j;
+      const a = first + j;
       const b = a + 1;
       if (reverse) indices.push(center, b, a);
       else indices.push(center, a, b);
     }
+    // The cross-section loop starts and ends at the gunwales. Close that final upper edge too;
+    // otherwise the stern reads as a triangular hole when viewed from the chase camera.
+    if (reverse) indices.push(center, first, last);
+    else indices.push(center, last, first);
   };
   closeEnd(0, true);
   closeEnd(HULL_STATIONS.length - 1, false);
@@ -144,7 +155,6 @@ function buildDeck(world: OceanWorld, material: Material | null): Mesh {
       const b = a + 1;
       const c = (station + 1) * across + j;
       const d = c + 1;
-      // Winding gives upward normals. The deck material is also two-sided as a Safari/WebGL safety net.
       indices.push(a, c, b, b, c, d);
     }
   }
@@ -191,18 +201,19 @@ function addTube(world: OceanWorld, name: string, path: Vector3[], radius: numbe
 
 function addCockpit(world: OceanWorld, deckMaterial: Material | null, railMaterial: Material | null): void {
   const scene = world.scene;
-  const dark = createRefitMaterial(world, 'cockpit-well-dark', new Color3(0.10, 0.065, 0.038), new Color3(0.025, 0.02, 0.015), 14);
-  const floor = MeshBuilder.CreateBox('refit-cockpit-floor', { width: 1.10, height: 0.045, depth: 1.26 }, scene);
+  const dark = createRefitMaterial(world, 'cockpit-well-dark', new Color3(0.12, 0.075, 0.040), new Color3(0.025, 0.02, 0.015), 14);
+  dark.emissiveColor = new Color3(0.025, 0.014, 0.006);
+  const floor = MeshBuilder.CreateBox('refit-cockpit-floor', { width: 1.06, height: 0.045, depth: 1.20 }, scene);
   floor.position.set(0, 0.785, -2.48);
   floor.parent = world.shipRoot;
   floor.material = dark;
   floor.isPickable = false;
 
   const coamings = [
-    { width: 1.38, height: 0.12, depth: 0.10, x: 0, z: -1.80 },
-    { width: 1.38, height: 0.12, depth: 0.10, x: 0, z: -3.16 },
-    { width: 0.10, height: 0.12, depth: 1.46, x: -0.69, z: -2.48 },
-    { width: 0.10, height: 0.12, depth: 1.46, x: 0.69, z: -2.48 }
+    { width: 1.36, height: 0.12, depth: 0.10, x: 0, z: -1.82 },
+    { width: 1.36, height: 0.12, depth: 0.10, x: 0, z: -3.14 },
+    { width: 0.10, height: 0.12, depth: 1.42, x: -0.68, z: -2.48 },
+    { width: 0.10, height: 0.12, depth: 1.42, x: 0.68, z: -2.48 }
   ];
   for (let i = 0; i < coamings.length; i += 1) {
     const c = coamings[i];
@@ -234,8 +245,8 @@ function refitShip(world: OceanWorld): void {
   const oldDeck = scene.getMeshByName('cambered-deck');
   const hullMaterial = oldHull?.material ?? null;
   const deckMaterial = oldDeck?.material ?? hullMaterial;
-  if (hullMaterial) hullMaterial.backFaceCulling = false;
-  if (deckMaterial) deckMaterial.backFaceCulling = false;
+  tuneSurfaceMaterial(hullMaterial, 'hull');
+  tuneSurfaceMaterial(deckMaterial, 'deck');
 
   const obsoleteExact = new Set([
     'full-carvel-hull', 'cambered-deck', 'keel', 'stern-cabin', 'cabin-roof',
@@ -260,7 +271,6 @@ function refitShip(world: OceanWorld): void {
   const ropeMaterial = scene.getMaterialByName('hemp-rigging') ?? hullMaterial;
   const ironMaterial = scene.getMaterialByName('blackened-iron') ?? hullMaterial;
 
-  // Continuous gunwales and rubbing strakes reinforce the hull silhouette without floating trim pieces.
   for (const side of [-1, 1]) {
     const capPath = HULL_STATIONS.slice(0, -1).map((s) => new Vector3(side * s.beam, s.sheer + 0.045, s.z));
     addTube(world, `refit-caprail-${side}`, capPath, 0.058, railMaterial);
@@ -270,7 +280,6 @@ function refitShip(world: OceanWorld): void {
 
   addCockpit(world, deckMaterial, railMaterial);
 
-  // Existing fittings are retained because they are mechanically animated; raise them to the new deck datum.
   for (const node of scene.transformNodes) {
     if (node.name.startsWith('oar-') && node !== world.shipRoot) node.position.y += 0.55;
   }
@@ -337,7 +346,6 @@ function frameWholeShip(
   lookYaw: number,
   lookPitch: number
 ): void {
-  // A slight quartering default angle makes the hull volume legible instead of flattening it into a stern-on silhouette.
   const quarterOffset = 0.075 * Math.exp(-Math.abs(lookYaw) * 4.0);
   const cameraYaw = state.yaw + lookYaw + quarterOffset;
   const fwdX = Math.sin(cameraYaw);
@@ -350,7 +358,6 @@ function frameWholeShip(
     memory = { position: world.camera.position.clone(), desired: new Vector3(), target: new Vector3() };
     cameraMemory.set(world, memory);
   }
-
   memory.desired.set(state.x - fwdX * distance, state.y + height, state.z - fwdZ * distance);
   memory.position.x = smoothTo(memory.position.x, memory.desired.x, 3.7, dt);
   memory.position.y = smoothTo(memory.position.y, memory.desired.y, 2.85, dt);
@@ -369,9 +376,9 @@ function frameWholeShip(
   world.scene.getMeshByName('sky-dome')?.position.copyFrom(world.camera.position);
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipRefitV3?: boolean };
-if (!prototype.__pelagosShipRefitV3) {
-  prototype.__pelagosShipRefitV3 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipRefitV4?: boolean };
+if (!prototype.__pelagosShipRefitV4) {
+  prototype.__pelagosShipRefitV4 = true;
   const originalUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function patchedUpdate(
     state: ShipState,
