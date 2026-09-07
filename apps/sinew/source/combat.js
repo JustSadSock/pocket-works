@@ -57,6 +57,37 @@ function sampleCount(trace, dt) {
   return clamp(Math.max(2, dynamic), 2, 9);
 }
 
+function translateShield(warrior, delta) {
+  warrior.leftHand.position.addInPlace(delta);
+  warrior.shield.center.addInPlace(delta);
+  warrior.meshes.shield.position.addInPlace(delta);
+  warrior.meshes.shieldRim.position.addInPlace(delta);
+  warrior.meshes.shieldBoss.position.addInPlace(delta);
+}
+
+function shieldBodyContact(shield, defender) {
+  let best = null;
+  const normal = shield.normal.normalizeToNew();
+  for (const sphere of defender.getHitSpheres()) {
+    const delta = sphere.center.subtract(shield.center);
+    const signed = Vector3.Dot(delta, normal);
+    const planar = delta.subtract(normal.scale(signed));
+    const radialLimit = shield.radius + sphere.radius * 0.46;
+    const planeLimit = sphere.radius + 0.085;
+    if (planar.length() > radialLimit || Math.abs(signed) >= planeLimit) continue;
+    const penetration = planeLimit - Math.abs(signed);
+    if (!best || penetration > best.penetration) {
+      best = {
+        sphere,
+        penetration,
+        point: sphere.center.subtract(normal.scale(signed)),
+        normal: signed >= 0 ? normal : normal.scale(-1)
+      };
+    }
+  }
+  return best;
+}
+
 function intersectsShield(trace, shield, dt) {
   const steps = sampleCount(trace, dt);
   let best = null;
@@ -138,8 +169,60 @@ export class CombatSystem {
     return true;
   }
 
+  resolveShieldBody(owner, defender, now) {
+    const hit = shieldBodyContact(owner.getShieldTrace(), defender);
+    if (!hit) return false;
+
+    let separation = defender.position.subtract(owner.position);
+    separation.y = 0;
+    if (separation.lengthSquared() < 1e-6) separation = hit.normal.clone();
+    separation.normalize();
+    const correction = clamp(hit.penetration * 0.42 + 0.006, 0.008, 0.075);
+
+    translateShield(owner, separation.scale(-correction * 0.82));
+    owner.leftHand.velocity.addInPlace(separation.scale(-correction * 15));
+    owner.position.addInPlace(separation.scale(-correction * 0.34));
+    defender.position.addInPlace(separation.scale(correction * 0.28));
+    owner.velocity.scaleInPlace(0.76);
+    defender.velocity.scaleInPlace(0.8);
+    owner.stability = Math.max(0, owner.stability - correction * 48);
+    defender.applyBodyImpulse(separation.scale(correction * 20));
+
+    if (this.canContact('shield-body', owner, defender, now, 0.11)) {
+      this.onEvent({ type: 'block', attacker: owner, defender, point: hit.point, normal: hit.normal, intensity: clamp(hit.penetration / 0.22, 0.15, 0.72), speed: 0 });
+    }
+    return true;
+  }
+
+  resolveShieldShield(a, b, now) {
+    const shieldA = a.getShieldTrace();
+    const shieldB = b.getShieldTrace();
+    const delta = shieldB.center.subtract(shieldA.center);
+    const distance = delta.length();
+    const minimum = (shieldA.radius + shieldB.radius) * 0.78;
+    if (distance <= 1e-5 || distance >= minimum) return false;
+    const normal = delta.scale(1 / distance);
+    const penetration = minimum - distance;
+    const correction = clamp(penetration * 0.34, 0.006, 0.06);
+    translateShield(a, normal.scale(-correction));
+    translateShield(b, normal.scale(correction));
+    a.leftHand.velocity.addInPlace(normal.scale(-correction * 13));
+    b.leftHand.velocity.addInPlace(normal.scale(correction * 13));
+    a.stability = Math.max(0, a.stability - correction * 35);
+    b.stability = Math.max(0, b.stability - correction * 35);
+    if (this.canContact('shield-shield', a, b, now, 0.13)) {
+      this.onEvent({ type: 'clash', a, b, point: Vector3.Lerp(shieldA.center, shieldB.center, 0.5), intensity: clamp(penetration / 0.25, 0.15, 0.7) });
+    }
+    return true;
+  }
+
   resolvePair(a, b, dt, now) {
     if (a.dead || b.dead) return;
+
+    this.resolveShieldBody(a, b, now);
+    this.resolveShieldBody(b, a, now);
+    this.resolveShieldShield(a, b, now);
+
     const swordA = a.getSwordTrace();
     const swordB = b.getSwordTrace();
     const velocityA = swordVelocity(swordA, dt);
