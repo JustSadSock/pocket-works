@@ -4,6 +4,7 @@ import { DesertWorld } from './world.js';
 import { SandWalkerController } from './movement.js';
 import { HumanoidRig } from './character.js';
 import { SandPhysics } from './sand-physics.js';
+import { LocalSandSurface } from './sand-surface.js';
 import { SandParticles } from './particles.js';
 import { DesertLighting } from './lighting.js';
 import { DesertAtmosphere } from './atmosphere.js';
@@ -53,13 +54,14 @@ export class SiroccoGame {
     this.sand = new SandPhysics(this.world);
     this.sand.setQuality(this.quality.preset);
     this.world.setSandPhysics(this.sand);
-    this.controller = new SandWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz), this.world);
+    this.sandSurface = new LocalSandSurface(this.scene, this.world, this.sand, this.materials.near, this.quality.preset);
+    this.controller = new SandWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz), this.sandSurface);
     this.restoreSession();
     await nextFrame();
 
     report('Строим бедуинское тело и foot IK…', 0.43);
     this.shadowCasters = [];
-    this.rig = new HumanoidRig(this.scene, this.shadowCasters, this.world);
+    this.rig = new HumanoidRig(this.scene, this.shadowCasters, this.sandSurface);
     this.lighting = new DesertLighting(this.scene, this.quality.preset, this.shadowCasters);
     this.atmosphere = new DesertAtmosphere(this.scene, this.lighting.sunDirection);
     this.particles = new SandParticles(this.scene, this.quality.preset.particles);
@@ -78,7 +80,8 @@ export class SiroccoGame {
     this.applyQuality(this.quality.preset);
     this.world.setOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
     this.world.update(this.controller.globalX, this.controller.globalZ);
-    this.controller.localPosition.y = this.world.sampleHeight(this.controller.globalX, this.controller.globalZ);
+    this.sandSurface.update(this.controller, true);
+    this.controller.localPosition.y = this.sandSurface.sampleHeight(this.controller.globalX, this.controller.globalZ);
     await nextFrame();
 
     report('Прогреваем дюны и мягкие тени…', 0.88);
@@ -133,6 +136,7 @@ export class SiroccoGame {
   handleRebase(dx, dz, offsetX, offsetZ) {
     this.world.setOrigin(offsetX, offsetZ);
     this.rig.shiftOrigin(dx, dz);
+    this.sandSurface.syncOrigin();
   }
 
   adaptBodyToFeet(dt) {
@@ -156,6 +160,7 @@ export class SiroccoGame {
     this.atmosphere?.setQuality(preset);
     this.particles?.setBudget(preset.particles);
     this.sand?.setQuality(preset);
+    this.sandSurface?.setQuality(preset);
     document.querySelector('#quality-label')?.replaceChildren(document.createTextNode(this.quality?.mode === 'auto' ? `AUTO · ${preset.label}` : preset.label));
   }
 
@@ -168,19 +173,24 @@ export class SiroccoGame {
       this.controller.applyLook(this.input.consumeLook());
       const groundState = this.controller.update(dt, move);
       this.world.update(this.controller.globalX, this.controller.globalZ);
+      this.sandSurface.update(this.controller);
 
       const landings = this.rig.update(this.controller, dt);
       this.adaptBodyToFeet(dt);
       for (const landing of landings) {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
-        const down = steep ? this.world.downhill(landing.globalX, landing.globalZ) : null;
+        const down = steep ? this.sandSurface.downhill(landing.globalX, landing.globalZ) : null;
         this.particles.kick(landing.position, landing.yaw, steep ? 1.18 : 0.58, down);
         this.audio.footstep(0.72 + Math.min(0.28, this.controller.speed * 0.08));
       }
 
       const dirtySand = this.sand.consumeDirtyBounds();
-      if (dirtySand) this.world.refreshDeformation(dirtySand);
+      if (dirtySand) {
+        this.world.refreshDeformation(dirtySand);
+        this.sandSurface.markDirty();
+        this.sandSurface.update(this.controller, true);
+      }
       this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
 
       this.camera.update(this.controller, dt);
@@ -206,6 +216,7 @@ export class SiroccoGame {
     this.input?.dispose();
     this.debug?.dispose();
     this.particles?.dispose();
+    this.sandSurface?.dispose();
     this.sand?.clear();
     this.rig?.dispose();
     this.world?.dispose();
