@@ -10,9 +10,10 @@ const CACHE_NAME = 'sirocco-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
-  'Процедурная бесшовная пустыня и стриминг дюн.',
-  'Humanoid body awareness, foot IK и физически читаемые следы.',
-  'Локальное осыпание песка и адаптивный мобильный рендер.'
+  'Процедурная бесшовная пустыня из направленных дюн с chunk streaming и несколькими пространственными масштабами.',
+  'Полноценное first-person тело с humanoid rig, процедурной походкой, foot planting и IK-адаптацией к склону.',
+  'Объёмные следы с вдавливанием и песчаным валиком, локальное осыпание склонов и умеренные частицы песка.',
+  'Мобильное landscape-управление, атмосферное небо, мягкие каскадные тени и автоматические High / Medium / Low профили качества.'
 ];
 
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });

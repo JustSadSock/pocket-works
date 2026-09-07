@@ -27,6 +27,24 @@ export class SandWalkerController {
     this.pitch = clamp(this.pitch - look.y, -1.34, 1.18);
   }
 
+  restore(snapshot) {
+    if (!snapshot || !Number.isFinite(snapshot.x) || !Number.isFinite(snapshot.z)) return false;
+    this.worldOffsetX = snapshot.x;
+    this.worldOffsetZ = snapshot.z;
+    this.localPosition.set(0, terrainHeight(snapshot.x, snapshot.z), 0);
+    this.velocity.setAll(0);
+    this.yaw = Number.isFinite(snapshot.yaw) ? snapshot.yaw : this.yaw;
+    this.pitch = Number.isFinite(snapshot.pitch) ? clamp(snapshot.pitch, -1.34, 1.18) : this.pitch;
+    this.bodyYaw = this.yaw;
+    this.speed = 0;
+    this.sliding = 0;
+    return true;
+  }
+
+  snapshot() {
+    return { x: this.globalX, z: this.globalZ, yaw: this.yaw, pitch: this.pitch };
+  }
+
   update(dt, input) {
     dt = Math.min(dt, 0.034);
     const forwardX = Math.sin(this.yaw);

@@ -11,12 +11,12 @@ const releaseNotes = [
   'Процедурная бесшовная пустыня из направленных дюн с chunk streaming и несколькими пространственными масштабами.',
   'Полноценное first-person тело с humanoid rig, процедурной походкой, foot planting и IK-адаптацией к склону.',
   'Объёмные следы с вдавливанием и песчаным валиком, локальное осыпание склонов и умеренные частицы песка.',
-  'Мобильное landscape-управление, атмосферное небо, мягкие каскадные тени и автоматические профили качества.'
+  'Мобильное landscape-управление, атмосферное небо, мягкие каскадные тени и автоматические High / Medium / Low профили качества.'
 ];
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName, version, releaseNotes });
+registerEnhancedUpdate({ appName, version: '1.0.0', releaseNotes });
 createWorkshopMode({
   appName,
   version,

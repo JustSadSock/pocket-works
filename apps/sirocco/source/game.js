@@ -14,6 +14,7 @@ import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
 import { downhillDirection } from './terrain.js';
 
+const SESSION_KEY = 'pocket-works:sirocco:session';
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -25,6 +26,7 @@ export class SiroccoGame {
     this.paused = false;
     this.orientationBlocked = false;
     this.lastFps = 60;
+    this.saveClock = 0;
   }
 
   async init(report = () => {}) {
@@ -46,6 +48,7 @@ export class SiroccoGame {
     this.materials = createSandMaterials(this.scene);
     this.world = new DesertWorld(this.scene, this.materials, this.quality.preset);
     this.controller = new SandWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz));
+    this.restoreSession();
     await nextFrame();
 
     report('Строим тело и foot IK…', 0.43);
@@ -61,15 +64,10 @@ export class SiroccoGame {
     this.camera = new FirstPersonCamera(this.scene);
     this.input = new MobileInput(document.body);
     this.audio = new DesertAudio();
-    this.debug = new DebugPanel(this.scene, this.engine, {
-      materials: this.materials,
-      world: this.world,
-      rig: this.rig,
-      footprints: this.footprints
-    });
+    this.debug = new DebugPanel(this.scene, this.engine, { materials: this.materials, world: this.world, rig: this.rig, footprints: this.footprints });
     this.applyQuality(this.quality.preset);
-    this.world.setOrigin(0, 0);
-    this.world.update(0, 0);
+    this.world.setOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
+    this.world.update(this.controller.globalX, this.controller.globalZ);
     this.lighting.registerWorld(this.world);
     await nextFrame();
 
@@ -85,11 +83,33 @@ export class SiroccoGame {
     this.engine.runRenderLoop(() => this.frame());
   }
 
+  restoreSession() {
+    try {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (stored) this.controller.restore(JSON.parse(stored));
+    } catch (error) {
+      console.warn('[SIROCCO] Ignoring invalid saved session.', error);
+    }
+  }
+
+  saveSession() {
+    if (!this.controller) return;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(this.controller.snapshot())); }
+    catch (error) { console.warn('[SIROCCO] Session persistence failed.', error); }
+  }
+
   bindLifecycle() {
-    window.addEventListener('resize', () => this.engine.resize());
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.audio?.ctx?.suspend?.();
-    });
+    this.onResize = () => this.engine.resize();
+    this.onVisibility = () => {
+      if (document.hidden) {
+        this.saveSession();
+        this.audio?.ctx?.suspend?.();
+      }
+    };
+    this.onPageHide = () => this.saveSession();
+    window.addEventListener('resize', this.onResize);
+    document.addEventListener('visibilitychange', this.onVisibility);
+    window.addEventListener('pagehide', this.onPageHide);
   }
 
   handleRebase(dx, dz, offsetX, offsetZ) {
@@ -132,15 +152,21 @@ export class SiroccoGame {
       this.lastFps = this.engine.getFps();
       this.quality.update(dt, this.lastFps);
       this.debug.update(dt, this.controller, this.quality.preset);
+      this.saveClock += dt;
+      if (this.saveClock >= 2.5) { this.saveClock = 0; this.saveSession(); }
     }
     this.scene.render();
   }
 
-  setPaused(value) { this.paused = value; }
+  setPaused(value) { this.paused = value; if (value) this.saveSession(); }
   setOrientationBlocked(value) { this.orientationBlocked = value; }
 
   dispose() {
     this.running = false;
+    this.saveSession();
+    window.removeEventListener('resize', this.onResize);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    window.removeEventListener('pagehide', this.onPageHide);
     this.input?.dispose();
     this.debug?.dispose();
     this.particles?.dispose();
