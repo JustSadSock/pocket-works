@@ -9,13 +9,14 @@ import { SandParticles } from './particles.js';
 import { DesertLighting } from './lighting.js';
 import { DesertAtmosphere } from './atmosphere.js';
 import { FirstPersonCamera } from './camera.js';
+import { CharacterContactShadow } from './contact-shadow.js';
 import { MobileInput } from './input.js';
 import { AdaptiveQuality } from './quality.js';
 import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
-const SESSION_SCHEMA = 5;
+const SESSION_SCHEMA = 6;
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -66,6 +67,7 @@ export class SiroccoGame {
     this.lighting = new DesertLighting(this.scene, this.quality.preset, this.shadowCasters);
     this.atmosphere = new DesertAtmosphere(this.scene, this.lighting.sunDirection);
     this.particles = new SandParticles(this.scene, this.quality.preset.particles);
+    this.contactShadow = new CharacterContactShadow(this.scene, this.sandSurface);
     await nextFrame();
 
     report('Настраиваем камеру и touch input…', 0.67);
@@ -83,6 +85,7 @@ export class SiroccoGame {
     this.world.update(this.controller.globalX, this.controller.globalZ);
     this.sandSurface.update(this.controller, true);
     this.controller.localPosition.y = this.sandSurface.sampleHeight(this.controller.globalX, this.controller.globalZ);
+    this.contactShadow.update(this.controller);
     await nextFrame();
 
     report('Прогреваем анимацию и мягкие тени…', 0.90);
@@ -179,6 +182,7 @@ export class SiroccoGame {
       }
       this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
 
+      this.contactShadow.update(this.controller);
       this.camera.update(this.controller, dt);
       this.audio.update(this.controller.speed, this.controller.lastSlope);
       this.lastFps = this.engine.getFps();
@@ -201,6 +205,7 @@ export class SiroccoGame {
     window.removeEventListener('pagehide', this.onPageHide);
     this.input?.dispose();
     this.debug?.dispose();
+    this.contactShadow?.dispose();
     this.particles?.dispose();
     this.sandSurface?.dispose();
     this.sand?.clear();
