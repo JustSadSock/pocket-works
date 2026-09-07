@@ -1,331 +1,321 @@
+import '@babylonjs/loaders/glTF';
 import {
-  Bone, Color3, Matrix, MeshBuilder, PBRMaterial, Quaternion,
-  Skeleton, TransformNode, Vector3
+  Color3, MeshBuilder, PBRMaterial, Quaternion, SceneLoader, TransformNode, Vector3
 } from '@babylonjs/core';
-import { clamp } from './core.js';
+import { clamp, damp } from './core.js';
 
 const UP = new Vector3(0, 1, 0);
-const UPPER_LEG = 0.515;
-const LOWER_LEG = 0.505;
+const TARGET_HEIGHT = 1.80;
 
-function makeMaterial(scene, name, color, roughness = 0.9) {
-  const mat = new PBRMaterial(name, scene);
-  mat.albedoColor = color;
-  mat.metallic = 0;
-  mat.roughness = roughness;
-  return mat;
+function makeMaterial(scene, name, color, roughness = 0.94) {
+  const material = new PBRMaterial(name, scene);
+  material.albedoColor = color;
+  material.metallic = 0;
+  material.roughness = roughness;
+  return material;
 }
 
-function rotateXZ(x, z, yaw) {
-  const c = Math.cos(yaw), s = Math.sin(yaw);
-  return { x: x * c + z * s, z: -x * s + z * c };
-}
-
-function orientYAxis(node, start, end) {
-  const dir = end.subtract(start);
-  const len = dir.length();
-  if (len < 1e-5) return;
-  const d = dir.scale(1 / len);
+function orientYAxis(mesh, start, end) {
+  const direction = end.subtract(start);
+  const length = direction.length();
+  if (length < 1e-5) return;
+  const d = direction.scale(1 / length);
   const axis = Vector3.Cross(UP, d);
-  const axisLen = axis.length();
-  let q;
-  if (axisLen < 1e-5) q = d.y >= 0 ? Quaternion.Identity() : Quaternion.RotationAxis(Vector3.Right(), Math.PI);
-  else q = Quaternion.RotationAxis(axis.scale(1 / axisLen), Math.acos(clamp(Vector3.Dot(UP, d), -1, 1)));
-  node.position.copyFrom(start.add(end).scale(0.5));
-  node.rotationQuaternion = q;
-  node.scaling.set(1, len, 1);
+  const axisLength = axis.length();
+  mesh.position.copyFrom(start.add(end).scale(0.5));
+  mesh.scaling.set(1, length, 1);
+  if (axisLength < 1e-5) {
+    mesh.rotationQuaternion = d.y >= 0 ? Quaternion.Identity() : Quaternion.RotationAxis(Vector3.Right(), Math.PI);
+  } else {
+    mesh.rotationQuaternion = Quaternion.RotationAxis(axis.scale(1 / axisLength), Math.acos(clamp(Vector3.Dot(UP, d), -1, 1)));
+  }
 }
 
-function solveKnee(hip, ankle, forward, right, side) {
-  const delta = ankle.subtract(hip);
-  const rawDistance = Math.max(0.001, delta.length());
-  const distance = clamp(rawDistance, 0.18, UPPER_LEG + LOWER_LEG - 0.018);
-  const dir = delta.scale(1 / rawDistance);
-  const along = (UPPER_LEG * UPPER_LEG - LOWER_LEG * LOWER_LEG + distance * distance) / (2 * distance);
-  const bendHeight = Math.sqrt(Math.max(0, UPPER_LEG * UPPER_LEG - along * along));
-  let bend = forward.subtract(dir.scale(Vector3.Dot(forward, dir)));
-  if (bend.lengthSquared() < 1e-5) bend = right.scale(side * 0.08).add(new Vector3(0, 0, 1));
-  bend.normalize();
-  return hip.add(dir.scale(along)).add(bend.scale(bendHeight)).add(right.scale(side * 0.012));
+function chooseAnimation(groups, pattern, reject = null) {
+  return groups.find((group) => pattern.test(group.name) && (!reject || !reject.test(group.name))) || null;
+}
+
+function sideCandidates(skeleton, pattern) {
+  return skeleton?.bones
+    ?.filter((bone) => pattern.test(bone.name))
+    .map((bone) => ({ bone, node: bone.getTransformNode?.() }))
+    .filter((entry) => entry.node) || [];
+}
+
+function splitLeftRight(entries) {
+  if (!entries.length) return { left: null, right: null };
+  const explicitLeft = entries.find(({ bone }) => /left|(^|[_. -])l($|[_. -])/i.test(bone.name));
+  const explicitRight = entries.find(({ bone }) => /right|(^|[_. -])r($|[_. -])/i.test(bone.name));
+  if (explicitLeft || explicitRight) return { left: explicitLeft?.node || null, right: explicitRight?.node || null };
+  const sorted = [...entries].sort((a, b) => a.node.getAbsolutePosition().x - b.node.getAbsolutePosition().x);
+  return { left: sorted[0]?.node || null, right: sorted.at(-1)?.node || null };
 }
 
 export class HumanoidRig {
   constructor(scene, shadowCasters, surface) {
     this.scene = scene;
     this.surface = surface;
-    this.root = new TransformNode('body-root', scene);
-    this.skeleton = new Skeleton('walker-skeleton', 'walker-skeleton', scene);
-    this.bones = {};
-    this.nodes = {};
+    this.shadowCasters = shadowCasters;
+    this.root = new TransformNode('bedouin-body-root', scene);
     this.meshes = [];
+    this.garments = [];
+    this.materials = [];
+    this.animationGroups = [];
+    this.walkAnimation = null;
+    this.idleAnimation = null;
+    this.walkWeight = 0;
+    this.visualLift = 0;
+    this.baseModelY = 0;
     this.debugTargets = [];
     this.footState = {
-      left: this.makeFootState(-1, Math.PI),
-      right: this.makeFootState(1, 0)
+      left: { initialized: false, plant: new Vector3(), previousDistance: 1, previousVelocity: 0, cooldown: 0 },
+      right: { initialized: false, plant: new Vector3(), previousDistance: 1, previousVelocity: 0, cooldown: 0 }
     };
-    this.buildRig(shadowCasters);
   }
 
-  sampleHeight(x, z) { return this.surface?.sampleHeight?.(x, z) ?? 0; }
-  sampleNormal(x, z) { return this.surface?.sampleNormal?.(x, z) ?? { x: 0, y: 1, z: 0 }; }
+  async init() {
+    const imported = await SceneLoader.ImportMeshAsync('', './models/', 'human.glb', this.scene);
+    this.animationGroups = imported.animationGroups || [];
+    this.skeleton = imported.skeletons?.[0] || null;
+    this.modelRoot = imported.meshes.find((mesh) => mesh.name === '__root__') || imported.meshes[0];
+    if (!this.modelRoot) throw new Error('CC0 humanoid loaded without a root mesh');
 
-  makeFootState(side, offset) {
-    return { side, offset, swinging: false, initialized: false, plant: new Vector3(), swingStart: new Vector3(), swingEnd: new Vector3() };
+    this.modelRoot.parent = this.root;
+    for (const mesh of imported.meshes) {
+      mesh.isPickable = false;
+      mesh.receiveShadows = true;
+      if (mesh !== this.modelRoot && mesh.getTotalVertices?.() > 0) {
+        this.meshes.push(mesh);
+        this.shadowCasters?.push(mesh);
+      }
+    }
+
+    this.fitModelToHeight();
+    this.resolveBones();
+    this.buildBedouinGarments();
+    this.configureAnimations();
+    this.ready = true;
   }
 
-  bone(name, parent = null) {
-    const b = new Bone(name, this.skeleton, parent, Matrix.Identity());
-    this.bones[name] = b;
-    return b;
+  fitModelToHeight() {
+    this.root.computeWorldMatrix(true);
+    this.modelRoot.computeWorldMatrix(true);
+    let bounds = this.modelRoot.getHierarchyBoundingVectors(true);
+    const rawHeight = Math.max(0.001, bounds.max.y - bounds.min.y);
+    const scale = TARGET_HEIGHT / rawHeight;
+    this.modelRoot.scaling.scaleInPlace(scale);
+    this.modelRoot.computeWorldMatrix(true);
+    bounds = this.modelRoot.getHierarchyBoundingVectors(true);
+    this.baseModelY = -bounds.min.y;
+    this.modelRoot.position.y += this.baseModelY;
   }
 
-  linkedNode(name, bone, parent = null) {
-    const n = new TransformNode(name, this.scene);
-    if (parent) n.parent = parent;
-    bone.linkTransformNode(n);
-    this.nodes[name] = n;
-    return n;
+  resolveBones() {
+    this.feet = splitLeftRight(sideCandidates(this.skeleton, /foot|ankle/i));
+    this.hands = splitLeftRight(sideCandidates(this.skeleton, /hand|wrist/i));
+    this.elbows = splitLeftRight(sideCandidates(this.skeleton, /forearm|lowerarm|elbow/i));
+    this.shoulders = splitLeftRight(sideCandidates(this.skeleton, /upperarm|shoulder/i));
   }
 
-  addMesh(mesh, parent, material, shadowCasters) {
+  addGarment(mesh, material, parent = this.root) {
     mesh.parent = parent;
     mesh.material = material;
     mesh.isPickable = false;
     mesh.receiveShadows = true;
-    this.meshes.push(mesh);
-    shadowCasters?.push(mesh);
+    this.garments.push(mesh);
+    this.shadowCasters?.push(mesh);
     return mesh;
   }
 
-  buildRig(shadowCasters) {
-    const robe = makeMaterial(this.scene, 'bedouin-robe', new Color3(0.78, 0.72, 0.61), 0.97);
-    const robeShade = makeMaterial(this.scene, 'bedouin-robe-shadow', new Color3(0.60, 0.54, 0.45), 0.98);
-    const trousers = makeMaterial(this.scene, 'bedouin-trousers', new Color3(0.34, 0.31, 0.26), 0.96);
-    const wrap = makeMaterial(this.scene, 'bedouin-leg-wrap', new Color3(0.55, 0.47, 0.37), 0.98);
-    const leather = makeMaterial(this.scene, 'bedouin-leather', new Color3(0.14, 0.09, 0.055), 0.91);
-    const sash = makeMaterial(this.scene, 'bedouin-sash', new Color3(0.33, 0.095, 0.065), 0.94);
-    const skin = makeMaterial(this.scene, 'bedouin-skin', new Color3(0.48, 0.29, 0.18), 0.86);
-    this.materials = [robe, robeShade, trousers, wrap, leather, sash, skin];
+  buildBedouinGarments() {
+    const linen = makeMaterial(this.scene, 'bedouin-sunbleached-linen', new Color3(0.83, 0.78, 0.67), 0.99);
+    const linenShade = makeMaterial(this.scene, 'bedouin-linen-shadow', new Color3(0.66, 0.59, 0.49), 0.99);
+    const sash = makeMaterial(this.scene, 'bedouin-red-sash', new Color3(0.38, 0.075, 0.055), 0.96);
+    const leather = makeMaterial(this.scene, 'bedouin-leather', new Color3(0.16, 0.095, 0.05), 0.93);
+    this.materials.push(linen, linenShade, sash, leather);
 
-    const pelvisBone = this.bone('pelvis');
-    const spineBone = this.bone('spine', pelvisBone);
-    const headBone = this.bone('head', spineBone);
-    const shoulderLBone = this.bone('shoulderL', spineBone);
-    const shoulderRBone = this.bone('shoulderR', spineBone);
-    const armLBone = this.bone('armL', shoulderLBone);
-    const armRBone = this.bone('armR', shoulderRBone);
-    const legLBone = this.bone('legL', pelvisBone);
-    const kneeLBone = this.bone('kneeL', legLBone);
-    const footLBone = this.bone('footL', kneeLBone);
-    const legRBone = this.bone('legR', pelvisBone);
-    const kneeRBone = this.bone('kneeR', legRBone);
-    const footRBone = this.bone('footR', kneeRBone);
+    this.robeTorso = this.addGarment(MeshBuilder.CreateCylinder('bedouin-thobe-upper', {
+      height: 0.64, diameterTop: 0.43, diameterBottom: 0.50, tessellation: 20
+    }, this.scene), linen);
+    this.robeTorso.position.set(0, 1.18, -0.01);
 
-    const pelvis = this.linkedNode('pelvis', pelvisBone, this.root);
-    const spine = this.linkedNode('spine', spineBone, pelvis);
-    this.linkedNode('head', headBone, spine);
-    const shoulderL = this.linkedNode('shoulderL', shoulderLBone, spine);
-    const shoulderR = this.linkedNode('shoulderR', shoulderRBone, spine);
-    const armL = this.linkedNode('armL', armLBone, shoulderL);
-    const armR = this.linkedNode('armR', armRBone, shoulderR);
-    const legL = this.linkedNode('legL', legLBone);
-    const kneeL = this.linkedNode('kneeL', kneeLBone);
-    const footL = this.linkedNode('footL', footLBone);
-    const legR = this.linkedNode('legR', legRBone);
-    const kneeR = this.linkedNode('kneeR', kneeRBone);
-    const footR = this.linkedNode('footR', footRBone);
+    this.robeSkirt = this.addGarment(MeshBuilder.CreateCylinder('bedouin-thobe-lower', {
+      height: 0.78, diameterTop: 0.48, diameterBottom: 0.62, tessellation: 24
+    }, this.scene), linen);
+    this.robeSkirt.position.set(0, 0.60, -0.02);
 
-    pelvis.position.y = 0.99;
-    spine.position.y = 0.39;
-    shoulderL.position.set(-0.245, 0.25, 0.005);
-    shoulderR.position.set(0.245, 0.25, 0.005);
-    armL.position.set(0, -0.22, 0.01);
-    armR.position.set(0, -0.22, 0.01);
+    this.frontFold = this.addGarment(MeshBuilder.CreateBox('bedouin-thobe-front-fold', {
+      width: 0.25, height: 0.70, depth: 0.025
+    }, this.scene), linenShade);
+    this.frontFold.position.set(0, 0.62, 0.305);
 
-    // Lower thobe: kept well below the head camera so body awareness is visible
-    // when looking down without ever becoming the giant screen-filling torso blob.
-    const skirt = this.addMesh(MeshBuilder.CreateCylinder('thobe-skirt', {
-      height: 0.46, diameterTop: 0.35, diameterBottom: 0.46, tessellation: 20
-    }, this.scene), pelvis, robe, shadowCasters);
-    skirt.position.y = -0.22;
-    skirt.position.z = -0.015;
+    this.belt = this.addGarment(MeshBuilder.CreateTorus('bedouin-waist-sash', {
+      diameter: 0.49, thickness: 0.042, tessellation: 28
+    }, this.scene), sash);
+    this.belt.position.y = 0.94;
 
-    const belt = this.addMesh(MeshBuilder.CreateTorus('robe-belt', {
-      diameter: 0.355, thickness: 0.036, tessellation: 24
-    }, this.scene), pelvis, sash, shadowCasters);
-    belt.position.y = 0.015;
-    belt.rotation.x = Math.PI * 0.5;
+    this.scarfCollar = this.addGarment(MeshBuilder.CreateTorus('bedouin-keffiyeh-collar', {
+      diameter: 0.36, thickness: 0.055, tessellation: 24
+    }, this.scene), sash);
+    this.scarfCollar.position.set(0, 1.51, -0.015);
 
-    const frontPanel = this.addMesh(MeshBuilder.CreateBox('robe-front-panel', {
-      width: 0.28, height: 0.43, depth: 0.035
-    }, this.scene), pelvis, robeShade, shadowCasters);
-    frontPanel.position.set(0, -0.225, 0.205);
-    frontPanel.rotation.x = -0.035;
-
-    for (const [side, upperNode, lowerNode, footNode] of [
-      ['l', legL, kneeL, footL], ['r', legR, kneeR, footR]
-    ]) {
-      const upper = MeshBuilder.CreateCylinder(`thigh-${side}`, {
-        height: 1, diameterTop: 0.188, diameterBottom: 0.145, tessellation: 18
-      }, this.scene);
-      const lower = MeshBuilder.CreateCylinder(`shin-${side}`, {
-        height: 1, diameterTop: 0.138, diameterBottom: 0.105, tessellation: 18
-      }, this.scene);
-      const knee = MeshBuilder.CreateSphere(`knee-${side}`, { diameter: 0.145, segments: 12 }, this.scene);
-      const ankleWrap = MeshBuilder.CreateCylinder(`ankle-wrap-${side}`, { height: 0.13, diameter: 0.118, tessellation: 16 }, this.scene);
-      const foot = MeshBuilder.CreateCapsule(`desert-boot-${side}`, { radius: 0.072, height: 0.31, tessellation: 14 }, this.scene);
-
-      this.addMesh(upper, upperNode, trousers, shadowCasters);
-      this.addMesh(lower, lowerNode, trousers, shadowCasters);
-      this.addMesh(knee, lowerNode, trousers, shadowCasters);
-      knee.position.y = 0.5;
-      this.addMesh(ankleWrap, lowerNode, wrap, shadowCasters);
-      ankleWrap.position.y = -0.43;
-      this.addMesh(foot, footNode, leather, shadowCasters);
-      foot.rotation.x = Math.PI * 0.5;
-      foot.position.z = 0.065;
-      foot.scaling.y = 0.78;
+    for (const side of [-1, 1]) {
+      const tail = this.addGarment(MeshBuilder.CreateBox(`bedouin-keffiyeh-tail-${side}`, {
+        width: 0.13, height: 0.43, depth: 0.025
+      }, this.scene), side < 0 ? linen : sash);
+      tail.position.set(side * 0.11, 1.35, -0.19);
+      tail.rotation.z = side * 0.07;
     }
 
-    // Sleeves and hands stay close to the sides. They enter view naturally when
-    // looking down but never cross the camera like the previous full arm poles.
-    for (const [side, armNode] of [['l', armL], ['r', armR]]) {
-      const sleeve = this.addMesh(MeshBuilder.CreateCapsule(`sleeve-${side}`, {
-        radius: 0.068, height: 0.40, tessellation: 14
-      }, this.scene), armNode, robe, shadowCasters);
-      sleeve.position.y = -0.10;
-      const cuff = this.addMesh(MeshBuilder.CreateCylinder(`cuff-${side}`, {
-        height: 0.07, diameter: 0.125, tessellation: 14
-      }, this.scene), armNode, sash, shadowCasters);
-      cuff.position.y = -0.31;
-      const hand = this.addMesh(MeshBuilder.CreateCapsule(`hand-${side}`, {
-        radius: 0.052, height: 0.17, tessellation: 12
-      }, this.scene), armNode, skin, shadowCasters);
-      hand.position.y = -0.40;
+    this.sleeves = {
+      left: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-left', { height: 1, diameterTop: 0.14, diameterBottom: 0.11, tessellation: 16 }, this.scene), linen, null),
+      right: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-right', { height: 1, diameterTop: 0.14, diameterBottom: 0.11, tessellation: 16 }, this.scene), linen, null)
+    };
+    for (const sleeve of Object.values(this.sleeves)) sleeve.parent = null;
+
+    for (const side of [-1, 1]) {
+      const wrap = this.addGarment(MeshBuilder.CreateCylinder(`bedouin-calf-wrap-${side}`, {
+        height: 0.22, diameter: 0.13, tessellation: 14
+      }, this.scene), linenShade);
+      wrap.position.set(side * 0.105, 0.20, 0.01);
+      const boot = this.addGarment(MeshBuilder.CreateCapsule(`bedouin-boot-${side}`, {
+        radius: 0.072, height: 0.30, tessellation: 14
+      }, this.scene), leather);
+      boot.position.set(side * 0.105, 0.07, 0.08);
+      boot.rotation.x = Math.PI * 0.5;
     }
 
-    for (const s of [-1, 1]) {
-      const sphere = MeshBuilder.CreateSphere(`ik-${s}`, { diameter: 0.075, segments: 6 }, this.scene);
-      sphere.isVisible = false;
-      sphere.isPickable = false;
-      this.debugTargets.push(sphere);
+    for (const side of [-1, 1]) {
+      const debug = MeshBuilder.CreateSphere(`imported-foot-target-${side}`, { diameter: 0.06, segments: 6 }, this.scene);
+      debug.isVisible = false;
+      debug.isPickable = false;
+      this.debugTargets.push(debug);
     }
   }
 
-  shiftOrigin(dx, dz) {
-    for (const state of Object.values(this.footState)) {
-      state.plant.x -= dx; state.plant.z -= dz;
-      state.swingStart.x -= dx; state.swingStart.z -= dz;
-      state.swingEnd.x -= dx; state.swingEnd.z -= dz;
+  configureAnimations() {
+    for (const group of this.animationGroups) {
+      for (const targeted of group.targetedAnimations || []) {
+        targeted.animation.enableBlending = true;
+        targeted.animation.blendingSpeed = 0.09;
+      }
+    }
+    this.walkAnimation = chooseAnimation(this.animationGroups, /walk/i, /back|left|right|strafe/i)
+      || chooseAnimation(this.animationGroups, /run/i);
+    this.idleAnimation = chooseAnimation(this.animationGroups, /idle/i);
+    if (this.idleAnimation) {
+      this.idleAnimation.start(true, 1);
+      this.idleAnimation.setWeightForAllAnimatables(1);
+    }
+    if (this.walkAnimation) {
+      this.walkAnimation.start(true, 1);
+      this.walkAnimation.setWeightForAllAnimatables(this.idleAnimation ? 0 : 1);
     }
   }
 
-  update(controller) {
+  updateAnimations(controller, dt) {
+    const targetWalk = clamp((controller.speed - 0.08) / 0.65, 0, 1);
+    this.walkWeight = damp(this.walkWeight, targetWalk, 8.5, dt);
+    if (this.walkAnimation) {
+      this.walkAnimation.speedRatio = clamp(0.72 + controller.speed * 0.22, 0.72, 1.42);
+      this.walkAnimation.setWeightForAllAnimatables(this.idleAnimation ? this.walkWeight : 1);
+    }
+    if (this.idleAnimation) this.idleAnimation.setWeightForAllAnimatables(1 - this.walkWeight);
+  }
+
+  updateSleeves() {
+    for (const side of ['left', 'right']) {
+      const shoulder = this.shoulders?.[side];
+      const hand = this.hands?.[side] || this.elbows?.[side];
+      const sleeve = this.sleeves?.[side];
+      if (!shoulder || !hand || !sleeve) continue;
+      const a = shoulder.getAbsolutePosition();
+      const b = hand.getAbsolutePosition();
+      orientYAxis(sleeve, a, Vector3.Lerp(a, b, 0.78));
+    }
+  }
+
+  updateFoot(side, controller, dt) {
+    const state = this.footState[side];
+    const node = this.feet?.[side];
+    if (!node) return null;
+    const position = node.getAbsolutePosition();
+    const globalX = position.x + controller.worldOffsetX;
+    const globalZ = position.z + controller.worldOffsetZ;
+    const ground = this.surface.sampleHeight(globalX, globalZ);
+    const distance = position.y - ground;
+    const velocity = (distance - state.previousDistance) / Math.max(0.001, dt);
+    state.cooldown = Math.max(0, state.cooldown - dt);
+    const landed = state.initialized
+      && state.previousVelocity < -0.025
+      && velocity >= -0.005
+      && distance < 0.16
+      && state.cooldown <= 0
+      && controller.speed > 0.18;
+
+    state.initialized = true;
+    state.previousDistance = distance;
+    state.previousVelocity = velocity;
+    if (distance < 0.18) state.plant.set(position.x, ground + 0.018, position.z);
+    this.debugTargets[side === 'left' ? 0 : 1]?.position.copyFrom(state.plant);
+    if (!landed) return null;
+
+    state.cooldown = 0.24;
+    return {
+      side,
+      position: state.plant.clone(),
+      globalX,
+      globalZ,
+      normal: this.surface.sampleNormal(globalX, globalZ),
+      yaw: controller.bodyYaw
+    };
+  }
+
+  update(controller, dt = 1 / 60) {
+    if (!this.ready) return [];
+    const normal = this.surface.sampleNormal(controller.globalX, controller.globalZ);
+    const forwardX = Math.sin(controller.bodyYaw), forwardZ = Math.cos(controller.bodyYaw);
+    const rightX = Math.cos(controller.bodyYaw), rightZ = -Math.sin(controller.bodyYaw);
+    const forwardGrade = -(normal.x * forwardX + normal.z * forwardZ);
+    const sideGrade = -(normal.x * rightX + normal.z * rightZ);
+
     this.root.position.copyFrom(controller.localPosition);
     this.root.rotation.y = controller.bodyYaw;
+    this.root.rotation.x = clamp(forwardGrade * 0.22, -0.12, 0.16);
+    this.root.rotation.z = clamp(-sideGrade * 0.16, -0.09, 0.09);
+    this.updateAnimations(controller, dt);
+
+    const footPositions = [this.feet?.left, this.feet?.right].filter(Boolean).map((node) => node.getAbsolutePosition());
+    let requiredLift = 0;
+    for (const foot of footPositions) {
+      const gx = foot.x + controller.worldOffsetX, gz = foot.z + controller.worldOffsetZ;
+      requiredLift = Math.max(requiredLift, this.surface.sampleHeight(gx, gz) - foot.y + 0.012);
+    }
+    this.visualLift = damp(this.visualLift, clamp(requiredLift, 0, 0.16), 12, dt);
+    this.modelRoot.position.y = this.baseModelY + this.visualLift;
+
     const speedNorm = clamp(controller.speed / 3.25, 0, 1);
-    const slopeNorm = clamp(controller.lastSlope / 0.65, 0, 1);
-    const bob = Math.sin(controller.gait * 2) * 0.013 * speedNorm;
-    this.nodes.pelvis.position.y = 0.99 + bob - slopeNorm * 0.012;
-    this.nodes.spine.rotation.x = -controller.lastSlope * 0.11 * speedNorm;
+    this.robeSkirt.rotation.x = Math.sin(controller.gait) * 0.018 * speedNorm;
+    this.robeSkirt.rotation.z = Math.cos(controller.gait * 0.5) * 0.012 * speedNorm;
+    this.frontFold.position.z = 0.305 + Math.sin(controller.gait) * 0.018 * speedNorm;
+    this.updateSleeves();
 
-    const armSwing = Math.sin(controller.gait) * 0.28 * speedNorm;
-    this.nodes.armL.rotation.x = armSwing;
-    this.nodes.armR.rotation.x = -armSwing;
-    this.nodes.armL.rotation.z = -0.05;
-    this.nodes.armR.rotation.z = 0.05;
-
-    const forward = new Vector3(Math.sin(controller.bodyYaw), 0, Math.cos(controller.bodyYaw));
-    const right = new Vector3(Math.cos(controller.bodyYaw), 0, -Math.sin(controller.bodyYaw));
-    return [
-      this.updateLeg(this.footState.left, controller, forward, right),
-      this.updateLeg(this.footState.right, controller, forward, right)
-    ].filter(Boolean);
+    return [this.updateFoot('left', controller, dt), this.updateFoot('right', controller, dt)].filter(Boolean);
   }
 
-  updateLeg(state, controller, forward, right) {
-    const left = state.side < 0;
-    const sideName = left ? 'left' : 'right';
-    const upperNode = this.nodes[left ? 'legL' : 'legR'];
-    const lowerNode = this.nodes[left ? 'kneeL' : 'kneeR'];
-    const footNode = this.nodes[left ? 'footL' : 'footR'];
-    const lateral = rotateXZ(state.side * 0.145, 0.005, controller.bodyYaw);
-    const hip = controller.localPosition.add(new Vector3(lateral.x, 0.96, lateral.z));
+  shiftOrigin() {}
 
-    const phase = ((controller.gait + state.offset) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
-    const swinging = phase < 0.42 && controller.speed > 0.13;
-    if (!state.initialized) {
-      state.initialized = true;
-      state.plant.copyFrom(this.makeFootCandidate(controller, state.side, -0.04));
-      state.swingStart.copyFrom(state.plant);
-      state.swingEnd.copyFrom(state.plant);
-      state.swinging = swinging;
-    }
-
-    let landing = null;
-    if (swinging && !state.swinging) {
-      state.swingStart.copyFrom(state.plant);
-      const stride = 0.19 + clamp(controller.speed / 3.25, 0, 1) * 0.23;
-      state.swingEnd.copyFrom(this.makeFootCandidate(controller, state.side, stride));
-    }
-    if (!swinging && state.swinging) {
-      state.plant.copyFrom(state.swingEnd);
-      const gx = state.plant.x + controller.worldOffsetX;
-      const gz = state.plant.z + controller.worldOffsetZ;
-      const n = this.sampleNormal(gx, gz);
-      state.plant.y = this.sampleHeight(gx, gz) + 0.022;
-      landing = { side: sideName, position: state.plant.clone(), globalX: gx, globalZ: gz, normal: n, yaw: controller.bodyYaw };
-    }
-    state.swinging = swinging;
-
-    let ankle;
-    if (swinging) {
-      const t = clamp(phase / 0.42, 0, 1);
-      const ease = t * t * (3 - 2 * t);
-      ankle = Vector3.Lerp(state.swingStart, state.swingEnd, ease);
-      ankle.y += Math.sin(t * Math.PI) * (0.085 + controller.lastSlope * 0.04);
-    } else {
-      ankle = state.plant.clone();
-      const gx = ankle.x + controller.worldOffsetX;
-      const gz = ankle.z + controller.worldOffsetZ;
-      ankle.y = this.sampleHeight(gx, gz) + 0.022;
-      state.plant.y = ankle.y;
-    }
-
-    const knee = solveKnee(hip, ankle.add(new Vector3(0, 0.04, 0)), forward, right, state.side);
-    orientYAxis(upperNode, hip, knee);
-    orientYAxis(lowerNode, knee, ankle.add(new Vector3(0, 0.045, 0)));
-    footNode.position.copyFrom(ankle);
-
-    const gx = ankle.x + controller.worldOffsetX;
-    const gz = ankle.z + controller.worldOffsetZ;
-    const n = this.sampleNormal(gx, gz);
-    const normalV = new Vector3(n.x, n.y, n.z);
-    let tangentForward = forward.subtract(normalV.scale(Vector3.Dot(forward, normalV)));
-    if (tangentForward.lengthSquared() < 1e-5) tangentForward = forward.clone();
-    tangentForward.normalize();
-    footNode.rotationQuaternion = Quaternion.FromLookDirectionLH(tangentForward, normalV);
-    this.debugTargets[left ? 0 : 1].position.copyFrom(ankle);
-    return landing;
+  setDebugTargets(enabled) {
+    for (const target of this.debugTargets) target.isVisible = enabled;
   }
-
-  makeFootCandidate(controller, side, forwardOffset) {
-    const sideVec = rotateXZ(side * 0.145, forwardOffset, controller.bodyYaw);
-    const x = controller.localPosition.x + sideVec.x;
-    const z = controller.localPosition.z + sideVec.z;
-    const gx = x + controller.worldOffsetX;
-    const gz = z + controller.worldOffsetZ;
-    return new Vector3(x, this.sampleHeight(gx, gz) + 0.022, z);
-  }
-
-  setDebugTargets(enabled) { for (const sphere of this.debugTargets) sphere.isVisible = enabled; }
 
   dispose() {
+    for (const group of this.animationGroups) group.dispose();
+    for (const mesh of this.garments) mesh.dispose();
     for (const mesh of this.meshes) mesh.dispose();
-    for (const sphere of this.debugTargets) sphere.dispose();
-    for (const node of Object.values(this.nodes)) node.dispose();
+    for (const debug of this.debugTargets) debug.dispose();
     for (const material of this.materials) material.dispose();
-    this.skeleton.dispose();
+    this.modelRoot?.dispose();
     this.root.dispose();
   }
 }
