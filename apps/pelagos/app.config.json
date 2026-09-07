@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "pelagos",
+  "name": "PELAGOS",
+  "shortName": "PELAGOS",
+  "description": "Премиальная 3D-игра о парусном корабле в открытом море: физические волны, ветер, плавучесть, гребля, погода и портретное управление для iPhone.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-07",
+  "releaseDateTime": "2026-09-07T14:45:00Z",
+  "changelog": [
+    "Добавлено единое физическое поле волн для рендера и восьмиточечной плавучести.",
+    "Реализованы инерция корпуса, руль, парусная полярная диаграмма, гребля и динамический ветер.",
+    "Добавлены портретная chase-камера, адаптивное качество, погода, время суток и процедурный океан.",
+    "Игра интегрирована в Pocket Works Enhanced runtime с офлайн-режимом, persistence и Safari-safe touch input."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#5fb8c8",
+  "backgroundColor": "#081719",
+  "themeColor": "#081719",
+  "orientation": "portrait",
+  "cacheName": "pelagos-v1.0.0",
+  "storageNamespace": "pocket-works:pelagos",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "ocean", "sailing", "portrait", "Safari", "audio", "physics"],
+  "order": 74
+}
