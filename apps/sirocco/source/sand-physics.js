@@ -1,12 +1,12 @@
 import { clamp } from './core.js';
 
-const DEFAULT_CELL = 0.16;
+const DEFAULT_CELL = 0.12;
 
 export class SandPhysics {
   constructor(world, options = {}) {
     this.world = world;
     this.cellSize = options.cellSize ?? DEFAULT_CELL;
-    this.maxCells = options.maxCells ?? 5200;
+    this.maxCells = options.maxCells ?? 6200;
     this.keepRadius = options.keepRadius ?? 58;
     this.cells = new Map();
     this.dirty = null;
@@ -16,9 +16,9 @@ export class SandPhysics {
 
   setQuality(preset) {
     if (!preset) return;
-    if (preset.id === 'high') { this.maxCells = 5200; this.keepRadius = 58; }
-    else if (preset.id === 'medium') { this.maxCells = 3600; this.keepRadius = 46; }
-    else { this.maxCells = 2200; this.keepRadius = 34; }
+    if (preset.id === 'high') { this.maxCells = 6200; this.keepRadius = 58; }
+    else if (preset.id === 'medium') { this.maxCells = 4400; this.keepRadius = 46; }
+    else { this.maxCells = 2800; this.keepRadius = 34; }
   }
 
   key(ix, iz) { return `${ix},${iz}`; }
@@ -26,8 +26,8 @@ export class SandPhysics {
 
   setCell(ix, iz, h) {
     const key = this.key(ix, iz);
-    const value = clamp(h, -0.085, 0.055);
-    if (Math.abs(value) < 0.00035) { this.cells.delete(key); return; }
+    const value = clamp(h, -0.105, 0.070);
+    if (Math.abs(value) < 0.00028) { this.cells.delete(key); return; }
     this.cells.set(key, { ix, iz, h: value, touched: performance.now() });
     const x = ix * this.cellSize, z = iz * this.cellSize;
     this.markDirty(x - this.cellSize, z - this.cellSize, x + this.cellSize, z + this.cellSize);
@@ -61,10 +61,12 @@ export class SandPhysics {
   stampFoot(landing, controller) {
     const cx = landing.globalX, cz = landing.globalZ, yaw = landing.yaw;
     const c = Math.cos(yaw), s = Math.sin(yaw);
-    const speed = clamp(controller.speed / 3.25, 0, 1);
+    const speed = clamp(controller.speed / 3.0, 0, 1);
     const slope = clamp(controller.lastSlope / 0.65, 0, 1);
-    const depth = 0.028 + speed * 0.012 + slope * 0.009;
-    const halfW = 0.13, halfL = 0.255, radius = 0.42;
+    // Loose dry sand compresses several centimetres under an adult foot. The
+    // previous 2–3 cm depression was visually too subtle at phone scale.
+    const depth = 0.040 + speed * 0.018 + slope * 0.013;
+    const halfW = 0.125, halfL = 0.245, radius = 0.40;
     const minIx = Math.floor((cx - radius) / this.cellSize), maxIx = Math.ceil((cx + radius) / this.cellSize);
     const minIz = Math.floor((cz - radius) / this.cellSize), maxIz = Math.ceil((cz + radius) / this.cellSize);
 
@@ -76,24 +78,24 @@ export class SandPhysics {
         const r = Math.hypot(localX / halfW, localZ / halfL);
         let delta = 0;
         if (r < 1) {
-          const bowl = Math.pow(1 - r, 1.35);
-          const heelToe = 0.82 + 0.18 * Math.cos(localZ / halfL * Math.PI);
+          const bowl = Math.pow(1 - r, 1.22);
+          const heelToe = 0.80 + 0.20 * Math.cos(localZ / halfL * Math.PI);
           delta -= depth * bowl * heelToe;
-        } else if (r < 1.55) {
-          const ring = 1 - Math.abs(r - 1.22) / 0.33;
-          delta += Math.max(0, ring) * depth * 0.30;
+        } else if (r < 1.62) {
+          const ring = 1 - Math.abs(r - 1.24) / 0.38;
+          delta += Math.max(0, ring) * depth * 0.38;
         }
-        if (Math.abs(delta) > 0.0001) this.addCell(ix, iz, delta);
+        if (Math.abs(delta) > 0.00008) this.addCell(ix, iz, delta);
       }
     }
 
     const down = this.world?.downhill?.(cx, cz) ?? { x: 0, z: 0 };
-    const push = 0.18 + slope * 0.30;
-    const px = cx + Math.sin(yaw) * 0.18 + down.x * push;
-    const pz = cz + Math.cos(yaw) * 0.18 + down.z * push;
-    this.depositBlob(px, pz, 0.24, depth * (0.22 + slope * 0.2));
-    if (slope > 0.45 || controller.sliding > 0.08) this.carveSlip(cx, cz, down, 0.45 + slope * 0.65, depth * 0.65);
-    this.relaxArea(cx, cz, 0.72, 3);
+    const push = 0.18 + slope * 0.34;
+    const px = cx + Math.sin(yaw) * 0.19 + down.x * push;
+    const pz = cz + Math.cos(yaw) * 0.19 + down.z * push;
+    this.depositBlob(px, pz, 0.25, depth * (0.28 + slope * 0.22));
+    if (slope > 0.38 || controller.sliding > 0.05) this.carveSlip(cx, cz, down, 0.48 + slope * 0.72, depth * 0.78);
+    this.relaxArea(cx, cz, 0.72, 2);
     this.totalImpacts += 1;
   }
 
@@ -104,19 +106,19 @@ export class SandPhysics {
       for (let ix = minIx; ix <= maxIx; ix += 1) {
         const dx = ix * this.cellSize - cx, dz = iz * this.cellSize - cz;
         const r = Math.hypot(dx, dz) / radius;
-        if (r < 1) this.addCell(ix, iz, amount * Math.pow(1 - r, 1.8));
+        if (r < 1) this.addCell(ix, iz, amount * Math.pow(1 - r, 1.65));
       }
     }
   }
 
   carveSlip(cx, cz, downhill, length, depth) {
-    const steps = Math.max(2, Math.ceil(length / (this.cellSize * 0.8)));
+    const steps = Math.max(2, Math.ceil(length / (this.cellSize * 0.75)));
     for (let i = 0; i <= steps; i += 1) {
       const t = i / steps;
       const x = cx + downhill.x * length * t, z = cz + downhill.z * length * t;
       const amount = depth * (1 - t * 0.65);
-      this.depositBlob(x, z, 0.16 + t * 0.08, -amount * 0.44);
-      this.depositBlob(x + downhill.x * 0.11, z + downhill.z * 0.11, 0.18, amount * 0.20);
+      this.depositBlob(x, z, 0.15 + t * 0.08, -amount * 0.48);
+      this.depositBlob(x + downhill.x * 0.11, z + downhill.z * 0.11, 0.18, amount * 0.24);
     }
   }
 
@@ -130,7 +132,7 @@ export class SandPhysics {
           const h = this.getCell(ix, iz);
           if (Math.abs(h) < 0.0002) continue;
           const average = (this.getCell(ix - 1, iz) + this.getCell(ix + 1, iz) + this.getCell(ix, iz - 1) + this.getCell(ix, iz + 1)) * 0.25;
-          const diffuse = (average - h) * 0.055;
+          const diffuse = (average - h) * 0.045;
           if (Math.abs(diffuse) > 0.00003) changes.push([ix, iz, diffuse]);
         }
       }
