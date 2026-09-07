@@ -6,7 +6,7 @@ import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
 const version = '1.0.0';
-const namespace = 'pocket-works:pelagos';
+const STORAGE_NAMESPACE = 'pocket-works:pelagos';
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
@@ -29,7 +29,7 @@ createWorkshopMode({
   appName,
   version,
   cachePrefix: 'pelagos-',
-  storageNamespace: namespace,
+  storageNamespace: STORAGE_NAMESPACE,
   onReset: () => game.resetAll()
 });
 
