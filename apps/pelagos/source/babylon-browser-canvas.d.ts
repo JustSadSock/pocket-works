@@ -4,5 +4,6 @@
 import '@babylonjs/core/Engines/ICanvas.js';
 
 declare module '@babylonjs/core/Engines/ICanvas.js' {
+  interface ICanvas extends HTMLCanvasElement {}
   interface ICanvasRenderingContext extends CanvasRenderingContext2D {}
 }
