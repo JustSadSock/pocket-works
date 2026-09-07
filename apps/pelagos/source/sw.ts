@@ -6,6 +6,7 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'pelagos-';
+const CACHE_NAME = 'pelagos-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
@@ -38,7 +39,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && !key.includes(`v${APP_VERSION}`))
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && !key.includes(`v${APP_VERSION}`))
           .map((key) => caches.delete(key))
       ))
       .then(() => clientsClaim())
