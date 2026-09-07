@@ -87,7 +87,8 @@ export class DesertWorld {
     this.offsetZ = 0;
     this.farMesh = new Mesh('far-desert', scene);
     this.farMesh.material = materials.far;
-    this.farMesh.receiveShadows = true;
+    this.farMesh.receiveShadows = false;
+    this.farMesh.isPickable = false;
     this.farCenter = { cx: Number.NaN, cz: Number.NaN };
   }
 
@@ -125,8 +126,8 @@ export class DesertWorld {
 
   positionFar() {
     if (!Number.isFinite(this.farCenter.cx)) return;
-    this.farMesh.position.x = this.farCenter.cx * CHUNK_SIZE - this.offsetX;
-    this.farMesh.position.z = this.farCenter.cz * CHUNK_SIZE - this.offsetZ;
+    this.farMesh.position.x = (this.farCenter.cx + 0.5) * CHUNK_SIZE - this.offsetX;
+    this.farMesh.position.z = (this.farCenter.cz + 0.5) * CHUNK_SIZE - this.offsetZ;
   }
 
   acquire(cx, cz) {
@@ -178,13 +179,15 @@ export class DesertWorld {
     this.farCenter = { cx, cz };
     const size = this.quality.farSize;
     const segments = this.quality.farSegments;
-    const centerGX = cx * CHUNK_SIZE;
-    const centerGZ = cz * CHUNK_SIZE;
+    const centerGX = (cx + 0.5) * CHUNK_SIZE;
+    const centerGZ = (cz + 0.5) * CHUNK_SIZE;
+    const nearHoleHalfExtent = this.quality.radius * CHUNK_SIZE;
     const positions = [];
     const normals = [];
     const uvs = [];
     const colors = [];
     const indices = [];
+
     for (let iz = 0; iz <= segments; iz += 1) {
       const vz = iz / segments;
       for (let ix = 0; ix <= segments; ix += 1) {
@@ -193,7 +196,7 @@ export class DesertWorld {
         const lz = (vz - 0.5) * size;
         const gx = centerGX + lx;
         const gz = centerGZ + lz;
-        const y = terrainHeight(gx, gz) - 0.1;
+        const y = terrainHeight(gx, gz) - 0.22;
         const n = terrainNormal(gx, gz, 1.4);
         positions.push(lx, y, lz);
         normals.push(n.x, n.y, n.z);
@@ -202,13 +205,21 @@ export class DesertWorld {
         colors.push(v, v * 0.99, v * 0.96, 1);
       }
     }
+
     const row = segments + 1;
     for (let z = 0; z < segments; z += 1) {
       for (let x = 0; x < segments; x += 1) {
-        const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
+        const midX = (((x + 0.5) / segments) - 0.5) * size;
+        const midZ = (((z + 0.5) / segments) - 0.5) * size;
+        if (Math.abs(midX) < nearHoleHalfExtent && Math.abs(midZ) < nearHoleHalfExtent) continue;
+        const a = z * row + x;
+        const b = a + 1;
+        const d = a + row;
+        const e = d + 1;
         indices.push(a, d, b, b, d, e);
       }
     }
+
     applyData(this.farMesh, { positions, normals, uvs, colors, indices });
     this.positionFar();
   }
