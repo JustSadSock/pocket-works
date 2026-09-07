@@ -43,7 +43,7 @@ function makeFootprintTemplate(scene) {
       const b = a + 1;
       const d = a + row;
       const e = d + 1;
-      indices.push(a, d, b, b, d, e);
+      indices.push(b, e, d, a, b, d);
     }
   }
   VertexData.ComputeNormals(positions, indices, normals);
