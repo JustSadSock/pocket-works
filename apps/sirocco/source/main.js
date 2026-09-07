@@ -37,6 +37,7 @@ async function boot() {
   try {
     updateOrientation();
     await game.init(report);
+    game.setPaused(true);
     qualitySelect.value = game.quality.mode;
     sensitivity.value = String(game.input.sensitivity);
     sound.checked = game.audio.enabled;
@@ -51,11 +52,12 @@ async function boot() {
   }
 }
 
-enterButton.addEventListener('pointerdown', async (event) => {
+enterButton.addEventListener('pointerdown', (event) => {
   event.preventDefault();
-  await game.audio.ensure();
+  game.setPaused(false);
   enter.classList.add('done');
-  setTimeout(() => { enter.hidden = true; }, 300);
+  setTimeout(() => { enter.hidden = true; }, 220);
+  void game.audio.ensure().catch((error) => console.warn('[SIROCCO] Audio unlock failed; continuing silently.', error));
 }, { once: true });
 startExitButton.addEventListener('click', exitToLauncher);
 menuButton.addEventListener('click', openMenu);
