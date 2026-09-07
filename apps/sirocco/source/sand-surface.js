@@ -8,16 +8,12 @@ export class LocalSandSurface {
     this.world = world;
     this.sand = sand;
     this.material = material;
-    this.mesh = new Mesh('local-physical-sand', scene);
+    this.mesh = new Mesh('local-physical-sand-replacement', scene);
     this.mesh.material = material;
-    // This mesh is not a second terrain layer anymore. It only contains cells
-    // around actual deformation, so it must not create its own shadow island.
     this.mesh.receiveShadows = false;
     this.mesh.isPickable = false;
     this.centerX = Number.NaN;
     this.centerZ = Number.NaN;
-    this.localCenterX = 0;
-    this.localCenterZ = 0;
     this.lastBuildX = Number.NaN;
     this.lastBuildZ = Number.NaN;
     this.dirty = true;
@@ -25,9 +21,11 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    this.radius = preset.id === 'high' ? 5.6 : preset.id === 'medium' ? 5.0 : 4.2;
-    this.segments = preset.id === 'high' ? 50 : preset.id === 'medium' ? 42 : 32;
-    this.rebuildDistance = preset.id === 'high' ? 0.52 : preset.id === 'medium' ? 0.68 : 0.85;
+    this.radius = preset.id === 'high' ? 5.4 : preset.id === 'medium' ? 4.8 : 4.0;
+    this.segments = preset.id === 'high' ? 96 : preset.id === 'medium' ? 72 : 52;
+    // Snap the replacement patch in world space. The player can move freely
+    // inside it while the expensive coarse-terrain hole only updates every ~1 m.
+    this.snapStep = preset.id === 'high' ? 0.9 : preset.id === 'medium' ? 1.1 : 1.35;
     this.dirty = true;
   }
 
@@ -35,11 +33,11 @@ export class LocalSandSurface {
 
   sampleHeight(x, z) {
     const base = this.world.sampleBaseHeight(x, z);
-    return base + clamp(this.sand.sampleOffset(x, z), -0.065, 0.045);
+    return base + clamp(this.sand.sampleOffset(x, z), -0.095, 0.065);
   }
 
   sampleNormal(x, z) {
-    const step = 0.09;
+    const step = 0.075;
     const hx0 = this.sampleHeight(x - step, z), hx1 = this.sampleHeight(x + step, z);
     const hz0 = this.sampleHeight(x, z - step), hz1 = this.sampleHeight(x, z + step);
     let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
@@ -55,74 +53,66 @@ export class LocalSandSurface {
   }
 
   update(controller, force = false) {
-    this.centerX = controller.globalX;
-    this.centerZ = controller.globalZ;
-    this.localCenterX = controller.localPosition.x;
-    this.localCenterZ = controller.localPosition.z;
-    const moved = !Number.isFinite(this.lastBuildX) || Math.hypot(this.centerX - this.lastBuildX, this.centerZ - this.lastBuildZ) >= this.rebuildDistance;
-    if (!force && !this.dirty && !moved) return false;
+    const snappedX = Math.round(controller.globalX / this.snapStep) * this.snapStep;
+    const snappedZ = Math.round(controller.globalZ / this.snapStep) * this.snapStep;
+    const moved = !Number.isFinite(this.centerX) || snappedX !== this.centerX || snappedZ !== this.centerZ;
+    if (moved) {
+      this.centerX = snappedX;
+      this.centerZ = snappedZ;
+      // The high-resolution sand patch is now a true replacement, not an
+      // overlay. Coarse triangles beneath its safe interior are removed.
+      this.world.setLocalReplacement(this.centerX, this.centerZ, this.radius);
+      this.dirty = true;
+    }
+    if (!force && !this.dirty) return false;
     this.rebuild();
     return true;
-  }
-
-  deformationNear(x, z, step) {
-    let strongest = 0;
-    for (let oz = -1; oz <= 1; oz += 1) {
-      for (let ox = -1; ox <= 1; ox += 1) {
-        strongest = Math.max(strongest, Math.abs(this.sand.sampleOffset(x + ox * step, z + oz * step)));
-      }
-    }
-    return strongest;
   }
 
   rebuild() {
     const segments = this.segments;
     const diameter = this.radius * 2;
     const step = diameter / segments;
-    const positions = [];
-    const normals = [];
-    const uvs = [];
+    const positions = new Array((segments + 1) * (segments + 1) * 3);
+    const normals = new Array((segments + 1) * (segments + 1) * 3).fill(0);
+    const uvs = new Array((segments + 1) * (segments + 1) * 2);
     const indices = [];
-    const colors = [];
+    let p = 0, uv = 0;
 
-    // Build independent quads only where sand has actually moved. The previous
-    // full disc duplicated the terrain under the player and therefore produced
-    // the persistent dark circular region the user was seeing.
-    for (let iz = 0; iz < segments; iz += 1) {
-      const z0 = -this.radius + iz * step;
-      const z1 = z0 + step;
-      for (let ix = 0; ix < segments; ix += 1) {
-        const x0 = -this.radius + ix * step;
-        const x1 = x0 + step;
-        const cx = this.centerX + (x0 + x1) * 0.5;
-        const cz = this.centerZ + (z0 + z1) * 0.5;
-        if (Math.hypot((x0 + x1) * 0.5, (z0 + z1) * 0.5) > this.radius) continue;
-        if (this.deformationNear(cx, cz, step) < 0.00045) continue;
-
-        const local = [[x0, z0], [x1, z0], [x0, z1], [x1, z1]];
-        const baseIndex = positions.length / 3;
-        for (const [lx, lz] of local) {
-          const gx = this.centerX + lx;
-          const gz = this.centerZ + lz;
-          const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.065, 0.045);
-          // A tiny local lift avoids z-fighting against the coarse terrain, but
-          // unlike the old 5 cm disc this exists only around moved sand.
-          const y = this.world.sampleBaseHeight(gx, gz) + deformation + 0.0015;
-          positions.push(lx, y, lz);
-          normals.push(0, 1, 0);
-          uvs.push(gx * 0.055, gz * 0.055);
-          colors.push(1, 1, 1, 1);
-        }
-        appendBabylonGroundCell(indices, baseIndex, baseIndex + 1, baseIndex + 2, baseIndex + 3);
+    for (let iz = 0; iz <= segments; iz += 1) {
+      const lz = -this.radius + iz * step;
+      for (let ix = 0; ix <= segments; ix += 1) {
+        const lx = -this.radius + ix * step;
+        const gx = this.centerX + lx;
+        const gz = this.centerZ + lz;
+        const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.095, 0.065);
+        const edge = Math.max(Math.abs(lx), Math.abs(lz)) / this.radius;
+        // Only the overlap ring gets a sub-millimetre depth separation. The
+        // interior is the actual terrain, so negative footprints remain visible.
+        const edgeLift = edge > 0.82 ? ((edge - 0.82) / 0.18) * 0.0008 : 0;
+        positions[p] = lx;
+        positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation + edgeLift;
+        positions[p + 2] = lz;
+        p += 3;
+        uvs[uv] = gx * 0.055;
+        uvs[uv + 1] = gz * 0.055;
+        uv += 2;
       }
     }
 
-    if (positions.length > 0) VertexData.ComputeNormals(positions, indices, normals);
+    const row = segments + 1;
+    for (let z = 0; z < segments; z += 1) {
+      for (let x = 0; x < segments; x += 1) {
+        const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
+        appendBabylonGroundCell(indices, a, b, d, e);
+      }
+    }
+
+    VertexData.ComputeNormals(positions, indices, normals);
     const vd = new VertexData();
     vd.positions = positions;
     vd.normals = normals;
     vd.uvs = uvs;
-    vd.colors = colors;
     vd.indices = indices;
     vd.applyToMesh(this.mesh, true);
     this.mesh.position.x = this.centerX - this.world.offsetX;
