@@ -195,3 +195,29 @@ An app is done only when:
 - the PR changes only `apps/<slug>/**` unless explicitly labeled as platform work.
 
 When forced to choose, ship one excellent mechanic rather than a broad pile of shallow features.
+
+## 13. 3D assets, animation and audio production
+
+Pocket Works provides a shared Blender Asset Forge documented in `docs/ASSET-FORGE.md`. Use it when authored asset quality materially improves the product.
+
+### 3D asset rule
+
+- Do not default to Babylon/Three runtime primitives for a visually important object merely because the task is being performed by a repository agent.
+- For important props, architecture, weapons, vehicles, stylized creatures or other authored geometry, prefer app-local Blender Python under `apps/<slug>/asset-forge/` when it can produce a meaningfully better result.
+- Keep the forge manifest, Blender source and generated outputs inside the owning app so normal app PR isolation remains intact.
+- Runtime primitives remain appropriate for invisible collision, debug geometry, particles, simple terrain cells and deliberately minimal/stylized objects.
+- Prefer deterministic procedural modeling, reusable source assets with compatible licenses, or a combination. Record third-party asset provenance when applicable.
+
+### Animation rule
+
+- When a 3D object benefits from authored animation, prefer a real armature and readable named animation actions in the exported GLB.
+- Use Blender actions for authored motion such as `Idle`, `Walk`, `Run`, `Attack`, `Hit` and `Death`; use runtime Babylon logic for blending, IK, foot planting, look/aim targets, springs, inertia and gameplay-dependent contact response.
+- Do not fake articulated characters as unrelated meshes when a small skeleton is the cleaner production solution.
+- Validate animated GLBs by re-importing them through Asset Forge with `requireArmature` / `requireAnimation` where appropriate.
+
+### Audio rule
+
+- Avoid replaying one identical transient for frequent events such as footsteps, impacts, weapon swings or UI feedback.
+- Prefer procedural Web Audio/Tone layers for continuous/physical sounds and controlled randomization of pitch, gain, filtering, timing and layer selection for repeated events.
+- Use small app-local variation banks when a sampled sound is more convincing than synthesis.
+- Do not add a paid external audio-generation dependency unless the requested sound genuinely cannot be produced well with the existing browser/audio toolchain.
