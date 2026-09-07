@@ -1,5 +1,4 @@
 import { MeshBuilder, Vector3 } from '@babylonjs/core';
-import { terrainHeight, terrainNormal } from './terrain.js';
 
 export class DebugPanel {
   constructor(scene, engine, deps) {
@@ -22,7 +21,18 @@ export class DebugPanel {
     this.panel.querySelector('[data-debug="wireframe"]').addEventListener('change', (e) => this.deps.materials.setWireframe(e.target.checked));
     this.panel.querySelector('[data-debug="chunks"]').addEventListener('change', (e) => this.deps.world.setDebugBoundaries(e.target.checked));
     this.panel.querySelector('[data-debug="ik"]').addEventListener('change', (e) => this.deps.rig.setDebugTargets(e.target.checked));
-    this.panel.querySelector('[data-debug="footprints"]').addEventListener('change', (e) => this.deps.footprints.setVisible(e.target.checked));
+    this.panel.querySelector('[data-debug="footprints"]').addEventListener('change', (e) => {
+      if (!e.target.checked) {
+        const cells = [...this.deps.sand.cells.values()];
+        if (cells.length) {
+          const xs = cells.map((cell) => cell.ix * this.deps.sand.cellSize);
+          const zs = cells.map((cell) => cell.iz * this.deps.sand.cellSize);
+          const bounds = { minX: Math.min(...xs) - 1, maxX: Math.max(...xs) + 1, minZ: Math.min(...zs) - 1, maxZ: Math.max(...zs) + 1 };
+          this.deps.sand.clear();
+          this.deps.world.refreshDeformation(bounds);
+        }
+      }
+    });
     this.panel.querySelector('[data-debug="lod"]').addEventListener('change', (e) => this.deps.world.setDebugLod(e.target.checked));
     this.panel.querySelector('[data-debug="normals"]').addEventListener('change', (e) => { this.showNormals = e.target.checked; });
     this.panel.querySelector('[data-debug="rays"]').addEventListener('change', (e) => { this.showRay = e.target.checked; });
@@ -37,9 +47,9 @@ export class DebugPanel {
     const stats = [
       `FPS ${this.engine.getFps().toFixed(0)} · ${(1000 / Math.max(1, this.engine.getFps())).toFixed(1)} ms`,
       `draw ${drawCalls} · tris ${Math.round(this.scene.getActiveIndices() / 3).toLocaleString()}`,
-      `chunks ${this.deps.world.activeChunkCount} · footprints ${this.deps.footprints.count}`,
-      `sand field geometric/SPS · particles ${quality.particles}`,
-      `shadow ${quality.shadowSize}px · ${quality.label}`,
+      `chunks ${this.deps.world.activeChunkCount} · sand cells ${this.deps.sand.activeCellCount}`,
+      `physical impacts ${this.deps.sand.totalImpacts} · particles ${quality.particles}`,
+      `character shadow ${quality.id === 'low' ? 512 : 1024}px · ${quality.label}`,
       `world ${controller.globalX.toFixed(1)}, ${controller.globalZ.toFixed(1)} · slope ${(controller.lastSlope * 57.2958).toFixed(1)}°`
     ];
     this.stats.textContent = stats.join('\n');
@@ -58,8 +68,8 @@ export class DebugPanel {
         const lz = controller.localPosition.z + z * 1.25;
         const gx = lx + controller.worldOffsetX;
         const gz = lz + controller.worldOffsetZ;
-        const y = terrainHeight(gx, gz) + 0.08;
-        const n = terrainNormal(gx, gz);
+        const y = this.deps.world.sampleHeight(gx, gz) + 0.08;
+        const n = this.deps.world.sampleNormal(gx, gz);
         lines.push([new Vector3(lx, y, lz), new Vector3(lx + n.x * 0.55, y + n.y * 0.55, lz + n.z * 0.55)]);
       }
     }
