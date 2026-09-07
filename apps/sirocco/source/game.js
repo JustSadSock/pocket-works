@@ -13,10 +13,9 @@ import { MobileInput } from './input.js';
 import { AdaptiveQuality } from './quality.js';
 import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
-import { clamp, damp } from './core.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
-const SESSION_SCHEMA = 4;
+const SESSION_SCHEMA = 5;
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -29,8 +28,6 @@ export class SiroccoGame {
     this.orientationBlocked = false;
     this.lastFps = 60;
     this.saveClock = 0;
-    this.pelvisRoll = 0;
-    this.pelvisLift = 0;
   }
 
   async init(report = () => {}) {
@@ -59,15 +56,19 @@ export class SiroccoGame {
     this.restoreSession();
     await nextFrame();
 
-    report('Строим бедуинское тело и foot IK…', 0.43);
+    report('Загружаем тело и настоящую походку…', 0.39);
     this.shadowCasters = [];
     this.rig = new HumanoidRig(this.scene, this.shadowCasters, this.sandSurface);
+    await this.rig.init();
+    await nextFrame();
+
+    report('Настраиваем свет и атмосферу…', 0.53);
     this.lighting = new DesertLighting(this.scene, this.quality.preset, this.shadowCasters);
     this.atmosphere = new DesertAtmosphere(this.scene, this.lighting.sunDirection);
     this.particles = new SandParticles(this.scene, this.quality.preset.particles);
     await nextFrame();
 
-    report('Настраиваем камеру и touch input…', 0.64);
+    report('Настраиваем камеру и touch input…', 0.67);
     this.camera = new FirstPersonCamera(this.scene);
     this.input = new MobileInput(document.body);
     this.audio = new DesertAudio();
@@ -84,9 +85,8 @@ export class SiroccoGame {
     this.controller.localPosition.y = this.sandSurface.sampleHeight(this.controller.globalX, this.controller.globalZ);
     await nextFrame();
 
-    report('Прогреваем дюны и мягкие тени…', 0.88);
+    report('Прогреваем анимацию и мягкие тени…', 0.90);
     this.rig.update(this.controller, 1 / 60);
-    this.adaptBodyToFeet(1 / 60);
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
     await nextFrame();
@@ -133,23 +133,10 @@ export class SiroccoGame {
     window.addEventListener('pagehide', this.onPageHide);
   }
 
-  handleRebase(dx, dz, offsetX, offsetZ) {
-    this.world.setOrigin(offsetX, offsetZ);
-    this.rig.shiftOrigin(dx, dz);
-    this.sandSurface.syncOrigin();
-  }
-
-  adaptBodyToFeet(dt) {
-    const left = this.rig.footState.left, right = this.rig.footState.right;
-    if (!left.initialized || !right.initialized) return;
-    const averageFootY = (left.plant.y + right.plant.y) * 0.5;
-    const liftTarget = clamp((averageFootY - this.controller.localPosition.y - 0.022) * 0.42, -0.035, 0.055);
-    const rollTarget = clamp((right.plant.y - left.plant.y) * 0.22, -0.075, 0.075);
-    this.pelvisLift = damp(this.pelvisLift, liftTarget, 10, dt);
-    this.pelvisRoll = damp(this.pelvisRoll, rollTarget, 9, dt);
-    this.rig.nodes.pelvis.position.y += this.pelvisLift;
-    this.rig.nodes.pelvis.rotation.z = this.pelvisRoll;
-    this.rig.nodes.spine.rotation.z = -this.pelvisRoll * 0.34;
+  handleRebase() {
+    this.world.setOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
+    this.rig?.shiftOrigin();
+    this.sandSurface?.syncOrigin();
   }
 
   applyQuality(preset) {
@@ -176,12 +163,11 @@ export class SiroccoGame {
       this.sandSurface.update(this.controller);
 
       const landings = this.rig.update(this.controller, dt);
-      this.adaptBodyToFeet(dt);
       for (const landing of landings) {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
         const down = steep ? this.sandSurface.downhill(landing.globalX, landing.globalZ) : null;
-        this.particles.kick(landing.position, landing.yaw, steep ? 1.18 : 0.58, down);
+        this.particles.kick(landing.position, landing.yaw, steep ? 1.14 : 0.52, down);
         this.audio.footstep(0.72 + Math.min(0.28, this.controller.speed * 0.08));
       }
 
