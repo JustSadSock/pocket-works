@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vitest run --config vite.config.ts && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs pelagos",
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs pelagos",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit"
   },
