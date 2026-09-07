@@ -47,7 +47,6 @@ for (const segments of [24, 32, 42]) {
   }
 }
 
-// Physical sand is a persistent world-space heightfield, not a view-facing decal.
 const sand = new SandPhysics({ downhill: () => ({ x: 0.35, z: 0.94 }) }, { cellSize: 0.12 });
 sand.stampFoot(
   { globalX: 1.2, globalZ: -0.8, yaw: 0.4 },
@@ -67,4 +66,13 @@ for (const file of ['world.js', 'deformation.js', 'slip-field.js']) {
   assert.ok(!source.includes('indices.push(a, d, b, b, d, e)'), `${file} must not use the old underside winding`);
 }
 
-console.log('SIROCCO core tests: terrain, winding, continuity and persistent physical sand OK');
+const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
+assert.ok(!localSandSource.includes('0.044 * fade'), 'local sand must never reintroduce the old 5 cm dark render mound');
+assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
+
+const characterSource = readFileSync(new URL('./character.js', import.meta.url), 'utf8');
+assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'), 'SIROCCO body must use the imported skinned humanoid');
+assert.ok(characterSource.includes('setWeightForAllAnimatables'), 'walk/idle animation blending must stay enabled');
+assert.ok(!characterSource.includes("this.bone('legL'"), 'old procedural stretch-leg rig must not return');
+
+console.log('SIROCCO core tests: terrain, winding, physical sand, animated body and local-surface guards OK');
