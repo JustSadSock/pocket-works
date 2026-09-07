@@ -4,13 +4,22 @@ import { clamp } from './core.js';
 
 const CHUNK_SIZE = TERRAIN_CHUNK_SIZE;
 
+// Babylon's default scene is left-handed. Its built-in TiledGround uses
+// [b,e,d, a,b,d] for a grid whose Z coordinate increases with each row.
+// Using the reverse order makes the TOP of the desert a back face, so with
+// backFaceCulling enabled the camera only sees dunes when it is underneath
+// them. Keep every custom XZ grid on this same winding convention.
+export function appendBabylonGroundCell(indices, a, b, d, e) {
+  indices.push(b, e, d, a, b, d);
+}
+
 function buildChunkData(cx, cz, segments) {
   const verts = (segments + 1) * (segments + 1);
   const positions = new Array(verts * 3);
   const normals = new Array(verts * 3);
   const uvs = new Array(verts * 2);
   const colors = new Array(verts * 4);
-  const indices = new Array(segments * segments * 6);
+  const indices = [];
   let p = 0, uv = 0, c = 0;
   const baseX = cx * CHUNK_SIZE;
   const baseZ = cz * CHUNK_SIZE;
@@ -35,13 +44,11 @@ function buildChunkData(cx, cz, segments) {
     }
   }
 
-  let q = 0;
   const row = segments + 1;
   for (let z = 0; z < segments; z += 1) {
     for (let x = 0; x < segments; x += 1) {
       const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-      indices[q++] = a; indices[q++] = d; indices[q++] = b;
-      indices[q++] = b; indices[q++] = d; indices[q++] = e;
+      appendBabylonGroundCell(indices, a, b, d, e);
     }
   }
   return { positions, normals, uvs, colors, indices };
@@ -140,7 +147,8 @@ export class DesertWorld {
     for (let z = 0; z < segments; z += 1) for (let x = 0; x < segments; x += 1) {
       const midX = (((x + 0.5) / segments) - 0.5) * size, midZ = (((z + 0.5) / segments) - 0.5) * size;
       if (Math.abs(midX) < nearHoleHalfExtent && Math.abs(midZ) < nearHoleHalfExtent) continue;
-      const a = z * row + x, b = a + 1, d = a + row, e = d + 1; indices.push(a, d, b, b, d, e);
+      const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
+      appendBabylonGroundCell(indices, a, b, d, e);
     }
     applyData(this.farMesh, { positions, normals, uvs, colors, indices }); this.positionFar();
   }

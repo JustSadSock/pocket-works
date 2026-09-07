@@ -4,14 +4,14 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.0.3';
-const APP_VERSION = '1.0.3';
-const RELEASE_DATE = '2026-09-07';
+const CACHE_NAME = 'sirocco-v1.0.4';
+const APP_VERSION = '1.0.4';
+const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Контроллер и foot IK теперь используют точную высоту тех же треугольников, которые видит игрок, поэтому камера больше не оказывается под поверхностью и не смотрит на изнанку дюн.',
-  'Исправлено инвертированное вертикальное touch-управление камерой.',
-  'Пересобрана first-person геометрия ног: устойчивый изгиб колена, меньший шаг, человеческие пропорции бедра, голени и обуви без растягивания конечностей.',
-  'Добавлены проверки непрерывности и нормалей именно визуальной mesh-поверхности на границах чанков.'
+  'Исправлена настоящая причина изнанки дюн: winding всех terrain-треугольников был обратным стандартному Babylon.js TiledGround, поэтому верх песка отбрасывался back-face culling, а игрок видел поверхность только снизу.',
+  'Ближние чанки и дальний LOD теперь используют тот же top-facing порядок индексов, что встроенный Babylon.js ground для XZ-сетки с растущей координатой Z.',
+  'Тем же исправлением приведены в правильную ориентацию геометрические следы и локальные следы осыпания песка.',
+  'Добавлен регрессионный тест winding и продолжены проверки непрерывности визуальной mesh-поверхности на всех профилях качества.'
 ];
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
