@@ -17,6 +17,7 @@ import { clamp, damp } from './core.js';
 import { downhillDirection } from './terrain.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
+const SESSION_SCHEMA = 2;
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -87,16 +88,26 @@ export class SiroccoGame {
   restoreSession() {
     try {
       const stored = localStorage.getItem(SESSION_KEY);
-      if (stored) this.controller.restore(JSON.parse(stored));
+      if (!stored) return;
+      const snapshot = JSON.parse(stored);
+      if (snapshot?.schema !== SESSION_SCHEMA) {
+        localStorage.removeItem(SESSION_KEY);
+        return;
+      }
+      this.controller.restore(snapshot);
     } catch (error) {
+      localStorage.removeItem(SESSION_KEY);
       console.warn('[SIROCCO] Ignoring invalid saved session.', error);
     }
   }
 
   saveSession() {
     if (!this.controller) return;
-    try { localStorage.setItem(SESSION_KEY, JSON.stringify(this.controller.snapshot())); }
-    catch (error) { console.warn('[SIROCCO] Session persistence failed.', error); }
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ schema: SESSION_SCHEMA, ...this.controller.snapshot() }));
+    } catch (error) {
+      console.warn('[SIROCCO] Session persistence failed.', error);
+    }
   }
 
   bindLifecycle() {
