@@ -6,6 +6,7 @@ import '@babylonjs/core/Engines/ICanvas.js';
 
 declare module '@babylonjs/core/Engines/ICanvas.js' {
   interface ICanvas {
+    remove(): void;
     getContext(contextId: '2d', options?: CanvasRenderingContext2DSettings): CanvasRenderingContext2D | null;
     getContext(contextId: 'bitmaprenderer', options?: ImageBitmapRenderingContextSettings): ImageBitmapRenderingContext | null;
     getContext(contextId: 'webgl', options?: WebGLContextAttributes): WebGLRenderingContext | null;
