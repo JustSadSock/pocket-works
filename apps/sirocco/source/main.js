@@ -32,15 +32,8 @@ function updateOrientation() {
   game.setOrientationBlocked(blocked);
 }
 
-function openMenu() {
-  game.setPaused(true);
-  menu.hidden = false;
-}
-
-function closeMenu() {
-  menu.hidden = true;
-  game.setPaused(false);
-}
+function openMenu() { game.setPaused(true); menu.hidden = false; }
+function closeMenu() { menu.hidden = true; game.setPaused(false); }
 
 async function boot() {
   try {
@@ -65,7 +58,6 @@ enter.addEventListener('pointerdown', async () => {
   enter.classList.add('done');
   setTimeout(() => { enter.hidden = true; }, 300);
 }, { once: true });
-
 menuButton.addEventListener('click', openMenu);
 resumeButton.addEventListener('click', closeMenu);
 menu.addEventListener('click', (e) => { if (e.target === menu) closeMenu(); });
@@ -73,15 +65,8 @@ qualitySelect.addEventListener('change', (e) => game.quality.setMode(e.target.va
 sensitivity.addEventListener('input', (e) => game.input.setSensitivity(e.target.value));
 sound.addEventListener('change', (e) => game.audio.setEnabled(e.target.checked));
 reloadButton.addEventListener('click', () => location.reload());
-exitButton.addEventListener('click', () => {
-  if (history.length > 1) history.back();
-  else location.href = '../../';
-});
+exitButton.addEventListener('click', () => { if (history.length > 1) history.back(); else location.href = '../../'; });
 window.addEventListener('orientationchange', updateOrientation);
 window.addEventListener('resize', updateOrientation);
-
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js', { type: 'module' }).catch(() => {}));
-}
 
 boot();
