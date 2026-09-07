@@ -16,13 +16,27 @@ export class DuelAudio {
     if (!this.context) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
-      this.context = new AudioContextClass();
+      this.context = new AudioContextClass({ latencyHint: 'interactive' });
       this.master = this.context.createGain();
-      this.master.gain.value = 0.22;
+      this.master.gain.value = 0.42;
       this.master.connect(this.context.destination);
       this.noiseBuffer = this.createNoiseBuffer();
     }
-    if (this.context.state === 'suspended') await this.context.resume();
+
+    // iOS Safari may report "interrupted" instead of "suspended" after app switches,
+    // lock-screen transitions or PWA lifecycle changes. Resume for every non-running state.
+    if (this.context.state !== 'running') {
+      try { await this.context.resume(); } catch {}
+    }
+    if (this.context.state !== 'running') return;
+
+    // Prime the output from the user gesture. A one-frame silent source avoids the common
+    // iOS case where the graph exists but the hardware output route is still asleep.
+    const buffer = this.context.createBuffer(1, 1, this.context.sampleRate);
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.master);
+    source.start();
   }
 
   createNoiseBuffer() {
@@ -87,36 +101,37 @@ export class DuelAudio {
     if (now - this.lastStep < 90) return;
     this.lastStep = now;
     const strength = clamp(intensity, 0, 1);
-    this.noise({ duration: 0.055, gain: 0.05 + strength * 0.035, highpass: 70, lowpass: 900 });
-    this.tone({ frequency: 86, frequencyEnd: 58, duration: 0.07, gain: 0.025 + strength * 0.02, type: 'triangle' });
+    this.noise({ duration: 0.06, gain: 0.075 + strength * 0.05, highpass: 65, lowpass: 1000 });
+    this.tone({ frequency: 92, frequencyEnd: 54, duration: 0.08, gain: 0.04 + strength * 0.03, type: 'triangle' });
   }
 
   whoosh(speed) {
     const now = performance.now();
-    if (now - this.lastWhoosh < 150 || speed < 5.2) return;
+    if (now - this.lastWhoosh < 135 || speed < 4.7) return;
     this.lastWhoosh = now;
-    const strength = clamp((speed - 5.2) / 7, 0, 1);
-    this.noise({ duration: 0.11 + strength * 0.08, gain: 0.035 + strength * 0.065, highpass: 900, lowpass: 6000 });
+    const strength = clamp((speed - 4.7) / 7, 0, 1);
+    this.noise({ duration: 0.12 + strength * 0.09, gain: 0.055 + strength * 0.095, highpass: 750, lowpass: 6500 });
   }
 
   clash(intensity = 0.7) {
     const strength = clamp(intensity, 0, 1);
-    this.tone({ frequency: 1750, frequencyEnd: 620, duration: 0.13, gain: 0.08 + strength * 0.09, type: 'square' });
-    this.noise({ duration: 0.07, gain: 0.07 + strength * 0.07, highpass: 1800, lowpass: 9500 });
+    this.tone({ frequency: 1850, frequencyEnd: 610, duration: 0.14, gain: 0.12 + strength * 0.12, type: 'square' });
+    this.tone({ frequency: 790, frequencyEnd: 330, duration: 0.18, gain: 0.055 + strength * 0.055, type: 'triangle' });
+    this.noise({ duration: 0.085, gain: 0.10 + strength * 0.09, highpass: 1500, lowpass: 9800 });
     navigator.vibrate?.(strength > 0.65 ? 18 : 9);
   }
 
   block(intensity = 0.7) {
     const strength = clamp(intensity, 0, 1);
-    this.tone({ frequency: 410, frequencyEnd: 180, duration: 0.12, gain: 0.08 + strength * 0.07, type: 'triangle' });
-    this.noise({ duration: 0.09, gain: 0.08 + strength * 0.06, highpass: 280, lowpass: 2400 });
+    this.tone({ frequency: 430, frequencyEnd: 165, duration: 0.14, gain: 0.12 + strength * 0.10, type: 'triangle' });
+    this.noise({ duration: 0.105, gain: 0.11 + strength * 0.09, highpass: 240, lowpass: 2600 });
     navigator.vibrate?.(strength > 0.65 ? 20 : 10);
   }
 
   hit(intensity = 0.7) {
     const strength = clamp(intensity, 0, 1);
-    this.tone({ frequency: 120, frequencyEnd: 54, duration: 0.16, gain: 0.09 + strength * 0.09, type: 'sawtooth' });
-    this.noise({ duration: 0.08, gain: 0.06 + strength * 0.06, highpass: 120, lowpass: 1800 });
+    this.tone({ frequency: 126, frequencyEnd: 48, duration: 0.18, gain: 0.13 + strength * 0.12, type: 'sawtooth' });
+    this.noise({ duration: 0.095, gain: 0.09 + strength * 0.09, highpass: 90, lowpass: 1900 });
     navigator.vibrate?.(strength > 0.5 ? 26 : 12);
   }
 }
