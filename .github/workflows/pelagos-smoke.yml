@@ -93,22 +93,50 @@ jobs:
           page.on('console', message => {
             if (message.type() === 'error') failures.push(`console: ${message.text()}`);
           });
+
+          const assertViewport = async (label) => {
+            const result = await page.evaluate(() => {
+              const viewport = { width: window.innerWidth, height: window.innerHeight };
+              const ids = ['pauseButton', 'helmZone', 'trimZone', 'rowButton'];
+              const boxes = Object.fromEntries(ids.map(id => {
+                const element = document.getElementById(id);
+                if (!element) return [id, null];
+                const rect = element.getBoundingClientRect();
+                return [id, { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }];
+              }));
+              return {
+                viewport,
+                scrollWidth: document.documentElement.scrollWidth,
+                scrollHeight: document.documentElement.scrollHeight,
+                boxes
+              };
+            });
+            if (result.scrollWidth > result.viewport.width + 1 || result.scrollHeight > result.viewport.height + 1) {
+              failures.push(`${label}: viewport overflow ${JSON.stringify(result)}`);
+            }
+            for (const [id, box] of Object.entries(result.boxes)) {
+              if (!box) continue;
+              if (box.left < -1 || box.top < -1 || box.right > result.viewport.width + 1 || box.bottom > result.viewport.height + 1) {
+                failures.push(`${label}: ${id} outside viewport ${JSON.stringify(box)}`);
+              }
+            }
+          };
+
           await page.goto('http://127.0.0.1:4173/apps/pelagos/', { waitUntil: 'networkidle', timeout: 30000 });
           await page.locator('#menu:not(.hidden)').waitFor({ state: 'visible', timeout: 20000 });
-          const layout = await page.evaluate(() => ({
-            width: window.innerWidth,
-            height: window.innerHeight,
-            scrollWidth: document.documentElement.scrollWidth,
-            scrollHeight: document.documentElement.scrollHeight
-          }));
-          if (layout.scrollWidth > layout.width + 1 || layout.scrollHeight > layout.height + 1) {
-            failures.push(`viewport overflow ${JSON.stringify(layout)}`);
-          }
           await page.locator('#startButton').click();
           await page.locator('#hud:not(.hidden)').waitFor({ state: 'visible' });
-          await page.waitForTimeout(1200);
+          await page.waitForTimeout(1400);
           const speed = Number.parseFloat(await page.locator('#speedValue').innerText());
           if (!Number.isFinite(speed)) failures.push('speed telemetry is not finite');
+          await assertViewport('393x852 gameplay');
+          await page.screenshot({ path: 'pelagos-sea-webkit.png', fullPage: true });
+
+          await page.setViewportSize({ width: 375, height: 667 });
+          await page.waitForTimeout(250);
+          await assertViewport('375x667 gameplay');
+          await page.setViewportSize({ width: 393, height: 852 });
+
           await page.locator('#pauseButton').click();
           await page.locator('#pause:not(.hidden)').waitFor({ state: 'visible' });
           await page.locator('#resumeButton').click();
@@ -122,16 +150,18 @@ jobs:
           await page.locator('#qualityButton').click();
           const afterQuality = await page.locator('#qualityButton').innerText();
           if (beforeQuality === afterQuality) failures.push('quality control did not change');
-          await page.screenshot({ path: 'pelagos-iphone-webkit.png', fullPage: true });
+          await page.screenshot({ path: 'pelagos-settings-webkit.png', fullPage: true });
           await browser.close();
           if (failures.length) throw new Error(failures.join('\n'));
           NODE
 
-      - name: Upload WebKit screenshot
+      - name: Upload WebKit screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pelagos-iphone-webkit-${{ github.sha }}
-          path: pelagos-iphone-webkit.png
+          name: pelagos-webkit-${{ github.sha }}
+          path: |
+            pelagos-sea-webkit.png
+            pelagos-settings-webkit.png
           if-no-files-found: warn
           retention-days: 7
