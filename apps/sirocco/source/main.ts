@@ -5,24 +5,16 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'SIROCCO';
-const version = '1.0.1';
+const version = '1.0.2';
 const storageNamespace = 'pocket-works:sirocco';
 const releaseNotes = [
-  'Исправлен критический баг дальнего LOD: грубый terrain больше не перекрывает активные чанки и не накрывает камеру песчаным потолком.',
-  'Дальний ландшафт теперь строится кольцом с гарантированным пустым центром вокруг игрока и корректно центрируется по активному чанку.',
-  'Сломанные сохранения камеры из версии 1.0.0 автоматически сбрасываются через новую схему session-state.',
-  'Вход в прогулку больше не зависит от успешной инициализации Web Audio: управление запускается сразу, а звук подключается отдельно.'
+  'Перестроена генерация рельефа: вместо одинаковых параллельных рядов появились регионально изгибающиеся гряды, разрывы, седловины и меняющаяся высота дюн.',
+  'Повышена плотность ближней геометрии и сглажены высокочастотные формы, чтобы камера больше не проваливалась под визуальную поверхность дюны.',
+  'Исправлено инвертированное горизонтальное управление камерой на touch-экране.',
+  'Убран торс и таз из first-person рендера: геометрия тела больше не перекрывает нижнюю половину экрана.'
 ];
-
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName, version: '1.0.1', releaseNotes });
-createWorkshopMode({
-  appName,
-  version,
-  cachePrefix: 'sirocco-',
-  storageNamespace,
-  onReset: () => location.reload()
-});
-
+registerEnhancedUpdate({ appName, version, releaseNotes });
+createWorkshopMode({ appName, version, cachePrefix: 'sirocco-', storageNamespace, onReset: () => location.reload() });
 void import('./main.js');
