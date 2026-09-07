@@ -3,25 +3,23 @@
   "version": "0.9.7",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "apps/[!_]*"
-  ],
+  "workspaces": ["apps/[!_]*"],
   "scripts": {
     "new:app": "node scripts/new-app.mjs",
     "registry:build": "node scripts/build-registry.mjs --output=dist-site/apps.json",
     "registry:check": "node scripts/build-registry.mjs --check",
-    "build:enhanced": "node scripts/build-enhanced.mjs",
+    "build:enhanced": "node scripts/identify-netlify-command.mjs build:enhanced",
     "test:enhanced": "node scripts/test-enhanced.mjs",
     "prepare:sente-engine": "node scripts/prepare-sente-engine.mjs",
     "test:sente-ai": "node scripts/audit-sente-gnugo.mjs",
     "test:shpilka": "node scripts/audit-shpilka-2-7-1.mjs && node scripts/audit-shpilka-2-7-2.mjs && node scripts/audit-shpilka-2-8-final.mjs && node scripts/audit-shpilka-2-9.mjs",
     "test:moss-marble": "node scripts/audit-moss-marble-1-2.mjs && node scripts/audit-moss-marble-1-3.mjs && node scripts/audit-moss-marble-1-4.mjs && node scripts/audit-moss-marble-1-4-1.mjs",
-    "prepare:site": "node scripts/prepare-site.mjs",
-    "validate:site": "node scripts/validate-site.mjs",
-    "deploy:site": "npm run build:enhanced && npm run prepare:site && npm run validate:site",
-    "build:site": "node scripts/diagnose-netlify-build.mjs",
-    "ci:full": "npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site",
-    "build:quality-site": "npm run prepare:sente-engine && npm run build:enhanced && npm run prepare:site && npm run validate:site",
+    "prepare:site": "node scripts/identify-netlify-command.mjs prepare:site",
+    "validate:site": "node scripts/identify-netlify-command.mjs validate:site",
+    "deploy:site": "node scripts/identify-netlify-command.mjs deploy:site",
+    "build:site": "node scripts/identify-netlify-command.mjs build:site",
+    "ci:full": "node scripts/identify-netlify-command.mjs ci:full",
+    "build:quality-site": "node scripts/identify-netlify-command.mjs build:quality-site",
     "preview:test": "node scripts/serve-site.mjs",
     "test:e2e": "playwright test",
     "test:lighthouse": "lhci autorun --config=./lighthouserc.json",
@@ -39,7 +37,7 @@
     "validate:all": "npm run registry:check && npm run validate:scripts && npm run validate:configs && npm run validate && npm run validate:mobile && npm run validate:updates && npm run validate:launcher && npm run validate:capabilities && npm run validate:enhanced && npm run validate:quality && npm run validate:pipeline",
     "test:forge:quick": "node scripts/test-forge.mjs",
     "test:forge:enhanced": "node scripts/test-enhanced-forge.mjs",
-    "health": "npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced && npm run test:shpilka && npm run test:moss-marble"
+    "health": "node scripts/identify-netlify-command.mjs health"
   },
   "dependencies": {
     "phaser": "^3.90.0",
@@ -58,7 +56,5 @@
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.0"
   },
-  "engines": {
-    "node": ">=22.12"
-  }
+  "engines": {"node": ">=22.12"}
 }
