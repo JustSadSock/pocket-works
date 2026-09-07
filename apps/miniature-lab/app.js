@@ -19,30 +19,32 @@
     objectScale: 1
   });
 
+  const M = window.MiniatureMedia;
+  const A = window.MiniatureAnalysis;
+  const R = window.MiniatureRenderer;
+
   const state = {
     settings: loadSettings(),
     media: null,
     objectUrl: null,
+    analysis: null,
     compare: false,
     dragging: false,
-    dragKind: 'focus',
+    dragKind: 'move',
+    guideVisible: false,
     guideTimer: 0,
-    loopToken: 0,
     renderQueued: false,
+    videoToken: 0,
     lastVideoRender: 0,
     exporting: false,
     exportCancelled: false,
     exportResolve: null,
     recorder: null,
-    toastTimer: 0,
     audioContext: null,
     audioSource: null,
     audioDestination: null,
     monitorGain: null,
-    imageCacheKey: '',
-    imageLayers: null,
-    analysis: null,
-    autoAppliedForCurrentAsset: false
+    toastTimer: 0
   };
 
   const $ = (id) => document.getElementById(id);
@@ -50,22 +52,19 @@
     emptyState: $('emptyState'), workspace: $('workspace'), fileInput: $('fileInput'), replaceInput: $('replaceInput'), replaceButton: $('replaceButton'),
     sourceImage: $('sourceImage'), sourceVideo: $('sourceVideo'), previewCanvas: $('previewCanvas'), guideCanvas: $('guideCanvas'), exportCanvas: $('exportCanvas'),
     loadingState: $('loadingState'), loadingTitle: $('loadingTitle'), loadingText: $('loadingText'), stageHint: $('stageHint'), mediaMeta: $('mediaMeta'),
-    compareButton: $('compareButton'), videoControls: $('videoControls'), playButton: $('playButton'), seekInput: $('seekInput'), timeOutput: $('timeOutput'),
+    compareButton: $('compareButton'), autoButton: $('autoButton'), videoControls: $('videoControls'), playButton: $('playButton'), seekInput: $('seekInput'), timeOutput: $('timeOutput'),
     resolutionSelect: $('resolutionSelect'), formatSelect: $('formatSelect'), exportButton: $('exportButton'), exportInfo: $('exportInfo'), exportProgress: $('exportProgress'),
-    progressBar: $('progressBar'), progressText: $('progressText'), cancelExport: $('cancelExport'), resetButton: $('resetButton'), presetButton: $('presetButton'), autoButton: $('autoButton'), toast: $('toast'),
+    progressBar: $('progressBar'), progressText: $('progressText'), cancelExport: $('cancelExport'), resetButton: $('resetButton'), presetButton: $('presetButton'), toast: $('toast'),
     blurInput: $('blurInput'), focusInput: $('focusInput'), featherInput: $('featherInput'), angleInput: $('angleInput'), saturationInput: $('saturationInput'),
     contrastInput: $('contrastInput'), brightnessInput: $('brightnessInput'), vignetteInput: $('vignetteInput'), popInput: $('popInput'),
     blurValue: $('blurValue'), focusValue: $('focusValue'), featherValue: $('featherValue'), angleValue: $('angleValue'), saturationValue: $('saturationValue'),
     contrastValue: $('contrastValue'), brightnessValue: $('brightnessValue'), vignetteValue: $('vignetteValue'), popValue: $('popValue')
   };
 
-  const scratch = {
+  const fallback = {
     small: document.createElement('canvas'),
-    layer: document.createElement('canvas'),
-    mask: document.createElement('canvas'),
-    pop: document.createElement('canvas'),
-    radial: document.createElement('canvas'),
-    analysis: document.createElement('canvas')
+    blur: document.createElement('canvas'),
+    mask: document.createElement('canvas')
   };
 
   const controls = [
@@ -83,7 +82,7 @@
   init();
 
   function init() {
-    installModeControls();
+    installModeSwitch();
     applySettingsToControls();
     bindEvents();
     updateModeUi();
@@ -92,28 +91,26 @@
     }
   }
 
-  function installModeControls() {
-    const rail = document.querySelector('.control-rail');
+  function installModeSwitch() {
     const heading = document.querySelector('.rail-heading');
-    if (!rail || !heading) return;
+    if (!heading) return;
     const wrap = document.createElement('div');
     wrap.className = 'focus-mode-switch';
-    wrap.innerHTML = '<button type="button" data-focus-mode="auto"><b>Авто</b><small>сам ищет главный объект</small></button><button type="button" data-focus-mode="scene"><b>Сцена</b><small>улицы, комнаты, пейзажи</small></button><button type="button" data-focus-mode="object"><b>Объект</b><small>еда, вещи, люди сверху</small></button>';
+    wrap.innerHTML = [
+      '<button type="button" data-focus-mode="auto"><b>Авто</b><small>анализирует кадр</small></button>',
+      '<button type="button" data-focus-mode="scene"><b>Сцена</b><small>улицы · комнаты</small></button>',
+      '<button type="button" data-focus-mode="object"><b>Объект</b><small>вещи · люди · еда</small></button>'
+    ].join('');
     heading.insertAdjacentElement('afterend', wrap);
-    const style = document.createElement('style');
-    style.textContent = `.focus-mode-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0 4px}.focus-mode-switch button{min-height:58px;border:1px solid var(--line);background:#fff;text-align:left;padding:8px 9px;cursor:pointer}.focus-mode-switch button.is-active{border-color:var(--ink);background:var(--ink);color:#fff}.focus-mode-switch b{display:block;font-size:11px}.focus-mode-switch small{display:block;font-size:9px;line-height:1.25;margin-top:3px;opacity:.72}.focus-mode-switch button:active{transform:translateY(1px)}@media (max-width:620px){.focus-mode-switch{grid-template-columns:1fr}}`;
-    document.head.appendChild(style);
     wrap.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-focus-mode]');
       if (!button || state.exporting) return;
       state.settings.mode = button.dataset.focusMode;
+      if (state.settings.mode === 'auto') applyAutoAnalysis(true);
       saveSettings();
       updateModeUi();
-      if (state.settings.mode === 'auto') runAutoFocus(false);
       requestRender();
-      showGuide(1800);
-      const title = state.settings.mode === 'object' ? 'Режим «Объект» активен' : state.settings.mode === 'scene' ? 'Режим «Сцена» активен' : 'Авто‑режим активен';
-      showToast(title);
+      showGuide(1700);
     });
     el.modeSwitch = wrap;
   }
@@ -126,52 +123,58 @@
       input.addEventListener('input', () => {
         state.settings[key] = Number(input.value);
         output.value = format(input.value);
-        if (['blur', 'saturation', 'contrast', 'brightness'].includes(key)) invalidateImageCache();
         requestRender();
         showGuide();
       });
       input.addEventListener('change', saveSettings);
     });
 
-    el.resetButton.addEventListener('click', () => setSettings(DEFAULTS, 'Настройки сброшены'));
+    el.resetButton.addEventListener('click', () => setSettings({ ...DEFAULTS }, 'Настройки сброшены'));
     el.presetButton.addEventListener('click', () => setSettings({
       ...state.settings,
-      blur: 36,
-      focus: 16,
+      blur: 38,
+      focus: 15,
       feather: 18,
-      saturation: 154,
-      contrast: 128,
+      saturation: 156,
+      contrast: 130,
       brightness: 105,
-      vignette: 18,
-      pop: 80
-    }, 'Применён сильный miniature-профиль'));
-    el.autoButton.addEventListener('click', () => runAutoFocus(true));
+      vignette: 19,
+      pop: 84
+    }, 'Сильный miniature-профиль применён'));
+    el.autoButton.addEventListener('click', () => {
+      state.settings.mode = 'auto';
+      applyAutoAnalysis(true);
+      saveSettings();
+      updateModeUi();
+      requestRender();
+      showGuide(1700);
+    });
 
-    bindCompareEvents();
-    bindGuideDrag();
+    bindCompare();
+    bindGuide();
 
     el.playButton.addEventListener('click', togglePlayback);
     el.seekInput.addEventListener('input', () => {
       if (!state.media || state.media.kind !== 'video' || state.exporting) return;
-      const d = finiteDuration();
-      if (d) el.sourceVideo.currentTime = d * Number(el.seekInput.value) / 1000;
+      const duration = finiteDuration();
+      if (duration) el.sourceVideo.currentTime = duration * Number(el.seekInput.value) / 1000;
     });
-
-    el.sourceVideo.addEventListener('play', () => {
-      updatePlayButton();
-      startVideoLoop();
-    });
+    el.sourceVideo.addEventListener('play', () => { updatePlayButton(); startVideoLoop(); });
     el.sourceVideo.addEventListener('pause', updatePlayButton);
     el.sourceVideo.addEventListener('ended', updatePlayButton);
     el.sourceVideo.addEventListener('timeupdate', updateVideoUi);
     el.sourceVideo.addEventListener('seeked', () => {
-      if (state.settings.mode === 'auto' && !state.exporting) analyzeCurrentFrame(false);
+      if (!state.exporting && state.settings.mode === 'auto') {
+        analyzeCurrentFrame();
+        applyAutoAnalysis(false);
+      }
       requestRender();
     });
 
     el.exportButton.addEventListener('click', () => {
       if (!state.media || state.exporting) return;
-      if (state.media.kind === 'image') exportImage(); else exportVideo();
+      if (state.media.kind === 'image') exportImage();
+      else exportVideo();
     });
     el.cancelExport.addEventListener('click', cancelVideoExport);
 
@@ -185,34 +188,29 @@
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || state.exporting) return;
-    await loadFile(file);
-  }
-
-  async function loadFile(file) {
-    const kind = classifyFile(file);
+    const kind = M.classify(file);
     if (!kind) return showToast('Не смог определить фото или видео.');
 
     stopExistingMedia();
     state.media = { kind, file, width: 0, height: 0, duration: 0 };
     state.objectUrl = URL.createObjectURL(file);
     state.analysis = null;
-    state.autoAppliedForCurrentAsset = false;
-    invalidateImageCache();
 
     el.emptyState.hidden = true;
     el.workspace.hidden = false;
     el.replaceButton.hidden = false;
-    setLoading(true, 'Открываю медиа', 'Подготавливаю кадр…');
+    setLoading(true, 'Открываю медиа', 'Проверяю декодер и размеры…');
 
     try {
-      if (kind === 'image') await loadImageSource(state.objectUrl);
-      else await loadVideoSource(state.objectUrl);
+      if (kind === 'image') await loadImage(state.objectUrl);
+      else await loadVideo(state.objectUrl);
       setPreviewDimensions();
       updateMediaUi();
+      analyzeCurrentFrame();
+      if (state.settings.mode === 'auto') applyAutoAnalysis(false);
       setLoading(false);
-      analyzeCurrentFrame(true);
       requestRender();
-      showGuide(1800);
+      showGuide(1900);
     } catch (error) {
       console.error(error);
       setLoading(false);
@@ -221,23 +219,14 @@
       el.workspace.hidden = true;
       el.emptyState.hidden = false;
       el.replaceButton.hidden = true;
-      showToast('Этот файл браузер не смог декодировать.');
+      showToast('Файл распознан, но его кодек не декодируется на этом устройстве.');
     }
   }
 
-  function classifyFile(file) {
-    if (file.type.startsWith('image/')) return 'image';
-    if (file.type.startsWith('video/')) return 'video';
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    if (['jpg','jpeg','png','webp','gif','bmp','avif','heic','heif'].includes(ext)) return 'image';
-    if (['mp4','mov','m4v','webm','mkv','avi','mpeg','mpg'].includes(ext)) return 'video';
-    return null;
-  }
-
-  function loadImageSource(url) {
+  function loadImage(url) {
     return new Promise((resolve, reject) => {
       el.sourceImage.onload = () => {
-        if (!el.sourceImage.naturalWidth) return reject(new Error('bad image'));
+        if (!el.sourceImage.naturalWidth || !el.sourceImage.naturalHeight) return reject(new Error('invalid image'));
         state.media.width = el.sourceImage.naturalWidth;
         state.media.height = el.sourceImage.naturalHeight;
         resolve();
@@ -247,12 +236,12 @@
     });
   }
 
-  function loadVideoSource(url) {
+  function loadVideo(url) {
     return new Promise((resolve, reject) => {
       const video = el.sourceVideo;
       const ready = () => {
         cleanup();
-        if (!video.videoWidth) return reject(new Error('bad video'));
+        if (!video.videoWidth || !video.videoHeight) return reject(new Error('invalid video'));
         state.media.width = video.videoWidth;
         state.media.height = video.videoHeight;
         state.media.duration = Number.isFinite(video.duration) ? video.duration : 0;
@@ -271,7 +260,7 @@
   }
 
   function stopExistingMedia() {
-    state.loopToken += 1;
+    state.videoToken += 1;
     el.sourceVideo.pause();
     el.sourceVideo.removeAttribute('src');
     el.sourceVideo.load();
@@ -283,149 +272,100 @@
   function setPreviewDimensions() {
     const longest = Math.max(state.media.width, state.media.height);
     const mobile = matchMedia('(max-width:700px)').matches;
-    const edge = mobile ? (state.media.kind === 'video' ? 720 : 980) : (state.media.kind === 'video' ? 960 : 1360);
-    const scale = Math.min(1, edge / longest);
-    const w = Math.max(2, Math.round(state.media.width * scale));
-    const h = Math.max(2, Math.round(state.media.height * scale));
-    el.previewCanvas.width = w;
-    el.previewCanvas.height = h;
-    el.guideCanvas.width = w;
-    el.guideCanvas.height = h;
+    const maxEdge = mobile
+      ? (state.media.kind === 'video' ? 640 : 980)
+      : (state.media.kind === 'video' ? 860 : 1360);
+    const scale = Math.min(1, maxEdge / longest);
+    const width = Math.max(2, Math.round(state.media.width * scale));
+    const height = Math.max(2, Math.round(state.media.height * scale));
+    el.previewCanvas.width = width;
+    el.previewCanvas.height = height;
+    el.guideCanvas.width = width;
+    el.guideCanvas.height = height;
     syncGuideCanvasCss();
   }
 
   function syncGuideCanvasCss() {
     requestAnimationFrame(() => {
       const rect = el.previewCanvas.getBoundingClientRect();
-      if (!rect.width) return;
+      if (!rect.width || !rect.height) return;
       el.guideCanvas.style.width = `${rect.width}px`;
       el.guideCanvas.style.height = `${rect.height}px`;
     });
   }
 
   function updateMediaUi() {
-    const m = state.media;
-    const mp = ((m.width * m.height) / 1e6).toFixed(1).replace('.0', '');
-    el.mediaMeta.textContent = m.kind === 'image'
-      ? `${m.width}×${m.height} · ${mp} МП · ${prettyBytes(m.file.size)}`
-      : `${m.width}×${m.height} · ${formatTime(m.duration)} · ${prettyBytes(m.file.size)}`;
-    el.videoControls.hidden = m.kind !== 'video';
-    el.formatSelect.hidden = m.kind === 'video';
-    el.exportInfo.textContent = m.kind === 'image'
+    const media = state.media;
+    const mp = ((media.width * media.height) / 1e6).toFixed(1).replace('.0', '');
+    el.mediaMeta.textContent = media.kind === 'image'
+      ? `${media.width}×${media.height} · ${mp} МП · ${M.prettyBytes(media.file.size)}`
+      : `${media.width}×${media.height} · ${M.formatTime(media.duration)} · ${M.prettyBytes(media.file.size)}`;
+    el.videoControls.hidden = media.kind !== 'video';
+    el.formatSelect.hidden = media.kind === 'video';
+    el.exportInfo.textContent = media.kind === 'image'
       ? 'Авто: до 4096 px по длинной стороне.'
       : 'Авто: до 1080p; видео рендерится покадрово.';
     updateVideoUi();
   }
 
-  function analyzeCurrentFrame(applyAfter = false) {
+  function analyzeCurrentFrame() {
     if (!state.media) return;
     const source = state.media.kind === 'image' ? el.sourceImage : el.sourceVideo;
     if (state.media.kind === 'video' && el.sourceVideo.readyState < 2) return;
-    state.analysis = analyzeFrame(source, state.media.width, state.media.height);
-    if ((state.settings.mode === 'auto' || applyAfter) && !state.autoAppliedForCurrentAsset) {
-      runAutoFocus(false);
-      state.autoAppliedForCurrentAsset = true;
+    try {
+      state.analysis = A.analyze(source, state.media.width, state.media.height);
+    } catch (error) {
+      console.warn('[Miniature Lab] auto analysis failed:', error);
+      state.analysis = null;
     }
   }
 
-  function analyzeFrame(source, sourceW, sourceH) {
-    const longest = Math.max(sourceW, sourceH);
-    const scale = Math.min(1, 320 / longest);
-    const w = Math.max(24, Math.round(sourceW * scale));
-    const h = Math.max(24, Math.round(sourceH * scale));
-    ensureCanvasSize(scratch.analysis, w, h);
-    const ctx = scratch.analysis.getContext('2d', { willReadFrequently: true });
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(source, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h).data;
-
-    let total = 0, sumX = 0, sumY = 0;
-    const cell = 4;
-    const map = [];
-    for (let y = 1; y < h - 1; y += cell) {
-      for (let x = 1; x < w - 1; x += cell) {
-        const i = ((y * w) + x) * 4;
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        const idxR = ((y * w) + Math.min(w - 1, x + 1)) * 4;
-        const idxD = (((Math.min(h - 1, y + 1) * w) + x) * 4);
-        const lumR = 0.2126 * data[idxR] + 0.7152 * data[idxR + 1] + 0.0722 * data[idxR + 2];
-        const lumD = 0.2126 * data[idxD] + 0.7152 * data[idxD + 1] + 0.0722 * data[idxD + 2];
-        const edge = Math.abs(lum - lumR) + Math.abs(lum - lumD);
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        const sat = max ? ((max - min) / max) : 0;
-        const cx = (x / (w - 1)) - 0.5;
-        const cy = (y / (h - 1)) - 0.5;
-        const centerBias = 1.18 - Math.min(1, Math.hypot(cx * 1.05, cy) * 1.25) * 0.45;
-        const score = (edge * 0.8 + sat * 90 + Math.abs(lum - 128) * 0.18 + 12) * centerBias;
-        map.push({ x: x / w, y: y / h, score });
-        total += score;
-        sumX += (x / w) * score;
-        sumY += (y / h) * score;
-      }
-    }
-    const cx = total ? sumX / total : 0.5;
-    const cy = total ? sumY / total : 0.5;
-    let spreadX = 0, spreadY = 0;
-    for (const point of map) {
-      spreadX += Math.abs(point.x - cx) * point.score;
-      spreadY += Math.abs(point.y - cy) * point.score;
-    }
-    spreadX = total ? spreadX / total : 0.16;
-    spreadY = total ? spreadY / total : 0.16;
-
-    const upper = bandEnergy(map, 0, 0.18);
-    const lower = bandEnergy(map, 0.82, 1);
-    const middle = bandEnergy(map, 0.36, 0.64);
-    const horizontalPreference = middle > (upper + lower) * 0.66;
-    const concentrated = Math.max(spreadX, spreadY) < 0.19;
-
-    return { cx, cy, spreadX, spreadY, horizontalPreference, concentrated };
-  }
-
-  function bandEnergy(map, minY, maxY) {
-    let total = 0;
-    for (const p of map) if (p.y >= minY && p.y <= maxY) total += p.score;
-    return total;
-  }
-
-  function runAutoFocus(showFeedback) {
+  function applyAutoAnalysis(showFeedback) {
     if (!state.media) return;
-    if (!state.analysis) analyzeCurrentFrame(false);
-    if (!state.analysis) return;
+    if (!state.analysis) analyzeCurrentFrame();
     const a = state.analysis;
-    const useObject = a.concentrated || (Math.abs(a.cy - 0.5) > 0.1 && Math.max(a.spreadX, a.spreadY) < 0.24);
-    if (useObject) {
-      state.settings.mode = 'object';
-      state.settings.objectX = clamp(a.cx, 0.16, 0.84);
-      state.settings.objectY = clamp(a.cy, 0.12, 0.88);
-      const spread = clamp(Math.max(a.spreadX, a.spreadY), 0.08, 0.25);
-      state.settings.focus = Math.round(clamp(spread * 135, 10, 26));
-      state.settings.feather = Math.round(clamp(state.settings.focus * 1.05, 12, 28));
-      state.settings.objectScale = clamp(0.8 + spread * 1.7, 0.85, 1.25);
-      state.settings.blur = Math.round(clamp(34 + (0.22 - spread) * 55, 24, 40));
-      state.settings.pop = 80;
+    if (!a) {
+      if (showFeedback) showToast('Авто-анализ не сработал — оставил ручное управление.');
+      return;
+    }
+
+    if (a.suggestedMode === 'object') {
+      const spread = M.clamp(Math.max(a.spreadX, a.spreadY), 0.08, 0.25);
+      state.settings.objectX = M.clamp(a.cx, 0.14, 0.86);
+      state.settings.objectY = M.clamp(a.cy, 0.12, 0.88);
+      state.settings.objectScale = M.clamp(0.82 + spread * 1.65, 0.82, 1.28);
+      state.settings.focus = Math.round(M.clamp(spread * 135, 10, 26));
+      state.settings.feather = Math.round(M.clamp(state.settings.focus * 1.04, 12, 28));
+      state.settings.blur = Math.round(M.clamp(35 + (0.22 - spread) * 55, 26, 41));
       state.settings.angle = 0;
+      state.settings.pop = 82;
     } else {
-      state.settings.mode = 'scene';
-      state.settings.objectScale = 1;
-      state.settings.position = clamp((a.cy - 0.5) * 1.3, -0.72, 0.72);
-      state.settings.angle = a.horizontalPreference ? 0 : (a.cx < 0.5 ? -8 : 8);
+      state.settings.position = M.clamp((a.cy - 0.5) * 1.25, -0.72, 0.72);
+      state.settings.angle = a.horizontalPreference ? 0 : M.clamp(a.principalAngle, -16, 16);
       state.settings.focus = 16;
       state.settings.feather = 18;
-      state.settings.blur = 36;
-      state.settings.pop = 76;
+      state.settings.blur = 37;
+      state.settings.pop = 78;
+      state.settings.objectScale = 1;
     }
-    state.settings.saturation = Math.max(state.settings.saturation, 146);
-    state.settings.contrast = Math.max(state.settings.contrast, 124);
+
+    state.settings.saturation = Math.max(state.settings.saturation, 148);
+    state.settings.contrast = Math.max(state.settings.contrast, 125);
     state.settings.vignette = Math.max(state.settings.vignette, 16);
-    saveSettings();
-    invalidateImageCache();
     applySettingsToControls();
     updateModeUi();
-    requestRender();
-    showGuide(1800);
-    if (showFeedback) showToast(useObject ? 'Авто нашёл объект и выставил эллипс' : 'Авто выставил полоску по сцене');
+    saveSettings();
+    if (showFeedback) {
+      showToast(a.suggestedMode === 'object'
+        ? 'Авто выбрал объектную глубину — эллипс можно подправить пальцем.'
+        : 'Авто выбрал сценическую глубину — полосу можно подправить пальцем.');
+    }
+  }
+
+  function effectiveMode() {
+    return state.settings.mode === 'auto'
+      ? (state.analysis?.suggestedMode || 'scene')
+      : state.settings.mode;
   }
 
   function requestRender() {
@@ -441,352 +381,296 @@
     if (!state.media || state.exporting) return;
     const source = state.media.kind === 'image' ? el.sourceImage : el.sourceVideo;
     if (state.media.kind === 'video' && el.sourceVideo.readyState < 2) return;
-    drawProcessed(el.previewCanvas, source, state.compare, false);
+    renderTo(el.previewCanvas, source, state.compare);
     drawGuide();
   }
 
-  function drawProcessed(canvas, source, originalOnly = false, isExport = false) {
-    const w = canvas.width, h = canvas.height;
-    if (!w || !h) return;
-    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: !isExport });
-    ctx.save();
-    ctx.clearRect(0, 0, w, h);
+  function renderTo(canvas, source, originalOnly = false) {
+    const width = canvas.width;
+    const height = canvas.height;
+    if (!width || !height) return;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.clearRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     if (originalOnly) {
       ctx.filter = 'none';
-      ctx.drawImage(source, 0, 0, w, h);
-      ctx.restore();
+      ctx.drawImage(source, 0, 0, width, height);
       return;
     }
 
-    const grade = gradeFilter();
+    if (R?.available) {
+      const rendered = R.render(source, width, height, state.settings, effectiveMode());
+      if (rendered) {
+        ctx.filter = 'none';
+        ctx.drawImage(rendered, 0, 0, width, height);
+        return;
+      }
+    }
+
+    renderFallback(ctx, source, width, height);
+  }
+
+  function renderFallback(ctx, source, width, height) {
+    const grade = `saturate(${state.settings.saturation}%) contrast(${state.settings.contrast}%) brightness(${state.settings.brightness}%)`;
     ctx.filter = grade;
-    ctx.drawImage(source, 0, 0, w, h);
+    ctx.drawImage(source, 0, 0, width, height);
     ctx.filter = 'none';
+    if (state.settings.blur <= 0) return;
 
-    if (state.settings.blur > 0) drawProgressiveBlur(ctx, source, w, h, grade, isExport);
-    drawFocusPop(ctx, source, w, h, isExport);
-    if (state.settings.vignette > 0) drawVignette(ctx, w, h, state.settings.vignette);
-    ctx.restore();
+    const longest = Math.max(width, height);
+    const scale = Math.min(1, 640 / longest);
+    const sw = Math.max(2, Math.round(width * scale));
+    const sh = Math.max(2, Math.round(height * scale));
+    sizeCanvas(fallback.small, sw, sh);
+    sizeCanvas(fallback.blur, width, height);
+    sizeCanvas(fallback.mask, width, height);
+
+    const smallCtx = fallback.small.getContext('2d');
+    smallCtx.clearRect(0, 0, sw, sh);
+    smallCtx.filter = `${grade} blur(${Math.max(1, state.settings.blur * scale * Math.min(width, height) / 900)}px)`;
+    smallCtx.drawImage(source, -2, -2, sw + 4, sh + 4);
+    smallCtx.filter = 'none';
+
+    const blurCtx = fallback.blur.getContext('2d');
+    blurCtx.clearRect(0, 0, width, height);
+    blurCtx.drawImage(fallback.small, 0, 0, width, height);
+
+    const maskCtx = fallback.mask.getContext('2d');
+    maskCtx.clearRect(0, 0, width, height);
+    paintOutsideMask(maskCtx, width, height);
+    blurCtx.globalCompositeOperation = 'destination-in';
+    blurCtx.drawImage(fallback.mask, 0, 0);
+    blurCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(fallback.blur, 0, 0);
   }
 
-  function gradeFilter(extraContrast = 0, extraSat = 0, extraBright = 0) {
-    return `saturate(${state.settings.saturation + extraSat}%) contrast(${state.settings.contrast + extraContrast}%) brightness(${state.settings.brightness + extraBright}%)`;
-  }
-
-  function drawProgressiveBlur(targetCtx, source, w, h, colorFilter, isExport) {
-    const levels = state.media?.kind === 'video' && !isExport ? [0.42, 0.82] : [0.28, 0.54, 0.86, 1.16];
-    const starts = levels.length === 2 ? [0.06, 0.76] : [0, 0.34, 0.72, 1.1];
-    const spans = levels.length === 2 ? [0.78, 1.1] : [0.6, 0.75, 0.84, 1.1];
-    const cached = state.media?.kind === 'image' && !isExport ? getImageBlurLayers(source, w, h, colorFilter, levels) : null;
-    levels.forEach((factor, index) => {
-      const layer = cached ? cached[index] : renderBlurLayer(source, w, h, colorFilter, factor, isExport);
-      maskAndComposite(targetCtx, layer, w, h, starts[index], spans[index]);
-    });
-  }
-
-  function getImageBlurLayers(source, w, h, colorFilter, levels) {
-    const key = [w,h,state.settings.blur,state.settings.saturation,state.settings.contrast,state.settings.brightness,levels.join(',')].join('|');
-    if (state.imageCacheKey === key && state.imageLayers) return state.imageLayers;
-    state.imageLayers = levels.map((factor) => cloneCanvas(renderBlurLayer(source, w, h, colorFilter, factor, false)));
-    state.imageCacheKey = key;
-    return state.imageLayers;
-  }
-
-  function renderBlurLayer(source, w, h, colorFilter, factor, isExport) {
-    ensureCanvasSize(scratch.layer, w, h);
-    const longest = Math.max(w, h);
-    const sampleEdge = isExport ? 1400 : (state.media?.kind === 'video' ? 560 : 760);
-    const scale = Math.min(1, sampleEdge / longest);
-    const sw = Math.max(2, Math.round(w * scale));
-    const sh = Math.max(2, Math.round(h * scale));
-    ensureCanvasSize(scratch.small, sw, sh);
-    const sctx = scratch.small.getContext('2d');
-    sctx.clearRect(0, 0, sw, sh);
-    sctx.imageSmoothingEnabled = true;
-    sctx.imageSmoothingQuality = 'high';
-    const px = Math.max(0.8, state.settings.blur * factor * Math.min(w, h) / 690 * scale);
-    sctx.filter = `${colorFilter} blur(${px.toFixed(2)}px)`;
-    sctx.drawImage(source, -2, -2, sw + 4, sh + 4);
-    sctx.filter = 'none';
-    const lctx = scratch.layer.getContext('2d');
-    lctx.clearRect(0, 0, w, h);
-    lctx.imageSmoothingEnabled = true;
-    lctx.imageSmoothingQuality = 'high';
-    lctx.drawImage(scratch.small, 0, 0, w, h);
-    return scratch.layer;
-  }
-
-  function maskAndComposite(targetCtx, layer, w, h, start, span) {
-    ensureCanvasSize(scratch.mask, w, h);
-    const mctx = scratch.mask.getContext('2d');
-    mctx.clearRect(0, 0, w, h);
-    if (effectiveMode() === 'object') paintObjectOutsideMask(mctx, w, h, start, span);
-    else paintSceneOutsideMask(mctx, w, h, start, span);
-    ensureCanvasSize(scratch.pop, w, h);
-    const pctx = scratch.pop.getContext('2d');
-    pctx.clearRect(0, 0, w, h);
-    pctx.drawImage(layer, 0, 0);
-    pctx.globalCompositeOperation = 'destination-in';
-    pctx.drawImage(scratch.mask, 0, 0);
-    pctx.globalCompositeOperation = 'source-over';
-    targetCtx.drawImage(scratch.pop, 0, 0);
-  }
-
-  function paintSceneOutsideMask(ctx, w, h, start, span) {
-    const g = sceneGeometry(w, h);
-    const inner = g.halfSharp + g.feather * start;
-    const outer = inner + g.feather * span;
-    const grad = ctx.createLinearGradient(g.centerX - g.normalX * g.extent, g.centerY - g.normalY * g.extent, g.centerX + g.normalX * g.extent, g.centerY + g.normalY * g.extent);
-    const stop = (d) => clamp(0.5 + d / (2 * g.extent), 0, 1);
-    grad.addColorStop(0, 'rgba(0,0,0,1)');
-    grad.addColorStop(stop(-outer), 'rgba(0,0,0,1)');
-    grad.addColorStop(stop(-inner), 'rgba(0,0,0,0)');
-    grad.addColorStop(stop(inner), 'rgba(0,0,0,0)');
-    grad.addColorStop(stop(outer), 'rgba(0,0,0,1)');
-    grad.addColorStop(1, 'rgba(0,0,0,1)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  }
-
-  function paintObjectOutsideMask(ctx, w, h, start, span) {
-    const g = objectGeometry(w, h);
-    const innerX = g.rx + g.feather * start;
-    const innerY = g.ry + g.feather * start * 0.76;
-    const outerX = innerX + g.feather * span;
-    const outerY = innerY + g.feather * span * 0.76;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-    const size = 256;
-    ensureCanvasSize(scratch.radial, size, size);
-    const rctx = scratch.radial.getContext('2d');
-    rctx.clearRect(0, 0, size, size);
-    const ratio = clamp(Math.max(innerX / outerX, innerY / outerY), 0, 0.95);
-    const grad = rctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-    grad.addColorStop(0, 'rgba(0,0,0,1)');
-    grad.addColorStop(ratio, 'rgba(0,0,0,1)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    rctx.fillStyle = grad;
-    rctx.fillRect(0, 0, size, size);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.drawImage(scratch.radial, g.cx - outerX, g.cy - outerY, outerX * 2, outerY * 2);
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  function drawFocusPop(targetCtx, source, w, h, isExport) {
-    ensureCanvasSize(scratch.pop, w, h);
-    const pctx = scratch.pop.getContext('2d');
-    pctx.clearRect(0, 0, w, h);
-    const punchContrast = Math.round(state.settings.pop * 0.14);
-    const punchSat = Math.round(state.settings.pop * 0.1);
-    pctx.filter = gradeFilter(punchContrast, punchSat, 1);
-    pctx.drawImage(source, 0, 0, w, h);
-    pctx.filter = 'none';
-
-    ensureCanvasSize(scratch.mask, w, h);
-    const mctx = scratch.mask.getContext('2d');
-    mctx.clearRect(0, 0, w, h);
-    paintSharpMask(mctx, w, h);
-    pctx.globalCompositeOperation = 'destination-in';
-    pctx.drawImage(scratch.mask, 0, 0);
-    pctx.globalCompositeOperation = 'source-over';
-    targetCtx.globalAlpha = isExport ? clamp(0.48 + state.settings.pop / 200, 0.55, 0.92) : clamp(0.42 + state.settings.pop / 210, 0.48, 0.82);
-    targetCtx.drawImage(scratch.pop, 0, 0);
-    targetCtx.globalAlpha = 1;
-  }
-
-  function paintSharpMask(ctx, w, h) {
+  function paintOutsideMask(ctx, width, height) {
     if (effectiveMode() === 'object') {
-      const g = objectGeometry(w, h);
-      ctx.fillStyle = 'rgba(0,0,0,.94)';
+      const g = objectGeometry(width, height);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'destination-out';
+      const gradient = ctx.createRadialGradient(g.cx, g.cy, Math.min(g.rx, g.ry) * 0.7, g.cx, g.cy, Math.max(g.rx, g.ry) + g.feather);
+      gradient.addColorStop(0, 'rgba(0,0,0,1)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, Math.PI * 2);
+      ctx.ellipse(g.cx, g.cy, g.rx + g.feather, g.ry + g.feather, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
       return;
     }
-    const g = sceneGeometry(w, h);
-    const tangentX = g.normalY, tangentY = -g.normalX, lineHalf = Math.hypot(w, h);
-    ctx.strokeStyle = 'rgba(0,0,0,.94)';
-    ctx.lineWidth = g.halfSharp * 2;
-    ctx.lineCap = 'butt';
-    ctx.beginPath();
-    ctx.moveTo(g.centerX - tangentX * lineHalf, g.centerY - tangentY * lineHalf);
-    ctx.lineTo(g.centerX + tangentX * lineHalf, g.centerY + tangentY * lineHalf);
-    ctx.stroke();
+
+    const g = sceneGeometry(width, height);
+    const gradient = ctx.createLinearGradient(
+      g.centerX - g.normalX * g.extent,
+      g.centerY - g.normalY * g.extent,
+      g.centerX + g.normalX * g.extent,
+      g.centerY + g.normalY * g.extent
+    );
+    const stop = (distance) => M.clamp(0.5 + distance / (2 * g.extent), 0, 1);
+    gradient.addColorStop(0, 'rgba(0,0,0,1)');
+    gradient.addColorStop(stop(-(g.halfSharp + g.feather)), 'rgba(0,0,0,1)');
+    gradient.addColorStop(stop(-g.halfSharp), 'rgba(0,0,0,0)');
+    gradient.addColorStop(stop(g.halfSharp), 'rgba(0,0,0,0)');
+    gradient.addColorStop(stop(g.halfSharp + g.feather), 'rgba(0,0,0,1)');
+    gradient.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
   }
 
-  function effectiveMode() {
-    return state.settings.mode === 'auto' ? ((state.analysis?.concentrated || false) ? 'object' : 'scene') : state.settings.mode;
-  }
-
-  function sceneGeometry(w, h) {
-    const a = state.settings.angle * Math.PI / 180;
-    const normalX = -Math.sin(a), normalY = Math.cos(a);
-    const maxProjection = (Math.abs(normalX) * w + Math.abs(normalY) * h) / 2;
+  function sceneGeometry(width, height) {
+    const angle = state.settings.angle * Math.PI / 180;
+    const normalX = -Math.sin(angle);
+    const normalY = Math.cos(angle);
+    const maxProjection = (Math.abs(normalX) * width + Math.abs(normalY) * height) / 2;
     const offset = state.settings.position * maxProjection;
     return {
-      normalX, normalY,
-      centerX: w/2 + normalX * offset,
-      centerY: h/2 + normalY * offset,
-      maxProjection,
-      halfSharp: maxProjection * (state.settings.focus / 100),
-      feather: Math.max(3, maxProjection * (state.settings.feather / 100)),
-      extent: Math.hypot(w, h) * 0.86
+      normalX,
+      normalY,
+      centerX: width / 2 + normalX * offset,
+      centerY: height / 2 + normalY * offset,
+      halfSharp: maxProjection * state.settings.focus / 100,
+      feather: Math.max(3, maxProjection * state.settings.feather / 100),
+      extent: Math.hypot(width, height) * 0.86
     };
   }
 
-  function objectGeometry(w, h) {
-    const min = Math.min(w, h);
-    const radius = min * clamp(state.settings.focus / 100 * 1.7, 0.11, 0.62) * state.settings.objectScale;
+  function objectGeometry(width, height) {
+    const min = Math.min(width, height);
+    const radius = min * M.clamp(state.settings.focus / 100 * 1.7, 0.11, 0.62) * state.settings.objectScale;
     return {
-      cx: state.settings.objectX * w,
-      cy: state.settings.objectY * h,
+      cx: state.settings.objectX * width,
+      cy: state.settings.objectY * height,
       rx: radius * 1.22,
       ry: radius * 0.84,
-      feather: Math.max(4, min * (state.settings.feather / 100) * 0.9)
+      feather: Math.max(4, min * state.settings.feather / 100 * 0.9)
     };
   }
 
-  function drawGuide() {
-    const c = el.guideCanvas, ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (!state.media || state.compare) return;
-    ctx.save();
-    ctx.lineWidth = Math.max(1.5, Math.min(c.width, c.height) / 520);
-    ctx.strokeStyle = 'rgba(214,255,103,.92)';
-    ctx.fillStyle = '#d6ff67';
-    ctx.setLineDash([10, 8]);
-    if (effectiveMode() === 'object') {
-      const g = objectGeometry(c.width, c.height);
-      ctx.beginPath();
-      ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(g.cx, g.cy, Math.max(7, c.width / 110), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#171817'; ctx.stroke();
-    } else {
-      const g = sceneGeometry(c.width, c.height), tx = g.normalY, ty = -g.normalX, half = Math.hypot(c.width, c.height);
-      [-g.halfSharp, g.halfSharp].forEach((off) => {
-        const x = g.centerX + g.normalX * off, y = g.centerY + g.normalY * off;
-        ctx.beginPath(); ctx.moveTo(x - tx * half, y - ty * half); ctx.lineTo(x + tx * half, y + ty * half); ctx.stroke();
-      });
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(g.centerX, g.centerY, Math.max(7, c.width / 110), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#171817'; ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function bindGuideDrag() {
-    const c = el.guideCanvas;
-    c.addEventListener('pointerdown', (event) => {
+  function bindGuide() {
+    const canvas = el.guideCanvas;
+    canvas.addEventListener('pointerdown', (event) => {
       if (!state.media || state.exporting) return;
       state.dragging = true;
       state.dragKind = chooseDragKind(event);
-      c.setPointerCapture?.(event.pointerId);
-      moveFocus(event);
+      canvas.setPointerCapture?.(event.pointerId);
+      moveGuide(event);
       el.stageHint.classList.add('is-hidden');
     });
-    c.addEventListener('pointermove', (event) => { if (state.dragging) moveFocus(event); });
-    const finish = () => { if (!state.dragging) return; state.dragging = false; saveSettings(); showGuide(); };
-    c.addEventListener('pointerup', finish);
-    c.addEventListener('pointercancel', finish);
+    canvas.addEventListener('pointermove', (event) => { if (state.dragging) moveGuide(event); });
+    const finish = () => {
+      if (!state.dragging) return;
+      state.dragging = false;
+      saveSettings();
+      showGuide();
+    };
+    canvas.addEventListener('pointerup', finish);
+    canvas.addEventListener('pointercancel', finish);
   }
 
   function chooseDragKind(event) {
-    if (effectiveMode() !== 'object') return 'focus';
+    if (effectiveMode() !== 'object') return 'move';
     const rect = el.guideCanvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * el.guideCanvas.width;
-    const y = ((event.clientY - rect.top) / rect.height) * el.guideCanvas.height;
+    const x = (event.clientX - rect.left) / rect.width * el.guideCanvas.width;
+    const y = (event.clientY - rect.top) / rect.height * el.guideCanvas.height;
     const g = objectGeometry(el.guideCanvas.width, el.guideCanvas.height);
-    const dx = (x - g.cx) / g.rx;
-    const dy = (y - g.cy) / g.ry;
-    const distance = Math.hypot(dx, dy);
-    return Math.abs(distance - 1) < 0.22 ? 'resize' : 'focus';
+    const distance = Math.hypot((x - g.cx) / g.rx, (y - g.cy) / g.ry);
+    return Math.abs(distance - 1) < 0.24 ? 'resize' : 'move';
   }
 
-  function moveFocus(event) {
+  function moveGuide(event) {
     const rect = el.guideCanvas.getBoundingClientRect();
-    const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+    const nx = M.clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    const ny = M.clamp((event.clientY - rect.top) / rect.height, 0, 1);
     if (effectiveMode() === 'object') {
       if (state.dragKind === 'resize') {
         const g = objectGeometry(el.guideCanvas.width, el.guideCanvas.height);
-        const px = x * el.guideCanvas.width, py = y * el.guideCanvas.height;
-        const dist = Math.hypot((px - g.cx) / Math.max(1, g.rx), (py - g.cy) / Math.max(1, g.ry));
-        state.settings.objectScale = clamp(dist, 0.6, 1.7);
+        const px = nx * el.guideCanvas.width;
+        const py = ny * el.guideCanvas.height;
+        const distance = Math.hypot((px - g.cx) / Math.max(1, g.rx), (py - g.cy) / Math.max(1, g.ry));
+        state.settings.objectScale = M.clamp(distance, 0.58, 1.75);
       } else {
-        state.settings.objectX = x; state.settings.objectY = y;
+        state.settings.objectX = nx;
+        state.settings.objectY = ny;
       }
     } else {
-      const px = x * el.guideCanvas.width, py = y * el.guideCanvas.height;
+      const px = nx * el.guideCanvas.width;
+      const py = ny * el.guideCanvas.height;
       const g = sceneGeometry(el.guideCanvas.width, el.guideCanvas.height);
-      const dx = px - el.guideCanvas.width / 2, dy = py - el.guideCanvas.height / 2;
-      state.settings.position = clamp((dx * g.normalX + dy * g.normalY) / Math.max(1, g.maxProjection), -0.98, 0.98);
+      const dx = px - el.guideCanvas.width / 2;
+      const dy = py - el.guideCanvas.height / 2;
+      const maxProjection = (Math.abs(g.normalX) * el.guideCanvas.width + Math.abs(g.normalY) * el.guideCanvas.height) / 2;
+      state.settings.position = M.clamp((dx * g.normalX + dy * g.normalY) / Math.max(1, maxProjection), -0.98, 0.98);
     }
     requestRender();
   }
 
-  function bindCompareEvents() {
-    const b = el.compareButton;
+  function drawGuide() {
+    const canvas = el.guideCanvas;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!state.media || state.compare || (!state.guideVisible && !state.dragging)) return;
+
+    ctx.save();
+    ctx.lineWidth = Math.max(1.5, Math.min(canvas.width, canvas.height) / 520);
+    ctx.strokeStyle = 'rgba(214,255,103,.94)';
+    ctx.fillStyle = '#d6ff67';
+    ctx.setLineDash([10, 8]);
+
+    if (effectiveMode() === 'object') {
+      const g = objectGeometry(canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(g.cx, g.cy, Math.max(7, canvas.width / 110), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#161816';
+      ctx.stroke();
+    } else {
+      const g = sceneGeometry(canvas.width, canvas.height);
+      const tx = g.normalY;
+      const ty = -g.normalX;
+      const half = Math.hypot(canvas.width, canvas.height);
+      [-g.halfSharp, g.halfSharp].forEach((offset) => {
+        const x = g.centerX + g.normalX * offset;
+        const y = g.centerY + g.normalY * offset;
+        ctx.beginPath();
+        ctx.moveTo(x - tx * half, y - ty * half);
+        ctx.lineTo(x + tx * half, y + ty * half);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(g.centerX, g.centerY, Math.max(7, canvas.width / 110), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#161816';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function showGuide(delay = 1200) {
+    clearTimeout(state.guideTimer);
+    state.guideVisible = true;
+    drawGuide();
+    state.guideTimer = setTimeout(() => {
+      if (state.dragging) return;
+      state.guideVisible = false;
+      const ctx = el.guideCanvas.getContext('2d');
+      ctx.clearRect(0, 0, el.guideCanvas.width, el.guideCanvas.height);
+    }, delay);
+  }
+
+  function bindCompare() {
+    const button = el.compareButton;
     const start = (event) => {
       if (!state.media || state.exporting) return;
       event.preventDefault();
       state.compare = true;
-      b.classList.add('is-active');
-      b.textContent = 'Оригинал';
+      button.classList.add('is-active');
+      button.textContent = 'Оригинал';
       requestRender();
     };
     const end = () => {
       if (!state.compare) return;
       state.compare = false;
-      b.classList.remove('is-active');
-      b.textContent = 'Зажми: оригинал';
+      button.classList.remove('is-active');
+      button.textContent = 'Зажми: оригинал';
       requestRender();
       showGuide();
     };
-    b.addEventListener('pointerdown', start);
-    b.addEventListener('pointerup', end);
-    b.addEventListener('pointercancel', end);
-    b.addEventListener('pointerleave', end);
+    button.addEventListener('pointerdown', start);
+    button.addEventListener('pointerup', end);
+    button.addEventListener('pointercancel', end);
+    button.addEventListener('pointerleave', end);
     window.addEventListener('pointerup', end);
-  }
-
-  function showGuide(delay = 1200) {
-    clearTimeout(state.guideTimer);
-    drawGuide();
-    state.guideTimer = setTimeout(() => {
-      if (state.dragging) return;
-      el.guideCanvas.getContext('2d').clearRect(0, 0, el.guideCanvas.width, el.guideCanvas.height);
-    }, delay);
   }
 
   function startVideoLoop() {
     if (!state.media || state.media.kind !== 'video') return;
-    const token = ++state.loopToken;
+    const token = ++state.videoToken;
     const frame = (now = performance.now()) => {
-      if (token !== state.loopToken || !state.media || state.media.kind !== 'video') return;
+      if (token !== state.videoToken || !state.media || state.media.kind !== 'video') return;
       if (state.exporting) renderExportVideoFrame();
-      else if (now - state.lastVideoRender > 44) { state.lastVideoRender = now; renderCurrentFrame(); }
+      else if (now - state.lastVideoRender >= 52) {
+        state.lastVideoRender = now;
+        renderCurrentFrame();
+      }
       updateVideoUi();
-      if (!el.sourceVideo.paused && !el.sourceVideo.ended) schedule(frame);
+      if (!el.sourceVideo.paused && !el.sourceVideo.ended) scheduleVideoFrame(frame);
     };
-    schedule(frame);
+    scheduleVideoFrame(frame);
   }
 
-  function schedule(cb) {
-    if ('requestVideoFrameCallback' in el.sourceVideo) el.sourceVideo.requestVideoFrameCallback(() => cb(performance.now()));
-    else requestAnimationFrame(cb);
-  }
-
-  function renderExportVideoFrame() {
-    if (!state.exporting) return;
-    drawProcessed(el.exportCanvas, el.sourceVideo, false, true);
-    const ctx = el.previewCanvas.getContext('2d', { alpha: false });
-    ctx.clearRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
-    ctx.drawImage(el.exportCanvas, 0, 0, el.previewCanvas.width, el.previewCanvas.height);
-    const d = finiteDuration();
-    setExportProgress(d ? clamp(el.sourceVideo.currentTime / d, 0, 1) : 0);
+  function scheduleVideoFrame(callback) {
+    if ('requestVideoFrameCallback' in el.sourceVideo) {
+      el.sourceVideo.requestVideoFrameCallback(() => callback(performance.now()));
+    } else requestAnimationFrame(callback);
   }
 
   function togglePlayback() {
@@ -798,82 +682,130 @@
   }
 
   function updatePlayButton() {
-    const p = !el.sourceVideo.paused && !el.sourceVideo.ended;
-    el.playButton.textContent = p ? 'Ⅱ' : '▶';
-    el.playButton.setAttribute('aria-label', p ? 'Пауза' : 'Воспроизвести');
+    const playing = !el.sourceVideo.paused && !el.sourceVideo.ended;
+    el.playButton.textContent = playing ? 'Ⅱ' : '▶';
+    el.playButton.setAttribute('aria-label', playing ? 'Пауза' : 'Воспроизвести');
   }
 
   function updateVideoUi() {
     if (!state.media || state.media.kind !== 'video') return;
-    const d = finiteDuration(), t = Number.isFinite(el.sourceVideo.currentTime) ? el.sourceVideo.currentTime : 0;
-    if (d && !state.exporting) el.seekInput.value = String(Math.round(t / d * 1000));
-    el.timeOutput.value = `${formatTime(t)} / ${formatTime(d)}`;
+    const duration = finiteDuration();
+    const time = Number.isFinite(el.sourceVideo.currentTime) ? el.sourceVideo.currentTime : 0;
+    if (duration && !state.exporting) el.seekInput.value = String(Math.round(time / duration * 1000));
+    el.timeOutput.value = `${M.formatTime(time)} / ${M.formatTime(duration)}`;
     updatePlayButton();
   }
 
   async function exportImage() {
-    if (!state.media || state.media.kind !== 'image') return;
-    setLoading(true, 'Готовлю файл', 'Рендерю miniature-эффект…');
     setUiLocked(true);
+    setLoading(true, 'Готовлю фото', 'Рендерю эффект в экспортном разрешении…');
     try {
-      const d = resolveExportDimensions('image');
-      el.exportCanvas.width = d.width; el.exportCanvas.height = d.height;
+      const dimensions = M.resolveDimensions(state.media, el.resolutionSelect.value, 'image');
+      el.exportCanvas.width = dimensions.width;
+      el.exportCanvas.height = dimensions.height;
       await nextFrame();
-      drawProcessed(el.exportCanvas, el.sourceImage, false, true);
+      renderTo(el.exportCanvas, el.sourceImage, false);
       const type = el.formatSelect.value === 'png' ? 'image/png' : 'image/jpeg';
-      const blob = await canvasToBlob(el.exportCanvas, type, type === 'image/jpeg' ? 0.94 : undefined);
-      if (!blob) throw new Error('export');
-      downloadBlob(blob, `${fileBaseName(state.media.file.name)}-miniature.${type === 'image/png' ? 'png' : 'jpg'}`);
-      showToast(`Готово · ${d.width}×${d.height}`);
-    } catch (e) {
-      console.error(e); showToast('Не удалось сохранить изображение.');
+      const blob = await M.canvasToBlob(el.exportCanvas, type, type === 'image/jpeg' ? 0.94 : undefined);
+      if (!blob) throw new Error('empty export');
+      const ext = type === 'image/png' ? 'png' : 'jpg';
+      M.download(blob, `${M.baseName(state.media.file.name)}-miniature.${ext}`);
+      showToast(`Готово · ${dimensions.width}×${dimensions.height}`);
+    } catch (error) {
+      console.error(error);
+      showToast('Не удалось сохранить изображение.');
     } finally {
-      setLoading(false); setUiLocked(false); requestRender();
+      setLoading(false);
+      setUiLocked(false);
+      requestRender();
     }
   }
 
   async function exportVideo() {
-    if (!state.media || state.media.kind !== 'video' || state.exporting) return;
-    if (!el.exportCanvas.captureStream || typeof MediaRecorder === 'undefined') return showToast('Этот браузер не умеет записывать обработанный canvas.');
-    const mime = pickRecorderMime();
-    if (!mime) return showToast('Нет доступного видеокодека для экспорта.');
-    const video = el.sourceVideo, saved = video.currentTime, wasPlaying = !video.paused;
-    state.exporting = true; state.exportCancelled = false; setUiLocked(true); el.exportProgress.hidden = false; setExportProgress(0);
+    if (!el.exportCanvas.captureStream || typeof MediaRecorder === 'undefined') {
+      return showToast('Этот браузер не умеет записывать обработанный canvas.');
+    }
+    const mime = M.pickRecorderMime();
+    if (!mime) return showToast('На этом устройстве нет доступного видеокодека для экспорта.');
+
+    const video = el.sourceVideo;
+    const savedTime = video.currentTime;
+    const wasPlaying = !video.paused;
+    const audioPromise = getAudioTrack();
+    state.exporting = true;
+    state.exportCancelled = false;
+    setUiLocked(true);
+    el.exportProgress.hidden = false;
+    setExportProgress(0);
+
     try {
-      video.pause(); await seekVideo(0);
-      const d = resolveExportDimensions('video');
-      el.exportCanvas.width = d.width; el.exportCanvas.height = d.height;
-      drawProcessed(el.exportCanvas, video, false, true);
-      const stream = el.exportCanvas.captureStream(30), audio = await getAudioTrack(); if (audio) stream.addTrack(audio);
-      const bitrate = Math.round(clamp((d.width * d.height / (1280 * 720)) * 5_000_000, 4_000_000, 24_000_000));
-      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
-      state.recorder = rec;
+      video.pause();
+      await seekVideo(0);
+      const dimensions = M.resolveDimensions(state.media, el.resolutionSelect.value, 'video');
+      el.exportCanvas.width = dimensions.width;
+      el.exportCanvas.height = dimensions.height;
+      renderTo(el.exportCanvas, video, false);
+
+      const stream = el.exportCanvas.captureStream(30);
+      const audio = await audioPromise;
+      if (audio) stream.addTrack(audio);
+
+      const bitrate = Math.round(M.clamp(
+        dimensions.width * dimensions.height / (1280 * 720) * 5_000_000,
+        4_000_000,
+        24_000_000
+      ));
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
+      state.recorder = recorder;
       const chunks = [];
-      rec.addEventListener('dataavailable', (e) => { if (e.data?.size) chunks.push(e.data); });
-      const stopped = new Promise((r) => rec.addEventListener('stop', r, { once: true }));
-      rec.start(1000);
+      recorder.addEventListener('dataavailable', (event) => { if (event.data?.size) chunks.push(event.data); });
+      const stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve, { once: true }));
+      recorder.start(1000);
       if (state.monitorGain) state.monitorGain.gain.value = 0;
-      const finish = new Promise((r) => { state.exportResolve = r; });
+
+      const finished = new Promise((resolve) => { state.exportResolve = resolve; });
       const ended = () => state.exportResolve?.('ended');
       video.addEventListener('ended', ended, { once: true });
-      await video.play(); startVideoLoop(); await finish; video.removeEventListener('ended', ended); video.pause();
-      if (rec.state !== 'inactive') rec.stop(); await stopped;
+      await video.play();
+      startVideoLoop();
+      await finished;
+      video.removeEventListener('ended', ended);
+      video.pause();
+      if (recorder.state !== 'inactive') recorder.stop();
+      await stopped;
+
       if (!state.exportCancelled) {
         const blob = new Blob(chunks, { type: mime.split(';')[0] });
-        if (!blob.size) throw new Error('empty');
+        if (!blob.size) throw new Error('empty video');
         const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
-        downloadBlob(blob, `${fileBaseName(state.media.file.name)}-miniature.${ext}`);
-        showToast(`Видео готово · ${d.width}×${d.height}`);
+        M.download(blob, `${M.baseName(state.media.file.name)}-miniature.${ext}`);
+        showToast(`Видео готово · ${dimensions.width}×${dimensions.height}`);
       } else showToast('Экспорт отменён');
-    } catch (e) {
-      console.error(e); showToast('Экспорт видео не завершился.');
+    } catch (error) {
+      console.error(error);
+      showToast('Экспорт видео не завершился.');
     } finally {
-      state.exportResolve = null; state.recorder = null; state.exporting = false; state.exportCancelled = false;
+      state.exportResolve = null;
+      state.recorder = null;
+      state.exporting = false;
+      state.exportCancelled = false;
       if (state.monitorGain) state.monitorGain.gain.value = 1;
-      el.exportProgress.hidden = true; setUiLocked(false);
-      try { await seekVideo(Math.min(saved, finiteDuration() || saved)); } catch (_) {}
-      if (wasPlaying) el.sourceVideo.play().catch(() => {}); else requestRender();
+      el.exportProgress.hidden = true;
+      setUiLocked(false);
+      try { await seekVideo(Math.min(savedTime, finiteDuration() || savedTime)); } catch (_) {}
+      if (wasPlaying) el.sourceVideo.play().catch(() => {});
+      else requestRender();
     }
+  }
+
+  function renderExportVideoFrame() {
+    if (!state.exporting) return;
+    renderTo(el.exportCanvas, el.sourceVideo, false);
+    const ctx = el.previewCanvas.getContext('2d', { alpha: false });
+    ctx.clearRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
+    ctx.drawImage(el.exportCanvas, 0, 0, el.previewCanvas.width, el.previewCanvas.height);
+    const duration = finiteDuration();
+    setExportProgress(duration ? M.clamp(el.sourceVideo.currentTime / duration, 0, 1) : 0);
   }
 
   function cancelVideoExport() {
@@ -884,11 +816,11 @@
   }
 
   async function getAudioTrack() {
-    const C = window.AudioContext || window.webkitAudioContext;
-    if (!C) return null;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
     try {
       if (!state.audioContext) {
-        state.audioContext = new C();
+        state.audioContext = new AudioContextClass();
         state.audioSource = state.audioContext.createMediaElementSource(el.sourceVideo);
         state.audioDestination = state.audioContext.createMediaStreamDestination();
         state.monitorGain = state.audioContext.createGain();
@@ -898,55 +830,80 @@
       }
       if (state.audioContext.state === 'suspended') await state.audioContext.resume();
       return state.audioDestination.stream.getAudioTracks()[0] || null;
-    } catch (e) { console.warn(e); return null; }
+    } catch (error) {
+      console.warn('[Miniature Lab] audio export unavailable:', error);
+      return null;
+    }
   }
 
-  function pickRecorderMime() {
-    const list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
-    return typeof MediaRecorder?.isTypeSupported === 'function' ? (list.find((t) => MediaRecorder.isTypeSupported(t)) || '') : '';
+  function seekVideo(time) {
+    const video = el.sourceVideo;
+    if (!Number.isFinite(time) || Math.abs(video.currentTime - time) < 0.02) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let timer;
+      const done = () => {
+        clearTimeout(timer);
+        video.removeEventListener('seeked', done);
+        video.removeEventListener('error', fail);
+        resolve();
+      };
+      const fail = () => {
+        clearTimeout(timer);
+        reject(new Error('seek failed'));
+      };
+      video.addEventListener('seeked', done, { once: true });
+      video.addEventListener('error', fail, { once: true });
+      timer = setTimeout(done, 2500);
+      video.currentTime = M.clamp(time, 0, finiteDuration() || time);
+    });
   }
 
-  function resolveExportDimensions(kind) {
-    const w = state.media.width, h = state.media.height, longest = Math.max(w, h), choice = el.resolutionSelect.value;
-    let maxEdge;
-    if (choice === '1080') maxEdge = 1920;
-    else if (choice === '2160') maxEdge = 3840;
-    else if (choice === 'original') maxEdge = 8192;
-    else maxEdge = kind === 'image' ? 4096 : 1920;
-    const s = Math.min(1, maxEdge / longest);
-    return { width: Math.max(2, Math.round(w * s)), height: Math.max(2, Math.round(h * s)) };
+  function finiteDuration() {
+    const duration = el.sourceVideo.duration;
+    return Number.isFinite(duration) && duration > 0 ? duration : (state.media?.duration || 0);
   }
 
-  function setUiLocked(v) {
-    controls.forEach(([, input]) => input.disabled = v);
-    [el.resetButton, el.presetButton, el.autoButton, el.resolutionSelect, el.formatSelect, el.exportButton, el.replaceInput, el.playButton, el.seekInput, el.compareButton].forEach((x) => { if (x) x.disabled = v; });
-    if (el.modeSwitch) el.modeSwitch.querySelectorAll('button').forEach((b) => b.disabled = v);
-    el.angleInput.disabled = (effectiveMode() === 'object' && !v) || v;
+  function setUiLocked(locked) {
+    controls.forEach(([, input]) => { input.disabled = locked; });
+    [
+      el.resetButton, el.presetButton, el.autoButton, el.resolutionSelect, el.formatSelect,
+      el.exportButton, el.replaceInput, el.playButton, el.seekInput, el.compareButton
+    ].forEach((node) => { if (node) node.disabled = locked; });
+    if (el.modeSwitch) el.modeSwitch.querySelectorAll('button').forEach((button) => { button.disabled = locked; });
+    updateModeUi();
   }
 
-  function setExportProgress(p) {
-    const pct = Math.round(clamp(p, 0, 1) * 100);
+  function setExportProgress(progress) {
+    const pct = Math.round(M.clamp(progress, 0, 1) * 100);
     el.progressBar.style.width = `${pct}%`;
     el.progressText.textContent = `Экспорт ${pct}%`;
   }
 
-  function setLoading(v, title = '', text = '') {
-    el.loadingState.hidden = !v;
+  function setLoading(visible, title = '', text = '') {
+    el.loadingState.hidden = !visible;
     if (title) el.loadingTitle.textContent = title;
     if (text) el.loadingText.textContent = text;
   }
 
   function updateModeUi() {
     if (el.modeSwitch) {
-      el.modeSwitch.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.focusMode === state.settings.mode));
+      el.modeSwitch.querySelectorAll('button').forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.focusMode === state.settings.mode);
+      });
     }
-    el.angleInput.disabled = effectiveMode() === 'object' || state.exporting;
-    el.stageHint.textContent = effectiveMode() === 'object' ? 'Тяни эллипс по объекту. По краю можно менять размер' : 'Тяни кадр поперёк — двигается зона резкости';
+    el.angleInput.disabled = state.exporting || effectiveMode() === 'object';
+    el.stageHint.textContent = effectiveMode() === 'object'
+      ? 'Тяни эллипс по объекту · тяни за край, чтобы менять размер'
+      : 'Тяни кадр поперёк — двигается зона резкости';
   }
 
   function setSettings(next, message) {
-    state.settings = { ...state.settings, ...next };
-    invalidateImageCache(); applySettingsToControls(); saveSettings(); updateModeUi(); requestRender(); showGuide();
+    state.settings = sanitizeSettings(next);
+    applySettingsToControls();
+    saveSettings();
+    updateModeUi();
+    requestRender();
+    showGuide();
     if (message) showToast(message);
   }
 
@@ -957,53 +914,46 @@
     });
   }
 
-  function invalidateImageCache() { state.imageCacheKey = ''; state.imageLayers = null; }
-
   function loadSettings() {
     try {
-      const p = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      const n = { ...DEFAULTS };
-      if (p && typeof p === 'object') {
-        Object.keys(DEFAULTS).forEach((k) => {
-          if (k === 'mode') { if (['auto', 'scene', 'object'].includes(p.mode)) n.mode = p.mode; }
-          else if (Number.isFinite(Number(p[k]))) n[k] = Number(p[k]);
-        });
-      }
-      n.position = clamp(n.position, -0.98, 0.98);
-      n.objectX = clamp(n.objectX, 0, 1);
-      n.objectY = clamp(n.objectY, 0, 1);
-      n.objectScale = clamp(n.objectScale, 0.6, 1.7);
-      return n;
-    } catch (_) { return { ...DEFAULTS }; }
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return sanitizeSettings({ ...DEFAULTS, ...(parsed && typeof parsed === 'object' ? parsed : {}) });
+    } catch (_) {
+      return { ...DEFAULTS };
+    }
   }
 
-  function saveSettings() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings)); } catch (_) {} }
+  function sanitizeSettings(settings) {
+    const next = { ...DEFAULTS, ...settings };
+    next.mode = ['auto','scene','object'].includes(next.mode) ? next.mode : DEFAULTS.mode;
+    for (const key of ['blur','focus','feather','angle','saturation','contrast','brightness','vignette','pop','position','objectX','objectY','objectScale']) {
+      const value = Number(next[key]);
+      next[key] = Number.isFinite(value) ? value : DEFAULTS[key];
+    }
+    next.position = M.clamp(next.position, -0.98, 0.98);
+    next.objectX = M.clamp(next.objectX, 0, 1);
+    next.objectY = M.clamp(next.objectY, 0, 1);
+    next.objectScale = M.clamp(next.objectScale, 0.58, 1.75);
+    return next;
+  }
 
-  function cloneCanvas(source) {
-    const c = document.createElement('canvas'); c.width = source.width; c.height = source.height; c.getContext('2d').drawImage(source, 0, 0); return c;
+  function saveSettings() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings)); } catch (_) {}
   }
-  function ensureCanvasSize(c, w, h) { if (c.width !== w) c.width = w; if (c.height !== h) c.height = h; }
-  function drawVignette(ctx, w, h, amount) {
-    const g = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.2, w/2, h/2, Math.hypot(w,h)*0.62), a = clamp(amount / 100 * 0.95, 0, 0.42);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.58, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  function sizeCanvas(canvas, width, height) {
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
   }
-  function canvasToBlob(c, t, q) { return new Promise((r) => c.toBlob(r, t, q)); }
-  function downloadBlob(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
-  function seekVideo(time) {
-    const v = el.sourceVideo; if (!Number.isFinite(time) || Math.abs(v.currentTime - time) < 0.02) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      let timer;
-      const done = () => { clearTimeout(timer); v.removeEventListener('seeked', done); v.removeEventListener('error', fail); resolve(); };
-      const fail = () => { clearTimeout(timer); reject(new Error('seek')); };
-      v.addEventListener('seeked', done, { once: true }); v.addEventListener('error', fail, { once: true }); timer = setTimeout(done, 2500); v.currentTime = clamp(time, 0, finiteDuration() || time);
-    });
+
+  function showToast(message) {
+    clearTimeout(state.toastTimer);
+    el.toast.textContent = message;
+    el.toast.classList.add('is-visible');
+    state.toastTimer = setTimeout(() => el.toast.classList.remove('is-visible'), 3300);
   }
-  function finiteDuration() { const d = el.sourceVideo.duration; return Number.isFinite(d) && d > 0 ? d : (state.media?.duration || 0); }
-  function showToast(message) { clearTimeout(state.toastTimer); el.toast.textContent = message; el.toast.classList.add('is-visible'); state.toastTimer = setTimeout(() => el.toast.classList.remove('is-visible'), 3300); }
-  function prettyBytes(bytes) { if (!Number.isFinite(bytes) || bytes <= 0) return '0 Б'; const u=['Б','КБ','МБ','ГБ'], i=Math.min(u.length-1, Math.floor(Math.log(bytes)/Math.log(1024))), v=bytes/Math.pow(1024,i); return `${v>=10||i===0?Math.round(v):v.toFixed(1)} ${u[i]}`; }
-  function formatTime(seconds) { const v=Number.isFinite(seconds)?Math.max(0,seconds):0, h=Math.floor(v/3600), m=Math.floor((v%3600)/60), s=Math.floor(v%60); return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`; }
-  function fileBaseName(name) { return (name || 'media').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9а-яА-ЯёЁіІїЇєЄ_-]+/g, '-').replace(/^-+|-+$/g, '') || 'media'; }
-  function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-  function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
+
+  function nextFrame() {
+    return new Promise((resolve) => requestAnimationFrame(resolve));
+  }
 })();
