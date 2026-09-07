@@ -30,6 +30,7 @@ const HULL_STATIONS: readonly HullStation[] = [
 const refitted = new WeakSet<OceanWorld>();
 type CameraMemory = { position: Vector3; desired: Vector3; target: Vector3 };
 const cameraMemory = new WeakMap<OceanWorld, CameraMemory>();
+const oarDeployMemory = new WeakMap<OceanWorld, number>();
 
 function registerShadowCaster(world: OceanWorld, mesh: Mesh): void {
   const sun = world.scene.getLightByName('sun') as unknown as {
@@ -42,8 +43,6 @@ function tuneSurfaceMaterial(material: Material | null, kind: 'hull' | 'deck'): 
   if (!(material instanceof StandardMaterial)) return;
   material.backFaceCulling = false;
   material.twoSidedLighting = true;
-  // The sail can shadow most of the deck at once. A tiny indirect component keeps wood readable
-  // without flattening the directional lighting or removing the actual shadow.
   material.emissiveColor = kind === 'deck'
     ? new Color3(0.060, 0.038, 0.018)
     : new Color3(0.018, 0.008, 0.003);
@@ -64,19 +63,11 @@ function buildHull(world: OceanWorld, material: Material | null): Mesh {
     const y4 = y0 - 0.98;
     const y5 = station.keel + 0.28;
     const xs = [
-      -station.beam,
-      -station.beam * 1.02,
-      -station.beam * 1.01,
-      -station.beam * 0.94,
-      -station.beam * 0.78,
-      -station.beam * 0.48,
+      -station.beam, -station.beam * 1.02, -station.beam * 1.01,
+      -station.beam * 0.94, -station.beam * 0.78, -station.beam * 0.48,
       0,
-      station.beam * 0.48,
-      station.beam * 0.78,
-      station.beam * 0.94,
-      station.beam * 1.01,
-      station.beam * 1.02,
-      station.beam
+      station.beam * 0.48, station.beam * 0.78, station.beam * 0.94,
+      station.beam * 1.01, station.beam * 1.02, station.beam
     ];
     const ys = [y0, y1, y2, y3, y4, y5, station.keel, y5, y4, y3, y2, y1, y0];
     for (let j = 0; j < ring; j += 1) {
@@ -108,8 +99,6 @@ function buildHull(world: OceanWorld, material: Material | null): Mesh {
       if (reverse) indices.push(center, b, a);
       else indices.push(center, a, b);
     }
-    // The cross-section loop starts and ends at the gunwales. Close that final upper edge too;
-    // otherwise the stern reads as a triangular hole when viewed from the chase camera.
     if (reverse) indices.push(center, first, last);
     else indices.push(center, last, first);
   };
@@ -270,14 +259,12 @@ function refitShip(world: OceanWorld): void {
   const railMaterial = scene.getMaterialByName('spars-and-rails') ?? hullMaterial;
   const ropeMaterial = scene.getMaterialByName('hemp-rigging') ?? hullMaterial;
   const ironMaterial = scene.getMaterialByName('blackened-iron') ?? hullMaterial;
-
   for (const side of [-1, 1]) {
     const capPath = HULL_STATIONS.slice(0, -1).map((s) => new Vector3(side * s.beam, s.sheer + 0.045, s.z));
     addTube(world, `refit-caprail-${side}`, capPath, 0.058, railMaterial);
     const strakePath = HULL_STATIONS.slice(0, -1).map((s) => new Vector3(side * s.beam * 1.01, s.sheer - 0.30, s.z));
     addTube(world, `refit-rubbing-strake-${side}`, strakePath, 0.036, railMaterial);
   }
-
   addCockpit(world, deckMaterial, railMaterial);
 
   for (const node of scene.transformNodes) {
@@ -313,6 +300,25 @@ function refitShip(world: OceanWorld): void {
   skeg.isPickable = false;
   skeg.receiveShadows = true;
   registerShadowCaster(world, skeg);
+}
+
+function poseOars(world: OceanWorld, rowing: number, dt: number): void {
+  const targetDeploy = clamp(rowing * 1.35, 0, 1);
+  const previous = oarDeployMemory.get(world) ?? 0;
+  const deploy = smoothTo(previous, targetDeploy, targetDeploy > previous ? 7.0 : 3.8, dt);
+  oarDeployMemory.set(world, deploy);
+
+  for (const node of world.scene.transformNodes) {
+    if (!node.name.startsWith('oar-') || node === world.shipRoot) continue;
+    const side = Math.sign(node.position.x) || 1;
+    const rowingY = node.rotation.y;
+    const rowingZ = node.rotation.z;
+    const rowingX = node.rotation.x;
+    const stowedY = side * (Math.PI * 0.5 - 0.10);
+    node.rotation.y = stowedY + (rowingY - stowedY) * deploy;
+    node.rotation.z = side * 0.025 + (rowingZ - side * 0.025) * deploy;
+    node.rotation.x = -0.025 + (rowingX + 0.025) * deploy;
+  }
 }
 
 function correctWaterEffects(
@@ -376,9 +382,9 @@ function frameWholeShip(
   world.scene.getMeshByName('sky-dome')?.position.copyFrom(world.camera.position);
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipRefitV4?: boolean };
-if (!prototype.__pelagosShipRefitV4) {
-  prototype.__pelagosShipRefitV4 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipRefitV5?: boolean };
+if (!prototype.__pelagosShipRefitV5) {
+  prototype.__pelagosShipRefitV5 = true;
   const originalUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function patchedUpdate(
     state: ShipState,
@@ -394,6 +400,7 @@ if (!prototype.__pelagosShipRefitV4) {
   ): void {
     refitShip(this);
     originalUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
+    poseOars(this, rowing, dt);
     correctWaterEffects(this, state, environment, time, originX, originZ);
     frameWholeShip(this, state, telemetry, dt, lookYaw, lookPitch);
   };
