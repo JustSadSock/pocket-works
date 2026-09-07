@@ -6,7 +6,7 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: str
 const CACHE_PREFIX = 'sirocco-';
 const CACHE_NAME = 'sirocco-v1.0.2';
 const APP_VERSION = '1.0.2';
-const RELEASE_DATE = '2026-09-08';
+const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
   'Перестроена генерация рельефа: вместо одинаковых параллельных рядов появились регионально изгибающиеся гряды, разрывы, седловины и меняющаяся высота дюн.',
   'Повышена плотность ближней геометрии и сглажены высокочастотные формы, чтобы камера больше не проваливалась под визуальную поверхность дюны.',
