@@ -5,16 +5,16 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'SIROCCO';
-const version = '1.0.2';
+const version = '1.0.3';
 const storageNamespace = 'pocket-works:sirocco';
 const releaseNotes = [
-  'Перестроена генерация рельефа: вместо одинаковых параллельных рядов появились регионально изгибающиеся гряды, разрывы, седловины и меняющаяся высота дюн.',
-  'Повышена плотность ближней геометрии и сглажены высокочастотные формы, чтобы камера больше не проваливалась под визуальную поверхность дюны.',
-  'Исправлено инвертированное горизонтальное управление камерой на touch-экране.',
-  'Убран торс и таз из first-person рендера: геометрия тела больше не перекрывает нижнюю половину экрана.'
+  'Контроллер и foot IK теперь используют точную высоту тех же треугольников, которые видит игрок, поэтому камера больше не оказывается под поверхностью и не смотрит на изнанку дюн.',
+  'Исправлено инвертированное вертикальное touch-управление камерой.',
+  'Пересобрана first-person геометрия ног: устойчивый изгиб колена, меньший шаг, человеческие пропорции бедра, голени и обуви без растягивания конечностей.',
+  'Добавлены проверки непрерывности и нормалей именно визуальной mesh-поверхности на границах чанков.'
 ];
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName, version, releaseNotes });
+registerEnhancedUpdate({ appName, version: '1.0.3', releaseNotes });
 createWorkshopMode({ appName, version, cachePrefix: 'sirocco-', storageNamespace, onReset: () => location.reload() });
 void import('./main.js');
