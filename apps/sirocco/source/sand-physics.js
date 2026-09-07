@@ -1,6 +1,7 @@
 import { clamp } from './core.js';
 
 const DEFAULT_CELL = 0.12;
+const REPOSE_TAN = Math.tan(32 * Math.PI / 180);
 
 export class SandPhysics {
   constructor(world, options = {}) {
@@ -11,14 +12,15 @@ export class SandPhysics {
     this.cells = new Map();
     this.dirty = null;
     this.pruneClock = 0;
+    this.avalancheClock = 0;
     this.totalImpacts = 0;
   }
 
   setQuality(preset) {
     if (!preset) return;
-    if (preset.id === 'high') { this.maxCells = 6200; this.keepRadius = 58; }
-    else if (preset.id === 'medium') { this.maxCells = 4400; this.keepRadius = 46; }
-    else { this.maxCells = 2800; this.keepRadius = 34; }
+    if (preset.id === 'high') { this.maxCells = 6200; this.keepRadius = 58; this.avalancheBudget = 240; }
+    else if (preset.id === 'medium') { this.maxCells = 4400; this.keepRadius = 46; this.avalancheBudget = 160; }
+    else { this.maxCells = 2800; this.keepRadius = 34; this.avalancheBudget = 90; }
   }
 
   key(ix, iz) { return `${ix},${iz}`; }
@@ -63,8 +65,6 @@ export class SandPhysics {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     const speed = clamp(controller.speed / 3.0, 0, 1);
     const slope = clamp(controller.lastSlope / 0.65, 0, 1);
-    // Loose dry sand compresses several centimetres under an adult foot. The
-    // previous 2–3 cm depression was visually too subtle at phone scale.
     const depth = 0.040 + speed * 0.018 + slope * 0.013;
     const halfW = 0.125, halfL = 0.245, radius = 0.40;
     const minIx = Math.floor((cx - radius) / this.cellSize), maxIx = Math.ceil((cx + radius) / this.cellSize);
@@ -140,7 +140,57 @@ export class SandPhysics {
     }
   }
 
+  baseHeight(ix, iz) {
+    return this.world?.sampleBaseHeight?.(ix * this.cellSize, iz * this.cellSize) ?? 0;
+  }
+
+  avalanche(playerX, playerZ) {
+    const radius = 5.8;
+    const radius2 = radius * radius;
+    const candidates = [];
+    for (const cell of this.cells.values()) {
+      if (cell.h <= 0.00045) continue; // only displaced material can flow
+      const wx = cell.ix * this.cellSize, wz = cell.iz * this.cellSize;
+      const dx = wx - playerX, dz = wz - playerZ;
+      if (dx * dx + dz * dz <= radius2) candidates.push(cell);
+    }
+    if (!candidates.length) return;
+    candidates.sort((a, b) => b.touched - a.touched);
+    const budget = Math.min(this.avalancheBudget ?? 160, candidates.length);
+    const transfers = [];
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const reposeDrop = REPOSE_TAN * this.cellSize;
+
+    for (let i = 0; i < budget; i += 1) {
+      const cell = candidates[i];
+      const sourceHeight = this.baseHeight(cell.ix, cell.iz) + cell.h;
+      let best = null;
+      let bestDrop = reposeDrop;
+      for (const [ox, oz] of neighbors) {
+        const nx = cell.ix + ox, nz = cell.iz + oz;
+        const neighborHeight = this.baseHeight(nx, nz) + this.getCell(nx, nz);
+        const drop = sourceHeight - neighborHeight;
+        if (drop > bestDrop) { bestDrop = drop; best = [nx, nz]; }
+      }
+      if (!best) continue;
+      const excess = bestDrop - reposeDrop;
+      const amount = Math.min(cell.h * 0.18, excess * 0.055, 0.0035);
+      if (amount > 0.00005) transfers.push([cell.ix, cell.iz, best[0], best[1], amount]);
+    }
+
+    for (const [sx, sz, tx, tz, amount] of transfers) {
+      this.addCell(sx, sz, -amount);
+      this.addCell(tx, tz, amount);
+    }
+  }
+
   update(dt, playerX, playerZ) {
+    this.avalancheClock += dt;
+    if (this.avalancheClock >= 0.11) {
+      this.avalancheClock = 0;
+      this.avalanche(playerX, playerZ);
+    }
+
     this.pruneClock += dt;
     if (this.pruneClock < 3.5) return;
     this.pruneClock = 0;
