@@ -43,6 +43,7 @@ export class MobileInput {
     this.base.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
     this.updateMove(event);
   }
+
   updateMove(event) {
     if (event.pointerId !== this.movePointer) return;
     event.preventDefault();
@@ -53,16 +54,19 @@ export class MobileInput {
     this.move.x = nx * inv; this.move.y = -ny * inv;
     this.knob.style.transform = `translate3d(${px}px, ${py}px, 0)`;
   }
+
   endMove(event) {
     if (event.pointerId !== this.movePointer) return;
     event.preventDefault(); this.movePointer = null; this.move.x = 0; this.move.y = 0;
     this.knob.style.transform = 'translate3d(0,0,0)'; this.base.classList.remove('active');
   }
+
   startLook(event) {
     if (this.lookPointer !== null) return;
     event.preventDefault(); this.lookPointer = event.pointerId;
     this.lookLast.x = event.clientX; this.lookLast.y = event.clientY;
   }
+
   updateLook(event) {
     if (event.pointerId !== this.lookPointer) return;
     event.preventDefault();
@@ -70,7 +74,9 @@ export class MobileInput {
     this.lookLast.x = event.clientX; this.lookLast.y = event.clientY;
     this.lookAccum.x += dx; this.lookAccum.y += dy;
   }
+
   endLook(event) { if (event.pointerId === this.lookPointer) { event.preventDefault(); this.lookPointer = null; } }
+
   getMove() {
     let x = this.move.x, y = this.move.y;
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) x -= 1;
@@ -80,11 +86,16 @@ export class MobileInput {
     const len = Math.hypot(x, y); if (len > 1) { x /= len; y /= len; }
     return { x, y, magnitude: Math.min(1, Math.hypot(x, y)) };
   }
+
   consumeLook() {
-    // Direct touch convention: dragging the world to the right turns the view to the right.
-    const result = { x: -this.lookAccum.x * 0.0032 * this.sensitivity, y: this.lookAccum.y * 0.003 * this.sensitivity };
-    this.lookAccum.x = 0; this.lookAccum.y = 0; return result;
+    const result = {
+      x: -this.lookAccum.x * 0.0032 * this.sensitivity,
+      y: -this.lookAccum.y * 0.003 * this.sensitivity
+    };
+    this.lookAccum.x = 0; this.lookAccum.y = 0;
+    return result;
   }
+
   setSensitivity(value) { this.sensitivity = clamp(Number(value) || 1, 0.45, 1.8); localStorage.setItem('pocket-works:sirocco:sensitivity', String(this.sensitivity)); }
   dispose() {
     for (const cleanup of this.cleanup) cleanup?.(); this.cleanup.length = 0;
