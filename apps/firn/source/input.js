@@ -95,7 +95,8 @@ export class MobileInput {
     return { x, y, magnitude: Math.min(1, Math.hypot(x, y)), sprint: y > 0.82 && Math.hypot(x, y) > 0.88, bracing: this.bracing };
   }
   consumeLook() {
-    const result = { x: -this.lookAccum.x * 0.00315 * this.sensitivity, y: -this.lookAccum.y * 0.0029 * this.sensitivity };
+    // Direct-manipulation camera: drag right turns right; drag up looks up.
+    const result = { x: this.lookAccum.x * 0.00315 * this.sensitivity, y: -this.lookAccum.y * 0.0029 * this.sensitivity };
     this.lookAccum.x = 0; this.lookAccum.y = 0;
     return result;
   }
