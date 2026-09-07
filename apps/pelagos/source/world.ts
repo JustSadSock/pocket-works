@@ -268,7 +268,7 @@ Effect.ShadersStore.pelagosSkyFragmentShader = skyFragment;
 
 function makeTexture(scene: Scene, name: string, size: number, painter: (ctx: CanvasRenderingContext2D, size: number) => void): DynamicTexture {
   const texture = new DynamicTexture(name, { width: size, height: size }, scene, false);
-  const ctx = texture.getContext();
+  const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
   painter(ctx, size);
   texture.wrapU = Texture.WRAP_ADDRESSMODE;
   texture.wrapV = Texture.WRAP_ADDRESSMODE;
