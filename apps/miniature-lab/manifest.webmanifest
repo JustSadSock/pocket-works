@@ -1,0 +1,17 @@
+{
+  "id": "/apps/miniature-lab/",
+  "name": "Miniature Lab",
+  "short_name": "Miniature Lab",
+  "description": "Локальная miniature / tilt-shift студия для фото и видео.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3efe5",
+  "theme_color": "#f3efe5",
+  "lang": "ru",
+  "categories": ["photo", "video", "utilities", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
