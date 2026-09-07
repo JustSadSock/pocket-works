@@ -8,7 +8,15 @@ export function appendBabylonGroundCell(indices, a, b, d, e) {
   indices.push(b, e, d, a, b, d);
 }
 
-function buildChunkData(cx, cz, segments, deformation = null) {
+function insideReplacementCell(gx, gz, replacement, coarseStep) {
+  if (!replacement || !Number.isFinite(replacement.x)) return false;
+  // Only remove a coarse cell if the high-resolution replacement safely covers
+  // it. The inset leaves a narrow overlap ring rather than a visible crack.
+  const safeHalf = Math.max(0, replacement.halfExtent - coarseStep * 0.62);
+  return Math.abs(gx - replacement.x) < safeHalf && Math.abs(gz - replacement.z) < safeHalf;
+}
+
+function buildChunkData(cx, cz, segments, deformation = null, replacement = null) {
   const verts = (segments + 1) * (segments + 1);
   const positions = new Array(verts * 3);
   const normals = new Array(verts * 3).fill(0);
@@ -39,8 +47,12 @@ function buildChunkData(cx, cz, segments, deformation = null) {
   }
 
   const row = segments + 1;
+  const coarseStep = CHUNK_SIZE / segments;
   for (let z = 0; z < segments; z += 1) {
     for (let x = 0; x < segments; x += 1) {
+      const midGX = baseX + (x + 0.5) * coarseStep;
+      const midGZ = baseZ + (z + 0.5) * coarseStep;
+      if (insideReplacementCell(midGX, midGZ, replacement, coarseStep)) continue;
       const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
       appendBabylonGroundCell(indices, a, b, d, e);
     }
@@ -67,6 +79,14 @@ function createBoundary(scene) {
   ], updatable: false }, scene);
 }
 
+function squareIntersectsChunk(square, cx, cz) {
+  if (!square || !Number.isFinite(square.x)) return false;
+  const minX = cx * CHUNK_SIZE, maxX = minX + CHUNK_SIZE;
+  const minZ = cz * CHUNK_SIZE, maxZ = minZ + CHUNK_SIZE;
+  return !(square.x + square.halfExtent < minX || square.x - square.halfExtent > maxX ||
+    square.z + square.halfExtent < minZ || square.z - square.halfExtent > maxZ);
+}
+
 export class DesertWorld {
   constructor(scene, materials, quality) {
     this.scene = scene;
@@ -81,17 +101,34 @@ export class DesertWorld {
     this.offsetX = 0;
     this.offsetZ = 0;
     this.sandPhysics = null;
+    this.localReplacement = null;
     this.farMesh = new Mesh('far-desert', scene);
     this.farMesh.material = materials.far;
-    this.farMesh.receiveShadows = true;
+    // Terrain does not receive the realtime character shadow map. A dedicated
+    // stable contact shadow is used instead; this avoids a giant mobile shadow
+    // projection rectangle that previously looked like a dark render radius.
+    this.farMesh.receiveShadows = false;
     this.farMesh.isPickable = false;
     this.farCenter = { cx: Number.NaN, cz: Number.NaN };
   }
 
   get activeChunkCount() { return this.active.size; }
 
-  setSandPhysics(physics) {
-    this.sandPhysics = physics;
+  setSandPhysics(physics) { this.sandPhysics = physics; }
+
+  setLocalReplacement(centerX, centerZ, halfExtent) {
+    const next = { x: centerX, z: centerZ, halfExtent };
+    const prev = this.localReplacement;
+    if (prev && Math.abs(prev.x - next.x) < 0.001 && Math.abs(prev.z - next.z) < 0.001 && Math.abs(prev.halfExtent - next.halfExtent) < 0.001) return 0;
+    this.localReplacement = next;
+    let rebuilt = 0;
+    for (const chunk of this.active.values()) {
+      if (squareIntersectsChunk(prev, chunk.cx, chunk.cz) || squareIntersectsChunk(next, chunk.cx, chunk.cz)) {
+        this.rebuildChunk(chunk);
+        rebuilt += 1;
+      }
+    }
+    return rebuilt;
   }
 
   setQuality(quality) {
@@ -103,9 +140,7 @@ export class DesertWorld {
     for (const chunk of this.active.values()) chunk.mesh.dispose();
     for (const chunk of this.pool) chunk.mesh.dispose();
     for (const line of this.boundaries.values()) line.dispose();
-    this.active.clear();
-    this.pool.length = 0;
-    this.boundaries.clear();
+    this.active.clear(); this.pool.length = 0; this.boundaries.clear();
     this.centerKey = '';
     this.farCenter.cx = Number.NaN;
   }
@@ -133,19 +168,18 @@ export class DesertWorld {
   }
 
   rebuildChunk(chunk) {
-    applyData(chunk.mesh, buildChunkData(chunk.cx, chunk.cz, this.quality.segments, this.sandPhysics));
+    applyData(chunk.mesh, buildChunkData(chunk.cx, chunk.cz, this.quality.segments, this.sandPhysics, this.localReplacement));
     this.positionChunk(chunk);
   }
 
   acquire(cx, cz) {
     const reused = this.pool.pop();
     const chunk = reused || { mesh: new Mesh('dune-chunk', this.scene), cx, cz };
-    chunk.cx = cx;
-    chunk.cz = cz;
+    chunk.cx = cx; chunk.cz = cz;
     chunk.mesh.name = `dune-${cx}-${cz}`;
     chunk.mesh.setEnabled(true);
     chunk.mesh.material = this.materials.near;
-    chunk.mesh.receiveShadows = true;
+    chunk.mesh.receiveShadows = false;
     chunk.mesh.isPickable = false;
     this.rebuildChunk(chunk);
     return chunk;
@@ -180,10 +214,8 @@ export class DesertWorld {
 
   refreshDeformation(bounds) {
     if (!bounds) return 0;
-    const minCx = Math.floor(bounds.minX / CHUNK_SIZE);
-    const maxCx = Math.floor(bounds.maxX / CHUNK_SIZE);
-    const minCz = Math.floor(bounds.minZ / CHUNK_SIZE);
-    const maxCz = Math.floor(bounds.maxZ / CHUNK_SIZE);
+    const minCx = Math.floor(bounds.minX / CHUNK_SIZE), maxCx = Math.floor(bounds.maxX / CHUNK_SIZE);
+    const minCz = Math.floor(bounds.minZ / CHUNK_SIZE), maxCz = Math.floor(bounds.maxZ / CHUNK_SIZE);
     let rebuilt = 0;
     for (let cz = minCz; cz <= maxCz; cz += 1) {
       for (let cx = minCx; cx <= maxCx; cx += 1) {
@@ -208,13 +240,13 @@ export class DesertWorld {
         const vx = ix / segments, vz = iz / segments;
         const lx = (vx - 0.5) * size, lz = (vz - 0.5) * size;
         const gx = centerGX + lx, gz = centerGZ + lz;
-        const y = terrainHeight(gx, gz) - 0.22;
+        const y = terrainHeight(gx, gz) - 0.12;
         const n = terrainNormal(gx, gz, 1.4);
         positions.push(lx, y, lz);
         normals.push(n.x, n.y, n.z);
         uvs.push(gx * 0.055, gz * 0.055);
-        const v = 0.97 + sandVariation(gx, gz) * 0.02;
-        colors.push(v, v * 0.995, v * 0.98, 1);
+        const v = 0.96 + sandVariation(gx, gz) * 0.02;
+        colors.push(v, v, v, 1);
       }
     }
     const row = segments + 1;
@@ -257,10 +289,8 @@ export class DesertWorld {
 
   sampleNormal(globalX, globalZ) {
     const step = Math.max(0.12, CHUNK_SIZE / this.quality.segments * 0.16);
-    const hx0 = this.sampleHeight(globalX - step, globalZ);
-    const hx1 = this.sampleHeight(globalX + step, globalZ);
-    const hz0 = this.sampleHeight(globalX, globalZ - step);
-    const hz1 = this.sampleHeight(globalX, globalZ + step);
+    const hx0 = this.sampleHeight(globalX - step, globalZ), hx1 = this.sampleHeight(globalX + step, globalZ);
+    const hz0 = this.sampleHeight(globalX, globalZ - step), hz1 = this.sampleHeight(globalX, globalZ + step);
     let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
     const inv = 1 / Math.hypot(nx, ny, nz);
     nx *= inv; ny *= inv; nz *= inv;
