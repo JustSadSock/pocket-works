@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "sinew",
+  "name": "SINEW",
+  "shortName": "SINEW",
+  "description": "Мобильная first-person дуэль двух воинов с минималистичным двухпальцевым управлением: камера физически ведёт корпус, меч и щит через пружины, инерцию и реальные 3D-контакты.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-07T21:52:00Z",
+  "changelog": [
+    "Новая физическая дуэль: движение слева, всё управление верхом тела — только правым пальцем.",
+    "Процедурный риг с инерцией корпуса, рук, меча и щита; игрок видит собственные ноги и торс.",
+    "Swept-контакты клинка различают медленное касание, удар по телу, блок щитом и столкновение мечей.",
+    "AI использует тот же контроллер позы, телеграфирует замахи и реагирует на реальное положение оружия игрока."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#9b5b3d",
+  "backgroundColor": "#211b17",
+  "themeColor": "#211b17",
+  "orientation": "landscape",
+  "cacheName": "sinew-v1.0.0",
+  "storageNamespace": "pocket-works:sinew",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "duel", "sword", "shield", "procedural-animation", "physics", "landscape", "Safari", "iPhone", "adaptive-quality"],
+  "order": 82
+}
