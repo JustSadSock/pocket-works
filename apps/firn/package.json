@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/firn",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs firn",
+    "test": "node source/core.test.mjs && vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1"
+  }
+}

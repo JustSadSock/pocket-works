@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#d8e8ef" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <title>FIRN — Pocket Works</title>
+</head>
+<body data-gesture-surface data-block-callout>
+  <main id="app" class="app-shell" data-app-shell data-fullscreen-app aria-label="FIRN mountain snow experience">
+    <canvas id="render-canvas" aria-label="3D снежные горы" data-gesture-surface></canvas>
+
+    <div id="move-zone" class="touch-zone move-zone" aria-hidden="true" data-gesture-surface data-touch-action="none"></div>
+    <div id="look-zone" class="touch-zone look-zone" aria-hidden="true" data-gesture-surface data-touch-action="none"></div>
+    <div id="joystick-base" aria-hidden="true"><div id="joystick-knob"></div></div>
+
+    <header id="hud" data-ui>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i></span><span>FIRN</span></div>
+      <div id="quality-label">AUTO · Medium</div>
+    </header>
+    <div id="reticle" aria-hidden="true"></div>
+    <div id="surface-chip" class="status-chip" aria-live="polite"></div>
+    <div id="weather-chip" class="status-chip weather-chip" aria-live="polite"></div>
+
+    <button id="brace-button" class="brace-button" type="button" data-native-press data-gesture-surface aria-label="Упереться на склоне">
+      <span class="brace-icon" aria-hidden="true"></span><b>УПОР</b>
+    </button>
+    <button id="menu-button" class="menu-button" type="button" aria-label="Открыть настройки" data-native-press>
+      <span></span><span></span><span></span>
+    </button>
+
+    <section id="loading" class="screen-layer loading" aria-live="polite" data-ui>
+      <div class="mountain-glyph" aria-hidden="true"><i></i><b></b><em></em></div>
+      <p class="eyebrow">POCKET WORKS / ALPINE RUNTIME</p>
+      <h1>FIRN</h1>
+      <p id="loading-text">Поднимаем ветер…</p>
+      <div class="loading-track"><div id="loading-bar"></div></div>
+    </section>
+
+    <section id="enter" class="screen-layer enter" hidden data-ui>
+      <div class="entry-copy">
+        <p>Снег здесь — поверхность, а не декорация.</p>
+        <span>Слева — движение · справа — взгляд · полный ход стика ускоряет шаг</span>
+      </div>
+      <button id="enter-button" class="enter-button" type="button" data-native-press>
+        <span>ВОЙТИ В СНЕГ</span><i aria-hidden="true"></i>
+      </button>
+      <button id="start-exit-button" class="launcher-link" type="button" data-native-press>Вернуться в Pocket Works</button>
+    </section>
+
+    <section id="rotate" class="screen-layer rotate" hidden data-ui>
+      <div class="rotate-device" aria-hidden="true"><i></i></div>
+      <strong>Поверни iPhone</strong>
+      <span>FIRN рассчитан на горизонтальный экран</span>
+    </section>
+
+    <section id="menu" class="screen-layer menu" hidden aria-label="Настройки FIRN" data-ui>
+      <div class="menu-sheet">
+        <div class="menu-head">
+          <div><p>FIRN / FIELD SETTINGS</p><h2>Параметры среды</h2></div>
+          <button id="resume-button" class="close-button" type="button" aria-label="Закрыть настройки" data-native-press>ЗАКРЫТЬ</button>
+        </div>
+        <label class="setting-row">
+          <span><b>Качество</b><small>автоматически держит мобильный frame budget</small></span>
+          <select id="quality-select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        </label>
+        <label class="setting-row slider-row">
+          <span><b>Чувствительность</b><small>скорость обзора справа</small></span>
+          <input id="sensitivity" type="range" min="0.45" max="1.8" step="0.05" value="1" />
+        </label>
+        <label class="setting-row switch-row">
+          <span><b>Звук горы</b><small>ветер, наст и хруст снега</small></span>
+          <input id="sound-toggle" type="checkbox" checked /><i></i>
+        </label>
+        <div class="control-note"><b>УПОР</b><span>появляется на опасном склоне: удерживай, чтобы гасить скольжение ценой скорости.</span></div>
+        <button id="exit-button" class="exit-button" type="button" data-native-press>Вернуться в Pocket Works</button>
+      </div>
+    </section>
+
+    <section id="error-screen" class="screen-layer error" hidden data-ui>
+      <div><p>FIRN не смог запустить WebGL-сцену.</p><code id="error-text"></code><button id="reload-button" type="button" data-native-press>Перезапустить</button><button id="error-exit-button" class="launcher-link" type="button" data-native-press>Вернуться в Pocket Works</button></div>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
