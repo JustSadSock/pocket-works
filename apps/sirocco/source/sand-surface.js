@@ -7,15 +7,16 @@ export class LocalSandSurface {
     this.scene = scene;
     this.world = world;
     this.sand = sand;
-    this.material = material;
+    this.material = material.clone('sand-pbr-local-physical');
+    // The local physical sheet exists only to resolve centimetre-scale footprints.
+    // It must not read as a separate dark render island around the player.
+    this.material.zOffset = -2;
     this.mesh = new Mesh('local-physical-sand', scene);
-    this.mesh.material = material;
-    this.mesh.receiveShadows = true;
+    this.mesh.material = this.material;
+    this.mesh.receiveShadows = false;
     this.mesh.isPickable = false;
     this.centerX = Number.NaN;
     this.centerZ = Number.NaN;
-    this.localCenterX = 0;
-    this.localCenterZ = 0;
     this.lastBuildX = Number.NaN;
     this.lastBuildZ = Number.NaN;
     this.dirty = true;
@@ -23,9 +24,9 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    this.radius = preset.id === 'high' ? 5.4 : preset.id === 'medium' ? 4.8 : 4.0;
+    this.radius = preset.id === 'high' ? 3.5 : preset.id === 'medium' ? 3.0 : 2.5;
     this.segments = preset.id === 'high' ? 46 : preset.id === 'medium' ? 38 : 28;
-    this.rebuildDistance = preset.id === 'high' ? 0.62 : preset.id === 'medium' ? 0.78 : 0.95;
+    this.rebuildDistance = preset.id === 'high' ? 0.48 : preset.id === 'medium' ? 0.62 : 0.78;
     this.dirty = true;
   }
 
@@ -34,7 +35,7 @@ export class LocalSandSurface {
   fadeAt(x, z) {
     if (!Number.isFinite(this.centerX)) return 0;
     const d = Math.hypot(x - this.centerX, z - this.centerZ);
-    return 1 - smoothstep(this.radius * 0.68, this.radius, d);
+    return 1 - smoothstep(this.radius * 0.58, this.radius, d);
   }
 
   sampleHeight(x, z) {
@@ -42,10 +43,9 @@ export class LocalSandSurface {
     if (fade <= 0.001) return this.world.sampleHeight(x, z);
     const base = this.world.sampleBaseHeight(x, z);
     const deformation = clamp(this.sand.sampleOffset(x, z), -0.042, 0.038);
-    // Keep the local physical sheet just above the coarse base mesh so deep
-    // footprints never reveal/intersect the underlying low-resolution terrain.
-    const lift = 0.006 + 0.044 * fade;
-    return base + lift + deformation * fade;
+    // Physical height contains no artificial lift. The old +5 cm mound was the
+    // visible dark circle the user saw around the rendered local sand patch.
+    return base + deformation * fade;
   }
 
   sampleNormal(x, z) {
@@ -67,9 +67,8 @@ export class LocalSandSurface {
   update(controller, force = false) {
     this.centerX = controller.globalX;
     this.centerZ = controller.globalZ;
-    this.localCenterX = controller.localPosition.x;
-    this.localCenterZ = controller.localPosition.z;
-    const moved = !Number.isFinite(this.lastBuildX) || Math.hypot(this.centerX - this.lastBuildX, this.centerZ - this.lastBuildZ) >= this.rebuildDistance;
+    const moved = !Number.isFinite(this.lastBuildX)
+      || Math.hypot(this.centerX - this.lastBuildX, this.centerZ - this.lastBuildZ) >= this.rebuildDistance;
     if (!force && !this.dirty && !moved) return false;
     this.rebuild();
     return true;
@@ -93,15 +92,16 @@ export class LocalSandSurface {
         const gx = this.centerX + lx;
         const gz = this.centerZ + lz;
         const d = Math.hypot(lx, lz);
-        const fade = 1 - smoothstep(this.radius * 0.68, this.radius, d);
+        const fade = 1 - smoothstep(this.radius * 0.58, this.radius, d);
         const base = this.world.sampleBaseHeight(gx, gz);
         const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.042, 0.038);
-        const y = base + 0.006 + 0.044 * fade + deformation * fade;
+        // Tiny render-only epsilon prevents coplanar flicker. zOffset keeps the
+        // deformed local sheet visible even where footprints dip below coarse terrain.
+        const y = base + deformation * fade + 0.0015 * fade;
         positions.push(lx, y, lz);
         normals.push(0, 1, 0);
         uvs.push(gx * 0.055, gz * 0.055);
-        const edge = 0.985 + fade * 0.015;
-        colors.push(edge, edge, edge * 0.99, 1);
+        colors.push(1, 1, 1, 1);
       }
     }
 
@@ -134,5 +134,8 @@ export class LocalSandSurface {
     this.mesh.position.z = this.centerZ - this.world.offsetZ;
   }
 
-  dispose() { this.mesh.dispose(); }
+  dispose() {
+    this.mesh.dispose();
+    this.material.dispose();
+  }
 }
