@@ -1,0 +1,22 @@
+name: Pelagos Release Date Smoke
+
+on:
+  push:
+    branches:
+      - fix/pelagos-release-date
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Run production site build and validation
+        run: npm run deploy:site
