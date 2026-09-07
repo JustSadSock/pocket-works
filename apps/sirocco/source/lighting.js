@@ -22,15 +22,15 @@ export class DesertLighting {
 
   setQuality(preset) {
     this.shadow?.dispose();
-    const size = preset.id === 'high' ? 1024 : preset.id === 'medium' ? 1024 : 512;
+    const size = preset.id === 'low' ? 512 : 1024;
     const shadow = new ShadowGenerator(size, this.sun);
     shadow.usePercentageCloserFiltering = true;
     shadow.filteringQuality = preset.id === 'high' ? ShadowGenerator.QUALITY_HIGH : ShadowGenerator.QUALITY_MEDIUM;
     shadow.bias = 0.0018;
     shadow.normalBias = 0.028;
-    shadow.darkness = 0.28;
-    shadow.transparencyShadow = true;
     shadow.forceBackFacesOnly = true;
+    shadow.setDarkness(0.28);
+    shadow.setTransparencyShadow(true);
     for (const mesh of this.bodyCasters) shadow.addShadowCaster(mesh, false);
     this.shadow = shadow;
   }
