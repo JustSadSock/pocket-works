@@ -7,28 +7,30 @@ function makeAlbedoData(size) {
     for (let x = 0; x < size; x += 1) {
       const i = (y * size + x) * 4;
       const grain = hash2(x, y, 101) - 0.5;
-      const broad = hash2(Math.floor(x / 9), Math.floor(y / 9), 107) - 0.5;
-      const ripple = Math.sin((x * 0.22) + Math.sin(y * 0.041) * 1.5) * 0.018;
-      const lum = 1 + grain * 0.032 + broad * 0.026 + ripple;
-      data[i] = Math.max(0, Math.min(255, 211 * lum));
-      data[i + 1] = Math.max(0, Math.min(255, 158 * lum));
-      data[i + 2] = Math.max(0, Math.min(255, 96 * lum));
+      const broad = hash2(Math.floor(x / 12), Math.floor(y / 12), 107) - 0.5;
+      const warm = hash2(Math.floor(x / 27), Math.floor(y / 27), 113) - 0.5;
+      const lum = 1 + grain * 0.018 + broad * 0.024;
+      data[i] = Math.max(0, Math.min(255, (214 + warm * 4) * lum));
+      data[i + 1] = Math.max(0, Math.min(255, (161 + warm * 2) * lum));
+      data[i + 2] = Math.max(0, Math.min(255, (98 - warm * 2) * lum));
       data[i + 3] = 255;
     }
   }
   return data;
 }
 
-function rippleHeight(x, y, size) {
+function rippleHeight(x, y, size, frequency = 10) {
   const wx = x / size;
   const wy = y / size;
-  const primary = Math.sin((wx * 30 + Math.sin(wy * 9) * 0.34) * Math.PI * 2) * 0.68;
-  const cross = Math.sin((wx * 11 + wy * 3.5) * Math.PI * 2) * 0.16;
-  const grain = (hash2(x, y, 211) - 0.5) * 0.16;
-  return primary + cross + grain;
+  // Two weak, slightly misaligned wind-ripple families. The old normal map had
+  // metre-scale amplitude and read as dark shadow stripes across every dune.
+  const primary = Math.sin((wx * frequency + Math.sin(wy * 3.7) * 0.18) * Math.PI * 2) * 0.24;
+  const secondary = Math.sin((wx * frequency * 0.52 + wy * 1.35) * Math.PI * 2) * 0.065;
+  const grain = (hash2(x, y, 211) - 0.5) * 0.055;
+  return primary + secondary + grain;
 }
 
-function makeNormalData(size, strength = 2.1) {
+function makeNormalData(size, strength = 0.22, frequency = 10) {
   const data = new Uint8Array(size * size * 4);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
@@ -36,8 +38,8 @@ function makeNormalData(size, strength = 2.1) {
       const xp = (x + 1) % size;
       const ym = (y - 1 + size) % size;
       const yp = (y + 1) % size;
-      const dx = (rippleHeight(xp, y, size) - rippleHeight(xm, y, size)) * strength;
-      const dy = (rippleHeight(x, yp, size) - rippleHeight(x, ym, size)) * strength;
+      const dx = (rippleHeight(xp, y, size, frequency) - rippleHeight(xm, y, size, frequency)) * strength;
+      const dy = (rippleHeight(x, yp, size, frequency) - rippleHeight(x, ym, size, frequency)) * strength;
       let nx = -dx;
       let ny = 1;
       let nz = -dy;
@@ -64,45 +66,44 @@ function textureFrom(scene, data, size, name) {
 
 export function createSandMaterials(scene) {
   const albedo = textureFrom(scene, makeAlbedoData(256), 256, 'sand-albedo-procedural');
-  const normal = textureFrom(scene, makeNormalData(256, 1.45), 256, 'sand-normal-procedural');
-  const detail = textureFrom(scene, makeNormalData(128, 2.7), 128, 'sand-detail-normal');
+  const normal = textureFrom(scene, makeNormalData(256, 0.24, 10), 256, 'sand-normal-wind-ripples');
+  const detail = textureFrom(scene, makeNormalData(128, 0.30, 22), 128, 'sand-detail-grain');
 
-  albedo.uScale = 0.9;
-  albedo.vScale = 0.9;
-  normal.uScale = 0.9;
-  normal.vScale = 0.9;
-  detail.uScale = 7.5;
-  detail.vScale = 7.5;
+  albedo.uScale = 1.35;
+  albedo.vScale = 1.35;
+  normal.uScale = 4.8;
+  normal.vScale = 4.8;
+  detail.uScale = 18;
+  detail.vScale = 18;
 
   const near = new PBRMaterial('sand-pbr-near', scene);
-  near.albedoColor = new Color3(1.0, 0.81, 0.55);
+  near.albedoColor = new Color3(1.0, 0.82, 0.57);
   near.albedoTexture = albedo;
   near.bumpTexture = normal;
-  near.bumpTexture.level = 0.72;
+  near.bumpTexture.level = 0.38;
   near.metallic = 0;
-  near.roughness = 0.88;
-  near.environmentIntensity = 0.48;
+  near.roughness = 0.91;
+  near.environmentIntensity = 0.42;
   near.usePhysicalLightFalloff = true;
   near.useParallax = false;
   near.useVertexColors = true;
   near.backFaceCulling = true;
   near.detailMap.texture = detail;
   near.detailMap.isEnabled = true;
-  near.detailMap.diffuseBlendLevel = 0.06;
-  near.detailMap.roughnessBlendLevel = 0.16;
-  near.detailMap.bumpLevel = 0.47;
+  near.detailMap.diffuseBlendLevel = 0.025;
+  near.detailMap.roughnessBlendLevel = 0.10;
+  near.detailMap.bumpLevel = 0.22;
 
   const far = near.clone('sand-pbr-far');
   far.bumpTexture = normal;
-  far.bumpTexture.level = 0.28;
+  far.bumpTexture.level = 0.12;
   far.detailMap.isEnabled = false;
-  far.roughness = 0.91;
+  far.roughness = 0.94;
 
-  const footprint = near.clone('sand-footprint-pbr');
-  footprint.albedoColor = new Color3(0.84, 0.62, 0.37);
-  footprint.bumpTexture.level = 0.9;
-  footprint.detailMap.bumpLevel = 0.65;
-  footprint.roughness = 0.94;
+  const footprint = near.clone('sand-deformation-pbr');
+  footprint.albedoColor = near.albedoColor.clone();
+  footprint.bumpTexture.level = near.bumpTexture.level;
+  footprint.detailMap.bumpLevel = near.detailMap.bumpLevel;
 
   return {
     near,
