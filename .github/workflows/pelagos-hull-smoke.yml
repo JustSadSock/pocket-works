@@ -16,8 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Use stable npm 11
+        run: npm install --global npm@11.6.0 --no-audit --no-fund
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --no-audit --no-fund --legacy-peer-deps
       - name: Typecheck PELAGOS
         run: npm run typecheck --workspace @pocket-works/pelagos
       - name: Test PELAGOS
