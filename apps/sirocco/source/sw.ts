@@ -6,14 +6,14 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'sirocco-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
-  'Процедурная бесшовная пустыня из направленных дюн с chunk streaming и несколькими пространственными масштабами.',
-  'Полноценное first-person тело с humanoid rig, процедурной походкой, foot planting и IK-адаптацией к склону.',
-  'Объёмные следы с вдавливанием и песчаным валиком, локальное осыпание склонов и умеренные частицы песка.',
-  'Мобильное landscape-управление, атмосферное небо, мягкие каскадные тени и автоматические High / Medium / Low профили качества.'
+  'Исправлен критический баг дальнего LOD: грубый terrain больше не перекрывает активные чанки и не накрывает камеру песчаным потолком.',
+  'Дальний ландшафт теперь строится кольцом с гарантированным пустым центром вокруг игрока и корректно центрируется по активному чанку.',
+  'Сломанные сохранения камеры из версии 1.0.0 автоматически сбрасываются через новую схему session-state.',
+  'Вход в прогулку больше не зависит от успешной инициализации Web Audio: управление запускается сразу, а звук подключается отдельно.'
 ];
 
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
