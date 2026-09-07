@@ -107,7 +107,7 @@ export function angleDelta(from: number, to: number): number {
 
 export function hash2(x: number, z: number): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(z | 0, 668265263);
-  h = Math.imul(h ^ (h >>> 13), 1274126177;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
 }
 
@@ -252,15 +252,6 @@ export class ShipDynamics {
     });
     this.originX = 0;
     this.originZ = 0;
-    this.lastTelemetry = {
-      speed: 0,
-      forwardSpeed: 0,
-      lateralSpeed: 0,
-      windAngle: 0,
-      apparentWindSpeed: 0,
-      sailEfficiency: 0,
-      heel: 0
-    };
   }
 
   update(dt: number, time: number, controls: ShipControls, wind: WindState, waveScale: number): ShipTelemetry {
