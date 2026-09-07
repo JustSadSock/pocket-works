@@ -4,14 +4,14 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.0.4';
-const APP_VERSION = '1.0.4';
+const CACHE_NAME = 'sirocco-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Исправлена настоящая причина изнанки дюн: winding всех terrain-треугольников был обратным стандартному Babylon.js TiledGround, поэтому верх песка отбрасывался back-face culling, а игрок видел поверхность только снизу.',
-  'Ближние чанки и дальний LOD теперь используют тот же top-facing порядок индексов, что встроенный Babylon.js ground для XZ-сетки с растущей координатой Z.',
-  'Тем же исправлением приведены в правильную ориентацию геометрические следы и локальные следы осыпания песка.',
-  'Добавлен регрессионный тест winding и продолжены проверки непрерывности визуальной mesh-поверхности на всех профилях качества.'
+  'Песок переведён с декоративных геометрических следов на локальную физическую world-space heightfield: стопа вдавливает поверхность, выталкивает валик, переносит песок вниз по склону и оставляет устойчивую деформацию, не зависящую от направления камеры.',
+  'Добавлена отдельная высокодетализированная физическая sand-surface вокруг игрока, поэтому сантиметровые отпечатки и локальное осыпание видны без увеличения детализации всей бесконечной пустыни.',
+  'First-person тело пересобрано в образе бедуинского путника: длинная светлая туника, пояс, свободные штаны, обмотки, кожаная обувь, рукава и руки, а ноги используют устойчивый двухзвенный IK.',
+  'Освещение и тени переделаны: удалено полосатое terrain self-shadowing и чрезмерная periodic normal-map рябь, солнце опущено ниже для читаемой формы дюн, а персонаж получает отдельную мягкую фильтрованную динамическую тень.'
 ];
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
