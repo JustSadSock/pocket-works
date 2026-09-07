@@ -1,0 +1,147 @@
+name: Blender Asset Forge
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Optional app slug to build (leave empty for platform smoke test)"
+        required: false
+        type: string
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - "apps/*/asset-forge/**"
+  pull_request:
+    paths:
+      - ".github/workflows/blender-asset-forge.yml"
+      - "tools/asset-forge/**"
+      - "docs/ASSET-FORGE.md"
+      - "AGENTS.md"
+
+concurrency:
+  group: blender-asset-forge-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BLENDER_VERSION: "5.2.1"
+  BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
+
+jobs:
+  platform-smoke:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download pinned Blender LTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSLO "${BLENDER_BASE_URL}/${archive}"
+          curl -fsSLO "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
+          grep " ${archive}$" "blender-${BLENDER_VERSION}.sha256" | sha256sum --check --strict
+          tar -xf "${archive}"
+          echo "BLENDER=$PWD/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+
+      - name: Generate rigged animated GLB smoke asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p asset-forge-smoke
+          "$BLENDER" --background --factory-startup \
+            --python tools/asset-forge/smoke_generate.py -- \
+            --output "$PWD/asset-forge-smoke/forge-smoke.glb"
+
+      - name: Re-import and verify GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BLENDER" --background --factory-startup \
+            --python tools/asset-forge/verify_glb.py -- \
+            --input "$PWD/asset-forge-smoke/forge-smoke.glb" \
+            --require-armature \
+            --require-animation
+
+      - name: Upload smoke asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-asset-forge-smoke
+          path: asset-forge-smoke/forge-smoke.glb
+          if-no-files-found: error
+          retention-days: 7
+
+  generate-app-assets:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.app != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: Refuse direct generation on main
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+            echo "Asset Forge writes generated assets back to the current feature branch; select a non-main branch."
+            exit 1
+          fi
+
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Download pinned Blender LTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSLO "${BLENDER_BASE_URL}/${archive}"
+          curl -fsSLO "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
+          grep " ${archive}$" "blender-${BLENDER_VERSION}.sha256" | sha256sum --check --strict
+          tar -xf "${archive}"
+          echo "BLENDER=$PWD/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+
+      - name: Build app-local Blender manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            python3 tools/asset-forge/run_manifest.py \
+              --blender "$BLENDER" \
+              --app "${{ inputs.app }}"
+          else
+            python3 tools/asset-forge/run_manifest.py \
+              --blender "$BLENDER" \
+              --changed-from "${{ github.event.before }}"
+          fi
+
+      - name: Commit generated assets back to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s .asset-forge-generated.txt ]]; then
+            echo "No generated outputs were reported."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] && git add -- "$file"
+          done < .asset-forge-generated.txt
+
+          if git diff --cached --quiet; then
+            echo "Generated assets are already up to date."
+            exit 0
+          fi
+
+          git commit -m "Generate Blender assets"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
