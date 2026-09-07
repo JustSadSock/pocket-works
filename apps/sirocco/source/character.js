@@ -77,10 +77,23 @@ export class HumanoidRig {
     if (!this.modelRoot || !this.skeleton) throw new Error('Animated CC0 humanoid did not contain the expected root/skeleton');
 
     this.modelRoot.parent = this.root;
+    const skinTone = new Color3(0.46, 0.285, 0.18);
     for (const mesh of imported.meshes) {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       if (mesh !== this.modelRoot && mesh.getTotalVertices?.() > 0) {
+        // The source character is deliberately neutral. Re-materialise the
+        // exposed body as warm skin; the thobe, trousers and leather layers are
+        // separate meshes, so the figure no longer reads as one monochrome lump.
+        if (mesh.material?.clone) {
+          const bodyMaterial = mesh.material.clone(`bedouin-skin-${mesh.name}`);
+          if ('albedoTexture' in bodyMaterial) bodyMaterial.albedoTexture = null;
+          if ('albedoColor' in bodyMaterial) bodyMaterial.albedoColor = skinTone.clone();
+          if ('roughness' in bodyMaterial) bodyMaterial.roughness = 0.88;
+          if ('metallic' in bodyMaterial) bodyMaterial.metallic = 0;
+          mesh.material = bodyMaterial;
+          this.materials.push(bodyMaterial);
+        }
         this.meshes.push(mesh);
         this.shadowCasters?.push(mesh);
       }
@@ -123,51 +136,80 @@ export class HumanoidRig {
   }
 
   buildBedouinGarments() {
-    const linen = makeMaterial(this.scene, 'bedouin-sunbleached-linen', new Color3(0.84, 0.79, 0.68), 0.99);
-    const linenShade = makeMaterial(this.scene, 'bedouin-linen-folds', new Color3(0.66, 0.59, 0.49), 0.99);
-    const sash = makeMaterial(this.scene, 'bedouin-red-sash', new Color3(0.40, 0.08, 0.055), 0.96);
-    this.materials.push(linen, linenShade, sash);
+    const linen = makeMaterial(this.scene, 'bedouin-sunbleached-linen', new Color3(0.86, 0.80, 0.67), 0.99);
+    const linenShade = makeMaterial(this.scene, 'bedouin-linen-folds', new Color3(0.66, 0.57, 0.45), 0.99);
+    const trousers = makeMaterial(this.scene, 'bedouin-charcoal-trousers', new Color3(0.19, 0.17, 0.145), 0.97);
+    const sash = makeMaterial(this.scene, 'bedouin-red-sash', new Color3(0.43, 0.075, 0.045), 0.96);
+    const leather = makeMaterial(this.scene, 'bedouin-leather', new Color3(0.13, 0.075, 0.035), 0.92);
+    const skin = makeMaterial(this.scene, 'bedouin-visible-skin', new Color3(0.49, 0.30, 0.19), 0.86);
+    this.materials.push(linen, linenShade, trousers, sash, leather, skin);
 
     this.robeTorso = this.addGarment(MeshBuilder.CreateCylinder('bedouin-thobe-upper', {
-      height: 0.64, diameterTop: 0.43, diameterBottom: 0.50, tessellation: 20
+      height: 0.64, diameterTop: 0.43, diameterBottom: 0.51, tessellation: 22
     }, this.scene), linen);
     this.robeTorso.position.set(0, 1.18, -0.01);
 
     this.robeSkirt = this.addGarment(MeshBuilder.CreateCylinder('bedouin-thobe-lower', {
-      height: 0.78, diameterTop: 0.48, diameterBottom: 0.62, tessellation: 24
+      height: 0.82, diameterTop: 0.49, diameterBottom: 0.64, tessellation: 26
     }, this.scene), linen);
-    this.robeSkirt.position.set(0, 0.60, -0.02);
+    this.robeSkirt.position.set(0, 0.58, -0.02);
 
     this.frontFold = this.addGarment(MeshBuilder.CreateBox('bedouin-thobe-front-fold', {
-      width: 0.25, height: 0.70, depth: 0.025
+      width: 0.255, height: 0.73, depth: 0.026
     }, this.scene), linenShade);
-    this.frontFold.position.set(0, 0.62, 0.305);
+    this.frontFold.position.set(0, 0.60, 0.315);
 
     this.belt = this.addGarment(MeshBuilder.CreateTorus('bedouin-waist-sash', {
-      diameter: 0.49, thickness: 0.042, tessellation: 28
+      diameter: 0.50, thickness: 0.045, tessellation: 30
     }, this.scene), sash);
     this.belt.position.y = 0.94;
 
     this.scarfCollar = this.addGarment(MeshBuilder.CreateTorus('bedouin-keffiyeh-collar', {
-      diameter: 0.36, thickness: 0.055, tessellation: 24
+      diameter: 0.37, thickness: 0.058, tessellation: 26
     }, this.scene), sash);
-    this.scarfCollar.position.set(0, 1.51, -0.015);
+    this.scarfCollar.position.set(0, 1.52, -0.015);
+
+    const scarfBand = this.addGarment(MeshBuilder.CreateCylinder('bedouin-keffiyeh-headband', {
+      height: 0.07, diameter: 0.30, tessellation: 24
+    }, this.scene), sash);
+    scarfBand.position.set(0, 1.72, -0.01);
 
     this.scarfTails = [];
     for (const side of [-1, 1]) {
       const tail = this.addGarment(MeshBuilder.CreateBox(`bedouin-keffiyeh-tail-${side}`, {
-        width: 0.13, height: 0.46, depth: 0.025
-      }, this.scene), side < 0 ? linen : sash);
-      tail.position.set(side * 0.11, 1.34, -0.19);
-      tail.rotation.z = side * 0.07;
+        width: 0.14, height: 0.48, depth: 0.026
+      }, this.scene), side < 0 ? linen : linenShade);
+      tail.position.set(side * 0.12, 1.35, -0.20);
+      tail.rotation.z = side * 0.08;
       this.scarfTails.push(tail);
     }
 
     this.sleeves = {
-      left: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-left', { height: 1, diameterTop: 0.14, diameterBottom: 0.11, tessellation: 16 }, this.scene), linen, null),
-      right: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-right', { height: 1, diameterTop: 0.14, diameterBottom: 0.11, tessellation: 16 }, this.scene), linen, null)
+      left: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-left', { height: 1, diameterTop: 0.145, diameterBottom: 0.105, tessellation: 18 }, this.scene), linen, null),
+      right: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-right', { height: 1, diameterTop: 0.145, diameterBottom: 0.105, tessellation: 18 }, this.scene), linen, null)
     };
     for (const sleeve of Object.values(this.sleeves)) sleeve.parent = null;
+
+    this.handCovers = {
+      left: this.addGarment(MeshBuilder.CreateCapsule('bedouin-hand-left', { radius: 0.047, height: 0.15, tessellation: 14 }, this.scene), skin, null),
+      right: this.addGarment(MeshBuilder.CreateCapsule('bedouin-hand-right', { radius: 0.047, height: 0.15, tessellation: 14 }, this.scene), skin, null)
+    };
+    for (const hand of Object.values(this.handCovers)) hand.parent = null;
+
+    this.boots = {
+      left: this.addGarment(MeshBuilder.CreateCapsule('bedouin-boot-left', { radius: 0.070, height: 0.30, tessellation: 16 }, this.scene), leather, null),
+      right: this.addGarment(MeshBuilder.CreateCapsule('bedouin-boot-right', { radius: 0.070, height: 0.30, tessellation: 16 }, this.scene), leather, null)
+    };
+    for (const boot of Object.values(this.boots)) boot.parent = null;
+
+    // Dark cloth just inside the robe opening keeps the lower silhouette from
+    // turning into one uninterrupted beige column while the animated feet move.
+    for (const side of [-1, 1]) {
+      const trouser = this.addGarment(MeshBuilder.CreateCylinder(`bedouin-trouser-cuff-${side}`, {
+        height: 0.34, diameterTop: 0.145, diameterBottom: 0.12, tessellation: 16
+      }, this.scene), trousers);
+      trouser.position.set(side * 0.11, 0.22, 0.0);
+    }
 
     for (const side of [-1, 1]) {
       const debug = MeshBuilder.CreateSphere(`imported-foot-target-${side}`, { diameter: 0.06, segments: 6 }, this.scene);
@@ -199,24 +241,39 @@ export class HumanoidRig {
   }
 
   updateAnimations(controller, dt) {
-    const targetWalk = clamp((controller.speed - 0.08) / 0.65, 0, 1);
-    this.walkWeight = damp(this.walkWeight, targetWalk, 8.5, dt);
+    const targetWalk = clamp((controller.speed - 0.07) / 0.58, 0, 1);
+    this.walkWeight = damp(this.walkWeight, targetWalk, 9.2, dt);
     if (this.walkAnimation) {
-      this.walkAnimation.speedRatio = clamp(0.72 + controller.speed * 0.22, 0.72, 1.42);
+      this.walkAnimation.speedRatio = clamp(0.70 + controller.speed * 0.25, 0.70, 1.38);
       this.walkAnimation.setWeightForAllAnimatables(this.idleAnimation ? this.walkWeight : 1);
     }
     if (this.idleAnimation) this.idleAnimation.setWeightForAllAnimatables(1 - this.walkWeight);
   }
 
-  updateSleeves() {
+  updateSleevesAndExtremities(controller) {
     for (const side of ['left', 'right']) {
       const shoulder = this.shoulders?.[side];
-      const hand = this.hands?.[side] || this.elbows?.[side];
+      const handNode = this.hands?.[side] || this.elbows?.[side];
       const sleeve = this.sleeves?.[side];
-      if (!shoulder || !hand || !sleeve) continue;
-      const a = shoulder.getAbsolutePosition();
-      const b = hand.getAbsolutePosition();
-      orientYAxis(sleeve, a, Vector3.Lerp(a, b, 0.78));
+      if (shoulder && handNode && sleeve) {
+        const a = shoulder.getAbsolutePosition();
+        const b = handNode.getAbsolutePosition();
+        orientYAxis(sleeve, a, Vector3.Lerp(a, b, 0.79));
+      }
+      if (handNode && this.handCovers?.[side]) {
+        const hand = this.handCovers[side];
+        hand.position.copyFrom(handNode.getAbsolutePosition());
+        hand.rotationQuaternion = Quaternion.RotationAxis(UP, controller.bodyYaw);
+      }
+      const footNode = this.feet?.[side];
+      if (footNode && this.boots?.[side]) {
+        const boot = this.boots[side];
+        boot.position.copyFrom(footNode.getAbsolutePosition());
+        boot.position.y += 0.035;
+        const yaw = Quaternion.RotationAxis(UP, controller.bodyYaw);
+        const pitch = Quaternion.RotationAxis(Vector3.Right(), Math.PI * 0.5);
+        boot.rotationQuaternion = yaw.multiply(pitch);
+      }
     }
   }
 
@@ -241,7 +298,7 @@ export class HumanoidRig {
     state.initialized = true;
     state.previousDistance = distance;
     state.previousVelocity = velocity;
-    if (distance < 0.18) state.plant.set(position.x, ground + 0.018, position.z);
+    if (distance < 0.18) state.plant.set(position.x, ground + 0.012, position.z);
     this.debugTargets[side === 'left' ? 0 : 1]?.position.copyFrom(state.plant);
     if (!landed) return null;
 
@@ -266,8 +323,8 @@ export class HumanoidRig {
 
     this.root.position.copyFrom(controller.localPosition);
     this.root.rotation.y = controller.bodyYaw;
-    this.root.rotation.x = clamp(forwardGrade * 0.22, -0.12, 0.16);
-    this.root.rotation.z = clamp(-sideGrade * 0.16, -0.09, 0.09);
+    this.root.rotation.x = clamp(forwardGrade * 0.20, -0.11, 0.15);
+    this.root.rotation.z = clamp(-sideGrade * 0.14, -0.08, 0.08);
     this.updateAnimations(controller, dt);
 
     const footPositions = [this.feet?.left, this.feet?.right].filter(Boolean).map((node) => node.getAbsolutePosition());
@@ -275,18 +332,18 @@ export class HumanoidRig {
     for (const foot of footPositions) {
       const gx = foot.x + controller.worldOffsetX;
       const gz = foot.z + controller.worldOffsetZ;
-      requiredLift = Math.max(requiredLift, this.surface.sampleHeight(gx, gz) - foot.y + 0.012);
+      requiredLift = Math.max(requiredLift, this.surface.sampleHeight(gx, gz) - foot.y + 0.010);
     }
-    this.visualLift = damp(this.visualLift, clamp(requiredLift, 0, 0.16), 12, dt);
+    this.visualLift = damp(this.visualLift, clamp(requiredLift, 0, 0.12), 10, dt);
     this.modelRoot.position.y = this.baseModelY + this.visualLift;
 
-    const speedNorm = clamp(controller.speed / 3.25, 0, 1);
-    this.robeSkirt.rotation.x = Math.sin(controller.gait) * 0.018 * speedNorm;
-    this.robeSkirt.rotation.z = Math.cos(controller.gait * 0.5) * 0.012 * speedNorm;
-    this.frontFold.position.z = 0.305 + Math.sin(controller.gait) * 0.018 * speedNorm;
-    this.scarfTails[0].rotation.x = Math.sin(controller.gait * 0.75) * 0.025 * speedNorm;
-    this.scarfTails[1].rotation.x = Math.sin(controller.gait * 0.75 + 0.8) * 0.025 * speedNorm;
-    this.updateSleeves();
+    const speedNorm = clamp(controller.speed / 3.0, 0, 1);
+    this.robeSkirt.rotation.x = Math.sin(controller.gait) * 0.016 * speedNorm;
+    this.robeSkirt.rotation.z = Math.cos(controller.gait * 0.5) * 0.010 * speedNorm;
+    this.frontFold.position.z = 0.315 + Math.sin(controller.gait) * 0.015 * speedNorm;
+    this.scarfTails[0].rotation.x = Math.sin(controller.gait * 0.75) * 0.022 * speedNorm;
+    this.scarfTails[1].rotation.x = Math.sin(controller.gait * 0.75 + 0.8) * 0.022 * speedNorm;
+    this.updateSleevesAndExtremities(controller);
 
     return [this.updateFoot('left', controller, dt), this.updateFoot('right', controller, dt)].filter(Boolean);
   }
