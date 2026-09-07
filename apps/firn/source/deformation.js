@@ -22,7 +22,7 @@ export class SnowDeformationPatch {
     this.offsetX = 0; this.offsetZ = 0;
     this.centerGX = 0; this.centerGZ = 0;
     this.dirty = true;
-    this.markBase = MeshBuilder.CreateGround('firn-footprint-source', { width: 0.26, height: 0.62, subdivisions: 1 }, scene);
+    this.markBase = MeshBuilder.CreateGround('firn-footprint-source', { width: 0.3, height: 0.66, subdivisions: 1 }, scene);
     this.markBase.material = materials.track;
     this.markBase.position.y = -10000;
     this.markBase.isPickable = false;
@@ -30,9 +30,9 @@ export class SnowDeformationPatch {
   }
 
   setQuality(quality) {
-    this.size = quality.key === 'high' ? 10.5 : quality.key === 'medium' ? 10 : 9;
-    this.segments = quality.key === 'high' ? 52 : quality.key === 'medium' ? 44 : 36;
-    this.coarseSegments = quality.key === 'high' ? 10 : quality.key === 'medium' ? 8 : 7;
+    this.size = quality.key === 'high' ? 12.5 : quality.key === 'medium' ? 11.5 : 10.5;
+    this.segments = quality.key === 'high' ? 58 : quality.key === 'medium' ? 48 : 40;
+    this.coarseSegments = quality.key === 'high' ? 11 : quality.key === 'medium' ? 9 : 8;
     this.limit = quality.trackLimit;
     while (this.entries.length > this.limit) this.removeOldest();
     this.dirty = true;
@@ -48,7 +48,7 @@ export class SnowDeformationPatch {
     const n = terrainNormal(mark.entry.x, mark.entry.z, 0.65);
     mark.mesh.position.x = mark.entry.x - this.offsetX;
     mark.mesh.position.z = mark.entry.z - this.offsetZ;
-    mark.mesh.position.y = snowSurfaceHeight(mark.entry.x, mark.entry.z) + 0.008;
+    mark.mesh.position.y = snowSurfaceHeight(mark.entry.x, mark.entry.z) - Math.min(0.025, mark.entry.depth * 0.2);
     mark.mesh.rotation.x = Math.atan2(n.z, n.y);
     mark.mesh.rotation.y = mark.entry.yaw;
     mark.mesh.rotation.z = -Math.atan2(n.x, n.y);
@@ -65,12 +65,18 @@ export class SnowDeformationPatch {
   }
 
   addFootprint(landing) {
-    const depth = clamp(0.01 + landing.sink * 0.03 + landing.powder * 0.009, 0.01, 0.044);
-    const entry = { type: 'foot', x: landing.globalX, z: landing.globalZ, yaw: landing.yaw, rx: 0.145, rz: 0.31 + landing.sink * 0.07, depth, mark: null };
+    const sinkDepth = Number.isFinite(landing.sinkDepth) ? landing.sinkDepth : landing.sink * 0.28;
+    const depth = clamp(0.025 + sinkDepth * 0.58 + landing.powder * 0.018, 0.025, 0.19);
+    const entry = {
+      type: 'foot', x: landing.globalX, z: landing.globalZ, yaw: landing.yaw,
+      rx: 0.16 + landing.sink * 0.025,
+      rz: 0.33 + landing.sink * 0.12,
+      depth, mark: null
+    };
     const mesh = this.markBase.createInstance(`firn-step-${this.entries.length}-${Date.now() % 100000}`);
     mesh.isPickable = false;
-    mesh.scaling.x = 0.9 + landing.sink * 0.15;
-    mesh.scaling.z = 0.92 + landing.sink * 0.2;
+    mesh.scaling.x = 0.92 + landing.sink * 0.22;
+    mesh.scaling.z = 0.92 + landing.sink * 0.3;
     const mark = { mesh, entry };
     entry.mark = mark;
     this.entries.push(entry);
@@ -81,7 +87,13 @@ export class SnowDeformationPatch {
   }
 
   addScar(globalX, globalZ, yaw, strength = 1) {
-    const entry = { type: 'scar', x: globalX, z: globalZ, yaw, rx: 0.32 + strength * 0.18, rz: 0.9 + strength * 0.75, depth: 0.018 + strength * 0.014, mark: null };
+    const entry = {
+      type: 'scar', x: globalX, z: globalZ, yaw,
+      rx: 0.36 + strength * 0.22,
+      rz: 1.0 + strength * 0.9,
+      depth: 0.035 + strength * 0.045,
+      mark: null
+    };
     this.entries.push(entry);
     while (this.entries.length > this.limit) this.removeOldest();
     this.dirty = true;
@@ -90,7 +102,7 @@ export class SnowDeformationPatch {
   deformationAt(gx, gz) {
     let depression = 0, compression = 0;
     for (const e of this.entries) {
-      const bound = e.rz * 1.35;
+      const bound = e.rz * 1.4;
       if (Math.abs(gx - e.x) > bound || Math.abs(gz - e.z) > bound) continue;
       const dx = gx - e.x, dz = gz - e.z;
       const c = Math.cos(e.yaw), s = Math.sin(e.yaw);
@@ -101,7 +113,7 @@ export class SnowDeformationPatch {
       depression += e.depth * w;
       compression = Math.max(compression, w);
     }
-    return { depression: clamp(depression, 0, 0.048), compression };
+    return { depression: clamp(depression, 0, 0.22), compression };
   }
 
   buildCoarseField() {
@@ -149,7 +161,7 @@ export class SnowDeformationPatch {
   }
 
   update(_dt, globalX, globalZ) {
-    const moved = Math.hypot(globalX - this.centerGX, globalZ - this.centerGZ) > 0.72;
+    const moved = Math.hypot(globalX - this.centerGX, globalZ - this.centerGZ) > 0.64;
     if (!this.dirty && !moved) return;
     this.centerGX = globalX; this.centerGZ = globalZ; this.dirty = false;
     this.rebuild();
@@ -170,7 +182,7 @@ export class SnowDeformationPatch {
         const lift = 0.004 + edge * 0.003;
         const base = this.sampleCoarse(field, vx, vz);
         const def = this.deformationAt(gx, gz);
-        const dark = 1 - def.compression * 0.16;
+        const dark = 1 - def.compression * 0.2;
         positions.push(lx, base.y + lift - def.depression, lz);
         normals.push(base.nx, base.ny, base.nz);
         uvs.push(gx * 0.04, gz * 0.04);
