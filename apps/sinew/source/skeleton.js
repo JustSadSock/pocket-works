@@ -48,22 +48,24 @@ function applyGroundedPhysicalFeel(warrior, control, dt) {
   const yawRate = clamp(control.lookYawRate || 0, -9, 9);
   const pitchRate = clamp(control.lookPitchRate || 0, -8, 8);
   const angularEnergy = clamp(Math.hypot(yawRate, pitchRate) / 8.5, 0, 1);
+  const bladeEnergy = clamp((warrior.sword.speed - 2.2) / 7.2, 0, 1);
+  const actionEnergy = Math.max(angularEnergy, bladeEnergy);
   const moveMagnitude = clamp(control.moveMagnitude || 0, 0, 1);
 
   // The base rig intentionally has under-damped springs. Add velocity damping instead of
   // removing lag: slow aiming becomes planted, while fast cuts still carry momentum.
-  const handDamping = 8.5 - angularEnergy * 4.2;
-  const weaponDamping = 7.2 - angularEnergy * 4.6;
-  const shieldDamping = 8.8 - angularEnergy * 3.2;
+  const handDamping = 8.5 - actionEnergy * 4.2;
+  const weaponDamping = 7.2 - actionEnergy * 4.6;
+  const shieldDamping = 8.8 - actionEnergy * 3.2;
   warrior.leftHand.velocity.scaleInPlace(Math.exp(-handDamping * safeDt));
   warrior.rightHand.velocity.scaleInPlace(Math.exp(-(handDamping - 0.8) * safeDt));
   warrior.swordDirection.velocity.scaleInPlace(Math.exp(-weaponDamping * safeDt));
   warrior.shieldNormal.velocity.scaleInPlace(Math.exp(-shieldDamping * safeDt));
 
   // Keep the torso from continuously oscillating around the desired facing.
-  warrior.bodyYawState.velocity *= Math.exp(-(4.2 - angularEnergy * 1.4) * safeDt);
-  warrior.upperYawState.velocity *= Math.exp(-(3.1 - angularEnergy * 1.1) * safeDt);
-  warrior.pitchState.velocity *= Math.exp(-(3.6 - angularEnergy * 1.3) * safeDt);
+  warrior.bodyYawState.velocity *= Math.exp(-(4.2 - actionEnergy * 1.4) * safeDt);
+  warrior.upperYawState.velocity *= Math.exp(-(3.1 - actionEnergy * 1.1) * safeDt);
+  warrior.pitchState.velocity *= Math.exp(-(3.6 - actionEnergy * 1.3) * safeDt);
 
   // Feet should feel planted when the movement thumb is released. Preserve acceleration
   // while moving, but kill the residual skating that made the body feel submerged.
@@ -94,7 +96,7 @@ function applyGroundedPhysicalFeel(warrior, control, dt) {
   }
 
   // Restore stability decisively while calm; taking/making hard swings still costs it.
-  const calm = 1 - angularEnergy;
+  const calm = 1 - actionEnergy;
   warrior.stability = Math.min(100, warrior.stability + calm * calm * safeDt * 7.5);
 }
 
