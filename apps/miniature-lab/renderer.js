@@ -199,7 +199,7 @@
       gl.uniform1f(uniforms.u_pop, clamp((Number(settings.pop) || 0) / 100, 0, 1));
 
       gl.drawArrays(gl.TRIANGLES, 0, 6);
-      gl.finish();
+      gl.flush();
       return canvas;
     } catch (error) {
       console.warn('[Miniature Lab] renderer failed:', error);
