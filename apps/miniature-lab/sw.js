@@ -5,6 +5,9 @@ const APP_SHELL = [
   './index.html',
   './styles.css',
   './canvas-filter-polyfill.js',
+  './media-utils.js',
+  './analysis.js',
+  './renderer.js',
   './app.js',
   './manifest.webmanifest',
   './icons/icon.svg'
