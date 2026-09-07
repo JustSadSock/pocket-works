@@ -17,7 +17,7 @@
 
     <header id="hud" class="hud hidden" data-ui>
       <div class="wind-dial" aria-label="Направление ветра">
-        <i id="windArrow"></i>
+        <i id="windArrow" aria-hidden="true"></i>
         <span><b id="windValue">8.2</b><small>М/С</small></span>
       </div>
       <button id="pauseButton" class="circle-button" type="button" aria-label="Пауза">Ⅱ</button>
@@ -25,7 +25,7 @@
 
     <section id="telemetry" class="telemetry hidden" data-ui>
       <span><b id="speedValue">0.0</b><small>УЗЛА</small></span>
-      <span class="course"><i id="courseNeedle"></i><small id="courseValue">000°</small></span>
+      <span class="course"><i id="courseNeedle" aria-hidden="true"></i><small id="courseValue">000°</small></span>
       <span><b id="weatherValue">БРИЗ</b><small>МОРЕ</small></span>
     </section>
 
@@ -68,7 +68,7 @@
     </section>
 
     <section id="settings" class="screen sheet hidden" data-ui>
-      <div class="sheet-head"><div><p>БОРТОВЫЕ СИСТЕМЫ</p><h2>Настройки</h2></div><button id="closeSettings" class="circle-button" type="button">×</button></div>
+      <div class="sheet-head"><div><p>БОРТОВЫЕ СИСТЕМЫ</p><h2>Настройки</h2></div><button id="closeSettings" class="circle-button" type="button" aria-label="Закрыть настройки">×</button></div>
       <label class="setting"><span><b>Чувствительность руля</b><small>Нелинейная кривая сохраняется</small></span><input id="sensitivity" type="range" min="65" max="140" value="100"><output id="sensitivityValue">100%</output></label>
       <div class="setting"><span><b>Качество 3D</b><small>Авто само регулирует внутреннее разрешение</small></span><button id="qualityButton" class="value-button" type="button">АВТО</button></div>
       <div class="setting"><span><b>Звук моря</b><small>Ветер, вода, корпус, парус и гребля</small></span><button id="soundButton" class="value-button" type="button">ВКЛ</button></div>
