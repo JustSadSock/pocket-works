@@ -4,7 +4,7 @@ PELAGOS is a portrait-first 3D sailing game for Pocket Works, tuned for iPhone S
 
 ## Core loop
 
-Sail an effectively endless procedural ocean. The boat is driven by forces rather than direct coordinate changes: apparent wind, sail trim, rowing impulses, hydrodynamic drag and a speed-dependent rudder all feed the same rigid-body-style state. Eight hull sample points query the same mathematical wave field used by the water shader, producing heave, pitch and roll from the visible sea.
+Sail an effectively endless procedural ocean. The boat is driven by forces rather than direct coordinate changes: apparent wind, sail trim, rowing impulses, hydrodynamic drag, keel side force and a speed-dependent rudder all feed the same rigid-body-style state. Ten hull sample points query the same six-component mathematical wave field used by the water shader, producing heave, pitch and roll from the visible sea.
 
 ## Mobile interaction
 
@@ -20,11 +20,12 @@ Sail an effectively endless procedural ocean. The boat is driven by forces rathe
 
 Babylon.js Enhanced runtime with:
 
-- analytic multi-wave ocean displacement and normals;
-- Fresnel reflection approximation, sun path, foam, wake and storm response;
-- procedural ship model with hull, deck, mast, rigging, sail, rudder, four animated oars, iron fittings and lanterns;
-- shader-driven dynamic sky with sun, moon, stars and sunset transition;
-- pooled procedural rocks, buoys and driftwood;
+- shared six-component analytic/choppy ocean displacement and normals;
+- Fresnel water, micro-ripples, sun glints, whitecaps, bow foam, V-shaped wake and storm response;
+- procedural ship model with shaped hull, deck, keel, cabin, helm, mast, yard, boom, bowsprit, rigging, dynamic cloth sail + jib, rudder, anchors, four animated oars and lantern lighting;
+- procedural wood, deck and canvas materials with dynamic shadows;
+- shader-driven dynamic sky with clouds, sun, moon, stars and sunset transition;
+- pooled procedural rocks, buoys and driftwood that follow the same wave field;
 - spray, rain and oar splash particle systems;
 - adaptive internal render scale for sustained mobile performance.
 

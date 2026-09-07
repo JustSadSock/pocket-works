@@ -6,14 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'pelagos-';
-const CACHE_NAME = 'pelagos-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
-  'Добавлено единое физическое поле волн для рендера и восьмиточечной плавучести.',
-  'Реализованы инерция корпуса, руль, парусная полярная диаграмма, гребля и динамический ветер.',
-  'Добавлены портретная chase-камера, адаптивное качество, погода, время суток и процедурный океан.',
-  'Игра интегрирована в Pocket Works Enhanced runtime с офлайн-режимом, persistence и Safari-safe touch input.'
+  'Единое шестикомпонентное поле волн управляет рендером и десятиточечной плавучестью корпуса.',
+  'Корабль полностью пересобран: корпус, палуба, каюта, оснастка, руль, якоря, вёсла и динамическая парусина.',
+  'Добавлены процедурные материалы дерева и ткани, динамические тени, фонари, облака, белые барашки и физический кильватер.',
+  'Уточнены гидродинамическое сопротивление, боковая работа киля, руль, крен, волновой наклон и адаптивный мобильный рендер.'
 ];
 
 setCacheNameDetails({
@@ -39,7 +38,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && !key.includes(`v${APP_VERSION}`) && key !== CACHE_NAME)
+          .filter((key) => key.startsWith(CACHE_PREFIX) && !key.includes(`v${APP_VERSION}`))
           .map((key) => caches.delete(key))
       ))
       .then(() => clientsClaim())
