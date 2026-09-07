@@ -59,20 +59,40 @@ const dirty = sand.consumeDirtyBounds();
 assert.ok(dirty && dirty.minX < 1.2 && dirty.maxX > 1.2, 'sand impact must mark terrain geometry dirty');
 const remembered = sand.sampleOffset(1.2, -0.8);
 sand.update(1, 1.2, -0.8);
-assert.equal(sand.sampleOffset(1.2, -0.8), remembered, 'nearby physical tracks must persist when camera/time advances');
+const settled = sand.sampleOffset(1.2, -0.8);
+assert.ok(settled < -0.001, 'nearby track depression must persist after local relaxation');
+assert.ok(Math.abs(settled - remembered) < 0.018, 'angle-of-repose relaxation must not erase a footprint in one update');
+
+const avalancheSand = new SandPhysics({ sampleBaseHeight: (x) => -x, downhill: () => ({ x: 1, z: 0 }) }, { cellSize: 0.12 });
+avalancheSand.setCell(0, 0, 0.03);
+avalancheSand.update(0.2, 0, 0);
+assert.ok(avalancheSand.getCell(1, 0) > 0, 'displaced sand must transfer downhill when slope exceeds angle of repose');
 
 for (const file of ['world.js', 'deformation.js', 'slip-field.js']) {
   const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
   assert.ok(!source.includes('indices.push(a, d, b, b, d, e)'), `${file} must not use the old underside winding`);
 }
 
+const worldSource = readFileSync(new URL('./world.js', import.meta.url), 'utf8');
+assert.ok(worldSource.includes('setLocalReplacement'), 'coarse terrain must expose a local replacement hole for physical sand');
+assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'), 'terrain must not receive the unstable realtime character shadow map');
+
 const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
-assert.ok(!localSandSource.includes('0.044 * fade'), 'local sand must never reintroduce the old 5 cm dark render mound');
+assert.ok(localSandSource.includes('this.world.setLocalReplacement'), 'high-detail physical sand must replace, not overlay, coarse terrain');
+assert.ok(localSandSource.includes("segments = preset.id === 'high' ? 96"), 'High physical sand must keep approximately 10 cm vertex spacing');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
+
+const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
+assert.ok(materialSource.includes('near.useVertexColors = false'), 'near/far LOD must not diverge through per-vertex tinting');
+assert.ok(materialSource.includes("near.clone('sand-pbr-far-unified')"), 'far terrain must share the same optical PBR response as near terrain');
+
+const cameraSource = readFileSync(new URL('./camera.js', import.meta.url), 'utf8');
+assert.ok(cameraSource.includes('const eyeForward = 0.34'), 'first-person eye must remain safely outside the imported head');
+assert.ok(cameraSource.includes('viewForwardX'), 'camera offset must follow view yaw instead of lagging body yaw');
 
 const characterSource = readFileSync(new URL('./character.js', import.meta.url), 'utf8');
 assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'), 'SIROCCO body must use the imported skinned humanoid');
 assert.ok(characterSource.includes('setWeightForAllAnimatables'), 'walk/idle animation blending must stay enabled');
 assert.ok(!characterSource.includes("this.bone('legL'"), 'old procedural stretch-leg rig must not return');
 
-console.log('SIROCCO core tests: terrain, winding, physical sand, animated body and local-surface guards OK');
+console.log('SIROCCO core tests: terrain, winding, replacement sand, avalanche relaxation, LOD lighting and animated body guards OK');
