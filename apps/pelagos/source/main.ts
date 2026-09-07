@@ -6,6 +6,7 @@ import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager'
 import './sea-profile';
 import './ship-refit';
 import './marine-refit';
+import './marine-tuning';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
