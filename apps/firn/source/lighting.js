@@ -4,17 +4,17 @@ export class MountainLighting {
   constructor(scene, preset) {
     this.scene = scene;
     this.casters = new Set();
-    this.sunDirection = new Vector3(-0.52, -0.64, 0.56).normalize();
+    this.sunDirection = new Vector3(-0.48, -0.52, 0.7).normalize();
     this.sun = new DirectionalLight('firn-sun', this.sunDirection, scene);
-    this.sun.position = this.sunDirection.scale(-180);
-    this.sun.intensity = 3.55;
-    this.sun.diffuse = new Color3(0.93, 0.97, 1.0);
-    this.sun.specular = new Color3(1.0, 0.98, 0.92);
+    this.sun.position = this.sunDirection.scale(-220);
+    this.sun.intensity = 2.7;
+    this.sun.diffuse = new Color3(1.0, 0.94, 0.84);
+    this.sun.specular = new Color3(0.92, 0.96, 1.0);
 
     this.fill = new HemisphericLight('firn-sky-fill', new Vector3(0.02, 1, 0.08), scene);
-    this.fill.intensity = 0.72;
-    this.fill.diffuse = new Color3(0.57, 0.72, 0.84);
-    this.fill.groundColor = new Color3(0.22, 0.3, 0.34);
+    this.fill.intensity = 0.48;
+    this.fill.diffuse = new Color3(0.47, 0.62, 0.72);
+    this.fill.groundColor = new Color3(0.095, 0.12, 0.13);
     this.shadow = null;
     this.setQuality(preset);
   }
@@ -23,11 +23,12 @@ export class MountainLighting {
     this.shadow?.dispose();
     const shadow = new CascadedShadowGenerator(preset.shadowSize, this.sun);
     shadow.numCascades = preset.key === 'low' ? 2 : 3;
-    shadow.lambda = 0.72;
+    shadow.lambda = 0.76;
     shadow.stabilizeCascades = true;
-    shadow.shadowMaxZ = preset.key === 'high' ? 118 : preset.key === 'medium' ? 92 : 68;
-    shadow.bias = 0.0012;
-    shadow.normalBias = 0.026;
+    shadow.shadowMaxZ = preset.key === 'high' ? 145 : preset.key === 'medium' ? 110 : 78;
+    shadow.bias = 0.0008;
+    shadow.normalBias = 0.018;
+    shadow.darkness = 0.12;
     shadow.filteringQuality = preset.key === 'high' ? ShadowGenerator.QUALITY_HIGH : ShadowGenerator.QUALITY_MEDIUM;
     shadow.usePercentageCloserFiltering = true;
     for (const mesh of this.casters) if (!mesh.isDisposed?.()) shadow.addShadowCaster(mesh, false);
@@ -51,9 +52,10 @@ export class MountainLighting {
   }
 
   setWeather(cloud, whiteout) {
-    this.sun.intensity = 3.55 - cloud * 1.55 - whiteout * 0.65;
-    this.fill.intensity = 0.72 + cloud * 0.18;
-    this.sun.diffuse = Color3.Lerp(new Color3(0.93, 0.97, 1.0), new Color3(0.77, 0.87, 0.94), cloud);
+    this.sun.intensity = 2.7 - cloud * 1.15 - whiteout * 0.48;
+    this.fill.intensity = 0.48 + cloud * 0.2 + whiteout * 0.12;
+    this.sun.diffuse = Color3.Lerp(new Color3(1.0, 0.94, 0.84), new Color3(0.74, 0.82, 0.87), cloud);
+    this.fill.diffuse = Color3.Lerp(new Color3(0.47, 0.62, 0.72), new Color3(0.68, 0.73, 0.74), cloud);
   }
 
   dispose() { this.casters.clear(); this.shadow?.dispose(); this.sun.dispose(); this.fill.dispose(); }
