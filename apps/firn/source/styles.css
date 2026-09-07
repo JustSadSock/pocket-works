@@ -18,7 +18,7 @@ button { border: 0; color: inherit; }
 #render-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
 .touch-zone { position: absolute; top: 0; bottom: 0; z-index: 3; touch-action: none; }
 .move-zone { left: 0; width: 49%; }
-.lood­zone { right: 0; width: 51%; }
+.look-zone { right: 0; width: 51%; }
 
 #hud { position: absolute; z-index: 8; top: max(10px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; pointer-events: none; color: rgba(8, 26, 34, .74); font-size: 10px; font-weight: 760; letter-spacing: .14em; text-shadow: 0 1px 8px rgba(255,255,255,.35); }
 .brand { display: flex; align-items: center; gap: 9px; }
