@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe5">
+  <meta name="color-scheme" content="light">
+  <title>Miniature Lab</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas">
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="back-link" href="../../" aria-label="Вернуться в Pocket Works">← Pocket Works</a>
+      <div class="brand" aria-label="Miniature Lab">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>MINIATURE LAB</span>
+      </div>
+      <label class="replace-button" id="replaceButton" hidden>
+        <input id="replaceInput" type="file" accept="image/*,video/*,.heic,.heif,.avif,.mov,.m4v,.mkv" hidden>
+        <span>Другое</span>
+      </label>
+    </header>
+
+    <section class="empty-state" id="emptyState">
+      <div class="empty-visual" aria-hidden="true">
+        <div class="blur-field blur-top"></div>
+        <div class="mini-city"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="focus-slit"></div>
+        <div class="blur-field blur-bottom"></div>
+      </div>
+      <div class="empty-copy">
+        <p class="eyebrow">ULTIMATE MINIATURE EDITOR</p>
+        <h1>Делаем мир игрушечным, а не просто замыленным.</h1>
+        <p>Загрузи фото или видео — Miniature Lab сам попробует найти объект, выставить геометрию фокуса и превратить кадр в убедительную миниатюру.</p>
+        <label class="import-button">
+          <input id="fileInput" type="file" accept="image/*,video/*,.heic,.heif,.avif,.mov,.m4v,.mkv" hidden>
+          <span>Загрузить фото или видео</span>
+        </label>
+        <small>Локальная обработка на устройстве · JPEG / PNG / WebP / AVIF / HEIC* / MP4 / MOV / WebM и другие форматы, которые декодирует браузер.</small>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace" hidden>
+      <div class="stage-column">
+        <div class="stage-frame">
+          <div class="media-stage">
+            <canvas id="previewCanvas" aria-label="Предпросмотр miniature-эффекта"></canvas>
+            <canvas id="guideCanvas" aria-hidden="true"></canvas>
+            <div class="loading-state" id="loadingState" hidden>
+              <span class="spinner" aria-hidden="true"></span>
+              <b id="loadingTitle">Открываю медиа</b>
+              <small id="loadingText">Подготавливаю предпросмотр…</small>
+            </div>
+            <div class="stage-hint" id="stageHint">Тяни зону фокуса по кадру</div>
+          </div>
+          <div class="stage-toolbar">
+            <div class="toolbar-left">
+              <button class="compare-button" id="compareButton" type="button">Зажми: оригинал</button>
+              <button class="secondary-button" id="autoButton" type="button">Авто‑фокус</button>
+            </div>
+            <div class="media-meta" id="mediaMeta">—</div>
+          </div>
+          <div class="video-controls" id="videoControls" hidden>
+            <button id="playButton" type="button" class="play-button" aria-label="Воспроизвести">▶</button>
+            <input id="seekInput" type="range" min="0" max="1000" value="0" step="1" aria-label="Позиция видео">
+            <output id="timeOutput">0:00 / 0:00</output>
+          </div>
+        </div>
+
+        <div class="export-strip">
+          <div class="export-copy">
+            <span>Экспорт</span>
+            <small id="exportInfo">Автоматически подберу безопасное разрешение.</small>
+          </div>
+          <select id="resolutionSelect" aria-label="Разрешение экспорта">
+            <option value="auto">Авто</option>
+            <option value="1080">1080p</option>
+            <option value="2160">4K</option>
+            <option value="original">Оригинал</option>
+          </select>
+          <select id="formatSelect" aria-label="Формат фото">
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+          </select>
+          <button class="export-button" id="exportButton" type="button">Сохранить</button>
+        </div>
+
+        <div class="export-progress" id="exportProgress" hidden>
+          <div class="progress-track"><i id="progressBar"></i></div>
+          <div><span id="progressText">Экспорт 0%</span><button id="cancelExport" type="button">Отменить</button></div>
+        </div>
+      </div>
+
+      <aside class="control-rail" aria-label="Настройки эффекта">
+        <div class="rail-heading">
+          <p class="eyebrow">FOCUS ENGINE</p>
+          <h2>Глубина кадра</h2>
+          <button id="resetButton" type="button">Сбросить</button>
+        </div>
+
+        <label class="control-row">
+          <span><b>Размытие</b><output id="blurValue">34</output></span>
+          <input id="blurInput" type="range" min="0" max="42" value="34" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Резкая зона</b><output id="focusValue">18%</output></span>
+          <input id="focusInput" type="range" min="6" max="50" value="18" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Переход</b><output id="featherValue">18%</output></span>
+          <input id="featherInput" type="range" min="6" max="40" value="18" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Наклон</b><output id="angleValue">0°</output></span>
+          <input id="angleInput" type="range" min="-35" max="35" value="0" step="1">
+        </label>
+
+        <div class="rail-divider"><span>MINIATURE POP</span></div>
+
+        <label class="control-row">
+          <span><b>Насыщенность</b><output id="saturationValue">148%</output></span>
+          <input id="saturationInput" type="range" min="80" max="190" value="148" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Контраст</b><output id="contrastValue">124%</output></span>
+          <input id="contrastInput" type="range" min="85" max="160" value="124" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Свет</b><output id="brightnessValue">104%</output></span>
+          <input id="brightnessInput" type="range" min="85" max="125" value="104" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Виньетка</b><output id="vignetteValue">16%</output></span>
+          <input id="vignetteInput" type="range" min="0" max="35" value="16" step="1">
+        </label>
+        <label class="control-row">
+          <span><b>Pop‑эффект</b><output id="popValue">72%</output></span>
+          <input id="popInput" type="range" min="0" max="100" value="72" step="1">
+        </label>
+
+        <button class="preset-button" id="presetButton" type="button">
+          <span>Сильная миниатюра</span>
+          <small>Агрессивный пресет для максимального “toy world” эффекта</small>
+        </button>
+      </aside>
+    </section>
+
+    <video id="sourceVideo" playsinline preload="metadata" hidden></video>
+    <img id="sourceImage" alt="" hidden>
+    <canvas id="exportCanvas" hidden></canvas>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="./canvas-filter-polyfill.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>
