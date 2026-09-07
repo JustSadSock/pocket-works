@@ -1,4 +1,5 @@
 import './styles.css';
+import { installActiveCombat } from './combat-motion.js';
 import { SinewGame } from './game.js';
 
 const storageNamespace = 'pocket-works:sinew';
@@ -83,6 +84,7 @@ async function boot() {
   try {
     updateOrientation();
     await game.init(report);
+    installActiveCombat(game);
     game.setPaused(true);
     game.onState = updateHud;
     game.onQuality = (mode, effective) => {
@@ -122,8 +124,6 @@ enterButton.addEventListener('pointerdown', (event) => {
   setTimeout(() => { enter.hidden = true; }, 220);
 }, { once: true });
 
-// On iOS/PWA the audio route can be interrupted when the app backgrounds. Any subsequent
-// gameplay touch is a fresh user gesture, so use it to recover the context automatically.
 root.addEventListener('pointerdown', unlockAudio, { passive: true });
 
 startExitButton.addEventListener('click', exitToLauncher);
