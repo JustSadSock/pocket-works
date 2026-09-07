@@ -16,6 +16,7 @@ export class LocalSandSurface {
     this.centerZ = Number.NaN;
     this.lastBuildX = Number.NaN;
     this.lastBuildZ = Number.NaN;
+    this.replacementRadius = Number.NaN;
     this.dirty = true;
     this.setQuality(preset);
   }
@@ -23,8 +24,6 @@ export class LocalSandSurface {
   setQuality(preset) {
     this.radius = preset.id === 'high' ? 5.4 : preset.id === 'medium' ? 4.8 : 4.0;
     this.segments = preset.id === 'high' ? 96 : preset.id === 'medium' ? 72 : 52;
-    // Snap the replacement patch in world space. The player can move freely
-    // inside it while the expensive coarse-terrain hole only updates every ~1 m.
     this.snapStep = preset.id === 'high' ? 0.9 : preset.id === 'medium' ? 1.1 : 1.35;
     this.dirty = true;
   }
@@ -56,12 +55,12 @@ export class LocalSandSurface {
     const snappedX = Math.round(controller.globalX / this.snapStep) * this.snapStep;
     const snappedZ = Math.round(controller.globalZ / this.snapStep) * this.snapStep;
     const moved = !Number.isFinite(this.centerX) || snappedX !== this.centerX || snappedZ !== this.centerZ;
-    if (moved) {
+    const radiusChanged = !Number.isFinite(this.replacementRadius) || this.replacementRadius !== this.radius;
+    if (moved || radiusChanged) {
       this.centerX = snappedX;
       this.centerZ = snappedZ;
-      // The high-resolution sand patch is now a true replacement, not an
-      // overlay. Coarse triangles beneath its safe interior are removed.
       this.world.setLocalReplacement(this.centerX, this.centerZ, this.radius);
+      this.replacementRadius = this.radius;
       this.dirty = true;
     }
     if (!force && !this.dirty) return false;
@@ -87,8 +86,6 @@ export class LocalSandSurface {
         const gz = this.centerZ + lz;
         const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.095, 0.065);
         const edge = Math.max(Math.abs(lx), Math.abs(lz)) / this.radius;
-        // Only the overlap ring gets a sub-millimetre depth separation. The
-        // interior is the actual terrain, so negative footprints remain visible.
         const edgeLift = edge > 0.82 ? ((edge - 0.82) / 0.18) * 0.0008 : 0;
         positions[p] = lx;
         positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation + edgeLift;
