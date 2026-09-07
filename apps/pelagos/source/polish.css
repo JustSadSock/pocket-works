@@ -1,0 +1,75 @@
+/* Final mobile and tactile polish layered over the core PELAGOS skin. */
+.pelagos {
+  height: min(var(--app-viewport-height, 100dvh), 100dvh);
+  max-height: 100dvh;
+}
+
+.vignette {
+  background:
+    linear-gradient(180deg, rgba(0, 8, 10, .13), transparent 18%, transparent 72%, rgba(0, 7, 8, .23)),
+    radial-gradient(ellipse at 50% 43%, transparent 43%, rgba(0, 0, 0, .08) 67%, rgba(0, 0, 0, .38) 112%);
+}
+
+.wind-dial,
+.circle-button,
+.row-button,
+.helm-track,
+.trim-track {
+  box-shadow: inset 0 1px rgba(255,255,255,.07), 0 9px 24px rgba(0,0,0,.18);
+}
+
+.helm-track i {
+  background:
+    radial-gradient(circle at 39% 33%, rgba(223,236,231,.92) 0 7%, transparent 8%),
+    repeating-conic-gradient(from 0deg, #8ca19c 0 7deg, #566b67 7deg 24deg),
+    radial-gradient(circle, #728984, #314845 70%);
+  box-shadow: 0 5px 15px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.28), inset 0 -4px 8px rgba(0,0,0,.2);
+}
+
+.helm-track i::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(20,42,40,.55);
+  box-shadow: inset 0 1px rgba(255,255,255,.15);
+}
+
+.trim-track i {
+  background: linear-gradient(180deg, #c8d7d3, #687d78 52%, #3d514e);
+  box-shadow: 0 5px 14px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.26);
+}
+
+@media (max-height: 720px) {
+  .hud { top: max(7px, env(safe-area-inset-top)); }
+  .wind-dial { height: 44px; min-width: 98px; padding-top: 5px; padding-bottom: 5px; }
+  .wind-dial > i { width: 30px; height: 30px; }
+  .circle-button { width: 44px; height: 44px; }
+  .telemetry { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 88px); transform: translateX(-50%) scale(.92); transform-origin: 50% 100%; }
+  .controls { height: calc(126px + max(0px, env(safe-area-inset-bottom))); }
+  .helm-zone { bottom: calc(max(7px, env(safe-area-inset-bottom)) + 4px); height: 72px; width: min(41vw, 158px); gap: 5px; }
+  .helm-track { height: 34px; }
+  .helm-track i { width: 38px; height: 38px; }
+  .trim-zone { bottom: calc(max(7px, env(safe-area-inset-bottom)) + 4px); height: 104px; width: 56px; gap: 4px; }
+  .trim-track { width: 33px; }
+  .trim-track i { width: 42px; height: 22px; }
+  .row-button { right: calc(max(9px, env(safe-area-inset-right)) + 64px); bottom: calc(max(7px, env(safe-area-inset-bottom)) + 4px); min-width: 80px; height: 46px; }
+  .look-zone { bottom: 27%; }
+  .hint { top: max(62px, calc(env(safe-area-inset-top) + 51px)); font-size: 12px; padding: 8px 12px; }
+  .menu-copy { margin-bottom: 16px; }
+  .menu-copy h1 { margin: 5px 0 11px; font-size: clamp(52px, 17vw, 76px); }
+  .menu-lead { font-size: 12px; line-height: 1.35; }
+  .primary-action { min-height: 56px; }
+  .secondary-action { min-height: 44px; }
+}
+
+@media (max-height: 620px) {
+  .telemetry { bottom: calc(max(5px, env(safe-area-inset-bottom)) + 74px); transform: translateX(-50%) scale(.84); }
+  .controls { height: calc(106px + max(0px, env(safe-area-inset-bottom))); }
+  .helm-zone { height: 62px; bottom: calc(max(4px, env(safe-area-inset-bottom)) + 2px); }
+  .helm-zone > span, .trim-zone > span { font-size: 7px; }
+  .trim-zone { height: 88px; bottom: calc(max(4px, env(safe-area-inset-bottom)) + 2px); }
+  .row-button { bottom: calc(max(4px, env(safe-area-inset-bottom)) + 2px); height: 42px; min-width: 74px; }
+  .menu-lead { display: none; }
+  .menu-copy h1 { font-size: clamp(46px, 15vw, 64px); }
+}

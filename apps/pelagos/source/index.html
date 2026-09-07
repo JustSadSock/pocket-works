@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#081719">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PELAGOS">
+  <meta name="pocket-works-build" content="1.0.0">
+  <title>PELAGOS — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="pelagos" data-app-shell data-fullscreen-app>
+    <canvas id="renderCanvas" aria-label="Корабль в открытом море" data-gesture-surface data-block-callout></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header id="hud" class="hud hidden" data-ui>
+      <div class="wind-dial" aria-label="Направление ветра">
+        <i id="windArrow" aria-hidden="true"></i>
+        <span><b id="windValue">8.2</b><small>М/С</small></span>
+      </div>
+      <button id="pauseButton" class="circle-button" type="button" aria-label="Пауза">Ⅱ</button>
+    </header>
+
+    <section id="telemetry" class="telemetry hidden" data-ui>
+      <span><b id="speedValue">0.0</b><small>УЗЛА</small></span>
+      <span class="course"><i id="courseNeedle" aria-hidden="true"></i><small id="courseValue">000°</small></span>
+      <span><b id="weatherValue">БРИЗ</b><small>МОРЕ</small></span>
+    </section>
+
+    <section id="controls" class="controls hidden" data-ui>
+      <div id="helmZone" class="helm-zone" data-gesture-surface data-block-callout>
+        <div class="helm-track"><i id="helmKnob"></i></div>
+        <span>РУЛЬ</span>
+      </div>
+      <div id="trimZone" class="trim-zone" data-gesture-surface data-block-callout>
+        <span>ПАРУС</span>
+        <div class="trim-track"><i id="trimKnob"></i><b id="trimIdeal"></b></div>
+      </div>
+      <button id="rowButton" class="row-button" type="button"><b>ГРЕСТИ</b><small>УДЕРЖИВАЙ</small></button>
+    </section>
+
+    <div id="lookZone" class="look-zone hidden" data-gesture-surface data-block-callout aria-label="Обзор камерой"></div>
+    <div id="hint" class="hint hidden" data-ui aria-live="polite"></div>
+    <div id="toast" class="toast" data-ui aria-live="polite"></div>
+
+    <section id="loading" class="screen loading" data-ui>
+      <div class="horizon-mark"><i></i></div>
+      <p>PELAGOS / OPEN WATER</p>
+      <h1>Поднимаем море</h1>
+      <div class="loading-line"><i id="loadingBar"></i></div>
+      <small id="loadingText">Поле волн</small>
+    </section>
+
+    <section id="menu" class="screen menu hidden" data-ui>
+      <a class="back-link" href="../../" data-app-control>← POCKET WORKS</a>
+      <div class="menu-copy">
+        <p>БЕСКРАЙНЕЕ МОРЕ / 1.0</p>
+        <h1>PELA<br><em>GOS</em></h1>
+        <div class="menu-lead">Не гонка и не симулятор меню. Здесь удовольствие — в самом движении: поймай ветер, отпусти парус и почувствуй, как корпус работает на волне.</div>
+      </div>
+      <div class="menu-actions">
+        <div class="voyage-stat"><span>ВСЕГО ПРОЙДЕНО</span><b id="totalDistance">0.0 км</b></div>
+        <button id="startButton" class="primary-action" type="button" data-native-press><b>ВЫЙТИ В МОРЕ</b><small>ПОРТРЕТНЫЙ РЕЖИМ</small></button>
+        <button id="settingsButton" class="secondary-action" type="button">НАСТРОЙКИ</button>
+      </div>
+    </section>
+
+    <section id="settings" class="screen sheet hidden" data-ui>
+      <div class="sheet-head"><div><p>БОРТОВЫЕ СИСТЕМЫ</p><h2>Настройки</h2></div><button id="closeSettings" class="circle-button" type="button" aria-label="Закрыть настройки">×</button></div>
+      <label class="setting"><span><b>Чувствительность руля</b><small>Нелинейная кривая сохраняется</small></span><input id="sensitivity" type="range" min="65" max="140" value="100"><output id="sensitivityValue">100%</output></label>
+      <div class="setting"><span><b>Качество 3D</b><small>Авто само регулирует внутреннее разрешение</small></span><button id="qualityButton" class="value-button" type="button">АВТО</button></div>
+      <div class="setting"><span><b>Звук моря</b><small>Ветер, вода, корпус, парус и гребля</small></span><button id="soundButton" class="value-button" type="button">ВКЛ</button></div>
+      <div class="setting"><span><b>Подсказки</b><small>Короткое обучение жестами</small></span><button id="hintsButton" class="value-button" type="button">ВКЛ</button></div>
+      <button class="secondary-action full" type="button" data-workshop-trigger>WORKSHOP MODE / ДИАГНОСТИКА</button>
+    </section>
+
+    <section id="pause" class="screen modal hidden" data-ui>
+      <p>МОРЕ ЗАМЕРЛО</p>
+      <h2>Пауза</h2>
+      <div class="modal-copy">Симуляция, частицы и звук остановлены. Возврат не создаст огромный delta-time.</div>
+      <div class="stack"><button id="resumeButton" class="primary-action compact" type="button"><b>ПРОДОЛЖИТЬ</b><small>В МОРЕ</small></button><button id="menuButton" class="secondary-action full" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="secondary-action full link" href="../../" data-app-control>В POCKET WORKS</a></div>
+    </section>
+
+    <section id="resumeGate" class="resume-gate hidden" data-ui>
+      <div><p>СЕАНС ВОССТАНОВЛЕН</p><b>Коснись, чтобы продолжить</b><small>Звук будет повторно разблокирован Safari</small></div>
+    </section>
+
+    <section id="errorScreen" class="screen modal hidden" data-ui>
+      <p>СБОЙ РЕНДЕРА</p>
+      <h2>Море не поднялось</h2>
+      <div id="errorText" class="modal-copy">WebGL недоступен.</div>
+      <div class="stack"><button id="retryButton" class="primary-action compact" type="button"><b>ПОВТОРИТЬ</b><small>ПЕРЕЗАПУСК</small></button><a class="secondary-action full link" href="../../" data-app-control>В POCKET WORKS</a></div>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

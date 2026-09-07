@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14343a"/>
+      <stop offset="1" stop-color="#071719"/>
+    </linearGradient>
+    <linearGradient id="sail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2e8ce"/>
+      <stop offset="1" stop-color="#b9c9bd"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="258" r="172" fill="none" stroke="#d7eee8" stroke-opacity=".18" stroke-width="6"/>
+  <path d="M96 324c64-28 104-28 160 0s96 28 160 0v42c-64 28-104 28-160 0s-96-28-160 0z" fill="#4d9cac" opacity=".88"/>
+  <path d="M121 367c54-19 86-16 135 8s84 28 136 8" fill="none" stroke="#a8d9da" stroke-width="13" stroke-linecap="round" opacity=".7"/>
+  <path d="M252 125v190" stroke="#6c4a2d" stroke-width="18" stroke-linecap="round"/>
+  <path d="M260 140c66 36 103 84 107 145-45-15-80-17-107-7z" fill="url(#sail)"/>
+  <path d="M243 161c-51 30-82 69-91 116 37-12 67-13 91-6z" fill="#d8d2bc" opacity=".92"/>
+  <path d="M159 298h194l-27 50H187z" fill="#4a2b19"/>
+  <path d="M186 302h138" stroke="#a86d3d" stroke-width="7" stroke-linecap="round" opacity=".75"/>
+  <circle cx="367" cy="133" r="22" fill="#f1d28b" opacity=".78"/>
+</svg>
