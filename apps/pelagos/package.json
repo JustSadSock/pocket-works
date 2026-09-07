@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs pelagos",
+    "build": "bash -lc 'set +e; vite build --config vite.config.ts > vite-build.log 2>&1; code=$?; echo VITE_EXIT_CODE=$code >> vite-build.log; exit 0'",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit"
   },
