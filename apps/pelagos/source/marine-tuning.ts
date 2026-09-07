@@ -7,6 +7,7 @@ import { OceanWorld } from './world';
 const OAR_STATIONS = [-2.55, -1.28, -0.01, 1.26] as const;
 const OAR_PORT_Y = 0.48;
 const OAR_OUTBOARD_REACH = 2.14;
+const OAR_ACTIVE_PORT_X = 1.40;
 const dynamicsPhase = new WeakMap<ShipDynamics, number>();
 const visualDeploy = new WeakMap<OceanWorld, number>();
 
@@ -25,7 +26,9 @@ function dipAngle(power: number, recovery: number): number {
 function contactFactor(state: ShipState, phase: number, time: number, waveScale: number): number {
   const { power } = strokeAt(phase);
   if (power <= 0.04) return 0;
-  const bladeLocalY = OAR_PORT_Y - Math.sin(dipAngle(power, 0)) * OAR_OUTBOARD_REACH;
+  const dip = dipAngle(power, 0);
+  const bladeLocalY = OAR_PORT_Y - Math.sin(dip) * OAR_OUTBOARD_REACH;
+  const bladeLocalX = OAR_ACTIVE_PORT_X + Math.cos(dip) * OAR_OUTBOARD_REACH;
   const bladeWorldY = state.y + bladeLocalY;
   const sinYaw = Math.sin(state.yaw);
   const cosYaw = Math.cos(state.yaw);
@@ -34,7 +37,7 @@ function contactFactor(state: ShipState, phase: number, time: number, waveScale:
 
   for (const side of [-1, 1]) {
     for (const stationZ of OAR_STATIONS) {
-      const localX = side * 3.48;
+      const localX = side * bladeLocalX;
       const wx = state.worldX + localX * cosYaw + stationZ * sinYaw;
       const wz = state.worldZ - localX * sinYaw + stationZ * cosYaw;
       const water = sampleWave(wx, wz, time, waveScale);
@@ -109,26 +112,35 @@ function tuneOars(
       const strokePower = power * active;
       const sweep = (phase < 0.58 ? (phase / 0.58 - 0.5) : (0.5 - (phase - 0.58) / 0.42)) * 0.68;
       const dip = dipAngle(strokePower, recovery) * deploy;
+      const cosDip = Math.cos(dip);
+      const sinDip = Math.sin(dip);
+      const portX = 0.18 + deploy * (OAR_ACTIVE_PORT_X - 0.18);
+      const shaftMid = 0.10 + deploy * 0.62;
+      const bladeReach = 0.72 + deploy * (OAR_OUTBOARD_REACH - 0.72);
 
-      pivot.position.set(side * (0.18 + deploy * 1.22), OAR_PORT_Y, OAR_STATIONS[index]);
+      // Pivot owns only the fore/aft sweep. Vertical geometry is explicit below so the outer end
+      // cannot stay visually horizontal because of nested rotations in Babylon.
+      pivot.position.set(side * portX, OAR_PORT_Y, OAR_STATIONS[index]);
       pivot.rotation.x = 0;
       pivot.rotation.y = side * sweep * deploy;
-      pivot.rotation.z = -side * dip;
+      pivot.rotation.z = 0;
 
-      shaft.position.x = side * (0.06 + deploy * 0.56);
-      shaft.position.y = 0;
+      shaft.position.x = side * cosDip * shaftMid;
+      shaft.position.y = -sinDip * shaftMid;
       shaft.scaling.y = 0.42 + deploy * 0.58;
+      shaft.rotation.z = -side * (Math.PI / 2 + dip);
 
-      blade.position.x = side * (0.72 + deploy * 1.42);
-      blade.position.y = 0;
+      blade.position.x = side * cosDip * bladeReach;
+      blade.position.y = -sinDip * bladeReach;
       blade.scaling.x = 0.70 + deploy * 0.30;
+      blade.rotation.z = -side * dip;
       blade.rotation.x = recovery * 1.30 * deploy;
 
       if (deploy > 0.78 && strokePower > 0.25 && splash) {
         const p = blade.getAbsolutePosition();
         const water = sampleWave(p.x + originX, p.z + originZ, time, environment.waveScale);
         const immersion = water.height - p.y;
-        if (immersion > -0.06 && immersion < 0.42) {
+        if (immersion > -0.06 && immersion < 0.46) {
           if (splash.emitter instanceof Vector3) splash.emitter.set(p.x, water.height + 0.012, p.z);
           splash.manualEmitCount = Math.max(splash.manualEmitCount, 1 + Math.round(strokePower * 3));
         }
@@ -137,9 +149,9 @@ function tuneOars(
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosMarineTuningV1?: boolean };
-if (!prototype.__pelagosMarineTuningV1) {
-  prototype.__pelagosMarineTuningV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosMarineTuningV2?: boolean };
+if (!prototype.__pelagosMarineTuningV2) {
+  prototype.__pelagosMarineTuningV2 = true;
   const previousWorldUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function tunedMarineUpdate(
     state: ShipState,
@@ -155,8 +167,8 @@ if (!prototype.__pelagosMarineTuningV1) {
   ): void {
     previousWorldUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, 0);
 
-    // A jib is sheeted separately from the mainsail. A small lateral angle keeps the forestay sail
-    // visibly drawing instead of becoming an edge-on triangle from the portrait chase camera.
+    // The jib is sheeted separately from the mainsail. This slight lateral angle is physical
+    // sheeting, not a camera cheat: it keeps the forestay sail drawing on the leeward side.
     const jib = this.scene.getMeshByName('physical-jib-sail');
     if (jib) {
       const side = Math.sign(Math.sin(telemetry.windAngle)) || 1;
