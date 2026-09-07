@@ -31,6 +31,15 @@ describe('sailing model', () => {
 });
 
 describe('ship dynamics', () => {
+  it('settles with real freeboard instead of floating with the deck at water level', () => {
+    const ship = new ShipDynamics();
+    const wind = { direction: 0, speed: 0, gust: 0 };
+    for (let i = 0; i < 1800; i += 1) ship.update(1 / 60, i / 60, { steer: 0, sail: 0.42, rowing: 0 }, wind, 0);
+    expect(ship.state.y).toBeGreaterThan(0.52);
+    expect(ship.state.y).toBeLessThan(0.66);
+    expect(Math.abs(ship.state.verticalVelocity)).toBeLessThan(0.02);
+  });
+
   it('accelerates from forces instead of teleporting position', () => {
     const ship = new ShipDynamics();
     const wind = { direction: 90 * DEG, speed: 10, gust: 0.2 };
@@ -40,12 +49,12 @@ describe('ship dynamics', () => {
     expect(ship.state.distance).toBeLessThan(300);
   });
 
-  it('keeps the hull response finite in rough water', () => {
+  it('keeps the heavier hull response finite in rough water', () => {
     const ship = new ShipDynamics();
     const wind = { direction: 115 * DEG, speed: 18, gust: 0.8 };
     for (let i = 0; i < 2400; i += 1) ship.update(1 / 60, i / 60, { steer: Math.sin(i / 180), sail: 0.62, rowing: 0.1 }, wind, 2.1);
     for (const value of [ship.state.y, ship.state.pitch, ship.state.roll, ship.state.yaw, ship.telemetry.speed]) expect(Number.isFinite(value)).toBe(true);
-    expect(Math.abs(ship.state.pitch)).toBeLessThanOrEqual(24 * DEG + 1e-6);
-    expect(Math.abs(ship.state.roll)).toBeLessThanOrEqual(31 * DEG + 1e-6);
+    expect(Math.abs(ship.state.pitch)).toBeLessThanOrEqual(16 * DEG + 1e-6);
+    expect(Math.abs(ship.state.roll)).toBeLessThanOrEqual(23 * DEG + 1e-6);
   });
 });

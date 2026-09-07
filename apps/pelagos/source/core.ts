@@ -74,13 +74,13 @@ export const WAVE_COMPONENTS: readonly WaveComponent[] = [
   { direction: 152 * DEG, amplitude: 0.036, wavelength: 0.94, speed: 1.08, steepness: 0.24 }
 ] as const;
 
-// Wider sampling near bow/stern and amidships makes roll/pitch response much more boat-like.
+// Ten distributed displacement samples represent the immersed volume under the hull.
 export const BUOYANCY_POINTS = [
-  { x: -0.92, z: 3.75 }, { x: 0.92, z: 3.75 },
-  { x: -1.36, z: 2.15 }, { x: 1.36, z: 2.15 },
-  { x: -1.52, z: 0.25 }, { x: 1.52, z: 0.25 },
-  { x: -1.44, z: -1.75 }, { x: 1.44, z: -1.75 },
-  { x: -1.04, z: -3.55 }, { x: 1.04, z: -3.55 }
+  { x: -0.78, z: 3.80 }, { x: 0.78, z: 3.80 },
+  { x: -1.22, z: 2.20 }, { x: 1.22, z: 2.20 },
+  { x: -1.43, z: 0.35 }, { x: 1.43, z: 0.35 },
+  { x: -1.36, z: -1.60 }, { x: 1.36, z: -1.60 },
+  { x: -0.96, z: -3.45 }, { x: 0.96, z: -3.45 }
 ] as const;
 
 export function clamp(value: number, minimum: number, maximum: number): number {
@@ -182,15 +182,18 @@ export function sailTrimEfficiency(trim: number, ideal: number): number {
   return Math.exp(-miss * miss * 10.6);
 }
 
-const MASS = 1680;
-const YAW_INERTIA = 9650;
-const PITCH_INERTIA = 11200;
-const ROLL_INERTIA = 6400;
-const BUOYANCY_STIFFNESS = 3450;
-const BUOYANCY_DAMPING = 690;
-const HULL_SAMPLE_Y = -0.52;
-const MAX_RUDDER = 34 * DEG;
-const WATER_COUPLING = 0.24;
+// A ~9 m cutter should feel heavy and should float with roughly 0.6 m of hull below
+// the local waterline, not with the deck almost flush to the surface.
+const MASS = 3200;
+const YAW_INERTIA = 28000;
+const PITCH_INERTIA = 47000;
+const ROLL_INERTIA = 18000;
+const BUOYANCY_STIFFNESS = 7200;
+const BUOYANCY_DAMPING = 1280;
+const HULL_SAMPLE_Y = -0.96;
+const MAX_RUDDER = 29 * DEG;
+const WATER_COUPLING = 0.20;
+const RESTING_CENTER_Y = 0.58;
 
 function emptyTelemetry(): ShipTelemetry {
   return {
@@ -210,7 +213,7 @@ export class ShipDynamics {
     z: 0,
     worldX: 0,
     worldZ: 0,
-    y: 0.08,
+    y: RESTING_CENTER_Y,
     velocityX: 0,
     velocityZ: 0,
     verticalVelocity: 0,
@@ -240,7 +243,7 @@ export class ShipDynamics {
       z: 0,
       worldX: 0,
       worldZ: 0,
-      y: 0.08,
+      y: RESTING_CENTER_Y,
       velocityX: 0,
       velocityZ: 0,
       verticalVelocity: 0,
@@ -284,30 +287,30 @@ export class ShipDynamics {
     const apparentDirection = Math.atan2(apparentX, apparentZ);
     const relativeWindAngle = wrapAngle(apparentDirection - state.yaw);
     const idealTrim = idealSailTrim(relativeWindAngle);
-    state.sailAngle = smoothTo(state.sailAngle, clamp(controls.sail, 0, 1), 3.9, safeDt);
+    state.sailAngle = smoothTo(state.sailAngle, clamp(controls.sail, 0, 1), 3.2, safeDt);
     const polar = sailingPolar(relativeWindAngle);
     const trimEfficiency = sailTrimEfficiency(state.sailAngle, idealTrim);
     const sailEfficiency = polar * trimEfficiency;
 
-    // A lift/drag split produces convincing heeling and leeway without an arcade speed impulse.
     const windPressure = apparentWindSpeed * apparentWindSpeed;
     const absWind = Math.abs(relativeWindAngle);
     const sideSign = Math.sign(Math.sin(relativeWindAngle)) || 1;
     const liftFactor = Math.sin(clamp(absWind, 0, Math.PI) * 2) * 0.5 + 0.5;
-    const sailForce = windPressure * 10.8 * sailEfficiency * (0.86 + wind.gust * 0.16);
+    const sailForce = windPressure * 13.0 * sailEfficiency * (0.86 + wind.gust * 0.16);
     const sailForwardForce = sailForce * (0.58 + polar * 0.38 + liftFactor * 0.12);
-    const sailSideForce = sideSign * sailForce * (0.27 + liftFactor * 0.18);
+    const sailSideForce = sideSign * sailForce * (0.25 + liftFactor * 0.16);
 
-    state.rowingPhase = (state.rowingPhase + safeDt * (2.0 + controls.rowing * 1.05)) % 1;
+    state.rowingPhase = (state.rowingPhase + safeDt * (1.75 + controls.rowing * 0.9)) % 1;
     const stroke = Math.max(0, Math.sin(state.rowingPhase * TAU));
     const rowingForce = clamp(controls.rowing, 0, 1)
-      * (1180 + Math.max(0, 2.0 - Math.abs(forwardSpeed)) * 285)
+      * (1450 + Math.max(0, 2.0 - Math.abs(forwardSpeed)) * 320)
       * (0.42 + stroke * 0.78);
 
-    // Hull resistance rises sharply near hull speed. Keel resistance fights sideways drift.
-    const forwardDrag = -forwardSpeed * (56 + Math.abs(forwardSpeed) * 84 + forwardSpeed * forwardSpeed * 6.4);
-    const lateralDrag = -lateralSpeed * (290 + Math.abs(lateralSpeed) * 470 + Math.abs(forwardSpeed) * 92);
-    const keelLift = -lateralSpeed * Math.abs(forwardSpeed) * 145;
+    // Displacement-hull resistance rises quickly near hull speed while the keel strongly
+    // rejects sideways skating. Mass affects acceleration, not the eventual drag balance.
+    const forwardDrag = -forwardSpeed * (62 + Math.abs(forwardSpeed) * 92 + forwardSpeed * forwardSpeed * 7.0);
+    const lateralDrag = -lateralSpeed * (390 + Math.abs(lateralSpeed) * 610 + Math.abs(forwardSpeed) * 118);
+    const keelLift = -lateralSpeed * Math.abs(forwardSpeed) * 190;
     const totalForwardForce = sailForwardForce + rowingForce + forwardDrag;
     const totalLateralForce = sailSideForce + lateralDrag + keelLift;
 
@@ -315,15 +318,15 @@ export class ShipDynamics {
     state.velocityZ += (forwardZ * totalForwardForce + rightZ * totalLateralForce) / MASS * safeDt;
 
     const targetRudder = clamp(controls.steer, -1, 1) * MAX_RUDDER;
-    const rudderRate = 58 * DEG;
+    const rudderRate = 34 * DEG;
     state.rudder += clamp(targetRudder - state.rudder, -rudderRate * safeDt, rudderRate * safeDt);
-    const rudderFlow = clamp(Math.abs(forwardSpeed) / 4.2, 0, 1.8);
+    const rudderFlow = clamp(Math.abs(forwardSpeed) / 4.8, 0, 1.55);
     const rudderEffect = Math.sin(state.rudder) * Math.cos(state.rudder * 0.55);
-    const rudderTorque = -rudderEffect * forwardSpeed * Math.abs(forwardSpeed) * 1110;
-    const sailYawTorque = -sailSideForce * 0.24;
-    const yawDamping = -state.yawVelocity * (1450 + rudderFlow * 980 + Math.abs(lateralSpeed) * 330);
+    const rudderTorque = -rudderEffect * forwardSpeed * Math.abs(forwardSpeed) * 900;
+    const sailYawTorque = -sailSideForce * 0.18;
+    const yawDamping = -state.yawVelocity * (3600 + rudderFlow * 1650 + Math.abs(lateralSpeed) * 520);
     state.yawVelocity += (rudderTorque + sailYawTorque + yawDamping) / YAW_INERTIA * safeDt;
-    state.yawVelocity = clamp(state.yawVelocity, -0.88, 0.88);
+    state.yawVelocity = clamp(state.yawVelocity, -0.46, 0.46);
     state.yaw = wrapAngle(state.yaw + state.yawVelocity * safeDt);
 
     let totalBuoyancy = 0;
@@ -340,31 +343,38 @@ export class ShipDynamics {
       const localHullY = HULL_SAMPLE_Y + point.z * Math.sin(state.pitch) - point.x * Math.sin(state.roll);
       const pointVerticalVelocity = state.verticalVelocity + state.pitchVelocity * point.z - state.rollVelocity * point.x;
       const submersion = water.height - (state.y + localHullY);
-      const force = Math.max(0, submersion * BUOYANCY_STIFFNESS - pointVerticalVelocity * BUOYANCY_DAMPING);
-      totalBuoyancy += force;
-      pitchTorque += force * point.z;
-      rollTorque -= force * point.x;
+      if (submersion > 0) {
+        // Reserve buoyancy increases progressively as more hull volume is pushed under.
+        // That prevents a crest from casually burying the deck without making the hull rigid.
+        const reserve = 1 + clamp(submersion, 0, 0.9) * 0.45;
+        const hydrostatic = submersion * BUOYANCY_STIFFNESS * reserve;
+        const damping = pointVerticalVelocity * BUOYANCY_DAMPING;
+        const force = Math.max(0, hydrostatic - damping);
+        totalBuoyancy += force;
+        pitchTorque += force * point.z;
+        rollTorque -= force * point.x;
+      }
     }
 
     const gravityForce = MASS * 9.81;
     state.verticalVelocity += (totalBuoyancy - gravityForce) / MASS * safeDt;
-    state.verticalVelocity *= Math.exp(-0.52 * safeDt);
+    state.verticalVelocity *= Math.exp(-0.88 * safeDt);
     state.y += state.verticalVelocity * safeDt;
 
     averageNormalX /= BUOYANCY_POINTS.length;
     averageNormalZ /= BUOYANCY_POINTS.length;
-    const wavePitchTarget = clamp(-averageNormalZ * 0.55, -12 * DEG, 12 * DEG);
-    const waveRollTarget = clamp(averageNormalX * 0.55, -14 * DEG, 14 * DEG);
-    const pitchDamping = -state.pitchVelocity * 5350 - (state.pitch - wavePitchTarget) * 1650;
-    const rollDamping = -state.rollVelocity * 4850 - (state.roll - waveRollTarget) * 1820;
-    const windHeelTorque = -sailSideForce * 1.34;
-    const turnHeelTorque = -state.yawVelocity * forwardSpeed * Math.abs(forwardSpeed) * 260;
+    const wavePitchTarget = clamp(-averageNormalZ * 0.38, -8.5 * DEG, 8.5 * DEG);
+    const waveRollTarget = clamp(averageNormalX * 0.38, -10.5 * DEG, 10.5 * DEG);
+    const pitchDamping = -state.pitchVelocity * 11800 - (state.pitch - wavePitchTarget) * 5200;
+    const rollDamping = -state.rollVelocity * 9200 - (state.roll - waveRollTarget) * 4300;
+    const windHeelTorque = -sailSideForce * 1.05;
+    const turnHeelTorque = -state.yawVelocity * forwardSpeed * Math.abs(forwardSpeed) * 210;
     state.pitchVelocity += (pitchTorque + pitchDamping) / PITCH_INERTIA * safeDt;
     state.rollVelocity += (rollTorque + rollDamping + windHeelTorque + turnHeelTorque) / ROLL_INERTIA * safeDt;
-    state.pitchVelocity = clamp(state.pitchVelocity, -0.96, 0.96);
-    state.rollVelocity = clamp(state.rollVelocity, -1.08, 1.08);
-    state.pitch = clamp(state.pitch + state.pitchVelocity * safeDt, -24 * DEG, 24 * DEG);
-    state.roll = clamp(state.roll + state.rollVelocity * safeDt, -31 * DEG, 31 * DEG);
+    state.pitchVelocity = clamp(state.pitchVelocity, -0.55, 0.55);
+    state.rollVelocity = clamp(state.rollVelocity, -0.68, 0.68);
+    state.pitch = clamp(state.pitch + state.pitchVelocity * safeDt, -16 * DEG, 16 * DEG);
+    state.roll = clamp(state.roll + state.rollVelocity * safeDt, -23 * DEG, 23 * DEG);
 
     const beforeX = state.x;
     const beforeZ = state.z;
