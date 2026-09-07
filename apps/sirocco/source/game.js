@@ -4,6 +4,7 @@ import { DesertWorld } from './world.js';
 import { SandWalkerController } from './movement.js';
 import { HumanoidRig } from './character.js';
 import { FootprintField } from './deformation.js';
+import { SlipField } from './slip-field.js';
 import { SandParticles } from './particles.js';
 import { DesertLighting } from './lighting.js';
 import { DesertAtmosphere } from './atmosphere.js';
@@ -12,6 +13,7 @@ import { MobileInput } from './input.js';
 import { AdaptiveQuality } from './quality.js';
 import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
+import { clamp, damp } from './core.js';
 import { downhillDirection } from './terrain.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
@@ -27,16 +29,13 @@ export class SiroccoGame {
     this.orientationBlocked = false;
     this.lastFps = 60;
     this.saveClock = 0;
+    this.pelvisRoll = 0;
+    this.pelvisLift = 0;
   }
 
   async init(report = () => {}) {
     report('Инициализация мобильного рендера…', 0.08);
-    this.engine = new Engine(this.canvas, true, {
-      preserveDrawingBuffer: false,
-      stencil: false,
-      premultipliedAlpha: false,
-      powerPreference: 'high-performance'
-    }, false);
+    this.engine = new Engine(this.canvas, true, { preserveDrawingBuffer: false, stencil: false, premultipliedAlpha: false, powerPreference: 'high-performance' }, false);
     this.engine.setHardwareScalingLevel(1.28);
     this.scene = new Scene(this.engine);
     this.scene.skipPointerMovePicking = true;
@@ -57,6 +56,7 @@ export class SiroccoGame {
     this.lighting = new DesertLighting(this.scene, this.quality.preset, this.shadowCasters);
     this.atmosphere = new DesertAtmosphere(this.scene, this.lighting.sunDirection);
     this.footprints = new FootprintField(this.scene, this.materials.footprint, 112);
+    this.slips = new SlipField(this.scene, this.materials.footprint, 36);
     this.particles = new SandParticles(this.scene, this.quality.preset.particles);
     await nextFrame();
 
@@ -73,6 +73,7 @@ export class SiroccoGame {
 
     report('Прогреваем дюны и тени…', 0.88);
     this.rig.update(this.controller, 1 / 60);
+    this.adaptBodyToFeet(1 / 60);
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
     await nextFrame();
@@ -116,6 +117,21 @@ export class SiroccoGame {
     this.world.setOrigin(offsetX, offsetZ);
     this.rig.shiftOrigin(dx, dz);
     this.footprints.shiftOrigin(dx, dz);
+    this.slips.shiftOrigin(dx, dz);
+  }
+
+  adaptBodyToFeet(dt) {
+    const left = this.rig.footState.left;
+    const right = this.rig.footState.right;
+    if (!left.initialized || !right.initialized) return;
+    const averageFootY = (left.plant.y + right.plant.y) * 0.5;
+    const liftTarget = clamp((averageFootY - this.controller.localPosition.y - 0.035) * 0.55, -0.045, 0.075);
+    const rollTarget = clamp((right.plant.y - left.plant.y) * 0.36, -0.115, 0.115);
+    this.pelvisLift = damp(this.pelvisLift, liftTarget, 10, dt);
+    this.pelvisRoll = damp(this.pelvisRoll, rollTarget, 9, dt);
+    this.rig.nodes.pelvis.position.y += this.pelvisLift;
+    this.rig.nodes.pelvis.rotation.z = this.pelvisRoll;
+    this.rig.nodes.spine.rotation.z = -this.pelvisRoll * 0.42;
   }
 
   applyQuality(preset) {
@@ -126,6 +142,7 @@ export class SiroccoGame {
     this.atmosphere?.setQuality(preset);
     this.particles?.setBudget(preset.particles);
     this.footprints?.setLimit(preset.footprintLimit);
+    this.slips?.setQuality(preset);
     document.querySelector('#quality-label')?.replaceChildren(document.createTextNode(this.quality?.mode === 'auto' ? `AUTO · ${preset.label}` : preset.label));
   }
 
@@ -140,10 +157,12 @@ export class SiroccoGame {
       const chunksChanged = this.world.update(this.controller.globalX, this.controller.globalZ);
       if (chunksChanged) this.lighting.registerWorld(this.world);
       const landings = this.rig.update(this.controller, dt);
+      this.adaptBodyToFeet(dt);
       for (const landing of landings) {
         this.footprints.add(landing, this.controller);
         const steep = groundState.sliding > 0.04;
         const down = steep ? downhillDirection(landing.globalX, landing.globalZ) : null;
+        if (steep) this.slips.add(landing, down, 0.45 + groundState.sliding * 0.9);
         this.particles.kick(landing.position, landing.yaw, steep ? 1.25 : 0.72, down);
         this.audio.footstep(0.75 + Math.min(0.3, this.controller.speed * 0.08));
       }
@@ -170,6 +189,7 @@ export class SiroccoGame {
     this.input?.dispose();
     this.debug?.dispose();
     this.particles?.dispose();
+    this.slips?.dispose();
     this.footprints?.dispose();
     this.rig?.dispose();
     this.world?.dispose();
