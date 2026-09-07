@@ -4,7 +4,6 @@ const UPDATE_CONCURRENCY=3;
 const APP_TIMEOUT=30_000;
 const INSTALL_TIMEOUT=22_000;
 const ACTIVATION_TIMEOUT=10_000;
-const WORKER_INFO_TIMEOUT=1200;
 
 const refreshButton=document.querySelector('#refresh-button');
 const syncStatus=document.querySelector('#sync-status');
@@ -72,55 +71,21 @@ async function fetchLiveRegistry(){
   return apps.filter(app=>app&&app.status!=='archived'&&typeof app.slug==='string'&&typeof app.path==='string'&&typeof app.version==='string');
 }
 
-function workerInfoAttempt(worker,timeout=WORKER_INFO_TIMEOUT){
-  if(!worker)return Promise.resolve(null);
-  return new Promise(resolve=>{
-    const channel=new MessageChannel();
-    const finish=value=>{
-      clearTimeout(timer);
-      channel.port1.onmessage=null;
-      channel.port1.close();
-      resolve(value);
-    };
-    const timer=setTimeout(()=>finish(null),timeout);
-    channel.port1.onmessage=event=>finish(event.data||null);
-    try{worker.postMessage({type:'GET_UPDATE_INFO'},[channel.port2]);}
-    catch{finish(null);}
-  });
-}
-
-async function workerInfo(worker){
-  for(const timeout of [700,WORKER_INFO_TIMEOUT,2200]){
-    const info=await workerInfoAttempt(worker,timeout);
-    if(info)return info;
-  }
-  return null;
-}
-
-async function workerMatchesRelease(worker,app){
-  const info=await workerInfo(worker);
-  return Boolean(info&&info.version===app.version);
-}
-
-function isLegacyLauncherWorker(worker){
+function workerMatches(worker,app){
   if(!worker)return false;
   try{
     const url=new URL(worker.scriptURL);
-    return url.searchParams.has('pw_release')||url.searchParams.has('pw_fp');
+    return url.searchParams.get('pw_release')===app.version&&url.searchParams.get('pw_fp')===expectedFingerprint(app);
   }catch{return false;}
 }
 
-async function currentRegistration(app){
-  const scopeUrl=new URL(app.path,location.href);
-  try{return await navigator.serviceWorker.getRegistration(scopeUrl.href);}
-  catch{return null;}
-}
-
-async function verifiedRegistrationIsCurrent(app,verified){
+async function verifiedReleaseIsActive(app,verified){
   if(!locallyCurrent(app,verified))return false;
-  const registration=await currentRegistration(app);
-  if(!registration?.active||isLegacyLauncherWorker(registration.active))return false;
-  return workerMatchesRelease(registration.active,app);
+  try{
+    const scopeUrl=new URL(app.path,location.href);
+    const registration=await navigator.serviceWorker.getRegistration(scopeUrl.href);
+    return workerMatches(registration?.active,app);
+  }catch{return false;}
 }
 
 function waitForWorkerState(worker,accepted,timeout){
@@ -162,11 +127,11 @@ async function waitForCandidate(registration){
 async function activateExpectedWorker(registration,app){
   const deadline=Date.now()+ACTIVATION_TIMEOUT;
   while(Date.now()<deadline){
-    if(await workerMatchesRelease(registration.active,app))return registration.active;
-    if(registration.waiting&&await workerMatchesRelease(registration.waiting,app)){
+    if(workerMatches(registration.active,app))return registration.active;
+    if(registration.waiting){
       try{registration.waiting.postMessage({type:'SKIP_WAITING'});}catch{}
     }
-    await wait(120);
+    await wait(100);
   }
   throw new Error('new release did not become active');
 }
@@ -174,14 +139,19 @@ async function activateExpectedWorker(registration,app){
 async function installRelease(app,onStage){
   const scopeUrl=new URL(app.path,location.href);
   const previous=await navigator.serviceWorker.getRegistration(scopeUrl.href);
+  if(workerMatches(previous?.active,app)){
+    storeVerified(app);
+    return{app,status:'current'};
+  }
 
   onStage('Downloading service worker');
   const workerUrl=new URL('sw.js',scopeUrl);
+  workerUrl.searchParams.set('pw_release',app.version);
+  workerUrl.searchParams.set('pw_fp',expectedFingerprint(app));
   const registration=await navigator.serviceWorker.register(workerUrl.href,{scope:scopeUrl.href,updateViaCache:'none'});
 
-  try{await registration.update();}
-  catch(error){
-    if(!registration.installing&&!registration.waiting)throw error;
+  if(!workerMatches(registration.active,app)&&!registration.installing&&!registration.waiting){
+    try{await registration.update();}catch{}
   }
 
   const candidate=await waitForCandidate(registration);
@@ -198,12 +168,9 @@ async function installRelease(app,onStage){
 }
 
 async function updateApplication(app,verified,onStage){
-  try{
-    if(await verifiedRegistrationIsCurrent(app,verified))return{app,status:'current'};
-    return await withTimeout(installRelease(app,onStage),APP_TIMEOUT,`${app.name} update`);
-  }catch(error){
-    return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};
-  }
+  if(await verifiedReleaseIsActive(app,verified))return{app,status:'current'};
+  try{return await withTimeout(installRelease(app,onStage),APP_TIMEOUT,`${app.name} update`);}
+  catch(error){return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};}
 }
 
 async function mapWithConcurrency(items,concurrency,handler,onProgress){
@@ -275,7 +242,7 @@ async function runBulkUpdate(){
         const label=result.status==='failed'
           ?`${result.app.name} · skipped`
           :result.status==='current'
-            ?`${result.app.name} · fingerprint + worker match`
+            ?`${result.app.name} · fingerprint + active worker match`
             :`${result.app.name} · ${result.status}`;
         showProgress({completed,total,label});
         syncStatus.textContent=result.status==='failed'?`${result.app.name}: ${result.error}`:label;
