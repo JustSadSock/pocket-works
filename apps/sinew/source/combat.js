@@ -178,14 +178,16 @@ export class CombatSystem {
     }
 
     const bodyHit = intersectsBody(sword, defender, dt);
-    if (!bodyHit || !this.canContact('body', attacker, defender, now, 0.24)) return;
+    if (!bodyHit) return;
     const tipFactor = Math.max(0, bladeClosestFactor(bodyHit.point, sword.base, sword.tip));
     const damage = weaponDamage(speed, tipFactor, bodyHit.sphere.multiplier);
     const direction = velocity.lengthSquared() > 1e-5 ? velocity.normalizeToNew() : sword.tip.subtract(sword.base).normalize();
     if (damage <= 0) {
+      if (!this.canContact('graze', attacker, defender, now, 0.08)) return;
       this.onEvent({ type: 'graze', attacker, defender, point: bodyHit.point, intensity: clamp(speed / 5, 0.1, 0.5), speed });
       return;
     }
+    if (!this.canContact('body', attacker, defender, now, 0.24)) return;
     const impulse = direction.scale(4.6 + damage * 0.13);
     const applied = defender.takeDamage(damage, impulse);
     attacker.applyWeaponImpulse(direction.scale(-(1.1 + applied * 0.025)));
