@@ -7,6 +7,9 @@ export interface EnhancedUpdateOptions {
   releaseNotes: string[];
 }
 
+type EnhancedUpdateHandle = (reloadPage?: boolean) => Promise<void>;
+type PocketWorksRelease = { verified?: boolean };
+
 function createPrompt(options: EnhancedUpdateOptions, applyUpdate: () => Promise<void>) {
   const prompt = document.createElement('section');
   prompt.className = 'app-update-prompt';
@@ -56,9 +59,22 @@ function createPrompt(options: EnhancedUpdateOptions, applyUpdate: () => Promise
   };
 }
 
-export function registerEnhancedUpdate(options: EnhancedUpdateOptions) {
+export function registerEnhancedUpdate(options: EnhancedUpdateOptions): EnhancedUpdateHandle {
+  const coherentRelease = (globalThis as typeof globalThis & {
+    __POCKET_WORKS_RELEASE__?: PocketWorksRelease;
+  }).__POCKET_WORKS_RELEASE__;
+
+  // Production pages are stamped with release-guard.js before the application bundle runs.
+  // That guard owns the fingerprinted Service Worker URL and recovery lifecycle. Registering
+  // the same scope again through vite-plugin-pwa with canonical `sw.js` creates a second
+  // candidate for the same release and can trap Safari in a permanent "Update now" loop.
+  if (coherentRelease?.verified) {
+    document.querySelectorAll('.app-update-prompt').forEach((element) => element.remove());
+    return async () => {};
+  }
+
   let prompt: ReturnType<typeof createPrompt> | null = null;
-  let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
+  let updateSW: EnhancedUpdateHandle | undefined;
 
   updateSW = registerSW({
     immediate: true,

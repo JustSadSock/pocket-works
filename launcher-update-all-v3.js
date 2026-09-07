@@ -79,6 +79,15 @@ function workerMatches(worker,app){
   }catch{return false;}
 }
 
+async function verifiedReleaseIsActive(app,verified){
+  if(!locallyCurrent(app,verified))return false;
+  try{
+    const scopeUrl=new URL(app.path,location.href);
+    const registration=await navigator.serviceWorker.getRegistration(scopeUrl.href);
+    return workerMatches(registration?.active,app);
+  }catch{return false;}
+}
+
 function waitForWorkerState(worker,accepted,timeout){
   if(!worker)return Promise.resolve(null);
   if(accepted.includes(worker.state))return Promise.resolve(worker.state);
@@ -159,7 +168,7 @@ async function installRelease(app,onStage){
 }
 
 async function updateApplication(app,verified,onStage){
-  if(locallyCurrent(app,verified))return{app,status:'current'};
+  if(await verifiedReleaseIsActive(app,verified))return{app,status:'current'};
   try{return await withTimeout(installRelease(app,onStage),APP_TIMEOUT,`${app.name} update`);}
   catch(error){return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};}
 }
@@ -233,7 +242,7 @@ async function runBulkUpdate(){
         const label=result.status==='failed'
           ?`${result.app.name} · skipped`
           :result.status==='current'
-            ?`${result.app.name} · fingerprint matches`
+            ?`${result.app.name} · fingerprint + active worker match`
             :`${result.app.name} · ${result.status}`;
         showProgress({completed,total,label});
         syncStatus.textContent=result.status==='failed'?`${result.app.name}: ${result.error}`:label;

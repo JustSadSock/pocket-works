@@ -6,6 +6,7 @@ const files={
   links:await readFile('launcher-release-links.js','utf8'),
   guard:await readFile('shared/release-guard.js','utf8'),
   updateManager:await readFile('shared/update-manager.js','utf8'),
+  enhancedUpdateManager:await readFile('shared/enhanced-update-manager.ts','utf8'),
   prepare:await readFile('scripts/prepare-site.mjs','utf8'),
   blazonEngine:await readFile('apps/blazon/engine.js','utf8'),
   blazonBootstrap:await readFile('apps/blazon/bootstrap.js','utf8'),
@@ -19,12 +20,15 @@ requireToken('index','launcher-update-all-v3.js','launcher entry');
 requireToken('index','launcher-release-links.js','launcher entry');
 requireToken('updater','expectedFingerprint','fingerprint updater');
 requireToken('updater','pw_fp','fingerprint updater');
+requireToken('updater','verifiedReleaseIsActive','fingerprint updater');
 requireToken('updater','pw-update-progress','update progress');
 requireToken('links','fingerprint','versioned launch links');
 requireToken('guard','checkLatest','release guard');
 requireToken('guard','release.json','release guard');
 requireToken('updateManager','__POCKET_WORKS_RELEASE__','managed update handoff');
 requireToken('updateManager','getRegistration','managed update handoff');
+requireToken('enhancedUpdateManager','__POCKET_WORKS_RELEASE__','enhanced update handoff');
+requireToken('enhancedUpdateManager','coherentRelease?.verified','enhanced update handoff');
 requireToken('prepare','createHash','production fingerprinting');
 requireToken('prepare','canonicalFingerprint','production fingerprinting');
 requireToken('prepare','fingerprints.get(app.slug)','registry fingerprinting');
@@ -37,6 +41,9 @@ requireToken('compositionRuntime','requestAnimationFrame','Blazon composition ru
 const guardedHandoff=files.updateManager.indexOf('__POCKET_WORKS_RELEASE__');
 const directRegistration=files.updateManager.indexOf('navigator.serviceWorker.register(path)');
 if(guardedHandoff<0||directRegistration<0||guardedHandoff>directRegistration)errors.push('Managed update handoff must run before direct Service Worker registration');
+const enhancedHandoff=files.enhancedUpdateManager.indexOf('coherentRelease?.verified');
+const enhancedRegistration=files.enhancedUpdateManager.indexOf('registerSW({');
+if(enhancedHandoff<0||enhancedRegistration<0||enhancedHandoff>enhancedRegistration)errors.push('Enhanced update handoff must run before vite-plugin-pwa registration');
 if(files.updater.includes('verifyServerRelease'))errors.push('Updater must not reread HTML, config and worker source per application');
 if(files.guard.includes('XMLHttpRequest'))errors.push('Release guard must not block startup with synchronous XHR');
 if(files.progressionRuntime.includes('queueMicrotask'))errors.push('Progression runtime must not create a microtask mutation loop');
@@ -52,4 +59,4 @@ if(errors.length){
   console.error(errors.join('\n'));
   process.exit(1);
 }
-console.log('Fingerprint release, managed update handoff and Blazon event-loop coherence contracts passed.');
+console.log('Fingerprint release, managed/enhanced update handoff and Blazon event-loop coherence contracts passed.');
