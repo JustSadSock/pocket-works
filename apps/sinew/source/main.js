@@ -74,6 +74,11 @@ function updateHud(state) {
   enemyStability.style.transform = `scaleX(${Math.max(0, state.enemyStability) / 100})`;
 }
 
+function unlockAudio() {
+  if (!entered || !game.audio?.enabled) return;
+  void game.audio.ensure().catch((error) => console.warn('[SINEW] audio unlock failed; continuing silently', error));
+}
+
 async function boot() {
   try {
     updateOrientation();
@@ -111,11 +116,15 @@ async function boot() {
 enterButton.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   entered = true;
+  unlockAudio();
   game.setPaused(false);
   enter.classList.add('done');
   setTimeout(() => { enter.hidden = true; }, 220);
-  void game.audio.ensure().catch((error) => console.warn('[SINEW] audio unlock failed; continuing silently', error));
 }, { once: true });
+
+// On iOS/PWA the audio route can be interrupted when the app backgrounds. Any subsequent
+// gameplay touch is a fresh user gesture, so use it to recover the context automatically.
+root.addEventListener('pointerdown', unlockAudio, { passive: true });
 
 startExitButton.addEventListener('click', exitToLauncher);
 menuButton.addEventListener('click', openMenu);
