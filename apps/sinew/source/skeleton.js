@@ -43,6 +43,61 @@ function enforceWeaponBodyClearance(warrior) {
   }
 }
 
+function applyGroundedPhysicalFeel(warrior, control, dt) {
+  const safeDt = clamp(dt, 1 / 240, 1 / 24);
+  const yawRate = clamp(control.lookYawRate || 0, -9, 9);
+  const pitchRate = clamp(control.lookPitchRate || 0, -8, 8);
+  const angularEnergy = clamp(Math.hypot(yawRate, pitchRate) / 8.5, 0, 1);
+  const moveMagnitude = clamp(control.moveMagnitude || 0, 0, 1);
+
+  // The base rig intentionally has under-damped springs. Add velocity damping instead of
+  // removing lag: slow aiming becomes planted, while fast cuts still carry momentum.
+  const handDamping = 8.5 - angularEnergy * 4.2;
+  const weaponDamping = 7.2 - angularEnergy * 4.6;
+  const shieldDamping = 8.8 - angularEnergy * 3.2;
+  warrior.leftHand.velocity.scaleInPlace(Math.exp(-handDamping * safeDt));
+  warrior.rightHand.velocity.scaleInPlace(Math.exp(-(handDamping - 0.8) * safeDt));
+  warrior.swordDirection.velocity.scaleInPlace(Math.exp(-weaponDamping * safeDt));
+  warrior.shieldNormal.velocity.scaleInPlace(Math.exp(-shieldDamping * safeDt));
+
+  // Keep the torso from continuously oscillating around the desired facing.
+  warrior.bodyYawState.velocity *= Math.exp(-(4.2 - angularEnergy * 1.4) * safeDt);
+  warrior.upperYawState.velocity *= Math.exp(-(3.1 - angularEnergy * 1.1) * safeDt);
+  warrior.pitchState.velocity *= Math.exp(-(3.6 - angularEnergy * 1.3) * safeDt);
+
+  // Feet should feel planted when the movement thumb is released. Preserve acceleration
+  // while moving, but kill the residual skating that made the body feel submerged.
+  if (moveMagnitude < 0.06) {
+    const groundGrip = Math.exp(-8.5 * safeDt);
+    warrior.velocity.x *= groundGrip;
+    warrior.velocity.z *= groundGrip;
+    if (Math.hypot(warrior.velocity.x, warrior.velocity.z) < 0.025) {
+      warrior.velocity.x = 0;
+      warrior.velocity.z = 0;
+    }
+  }
+
+  // Inertia should show up as resistance to *changes* in angular motion, not as endless
+  // spring wobble. A short counter-lean makes quick starts/stops feel like moving mass.
+  const feel = warrior.__sinewPhysicalFeel || (warrior.__sinewPhysicalFeel = { yawRate: 0, pitchRate: 0 });
+  const yawAcceleration = clamp((yawRate - feel.yawRate) / safeDt, -45, 45);
+  const pitchAcceleration = clamp((pitchRate - feel.pitchRate) / safeDt, -40, 40);
+  feel.yawRate = yawRate;
+  feel.pitchRate = pitchRate;
+  if (angularEnergy > 0.08) {
+    const basisForward = warrior.sword.tip.subtract(warrior.sword.base);
+    basisForward.y = 0;
+    if (basisForward.lengthSquared() > 1e-5) basisForward.normalize();
+    const right = new Vector3(basisForward.z, 0, -basisForward.x);
+    warrior.impactLeanVelocity.addInPlace(right.scale(-yawAcceleration * 0.00052));
+    warrior.impactLeanVelocity.y += -pitchAcceleration * 0.00022;
+  }
+
+  // Restore stability decisively while calm; taking/making hard swings still costs it.
+  const calm = 1 - angularEnergy;
+  warrior.stability = Math.min(100, warrior.stability + calm * calm * safeDt * 7.5);
+}
+
 export function attachBabylonSkeleton(warrior, scene) {
   const skeleton = new Skeleton(`${warrior.id}:skeleton`, `${warrior.id}:skeleton`, scene);
   const bones = {};
@@ -57,7 +112,10 @@ export function attachBabylonSkeleton(warrior, scene) {
   const originalUpdate = warrior.update.bind(warrior);
   warrior.update = (dt, control, snap = false) => {
     originalUpdate(dt, control, snap);
-    if (!snap) enforceWeaponBodyClearance(warrior);
+    if (!snap) {
+      applyGroundedPhysicalFeel(warrior, control, dt);
+      enforceWeaponBodyClearance(warrior);
+    }
   };
   const originalDispose = warrior.dispose.bind(warrior);
   warrior.dispose = () => {
