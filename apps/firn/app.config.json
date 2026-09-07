@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "firn",
+  "name": "FIRN",
+  "shortName": "FIRN",
+  "description": "Иммерсивная first-person прогулка по процедурным снежным горам: глубокий снег, наст, лёд, физика склонов, следы, позёмка, локальные снежные срывы и адаптивный Babylon.js рендер для iPhone.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T00:30:00+03:00",
+  "changelog": [
+    "Первый релиз FIRN: процедурные снежные горы с хребтами, седловинами, плато, карнизами и продуваемыми ледяными зонами.",
+    "Состояние снега влияет на скорость, глубину шага, сцепление, скольжение, следы и снежные срывы.",
+    "Добавлены touch-управление для landscape iPhone, адаптивное качество, генеративный ветер/хруст снега и сохранение позиции.",
+    "Интегрированы Pocket Works mobile runtime, workshop mode, enhanced update manager и offline PWA-кэш."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#a9d7ed",
+  "backgroundColor": "#d8e8ef",
+  "themeColor": "#d8e8ef",
+  "orientation": "landscape",
+  "cacheName": "firn-v1.0.0",
+  "storageNamespace": "pocket-works:firn",
+  "tags": ["PWA", "offline", "experience", "3D", "Babylon.js", "snow", "mountains", "procedural", "first-person", "landscape", "Safari", "iPhone", "adaptive-quality"],
+  "order": 77
+}
