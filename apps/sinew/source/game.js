@@ -13,6 +13,7 @@ import { CombatSystem } from './combat.js';
 import { clamp, wrapAngle } from './core.js';
 import { DuelInput } from './input.js';
 import { ProceduralWarrior } from './rig.js';
+import { attachBabylonSkeleton } from './skeleton.js';
 import { ArenaWorld } from './world.js';
 
 class QualityController {
@@ -120,7 +121,7 @@ export class SinewGame {
     report('Поднимаем каменный двор…', 0.28);
     this.world = new ArenaWorld(this.scene);
 
-    report('Собираем процедурные риги…', 0.48);
+    report('Собираем процедурные скелеты…', 0.48);
     this.player = new ProceduralWarrior(this.scene, {
       id: 'player',
       isPlayer: true,
@@ -134,6 +135,8 @@ export class SinewGame {
       yaw: Math.PI,
       palette: { cloth: '#4b4036', leather: '#523024', darkSteel: '#343b3c', accent: '#7f3528', steel: '#959d9b' }
     });
+    attachBabylonSkeleton(this.player, this.scene);
+    attachBabylonSkeleton(this.enemy, this.scene);
     this.world.addWarrior(this.player);
     this.world.addWarrior(this.enemy);
 
@@ -151,7 +154,7 @@ export class SinewGame {
 
     this.quality = new QualityController(this.engine, this.world, this.storageNamespace, (mode, effective) => this.onQuality?.(mode, effective));
 
-    report('Калибруем инерцию…', 0.84);
+    report('Калибруем инерцию и баланс…', 0.84);
     this.resetMatch(true);
     this.bindLifecycle();
     this.engine.runRenderLoop(() => this.frame());
@@ -197,9 +200,11 @@ export class SinewGame {
       moveMagnitude: move.magnitude,
       moveSpaceYaw: this.viewYaw
     });
+    this.applyWeaponBalance(this.player, dt, true);
 
     const enemyControl = this.ai.update(dt, this.enemy, this.player);
     this.enemy.update(dt, enemyControl);
+    this.applyWeaponBalance(this.enemy, dt, false);
     this.resolveBodySeparation();
     this.combat.resolvePair(this.player, this.enemy, dt, nowSeconds);
 
@@ -212,6 +217,21 @@ export class SinewGame {
     this.onState?.(this.getState());
 
     if (this.player.dead || this.enemy.dead) this.finishMatch();
+  }
+
+  applyWeaponBalance(warrior, dt, affectCamera) {
+    const angular = clamp(warrior.sword.angularSpeed / 10, 0, 1);
+    const tipSpeed = clamp((warrior.sword.speed - 3.2) / 8.5, 0, 1);
+    const load = angular * tipSpeed * warrior.sword.mass;
+    if (load <= 0.02) return;
+    const blade = warrior.sword.tip.subtract(warrior.sword.base).normalize();
+    const sideways = new Vector3(blade.z, 0, -blade.x);
+    warrior.velocity.addInPlace(sideways.scale(-warrior.swordDirection.velocity.x * load * dt * 0.065));
+    warrior.stability = Math.max(0, warrior.stability - load * dt * 5.5);
+    warrior.impactLeanVelocity.addInPlace(blade.scale(load * dt * 0.06));
+    if (affectCamera && load > 0.32) {
+      this.cameraKickVelocity.z += clamp(warrior.swordDirection.velocity.x * -0.0025, -0.014, 0.014);
+    }
   }
 
   resolveBodySeparation() {
@@ -268,7 +288,9 @@ export class SinewGame {
   }
 
   spawnImpact(point, color, intensity) {
-    if (!point || this.fx.size > 20) return;
+    if (!point) return;
+    const maxFx = this.quality?.effective === 'low' ? 8 : this.quality?.effective === 'medium' ? 14 : 20;
+    if (this.fx.size >= maxFx) return;
     const material = new StandardMaterial(`impact-mat-${performance.now()}`, this.scene);
     material.emissiveColor = Color3.FromHexString(color);
     material.disableLighting = false;
