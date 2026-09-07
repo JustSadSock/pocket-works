@@ -5,16 +5,16 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'SIROCCO';
-const version = '1.0.4';
+const version = '1.1.0';
 const storageNamespace = 'pocket-works:sirocco';
 const releaseNotes = [
-  'Исправлена настоящая причина изнанки дюн: winding всех terrain-треугольников был обратным стандартному Babylon.js TiledGround, поэтому верх песка отбрасывался back-face culling, а игрок видел поверхность только снизу.',
-  'Ближние чанки и дальний LOD теперь используют тот же top-facing порядок индексов, что встроенный Babylon.js ground для XZ-сетки с растущей координатой Z.',
-  'Тем же исправлением приведены в правильную ориентацию геометрические следы и локальные следы осыпания песка.',
-  'Добавлен регрессионный тест winding и продолжены проверки непрерывности визуальной mesh-поверхности на всех профилях качества.'
+  'Песок переведён с декоративных геометрических следов на локальную физическую world-space heightfield: стопа вдавливает поверхность, выталкивает валик, переносит песок вниз по склону и оставляет устойчивую деформацию, не зависящую от направления камеры.',
+  'Добавлена отдельная высокодетализированная физическая sand-surface вокруг игрока, поэтому сантиметровые отпечатки и локальное осыпание видны без увеличения детализации всей бесконечной пустыни.',
+  'First-person тело пересобрано в образе бедуинского путника: длинная светлая туника, пояс, свободные штаны, обмотки, кожаная обувь, рукава и руки, а ноги используют устойчивый двухзвенный IK.',
+  'Освещение и тени переделаны: удалено полосатое terrain self-shadowing и чрезмерная periodic normal-map рябь, солнце опущено ниже для читаемой формы дюн, а персонаж получает отдельную мягкую фильтрованную динамическую тень.'
 ];
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName, version: '1.0.4', releaseNotes });
+registerEnhancedUpdate({ appName, version: '1.1.0', releaseNotes });
 createWorkshopMode({ appName, version, cachePrefix: 'sirocco-', storageNamespace, onReset: () => location.reload() });
 void import('./main.js');
