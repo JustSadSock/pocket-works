@@ -24,11 +24,9 @@ function orientYAxis(mesh, start, end) {
   const axisLength = axis.length();
   mesh.position.copyFrom(start.add(end).scale(0.5));
   mesh.scaling.set(1, length, 1);
-  if (axisLength < 1e-5) {
-    mesh.rotationQuaternion = d.y >= 0 ? Quaternion.Identity() : Quaternion.RotationAxis(Vector3.Right(), Math.PI);
-  } else {
-    mesh.rotationQuaternion = Quaternion.RotationAxis(axis.scale(1 / axisLength), Math.acos(clamp(Vector3.Dot(UP, d), -1, 1)));
-  }
+  mesh.rotationQuaternion = axisLength < 1e-5
+    ? (d.y >= 0 ? Quaternion.Identity() : Quaternion.RotationAxis(Vector3.Right(), Math.PI))
+    : Quaternion.RotationAxis(axis.scale(1 / axisLength), Math.acos(clamp(Vector3.Dot(UP, d), -1, 1)));
 }
 
 function chooseAnimation(groups, pattern, reject = null) {
@@ -61,8 +59,6 @@ export class HumanoidRig {
     this.garments = [];
     this.materials = [];
     this.animationGroups = [];
-    this.walkAnimation = null;
-    this.idleAnimation = null;
     this.walkWeight = 0;
     this.visualLift = 0;
     this.baseModelY = 0;
@@ -78,7 +74,7 @@ export class HumanoidRig {
     this.animationGroups = imported.animationGroups || [];
     this.skeleton = imported.skeletons?.[0] || null;
     this.modelRoot = imported.meshes.find((mesh) => mesh.name === '__root__') || imported.meshes[0];
-    if (!this.modelRoot) throw new Error('CC0 humanoid loaded without a root mesh');
+    if (!this.modelRoot || !this.skeleton) throw new Error('Animated CC0 humanoid did not contain the expected root/skeleton');
 
     this.modelRoot.parent = this.root;
     for (const mesh of imported.meshes) {
@@ -102,8 +98,7 @@ export class HumanoidRig {
     this.modelRoot.computeWorldMatrix(true);
     let bounds = this.modelRoot.getHierarchyBoundingVectors(true);
     const rawHeight = Math.max(0.001, bounds.max.y - bounds.min.y);
-    const scale = TARGET_HEIGHT / rawHeight;
-    this.modelRoot.scaling.scaleInPlace(scale);
+    this.modelRoot.scaling.scaleInPlace(TARGET_HEIGHT / rawHeight);
     this.modelRoot.computeWorldMatrix(true);
     bounds = this.modelRoot.getHierarchyBoundingVectors(true);
     this.baseModelY = -bounds.min.y;
@@ -128,11 +123,10 @@ export class HumanoidRig {
   }
 
   buildBedouinGarments() {
-    const linen = makeMaterial(this.scene, 'bedouin-sunbleached-linen', new Color3(0.83, 0.78, 0.67), 0.99);
-    const linenShade = makeMaterial(this.scene, 'bedouin-linen-shadow', new Color3(0.66, 0.59, 0.49), 0.99);
-    const sash = makeMaterial(this.scene, 'bedouin-red-sash', new Color3(0.38, 0.075, 0.055), 0.96);
-    const leather = makeMaterial(this.scene, 'bedouin-leather', new Color3(0.16, 0.095, 0.05), 0.93);
-    this.materials.push(linen, linenShade, sash, leather);
+    const linen = makeMaterial(this.scene, 'bedouin-sunbleached-linen', new Color3(0.84, 0.79, 0.68), 0.99);
+    const linenShade = makeMaterial(this.scene, 'bedouin-linen-folds', new Color3(0.66, 0.59, 0.49), 0.99);
+    const sash = makeMaterial(this.scene, 'bedouin-red-sash', new Color3(0.40, 0.08, 0.055), 0.96);
+    this.materials.push(linen, linenShade, sash);
 
     this.robeTorso = this.addGarment(MeshBuilder.CreateCylinder('bedouin-thobe-upper', {
       height: 0.64, diameterTop: 0.43, diameterBottom: 0.50, tessellation: 20
@@ -159,12 +153,14 @@ export class HumanoidRig {
     }, this.scene), sash);
     this.scarfCollar.position.set(0, 1.51, -0.015);
 
+    this.scarfTails = [];
     for (const side of [-1, 1]) {
       const tail = this.addGarment(MeshBuilder.CreateBox(`bedouin-keffiyeh-tail-${side}`, {
-        width: 0.13, height: 0.43, depth: 0.025
+        width: 0.13, height: 0.46, depth: 0.025
       }, this.scene), side < 0 ? linen : sash);
-      tail.position.set(side * 0.11, 1.35, -0.19);
+      tail.position.set(side * 0.11, 1.34, -0.19);
       tail.rotation.z = side * 0.07;
+      this.scarfTails.push(tail);
     }
 
     this.sleeves = {
@@ -172,18 +168,6 @@ export class HumanoidRig {
       right: this.addGarment(MeshBuilder.CreateCylinder('bedouin-sleeve-right', { height: 1, diameterTop: 0.14, diameterBottom: 0.11, tessellation: 16 }, this.scene), linen, null)
     };
     for (const sleeve of Object.values(this.sleeves)) sleeve.parent = null;
-
-    for (const side of [-1, 1]) {
-      const wrap = this.addGarment(MeshBuilder.CreateCylinder(`bedouin-calf-wrap-${side}`, {
-        height: 0.22, diameter: 0.13, tessellation: 14
-      }, this.scene), linenShade);
-      wrap.position.set(side * 0.105, 0.20, 0.01);
-      const boot = this.addGarment(MeshBuilder.CreateCapsule(`bedouin-boot-${side}`, {
-        radius: 0.072, height: 0.30, tessellation: 14
-      }, this.scene), leather);
-      boot.position.set(side * 0.105, 0.07, 0.08);
-      boot.rotation.x = Math.PI * 0.5;
-    }
 
     for (const side of [-1, 1]) {
       const debug = MeshBuilder.CreateSphere(`imported-foot-target-${side}`, { diameter: 0.06, segments: 6 }, this.scene);
@@ -201,7 +185,8 @@ export class HumanoidRig {
       }
     }
     this.walkAnimation = chooseAnimation(this.animationGroups, /walk/i, /back|left|right|strafe/i)
-      || chooseAnimation(this.animationGroups, /run/i);
+      || chooseAnimation(this.animationGroups, /run/i)
+      || this.animationGroups.find((group) => !/idle/i.test(group.name));
     this.idleAnimation = chooseAnimation(this.animationGroups, /idle/i);
     if (this.idleAnimation) {
       this.idleAnimation.start(true, 1);
@@ -288,7 +273,8 @@ export class HumanoidRig {
     const footPositions = [this.feet?.left, this.feet?.right].filter(Boolean).map((node) => node.getAbsolutePosition());
     let requiredLift = 0;
     for (const foot of footPositions) {
-      const gx = foot.x + controller.worldOffsetX, gz = foot.z + controller.worldOffsetZ;
+      const gx = foot.x + controller.worldOffsetX;
+      const gz = foot.z + controller.worldOffsetZ;
       requiredLift = Math.max(requiredLift, this.surface.sampleHeight(gx, gz) - foot.y + 0.012);
     }
     this.visualLift = damp(this.visualLift, clamp(requiredLift, 0, 0.16), 12, dt);
@@ -298,6 +284,8 @@ export class HumanoidRig {
     this.robeSkirt.rotation.x = Math.sin(controller.gait) * 0.018 * speedNorm;
     this.robeSkirt.rotation.z = Math.cos(controller.gait * 0.5) * 0.012 * speedNorm;
     this.frontFold.position.z = 0.305 + Math.sin(controller.gait) * 0.018 * speedNorm;
+    this.scarfTails[0].rotation.x = Math.sin(controller.gait * 0.75) * 0.025 * speedNorm;
+    this.scarfTails[1].rotation.x = Math.sin(controller.gait * 0.75 + 0.8) * 0.025 * speedNorm;
     this.updateSleeves();
 
     return [this.updateFoot('left', controller, dt), this.updateFoot('right', controller, dt)].filter(Boolean);
