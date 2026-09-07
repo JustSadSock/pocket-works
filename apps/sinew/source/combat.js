@@ -179,7 +179,6 @@ export class CombatSystem {
     separation.normalize();
     const correction = clamp(hit.penetration * 0.42 + 0.006, 0.008, 0.075);
 
-    // The shield hand gives first, then both planted bodies share the remaining impulse.
     translateShield(owner, separation.scale(-correction * 0.82));
     owner.leftHand.velocity.addInPlace(separation.scale(-correction * 15));
     owner.position.addInPlace(separation.scale(-correction * 0.34));
@@ -190,7 +189,7 @@ export class CombatSystem {
     defender.applyBodyImpulse(separation.scale(correction * 20));
 
     if (this.canContact('shield-body', owner, defender, now, 0.11)) {
-      this.onEvent({ type: 'shove', attacker: owner, defender, point: hit.point, intensity: clamp(hit.penetration / 0.22, 0.15, 0.75) });
+      this.onEvent({ type: 'block', attacker: owner, defender, point: hit.point, normal: hit.normal, intensity: clamp(hit.penetration / 0.22, 0.15, 0.72), speed: 0 });
     }
     return true;
   }
@@ -212,7 +211,7 @@ export class CombatSystem {
     a.stability = Math.max(0, a.stability - correction * 35);
     b.stability = Math.max(0, b.stability - correction * 35);
     if (this.canContact('shield-shield', a, b, now, 0.13)) {
-      this.onEvent({ type: 'shield-clash', a, b, point: Vector3.Lerp(shieldA.center, shieldB.center, 0.5), intensity: clamp(penetration / 0.25, 0.15, 0.7) });
+      this.onEvent({ type: 'clash', a, b, point: Vector3.Lerp(shieldA.center, shieldB.center, 0.5), intensity: clamp(penetration / 0.25, 0.15, 0.7) });
     }
     return true;
   }
@@ -220,8 +219,6 @@ export class CombatSystem {
   resolvePair(a, b, dt, now) {
     if (a.dead || b.dead) return;
 
-    // Resolve large rigid contacts before blade contacts so shields cannot ghost through
-    // bodies or each other while the swords continue to use swept collision.
     this.resolveShieldBody(a, b, now);
     this.resolveShieldBody(b, a, now);
     this.resolveShieldShield(a, b, now);
