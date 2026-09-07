@@ -130,7 +130,7 @@ export class DuelInput {
     this.lookAccum.x = 0;
     this.lookAccum.y = 0;
     const yaw = dx * 0.00345 * this.sensitivity;
-    const pitch = -dy * 0.00315 * this.sensitivity;
+    const pitch = dy * 0.00315 * this.sensitivity;
     const safeDt = Math.max(1 / 240, dt);
     return {
       yaw,
