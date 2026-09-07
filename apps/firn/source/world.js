@@ -1,5 +1,5 @@
 import { Mesh, MeshBuilder, VertexData } from '@babylonjs/core';
-import { clamp, hash2 } from './core.js';
+import { clamp, hash2, smoothstep } from './core.js';
 import { mountainHeight } from './terrain.js';
 import { meshSnowSurfaceHeight, snowSample, snowSurfaceHeight, snowSurfaceOffset, snowTint } from './snow.js';
 import { appendBabylonGroundCell } from './mesh.js';
@@ -13,8 +13,6 @@ function buildSurfaceData(startX, startZ, size, segments, centered = false) {
   const paddedRow = segments + 3;
   const base = new Float32Array(paddedRow * paddedRow);
 
-  // One exact mountain sample per padded grid point. Normals then come from the
-  // cached heightfield instead of evaluating the procedural massif four more times.
   for (let iz = -1; iz <= segments + 1; iz += 1) {
     for (let ix = -1; ix <= segments + 1; ix += 1) {
       const gx = originX + ix * step;
@@ -46,14 +44,26 @@ function buildSurfaceData(startX, startZ, size, segments, centered = false) {
       const sample = snowSample(gx, gz, n);
       const y = h + snowSurfaceOffset(gx, gz, sample);
       const tint = snowTint(sample);
-      const slopeShade = clamp(1 - (1 - ny) * 0.33, 0.75, 1);
+      const slope = Math.acos(clamp(ny, -1, 1));
+      const cliff = smoothstep(0.72, 1.08, slope);
+      const windScour = smoothstep(0.35, 0.82, sample.exposure) * (1 - sample.depth);
+      const exposed = clamp(cliff * 0.82 + windScour * 0.48, 0, 0.92);
+      const rockVariation = 0.82 + hash2(Math.floor(gx * 0.23), Math.floor(gz * 0.23), 521) * 0.18;
+      const rockR = 0.16 * rockVariation;
+      const rockG = 0.175 * rockVariation;
+      const rockB = 0.18 * rockVariation;
+      const shade = clamp(0.92 + ny * 0.08, 0.84, 1);
+      const sr = tint.r * shade, sg = tint.g * shade, sb = tint.b * shade;
       const lx = centered ? ix * step - size * 0.5 : ix * step;
       const lz = centered ? iz * step - size * 0.5 : iz * step;
 
       positions[p] = lx; positions[p + 1] = y; positions[p + 2] = lz;
       normals[p] = nx; normals[p + 1] = ny; normals[p + 2] = nz; p += 3;
-      uvs[uv] = gx * 0.036; uvs[uv + 1] = gz * 0.036; uv += 2;
-      colors[c] = tint.r * slopeShade; colors[c + 1] = tint.g * slopeShade; colors[c + 2] = tint.b * slopeShade; colors[c + 3] = 1; c += 4;
+      uvs[uv] = gx * 0.032; uvs[uv + 1] = gz * 0.032; uv += 2;
+      colors[c] = sr * (1 - exposed) + rockR * exposed;
+      colors[c + 1] = sg * (1 - exposed) + rockG * exposed;
+      colors[c + 2] = sb * (1 - exposed) + rockB * exposed;
+      colors[c + 3] = 1; c += 4;
     }
   }
 
@@ -145,17 +155,21 @@ export class SnowWorld {
 
   makeRocks(cx, cz) {
     const rocks = [];
-    const count = hash2(cx, cz, 401) > 0.38 ? 1 + Math.floor(hash2(cx, cz, 403) * 3) : 0;
+    const probeX = (cx + 0.5) * CHUNK_SIZE;
+    const probeZ = (cz + 0.5) * CHUNK_SIZE;
+    const probe = snowSample(probeX, probeZ);
+    const steepBonus = smoothstep(0.45, 0.95, probe.slope);
+    const count = hash2(cx, cz, 401) > (0.52 - steepBonus * 0.34) ? 2 + Math.floor(hash2(cx, cz, 403) * (2 + steepBonus * 4)) : 0;
     for (let i = 0; i < count; i += 1) {
-      const gx = (cx + 0.14 + hash2(cx * 17 + i, cz * 13, 407) * 0.72) * CHUNK_SIZE;
-      const gz = (cz + 0.14 + hash2(cx * 11 + i, cz * 19, 409) * 0.72) * CHUNK_SIZE;
+      const gx = (cx + 0.08 + hash2(cx * 17 + i, cz * 13, 407) * 0.84) * CHUNK_SIZE;
+      const gz = (cz + 0.08 + hash2(cx * 11 + i, cz * 19, 409) * 0.84) * CHUNK_SIZE;
       const s = snowSample(gx, gz);
-      if (s.depth > 0.56 && s.exposure < 0.32) continue;
+      if (s.depth > 0.66 && s.slope < 0.55) continue;
       const rock = this.rockBase.createInstance(`rock-${cx}-${cz}-${i}`);
-      const size = 0.55 + hash2(cx + i, cz - i, 419) * 1.45;
-      rock.scaling.set(size * (0.7 + hash2(i, cx, 421) * 0.65), size * (0.55 + hash2(i, cz, 423) * 0.65), size);
-      rock.rotation.set(hash2(i, cx, 425) * 0.7, hash2(i, cz, 427) * 6.28, hash2(cx, cz + i, 429) * 0.45);
-      rock.metadata = { gx, gz, bury: 0.32 + s.depth * 0.22 };
+      const size = 0.65 + hash2(cx + i, cz - i, 419) * (1.3 + s.slope * 2.3);
+      rock.scaling.set(size * (0.55 + hash2(i, cx, 421) * 0.8), size * (0.42 + hash2(i, cz, 423) * 1.0), size * (0.7 + hash2(i, cx + cz, 424) * 0.6));
+      rock.rotation.set(hash2(i, cx, 425) * 0.85, hash2(i, cz, 427) * 6.28, hash2(cx, cz + i, 429) * 0.7);
+      rock.metadata = { gx, gz, bury: 0.35 + s.depth * 0.3 };
       rock.receiveShadows = true;
       rock.isPickable = false;
       rocks.push(rock);
