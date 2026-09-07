@@ -67,7 +67,7 @@ jobs:
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
 
-      - name: WebKit iPhone smoke
+      - name: WebKit iPhone matrix
         shell: bash
         run: |
           python3 -m http.server 4173 >/tmp/pelagos-http.log 2>&1 &
@@ -80,77 +80,78 @@ jobs:
           node --input-type=module <<'NODE'
           import { webkit } from '@playwright/test';
           const browser = await webkit.launch();
-          const context = await browser.newContext({
-            viewport: { width: 393, height: 852 },
-            deviceScaleFactor: 3,
-            isMobile: true,
-            hasTouch: true,
-            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1'
-          });
-          const page = await context.newPage();
           const failures = [];
-          page.on('pageerror', error => failures.push(`pageerror: ${error.message}`));
-          page.on('console', message => {
-            if (message.type() === 'error') failures.push(`console: ${message.text()}`);
-          });
+          const iphoneUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1';
 
-          const assertViewport = async (label) => {
+          async function makePage(width, height) {
+            const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: iphoneUA });
+            const page = await context.newPage();
+            page.on('pageerror', error => failures.push(`${width}x${height} pageerror: ${error.message}`));
+            page.on('console', message => { if (message.type() === 'error') failures.push(`${width}x${height} console: ${message.text()}`); });
+            await page.goto('http://127.0.0.1:4173/apps/pelagos/', { waitUntil: 'networkidle', timeout: 30000 });
+            await page.locator('#menu:not(.hidden)').waitFor({ state: 'visible', timeout: 20000 });
+            return { context, page };
+          }
+
+          async function assertViewport(page, label) {
             const result = await page.evaluate(() => {
               const viewport = { width: window.innerWidth, height: window.innerHeight };
-              const ids = ['pauseButton', 'helmZone', 'trimZone', 'rowButton'];
+              const ids = ['pauseButton', 'helmZone', 'trimZone', 'rowButton', 'telemetry'];
               const boxes = Object.fromEntries(ids.map(id => {
                 const element = document.getElementById(id);
-                if (!element) return [id, null];
+                if (!element || element.classList.contains('hidden')) return [id, null];
                 const rect = element.getBoundingClientRect();
                 return [id, { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }];
               }));
-              return {
-                viewport,
-                scrollWidth: document.documentElement.scrollWidth,
-                scrollHeight: document.documentElement.scrollHeight,
-                boxes
-              };
+              return { viewport, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, boxes };
             });
-            if (result.scrollWidth > result.viewport.width + 1 || result.scrollHeight > result.viewport.height + 1) {
-              failures.push(`${label}: viewport overflow ${JSON.stringify(result)}`);
-            }
+            if (result.scrollWidth > result.viewport.width + 1 || result.scrollHeight > result.viewport.height + 1) failures.push(`${label}: viewport overflow ${JSON.stringify(result)}`);
             for (const [id, box] of Object.entries(result.boxes)) {
               if (!box) continue;
-              if (box.left < -1 || box.top < -1 || box.right > result.viewport.width + 1 || box.bottom > result.viewport.height + 1) {
-                failures.push(`${label}: ${id} outside viewport ${JSON.stringify(box)}`);
-              }
+              if (box.left < -1 || box.top < -1 || box.right > result.viewport.width + 1 || box.bottom > result.viewport.height + 1) failures.push(`${label}: ${id} outside viewport ${JSON.stringify(box)}`);
             }
-          };
+          }
 
-          await page.goto('http://127.0.0.1:4173/apps/pelagos/', { waitUntil: 'networkidle', timeout: 30000 });
-          await page.locator('#menu:not(.hidden)').waitFor({ state: 'visible', timeout: 20000 });
-          await page.locator('#startButton').click();
-          await page.locator('#hud:not(.hidden)').waitFor({ state: 'visible' });
-          await page.waitForTimeout(1400);
-          const speed = Number.parseFloat(await page.locator('#speedValue').innerText());
-          if (!Number.isFinite(speed)) failures.push('speed telemetry is not finite');
-          await assertViewport('393x852 gameplay');
-          await page.screenshot({ path: 'pelagos-sea-webkit.png', fullPage: true });
+          // Primary modern iPhone: full functional path and visual artifact.
+          {
+            const { context, page } = await makePage(393, 852);
+            await page.locator('#startButton').click();
+            await page.locator('#hud:not(.hidden)').waitFor({ state: 'visible' });
+            await page.waitForTimeout(4200);
+            const speed = Number.parseFloat(await page.locator('#speedValue').innerText());
+            if (!Number.isFinite(speed)) failures.push('393x852 speed telemetry is not finite');
+            await assertViewport(page, '393x852 gameplay');
+            const metrics = await page.evaluate(() => ({ fps: document.documentElement.dataset.fps ?? null, scale: document.documentElement.dataset.qualityScale ?? null }));
+            console.log('PELAGOS WebKit adaptive metrics', metrics);
+            await page.screenshot({ path: 'pelagos-sea-webkit.png', fullPage: true });
+            await page.locator('#pauseButton').click();
+            await page.locator('#pause:not(.hidden)').waitFor({ state: 'visible' });
+            await page.locator('#resumeButton').click();
+            await page.locator('#pause').waitFor({ state: 'hidden' });
+            await page.locator('#pauseButton').click();
+            await page.locator('#menuButton').click();
+            await page.locator('#menu:not(.hidden)').waitFor({ state: 'visible' });
+            await page.locator('#settingsButton').click();
+            await page.locator('#settings:not(.hidden)').waitFor({ state: 'visible' });
+            const beforeQuality = await page.locator('#qualityButton').innerText();
+            await page.locator('#qualityButton').click();
+            const afterQuality = await page.locator('#qualityButton').innerText();
+            if (beforeQuality === afterQuality) failures.push('quality control did not change');
+            await page.screenshot({ path: 'pelagos-settings-webkit.png', fullPage: true });
+            await context.close();
+          }
 
-          await page.setViewportSize({ width: 375, height: 667 });
-          await page.waitForTimeout(250);
-          await assertViewport('375x667 gameplay');
-          await page.setViewportSize({ width: 393, height: 852 });
+          // Fresh contexts avoid stale visualViewport data and represent actual small/large phones.
+          for (const [width, height, shot] of [[375, 667, 'pelagos-small-webkit.png'], [430, 932, null]]) {
+            const { context, page } = await makePage(width, height);
+            await page.locator('#startButton').click();
+            await page.locator('#hud:not(.hidden)').waitFor({ state: 'visible' });
+            await page.waitForTimeout(1000);
+            await assertViewport(page, `${width}x${height} gameplay`);
+            if (shot) await page.screenshot({ path: shot, fullPage: true });
+            await context.close();
+          }
 
-          await page.locator('#pauseButton').click();
-          await page.locator('#pause:not(.hidden)').waitFor({ state: 'visible' });
-          await page.locator('#resumeButton').click();
-          await page.locator('#pause').waitFor({ state: 'hidden' });
-          await page.locator('#pauseButton').click();
-          await page.locator('#menuButton').click();
-          await page.locator('#menu:not(.hidden)').waitFor({ state: 'visible' });
-          await page.locator('#settingsButton').click();
-          await page.locator('#settings:not(.hidden)').waitFor({ state: 'visible' });
-          const beforeQuality = await page.locator('#qualityButton').innerText();
-          await page.locator('#qualityButton').click();
-          const afterQuality = await page.locator('#qualityButton').innerText();
-          if (beforeQuality === afterQuality) failures.push('quality control did not change');
-          await page.screenshot({ path: 'pelagos-settings-webkit.png', fullPage: true });
           await browser.close();
           if (failures.length) throw new Error(failures.join('\n'));
           NODE
@@ -162,6 +163,7 @@ jobs:
           name: pelagos-webkit-${{ github.sha }}
           path: |
             pelagos-sea-webkit.png
+            pelagos-small-webkit.png
             pelagos-settings-webkit.png
           if-no-files-found: warn
           retention-days: 7
