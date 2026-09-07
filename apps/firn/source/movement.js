@@ -13,8 +13,8 @@ export class MountainWalkerController {
     this.worldOffsetX = 0;
     this.worldOffsetZ = 0;
     this.localPosition = { x: 8, y: this.sampleHeight(8, -12), z: -12 };
-    this.yaw = 0.45;
-    this.pitch = -0.08;
+    this.yaw = 0.12;
+    this.pitch = -0.18;
     this.vx = 0;
     this.vz = 0;
     this.speed = 0;
@@ -27,6 +27,9 @@ export class MountainWalkerController {
     this.braceAmount = 0;
     this.verticalBob = 0;
     this.roll = 0;
+    this.bodySink = 0;
+    this.climbing = 0;
+    this.climbPulse = 0;
   }
 
   applyLook(delta) {
@@ -45,23 +48,36 @@ export class MountainWalkerController {
     if (dirLen > 0.001) { dirX /= dirLen; dirZ /= dirLen; }
 
     const uphillDot = -(dirX * down.x + dirZ * down.z);
+    const uphillIntent = Math.max(0, uphillDot) * input.magnitude;
+    const slopeDeg = current.slope * 57.2958;
+    const climbTarget = clamp((slopeDeg - 24) / 24, 0, 1) * uphillIntent;
+    this.climbing = damp(this.climbing, climbTarget, 8, dt);
+
     const response = movementResponse(current, uphillDot, input.sprint);
-    const baseSpeed = 3.0;
-    const intendedSpeed = baseSpeed * response * input.magnitude;
+    const climbPenalty = 1 - this.climbing * 0.58;
+    const baseSpeed = 3.05;
+    let intendedSpeed = baseSpeed * response * climbPenalty * input.magnitude;
+
+    // Above roughly 52 degrees the character can no longer simply walk upward.
+    // Forward input becomes a slow scramble while gravity keeps pulling downhill.
+    const overhang = clamp((slopeDeg - 50) / 16, 0, 1) * uphillIntent;
+    intendedSpeed *= 1 - overhang * 0.72;
+
     const targetVx = dirX * intendedSpeed;
     const targetVz = dirZ * intendedSpeed;
-    const acceleration = current.powder > 0.55 ? 5.4 : 8.5;
+    const acceleration = current.powder > 0.55 ? 4.2 : 7.6;
     this.vx = damp(this.vx, targetVx, acceleration, dt);
     this.vz = damp(this.vz, targetVz, acceleration, dt);
 
     this.braceAmount = damp(this.braceAmount, input.bracing ? 1 : 0, 12, dt);
-    const slideThreshold = 0.37 + current.traction * 0.16;
-    const slideDrive = Math.max(0, current.slope - slideThreshold) * (8.2 + current.ice * 7.5) * (1 - current.traction * 0.52);
-    const braceReduction = 1 - this.braceAmount * 0.82;
-    const slideAccel = slideDrive * braceReduction;
+    const slideThreshold = 0.34 + current.traction * 0.18;
+    const slideDrive = Math.max(0, current.slope - slideThreshold) * (9.2 + current.ice * 8.5) * (1 - current.traction * 0.55);
+    const climbGravity = Math.max(0, overhang) * 5.8;
+    const braceReduction = 1 - this.braceAmount * 0.84;
+    const slideAccel = (slideDrive + climbGravity) * braceReduction;
     this.vx += down.x * slideAccel * dt;
     this.vz += down.z * slideAccel * dt;
-    if (input.bracing) { this.vx *= 1 - dt * 2.6; this.vz *= 1 - dt * 2.6; }
+    if (input.bracing) { this.vx *= 1 - dt * 2.8; this.vz *= 1 - dt * 2.8; }
 
     const prevX = this.globalX, prevZ = this.globalZ;
     this.globalX += this.vx * dt;
@@ -72,36 +88,48 @@ export class MountainWalkerController {
     this.lastSlope = current.slope;
     this.lastSnow = current;
 
+    const sinkTarget = current.sinkDepth * (0.78 + clamp(this.speed / 3.2, 0, 1) * 0.22);
+    this.bodySink = damp(this.bodySink, sinkTarget, current.powder > 0.5 ? 5.5 : 10, dt);
+
     this.stepDistance += traveled;
-    const stride = clamp(0.72 - this.speed * 0.045 + current.sink * 0.22, 0.46, 0.84);
+    const stride = clamp(0.7 - this.speed * 0.04 + current.sink * 0.3 + this.climbing * 0.18, 0.48, 1.02);
     const landings = [];
-    if (this.speed > 0.28 && this.stepDistance >= stride) {
+    if (this.speed > 0.2 && this.stepDistance >= stride) {
       this.stepDistance -= stride;
       this.stepSide *= -1;
-      const side = this.stepSide * 0.115;
-      const fx = this.globalX + rightX * side + forwardX * 0.05;
-      const fz = this.globalZ + rightZ * side + forwardZ * 0.05;
+      const side = this.stepSide * 0.12;
+      const fx = this.globalX + rightX * side + forwardX * 0.045;
+      const fz = this.globalZ + rightZ * side + forwardZ * 0.045;
       const sample = snowSample(fx, fz);
       landings.push({
         globalX: fx, globalZ: fz,
         localX: fx - this.worldOffsetX, localZ: fz - this.worldOffsetZ,
         y: this.sampleHeight(fx, fz), yaw: this.yaw, side: this.stepSide,
-        sink: sample.sink, powder: sample.powder, hardness: sample.hardness,
-        instability: sample.instability, slide: this.sliding
+        sink: sample.sink, sinkDepth: sample.sinkDepth, powder: sample.powder, hardness: sample.hardness,
+        instability: sample.instability, slide: this.sliding, climbing: this.climbing
       });
     }
 
-    this.stepPhase += traveled * (5.8 + current.sink * 1.2);
-    const bobAmp = clamp(this.speed / 3.5, 0, 1) * (0.018 + current.sink * 0.035);
-    this.verticalBob = Math.sin(this.stepPhase * 2) * bobAmp;
-    this.roll = damp(this.roll, Math.sin(this.stepPhase) * clamp(this.speed / 4, 0, 1) * 0.018 + this.sliding * 0.022 * Math.sign(this.vx || 1), 10, dt);
+    this.stepPhase += traveled * (5.4 + current.sink * 1.7 + this.climbing * 1.1);
+    this.climbPulse += dt * (3.8 + this.climbing * 3.6);
+    const posthole = current.sink * clamp(this.speed / 2.8, 0, 1);
+    const bobAmp = clamp(this.speed / 3.5, 0, 1) * (0.025 + posthole * 0.065 + this.climbing * 0.035);
+    const climbLurch = Math.sin(this.climbPulse) * this.climbing * 0.045;
+    this.verticalBob = Math.sin(this.stepPhase * 2) * bobAmp + climbLurch;
+    this.roll = damp(this.roll, Math.sin(this.stepPhase) * clamp(this.speed / 4, 0, 1) * (0.018 + current.sink * 0.02) + this.sliding * 0.035 * Math.sign(this.vx || 1), 10, dt);
 
     this.localPosition.x = this.globalX - this.worldOffsetX;
     this.localPosition.z = this.globalZ - this.worldOffsetZ;
     this.localPosition.y = this.sampleHeight(this.globalX, this.globalZ);
     this.maybeRebase();
 
-    return { snow: current, landings, sliding: this.sliding, braceNeeded: this.sliding > 0.08 || (current.slope > 0.5 && current.traction < 0.55) };
+    return {
+      snow: current,
+      landings,
+      sliding: this.sliding,
+      climbing: this.climbing,
+      braceNeeded: this.sliding > 0.08 || (current.slope > 0.5 && current.traction < 0.55)
+    };
   }
 
   maybeRebase() {
