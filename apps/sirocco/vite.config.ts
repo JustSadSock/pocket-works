@@ -59,7 +59,7 @@ export default defineConfig({
         }]
       },
       injectManifest: {
-        globPatterns: ['**/*.{html,js,css,svg,png,webmanifest}'],
+        globPatterns: ['**/*.{html,js,css,svg,png,glb,webmanifest}'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024
       },
       devOptions: { enabled: true, type: 'module' }
