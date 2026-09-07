@@ -10,10 +10,10 @@ const CACHE_NAME = 'pelagos-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-07';
 const RELEASE_NOTES = [
-  'Единое физическое поле волн синхронизирует поверхность океана, плавучесть и эффекты.',
-  'Реализованы парусная физика, руль, гребля, погода, время суток и portrait touch controls.',
-  'Добавлены adaptive quality, fixed timestep, Safari lifecycle recovery и adaptive audio.',
-  'PELAGOS работает как изолированное офлайн-приложение внутри Pocket Works.'
+  'Добавлено единое физическое поле волн для рендера и восьмиточечной плавучести.',
+  'Реализованы инерция корпуса, руль, парусная полярная диаграмма, гребля и динамический ветер.',
+  'Добавлены портретная chase-камера, адаптивное качество, погода, время суток и процедурный океан.',
+  'Игра интегрирована в Pocket Works Enhanced runtime с офлайн-режимом, persistence и Safari-safe touch input.'
 ];
 
 setCacheNameDetails({
