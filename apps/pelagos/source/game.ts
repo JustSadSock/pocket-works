@@ -125,6 +125,7 @@ export class PelagosGame {
   private onboardingStep = 0;
   private readonly learned = { helm: false, trim: false, row: false, look: false };
   private toastTimer = 0;
+  private onboardingTimer = 0;
   private readonly cleanup: Array<() => void> = [];
 
   private readonly loading = required<HTMLElement>('#loading');
@@ -246,6 +247,7 @@ export class PelagosGame {
 
     this.cleanup.push(bindPointerGesture(this.rowButton, {
       onStart: () => {
+        if (!this.running || this.paused) return;
         this.controls.rowing = 1;
         this.learned.row = true;
         this.rowButton.classList.add('active');
@@ -261,6 +263,7 @@ export class PelagosGame {
     let lookBasePitch = 0;
     this.cleanup.push(bindPointerGesture(this.lookZone, {
       onStart: (event: PointerEvent) => {
+        if (!this.running || this.paused) return;
         this.lookDragging = true;
         lookStartX = event.clientX;
         lookStartY = event.clientY;
@@ -268,6 +271,7 @@ export class PelagosGame {
         lookBasePitch = this.lookPitch;
       },
       onMove: (event: PointerEvent) => {
+        if (!this.running || this.paused || !this.lookDragging) return;
         const dx = (event.clientX - lookStartX) / Math.max(240, window.innerWidth);
         const dy = (event.clientY - lookStartY) / Math.max(420, window.innerHeight);
         this.lookYaw = clamp(lookBaseYaw - dx * 2.45, -1.18, 1.18);
@@ -310,12 +314,14 @@ export class PelagosGame {
       void this.audio.suspend();
     };
     window.addEventListener('pagehide', pageHide);
-    this.resumeGate.addEventListener('pointerdown', () => void this.resumeAfterHidden());
+    const resumeAfterHidden = () => void this.resumeAfterHidden();
+    this.resumeGate.addEventListener('pointerdown', resumeAfterHidden);
     this.cleanup.push(() => window.removeEventListener('resize', onResize));
     this.cleanup.push(() => window.removeEventListener('appviewportchange', onResize as EventListener));
     this.cleanup.push(() => window.removeEventListener('blur', reset));
     this.cleanup.push(() => document.removeEventListener('visibilitychange', visibility));
     this.cleanup.push(() => window.removeEventListener('pagehide', pageHide));
+    this.cleanup.push(() => this.resumeGate.removeEventListener('pointerdown', resumeAfterHidden));
   }
 
   private updateHelmFromPointer(event: PointerEvent): void {
@@ -359,12 +365,23 @@ export class PelagosGame {
     this.syncControlVisuals();
   }
 
+  private resetOnboardingProgress(): void {
+    Object.assign(this.learned, { helm: false, trim: false, row: false, look: false });
+    this.onboardingStep = 0;
+    window.clearTimeout(this.onboardingTimer);
+    this.onboardingTimer = 0;
+    this.hint.classList.add('hidden');
+  }
+
   private async startVoyage(): Promise<void> {
     await this.audio.unlock().catch(() => false);
     this.ship.reset();
     this.controls = { steer: 0, sail: 0.42, rowing: 0 };
     this.committedDistance = 0;
     this.lastProgressSave = this.worldTime;
+    this.lastWeatherLabel = '';
+    this.impactCooldown = 0;
+    if (!this.settings.onboardingDone) this.resetOnboardingProgress();
     this.running = true;
     this.paused = false;
     this.hiddenPause = false;
@@ -375,10 +392,7 @@ export class PelagosGame {
     this.pausePanel.classList.add('hidden');
     this.resumeGate.classList.add('hidden');
     this.showGameUI(true);
-    if (this.settings.hints && !this.settings.onboardingDone) {
-      this.onboardingStep = 0;
-      this.updateOnboarding(true);
-    }
+    if (this.settings.hints && !this.settings.onboardingDone) this.updateOnboarding(true);
     this.showToast('Ветер уже в парусе');
   }
 
@@ -413,6 +427,8 @@ export class PelagosGame {
     this.paused = false;
     this.hiddenPause = false;
     this.resetTransientInput();
+    window.clearTimeout(this.onboardingTimer);
+    this.onboardingTimer = 0;
     void this.audio.suspend();
     this.showGameUI(false);
     this.pausePanel.classList.add('hidden');
@@ -485,7 +501,7 @@ export class PelagosGame {
       if (this.impactCooldown <= 0 && Math.abs(this.ship.state.verticalVelocity) > 1.65 && this.environment.waveScale > 1.1) {
         const strength = clamp((Math.abs(this.ship.state.verticalVelocity) - 1.2) / 2.2, 0, 1);
         this.audio.impact(strength);
-        if (strength > 0.7 && navigator.vibrate) navigator.vibrate(6);
+        if (strength > 0.7 && typeof navigator.vibrate === 'function') navigator.vibrate(6);
         this.impactCooldown = 0.55;
       }
       if (this.worldTime - this.lastProgressSave > 24) {
@@ -547,7 +563,11 @@ export class PelagosGame {
       this.store.set('onboardingDone', true);
       this.hint.textContent = 'Готово. Дальше море объяснит само.';
       this.hint.classList.remove('hidden');
-      window.setTimeout(() => this.hint.classList.add('hidden'), 2100);
+      window.clearTimeout(this.onboardingTimer);
+      this.onboardingTimer = window.setTimeout(() => {
+        this.hint.classList.add('hidden');
+        this.onboardingTimer = 0;
+      }, 2100);
       return;
     }
     if (!force && previous === this.onboardingStep) return;
@@ -565,7 +585,10 @@ export class PelagosGame {
     this.toast.textContent = message;
     this.toast.classList.add('show');
     window.clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => this.toast.classList.remove('show'), 1800);
+    this.toastTimer = window.setTimeout(() => {
+      this.toast.classList.remove('show');
+      this.toastTimer = 0;
+    }, 1800);
   }
 
   private commitProgress(): void {
@@ -600,16 +623,49 @@ export class PelagosGame {
   }
 
   resetAll(): void {
+    this.running = false;
+    this.paused = false;
+    this.hiddenPause = false;
+    this.accumulator = 0;
+    this.worldTime = 0;
+    this.lastFrameTime = performance.now();
+    this.lookYaw = 0;
+    this.lookPitch = 0;
+    this.committedDistance = 0;
+    this.lastProgressSave = 0;
+    this.lastWeatherLabel = '';
+    this.impactCooldown = 0;
+    this.resetOnboardingProgress();
+    this.resetTransientInput();
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = 0;
+    this.toast.classList.remove('show');
     this.store.reset();
     this.settings = this.store.getAll() as SettingsState;
     this.audio.setEnabled(this.settings.sound);
+    this.ship.reset();
+    this.controls = { steer: 0, sail: 0.42, rowing: 0 };
+    this.environment = interpolateEnvironment(PRESETS[1], PRESETS[1], 0, 0);
+    this.world?.setQuality(this.settings.quality);
+    this.syncControlVisuals();
     this.syncSettingsUI();
     this.refreshDistanceUI();
-    this.ship.reset();
+    this.showGameUI(false);
+    this.loading.classList.add('hidden');
+    this.settingsPanel.classList.add('hidden');
+    this.pausePanel.classList.add('hidden');
+    this.resumeGate.classList.add('hidden');
+    this.errorScreen.classList.add('hidden');
+    this.menu.classList.remove('hidden');
+    void this.audio.suspend();
   }
 
   async destroy(): Promise<void> {
     this.commitProgress();
+    window.clearTimeout(this.toastTimer);
+    window.clearTimeout(this.onboardingTimer);
+    this.toastTimer = 0;
+    this.onboardingTimer = 0;
     for (const dispose of this.cleanup.splice(0)) dispose();
     await this.audio.destroy();
     this.world?.dispose();
