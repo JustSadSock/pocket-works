@@ -1,4 +1,5 @@
 import { clamp } from './core.js';
+import { bindPointerGesture } from '../../../shared/mobile-runtime.js';
 
 export class MobileInput {
   constructor(root) {
@@ -15,42 +16,46 @@ export class MobileInput {
     this.lookLast = { x: 0, y: 0 };
     this.keys = new Set();
     this.sensitivity = Number(localStorage.getItem('pocket-works:sirocco:sensitivity') || 1);
+    this.cleanup = [];
     this.bind();
   }
 
   bind() {
-    const options = { passive: false };
-    this.leftZone.addEventListener('pointerdown', (e) => this.startMove(e), options);
-    this.leftZone.addEventListener('pointermove', (e) => this.updateMove(e), options);
-    this.leftZone.addEventListener('pointerup', (e) => this.endMove(e), options);
-    this.leftZone.addEventListener('pointercancel', (e) => this.endMove(e), options);
-    this.rightZone.addEventListener('pointerdown', (e) => this.startLook(e), options);
-    this.rightZone.addEventListener('pointermove', (e) => this.updateLook(e), options);
-    this.rightZone.addEventListener('pointerup', (e) => this.endLook(e), options);
-    this.rightZone.addEventListener('pointercancel', (e) => this.endLook(e), options);
-    window.addEventListener('keydown', (e) => this.keys.add(e.code));
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    document.addEventListener('gesturestart', (e) => e.preventDefault(), options);
-    this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.cleanup.push(bindPointerGesture(this.leftZone, {
+      onStart: (event) => this.startMove(event),
+      onMove: (event) => this.updateMove(event),
+      onEnd: (event) => this.endMove(event),
+      onCancel: (event) => this.endMove(event)
+    }));
+    this.cleanup.push(bindPointerGesture(this.rightZone, {
+      onStart: (event) => this.startLook(event),
+      onMove: (event) => this.updateLook(event),
+      onEnd: (event) => this.endLook(event),
+      onCancel: (event) => this.endLook(event)
+    }));
+
+    this.onKeyDown = (event) => this.keys.add(event.code);
+    this.onKeyUp = (event) => this.keys.delete(event.code);
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keyup', this.onKeyUp);
   }
 
-  startMove(e) {
+  startMove(event) {
     if (this.movePointer !== null) return;
-    e.preventDefault();
-    this.movePointer = e.pointerId;
-    this.moveOrigin.x = e.clientX;
-    this.moveOrigin.y = e.clientY;
-    this.leftZone.setPointerCapture?.(e.pointerId);
+    event.preventDefault();
+    this.movePointer = event.pointerId;
+    this.moveOrigin.x = event.clientX;
+    this.moveOrigin.y = event.clientY;
     this.base.classList.add('active');
-    this.base.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-    this.updateMove(e);
+    this.base.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
+    this.updateMove(event);
   }
 
-  updateMove(e) {
-    if (e.pointerId !== this.movePointer) return;
-    e.preventDefault();
-    const dx = e.clientX - this.moveOrigin.x;
-    const dy = e.clientY - this.moveOrigin.y;
+  updateMove(event) {
+    if (event.pointerId !== this.movePointer) return;
+    event.preventDefault();
+    const dx = event.clientX - this.moveOrigin.x;
+    const dy = event.clientY - this.moveOrigin.y;
     const radius = 54;
     const len = Math.hypot(dx, dy);
     const scale = len > radius ? radius / len : 1;
@@ -67,38 +72,38 @@ export class MobileInput {
     this.knob.style.transform = `translate3d(${px}px, ${py}px, 0)`;
   }
 
-  endMove(e) {
-    if (e.pointerId !== this.movePointer) return;
-    e.preventDefault();
+  endMove(event) {
+    if (event.pointerId !== this.movePointer) return;
+    event.preventDefault();
     this.movePointer = null;
-    this.move.x = 0; this.move.y = 0;
+    this.move.x = 0;
+    this.move.y = 0;
     this.knob.style.transform = 'translate3d(0,0,0)';
     this.base.classList.remove('active');
   }
 
-  startLook(e) {
+  startLook(event) {
     if (this.lookPointer !== null) return;
-    e.preventDefault();
-    this.lookPointer = e.pointerId;
-    this.lookLast.x = e.clientX;
-    this.lookLast.y = e.clientY;
-    this.rightZone.setPointerCapture?.(e.pointerId);
+    event.preventDefault();
+    this.lookPointer = event.pointerId;
+    this.lookLast.x = event.clientX;
+    this.lookLast.y = event.clientY;
   }
 
-  updateLook(e) {
-    if (e.pointerId !== this.lookPointer) return;
-    e.preventDefault();
-    const dx = e.clientX - this.lookLast.x;
-    const dy = e.clientY - this.lookLast.y;
-    this.lookLast.x = e.clientX;
-    this.lookLast.y = e.clientY;
+  updateLook(event) {
+    if (event.pointerId !== this.lookPointer) return;
+    event.preventDefault();
+    const dx = event.clientX - this.lookLast.x;
+    const dy = event.clientY - this.lookLast.y;
+    this.lookLast.x = event.clientX;
+    this.lookLast.y = event.clientY;
     this.lookAccum.x += dx;
     this.lookAccum.y += dy;
   }
 
-  endLook(e) {
-    if (e.pointerId !== this.lookPointer) return;
-    e.preventDefault();
+  endLook(event) {
+    if (event.pointerId !== this.lookPointer) return;
+    event.preventDefault();
     this.lookPointer = null;
   }
 
@@ -119,12 +124,21 @@ export class MobileInput {
       x: this.lookAccum.x * 0.0032 * this.sensitivity,
       y: this.lookAccum.y * 0.003 * this.sensitivity
     };
-    this.lookAccum.x = 0; this.lookAccum.y = 0;
+    this.lookAccum.x = 0;
+    this.lookAccum.y = 0;
     return result;
   }
 
   setSensitivity(value) {
     this.sensitivity = clamp(Number(value) || 1, 0.45, 1.8);
     localStorage.setItem('pocket-works:sirocco:sensitivity', String(this.sensitivity));
+  }
+
+  dispose() {
+    for (const cleanup of this.cleanup) cleanup?.();
+    this.cleanup.length = 0;
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('keyup', this.onKeyUp);
+    this.keys.clear();
   }
 }

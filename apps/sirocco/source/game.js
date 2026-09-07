@@ -70,6 +70,7 @@ export class SiroccoGame {
     this.applyQuality(this.quality.preset);
     this.world.setOrigin(0, 0);
     this.world.update(0, 0);
+    this.lighting.registerWorld(this.world);
     await nextFrame();
 
     report('Прогреваем дюны и тени…', 0.88);
@@ -116,7 +117,8 @@ export class SiroccoGame {
       const move = this.input.getMove();
       this.controller.applyLook(this.input.consumeLook());
       const groundState = this.controller.update(dt, move);
-      this.world.update(this.controller.globalX, this.controller.globalZ);
+      const chunksChanged = this.world.update(this.controller.globalX, this.controller.globalZ);
+      if (chunksChanged) this.lighting.registerWorld(this.world);
       const landings = this.rig.update(this.controller, dt);
       for (const landing of landings) {
         this.footprints.add(landing, this.controller);
@@ -139,6 +141,7 @@ export class SiroccoGame {
 
   dispose() {
     this.running = false;
+    this.input?.dispose();
     this.debug?.dispose();
     this.particles?.dispose();
     this.footprints?.dispose();
