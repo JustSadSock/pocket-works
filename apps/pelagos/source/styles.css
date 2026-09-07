@@ -79,6 +79,8 @@ button { color: inherit; border: 0; }
 .hint { position: absolute; z-index: 14; left: 50%; top: max(84px, calc(env(safe-area-inset-top) + 66px)); transform: translateX(-50%); max-width: min(82vw, 340px); padding: 10px 14px; border-radius: 16px; background: rgba(5,17,18,.62); border: 1px solid rgba(224,247,244,.15); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: center; font-size: 13px; line-height: 1.35; box-shadow: 0 8px 30px rgba(0,0,0,.15); }
 .toast { position: absolute; z-index: 30; left: 50%; top: calc(max(12px, env(safe-area-inset-top)) + 58px); transform: translate(-50%,-8px); opacity: 0; transition: opacity .18s ease, transform .18s ease; border-radius: 18px; background: rgba(4,16,17,.7); border: 1px solid rgba(255,255,255,.12); padding: 8px 12px; pointer-events: none; font-size: 11px; }
 .toast.show { opacity: 1; transform: translate(-50%,0); }
+.hint:not(.hidden) + .toast { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 172px); transform: translate(-50%,8px); }
+.hint:not(.hidden) + .toast.show { transform: translate(-50%,0); }
 
 .screen { position: absolute; inset: 0; z-index: 40; padding: max(22px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left)); background: linear-gradient(180deg, rgba(3,16,18,.16), rgba(3,14,15,.8) 58%, #071719 100%); }
 .loading { display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
