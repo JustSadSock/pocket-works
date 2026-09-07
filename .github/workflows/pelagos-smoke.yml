@@ -23,19 +23,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install root toolchain
+        run: npm install --no-audit --no-fund --workspaces=false
+
+      - name: Install PELAGOS runtime dependency
+        run: npm install --no-audit --no-fund --workspaces=false --prefix apps/pelagos
 
       - name: Typecheck PELAGOS
-        run: npm run typecheck --workspace @pocket-works/pelagos
+        run: npx tsc -p apps/pelagos/tsconfig.json --noEmit
 
       - name: Test PELAGOS
-        run: npm run test --workspace @pocket-works/pelagos
+        run: npx vitest run --config apps/pelagos/vite.config.ts
 
       - name: Build PELAGOS
-        run: npm run build --workspace @pocket-works/pelagos
+        run: npx vite build --config apps/pelagos/vite.config.ts
 
       - name: Validate Pocket Works integration
         run: npm run validate:configs && npm run validate:mobile && npm run validate:capabilities && npm run validate:enhanced
