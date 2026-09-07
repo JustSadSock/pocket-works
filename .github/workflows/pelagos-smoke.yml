@@ -1,0 +1,41 @@
+name: Pelagos smoke
+
+on:
+  push:
+    branches:
+      - app/pelagos
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pelagos-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck PELAGOS
+        run: npm run typecheck --workspace @pocket-works/pelagos
+
+      - name: Test PELAGOS
+        run: npm run test --workspace @pocket-works/pelagos
+
+      - name: Build PELAGOS
+        run: npm run build --workspace @pocket-works/pelagos
+
+      - name: Validate Pocket Works integration
+        run: npm run validate:configs && npm run validate:mobile && npm run validate:capabilities && npm run validate:enhanced
