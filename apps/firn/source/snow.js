@@ -1,5 +1,6 @@
 import { clamp, fbm2, smoothstep, valueNoise2 } from './core.js';
 import { MOUNTAIN_SEED, mountainHeight, terrainNormal, windExposure } from './terrain.js';
+import { interpolateGroundCell } from './mesh.js';
 
 export function snowSample(x, z, normal = null) {
   const n = normal || terrainNormal(x, z, 0.72);
@@ -49,6 +50,37 @@ export function snowSurfaceOffset(x, z, sample) {
 export function snowSurfaceHeight(x, z, sample = null) {
   const s = sample || snowSample(x, z);
   return mountainHeight(x, z) + snowSurfaceOffset(x, z, s);
+}
+
+function meshSnowVertexHeight(x, z, step) {
+  const h = mountainHeight(x, z);
+  let nx = -(mountainHeight(x + step, z) - mountainHeight(x - step, z)) / (step * 2);
+  let ny = 1;
+  let nz = -(mountainHeight(x, z + step) - mountainHeight(x, z - step)) / (step * 2);
+  const inv = 1 / Math.hypot(nx, ny, nz);
+  nx *= inv; ny *= inv; nz *= inv;
+  const sample = snowSample(x, z, { x: nx, y: ny, z: nz });
+  return h + snowSurfaceOffset(x, z, sample);
+}
+
+export function meshSnowSurfaceHeight(x, z, segments, chunkSize = 56) {
+  const seg = Math.max(2, segments | 0);
+  const step = chunkSize / seg;
+  const cx = Math.floor(x / chunkSize);
+  const cz = Math.floor(z / chunkSize);
+  const localX = x - cx * chunkSize;
+  const localZ = z - cz * chunkSize;
+  const ix = Math.min(seg - 1, Math.max(0, Math.floor(localX / step)));
+  const iz = Math.min(seg - 1, Math.max(0, Math.floor(localZ / step)));
+  const x0 = cx * chunkSize + ix * step;
+  const z0 = cz * chunkSize + iz * step;
+  const tx = clamp((x - x0) / step, 0, 1);
+  const tz = clamp((z - z0) / step, 0, 1);
+  const ha = meshSnowVertexHeight(x0, z0, step);
+  const hb = meshSnowVertexHeight(x0 + step, z0, step);
+  const hd = meshSnowVertexHeight(x0, z0 + step, step);
+  const he = meshSnowVertexHeight(x0 + step, z0 + step, step);
+  return interpolateGroundCell(ha, hb, hd, he, tx, tz);
 }
 
 export function snowSurfaceNormal(x, z, step = 0.48) {

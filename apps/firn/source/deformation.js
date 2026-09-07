@@ -2,6 +2,7 @@ import { Mesh, MeshBuilder, VertexData } from '@babylonjs/core';
 import { clamp, lerp } from './core.js';
 import { snowSample, snowSurfaceHeight, snowTint } from './snow.js';
 import { terrainNormal } from './terrain.js';
+import { appendBabylonGroundCell } from './mesh.js';
 
 function bilerp(a, b, c, d, tx, tz) {
   return lerp(lerp(a, b, tx), lerp(c, d, tx), tz);
@@ -179,7 +180,7 @@ export class SnowDeformationPatch {
     const row = seg + 1;
     for (let z = 0; z < seg; z += 1) for (let x = 0; x < seg; x += 1) {
       const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-      indices.push(a, d, b, b, d, e);
+      appendBabylonGroundCell(indices, a, b, d, e);
     }
     const vd = new VertexData();
     vd.positions = positions; vd.normals = normals; vd.uvs = uvs; vd.colors = colors; vd.indices = indices;

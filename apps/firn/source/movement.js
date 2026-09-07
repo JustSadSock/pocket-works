@@ -5,13 +5,14 @@ import { movementResponse, snowSample, snowSurfaceHeight } from './snow.js';
 const REBASE_DISTANCE = 420;
 
 export class MountainWalkerController {
-  constructor(onRebase = () => {}) {
+  constructor(onRebase = () => {}, sampleHeight = snowSurfaceHeight) {
     this.onRebase = onRebase;
+    this.sampleHeight = sampleHeight;
     this.globalX = 8;
     this.globalZ = -12;
     this.worldOffsetX = 0;
     this.worldOffsetZ = 0;
-    this.localPosition = { x: 8, y: snowSurfaceHeight(8, -12), z: -12 };
+    this.localPosition = { x: 8, y: this.sampleHeight(8, -12), z: -12 };
     this.yaw = 0.45;
     this.pitch = -0.08;
     this.vx = 0;
@@ -84,7 +85,7 @@ export class MountainWalkerController {
       landings.push({
         globalX: fx, globalZ: fz,
         localX: fx - this.worldOffsetX, localZ: fz - this.worldOffsetZ,
-        y: snowSurfaceHeight(fx, fz), yaw: this.yaw, side: this.stepSide,
+        y: this.sampleHeight(fx, fz), yaw: this.yaw, side: this.stepSide,
         sink: sample.sink, powder: sample.powder, hardness: sample.hardness,
         instability: sample.instability, slide: this.sliding
       });
@@ -97,7 +98,7 @@ export class MountainWalkerController {
 
     this.localPosition.x = this.globalX - this.worldOffsetX;
     this.localPosition.z = this.globalZ - this.worldOffsetZ;
-    this.localPosition.y = snowSurfaceHeight(this.globalX, this.globalZ);
+    this.localPosition.y = this.sampleHeight(this.globalX, this.globalZ);
     this.maybeRebase();
 
     return { snow: current, landings, sliding: this.sliding, braceNeeded: this.sliding > 0.08 || (current.slope > 0.5 && current.traction < 0.55) };
@@ -124,6 +125,6 @@ export class MountainWalkerController {
     this.worldOffsetZ = Number.isFinite(snapshot.worldOffsetZ) ? snapshot.worldOffsetZ : 0;
     this.localPosition.x = this.globalX - this.worldOffsetX;
     this.localPosition.z = this.globalZ - this.worldOffsetZ;
-    this.localPosition.y = snowSurfaceHeight(this.globalX, this.globalZ);
+    this.localPosition.y = this.sampleHeight(this.globalX, this.globalZ);
   }
 }

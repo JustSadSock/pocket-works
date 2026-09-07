@@ -1,7 +1,8 @@
 import { Mesh, MeshBuilder, VertexData } from '@babylonjs/core';
 import { clamp, hash2 } from './core.js';
 import { mountainHeight } from './terrain.js';
-import { snowSample, snowSurfaceHeight, snowSurfaceOffset, snowTint } from './snow.js';
+import { meshSnowSurfaceHeight, snowSample, snowSurfaceHeight, snowSurfaceOffset, snowTint } from './snow.js';
+import { appendBabylonGroundCell } from './mesh.js';
 
 export const CHUNK_SIZE = 56;
 
@@ -27,7 +28,7 @@ function buildSurfaceData(startX, startZ, size, segments, centered = false) {
   const normals = new Array(verts * 3);
   const uvs = new Array(verts * 2);
   const colors = new Array(verts * 4);
-  const indices = new Array(segments * segments * 6);
+  const indices = [];
   let p = 0, uv = 0, c = 0;
 
   for (let iz = 0; iz <= segments; iz += 1) {
@@ -56,13 +57,11 @@ function buildSurfaceData(startX, startZ, size, segments, centered = false) {
     }
   }
 
-  let q = 0;
   const row = segments + 1;
   for (let z = 0; z < segments; z += 1) {
     for (let x = 0; x < segments; x += 1) {
       const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-      indices[q++] = a; indices[q++] = d; indices[q++] = b;
-      indices[q++] = b; indices[q++] = d; indices[q++] = e;
+      appendBabylonGroundCell(indices, a, b, d, e);
     }
   }
   return { positions, normals, uvs, colors, indices };
@@ -238,7 +237,7 @@ export class SnowWorld {
         const midZ = (((z + 0.5) / segments) - 0.5) * size;
         if (Math.abs(midX) < nearHoleHalfExtent && Math.abs(midZ) < nearHoleHalfExtent) continue;
         const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-        filtered.push(a, d, b, b, d, e);
+        appendBabylonGroundCell(filtered, a, b, d, e);
       }
     }
     data.indices = filtered;
@@ -246,7 +245,7 @@ export class SnowWorld {
     this.positionFar();
   }
 
-  sampleHeight(globalX, globalZ) { return snowSurfaceHeight(globalX, globalZ); }
+  sampleHeight(globalX, globalZ) { return meshSnowSurfaceHeight(globalX, globalZ, this.quality.segments, CHUNK_SIZE); }
   sampleSnow(globalX, globalZ) { return snowSample(globalX, globalZ); }
 
   dispose() {

@@ -46,7 +46,7 @@ export class FirnGame {
     this.quality = new AdaptiveQuality((preset) => this.applyQuality(preset));
     this.materials = createSnowMaterials(this.scene);
     this.world = new SnowWorld(this.scene, this.materials, this.quality.preset);
-    this.controller = new MountainWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz));
+    this.controller = new MountainWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz), (x, z) => this.world.sampleHeight(x, z));
     this.restoreSession();
     await nextFrame();
 
