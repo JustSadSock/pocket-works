@@ -26,4 +26,4 @@ createWorkshopMode({
   onReset: () => location.reload()
 });
 
-void import('./game');
+void import('./game2');
