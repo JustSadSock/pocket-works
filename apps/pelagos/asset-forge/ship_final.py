@@ -88,6 +88,51 @@ def add_transom_closure(mat, rail_mat, brass_mat):
     text.data.materials.append(brass_mat)
 
 
+def add_sheer_closure(hull_mat):
+    """Close the narrow slot between the hull sheer and the inset cambered deck.
+
+    The hull and deck intentionally overlap only a little. From a quartering side camera that left
+    a visible dark slit directly under the deck edge. This authored shelf gives the Blender model
+    an actual closed upper shell instead of masking the problem with a runtime card.
+    """
+    for side in (-1, 1):
+        vertices = []
+        faces = []
+        rows = 4
+        stations = base.STATIONS[:-1]
+        for y, beam, sheer, keel in stations:
+            top_point = base.section_points(beam, sheer, keel)[-1 if side > 0 else 0]
+            hull_x = top_point[0]
+            deck_x = side * beam * 0.955
+            inner_x = side * beam * 0.900
+            vertices.extend([
+                (hull_x, y, sheer - 0.055),
+                (hull_x, y, sheer + 0.050),
+                (deck_x, y, sheer + 0.082),
+                (inner_x, y, sheer - 0.105),
+            ])
+
+        for s in range(len(stations) - 1):
+            a = s * rows
+            b = (s + 1) * rows
+            # Outer overlap, top shelf and inner return. Together they make a watertight-looking
+            # sheer box that remains closed from both side and elevated chase-camera angles.
+            faces.extend([
+                (a + 0, b + 0, b + 1, a + 1),
+                (a + 1, b + 1, b + 2, a + 2),
+                (a + 2, b + 2, b + 3, a + 3),
+                (a + 3, b + 3, b + 0, a + 0),
+            ])
+
+        mesh = bpy.data.meshes.new(f'PelagosSheerClosureMesh_{side}')
+        mesh.from_pydata(vertices, [], faces)
+        mesh.update()
+        closure = bpy.data.objects.new(f'PW_SheerClosure_{side}', mesh)
+        bpy.context.collection.objects.link(closure)
+        base.finish(closure, hull_mat, smooth=False)
+        base.bevel(closure, 0.010, 1)
+
+
 def hull_level_point(side, station, v):
     y, beam, sheer, keel = station
     x = beam * (math.sin(v * math.pi * 0.5) ** 0.88)
@@ -161,7 +206,6 @@ def add_rope_coil(name, location, rope_mat, radius=0.24):
 
 
 def add_deck_life(deck_mat, rail_mat, dark_mat, iron_mat, brass_mat, rope_mat):
-    # Cockpit benches make the stern feel inhabitable rather than like an empty geometric tray.
     for side in (-1, 1):
         base.box(
             f'PW_CockpitBench_{side}',
@@ -175,21 +219,18 @@ def add_deck_life(deck_mat, rail_mat, dark_mat, iron_mat, brass_mat, rope_mat):
             (side * 1.13, -2.42, 1.17),
             (0.20, 0.80, 0.018),
             rail_mat,
-            0.012,
+            0.035,
         )
 
-    # Grating below the helm: narrow slats and a dark frame catch moving sunlight and scale the deck.
     base.box('PW_CockpitGratingFrame', (0.0, -2.46, 0.79), (0.61, 0.58, 0.026), dark_mat, 0.015)
     for index in range(7):
         x = -0.48 + index * 0.16
         base.box(f'PW_CockpitGratingSlat_{index}', (x, -2.46, 0.825), (0.035, 0.53, 0.012), deck_mat, 0.006)
 
-    # A compact binnacle lives forward of the wheel, deliberately offset so the runtime helm remains clear.
     base.box('PW_BinnacleFoot', (-0.42, -1.42, 1.17), (0.20, 0.19, 0.055), rail_mat, 0.028)
     base.cylinder('PW_BinnacleBody', (-0.42, -1.42, 1.35), 0.145, 0.28, dark_mat, 20)
     base.cylinder('PW_BinnacleBrassRing', (-0.42, -1.42, 1.50), 0.155, 0.026, brass_mat, 24)
 
-    # Mooring hardware and deck eyes create small high-frequency highlights without cluttering controls.
     hardware = [(-1.30, -3.32), (1.30, -3.32), (-1.18, 3.02), (1.18, 3.02)]
     for index, (x, y) in enumerate(hardware):
         _, _, sheer, _ = base.station_interp(y)
@@ -211,11 +252,9 @@ def add_deck_life(deck_mat, rail_mat, dark_mat, iron_mat, brass_mat, rope_mat):
         eye.name = f'PW_DeckEye_{index}'
         base.finish(eye, brass_mat)
 
-    # Rope coils visually connect the physical sail system to believable deck work.
     add_rope_coil('PW_RopeCoilPort', (-0.92, -0.72, 1.13), rope_mat, 0.22)
     add_rope_coil('PW_RopeCoilStarboard', (0.94, 1.58, 1.17), rope_mat, 0.20)
 
-    # A small forward tool chest gives the bow a second readable mass behind the hatch.
     base.box('PW_ForwardToolChest', (0.62, 1.38, 1.15), (0.34, 0.23, 0.14), rail_mat, 0.045)
     base.box('PW_ForwardToolChestLid', (0.62, 1.38, 1.31), (0.37, 0.26, 0.025), deck_mat, 0.02)
     base.box('PW_ForwardToolChestLatch', (0.62, 1.12, 1.24), (0.055, 0.018, 0.065), brass_mat, 0.01)
@@ -239,6 +278,7 @@ def main():
 
     base.build_hull(hull_mat)
     base.build_deck(deck_mat)
+    add_sheer_closure(hull_mat)
     base.add_structural_details(deck_mat, rail_mat, dark_mat, iron_mat)
     add_transom_closure(hull_mat, rail_mat, brass_mat)
     add_hull_surface_detail(dark_mat, ivory_mat, sea_green_mat, brass_mat)
