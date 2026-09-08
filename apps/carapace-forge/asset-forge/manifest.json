@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "description": "Blender-authored comparison crab with armature and four named actions.",
   "jobs": [
     {
       "name": "forge-crab",
