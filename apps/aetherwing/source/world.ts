@@ -54,7 +54,7 @@ export class WorldStreamer{
   private terrainMaterial:StandardMaterial; private fallbackFir:Mesh; private fallbackBroad:Mesh; private fallbackRock:Mesh; private quality=1; private lastCenter=''; private nextChunkBuild=0;
   constructor(scene:Scene){
     this.scene=scene;
-    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=new Color3(.78,.83,.63);this.terrainMaterial.specularColor=new Color3(.035,.045,.025);this.terrainMaterial.specularPower=20;
+    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=new Color3(.78,.83,.63);this.terrainMaterial.specularColor=new Color3(.035,.045,.025);this.terrainMaterial.specularPower=20;this.terrainMaterial.backFaceCulling=false;this.terrainMaterial.emissiveColor=new Color3(.018,.024,.014);
     this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.86;
     this.fallbackFir=this.makeFir('fallbackFir',new Color3(.12,.29,.17));this.fallbackBroad=this.makeBroad('fallbackBroad',new Color3(.22,.41,.20));this.fallbackRock=this.makeRock('fallbackRock');
     this.fallbackFir.position.y=this.fallbackBroad.position.y=this.fallbackRock.position.y=-2000;
@@ -78,7 +78,7 @@ export class WorldStreamer{
     const root=new TransformNode(`chunk_${cx}_${cz}`,this.scene);const grid=near?(this.quality>.8?27:23):15;const positions:number[]=[],indices:number[]=[],normals:number[]=[],colors:number[]=[];const baseX=cx*CHUNK,baseZ=cz*CHUNK;
     for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){const wx=baseX+(x/(grid-1)-.5)*CHUNK,wz=baseZ+(z/(grid-1)-.5)*CHUNK,h=terrainHeight(wx,wz);positions.push(wx,h,wz);const c=biomeColor(wx,wz,h);colors.push(c.r,c.g,c.b,1);}
     for(let z=0;z<grid-1;z++)for(let x=0;x<grid-1;x++){const a=z*grid+x,b=a+1,c=a+grid,d=c+1;indices.push(a,c,b,b,c,d);}
-    VertexData.ComputeNormals(positions,indices,normals);const mesh=new Mesh(`terrain_${key}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh);mesh.material=this.terrainMaterial;mesh.useVertexColors=true;mesh.receiveShadows=true;mesh.parent=root;mesh.freezeWorldMatrix();
+    VertexData.ComputeNormals(positions,indices,normals);const mesh=new Mesh(`terrain_${key}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh);mesh.material=this.terrainMaterial;mesh.useVertexColors=true;mesh.receiveShadows=true;mesh.isPickable=false;mesh.parent=root;mesh.freezeWorldMatrix();
     const riverOwnerCz=Math.floor((riverCenter(baseX)+HALF_CHUNK)/CHUNK);if(cz===riverOwnerCz){const river=this.createRiver(cx);river.parent=root;}
     this.createLakes(cx,cz,root);
     const instances:InstancedMesh[]=[];if(near)this.scatter(cx,cz,instances);
