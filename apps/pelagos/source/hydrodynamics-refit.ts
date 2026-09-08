@@ -25,9 +25,8 @@ const DEG = Math.PI / 180;
 
 function hullResponse(wavelength: number, hullLength: number): number {
   const ratio = wavelength / Math.max(1, hullLength);
-  // A displacement hull follows long swell, but short chop mostly runs around the hull instead of
-  // throwing the whole vessel vertically. Keep the response deliberately conservative below one
-  // hull length so the boat reads as several tonnes of timber rather than a buoyant toy.
+  // Short chop runs around a displacement hull; only swell on the order of the hull length can
+  // move the complete centre of mass appreciably. This keeps the vessel from reading like a buoy.
   return clamp(Math.pow(Math.max(0, ratio), 1.34) * 1.06, 0.035, 1);
 }
 
@@ -87,9 +86,29 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   wind: WindState,
   waveScale: number
 ): ShipTelemetry {
+  // Preserve the six-DOF components owned by this pass. The legacy core is still useful for sail
+  // drive, rowing, lateral resistance, rudder and yaw, but its original 9 m point-buoyancy solver
+  // must not run in series with the long-hull solver below. Restoring these values makes this pass
+  // the single authority for heave, pitch and roll instead of correcting another solver afterward.
+  const beforeMotion = {
+    y: this.state.y,
+    verticalVelocity: this.state.verticalVelocity,
+    pitch: this.state.pitch,
+    pitchVelocity: this.state.pitchVelocity,
+    roll: this.state.roll,
+    rollVelocity: this.state.rollVelocity
+  };
+
   const telemetry = previousUpdate.call(this, dt, time, controls, wind, waveScale);
   const safeDt = clamp(dt, 1 / 240, 1 / 30);
   const state = this.state;
+  state.y = beforeMotion.y;
+  state.verticalVelocity = beforeMotion.verticalVelocity;
+  state.pitch = beforeMotion.pitch;
+  state.pitchVelocity = beforeMotion.pitchVelocity;
+  state.roll = beforeMotion.roll;
+  state.rollVelocity = beforeMotion.rollVelocity;
+
   const loadout = getActiveShipLoadout();
   const { length, beam, draft, waterlineCenterY, displacementKg } = loadout.dimensions;
   const massFactor = clamp(Math.sqrt(displacementKg / 5200), 0.78, 1.42);
@@ -129,10 +148,6 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   const bowPlaneVelocity = bow.velocityY * 0.34 + bowInner.velocityY * 0.66;
   const sternPlaneVelocity = stern.velocityY * 0.22 + sternInner.velocityY * 0.78;
 
-  // Do not slave the hull centre directly to the instantaneous wave height. A heavy hull has
-  // memory: a crest can run past the bow and quarter while the centre of mass keeps moving on a
-  // much slower path. This low-pass surface is the biggest difference between "floating" and
-  // "being thrown around by the shader".
   const surfaceRate = 0.72 / massFactor;
   const filteredSurfaceHeight = previousFrame
     ? smoothTo(previousFrame.filteredSurfaceHeight, meanHeight, surfaceRate, safeDt)
@@ -141,16 +156,13 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
     ? clamp((filteredSurfaceHeight - previousFrame.filteredSurfaceHeight) / safeDt, -0.52, 0.52)
     : clamp(meanVelocity * 0.08, -0.18, 0.18);
 
-  // A 13 m displacement hull bridges a local trough under the quarter; it does not articulate down
-  // into that trough like a raft. Blend the local stern sample strongly toward the hull-wide support
-  // plane and filter it in time before using it as a hard immersion reference.
+  // The stern cannot articulate down into a single trough like a raft. The filtered support plane
+  // represents the span of hull still supported by water ahead of the transom.
   const sternSupportRaw = sternPlaneHeight * 0.28 + filteredSurfaceHeight * 0.72;
   const filteredSternHeight = previousFrame
     ? smoothTo(previousFrame.filteredSternHeight, sternSupportRaw, 1.10 / massFactor, safeDt)
     : sternSupportRaw;
 
-  // Sit the vessel a little deeper than the old visual waterline and add a small speed-dependent
-  // squat. This keeps the transom and steering gear planted without making the deck look flooded.
   const immersionBias = clamp(restingImmersionBias(draft) + telemetry.speed * 0.0065, 0.10, 0.18);
   const targetY = filteredSurfaceHeight + waterlineCenterY - immersionBias;
 
@@ -169,63 +181,65 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   const retainedHeel = clamp(state.roll - waveRoll, -6.5 * DEG, 6.5 * DEG) * 0.48;
   const targetRoll = waveRoll + retainedHeel;
 
-  // Heave is intentionally asymmetric. A heavy cutter may be lifted by broad swell, but it must
-  // settle into a falling trough faster than it can "launch" upward. That removes the airborne
-  // stern flashes which were still visible after the pitch-sign fix.
+  // Heave is a damped mass-spring response, not direct interpolation of position. Broad swell can
+  // push the hull upward, but upward acceleration is deliberately weaker than gravity/settling and
+  // gets weaker again as displacement rises. This is the physical cue that makes several tonnes of
+  // vessel feel planted rather than visually glued to the wave shader.
   const heaveError = targetY - state.y;
   const airGapBefore = state.y - targetY;
-  const allowedAirGap = 0.19 + clamp(waveScale - 1, 0, 1.5) * 0.035;
-  const breachGuard = clamp((airGapBefore - 0.07) / Math.max(0.06, allowedAirGap - 0.07), 0, 1);
-  const heaveRate = breachGuard > 0
-    ? 1.55 + breachGuard * 4.4
-    : heaveError > 0
-      ? 0.38 / massFactor
-      : 0.82 / massFactor;
+  const allowedAirGap = 0.18 + clamp(waveScale - 1, 0, 1.5) * 0.032;
+  const breachGuard = clamp((airGapBefore - 0.055) / Math.max(0.06, allowedAirGap - 0.055), 0, 1);
+  const deepGuard = clamp((targetY - state.y - 0.16) / 0.22, 0, 1);
+  const supportVelocity = filteredWaterVelocity * 0.10;
+  const relativeHeaveVelocity = state.verticalVelocity - supportVelocity;
 
-  const beforeY = state.y;
-  state.y = smoothTo(state.y, targetY, heaveRate, safeDt);
-  if (state.y > targetY + allowedAirGap) state.y = targetY + allowedAirGap;
-  const geometricVerticalVelocity = (state.y - beforeY) / safeDt;
-  const verticalVelocityTarget = geometricVerticalVelocity + filteredWaterVelocity * 0.08;
-  state.verticalVelocity = smoothTo(state.verticalVelocity, verticalVelocityTarget, 1.45 / massFactor, safeDt);
-  state.verticalVelocity = clamp(state.verticalVelocity, -0.62 / massFactor, 0.38 / massFactor);
+  let heaveAcceleration = heaveError * (1.48 / massFactor)
+    - relativeHeaveVelocity * (1.95 + massFactor * 0.34);
+  if (heaveAcceleration > 0) heaveAcceleration *= 0.60 / massFactor;
+  heaveAcceleration += deepGuard * (0.52 / massFactor);
+  heaveAcceleration -= breachGuard * (0.82 + Math.max(0, state.verticalVelocity) * 2.7);
+  heaveAcceleration = clamp(heaveAcceleration, -1.15, 0.58 / massFactor);
 
-  // Compare the actual stern waterline with the hull-supported stern plane. This catches genuine
-  // whole-hull emergence without making the vessel chase every instantaneous trough under the rudder.
+  state.verticalVelocity += heaveAcceleration * safeDt;
+  state.verticalVelocity = clamp(state.verticalVelocity, -0.50 / massFactor, 0.28 / massFactor);
+  state.y += state.verticalVelocity * safeDt;
+  if (state.y > targetY + allowedAirGap) {
+    state.y = targetY + allowedAirGap;
+    state.verticalVelocity = Math.min(0, state.verticalVelocity);
+  }
+
   let sternReferenceY = state.y - waterlineCenterY + length * 0.40 * Math.sin(state.pitch);
   let sternGap = sternReferenceY - filteredSternHeight;
-  const sternLiftGuard = clamp((sternGap - 0.025) / 0.17, 0, 1);
+  const sternLiftGuard = clamp((sternGap - 0.018) / 0.15, 0, 1);
   const guardedTargetPitch = targetPitch > 0
-    ? targetPitch * (1 - sternLiftGuard * 0.92)
+    ? targetPitch * (1 - sternLiftGuard * 0.94)
     : targetPitch;
 
   if (sternLiftGuard > 0) {
-    const maximumRootY = filteredSternHeight + waterlineCenterY - length * 0.40 * Math.sin(state.pitch) + 0.055;
+    const maximumRootY = filteredSternHeight + waterlineCenterY - length * 0.40 * Math.sin(state.pitch) + 0.045;
     if (state.y > maximumRootY) {
-      state.y = smoothTo(state.y, maximumRootY, 5.2 + sternLiftGuard * 4.6, safeDt);
-      // A tiny residual clearance is fine, but a rare solver transient must not be allowed to turn
-      // into a visible "hop". This ceiling is at most a few centimetres of correction per normal
-      // frame after the filtered support plane has done the real work.
-      state.y = Math.min(state.y, maximumRootY + 0.13);
-      state.verticalVelocity = Math.min(state.verticalVelocity, 0.02);
+      // The filtered water plane does the physical work; this is only a final geometric guard for a
+      // rare frame where a transparent wave would otherwise reveal the whole steering appendage.
+      state.y = Math.min(state.y, maximumRootY + 0.075);
+      state.verticalVelocity = Math.min(state.verticalVelocity, -0.015 * sternLiftGuard);
     }
   }
 
   let desiredPitchVelocity = (sternPlaneVelocity - bowPlaneVelocity) / Math.max(2, length * 0.84);
-  if (desiredPitchVelocity > 0) desiredPitchVelocity *= 0.34;
-  else desiredPitchVelocity *= 0.68;
-  const pitchVelocityTarget = desiredPitchVelocity + (guardedTargetPitch - state.pitch) * (1.18 + sternLiftGuard * 2.0);
-  state.pitchVelocity = smoothTo(state.pitchVelocity, pitchVelocityTarget, (2.7 + sternLiftGuard * 4.8) / massFactor, safeDt);
-  state.pitchVelocity = clamp(state.pitchVelocity, -0.15 / massFactor, 0.075 / massFactor);
-  state.pitch = smoothTo(state.pitch, guardedTargetPitch, 0.46 / massFactor + sternLiftGuard * 4.2, safeDt);
-  state.pitch = clamp(state.pitch, -7.2 * DEG, 3.5 * DEG);
+  if (desiredPitchVelocity > 0) desiredPitchVelocity *= 0.30;
+  else desiredPitchVelocity *= 0.64;
+  const pitchVelocityTarget = desiredPitchVelocity + (guardedTargetPitch - state.pitch) * (1.10 + sternLiftGuard * 2.1);
+  state.pitchVelocity = smoothTo(state.pitchVelocity, pitchVelocityTarget, (2.45 + sternLiftGuard * 4.8) / massFactor, safeDt);
+  state.pitchVelocity = clamp(state.pitchVelocity, -0.135 / massFactor, 0.064 / massFactor);
+  state.pitch = smoothTo(state.pitch, guardedTargetPitch, 0.42 / massFactor + sternLiftGuard * 4.4, safeDt);
+  state.pitch = clamp(state.pitch, -7.0 * DEG, 3.25 * DEG);
 
-  const desiredRollVelocity = ((port.velocityY - starboard.velocityY) / Math.max(1.5, beam * 0.86)) * 0.58
-    + (targetRoll - state.roll) * 0.84;
-  state.rollVelocity = smoothTo(state.rollVelocity, desiredRollVelocity, 2.0 / massFactor, safeDt);
-  state.rollVelocity = clamp(state.rollVelocity, -0.23 / massFactor, 0.23 / massFactor);
-  state.roll = smoothTo(state.roll, targetRoll, 0.40 / massFactor, safeDt);
-  state.roll = clamp(state.roll, -11.5 * DEG, 11.5 * DEG);
+  const desiredRollVelocity = ((port.velocityY - starboard.velocityY) / Math.max(1.5, beam * 0.86)) * 0.54
+    + (targetRoll - state.roll) * 0.80;
+  state.rollVelocity = smoothTo(state.rollVelocity, desiredRollVelocity, 1.86 / massFactor, safeDt);
+  state.rollVelocity = clamp(state.rollVelocity, -0.21 / massFactor, 0.21 / massFactor);
+  state.roll = smoothTo(state.roll, targetRoll, 0.36 / massFactor, safeDt);
+  state.roll = clamp(state.roll, -10.8 * DEG, 10.8 * DEG);
 
   sternReferenceY = state.y - waterlineCenterY + length * 0.40 * Math.sin(state.pitch);
   sternGap = sternReferenceY - filteredSternHeight;
