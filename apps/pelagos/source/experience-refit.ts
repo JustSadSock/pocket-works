@@ -24,6 +24,7 @@ type ExperienceRig = {
 
 type QaSnapshot = {
   shipAsset: string;
+  shipCraft: string;
   speedKnots: number;
   forwardSpeedKnots: number;
   headingDegrees: number;
@@ -36,6 +37,8 @@ type QaSnapshot = {
   mainSailVertices: number;
   visibleOars: number;
   floatingCues: number;
+  runningSheets: number;
+  authoredFittings: number;
   rowingInput: number;
   weather: string;
 };
@@ -162,8 +165,17 @@ function updateQaBridge(
   const sail = world.scene.getMeshByName('physical-main-sail');
   const visibleOars = world.scene.meshes.filter((mesh) => mesh.name.startsWith('physical-oar-blade-') && mesh.isEnabled() && mesh.visibility > 0.05).length;
   const floatingCues = world.scene.transformNodes.filter((node) => node.name.startsWith('motion-prop-') && node.isEnabled()).length;
+  const runningSheets = world.scene.meshes.filter((mesh) => mesh.name.startsWith('crafted-main-sheet-') && mesh.isEnabled() && mesh.visibility > 0.1).length;
+  const authoredFittings = [
+    'PW_LanternPortPivot',
+    'PW_LanternStarboardPivot',
+    'PW_BellPivot',
+    'PW_SheetBlockPortPivot',
+    'PW_SheetBlockStarboardPivot'
+  ].filter((name) => Boolean(world.scene.getTransformNodeByName(name))).length;
   qaWindow.__POCKET_WORKS_TEST_STATE__ = {
     shipAsset: document.documentElement.dataset.pelagosShipAsset ?? 'loading',
+    shipCraft: document.documentElement.dataset.pelagosShipCraft ?? 'loading',
     speedKnots: Number((telemetry.speed * 1.94384).toFixed(3)),
     forwardSpeedKnots: Number((telemetry.forwardSpeed * 1.94384).toFixed(3)),
     headingDegrees: Number((((state.yaw / DEG) % 360 + 360) % 360).toFixed(2)),
@@ -176,6 +188,8 @@ function updateQaBridge(
     mainSailVertices: sail?.getTotalVertices() ?? 0,
     visibleOars,
     floatingCues,
+    runningSheets,
+    authoredFittings,
     rowingInput: Number(clamp(rowing, 0, 1).toFixed(3)),
     weather: environment.label
   };
