@@ -1,0 +1,70 @@
+/* 1.6.4 presentation pass: coach in the sky, not on top of the ship. */
+.hint {
+  top: max(58px, calc(env(safe-area-inset-top) + 44px));
+  max-width: min(64vw, 250px);
+  padding: 6px 9px;
+  border-radius: 12px;
+  background: rgba(5, 17, 18, .48);
+  border-color: rgba(224, 247, 244, .12);
+  font-size: 10.5px;
+  line-height: 1.22;
+  letter-spacing: .002em;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .11);
+  pointer-events: none;
+}
+
+/* During the four-step gesture lesson the coach is the only transient message. Weather toasts
+   resume immediately afterwards, avoiding two glass panels over the vessel during first launch. */
+.hint:not(.hidden) + .toast,
+.hint:not(.hidden) + .toast.show {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Make the shipyard read like an intentional carousel. Symmetric end padding lets the first and
+   last modules truly center; only a narrow, faded sliver of the neighbouring card remains. */
+.shipyard-options {
+  grid-auto-columns: min(78vw, 320px);
+  padding-left: calc(50% - min(39vw, 160px));
+  padding-right: calc(50% - min(39vw, 160px));
+  scroll-padding-inline: calc(50% - min(39vw, 160px));
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+}
+
+.helm-track,
+.trim-track,
+.row-button {
+  transition: transform .12s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+
+.helm-zone:active .helm-track,
+.trim-zone:active .trim-track {
+  border-color: rgba(221, 249, 245, .25);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .07), 0 4px 16px rgba(0, 0, 0, .12);
+}
+
+.row-button.is-pressed,
+.row-button.active {
+  border-color: rgba(222, 249, 245, .25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .16), inset 0 1px rgba(255, 255, 255, .07);
+}
+
+@media (max-height: 720px) {
+  .hint {
+    top: max(54px, calc(env(safe-area-inset-top) + 40px));
+    max-width: min(62vw, 236px);
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (min-width: 700px) and (orientation: landscape) {
+  .shipyard-options {
+    padding-left: 1px;
+    padding-right: 1px;
+    scroll-padding-inline: 1px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
