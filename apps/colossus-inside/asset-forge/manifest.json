@@ -17,7 +17,7 @@
     },
     {
       "name": "traveler",
-      "script": "player.py",
+      "script": "player_v2.py",
       "output": "public/models/player.glb",
       "requireArmature": true,
       "requireAnimation": true
