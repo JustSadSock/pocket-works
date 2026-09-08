@@ -114,6 +114,7 @@ async function loadWarriorKit(game, warrior) {
   if (warrior.isPlayer && parts.bladeRidge) parts.bladeRidge.setEnabled(false);
 
   if (parts.chest) warrior.meshes.chestPlate.setEnabled(false);
+  if (parts.tabard) warrior.meshes.tabard.setEnabled(false);
   if (parts.helmet && !warrior.isPlayer) warrior.meshes.helmet.setEnabled(false);
   if (parts.blade) warrior.meshes.blade.setEnabled(false);
   if (parts.grip) warrior.meshes.grip.setEnabled(false);
