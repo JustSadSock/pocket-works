@@ -32,6 +32,7 @@ export class ConstraintArm {
   }
   impulse(vec,amount=1){this.hand.prev=sub(this.hand.prev,scale(vec,amount));this.tip.prev=sub(this.tip.prev,scale(vec,amount*1.22));}
   step({ shoulder, guardHand, guardTip, drive=v(), brace=.55, dt=1/60, iterations=7 }) {
+    const rawDriveLength=len(drive);if(rawDriveLength>2.1)drive=scale(drive,2.1/rawDriveLength);
     this.shoulder.p={...shoulder};this.shoulder.prev={...shoulder};integrate(this.elbow,.972);integrate(this.hand,.966);integrate(this.tip,.974);
     const driveDelta=sub(drive,this.lastDrive);this.lastDrive={...drive};const energy=clamp(len(drive)*.22+len(driveDelta)*.32,0,1);this.energy=energy;const slow=1-energy;
     this.hand.p=add(this.hand.p,scale(sub(guardHand,this.hand.p),(.055+slow*.14)*brace));this.tip.p=add(this.tip.p,scale(sub(guardTip,this.tip.p),(.025+slow*.075)*brace));
