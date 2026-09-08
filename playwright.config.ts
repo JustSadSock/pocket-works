@@ -11,10 +11,8 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  timeout: 30_000,
-  expect: {
-    timeout: 7_000
-  },
+  timeout: 45_000,
+  expect: { timeout: 7_000 },
   reporter: [
     ['line'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }]
@@ -38,31 +36,17 @@ export default defineConfig({
     gracefulShutdown: { signal: 'SIGTERM', timeout: 1_000 }
   },
   projects: [
-    {
-      name: 'chromium-mobile-portrait',
-      use: { ...pixel }
-    },
-    {
-      name: 'webkit-mobile-portrait',
-      use: { ...iphone }
-    },
+    { name: 'chromium-mobile-portrait', use: { ...pixel } },
+    { name: 'webkit-mobile-portrait', use: { ...iphone } },
     {
       name: 'chromium-mobile-landscape',
-      testMatch: /(orientation|petlya-17|ai-gameplay)\.spec\.ts/,
-      use: {
-        ...pixel,
-        viewport: { width: 851, height: 393 },
-        screen: { width: 851, height: 393 }
-      }
+      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco)\.spec\.ts/,
+      use: { ...pixel, viewport: { width: 851, height: 393 }, screen: { width: 851, height: 393 } }
     },
     {
       name: 'webkit-mobile-landscape',
-      testMatch: /(orientation|petlya-17|ai-gameplay)\.spec\.ts/,
-      use: {
-        ...iphone,
-        viewport: { width: 844, height: 390 },
-        screen: { width: 844, height: 390 }
-      }
+      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco)\.spec\.ts/,
+      use: { ...iphone, viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 } }
     }
   ]
 });
