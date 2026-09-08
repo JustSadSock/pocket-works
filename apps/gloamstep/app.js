@@ -232,9 +232,9 @@ let restartIntent = 'menu';
 let cachedSavedRun = readSavedRun();
 
 function makeSeed() {
-  if (crypto?.getRandomValues) {
+  if (globalThis.crypto?.getRandomValues) {
     const words = new Uint32Array(1);
-    crypto.getRandomValues(words);
+    globalThis.crypto.getRandomValues(words);
     return words[0] >>> 0;
   }
   return (Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0;
@@ -909,7 +909,7 @@ function enemyTurn() {
     if (
       enemy.kind === 'shade' &&
       aligned &&
-      distance <= 5 &&
+      distance <= 4 &&
       lineClear(enemy.x, enemy.y, state.player.x, state.player.y) &&
       (state.turn + enemy.phase) % 2 === 1
     ) {
@@ -1472,12 +1472,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => {
   if (state && ['playing', 'paused', 'relic'].includes(mode)) saveRun();
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
-  }, { once: true });
-}
 
 setupInput();
 updateSoundUI();
