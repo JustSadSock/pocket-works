@@ -29,7 +29,8 @@ function baseTerrainHeight(x:number,z:number){
   const fine=(fbm(x*.0055,z*.0055,4)-.5)*9;
   const riverDist=Math.abs(z-riverCenter(x));
   const valley=clamp(1-riverDist/165,0,1);
-  const carve=valley*valley*(33+mountains*.43);
+  const channel=clamp(1-riverDist/74,0,1);
+  const carve=valley*valley*(33+mountains*.43)+Math.pow(channel,1.45)*13;
   return 54+continental+hills+mountains+fine-carve;
 }
 function lakeSpec(lx:number,lz:number):Lake|null{
@@ -54,34 +55,34 @@ function forestField(x:number,z:number){const broad=fbm(x*.00175+18,z*.00175-67,
 function meadowField(x:number,z:number){return fbm(x*.0027+441,z*.0027-118,4);}
 function biomeColor(x:number,z:number,h:number){
   const m=moistureAt(x,z),t=temperatureAt(x,z,h),forest=forestField(x,z),meadow=meadowField(x,z),riverDist=Math.abs(z-riverCenter(x));let c:Color4;
-  if(h>225)c=new Color4(.39,.40,.37,1);
-  else if(h>170)c=new Color4(.43,.45,.34,1);
-  else if(riverDist<72)c=new Color4(.43,.47,.27,1);
-  else if(forest>.64)c=t<.42?new Color4(.24,.35,.25,1):new Color4(.28,.40,.22,1);
-  else if(meadow>.60)c=new Color4(.48,.55,.27,1);
-  else if(m>.70)c=new Color4(.31,.46,.25,1);
-  else if(m>.48)c=new Color4(.39,.50,.27,1);
-  else c=new Color4(.48,.52,.29,1);
-  const v=(fbm(x*.012+241,z*.012-107,3)-.5)*.105;
+  if(h>225)c=new Color4(.43,.44,.40,1);
+  else if(h>170)c=new Color4(.47,.49,.37,1);
+  else if(riverDist<72)c=new Color4(.48,.53,.31,1);
+  else if(forest>.64)c=t<.42?new Color4(.29,.40,.28,1):new Color4(.33,.46,.25,1);
+  else if(meadow>.60)c=new Color4(.52,.60,.31,1);
+  else if(m>.70)c=new Color4(.36,.51,.29,1);
+  else if(m>.48)c=new Color4(.44,.56,.31,1);
+  else c=new Color4(.52,.57,.33,1);
+  const v=(fbm(x*.012+241,z*.012-107,3)-.5)*.09;
   return new Color4(clamp(c.r+v,0,1),clamp(c.g+v*.82,0,1),clamp(c.b+v*.42,0,1),1);
 }
 
 const waterVertex=`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;uniform float time;varying vec3 vPos;void main(){vec3 p=position;p.y+=sin(p.x*.036+time*.92)*.16+sin(p.z*.051-time*.64)*.10;vPos=p;gl_Position=worldViewProjection*vec4(p,1.0);}`;
-const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){float a=vPos.x*.037+time*.72;float b=vPos.z*.052-time*.43;vec3 n=normalize(vec3(-.075*cos(a),1.0,-.062*cos(b)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.2);float flow=.5+.5*sin(vPos.x*.078+vPos.z*.014-time*1.35);vec3 shallow=vec3(.12,.37,.39),deep=vec3(.025,.15,.22);vec3 c=mix(shallow,deep,.48)+f*vec3(.31,.43,.46)+flow*.012;gl_FragColor=vec4(c,.92);}`;
+const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){float a=vPos.x*.037+time*.72;float b=vPos.z*.052-time*.43;vec3 n=normalize(vec3(-.075*cos(a),1.0,-.062*cos(b)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.2);float flow=.5+.5*sin(vPos.x*.078+vPos.z*.014-time*1.35);vec3 shallow=vec3(.10,.34,.38),deep=vec3(.025,.14,.21);vec3 c=mix(shallow,deep,.46)+f*vec3(.28,.40,.44)+flow*.010;gl_FragColor=vec4(c,.91);}`;
 
 export class WorldStreamer{
   readonly scene:Scene;readonly chunks=new Map<string,Chunk>();readonly water:ShaderMaterial;readonly templates:Templates={};
   private terrainMaterial:StandardMaterial;
   private firDark:Mesh;private firBlue:Mesh;private oak:Mesh;private aspen:Mesh;private rock:Mesh;private flower:Mesh;
-  private quality=1;private lastCenter='';private nextChunkBuild=0;
+  private quality=1;private lastCenter='';private lastRadius=-1;private nextChunkBuild=0;
   constructor(scene:Scene){
     this.scene=scene;
-    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=Color3.White();this.terrainMaterial.specularColor=new Color3(.018,.022,.014);this.terrainMaterial.specularPower=18;this.terrainMaterial.backFaceCulling=false;this.terrainMaterial.emissiveColor=new Color3(.022,.028,.015);
-    this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.92;
-    this.firDark=this.makeFir('firDark',new Color3(.075,.20,.105),0);
-    this.firBlue=this.makeFir('firBlue',new Color3(.10,.24,.19),1);
-    this.oak=this.makeBroad('oak',new Color3(.20,.34,.135),0);
-    this.aspen=this.makeBroad('aspen',new Color3(.30,.41,.16),1);
+    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=Color3.White();this.terrainMaterial.specularColor=new Color3(.018,.022,.014);this.terrainMaterial.specularPower=18;this.terrainMaterial.backFaceCulling=false;this.terrainMaterial.emissiveColor=new Color3(.030,.036,.020);
+    this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.91;
+    this.firDark=this.makeFir('firDark',new Color3(.085,.22,.115),0);
+    this.firBlue=this.makeFir('firBlue',new Color3(.11,.25,.20),1);
+    this.oak=this.makeBroad('oak',new Color3(.22,.36,.15),0);
+    this.aspen=this.makeBroad('aspen',new Color3(.31,.42,.18),1);
     this.rock=this.makeRock('fieldRock');this.flower=this.makeFlower('meadowFlower');
     for(const m of [this.firDark,this.firBlue,this.oak,this.aspen,this.rock,this.flower]){m.position.y=-2600;m.isPickable=false;}
     void this.loadTemplates();
@@ -100,7 +101,7 @@ export class WorldStreamer{
         if(m.material instanceof PBRMaterial){m.material.roughness=Math.max(m.material.roughness??.82,.82);m.material.metallic=Math.min(m.material.metallic??0,.025);m.material.environmentIntensity=.62;}
         if(m.material instanceof StandardMaterial){m.material.specularColor=new Color3(.02,.025,.015);}
       }
-    }catch{/* procedural authored-looking fallbacks keep the world complete offline */}
+    }catch{/* procedural fallbacks keep the world complete offline */}
   }
   update(position:Vector3,time:number){
     const cx=Math.floor((position.x+HALF_CHUNK)/CHUNK),cz=Math.floor((position.z+HALF_CHUNK)/CHUNK),center=`${cx}:${cz}`;
@@ -109,7 +110,15 @@ export class WorldStreamer{
     for(let dz=-radius;dz<=radius;dz++)for(let dx=-radius;dx<=radius;dx++){const key=`${cx+dx}:${cz+dz}`;wanted.add(key);if(!this.chunks.has(key))queue.push({cx:cx+dx,cz:cz+dz,dist:Math.hypot(dx,dz)});}
     queue.sort((a,b)=>a.dist-b.dist);
     if(queue.length&&time>=this.nextChunkBuild){const budget=this.chunks.size===0?4:1;for(const q of queue.slice(0,budget))this.createChunk(q.cx,q.cz,q.dist<1.25);this.nextChunkBuild=time+.045;}
-    if(center!==this.lastCenter){for(const [key,ch] of this.chunks)if(!wanted.has(key)){ch.root.dispose(false,true);this.chunks.delete(key);}this.lastCenter=center;}
+    if(center!==this.lastCenter||radius!==this.lastRadius){
+      for(const [key,ch] of this.chunks)if(!wanted.has(key)){
+        // Chunk meshes share terrain/water/vegetation materials. Disposing a
+        // streaming chunk must never dispose those shared materials, otherwise
+        // the next chunk renders as clearColor/white after crossing a boundary.
+        ch.root.dispose(false,false);this.chunks.delete(key);
+      }
+      this.lastCenter=center;this.lastRadius=radius;
+    }
   }
   private createChunk(cx:number,cz:number,near:boolean){
     const key=`${cx}:${cz}`;if(this.chunks.has(key))return;
@@ -123,8 +132,8 @@ export class WorldStreamer{
     this.chunks.set(key,{key,cx,cz,root,instances,treeCount});
   }
   private createRiver(cx:number){
-    const seg=34,positions:number[]=[],indices:number[]=[],x0=cx*CHUNK-HALF_CHUNK;
-    for(let i=0;i<seg;i++){const x=x0+i/(seg-1)*CHUNK,z=riverCenter(x),h=terrainHeight(x,z)+2.8,half=32+noise(x*.012,cx)*18;positions.push(x,h,z-half,x,h,z+half);if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}}
+    const seg=38,positions:number[]=[],indices:number[]=[],x0=cx*CHUNK-HALF_CHUNK;
+    for(let i=0;i<seg;i++){const x=x0+i/(seg-1)*CHUNK,z=riverCenter(x),h=terrainHeight(x,z)+3.4,half=24+noise(x*.012,cx)*12;positions.push(x,h,z-half,x,h,z+half);if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}}
     const mesh=new Mesh(`river_${cx}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.receiveShadows=false;mesh.isPickable=false;return mesh;
   }
   private createLakes(cx:number,cz:number,root:TransformNode){
@@ -135,18 +144,17 @@ export class WorldStreamer{
     const baseX=cx*CHUNK,baseZ=cz*CHUNK,candidates=Math.floor(310*this.quality*density),far=density<.5;let trees=0;
     for(let i=0;i<candidates;i++){
       const x=baseX+(hash(cx*97+i,cz*131-i)-.5)*CHUNK,z=baseZ+(hash(cx*173-i,cz*67+i)-.5)*CHUNK,h=terrainHeight(x,z),m=moistureAt(x,z),t=temperatureAt(x,z,h),forest=forestField(x,z),riverDist=Math.abs(z-riverCenter(x));
-      if(riverDist<44||lakeDistance(x,z)<18||h>238)continue;
+      if(riverDist<42||lakeDistance(x,z)<18||h>238)continue;
       const patch=smoothstep(.39,.70,forest),wetBoost=(m-.5)*.22,gate=clamp(.055+patch*.83+wetBoost,.04,.90);if(hash(i*31+cx*7,cz*29-i*3)>gate)continue;
-      const species=hash(i*19+cx*43,cz*37-i*11),authored=hash(i*53-cx,cz*47+i)<.12;let kind:PlantKind;
+      const species=hash(i*19+cx*43,cz*37-i*11);let kind:PlantKind;
       if(h>155||t<.38){kind=species<.73?'firBlue':'firDark';}
       else if(m>.66){kind=species<.45?'aspen':species<.72?'oak':'firDark';}
       else{kind=species<.42?'oak':species<.66?'aspen':species<.86?'firDark':'firBlue';}
-      if(authored){if(kind==='oak'||kind==='aspen')kind='authoredBroad';else kind='authoredFir';}
-      if(hash(i*71+cx,cz-i*17)>.965)kind='authoredRock';
+      if(hash(i*71+cx,cz-i*17)>.972)kind='rock';
       const template=this.templateFor(kind),inst=template.createInstance(`veg_${cx}_${cz}_${i}`);inst.parent=root;inst.position.set(x,h,z);inst.rotation.y=hash(cx*13-i,cz*17+i)*Math.PI*2;
       const age=.70+hash(i*3+cx,cz-i*9)*.62,slender=.86+hash(i*41-cx,cz+i*23)*.24;
       if(isRockKind(kind))inst.scaling.set(.72+age*.32,.46+age*.30,.68+age*.38);
-      else if(kind==='oak'||kind==='authoredBroad')inst.scaling.set(age*1.05,age*(.88+slender*.08),age*(.94+slender*.05));
+      else if(kind==='oak')inst.scaling.set(age*1.05,age*(.88+slender*.08),age*(.94+slender*.05));
       else if(kind==='aspen')inst.scaling.set(age*.78,age*(1.10+slender*.12),age*.82);
       else inst.scaling.set(age*.82,age*(1.02+slender*.16),age*.82);
       if(far)inst.scaling.scaleInPlace(.92);inst.isPickable=false;inst.freezeWorldMatrix();out.push(inst);if(!isRockKind(kind))trees++;
@@ -176,6 +184,6 @@ export class WorldStreamer{
     blobs.forEach((b,i)=>{const crown=MeshBuilder.CreateIcoSphere(`${name}_crown${i}`,{radius:1,subdivisions:1},this.scene);crown.position.set(b[0],b[2],b[1]);crown.scaling.set(b[3],b[4],b[5]);crown.rotation.set((i%2-.5)*.18,i*.77,(i%3-1)*.11);crown.material=leaf;parts.push(crown);});
     const merged=Mesh.MergeMeshes(parts,true,true,undefined,false,true)!;merged.name=name;return merged;
   }
-  private makeRock(name:string){const rock=MeshBuilder.CreateIcoSphere(name,{radius:2.0,subdivisions:1},this.scene);rock.scaling.set(1.55,.72,1.18);rock.rotation.set(.12,.35,-.08);const m=new PBRMaterial(`${name}_mat`,this.scene);m.albedoColor=new Color3(.33,.34,.31);m.roughness=.98;m.metallic=.01;rock.material=m;return rock;}
-  private makeFlower(name:string){const stem=MeshBuilder.CreateCylinder(`${name}_stem`,{height:.85,diameter:.075,tessellation:5},this.scene);stem.position.y=.42;const bloom=MeshBuilder.CreateIcoSphere(`${name}_bloom`,{radius:.20,subdivisions:1},this.scene);bloom.position.y=.92;const sm=new StandardMaterial(`${name}_stemMat`,this.scene);sm.diffuseColor=new Color3(.16,.32,.13);sm.specularColor=Color3.Black();stem.material=sm;const bm=new StandardMaterial(`${name}_bloomMat`,this.scene);bm.diffuseColor=new Color3(.72,.52,.22);bm.specularColor=Color3.Black();bloom.material=bm;const merged=Mesh.MergeMeshes([stem,bloom],true,true,undefined,false,true)!;merged.name=name;return merged;}
+  private makeRock(name:string){const rock=MeshBuilder.CreateIcoSphere(name,{radius:2.0,subdivisions:1},this.scene);rock.scaling.set(1.55,.72,1.18);rock.rotation.set(.12,.35,-.08);const m=new PBRMaterial(`${name}_mat`,this.scene);m.albedoColor=new Color3(.31,.32,.29);m.roughness=.98;m.metallic=.01;rock.material=m;return rock;}
+  private makeFlower(name:string){const stem=MeshBuilder.CreateCylinder(`${name}_stem`,{height:.85,diameter:.075,tessellation:5},this.scene);stem.position.y=.42;const bloom=MeshBuilder.CreateIcoSphere(`${name}_bloom`,{radius:.20,subdivisions:1},this.scene);bloom.position.y=.92;const sm=new StandardMaterial(`${name}_stemMat`,this.scene);sm.diffuseColor=new Color3(.16,.32,.13);sm.specularColor=Color3.Black();stem.material=sm;const bm=new StandardMaterial(`${name}_bloomMat`,this.scene);bm.diffuseColor=new Color3(.68,.50,.23);bm.specularColor=Color3.Black();bloom.material=bm;const merged=Mesh.MergeMeshes([stem,bloom],true,true,undefined,false,true)!;merged.name=name;return merged;}
 }
