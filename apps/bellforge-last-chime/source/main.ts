@@ -5,12 +5,13 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'BELLFORGE // THE LAST CHIME';
-const version = '1.0.0';
+const version = '1.1.0';
 const storageNamespace = 'pocket-works:bellforge-last-chime';
 const releaseNotes = [
-  'Законченная сюжетная кампания через Рыночный квартал, Литейную, крыши и башню Великого Колокола.',
-  'Blender Asset Forge создаёт архитектуру, механизмы, пропсы и ригнутых персонажей как основной production pipeline.',
-  'Добавлены резонансные головоломки, погоня, постановочные сцены, мобильное управление, collision proxies и procedural audio.'
+  'Исправлено инвертированное управление камерой и улучшена точность touch-look.',
+  'Landscape HUD, safe-area и двухручные зоны управления переработаны для iPhone.',
+  'Blender-персонажи получили расширенный риг, дополнительные детали и более живые циклы движения и жестов.',
+  'Усилены tactile-состояния управления, floating joystick и читаемость взаимодействий.'
 ];
 
 const runtime = installMobileRuntime();
