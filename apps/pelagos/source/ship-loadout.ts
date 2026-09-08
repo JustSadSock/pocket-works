@@ -48,6 +48,8 @@ export type ShipLoadout = {
   oars: OarModule;
 };
 
+export type ShipModuleSlot = 'dimensions' | 'palette' | 'sails' | 'oars';
+
 export const BASE_ASSET_LENGTH = 9.35;
 export const BASE_ASSET_BEAM = 3.40;
 
@@ -177,11 +179,34 @@ export const SHIP_LOADOUTS: Record<string, ShipLoadout> = {
   }
 };
 
-let activeLoadoutId = 'long-cutter';
+function cloneLoadout(loadout: ShipLoadout): ShipLoadout {
+  return {
+    ...loadout,
+    dimensions: { ...loadout.dimensions },
+    palette: { ...loadout.palette },
+    sails: { ...loadout.sails },
+    oars: { ...loadout.oars }
+  };
+}
+
+let activeLoadout = cloneLoadout(SHIP_LOADOUTS['long-cutter']);
 let revision = 0;
 
+function markCustom(slot: ShipModuleSlot, sourceLabel: string): void {
+  activeLoadout = {
+    ...activeLoadout,
+    id: 'custom',
+    label: `Custom Cutter · ${slot}: ${sourceLabel}`
+  };
+  revision += 1;
+}
+
 export function getActiveShipLoadout(): ShipLoadout {
-  return SHIP_LOADOUTS[activeLoadoutId] ?? SHIP_LOADOUTS['long-cutter'];
+  return activeLoadout;
+}
+
+export function getShipLoadoutSnapshot(): ShipLoadout {
+  return cloneLoadout(activeLoadout);
 }
 
 export function getShipLoadoutRevision(): number {
@@ -189,10 +214,30 @@ export function getShipLoadoutRevision(): number {
 }
 
 export function setActiveShipLoadout(id: string): boolean {
-  if (!SHIP_LOADOUTS[id] || id === activeLoadoutId) return Boolean(SHIP_LOADOUTS[id]);
-  activeLoadoutId = id;
+  const preset = SHIP_LOADOUTS[id];
+  if (!preset) return false;
+  if (activeLoadout.id === id) return true;
+  activeLoadout = cloneLoadout(preset);
   revision += 1;
   return true;
+}
+
+export function setShipModuleFromPreset(slot: ShipModuleSlot, presetId: string): boolean {
+  const preset = SHIP_LOADOUTS[presetId];
+  if (!preset) return false;
+
+  if (slot === 'dimensions') activeLoadout.dimensions = { ...preset.dimensions };
+  else if (slot === 'palette') activeLoadout.palette = { ...preset.palette };
+  else if (slot === 'sails') activeLoadout.sails = { ...preset.sails };
+  else activeLoadout.oars = { ...preset.oars };
+
+  markCustom(slot, preset.label);
+  return true;
+}
+
+export function setShipPalette(palette: Partial<ShipPalette>): void {
+  activeLoadout.palette = { ...activeLoadout.palette, ...palette };
+  markCustom('palette', 'custom paint');
 }
 
 export function getShipScale(loadout = getActiveShipLoadout()): { x: number; y: number; z: number } {
