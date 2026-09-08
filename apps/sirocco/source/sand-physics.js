@@ -7,8 +7,8 @@ export class SandPhysics {
   constructor(world, options = {}) {
     this.world = world;
     this.cellSize = options.cellSize ?? DEFAULT_CELL;
-    this.maxCells = options.maxCells ?? 6200;
-    this.keepRadius = options.keepRadius ?? 58;
+    this.maxCells = options.maxCells ?? 4600;
+    this.keepRadius = options.keepRadius ?? 52;
     this.cells = new Map();
     this.dirty = null;
     this.pruneClock = 0;
@@ -18,9 +18,9 @@ export class SandPhysics {
 
   setQuality(preset) {
     if (!preset) return;
-    if (preset.id === 'high') { this.maxCells = 6200; this.keepRadius = 58; this.avalancheBudget = 240; }
-    else if (preset.id === 'medium') { this.maxCells = 4400; this.keepRadius = 46; this.avalancheBudget = 160; }
-    else { this.maxCells = 2800; this.keepRadius = 34; this.avalancheBudget = 90; }
+    if (preset.id === 'high') { this.maxCells = 4600; this.keepRadius = 52; this.avalancheBudget = 96; }
+    else if (preset.id === 'medium') { this.maxCells = 3200; this.keepRadius = 42; this.avalancheBudget = 64; }
+    else { this.maxCells = 1900; this.keepRadius = 32; this.avalancheBudget = 36; }
   }
 
   key(ix, iz) { return `${ix},${iz}`; }
@@ -145,24 +145,23 @@ export class SandPhysics {
   }
 
   avalanche(playerX, playerZ) {
-    const radius = 5.8;
+    const radius = 5.4;
     const radius2 = radius * radius;
-    const candidates = [];
-    for (const cell of this.cells.values()) {
-      if (cell.h <= 0.00045) continue; // only displaced material can flow
-      const wx = cell.ix * this.cellSize, wz = cell.iz * this.cellSize;
-      const dx = wx - playerX, dz = wz - playerZ;
-      if (dx * dx + dz * dz <= radius2) candidates.push(cell);
-    }
-    if (!candidates.length) return;
-    candidates.sort((a, b) => b.touched - a.touched);
-    const budget = Math.min(this.avalancheBudget ?? 160, candidates.length);
-    const transfers = [];
     const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const reposeDrop = REPOSE_TAN * this.cellSize;
+    const transfers = [];
+    let processed = 0;
 
-    for (let i = 0; i < budget; i += 1) {
-      const cell = candidates[i];
+    // Avoid allocating and sorting every positive sand cell several times per
+    // second. The flow is local and iterative, so bounded map-order sampling is
+    // visually equivalent over a few ticks and much cheaper on mobile Safari.
+    for (const cell of this.cells.values()) {
+      if (processed >= (this.avalancheBudget ?? 64)) break;
+      if (cell.h <= 0.00045) continue;
+      const wx = cell.ix * this.cellSize, wz = cell.iz * this.cellSize;
+      const dx = wx - playerX, dz = wz - playerZ;
+      if (dx * dx + dz * dz > radius2) continue;
+      processed += 1;
       const sourceHeight = this.baseHeight(cell.ix, cell.iz) + cell.h;
       let best = null;
       let bestDrop = reposeDrop;
@@ -186,13 +185,13 @@ export class SandPhysics {
 
   update(dt, playerX, playerZ) {
     this.avalancheClock += dt;
-    if (this.avalancheClock >= 0.11) {
+    if (this.avalancheClock >= 0.20) {
       this.avalancheClock = 0;
       this.avalanche(playerX, playerZ);
     }
 
     this.pruneClock += dt;
-    if (this.pruneClock < 3.5) return;
+    if (this.pruneClock < 4.0) return;
     this.pruneClock = 0;
     const maxDist2 = this.keepRadius * this.keepRadius;
     for (const cell of [...this.cells.values()]) {
