@@ -1,6 +1,6 @@
 {
   "name": "@pocket-works/sinew",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,5 @@
     "test": "node source/core.test.mjs && node source/constraint-model.test.mjs && vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": {
-    "@babylonjs/core": "^9.2.1"
-  }
+  "dependencies": {"@babylonjs/core": "^9.2.1"}
 }
