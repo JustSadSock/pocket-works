@@ -1,6 +1,6 @@
 .shipyard {
   padding: 0;
-  background: linear-gradient(180deg, rgba(4,15,17,.04) 0%, rgba(4,15,17,.05) 43%, rgba(4,15,17,.26) 54%, rgba(4,15,17,.72) 62%, #071719 100%);
+  background: linear-gradient(180deg, rgba(4,15,17,.035) 0%, rgba(4,15,17,.045) 47%, rgba(4,15,17,.22) 57%, rgba(4,15,17,.68) 65%, #071719 100%);
 }
 
 .shipyard-head {
@@ -20,16 +20,36 @@
 .shipyard-head h2 { margin: 0; font-size: 25px; letter-spacing: -.045em; font-weight: 680; }
 .shipyard-head .circle-button { pointer-events: auto; }
 
+.shipyard-preview-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(min(41svh, 370px) + 10px);
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  border: 1px solid rgba(220,240,236,.12);
+  background: rgba(5,18,20,.44);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(224,241,237,.68);
+  font-size: 7px;
+  letter-spacing: .12em;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.shipyard.preview-touched .shipyard-preview-hint { opacity: 0; transform: translate(-50%, 4px); }
+
 .shipyard-dock {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(270px, 42svh, 420px);
-  max-height: 45svh;
-  padding: 10px max(14px, env(safe-area-inset-right)) calc(max(12px, env(safe-area-inset-bottom)) + 4px) max(14px, env(safe-area-inset-left));
+  height: clamp(248px, 38.5svh, 370px);
+  max-height: 41svh;
+  padding: 9px max(14px, env(safe-area-inset-right)) calc(max(12px, env(safe-area-inset-bottom)) + 4px) max(14px, env(safe-area-inset-left));
   background:
-    linear-gradient(180deg, rgba(8,26,27,.86), rgba(5,19,20,.97) 26%, rgba(5,18,19,.995)),
+    linear-gradient(180deg, rgba(8,26,27,.84), rgba(5,19,20,.97) 24%, rgba(5,18,19,.995)),
     repeating-linear-gradient(90deg, transparent 0 18px, rgba(255,255,255,.015) 18px 19px);
   border-top: 1px solid rgba(213,240,235,.18);
   box-shadow: 0 -14px 52px rgba(0,0,0,.22);
@@ -42,12 +62,12 @@
 .shipyard-dock::before {
   content: "";
   position: sticky;
-  top: -10px;
+  top: -9px;
   z-index: 2;
   display: block;
   width: 42px;
   height: 3px;
-  margin: 0 auto 7px;
+  margin: 0 auto 6px;
   border-radius: 99px;
   background: rgba(221,241,237,.22);
 }
@@ -57,18 +77,18 @@
   grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid rgba(221,246,241,.12);
   border-bottom: 1px solid rgba(221,246,241,.12);
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
-.shipyard-summary span { display: grid; gap: 1px; padding: 6px 4px 5px; text-align: center; border-right: 1px solid rgba(221,246,241,.08); }
+.shipyard-summary span { display: grid; gap: 1px; padding: 5px 4px 4px; text-align: center; border-right: 1px solid rgba(221,246,241,.08); }
 .shipyard-summary span:last-child { border-right: 0; }
 .shipyard-summary b { font-size: 12px; font-variant-numeric: tabular-nums; }
 .shipyard-summary small { font-size: 6.5px; letter-spacing: .12em; color: #829f9e; }
 
-.shipyard-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 7px; }
+.shipyard-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
 .shipyard-tabs button {
   position: relative;
-  min-height: 30px;
+  min-height: 29px;
   padding: 0 3px;
   background: transparent;
   border-bottom: 1px solid rgba(228,248,244,.12);
@@ -86,22 +106,21 @@
   box-shadow: 0 0 10px rgba(215,177,118,.35);
 }
 
-.shipyard-category-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.shipyard-category-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
 .shipyard-category-row h3 { margin: 0; font-size: 9px; letter-spacing: .18em; color: #dbece8; }
 .shipyard-category-row small { color: #708d8c; font-size: 7px; letter-spacing: .07em; }
 
-/* Options are a horizontal rail instead of a tall stack. The ship therefore remains fully visible
-   in the upper half of the portrait viewport while every change still applies live. */
 .shipyard-options {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(218px, 76vw);
+  grid-auto-columns: minmax(212px, 74vw);
   gap: 7px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 1px 1px 7px;
+  padding: 1px 1px 6px;
   margin: 0 -1px;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 1px;
   scrollbar-width: none;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
@@ -109,21 +128,21 @@
 .shipyard-options::-webkit-scrollbar { display: none; }
 
 .shipyard-option {
-  min-height: 64px;
+  min-height: 60px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 9px;
-  padding: 8px 9px;
+  padding: 7px 9px;
   text-align: left;
   background: rgba(255,255,255,.018);
   border-left: 2px solid rgba(215,177,118,0);
   border-top: 1px solid rgba(231,248,245,.075);
   border-bottom: 1px solid rgba(0,0,0,.22);
-  scroll-snap-align: start;
+  scroll-snap-align: center;
   transition: background .14s ease, transform .1s ease, border-color .14s ease;
 }
-.shipyard-option:active { transform: translateY(1px); }
+.shipyard-option:active { transform: translateY(1px) scale(.995); }
 .shipyard-option[data-selected="true"] { background: rgba(111,197,208,.075); border-left-color: #d7b176; }
 .shipyard-option-copy { display: grid; gap: 3px; min-width: 0; }
 .shipyard-option-copy b { font-size: 11px; letter-spacing: .01em; }
@@ -138,12 +157,12 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  margin: 7px 0 5px;
+  margin: 6px 0 4px;
 }
 .shipyard-paint label {
-  min-height: 36px;
+  min-height: 34px;
   display: grid;
-  grid-template-columns: 25px 1fr;
+  grid-template-columns: 24px 1fr;
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
@@ -154,15 +173,15 @@
   letter-spacing: .08em;
 }
 .shipyard-paint input[type="color"] {
-  width: 25px; height: 25px; padding: 0; border: 0; border-radius: 50%; overflow: hidden; background: transparent;
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; overflow: hidden; background: transparent;
 }
 .shipyard-paint input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .shipyard-paint input[type="color"]::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.2); border-radius: 50%; }
 
 .shipyard-reset {
   width: 100%;
-  min-height: 34px;
-  margin-top: 4px;
+  min-height: 32px;
+  margin-top: 3px;
   background: transparent;
   border: 1px solid rgba(226,246,242,.12);
   color: #90a9a7;
@@ -171,14 +190,15 @@
 }
 
 @media (max-height: 700px) {
-  .shipyard-dock { height: 40svh; max-height: 43svh; padding-top: 7px; }
-  .shipyard-dock::before { margin-bottom: 4px; }
-  .shipyard-summary span { padding-top: 4px; padding-bottom: 4px; }
+  .shipyard-dock { height: 36.5svh; max-height: 39svh; padding-top: 6px; }
+  .shipyard-preview-hint { bottom: calc(39svh + 7px); }
+  .shipyard-dock::before { margin-bottom: 3px; }
+  .shipyard-summary span { padding-top: 3px; padding-bottom: 3px; }
   .shipyard-summary small { display: none; }
-  .shipyard-option { min-height: 56px; }
+  .shipyard-option { min-height: 54px; }
   .shipyard-option-copy small { font-size: 7.5px; }
-  .shipyard-paint { margin-top: 5px; }
-  .shipyard-reset { min-height: 31px; }
+  .shipyard-paint { margin-top: 4px; }
+  .shipyard-reset { min-height: 30px; }
 }
 
 @media (min-width: 700px) and (orientation: landscape) {
@@ -194,6 +214,8 @@
     border-left: 1px solid rgba(213,240,235,.18);
     box-shadow: -18px 0 60px rgba(0,0,0,.24);
   }
+  .shipyard-preview-hint { right: calc(min(430px, 42vw) + 18px); left: auto; bottom: 18px; transform: none; }
+  .shipyard.preview-touched .shipyard-preview-hint { transform: translateY(4px); }
   .shipyard-dock::before { display: none; }
   .shipyard-options { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: 1fr; overflow-x: hidden; overflow-y: visible; }
 }
