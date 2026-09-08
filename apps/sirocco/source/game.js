@@ -16,7 +16,7 @@ import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
-const SESSION_SCHEMA = 6;
+const SESSION_SCHEMA = 7;
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -52,7 +52,7 @@ export class SiroccoGame {
     this.sand = new SandPhysics(this.world);
     this.sand.setQuality(this.quality.preset);
     this.world.setSandPhysics(this.sand);
-    this.sandSurface = new LocalSandSurface(this.scene, this.world, this.sand, this.materials.near, this.quality.preset);
+    this.sandSurface = new LocalSandSurface(this.scene, this.world, this.sand, this.materials.local, this.quality.preset);
     this.controller = new SandWalkerController((dx, dz, ox, oz) => this.handleRebase(dx, dz, ox, oz), this.sandSurface);
     this.restoreSession();
     await nextFrame();
@@ -88,7 +88,7 @@ export class SiroccoGame {
     this.contactShadow.update(this.controller);
     await nextFrame();
 
-    report('Прогреваем анимацию и мягкие тени…', 0.90);
+    report('Прогреваем анимацию и физический песок…', 0.90);
     this.rig.update(this.controller, 1 / 60);
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
@@ -105,7 +105,10 @@ export class SiroccoGame {
       const stored = localStorage.getItem(SESSION_KEY);
       if (!stored) return;
       const snapshot = JSON.parse(stored);
-      if (snapshot?.schema !== SESSION_SCHEMA) { localStorage.removeItem(SESSION_KEY); return; }
+      if (snapshot?.schema !== SESSION_SCHEMA) {
+        localStorage.removeItem(SESSION_KEY);
+        return;
+      }
       this.controller.restore(snapshot);
     } catch (error) {
       localStorage.removeItem(SESSION_KEY);
@@ -179,13 +182,15 @@ export class SiroccoGame {
         : null;
       this.particles.trail(dt, this.controller.localPosition, this.controller.bodyYaw, groundState.sliding, downhill);
 
+      // Relax first, then rebuild once. Previous ordering delayed avalanche
+      // deformation by one frame and made the sand look like a frozen stamp.
+      this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
       const dirtySand = this.sand.consumeDirtyBounds();
       if (dirtySand) {
         this.world.refreshDeformation(dirtySand);
         this.sandSurface.markDirty();
         this.sandSurface.update(this.controller, true);
       }
-      this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
 
       this.contactShadow.update(this.controller);
       this.camera.update(this.controller, dt);
