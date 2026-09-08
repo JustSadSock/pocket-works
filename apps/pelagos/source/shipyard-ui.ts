@@ -27,9 +27,12 @@ const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[dat
 let activeSlot: ShipModuleSlot = 'dimensions';
 let sourceScreen: SourceScreen = 'menu';
 let previewOrbit = 0.42;
+let previewPitch = 0.08;
 let previewPointer: number | null = null;
 let previewStartX = 0;
+let previewStartY = 0;
 let previewStartOrbit = previewOrbit;
+let previewStartPitch = previewPitch;
 
 const labels: Record<ShipModuleSlot, string> = {
   dimensions: 'КОРПУС',
@@ -53,18 +56,21 @@ function screen(id: SourceScreen): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#${id}`);
 }
 
-function applyPreviewOrbit(value: number): void {
-  previewOrbit = clamp(value, -1.08, 1.08);
+function applyPreviewPose(orbit: number, pitch: number): void {
+  previewOrbit = clamp(orbit, -1.12, 1.12);
+  previewPitch = clamp(pitch, -0.28, 0.42);
   document.documentElement.dataset.shipyardOrbit = previewOrbit.toFixed(4);
+  document.documentElement.dataset.shipyardPitch = previewPitch.toFixed(4);
 }
 
 function setPreviewMode(enabled: boolean): void {
   document.documentElement.classList.toggle('pelagos-shipyard-open', enabled);
   if (enabled) {
-    applyPreviewOrbit(0.42);
+    applyPreviewPose(0.42, 0.08);
     shipyard?.classList.remove('preview-touched');
   } else {
     delete document.documentElement.dataset.shipyardOrbit;
+    delete document.documentElement.dataset.shipyardPitch;
     previewPointer = null;
   }
   document.dispatchEvent(new CustomEvent('pelagos:shipyard-preview', { detail: { enabled } }));
@@ -169,7 +175,7 @@ function installPreviewGesture(): void {
   if (!shipyard) return;
   const hint = document.createElement('div');
   hint.className = 'shipyard-preview-hint';
-  hint.textContent = 'ПРОВЕДИ ПО КОРАБЛЮ — ОСМОТР';
+  hint.textContent = 'ПРОВЕДИ — ПОВОРОТ / ВЫСОТА';
   shipyard.appendChild(hint);
 
   shipyard.addEventListener('pointerdown', (event) => {
@@ -177,15 +183,20 @@ function installPreviewGesture(): void {
     if (target?.closest('.shipyard-dock, .shipyard-head')) return;
     previewPointer = event.pointerId;
     previewStartX = event.clientX;
+    previewStartY = event.clientY;
     previewStartOrbit = previewOrbit;
+    previewStartPitch = previewPitch;
     shipyard.setPointerCapture(event.pointerId);
   });
 
   shipyard.addEventListener('pointermove', (event) => {
     if (previewPointer !== event.pointerId) return;
-    const travel = (event.clientX - previewStartX) / Math.max(280, shipyard.clientWidth);
-    applyPreviewOrbit(previewStartOrbit - travel * 2.25);
-    if (Math.abs(event.clientX - previewStartX) > 10) shipyard.classList.add('preview-touched');
+    const travelX = (event.clientX - previewStartX) / Math.max(280, shipyard.clientWidth);
+    const travelY = (event.clientY - previewStartY) / Math.max(420, shipyard.clientHeight);
+    applyPreviewPose(previewStartOrbit - travelX * 2.25, previewStartPitch - travelY * 1.55);
+    if (Math.hypot(event.clientX - previewStartX, event.clientY - previewStartY) > 10) {
+      shipyard.classList.add('preview-touched');
+    }
   });
 
   const endPreview = (event: PointerEvent) => {
