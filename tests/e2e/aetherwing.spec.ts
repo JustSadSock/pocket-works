@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { attachCriticalScreenshot, monitorUnexpectedBrowserOutput } from './helpers';
 
 type AetherwingState={
-  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;chunks?:number;fauna?:number;terrainMeshes?:number;groundHeight?:number;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;assetErrors?:string[];
+  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;chunks?:number;fauna?:number;terrainMeshes?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;assetErrors?:string[];
 };
 
 async function state(page:Page){return page.evaluate(()=>((window as any).__AI_TEST_STATE__??null) as AetherwingState|null);}
@@ -38,7 +38,7 @@ test.describe('AETHERWING flight journey',()=>{
     const bank=await state(page);expect(Math.abs(bank?.roll??0)).toBeGreaterThan(.12);await snap(page,testInfo,'aetherwing-bank');
 
     const viewport=page.viewportSize()!;const bx=Math.round(viewport.width*.80),by=Math.round(viewport.height*.70);await page.touchscreen.tap(bx,by);await page.waitForTimeout(110);await page.touchscreen.tap(bx,by);await page.waitForTimeout(220);
-    const brake=await state(page);expect(brake?.mode).toBe('brake');await snap(page,testInfo,'aetherwing-brake');
+    const brake=await state(page);expect(brake?.brakeEvents??0,'right-side tap did not reach the mobile input state').toBeGreaterThan(0);expect(brake?.lastGesture).toContain('brake');expect(brake?.mode).toBe('brake');await snap(page,testInfo,'aetherwing-brake');
 
     await testInfo.attach('aetherwing-flight-state',{body:Buffer.from(`${JSON.stringify({loaded,glide,climb,dive,bank,brake},null,2)}\n`,'utf8'),contentType:'application/json'});
     monitor.assertClean();
