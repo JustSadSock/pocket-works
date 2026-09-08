@@ -10,10 +10,10 @@ export function appendBabylonGroundCell(indices, a, b, d, e) {
 
 function insideReplacementCell(gx, gz, replacement, coarseStep) {
   if (!replacement || !Number.isFinite(replacement.x)) return false;
-  // Only remove a coarse cell if the high-resolution replacement safely covers
-  // it. The inset leaves a narrow overlap ring rather than a visible crack.
-  const safeHalf = Math.max(0, replacement.halfExtent - coarseStep * 0.62);
-  return Math.abs(gx - replacement.x) < safeHalf && Math.abs(gz - replacement.z) < safeHalf;
+  const safeRadius = Math.max(0, replacement.halfExtent - coarseStep * 0.72);
+  const dx = gx - replacement.x;
+  const dz = gz - replacement.z;
+  return dx * dx + dz * dz < safeRadius * safeRadius;
 }
 
 function buildChunkData(cx, cz, segments, deformation = null, replacement = null) {
@@ -79,12 +79,14 @@ function createBoundary(scene) {
   ], updatable: false }, scene);
 }
 
-function squareIntersectsChunk(square, cx, cz) {
-  if (!square || !Number.isFinite(square.x)) return false;
+function replacementIntersectsChunk(circle, cx, cz) {
+  if (!circle || !Number.isFinite(circle.x)) return false;
   const minX = cx * CHUNK_SIZE, maxX = minX + CHUNK_SIZE;
   const minZ = cz * CHUNK_SIZE, maxZ = minZ + CHUNK_SIZE;
-  return !(square.x + square.halfExtent < minX || square.x - square.halfExtent > maxX ||
-    square.z + square.halfExtent < minZ || square.z - square.halfExtent > maxZ);
+  const closestX = clamp(circle.x, minX, maxX);
+  const closestZ = clamp(circle.z, minZ, maxZ);
+  const dx = circle.x - closestX, dz = circle.z - closestZ;
+  return dx * dx + dz * dz <= circle.halfExtent * circle.halfExtent;
 }
 
 export class DesertWorld {
@@ -104,9 +106,6 @@ export class DesertWorld {
     this.localReplacement = null;
     this.farMesh = new Mesh('far-desert', scene);
     this.farMesh.material = materials.far;
-    // Terrain does not receive the realtime character shadow map. A dedicated
-    // stable contact shadow is used instead; this avoids a giant mobile shadow
-    // projection rectangle that previously looked like a dark render radius.
     this.farMesh.receiveShadows = false;
     this.farMesh.isPickable = false;
     this.farCenter = { cx: Number.NaN, cz: Number.NaN };
@@ -116,14 +115,14 @@ export class DesertWorld {
 
   setSandPhysics(physics) { this.sandPhysics = physics; }
 
-  setLocalReplacement(centerX, centerZ, halfExtent) {
-    const next = { x: centerX, z: centerZ, halfExtent };
+  setLocalReplacement(centerX, centerZ, radius) {
+    const next = { x: centerX, z: centerZ, halfExtent: radius };
     const prev = this.localReplacement;
     if (prev && Math.abs(prev.x - next.x) < 0.001 && Math.abs(prev.z - next.z) < 0.001 && Math.abs(prev.halfExtent - next.halfExtent) < 0.001) return 0;
     this.localReplacement = next;
     let rebuilt = 0;
     for (const chunk of this.active.values()) {
-      if (squareIntersectsChunk(prev, chunk.cx, chunk.cz) || squareIntersectsChunk(next, chunk.cx, chunk.cz)) {
+      if (replacementIntersectsChunk(prev, chunk.cx, chunk.cz) || replacementIntersectsChunk(next, chunk.cx, chunk.cz)) {
         this.rebuildChunk(chunk);
         rebuilt += 1;
       }
@@ -233,14 +232,13 @@ export class DesertWorld {
     this.farCenter = { cx, cz };
     const size = this.quality.farSize, segments = this.quality.farSegments;
     const centerGX = (cx + 0.5) * CHUNK_SIZE, centerGZ = (cz + 0.5) * CHUNK_SIZE;
-    const nearHoleHalfExtent = this.quality.radius * CHUNK_SIZE;
     const positions = [], normals = [], uvs = [], colors = [], indices = [];
     for (let iz = 0; iz <= segments; iz += 1) {
       for (let ix = 0; ix <= segments; ix += 1) {
         const vx = ix / segments, vz = iz / segments;
         const lx = (vx - 0.5) * size, lz = (vz - 0.5) * size;
         const gx = centerGX + lx, gz = centerGZ + lz;
-        const y = terrainHeight(gx, gz) - 0.12;
+        const y = terrainHeight(gx, gz) - 0.28;
         const n = terrainNormal(gx, gz, 1.4);
         positions.push(lx, y, lz);
         normals.push(n.x, n.y, n.z);
@@ -252,9 +250,6 @@ export class DesertWorld {
     const row = segments + 1;
     for (let z = 0; z < segments; z += 1) {
       for (let x = 0; x < segments; x += 1) {
-        const midX = (((x + 0.5) / segments) - 0.5) * size;
-        const midZ = (((z + 0.5) / segments) - 0.5) * size;
-        if (Math.abs(midX) < nearHoleHalfExtent && Math.abs(midZ) < nearHoleHalfExtent) continue;
         const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
         appendBabylonGroundCell(indices, a, b, d, e);
       }
@@ -270,7 +265,7 @@ export class DesertWorld {
     for (const [key, chunk] of this.active) {
       const line = createBoundary(this.scene);
       line.color.set(0.15, 0.8, 1.0);
-      line.position.set(chunk.cx * CHUNK_SIZE - this.offsetX, this.sampleHeight(chunk.cx * CHUNK_SIZE, chunk.cz * CHUNK_SIZE) + 0.16, chunk.cz * CHUNK_SIZE - this.offsetZ);
+      line.position.set(chunk.cx * CHUNK_SIZE - this.offsetX, this.sampleHeight(chunk.cx * CHUNK_SIZE, cz * CHUNK_SIZE) + 0.16, chunk.cz * CHUNK_SIZE - this.offsetZ);
       line.isPickable = false;
       this.boundaries.set(key, line);
     }
