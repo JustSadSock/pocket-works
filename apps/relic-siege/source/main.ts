@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'RELIC SIEGE';
-const version = '1.0.0';
+const version = '2.0.0';
 const storageNamespace = 'pocket-works:relic-siege';
 
 const runtime = installMobileRuntime();
@@ -13,9 +13,9 @@ registerEnhancedUpdate({
   appName,
   version,
   releaseNotes: [
-    'Новая сюжетная 3D-осада с тремя обелисками и финальным Стражем.',
-    'Blender Asset Forge создаёт крепость, реликт и анимированного Стража.',
-    'Audio Asset Forge генерирует музыку, ветер и боевые звуки без локального ПК.'
+    'Круглая арена полностью заменена многоуровневой Blender-крепостью с отдельными зонами и маршрутом к верхнему святилищу.',
+    'Бой теперь использует комбо, удерживаемый блок, тайминговое парирование и заряжаемую силу RELIC.',
+    'Keeper, Ash Raider и Ash Warden загружаются как Blender-персонажи; мобильный QA отслеживает реальную геометрию, grounded и прогресс прохождения.'
   ]
 });
 createWorkshopMode({
