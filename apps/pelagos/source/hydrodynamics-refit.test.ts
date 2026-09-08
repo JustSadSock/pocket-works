@@ -7,7 +7,14 @@ import './hydrodynamics-refit';
 import { DEG, ShipDynamics } from './core';
 import { getHydrodynamicsFrame } from './hydrodynamics-refit';
 import { appendageVisibility } from './stern-immersion';
-import { getActiveShipLoadout, getOarStations, setActiveShipLoadout } from './ship-loadout';
+import {
+  getActiveShipLoadout,
+  getOarStations,
+  getShipLoadoutSnapshot,
+  setActiveShipLoadout,
+  setShipModuleFromPreset,
+  setShipPalette
+} from './ship-loadout';
 
 describe('PELAGOS modular hull and hydrodynamics', () => {
   it('uses a larger default hull with a denser configurable rowing bank', () => {
@@ -16,6 +23,24 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     expect(loadout.dimensions.length).toBeCloseTo(12.8, 4);
     expect(loadout.dimensions.beam).toBeCloseTo(3.9, 4);
     expect(getOarStations(loadout.oars)).toHaveLength(6);
+  });
+
+  it('can swap hull size, paint, sails and oars independently instead of only whole presets', () => {
+    expect(setActiveShipLoadout('long-cutter')).toBe(true);
+    expect(setShipModuleFromPreset('sails', 'storm-cutter')).toBe(true);
+    expect(setShipModuleFromPreset('oars', 'raider-cutter')).toBe(true);
+    setShipPalette({ hull: '#123456', sail: '#abcdef' });
+
+    const custom = getShipLoadoutSnapshot();
+    expect(custom.id).toBe('custom');
+    expect(custom.dimensions.length).toBeCloseTo(12.8, 4);
+    expect(custom.sails.id).toBe('storm-gaff');
+    expect(custom.oars.id).toBe('light-sweeps');
+    expect(getOarStations(custom.oars)).toHaveLength(7);
+    expect(custom.palette.hull).toBe('#123456');
+    expect(custom.palette.sail).toBe('#abcdef');
+
+    expect(setActiveShipLoadout('long-cutter')).toBe(true);
   });
 
   it('keeps a heavy hull coupled to the sea instead of launching the stern clear of the water', () => {
