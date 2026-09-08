@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#272923">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GLOAMSTEP">
+  <title>GLOAMSTEP</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <div class="brand" aria-label="GLOAMSTEP">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>GLOAMSTEP</span>
+      </div>
+      <button class="text-control" id="pauseButton" type="button" data-native-press>Пауза</button>
+    </header>
+
+    <section class="runbar" data-ui aria-label="Состояние забега">
+      <div><span class="run-label">Этаж</span><strong id="floorLabel">I / V</strong></div>
+      <div class="health-block"><span class="run-label">Жизнь</span><div id="healthPips" class="health-pips" aria-label="Здоровье"></div></div>
+      <div><span class="run-label">Убито</span><strong id="killsLabel">0</strong></div>
+    </section>
+
+    <section class="playfield" id="playfield" data-gesture-surface data-touch-action="none" data-block-callout>
+      <canvas id="gameCanvas" width="660" height="900" aria-label="Подземелье GLOAMSTEP"></canvas>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div id="swipeHint" class="swipe-hint" data-ui>Свайпни по полю или используй крестовину</div>
+    </section>
+
+    <section class="controls" data-ui aria-label="Управление">
+      <div class="dpad" aria-label="Крестовина">
+        <button class="dpad-key up" type="button" data-dir="up" data-native-press aria-label="Вверх"><span aria-hidden="true">↑</span></button>
+        <button class="dpad-key left" type="button" data-dir="left" data-native-press aria-label="Влево"><span aria-hidden="true">←</span></button>
+        <button class="dpad-key wait" id="waitButton" type="button" data-native-press aria-label="Ждать один ход"><span class="wait-dot" aria-hidden="true"></span></button>
+        <button class="dpad-key right" type="button" data-dir="right" data-native-press aria-label="Вправо"><span aria-hidden="true">→</span></button>
+        <button class="dpad-key down" type="button" data-dir="down" data-native-press aria-label="Вниз"><span aria-hidden="true">↓</span></button>
+      </div>
+      <div class="control-copy">
+        <strong>Толкни врага, чтобы ударить.</strong>
+        <span>Центр крестовины — пропустить ход.</span>
+      </div>
+      <button class="sound-toggle" id="soundButton" type="button" data-native-press aria-pressed="true">Звук: вкл</button>
+    </section>
+
+    <section class="overlay is-visible" id="menuOverlay" data-ui aria-label="Главное меню">
+      <div class="menu-panel">
+        <div class="menu-sigil" aria-hidden="true"><span></span></div>
+        <p class="eyebrow">Короткий рогалик на один забег</p>
+        <h1>GLOAMSTEP</h1>
+        <p class="menu-lead">Пять этажей. Один фитиль. Никаких сохранений после смерти.</p>
+        <div class="menu-stats" id="menuStats">
+          <span>Лучший этаж <strong id="bestFloor">—</strong></span>
+          <span>Лучший счёт <strong id="bestScore">0</strong></span>
+        </div>
+        <div class="menu-actions">
+          <button class="primary-action" id="continueButton" type="button" data-native-press hidden>Продолжить забег</button>
+          <button class="secondary-action" id="newRunButton" type="button" data-native-press>Новый забег</button>
+          <a class="launcher-link" href="../../" data-app-control>Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay" id="pauseOverlay" data-ui aria-label="Пауза" hidden>
+      <div class="menu-panel compact-panel">
+        <p class="eyebrow">Забег приостановлен</p>
+        <h2>Пауза</h2>
+        <div class="pause-summary" id="pauseSummary"></div>
+        <div class="menu-actions">
+          <button class="primary-action" id="resumeButton" type="button" data-native-press>Продолжить</button>
+          <button class="secondary-action" id="restartButton" type="button" data-native-press>Начать заново</button>
+          <a class="launcher-link" href="../../" data-app-control>Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay" id="relicOverlay" data-ui aria-label="Выбор реликвии" hidden>
+      <div class="menu-panel relic-panel">
+        <p class="eyebrow">Лестница ниже открыта</p>
+        <h2>Возьми одну реликвию</h2>
+        <p class="relic-intro">Она останется с тобой до конца забега.</p>
+        <div class="relic-list" id="relicList"></div>
+      </div>
+    </section>
+
+    <section class="overlay" id="endOverlay" data-ui aria-label="Результат забега" hidden>
+      <div class="menu-panel compact-panel">
+        <p class="eyebrow" id="endEyebrow">Забег окончен</p>
+        <h2 id="endTitle">Погас</h2>
+        <p class="menu-lead" id="endCopy"></p>
+        <div class="result-grid" id="resultGrid"></div>
+        <div class="menu-actions">
+          <button class="primary-action" id="againButton" type="button" data-native-press>Ещё один забег</button>
+          <a class="launcher-link" href="../../" data-app-control>Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay confirm-overlay" id="confirmOverlay" data-ui aria-label="Подтверждение" hidden>
+      <div class="confirm-panel">
+        <p class="eyebrow">Текущий забег будет потерян</p>
+        <h2>Начать заново?</h2>
+        <div class="confirm-actions">
+          <button class="secondary-action" id="cancelRestartButton" type="button" data-native-press>Нет</button>
+          <button class="danger-action" id="confirmRestartButton" type="button" data-native-press>Да, стереть</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
