@@ -3,7 +3,6 @@ import '../../../shared/workshop-mode.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
-import { installBellforgeMobileRenderBudget } from './mobile-render-budget.js';
 
 const appName = 'BELLFORGE // THE LAST CHIME';
 const version = '1.0.0';
@@ -25,5 +24,4 @@ createWorkshopMode({
   onReset: () => location.reload()
 });
 
-installBellforgeMobileRenderBudget();
 void import('./game.js');
