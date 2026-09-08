@@ -265,7 +265,11 @@ export class DesertWorld {
     for (const [key, chunk] of this.active) {
       const line = createBoundary(this.scene);
       line.color.set(0.15, 0.8, 1.0);
-      line.position.set(chunk.cx * CHUNK_SIZE - this.offsetX, this.sampleHeight(chunk.cx * CHUNK_SIZE, cz * CHUNK_SIZE) + 0.16, chunk.cz * CHUNK_SIZE - this.offsetZ);
+      line.position.set(
+        chunk.cx * CHUNK_SIZE - this.offsetX,
+        this.sampleHeight(chunk.cx * CHUNK_SIZE, chunk.cz * CHUNK_SIZE) + 0.16,
+        chunk.cz * CHUNK_SIZE - this.offsetZ
+      );
       line.isPickable = false;
       this.boundaries.set(key, line);
     }
