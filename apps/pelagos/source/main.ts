@@ -6,8 +6,11 @@ import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager'
 import './sea-profile';
 import './ship-refit';
 import './marine-refit';
+import './ship-modularity';
 import './marine-tuning';
 import './presence-pass';
+import './hydrodynamics-refit';
+import './stern-immersion';
 import './wake-refit';
 import './blender-ship';
 import './camera-stabilizer';
@@ -16,16 +19,16 @@ import './experience-refit';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
-const version = '1.4.1';
+const version = '1.5.0';
 const STORAGE_NAMESPACE = 'pocket-works:pelagos';
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
 const releaseNotes = [
-  'Исправлена физическая конвенция руля: перекладка вправо теперь действительно разворачивает судно вправо, а не создаёт противоположный момент.',
-  'Убрано второе скрытое сглаживание угловой скорости, которое почти полностью гасило развитие поворота поверх уже существующей инерции корпуса и руля.',
-  'Исправлена конвенция apparent wind для парусной поляры: встречный поток снова является no-go зоной, попутный — рабочим курсом, а индикатор оптимального трима соответствует физике.',
-  'Гребля сведена к одному contact-gated источнику тяги и одному владельцу анимации восьми вёсел, без двойного импульса и конкурирующих поз.'
+  'Корабль переведён на модульный loadout: размер корпуса, цветовая схема, парусный план и гребной комплект теперь независимы и могут заменяться без переписывания сцены.',
+  'Текущий Long Cutter увеличен до 12,8 м длины и 3,9 м ширины; гребной банк расширен до шести вёсел на каждый борт с отдельными портами и водяными контактами.',
+  'Плавучесть получила long-hull фильтрацию волн, связанную модель heave/pitch/roll и ограничитель отрыва корпуса от воды, чтобы корму больше не подбрасывало на гребнях.',
+  'Осадка привязана к размерам корпуса, а рулевая лопасть и скег теперь визуально остаются под живой поверхностью воды, пока волна действительно их не оголит.'
 ];
 
 registerEnhancedUpdate({ appName, version, releaseNotes });
