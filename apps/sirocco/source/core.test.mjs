@@ -54,11 +54,22 @@ assert.ok(highSegments >= 60 && highSegments <= 72 && spacing <= 0.165, 'High ph
 assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must be radial rather than a visible square');
 assert.ok(localSandSource.includes('smoothstep(0.68, 0.86, r)'), 'physical deformation must fade before the local patch edge');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
+assert.ok(localSandSource.includes('directionalShade'), 'physical footprints must include stable directional self-shading');
+assert.ok(localSandSource.includes('const cavity ='), 'footprint depressions must include local cavity darkening');
+assert.ok(localSandSource.includes('LIGHT_TO_SURFACE'), 'footprint shading must stay aligned with the desert sun direction');
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
 assert.ok(materialSource.includes('makeSandMaterial'), 'near/far/local terrain materials must be constructed from one optical recipe');
 assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"), 'RawTexture-backed terrain materials must not be cloned into URL-loading fallbacks');
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"), 'far terrain must explicitly share the same GPU texture recipe as near terrain');
+
+const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
+assert.ok(lightingSource.includes('this.fill.intensity = 0.62'), 'sky fill must leave enough directional contrast for dune and footprint relief');
+assert.ok(lightingSource.includes('this.sun.intensity = 3.15'), 'directional sun must remain strong enough to read sand form');
+
+const contactShadowSource = readFileSync(new URL('./contact-shadow.js', import.meta.url), 'utf8');
+assert.ok(contactShadowSource.includes('this.material.alpha = 0.54'), 'character contact shadow must remain visibly grounded at rest');
+assert.ok(!contactShadowSource.includes('ShadowGenerator'), 'contact shadow must stay stable and independent of mobile shadow maps');
 
 const cameraSource = readFileSync(new URL('./camera.js', import.meta.url), 'utf8');
 assert.ok(cameraSource.includes('const eyeForward = 0.50'), 'first-person eye must remain safely outside the imported head');
