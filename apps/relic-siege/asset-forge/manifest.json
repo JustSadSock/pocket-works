@@ -3,7 +3,7 @@
   "jobs": [
     {
       "name": "relic-fortress",
-      "script": "world.py",
+      "script": "world_aligned.py",
       "output": "public/models/relic-fortress.glb",
       "requireArmature": false,
       "requireAnimation": false
