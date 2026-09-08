@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "ui-confirm",
+      "type": "sfx",
+      "preset": "blipSelect",
+      "seed": 20260908,
+      "output": "generated/ui-confirm.ogg",
+      "post": {
+        "normalizeDb": -4,
+        "highpass": 90,
+        "lowpass": 12000
+      }
+    },
+    {
+      "name": "wind-bed",
+      "type": "ambient",
+      "generator": "brownnoise",
+      "duration": 3,
+      "channels": 2,
+      "output": "generated/wind-bed.ogg",
+      "post": {
+        "normalizeDb": -12,
+        "highpass": 35,
+        "lowpass": 1600
+      }
+    },
+    {
+      "name": "forge-theme",
+      "type": "music",
+      "tempo": 92,
+      "program": 48,
+      "synthGain": 0.65,
+      "output": "generated/forge-theme.ogg",
+      "notes": [
+        { "note": "C3", "beat": 0, "duration": 2, "velocity": 70 },
+        { "note": "G3", "beat": 0, "duration": 2, "velocity": 60 },
+        { "note": "Eb4", "beat": 2, "duration": 2, "velocity": 66 },
+        { "note": "Bb3", "beat": 2, "duration": 2, "velocity": 58 },
+        { "note": "F3", "beat": 4, "duration": 2, "velocity": 68 },
+        { "note": "C4", "beat": 4, "duration": 2, "velocity": 60 },
+        { "note": "G3", "beat": 6, "duration": 2, "velocity": 72 },
+        { "note": "D4", "beat": 6, "duration": 2, "velocity": 62 }
+      ],
+      "post": {
+        "normalizeDb": -5,
+        "reverb": 18,
+        "lowpass": 15000
+      }
+    }
+  ]
+}
