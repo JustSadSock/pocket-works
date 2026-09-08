@@ -1,179 +1,221 @@
 import {
+  AbstractMesh,
+  AnimationGroup,
   ArcRotateCamera,
   Color3,
   Color4,
+  DefaultRenderingPipeline,
   DirectionalLight,
   Engine,
   HemisphericLight,
   Mesh,
   MeshBuilder,
   PointLight,
+  Ray,
   Scene,
   SceneLoader,
+  ShadowGenerator,
   StandardMaterial,
   TransformNode,
   Vector3
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 
-type Phase = 'intro' | 'pylons' | 'wave' | 'boss' | 'won' | 'lost';
-type Enemy = { mesh: TransformNode; hp: number; speed: number; hitAt: number; boss: boolean };
-type Pylon = { position: Vector3; root: TransformNode; core: Mesh; ring: Mesh; light: PointLight; active: boolean };
+type Phase = 'intro' | 'gate' | 'courtyard' | 'wings' | 'bridge' | 'sanctum' | 'boss' | 'won' | 'lost';
+type EnemyKind = 'raider' | 'brute' | 'seer' | 'boss';
+type Enemy = {
+  id: number;
+  root: TransformNode;
+  visual: AbstractMesh | null;
+  telegraph: Mesh;
+  hp: number;
+  maxHp: number;
+  speed: number;
+  damage: number;
+  range: number;
+  kind: EnemyKind;
+  nextAttack: number;
+  resolveAttackAt: number;
+  staggerUntil: number;
+  projectileAt: number;
+  dead: boolean;
+};
+type Projectile = { mesh: Mesh; velocity: Vector3; damage: number; expires: number };
+
+type ZoneName = 'gate' | 'courtyard' | 'archive' | 'forge' | 'approach' | 'bridge' | 'sanctum';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas')!;
 const startPanel = document.querySelector<HTMLElement>('#startPanel')!;
 const startButton = document.querySelector<HTMLButtonElement>('#startButton')!;
 const hud = document.querySelector<HTMLElement>('#hud')!;
 const healthBar = document.querySelector<HTMLElement>('#healthBar')!;
+const relicBar = document.querySelector<HTMLElement>('#relicBar')!;
 const objective = document.querySelector<HTMLElement>('#objective')!;
-const pylonCount = document.querySelector<HTMLElement>('#pylonCount')!;
+const zoneLabel = document.querySelector<HTMLElement>('#zoneLabel')!;
+const shardState = document.querySelector<HTMLElement>('#shardState')!;
+const emberState = document.querySelector<HTMLElement>('#emberState')!;
 const message = document.querySelector<HTMLElement>('#message')!;
 const joystick = document.querySelector<HTMLElement>('#joystick')!;
 const stick = document.querySelector<HTMLElement>('#stick')!;
 const lookZone = document.querySelector<HTMLElement>('#lookZone')!;
-const actionButton = document.querySelector<HTMLButtonElement>('#actionButton')!;
+const attackButton = document.querySelector<HTMLButtonElement>('#attackButton')!;
+const guardButton = document.querySelector<HTMLButtonElement>('#guardButton')!;
+const relicButton = document.querySelector<HTMLButtonElement>('#relicButton')!;
+const bossHud = document.querySelector<HTMLElement>('#bossHud')!;
+const bossBar = document.querySelector<HTMLElement>('#bossBar')!;
 const ending = document.querySelector<HTMLElement>('#ending')!;
 const endingTitle = document.querySelector<HTMLElement>('#endingTitle')!;
 const endingCopy = document.querySelector<HTMLElement>('#endingCopy')!;
 const restartButton = document.querySelector<HTMLButtonElement>('#restartButton')!;
 
 const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true, adaptToDeviceRatio: true });
-engine.setHardwareScalingLevel(Math.max(1, Math.min(1.6, window.devicePixelRatio > 2 ? 1.35 : 1)));
+engine.setHardwareScalingLevel(Math.max(1, Math.min(1.8, window.devicePixelRatio >= 3 ? 1.55 : window.devicePixelRatio >= 2 ? 1.3 : 1)));
 const scene = new Scene(engine);
-scene.clearColor = new Color4(0.045, 0.038, 0.055, 1);
-scene.ambientColor = new Color3(0.2, 0.17, 0.22);
+scene.clearColor = new Color4(0.018, 0.025, 0.045, 1);
+scene.ambientColor = new Color3(0.13, 0.13, 0.18);
 scene.fogMode = Scene.FOGMODE_EXP2;
-scene.fogDensity = 0.018;
-scene.fogColor = new Color3(0.08, 0.065, 0.09);
+scene.fogDensity = 0.0085;
+scene.fogColor = new Color3(0.035, 0.045, 0.07);
+scene.collisionsEnabled = true;
 
-const camera = new ArcRotateCamera('camera', Math.PI * 1.5, 1.06, 12.5, new Vector3(0, 1.8, 0), scene);
-camera.lowerRadiusLimit = 9;
-camera.upperRadiusLimit = 15;
+const camera = new ArcRotateCamera('camera', Math.PI, 1.04, 8.6, new Vector3(0, 1.5, -43), scene);
+camera.lowerRadiusLimit = 6.8;
+camera.upperRadiusLimit = 10.5;
 camera.lowerBetaLimit = 0.72;
 camera.upperBetaLimit = 1.32;
-camera.fov = 0.9;
+camera.fov = 0.86;
 camera.inputs.clear();
 
-const hemi = new HemisphericLight('moon', new Vector3(0.1, 1, -0.35), scene);
-hemi.intensity = 0.52;
-hemi.diffuse = new Color3(0.5, 0.56, 0.72);
-hemi.groundColor = new Color3(0.16, 0.09, 0.08);
-const sun = new DirectionalLight('relic-light', new Vector3(-0.4, -1, 0.2), scene);
-sun.position = new Vector3(12, 24, -10);
-sun.intensity = 1.35;
-sun.diffuse = new Color3(1, 0.57, 0.24);
+const pipeline = new DefaultRenderingPipeline('relic-pipeline', true, scene, [camera]);
+pipeline.fxaaEnabled = true;
+pipeline.bloomEnabled = true;
+pipeline.bloomThreshold = 0.78;
+pipeline.bloomWeight = 0.22;
+pipeline.bloomKernel = 42;
 
-function mat(name: string, diffuse: Color3, emissive = Color3.Black(), rough = 0.9) {
+const hemi = new HemisphericLight('night-fill', new Vector3(-0.2, 1, 0.15), scene);
+hemi.intensity = 0.42;
+hemi.diffuse = new Color3(0.35, 0.47, 0.72);
+hemi.groundColor = new Color3(0.11, 0.06, 0.07);
+const moon = new DirectionalLight('moon-key', new Vector3(-0.38, -1, 0.24), scene);
+moon.position = new Vector3(32, 46, -24);
+moon.intensity = 1.15;
+moon.diffuse = new Color3(0.58, 0.68, 0.95);
+const shadowGenerator = new ShadowGenerator(1024, moon);
+shadowGenerator.bias = 0.0008;
+shadowGenerator.normalBias = 0.03;
+shadowGenerator.usePercentageCloserFiltering = true;
+
+function mat(name: string, diffuse: Color3, emissive = Color3.Black(), alpha = 1) {
   const material = new StandardMaterial(name, scene);
   material.diffuseColor = diffuse;
   material.emissiveColor = emissive;
-  material.specularColor = new Color3(0.06 + (1 - rough) * 0.15, 0.06, 0.05);
+  material.specularColor = new Color3(0.08, 0.07, 0.08);
+  material.alpha = alpha;
   return material;
 }
+const fallbackStone = mat('fallback-stone', new Color3(0.14, 0.12, 0.16));
+const keeperMat = mat('keeper-fallback', new Color3(0.06, 0.14, 0.28));
+const bronzeMat = mat('bronze-fallback', new Color3(0.55, 0.28, 0.08), new Color3(0.08, 0.02, 0));
+const emberMat = mat('ember-fallback', new Color3(0.4, 0.05, 0.02), new Color3(0.85, 0.07, 0.01));
+const ashMat = mat('ash-fallback', new Color3(0.1, 0.08, 0.11));
+const seerMat = mat('seer-fallback', new Color3(0.08, 0.12, 0.19), new Color3(0.02, 0.12, 0.28));
+const telegraphMat = mat('telegraph', new Color3(0.9, 0.12, 0.03), new Color3(1, 0.05, 0.01), 0.72);
+const parryMat = mat('parry', new Color3(1, 0.58, 0.08), new Color3(1, 0.38, 0.02), 0.85);
+const relicMat = mat('relic', new Color3(0.95, 0.55, 0.12), new Color3(1, 0.28, 0.03), 0.9);
 
-const stone = mat('basalt', new Color3(0.16, 0.135, 0.15));
-const darkStone = mat('dark-basalt', new Color3(0.075, 0.065, 0.075));
-const gold = mat('sun-metal', new Color3(0.52, 0.31, 0.13), new Color3(0.05, 0.015, 0));
-const ember = mat('ember', new Color3(0.72, 0.22, 0.08), new Color3(0.55, 0.08, 0.015));
-const litGold = mat('lit-gold', new Color3(0.92, 0.55, 0.18), new Color3(0.9, 0.33, 0.05));
-const ashMat = mat('ash', new Color3(0.12, 0.1, 0.13), new Color3(0.09, 0.025, 0.02));
-const robeMat = mat('robe', new Color3(0.17, 0.19, 0.22));
+const playerCollider = MeshBuilder.CreateCapsule('player-collider', { height: 1.8, radius: 0.42, tessellation: 8 }, scene);
+playerCollider.position.set(0, 1.08, -46);
+playerCollider.visibility = 0;
+playerCollider.isPickable = false;
+playerCollider.checkCollisions = true;
+playerCollider.ellipsoid = new Vector3(0.42, 0.88, 0.42);
+playerCollider.ellipsoidOffset = new Vector3(0, 0.02, 0);
 
-// A simple guaranteed-playable collision/gameplay layer sits underneath the authored Blender world.
-const floor = MeshBuilder.CreateCylinder('arena-floor', { diameter: 39, height: 1.2, tessellation: 48 }, scene);
-floor.position.y = -0.65;
-floor.material = stone;
-const altar = MeshBuilder.CreateCylinder('altar', { diameter: 5.3, height: 0.75, tessellation: 12 }, scene);
-altar.position.y = 0.38;
-altar.material = darkStone;
-const altarRing = MeshBuilder.CreateTorus('altar-ring', { diameter: 4.2, thickness: 0.13, tessellation: 32 }, scene);
-altarRing.rotation.x = Math.PI / 2;
-altarRing.position.y = 0.82;
-altarRing.material = gold;
-for (let i = 0; i < 12; i++) {
-  const a = (i / 12) * Math.PI * 2;
-  const buttress = MeshBuilder.CreateBox(`buttress-${i}`, { width: 2.2, height: 2.4 + (i % 3) * 0.55, depth: 3.8 }, scene);
-  buttress.position = new Vector3(Math.cos(a) * 18.5, 0.7, Math.sin(a) * 18.5);
-  buttress.rotation.y = -a + Math.PI / 2;
-  buttress.material = darkStone;
+const playerMount = new TransformNode('keeper-mount', scene);
+playerMount.parent = playerCollider;
+playerMount.position.y = -0.44;
+let playerVisual: AbstractMesh | null = null;
+let playerAnimationGroups: AnimationGroup[] = [];
+let playerAnimationState = '';
+
+function makeFallbackKeeper() {
+  const root = new TransformNode('keeper-fallback-root', scene);
+  root.parent = playerMount;
+  const body = MeshBuilder.CreateCapsule('keeper-body', { height: 1.75, radius: 0.34, tessellation: 8 }, scene);
+  body.parent = root;
+  body.position.y = 0.95;
+  body.material = keeperMat;
+  const head = MeshBuilder.CreateSphere('keeper-head', { diameter: 0.55, segments: 8 }, scene);
+  head.parent = root;
+  head.position.y = 1.93;
+  head.material = bronzeMat;
+  const glaive = MeshBuilder.CreateBox('keeper-glaive', { width: 0.11, height: 1.7, depth: 0.11 }, scene);
+  glaive.parent = root;
+  glaive.position.set(0.58, 1.05, 0.04);
+  glaive.rotation.z = -0.2;
+  glaive.material = bronzeMat;
+  shadowGenerator.addShadowCaster(body);
+  shadowGenerator.addShadowCaster(head);
+  return root as unknown as AbstractMesh;
 }
 
-const playerRoot = new TransformNode('keeper', scene);
-playerRoot.position = new Vector3(0, 0, -2.8);
-const body = MeshBuilder.CreateCapsule('keeper-body', { height: 2.15, radius: 0.42, tessellation: 10 }, scene);
-body.parent = playerRoot;
-body.position.y = 1.08;
-body.material = robeMat;
-const hood = MeshBuilder.CreateSphere('keeper-hood', { diameter: 0.82, segments: 10 }, scene);
-hood.parent = playerRoot;
-hood.position.y = 2.03;
-hood.material = darkStone;
-const staff = MeshBuilder.CreateCylinder('keeper-staff', { diameter: 0.11, height: 2.5, tessellation: 8 }, scene);
-staff.parent = playerRoot;
-staff.position.set(0.62, 1.25, 0.1);
-staff.rotation.z = -0.12;
-staff.material = gold;
-const staffCore = MeshBuilder.CreateSphere('keeper-staff-core', { diameter: 0.34, segments: 8 }, scene);
-staffCore.parent = playerRoot;
-staffCore.position.set(0.62, 2.54, 0.1);
-staffCore.material = litGold;
-
-const pylonPositions = [new Vector3(0, 0, 12), new Vector3(10.4, 0, -6), new Vector3(-10.4, 0, -6)];
-const pylons: Pylon[] = pylonPositions.map((position, index) => {
-  const root = new TransformNode(`pylon-${index + 1}`, scene);
-  root.position.copyFrom(position);
-  const plinth = MeshBuilder.CreateCylinder(`pylon-plinth-${index}`, { diameter: 3.1, height: 0.65, tessellation: 10 }, scene);
-  plinth.parent = root;
-  plinth.position.y = 0.32;
-  plinth.material = darkStone;
-  const core = MeshBuilder.CreateCylinder(`pylon-core-${index}`, { diameterTop: 0.44, diameterBottom: 0.88, height: 3.7, tessellation: 6 }, scene);
-  core.parent = root;
-  core.position.y = 2.3;
-  core.material = ember;
-  const ring = MeshBuilder.CreateTorus(`pylon-ring-${index}`, { diameter: 2, thickness: 0.09, tessellation: 28 }, scene);
-  ring.parent = root;
-  ring.position.y = 2.55;
-  ring.rotation.x = Math.PI / 2;
-  ring.material = gold;
-  const light = new PointLight(`pylon-light-${index}`, new Vector3(position.x, 2.8, position.z), scene);
-  light.diffuse = new Color3(1, 0.28, 0.06);
-  light.intensity = 0.45;
-  light.range = 7;
-  return { position, root, core, ring, light, active: false };
-});
-
-const relicLight = new PointLight('central-relic-light', new Vector3(0, 3.5, 0), scene);
-relicLight.diffuse = new Color3(1, 0.56, 0.18);
-relicLight.intensity = 0.5;
-relicLight.range = 14;
+const fallbackKeeper = makeFallbackKeeper();
 
 let phase: Phase = 'intro';
-let health = 100;
-let activePylons = 0;
-let waveIndex = 0;
-let enemies: Enemy[] = [];
 let started = false;
-let lastStrike = -9999;
+let health = 100;
+let relicCharge = 0;
+let hasArchiveShard = false;
+let hasForgeEmber = false;
+let gateEncounterCleared = false;
+let archiveEncounterStarted = false;
+let archiveEncounterCleared = false;
+let forgeEncounterStarted = false;
+let forgeEncounterCleared = false;
+let bridgeEncounterStarted = false;
+let bridgeEncounterCleared = false;
+let bossStarted = false;
+let currentZone: ZoneName = 'gate';
+let enemies: Enemy[] = [];
+let projectiles: Projectile[] = [];
+let enemyId = 0;
+let lastAttack = -9999;
+let lastComboAt = -9999;
+let combo = 0;
+let guarding = false;
+let guardStarted = 0;
+let lastRelic = -9999;
+let verticalVelocity = 0;
+let grounded = false;
 let messageTimer = 0;
-let guardianAsset: TransformNode | null = null;
-let guardianAnimations: { start: (loop?: boolean) => unknown; stop: () => unknown; name: string }[] = [];
 let blenderWorldLoaded = false;
-let guardianLoaded = false;
+let keeperLoaded = false;
+let raiderLoaded = false;
+let wardenLoaded = false;
+let worldCollisionCount = 0;
+let raiderTemplate: AbstractMesh | null = null;
+let wardenAsset: AbstractMesh | null = null;
+let wardenAnimations: AnimationGroup[] = [];
 
 const audioFiles = {
+  ambience: './audio/generated/wind.ogg',
   theme: './audio/generated/theme.ogg',
-  wind: './audio/generated/wind.ogg',
-  strike: './audio/generated/strike.ogg',
-  pylon: './audio/generated/pylon.ogg',
+  combat: './audio/generated/combat.ogg',
+  swing: './audio/generated/strike.ogg',
   hit: './audio/generated/hit.ogg',
-  boss: './audio/generated/boss.ogg'
+  parry: './audio/generated/parry.ogg',
+  relic: './audio/generated/pylon.ogg',
+  enemy: './audio/generated/enemy.ogg',
+  boss: './audio/generated/boss.ogg',
+  stepStone: './audio/generated/step-stone.ogg'
 };
 const audios = new Map<string, HTMLAudioElement>();
 for (const [name, src] of Object.entries(audioFiles)) {
   const audio = new Audio(src);
   audio.preload = 'auto';
-  audio.volume = name === 'theme' ? 0.28 : name === 'wind' ? 0.2 : 0.48;
-  if (name === 'theme' || name === 'wind') audio.loop = true;
+  audio.volume = name === 'theme' ? 0.24 : name === 'combat' ? 0.28 : name === 'ambience' ? 0.2 : 0.48;
+  if (name === 'theme' || name === 'combat' || name === 'ambience') audio.loop = true;
   audios.set(name, audio);
 }
 function playAudio(name: string, variation = 0) {
@@ -184,12 +226,45 @@ function playAudio(name: string, variation = 0) {
     return;
   }
   const shot = base.cloneNode(true) as HTMLAudioElement;
-  shot.volume = Math.max(0, Math.min(1, base.volume * (0.92 + variation * 0.08)));
-  shot.playbackRate = Math.max(0.86, Math.min(1.15, 1 + variation * 0.05));
+  shot.volume = Math.max(0, Math.min(1, base.volume * (0.9 + variation * 0.1)));
+  shot.playbackRate = Math.max(0.82, Math.min(1.18, 1 + variation * 0.06));
   void shot.play().catch(() => {});
 }
+function setCombatMusic(active: boolean) {
+  const theme = audios.get('theme');
+  const combat = audios.get('combat');
+  if (!theme || !combat) return;
+  if (active) {
+    theme.volume = 0.1;
+    combat.volume = 0.28;
+    void combat.play().catch(() => {});
+  } else {
+    theme.volume = 0.24;
+    combat.pause();
+    combat.currentTime = 0;
+  }
+}
 
-function showMessage(text: string, seconds = 2.2) {
+const archiveLight = new PointLight('archive-blue', new Vector3(-20, 8, -8), scene);
+archiveLight.diffuse = new Color3(0.12, 0.45, 1);
+archiveLight.intensity = 1.3;
+archiveLight.range = 17;
+const forgeLight = new PointLight('forge-orange', new Vector3(20, 8, -8), scene);
+forgeLight.diffuse = new Color3(1, 0.19, 0.04);
+forgeLight.intensity = 1.7;
+forgeLight.range = 18;
+const sanctumLight = new PointLight('sanctum-gold', new Vector3(0, 13, 35), scene);
+sanctumLight.diffuse = new Color3(1, 0.55, 0.16);
+sanctumLight.intensity = 1.0;
+sanctumLight.range = 28;
+
+const bridgeBarrier = MeshBuilder.CreateBox('bridge-seal', { width: 8, height: 5.5, depth: 0.35 }, scene);
+bridgeBarrier.position.set(0, 7.5, 1.8);
+bridgeBarrier.material = relicMat;
+bridgeBarrier.visibility = 0.68;
+bridgeBarrier.checkCollisions = true;
+
+function showMessage(text: string, seconds = 2.0) {
   message.textContent = text;
   message.classList.add('show');
   messageTimer = performance.now() + seconds * 1000;
@@ -197,118 +272,243 @@ function showMessage(text: string, seconds = 2.2) {
 function setObjective(text: string) { objective.textContent = text; }
 function updateHud() {
   healthBar.style.width = `${Math.max(0, health)}%`;
-  pylonCount.textContent = `${activePylons} / 3`;
+  relicBar.style.width = `${Math.max(0, Math.min(100, relicCharge))}%`;
+  shardState.classList.toggle('done', hasArchiveShard);
+  emberState.classList.toggle('done', hasForgeEmber);
+  zoneLabel.textContent = zoneTitle(currentZone);
+  const boss = enemies.find(enemy => enemy.kind === 'boss');
+  bossHud.hidden = !boss;
+  if (boss) bossBar.style.width = `${Math.max(0, boss.hp / boss.maxHp * 100)}%`;
 }
-function nearestInactivePylon() {
-  let best: Pylon | null = null;
-  let distance = Infinity;
-  for (const pylon of pylons) {
-    if (pylon.active) continue;
-    const d = Vector3.Distance(playerRoot.position, pylon.position);
-    if (d < distance) { distance = d; best = pylon; }
-  }
-  return { pylon: best, distance };
+function zoneTitle(zone: ZoneName) {
+  return ({ gate: 'Внешние ворота', courtyard: 'Двор хранителей', archive: 'Звёздный архив', forge: 'Пепельная кузня', approach: 'Врата солнца', bridge: 'Солнечный мост', sanctum: 'Верхнее святилище' })[zone];
 }
 
-function makeEnemy(position: Vector3, boss = false): Enemy {
-  const root = new TransformNode(boss ? 'ash-warden-runtime' : 'ash-raider', scene);
-  root.position.copyFrom(position);
-  const torso = MeshBuilder.CreatePolyhedron(`enemy-body-${Math.random()}`, { type: boss ? 2 : 1, size: boss ? 1.3 : 0.7 }, scene);
+function zoneFromPosition(p: Vector3): ZoneName {
+  if (p.z < -32) return 'gate';
+  if (p.z < -12 && Math.abs(p.x) < 14) return 'courtyard';
+  if (p.x < -12 && p.z < 1) return 'archive';
+  if (p.x > 12 && p.z < 1) return 'forge';
+  if (p.z < 3) return 'approach';
+  if (p.z < 23) return 'bridge';
+  return 'sanctum';
+}
+
+function setPlayerAnimation(name: 'Idle' | 'Walk' | 'Attack') {
+  if (!playerAnimationGroups.length || playerAnimationState === name) return;
+  const group = playerAnimationGroups.find(a => a.name.toLowerCase().includes(name.toLowerCase()));
+  if (!group) return;
+  playerAnimationGroups.forEach(a => a.stop());
+  group.start(name !== 'Attack', 1.0, group.from, group.to, false);
+  playerAnimationState = name;
+}
+
+function spawnFallbackEnemyVisual(root: TransformNode, kind: EnemyKind) {
+  const torso = MeshBuilder.CreatePolyhedron(`enemy-body-${enemyId}`, { type: kind === 'boss' ? 2 : 1, size: kind === 'brute' ? 1.0 : kind === 'boss' ? 1.45 : 0.68 }, scene);
   torso.parent = root;
-  torso.position.y = boss ? 1.7 : 1.05;
-  torso.scaling.y = boss ? 1.45 : 1.25;
-  torso.material = boss ? ember : ashMat;
-  const head = MeshBuilder.CreateSphere(`enemy-head-${Math.random()}`, { diameter: boss ? 0.72 : 0.46, segments: 7 }, scene);
+  torso.position.y = kind === 'boss' ? 1.85 : kind === 'brute' ? 1.25 : 1.0;
+  torso.scaling.y = kind === 'boss' ? 1.5 : 1.25;
+  torso.material = kind === 'seer' ? seerMat : kind === 'boss' ? emberMat : ashMat;
+  const head = MeshBuilder.CreateSphere(`enemy-head-${enemyId}`, { diameter: kind === 'boss' ? 0.78 : 0.46, segments: 7 }, scene);
   head.parent = root;
-  head.position.y = boss ? 3.15 : 1.95;
-  head.material = boss ? litGold : ember;
-
-  if (boss && guardianAsset) {
-    torso.setEnabled(false);
-    head.setEnabled(false);
-    // The authored GLB follows the gameplay node, rather than the gameplay node becoming a child of a static visual root.
-    guardianAsset.parent = root;
-    guardianAsset.position.set(0, 0, 0);
-    guardianAsset.setEnabled(true);
-    guardianAnimations[0]?.start(true);
-  }
-  return { mesh: root, hp: boss ? 12 : 2, speed: boss ? 1.5 : 1.85 + Math.random() * 0.5, hitAt: 0, boss };
+  head.position.y = kind === 'boss' ? 3.25 : kind === 'brute' ? 2.3 : 1.9;
+  head.material = emberMat;
+  shadowGenerator.addShadowCaster(torso);
+  shadowGenerator.addShadowCaster(head);
+  return torso;
 }
 
-function spawnWave(count: number) {
-  phase = 'wave';
-  enemies.forEach(enemy => enemy.mesh.dispose());
-  enemies = [];
-  const ring = 14.5;
-  for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2 + waveIndex * 0.43;
-    enemies.push(makeEnemy(new Vector3(Math.cos(a) * ring, 0, Math.sin(a) * ring)));
+function cloneRaiderVisual(root: TransformNode, kind: EnemyKind) {
+  if (!raiderTemplate || kind === 'boss') return null;
+  const clone = raiderTemplate.clone(`raider-visual-${enemyId}`, root, false);
+  if (!clone) return null;
+  clone.setEnabled(true);
+  clone.position.set(0, 0.62, 0);
+  const scale = kind === 'brute' ? 0.92 : kind === 'seer' ? 0.7 : 0.76;
+  clone.scaling.setAll(scale);
+  if (kind === 'seer') clone.scaling.y *= 1.08;
+  clone.getChildMeshes(false).forEach(mesh => shadowGenerator.addShadowCaster(mesh));
+  return clone;
+}
+
+function makeEnemy(position: Vector3, kind: EnemyKind): Enemy {
+  enemyId += 1;
+  const root = new TransformNode(`enemy-${kind}-${enemyId}`, scene);
+  root.position.copyFrom(position);
+  let visual: AbstractMesh | null = null;
+  if (kind === 'boss' && wardenAsset) {
+    wardenAsset.parent = root;
+    wardenAsset.position.set(0, 0.65, 0);
+    wardenAsset.scaling.setAll(0.9);
+    wardenAsset.setEnabled(true);
+    wardenAnimations[0]?.start(true);
+    visual = wardenAsset;
+  } else {
+    visual = cloneRaiderVisual(root, kind);
   }
-  setObjective(`Волна ${waveIndex}: уничтожь пепельных стражей (${count})`);
-  showMessage(`ПЕПЕЛ ПОДНЯЛСЯ — ВОЛНА ${waveIndex}`, 1.8);
+  if (!visual) spawnFallbackEnemyVisual(root, kind);
+
+  const telegraph = MeshBuilder.CreateTorus(`telegraph-${enemyId}`, { diameter: kind === 'boss' ? 4.8 : kind === 'brute' ? 2.8 : 2.1, thickness: 0.08, tessellation: 28 }, scene);
+  telegraph.parent = root;
+  telegraph.position.y = 0.08;
+  telegraph.rotation.x = Math.PI / 2;
+  telegraph.material = telegraphMat;
+  telegraph.visibility = 0;
+
+  const stats = kind === 'raider'
+    ? { hp: 4, speed: 2.35, damage: 9, range: 1.65 }
+    : kind === 'brute'
+      ? { hp: 9, speed: 1.45, damage: 18, range: 2.0 }
+      : kind === 'seer'
+        ? { hp: 5, speed: 1.65, damage: 11, range: 8.0 }
+        : { hp: 42, speed: 1.75, damage: 23, range: 2.6 };
+
+  return {
+    id: enemyId,
+    root,
+    visual,
+    telegraph,
+    hp: stats.hp,
+    maxHp: stats.hp,
+    speed: stats.speed,
+    damage: stats.damage,
+    range: stats.range,
+    kind,
+    nextAttack: performance.now() + 600 + Math.random() * 500,
+    resolveAttackAt: 0,
+    staggerUntil: 0,
+    projectileAt: 0,
+    dead: false
+  };
 }
-function spawnBoss() {
-  phase = 'boss';
-  enemies = [makeEnemy(new Vector3(0, 0, 10.5), true)];
-  setObjective('Победи Пепельного Стража');
-  showMessage('ПЕПЕЛ ПОМНИТ СВОЕГО СТРАЖА', 2.8);
-  playAudio('boss');
-}
-function activatePylon(pylon: Pylon) {
-  if (pylon.active || enemies.length > 0 || phase === 'boss') return;
-  pylon.active = true;
-  activePylons += 1;
-  pylon.core.material = litGold;
-  pylon.ring.material = litGold;
-  pylon.light.diffuse = new Color3(1, 0.63, 0.2);
-  pylon.light.intensity = 2.2;
-  playAudio('pylon');
+
+function spawnEncounter(label: string, specs: Array<[EnemyKind, Vector3]>) {
+  for (const [kind, position] of specs) enemies.push(makeEnemy(position, kind));
+  setCombatMusic(true);
+  showMessage(label, 1.8);
+  playAudio('enemy');
   updateHud();
-  showMessage(`ОБЕЛИСК ${activePylons} ЗАЖЖЁН`, 1.6);
-  waveIndex = activePylons;
-  setTimeout(() => spawnWave(3 + waveIndex), 700);
-}
-function win() {
-  phase = 'won';
-  enemies.forEach(enemy => enemy.mesh.dispose());
-  enemies = [];
-  relicLight.intensity = 8;
-  sun.intensity = 3;
-  sun.diffuse = new Color3(1, 0.74, 0.4);
-  endingTitle.textContent = 'Цитадель проснулась';
-  endingCopy.textContent = 'Три обелиска снова связаны. Пепельный Страж рассыпается, и солнечный реликт впервые за столетие пробивает бурю золотым светом.';
-  ending.hidden = false;
-  setObjective('Осада окончена');
-}
-function lose() {
-  if (phase === 'lost' || phase === 'won') return;
-  phase = 'lost';
-  endingTitle.textContent = 'Реликт погас';
-  endingCopy.textContent = 'Пепел добрался до алтаря раньше рассвета. Но цитадель помнит путь — попробуй зажечь обелиски снова.';
-  ending.hidden = false;
-  setObjective('Хранитель пал');
 }
 
-function strike() {
+function destroyEnemy(enemy: Enemy) {
+  enemy.dead = true;
+  enemy.telegraph.dispose();
+  if (enemy.kind === 'boss' && wardenAsset) wardenAsset.setEnabled(false);
+  enemy.root.dispose(false, true);
+  relicCharge = Math.min(100, relicCharge + (enemy.kind === 'boss' ? 35 : enemy.kind === 'brute' ? 22 : 14));
+  updateHud();
+}
+
+function applyPlayerDamage(amount: number, source: Enemy | null, now: number) {
+  if (guarding && source) {
+    const parry = now - guardStarted < 270;
+    if (parry) {
+      source.staggerUntil = now + 1050;
+      source.resolveAttackAt = 0;
+      source.telegraph.material = parryMat;
+      source.telegraph.visibility = 0.95;
+      relicCharge = Math.min(100, relicCharge + 30);
+      playAudio('parry', Math.random() * 0.4);
+      showMessage('ПАРИРОВАНИЕ', 0.75);
+      updateHud();
+      return;
+    }
+    amount *= 0.28;
+  }
+  health -= amount;
+  playAudio('hit', -0.45);
+  updateHud();
+  if (health <= 0) lose();
+}
+
+function chooseAimTarget(maxDistance = 4.4) {
+  let best: Enemy | null = null;
+  let score = Infinity;
+  const forward = new Vector3(Math.sin(playerCollider.rotation.y), 0, Math.cos(playerCollider.rotation.y));
+  for (const enemy of enemies) {
+    if (enemy.dead) continue;
+    const delta = enemy.root.position.subtract(playerCollider.position);
+    delta.y = 0;
+    const d = delta.length();
+    if (d > maxDistance) continue;
+    const dot = d < 0.01 ? 1 : Vector3.Dot(forward, delta.normalize());
+    const candidate = d + (1 - dot) * 2.2;
+    if (candidate < score) { score = candidate; best = enemy; }
+  }
+  return best;
+}
+
+function meleeAttack() {
   if (!started || phase === 'won' || phase === 'lost') return;
   const now = performance.now();
-  if (now - lastStrike < 430) return;
-  const near = nearestInactivePylon();
-  if (enemies.length === 0 && near.pylon && near.distance < 3.25 && phase !== 'boss') {
-    activatePylon(near.pylon);
+  if (now - lastAttack < 300) return;
+  combo = now - lastComboAt < 720 ? (combo + 1) % 3 : 0;
+  lastComboAt = now;
+  lastAttack = now;
+  const damage = combo === 2 ? 3 : 2;
+  const reach = combo === 2 ? 3.35 : 2.75;
+  const dotLimit = combo === 2 ? -0.18 : 0.02;
+  const target = chooseAimTarget();
+  if (target) {
+    const delta = target.root.position.subtract(playerCollider.position);
+    playerCollider.rotation.y = Math.atan2(delta.x, delta.z);
+  }
+  setPlayerAnimation('Attack');
+  playAudio('swing', combo * 0.45 - 0.35);
+
+  const forward = new Vector3(Math.sin(playerCollider.rotation.y), 0, Math.cos(playerCollider.rotation.y));
+  let hitSomething = false;
+  for (const enemy of enemies) {
+    if (enemy.dead) continue;
+    const offset = enemy.root.position.subtract(playerCollider.position);
+    offset.y = 0;
+    const d = offset.length();
+    if (d > reach) continue;
+    const dir = d < 0.01 ? forward : offset.normalize();
+    if (Vector3.Dot(forward, dir) < dotLimit) continue;
+    enemy.hp -= damage;
+    enemy.staggerUntil = now + (combo === 2 ? 520 : 260);
+    enemy.root.position.addInPlace(dir.scale(combo === 2 ? 0.85 : 0.38));
+    relicCharge = Math.min(100, relicCharge + 7);
+    hitSomething = true;
+    playAudio('hit', Math.random() * 1.2 - 0.6);
+  }
+  if (hitSomething) updateHud();
+}
+
+function useRelicOrInteract() {
+  if (!started || phase === 'won' || phase === 'lost') return;
+  const p = playerCollider.position;
+  const archiveDistance = Vector3.Distance(p, new Vector3(-20, 5, -2.5));
+  const forgeDistance = Vector3.Distance(p, new Vector3(20, 5, -2.5));
+  if (!hasArchiveShard && archiveEncounterCleared && archiveDistance < 3.1) {
+    hasArchiveShard = true;
+    health = Math.min(100, health + 24);
+    playAudio('relic');
+    showMessage('ЗВЁЗДНЫЙ ОСКОЛОК ВОЗВРАЩЁН', 2.0);
+    checkWingsComplete();
     return;
   }
-  lastStrike = now;
-  playAudio('strike', Math.random() * 2 - 1);
-  const forward = new Vector3(Math.sin(playerRoot.rotation.y), 0, Math.cos(playerRoot.rotation.y));
-  const pulse = MeshBuilder.CreateTorus(`pulse-${now}`, { diameter: 1.6, thickness: 0.08, tessellation: 24 }, scene);
-  pulse.position = playerRoot.position.add(new Vector3(0, 0.65, 0));
+  if (!hasForgeEmber && forgeEncounterCleared && forgeDistance < 3.1) {
+    hasForgeEmber = true;
+    health = Math.min(100, health + 24);
+    playAudio('relic', 0.3);
+    showMessage('ЖАР КУЗНИ СНОВА ЖИВ', 2.0);
+    checkWingsComplete();
+    return;
+  }
+  if (relicCharge < 100 || performance.now() - lastRelic < 900) return;
+  lastRelic = performance.now();
+  relicCharge = 0;
+  playAudio('relic', 0.6);
+  const pulse = MeshBuilder.CreateTorus(`relic-pulse-${lastRelic}`, { diameter: 2.0, thickness: 0.11, tessellation: 36 }, scene);
+  pulse.position = playerCollider.position.add(new Vector3(0, -0.6, 0));
   pulse.rotation.x = Math.PI / 2;
-  pulse.material = litGold;
+  pulse.material = relicMat;
   const born = performance.now();
   const obs = scene.onBeforeRenderObservable.add(() => {
-    const t = Math.min(1, (performance.now() - born) / 260);
-    pulse.scaling.setAll(1 + t * 3.6);
+    const t = Math.min(1, (performance.now() - born) / 520);
+    pulse.scaling.setAll(1 + t * 7.5);
     pulse.visibility = 1 - t;
     if (t >= 1) {
       scene.onBeforeRenderObservable.remove(obs);
@@ -316,19 +516,47 @@ function strike() {
     }
   });
   for (const enemy of enemies) {
-    const offset = enemy.mesh.getAbsolutePosition().subtract(playerRoot.position);
-    offset.y = 0;
-    const d = offset.length();
-    const direction = d < 0.01 ? Vector3.Forward() : offset.normalize();
-    const facing = d < 0.01 ? 1 : Vector3.Dot(forward, direction);
-    if (d < 4.7 && (d < 2.4 || facing > -0.1)) {
-      enemy.hp -= 1;
-      enemy.mesh.position.addInPlace(direction.scale(0.7));
-      playAudio('hit', Math.random() * 2 - 1);
+    const d = Vector3.Distance(enemy.root.position, playerCollider.position);
+    if (d < 7.6) {
+      enemy.hp -= enemy.kind === 'boss' ? 6 : 8;
+      enemy.staggerUntil = performance.now() + 1200;
+      const push = enemy.root.position.subtract(playerCollider.position);
+      push.y = 0;
+      if (push.lengthSquared() > 0.01) enemy.root.position.addInPlace(push.normalize().scale(1.3));
     }
   }
+  updateHud();
 }
-actionButton.addEventListener('pointerdown', event => { event.preventDefault(); strike(); });
+
+function checkWingsComplete() {
+  updateHud();
+  if (hasArchiveShard && hasForgeEmber) {
+    bridgeBarrier.setEnabled(false);
+    phase = 'bridge';
+    setObjective('Вернись к Вратам солнца и пересеките мост');
+    showMessage('ПЕЧАТЬ МОСТА СНЯТА', 2.2);
+    sanctumLight.intensity = 2.3;
+  } else {
+    phase = 'wings';
+    setObjective(hasArchiveShard ? 'Добудь жар Пепельной кузни' : 'Верни Звёздный осколок из Архива');
+  }
+}
+
+function guardStart() {
+  if (!started) return;
+  guarding = true;
+  guardStarted = performance.now();
+  guardButton.classList.add('active');
+}
+function guardEnd() {
+  guarding = false;
+  guardButton.classList.remove('active');
+}
+attackButton.addEventListener('pointerdown', event => { event.preventDefault(); meleeAttack(); });
+guardButton.addEventListener('pointerdown', event => { event.preventDefault(); guardButton.setPointerCapture(event.pointerId); guardStart(); });
+guardButton.addEventListener('pointerup', guardEnd);
+guardButton.addEventListener('pointercancel', guardEnd);
+relicButton.addEventListener('pointerdown', event => { event.preventDefault(); useRelicOrInteract(); });
 
 let movePointer: number | null = null;
 let moveX = 0;
@@ -379,8 +607,8 @@ lookZone.addEventListener('pointermove', event => {
   const dy = event.clientY - lookLastY;
   lookLastX = event.clientX;
   lookLastY = event.clientY;
-  camera.alpha -= dx * 0.007;
-  camera.beta = Math.max(0.72, Math.min(1.32, camera.beta + dy * 0.0045));
+  camera.alpha -= dx * 0.0065;
+  camera.beta = Math.max(0.72, Math.min(1.32, camera.beta + dy * 0.0042));
 });
 const clearLook = (event: PointerEvent) => { if (event.pointerId === lookPointer) lookPointer = null; };
 lookZone.addEventListener('pointerup', clearLook);
@@ -389,41 +617,97 @@ lookZone.addEventListener('pointercancel', clearLook);
 const keys = new Set<string>();
 window.addEventListener('keydown', event => {
   keys.add(event.code);
-  if (event.code === 'Space') {
-    event.preventDefault();
-    strike();
-  }
+  if (event.code === 'Space') { event.preventDefault(); meleeAttack(); }
+  if (event.code === 'KeyQ') guardStart();
+  if (event.code === 'KeyE') useRelicOrInteract();
 });
-window.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('keyup', event => { keys.delete(event.code); if (event.code === 'KeyQ') guardEnd(); });
 
-function updateActionHint() {
-  const near = nearestInactivePylon();
-  const canChannel = enemies.length === 0 && Boolean(near.pylon) && near.distance < 3.25 && phase !== 'boss';
-  actionButton.textContent = canChannel ? 'IGNITE' : 'RELIC';
-  actionButton.classList.toggle('channel', canChannel);
+function createProjectile(enemy: Enemy, now: number) {
+  const mesh = MeshBuilder.CreateSphere(`ash-bolt-${enemy.id}-${now}`, { diameter: enemy.kind === 'boss' ? 0.7 : 0.42, segments: 8 }, scene);
+  mesh.position.copyFrom(enemy.root.position.add(new Vector3(0, enemy.kind === 'boss' ? 2.1 : 1.45, 0)));
+  mesh.material = emberMat;
+  const direction = playerCollider.position.add(new Vector3(0, 0.5, 0)).subtract(mesh.position).normalize();
+  projectiles.push({ mesh, velocity: direction.scale(enemy.kind === 'boss' ? 8.5 : 6.6), damage: enemy.damage, expires: now + 4200 });
 }
 
-function publishTestState() {
-  (window as typeof window & { __AI_TEST_STATE__?: unknown }).__AI_TEST_STATE__ = {
-    app: 'relic-siege',
-    currentScene: 'citadel',
-    phase,
-    playerPosition: { x: +playerRoot.position.x.toFixed(2), y: 0, z: +playerRoot.position.z.toFixed(2) },
-    grounded: true,
-    hp: Math.max(0, health),
-    activeEnemies: enemies.length,
-    pylons: activePylons,
-    blenderWorldLoaded,
-    guardianLoaded,
-    loadingState: started ? 'ready' : 'awaiting-start',
-    fps: Math.round(engine.getFps())
-  };
+function resolveEnemyAttack(enemy: Enemy, now: number) {
+  enemy.telegraph.visibility = 0;
+  enemy.telegraph.material = telegraphMat;
+  enemy.resolveAttackAt = 0;
+  enemy.nextAttack = now + (enemy.kind === 'boss' ? 1450 : enemy.kind === 'brute' ? 1850 : 1350) + Math.random() * 500;
+  if (enemy.kind === 'seer') {
+    createProjectile(enemy, now);
+    return;
+  }
+  const distance = Vector3.Distance(enemy.root.position, playerCollider.position);
+  if (distance <= enemy.range + 0.65) applyPlayerDamage(enemy.damage, enemy, now);
 }
 
-function updateGame(dt: number, now: number) {
-  publishTestState();
-  if (!started || phase === 'won' || phase === 'lost') return;
+function updateEnemy(enemy: Enemy, dt: number, now: number) {
+  if (enemy.dead) return;
+  if (enemy.hp <= 0) { destroyEnemy(enemy); return; }
+  if (enemy.staggerUntil > now) {
+    enemy.telegraph.visibility = Math.min(0.7, (enemy.staggerUntil - now) / 700);
+    return;
+  }
+  if (enemy.resolveAttackAt > 0) {
+    const remaining = enemy.resolveAttackAt - now;
+    enemy.telegraph.visibility = Math.max(0.2, Math.min(1, 1 - remaining / (enemy.kind === 'boss' ? 950 : enemy.kind === 'brute' ? 780 : 520)));
+    enemy.telegraph.scaling.setAll(1 + Math.max(0, 1 - remaining / 900) * 0.35);
+    if (now >= enemy.resolveAttackAt) resolveEnemyAttack(enemy, now);
+    return;
+  }
 
+  const toPlayer = playerCollider.position.subtract(enemy.root.position);
+  toPlayer.y = 0;
+  const distance = toPlayer.length();
+  const direction = distance > 0.01 ? toPlayer.normalize() : Vector3.Zero();
+  enemy.root.rotation.y = Math.atan2(direction.x, direction.z);
+
+  if (enemy.kind === 'seer') {
+    if (distance < 5.2) enemy.root.position.addInPlace(direction.scale(-enemy.speed * dt));
+    else if (distance > 8.3) enemy.root.position.addInPlace(direction.scale(enemy.speed * dt));
+    if (now > enemy.nextAttack) {
+      enemy.resolveAttackAt = now + 680;
+      enemy.nextAttack = now + 2500;
+    }
+    return;
+  }
+
+  if (enemy.kind === 'boss' && distance > 5.5 && now > enemy.projectileAt) {
+    enemy.projectileAt = now + 3200;
+    enemy.resolveAttackAt = now + 920;
+    return;
+  }
+  if (distance > enemy.range) {
+    enemy.root.position.addInPlace(direction.scale(enemy.speed * dt));
+  } else if (now > enemy.nextAttack) {
+    enemy.resolveAttackAt = now + (enemy.kind === 'boss' ? 900 : enemy.kind === 'brute' ? 760 : 500);
+  }
+}
+
+function updateProjectiles(dt: number, now: number) {
+  for (const projectile of projectiles) {
+    projectile.mesh.position.addInPlace(projectile.velocity.scale(dt));
+    if (Vector3.Distance(projectile.mesh.position, playerCollider.position.add(new Vector3(0, 0.4, 0))) < 0.8) {
+      applyPlayerDamage(projectile.damage, null, now);
+      projectile.expires = 0;
+    }
+  }
+  const expired = projectiles.filter(projectile => projectile.expires <= now);
+  expired.forEach(projectile => projectile.mesh.dispose());
+  projectiles = projectiles.filter(projectile => projectile.expires > now);
+}
+
+function detectGrounded() {
+  const origin = playerCollider.position.add(new Vector3(0, 0.12, 0));
+  const hit = scene.pickWithRay(new Ray(origin, Vector3.Down(), 1.15), mesh => mesh.name.startsWith('COL_'));
+  grounded = Boolean(hit?.hit);
+  return grounded;
+}
+
+function updateMovement(dt: number) {
   let ix = moveX;
   let iy = moveY;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
@@ -433,123 +717,306 @@ function updateGame(dt: number, now: number) {
   ix = Math.max(-1, Math.min(1, ix));
   iy = Math.max(-1, Math.min(1, iy));
   const inputLength = Math.hypot(ix, iy);
+  let moving = false;
   if (inputLength > 0.08) {
+    moving = true;
     ix /= Math.max(1, inputLength);
     iy /= Math.max(1, inputLength);
     const camForward = new Vector3(Math.sin(camera.alpha), 0, Math.cos(camera.alpha));
     const camRight = new Vector3(camForward.z, 0, -camForward.x);
-    const movement = camRight.scale(ix).add(camForward.scale(-iy));
-    playerRoot.position.addInPlace(movement.scale(5.4 * dt));
-    const radius = Math.hypot(playerRoot.position.x, playerRoot.position.z);
-    if (radius > 16.8) {
-      playerRoot.position.x *= 16.8 / radius;
-      playerRoot.position.z *= 16.8 / radius;
-    }
-    playerRoot.rotation.y = Math.atan2(movement.x, movement.z);
+    const direction = camRight.scale(ix).add(camForward.scale(-iy)).normalize();
+    const speed = guarding ? 2.5 : 5.6 * Math.min(1, Math.max(0.35, inputLength));
+    playerCollider.moveWithCollisions(direction.scale(speed * dt));
+    playerCollider.rotation.y = Math.atan2(direction.x, direction.z);
   }
 
-  for (const enemy of enemies) {
-    const toPlayer = playerRoot.position.subtract(enemy.mesh.getAbsolutePosition());
-    toPlayer.y = 0;
-    const distance = toPlayer.length();
-    if (distance > 1.25) {
-      const delta = toPlayer.normalize().scale(enemy.speed * dt);
-      enemy.mesh.position.addInPlace(delta);
-      enemy.mesh.rotation.y = Math.atan2(delta.x, delta.z);
-    } else if (now > enemy.hitAt) {
-      enemy.hitAt = now + (enemy.boss ? 720 : 980);
-      health -= enemy.boss ? 11 : 6;
-      updateHud();
-      playAudio('hit', -0.7);
-      if (health <= 0) lose();
-    }
-  }
+  const onGround = detectGrounded();
+  if (onGround && verticalVelocity < 0) verticalVelocity = -0.6;
+  else verticalVelocity = Math.max(-14, verticalVelocity - 20 * dt);
+  playerCollider.moveWithCollisions(new Vector3(0, verticalVelocity * dt, 0));
 
-  const dead = enemies.filter(enemy => enemy.hp <= 0);
-  for (const enemy of dead) {
-    if (enemy.boss && guardianAsset) guardianAsset.setEnabled(false);
-    enemy.mesh.dispose();
-  }
-  if (dead.length) enemies = enemies.filter(enemy => enemy.hp > 0);
-
-  if (phase === 'wave' && enemies.length === 0) {
-    health = Math.min(100, health + 18);
+  if (playerCollider.position.y < -10) {
+    // Geometry failure or a real fall: reset to the most recent safe route anchor, never leave the player swimming under the map.
+    const respawn = currentZone === 'sanctum' ? new Vector3(0, 9.2, 27) : currentZone === 'bridge' ? new Vector3(0, 7.2, 7) : currentZone === 'archive' ? new Vector3(-17, 5.2, -10) : currentZone === 'forge' ? new Vector3(17, 5.2, -10) : currentZone === 'courtyard' ? new Vector3(0, 3.2, -24) : new Vector3(0, 1.2, -46);
+    playerCollider.position.copyFrom(respawn);
+    verticalVelocity = 0;
+    health = Math.max(20, health - 12);
     updateHud();
-    if (activePylons < 3) {
-      phase = 'pylons';
-      setObjective(`Найди и зажги обелиск ${activePylons + 1}`);
-      showMessage('ПУТЬ К СЛЕДУЮЩЕМУ ОБЕЛИСКУ ОТКРЫТ', 1.8);
-    } else {
-      spawnBoss();
-    }
-  } else if (phase === 'boss' && enemies.length === 0) {
-    win();
+    showMessage('ПРОПАСТЬ ОТБРОСИЛА ТЕБЯ НАЗАД', 1.5);
   }
-
-  for (const pylon of pylons) {
-    pylon.ring.rotation.y += dt * (pylon.active ? 1.4 : 0.35);
-    if (pylon.active) pylon.core.rotation.y += dt * 0.45;
-  }
-  altarRing.rotation.z += dt * (0.08 + activePylons * 0.05);
-  relicLight.intensity = 0.55 + activePylons * 0.8 + Math.sin(now * 0.003) * 0.12;
-  if (messageTimer && now > messageTimer) {
-    message.classList.remove('show');
-    messageTimer = 0;
-  }
-  updateActionHint();
-  const target = playerRoot.position.add(new Vector3(0, 1.45, 0));
-  camera.setTarget(Vector3.Lerp(camera.target, target, Math.min(1, dt * 7)));
+  if (performance.now() - lastAttack > 520) setPlayerAnimation(moving ? 'Walk' : 'Idle');
 }
 
-startButton.addEventListener('click', () => {
-  if (started) return;
-  started = true;
-  phase = 'pylons';
-  startPanel.hidden = true;
-  hud.classList.add('active');
-  setObjective('Найди и зажги обелиск 1');
-  showMessage('ТРИ ОБЕЛИСКА. ОДНА НОЧЬ.', 2.4);
-  updateHud();
-  playAudio('theme');
-  playAudio('wind');
-});
-restartButton.addEventListener('click', () => location.reload());
+function updateStory() {
+  const zone = zoneFromPosition(playerCollider.position);
+  if (zone !== currentZone) {
+    currentZone = zone;
+    updateHud();
+    showMessage(zoneTitle(zone).toUpperCase(), 1.15);
+  }
+
+  if (!gateEncounterCleared && currentZone === 'courtyard' && enemies.length === 0) {
+    phase = 'courtyard';
+    spawnEncounter('ДВОР НЕ ПУСТ', [
+      ['raider', new Vector3(-5, 2.6, -21)],
+      ['raider', new Vector3(5, 2.6, -22)],
+      ['brute', new Vector3(0, 2.6, -16)]
+    ]);
+    setObjective('Очисти двор хранителей');
+    gateEncounterCleared = true;
+  }
+
+  if (gateEncounterCleared && enemies.length === 0 && phase === 'courtyard') {
+    phase = 'wings';
+    setCombatMusic(false);
+    setObjective('Верни Звёздный осколок и жар Пепельной кузни');
+    showMessage('ДВА КРЫЛА. ДВЕ ЧАСТИ ПЕЧАТИ.', 2.0);
+  }
+
+  if (currentZone === 'archive' && !archiveEncounterStarted) {
+    archiveEncounterStarted = true;
+    spawnEncounter('АРХИВ ПРОСНУЛСЯ', [
+      ['seer', new Vector3(-23, 4.6, -12)],
+      ['raider', new Vector3(-16, 4.6, -7)],
+      ['raider', new Vector3(-24, 4.6, -4)]
+    ]);
+    setObjective('Уничтожь стражей Архива');
+  }
+  if (archiveEncounterStarted && !archiveEncounterCleared && enemies.length === 0 && currentZone === 'archive') {
+    archiveEncounterCleared = true;
+    setCombatMusic(false);
+    setObjective('Забери Звёздный осколок у дальней святыни');
+  }
+
+  if (currentZone === 'forge' && !forgeEncounterStarted) {
+    forgeEncounterStarted = true;
+    spawnEncounter('КУЗНЯ ДЫШИТ ПЕПЛОМ', [
+      ['brute', new Vector3(23, 4.6, -11)],
+      ['raider', new Vector3(16, 4.6, -7)],
+      ['seer', new Vector3(22, 4.6, -3)]
+    ]);
+    setObjective('Погаси пепельную охрану Кузни');
+  }
+  if (forgeEncounterStarted && !forgeEncounterCleared && enemies.length === 0 && currentZone === 'forge') {
+    forgeEncounterCleared = true;
+    setCombatMusic(false);
+    setObjective('Разожги жар у дальней святыни');
+  }
+
+  if (hasArchiveShard && hasForgeEmber && currentZone === 'bridge' && !bridgeEncounterStarted) {
+    bridgeEncounterStarted = true;
+    phase = 'bridge';
+    spawnEncounter('НА МОСТЕ НЕКУДА ОТСТУПАТЬ', [
+      ['raider', new Vector3(-2.4, 6.6, 10)],
+      ['brute', new Vector3(1.8, 6.6, 15)],
+      ['seer', new Vector3(0, 6.6, 20)]
+    ]);
+    setObjective('Прорви оборону Солнечного моста');
+  }
+  if (bridgeEncounterStarted && !bridgeEncounterCleared && enemies.length === 0) {
+    bridgeEncounterCleared = true;
+    setCombatMusic(false);
+    phase = 'sanctum';
+    setObjective('Поднимись в Верхнее святилище');
+    showMessage('СТРАЖ ЖДЁТ НАВЕРХУ', 2.0);
+  }
+
+  if (bridgeEncounterCleared && currentZone === 'sanctum' && !bossStarted) {
+    bossStarted = true;
+    phase = 'boss';
+    spawnEncounter('ПЕПЕЛ ПОМНИТ СВОЕГО КОРОЛЯ', [['boss', new Vector3(0, 8.8, 34)]]);
+    setObjective('Победи Пепельного Стража');
+    playAudio('boss');
+    sanctumLight.intensity = 3.7;
+  }
+}
+
+function updateContextButton() {
+  const p = playerCollider.position;
+  if (!hasArchiveShard && archiveEncounterCleared && Vector3.Distance(p, new Vector3(-20, 5, -2.5)) < 3.1) {
+    relicButton.textContent = 'ВЗЯТЬ';
+    relicButton.classList.add('context');
+    return;
+  }
+  if (!hasForgeEmber && forgeEncounterCleared && Vector3.Distance(p, new Vector3(20, 5, -2.5)) < 3.1) {
+    relicButton.textContent = 'РАЗЖЕЧЬ';
+    relicButton.classList.add('context');
+    return;
+  }
+  relicButton.classList.remove('context');
+  relicButton.textContent = relicCharge >= 100 ? 'RELIC!' : `RELIC ${Math.floor(relicCharge)}%`;
+}
+
+function win() {
+  phase = 'won';
+  setCombatMusic(false);
+  audios.get('ambience')!.volume = 0.08;
+  sanctumLight.intensity = 8;
+  moon.intensity = 0.45;
+  endingTitle.textContent = 'Цитадель снова видит солнце';
+  endingCopy.textContent = 'Архив вернул память, Кузня — жар, а Солнечный мост связал их с реликтом. Пепельный Страж пал не на арене, а в крепости, которую ты прошёл от ворот до вершины.';
+  ending.hidden = false;
+  setObjective('Ночь осады окончена');
+}
+function lose() {
+  if (phase === 'lost' || phase === 'won') return;
+  phase = 'lost';
+  setCombatMusic(false);
+  endingTitle.textContent = 'Пепел добрался до реликта';
+  endingCopy.textContent = 'Последний хранитель пал, но печать уже помнит путь через Ворота, Архив, Кузню и Солнечный мост.';
+  ending.hidden = false;
+  setObjective('Хранитель пал');
+}
+
+function publishTestState() {
+  (window as typeof window & { __AI_TEST_STATE__?: unknown }).__AI_TEST_STATE__ = {
+    app: 'relic-siege',
+    version: '2.0.0',
+    currentScene: 'mountain-citadel',
+    zone: currentZone,
+    phase,
+    playerPosition: { x: +playerCollider.position.x.toFixed(2), y: +playerCollider.position.y.toFixed(2), z: +playerCollider.position.z.toFixed(2) },
+    grounded,
+    hp: Math.max(0, +health.toFixed(1)),
+    relicCharge: Math.round(relicCharge),
+    activeEnemies: enemies.filter(enemy => !enemy.dead).length,
+    archiveShard: hasArchiveShard,
+    forgeEmber: hasForgeEmber,
+    blenderWorldLoaded,
+    worldCollisionCount,
+    keeperLoaded,
+    raiderLoaded,
+    wardenLoaded,
+    loadingState: started ? 'ready' : 'awaiting-start',
+    fps: Math.round(engine.getFps())
+  };
+}
+
+function buildFallbackLevel() {
+  const pieces: Array<[string, Vector3, Vector3]> = [
+    ['GateYard', new Vector3(0, -0.25, -43), new Vector3(8.5, 0.25, 10.5)],
+    ['Courtyard', new Vector3(0, 1.75, -22), new Vector3(13.5, 0.25, 10)],
+    ['Archive', new Vector3(-20, 3.75, -8), new Vector3(8.5, 0.25, 8.5)],
+    ['Forge', new Vector3(20, 3.75, -8), new Vector3(8.5, 0.25, 8.5)],
+    ['Approach', new Vector3(0, 4.75, -5), new Vector3(8, 0.25, 7)],
+    ['Bridge', new Vector3(0, 5.75, 11), new Vector3(4.2, 0.25, 10.5)],
+    ['Sanctum', new Vector3(0, 7.75, 31), new Vector3(13, 0.25, 11.5)]
+  ];
+  for (const [name, position, half] of pieces) {
+    const floor = MeshBuilder.CreateBox(`COL_Fallback_${name}`, { width: half.x * 2, height: half.y * 2, depth: half.z * 2 }, scene);
+    floor.position.copyFrom(position);
+    floor.material = fallbackStone;
+    floor.visibility = 0.06;
+    floor.checkCollisions = true;
+  }
+}
 
 async function loadAuthoredAssets() {
   try {
-    await SceneLoader.ImportMeshAsync('', './models/', 'relic-fortress.glb', scene);
-    blenderWorldLoaded = true;
+    const world = await SceneLoader.ImportMeshAsync('', './models/', 'relic-fortress.glb', scene);
+    world.meshes.forEach(mesh => {
+      if (mesh.name.startsWith('COL_')) {
+        mesh.visibility = 0;
+        mesh.checkCollisions = true;
+        mesh.isPickable = true;
+        worldCollisionCount += 1;
+      } else {
+        mesh.receiveShadows = true;
+      }
+    });
+    blenderWorldLoaded = worldCollisionCount > 0;
+    if (!blenderWorldLoaded) buildFallbackLevel();
   } catch (error) {
-    console.warn('[RELIC SIEGE] Blender fortress unavailable; runtime foundation remains playable.', error);
+    console.warn('[RELIC SIEGE 2] Blender world unavailable; using emergency route geometry.', error);
+    buildFallbackLevel();
   }
+
   try {
-    const result = await SceneLoader.ImportMeshAsync('', './models/', 'ash-warden.glb', scene);
-    guardianAsset = result.meshes[0] as unknown as TransformNode;
-    guardianAsset.setEnabled(false);
-    guardianAnimations = result.animationGroups as unknown as typeof guardianAnimations;
-    guardianLoaded = true;
+    const keeper = await SceneLoader.ImportMeshAsync('', './models/', 'keeper.glb', scene);
+    playerVisual = keeper.meshes[0];
+    playerVisual.parent = playerMount;
+    playerVisual.position.set(0, 0.55, 0);
+    playerVisual.scaling.setAll(0.72);
+    keeper.meshes.forEach(mesh => shadowGenerator.addShadowCaster(mesh));
+    playerAnimationGroups = keeper.animationGroups;
+    fallbackKeeper.setEnabled(false);
+    keeperLoaded = true;
+    setPlayerAnimation('Idle');
   } catch (error) {
-    console.warn('[RELIC SIEGE] Blender warden unavailable; runtime boss fallback enabled.', error);
+    console.warn('[RELIC SIEGE 2] Keeper GLB unavailable; fallback keeper remains enabled.', error);
+  }
+
+  try {
+    const raider = await SceneLoader.ImportMeshAsync('', './models/', 'ash-raider.glb', scene);
+    raiderTemplate = raider.meshes[0];
+    raiderTemplate.setEnabled(false);
+    raider.animationGroups.forEach(group => group.stop());
+    raiderLoaded = true;
+  } catch (error) {
+    console.warn('[RELIC SIEGE 2] Raider GLB unavailable; procedural enemies remain enabled.', error);
+  }
+
+  try {
+    const warden = await SceneLoader.ImportMeshAsync('', './models/', 'ash-warden.glb', scene);
+    wardenAsset = warden.meshes[0];
+    wardenAsset.setEnabled(false);
+    wardenAnimations = warden.animationGroups;
+    wardenLoaded = true;
+  } catch (error) {
+    console.warn('[RELIC SIEGE 2] Warden GLB unavailable; boss fallback remains enabled.', error);
   }
   publishTestState();
 }
 void loadAuthoredAssets();
 
+startButton.addEventListener('click', () => {
+  if (started) return;
+  started = true;
+  phase = 'gate';
+  startPanel.hidden = true;
+  hud.classList.add('active');
+  setObjective('Пройди через Внешние ворота во двор хранителей');
+  showMessage('НОЧЬ ПЕПЛА // ПОСЛЕДНИЙ ХРАНИТЕЛЬ', 2.5);
+  updateHud();
+  playAudio('theme');
+  playAudio('ambience');
+});
+restartButton.addEventListener('click', () => location.reload());
+
 let previous = performance.now();
 engine.runRenderLoop(() => {
   const now = performance.now();
-  const dt = Math.min(0.05, Math.max(0, (now - previous) / 1000));
+  const dt = Math.min(0.045, Math.max(0, (now - previous) / 1000));
   previous = now;
-  updateGame(dt, now);
+  publishTestState();
+  if (started && phase !== 'won' && phase !== 'lost') {
+    updateMovement(dt);
+    enemies.forEach(enemy => updateEnemy(enemy, dt, now));
+    enemies = enemies.filter(enemy => !enemy.dead);
+    updateProjectiles(dt, now);
+    updateStory();
+    updateContextButton();
+    if (bossStarted && phase === 'boss' && !enemies.some(enemy => enemy.kind === 'boss')) win();
+    if (messageTimer && now > messageTimer) {
+      message.classList.remove('show');
+      messageTimer = 0;
+    }
+    const cameraTarget = playerCollider.position.add(new Vector3(0, 0.7, 0));
+    camera.setTarget(Vector3.Lerp(camera.target, cameraTarget, Math.min(1, dt * 7)));
+  }
+  updateHud();
   scene.render();
 });
+
 window.addEventListener('resize', () => engine.resize());
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     audios.get('theme')?.pause();
-    audios.get('wind')?.pause();
+    audios.get('combat')?.pause();
+    audios.get('ambience')?.pause();
   } else if (started && phase !== 'lost' && phase !== 'won') {
     playAudio('theme');
-    playAudio('wind');
+    playAudio('ambience');
+    if (enemies.length) setCombatMusic(true);
   }
 });
