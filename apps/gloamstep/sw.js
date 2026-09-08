@@ -2,7 +2,7 @@ const CACHE_PREFIX = 'gloamstep-';
 const CACHE_NAME = 'gloamstep-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-08';
-const CACHE_PROTOCOL = 2;
+const CACHE_PROTOCOL = 3;
 const RELEASE_NOTES = [
   'Первый законченный забег на пять процедурно генерируемых этажей с финальным боссом.',
   'Добавлены свайпы, экранная крестовина, клавиатура, пошаговый бой, три архетипа врагов и туман войны.',
@@ -18,7 +18,9 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
-  '../../shared/mobile-runtime.js'
+  '../../shared/mobile-runtime.js',
+  '../../shared/update-manager.css',
+  '../../shared/update-manager.js'
 ];
 
 const SCOPE_URL = new URL('./', self.registration.scope);
