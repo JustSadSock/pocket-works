@@ -26,3 +26,9 @@ Runtime primitives are limited to invisible collision helpers, particles and res
 ## Mobile rendering
 
 The environment is authored as hundreds of convenient Blender objects, then the forge batches static decoration by material and street zone before export. Collision proxies, animated flags, mechanisms and interactable pieces remain independent. This preserves the authored geometry and material variety while reducing the city GLB from 519 meshes to 91 and keeping mobile draw-call cost predictable. Phone-sized viewports also use the conservative shadow/particle tier regardless of reported logical CPU core count.
+
+## 1.1 landscape controls and character pass
+
+Bellforge 1.1 treats a landscape iPhone as the primary controller rather than a desktop viewport shrunk onto a phone. The left thumb gets a floating analog stick with deadzone shaping and sprint hysteresis; the right side is a dedicated look surface whose drag direction follows the finger naturally. The HUD, subtitles, interaction button and puzzle panels respect notch/home-indicator safe areas and collapse vertically on short landscape viewports. Portrait launches show an explicit rotate-device gate instead of a cramped playfield.
+
+The Bellwright and Warden are regenerated through Asset Forge with expanded spine/chest/neck, hand and foot bones, stronger silhouettes, extra props and facial/mechanical detail. Each model carries six authored actions — Idle, Walk, Run, Talk/Point, Gesture and Alert — with pelvis motion, torso counter-rotation, head stabilization and articulated hands/feet for less mannequin-like movement while keeping the mobile runtime lightweight.
