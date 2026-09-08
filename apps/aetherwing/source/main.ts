@@ -8,6 +8,7 @@ import { FaunaSystem } from './fauna';
 import { createControls } from './input';
 import { riverCenter, WorldStreamer } from './world';
 
+const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const canvas=document.querySelector<HTMLCanvasElement>('#renderCanvas')!;const touch=document.querySelector<HTMLElement>('#touchSurface')!;const loading=document.querySelector<HTMLElement>('#loading')!;const loadingText=document.querySelector<HTMLElement>('#loadingText')!;const startBtn=document.querySelector<HTMLButtonElement>('#startBtn')!;const speedEl=document.querySelector<HTMLElement>('#speed')!;const altEl=document.querySelector<HTMLElement>('#alt')!;const modeEl=document.querySelector<HTMLElement>('#mode')!;const soundBtn=document.querySelector<HTMLButtonElement>('#soundBtn')!;const speedLines=document.querySelector<HTMLElement>('#speedlines')!;const hints=[document.querySelector<HTMLElement>('#leftHint')!,document.querySelector<HTMLElement>('#rightHint')!];
 registerSW({immediate:true});
 
