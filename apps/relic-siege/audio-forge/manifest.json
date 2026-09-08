@@ -5,65 +5,112 @@
       "name": "wind",
       "type": "ambient",
       "generator": "brownnoise",
-      "duration": 10,
+      "duration": 12,
       "channels": 2,
       "output": "public/audio/generated/wind.ogg",
-      "post": { "normalizeDb": -17, "highpass": 55, "lowpass": 1500, "fadeIn": 0.7, "fadeOut": 0.7 }
+      "post": { "normalizeDb": -18, "highpass": 45, "lowpass": 1450, "reverb": 18, "fadeIn": 0.8, "fadeOut": 0.8 }
     },
     {
       "name": "strike",
       "type": "sfx",
-      "preset": "laserShoot",
-      "seed": 181,
+      "preset": "synth",
+      "seed": 4181,
       "output": "public/audio/generated/strike.ogg",
-      "post": { "normalizeDb": -5, "highpass": 110, "lowpass": 9000, "reverb": 10 }
+      "post": { "normalizeDb": -6, "highpass": 140, "lowpass": 7600, "reverb": 7 }
     },
     {
       "name": "hit",
       "type": "sfx",
       "preset": "hitHurt",
-      "seed": 947,
+      "seed": 9472,
       "output": "public/audio/generated/hit.ogg",
-      "post": { "normalizeDb": -6, "highpass": 80, "lowpass": 6200, "reverb": 7 }
+      "post": { "normalizeDb": -6, "highpass": 70, "lowpass": 5100, "reverb": 9 }
+    },
+    {
+      "name": "parry",
+      "type": "sfx",
+      "preset": "powerUp",
+      "seed": 55213,
+      "output": "public/audio/generated/parry.ogg",
+      "post": { "normalizeDb": -4, "highpass": 260, "lowpass": 10800, "reverb": 13 }
     },
     {
       "name": "pylon",
       "type": "sfx",
       "preset": "powerUp",
-      "seed": 3301,
+      "seed": 33019,
       "output": "public/audio/generated/pylon.ogg",
-      "post": { "normalizeDb": -4, "highpass": 70, "lowpass": 11000, "reverb": 24 }
+      "post": { "normalizeDb": -5, "highpass": 60, "lowpass": 11200, "reverb": 31 }
+    },
+    {
+      "name": "enemy",
+      "type": "sfx",
+      "preset": "tone",
+      "seed": 7162,
+      "output": "public/audio/generated/enemy.ogg",
+      "post": { "normalizeDb": -9, "highpass": 55, "lowpass": 1900, "reverb": 39 }
     },
     {
       "name": "boss",
       "type": "sfx",
       "preset": "explosion",
-      "seed": 7702,
+      "seed": 77021,
       "output": "public/audio/generated/boss.ogg",
-      "post": { "normalizeDb": -5, "highpass": 35, "lowpass": 4800, "reverb": 32 }
+      "post": { "normalizeDb": -5, "highpass": 28, "lowpass": 4200, "reverb": 38 }
+    },
+    {
+      "name": "step-stone",
+      "type": "sfx",
+      "preset": "click",
+      "seed": 18004,
+      "output": "public/audio/generated/step-stone.ogg",
+      "post": { "normalizeDb": -13, "highpass": 95, "lowpass": 2500, "reverb": 4 }
     },
     {
       "name": "theme",
       "type": "music",
-      "tempo": 78,
+      "tempo": 68,
       "program": 48,
-      "synthGain": 0.42,
+      "synthGain": 0.34,
       "output": "public/audio/generated/theme.ogg",
       "notes": [
-        { "note": "D2", "beat": 0, "duration": 4, "velocity": 70 },
-        { "note": "A2", "beat": 0, "duration": 4, "velocity": 52 },
-        { "note": "F3", "beat": 1, "duration": 2.5, "velocity": 46 },
-        { "note": "C3", "beat": 4, "duration": 4, "velocity": 64 },
-        { "note": "G2", "beat": 4, "duration": 4, "velocity": 48 },
-        { "note": "E3", "beat": 5, "duration": 2.5, "velocity": 44 },
-        { "note": "Bb2", "beat": 8, "duration": 4, "velocity": 66 },
-        { "note": "F3", "beat": 8, "duration": 4, "velocity": 50 },
-        { "note": "D3", "beat": 9, "duration": 2.5, "velocity": 42 },
-        { "note": "A2", "beat": 12, "duration": 4, "velocity": 68 },
-        { "note": "E3", "beat": 12, "duration": 4, "velocity": 50 },
-        { "note": "C3", "beat": 13, "duration": 2.5, "velocity": 44 }
+        { "note": "D2", "beat": 0, "duration": 8, "velocity": 62 },
+        { "note": "A2", "beat": 0, "duration": 4, "velocity": 46 },
+        { "note": "F3", "beat": 2, "duration": 2, "velocity": 42 },
+        { "note": "C3", "beat": 4, "duration": 4, "velocity": 48 },
+        { "note": "Bb2", "beat": 8, "duration": 8, "velocity": 58 },
+        { "note": "F3", "beat": 8, "duration": 4, "velocity": 43 },
+        { "note": "D3", "beat": 10, "duration": 2, "velocity": 39 },
+        { "note": "A2", "beat": 12, "duration": 4, "velocity": 46 },
+        { "note": "D2", "beat": 16, "duration": 8, "velocity": 64 },
+        { "note": "E3", "beat": 18, "duration": 2, "velocity": 40 },
+        { "note": "G2", "beat": 20, "duration": 4, "velocity": 44 }
       ],
-      "post": { "normalizeDb": -9, "lowpass": 8500, "reverb": 28, "fadeIn": 0.6, "fadeOut": 1.1 }
+      "post": { "normalizeDb": -12, "lowpass": 7600, "reverb": 34, "fadeIn": 1.0, "fadeOut": 1.4 }
+    },
+    {
+      "name": "combat",
+      "type": "music",
+      "tempo": 112,
+      "program": 47,
+      "synthGain": 0.41,
+      "output": "public/audio/generated/combat.ogg",
+      "notes": [
+        { "note": "D2", "beat": 0, "duration": 1, "velocity": 84 },
+        { "note": "D3", "beat": 0, "duration": 0.5, "velocity": 66 },
+        { "note": "F2", "beat": 1, "duration": 1, "velocity": 74 },
+        { "note": "A2", "beat": 2, "duration": 1, "velocity": 82 },
+        { "note": "C3", "beat": 3, "duration": 0.5, "velocity": 72 },
+        { "note": "D2", "beat": 4, "duration": 1, "velocity": 86 },
+        { "note": "Bb2", "beat": 5, "duration": 1, "velocity": 75 },
+        { "note": "A2", "beat": 6, "duration": 1, "velocity": 84 },
+        { "note": "E3", "beat": 7, "duration": 0.5, "velocity": 68 },
+        { "note": "D2", "beat": 8, "duration": 2, "velocity": 88 },
+        { "note": "F3", "beat": 8, "duration": 1, "velocity": 63 },
+        { "note": "C3", "beat": 10, "duration": 1, "velocity": 76 },
+        { "note": "A2", "beat": 11, "duration": 1, "velocity": 82 }
+      ],
+      "post": { "normalizeDb": -10, "highpass": 42, "lowpass": 9000, "reverb": 21, "fadeIn": 0.3, "fadeOut": 0.6 }
     }
   ]
 }
