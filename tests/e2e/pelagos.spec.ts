@@ -16,9 +16,18 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.locator('#shipyardButton').click();
     const shipyard = page.locator('#shipyard');
     const dock = page.locator('.shipyard-dock');
+    const performance = page.locator('#shipyardPerformance');
     await expect(shipyard).toBeVisible();
     await expect(page.locator('#menu')).toBeHidden();
     await expect(page.locator('.shipyard-preview-hint')).toContainText('ПОВОРОТ');
+    await expect(performance).toContainText('ХОД');
+    await expect(performance).toContainText('МАНЁВР');
+    await expect(performance).toContainText('МОРЕ');
+    await expect(performance).toContainText('ГРЕБЛЯ');
+
+    const baselineProfile = (await performance.getAttribute('data-profile'))!.split('-').map(Number);
+    expect(baselineProfile).toHaveLength(4);
+    expect(baselineProfile.every(Number.isFinite)).toBe(true);
 
     const viewport = page.viewportSize();
     const dockBox = await dock.boundingBox();
@@ -30,6 +39,9 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await expect(page.locator('#shipyardSummary')).toContainText('15.6 м');
     await expect(page.locator('#shipyardSummary')).toContainText('4.6 м');
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosOceanHull)).toBe('15.6x4.6');
+    const highboardProfile = (await performance.getAttribute('data-profile'))!.split('-').map(Number);
+    expect(highboardProfile[1]).toBeLessThan(baselineProfile[1]);
+    expect(highboardProfile[2]).toBeGreaterThan(baselineProfile[2]);
 
     const shipyardBox = await shipyard.boundingBox();
     expect(shipyardBox).not.toBeNull();
@@ -67,6 +79,8 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.getByRole('button', { name: /Merchant Rig/i }).click();
     await expect(page.locator('[data-module-id="merchant-gaff"]')).toHaveAttribute('data-selected', 'true');
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosRigging)).toBe('living');
+    const merchantProfile = (await performance.getAttribute('data-profile'))!.split('-').map(Number);
+    expect(merchantProfile[0]).not.toBe(baselineProfile[0]);
     await attachCriticalScreenshot(page, testInfo, 'pelagos-shipyard-navy', { fullPage: false });
 
     await page.locator('#closeShipyard').click();
@@ -78,6 +92,7 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosTextureAnisotropy)).toBe('8');
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosCompactCoach)).toBe('1');
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosSheetLoad))).toBeGreaterThanOrEqual(0);
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosPerformance)).not.toBeUndefined();
     await page.waitForTimeout(1_200);
 
     const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
@@ -85,6 +100,12 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     const sheetLoad = await page.evaluate(() => Number(document.documentElement.dataset.pelagosSheetLoad));
     expect(Number.isFinite(sheetLoad)).toBe(true);
     expect(sheetLoad).toBeLessThanOrEqual(1);
+    const turnResponse = await page.evaluate(() => Number(document.documentElement.dataset.pelagosTurnResponse));
+    expect(turnResponse).toBeGreaterThanOrEqual(0.72);
+    expect(turnResponse).toBeLessThan(1);
+    const sailArea = await page.evaluate(() => Number(document.documentElement.dataset.pelagosSailArea));
+    expect(sailArea).toBeGreaterThan(0.5);
+    expect(sailArea).toBeLessThanOrEqual(1.18);
     const hint = page.locator('#hint');
     if (await hint.isVisible()) {
       await expect(hint).toContainText('Руль:');
