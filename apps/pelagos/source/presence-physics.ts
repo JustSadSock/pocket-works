@@ -15,11 +15,7 @@ type DynamicsMemory = PresencePhysicsFrame & {
 
 const memory = new WeakMap<ShipDynamics, DynamicsMemory>();
 
-/**
- * Slow, spatially varying wave-group envelope. It is deliberately deterministic and is
- * consumed by both the physics wrapper and the visual world wrapper, so the large patches
- * of calmer / rougher water remain the same surface rather than a visual-only trick.
- */
+/** Slow deterministic wave-group envelope shared by physics and visuals. */
 export function seaEnvelope(x: number, z: number, time: number): number {
   const longGroup = Math.sin(x * 0.0067 + z * 0.0041 - time * 0.025);
   const crossGroup = Math.sin(x * -0.0113 + z * 0.0089 + time * 0.018 + 1.7);
@@ -63,9 +59,8 @@ ShipDynamics.prototype.update = function presenceUpdate(
     memory.set(this, frame);
   }
 
-  // A wheel command is not a yaw command. The helmsman moves the rudder, water loads it,
-  // and only then does a multi-ton displacement hull begin to turn.
-  frame.filteredSteer = smoothTo(frame.filteredSteer, clamp(controls.steer, -1, 1), 1.45, safeDt);
+  // A wheel command first loads the rudder; a displacement hull only develops turn rate later.
+  frame.filteredSteer = smoothTo(frame.filteredSteer, clamp(controls.steer, -1, 1), 0.78, safeDt);
   const localScale = waveScale * seaEnvelope(state.worldX, state.worldZ, time);
   frame.seaScale = localScale;
 
@@ -90,24 +85,17 @@ ShipDynamics.prototype.update = function presenceUpdate(
   const port = sample(0.1, -1.58);
   const starboard = sample(0.1, 1.58);
 
-  // Quartering seas nudge the heading instead of producing perfectly symmetric pitch/roll.
-  // The coefficient is intentionally small: it should be felt over several waves, not look
-  // like random steering noise.
   const crossHeight = port.height - starboard.height;
   const longitudinalHeight = bow.height - stern.height;
   const quarteringTarget = clamp(crossHeight * 0.42 + longitudinalHeight * crossHeight * 0.10, -1, 1);
   frame.quartering = smoothTo(frame.quartering, quarteringTarget, 1.8, safeDt);
   state.yawVelocity += frame.quartering * 0.0105 * safeDt * clamp(0.55 + Math.abs(telemetry.forwardSpeed) * 0.16, 0.55, 1.35);
 
-  // Added rotational mass removes the last instantaneous-looking changes in yaw rate while
-  // preserving the existing rudder and keel model underneath.
   const rawYawVelocity = state.yawVelocity;
   const inertialYaw = smoothTo(yawBefore, rawYawVelocity, 3.2, safeDt);
   state.yawVelocity = inertialYaw;
   frame.previousYawVelocity = inertialYaw;
 
-  // Bow slamming is derived from the same wave sample used by buoyancy. It adds a brief loss
-  // of forward momentum and a small upward impulse when a moving bow meets an oncoming crest.
   const bowHullY = state.y - 0.27 + Math.sin(state.pitch) * 4.1;
   const bowImmersion = bow.height - bowHullY;
   const bowVerticalSpeed = state.verticalVelocity + state.pitchVelocity * 4.1;
@@ -122,7 +110,6 @@ ShipDynamics.prototype.update = function presenceUpdate(
     state.verticalVelocity += frame.slam * 0.075 * safeDt;
   }
 
-  // Keep a physically useful load estimate for rigging, wet-contact visuals and audio.
   frame.sailLoad = clamp((telemetry.apparentWindSpeed / 17) * (0.18 + telemetry.sailEfficiency * 0.92), 0, 1);
 
   if (!Number.isFinite(state.yawVelocity)) state.yawVelocity = 0;
