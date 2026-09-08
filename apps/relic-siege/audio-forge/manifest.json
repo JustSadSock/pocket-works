@@ -46,7 +46,7 @@
       "name": "enemy",
       "type": "sfx",
       "preset": "tone",
-      "seed": 7162,
+      "seed": 7163,
       "output": "public/audio/generated/enemy.ogg",
       "post": { "normalizeDb": -9, "highpass": 55, "lowpass": 1900, "reverb": 39 }
     },
