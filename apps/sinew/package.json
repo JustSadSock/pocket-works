@@ -1,11 +1,11 @@
 {
   "name": "@pocket-works/sinew",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs sinew",
-    "test": "node source/core.test.mjs && vitest run --config vite.config.ts",
+    "build": "node source/core.test.mjs && node source/muscle-model.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs sinew",
+    "test": "node source/core.test.mjs && node source/muscle-model.test.mjs && vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

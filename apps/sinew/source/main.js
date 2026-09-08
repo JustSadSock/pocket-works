@@ -1,6 +1,7 @@
 import './styles.css';
 import { installActiveCombat } from './combat-motion.js';
 import { SinewGame } from './game.js';
+import { installVisualPolish } from './visual-polish.js';
 
 const storageNamespace = 'pocket-works:sinew';
 const root = document.querySelector('#app');
@@ -85,6 +86,7 @@ async function boot() {
     updateOrientation();
     await game.init(report);
     installActiveCombat(game);
+    installVisualPolish(game);
     game.setPaused(true);
     game.onState = updateHud;
     game.onQuality = (mode, effective) => {
