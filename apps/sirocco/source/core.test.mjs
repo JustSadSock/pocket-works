@@ -63,9 +63,9 @@ assert.ok(localSandSource.includes('this.world.setLocalReplacement'), 'high-deta
 const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
 const highRadius = Number(localSandSource.match(/this\.radius\s*=\s*preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
 const spacing = highRadius * 2 / highSegments;
-assert.ok(highSegments >= 60 && highSegments <= 72 && spacing <= 0.165, 'High physical sand must keep foot-readable detail without the old performance spike');
+assert.ok(highSegments >= 64 && highSegments <= 72 && spacing <= 0.115, 'High physical sand must keep roughly 11 cm footprint detail under a 5k-vertex budget');
 assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must remain radial rather than a visible square');
-assert.ok(localSandSource.includes('smoothstep(0.68, 0.86, r)'), 'physical deformation must fade before the local patch edge');
+assert.ok(localSandSource.includes('smoothstep(0.70, 0.88, r)'), 'physical deformation must fade before the tighter local patch edge');
 assert.ok(localSandSource.includes('sampleLoose'), 'local surface must render the fresh loose layer');
 assert.ok(localSandSource.includes('sampleCompaction'), 'local surface must render compacted tracks separately from loose deposits');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
