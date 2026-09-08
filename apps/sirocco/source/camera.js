@@ -3,8 +3,8 @@ import { clamp, damp } from './core.js';
 
 export class FirstPersonCamera {
   constructor(scene) {
-    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.56), scene);
-    this.camera.minZ = 0.20;
+    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.38), scene);
+    this.camera.minZ = 0.22;
     this.camera.maxZ = 950;
     this.camera.fov = 1.02;
     this.camera.inertia = 0;
@@ -23,24 +23,25 @@ export class FirstPersonCamera {
     this.swayX = damp(this.swayX, swayTarget, 12, dt);
     this.pitchLag = damp(this.pitchLag, controller.pitch, 20, dt);
 
-    const pitchForOffset = clamp(this.pitchLag, -1.10, 0.98);
-    const cosPitch = Math.cos(pitchForOffset);
-    const viewForwardX = Math.sin(controller.yaw) * cosPitch;
-    const viewForwardY = -Math.sin(pitchForOffset);
-    const viewForwardZ = Math.cos(controller.yaw) * cosPitch;
+    const pitchForClearance = clamp(this.pitchLag, -1.10, 0.98);
+    const viewForwardY = -Math.sin(pitchForClearance);
+    const forwardX = Math.sin(controller.yaw);
+    const forwardZ = Math.cos(controller.yaw);
     const rightX = Math.cos(controller.yaw);
     const rightZ = -Math.sin(controller.yaw);
-    // Deliberately place the gameplay eye slightly in front of the anatomical
-    // eye. Imported head animation can lead/lag body yaw by several frames;
-    // this clearance plus a 20 cm near plane makes skull/keffiyeh clipping
-    // impossible without noticeably changing the perceived player height.
-    const eyeForward = 0.56;
+
+    // Keep the eye in front of the animated skull, but do not drag the camera
+    // down along the full pitch vector. The latter pushed the body behind the
+    // player when looking down. A small vertical clearance is enough together
+    // with the 22 cm near plane while preserving a natural first-person body.
+    const eyeForward = 0.38;
     const eyeBaseY = 1.78;
+    const verticalClearance = viewForwardY * 0.08;
 
     this.camera.position.set(
-      controller.localPosition.x + viewForwardX * eyeForward + rightX * this.swayX,
-      controller.localPosition.y + eyeBaseY + viewForwardY * eyeForward + this.bobY,
-      controller.localPosition.z + viewForwardZ * eyeForward + rightZ * this.swayX
+      controller.localPosition.x + forwardX * eyeForward + rightX * this.swayX,
+      controller.localPosition.y + eyeBaseY + verticalClearance + this.bobY,
+      controller.localPosition.z + forwardZ * eyeForward + rightZ * this.swayX
     );
     this.camera.rotation.x = this.pitchLag;
     this.camera.rotation.y = controller.yaw;
