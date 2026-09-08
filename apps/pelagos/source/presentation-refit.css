@@ -1,0 +1,45 @@
+/* 1.6.4 presentation pass: keep coaching readable without covering the ship. */
+.hint {
+  top: max(72px, calc(env(safe-area-inset-top) + 54px));
+  max-width: min(70vw, 286px);
+  padding: 7px 10px;
+  border-radius: 13px;
+  background: rgba(5, 17, 18, .52);
+  border-color: rgba(224, 247, 244, .13);
+  font-size: 11px;
+  line-height: 1.28;
+  letter-spacing: .002em;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+  pointer-events: none;
+}
+
+.hint:not(.hidden) + .toast {
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 164px);
+}
+
+.helm-track,
+.trim-track,
+.row-button {
+  transition: transform .12s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+
+.helm-zone:active .helm-track,
+.trim-zone:active .trim-track {
+  border-color: rgba(221, 249, 245, .25);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .07), 0 4px 16px rgba(0, 0, 0, .12);
+}
+
+.row-button.is-pressed,
+.row-button.active {
+  border-color: rgba(222, 249, 245, .25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .16), inset 0 1px rgba(255, 255, 255, .07);
+}
+
+@media (max-height: 720px) {
+  .hint {
+    top: max(66px, calc(env(safe-area-inset-top) + 48px));
+    max-width: min(68vw, 270px);
+    padding: 6px 9px;
+    font-size: 10.5px;
+  }
+}
