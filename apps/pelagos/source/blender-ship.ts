@@ -6,6 +6,7 @@ import '@babylonjs/loaders/glTF';
 import type { ShipState, ShipTelemetry } from './core';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
+import { ACTIVE_SHIP } from './ship-config';
 
 const loadState = new WeakMap<OceanWorld, Promise<void>>();
 
@@ -89,9 +90,9 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
   const existing = loadState.get(world);
   if (existing) return existing;
 
-  const promise = SceneLoader.ImportMeshAsync('', './models/', 'pelagos-cutter.glb', world.scene)
+  const promise = SceneLoader.ImportMeshAsync('', './models/', ACTIVE_SHIP.definition.hullAsset, world.scene)
     .then((result) => {
-      const assetRoot = new TransformNode('pelagos-blender-cutter-root', world.scene);
+      const assetRoot = new TransformNode(`pelagos-${ACTIVE_SHIP.definition.id}-root`, world.scene);
       assetRoot.parent = world.shipRoot;
       // Blender's +Y longitudinal axis is exported opposite PELAGOS' +Z forward axis.
       // One authored orientation node fixes it without touching glTF's internal coordinate transform.
@@ -121,6 +122,7 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
 
       hideProceduralStructure(world);
       document.documentElement.dataset.pelagosShipAsset = 'blender';
+      document.documentElement.dataset.pelagosShipClass = ACTIVE_SHIP.definition.id;
     })
     .catch((error: unknown) => {
       // The procedural hull intentionally remains enabled as an offline/failure fallback.
@@ -132,9 +134,9 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
   return promise;
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV3?: boolean };
-if (!prototype.__pelagosBlenderShipV3) {
-  prototype.__pelagosBlenderShipV3 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV4?: boolean };
+if (!prototype.__pelagosBlenderShipV4) {
+  prototype.__pelagosBlenderShipV4 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function blenderShipUpdate(
     state: ShipState,
