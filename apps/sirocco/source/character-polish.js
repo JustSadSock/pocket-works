@@ -1,9 +1,9 @@
 import { Color3, DynamicTexture, MeshBuilder, PBRMaterial, Texture } from '@babylonjs/core';
 
-function makeWeaveTexture(scene, name, contrast = 0.10, patterned = false) {
+function makeWeaveTexture(scene, name, contrast = 0.10, patterned = false, base = '#f6f0e7') {
   const texture = new DynamicTexture(name, { width: 96, height: 96 }, scene, false);
   const ctx = texture.getContext();
-  ctx.fillStyle = '#f6f0e7';
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, 96, 96);
   ctx.strokeStyle = `rgba(70,55,38,${contrast})`;
   ctx.lineWidth = 1;
@@ -11,7 +11,6 @@ function makeWeaveTexture(scene, name, contrast = 0.10, patterned = false) {
     ctx.beginPath(); ctx.moveTo(i + 0.5, 0); ctx.lineTo(i + 0.5, 96); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i + 0.5); ctx.lineTo(96, i + 0.5); ctx.stroke();
   }
-  // Sun-faded broad variation and dust break the flat single-colour look.
   const fade = ctx.createLinearGradient(0, 0, 96, 96);
   fade.addColorStop(0, 'rgba(255,244,220,0.08)');
   fade.addColorStop(0.55, 'rgba(120,86,51,0.02)');
@@ -24,7 +23,7 @@ function makeWeaveTexture(scene, name, contrast = 0.10, patterned = false) {
     ctx.fillRect(x, y, 1 + (i % 3 === 0 ? 1 : 0), 1);
   }
   if (patterned) {
-    ctx.strokeStyle = 'rgba(72,28,20,0.28)';
+    ctx.strokeStyle = 'rgba(72,28,20,0.30)';
     ctx.lineWidth = 2;
     for (let y = 8; y < 96; y += 16) {
       ctx.beginPath();
@@ -40,6 +39,32 @@ function makeWeaveTexture(scene, name, contrast = 0.10, patterned = false) {
   texture.wrapV = Texture.WRAP_ADDRESSMODE;
   texture.uScale = patterned ? 3.4 : 5.2;
   texture.vScale = patterned ? 3.4 : 5.2;
+  return texture;
+}
+
+function makeSkinTexture(scene) {
+  const texture = new DynamicTexture('bedouin-skin-detail', { width: 96, height: 96 }, scene, false);
+  const ctx = texture.getContext();
+  ctx.fillStyle = '#f1d6c1';
+  ctx.fillRect(0, 0, 96, 96);
+  const warmth = ctx.createRadialGradient(48, 42, 8, 48, 48, 64);
+  warmth.addColorStop(0, 'rgba(255,225,205,0.12)');
+  warmth.addColorStop(0.55, 'rgba(183,105,67,0.035)');
+  warmth.addColorStop(1, 'rgba(104,62,42,0.09)');
+  ctx.fillStyle = warmth;
+  ctx.fillRect(0, 0, 96, 96);
+  for (let i = 0; i < 180; i += 1) {
+    const x = (i * 43 + 11) % 96;
+    const y = (i * 67 + 7) % 96;
+    const alpha = 0.012 + (i % 7) * 0.003;
+    ctx.fillStyle = i % 3 === 0 ? `rgba(91,51,34,${alpha})` : `rgba(255,228,207,${alpha})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  texture.update(false);
+  texture.wrapU = Texture.WRAP_ADDRESSMODE;
+  texture.wrapV = Texture.WRAP_ADDRESSMODE;
+  texture.uScale = 2.2;
+  texture.vScale = 2.2;
   return texture;
 }
 
@@ -87,14 +112,19 @@ export class BedouinVisualPolish {
   }
 
   init() {
-    const linenWeave = makeWeaveTexture(this.scene, 'bedouin-linen-weave', 0.075, false);
-    const sashWeave = makeWeaveTexture(this.scene, 'bedouin-sash-weave', 0.11, true);
+    const linenWeave = makeWeaveTexture(this.scene, 'bedouin-linen-weave', 0.075, false, '#f5eee1');
+    const sashWeave = makeWeaveTexture(this.scene, 'bedouin-sash-weave', 0.11, true, '#ead6c8');
+    const keffiyehWeave = makeWeaveTexture(this.scene, 'bedouin-keffiyeh-weave', 0.09, true, '#f2e8dd');
     const leatherGrain = makeLeatherTexture(this.scene);
-    this.textures.push(linenWeave, sashWeave, leatherGrain);
+    const skinDetail = makeSkinTexture(this.scene);
+    this.textures.push(linenWeave, sashWeave, keffiyehWeave, leatherGrain, skinDetail);
 
     for (const mat of this.rig.materials || []) {
       if (!('albedoTexture' in mat)) continue;
-      if (/linen|thobe/i.test(mat.name)) {
+      if (/skin/i.test(mat.name)) {
+        mat.albedoTexture = skinDetail;
+        mat.roughness = 0.86;
+      } else if (/linen|thobe/i.test(mat.name)) {
         mat.albedoTexture = linenWeave;
         mat.roughness = 0.985;
         if ('microSurface' in mat) mat.microSurface = 0.10;
@@ -110,12 +140,14 @@ export class BedouinVisualPolish {
     const darkLeather = material(this.scene, 'bedouin-polish-leather', new Color3(0.115, 0.060, 0.028), 0.91);
     const clothShadow = material(this.scene, 'bedouin-polish-shadow-cloth', new Color3(0.48, 0.40, 0.31), 0.99);
     const redCloth = material(this.scene, 'bedouin-polish-patterned-red', new Color3(0.44, 0.075, 0.045), 0.97);
+    const headCloth = material(this.scene, 'bedouin-polish-keffiyeh', new Color3(0.82, 0.72, 0.62), 0.985);
     const brass = material(this.scene, 'bedouin-polish-aged-brass', new Color3(0.34, 0.22, 0.08), 0.72);
     brass.metallic = 0.35;
     darkLeather.albedoTexture = leatherGrain;
     clothShadow.albedoTexture = linenWeave;
     redCloth.albedoTexture = sashWeave;
-    this.materials.push(darkLeather, clothShadow, redCloth, brass);
+    headCloth.albedoTexture = keffiyehWeave;
+    this.materials.push(darkLeather, clothShadow, redCloth, headCloth, brass);
 
     const add = (mesh, mat) => {
       mesh.parent = this.rig.root;
@@ -160,7 +192,7 @@ export class BedouinVisualPolish {
 
     this.shoulderDrape = add(MeshBuilder.CreateBox('bedouin-shoulder-drape', {
       width: 0.50, height: 0.19, depth: 0.035
-    }, this.scene), clothShadow);
+    }, this.scene), headCloth);
     this.shoulderDrape.position.set(0, 1.43, -0.245);
     this.shoulderDrape.rotation.x = -0.10;
 
@@ -170,7 +202,6 @@ export class BedouinVisualPolish {
     this.scarfLayer.position.set(-0.08, 1.34, -0.262);
     this.scarfLayer.rotation.z = 0.10;
 
-    // A second belt wrap gives the waist a layered, authored silhouette.
     this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', {
       diameter: 0.53, thickness: 0.022, tessellation: 24
     }, this.scene), redCloth);
