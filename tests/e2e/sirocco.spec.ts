@@ -24,28 +24,16 @@ async function qaState(page: import('@playwright/test').Page) {
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
       camera: camera ? {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z,
-        pitch: camera.rotation.x,
-        yaw: camera.rotation.y,
-        minZ: camera.minZ
+        x: camera.position.x, y: camera.position.y, z: camera.position.z,
+        pitch: camera.rotation.x, yaw: camera.rotation.y, minZ: camera.minZ
       } : null,
       player: controller ? {
-        x: controller.globalX,
-        y: controller.localPosition.y,
-        z: controller.globalZ,
-        yaw: controller.yaw,
-        bodyYaw: controller.bodyYaw,
-        pitch: controller.pitch,
-        speed: controller.speed
+        x: controller.globalX, y: controller.localPosition.y, z: controller.globalZ,
+        yaw: controller.yaw, bodyYaw: controller.bodyYaw, pitch: controller.pitch, speed: controller.speed
       } : null,
       localSand: localSand ? {
-        enabled: localSand.isEnabled(),
-        vertices: localSand.getTotalVertices(),
-        indices: localSand.getTotalIndices(),
-        x: localSand.position.x,
-        z: localSand.position.z
+        enabled: localSand.isEnabled(), vertices: localSand.getTotalVertices(), indices: localSand.getTotalIndices(),
+        x: localSand.position.x, z: localSand.position.z
       } : null,
       meshes: game.scene?.meshes?.length,
       materials: game.scene?.materials?.map((material: any) => material.name)
@@ -68,64 +56,68 @@ test.describe('SIROCCO deterministic visual QA', () => {
       const game = window.__SIROCCO_QA__;
       game.quality.setMode('high');
       game.applyQuality(game.quality.preset);
+      game.controller.resetToSpawn?.();
       game.controller.yaw = 0.15;
       game.controller.bodyYaw = 0.15;
       game.controller.pitch = -0.05;
+      game.sand.clear();
+      game.sandSurface.markDirty();
+      game.sandSurface.update(game.controller, true);
     });
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(650);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-forward', { fullPage: false });
 
     const initial = await qaState(page);
     expect(initial).not.toBeNull();
     expect(initial!.activeChunks).toBeGreaterThan(20);
-    expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(4_000);
-    expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.55);
+    expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(10_000);
+    expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
 
-    // Stress the old head-intersection failure: look steeply down, then rotate
-    // the view far away from the body's smoothed yaw before it can catch up.
+    // Reproduce the old intermittent head/keffiyeh intrusion: steep look-down
+    // plus a large yaw jump before the animated body can catch up.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
-      game.controller.pitch = 1.08;
+      game.controller.pitch = 1.05;
       game.controller.yaw += 1.35;
     });
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(140);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-look-down-yaw-diverged', { fullPage: false });
 
-    // Create a deterministic footprint field around the current player so the
-    // screenshot proves that negative displacement, positive rims and local
-    // relaxation are actually visible in the rendered replacement surface.
+    // Put a clearly readable alternating footprint chain 0.9–3.1 m ahead of
+    // the camera. This framing shows the actual negative bowls and positive
+    // displaced rims instead of photographing the ground directly underfoot.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       const c = game.controller;
-      const offsets = [
-        [-0.18, 0.25, -0.06], [0.18, 0.55, 0.05], [-0.18, 0.85, -0.04],
-        [0.18, 1.15, 0.08], [-0.18, 1.45, -0.03], [0.18, 1.75, 0.06]
-      ];
-      for (const [side, forward, lateral] of offsets) {
-        const yaw = c.bodyYaw;
-        const fx = Math.sin(yaw), fz = Math.cos(yaw);
-        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+      c.yaw = 0.15;
+      c.bodyYaw = 0.15;
+      c.pitch = 0.52;
+      const yaw = c.bodyYaw;
+      const fx = Math.sin(yaw), fz = Math.cos(yaw);
+      const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+      const steps = [0.9, 1.32, 1.74, 2.16, 2.58, 3.0];
+      steps.forEach((forward, index) => {
+        const side = index % 2 === 0 ? -0.13 : 0.13;
         game.sand.stampFoot({
-          globalX: c.globalX + fx * forward + rx * lateral + rx * side,
-          globalZ: c.globalZ + fz * forward + rz * lateral + rz * side,
+          globalX: c.globalX + fx * forward + rx * side,
+          globalZ: c.globalZ + fz * forward + rz * side,
           yaw
-        }, { speed: 2.2, lastSlope: 0.24, sliding: 0.08 });
-      }
-      game.sand.relaxArea(c.globalX, c.globalZ + 0.9, 2.2, 5);
+        }, { speed: 2.35, lastSlope: 0.20, sliding: 0.06 });
+      });
+      game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 6);
+      for (let i = 0; i < 5; i += 1) game.sand.update(0.12, c.globalX, c.globalZ);
       const dirty = game.sand.consumeDirtyBounds();
       if (dirty) game.world.refreshDeformation(dirty);
       game.sandSurface.markDirty();
       game.sandSurface.update(c, true);
-      c.pitch = 0.92;
-      c.yaw = c.bodyYaw;
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(550);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand', { fullPage: false });
 
     const deformed = await qaState(page);
     expect(deformed!.sandCells).toBeGreaterThan(80);
     expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(6);
-    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.12);
+    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
 
     await testInfo.attach('sirocco-state.json', {
       body: Buffer.from(JSON.stringify({ initial, deformed }, null, 2)),
