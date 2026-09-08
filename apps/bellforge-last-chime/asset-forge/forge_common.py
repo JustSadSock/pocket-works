@@ -19,6 +19,7 @@ def painted_material(name, base, roughness=.72, metallic=0.0, accent=None, seed=
     mat=bpy.data.materials.new(name); mat.use_nodes=True
     bsdf=mat.node_tree.nodes.get('Principled BSDF')
     if not bsdf: return mat
+    bsdf.inputs['Base Color'].default_value=(*base,1)
     accent=accent or tuple(min(1,c*1.16+0.03) for c in base)
     rng=random.Random(seed); size=64; image=bpy.data.images.new(f'{name}_Paint',width=size,height=size,alpha=True)
     pixels=[]
