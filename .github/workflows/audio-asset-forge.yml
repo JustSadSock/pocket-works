@@ -1,0 +1,199 @@
+name: Audio Asset Forge
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Optional app slug to build (leave empty for platform smoke test)"
+        required: false
+        type: string
+  push:
+    paths:
+      - ".github/workflows/audio-asset-forge.yml"
+      - "tools/audio-forge/**"
+      - "docs/AUDIO-FORGE.md"
+      - "apps/*/audio-forge/**"
+  pull_request:
+    paths:
+      - ".github/workflows/audio-asset-forge.yml"
+      - "tools/audio-forge/**"
+      - "docs/AUDIO-FORGE.md"
+      - "apps/*/audio-forge/**"
+
+concurrency:
+  group: audio-asset-forge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform-smoke:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && inputs.app == '') ||
+      (github.event_name == 'push' && github.ref_name == 'main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install CPU audio toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            sox \
+            libsox-fmt-all \
+            fluidsynth \
+            fluid-soundfont-gm
+          npm install \
+            --prefix "$RUNNER_TEMP/audio-forge-node" \
+            --no-save \
+            --no-package-lock \
+            jsfxr@1.4.1
+          echo "AUDIO_FORGE_NODE_MODULES=$RUNNER_TEMP/audio-forge-node/node_modules" >> "$GITHUB_ENV"
+          soundfont="$(find /usr/share/sounds -type f \( -name '*.sf2' -o -name '*.sf3' \) | sort | head -n 1)"
+          test -n "$soundfont"
+          echo "AUDIO_FORGE_SOUNDFONT=$soundfont" >> "$GITHUB_ENV"
+
+      - name: Generate SFX, ambience and music smoke assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .audio-forge-smoke
+          mkdir -p .audio-forge-smoke
+          node tools/audio-forge/run_manifest.mjs \
+            --manifest tools/audio-forge/smoke-manifest.json \
+            --base .audio-forge-smoke
+
+      - name: Validate generated audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            test -s "$file"
+            soxi "$file"
+            count=$((count + 1))
+          done < .audio-forge-generated.txt
+          test "$count" -eq 3
+
+      - name: Upload smoke audio
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-asset-forge-smoke-${{ github.run_id }}
+          path: .audio-forge-smoke/generated/
+          if-no-files-found: error
+          retention-days: 7
+
+  generate-app-assets:
+    if: >-
+      (github.event_name == 'push' && github.ref_name != 'main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.app != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Refuse direct generation on main
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+            echo "Audio Forge writes generated assets back to the current feature branch; select a non-main branch."
+            exit 1
+          fi
+
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install CPU audio toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            sox \
+            libsox-fmt-all \
+            fluidsynth \
+            fluid-soundfont-gm
+          npm install \
+            --prefix "$RUNNER_TEMP/audio-forge-node" \
+            --no-save \
+            --no-package-lock \
+            jsfxr@1.4.1
+          echo "AUDIO_FORGE_NODE_MODULES=$RUNNER_TEMP/audio-forge-node/node_modules" >> "$GITHUB_ENV"
+          soundfont="$(find /usr/share/sounds -type f \( -name '*.sf2' -o -name '*.sf3' \) | sort | head -n 1)"
+          test -n "$soundfont"
+          echo "AUDIO_FORGE_SOUNDFONT=$soundfont" >> "$GITHUB_ENV"
+
+      - name: Build app-local audio manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            node tools/audio-forge/run_manifest.mjs --app "${{ inputs.app }}"
+          else
+            before="${{ github.event.before }}"
+            if [[ -z "$before" || "$before" =~ ^0+$ ]]; then
+              before="$(git rev-parse HEAD^ 2>/dev/null || true)"
+            fi
+            if [[ -z "$before" ]]; then
+              echo "Cannot determine a previous commit for changed-app discovery. Use workflow_dispatch with an app slug."
+              exit 1
+            fi
+            node tools/audio-forge/run_manifest.mjs --changed-from "$before"
+          fi
+
+      - name: Validate generated audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s .audio-forge-generated.txt ]]; then
+            echo "No generated audio outputs were reported."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            test -s "$file"
+            soxi "$file"
+          done < .audio-forge-generated.txt
+
+      - name: Commit generated audio back to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s .audio-forge-generated.txt ]]; then
+            echo "No generated outputs were reported."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] && git add -- "$file"
+          done < .audio-forge-generated.txt
+
+          if git diff --cached --quiet; then
+            echo "Generated audio assets are already up to date."
+            exit 0
+          fi
+
+          git commit -m "Generate audio assets"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
