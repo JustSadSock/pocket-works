@@ -18,6 +18,16 @@ export function appendageVisibility(
   return t * t * (3 - 2 * t);
 }
 
+function hideAuthoredUnderwaterDuplicate(world: OceanWorld): void {
+  // The Blender cutter contains a decorative PW_Sternpost running well below the transom.
+  // Through the intentionally translucent ocean it reads as a second exposed rudder even when
+  // the actual working blade is submerged. The closed authored transom already carries the
+  // visible stern structure, so this redundant full-depth post is disabled at runtime.
+  for (const mesh of world.scene.meshes) {
+    if (mesh.name.toLowerCase() === 'pw_sternpost') mesh.setEnabled(false);
+  }
+}
+
 function updateSternAppendageImmersion(
   world: OceanWorld,
   environment: EnvironmentFrame,
@@ -25,6 +35,8 @@ function updateSternAppendageImmersion(
   originX: number,
   originZ: number
 ): void {
+  hideAuthoredUnderwaterDuplicate(world);
+
   const rudder = world.scene.getMeshByName('rudder-blade');
   if (rudder) {
     // The working blade lives behind the immersed transom. It should only become visually
@@ -53,9 +65,9 @@ function updateSternAppendageImmersion(
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV2?: boolean };
-if (!prototype.__pelagosSternImmersionV2) {
-  prototype.__pelagosSternImmersionV2 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV3?: boolean };
+if (!prototype.__pelagosSternImmersionV3) {
+  prototype.__pelagosSternImmersionV3 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function sternImmersionUpdate(
     state: ShipState,
