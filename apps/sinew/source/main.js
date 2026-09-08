@@ -120,10 +120,11 @@ async function boot() {
     qaState.torsoCoupling = true;
     installAnatomicalEnvelope(game);
     qaState.anatomicalEnvelope = true;
-    installVisualPolish(game);
+    const visualPolish = installVisualPolish(game);
     report('Подгружаем Blender-доспехи…', .92);
     await installBlenderCombatKit(game);
     qaState.blender = document.documentElement.dataset.sinewBlender || 'unknown';
+    visualPolish.setBlenderKitActive(qaState.blender === 'ready');
     qaState.sensitivity = game.input.sensitivity;
     game.setPaused(true);
     game.onState = updateHud;
