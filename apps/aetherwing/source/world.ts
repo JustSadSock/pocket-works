@@ -30,8 +30,6 @@ function baseTerrainHeight(x:number,z:number){
   const riverDist=Math.abs(z-riverCenter(x));
   const valley=clamp(1-riverDist/176,0,1);
   const channel=clamp(1-riverDist/78,0,1);
-  // A broad valley plus a distinct submerged channel prevents the water ribbon
-  // from intermittently falling behind the terrain mesh on mobile rasterizers.
   const carve=valley*valley*(31+mountains*.40)+Math.pow(channel,1.28)*22;
   return 56+continental+hills+mountains+fine-carve;
 }
@@ -93,7 +91,7 @@ export class WorldStreamer{
   heightAt(x:number,z:number){return terrainHeight(x,z);}
   get instanceCount(){let n=0;for(const [,c] of this.chunks)n+=c.instances.length;return n;}
   get treeCount(){let n=0;for(const [,c] of this.chunks)n+=c.treeCount;return n;}
-  get materialsHealthy(){return !this.terrainMaterial.isDisposed()&&!this.water.isDisposed();}
+  get materialsHealthy(){return this.scene.materials.includes(this.terrainMaterial)&&this.scene.materials.includes(this.water);}
   get riverMeshCount(){return this.scene.meshes.filter(m=>m.name.startsWith('river_')&&m.isEnabled()).length;}
   async loadTemplates(){
     try{
@@ -130,7 +128,7 @@ export class WorldStreamer{
     for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){const wx=baseX+(x/(grid-1)-.5)*CHUNK,wz=baseZ+(z/(grid-1)-.5)*CHUNK,h=terrainHeight(wx,wz),c=biomeColor(wx,wz,h);positions.push(wx,h,wz);colors.push(c.r,c.g,c.b,1);}
     for(let z=0;z<grid-1;z++)for(let x=0;x<grid-1;x++){const a=z*grid+x,b=a+1,c=a+grid,d=c+1;indices.push(a,c,b,b,c,d);}
     VertexData.ComputeNormals(positions,indices,normals);const mesh=new Mesh(`terrain_${key}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh);mesh.material=this.terrainMaterial;mesh.useVertexColors=true;mesh.receiveShadows=true;mesh.isPickable=false;mesh.parent=root;mesh.freezeWorldMatrix();
-    const centerZ=riverCenter(baseX),minZ=baseZ-HALF_CHUNK-110,maxZ=baseZ+HALF_CHUNK+110;if(centerZ>=minZ&&centerZ<=maxZ){const river=this.createRiver(cx);river.parent=root;}
+    const ownerCz=Math.floor((riverCenter(baseX)+HALF_CHUNK)/CHUNK);if(cz===ownerCz){const river=this.createRiver(cx);river.parent=root;}
     this.createLakes(cx,cz,root);
     const instances:InstancedMesh[]=[];const treeCount=this.scatter(cx,cz,root,instances,near?1:.29);
     this.chunks.set(key,{key,cx,cz,root,instances,treeCount});
@@ -139,8 +137,6 @@ export class WorldStreamer{
     const seg=96,positions:number[]=[],indices:number[]=[],x0=cx*CHUNK-HALF_CHUNK;
     for(let i=0;i<seg;i++){
       const x=x0+i/(seg-1)*CHUNK,z=riverCenter(x),h=terrainHeight(x,z)+4.55;
-      // Width noise is a function of world X only. It therefore matches exactly
-      // at adjacent chunk boundaries instead of stepping when cx changes.
       const half=27+noise(x*.0107,31.7)*17;
       positions.push(x,h,z-half,x,h,z+half);
       if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
