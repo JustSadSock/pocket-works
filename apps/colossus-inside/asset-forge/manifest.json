@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "colossus-exterior",
+      "script": "colossus.py",
+      "output": "public/models/colossus.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "colossus-interior",
+      "script": "interior.py",
+      "output": "public/models/interior.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "traveler",
+      "script": "player.py",
+      "output": "public/models/player.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    }
+  ]
+}
