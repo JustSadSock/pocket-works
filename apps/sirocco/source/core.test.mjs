@@ -85,9 +85,9 @@ assert.ok(contactShadowSource.includes('this.material.alpha = 0.54'));
 assert.ok(!contactShadowSource.includes('ShadowGenerator'));
 
 const cameraSource = readFileSync(new URL('./camera.js', import.meta.url), 'utf8');
-assert.ok(cameraSource.includes('const eyeForward = 0.56'), 'first-person camera must stay safely ahead of animated head motion');
-assert.ok(cameraSource.includes('viewForwardY'));
-assert.ok(cameraSource.includes('camera.minZ = 0.20'), 'near clip must reject residual skull and keffiyeh intersections');
+assert.ok(cameraSource.includes('const eyeForward = 0.38'), 'camera must keep enough head clearance without pushing the visible body behind the player');
+assert.ok(cameraSource.includes('const verticalClearance = viewForwardY * 0.08'), 'pitch clearance must stay small enough to preserve first-person body visibility');
+assert.ok(cameraSource.includes('camera.minZ = 0.22'), 'near clip must reject residual skull and keffiyeh intersections');
 const movementSource = readFileSync(new URL('./movement.js', import.meta.url), 'utf8');
 assert.ok(movementSource.includes('sampleSoftness'));
 assert.ok(movementSource.includes('looseDrag'));
