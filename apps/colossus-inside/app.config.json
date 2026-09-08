@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "colossus-inside",
+  "name": "COLOSSUS // INSIDE",
+  "shortName": "COLOSSUS",
+  "description": "Короткая мобильная 3D-игра о человеке, который карабкается по живому биомеханическому колоссу и ремонтирует его внутренний стабилизатор во время шторма.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T03:32:00+03:00",
+  "changelog": [
+    "Добавлен законченный вертикальный slice: пробуждение на спине, молния, опасное плечо, проникновение внутрь, физический ремонт и выход на голову.",
+    "Blender Asset Forge генерирует отдельные GLB колосса, внутренней анатомии и ригнутого персонажа с armature и именованными анимациями.",
+    "Игрок наследует движение текущей части тела через иерархию движущихся физических носителей; повреждение и ремонт меняют походку и передаваемые импульсы.",
+    "Добавлены шторм, дождь, молнии, атмосферная перспектива, разрушение брони, процедурный spatial-like Web Audio и адаптивное мобильное качество."
+  ],
+  "status": "published",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#d8c6a1",
+  "backgroundColor": "#101518",
+  "themeColor": "#101518",
+  "orientation": "landscape",
+  "cacheName": "colossus-inside-v1.0.0",
+  "storageNamespace": "pocket-works:colossus-inside",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "Asset Forge", "armature", "animation", "physics", "storm", "landscape", "iPhone"],
+  "order": 81
+}

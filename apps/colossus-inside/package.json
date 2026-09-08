@@ -1,0 +1,15 @@
+{
+  "name": "@pocket-works/colossus-inside",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs colossus-inside",
+    "test": "node source/core.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1",
+    "@babylonjs/loaders": "^9.2.1"
+  }
+}
