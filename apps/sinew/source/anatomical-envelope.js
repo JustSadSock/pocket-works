@@ -132,7 +132,7 @@ export function installAnatomicalEnvelope(game) {
     const minShieldZ = .82;
     const safeShield = {
       x: Math.min(shieldLocal.x, maxShieldX),
-      y: clamp(shieldLocal.y, -.68, .12),
+      y: clamp(shieldLocal.y, -.78, .12),
       z: Math.max(shieldLocal.z, minShieldZ)
     };
     const safeCenter = worldPoint(safeShield, head, frame);
