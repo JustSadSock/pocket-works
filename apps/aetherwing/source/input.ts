@@ -13,6 +13,7 @@ export function createControls(surface:HTMLElement):Controls{
   let brakeTimer=0;
   let leftTap=0,rightTap=0;
   let lastPointerEventAt=0;
+  let lastTick=performance.now();
 
   const engageBoost=(now:number)=>{c.boost=1;c.lastGesture='boost';leftTap=now;};
   const engageBrake=(now:number,duration=2300)=>{c.brake=1;c.brakeEvents+=1;c.lastGesture='brake';brakeTimer=Math.max(brakeTimer,now+duration);rightTap=now;};
@@ -20,10 +21,7 @@ export function createControls(surface:HTMLElement):Controls{
   const begin=(id:number,x:number,y:number)=>{
     const now=performance.now();
     const side=x<innerWidth*.5?'left':'right';
-    if(side==='left'&&now-leftTap<350)c.boost=1;
-    // Second tap starts the extended brake immediately. A 3.2 s window is
-    // deliberate: on mobile, terrain/chunk work can delay a frame by hundreds
-    // of milliseconds and the physical action must still be visible afterwards.
+    if(side==='left'&&now-leftTap<350)engageBoost(now);
     if(side==='right'&&now-rightTap<350)engageBrake(now,3200);
     pointers.set(id,{id,side,sx:x,sy:y,x,y,t:now});
   };
@@ -76,9 +74,10 @@ export function createControls(surface:HTMLElement):Controls{
     surface.removeEventListener('touchstart',touchStart);surface.removeEventListener('touchmove',touchMove);surface.removeEventListener('touchend',touchEnd);surface.removeEventListener('touchcancel',touchEnd);
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);
   };
-  const tick=()=>{
+  const tick=(now=performance.now())=>{
+    const dt=Math.max(0,(now-lastTick)/1000);lastTick=now;
     if(key.size){c.x=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0);c.y=(key.has('KeyW')||key.has('ArrowUp')?1:0)-(key.has('KeyS')||key.has('ArrowDown')?1:0);}
-    c.boost=Math.max(0,c.boost-.018);
+    if(!key.has('Space'))c.boost=Math.max(0,c.boost-dt*1.08);
     if(brakeTimer&&performance.now()>brakeTimer){c.brake=0;brakeTimer=0;}
     requestAnimationFrame(tick);
   }; tick();
