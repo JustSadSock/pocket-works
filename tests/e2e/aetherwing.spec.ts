@@ -24,18 +24,16 @@ test.describe('AETHERWING flight journey',()=>{
     const loaded=await state(page);expect(loaded?.dragonReady).toBe(true);expect(loaded?.usedFallback,'Blender dragon unexpectedly fell back to primitive runtime geometry').toBe(false);expect(loaded?.animationGroups??0).toBeGreaterThanOrEqual(5);expect(loaded?.boneCount??0).toBeGreaterThanOrEqual(20);expect(loaded?.fauna??0).toBeGreaterThanOrEqual(20);expect(loaded?.assetErrors??[]).toEqual([]);
     await page.locator('#startBtn').click();
     await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return s?.loadingState==='flying'&&s?.started===true;},undefined,{timeout:8_000});
+    const sound=page.locator('#soundBtn');await expect(sound).toHaveText('SND ON');await sound.click();await expect(sound).toHaveText('SND OFF');await sound.click();await expect(sound).toHaveText('SND ON');
     await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return (s?.chunks??0)>=9&&(s?.terrainMeshes??0)>=9&&(s?.vegetationInstances??0)>=300&&(s?.treeInstances??0)>=180;},undefined,{timeout:10_000});
     await page.waitForTimeout(450);
     const glide=await state(page);expect(glide?.speed??0).toBeGreaterThan(12);expect(glide?.altitude??0).toBeGreaterThan(8);expect(glide?.altitude??999).toBeLessThan(160);expect(glide?.chunks??0).toBeGreaterThanOrEqual(9);expect(glide?.terrainMeshes??0).toBeGreaterThanOrEqual(9);expect(glide?.riverMeshes??0,'opening river valley did not render a river mesh').toBeGreaterThan(0);expect(glide?.materialsHealthy).toBe(true);expect(glide?.vegetationInstances??0).toBeGreaterThanOrEqual(300);expect(glide?.treeInstances??0).toBeGreaterThanOrEqual(180);await snap(page,testInfo,'aetherwing-glide-default');
 
-    // The start point is deliberately close to a chunk boundary. This sustained
-    // climb crosses it and verifies that streaming disposal does not destroy the
-    // shared terrain/water materials used by the incoming chunks.
     await holdStick(page,0,-1,3000);
     const climb=await state(page);expect(climb?.pitch??-1).toBeGreaterThan(.08);expect(['climb','flap','glide']).toContain(climb?.mode);expect(climb?.materialsHealthy,'shared terrain/water material was disposed while crossing a chunk').toBe(true);expect(climb?.terrainMeshes??0).toBeGreaterThanOrEqual(9);await snap(page,testInfo,'aetherwing-climb');
 
     const beforeDive=climb?.speed??0;await holdStick(page,0,1,4200);
-    const dive=await state(page);expect(dive?.pitch??1).toBeLessThan(-.18);expect(dive?.mode).toBe('dive');expect(dive?.speed??0).toBeGreaterThan(Math.max(18,beforeDive*.92));expect(dive?.materialsHealthy).toBe(true);await snap(page,testInfo,'aetherwing-dive');
+    const dive=await state(page);expect(dive?.pitch??1).toBeLessThan(-.18);expect(dive?.mode).toBe('dive');expect(dive?.speed??0,'dive did not convert altitude into speed').toBeGreaterThan(beforeDive+1.5);expect(dive?.materialsHealthy).toBe(true);await snap(page,testInfo,'aetherwing-dive');
 
     await holdStick(page,-1,0,2600);
     const bank=await state(page);expect(Math.abs(bank?.roll??0)).toBeGreaterThan(.12);expect(bank?.materialsHealthy).toBe(true);await snap(page,testInfo,'aetherwing-bank');
