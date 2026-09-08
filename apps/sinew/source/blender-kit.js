@@ -3,6 +3,7 @@ import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import '@babylonjs/loaders/glTF';
 
 const AXIS_Y = new Vector3(0, 1, 0);
+const AXIS_Z = new Vector3(0, 0, 1);
 
 function quatAxisTo(axis, direction) {
   const dir = direction.normalizeToNew();
@@ -32,9 +33,9 @@ function tintFaction(result, warrior) {
   for (const mesh of result.meshes) {
     const mat = mesh.material;
     if (!(mat instanceof PBRMaterial)) continue;
-    mat.environmentIntensity = .58;
-    mat.directIntensity = 1.05;
-    mat.specularIntensity = .62;
+    mat.environmentIntensity = .64;
+    mat.directIntensity = 1.08;
+    mat.specularIntensity = .68;
     if (/OxideRed/i.test(mat.name)) mat.albedoColor = faction;
   }
 }
@@ -45,21 +46,21 @@ function shadow(game, mesh) {
   game.world?.shadowGenerator?.addShadowCaster(mesh);
 }
 
-function syncRigid(mesh, target, scale = 1) {
-  if (!mesh || !target) return;
-  mesh.position.copyFrom(target.position);
-  if (target.rotationQuaternion) mesh.rotationQuaternion = target.rotationQuaternion.clone();
-  else mesh.rotationQuaternion = Quaternion.FromEulerAngles(target.rotation.x, target.rotation.y, target.rotation.z);
-  mesh.scaling.setAll(scale);
-}
-
-function syncSegment(mesh, a, b, authoredLength, widthScale = 1) {
+function syncSegment(mesh, a, b, authoredLength, axis = AXIS_Y, widthScale = 1) {
   if (!mesh) return;
   const delta = b.subtract(a);
   const length = Math.max(.001, delta.length());
   mesh.position.copyFrom(a.add(b).scale(.5));
-  mesh.rotationQuaternion = quatAxisTo(AXIS_Y, delta);
-  mesh.scaling.set(widthScale, length / authoredLength, widthScale);
+  mesh.rotationQuaternion = quatAxisTo(axis, delta);
+  if (axis === AXIS_Z) mesh.scaling.set(widthScale, widthScale, length / authoredLength);
+  else mesh.scaling.set(widthScale, length / authoredLength, widthScale);
+}
+
+function syncShieldPart(mesh, center, normal, scale, normalOffset = 0) {
+  if (!mesh) return;
+  mesh.position.copyFrom(center.add(normal.scale(normalOffset * scale)));
+  mesh.rotationQuaternion = quatAxisTo(AXIS_Z, normal);
+  mesh.scaling.setAll(scale);
 }
 
 async function loadWarriorKit(game, warrior) {
@@ -82,7 +83,17 @@ async function loadWarriorKit(game, warrior) {
     greaveL: find('Kit_Greave'),
     greaveR: null,
     bootL: find('Kit_Boot'),
-    bootR: null
+    bootR: null,
+    blade: find('Kit_Blade'),
+    bladeRidge: find('Kit_Blade_Ridge'),
+    guard: find('Kit_Guard'),
+    grip: find('Kit_Grip'),
+    pommel: find('Kit_Pommel'),
+    shieldFace: find('Kit_ShieldFace'),
+    shieldRim: find('Kit_ShieldRim'),
+    shieldBoss: find('Kit_ShieldBoss'),
+    shieldPaintRing: find('Kit_ShieldPaintRing'),
+    shieldSlash: find('Kit_ShieldSlash')
   };
 
   if (parts.greaveL) parts.greaveR = parts.greaveL.clone(`${warrior.id}:blender-greave-r`);
@@ -90,14 +101,20 @@ async function loadWarriorKit(game, warrior) {
   if (parts.greaveR) shadow(game, parts.greaveR);
   if (parts.bootR) shadow(game, parts.bootR);
 
-  // Decorative source chips and weapon/shield prototypes stay disabled until a future
-  // physical-visual calibration pass; armor is already production Blender geometry.
   for (const mesh of result.meshes) {
-    if (mesh.name.startsWith('Kit_Color') || mesh.name.startsWith('Kit_Blade') || mesh.name === 'Kit_Guard' || mesh.name === 'Kit_Grip' || mesh.name === 'Kit_Pommel' || mesh.name.startsWith('Kit_Shield')) mesh.setEnabled(false);
+    if (mesh.name.startsWith('Kit_Color')) mesh.setEnabled(false);
   }
 
-  warrior.meshes.chestPlate.setEnabled(false);
-  if (!warrior.isPlayer) warrior.meshes.helmet.setEnabled(false);
+  // Procedural meshes remain the fail-safe if the GLB cannot load. Once the authored
+  // pieces are present, hide only the pieces they genuinely replace.
+  if (parts.chest) warrior.meshes.chestPlate.setEnabled(false);
+  if (parts.helmet && !warrior.isPlayer) warrior.meshes.helmet.setEnabled(false);
+  if (parts.blade) warrior.meshes.blade.setEnabled(false);
+  if (parts.grip) warrior.meshes.grip.setEnabled(false);
+  if (parts.guard) warrior.meshes.guard.setEnabled(false);
+  if (parts.shieldFace) warrior.meshes.shield.setEnabled(false);
+  if (parts.shieldRim) warrior.meshes.shieldRim.setEnabled(false);
+  if (parts.shieldBoss) warrior.meshes.shieldBoss.setEnabled(false);
 
   const update = () => {
     const chest = warrior.bones.chest.getAbsolutePosition();
@@ -149,8 +166,8 @@ async function loadWarriorKit(game, warrior) {
       parts.pauldronR.rotationQuaternion = upperQuat.clone();
     }
 
-    syncSegment(parts.greaveL, kneeL, footL, .33, .95);
-    syncSegment(parts.greaveR, kneeR, footR, .33, .95);
+    syncSegment(parts.greaveL, kneeL, footL, .33, AXIS_Y, .95);
+    syncSegment(parts.greaveR, kneeR, footR, .33, AXIS_Y, .95);
     if (parts.bootL) {
       parts.bootL.position.copyFrom(footL.add(new Vector3(0, .01, 0)));
       parts.bootL.rotationQuaternion = bodyQuat.clone();
@@ -159,6 +176,35 @@ async function loadWarriorKit(game, warrior) {
       parts.bootR.position.copyFrom(footR.add(new Vector3(0, .01, 0)));
       parts.bootR.rotationQuaternion = bodyQuat.clone();
     }
+
+    // Authoritative weapon anchors come from the collision/constraint system.
+    const swordBase = warrior.sword.base;
+    const swordTip = warrior.sword.tip;
+    const swordDir = swordTip.subtract(swordBase).normalize();
+    const bladeStart = swordBase.add(swordDir.scale(.10));
+    syncSegment(parts.blade, bladeStart, swordTip, 1.0, AXIS_Z, 1);
+    syncSegment(parts.bladeRidge, bladeStart.add(swordDir.scale(.04)), swordTip.subtract(swordDir.scale(.04)), .84, AXIS_Z, 1);
+    if (parts.guard) {
+      parts.guard.position.copyFrom(swordBase.add(swordDir.scale(.015)));
+      parts.guard.rotationQuaternion = quatAxisTo(AXIS_Z, swordDir);
+      parts.guard.scaling.setAll(1);
+    }
+    syncSegment(parts.grip, swordBase.subtract(swordDir.scale(.18)), swordBase, 1.0, AXIS_Y, 1);
+    if (parts.pommel) {
+      parts.pommel.position.copyFrom(swordBase.subtract(swordDir.scale(.205)));
+      parts.pommel.scaling.setAll(1);
+    }
+
+    // Blender shield is authored around +Z; scale follows the physical radius so
+    // the visible edge and collision edge remain in the same place.
+    const shieldScale = warrior.shield.radius / .45;
+    const shieldCenter = warrior.shield.center;
+    const shieldNormal = warrior.shield.normal.normalizeToNew();
+    syncShieldPart(parts.shieldFace, shieldCenter, shieldNormal, shieldScale, 0);
+    syncShieldPart(parts.shieldRim, shieldCenter, shieldNormal, shieldScale, 0);
+    syncShieldPart(parts.shieldBoss, shieldCenter, shieldNormal, shieldScale, .060);
+    syncShieldPart(parts.shieldPaintRing, shieldCenter, shieldNormal, shieldScale, .038);
+    syncShieldPart(parts.shieldSlash, shieldCenter, shieldNormal, shieldScale, .043);
   };
 
   update();
