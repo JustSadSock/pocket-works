@@ -30,8 +30,8 @@ function addRouteInlays(scene) {
 function addInteriorArchitecture(scene) {
   const parent=scene.getTransformNodeByName('carrier-interior');
   if (!parent) return null;
-  const shell=makeMaterial(scene,'interior-shell-runtime',new Color3(.16,.18,.165),new Color3(.018,.021,.018));
-  const rib=makeMaterial(scene,'interior-rib-runtime',new Color3(.27,.20,.095),new Color3(.026,.016,.004));
+  const shell=makeMaterial(scene,'interior-shell-runtime',new Color3(.18,.205,.19),new Color3(.055,.064,.058));
+  const rib=makeMaterial(scene,'interior-rib-runtime',new Color3(.29,.215,.10),new Color3(.045,.028,.008));
   const tissue=makeMaterial(scene,'interior-tissue-runtime',new Color3(.18,.045,.035),new Color3(.032,.005,.004));
   const lampMat=makeMaterial(scene,'interior-lamp-runtime',new Color3(.06,.48,.38),new Color3(.05,.62,.48));
   const targetMat=makeMaterial(scene,'stabilizer-target-runtime',new Color3(.025,.34,.28),new Color3(.04,.78,.60));
@@ -66,20 +66,36 @@ function addInteriorArchitecture(scene) {
 export function installColossusVisualTuning(){
   const scene=EngineStore.LastCreatedScene;
   if(!scene)return;
-  globalThis.__PW_VISUAL_TUNING__={ready:true,version:5};
-  scene.clearColor=new Color4(.048,.064,.067,1);
-  scene.ambientColor=new Color3(.34,.35,.32);
-  scene.imageProcessingConfiguration.exposure=1.30;
-  scene.imageProcessingConfiguration.contrast=1.06;
-  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene); sky.intensity=.96; sky.diffuse=new Color3(.66,.73,.70); sky.groundColor=new Color3(.20,.19,.15);
-  const rim=new DirectionalLight('cross-browser-rim',new Vector3(.5,-.7,-.46),scene); rim.position.set(-18,30,24); rim.intensity=.88; rim.diffuse=new Color3(.86,.74,.53);
-  const cameraLamp=new PointLight('camera-readable-fill',new Vector3(0,1.25,1.3),scene); cameraLamp.parent=scene.activeCamera; cameraLamp.intensity=1.45; cameraLamp.range=26; cameraLamp.diffuse=new Color3(.80,.74,.60);
+  globalThis.__PW_VISUAL_TUNING__={ready:true,version:6};
+  scene.clearColor=new Color4(.052,.070,.073,1);
+  scene.ambientColor=new Color3(.36,.37,.34);
+  scene.imageProcessingConfiguration.exposure=1.32;
+  scene.imageProcessingConfiguration.contrast=1.05;
+
+  const routeSurface=makeMaterial(scene,'route-surface-guaranteed',new Color3(.15,.18,.17),new Color3(.105,.13,.12));
+  routeSurface.disableLighting=true;
+  routeSurface.specularColor=Color3.Black();
+  const routeEdge=makeMaterial(scene,'route-edge-guaranteed',new Color3(.30,.215,.085),new Color3(.17,.105,.025));
+  routeEdge.disableLighting=true;
+  routeEdge.specularColor=Color3.Black();
+
+  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene); sky.intensity=.98; sky.diffuse=new Color3(.68,.75,.72); sky.groundColor=new Color3(.21,.20,.16);
+  const rim=new DirectionalLight('cross-browser-rim',new Vector3(.5,-.7,-.46),scene); rim.position.set(-18,30,24); rim.intensity=.90; rim.diffuse=new Color3(.88,.76,.55);
+  const cameraLamp=new PointLight('camera-readable-fill',new Vector3(0,1.25,1.3),scene); cameraLamp.parent=scene.activeCamera; cameraLamp.intensity=1.48; cameraLamp.range=26; cameraLamp.diffuse=new Color3(.82,.76,.62);
   addRouteInlays(scene); const stabilizer=addInteriorArchitecture(scene);
+
   const tune=()=>{
     const inside=globalThis.__PW_TEST_STATE__?.carrier==='interior';
-    scene.imageProcessingConfiguration.exposure=inside?1.40:1.31; scene.imageProcessingConfiguration.contrast=inside?1.02:1.06;
-    if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.006);scene.fogColor=new Color3(.085,.10,.09);cameraLamp.intensity=1.8;cameraLamp.range=20;}
-    else{if(scene.fogDensity>.0028)scene.fogDensity=.00225;scene.fogColor=new Color3(.115,.145,.15);cameraLamp.intensity=1.45;cameraLamp.range=26;}
+    scene.imageProcessingConfiguration.exposure=inside?1.40:1.33; scene.imageProcessingConfiguration.contrast=inside?1.02:1.05;
+    if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.006);scene.fogColor=new Color3(.09,.105,.095);cameraLamp.intensity=1.82;cameraLamp.range=20;}
+    else{if(scene.fogDensity>.0028)scene.fogDensity=.0022;scene.fogColor=new Color3(.12,.15,.155);cameraLamp.intensity=1.48;cameraLamp.range=26;}
+
+    for(const mesh of scene.meshes){
+      const name=mesh.name||'';
+      if(/^(back|shoulder|interior|head)-plate-\d+$/.test(name)) mesh.material=routeSurface;
+      else if(/^(back|shoulder|interior|head)-plate-\d+-ridge$/.test(name)||/^spine-fin-\d+$/.test(name)) mesh.material=routeEdge;
+    }
+
     for(const m of scene.materials){
       const name=m.name||'';
       if(!/^authored-/.test(name))continue;
@@ -90,16 +106,15 @@ export function installColossusVisualTuning(){
         else if(/interior/i.test(name))m.emissiveColor=new Color3(.10,.115,.098);
         else if(/edge/i.test(name))m.emissiveColor=new Color3(.13,.085,.024);
         else if(/bone/i.test(name))m.emissiveColor=new Color3(.10,.105,.085);
-        else if(/player|cloth/i.test(name))m.emissiveColor=new Color3(.095,.075,.045);
+        else if(/player|cloth/i.test(name))m.emissiveColor=new Color3(.11,.085,.052);
         else if(/armor/i.test(name))m.emissiveColor=new Color3(.085,.105,.095);
       }
-      if(m.diffuseTexture && 'emissiveTexture' in m && /armor|bone|interior|player|cloth|edge/i.test(name))m.emissiveTexture=m.diffuseTexture;
     }
     for(const light of scene.lights)if(/route-light|traveler-lamp/i.test(light.name||'')){light.intensity=Math.max(light.intensity||0,inside?.86:.78);light.range=Math.max(light.range||0,inside?11:10);}
   };
   tune(); let passes=0; const observer=scene.onBeforeRenderObservable.add(()=>{
     if(passes%12===0)tune();
-    if(stabilizer){const t=performance.now()/1000;stabilizer.ring.rotation.z=t*.35;const p=.85+.15*Math.sin(t*3.1);stabilizer.ring.scaling.setAll(p);stabilizer.targetLight.intensity=1.0+.35*Math.sin(t*3.1);}
-    passes+=1;if(passes>1800&&!stabilizer)scene.onBeforeRenderObservable.remove(observer);
+    if(stabilizer){const t=performance.now()/1000;stabilizer.ring.rotation.z=t*.35;const p=.88+.12*Math.sin(t*3.1);stabilizer.ring.scaling.setAll(p);stabilizer.targetLight.intensity=1.0+.35*Math.sin(t*3.1);}
+    passes+=1;
   });
 }
