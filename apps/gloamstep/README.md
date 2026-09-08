@@ -25,4 +25,4 @@
 
 ## Offline / PWA
 
-`sw.js` кэширует только собственный shell приложения и обязательный shared mobile runtime. Cache prefix и storage namespace изолированы от остальных приложений.
+`sw.js` кэширует собственный shell приложения и только явно необходимые shared-файлы Pocket Works: mobile runtime и update manager. Cache prefix и storage namespace изолированы от остальных приложений.
