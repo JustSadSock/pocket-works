@@ -330,7 +330,10 @@ test.describe('AI exploratory mobile gameplay', () => {
   for (const app of targets) {
     test(`${app.slug} survives a touch exploration pass`, async ({ page }, testInfo) => {
       test.skip(!orientationMatchesProject(app, testInfo.project.name), `App prefers ${app.orientation} orientation.`);
-      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : 35_000);
+      // Heavy Babylon/WebGL scenes can take tens of seconds per interaction sequence on
+      // GitHub-hosted software rendering. Keep assertions strict but allow the browser
+      // enough wall-clock time to finish the same real input sequence.
+      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : 60_000);
 
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
