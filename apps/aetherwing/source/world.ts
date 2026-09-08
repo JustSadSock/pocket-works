@@ -3,8 +3,11 @@ import '@babylonjs/loaders/glTF';
 
 type Chunk={key:string;cx:number;cz:number;root:TransformNode;instances:InstancedMesh[]};
 type Templates={fir?:Mesh;broad?:Mesh;rock?:Mesh};
+type Lake={x:number;z:number;r:number;level:number};
 const CHUNK=520;
 const HALF_CHUNK=CHUNK*.5;
+const LAKE_CELL=1800;
+const lakeCache=new Map<string,Lake|null>();
 
 const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const smooth=(t:number)=>t*t*(3-2*t);
@@ -13,7 +16,7 @@ function noise(x:number,z:number){const ix=Math.floor(x),iz=Math.floor(z),fx=x-i
 function fbm(x:number,z:number){let f=0,a=.55,s=0;for(let i=0;i<5;i++){f+=noise(x,z)*a;s+=a;x*=2.03;z*=2.03;a*=.5;}return f/s;}
 function ridge(x:number,z:number){return 1-Math.abs(fbm(x,z)*2-1);}
 export function riverCenter(x:number){return Math.sin(x*.0017)*180+Math.sin(x*.0049+1.4)*55;}
-export function terrainHeight(x:number,z:number){
+function baseTerrainHeight(x:number,z:number){
   const continental=(fbm(x*.00026,z*.00026)-.46)*120;
   const hills=(fbm(x*.0013,z*.0013)-.5)*58;
   const mountains=Math.pow(clamp(ridge(x*.00072+31,z*.00072-17),0,1),3.1)*235*Math.pow(clamp(fbm(x*.00024+9,z*.00024+13),0,1),1.8);
@@ -23,21 +26,37 @@ export function terrainHeight(x:number,z:number){
   const carve=valley*valley*(30+mountains*.42);
   return 56+continental+hills+mountains+fine-carve;
 }
-function moistureAt(x:number,z:number){const river=Math.exp(-Math.abs(z-riverCenter(x))/130);return clamp(fbm(x*.0007+90,z*.0007-42)*.72+river*.55,0,1);}
+function lakeSpec(lx:number,lz:number):Lake|null{
+  const key=`${lx}:${lz}`;if(lakeCache.has(key))return lakeCache.get(key)!;
+  const chance=hash(lx*79+17,lz*83-31);if(chance<.62){lakeCache.set(key,null);return null;}
+  const x=(lx+.18+hash(lx*131+5,lz*101-9)*.64)*LAKE_CELL;
+  const z=(lz+.18+hash(lx*67-11,lz*149+3)*.64)*LAKE_CELL;
+  const center=baseTerrainHeight(x,z);if(center>155){lakeCache.set(key,null);return null;}
+  const r=72+hash(lx*211+7,lz*193-5)*82;
+  const lake={x,z,r,level:center-4.5};lakeCache.set(key,lake);return lake;
+}
+function nearbyLakes(x:number,z:number){const lx=Math.floor(x/LAKE_CELL),lz=Math.floor(z/LAKE_CELL);const out:Lake[]=[];for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){const lake=lakeSpec(lx+dx,lz+dz);if(lake)out.push(lake);}return out;}
+export function terrainHeight(x:number,z:number){
+  let h=baseTerrainHeight(x,z);
+  for(const lake of nearbyLakes(x,z)){const d=Math.hypot(x-lake.x,z-lake.z);if(d<lake.r*1.18){const t=clamp(1-d/(lake.r*1.18),0,1);h=Math.min(h,lake.level-3.8*t*t);}}
+  return h;
+}
+function lakeDistance(x:number,z:number){let d=99999;for(const lake of nearbyLakes(x,z))d=Math.min(d,Math.hypot(x-lake.x,z-lake.z)-lake.r);return d;}
+function moistureAt(x:number,z:number){const river=Math.exp(-Math.abs(z-riverCenter(x))/130);const lake=Math.exp(-Math.max(0,lakeDistance(x,z))/120);return clamp(fbm(x*.0007+90,z*.0007-42)*.68+river*.48+lake*.34,0,1);}
 function temperatureAt(x:number,z:number,h:number){return clamp(.86-fbm(x*.00035-70,z*.00035+33)*.38-h*.0014,0,1);}
-function biomeColor(x:number,z:number,h:number){const m=moistureAt(x,z),t=temperatureAt(x,z,h);if(h>220)return new Color4(.31,.34,.31,1);if(h>160)return new Color4(.40,.43,.34,1);if(m>.68&&t>.35)return new Color4(.23,.39,.24,1);if(m>.48)return new Color4(.34,.48,.27,1);if(t<.34)return new Color4(.35,.42,.31,1);return new Color4(.48,.54,.29,1);}
+function biomeColor(x:number,z:number,h:number){const m=moistureAt(x,z),t=temperatureAt(x,z,h);if(h>220)return new Color4(.29,.32,.30,1);if(h>160)return new Color4(.39,.42,.33,1);if(m>.73&&t>.35)return new Color4(.20,.37,.23,1);if(m>.50)return new Color4(.31,.47,.26,1);if(t<.34)return new Color4(.34,.41,.30,1);return new Color4(.47,.55,.29,1);}
 
-const waterVertex=`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;uniform float time;varying vec3 vPos;void main(){vec3 p=position;p.y+=sin(p.x*.045+time*1.25)*.32+sin(p.z*.06-time*.8)*.18;vPos=p;gl_Position=worldViewProjection*vec4(p,1.0);}`;
-const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){vec3 n=normalize(vec3(-.14*cos(vPos.x*.045+time*1.25),1.0,-.11*cos(vPos.z*.06-time*.8)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.0);vec3 shallow=vec3(.10,.35,.38),deep=vec3(.035,.16,.22);vec3 c=mix(shallow,deep,.45)+f*vec3(.42,.55,.52);gl_FragColor=vec4(c,.78);}`;
+const waterVertex=`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;uniform float time;varying vec3 vPos;void main(){vec3 p=position;p.y+=sin(p.x*.045+time*1.25)*.22+sin(p.z*.06-time*.8)*.14;vPos=p;gl_Position=worldViewProjection*vec4(p,1.0);}`;
+const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){vec3 n=normalize(vec3(-.12*cos(vPos.x*.045+time*1.25),1.0,-.09*cos(vPos.z*.06-time*.8)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.0);vec3 shallow=vec3(.10,.34,.36),deep=vec3(.035,.15,.21);vec3 c=mix(shallow,deep,.48)+f*vec3(.38,.53,.53);gl_FragColor=vec4(c,.84);}`;
 
 export class WorldStreamer{
   readonly scene:Scene; readonly chunks=new Map<string,Chunk>(); readonly water:ShaderMaterial; readonly templates:Templates={};
   private terrainMaterial:StandardMaterial; private fallbackFir:Mesh; private fallbackBroad:Mesh; private fallbackRock:Mesh; private quality=1; private lastCenter=''; private nextChunkBuild=0;
   constructor(scene:Scene){
     this.scene=scene;
-    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=new Color3(.73,.79,.58);this.terrainMaterial.specularColor=new Color3(.04,.05,.03);this.terrainMaterial.specularPower=24;
-    this.water=new ShaderMaterial('riverWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.82;
-    this.fallbackFir=this.makeFir('fallbackFir',new Color3(.13,.31,.18));this.fallbackBroad=this.makeBroad('fallbackBroad',new Color3(.23,.42,.21));this.fallbackRock=this.makeRock('fallbackRock');
+    this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=new Color3(.78,.83,.63);this.terrainMaterial.specularColor=new Color3(.035,.045,.025);this.terrainMaterial.specularPower=20;
+    this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.86;
+    this.fallbackFir=this.makeFir('fallbackFir',new Color3(.12,.29,.17));this.fallbackBroad=this.makeBroad('fallbackBroad',new Color3(.22,.41,.20));this.fallbackRock=this.makeRock('fallbackRock');
     this.fallbackFir.position.y=this.fallbackBroad.position.y=this.fallbackRock.position.y=-2000;
     void this.loadTemplates();
   }
@@ -56,16 +75,18 @@ export class WorldStreamer{
   }
   private createChunk(cx:number,cz:number,near:boolean){
     const key=`${cx}:${cz}`;if(this.chunks.has(key))return;
-    const root=new TransformNode(`chunk_${cx}_${cz}`,this.scene);const grid=near?(this.quality>.8?25:21):15;const positions:number[]=[],indices:number[]=[],normals:number[]=[],colors:number[]=[];const baseX=cx*CHUNK,baseZ=cz*CHUNK;
+    const root=new TransformNode(`chunk_${cx}_${cz}`,this.scene);const grid=near?(this.quality>.8?27:23):15;const positions:number[]=[],indices:number[]=[],normals:number[]=[],colors:number[]=[];const baseX=cx*CHUNK,baseZ=cz*CHUNK;
     for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){const wx=baseX+(x/(grid-1)-.5)*CHUNK,wz=baseZ+(z/(grid-1)-.5)*CHUNK,h=terrainHeight(wx,wz);positions.push(wx,h,wz);const c=biomeColor(wx,wz,h);colors.push(c.r,c.g,c.b,1);}
     for(let z=0;z<grid-1;z++)for(let x=0;x<grid-1;x++){const a=z*grid+x,b=a+1,c=a+grid,d=c+1;indices.push(a,c,b,b,c,d);}
     VertexData.ComputeNormals(positions,indices,normals);const mesh=new Mesh(`terrain_${key}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh);mesh.material=this.terrainMaterial;mesh.useVertexColors=true;mesh.receiveShadows=true;mesh.parent=root;mesh.freezeWorldMatrix();
     const riverOwnerCz=Math.floor((riverCenter(baseX)+HALF_CHUNK)/CHUNK);if(cz===riverOwnerCz){const river=this.createRiver(cx);river.parent=root;}
+    this.createLakes(cx,cz,root);
     const instances:InstancedMesh[]=[];if(near)this.scatter(cx,cz,instances);
     this.chunks.set(key,{key,cx,cz,root,instances});
   }
-  private createRiver(cx:number){const seg=20;const positions:number[]=[],indices:number[]=[];const x0=cx*CHUNK-HALF_CHUNK;for(let i=0;i<seg;i++){const x=x0+i/(seg-1)*CHUNK;const z=riverCenter(x);const h=terrainHeight(x,z)+3.4;const half=23+noise(x*.01,cx)*12;positions.push(x,h,z-half,x,h,z+half);if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}}const mesh=new Mesh(`river_${cx}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.alwaysSelectAsActiveMesh=false;return mesh;}
-  private scatter(cx:number,cz:number,out:InstancedMesh[]){const count=Math.floor(34*this.quality);const baseX=cx*CHUNK,baseZ=cz*CHUNK;for(let i=0;i<count;i++){const r=hash(cx*97+i,cz*131-i);const r2=hash(cx*173-i,cz*67+i);const x=baseX+(r-.5)*CHUNK,z=baseZ+(r2-.5)*CHUNK,h=terrainHeight(x,z),m=moistureAt(x,z);if(Math.abs(z-riverCenter(x))<34||h>225)continue;const choice=hash(i+cx*11,cz*17);const template=(choice<.58?(this.templates.fir||this.fallbackFir):choice<.88?(this.templates.broad||this.fallbackBroad):(this.templates.rock||this.fallbackRock));const inst=template.createInstance(`veg_${cx}_${cz}_${i}`);inst.position.set(x,h,z);const s=.7+hash(i*3+cx,cz-i*9)*1.25;inst.scaling.setAll(s);inst.rotation.y=hash(cx-i,cz+i)*Math.PI*2;if(template!==this.fallbackRock&&m<.28)inst.scaling.scaleInPlace(.7);out.push(inst);}}
+  private createRiver(cx:number){const seg=24;const positions:number[]=[],indices:number[]=[];const x0=cx*CHUNK-HALF_CHUNK;for(let i=0;i<seg;i++){const x=x0+i/(seg-1)*CHUNK;const z=riverCenter(x);const h=terrainHeight(x,z)+3.0;const half=22+noise(x*.01,cx)*13;positions.push(x,h,z-half,x,h,z+half);if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}}const mesh=new Mesh(`river_${cx}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.alwaysSelectAsActiveMesh=false;mesh.receiveShadows=false;return mesh;}
+  private createLakes(cx:number,cz:number,root:TransformNode){const minX=cx*CHUNK-HALF_CHUNK,maxX=cx*CHUNK+HALF_CHUNK,minZ=cz*CHUNK-HALF_CHUNK,maxZ=cz*CHUNK+HALF_CHUNK;const l0=Math.floor(minX/LAKE_CELL)-1,l1=Math.floor(maxX/LAKE_CELL)+1,z0=Math.floor(minZ/LAKE_CELL)-1,z1=Math.floor(maxZ/LAKE_CELL)+1;for(let lz=z0;lz<=z1;lz++)for(let lx=l0;lx<=l1;lx++){const lake=lakeSpec(lx,lz);if(!lake||lake.x<minX||lake.x>=maxX||lake.z<minZ||lake.z>=maxZ)continue;const seg=36,positions=[lake.x,lake.level+.12,lake.z],indices:number[]=[];for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;positions.push(lake.x+Math.cos(a)*lake.r,lake.level+.12,lake.z+Math.sin(a)*lake.r);if(i>0)indices.push(0,i,i+1);}const mesh=new Mesh(`lake_${lx}_${lz}`,this.scene);const vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.parent=root;}}
+  private scatter(cx:number,cz:number,out:InstancedMesh[]){const count=Math.floor(92*this.quality);const baseX=cx*CHUNK,baseZ=cz*CHUNK;for(let i=0;i<count;i++){const r=hash(cx*97+i,cz*131-i);const r2=hash(cx*173-i,cz*67+i);const x=baseX+(r-.5)*CHUNK,z=baseZ+(r2-.5)*CHUNK,h=terrainHeight(x,z),m=moistureAt(x,z);if(Math.abs(z-riverCenter(x))<32||lakeDistance(x,z)<12||h>230)continue;const choice=hash(i+cx*11,cz*17);const template=(choice<.54?(this.templates.fir||this.fallbackFir):choice<.91?(this.templates.broad||this.fallbackBroad):(this.templates.rock||this.fallbackRock));const inst=template.createInstance(`veg_${cx}_${cz}_${i}`);inst.position.set(x,h,z);const s=.55+hash(i*3+cx,cz-i*9)*1.55;inst.scaling.setAll(s);inst.rotation.y=hash(cx-i,cz+i)*Math.PI*2;if(template!==this.fallbackRock&&m<.28)inst.scaling.scaleInPlace(.72);out.push(inst);}}
   private makeFir(name:string,color:Color3){const trunk=MeshBuilder.CreateCylinder(`${name}_trunk`,{height:7,diameterTop:.55,diameterBottom:.9,tessellation:7},this.scene);const crown=MeshBuilder.CreateCylinder(`${name}_crown`,{height:9,diameterTop:.3,diameterBottom:5.2,tessellation:8},this.scene);crown.position.y=5.4;const tm=new StandardMaterial(`${name}m`,this.scene);tm.diffuseColor=new Color3(.24,.14,.08);trunk.material=tm;const cm=new StandardMaterial(`${name}c`,this.scene);cm.diffuseColor=color;crown.material=cm;const merged=Mesh.MergeMeshes([trunk,crown],true,true,undefined,false,true)!;merged.name=name;return merged;}
   private makeBroad(name:string,color:Color3){const trunk=MeshBuilder.CreateCylinder(`${name}_trunk`,{height:6,diameterTop:.7,diameterBottom:1.15,tessellation:8},this.scene);const crown=MeshBuilder.CreateIcoSphere(`${name}_crown`,{radius:3.6,subdivisions:2},this.scene);crown.scaling.y=1.25;crown.position.y=5.5;const tm=new StandardMaterial(`${name}m`,this.scene);tm.diffuseColor=new Color3(.28,.16,.09);trunk.material=tm;const cm=new StandardMaterial(`${name}c`,this.scene);cm.diffuseColor=color;crown.material=cm;const merged=Mesh.MergeMeshes([trunk,crown],true,true,undefined,false,true)!;merged.name=name;return merged;}
   private makeRock(name:string){const rock=MeshBuilder.CreateIcoSphere(name,{radius:2.2,subdivisions:2},this.scene);rock.scaling.set(1.7,.7,1.15);const m=new PBRMaterial(`${name}m`,this.scene);m.albedoColor=new Color3(.29,.31,.28);m.roughness=.95;rock.material=m;return rock;}
