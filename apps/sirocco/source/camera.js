@@ -3,8 +3,8 @@ import { clamp, damp } from './core.js';
 
 export class FirstPersonCamera {
   constructor(scene) {
-    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.77, 0.50), scene);
-    this.camera.minZ = 0.18;
+    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.56), scene);
+    this.camera.minZ = 0.20;
     this.camera.maxZ = 950;
     this.camera.fov = 1.02;
     this.camera.inertia = 0;
@@ -23,10 +23,6 @@ export class FirstPersonCamera {
     this.swayX = damp(this.swayX, swayTarget, 12, dt);
     this.pitchLag = damp(this.pitchLag, controller.pitch, 20, dt);
 
-    // Offset along the complete 3D look vector, not only yaw. The old camera
-    // moved forward horizontally, so steep pitch could rotate the animated
-    // skull/keffiyeh back through the near plane. Following pitch keeps the eye
-    // physically outside the head for every valid look angle.
     const pitchForOffset = clamp(this.pitchLag, -1.10, 0.98);
     const cosPitch = Math.cos(pitchForOffset);
     const viewForwardX = Math.sin(controller.yaw) * cosPitch;
@@ -34,8 +30,12 @@ export class FirstPersonCamera {
     const viewForwardZ = Math.cos(controller.yaw) * cosPitch;
     const rightX = Math.cos(controller.yaw);
     const rightZ = -Math.sin(controller.yaw);
-    const eyeForward = 0.50;
-    const eyeBaseY = 1.77;
+    // Deliberately place the gameplay eye slightly in front of the anatomical
+    // eye. Imported head animation can lead/lag body yaw by several frames;
+    // this clearance plus a 20 cm near plane makes skull/keffiyeh clipping
+    // impossible without noticeably changing the perceived player height.
+    const eyeForward = 0.56;
+    const eyeBaseY = 1.78;
 
     this.camera.position.set(
       controller.localPosition.x + viewForwardX * eyeForward + rightX * this.swayX,
