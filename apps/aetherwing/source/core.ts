@@ -133,8 +133,11 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   s.load = clamp(liftMagnitude / (MASS * GRAVITY), 0, 3.4);
   s.flap = lerp(s.flap, flap, 1 - Math.exp(-dt * 4.5));
 
-  const diving = s.pitch < -0.30 || s.verticalSpeed < -12;
-  const climbing = s.pitch > 0.18 && s.verticalSpeed > 4;
+  // Flight-state labels now follow the aerodynamic shape instead of waiting for
+  // extreme pitch/vertical-speed thresholds. This keeps animation blending and
+  // player feedback in sync with the moment the dragon actually tucks or pulls.
+  const diving = (input.y < -0.45 && s.pitch < -0.10) || s.pitch < -0.22 || s.verticalSpeed < -8;
+  const climbing = (input.y > 0.45 && s.pitch > 0.10) || (s.pitch > 0.15 && s.verticalSpeed > 3);
   s.mode = input.brake > 0.3 ? 'brake' : diving ? 'dive' : climbing ? 'climb' : s.flap > 0.48 ? 'flap' : 'glide';
   return s;
 }
