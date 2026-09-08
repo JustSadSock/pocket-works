@@ -32,8 +32,6 @@ function makeExtras(game, warrior) {
     return mesh;
   };
 
-  // These remain useful with Blender because the combat kit intentionally does
-  // not replace the hands, belt or inner shield handle.
   meshes.handL = add(MeshBuilder.CreateSphere(`${warrior.id}:handL-detail`, { diameter: .12, segments: 8 }, scene));
   meshes.handR = add(MeshBuilder.CreateSphere(`${warrior.id}:handR-detail`, { diameter: .12, segments: 8 }, scene));
   meshes.handL.material = warrior.materials.leather;
@@ -45,8 +43,6 @@ function makeExtras(game, warrior) {
   meshes.shieldHandle.material = warrior.materials.darkSteel;
   meshes.shieldHandle.rotationQuaternion = Quaternion.Identity();
 
-  // Fallback-only details. 1.7 rendered these on top of the Blender versions,
-  // producing doubled boots/pauldrons/pommels and a visibly broken silhouette.
   meshes.bootL = add(MeshBuilder.CreateBox(`${warrior.id}:bootL-detail`, { width: .16, height: .10, depth: .30 }, scene));
   meshes.bootR = add(MeshBuilder.CreateBox(`${warrior.id}:bootR-detail`, { width: .16, height: .10, depth: .30 }, scene));
   meshes.bootL.material = warrior.materials.leather;
@@ -141,12 +137,29 @@ function makeExtras(game, warrior) {
   };
 }
 
+function applyFirstPersonSilhouette(player) {
+  // The rig solver rewrites segment length every frame, so apply radial scale
+  // afterwards. This keeps believable arm length while preventing near-camera
+  // capsules from reading as oversized pipes across the phone display.
+  for (const mesh of [player.meshes.upperArmL, player.meshes.upperArmR]) {
+    if (!mesh) continue;
+    mesh.scaling.x = .58;
+    mesh.scaling.z = .58;
+  }
+  for (const mesh of [player.meshes.forearmL, player.meshes.forearmR]) {
+    if (!mesh) continue;
+    mesh.scaling.x = .62;
+    mesh.scaling.z = .62;
+  }
+}
+
 export function installVisualPolish(game) {
   const extras = [makeExtras(game, game.player), makeExtras(game, game.enemy)];
   const originalUpdate = game.update.bind(game);
   game.update = (dt, nowSeconds) => {
     originalUpdate(dt, nowSeconds);
     for (const extra of extras) extra.update();
+    applyFirstPersonSilhouette(game.player);
   };
   return {
     setBlenderKitActive(active) { for (const extra of extras) extra.setBlenderKitActive(active); },
