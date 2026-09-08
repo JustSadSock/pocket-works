@@ -96,8 +96,6 @@ export function installAnatomicalEnvelope(game) {
     const shoulderR = player.bones.shoulderR.getAbsolutePosition();
     const shoulderL = player.bones.shoulderL.getAbsolutePosition();
 
-    // Raw finger energy is deliberately independent from the filtered camera
-    // share: a fast flick can accelerate the sword without throwing the view.
     const energy = clamp((enriched.gestureEnergy ?? Math.hypot(enriched.gestureYawRate || 0, enriched.gesturePitchRate || 0) / 10.5), 0, 1);
     const baseLocal = localPoint(player.sword.base, head, frame);
     const tipLocal = localPoint(player.sword.tip, head, frame);
@@ -123,10 +121,6 @@ export function installAnatomicalEnvelope(game) {
       alignFallbackSword(player);
     }
 
-    // Neutral guard opens the centre primarily by moving the shield outward,
-    // rather than pushing it unrealistically far away and visually stretching
-    // the left arm. Under a fast nearby strike the envelope relaxes toward the
-    // centre so defensive coverage still wins over framing.
     let threat = 0;
     if (game.enemy && !game.enemy.dead) {
       const trace = game.enemy.getSwordTrace();
@@ -135,7 +129,7 @@ export function installAnatomicalEnvelope(game) {
     }
     const shieldLocal = localPoint(player.shield.center, head, frame);
     const maxShieldX = -.56 + threat * .20;
-    const minShieldZ = .82 - threat * .08;
+    const minShieldZ = .82;
     const safeShield = {
       x: Math.min(shieldLocal.x, maxShieldX),
       y: clamp(shieldLocal.y, -.68, .12),
