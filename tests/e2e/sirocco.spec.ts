@@ -73,6 +73,19 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(10_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
 
+    // Exercise the real input -> animation -> foot-bone contact -> sand path.
+    // This catches a visually animated model whose landing detector never
+    // actually stamps the terrain.
+    const impactBeforeWalk = initial!.sandImpacts ?? 0;
+    await page.keyboard.down('KeyW');
+    await page.waitForTimeout(2_800);
+    await page.keyboard.up('KeyW');
+    await page.waitForTimeout(250);
+    const walked = await qaState(page);
+    expect(walked!.player!.z).not.toBeCloseTo(initial!.player!.z, 1);
+    expect(walked!.sandImpacts).toBeGreaterThan(impactBeforeWalk);
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
+
     // Reproduce the old intermittent head/keffiyeh intrusion: steep look-down
     // plus a large yaw jump before the animated body can catch up.
     await page.evaluate(() => {
@@ -120,7 +133,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
 
     await testInfo.attach('sirocco-state.json', {
-      body: Buffer.from(JSON.stringify({ initial, deformed }, null, 2)),
+      body: Buffer.from(JSON.stringify({ initial, walked, deformed }, null, 2)),
       contentType: 'application/json'
     });
     monitor.assertClean();
