@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PELAGOS">
-  <meta name="pocket-works-build" content="1.0.1">
+  <meta name="pocket-works-build" content="1.4.0">
   <title>PELAGOS — Pocket Works</title>
 </head>
 <body data-fullscreen-app>
@@ -30,15 +30,15 @@
     </section>
 
     <section id="controls" class="controls hidden" data-ui>
-      <div id="helmZone" class="helm-zone" data-gesture-surface data-block-callout>
+      <div id="helmZone" class="helm-zone" data-gesture-surface data-block-callout aria-label="Руль: проведи влево или вправо">
         <div class="helm-track"><i id="helmKnob"></i></div>
         <span>РУЛЬ</span>
       </div>
-      <div id="trimZone" class="trim-zone" data-gesture-surface data-block-callout>
+      <div id="trimZone" class="trim-zone" data-gesture-surface data-block-callout aria-label="Парус: проведи вверх или вниз">
         <span>ПАРУС</span>
         <div class="trim-track"><i id="trimKnob"></i><b id="trimIdeal"></b></div>
       </div>
-      <button id="rowButton" class="row-button" type="button"><b>ГРЕСТИ</b><small>УДЕРЖИВАЙ</small></button>
+      <button id="rowButton" class="row-button" type="button" aria-label="Грести, удерживать"><b>ГРЕСТИ</b><small>УДЕРЖИВАЙ</small></button>
     </section>
 
     <div id="lookZone" class="look-zone hidden" data-gesture-surface data-block-callout aria-label="Обзор камерой"></div>
@@ -56,13 +56,13 @@
     <section id="menu" class="screen menu hidden" data-ui>
       <a class="back-link" href="../../" data-app-control>← POCKET WORKS</a>
       <div class="menu-copy">
-        <p>БЕСКРАЙНЕЕ МОРЕ / 1.0.1</p>
+        <p>БЕСКРАЙНЕЕ МОРЕ / 1.4.0</p>
         <h1>PELA<br><em>GOS</em></h1>
         <div class="menu-lead">Не гонка и не симулятор меню. Здесь удовольствие — в самом движении: поймай ветер, отпусти парус и почувствуй, как корпус работает на волне.</div>
       </div>
       <div class="menu-actions">
         <div class="voyage-stat"><span>ВСЕГО ПРОЙДЕНО</span><b id="totalDistance">0.0 км</b></div>
-        <button id="startButton" class="primary-action" type="button" data-native-press><b>ВЫЙТИ В МОРЕ</b><small>ПОРТРЕТНЫЙ РЕЖИМ</small></button>
+        <button id="startButton" class="primary-action" type="button" aria-label="Начать плавание — выйти в море" data-native-press><b>ВЫЙТИ В МОРЕ</b><small>ПОРТРЕТНЫЙ РЕЖИМ</small></button>
         <button id="settingsButton" class="secondary-action" type="button">НАСТРОЙКИ</button>
       </div>
     </section>
