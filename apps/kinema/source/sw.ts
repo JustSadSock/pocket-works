@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'kinema-';
-const CACHE_NAME = 'kinema-v1.1.0';
-const APP_VERSION = '1.1.0';
+const CACHE_NAME = 'kinema-v1.2.0';
+const APP_VERSION = '1.2.0';
 const RELEASE_DATE = '2026-09-09';
 const RELEASE_NOTES = [
-  'Blender character rebuilt with smoother weighted anatomy, natural arm rest pose and richer clothing/face detail.',
-  'Walk, jog and run now use improved body mechanics and synchronized locomotion phase blending.',
-  'Closer speed-reactive third-person camera, stronger form lighting and refreshed offline cache.'
+  'Human proportions refined again with slimmer sleeves/legs/hands, smaller footwear and restrained facial features.',
+  'Blender forward axis now matches gameplay so the default third-person camera sits behind the character.',
+  'Weighted armature, nine authored actions, synchronized gait blending, PBR lighting and procedural footsteps remain intact.'
 ];
 
 setCacheNameDetails({ prefix: 'kinema', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
