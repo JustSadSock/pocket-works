@@ -26,6 +26,10 @@ const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[dat
 
 let activeSlot: ShipModuleSlot = 'dimensions';
 let sourceScreen: SourceScreen = 'menu';
+let previewOrbit = 0.42;
+let previewPointer: number | null = null;
+let previewStartX = 0;
+let previewStartOrbit = previewOrbit;
 
 const labels: Record<ShipModuleSlot, string> = {
   dimensions: 'КОРПУС',
@@ -33,6 +37,10 @@ const labels: Record<ShipModuleSlot, string> = {
   sails: 'ПАРУСА',
   oars: 'ВЁСЛА'
 };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 function catalog(slot: ShipModuleSlot) {
   if (slot === 'dimensions') return DIMENSION_MODULES;
@@ -45,8 +53,20 @@ function screen(id: SourceScreen): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#${id}`);
 }
 
+function applyPreviewOrbit(value: number): void {
+  previewOrbit = clamp(value, -1.08, 1.08);
+  document.documentElement.dataset.shipyardOrbit = previewOrbit.toFixed(4);
+}
+
 function setPreviewMode(enabled: boolean): void {
   document.documentElement.classList.toggle('pelagos-shipyard-open', enabled);
+  if (enabled) {
+    applyPreviewOrbit(0.42);
+    shipyard?.classList.remove('preview-touched');
+  } else {
+    delete document.documentElement.dataset.shipyardOrbit;
+    previewPointer = null;
+  }
   document.dispatchEvent(new CustomEvent('pelagos:shipyard-preview', { detail: { enabled } }));
 }
 
@@ -62,6 +82,13 @@ function updateSummary(): void {
   if (hullColor) hullColor.value = loadout.palette.hull;
   if (deckColor) deckColor.value = loadout.palette.deck;
   if (sailColor) sailColor.value = loadout.palette.sail;
+}
+
+function centerSelectedOption(behavior: ScrollBehavior = 'smooth'): void {
+  if (!options) return;
+  const selected = options.querySelector<HTMLElement>('[data-selected="true"]');
+  if (!selected) return;
+  requestAnimationFrame(() => selected.scrollIntoView({ behavior, block: 'nearest', inline: 'center' }));
 }
 
 function renderOptions(): void {
@@ -106,8 +133,10 @@ function renderOptions(): void {
 
     button.addEventListener('click', () => {
       if (!setShipModule(activeSlot, entry.id)) return;
+      if (typeof navigator.vibrate === 'function') navigator.vibrate(4);
       renderOptions();
       updateSummary();
+      centerSelectedOption();
       document.dispatchEvent(new CustomEvent('pelagos:ship-customized', { detail: { slot: activeSlot, moduleId: entry.id } }));
     });
     options.appendChild(button);
@@ -122,6 +151,7 @@ function showShipyard(from: SourceScreen): void {
   setPreviewMode(true);
   renderOptions();
   updateSummary();
+  centerSelectedOption('auto');
 }
 
 function closeShipyard(): void {
@@ -135,6 +165,38 @@ function bindTrigger(id: string, source: SourceScreen): void {
   document.querySelector<HTMLButtonElement>(`#${id}`)?.addEventListener('click', () => showShipyard(source));
 }
 
+function installPreviewGesture(): void {
+  if (!shipyard) return;
+  const hint = document.createElement('div');
+  hint.className = 'shipyard-preview-hint';
+  hint.textContent = 'ПРОВЕДИ ПО КОРАБЛЮ — ОСМОТР';
+  shipyard.appendChild(hint);
+
+  shipyard.addEventListener('pointerdown', (event) => {
+    const target = event.target as Element | null;
+    if (target?.closest('.shipyard-dock, .shipyard-head')) return;
+    previewPointer = event.pointerId;
+    previewStartX = event.clientX;
+    previewStartOrbit = previewOrbit;
+    shipyard.setPointerCapture(event.pointerId);
+  });
+
+  shipyard.addEventListener('pointermove', (event) => {
+    if (previewPointer !== event.pointerId) return;
+    const travel = (event.clientX - previewStartX) / Math.max(280, shipyard.clientWidth);
+    applyPreviewOrbit(previewStartOrbit - travel * 2.25);
+    if (Math.abs(event.clientX - previewStartX) > 10) shipyard.classList.add('preview-touched');
+  });
+
+  const endPreview = (event: PointerEvent) => {
+    if (previewPointer !== event.pointerId) return;
+    previewPointer = null;
+    if (shipyard.hasPointerCapture(event.pointerId)) shipyard.releasePointerCapture(event.pointerId);
+  };
+  shipyard.addEventListener('pointerup', endPreview);
+  shipyard.addEventListener('pointercancel', endPreview);
+}
+
 bindTrigger('shipyardButton', 'menu');
 bindTrigger('settingsShipyardButton', 'settings');
 bindTrigger('pauseShipyardButton', 'pause');
@@ -146,6 +208,8 @@ resetButton?.addEventListener('click', () => {
   for (const button of tabButtons) button.dataset.active = button.dataset.shipyardSlot === activeSlot ? 'true' : 'false';
   renderOptions();
   updateSummary();
+  centerSelectedOption();
+  if (typeof navigator.vibrate === 'function') navigator.vibrate(5);
 });
 
 for (const button of tabButtons) {
@@ -155,6 +219,7 @@ for (const button of tabButtons) {
     activeSlot = slot;
     for (const peer of tabButtons) peer.dataset.active = peer === button ? 'true' : 'false';
     renderOptions();
+    centerSelectedOption('auto');
   });
 }
 
@@ -169,5 +234,6 @@ function bindColor(input: HTMLInputElement | null, key: 'hull' | 'deck' | 'sail'
 bindColor(hullColor, 'hull');
 bindColor(deckColor, 'deck');
 bindColor(sailColor, 'sail');
+installPreviewGesture();
 
 if (tabButtons[0]) tabButtons[0].dataset.active = 'true';
