@@ -21,14 +21,15 @@ function bendConstraint(root,mid,end,minAngle,maxAngle,stiffness=.72) {
 }
 
 export class ConstraintArm {
-  constructor({ upper=.34, lower=.33, tool=1.04, handed=1 }={}) {
-    this.upper=upper;this.lower=lower;this.tool=tool;this.handed=handed;this.shoulder=particle(v(),0);this.elbow=particle(v());this.hand=particle(v());this.tip=particle(v());this.lastDrive=v();this.energy=0;this.reset(v());
+  constructor({ upper=.34, lower=.33, tool=1.04, handed=1, restHand=null, restTool=null }={}) {
+    this.upper=upper;this.lower=lower;this.tool=tool;this.handed=handed;this.restHand=restHand;this.restTool=restTool;this.shoulder=particle(v(),0);this.elbow=particle(v());this.hand=particle(v());this.tip=particle(v());this.lastDrive=v();this.energy=0;this.reset(v());
   }
   reset(shoulder=v()) {
     this.shoulder.p={...shoulder};this.shoulder.prev={...shoulder};
-    const upper=scale(norm(v(.18*this.handed,-.12,.25)),this.upper);this.elbow.p=add(shoulder,upper);this.elbow.prev={...this.elbow.p};
-    const fore=scale(norm(v(.10*this.handed,-.02,.31)),this.lower);this.hand.p=add(this.elbow.p,fore);this.hand.prev={...this.hand.p};
-    const tool=scale(norm(v(.08*this.handed,.10,1.02)),this.tool);this.tip.p=add(this.hand.p,tool);this.tip.prev={...this.tip.p};this.lastDrive=v();this.energy=0;
+    const handTarget=this.restHand||v(.24*this.handed,-.13,.54);const handDir=norm(handTarget);const elbowBias=norm(v(.20*this.handed,-.18,.24));
+    this.elbow.p=add(shoulder,scale(elbowBias,this.upper));this.elbow.prev={...this.elbow.p};
+    const towardHand=norm(sub(handTarget,this.elbow.p));this.hand.p=add(this.elbow.p,scale(towardHand,this.lower));this.hand.prev={...this.hand.p};
+    const toolDir=norm(this.restTool||v(.12*this.handed,.58,.80));this.tip.p=add(this.hand.p,scale(toolDir,this.tool));this.tip.prev={...this.tip.p};this.lastDrive=v();this.energy=0;
   }
   impulse(vec,amount=1){this.hand.prev=sub(this.hand.prev,scale(vec,amount));this.tip.prev=sub(this.tip.prev,scale(vec,amount*1.22));}
   step({ shoulder, guardHand, guardTip, drive=v(), brace=.55, dt=1/60, iterations=7 }) {
@@ -36,9 +37,6 @@ export class ConstraintArm {
     this.shoulder.p={...shoulder};this.shoulder.prev={...shoulder};integrate(this.elbow,.972);integrate(this.hand,.966);integrate(this.tip,.974);
     const driveDelta=sub(drive,this.lastDrive);this.lastDrive={...drive};const energy=clamp(len(drive)*.22+len(driveDelta)*.32,0,1);this.energy=energy;const slow=1-energy;
     this.hand.p=add(this.hand.p,scale(sub(guardHand,this.hand.p),(.055+slow*.14)*brace));this.tip.p=add(this.tip.p,scale(sub(guardTip,this.tip.p),(.025+slow*.075)*brace));
-    // Keep the arm responsive enough to cover the intended combat arc. These drive gains
-    // are calibrated against the sparring tests: ~0.49 m horizontal, ~0.55 m vertical,
-    // while staying comfortably below the 28 m/s stability ceiling.
     this.hand.p=add(this.hand.p,scale(drive,.0036+energy*.0048));this.tip.p=add(this.tip.p,scale(drive,.005+energy*.008));this.tip.p.z+=energy*.0025;
     for(let i=0;i<iterations;i++){
       distanceConstraint(this.shoulder,this.elbow,this.upper,1);distanceConstraint(this.elbow,this.hand,this.lower,1);distanceConstraint(this.hand,this.tip,this.tool,1);
