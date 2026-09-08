@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "slug": "aetherwing",
+  "name": "AETHERWING",
+  "shortName": "AETHERWING",
+  "description": "Свободный полёт на большом живом драконе над процедурным миром: инерционная аэродинамика, Blender-риг, процедурная вторичная анимация, стриминг ландшафта и мобильное управление для landscape iPhone.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T22:07:00+03:00",
+  "changelog": [
+    "Добавлен полноценный режим свободного полёта на драконе с подъёмной силой, сопротивлением, креном, инерцией, пикированием и торможением.",
+    "Blender Asset Forge создаёт и валидирует скелетированного текстурированного дракона с набором читаемых анимационных клипов.",
+    "Добавлены процедурные хвост, шея, крылья и animation blending, зависящие от скорости, вертикального движения, угловой скорости и нагрузки.",
+    "Реализован chunk-streamed природный мир с биомами, реками, озёрами, лесами, растительностью, водой, атмосферой и фауной.",
+    "Добавлены мобильные зоны управления, свободная третьелицая камера, динамический FOV, генеративный ветер и адаптивное качество."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#d7b86b",
+  "backgroundColor": "#92b7c1",
+  "themeColor": "#92b7c1",
+  "orientation": "landscape",
+  "cacheName": "aetherwing-v1.0.0",
+  "storageNamespace": "pocket-works:aetherwing",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "dragon", "flight", "procedural", "open-world", "landscape", "Safari", "iPhone", "adaptive-quality"],
+  "order": 82
+}

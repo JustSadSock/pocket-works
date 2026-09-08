@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "aetherwing-dragon",
+      "script": "dragon.py",
+      "output": "public/models/dragon.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "aetherwing-biome-props",
+      "script": "biome_props.py",
+      "output": "public/models/biome_props.glb",
+      "requireArmature": false,
+      "requireAnimation": false
+    }
+  ]
+}
