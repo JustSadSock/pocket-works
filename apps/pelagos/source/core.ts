@@ -162,8 +162,16 @@ export function sampleWave(x: number, z: number, time: number, scale = 1): WaveS
   };
 }
 
-export function sailingPolar(relativeWindAngle: number): number {
-  const degrees = Math.abs(wrapAngle(relativeWindAngle)) / DEG;
+// WindState.direction and telemetry.windAngle describe the direction the air is actually
+// travelling. Sailing polars and sheet trim, however, are conventionally measured toward the
+// source of the wind. Keeping that conversion explicit prevents the old 180° inversion where a
+// following wind was treated as the no-go zone and a headwind as a broad reach.
+export function windSourceAngleFromFlow(relativeAirflowAngle: number): number {
+  return wrapAngle(relativeAirflowAngle + Math.PI);
+}
+
+export function sailingPolar(relativeAirflowAngle: number): number {
+  const degrees = Math.abs(windSourceAngleFromFlow(relativeAirflowAngle)) / DEG;
   if (degrees < 30) return 0.018;
   if (degrees < 39) return lerp(0.05, 0.43, (degrees - 30) / 9);
   if (degrees < 62) return lerp(0.43, 0.89, (degrees - 39) / 23);
@@ -172,8 +180,8 @@ export function sailingPolar(relativeWindAngle: number): number {
   return lerp(0.83, 0.50, (degrees - 145) / 35);
 }
 
-export function idealSailTrim(relativeWindAngle: number): number {
-  const degrees = Math.abs(wrapAngle(relativeWindAngle)) / DEG;
+export function idealSailTrim(relativeAirflowAngle: number): number {
+  const degrees = Math.abs(windSourceAngleFromFlow(relativeAirflowAngle)) / DEG;
   return clamp((degrees - 24) / 148, 0.07, 1);
 }
 
@@ -322,7 +330,9 @@ export class ShipDynamics {
     state.rudder += clamp(targetRudder - state.rudder, -rudderRate * safeDt, rudderRate * safeDt);
     const rudderFlow = clamp(Math.abs(forwardSpeed) / 4.8, 0, 1.55);
     const rudderEffect = Math.sin(state.rudder) * Math.cos(state.rudder * 0.55);
-    const rudderTorque = -rudderEffect * forwardSpeed * Math.abs(forwardSpeed) * 900;
+    // Positive helm input is screen-right and positive yaw is a starboard/right turn. The old
+    // minus sign made the vessel turn left when the player dragged the helm right.
+    const rudderTorque = rudderEffect * forwardSpeed * Math.abs(forwardSpeed) * 900;
     const sailYawTorque = -sailSideForce * 0.18;
     const yawDamping = -state.yawVelocity * (3600 + rudderFlow * 1650 + Math.abs(lateralSpeed) * 520);
     state.yawVelocity += (rudderTorque + sailYawTorque + yawDamping) / YAW_INERTIA * safeDt;

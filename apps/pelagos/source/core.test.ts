@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DEG, ShipDynamics, idealSailTrim, sailTrimEfficiency, sailingPolar, sampleWave, waveHeightAt } from './core';
+import {
+  DEG,
+  ShipDynamics,
+  idealSailTrim,
+  sailTrimEfficiency,
+  sailingPolar,
+  sampleWave,
+  waveHeightAt,
+  windSourceAngleFromFlow
+} from './core';
 
 describe('wave field', () => {
   it('uses the same height function as the full sampler', () => {
@@ -16,15 +25,23 @@ describe('wave field', () => {
 });
 
 describe('sailing model', () => {
-  it('has a genuine no-go zone and a strong reaching zone', () => {
-    expect(sailingPolar(10 * DEG)).toBeLessThan(0.05);
-    expect(sailingPolar(90 * DEG)).toBeGreaterThan(0.95);
-    expect(sailingPolar(180 * DEG)).toBeLessThan(sailingPolar(100 * DEG));
+  it('converts apparent airflow to the conventional wind-source angle', () => {
+    expect(Math.abs(windSourceAngleFromFlow(0))).toBeCloseTo(Math.PI, 10);
+    expect(windSourceAngleFromFlow(Math.PI)).toBeCloseTo(0, 10);
   });
 
-  it('rewards a correctly trimmed sail', () => {
-    const angle = 82 * DEG;
-    const ideal = idealSailTrim(angle);
+  it('has a genuine headwind no-go zone and a strong reaching zone', () => {
+    // Air moving toward the stern (π in the ship frame) comes from directly ahead.
+    expect(sailingPolar(Math.PI)).toBeLessThan(0.05);
+    expect(sailingPolar(90 * DEG)).toBeGreaterThan(0.95);
+    // Air moving straight forward comes from astern and remains useful, but weaker than a reach.
+    expect(sailingPolar(0)).toBeGreaterThan(0.45);
+    expect(sailingPolar(0)).toBeLessThan(sailingPolar(90 * DEG));
+  });
+
+  it('rewards a correctly trimmed sail for the airflow convention used by telemetry', () => {
+    const airflowAngle = -98 * DEG;
+    const ideal = idealSailTrim(airflowAngle);
     expect(sailTrimEfficiency(ideal, ideal)).toBeCloseTo(1, 8);
     expect(sailTrimEfficiency(Math.min(1, ideal + 0.55), ideal)).toBeLessThan(0.2);
   });
@@ -42,11 +59,23 @@ describe('ship dynamics', () => {
 
   it('accelerates from forces instead of teleporting position', () => {
     const ship = new ShipDynamics();
-    const wind = { direction: 90 * DEG, speed: 10, gust: 0.2 };
-    for (let i = 0; i < 600; i += 1) ship.update(1 / 60, i / 60, { steer: 0, sail: 0.42, rowing: 0 }, wind, 1);
+    const airflowAngle = 90 * DEG;
+    const wind = { direction: airflowAngle, speed: 10, gust: 0.2 };
+    const trim = idealSailTrim(airflowAngle);
+    ship.state.sailAngle = trim;
+    for (let i = 0; i < 600; i += 1) ship.update(1 / 60, i / 60, { steer: 0, sail: trim, rowing: 0 }, wind, 1);
     expect(ship.telemetry.speed).toBeGreaterThan(0.25);
     expect(ship.state.distance).toBeGreaterThan(1);
     expect(ship.state.distance).toBeLessThan(300);
+  });
+
+  it('turns right for a right helm command', () => {
+    const ship = new ShipDynamics();
+    ship.state.velocityZ = 3;
+    const wind = { direction: 0, speed: 0, gust: 0 };
+    for (let i = 0; i < 180; i += 1) ship.update(1 / 60, i / 60, { steer: 1, sail: 0.5, rowing: 0 }, wind, 0);
+    expect(ship.state.rudder).toBeGreaterThan(20 * DEG);
+    expect(ship.state.yaw).toBeGreaterThan(0.004);
   });
 
   it('keeps the heavier hull response finite in rough water', () => {

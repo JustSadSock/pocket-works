@@ -14,14 +14,23 @@ describe('PELAGOS presence pass', () => {
     expect(Math.max(...values) - Math.min(...values)).toBeGreaterThan(0.18);
   });
 
-  it('filters helm input before a heavy hull develops turn rate', () => {
+  it('eases helm input without cancelling the core rudder response', () => {
     const ship = new ShipDynamics();
-    const wind = { direction: 1.1, speed: 10, gust: 0.2 };
-    for (let i = 0; i < 5; i += 1) ship.update(1 / 60, i / 60, { steer: 1, sail: 0.48, rowing: 0 }, wind, 1);
-    expect(Math.abs(ship.state.rudder)).toBeLessThan(2.0 * DEG);
-    for (let i = 5; i < 150; i += 1) ship.update(1 / 60, i / 60, { steer: 1, sail: 0.48, rowing: 0 }, wind, 1);
-    expect(Math.abs(ship.state.rudder)).toBeGreaterThan(8 * DEG);
-    expect(Math.abs(ship.state.yawVelocity)).toBeLessThan(0.5);
+    ship.state.velocityZ = 3;
+    const wind = { direction: 0, speed: 0, gust: 0 };
+
+    for (let i = 0; i < 5; i += 1) ship.update(1 / 60, i / 60, { steer: 1, sail: 0.48, rowing: 0 }, wind, 0);
+    expect(ship.state.rudder).toBeGreaterThan(1.5 * DEG);
+    expect(ship.state.rudder).toBeLessThan(4.0 * DEG);
+
+    for (let i = 5; i < 150; i += 1) ship.update(1 / 60, i / 60, { steer: 1, sail: 0.48, rowing: 0 }, wind, 0);
+    expect(ship.state.rudder).toBeGreaterThan(24 * DEG);
+    expect(ship.state.yaw).toBeGreaterThan(0.004);
+    expect(ship.state.yawVelocity).toBeGreaterThan(0);
+    expect(ship.state.yawVelocity).toBeLessThan(0.5);
+
+    for (let i = 150; i < 270; i += 1) ship.update(1 / 60, i / 60, { steer: 0, sail: 0.48, rowing: 0 }, wind, 0);
+    expect(Math.abs(ship.state.rudder)).toBeLessThan(8 * DEG);
   });
 
   it('stays finite through long grouped rough-water sailing', () => {
