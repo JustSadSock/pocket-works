@@ -13,6 +13,7 @@ const releaseNotes = [
   'У каждого разрыва брони работает системный захват края; прыжки, падения и перенос импульса зависят от движения гиганта.',
   'Удар молнии физически выбивает бронепанель, разбрасывает обломки и создаёт реальный обход повреждённой секции.',
   'Ремонт стабилизатора стал трёхфазной задачей: нужно перемещаться между тремя узлами и синхронизировать каждый удержанием JUMP.',
+  'Пересобрана макрогеометрия тела: маршрут теперь лежит на массивном живом панцире с рёбрами, позвонками, сухожилиями, плечевыми суставами и черепной бронёй.',
   'Усилены камера, scale cues, живая механика внутренностей, звук шага и финальный переход после стабилизации.'
 ];
 const runtime = installMobileRuntime();
@@ -23,4 +24,6 @@ void (async () => {
   await import('./game-v4.js');
   const { installLivingAnimationBridge } = await import('./living-animation-bridge.js');
   installLivingAnimationBridge();
+  const { installColossusVisualOverhaul } = await import('./colossus-visual-overhaul.js');
+  installColossusVisualOverhaul();
 })();
