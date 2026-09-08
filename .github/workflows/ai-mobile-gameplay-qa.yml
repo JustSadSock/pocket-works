@@ -20,6 +20,9 @@ jobs:
   exploratory-mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
     steps:
       - name: Checkout repository history
         uses: actions/checkout@v4
@@ -34,8 +37,8 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Install Playwright browser engines
-        run: npx playwright install --with-deps chromium webkit
+      - name: Match Playwright package to browser image
+        run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
 
       - name: Detect changed Pocket Works apps
         shell: bash
