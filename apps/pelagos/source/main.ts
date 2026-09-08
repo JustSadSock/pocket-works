@@ -8,14 +8,18 @@ import './sea-profile';
 import './ship-refit';
 import './rigging-cleanup';
 import './marine-refit';
+import './sail-uv-refit';
 import './ship-modularity';
 import './marine-tuning';
 import './presence-pass';
 import './hydrodynamics-refit';
 import './stern-immersion';
 import './wake-refit';
+import './water-contact-refit';
 import './blender-ship';
 import './finish-tuning';
+import './sail-fabric-refit';
+import './sail-lighting-refit';
 import './camera-stabilizer';
 import './motion-cues';
 import './experience-refit';
@@ -23,16 +27,18 @@ import './shipyard-ui';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
-const version = '1.6.1';
+const version = '1.6.2';
 const STORAGE_NAMESPACE = 'pocket-works:pelagos';
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
 const releaseNotes = [
-  'Верфь теперь оставляет корабль в кадре: нижняя панель стала компактнее, варианты листаются по горизонтали, а камера переходит в отдельный режим живого предпросмотра.',
-  'Корпус получил более тяжёлую вертикальную динамику: он следует за длинным профилем моря с инерцией, а не подпрыгивает вслед за каждой локальной волной.',
-  'Кормовая ватерлиния теперь ограничивает одновременно дифферент и подъём центра корпуса, удерживая транец связанным с водой.',
-  'Руль посажен глубже и перестал целиком проступать сквозь прозрачную воду при обычной качке.'
+  'Верфь получила свободный живой осмотр: проведи пальцем по кораблю, чтобы вращать трёхчетвертную камеру, а нижняя панель занимает ещё меньше экрана.',
+  'Камера теперь учитывает реальную длину выбранного корпуса, поэтому Harbor Cutter и Highboard Cruiser ощущаются разными по масштабу, а не просто разным зумом.',
+  'Пена у борта, кормовой контакт и след теперь масштабируются вместе с корпусом и начинаются у фактического транца, а не в точках исходной 9-метровой модели.',
+  'Плавучесть теперь имеет одного владельца: длиннокорпусная модель сама считает heave/pitch/roll через инерцию и больше не спорит со старым 9-метровым solver внутри кадра.',
+  'Физические паруса получили стабильную UV-развёртку, нейтральную текстуру ткани и двухстороннее освещение без самозатенения — цвет верфи читается корректно и Safari/WebKit не затемняет парус в чёрный.',
+  'Главное меню получило отдельное более дальнее кинематографичное кадрирование, а игровой ракурс показывает больше воды вокруг корпуса для лучшего ощущения массы и масштаба.'
 ];
 
 registerEnhancedUpdate({ appName, version, releaseNotes });

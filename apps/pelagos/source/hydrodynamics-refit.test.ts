@@ -112,6 +112,38 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     expect(maximumSternGuard).toBeLessThanOrEqual(1);
   });
 
+  it('keeps every selectable hull size stable in rough water', () => {
+    const wind = { direction: 57 * DEG, speed: 12.5, gust: 0.42 };
+    for (const moduleId of ['harbor', 'long', 'bluewater', 'highboard']) {
+      setActiveShipLoadout('long-cutter');
+      expect(setShipModule('dimensions', moduleId)).toBe(true);
+      const dynamics = new ShipDynamics();
+      dynamics.reset();
+      let time = 0;
+      let maxVerticalSpeed = 0;
+      let maxSternGap = -Infinity;
+
+      for (let step = 0; step < 720; step += 1) {
+        const dt = 1 / 60;
+        time += dt;
+        dynamics.update(dt, time, { steer: 0.42, sail: 0.58, rowing: step < 90 ? 0.5 : 0 }, wind, 1.72);
+        maxVerticalSpeed = Math.max(maxVerticalSpeed, Math.abs(dynamics.state.verticalVelocity));
+        const frame = getHydrodynamicsFrame(dynamics);
+        if (frame) maxSternGap = Math.max(maxSternGap, frame.sternGap);
+      }
+
+      expect(Number.isFinite(dynamics.state.y)).toBe(true);
+      expect(Number.isFinite(dynamics.state.pitch)).toBe(true);
+      expect(Number.isFinite(dynamics.state.roll)).toBe(true);
+      expect(maxVerticalSpeed).toBeLessThanOrEqual(0.80);
+      expect(dynamics.state.pitch).toBeLessThanOrEqual(3.5 * DEG + 1e-6);
+      expect(dynamics.state.pitch).toBeGreaterThanOrEqual(-7.2 * DEG - 1e-6);
+      expect(Math.abs(dynamics.state.roll)).toBeLessThanOrEqual(11.5 * DEG + 1e-6);
+      expect(maxSternGap).toBeLessThanOrEqual(0.32);
+    }
+    setActiveShipLoadout('long-cutter');
+  });
+
   it('keeps a mostly submerged rudder visually occluded by translucent water', () => {
     expect(appendageVisibility(-1.8, -0.6, -1.2, 0.64, 0.96)).toBe(0);
     const partial = appendageVisibility(-1.8, -0.6, -1.45, 0.64, 0.96);
