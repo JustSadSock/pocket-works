@@ -22,7 +22,7 @@ import { FootstepAudio } from './audio';
 import { InputController } from './input';
 import { MAX_SPEED, exponentialApproach, speedFromMagnitude } from './locomotion';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -152,13 +152,16 @@ async function start(): Promise<void> {
     const leanRoot = new TransformNode('character-lean', scene);
     leanRoot.parent = characterRoot;
     leanRoot.rotationQuaternion = Quaternion.Identity();
+    const modelRoot = new TransformNode('blender-forward-correction', scene);
+    modelRoot.parent = leanRoot;
+    modelRoot.rotationQuaternion = Quaternion.FromEulerAngles(0, Math.PI, 0);
 
     loadingBar.style.width = '39%';
     loadingText.textContent = 'Blender / body / clothing / textures';
     const result = await SceneLoader.ImportMeshAsync('', './models/', 'kinema-character.glb', scene);
     if (!result.meshes.length) throw new Error('Blender GLB загрузился без геометрии.');
     for (const mesh of result.meshes) {
-      if (!mesh.parent) mesh.parent = leanRoot;
+      if (!mesh.parent) mesh.parent = modelRoot;
       if (mesh.getTotalVertices() > 0) shadows.addShadowCaster(mesh, false);
     }
 
