@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "gloamstep",
+  "name": "GLOAMSTEP",
+  "shortName": "GLOAMSTEP",
+  "description": "Компактный пошаговый рогалик: пять процедурных этажей, туман войны, реликвии, пермадес и финальный Страж Пепла.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T23:47:00+03:00",
+  "changelog": [
+    "Первый законченный забег на пять процедурно генерируемых этажей с финальным боссом.",
+    "Добавлены свайпы, экранная крестовина, клавиатура, пошаговый бой, три архетипа врагов и туман войны.",
+    "Реализованы реликвии между этажами, локальное сохранение забега, рекорды, звук, тактильная отдача и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#b75c36",
+  "backgroundColor": "#e7ddc4",
+  "themeColor": "#272923",
+  "orientation": "portrait",
+  "cacheName": "gloamstep-v1.0.0",
+  "storageNamespace": "pocket-works:gloamstep",
+  "tags": ["PWA", "offline", "game", "roguelike", "turn-based", "procedural", "canvas", "portrait", "mobile", "audio", "haptics"],
+  "order": 132
+}
