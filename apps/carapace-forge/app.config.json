@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "carapace-forge",
+  "name": "CARAPACE FORGE",
+  "shortName": "CARAPACE",
+  "description": "Мини-игра-сравнение: один и тот же краб мгновенно переключается между Babylon-примитивами и полноценной Blender-моделью с armature и анимациями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T02:52:00+03:00",
+  "changelog": [
+    "Добавлен прямой A/B-переключатель между примитивной Babylon-сборкой и Blender Asset Forge моделью в одном игровом состоянии.",
+    "Blender-краб имеет отдельный силуэт, суставы, armature и авторские Idle, Scuttle, Pinch и Celebrate анимации.",
+    "Добавлена маленькая игровая цель: собрать жемчужины в приливной арене, управляя крабом с телефона.",
+    "Звуки сбора, клешни и победы синтезируются с вариациями через Web Audio без внешних аудио-сервисов."
+  ],
+  "status": "experimental",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#e56b47",
+  "backgroundColor": "#d9c39e",
+  "themeColor": "#d9c39e",
+  "orientation": "landscape",
+  "cacheName": "carapace-forge-v1.0.0",
+  "storageNamespace": "pocket-works:carapace-forge",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "animation", "Asset Forge", "comparison", "crab", "landscape", "iPhone"],
+  "order": 80
+}
