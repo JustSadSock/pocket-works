@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GLOAMSTEP">
+  <rect width="512" height="512" fill="#e7ddc4"/>
+  <rect x="66" y="82" width="380" height="348" fill="#272923"/>
+  <path d="M124 364h264v22H124zm32-58h232v22H156zm34-58h198v22H190zm34-58h164v22H224z" fill="#e7ddc4"/>
+  <path d="M256 76c40 48 66 86 66 124 0 40-29 70-66 70s-66-30-66-70c0-38 26-76 66-124Z" fill="#b75c36"/>
+  <path d="M256 128c18 27 29 48 29 68 0 19-13 33-29 33s-29-14-29-33c0-20 11-41 29-68Z" fill="#e7ddc4"/>
+</svg>
