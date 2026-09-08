@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "relic-siege",
+  "name": "RELIC SIEGE",
+  "shortName": "RELIC",
+  "description": "Короткая сюжетная мобильная 3D-игра о последнем хранителе горной цитадели: зажги три солнечных обелиска, переживи волны пепельных стражей и разбуди древний реликт.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T14:12:00+03:00",
+  "changelog": [
+    "Первая версия: трехчастная сюжетная осада с активацией обелисков, волнами врагов и финальным Стражем.",
+    "Визуальный центр собирается через Blender Asset Forge: крепость, реликт, обелиски и анимированный Страж.",
+    "Музыка, ветер, удар реликта, атаки и интерфейсные импульсы генерируются через Audio Asset Forge на GitHub-hosted runner.",
+    "Добавлено диагностическое состояние __AI_TEST_STATE__ для автоматического Playwright mobile QA."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#f0a84a",
+  "backgroundColor": "#17131a",
+  "themeColor": "#17131a",
+  "orientation": "landscape",
+  "cacheName": "relic-siege-v1.0.0",
+  "storageNamespace": "pocket-works:relic-siege",
+  "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "Asset Forge", "Audio Forge", "Playwright", "combat", "story", "landscape", "iPhone"],
+  "order": 82
+}

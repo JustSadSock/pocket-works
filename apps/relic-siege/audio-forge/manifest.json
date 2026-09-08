@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "wind",
+      "type": "ambient",
+      "generator": "brownnoise",
+      "duration": 10,
+      "channels": 2,
+      "output": "public/audio/generated/wind.ogg",
+      "post": { "normalizeDb": -17, "highpass": 55, "lowpass": 1500, "fadeIn": 0.7, "fadeOut": 0.7 }
+    },
+    {
+      "name": "strike",
+      "type": "sfx",
+      "preset": "laserShoot",
+      "seed": 181,
+      "output": "public/audio/generated/strike.ogg",
+      "post": { "normalizeDb": -5, "highpass": 110, "lowpass": 9000, "reverb": 10 }
+    },
+    {
+      "name": "hit",
+      "type": "sfx",
+      "preset": "hitHurt",
+      "seed": 947,
+      "output": "public/audio/generated/hit.ogg",
+      "post": { "normalizeDb": -6, "highpass": 80, "lowpass": 6200, "reverb": 7 }
+    },
+    {
+      "name": "pylon",
+      "type": "sfx",
+      "preset": "powerUp",
+      "seed": 3301,
+      "output": "public/audio/generated/pylon.ogg",
+      "post": { "normalizeDb": -4, "highpass": 70, "lowpass": 11000, "reverb": 24 }
+    },
+    {
+      "name": "boss",
+      "type": "sfx",
+      "preset": "explosion",
+      "seed": 7702,
+      "output": "public/audio/generated/boss.ogg",
+      "post": { "normalizeDb": -5, "highpass": 35, "lowpass": 4800, "reverb": 32 }
+    },
+    {
+      "name": "theme",
+      "type": "music",
+      "tempo": 78,
+      "program": 48,
+      "synthGain": 0.42,
+      "output": "public/audio/generated/theme.ogg",
+      "notes": [
+        { "note": "D2", "beat": 0, "duration": 4, "velocity": 70 },
+        { "note": "A2", "beat": 0, "duration": 4, "velocity": 52 },
+        { "note": "F3", "beat": 1, "duration": 2.5, "velocity": 46 },
+        { "note": "C3", "beat": 4, "duration": 4, "velocity": 64 },
+        { "note": "G2", "beat": 4, "duration": 4, "velocity": 48 },
+        { "note": "E3", "beat": 5, "duration": 2.5, "velocity": 44 },
+        { "note": "Bb2", "beat": 8, "duration": 4, "velocity": 66 },
+        { "note": "F3", "beat": 8, "duration": 4, "velocity": 50 },
+        { "note": "D3", "beat": 9, "duration": 2.5, "velocity": 42 },
+        { "note": "A2", "beat": 12, "duration": 4, "velocity": 68 },
+        { "note": "E3", "beat": 12, "duration": 4, "velocity": 50 },
+        { "note": "C3", "beat": 13, "duration": 2.5, "velocity": 44 }
+      ],
+      "post": { "normalizeDb": -9, "lowpass": 8500, "reverb": 28, "fadeIn": 0.6, "fadeOut": 1.1 }
+    }
+  ]
+}
