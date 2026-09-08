@@ -1,6 +1,7 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { ShipState, ShipTelemetry } from './core';
 import { angleDelta, clamp, smoothTo, wrapAngle } from './core';
+import { getActiveShipLoadout } from './ship-loadout';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
@@ -40,6 +41,16 @@ function snap(memory: CameraState, ship: ShipState, desiredYaw: number): void {
   memory.initialized = true;
 }
 
+function menuIsVisible(): boolean {
+  const menu = document.querySelector<HTMLElement>('#menu');
+  return Boolean(menu && !menu.classList.contains('hidden'));
+}
+
+function shipyardOrbit(): number {
+  const raw = Number(document.documentElement.dataset.shipyardOrbit ?? '0.42');
+  return Number.isFinite(raw) ? clamp(raw, -1.08, 1.08) : 0.42;
+}
+
 function stabilizeCamera(
   world: OceanWorld,
   ship: ShipState,
@@ -51,8 +62,14 @@ function stabilizeCamera(
   const safeDt = clamp(dt, 1 / 240, 1 / 24);
   const memory = getState(world);
   const shipyardPreview = document.documentElement.classList.contains('pelagos-shipyard-open');
-  const turnLook = Math.abs(lookYaw) > 0.035 || shipyardPreview ? 0 : clamp(ship.yawVelocity * 0.58, -0.11, 0.11);
-  const previewYaw = shipyardPreview ? 0.34 : 0;
+  const menuPreview = !shipyardPreview && menuIsVisible();
+  const loadout = getActiveShipLoadout();
+  const hullScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
+  const heightScale = Math.pow(hullScale, 0.36);
+  const turnLook = Math.abs(lookYaw) > 0.035 || shipyardPreview || menuPreview
+    ? 0
+    : clamp(ship.yawVelocity * 0.58, -0.11, 0.11);
+  const previewYaw = shipyardPreview ? shipyardOrbit() : menuPreview ? 0.54 : 0;
   const desiredYaw = wrapAngle(ship.yaw + lookYaw + turnLook + previewYaw);
 
   const displacement = Math.hypot(memory.anchor.x - ship.x, memory.anchor.z - ship.z);
@@ -62,9 +79,9 @@ function stabilizeCamera(
 
   memory.anchor.x = smoothTo(memory.anchor.x, ship.x, 7.8, safeDt);
   memory.anchor.z = smoothTo(memory.anchor.z, ship.z, 7.8, safeDt);
-  memory.anchor.y = smoothTo(memory.anchor.y, ship.y, shipyardPreview ? 3.4 : 1.95, safeDt);
+  memory.anchor.y = smoothTo(memory.anchor.y, ship.y, shipyardPreview ? 3.8 : menuPreview ? 2.8 : 1.95, safeDt);
 
-  const yawRate = shipyardPreview ? 5.8 : Math.abs(lookYaw) > 0.035 ? 10.0 : 4.9;
+  const yawRate = shipyardPreview ? 7.0 : menuPreview ? 2.8 : Math.abs(lookYaw) > 0.035 ? 10.0 : 4.9;
   memory.yaw = wrapAngle(memory.yaw + angleDelta(memory.yaw, desiredYaw) * (1 - Math.exp(-yawRate * safeDt)));
 
   const forwardX = Math.sin(memory.yaw);
@@ -73,13 +90,23 @@ function stabilizeCamera(
   const rightZ = -Math.sin(memory.yaw);
   const speed = clamp(telemetry.speed, 0, 8);
 
-  // Shipyard mode is a genuine live 3D preview: pull farther back, move to a three-quarter angle
-  // and aim lower on the hull so the complete ship sits above the bottom customization dock.
-  const distance = shipyardPreview ? 20.4 : 15.35 + speed * 0.31;
-  const height = shipyardPreview ? 6.15 : 5.72 + speed * 0.075 + lookPitch * 1.58;
+  // Camera distance follows the selected hull length. This keeps the 10.8 m harbor cutter and
+  // 15.6 m highboard cruiser feeling like differently sized ships instead of different camera zooms.
+  const distance = shipyardPreview
+    ? 21.9 * hullScale
+    : menuPreview
+      ? 21.2 * hullScale
+      : (16.65 + speed * 0.34) * hullScale;
+  const height = shipyardPreview
+    ? 6.5 * heightScale
+    : menuPreview
+      ? 7.05 * heightScale
+      : (6.08 + speed * 0.072 + lookPitch * 1.52) * heightScale;
   const quarter = shipyardPreview
-    ? 2.55
-    : (0.92 + clamp(Math.abs(ship.yawVelocity) * 0.46, 0, 0.34)) * Math.exp(-Math.abs(lookYaw) * 2.7);
+    ? 2.15 * hullScale
+    : menuPreview
+      ? 3.35 * hullScale
+      : (1.04 + clamp(Math.abs(ship.yawVelocity) * 0.44, 0, 0.32)) * Math.exp(-Math.abs(lookYaw) * 2.7);
 
   memory.desiredPosition.set(
     memory.anchor.x - forwardX * distance + rightX * quarter,
@@ -89,11 +116,14 @@ function stabilizeCamera(
 
   const shipForwardX = Math.sin(ship.yaw);
   const shipForwardZ = Math.cos(ship.yaw);
-  const lookAhead = shipyardPreview ? 0.35 : 1.28 + speed * 0.12;
+  const shipRightX = Math.cos(ship.yaw);
+  const shipRightZ = -Math.sin(ship.yaw);
+  const lookAhead = shipyardPreview ? 0.15 : menuPreview ? 0.55 : 1.42 + speed * 0.12;
+  const targetSide = menuPreview ? -2.35 * hullScale : shipyardPreview ? -0.30 * hullScale : 0;
   memory.desiredTarget.set(
-    ship.x + shipForwardX * lookAhead,
-    ship.y + (shipyardPreview ? 0.72 : 1.93 + lookPitch * 0.66),
-    ship.z + shipForwardZ * lookAhead
+    ship.x + shipForwardX * lookAhead + shipRightX * targetSide,
+    ship.y + (shipyardPreview ? 0.66 * heightScale : menuPreview ? 1.08 * heightScale : 1.78 * heightScale + lookPitch * 0.62),
+    ship.z + shipForwardZ * lookAhead + shipRightZ * targetSide
   );
 
   const cameraGap = Vector3.Distance(memory.position, memory.desiredPosition);
@@ -101,25 +131,26 @@ function stabilizeCamera(
     memory.position.copyFrom(memory.desiredPosition);
     memory.target.copyFrom(memory.desiredTarget);
   } else {
-    const positionRate = shipyardPreview ? 7.4 : 6.5;
+    const positionRate = shipyardPreview ? 8.0 : menuPreview ? 3.0 : 6.3;
     memory.position.x = smoothTo(memory.position.x, memory.desiredPosition.x, positionRate, safeDt);
     memory.position.z = smoothTo(memory.position.z, memory.desiredPosition.z, positionRate, safeDt);
-    memory.position.y = smoothTo(memory.position.y, memory.desiredPosition.y, shipyardPreview ? 5.2 : 2.9, safeDt);
-    memory.target.x = smoothTo(memory.target.x, memory.desiredTarget.x, shipyardPreview ? 8.0 : 7.4, safeDt);
-    memory.target.z = smoothTo(memory.target.z, memory.desiredTarget.z, shipyardPreview ? 8.0 : 7.4, safeDt);
-    memory.target.y = smoothTo(memory.target.y, memory.desiredTarget.y, shipyardPreview ? 6.0 : 4.0, safeDt);
+    memory.position.y = smoothTo(memory.position.y, memory.desiredPosition.y, shipyardPreview ? 5.8 : menuPreview ? 2.6 : 2.75, safeDt);
+    const targetRate = shipyardPreview ? 8.6 : menuPreview ? 3.2 : 7.1;
+    memory.target.x = smoothTo(memory.target.x, memory.desiredTarget.x, targetRate, safeDt);
+    memory.target.z = smoothTo(memory.target.z, memory.desiredTarget.z, targetRate, safeDt);
+    memory.target.y = smoothTo(memory.target.y, memory.desiredTarget.y, shipyardPreview ? 6.8 : menuPreview ? 3.0 : 3.8, safeDt);
   }
 
   world.camera.position.copyFrom(memory.position);
   world.camera.setTarget(memory.target);
-  const targetFov = shipyardPreview ? 0.93 : 0.865 + speed * 0.0082;
-  world.camera.fov = smoothTo(world.camera.fov, targetFov, shipyardPreview ? 5.2 : 3.8, safeDt);
+  const targetFov = shipyardPreview ? 0.91 : menuPreview ? 0.90 : 0.89 + speed * 0.0075;
+  world.camera.fov = smoothTo(world.camera.fov, targetFov, shipyardPreview ? 5.6 : menuPreview ? 2.8 : 3.6, safeDt);
   world.scene.getMeshByName('sky-dome')?.position.copyFrom(memory.position);
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV3?: boolean };
-if (!prototype.__pelagosStableCameraV3) {
-  prototype.__pelagosStableCameraV3 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV4?: boolean };
+if (!prototype.__pelagosStableCameraV4) {
+  prototype.__pelagosStableCameraV4 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function stableCameraUpdate(
     state: ShipState,
