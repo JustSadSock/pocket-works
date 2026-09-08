@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "description": "Final Blender-authored PELAGOS cutter: closed transom, layered colored PBR timber, painted stripes, brass details and authored structural geometry; responsive sails, oars, rudder and rigging remain runtime-driven.",
+  "description": "Crafted Blender-authored PELAGOS cutter with closed hull, layered timber/paint/brass materials, belaying hardware, hawse fittings, compass, ship bell, swinging quarter lanterns and sheet blocks; sails, oars, rudder and secondary motion remain runtime-driven.",
   "jobs": [
     {
       "name": "pelagos-cutter",
-      "script": "ship_final.py",
+      "script": "ship_craft.py",
       "output": "public/models/pelagos-cutter.glb",
       "requireArmature": false,
       "requireAnimation": false
