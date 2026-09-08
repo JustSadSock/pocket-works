@@ -18,8 +18,8 @@ export class DragonRig{
         const lower=m.name.toLowerCase();
         if(m.material instanceof PBRMaterial){
           const mat=m.material;
-          mat.metallic=Math.min(mat.metallic,.035);
-          mat.roughness=Math.max(mat.roughness,.58);
+          mat.metallic=Math.min(mat.metallic??0,.035);
+          mat.roughness=Math.max(mat.roughness??.58,.58);
           mat.environmentIntensity=.72;
           if(mat.albedoTexture)mat.albedoTexture.level=.48;
           if(lower.includes('wingmembrane')){
