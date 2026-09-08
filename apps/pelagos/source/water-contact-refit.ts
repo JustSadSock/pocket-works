@@ -4,7 +4,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { ShipState, ShipTelemetry } from './core';
 import { clamp, sampleWave } from './core';
-import { getActiveShipLoadout, getShipScale } from './ship-loadout';
+import { getActiveShipLoadout, getShipScale, type ShipLoadout } from './ship-loadout';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
@@ -33,6 +33,15 @@ function worldPoint(state: ShipState, localX: number, localZ: number): { x: numb
   };
 }
 
+function loadedWaterlineY(state: ShipState, telemetry: ShipTelemetry, loadout: ShipLoadout): number {
+  // Mirror the loaded-trim envelope from the authoritative hydrodynamics pass. This is only used to
+  // stop a decorative contact ribbon from following a short raw trough far below the supported hull;
+  // it never moves the ship or the ocean simulation.
+  const restingBias = clamp(0.14 + loadout.dimensions.draft * 0.055, 0.18, 0.25);
+  const immersionBias = clamp(restingBias + telemetry.speed * 0.008, 0.18, 0.27);
+  return state.y - loadout.dimensions.waterlineCenterY + immersionBias;
+}
+
 function ensureContact(world: OceanWorld): ContactMemory {
   const existing = memories.get(world);
   if (existing) return existing;
@@ -53,27 +62,34 @@ function ensureContact(world: OceanWorld): ContactMemory {
     return mesh;
   });
 
-  // A heavy hull always carries a thin meniscus even before it has enough speed to throw white
-  // water. This low-alpha contact layer is deliberately separate from foam: it visually seals the
-  // water to the planking and removes the "model hovering over a shader" cue at low speed.
+  // A displacement hull carries a thin band of disturbed water before it produces actual white
+  // foam. Thin 3D ribbons intersect the planking instead of lying flat on the ocean; this makes the
+  // waterline readable from a chase camera without drawing a glowing outline around the vessel.
   const meniscusMaterial = new StandardMaterial('pelagos-waterline-meniscus', world.scene);
-  meniscusMaterial.diffuseColor = new Color3(0.58, 0.76, 0.74);
-  meniscusMaterial.emissiveColor = new Color3(0.018, 0.045, 0.043);
-  meniscusMaterial.specularColor = new Color3(0.02, 0.03, 0.03);
-  meniscusMaterial.alpha = 0.44;
+  meniscusMaterial.diffuseColor = new Color3(0.54, 0.72, 0.71);
+  meniscusMaterial.emissiveColor = new Color3(0.012, 0.034, 0.033);
+  meniscusMaterial.specularColor = new Color3(0.045, 0.065, 0.062);
+  meniscusMaterial.specularPower = 42;
+  meniscusMaterial.alpha = 0.52;
   meniscusMaterial.backFaceCulling = false;
 
   const sideMeniscus = BASE_CONTACT_POINTS.map((_, index) => {
-    const mesh = MeshBuilder.CreatePlane(`pelagos-waterline-meniscus-${index}`, { width: 0.32, height: 1.34 }, world.scene);
-    mesh.rotation.x = Math.PI / 2;
+    const mesh = MeshBuilder.CreateBox(`pelagos-waterline-meniscus-${index}`, {
+      width: 0.14,
+      height: 0.085,
+      depth: 1.28
+    }, world.scene);
     mesh.material = meniscusMaterial;
     mesh.visibility = 0;
     mesh.isPickable = false;
     return mesh;
   });
 
-  const transomMeniscus = MeshBuilder.CreatePlane('pelagos-transom-meniscus', { width: 1.62, height: 0.26 }, world.scene);
-  transomMeniscus.rotation.x = Math.PI / 2;
+  const transomMeniscus = MeshBuilder.CreateBox('pelagos-transom-meniscus', {
+    width: 1.58,
+    height: 0.09,
+    depth: 0.16
+  }, world.scene);
   transomMeniscus.material = meniscusMaterial;
   transomMeniscus.visibility = 0;
   transomMeniscus.isPickable = false;
@@ -97,6 +113,7 @@ function updateScaledSideContact(
   const scale = getShipScale(loadout);
   const speed = clamp(telemetry.speed / 6.2, 0, 1);
   const halfLength = loadout.dimensions.length * 0.5;
+  const supportedWater = loadedWaterlineY(state, telemetry, loadout);
 
   for (let index = 0; index < BASE_CONTACT_POINTS.length; index += 1) {
     const source = BASE_CONTACT_POINTS[index];
@@ -126,14 +143,20 @@ function updateScaledSideContact(
 
     const meniscus = memory.sideMeniscus[index];
     const side = Math.sign(source.x) || 1;
-    meniscus.position.set(point.x, water.height + 0.014, point.z);
-    meniscus.rotation.y = state.yaw + side * clamp(localZ / Math.max(1, halfLength), -1, 1) * 0.055;
-    meniscus.scaling.x = scale.x * (0.74 + contact * 0.32);
-    meniscus.scaling.y = scale.z * (0.74 + speed * 0.20 + motion * 0.08);
+    // Never let a tiny raw trough pull the contact strip far below the displacement support plane.
+    // Crests can still rise naturally; only the visually impossible downward separation is clipped.
+    const displayWater = Math.max(water.height, supportedWater - 0.065);
+    meniscus.position.set(point.x - side * 0.018 * scale.x, displayWater + 0.004, point.z);
+    meniscus.rotation.y = state.yaw + side * clamp(localZ / Math.max(1, halfLength), -1, 1) * 0.045;
+    meniscus.scaling.set(
+      scale.x * (0.86 + contact * 0.14),
+      0.82 + motion * 0.12,
+      scale.z * (0.88 + speed * 0.16 + motion * 0.06)
+    );
     meniscus.visibility = clamp(
-      contact * (0.075 + environment.waveScale * 0.035 + speed * 0.13 + motion * 0.16),
-      0,
-      0.34
+      (0.12 + contact * 0.18 + environment.waveScale * 0.035 + speed * 0.10 + motion * 0.16),
+      0.12,
+      0.42
     );
   }
 
@@ -157,6 +180,7 @@ function updateTransomContact(
   const scale = getShipScale(loadout);
   const speed = clamp(telemetry.speed / 6.2, 0, 1);
   const localZ = -4.42 * scale.z;
+  const supportedWater = loadedWaterlineY(state, telemetry, loadout);
   let transomContact = 0;
   let transomWater = 0;
 
@@ -168,7 +192,7 @@ function updateTransomContact(
     const hullY = state.y - 0.58 * scale.y + Math.sin(state.pitch) * localZ - Math.sin(state.roll) * localX;
     const contact = clamp((water.height - hullY + 0.12 * scale.y) / (0.28 * scale.y), 0, 1);
     transomContact += contact * 0.5;
-    transomWater += water.height * 0.5;
+    transomWater += Math.max(water.height, supportedWater - 0.055) * 0.5;
 
     const mesh = memory.sternFoam[index];
     mesh.position.set(point.x, water.height + 0.022, point.z);
@@ -180,20 +204,23 @@ function updateTransomContact(
 
   const center = worldPoint(state, 0, localZ);
   const motion = clamp(Math.abs(state.verticalVelocity) + Math.abs(state.pitchVelocity * localZ) * 0.52, 0, 1.5);
-  memory.transomMeniscus.position.set(center.x, transomWater + 0.013, center.z);
+  memory.transomMeniscus.position.set(center.x, transomWater + 0.002, center.z);
   memory.transomMeniscus.rotation.y = state.yaw;
-  memory.transomMeniscus.scaling.x = scale.x * (1.0 + speed * 0.16);
-  memory.transomMeniscus.scaling.y = scale.z * (0.82 + motion * 0.08);
+  memory.transomMeniscus.scaling.set(
+    scale.x * (1.02 + speed * 0.12),
+    0.86 + motion * 0.12,
+    scale.z * (0.90 + motion * 0.06)
+  );
   memory.transomMeniscus.visibility = clamp(
-    transomContact * (0.085 + environment.waveScale * 0.035 + speed * 0.10 + motion * 0.18),
-    0,
-    0.32
+    0.14 + transomContact * 0.17 + environment.waveScale * 0.03 + speed * 0.10 + motion * 0.17,
+    0.14,
+    0.40
   );
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosWaterContactV2?: boolean };
-if (!prototype.__pelagosWaterContactV2) {
-  prototype.__pelagosWaterContactV2 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosWaterContactV3?: boolean };
+if (!prototype.__pelagosWaterContactV3) {
+  prototype.__pelagosWaterContactV3 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function scaleAwareWaterContactUpdate(
     state: ShipState,
