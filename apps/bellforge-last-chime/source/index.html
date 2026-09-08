@@ -49,12 +49,20 @@
 
     <section id="puzzlePanel" class="puzzle-panel hidden" aria-label="Резонансный механизм">
       <p id="puzzleTitle">РЕЗОНАТОР</p>
-      <div class="ring-row">
-        <button class="ring-button" data-ring="0" type="button"><span>Ⅰ</span><b id="ring0">0</b></button>
-        <button class="ring-button" data-ring="1" type="button"><span>Ⅱ</span><b id="ring1">0</b></button>
-        <button class="ring-button" data-ring="2" type="button"><span>Ⅲ</span><b id="ring2">0</b></button>
+      <div class="reference-row">
+        <button id="referencePattern" class="reference-pattern" type="button" aria-label="Прослушать эталонную последовательность">
+          <span>ЭТАЛОН</span><b>▶</b>
+        </button>
+        <div class="reference-bars" aria-label="Визуальный спектр эталона">
+          <i data-reference-tone="0"></i><i data-reference-tone="1"></i><i data-reference-tone="2"></i>
+        </div>
       </div>
-      <small>Коснись кольца, чтобы повернуть его. Правильный аккорд слышен и виден.</small>
+      <div class="ring-row">
+        <button class="ring-button" data-ring="0" type="button"><span>Ⅰ</span><b id="ring0">0</b><i aria-hidden="true"></i></button>
+        <button class="ring-button" data-ring="1" type="button"><span>Ⅱ</span><b id="ring1">0</b><i aria-hidden="true"></i></button>
+        <button class="ring-button" data-ring="2" type="button"><span>Ⅲ</span><b id="ring2">0</b><i aria-hidden="true"></i></button>
+      </div>
+      <small>Сначала прослушай эталон. Затем крути кольца: каждое положение имеет свой тон и высоту световой полосы. Совмести три отклика с эталоном.</small>
       <button id="closePuzzle" class="close-puzzle" type="button">Вернуться</button>
     </section>
 
