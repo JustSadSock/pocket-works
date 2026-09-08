@@ -6,6 +6,7 @@ import './presence-physics';
 import './hydrodynamics-refit';
 import { DEG, ShipDynamics } from './core';
 import { getHydrodynamicsFrame } from './hydrodynamics-refit';
+import { appendageVisibility } from './stern-immersion';
 import { getActiveShipLoadout, getOarStations, setActiveShipLoadout } from './ship-loadout';
 
 describe('PELAGOS modular hull and hydrodynamics', () => {
@@ -40,5 +41,13 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     expect(dynamics.state.y - (frame?.targetY ?? dynamics.state.y)).toBeLessThanOrEqual(0.7);
     expect(frame?.breachGuard ?? 0).toBeGreaterThanOrEqual(0);
     expect(frame?.breachGuard ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps a mostly submerged rudder visually occluded by translucent water', () => {
+    expect(appendageVisibility(-1.8, -0.6, -0.72, 0.46, 0.84)).toBe(0);
+    const partial = appendageVisibility(-1.8, -0.6, -1.28, 0.46, 0.84);
+    expect(partial).toBeGreaterThan(0);
+    expect(partial).toBeLessThan(1);
+    expect(appendageVisibility(-1.8, -0.6, -1.7, 0.46, 0.84)).toBeCloseTo(1, 5);
   });
 });
