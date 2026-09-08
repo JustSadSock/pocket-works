@@ -24,6 +24,12 @@ assert.equal(nearestInteractable(
   [{id:'a',position:{x:2,y:0,z:0}},{id:'b',position:{x:5,y:0,z:0}}],
   3
 ).item.id, 'a');
-assert.equal(qualityProfile(8,430).tier, 'high');
+
+// Phone-sized viewports intentionally stay conservative even when modern phones
+// expose many logical CPU cores. Larger tablet/desktop viewports can step up.
+assert.equal(qualityProfile(8,430).tier, 'low');
+assert.equal(qualityProfile(8,720).tier, 'high');
+assert.equal(qualityProfile(6,600).tier, 'medium');
+assert.equal(qualityProfile(4,900).tier, 'low');
 assert.equal(qualityProfile(2,320).tier, 'low');
 console.log('BELLFORGE core tests passed');
