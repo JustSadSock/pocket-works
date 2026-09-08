@@ -5,13 +5,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'bellforge-last-chime-';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
+  'Новый cache/fingerprint boundary гарантированно отделяет этот билд от 1.1.0 после исправления iOS update-convergence.',
   'Исправлено инвертированное touch-управление камерой и улучшена точность двухручного управления.',
   'Интерфейс полностью адаптирован под горизонтальный iPhone: safe-area, HUD, floating joystick и правый look-sector.',
-  'Blender-персонажи получили расширенный риг, новые детали и более живые Idle, Walk, Run, Talk, Gesture и Alert анимации.',
-  'Добавлены более выраженные tactile-состояния управления и компактный landscape presentation pass.'
+  'Blender-персонажи, механизмы и мобильный render path получили финальный production pass.'
 ];
 setCacheNameDetails({ prefix: 'bellforge-last-chime', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
