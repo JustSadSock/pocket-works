@@ -22,19 +22,32 @@ export function shapeStick(dx, dy, radius = 60, deadzone = 0.08) {
 
 export function createInput({ canvas, joystick, knob, lookZone, actionButton }) {
   const state = { moveX: 0, moveY: 0, lookX: 0, lookY: 0, action: false, sprint: false };
-  const pointers = new Map();
+  const pointers = new Set();
   const keys = new Set();
   let joyId = null;
   let lookId = null;
   let joyOrigin = { x: 0, y: 0 };
   let lookLast = { x: 0, y: 0 };
   let sprintLatched = false;
+  let knobFrame = 0;
+  let pendingKnobX = 0;
+  let pendingKnobY = 0;
 
   const setKnob = (x, y) => {
     const radius = 39;
     const length = Math.hypot(x, y) || 1;
     const scale = Math.min(1, radius / length);
     knob.style.transform = `translate3d(${x * scale}px, ${y * scale}px, 0)`;
+  };
+
+  const scheduleKnob = (x, y) => {
+    pendingKnobX = x;
+    pendingKnobY = y;
+    if (knobFrame) return;
+    knobFrame = requestAnimationFrame(() => {
+      knobFrame = 0;
+      setKnob(pendingKnobX, pendingKnobY);
+    });
   };
 
   const placeFloatingJoystick = (x, y) => {
@@ -61,6 +74,12 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
     state.moveY = 0;
     state.sprint = false;
     sprintLatched = false;
+    pendingKnobX = 0;
+    pendingKnobY = 0;
+    if (knobFrame) {
+      cancelAnimationFrame(knobFrame);
+      knobFrame = 0;
+    }
     setKnob(0, 0);
     joystick.classList.remove('active');
     resetJoystickPosition();
@@ -73,11 +92,22 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
     lookZone.classList.remove('active');
   };
 
+  const releaseCapture = (event) => {
+    try {
+      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    } catch {}
+  };
+
   const down = (event) => {
     if (event.target === actionButton || actionButton.contains(event.target)) return;
     event.preventDefault();
-    canvas.setPointerCapture?.(event.pointerId);
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    // Touch/pen can leave the canvas while the thumb is still down. Mouse does
+    // not need capture on this full-screen canvas, and avoiding it keeps desktop
+    // emulation/input tooling responsive under heavy WebGL load.
+    if (event.pointerType !== 'mouse') {
+      try { canvas.setPointerCapture?.(event.pointerId); } catch {}
+    }
+    pointers.add(event.pointerId);
 
     const leftControlBoundary = innerWidth * 0.43;
     if (event.clientX < leftControlBoundary && joyId === null) {
@@ -109,7 +139,9 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
       if (sprintLatched) sprintLatched = shaped.magnitude > 0.69;
       else sprintLatched = shaped.magnitude > 0.84;
       state.sprint = sprintLatched;
-      setKnob(dx, dy);
+      // Coalesce cosmetic DOM work to one write per visual frame. Gameplay
+      // state above remains immediate, so fast thumb movement never loses input.
+      scheduleKnob(dx, dy);
     } else if (event.pointerId === lookId) {
       const current = { x: event.clientX, y: event.clientY };
       const delta = naturalLookDelta(current, lookLast);
@@ -117,11 +149,17 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
       state.lookY += delta.y;
       lookLast = current;
     }
-
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   };
 
   const up = (event) => {
+    pointers.delete(event.pointerId);
+    releaseCapture(event);
+    if (event.pointerId === joyId) clearJoy();
+    if (event.pointerId === lookId) clearLook();
+  };
+
+  const lostCapture = (event) => {
+    if (!pointers.has(event.pointerId)) return;
     pointers.delete(event.pointerId);
     if (event.pointerId === joyId) clearJoy();
     if (event.pointerId === lookId) clearLook();
@@ -131,6 +169,7 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
   canvas.addEventListener('pointermove', move, { passive: false });
   canvas.addEventListener('pointerup', up, { passive: true });
   canvas.addEventListener('pointercancel', up, { passive: true });
+  canvas.addEventListener('lostpointercapture', lostCapture, { passive: true });
 
   actionButton.addEventListener('pointerdown', (event) => {
     event.preventDefault();
@@ -149,6 +188,7 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
   window.addEventListener('blur', () => {
     clearJoy();
     clearLook();
+    pointers.clear();
     keys.clear();
   });
 
