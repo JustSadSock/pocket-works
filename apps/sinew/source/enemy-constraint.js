@@ -112,7 +112,12 @@ class EnemyConstraintBody {
       const local = toLocal(normal, frame);
       this.shieldBarrier = { normal: vec3(local.x, local.y, local.z), life: .08 };
       const pose = this.shield.contact(this.shieldBarrier.normal, penetration, .72);
-      this.applyShieldPose(pose, e.bones.shoulderL.getAbsolutePosition(), frame, normalizedLocal(null));
+      const currentNormal = normalizedLocal({
+        x: Vector3.Dot(e.shield.normal, frame.right),
+        y: e.shield.normal.y,
+        z: Vector3.Dot(e.shield.normal, frame.forward)
+      }, { x: .12, y: -.05, z: 1 });
+      this.applyShieldPose(pose, e.bones.shoulderL.getAbsolutePosition(), frame, currentNormal);
     };
   }
 
