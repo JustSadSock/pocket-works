@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PELAGOS">
-  <meta name="pocket-works-build" content="1.5.0">
+  <meta name="pocket-works-build" content="1.6.0">
   <title>PELAGOS — Pocket Works</title>
 </head>
 <body data-fullscreen-app>
@@ -56,13 +56,14 @@
     <section id="menu" class="screen menu hidden" data-ui>
       <a class="back-link" href="../../" data-app-control>← POCKET WORKS</a>
       <div class="menu-copy">
-        <p>БЕСКРАЙНЕЕ МОРЕ / 1.5.0</p>
+        <p>БЕСКРАЙНЕЕ МОРЕ / 1.6.0</p>
         <h1>PELA<br><em>GOS</em></h1>
         <div class="menu-lead">Не гонка и не симулятор меню. Здесь удовольствие — в самом движении: поймай ветер, отпусти парус и почувствуй, как корпус работает на волне.</div>
       </div>
       <div class="menu-actions">
         <div class="voyage-stat"><span>ВСЕГО ПРОЙДЕНО</span><b id="totalDistance">0.0 км</b></div>
         <button id="startButton" class="primary-action" type="button" aria-label="Начать плавание — выйти в море" data-native-press><b>ВЫЙТИ В МОРЕ</b><small>ПОРТРЕТНЫЙ РЕЖИМ</small></button>
+        <button id="shipyardButton" class="secondary-action" type="button">ВЕРФЬ / КОРАБЛЬ</button>
         <button id="settingsButton" class="secondary-action" type="button">НАСТРОЙКИ</button>
       </div>
     </section>
@@ -73,14 +74,39 @@
       <div class="setting"><span><b>Качество 3D</b><small>Авто само регулирует внутреннее разрешение</small></span><button id="qualityButton" class="value-button" type="button">АВТО</button></div>
       <div class="setting"><span><b>Звук моря</b><small>Ветер, вода, корпус, парус и гребля</small></span><button id="soundButton" class="value-button" type="button">ВКЛ</button></div>
       <div class="setting"><span><b>Подсказки</b><small>Короткое обучение жестами</small></span><button id="hintsButton" class="value-button" type="button">ВКЛ</button></div>
+      <button id="settingsShipyardButton" class="secondary-action full" type="button">ВЕРФЬ / КАСТОМИЗАЦИЯ</button>
       <button class="secondary-action full" type="button" data-workshop-trigger>WORKSHOP MODE / ДИАГНОСТИКА</button>
+    </section>
+
+    <section id="shipyard" class="screen shipyard hidden" data-ui>
+      <div class="shipyard-head">
+        <div><p>PELAGOS / SHIPYARD</p><h2>Верфь</h2></div>
+        <button id="closeShipyard" class="circle-button" type="button" aria-label="Закрыть верфь">×</button>
+      </div>
+      <div class="shipyard-dock">
+        <div id="shipyardSummary" class="shipyard-summary" aria-live="polite"></div>
+        <nav class="shipyard-tabs" aria-label="Модули корабля">
+          <button type="button" data-shipyard-slot="dimensions">КОРПУС</button>
+          <button type="button" data-shipyard-slot="palette">ОТДЕЛКА</button>
+          <button type="button" data-shipyard-slot="sails">ПАРУСА</button>
+          <button type="button" data-shipyard-slot="oars">ВЁСЛА</button>
+        </nav>
+        <div class="shipyard-category-row"><h3 id="shipyardCategoryTitle">КОРПУС</h3><small>ИЗМЕНЕНИЯ ПРИМЕНЯЮТСЯ СРАЗУ</small></div>
+        <div id="shipyardOptions" class="shipyard-options"></div>
+        <div class="shipyard-paint" aria-label="Своя окраска">
+          <label><input id="shipHullColor" type="color" value="#315f5f"><span>БОРТ</span></label>
+          <label><input id="shipDeckColor" type="color" value="#a77743"><span>ПАЛУБА</span></label>
+          <label><input id="shipSailColor" type="color" value="#eadfbf"><span>ПАРУС</span></label>
+        </div>
+        <button id="shipyardReset" class="shipyard-reset" type="button">СБРОСИТЬ К LONG CUTTER</button>
+      </div>
     </section>
 
     <section id="pause" class="screen modal hidden" data-ui>
       <p>МОРЕ ЗАМЕРЛО</p>
       <h2>Пауза</h2>
       <div class="modal-copy">Симуляция, частицы и звук остановлены. Возврат не создаст огромный delta-time.</div>
-      <div class="stack"><button id="resumeButton" class="primary-action compact" type="button"><b>ПРОДОЛЖИТЬ</b><small>В МОРЕ</small></button><button id="menuButton" class="secondary-action full" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="secondary-action full link" href="../../" data-app-control>В POCKET WORKS</a></div>
+      <div class="stack"><button id="resumeButton" class="primary-action compact" type="button"><b>ПРОДОЛЖИТЬ</b><small>В МОРЕ</small></button><button id="pauseShipyardButton" class="secondary-action full" type="button">ВЕРФЬ / КОРАБЛЬ</button><button id="menuButton" class="secondary-action full" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="secondary-action full link" href="../../" data-app-control>В POCKET WORKS</a></div>
     </section>
 
     <section id="resumeGate" class="resume-gate hidden" data-ui>
