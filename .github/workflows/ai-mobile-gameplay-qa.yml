@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ai-mobile-qa-${{ github.ref }}
@@ -20,11 +21,12 @@ jobs:
   exploratory-mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
     steps:
-      - name: Checkout repository history
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,39 +36,73 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Install Playwright browser engines
-        run: npx playwright install --with-deps chromium webkit
+      - name: Match Playwright package to browser image
+        run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
 
       - name: Detect changed Pocket Works apps
-        shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          ZERO_SHA="0000000000000000000000000000000000000000"
-          RANGE=""
+          node <<'NODE'
+          const fs = require('node:fs');
 
-          if [[ "$EVENT_NAME" == "pull_request" && -n "${BASE_SHA:-}" ]]; then
-            RANGE="${BASE_SHA}...${HEAD_SHA}"
-          elif [[ "$EVENT_NAME" == "push" && -n "${BEFORE_SHA:-}" && "$BEFORE_SHA" != "$ZERO_SHA" ]]; then
-            RANGE="${BEFORE_SHA}..${HEAD_SHA}"
-          fi
+          const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+          const repository = process.env.GITHUB_REPOSITORY;
+          const apiBase = process.env.GITHUB_API_URL || 'https://api.github.com';
+          const token = process.env.GH_TOKEN;
+          const headers = {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'pocket-works-ai-mobile-qa'
+          };
 
-          TARGETS=""
-          if [[ -n "$RANGE" ]]; then
-            CHANGED_FILES="$(git diff --name-only "$RANGE" || true)"
-            TARGETS="$(printf '%s\n' "$CHANGED_FILES" | awk -F/ '$1 == "apps" && $2 !~ /^_/ { print $2 }' | sort -u | paste -sd, -)"
-          fi
+          async function getJson(url) {
+            const response = await fetch(url, { headers });
+            if (!response.ok) {
+              throw new Error(`GitHub API ${response.status} for ${url}: ${await response.text()}`);
+            }
+            return response.json();
+          }
 
-          echo "PW_APP_TARGETS=$TARGETS" >> "$GITHUB_ENV"
-          if [[ -n "$TARGETS" ]]; then
-            echo "Exploratory QA targets changed apps: $TARGETS"
-          else
-            echo "No changed app slug detected; exploratory QA will sample the newest active apps."
-          fi
+          async function changedFiles() {
+            if (event.pull_request?.number) {
+              const files = [];
+              for (let page = 1; page <= 30; page += 1) {
+                const batch = await getJson(
+                  `${apiBase}/repos/${repository}/pulls/${event.pull_request.number}/files?per_page=100&page=${page}`
+                );
+                files.push(...batch.map((item) => item.filename));
+                if (batch.length < 100) break;
+              }
+              return files;
+            }
+
+            const zero = '0000000000000000000000000000000000000000';
+            if (event.before && event.after && event.before !== zero) {
+              const comparison = await getJson(`${apiBase}/repos/${repository}/compare/${event.before}...${event.after}`);
+              return (comparison.files || []).map((item) => item.filename);
+            }
+
+            return [];
+          }
+
+          changedFiles().then((files) => {
+            const targets = [...new Set(files
+              .map((file) => /^apps\/([^/]+)\//.exec(file)?.[1])
+              .filter((slug) => slug && !slug.startsWith('_')))]
+              .sort();
+            fs.appendFileSync(process.env.GITHUB_ENV, `PW_APP_TARGETS=${targets.join(',')}\n`);
+            if (targets.length) {
+              console.log(`Exploratory QA targets changed apps: ${targets.join(',')}`);
+            } else {
+              console.log('No changed app slug detected; exploratory QA will sample the newest active apps.');
+            }
+          }).catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
 
       - name: Assemble production-like browser test site
         run: npm run build:quality-site

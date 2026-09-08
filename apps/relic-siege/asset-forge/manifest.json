@@ -3,14 +3,28 @@
   "jobs": [
     {
       "name": "relic-fortress",
-      "script": "world.py",
+      "script": "world_aligned.py",
       "output": "public/models/relic-fortress.glb",
       "requireArmature": false,
       "requireAnimation": false
     },
     {
+      "name": "keeper",
+      "script": "actors.py",
+      "output": "public/models/keeper.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "ash-raider",
+      "script": "actors.py",
+      "output": "public/models/ash-raider.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
       "name": "ash-warden",
-      "script": "warden.py",
+      "script": "actors.py",
       "output": "public/models/ash-warden.glb",
       "requireArmature": true,
       "requireAnimation": true
