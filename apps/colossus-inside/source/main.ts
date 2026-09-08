@@ -19,4 +19,8 @@ const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 registerEnhancedUpdate({ appName, version, releaseNotes });
 createWorkshopMode({ appName, version, cachePrefix: 'colossus-inside-', storageNamespace, onReset: () => location.reload() });
-void import('./game-v4.js');
+void (async () => {
+  await import('./game-v4.js');
+  const { installLivingAnimationBridge } = await import('./living-animation-bridge.js');
+  installLivingAnimationBridge();
+})();
