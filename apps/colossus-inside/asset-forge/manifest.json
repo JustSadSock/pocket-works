@@ -3,7 +3,7 @@
   "jobs": [
     {
       "name": "colossus-exterior",
-      "script": "colossus.py",
+      "script": "colossus_v2.py",
       "output": "public/models/colossus.glb",
       "requireArmature": true,
       "requireAnimation": true
