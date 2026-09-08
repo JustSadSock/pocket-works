@@ -3,6 +3,7 @@ import { createSandMaterials } from './sand-material.js';
 import { DesertWorld } from './world.js';
 import { SandWalkerController } from './movement.js';
 import { HumanoidRig } from './character.js';
+import { BedouinVisualPolish } from './character-polish.js';
 import { SandPhysics } from './sand-physics.js';
 import { LocalSandSurface } from './sand-surface.js';
 import { SandParticles } from './particles.js';
@@ -17,7 +18,7 @@ import { DesertAudio } from './audio.js';
 import { DesertLandmarks } from './landmarks.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
-const SESSION_SCHEMA = 7;
+const SESSION_SCHEMA = 8;
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 export class SiroccoGame {
@@ -31,6 +32,9 @@ export class SiroccoGame {
     this.lastFps = 60;
     this.saveClock = 0;
     this.slideSoundClock = 0;
+    this.sandVisualClock = 0;
+    this.coarseSandClock = 0;
+    this.pendingSandBounds = null;
   }
 
   async init(report = () => {}) {
@@ -41,7 +45,7 @@ export class SiroccoGame {
       premultipliedAlpha: false,
       powerPreference: 'high-performance'
     }, false);
-    this.engine.setHardwareScalingLevel(1.28);
+    this.engine.setHardwareScalingLevel(1.34);
     this.scene = new Scene(this.engine);
     this.scene.skipPointerMovePicking = true;
     this.scene.autoClear = true;
@@ -63,6 +67,8 @@ export class SiroccoGame {
     this.shadowCasters = [];
     this.rig = new HumanoidRig(this.scene, this.shadowCasters, this.sandSurface);
     await this.rig.init();
+    this.characterPolish = new BedouinVisualPolish(this.scene, this.rig);
+    this.characterPolish.init();
     await nextFrame();
 
     report('Настраиваем свет, атмосферу и скалы…', 0.53);
@@ -95,6 +101,7 @@ export class SiroccoGame {
 
     report('Прогреваем анимацию и физический песок…', 0.90);
     this.rig.update(this.controller, 1 / 60);
+    this.characterPolish.update(this.controller, 1 / 60);
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
     await nextFrame();
@@ -151,6 +158,18 @@ export class SiroccoGame {
     this.sandSurface?.syncOrigin();
   }
 
+  queueSandBounds(bounds) {
+    if (!bounds) return;
+    if (!this.pendingSandBounds) {
+      this.pendingSandBounds = { ...bounds };
+      return;
+    }
+    this.pendingSandBounds.minX = Math.min(this.pendingSandBounds.minX, bounds.minX);
+    this.pendingSandBounds.minZ = Math.min(this.pendingSandBounds.minZ, bounds.minZ);
+    this.pendingSandBounds.maxX = Math.max(this.pendingSandBounds.maxX, bounds.maxX);
+    this.pendingSandBounds.maxZ = Math.max(this.pendingSandBounds.maxZ, bounds.maxZ);
+  }
+
   applyQuality(preset) {
     if (!preset || !this.engine) return;
     this.engine.setHardwareScalingLevel(preset.hardwareScaling);
@@ -175,11 +194,12 @@ export class SiroccoGame {
       this.sandSurface.update(this.controller);
 
       const landings = this.rig.update(this.controller, dt);
+      this.characterPolish.update(this.controller, dt);
       for (const landing of landings) {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
         const down = steep ? this.sandSurface.downhill(landing.globalX, landing.globalZ) : null;
-        this.particles.kick(landing.position, landing.yaw, steep ? 1.14 : 0.62, down);
+        this.particles.kick(landing.position, landing.yaw, steep ? 1.10 : 0.58, down);
         this.audio.footstep(0.72 + Math.min(0.28, this.controller.speed * 0.08));
       }
 
@@ -190,15 +210,27 @@ export class SiroccoGame {
       this.slideSoundClock = Math.max(0, this.slideSoundClock - dt);
       if (groundState.sliding > 0.16 && this.controller.speed > 0.35 && this.slideSoundClock <= 0) {
         this.audio.slide(groundState.sliding);
-        this.slideSoundClock = 0.14 + (1 - groundState.sliding) * 0.12;
+        this.slideSoundClock = 0.16 + (1 - groundState.sliding) * 0.14;
       }
 
       this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
-      const dirtySand = this.sand.consumeDirtyBounds();
-      if (dirtySand) {
-        this.world.refreshDeformation(dirtySand);
+      this.queueSandBounds(this.sand.consumeDirtyBounds());
+      this.sandVisualClock += dt;
+      this.coarseSandClock += dt;
+
+      // Keep the detailed physical surface responsive to footsteps, but don't
+      // rebuild thousands of vertices every animation frame while an avalanche
+      // is relaxing. Coarse chunks are even less time-critical and update twice
+      // per second. This removes the large CPU spikes visible on iPhone Safari.
+      if (this.pendingSandBounds && (landings.length > 0 || this.sandVisualClock >= 0.10)) {
         this.sandSurface.markDirty();
         this.sandSurface.update(this.controller, true);
+        this.sandVisualClock = 0;
+      }
+      if (this.pendingSandBounds && this.coarseSandClock >= 0.50) {
+        this.world.refreshDeformation(this.pendingSandBounds);
+        this.pendingSandBounds = null;
+        this.coarseSandClock = 0;
       }
 
       this.contactShadow.update(this.controller);
@@ -227,6 +259,7 @@ export class SiroccoGame {
     this.contactShadow?.dispose();
     this.particles?.dispose();
     this.landmarks?.dispose();
+    this.characterPolish?.dispose();
     this.sandSurface?.dispose();
     this.sand?.clear();
     this.rig?.dispose();
