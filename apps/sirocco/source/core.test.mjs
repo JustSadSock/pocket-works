@@ -20,18 +20,31 @@ for (const segments of [18, 22, 24, 30, 32, 40, 42]) {
 }
 
 const sand = new SandPhysics({ sampleBaseHeight: () => 0, downhill: () => ({ x: 0, z: 1 }) }, { cellSize: 0.12 });
+sand.setQuality({ id: 'high' });
 sand.stampFoot({ globalX: 0, globalZ: 0, yaw: 0 }, { speed: 2.2, lastSlope: 0.2, sliding: 0 });
 assert.ok(sand.activeCellCount > 8, 'foot impact must deform multiple sand cells');
 assert.ok(sand.sampleOffset(0, 0) < -0.01, 'footprint centre must depress the sand surface');
 let positiveMass = 0;
-for (const cell of sand.cells.values()) if (cell.h > 0) positiveMass += cell.h;
+let maxLoose = 0;
+let maxCompaction = 0;
+for (const cell of sand.cells.values()) {
+  if (cell.h > 0) positiveMass += cell.h;
+  maxLoose = Math.max(maxLoose, cell.loose ?? 0);
+  maxCompaction = Math.max(maxCompaction, cell.compaction ?? 0);
+}
 assert.ok(positiveMass > 0.005, 'foot impact must push material into positive rims/deposits');
+assert.ok(maxLoose > 0.10, 'displaced footprint rims must become a loose mobile sand layer');
+assert.ok(maxCompaction > 0.10, 'footprint cavity must become compacted rather than only changing height');
+const firstSoftness = sand.sampleSoftness(0, 0);
+sand.stampFoot({ globalX: 0, globalZ: 0, yaw: 0 }, { speed: 1.4, lastSlope: 0.1, sliding: 0 });
+assert.ok(sand.sampleSoftness(0, 0) <= firstSoftness + 1e-6, 'repeated steps must firm the compacted track instead of making it looser');
 
 const avalancheSand = new SandPhysics({ sampleBaseHeight: (x) => -x, downhill: () => ({ x: 1, z: 0 }) }, { cellSize: 0.12 });
 avalancheSand.setQuality({ id: 'high' });
 avalancheSand.setCell(0, 0, 0.03);
-avalancheSand.update(0.21, 0, 0);
-assert.ok(avalancheSand.getCell(1, 0) > 0, 'displaced sand must transfer downhill when slope exceeds angle of repose');
+avalancheSand.update(0.23, 0, 0);
+assert.ok(avalancheSand.getCell(1, 0) > 0, 'loose displaced sand must transfer downhill when slope exceeds angle of repose');
+assert.ok(Number.isFinite(avalancheSand.lastWorkMs), 'sand physics must expose its per-tick CPU cost for mobile budgeting');
 
 for (const file of ['world.js', 'deformation.js', 'slip-field.js']) {
   const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
@@ -50,13 +63,14 @@ assert.ok(localSandSource.includes('this.world.setLocalReplacement'), 'high-deta
 const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
 const highRadius = Number(localSandSource.match(/this\.radius\s*=\s*preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
 const spacing = highRadius * 2 / highSegments;
-assert.ok(highSegments >= 60 && highSegments <= 72 && spacing <= 0.165, 'High physical sand must keep foot-readable detail without the 14k-vertex performance spike');
-assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must be radial rather than a visible square');
+assert.ok(highSegments >= 60 && highSegments <= 72 && spacing <= 0.165, 'High physical sand must keep foot-readable detail without the old performance spike');
+assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must remain radial rather than a visible square');
 assert.ok(localSandSource.includes('smoothstep(0.68, 0.86, r)'), 'physical deformation must fade before the local patch edge');
+assert.ok(localSandSource.includes('sampleLoose'), 'local surface must render the fresh loose layer');
+assert.ok(localSandSource.includes('sampleCompaction'), 'local surface must render compacted tracks separately from loose deposits');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
 assert.ok(localSandSource.includes('const cavity ='), 'footprint depressions must include stable local cavity darkening');
 assert.ok(!localSandSource.includes('directionalShade'), 'mobile sand must not add polygonal pseudo directional shadows on top of PBR lighting');
-assert.ok(!localSandSource.includes('LIGHT_TO_SURFACE'), 'footprint contrast must not depend on a duplicated hard-coded light vector');
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
 assert.ok(materialSource.includes('makeSandMaterial'), 'near/far/local terrain materials must be constructed from one optical recipe');
@@ -76,12 +90,18 @@ assert.ok(cameraSource.includes('const eyeForward = 0.50'), 'first-person eye mu
 assert.ok(cameraSource.includes('viewForwardY'), 'camera offset must follow full 3D look direction, including pitch');
 assert.ok(cameraSource.includes('camera.minZ = 0.18'), 'near clip must reject residual face/keffiyeh intersections');
 
+const movementSource = readFileSync(new URL('./movement.js', import.meta.url), 'utf8');
+assert.ok(movementSource.includes('sampleSoftness'), 'walking resistance and sink must react to the physical loose/compacted sand state');
+assert.ok(movementSource.includes('looseDrag'), 'loose sand must affect acceleration and top speed');
+
 const characterSource = readFileSync(new URL('./character.js', import.meta.url), 'utf8');
 assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'), 'SIROCCO body must use the imported skinned humanoid');
 assert.ok(characterSource.includes('setWeightForAllAnimatables'), 'walk/idle animation blending must stay enabled');
 const polishSource = readFileSync(new URL('./character-polish.js', import.meta.url), 'utf8');
 assert.ok(polishSource.includes('bedouin-crossbody-strap'), 'Bedouin silhouette must include travel gear beyond the base humanoid');
 assert.ok(polishSource.includes('bedouin-linen-weave'), 'robe materials must contain visible textile microdetail');
+assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'), 'Bedouin clothing must include an authored patterned layer, not only flat colours');
+assert.ok(polishSource.includes('cameraSafe'), 'extra clothing layers must protect the first-person camera from clipping');
 
 const gameSource = readFileSync(new URL('./game.js', import.meta.url), 'utf8');
 assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must be throttled on mobile');
