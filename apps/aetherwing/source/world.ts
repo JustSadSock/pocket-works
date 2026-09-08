@@ -14,6 +14,7 @@ const lakeCache=new Map<string,Lake|null>();
 const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const smooth=(t:number)=>t*t*(3-2*t);
 const smoothstep=(a:number,b:number,v:number)=>{const t=clamp((v-a)/(b-a),0,1);return smooth(t);};
+const isRockKind=(kind:PlantKind)=>kind==='rock'||kind==='authoredRock';
 function hash(x:number,z:number){let n=(Math.imul(x|0,374761393)^Math.imul(z|0,668265263)^0x5bf03635)|0;n=Math.imul((n^(n>>>13))|0,1274126177);return ((n^(n>>>16))>>>0)/4294967295;}
 function noise(x:number,z:number){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,u=smooth(fx),v=smooth(fz);const a=hash(ix,iz),b=hash(ix+1,iz),c=hash(ix,iz+1),d=hash(ix+1,iz+1);const ab=a+(b-a)*u,cd=c+(d-c)*u;return ab+(cd-ab)*v;}
 function fbm(x:number,z:number,octaves=5){let f=0,a=.56,s=0;for(let i=0;i<octaves;i++){f+=noise(x,z)*a;s+=a;x*=2.03;z*=2.03;a*=.5;}return f/s;}
@@ -135,7 +136,6 @@ export class WorldStreamer{
     for(let i=0;i<candidates;i++){
       const x=baseX+(hash(cx*97+i,cz*131-i)-.5)*CHUNK,z=baseZ+(hash(cx*173-i,cz*67+i)-.5)*CHUNK,h=terrainHeight(x,z),m=moistureAt(x,z),t=temperatureAt(x,z,h),forest=forestField(x,z),riverDist=Math.abs(z-riverCenter(x));
       if(riverDist<44||lakeDistance(x,z)<18||h>238)continue;
-      // Broad low-frequency patches create forests with real edges and clearings.
       const patch=smoothstep(.39,.70,forest),wetBoost=(m-.5)*.22,gate=clamp(.055+patch*.83+wetBoost,.04,.90);if(hash(i*31+cx*7,cz*29-i*3)>gate)continue;
       const species=hash(i*19+cx*43,cz*37-i*11),authored=hash(i*53-cx,cz*47+i)<.12;let kind:PlantKind;
       if(h>155||t<.38){kind=species<.73?'firBlue':'firDark';}
@@ -145,11 +145,11 @@ export class WorldStreamer{
       if(hash(i*71+cx,cz-i*17)>.965)kind='authoredRock';
       const template=this.templateFor(kind),inst=template.createInstance(`veg_${cx}_${cz}_${i}`);inst.parent=root;inst.position.set(x,h,z);inst.rotation.y=hash(cx*13-i,cz*17+i)*Math.PI*2;
       const age=.70+hash(i*3+cx,cz-i*9)*.62,slender=.86+hash(i*41-cx,cz+i*23)*.24;
-      if(kind.includes('Rock')||kind==='rock')inst.scaling.set(.72+age*.32,.46+age*.30,.68+age*.38);
+      if(isRockKind(kind))inst.scaling.set(.72+age*.32,.46+age*.30,.68+age*.38);
       else if(kind==='oak'||kind==='authoredBroad')inst.scaling.set(age*1.05,age*(.88+slender*.08),age*(.94+slender*.05));
       else if(kind==='aspen')inst.scaling.set(age*.78,age*(1.10+slender*.12),age*.82);
       else inst.scaling.set(age*.82,age*(1.02+slender*.16),age*.82);
-      if(far)inst.scaling.scaleInPlace(.92);inst.isPickable=false;inst.freezeWorldMatrix();out.push(inst);if(!(kind.includes('Rock')||kind==='rock'))trees++;
+      if(far)inst.scaling.scaleInPlace(.92);inst.isPickable=false;inst.freezeWorldMatrix();out.push(inst);if(!isRockKind(kind))trees++;
     }
     if(!far){
       const flowers=Math.floor(105*this.quality);for(let i=0;i<flowers;i++){const x=baseX+(hash(cx*233+i,cz*181-i)-.5)*CHUNK,z=baseZ+(hash(cx*199-i,cz*239+i)-.5)*CHUNK,h=terrainHeight(x,z),m=moistureAt(x,z),forest=forestField(x,z);if(h>170||m<.31||forest>.61||Math.abs(z-riverCenter(x))<22||lakeDistance(x,z)<8)continue;const inst=this.flower.createInstance(`flower_${cx}_${cz}_${i}`);inst.parent=root;inst.position.set(x,h+.03,z);const s=.65+hash(i*17+cx,cz*13-i)*.75;inst.scaling.set(s*.75,s,s*.75);inst.rotation.y=hash(cx+i*5,cz-i*3)*Math.PI*2;inst.isPickable=false;inst.freezeWorldMatrix();out.push(inst);}
