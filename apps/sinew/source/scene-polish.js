@@ -1,4 +1,4 @@
-import { MeshBuilder, ShaderMaterial, Vector3 } from '@babylonjs/core';
+import { MeshBuilder, ShaderMaterial } from '@babylonjs/core';
 
 const SKY_VERTEX = `
 precision highp float;
@@ -35,7 +35,7 @@ void main(void) {
 
 function scaleShield(warrior, factor) {
   if (!warrior?.meshes) return;
-  warrior.shield.radius = 0.42;
+  warrior.shield.radius = 0.38;
   warrior.meshes.shield.scaling.set(factor, factor, factor);
   warrior.meshes.shieldRim.scaling.set(factor, factor, factor);
   warrior.meshes.shieldBoss.scaling.set(factor * 0.96, factor * 0.96, factor * 0.96);
@@ -61,12 +61,12 @@ export function installScenePolish(game) {
   sky.applyFog = false;
   sky.isPickable = false;
 
-  // A round 84 cm shield still reads as substantial, but no longer becomes a
-  // first-person wall on a phone display. Collision and visual size stay aligned.
-  scaleShield(game.player, 0.92);
-  scaleShield(game.enemy, 0.92);
+  // 76 cm round shields retain meaningful coverage without monopolising a
+  // landscape phone viewport. Visual and collision size remain aligned.
+  scaleShield(game.player, 0.84);
+  scaleShield(game.enemy, 0.84);
 
-  game.camera.fov = 1.13;
+  game.camera.fov = 1.15;
   game.camera.minZ = 0.045;
   game.scene.fogDensity = Math.min(game.scene.fogDensity, 0.0095);
   game.scene.imageProcessingConfiguration.exposure = 1.16;
