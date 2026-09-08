@@ -41,31 +41,30 @@ jobs:
         run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
 
       - name: Detect changed Pocket Works apps
-        shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          set -euo pipefail
+          set -eu
           ZERO_SHA="0000000000000000000000000000000000000000"
           RANGE=""
 
-          if [[ "$EVENT_NAME" == "pull_request" && -n "${BASE_SHA:-}" ]]; then
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "${BASE_SHA:-}" ]; then
             RANGE="${BASE_SHA}...${HEAD_SHA}"
-          elif [[ "$EVENT_NAME" == "push" && -n "${BEFORE_SHA:-}" && "$BEFORE_SHA" != "$ZERO_SHA" ]]; then
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "$ZERO_SHA" ]; then
             RANGE="${BEFORE_SHA}..${HEAD_SHA}"
           fi
 
           TARGETS=""
-          if [[ -n "$RANGE" ]]; then
+          if [ -n "$RANGE" ]; then
             CHANGED_FILES="$(git diff --name-only "$RANGE" || true)"
             TARGETS="$(printf '%s\n' "$CHANGED_FILES" | awk -F/ '$1 == "apps" && $2 !~ /^_/ { print $2 }' | sort -u | paste -sd, -)"
           fi
 
           echo "PW_APP_TARGETS=$TARGETS" >> "$GITHUB_ENV"
-          if [[ -n "$TARGETS" ]]; then
+          if [ -n "$TARGETS" ]; then
             echo "Exploratory QA targets changed apps: $TARGETS"
           else
             echo "No changed app slug detected; exploratory QA will sample the newest active apps."
