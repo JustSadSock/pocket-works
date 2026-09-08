@@ -67,7 +67,19 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.locator('#startButton').click();
     await expect(page.locator('#controls')).toBeVisible();
     await expect(page.locator('#hud')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale))).toBeGreaterThanOrEqual(1.05);
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosTextureAnisotropy)).toBe('8');
     await page.waitForTimeout(1_200);
+
+    const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
+    expect(frameScale).toBeLessThanOrEqual(1.105);
+    const hint = page.locator('#hint');
+    if (await hint.isVisible()) {
+      const hintBox = await hint.boundingBox();
+      expect(hintBox).not.toBeNull();
+      expect(hintBox!.width).toBeLessThan(300);
+      expect(hintBox!.height).toBeLessThan(82);
+    }
     await attachCriticalScreenshot(page, testInfo, 'pelagos-gameplay-scale', { fullPage: false });
 
     monitor.assertClean();
