@@ -1,11 +1,11 @@
 {
   "name": "@pocket-works/colossus-inside",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs colossus-inside",
-    "test": "node source/core.test.mjs",
+    "build": "node source/core.test.mjs && node source/traversal.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs colossus-inside",
+    "test": "node source/core.test.mjs && node source/traversal.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
