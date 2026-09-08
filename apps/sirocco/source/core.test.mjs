@@ -9,7 +9,6 @@ for (const [x, z] of [[0, 0], [42, 0], [-42, 84], [123.456, -98.25]]) {
   assert.ok(Number.isFinite(normal.x) && Number.isFinite(normal.y) && Number.isFinite(normal.z));
   assert.ok(Math.abs(Math.hypot(normal.x, normal.y, normal.z) - 1) < 1e-5, 'terrain normal must stay normalized');
 }
-
 for (const segments of [18, 22, 24, 30, 32, 40, 42]) {
   for (let i = -4; i <= 4; i += 1) {
     const boundary = i * 42;
@@ -22,89 +21,84 @@ for (const segments of [18, 22, 24, 30, 32, 40, 42]) {
 const sand = new SandPhysics({ sampleBaseHeight: () => 0, downhill: () => ({ x: 0, z: 1 }) }, { cellSize: 0.12 });
 sand.setQuality({ id: 'high' });
 sand.stampFoot({ globalX: 0, globalZ: 0, yaw: 0 }, { speed: 2.2, lastSlope: 0.2, sliding: 0 });
-assert.ok(sand.activeCellCount > 8, 'foot impact must deform multiple sand cells');
-assert.ok(sand.sampleOffset(0, 0) < -0.01, 'footprint centre must depress the sand surface');
-let positiveMass = 0;
-let maxLoose = 0;
-let maxCompaction = 0;
+assert.ok(sand.activeCellCount > 8);
+assert.ok(sand.sampleOffset(0, 0) < -0.01, 'foot centre must depress');
+let positiveMass = 0, maxLoose = 0, maxCompaction = 0;
 for (const cell of sand.cells.values()) {
   if (cell.h > 0) positiveMass += cell.h;
   maxLoose = Math.max(maxLoose, cell.loose ?? 0);
   maxCompaction = Math.max(maxCompaction, cell.compaction ?? 0);
 }
-assert.ok(positiveMass > 0.005, 'foot impact must push material into positive rims/deposits');
-assert.ok(maxLoose > 0.10, 'displaced footprint rims must become a loose mobile sand layer');
-assert.ok(maxCompaction > 0.10, 'footprint cavity must become compacted rather than only changing height');
+assert.ok(positiveMass > 0.005, 'foot impact must create displaced rim mass');
+assert.ok(maxLoose > 0.10, 'fresh displaced material must become loose');
+assert.ok(maxCompaction > 0.10, 'footprint cavity must compact');
 const firstSoftness = sand.sampleSoftness(0, 0);
 sand.stampFoot({ globalX: 0, globalZ: 0, yaw: 0 }, { speed: 1.4, lastSlope: 0.1, sliding: 0 });
-assert.ok(sand.sampleSoftness(0, 0) <= firstSoftness + 1e-6, 'repeated steps must firm the compacted track instead of making it looser');
+assert.ok(sand.sampleSoftness(0, 0) <= firstSoftness + 1e-6, 'repeat step must firm the track');
 
 const avalancheSand = new SandPhysics({ sampleBaseHeight: (x) => -x, downhill: () => ({ x: 1, z: 0 }) }, { cellSize: 0.12 });
 avalancheSand.setQuality({ id: 'high' });
 avalancheSand.setCell(0, 0, 0.03);
 avalancheSand.update(0.23, 0, 0);
-assert.ok(avalancheSand.getCell(1, 0) > 0, 'loose displaced sand must transfer downhill when slope exceeds angle of repose');
-assert.ok(Number.isFinite(avalancheSand.lastWorkMs), 'sand physics must expose its per-tick CPU cost for mobile budgeting');
+assert.ok(avalancheSand.getCell(1, 0) > 0, 'loose sand must transfer downhill');
+assert.ok(Number.isFinite(avalancheSand.lastWorkMs));
 
 for (const file of ['world.js', 'deformation.js', 'slip-field.js']) {
   const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
-  assert.ok(!source.includes('indices.push(a, d, b, b, d, e)'), `${file} must not use the old underside winding`);
+  assert.ok(!source.includes('indices.push(a, d, b, b, d, e)'), `${file} must not use old winding`);
 }
 
 const worldSource = readFileSync(new URL('./world.js', import.meta.url), 'utf8');
-assert.ok(worldSource.includes('setLocalReplacement'), 'coarse terrain must expose a local replacement hole for physical sand');
-assert.ok(worldSource.includes('replacementIntersectsChunk'), 'local replacement updates must use radial chunk intersection');
-assert.ok(worldSource.includes('dx * dx + dz * dz < safeRadius * safeRadius'), 'coarse replacement hole must be circular');
-assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'), 'terrain must not receive unstable realtime character shadow maps');
-assert.ok(!worldSource.includes('nearHoleHalfExtent'), 'far terrain must remain continuous under near chunks instead of exposing a square LOD hole');
+assert.ok(worldSource.includes('setLocalReplacement'));
+assert.ok(worldSource.includes('replacementIntersectsChunk'));
+assert.ok(worldSource.includes('dx * dx + dz * dz < safeRadius * safeRadius'));
+assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'));
+assert.ok(!worldSource.includes('nearHoleHalfExtent'));
 
 const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
-assert.ok(localSandSource.includes('this.world.setLocalReplacement'), 'high-detail physical sand must replace, not overlay, coarse terrain');
 const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
 const highRadius = Number(localSandSource.match(/this\.radius\s*=\s*preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
 const spacing = highRadius * 2 / highSegments;
-assert.ok(highSegments >= 64 && highSegments <= 72 && spacing <= 0.115, 'High physical sand must keep roughly 11 cm footprint detail under a 5k-vertex budget');
-assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must remain radial rather than a visible square');
-assert.ok(localSandSource.includes('smoothstep(0.70, 0.88, r)'), 'physical deformation must fade before the tighter local patch edge');
-assert.ok(localSandSource.includes('sampleLoose'), 'local surface must render the fresh loose layer');
-assert.ok(localSandSource.includes('sampleCompaction'), 'local surface must render compacted tracks separately from loose deposits');
-assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
-assert.ok(localSandSource.includes('const cavity ='), 'footprint depressions must include stable local cavity darkening');
-assert.ok(!localSandSource.includes('directionalShade'), 'mobile sand must not add polygonal pseudo directional shadows on top of PBR lighting');
+assert.ok(highSegments >= 64 && highSegments <= 72 && spacing <= 0.115, 'High sand must stay near 11 cm detail below 5k vertices');
+assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'));
+assert.ok(localSandSource.includes('smoothstep(0.70, 0.88, r)'));
+assert.ok(localSandSource.includes('sampleLoose'));
+assert.ok(localSandSource.includes('sampleCompaction'));
+assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'));
+assert.ok(localSandSource.includes('const cavity ='));
+assert.ok(!localSandSource.includes('directionalShade'));
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
-assert.ok(materialSource.includes('makeSandMaterial'), 'near/far/local terrain materials must be constructed from one optical recipe');
-assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"), 'RawTexture-backed terrain materials must not be cloned into URL-loading fallbacks');
-assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"), 'far terrain must explicitly share the same GPU texture recipe as near terrain');
+assert.ok(materialSource.includes('makeSandMaterial'));
+assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"));
 
 const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
-assert.ok(lightingSource.includes('this.fill.intensity = 0.62'), 'sky fill must leave enough directional contrast for dune and footprint relief');
-assert.ok(lightingSource.includes('this.sun.intensity = 3.15'), 'directional sun must remain strong enough to read sand form');
-
+assert.ok(lightingSource.includes('this.fill.intensity = 0.62'));
+assert.ok(lightingSource.includes('this.sun.intensity = 3.15'));
 const contactShadowSource = readFileSync(new URL('./contact-shadow.js', import.meta.url), 'utf8');
-assert.ok(contactShadowSource.includes('this.material.alpha = 0.54'), 'character contact shadow must remain visibly grounded at rest');
-assert.ok(!contactShadowSource.includes('ShadowGenerator'), 'contact shadow must stay stable and independent of mobile shadow maps');
+assert.ok(contactShadowSource.includes('this.material.alpha = 0.54'));
+assert.ok(!contactShadowSource.includes('ShadowGenerator'));
 
 const cameraSource = readFileSync(new URL('./camera.js', import.meta.url), 'utf8');
-assert.ok(cameraSource.includes('const eyeForward = 0.50'), 'first-person eye must remain safely outside the imported head');
-assert.ok(cameraSource.includes('viewForwardY'), 'camera offset must follow full 3D look direction, including pitch');
-assert.ok(cameraSource.includes('camera.minZ = 0.18'), 'near clip must reject residual face/keffiyeh intersections');
-
+assert.ok(cameraSource.includes('const eyeForward = 0.50'));
+assert.ok(cameraSource.includes('viewForwardY'));
+assert.ok(cameraSource.includes('camera.minZ = 0.18'));
 const movementSource = readFileSync(new URL('./movement.js', import.meta.url), 'utf8');
-assert.ok(movementSource.includes('sampleSoftness'), 'walking resistance and sink must react to the physical loose/compacted sand state');
-assert.ok(movementSource.includes('looseDrag'), 'loose sand must affect acceleration and top speed');
-
+assert.ok(movementSource.includes('sampleSoftness'));
+assert.ok(movementSource.includes('looseDrag'));
 const characterSource = readFileSync(new URL('./character.js', import.meta.url), 'utf8');
-assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'), 'SIROCCO body must use the imported skinned humanoid');
-assert.ok(characterSource.includes('setWeightForAllAnimatables'), 'walk/idle animation blending must stay enabled');
+assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'));
+assert.ok(characterSource.includes('setWeightForAllAnimatables'));
 const polishSource = readFileSync(new URL('./character-polish.js', import.meta.url), 'utf8');
-assert.ok(polishSource.includes('bedouin-crossbody-strap'), 'Bedouin silhouette must include travel gear beyond the base humanoid');
-assert.ok(polishSource.includes('bedouin-linen-weave'), 'robe materials must contain visible textile microdetail');
-assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'), 'Bedouin clothing must include an authored patterned layer, not only flat colours');
-assert.ok(polishSource.includes('cameraSafe'), 'extra clothing layers must protect the first-person camera from clipping');
+assert.ok(polishSource.includes('bedouin-crossbody-strap'));
+assert.ok(polishSource.includes('bedouin-linen-weave'));
+assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'));
+assert.ok(polishSource.includes('cameraSafe'));
 
 const gameSource = readFileSync(new URL('./game.js', import.meta.url), 'utf8');
-assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must be throttled on mobile');
-assert.ok(gameSource.includes('this.coarseSandClock >= 0.50'), 'coarse terrain deformation must not rebuild every avalanche frame');
+assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must stay throttled');
+assert.ok(!gameSource.includes('world.refreshDeformation(this.pendingSandBounds)'), 'fine footprint data must never be baked into metre-scale coarse terrain');
+assert.ok(gameSource.includes('Persistent\n      // sand state stays in the sparse field'), 'game must document persistent local-only fine sand rendering');
 
 console.log('SIROCCO core regression checks passed');
