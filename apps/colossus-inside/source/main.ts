@@ -24,6 +24,6 @@ void (async () => {
   await import('./game-v4.js');
   const { installLivingAnimationBridge } = await import('./living-animation-bridge.js');
   installLivingAnimationBridge();
-  const { installColossusVisualOverhaul } = await import('./colossus-visual-overhaul.js');
-  installColossusVisualOverhaul();
+  const { installColossusVisualOverhaulWhenReady } = await import('./colossus-visual-overhaul-bootstrap.js');
+  installColossusVisualOverhaulWhenReady();
 })();
