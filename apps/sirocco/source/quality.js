@@ -1,9 +1,9 @@
 import { rollingAverage } from './core.js';
 
 export const QUALITY_PRESETS = {
-  high: { id: 'high', label: 'High', hardwareScaling: 1.0, radius: 3, segments: 42, farSegments: 38, farSize: 820, shadowSize: 1024, particles: 22 },
-  medium: { id: 'medium', label: 'Medium', hardwareScaling: 1.28, radius: 2, segments: 32, farSegments: 30, farSize: 720, shadowSize: 1024, particles: 14 },
-  low: { id: 'low', label: 'Low', hardwareScaling: 1.58, radius: 2, segments: 24, farSegments: 22, farSize: 600, shadowSize: 512, particles: 7 }
+  high: { id: 'high', label: 'High', hardwareScaling: 1.12, radius: 3, segments: 40, farSegments: 34, farSize: 820, shadowSize: 1024, particles: 16 },
+  medium: { id: 'medium', label: 'Medium', hardwareScaling: 1.34, radius: 2, segments: 30, farSegments: 26, farSize: 720, shadowSize: 1024, particles: 11 },
+  low: { id: 'low', label: 'Low', hardwareScaling: 1.62, radius: 2, segments: 22, farSegments: 20, farSize: 600, shadowSize: 512, particles: 6 }
 };
 const ORDER = ['low', 'medium', 'high'];
 function detectInitial() {
@@ -45,10 +45,10 @@ export class AdaptiveQuality {
     if (this.samples.length > 90) this.samples.shift();
     if (this.mode !== 'auto' || this.elapsed < 6 || this.cooldown > 0) return;
     const average = rollingAverage(this.samples);
-    this.lowSeconds = average < 48 ? this.lowSeconds + dt : Math.max(0, this.lowSeconds - dt * 1.5);
+    this.lowSeconds = average < 50 ? this.lowSeconds + dt : Math.max(0, this.lowSeconds - dt * 1.5);
     this.highSeconds = average > 58 ? this.highSeconds + dt : Math.max(0, this.highSeconds - dt * 1.5);
     const index = ORDER.indexOf(this.level);
-    if (this.lowSeconds > 3.5 && index > 0) this.apply(ORDER[index - 1]);
-    else if (this.highSeconds > 15 && index < ORDER.length - 1) this.apply(ORDER[index + 1]);
+    if (this.lowSeconds > 2.8 && index > 0) this.apply(ORDER[index - 1]);
+    else if (this.highSeconds > 18 && index < ORDER.length - 1) this.apply(ORDER[index + 1]);
   }
 }
