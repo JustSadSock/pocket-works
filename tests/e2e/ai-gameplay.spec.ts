@@ -54,33 +54,11 @@ function orientationMatchesProject(app: AppTarget, projectName: string) {
   return true;
 }
 
-async function dispatchTouchSwipe(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
-  await page.evaluate(async ({ from, to }) => {
-    const steps = 10;
-    const target = document.elementFromPoint(from.x, from.y) || document.body;
-    const fire = (type: string, x: number, y: number, buttons: number) => {
-      target.dispatchEvent(new PointerEvent(type, {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 41,
-        pointerType: 'touch',
-        isPrimary: true,
-        clientX: x,
-        clientY: y,
-        buttons
-      }));
-    };
-
-    fire('pointerdown', from.x, from.y, 1);
-    for (let index = 1; index <= steps; index += 1) {
-      const progress = index / steps;
-      const x = from.x + (to.x - from.x) * progress;
-      const y = from.y + (to.y - from.y) * progress;
-      fire('pointermove', x, y, 1);
-      await new Promise((resolve) => setTimeout(resolve, 16));
-    }
-    fire('pointerup', to.x, to.y, 0);
-  }, { from, to });
+async function dragPointer(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 10 });
+  await page.mouse.up();
 }
 
 async function clickLikelyStartControl(page: Page) {
@@ -150,13 +128,16 @@ test.describe('AI exploratory mobile gameplay', () => {
         await page.waitForTimeout(90);
       }
 
-      await dispatchTouchSwipe(
+      // Playwright has a browser-native touch tap API but no portable cross-engine swipe API.
+      // Use real browser pointer input for drags instead of constructing synthetic PointerEvents;
+      // synthetic pointer ids cannot legally participate in setPointerCapture() and create false failures.
+      await dragPointer(
         page,
         { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
         { x: Math.round(width * 0.30), y: Math.round(height * 0.58) }
       ).catch(() => {});
       await page.waitForTimeout(120);
-      await dispatchTouchSwipe(
+      await dragPointer(
         page,
         { x: Math.round(width * 0.78), y: Math.round(height * 0.56) },
         { x: Math.round(width * 0.62), y: Math.round(height * 0.48) }
@@ -224,7 +205,7 @@ test.describe('AI exploratory mobile gameplay', () => {
         failedRequests
       });
 
-      expect(pageErrors, `Page crashed during touch exploration of ${app.slug}`).toEqual([]);
+      expect(pageErrors, `Unhandled page errors during exploration of ${app.slug}`).toEqual([]);
       expect(state.document.scrollWidth - state.viewport.width, `${app.slug} horizontally overflows the emulated phone viewport`).toBeLessThanOrEqual(4);
     });
   }
