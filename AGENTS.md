@@ -221,3 +221,20 @@ Pocket Works provides a shared Blender Asset Forge documented in `docs/ASSET-FOR
 - Prefer procedural Web Audio/Tone layers for continuous/physical sounds and controlled randomization of pitch, gain, filtering, timing and layer selection for repeated events.
 - Use small app-local variation banks when a sampled sound is more convincing than synthesis.
 - Do not add a paid external audio-generation dependency unless the requested sound genuinely cannot be produced well with the existing browser/audio toolchain.
+
+## 14. Playwright QA and visual sign-off
+
+Pocket Works has Playwright browser testing available in the repository and through GitHub Actions. Treat it as a required production tool, not an optional debugging aid.
+
+Before delivering an application to the user or merging it into `main`:
+
+1. Run the relevant automated validation and app-specific tests.
+2. Run Playwright against the production-like build. For mobile apps, exercise the supported mobile matrix with Chromium and WebKit at minimum; include other supported form factors when relevant.
+3. Exercise the real primary flow, not only page load: start the app, interact with controls, perform representative gameplay/actions, cover pause/resume or equivalent lifecycle states, and verify persistence/reload when the product uses it.
+4. Capture screenshots before and after meaningful interaction states. Use Playwright artifacts when available.
+5. Inspect the screenshots visually. A green test run is not sufficient by itself. Check composition, clipping, safe areas, text readability, control sizes, spacing, visual hierarchy, responsive behavior, unexpected blank areas, broken assets and obvious low-quality presentation.
+6. Inspect browser console/page errors and failed requests. Do not ignore silent errors merely because the main flow appears to work.
+7. If anything is broken, ugly, inconsistent, misleading, flaky or below the requested quality bar, fix it and repeat the relevant tests and screenshot review.
+8. Merge or deliver only after the final tested commit is the same commit that was visually reviewed and all relevant checks are clean.
+
+For Pocket Works game/application PRs, `.github/workflows/ai-mobile-gameplay-qa.yml` is the standard exploratory mobile screenshot pass when applicable. The broader Playwright matrix remains available through the repository browser-quality workflow and local `npm run test:e2e` after building the quality site.
