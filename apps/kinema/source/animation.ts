@@ -9,11 +9,15 @@ export class LocomotionMixer {
   private clips = new Map<Gait, AnimationGroup>();
 
   constructor(groups: AnimationGroup[]) {
-    const exact = (name: Gait) => groups.find((group) => normalizeClipName(group.name) === name);
-    const idle = exact('idle') || groups[0];
-    const walk = exact('walk') || idle;
-    const jog = exact('jog') || walk;
-    const run = exact('run') || jog;
+    const resolve = (name: Gait) => {
+      const normalized = groups.map((group) => ({ group, name: normalizeClipName(group.name) }));
+      return normalized.find((entry) => entry.name === name)?.group
+        || normalized.find((entry) => entry.name.endsWith(name))?.group;
+    };
+    const idle = resolve('idle') || groups[0];
+    const walk = resolve('walk') || idle;
+    const jog = resolve('jog') || walk;
+    const run = resolve('run') || jog;
     if (!idle) throw new Error('Blender GLB не содержит Idle animation action.');
     this.clips.set('idle', idle);
     this.clips.set('walk', walk);
