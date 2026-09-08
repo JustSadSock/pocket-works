@@ -72,9 +72,6 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   const rollTarget = -input.x * (0.32 + speedN * 0.72);
   const divingInput = input.y < -0.05;
   const climbingInput = input.y > 0.05;
-  // Diving is still faster to initiate, but a sustained climb must clearly move
-  // a 1.2-ton animal rather than hovering near level flight. The previous upward
-  // authority sat right on the mobile-frame threshold and felt mushy on Safari.
   const pitchAuthority = divingInput
     ? 0.40 + 0.50 * controlAuthority
     : climbingInput
@@ -114,7 +111,11 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   const cl = clamp(0.34 + aoa * 1.75 + flapImpulse * 0.26, 0.06, 1.45) * stallFactor * (1 - diveFold * 0.40);
   const dynamicPressure = 0.5 * AIR_DENSITY * speed * speed;
   const liftMagnitude = dynamicPressure * effectiveWingArea * cl;
-  const dragCoeff = (0.028 + aoa * aoa * 0.44 + input.brake * 0.50 + flapImpulse * 0.03) * (1 - diveFold * 0.55);
+  // A tucked dragon is dramatically cleaner than one presenting two huge
+  // membranes to the flow. Reducing both reference area and Cd lets potential
+  // energy become speed during a committed dive instead of being burnt as drag.
+  const streamlinedCd = 1 - diveFold * 0.68;
+  const dragCoeff = (0.028 + aoa * aoa * 0.44 + input.brake * 0.50 + flapImpulse * 0.03) * streamlinedCd;
   const drag = dynamicPressure * effectiveWingArea * dragCoeff;
   const thrust = (8600 + input.boost * 13000) * flapImpulse + Math.max(0, 23 - speed) * 560;
 
@@ -124,8 +125,6 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   force = add(force, mul(forward, thrust));
 
   if (input.brake > 0.1) {
-    // Spreading the wings during a brake creates both a hard drag wall and a
-    // short pitch-up impulse. It should feel like a living animal catching air.
     force = add(force, mul(baseUp, dynamicPressure * 22 * input.brake));
   }
 
@@ -141,9 +140,29 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   s.load = clamp(liftMagnitude / (MASS * GRAVITY), 0, 3.4);
   s.flap = lerp(s.flap, flap, 1 - Math.exp(-dt * 4.5));
 
-  const diving = (input.y < -0.45 && s.pitch < -0.10) || s.pitch < -0.22 || s.verticalSpeed < -8;
-  const climbing = (input.y > 0.42 && s.pitch > 0.08) || (s.pitch > 0.14 && s.verticalSpeed > 3);
+  // Keep the semantic state aligned with the body's momentum after the finger
+  // leaves the stick. This avoids a physically diving animal reporting GLIDE
+  // merely because its pitch crossed a razor-thin threshold for one frame.
+  const diving = (input.y < -0.45 && s.pitch < -0.10) || s.pitch < -0.17 || s.verticalSpeed < -6;
+  const climbing = (input.y > 0.42 && s.pitch > 0.08) || (s.pitch > 0.12 && s.verticalSpeed > 2);
   s.mode = input.brake > 0.3 ? 'brake' : diving ? 'dive' : climbing ? 'climb' : s.flap > 0.48 ? 'flap' : 'glide';
+  return s;
+}
+
+/**
+ * Integrate one rendered frame using bounded aerodynamic substeps.
+ *
+ * Mobile Safari can occasionally deliver 80–120 ms frames while terrain or GPU
+ * work spikes. Advancing the flight model only 40 ms in such a frame makes the
+ * entire animal enter slow motion and destroys control consistency. We preserve
+ * up to 120 ms of real elapsed time, split into <= 1/30 s steps, while keeping
+ * rendering/world streaming at one update per frame.
+ */
+export function stepFlightFrame(s: FlightState, raw: FlightInput, frameDtRaw: number): FlightState {
+  const frameDt = clamp(frameDtRaw, 1 / 240, 0.12);
+  const steps = Math.max(1, Math.ceil(frameDt / (1 / 30)));
+  const dt = frameDt / steps;
+  for (let i = 0; i < steps; i++) stepFlight(s, raw, dt);
   return s;
 }
 
