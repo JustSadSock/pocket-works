@@ -18,15 +18,7 @@ import '@babylonjs/loaders/glTF';
 
 type Phase = 'intro' | 'pylons' | 'wave' | 'boss' | 'won' | 'lost';
 type Enemy = { mesh: TransformNode; hp: number; speed: number; hitAt: number; boss: boolean };
-
-type Pylon = {
-  position: Vector3;
-  root: TransformNode;
-  core: Mesh;
-  ring: Mesh;
-  light: PointLight;
-  active: boolean;
-};
+type Pylon = { position: Vector3; root: TransformNode; core: Mesh; ring: Mesh; light: PointLight; active: boolean };
 
 const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas')!;
 const startPanel = document.querySelector<HTMLElement>('#startPanel')!;
@@ -87,7 +79,7 @@ const litGold = mat('lit-gold', new Color3(0.92, 0.55, 0.18), new Color3(0.9, 0.
 const ashMat = mat('ash', new Color3(0.12, 0.1, 0.13), new Color3(0.09, 0.025, 0.02));
 const robeMat = mat('robe', new Color3(0.17, 0.19, 0.22));
 
-// Runtime collision/gameplay foundation. Blender adds authored detail over this layer.
+// A simple guaranteed-playable collision/gameplay layer sits underneath the authored Blender world.
 const floor = MeshBuilder.CreateCylinder('arena-floor', { diameter: 39, height: 1.2, tessellation: 48 }, scene);
 floor.position.y = -0.65;
 floor.material = stone;
@@ -202,13 +194,11 @@ function showMessage(text: string, seconds = 2.2) {
   message.classList.add('show');
   messageTimer = performance.now() + seconds * 1000;
 }
-
 function setObjective(text: string) { objective.textContent = text; }
 function updateHud() {
   healthBar.style.width = `${Math.max(0, health)}%`;
   pylonCount.textContent = `${activePylons} / 3`;
 }
-
 function nearestInactivePylon() {
   let best: Pylon | null = null;
   let distance = Infinity;
@@ -232,21 +222,22 @@ function makeEnemy(position: Vector3, boss = false): Enemy {
   head.parent = root;
   head.position.y = boss ? 3.15 : 1.95;
   head.material = boss ? litGold : ember;
+
   if (boss && guardianAsset) {
     torso.setEnabled(false);
     head.setEnabled(false);
-    guardianAsset.position.copyFrom(position);
+    // The authored GLB follows the gameplay node, rather than the gameplay node becoming a child of a static visual root.
+    guardianAsset.parent = root;
+    guardianAsset.position.set(0, 0, 0);
     guardianAsset.setEnabled(true);
-    root.parent = guardianAsset;
-    root.position.set(0, 0, 0);
     guardianAnimations[0]?.start(true);
   }
-  return { mesh: root, hp: boss ? 12 : 2, speed: boss ? 1.55 : 2 + Math.random() * 0.6, hitAt: 0, boss };
+  return { mesh: root, hp: boss ? 12 : 2, speed: boss ? 1.5 : 1.85 + Math.random() * 0.5, hitAt: 0, boss };
 }
 
 function spawnWave(count: number) {
   phase = 'wave';
-  enemies.forEach(e => e.mesh.dispose());
+  enemies.forEach(enemy => enemy.mesh.dispose());
   enemies = [];
   const ring = 14.5;
   for (let i = 0; i < count; i++) {
@@ -256,16 +247,13 @@ function spawnWave(count: number) {
   setObjective(`Волна ${waveIndex}: уничтожь пепельных стражей (${count})`);
   showMessage(`ПЕПЕЛ ПОДНЯЛСЯ — ВОЛНА ${waveIndex}`, 1.8);
 }
-
 function spawnBoss() {
   phase = 'boss';
-  const boss = makeEnemy(new Vector3(0, 0, 10.5), true);
-  enemies = [boss];
+  enemies = [makeEnemy(new Vector3(0, 0, 10.5), true)];
   setObjective('Победи Пепельного Стража');
   showMessage('ПЕПЕЛ ПОМНИТ СВОЕГО СТРАЖА', 2.8);
   playAudio('boss');
 }
-
 function activatePylon(pylon: Pylon) {
   if (pylon.active || enemies.length > 0 || phase === 'boss') return;
   pylon.active = true;
@@ -280,10 +268,9 @@ function activatePylon(pylon: Pylon) {
   waveIndex = activePylons;
   setTimeout(() => spawnWave(3 + waveIndex), 700);
 }
-
 function win() {
   phase = 'won';
-  enemies.forEach(e => e.mesh.dispose());
+  enemies.forEach(enemy => enemy.mesh.dispose());
   enemies = [];
   relicLight.intensity = 8;
   sun.intensity = 3;
@@ -293,7 +280,6 @@ function win() {
   ending.hidden = false;
   setObjective('Осада окончена');
 }
-
 function lose() {
   if (phase === 'lost' || phase === 'won') return;
   phase = 'lost';
@@ -324,22 +310,25 @@ function strike() {
     const t = Math.min(1, (performance.now() - born) / 260);
     pulse.scaling.setAll(1 + t * 3.6);
     pulse.visibility = 1 - t;
-    if (t >= 1) { scene.onBeforeRenderObservable.remove(obs); pulse.dispose(); }
+    if (t >= 1) {
+      scene.onBeforeRenderObservable.remove(obs);
+      pulse.dispose();
+    }
   });
   for (const enemy of enemies) {
     const offset = enemy.mesh.getAbsolutePosition().subtract(playerRoot.position);
     offset.y = 0;
     const d = offset.length();
-    const facing = d < 0.01 ? 1 : Vector3.Dot(forward, offset.normalize());
+    const direction = d < 0.01 ? Vector3.Forward() : offset.normalize();
+    const facing = d < 0.01 ? 1 : Vector3.Dot(forward, direction);
     if (d < 4.7 && (d < 2.4 || facing > -0.1)) {
       enemy.hp -= 1;
-      enemy.mesh.position.addInPlace(offset.normalize().scale(0.7));
+      enemy.mesh.position.addInPlace(direction.scale(0.7));
       playAudio('hit', Math.random() * 2 - 1);
     }
   }
 }
-
-actionButton.addEventListener('pointerdown', (event) => { event.preventDefault(); strike(); });
+actionButton.addEventListener('pointerdown', event => { event.preventDefault(); strike(); });
 
 let movePointer: number | null = null;
 let moveX = 0;
@@ -367,7 +356,10 @@ joystick.addEventListener('pointerdown', event => {
 joystick.addEventListener('pointermove', event => { if (event.pointerId === movePointer) updateJoystick(event.clientX, event.clientY); });
 function resetMove(event?: PointerEvent) {
   if (event && movePointer !== null && event.pointerId !== movePointer) return;
-  movePointer = null; moveX = 0; moveY = 0; stick.style.transform = 'translate(-50%, -50%)';
+  movePointer = null;
+  moveX = 0;
+  moveY = 0;
+  stick.style.transform = 'translate(-50%, -50%)';
 }
 joystick.addEventListener('pointerup', resetMove);
 joystick.addEventListener('pointercancel', resetMove);
@@ -397,19 +389,41 @@ lookZone.addEventListener('pointercancel', clearLook);
 const keys = new Set<string>();
 window.addEventListener('keydown', event => {
   keys.add(event.code);
-  if (event.code === 'Space') { event.preventDefault(); strike(); }
+  if (event.code === 'Space') {
+    event.preventDefault();
+    strike();
+  }
 });
 window.addEventListener('keyup', event => keys.delete(event.code));
 
 function updateActionHint() {
   const near = nearestInactivePylon();
-  const canChannel = enemies.length === 0 && near.pylon && near.distance < 3.25 && phase !== 'boss';
+  const canChannel = enemies.length === 0 && Boolean(near.pylon) && near.distance < 3.25 && phase !== 'boss';
   actionButton.textContent = canChannel ? 'IGNITE' : 'RELIC';
-  actionButton.classList.toggle('channel', Boolean(canChannel));
+  actionButton.classList.toggle('channel', canChannel);
+}
+
+function publishTestState() {
+  (window as typeof window & { __AI_TEST_STATE__?: unknown }).__AI_TEST_STATE__ = {
+    app: 'relic-siege',
+    currentScene: 'citadel',
+    phase,
+    playerPosition: { x: +playerRoot.position.x.toFixed(2), y: 0, z: +playerRoot.position.z.toFixed(2) },
+    grounded: true,
+    hp: Math.max(0, health),
+    activeEnemies: enemies.length,
+    pylons: activePylons,
+    blenderWorldLoaded,
+    guardianLoaded,
+    loadingState: started ? 'ready' : 'awaiting-start',
+    fps: Math.round(engine.getFps())
+  };
 }
 
 function updateGame(dt: number, now: number) {
+  publishTestState();
   if (!started || phase === 'won' || phase === 'lost') return;
+
   let ix = moveX;
   let iy = moveY;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
@@ -425,28 +439,26 @@ function updateGame(dt: number, now: number) {
     const camForward = new Vector3(Math.sin(camera.alpha), 0, Math.cos(camera.alpha));
     const camRight = new Vector3(camForward.z, 0, -camForward.x);
     const movement = camRight.scale(ix).add(camForward.scale(-iy));
-    const speed = 5.4;
-    playerRoot.position.addInPlace(movement.scale(speed * dt));
-    const r = Math.hypot(playerRoot.position.x, playerRoot.position.z);
-    if (r > 16.8) {
-      playerRoot.position.x *= 16.8 / r;
-      playerRoot.position.z *= 16.8 / r;
+    playerRoot.position.addInPlace(movement.scale(5.4 * dt));
+    const radius = Math.hypot(playerRoot.position.x, playerRoot.position.z);
+    if (radius > 16.8) {
+      playerRoot.position.x *= 16.8 / radius;
+      playerRoot.position.z *= 16.8 / radius;
     }
     playerRoot.rotation.y = Math.atan2(movement.x, movement.z);
   }
 
   for (const enemy of enemies) {
-    const pos = enemy.mesh.getAbsolutePosition();
-    const toPlayer = playerRoot.position.subtract(pos);
+    const toPlayer = playerRoot.position.subtract(enemy.mesh.getAbsolutePosition());
     toPlayer.y = 0;
     const distance = toPlayer.length();
     if (distance > 1.25) {
       const delta = toPlayer.normalize().scale(enemy.speed * dt);
       enemy.mesh.position.addInPlace(delta);
-      if (!enemy.boss) enemy.mesh.rotation.y = Math.atan2(delta.x, delta.z);
+      enemy.mesh.rotation.y = Math.atan2(delta.x, delta.z);
     } else if (now > enemy.hitAt) {
-      enemy.hitAt = now + (enemy.boss ? 650 : 900);
-      health -= enemy.boss ? 14 : 8;
+      enemy.hitAt = now + (enemy.boss ? 720 : 980);
+      health -= enemy.boss ? 11 : 6;
       updateHud();
       playAudio('hit', -0.7);
       if (health <= 0) lose();
@@ -461,10 +473,11 @@ function updateGame(dt: number, now: number) {
   if (dead.length) enemies = enemies.filter(enemy => enemy.hp > 0);
 
   if (phase === 'wave' && enemies.length === 0) {
+    health = Math.min(100, health + 18);
+    updateHud();
     if (activePylons < 3) {
       phase = 'pylons';
-      const next = activePylons + 1;
-      setObjective(`Найди и зажги обелиск ${next}`);
+      setObjective(`Найди и зажги обелиск ${activePylons + 1}`);
       showMessage('ПУТЬ К СЛЕДУЮЩЕМУ ОБЕЛИСКУ ОТКРЫТ', 1.8);
     } else {
       spawnBoss();
@@ -479,26 +492,13 @@ function updateGame(dt: number, now: number) {
   }
   altarRing.rotation.z += dt * (0.08 + activePylons * 0.05);
   relicLight.intensity = 0.55 + activePylons * 0.8 + Math.sin(now * 0.003) * 0.12;
-  if (messageTimer && now > messageTimer) { message.classList.remove('show'); messageTimer = 0; }
+  if (messageTimer && now > messageTimer) {
+    message.classList.remove('show');
+    messageTimer = 0;
+  }
   updateActionHint();
-
   const target = playerRoot.position.add(new Vector3(0, 1.45, 0));
   camera.setTarget(Vector3.Lerp(camera.target, target, Math.min(1, dt * 7)));
-
-  (window as any).__AI_TEST_STATE__ = {
-    app: 'relic-siege',
-    currentScene: 'citadel',
-    phase,
-    playerPosition: { x: +playerRoot.position.x.toFixed(2), y: 0, z: +playerRoot.position.z.toFixed(2) },
-    grounded: true,
-    hp: Math.max(0, health),
-    activeEnemies: enemies.length,
-    pylons: activePylons,
-    blenderWorldLoaded,
-    guardianLoaded,
-    loadingState: started ? 'ready' : 'awaiting-start',
-    fps: Math.round(engine.getFps())
-  };
 }
 
 startButton.addEventListener('click', () => {
@@ -524,14 +524,14 @@ async function loadAuthoredAssets() {
   }
   try {
     const result = await SceneLoader.ImportMeshAsync('', './models/', 'ash-warden.glb', scene);
-    const root = result.meshes[0] as unknown as TransformNode;
-    guardianAsset = root;
-    root.setEnabled(false);
+    guardianAsset = result.meshes[0] as unknown as TransformNode;
+    guardianAsset.setEnabled(false);
     guardianAnimations = result.animationGroups as unknown as typeof guardianAnimations;
     guardianLoaded = true;
   } catch (error) {
     console.warn('[RELIC SIEGE] Blender warden unavailable; runtime boss fallback enabled.', error);
   }
+  publishTestState();
 }
 void loadAuthoredAssets();
 
