@@ -3,6 +3,12 @@ import { clamp, smoothstep } from './core.js';
 import { terrainNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
+const LIGHT_TO_SURFACE = (() => {
+  const x = 0.44, y = 0.52, z = -0.73;
+  const inv = 1 / Math.hypot(x, y, z);
+  return { x: x * inv, y: y * inv, z: z * inv };
+})();
+
 export class LocalSandSurface {
   constructor(scene, world, sand, material, preset) {
     this.scene = scene;
@@ -21,10 +27,6 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    // 1.4 used 120x120 on High and rebuilt it after every physical change.
-    // 64x64 still gives ~15 cm spacing, enough for a 25 cm footprint, while
-    // cutting vertex work by ~71% and index work by even more because the patch
-    // is circular rather than a full square.
     this.radius = preset.id === 'high' ? 5.0 : preset.id === 'medium' ? 4.4 : 3.8;
     this.segments = preset.id === 'high' ? 64 : preset.id === 'medium' ? 52 : 40;
     this.snapStep = preset.id === 'high' ? 1.9 : preset.id === 'medium' ? 2.1 : 2.4;
@@ -82,6 +84,7 @@ export class LocalSandSurface {
     const uvs = new Array(vertexCount * 2);
     const colors = new Array(vertexCount * 4);
     const radial = new Array(vertexCount);
+    const deformations = new Array(vertexCount);
     const indices = [];
     let p = 0, uv = 0, c = 0, vertex = 0;
 
@@ -93,13 +96,10 @@ export class LocalSandSurface {
         const gz = this.centerZ + lz;
         const r = Math.hypot(lx, lz) / this.radius;
         radial[vertex] = r;
-
-        // The physical heightfield fades completely before the replacement edge.
-        // The outer annulus therefore has exactly the same geometry as coarse
-        // terrain and can overlap it without exposing a visible render radius.
         const deformFade = 1 - smoothstep(0.68, 0.86, r);
         const rawDeformation = clamp(this.sand.sampleOffset(gx, gz), -0.11, 0.075);
         const deformation = rawDeformation * deformFade;
+        deformations[vertex] = deformation;
         positions[p] = lx;
         positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation;
         positions[p + 2] = lz;
@@ -108,20 +108,20 @@ export class LocalSandSurface {
         uvs[uv + 1] = gz * 0.055;
         uv += 2;
 
-        const compact = smoothstep(0.006, 0.075, -deformation);
-        const deposit = smoothstep(0.006, 0.055, deformation);
-        colors[c] = 1 - compact * 0.060;
-        colors[c + 1] = 1 - compact * 0.073 - deposit * 0.008;
-        colors[c + 2] = 1 - compact * 0.090 - deposit * 0.018;
+        // Base chroma contrast: compressed sand is darker and slightly redder,
+        // displaced dry rims are a touch lighter. A second directional pass is
+        // applied after normals are known so this remains stable and local.
+        const compact = smoothstep(0.004, 0.070, -deformation);
+        const deposit = smoothstep(0.004, 0.052, deformation);
+        colors[c] = 1 - compact * 0.105 + deposit * 0.020;
+        colors[c + 1] = 1 - compact * 0.135 + deposit * 0.014;
+        colors[c + 2] = 1 - compact * 0.175 + deposit * 0.006;
         colors[c + 3] = 1;
         c += 4;
         vertex += 1;
       }
     }
 
-    // Circular topology removes the readable square around the player. Keep a
-    // generous overlap annulus outside the coarse-terrain hole so both meshes
-    // meet where deformation has already faded to zero.
     const renderRadius = this.radius * 0.985;
     for (let z = 0; z < segments; z += 1) {
       for (let x = 0; x < segments; x += 1) {
@@ -135,27 +135,41 @@ export class LocalSandSurface {
 
     VertexData.ComputeNormals(positions, indices, normals);
 
-    // Computed high-resolution normals are useful around footprints, but in the
-    // outer annulus they would reveal the LOD transition. Blend them back to the
-    // exact procedural dune normal before the mesh reaches its edge.
     for (let iz = 0; iz <= segments; iz += 1) {
       const lz = -this.radius + iz * step;
       for (let ix = 0; ix <= segments; ix += 1) {
         const lx = -this.radius + ix * step;
         const i = iz * row + ix;
         const r = radial[i];
-        const edgeBlend = smoothstep(0.70, 0.91, r);
-        if (edgeBlend <= 0) continue;
         const gx = this.centerX + lx, gz = this.centerZ + lz;
         const base = terrainNormal(gx, gz, 0.42);
         const ni = i * 3;
-        let nx = normals[ni] + (base.x - normals[ni]) * edgeBlend;
-        let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * edgeBlend;
-        let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * edgeBlend;
-        const inv = 1 / Math.hypot(nx, ny, nz);
-        normals[ni] = nx * inv;
-        normals[ni + 1] = ny * inv;
-        normals[ni + 2] = nz * inv;
+
+        // Preserve high-res normals through the physical footprint itself, but
+        // fade them to the procedural dune normal before the patch boundary.
+        const edgeBlend = smoothstep(0.70, 0.91, r);
+        if (edgeBlend > 0) {
+          let nx = normals[ni] + (base.x - normals[ni]) * edgeBlend;
+          let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * edgeBlend;
+          let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * edgeBlend;
+          const inv = 1 / Math.hypot(nx, ny, nz);
+          normals[ni] = nx * inv;
+          normals[ni + 1] = ny * inv;
+          normals[ni + 2] = nz * inv;
+        }
+
+        // Stable pseudo self-shadow: compare the deformed normal to the base
+        // dune under the same sun. Only local loss of direct light darkens the
+        // albedo, so untouched terrain and the render-radius edge stay identical.
+        const localLambert = Math.max(0, normals[ni] * LIGHT_TO_SURFACE.x + normals[ni + 1] * LIGHT_TO_SURFACE.y + normals[ni + 2] * LIGHT_TO_SURFACE.z);
+        const baseLambert = Math.max(0, base.x * LIGHT_TO_SURFACE.x + base.y * LIGHT_TO_SURFACE.y + base.z * LIGHT_TO_SURFACE.z);
+        const directionalShade = clamp((baseLambert - localLambert) * 0.72, 0, 0.24);
+        const cavity = smoothstep(0.006, 0.060, -deformations[i]) * 0.11;
+        const shade = 1 - directionalShade - cavity;
+        const ci = i * 4;
+        colors[ci] *= shade;
+        colors[ci + 1] *= shade;
+        colors[ci + 2] *= shade;
       }
     }
 
