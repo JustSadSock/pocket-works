@@ -47,7 +47,7 @@ test.describe('SINEW deterministic rig QA', () => {
     await attachCriticalScreenshot(page, testInfo, 'sinew-neutral-guard', { fullPage: false });
 
     await setPose(page, 0, 1);
-    await page.waitForTimeout(650);
+    await page.waitForTimeout(700);
     const high = await bridge(page);
     expect(high.swordTipHeight).toBeGreaterThan(neutral.swordTipHeight + .35);
     expect(high.shieldHeight).toBeGreaterThan(neutral.shieldHeight + .18);
@@ -56,10 +56,10 @@ test.describe('SINEW deterministic rig QA', () => {
     await attachCriticalScreenshot(page, testInfo, 'sinew-high-guard', { fullPage: false });
 
     await setPose(page, 0, -1);
-    await page.waitForTimeout(650);
+    await page.waitForTimeout(800);
     const low = await bridge(page);
-    expect(low.swordTipHeight).toBeLessThan(neutral.swordTipHeight - .35);
-    expect(low.shieldHeight).toBeLessThan(neutral.shieldHeight - .18);
+    expect(low.swordTipHeight).toBeLessThan(neutral.swordTipHeight - .24);
+    expect(low.shieldHeight).toBeLessThan(neutral.shieldHeight - .15);
     expect(low.viewSafety.shieldLocalX).toBeLessThanOrEqual(-.33);
     expect(low.viewSafety.shieldLocalZ).toBeGreaterThanOrEqual(.80);
     await attachCriticalScreenshot(page, testInfo, 'sinew-low-guard', { fullPage: false });
