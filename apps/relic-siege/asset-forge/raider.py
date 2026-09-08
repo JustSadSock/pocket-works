@@ -184,8 +184,7 @@ def export(output):
         export_format='GLB',
         export_apply=True,
         export_animations=True,
-        export_nla_strips=True,
-        export_all_actions=True,
+        export_animation_mode='ACTIONS',
         export_materials='EXPORT'
     )
     print(f'RELIC SIEGE Raider generated: {output} ({output.stat().st_size} bytes)')
