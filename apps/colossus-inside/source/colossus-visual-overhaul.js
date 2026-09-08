@@ -44,15 +44,11 @@ export function installColossusVisualOverhaul() {
   const conduit = material(scene, 'macro-conduit', new Color3(0.24, 0.14, 0.035), new Color3(0.045, 0.021, 0.002), true);
   const sensor = material(scene, 'macro-sensor', new Color3(0.02, 0.19, 0.16), new Color3(0.035, 0.68, 0.52), true);
 
-  // Keep the macro body entirely below the playable crest. Earlier enclosing spheres could
-  // swallow the third-person camera on mobile and turn the frame into one flat surface.
   const zs = [-11, -7.2, -3.1, 1.2, 5.5, 9.3, 12.4];
   zs.forEach((z, i) => {
     for (const side of [-1, 1]) {
       const plate = finishMesh(MeshBuilder.CreateBox(`macro-scute-${i}-${side}`, {
-        width: 5.7 + (i % 2) * 0.7,
-        height: 0.58,
-        depth: 4.55
+        width: 5.7 + (i % 2) * 0.7, height: 0.58, depth: 4.55
       }, scene), back, i % 3 === 1 ? armorHi : armor);
       plate.position.set(side * (4.0 + (i % 2) * 0.35), -1.05 + Math.sin(i * 0.7) * 0.12, z);
       plate.rotation.y = side * (0.11 + (i % 3) * 0.025);
@@ -60,33 +56,25 @@ export function installColossusVisualOverhaul() {
       plate.rotation.x = (i - 3) * 0.012;
 
       const seam = finishMesh(MeshBuilder.CreateBox(`macro-seam-${i}-${side}`, {
-        width: 0.16,
-        height: 0.16,
-        depth: 3.8
+        width: 0.16, height: 0.16, depth: 3.8
       }, scene), back, conduit);
       seam.position.set(side * 1.42, -0.36, z);
       seam.rotation.y = side * 0.03;
     }
 
     const vertebra = finishMesh(MeshBuilder.CreateCylinder(`macro-vertebra-${i}`, {
-      diameter: 2.15,
-      height: 1.05,
-      tessellation: 14
+      diameter: 2.15, height: 1.05, tessellation: 14
     }, scene), back, bone);
     vertebra.rotation.z = Math.PI / 2;
     vertebra.position.set(0, -0.92, z + 0.18);
     vertebra.scaling.z = 0.72;
   });
 
-  // Ribs and tendons sit far below/alongside the walkable spine, providing scale without
-  // ever enclosing the camera volume.
   for (let i = 0; i < 6; i++) {
     const z = -9 + i * 4.3;
     for (const side of [-1, 1]) {
       const rib = finishMesh(MeshBuilder.CreateTorus(`macro-rib-${i}-${side}`, {
-        diameter: 9.2,
-        thickness: 0.38,
-        tessellation: 30
+        diameter: 9.2, thickness: 0.38, tessellation: 30
       }, scene), back, bone);
       rib.position.set(side * 6.4, -5.6, z);
       rib.rotation.x = Math.PI / 2;
@@ -98,9 +86,7 @@ export function installColossusVisualOverhaul() {
   for (let i = 0; i < 8; i++) {
     const side = i % 2 ? 1 : -1;
     const cable = finishMesh(MeshBuilder.CreateCylinder(`macro-tendon-${i}`, {
-      diameter: 0.36 + (i % 3) * 0.10,
-      height: 16 + (i % 2) * 5,
-      tessellation: 10
+      diameter: 0.36 + (i % 3) * 0.10, height: 16 + (i % 2) * 5, tessellation: 10
     }, scene), back, i % 3 === 0 ? tissue : conduit);
     cable.rotation.x = Math.PI / 2;
     cable.rotation.z = side * (0.14 + (i % 3) * 0.025);
@@ -113,16 +99,12 @@ export function installColossusVisualOverhaul() {
     socket.position.set(side * 9.2, -4.4, 10.5);
 
     const joint = finishMesh(MeshBuilder.CreateCylinder(`macro-shoulder-joint-${side}`, {
-      diameter: 4.7,
-      height: 4.6,
-      tessellation: 18
+      diameter: 4.7, height: 4.6, tessellation: 18
     }, scene), back, bone);
     joint.rotation.z = Math.PI / 2;
     joint.position.set(side * 9.5, -3.7, 10.8);
   }
 
-  // Shoulder/head masses are deliberately offset downward so their upper surfaces support
-  // silhouettes rather than becoming camera-intersecting shells.
   const shoulderMass = finishMesh(MeshBuilder.CreateSphere('macro-active-shoulder', { diameter: 2, segments: 20 }, scene), shoulder, armor);
   shoulderMass.scaling.set(6.2, 2.6, 5.5);
   shoulderMass.position.set(-0.4, -5.4, 1.8);
@@ -159,5 +141,12 @@ export function installColossusVisualOverhaul() {
     sensor.emissiveColor.set(0.025 + pulse * 0.025, 0.44 + pulse * 0.28, 0.34 + pulse * 0.2);
     beaconLight.intensity = 1.1 + pulse * 0.65;
     tissue.emissiveColor.set(0.024 + pulse * 0.018, 0.003, 0.0015);
+
+    // Carrier nodes all coexist spatially. Large masses for inactive zones must not occlude
+    // the orbit camera while the player is traversing another part of the colossus.
+    const carrier = globalThis.__PW_TEST_STATE__?.carrier || 'back';
+    shoulderMass.setEnabled(carrier === 'shoulder');
+    cranium.setEnabled(carrier === 'head');
+    crown.setEnabled(carrier === 'head');
   });
 }
