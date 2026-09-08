@@ -1,0 +1,88 @@
+name: AI Mobile Gameplay QA
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-mobile-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exploratory-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright browser engines
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Detect changed Pocket Works apps
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          RANGE=""
+
+          if [[ "$EVENT_NAME" == "pull_request" && -n "${BASE_SHA:-}" ]]; then
+            RANGE="${BASE_SHA}...${HEAD_SHA}"
+          elif [[ "$EVENT_NAME" == "push" && -n "${BEFORE_SHA:-}" && "$BEFORE_SHA" != "$ZERO_SHA" ]]; then
+            RANGE="${BEFORE_SHA}..${HEAD_SHA}"
+          fi
+
+          TARGETS=""
+          if [[ -n "$RANGE" ]]; then
+            CHANGED_FILES="$(git diff --name-only "$RANGE" || true)"
+            TARGETS="$(printf '%s\n' "$CHANGED_FILES" | awk -F/ '$1 == "apps" && $2 !~ /^_/ { print $2 }' | sort -u | paste -sd, -)"
+          fi
+
+          echo "PW_APP_TARGETS=$TARGETS" >> "$GITHUB_ENV"
+          if [[ -n "$TARGETS" ]]; then
+            echo "Exploratory QA targets changed apps: $TARGETS"
+          else
+            echo "No changed app slug detected; exploratory QA will sample the newest active apps."
+          fi
+
+      - name: Assemble production-like browser test site
+        run: npm run build:quality-site
+
+      - name: Run exploratory mobile gameplay
+        env:
+          PW_AI_MAX_APPS: "6"
+        run: npx playwright test tests/e2e/ai-gameplay.spec.ts
+
+      - name: Upload exploratory QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-mobile-qa-${{ github.run_id }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14

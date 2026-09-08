@@ -48,7 +48,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-landscape',
-      testMatch: /(orientation|petlya-17)\.spec\.ts/,
+      testMatch: /(orientation|petlya-17|ai-gameplay)\.spec\.ts/,
       use: {
         ...pixel,
         viewport: { width: 851, height: 393 },
@@ -57,7 +57,7 @@ export default defineConfig({
     },
     {
       name: 'webkit-mobile-landscape',
-      testMatch: /(orientation|petlya-17)\.spec\.ts/,
+      testMatch: /(orientation|petlya-17|ai-gameplay)\.spec\.ts/,
       use: {
         ...iphone,
         viewport: { width: 844, height: 390 },
