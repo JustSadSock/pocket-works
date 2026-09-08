@@ -9,13 +9,23 @@ function setSegment(mesh,a,b,axis=AXIS_Y){const delta=b.subtract(a);const length
 function toWorld(local,origin,b){return origin.add(b.right.scale(local.x)).add(new Vector3(0,local.y,0)).add(b.forward.scale(local.z));}
 function toLocal(world,b){return vec3(Vector3.Dot(world,b.right),world.y,Vector3.Dot(world,b.forward));}
 
+// Neutral guard is deliberately not a T-pose with props. It is a compact, plausible
+// sword-and-round-shield stance: shield below the eyes and off the weapon line, sword
+// hand close to the lower ribs, point threatening the opponent's face/chest.
+const PLAYER_GUARD={
+  hand:vec3(.17,-.19,.43),
+  tip:vec3(.28,.43,1.25),
+  shieldHand:vec3(-.17,-.16,.37),
+  shieldCenter:vec3(-.23,-.12,.43)
+};
+
 class PhysicalUpperBody {
   constructor(game){
     this.game=game;this.player=game.player;
-    this.weapon=new ConstraintArm({upper:.34,lower:.33,tool:1.04,handed:1});
-    this.shield=new ConstraintArm({upper:.33,lower:.32,tool:.055,handed:-1});
+    this.weapon=new ConstraintArm({upper:.34,lower:.33,tool:1.04,handed:1,restHand:PLAYER_GUARD.hand,restTool:vec3(.10,.58,.80)});
+    this.shield=new ConstraintArm({upper:.33,lower:.32,tool:.075,handed:-1,restHand:PLAYER_GUARD.shieldHand,restTool:vec3(-.18,.05,.98)});
     this.prevSwordBase=null;this.prevSwordTip=null;this.prevShieldCenter=null;this.prevShieldNormal=null;
-    this.lastGesture={x:0,y:0};this.reset();this.patchImpulses();
+    this.lastGesture={x:0,y:0};this.breathPhase=Math.random()*Math.PI*2;this.reset();this.patchImpulses();
   }
   reset(){this.weapon.reset(vec3());this.shield.reset(vec3());this.prevSwordBase=this.prevSwordTip=this.prevShieldCenter=this.prevShieldNormal=null;this.lastGesture={x:0,y:0};}
   patchImpulses(){
@@ -29,13 +39,20 @@ class PhysicalUpperBody {
     const gestureEnergy=clamp(Math.hypot(gy,gp)/8.8,0,1);
     const deltaX=gy-this.lastGesture.x,deltaY=gp-this.lastGesture.y;this.lastGesture={x:gy,y:gp};
     const snap=clamp(Math.hypot(deltaX,deltaY)/5.5,0,1);
+    this.breathPhase+=dt*(1.7+gestureEnergy*.8);
+    const breath=Math.sin(this.breathPhase);
+    const moving=clamp(control.moveMagnitude||0,0,1);
+    const guardHand=vec3(PLAYER_GUARD.hand.x,PLAYER_GUARD.hand.y+breath*.006-moving*.012,PLAYER_GUARD.hand.z-moving*.018);
+    const guardTip=vec3(PLAYER_GUARD.tip.x+breath*.008,PLAYER_GUARD.tip.y+breath*.012,PLAYER_GUARD.tip.z);
     const drive=vec3(-gy*(.72+.45*snap),gp*(.68+.42*snap),gestureEnergy*(1.4+.8*snap));
-    const weaponPose=this.weapon.step({shoulder:vec3(),guardHand:vec3(.24,-.13,.54),guardTip:vec3(.31,-.015,1.56),drive,brace:.70-gestureEnergy*.20,dt,iterations:8});
+    const weaponPose=this.weapon.step({shoulder:vec3(),guardHand,guardTip,drive,brace:.78-gestureEnergy*.24,dt,iterations:8});
 
     let threat=vec3();let danger=0;const enemy=this.game.enemy;
-    if(enemy&&!enemy.dead){const trace=enemy.getSwordTrace();const rel=trace.tip.subtract(p.bones.chest.getAbsolutePosition());const dist=rel.length();danger=clamp((trace.speed-1.7)/6,0,1)*clamp((3.0-dist)/1.5,0,1);threat=vec3(-Vector3.Dot(rel,b.right)*danger*2.4,(rel.y-.2)*danger*2.0,danger*1.7);}
-    const shieldDrive=vec3(threat.x-gy*.10,threat.y+gp*.08,threat.z);
-    const shieldPose=this.shield.step({shoulder:vec3(),guardHand:vec3(-.22,-.03,.49),guardTip:vec3(-.22,-.03,.545),drive:shieldDrive,brace:.92,dt,iterations:9});
+    if(enemy&&!enemy.dead){const trace=enemy.getSwordTrace();const rel=trace.tip.subtract(p.bones.chest.getAbsolutePosition());const dist=rel.length();danger=clamp((trace.speed-1.7)/6,0,1)*clamp((3.0-dist)/1.5,0,1);threat=vec3(-Vector3.Dot(rel,b.right)*danger*2.4,(rel.y-.2)*danger*1.55,danger*1.55);}
+    const shieldDrive=vec3(threat.x-gy*.08,threat.y+gp*.055,threat.z);
+    const shieldGuardHand=vec3(PLAYER_GUARD.shieldHand.x,PLAYER_GUARD.shieldHand.y+breath*.004,PLAYER_GUARD.shieldHand.z);
+    const shieldGuardCenter=vec3(PLAYER_GUARD.shieldCenter.x,PLAYER_GUARD.shieldCenter.y+breath*.005,PLAYER_GUARD.shieldCenter.z+danger*.035);
+    const shieldPose=this.shield.step({shoulder:vec3(),guardHand:shieldGuardHand,guardTip:shieldGuardCenter,drive:shieldDrive,brace:.96,dt,iterations:9});
 
     this.applyWeaponPose(weaponPose,shoulderR,b,dt);this.applyShieldPose(shieldPose,shoulderL,b,dt);
     if(gestureEnergy>.12){p.impactLeanVelocity.addInPlace(b.right.scale(-deltaX*.0017));p.impactLeanVelocity.y+=-deltaY*.0008;p.stability=Math.max(0,p.stability-gestureEnergy*dt*1.8);}
@@ -52,7 +69,8 @@ class PhysicalUpperBody {
   applyShieldPose(pose,shoulder,b,dt){
     const w=this.player;const elbow=toWorld(pose.elbow,shoulder,b),hand=toWorld(pose.hand,shoulder,b),center=toWorld(pose.tip,shoulder,b);
     w.bones.elbowL.setAbsolutePosition(elbow);w.bones.handL.setAbsolutePosition(hand);w.leftHand.position.copyFrom(hand);setSegment(w.meshes.upperArmL,shoulder,elbow);setSegment(w.meshes.forearmL,elbow,hand);
-    const forward=center.subtract(hand).normalize();const normal=forward.scale(.35).add(b.forward.scale(.65)).normalize();const lastCenter=this.prevShieldCenter?.clone()??center.clone(),lastNormal=this.prevShieldNormal?.clone()??normal.clone();
+    // Round shields are normally held obliquely, not as a vertical wall in front of the eyes.
+    const normal=b.forward.scale(.90).add(b.right.scale(.16)).add(new Vector3(0,-.08,0)).normalize();const lastCenter=this.prevShieldCenter?.clone()??center.clone(),lastNormal=this.prevShieldNormal?.clone()??normal.clone();
     w.shield.prevCenter.copyFrom(lastCenter);w.shield.prevNormal.copyFrom(lastNormal);w.shield.center.copyFrom(center);w.shield.normal.copyFrom(normal);this.prevShieldCenter=center.clone();this.prevShieldNormal=normal.clone();w.shieldNormal.position.copyFrom(normal);
     const rot=quatAxisTo(AXIS_Y,normal);w.meshes.shield.position.copyFrom(center);w.meshes.shield.rotationQuaternion=rot;w.meshes.shieldRim.position.copyFrom(center.add(normal.scale(.045)));w.meshes.shieldRim.rotationQuaternion=rot;w.meshes.shieldBoss.position.copyFrom(center.add(normal.scale(.075)));
   }
