@@ -32,10 +32,9 @@ function applyRoughness(material: PBRMaterial | StandardMaterial, roughness: num
   }
 
   // StandardMaterial has no roughness input. Map perceptual roughness to highlight width while
-  // retaining the authored specular tint. Low roughness gives a tight varnish highlight; tarred
-  // or weathered timber stays broad and subdued.
+  // preserving the authored specular tint. This assignment is absolute, so repeated runtime
+  // application cannot gradually darken a material over many frames.
   material.specularPower = 7 + Math.pow(1 - value, 2.2) * 118;
-  material.specularColor.scaleInPlace(clamp(1.08 - value * 0.42, 0.58, 1));
 }
 
 function applyFinishes(world: OceanWorld): void {
