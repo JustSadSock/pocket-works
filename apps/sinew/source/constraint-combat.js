@@ -5,8 +5,8 @@ import { ConstraintArm, vec3 } from './constraint-model.js';
 const AXIS_Y = new Vector3(0, 1, 0);
 const AXIS_Z = new Vector3(0, 0, 1);
 const PLAYER_GUARD = {
-  hand: vec3(.17, -.19, .43),
-  tip: vec3(.28, .43, 1.25),
+  hand: vec3(.23, -.19, .43),
+  tip: vec3(.43, .43, 1.25),
   shieldHand: vec3(-.17, -.16, .45),
   shieldCenter: vec3(-.27, -.15, .58)
 };
@@ -231,16 +231,15 @@ class PhysicalUpperBody {
     let hand = toWorld(pose.hand, shoulder, frame);
     let center = toWorld(pose.tip, shoulder, frame);
 
-    // Camera-safe corridor is enforced after the constraint solve. The previous
-    // pre-solve safety target could be overwritten by contact/drive impulses,
-    // allowing the 90 cm shield to sit almost on the near plane.
+    // Keep the physical shield itself out of the camera, not merely its render mesh.
+    // This preserves visual/contact agreement while keeping a usable first-person view.
     const head = w.bones.head.getAbsolutePosition();
     const rel = center.subtract(head);
     let lateral = Vector3.Dot(rel, frame.right);
     let forward = Vector3.Dot(rel, frame.forward);
-    const vertical = clamp(rel.y, -.72, .18);
-    lateral = clamp(lateral, -.68, -.20);
-    forward = Math.max(.62, forward);
+    const vertical = clamp(rel.y, -.72, .10);
+    lateral = clamp(lateral, -.68, -.32);
+    forward = Math.max(.70, forward);
     const safeCenter = head.add(frame.right.scale(lateral)).add(frame.forward.scale(forward)).add(new Vector3(0, vertical, 0));
     const correction = safeCenter.subtract(center);
     center = safeCenter;
