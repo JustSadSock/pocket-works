@@ -62,40 +62,38 @@ function textureFrom(scene, data, size, name) {
   return texture;
 }
 
+function makeSandMaterial(scene, name, albedo, normal, useVertexColors = false) {
+  const material = new PBRMaterial(name, scene);
+  material.albedoColor = new Color3(1.0, 0.965, 0.90);
+  material.albedoTexture = albedo;
+  material.bumpTexture = normal;
+  material.bumpTexture.level = 0.34;
+  material.metallic = 0;
+  material.roughness = 0.945;
+  material.environmentIntensity = 0.58;
+  material.usePhysicalLightFalloff = true;
+  material.useParallax = false;
+  material.useVertexColors = useVertexColors;
+  material.vertexColorUseAlpha = false;
+  material.backFaceCulling = true;
+  return material;
+}
+
 export function createSandMaterials(scene) {
   const albedo = textureFrom(scene, makeAlbedoData(384), 384, 'sand-albedo-procedural');
   const normal = textureFrom(scene, makeNormalData(384, 0.24), 384, 'sand-normal-combined');
-
   albedo.uScale = 0.92;
   albedo.vScale = 0.92;
   normal.uScale = 3.1;
   normal.vScale = 3.1;
 
-  const near = new PBRMaterial('sand-pbr-unified', scene);
-  // The procedural texture already carries the ochre hue. Multiplying it by a
-  // strongly orange albedoColor made all camera-facing dunes muddy brown.
-  near.albedoColor = new Color3(1.0, 0.965, 0.90);
-  near.albedoTexture = albedo;
-  near.bumpTexture = normal;
-  near.bumpTexture.level = 0.36;
-  near.metallic = 0;
-  near.roughness = 0.94;
-  near.environmentIntensity = 0.58;
-  near.usePhysicalLightFalloff = true;
-  near.useParallax = false;
-  near.useVertexColors = false;
-  near.backFaceCulling = true;
-
-  // Far terrain is intentionally optically identical. There must be no LOD
-  // lighting boundary that can read as a giant shadow on mobile Safari.
-  const far = near.clone('sand-pbr-far-unified');
-
-  // The local physical patch uses the exact same PBR response, but enables
-  // vertex colours only so actually displaced sand can show compacted bowls.
-  // Untouched vertices stay pure white and therefore have zero patch boundary.
-  const local = near.clone('sand-pbr-physical-local');
-  local.useVertexColors = true;
-  local.vertexColorUseAlpha = false;
+  // Do not clone materials containing RawTexture instances. Babylon can
+  // serialise a cloned procedural texture name as a URL and attempt a network
+  // request, making far/local LODs optically different. All three materials
+  // are constructed explicitly and share the exact same GPU textures.
+  const near = makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false);
+  const far = makeSandMaterial(scene, 'sand-pbr-far', albedo, normal, false);
+  const local = makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true);
 
   return {
     near,
@@ -107,8 +105,11 @@ export function createSandMaterials(scene) {
       local.wireframe = enabled;
     },
     dispose() {
-      near.dispose(); far.dispose(); local.dispose();
-      albedo.dispose(); normal.dispose();
+      near.dispose();
+      far.dispose();
+      local.dispose();
+      albedo.dispose();
+      normal.dispose();
     }
   };
 }
