@@ -4,14 +4,13 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.5.0';
-const APP_VERSION = '1.5.0';
+const CACHE_NAME = 'sirocco-v1.5.1';
+const APP_VERSION = '1.5.1';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Физический песок значительно оптимизирован для iPhone/Safari: локальная High-сетка стала примерно втрое дешевле, а avalanche и coarse mesh больше не перестраиваются почти каждый кадр.',
-  'Зона рендера вокруг игрока убрана радиальной replacement-поверхностью, плавным затуханием деформации и непрерывным far terrain без квадратного отверстия.',
-  'Модель бедуина получила фактуру ткани и кожи, ремень через плечо, сумку, бурдюк, дополнительные слои одежды и лёгкое движение с походкой.',
-  'Обновлены мобильные quality budgets и Playwright-регрессии производительности, WebKit, физического песка и персонажа.'
+  'Следы в песке стали заметно читаемее: углубления получают локальное затенение, а выдавленные края — мягкий светлый контраст.',
+  'Солнце стало направленнее, sky fill слабее, поэтому формы дюн и мелкий рельеф лучше читаются без старых полос и квадратных теней.',
+  'Контактная тень персонажа стала плотнее и мягче по краям, не возвращая realtime shadow map на terrain.'
 ];
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
