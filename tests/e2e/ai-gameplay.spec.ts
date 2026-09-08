@@ -31,6 +31,16 @@ type RelicState = {
   loadingState?: string;
 };
 
+type RelicDriveSample = {
+  elapsedMs: number;
+  phase?: string;
+  zone?: string;
+  playerPosition?: { x?: number; y?: number; z?: number };
+  grounded?: boolean;
+  groundDistance?: number;
+  activeEnemies?: number;
+};
+
 function loadTargets(): AppTarget[] {
   const appsRoot = path.join(process.cwd(), 'apps');
   const entries = readdirSync(appsRoot, { withFileTypes: true });
@@ -105,6 +115,82 @@ async function readRelicState(page: Page) {
   return page.evaluate(() => ((window as any).__AI_TEST_STATE__ ?? null) as RelicState | null);
 }
 
+async function driveRelicStickUntil(
+  page: Page,
+  dx: number,
+  dy: number,
+  timeoutMs: number,
+  label: string,
+  done: (state: RelicState | null) => boolean
+) {
+  const stick = page.locator('#joystick');
+  await expect(stick).toBeVisible();
+  const box = await stick.boundingBox();
+  expect(box, 'Virtual joystick had no measurable bounds').not.toBeNull();
+
+  const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+  const max = box!.width * 0.3;
+  const length = Math.hypot(dx, dy) || 1;
+  const scale = max / Math.max(1, length);
+  const target = { x: center.x + dx * scale, y: center.y + dy * scale };
+  const startedAt = Date.now();
+  const samples: RelicDriveSample[] = [];
+  let lastState: RelicState | null = await readRelicState(page);
+
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 8 });
+
+  try {
+    while (Date.now() - startedAt < timeoutMs) {
+      await page.waitForTimeout(300);
+      lastState = await readRelicState(page);
+      samples.push({
+        elapsedMs: Date.now() - startedAt,
+        phase: lastState?.phase,
+        zone: lastState?.zone,
+        playerPosition: lastState?.playerPosition,
+        grounded: lastState?.grounded,
+        groundDistance: lastState?.groundDistance,
+        activeEnemies: lastState?.activeEnemies
+      });
+      if (done(lastState)) {
+        return { state: lastState, samples };
+      }
+    }
+
+    throw new Error(
+      `${label} did not reach its physical target within ${timeoutMs}ms. ` +
+      `Last state: ${JSON.stringify(lastState)}. ` +
+      `Drive samples: ${JSON.stringify(samples.slice(-12))}`
+    );
+  } finally {
+    await page.mouse.up().catch(() => {});
+    await page.waitForTimeout(120);
+  }
+}
+
+async function driveRelicDistance(
+  page: Page,
+  dx: number,
+  dy: number,
+  distance: number,
+  timeoutMs: number,
+  label: string
+) {
+  const start = await readRelicState(page);
+  const startX = start?.playerPosition?.x;
+  const startZ = start?.playerPosition?.z;
+  expect(Number.isFinite(startX) && Number.isFinite(startZ), `${label} had no finite starting position`).toBe(true);
+
+  return driveRelicStickUntil(page, dx, dy, timeoutMs, label, (state) => {
+    const x = state?.playerPosition?.x;
+    const z = state?.playerPosition?.z;
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+    return Math.hypot(x! - startX!, z! - startZ!) >= distance;
+  });
+}
+
 async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   await page.waitForFunction(() => {
     const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
@@ -144,26 +230,29 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   expect(gate?.grounded).toBe(true);
   expect(gate?.playerPosition?.y ?? -999).toBeGreaterThan(-1);
 
-  // Camera starts looking north. Holding the on-screen stick down drives the keeper
-  // physically forward (+Z) from the outer gate, up the authored ramp and into the courtyard.
-  await holdVirtualStick(page, 0, 1, 3_650);
+  // CI software WebGL can render far below real-time. Keep the real on-screen stick
+  // physically held until gameplay itself reports the courtyard encounter instead of
+  // assuming a wall-clock duration corresponds to a fixed amount of simulation time.
+  const courtyardDrive = await driveRelicStickUntil(
+    page,
+    0,
+    1,
+    24_000,
+    'Gate-to-courtyard traversal',
+    (state) => state?.zone === 'courtyard' && (state?.activeEnemies ?? 0) >= 3
+  );
 
-  await page.waitForFunction(() => {
-    const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
-    return state?.zone === 'courtyard' && (state?.activeEnemies ?? 0) >= 3;
-  }, undefined, { timeout: 8_000 });
-
-  const courtyard = await readRelicState(page);
+  const courtyard = courtyardDrive.state;
   expect(courtyard?.phase).toBe('courtyard');
   expect(courtyard?.grounded).toBe(true);
   expect(courtyard?.groundDistance ?? 99).toBeLessThan(1.7);
   expect(courtyard?.activeEnemies ?? 0).toBeGreaterThanOrEqual(3);
   expect(courtyard?.groundedEnemies).toBe(courtyard?.activeEnemies);
 
-  // Continue toward the two front raiders, then strafe onto the left opponent using
-  // the same physical joystick. No direct position mutation is allowed in this QA path.
-  await holdVirtualStick(page, 0, 1, 1_250);
-  await holdVirtualStick(page, 1, 0, 780);
+  // Approach the first encounter through physical displacement rather than wall-clock
+  // time so low-FPS Chromium/WebKit runners perform the same journey as a real phone.
+  const approachDrive = await driveRelicDistance(page, 0, 1, 5.5, 14_000, 'Courtyard enemy approach');
+  const strafeDrive = await driveRelicDistance(page, 1, 0, 3.0, 12_000, 'Courtyard combat strafe');
 
   const chargeBefore = (await readRelicState(page))?.relicCharge ?? 0;
   const enemiesBefore = (await readRelicState(page))?.activeEnemies ?? 0;
@@ -186,7 +275,7 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
 
   await attachCriticalScreenshot(page, testInfo, 'relic-courtyard-combat', { fullPage: false });
   await testInfo.attach('relic-siege-journey-state', {
-    body: Buffer.from(`${JSON.stringify({ loaded, gate, courtyard, combat }, null, 2)}\n`, 'utf8'),
+    body: Buffer.from(`${JSON.stringify({ loaded, gate, courtyard, combat, courtyardDrive, approachDrive, strafeDrive }, null, 2)}\n`, 'utf8'),
     contentType: 'application/json'
   });
 }
@@ -219,7 +308,7 @@ test.describe('AI exploratory mobile gameplay', () => {
   for (const app of targets) {
     test(`${app.slug} survives a touch exploration pass`, async ({ page }, testInfo) => {
       test.skip(!orientationMatchesProject(app, testInfo.project.name), `App prefers ${app.orientation} orientation.`);
-      test.setTimeout(app.slug === 'relic-siege' ? 70_000 : 35_000);
+      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : 35_000);
 
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
