@@ -33,13 +33,13 @@ def remove_object(name):
 
 
 def make_walkable_ramp(name, start, end, width):
-    """Replace a rotated box ramp with a clean wedge collider.
+    """Build a top-surface-only collision ramp for Babylon's capsule solver.
 
-    The old proxy was a rotated cuboid. Its lower top corner sat ~0.22 m above the
-    lower floor, so Babylon's capsule hit the cuboid's vertical front face instead
-    of entering the slope. This wedge puts the leading top edge exactly on the lower
-    floor and buries its front wall below that floor. The trailing edge lands exactly
-    on the authored upper-floor height.
+    A closed wedge still exposes a front/side triangle set to Babylon. At a coplanar
+    floor transition the capsule can resolve against those vertical faces instead of
+    the intended slope and stop at the ramp. A two-triangle surface has no leading,
+    trailing or side wall at all: the only collision normal is the walkable slope.
+    The surface is extended along the same slope so both landings overlap safely.
     """
     sx, sy, sz = start
     ex, ey, ez = end
@@ -51,38 +51,29 @@ def make_walkable_ramp(name, start, end, width):
     fx, fz = dx / length, dz / length
     rx, rz = fz, -fx
     half_width = width * 0.48
-    depth = 0.62
+    rise_per_meter = (ey - sy) / length
+    lead_overlap = 0.48
+    tail_overlap = 0.48
 
-    # A small overlap buries the leading wall in the lower platform and makes the
-    # final contact with the upper landing tolerant to floating point differences.
-    lead_overlap = 0.34
-    tail_overlap = 0.22
-    lsx, lsz = sx - fx * lead_overlap, sz - fz * lead_overlap
-    tex, tez = ex + fx * tail_overlap, ez + fz * tail_overlap
+    lead_x = sx - fx * lead_overlap
+    lead_z = sz - fz * lead_overlap
+    lead_y = sy - rise_per_meter * lead_overlap
+    tail_x = ex + fx * tail_overlap
+    tail_z = ez + fz * tail_overlap
+    tail_y = ey + rise_per_meter * tail_overlap
 
     vertices = [
-        (lsx - rx * half_width, sy, lsz - rz * half_width),
-        (lsx + rx * half_width, sy, lsz + rz * half_width),
-        (tex + rx * half_width, ey, tez + rz * half_width),
-        (tex - rx * half_width, ey, tez - rz * half_width),
-        (lsx - rx * half_width, sy - depth, lsz - rz * half_width),
-        (lsx + rx * half_width, sy - depth, lsz + rz * half_width),
-        (tex + rx * half_width, ey - depth, tez + rz * half_width),
-        (tex - rx * half_width, ey - depth, tez - rz * half_width),
+        (lead_x - rx * half_width, lead_y, lead_z - rz * half_width),
+        (lead_x + rx * half_width, lead_y, lead_z + rz * half_width),
+        (tail_x + rx * half_width, tail_y, tail_z + rz * half_width),
+        (tail_x - rx * half_width, tail_y, tail_z - rz * half_width),
     ]
-    # Top winding points toward +game-Y before the global axis correction.
-    faces = [
-        (0, 3, 2, 1),
-        (4, 5, 6, 7),
-        (0, 1, 5, 4),
-        (1, 2, 6, 5),
-        (2, 3, 7, 6),
-        (3, 0, 4, 7),
-    ]
+    # Before the global axis correction these wind toward +game-Y (the walkable side).
+    faces = [(0, 3, 2), (0, 2, 1)]
 
     mesh = bpy.data.meshes.new(f'COL_{name}_Ramp_Mesh')
     mesh.from_pydata(vertices, [], faces)
-    mesh.update()
+    mesh.update(calc_edges=True)
     obj = bpy.data.objects.new(f'COL_{name}_Ramp', mesh)
     bpy.context.collection.objects.link(obj)
 
@@ -93,27 +84,25 @@ def make_walkable_ramp(name, start, end, width):
 
 
 def open_gate_ramp_landing():
-    """Move the courtyard floor front edge behind the gate-ramp landing.
+    """Keep the raised courtyard collision wall behind the ramp's upper overlap.
 
-    The original courtyard slab began at game Z=-32 while the ramp did not reach
-    courtyard height until Z=-29.5. The slab therefore formed a second invisible
-    vertical wall through the ramp. Keep the rear edge fixed at Z=-12 and move only
-    the front edge to Z=-29.25 for both the visible floor and collision proxy.
+    The visible floor remains at its authored extent. Only the collision proxy is
+    shortened, because a thick raised-floor proxy exposes a vertical front face.
+    The surface ramp now overlaps the shortened landing by roughly 0.7 m.
     """
     old_min_z = -32.0
     old_max_z = -12.0
-    new_min_z = -29.25
+    new_min_z = -28.8
     new_max_z = old_max_z
     old_center = (old_min_z + old_max_z) * 0.5
     new_center = (new_min_z + new_max_z) * 0.5
     scale_z = (new_max_z - new_min_z) / (old_max_z - old_min_z)
 
-    for name in ('Courtyard_Floor', 'COL_Courtyard_Floor'):
-        obj = bpy.data.objects.get(name)
-        if obj is None:
-            raise RuntimeError(f'Missing courtyard floor object: {name}')
-        obj.location.z += new_center - old_center
-        obj.scale.z *= scale_z
+    obj = bpy.data.objects.get('COL_Courtyard_Floor')
+    if obj is None:
+        raise RuntimeError('Missing courtyard collision floor object')
+    obj.location.z += new_center - old_center
+    obj.scale.z *= scale_z
 
 
 def rebuild_walkable_ramps():
@@ -124,13 +113,11 @@ def rebuild_walkable_ramps():
 
 
 def align_game_axes():
-    """Convert the legacy game-space-authored scene into Blender Z-up before glTF export.
+    """Convert the game-space-authored scene into Blender Z-up before glTF export.
 
-    world.py intentionally describes positions as Pocket Works/Babylon (X, Y-up, Z-forward).
-    Blender interprets those tuples as (X, Y, Z-up), which previously turned every floor
-    into a vertical slab. Rotating the complete authored scene +90 degrees around Blender X
-    maps (game X, game Y, game Z) -> (Blender X, -game Z, game Y). Blender's glTF exporter
-    then performs its normal Z-up -> Y-up conversion without the fortress lying on its side.
+    world.py describes positions as Pocket Works/Babylon (X, Y-up, Z-forward).
+    Blender interprets those tuples as (X, Y, Z-up), so the complete authored scene
+    is rotated +90 degrees around Blender X before the normal glTF Z-up -> Y-up export.
     """
     axis_fix = Matrix.Rotation(math.pi / 2, 4, 'X')
     for obj in list(bpy.context.scene.objects):
@@ -140,9 +127,10 @@ def align_game_axes():
     gate_ramp = bpy.data.objects.get('COL_GateToCourtyard_Ramp')
     if gate is None or gate_ramp is None:
         raise RuntimeError('Gate collision geometry missing before export')
-    # After the correction, Blender Z is vertical and the gate floor must be near Z=0.
     if abs(gate.matrix_world.translation.z) > 1.0:
         raise RuntimeError(f'Gate collision proxy axis correction failed: {tuple(gate.matrix_world.translation)}')
+    if len(gate_ramp.data.polygons) != 2:
+        raise RuntimeError('Gate walkable ramp must export as exactly two collision triangles')
 
 
 def main():
