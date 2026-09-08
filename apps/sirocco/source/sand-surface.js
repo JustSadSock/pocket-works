@@ -1,14 +1,11 @@
 import { Mesh, VertexData } from '@babylonjs/core';
 import { clamp, smoothstep } from './core.js';
-import { terrainNormal } from './terrain.js';
+import { meshTerrainNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
 function warpLocalAxis(value, radius) {
   const n = clamp(value / radius, -1, 1);
   const a = Math.abs(n);
-  // Preserve the outer radius while concentrating ~38% more samples around
-  // the player. The edge deliberately becomes coarser because deformation has
-  // already faded out there and only needs to bridge to the coarse terrain.
   return radius * n * (0.62 + 0.38 * a);
 }
 
@@ -160,13 +157,10 @@ export class LocalSandSurface {
         const i = iz * row + ix;
         const r = radial[i];
         const gx = this.centerX + lx, gz = this.centerZ + lz;
-        const base = terrainNormal(gx, gz, 0.36);
+        // Match the actual triangulated coarse surface, not the higher-frequency
+        // analytical dune. Untouched physical sand should be invisible.
+        const base = meshTerrainNormal(gx, gz, this.world.quality.segments);
         const ni = i * 3;
-
-        // Outside actual physical displacement, the local replacement must be
-        // optically indistinguishable from the surrounding dune. Mesh normals
-        // from the denser patch reveal its triangulation even on untouched sand,
-        // so only let them influence lighting where deformation is real.
         const edgeFade = 1 - smoothstep(0.68, 0.90, r);
         const heightActivity = smoothstep(0.0015, 0.020, Math.abs(deformations[i]));
         const stateActivity = clamp(looseValues[i] * 0.32 + compactValues[i] * 0.22, 0, 1);
