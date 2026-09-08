@@ -10,6 +10,7 @@ export function createInput({ canvas, joystick, knob, actionButton, onFirstGestu
     actionPressed: false,
     sprint: false
   };
+  globalThis.__PW_COLOSSUS_INPUT_STATE__ = state;
 
   let movePointer = null;
   let lookPointer = null;

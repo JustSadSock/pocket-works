@@ -6,12 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'colossus-inside-';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.5.0';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Новая contact/traversal physics: реальные бронепластины, разрывы, прыжки и падения вместо непрерывной невидимой поверхности.',
-  'Инерция колосса отделена от собственной скорости игрока; добавлены баланс корпуса и корректное наследование движения carrier-иерархии.',
-  'Плечевой шарнир получил мировой маяк, экранный указатель и усиленное локальное освещение; Playwright получает диагностическое состояние игры.'
+  'Колосс стал движущимся уровнем: маршрутные carrier-узлы синхронизируются с Blender armature.',
+  'Системные ledge grabs работают на обычных разрывах брони, а импульс поверхности влияет на баланс и положение игрока.',
+  'Lightning set piece разрушает секцию корпуса; ремонт стабилизатора теперь состоит из трёх отдельных фаз синхронизации.',
+  'Обновлены камера, world-guidance, scale cues, внутренние механизмы и финальная стабилизация.'
 ];
 
 setCacheNameDetails({ prefix: 'colossus-inside', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
