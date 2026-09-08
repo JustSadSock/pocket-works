@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { attachCriticalScreenshot, monitorUnexpectedBrowserOutput } from './helpers';
 
 type AetherwingState={
-  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;chunks?:number;fauna?:number;terrainMeshes?:number;waterMeshes?:number;riverMeshes?:number;materialsHealthy?:boolean;vegetationInstances?:number;treeInstances?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;cameraDistance?:number;cameraGroundClearance?:number;assetErrors?:string[];
+  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;authoredBiomeTemplates?:number;chunks?:number;fauna?:number;terrainMeshes?:number;waterMeshes?:number;riverMeshes?:number;materialsHealthy?:boolean;vegetationInstances?:number;treeInstances?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;cameraDistance?:number;cameraGroundClearance?:number;assetErrors?:string[];
 };
 
 async function state(page:Page){return page.evaluate(()=>((window as any).__AI_TEST_STATE__??null) as AetherwingState|null);}
@@ -22,7 +22,7 @@ test.describe('AETHERWING flight journey',()=>{
     const monitor=monitorUnexpectedBrowserOutput(page);
     const response=await page.goto('/apps/aetherwing/',{waitUntil:'domcontentloaded'});expect(response?.status()??500).toBeLessThan(400);
     await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return s?.loadingState==='awaiting-start';},undefined,{timeout:30_000});
-    const loaded=await state(page);expect(loaded?.dragonReady).toBe(true);expect(loaded?.usedFallback,'Blender dragon unexpectedly fell back to primitive runtime geometry').toBe(false);expect(loaded?.animationGroups??0).toBeGreaterThanOrEqual(5);expect(loaded?.boneCount??0).toBeGreaterThanOrEqual(20);expect(loaded?.fauna??0).toBeGreaterThanOrEqual(20);expect(loaded?.assetErrors??[]).toEqual([]);
+    const loaded=await state(page);expect(loaded?.dragonReady).toBe(true);expect(loaded?.usedFallback,'Blender dragon unexpectedly fell back to primitive runtime geometry').toBe(false);expect(loaded?.animationGroups??0).toBeGreaterThanOrEqual(5);expect(loaded?.boneCount??0).toBeGreaterThanOrEqual(20);expect(loaded?.authoredBiomeTemplates??0,'Blender biome props did not load before the opening chunks were built').toBe(3);expect(loaded?.fauna??0).toBeGreaterThanOrEqual(20);expect(loaded?.assetErrors??[]).toEqual([]);
     await page.locator('#startBtn').click();
     await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return s?.loadingState==='flying'&&s?.started===true;},undefined,{timeout:8_000});
     const sound=page.locator('#soundBtn');await expect(sound).toHaveText('SND ON');await sound.click();await expect(sound).toHaveText('SND OFF');await sound.click();await expect(sound).toHaveText('SND ON');
