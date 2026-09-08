@@ -44,13 +44,19 @@ export class DebugPanel {
     if (this.elapsed < 0.18) return;
     this.elapsed = 0;
     const drawCalls = this.engine._drawCalls?.current ?? '—';
+    let maxLoose = 0, maxPacked = 0;
+    for (const cell of this.deps.sand.cells.values()) {
+      maxLoose = Math.max(maxLoose, cell.loose ?? 0);
+      maxPacked = Math.max(maxPacked, cell.compaction ?? 0);
+    }
     const stats = [
       `FPS ${this.engine.getFps().toFixed(0)} · ${(1000 / Math.max(1, this.engine.getFps())).toFixed(1)} ms`,
       `draw ${drawCalls} · tris ${Math.round(this.scene.getActiveIndices() / 3).toLocaleString()}`,
       `chunks ${this.deps.world.activeChunkCount} · sand cells ${this.deps.sand.activeCellCount}`,
+      `sand CPU ${(this.deps.sand.lastWorkMs ?? 0).toFixed(2)} ms · transfers ${this.deps.sand.lastTransferCount ?? 0}`,
+      `softness ${(controller.softness ?? 0).toFixed(2)} · loose ${maxLoose.toFixed(2)} · packed ${maxPacked.toFixed(2)}`,
       `physical impacts ${this.deps.sand.totalImpacts} · particles ${quality.particles}`,
-      `character shadow ${quality.id === 'low' ? 512 : 1024}px · ${quality.label}`,
-      `world ${controller.globalX.toFixed(1)}, ${controller.globalZ.toFixed(1)} · slope ${(controller.lastSlope * 57.2958).toFixed(1)}°`
+      `world ${controller.globalX.toFixed(1)}, ${controller.globalZ.toFixed(1)} · slope ${(controller.lastSlope * 57.2958).toFixed(1)}° · ${quality.label}`
     ];
     this.stats.textContent = stats.join('\n');
     this.updateNormals(controller);
