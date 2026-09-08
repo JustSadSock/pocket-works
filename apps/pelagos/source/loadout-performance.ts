@@ -1,5 +1,5 @@
 import type { ShipControls, ShipTelemetry, WindState } from './core';
-import { DEG, ShipDynamics, clamp, sailingPolar } from './core';
+import { ShipDynamics, clamp, sailingPolar } from './core';
 import { getActiveShipLoadout, type ShipLoadout } from './ship-loadout';
 
 export type ShipPerformanceProfile = {
