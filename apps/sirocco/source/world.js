@@ -167,7 +167,10 @@ export class DesertWorld {
   }
 
   rebuildChunk(chunk) {
-    applyData(chunk.mesh, buildChunkData(chunk.cx, chunk.cz, this.quality.segments, this.sandPhysics, this.localReplacement));
+    // Fine 12 cm sand state is intentionally local-only. Sampling it into the
+    // metre-scale chunk grid aliases a single footprint into giant polygonal
+    // scars whenever the replacement hole moves or a chunk is recycled.
+    applyData(chunk.mesh, buildChunkData(chunk.cx, chunk.cz, this.quality.segments, null, this.localReplacement));
     this.positionChunk(chunk);
   }
 
