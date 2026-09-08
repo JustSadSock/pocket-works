@@ -29,7 +29,7 @@ def make_scale_image():
     img.pixels=px; img.pack(); return img
 
 def material(name,color,rough=.65,metal=.0,image=None,emission=None,alpha=1):
-    m=bpy.data.materials.new(name); m.diffuse_color=(*color,alpha); m.use_nodes=True
+    m=bpy.data.materials.new(name); m.diffuse_color=(*color,alpha); m.use_nodes=True; m.use_backface_culling=False
     bsdf=m.node_tree.nodes.get('Principled BSDF'); bsdf.inputs['Base Color'].default_value=(*color,1); bsdf.inputs['Roughness'].default_value=rough; bsdf.inputs['Metallic'].default_value=metal
     if image:
         tex=m.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=image; tex.interpolation='Linear'; m.node_tree.links.new(tex.outputs['Color'],bsdf.inputs['Base Color'])
@@ -66,40 +66,46 @@ def create_rig():
     add('Root',(0,1,0),(0,0,0));add('Spine',(0,.8,0),(0,-1.2,.12),'Root');add('Chest',(0,-1.2,.12),(0,-2.4,.38),'Spine');add('Neck1',(0,-2.4,.38),(0,-3.25,.65),'Chest');add('Neck2',(0,-3.25,.65),(0,-4.1,.72),'Neck1');add('Head',(0,-4.1,.72),(0,-5.15,.66),'Neck2')
     add('Tail1',(0,1.0,.02),(0,2.5,.0),'Root');add('Tail2',(0,2.5,0),(0,4.1,-.05),'Tail1');add('Tail3',(0,4.1,-.05),(0,5.65,-.12),'Tail2');add('Tail4',(0,5.65,-.12),(0,7.0,-.2),'Tail3')
     for side_name,side in (('L',-1),('R',1)):
-        add(f'Wing{side_name}1',(side*1.0,-1.75,.55),(side*4.1,-1.55,.78),'Chest');add(f'Wing{side_name}2',(side*4.1,-1.55,.78),(side*7.0,-.95,.55),f'Wing{side_name}1');add(f'Wing{side_name}3',(side*7.0,-.95,.55),(side*9.1,.25,.2),f'Wing{side_name}2')
-        add(f'FrontUpper{side_name}',(side*.78,-1.85,.15),(side*.9,-2.0,-1.05),'Chest');add(f'FrontLower{side_name}',(side*.9,-2.0,-1.05),(side*1.05,-2.35,-2.0),f'FrontUpper{side_name}');add(f'FrontFoot{side_name}',(side*1.05,-2.35,-2.0),(side*1.06,-2.85,-2.15),f'FrontLower{side_name}')
-        add(f'HindUpper{side_name}',(side*.88,.65,-.05),(side*1.15,1.0,-1.1),'Root');add(f'HindLower{side_name}',(side*1.15,1.0,-1.1),(side*1.1,.35,-2.0),f'HindUpper{side_name}');add(f'HindFoot{side_name}',(side*1.1,.35,-2.0),(side*1.15,-.3,-2.12),f'HindLower{side_name}')
+        add(f'Wing{side_name}1',(side*1.0,-1.75,.55),(side*4.2,-1.5,1.05),'Chest');add(f'Wing{side_name}2',(side*4.2,-1.5,1.05),(side*7.25,-.65,.78),f'Wing{side_name}1');add(f'Wing{side_name}3',(side*7.25,-.65,.78),(side*9.45,.72,.16),f'Wing{side_name}2')
+        add(f'FrontUpper{side_name}',(side*.78,-1.85,.15),(side*.98,-1.55,-.55),'Chest');add(f'FrontLower{side_name}',(side*.98,-1.55,-.55),(side*1.14,-.72,-.82),f'FrontUpper{side_name}');add(f'FrontFoot{side_name}',(side*1.14,-.72,-.82),(side*1.23,-.10,-.66),f'FrontLower{side_name}')
+        add(f'HindUpper{side_name}',(side*.88,.65,-.05),(side*1.18,1.24,-.52),'Root');add(f'HindLower{side_name}',(side*1.18,1.24,-.52),(side*1.13,2.02,-.76),f'HindUpper{side_name}');add(f'HindFoot{side_name}',(side*1.13,2.02,-.76),(side*1.20,2.52,-.56),f'HindLower{side_name}')
     bpy.ops.object.mode_set(mode='OBJECT');return rig
 
 def bind(obj,rig,bone):
     world=obj.matrix_world.copy();obj.parent=rig;obj.matrix_world=world;mod=obj.modifiers.new('AetherwingArmature','ARMATURE');mod.object=rig;g=obj.vertex_groups.new(name=bone);g.add(list(range(len(obj.data.vertices))),1,'REPLACE')
 
 def membrane(name,side,rig,mat):
-    pts=[(side*1.1,-1.72,.54),(side*4.15,-1.55,.77),(side*7.05,-.95,.54),(side*9.05,.25,.18),(side*5.8,.65,-.15),(side*3.0,-.1,.02)]
-    verts=pts;faces=[(0,1,5),(1,2,5),(2,4,5),(2,3,4)];me=bpy.data.meshes.new(name+'Mesh');me.from_pydata(verts,[],faces);me.update();o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);smooth(o,mat)
+    sn='L' if side<0 else 'R'
+    pts=[
+        (side*1.05,-1.76,.58),(side*4.22,-1.50,1.04),(side*7.27,-.65,.77),(side*9.46,.72,.16),
+        (side*7.15,1.48,-.92),(side*4.55,1.23,-1.27),(side*2.08,-.10,-.70)
+    ]
+    faces=[(0,1,6),(1,5,6),(1,2,5),(2,4,5),(2,3,4)];me=bpy.data.meshes.new(name+'Mesh');me.from_pydata(pts,[],faces);me.update();o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);smooth(o,mat)
     world=o.matrix_world.copy();o.parent=rig;o.matrix_world=world;mod=o.modifiers.new('AetherwingArmature','ARMATURE');mod.object=rig
-    weights=[f'Wing{side and ("L" if side<0 else "R")}1',f'Wing{("L" if side<0 else "R")}1',f'Wing{("L" if side<0 else "R")}2',f'Wing{("L" if side<0 else "R")}3',f'Wing{("L" if side<0 else "R")}2',f'Wing{("L" if side<0 else "R")}1']
+    weights=[f'Wing{sn}1',f'Wing{sn}1',f'Wing{sn}2',f'Wing{sn}3',f'Wing{sn}3',f'Wing{sn}2',f'Wing{sn}1']
     for idx,bone in enumerate(weights):
         g=o.vertex_groups.get(bone) or o.vertex_groups.new(name=bone);g.add([idx],1,'REPLACE')
-    sol=o.modifiers.new('Membrane thickness','SOLIDIFY');sol.thickness=.035;return o
+    sol=o.modifiers.new('Membrane thickness','SOLIDIFY');sol.thickness=.055;return o
 
 def build(rig):
-    scale_img=make_scale_image();scales=material('Deep green scales',(.17,.31,.21),.58,.02,scale_img);belly=material('Warm belly plates',(.38,.31,.17),.72);mem=material('Wing membrane',(.30,.20,.14),.6,.01,alpha=.96);horn=material('Horn and claw',(.20,.18,.14),.52);eye=material('Amber eyes',(.8,.35,.04),.26,emission=(1,.18,.02));dark=material('Dorsal scales',(.09,.18,.13),.7)
+    scale_img=make_scale_image();scales=material('Deep green scales',(.16,.32,.21),.55,.02,scale_img);belly=material('Warm belly plates',(.43,.34,.17),.70);mem=material('Wing membrane',(.36,.19,.12),.58,.01,alpha=1);horn=material('Horn and claw',(.20,.18,.14),.52);eye=material('Amber eyes',(.8,.35,.04),.26,emission=(1,.18,.02));dark=material('Dorsal scales',(.075,.16,.115),.7);vein=material('Wing veins',(.13,.12,.09),.66)
     parts=[]
     def add(o,b):parts.append((o,b));return o
-    add(uv('Dragon_Body',(0,0,.05),(1.55,3.0,1.18),scales,40,24),'Spine');add(uv('Dragon_Chest',(0,-1.6,.28),(1.72,1.75,1.35),scales,40,24),'Chest')
-    add(cone_between('Dragon_Neck1',(0,-2.0,.45),(0,-3.25,.66),.95,.65,scales,24),'Neck1');add(cone_between('Dragon_Neck2',(0,-3.2,.66),(0,-4.22,.73),.66,.50,scales,24),'Neck2')
-    add(uv('Dragon_Head',(0,-4.72,.69),(.82,1.08,.72),scales,36,22),'Head');add(uv('Dragon_Muzzle',(0,-5.55,.48),(.62,.82,.42),belly,32,18),'Head')
+    add(uv('Dragon_Body',(0,.05,.03),(1.48,3.15,1.12),scales,44,26),'Spine');add(uv('Dragon_Chest',(0,-1.65,.30),(1.75,1.72,1.38),scales,44,26),'Chest')
+    add(cone_between('Dragon_Neck1',(0,-2.0,.45),(0,-3.25,.66),.95,.65,scales,26),'Neck1');add(cone_between('Dragon_Neck2',(0,-3.2,.66),(0,-4.22,.73),.66,.50,scales,26),'Neck2')
+    add(uv('Dragon_Head',(0,-4.72,.69),(.84,1.10,.73),scales,40,24),'Head');add(uv('Dragon_Muzzle',(0,-5.58,.47),(.64,.84,.40),belly,34,20),'Head');add(uv('Dragon_Jaw',(0,-5.52,.22),(.56,.72,.22),dark,30,16),'Head')
     for side in (-1,1):
-        add(uv(f'Dragon_Eye_{side}',(side*.36,-5.08,1.02),(.10,.14,.10),eye,20,12),'Head');add(cone_between(f'Dragon_Horn_{side}',(side*.34,-4.55,1.26),(side*.56,-3.88,1.73),.16,.015,horn,12),'Head')
-    for i,(a,b,r1,r2,bone) in enumerate([((0,1.5,.02),(0,2.8,0),1.1,.82,'Tail1'),((0,2.7,0),(0,4.2,-.05),.84,.57,'Tail2'),((0,4.1,-.05),(0,5.7,-.12),.58,.32,'Tail3'),((0,5.6,-.12),(0,7.05,-.2),.34,.06,'Tail4')]):add(cone_between(f'Dragon_Tail_{i}',a,b,r1,r2,scales,24),bone)
+        add(uv(f'Dragon_Eye_{side}',(side*.37,-5.10,1.01),(.11,.145,.105),eye,20,12),'Head');add(cone_between(f'Dragon_Horn_{side}',(side*.34,-4.55,1.26),(side*.57,-3.86,1.76),.17,.015,horn,12),'Head');add(cone_between(f'Dragon_Brow_{side}',(side*.28,-5.00,1.16),(side*.58,-4.83,1.23),.13,.04,dark,12),'Head')
+    for i,(a,b,r1,r2,bone) in enumerate([((0,1.5,.02),(0,2.8,0),1.08,.80,'Tail1'),((0,2.7,0),(0,4.2,-.05),.82,.55,'Tail2'),((0,4.1,-.05),(0,5.7,-.12),.56,.30,'Tail3'),((0,5.6,-.12),(0,7.15,-.2),.32,.055,'Tail4')]):add(cone_between(f'Dragon_Tail_{i}',a,b,r1,r2,scales,26),bone)
     for side_name,side in (('L',-1),('R',1)):
-        add(cone_between(f'Dragon_WingArm_{side_name}1',(side*1.05,-1.75,.58),(side*4.2,-1.55,.8),.32,.22,scales,18),f'Wing{side_name}1');add(cone_between(f'Dragon_WingArm_{side_name}2',(side*4.1,-1.55,.78),(side*7.05,-.95,.55),.22,.15,scales,16),f'Wing{side_name}2');add(cone_between(f'Dragon_WingFinger_{side_name}',(side*7.0,-.95,.54),(side*9.1,.25,.18),.15,.04,horn,14),f'Wing{side_name}3');membrane(f'Dragon_WingMembrane_{side_name}',side,rig,mem)
-        for prefix,y,upper,lower,foot in [('Front',-1.7,f'FrontUpper{side_name}',f'FrontLower{side_name}',f'FrontFoot{side_name}'),('Hind',.75,f'HindUpper{side_name}',f'HindLower{side_name}',f'HindFoot{side_name}')]:
-            if prefix=='Front':a=(side*.75,-1.65,.1);b=(side*.9,-2.02,-1.05);c=(side*1.04,-2.35,-2.0);d=(side*1.06,-2.9,-2.12)
-            else:a=(side*.85,.7,-.08);b=(side*1.14,1.0,-1.1);c=(side*1.08,.34,-2.0);d=(side*1.18,-.32,-2.1)
-            add(cone_between(f'Dragon_{prefix}Upper_{side_name}',a,b,.33,.24,scales,18),upper);add(cone_between(f'Dragon_{prefix}Lower_{side_name}',b,c,.24,.15,scales,18),lower);add(cone_between(f'Dragon_{prefix}Foot_{side_name}',c,d,.16,.08,horn,14),foot)
-            for claw in (-.16,0,.16):add(cone_between(f'Dragon_{prefix}Claw_{side_name}_{claw}',d,(d[0]+side*claw,d[1]-.35,d[2]-.08),.055,.006,horn,10),foot)
+        p0=(side*1.05,-1.76,.58);p1=(side*4.22,-1.50,1.04);p2=(side*7.27,-.65,.77);p3=(side*9.46,.72,.16);t1=(side*4.55,1.23,-1.27);t2=(side*7.15,1.48,-.92)
+        add(cone_between(f'Dragon_WingArm_{side_name}1',p0,p1,.36,.23,scales,20),f'Wing{side_name}1');add(cone_between(f'Dragon_WingArm_{side_name}2',p1,p2,.24,.155,scales,18),f'Wing{side_name}2');add(cone_between(f'Dragon_WingFinger_{side_name}',p2,p3,.16,.035,horn,14),f'Wing{side_name}3')
+        add(cone_between(f'Dragon_WingRib_{side_name}A',p1,t1,.105,.025,vein,12),f'Wing{side_name}2');add(cone_between(f'Dragon_WingRib_{side_name}B',p2,t2,.09,.018,vein,12),f'Wing{side_name}3');membrane(f'Dragon_WingMembrane_{side_name}',side,rig,mem)
+        for prefix,upper,lower,foot in [('Front',f'FrontUpper{side_name}',f'FrontLower{side_name}',f'FrontFoot{side_name}'),('Hind',f'HindUpper{side_name}',f'HindLower{side_name}',f'HindFoot{side_name}')]:
+            if prefix=='Front':a=(side*.76,-1.68,.10);b=(side*.98,-1.55,-.55);c=(side*1.14,-.72,-.82);d=(side*1.23,-.10,-.66)
+            else:a=(side*.86,.70,-.06);b=(side*1.18,1.24,-.52);c=(side*1.13,2.02,-.76);d=(side*1.20,2.52,-.56)
+            add(cone_between(f'Dragon_{prefix}Upper_{side_name}',a,b,.34,.25,scales,18),upper);add(cone_between(f'Dragon_{prefix}Lower_{side_name}',b,c,.25,.15,scales,18),lower);add(cone_between(f'Dragon_{prefix}Foot_{side_name}',c,d,.16,.075,horn,14),foot)
+            for claw in (-.14,0,.14):add(cone_between(f'Dragon_{prefix}Claw_{side_name}_{claw}',d,(d[0]+side*claw,d[1]+.30,d[2]-.04),.05,.006,horn,10),foot)
     for i,y in enumerate([1.8,1.15,.5,-.2,-.9,-1.55,-2.18,-2.8,-3.45]):
         z=1.1+(.35 if i>4 else .2);bone='Tail1' if y>1.2 else 'Spine' if y>-.8 else 'Chest' if y>-2.4 else 'Neck1';add(cone_between(f'Dragon_Dorsal_{i}',(0,y,z),(0,y,z+.55-(i*.02)),.17,.01,dark,10),bone)
     for o,b in parts:bind(o,rig,b)
