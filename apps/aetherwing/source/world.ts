@@ -68,17 +68,17 @@ function biomeColor(x:number,z:number,h:number){
 }
 
 const waterVertex=`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;uniform float time;varying vec3 vPos;void main(){vec3 p=position;p.y+=sin(p.x*.031+time*.82)*.11+sin(p.z*.047-time*.59)*.07;vPos=p;gl_Position=worldViewProjection*vec4(p,1.0);}`;
-const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){float a=vPos.x*.031+time*.67;float b=vPos.z*.047-time*.39;vec3 n=normalize(vec3(-.058*cos(a),1.0,-.048*cos(b)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.4);float flow=.5+.5*sin(vPos.x*.071+vPos.z*.012-time*1.17);vec3 shallow=vec3(.105,.36,.40),deep=vec3(.024,.145,.215);vec3 c=mix(shallow,deep,.43)+f*vec3(.30,.42,.45)+flow*.009;gl_FragColor=vec4(c,.93);}`;
+const waterFragment=`precision highp float;varying vec3 vPos;uniform float time;uniform vec3 cameraPosition;void main(){float a=vPos.x*.031+time*.67;float b=vPos.z*.047-time*.39;vec3 n=normalize(vec3(-.058*cos(a),1.0,-.048*cos(b)));vec3 v=normalize(cameraPosition-vPos);float f=pow(1.0-max(dot(n,v),0.0),3.4);float flow=.5+.5*sin(vPos.x*.071+vPos.z*.012-time*1.17);vec3 shallow=vec3(.105,.36,.40),deep=vec3(.024,.145,.215);vec3 c=mix(shallow,deep,.43)+f*vec3(.30,.42,.45)+flow*.009;gl_FragColor=vec4(c,1.0);}`;
 
 export class WorldStreamer{
-  readonly scene:Scene;readonly chunks=new Map<string,Chunk>();readonly water:ShaderMaterial;readonly templates:Templates={};
+  readonly scene:Scene;readonly chunks=new Map<string,Chunk>();readonly rivers=new Map<number,Mesh>();readonly water:ShaderMaterial;readonly templates:Templates={};
   private terrainMaterial:StandardMaterial;
   private firDark:Mesh;private firBlue:Mesh;private oak:Mesh;private aspen:Mesh;private rock:Mesh;private flower:Mesh;private shrub:Mesh;
   private quality=1;private lastCenter='';private lastRadius=-1;private nextChunkBuild=0;
   constructor(scene:Scene){
     this.scene=scene;
     this.terrainMaterial=new StandardMaterial('terrainMat',scene);this.terrainMaterial.diffuseColor=Color3.White();this.terrainMaterial.specularColor=new Color3(.014,.018,.010);this.terrainMaterial.specularPower=20;this.terrainMaterial.backFaceCulling=false;this.terrainMaterial.emissiveColor=new Color3(.042,.050,.027);this.terrainMaterial.ambientColor=new Color3(.24,.27,.18);
-    this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:true});this.water.backFaceCulling=false;this.water.alpha=.93;
+    this.water=new ShaderMaterial('naturalWater',scene,{vertexSource:waterVertex,fragmentSource:waterFragment},{attributes:['position'],uniforms:['worldViewProjection','time','cameraPosition'],needAlphaBlending:false});this.water.backFaceCulling=false;this.water.alpha=1;
     this.firDark=this.makeFir('firDark',new Color3(.095,.235,.125),0);
     this.firBlue=this.makeFir('firBlue',new Color3(.12,.27,.215),1);
     this.oak=this.makeBroad('oak',new Color3(.235,.39,.16),0);
@@ -92,7 +92,7 @@ export class WorldStreamer{
   get instanceCount(){let n=0;for(const [,c] of this.chunks)n+=c.instances.length;return n;}
   get treeCount(){let n=0;for(const [,c] of this.chunks)n+=c.treeCount;return n;}
   get materialsHealthy(){return this.scene.materials.includes(this.terrainMaterial)&&this.scene.materials.includes(this.water);}
-  get riverMeshCount(){return this.scene.meshes.filter(m=>m.name.startsWith('river_')&&m.isEnabled()).length;}
+  get riverMeshCount(){return this.rivers.size;}
   async loadTemplates(){
     try{
       const r=await SceneLoader.ImportMeshAsync(null,'./models/','biome_props.glb',this.scene);
@@ -114,6 +114,8 @@ export class WorldStreamer{
     const cx=Math.floor((position.x+HALF_CHUNK)/CHUNK),cz=Math.floor((position.z+HALF_CHUNK)/CHUNK),center=`${cx}:${cz}`;
     this.water.setFloat('time',time);this.water.setVector3('cameraPosition',this.scene.activeCamera?.position??position);
     const wanted=new Set<string>(),queue:{cx:number;cz:number;dist:number}[]=[];const radius=this.quality>.76?2:1;
+    const wantedRiverXs=new Set<number>();for(let dx=-radius;dx<=radius;dx++){const rx=cx+dx;wantedRiverXs.add(rx);if(!this.rivers.has(rx))this.rivers.set(rx,this.createRiver(rx));}
+    for(const [rx,river] of this.rivers)if(!wantedRiverXs.has(rx)){river.dispose(false,false);this.rivers.delete(rx);}
     for(let dz=-radius;dz<=radius;dz++)for(let dx=-radius;dx<=radius;dx++){const key=`${cx+dx}:${cz+dz}`;wanted.add(key);if(!this.chunks.has(key))queue.push({cx:cx+dx,cz:cz+dz,dist:Math.hypot(dx,dz)});}
     queue.sort((a,b)=>a.dist-b.dist);
     if(queue.length&&time>=this.nextChunkBuild){const budget=this.chunks.size===0?4:1;for(const q of queue.slice(0,budget))this.createChunk(q.cx,q.cz,q.dist<1.25);this.nextChunkBuild=time+.045;}
@@ -128,7 +130,6 @@ export class WorldStreamer{
     for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){const wx=baseX+(x/(grid-1)-.5)*CHUNK,wz=baseZ+(z/(grid-1)-.5)*CHUNK,h=terrainHeight(wx,wz),c=biomeColor(wx,wz,h);positions.push(wx,h,wz);colors.push(c.r,c.g,c.b,1);}
     for(let z=0;z<grid-1;z++)for(let x=0;x<grid-1;x++){const a=z*grid+x,b=a+1,c=a+grid,d=c+1;indices.push(a,c,b,b,c,d);}
     VertexData.ComputeNormals(positions,indices,normals);const mesh=new Mesh(`terrain_${key}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh);mesh.material=this.terrainMaterial;mesh.useVertexColors=true;mesh.receiveShadows=true;mesh.isPickable=false;mesh.parent=root;mesh.freezeWorldMatrix();
-    const ownerCz=Math.floor((riverCenter(baseX)+HALF_CHUNK)/CHUNK);if(cz===ownerCz){const river=this.createRiver(cx);river.parent=root;}
     this.createLakes(cx,cz,root);
     const instances:InstancedMesh[]=[];const treeCount=this.scatter(cx,cz,root,instances,near?1:.29);
     this.chunks.set(key,{key,cx,cz,root,instances,treeCount});
@@ -141,7 +142,7 @@ export class WorldStreamer{
       positions.push(x,h,z-half,x,h,z+half);
       if(i<seg-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
     }
-    const mesh=new Mesh(`river_${cx}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.receiveShadows=false;mesh.isPickable=false;return mesh;
+    const mesh=new Mesh(`river_${cx}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.receiveShadows=false;mesh.isPickable=false;mesh.renderingGroupId=1;return mesh;
   }
   private createLakes(cx:number,cz:number,root:TransformNode){
     const minX=cx*CHUNK-HALF_CHUNK,maxX=cx*CHUNK+HALF_CHUNK,minZ=cz*CHUNK-HALF_CHUNK,maxZ=cz*CHUNK+HALF_CHUNK,l0=Math.floor(minX/LAKE_CELL)-1,l1=Math.floor(maxX/LAKE_CELL)+1,z0=Math.floor(minZ/LAKE_CELL)-1,z1=Math.floor(maxZ/LAKE_CELL)+1;
@@ -149,7 +150,7 @@ export class WorldStreamer{
       const lake=lakeSpec(lx,lz);if(!lake||lake.x<minX||lake.x>=maxX||lake.z<minZ||lake.z>=maxZ)continue;
       const seg=56,positions=[lake.x,lake.level+.24,lake.z],indices:number[]=[];
       for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;positions.push(lake.x+Math.cos(a)*lake.r,lake.level+.24,lake.z+Math.sin(a)*lake.r);if(i>0)indices.push(0,i,i+1);}
-      const mesh=new Mesh(`lake_${lx}_${lz}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.parent=root;mesh.isPickable=false;
+      const mesh=new Mesh(`lake_${lx}_${lz}`,this.scene),vd=new VertexData();vd.positions=positions;vd.indices=indices;vd.applyToMesh(mesh);mesh.material=this.water;mesh.parent=root;mesh.isPickable=false;mesh.renderingGroupId=1;
     }
   }
   private scatter(cx:number,cz:number,root:TransformNode,out:InstancedMesh[],density:number){
