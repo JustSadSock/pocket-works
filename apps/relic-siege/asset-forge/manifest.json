@@ -9,6 +9,20 @@
       "requireAnimation": false
     },
     {
+      "name": "keeper",
+      "script": "keeper.py",
+      "output": "public/models/keeper.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "ash-raider",
+      "script": "raider.py",
+      "output": "public/models/ash-raider.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
       "name": "ash-warden",
       "script": "warden.py",
       "output": "public/models/ash-warden.glb",
