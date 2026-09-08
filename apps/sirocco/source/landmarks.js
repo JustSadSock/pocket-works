@@ -34,8 +34,16 @@ export class DesertLandmarks {
 
       for (let index = 0; index < PLACEMENTS.length; index += 1) {
         const placement = PLACEMENTS[index];
-        const instance = this.template.clone(`sirocco-landmark-${index}`, null, true);
+        // TransformNode.clone's third parameter means doNotCloneChildren.
+        // Leaving it false is essential: otherwise CI sees five empty roots
+        // while none of the Blender-authored geometry actually reaches the scene.
+        const instance = this.template.clone(`sirocco-landmark-${index}`, null, false);
         instance.setEnabled(true);
+        for (const child of instance.getChildMeshes(false)) {
+          child.setEnabled(true);
+          child.isPickable = false;
+          child.receiveShadows = false;
+        }
         instance.scaling.setAll(placement.scale);
         instance.rotation.y = placement.yaw;
         this.instances.push({ root: instance, placement });
@@ -43,7 +51,6 @@ export class DesertLandmarks {
       this.updateOrigin(this.offsetX, this.offsetZ);
       return true;
     } catch (error) {
-      // The app remains playable while Asset Forge is generating the GLB on a fresh branch.
       console.warn('[SIROCCO] Blender landmark asset unavailable; continuing with dunes only.', error);
       return false;
     }
@@ -59,7 +66,7 @@ export class DesertLandmarks {
         ?? 0;
       root.position.copyFrom(new Vector3(
         placement.x - offsetX,
-        ground - 0.24 * placement.scale,
+        ground - 0.12 * placement.scale,
         placement.z - offsetZ
       ));
     }
