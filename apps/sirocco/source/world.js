@@ -10,7 +10,10 @@ export function appendBabylonGroundCell(indices, a, b, d, e) {
 
 function insideReplacementCell(gx, gz, replacement, coarseStep) {
   if (!replacement || !Number.isFinite(replacement.x)) return false;
-  const safeRadius = Math.max(0, replacement.halfExtent - coarseStep * 0.72);
+  // Keep only a narrow overlap ring. The previous 0.72-cell shrink left nearly
+  // a metre of duplicate terrain under the physical patch and made its render
+  // radius visible at grazing angles.
+  const safeRadius = Math.max(0, replacement.halfExtent - coarseStep * 0.12);
   const dx = gx - replacement.x;
   const dz = gz - replacement.z;
   return dx * dx + dz * dz < safeRadius * safeRadius;
@@ -23,7 +26,7 @@ function buildChunkData(cx, cz, segments, deformation = null, replacement = null
   const uvs = new Array(verts * 2);
   const colors = new Array(verts * 4);
   const indices = [];
-  let p = 0, uv = 0, c = 0;
+  let p = 0, nPtr = 0, uv = 0, c = 0;
   const baseX = cx * CHUNK_SIZE;
   const baseZ = cz * CHUNK_SIZE;
 
@@ -41,6 +44,10 @@ function buildChunkData(cx, cz, segments, deformation = null, replacement = null
       const slope = 1 - n.y;
       const brightness = clamp(0.96 + variation * 0.035 - slope * 0.13, 0.84, 1.05);
       positions[p] = lx; positions[p + 1] = y; positions[p + 2] = lz; p += 3;
+      // Use the authored smooth dune normal rather than recomputing normals from
+      // the metre-scale chunk triangles. This removes faceted lighting and gives
+      // the high-detail physical replacement the same untouched normal field.
+      normals[nPtr] = n.x; normals[nPtr + 1] = n.y; normals[nPtr + 2] = n.z; nPtr += 3;
       uvs[uv] = gx * 0.055; uvs[uv + 1] = gz * 0.055; uv += 2;
       colors[c] = brightness; colors[c + 1] = brightness * 0.995; colors[c + 2] = brightness * 0.975; colors[c + 3] = 1; c += 4;
     }
@@ -57,7 +64,6 @@ function buildChunkData(cx, cz, segments, deformation = null, replacement = null
       appendBabylonGroundCell(indices, a, b, d, e);
     }
   }
-  VertexData.ComputeNormals(positions, indices, normals);
   return { positions, normals, uvs, colors, indices };
 }
 
