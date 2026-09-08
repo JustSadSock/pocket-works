@@ -5,13 +5,13 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'BELLFORGE // THE LAST CHIME';
-const version = '1.1.0';
+const version = '1.1.1';
 const storageNamespace = 'pocket-works:bellforge-last-chime';
 const releaseNotes = [
+  'Новый cache/fingerprint boundary гарантированно отделяет этот релиз от 1.1.0 после исправления iOS update-convergence.',
   'Исправлено инвертированное управление камерой и улучшена точность touch-look.',
   'Landscape HUD, safe-area и двухручные зоны управления переработаны для iPhone.',
-  'Blender-персонажи получили расширенный риг, дополнительные детали и более живые циклы движения и жестов.',
-  'Усилены tactile-состояния управления, floating joystick и читаемость взаимодействий.'
+  'Blender-персонажи, механизмы и мобильный render path получили финальный production pass.'
 ];
 
 const runtime = installMobileRuntime();
