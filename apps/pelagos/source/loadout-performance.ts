@@ -151,15 +151,17 @@ function applyLoadoutCorrection(
   state.velocityX += (forwardX * forwardCorrection + rightX * sideCorrection) * correctionScale;
   state.velocityZ += (forwardZ * forwardCorrection + rightZ * sideCorrection) * correctionScale;
 
-  document.documentElement.dataset.pelagosPerformance = [
-    profile.scores.speed,
-    profile.scores.agility,
-    profile.scores.seakeeping,
-    profile.scores.rowing
-  ].join('-');
-  document.documentElement.dataset.pelagosSailArea = profile.sailArea.toFixed(3);
-  document.documentElement.dataset.pelagosOarPower = profile.oarPower.toFixed(3);
-  document.documentElement.dataset.pelagosTurnResponse = profile.turnResponse.toFixed(3);
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.pelagosPerformance = [
+      profile.scores.speed,
+      profile.scores.agility,
+      profile.scores.seakeeping,
+      profile.scores.rowing
+    ].join('-');
+    document.documentElement.dataset.pelagosSailArea = profile.sailArea.toFixed(3);
+    document.documentElement.dataset.pelagosOarPower = profile.oarPower.toFixed(3);
+    document.documentElement.dataset.pelagosTurnResponse = profile.turnResponse.toFixed(3);
+  }
 }
 
 const prototype = ShipDynamics.prototype as typeof ShipDynamics.prototype & { __pelagosLoadoutPerformanceV1?: boolean };
