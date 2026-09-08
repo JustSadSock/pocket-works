@@ -3,12 +3,6 @@ import { clamp, smoothstep } from './core.js';
 import { terrainNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
-const LIGHT_TO_SURFACE = (() => {
-  const x = 0.44, y = 0.52, z = -0.73;
-  const inv = 1 / Math.hypot(x, y, z);
-  return { x: x * inv, y: y * inv, z: z * inv };
-})();
-
 export class LocalSandSurface {
   constructor(scene, world, sand, material, preset) {
     this.scene = scene;
@@ -108,14 +102,11 @@ export class LocalSandSurface {
         uvs[uv + 1] = gz * 0.055;
         uv += 2;
 
-        // Base chroma contrast: compressed sand is darker and slightly redder,
-        // displaced dry rims are a touch lighter. A second directional pass is
-        // applied after normals are known so this remains stable and local.
-        const compact = smoothstep(0.004, 0.070, -deformation);
+        const compact = smoothstep(0.0035, 0.065, -deformation);
         const deposit = smoothstep(0.004, 0.052, deformation);
-        colors[c] = 1 - compact * 0.105 + deposit * 0.020;
-        colors[c + 1] = 1 - compact * 0.135 + deposit * 0.014;
-        colors[c + 2] = 1 - compact * 0.175 + deposit * 0.006;
+        colors[c] = 1 - compact * 0.14 + deposit * 0.035;
+        colors[c + 1] = 1 - compact * 0.18 + deposit * 0.026;
+        colors[c + 2] = 1 - compact * 0.24 + deposit * 0.012;
         colors[c + 3] = 1;
         c += 4;
         vertex += 1;
@@ -145,8 +136,6 @@ export class LocalSandSurface {
         const base = terrainNormal(gx, gz, 0.42);
         const ni = i * 3;
 
-        // Preserve high-res normals through the physical footprint itself, but
-        // fade them to the procedural dune normal before the patch boundary.
         const edgeBlend = smoothstep(0.70, 0.91, r);
         if (edgeBlend > 0) {
           let nx = normals[ni] + (base.x - normals[ni]) * edgeBlend;
@@ -158,14 +147,12 @@ export class LocalSandSurface {
           normals[ni + 2] = nz * inv;
         }
 
-        // Stable pseudo self-shadow: compare the deformed normal to the base
-        // dune under the same sun. Only local loss of direct light darkens the
-        // albedo, so untouched terrain and the render-radius edge stay identical.
-        const localLambert = Math.max(0, normals[ni] * LIGHT_TO_SURFACE.x + normals[ni + 1] * LIGHT_TO_SURFACE.y + normals[ni + 2] * LIGHT_TO_SURFACE.z);
-        const baseLambert = Math.max(0, base.x * LIGHT_TO_SURFACE.x + base.y * LIGHT_TO_SURFACE.y + base.z * LIGHT_TO_SURFACE.z);
-        const directionalShade = clamp((baseLambert - localLambert) * 0.72, 0, 0.24);
-        const cavity = smoothstep(0.006, 0.060, -deformations[i]) * 0.11;
-        const shade = 1 - directionalShade - cavity;
+        // Stable cavity AO only. Directional light is left to Babylon's real
+        // PBR normal lighting; adding another normal-based shadow here created
+        // long polygonal wedges on the 64x64 mobile mesh. This term depends only
+        // on actual negative displacement, so it cannot reveal the patch radius.
+        const cavity = smoothstep(0.004, 0.058, -deformations[i]);
+        const shade = 1 - cavity * 0.16;
         const ci = i * 4;
         colors[ci] *= shade;
         colors[ci + 1] *= shade;
