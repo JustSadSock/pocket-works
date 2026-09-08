@@ -22,3 +22,7 @@ The visual language is painterly industrial fantasy: oxidized teal copper, warm 
 `asset-forge/manifest.json` generates separate environment, machinery, citizen and Warden GLBs. Scripts author hand-painted PBR materials, collision proxies, armatures and named animation actions, then Asset Forge validates the GLB round trip before Babylon consumes them.
 
 Runtime primitives are limited to invisible collision helpers, particles and resilient fallback geometry. The primary world, mechanisms and characters remain Blender-authored content.
+
+## Mobile rendering
+
+The environment is authored as hundreds of convenient Blender objects, then the forge batches static decoration by material and street zone before export. Collision proxies, animated flags, mechanisms and interactable pieces remain independent. This preserves the authored geometry and material variety while reducing the city GLB from 519 meshes to 91 and keeping mobile draw-call cost predictable. Phone-sized viewports also use the conservative shadow/particle tier regardless of reported logical CPU core count.
