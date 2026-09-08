@@ -25,6 +25,9 @@ type ExperienceRig = {
 type QaSnapshot = {
   shipAsset: string;
   speedKnots: number;
+  forwardSpeedKnots: number;
+  headingDegrees: number;
+  rudderDegrees: number;
   sailEfficiency: number;
   apparentWind: number;
   heelDegrees: number;
@@ -162,6 +165,9 @@ function updateQaBridge(
   qaWindow.__POCKET_WORKS_TEST_STATE__ = {
     shipAsset: document.documentElement.dataset.pelagosShipAsset ?? 'loading',
     speedKnots: Number((telemetry.speed * 1.94384).toFixed(3)),
+    forwardSpeedKnots: Number((telemetry.forwardSpeed * 1.94384).toFixed(3)),
+    headingDegrees: Number((((state.yaw / DEG) % 360 + 360) % 360).toFixed(2)),
+    rudderDegrees: Number((state.rudder / DEG).toFixed(2)),
     sailEfficiency: Number(telemetry.sailEfficiency.toFixed(3)),
     apparentWind: Number(telemetry.apparentWindSpeed.toFixed(3)),
     heelDegrees: Number((state.roll / DEG).toFixed(2)),
