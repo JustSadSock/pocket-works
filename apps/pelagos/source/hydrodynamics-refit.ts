@@ -20,9 +20,6 @@ const frames = new WeakMap<ShipDynamics, HydroFrame>();
 const DEG = Math.PI / 180;
 
 function hullResponse(wavelength: number, hullLength: number): number {
-  // A displacement hull should ride the broad swell and cut through short chop. The old linear
-  // response still let 4-7 m waves pitch a 13 m hull too aggressively, which was most visible as
-  // the transom being lifted clear of the sea. This curve deliberately attenuates sub-hull chop.
   const ratio = wavelength / Math.max(1, hullLength);
   return clamp(Math.pow(Math.max(0, ratio), 1.22) * 1.14, 0.055, 1);
 }
@@ -120,11 +117,16 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   const sternPlaneVelocity = stern.velocityY * 0.28 + sternInner.velocityY * 0.72;
 
   const targetY = meanHeight + waterlineCenterY;
-  let pitchPlane = Math.atan2(bowPlaneHeight - sternPlaneHeight, length * 0.80);
-  // Negative pitch is stern-up in PELAGOS. A real long cutter does not follow a stern crest like
-  // a rigid plank; the immersed volume and inertia keep the transom coupled to the surrounding sea.
-  if (pitchPlane < 0) pitchPlane *= 0.58;
-  const targetPitch = clamp(pitchPlane, -4.6 * DEG, 7.8 * DEG);
+
+  // Babylon rotation.x raises the stern when pitch is positive and raises the bow when pitch is
+  // negative. The previous refit used the opposite sign, so a crest under the bow could command
+  // the renderer to lift the transom. Derive pitch in the same convention as the actual transform.
+  let pitchPlane = Math.atan2(sternPlaneHeight - bowPlaneHeight, length * 0.80);
+  // Stern-up motion is the visually dangerous direction for a displacement cutter, so it follows
+  // local wave slope less aggressively than bow-up motion.
+  if (pitchPlane > 0) pitchPlane *= 0.56;
+  const targetPitch = clamp(pitchPlane, -7.8 * DEG, 4.6 * DEG);
+
   const waveRoll = clamp(Math.atan2(port.height - starboard.height, beam * 0.82), -9.5 * DEG, 9.5 * DEG);
   const retainedHeel = clamp(state.roll - waveRoll, -8.0 * DEG, 8.0 * DEG) * 0.55;
   const targetRoll = waveRoll + retainedHeel;
@@ -144,23 +146,23 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
     state.verticalVelocity = Math.min(state.verticalVelocity, 0.06);
   }
 
-  // Compare the nominal stern waterline against the locally filtered water plane. This is a
-  // geometric guard, not just an angle clamp: if the transom actually starts leaving the sea,
-  // stern-up pitch is rapidly damped back toward the water instead of waiting for the next swell.
-  const sternReferenceY = state.y - waterlineCenterY + (-length * 0.40) * Math.sin(state.pitch);
+  // For a stern point at negative local Z, Babylon's X rotation adds +L*sin(pitch) to world Y.
+  // Compare that actual geometric stern waterline with the local filtered water plane. This catches
+  // the transom leaving the sea even if the global heave remains perfectly reasonable.
+  const sternReferenceY = state.y - waterlineCenterY + length * 0.40 * Math.sin(state.pitch);
   const sternGap = sternReferenceY - sternPlaneHeight;
-  const sternLiftGuard = clamp((sternGap - 0.10) / 0.28, 0, 1);
-  const guardedTargetPitch = targetPitch < 0
-    ? targetPitch * (1 - sternLiftGuard * 0.78)
+  const sternLiftGuard = clamp((sternGap - 0.08) / 0.24, 0, 1);
+  const guardedTargetPitch = targetPitch > 0
+    ? targetPitch * (1 - sternLiftGuard * 0.84)
     : targetPitch;
 
-  let desiredPitchVelocity = (bowPlaneVelocity - sternPlaneVelocity) / Math.max(2, length * 0.80);
-  if (desiredPitchVelocity < 0) desiredPitchVelocity *= 0.52;
-  const pitchVelocityTarget = desiredPitchVelocity + (guardedTargetPitch - state.pitch) * (1.42 + sternLiftGuard * 1.5);
-  state.pitchVelocity = smoothTo(state.pitchVelocity, pitchVelocityTarget, (3.45 + sternLiftGuard * 3.8) / massFactor, safeDt);
-  state.pitchVelocity = clamp(state.pitchVelocity, -0.13 / massFactor, 0.20 / massFactor);
-  state.pitch = smoothTo(state.pitch, guardedTargetPitch, 0.62 / massFactor + sternLiftGuard * 3.4, safeDt);
-  state.pitch = clamp(state.pitch, -5.0 * DEG, 9.5 * DEG);
+  let desiredPitchVelocity = (sternPlaneVelocity - bowPlaneVelocity) / Math.max(2, length * 0.80);
+  if (desiredPitchVelocity > 0) desiredPitchVelocity *= 0.50;
+  const pitchVelocityTarget = desiredPitchVelocity + (guardedTargetPitch - state.pitch) * (1.42 + sternLiftGuard * 1.8);
+  state.pitchVelocity = smoothTo(state.pitchVelocity, pitchVelocityTarget, (3.45 + sternLiftGuard * 4.2) / massFactor, safeDt);
+  state.pitchVelocity = clamp(state.pitchVelocity, -0.20 / massFactor, 0.12 / massFactor);
+  state.pitch = smoothTo(state.pitch, guardedTargetPitch, 0.62 / massFactor + sternLiftGuard * 3.8, safeDt);
+  state.pitch = clamp(state.pitch, -9.5 * DEG, 5.0 * DEG);
 
   const desiredRollVelocity = ((port.velocityY - starboard.velocityY) / Math.max(1.5, beam * 0.82))
     + (targetRoll - state.roll) * 1.10;
