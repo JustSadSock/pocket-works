@@ -89,7 +89,10 @@ export function createBellforgeAudio() {
     return context;
   }
 
-  function tone({ frequency = 220, duration = 0.1, gain = 0.08, type = 'sine', detune = 0, filter = 2800, pan = 0, attack = 0.008 } = {}) {
+  function tone({
+    frequency = 220, duration = 0.1, gain = 0.08, type = 'sine', detune = 0,
+    filter = 2800, pan = 0, attack = 0.008
+  } = {}) {
     const ctx = ensure();
     if (!ctx || !master) return;
     const osc = ctx.createOscillator();
@@ -156,6 +159,19 @@ export function createBellforgeAudio() {
     setTimeout(() => tone({ frequency: 176 + Math.random() * 20, duration: 0.09, gain: 0.042, type: 'triangle', filter: 1800, pan }), 26);
   }
 
+  function note(step = 0, pan = 0, gain = 0.045) {
+    const value = ((Math.trunc(Number(step) || 0) % 8) + 8) % 8;
+    const frequency = 146.83 * Math.pow(2, value / 12);
+    tone({ frequency, duration: 0.28, gain, type: 'sine', filter: 3600, pan, attack: 0.006 });
+    tone({ frequency: frequency * 2, duration: 0.18, gain: gain * 0.22, type: 'triangle', filter: 4200, pan, attack: 0.004 });
+  }
+
+  function chord(values = [2,5,1], power = 0.62) {
+    values.slice(0,3).forEach((value,index) => {
+      setTimeout(() => note(value,(index-1)*0.3,0.045*clamp01(power)),index*42);
+    });
+  }
+
   function resonance(power = 1, pan = 0) {
     const p = clamp01(power);
     for (const [frequency, delay, gain] of [[330,0,0.075],[495,24,0.055],[660,48,0.032]]) {
@@ -183,13 +199,20 @@ export function createBellforgeAudio() {
     const ctx = ensure();
     if (!ctx || !master) return;
     tone({ frequency: 61, duration: 2.7, gain: 0.075, type: 'sawtooth', filter: 310 });
-    [260, 720, 1180, 1660, 2140].forEach((delay, index) => setTimeout(() => mechanism(index % 2 ? 0.25 : -0.25), delay));
+    [260, 720, 1180, 1660, 2140].forEach((delay, index) => {
+      setTimeout(() => mechanism(index % 2 ? 0.25 : -0.25), delay);
+    });
   }
 
   function bell() {
-    const partials = [[92,3.6,0.13],[184.4,3,0.085],[276.8,2.6,0.058],[367.2,2.2,0.044],[515.5,1.8,0.031],[689,1.45,0.021]];
+    const partials = [
+      [92, 3.6, 0.13], [184.4, 3.0, 0.085], [276.8, 2.6, 0.058],
+      [367.2, 2.2, 0.044], [515.5, 1.8, 0.031], [689, 1.45, 0.021]
+    ];
     noiseBurst({ duration: 0.12, gain: 0.12, frequency: 620, q: 0.45 });
-    partials.forEach(([frequency, duration, gain], index) => setTimeout(() => tone({ frequency, duration, gain, type: 'sine', filter: 6200, detune: index % 2 ? 3 : -2, attack: 0.004 }), index * 12));
+    partials.forEach(([frequency, duration, gain], index) => {
+      setTimeout(() => tone({ frequency, duration, gain, type: 'sine', filter: 6200, detune: index % 2 ? 3 : -2, attack: 0.004 }), index * 12);
+    });
   }
 
   return {
@@ -202,6 +225,8 @@ export function createBellforgeAudio() {
     step,
     mechanism,
     resonance,
+    note,
+    chord,
     voice,
     alarm,
     lift,
