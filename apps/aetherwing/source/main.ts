@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { FlightAudio } from './audio';
 import { makeFlightState, stepFlight, terrainSafeAltitude } from './core';
 import { DragonRig } from './dragon';
+import { FaunaSystem } from './fauna';
 import { createControls } from './input';
 import { WorldStreamer } from './world';
 
@@ -21,9 +22,9 @@ const skyFragment=`precision highp float;varying vec3 v;void main(){float h=clam
 const sky=MeshBuilder.CreateSphere('sky',{diameter:3600,segments:18,sideOrientation:1},scene);const skyMat=new ShaderMaterial('skyMat',scene,{vertexSource:skyVertex,fragmentSource:skyFragment},{attributes:['position'],uniforms:['worldViewProjection']});skyMat.backFaceCulling=false;sky.material=skyMat;sky.infiniteDistance=true;sky.isPickable=false;
 
 const camera=new FreeCamera('camera',new Vector3(0,205,-24),scene);camera.minZ=.35;camera.maxZ=4200;camera.fov=.92;scene.activeCamera=camera;
-const state=makeFlightState();const controls=createControls(touch);const audio=new FlightAudio();const world=new WorldStreamer(scene);const dragon=new DragonRig(scene);
+const state=makeFlightState();const controls=createControls(touch);const audio=new FlightAudio();const world=new WorldStreamer(scene);const dragon=new DragonRig(scene);const fauna=new FaunaSystem(scene);
 let lookYaw=0,lookPitch=.06;let started=false,last=performance.now(),fpsEMA=60,quality=1,frameCount=0;
-const qaState={version:'1.0.0',loadingState:'booting',started:false,dragonReady:false,usedFallback:false,animationGroups:0,boneCount:0,chunks:0,mode:state.mode,speed:state.speed,altitude:0,position:{...state.position},pitch:state.pitch,roll:state.roll,yaw:state.yaw,quality,assetErrors:[] as string[]};
+const qaState={version:'1.0.0',loadingState:'booting',started:false,dragonReady:false,usedFallback:false,animationGroups:0,boneCount:0,chunks:0,fauna:fauna.activeCount,mode:state.mode,speed:state.speed,altitude:0,position:{...state.position},pitch:state.pitch,roll:state.roll,yaw:state.yaw,quality,assetErrors:[] as string[]};
 (window as typeof window & {__AI_TEST_STATE__?:typeof qaState}).__AI_TEST_STATE__=qaState;
 
 type WindStreak={line:LinesMesh;side:number;lift:number;depth:number;phase:number};
@@ -40,5 +41,5 @@ async function boot(){try{loadingText.textContent='Риггинг дракона
 startBtn.addEventListener('click',async()=>{await audio.start();started=true;qaState.loadingState='flying';loading.classList.add('dismiss');hints.forEach((h,i)=>setTimeout(()=>h.style.opacity='0',3600+i*500));});
 soundBtn.addEventListener('click',async()=>{await audio.start();soundBtn.textContent='SND';});
 addEventListener('resize',()=>engine.resize(),{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden)engine.stopRenderLoop();else engine.runRenderLoop(loop);});
-function loop(){const now=performance.now();const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;let ground=world.heightAt(state.position.x,state.position.z);if(started){const input={x:controls.x,y:controls.y,boost:controls.boost,brake:controls.brake};stepFlight(state,input,dt);ground=world.heightAt(state.position.x,state.position.z);terrainSafeAltitude(state,ground,dt);dragon.update(state,input,dt);updateCamera(dt,ground);world.update(dragon.root.position,now/1000);audio.update(state,dt);updateQuality(dt);speedEl.textContent=String(Math.round(state.speed));altEl.textContent=String(Math.max(0,Math.round(state.position.y-ground)));modeEl.textContent=modeLabel();const speedN=Math.max(0,Math.min(1,(state.speed-27)/58));speedLines.style.opacity=String(speedN*.32);updateWindStreaks(speedN,now/1000);}else updateWindStreaks(0,now/1000);publishQA(ground);sky.position.copyFrom(camera.position);scene.render();}
+function loop(){const now=performance.now();const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;let ground=world.heightAt(state.position.x,state.position.z);if(started){const input={x:controls.x,y:controls.y,boost:controls.boost,brake:controls.brake};stepFlight(state,input,dt);ground=world.heightAt(state.position.x,state.position.z);terrainSafeAltitude(state,ground,dt);dragon.update(state,input,dt);updateCamera(dt,ground);world.update(dragon.root.position,now/1000);fauna.update(dragon.root.position,new Vector3(state.velocity.x,state.velocity.y,state.velocity.z),now/1000);audio.update(state,dt);updateQuality(dt);speedEl.textContent=String(Math.round(state.speed));altEl.textContent=String(Math.max(0,Math.round(state.position.y-ground)));modeEl.textContent=modeLabel();const speedN=Math.max(0,Math.min(1,(state.speed-27)/58));speedLines.style.opacity=String(speedN*.32);updateWindStreaks(speedN,now/1000);}else updateWindStreaks(0,now/1000);publishQA(ground);sky.position.copyFrom(camera.position);scene.render();}
 boot().catch(err=>{console.error(err);loadingText.textContent='Не удалось инициализировать сцену.';startBtn.disabled=true;});engine.runRenderLoop(loop);
