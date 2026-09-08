@@ -16,19 +16,26 @@ export class SandPhysics {
     this.settleClock = 0;
     this.totalImpacts = 0;
     this.lastWorkMs = 0;
+    this.lastMaintenanceMs = 0;
     this.lastTransferCount = 0;
+    this.adaptiveBudgetScale = 1;
+    this.baseAvalancheBudget = 64;
+    this.baseSettleBudget = 48;
   }
 
   setQuality(preset) {
     if (!preset) return;
     if (preset.id === 'high') {
-      this.maxCells = 4600; this.keepRadius = 52; this.avalancheBudget = 92; this.settleBudget = 72;
+      this.maxCells = 4600; this.keepRadius = 52; this.baseAvalancheBudget = 92; this.baseSettleBudget = 72;
     } else if (preset.id === 'medium') {
-      this.maxCells = 3200; this.keepRadius = 42; this.avalancheBudget = 60; this.settleBudget = 48;
+      this.maxCells = 3200; this.keepRadius = 42; this.baseAvalancheBudget = 60; this.baseSettleBudget = 48;
     } else {
-      this.maxCells = 1900; this.keepRadius = 32; this.avalancheBudget = 34; this.settleBudget = 28;
+      this.maxCells = 1900; this.keepRadius = 32; this.baseAvalancheBudget = 34; this.baseSettleBudget = 28;
     }
   }
+
+  get avalancheBudget() { return Math.max(18, Math.round(this.baseAvalancheBudget * this.adaptiveBudgetScale)); }
+  get settleBudget() { return Math.max(14, Math.round(this.baseSettleBudget * this.adaptiveBudgetScale)); }
 
   key(ix, iz) { return `${ix},${iz}`; }
   getCellData(ix, iz) { return this.cells.get(this.key(ix, iz)) || null; }
@@ -95,8 +102,6 @@ export class SandPhysics {
   sampleSoftness(x, z) {
     const loose = this.sampleLoose(x, z);
     const compact = this.sampleCompaction(x, z);
-    // Untouched dune sand is moderately loose. Fresh deposits are softer,
-    // repeated footprints become firmer and offer less sink/drag.
     return clamp(0.48 + loose * 0.46 - compact * 0.34, 0.16, 0.96);
   }
 
@@ -144,7 +149,6 @@ export class SandPhysics {
       }
     }
 
-    // Return most displaced volume to the rim instead of creating/losing it.
     const rimWeight = rimCells.reduce((sum, cell) => sum + cell[2], 0) || 1;
     const rimMass = removedMass * 0.68;
     for (const [ix, iz, weight] of rimCells) {
@@ -225,7 +229,7 @@ export class SandPhysics {
     let processed = 0;
 
     for (const cell of this.cells.values()) {
-      if (processed >= (this.avalancheBudget ?? 64)) break;
+      if (processed >= this.avalancheBudget) break;
       if (cell.h <= 0.00035 || cell.loose <= 0.04) continue;
       const wx = cell.ix * this.cellSize, wz = cell.iz * this.cellSize;
       const dx = wx - playerX, dz = wz - playerZ;
@@ -258,7 +262,7 @@ export class SandPhysics {
     const radius2 = 5.5 * 5.5;
     let processed = 0;
     for (const cell of this.cells.values()) {
-      if (processed >= (this.settleBudget ?? 48)) break;
+      if (processed >= this.settleBudget) break;
       const wx = cell.ix * this.cellSize, wz = cell.iz * this.cellSize;
       const dx = wx - playerX, dz = wz - playerZ;
       if (dx * dx + dz * dz > radius2 || (cell.loose < 0.01 && cell.compaction < 0.01)) continue;
@@ -274,22 +278,40 @@ export class SandPhysics {
     }
   }
 
+  adaptBudget(workMs, dt) {
+    // Budget only the loose-sand simulation, not occasional pruning. A costly
+    // WebKit tick immediately backs off; recovery is deliberately slow so the
+    // game cannot oscillate between smooth and expensive every few frames.
+    if (workMs > 2.4) this.adaptiveBudgetScale = Math.max(0.34, this.adaptiveBudgetScale * 0.80);
+    else if (workMs > 1.7) this.adaptiveBudgetScale = Math.max(0.45, this.adaptiveBudgetScale * 0.92);
+    else if (workMs < 0.85) this.adaptiveBudgetScale = Math.min(1, this.adaptiveBudgetScale + dt * 0.055);
+  }
+
   update(dt, playerX, playerZ) {
-    const start = performance.now();
+    const simStart = performance.now();
+    let simulated = false;
     this.avalancheClock += dt;
     if (this.avalancheClock >= 0.22) {
       this.avalancheClock = 0;
       this.avalanche(playerX, playerZ);
+      simulated = true;
     }
     this.settleClock += dt;
     if (this.settleClock >= 0.32) {
       this.settleClock = 0;
       this.settleLoose(playerX, playerZ);
+      simulated = true;
+    }
+    const simWork = performance.now() - simStart;
+    if (simulated) {
+      this.lastWorkMs = simWork;
+      this.adaptBudget(simWork, dt);
     }
 
     this.pruneClock += dt;
     if (this.pruneClock >= 4.0) {
       this.pruneClock = 0;
+      const maintenanceStart = performance.now();
       const maxDist2 = this.keepRadius * this.keepRadius;
       for (const cell of [...this.cells.values()]) {
         const dx = cell.ix * this.cellSize - playerX, dz = cell.iz * this.cellSize - playerZ;
@@ -300,10 +322,16 @@ export class SandPhysics {
         const removeCount = this.cells.size - this.maxCells;
         for (let i = 0; i < removeCount; i += 1) this.cells.delete(this.key(ordered[i].ix, ordered[i].iz));
       }
+      this.lastMaintenanceMs = performance.now() - maintenanceStart;
     }
-    this.lastWorkMs = performance.now() - start;
   }
 
-  clear() { this.cells.clear(); this.dirty = null; }
+  clear() {
+    this.cells.clear();
+    this.dirty = null;
+    this.adaptiveBudgetScale = 1;
+    this.lastWorkMs = 0;
+    this.lastMaintenanceMs = 0;
+  }
   get activeCellCount() { return this.cells.size; }
 }
