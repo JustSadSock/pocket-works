@@ -8,6 +8,7 @@ import { OceanWorld } from './world';
 
 const SPEED_BUCKET = 16;
 const LENGTH_BUCKET = 4096;
+const BEAM_UNIT_METERS = 0.05;
 
 export type OceanMetrics = {
   speed: number;
@@ -17,26 +18,26 @@ export type OceanMetrics = {
 
 /**
  * PELAGOS' original ShaderMaterial signature only exposes one float for ship speed. Keeping that
- * signature avoids rebuilding OceanWorld just to add two uniforms. We pack the selected hull's
- * decimetre dimensions into the integer portion and preserve speed in the low bucket. highp floats
- * keep far more than enough precision for the sub-8 m/s speeds used by the game, including WebKit.
+ * signature avoids rebuilding OceanWorld just to add two uniforms. Length uses decimetres and beam
+ * uses 5 cm units, preserving the 3.35/4.35 m hulls while leaving enough low bits for smooth speed
+ * on WebGL highp floats.
  */
 export function packOceanMetrics(speed: number, hullLength: number, hullBeam: number): number {
   const safeSpeed = clamp(speed, 0, SPEED_BUCKET - 0.5);
   const lengthDeci = clamp(Math.round(hullLength * 10), 80, 200);
-  const beamDeci = clamp(Math.round(hullBeam * 10), 24, 70);
-  return safeSpeed + lengthDeci * SPEED_BUCKET + beamDeci * LENGTH_BUCKET;
+  const beamUnits = clamp(Math.round(hullBeam / BEAM_UNIT_METERS), 48, 140);
+  return safeSpeed + lengthDeci * SPEED_BUCKET + beamUnits * LENGTH_BUCKET;
 }
 
 export function decodeOceanMetrics(packed: number): OceanMetrics {
-  const beamDeci = Math.floor(packed / LENGTH_BUCKET + 1e-6);
-  const afterBeam = packed - beamDeci * LENGTH_BUCKET;
+  const beamUnits = Math.floor(packed / LENGTH_BUCKET + 1e-6);
+  const afterBeam = packed - beamUnits * LENGTH_BUCKET;
   const lengthDeci = Math.floor(afterBeam / SPEED_BUCKET + 1e-6);
   const speed = afterBeam - lengthDeci * SPEED_BUCKET;
   return {
     speed,
     hullLength: lengthDeci / 10,
-    hullBeam: beamDeci / 10
+    hullBeam: beamUnits * BEAM_UNIT_METERS
   };
 }
 
@@ -64,14 +65,14 @@ function patchOceanShaders(): void {
   const vertexMotion = replaceOnce(
     vertex,
     '  wp.xz += chop;\n  wp.y += h;\n  vWorldPos = wp.xyz;',
-    `  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.1, 2.4, 7.0);\n  vec2 relShip = wp.xz - uShip;\n  vec2 shipForward = vec2(sin(uHeading), cos(uHeading));\n  vec2 shipRight = vec2(cos(uHeading), -sin(uHeading));\n  float localForward = dot(relShip, shipForward);\n  float localSide = dot(relShip, shipRight);\n  float along = abs(localForward) / max(1.0, hullLength * 0.50);\n  float across = abs(localSide) / max(0.45, hullBeam * 0.50);\n  float footprint = max(along, across);\n  float hullRelief = 1.0 - smoothstep(0.70, 1.02, footprint);\n  // The visible ocean should run around the displacement volume, not crest through the hull.\n  // Only the hidden inner footprint is flattened; the free surface is untouched at the waterline.\n  wp.xz += chop * (1.0 - hullRelief * 0.72);\n  wp.y += h * (1.0 - hullRelief * 0.46) - hullRelief * hullBeam * 0.022;\n  vWorldPos = wp.xyz;`
+    `  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.05, 2.4, 7.0);\n  vec2 relShip = wp.xz - uShip;\n  vec2 shipForward = vec2(sin(uHeading), cos(uHeading));\n  vec2 shipRight = vec2(cos(uHeading), -sin(uHeading));\n  float localForward = dot(relShip, shipForward);\n  float localSide = dot(relShip, shipRight);\n  float along = abs(localForward) / max(1.0, hullLength * 0.50);\n  float across = abs(localSide) / max(0.45, hullBeam * 0.50);\n  float footprint = max(along, across);\n  float hullRelief = 1.0 - smoothstep(0.70, 1.02, footprint);\n  // The visible ocean should run around the displacement volume, not crest through the hull.\n  // Only the hidden inner footprint is flattened; the free surface is untouched at the waterline.\n  wp.xz += chop * (1.0 - hullRelief * 0.72);\n  wp.y += h * (1.0 - hullRelief * 0.46) - hullRelief * hullBeam * 0.022;\n  vWorldPos = wp.xyz;`
   );
   vertex = vertexMotion.source;
 
   const fragmentWake = replaceOnce(
     fragment,
     `  float speedFactor = smoothstep(0.35, 4.8, uSpeed);\n  float centerWake = exp(-side * side / max(0.12, 0.45 + back * 0.055)) * smoothstep(0.9, 5.2, back) * (1.0 - smoothstep(40.0, 76.0, back));\n  float vLine = abs(abs(side) - max(back, 0.0) * 0.255);\n  float vWake = exp(-vLine * vLine * 2.4) * smoothstep(2.0, 7.0, back) * (1.0 - smoothstep(32.0, 72.0, back));\n  float bow = exp(-pow(forward - 3.7, 2.0) * 1.1 - side * side * 0.7);\n  float wake = (centerWake * 0.75 + vWake * 0.82 + bow * 0.7) * speedFactor;`,
-    `  float speedValue = mod(uSpeed, 16.0);\n  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.1, 2.4, 7.0);\n  float speedFactor = smoothstep(0.30, 4.6, speedValue);\n  float halfLength = hullLength * 0.47;\n  float bowLong = (forward - halfLength) / max(0.60, hullBeam * 0.28);\n  float bowSide = side / max(0.45, hullBeam * 0.36);\n  float bowPressure = exp(-bowLong * bowLong * 1.7 - bowSide * bowSide * 1.2);\n  float transomBack = -forward - halfLength * 0.98;\n  float sternGate = smoothstep(0.0, max(0.40, hullLength * 0.06), transomBack)\n    * (1.0 - smoothstep(hullLength * 0.25, hullLength * 0.70, transomBack));\n  float sternSide = side / max(0.50, hullBeam * 0.44);\n  float sternPressure = exp(-sternSide * sternSide * 1.5) * sternGate;\n  // The shader owns only the pressure field directly against the hull. The broken-wake runtime\n  // owns the long trail, avoiding two differently-scaled wakes fighting each other.\n  float wake = (bowPressure * 0.42 + sternPressure * 0.24) * speedFactor;`
+    `  float speedValue = mod(uSpeed, 16.0);\n  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.05, 2.4, 7.0);\n  float speedFactor = smoothstep(0.30, 4.6, speedValue);\n  float halfLength = hullLength * 0.47;\n  float bowLong = (forward - halfLength) / max(0.60, hullBeam * 0.28);\n  float bowSide = side / max(0.45, hullBeam * 0.36);\n  float bowPressure = exp(-bowLong * bowLong * 1.7 - bowSide * bowSide * 1.2);\n  float transomBack = -forward - halfLength * 0.98;\n  float sternGate = smoothstep(0.0, max(0.40, hullLength * 0.06), transomBack)\n    * (1.0 - smoothstep(hullLength * 0.25, hullLength * 0.70, transomBack));\n  float sternSide = side / max(0.50, hullBeam * 0.44);\n  float sternPressure = exp(-sternSide * sternSide * 1.5) * sternGate;\n  // The shader owns only the pressure field directly against the hull. The broken-wake runtime\n  // owns the long trail, avoiding two differently-scaled wakes fighting each other.\n  float wake = (bowPressure * 0.42 + sternPressure * 0.24) * speedFactor;`
   );
   fragment = fragmentWake.source;
 
