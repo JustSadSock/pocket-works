@@ -56,7 +56,7 @@ def main():
     import bpy
     rig.animation_data.action = next(a for a in bpy.data.actions if a.name == 'Idle')
     base.export_glb(output)
-    print(f'COLOSSUS traveler v2 generated {output} ({output.stat().st_size} bytes)')
+    print(f'COLOSSUS traveler v2 physics animation set generated {output} ({output.stat().st_size} bytes)')
 
 
 if __name__ == '__main__':
