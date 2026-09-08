@@ -54,9 +54,9 @@ assert.ok(highSegments >= 60 && highSegments <= 72 && spacing <= 0.165, 'High ph
 assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'), 'local physical sand topology must be radial rather than a visible square');
 assert.ok(localSandSource.includes('smoothstep(0.68, 0.86, r)'), 'physical deformation must fade before the local patch edge');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
-assert.ok(localSandSource.includes('directionalShade'), 'physical footprints must include stable directional self-shading');
-assert.ok(localSandSource.includes('const cavity ='), 'footprint depressions must include local cavity darkening');
-assert.ok(localSandSource.includes('LIGHT_TO_SURFACE'), 'footprint shading must stay aligned with the desert sun direction');
+assert.ok(localSandSource.includes('const cavity ='), 'footprint depressions must include stable local cavity darkening');
+assert.ok(!localSandSource.includes('directionalShade'), 'mobile sand must not add polygonal pseudo directional shadows on top of PBR lighting');
+assert.ok(!localSandSource.includes('LIGHT_TO_SURFACE'), 'footprint contrast must not depend on a duplicated hard-coded light vector');
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
 assert.ok(materialSource.includes('makeSandMaterial'), 'near/far/local terrain materials must be constructed from one optical recipe');
