@@ -17,6 +17,12 @@ type PresentationMemory = {
 };
 
 const memories = new WeakMap<OceanWorld, PresentationMemory>();
+const COACHING_COPY: Array<[string, string]> = [
+  ['Проведи большим пальцем по рулю слева', 'Руль: веди пальцем влево ↔ вправо.'],
+  ['Потяни ползунок паруса справа', 'Парус: вверх/вниз · золотая риска — оптимум.'],
+  ['Удерживай «ГРЕСТИ»', 'Грести: удерживай на малой скорости.'],
+  ['Свайпни по самому морю', 'Обзор: свайп по морю · камера вернётся сама.']
+];
 
 function getMemory(world: OceanWorld): PresentationMemory {
   let memory = memories.get(world);
@@ -36,6 +42,19 @@ function gameplayVisible(): boolean {
     && (!menu || menu.classList.contains('hidden'))
     && (!shipyard || shipyard.classList.contains('hidden'))
   );
+}
+
+function compactOnboardingCopy(): void {
+  const hint = document.querySelector<HTMLElement>('#hint');
+  if (!hint || hint.classList.contains('hidden')) return;
+  const current = hint.textContent?.trim() ?? '';
+  for (const [prefix, compact] of COACHING_COPY) {
+    if (current.startsWith(prefix)) {
+      hint.textContent = compact;
+      document.documentElement.dataset.pelagosCompactCoach = '1';
+      break;
+    }
+  }
 }
 
 function tuneObliqueTextures(world: OceanWorld): void {
@@ -83,9 +102,9 @@ function refineGameplayComposition(world: OceanWorld): void {
   document.documentElement.dataset.pelagosFrameScale = scale.toFixed(3);
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosPresentationRefitV1?: boolean };
-if (!prototype.__pelagosPresentationRefitV1) {
-  prototype.__pelagosPresentationRefitV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosPresentationRefitV2?: boolean };
+if (!prototype.__pelagosPresentationRefitV2) {
+  prototype.__pelagosPresentationRefitV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function presentationRefitUpdate(
     state: ShipState,
@@ -100,6 +119,7 @@ if (!prototype.__pelagosPresentationRefitV1) {
     rowing: number
   ): void {
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
+    compactOnboardingCopy();
     tuneObliqueTextures(this);
     refineGameplayComposition(this);
   };
