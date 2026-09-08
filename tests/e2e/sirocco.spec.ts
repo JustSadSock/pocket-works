@@ -30,6 +30,8 @@ async function qaState(page: import('@playwright/test').Page) {
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
       sandWorkMs: game.sand?.lastWorkMs,
+      sandMaintenanceMs: game.sand?.lastMaintenanceMs,
+      sandBudgetScale: game.sand?.adaptiveBudgetScale,
       sandTransfers: game.sand?.lastTransferCount,
       maxLoose,
       maxCompaction,
@@ -49,7 +51,8 @@ async function qaState(page: import('@playwright/test').Page) {
         x: localSand.position.x, z: localSand.position.z
       } : null,
       meshes: game.scene?.meshes?.length,
-      materials: game.scene?.materials?.map((material: any) => material.name)
+      materials: game.scene?.materials?.map((material: any) => material.name),
+      textures: game.scene?.textures?.map((texture: any) => texture.name)
     };
   });
 }
@@ -87,8 +90,11 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(initial!.localSand?.vertices ?? 99_999).toBeLessThan(5_000);
     expect(initial!.localSand?.indices ?? 0).toBeGreaterThan(15_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
+    expect(initial!.camera!.minZ).toBeGreaterThanOrEqual(0.20);
     expect(initial!.landmarkInstances).toBeGreaterThanOrEqual(5);
     expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(9);
+    expect(initial!.textures).toContain('bedouin-skin-detail');
+    expect(initial!.textures).toContain('bedouin-keffiyeh-weave');
     expect(initial!.player!.softness).toBeGreaterThan(0.2);
     expect(initial!.player!.softness).toBeLessThan(0.9);
 
@@ -143,7 +149,22 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(walked!.maxLoose).toBeGreaterThan(0.08);
     expect(walked!.maxCompaction).toBeGreaterThan(0.08);
     expect(walked!.sandWorkMs).toBeLessThan(12);
+    expect(walked!.sandBudgetScale).toBeGreaterThanOrEqual(0.34);
+    expect(walked!.sandBudgetScale).toBeLessThanOrEqual(1);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
+
+    // Deliberately inspect the authored body at a normal downward glance before
+    // the extreme clipping test. This is the frame the player actually sees.
+    await page.evaluate(() => {
+      const game = window.__SIROCCO_QA__;
+      game.controller.bodyYaw = game.controller.yaw;
+      game.controller.pitch = 0.68;
+      game.rig.update(game.controller, 1 / 60);
+      game.characterPolish?.update(game.controller, 1 / 60);
+      game.camera.update(game.controller, 1 / 60);
+    });
+    await page.waitForTimeout(180);
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-body-look-down', { fullPage: false });
 
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
@@ -189,7 +210,8 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(deformed!.maxLoose).toBeGreaterThan(0.12);
     expect(deformed!.maxCompaction).toBeGreaterThan(0.12);
     expect(deformed!.sandWorkMs).toBeLessThan(12);
-    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
+    expect(deformed!.sandBudgetScale).toBeGreaterThanOrEqual(0.34);
+    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.20);
 
     await testInfo.attach('sirocco-state.json', {
       body: Buffer.from(JSON.stringify({ initial, preWalk, walked, deformed }, null, 2)),
