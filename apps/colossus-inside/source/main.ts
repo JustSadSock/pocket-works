@@ -5,29 +5,23 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'COLOSSUS // INSIDE';
-const version = '1.3.0';
+const version = '1.4.0';
 const storageNamespace = 'pocket-works:colossus-inside';
 const releaseNotes = [
-  'Переписана traversal-физика: визуальные разрывы между бронепластинами теперь реальные и требуют прыжков, а падение возвращает к последней устойчивой опоре.',
-  'Инерция больше не считается из собственной ходьбы игрока: движение колосса передаётся отдельно, а корпус персонажа компенсирует наклон и ускорение платформы.',
-  'Плечевой шарнир получил крупный мировой маяк, экранный указатель и усиленный локальный свет; вдоль маршрута добавлено рабочее сервисное освещение.',
-  'Добавлен диагностический state bridge для Playwright и отдельные детерминированные тесты прыжка, разрывов, опор и climb-якорей.',
-  'По реальным Chromium/WebKit-скриншотам поднята читаемость брони: добавлены мобильный sky-fill, тёплый rim-light, camera fill и минимальный material ambient/emissive lift без пересвета.'
+  'Спина колосса собрана как сегментированная биомеханическая броня с отдельными левыми и правыми панелями, центральным хребтом, плечевыми узлами и шеей.',
+  'Стартовая защитная ниша теперь существует в самом мире, а маршрут читается как часть корпуса, а не как отдельная дорога.',
+  'Внутри появились пол, силовой каркас, поперечные рёбра, мембраны, сервисные огни и физически видимый стабилизатор.',
+  'Финальный mobile readability pass поднимает локальный контраст брони, персонажа и навигационных инкрустаций одинаково в Safari/WebKit и Chromium.',
+  'Сохранена физика 1.3: реальные разрывы, прыжок, падение, checkpoint recovery и удержание JUMP у climb-якорей.'
 ];
-
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 registerEnhancedUpdate({ appName, version, releaseNotes });
-createWorkshopMode({
-  appName,
-  version,
-  cachePrefix: 'colossus-inside-',
-  storageNamespace,
-  onReset: () => location.reload()
-});
-
+createWorkshopMode({ appName, version, cachePrefix: 'colossus-inside-', storageNamespace, onReset: () => location.reload() });
 void (async () => {
   await import('./game-v3.js');
   const { installColossusVisualTuning } = await import('./visual-tuning.js');
   installColossusVisualTuning();
+  const { installReadabilityPass } = await import('./readability-pass.js');
+  installReadabilityPass();
 })();
