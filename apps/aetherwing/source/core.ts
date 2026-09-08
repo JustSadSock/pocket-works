@@ -70,12 +70,16 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   const controlAuthority = (0.3 + speedN * 0.9) * overSpeedPenalty;
 
   const rollTarget = -input.x * (0.32 + speedN * 0.72);
-  // Diving has deliberately more pitch authority than climbing: the dragon can
-  // tuck its body into the airflow, while pulling upward has to fight weight and load.
-  const pitchAuthority = input.y < 0 ? 0.28 + 0.34 * controlAuthority : 0.22 + 0.22 * controlAuthority;
+  // A dragon can enter a dive much more decisively than it can pitch upward:
+  // folding the wing roots and dropping the chest takes less aerodynamic work
+  // than hauling this mass into a climb. Sustained full-down input should read
+  // unmistakably as a dive within a few seconds even on a 20–30 FPS phone.
+  const divingInput = input.y < -0.05;
+  const pitchAuthority = divingInput ? 0.40 + 0.50 * controlAuthority : 0.22 + 0.22 * controlAuthority;
   const pitchTarget = input.y * pitchAuthority - clamp((speed - 78) / 100, 0, 0.12);
+  const pitchResponse = divingInput ? 3.45 : 2.5;
   s.rollRate += (rollTarget - s.roll) * (3.6 * controlAuthority) * dt - s.rollRate * 3.0 * dt;
-  s.pitchRate += (pitchTarget - s.pitch) * (2.5 * controlAuthority) * dt - s.pitchRate * 2.7 * dt;
+  s.pitchRate += (pitchTarget - s.pitch) * (pitchResponse * controlAuthority) * dt - s.pitchRate * (divingInput ? 2.45 : 2.7) * dt;
   const bankTurn = -Math.sin(s.roll) * (0.34 + speed * 0.0105) * controlAuthority;
   s.yawRate += (bankTurn - s.yawRate) * 2.3 * dt;
   s.roll += s.rollRate * dt;
@@ -99,16 +103,16 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   const downstroke = Math.max(0, Math.sin(s.flapPhase));
   const flapImpulse = flap * (0.45 + downstroke * 0.55);
 
-  // A tucked dive is not the same aerodynamic shape as a glide. Folding the
-  // wings reduces both lifting area and parasitic drag, allowing gravity to
-  // convert altitude into airspeed instead of the old "nose down, still float" feel.
-  const diveFold = clamp(Math.max(-s.pitch - 0.06, -input.y * 0.42), 0, 0.82);
-  const effectiveWingArea = WING_AREA * (1 - diveFold * 0.60);
+  // The tucked silhouette is aerodynamically different from a glide: much less
+  // lifting area and substantially less parasitic drag. That makes altitude turn
+  // into speed instead of producing the old "nose down but still floating" feel.
+  const diveFold = clamp(Math.max(-s.pitch - 0.04, -input.y * 0.60), 0, 0.90);
+  const effectiveWingArea = WING_AREA * (1 - diveFold * 0.66);
   const stallFactor = clamp((speed - 10) / 17, 0, 1);
-  const cl = clamp(0.34 + aoa * 1.75 + flapImpulse * 0.26, 0.06, 1.45) * stallFactor * (1 - diveFold * 0.28);
+  const cl = clamp(0.34 + aoa * 1.75 + flapImpulse * 0.26, 0.06, 1.45) * stallFactor * (1 - diveFold * 0.40);
   const dynamicPressure = 0.5 * AIR_DENSITY * speed * speed;
   const liftMagnitude = dynamicPressure * effectiveWingArea * cl;
-  const dragCoeff = (0.028 + aoa * aoa * 0.44 + input.brake * 0.42 + flapImpulse * 0.03) * (1 - diveFold * 0.40);
+  const dragCoeff = (0.028 + aoa * aoa * 0.44 + input.brake * 0.42 + flapImpulse * 0.03) * (1 - diveFold * 0.55);
   const drag = dynamicPressure * effectiveWingArea * dragCoeff;
   const thrust = (8600 + input.boost * 13000) * flapImpulse + Math.max(0, 23 - speed) * 560;
 
@@ -133,9 +137,6 @@ export function stepFlight(s: FlightState, raw: FlightInput, dtRaw: number): Fli
   s.load = clamp(liftMagnitude / (MASS * GRAVITY), 0, 3.4);
   s.flap = lerp(s.flap, flap, 1 - Math.exp(-dt * 4.5));
 
-  // Flight-state labels now follow the aerodynamic shape instead of waiting for
-  // extreme pitch/vertical-speed thresholds. This keeps animation blending and
-  // player feedback in sync with the moment the dragon actually tucks or pulls.
   const diving = (input.y < -0.45 && s.pitch < -0.10) || s.pitch < -0.22 || s.verticalSpeed < -8;
   const climbing = (input.y > 0.45 && s.pitch > 0.10) || (s.pitch > 0.15 && s.verticalSpeed > 3);
   s.mode = input.brake > 0.3 ? 'brake' : diving ? 'dive' : climbing ? 'climb' : s.flap > 0.48 ? 'flap' : 'glide';
