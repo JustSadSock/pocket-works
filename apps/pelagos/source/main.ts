@@ -1,6 +1,7 @@
 import './styles.css';
 import './polish.css';
 import './shipyard.css';
+import './shipyard-performance.css';
 import './presentation-refit.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
@@ -11,6 +12,7 @@ import './rigging-cleanup';
 import './marine-refit';
 import './sail-uv-refit';
 import './ship-modularity';
+import './loadout-performance';
 import './marine-tuning';
 import './presence-pass';
 import './hydrodynamics-refit';
@@ -31,16 +33,16 @@ import './shipyard-ui';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
-const version = '1.6.5';
+const version = '1.6.6';
 const STORAGE_NAMESPACE = 'pocket-works:pelagos';
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
 const releaseNotes = [
-  'Такелаж полностью привязан к реальной парусной геометрии: четыре ванты, форштаг, ахтерштаг и две гика-шкоты больше не заканчиваются в пустоте и двигаются вместе с рангоутом.',
-  'Гика-шкоты теперь физически читают нагрузку на парус: при наполненном парусе они натягиваются, а при потере тяги получают заметную слабину и лёгкое колебание.',
-  'Старые декоративные тросы принудительно отключаются после загрузки сцены, поэтому Blender-модель и runtime-такелаж больше не накладываются друг на друга.',
-  'Сохранены адаптивная камера, модульная верфь, hull-aware океан, тяжёлая посадка и мобильная фильтрация 1.6.4.'
+  'Модули верфи теперь меняют не только внешний вид: масса корпуса, длина, ширина и осадка реально влияют на инерцию, сопротивление, боковую устойчивость и скорость перекладки курса.',
+  'Каждый комплект парусов имеет физическую эффективную площадь, а варианты вёсел — собственную тягу по числу, длине и площади лопастей; Storm Rig и Heavy Sweeps теперь ощущаются по-разному в управлении.',
+  'В верфи появился живой профиль ХОД / МАНЁВР / МОРЕ / ГРЕБЛЯ, который сразу пересчитывается при любой замене корпуса, парусов или вёсел.',
+  'Сохранён физический такелаж 1.6.5: шкоты следуют за модульным гиком и меняют слабину по фактической нагрузке паруса.'
 ];
 
 registerEnhancedUpdate({ appName, version, releaseNotes });
