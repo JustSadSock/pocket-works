@@ -35,6 +35,29 @@ function registerShadowCaster(world: OceanWorld, mesh: AbstractMesh): void {
   sun?.getShadowGenerator?.()?.addShadowCaster(mesh, false);
 }
 
+function tuneImportedMaterial(material: PBRMaterial): void {
+  // The authored Blender palette was reading too dark under WebKit's mobile WebGL path.
+  // Keep the material response tactile, but give varnished timber and metal enough indirect
+  // light to preserve the smaller deck details added by Asset Forge.
+  material.environmentIntensity = 0.56;
+  material.directIntensity = 1.08;
+  material.specularIntensity = 0.52;
+  material.microSurface = Math.min(material.microSurface, 0.82);
+
+  const name = material.name.toLowerCase();
+  if (name.includes('deck')) {
+    material.environmentIntensity = 0.64;
+    material.directIntensity = 1.12;
+    material.specularIntensity = 0.38;
+  } else if (name.includes('brass') || name.includes('iron')) {
+    material.environmentIntensity = 0.66;
+    material.specularIntensity = 0.72;
+  } else if (name.includes('rope')) {
+    material.specularIntensity = 0.16;
+    material.environmentIntensity = 0.48;
+  }
+}
+
 export function ensureBlenderShip(world: OceanWorld): Promise<void> {
   const existing = loadState.get(world);
   if (existing) return existing;
@@ -59,11 +82,7 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
         mesh.receiveShadows = true;
         registerShadowCaster(world, mesh);
         const material = mesh.material;
-        if (material instanceof PBRMaterial) {
-          material.environmentIntensity = 0.42;
-          material.directIntensity = 0.96;
-          material.specularIntensity = 0.62;
-        }
+        if (material instanceof PBRMaterial) tuneImportedMaterial(material);
       }
 
       hideProceduralStructure(world);
@@ -79,9 +98,9 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
   return promise;
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV1?: boolean };
-if (!prototype.__pelagosBlenderShipV1) {
-  prototype.__pelagosBlenderShipV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV2?: boolean };
+if (!prototype.__pelagosBlenderShipV2) {
+  prototype.__pelagosBlenderShipV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function blenderShipUpdate(
     state: ShipState,
