@@ -69,11 +69,15 @@ export function nearestSupportedZ(carrier, z) {
 
 export function carrierImpulse(previousVelocity, currentVelocity, dt, braced = false) {
   const safeDt = Math.max(dt, 1 / 120);
-  const ax = (currentVelocity.x - previousVelocity.x) / safeDt;
-  const az = (currentVelocity.z - previousVelocity.z) / safeDt;
+  // Limit the *physical acceleration* first, then apply stance coupling. If we
+  // clamp the final impulse, violent gait peaks saturate both braced and loose
+  // states to the same value and the stance stops mattering precisely when it
+  // should matter most.
+  const ax = clamp((currentVelocity.x - previousVelocity.x) / safeDt, -10, 10);
+  const az = clamp((currentVelocity.z - previousVelocity.z) / safeDt, -10, 10);
   const multiplier = braced ? 0.08 : 0.24;
-  const x = clamp(-ax * multiplier, -2.4, 2.4);
-  const z = clamp(-az * multiplier, -2.4, 2.4);
+  const x = -ax * multiplier;
+  const z = -az * multiplier;
   return { x, z, magnitude: Math.hypot(ax, az) };
 }
 
