@@ -4,7 +4,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { ShipState, ShipTelemetry } from './core';
-import { DEG, clamp, smoothTo } from './core';
+import { DEG, angleDelta, clamp, smoothTo, wrapAngle } from './core';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
@@ -33,6 +33,7 @@ type QaSnapshot = {
   mainSailVertices: number;
   visibleOars: number;
   floatingCues: number;
+  rowingInput: number;
   weather: string;
 };
 
@@ -135,16 +136,26 @@ function updateWindFeedback(
     telltale.ribbon.visibility = 0.78 + efficient * 0.22;
   });
 
-  const trueRelative = environment.wind.direction;
-  const targetPennantYaw = trueRelative + Math.PI;
-  rig.pennantYaw += (targetPennantYaw - rig.pennantYaw) * (1 - Math.exp(-safeDt * 4.2));
+  // windAngle is already relative to the ship. Keeping the pennant in the ship's local frame
+  // avoids the 360° jumps that appeared when absolute true-wind direction was applied to a
+  // node parented under shipRoot.
+  const targetPennantYaw = wrapAngle(telemetry.windAngle + Math.PI);
+  rig.pennantYaw = wrapAngle(
+    rig.pennantYaw + angleDelta(rig.pennantYaw, targetPennantYaw) * (1 - Math.exp(-safeDt * 4.2))
+  );
   rig.pennantRoot.rotation.y = rig.pennantYaw;
   rig.pennantRoot.rotation.x = Math.sin(time * 8.6) * (0.025 + turbulence * 0.035);
   rig.pennantRoot.rotation.z = Math.sin(time * 11.2 + 0.8) * turbulence * 0.026;
   rig.pennant.scaling.z = 0.88 + apparent * 0.19;
 }
 
-function updateQaBridge(world: OceanWorld, state: ShipState, telemetry: ShipTelemetry, environment: EnvironmentFrame): void {
+function updateQaBridge(
+  world: OceanWorld,
+  state: ShipState,
+  telemetry: ShipTelemetry,
+  environment: EnvironmentFrame,
+  rowing: number
+): void {
   const sail = world.scene.getMeshByName('physical-main-sail');
   const visibleOars = world.scene.meshes.filter((mesh) => mesh.name.startsWith('physical-oar-blade-') && mesh.isEnabled() && mesh.visibility > 0.05).length;
   const floatingCues = world.scene.transformNodes.filter((node) => node.name.startsWith('motion-prop-') && node.isEnabled()).length;
@@ -159,6 +170,7 @@ function updateQaBridge(world: OceanWorld, state: ShipState, telemetry: ShipTele
     mainSailVertices: sail?.getTotalVertices() ?? 0,
     visibleOars,
     floatingCues,
+    rowingInput: Number(clamp(rowing, 0, 1).toFixed(3)),
     weather: environment.label
   };
 }
@@ -182,6 +194,6 @@ if (!prototype.__pelagosExperienceRefitV1) {
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
     const rig = ensureExperienceRig(this);
     if (rig) updateWindFeedback(rig, telemetry, environment, time, dt);
-    updateQaBridge(this, state, telemetry, environment);
+    updateQaBridge(this, state, telemetry, environment, rowing);
   };
 }
