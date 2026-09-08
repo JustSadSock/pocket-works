@@ -23,6 +23,7 @@ async function qaState(page: import('@playwright/test').Page) {
       activeChunks: game.world?.activeChunkCount,
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
+      landmarkInstances: game.landmarks?.instances?.length ?? 0,
       camera: camera ? {
         x: camera.position.x, y: camera.position.y, z: camera.position.z,
         pitch: camera.rotation.x, yaw: camera.rotation.y, minZ: camera.minZ
@@ -42,7 +43,7 @@ async function qaState(page: import('@playwright/test').Page) {
 }
 
 test.describe('SIROCCO deterministic visual QA', () => {
-  test('landscape walk, body awareness, terrain LOD and physical sand stay coherent', async ({ page }, testInfo) => {
+  test('landscape walk, Blender landmarks, terrain LOD and physical sand stay coherent', async ({ page }, testInfo) => {
     test.skip(!testInfo.project.name.includes('landscape'), 'SIROCCO is landscape-first.');
     const monitor = monitorUnexpectedBrowserOutput(page);
 
@@ -72,17 +73,59 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(initial!.activeChunks).toBeGreaterThan(20);
     expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(10_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
+    expect(initial!.landmarkInstances).toBeGreaterThanOrEqual(5);
+
+    // Frame the closest Blender-authored landmark deliberately so CI proves
+    // that the generated GLB is not only present on disk but visible through
+    // Babylon/WebKit at mobile landscape scale.
+    await page.evaluate(() => {
+      const game = window.__SIROCCO_QA__;
+      const c = game.controller;
+      c.worldOffsetX = 158;
+      c.worldOffsetZ = 105;
+      c.localPosition.set(0, c.sampleHeight(158, 105), 0);
+      c.velocity.setAll(0);
+      c.yaw = Math.atan2(169 - 158, 132 - 105);
+      c.bodyYaw = c.yaw;
+      c.pitch = -0.08;
+      game.world.setOrigin(c.worldOffsetX, c.worldOffsetZ);
+      game.landmarks.updateOrigin(c.worldOffsetX, c.worldOffsetZ);
+      game.world.update(c.globalX, c.globalZ);
+      game.sandSurface.syncOrigin?.();
+      game.sandSurface.update(c, true);
+      game.rig.update(c, 1 / 60);
+      game.camera.update(c, 1 / 60);
+    });
+    await page.waitForTimeout(650);
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-blender-landmark', { fullPage: false });
+
+    // Return to deterministic spawn before exercising gameplay systems.
+    await page.evaluate(() => {
+      const game = window.__SIROCCO_QA__;
+      const c = game.controller;
+      c.resetToSpawn();
+      c.yaw = 0.15;
+      c.bodyYaw = 0.15;
+      c.pitch = -0.05;
+      game.world.setOrigin(c.worldOffsetX, c.worldOffsetZ);
+      game.landmarks.updateOrigin(c.worldOffsetX, c.worldOffsetZ);
+      game.world.update(c.globalX, c.globalZ);
+      game.sand.clear();
+      game.sandSurface.syncOrigin?.();
+      game.sandSurface.markDirty();
+      game.sandSurface.update(c, true);
+    });
+    await page.waitForTimeout(220);
 
     // Exercise the real input -> animation -> foot-bone contact -> sand path.
-    // This catches a visually animated model whose landing detector never
-    // actually stamps the terrain.
-    const impactBeforeWalk = initial!.sandImpacts ?? 0;
+    const impactBeforeWalk = (await qaState(page))!.sandImpacts ?? 0;
+    const preWalk = await qaState(page);
     await page.keyboard.down('KeyW');
     await page.waitForTimeout(2_800);
     await page.keyboard.up('KeyW');
     await page.waitForTimeout(250);
     const walked = await qaState(page);
-    expect(walked!.player!.z).not.toBeCloseTo(initial!.player!.z, 1);
+    expect(walked!.player!.z).not.toBeCloseTo(preWalk!.player!.z, 1);
     expect(walked!.sandImpacts).toBeGreaterThan(impactBeforeWalk);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
 
@@ -133,7 +176,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
 
     await testInfo.attach('sirocco-state.json', {
-      body: Buffer.from(JSON.stringify({ initial, walked, deformed }, null, 2)),
+      body: Buffer.from(JSON.stringify({ initial, preWalk, walked, deformed }, null, 2)),
       contentType: 'application/json'
     });
     monitor.assertClean();
