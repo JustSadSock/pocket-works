@@ -32,9 +32,9 @@
     <section id="loading" class="screen-layer loading" aria-live="polite" data-ui><div class="loading-emblem" aria-hidden="true"><i></i><b></b></div><p class="kicker">POCKET WORKS / PHYSICAL DUEL</p><h1>SINEW</h1><p id="loading-text">Собираем риг…</p><div class="loading-track"><i id="loading-bar"></i></div></section>
 
     <section id="enter" class="screen-layer enter" hidden data-ui>
-      <div class="enter-copy"><p class="kicker">ОДНА ДУЭЛЬ · ДВА БОЛЬШИХ ПАЛЬЦА</p><h1>SINEW</h1><p>Слева — ноги. Справа — взгляд, корпус, меч и щит. Резкий поворот создаёт замах; медленный позволяет поставить щит точно под удар.</p></div>
-      <div class="control-diagram" aria-hidden="true"><div><i></i><span>ИДИ / БЕГИ</span></div><b></b><div><i></i><span>ДВИГАЙ ТЕЛОМ</span></div></div>
-      <button id="enter-button" class="primary-action" type="button" data-native-press>Войти на арену</button>
+      <div class="enter-copy"><p class="kicker">ОДНА ДУЭЛЬ · ДВА БОЛЬШИХ ПАЛЬЦА</p><h1>SINEW</h1><p>Слева — ноги. Справа — взгляд, корпус, меч и щит. Удерживай палец выше или ниже, чтобы поставить оружие в нужную линию; резкий жест создаёт физический замах.</p></div>
+      <div class="control-diagram" aria-hidden="true"><div><i></i><span>ИДИ / БЕГИ</span></div><b></b><div><i></i><span>ПОСТАВЬ · УДАРЬ</span></div></div>
+      <button id="enter-button" class="primary-action" type="button" aria-label="Играть — войти на арену" data-native-press>Войти на арену</button>
       <button id="start-exit-button" class="text-action" type="button" data-native-press>Вернуться в Pocket Works</button>
     </section>
 
@@ -44,7 +44,7 @@
       <div class="menu-panel">
         <div class="menu-head"><div><p class="kicker">ДУЭЛЬ ПРИОСТАНОВЛЕНА</p><h2>SINEW</h2></div><button id="resume-button" class="close-button" type="button" aria-label="Продолжить" data-native-press>×</button></div>
         <label class="setting-row"><span><b>Качество</b><small id="quality-label">AUTO · Medium</small></span><select id="quality-select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
-        <label class="setting-row slider-row"><span><b>Чувствительность тела</b><small>камера задаёт цель, инерция остаётся физической</small></span><input id="sensitivity" type="range" min="0.55" max="1.7" step="0.05" value="1" /></label>
+        <label class="setting-row slider-row"><span><b>Чувствительность тела</b><small>камера задаёт цель, инерция остаётся физической</small></span><input id="sensitivity" type="range" min="0.45" max="2.4" step="0.05" value="1.12" /></label>
         <label class="setting-row switch-row"><span><b>Звук контактов</b><small>шаги, свист клинка, металл и щит</small></span><input id="sound-toggle" type="checkbox" checked /><i></i></label>
         <button id="restart-menu-button" class="secondary-action" type="button" data-native-press>Начать дуэль заново</button>
         <button id="exit-button" class="text-action strong" type="button" data-native-press>Вернуться в Pocket Works</button>
