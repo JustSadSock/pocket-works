@@ -15,6 +15,12 @@ async function qaState(page: import('@playwright/test').Page) {
     const camera = game.camera?.camera;
     const controller = game.controller;
     const localSand = game.sandSurface?.mesh;
+    let maxLoose = 0;
+    let maxCompaction = 0;
+    for (const cell of game.sand?.cells?.values?.() || []) {
+      maxLoose = Math.max(maxLoose, cell.loose || 0);
+      maxCompaction = Math.max(maxCompaction, cell.compaction || 0);
+    }
     return {
       running: game.running,
       paused: game.paused,
@@ -23,6 +29,10 @@ async function qaState(page: import('@playwright/test').Page) {
       activeChunks: game.world?.activeChunkCount,
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
+      sandWorkMs: game.sand?.lastWorkMs,
+      sandTransfers: game.sand?.lastTransferCount,
+      maxLoose,
+      maxCompaction,
       landmarkInstances: game.landmarks?.instances?.length ?? 0,
       characterPolishMeshes: game.characterPolish?.meshes?.length ?? 0,
       camera: camera ? {
@@ -31,7 +41,8 @@ async function qaState(page: import('@playwright/test').Page) {
       } : null,
       player: controller ? {
         x: controller.globalX, y: controller.localPosition.y, z: controller.globalZ,
-        yaw: controller.yaw, bodyYaw: controller.bodyYaw, pitch: controller.pitch, speed: controller.speed
+        yaw: controller.yaw, bodyYaw: controller.bodyYaw, pitch: controller.pitch, speed: controller.speed,
+        softness: controller.softness
       } : null,
       localSand: localSand ? {
         enabled: localSand.isEnabled(), vertices: localSand.getTotalVertices(), indices: localSand.getTotalIndices(),
@@ -72,14 +83,14 @@ test.describe('SIROCCO deterministic visual QA', () => {
     const initial = await qaState(page);
     expect(initial).not.toBeNull();
     expect(initial!.activeChunks).toBeGreaterThan(20);
-    // 1.5 intentionally replaces the 14k-vertex square sand patch with a
-    // circular ~4k-vertex patch. Guard both visual detail and the performance cap.
     expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(3_500);
     expect(initial!.localSand?.vertices ?? 99_999).toBeLessThan(5_000);
     expect(initial!.localSand?.indices ?? 0).toBeGreaterThan(15_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
     expect(initial!.landmarkInstances).toBeGreaterThanOrEqual(5);
-    expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(7);
+    expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(9);
+    expect(initial!.player!.softness).toBeGreaterThan(0.2);
+    expect(initial!.player!.softness).toBeLessThan(0.9);
 
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
@@ -129,6 +140,9 @@ test.describe('SIROCCO deterministic visual QA', () => {
     const walked = await qaState(page);
     expect(walked!.player!.z).not.toBeCloseTo(preWalk!.player!.z, 1);
     expect(walked!.sandImpacts).toBeGreaterThan(impactBeforeWalk);
+    expect(walked!.maxLoose).toBeGreaterThan(0.08);
+    expect(walked!.maxCompaction).toBeGreaterThan(0.08);
+    expect(walked!.sandWorkMs).toBeLessThan(12);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
 
     await page.evaluate(() => {
@@ -157,19 +171,27 @@ test.describe('SIROCCO deterministic visual QA', () => {
           yaw
         }, { speed: 2.35, lastSlope: 0.20, sliding: 0.06 });
       });
-      game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 6);
-      for (let i = 0; i < 5; i += 1) game.sand.update(0.21, c.globalX, c.globalZ);
+      // Re-stamp the nearest footprint to verify visible compaction and a firmer
+      // repeated track rather than treating every step as untouched sand.
+      const repeatX = c.globalX + fx * 0.9 - rx * 0.13;
+      const repeatZ = c.globalZ + fz * 0.9 - rz * 0.13;
+      game.sand.stampFoot({ globalX: repeatX, globalZ: repeatZ, yaw }, { speed: 1.5, lastSlope: 0.12, sliding: 0 });
+      game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 5);
+      for (let i = 0; i < 5; i += 1) game.sand.update(0.23, c.globalX, c.globalZ);
       const dirty = game.sand.consumeDirtyBounds();
       if (dirty) game.world.refreshDeformation(dirty);
       game.sandSurface.markDirty();
       game.sandSurface.update(c, true);
     });
     await page.waitForTimeout(550);
-    await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand', { fullPage: false });
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand-v2', { fullPage: false });
 
     const deformed = await qaState(page);
     expect(deformed!.sandCells).toBeGreaterThan(80);
-    expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(6);
+    expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(7);
+    expect(deformed!.maxLoose).toBeGreaterThan(0.12);
+    expect(deformed!.maxCompaction).toBeGreaterThan(0.12);
+    expect(deformed!.sandWorkMs).toBeLessThan(12);
     expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
 
     await testInfo.attach('sirocco-state.json', {
