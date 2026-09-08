@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#d9c39e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>CARAPACE FORGE</title>
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app data-ui>
+    <canvas id="renderCanvas" data-gesture-surface data-block-callout aria-label="Игровая сцена CARAPACE FORGE"></canvas>
+
+    <header class="topbar">
+      <a class="back-link" href="../../index.html" data-app-control data-native-press>← Pocket Works</a>
+      <div class="identity">
+        <strong>CARAPACE FORGE</strong>
+        <span id="modelBadge">BLENDER ASSET FORGE</span>
+      </div>
+      <div class="score" aria-live="polite"><span id="scoreValue">0</span><small>/ 6</small></div>
+    </header>
+
+    <div class="compare" role="group" aria-label="Сравнение модели">
+      <button id="babylonMode" type="button" data-native-press>BABYLON</button>
+      <button id="blenderMode" class="active" type="button" data-native-press>BLENDER</button>
+    </div>
+
+    <div class="hint" id="hint">Один краб. Одна игра. Переключай модель на ходу.</div>
+
+    <div class="joystick" id="joystick" data-gesture-surface data-block-callout aria-label="Джойстик движения">
+      <div class="joystick-ring"></div>
+      <div class="joystick-knob" id="joystickKnob"></div>
+    </div>
+
+    <button class="claw-button" id="clawButton" type="button" data-native-press>КЛЕШНЯ</button>
+
+    <section class="finish" id="finishPanel" hidden>
+      <p>Все жемчужины собраны</p>
+      <strong>Теперь переключи BABYLON ↔ BLENDER и посмотри на победную анимацию.</strong>
+      <button id="restartButton" type="button" data-native-press>Ещё забег</button>
+      <a href="../../index.html" data-app-control data-native-press>Назад в Pocket Works</a>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
