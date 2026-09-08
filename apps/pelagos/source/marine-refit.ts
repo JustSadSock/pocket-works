@@ -65,17 +65,17 @@ function shadow(world: OceanWorld, mesh: Mesh): void {
 function sailMaterial(world: OceanWorld): StandardMaterial {
   const existing = world.scene.getMaterialByName('salted-canvas');
   if (existing instanceof StandardMaterial) {
-    existing.diffuseColor = new Color3(0.91, 0.86, 0.70);
-    existing.specularColor = new Color3(0.07, 0.06, 0.04);
-    existing.specularPower = 18;
+    existing.diffuseColor = new Color3(0.95, 0.90, 0.76);
+    existing.specularColor = new Color3(0.055, 0.045, 0.03);
+    existing.specularPower = 14;
     existing.backFaceCulling = false;
     existing.twoSidedLighting = true;
     return existing;
   }
   const material = new StandardMaterial('physical-sail-cloth', world.scene);
-  material.diffuseColor = new Color3(0.91, 0.86, 0.70);
-  material.specularColor = new Color3(0.07, 0.06, 0.04);
-  material.specularPower = 18;
+  material.diffuseColor = new Color3(0.95, 0.90, 0.76);
+  material.specularColor = new Color3(0.055, 0.045, 0.03);
+  material.specularPower = 14;
   material.backFaceCulling = false;
   material.twoSidedLighting = true;
   return material;
@@ -407,7 +407,10 @@ function createMarineRig(world: OceanWorld): MarineRig {
     }
   }
 
-  return { mainPivot, mainBoom, gaff, main, jib, oars, deploy: 0.035, oarDeploy: 0 };
+  // Gameplay begins with the vessel already under sail. Starting the cloth from a nearly
+  // furled state made the first WebKit frames look broken because the QA/player can reach the
+  // scene before the slow hoist completes on mobile Safari.
+  return { mainPivot, mainBoom, gaff, main, jib, oars, deploy: 1, oarDeploy: 0 };
 }
 
 function ensureMarineRig(world: OceanWorld): MarineRig {
@@ -488,7 +491,7 @@ function updateSails(
   time: number,
   dt: number
 ): void {
-  rig.deploy = smoothTo(rig.deploy, 1, 0.62, dt);
+  rig.deploy = smoothTo(rig.deploy, 1, 4.8, dt);
   const windSide = Math.sign(Math.sin(telemetry.windAngle)) || 1;
   const load = clamp(telemetry.apparentWindSpeed / 14.0, 0, 1.22) * clamp(telemetry.sailEfficiency * 1.48, 0, 1);
   const sheetTarget = windSide * (0.18 + state.sailAngle * 1.12);
