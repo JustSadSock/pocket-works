@@ -5,6 +5,19 @@ import { OceanWorld } from './world';
 
 const UNDERWATER_APPENDAGES = ['rudder-blade', 'refit-skeg'] as const;
 
+export function appendageVisibility(
+  minimumY: number,
+  maximumY: number,
+  waterHeight: number,
+  exposureStart = 0.42,
+  exposureFull = 0.82
+): number {
+  const span = Math.max(0.05, maximumY - minimumY);
+  const exposedFraction = clamp((maximumY - waterHeight) / span, 0, 1);
+  const t = clamp((exposedFraction - exposureStart) / Math.max(0.05, exposureFull - exposureStart), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 function updateSternAppendageImmersion(
   world: OceanWorld,
   environment: EnvironmentFrame,
@@ -14,10 +27,11 @@ function updateSternAppendageImmersion(
 ): void {
   const rudder = world.scene.getMeshByName('rudder-blade');
   if (rudder) {
-    // The old blade was centred high enough that a passing stern trough could expose most of it.
-    // Seat it behind the immersed transom; the tiller/stock stay untouched above the waterline.
-    rudder.position.y = -1.42;
-    rudder.scaling.y = 0.94;
+    // The working blade lives behind the immersed transom. It should only become visually
+    // readable when a genuinely severe trough exposes a large fraction of the blade, not merely
+    // because transparent water lets the camera see through the surface.
+    rudder.position.y = -1.58;
+    rudder.scaling.y = 0.90;
   }
 
   for (const name of UNDERWATER_APPENDAGES) {
@@ -28,18 +42,20 @@ function updateSternAppendageImmersion(
     const bounds = mesh.getBoundingInfo().boundingBox;
     const center = bounds.centerWorld;
     const water = sampleWave(center.x + originX, center.z + originZ, time, environment.waveScale);
-    const exposedTop = bounds.maximumWorld.y - water.height;
 
-    // The ocean shader is intentionally translucent at grazing angles, which used to make fully
-    // submerged steering hardware look as if it were hanging in open air. Treat the water surface
-    // as the visual occluder for appendages: they fade in only if the real wave surface exposes them.
-    mesh.visibility = clamp((exposedTop + 0.015) / 0.16, 0, 1);
+    // Whole-mesh visibility is based on the fraction actually above the live wave surface.
+    // A few exposed centimetres at the stock no longer make a metre of submerged blade appear
+    // through the translucent ocean. The skeg uses a slightly lower threshold because it is
+    // shorter and can legitimately flash into view sooner in an extreme trough.
+    mesh.visibility = name === 'rudder-blade'
+      ? appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.46, 0.84)
+      : appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.38, 0.76);
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV1?: boolean };
-if (!prototype.__pelagosSternImmersionV1) {
-  prototype.__pelagosSternImmersionV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV2?: boolean };
+if (!prototype.__pelagosSternImmersionV2) {
+  prototype.__pelagosSternImmersionV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function sternImmersionUpdate(
     state: ShipState,
