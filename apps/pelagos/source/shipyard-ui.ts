@@ -45,6 +45,11 @@ function screen(id: SourceScreen): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#${id}`);
 }
 
+function setPreviewMode(enabled: boolean): void {
+  document.documentElement.classList.toggle('pelagos-shipyard-open', enabled);
+  document.dispatchEvent(new CustomEvent('pelagos:shipyard-preview', { detail: { enabled } }));
+}
+
 function updateSummary(): void {
   if (!summary) return;
   const loadout = getActiveShipLoadout();
@@ -114,6 +119,7 @@ function showShipyard(from: SourceScreen): void {
   sourceScreen = from;
   screen(from)?.classList.add('hidden');
   shipyard.classList.remove('hidden');
+  setPreviewMode(true);
   renderOptions();
   updateSummary();
 }
@@ -121,6 +127,7 @@ function showShipyard(from: SourceScreen): void {
 function closeShipyard(): void {
   if (!shipyard) return;
   shipyard.classList.add('hidden');
+  setPreviewMode(false);
   screen(sourceScreen)?.classList.remove('hidden');
 }
 
