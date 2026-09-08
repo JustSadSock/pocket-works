@@ -11,8 +11,8 @@ const makeMaterial = (scene, name, diffuse, emissive = null) => {
 };
 
 function addRouteInlays(scene) {
-  const brass = makeMaterial(scene, 'route-inlay-brass', new Color3(.20,.145,.055), new Color3(.055,.036,.010));
-  const teal = makeMaterial(scene, 'route-inlay-joint', new Color3(.025,.22,.18), new Color3(.025,.25,.20));
+  const brass = makeMaterial(scene, 'route-inlay-brass', new Color3(.24,.175,.065), new Color3(.085,.055,.014));
+  const teal = makeMaterial(scene, 'route-inlay-joint', new Color3(.03,.26,.21), new Color3(.03,.31,.24));
   const parents = { back:'carrier-back', shoulder:'carrier-shoulder', interior:'carrier-interior', head:'carrier-head' };
   for (const [carrier, route] of Object.entries(ROUTES)) {
     const parent = scene.getTransformNodeByName(parents[carrier]);
@@ -20,8 +20,8 @@ function addRouteInlays(scene) {
     route.pads.forEach(([a,b], index) => {
       const mid=(a+b)*.5, p=routePoint(carrier,0,mid), depth=Math.max(.35,b-a-.30), edge=Math.max(1.1,p.width*.73);
       for (const side of [-1,1]) {
-        const inlay=MeshBuilder.CreateBox(`route-inlay-${carrier}-${index}-${side}`,{width:.055,height:.018,depth},scene);
-        inlay.parent=parent; inlay.position.set(edge*side,p.y+.145,mid); inlay.material=index===route.pads.length-1?teal:brass;
+        const inlay=MeshBuilder.CreateBox(`route-inlay-${carrier}-${index}-${side}`,{width:.075,height:.025,depth},scene);
+        inlay.parent=parent; inlay.position.set(edge*side,p.y+.15,mid); inlay.material=index===route.pads.length-1?teal:brass;
       }
     });
   }
@@ -29,11 +29,12 @@ function addRouteInlays(scene) {
 
 function addInteriorArchitecture(scene) {
   const parent=scene.getTransformNodeByName('carrier-interior');
-  if (!parent) return;
-  const shell=makeMaterial(scene,'interior-shell-runtime',new Color3(.10,.115,.105));
-  const rib=makeMaterial(scene,'interior-rib-runtime',new Color3(.19,.145,.075),new Color3(.018,.012,.004));
-  const tissue=makeMaterial(scene,'interior-tissue-runtime',new Color3(.13,.030,.024),new Color3(.025,.004,.003));
-  const lampMat=makeMaterial(scene,'interior-lamp-runtime',new Color3(.05,.42,.34),new Color3(.04,.55,.43));
+  if (!parent) return null;
+  const shell=makeMaterial(scene,'interior-shell-runtime',new Color3(.16,.18,.165),new Color3(.018,.021,.018));
+  const rib=makeMaterial(scene,'interior-rib-runtime',new Color3(.27,.20,.095),new Color3(.026,.016,.004));
+  const tissue=makeMaterial(scene,'interior-tissue-runtime',new Color3(.18,.045,.035),new Color3(.032,.005,.004));
+  const lampMat=makeMaterial(scene,'interior-lamp-runtime',new Color3(.06,.48,.38),new Color3(.05,.62,.48));
+  const targetMat=makeMaterial(scene,'stabilizer-target-runtime',new Color3(.025,.34,.28),new Color3(.04,.78,.60));
   const floor=MeshBuilder.CreateBox('interior-service-bed',{width:9.6,height:.34,depth:25.2},scene);
   floor.parent=parent; floor.position.set(0,.45,.45); floor.material=shell;
   for(let i=0;i<7;i+=1){
@@ -51,39 +52,54 @@ function addInteriorArchitecture(scene) {
     for(const side of [-1,1]){
       const lamp=MeshBuilder.CreateBox(`interior-guide-lamp-${i}-${side}`,{width:.20,height:.14,depth:.48},scene);
       lamp.parent=parent; lamp.position.set(side*3.55,1.25,z); lamp.material=lampMat;
-      const light=new PointLight(`interior-guide-light-${i}-${side}`,Vector3.Zero(),scene); light.parent=lamp; light.intensity=.34; light.range=5.5; light.diffuse=new Color3(.20,.78,.63);
+      const light=new PointLight(`interior-guide-light-${i}-${side}`,Vector3.Zero(),scene); light.parent=lamp; light.intensity=.40; light.range=6.2; light.diffuse=new Color3(.20,.82,.66);
     }
   }
+  const ring=MeshBuilder.CreateTorus('stabilizer-world-target',{diameter:3.2,thickness:.18,tessellation:40},scene);
+  ring.parent=parent; ring.position.set(0,2.5,9.3); ring.rotation.x=Math.PI/2; ring.material=targetMat;
+  const core=MeshBuilder.CreateSphere('stabilizer-world-core',{diameter:.48,segments:18},scene);
+  core.parent=parent; core.position.set(0,2.5,9.3); core.material=targetMat;
+  const targetLight=new PointLight('stabilizer-world-light',Vector3.Zero(),scene); targetLight.parent=core; targetLight.intensity=1.25; targetLight.range=11; targetLight.diffuse=new Color3(.12,1,.76);
+  return { ring, core, targetLight };
 }
 
 export function installColossusVisualTuning(){
   const scene=EngineStore.LastCreatedScene;
   if(!scene)return;
-  globalThis.__PW_VISUAL_TUNING__={ready:true,version:4};
-  scene.clearColor=new Color4(.040,.055,.058,1);
-  scene.ambientColor=new Color3(.27,.285,.26);
-  scene.imageProcessingConfiguration.exposure=1.26;
-  scene.imageProcessingConfiguration.contrast=1.08;
-  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene); sky.intensity=.82; sky.diffuse=new Color3(.62,.69,.66); sky.groundColor=new Color3(.16,.15,.12);
-  const rim=new DirectionalLight('cross-browser-rim',new Vector3(.5,-.7,-.46),scene); rim.position.set(-18,30,24); rim.intensity=.78; rim.diffuse=new Color3(.82,.70,.50);
-  const cameraLamp=new PointLight('camera-readable-fill',new Vector3(0,1.25,1.3),scene); cameraLamp.parent=scene.activeCamera; cameraLamp.intensity=1.18; cameraLamp.range=22; cameraLamp.diffuse=new Color3(.76,.70,.57);
-  addRouteInlays(scene); addInteriorArchitecture(scene);
+  globalThis.__PW_VISUAL_TUNING__={ready:true,version:5};
+  scene.clearColor=new Color4(.048,.064,.067,1);
+  scene.ambientColor=new Color3(.34,.35,.32);
+  scene.imageProcessingConfiguration.exposure=1.30;
+  scene.imageProcessingConfiguration.contrast=1.06;
+  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene); sky.intensity=.96; sky.diffuse=new Color3(.66,.73,.70); sky.groundColor=new Color3(.20,.19,.15);
+  const rim=new DirectionalLight('cross-browser-rim',new Vector3(.5,-.7,-.46),scene); rim.position.set(-18,30,24); rim.intensity=.88; rim.diffuse=new Color3(.86,.74,.53);
+  const cameraLamp=new PointLight('camera-readable-fill',new Vector3(0,1.25,1.3),scene); cameraLamp.parent=scene.activeCamera; cameraLamp.intensity=1.45; cameraLamp.range=26; cameraLamp.diffuse=new Color3(.80,.74,.60);
+  addRouteInlays(scene); const stabilizer=addInteriorArchitecture(scene);
   const tune=()=>{
     const inside=globalThis.__PW_TEST_STATE__?.carrier==='interior';
-    scene.imageProcessingConfiguration.exposure=inside?1.34:1.26; scene.imageProcessingConfiguration.contrast=inside?1.03:1.08;
-    if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.0065);scene.fogColor=new Color3(.075,.088,.078);cameraLamp.intensity=1.55;cameraLamp.range=18;}
-    else{if(scene.fogDensity>.0028)scene.fogDensity=.00235;scene.fogColor=new Color3(.105,.135,.14);cameraLamp.intensity=1.18;cameraLamp.range=22;}
+    scene.imageProcessingConfiguration.exposure=inside?1.40:1.31; scene.imageProcessingConfiguration.contrast=inside?1.02:1.06;
+    if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.006);scene.fogColor=new Color3(.085,.10,.09);cameraLamp.intensity=1.8;cameraLamp.range=20;}
+    else{if(scene.fogDensity>.0028)scene.fogDensity=.00225;scene.fogColor=new Color3(.115,.145,.15);cameraLamp.intensity=1.45;cameraLamp.range=26;}
     for(const m of scene.materials){
       const name=m.name||'';
-      if('ambientColor'in m&&/^authored-/.test(name))m.ambientColor=/interior|bone|edge/i.test(name)?new Color3(.62,.60,.51):new Color3(.48,.50,.46);
-      if('emissiveColor'in m&&/^authored-/.test(name)){
-        if(/sensor/i.test(name))m.emissiveColor=new Color3(.035,.34,.27);
-        else if(/heart/i.test(name))m.emissiveColor=new Color3(.10,.014,.010);
-        else if(/interior/i.test(name))m.emissiveColor=new Color3(.050,.058,.050);
-        else if(/edge/i.test(name))m.emissiveColor=new Color3(.075,.052,.018);
+      if(!/^authored-/.test(name))continue;
+      if('ambientColor'in m)m.ambientColor=/interior|bone|edge/i.test(name)?new Color3(.72,.68,.56):new Color3(.58,.60,.55);
+      if('emissiveColor'in m){
+        if(/sensor/i.test(name))m.emissiveColor=new Color3(.045,.38,.30);
+        else if(/heart/i.test(name))m.emissiveColor=new Color3(.12,.018,.012);
+        else if(/interior/i.test(name))m.emissiveColor=new Color3(.10,.115,.098);
+        else if(/edge/i.test(name))m.emissiveColor=new Color3(.13,.085,.024);
+        else if(/bone/i.test(name))m.emissiveColor=new Color3(.10,.105,.085);
+        else if(/player|cloth/i.test(name))m.emissiveColor=new Color3(.095,.075,.045);
+        else if(/armor/i.test(name))m.emissiveColor=new Color3(.085,.105,.095);
       }
+      if(m.diffuseTexture && 'emissiveTexture' in m && /armor|bone|interior|player|cloth|edge/i.test(name))m.emissiveTexture=m.diffuseTexture;
     }
-    for(const light of scene.lights)if(/route-light|traveler-lamp/i.test(light.name||'')){light.intensity=Math.max(light.intensity||0,inside?.76:.66);light.range=Math.max(light.range||0,inside?10:9);}
+    for(const light of scene.lights)if(/route-light|traveler-lamp/i.test(light.name||'')){light.intensity=Math.max(light.intensity||0,inside?.86:.78);light.range=Math.max(light.range||0,inside?11:10);}
   };
-  tune(); let passes=0; const observer=scene.onBeforeRenderObservable.add(()=>{if(passes%12===0)tune();passes+=1;if(passes>1800)scene.onBeforeRenderObservable.remove(observer);});
+  tune(); let passes=0; const observer=scene.onBeforeRenderObservable.add(()=>{
+    if(passes%12===0)tune();
+    if(stabilizer){const t=performance.now()/1000;stabilizer.ring.rotation.z=t*.35;const p=.85+.15*Math.sin(t*3.1);stabilizer.ring.scaling.setAll(p);stabilizer.targetLight.intensity=1.0+.35*Math.sin(t*3.1);}
+    passes+=1;if(passes>1800&&!stabilizer)scene.onBeforeRenderObservable.remove(observer);
+  });
 }
