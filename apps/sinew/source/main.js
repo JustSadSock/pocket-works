@@ -2,6 +2,7 @@ import './styles.css';
 import { installBlenderCombatKit } from './blender-kit.js';
 import { installConstraintCombat } from './constraint-combat.js';
 import { SinewGame } from './game.js';
+import { installScenePolish } from './scene-polish.js';
 import { installVisualPolish } from './visual-polish.js';
 
 const storageNamespace = 'pocket-works:sinew';
@@ -92,6 +93,7 @@ async function boot() {
   try {
     updateOrientation();
     await game.init(report);
+    installScenePolish(game);
     installConstraintCombat(game);
     installVisualPolish(game);
     report('Подгружаем Blender-доспехи…', .92);
@@ -120,9 +122,6 @@ async function boot() {
     updateHud(game.getState());
     qaState.booted = true;
 
-    // Reveal the playable entry state in the same frame the loading layer begins fading.
-    // The old 360 ms hidden gap produced a blank HUD frame on Safari/WebKit and made
-    // automated/mobile taps race the UI even though the engine was already ready.
     enter.hidden = false;
     loading.classList.add('done');
     setTimeout(() => { loading.hidden = true; }, 380);
