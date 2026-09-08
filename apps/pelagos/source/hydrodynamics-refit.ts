@@ -12,6 +12,7 @@ type HydroFrame = {
   targetPitch: number;
   targetRoll: number;
   filteredSurfaceHeight: number;
+  filteredSternHeight: number;
   filteredWaterVelocity: number;
   immersionBias: number;
   sternGap: number;
@@ -140,6 +141,14 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
     ? clamp((filteredSurfaceHeight - previousFrame.filteredSurfaceHeight) / safeDt, -0.52, 0.52)
     : clamp(meanVelocity * 0.08, -0.18, 0.18);
 
+  // A 13 m displacement hull bridges a local trough under the quarter; it does not articulate down
+  // into that trough like a raft. Blend the local stern sample strongly toward the hull-wide support
+  // plane and filter it in time before using it as a hard immersion reference.
+  const sternSupportRaw = sternPlaneHeight * 0.28 + filteredSurfaceHeight * 0.72;
+  const filteredSternHeight = previousFrame
+    ? smoothTo(previousFrame.filteredSternHeight, sternSupportRaw, 1.10 / massFactor, safeDt)
+    : sternSupportRaw;
+
   // Sit the vessel a little deeper than the old visual waterline and add a small speed-dependent
   // squat. This keeps the transom and steering gear planted without making the deck look flooded.
   const immersionBias = clamp(restingImmersionBias(draft) + telemetry.speed * 0.0065, 0.10, 0.18);
@@ -181,20 +190,19 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   state.verticalVelocity = smoothTo(state.verticalVelocity, verticalVelocityTarget, 1.45 / massFactor, safeDt);
   state.verticalVelocity = clamp(state.verticalVelocity, -0.62 / massFactor, 0.38 / massFactor);
 
-  // Compare the actual stern waterline with the local stern surface. If it starts to clear the
-  // water, correct both pitch and heave. Correcting only pitch still allowed the entire vessel to
-  // rise high enough for the rudder to flash out of the sea.
+  // Compare the actual stern waterline with the hull-supported stern plane. This catches genuine
+  // whole-hull emergence without making the vessel chase every instantaneous trough under the rudder.
   let sternReferenceY = state.y - waterlineCenterY + length * 0.40 * Math.sin(state.pitch);
-  let sternGap = sternReferenceY - sternPlaneHeight;
+  let sternGap = sternReferenceY - filteredSternHeight;
   const sternLiftGuard = clamp((sternGap - 0.025) / 0.17, 0, 1);
   const guardedTargetPitch = targetPitch > 0
     ? targetPitch * (1 - sternLiftGuard * 0.92)
     : targetPitch;
 
   if (sternLiftGuard > 0) {
-    const maximumRootY = sternPlaneHeight + waterlineCenterY - length * 0.40 * Math.sin(state.pitch) + 0.055;
+    const maximumRootY = filteredSternHeight + waterlineCenterY - length * 0.40 * Math.sin(state.pitch) + 0.055;
     if (state.y > maximumRootY) {
-      state.y = smoothTo(state.y, maximumRootY, 7.0 + sternLiftGuard * 7.5, safeDt);
+      state.y = smoothTo(state.y, maximumRootY, 5.2 + sternLiftGuard * 4.6, safeDt);
       state.verticalVelocity = Math.min(state.verticalVelocity, 0.02);
     }
   }
@@ -216,7 +224,7 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
   state.roll = clamp(state.roll, -11.5 * DEG, 11.5 * DEG);
 
   sternReferenceY = state.y - waterlineCenterY + length * 0.40 * Math.sin(state.pitch);
-  sternGap = sternReferenceY - sternPlaneHeight;
+  sternGap = sternReferenceY - filteredSternHeight;
 
   if (!Number.isFinite(state.y + state.verticalVelocity + state.pitch + state.roll)) {
     state.y = targetY;
@@ -233,6 +241,7 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
     targetPitch: guardedTargetPitch,
     targetRoll,
     filteredSurfaceHeight,
+    filteredSternHeight,
     filteredWaterVelocity,
     immersionBias,
     sternGap,
