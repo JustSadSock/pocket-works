@@ -25,4 +25,14 @@ describe('PELAGOS living rigging', () => {
     expect(starboard.x).toBeLessThan(0);
     expect(port.x).toBeGreaterThan(0);
   });
+
+  it('keeps sheets attached when a shipyard sail module changes rig height and chord', () => {
+    const baseline = boomEndLocal(0, 1, 1);
+    const merchant = boomEndLocal(0, 1.02, 1.22);
+    const storm = boomEndLocal(0, 0.86, 0.82);
+    expect(merchant.y).toBeGreaterThan(baseline.y);
+    expect(Math.abs(merchant.z - 0.32)).toBeGreaterThan(Math.abs(baseline.z - 0.32));
+    expect(storm.y).toBeLessThan(baseline.y);
+    expect(Math.abs(storm.z - 0.32)).toBeLessThan(Math.abs(baseline.z - 0.32));
+  });
 });
