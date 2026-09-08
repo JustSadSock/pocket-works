@@ -1,24 +1,28 @@
 # RELIC SIEGE
 
-A short landscape-first mobile 3D action game for Pocket Works.
+A landscape-first mobile 3D action game for Pocket Works, rebuilt in 2.0 around traversal through an authored mountain fortress rather than a single arena.
 
 ## Premise
 
-The last keeper of a mountain citadel must reignite three solar obelisks during a night ash storm. Every ignition wakes a larger wave of ash-raiders; after the third wave the ancient Ash Warden enters the arena.
+The last Keeper enters a storm-battered ash citadel, fights through successive fortress spaces and confronts the Ash Warden. The level is designed as a readable physical journey: outer gate, ramp, courtyard encounters and deeper fortress spaces, with authored collision surfaces matching the visible architecture.
 
 ## Controls
 
 - left virtual stick: movement;
 - drag the right half: orbit/look camera;
-- `RELIC`: radial/cone strike;
-- near an inactive obelisk with the arena clear, the same button becomes `IGNITE`;
+- `RELIC`: melee strike / contextual interaction;
 - desktop QA fallback: WASD/arrow keys and Space.
 
 ## Production pipeline
 
-- Babylon.js renders and runs gameplay;
-- `asset-forge/` generates the authored fortress and animated Ash Warden through Blender Asset Forge;
-- `audio-forge/manifest.json` generates music, wind and combat SFX through Audio Asset Forge;
-- the runtime exposes `window.__AI_TEST_STATE__` so the shared Playwright mobile QA can read health, phase, enemy count, pylon progress, position, grounded state, FPS and authored-asset load status.
+- Babylon.js renders the scene and owns gameplay, collision, enemy logic and mobile input;
+- `asset-forge/world.py` generates the authored fortress through Blender Asset Forge;
+- `asset-forge/actors.py` generates the skinned Keeper, Ash Raider and Ash Warden GLBs with armatures and exported actions;
+- `audio-forge/manifest.json` generates ambience, combat, footsteps, parries and music through Audio Asset Forge;
+- the runtime exposes `window.__AI_TEST_STATE__` so the shared Playwright mobile QA can inspect phase, zone, player position, grounded state, ground distance, health, relic charge, enemy grounding and authored-asset load status.
 
-The game intentionally keeps a runtime geometry fallback under the Blender layer. If a generated GLB is temporarily unavailable, the game remains playable instead of becoming a blank/broken scene.
+## Release QA
+
+The RELIC SIEGE Playwright path is intentionally stricter than the generic Pocket Works smoke pass. On both landscape Chromium and WebKit it must load all authored Blender assets, start through the real UI, establish a valid ground collision at the gate, move through the physical virtual joystick into the courtyard, spawn the first encounter, keep the player and active enemies grounded, and connect a real attack through the on-screen combat control. Screenshots and bridge-state diagnostics are retained as workflow artifacts for visual inspection.
+
+The runtime still contains a lightweight geometry fallback underneath the authored Blender layer so a temporary asset delivery failure is diagnosable rather than producing a blank canvas; release QA nevertheless requires the authored 2.0 assets to load successfully.
