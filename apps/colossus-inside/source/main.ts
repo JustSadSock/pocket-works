@@ -5,12 +5,12 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'COLOSSUS // INSIDE';
-const version = '1.0.0';
+const version = '1.2.0';
 const storageNamespace = 'pocket-works:colossus-inside';
 const releaseNotes = [
-  'Добавлен законченный вертикальный slice: спина → плечо → внутренности → ремонт → голова.',
-  'Три Blender Asset Forge GLB используют настоящие armature и именованные анимации колосса, анатомии и игрока.',
-  'Движущаяся поверхность физически передаёт игроку движение и импульс, а ремонт реально стабилизирует походку.'
+  'Добавлена полноценная физика персонажа на движущемся теле колосса: баланс, импульсы, прыжок, падение и приземление.',
+  'Короткое нажатие JUMP прыгает, удержание у подсвеченного уступа запускает grab/climb с отдельными Blender-анимациями.',
+  'Плечевой шарнир теперь отмечен ярким бирюзовым emissive-маяком и локальным светом; броня получила дополнительные сервисные источники света.'
 ];
 
 const runtime = installMobileRuntime();
@@ -24,4 +24,4 @@ createWorkshopMode({
   onReset: () => location.reload()
 });
 
-void import('./game.js');
+void import('./game-v2.js');
