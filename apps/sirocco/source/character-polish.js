@@ -51,6 +51,11 @@ function material(scene, name, color, roughness) {
   return mat;
 }
 
+function angleDelta(a, b) {
+  const d = a - b;
+  return Math.atan2(Math.sin(d), Math.cos(d));
+}
+
 export class BedouinVisualPolish {
   constructor(scene, rig) {
     this.scene = scene;
@@ -59,6 +64,7 @@ export class BedouinVisualPolish {
     this.materials = [];
     this.textures = [];
     this.time = 0;
+    this.cosmeticsVisible = true;
   }
 
   init() {
@@ -98,8 +104,6 @@ export class BedouinVisualPolish {
       return mesh;
     };
 
-    // Cross-body strap breaks the large monochrome torso and reads immediately
-    // in first-person when looking down, without increasing the skinned mesh cost.
     this.strap = add(MeshBuilder.CreateBox('bedouin-crossbody-strap', {
       width: 0.052, height: 0.78, depth: 0.028
     }, this.scene), darkLeather);
@@ -122,7 +126,6 @@ export class BedouinVisualPolish {
     this.waterSkin.scaling.set(0.78, 1.28, 0.58);
     this.waterSkin.position.set(-0.28, 0.83, 0.02);
 
-    // Layered robe gores make the lower silhouette less like a single cylinder.
     this.gores = [];
     for (const side of [-1, 1]) {
       const gore = add(MeshBuilder.CreateBox(`bedouin-robe-gore-${side}`, {
@@ -133,8 +136,6 @@ export class BedouinVisualPolish {
       this.gores.push(gore);
     }
 
-    // Small shoulder drape adds a layered desert-traveller silhouette while
-    // staying behind the first-person camera and therefore cannot clip the view.
     this.shoulderDrape = add(MeshBuilder.CreateBox('bedouin-shoulder-drape', {
       width: 0.50, height: 0.19, depth: 0.035
     }, this.scene), clothShadow);
@@ -142,8 +143,24 @@ export class BedouinVisualPolish {
     this.shoulderDrape.rotation.x = -0.10;
   }
 
+  setCosmeticsVisible(visible) {
+    if (this.cosmeticsVisible === visible) return;
+    this.cosmeticsVisible = visible;
+    for (const mesh of this.meshes) mesh.setEnabled(visible);
+  }
+
   update(controller, dt) {
     this.time += dt;
+
+    // The animated body intentionally lags camera yaw for weight. During a very
+    // fast turn + steep look-down that can put any rigid cosmetic attached to
+    // the torso between the eye and the body for a few frames. Hide only this
+    // cheap detail layer in that extreme pose; the skinned character remains.
+    const yawDivergence = Math.abs(angleDelta(controller.yaw, controller.bodyYaw));
+    const cameraSafe = yawDivergence < 0.72 && controller.pitch < 0.88;
+    this.setCosmeticsVisible(cameraSafe);
+    if (!cameraSafe) return;
+
     const speed = Math.min(1, controller.speed / 3);
     if (this.pouch) this.pouch.rotation.z = Math.sin(this.time * 3.2 + controller.gait) * 0.035 * speed;
     if (this.waterSkin) this.waterSkin.rotation.z = -0.08 + Math.sin(this.time * 2.4 + 0.7) * 0.045 * speed;
