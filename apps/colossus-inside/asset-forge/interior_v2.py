@@ -38,11 +38,10 @@ def add_living_stabilizer(rig):
             )
             base.bind(tendon, rig, 'chamber')
 
-    # Larger ribs frame the destination as a living organ rather than a sci-fi console.
     for i, y in enumerate((11.8, 15.0, 18.4, 21.6), 1):
         arch = base.torus(f'INT_PhaseRibArch_{i}', (0, y, 7.7), 7.1 - i * .18, .48, frame, rot=(math.pi/2,0,0))
         base.bind(arch, rig, 'chamber')
-        sternum = base.cube(f'INT_PhaseSternum_{i}', (0, y, 10.7), (1.15, .34, 1.8), copper, rot=(0,0,.02*(i%2 and 1 or -1)), bevel=.20)
+        sternum = base.cube(f'INT_PhaseSternum_{i}', (0, y, 10.7), (1.15, .34, 1.8), copper, rot=(0,0,.02*(1 if i % 2 else -1)), bevel=.20)
         base.bind(sternum, rig, 'chamber')
 
 
@@ -54,7 +53,7 @@ def main():
     base.build(rig)
     add_living_stabilizer(rig)
     base.animate(rig)
-    base.export(output)
+    base.export_glb(output)
     print(f'COLOSSUS living interior generated {output} ({output.stat().st_size} bytes)')
 
 
