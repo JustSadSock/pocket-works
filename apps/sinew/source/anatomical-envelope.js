@@ -123,9 +123,10 @@ export function installAnatomicalEnvelope(game) {
       alignFallbackSword(player);
     }
 
-    // Neutral guard deliberately opens the centre. Under a genuinely fast,
-    // nearby incoming blade the envelope relaxes and lets the shield move back
-    // toward the centre/face so blocking ability is not sacrificed for framing.
+    // Neutral guard opens the centre primarily by moving the shield outward,
+    // rather than pushing it unrealistically far away and visually stretching
+    // the left arm. Under a fast nearby strike the envelope relaxes toward the
+    // centre so defensive coverage still wins over framing.
     let threat = 0;
     if (game.enemy && !game.enemy.dead) {
       const trace = game.enemy.getSwordTrace();
@@ -133,19 +134,19 @@ export function installAnatomicalEnvelope(game) {
       threat = clamp((trace.speed - 2.2) / 6.5, 0, 1) * clamp((2.65 - distance) / 1.45, 0, 1);
     }
     const shieldLocal = localPoint(player.shield.center, head, frame);
-    const maxShieldX = -.50 + threat * .18;
-    const minShieldZ = .90 - threat * .12;
+    const maxShieldX = -.56 + threat * .20;
+    const minShieldZ = .82 - threat * .08;
     const safeShield = {
       x: Math.min(shieldLocal.x, maxShieldX),
-      y: clamp(shieldLocal.y, -.70, .14),
+      y: clamp(shieldLocal.y, -.68, .12),
       z: Math.max(shieldLocal.z, minShieldZ)
     };
     const safeCenter = worldPoint(safeShield, head, frame);
     const shieldCorrection = safeCenter.subtract(player.shield.center);
     if (shieldCorrection.lengthSquared() > 1e-8) {
       player.shield.center.copyFrom(safeCenter);
-      const hand = player.bones.handL.getAbsolutePosition().add(shieldCorrection.scale(.72));
-      const elbow = player.bones.elbowL.getAbsolutePosition().add(shieldCorrection.scale(.34));
+      const hand = player.bones.handL.getAbsolutePosition().add(shieldCorrection.scale(.58));
+      const elbow = player.bones.elbowL.getAbsolutePosition().add(shieldCorrection.scale(.22));
       player.bones.handL.setAbsolutePosition(hand);
       player.bones.elbowL.setAbsolutePosition(elbow);
       player.leftHand.position.copyFrom(hand);
@@ -171,8 +172,8 @@ export function installAnatomicalEnvelope(game) {
     const finalSwordIntrusion = clamp((.18 - Math.abs(finalTip.x)) / .18, 0, 1)
       * clamp((.82 - finalTip.z) / .52, 0, 1)
       * (1 - energy * .72);
-    const finalShieldIntrusion = clamp((finalShield.x + .50) / .24, 0, 1)
-      * clamp((.90 - finalShield.z) / .32, 0, 1)
+    const finalShieldIntrusion = clamp((finalShield.x + .56) / .24, 0, 1)
+      * clamp((.82 - finalShield.z) / .30, 0, 1)
       * (1 - threat * .85);
 
     player.viewSafety = {
