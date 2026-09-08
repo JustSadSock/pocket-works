@@ -34,6 +34,8 @@ export class LocalSandSurface {
     return this.world.sampleBaseHeight(x, z) + clamp(this.sand.sampleOffset(x, z), -0.11, 0.075);
   }
 
+  sampleSoftness(x, z) { return this.sand.sampleSoftness?.(x, z) ?? 0.48; }
+
   sampleNormal(x, z) {
     const step = 0.075;
     const hx0 = this.sampleHeight(x - step, z), hx1 = this.sampleHeight(x + step, z);
@@ -79,6 +81,8 @@ export class LocalSandSurface {
     const colors = new Array(vertexCount * 4);
     const radial = new Array(vertexCount);
     const deformations = new Array(vertexCount);
+    const looseValues = new Array(vertexCount);
+    const compactValues = new Array(vertexCount);
     const indices = [];
     let p = 0, uv = 0, c = 0, vertex = 0;
 
@@ -93,7 +97,11 @@ export class LocalSandSurface {
         const deformFade = 1 - smoothstep(0.68, 0.86, r);
         const rawDeformation = clamp(this.sand.sampleOffset(gx, gz), -0.11, 0.075);
         const deformation = rawDeformation * deformFade;
+        const loose = (this.sand.sampleLoose?.(gx, gz) ?? 0) * deformFade;
+        const compaction = (this.sand.sampleCompaction?.(gx, gz) ?? 0) * deformFade;
         deformations[vertex] = deformation;
+        looseValues[vertex] = loose;
+        compactValues[vertex] = compaction;
         positions[p] = lx;
         positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation;
         positions[p + 2] = lz;
@@ -102,11 +110,13 @@ export class LocalSandSurface {
         uvs[uv + 1] = gz * 0.055;
         uv += 2;
 
-        const compact = smoothstep(0.0035, 0.065, -deformation);
+        const compactBowl = smoothstep(0.0035, 0.065, -deformation);
         const deposit = smoothstep(0.004, 0.052, deformation);
-        colors[c] = 1 - compact * 0.14 + deposit * 0.035;
-        colors[c + 1] = 1 - compact * 0.18 + deposit * 0.026;
-        colors[c + 2] = 1 - compact * 0.24 + deposit * 0.012;
+        const looseLift = loose * 0.055;
+        const packedShade = compaction * 0.105;
+        colors[c] = 1 - compactBowl * 0.12 - packedShade + deposit * 0.038 + looseLift;
+        colors[c + 1] = 1 - compactBowl * 0.16 - packedShade * 1.18 + deposit * 0.030 + looseLift * 0.78;
+        colors[c + 2] = 1 - compactBowl * 0.22 - packedShade * 1.36 + deposit * 0.015 + looseLift * 0.50;
         colors[c + 3] = 1;
         c += 4;
         vertex += 1;
@@ -136,11 +146,12 @@ export class LocalSandSurface {
         const base = terrainNormal(gx, gz, 0.42);
         const ni = i * 3;
 
-        // The physical geometry stays fully deformed, but mobile lighting uses
-        // a softened normal. Retaining ~58% of the high-resolution normal keeps
-        // a real footprint shape while suppressing large triangular light wedges.
+        // Keep geometry deep while filtering the low-poly lighting response.
+        // Fresh loose rims are allowed slightly more normal detail; compacted
+        // cavities are smoother and darker instead of forming triangular wedges.
         const edgeBlend = smoothstep(0.70, 0.91, r);
-        const baseMix = 0.42 + edgeBlend * 0.58;
+        const materialDetail = looseValues[i] * 0.10 - compactValues[i] * 0.08;
+        const baseMix = clamp(0.52 + edgeBlend * 0.48 - materialDetail, 0.42, 1);
         let nx = normals[ni] + (base.x - normals[ni]) * baseMix;
         let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * baseMix;
         let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * baseMix;
@@ -150,7 +161,7 @@ export class LocalSandSurface {
         normals[ni + 2] = nz * inv;
 
         const cavity = smoothstep(0.004, 0.058, -deformations[i]);
-        const shade = 1 - cavity * 0.16;
+        const shade = 1 - cavity * (0.12 + compactValues[i] * 0.12);
         const ci = i * 4;
         colors[ci] *= shade;
         colors[ci + 1] *= shade;
