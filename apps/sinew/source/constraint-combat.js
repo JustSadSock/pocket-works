@@ -30,53 +30,39 @@ class PhysicalUpperBody {
     const deltaX=gy-this.lastGesture.x,deltaY=gp-this.lastGesture.y;this.lastGesture={x:gy,y:gp};
     const snap=clamp(Math.hypot(deltaX,deltaY)/5.5,0,1);
     const drive=vec3(-gy*(.72+.45*snap),gp*(.68+.42*snap),gestureEnergy*(1.4+.8*snap));
-
-    // A quiet drag aims; a fast flick injects momentum. No canned strike phase.
     const weaponPose=this.weapon.step({shoulder:vec3(),guardHand:vec3(.24,-.13,.54),guardTip:vec3(.31,-.015,1.56),drive,brace:.70-gestureEnergy*.20,dt,iterations:8});
 
-    let threat=vec3();let danger=0;
-    const enemy=this.game.enemy;
+    let threat=vec3();let danger=0;const enemy=this.game.enemy;
     if(enemy&&!enemy.dead){const trace=enemy.getSwordTrace();const rel=trace.tip.subtract(p.bones.chest.getAbsolutePosition());const dist=rel.length();danger=clamp((trace.speed-1.7)/6,0,1)*clamp((3.0-dist)/1.5,0,1);threat=vec3(-Vector3.Dot(rel,b.right)*danger*2.4,(rel.y-.2)*danger*2.0,danger*1.7);}
-    // Shield is heavy and mostly body/threat driven; camera flicks only tug it slightly.
     const shieldDrive=vec3(threat.x-gy*.10,threat.y+gp*.08,threat.z);
     const shieldPose=this.shield.step({shoulder:vec3(),guardHand:vec3(-.22,-.03,.49),guardTip:vec3(-.22,-.03,.545),drive:shieldDrive,brace:.92,dt,iterations:9});
 
-    this.applyWeaponPose(weaponPose,shoulderR,b,dt);
-    this.applyShieldPose(shieldPose,shoulderL,b,dt);
-
-    // Body reacts to the *change* in limb momentum, not directly to camera position.
+    this.applyWeaponPose(weaponPose,shoulderR,b,dt);this.applyShieldPose(shieldPose,shoulderL,b,dt);
     if(gestureEnergy>.12){p.impactLeanVelocity.addInPlace(b.right.scale(-deltaX*.0017));p.impactLeanVelocity.y+=-deltaY*.0008;p.stability=Math.max(0,p.stability-gestureEnergy*dt*1.8);}
   }
   applyWeaponPose(pose,shoulder,b,dt){
     const w=this.player;const elbow=toWorld(pose.elbow,shoulder,b),hand=toWorld(pose.hand,shoulder,b),tip=toWorld(pose.tip,shoulder,b);
-    w.bones.elbowR.setAbsolutePosition(elbow);w.bones.handR.setAbsolutePosition(hand);w.rightHand.position.copyFrom(hand);
-    setSegment(w.meshes.upperArmR,shoulder,elbow);setSegment(w.meshes.forearmR,elbow,hand);
-    const dir=tip.subtract(hand).normalize();
-    const lastBase=this.prevSwordBase?.clone()??hand.clone(),lastTip=this.prevSwordTip?.clone()??tip.clone();
-    w.sword.prevBase.copyFrom(lastBase);w.sword.prevTip.copyFrom(lastTip);w.sword.base.copyFrom(hand);w.sword.tip.copyFrom(tip);this.prevSwordBase=hand.clone();this.prevSwordTip=tip.clone();
-    w.swordDirection.position.copyFrom(dir);
-    w.sword.speed=tip.subtract(lastTip).scale(1/Math.max(dt,1/240)).length();
-    const baseSpeed=hand.subtract(lastBase).scale(1/Math.max(dt,1/240));const tipSpeed=tip.subtract(lastTip).scale(1/Math.max(dt,1/240));w.sword.angularSpeed=tipSpeed.subtract(baseSpeed).length()/w.sword.length;
-    setSegment(w.meshes.blade,hand.add(dir.scale(.10)),tip,AXIS_Z);const gripEnd=hand.subtract(dir.scale(.18));setSegment(w.meshes.grip,gripEnd,hand,AXIS_Y);w.meshes.guard.position.copyFrom(hand.add(dir.scale(.015)));w.meshes.guard.rotationQuaternion=quatAxisTo(AXIS_Z,dir);
-    // Natural wrist roll from the swing plane rather than an animation preset.
+    w.bones.elbowR.setAbsolutePosition(elbow);w.bones.handR.setAbsolutePosition(hand);w.rightHand.position.copyFrom(hand);setSegment(w.meshes.upperArmR,shoulder,elbow);setSegment(w.meshes.forearmR,elbow,hand);
+    const dir=tip.subtract(hand).normalize();const lastBase=this.prevSwordBase?.clone()??hand.clone(),lastTip=this.prevSwordTip?.clone()??tip.clone();
+    w.sword.prevBase.copyFrom(lastBase);w.sword.prevTip.copyFrom(lastTip);w.sword.base.copyFrom(hand);w.sword.tip.copyFrom(tip);this.prevSwordBase=hand.clone();this.prevSwordTip=tip.clone();w.swordDirection.position.copyFrom(dir);
+    w.sword.speed=tip.subtract(lastTip).scale(1/Math.max(dt,1/240)).length();const baseSpeed=hand.subtract(lastBase).scale(1/Math.max(dt,1/240));const tipSpeed=tip.subtract(lastTip).scale(1/Math.max(dt,1/240));w.sword.angularSpeed=tipSpeed.subtract(baseSpeed).length()/w.sword.length;
+    setSegment(w.meshes.blade,hand.add(dir.scale(.10)),tip,AXIS_Z);setSegment(w.meshes.grip,hand.subtract(dir.scale(.18)),hand,AXIS_Y);w.meshes.guard.position.copyFrom(hand.add(dir.scale(.015)));w.meshes.guard.rotationQuaternion=quatAxisTo(AXIS_Z,dir);
     const roll=clamp((pose.tip.x-pose.hand.x)*-.55+(pose.tip.y-pose.hand.y)*.32,-.85,.85);const q=Quaternion.RotationAxis(dir,roll);w.meshes.blade.rotationQuaternion=q.multiply(w.meshes.blade.rotationQuaternion);w.meshes.guard.rotationQuaternion=q.multiply(w.meshes.guard.rotationQuaternion);
   }
   applyShieldPose(pose,shoulder,b,dt){
     const w=this.player;const elbow=toWorld(pose.elbow,shoulder,b),hand=toWorld(pose.hand,shoulder,b),center=toWorld(pose.tip,shoulder,b);
     w.bones.elbowL.setAbsolutePosition(elbow);w.bones.handL.setAbsolutePosition(hand);w.leftHand.position.copyFrom(hand);setSegment(w.meshes.upperArmL,shoulder,elbow);setSegment(w.meshes.forearmL,elbow,hand);
-    const forward=center.subtract(hand).normalize();const bodyForward=b.forward;const normal=forward.scale(.35).add(bodyForward.scale(.65)).normalize();
-    const lastCenter=this.prevShieldCenter?.clone()??center.clone(),lastNormal=this.prevShieldNormal?.clone()??normal.clone();w.shield.prevCenter.copyFrom(lastCenter);w.shield.prevNormal.copyFrom(lastNormal);w.shield.center.copyFrom(center);w.shield.normal.copyFrom(normal);this.prevShieldCenter=center.clone();this.prevShieldNormal=normal.clone();w.shieldNormal.position.copyFrom(normal);
+    const forward=center.subtract(hand).normalize();const normal=forward.scale(.35).add(b.forward.scale(.65)).normalize();const lastCenter=this.prevShieldCenter?.clone()??center.clone(),lastNormal=this.prevShieldNormal?.clone()??normal.clone();
+    w.shield.prevCenter.copyFrom(lastCenter);w.shield.prevNormal.copyFrom(lastNormal);w.shield.center.copyFrom(center);w.shield.normal.copyFrom(normal);this.prevShieldCenter=center.clone();this.prevShieldNormal=normal.clone();w.shieldNormal.position.copyFrom(normal);
     const rot=quatAxisTo(AXIS_Y,normal);w.meshes.shield.position.copyFrom(center);w.meshes.shield.rotationQuaternion=rot;w.meshes.shieldRim.position.copyFrom(center.add(normal.scale(.045)));w.meshes.shieldRim.rotationQuaternion=rot;w.meshes.shieldBoss.position.copyFrom(center.add(normal.scale(.075)));
   }
 }
 
 export function installConstraintCombat(game){
-  const body=new PhysicalUpperBody(game);const originalUpdate=game.update.bind(game);const originalRestart=game.restart?.bind(game);
-  const originalHandle=game.handleCombatEvent.bind(game);let hitStop=0;
-  game.update=(dt,now)=>{if(hitStop>0){hitStop-=dt;return;}originalUpdate(dt,now);body.drive(game.__lastPlayerControl||{},dt);};
-  // Capture exactly the control signal consumed by the stock update without changing the game's external API.
+  const body=new PhysicalUpperBody(game);const originalUpdate=game.update.bind(game);const originalRestart=game.restart?.bind(game);const originalHandle=game.handleCombatEvent.bind(game);let hitStop=0;
   const originalPlayerUpdate=game.player.update.bind(game.player);
-  game.player.update=(dt,control,snap=false)=>{game.__lastPlayerControl=control;originalPlayerUpdate(dt,control,snap);if(snap)body.reset();};
+  game.player.update=(dt,control,snap=false)=>{originalPlayerUpdate(dt,control,snap);if(snap)body.reset();else body.drive(control,dt);};
+  game.update=(dt,now)=>{if(hitStop>0){hitStop-=dt;return;}originalUpdate(dt,now);};
   game.handleCombatEvent=(event)=>{if(event.type==='hit')hitStop=Math.max(hitStop,.032+(event.intensity||0)*.018);else if(event.type==='clash')hitStop=Math.max(hitStop,.018+(event.intensity||0)*.012);else if(event.type==='block')hitStop=Math.max(hitStop,.014+(event.intensity||0)*.010);originalHandle(event);};
   if(originalRestart)game.restart=(...args)=>{body.reset();hitStop=0;return originalRestart(...args);};
   return body;
