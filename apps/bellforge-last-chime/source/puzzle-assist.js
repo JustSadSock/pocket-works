@@ -107,6 +107,7 @@ export function installPuzzleAssist() {
   const syncAllRings = () => ringButtons.forEach(syncRing);
 
   referenceButton.addEventListener('click', () => {
+    context();
     syncReference();
     const mode = referenceButton.dataset.mode || 'market';
     const target = PUZZLE_TARGETS[mode];
@@ -128,6 +129,7 @@ export function installPuzzleAssist() {
 
   ringButtons.forEach((button, index) => {
     button.addEventListener('click', () => {
+      context();
       setTimeout(() => {
         syncRing(button, index);
         const value = normalizeToneValue(button.querySelector('b')?.textContent);
