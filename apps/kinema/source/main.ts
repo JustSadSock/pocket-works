@@ -22,7 +22,7 @@ import { FootstepAudio } from './audio';
 import { InputController } from './input';
 import { MAX_SPEED, exponentialApproach, speedFromMagnitude } from './locomotion';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -107,35 +107,35 @@ async function start(): Promise<void> {
     const scene = new Scene(engine);
     scene.clearColor = Color4.FromHexString('#d5d0c7ff');
     scene.fogMode = Scene.FOGMODE_EXP2;
-    scene.fogDensity = 0.0085;
+    scene.fogDensity = 0.0072;
     scene.fogColor = Color3.FromHexString('#d5d0c7');
     const image = scene.imageProcessingConfiguration;
     image.toneMappingEnabled = true;
     image.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-    image.exposure = 1.08;
-    image.contrast = 1.06;
+    image.exposure = 1.02;
+    image.contrast = 1.12;
 
-    const camera = new UniversalCamera('third-person', new Vector3(0, 2.55, 5.8), scene);
+    const camera = new UniversalCamera('third-person', new Vector3(0, 2.22, 4.25), scene);
     camera.minZ = 0.05;
     camera.maxZ = 150;
-    camera.fov = 0.72;
-    camera.setTarget(new Vector3(0, 1.3, 0));
+    camera.fov = 0.64;
+    camera.setTarget(new Vector3(0, 1.22, 0));
     scene.activeCamera = camera;
 
     const fill = new HemisphericLight('soft-fill', new Vector3(0.15, 1, 0.18), scene);
-    fill.intensity = 0.92;
-    fill.diffuse = Color3.FromHexString('#f4eadc');
-    fill.groundColor = Color3.FromHexString('#66716b');
+    fill.intensity = 0.72;
+    fill.diffuse = Color3.FromHexString('#f0e6d9');
+    fill.groundColor = Color3.FromHexString('#59645e');
 
     const sun = new DirectionalLight('key-light', new Vector3(-0.46, -1, -0.35), scene);
     sun.position = new Vector3(7.5, 11.5, 7.2);
-    sun.intensity = 2.2;
+    sun.intensity = 2.45;
     sun.diffuse = Color3.FromHexString('#fff0dd');
 
     const floor = MeshBuilder.CreateGround('studio-floor', { width: 180, height: 180 }, scene);
     const floorMat = new PBRMaterial('studio-floor-mat', scene);
-    floorMat.albedoColor = Color3.FromHexString('#c7c1b7');
-    floorMat.roughness = 0.94;
+    floorMat.albedoColor = Color3.FromHexString('#c3bdb3');
+    floorMat.roughness = 0.96;
     floorMat.metallic = 0;
     floor.material = floorMat;
     floor.receiveShadows = true;
@@ -143,8 +143,8 @@ async function start(): Promise<void> {
     const shadows = new ShadowGenerator(innerWidth >= 900 ? 2048 : 1024, sun);
     shadows.usePercentageCloserFiltering = true;
     shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
-    shadows.bias = 0.00035;
-    shadows.normalBias = 0.018;
+    shadows.bias = 0.00032;
+    shadows.normalBias = 0.015;
 
     const characterRoot = new TransformNode('character-root', scene);
     characterRoot.position.set(0, 0.015, 0);
@@ -181,18 +181,18 @@ async function start(): Promise<void> {
     let hidden = document.hidden;
 
     const updateCamera = (dt: number) => {
-      const target = characterRoot.position.add(new Vector3(0, 1.31, 0));
       const running = clamp(speed / MAX_SPEED, 0, 1);
-      const radius = 5.2 + running * 0.82;
+      const target = characterRoot.position.add(new Vector3(0, 1.22 + running * 0.035, 0));
+      const radius = 4.18 + running * 0.66;
       const cp = Math.cos(input.cameraPitch);
       const desired = new Vector3(
         target.x + Math.sin(input.cameraYaw) * cp * radius,
         target.y + Math.sin(input.cameraPitch) * radius,
         target.z + Math.cos(input.cameraYaw) * cp * radius
       );
-      camera.position = Vector3.Lerp(camera.position, desired, 1 - Math.exp(-10 * dt));
-      camera.setTarget(Vector3.Lerp(camera.getTarget(), target, 1 - Math.exp(-13 * dt)));
-      camera.fov = exponentialApproach(camera.fov, 0.72 + running * 0.055, 5.5, dt);
+      camera.position = Vector3.Lerp(camera.position, desired, 1 - Math.exp(-11 * dt));
+      camera.setTarget(Vector3.Lerp(camera.getTarget(), target, 1 - Math.exp(-14 * dt)));
+      camera.fov = exponentialApproach(camera.fov, 0.64 + running * 0.045, 6.2, dt);
     };
 
     const update = (dt: number) => {
