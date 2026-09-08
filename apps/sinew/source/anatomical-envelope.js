@@ -68,13 +68,33 @@ function alignFallbackSword(player) {
 export function installAnatomicalEnvelope(game) {
   const player = game.player;
   const originalUpdate = player.update.bind(player);
+  const originalConsumeLook = game.input.consumeLook.bind(game.input);
+  let lastLookFrame = null;
   let previousTip = player.sword.tip.clone();
   let previousShield = player.shield.center.clone();
   let centerIntrusion = 0;
   let shieldIntrusion = 0;
 
+  // SinewGame historically forwarded only camera-filtered look rates to the
+  // player rig. Preserve the raw fast-flick rates here so weapon inertia uses
+  // the finger's actual motion while the camera keeps the reduced share.
+  game.input.consumeLook = (dt) => {
+    const look = originalConsumeLook(dt);
+    lastLookFrame = look;
+    return look;
+  };
+
   player.update = (dt, control, snap = false) => {
-    originalUpdate(dt, control, snap);
+    const enriched = lastLookFrame ? {
+      ...control,
+      gestureYawRate: lastLookFrame.gestureYawRate,
+      gesturePitchRate: lastLookFrame.gesturePitchRate,
+      gestureEnergy: lastLookFrame.gestureEnergy,
+      poseX: lastLookFrame.poseX,
+      poseY: lastLookFrame.poseY,
+      poseEngaged: lastLookFrame.poseEngaged
+    } : control;
+    originalUpdate(dt, enriched, snap);
     if (snap) {
       previousTip.copyFrom(player.sword.tip);
       previousShield.copyFrom(player.shield.center);
@@ -88,7 +108,7 @@ export function installAnatomicalEnvelope(game) {
 
     // Sword: keep the hilt clearly on the right side in neutral/low-energy
     // poses. Fast gestures remain free to cross the centre during an attack.
-    const energy = clamp((control.gestureEnergy ?? Math.hypot(control.gestureYawRate || 0, control.gesturePitchRate || 0) / 10.5), 0, 1);
+    const energy = clamp((enriched.gestureEnergy ?? Math.hypot(enriched.gestureYawRate || 0, enriched.gesturePitchRate || 0) / 10.5), 0, 1);
     const baseLocal = localPoint(player.sword.base, head, frame);
     const tipLocal = localPoint(player.sword.tip, head, frame);
     const minBaseX = .19 - energy * .23;
@@ -162,7 +182,8 @@ export function installAnatomicalEnvelope(game) {
       swordTipLocalX: Number(finalTip.x.toFixed(4)),
       swordTipLocalZ: Number(finalTip.z.toFixed(4)),
       shieldLocalX: Number(safeShield.x.toFixed(4)),
-      shieldLocalZ: Number(safeShield.z.toFixed(4))
+      shieldLocalZ: Number(safeShield.z.toFixed(4)),
+      gestureEnergy: Number(energy.toFixed(4))
     };
   };
 
