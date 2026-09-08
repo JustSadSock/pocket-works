@@ -28,12 +28,18 @@ export function sheetSag(load: number, turbulence = 0): number {
   return 0.075 + (1 - tension) * 0.34 + clamp(turbulence, 0, 1.5) * (1 - tension) * 0.035;
 }
 
-export function boomEndLocal(angle: number): { x: number; y: number; z: number } {
+export function boomEndLocal(
+  angle: number,
+  heightScale = 1,
+  chordScale = 1
+): { x: number; y: number; z: number } {
   // The physical boom is 4.45 m long, centred at z=-2.15 under a rig pivot at z=0.32.
-  const z = -4.375;
+  // Shipyard sail modules scale the physical rig independently from the hull, so sheets must
+  // follow the scaled boom instead of staying attached to the baseline 1.0 rig dimensions.
+  const z = -4.375 * chordScale;
   return {
     x: z * Math.sin(angle),
-    y: 2.28,
+    y: 2.28 * heightScale,
     z: 0.32 + z * Math.cos(angle)
   };
 }
@@ -158,7 +164,7 @@ function updateLivingRig(
   updateRope(rig.forestay, [mastTop, midpoint(mastTop, bow, 0.025 + turbulence * 0.003), bow]);
   updateRope(rig.backstay, [mastTop, midpoint(mastTop, stern, 0.038 + turbulence * 0.004), stern]);
 
-  const boom = boomEndLocal(mainRig.rotation.y);
+  const boom = boomEndLocal(mainRig.rotation.y, mainRig.scaling.y, mainRig.scaling.z);
   const boomEnd = new Vector3(boom.x, boom.y, boom.z);
   const sheetAnchors = [new Vector3(-0.92, 0.80, -3.34), new Vector3(0.92, 0.80, -3.34)];
   const sag = sheetSag(load, turbulence);
