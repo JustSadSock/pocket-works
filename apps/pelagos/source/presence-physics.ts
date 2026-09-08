@@ -9,9 +9,7 @@ export type PresencePhysicsFrame = {
   filteredSteer: number;
 };
 
-type DynamicsMemory = PresencePhysicsFrame & {
-  previousYawVelocity: number;
-};
+type DynamicsMemory = PresencePhysicsFrame;
 
 const memory = new WeakMap<ShipDynamics, DynamicsMemory>();
 
@@ -53,18 +51,19 @@ ShipDynamics.prototype.update = function presenceUpdate(
       slam: 0,
       quartering: 0,
       sailLoad: 0,
-      filteredSteer: 0,
-      previousYawVelocity: state.yawVelocity
+      filteredSteer: 0
     };
     memory.set(this, frame);
   }
 
-  // A wheel command first loads the rudder; a displacement hull only develops turn rate later.
-  frame.filteredSteer = smoothTo(frame.filteredSteer, clamp(controls.steer, -1, 1), 0.78, safeDt);
+  // Input gets a short human-scale easing, while the actual rudder slew and yaw inertia remain
+  // authoritative in core.ts. The former 0.78 Hz filter plus a second post-integrator yaw filter
+  // made a full helm command take several seconds to become useful and discarded ~95% of each
+  // frame's rudder acceleration.
+  frame.filteredSteer = smoothTo(frame.filteredSteer, clamp(controls.steer, -1, 1), 2.2, safeDt);
   const localScale = waveScale * seaEnvelope(state.worldX, state.worldZ, time);
   frame.seaScale = localScale;
 
-  const yawBefore = state.yawVelocity;
   const telemetry = previousUpdate.call(this, dt, time, { ...controls, steer: frame.filteredSteer }, wind, localScale);
 
   const sinYaw = Math.sin(state.yaw);
@@ -90,11 +89,7 @@ ShipDynamics.prototype.update = function presenceUpdate(
   const quarteringTarget = clamp(crossHeight * 0.42 + longitudinalHeight * crossHeight * 0.10, -1, 1);
   frame.quartering = smoothTo(frame.quartering, quarteringTarget, 1.8, safeDt);
   state.yawVelocity += frame.quartering * 0.0105 * safeDt * clamp(0.55 + Math.abs(telemetry.forwardSpeed) * 0.16, 0.55, 1.35);
-
-  const rawYawVelocity = state.yawVelocity;
-  const inertialYaw = smoothTo(yawBefore, rawYawVelocity, 3.2, safeDt);
-  state.yawVelocity = inertialYaw;
-  frame.previousYawVelocity = inertialYaw;
+  state.yawVelocity = clamp(state.yawVelocity, -0.46, 0.46);
 
   const bowHullY = state.y - 0.27 + Math.sin(state.pitch) * 4.1;
   const bowImmersion = bow.height - bowHullY;
