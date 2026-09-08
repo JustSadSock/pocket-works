@@ -1,6 +1,6 @@
 import { Mesh, VertexData } from '@babylonjs/core';
 import { clamp, smoothstep } from './core.js';
-import { meshTerrainNormal } from './terrain.js';
+import { meshTerrainShadingNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
 function warpLocalAxis(value, radius) {
@@ -157,9 +157,7 @@ export class LocalSandSurface {
         const i = iz * row + ix;
         const r = radial[i];
         const gx = this.centerX + lx, gz = this.centerZ + lz;
-        // Match the actual triangulated coarse surface, not the higher-frequency
-        // analytical dune. Untouched physical sand should be invisible.
-        const base = meshTerrainNormal(gx, gz, this.world.quality.segments);
+        const base = meshTerrainShadingNormal(gx, gz, this.world.quality.segments);
         const ni = i * 3;
         const edgeFade = 1 - smoothstep(0.68, 0.90, r);
         const heightActivity = smoothstep(0.0015, 0.020, Math.abs(deformations[i]));
