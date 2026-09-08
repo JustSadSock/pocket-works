@@ -6,12 +6,12 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'colossus-inside-';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Законченный маршрут по живому биомеханическому колоссу: поверхность, плечо, внутренний отсек и голова.',
-  'Blender Asset Forge создаёт внешний rig колосса, внутреннюю анатомию и ригнутого игрока с анимациями.',
-  'Шторм, разрушение брони, moving-surface physics, procedural audio и ремонт стабилизатора работают как единый сценарий.'
+  'Новая contact/traversal physics: реальные бронепластины, разрывы, прыжки и падения вместо непрерывной невидимой поверхности.',
+  'Инерция колосса отделена от собственной скорости игрока; добавлены баланс корпуса и корректное наследование движения carrier-иерархии.',
+  'Плечевой шарнир получил мировой маяк, экранный указатель и усиленное локальное освещение; Playwright получает диагностическое состояние игры.'
 ];
 
 setCacheNameDetails({ prefix: 'colossus-inside', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
