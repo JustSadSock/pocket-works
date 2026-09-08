@@ -22,9 +22,11 @@ Babylon.js Enhanced runtime with Pocket Works Blender Asset Forge:
 
 - Blender 5.2.1 LTS authors `public/models/pelagos-cutter.glb` from deterministic app-local `asset-forge/ship.py` + `ship_final.py` sources;
 - the GLB provides the structural cutter hull, fully closed transom, cambered deck, keel/stem/sternpost, cap rails, handrails, stanchions, cockpit, companionway, hatch, chainplates, cleats and other hard-surface detail;
+- the 1.4 refit adds dense lived-in deck detail, clearer trim paint, stronger mobile material response and a regenerated authored cutter containing 124 mesh objects and roughly 23.7k vertices;
 - the final authored finish uses separate PBR materials for oxblood oak, honey deck planking, mahogany rails, tarred seams, warm ivory trim, sea-green paint, aged brass and black iron; longitudinal hull strakes and a raised PELAGOS transom board break up the previous plastic-shell look;
 - if the authored GLB cannot load, the previous procedural structural hull remains available as an automatic runtime fallback;
 - physical mass-spring mainsail and jib, responsive rigging, rudder and eight rowing oars remain runtime systems so they react continuously to wind, hull motion and water contact instead of being frozen into the GLB;
+- sail telltales and the mast pennant expose local apparent-wind behaviour directly on the vessel, including luffing and gust response;
 - shared eight-component analytic/choppy ocean displacement and normals with spatial swell groups;
 - Fresnel water, micro-ripples, sun glints, whitecaps, hull-contact foam, bow spray and a persistent turbulent wake;
 - dynamic wet waterline, procedural surface treatment and reflected ocean bounce light;
@@ -35,11 +37,15 @@ Babylon.js Enhanced runtime with Pocket Works Blender Asset Forge:
 
 ## Camera
 
-The final camera transform is owned by `camera-stabilizer.ts`. Earlier visual passes may calculate their own framing, but they cannot accumulate motion into the final view: every rendered frame is rebuilt from the current ship transform, filtered chase yaw, a smoothed translation anchor and the user's look offset. Large floating-origin shifts trigger a bounded snap instead of a long camera flight across the world.
+The final camera transform is owned by `camera-stabilizer.ts`. Earlier visual passes may calculate their own framing, but they cannot accumulate motion into the final view: every rendered frame is rebuilt from the current ship transform, filtered chase yaw, a smoothed translation anchor and the user's look offset. Large floating-origin shifts trigger a bounded snap instead of a long camera flight across the world. The 1.4 framing pass gives the horizon and working sail more room on narrow iPhone screens while keeping the helm and trim controls legible.
 
 ## Persistence and offline
 
 Settings, onboarding state and accumulated voyage distance use the shared versioned Pocket Works storage capability. The application owns its Workbox service worker, cache namespace and install manifest and remains isolated under `apps/pelagos/`.
+
+## Automated gameplay QA
+
+The app exposes a read-only `window.__POCKET_WORKS_TEST_STATE__` snapshot for the repository mobile gameplay workflow. Playwright can assert that the authored Blender vessel is loaded, the physical mainsail is active, floating motion cues exist and rowing input reaches the simulation while it captures real Chromium/WebKit gameplay frames. This bridge is diagnostics-only and does not alter production controls or simulation state.
 
 ## Development
 
