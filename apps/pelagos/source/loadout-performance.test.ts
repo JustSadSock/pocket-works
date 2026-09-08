@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { ShipDynamics } from './core';
 import {
   DIMENSION_MODULES,
   OAR_MODULES,
   PALETTE_MODULES,
   SAIL_MODULES,
+  setActiveShipLoadout,
+  setShipModule,
   type ShipLoadout
 } from './ship-loadout';
 import { performanceProfile } from './loadout-performance';
@@ -21,6 +24,27 @@ function loadout(
     sails: { ...SAIL_MODULES[sails].value },
     oars: { ...OAR_MODULES[oars].value }
   };
+}
+
+function simulateHull(dimensions: 'harbor' | 'highboard'): { speed: number; yawVelocity: number } {
+  setActiveShipLoadout('long-cutter');
+  setShipModule('dimensions', dimensions);
+  const dynamics = new ShipDynamics();
+  const wind = { direction: 0, speed: 0, gust: 0 };
+  let time = 0;
+
+  for (let frame = 0; frame < 240; frame += 1) {
+    dynamics.update(1 / 60, time, { steer: 0, sail: 0.42, rowing: 1 }, wind, 0);
+    time += 1 / 60;
+  }
+  const speed = Math.hypot(dynamics.state.velocityX, dynamics.state.velocityZ);
+
+  for (let frame = 0; frame < 90; frame += 1) {
+    dynamics.update(1 / 60, time, { steer: 1, sail: 0.42, rowing: 1 }, wind, 0);
+    time += 1 / 60;
+  }
+
+  return { speed, yawVelocity: Math.abs(dynamics.state.yawVelocity) };
 }
 
 describe('PELAGOS modular performance', () => {
@@ -54,5 +78,14 @@ describe('PELAGOS modular performance', () => {
     expect(heavy.oarPower).toBeGreaterThan(1.15);
     expect(harborOars.oarPower).toBeLessThan(0.90);
     expect(heavy.scores.rowing).toBeGreaterThan(harborOars.scores.rowing + 12);
+  });
+
+  it('changes real fixed-step acceleration and helm response when the hull module changes', () => {
+    const harbor = simulateHull('harbor');
+    const highboard = simulateHull('highboard');
+    setActiveShipLoadout('long-cutter');
+
+    expect(harbor.speed).toBeGreaterThan(highboard.speed * 1.12);
+    expect(harbor.yawVelocity).toBeGreaterThan(highboard.yawVelocity * 1.15);
   });
 });
