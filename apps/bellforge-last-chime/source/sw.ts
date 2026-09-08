@@ -5,12 +5,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'bellforge-last-chime-';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [
-  'Полная сюжетная кампания Беллфорджа от городских ворот до Великого Колокола.',
-  'Blender Asset Forge генерирует цветную архитектуру, механизмы, пропсы и ригнутых персонажей.',
-  'Touch-first управление, резонансные головоломки, rooftop chase, collision proxies и procedural spatial-like audio.'
+  'Исправлено инвертированное touch-управление камерой и улучшена точность двухручного управления.',
+  'Интерфейс полностью адаптирован под горизонтальный iPhone: safe-area, HUD, floating joystick и правый look-sector.',
+  'Blender-персонажи получили расширенный риг, новые детали и более живые Idle, Walk, Run, Talk, Gesture и Alert анимации.',
+  'Добавлены более выраженные tactile-состояния управления и компактный landscape presentation pass.'
 ];
 setCacheNameDetails({ prefix: 'bellforge-last-chime', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
