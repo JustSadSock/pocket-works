@@ -5,6 +5,7 @@ import { installConstraintCombat } from './constraint-combat.js';
 import { installEnemyConstraintCombat } from './enemy-constraint.js';
 import { SinewGame } from './game.js';
 import { installScenePolish } from './scene-polish.js';
+import { installTorsoCoupling } from './torso-coupling.js';
 import { installVisualPolish } from './visual-polish.js';
 
 const storageNamespace = 'pocket-works:sinew';
@@ -52,6 +53,7 @@ const qaState = {
   blender: 'pending',
   symmetricConstraints: false,
   anatomicalEnvelope: false,
+  torsoCoupling: false,
   playerHealth: 100,
   enemyHealth: 100,
   playerStability: 100,
@@ -62,6 +64,8 @@ const qaState = {
   enemyShieldHeight: 0,
   swordTipHeight: 0,
   enemySwordTipHeight: 0,
+  playerTorsoLoad: 0,
+  enemyTorsoLoad: 0,
   sensitivity: 0,
   viewSafety: null
 };
@@ -95,6 +99,8 @@ function updateHud(state) {
   qaState.enemyShieldHeight = Number(game.enemy?.shield?.center?.y || 0);
   qaState.swordTipHeight = Number(game.player?.sword?.tip?.y || 0);
   qaState.enemySwordTipHeight = Number(game.enemy?.sword?.tip?.y || 0);
+  qaState.playerTorsoLoad = Number(game.player?.torsoLoad || 0);
+  qaState.enemyTorsoLoad = Number(game.enemy?.torsoLoad || 0);
   qaState.viewSafety = game.player?.viewSafety || null;
 }
 function unlockAudio() {
@@ -110,6 +116,8 @@ async function boot() {
     installConstraintCombat(game);
     installEnemyConstraintCombat(game);
     qaState.symmetricConstraints = true;
+    installTorsoCoupling(game);
+    qaState.torsoCoupling = true;
     installAnatomicalEnvelope(game);
     qaState.anatomicalEnvelope = true;
     installVisualPolish(game);
