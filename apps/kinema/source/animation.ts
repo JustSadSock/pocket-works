@@ -3,17 +3,17 @@ import { MAX_SPEED, gaitWeights } from './locomotion';
 
 type Gait = 'idle' | 'walk' | 'jog' | 'run';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const normalizeClipName = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
 
 export class LocomotionMixer {
   private clips = new Map<Gait, AnimationGroup>();
 
   constructor(groups: AnimationGroup[]) {
-    const key = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
-    const find = (name: Gait) => groups.find((group) => key(group.name).includes(name));
-    const idle = find('idle') || groups[0];
-    const walk = find('walk') || idle;
-    const jog = find('jog') || walk;
-    const run = find('run') || jog;
+    const exact = (name: Gait) => groups.find((group) => normalizeClipName(group.name) === name);
+    const idle = exact('idle') || groups[0];
+    const walk = exact('walk') || idle;
+    const jog = exact('jog') || walk;
+    const run = exact('run') || jog;
     if (!idle) throw new Error('Blender GLB не содержит Idle animation action.');
     this.clips.set('idle', idle);
     this.clips.set('walk', walk);
