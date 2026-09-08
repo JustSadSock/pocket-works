@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "bellforge-last-chime",
+  "name": "BELLFORGE // THE LAST CHIME",
+  "shortName": "BELLFORGE",
+  "description": "Сюжетная мобильная 3D-игра о городе, построенном вокруг гигантского колокольного механизма: исследуй кварталы, возвращай питание резонаторам и реши судьбу Последнего Удара.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-08",
+  "releaseDateTime": "2026-09-08T12:33:00+03:00",
+  "changelog": [
+    "Добавлена законченная сюжетная кампания из трёх городских районов, центральной башни и финального подъёма к Великому Колоколу.",
+    "Blender Asset Forge используется как основной production pipeline для архитектуры, интерьерных наборов, пропсов, механизмов и ригнутых персонажей.",
+    "Реализованы мобильное first-person управление, контекстные взаимодействия, резонансные головоломки, стелс-погоня, постановочные сцены и несколько состояний мира.",
+    "Добавлены цветные PBR-материалы, туман, тени, динамическое освещение, пространственный Web Audio, collision proxies и мобильные уровни качества."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#e19a45",
+  "backgroundColor": "#17222a",
+  "themeColor": "#17222a",
+  "orientation": "landscape",
+  "cacheName": "bellforge-last-chime-v1.0.0",
+  "storageNamespace": "pocket-works:bellforge-last-chime",
+  "tags": ["PWA", "offline", "game", "story", "3D", "Babylon.js", "Blender", "Asset Forge", "armature", "animation", "puzzle", "landscape", "iPhone"],
+  "order": 84
+}
