@@ -31,16 +31,12 @@ const ORIENTATION_ALIASES = new Map([
   ['landscape', 'landscape'], ['horizontal', 'landscape']
 ]);
 
-function trimmed(value) {
-  return typeof value === 'string' ? value.trim() : value;
-}
-
+function trimmed(value) { return typeof value === 'string' ? value.trim() : value; }
 function normalizeAlias(value, aliases) {
   if (typeof value !== 'string') return value;
   const normalized = value.trim().toLowerCase();
   return aliases.get(normalized) ?? normalized;
 }
-
 function normalizeColor(value) {
   if (typeof value !== 'string') return value;
   let color = value.trim();
@@ -48,7 +44,6 @@ function normalizeColor(value) {
   if (/^#[0-9a-f]{3}$/i.test(color)) color = `#${[...color.slice(1)].map((digit) => digit.repeat(2)).join('')}`;
   return color.toLowerCase();
 }
-
 function normalizeDate(value) {
   if (typeof value !== 'string') return value;
   const source = value.trim();
@@ -57,11 +52,8 @@ function normalizeDate(value) {
   if (Number.isNaN(parsed)) return source;
   return new Date(parsed).toISOString().slice(0, 10);
 }
-
 function normalizeDateTime(value, fallbackDate) {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return isoDatePattern.test(fallbackDate || '') ? `${fallbackDate}T00:00:00Z` : value;
-  }
+  if (typeof value !== 'string' || value.trim() === '') return isoDatePattern.test(fallbackDate || '') ? `${fallbackDate}T00:00:00Z` : value;
   let source = value.trim();
   if (isoDatePattern.test(source)) source = `${source}T00:00:00Z`;
   if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(source)) source = `${source.replace(' ', 'T')}:00Z`;
@@ -70,10 +62,9 @@ function normalizeDateTime(value, fallbackDate) {
   if (Number.isNaN(parsed)) return source;
   return new Date(parsed).toISOString();
 }
-
 function normalizeList(value) {
   if (Array.isArray(value)) return value.map(trimmed).filter((item) => typeof item !== 'string' || item !== '');
-  if (typeof value === 'string' && value.trim() !== '') return [value.trim()];
+  if (typeof value === 'string' && value.trim() !== '') return value.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
   return value;
 }
 
@@ -86,6 +77,8 @@ export function normalizeAppConfig(source, directoryName = source?.slug) {
   if (typeof config.order === 'string' && /^\d+$/.test(config.order.trim())) config.order = Number(config.order.trim());
   if (typeof config.version === 'string') config.version = config.version.trim().replace(/^v(?=\d)/i, '');
   if (typeof config.preset === 'string') config.preset = config.preset.toLowerCase();
+  if (config.status === true) config.status = 'active';
+  if (config.status === false) config.status = 'archived';
   config.status = normalizeAlias(config.status, STATUS_ALIASES);
   config.runtime = normalizeAlias(config.runtime, RUNTIME_ALIASES);
   config.orientation = normalizeAlias(config.orientation, ORIENTATION_ALIASES);
@@ -94,20 +87,21 @@ export function normalizeAppConfig(source, directoryName = source?.slug) {
   config.themeColor = normalizeColor(config.themeColor);
   config.tags = normalizeList(config.tags);
   config.changelog = normalizeList(config.changelog);
+  if (Array.isArray(config.changelog) && config.changelog.length > 8) config.changelog = config.changelog.slice(0, 8);
 
   const rawReleaseDateTime = config.releaseDateTime;
   config.releaseDate = normalizeDate(config.releaseDate);
   config.releaseDateTime = normalizeDateTime(rawReleaseDateTime, config.releaseDate);
-  if ((!config.releaseDate || !isoDatePattern.test(config.releaseDate)) && typeof config.releaseDateTime === 'string' && !Number.isNaN(Date.parse(config.releaseDateTime))) {
-    config.releaseDate = new Date(config.releaseDateTime).toISOString().slice(0, 10);
-  }
+  if ((!config.releaseDate || !isoDatePattern.test(config.releaseDate)) && typeof config.releaseDateTime === 'string' && !Number.isNaN(Date.parse(config.releaseDateTime))) config.releaseDate = new Date(config.releaseDateTime).toISOString().slice(0, 10);
 
   const slug = typeof config.slug === 'string' && config.slug ? config.slug : directoryName;
   if ((config.cacheName == null || config.cacheName === '') && slug) config.cacheName = `${slug}-v${config.version || '1.0.0'}`;
   if ((config.storageNamespace == null || config.storageNamespace === '') && slug) config.storageNamespace = `pocket-works:${slug}`;
-  if ((config.shortName == null || config.shortName === '') && typeof config.name === 'string') config.shortName = config.name.slice(0, 20);
+  if ((config.shortName == null || config.shortName === '') && typeof config.name === 'string') config.shortName = config.name;
+  if (typeof config.shortName === 'string' && config.shortName.length > 20) config.shortName = config.shortName.slice(0, 20);
   if (config.runtime == null || config.runtime === '') config.runtime = 'quick';
   if (config.orientation == null || config.orientation === '') config.orientation = 'any';
+  if (config.status == null || config.status === '') config.status = 'active';
   if (config.schemaVersion == null) config.schemaVersion = APP_CONFIG_SCHEMA_VERSION;
 
   return config;
@@ -117,18 +111,14 @@ function requireString(config, key, errors) {
   if (typeof config[key] !== 'string' || config[key].trim() === '') errors.push(`${key} must be a non-empty string`);
 }
 
-export function runtimeForConfig(config) {
-  return normalizeAlias(config?.runtime || 'quick', RUNTIME_ALIASES);
-}
+export function runtimeForConfig(config) { return normalizeAlias(config?.runtime || 'quick', RUNTIME_ALIASES); }
 
 export function validateAppConfig(source, directoryName = source?.slug) {
   const errors = [];
-
   if (!source || typeof source !== 'object' || Array.isArray(source)) return ['config must be a JSON object'];
   const config = normalizeAppConfig(source, directoryName);
 
   if (config.schemaVersion !== APP_CONFIG_SCHEMA_VERSION) errors.push(`schemaVersion must equal ${APP_CONFIG_SCHEMA_VERSION}`);
-
   for (const key of ['slug', 'name', 'shortName', 'description', 'version', 'releaseDate', 'releaseDateTime', 'status', 'preset', 'accent', 'backgroundColor', 'themeColor', 'orientation', 'cacheName', 'storageNamespace']) requireString(config, key, errors);
 
   const runtime = runtimeForConfig(config);
@@ -143,18 +133,15 @@ export function validateAppConfig(source, directoryName = source?.slug) {
   const allowedPresets = runtime === 'enhanced' ? ENHANCED_APP_PRESETS : QUICK_APP_PRESETS;
   if (!allowedPresets.includes(config.preset)) errors.push(`preset ${config.preset} is not valid for the ${runtime} runtime; expected one of: ${allowedPresets.join(', ')}`);
   if (!APP_ORIENTATIONS.includes(config.orientation)) errors.push(`orientation must resolve to one of: ${APP_ORIENTATIONS.join(', ')}`);
-
   for (const key of ['accent', 'backgroundColor', 'themeColor']) if (!colorPattern.test(config[key] || '')) errors.push(`${key} must resolve to a six-digit hex color`);
   if (!Array.isArray(config.tags) || config.tags.length === 0 || config.tags.some((tag) => typeof tag !== 'string' || tag.trim() === '')) errors.push('tags must contain at least one non-empty string');
-  if (!Array.isArray(config.changelog) || config.changelog.length === 0 || config.changelog.length > 8 || config.changelog.some((note) => typeof note !== 'string' || note.trim() === '')) errors.push('changelog must contain between 1 and 8 non-empty strings');
+  if (!Array.isArray(config.changelog) || config.changelog.length === 0 || config.changelog.some((note) => typeof note !== 'string' || note.trim() === '')) errors.push('changelog must contain at least one non-empty string');
   if (!Number.isInteger(config.order) || config.order < 0) errors.push('order must resolve to a non-negative integer');
-  if (typeof config.shortName === 'string' && config.shortName.length > 20) errors.push('shortName must be 20 characters or fewer');
 
   const expectedCachePrefix = `${config.slug}-`;
   if (typeof config.cacheName === 'string' && !config.cacheName.startsWith(expectedCachePrefix)) errors.push(`cacheName must start with ${expectedCachePrefix}`);
   const expectedStorageNamespace = `pocket-works:${config.slug}`;
   if (config.storageNamespace !== expectedStorageNamespace) errors.push(`storageNamespace must equal ${expectedStorageNamespace}`);
-
   return errors;
 }
 
@@ -178,9 +165,7 @@ export function toRegistryEntry(source) {
   };
 }
 
-export function formatRegistry(entries) {
-  return `${JSON.stringify(entries, null, 2)}\n`;
-}
+export function formatRegistry(entries) { return `${JSON.stringify(entries, null, 2)}\n`; }
 
 export async function collectAppConfigs(root = process.cwd()) {
   const appsDirectory = path.join(root, 'apps');
@@ -228,6 +213,4 @@ export async function collectAppConfigs(root = process.cwd()) {
   return configs.sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
 }
 
-export async function buildRegistryEntries(root = process.cwd()) {
-  return (await collectAppConfigs(root)).map(toRegistryEntry);
-}
+export async function buildRegistryEntries(root = process.cwd()) { return (await collectAppConfigs(root)).map(toRegistryEntry); }
