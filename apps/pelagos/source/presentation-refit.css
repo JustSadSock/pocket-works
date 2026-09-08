@@ -1,20 +1,24 @@
-/* 1.6.4 presentation pass: keep coaching readable without covering the ship. */
+/* 1.6.4 presentation pass: coach in the sky, not on top of the ship. */
 .hint {
-  top: max(72px, calc(env(safe-area-inset-top) + 54px));
-  max-width: min(70vw, 286px);
-  padding: 7px 10px;
-  border-radius: 13px;
-  background: rgba(5, 17, 18, .52);
-  border-color: rgba(224, 247, 244, .13);
-  font-size: 11px;
-  line-height: 1.28;
+  top: max(58px, calc(env(safe-area-inset-top) + 44px));
+  max-width: min(64vw, 250px);
+  padding: 6px 9px;
+  border-radius: 12px;
+  background: rgba(5, 17, 18, .48);
+  border-color: rgba(224, 247, 244, .12);
+  font-size: 10.5px;
+  line-height: 1.22;
   letter-spacing: .002em;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .11);
   pointer-events: none;
 }
 
-.hint:not(.hidden) + .toast {
-  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 164px);
+/* During the four-step gesture lesson the coach is the only transient message. Weather toasts
+   resume immediately afterwards, avoiding two glass panels over the vessel during first launch. */
+.hint:not(.hidden) + .toast,
+.hint:not(.hidden) + .toast.show {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .helm-track,
@@ -37,9 +41,9 @@
 
 @media (max-height: 720px) {
   .hint {
-    top: max(66px, calc(env(safe-area-inset-top) + 48px));
-    max-width: min(68vw, 270px);
-    padding: 6px 9px;
-    font-size: 10.5px;
+    top: max(54px, calc(env(safe-area-inset-top) + 40px));
+    max-width: min(62vw, 236px);
+    padding: 5px 8px;
+    font-size: 10px;
   }
 }
