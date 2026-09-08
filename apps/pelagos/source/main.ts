@@ -1,5 +1,6 @@
 import './styles.css';
 import './polish.css';
+import './shipyard.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
@@ -8,12 +9,15 @@ import './ship-refit';
 import './marine-refit';
 import './marine-tuning';
 import './presence-pass';
+import './hydrodynamics-refit';
 import './wake-refit';
 import './blender-ship';
 import './ship-polish';
+import './ship-modules';
 import './camera-stabilizer';
 import './motion-cues';
 import './experience-refit';
+import { installShipyard } from './shipyard';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
@@ -23,13 +27,15 @@ const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
 const releaseNotes = [
-  'Blender-катер заново насыщен судовыми деталями: кнехты и швартовное железо, шкивы, нагели, шпигаты, клюзы, компас, колокол, кормовые фонари и более богатая столярка теперь читаются даже с мобильной камеры.',
-  'Корабельные фонари физически раскачиваются относительно крена и дифферента, живой огонь мерцает ночью и в шторм, а судовой колокол и его язык получают собственную вторичную инерцию.',
-  'Штурвал теперь действительно вращается вместе с перекладкой руля, компасная картушка удерживает север, закреплённые якоря едва играют на волне, а блоки реагируют на нагрузку паруса.',
-  'Главный гик получил видимые динамические шкоты: они постоянно перестраиваются между кормовыми блоками и концом гика, поэтому рангоут и такелаж наконец ощущаются одной работающей системой.'
+  'Корабль переведён на модульную архитектуру: класс корпуса, окраска, парусный комплект и гребной комплект теперь описаны отдельными судовыми модулями и сохраняются через новую Верфь.',
+  'Текущий PELAGOS Cutter 30 теперь имеет зафиксированный физический масштаб: корпус 9.13 м, ширина 3.48 м, полная длина около 11.7 м и водоизмещение около 5.6 т.',
+  'Базовый гребной комплект увеличен до шести пар — двенадцати физических вёсел — с отдельными уключинами, втягиванием под планширь, флюгированием лопасти и тягой только при контакте с локальной волной.',
+  'Гидродинамика получила added-water mass, широкую опорную плоскость корпуса и отдельный контроль погружения кормы: короткий гребень больше не должен катапультировать судно и оголять руль/скег.',
+  'Blender-катер дополнительно насыщен работающими судовыми деталями: штурвал, компас, фонари, колокол, блоки, якоря и динамические шкоты связаны с фактическим состоянием судна.'
 ];
 
 registerEnhancedUpdate({ appName, version, releaseNotes });
+installShipyard();
 
 const canvas = document.querySelector<HTMLCanvasElement>('#renderCanvas');
 if (!canvas) throw new Error('Pelagos render canvas is missing');
