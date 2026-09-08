@@ -48,7 +48,12 @@ function menuIsVisible(): boolean {
 
 function shipyardOrbit(): number {
   const raw = Number(document.documentElement.dataset.shipyardOrbit ?? '0.42');
-  return Number.isFinite(raw) ? clamp(raw, -1.08, 1.08) : 0.42;
+  return Number.isFinite(raw) ? clamp(raw, -1.12, 1.12) : 0.42;
+}
+
+function shipyardPitch(): number {
+  const raw = Number(document.documentElement.dataset.shipyardPitch ?? '0.08');
+  return Number.isFinite(raw) ? clamp(raw, -0.28, 0.42) : 0.08;
 }
 
 function stabilizeCamera(
@@ -66,6 +71,7 @@ function stabilizeCamera(
   const loadout = getActiveShipLoadout();
   const hullScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
   const heightScale = Math.pow(hullScale, 0.36);
+  const previewPitch = shipyardPreview ? shipyardPitch() : 0;
   const turnLook = Math.abs(lookYaw) > 0.035 || shipyardPreview || menuPreview
     ? 0
     : clamp(ship.yawVelocity * 0.58, -0.11, 0.11);
@@ -98,7 +104,7 @@ function stabilizeCamera(
       ? 21.2 * hullScale
       : (16.65 + speed * 0.34) * hullScale;
   const height = shipyardPreview
-    ? 6.5 * heightScale
+    ? (6.5 + previewPitch * 4.8) * heightScale
     : menuPreview
       ? 7.05 * heightScale
       : (6.08 + speed * 0.072 + lookPitch * 1.52) * heightScale;
@@ -122,7 +128,11 @@ function stabilizeCamera(
   const targetSide = menuPreview ? -2.35 * hullScale : shipyardPreview ? -0.30 * hullScale : 0;
   memory.desiredTarget.set(
     ship.x + shipForwardX * lookAhead + shipRightX * targetSide,
-    ship.y + (shipyardPreview ? 0.66 * heightScale : menuPreview ? 1.08 * heightScale : 1.78 * heightScale + lookPitch * 0.62),
+    ship.y + (shipyardPreview
+      ? (0.66 + previewPitch * 0.48) * heightScale
+      : menuPreview
+        ? 1.08 * heightScale
+        : 1.78 * heightScale + lookPitch * 0.62),
     ship.z + shipForwardZ * lookAhead + shipRightZ * targetSide
   );
 
@@ -148,9 +158,9 @@ function stabilizeCamera(
   world.scene.getMeshByName('sky-dome')?.position.copyFrom(memory.position);
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV4?: boolean };
-if (!prototype.__pelagosStableCameraV4) {
-  prototype.__pelagosStableCameraV4 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV5?: boolean };
+if (!prototype.__pelagosStableCameraV5) {
+  prototype.__pelagosStableCameraV5 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function stableCameraUpdate(
     state: ShipState,
