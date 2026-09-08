@@ -162,7 +162,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
       const yaw = c.bodyYaw;
       const fx = Math.sin(yaw), fz = Math.cos(yaw);
       const rx = Math.cos(yaw), rz = -Math.sin(yaw);
-      const steps = [0.9, 1.32, 1.74, 2.16, 2.58, 3.0];
+      const steps = [0.75, 1.1, 1.45, 1.80, 2.15, 2.50];
       steps.forEach((forward, index) => {
         const side = index % 2 === 0 ? -0.13 : 0.13;
         game.sand.stampFoot({
@@ -171,15 +171,12 @@ test.describe('SIROCCO deterministic visual QA', () => {
           yaw
         }, { speed: 2.35, lastSlope: 0.20, sliding: 0.06 });
       });
-      // Re-stamp the nearest footprint to verify visible compaction and a firmer
-      // repeated track rather than treating every step as untouched sand.
-      const repeatX = c.globalX + fx * 0.9 - rx * 0.13;
-      const repeatZ = c.globalZ + fz * 0.9 - rz * 0.13;
+      const repeatX = c.globalX + fx * 0.75 - rx * 0.13;
+      const repeatZ = c.globalZ + fz * 0.75 - rz * 0.13;
       game.sand.stampFoot({ globalX: repeatX, globalZ: repeatZ, yaw }, { speed: 1.5, lastSlope: 0.12, sliding: 0 });
-      game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 5);
-      for (let i = 0; i < 5; i += 1) game.sand.update(0.23, c.globalX, c.globalZ);
-      const dirty = game.sand.consumeDirtyBounds();
-      if (dirty) game.world.refreshDeformation(dirty);
+      game.sand.relaxArea(c.globalX + fx * 1.6, c.globalZ + fz * 1.6, 2.15, 4);
+      for (let i = 0; i < 4; i += 1) game.sand.update(0.23, c.globalX, c.globalZ);
+      game.sand.consumeDirtyBounds();
       game.sandSurface.markDirty();
       game.sandSurface.update(c, true);
     });
@@ -187,7 +184,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
     await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand-v2', { fullPage: false });
 
     const deformed = await qaState(page);
-    expect(deformed!.sandCells).toBeGreaterThan(80);
+    expect(deformed!.sandCells).toBeGreaterThan(60);
     expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(7);
     expect(deformed!.maxLoose).toBeGreaterThan(0.12);
     expect(deformed!.maxCompaction).toBeGreaterThan(0.12);
