@@ -3,6 +3,15 @@ import { clamp, smoothstep } from './core.js';
 import { terrainNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
+function warpLocalAxis(value, radius) {
+  const n = clamp(value / radius, -1, 1);
+  const a = Math.abs(n);
+  // Preserve the outer radius while concentrating ~38% more samples around
+  // the player. The edge deliberately becomes coarser because deformation has
+  // already faded out there and only needs to bridge to the coarse terrain.
+  return radius * n * (0.62 + 0.38 * a);
+}
+
 export class LocalSandSurface {
   constructor(scene, world, sand, material, preset) {
     this.scene = scene;
@@ -21,13 +30,12 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    // Concentrate the same mobile vertex budget where feet actually interact.
-    // 1.5 covered a 10 m diameter at ~15.6 cm spacing; 1.6 uses a tighter
-    // footprint-focused patch at ~10.9 cm on High without crossing 5k vertices.
     this.radius = preset.id === 'high' ? 3.7 : preset.id === 'medium' ? 3.3 : 2.9;
     this.segments = preset.id === 'high' ? 68 : preset.id === 'medium' ? 56 : 44;
-    this.snapStep = preset.id === 'high' ? 1.75 : preset.id === 'medium' ? 1.95 : 2.15;
-    this.holeRatio = 0.74;
+    this.snapStep = preset.id === 'high' ? 1.55 : preset.id === 'medium' ? 1.78 : 2.0;
+    // The coarse hole now reaches past the end of deformation fade. That leaves
+    // only a narrow, already-flat overlap ring and prevents z-fighting seams.
+    this.holeRatio = 0.90;
     this.dirty = true;
   }
 
@@ -40,7 +48,7 @@ export class LocalSandSurface {
   sampleSoftness(x, z) { return this.sand.sampleSoftness?.(x, z) ?? 0.48; }
 
   sampleNormal(x, z) {
-    const step = 0.07;
+    const step = 0.065;
     const hx0 = this.sampleHeight(x - step, z), hx1 = this.sampleHeight(x + step, z);
     const hz0 = this.sampleHeight(x, z - step), hz1 = this.sampleHeight(x, z + step);
     let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
@@ -75,7 +83,7 @@ export class LocalSandSurface {
   rebuild() {
     const segments = this.segments;
     const diameter = this.radius * 2;
-    const step = diameter / segments;
+    const uniformStep = diameter / segments;
     const row = segments + 1;
     const vertexCount = row * row;
     const positions = new Array(vertexCount * 3);
@@ -86,13 +94,21 @@ export class LocalSandSurface {
     const deformations = new Array(vertexCount);
     const looseValues = new Array(vertexCount);
     const compactValues = new Array(vertexCount);
+    const localXs = new Array(row);
+    const localZs = new Array(row);
     const indices = [];
-    let p = 0, uv = 0, c = 0, vertex = 0;
 
+    for (let i = 0; i <= segments; i += 1) {
+      const uniform = -this.radius + i * uniformStep;
+      localXs[i] = warpLocalAxis(uniform, this.radius);
+      localZs[i] = warpLocalAxis(uniform, this.radius);
+    }
+
+    let p = 0, uv = 0, c = 0, vertex = 0;
     for (let iz = 0; iz <= segments; iz += 1) {
-      const lz = -this.radius + iz * step;
+      const lz = localZs[iz];
       for (let ix = 0; ix <= segments; ix += 1) {
-        const lx = -this.radius + ix * step;
+        const lx = localXs[ix];
         const gx = this.centerX + lx;
         const gz = this.centerZ + lz;
         const r = Math.hypot(lx, lz) / this.radius;
@@ -115,22 +131,22 @@ export class LocalSandSurface {
 
         const compactBowl = smoothstep(0.004, 0.060, -deformation);
         const deposit = smoothstep(0.004, 0.050, deformation);
-        const looseLift = loose * 0.040;
-        const packedShade = compaction * 0.050;
-        colors[c] = 1 - compactBowl * 0.085 - packedShade + deposit * 0.030 + looseLift;
-        colors[c + 1] = 1 - compactBowl * 0.110 - packedShade * 1.10 + deposit * 0.024 + looseLift * 0.78;
-        colors[c + 2] = 1 - compactBowl * 0.145 - packedShade * 1.20 + deposit * 0.012 + looseLift * 0.50;
+        const looseLift = loose * 0.034;
+        const packedShade = compaction * 0.042;
+        colors[c] = 1 - compactBowl * 0.075 - packedShade + deposit * 0.026 + looseLift;
+        colors[c + 1] = 1 - compactBowl * 0.095 - packedShade * 1.08 + deposit * 0.021 + looseLift * 0.78;
+        colors[c + 2] = 1 - compactBowl * 0.125 - packedShade * 1.16 + deposit * 0.011 + looseLift * 0.50;
         colors[c + 3] = 1;
         c += 4;
         vertex += 1;
       }
     }
 
-    const renderRadius = this.radius * 0.985;
+    const renderRadius = this.radius * 0.992;
     for (let z = 0; z < segments; z += 1) {
       for (let x = 0; x < segments; x += 1) {
-        const cellX = -this.radius + (x + 0.5) * step;
-        const cellZ = -this.radius + (z + 0.5) * step;
+        const cellX = (localXs[x] + localXs[x + 1]) * 0.5;
+        const cellZ = (localZs[z] + localZs[z + 1]) * 0.5;
         if (Math.hypot(cellX, cellZ) >= renderRadius) continue;
         const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
         appendBabylonGroundCell(indices, a, b, d, e);
@@ -140,18 +156,18 @@ export class LocalSandSurface {
     VertexData.ComputeNormals(positions, indices, normals);
 
     for (let iz = 0; iz <= segments; iz += 1) {
-      const lz = -this.radius + iz * step;
+      const lz = localZs[iz];
       for (let ix = 0; ix <= segments; ix += 1) {
-        const lx = -this.radius + ix * step;
+        const lx = localXs[ix];
         const i = iz * row + ix;
         const r = radial[i];
         const gx = this.centerX + lx, gz = this.centerZ + lz;
-        const base = terrainNormal(gx, gz, 0.38);
+        const base = terrainNormal(gx, gz, 0.36);
         const ni = i * 3;
 
         const edgeBlend = smoothstep(0.72, 0.92, r);
-        const materialDetail = looseValues[i] * 0.08 - compactValues[i] * 0.05;
-        const baseMix = clamp(0.58 + edgeBlend * 0.42 - materialDetail, 0.50, 1);
+        const materialDetail = looseValues[i] * 0.07 - compactValues[i] * 0.04;
+        const baseMix = clamp(0.56 + edgeBlend * 0.44 - materialDetail, 0.50, 1);
         let nx = normals[ni] + (base.x - normals[ni]) * baseMix;
         let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * baseMix;
         let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * baseMix;
@@ -161,7 +177,7 @@ export class LocalSandSurface {
         normals[ni + 2] = nz * inv;
 
         const cavity = smoothstep(0.005, 0.055, -deformations[i]);
-        const shade = 1 - cavity * (0.085 + compactValues[i] * 0.070);
+        const shade = 1 - cavity * (0.080 + compactValues[i] * 0.060);
         const ci = i * 4;
         colors[ci] *= shade;
         colors[ci + 1] *= shade;
