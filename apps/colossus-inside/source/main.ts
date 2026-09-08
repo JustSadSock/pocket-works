@@ -11,7 +11,8 @@ const releaseNotes = [
   'Переписана traversal-физика: визуальные разрывы между бронепластинами теперь реальные и требуют прыжков, а падение возвращает к последней устойчивой опоре.',
   'Инерция больше не считается из собственной ходьбы игрока: движение колосса передаётся отдельно, а корпус персонажа компенсирует наклон и ускорение платформы.',
   'Плечевой шарнир получил крупный мировой маяк, экранный указатель и усиленный локальный свет; вдоль маршрута добавлено рабочее сервисное освещение.',
-  'Добавлен диагностический state bridge для Playwright и отдельные детерминированные тесты прыжка, разрывов, опор и climb-якорей.'
+  'Добавлен диагностический state bridge для Playwright и отдельные детерминированные тесты прыжка, разрывов, опор и climb-якорей.',
+  'По реальным Chromium/WebKit-скриншотам поднята читаемость брони: добавлены мобильный sky-fill, тёплый rim-light, camera fill и минимальный material ambient/emissive lift без пересвета.'
 ];
 
 const runtime = installMobileRuntime();
@@ -25,4 +26,8 @@ createWorkshopMode({
   onReset: () => location.reload()
 });
 
-void import('./game-v3.js');
+void (async () => {
+  await import('./game-v3.js');
+  const { installColossusVisualTuning } = await import('./visual-tuning.js');
+  installColossusVisualTuning();
+})();
