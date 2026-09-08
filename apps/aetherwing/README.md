@@ -12,11 +12,11 @@ The runtime integrates mass, gravity, aerodynamic drag, lift, bank-induced turni
 
 ## Blender production
 
-`asset-forge/dragon.py` deterministically creates the authored dragon mesh, PBR materials, armature, skinning and named animation actions. The generated GLB is validated by the repository Blender Asset Forge with armature and animation requirements enabled. `asset-forge/biome_props.py` produces authored tree/rock prop geometry for world instancing.
+`asset-forge/dragon.py` deterministically creates the authored dragon mesh, PBR materials, armature, skinning and named animation actions. The current production source uses a lean overlapping torso, a longer articulated neck and tail, scalloped multi-rib wing membranes, tucked four-limb anatomy, head horns, cheek spines, a denser dorsal ridge and a staggered irregular scale texture without long periodic bands. The generated GLB is rebuilt and re-import validated by the repository Blender Asset Forge with armature and animation requirements enabled. `asset-forge/biome_props.py` produces authored tree/rock prop geometry for world instancing.
 
 ## World
 
-The world is streamed in disposable terrain chunks. Multi-scale elevation, ridges, moisture and temperature choose blended biomes; meandering river fields carve visible valleys and water ribbons, while deterministic basins form lakes. Trees, rocks and meadow flowers are scattered according to altitude and moisture, and procedural birds plus ground herds make the landscape feel inhabited. Distant terrain is cheaper than near terrain and old chunks are disposed instead of accumulating forever.
+The world is streamed in disposable terrain chunks. Multi-scale elevation, ridges, moisture and temperature choose blended biomes; a broad valley plus submerged channel carves the river, while deterministic basins form lakes. River meshes use an independent x-column streamer rather than waiting for terrain z-chunks, so the visible waterway is present continuously from the opening frame and remains independent of terrain disposal. Forests combine fir, aspen and broadleaf silhouettes with riparian selection, age variation, clearings and understory. Procedural birds and ground herds make the landscape feel inhabited. Distant terrain is cheaper than near terrain and old chunks are disposed instead of accumulating forever.
 
 ## Mobile controls
 
@@ -30,4 +30,4 @@ The UI deliberately stays sparse. Flight state is communicated by the dragon, ho
 
 ## Quality strategy
 
-AETHERWING dynamically adjusts hardware scaling, terrain detail radius and vegetation density. Expensive work is spread over frames, streamed chunks are disposed behind the player, and the render loop pauses when the page is hidden.
+AETHERWING dynamically adjusts hardware scaling, terrain detail radius and vegetation density. Expensive terrain work is spread over frames while the lightweight river strip is guaranteed immediately around the player. Streamed geometry is disposed behind the player without destroying shared terrain/water materials, and the render loop pauses when the page is hidden. The mobile QA journey crosses chunk boundaries and explicitly checks that shared materials, terrain and river streaming survive the transition in Chromium and WebKit.
