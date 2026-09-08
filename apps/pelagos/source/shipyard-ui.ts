@@ -10,6 +10,7 @@ import {
   setShipPalette,
   type ShipModuleSlot
 } from './ship-loadout';
+import { performanceProfile } from './loadout-performance';
 
 type SourceScreen = 'menu' | 'settings' | 'pause';
 
@@ -19,6 +20,15 @@ const resetButton = document.querySelector<HTMLButtonElement>('#shipyardReset');
 const options = document.querySelector<HTMLElement>('#shipyardOptions');
 const title = document.querySelector<HTMLElement>('#shipyardCategoryTitle');
 const summary = document.querySelector<HTMLElement>('#shipyardSummary');
+const performance = (() => {
+  if (!summary) return null;
+  const element = document.createElement('div');
+  element.id = 'shipyardPerformance';
+  element.className = 'shipyard-performance';
+  element.setAttribute('aria-label', 'Ходовые качества выбранной конфигурации');
+  summary.insertAdjacentElement('afterend', element);
+  return element;
+})();
 const hullColor = document.querySelector<HTMLInputElement>('#shipHullColor');
 const deckColor = document.querySelector<HTMLInputElement>('#shipDeckColor');
 const sailColor = document.querySelector<HTMLInputElement>('#shipSailColor');
@@ -79,12 +89,34 @@ function setPreviewMode(enabled: boolean): void {
 function updateSummary(): void {
   if (!summary) return;
   const loadout = getActiveShipLoadout();
+  const profile = performanceProfile(loadout);
   summary.innerHTML = `
     <span><b>${loadout.dimensions.length.toFixed(1)} м</b><small>ДЛИНА</small></span>
     <span><b>${loadout.dimensions.beam.toFixed(1)} м</b><small>ШИРИНА</small></span>
     <span><b>${loadout.dimensions.draft.toFixed(2)} м</b><small>ОСАДКА</small></span>
     <span><b>${loadout.oars.stationsPerSide} × 2</b><small>ВЁСЛА</small></span>
   `;
+  if (performance) {
+    const stats = [
+      ['ХОД', profile.scores.speed],
+      ['МАНЁВР', profile.scores.agility],
+      ['МОРЕ', profile.scores.seakeeping],
+      ['ГРЕБЛЯ', profile.scores.rowing]
+    ] as const;
+    performance.innerHTML = stats.map(([label, score]) => `
+      <span title="${label}: ${score}">
+        <small>${label}</small>
+        <i><b style="width:${score}%"></b></i>
+        <em>${score}</em>
+      </span>
+    `).join('');
+    performance.dataset.profile = [
+      profile.scores.speed,
+      profile.scores.agility,
+      profile.scores.seakeeping,
+      profile.scores.rowing
+    ].join('-');
+  }
   if (hullColor) hullColor.value = loadout.palette.hull;
   if (deckColor) deckColor.value = loadout.palette.deck;
   if (sailColor) sailColor.value = loadout.palette.sail;
