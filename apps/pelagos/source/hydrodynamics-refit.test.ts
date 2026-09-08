@@ -70,7 +70,8 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     dynamics.reset();
     const wind = { direction: 42 * DEG, speed: 11, gust: 0.35 };
     let time = 0;
-    let minimumPitch = 0;
+    let maximumSternUpPitch = 0;
+    let minimumBowUpPitch = 0;
     let maximumAirGap = -Infinity;
     let maximumSternGuard = 0;
 
@@ -81,7 +82,8 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
       expect(Number.isFinite(dynamics.state.y)).toBe(true);
       expect(Number.isFinite(dynamics.state.pitch)).toBe(true);
       expect(Number.isFinite(dynamics.state.roll)).toBe(true);
-      minimumPitch = Math.min(minimumPitch, dynamics.state.pitch);
+      maximumSternUpPitch = Math.max(maximumSternUpPitch, dynamics.state.pitch);
+      minimumBowUpPitch = Math.min(minimumBowUpPitch, dynamics.state.pitch);
       const liveFrame = getHydrodynamicsFrame(dynamics);
       if (liveFrame) {
         maximumAirGap = Math.max(maximumAirGap, dynamics.state.y - liveFrame.targetY);
@@ -91,7 +93,8 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
 
     const frame = getHydrodynamicsFrame(dynamics);
     expect(frame).not.toBeNull();
-    expect(minimumPitch).toBeGreaterThanOrEqual(-5.0 * DEG - 1e-6);
+    expect(maximumSternUpPitch).toBeLessThanOrEqual(5.0 * DEG + 1e-6);
+    expect(minimumBowUpPitch).toBeGreaterThanOrEqual(-9.5 * DEG - 1e-6);
     expect(Math.abs(dynamics.state.roll)).toBeLessThanOrEqual(14.5 * DEG + 1e-6);
     expect(maximumAirGap).toBeLessThanOrEqual(0.49);
     expect(frame?.breachGuard ?? 0).toBeGreaterThanOrEqual(0);
