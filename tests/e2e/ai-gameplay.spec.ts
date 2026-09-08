@@ -132,6 +132,13 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
     return state?.loadingState === 'ready' && state?.phase === 'gate';
   }, undefined, { timeout: 8_000 });
 
+  // The start handler publishes the phase before the first physics frame. Wait for an
+  // actual collision/ground frame instead of reading the pre-physics `grounded=false`.
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
+    return state?.phase === 'gate' && state?.grounded === true && (state?.groundDistance ?? 99) < 1.7;
+  }, undefined, { timeout: 4_000 });
+
   const gate = await readRelicState(page);
   expect(gate?.zone).toBe('gate');
   expect(gate?.grounded).toBe(true);
