@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vitest run --config vite.config.ts && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs aetherwing",
+    "build": "vitest run --config vite.config.ts && tsc --noEmit -p tsconfig.json && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs aetherwing",
     "test": "vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
