@@ -69,16 +69,20 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await expect(page.locator('#hud')).toBeVisible();
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale))).toBeGreaterThanOrEqual(1.05);
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosTextureAnisotropy)).toBe('8');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosCompactCoach)).toBe('1');
     await page.waitForTimeout(1_200);
 
     const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
     expect(frameScale).toBeLessThanOrEqual(1.105);
     const hint = page.locator('#hint');
     if (await hint.isVisible()) {
+      await expect(hint).toContainText('Руль:');
       const hintBox = await hint.boundingBox();
       expect(hintBox).not.toBeNull();
-      expect(hintBox!.width).toBeLessThan(300);
-      expect(hintBox!.height).toBeLessThan(82);
+      expect(hintBox!.width).toBeLessThan(270);
+      expect(hintBox!.height).toBeLessThan(60);
+      const toastOpacity = await page.locator('#toast').evaluate((node) => getComputedStyle(node).opacity);
+      expect(Number(toastOpacity)).toBe(0);
     }
     await attachCriticalScreenshot(page, testInfo, 'pelagos-gameplay-scale', { fullPage: false });
 
