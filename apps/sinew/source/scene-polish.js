@@ -17,28 +17,29 @@ void main(void) {
   vec3 dir = normalize(vDir);
   float h = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
   float horizonBand = 1.0 - smoothstep(0.46, 0.68, h);
-  vec3 zenith = vec3(0.055, 0.065, 0.078);
-  vec3 upper = vec3(0.105, 0.092, 0.086);
-  vec3 horizon = vec3(0.285, 0.205, 0.145);
+  vec3 zenith = vec3(0.060, 0.072, 0.090);
+  vec3 upper = vec3(0.125, 0.112, 0.104);
+  vec3 horizon = vec3(0.33, 0.235, 0.165);
   vec3 color = mix(horizon, upper, smoothstep(0.38, 0.62, h));
   color = mix(color, zenith, smoothstep(0.62, 0.98, h));
 
   vec3 sunDir = normalize(vec3(-0.50, 0.30, -0.81));
   float sun = max(dot(dir, sunDir), 0.0);
-  float glow = pow(sun, 18.0) * 0.22 + pow(sun, 110.0) * 0.52;
-  color += vec3(1.0, 0.58, 0.28) * glow * horizonBand;
+  float glow = pow(sun, 18.0) * 0.24 + pow(sun, 110.0) * 0.54;
+  color += vec3(1.0, 0.61, 0.32) * glow * horizonBand;
 
   float lowHaze = pow(max(0.0, 1.0 - abs(dir.y) * 4.2), 2.0);
-  color += vec3(0.10, 0.055, 0.025) * lowHaze;
+  color += vec3(0.12, 0.065, 0.032) * lowHaze;
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-function scaleShield(warrior, factor) {
-  if (!warrior?.meshes) return;
-  warrior.shield.radius = 0.38;
-  warrior.meshes.shield.scaling.set(factor, factor, factor);
-  warrior.meshes.shieldRim.scaling.set(factor, factor, factor);
-  warrior.meshes.shieldBoss.scaling.set(factor * 0.96, factor * 0.96, factor * 0.96);
+function setShieldScale(warrior, radius) {
+  if (!warrior?.meshes || !warrior?.shield) return;
+  warrior.shield.radius = radius;
+  const factor = radius / 0.45;
+  warrior.meshes.shield.scaling.setAll(factor);
+  warrior.meshes.shieldRim.scaling.setAll(factor);
+  warrior.meshes.shieldBoss.scaling.setAll(factor * 0.96);
 }
 
 export function installScenePolish(game) {
@@ -61,16 +62,17 @@ export function installScenePolish(game) {
   sky.applyFog = false;
   sky.isPickable = false;
 
-  // 76 cm round shields retain meaningful coverage without monopolising a
-  // landscape phone viewport. Visual and collision size remain aligned.
-  scaleShield(game.player, 0.84);
-  scaleShield(game.enemy, 0.84);
+  // First-person and AI shields use different combat sizes. The player's 78 cm
+  // shield preserves believable coverage without becoming a permanent wall in
+  // front of the phone camera; the AI keeps a slightly broader 82 cm target.
+  setShieldScale(game.player, 0.39);
+  setShieldScale(game.enemy, 0.41);
 
-  game.camera.fov = 1.15;
-  game.camera.minZ = 0.045;
-  game.scene.fogDensity = Math.min(game.scene.fogDensity, 0.0095);
-  game.scene.imageProcessingConfiguration.exposure = 1.16;
-  game.scene.imageProcessingConfiguration.contrast = 1.10;
+  game.camera.fov = 1.22;
+  game.camera.minZ = 0.05;
+  game.scene.fogDensity = Math.min(game.scene.fogDensity, 0.0090);
+  game.scene.imageProcessingConfiguration.exposure = 1.24;
+  game.scene.imageProcessingConfiguration.contrast = 1.06;
 
   const originalDispose = game.dispose?.bind(game);
   if (originalDispose) {
