@@ -4,13 +4,13 @@
   "name": "KINEMA",
   "shortName": "KINEMA",
   "description": "Third-person character motion study for landscape phones: a Blender-authored clothed human with weighted skeletal locomotion, analog speed, camera orbit, shadows and procedural footsteps.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "releaseDate": "2026-09-09",
-  "releaseDateTime": "2026-09-09T02:30:00+03:00",
+  "releaseDateTime": "2026-09-09T02:42:00+03:00",
   "changelog": [
-    "Персонаж полностью пересобран в Blender: более естественные пропорции, непрерывные сглаженные торс, рукава и штанины, расслабленная стойка и детализированная одежда, лицо и обувь.",
-    "Скелет и локомоция переработаны: взвешенные суставы, естественные плечи и локти, синхронные Walk/Jog/Run с переносом корпуса, сгибом коленей и противовращением торса.",
-    "Камера стала ближе к персонажу, свет контрастнее, а разъезд камеры и FOV теперь мягко зависят от фактической скорости бега."
+    "Пропорции персонажа пересобраны ещё раз: уже плечи и рукава, тоньше ноги и кисти, нормальный размер обуви и заметно более сдержанные черты лица.",
+    "Blender-модель теперь ориентирована в ту же сторону, что и физическое движение: камера по умолчанию находится за персонажем, а не перед ним.",
+    "Сохранены взвешенный armature, девять именованных действий, фазовое смешивание Walk/Jog/Run, адаптивная камера, PBR-материалы, тени и процедурные шаги."
   ],
   "status": "active",
   "preset": "vite",
@@ -19,7 +19,7 @@
   "backgroundColor": "#d5d0c7",
   "themeColor": "#d5d0c7",
   "orientation": "landscape",
-  "cacheName": "kinema-v1.1.0",
+  "cacheName": "kinema-v1.2.0",
   "storageNamespace": "pocket-works:kinema",
   "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "character", "animation", "third-person", "landscape", "Safari", "audio"],
   "order": 75
