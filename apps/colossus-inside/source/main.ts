@@ -5,27 +5,18 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'COLOSSUS // INSIDE';
-const version = '1.3.0';
+const version = '1.4.0';
 const storageNamespace = 'pocket-works:colossus-inside';
 const releaseNotes = [
-  'Переписана traversal-физика: визуальные разрывы между бронепластинами теперь реальные и требуют прыжков, а падение возвращает к последней устойчивой опоре.',
-  'Инерция больше не считается из собственной ходьбы игрока: движение колосса передаётся отдельно, а корпус персонажа компенсирует наклон и ускорение платформы.',
-  'Плечевой шарнир получил крупный мировой маяк, экранный указатель и усиленный локальный свет; вдоль маршрута добавлено рабочее сервисное освещение.',
-  'Добавлен диагностический state bridge для Playwright и отдельные детерминированные тесты прыжка, разрывов, опор и climb-якорей.',
-  'По реальным Chromium/WebKit-скриншотам поднята читаемость брони: добавлены мобильный sky-fill, тёплый rim-light, camera fill и минимальный material ambient/emissive lift без пересвета.'
+  'Перестроена визуальная читаемость внутренностей: вместо линий в пустоте появились пол, силовой каркас, поперечные рёбра, мембраны и локальные сервисные огни.',
+  'Маршрутные полосы превращены из яркой сетки в тонкие металлические инкрустации, встроенные в геометрию опор.',
+  'Освещение и туман теперь отдельно настраиваются для внешней поверхности и thoracic core, поэтому глубина не исчезает в чёрном фоне.',
+  'Сохранена физика 1.3: реальные разрывы, прыжок, падение, checkpoint recovery и удержание JUMP у climb-якорей.'
 ];
-
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 registerEnhancedUpdate({ appName, version, releaseNotes });
-createWorkshopMode({
-  appName,
-  version,
-  cachePrefix: 'colossus-inside-',
-  storageNamespace,
-  onReset: () => location.reload()
-});
-
+createWorkshopMode({ appName, version, cachePrefix: 'colossus-inside-', storageNamespace, onReset: () => location.reload() });
 void (async () => {
   await import('./game-v3.js');
   const { installColossusVisualTuning } = await import('./visual-tuning.js');
