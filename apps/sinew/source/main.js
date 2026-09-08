@@ -1,9 +1,11 @@
 import './styles.css';
+import { installAnatomicalEnvelope } from './anatomical-envelope.js';
 import { installBlenderCombatKit } from './blender-kit.js';
 import { installConstraintCombat } from './constraint-combat.js';
 import { installEnemyConstraintCombat } from './enemy-constraint.js';
 import { SinewGame } from './game.js';
 import { installScenePolish } from './scene-polish.js';
+import { installTorsoCoupling } from './torso-coupling.js';
 import { installVisualPolish } from './visual-polish.js';
 
 const storageNamespace = 'pocket-works:sinew';
@@ -41,14 +43,17 @@ const reloadButton = document.querySelector('#reload-button');
 const errorExitButton = document.querySelector('#error-exit-button');
 
 const game = new SinewGame(canvas, root, storageNamespace);
+if (new URLSearchParams(location.search).has('qa')) window.__SINEW_QA__ = game;
 let entered = false;
 const qaState = {
   app: 'sinew',
-  version: '1.7.0',
+  version: '1.8.0',
   booted: false,
   entered: false,
   blender: 'pending',
   symmetricConstraints: false,
+  anatomicalEnvelope: false,
+  torsoCoupling: false,
   playerHealth: 100,
   enemyHealth: 100,
   playerStability: 100,
@@ -59,7 +64,10 @@ const qaState = {
   enemyShieldHeight: 0,
   swordTipHeight: 0,
   enemySwordTipHeight: 0,
-  sensitivity: 0
+  playerTorsoLoad: 0,
+  enemyTorsoLoad: 0,
+  sensitivity: 0,
+  viewSafety: null
 };
 window.__POCKET_WORKS_TEST_STATE__ = qaState;
 
@@ -91,6 +99,9 @@ function updateHud(state) {
   qaState.enemyShieldHeight = Number(game.enemy?.shield?.center?.y || 0);
   qaState.swordTipHeight = Number(game.player?.sword?.tip?.y || 0);
   qaState.enemySwordTipHeight = Number(game.enemy?.sword?.tip?.y || 0);
+  qaState.playerTorsoLoad = Number(game.player?.torsoLoad || 0);
+  qaState.enemyTorsoLoad = Number(game.enemy?.torsoLoad || 0);
+  qaState.viewSafety = game.player?.viewSafety || null;
 }
 function unlockAudio() {
   if (!entered || !game.audio?.enabled) return;
@@ -105,10 +116,15 @@ async function boot() {
     installConstraintCombat(game);
     installEnemyConstraintCombat(game);
     qaState.symmetricConstraints = true;
-    installVisualPolish(game);
+    installTorsoCoupling(game);
+    qaState.torsoCoupling = true;
+    installAnatomicalEnvelope(game);
+    qaState.anatomicalEnvelope = true;
+    const visualPolish = installVisualPolish(game);
     report('Подгружаем Blender-доспехи…', .92);
     await installBlenderCombatKit(game);
     qaState.blender = document.documentElement.dataset.sinewBlender || 'unknown';
+    visualPolish.setBlenderKitActive(qaState.blender === 'ready');
     qaState.sensitivity = game.input.sensitivity;
     game.setPaused(true);
     game.onState = updateHud;

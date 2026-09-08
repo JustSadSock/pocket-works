@@ -40,12 +40,12 @@ export default defineConfig({
     { name: 'webkit-mobile-portrait', use: { ...iphone } },
     {
       name: 'chromium-mobile-landscape',
-      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco)\.spec\.ts/,
+      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco|sinew)\.spec\.ts/,
       use: { ...pixel, viewport: { width: 851, height: 393 }, screen: { width: 851, height: 393 } }
     },
     {
       name: 'webkit-mobile-landscape',
-      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco)\.spec\.ts/,
+      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco|sinew)\.spec\.ts/,
       use: { ...iphone, viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 } }
     }
   ]

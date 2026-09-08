@@ -113,7 +113,18 @@ async function loadWarriorKit(game, warrior) {
   for (const mesh of result.meshes) if (mesh.name.startsWith('Kit_Color')) mesh.setEnabled(false);
   if (warrior.isPlayer && parts.bladeRidge) parts.bladeRidge.setEnabled(false);
 
+  // First-person camera: chest/shoulder armor is physically close to the eye
+  // and previously dominated the screen as giant black blobs. Keep Blender on
+  // the player's weapon/shield and lower body, and reserve the full armor kit
+  // for the opponent where its silhouette can actually be read.
+  if (warrior.isPlayer) {
+    for (const mesh of [parts.chest, parts.band, parts.tabard, parts.helmet, parts.helmetCone, parts.nasal, parts.crest, parts.pauldronL, parts.pauldronR]) {
+      mesh?.setEnabled(false);
+    }
+  }
+
   if (parts.chest) warrior.meshes.chestPlate.setEnabled(false);
+  if (parts.tabard) warrior.meshes.tabard.setEnabled(false);
   if (parts.helmet && !warrior.isPlayer) warrior.meshes.helmet.setEnabled(false);
   if (parts.blade) warrior.meshes.blade.setEnabled(false);
   if (parts.grip) warrior.meshes.grip.setEnabled(false);
@@ -134,17 +145,19 @@ async function loadWarriorKit(game, warrior) {
     const upperQuat = Quaternion.RotationAxis(AXIS_Y, warrior.upperYaw);
     const bodyQuat = Quaternion.RotationAxis(AXIS_Y, warrior.bodyYaw);
 
-    for (const mesh of [parts.chest, parts.band, parts.tabard]) {
-      if (!mesh) continue;
-      mesh.position.copyFrom(chest);
-      mesh.rotationQuaternion = upperQuat.clone();
-      mesh.scaling.setAll(1);
-    }
-    if (parts.band) parts.band.position.y -= .18;
-    if (parts.tabard) {
-      parts.tabard.position.y -= .18;
-      const forward = new Vector3(Math.sin(warrior.upperYaw), 0, Math.cos(warrior.upperYaw));
-      parts.tabard.position.addInPlace(forward.scale(.11));
+    if (!warrior.isPlayer) {
+      for (const mesh of [parts.chest, parts.band, parts.tabard]) {
+        if (!mesh) continue;
+        mesh.position.copyFrom(chest);
+        mesh.rotationQuaternion = upperQuat.clone();
+        mesh.scaling.setAll(1);
+      }
+      if (parts.band) parts.band.position.y -= .18;
+      if (parts.tabard) {
+        parts.tabard.position.y -= .18;
+        const forward = new Vector3(Math.sin(warrior.upperYaw), 0, Math.cos(warrior.upperYaw));
+        parts.tabard.position.addInPlace(forward.scale(.11));
+      }
     }
 
     for (const mesh of [parts.helmet, parts.helmetCone, parts.nasal, parts.crest]) {
@@ -163,11 +176,11 @@ async function loadWarriorKit(game, warrior) {
     }
     if (parts.crest) parts.crest.position.y += .27;
 
-    if (parts.pauldronL) {
+    if (parts.pauldronL && !warrior.isPlayer) {
       parts.pauldronL.position.copyFrom(shoulderL);
       parts.pauldronL.rotationQuaternion = upperQuat.clone();
     }
-    if (parts.pauldronR) {
+    if (parts.pauldronR && !warrior.isPlayer) {
       parts.pauldronR.position.copyFrom(shoulderR);
       parts.pauldronR.rotationQuaternion = upperQuat.clone();
     }
@@ -187,18 +200,18 @@ async function loadWarriorKit(game, warrior) {
     const swordTip = warrior.sword.tip;
     const swordDir = swordTip.subtract(swordBase).normalize();
     const bladeStart = swordBase.add(swordDir.scale(.10));
-    const weaponWidth = warrior.isPlayer ? .46 : .82;
+    const weaponWidth = warrior.isPlayer ? .36 : .82;
     syncSegment(parts.blade, bladeStart, swordTip, 1.0, AXIS_Z, weaponWidth);
     syncSegment(parts.bladeRidge, bladeStart.add(swordDir.scale(.04)), swordTip.subtract(swordDir.scale(.04)), .84, AXIS_Z, weaponWidth * .62);
     if (parts.guard) {
       parts.guard.position.copyFrom(swordBase.add(swordDir.scale(.015)));
       parts.guard.rotationQuaternion = quatAxisTo(AXIS_Z, swordDir);
-      parts.guard.scaling.setAll(warrior.isPlayer ? .74 : .92);
+      parts.guard.scaling.setAll(warrior.isPlayer ? .66 : .92);
     }
-    syncSegment(parts.grip, swordBase.subtract(swordDir.scale(.18)), swordBase, 1.0, AXIS_Y, warrior.isPlayer ? .78 : .94);
+    syncSegment(parts.grip, swordBase.subtract(swordDir.scale(.18)), swordBase, 1.0, AXIS_Y, warrior.isPlayer ? .68 : .94);
     if (parts.pommel) {
       parts.pommel.position.copyFrom(swordBase.subtract(swordDir.scale(.205)));
-      parts.pommel.scaling.setAll(warrior.isPlayer ? .78 : .94);
+      parts.pommel.scaling.setAll(warrior.isPlayer ? .68 : .94);
     }
 
     const shieldScale = warrior.shield.radius / .45;
