@@ -33,12 +33,19 @@ function tintFaction(result, warrior) {
   for (const mesh of result.meshes) {
     const mat = mesh.material;
     if (!(mat instanceof PBRMaterial)) continue;
-    mat.environmentIntensity = .78;
-    mat.directIntensity = 1.12;
-    mat.specularIntensity = .78;
+    mat.environmentIntensity = .86;
+    mat.directIntensity = 1.18;
+    mat.specularIntensity = .82;
     if (/OxideRed/i.test(mat.name)) mat.albedoColor = faction;
-    else if (/DarkSteel/i.test(mat.name)) mat.albedoColor = Color3.FromHexString('#3e474b');
-    else if (/^Steel/i.test(mat.name)) mat.albedoColor = Color3.FromHexString('#879399');
+    else if (/DarkSteel/i.test(mat.name)) {
+      mat.albedoColor = Color3.FromHexString('#586267');
+      mat.metallic = .55;
+      mat.roughness = .40;
+    } else if (/^Steel/i.test(mat.name)) {
+      mat.albedoColor = Color3.FromHexString('#a3adb2');
+      mat.metallic = warrior.isPlayer ? .42 : .52;
+      mat.roughness = warrior.isPlayer ? .38 : .32;
+    }
   }
 }
 
@@ -180,18 +187,18 @@ async function loadWarriorKit(game, warrior) {
     const swordTip = warrior.sword.tip;
     const swordDir = swordTip.subtract(swordBase).normalize();
     const bladeStart = swordBase.add(swordDir.scale(.10));
-    const weaponWidth = warrior.isPlayer ? .58 : .82;
+    const weaponWidth = warrior.isPlayer ? .46 : .82;
     syncSegment(parts.blade, bladeStart, swordTip, 1.0, AXIS_Z, weaponWidth);
     syncSegment(parts.bladeRidge, bladeStart.add(swordDir.scale(.04)), swordTip.subtract(swordDir.scale(.04)), .84, AXIS_Z, weaponWidth * .62);
     if (parts.guard) {
       parts.guard.position.copyFrom(swordBase.add(swordDir.scale(.015)));
       parts.guard.rotationQuaternion = quatAxisTo(AXIS_Z, swordDir);
-      parts.guard.scaling.setAll(warrior.isPlayer ? .78 : .92);
+      parts.guard.scaling.setAll(warrior.isPlayer ? .74 : .92);
     }
-    syncSegment(parts.grip, swordBase.subtract(swordDir.scale(.18)), swordBase, 1.0, AXIS_Y, warrior.isPlayer ? .82 : .94);
+    syncSegment(parts.grip, swordBase.subtract(swordDir.scale(.18)), swordBase, 1.0, AXIS_Y, warrior.isPlayer ? .78 : .94);
     if (parts.pommel) {
       parts.pommel.position.copyFrom(swordBase.subtract(swordDir.scale(.205)));
-      parts.pommel.scaling.setAll(warrior.isPlayer ? .82 : .94);
+      parts.pommel.scaling.setAll(warrior.isPlayer ? .78 : .94);
     }
 
     const shieldScale = warrior.shield.radius / .45;
