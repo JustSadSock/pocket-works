@@ -23,8 +23,15 @@ requireToken('updater','pw_fp','fingerprint updater');
 requireToken('updater','verifiedReleaseIsActive','fingerprint updater');
 requireToken('updater','pw-update-progress','update progress');
 requireToken('links','fingerprint','versioned launch links');
+requireToken('links','clearStaleAppRuntime','launcher release convergence');
+requireToken('links','stopImmediatePropagation','launcher stale-runtime handoff');
 requireToken('guard','checkLatest','release guard');
 requireToken('guard','release.json','release guard');
+requireToken('guard','visibilitychange','resume release guard');
+requireToken('guard','pageshow','resume release guard');
+requireToken('guard','registration.waiting','waiting worker convergence');
+requireToken('guard','SKIP_WAITING','waiting worker convergence');
+requireToken('guard','controllerMismatch','controller release convergence');
 requireToken('updateManager','__POCKET_WORKS_RELEASE__','managed update handoff');
 requireToken('updateManager','getRegistration','managed update handoff');
 requireToken('enhancedUpdateManager','__POCKET_WORKS_RELEASE__','enhanced update handoff');
@@ -59,4 +66,4 @@ if(errors.length){
   console.error(errors.join('\n'));
   process.exit(1);
 }
-console.log('Fingerprint release, managed/enhanced update handoff and Blazon event-loop coherence contracts passed.');
+console.log('Fingerprint release, resume convergence, managed/enhanced update handoff and Blazon event-loop coherence contracts passed.');
