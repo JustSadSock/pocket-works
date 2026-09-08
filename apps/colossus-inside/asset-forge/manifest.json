@@ -10,7 +10,7 @@
     },
     {
       "name": "colossus-interior",
-      "script": "interior.py",
+      "script": "interior_v2.py",
       "output": "public/models/interior.glb",
       "requireArmature": true,
       "requireAnimation": true
