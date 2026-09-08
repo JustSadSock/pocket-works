@@ -42,10 +42,7 @@ export function terrainHeight(x, z, seed = DESERT_SEED) {
   return basin + macro + secondary + cross + lowland;
 }
 
-// Sample the exact piecewise-linear surface produced by buildChunkData. This is
-// intentionally separate from terrainHeight: the controller and IK must stand
-// on the rendered triangles, not on the higher-frequency analytical function.
-export function meshTerrainHeight(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
+function coarseCell(x, z, segments, chunkSize) {
   const seg = Math.max(2, segments | 0);
   const cx = Math.floor(x / chunkSize);
   const cz = Math.floor(z / chunkSize);
@@ -58,13 +55,24 @@ export function meshTerrainHeight(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE
   const iz = Math.min(seg - 1, Math.max(0, Math.floor(localZ / cell)));
   const x0 = baseX + ix * cell;
   const z0 = baseZ + iz * cell;
-  const u = clamp((x - x0) / cell, 0, 1);
-  const v = clamp((z - z0) / cell, 0, 1);
+  return {
+    cell,
+    x0,
+    z0,
+    u: clamp((x - x0) / cell, 0, 1),
+    v: clamp((z - z0) / cell, 0, 1)
+  };
+}
+
+// Sample the exact piecewise-linear surface produced by buildChunkData. This is
+// intentionally separate from terrainHeight: the controller and IK must stand
+// on the rendered triangles, not on the higher-frequency analytical function.
+export function meshTerrainHeight(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
+  const { cell, x0, z0, u, v } = coarseCell(x, z, segments, chunkSize);
   const hA = terrainHeight(x0, z0);
   const hB = terrainHeight(x0 + cell, z0);
   const hD = terrainHeight(x0, z0 + cell);
   const hE = terrainHeight(x0 + cell, z0 + cell);
-
   if (u + v <= 1) return hA * (1 - u - v) + hB * u + hD * v;
   return hB * (1 - v) + hD * (1 - u) + hE * (u + v - 1);
 }
@@ -75,6 +83,31 @@ export function terrainNormal(x, z, step = 0.38) {
   let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
   const inv = 1 / Math.hypot(nx, ny, nz); nx *= inv; ny *= inv; nz *= inv;
   return { x: nx, y: ny, z: nz };
+}
+
+// Reproduce the normal that the GPU receives inside the coarse triangle: sample
+// the same authored normals at the four coarse-grid vertices, interpolate them
+// with the exact terrain triangle barycentric weights, then renormalize.
+export function meshTerrainShadingNormal(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
+  const { cell, x0, z0, u, v } = coarseCell(x, z, segments, chunkSize);
+  const a = terrainNormal(x0, z0, 0.42);
+  const b = terrainNormal(x0 + cell, z0, 0.42);
+  const d = terrainNormal(x0, z0 + cell, 0.42);
+  const e = terrainNormal(x0 + cell, z0 + cell, 0.42);
+  let nx, ny, nz;
+  if (u + v <= 1) {
+    const wa = 1 - u - v, wb = u, wd = v;
+    nx = a.x * wa + b.x * wb + d.x * wd;
+    ny = a.y * wa + b.y * wb + d.y * wd;
+    nz = a.z * wa + b.z * wb + d.z * wd;
+  } else {
+    const wb = 1 - v, wd = 1 - u, we = u + v - 1;
+    nx = b.x * wb + d.x * wd + e.x * we;
+    ny = b.y * wb + d.y * wd + e.y * we;
+    nz = b.z * wb + d.z * wd + e.z * we;
+  }
+  const inv = 1 / Math.hypot(nx, ny, nz);
+  return { x: nx * inv, y: ny * inv, z: nz * inv };
 }
 
 export function meshTerrainNormal(x, z, segments, chunkSize = TERRAIN_CHUNK_SIZE) {
