@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "forge-crab",
+      "script": "crab.py",
+      "output": "public/models/forge-crab.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    }
+  ]
+}
