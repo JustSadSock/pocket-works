@@ -15,11 +15,33 @@ export class DragonRig{
       this.meshes=r.meshes.filter((m):m is Mesh=>m instanceof Mesh);
       for(const m of this.meshes){
         if(!m.parent||!r.meshes.includes(m.parent as any))m.parent=this.visual;
-        if(m.name.toLowerCase().includes('wingmembrane')&&m.material){const mat=m.material as Material & {twoSidedLighting?:boolean};mat.backFaceCulling=false;mat.alpha=Math.max(.96,mat.alpha);if('twoSidedLighting' in mat)mat.twoSidedLighting=true;}
+        const lower=m.name.toLowerCase();
+        if(m.material instanceof PBRMaterial){
+          const mat=m.material;
+          mat.metallic=Math.min(mat.metallic,.035);
+          mat.roughness=Math.max(mat.roughness,.58);
+          mat.environmentIntensity=.72;
+          if(mat.albedoTexture)mat.albedoTexture.level=.48;
+          if(lower.includes('wingmembrane')){
+            mat.albedoColor=new Color3(.52,.31,.20);
+            mat.roughness=.72;
+          }else if(lower.includes('body')||lower.includes('chest')||lower.includes('neck')||lower.includes('tail')){
+            mat.albedoColor=new Color3(.68,.78,.68);
+          }
+        }
+        if(lower.includes('wingmembrane')&&m.material){
+          const mat=m.material as Material & {twoSidedLighting?:boolean};
+          mat.backFaceCulling=false;mat.alpha=Math.max(.94,mat.alpha);if('twoSidedLighting' in mat)mat.twoSidedLighting=true;
+        }
       }
       for(const g of r.animationGroups){this.groups.set(g.name.toLowerCase(),g);g.start(true,1);g.setWeightForAllAnimatables(g.name.toLowerCase()==='glide'?1:0);}
       for(const s of r.skeletons)for(const b of s.bones)this.bones.set(b.name,b);
-      this.visual.scaling.setAll(1.08);this.visual.rotationQuaternion=Quaternion.RotationYawPitchRoll(Math.PI,0,0);
+      // Blender authors the dragon with its head on -Y. The glTF exporter maps
+      // that axis to Babylon +Z, which is already the flight model's forward.
+      // The old extra PI yaw made the dragon literally fly tail-first: the round
+      // muzzle faced the chase camera and the tail disappeared behind the body.
+      this.visual.scaling.setAll(1.16);
+      this.visual.rotationQuaternion=Quaternion.Identity();
       this.ready=true;
     }catch(err){console.warn('AETHERWING dragon GLB fallback',err);this.createFallback();this.usedFallback=true;this.ready=true;}
   }
@@ -41,6 +63,6 @@ export class DragonRig{
     const mat=new PBRMaterial('fallbackDragonMat',this.scene);mat.albedoColor=new Color3(.22,.38,.27);mat.metallic=.04;mat.roughness=.58;
     const body=MeshBuilder.CreateCapsule('FallbackDragonBody',{height:10,radius:1.35,tessellation:18},this.scene);body.rotation.x=Math.PI/2;body.material=mat;body.parent=this.visual;this.meshes.push(body);
     const head=MeshBuilder.CreateIcoSphere('FallbackDragonHead',{radius:1.2,subdivisions:2},this.scene);head.position.z=5.2;head.scaling.set(1,.8,1.35);head.material=mat;head.parent=this.visual;this.meshes.push(head);
-    for(const side of [-1,1]){const wing=MeshBuilder.CreateCylinder(`FallbackWing${side}`,{height:7,diameterTop:.22,diameterBottom:.65,tessellation:8},this.scene);wing.rotation.z=Math.PI/2;wing.rotation.y=side*.22;wing.position.set(side*3.4,.25,-.2);wing.scaling.x=1.6;wing.material=mat;wing.parent=this.visual;this.meshes.push(wing);}this.visual.rotationQuaternion=Quaternion.RotationYawPitchRoll(Math.PI,0,0);
+    for(const side of [-1,1]){const wing=MeshBuilder.CreateCylinder(`FallbackWing${side}`,{height:7,diameterTop:.22,diameterBottom:.65,tessellation:8},this.scene);wing.rotation.z=Math.PI/2;wing.rotation.y=side*.22;wing.position.set(side*3.4,.25,-.2);wing.scaling.x=1.6;wing.material=mat;wing.parent=this.visual;this.meshes.push(wing);}this.visual.rotationQuaternion=Quaternion.Identity();
   }
 }
