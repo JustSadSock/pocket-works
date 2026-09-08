@@ -14,6 +14,7 @@ import { MobileInput } from './input.js';
 import { AdaptiveQuality } from './quality.js';
 import { DebugPanel } from './debug.js';
 import { DesertAudio } from './audio.js';
+import { DesertLandmarks } from './landmarks.js';
 
 const SESSION_KEY = 'pocket-works:sirocco:session';
 const SESSION_SCHEMA = 7;
@@ -29,6 +30,7 @@ export class SiroccoGame {
     this.orientationBlocked = false;
     this.lastFps = 60;
     this.saveClock = 0;
+    this.slideSoundClock = 0;
   }
 
   async init(report = () => {}) {
@@ -63,14 +65,16 @@ export class SiroccoGame {
     await this.rig.init();
     await nextFrame();
 
-    report('Настраиваем свет и атмосферу…', 0.53);
+    report('Настраиваем свет, атмосферу и скалы…', 0.53);
     this.lighting = new DesertLighting(this.scene, this.quality.preset, this.shadowCasters);
     this.atmosphere = new DesertAtmosphere(this.scene, this.lighting.sunDirection);
     this.particles = new SandParticles(this.scene, this.quality.preset.particles);
     this.contactShadow = new CharacterContactShadow(this.scene, this.sandSurface);
+    this.landmarks = new DesertLandmarks(this.scene, this.sandSurface);
+    await this.landmarks.init();
     await nextFrame();
 
-    report('Настраиваем камеру и touch input…', 0.67);
+    report('Настраиваем камеру, звук и touch input…', 0.67);
     this.camera = new FirstPersonCamera(this.scene);
     this.input = new MobileInput(document.body);
     this.audio = new DesertAudio();
@@ -82,6 +86,7 @@ export class SiroccoGame {
     });
     this.applyQuality(this.quality.preset);
     this.world.setOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
+    this.landmarks.updateOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
     this.world.update(this.controller.globalX, this.controller.globalZ);
     this.sandSurface.update(this.controller, true);
     this.controller.localPosition.y = this.sandSurface.sampleHeight(this.controller.globalX, this.controller.globalZ);
@@ -141,6 +146,7 @@ export class SiroccoGame {
 
   handleRebase() {
     this.world.setOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
+    this.landmarks?.updateOrigin(this.controller.worldOffsetX, this.controller.worldOffsetZ);
     this.rig?.shiftOrigin();
     this.sandSurface?.syncOrigin();
   }
@@ -181,9 +187,12 @@ export class SiroccoGame {
         ? this.sandSurface.downhill(this.controller.globalX, this.controller.globalZ)
         : null;
       this.particles.trail(dt, this.controller.localPosition, this.controller.bodyYaw, groundState.sliding, downhill);
+      this.slideSoundClock = Math.max(0, this.slideSoundClock - dt);
+      if (groundState.sliding > 0.16 && this.controller.speed > 0.35 && this.slideSoundClock <= 0) {
+        this.audio.slide(groundState.sliding);
+        this.slideSoundClock = 0.14 + (1 - groundState.sliding) * 0.12;
+      }
 
-      // Relax first, then rebuild once. Previous ordering delayed avalanche
-      // deformation by one frame and made the sand look like a frozen stamp.
       this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
       const dirtySand = this.sand.consumeDirtyBounds();
       if (dirtySand) {
@@ -217,6 +226,7 @@ export class SiroccoGame {
     this.debug?.dispose();
     this.contactShadow?.dispose();
     this.particles?.dispose();
+    this.landmarks?.dispose();
     this.sandSurface?.dispose();
     this.sand?.clear();
     this.rig?.dispose();
