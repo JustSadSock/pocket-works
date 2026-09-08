@@ -34,11 +34,18 @@ function chamferedPrism(scene, name, parent, width, depth, thickness, chamfer, y
 
 function addArmorTraversal(scene) {
   const parents = { back:'carrier-back', shoulder:'carrier-shoulder', interior:'carrier-interior', head:'carrier-head' };
-  const armor = makeMaterial(scene,'faceted-route-armor',new Color3(.14,.17,.162),new Color3(.050,.064,.060),new Color3(.42,.44,.37),72);
-  armor.ambientColor = new Color3(.58,.60,.55);
-  const edge = makeMaterial(scene,'faceted-route-edge',new Color3(.25,.17,.060),new Color3(.065,.040,.010),new Color3(.54,.43,.20),66);
-  const recess = makeMaterial(scene,'faceted-route-recess',new Color3(.050,.068,.066),new Color3(.012,.018,.018),new Color3(.16,.18,.16),38);
-  const bone = makeMaterial(scene,'dorsal-mechanism',new Color3(.15,.16,.14),new Color3(.025,.027,.022),new Color3(.40,.41,.34),52);
+  const armor = makeMaterial(scene,'faceted-route-armor',new Color3(.205,.235,.220),new Color3(.028,.034,.032));
+  armor.disableLighting = true;
+  armor.specularColor = Color3.Black();
+  const edge = makeMaterial(scene,'faceted-route-edge',new Color3(.34,.235,.075),new Color3(.035,.022,.004));
+  edge.disableLighting = true;
+  edge.specularColor = Color3.Black();
+  const recess = makeMaterial(scene,'faceted-route-recess',new Color3(.068,.088,.082),new Color3(.010,.014,.013));
+  recess.disableLighting = true;
+  recess.specularColor = Color3.Black();
+  const bone = makeMaterial(scene,'dorsal-mechanism',new Color3(.19,.205,.18),new Color3(.018,.020,.016));
+  bone.disableLighting = true;
+  bone.specularColor = Color3.Black();
 
   for (const [carrier, route] of Object.entries(ROUTES)) {
     const parent=scene.getTransformNodeByName(parents[carrier]);
@@ -62,12 +69,30 @@ function addArmorTraversal(scene) {
       }
     });
   }
-  for(const mesh of scene.meshes){const name=mesh.name||'';if(/^(back|shoulder|interior|head)-plate-\d+(-ridge)?$/.test(name)||/^spine-fin-\d+$/.test(name))mesh.visibility=.02;}
+
+  const fallbackArmor = makeMaterial(scene,'route-fallback-armor',new Color3(.155,.185,.175),new Color3(.018,.024,.022));
+  fallbackArmor.disableLighting = true;
+  fallbackArmor.specularColor = Color3.Black();
+  const fallbackEdge = makeMaterial(scene,'route-fallback-edge',new Color3(.31,.215,.072),new Color3(.030,.018,.004));
+  fallbackEdge.disableLighting = true;
+  fallbackEdge.specularColor = Color3.Black();
+  for(const mesh of scene.meshes){
+    const name=mesh.name||'';
+    if(/^(back|shoulder|interior|head)-plate-\d+$/.test(name)){
+      mesh.visibility=.72;
+      mesh.material=fallbackArmor;
+    } else if(/^(back|shoulder|interior|head)-plate-\d+-ridge$/.test(name)||/^spine-fin-\d+$/.test(name)){
+      mesh.visibility=.88;
+      mesh.material=fallbackEdge;
+    }
+  }
 }
 
 function addRouteInlays(scene) {
-  const brass=makeMaterial(scene,'route-inlay-brass',new Color3(.22,.155,.055),new Color3(.045,.028,.008));
-  const teal=makeMaterial(scene,'route-inlay-joint',new Color3(.025,.22,.18),new Color3(.025,.24,.19));
+  const brass=makeMaterial(scene,'route-inlay-brass',new Color3(.30,.205,.064),new Color3(.020,.012,.002));
+  const teal=makeMaterial(scene,'route-inlay-joint',new Color3(.035,.34,.28),new Color3(.020,.18,.15));
+  brass.disableLighting=true; teal.disableLighting=true;
+  brass.specularColor=Color3.Black(); teal.specularColor=Color3.Black();
   const parents={back:'carrier-back',shoulder:'carrier-shoulder',interior:'carrier-interior',head:'carrier-head'};
   for(const [carrier,route] of Object.entries(ROUTES)){
     const parent=scene.getTransformNodeByName(parents[carrier]);if(!parent)continue;
@@ -89,12 +114,12 @@ function addInteriorArchitecture(scene) {
 }
 
 export function installColossusVisualTuning(){
-  const scene=EngineStore.LastCreatedScene;if(!scene)return;globalThis.__PW_VISUAL_TUNING__={ready:true,version:8};
-  scene.clearColor=new Color4(.045,.061,.064,1);scene.ambientColor=new Color3(.32,.33,.30);scene.imageProcessingConfiguration.exposure=1.28;scene.imageProcessingConfiguration.contrast=1.08;
-  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene);sky.intensity=.90;sky.diffuse=new Color3(.65,.72,.69);sky.groundColor=new Color3(.18,.17,.14);
+  const scene=EngineStore.LastCreatedScene;if(!scene)return;globalThis.__PW_VISUAL_TUNING__={ready:true,version:9};
+  scene.clearColor=new Color4(.050,.066,.069,1);scene.ambientColor=new Color3(.34,.35,.32);scene.imageProcessingConfiguration.exposure=1.31;scene.imageProcessingConfiguration.contrast=1.05;
+  const sky=new HemisphericLight('cross-browser-sky-fill',new Vector3(.2,1,.18),scene);sky.intensity=.92;sky.diffuse=new Color3(.65,.72,.69);sky.groundColor=new Color3(.18,.17,.14);
   const rim=new DirectionalLight('cross-browser-rim',new Vector3(.5,-.7,-.46),scene);rim.position.set(-18,30,24);rim.intensity=.84;rim.diffuse=new Color3(.84,.72,.52);
   const cameraLamp=new PointLight('camera-readable-fill',new Vector3(0,1.25,1.3),scene);cameraLamp.parent=scene.activeCamera;cameraLamp.intensity=1.28;cameraLamp.range=24;cameraLamp.diffuse=new Color3(.78,.72,.59);
   addArmorTraversal(scene);addRouteInlays(scene);const stabilizer=addInteriorArchitecture(scene);
-  const tune=()=>{const inside=globalThis.__PW_TEST_STATE__?.carrier==='interior';scene.imageProcessingConfiguration.exposure=inside?1.35:1.29;scene.imageProcessingConfiguration.contrast=inside?1.04:1.08;if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.006);scene.fogColor=new Color3(.085,.10,.09);cameraLamp.intensity=1.65;cameraLamp.range=19;}else{if(scene.fogDensity>.0028)scene.fogDensity=.0023;scene.fogColor=new Color3(.11,.14,.145);cameraLamp.intensity=1.28;cameraLamp.range=24;}for(const m of scene.materials){const name=m.name||'';if(!/^authored-/.test(name))continue;if('ambientColor'in m)m.ambientColor=/interior|bone|edge/i.test(name)?new Color3(.64,.61,.52):new Color3(.50,.52,.48);if('emissiveColor'in m){if(/sensor/i.test(name))m.emissiveColor=new Color3(.035,.32,.26);else if(/heart/i.test(name))m.emissiveColor=new Color3(.10,.014,.010);else if(/player|cloth/i.test(name))m.emissiveColor=new Color3(.085,.065,.040);else if(/armor|bone|interior/i.test(name))m.emissiveColor=new Color3(.045,.055,.050);}}};
+  const tune=()=>{const inside=globalThis.__PW_TEST_STATE__?.carrier==='interior';scene.imageProcessingConfiguration.exposure=inside?1.35:1.31;scene.imageProcessingConfiguration.contrast=inside?1.04:1.05;if(inside){scene.fogDensity=Math.min(scene.fogDensity||.006,.006);scene.fogColor=new Color3(.085,.10,.09);cameraLamp.intensity=1.65;cameraLamp.range=19;}else{if(scene.fogDensity>.0028)scene.fogDensity=.00215;scene.fogColor=new Color3(.11,.14,.145);cameraLamp.intensity=1.28;cameraLamp.range=24;}for(const m of scene.materials){const name=m.name||'';if(!/^authored-/.test(name))continue;if('ambientColor'in m)m.ambientColor=/interior|bone|edge/i.test(name)?new Color3(.64,.61,.52):new Color3(.50,.52,.48);if('emissiveColor'in m){if(/sensor/i.test(name))m.emissiveColor=new Color3(.035,.32,.26);else if(/heart/i.test(name))m.emissiveColor=new Color3(.10,.014,.010);else if(/player|cloth/i.test(name))m.emissiveColor=new Color3(.085,.065,.040);else if(/armor|bone|interior/i.test(name))m.emissiveColor=new Color3(.045,.055,.050);}}};
   tune();let passes=0;scene.onBeforeRenderObservable.add(()=>{if(passes%12===0)tune();if(stabilizer){const t=performance.now()/1000;stabilizer.ring.rotation.z=t*.35;const p=.90+.10*Math.sin(t*3.1);stabilizer.ring.scaling.setAll(p);stabilizer.targetLight.intensity=1.0+.30*Math.sin(t*3.1);}passes++;});
 }
