@@ -10,6 +10,27 @@ type AppTarget = {
   releaseDateTime?: string;
 };
 
+type RelicState = {
+  version?: string;
+  phase?: string;
+  zone?: string;
+  playerPosition?: { x?: number; y?: number; z?: number };
+  grounded?: boolean;
+  groundDistance?: number;
+  hp?: number;
+  relicCharge?: number;
+  activeEnemies?: number;
+  groundedEnemies?: number;
+  blenderWorldLoaded?: boolean;
+  worldCollisionCount?: number;
+  keeperLoaded?: boolean;
+  raiderLoaded?: boolean;
+  wardenLoaded?: boolean;
+  criticalAssetsReady?: boolean;
+  assetErrors?: string[];
+  loadingState?: string;
+};
+
 function loadTargets(): AppTarget[] {
   const appsRoot = path.join(process.cwd(), 'apps');
   const entries = readdirSync(appsRoot, { withFileTypes: true });
@@ -61,8 +82,110 @@ async function dragPointer(page: Page, from: { x: number; y: number }, to: { x: 
   await page.mouse.up();
 }
 
+async function holdVirtualStick(page: Page, dx: number, dy: number, holdMs: number) {
+  const stick = page.locator('#joystick');
+  await expect(stick).toBeVisible();
+  const box = await stick.boundingBox();
+  expect(box, 'Virtual joystick had no measurable bounds').not.toBeNull();
+  const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+  const max = box!.width * 0.3;
+  const length = Math.hypot(dx, dy) || 1;
+  const scale = max / Math.max(1, length);
+  const target = { x: center.x + dx * scale, y: center.y + dy * scale };
+
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 8 });
+  await page.waitForTimeout(holdMs);
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+}
+
+async function readRelicState(page: Page) {
+  return page.evaluate(() => ((window as any).__AI_TEST_STATE__ ?? null) as RelicState | null);
+}
+
+async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
+    return state?.loadingState === 'awaiting-start';
+  }, undefined, { timeout: 25_000 });
+
+  const loaded = await readRelicState(page);
+  expect(loaded, 'RELIC SIEGE did not publish its QA bridge').not.toBeNull();
+  expect(loaded?.version).toBe('2.0.0');
+  expect(loaded?.criticalAssetsReady, `Authored asset load failed: ${JSON.stringify(loaded?.assetErrors || [])}`).toBe(true);
+  expect(loaded?.blenderWorldLoaded).toBe(true);
+  expect(loaded?.worldCollisionCount ?? 0).toBeGreaterThanOrEqual(7);
+  expect(loaded?.keeperLoaded).toBe(true);
+  expect(loaded?.raiderLoaded).toBe(true);
+  expect(loaded?.wardenLoaded).toBe(true);
+  expect(loaded?.assetErrors ?? []).toEqual([]);
+
+  const start = page.locator('#startButton');
+  await expect(start).toBeVisible();
+  await expect(start).toBeEnabled();
+  await start.click();
+
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
+    return state?.loadingState === 'ready' && state?.phase === 'gate';
+  }, undefined, { timeout: 8_000 });
+
+  const gate = await readRelicState(page);
+  expect(gate?.zone).toBe('gate');
+  expect(gate?.grounded).toBe(true);
+  expect(gate?.playerPosition?.y ?? -999).toBeGreaterThan(-1);
+
+  // Camera starts looking north. Holding the on-screen stick down drives the keeper
+  // physically forward (+Z) from the outer gate, up the authored ramp and into the courtyard.
+  await holdVirtualStick(page, 0, 1, 3_650);
+
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
+    return state?.zone === 'courtyard' && (state?.activeEnemies ?? 0) >= 3;
+  }, undefined, { timeout: 8_000 });
+
+  const courtyard = await readRelicState(page);
+  expect(courtyard?.phase).toBe('courtyard');
+  expect(courtyard?.grounded).toBe(true);
+  expect(courtyard?.groundDistance ?? 99).toBeLessThan(1.7);
+  expect(courtyard?.activeEnemies ?? 0).toBeGreaterThanOrEqual(3);
+  expect(courtyard?.groundedEnemies).toBe(courtyard?.activeEnemies);
+
+  // Continue toward the two front raiders, then strafe onto the left opponent using
+  // the same physical joystick. No direct position mutation is allowed in this QA path.
+  await holdVirtualStick(page, 0, 1, 1_250);
+  await holdVirtualStick(page, 1, 0, 780);
+
+  const chargeBefore = (await readRelicState(page))?.relicCharge ?? 0;
+  const enemiesBefore = (await readRelicState(page))?.activeEnemies ?? 0;
+  const attack = page.locator('#attackButton');
+  await expect(attack).toBeVisible();
+  for (let index = 0; index < 9; index += 1) {
+    await attack.click();
+    await page.waitForTimeout(340);
+  }
+  await page.waitForTimeout(250);
+
+  const combat = await readRelicState(page);
+  expect(combat?.grounded).toBe(true);
+  expect(combat?.playerPosition?.y ?? -999).toBeGreaterThan(0);
+  expect(combat?.hp ?? 0).toBeGreaterThan(0);
+  expect(
+    (combat?.relicCharge ?? 0) > chargeBefore || (combat?.activeEnemies ?? enemiesBefore) < enemiesBefore,
+    `Combat input did not connect with an enemy: ${JSON.stringify(combat)}`
+  ).toBe(true);
+
+  await attachCriticalScreenshot(page, testInfo, 'relic-courtyard-combat', { fullPage: false });
+  await testInfo.attach('relic-siege-journey-state', {
+    body: Buffer.from(`${JSON.stringify({ loaded, gate, courtyard, combat }, null, 2)}\n`, 'utf8'),
+    contentType: 'application/json'
+  });
+}
+
 async function clickLikelyStartControl(page: Page) {
-  const label = /start|play|begin|enter|continue|resume|launch|new game|начать|играть|старт|продолжить|почати|грати|увійти/i;
+  const label = /start|play|begin|enter|continue|resume|launch|new game|начать|играть|старт|продолжить|войти|почати|грати|увійти/i;
   const candidates = page.getByRole('button', { name: label });
   const count = await candidates.count();
   for (let index = 0; index < count; index += 1) {
@@ -89,6 +212,7 @@ test.describe('AI exploratory mobile gameplay', () => {
   for (const app of targets) {
     test(`${app.slug} survives a touch exploration pass`, async ({ page }, testInfo) => {
       test.skip(!orientationMatchesProject(app, testInfo.project.name), `App prefers ${app.orientation} orientation.`);
+      test.setTimeout(app.slug === 'relic-siege' ? 70_000 : 35_000);
 
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
@@ -109,40 +233,45 @@ test.describe('AI exploratory mobile gameplay', () => {
       await page.waitForTimeout(350);
 
       await attachCriticalScreenshot(page, testInfo, 'before-touch', { fullPage: false });
-      await clickLikelyStartControl(page);
 
-      const viewport = page.viewportSize();
-      expect(viewport).not.toBeNull();
-      const width = viewport!.width;
-      const height = viewport!.height;
+      if (app.slug === 'relic-siege') {
+        await runRelicSiegeJourney(page, testInfo);
+      } else {
+        await clickLikelyStartControl(page);
 
-      const tapPoints = [
-        { x: Math.round(width * 0.50), y: Math.round(height * 0.50) },
-        { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
-        { x: Math.round(width * 0.80), y: Math.round(height * 0.76) },
-        { x: Math.round(width * 0.72), y: Math.round(height * 0.42) }
-      ];
+        const viewport = page.viewportSize();
+        expect(viewport).not.toBeNull();
+        const width = viewport!.width;
+        const height = viewport!.height;
 
-      for (const point of tapPoints) {
-        await page.touchscreen.tap(point.x, point.y).catch(() => {});
-        await page.waitForTimeout(90);
+        const tapPoints = [
+          { x: Math.round(width * 0.50), y: Math.round(height * 0.50) },
+          { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
+          { x: Math.round(width * 0.80), y: Math.round(height * 0.76) },
+          { x: Math.round(width * 0.72), y: Math.round(height * 0.42) }
+        ];
+
+        for (const point of tapPoints) {
+          await page.touchscreen.tap(point.x, point.y).catch(() => {});
+          await page.waitForTimeout(90);
+        }
+
+        // Playwright has a browser-native touch tap API but no portable cross-engine swipe API.
+        // Use real browser pointer input for drags instead of constructing synthetic PointerEvents;
+        // synthetic pointer ids cannot legally participate in setPointerCapture() and create false failures.
+        await dragPointer(
+          page,
+          { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
+          { x: Math.round(width * 0.30), y: Math.round(height * 0.58) }
+        ).catch(() => {});
+        await page.waitForTimeout(120);
+        await dragPointer(
+          page,
+          { x: Math.round(width * 0.78), y: Math.round(height * 0.56) },
+          { x: Math.round(width * 0.62), y: Math.round(height * 0.48) }
+        ).catch(() => {});
+        await page.waitForTimeout(500);
       }
-
-      // Playwright has a browser-native touch tap API but no portable cross-engine swipe API.
-      // Use real browser pointer input for drags instead of constructing synthetic PointerEvents;
-      // synthetic pointer ids cannot legally participate in setPointerCapture() and create false failures.
-      await dragPointer(
-        page,
-        { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
-        { x: Math.round(width * 0.30), y: Math.round(height * 0.58) }
-      ).catch(() => {});
-      await page.waitForTimeout(120);
-      await dragPointer(
-        page,
-        { x: Math.round(width * 0.78), y: Math.round(height * 0.56) },
-        { x: Math.round(width * 0.62), y: Math.round(height * 0.48) }
-      ).catch(() => {});
-      await page.waitForTimeout(500);
 
       const state = await page.evaluate(() => {
         const visibleElements = [...document.querySelectorAll('button, [role="button"], input, select, textarea')]
