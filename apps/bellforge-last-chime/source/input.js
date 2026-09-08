@@ -7,6 +7,14 @@ export function naturalLookDelta(current, previous) {
   };
 }
 
+export function shapeLookDelta(x, y) {
+  const magnitude = Math.hypot(x, y);
+  if (magnitude < 0.18) return { x: 0, y: 0 };
+  const normalized = Math.min(1, magnitude / 28);
+  const gain = 0.9 + normalized * normalized * 0.62;
+  return { x: x * gain, y: y * gain };
+}
+
 export function shapeStick(dx, dy, radius = 60, deadzone = 0.08) {
   const rawLength = Math.hypot(dx, dy);
   if (rawLength < radius * deadzone) return { x: 0, y: 0, magnitude: 0 };
@@ -101,16 +109,19 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
   const down = (event) => {
     if (event.target === actionButton || actionButton.contains(event.target)) return;
     event.preventDefault();
-    // Touch/pen can leave the canvas while the thumb is still down. Mouse does
-    // not need capture on this full-screen canvas, and avoiding it keeps desktop
-    // emulation/input tooling responsive under heavy WebGL load.
+
+    const leftControlBoundary = innerWidth * 0.43;
+    const lookControlBoundary = innerWidth * 0.47;
+    const wantsJoy = event.clientX < leftControlBoundary;
+    const wantsLook = event.clientX >= lookControlBoundary;
+    if ((wantsJoy && joyId !== null) || (wantsLook && lookId !== null) || (!wantsJoy && !wantsLook)) return;
+
     if (event.pointerType !== 'mouse') {
       try { canvas.setPointerCapture?.(event.pointerId); } catch {}
     }
     pointers.add(event.pointerId);
 
-    const leftControlBoundary = innerWidth * 0.43;
-    if (event.clientX < leftControlBoundary && joyId === null) {
+    if (wantsJoy) {
       joyId = event.pointerId;
       joyOrigin = { x: event.clientX, y: event.clientY };
       placeFloatingJoystick(event.clientX, event.clientY);
@@ -119,11 +130,9 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
       return;
     }
 
-    if (lookId === null) {
-      lookId = event.pointerId;
-      lookLast = { x: event.clientX, y: event.clientY };
-      lookZone.classList.add('active');
-    }
+    lookId = event.pointerId;
+    lookLast = { x: event.clientX, y: event.clientY };
+    lookZone.classList.add('active');
   };
 
   const move = (event) => {
@@ -139,12 +148,11 @@ export function createInput({ canvas, joystick, knob, lookZone, actionButton }) 
       if (sprintLatched) sprintLatched = shaped.magnitude > 0.69;
       else sprintLatched = shaped.magnitude > 0.84;
       state.sprint = sprintLatched;
-      // Coalesce cosmetic DOM work to one write per visual frame. Gameplay
-      // state above remains immediate, so fast thumb movement never loses input.
       scheduleKnob(dx, dy);
     } else if (event.pointerId === lookId) {
       const current = { x: event.clientX, y: event.clientY };
-      const delta = naturalLookDelta(current, lookLast);
+      const raw = naturalLookDelta(current, lookLast);
+      const delta = shapeLookDelta(raw.x, raw.y);
       state.lookX += delta.x;
       state.lookY += delta.y;
       lookLast = current;
