@@ -95,11 +95,11 @@ The smoke job creates a skinned mesh with an armature and animation, exports it 
 
 To manually rebuild a particular app, select a non-main feature branch and provide that app's slug in `app`.
 
-## Required GitHub workflow permission for automatic commits
+## GitHub workflow permissions
 
-The automatic generation job requests only `contents: write` so it can commit generated binary assets back to the feature branch. GitHub personal repositories commonly default `GITHUB_TOKEN` to read-only.
+The generation job explicitly requests only `contents: write` for `GITHUB_TOKEN` so it can commit generated binary assets back to the same feature branch. For a normal same-repository branch this should not require changing the repository's default workflow-permission setting; GitHub allows a workflow owned by someone with write access to request the scopes it needs in the workflow file.
 
-If the generation job fails at `git push` with a permissions error, enable repository workflow write access:
+If a repository or organization policy still blocks the generated-asset push, the fallback setting is:
 
 **Repository → Settings → Actions → General → Workflow permissions → Read and write permissions → Save**
 
