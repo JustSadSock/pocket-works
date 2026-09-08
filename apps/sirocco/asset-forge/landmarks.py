@@ -31,16 +31,15 @@ def assign_weathered_materials(obj, materials, height_span, phase=0.0):
         obj.data.materials.append(mat)
     for poly in obj.data.polygons:
         z = poly.center.z
-        nz = poly.normal.z
-        stripe = math.sin(z * 5.4 + phase) + 0.45 * math.sin(z * 11.7 - phase * 0.7)
-        if nz < -0.18:
-            poly.material_index = 2
-        elif stripe > 0.95:
-            poly.material_index = 1
-        elif stripe < -1.0:
-            poly.material_index = 3
-        elif z > height_span * 0.72 and poly.normal.x > 0.15:
-            poly.material_index = 4
+        stripe = math.sin(z * 5.0 + phase) + 0.52 * math.sin(z * 10.8 - phase * 0.7)
+        if poly.normal.z < -0.18:
+            poly.material_index = 2  # undercuts
+        elif stripe > 0.82:
+            poly.material_index = 1  # sun-washed sediment band
+        elif stripe < -0.92:
+            poly.material_index = 3  # iron-rich darker band
+        elif z > height_span * 0.70 and poly.normal.x > 0.12:
+            poly.material_index = 4  # pale weathered crown
         else:
             poly.material_index = 0
 
@@ -88,31 +87,15 @@ def ring_mesh(name, rings, segments, materials, phase=0.0):
     return obj
 
 
-def add_strata_ring(name, location, radius_x, radius_y, mat, yaw=0.0, thickness=0.028):
-    bpy.ops.mesh.primitive_torus_add(
-        major_radius=radius_x,
-        minor_radius=thickness,
-        major_segments=30,
-        minor_segments=5,
-        location=location,
-        rotation=(0.0, 0.0, yaw),
-    )
-    torus = bpy.context.active_object
-    torus.name = name
-    torus.scale.y = max(0.2, radius_y / max(radius_x, 0.001))
-    torus.data.materials.append(mat)
-    return torus
-
-
-def add_spire(materials, strata_mat):
+def add_spire(materials):
     rings = [
         (0.0, 2.55, 2.00, 0.0, 0.0),
         (0.65, 2.43, 1.94, 0.05, -0.02),
         (1.45, 2.28, 1.78, 0.11, -0.05),
-        (2.3, 2.00, 1.52, 0.22, -0.09),
-        (3.2, 1.66, 1.25, 0.37, -0.11),
-        (4.2, 1.39, 1.03, 0.53, -0.08),
-        (5.2, 1.16, 0.86, 0.69, -0.04),
+        (2.30, 2.00, 1.52, 0.22, -0.09),
+        (3.20, 1.66, 1.25, 0.37, -0.11),
+        (4.20, 1.39, 1.03, 0.53, -0.08),
+        (5.20, 1.16, 0.86, 0.69, -0.04),
         (6.15, 0.92, 0.68, 0.84, 0.03),
         (6.95, 0.67, 0.49, 0.96, 0.08),
         (7.55, 0.42, 0.34, 1.04, 0.11),
@@ -120,21 +103,10 @@ def add_spire(materials, strata_mat):
     ]
     obj = ring_mesh('PW_WindSpire', rings, 24, materials, phase=0.4)
     obj.rotation_euler[2] = math.radians(-8)
-    for idx, z in enumerate((0.72, 1.38, 2.12, 2.94, 3.86, 4.84, 5.76, 6.58)):
-        radius = max(0.28, 2.42 - z * 0.285)
-        add_strata_ring(
-            f'PW_SpireStrata_{idx:02d}',
-            (0.10 + z * 0.125, -0.07 + z * 0.018, z),
-            radius,
-            radius * 0.78,
-            strata_mat,
-            math.radians(-8),
-            0.026,
-        )
     return obj
 
 
-def add_shelf(materials, strata_mat):
+def add_shelf(materials):
     rings = [
         (0.0, 3.55, 1.72, 0.0, 0.0),
         (0.45, 3.42, 1.62, -0.06, 0.02),
@@ -148,17 +120,6 @@ def add_shelf(materials, strata_mat):
     obj = ring_mesh('PW_ErodedShelf', rings, 26, materials, phase=1.1)
     obj.location = (6.4, 0.2, 0.0)
     obj.rotation_euler[2] = math.radians(14)
-    for idx, z in enumerate((0.58, 1.08, 1.62, 2.15, 2.58)):
-        radius = max(1.4, 3.42 - z * 0.53)
-        add_strata_ring(
-            f'PW_ShelfStrata_{idx:02d}',
-            (6.34 - z * 0.07, 0.23 + z * 0.025, z),
-            radius,
-            radius * 0.47,
-            strata_mat,
-            math.radians(14),
-            0.024,
-        )
     return obj
 
 
@@ -226,11 +187,10 @@ def main():
     undercut = material('SiroccoUndercut', (0.245, 0.105, 0.050), 0.985)
     iron = material('SiroccoIronStain', (0.35, 0.135, 0.060), 0.97)
     pale = material('SiroccoPaleWeathering', (0.69, 0.42, 0.22), 0.95)
-    strata = material('SiroccoStrata', (0.72, 0.39, 0.17), 0.945)
     materials = [sandstone, sunface, undercut, iron, pale]
 
-    add_spire(materials, strata)
-    add_shelf(materials, strata)
+    add_spire(materials)
+    add_shelf(materials)
     add_balanced_stone(materials)
     add_base_scree(materials)
 
