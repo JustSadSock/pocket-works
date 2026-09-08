@@ -81,6 +81,9 @@ jobs:
           if [[ ",${PW_APP_TARGETS:-}," == *",sirocco,"* ]]; then
             TESTS+=(tests/e2e/sirocco.spec.ts)
           fi
+          if [[ ",${PW_APP_TARGETS:-}," == *",sinew,"* ]]; then
+            TESTS+=(tests/e2e/sinew.spec.ts)
+          fi
           npx playwright test "${TESTS[@]}"
 
       - name: Upload exploratory QA evidence
