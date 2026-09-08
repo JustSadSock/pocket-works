@@ -1,7 +1,44 @@
 from pathlib import Path
 import math, sys
+import bpy
 sys.path.insert(0, str(Path(__file__).parent))
 from forge_common import *
+
+def batch_static_environment():
+    """Batch authored static decoration by material and street zone.
+
+    The original scene deliberately builds hundreds of small Blender objects for
+    authoring flexibility. Keeping every object as a separate glTF mesh is costly
+    on mobile because draw-call overhead dominates the modest polygon count.
+    Collision proxies and animated/mechanical meshes remain independent.
+    """
+    groups={}
+    for obj in list(bpy.context.scene.objects):
+        if obj.type != 'MESH' or obj.name.startswith(('COL_','FX_','MECH_')):
+            continue
+        material=obj.data.materials[0] if obj.data and len(obj.data.materials) else None
+        material_name=material.name if material else 'Unmaterialed'
+        game_z=-obj.location.y
+        zone=math.floor((game_z+72)/28)
+        groups.setdefault((zone,material_name),[]).append(obj)
+
+    batched=0
+    for (zone,material_name), objects in groups.items():
+        if len(objects) < 2:
+            continue
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in objects:
+            obj.select_set(True)
+        active=objects[0]
+        bpy.context.view_layer.objects.active=active
+        bpy.ops.object.join()
+        safe=''.join(ch if ch.isalnum() else '_' for ch in material_name)
+        casts_shadow=not any(token in material_name for token in ('Glass','Ceramic','Plant'))
+        # Runtime deliberately recognizes Bridge* as an authored shadow caster.
+        active.name=f'{"BridgeBatch" if casts_shadow else "StaticBatch"}_{zone}_{safe}'
+        active.data.name=f'{active.name}_Mesh'
+        batched += len(objects)-1
+    print(f'BELLFORGE static batching removed {batched} redundant draw-call objects')
 
 def main():
     args=parse_args(); clear_scene()
@@ -88,6 +125,8 @@ def main():
     for i,(x,z) in enumerate([(-4.2,-44),(4.1,-16),(-4.2,5),(4.1,30)]):
         cylinder(f'Planter_{i}',(x,.35,z),.5,.7,stone,18)
         for k in range(5): sphere(f'Plant_{i}_{k}',(x+(k-2)*.12,.9+(k%2)*.18,z+(k%3-1)*.12),(.18,.5,.16),green,12,6)
+
+    batch_static_environment()
     export_glb(args.output,animations=False)
 
 if __name__=='__main__': main()

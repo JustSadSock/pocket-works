@@ -59,7 +59,11 @@ export function nearestInteractable(position, items, maxDistance = 3.1) {
   return best ? { item: best, distance: bestDistance } : null;
 }
 export function qualityProfile(hardwareConcurrency = 4, minDimension = 390) {
-  if (hardwareConcurrency >= 8 && minDimension >= 390) return { tier:'high', scale:1.15, shadows:1024, particles:1 };
-  if (hardwareConcurrency >= 6 && minDimension >= 350) return { tier:'medium', scale:1.45, shadows:768, particles:.7 };
+  // CSS viewport size matters more than reported core count on phones. A modern
+  // phone can expose 8+ logical cores while still having a much tighter thermal
+  // and draw-call budget than a tablet/desktop. Keep full geometry/materials,
+  // but reserve the expensive shadow/particle tiers for physically larger screens.
+  if (hardwareConcurrency >= 8 && minDimension >= 700) return { tier:'high', scale:1.15, shadows:1024, particles:1 };
+  if (hardwareConcurrency >= 6 && minDimension >= 520) return { tier:'medium', scale:1.45, shadows:768, particles:.7 };
   return { tier:'low', scale:1.8, shadows:512, particles:.42 };
 }
