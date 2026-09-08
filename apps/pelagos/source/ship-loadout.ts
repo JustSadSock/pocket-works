@@ -269,9 +269,10 @@ function restorePersisted(): void {
     activeLoadout.dimensions = { ...DIMENSION_MODULES[selection.dimensions].value };
     activeLoadout.sails = { ...SAIL_MODULES[selection.sails].value };
     activeLoadout.oars = { ...OAR_MODULES[selection.oars].value };
+    const storedPalette = PALETTE_MODULES[selection.palette]?.value ?? PALETTE_MODULES.seafoam.value;
     activeLoadout.palette = selection.palette === 'custom' && parsed.palette
       ? { ...PALETTE_MODULES.seafoam.value, ...parsed.palette }
-      : { ...PALETTE_MODULES[selection.palette]?.value ?? PALETTE_MODULES.seafoam.value };
+      : { ...storedPalette };
     activeLoadout.id = 'custom';
     activeLoadout.label = 'Custom Cutter';
   } catch {
