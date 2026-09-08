@@ -9,6 +9,7 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.goto('/apps/pelagos/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#menu')).toBeVisible({ timeout: 25_000 });
     await expect(page.locator('#shipyardButton')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosOceanPatch)).toBe('1');
 
     await page.locator('#shipyardButton').click();
     const shipyard = page.locator('#shipyard');
@@ -26,6 +27,7 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.getByRole('button', { name: /Highboard Cruiser/i }).click();
     await expect(page.locator('#shipyardSummary')).toContainText('15.6 м');
     await expect(page.locator('#shipyardSummary')).toContainText('4.6 м');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosOceanHull)).toBe('15.6x4.6');
 
     const shipyardBox = await shipyard.boundingBox();
     expect(shipyardBox).not.toBeNull();
