@@ -62,14 +62,14 @@ export function installScenePolish(game) {
   sky.applyFog = false;
   sky.isPickable = false;
 
-  // First-person and AI shields use different combat sizes. The player's 78 cm
-  // shield preserves believable coverage without becoming a permanent wall in
-  // front of the phone camera; the AI keeps a slightly broader 82 cm target.
-  setShieldScale(game.player, 0.39);
-  setShieldScale(game.enemy, 0.41);
+  // The first-person shield must read as a real object held at arm's length,
+  // not as a permanent full-screen wall. The opponent keeps a broader target
+  // because it is viewed from several metres away.
+  setShieldScale(game.player, 0.32);
+  setShieldScale(game.enemy, 0.39);
 
-  game.camera.fov = 1.22;
-  game.camera.minZ = 0.05;
+  game.camera.fov = 1.25;
+  game.camera.minZ = 0.045;
   game.scene.fogDensity = Math.min(game.scene.fogDensity, 0.0090);
   game.scene.imageProcessingConfiguration.exposure = 1.24;
   game.scene.imageProcessingConfiguration.contrast = 1.06;
