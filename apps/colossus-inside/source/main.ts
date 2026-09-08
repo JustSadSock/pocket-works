@@ -5,23 +5,17 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'COLOSSUS // INSIDE';
-const version = '1.4.0';
+const version = '1.5.0';
 const storageNamespace = 'pocket-works:colossus-inside';
 const releaseNotes = [
-  'Спина колосса собрана как сегментированная биомеханическая броня с отдельными левыми и правыми панелями, центральным хребтом, плечевыми узлами и шеей.',
-  'Стартовая защитная ниша теперь существует в самом мире, а маршрут читается как часть корпуса, а не как отдельная дорога.',
-  'Внутри появились пол, силовой каркас, поперечные рёбра, мембраны, сервисные огни и физически видимый стабилизатор.',
-  'Финальный mobile readability pass поднимает локальный контраст брони, персонажа и навигационных инкрустаций одинаково в Safari/WebKit и Chromium.',
-  'Сохранена физика 1.3: реальные разрывы, прыжок, падение, checkpoint recovery и удержание JUMP у climb-якорей.'
+  'Колосс теперь является самим уровнем: traversal carriers синхронизируются с Blender-костями груди, плеча и головы.',
+  'У каждого разрыва брони работает системный захват края; прыжки, падения и перенос импульса зависят от движения гиганта.',
+  'Удар молнии физически выбивает бронепанель, разбрасывает обломки и создаёт реальный обход повреждённой секции.',
+  'Ремонт стабилизатора стал трёхфазной задачей: нужно перемещаться между тремя узлами и синхронизировать каждый удержанием JUMP.',
+  'Усилены камера, scale cues, живая механика внутренностей, звук шага и финальный переход после стабилизации.'
 ];
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 registerEnhancedUpdate({ appName, version, releaseNotes });
 createWorkshopMode({ appName, version, cachePrefix: 'colossus-inside-', storageNamespace, onReset: () => location.reload() });
-void (async () => {
-  await import('./game-v3.js');
-  const { installColossusVisualTuning } = await import('./visual-tuning.js');
-  installColossusVisualTuning();
-  const { installReadabilityPass } = await import('./readability-pass.js');
-  installReadabilityPass();
-})();
+void import('./game-v4.js');
