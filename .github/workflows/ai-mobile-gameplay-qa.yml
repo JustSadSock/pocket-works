@@ -59,7 +59,7 @@ jobs:
 
           TARGETS=""
           if [ -n "$RANGE" ]; then
-            CHANGED_FILES="$(git diff --name-only "$RANGE" || true)"
+            CHANGED_FILES="$(git -C "$GITHUB_WORKSPACE" diff --name-only "$RANGE" || true)"
             TARGETS="$(printf '%s\n' "$CHANGED_FILES" | awk -F/ '$1 == "apps" && $2 !~ /^_/ { print $2 }' | sort -u | paste -sd, -)"
           fi
 
