@@ -69,7 +69,7 @@ const waterVertex=`precision highp float;attribute vec3 position;attribute vec2 
 const waterFragment=`precision highp float;varying vec3 vPos;varying vec2 vUv;uniform float time;uniform vec3 cameraPosition;void main(){float a=vPos.x*.031+time*.67;float b=vPos.z*.047-time*.39;vec3 n=normalize(vec3(-.058*cos(a),1.0,-.048*cos(b)));vec3 v=normalize(cameraPosition-vPos);float fres=pow(1.0-max(dot(n,v),0.0),3.2);float center=clamp(vUv.y,0.0,1.0);float shore=1.0-smoothstep(.05,.38,center);float flow=.5+.5*sin(vUv.x*92.0-time*2.1+sin(vPos.z*.018)*2.0);float fine=.5+.5*sin(vPos.x*.145+vPos.z*.081-time*1.55);vec3 bank=vec3(.16,.30,.27);vec3 shallow=vec3(.060,.27,.31);vec3 deep=vec3(.016,.095,.155);vec3 c=mix(shallow,deep,smoothstep(.20,.92,center));c=mix(c,bank,shore*.25);c+=fres*vec3(.27,.36,.37);c+=(flow*.009+fine*.0045)*(1.0-shore*.55);float foam=shore*shore*(.020+.020*flow);c+=foam*vec3(.70,.75,.68);gl_FragColor=vec4(c,1.0);}`;
 
 export class WorldStreamer{
-  readonly scene:Scene;readonly chunks=new Map<string,Chunk>();readonly rivers=new Map<number,Mesh>();readonly water:ShaderMaterial;readonly templates:Templates={};
+  readonly scene:Scene;readonly chunks=new Map<string,Chunk>();readonly rivers=new Map<number,Mesh>();readonly water:ShaderMaterial;readonly templates:Templates={};readonly templatesReady:Promise<void>;
   private terrainMaterial:StandardMaterial;
   private firDark:Mesh;private firBlue:Mesh;private oak:Mesh;private aspen:Mesh;private rock:Mesh;private flower:Mesh;private shrub:Mesh;
   private quality=1;private lastCenter='';private lastRadius=-1;private nextChunkBuild=0;
@@ -83,7 +83,7 @@ export class WorldStreamer{
     this.aspen=this.makeBroad('aspen',new Color3(.175,.285,.105),1);
     this.rock=this.makeRock('fieldRock');this.flower=this.makeFlower('meadowFlower');this.shrub=this.makeShrub('understory');
     for(const m of [this.firDark,this.firBlue,this.oak,this.aspen,this.rock,this.flower,this.shrub]){m.position.y=-2600;m.isPickable=false;}
-    void this.loadTemplates();
+    this.templatesReady=this.loadTemplates();
   }
   setQuality(q:number){this.quality=clamp(q,.55,1);}
   heightAt(x:number,z:number){return terrainHeight(x,z);}
@@ -91,7 +91,8 @@ export class WorldStreamer{
   get treeCount(){let n=0;for(const [,c] of this.chunks)n+=c.treeCount;return n;}
   get materialsHealthy(){return this.scene.materials.includes(this.terrainMaterial)&&this.scene.materials.includes(this.water);}
   get riverMeshCount(){return this.rivers.size;}
-  async loadTemplates(){
+  get authoredTemplateCount(){return Number(Boolean(this.templates.fir))+Number(Boolean(this.templates.broad))+Number(Boolean(this.templates.rock));}
+  private async loadTemplates(){
     try{
       const r=await SceneLoader.ImportMeshAsync(null,'./models/','biome_props.glb',this.scene);
       for(const m of r.meshes){
@@ -106,7 +107,7 @@ export class WorldStreamer{
         }
         if(m.material instanceof StandardMaterial){m.material.specularColor=new Color3(.006,.009,.005);if(lower.includes('fir'))m.material.diffuseColor=new Color3(.064,.17,.095);else if(lower.includes('broad'))m.material.diffuseColor=new Color3(.14,.27,.095);else m.material.diffuseColor=new Color3(.32,.33,.30);}
       }
-    }catch{/* procedural fallbacks keep the world complete offline */}
+    }catch(err){console.warn('AETHERWING biome GLB fallback',err);}
   }
   update(position:Vector3,time:number){
     const cx=Math.floor((position.x+HALF_CHUNK)/CHUNK),cz=Math.floor((position.z+HALF_CHUNK)/CHUNK),center=`${cx}:${cz}`;
