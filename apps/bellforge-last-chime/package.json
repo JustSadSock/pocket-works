@@ -1,11 +1,11 @@
 {
   "name": "@pocket-works/bellforge-last-chime",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs bellforge-last-chime",
-    "test": "node source/core.test.mjs",
+    "build": "node source/core.test.mjs && node source/input.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs bellforge-last-chime",
+    "test": "node source/core.test.mjs && node source/input.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
