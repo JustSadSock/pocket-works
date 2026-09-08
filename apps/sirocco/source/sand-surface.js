@@ -136,21 +136,19 @@ export class LocalSandSurface {
         const base = terrainNormal(gx, gz, 0.42);
         const ni = i * 3;
 
+        // The physical geometry stays fully deformed, but mobile lighting uses
+        // a softened normal. Retaining ~58% of the high-resolution normal keeps
+        // a real footprint shape while suppressing large triangular light wedges.
         const edgeBlend = smoothstep(0.70, 0.91, r);
-        if (edgeBlend > 0) {
-          let nx = normals[ni] + (base.x - normals[ni]) * edgeBlend;
-          let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * edgeBlend;
-          let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * edgeBlend;
-          const inv = 1 / Math.hypot(nx, ny, nz);
-          normals[ni] = nx * inv;
-          normals[ni + 1] = ny * inv;
-          normals[ni + 2] = nz * inv;
-        }
+        const baseMix = 0.42 + edgeBlend * 0.58;
+        let nx = normals[ni] + (base.x - normals[ni]) * baseMix;
+        let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * baseMix;
+        let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * baseMix;
+        const inv = 1 / Math.hypot(nx, ny, nz);
+        normals[ni] = nx * inv;
+        normals[ni + 1] = ny * inv;
+        normals[ni + 2] = nz * inv;
 
-        // Stable cavity AO only. Directional light is left to Babylon's real
-        // PBR normal lighting; adding another normal-based shadow here created
-        // long polygonal wedges on the 64x64 mobile mesh. This term depends only
-        // on actual negative displacement, so it cannot reveal the patch radius.
         const cavity = smoothstep(0.004, 0.058, -deformations[i]);
         const shade = 1 - cavity * 0.16;
         const ci = i * 4;
