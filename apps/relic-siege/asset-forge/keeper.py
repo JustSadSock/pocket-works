@@ -137,7 +137,6 @@ def build(arm):
     cube('KeeperBootL', (-0.28, -0.12, -0.46), (0.3, 0.43, 0.18), bronze, arm, 'leg_L', bevel=0.05)
     cube('KeeperBootR', (0.28, -0.12, -0.46), (0.3, 0.43, 0.18), bronze, arm, 'leg_R', bevel=0.05)
 
-    # A short sun-glaive reads clearly on a phone without becoming a giant clipping pole.
     cylinder('KeeperGlaiveShaft', (1.22, -0.08, 0.82), 0.065, 2.0, bronze, arm, 'weapon', (0.08, 0, 0.18))
     cube('KeeperGlaiveBlade', (1.16, -0.08, -0.18), (0.11, 0.07, 0.55), sun, arm, 'weapon', (0, 0.22, 0.08), 0.03)
     bpy.ops.mesh.primitive_torus_add(major_radius=0.26, minor_radius=0.05, major_segments=20, minor_segments=6, location=(1.2, -0.08, 0.2), rotation=(math.pi / 2, 0, 0))
@@ -222,8 +221,7 @@ def export(output):
         export_format='GLB',
         export_apply=True,
         export_animations=True,
-        export_nla_strips=True,
-        export_all_actions=True,
+        export_animation_mode='ACTIONS',
         export_materials='EXPORT'
     )
     print(f'RELIC SIEGE Keeper generated: {output} ({output.stat().st_size} bytes)')
