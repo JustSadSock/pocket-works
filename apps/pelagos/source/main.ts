@@ -19,6 +19,7 @@ import './underbody-refit';
 import './camera-stabilizer';
 import './motion-cues';
 import './experience-refit';
+import './ship-qa-refit';
 import { installShipyard } from './shipyard';
 import { PelagosGame } from './game';
 
