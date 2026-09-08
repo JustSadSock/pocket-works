@@ -8,6 +8,7 @@ import './ship-refit';
 import './marine-refit';
 import './marine-tuning';
 import './presence-pass';
+import './wake-refit';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
