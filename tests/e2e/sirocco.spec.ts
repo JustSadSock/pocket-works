@@ -24,6 +24,7 @@ async function qaState(page: import('@playwright/test').Page) {
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
       landmarkInstances: game.landmarks?.instances?.length ?? 0,
+      characterPolishMeshes: game.characterPolish?.meshes?.length ?? 0,
       camera: camera ? {
         x: camera.position.x, y: camera.position.y, z: camera.position.z,
         pitch: camera.rotation.x, yaw: camera.rotation.y, minZ: camera.minZ
@@ -71,13 +72,15 @@ test.describe('SIROCCO deterministic visual QA', () => {
     const initial = await qaState(page);
     expect(initial).not.toBeNull();
     expect(initial!.activeChunks).toBeGreaterThan(20);
-    expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(10_000);
+    // 1.5 intentionally replaces the 14k-vertex square sand patch with a
+    // circular ~4k-vertex patch. Guard both visual detail and the performance cap.
+    expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(3_500);
+    expect(initial!.localSand?.vertices ?? 99_999).toBeLessThan(5_000);
+    expect(initial!.localSand?.indices ?? 0).toBeGreaterThan(15_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
     expect(initial!.landmarkInstances).toBeGreaterThanOrEqual(5);
+    expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(7);
 
-    // Frame the closest Blender-authored landmark deliberately so CI proves
-    // that the generated GLB is not only present on disk but visible through
-    // Babylon/WebKit at mobile landscape scale.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       const c = game.controller;
@@ -94,12 +97,12 @@ test.describe('SIROCCO deterministic visual QA', () => {
       game.sandSurface.syncOrigin?.();
       game.sandSurface.update(c, true);
       game.rig.update(c, 1 / 60);
+      game.characterPolish?.update(c, 1 / 60);
       game.camera.update(c, 1 / 60);
     });
     await page.waitForTimeout(650);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-blender-landmark', { fullPage: false });
 
-    // Return to deterministic spawn before exercising gameplay systems.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       const c = game.controller;
@@ -117,7 +120,6 @@ test.describe('SIROCCO deterministic visual QA', () => {
     });
     await page.waitForTimeout(220);
 
-    // Exercise the real input -> animation -> foot-bone contact -> sand path.
     const impactBeforeWalk = (await qaState(page))!.sandImpacts ?? 0;
     const preWalk = await qaState(page);
     await page.keyboard.down('KeyW');
@@ -129,8 +131,6 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(walked!.sandImpacts).toBeGreaterThan(impactBeforeWalk);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
 
-    // Reproduce the old intermittent head/keffiyeh intrusion: steep look-down
-    // plus a large yaw jump before the animated body can catch up.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       game.controller.pitch = 1.05;
@@ -139,9 +139,6 @@ test.describe('SIROCCO deterministic visual QA', () => {
     await page.waitForTimeout(140);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-look-down-yaw-diverged', { fullPage: false });
 
-    // Put a clearly readable alternating footprint chain 0.9–3.1 m ahead of
-    // the camera. This framing shows the actual negative bowls and positive
-    // displaced rims instead of photographing the ground directly underfoot.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       const c = game.controller;
@@ -161,7 +158,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
         }, { speed: 2.35, lastSlope: 0.20, sliding: 0.06 });
       });
       game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 6);
-      for (let i = 0; i < 5; i += 1) game.sand.update(0.12, c.globalX, c.globalZ);
+      for (let i = 0; i < 5; i += 1) game.sand.update(0.21, c.globalX, c.globalZ);
       const dirty = game.sand.consumeDirtyBounds();
       if (dirty) game.world.refreshDeformation(dirty);
       game.sandSurface.markDirty();
