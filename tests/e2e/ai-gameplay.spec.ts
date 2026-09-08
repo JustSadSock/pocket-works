@@ -92,25 +92,6 @@ async function dragPointer(page: Page, from: { x: number; y: number }, to: { x: 
   await page.mouse.up();
 }
 
-async function holdVirtualStick(page: Page, dx: number, dy: number, holdMs: number) {
-  const stick = page.locator('#joystick');
-  await expect(stick).toBeVisible();
-  const box = await stick.boundingBox();
-  expect(box, 'Virtual joystick had no measurable bounds').not.toBeNull();
-  const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
-  const max = box!.width * 0.3;
-  const length = Math.hypot(dx, dy) || 1;
-  const scale = max / Math.max(1, length);
-  const target = { x: center.x + dx * scale, y: center.y + dy * scale };
-
-  await page.mouse.move(center.x, center.y);
-  await page.mouse.down();
-  await page.mouse.move(target.x, target.y, { steps: 8 });
-  await page.waitForTimeout(holdMs);
-  await page.mouse.up();
-  await page.waitForTimeout(120);
-}
-
 async function readRelicState(page: Page) {
   return page.evaluate(() => ((window as any).__AI_TEST_STATE__ ?? null) as RelicState | null);
 }
@@ -157,6 +138,9 @@ async function driveRelicStickUntil(
       if (done(lastState)) {
         return { state: lastState, samples };
       }
+      if (lastState?.phase === 'lost' || (lastState?.hp ?? 1) <= 0) {
+        throw new Error(`${label} killed the keeper before reaching its target: ${JSON.stringify(lastState)}`);
+      }
     }
 
     throw new Error(
@@ -191,6 +175,48 @@ async function driveRelicDistance(
   });
 }
 
+async function engageCourtyardCombat(page: Page) {
+  const attack = page.locator('#attackButton');
+  await expect(attack).toBeVisible();
+  const initial = await readRelicState(page);
+  const initialCharge = initial?.relicCharge ?? 0;
+  const initialEnemies = initial?.activeEnemies ?? 0;
+  const rounds: Array<{ round: number; afterMove: RelicState | null; afterAttacks: RelicState | null }> = [];
+
+  // Behave like an actual player instead of walking several metres through three free
+  // enemy attack cycles. Advance in short physical joystick bursts and attack after
+  // every burst. Enemies also advance during these bursts, so the first real melee
+  // connection determines when the QA engagement is complete.
+  for (let round = 0; round < 8; round += 1) {
+    await driveRelicDistance(page, 0, 1, 0.85, 7_000, `Courtyard combat approach ${round + 1}`);
+    const afterMove = await readRelicState(page);
+    if (afterMove?.phase === 'lost' || (afterMove?.hp ?? 1) <= 0) {
+      throw new Error(`Keeper died while physically approaching courtyard combat: ${JSON.stringify(afterMove)}`);
+    }
+    expect(afterMove?.zone).toBe('courtyard');
+    expect(afterMove?.grounded).toBe(true);
+
+    let afterAttacks = afterMove;
+    for (let strike = 0; strike < 3; strike += 1) {
+      afterAttacks = await readRelicState(page);
+      if (afterAttacks?.phase === 'lost' || (afterAttacks?.hp ?? 1) <= 0) {
+        throw new Error(`Keeper died before courtyard strike connected: ${JSON.stringify(afterAttacks)}`);
+      }
+      await attack.click({ timeout: 2_500 });
+      await page.waitForTimeout(340);
+      afterAttacks = await readRelicState(page);
+      if ((afterAttacks?.relicCharge ?? 0) > initialCharge || (afterAttacks?.activeEnemies ?? initialEnemies) < initialEnemies) {
+        rounds.push({ round: round + 1, afterMove, afterAttacks });
+        return { combat: afterAttacks, rounds };
+      }
+    }
+    rounds.push({ round: round + 1, afterMove, afterAttacks });
+  }
+
+  const finalState = await readRelicState(page);
+  throw new Error(`Physical courtyard attacks never connected with an enemy: ${JSON.stringify({ initial, finalState, rounds })}`);
+}
+
 async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   await page.waitForFunction(() => {
     const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
@@ -218,8 +244,6 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
     return state?.loadingState === 'ready' && state?.phase === 'gate';
   }, undefined, { timeout: 8_000 });
 
-  // The start handler publishes the phase before the first physics frame. Wait for an
-  // actual collision/ground frame instead of reading the pre-physics `grounded=false`.
   await page.waitForFunction(() => {
     const state = (window as any).__AI_TEST_STATE__ as RelicState | undefined;
     return state?.phase === 'gate' && state?.grounded === true && (state?.groundDistance ?? 99) < 1.7;
@@ -230,10 +254,6 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   expect(gate?.grounded).toBe(true);
   expect(gate?.playerPosition?.y ?? -999).toBeGreaterThan(-1);
 
-  // CI software WebGL can render far below real-time. Keep the real on-screen stick
-  // physically held until gameplay itself reports the courtyard encounter and the
-  // keeper is stably supported by authored collision, rather than stopping on the
-  // transitional frame where the zone flips while the capsule is still settling.
   const courtyardDrive = await driveRelicStickUntil(
     page,
     0,
@@ -253,33 +273,16 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   expect(courtyard?.activeEnemies ?? 0).toBeGreaterThanOrEqual(3);
   expect(courtyard?.groundedEnemies).toBe(courtyard?.activeEnemies);
 
-  // Approach the first encounter through physical displacement rather than wall-clock
-  // time so low-FPS Chromium/WebKit runners perform the same journey as a real phone.
-  const approachDrive = await driveRelicDistance(page, 0, 1, 5.5, 14_000, 'Courtyard enemy approach');
-  const strafeDrive = await driveRelicDistance(page, 1, 0, 3.0, 12_000, 'Courtyard combat strafe');
-
-  const chargeBefore = (await readRelicState(page))?.relicCharge ?? 0;
-  const enemiesBefore = (await readRelicState(page))?.activeEnemies ?? 0;
-  const attack = page.locator('#attackButton');
-  await expect(attack).toBeVisible();
-  for (let index = 0; index < 9; index += 1) {
-    await attack.click();
-    await page.waitForTimeout(340);
-  }
-  await page.waitForTimeout(250);
-
-  const combat = await readRelicState(page);
+  const engagement = await engageCourtyardCombat(page);
+  const combat = engagement.combat;
   expect(combat?.grounded).toBe(true);
   expect(combat?.playerPosition?.y ?? -999).toBeGreaterThan(0);
   expect(combat?.hp ?? 0).toBeGreaterThan(0);
-  expect(
-    (combat?.relicCharge ?? 0) > chargeBefore || (combat?.activeEnemies ?? enemiesBefore) < enemiesBefore,
-    `Combat input did not connect with an enemy: ${JSON.stringify(combat)}`
-  ).toBe(true);
+  expect((combat?.relicCharge ?? 0) > (courtyard?.relicCharge ?? 0) || (combat?.activeEnemies ?? 3) < (courtyard?.activeEnemies ?? 3)).toBe(true);
 
   await attachCriticalScreenshot(page, testInfo, 'relic-courtyard-combat', { fullPage: false });
   await testInfo.attach('relic-siege-journey-state', {
-    body: Buffer.from(`${JSON.stringify({ loaded, gate, courtyard, combat, courtyardDrive, approachDrive, strafeDrive }, null, 2)}\n`, 'utf8'),
+    body: Buffer.from(`${JSON.stringify({ loaded, gate, courtyard, combat, courtyardDrive, engagement }, null, 2)}\n`, 'utf8'),
     contentType: 'application/json'
   });
 }
@@ -356,9 +359,6 @@ test.describe('AI exploratory mobile gameplay', () => {
           await page.waitForTimeout(90);
         }
 
-        // Playwright has a browser-native touch tap API but no portable cross-engine swipe API.
-        // Use real browser pointer input for drags instead of constructing synthetic PointerEvents;
-        // synthetic pointer ids cannot legally participate in setPointerCapture() and create false failures.
         await dragPointer(
           page,
           { x: Math.round(width * 0.20), y: Math.round(height * 0.76) },
