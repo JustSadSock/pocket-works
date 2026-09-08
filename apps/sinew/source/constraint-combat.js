@@ -7,8 +7,8 @@ const AXIS_Z = new Vector3(0, 0, 1);
 const PLAYER_GUARD = {
   hand: vec3(.17, -.19, .43),
   tip: vec3(.28, .43, 1.25),
-  shieldHand: vec3(-.17, -.16, .37),
-  shieldCenter: vec3(-.23, -.12, .43)
+  shieldHand: vec3(-.17, -.16, .45),
+  shieldCenter: vec3(-.27, -.15, .58)
 };
 
 function basis(yaw) {
@@ -154,25 +154,25 @@ class PhysicalUpperBody {
       threat = vec3(-Vector3.Dot(rel, frame.right) * danger * 2.2, (rel.y - .2) * danger * 1.35, danger * 1.45);
     }
 
-    const shieldX = clamp(-.23 + lateralWorkspace * .34, -.46, .16);
-    const shieldY = clamp(-.12 + verticalWorkspace * .76, -.68, .70);
-    const shieldDrive = vec3(threat.x - gy * .10, threat.y + gp * .20, threat.z);
+    const shieldX = clamp(-.28 + lateralWorkspace * .27, -.49, -.10);
+    const shieldY = clamp(-.17 + verticalWorkspace * .66, -.65, .48);
+    const shieldDrive = vec3(threat.x - gy * .09, threat.y + gp * .17, threat.z);
     const shieldGuardHand = vec3(
-      clamp(-.17 + lateralWorkspace * .22, -.40, .06),
-      clamp(-.16 + verticalWorkspace * .68 + breath * .004, -.62, .54),
-      .37
+      clamp(-.19 + lateralWorkspace * .16, -.38, -.03),
+      clamp(-.18 + verticalWorkspace * .58 + breath * .004, -.58, .43),
+      .45
     );
     const shieldGuardCenter = vec3(
       shieldX,
       shieldY + breath * .005,
-      .43 + danger * .035 - Math.abs(verticalWorkspace) * .025
+      .58 + danger * .04 + Math.max(0, verticalWorkspace) * .04
     );
     const shieldPose = this.shield.step({
       shoulder: vec3(),
       guardHand: shieldGuardHand,
       guardTip: shieldGuardCenter,
       drive: shieldDrive,
-      brace: .90 - danger * .08,
+      brace: .92 - danger * .08,
       dt,
       iterations: 11
     });
@@ -180,7 +180,6 @@ class PhysicalUpperBody {
     this.applyWeaponPose(weaponPose, shoulderR, frame, dt);
     this.applyShieldPose(shieldPose, shoulderL, frame, dt, lateralWorkspace, verticalWorkspace);
 
-    // Whole-body anticipation: the torso subtly loads opposite the weapon and follows through.
     if (gestureEnergy > .08) {
       p.impactLeanVelocity.addInPlace(frame.right.scale(-deltaX * .0019));
       p.impactLeanVelocity.y += -deltaY * .0009;
@@ -228,18 +227,35 @@ class PhysicalUpperBody {
 
   applyShieldPose(pose, shoulder, frame, dt, workspaceX = 0, workspaceY = 0) {
     const w = this.player;
-    const elbow = toWorld(pose.elbow, shoulder, frame);
-    const hand = toWorld(pose.hand, shoulder, frame);
-    const center = toWorld(pose.tip, shoulder, frame);
+    let elbow = toWorld(pose.elbow, shoulder, frame);
+    let hand = toWorld(pose.hand, shoulder, frame);
+    let center = toWorld(pose.tip, shoulder, frame);
+
+    // Camera-safe corridor is enforced after the constraint solve. The previous
+    // pre-solve safety target could be overwritten by contact/drive impulses,
+    // allowing the 90 cm shield to sit almost on the near plane.
+    const head = w.bones.head.getAbsolutePosition();
+    const rel = center.subtract(head);
+    let lateral = Vector3.Dot(rel, frame.right);
+    let forward = Vector3.Dot(rel, frame.forward);
+    const vertical = clamp(rel.y, -.72, .18);
+    lateral = clamp(lateral, -.68, -.20);
+    forward = Math.max(.62, forward);
+    const safeCenter = head.add(frame.right.scale(lateral)).add(frame.forward.scale(forward)).add(new Vector3(0, vertical, 0));
+    const correction = safeCenter.subtract(center);
+    center = safeCenter;
+    hand = hand.add(correction.scale(.72));
+    elbow = elbow.add(correction.scale(.32));
+
     w.bones.elbowL.setAbsolutePosition(elbow);
     w.bones.handL.setAbsolutePosition(hand);
     w.leftHand.position.copyFrom(hand);
     setSegment(w.meshes.upperArmL, shoulder, elbow);
     setSegment(w.meshes.forearmL, elbow, hand);
 
-    const normal = frame.forward.scale(.86)
-      .add(frame.right.scale(.14 + workspaceX * .22))
-      .add(new Vector3(0, clamp(-workspaceY * .18 + (center.y - shoulder.y) * -.09, -.24, .24), 0))
+    const normal = frame.forward.scale(.90)
+      .add(frame.right.scale(.10 + workspaceX * .16))
+      .add(new Vector3(0, clamp(-workspaceY * .13 + (center.y - shoulder.y) * -.07, -.18, .18), 0))
       .normalize();
     const lastCenter = this.prevShieldCenter?.clone() ?? center.clone();
     const lastNormal = this.prevShieldNormal?.clone() ?? normal.clone();
