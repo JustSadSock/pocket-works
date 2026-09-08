@@ -64,7 +64,7 @@ function patchOceanShaders(): void {
   const vertexMotion = replaceOnce(
     vertex,
     '  wp.xz += chop;\n  wp.y += h;\n  vWorldPos = wp.xyz;',
-    `  float speedValue = mod(uSpeed, 16.0);\n  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.1, 2.4, 7.0);\n  vec2 relShip = wp.xz - uShip;\n  vec2 shipForward = vec2(sin(uHeading), cos(uHeading));\n  vec2 shipRight = vec2(cos(uHeading), -sin(uHeading));\n  float localForward = dot(relShip, shipForward);\n  float localSide = dot(relShip, shipRight);\n  float along = abs(localForward) / max(1.0, hullLength * 0.50);\n  float across = abs(localSide) / max(0.45, hullBeam * 0.50);\n  float footprint = max(along, across);\n  float hullRelief = 1.0 - smoothstep(0.70, 1.02, footprint);\n  // The visible ocean should run around the displacement volume, not crest through the hull.\n  // Only the hidden inner footprint is flattened; the free surface is untouched at the waterline.\n  wp.xz += chop * (1.0 - hullRelief * 0.72);\n  wp.y += h * (1.0 - hullRelief * 0.46) - hullRelief * hullBeam * 0.022;\n  vWorldPos = wp.xyz;`
+    `  float hullLength = clamp(floor(mod(uSpeed / 16.0, 256.0) + 0.001) * 0.1, 8.0, 20.0);\n  float hullBeam = clamp(floor(uSpeed / 4096.0 + 0.001) * 0.1, 2.4, 7.0);\n  vec2 relShip = wp.xz - uShip;\n  vec2 shipForward = vec2(sin(uHeading), cos(uHeading));\n  vec2 shipRight = vec2(cos(uHeading), -sin(uHeading));\n  float localForward = dot(relShip, shipForward);\n  float localSide = dot(relShip, shipRight);\n  float along = abs(localForward) / max(1.0, hullLength * 0.50);\n  float across = abs(localSide) / max(0.45, hullBeam * 0.50);\n  float footprint = max(along, across);\n  float hullRelief = 1.0 - smoothstep(0.70, 1.02, footprint);\n  // The visible ocean should run around the displacement volume, not crest through the hull.\n  // Only the hidden inner footprint is flattened; the free surface is untouched at the waterline.\n  wp.xz += chop * (1.0 - hullRelief * 0.72);\n  wp.y += h * (1.0 - hullRelief * 0.46) - hullRelief * hullBeam * 0.022;\n  vWorldPos = wp.xyz;`
   );
   vertex = vertexMotion.source;
 
@@ -83,6 +83,7 @@ function patchOceanShaders(): void {
 
   Effect.ShadersStore[vertexKey] = vertex;
   Effect.ShadersStore[fragmentKey] = fragment;
+  if (typeof document !== 'undefined') document.documentElement.dataset.pelagosOceanPatch = '1';
 }
 
 export function isOceanHullPatchApplied(): boolean {
@@ -91,7 +92,6 @@ export function isOceanHullPatchApplied(): boolean {
 
 patchOceanShaders();
 
-type OceanWorldPrivate = OceanWorld & { oceanMaterial: ShaderMaterial };
 const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosOceanHullRefitV1?: boolean };
 if (!prototype.__pelagosOceanHullRefitV1) {
   prototype.__pelagosOceanHullRefitV1 = true;
@@ -110,7 +110,10 @@ if (!prototype.__pelagosOceanHullRefitV1) {
   ): void {
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
     const dimensions = getActiveShipLoadout().dimensions;
-    const oceanMaterial = (this as OceanWorldPrivate).oceanMaterial;
+    const oceanMaterial = (this as unknown as { oceanMaterial?: ShaderMaterial }).oceanMaterial;
     oceanMaterial?.setFloat('uSpeed', packOceanMetrics(telemetry.speed, dimensions.length, dimensions.beam));
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.pelagosOceanHull = `${dimensions.length.toFixed(1)}x${dimensions.beam.toFixed(1)}`;
+    }
   };
 }
