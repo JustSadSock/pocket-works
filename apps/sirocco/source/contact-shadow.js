@@ -1,17 +1,18 @@
 import { Color3, DynamicTexture, MeshBuilder, StandardMaterial } from '@babylonjs/core';
 
 function makeShadowTexture(scene) {
-  const texture = new DynamicTexture('bedouin-contact-shadow-texture', { width: 128, height: 128 }, scene, false);
+  const texture = new DynamicTexture('bedouin-contact-shadow-texture', { width: 160, height: 160 }, scene, false);
   texture.hasAlpha = true;
   const ctx = texture.getContext();
-  const gradient = ctx.createRadialGradient(64, 64, 8, 64, 64, 62);
-  gradient.addColorStop(0, 'rgba(0,0,0,0.62)');
-  gradient.addColorStop(0.32, 'rgba(0,0,0,0.34)');
-  gradient.addColorStop(0.72, 'rgba(0,0,0,0.11)');
+  const gradient = ctx.createRadialGradient(80, 80, 7, 80, 80, 77);
+  gradient.addColorStop(0, 'rgba(0,0,0,0.82)');
+  gradient.addColorStop(0.22, 'rgba(0,0,0,0.56)');
+  gradient.addColorStop(0.52, 'rgba(0,0,0,0.25)');
+  gradient.addColorStop(0.80, 'rgba(0,0,0,0.08)');
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.clearRect(0, 0, 128, 128);
+  ctx.clearRect(0, 0, 160, 160);
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillRect(0, 0, 160, 160);
   texture.update();
   return texture;
 }
@@ -28,11 +29,11 @@ export class CharacterContactShadow {
     this.material.specularColor = Color3.Black();
     this.material.emissiveColor = Color3.Black();
     this.material.disableLighting = true;
-    this.material.alpha = 0.42;
+    this.material.alpha = 0.54;
     this.material.backFaceCulling = false;
     this.material.zOffset = -2;
 
-    this.mesh = MeshBuilder.CreateGround('bedouin-contact-shadow', { width: 0.82, height: 1.22, subdivisions: 1 }, scene);
+    this.mesh = MeshBuilder.CreateGround('bedouin-contact-shadow', { width: 0.86, height: 1.28, subdivisions: 1 }, scene);
     this.mesh.material = this.material;
     this.mesh.isPickable = false;
     this.mesh.receiveShadows = false;
@@ -46,9 +47,9 @@ export class CharacterContactShadow {
     this.mesh.position.set(controller.localPosition.x, y, controller.localPosition.z);
     this.mesh.rotation.y = controller.bodyYaw;
     const speed = Math.min(1, controller.speed / 3.0);
-    this.mesh.scaling.x = 0.92 + speed * 0.12;
-    this.mesh.scaling.z = 0.92 + speed * 0.18;
-    this.material.alpha = 0.38 - speed * 0.06;
+    this.mesh.scaling.x = 0.94 + speed * 0.10;
+    this.mesh.scaling.z = 0.94 + speed * 0.16;
+    this.material.alpha = 0.52 - speed * 0.07;
   }
 
   dispose() {
