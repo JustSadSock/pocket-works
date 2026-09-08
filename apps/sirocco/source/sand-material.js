@@ -7,28 +7,30 @@ function makeAlbedoData(size) {
     for (let x = 0; x < size; x += 1) {
       const i = (y * size + x) * 4;
       const grain = hash2(x, y, 101) - 0.5;
-      const broad = hash2(Math.floor(x / 12), Math.floor(y / 12), 107) - 0.5;
-      const warm = hash2(Math.floor(x / 27), Math.floor(y / 27), 113) - 0.5;
-      const lum = 1 + grain * 0.014 + broad * 0.018;
-      data[i] = Math.max(0, Math.min(255, (214 + warm * 4) * lum));
-      data[i + 1] = Math.max(0, Math.min(255, (161 + warm * 2) * lum));
-      data[i + 2] = Math.max(0, Math.min(255, (98 - warm * 2) * lum));
+      const broad = hash2(Math.floor(x / 17), Math.floor(y / 17), 107) - 0.5;
+      const warm = hash2(Math.floor(x / 39), Math.floor(y / 39), 113) - 0.5;
+      const lum = 1 + grain * 0.010 + broad * 0.016;
+      data[i] = Math.max(0, Math.min(255, (226 + warm * 5) * lum));
+      data[i + 1] = Math.max(0, Math.min(255, (176 + warm * 3) * lum));
+      data[i + 2] = Math.max(0, Math.min(255, (110 - warm * 2) * lum));
       data[i + 3] = 255;
     }
   }
   return data;
 }
 
-function rippleHeight(x, y, size, frequency = 10) {
+function rippleHeight(x, y, size) {
   const wx = x / size;
   const wy = y / size;
-  const primary = Math.sin((wx * frequency + Math.sin(wy * 3.7) * 0.18) * Math.PI * 2) * 0.20;
-  const secondary = Math.sin((wx * frequency * 0.52 + wy * 1.35) * Math.PI * 2) * 0.050;
-  const grain = (hash2(x, y, 211) - 0.5) * 0.045;
-  return primary + secondary + grain;
+  const phaseWarp = Math.sin(wy * Math.PI * 7.1) * 0.12 + Math.sin(wy * Math.PI * 2.3 + 1.4) * 0.055;
+  const primary = Math.sin((wx * 15.5 + phaseWarp) * Math.PI * 2) * 0.145;
+  const secondary = Math.sin((wx * 31.0 + wy * 2.1 + phaseWarp * 1.7) * Math.PI * 2) * 0.035;
+  const cross = Math.sin((wx * 5.2 + wy * 8.7) * Math.PI * 2) * 0.018;
+  const grain = (hash2(x, y, 211) - 0.5) * 0.038;
+  return primary + secondary + cross + grain;
 }
 
-function makeNormalData(size, strength = 0.18, frequency = 10) {
+function makeNormalData(size, strength = 0.24) {
   const data = new Uint8Array(size * size * 4);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
@@ -36,8 +38,8 @@ function makeNormalData(size, strength = 0.18, frequency = 10) {
       const xp = (x + 1) % size;
       const ym = (y - 1 + size) % size;
       const yp = (y + 1) % size;
-      const dx = (rippleHeight(xp, y, size, frequency) - rippleHeight(xm, y, size, frequency)) * strength;
-      const dy = (rippleHeight(x, yp, size, frequency) - rippleHeight(x, ym, size, frequency)) * strength;
+      const dx = (rippleHeight(xp, y, size) - rippleHeight(xm, y, size)) * strength;
+      const dy = (rippleHeight(x, yp, size) - rippleHeight(x, ym, size)) * strength;
       let nx = -dx, ny = 1, nz = -dy;
       const inv = 1 / Math.hypot(nx, ny, nz);
       nx *= inv; ny *= inv; nz *= inv;
@@ -60,54 +62,54 @@ function textureFrom(scene, data, size, name) {
   return texture;
 }
 
+function makeSandMaterial(scene, name, albedo, normal, useVertexColors = false) {
+  const material = new PBRMaterial(name, scene);
+  material.albedoColor = new Color3(1.0, 0.965, 0.90);
+  material.albedoTexture = albedo;
+  material.bumpTexture = normal;
+  material.bumpTexture.level = 0.34;
+  material.metallic = 0;
+  material.roughness = 0.945;
+  material.environmentIntensity = 0.58;
+  material.usePhysicalLightFalloff = true;
+  material.useParallax = false;
+  material.useVertexColors = useVertexColors;
+  material.vertexColorUseAlpha = false;
+  material.backFaceCulling = true;
+  return material;
+}
+
 export function createSandMaterials(scene) {
-  const albedo = textureFrom(scene, makeAlbedoData(256), 256, 'sand-albedo-procedural');
-  const normal = textureFrom(scene, makeNormalData(256, 0.18, 10), 256, 'sand-normal-wind-ripples');
-  const detail = textureFrom(scene, makeNormalData(128, 0.22, 22), 128, 'sand-detail-grain');
+  const albedo = textureFrom(scene, makeAlbedoData(384), 384, 'sand-albedo-procedural');
+  const normal = textureFrom(scene, makeNormalData(384, 0.24), 384, 'sand-normal-combined');
+  albedo.uScale = 0.92;
+  albedo.vScale = 0.92;
+  normal.uScale = 3.1;
+  normal.vScale = 3.1;
 
-  albedo.uScale = 1.35; albedo.vScale = 1.35;
-  normal.uScale = 4.8; normal.vScale = 4.8;
-  detail.uScale = 18; detail.vScale = 18;
-
-  const near = new PBRMaterial('sand-pbr-unified', scene);
-  near.albedoColor = new Color3(1.0, 0.82, 0.57);
-  near.albedoTexture = albedo;
-  near.bumpTexture = normal;
-  near.bumpTexture.level = 0.28;
-  near.metallic = 0;
-  near.roughness = 0.92;
-  near.environmentIntensity = 0.48;
-  near.usePhysicalLightFalloff = true;
-  near.useParallax = false;
-  // Per-vertex tinting differed between near chunks and the horizon mesh and
-  // produced the giant dark "shadow" boundary. All terrain now uses one PBR
-  // response; geometry/normal direction supplies the large-scale shading.
-  near.useVertexColors = false;
-  near.backFaceCulling = true;
-  near.detailMap.texture = detail;
-  near.detailMap.isEnabled = true;
-  near.detailMap.diffuseBlendLevel = 0.018;
-  near.detailMap.roughnessBlendLevel = 0.08;
-  near.detailMap.bumpLevel = 0.16;
-
-  // Keep a distinct object for debug/disposal compatibility, but make it
-  // optically identical. LOD must never be visible as a lighting boundary.
-  const far = near.clone('sand-pbr-far-unified');
-
-  const footprint = near.clone('sand-deformation-pbr');
+  // Do not clone materials containing RawTexture instances. Babylon can
+  // serialise a cloned procedural texture name as a URL and attempt a network
+  // request, making far/local LODs optically different. All three materials
+  // are constructed explicitly and share the exact same GPU textures.
+  const near = makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false);
+  const far = makeSandMaterial(scene, 'sand-pbr-far', albedo, normal, false);
+  const local = makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true);
 
   return {
     near,
     far,
-    footprint,
+    local,
     setWireframe(enabled) {
       near.wireframe = enabled;
       far.wireframe = enabled;
-      footprint.wireframe = enabled;
+      local.wireframe = enabled;
     },
     dispose() {
-      near.dispose(); far.dispose(); footprint.dispose();
-      albedo.dispose(); normal.dispose(); detail.dispose();
+      near.dispose();
+      far.dispose();
+      local.dispose();
+      albedo.dispose();
+      normal.dispose();
     }
   };
 }

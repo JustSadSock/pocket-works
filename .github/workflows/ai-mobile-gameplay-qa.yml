@@ -72,9 +72,16 @@ jobs:
         run: npm run build:quality-site
 
       - name: Run exploratory mobile gameplay
+        shell: bash
         env:
           PW_AI_MAX_APPS: "6"
-        run: npx playwright test tests/e2e/ai-gameplay.spec.ts
+        run: |
+          set -euo pipefail
+          TESTS=(tests/e2e/ai-gameplay.spec.ts)
+          if [[ ",${PW_APP_TARGETS:-}," == *",sirocco,"* ]]; then
+            TESTS+=(tests/e2e/sirocco.spec.ts)
+          fi
+          npx playwright test "${TESTS[@]}"
 
       - name: Upload exploratory QA evidence
         if: always()

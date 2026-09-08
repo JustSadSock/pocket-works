@@ -21,6 +21,8 @@ const errorText = document.querySelector('#error-text');
 const reloadButton = document.querySelector('#reload-button');
 
 const game = new SiroccoGame(canvas);
+const qaEnabled = new URLSearchParams(location.search).get('qa') === '1';
+if (qaEnabled) window.__SIROCCO_QA__ = game;
 
 function report(text, progress) { loadingText.textContent = text; loadingBar.style.transform = `scaleX(${progress})`; }
 function updateOrientation() {
@@ -44,6 +46,7 @@ async function boot() {
     loading.classList.add('done');
     setTimeout(() => { loading.hidden = true; }, 520);
     enter.hidden = false;
+    if (qaEnabled) window.__SIROCCO_QA_READY__ = true;
   } catch (error) {
     console.error(error);
     loading.hidden = true;

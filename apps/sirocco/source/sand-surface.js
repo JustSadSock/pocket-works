@@ -1,5 +1,5 @@
 import { Mesh, VertexData } from '@babylonjs/core';
-import { clamp } from './core.js';
+import { clamp, smoothstep } from './core.js';
 import { appendBabylonGroundCell } from './world.js';
 
 export class LocalSandSurface {
@@ -22,9 +22,9 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    this.radius = preset.id === 'high' ? 5.4 : preset.id === 'medium' ? 4.8 : 4.0;
-    this.segments = preset.id === 'high' ? 96 : preset.id === 'medium' ? 72 : 52;
-    this.snapStep = preset.id === 'high' ? 0.9 : preset.id === 'medium' ? 1.1 : 1.35;
+    this.radius = preset.id === 'high' ? 6.2 : preset.id === 'medium' ? 5.2 : 4.2;
+    this.segments = preset.id === 'high' ? 120 : preset.id === 'medium' ? 80 : 56;
+    this.snapStep = preset.id === 'high' ? 0.95 : preset.id === 'medium' ? 1.15 : 1.4;
     this.dirty = true;
   }
 
@@ -32,13 +32,23 @@ export class LocalSandSurface {
 
   sampleHeight(x, z) {
     const base = this.world.sampleBaseHeight(x, z);
-    return base + clamp(this.sand.sampleOffset(x, z), -0.095, 0.065);
+    return base + clamp(this.sand.sampleOffset(x, z), -0.11, 0.075);
   }
 
   sampleNormal(x, z) {
-    const step = 0.075;
+    const step = 0.065;
     const hx0 = this.sampleHeight(x - step, z), hx1 = this.sampleHeight(x + step, z);
     const hz0 = this.sampleHeight(x, z - step), hz1 = this.sampleHeight(x, z + step);
+    return this.normalFromHeights(hx0, hx1, hz0, hz1, step);
+  }
+
+  sampleBaseNormal(x, z, step = 0.10) {
+    const hx0 = this.world.sampleBaseHeight(x - step, z), hx1 = this.world.sampleBaseHeight(x + step, z);
+    const hz0 = this.world.sampleBaseHeight(x, z - step), hz1 = this.world.sampleBaseHeight(x, z + step);
+    return this.normalFromHeights(hx0, hx1, hz0, hz1, step);
+  }
+
+  normalFromHeights(hx0, hx1, hz0, hz1, step) {
     let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
     const inv = 1 / Math.hypot(nx, ny, nz);
     nx *= inv; ny *= inv; nz *= inv;
@@ -72,11 +82,13 @@ export class LocalSandSurface {
     const segments = this.segments;
     const diameter = this.radius * 2;
     const step = diameter / segments;
-    const positions = new Array((segments + 1) * (segments + 1) * 3);
-    const normals = new Array((segments + 1) * (segments + 1) * 3).fill(0);
-    const uvs = new Array((segments + 1) * (segments + 1) * 2);
+    const vertexCount = (segments + 1) * (segments + 1);
+    const positions = new Array(vertexCount * 3);
+    const normals = new Array(vertexCount * 3);
+    const uvs = new Array(vertexCount * 2);
+    const colors = new Array(vertexCount * 4);
     const indices = [];
-    let p = 0, uv = 0;
+    let p = 0, uv = 0, c = 0, nIndex = 0;
 
     for (let iz = 0; iz <= segments; iz += 1) {
       const lz = -this.radius + iz * step;
@@ -84,9 +96,9 @@ export class LocalSandSurface {
         const lx = -this.radius + ix * step;
         const gx = this.centerX + lx;
         const gz = this.centerZ + lz;
-        const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.095, 0.065);
+        const deformation = clamp(this.sand.sampleOffset(gx, gz), -0.11, 0.075);
         const edge = Math.max(Math.abs(lx), Math.abs(lz)) / this.radius;
-        const edgeLift = edge > 0.82 ? ((edge - 0.82) / 0.18) * 0.0008 : 0;
+        const edgeLift = edge > 0.84 ? ((edge - 0.84) / 0.16) * 0.00045 : 0;
         positions[p] = lx;
         positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation + edgeLift;
         positions[p + 2] = lz;
@@ -94,6 +106,37 @@ export class LocalSandSurface {
         uvs[uv] = gx * 0.055;
         uvs[uv + 1] = gz * 0.055;
         uv += 2;
+
+        // Untouched replacement sand must shade exactly like the coarse mesh.
+        // Only blend toward a deformation normal where nearby heightfield mass
+        // actually moved; this removes the circular/rectangular dark patch that
+        // previously revealed the high-detail replacement radius.
+        const neighborMagnitude = Math.max(
+          Math.abs(deformation),
+          Math.abs(this.sand.sampleOffset(gx - step, gz)),
+          Math.abs(this.sand.sampleOffset(gx + step, gz)),
+          Math.abs(this.sand.sampleOffset(gx, gz - step)),
+          Math.abs(this.sand.sampleOffset(gx, gz + step))
+        );
+        const deformBlend = smoothstep(0.0015, 0.012, neighborMagnitude);
+        const baseN = this.sampleBaseNormal(gx, gz, Math.max(0.09, step));
+        const deformN = deformBlend > 0 ? this.sampleNormal(gx, gz) : baseN;
+        let nx = baseN.x + (deformN.x - baseN.x) * deformBlend;
+        let ny = baseN.y + (deformN.y - baseN.y) * deformBlend;
+        let nz = baseN.z + (deformN.z - baseN.z) * deformBlend;
+        const invN = 1 / Math.hypot(nx, ny, nz);
+        normals[nIndex] = nx * invN;
+        normals[nIndex + 1] = ny * invN;
+        normals[nIndex + 2] = nz * invN;
+        nIndex += 3;
+
+        const compact = smoothstep(0.006, 0.075, -deformation);
+        const deposit = smoothstep(0.006, 0.055, deformation);
+        colors[c] = 1 - compact * 0.075;
+        colors[c + 1] = 1 - compact * 0.09 - deposit * 0.010;
+        colors[c + 2] = 1 - compact * 0.115 - deposit * 0.024;
+        colors[c + 3] = 1;
+        c += 4;
       }
     }
 
@@ -105,11 +148,11 @@ export class LocalSandSurface {
       }
     }
 
-    VertexData.ComputeNormals(positions, indices, normals);
     const vd = new VertexData();
     vd.positions = positions;
     vd.normals = normals;
     vd.uvs = uvs;
+    vd.colors = colors;
     vd.indices = indices;
     vd.applyToMesh(this.mesh, true);
     this.mesh.position.x = this.centerX - this.world.offsetX;

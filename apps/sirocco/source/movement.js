@@ -1,15 +1,24 @@
 import { Vector3 } from '@babylonjs/core';
 import { clamp, damp } from './core.js';
 
+export const DEFAULT_SPAWN = Object.freeze({ x: 150, z: 40, yaw: 0.02, pitch: -0.055 });
+
 export class SandWalkerController {
   constructor(onRebase, surface) {
     this.surface = surface;
-    const h0 = surface?.sampleHeight?.(0, 0) ?? 0;
+    this.worldOffsetX = DEFAULT_SPAWN.x;
+    this.worldOffsetZ = DEFAULT_SPAWN.z;
+    const h0 = surface?.sampleHeight?.(this.worldOffsetX, this.worldOffsetZ) ?? 0;
     this.localPosition = new Vector3(0, h0, 0);
     this.velocity = new Vector3(0, 0, 0);
-    this.worldOffsetX = 0; this.worldOffsetZ = 0;
-    this.yaw = 0.15; this.pitch = -0.08; this.bodyYaw = this.yaw;
-    this.speed = 0; this.gait = 0; this.onRebase = onRebase; this.lastSlope = 0; this.sliding = 0;
+    this.yaw = DEFAULT_SPAWN.yaw;
+    this.pitch = DEFAULT_SPAWN.pitch;
+    this.bodyYaw = this.yaw;
+    this.speed = 0;
+    this.gait = 0;
+    this.onRebase = onRebase;
+    this.lastSlope = 0;
+    this.sliding = 0;
     this.sandSink = 0;
   }
 
@@ -26,12 +35,30 @@ export class SandWalkerController {
 
   restore(snapshot) {
     if (!snapshot || !Number.isFinite(snapshot.x) || !Number.isFinite(snapshot.z)) return false;
-    this.worldOffsetX = snapshot.x; this.worldOffsetZ = snapshot.z;
+    this.worldOffsetX = snapshot.x;
+    this.worldOffsetZ = snapshot.z;
     this.localPosition.set(0, this.sampleHeight(snapshot.x, snapshot.z), 0);
     this.velocity.setAll(0);
     this.yaw = Number.isFinite(snapshot.yaw) ? snapshot.yaw : this.yaw;
     this.pitch = Number.isFinite(snapshot.pitch) ? clamp(snapshot.pitch, -1.34, 1.18) : this.pitch;
-    this.bodyYaw = this.yaw; this.speed = 0; this.sliding = 0; this.sandSink = 0; return true;
+    this.bodyYaw = this.yaw;
+    this.speed = 0;
+    this.sliding = 0;
+    this.sandSink = 0;
+    return true;
+  }
+
+  resetToSpawn() {
+    this.worldOffsetX = DEFAULT_SPAWN.x;
+    this.worldOffsetZ = DEFAULT_SPAWN.z;
+    this.localPosition.set(0, this.sampleHeight(DEFAULT_SPAWN.x, DEFAULT_SPAWN.z), 0);
+    this.velocity.setAll(0);
+    this.yaw = DEFAULT_SPAWN.yaw;
+    this.pitch = DEFAULT_SPAWN.pitch;
+    this.bodyYaw = this.yaw;
+    this.speed = 0;
+    this.sliding = 0;
+    this.sandSink = 0;
   }
 
   snapshot() { return { x: this.globalX, z: this.globalZ, yaw: this.yaw, pitch: this.pitch }; }
@@ -40,17 +67,17 @@ export class SandWalkerController {
     dt = Math.min(dt, 0.034);
     const forwardX = Math.sin(this.yaw), forwardZ = Math.cos(this.yaw), rightX = Math.cos(this.yaw), rightZ = -Math.sin(this.yaw);
     let wishX = forwardX * input.y + rightX * input.x, wishZ = forwardZ * input.y + rightZ * input.x;
-    const wishLen = Math.hypot(wishX, wishZ); if (wishLen > 1e-4) { wishX /= wishLen; wishZ /= wishLen; }
+    const wishLen = Math.hypot(wishX, wishZ);
+    if (wishLen > 1e-4) { wishX /= wishLen; wishZ /= wishLen; }
 
     const gx = this.globalX, gz = this.globalZ, normal = this.sampleNormal(gx, gz);
-    const slope = Math.acos(clamp(normal.y, -1, 1)); this.lastSlope = slope;
+    const slope = Math.acos(clamp(normal.y, -1, 1));
+    this.lastSlope = slope;
     const horizontalNormal = Math.max(0.001, Math.hypot(normal.x, normal.z));
     const uphill = wishLen > 0 ? clamp(-(wishX * normal.x + wishZ * normal.z) / horizontalNormal, -1, 1) : 0;
     const uphillPenalty = Math.max(0, uphill) * clamp(slope / 0.6, 0, 1);
     const downhillAssist = Math.max(0, -uphill) * clamp(slope / 0.65, 0, 1);
 
-    // Loose sand absorbs energy. It should still feel responsive on a phone, but
-    // acceleration and top speed are deliberately lower than hard-ground FPS movement.
     const softGroundFactor = 0.90 - uphillPenalty * 0.08;
     const maxSpeed = (3.05 - uphillPenalty * 1.08 + downhillAssist * 0.34) * input.magnitude * softGroundFactor;
     const targetX = wishX * maxSpeed, targetZ = wishZ * maxSpeed;
@@ -61,10 +88,13 @@ export class SandWalkerController {
     this.sliding = clamp((slope - 0.45) / 0.24, 0, 1) * Math.max(0.1, input.magnitude);
     if (this.sliding > 0) {
       const down = this.surface?.downhill?.(gx, gz) ?? { x: normal.x / horizontalNormal, z: normal.z / horizontalNormal };
-      const slideForce = this.sliding * 1.08; this.velocity.x += down.x * slideForce * dt; this.velocity.z += down.z * slideForce * dt;
+      const slideForce = this.sliding * 1.08;
+      this.velocity.x += down.x * slideForce * dt;
+      this.velocity.z += down.z * slideForce * dt;
     }
 
-    this.localPosition.x += this.velocity.x * dt; this.localPosition.z += this.velocity.z * dt;
+    this.localPosition.x += this.velocity.x * dt;
+    this.localPosition.z += this.velocity.z * dt;
     this.speed = Math.hypot(this.velocity.x, this.velocity.z);
 
     const speedNorm = clamp(this.speed / 3.0, 0, 1);
@@ -87,7 +117,10 @@ export class SandWalkerController {
 
   rebase() {
     const dx = this.localPosition.x, dz = this.localPosition.z;
-    this.worldOffsetX += dx; this.worldOffsetZ += dz; this.localPosition.x = 0; this.localPosition.z = 0;
+    this.worldOffsetX += dx;
+    this.worldOffsetZ += dz;
+    this.localPosition.x = 0;
+    this.localPosition.z = 0;
     this.onRebase?.(dx, dz, this.worldOffsetX, this.worldOffsetZ);
   }
 }

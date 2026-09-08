@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "Sparse wind-carved sandstone landmarks for SIROCCO, authored in Blender and exported as a mobile-friendly GLB.",
+  "jobs": [
+    {
+      "name": "sirocco-landmarks",
+      "script": "landmarks.py",
+      "output": "public/models/sirocco-landmarks.glb",
+      "requireArmature": false,
+      "requireAnimation": false
+    }
+  ]
+}
