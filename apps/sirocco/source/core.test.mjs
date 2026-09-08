@@ -54,6 +54,10 @@ assert.ok(worldSource.includes('replacementIntersectsChunk'));
 assert.ok(worldSource.includes('dx * dx + dz * dz < safeRadius * safeRadius'));
 assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'));
 assert.ok(!worldSource.includes('nearHoleHalfExtent'));
+assert.ok(
+  worldSource.includes('buildChunkData(chunk.cx, chunk.cz, this.quality.segments, null, this.localReplacement)'),
+  'coarse terrain rebuilds must never sample the 12 cm physical footprint field'
+);
 
 const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
 const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
@@ -70,6 +74,8 @@ assert.ok(localSandSource.includes('sampleLoose'));
 assert.ok(localSandSource.includes('sampleCompaction'));
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'));
 assert.ok(localSandSource.includes('const cavity ='));
+assert.ok(localSandSource.includes('const physicalActivity ='), 'untouched local sand must suppress its own triangulated normal field');
+assert.ok(localSandSource.includes('const meshWeight = physicalActivity * 0.42'), 'mesh normals must only appear where physical sand actually moved');
 assert.ok(!localSandSource.includes('directionalShade'));
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
@@ -101,6 +107,10 @@ assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'));
 assert.ok(polishSource.includes('bedouin-skin-detail'), 'visible skin must have authored microdetail instead of a flat RGB material');
 assert.ok(polishSource.includes('bedouin-keffiyeh-weave'), 'head cloth must use a separate textile treatment');
 assert.ok(polishSource.includes('cameraSafe'));
+
+const landmarkSource = readFileSync(new URL('./landmarks.js', import.meta.url), 'utf8');
+assert.ok(landmarkSource.includes('sirocco-rock-contact-shadow-material'), 'Blender landmarks must have stable mobile-safe contact grounding');
+assert.ok(landmarkSource.includes('environmentIntensity = 0.34'), 'authored sandstone must remain matte and sun-baked');
 
 const gameSource = readFileSync(new URL('./game.js', import.meta.url), 'utf8');
 assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must stay throttled');
