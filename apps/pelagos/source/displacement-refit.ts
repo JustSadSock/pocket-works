@@ -38,4 +38,6 @@ ShipDynamics.prototype.update = function displacementUpdate(
   return telemetry;
 };
 
-document.documentElement.dataset.pelagosDisplacementTonnes = (ACTIVE_SHIP.definition.dimensions.displacementKg / 1000).toFixed(1);
+if (typeof document !== 'undefined') {
+  document.documentElement.dataset.pelagosDisplacementTonnes = (ACTIVE_SHIP.definition.dimensions.displacementKg / 1000).toFixed(1);
+}
