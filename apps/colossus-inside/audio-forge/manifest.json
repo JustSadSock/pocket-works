@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "storm-bed",
+      "type": "ambient",
+      "generator": "brownnoise",
+      "duration": 9,
+      "channels": 2,
+      "output": "public/audio/generated/storm-bed.ogg",
+      "post": {
+        "sampleRate": 48000,
+        "highpass": 42,
+        "lowpass": 1350,
+        "normalizeDb": -15,
+        "fadeIn": 0.35,
+        "fadeOut": 0.35
+      }
+    },
+    {
+      "name": "colossus-footfall",
+      "type": "sfx",
+      "preset": "explosion",
+      "seed": 73191,
+      "output": "public/audio/generated/colossus-footfall.ogg",
+      "post": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "highpass": 28,
+        "lowpass": 520,
+        "reverb": 18,
+        "normalizeDb": -7,
+        "fadeOut": 0.18
+      }
+    },
+    {
+      "name": "lightning-impact",
+      "type": "sfx",
+      "preset": "explosion",
+      "seed": 91307,
+      "output": "public/audio/generated/lightning-impact.ogg",
+      "post": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "highpass": 35,
+        "lowpass": 4200,
+        "reverb": 24,
+        "normalizeDb": -4,
+        "fadeOut": 0.28
+      }
+    },
+    {
+      "name": "armor-grab",
+      "type": "sfx",
+      "preset": "hitHurt",
+      "seed": 20481,
+      "output": "public/audio/generated/armor-grab.ogg",
+      "post": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "highpass": 90,
+        "lowpass": 5000,
+        "reverb": 8,
+        "normalizeDb": -8,
+        "fadeOut": 0.08
+      }
+    }
+  ]
+}
