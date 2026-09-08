@@ -21,10 +21,13 @@ export class LocalSandSurface {
   }
 
   setQuality(preset) {
-    this.radius = preset.id === 'high' ? 5.0 : preset.id === 'medium' ? 4.4 : 3.8;
-    this.segments = preset.id === 'high' ? 64 : preset.id === 'medium' ? 52 : 40;
-    this.snapStep = preset.id === 'high' ? 1.9 : preset.id === 'medium' ? 2.1 : 2.4;
-    this.holeRatio = 0.76;
+    // Concentrate the same mobile vertex budget where feet actually interact.
+    // 1.5 covered a 10 m diameter at ~15.6 cm spacing; 1.6 uses a tighter
+    // footprint-focused patch at ~10.9 cm on High without crossing 5k vertices.
+    this.radius = preset.id === 'high' ? 3.7 : preset.id === 'medium' ? 3.3 : 2.9;
+    this.segments = preset.id === 'high' ? 68 : preset.id === 'medium' ? 56 : 44;
+    this.snapStep = preset.id === 'high' ? 1.75 : preset.id === 'medium' ? 1.95 : 2.15;
+    this.holeRatio = 0.74;
     this.dirty = true;
   }
 
@@ -37,7 +40,7 @@ export class LocalSandSurface {
   sampleSoftness(x, z) { return this.sand.sampleSoftness?.(x, z) ?? 0.48; }
 
   sampleNormal(x, z) {
-    const step = 0.075;
+    const step = 0.07;
     const hx0 = this.sampleHeight(x - step, z), hx1 = this.sampleHeight(x + step, z);
     const hz0 = this.sampleHeight(x, z - step), hz1 = this.sampleHeight(x, z + step);
     let nx = -(hx1 - hx0) / (step * 2), ny = 1, nz = -(hz1 - hz0) / (step * 2);
@@ -94,7 +97,7 @@ export class LocalSandSurface {
         const gz = this.centerZ + lz;
         const r = Math.hypot(lx, lz) / this.radius;
         radial[vertex] = r;
-        const deformFade = 1 - smoothstep(0.68, 0.86, r);
+        const deformFade = 1 - smoothstep(0.70, 0.88, r);
         const rawDeformation = clamp(this.sand.sampleOffset(gx, gz), -0.11, 0.075);
         const deformation = rawDeformation * deformFade;
         const loose = (this.sand.sampleLoose?.(gx, gz) ?? 0) * deformFade;
@@ -110,13 +113,13 @@ export class LocalSandSurface {
         uvs[uv + 1] = gz * 0.055;
         uv += 2;
 
-        const compactBowl = smoothstep(0.0035, 0.065, -deformation);
-        const deposit = smoothstep(0.004, 0.052, deformation);
-        const looseLift = loose * 0.055;
-        const packedShade = compaction * 0.105;
-        colors[c] = 1 - compactBowl * 0.12 - packedShade + deposit * 0.038 + looseLift;
-        colors[c + 1] = 1 - compactBowl * 0.16 - packedShade * 1.18 + deposit * 0.030 + looseLift * 0.78;
-        colors[c + 2] = 1 - compactBowl * 0.22 - packedShade * 1.36 + deposit * 0.015 + looseLift * 0.50;
+        const compactBowl = smoothstep(0.004, 0.060, -deformation);
+        const deposit = smoothstep(0.004, 0.050, deformation);
+        const looseLift = loose * 0.040;
+        const packedShade = compaction * 0.050;
+        colors[c] = 1 - compactBowl * 0.085 - packedShade + deposit * 0.030 + looseLift;
+        colors[c + 1] = 1 - compactBowl * 0.110 - packedShade * 1.10 + deposit * 0.024 + looseLift * 0.78;
+        colors[c + 2] = 1 - compactBowl * 0.145 - packedShade * 1.20 + deposit * 0.012 + looseLift * 0.50;
         colors[c + 3] = 1;
         c += 4;
         vertex += 1;
@@ -143,15 +146,12 @@ export class LocalSandSurface {
         const i = iz * row + ix;
         const r = radial[i];
         const gx = this.centerX + lx, gz = this.centerZ + lz;
-        const base = terrainNormal(gx, gz, 0.42);
+        const base = terrainNormal(gx, gz, 0.38);
         const ni = i * 3;
 
-        // Keep geometry deep while filtering the low-poly lighting response.
-        // Fresh loose rims are allowed slightly more normal detail; compacted
-        // cavities are smoother and darker instead of forming triangular wedges.
-        const edgeBlend = smoothstep(0.70, 0.91, r);
-        const materialDetail = looseValues[i] * 0.10 - compactValues[i] * 0.08;
-        const baseMix = clamp(0.52 + edgeBlend * 0.48 - materialDetail, 0.42, 1);
+        const edgeBlend = smoothstep(0.72, 0.92, r);
+        const materialDetail = looseValues[i] * 0.08 - compactValues[i] * 0.05;
+        const baseMix = clamp(0.58 + edgeBlend * 0.42 - materialDetail, 0.50, 1);
         let nx = normals[ni] + (base.x - normals[ni]) * baseMix;
         let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * baseMix;
         let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * baseMix;
@@ -160,8 +160,8 @@ export class LocalSandSurface {
         normals[ni + 1] = ny * inv;
         normals[ni + 2] = nz * inv;
 
-        const cavity = smoothstep(0.004, 0.058, -deformations[i]);
-        const shade = 1 - cavity * (0.12 + compactValues[i] * 0.12);
+        const cavity = smoothstep(0.005, 0.055, -deformations[i]);
+        const shade = 1 - cavity * (0.085 + compactValues[i] * 0.070);
         const ci = i * 4;
         colors[ci] *= shade;
         colors[ci + 1] *= shade;
