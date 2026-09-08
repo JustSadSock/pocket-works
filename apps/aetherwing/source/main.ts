@@ -2,7 +2,7 @@ import './styles.css';
 import { Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, LinesMesh, MeshBuilder, Scene, ShaderMaterial, ShadowGenerator, Vector3 } from '@babylonjs/core';
 import { registerSW } from 'virtual:pwa-register';
 import { FlightAudio } from './audio';
-import { makeFlightState, stepFlight, terrainSafeAltitude } from './core';
+import { makeFlightState, stepFlightFrame, terrainSafeAltitude } from './core';
 import { DragonRig } from './dragon';
 import { FaunaSystem } from './fauna';
 import { createControls } from './input';
@@ -24,9 +24,6 @@ const sky=MeshBuilder.CreateSphere('sky',{diameter:4400,segments:20,sideOrientat
 
 const camera=new FreeCamera('camera',new Vector3(0,205,-20),scene);camera.minZ=.28;camera.maxZ=4700;camera.fov=.84;scene.activeCamera=camera;
 const state=makeFlightState();const controls=createControls(touch);const audio=new FlightAudio();const world=new WorldStreamer(scene);const dragon=new DragonRig(scene);const fauna=new FaunaSystem(scene);
-// Start in a deterministic river valley and point along the local tangent. The
-// opening shot is deliberately low enough for trees and water to communicate
-// scale, while retaining plenty of clearance for the first mobile gesture.
 state.position.x=1750;state.position.z=riverCenter(state.position.x);
 const tangentDz=riverCenter(state.position.x+8)-riverCenter(state.position.x-8);state.yaw=Math.atan2(16,tangentDz);state.velocity={x:Math.sin(state.yaw)*29,y:0,z:Math.cos(state.yaw)*29};state.speed=29;
 const initialGround=world.heightAt(state.position.x,state.position.z);state.position.y=initialGround+74;const initialForward=new Vector3(Math.sin(state.yaw),0,Math.cos(state.yaw));camera.position=new Vector3(state.position.x,state.position.y+4,state.position.z).subtract(initialForward.scale(16));altEl.textContent=String(Math.round(state.position.y-initialGround));
@@ -55,5 +52,5 @@ async function boot(){try{loadingText.textContent='Риггинг дракона
 startBtn.addEventListener('click',async()=>{await audio.start();started=true;qaState.loadingState='flying';loading.classList.add('dismiss');hints.forEach((h,i)=>setTimeout(()=>h.style.opacity='0',3600+i*500));});
 soundBtn.addEventListener('click',async()=>{await audio.start();soundBtn.textContent='SND';});
 addEventListener('resize',()=>engine.resize(),{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden)engine.stopRenderLoop();else engine.runRenderLoop(loop);});
-function loop(){const now=performance.now();const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;let ground=world.heightAt(state.position.x,state.position.z);if(started){const input={x:controls.x,y:controls.y,boost:controls.boost,brake:controls.brake};stepFlight(state,input,dt);ground=world.heightAt(state.position.x,state.position.z);terrainSafeAltitude(state,ground,dt);dragon.update(state,input,dt);updateCamera(dt,ground);world.update(dragon.root.position,now/1000);fauna.update(dragon.root.position,new Vector3(state.velocity.x,state.velocity.y,state.velocity.z),now/1000);audio.update(state,dt);updateQuality(dt);speedEl.textContent=String(Math.round(state.speed));altEl.textContent=String(Math.max(0,Math.round(state.position.y-ground)));modeEl.textContent=modeLabel();const speedN=Math.max(0,Math.min(1,(state.speed-27)/58));const lowFlight=1-Math.max(0,Math.min(1,((state.position.y-ground)-18)/155));speedLines.style.opacity=String(speedN*(.15+.15*lowFlight));updateWindStreaks(speedN,now/1000,ground);}else updateWindStreaks(0,now/1000,ground);sky.position.copyFrom(camera.position);skyMat.setFloat('time',now/1000);publishQA(ground);scene.render();}
+function loop(){const now=performance.now();const dt=Math.min(.12,Math.max(.001,(now-last)/1000));last=now;let ground=world.heightAt(state.position.x,state.position.z);if(started){const input={x:controls.x,y:controls.y,boost:controls.boost,brake:controls.brake};stepFlightFrame(state,input,dt);ground=world.heightAt(state.position.x,state.position.z);terrainSafeAltitude(state,ground,dt);dragon.update(state,input,dt);updateCamera(dt,ground);world.update(dragon.root.position,now/1000);fauna.update(dragon.root.position,new Vector3(state.velocity.x,state.velocity.y,state.velocity.z),now/1000);audio.update(state,dt);updateQuality(dt);speedEl.textContent=String(Math.round(state.speed));altEl.textContent=String(Math.max(0,Math.round(state.position.y-ground)));modeEl.textContent=modeLabel();const speedN=Math.max(0,Math.min(1,(state.speed-27)/58));const lowFlight=1-Math.max(0,Math.min(1,((state.position.y-ground)-18)/155));speedLines.style.opacity=String(speedN*(.15+.15*lowFlight));updateWindStreaks(speedN,now/1000,ground);}else updateWindStreaks(0,now/1000,ground);sky.position.copyFrom(camera.position);skyMat.setFloat('time',now/1000);publishQA(ground);scene.render();}
 boot().catch(err=>{console.error(err);loadingText.textContent='Не удалось инициализировать сцену.';startBtn.disabled=true;});engine.runRenderLoop(loop);
