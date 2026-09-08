@@ -64,7 +64,7 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     expect(setActiveShipLoadout('long-cutter')).toBe(true);
   });
 
-  it('keeps a heavy hull coupled to the sea instead of lifting the transom clear of a crest', () => {
+  it('moves like a heavy displacement hull instead of hopping over rough water', () => {
     setActiveShipLoadout('long-cutter');
     const dynamics = new ShipDynamics();
     dynamics.reset();
@@ -73,30 +73,39 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
     let maximumSternUpPitch = 0;
     let minimumBowUpPitch = 0;
     let maximumAirGap = -Infinity;
+    let maximumSternGap = -Infinity;
+    let maximumVerticalSpeed = 0;
     let maximumSternGuard = 0;
+    let minimumImmersionBias = Infinity;
 
-    for (let step = 0; step < 1200; step += 1) {
+    for (let step = 0; step < 1500; step += 1) {
       const dt = 1 / 60;
       time += dt;
-      dynamics.update(dt, time, { steer: 0.55, sail: 0.62, rowing: step < 180 ? 0.75 : 0 }, wind, 1.85);
+      dynamics.update(dt, time, { steer: 0.55, sail: 0.62, rowing: step < 180 ? 0.75 : 0 }, wind, 1.95);
       expect(Number.isFinite(dynamics.state.y)).toBe(true);
       expect(Number.isFinite(dynamics.state.pitch)).toBe(true);
       expect(Number.isFinite(dynamics.state.roll)).toBe(true);
       maximumSternUpPitch = Math.max(maximumSternUpPitch, dynamics.state.pitch);
       minimumBowUpPitch = Math.min(minimumBowUpPitch, dynamics.state.pitch);
+      maximumVerticalSpeed = Math.max(maximumVerticalSpeed, Math.abs(dynamics.state.verticalVelocity));
       const liveFrame = getHydrodynamicsFrame(dynamics);
       if (liveFrame) {
         maximumAirGap = Math.max(maximumAirGap, dynamics.state.y - liveFrame.targetY);
+        maximumSternGap = Math.max(maximumSternGap, liveFrame.sternGap);
         maximumSternGuard = Math.max(maximumSternGuard, liveFrame.sternLiftGuard);
+        minimumImmersionBias = Math.min(minimumImmersionBias, liveFrame.immersionBias);
       }
     }
 
     const frame = getHydrodynamicsFrame(dynamics);
     expect(frame).not.toBeNull();
-    expect(maximumSternUpPitch).toBeLessThanOrEqual(5.0 * DEG + 1e-6);
-    expect(minimumBowUpPitch).toBeGreaterThanOrEqual(-9.5 * DEG - 1e-6);
-    expect(Math.abs(dynamics.state.roll)).toBeLessThanOrEqual(14.5 * DEG + 1e-6);
-    expect(maximumAirGap).toBeLessThanOrEqual(0.49);
+    expect(maximumSternUpPitch).toBeLessThanOrEqual(3.5 * DEG + 1e-6);
+    expect(minimumBowUpPitch).toBeGreaterThanOrEqual(-7.2 * DEG - 1e-6);
+    expect(Math.abs(dynamics.state.roll)).toBeLessThanOrEqual(11.5 * DEG + 1e-6);
+    expect(maximumVerticalSpeed).toBeLessThanOrEqual(0.66);
+    expect(maximumAirGap).toBeLessThanOrEqual(0.26);
+    expect(maximumSternGap).toBeLessThanOrEqual(0.22);
+    expect(minimumImmersionBias).toBeGreaterThanOrEqual(0.099);
     expect(frame?.breachGuard ?? 0).toBeGreaterThanOrEqual(0);
     expect(frame?.breachGuard ?? 0).toBeLessThanOrEqual(1);
     expect(maximumSternGuard).toBeGreaterThanOrEqual(0);
@@ -104,10 +113,10 @@ describe('PELAGOS modular hull and hydrodynamics', () => {
   });
 
   it('keeps a mostly submerged rudder visually occluded by translucent water', () => {
-    expect(appendageVisibility(-1.8, -0.6, -0.72, 0.46, 0.84)).toBe(0);
-    const partial = appendageVisibility(-1.8, -0.6, -1.28, 0.46, 0.84);
+    expect(appendageVisibility(-1.8, -0.6, -1.2, 0.64, 0.96)).toBe(0);
+    const partial = appendageVisibility(-1.8, -0.6, -1.45, 0.64, 0.96);
     expect(partial).toBeGreaterThan(0);
     expect(partial).toBeLessThan(1);
-    expect(appendageVisibility(-1.8, -0.6, -1.7, 0.46, 0.84)).toBeCloseTo(1, 5);
+    expect(appendageVisibility(-1.8, -0.6, -1.78, 0.64, 0.96)).toBeCloseTo(1, 5);
   });
 });
