@@ -114,6 +114,9 @@ jobs:
         run: |
           set -euo pipefail
           TESTS=(tests/e2e/ai-gameplay.spec.ts)
+          if [[ ",${PW_APP_TARGETS:-}," == *",aetherwing,"* ]]; then
+            TESTS+=(tests/e2e/aetherwing.spec.ts)
+          fi
           if [[ ",${PW_APP_TARGETS:-}," == *",sirocco,"* ]]; then
             TESTS+=(tests/e2e/sirocco.spec.ts)
           fi
