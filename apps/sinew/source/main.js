@@ -1,6 +1,8 @@
 import './styles.css';
+import { installBlenderCombatKit } from './blender-kit.js';
 import { installConstraintCombat } from './constraint-combat.js';
 import { SinewGame } from './game.js';
+import { installScenePolish } from './scene-polish.js';
 import { installVisualPolish } from './visual-polish.js';
 
 const storageNamespace = 'pocket-works:sinew';
@@ -39,37 +41,107 @@ const errorExitButton = document.querySelector('#error-exit-button');
 
 const game = new SinewGame(canvas, root, storageNamespace);
 let entered = false;
+const qaState = {
+  app: 'sinew',
+  version: '1.6.0',
+  booted: false,
+  entered: false,
+  blender: 'pending',
+  playerHealth: 100,
+  enemyHealth: 100,
+  playerStability: 100,
+  enemyStability: 100,
+  swordSpeed: 0,
+  shieldHeight: 0,
+  swordTipHeight: 0,
+  sensitivity: 0
+};
+window.__POCKET_WORKS_TEST_STATE__ = qaState;
 
-function report(text, progress) { loadingText.textContent = text; loadingBar.style.transform = `scaleX(${progress})`; }
+function report(text, progress) {
+  loadingText.textContent = text;
+  loadingBar.style.transform = `scaleX(${progress})`;
+}
 function exitToLauncher() { game.saveSession(); if (history.length > 1) history.back(); else location.href = '../../'; }
-function updateOrientation() { const coarse = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; const blocked = coarse && window.innerHeight > window.innerWidth; rotate.hidden = !blocked; game.setOrientationBlocked(blocked); }
+function updateOrientation() {
+  const coarse = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const blocked = coarse && window.innerHeight > window.innerWidth;
+  rotate.hidden = !blocked;
+  game.setOrientationBlocked(blocked);
+}
 function openMenu() { if (!entered || game.ended) return; game.setPaused(true); menu.hidden = false; }
 function closeMenu() { menu.hidden = true; if (entered && !game.ended) game.setPaused(false); }
-function updateHud(state) { playerHealth.style.transform = `scaleX(${Math.max(0, state.playerHealth) / 100})`; enemyHealth.style.transform = `scaleX(${Math.max(0, state.enemyHealth) / 100})`; playerStability.style.transform = `scaleX(${Math.max(0, state.playerStability) / 100})`; enemyStability.style.transform = `scaleX(${Math.max(0, state.enemyStability) / 100})`; }
-function unlockAudio() { if (!entered || !game.audio?.enabled) return; void game.audio.ensure().catch((error) => console.warn('[SINEW] audio unlock failed; continuing silently', error)); }
+function updateHud(state) {
+  playerHealth.style.transform = `scaleX(${Math.max(0, state.playerHealth) / 100})`;
+  enemyHealth.style.transform = `scaleX(${Math.max(0, state.enemyHealth) / 100})`;
+  playerStability.style.transform = `scaleX(${Math.max(0, state.playerStability) / 100})`;
+  enemyStability.style.transform = `scaleX(${Math.max(0, state.enemyStability) / 100})`;
+  qaState.playerHealth = state.playerHealth;
+  qaState.enemyHealth = state.enemyHealth;
+  qaState.playerStability = state.playerStability;
+  qaState.enemyStability = state.enemyStability;
+  qaState.swordSpeed = Number(game.player?.sword?.speed || 0);
+  qaState.shieldHeight = Number(game.player?.shield?.center?.y || 0);
+  qaState.swordTipHeight = Number(game.player?.sword?.tip?.y || 0);
+}
+function unlockAudio() {
+  if (!entered || !game.audio?.enabled) return;
+  void game.audio.ensure().catch((error) => console.warn('[SINEW] audio unlock failed; continuing silently', error));
+}
 
 async function boot() {
   try {
     updateOrientation();
     await game.init(report);
+    installScenePolish(game);
     installConstraintCombat(game);
     installVisualPolish(game);
+    report('Подгружаем Blender-доспехи…', .92);
+    await installBlenderCombatKit(game);
+    qaState.blender = document.documentElement.dataset.sinewBlender || 'unknown';
+    qaState.sensitivity = game.input.sensitivity;
     game.setPaused(true);
     game.onState = updateHud;
-    game.onQuality = (mode, effective) => { qualityLabel.textContent = `${mode.toUpperCase()} · ${effective[0].toUpperCase()}${effective.slice(1)}`; };
+    game.onQuality = (mode, effective) => {
+      qualityLabel.textContent = `${mode.toUpperCase()} · ${effective[0].toUpperCase()}${effective.slice(1)}`;
+    };
     game.onMatchEnd = ({ result: outcome, stats }) => {
-      menu.hidden = true; result.hidden = false; result.dataset.outcome = outcome; resultTitle.textContent = outcome === 'victory' ? 'Победа' : 'Поражение';
-      resultDetail.textContent = outcome === 'victory' ? 'Ты провёл клинок через реальную защиту противника.' : 'Противник нашёл брешь. Щит был не там, где прошёл клинок.';
+      menu.hidden = true;
+      result.hidden = false;
+      result.dataset.outcome = outcome;
+      resultTitle.textContent = outcome === 'victory' ? 'Победа' : 'Поражение';
+      resultDetail.textContent = outcome === 'victory'
+        ? 'Ты провёл клинок через реальную защиту противника.'
+        : 'Противник нашёл брешь. Щит был не там, где прошёл клинок.';
       record.textContent = `${stats.wins} побед · ${stats.losses} поражений`;
     };
-    qualitySelect.value = game.quality.mode; qualityLabel.textContent = `${game.quality.mode.toUpperCase()} · ${game.quality.effective[0].toUpperCase()}${game.quality.effective.slice(1)}`;
-    sensitivity.value = String(game.input.sensitivity); soundToggle.checked = game.audio.enabled; updateHud(game.getState()); loading.classList.add('done'); setTimeout(() => { loading.hidden = true; enter.hidden = false; }, 420);
+    qualitySelect.value = game.quality.mode;
+    qualityLabel.textContent = `${game.quality.mode.toUpperCase()} · ${game.quality.effective[0].toUpperCase()}${game.quality.effective.slice(1)}`;
+    sensitivity.value = String(game.input.sensitivity);
+    soundToggle.checked = game.audio.enabled;
+    updateHud(game.getState());
+    qaState.booted = true;
+
+    enter.hidden = false;
+    loading.classList.add('done');
+    setTimeout(() => { loading.hidden = true; }, 380);
   } catch (error) {
-    console.error('[SINEW] boot failed', error); loading.hidden = true; errorText.textContent = error instanceof Error ? error.message : String(error); errorScreen.hidden = false;
+    console.error('[SINEW] boot failed', error);
+    loading.hidden = true;
+    errorText.textContent = error instanceof Error ? error.message : String(error);
+    errorScreen.hidden = false;
   }
 }
 
-enterButton.addEventListener('pointerdown', (event) => { event.preventDefault(); entered = true; unlockAudio(); game.setPaused(false); enter.classList.add('done'); setTimeout(() => { enter.hidden = true; }, 220); }, { once: true });
+enterButton.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  entered = true;
+  qaState.entered = true;
+  unlockAudio();
+  game.setPaused(false);
+  enter.classList.add('done');
+  setTimeout(() => { enter.hidden = true; }, 220);
+}, { once: true });
 root.addEventListener('pointerdown', unlockAudio, { passive: true });
 startExitButton.addEventListener('click', exitToLauncher);
 menuButton.addEventListener('click', openMenu);
@@ -78,7 +150,7 @@ menu.addEventListener('click', (event) => { if (event.target === menu) closeMenu
 restartMenuButton.addEventListener('click', () => { result.hidden = true; menu.hidden = true; game.restart(); });
 exitButton.addEventListener('click', exitToLauncher);
 qualitySelect.addEventListener('change', (event) => game.quality.setMode(event.target.value));
-sensitivity.addEventListener('input', (event) => game.input.setSensitivity(event.target.value));
+sensitivity.addEventListener('input', (event) => { game.input.setSensitivity(event.target.value); qaState.sensitivity = game.input.sensitivity; });
 soundToggle.addEventListener('change', async (event) => { game.audio.setEnabled(event.target.checked); if (event.target.checked) await game.audio.ensure().catch(() => {}); });
 restartButton.addEventListener('click', () => { result.hidden = true; game.restart(); });
 resultExitButton.addEventListener('click', exitToLauncher);

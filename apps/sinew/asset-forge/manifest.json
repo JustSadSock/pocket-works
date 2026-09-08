@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "sinew-combat-kit",
+      "script": "combat_kit.py",
+      "output": "public/models/sinew-combat-kit.glb",
+      "requireArmature": false,
+      "requireAnimation": false
+    }
+  ]
+}

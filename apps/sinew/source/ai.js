@@ -2,7 +2,7 @@ import { Vector3 } from '@babylonjs/core';
 import { clamp, lerp } from './core.js';
 
 // Compact one-handed sword guard: hand near lower ribs, point high on the centre line.
-// The shield sits off-line at sternum height so the fighter can see and counter-cut.
+// The shield is deliberately offset and slightly lower so attacks remain readable.
 const GUARD_POSE={x:0.10,y:-0.18,z:0.36};
 const GUARD_DIR={x:0.10,y:0.54,z:0.84};
 const STRIKES = [
@@ -27,8 +27,11 @@ export class DuelAI {
     const localRight=new Vector3(Math.cos(facingYaw),0,-Math.sin(facingYaw)),localForward=new Vector3(Math.sin(facingYaw),0,Math.cos(facingYaw));
     const playerBlade=target.getSwordTrace(),bladeRelative=playerBlade.tip.subtract(self.position),bladeHeight=bladeRelative.y-1.22,side=Vector3.Dot(bladeRelative,localRight),danger=clamp((playerBlade.speed-2.2)/5,0,1)*clamp((3.2-distance)/1.5,0,1);
     const breathing=Math.sin(this.breath)*.008;
-    const shieldPose={x:clamp(-.20+side*.075,-.34,-.05),y:clamp(-.12+bladeHeight*.16+danger*.10,-.24,.18)+breathing,z:.39+danger*.08};
-    const shieldNormal={x:clamp(.14+side*.09,-.08,.28),y:clamp(-.07+bladeHeight*.08,-.16,.10),z:1};
+
+    // Keep the shield protective without turning the opponent into a moving wall.
+    // Baseline sits lower and farther to the off-side; only a real fast threat lifts it.
+    const shieldPose={x:clamp(-.27+side*.060,-.39,-.12),y:clamp(-.21+bladeHeight*.13+danger*.12,-.31,.08)+breathing,z:.35+danger*.07};
+    const shieldNormal={x:clamp(.10+side*.07,-.08,.22),y:clamp(-.09+bladeHeight*.06,-.15,.07),z:1};
     this.timer-=dt;if(this.state==='measure'&&this.timer<=0&&distance<3.05&&self.stamina>24)this.chooseAttack();
     let weaponPose={...GUARD_POSE},weaponDir={...GUARD_DIR};
     if(this.state==='measure'){weaponPose.y+=breathing;weaponDir.y+=breathing*.8;}
