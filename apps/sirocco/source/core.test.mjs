@@ -43,8 +43,8 @@ assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'), 'terrain mu
 
 const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
 assert.ok(localSandSource.includes('this.world.setLocalReplacement'), 'high-detail physical sand must replace, not overlay, coarse terrain');
-const highSegments = Number(localSandSource.match(/preset\.id === 'high' \? (\d+)/)?.[1] || 0);
-const highRadius = Number(localSandSource.match(/this\.radius = preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
+const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
+const highRadius = Number(localSandSource.match(/this\.radius\s*=\s*preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
 assert.ok(highSegments >= 112 && highRadius > 0 && (highRadius * 2 / highSegments) <= 0.105, 'High physical sand must keep about 10 cm vertex spacing');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'), 'local physical sand must not become a separate shadow island');
 assert.ok(localSandSource.includes('sampleBaseNormal'), 'untouched replacement sand must preserve base-terrain shading');
