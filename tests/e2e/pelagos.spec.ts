@@ -10,6 +10,8 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await expect(page.locator('#menu')).toBeVisible({ timeout: 25_000 });
     await expect(page.locator('#shipyardButton')).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosOceanPatch)).toBe('1');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosRigging)).toBe('living');
+    await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosRiggingLines))).toBe(8);
 
     await page.locator('#shipyardButton').click();
     const shipyard = page.locator('#shipyard');
@@ -60,6 +62,11 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.locator('[data-shipyard-slot="palette"]').click();
     await page.getByRole('button', { name: /Midnight Navy/i }).click();
     await expect(page.locator('[data-module-id="navy"]')).toHaveAttribute('data-selected', 'true');
+
+    await page.locator('[data-shipyard-slot="sails"]').click();
+    await page.getByRole('button', { name: /Merchant Rig/i }).click();
+    await expect(page.locator('[data-module-id="merchant-gaff"]')).toHaveAttribute('data-selected', 'true');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosRigging)).toBe('living');
     await attachCriticalScreenshot(page, testInfo, 'pelagos-shipyard-navy', { fullPage: false });
 
     await page.locator('#closeShipyard').click();
@@ -70,10 +77,14 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale))).toBeGreaterThanOrEqual(1.05);
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosTextureAnisotropy)).toBe('8');
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosCompactCoach)).toBe('1');
+    await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosSheetLoad))).toBeGreaterThanOrEqual(0);
     await page.waitForTimeout(1_200);
 
     const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
     expect(frameScale).toBeLessThanOrEqual(1.105);
+    const sheetLoad = await page.evaluate(() => Number(document.documentElement.dataset.pelagosSheetLoad));
+    expect(Number.isFinite(sheetLoad)).toBe(true);
+    expect(sheetLoad).toBeLessThanOrEqual(1);
     const hint = page.locator('#hint');
     if (await hint.isVisible()) {
       await expect(hint).toContainText('Руль:');
