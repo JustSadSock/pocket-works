@@ -59,14 +59,34 @@ export async function attachCriticalScreenshot(
   options: { fullPage?: boolean; mask?: Locator[] } = {}
 ) {
   const path = testInfo.outputPath(`${name}.png`);
-  await page.screenshot({
-    path,
-    fullPage: options.fullPage ?? true,
-    animations: 'disabled',
-    caret: 'hide',
-    mask: options.mask || []
-  });
-  await testInfo.attach(name, { path, contentType: 'image/png' });
+
+  try {
+    await page.screenshot({
+      path,
+      fullPage: options.fullPage ?? true,
+      // Disabling CSS animations forces an additional style/layout synchronization.
+      // On continuously rendered WebGL canvases Chromium can then block in the GPU
+      // readback path even while the page itself keeps rendering normally. Evidence
+      // capture must never become the application-under-test failure.
+      animations: 'allow',
+      caret: 'hide',
+      mask: options.mask || [],
+      timeout: 6_000
+    });
+    await testInfo.attach(name, { path, contentType: 'image/png' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const hasCanvas = await page.locator('canvas').count().then((count) => count > 0).catch(() => false);
+    if (!hasCanvas || !/screenshot|timeout/i.test(message)) throw error;
+
+    await testInfo.attach(`${name}-capture-warning`, {
+      body: Buffer.from(
+        `Screenshot evidence capture was skipped after a bounded WebGL readback timeout.\n${message}\n`,
+        'utf8'
+      ),
+      contentType: 'text/plain'
+    });
+  }
 }
 
 export async function waitForActiveServiceWorker(page: Page, expectedScopeSuffix: string) {

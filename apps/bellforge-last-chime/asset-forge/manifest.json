@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "jobs": [
+    { "name": "bellforge-city", "script": "environment.py", "output": "public/models/bellforge-city.glb" },
+    { "name": "bellforge-machinery", "script": "machinery.py", "output": "public/models/bellforge-machinery.glb" },
+    { "name": "bellwright", "script": "characters.py", "output": "public/models/bellwright.glb", "requireArmature": true, "requireAnimation": true },
+    { "name": "warden", "script": "characters.py", "output": "public/models/warden.glb", "requireArmature": true, "requireAnimation": true }
+  ]
+}

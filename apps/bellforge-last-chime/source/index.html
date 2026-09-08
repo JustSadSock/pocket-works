@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#17222a" />
+  <title>BELLFORGE // THE LAST CHIME</title>
+</head>
+<body>
+  <main id="appShell">
+    <canvas id="renderCanvas" aria-label="Игровой мир Беллфорджа"></canvas>
+    <div id="sceneFade" class="scene-fade"></div>
+    <section id="loadingPanel" class="loading-panel" aria-live="polite"><div class="seal" aria-hidden="true"><span></span><i></i></div><p class="eyebrow">POCKET WORKS · BLENDER STORY GAME</p><h1 id="loadingTitle">BELLFORGE</h1><p id="loadingText">Разворачиваем городские кварталы…</p><div class="load-track"><div id="loadingBar"></div></div><b id="loadingPercent">0%</b></section>
+    <section id="errorPanel" class="error-panel hidden" aria-live="assertive"><p class="eyebrow">СБОЙ ЗАГРУЗКИ</p><h2>Город не собрался</h2><p id="errorText">Не удалось загрузить 3D-сцену.</p><button id="retryButton" type="button">Попробовать снова</button></section>
+    <header class="hud-top"><div class="chapter-plate"><span id="chapterLabel">I · ТИШИНА</span><strong id="objectiveText">Доберись до Рыночного резонатора</strong></div><button id="soundButton" class="sound-button" type="button" aria-label="Переключить звук">SOUND</button></header>
+    <div id="subtitle" class="subtitle" role="status"></div><div id="locationCard" class="location-card"><span id="locationName">НИЖНИЕ ВОРОТА</span></div>
+    <section id="puzzlePanel" class="puzzle-panel hidden" aria-label="Резонансный механизм"><p id="puzzleTitle">РЕЗОНАТОР</p><div class="ring-row"><button class="ring-button" data-ring="0" type="button"><span>Ⅰ</span><b id="ring0">0</b></button><button class="ring-button" data-ring="1" type="button"><span>Ⅱ</span><b id="ring1">0</b></button><button class="ring-button" data-ring="2" type="button"><span>Ⅲ</span><b id="ring2">0</b></button></div><small>Коснись кольца, чтобы повернуть его. Правильный аккорд слышен и виден.</small><button id="closePuzzle" class="close-puzzle" type="button">Вернуться</button></section>
+    <section id="choicePanel" class="choice-panel hidden" aria-label="Финальный выбор"><p class="eyebrow">ПОСЛЕДНИЙ УДАР</p><h2>Город ждёт твоего решения</h2><p>Удар разбудит все механизмы — и снова привяжет Беллфордж к древнему циклу. Тишина остановит машину, но оставит город без её защиты.</p><div class="choice-actions"><button id="ringChoice" type="button">УДАРИТЬ В КОЛОКОЛ</button><button id="silenceChoice" type="button">ОСТАВИТЬ ТИШИНУ</button></div></section>
+    <section id="finishPanel" class="finish-panel hidden"><p class="eyebrow">ЭПИЛОГ</p><h2 id="finishTitle">БЕЛЛФОРДЖ СНОВА ЗВУЧИТ</h2><p id="finishText"></p><button id="restartButton" type="button">Сыграть ещё раз</button></section>
+    <div id="joystick" class="joystick" aria-hidden="true"><div class="joystick-ring"><div id="joystickKnob" class="joystick-knob"></div></div><span>ДВИЖЕНИЕ</span></div><div id="lookZone" class="look-zone" aria-hidden="true"><span>ОБЗОР</span></div>
+    <button id="actionButton" class="action-button disabled" type="button" aria-label="Взаимодействие"><span id="actionGlyph">◇</span><b id="actionLabel">ОСМОТРЕТЬ</b><small id="actionHint">Подойди ближе</small></button>
+  </main><script type="module" src="./main.ts"></script>
+</body></html>
