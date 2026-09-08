@@ -10,6 +10,8 @@ Accelerate with wingbeats, convert speed into lift, climb, spread the wings into
 
 The runtime integrates mass, gravity, aerodynamic drag, lift, bank-induced turning, asymmetric pitch authority, dive acceleration, speed-dependent manoeuvrability and braking drag. Dragon presentation is coupled to those values: animation blending, procedural wing incidence, tail lag, neck compensation, body recoil, camera lag and audio all consume the same flight state.
 
+The Blender animation groups are the base motion layer. Aerodynamic secondary motion is evaluated as an additive pre-render bone pass after Babylon has advanced those clips, so dive wing sweep, braking spread, climb loading, delayed tail stabilization and neck compensation cannot be overwritten later in the frame by the skeletal animation engine.
+
 ## Blender production
 
 `asset-forge/dragon.py` deterministically creates the authored dragon mesh, PBR materials, armature, skinning and named animation actions. The current production source uses a lean overlapping torso, a longer articulated neck and tail, scalloped multi-rib wing membranes, tucked four-limb anatomy, head horns, cheek spines, a denser dorsal ridge and a staggered irregular scale texture without long periodic bands. The generated GLB is rebuilt and re-import validated by the repository Blender Asset Forge with armature and animation requirements enabled. `asset-forge/biome_props.py` produces authored tree/rock prop geometry for world instancing.
