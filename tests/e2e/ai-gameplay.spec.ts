@@ -114,13 +114,17 @@ async function driveRelicStickUntil(
   const length = Math.hypot(dx, dy) || 1;
   const scale = max / Math.max(1, length);
   const target = { x: center.x + dx * scale, y: center.y + dy * scale };
-  const startedAt = Date.now();
   const samples: RelicDriveSample[] = [];
   let lastState: RelicState | null = await readRelicState(page);
 
+  // Software WebGL can fall to single-digit FPS on hosted Chromium. Pointer setup itself
+  // can therefore take seconds while the browser main thread is saturated. Start the
+  // physical-drive budget only after the stick is actually held at its target, otherwise
+  // a slow pointer move can consume the entire timeout before gameplay begins.
   await page.mouse.move(center.x, center.y);
   await page.mouse.down();
-  await page.mouse.move(target.x, target.y, { steps: 8 });
+  await page.mouse.move(target.x, target.y, { steps: 2 });
+  const startedAt = Date.now();
 
   try {
     while (Date.now() - startedAt < timeoutMs) {
@@ -178,6 +182,12 @@ async function driveRelicDistance(
 async function engageCourtyardCombat(page: Page) {
   const attack = page.locator('#attackButton');
   await expect(attack).toBeVisible();
+  const attackBox = await attack.boundingBox();
+  expect(attackBox, 'Attack button had no measurable bounds').not.toBeNull();
+  const attackPoint = {
+    x: attackBox!.x + attackBox!.width / 2,
+    y: attackBox!.y + attackBox!.height / 2
+  };
   const initial = await readRelicState(page);
   const initialCharge = initial?.relicCharge ?? 0;
   const initialEnemies = initial?.activeEnemies ?? 0;
@@ -202,7 +212,12 @@ async function engageCourtyardCombat(page: Page) {
       if (afterAttacks?.phase === 'lost' || (afterAttacks?.hp ?? 1) <= 0) {
         throw new Error(`Keeper died before courtyard strike connected: ${JSON.stringify(afterAttacks)}`);
       }
-      await attack.click({ timeout: 2_500 });
+
+      // Use the emulated phone's real touchscreen at the rendered button coordinates.
+      // locator.click() waits for possible navigations after the pointer action; under a
+      // 4 FPS software-rendered scene that irrelevant auto-wait can time out even though
+      // the attack pointerdown already reached the game.
+      await page.touchscreen.tap(attackPoint.x, attackPoint.y);
       await page.waitForTimeout(340);
       afterAttacks = await readRelicState(page);
       if ((afterAttacks?.relicCharge ?? 0) > initialCharge || (afterAttacks?.activeEnemies ?? initialEnemies) < initialEnemies) {
