@@ -39,109 +39,101 @@ export function installColossusVisualOverhaul() {
 
   const armor = material(scene, 'macro-armor', new Color3(0.135, 0.155, 0.135), new Color3(0.009, 0.012, 0.009), true);
   const armorHi = material(scene, 'macro-armor-highlight', new Color3(0.205, 0.205, 0.155), new Color3(0.012, 0.011, 0.006), true);
-  const recess = material(scene, 'macro-recess', new Color3(0.027, 0.038, 0.034), new Color3(0.003, 0.005, 0.004), true);
   const bone = material(scene, 'macro-bone', new Color3(0.25, 0.25, 0.19), new Color3(0.012, 0.012, 0.007), true);
   const tissue = material(scene, 'macro-tissue', new Color3(0.19, 0.038, 0.026), new Color3(0.035, 0.004, 0.002));
   const conduit = material(scene, 'macro-conduit', new Color3(0.24, 0.14, 0.035), new Color3(0.045, 0.021, 0.002), true);
   const sensor = material(scene, 'macro-sensor', new Color3(0.02, 0.19, 0.16), new Color3(0.035, 0.68, 0.52), true);
 
-  // The traversal deck is only the exposed crest of a body that is dozens of metres wide.
-  const torso = finishMesh(MeshBuilder.CreateSphere('macro-torso', { diameter: 2, segments: 22 }, scene), back, recess);
-  torso.scaling.set(10.8, 4.7, 18.5);
-  torso.position.set(0, -5.6, 1.6);
-
-  const upperMass = finishMesh(MeshBuilder.CreateSphere('macro-upper-mass', { diameter: 2, segments: 18 }, scene), back, armor);
-  upperMass.scaling.set(9.1, 2.15, 13.6);
-  upperMass.position.set(0, -2.15, 2.8);
-
-  // Interlocking dorsal scutes make the playable route read as part of the colossus rather than floating platforms.
+  // Keep the macro body entirely below the playable crest. Earlier enclosing spheres could
+  // swallow the third-person camera on mobile and turn the frame into one flat surface.
   const zs = [-11, -7.2, -3.1, 1.2, 5.5, 9.3, 12.4];
   zs.forEach((z, i) => {
     for (const side of [-1, 1]) {
       const plate = finishMesh(MeshBuilder.CreateBox(`macro-scute-${i}-${side}`, {
         width: 5.7 + (i % 2) * 0.7,
-        height: 0.72,
+        height: 0.58,
         depth: 4.55
       }, scene), back, i % 3 === 1 ? armorHi : armor);
-      plate.position.set(side * (4.0 + (i % 2) * 0.35), -0.62 + Math.sin(i * 0.7) * 0.18, z);
+      plate.position.set(side * (4.0 + (i % 2) * 0.35), -1.05 + Math.sin(i * 0.7) * 0.12, z);
       plate.rotation.y = side * (0.11 + (i % 3) * 0.025);
-      plate.rotation.z = side * (-0.11 - i * 0.006);
+      plate.rotation.z = side * (-0.08 - i * 0.004);
       plate.rotation.x = (i - 3) * 0.012;
 
       const seam = finishMesh(MeshBuilder.CreateBox(`macro-seam-${i}-${side}`, {
         width: 0.16,
-        height: 0.20,
+        height: 0.16,
         depth: 3.8
       }, scene), back, conduit);
-      seam.position.set(side * 1.42, 0.08, z);
+      seam.position.set(side * 1.42, -0.36, z);
       seam.rotation.y = side * 0.03;
     }
 
     const vertebra = finishMesh(MeshBuilder.CreateCylinder(`macro-vertebra-${i}`, {
-      diameter: 2.45,
-      height: 1.15,
+      diameter: 2.15,
+      height: 1.05,
       tessellation: 14
     }, scene), back, bone);
     vertebra.rotation.z = Math.PI / 2;
-    vertebra.position.set(0, -0.22, z + 0.18);
+    vertebra.position.set(0, -0.92, z + 0.18);
     vertebra.scaling.z = 0.72;
   });
 
-  // Massive ribs disappear into the storm on both sides, selling city-scale anatomy.
+  // Ribs and tendons sit far below/alongside the walkable spine, providing scale without
+  // ever enclosing the camera volume.
   for (let i = 0; i < 6; i++) {
     const z = -9 + i * 4.3;
     for (const side of [-1, 1]) {
       const rib = finishMesh(MeshBuilder.CreateTorus(`macro-rib-${i}-${side}`, {
-        diameter: 10.4,
-        thickness: 0.46,
-        tessellation: 34
+        diameter: 9.2,
+        thickness: 0.38,
+        tessellation: 30
       }, scene), back, bone);
-      rib.position.set(side * 5.4, -3.8, z);
+      rib.position.set(side * 6.4, -5.6, z);
       rib.rotation.x = Math.PI / 2;
       rib.rotation.y = side * (0.82 + i * 0.015);
-      rib.scaling.set(1.0, 0.62, 1.0);
+      rib.scaling.set(1.0, 0.58, 1.0);
     }
   }
 
-  // Exposed tendons and service conduits visually connect otherwise separated traversal plates.
   for (let i = 0; i < 8; i++) {
     const side = i % 2 ? 1 : -1;
     const cable = finishMesh(MeshBuilder.CreateCylinder(`macro-tendon-${i}`, {
-      diameter: 0.42 + (i % 3) * 0.12,
-      height: 18 + (i % 2) * 6,
+      diameter: 0.36 + (i % 3) * 0.10,
+      height: 16 + (i % 2) * 5,
       tessellation: 10
     }, scene), back, i % 3 === 0 ? tissue : conduit);
     cable.rotation.x = Math.PI / 2;
     cable.rotation.z = side * (0.14 + (i % 3) * 0.025);
-    cable.position.set(side * (5.5 + (i % 4) * 0.82), -1.35 - (i % 3) * 0.55, 1.0 + (i - 4) * 1.25);
+    cable.position.set(side * (6.2 + (i % 4) * 0.72), -2.5 - (i % 3) * 0.45, 1.0 + (i - 4) * 1.25);
   }
 
   for (const side of [-1, 1]) {
-    const socket = finishMesh(MeshBuilder.CreateSphere(`macro-shoulder-socket-${side}`, { diameter: 2, segments: 20 }, scene), back, armorHi);
-    socket.scaling.set(4.6, 4.0, 4.2);
-    socket.position.set(side * 8.4, -1.7, 10.5);
+    const socket = finishMesh(MeshBuilder.CreateSphere(`macro-shoulder-socket-${side}`, { diameter: 2, segments: 18 }, scene), back, armorHi);
+    socket.scaling.set(3.8, 2.7, 3.7);
+    socket.position.set(side * 9.2, -4.4, 10.5);
 
     const joint = finishMesh(MeshBuilder.CreateCylinder(`macro-shoulder-joint-${side}`, {
-      diameter: 5.4,
-      height: 5.2,
+      diameter: 4.7,
+      height: 4.6,
       tessellation: 18
     }, scene), back, bone);
     joint.rotation.z = Math.PI / 2;
-    joint.position.set(side * 9.0, -0.6, 10.8);
+    joint.position.set(side * 9.5, -3.7, 10.8);
   }
 
+  // Shoulder/head masses are deliberately offset downward so their upper surfaces support
+  // silhouettes rather than becoming camera-intersecting shells.
   const shoulderMass = finishMesh(MeshBuilder.CreateSphere('macro-active-shoulder', { diameter: 2, segments: 20 }, scene), shoulder, armor);
-  shoulderMass.scaling.set(7.2, 3.7, 6.1);
-  shoulderMass.position.set(-0.4, -3.2, 1.8);
+  shoulderMass.scaling.set(6.2, 2.6, 5.5);
+  shoulderMass.position.set(-0.4, -5.4, 1.8);
 
   const cranium = finishMesh(MeshBuilder.CreateSphere('macro-cranium', { diameter: 2, segments: 22 }, scene), head, armor);
-  cranium.scaling.set(6.8, 4.4, 8.2);
-  cranium.position.set(0, -4.2, 2.1);
+  cranium.scaling.set(6.1, 3.1, 7.3);
+  cranium.position.set(0, -6.3, 2.1);
 
-  const crown = finishMesh(MeshBuilder.CreateBox('macro-cranial-crown', { width: 8.8, height: 0.72, depth: 10.5 }, scene), head, armorHi);
-  crown.position.set(0, -0.75, 2.4);
+  const crown = finishMesh(MeshBuilder.CreateBox('macro-cranial-crown', { width: 8.2, height: 0.56, depth: 9.8 }, scene), head, armorHi);
+  crown.position.set(0, -2.55, 2.4);
 
-  // Beacon and local spill light give mobile Safari a reliable depth/goal cue without flattening the storm lighting.
   const beaconRoot = new TransformNode('macro-beacon-root', scene);
   beaconRoot.parent = back;
   beaconRoot.position.set(0, 3.2, 12.1);
