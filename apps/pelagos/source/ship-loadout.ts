@@ -61,7 +61,7 @@ export const SHIP_LOADOUTS: Record<string, ShipLoadout> = {
       draft: 1.18,
       displacementKg: 5200,
       verticalScale: 1.08,
-      waterlineCenterY: 0.64
+      waterlineCenterY: 0.57
     },
     palette: {
       hull: '#315f5f',
@@ -102,7 +102,7 @@ export const SHIP_LOADOUTS: Record<string, ShipLoadout> = {
       draft: 1.22,
       displacementKg: 5500,
       verticalScale: 1.08,
-      waterlineCenterY: 0.61
+      waterlineCenterY: 0.53
     },
     palette: {
       hull: '#253f44',
@@ -143,7 +143,7 @@ export const SHIP_LOADOUTS: Record<string, ShipLoadout> = {
       draft: 1.08,
       displacementKg: 4700,
       verticalScale: 1.04,
-      waterlineCenterY: 0.66
+      waterlineCenterY: 0.60
     },
     palette: {
       hull: '#6f3028',
