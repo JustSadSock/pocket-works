@@ -84,6 +84,12 @@ export function installPuzzleAssist() {
     overtone.stop(now + duration + 0.04);
   };
 
+  const stopPattern = () => {
+    patternToken += 1;
+    referenceButton.classList.remove('playing');
+    referenceBars.forEach((bar) => bar.classList.remove('active'));
+  };
+
   const syncReference = () => {
     const mode = puzzleModeFromTitle(title.textContent);
     const target = PUZZLE_TARGETS[mode];
@@ -142,10 +148,12 @@ export function installPuzzleAssist() {
   });
 
   const observer = new MutationObserver(() => {
-    if (!panel.classList.contains('hidden')) {
-      syncReference();
-      syncAllRings();
+    if (panel.classList.contains('hidden')) {
+      stopPattern();
+      return;
     }
+    syncReference();
+    syncAllRings();
   });
   observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
   observer.observe(title, { childList: true, subtree: true });
@@ -155,7 +163,7 @@ export function installPuzzleAssist() {
   syncAllRings();
   window.addEventListener('pagehide', () => {
     observer.disconnect();
-    patternToken += 1;
+    stopPattern();
     if (audioContext?.state === 'running') void audioContext.suspend();
   }, { once: true });
 }
