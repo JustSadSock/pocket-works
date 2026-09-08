@@ -203,6 +203,10 @@ ShipDynamics.prototype.update = function hydrodynamicsUpdate(
     const maximumRootY = filteredSternHeight + waterlineCenterY - length * 0.40 * Math.sin(state.pitch) + 0.055;
     if (state.y > maximumRootY) {
       state.y = smoothTo(state.y, maximumRootY, 5.2 + sternLiftGuard * 4.6, safeDt);
+      // A tiny residual clearance is fine, but a rare solver transient must not be allowed to turn
+      // into a visible "hop". This ceiling is at most a few centimetres of correction per normal
+      // frame after the filtered support plane has done the real work.
+      state.y = Math.min(state.y, maximumRootY + 0.13);
       state.verticalVelocity = Math.min(state.verticalVelocity, 0.02);
     }
   }
