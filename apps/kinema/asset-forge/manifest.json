@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "kinema-character",
+      "script": "character.py",
+      "output": "public/models/kinema-character.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    }
+  ]
+}
