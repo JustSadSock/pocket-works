@@ -36,25 +36,52 @@ function registerShadowCaster(world: OceanWorld, mesh: AbstractMesh): void {
 }
 
 function tuneImportedMaterial(material: PBRMaterial): void {
-  // The authored Blender palette was reading too dark under WebKit's mobile WebGL path.
-  // Keep the material response tactile, but give varnished timber and metal enough indirect
-  // light to preserve the smaller deck details added by Asset Forge.
-  material.environmentIntensity = 0.56;
-  material.directIntensity = 1.08;
-  material.specularIntensity = 0.52;
-  material.microSurface = Math.min(material.microSurface, 0.82);
+  // The authored Blender palette should stay readable on WebKit without flattening the varnish,
+  // metal and rope into the same response. Small fittings need brighter indirect light than the
+  // hull mass because they occupy only a few mobile pixels at the default chase distance.
+  material.environmentIntensity = 0.58;
+  material.directIntensity = 1.10;
+  material.specularIntensity = 0.54;
+  material.microSurface = Math.min(material.microSurface, 0.84);
 
   const name = material.name.toLowerCase();
   if (name.includes('deck')) {
-    material.environmentIntensity = 0.64;
-    material.directIntensity = 1.12;
-    material.specularIntensity = 0.38;
-  } else if (name.includes('brass') || name.includes('iron')) {
     material.environmentIntensity = 0.66;
-    material.specularIntensity = 0.72;
+    material.directIntensity = 1.14;
+    material.specularIntensity = 0.34;
+    material.microSurface = Math.min(material.microSurface, 0.72);
+  } else if (name.includes('oxblood') || name.includes('mahogany')) {
+    material.environmentIntensity = 0.60;
+    material.specularIntensity = 0.58;
+    material.clearCoat.isEnabled = true;
+    material.clearCoat.intensity = 0.24;
+    material.clearCoat.roughness = 0.40;
+  } else if (name.includes('sea green')) {
+    material.environmentIntensity = 0.62;
+    material.specularIntensity = 0.44;
+    material.clearCoat.isEnabled = true;
+    material.clearCoat.intensity = 0.16;
+    material.clearCoat.roughness = 0.48;
+  } else if (name.includes('brass')) {
+    material.environmentIntensity = 0.72;
+    material.directIntensity = 1.18;
+    material.specularIntensity = 0.84;
+    material.microSurface = Math.min(material.microSurface, 0.90);
+  } else if (name.includes('iron')) {
+    material.environmentIntensity = 0.56;
+    material.specularIntensity = 0.66;
   } else if (name.includes('rope')) {
-    material.specularIntensity = 0.16;
-    material.environmentIntensity = 0.48;
+    material.specularIntensity = 0.14;
+    material.environmentIntensity = 0.50;
+    material.microSurface = Math.min(material.microSurface, 0.58);
+  } else if (name.includes('ivory')) {
+    material.environmentIntensity = 0.68;
+    material.specularIntensity = 0.30;
+  } else if (name.includes('lantern glow')) {
+    material.environmentIntensity = 0.18;
+    material.directIntensity = 0.42;
+    material.specularIntensity = 0.20;
+    material.emissiveColor.set(0.95, 0.20, 0.025);
   }
 }
 
@@ -70,12 +97,19 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
       // One authored orientation node fixes it without touching glTF's internal coordinate transform.
       assetRoot.rotation.y = Math.PI;
 
-      const imported = new Set<AbstractMesh>(result.meshes);
-      const roots = result.meshes.filter((mesh) => !mesh.parent || !imported.has(mesh.parent as AbstractMesh));
-      for (const root of roots) {
-        root.parent = assetRoot;
-        root.position.set(0, 0, 0);
+      // Preserve authored empties and parent/child relationships. The previous loader only tracked
+      // meshes, so a mesh parented to a Blender empty was mistaken for a root and detached. That
+      // made proper swinging lanterns, blocks and other articulated fittings impossible.
+      const importedNodes = new Set<TransformNode | AbstractMesh>([
+        ...result.transformNodes,
+        ...result.meshes
+      ]);
+      const roots: Array<TransformNode | AbstractMesh> = [];
+      for (const node of importedNodes) {
+        const parent = node.parent as TransformNode | AbstractMesh | null;
+        if (!parent || !importedNodes.has(parent)) roots.push(node);
       }
+      for (const root of roots) root.parent = assetRoot;
 
       for (const mesh of result.meshes) {
         mesh.isPickable = false;
@@ -98,9 +132,9 @@ export function ensureBlenderShip(world: OceanWorld): Promise<void> {
   return promise;
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV2?: boolean };
-if (!prototype.__pelagosBlenderShipV2) {
-  prototype.__pelagosBlenderShipV2 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBlenderShipV3?: boolean };
+if (!prototype.__pelagosBlenderShipV3) {
+  prototype.__pelagosBlenderShipV3 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function blenderShipUpdate(
     state: ShipState,
