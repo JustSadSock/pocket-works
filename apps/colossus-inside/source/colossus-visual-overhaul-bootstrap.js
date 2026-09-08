@@ -1,5 +1,6 @@
 import { EngineStore } from '@babylonjs/core';
 import { installColossusVisualOverhaul } from './colossus-visual-overhaul.js';
+import { applyColossusVisualSafety } from './colossus-visual-safety.js';
 
 export function installColossusVisualOverhaulWhenReady() {
   const scene = EngineStore.LastCreatedScene;
@@ -14,8 +15,13 @@ export function installColossusVisualOverhaulWhenReady() {
     scene.getTransformNodeByName('carrier-head')
   );
 
-  if (ready()) {
+  const install = () => {
     installColossusVisualOverhaul();
+    applyColossusVisualSafety(scene);
+  };
+
+  if (ready()) {
+    install();
     return;
   }
 
@@ -24,7 +30,7 @@ export function installColossusVisualOverhaulWhenReady() {
     frames += 1;
     if (ready()) {
       scene.onBeforeRenderObservable.remove(observer);
-      installColossusVisualOverhaul();
+      install();
       return;
     }
     if (frames > 360) {
