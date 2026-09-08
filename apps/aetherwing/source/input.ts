@@ -15,15 +15,16 @@ export function createControls(surface:HTMLElement):Controls{
   let lastPointerEventAt=0;
 
   const engageBoost=(now:number)=>{c.boost=1;c.lastGesture='boost';leftTap=now;};
-  const engageBrake=(now:number,duration=1350)=>{c.brake=1;c.brakeEvents+=1;c.lastGesture='brake';brakeTimer=Math.max(brakeTimer,now+duration);rightTap=now;};
+  const engageBrake=(now:number,duration=2300)=>{c.brake=1;c.brakeEvents+=1;c.lastGesture='brake';brakeTimer=Math.max(brakeTimer,now+duration);rightTap=now;};
 
   const begin=(id:number,x:number,y:number)=>{
     const now=performance.now();
     const side=x<innerWidth*.5?'left':'right';
-    // Trigger the second half of a double tap on pointer-down, not pointer-up.
-    // This makes the gesture immediate on low-FPS mobile frames.
     if(side==='left'&&now-leftTap<350)c.boost=1;
-    if(side==='right'&&now-rightTap<350)engageBrake(now,1450);
+    // Second tap starts the extended brake immediately. A 3.2 s window is
+    // deliberate: on mobile, terrain/chunk work can delay a frame by hundreds
+    // of milliseconds and the physical action must still be visible afterwards.
+    if(side==='right'&&now-rightTap<350)engageBrake(now,3200);
     pointers.set(id,{id,side,sx:x,sy:y,x,y,t:now});
   };
   const moveTracked=(id:number,x:number,y:number)=>{
@@ -40,15 +41,12 @@ export function createControls(surface:HTMLElement):Controls{
   const finish=(id:number)=>{
     const p=pointers.get(id); if(!p)return;
     const now=performance.now(); const moved=Math.hypot(p.x-p.sx,p.y-p.sy); const elapsed=now-p.t;
-    if(moved<20&&elapsed<280){
+    if(moved<20&&elapsed<300){
       if(p.side==='left'){
         if(now-leftTap<350)engageBoost(now); else leftTap=now;
       }else{
-        // A quick right tap is intentionally useful by itself: a short air-brake
-        // pulse. A second tap inside the gesture window extends it. Camera look
-        // remains a drag, so the two actions do not fight for the same motion.
         const doubleTap=now-rightTap<350;
-        engageBrake(now,doubleTap?1450:760);
+        engageBrake(now,doubleTap?3200:1900);
       }
     }
     pointers.delete(id);
@@ -60,8 +58,6 @@ export function createControls(surface:HTMLElement):Controls{
   const up=(e:PointerEvent)=>{lastPointerEventAt=performance.now();finish(e.pointerId);};
   const cancel=(e:PointerEvent)=>{lastPointerEventAt=performance.now();finish(e.pointerId);};
 
-  // Pointer Events are primary on current iOS; Touch Events are kept as a
-  // compatibility path for embedded/automation WebKit builds.
   const touchFallbackAllowed=()=>performance.now()-lastPointerEventAt>80;
   const touchStart=(e:TouchEvent)=>{if(!touchFallbackAllowed())return;e.preventDefault();for(const t of Array.from(e.changedTouches))begin(10000+t.identifier,t.clientX,t.clientY);};
   const touchMove=(e:TouchEvent)=>{if(!touchFallbackAllowed())return;e.preventDefault();for(const t of Array.from(e.changedTouches))moveTracked(10000+t.identifier,t.clientX,t.clientY);};
