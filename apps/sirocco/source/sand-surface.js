@@ -33,8 +33,6 @@ export class LocalSandSurface {
     this.radius = preset.id === 'high' ? 3.7 : preset.id === 'medium' ? 3.3 : 2.9;
     this.segments = preset.id === 'high' ? 68 : preset.id === 'medium' ? 56 : 44;
     this.snapStep = preset.id === 'high' ? 1.55 : preset.id === 'medium' ? 1.78 : 2.0;
-    // The coarse hole now reaches past the end of deformation fade. That leaves
-    // only a narrow, already-flat overlap ring and prevents z-fighting seams.
     this.holeRatio = 0.90;
     this.dirty = true;
   }
@@ -165,12 +163,18 @@ export class LocalSandSurface {
         const base = terrainNormal(gx, gz, 0.36);
         const ni = i * 3;
 
-        const edgeBlend = smoothstep(0.72, 0.92, r);
-        const materialDetail = looseValues[i] * 0.07 - compactValues[i] * 0.04;
-        const baseMix = clamp(0.56 + edgeBlend * 0.44 - materialDetail, 0.50, 1);
-        let nx = normals[ni] + (base.x - normals[ni]) * baseMix;
-        let ny = normals[ni + 1] + (base.y - normals[ni + 1]) * baseMix;
-        let nz = normals[ni + 2] + (base.z - normals[ni + 2]) * baseMix;
+        // Outside actual physical displacement, the local replacement must be
+        // optically indistinguishable from the surrounding dune. Mesh normals
+        // from the denser patch reveal its triangulation even on untouched sand,
+        // so only let them influence lighting where deformation is real.
+        const edgeFade = 1 - smoothstep(0.68, 0.90, r);
+        const heightActivity = smoothstep(0.0015, 0.020, Math.abs(deformations[i]));
+        const stateActivity = clamp(looseValues[i] * 0.32 + compactValues[i] * 0.22, 0, 1);
+        const physicalActivity = clamp(Math.max(heightActivity, stateActivity) * edgeFade, 0, 1);
+        const meshWeight = physicalActivity * 0.42;
+        let nx = base.x * (1 - meshWeight) + normals[ni] * meshWeight;
+        let ny = base.y * (1 - meshWeight) + normals[ni + 1] * meshWeight;
+        let nz = base.z * (1 - meshWeight) + normals[ni + 2] * meshWeight;
         const inv = 1 / Math.hypot(nx, ny, nz);
         normals[ni] = nx * inv;
         normals[ni + 1] = ny * inv;
