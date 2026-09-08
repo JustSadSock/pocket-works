@@ -19,10 +19,6 @@ export function appendageVisibility(
 }
 
 function hideAuthoredUnderwaterDuplicate(world: OceanWorld): void {
-  // The Blender cutter contains a decorative PW_Sternpost running well below the transom.
-  // Through the intentionally translucent ocean it reads as a second exposed rudder even when
-  // the actual working blade is submerged. The closed authored transom already carries the
-  // visible stern structure, so this redundant full-depth post is disabled at runtime.
   for (const mesh of world.scene.meshes) {
     if (mesh.name.toLowerCase() === 'pw_sternpost') mesh.setEnabled(false);
   }
@@ -39,11 +35,10 @@ function updateSternAppendageImmersion(
 
   const rudder = world.scene.getMeshByName('rudder-blade');
   if (rudder) {
-    // The working blade lives behind the immersed transom. It should only become visually
-    // readable when a genuinely severe trough exposes a large fraction of the blade, not merely
-    // because transparent water lets the camera see through the surface.
-    rudder.position.y = -1.58;
-    rudder.scaling.y = 0.90;
+    // The blade belongs below the transom. Lower it slightly and keep its full steering area so a
+    // trough has to expose most of the blade before it becomes readable above the surface.
+    rudder.position.y = -1.74;
+    rudder.scaling.y = 0.94;
   }
 
   for (const name of UNDERWATER_APPENDAGES) {
@@ -55,19 +50,18 @@ function updateSternAppendageImmersion(
     const center = bounds.centerWorld;
     const water = sampleWave(center.x + originX, center.z + originZ, time, environment.waveScale);
 
-    // Whole-mesh visibility is based on the fraction actually above the live wave surface.
-    // A few exposed centimetres at the stock no longer make a metre of submerged blade appear
-    // through the translucent ocean. The skeg uses a slightly lower threshold because it is
-    // shorter and can legitimately flash into view sooner in an extreme trough.
+    // Translucent water used to reveal the whole rudder as soon as a modest fraction crossed the
+    // surface. Only genuinely exposed geometry should now fade in; normal rough-water motion keeps
+    // the steering gear visually inside the sea.
     mesh.visibility = name === 'rudder-blade'
-      ? appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.46, 0.84)
-      : appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.38, 0.76);
+      ? appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.64, 0.96)
+      : appendageVisibility(bounds.minimumWorld.y, bounds.maximumWorld.y, water.height, 0.50, 0.88);
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV3?: boolean };
-if (!prototype.__pelagosSternImmersionV3) {
-  prototype.__pelagosSternImmersionV3 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSternImmersionV4?: boolean };
+if (!prototype.__pelagosSternImmersionV4) {
+  prototype.__pelagosSternImmersionV4 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function sternImmersionUpdate(
     state: ShipState,
