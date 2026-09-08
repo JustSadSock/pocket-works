@@ -11,7 +11,7 @@ export function shapeLookDelta(x, y) {
   const magnitude = Math.hypot(x, y);
   if (magnitude < 0.18) return { x: 0, y: 0 };
   const normalized = Math.min(1, magnitude / 28);
-  const gain = 0.9 + normalized * normalized * 0.62;
+  const gain = 1 + normalized * normalized * 0.52;
   return { x: x * gain, y: y * gain };
 }
 
