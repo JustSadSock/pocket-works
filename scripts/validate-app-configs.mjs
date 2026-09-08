@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
+import { collectAppConfigs, normalizeAppConfig, runtimeForConfig } from './app-config.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -19,6 +19,24 @@ for (const config of configs) {
   const directory = `apps/${config.slug}`;
   const manifest = await readJson(`${directory}/manifest.webmanifest`);
   if (manifest) {
+    const normalizedManifest = normalizeAppConfig({
+      ...config,
+      name: manifest.name ?? config.name,
+      shortName: manifest.short_name ?? config.shortName,
+      description: manifest.description ?? config.description,
+      orientation: manifest.orientation ?? config.orientation,
+      backgroundColor: manifest.background_color ?? config.backgroundColor,
+      themeColor: manifest.theme_color ?? config.themeColor
+    }, config.slug);
+    const actualManifest = {
+      id: typeof manifest.id === 'string' ? manifest.id.trim() : manifest.id,
+      name: normalizedManifest.name,
+      short_name: normalizedManifest.shortName,
+      description: normalizedManifest.description,
+      orientation: normalizedManifest.orientation,
+      background_color: normalizedManifest.backgroundColor,
+      theme_color: normalizedManifest.themeColor
+    };
     const expectedManifest = {
       id: `/apps/${config.slug}/`,
       name: config.name,
@@ -29,7 +47,7 @@ for (const config of configs) {
       theme_color: config.themeColor
     };
     for (const [key, value] of Object.entries(expectedManifest)) {
-      if (manifest[key] !== value) fail(`${directory}/manifest.webmanifest ${key} must equal app.config.json value ${value}`);
+      if (actualManifest[key] !== value) fail(`${directory}/manifest.webmanifest ${key} must resolve to app.config.json value ${value}`);
     }
   }
 
