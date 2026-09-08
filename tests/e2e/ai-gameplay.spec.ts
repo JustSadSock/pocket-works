@@ -231,15 +231,19 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   expect(gate?.playerPosition?.y ?? -999).toBeGreaterThan(-1);
 
   // CI software WebGL can render far below real-time. Keep the real on-screen stick
-  // physically held until gameplay itself reports the courtyard encounter instead of
-  // assuming a wall-clock duration corresponds to a fixed amount of simulation time.
+  // physically held until gameplay itself reports the courtyard encounter and the
+  // keeper is stably supported by authored collision, rather than stopping on the
+  // transitional frame where the zone flips while the capsule is still settling.
   const courtyardDrive = await driveRelicStickUntil(
     page,
     0,
     1,
     24_000,
     'Gate-to-courtyard traversal',
-    (state) => state?.zone === 'courtyard' && (state?.activeEnemies ?? 0) >= 3
+    (state) => state?.zone === 'courtyard'
+      && (state?.activeEnemies ?? 0) >= 3
+      && state?.grounded === true
+      && (state?.groundDistance ?? 99) < 1.7
   );
 
   const courtyard = courtyardDrive.state;
