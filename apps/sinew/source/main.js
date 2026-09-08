@@ -42,6 +42,7 @@ const reloadButton = document.querySelector('#reload-button');
 const errorExitButton = document.querySelector('#error-exit-button');
 
 const game = new SinewGame(canvas, root, storageNamespace);
+if (new URLSearchParams(location.search).has('qa')) window.__SINEW_QA__ = game;
 let entered = false;
 const qaState = {
   app: 'sinew',
