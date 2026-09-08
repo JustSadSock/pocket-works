@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeFlightState, stepFlight } from './core';
+import { makeFlightState, stepFlight, stepFlightFrame } from './core';
 
 describe('AETHERWING flight model', () => {
   it('loses altitude when slow without enough lift', () => {
@@ -23,6 +23,17 @@ describe('AETHERWING flight model', () => {
     expect(s.pitch).toBeLessThan(-.18);
     expect(s.verticalSpeed).toBeLessThan(-4);
     expect(s.speed).toBeGreaterThan(beforeDive*.92);
+    expect(s.mode).toBe('dive');
+  });
+  it('keeps real-time climb and dive response through 10 fps mobile frame drops', () => {
+    const s=makeFlightState();
+    for(let i=0;i<30;i++) stepFlightFrame(s,{x:0,y:1,boost:0,brake:0},.1);
+    expect(s.pitch).toBeGreaterThan(.20);
+    const beforeDive=s.speed;
+    for(let i=0;i<42;i++) stepFlightFrame(s,{x:0,y:-1,boost:0,brake:0},.1);
+    expect(s.pitch).toBeLessThan(-.35);
+    expect(s.verticalSpeed).toBeLessThan(-8);
+    expect(s.speed).toBeGreaterThan(beforeDive+3);
     expect(s.mode).toBe('dive');
   });
   it('air brake reduces forward speed', () => {
