@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/relic-siege",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs relic-siege",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1",
+    "@babylonjs/loaders": "^9.2.1"
+  }
+}
