@@ -10,21 +10,21 @@
     },
     {
       "name": "keeper",
-      "script": "keeper.py",
+      "script": "actors.py",
       "output": "public/models/keeper.glb",
       "requireArmature": true,
       "requireAnimation": true
     },
     {
       "name": "ash-raider",
-      "script": "raider.py",
+      "script": "actors.py",
       "output": "public/models/ash-raider.glb",
       "requireArmature": true,
       "requireAnimation": true
     },
     {
       "name": "ash-warden",
-      "script": "warden.py",
+      "script": "actors.py",
       "output": "public/models/ash-warden.glb",
       "requireArmature": true,
       "requireAnimation": true
