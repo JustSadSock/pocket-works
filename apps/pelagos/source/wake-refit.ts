@@ -4,6 +4,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { ShipState, ShipTelemetry } from './core';
 import { clamp, hash2, sampleWave } from './core';
+import { getActiveShipLoadout } from './ship-loadout';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
@@ -16,6 +17,8 @@ type WakeStrip = {
   side: number;
   strength: number;
   seed: number;
+  beamScale: number;
+  lengthScale: number;
   active: boolean;
 };
 
@@ -31,8 +34,6 @@ function ensureWake(world: OceanWorld): WakeMemory {
   const existing = memories.get(world);
   if (existing) return existing;
 
-  // The first presence implementation used torus stamps. Keep its lifecycle intact so this
-  // remains a small isolated refinement, but make those synthetic rings permanently invisible.
   for (const mesh of world.scene.meshes) {
     if (mesh.name.startsWith('presence-wake-')) mesh.setEnabled(false);
   }
@@ -44,7 +45,7 @@ function ensureWake(world: OceanWorld): WakeMemory {
   material.alpha = 0.23;
   material.backFaceCulling = false;
 
-  const strips: WakeStrip[] = Array.from({ length: 56 }, (_, index) => {
+  const strips: WakeStrip[] = Array.from({ length: 64 }, (_, index) => {
     const seed = hash2(index * 79 + 17, index * 131 + 23);
     const mesh = MeshBuilder.CreatePlane(`presence-broken-wake-${index}`, {
       width: 0.18 + seed * 0.10,
@@ -63,6 +64,8 @@ function ensureWake(world: OceanWorld): WakeMemory {
       side: index % 2 === 0 ? -1 : 1,
       strength: 0,
       seed,
+      beamScale: 1,
+      lengthScale: 1,
       active: false
     };
   });
@@ -75,10 +78,14 @@ function ensureWake(world: OceanWorld): WakeMemory {
 function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetry, time: number): void {
   const speed = clamp(telemetry.speed / 6.4, 0, 1);
   if (speed < 0.075 || time < memory.next) return;
-  memory.next = time + 0.13 + (1 - speed) * 0.11;
+  const loadout = getActiveShipLoadout();
+  const lengthScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
+  const beamScale = clamp(loadout.dimensions.beam / 3.9, 0.82, 1.22);
+  memory.next = time + 0.12 + (1 - speed) * 0.10;
 
-  // Alternating broken streaks form a turbulent centreline and two faint diverging shoulders
-  // instead of a repeated geometric symbol.
+  // The wake starts at the actual transom, not at a hard-coded point inside the enlarged hull.
+  // Width and divergence follow the selected beam so a 15.6 m cruiser leaves a broader track than
+  // the 10.8 m harbor cutter.
   for (let piece = 0; piece < 2; piece += 1) {
     const strip = memory.strips[memory.cursor++ % memory.strips.length];
     const side = strip.side;
@@ -86,14 +93,16 @@ function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetr
     const fwdZ = Math.cos(state.yaw);
     const rightX = Math.cos(state.yaw);
     const rightZ = -Math.sin(state.yaw);
-    const jitter = (strip.seed - 0.5) * 0.22;
-    const lateral = side * (0.22 + speed * 0.18) + jitter;
-    const aft = 3.55 + piece * 0.38 + strip.seed * 0.34;
+    const jitter = (strip.seed - 0.5) * 0.18 * beamScale;
+    const lateral = side * (loadout.dimensions.beam * (0.075 + speed * 0.045)) + jitter;
+    const aft = loadout.dimensions.length * 0.445 + piece * 0.28 * lengthScale + strip.seed * 0.20 * lengthScale;
     strip.worldX = state.worldX - fwdX * aft + rightX * lateral;
     strip.worldZ = state.worldZ - fwdZ * aft + rightZ * lateral;
-    strip.heading = state.yaw + side * (0.025 + speed * 0.035) + jitter * 0.03;
+    strip.heading = state.yaw + side * (0.022 + speed * 0.034) + jitter * 0.018;
     strip.born = time;
-    strip.strength = 0.22 + speed * 0.78;
+    strip.strength = 0.20 + speed * 0.80;
+    strip.beamScale = beamScale;
+    strip.lengthScale = lengthScale;
     strip.active = true;
   }
 }
@@ -110,7 +119,7 @@ function updateWake(
   for (const strip of memory.strips) {
     if (!strip.active) continue;
     const age = time - strip.born;
-    if (age > 7.8) {
+    if (age > 8.2) {
       strip.active = false;
       strip.mesh.visibility = 0;
       continue;
@@ -121,16 +130,16 @@ function updateWake(
     strip.mesh.rotation.y = strip.heading;
 
     const breakup = 0.82 + Math.sin(age * 1.7 + strip.seed * 13.4) * 0.13;
-    const widen = 1 + age * (0.18 + strip.strength * 0.12);
-    const stretch = 1 + age * (0.34 + speed * 0.10);
+    const widen = strip.beamScale * (1 + age * (0.18 + strip.strength * 0.12));
+    const stretch = strip.lengthScale * (1 + age * (0.34 + speed * 0.10));
     strip.mesh.scaling.set(widen, stretch, 1);
     strip.mesh.visibility = clamp(strip.strength * Math.exp(-age * 0.43) * breakup * 0.34, 0, 0.29);
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV1?: boolean };
-if (!prototype.__pelagosBrokenWakeV1) {
-  prototype.__pelagosBrokenWakeV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV2?: boolean };
+if (!prototype.__pelagosBrokenWakeV2) {
+  prototype.__pelagosBrokenWakeV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function brokenWakeUpdate(
     state: ShipState,
