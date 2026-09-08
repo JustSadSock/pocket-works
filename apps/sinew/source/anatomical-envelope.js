@@ -59,12 +59,6 @@ function alignFallbackSword(player) {
   }
 }
 
-/**
- * Final anatomical envelope for the first-person rig.
- * ConstraintArm owns motion and collision. This layer only rejects poses that
- * would require the player's real shoulder/forearm to pass through the head or
- * that would park a weapon in the central phone viewport.
- */
 export function installAnatomicalEnvelope(game) {
   const player = game.player;
   const originalUpdate = player.update.bind(player);
@@ -72,12 +66,7 @@ export function installAnatomicalEnvelope(game) {
   let lastLookFrame = null;
   let previousTip = player.sword.tip.clone();
   let previousShield = player.shield.center.clone();
-  let centerIntrusion = 0;
-  let shieldIntrusion = 0;
 
-  // SinewGame historically forwarded only camera-filtered look rates to the
-  // player rig. Preserve the raw fast-flick rates here so weapon inertia uses
-  // the finger's actual motion while the camera keeps the reduced share.
   game.input.consumeLook = (dt) => {
     const look = originalConsumeLook(dt);
     lastLookFrame = look;
@@ -103,27 +92,25 @@ export function installAnatomicalEnvelope(game) {
 
     const frame = basis(player.upperYaw);
     const head = player.bones.head.getAbsolutePosition();
+    const chest = player.bones.chest.getAbsolutePosition();
     const shoulderR = player.bones.shoulderR.getAbsolutePosition();
     const shoulderL = player.bones.shoulderL.getAbsolutePosition();
 
-    // Sword: keep the hilt clearly on the right side in neutral/low-energy
-    // poses. Fast gestures remain free to cross the centre during an attack.
+    // Raw finger energy is deliberately independent from the filtered camera
+    // share: a fast flick can accelerate the sword without throwing the view.
     const energy = clamp((enriched.gestureEnergy ?? Math.hypot(enriched.gestureYawRate || 0, enriched.gesturePitchRate || 0) / 10.5), 0, 1);
     const baseLocal = localPoint(player.sword.base, head, frame);
     const tipLocal = localPoint(player.sword.tip, head, frame);
     const minBaseX = .19 - energy * .23;
     const minBaseZ = .38;
-    const swordCorrection = {
-      x: Math.max(0, minBaseX - baseLocal.x),
-      z: Math.max(0, minBaseZ - baseLocal.z)
-    };
-    centerIntrusion = clamp((.18 - Math.abs(tipLocal.x)) / .18, 0, 1)
+    const swordIntrusion = clamp((.18 - Math.abs(tipLocal.x)) / .18, 0, 1)
       * clamp((.82 - tipLocal.z) / .52, 0, 1)
       * (1 - energy * .72);
-    swordCorrection.x += centerIntrusion * .12;
+    const swordCorrectionX = Math.max(0, minBaseX - baseLocal.x) + swordIntrusion * .12;
+    const swordCorrectionZ = Math.max(0, minBaseZ - baseLocal.z);
 
-    if (swordCorrection.x > .0001 || swordCorrection.z > .0001) {
-      const correction = frame.right.scale(swordCorrection.x).add(frame.forward.scale(swordCorrection.z));
+    if (swordCorrectionX > .0001 || swordCorrectionZ > .0001) {
+      const correction = frame.right.scale(swordCorrectionX).add(frame.forward.scale(swordCorrectionZ));
       player.sword.base.addInPlace(correction);
       player.sword.tip.addInPlace(correction);
       const hand = player.bones.handR.getAbsolutePosition().add(correction);
@@ -136,16 +123,23 @@ export function installAnatomicalEnvelope(game) {
       alignFallbackSword(player);
     }
 
-    // Shield: keep the disc outside the central binocular corridor and far
-    // enough forward that its apparent size is believable on a landscape phone.
+    // Neutral guard deliberately opens the centre. Under a genuinely fast,
+    // nearby incoming blade the envelope relaxes and lets the shield move back
+    // toward the centre/face so blocking ability is not sacrificed for framing.
+    let threat = 0;
+    if (game.enemy && !game.enemy.dead) {
+      const trace = game.enemy.getSwordTrace();
+      const distance = Vector3.Distance(trace.tip, chest);
+      threat = clamp((trace.speed - 2.2) / 6.5, 0, 1) * clamp((2.65 - distance) / 1.45, 0, 1);
+    }
     const shieldLocal = localPoint(player.shield.center, head, frame);
+    const maxShieldX = -.50 + threat * .18;
+    const minShieldZ = .90 - threat * .12;
     const safeShield = {
-      x: Math.min(shieldLocal.x, -.34),
+      x: Math.min(shieldLocal.x, maxShieldX),
       y: clamp(shieldLocal.y, -.70, .14),
-      z: Math.max(shieldLocal.z, .82)
+      z: Math.max(shieldLocal.z, minShieldZ)
     };
-    shieldIntrusion = clamp((shieldLocal.x + .52) / .28, 0, 1)
-      * clamp((.82 - shieldLocal.z) / .34, 0, 1);
     const safeCenter = worldPoint(safeShield, head, frame);
     const shieldCorrection = safeCenter.subtract(player.shield.center);
     if (shieldCorrection.lengthSquared() > 1e-8) {
@@ -162,8 +156,6 @@ export function installAnatomicalEnvelope(game) {
       player.meshes.shieldBoss.position.copyFrom(safeCenter.add(player.shield.normal.scale(.075)));
     }
 
-    // Couple upper-body effort to weapon acceleration. This is deliberately
-    // short-lived: mass is felt in shoulders/chest without returning to jelly.
     const safeDt = Math.max(dt, 1 / 240);
     const tipVelocity = player.sword.tip.subtract(previousTip).scale(1 / safeDt);
     const shieldVelocity = player.shield.center.subtract(previousShield).scale(1 / safeDt);
@@ -175,19 +167,26 @@ export function installAnatomicalEnvelope(game) {
 
     const finalBase = localPoint(player.sword.base, head, frame);
     const finalTip = localPoint(player.sword.tip, head, frame);
+    const finalShield = localPoint(player.shield.center, head, frame);
+    const finalSwordIntrusion = clamp((.18 - Math.abs(finalTip.x)) / .18, 0, 1)
+      * clamp((.82 - finalTip.z) / .52, 0, 1)
+      * (1 - energy * .72);
+    const finalShieldIntrusion = clamp((finalShield.x + .50) / .24, 0, 1)
+      * clamp((.90 - finalShield.z) / .32, 0, 1)
+      * (1 - threat * .85);
+
     player.viewSafety = {
-      swordCenterIntrusion: Number(centerIntrusion.toFixed(4)),
-      shieldCenterIntrusion: Number(shieldIntrusion.toFixed(4)),
+      swordCenterIntrusion: Number(finalSwordIntrusion.toFixed(4)),
+      shieldCenterIntrusion: Number(finalShieldIntrusion.toFixed(4)),
       swordBaseLocalX: Number(finalBase.x.toFixed(4)),
       swordTipLocalX: Number(finalTip.x.toFixed(4)),
       swordTipLocalZ: Number(finalTip.z.toFixed(4)),
-      shieldLocalX: Number(safeShield.x.toFixed(4)),
-      shieldLocalZ: Number(safeShield.z.toFixed(4)),
-      gestureEnergy: Number(energy.toFixed(4))
+      shieldLocalX: Number(finalShield.x.toFixed(4)),
+      shieldLocalZ: Number(finalShield.z.toFixed(4)),
+      gestureEnergy: Number(energy.toFixed(4)),
+      threat: Number(threat.toFixed(4))
     };
   };
 
-  return {
-    getMetrics: () => player.viewSafety || null
-  };
+  return { getMetrics: () => player.viewSafety || null };
 }
