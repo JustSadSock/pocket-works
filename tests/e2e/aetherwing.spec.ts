@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { attachCriticalScreenshot, monitorUnexpectedBrowserOutput } from './helpers';
 
 type AetherwingState={
-  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;chunks?:number;fauna?:number;terrainMeshes?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;assetErrors?:string[];
+  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;chunks?:number;fauna?:number;terrainMeshes?:number;vegetationInstances?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;assetErrors?:string[];
 };
 
 async function state(page:Page){return page.evaluate(()=>((window as any).__AI_TEST_STATE__??null) as AetherwingState|null);}
@@ -24,9 +24,9 @@ test.describe('AETHERWING flight journey',()=>{
     const loaded=await state(page);expect(loaded?.dragonReady).toBe(true);expect(loaded?.usedFallback,'Blender dragon unexpectedly fell back to primitive runtime geometry').toBe(false);expect(loaded?.animationGroups??0).toBeGreaterThanOrEqual(5);expect(loaded?.boneCount??0).toBeGreaterThanOrEqual(20);expect(loaded?.fauna??0).toBeGreaterThanOrEqual(20);expect(loaded?.assetErrors??[]).toEqual([]);
     await page.locator('#startBtn').click();
     await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return s?.loadingState==='flying'&&s?.started===true;},undefined,{timeout:8_000});
-    await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return (s?.chunks??0)>=9&&(s?.terrainMeshes??0)>=9;},undefined,{timeout:10_000});
+    await page.waitForFunction(()=>{const s=(window as any).__AI_TEST_STATE__;return (s?.chunks??0)>=9&&(s?.terrainMeshes??0)>=9&&(s?.vegetationInstances??0)>=300;},undefined,{timeout:10_000});
     await page.waitForTimeout(450);
-    const glide=await state(page);expect(glide?.speed??0).toBeGreaterThan(12);expect(glide?.altitude??0).toBeGreaterThan(8);expect(glide?.altitude??999).toBeLessThan(180);expect(glide?.chunks??0).toBeGreaterThanOrEqual(9);expect(glide?.terrainMeshes??0).toBeGreaterThanOrEqual(9);await snap(page,testInfo,'aetherwing-glide-default');
+    const glide=await state(page);expect(glide?.speed??0).toBeGreaterThan(12);expect(glide?.altitude??0).toBeGreaterThan(8);expect(glide?.altitude??999).toBeLessThan(160);expect(glide?.chunks??0).toBeGreaterThanOrEqual(9);expect(glide?.terrainMeshes??0).toBeGreaterThanOrEqual(9);expect(glide?.vegetationInstances??0).toBeGreaterThanOrEqual(300);await snap(page,testInfo,'aetherwing-glide-default');
 
     await holdStick(page,0,-1,3000);
     const climb=await state(page);expect(climb?.pitch??-1).toBeGreaterThan(.08);expect(['climb','flap','glide']).toContain(climb?.mode);await snap(page,testInfo,'aetherwing-climb');
