@@ -2,6 +2,7 @@ import { Quaternion, Vector3 } from '@babylonjs/core';
 import { clamp } from './core.js';
 
 const AXIS_Y = new Vector3(0, 1, 0);
+const AXIS_Z = new Vector3(0, 0, 1);
 
 function basis(yaw) {
   return {
@@ -21,12 +22,13 @@ function quatAxisTo(axis, direction) {
   return Quaternion.RotationAxis(cross, Math.acos(dot));
 }
 
-function setArmSegment(mesh, a, b) {
+function setSegment(mesh, a, b, axis = AXIS_Y) {
   if (!mesh) return;
   const delta = b.subtract(a);
   mesh.position.copyFrom(a.add(b).scale(.5));
-  mesh.rotationQuaternion = quatAxisTo(AXIS_Y, delta);
-  mesh.scaling.set(1, Math.max(.001, delta.length()), 1);
+  mesh.rotationQuaternion = quatAxisTo(axis, delta);
+  if (axis === AXIS_Z) mesh.scaling.set(1, 1, Math.max(.001, delta.length()));
+  else mesh.scaling.set(1, Math.max(.001, delta.length()), 1);
 }
 
 function localPoint(point, origin, frame) {
@@ -43,6 +45,18 @@ function worldPoint(local, origin, frame) {
     .add(frame.right.scale(local.x))
     .add(new Vector3(0, local.y, 0))
     .add(frame.forward.scale(local.z));
+}
+
+function alignFallbackSword(player) {
+  const base = player.sword.base;
+  const tip = player.sword.tip;
+  const dir = tip.subtract(base).normalize();
+  setSegment(player.meshes.blade, base.add(dir.scale(.10)), tip, AXIS_Z);
+  setSegment(player.meshes.grip, base.subtract(dir.scale(.18)), base, AXIS_Y);
+  if (player.meshes.guard) {
+    player.meshes.guard.position.copyFrom(base.add(dir.scale(.015)));
+    player.meshes.guard.rotationQuaternion = quatAxisTo(AXIS_Z, dir);
+  }
 }
 
 /**
@@ -81,10 +95,11 @@ export function installAnatomicalEnvelope(game) {
     const minBaseZ = .38;
     const swordCorrection = {
       x: Math.max(0, minBaseX - baseLocal.x),
-      y: 0,
       z: Math.max(0, minBaseZ - baseLocal.z)
     };
-    centerIntrusion = clamp((.18 - Math.abs(tipLocal.x)) / .18, 0, 1) * clamp((.82 - tipLocal.z) / .52, 0, 1) * (1 - energy * .72);
+    centerIntrusion = clamp((.18 - Math.abs(tipLocal.x)) / .18, 0, 1)
+      * clamp((.82 - tipLocal.z) / .52, 0, 1)
+      * (1 - energy * .72);
     swordCorrection.x += centerIntrusion * .12;
 
     if (swordCorrection.x > .0001 || swordCorrection.z > .0001) {
@@ -96,8 +111,9 @@ export function installAnatomicalEnvelope(game) {
       player.bones.handR.setAbsolutePosition(hand);
       player.bones.elbowR.setAbsolutePosition(elbow);
       player.rightHand.position.copyFrom(hand);
-      setArmSegment(player.meshes.upperArmR, shoulderR, elbow);
-      setArmSegment(player.meshes.forearmR, elbow, hand);
+      setSegment(player.meshes.upperArmR, shoulderR, elbow);
+      setSegment(player.meshes.forearmR, elbow, hand);
+      alignFallbackSword(player);
     }
 
     // Shield: keep the disc outside the central binocular corridor and far
@@ -108,7 +124,8 @@ export function installAnatomicalEnvelope(game) {
       y: clamp(shieldLocal.y, -.70, .14),
       z: Math.max(shieldLocal.z, .82)
     };
-    shieldIntrusion = clamp((shieldLocal.x + .52) / .28, 0, 1) * clamp((.82 - shieldLocal.z) / .34, 0, 1);
+    shieldIntrusion = clamp((shieldLocal.x + .52) / .28, 0, 1)
+      * clamp((.82 - shieldLocal.z) / .34, 0, 1);
     const safeCenter = worldPoint(safeShield, head, frame);
     const shieldCorrection = safeCenter.subtract(player.shield.center);
     if (shieldCorrection.lengthSquared() > 1e-8) {
@@ -118,8 +135,8 @@ export function installAnatomicalEnvelope(game) {
       player.bones.handL.setAbsolutePosition(hand);
       player.bones.elbowL.setAbsolutePosition(elbow);
       player.leftHand.position.copyFrom(hand);
-      setArmSegment(player.meshes.upperArmL, shoulderL, elbow);
-      setArmSegment(player.meshes.forearmL, elbow, hand);
+      setSegment(player.meshes.upperArmL, shoulderL, elbow);
+      setSegment(player.meshes.forearmL, elbow, hand);
       player.meshes.shield.position.copyFrom(safeCenter);
       player.meshes.shieldRim.position.copyFrom(safeCenter.add(player.shield.normal.scale(.045)));
       player.meshes.shieldBoss.position.copyFrom(safeCenter.add(player.shield.normal.scale(.075)));
@@ -136,10 +153,14 @@ export function installAnatomicalEnvelope(game) {
     previousTip.copyFrom(player.sword.tip);
     previousShield.copyFrom(player.shield.center);
 
+    const finalBase = localPoint(player.sword.base, head, frame);
+    const finalTip = localPoint(player.sword.tip, head, frame);
     player.viewSafety = {
       swordCenterIntrusion: Number(centerIntrusion.toFixed(4)),
       shieldCenterIntrusion: Number(shieldIntrusion.toFixed(4)),
-      swordBaseLocalX: Number(baseLocal.x.toFixed(4)),
+      swordBaseLocalX: Number(finalBase.x.toFixed(4)),
+      swordTipLocalX: Number(finalTip.x.toFixed(4)),
+      swordTipLocalZ: Number(finalTip.z.toFixed(4)),
       shieldLocalX: Number(safeShield.x.toFixed(4)),
       shieldLocalZ: Number(safeShield.z.toFixed(4))
     };
