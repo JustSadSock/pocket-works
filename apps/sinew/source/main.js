@@ -119,8 +119,13 @@ async function boot() {
     soundToggle.checked = game.audio.enabled;
     updateHud(game.getState());
     qaState.booted = true;
+
+    // Reveal the playable entry state in the same frame the loading layer begins fading.
+    // The old 360 ms hidden gap produced a blank HUD frame on Safari/WebKit and made
+    // automated/mobile taps race the UI even though the engine was already ready.
+    enter.hidden = false;
     loading.classList.add('done');
-    setTimeout(() => { loading.hidden = true; enter.hidden = false; }, 360);
+    setTimeout(() => { loading.hidden = true; }, 380);
   } catch (error) {
     console.error('[SINEW] boot failed', error);
     loading.hidden = true;
