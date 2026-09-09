@@ -1,4 +1,4 @@
-import { AnimationGroup } from '@babylonjs/core';
+import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { MAX_SPEED, directionalWeights, gaitWeights } from './locomotion';
 
 type Gait = 'idle' | 'walk' | 'jog' | 'run';
