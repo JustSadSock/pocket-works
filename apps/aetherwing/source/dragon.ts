@@ -21,22 +21,20 @@ export class DragonRig{
         if(!m.parent||!r.meshes.includes(m.parent as any))m.parent=this.visual;
         const lower=m.name.toLowerCase();
         if(m.material instanceof PBRMaterial){
-          const mat=m.material;mat.metallic=Math.min(mat.metallic??0,.018);mat.roughness=Math.max(mat.roughness??.66,.66);mat.environmentIntensity=.76;
-          // Keep the authored scale map legible. The former .17 texture level
-          // flattened the entire animal into one grey-green chase-camera mass.
-          if(mat.albedoTexture)mat.albedoTexture.level=.68;mat.emissiveColor=new Color3(.004,.006,.003);
-          if(lower.includes('wingmembrane')){mat.albedoColor=new Color3(.37,.155,.082);mat.roughness=.84;mat.emissiveColor=new Color3(.006,.002,.001);}
+          const mat=m.material;mat.metallic=Math.min(mat.metallic??0,.018);mat.roughness=Math.max(mat.roughness??.66,.66);mat.environmentIntensity=.73;
+          if(mat.albedoTexture)mat.albedoTexture.level=.82;mat.emissiveColor=new Color3(.004,.006,.003);
+          if(lower.includes('wingmembrane')){mat.albedoColor=new Color3(.12,.050,.032);mat.roughness=.89;mat.environmentIntensity=.48;mat.emissiveColor=new Color3(.0015,.0008,.0005);}
           else if(lower.includes('muzzle')||lower.includes('belly')){mat.albedoColor=new Color3(.43,.33,.18);mat.roughness=.79;mat.emissiveColor=new Color3(.004,.003,.001);}
           else if(lower.includes('horn')||lower.includes('claw')||lower.includes('jaw')){mat.albedoColor=new Color3(.19,.17,.12);mat.roughness=.76;}
-          else if(lower.includes('dorsal')||lower.includes('brow')){mat.albedoColor=new Color3(.115,.235,.135);mat.roughness=.78;mat.emissiveColor=new Color3(.003,.005,.003);}
+          else if(lower.includes('dorsal')||lower.includes('brow')){mat.albedoColor=new Color3(.105,.215,.125);mat.roughness=.80;mat.emissiveColor=new Color3(.002,.004,.002);}
           else if(lower.includes('eye')){mat.albedoColor=new Color3(.95,.43,.045);mat.emissiveColor=new Color3(.62,.14,.012);mat.roughness=.28;}
-          else if(lower.includes('body')||lower.includes('chest')||lower.includes('neck')||lower.includes('tail')||lower.includes('wingarm')){mat.albedoColor=new Color3(.36,.50,.285);mat.roughness=.74;mat.emissiveColor=new Color3(.006,.009,.004);}
+          else if(lower.includes('body')||lower.includes('chest')||lower.includes('shoulder')||lower.includes('neck')||lower.includes('tail')||lower.includes('wingarm')){mat.albedoColor=new Color3(.29,.44,.25);mat.roughness=.76;mat.emissiveColor=new Color3(.004,.007,.003);}
         }
-        if(lower.includes('wingmembrane')&&m.material){const mat=m.material as Material & {twoSidedLighting?:boolean};mat.backFaceCulling=false;mat.alpha=Math.max(.985,mat.alpha);if('twoSidedLighting' in mat)mat.twoSidedLighting=true;}
+        if(lower.includes('wingmembrane')&&m.material){const mat=m.material as Material & {twoSidedLighting?:boolean};mat.backFaceCulling=false;mat.alpha=1;if('twoSidedLighting' in mat)mat.twoSidedLighting=true;}
       }
       for(const g of r.animationGroups){this.groups.set(g.name.toLowerCase(),g);g.start(true,1);g.setWeightForAllAnimatables(g.name.toLowerCase()==='glide'?1:0);}
       for(const s of r.skeletons)for(const b of s.bones)this.bones.set(b.name,b);
-      this.visual.scaling.set(1.12,1.12,1.28);this.visual.rotationQuaternion=Quaternion.Identity();this.ready=true;
+      this.visual.scaling.set(.98,1.10,1.22);this.visual.rotationQuaternion=Quaternion.Identity();this.ready=true;
     }catch(err){console.warn('AETHERWING dragon GLB fallback',err);this.createFallback();this.usedFallback=true;this.ready=true;}
   }
   update(s:FlightState,input:FlightInput,dt:number){
