@@ -58,6 +58,8 @@ export class SandParticles {
     this.drift = new ParticleSystem('wind-driven-sand', 180, scene);
     this.drift.particleTexture = this.driftTexture;
     this.drift.emitter = Vector3.Zero();
+    this.drift.isBillboardBased = true;
+    this.drift.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
     this.drift.minLifeTime = 0.55;
     this.drift.maxLifeTime = 1.10;
     this.drift.minSize = 0.09;
@@ -72,8 +74,8 @@ export class SandParticles {
     this.drift.color1 = new Color4(0.93, 0.72, 0.45, 0.21);
     this.drift.color2 = new Color4(0.78, 0.50, 0.25, 0.11);
     this.drift.colorDead = new Color4(0.68, 0.39, 0.17, 0);
-    this.drift.minAngularSpeed = -0.18;
-    this.drift.maxAngularSpeed = 0.18;
+    this.drift.minAngularSpeed = -0.10;
+    this.drift.maxAngularSpeed = 0.10;
     this.drift.updateSpeed = 1 / 60;
     this.drift.emitRate = 0;
     this.drift.start();
