@@ -3,14 +3,14 @@
   "slug": "kinema",
   "name": "KINEMA",
   "shortName": "KINEMA",
-  "description": "Third-person character motion study for landscape phones: a Blender-authored clothed human with inertial skeletal locomotion, directional actions, camera orbit, shadows and procedural footsteps.",
-  "version": "1.7.0",
+  "description": "Third-person character motion study for landscape phones: a Blender-authored clothed human with inertial skeletal locomotion, directional actions, sharper mobile rendering, shadows and procedural footsteps.",
+  "version": "1.8.0",
   "releaseDate": "2026-09-09",
-  "releaseDateTime": "2026-09-09T04:12:00+03:00",
+  "releaseDateTime": "2026-09-09T04:28:00+03:00",
   "changelog": [
-    "Движение переведено на инерционный вектор скорости: разгон, торможение и резкая смена направления больше не приклеивают корпус к джойстику мгновенно.",
-    "Подключены ранее неиспользуемые Blender actions WalkBack, StrafeLeft/Right и PivotLeft/Right; они автоматически смешиваются во время разворотов, движения боком и назад.",
-    "Поворот корпуса, ускорение и камера теперь реагируют на траекторию отдельно: добавлены локальная инерция тела, наклон от бокового ускорения и небольшой camera lead по направлению фактического движения."
+    "Babylon runtime переведён с монолитного root import на модульные imports, а glTF loader загружается только непосредственно перед Blender GLB — меньше лишнего JavaScript на старте.",
+    "Рендер теперь стартует в облегчённом разрешении и после загрузки персонажа поднимается до ~1.85 device-scale; на landscape iPhone также включается 2048 shadow map для более чёткого силуэта и контакта с полом.",
+    "Сохранена вся система KINEMA 1.7: инерционная скорость, отдельный поворот корпуса, WalkBack/Strafe/Pivot blending, Safari no-UV fallback и camera lead."
   ],
   "status": "active",
   "preset": "vite",
@@ -19,7 +19,7 @@
   "backgroundColor": "#d5d0c7",
   "themeColor": "#d5d0c7",
   "orientation": "landscape",
-  "cacheName": "kinema-v1.7.0",
+  "cacheName": "kinema-v1.8.0",
   "storageNamespace": "pocket-works:kinema",
   "tags": ["PWA", "offline", "game", "3D", "Babylon.js", "Blender", "character", "animation", "third-person", "landscape", "Safari", "audio"],
   "order": 75
