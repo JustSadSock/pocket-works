@@ -13,7 +13,8 @@ import {
   ShadowGenerator,
   TransformNode,
   UniversalCamera,
-  Vector3
+  Vector3,
+  VertexBuffer
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import './styles.css';
@@ -26,10 +27,46 @@ const VERSION = '1.2.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
+const FALLBACK_MATERIAL_COLORS: Array<[string, Color3]> = [
+  ['olive_canvas', new Color3(0.205, 0.285, 0.235)],
+  ['canvas_seams', new Color3(0.125, 0.165, 0.142)],
+  ['charcoal_twill', new Color3(0.075, 0.082, 0.080)],
+  ['trouser_seams', new Color3(0.055, 0.060, 0.059)],
+  ['skin', new Color3(0.60, 0.39, 0.275)],
+  ['hair', new Color3(0.036, 0.030, 0.027)],
+  ['boot_leather', new Color3(0.073, 0.045, 0.033)]
+];
+
 function element<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing #${id}`);
   return node as T;
+}
+
+function fallbackColorForMaterial(name: string): Color3 | null {
+  const key = name.toLowerCase();
+  return FALLBACK_MATERIAL_COLORS.find(([token]) => key.includes(token))?.[1]?.clone() || null;
+}
+
+function stabilizeNoUvMaterials(meshes: typeof import('@babylonjs/core').AbstractMesh.prototype[]): void {
+  for (const mesh of meshes) {
+    if (mesh.getTotalVertices() <= 0 || mesh.isVerticesDataPresent(VertexBuffer.UVKind)) continue;
+    const source = mesh.material;
+    if (!(source instanceof PBRMaterial) || !source.albedoTexture) continue;
+    const material = source.clone(`${source.name}-no-uv-${mesh.uniqueId}`);
+    material.albedoTexture = null;
+    const color = fallbackColorForMaterial(source.name);
+    if (color) material.albedoColor = color;
+    mesh.material = material;
+  }
+}
+
+async function warmScene(scene: Scene): Promise<void> {
+  await scene.whenReadyAsync();
+  scene.render();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  scene.render();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function loadSoundSetting(): boolean {
@@ -160,6 +197,7 @@ async function start(): Promise<void> {
     loadingText.textContent = 'Blender / body / clothing / textures';
     const result = await SceneLoader.ImportMeshAsync('', './models/', 'kinema-character.glb', scene);
     if (!result.meshes.length) throw new Error('Blender GLB загрузился без геометрии.');
+    stabilizeNoUvMaterials(result.meshes);
     for (const mesh of result.meshes) {
       if (!mesh.parent) mesh.parent = modelRoot;
       if (mesh.getTotalVertices() > 0) shadows.addShadowCaster(mesh, false);
@@ -170,9 +208,11 @@ async function start(): Promise<void> {
     if (!result.animationGroups.length) throw new Error('Blender GLB не содержит animation actions.');
     const mixer = new LocomotionMixer(result.animationGroups);
 
+    loadingBar.style.width = '94%';
+    loadingText.textContent = 'Safari / shaders / first frame';
+    await warmScene(scene);
     loadingBar.style.width = '100%';
     loadingText.textContent = `${result.animationGroups.length} clips / ready`;
-    await new Promise((resolve) => setTimeout(resolve, 150));
     loading.classList.add('hidden');
 
     let speed = 0;
