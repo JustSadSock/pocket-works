@@ -1,4 +1,5 @@
 import {
+  AbstractMesh,
   Color3,
   Color4,
   DirectionalLight,
@@ -48,7 +49,7 @@ function fallbackColorForMaterial(name: string): Color3 | null {
   return FALLBACK_MATERIAL_COLORS.find(([token]) => key.includes(token))?.[1]?.clone() || null;
 }
 
-function stabilizeNoUvMaterials(meshes: typeof import('@babylonjs/core').AbstractMesh.prototype[]): void {
+function stabilizeNoUvMaterials(meshes: AbstractMesh[]): void {
   for (const mesh of meshes) {
     if (mesh.getTotalVertices() <= 0 || mesh.isVerticesDataPresent(VertexBuffer.UVKind)) continue;
     const source = mesh.material;
