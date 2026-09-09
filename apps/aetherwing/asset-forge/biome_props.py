@@ -35,6 +35,18 @@ def smooth(o,m):
     return o
 
 
+def ground_origin(o):
+    # Runtime instances are placed directly at terrainHeight(). Joined Blender
+    # meshes retain the origin of the first primitive, which used to bury half
+    # the trunk below terrain. Move mesh-local data so local Z=0 is the real
+    # lowest point and export the node itself at Z=0.
+    if not o.data.vertices:return o
+    min_z=min(v.co.z for v in o.data.vertices)
+    for v in o.data.vertices:v.co.z-=min_z
+    o.location.z=0
+    o.data.update();return o
+
+
 def cone(name,loc,r1,r2,depth,m,verts=10):
     bpy.ops.mesh.primitive_cone_add(vertices=verts,radius1=r1,radius2=r2,depth=depth,location=loc)
     o=bpy.context.active_object; o.name=name; return smooth(o,m)
@@ -63,7 +75,6 @@ def make_fir():
     bark=mat('Fir bark',(.155,.075,.035),.96); needles=mat('Fir needles',(.050,.145,.078),.92); tips=mat('Fir fresh needles',(.075,.205,.105),.90)
     objs=[]
     objs.append(cone_between('firTrunk',(0,0,0),(0,0,10.2),.50,.18,bark,11))
-    # Natural branch whorls: low branches droop, upper branches shorten and lift.
     for ring,z in enumerate((3.0,4.0,5.0,6.0,6.95,7.85,8.7)):
         progress=ring/6.0; radius=2.95*(1-progress*.62)
         count=5 if ring<5 else 4
@@ -78,7 +89,7 @@ def make_fir():
             inner=(math.cos(a+.09)*radius*.22,math.sin(a+.09)*radius*.22,z+.12)
             objs.append(cone_between(f'firInner_{ring}_{j}',inner,mid,.39,.06,needles,8))
     objs.append(cone_between('firTop',(0,0,8.25),(0,0,10.65),.82,.025,tips,10))
-    o=join('Fir_A',objs); bev=o.modifiers.new('weathered edges','BEVEL'); bev.width=.018; bev.segments=1; return o
+    o=ground_origin(join('Fir_A',objs)); bev=o.modifiers.new('weathered edges','BEVEL'); bev.width=.018; bev.segments=1; return o
 
 
 def make_broad():
@@ -103,18 +114,17 @@ def make_broad():
     for i,(x,y,z,sx,sy,sz) in enumerate(crowns):
         c=ico(f'broadCrown{i}',(x,y,z),(sx,sy,sz),leaf2 if i in (2,3,7,8) else leaf,2)
         c.rotation_euler=(.04*(i%3-1),.13*i,.055*((i+1)%3-1)); objs.append(c)
-    return join('Broad_A',objs)
+    return ground_origin(join('Broad_A',objs))
 
 
 def make_rock():
     rock=mat('Granite',(.255,.270,.245),.99)
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3,radius=2.1,location=(0,0,1.05))
     o=bpy.context.active_object; o.name='Rock_A'; o.scale=(1.75,1.28,.76); apply(o)
-    # Deterministic low-amplitude displacement breaks the primitive silhouette.
     for v in o.data.vertices:
         p=v.co; n=.90+.10*math.sin(p.x*2.7+p.y*4.2+p.z*3.1)+.045*math.sin(p.x*7.3-p.y*5.1)
         p.x*=n; p.y*=n*(.98+.03*math.sin(p.z*4.0)); p.z*=n
-    o.data.update(); smooth(o,rock); bev=o.modifiers.new('eroded bevel','BEVEL'); bev.width=.035; bev.segments=1; return o
+    o.data.update(); ground_origin(o); smooth(o,rock); bev=o.modifiers.new('eroded bevel','BEVEL'); bev.width=.035; bev.segments=1; return o
 
 
 def main():
