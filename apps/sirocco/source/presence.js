@@ -9,6 +9,7 @@ export class DesertPresence {
     this.lastPreset = '';
     this.baseFog = game.scene.fogDensity;
     this.observer = null;
+    this.time = 0;
   }
 
   start() {
@@ -29,6 +30,7 @@ export class DesertPresence {
     const game = this.game;
     if (!game?.running || game.paused || document.hidden || game.orientationBlocked) return;
     const dt = Math.min(0.04, game.engine.getDeltaTime() / 1000);
+    this.time += dt;
     this.applyQuality();
 
     const state = this.wind.update(dt, game.controller.globalX, game.controller.globalZ);
@@ -49,6 +51,17 @@ export class DesertPresence {
     // Override the baseline audio update with the same gust value that drives
     // visible sand. That coherence makes the desert feel much less synthetic.
     game.audio?.update(game.controller.speed, game.controller.lastSlope, state);
+
+    // Secondary garment motion is intentionally tiny and applied after the
+    // locomotion update. It reads as wind pressure, not as another walk cycle.
+    const polish = game.characterPolish;
+    if (polish?.cosmeticsVisible) {
+      const pressure = state.strength * (0.35 + state.gust * 0.65);
+      const flutter = Math.sin(this.time * (4.2 + state.gust * 2.4)) * 0.012 * pressure;
+      if (polish.shoulderDrape) polish.shoulderDrape.rotation.z = -state.x * 0.035 * pressure + flutter;
+      if (polish.scarfLayer) polish.scarfLayer.rotation.y = state.z * 0.055 * pressure + flutter * 0.7;
+      if (polish.waterSkin) polish.waterSkin.rotation.x = state.x * 0.020 * pressure;
+    }
 
     // Gust fronts carry a little more dust near the horizon. Keep the range
     // tiny so LOD silhouettes never disappear and High remains crisp.
