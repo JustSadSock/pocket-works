@@ -13,6 +13,7 @@ import './marine-refit';
 import './sail-uv-refit';
 import './ship-modularity';
 import './oar-visibility-refit';
+import './rowing-input-refit';
 import './loadout-performance';
 import './marine-tuning';
 import './presence-pass';
