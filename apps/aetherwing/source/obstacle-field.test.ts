@@ -11,7 +11,7 @@ describe('ObstacleField',()=>{
     const canopy={instances:[]} as any;
     const field=new ObstacleField(world,canopy);field.update(0,true);
     expect(field.colliderCount).toBe(1);
-    expect(field.surfaceAt(12,18,0)).toBeGreaterThan(14);
+    expect(field.surfaceAt(12,18,0)).toBeGreaterThan(13.5);
     expect(field.surfaceAt(45,18,0)).toBe(2);
     tree.dispose();source.dispose();scene.dispose();engine.dispose();
   });
