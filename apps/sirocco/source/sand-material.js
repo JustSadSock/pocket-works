@@ -62,7 +62,7 @@ function textureFrom(scene, data, size, name) {
   return texture;
 }
 
-function makeSandMaterial(scene, name, albedo, normal, useVertexColors = false) {
+function makeSandMaterial(scene, name, albedo, normal) {
   const material = new PBRMaterial(name, scene);
   material.albedoColor = new Color3(1.0, 0.965, 0.90);
   material.albedoTexture = albedo;
@@ -73,7 +73,7 @@ function makeSandMaterial(scene, name, albedo, normal, useVertexColors = false) 
   material.environmentIntensity = 0.58;
   material.usePhysicalLightFalloff = true;
   material.useParallax = false;
-  material.useVertexColors = useVertexColors;
+  material.useVertexColors = false;
   material.vertexColorUseAlpha = false;
   material.backFaceCulling = true;
   return material;
@@ -87,13 +87,17 @@ export function createSandMaterials(scene) {
   normal.uScale = 3.1;
   normal.vScale = 3.1;
 
-  // Do not clone materials containing RawTexture instances. Babylon can
-  // serialise a cloned procedural texture name as a URL and attempt a network
-  // request, making far/local LODs optically different. All three materials
-  // are constructed explicitly and share the exact same GPU textures.
-  const near = makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false);
-  const far = makeSandMaterial(scene, 'sand-pbr-far', albedo, normal, false);
-  const local = makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true);
+  // Near, far and physical sand deliberately use the exact same PBR feature
+  // set. Per-vertex colour on only the physical patch produced a subtle but
+  // visible render island on WebKit even when every vertex was neutral white.
+  const near = makeSandMaterial(scene, 'sand-pbr-near', albedo, normal);
+  const far = makeSandMaterial(scene, 'sand-pbr-far', albedo, normal);
+  const local = makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal);
+
+  // The fine physical patch overlaps coarse terrain only in a narrow safety
+  // ring. Resolve depth there without lifting geometry, which would recreate
+  // the old dark island around the player.
+  local.zOffset = -1;
 
   return {
     near,

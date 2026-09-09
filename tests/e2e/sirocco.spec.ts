@@ -15,6 +15,12 @@ async function qaState(page: import('@playwright/test').Page) {
     const camera = game.camera?.camera;
     const controller = game.controller;
     const localSand = game.sandSurface?.mesh;
+    let maxLoose = 0;
+    let maxCompaction = 0;
+    for (const cell of game.sand?.cells?.values?.() || []) {
+      maxLoose = Math.max(maxLoose, cell.loose || 0);
+      maxCompaction = Math.max(maxCompaction, cell.compaction || 0);
+    }
     return {
       running: game.running,
       paused: game.paused,
@@ -23,6 +29,12 @@ async function qaState(page: import('@playwright/test').Page) {
       activeChunks: game.world?.activeChunkCount,
       sandCells: game.sand?.activeCellCount,
       sandImpacts: game.sand?.totalImpacts,
+      sandWorkMs: game.sand?.lastWorkMs,
+      sandMaintenanceMs: game.sand?.lastMaintenanceMs,
+      sandBudgetScale: game.sand?.adaptiveBudgetScale,
+      sandTransfers: game.sand?.lastTransferCount,
+      maxLoose,
+      maxCompaction,
       landmarkInstances: game.landmarks?.instances?.length ?? 0,
       characterPolishMeshes: game.characterPolish?.meshes?.length ?? 0,
       camera: camera ? {
@@ -31,14 +43,16 @@ async function qaState(page: import('@playwright/test').Page) {
       } : null,
       player: controller ? {
         x: controller.globalX, y: controller.localPosition.y, z: controller.globalZ,
-        yaw: controller.yaw, bodyYaw: controller.bodyYaw, pitch: controller.pitch, speed: controller.speed
+        yaw: controller.yaw, bodyYaw: controller.bodyYaw, pitch: controller.pitch, speed: controller.speed,
+        softness: controller.softness
       } : null,
       localSand: localSand ? {
         enabled: localSand.isEnabled(), vertices: localSand.getTotalVertices(), indices: localSand.getTotalIndices(),
         x: localSand.position.x, z: localSand.position.z
       } : null,
       meshes: game.scene?.meshes?.length,
-      materials: game.scene?.materials?.map((material: any) => material.name)
+      materials: game.scene?.materials?.map((material: any) => material.name),
+      textures: game.scene?.textures?.map((texture: any) => texture.name)
     };
   });
 }
@@ -72,14 +86,17 @@ test.describe('SIROCCO deterministic visual QA', () => {
     const initial = await qaState(page);
     expect(initial).not.toBeNull();
     expect(initial!.activeChunks).toBeGreaterThan(20);
-    // 1.5 intentionally replaces the 14k-vertex square sand patch with a
-    // circular ~4k-vertex patch. Guard both visual detail and the performance cap.
     expect(initial!.localSand?.vertices ?? 0).toBeGreaterThan(3_500);
     expect(initial!.localSand?.vertices ?? 99_999).toBeLessThan(5_000);
     expect(initial!.localSand?.indices ?? 0).toBeGreaterThan(15_000);
     expect(initial!.camera!.y - initial!.player!.y).toBeGreaterThan(1.45);
+    expect(initial!.camera!.minZ).toBeGreaterThanOrEqual(0.20);
     expect(initial!.landmarkInstances).toBeGreaterThanOrEqual(5);
-    expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(7);
+    expect(initial!.characterPolishMeshes).toBeGreaterThanOrEqual(9);
+    expect(initial!.textures).toContain('bedouin-skin-detail');
+    expect(initial!.textures).toContain('bedouin-keffiyeh-weave');
+    expect(initial!.player!.softness).toBeGreaterThan(0.2);
+    expect(initial!.player!.softness).toBeLessThan(0.9);
 
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
@@ -98,6 +115,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
       game.sandSurface.update(c, true);
       game.rig.update(c, 1 / 60);
       game.characterPolish?.update(c, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
       game.camera.update(c, 1 / 60);
     });
     await page.waitForTimeout(650);
@@ -129,12 +147,33 @@ test.describe('SIROCCO deterministic visual QA', () => {
     const walked = await qaState(page);
     expect(walked!.player!.z).not.toBeCloseTo(preWalk!.player!.z, 1);
     expect(walked!.sandImpacts).toBeGreaterThan(impactBeforeWalk);
+    expect(walked!.maxLoose).toBeGreaterThan(0.08);
+    expect(walked!.maxCompaction).toBeGreaterThan(0.08);
+    expect(walked!.sandWorkMs).toBeLessThan(12);
+    expect(walked!.sandBudgetScale).toBeGreaterThanOrEqual(0.34);
+    expect(walked!.sandBudgetScale).toBeLessThanOrEqual(1);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
+
+    await page.evaluate(() => {
+      const game = window.__SIROCCO_QA__;
+      game.controller.bodyYaw = game.controller.yaw;
+      game.controller.pitch = 0.68;
+      game.rig.update(game.controller, 1 / 60);
+      game.characterPolish?.update(game.controller, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
+      game.camera.update(game.controller, 1 / 60);
+    });
+    await page.waitForTimeout(180);
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-body-look-down', { fullPage: false });
 
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       game.controller.pitch = 1.05;
       game.controller.yaw += 1.35;
+      game.rig.update(game.controller, 1 / 60);
+      game.characterPolish?.update(game.controller, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
+      game.camera.update(game.controller, 1 / 60);
     });
     await page.waitForTimeout(140);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-look-down-yaw-diverged', { fullPage: false });
@@ -145,10 +184,14 @@ test.describe('SIROCCO deterministic visual QA', () => {
       c.yaw = 0.15;
       c.bodyYaw = 0.15;
       c.pitch = 0.52;
+      game.rig.update(c, 1 / 60);
+      game.characterPolish?.update(c, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
+      game.camera.update(c, 1 / 60);
       const yaw = c.bodyYaw;
       const fx = Math.sin(yaw), fz = Math.cos(yaw);
       const rx = Math.cos(yaw), rz = -Math.sin(yaw);
-      const steps = [0.9, 1.32, 1.74, 2.16, 2.58, 3.0];
+      const steps = [0.75, 1.1, 1.45, 1.80, 2.15, 2.50];
       steps.forEach((forward, index) => {
         const side = index % 2 === 0 ? -0.13 : 0.13;
         game.sand.stampFoot({
@@ -157,20 +200,26 @@ test.describe('SIROCCO deterministic visual QA', () => {
           yaw
         }, { speed: 2.35, lastSlope: 0.20, sliding: 0.06 });
       });
-      game.sand.relaxArea(c.globalX + fx * 1.9, c.globalZ + fz * 1.9, 2.5, 6);
-      for (let i = 0; i < 5; i += 1) game.sand.update(0.21, c.globalX, c.globalZ);
-      const dirty = game.sand.consumeDirtyBounds();
-      if (dirty) game.world.refreshDeformation(dirty);
+      const repeatX = c.globalX + fx * 0.75 - rx * 0.13;
+      const repeatZ = c.globalZ + fz * 0.75 - rz * 0.13;
+      game.sand.stampFoot({ globalX: repeatX, globalZ: repeatZ, yaw }, { speed: 1.5, lastSlope: 0.12, sliding: 0 });
+      game.sand.relaxArea(c.globalX + fx * 1.6, c.globalZ + fz * 1.6, 2.15, 4);
+      for (let i = 0; i < 4; i += 1) game.sand.update(0.23, c.globalX, c.globalZ);
+      game.sand.consumeDirtyBounds();
       game.sandSurface.markDirty();
       game.sandSurface.update(c, true);
     });
     await page.waitForTimeout(550);
-    await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand', { fullPage: false });
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-physical-sand-v2', { fullPage: false });
 
     const deformed = await qaState(page);
-    expect(deformed!.sandCells).toBeGreaterThan(80);
-    expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(6);
-    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.16);
+    expect(deformed!.sandCells).toBeGreaterThan(60);
+    expect(deformed!.sandImpacts).toBeGreaterThanOrEqual(7);
+    expect(deformed!.maxLoose).toBeGreaterThan(0.12);
+    expect(deformed!.maxCompaction).toBeGreaterThan(0.12);
+    expect(deformed!.sandWorkMs).toBeLessThan(12);
+    expect(deformed!.sandBudgetScale).toBeGreaterThanOrEqual(0.34);
+    expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.20);
 
     await testInfo.attach('sirocco-state.json', {
       body: Buffer.from(JSON.stringify({ initial, preWalk, walked, deformed }, null, 2)),

@@ -33,8 +33,7 @@ export class SiroccoGame {
     this.saveClock = 0;
     this.slideSoundClock = 0;
     this.sandVisualClock = 0;
-    this.coarseSandClock = 0;
-    this.pendingSandBounds = null;
+    this.sandDirty = false;
   }
 
   async init(report = () => {}) {
@@ -102,6 +101,7 @@ export class SiroccoGame {
     report('Прогреваем анимацию и физический песок…', 0.90);
     this.rig.update(this.controller, 1 / 60);
     this.characterPolish.update(this.controller, 1 / 60);
+    this.updateFirstPersonGarmentVisibility();
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
     await nextFrame();
@@ -158,18 +158,6 @@ export class SiroccoGame {
     this.sandSurface?.syncOrigin();
   }
 
-  queueSandBounds(bounds) {
-    if (!bounds) return;
-    if (!this.pendingSandBounds) {
-      this.pendingSandBounds = { ...bounds };
-      return;
-    }
-    this.pendingSandBounds.minX = Math.min(this.pendingSandBounds.minX, bounds.minX);
-    this.pendingSandBounds.minZ = Math.min(this.pendingSandBounds.minZ, bounds.minZ);
-    this.pendingSandBounds.maxX = Math.max(this.pendingSandBounds.maxX, bounds.maxX);
-    this.pendingSandBounds.maxZ = Math.max(this.pendingSandBounds.maxZ, bounds.maxZ);
-  }
-
   applyQuality(preset) {
     if (!preset || !this.engine) return;
     this.engine.setHardwareScalingLevel(preset.hardwareScaling);
@@ -180,6 +168,25 @@ export class SiroccoGame {
     this.sand?.setQuality(preset);
     this.sandSurface?.setQuality(preset);
     document.querySelector('#quality-label')?.replaceChildren(document.createTextNode(this.quality?.mode === 'auto' ? `AUTO · ${preset.label}` : preset.label));
+  }
+
+  updateFirstPersonGarmentVisibility() {
+    if (!this.rig || !this.controller) return;
+    const pitch = this.controller.pitch;
+    const closeLook = pitch > 0.56;
+    const verticalLook = pitch > 0.88;
+    const set = (mesh, visible) => mesh?.setEnabled?.(visible);
+
+    // Keep the skinned human, sleeves, hands, trouser cuffs and boots visible,
+    // but cull static garment shells that become screen-sized when the eye is
+    // inside/above them. This mirrors a real first-person body mask without
+    // duplicating the skeleton or breaking bone-driven footsteps.
+    set(this.rig.robeTorso, !closeLook);
+    set(this.rig.belt, !closeLook);
+    set(this.rig.scarfCollar, !closeLook);
+    for (const tail of this.rig.scarfTails || []) set(tail, !closeLook);
+    set(this.rig.frontFold, !verticalLook);
+    set(this.rig.robeSkirt, !verticalLook);
   }
 
   frame() {
@@ -195,6 +202,7 @@ export class SiroccoGame {
 
       const landings = this.rig.update(this.controller, dt);
       this.characterPolish.update(this.controller, dt);
+      this.updateFirstPersonGarmentVisibility();
       for (const landing of landings) {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
@@ -214,23 +222,18 @@ export class SiroccoGame {
       }
 
       this.sand.update(dt, this.controller.globalX, this.controller.globalZ);
-      this.queueSandBounds(this.sand.consumeDirtyBounds());
+      if (this.sand.consumeDirtyBounds()) this.sandDirty = true;
       this.sandVisualClock += dt;
-      this.coarseSandClock += dt;
 
-      // Keep the detailed physical surface responsive to footsteps, but don't
-      // rebuild thousands of vertices every animation frame while an avalanche
-      // is relaxing. Coarse chunks are even less time-critical and update twice
-      // per second. This removes the large CPU spikes visible on iPhone Safari.
-      if (this.pendingSandBounds && (landings.length > 0 || this.sandVisualClock >= 0.10)) {
+      // Fine 12 cm footprint data must never be baked into metre-scale coarse
+      // terrain: doing so turns a foot into giant triangular scars. Persistent
+      // sand state stays in the sparse field and is rendered only by the local
+      // high-detail replacement when the player is near it again.
+      if (this.sandDirty && (landings.length > 0 || this.sandVisualClock >= 0.10)) {
         this.sandSurface.markDirty();
         this.sandSurface.update(this.controller, true);
         this.sandVisualClock = 0;
-      }
-      if (this.pendingSandBounds && this.coarseSandClock >= 0.50) {
-        this.world.refreshDeformation(this.pendingSandBounds);
-        this.pendingSandBounds = null;
-        this.coarseSandClock = 0;
+        this.sandDirty = false;
       }
 
       this.contactShadow.update(this.controller);

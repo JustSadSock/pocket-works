@@ -6,6 +6,7 @@ import { clamp, damp } from './core.js';
 
 const UP = new Vector3(0, 1, 0);
 const TARGET_HEIGHT = 1.80;
+const FIRST_PERSON_BODY_LEAD = 0.18;
 
 function makeMaterial(scene, name, color, roughness = 0.94) {
   const material = new PBRMaterial(name, scene);
@@ -82,9 +83,6 @@ export class HumanoidRig {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       if (mesh !== this.modelRoot && mesh.getTotalVertices?.() > 0) {
-        // The source character is deliberately neutral. Re-materialise the
-        // exposed body as warm skin; the thobe, trousers and leather layers are
-        // separate meshes, so the figure no longer reads as one monochrome lump.
         if (mesh.material?.clone) {
           const bodyMaterial = mesh.material.clone(`bedouin-skin-${mesh.name}`);
           if ('albedoTexture' in bodyMaterial) bodyMaterial.albedoTexture = null;
@@ -202,8 +200,6 @@ export class HumanoidRig {
     };
     for (const boot of Object.values(this.boots)) boot.parent = null;
 
-    // Dark cloth just inside the robe opening keeps the lower silhouette from
-    // turning into one uninterrupted beige column while the animated feet move.
     for (const side of [-1, 1]) {
       const trouser = this.addGarment(MeshBuilder.CreateCylinder(`bedouin-trouser-cuff-${side}`, {
         height: 0.34, diameterTop: 0.145, diameterBottom: 0.12, tessellation: 16
@@ -321,7 +317,15 @@ export class HumanoidRig {
     const forwardGrade = -(normal.x * forwardX + normal.z * forwardZ);
     const sideGrade = -(normal.x * rightX + normal.z * rightZ);
 
-    this.root.position.copyFrom(controller.localPosition);
+    // Put the animated body under the natural downward sightline. The camera is
+    // intentionally forward of the anatomical eye to eliminate head clipping;
+    // leading the body by 18 cm keeps torso/hands/feet visible while preserving
+    // bone-driven footsteps and their physical sand coordinates.
+    this.root.position.set(
+      controller.localPosition.x + forwardX * FIRST_PERSON_BODY_LEAD,
+      controller.localPosition.y,
+      controller.localPosition.z + forwardZ * FIRST_PERSON_BODY_LEAD
+    );
     this.root.rotation.y = controller.bodyYaw;
     this.root.rotation.x = clamp(forwardGrade * 0.20, -0.11, 0.15);
     this.root.rotation.z = clamp(-sideGrade * 0.14, -0.08, 0.08);

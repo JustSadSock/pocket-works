@@ -20,6 +20,7 @@ export class SandWalkerController {
     this.lastSlope = 0;
     this.sliding = 0;
     this.sandSink = 0;
+    this.softness = 0.48;
   }
 
   get globalX() { return this.localPosition.x + this.worldOffsetX; }
@@ -45,6 +46,7 @@ export class SandWalkerController {
     this.speed = 0;
     this.sliding = 0;
     this.sandSink = 0;
+    this.softness = 0.48;
     return true;
   }
 
@@ -59,6 +61,7 @@ export class SandWalkerController {
     this.speed = 0;
     this.sliding = 0;
     this.sandSink = 0;
+    this.softness = 0.48;
   }
 
   snapshot() { return { x: this.globalX, z: this.globalZ, yaw: this.yaw, pitch: this.pitch }; }
@@ -73,22 +76,27 @@ export class SandWalkerController {
     const gx = this.globalX, gz = this.globalZ, normal = this.sampleNormal(gx, gz);
     const slope = Math.acos(clamp(normal.y, -1, 1));
     this.lastSlope = slope;
+    this.softness = this.surface?.sampleSoftness?.(gx, gz) ?? 0.48;
     const horizontalNormal = Math.max(0.001, Math.hypot(normal.x, normal.z));
     const uphill = wishLen > 0 ? clamp(-(wishX * normal.x + wishZ * normal.z) / horizontalNormal, -1, 1) : 0;
     const uphillPenalty = Math.max(0, uphill) * clamp(slope / 0.6, 0, 1);
     const downhillAssist = Math.max(0, -uphill) * clamp(slope / 0.65, 0, 1);
 
-    const softGroundFactor = 0.90 - uphillPenalty * 0.08;
-    const maxSpeed = (3.05 - uphillPenalty * 1.08 + downhillAssist * 0.34) * input.magnitude * softGroundFactor;
+    const looseDrag = clamp((this.softness - 0.40) / 0.56, 0, 1);
+    const firmAssist = clamp((0.44 - this.softness) / 0.28, 0, 1);
+    const softGroundFactor = 0.96 - looseDrag * 0.13 - uphillPenalty * 0.07 + firmAssist * 0.025;
+    const maxSpeed = (3.08 - uphillPenalty * 1.08 + downhillAssist * 0.34) * input.magnitude * softGroundFactor;
     const targetX = wishX * maxSpeed, targetZ = wishZ * maxSpeed;
-    const acceleration = wishLen > 0 ? (5.45 - uphillPenalty * 1.25) : 7.2;
+    const acceleration = wishLen > 0
+      ? (5.65 - uphillPenalty * 1.20 - looseDrag * 0.55)
+      : (7.4 - looseDrag * 0.65);
     this.velocity.x = damp(this.velocity.x, targetX, acceleration, dt);
     this.velocity.z = damp(this.velocity.z, targetZ, acceleration, dt);
 
-    this.sliding = clamp((slope - 0.45) / 0.24, 0, 1) * Math.max(0.1, input.magnitude);
+    this.sliding = clamp((slope - 0.45) / 0.24, 0, 1) * Math.max(0.1, input.magnitude) * (0.74 + looseDrag * 0.52);
     if (this.sliding > 0) {
       const down = this.surface?.downhill?.(gx, gz) ?? { x: normal.x / horizontalNormal, z: normal.z / horizontalNormal };
-      const slideForce = this.sliding * 1.08;
+      const slideForce = this.sliding * (0.92 + looseDrag * 0.42);
       this.velocity.x += down.x * slideForce * dt;
       this.velocity.z += down.z * slideForce * dt;
     }
@@ -99,20 +107,20 @@ export class SandWalkerController {
 
     const speedNorm = clamp(this.speed / 3.0, 0, 1);
     const sinkTarget = wishLen > 0.05
-      ? 0.010 + speedNorm * 0.013 + clamp(slope / 0.65, 0, 1) * 0.008
-      : 0.004;
-    this.sandSink = damp(this.sandSink, sinkTarget, wishLen > 0.05 ? 5.8 : 3.4, dt);
+      ? 0.006 + this.softness * 0.018 + speedNorm * (0.006 + this.softness * 0.010) + clamp(slope / 0.65, 0, 1) * 0.006
+      : 0.002 + this.softness * 0.004;
+    this.sandSink = damp(this.sandSink, sinkTarget, wishLen > 0.05 ? 6.2 : 3.7, dt);
 
     const nextGX = this.globalX, nextGZ = this.globalZ;
     const targetY = this.sampleHeight(nextGX, nextGZ) - this.sandSink;
-    const verticalLambda = this.speed > 0.2 ? 24 : 18;
+    const verticalLambda = this.speed > 0.2 ? 25 : 18;
     this.localPosition.y = damp(this.localPosition.y, targetY, verticalLambda, dt);
-    if (this.localPosition.y < targetY - 0.02) this.localPosition.y = targetY - 0.02;
+    if (this.localPosition.y < targetY - 0.018) this.localPosition.y = targetY - 0.018;
 
-    this.gait += this.speed * dt * 1.82;
+    this.gait += this.speed * dt * (1.72 + firmAssist * 0.12 - looseDrag * 0.10);
     this.bodyYaw = dampAngle(this.bodyYaw, this.yaw, 6.4, dt);
     if (Math.abs(this.localPosition.x) > 320 || Math.abs(this.localPosition.z) > 320) this.rebase();
-    return { normal, slope, uphillPenalty, sliding: this.sliding };
+    return { normal, slope, uphillPenalty, sliding: this.sliding, softness: this.softness };
   }
 
   rebase() {

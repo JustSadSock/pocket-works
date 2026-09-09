@@ -22,16 +22,7 @@ export class DebugPanel {
     this.panel.querySelector('[data-debug="chunks"]').addEventListener('change', (e) => this.deps.world.setDebugBoundaries(e.target.checked));
     this.panel.querySelector('[data-debug="ik"]').addEventListener('change', (e) => this.deps.rig.setDebugTargets(e.target.checked));
     this.panel.querySelector('[data-debug="footprints"]').addEventListener('change', (e) => {
-      if (!e.target.checked) {
-        const cells = [...this.deps.sand.cells.values()];
-        if (cells.length) {
-          const xs = cells.map((cell) => cell.ix * this.deps.sand.cellSize);
-          const zs = cells.map((cell) => cell.iz * this.deps.sand.cellSize);
-          const bounds = { minX: Math.min(...xs) - 1, maxX: Math.max(...xs) + 1, minZ: Math.min(...zs) - 1, maxZ: Math.max(...zs) + 1 };
-          this.deps.sand.clear();
-          this.deps.world.refreshDeformation(bounds);
-        }
-      }
+      if (!e.target.checked) this.deps.sand.clear();
     });
     this.panel.querySelector('[data-debug="lod"]').addEventListener('change', (e) => this.deps.world.setDebugLod(e.target.checked));
     this.panel.querySelector('[data-debug="normals"]').addEventListener('change', (e) => { this.showNormals = e.target.checked; });
@@ -44,13 +35,21 @@ export class DebugPanel {
     if (this.elapsed < 0.18) return;
     this.elapsed = 0;
     const drawCalls = this.engine._drawCalls?.current ?? '—';
+    let maxLoose = 0, maxPacked = 0;
+    for (const cell of this.deps.sand.cells.values()) {
+      maxLoose = Math.max(maxLoose, cell.loose ?? 0);
+      maxPacked = Math.max(maxPacked, cell.compaction ?? 0);
+    }
+    const budget = this.deps.sand.adaptiveBudgetScale ?? 1;
     const stats = [
       `FPS ${this.engine.getFps().toFixed(0)} · ${(1000 / Math.max(1, this.engine.getFps())).toFixed(1)} ms`,
       `draw ${drawCalls} · tris ${Math.round(this.scene.getActiveIndices() / 3).toLocaleString()}`,
       `chunks ${this.deps.world.activeChunkCount} · sand cells ${this.deps.sand.activeCellCount}`,
+      `sand CPU ${(this.deps.sand.lastWorkMs ?? 0).toFixed(2)} ms · maint ${(this.deps.sand.lastMaintenanceMs ?? 0).toFixed(2)} ms · budget ${(budget * 100).toFixed(0)}%`,
+      `flow ${this.deps.sand.lastTransferCount ?? 0} · avalanche ${this.deps.sand.avalancheBudget ?? 0} · settle ${this.deps.sand.settleBudget ?? 0}`,
+      `softness ${(controller.softness ?? 0).toFixed(2)} · loose ${maxLoose.toFixed(2)} · packed ${maxPacked.toFixed(2)}`,
       `physical impacts ${this.deps.sand.totalImpacts} · particles ${quality.particles}`,
-      `character shadow ${quality.id === 'low' ? 512 : 1024}px · ${quality.label}`,
-      `world ${controller.globalX.toFixed(1)}, ${controller.globalZ.toFixed(1)} · slope ${(controller.lastSlope * 57.2958).toFixed(1)}°`
+      `world ${controller.globalX.toFixed(1)}, ${controller.globalZ.toFixed(1)} · slope ${(controller.lastSlope * 57.2958).toFixed(1)}° · ${quality.label}`
     ];
     this.stats.textContent = stats.join('\n');
     this.updateNormals(controller);

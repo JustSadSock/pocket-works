@@ -3,8 +3,8 @@ import { clamp, damp } from './core.js';
 
 export class FirstPersonCamera {
   constructor(scene) {
-    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.77, 0.50), scene);
-    this.camera.minZ = 0.18;
+    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.12), scene);
+    this.camera.minZ = 0.26;
     this.camera.maxZ = 950;
     this.camera.fov = 1.02;
     this.camera.inertia = 0;
@@ -23,24 +23,25 @@ export class FirstPersonCamera {
     this.swayX = damp(this.swayX, swayTarget, 12, dt);
     this.pitchLag = damp(this.pitchLag, controller.pitch, 20, dt);
 
-    // Offset along the complete 3D look vector, not only yaw. The old camera
-    // moved forward horizontally, so steep pitch could rotate the animated
-    // skull/keffiyeh back through the near plane. Following pitch keeps the eye
-    // physically outside the head for every valid look angle.
-    const pitchForOffset = clamp(this.pitchLag, -1.10, 0.98);
-    const cosPitch = Math.cos(pitchForOffset);
-    const viewForwardX = Math.sin(controller.yaw) * cosPitch;
-    const viewForwardY = -Math.sin(pitchForOffset);
-    const viewForwardZ = Math.cos(controller.yaw) * cosPitch;
+    const pitchForClearance = clamp(this.pitchLag, -1.10, 0.98);
+    const viewForwardY = -Math.sin(pitchForClearance);
+    const forwardX = Math.sin(controller.yaw);
+    const forwardZ = Math.cos(controller.yaw);
     const rightX = Math.cos(controller.yaw);
     const rightZ = -Math.sin(controller.yaw);
-    const eyeForward = 0.50;
-    const eyeBaseY = 1.77;
+
+    // Keep the gameplay eye close to the anatomical head so the chest, arms
+    // and legs remain in the natural downward sightline. Head/keffiyeh safety
+    // is provided primarily by the 26 cm near plane, not by pushing the camera
+    // half a metre in front of the character.
+    const eyeForward = 0.12;
+    const eyeBaseY = 1.78;
+    const verticalClearance = viewForwardY * 0.035;
 
     this.camera.position.set(
-      controller.localPosition.x + viewForwardX * eyeForward + rightX * this.swayX,
-      controller.localPosition.y + eyeBaseY + viewForwardY * eyeForward + this.bobY,
-      controller.localPosition.z + viewForwardZ * eyeForward + rightZ * this.swayX
+      controller.localPosition.x + forwardX * eyeForward + rightX * this.swayX,
+      controller.localPosition.y + eyeBaseY + verticalClearance + this.bobY,
+      controller.localPosition.z + forwardZ * eyeForward + rightZ * this.swayX
     );
     this.camera.rotation.x = this.pitchLag;
     this.camera.rotation.y = controller.yaw;

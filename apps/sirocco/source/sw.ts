@@ -4,13 +4,15 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.5.1';
-const APP_VERSION = '1.5.1';
-const RELEASE_DATE = '2026-09-08';
+const CACHE_NAME = 'sirocco-v1.6.0';
+const APP_VERSION = '1.6.0';
+const RELEASE_DATE = '2026-09-09';
 const RELEASE_NOTES = [
-  'Следы в песке стали заметно читаемее: углубления получают локальное затенение, а выдавленные края — мягкий светлый контраст.',
-  'Солнце стало направленнее, sky fill слабее, поэтому формы дюн и мелкий рельеф лучше читаются без старых полос и квадратных теней.',
-  'Контактная тень персонажа стала плотнее и мягче по краям, не возвращая realtime shadow map на terrain.'
+  'Песок v2 различает рыхлый и уплотнённый слой: свежие валики осыпаются, повторный след уплотняется и становится твёрже.',
+  'Локальная сетка сгущает тот же vertex budget вокруг ног, поэтому следы плавнее без возврата старых лагов.',
+  'Sand physics сам снижает avalanche/settling budget при дорогом WebKit-тике и постепенно восстанавливает его.',
+  'Бедуин получил отдельную фактуру кожи, льна и куфии, а first-person камера ещё надёжнее вынесена из головы.',
+  'Chromium/WebKit QA проверяет физический песок, тело, экстремальную камеру, Blender-окружение и CPU-бюджет.'
 ];
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);

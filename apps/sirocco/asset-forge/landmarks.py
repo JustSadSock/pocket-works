@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
 
 
 def parse_args():
@@ -15,7 +14,7 @@ def parse_args():
     return parser.parse_args(argv)
 
 
-def material(name, color, roughness=0.92):
+def material(name, color, roughness=0.94):
     mat = bpy.data.materials.new(name)
     mat.diffuse_color = (*color, 1.0)
     mat.use_nodes = True
@@ -27,15 +26,34 @@ def material(name, color, roughness=0.92):
     return mat
 
 
-def ring_mesh(name, rings, segments, mat, phase=0.0):
+def assign_weathered_materials(obj, materials, height_span, phase=0.0):
+    for mat in materials:
+        obj.data.materials.append(mat)
+    for poly in obj.data.polygons:
+        z = poly.center.z
+        stripe = math.sin(z * 5.0 + phase) + 0.52 * math.sin(z * 10.8 - phase * 0.7)
+        if poly.normal.z < -0.18:
+            poly.material_index = 2  # undercuts
+        elif stripe > 0.82:
+            poly.material_index = 1  # sun-washed sediment band
+        elif stripe < -0.92:
+            poly.material_index = 3  # iron-rich darker band
+        elif z > height_span * 0.70 and poly.normal.x > 0.12:
+            poly.material_index = 4  # pale weathered crown
+        else:
+            poly.material_index = 0
+
+
+def ring_mesh(name, rings, segments, materials, phase=0.0):
     verts = []
     faces = []
     for ri, (z, rx, ry, lean_x, lean_y) in enumerate(rings):
         for i in range(segments):
             a = i / segments * math.tau
-            ripple = 1.0 + 0.045 * math.sin(a * 3.0 + phase + ri * 0.72) + 0.025 * math.sin(a * 7.0 - ri)
-            x = lean_x + math.cos(a) * rx * ripple
-            y = lean_y + math.sin(a) * ry * (1.0 + 0.035 * math.cos(a * 5.0 + ri))
+            macro = 1.0 + 0.055 * math.sin(a * 3.0 + phase + ri * 0.72)
+            micro = 1.0 + 0.026 * math.sin(a * 7.0 - ri * 0.83) + 0.012 * math.sin(a * 13.0 + ri)
+            x = lean_x + math.cos(a) * rx * macro * micro
+            y = lean_y + math.sin(a) * ry * (1.0 + 0.042 * math.cos(a * 5.0 + ri)) * micro
             verts.append((x, y, z))
     for r in range(len(rings) - 1):
         for i in range(segments):
@@ -60,99 +78,122 @@ def ring_mesh(name, rings, segments, mat, phase=0.0):
     mesh.update()
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
-    obj.data.materials.append(mat)
     for poly in obj.data.polygons:
         poly.use_smooth = True
+    assign_weathered_materials(obj, materials, rings[-1][0], phase)
     bev = obj.modifiers.new('WindSoftenedEdges', 'BEVEL')
-    bev.width = 0.06
+    bev.width = 0.055
     bev.segments = 2
     return obj
 
 
-def add_spire(mat):
+def add_spire(materials):
     rings = [
         (0.0, 2.55, 2.00, 0.0, 0.0),
-        (0.7, 2.40, 1.92, 0.05, -0.02),
-        (1.8, 2.15, 1.64, 0.16, -0.08),
-        (3.0, 1.72, 1.30, 0.33, -0.10),
-        (4.2, 1.38, 1.04, 0.52, -0.08),
-        (5.5, 1.08, 0.78, 0.73, -0.02),
-        (6.8, 0.78, 0.55, 0.92, 0.08),
-        (7.8, 0.32, 0.28, 1.05, 0.12),
+        (0.65, 2.43, 1.94, 0.05, -0.02),
+        (1.45, 2.28, 1.78, 0.11, -0.05),
+        (2.30, 2.00, 1.52, 0.22, -0.09),
+        (3.20, 1.66, 1.25, 0.37, -0.11),
+        (4.20, 1.39, 1.03, 0.53, -0.08),
+        (5.20, 1.16, 0.86, 0.69, -0.04),
+        (6.15, 0.92, 0.68, 0.84, 0.03),
+        (6.95, 0.67, 0.49, 0.96, 0.08),
+        (7.55, 0.42, 0.34, 1.04, 0.11),
+        (7.95, 0.22, 0.20, 1.08, 0.13),
     ]
-    obj = ring_mesh('PW_WindSpire', rings, 18, mat, phase=0.4)
+    obj = ring_mesh('PW_WindSpire', rings, 24, materials, phase=0.4)
     obj.rotation_euler[2] = math.radians(-8)
     return obj
 
 
-def add_shelf(mat):
+def add_shelf(materials):
     rings = [
-        (0.0, 3.4, 1.6, 0.0, 0.0),
-        (0.55, 3.25, 1.50, -0.08, 0.02),
-        (1.15, 3.10, 1.38, -0.12, 0.04),
-        (1.9, 2.85, 1.22, -0.16, 0.06),
-        (2.45, 2.30, 0.95, -0.20, 0.10),
-        (2.85, 1.65, 0.72, -0.24, 0.13),
+        (0.0, 3.55, 1.72, 0.0, 0.0),
+        (0.45, 3.42, 1.62, -0.06, 0.02),
+        (0.92, 3.30, 1.51, -0.10, 0.03),
+        (1.38, 3.18, 1.42, -0.14, 0.05),
+        (1.84, 2.98, 1.28, -0.18, 0.08),
+        (2.28, 2.65, 1.10, -0.22, 0.10),
+        (2.62, 2.22, 0.91, -0.28, 0.12),
+        (2.90, 1.72, 0.72, -0.35, 0.14),
     ]
-    obj = ring_mesh('PW_ErodedShelf', rings, 20, mat, phase=1.1)
+    obj = ring_mesh('PW_ErodedShelf', rings, 26, materials, phase=1.1)
     obj.location = (6.4, 0.2, 0.0)
     obj.rotation_euler[2] = math.radians(14)
     return obj
 
 
-def add_balanced_stone(mat):
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=1.0, location=(-5.8, 0.2, 1.8))
+def add_balanced_stone(materials):
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=1.0, location=(-5.8, 0.2, 1.95))
     obj = bpy.context.active_object
     obj.name = 'PW_BalancedStone'
     for v in obj.data.vertices:
         p = v.co
-        wave = 1.0 + 0.12 * math.sin(p.x * 4.7 + p.z * 2.1) + 0.06 * math.cos(p.y * 6.2 - p.z)
-        p.x *= 2.1 * wave
-        p.y *= 1.25 * (1.0 + 0.08 * math.sin(p.z * 5.0))
-        p.z *= 1.65 * (1.0 + 0.05 * math.cos(p.x * 3.0))
-    obj.data.materials.append(mat)
+        wave = 1.0 + 0.13 * math.sin(p.x * 4.7 + p.z * 2.1) + 0.065 * math.cos(p.y * 6.2 - p.z)
+        p.x *= 2.15 * wave
+        p.y *= 1.28 * (1.0 + 0.09 * math.sin(p.z * 5.0))
+        p.z *= 1.72 * (1.0 + 0.06 * math.cos(p.x * 3.0))
+    for mat in materials:
+        obj.data.materials.append(mat)
     for poly in obj.data.polygons:
         poly.use_smooth = True
+        if poly.normal.z < -0.25:
+            poly.material_index = 2
+        elif math.sin(poly.center.z * 7.0 + poly.center.x * 1.7) > 0.75:
+            poly.material_index = 1
+        elif poly.normal.x > 0.45:
+            poly.material_index = 4
+        else:
+            poly.material_index = 0
     obj.rotation_euler = (math.radians(-7), math.radians(10), math.radians(-14))
 
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.0, location=(-5.9, 0.12, 0.48))
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.0, location=(-5.92, 0.14, 0.50))
     base = bpy.context.active_object
     base.name = 'PW_BalancedStoneFoot'
-    base.scale = (1.15, 0.88, 0.58)
-    base.data.materials.append(mat)
+    base.scale = (1.28, 0.94, 0.60)
+    for mat in materials:
+        base.data.materials.append(mat)
     for poly in base.data.polygons:
         poly.use_smooth = True
+        poly.material_index = 2 if poly.normal.z < 0.15 else 0
     return obj
 
 
-def add_strata(obj, mat):
-    # Thin inset rings catch grazing sunlight and create authored sediment layers.
-    for idx, z in enumerate((0.8, 1.65, 2.55, 3.55, 4.65, 5.75)):
-        bpy.ops.mesh.primitive_torus_add(
-            major_radius=max(0.32, 2.15 - z * 0.22),
-            minor_radius=0.035,
-            major_segments=28,
-            minor_segments=5,
-            location=(0.15 + z * 0.11, -0.08 + z * 0.018, z),
-            rotation=(0.0, 0.0, math.radians(-8)),
-        )
-        torus = bpy.context.active_object
-        torus.name = f'PW_Strata_{idx:02d}'
-        torus.scale.y = 0.78
-        torus.data.materials.append(mat)
+def add_base_scree(materials):
+    points = [
+        (-3.4, -1.6, 0.18, 0.38), (-2.7, 1.4, 0.14, 0.28), (-1.4, -2.05, 0.12, 0.22),
+        (2.15, -1.65, 0.13, 0.26), (3.4, 1.25, 0.17, 0.33), (5.0, -1.55, 0.14, 0.29),
+        (8.35, 1.25, 0.15, 0.31), (-7.45, -0.72, 0.11, 0.23), (-4.2, 1.62, 0.13, 0.25),
+    ]
+    for idx, (x, y, z, scale) in enumerate(points):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=1.0, location=(x, y, z))
+        pebble = bpy.context.active_object
+        pebble.name = f'PW_Scree_{idx:02d}'
+        pebble.scale = (scale * 1.45, scale, scale * 0.62)
+        pebble.rotation_euler = (0.15 * idx, 0.23 * idx, 0.41 * idx)
+        for mat in materials:
+            pebble.data.materials.append(mat)
+        for poly in pebble.data.polygons:
+            poly.use_smooth = True
+            poly.material_index = 3 if idx % 3 == 0 else 0
 
 
 def main():
     args = parse_args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    sandstone = material('SiroccoSandstone', (0.43, 0.19, 0.075), 0.96)
-    strata = material('SiroccoStrata', (0.57, 0.285, 0.115), 0.93)
-    spire = add_spire(sandstone)
-    add_shelf(sandstone)
-    add_balanced_stone(sandstone)
-    add_strata(spire, strata)
 
-    # Apply transforms/modifiers before export for predictable mobile runtime cost.
+    sandstone = material('SiroccoSandstoneBase', (0.46, 0.235, 0.105), 0.965)
+    sunface = material('SiroccoSunFace', (0.61, 0.345, 0.165), 0.94)
+    undercut = material('SiroccoUndercut', (0.245, 0.105, 0.050), 0.985)
+    iron = material('SiroccoIronStain', (0.35, 0.135, 0.060), 0.97)
+    pale = material('SiroccoPaleWeathering', (0.69, 0.42, 0.22), 0.95)
+    materials = [sandstone, sunface, undercut, iron, pale]
+
+    add_spire(materials)
+    add_shelf(materials)
+    add_balanced_stone(materials)
+    add_base_scree(materials)
+
     bpy.ops.object.select_all(action='DESELECT')
     for obj in list(bpy.context.scene.objects):
         if obj.type == 'MESH':

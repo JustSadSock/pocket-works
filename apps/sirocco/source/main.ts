@@ -5,12 +5,14 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'SIROCCO';
-const version = '1.5.1';
+const version = '1.6.0';
 const storageNamespace = 'pocket-works:sirocco';
 const releaseNotes = [
-  'Следы в песке стали заметно читаемее: углубления получают локальное затенение, а выдавленные края — мягкий светлый контраст.',
-  'Солнце стало направленнее, sky fill слабее, поэтому формы дюн и мелкий рельеф лучше читаются без старых полос и квадратных теней.',
-  'Контактная тень персонажа стала плотнее и мягче по краям, не возвращая realtime shadow map на terrain.'
+  'Песок v2 различает рыхлый и уплотнённый слой: свежие валики осыпаются, повторный след уплотняется и становится твёрже.',
+  'Локальная сетка теперь сгущает тот же vertex budget вокруг ног, поэтому следы заметно плавнее без возврата старых лагов.',
+  'Sand physics сам снижает avalanche/settling budget при дорогом WebKit-тике и постепенно восстанавливает его при наличии запаса.',
+  'Бедуин получил отдельную фактуру кожи, льна и куфии, а first-person камера ещё надёжнее вынесена из головы.',
+  'Playwright Chromium/WebKit проверяет обычный взгляд вниз на тело, экстремальную камеру, физический песок, Blender-скалы и CPU-бюджет.'
 ];
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
