@@ -158,21 +158,15 @@ export class BedouinVisualPolish {
       return mesh;
     };
 
-    this.strap = add(MeshBuilder.CreateBox('bedouin-crossbody-strap', {
-      width: 0.052, height: 0.78, depth: 0.028
-    }, this.scene), darkLeather);
+    this.strap = add(MeshBuilder.CreateBox('bedouin-crossbody-strap', { width: 0.052, height: 0.78, depth: 0.028 }, this.scene), darkLeather);
     this.strap.position.set(0.035, 1.20, 0.265);
     this.strap.rotation.z = -0.43;
 
-    this.pouch = add(MeshBuilder.CreateBox('bedouin-belt-pouch', {
-      width: 0.19, height: 0.15, depth: 0.105
-    }, this.scene), darkLeather);
+    this.pouch = add(MeshBuilder.CreateBox('bedouin-belt-pouch', { width: 0.19, height: 0.15, depth: 0.105 }, this.scene), darkLeather);
     this.pouch.position.set(0.27, 0.91, 0.10);
     this.pouch.rotation.y = -0.16;
 
-    const clasp = add(MeshBuilder.CreateCylinder('bedouin-pouch-clasp', {
-      height: 0.018, diameter: 0.035, tessellation: 12
-    }, this.scene), brass);
+    const clasp = add(MeshBuilder.CreateCylinder('bedouin-pouch-clasp', { height: 0.018, diameter: 0.035, tessellation: 12 }, this.scene), brass);
     clasp.position.set(0.27, 0.93, 0.158);
     clasp.rotation.x = Math.PI * 0.5;
 
@@ -182,29 +176,21 @@ export class BedouinVisualPolish {
 
     this.gores = [];
     for (const side of [-1, 1]) {
-      const gore = add(MeshBuilder.CreateBox(`bedouin-robe-gore-${side}`, {
-        width: 0.13, height: 0.64, depth: 0.030
-      }, this.scene), clothShadow);
+      const gore = add(MeshBuilder.CreateBox(`bedouin-robe-gore-${side}`, { width: 0.13, height: 0.64, depth: 0.030 }, this.scene), clothShadow);
       gore.position.set(side * 0.245, 0.58, 0.145);
       gore.rotation.z = side * 0.035;
       this.gores.push(gore);
     }
 
-    this.shoulderDrape = add(MeshBuilder.CreateBox('bedouin-shoulder-drape', {
-      width: 0.50, height: 0.19, depth: 0.035
-    }, this.scene), headCloth);
+    this.shoulderDrape = add(MeshBuilder.CreateBox('bedouin-shoulder-drape', { width: 0.50, height: 0.19, depth: 0.035 }, this.scene), headCloth);
     this.shoulderDrape.position.set(0, 1.43, -0.245);
     this.shoulderDrape.rotation.x = -0.10;
 
-    this.scarfLayer = add(MeshBuilder.CreateBox('bedouin-patterned-scarf-layer', {
-      width: 0.36, height: 0.38, depth: 0.024
-    }, this.scene), redCloth);
+    this.scarfLayer = add(MeshBuilder.CreateBox('bedouin-patterned-scarf-layer', { width: 0.36, height: 0.38, depth: 0.024 }, this.scene), redCloth);
     this.scarfLayer.position.set(-0.08, 1.34, -0.262);
     this.scarfLayer.rotation.z = 0.10;
 
-    this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', {
-      diameter: 0.53, thickness: 0.022, tessellation: 24
-    }, this.scene), redCloth);
+    this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', { diameter: 0.53, thickness: 0.022, tessellation: 24 }, this.scene), redCloth);
     this.beltWrap.position.y = 0.90;
   }
 
@@ -217,7 +203,11 @@ export class BedouinVisualPolish {
   update(controller, dt) {
     this.time += dt;
     const yawDivergence = Math.abs(angleDelta(controller.yaw, controller.bodyYaw));
-    const cameraSafe = yawDivergence < 0.68 && controller.pitch < 0.84;
+    // These accessories live on top of the skinned body and are valuable from
+    // normal view angles, but close first-person pitch turns straps and scarf
+    // panels into screen-sized polygons. Hide only the cosmetic layer early;
+    // sleeves, hands, legs and the real walk rig remain visible.
+    const cameraSafe = yawDivergence < 0.62 && controller.pitch < 0.58;
     this.setCosmeticsVisible(cameraSafe);
     if (!cameraSafe) return;
 
@@ -226,12 +216,8 @@ export class BedouinVisualPolish {
     const looseSway = 0.80 + softness * 0.45;
     if (this.pouch) this.pouch.rotation.z = Math.sin(this.time * 3.2 + controller.gait) * 0.032 * speed * looseSway;
     if (this.waterSkin) this.waterSkin.rotation.z = -0.08 + Math.sin(this.time * 2.4 + 0.7) * 0.042 * speed * looseSway;
-    for (let i = 0; i < this.gores.length; i += 1) {
-      this.gores[i].rotation.x = Math.sin(controller.gait + i * Math.PI) * 0.023 * speed * looseSway;
-    }
-    if (this.scarfLayer) {
-      this.scarfLayer.rotation.x = -0.02 + Math.sin(this.time * 2.0 + controller.gait * 0.35) * 0.018 * speed;
-    }
+    for (let i = 0; i < this.gores.length; i += 1) this.gores[i].rotation.x = Math.sin(controller.gait + i * Math.PI) * 0.023 * speed * looseSway;
+    if (this.scarfLayer) this.scarfLayer.rotation.x = -0.02 + Math.sin(this.time * 2.0 + controller.gait * 0.35) * 0.018 * speed;
   }
 
   dispose() {
