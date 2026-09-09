@@ -3,7 +3,7 @@
   "jobs": [
     {
       "name": "kinema-character",
-      "script": "character_blender52.py",
+      "script": "character_blender52_v16.py",
       "output": "public/models/kinema-character.glb",
       "requireArmature": true,
       "requireAnimation": true
