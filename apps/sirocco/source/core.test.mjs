@@ -55,6 +55,8 @@ assert.ok(worldSource.includes('replacementIntersectsChunk'));
 assert.ok(worldSource.includes('dx * dx + dz * dz < safeRadius * safeRadius'));
 assert.ok(worldSource.includes('chunk.mesh.receiveShadows = false'));
 assert.ok(!worldSource.includes('nearHoleHalfExtent'));
+assert.ok(worldSource.includes('updateReplacementIndices'), 'moving local sand must update only coarse index buffers');
+assert.ok(worldSource.includes('chunk.mesh.setIndices'), 'replacement movement must not rebuild static coarse vertex data');
 assert.ok(
   worldSource.includes('buildChunkData(chunk.cx, chunk.cz, this.quality.segments, null, this.localReplacement)'),
   'coarse terrain rebuilds must never sample the 12 cm physical footprint field'
@@ -124,8 +126,10 @@ assert.ok(polishSource.includes('bedouin-skin-detail'), 'visible skin must have 
 assert.ok(polishSource.includes('bedouin-keffiyeh-weave'), 'head cloth must use a separate textile treatment');
 assert.ok(polishSource.includes('bedouin-first-person-thobe-front'), 'look-down view must have a dedicated safe torso surface');
 assert.ok(polishSource.includes('setSkinVisible'), 'extreme pitch must be able to cull the imported skin mesh without affecting bones');
-assert.ok(polishSource.includes('controller.pitch < 0.44'), 'large external accessories must disappear before they fill the first-person view');
-assert.ok(polishSource.includes('controller.pitch >= 0.40'), 'safe first-person torso must replace external garments before the sand inspection angle');
+assert.ok(polishSource.includes('setRigGarmentsVisible'), 'large core garments must have a dedicated first-person cull path');
+assert.ok(polishSource.includes('controller.pitch < 0.40'), 'large external accessories must disappear before they fill the first-person view');
+assert.ok(polishSource.includes('controller.pitch >= 0.38'), 'safe first-person torso must replace external garments before the sand inspection angle');
+assert.ok(polishSource.includes('CreatePlane'), 'first-person cloth must be a thin surface rather than a screen-sized box');
 
 const landmarkSource = readFileSync(new URL('./landmarks.js', import.meta.url), 'utf8');
 assert.ok(landmarkSource.includes('sirocco-rock-contact-shadow-material'), 'Blender landmarks must have stable mobile-safe contact grounding');
