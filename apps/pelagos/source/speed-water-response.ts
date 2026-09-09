@@ -97,17 +97,11 @@ function applySpeedWaterDynamics(
   let forwardVelocity = state.velocityX * fwdX + state.velocityZ * fwdZ;
   let lateralVelocity = state.velocityX * rightX + state.velocityZ * rightZ;
 
-  // Resistance from crossing a moving wave field is separate from the hull's calm-water drag.
-  // It rises non-linearly with both vessel speed and encounter rate, so accelerating into chop now
-  // produces a visibly and physically different result from drifting through the same sea.
   forwardVelocity *= Math.exp(-profile.waveDragRate * safeDt);
   lateralVelocity *= Math.exp(-profile.waveDragRate * 0.42 * safeDt);
   state.velocityX = fwdX * forwardVelocity + rightX * lateralVelocity;
   state.velocityZ = fwdZ * forwardVelocity + rightZ * lateralVelocity;
 
-  // Dynamic squat increases with speed while fast-rising bow water produces a short supported lift.
-  // A falling surface releases the bow again. These are bounded accelerations layered on top of the
-  // long-hull buoyancy solver rather than a second position solver.
   const verticalAcceleration = profile.slamAcceleration
     - profile.releaseAcceleration
     - profile.squatAcceleration;
@@ -172,16 +166,16 @@ function updateSpeedWaterVisuals(
   const relativeBowRise = bow.rate - state.verticalVelocity;
   const profile = speedWaterProfile(Math.abs(telemetry.forwardSpeed), environment.waveScale, relativeBowRise);
   const speed = Math.max(0, telemetry.speed);
+  const sprayLoad = clamp(
+    profile.speedFactor * profile.speedFactor * (0.50 + profile.roughness * 0.52)
+    + profile.slamAcceleration * 1.45,
+    0,
+    1.65
+  );
 
   const spray = world.scene.particleSystems.find((system: { name: string }) => system.name === 'bow-spray') as ParticleSystem | undefined;
   if (spray) {
     const motionGate = clamp((speed - 0.18) / 0.55, 0, 1);
-    const sprayLoad = clamp(
-      profile.speedFactor * profile.speedFactor * (0.50 + profile.roughness * 0.52)
-      + profile.slamAcceleration * 1.45,
-      0,
-      1.65
-    );
     const desiredRate = motionGate * (5 + speed * speed * 5.4 + sprayLoad * 92);
     spray.emitRate = Math.max(spray.emitRate * 0.52, desiredRate);
 
@@ -206,8 +200,24 @@ function updateSpeedWaterVisuals(
     spray.maxEmitPower = 2.4 + speed * 0.46 + profile.slamAcceleration * 1.8;
   }
 
+  // The contact pass lays down the physically located waterline strips first. This final response
+  // only changes their energy: low-speed meniscus remains subtle, while a fast hull generates broad
+  // shoulder wash and a visibly stronger transom boil without moving the contact points themselves.
+  const contactGain = clamp(0.62 + Math.pow(profile.speedFactor, 1.45) * 1.18 + sprayLoad * 0.22, 0.62, 2.15);
+  for (const mesh of world.scene.meshes) {
+    if (mesh.name.startsWith('presence-hull-foam-')) {
+      mesh.visibility = clamp(mesh.visibility * contactGain, 0, 0.82);
+      mesh.scaling.x *= 0.92 + profile.speedFactor * 0.26;
+      mesh.scaling.z *= 0.96 + profile.speedFactor * 0.12;
+    } else if (mesh.name.startsWith('pelagos-transom-foam-')) {
+      mesh.visibility = clamp(mesh.visibility * (0.72 + profile.speedFactor * 1.10), 0, 0.66);
+      mesh.scaling.x *= 0.94 + profile.speedFactor * 0.20;
+    }
+  }
+
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.pelagosBowSpraySpeed = profile.speedFactor.toFixed(3);
+    document.documentElement.dataset.pelagosContactGain = contactGain.toFixed(3);
   }
 }
 
