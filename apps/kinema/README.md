@@ -39,4 +39,4 @@ npm run typecheck --workspace @pocket-works/kinema
 npm run build --workspace @pocket-works/kinema
 ```
 
-The release mobile QA exercises the production-like build in Chromium and WebKit, records KINEMA telemetry (`peakSpeed`, `peakGait`, `travelDistance`, animation/material readiness) and captures landscape screenshots for visual inspection before merge.
+Final Pocket Works AI Mobile Gameplay QA passed on the 1.6.0 release build in Chromium and WebKit. The release runner exercised production-like packaging, mobile touch exploration, KINEMA locomotion telemetry and landscape screenshot capture without critical runtime errors.
