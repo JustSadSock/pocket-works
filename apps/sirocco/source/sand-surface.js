@@ -1,6 +1,6 @@
 import { Mesh, VertexData } from '@babylonjs/core';
 import { clamp, smoothstep } from './core.js';
-import { meshTerrainShadingNormal, sandVariation } from './terrain.js';
+import { meshTerrainShadingNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
 
 function warpLocalAxis(value, radius) {
@@ -172,16 +172,12 @@ export class LocalSandSurface {
         normals[ni + 1] = ny * inv;
         normals[ni + 2] = nz * inv;
 
-        // Match the coarse terrain's baseline vertex tint before applying any
-        // footprint-specific cavity/rim modulation. This makes an untouched
-        // replacement patch visually disappear into the surrounding dune.
-        const coarseBrightness = clamp(0.96 + sandVariation(gx, gz) * 0.035 - (1 - base.y) * 0.13, 0.84, 1.05);
         const cavity = smoothstep(0.005, 0.055, -deformations[i]);
         const shade = 1 - cavity * (0.080 + compactValues[i] * 0.060);
         const ci = i * 4;
-        colors[ci] *= coarseBrightness * shade;
-        colors[ci + 1] *= coarseBrightness * 0.995 * shade;
-        colors[ci + 2] *= coarseBrightness * 0.975 * shade;
+        colors[ci] *= shade;
+        colors[ci + 1] *= shade;
+        colors[ci + 2] *= shade;
       }
     }
 
