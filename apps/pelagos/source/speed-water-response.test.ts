@@ -24,4 +24,13 @@ describe('PELAGOS speed-aware water response', () => {
     expect(risingCrest.slamAcceleration).toBeLessThan(0.75);
     expect(risingCrest.encounterFactor).toBeGreaterThan(calmEncounter.encounterFactor);
   });
+
+  it('puts a short hull deeper into the wave-making regime at the same absolute speed', () => {
+    const harbor = speedWaterProfile(4.2, 1.08, 0.8, 10.8);
+    const highboard = speedWaterProfile(4.2, 1.08, 0.8, 15.6);
+    expect(harbor.froude).toBeGreaterThan(highboard.froude);
+    expect(harbor.speedFactor).toBeGreaterThan(highboard.speedFactor);
+    expect(harbor.waveDragRate).toBeGreaterThan(highboard.waveDragRate);
+    expect(harbor.squatAcceleration).toBeGreaterThan(highboard.squatAcceleration);
+  });
 });
