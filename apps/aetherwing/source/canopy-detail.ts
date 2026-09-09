@@ -3,13 +3,18 @@ import { riverCenter, terrainHeight, WorldStreamer } from './world';
 
 const hash=(x:number,z:number)=>{let n=(Math.imul(x|0,374761393)^Math.imul(z|0,668265263)^0x6d2b79f5)|0;n=Math.imul((n^(n>>>15))|0,2246822519);return ((n^(n>>>13))>>>0)/4294967295;};
 const terrainKey=(x:number,z:number)=>`${Math.floor((x+260)/520)}:${Math.floor((z+260)/520)}`;
+const sourceNames=new Set(['firdark','firblue','oak','aspen','fieldrock','meadowflower','understory','fir_a','broad_a','rock_a']);
 
 export class CanopyDetailLayer{
   readonly instances:InstancedMesh[]=[];
   private cell='';
-  constructor(private world:WorldStreamer){}
+  constructor(private world:WorldStreamer){
+    this.parkSourceMeshes();
+    void this.world.templatesReady.then(()=>this.parkSourceMeshes());
+  }
   get activeCount(){return this.instances.length;}
   private terrainLoaded(x:number,z:number){return this.world.chunks.has(terrainKey(x,z));}
+  private parkSourceMeshes(){for(const mesh of this.world.scene.meshes)if(sourceNames.has(mesh.name.toLowerCase()))mesh.position.y=-12000;}
 
   update(position:Vector3,quality:number){
     if(this.world.authoredTemplateCount<3)return;
