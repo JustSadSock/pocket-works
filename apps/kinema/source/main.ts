@@ -24,7 +24,7 @@ import { FootstepAudio } from './audio';
 import { InputController } from './input';
 import { MAX_SPEED, exponentialApproach, speedFromMagnitude } from './locomotion';
 
-const VERSION = '1.2.0';
+const VERSION = '1.6.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type GaitName = 'idle' | 'walk' | 'jog' | 'run';
