@@ -3,7 +3,7 @@ import { riverCenter, terrainHeight, WorldStreamer } from './world';
 
 const hash=(x:number,z:number)=>{let n=(Math.imul(x|0,374761393)^Math.imul(z|0,668265263)^0x6d2b79f5)|0;n=Math.imul((n^(n>>>15))|0,2246822519);return ((n^(n>>>13))>>>0)/4294967295;};
 const terrainKey=(x:number,z:number)=>`${Math.floor((x+260)/520)}:${Math.floor((z+260)/520)}`;
-const sourceNames=new Set(['firdark','firblue','oak','aspen','fieldrock','meadowflower','understory','fir_a','broad_a','rock_a']);
+const sourcePrefixes=['firdark','firblue','oak','aspen','fieldrock','meadowflower','understory','fir_a','broad_a','rock_a'];
 
 export class CanopyDetailLayer{
   readonly instances:InstancedMesh[]=[];
@@ -14,11 +14,18 @@ export class CanopyDetailLayer{
   }
   get activeCount(){return this.instances.length;}
   private terrainLoaded(x:number,z:number){return this.world.chunks.has(terrainKey(x,z));}
-  private parkSourceMeshes(){for(const mesh of this.world.scene.meshes)if(sourceNames.has(mesh.name.toLowerCase()))mesh.position.y=-12000;}
+  private parkSourceMeshes(){
+    for(const mesh of this.world.scene.meshes){
+      if(mesh instanceof InstancedMesh)continue;
+      const name=mesh.name.toLowerCase();
+      if(sourcePrefixes.some(prefix=>name===prefix||name.startsWith(`${prefix}.`)||name.startsWith(`${prefix}_`)))mesh.position.y=-12000;
+    }
+  }
 
   update(position:Vector3,quality:number){
     if(this.world.authoredTemplateCount<3)return;
-    const cx=Math.floor(position.x/260),cz=Math.floor(position.z/260),tier=quality>.74?1:0,key=`${cx}:${cz}:${tier}`;if(key===this.cell)return;this.cell=key;this.clear();
+    this.parkSourceMeshes();
+    const cx=Math.floor(position.x/260),cz=Math.floor(position.z/260),tier=quality>.74?1:0,terrainStamp=[...this.world.chunks.keys()].sort().join('|'),key=`${cx}:${cz}:${tier}:${terrainStamp}`;if(key===this.cell)return;this.cell=key;this.clear();
     const clusters=tier?8:5,perCluster=tier?11:7,range=335;
     for(let c=0;c<clusters;c++){
       const sa=cx*313+c*97,sz=cz*331-c*89,angle=hash(sa,sz)*Math.PI*2,dist=82+hash(sz+17,sa-5)*(range-82),centerX=position.x+Math.cos(angle)*dist,centerZ=position.z+Math.sin(angle)*dist,spread=28+hash(sa*3,sz*5)*46;
