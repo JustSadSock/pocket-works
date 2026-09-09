@@ -110,6 +110,7 @@ export class BedouinVisualPolish {
     this.textures = [];
     this.time = 0;
     this.cosmeticsVisible = true;
+    this.skinVisible = true;
   }
 
   init() {
@@ -207,19 +208,16 @@ export class BedouinVisualPolish {
     this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', { diameter: 0.53, thickness: 0.022, tessellation: 24 }, this.scene), redCloth);
     this.beltWrap.position.y = 0.90;
 
-    // A compact first-person-only chest front. It lives just beyond the near
-    // plane and replaces the large cylindrical garment shell when looking down,
-    // so the player sees cloth and body volume without ever seeing its interior.
     this.firstPersonChest = addFirstPerson(MeshBuilder.CreateBox('bedouin-first-person-thobe-front', {
-      width: 0.39, height: 0.46, depth: 0.055
+      width: 0.46, height: 0.54, depth: 0.050
     }, this.scene), firstPersonLinen);
-    this.firstPersonChest.position.set(0, 1.18, 0.245);
-    this.firstPersonChest.rotation.x = -0.08;
+    this.firstPersonChest.position.set(0, 1.12, 0.305);
+    this.firstPersonChest.rotation.x = -0.10;
 
     this.firstPersonSash = addFirstPerson(MeshBuilder.CreateBox('bedouin-first-person-sash-front', {
-      width: 0.35, height: 0.065, depth: 0.060
+      width: 0.41, height: 0.060, depth: 0.054
     }, this.scene), firstPersonSash);
-    this.firstPersonSash.position.set(0, 0.965, 0.248);
+    this.firstPersonSash.position.set(0, 0.91, 0.307);
   }
 
   setCosmeticsVisible(visible) {
@@ -232,14 +230,23 @@ export class BedouinVisualPolish {
     for (const mesh of this.firstPersonMeshes) mesh.setEnabled(visible);
   }
 
+  setSkinVisible(visible) {
+    if (this.skinVisible === visible) return;
+    this.skinVisible = visible;
+    for (const mesh of this.rig.meshes || []) mesh.setEnabled(visible);
+  }
+
   update(controller, dt) {
     this.time += dt;
     const yawDivergence = Math.abs(angleDelta(controller.yaw, controller.bodyYaw));
-    const cameraSafe = yawDivergence < 0.62 && controller.pitch < 0.58;
+    const cameraSafe = yawDivergence < 0.56 && controller.pitch < 0.44;
     this.setCosmeticsVisible(cameraSafe);
 
-    const firstPersonSafe = yawDivergence < 0.66 && controller.pitch >= 0.56 && controller.pitch < 0.90;
+    const firstPersonSafe = yawDivergence < 0.72 && controller.pitch >= 0.40 && controller.pitch < 0.90;
     this.setFirstPersonVisible(firstPersonSafe);
+
+    const skinSafe = controller.pitch < 0.88 && yawDivergence < 0.95;
+    this.setSkinVisible(skinSafe);
     if (!cameraSafe) return;
 
     const speed = Math.min(1, controller.speed / 3);
