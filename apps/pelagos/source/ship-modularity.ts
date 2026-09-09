@@ -7,7 +7,8 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
 import type { ShipState, ShipTelemetry } from './core';
-import { TAU, clamp, sampleWave, smoothTo } from './core';
+import { clamp, sampleWave, smoothTo } from './core';
+import { oarVisualPose, oarWaterlineDip } from './oar-visibility-refit';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 import {
@@ -35,6 +36,8 @@ type ModularRig = {
   oars: ModularOar[];
   ports: Mesh[];
   deploy: number;
+  phase: number;
+  previousPhase: number;
   shaftMaterial: StandardMaterial;
   bladeMaterial: StandardMaterial;
 };
@@ -105,7 +108,7 @@ function createRig(world: OceanWorld, loadout: ShipLoadout): ModularRig {
       ports.push(port);
 
       const pivot = new TransformNode(`modular-oar-${side}-${index}`, scene);
-      pivot.position.set(side * 0.20, 0.48, stationZ);
+      pivot.position.set(side * 1.46, 0.49, stationZ);
       pivot.parent = world.shipRoot;
 
       const shaft = MeshBuilder.CreateCylinder(`modular-oar-shaft-${side}-${index}`, {
@@ -115,11 +118,13 @@ function createRig(world: OceanWorld, loadout: ShipLoadout): ModularRig {
         tessellation: 10
       }, scene);
       shaft.rotation.z = Math.PI / 2;
-      shaft.position.x = side * 0.14;
+      shaft.position.x = side * loadout.oars.shaftLength * 0.23;
       shaft.parent = pivot;
       shaft.material = shaftMaterial;
       shaft.isPickable = false;
       shaft.receiveShadows = true;
+      shaft.visibility = 0;
+      shaft.setEnabled(false);
       registerShadowCaster(world, shaft);
 
       const blade = MeshBuilder.CreateBox(`modular-oar-blade-${side}-${index}`, {
@@ -127,11 +132,13 @@ function createRig(world: OceanWorld, loadout: ShipLoadout): ModularRig {
         height: 0.046,
         depth: loadout.oars.bladeWidth
       }, scene);
-      blade.position.x = side * (loadout.oars.shaftLength * 0.33);
+      blade.position.x = side * loadout.oars.shaftLength * 0.79;
       blade.parent = pivot;
       blade.material = bladeMaterial;
       blade.isPickable = false;
       blade.receiveShadows = true;
+      blade.visibility = 0;
+      blade.setEnabled(false);
       registerShadowCaster(world, blade);
 
       oars.push({
@@ -140,7 +147,7 @@ function createRig(world: OceanWorld, loadout: ShipLoadout): ModularRig {
         blade,
         side,
         stationZ,
-        phaseOffset: index * 0.010 + (side > 0 ? 0.004 : 0)
+        phaseOffset: index * 0.022 + (side > 0 ? 0.010 : 0)
       });
     }
   }
@@ -151,6 +158,8 @@ function createRig(world: OceanWorld, loadout: ShipLoadout): ModularRig {
     oars,
     ports,
     deploy: 0,
+    phase: 0.08,
+    previousPhase: 0.08,
     shaftMaterial,
     bladeMaterial
   };
@@ -197,9 +206,6 @@ function applyShipGeometry(world: OceanWorld, loadout: ShipLoadout): void {
   const jibRig = world.scene.getTransformNodeByName('physical-jib-rig');
   if (jibRig) jibRig.scaling.set(1, loadout.sails.jibHeightScale, loadout.sails.jibChordScale);
 
-  // Keep the steering blade almost entirely below the static waterline. The tiller and stock
-  // remain where they belong; only the blade is moved, avoiding the old "stern lifted into air"
-  // look when a crest passes under the quarter.
   const rudderBlade = world.scene.getMeshByName('rudder-blade');
   if (rudderBlade) {
     rudderBlade.scaling.y = 1.02;
@@ -207,17 +213,10 @@ function applyShipGeometry(world: OceanWorld, loadout: ShipLoadout): void {
   }
 }
 
-function rowingStroke(phase: number): { power: number; recovery: number } {
-  const p = ((phase % 1) + 1) % 1;
-  if (p < 0.60) return { power: Math.max(0, Math.sin((p / 0.60) * Math.PI)), recovery: 0 };
-  return { power: 0, recovery: Math.sin(((p - 0.60) / 0.40) * Math.PI) };
-}
-
 function updateOars(
   world: OceanWorld,
   rig: ModularRig,
   loadout: ShipLoadout,
-  state: ShipState,
   environment: EnvironmentFrame,
   time: number,
   dt: number,
@@ -226,38 +225,69 @@ function updateOars(
   rowing: number
 ): void {
   const active = clamp(rowing, 0, 1);
-  rig.deploy = smoothTo(rig.deploy, active > 0.025 ? 1 : 0, active > 0.025 ? 3.0 : 2.0, dt);
-  const deploy = rig.deploy;
+  const safeDt = clamp(dt, 1 / 240, 1 / 24);
+  rig.previousPhase = rig.phase;
+  if (active > 0.02) rig.phase = (rig.phase + safeDt * (0.94 + active * 0.34)) % 1;
+  rig.deploy = smoothTo(rig.deploy, active > 0.02 ? 1 : 0, active > 0.02 ? 5.8 : 3.2, safeDt);
+
+  const visible = clamp(rig.deploy * 1.65, 0, 1);
+  const waterlineDip = oarWaterlineDip(
+    loadout.dimensions.waterlineCenterY,
+    loadout.dimensions.verticalScale,
+    loadout.oars.shaftLength
+  );
+  const dipScale = clamp(loadout.oars.dipAmplitude / 0.50, 0.76, 1.20);
+  const referenceMidDip = 0.295 * dipScale;
+  const desiredMidDip = waterlineDip + 0.030 + (dipScale - 1) * 0.045;
+  const waterlinePoseScale = clamp(desiredMidDip / Math.max(0.08, referenceMidDip), 0.82, 1.62);
   const splash = world.scene.particleSystems.find((system: { name: string }) => system.name === 'oar-splash') as ParticleSystem | undefined;
+  let visibleCount = 0;
+  let strongestPower = 0;
+  let splashPoint: Vector3 | null = null;
 
   for (const oar of rig.oars) {
-    const phase = ((state.rowingPhase + oar.phaseOffset) % 1 + 1) % 1;
-    const { power, recovery } = rowingStroke(phase);
-    const strokePower = power * active;
-    const sweepPhase = phase < 0.60 ? phase / 0.60 - 0.5 : 0.5 - (phase - 0.60) / 0.40;
-    const sweep = sweepPhase * loadout.oars.strokeAmplitude;
-    const dip = (0.10 + strokePower * loadout.oars.dipAmplitude - recovery * 0.06) * deploy;
+    const phase = (rig.phase + oar.phaseOffset) % 1;
+    const pose = oarVisualPose(phase, loadout.oars.strokeAmplitude, loadout.oars.dipAmplitude);
+    const dip = pose.dip * waterlinePoseScale;
 
-    oar.pivot.position.x = oar.side * (0.20 + deploy * 1.18);
-    oar.pivot.rotation.y = oar.side * sweep * deploy;
-    oar.pivot.rotation.z = -oar.side * dip;
+    oar.pivot.position.set(oar.side * 1.46, 0.49, oar.stationZ);
     oar.pivot.rotation.x = 0;
+    oar.pivot.rotation.y = oar.side * pose.sweep * rig.deploy;
+    oar.pivot.rotation.z = -oar.side * dip * rig.deploy;
 
-    oar.shaft.position.x = oar.side * (0.11 + deploy * 1.30);
-    oar.shaft.scaling.y = 0.45 + deploy * 0.55;
-    oar.blade.position.x = oar.side * (0.88 + deploy * (loadout.oars.shaftLength * 0.62));
-    oar.blade.rotation.x = recovery * 1.26 * deploy;
+    oar.shaft.position.x = oar.side * loadout.oars.shaftLength * 0.23;
+    oar.shaft.scaling.y = 1;
+    oar.shaft.visibility = visible;
+    oar.shaft.setEnabled(visible > 0.015);
 
-    if (deploy > 0.78 && strokePower > 0.32 && splash) {
-      const p = oar.blade.getAbsolutePosition();
-      const water = sampleWave(p.x + originX, p.z + originZ, time, environment.waveScale);
-      const immersion = water.height - p.y;
-      if (immersion > -0.07 && immersion < 0.44) {
-        const emitter = splash.emitter;
-        if (emitter instanceof Vector3) emitter.set(p.x, water.height + 0.012, p.z);
-        splash.manualEmitCount = Math.max(splash.manualEmitCount, 1 + Math.round(strokePower * 2.5));
+    oar.blade.position.x = oar.side * loadout.oars.shaftLength * 0.79;
+    oar.blade.rotation.x = pose.recovery * 1.34 * rig.deploy;
+    oar.blade.visibility = visible;
+    oar.blade.setEnabled(visible > 0.015);
+    if (visible > 0.30) visibleCount += 1;
+
+    if (pose.power > strongestPower && visible > 0.72) {
+      const point = oar.blade.getAbsolutePosition();
+      const water = sampleWave(point.x + originX, point.z + originZ, time, environment.waveScale);
+      const immersion = water.height - point.y;
+      if (immersion > -0.34 && immersion < 0.38) {
+        strongestPower = pose.power;
+        splashPoint = new Vector3(point.x, water.height + 0.018, point.z);
       }
     }
+  }
+
+  if (splashPoint && splash && strongestPower > 0.48 && active > 0.35) {
+    if (splash.emitter instanceof Vector3) splash.emitter.copyFrom(splashPoint);
+    const wrapped = rig.phase < rig.previousPhase;
+    splash.manualEmitCount = Math.max(splash.manualEmitCount, wrapped ? 8 : 2 + Math.round(strongestPower * 3));
+  }
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.pelagosOarDeploy = rig.deploy.toFixed(3);
+    document.documentElement.dataset.pelagosVisibleOars = String(visibleCount);
+    document.documentElement.dataset.pelagosOarVisualPhase = rig.phase.toFixed(3);
+    document.documentElement.dataset.pelagosOarWaterlineDip = waterlineDip.toFixed(3);
   }
 }
 
@@ -318,9 +348,9 @@ if (typeof window !== 'undefined') {
   (window as typeof window & { __PELAGOS_SHIPYARD__?: ShipyardApi }).__PELAGOS_SHIPYARD__ = shipyardApi;
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipModularityV1?: boolean };
-if (!prototype.__pelagosShipModularityV1) {
-  prototype.__pelagosShipModularityV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipModularityV2?: boolean };
+if (!prototype.__pelagosShipModularityV2) {
+  prototype.__pelagosShipModularityV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function modularShipUpdate(
     state: ShipState,
@@ -334,11 +364,11 @@ if (!prototype.__pelagosShipModularityV1) {
     lookPitch: number,
     rowing: number
   ): void {
-    // The legacy physical-oar owner still handles sail cloth. Give it zero rowing so only the
-    // modular bank below owns oar pose and water splashes.
+    // Keep the legacy sail-cloth owner, but never let the old physical-oar rig compete with the
+    // shipyard-selected modular bank. This module is the sole runtime owner of modular oar pose.
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, 0);
     const { rig, loadout } = ensureRig(this);
-    updateOars(this, rig, loadout, state, environment, time, dt, originX, originZ, rowing);
+    updateOars(this, rig, loadout, environment, time, dt, originX, originZ, rowing);
     correctBowWaterline(this, loadout, state, environment, time, originX, originZ);
   };
 }
