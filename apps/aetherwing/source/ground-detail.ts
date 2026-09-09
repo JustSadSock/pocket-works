@@ -4,7 +4,7 @@ import { riverCenter, terrainHeight } from './world';
 const hash=(x:number,z:number)=>{let n=(Math.imul(x|0,374761393)^Math.imul(z|0,668265263)^0x27d4eb2d)|0;n=Math.imul((n^(n>>>13))|0,1274126177);return ((n^(n>>>16))>>>0)/4294967295;};
 
 export class GroundDetailLayer{
-  readonly bladeBudget=620;
+  readonly bladeBudget=620;activeCount=0;
   private readonly grass:Mesh;
   private cell='';
 
@@ -25,7 +25,7 @@ export class GroundDetailLayer{
       const s=.55+hash(sx*3+7,sz*5-11)*1.25,yaw=hash(sx*7,sz*11)*Math.PI*2;
       const m=Matrix.Compose(new Vector3(s*(.72+hash(sx,sz+33)*.42),s,s*(.72+hash(sz,sx+41)*.42)),Quaternion.RotationYawPitchRoll(yaw,0,0),new Vector3(x,y+.02,z));m.copyToArray(data,written*16);written++;
     }
-    this.grass.thinInstanceSetBuffer('matrix',data.subarray(0,written*16),16,true);this.grass.thinInstanceRefreshBoundingInfo(true);
+    this.activeCount=written;this.grass.thinInstanceSetBuffer('matrix',data.subarray(0,written*16),16,true);this.grass.thinInstanceRefreshBoundingInfo(true);
   }
 
   dispose(){this.grass.dispose();}
