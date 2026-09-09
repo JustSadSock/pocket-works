@@ -14,15 +14,15 @@ float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float a=hash21
 void main(){
   vec3 n=normalize(vNormal);float slope=1.0-clamp(n.y,0.0,1.0);
   float macro=noise2(vPos.xz*.0105);float mid=noise2(vPos.xz*.037);float fine=noise2(vPos.xz*.115);
-  float speck=smoothstep(.77,.95,noise2(vPos.xz*.23+17.0));
-  vec3 grass=vColor.rgb*(.84+macro*.17+mid*.105+fine*.038);
-  vec3 soil=vec3(.24,.245,.16)*(1.0+mid*.16);vec3 rock=vec3(.285,.295,.275)*(1.0+fine*.12);
-  float exposed=clamp(smoothstep(.18,.55,slope)*.72+speck*.10,0.0,.82);
-  vec3 base=mix(grass,soil,smoothstep(.12,.36,slope)*.24);base=mix(base,rock,exposed);
-  float ndl=max(dot(n,normalize(vec3(.42,.78,-.28))),0.0);float sky=.56+.44*clamp(n.y,0.0,1.0);
-  vec3 lit=base*(.55+.48*ndl)*(.90+.10*sky);
-  lit+=vec3(.026,.030,.020)*(1.0-ndl);
-  float d=distance(cameraPosition,vPos);float fog=clamp(1.0-exp(-d*d*.000000075),0.0,.78);
+  float speck=smoothstep(.82,.96,noise2(vPos.xz*.23+17.0));
+  vec3 grass=vColor.rgb*vec3(1.05,1.12,.96)*(.91+macro*.17+mid*.10+fine*.035);
+  vec3 soil=vec3(.275,.285,.175)*(1.0+mid*.14);vec3 rock=vec3(.33,.34,.305)*(1.0+fine*.10);
+  float exposed=clamp(smoothstep(.24,.62,slope)*.56+speck*.065,0.0,.66);
+  vec3 base=mix(grass,soil,smoothstep(.18,.45,slope)*.17);base=mix(base,rock,exposed);
+  float ndl=max(dot(n,normalize(vec3(.42,.78,-.28))),0.0);float sky=.60+.40*clamp(n.y,0.0,1.0);
+  vec3 lit=base*(.68+.50*ndl)*(.92+.08*sky);
+  lit+=vec3(.030,.035,.022)*(1.0-ndl);
+  float d=distance(cameraPosition,vPos);float fog=clamp(1.0-exp(-d*d*.000000068),0.0,.75);
   gl_FragColor=vec4(mix(lit,fogColor,fog),1.0);
 }`;
 
