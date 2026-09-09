@@ -32,6 +32,9 @@ import './motion-cues';
 import './experience-refit';
 import './presentation-refit';
 import './shipyard-ui';
+// Keep this last: it preserves the live rowing demand through every OceanWorld compatibility
+// wrapper installed above, including the legacy sail owner that intentionally receives zero oar input.
+import './rowing-runtime-bridge';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
