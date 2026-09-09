@@ -27,6 +27,27 @@ import { MAX_SPEED, exponentialApproach, speedFromMagnitude } from './locomotion
 const VERSION = '1.2.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+type GaitName = 'idle' | 'walk' | 'jog' | 'run';
+type QaState = {
+  version: string;
+  loadingState: 'booting' | 'loading-model' | 'warming' | 'ready' | 'error';
+  playerPosition: { x: number; y: number; z: number };
+  speed: number;
+  peakSpeed: number;
+  gait: GaitName;
+  peakGait: GaitName;
+  travelDistance: number;
+  grounded: boolean;
+  animationClips: number;
+  noUvMaterialFallbacks: number;
+  materialsReady: boolean;
+};
+
+declare global {
+  interface Window {
+    __AI_TEST_STATE__?: QaState;
+  }
+}
 
 const FALLBACK_MATERIAL_COLORS: Array<[string, Color3]> = [
   ['olive_canvas', new Color3(0.205, 0.285, 0.235)],
@@ -49,7 +70,8 @@ function fallbackColorForMaterial(name: string): Color3 | null {
   return FALLBACK_MATERIAL_COLORS.find(([token]) => key.includes(token))?.[1]?.clone() || null;
 }
 
-function stabilizeNoUvMaterials(meshes: AbstractMesh[]): void {
+function stabilizeNoUvMaterials(meshes: AbstractMesh[]): number {
+  let patched = 0;
   for (const mesh of meshes) {
     if (mesh.getTotalVertices() <= 0 || mesh.isVerticesDataPresent(VertexBuffer.UVKind)) continue;
     const source = mesh.material;
@@ -59,7 +81,9 @@ function stabilizeNoUvMaterials(meshes: AbstractMesh[]): void {
     const color = fallbackColorForMaterial(source.name);
     if (color) material.albedoColor = color;
     mesh.material = material;
+    patched += 1;
   }
+  return patched;
 }
 
 async function warmScene(scene: Scene): Promise<void> {
@@ -85,6 +109,22 @@ async function registerWorker(): Promise<void> {
 }
 
 async function start(): Promise<void> {
+  const qa: QaState = {
+    version: VERSION,
+    loadingState: 'booting',
+    playerPosition: { x: 0, y: 0.015, z: 0 },
+    speed: 0,
+    peakSpeed: 0,
+    gait: 'idle',
+    peakGait: 'idle',
+    travelDistance: 0,
+    grounded: true,
+    animationClips: 0,
+    noUvMaterialFallbacks: 0,
+    materialsReady: false
+  };
+  window.__AI_TEST_STATE__ = qa;
+
   const canvas = element<HTMLCanvasElement>('renderCanvas');
   const loading = element<HTMLElement>('loading');
   const loadingBar = element<HTMLElement>('loadingBar');
@@ -100,6 +140,7 @@ async function start(): Promise<void> {
 
   retry.addEventListener('click', () => location.reload());
   if (!Engine.isSupported()) {
+    qa.loadingState = 'error';
     loading.classList.add('hidden');
     errorText.textContent = 'WebGL недоступен. KINEMA требует аппаратный 3D-рендеринг.';
     errorScreen.classList.remove('hidden');
@@ -194,11 +235,13 @@ async function start(): Promise<void> {
     modelRoot.parent = leanRoot;
     modelRoot.rotationQuaternion = Quaternion.FromEulerAngles(0, Math.PI, 0);
 
+    qa.loadingState = 'loading-model';
     loadingBar.style.width = '39%';
     loadingText.textContent = 'Blender / body / clothing / textures';
     const result = await SceneLoader.ImportMeshAsync('', './models/', 'kinema-character.glb', scene);
     if (!result.meshes.length) throw new Error('Blender GLB загрузился без геометрии.');
-    stabilizeNoUvMaterials(result.meshes);
+    qa.noUvMaterialFallbacks = stabilizeNoUvMaterials(result.meshes);
+    qa.materialsReady = true;
     for (const mesh of result.meshes) {
       if (!mesh.parent) mesh.parent = modelRoot;
       if (mesh.getTotalVertices() > 0) shadows.addShadowCaster(mesh, false);
@@ -207,14 +250,17 @@ async function start(): Promise<void> {
     loadingBar.style.width = '78%';
     loadingText.textContent = 'Armature / animation actions';
     if (!result.animationGroups.length) throw new Error('Blender GLB не содержит animation actions.');
+    qa.animationClips = result.animationGroups.length;
     const mixer = new LocomotionMixer(result.animationGroups);
 
+    qa.loadingState = 'warming';
     loadingBar.style.width = '94%';
     loadingText.textContent = 'Safari / shaders / first frame';
     await warmScene(scene);
     loadingBar.style.width = '100%';
     loadingText.textContent = `${result.animationGroups.length} clips / ready`;
     loading.classList.add('hidden');
+    qa.loadingState = 'ready';
 
     let speed = 0;
     let direction = new Vector3(0, 0, -1);
@@ -223,6 +269,7 @@ async function start(): Promise<void> {
     let stepSide = -1;
     let last = performance.now();
     let hidden = document.hidden;
+    const gaitRank: Record<GaitName, number> = { idle: 0, walk: 1, jog: 2, run: 3 };
 
     const updateCamera = (dt: number) => {
       const running = clamp(speed / MAX_SPEED, 0, 1);
@@ -262,7 +309,11 @@ async function start(): Promise<void> {
       } else {
         direction = retainedDirection.clone();
       }
-      if (speed > 0.001) characterRoot.position.addInPlace(direction.scale(speed * dt));
+      if (speed > 0.001) {
+        const distance = speed * dt;
+        characterRoot.position.addInPlace(direction.scale(distance));
+        qa.travelDistance += distance;
+      }
 
       const acceleration = dt > 0 ? (speed - previousSpeed) / dt : 0;
       const running = clamp(speed / MAX_SPEED, 0, 1);
@@ -278,6 +329,15 @@ async function start(): Promise<void> {
       gaitLabel.textContent = gait.toUpperCase();
       speedLabel.textContent = `${speed.toFixed(1)} m/s`;
       speedBar.style.width = `${(speed / MAX_SPEED * 100).toFixed(1)}%`;
+      qa.speed = speed;
+      qa.peakSpeed = Math.max(qa.peakSpeed, speed);
+      qa.gait = gait;
+      if (gaitRank[gait] > gaitRank[qa.peakGait]) qa.peakGait = gait;
+      qa.playerPosition = {
+        x: characterRoot.position.x,
+        y: characterRoot.position.y,
+        z: characterRoot.position.z
+      };
 
       if (speed > 0.45) {
         stepTravel += speed * dt;
@@ -306,6 +366,7 @@ async function start(): Promise<void> {
     });
     updateCamera(1 / 60);
   } catch (error) {
+    qa.loadingState = 'error';
     console.error('[KINEMA] boot failed', error);
     loading.classList.add('hidden');
     errorText.textContent = error instanceof Error ? error.message : 'Неизвестная ошибка 3D-сцены.';
