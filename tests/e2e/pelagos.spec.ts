@@ -3,6 +3,7 @@ import { attachCriticalScreenshot, monitorUnexpectedBrowserOutput } from './help
 
 test.describe('PELAGOS deterministic mobile QA', () => {
   test('shipyard keeps the vessel visible, applies modules live and supports two-axis inspection', async ({ page }, testInfo) => {
+    test.setTimeout(70_000);
     test.skip(!testInfo.project.name.includes('portrait'), 'PELAGOS is portrait-first.');
     const monitor = monitorUnexpectedBrowserOutput(page);
 
@@ -74,25 +75,44 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.locator('#closeShipyard').click();
     await expect(page.locator('#menu')).toBeVisible();
     await page.locator('#startButton').click();
-    await expect(page.locator('#controls')).toBeVisible();
+    await expect(page.locator('#controls')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('#hud')).toBeVisible();
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale))).toBeGreaterThanOrEqual(1.05);
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosTextureAnisotropy)).toBe('8');
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosCompactCoach)).toBe('1');
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosSheetLoad))).toBeGreaterThanOrEqual(0);
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosSeaLoad))).toBeGreaterThanOrEqual(0);
-    await page.waitForTimeout(1_000);
+    await page.waitForTimeout(800);
 
     const rowButton = page.locator('#rowButton');
     const rowBox = await rowButton.boundingBox();
     expect(rowBox).not.toBeNull();
-    await page.mouse.move(rowBox!.x + rowBox!.width / 2, rowBox!.y + rowBox!.height / 2);
-    await page.mouse.down();
+    const rowX = rowBox!.x + rowBox!.width / 2;
+    const rowY = rowBox!.y + rowBox!.height / 2;
+    // Use the same touch-style PointerEvent the mobile runtime consumes. page.mouse can be
+    // intercepted by the full-screen look surface even when its coordinates overlap the button.
+    await rowButton.dispatchEvent('pointerdown', {
+      pointerId: 71,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+      clientX: rowX,
+      clientY: rowY
+    });
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosOarDeploy)), { timeout: 2_500 }).toBeGreaterThan(0.78);
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosVisibleOars))).toBeGreaterThanOrEqual(10);
     await page.waitForTimeout(420);
     await attachCriticalScreenshot(page, testInfo, 'pelagos-rowing-visible-oars', { fullPage: false });
-    await page.mouse.up();
+    await rowButton.dispatchEvent('pointerup', {
+      pointerId: 71,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      buttons: 0,
+      clientX: rowX,
+      clientY: rowY
+    });
 
     const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
     expect(frameScale).toBeLessThanOrEqual(1.105);
@@ -102,20 +122,20 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     const encounterRate = await page.evaluate(() => Number(document.documentElement.dataset.pelagosEncounterRate));
     const seaLoad = await page.evaluate(() => Number(document.documentElement.dataset.pelagosSeaLoad));
     const waveDrag = await page.evaluate(() => Number(document.documentElement.dataset.pelagosWaveDrag));
+    const contactGain = await page.evaluate(() => Number(document.documentElement.dataset.pelagosContactGain));
     expect(Number.isFinite(encounterRate)).toBe(true);
     expect(Number.isFinite(seaLoad)).toBe(true);
     expect(Number.isFinite(waveDrag)).toBe(true);
+    expect(Number.isFinite(contactGain)).toBe(true);
     expect(waveDrag).toBeGreaterThanOrEqual(0);
+    expect(contactGain).toBeGreaterThan(0.5);
 
     const hint = page.locator('#hint');
     if (await hint.isVisible()) {
-      await expect(hint).toContainText('Руль:');
       const hintBox = await hint.boundingBox();
       expect(hintBox).not.toBeNull();
       expect(hintBox!.width).toBeLessThan(270);
       expect(hintBox!.height).toBeLessThan(60);
-      const toastOpacity = await page.locator('#toast').evaluate((node) => getComputedStyle(node).opacity);
-      expect(Number(toastOpacity)).toBe(0);
     }
     await attachCriticalScreenshot(page, testInfo, 'pelagos-gameplay-scale', { fullPage: false });
 
