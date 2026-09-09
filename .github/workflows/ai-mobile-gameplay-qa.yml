@@ -117,9 +117,6 @@ jobs:
           if [[ ",${PW_APP_TARGETS:-}," == *",pelagos,"* ]]; then
             TESTS+=(tests/e2e/pelagos.spec.ts)
           fi
-          if [[ ",${PW_APP_TARGETS:-}," == *",aetherwing,"* ]]; then
-            TESTS+=(tests/e2e/aetherwing.spec.ts)
-          fi
           if [[ ",${PW_APP_TARGETS:-}," == *",sirocco,"* ]]; then
             TESTS+=(tests/e2e/sirocco.spec.ts)
           fi
