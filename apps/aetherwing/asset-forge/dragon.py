@@ -23,9 +23,6 @@ def smooth01(t):
 
 
 def make_scale_image():
-    # Staggered overlapping micro-scales. Each cell receives a deterministic
-    # local colour variation; unlike the former sin/cos texture this has no
-    # long periodic bands that can turn the dragon into a striped cylinder.
     w=h=256; img=bpy.data.images.new('Aetherwing_ScaleTexture',width=w,height=h,alpha=True)
     px=[]; cell_w=13.0; cell_h=10.0
     for y in range(h):
@@ -33,7 +30,6 @@ def make_scale_image():
         offset=(row&1)*cell_w*.5
         for x in range(w):
             fx=(x-offset)/cell_w; col=math.floor(fx); lx=fx-col
-            # Soft teardrop/scale interior with a darker upper rim.
             dx=(lx-.5)/.52; dy=(ly-.47)/.58; d=dx*dx+dy*dy
             interior=1.0-smooth01((d-.45)/.62)
             rim=(1.0-smooth01(abs(d-.92)/.16))*0.16
@@ -41,6 +37,24 @@ def make_scale_image():
             shade=interior*.075-rim+speck
             r=.205+shade*.62; g=.365+shade; b=.235+shade*.68
             px.extend((max(.04,min(.48,r)),max(.09,min(.62,g)),max(.05,min(.44,b)),1.0))
+    img.pixels=px; img.pack(); return img
+
+
+def make_membrane_image():
+    w=h=256; img=bpy.data.images.new('Aetherwing_MembraneTexture',width=w,height=h,alpha=True); px=[]
+    for y in range(h):
+        v=y/(h-1)
+        for x in range(w):
+            u=x/(w-1)
+            grain=(cell_rand(x//5,y//5)-.5)*.050+(math.sin(u*31.0+v*13.0)+math.sin(u*9.0-v*27.0))*.010
+            edge=(1-smooth01(min(u,1-u)*5.2))*.08
+            vein=0.0
+            for slope,offset in ((.62,.10),(.38,.22),(.19,.37),(-.12,.58)):
+                d=abs(v-(offset+slope*u)); vein=max(vein,math.exp(-d*82.0))
+            radial=math.exp(-abs(v-(.08+.86*u)) * 60.0)
+            shade=grain-edge-vein*.15-radial*.07+.035*(1-v)
+            r=.30+shade; g=.135+shade*.58; b=.075+shade*.36
+            px.extend((max(.055,min(.40,r)),max(.035,min(.23,g)),max(.025,min(.15,b)),1.0))
     img.pixels=px; img.pack(); return img
 
 
@@ -98,9 +112,9 @@ def create_rig():
     add('Tail3',(0,4.60,-.12),(0,6.55,-.30),'Tail2')
     add('Tail4',(0,6.50,-.30),(0,8.45,-.55),'Tail3')
     for side_name,side in (('L',-1),('R',1)):
-        add(f'Wing{side_name}1',(side*1.05,-1.60,.69),(side*4.15,-1.28,1.18),'Chest')
-        add(f'Wing{side_name}2',(side*4.15,-1.28,1.18),(side*7.25,-.18,.82),f'Wing{side_name}1')
-        add(f'Wing{side_name}3',(side*7.25,-.18,.82),(side*10.05,1.38,.12),f'Wing{side_name}2')
+        add(f'Wing{side_name}1',(side*1.05,-1.60,.69),(side*3.92,-1.28,1.18),'Chest')
+        add(f'Wing{side_name}2',(side*3.92,-1.28,1.18),(side*6.72,-.18,.82),f'Wing{side_name}1')
+        add(f'Wing{side_name}3',(side*6.72,-.18,.82),(side*9.05,1.30,.16),f'Wing{side_name}2')
         add(f'FrontUpper{side_name}',(side*.73,-1.82,.18),(side*.98,-1.50,-.62),'Chest')
         add(f'FrontLower{side_name}',(side*.98,-1.50,-.62),(side*1.13,-.55,-.90),f'FrontUpper{side_name}')
         add(f'FrontFoot{side_name}',(side*1.13,-.55,-.90),(side*1.22,.10,-.73),f'FrontLower{side_name}')
@@ -118,62 +132,53 @@ def bind(obj,rig,bone):
 
 def membrane(name,side,rig,mat):
     sn='L' if side<0 else 'R'
-    # More points along the trailing edge give a bat-like scalloped planform
-    # instead of one flat pentagon. Slight vertical offsets keep a cambered read.
     pts=[
-        (side*1.03,-1.62,.70), # 0 root leading
-        (side*4.16,-1.28,1.18),# 1 elbow
-        (side*7.26,-.18,.82),  # 2 wrist
-        (side*10.06,1.38,.12), # 3 tip
-        (side*8.55,2.10,-.58), # 4 trailing tip
-        (side*7.05,1.72,-.96), # 5
-        (side*5.55,2.03,-1.16),# 6
-        (side*4.05,1.55,-1.17),# 7
-        (side*2.75,.82,-.98),  # 8
-        (side*1.62,-.35,-.48)  # 9 root trailing
+        (side*1.03,-1.62,.70),(side*3.93,-1.28,1.18),(side*6.73,-.18,.82),(side*9.06,1.30,.16),
+        (side*7.82,1.94,-.54),(side*6.48,1.65,-.91),(side*5.18,1.93,-1.08),(side*3.86,1.48,-1.10),
+        (side*2.55,.77,-.91),(side*1.56,-.35,-.46)
     ]
     faces=[(0,1,9),(1,8,9),(1,7,8),(1,2,7),(2,6,7),(2,5,6),(2,3,5),(3,4,5)]
-    me=bpy.data.meshes.new(name+'Mesh');me.from_pydata(pts,[],faces);me.update();o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);smooth(o,mat)
+    me=bpy.data.meshes.new(name+'Mesh');me.from_pydata(pts,[],faces);me.update()
+    uvmap=me.uv_layers.new(name='UVMap');uvs=[(.02,.05),(.28,.10),(.58,.25),(.98,.48),(.86,.92),(.68,.78),(.52,.94),(.36,.82),(.20,.65),(.06,.34)]
+    for poly in me.polygons:
+        for loop_index in poly.loop_indices:
+            vi=me.loops[loop_index].vertex_index;uvmap.data[loop_index].uv=uvs[vi]
+    o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);smooth(o,mat)
     world=o.matrix_world.copy();o.parent=rig;o.matrix_world=world;mod=o.modifiers.new('AetherwingArmature','ARMATURE');mod.object=rig
     weights=[f'Wing{sn}1',f'Wing{sn}1',f'Wing{sn}2',f'Wing{sn}3',f'Wing{sn}3',f'Wing{sn}3',f'Wing{sn}2',f'Wing{sn}2',f'Wing{sn}1',f'Wing{sn}1']
     for idx,bone in enumerate(weights):
         g=o.vertex_groups.get(bone) or o.vertex_groups.new(name=bone);g.add([idx],1,'REPLACE')
-    sol=o.modifiers.new('Membrane thickness','SOLIDIFY');sol.thickness=.042
+    sol=o.modifiers.new('Membrane thickness','SOLIDIFY');sol.thickness=.038
     return o
 
 
 def build(rig):
-    scale_img=make_scale_image()
+    scale_img=make_scale_image();membrane_img=make_membrane_image()
     scales=material('Deep green scales',(.26,.43,.28),.68,.012,scale_img)
     belly=material('Warm belly plates',(.46,.39,.23),.76)
-    mem=material('Wing membrane',(.28,.13,.085),.79,.005)
+    mem=material('Wing membrane',(.32,.18,.11),.88,.003,membrane_img)
     horn=material('Horn and claw',(.18,.16,.125),.72)
     eye=material('Amber eyes',(.88,.39,.055),.30,emission=(.45,.09,.008))
     dark=material('Dorsal scales',(.095,.19,.125),.78)
-    vein=material('Wing veins',(.12,.105,.085),.76)
+    vein=material('Wing veins',(.085,.065,.048),.82)
     parts=[]
     def add(o,b):parts.append((o,b));return o
 
-    # Lean torso with overlapping chest/abdomen masses. The old 3.15-long
-    # sphere dominated the rear silhouette; this keeps the creature athletic.
-    add(uv('Dragon_Body',(0,.45,.10),(1.12,2.15,.92),scales,44,26),'Spine')
-    add(uv('Dragon_Chest',(0,-1.35,.34),(1.43,1.50,1.16),scales,44,26),'Chest')
-    add(uv('Dragon_Shoulder',(0,-1.88,.48),(1.56,.84,1.22),scales,40,24),'Chest')
+    add(uv('Dragon_Body',(0,.45,.10),(1.16,2.15,.95),scales,44,26),'Spine')
+    add(uv('Dragon_Chest',(0,-1.35,.34),(1.50,1.50,1.19),scales,44,26),'Chest')
+    add(uv('Dragon_Shoulder',(0,-1.88,.48),(1.61,.84,1.25),scales,40,24),'Chest')
     add(cone_between('Dragon_Neck1',(0,-2.00,.51),(0,-3.55,.80),.82,.57,scales,28),'Neck1')
     add(cone_between('Dragon_Neck2',(0,-3.45,.80),(0,-4.78,.91),.59,.42,scales,28),'Neck2')
     add(uv('Dragon_Head',(0,-5.22,.88),(.70,1.03,.66),scales,40,24),'Head')
     add(uv('Dragon_Muzzle',(0,-6.03,.66),(.54,.86,.38),belly,34,20),'Head')
     add(uv('Dragon_Jaw',(0,-5.98,.40),(.49,.73,.22),dark,30,16),'Head')
 
-    # Brow, swept horns, cheek spines and bright eyes establish a readable head
-    # even from the chase camera when the neck is almost aligned with the body.
     for side in (-1,1):
         add(uv(f'Dragon_Eye_{side}',(side*.32,-5.61,1.08),(.10,.14,.10),eye,20,12),'Head')
         add(cone_between(f'Dragon_Horn_{side}',(side*.31,-4.86,1.25),(side*.62,-4.05,1.82),.15,.012,horn,13),'Head')
         add(cone_between(f'Dragon_CheekHorn_{side}',(side*.48,-5.45,.88),(side*.88,-5.03,.93),.11,.01,horn,12),'Head')
         add(cone_between(f'Dragon_Brow_{side}',(side*.24,-5.55,1.19),(side*.53,-5.31,1.28),.115,.035,dark,12),'Head')
 
-    # Long overlapping tail sections avoid the former single hard cone read.
     tail_specs=[
         ((0,1.55,.03),(0,3.00,-.03),.86,.67,'Tail1'),
         ((0,2.90,-.03),(0,4.80,-.14),.68,.47,'Tail2'),
@@ -182,19 +187,19 @@ def build(rig):
     for i,(a,b,r1,r2,bone) in enumerate(tail_specs):add(cone_between(f'Dragon_Tail_{i}',a,b,r1,r2,scales,28),bone)
 
     for side_name,side in (('L',-1),('R',1)):
-        p0=(side*1.05,-1.60,.69);p1=(side*4.16,-1.28,1.18);p2=(side*7.26,-.18,.82);p3=(side*10.06,1.38,.12)
-        t4=(side*8.55,2.10,-.58);t5=(side*7.05,1.72,-.96);t6=(side*5.55,2.03,-1.16);t7=(side*4.05,1.55,-1.17);t8=(side*2.75,.82,-.98)
-        add(cone_between(f'Dragon_WingArm_{side_name}1',p0,p1,.34,.22,scales,22),f'Wing{side_name}1')
+        p0=(side*1.05,-1.60,.69);p1=(side*3.93,-1.28,1.18);p2=(side*6.73,-.18,.82);p3=(side*9.06,1.30,.16)
+        t4=(side*7.82,1.94,-.54);t5=(side*6.48,1.65,-.91);t6=(side*5.18,1.93,-1.08);t7=(side*3.86,1.48,-1.10);t8=(side*2.55,.77,-.91);t9=(side*1.56,-.35,-.46)
+        add(cone_between(f'Dragon_WingArm_{side_name}1',p0,p1,.35,.22,scales,22),f'Wing{side_name}1')
         add(cone_between(f'Dragon_WingArm_{side_name}2',p1,p2,.225,.14,scales,20),f'Wing{side_name}2')
         add(cone_between(f'Dragon_WingFinger_{side_name}',p2,p3,.145,.028,horn,16),f'Wing{side_name}3')
-        add(cone_between(f'Dragon_WingRib_{side_name}A',p1,t7,.085,.018,vein,12),f'Wing{side_name}1')
-        add(cone_between(f'Dragon_WingRib_{side_name}B',p2,t6,.074,.016,vein,12),f'Wing{side_name}2')
-        add(cone_between(f'Dragon_WingRib_{side_name}C',p2,t5,.062,.013,vein,12),f'Wing{side_name}3')
-        add(cone_between(f'Dragon_WingRib_{side_name}D',p3,t4,.050,.010,vein,10),f'Wing{side_name}3')
+        add(cone_between(f'Dragon_WingRib_{side_name}Root',p0,t9,.10,.020,vein,12),f'Wing{side_name}1')
+        add(cone_between(f'Dragon_WingRib_{side_name}A',p1,t8,.090,.018,vein,12),f'Wing{side_name}1')
+        add(cone_between(f'Dragon_WingRib_{side_name}B',p1,t7,.082,.016,vein,12),f'Wing{side_name}1')
+        add(cone_between(f'Dragon_WingRib_{side_name}C',p2,t6,.072,.014,vein,12),f'Wing{side_name}2')
+        add(cone_between(f'Dragon_WingRib_{side_name}D',p2,t5,.060,.012,vein,12),f'Wing{side_name}3')
+        add(cone_between(f'Dragon_WingRib_{side_name}Tip',p3,t4,.050,.009,vein,10),f'Wing{side_name}3')
         membrane(f'Dragon_WingMembrane_{side_name}',side,rig,mem)
 
-        # Muscular limb chains; all segments overlap at joints so deformation
-        # never reveals a disconnected marionette gap during runtime springs.
         for prefix,upper,lower,foot in [('Front',f'FrontUpper{side_name}',f'FrontLower{side_name}',f'FrontFoot{side_name}'),('Hind',f'HindUpper{side_name}',f'HindLower{side_name}',f'HindFoot{side_name}')]:
             if prefix=='Front':a=(side*.72,-1.78,.16);b=(side*.98,-1.50,-.62);c=(side*1.13,-.55,-.90);d=(side*1.22,.10,-.73);r=(.30,.23,.14)
             else:a=(side*.77,.78,-.08);b=(side*1.17,1.42,-.56);c=(side*1.07,2.30,-.83);d=(side*1.18,2.88,-.59);r=(.36,.26,.16)
@@ -204,7 +209,6 @@ def build(rig):
             for ci,claw in enumerate((-.13,0,.13)):
                 add(cone_between(f'Dragon_{prefix}Claw_{side_name}_{ci}',d,(d[0]+side*claw,d[1]+.32,d[2]-.055),.042,.004,horn,9),foot)
 
-    # Smaller, denser dorsal ridge creates scale rather than fence-post spikes.
     ridge_points=[(1.65,1.02),(1.0,1.10),(.35,1.12),(-.3,1.18),(-.95,1.26),(-1.55,1.35),(-2.15,1.34),(-2.72,1.20),(-3.30,1.12),(-3.90,1.09),(-4.48,1.08)]
     for i,(y,z) in enumerate(ridge_points):
         bone='Tail1' if y>1.25 else 'Spine' if y>-.8 else 'Chest' if y>-2.4 else 'Neck1' if y>-3.6 else 'Neck2'
@@ -266,7 +270,7 @@ def animate(rig):
 def export(output):
     output.parent.mkdir(parents=True,exist_ok=True);bpy.ops.object.select_all(action='SELECT')
     bpy.ops.export_scene.gltf(filepath=str(output),export_format='GLB',export_apply=True,export_animations=True,export_skins=True,export_morph=False,export_animation_mode='ACTIONS',export_force_sampling=True,export_frame_range=False)
-    if not output.exists() or output.stat().st_size<140000:raise RuntimeError(f'Dragon GLB unexpectedly small: {output}')
+    if not output.exists() or output.stat().st_size<160000:raise RuntimeError(f'Dragon GLB unexpectedly small: {output}')
 
 
 def main():
