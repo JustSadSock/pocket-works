@@ -63,6 +63,14 @@ export class DesertPresence {
       if (polish.shoulderDrape) polish.shoulderDrape.rotation.z = -state.x * 0.035 * pressure + flutter;
       if (polish.scarfLayer) polish.scarfLayer.rotation.y = state.z * 0.055 * pressure + flutter * 0.7;
       if (polish.waterSkin) polish.waterSkin.rotation.x = state.x * 0.020 * pressure;
+      for (let i = 0; i < (game.rig?.scarfTails?.length || 0); i += 1) {
+        const tail = game.rig.scarfTails[i];
+        const side = i === 0 ? -1 : 1;
+        const tailFlutter = Math.sin(this.time * (5.0 + state.gust * 2.0) + i * 1.7) * 0.025 * pressure;
+        tail.rotation.x = -0.04 + state.strength * 0.12 + tailFlutter;
+        tail.rotation.y = side * state.x * 0.055 * pressure;
+        tail.rotation.z = side * (0.08 + state.z * 0.030 * pressure) + tailFlutter * 0.45;
+      }
     }
 
     // Gust fronts carry a little more dust near the horizon. Keep the range
