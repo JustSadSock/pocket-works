@@ -8,6 +8,7 @@ import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
 export type SpeedWaterProfile = {
+  froude: number;
   speedFactor: number;
   roughness: number;
   encounterFactor: number;
@@ -36,15 +37,32 @@ type VisualMemory = {
 
 const dynamicsMemory = new WeakMap<ShipDynamics, DynamicsMemory>();
 const visualMemory = new WeakMap<OceanWorld, VisualMemory>();
+const GRAVITY = 9.81;
+const REFERENCE_LENGTH = 12.8;
 
-export function speedWaterProfile(speed: number, waveScale: number, relativeBowRise: number): SpeedWaterProfile {
+/**
+ * Converts absolute speed into a displacement-hull speed regime. Using Froude number means the
+ * 10.8 m harbor hull starts paying wave-making resistance sooner than the 15.6 m cruiser instead of
+ * every hull hitting the same arbitrary metres-per-second threshold.
+ */
+export function speedWaterProfile(
+  speed: number,
+  waveScale: number,
+  relativeBowRise: number,
+  hullLength = REFERENCE_LENGTH
+): SpeedWaterProfile {
   const safeSpeed = Math.max(0, speed);
-  const speedFactor = clamp(safeSpeed / 5.2, 0, 1.25);
+  const safeLength = clamp(hullLength, 8, 22);
+  const froude = safeSpeed / Math.sqrt(GRAVITY * safeLength);
+  // Fn ~= 0.46 on the reference cutter maps almost exactly to the old 5.2 m/s full-response point,
+  // preserving the tuned baseline while making the threshold physically scale with waterline length.
+  const speedFactor = clamp(froude / 0.46, 0, 1.25);
   const roughness = clamp((waveScale - 0.45) / 1.55, 0, 1.15);
   const encounterFactor = clamp(Math.abs(relativeBowRise) / 2.25, 0, 1.25);
   const slam = clamp((relativeBowRise - 0.28) / 1.55, 0, 1.15) * speedFactor;
   const release = clamp((-relativeBowRise - 0.34) / 1.75, 0, 1.05) * speedFactor;
   return {
+    froude,
     speedFactor,
     roughness,
     encounterFactor,
@@ -96,7 +114,7 @@ function applySpeedWaterDynamics(
   const sternHullRate = state.verticalVelocity + state.pitchVelocity * length * 0.34;
   const relativeBowRise = bow.rate - bowHullRate;
   const relativeSternRise = stern.rate - sternHullRate;
-  const profile = speedWaterProfile(Math.abs(telemetry.forwardSpeed), waveScale, relativeBowRise);
+  const profile = speedWaterProfile(Math.abs(telemetry.forwardSpeed), waveScale, relativeBowRise, length);
 
   const fwdX = Math.sin(state.yaw);
   const fwdZ = Math.cos(state.yaw);
@@ -106,7 +124,8 @@ function applySpeedWaterDynamics(
   let lateralVelocity = state.velocityX * rightX + state.velocityZ * rightZ;
 
   // This is encounter resistance, not another generic drag curve. The faster the hull crosses the
-  // moving wave field, the more energy it loses pushing through each crest.
+  // moving wave field, the more energy it loses pushing through each crest. Froude scaling keeps
+  // the transition tied to the selected waterline length.
   forwardVelocity *= Math.exp(-profile.waveDragRate * safeDt);
   lateralVelocity *= Math.exp(-profile.waveDragRate * 0.42 * safeDt);
   state.velocityX = fwdX * forwardVelocity + rightX * lateralVelocity;
@@ -144,12 +163,13 @@ function applySpeedWaterDynamics(
     document.documentElement.dataset.pelagosSeaLoad = seaLoad.toFixed(3);
     document.documentElement.dataset.pelagosWaveDrag = profile.waveDragRate.toFixed(4);
     document.documentElement.dataset.pelagosSlam = profile.slamAcceleration.toFixed(3);
+    document.documentElement.dataset.pelagosFroude = profile.froude.toFixed(4);
   }
 }
 
-const dynamicsPrototype = ShipDynamics.prototype as typeof ShipDynamics.prototype & { __pelagosSpeedWaterV1?: boolean };
-if (!dynamicsPrototype.__pelagosSpeedWaterV1) {
-  dynamicsPrototype.__pelagosSpeedWaterV1 = true;
+const dynamicsPrototype = ShipDynamics.prototype as typeof ShipDynamics.prototype & { __pelagosSpeedWaterV2?: boolean };
+if (!dynamicsPrototype.__pelagosSpeedWaterV2) {
+  dynamicsPrototype.__pelagosSpeedWaterV2 = true;
   const previousUpdate = ShipDynamics.prototype.update;
   ShipDynamics.prototype.update = function speedWaterDynamicsUpdate(
     dt: number,
@@ -184,9 +204,10 @@ function updateSpeedWaterVisuals(
   time: number
 ): void {
   const loadout = getActiveShipLoadout();
-  const bow = encounterAt(state, loadout.dimensions.length * 0.46, time, environment.waveScale);
+  const length = loadout.dimensions.length;
+  const bow = encounterAt(state, length * 0.46, time, environment.waveScale);
   const relativeBowRise = bow.rate - state.verticalVelocity;
-  const profile = speedWaterProfile(Math.abs(telemetry.forwardSpeed), environment.waveScale, relativeBowRise);
+  const profile = speedWaterProfile(Math.abs(telemetry.forwardSpeed), environment.waveScale, relativeBowRise, length);
   const speed = Math.max(0, telemetry.speed);
   const sprayLoad = clamp(
     profile.speedFactor * profile.speedFactor * (0.50 + profile.roughness * 0.52)
@@ -197,7 +218,7 @@ function updateSpeedWaterVisuals(
   const visuals = visualFor(world);
 
   if (visuals.spray) {
-    const motionGate = clamp((speed - 0.18) / 0.55, 0, 1);
+    const motionGate = clamp((profile.froude - 0.012) / 0.050, 0, 1);
     const desiredRate = motionGate * (5 + speed * speed * 5.4 + sprayLoad * 92);
     visuals.spray.emitRate = Math.max(visuals.spray.emitRate * 0.52, desiredRate);
 
@@ -206,7 +227,7 @@ function updateSpeedWaterVisuals(
     const rightX = Math.cos(state.yaw);
     const rightZ = -Math.sin(state.yaw);
     const trail = 1.0 + speed * 0.44;
-    const spread = 0.72 + speed * 0.11;
+    const spread = 0.72 + profile.speedFactor * 0.58;
     const lift = 1.15 + sprayLoad * 1.25;
     visuals.spray.direction1 = new Vector3(
       -fwdX * trail - rightX * spread,
@@ -218,8 +239,8 @@ function updateSpeedWaterVisuals(
       lift + 1.15 + profile.slamAcceleration * 0.7,
       -fwdZ * (trail * 0.72) + rightZ * spread
     );
-    visuals.spray.minEmitPower = 0.85 + speed * 0.16;
-    visuals.spray.maxEmitPower = 2.4 + speed * 0.46 + profile.slamAcceleration * 1.8;
+    visuals.spray.minEmitPower = 0.85 + profile.speedFactor * 0.84;
+    visuals.spray.maxEmitPower = 2.4 + profile.speedFactor * 2.55 + profile.slamAcceleration * 1.8;
   }
 
   // Cache the contact meshes once. The contact pass owns their exact waterline position; this pass
@@ -241,9 +262,9 @@ function updateSpeedWaterVisuals(
   }
 }
 
-const worldPrototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSpeedWaterVisualV2?: boolean };
-if (!worldPrototype.__pelagosSpeedWaterVisualV2) {
-  worldPrototype.__pelagosSpeedWaterVisualV2 = true;
+const worldPrototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosSpeedWaterVisualV3?: boolean };
+if (!worldPrototype.__pelagosSpeedWaterVisualV3) {
+  worldPrototype.__pelagosSpeedWaterVisualV3 = true;
   const previousWorldUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function speedWaterVisualUpdate(
     state: ShipState,
