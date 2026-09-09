@@ -10,13 +10,30 @@ export function appendBabylonGroundCell(indices, a, b, d, e) {
 
 function insideReplacementCell(gx, gz, replacement, coarseStep) {
   if (!replacement || !Number.isFinite(replacement.x)) return false;
-  // Keep only a narrow overlap ring. The previous 0.72-cell shrink left nearly
-  // a metre of duplicate terrain under the physical patch and made its render
-  // radius visible at grazing angles.
+  // Keep only a narrow overlap ring. The local material gets a tiny depth bias,
+  // so this safety overlap cannot z-fight while still preventing moving holes.
   const safeRadius = Math.max(0, replacement.halfExtent - coarseStep * 0.12);
   const dx = gx - replacement.x;
   const dz = gz - replacement.z;
   return dx * dx + dz * dz < safeRadius * safeRadius;
+}
+
+function buildChunkIndices(cx, cz, segments, replacement = null) {
+  const indices = [];
+  const row = segments + 1;
+  const coarseStep = CHUNK_SIZE / segments;
+  const baseX = cx * CHUNK_SIZE;
+  const baseZ = cz * CHUNK_SIZE;
+  for (let z = 0; z < segments; z += 1) {
+    for (let x = 0; x < segments; x += 1) {
+      const midGX = baseX + (x + 0.5) * coarseStep;
+      const midGZ = baseZ + (z + 0.5) * coarseStep;
+      if (insideReplacementCell(midGX, midGZ, replacement, coarseStep)) continue;
+      const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
+      appendBabylonGroundCell(indices, a, b, d, e);
+    }
+  }
+  return indices;
 }
 
 function buildChunkData(cx, cz, segments, deformation = null, replacement = null) {
@@ -25,7 +42,6 @@ function buildChunkData(cx, cz, segments, deformation = null, replacement = null
   const normals = new Array(verts * 3).fill(0);
   const uvs = new Array(verts * 2);
   const colors = new Array(verts * 4);
-  const indices = [];
   let p = 0, nPtr = 0, uv = 0, c = 0;
   const baseX = cx * CHUNK_SIZE;
   const baseZ = cz * CHUNK_SIZE;
@@ -44,27 +60,13 @@ function buildChunkData(cx, cz, segments, deformation = null, replacement = null
       const slope = 1 - n.y;
       const brightness = clamp(0.96 + variation * 0.035 - slope * 0.13, 0.84, 1.05);
       positions[p] = lx; positions[p + 1] = y; positions[p + 2] = lz; p += 3;
-      // Use the authored smooth dune normal rather than recomputing normals from
-      // the metre-scale chunk triangles. This removes faceted lighting and gives
-      // the high-detail physical replacement the same untouched normal field.
       normals[nPtr] = n.x; normals[nPtr + 1] = n.y; normals[nPtr + 2] = n.z; nPtr += 3;
       uvs[uv] = gx * 0.055; uvs[uv + 1] = gz * 0.055; uv += 2;
       colors[c] = brightness; colors[c + 1] = brightness * 0.995; colors[c + 2] = brightness * 0.975; colors[c + 3] = 1; c += 4;
     }
   }
 
-  const row = segments + 1;
-  const coarseStep = CHUNK_SIZE / segments;
-  for (let z = 0; z < segments; z += 1) {
-    for (let x = 0; x < segments; x += 1) {
-      const midGX = baseX + (x + 0.5) * coarseStep;
-      const midGZ = baseZ + (z + 0.5) * coarseStep;
-      if (insideReplacementCell(midGX, midGZ, replacement, coarseStep)) continue;
-      const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-      appendBabylonGroundCell(indices, a, b, d, e);
-    }
-  }
-  return { positions, normals, uvs, colors, indices };
+  return { positions, normals, uvs, colors, indices: buildChunkIndices(cx, cz, segments, replacement) };
 }
 
 function applyData(mesh, data) {
@@ -126,14 +128,14 @@ export class DesertWorld {
     const prev = this.localReplacement;
     if (prev && Math.abs(prev.x - next.x) < 0.001 && Math.abs(prev.z - next.z) < 0.001 && Math.abs(prev.halfExtent - next.halfExtent) < 0.001) return 0;
     this.localReplacement = next;
-    let rebuilt = 0;
+    let updated = 0;
     for (const chunk of this.active.values()) {
       if (replacementIntersectsChunk(prev, chunk.cx, chunk.cz) || replacementIntersectsChunk(next, chunk.cx, chunk.cz)) {
-        this.rebuildChunk(chunk);
-        rebuilt += 1;
+        this.updateReplacementIndices(chunk);
+        updated += 1;
       }
     }
-    return rebuilt;
+    return updated;
   }
 
   setQuality(quality) {
@@ -173,11 +175,14 @@ export class DesertWorld {
   }
 
   rebuildChunk(chunk) {
-    // Fine 12 cm sand state is intentionally local-only. Sampling it into the
-    // metre-scale chunk grid aliases a single footprint into giant polygonal
-    // scars whenever the replacement hole moves or a chunk is recycled.
     applyData(chunk.mesh, buildChunkData(chunk.cx, chunk.cz, this.quality.segments, null, this.localReplacement));
     this.positionChunk(chunk);
+  }
+
+  updateReplacementIndices(chunk) {
+    const indices = buildChunkIndices(chunk.cx, chunk.cz, this.quality.segments, this.localReplacement);
+    const totalVertices = (this.quality.segments + 1) * (this.quality.segments + 1);
+    chunk.mesh.setIndices(indices, totalVertices, true);
   }
 
   acquire(cx, cz) {
