@@ -26,6 +26,7 @@ export class LocalSandSurface {
     this.vertexDataApplied = false;
     this.uvCenterX = Number.NaN;
     this.uvCenterZ = Number.NaN;
+    this.lastRebuildMs = 0;
     this.setQuality(preset);
   }
 
@@ -150,6 +151,7 @@ export class LocalSandSurface {
   }
 
   rebuild() {
+    const started = performance.now();
     const {
       row, positions, normals, uvs, colors, radial, deformations, looseValues,
       compactValues, localXs, localZs, indices
@@ -200,9 +202,6 @@ export class LocalSandSurface {
       this.uvCenterZ = this.centerZ;
     }
 
-    normals.fill(0);
-    VertexData.ComputeNormals(positions, indices, normals);
-
     for (let iz = 0; iz <= segments; iz += 1) {
       const lz = localZs[iz];
       for (let ix = 0; ix <= segments; ix += 1) {
@@ -216,14 +215,20 @@ export class LocalSandSurface {
         const heightActivity = smoothstep(0.0015, 0.020, Math.abs(deformations[i]));
         const stateActivity = clamp(looseValues[i] * 0.32 + compactValues[i] * 0.22, 0, 1);
         const physicalActivity = clamp(Math.max(heightActivity, stateActivity) * edgeFade, 0, 1);
-        const meshWeight = physicalActivity * 0.42;
-        let nx = base.x * (1 - meshWeight) + normals[ni] * meshWeight;
-        let ny = base.y * (1 - meshWeight) + normals[ni + 1] * meshWeight;
-        let nz = base.z * (1 - meshWeight) + normals[ni + 2] * meshWeight;
-        const inv = 1 / Math.hypot(nx, ny, nz);
-        normals[ni] = nx * inv;
-        normals[ni + 1] = ny * inv;
-        normals[ni + 2] = nz * inv;
+
+        let nx = base.x, ny = base.y, nz = base.z;
+        if (physicalActivity > 0.002) {
+          const disturbed = this.sampleNormal(gx, gz);
+          const weight = physicalActivity * 0.48;
+          nx = base.x * (1 - weight) + disturbed.x * weight;
+          ny = base.y * (1 - weight) + disturbed.y * weight;
+          nz = base.z * (1 - weight) + disturbed.z * weight;
+          const inv = 1 / Math.hypot(nx, ny, nz);
+          nx *= inv; ny *= inv; nz *= inv;
+        }
+        normals[ni] = nx;
+        normals[ni + 1] = ny;
+        normals[ni + 2] = nz;
 
         const cavity = smoothstep(0.005, 0.055, -deformations[i]);
         const shade = 1 - cavity * (0.080 + compactValues[i] * 0.060);
@@ -253,6 +258,7 @@ export class LocalSandSurface {
     this.mesh.position.x = this.centerX - this.world.offsetX;
     this.mesh.position.z = this.centerZ - this.world.offsetZ;
     this.mesh.refreshBoundingInfo();
+    this.lastRebuildMs = performance.now() - started;
     this.dirty = false;
   }
 
