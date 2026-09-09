@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#d5d0c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KINEMA">
+  <meta name="pocket-works-build" content="1.6.0">
+  <title>KINEMA — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="kinema" data-app-shell data-fullscreen-app>
+    <canvas id="renderCanvas" aria-label="Трёхмерный персонаж KINEMA" data-gesture-surface data-block-callout></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="topbar" data-ui>
+      <a class="shell-link" href="../../" data-app-control aria-label="Вернуться в Pocket Works">
+        <span aria-hidden="true">‹</span><b>POCKET WORKS</b>
+      </a>
+      <div class="identity" aria-hidden="true"><b>KINEMA</b><span>CHARACTER / MOTION</span></div>
+      <button id="soundButton" class="sound-button" type="button" aria-label="Выключить звук">SOUND / ON</button>
+    </header>
+
+    <section id="motionReadout" class="motion-readout" data-ui aria-live="polite">
+      <b id="gaitLabel">IDLE</b>
+      <span><i id="speedBar"></i></span>
+      <small id="speedLabel">0.0 m/s</small>
+    </section>
+
+    <div id="lookZone" class="look-zone" data-gesture-surface data-block-callout aria-label="Проведи пальцем, чтобы вращать камеру">
+      <div class="look-mark" aria-hidden="true"><i></i><span>CAMERA</span></div>
+    </div>
+
+    <div id="joystick" class="joystick" data-gesture-surface data-block-callout aria-label="Аналоговый джойстик движения">
+      <div class="joystick-ring">
+        <div id="joystickKnob" class="joystick-knob"></div>
+      </div>
+      <span>MOVE</span>
+    </div>
+
+    <div id="hint" class="hint" data-ui>
+      <span>ЛЕВАЯ РУКА — ДВИЖЕНИЕ</span>
+      <i></i>
+      <span>ПРАВАЯ — КАМЕРА</span>
+    </div>
+
+    <section id="loading" class="screen loading" data-ui>
+      <div class="figure-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p>KINEMA / CHARACTER STUDY</p>
+      <h1>Собираем движение</h1>
+      <div class="progress"><i id="loadingBar"></i></div>
+      <small id="loadingText">Инициализация Babylon.js</small>
+    </section>
+
+    <section id="errorScreen" class="screen error hidden" data-ui>
+      <p>KINEMA / ERROR</p>
+      <h2>Персонаж не загрузился</h2>
+      <div id="errorText">Проверь WebGL и соединение при первом запуске.</div>
+      <div class="error-actions">
+        <button id="retryButton" type="button">ПОВТОРИТЬ</button>
+        <a href="../../" data-app-control>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <section class="rotate-screen" data-ui>
+      <div class="phone-shape" aria-hidden="true"></div>
+      <b>Поверни телефон</b>
+      <span>KINEMA рассчитана на горизонтальный режим.</span>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
