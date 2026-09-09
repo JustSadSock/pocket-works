@@ -1,12 +1,12 @@
 {
   "name": "@pocket-works/sirocco",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "scripts": {
     "prepare:character": "node scripts/fetch-character-asset.mjs",
-    "build": "npm run prepare:character && node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs sirocco",
-    "test": "node source/core.test.mjs && vitest run --config vite.config.ts",
+    "build": "npm run prepare:character && node source/core.test.mjs && node source/presence.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs sirocco",
+    "test": "node source/core.test.mjs && node source/presence.test.mjs && vitest run --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
