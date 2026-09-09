@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { oarVisualPose } from './oar-visibility-refit';
+import { oarVisualPose, oarWaterlineDip } from './oar-visibility-refit';
 
 describe('PELAGOS visible oar stroke', () => {
-  it('keeps the power stroke shallow enough to remain readable beside the hull', () => {
+  it('keeps the normalized power stroke readable beside the hull', () => {
     const start = oarVisualPose(0.04);
     const middle = oarVisualPose(0.31);
     const end = oarVisualPose(0.60);
@@ -19,5 +19,14 @@ describe('PELAGOS visible oar stroke', () => {
     expect(recovery.dip).toBeLessThan(power.dip - 0.12);
     expect(recovery.recovery).toBeGreaterThan(0.9);
     expect(recovery.power).toBe(0);
+  });
+
+  it('solves a realistic waterline dip for low and high-board hulls', () => {
+    const longCutter = oarWaterlineDip(0.57, 1.08, 3.62);
+    const highboard = oarWaterlineDip(0.47, 1.23, 3.62);
+    expect(longCutter).toBeGreaterThan(0.33);
+    expect(longCutter).toBeLessThan(0.39);
+    expect(highboard).toBeGreaterThan(0.28);
+    expect(highboard).toBeLessThan(longCutter);
   });
 });
