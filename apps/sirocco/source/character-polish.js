@@ -105,7 +105,6 @@ export class BedouinVisualPolish {
     this.scene = scene;
     this.rig = rig;
     this.meshes = [];
-    this.firstPersonMeshes = [];
     this.rigUnsafeGarments = [];
     this.materials = [];
     this.textures = [];
@@ -145,19 +144,13 @@ export class BedouinVisualPolish {
     const clothShadow = material(this.scene, 'bedouin-polish-shadow-cloth', new Color3(0.48, 0.40, 0.31), 0.99);
     const redCloth = material(this.scene, 'bedouin-polish-patterned-red', new Color3(0.44, 0.075, 0.045), 0.97);
     const headCloth = material(this.scene, 'bedouin-polish-keffiyeh', new Color3(0.82, 0.72, 0.62), 0.985);
-    const firstPersonLinen = material(this.scene, 'bedouin-first-person-linen', new Color3(0.88, 0.82, 0.70), 0.99);
-    const firstPersonSash = material(this.scene, 'bedouin-first-person-sash', new Color3(0.40, 0.065, 0.040), 0.97);
     const brass = material(this.scene, 'bedouin-polish-aged-brass', new Color3(0.34, 0.22, 0.08), 0.72);
     brass.metallic = 0.35;
     darkLeather.albedoTexture = leatherGrain;
     clothShadow.albedoTexture = linenWeave;
     redCloth.albedoTexture = sashWeave;
     headCloth.albedoTexture = keffiyehWeave;
-    firstPersonLinen.albedoTexture = linenWeave;
-    firstPersonSash.albedoTexture = sashWeave;
-    firstPersonLinen.backFaceCulling = false;
-    firstPersonSash.backFaceCulling = false;
-    this.materials.push(darkLeather, clothShadow, redCloth, headCloth, firstPersonLinen, firstPersonSash, brass);
+    this.materials.push(darkLeather, clothShadow, redCloth, headCloth, brass);
 
     const add = (mesh, mat) => {
       mesh.parent = this.rig.root;
@@ -165,15 +158,6 @@ export class BedouinVisualPolish {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       this.meshes.push(mesh);
-      return mesh;
-    };
-    const addFirstPerson = (mesh, mat) => {
-      mesh.parent = this.rig.root;
-      mesh.material = mat;
-      mesh.isPickable = false;
-      mesh.receiveShadows = false;
-      mesh.setEnabled(false);
-      this.firstPersonMeshes.push(mesh);
       return mesh;
     };
 
@@ -212,18 +196,9 @@ export class BedouinVisualPolish {
     this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', { diameter: 0.53, thickness: 0.022, tessellation: 24 }, this.scene), redCloth);
     this.beltWrap.position.y = 0.90;
 
-    this.firstPersonChest = addFirstPerson(MeshBuilder.CreatePlane('bedouin-first-person-thobe-front', {
-      width: 0.46, height: 0.54
-    }, this.scene), firstPersonLinen);
-    this.firstPersonChest.position.set(0, 1.12, 0.305);
-    this.firstPersonChest.rotation.x = -0.18;
-
-    this.firstPersonSash = addFirstPerson(MeshBuilder.CreatePlane('bedouin-first-person-sash-front', {
-      width: 0.41, height: 0.07
-    }, this.scene), firstPersonSash);
-    this.firstPersonSash.position.set(0, 0.91, 0.310);
-    this.firstPersonSash.rotation.x = -0.18;
-
+    // These are the large closed shells that can engulf a first-person camera.
+    // Bone-driven sleeves, hand covers, trouser cuffs and boots are intentionally
+    // excluded, so the player still sees real animated limbs while looking down.
     this.rigUnsafeGarments = (this.rig.garments || []).filter((mesh) =>
       /thobe-upper|thobe-lower|thobe-front-fold|waist-sash|keffiyeh-collar|keffiyeh-headband|keffiyeh-tail/i.test(mesh.name)
     );
@@ -233,10 +208,6 @@ export class BedouinVisualPolish {
     if (this.cosmeticsVisible === visible) return;
     this.cosmeticsVisible = visible;
     for (const mesh of this.meshes) mesh.setEnabled(visible);
-  }
-
-  setFirstPersonVisible(visible) {
-    for (const mesh of this.firstPersonMeshes) mesh.setEnabled(visible);
   }
 
   setSkinVisible(visible) {
@@ -254,24 +225,17 @@ export class BedouinVisualPolish {
   update(controller, dt) {
     this.time += dt;
     const yawDivergence = Math.abs(angleDelta(controller.yaw, controller.bodyYaw));
-    const cameraSafe = yawDivergence < 0.56 && controller.pitch < 0.40;
-    this.setCosmeticsVisible(cameraSafe);
+    const fullBodySafe = controller.pitch < 0.36 && yawDivergence < 0.54;
+    this.setCosmeticsVisible(fullBodySafe);
+    this.setRigGarmentsVisible(fullBodySafe);
 
-    const firstPersonSafe = yawDivergence < 0.72 && controller.pitch >= 0.38 && controller.pitch < 0.90;
-    this.setFirstPersonVisible(firstPersonSafe);
-    this.setRigGarmentsVisible(controller.pitch < 0.38 && yawDivergence < 0.56);
-
-    const skinSafe = controller.pitch < 0.88 && yawDivergence < 0.95;
+    // The imported body is a single skinned shell. Hide it earlier than the
+    // extreme clip angle; the separately bone-driven sleeves/hands/boots keep
+    // body awareness without ever showing the inside of the skull or torso.
+    const skinSafe = controller.pitch < 0.48 && yawDivergence < 0.80;
     this.setSkinVisible(skinSafe);
 
-    if (firstPersonSafe) {
-      const speed = Math.min(1, controller.speed / 3);
-      this.firstPersonChest.position.y = 1.12 + Math.sin(controller.gait * 2) * 0.004 * speed;
-      this.firstPersonChest.rotation.z = Math.sin(controller.gait) * 0.010 * speed;
-      this.firstPersonSash.rotation.z = this.firstPersonChest.rotation.z * 0.75;
-    }
-
-    if (!cameraSafe) return;
+    if (!fullBodySafe) return;
     const speed = Math.min(1, controller.speed / 3);
     const softness = controller.softness ?? 0.48;
     const looseSway = 0.80 + softness * 0.45;
@@ -283,11 +247,9 @@ export class BedouinVisualPolish {
 
   dispose() {
     for (const mesh of this.meshes) mesh.dispose();
-    for (const mesh of this.firstPersonMeshes) mesh.dispose();
     for (const mat of this.materials) mat.dispose();
     for (const texture of this.textures) texture.dispose();
     this.meshes.length = 0;
-    this.firstPersonMeshes.length = 0;
     this.materials.length = 0;
     this.textures.length = 0;
   }
