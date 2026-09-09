@@ -86,9 +86,10 @@ assert.ok(!localSandSource.includes('directionalShade'));
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
 assert.ok(materialSource.includes('makeSandMaterial'));
 assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"));
-assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"));
-assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false)"));
-assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true)"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far', albedo, normal)"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-near', albedo, normal)"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal)"));
+assert.ok(materialSource.includes('material.useVertexColors = false'), 'all sand LODs must use the same shading feature set');
 assert.ok(materialSource.includes('local.zOffset = -1'), 'local sand must win the narrow overlap ring through depth bias, never physical lift');
 
 const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
