@@ -1,4 +1,4 @@
-import { InstancedMesh, Mesh } from '@babylonjs/core';
+import { InstancedMesh, Mesh, Vector3 } from '@babylonjs/core';
 import { terrainHeight, WorldStreamer } from './world';
 
 const CHUNK=520,HALF=260;
@@ -51,7 +51,7 @@ export class CanopyDetailLayer{
     }
   }
 
-  update(){
+  update(_position?:Vector3,_quality?:number){
     this.parkSourceMeshes();
     const terrainStamp=[...this.world.chunks.keys()].sort().join('|');
     this.alignStreamedVegetation(terrainStamp);
