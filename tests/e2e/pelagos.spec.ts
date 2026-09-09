@@ -85,34 +85,17 @@ test.describe('PELAGOS deterministic mobile QA', () => {
     await page.waitForTimeout(800);
 
     const rowButton = page.locator('#rowButton');
-    const rowBox = await rowButton.boundingBox();
-    expect(rowBox).not.toBeNull();
-    const rowX = rowBox!.x + rowBox!.width / 2;
-    const rowY = rowBox!.y + rowBox!.height / 2;
-    // Use the same touch-style PointerEvent the mobile runtime consumes. page.mouse can be
-    // intercepted by the full-screen look surface even when its coordinates overlap the button.
-    await rowButton.dispatchEvent('pointerdown', {
-      pointerId: 71,
-      pointerType: 'touch',
-      isPrimary: true,
-      button: 0,
-      buttons: 1,
-      clientX: rowX,
-      clientY: rowY
-    });
+    await rowButton.focus();
+    await page.keyboard.down('Space');
+    await expect(rowButton).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosRowInput)).toBe('1');
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosOarDeploy)), { timeout: 2_500 }).toBeGreaterThan(0.78);
     await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pelagosVisibleOars))).toBeGreaterThanOrEqual(10);
     await page.waitForTimeout(420);
     await attachCriticalScreenshot(page, testInfo, 'pelagos-rowing-visible-oars', { fullPage: false });
-    await rowButton.dispatchEvent('pointerup', {
-      pointerId: 71,
-      pointerType: 'touch',
-      isPrimary: true,
-      button: 0,
-      buttons: 0,
-      clientX: rowX,
-      clientY: rowY
-    });
+    await page.keyboard.up('Space');
+    await expect(rowButton).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.pelagosRowInput)).toBe('0');
 
     const frameScale = await page.evaluate(() => Number(document.documentElement.dataset.pelagosFrameScale));
     expect(frameScale).toBeLessThanOrEqual(1.105);
