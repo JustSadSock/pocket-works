@@ -288,6 +288,7 @@ function updateOars(
     document.documentElement.dataset.pelagosVisibleOars = String(visibleCount);
     document.documentElement.dataset.pelagosOarVisualPhase = rig.phase.toFixed(3);
     document.documentElement.dataset.pelagosOarWaterlineDip = waterlineDip.toFixed(3);
+    document.documentElement.dataset.pelagosModularRowing = active.toFixed(3);
   }
 }
 
@@ -325,6 +326,26 @@ function ensureRig(world: OceanWorld): { rig: ModularRig; loadout: ShipLoadout }
   return { rig, loadout };
 }
 
+/**
+ * Explicit rowing animation entry point. It is intentionally called by the final runtime bridge
+ * after the full OceanWorld update chain, so older compatibility wrappers cannot zero, replace or
+ * hide the selected modular oar bank later in the same frame.
+ */
+export function updateModularRowing(
+  world: OceanWorld,
+  state: ShipState,
+  environment: EnvironmentFrame,
+  time: number,
+  dt: number,
+  originX: number,
+  originZ: number,
+  rowing: number
+): void {
+  const { rig, loadout } = ensureRig(world);
+  updateOars(world, rig, loadout, environment, time, dt, originX, originZ, rowing);
+  correctBowWaterline(world, loadout, state, environment, time, originX, originZ);
+}
+
 type ShipyardApi = {
   list: () => Array<{ id: string; label: string; length: number; beam: number; oarsPerSide: number; sail: string }>;
   get: () => ShipLoadout;
@@ -348,9 +369,9 @@ if (typeof window !== 'undefined') {
   (window as typeof window & { __PELAGOS_SHIPYARD__?: ShipyardApi }).__PELAGOS_SHIPYARD__ = shipyardApi;
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipModularityV2?: boolean };
-if (!prototype.__pelagosShipModularityV2) {
-  prototype.__pelagosShipModularityV2 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosShipModularityV3?: boolean };
+if (!prototype.__pelagosShipModularityV3) {
+  prototype.__pelagosShipModularityV3 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function modularShipUpdate(
     state: ShipState,
@@ -364,11 +385,13 @@ if (!prototype.__pelagosShipModularityV2) {
     lookPitch: number,
     rowing: number
   ): void {
-    // Keep the legacy sail-cloth owner, but never let the old physical-oar rig compete with the
-    // shipyard-selected modular bank. This module is the sole runtime owner of modular oar pose.
+    // Preserve sail cloth and the rest of the legacy visual stack while preventing its old oar rig
+    // from competing with the shipyard bank. The final rowing bridge owns visible oar animation.
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, 0);
-    const { rig, loadout } = ensureRig(this);
-    updateOars(this, rig, loadout, environment, time, dt, originX, originZ, rowing);
+    const { loadout } = ensureRig(this);
     correctBowWaterline(this, loadout, state, environment, time, originX, originZ);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.pelagosModularityInput = clamp(rowing, 0, 1).toFixed(3);
+    }
   };
 }
