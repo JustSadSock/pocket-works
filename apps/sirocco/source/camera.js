@@ -3,8 +3,8 @@ import { clamp, damp } from './core.js';
 
 export class FirstPersonCamera {
   constructor(scene) {
-    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.38), scene);
-    this.camera.minZ = 0.22;
+    this.camera = new UniversalCamera('first-person', new Vector3(0, 1.78, 0.12), scene);
+    this.camera.minZ = 0.26;
     this.camera.maxZ = 950;
     this.camera.fov = 1.02;
     this.camera.inertia = 0;
@@ -30,13 +30,13 @@ export class FirstPersonCamera {
     const rightX = Math.cos(controller.yaw);
     const rightZ = -Math.sin(controller.yaw);
 
-    // Keep the eye in front of the animated skull, but do not drag the camera
-    // down along the full pitch vector. The latter pushed the body behind the
-    // player when looking down. A small vertical clearance is enough together
-    // with the 22 cm near plane while preserving a natural first-person body.
-    const eyeForward = 0.38;
+    // Keep the gameplay eye close to the anatomical head so the chest, arms
+    // and legs remain in the natural downward sightline. Head/keffiyeh safety
+    // is provided primarily by the 26 cm near plane, not by pushing the camera
+    // half a metre in front of the character.
+    const eyeForward = 0.12;
     const eyeBaseY = 1.78;
-    const verticalClearance = viewForwardY * 0.08;
+    const verticalClearance = viewForwardY * 0.035;
 
     this.camera.position.set(
       controller.localPosition.x + forwardX * eyeForward + rightX * this.swayX,
