@@ -29,6 +29,7 @@ type WakeMemory = {
 };
 
 const memories = new WeakMap<OceanWorld, WakeMemory>();
+const GRAVITY = 9.81;
 
 function ensureWake(world: OceanWorld): WakeMemory {
   const existing = memories.get(world);
@@ -76,16 +77,18 @@ function ensureWake(world: OceanWorld): WakeMemory {
 }
 
 function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetry, time: number): void {
-  const speed = clamp(telemetry.speed / 5.4, 0, 1.25);
-  if (speed < 0.045 || time < memory.next) return;
   const loadout = getActiveShipLoadout();
-  const lengthScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
+  const hullLength = loadout.dimensions.length;
+  const froude = Math.max(0, telemetry.speed) / Math.sqrt(GRAVITY * Math.max(8, hullLength));
+  const speed = clamp(froude / 0.46, 0, 1.25);
+  if (speed < 0.045 || time < memory.next) return;
+  const lengthScale = clamp(hullLength / 12.8, 0.82, 1.30);
   const beamScale = clamp(loadout.dimensions.beam / 3.9, 0.82, 1.22);
   const cadence = 0.17 - clamp(speed, 0, 1) * 0.105;
   memory.next = time + Math.max(0.055, cadence);
 
-  // Wake energy is deliberately super-linear with speed. At rowing pace the trace is a narrow
-  // disturbed ribbon; under sail it opens into a broad V and persists far behind the transom.
+  // Wake energy is keyed to the displacement speed regime. The small harbor hull starts opening a
+  // strong V sooner than a 15.6 m cruiser at the same m/s, matching the Froude-scaled pressure wave.
   for (let piece = 0; piece < 2; piece += 1) {
     const strip = memory.strips[memory.cursor++ % memory.strips.length];
     const side = strip.side;
@@ -95,7 +98,7 @@ function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetr
     const rightZ = -Math.sin(state.yaw);
     const jitter = (strip.seed - 0.5) * 0.22 * beamScale;
     const lateral = side * (loadout.dimensions.beam * (0.055 + speed * 0.090)) + jitter;
-    const aft = loadout.dimensions.length * 0.445 + piece * 0.30 * lengthScale + strip.seed * 0.24 * lengthScale;
+    const aft = hullLength * 0.445 + piece * 0.30 * lengthScale + strip.seed * 0.24 * lengthScale;
     strip.worldX = state.worldX - fwdX * aft + rightX * lateral;
     strip.worldZ = state.worldZ - fwdZ * aft + rightZ * lateral;
     strip.heading = state.yaw + side * (0.018 + speed * 0.070) + jitter * 0.020;
@@ -104,6 +107,11 @@ function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetr
     strip.beamScale = beamScale;
     strip.lengthScale = lengthScale;
     strip.active = true;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.pelagosWakeFroude = froude.toFixed(4);
+    document.documentElement.dataset.pelagosWakeRegime = speed.toFixed(3);
   }
 }
 
@@ -140,9 +148,9 @@ function updateWake(
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV3?: boolean };
-if (!prototype.__pelagosBrokenWakeV3) {
-  prototype.__pelagosBrokenWakeV3 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV4?: boolean };
+if (!prototype.__pelagosBrokenWakeV4) {
+  prototype.__pelagosBrokenWakeV4 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function brokenWakeUpdate(
     state: ShipState,
