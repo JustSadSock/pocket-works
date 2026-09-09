@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#e8e0d0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PIT LOOP">
+  <title>PIT LOOP</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive">
+  <main class="app-shell pit-app" data-app-shell data-fullscreen-app>
+    <header class="scoreboard" data-ui>
+      <section class="fighter-readout fighter-readout--left" aria-label="Левый боец">
+        <div class="fighter-meta"><strong>А</strong><span id="left-score">0</span></div>
+        <div class="health-track" aria-hidden="true"><i id="left-health"></i></div>
+      </section>
+
+      <div class="round-readout" aria-live="polite">
+        <span id="round-label">РАУНД 1</span>
+        <b id="round-state">БОЙ</b>
+      </div>
+
+      <section class="fighter-readout fighter-readout--right" aria-label="Правый боец">
+        <div class="fighter-meta"><span id="right-score">0</span><strong>Б</strong></div>
+        <div class="health-track health-track--right" aria-hidden="true"><i id="right-health"></i></div>
+      </section>
+    </header>
+
+    <section class="arena" data-gesture-surface data-touch-action="none" data-block-callout aria-label="Автоматический бой двух бойцов">
+      <canvas id="fight-canvas"></canvas>
+      <div id="winner-banner" class="winner-banner" aria-live="assertive" hidden>
+        <span id="winner-kicker">НОКАУТ</span>
+        <strong id="winner-text">А ПОБЕДИЛ</strong>
+        <small>реванш через мгновение</small>
+      </div>
+      <div id="pause-panel" class="pause-panel" data-ui hidden>
+        <span>СИМУЛЯЦИЯ ОСТАНОВЛЕНА</span>
+        <button id="resume-button" type="button" data-native-press>Продолжить</button>
+        <a href="../../" data-app-control data-native-press>В Pocket Works</a>
+      </div>
+    </section>
+
+    <nav class="controls" data-ui aria-label="Управление наблюдением">
+      <a class="control control--launcher" href="../../" data-app-control data-native-press>В Pocket Works</a>
+      <button class="control" id="pause-button" type="button" aria-pressed="false" data-native-press>Пауза</button>
+      <button class="control control--speed" id="speed-button" type="button" data-native-press>×1</button>
+    </nav>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="PIT LOOP"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
