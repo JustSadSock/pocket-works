@@ -61,8 +61,8 @@ assert.ok(
 );
 
 const localSandSource = readFileSync(new URL('./sand-surface.js', import.meta.url), 'utf8');
-const highSegments = Number(localSandSource.match(/this\.segments\s*=\s*preset\.id === 'high' \? (\d+)/)?.[1] || 0);
-const highRadius = Number(localSandSource.match(/this\.radius\s*=\s*preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
+const highSegments = Number(localSandSource.match(/nextSegments = preset\.id === 'high' \? (\d+)/)?.[1] || 0);
+const highRadius = Number(localSandSource.match(/nextRadius = preset\.id === 'high' \? ([0-9.]+)/)?.[1] || 0);
 const uniformSpacing = highRadius * 2 / highSegments;
 const centreSpacing = uniformSpacing * 0.62;
 assert.ok(highSegments >= 64 && highSegments <= 72, 'High local sand must stay below the 5k-vertex budget');
@@ -70,8 +70,13 @@ assert.ok(centreSpacing <= 0.072, 'adaptive High grid must provide roughly 7 cm 
 assert.ok(localSandSource.includes('warpLocalAxis'), 'local sand must concentrate samples near the player');
 assert.ok(localSandSource.includes('this.holeRatio = 0.90'), 'replacement hole must suppress seam z-fighting');
 assert.ok(localSandSource.includes('meshTerrainShadingNormal'), 'untouched local sand must inherit coarse shading normals');
-assert.ok(localSandSource.includes('const physicalActivity ='), 'mesh normals must activate only where physical sand moved');
-assert.ok(localSandSource.includes('const meshWeight = physicalActivity * 0.42'));
+assert.ok(localSandSource.includes('const physicalActivity ='), 'disturbed normals must activate only where physical sand moved');
+assert.ok(localSandSource.includes('const disturbed = this.sampleNormal'), 'disturbed sand must use heightfield normals instead of coarse triangle normals');
+assert.ok(!localSandSource.includes('VertexData.ComputeNormals'), 'local sand must not recompute the full normal field every visual tick');
+assert.ok(localSandSource.includes('new Float32Array'), 'physical sand must reuse typed buffers instead of allocating JS arrays every tick');
+assert.ok(localSandSource.includes('allocateBuffers()'), 'physical sand topology must be cached per quality preset');
+assert.ok(localSandSource.includes('updateVerticesData'), 'physical sand must update existing GPU buffers after first upload');
+assert.ok(localSandSource.includes('this.lastRebuildMs'), 'sand surface rebuild cost must remain observable for QA');
 assert.ok(!localSandSource.includes('const coarseBrightness ='), 'untouched physical patch must remain neutral while near terrain ignores vertex colors');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'));
 assert.ok(!localSandSource.includes('directionalShade'));
@@ -82,6 +87,7 @@ assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"));
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"));
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false)"));
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true)"));
+assert.ok(materialSource.includes('local.zOffset = -1'), 'local sand must win the narrow overlap ring through depth bias, never physical lift');
 
 const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
 assert.ok(lightingSource.includes('this.fill.intensity'));
@@ -116,11 +122,15 @@ assert.ok(polishSource.includes('bedouin-linen-weave'));
 assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'));
 assert.ok(polishSource.includes('bedouin-skin-detail'), 'visible skin must have authored microdetail instead of flat RGB');
 assert.ok(polishSource.includes('bedouin-keffiyeh-weave'), 'head cloth must use a separate textile treatment');
-assert.ok(polishSource.includes('cameraSafe'));
+assert.ok(polishSource.includes('bedouin-first-person-thobe-front'), 'look-down view must have a dedicated safe torso surface');
+assert.ok(polishSource.includes('setSkinVisible'), 'extreme pitch must be able to cull the imported skin mesh without affecting bones');
+assert.ok(polishSource.includes('controller.pitch < 0.44'), 'large external accessories must disappear before they fill the first-person view');
+assert.ok(polishSource.includes('controller.pitch >= 0.40'), 'safe first-person torso must replace external garments before the sand inspection angle');
 
 const landmarkSource = readFileSync(new URL('./landmarks.js', import.meta.url), 'utf8');
 assert.ok(landmarkSource.includes('sirocco-rock-contact-shadow-material'), 'Blender landmarks must have stable mobile-safe contact grounding');
 assert.ok(landmarkSource.includes('environmentIntensity'), 'authored sandstone must stay matte and sun-baked');
+assert.ok(landmarkSource.includes('sampleNormal'), 'landmark contact shadows must conform to the dune surface');
 
 const gameSource = readFileSync(new URL('./game.js', import.meta.url), 'utf8');
 assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must stay throttled');
