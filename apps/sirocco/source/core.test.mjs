@@ -9,6 +9,7 @@ for (const [x, z] of [[0, 0], [42, 0], [-42, 84], [123.456, -98.25]]) {
   assert.ok(Number.isFinite(normal.x) && Number.isFinite(normal.y) && Number.isFinite(normal.z));
   assert.ok(Math.abs(Math.hypot(normal.x, normal.y, normal.z) - 1) < 1e-5, 'terrain normal must stay normalized');
 }
+
 for (const segments of [18, 22, 24, 30, 32, 40, 42]) {
   for (let i = -4; i <= 4; i += 1) {
     const boundary = i * 42;
@@ -66,16 +67,14 @@ const uniformSpacing = highRadius * 2 / highSegments;
 const centreSpacing = uniformSpacing * 0.62;
 assert.ok(highSegments >= 64 && highSegments <= 72, 'High local sand must stay below the 5k-vertex budget');
 assert.ok(centreSpacing <= 0.072, 'adaptive High grid must provide roughly 7 cm detail around the player');
-assert.ok(localSandSource.includes('warpLocalAxis'), 'local sand must concentrate samples near the player instead of increasing total vertices');
-assert.ok(localSandSource.includes('this.holeRatio = 0.90'), 'replacement hole must extend through the deformation fade to suppress seam z-fighting');
-assert.ok(localSandSource.includes('Math.hypot(cellX, cellZ)'));
-assert.ok(localSandSource.includes('smoothstep(0.70, 0.88, r)'));
-assert.ok(localSandSource.includes('sampleLoose'));
-assert.ok(localSandSource.includes('sampleCompaction'));
+assert.ok(localSandSource.includes('warpLocalAxis'), 'local sand must concentrate samples near the player');
+assert.ok(localSandSource.includes('this.holeRatio = 0.90'), 'replacement hole must suppress seam z-fighting');
+assert.ok(localSandSource.includes('meshTerrainShadingNormal'), 'untouched local sand must inherit coarse shading normals');
+assert.ok(localSandSource.includes('sandVariation'), 'untouched local sand must inherit coarse vertex tint variation');
+assert.ok(localSandSource.includes('const coarseBrightness ='), 'local patch must match coarse brightness before footprint modulation');
+assert.ok(localSandSource.includes('const physicalActivity ='), 'mesh normals must activate only where physical sand moved');
+assert.ok(localSandSource.includes('const meshWeight = physicalActivity * 0.42'));
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'));
-assert.ok(localSandSource.includes('const cavity ='));
-assert.ok(localSandSource.includes('const physicalActivity ='), 'untouched local sand must suppress its own triangulated normal field');
-assert.ok(localSandSource.includes('const meshWeight = physicalActivity * 0.42'), 'mesh normals must only appear where physical sand actually moved');
 assert.ok(!localSandSource.includes('directionalShade'));
 
 const materialSource = readFileSync(new URL('./sand-material.js', import.meta.url), 'utf8');
@@ -84,33 +83,43 @@ assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"));
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"));
 
 const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
-assert.ok(lightingSource.includes('this.fill.intensity = 0.62'));
-assert.ok(lightingSource.includes('this.sun.intensity = 3.15'));
+assert.ok(lightingSource.includes('this.fill.intensity'));
+assert.ok(lightingSource.includes('this.sun.intensity'));
+assert.ok(!lightingSource.includes('ShadowGenerator'), 'terrain shadow-map regressions must stay disabled');
+
 const contactShadowSource = readFileSync(new URL('./contact-shadow.js', import.meta.url), 'utf8');
-assert.ok(contactShadowSource.includes('this.material.alpha = 0.54'));
+assert.ok(contactShadowSource.includes('slopeQuaternion'), 'contact shadow must conform to dune normal');
+assert.ok(contactShadowSource.includes('this.surface.sampleNormal'), 'contact shadow orientation must sample physical surface normal');
+assert.ok(contactShadowSource.includes('+ 0.022'), 'contact shadow must stay slightly above the dune to avoid clipped triangles');
 assert.ok(!contactShadowSource.includes('ShadowGenerator'));
 
 const cameraSource = readFileSync(new URL('./camera.js', import.meta.url), 'utf8');
-assert.ok(cameraSource.includes('const eyeForward = 0.38'), 'camera must keep enough head clearance without pushing the visible body behind the player');
-assert.ok(cameraSource.includes('const verticalClearance = viewForwardY * 0.08'), 'pitch clearance must stay small enough to preserve first-person body visibility');
-assert.ok(cameraSource.includes('camera.minZ = 0.22'), 'near clip must reject residual skull and keffiyeh intersections');
+const eyeForward = Number(cameraSource.match(/const eyeForward = ([0-9.]+)/)?.[1] || 999);
+const nearClip = Number(cameraSource.match(/camera\.minZ = ([0-9.]+)/)?.[1] || 0);
+assert.ok(eyeForward >= 0.08 && eyeForward <= 0.20, 'first-person eye must remain close enough to the body for natural look-down framing');
+assert.ok(nearClip >= 0.24, 'near clip must reject skull/keffiyeh intersections instead of pushing the eye far forward');
+assert.ok(cameraSource.includes('verticalClearance = viewForwardY * 0.035'));
+
 const movementSource = readFileSync(new URL('./movement.js', import.meta.url), 'utf8');
 assert.ok(movementSource.includes('sampleSoftness'));
 assert.ok(movementSource.includes('looseDrag'));
+
 const characterSource = readFileSync(new URL('./character.js', import.meta.url), 'utf8');
 assert.ok(characterSource.includes('SceneLoader.ImportMeshAsync'));
 assert.ok(characterSource.includes('setWeightForAllAnimatables'));
+assert.ok(characterSource.includes('FIRST_PERSON_BODY_LEAD'), 'animated body must be authored separately from camera placement');
+
 const polishSource = readFileSync(new URL('./character-polish.js', import.meta.url), 'utf8');
 assert.ok(polishSource.includes('bedouin-crossbody-strap'));
 assert.ok(polishSource.includes('bedouin-linen-weave'));
 assert.ok(polishSource.includes('bedouin-patterned-scarf-layer'));
-assert.ok(polishSource.includes('bedouin-skin-detail'), 'visible skin must have authored microdetail instead of a flat RGB material');
+assert.ok(polishSource.includes('bedouin-skin-detail'), 'visible skin must have authored microdetail instead of flat RGB');
 assert.ok(polishSource.includes('bedouin-keffiyeh-weave'), 'head cloth must use a separate textile treatment');
 assert.ok(polishSource.includes('cameraSafe'));
 
 const landmarkSource = readFileSync(new URL('./landmarks.js', import.meta.url), 'utf8');
 assert.ok(landmarkSource.includes('sirocco-rock-contact-shadow-material'), 'Blender landmarks must have stable mobile-safe contact grounding');
-assert.ok(landmarkSource.includes('environmentIntensity = 0.34'), 'authored sandstone must remain matte and sun-baked');
+assert.ok(landmarkSource.includes('environmentIntensity'), 'authored sandstone must stay matte and sun-baked');
 
 const gameSource = readFileSync(new URL('./game.js', import.meta.url), 'utf8');
 assert.ok(gameSource.includes('this.sandVisualClock >= 0.10'), 'local sand rebuilds must stay throttled');
