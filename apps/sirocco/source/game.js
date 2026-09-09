@@ -101,6 +101,7 @@ export class SiroccoGame {
     report('Прогреваем анимацию и физический песок…', 0.90);
     this.rig.update(this.controller, 1 / 60);
     this.characterPolish.update(this.controller, 1 / 60);
+    this.updateFirstPersonGarmentVisibility();
     this.camera.update(this.controller, 1 / 60);
     this.scene.render();
     await nextFrame();
@@ -169,6 +170,25 @@ export class SiroccoGame {
     document.querySelector('#quality-label')?.replaceChildren(document.createTextNode(this.quality?.mode === 'auto' ? `AUTO · ${preset.label}` : preset.label));
   }
 
+  updateFirstPersonGarmentVisibility() {
+    if (!this.rig || !this.controller) return;
+    const pitch = this.controller.pitch;
+    const closeLook = pitch > 0.56;
+    const verticalLook = pitch > 0.88;
+    const set = (mesh, visible) => mesh?.setEnabled?.(visible);
+
+    // Keep the skinned human, sleeves, hands, trouser cuffs and boots visible,
+    // but cull static garment shells that become screen-sized when the eye is
+    // inside/above them. This mirrors a real first-person body mask without
+    // duplicating the skeleton or breaking bone-driven footsteps.
+    set(this.rig.robeTorso, !closeLook);
+    set(this.rig.belt, !closeLook);
+    set(this.rig.scarfCollar, !closeLook);
+    for (const tail of this.rig.scarfTails || []) set(tail, !closeLook);
+    set(this.rig.frontFold, !verticalLook);
+    set(this.rig.robeSkirt, !verticalLook);
+  }
+
   frame() {
     if (!this.scene || !this.engine) return;
     const dt = Math.min(0.04, this.engine.getDeltaTime() / 1000);
@@ -182,6 +202,7 @@ export class SiroccoGame {
 
       const landings = this.rig.update(this.controller, dt);
       this.characterPolish.update(this.controller, dt);
+      this.updateFirstPersonGarmentVisibility();
       for (const landing of landings) {
         this.sand.stampFoot(landing, this.controller);
         const steep = groundState.sliding > 0.04;
