@@ -27,11 +27,14 @@ export class WindErosion {
     const stepZ = stepX === 0 ? Math.sign(dirZ) : 0;
     const gust = clamp(wind.gust, 0, 1);
     const strength = clamp(wind.strength, 0, 1);
-    const cells = [...this.sand.cells.values()];
     let processed = 0;
     let moved = 0;
 
-    for (const cell of cells) {
+    // Iterate the sparse map directly. Copying up to ~4600 cell objects every
+    // half-second only to process <=42 of them caused avoidable Safari GC work.
+    // Map iteration remains bounded by the processing budget even if a transfer
+    // adds a new downwind cell during this pass.
+    for (const cell of this.sand.cells.values()) {
       if (processed >= this.budget) break;
       const wx = cell.ix * this.sand.cellSize;
       const wz = cell.iz * this.sand.cellSize;
