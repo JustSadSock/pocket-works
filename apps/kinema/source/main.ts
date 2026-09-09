@@ -22,9 +22,16 @@ import './styles.css';
 import { LocomotionMixer } from './animation';
 import { FootstepAudio } from './audio';
 import { InputController } from './input';
-import { MAX_SPEED, exponentialApproach, speedFromMagnitude } from './locomotion';
+import {
+  MAX_SPEED,
+  exponentialApproach,
+  localMotionComponents,
+  moveAngleTowards,
+  shortestAngleDelta,
+  speedFromMagnitude
+} from './locomotion';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type GaitName = 'idle' | 'walk' | 'jog' | 'run';
@@ -36,9 +43,12 @@ type QaState = {
   peakSpeed: number;
   gait: GaitName;
   peakGait: GaitName;
+  motionMode: string;
+  peakDirectionalBlend: number;
   travelDistance: number;
   grounded: boolean;
   animationClips: number;
+  directionalClips: number;
   noUvMaterialFallbacks: number;
   materialsReady: boolean;
 };
@@ -117,9 +127,12 @@ async function start(): Promise<void> {
     peakSpeed: 0,
     gait: 'idle',
     peakGait: 'idle',
+    motionMode: 'idle',
+    peakDirectionalBlend: 0,
     travelDistance: 0,
     grounded: true,
     animationClips: 0,
+    directionalClips: 0,
     noUvMaterialFallbacks: 0,
     materialsReady: false
   };
@@ -248,10 +261,11 @@ async function start(): Promise<void> {
     }
 
     loadingBar.style.width = '78%';
-    loadingText.textContent = 'Armature / animation actions';
+    loadingText.textContent = 'Armature / nine motion actions';
     if (!result.animationGroups.length) throw new Error('Blender GLB не содержит animation actions.');
     qa.animationClips = result.animationGroups.length;
     const mixer = new LocomotionMixer(result.animationGroups);
+    qa.directionalClips = mixer.directionalClipCount;
 
     qa.loadingState = 'warming';
     loadingBar.style.width = '94%';
@@ -263,8 +277,10 @@ async function start(): Promise<void> {
     qa.loadingState = 'ready';
 
     let speed = 0;
-    let direction = new Vector3(0, 0, -1);
-    let retainedDirection = direction.clone();
+    let velocity = Vector3.Zero();
+    let retainedDirection = new Vector3(0, 0, -1);
+    let facingYaw = 0;
+    let turnRate = 0;
     let stepTravel = 0;
     let stepSide = -1;
     let last = performance.now();
@@ -273,7 +289,11 @@ async function start(): Promise<void> {
 
     const updateCamera = (dt: number) => {
       const running = clamp(speed / MAX_SPEED, 0, 1);
-      const target = characterRoot.position.add(new Vector3(0, 1.22 + running * 0.035, 0));
+      const motionDirection = speed > 0.05 ? velocity.scale(1 / speed) : retainedDirection;
+      const lead = motionDirection.scale(0.10 + running * 0.24);
+      const target = characterRoot.position
+        .add(new Vector3(0, 1.22 + running * 0.035, 0))
+        .add(lead);
       const radius = 4.18 + running * 0.66;
       const cp = Math.cos(input.cameraPitch);
       const desired = new Vector3(
@@ -281,8 +301,8 @@ async function start(): Promise<void> {
         target.y + Math.sin(input.cameraPitch) * radius,
         target.z + Math.cos(input.cameraYaw) * cp * radius
       );
-      camera.position = Vector3.Lerp(camera.position, desired, 1 - Math.exp(-11 * dt));
-      camera.setTarget(Vector3.Lerp(camera.getTarget(), target, 1 - Math.exp(-14 * dt)));
+      camera.position = Vector3.Lerp(camera.position, desired, 1 - Math.exp(-10.5 * dt));
+      camera.setTarget(Vector3.Lerp(camera.getTarget(), target, 1 - Math.exp(-13 * dt)));
       camera.fov = exponentialApproach(camera.fov, 0.64 + running * 0.045, 6.2, dt);
     };
 
@@ -290,49 +310,77 @@ async function start(): Promise<void> {
       const move = input.sample(dt);
       const targetSpeed = speedFromMagnitude(move.magnitude);
       const previousSpeed = speed;
-      speed = exponentialApproach(speed, targetSpeed, targetSpeed > speed ? 6.6 : 8.8, dt);
-      if (targetSpeed === 0 && speed < 0.035) speed = 0;
+      const previousVelocity = velocity.clone();
 
-      const forward = new Vector3(-Math.sin(input.cameraYaw), 0, -Math.cos(input.cameraYaw));
-      const right = new Vector3(Math.cos(input.cameraYaw), 0, -Math.sin(input.cameraYaw));
-      const wanted = forward.scale(move.y).add(right.scale(move.x));
-      if (wanted.lengthSquared() > 0.0001) {
-        wanted.normalize();
-        direction = Vector3.Lerp(direction, wanted, 1 - Math.exp(-(speed > 3.5 ? 9.5 : 13) * dt)).normalize();
-        retainedDirection = direction.clone();
-        const yaw = Math.atan2(-direction.x, -direction.z);
-        characterRoot.rotationQuaternion = Quaternion.Slerp(
-          characterRoot.rotationQuaternion || Quaternion.Identity(),
-          Quaternion.FromEulerAngles(0, yaw, 0),
-          1 - Math.exp(-(7.2 + speed * 0.7) * dt)
-        );
-      } else {
-        direction = retainedDirection.clone();
+      const cameraForward = new Vector3(-Math.sin(input.cameraYaw), 0, -Math.cos(input.cameraYaw));
+      const cameraRight = new Vector3(Math.cos(input.cameraYaw), 0, -Math.sin(input.cameraYaw));
+      const wanted = cameraForward.scale(move.y).add(cameraRight.scale(move.x));
+      const hasIntent = wanted.lengthSquared() > 0.0001;
+      if (hasIntent) wanted.normalize();
+
+      const desiredVelocity = hasIntent ? wanted.scale(targetSpeed) : Vector3.Zero();
+      const reversal = speed > 0.2 && hasIntent ? Math.max(0, -Vector3.Dot(retainedDirection, wanted)) : 0;
+      const velocitySharpness = targetSpeed > speed ? 5.5 + reversal * 1.2 : targetSpeed === 0 ? 9.5 : 7.2;
+      velocity = Vector3.Lerp(velocity, desiredVelocity, 1 - Math.exp(-velocitySharpness * dt));
+      speed = velocity.length();
+      if (targetSpeed === 0 && speed < 0.035) {
+        velocity = Vector3.Zero();
+        speed = 0;
       }
+      if (speed > 0.03) retainedDirection = velocity.scale(1 / speed);
+
+      const desiredFacingYaw = hasIntent ? Math.atan2(-wanted.x, -wanted.z) : facingYaw;
+      const turnError = shortestAngleDelta(facingYaw, desiredFacingYaw);
+      const previousFacingYaw = facingYaw;
+      const turnRateLimit = 5.0 - clamp(speed / MAX_SPEED, 0, 1) * 1.45;
+      facingYaw = moveAngleTowards(facingYaw, desiredFacingYaw, turnRateLimit * dt);
+      turnRate = dt > 0.0001 ? shortestAngleDelta(previousFacingYaw, facingYaw) / dt : 0;
+      characterRoot.rotationQuaternion = Quaternion.FromEulerAngles(0, facingYaw, 0);
+
       if (speed > 0.001) {
-        const distance = speed * dt;
-        characterRoot.position.addInPlace(direction.scale(distance));
-        qa.travelDistance += distance;
+        const displacement = velocity.scale(dt);
+        characterRoot.position.addInPlace(displacement);
+        qa.travelDistance += displacement.length();
       }
 
-      const acceleration = dt > 0 ? (speed - previousSpeed) / dt : 0;
+      const local = localMotionComponents(velocity.x, velocity.z, facingYaw);
+      const acceleration = dt > 0.0001 ? velocity.subtract(previousVelocity).scale(1 / dt) : Vector3.Zero();
+      const facingForward = new Vector3(-Math.sin(facingYaw), 0, -Math.cos(facingYaw));
+      const facingRight = new Vector3(Math.cos(facingYaw), 0, -Math.sin(facingYaw));
+      const forwardAcceleration = Vector3.Dot(acceleration, facingForward);
+      const sideAcceleration = Vector3.Dot(acceleration, facingRight);
       const running = clamp(speed / MAX_SPEED, 0, 1);
-      const pitch = clamp(-0.01 - acceleration * 0.0045 - running * 0.028, -0.085, 0.045);
-      const roll = clamp(-move.x * running * 0.055, -0.065, 0.065);
+      const pitch = clamp(-0.008 - forwardAcceleration * 0.006 - running * 0.022, -0.09, 0.05);
+      const roll = clamp(
+        -sideAcceleration * 0.005 - local.right * running * 0.035 - turnRate * running * 0.012,
+        -0.078,
+        0.078
+      );
       leanRoot.rotationQuaternion = Quaternion.Slerp(
         leanRoot.rotationQuaternion || Quaternion.Identity(),
         Quaternion.FromEulerAngles(pitch, 0, roll),
-        1 - Math.exp(-7 * dt)
+        1 - Math.exp(-7.5 * dt)
       );
 
-      const gait = mixer.update(speed);
-      gaitLabel.textContent = gait.toUpperCase();
+      const motion = mixer.update(speed, {
+        localForward: local.forward,
+        localRight: local.right,
+        turnError
+      });
+      const motionLabel = motion.mode === 'strafe'
+        ? `STRAFE ${local.right < 0 ? 'L' : 'R'}`
+        : motion.mode === 'pivot'
+          ? `PIVOT ${turnError < 0 ? 'L' : 'R'}`
+          : motion.mode.toUpperCase();
+      gaitLabel.textContent = motionLabel;
       speedLabel.textContent = `${speed.toFixed(1)} m/s`;
       speedBar.style.width = `${(speed / MAX_SPEED * 100).toFixed(1)}%`;
       qa.speed = speed;
       qa.peakSpeed = Math.max(qa.peakSpeed, speed);
-      qa.gait = gait;
-      if (gaitRank[gait] > gaitRank[qa.peakGait]) qa.peakGait = gait;
+      qa.gait = motion.gait;
+      qa.motionMode = motion.mode;
+      qa.peakDirectionalBlend = Math.max(qa.peakDirectionalBlend, motion.directionalWeight);
+      if (gaitRank[motion.gait] > gaitRank[qa.peakGait]) qa.peakGait = motion.gait;
       qa.playerPosition = {
         x: characterRoot.position.x,
         y: characterRoot.position.y,
@@ -341,13 +389,15 @@ async function start(): Promise<void> {
 
       if (speed > 0.45) {
         stepTravel += speed * dt;
-        const spacing = 0.54 + running * 0.25;
+        const spacing = 0.52 + running * 0.27;
         if (stepTravel >= spacing) {
           stepTravel %= spacing;
           stepSide *= -1;
           audio.step(running, stepSide);
         }
       } else stepTravel = 0;
+
+      if (previousSpeed > 0.2 && speed === 0) turnRate = 0;
       updateCamera(dt);
     };
 
