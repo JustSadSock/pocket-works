@@ -105,6 +105,7 @@ export class BedouinVisualPolish {
     this.scene = scene;
     this.rig = rig;
     this.meshes = [];
+    this.firstPersonMeshes = [];
     this.materials = [];
     this.textures = [];
     this.time = 0;
@@ -141,13 +142,17 @@ export class BedouinVisualPolish {
     const clothShadow = material(this.scene, 'bedouin-polish-shadow-cloth', new Color3(0.48, 0.40, 0.31), 0.99);
     const redCloth = material(this.scene, 'bedouin-polish-patterned-red', new Color3(0.44, 0.075, 0.045), 0.97);
     const headCloth = material(this.scene, 'bedouin-polish-keffiyeh', new Color3(0.82, 0.72, 0.62), 0.985);
+    const firstPersonLinen = material(this.scene, 'bedouin-first-person-linen', new Color3(0.88, 0.82, 0.70), 0.99);
+    const firstPersonSash = material(this.scene, 'bedouin-first-person-sash', new Color3(0.40, 0.065, 0.040), 0.97);
     const brass = material(this.scene, 'bedouin-polish-aged-brass', new Color3(0.34, 0.22, 0.08), 0.72);
     brass.metallic = 0.35;
     darkLeather.albedoTexture = leatherGrain;
     clothShadow.albedoTexture = linenWeave;
     redCloth.albedoTexture = sashWeave;
     headCloth.albedoTexture = keffiyehWeave;
-    this.materials.push(darkLeather, clothShadow, redCloth, headCloth, brass);
+    firstPersonLinen.albedoTexture = linenWeave;
+    firstPersonSash.albedoTexture = sashWeave;
+    this.materials.push(darkLeather, clothShadow, redCloth, headCloth, firstPersonLinen, firstPersonSash, brass);
 
     const add = (mesh, mat) => {
       mesh.parent = this.rig.root;
@@ -155,6 +160,15 @@ export class BedouinVisualPolish {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       this.meshes.push(mesh);
+      return mesh;
+    };
+    const addFirstPerson = (mesh, mat) => {
+      mesh.parent = this.rig.root;
+      mesh.material = mat;
+      mesh.isPickable = false;
+      mesh.receiveShadows = false;
+      mesh.setEnabled(false);
+      this.firstPersonMeshes.push(mesh);
       return mesh;
     };
 
@@ -192,6 +206,20 @@ export class BedouinVisualPolish {
 
     this.beltWrap = add(MeshBuilder.CreateTorus('bedouin-layered-sash-wrap', { diameter: 0.53, thickness: 0.022, tessellation: 24 }, this.scene), redCloth);
     this.beltWrap.position.y = 0.90;
+
+    // A compact first-person-only chest front. It lives just beyond the near
+    // plane and replaces the large cylindrical garment shell when looking down,
+    // so the player sees cloth and body volume without ever seeing its interior.
+    this.firstPersonChest = addFirstPerson(MeshBuilder.CreateBox('bedouin-first-person-thobe-front', {
+      width: 0.39, height: 0.46, depth: 0.055
+    }, this.scene), firstPersonLinen);
+    this.firstPersonChest.position.set(0, 1.18, 0.245);
+    this.firstPersonChest.rotation.x = -0.08;
+
+    this.firstPersonSash = addFirstPerson(MeshBuilder.CreateBox('bedouin-first-person-sash-front', {
+      width: 0.35, height: 0.065, depth: 0.060
+    }, this.scene), firstPersonSash);
+    this.firstPersonSash.position.set(0, 0.965, 0.248);
   }
 
   setCosmeticsVisible(visible) {
@@ -200,15 +228,18 @@ export class BedouinVisualPolish {
     for (const mesh of this.meshes) mesh.setEnabled(visible);
   }
 
+  setFirstPersonVisible(visible) {
+    for (const mesh of this.firstPersonMeshes) mesh.setEnabled(visible);
+  }
+
   update(controller, dt) {
     this.time += dt;
     const yawDivergence = Math.abs(angleDelta(controller.yaw, controller.bodyYaw));
-    // These accessories live on top of the skinned body and are valuable from
-    // normal view angles, but close first-person pitch turns straps and scarf
-    // panels into screen-sized polygons. Hide only the cosmetic layer early;
-    // sleeves, hands, legs and the real walk rig remain visible.
     const cameraSafe = yawDivergence < 0.62 && controller.pitch < 0.58;
     this.setCosmeticsVisible(cameraSafe);
+
+    const firstPersonSafe = yawDivergence < 0.66 && controller.pitch >= 0.56 && controller.pitch < 0.90;
+    this.setFirstPersonVisible(firstPersonSafe);
     if (!cameraSafe) return;
 
     const speed = Math.min(1, controller.speed / 3);
@@ -222,9 +253,11 @@ export class BedouinVisualPolish {
 
   dispose() {
     for (const mesh of this.meshes) mesh.dispose();
+    for (const mesh of this.firstPersonMeshes) mesh.dispose();
     for (const mat of this.materials) mat.dispose();
     for (const texture of this.textures) texture.dispose();
     this.meshes.length = 0;
+    this.firstPersonMeshes.length = 0;
     this.materials.length = 0;
     this.textures.length = 0;
   }
