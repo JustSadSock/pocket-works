@@ -8,6 +8,7 @@ export class DesertPresence {
     this.erosion = new WindErosion(game.sand);
     this.lastPreset = '';
     this.baseFog = game.scene.fogDensity;
+    this.baseHaze = 0.82;
     this.observer = null;
     this.time = 0;
   }
@@ -24,6 +25,7 @@ export class DesertPresence {
     this.lastPreset = preset.id;
     this.erosion.setQuality(preset);
     this.baseFog = preset.id === 'low' ? 0.00225 : preset.id === 'medium' ? 0.00195 : 0.0017;
+    this.baseHaze = preset.id === 'low' ? 0.92 : 0.82;
   }
 
   update() {
@@ -64,10 +66,11 @@ export class DesertPresence {
     }
 
     // Gust fronts carry a little more dust near the horizon. Keep the range
-    // tiny so LOD silhouettes never disappear and High remains crisp.
+    // tiny so LOD silhouettes never disappear and every quality mode retains
+    // its authored baseline visibility.
     const gustFog = this.baseFog * (1 + state.gust * state.strength * 0.18);
     game.scene.fogDensity += (gustFog - game.scene.fogDensity) * Math.min(1, dt * 1.8);
-    game.atmosphere?.material?.setFloat?.('haze', 0.78 + state.gust * state.strength * 0.12);
+    game.atmosphere?.material?.setFloat?.('haze', this.baseHaze + state.gust * state.strength * 0.10);
   }
 
   dispose() {
