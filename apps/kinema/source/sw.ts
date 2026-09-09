@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'kinema-';
-const CACHE_NAME = 'kinema-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'kinema-v1.6.0';
+const APP_VERSION = '1.6.0';
 const RELEASE_DATE = '2026-09-09';
 const RELEASE_NOTES = [
-  'Human proportions refined again with slimmer sleeves/legs/hands, smaller footwear and restrained facial features.',
-  'Blender forward axis now matches gameplay so the default third-person camera sits behind the character.',
-  'Weighted armature, nine authored actions, synchronized gait blending, PBR lighting and procedural footsteps remain intact.'
+  'Final Blender character proportions and relaxed asymmetric idle posture.',
+  'Verified analog Walk/Jog/Run locomotion and camera interaction in Chromium and WebKit mobile QA.',
+  'Safari no-UV skinned material fallback and first-frame shader warmup prevent black materials and blank startup frames.'
 ];
 
 setCacheNameDetails({ prefix: 'kinema', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
