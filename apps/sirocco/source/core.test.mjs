@@ -70,10 +70,9 @@ assert.ok(centreSpacing <= 0.072, 'adaptive High grid must provide roughly 7 cm 
 assert.ok(localSandSource.includes('warpLocalAxis'), 'local sand must concentrate samples near the player');
 assert.ok(localSandSource.includes('this.holeRatio = 0.90'), 'replacement hole must suppress seam z-fighting');
 assert.ok(localSandSource.includes('meshTerrainShadingNormal'), 'untouched local sand must inherit coarse shading normals');
-assert.ok(localSandSource.includes('sandVariation'), 'untouched local sand must inherit coarse vertex tint variation');
-assert.ok(localSandSource.includes('const coarseBrightness ='), 'local patch must match coarse brightness before footprint modulation');
 assert.ok(localSandSource.includes('const physicalActivity ='), 'mesh normals must activate only where physical sand moved');
 assert.ok(localSandSource.includes('const meshWeight = physicalActivity * 0.42'));
+assert.ok(!localSandSource.includes('const coarseBrightness ='), 'untouched physical patch must remain neutral while near terrain ignores vertex colors');
 assert.ok(localSandSource.includes('this.mesh.receiveShadows = false'));
 assert.ok(!localSandSource.includes('directionalShade'));
 
@@ -81,6 +80,8 @@ const materialSource = readFileSync(new URL('./sand-material.js', import.meta.ur
 assert.ok(materialSource.includes('makeSandMaterial'));
 assert.ok(!materialSource.includes("near.clone('sand-pbr-far-unified')"));
 assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-far'"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-near', albedo, normal, false)"));
+assert.ok(materialSource.includes("makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true)"));
 
 const lightingSource = readFileSync(new URL('./lighting.js', import.meta.url), 'utf8');
 assert.ok(lightingSource.includes('this.fill.intensity'));
