@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { attachCriticalScreenshot, monitorUnexpectedBrowserOutput } from './helpers';
 
 type AetherwingState={
-  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;authoredBiomeTemplates?:number;clouds?:number;groundDetail?:number;canopyAccents?:number;chunks?:number;fauna?:number;terrainMeshes?:number;waterMeshes?:number;riverMeshes?:number;materialsHealthy?:boolean;vegetationInstances?:number;treeInstances?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;cameraDistance?:number;cameraGroundClearance?:number;dragonObstacleClearance?:number;cameraObstacleClearance?:number;assetErrors?:string[];
+  loadingState?:string;started?:boolean;dragonReady?:boolean;usedFallback?:boolean;animationGroups?:number;boneCount?:number;authoredBiomeTemplates?:number;clouds?:number;groundDetail?:number;canopyAccents?:number;chunks?:number;fauna?:number;terrainMeshes?:number;waterMeshes?:number;riverMeshes?:number;materialsHealthy?:boolean;vegetationInstances?:number;treeInstances?:number;groundHeight?:number;brakeEvents?:number;lastGesture?:string;mode?:string;speed?:number;altitude?:number;pitch?:number;roll?:number;quality?:number;cameraDistance?:number;cameraGroundClearance?:number;dragonObstacleClearance?:number;cameraObstacleClearance?:number;cameraSightClearance?:number;assetErrors?:string[];
 };
 
 async function state(page:Page){return page.evaluate(()=>((window as any).__AI_TEST_STATE__??null) as AetherwingState|null);}
@@ -13,7 +13,7 @@ async function holdStick(page:Page,dx:number,dy:number,ms:number){
   await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(end.x,end.y,{steps:3});await page.waitForTimeout(ms);await page.mouse.up();await page.waitForTimeout(250);
 }
 async function snap(page:Page,testInfo:TestInfo,name:string){await attachCriticalScreenshot(page,testInfo,name,{fullPage:false});}
-function expectCameraFramed(s:AetherwingState|null,label:string){expect(s?.cameraDistance??999,`${label}: chase camera lost the dragon`).toBeLessThan(26);expect(s?.cameraGroundClearance??-999,`${label}: chase camera intersected terrain`).toBeGreaterThan(1.25);expect(s?.cameraObstacleClearance??-999,`${label}: chase camera intersected canopy/rock volume`).toBeGreaterThan(1.8);}
+function expectCameraFramed(s:AetherwingState|null,label:string){expect(s?.cameraDistance??999,`${label}: chase camera lost the dragon`).toBeLessThan(26);expect(s?.cameraGroundClearance??-999,`${label}: chase camera intersected terrain`).toBeGreaterThan(1.25);expect(s?.cameraObstacleClearance??-999,`${label}: chase camera intersected canopy/rock volume`).toBeGreaterThan(1.8);expect(s?.cameraSightClearance??-999,`${label}: terrain/canopy occluded the camera-to-dragon sight line`).toBeGreaterThan(1.45);}
 function expectFlightClearance(s:AetherwingState|null,label:string){expect(s?.dragonObstacleClearance??-999,`${label}: dragon crossed the terrain/canopy flight surface`).toBeGreaterThan(7.4);}
 
 test.describe('AETHERWING flight journey',()=>{
