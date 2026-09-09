@@ -29,6 +29,7 @@ type WakeMemory = {
 };
 
 const memories = new WeakMap<OceanWorld, WakeMemory>();
+const GRAVITY = 9.81;
 
 function ensureWake(world: OceanWorld): WakeMemory {
   const existing = memories.get(world);
@@ -39,17 +40,17 @@ function ensureWake(world: OceanWorld): WakeMemory {
   }
 
   const material = new StandardMaterial('presence-broken-wake-material', world.scene);
-  material.diffuseColor = new Color3(0.73, 0.86, 0.84);
-  material.emissiveColor = new Color3(0.025, 0.045, 0.042);
+  material.diffuseColor = new Color3(0.76, 0.89, 0.87);
+  material.emissiveColor = new Color3(0.030, 0.052, 0.048);
   material.specularColor = new Color3(0, 0, 0);
-  material.alpha = 0.23;
+  material.alpha = 0.30;
   material.backFaceCulling = false;
 
-  const strips: WakeStrip[] = Array.from({ length: 64 }, (_, index) => {
+  const strips: WakeStrip[] = Array.from({ length: 88 }, (_, index) => {
     const seed = hash2(index * 79 + 17, index * 131 + 23);
     const mesh = MeshBuilder.CreatePlane(`presence-broken-wake-${index}`, {
-      width: 0.18 + seed * 0.10,
-      height: 1.45 + seed * 0.85
+      width: 0.20 + seed * 0.13,
+      height: 1.55 + seed * 1.0
     }, world.scene);
     mesh.rotation.x = Math.PI / 2;
     mesh.material = material;
@@ -76,16 +77,18 @@ function ensureWake(world: OceanWorld): WakeMemory {
 }
 
 function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetry, time: number): void {
-  const speed = clamp(telemetry.speed / 6.4, 0, 1);
-  if (speed < 0.075 || time < memory.next) return;
   const loadout = getActiveShipLoadout();
-  const lengthScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
+  const hullLength = loadout.dimensions.length;
+  const froude = Math.max(0, telemetry.speed) / Math.sqrt(GRAVITY * Math.max(8, hullLength));
+  const speed = clamp(froude / 0.46, 0, 1.25);
+  if (speed < 0.045 || time < memory.next) return;
+  const lengthScale = clamp(hullLength / 12.8, 0.82, 1.30);
   const beamScale = clamp(loadout.dimensions.beam / 3.9, 0.82, 1.22);
-  memory.next = time + 0.12 + (1 - speed) * 0.10;
+  const cadence = 0.17 - clamp(speed, 0, 1) * 0.105;
+  memory.next = time + Math.max(0.055, cadence);
 
-  // The wake starts at the actual transom, not at a hard-coded point inside the enlarged hull.
-  // Width and divergence follow the selected beam so a 15.6 m cruiser leaves a broader track than
-  // the 10.8 m harbor cutter.
+  // Wake energy is keyed to the displacement speed regime. The small harbor hull starts opening a
+  // strong V sooner than a 15.6 m cruiser at the same m/s, matching the Froude-scaled pressure wave.
   for (let piece = 0; piece < 2; piece += 1) {
     const strip = memory.strips[memory.cursor++ % memory.strips.length];
     const side = strip.side;
@@ -93,53 +96,61 @@ function spawnWake(memory: WakeMemory, state: ShipState, telemetry: ShipTelemetr
     const fwdZ = Math.cos(state.yaw);
     const rightX = Math.cos(state.yaw);
     const rightZ = -Math.sin(state.yaw);
-    const jitter = (strip.seed - 0.5) * 0.18 * beamScale;
-    const lateral = side * (loadout.dimensions.beam * (0.075 + speed * 0.045)) + jitter;
-    const aft = loadout.dimensions.length * 0.445 + piece * 0.28 * lengthScale + strip.seed * 0.20 * lengthScale;
+    const jitter = (strip.seed - 0.5) * 0.22 * beamScale;
+    const lateral = side * (loadout.dimensions.beam * (0.055 + speed * 0.090)) + jitter;
+    const aft = hullLength * 0.445 + piece * 0.30 * lengthScale + strip.seed * 0.24 * lengthScale;
     strip.worldX = state.worldX - fwdX * aft + rightX * lateral;
     strip.worldZ = state.worldZ - fwdZ * aft + rightZ * lateral;
-    strip.heading = state.yaw + side * (0.022 + speed * 0.034) + jitter * 0.018;
+    strip.heading = state.yaw + side * (0.018 + speed * 0.070) + jitter * 0.020;
     strip.born = time;
-    strip.strength = 0.20 + speed * 0.80;
+    strip.strength = clamp(0.10 + Math.pow(speed, 1.35) * 0.92, 0.10, 1.20);
     strip.beamScale = beamScale;
     strip.lengthScale = lengthScale;
     strip.active = true;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.pelagosWakeFroude = froude.toFixed(4);
+    document.documentElement.dataset.pelagosWakeRegime = speed.toFixed(3);
   }
 }
 
 function updateWake(
   memory: WakeMemory,
-  telemetry: ShipTelemetry,
   environment: EnvironmentFrame,
   time: number,
   originX: number,
   originZ: number
 ): void {
-  const speed = clamp(telemetry.speed / 6.4, 0, 1);
   for (const strip of memory.strips) {
     if (!strip.active) continue;
     const age = time - strip.born;
-    if (age > 8.2) {
+    const life = 5.8 + strip.strength * 4.8;
+    if (age > life) {
       strip.active = false;
       strip.mesh.visibility = 0;
       continue;
     }
 
     const water = sampleWave(strip.worldX, strip.worldZ, time, environment.waveScale);
-    strip.mesh.position.set(strip.worldX - originX, water.height + 0.020, strip.worldZ - originZ);
+    strip.mesh.position.set(strip.worldX - originX, water.height + 0.022, strip.worldZ - originZ);
     strip.mesh.rotation.y = strip.heading;
 
-    const breakup = 0.82 + Math.sin(age * 1.7 + strip.seed * 13.4) * 0.13;
-    const widen = strip.beamScale * (1 + age * (0.18 + strip.strength * 0.12));
-    const stretch = strip.lengthScale * (1 + age * (0.34 + speed * 0.10));
+    const breakup = 0.82 + Math.sin(age * 1.55 + strip.seed * 13.4) * 0.15;
+    const widen = strip.beamScale * (1 + age * (0.15 + strip.strength * 0.19));
+    const stretch = strip.lengthScale * (1 + age * (0.29 + strip.strength * 0.18));
     strip.mesh.scaling.set(widen, stretch, 1);
-    strip.mesh.visibility = clamp(strip.strength * Math.exp(-age * 0.43) * breakup * 0.34, 0, 0.29);
+    strip.mesh.visibility = clamp(
+      strip.strength * Math.exp(-age * (0.36 - clamp(strip.strength, 0, 1) * 0.08)) * breakup * 0.42,
+      0,
+      0.42
+    );
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV2?: boolean };
-if (!prototype.__pelagosBrokenWakeV2) {
-  prototype.__pelagosBrokenWakeV2 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosBrokenWakeV4?: boolean };
+if (!prototype.__pelagosBrokenWakeV4) {
+  prototype.__pelagosBrokenWakeV4 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function brokenWakeUpdate(
     state: ShipState,
@@ -156,6 +167,6 @@ if (!prototype.__pelagosBrokenWakeV2) {
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
     const memory = ensureWake(this);
     spawnWake(memory, state, telemetry, time);
-    updateWake(memory, telemetry, environment, time, originX, originZ);
+    updateWake(memory, environment, time, originX, originZ);
   };
 }

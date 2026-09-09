@@ -62,7 +62,8 @@ function stabilizeCamera(
   telemetry: ShipTelemetry,
   dt: number,
   lookYaw: number,
-  lookPitch: number
+  lookPitch: number,
+  rowing: number
 ): void {
   const safeDt = clamp(dt, 1 / 240, 1 / 24);
   const memory = getState(world);
@@ -71,6 +72,7 @@ function stabilizeCamera(
   const loadout = getActiveShipLoadout();
   const hullScale = clamp(loadout.dimensions.length / 12.8, 0.82, 1.30);
   const heightScale = Math.pow(hullScale, 0.36);
+  const rowingView = shipyardPreview || menuPreview ? 0 : clamp(rowing, 0, 1);
   const previewPitch = shipyardPreview ? shipyardPitch() : 0;
   const turnLook = Math.abs(lookYaw) > 0.035 || shipyardPreview || menuPreview
     ? 0
@@ -96,23 +98,24 @@ function stabilizeCamera(
   const rightZ = -Math.sin(memory.yaw);
   const speed = clamp(telemetry.speed, 0, 8);
 
-  // Camera distance follows the selected hull length. This keeps the 10.8 m harbor cutter and
-  // 15.6 m highboard cruiser feeling like differently sized ships instead of different camera zooms.
+  // Camera distance follows the selected hull length. During an active rowing hold it eases back
+  // and slightly up so both deployed banks remain inside a portrait phone frame instead of being
+  // clipped by the hull or the lower control dock.
   const distance = shipyardPreview
     ? 21.9 * hullScale
     : menuPreview
       ? 21.2 * hullScale
-      : (16.65 + speed * 0.34) * hullScale;
+      : (16.65 + speed * 0.34 + rowingView * 1.20) * hullScale;
   const height = shipyardPreview
     ? (6.5 + previewPitch * 4.8) * heightScale
     : menuPreview
       ? 7.05 * heightScale
-      : (6.08 + speed * 0.072 + lookPitch * 1.52) * heightScale;
+      : (6.08 + speed * 0.072 + lookPitch * 1.52 + rowingView * 0.34) * heightScale;
   const quarter = shipyardPreview
     ? 2.15 * hullScale
     : menuPreview
       ? 3.35 * hullScale
-      : (1.04 + clamp(Math.abs(ship.yawVelocity) * 0.44, 0, 0.32)) * Math.exp(-Math.abs(lookYaw) * 2.7);
+      : (1.04 + rowingView * 0.18 + clamp(Math.abs(ship.yawVelocity) * 0.44, 0, 0.32)) * Math.exp(-Math.abs(lookYaw) * 2.7);
 
   memory.desiredPosition.set(
     memory.anchor.x - forwardX * distance + rightX * quarter,
@@ -153,14 +156,18 @@ function stabilizeCamera(
 
   world.camera.position.copyFrom(memory.position);
   world.camera.setTarget(memory.target);
-  const targetFov = shipyardPreview ? 0.91 : menuPreview ? 0.90 : 0.89 + speed * 0.0075;
+  const targetFov = shipyardPreview ? 0.91 : menuPreview ? 0.90 : 0.89 + speed * 0.0075 + rowingView * 0.012;
   world.camera.fov = smoothTo(world.camera.fov, targetFov, shipyardPreview ? 5.6 : menuPreview ? 2.8 : 3.6, safeDt);
   world.scene.getMeshByName('sky-dome')?.position.copyFrom(memory.position);
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.pelagosRowingCamera = rowingView.toFixed(3);
+  }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV5?: boolean };
-if (!prototype.__pelagosStableCameraV5) {
-  prototype.__pelagosStableCameraV5 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosStableCameraV6?: boolean };
+if (!prototype.__pelagosStableCameraV6) {
+  prototype.__pelagosStableCameraV6 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function stableCameraUpdate(
     state: ShipState,
@@ -175,6 +182,6 @@ if (!prototype.__pelagosStableCameraV5) {
     rowing: number
   ): void {
     previousUpdate.call(this, state, telemetry, environment, time, dt, originX, originZ, lookYaw, lookPitch, rowing);
-    stabilizeCamera(this, state, telemetry, dt, lookYaw, lookPitch);
+    stabilizeCamera(this, state, telemetry, dt, lookYaw, lookPitch, rowing);
   };
 }

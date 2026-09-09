@@ -1,6 +1,7 @@
 import './styles.css';
 import './polish.css';
 import './shipyard.css';
+import './shipyard-performance.css';
 import './presentation-refit.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
@@ -11,6 +12,8 @@ import './rigging-cleanup';
 import './marine-refit';
 import './sail-uv-refit';
 import './ship-modularity';
+import './rowing-input-refit';
+import './loadout-performance';
 import './marine-tuning';
 import './presence-pass';
 import './hydrodynamics-refit';
@@ -18,6 +21,7 @@ import './stern-immersion';
 import './ocean-hull-refit';
 import './wake-refit';
 import './water-contact-refit';
+import './speed-water-response';
 import './blender-ship';
 import './finish-tuning';
 import './sail-fabric-refit';
@@ -28,19 +32,22 @@ import './motion-cues';
 import './experience-refit';
 import './presentation-refit';
 import './shipyard-ui';
+// Keep this last: it preserves the live rowing demand through every OceanWorld compatibility
+// wrapper installed above, including the legacy sail owner that intentionally receives zero oar input.
+import './rowing-runtime-bridge';
 import { PelagosGame } from './game';
 
 const appName = 'PELAGOS';
-const version = '1.6.5';
+const version = '1.6.6';
 const STORAGE_NAMESPACE = 'pocket-works:pelagos';
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
 
 const releaseNotes = [
-  'Такелаж полностью привязан к реальной парусной геометрии: четыре ванты, форштаг, ахтерштаг и две гика-шкоты больше не заканчиваются в пустоте и двигаются вместе с рангоутом.',
-  'Гика-шкоты теперь физически читают нагрузку на парус: при наполненном парусе они натягиваются, а при потере тяги получают заметную слабину и лёгкое колебание.',
-  'Старые декоративные тросы принудительно отключаются после загрузки сцены, поэтому Blender-модель и runtime-такелаж больше не накладываются друг на друга.',
-  'Сохранены адаптивная камера, модульная верфь, hull-aware океан, тяжёлая посадка и мобильная фильтрация 1.6.4.'
+  'Вёсла снова читаются физически: при удержании ГРЕСТИ весь выбранный комплект выходит из бортов, вращается вокруг реальных уключин, проходит медленный силовой гребок, поднимается на возврате и даёт брызги у лопасти; камера мягко расширяет кадр, чтобы банк не обрезался.',
+  'Море замедлено до масштаба 10–16-метрового судна: длинная зыбь больше не выглядит ускоренной съёмкой, при этом визуальная поверхность и физическая волна используют один и тот же спектр.',
+  'Взаимодействие корпуса с водой теперь масштабируется числом Фруда: длина выбранного корпуса вместе со скоростью определяет волновое сопротивление, динамическую осадку, удар носом, собственную носовую волну, кормовую впадину и силу кильватера.',
+  'Модули верфи остаются физическими: корпус меняет инерцию и поворотливость, паруса — эффективную площадь, вёсла — гребную тягу; профиль ХОД / МАНЁВР / МОРЕ / ГРЕБЛЯ пересчитывается сразу.'
 ];
 
 registerEnhancedUpdate({ appName, version, releaseNotes });
