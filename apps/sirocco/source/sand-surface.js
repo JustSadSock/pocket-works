@@ -1,4 +1,4 @@
-import { Mesh, VertexData } from '@babylonjs/core';
+import { Mesh, VertexBuffer, VertexData } from '@babylonjs/core';
 import { clamp, smoothstep } from './core.js';
 import { meshTerrainShadingNormal } from './terrain.js';
 import { appendBabylonGroundCell } from './world.js';
@@ -23,15 +23,89 @@ export class LocalSandSurface {
     this.centerZ = Number.NaN;
     this.replacementRadius = Number.NaN;
     this.dirty = true;
+    this.vertexDataApplied = false;
+    this.uvCenterX = Number.NaN;
+    this.uvCenterZ = Number.NaN;
     this.setQuality(preset);
   }
 
   setQuality(preset) {
-    this.radius = preset.id === 'high' ? 3.7 : preset.id === 'medium' ? 3.3 : 2.9;
-    this.segments = preset.id === 'high' ? 68 : preset.id === 'medium' ? 56 : 44;
+    const nextRadius = preset.id === 'high' ? 3.7 : preset.id === 'medium' ? 3.3 : 2.9;
+    const nextSegments = preset.id === 'high' ? 68 : preset.id === 'medium' ? 56 : 44;
+    const topologyChanged = this.radius !== nextRadius || this.segments !== nextSegments;
+    this.radius = nextRadius;
+    this.segments = nextSegments;
     this.snapStep = preset.id === 'high' ? 1.55 : preset.id === 'medium' ? 1.78 : 2.0;
     this.holeRatio = 0.90;
+    if (topologyChanged || !this.buffers) this.allocateBuffers();
     this.dirty = true;
+  }
+
+  allocateBuffers() {
+    const segments = this.segments;
+    const row = segments + 1;
+    const vertexCount = row * row;
+    const diameter = this.radius * 2;
+    const uniformStep = diameter / segments;
+    const localXs = new Float32Array(row);
+    const localZs = new Float32Array(row);
+    for (let i = 0; i <= segments; i += 1) {
+      const uniform = -this.radius + i * uniformStep;
+      const warped = warpLocalAxis(uniform, this.radius);
+      localXs[i] = warped;
+      localZs[i] = warped;
+    }
+
+    const indices = [];
+    const renderRadius = this.radius * 0.992;
+    for (let z = 0; z < segments; z += 1) {
+      for (let x = 0; x < segments; x += 1) {
+        const cellX = (localXs[x] + localXs[x + 1]) * 0.5;
+        const cellZ = (localZs[z] + localZs[z + 1]) * 0.5;
+        if (Math.hypot(cellX, cellZ) >= renderRadius) continue;
+        const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
+        appendBabylonGroundCell(indices, a, b, d, e);
+      }
+    }
+
+    const positions = new Float32Array(vertexCount * 3);
+    const normals = new Float32Array(vertexCount * 3);
+    const uvs = new Float32Array(vertexCount * 2);
+    const colors = new Float32Array(vertexCount * 4);
+    const radial = new Float32Array(vertexCount);
+    let p = 0, c = 0, vertex = 0;
+    for (let iz = 0; iz <= segments; iz += 1) {
+      const lz = localZs[iz];
+      for (let ix = 0; ix <= segments; ix += 1) {
+        const lx = localXs[ix];
+        positions[p] = lx;
+        positions[p + 2] = lz;
+        p += 3;
+        radial[vertex] = Math.hypot(lx, lz) / this.radius;
+        colors[c] = 1; colors[c + 1] = 1; colors[c + 2] = 1; colors[c + 3] = 1;
+        c += 4;
+        vertex += 1;
+      }
+    }
+
+    this.buffers = {
+      row,
+      vertexCount,
+      positions,
+      normals,
+      uvs,
+      colors,
+      radial,
+      deformations: new Float32Array(vertexCount),
+      looseValues: new Float32Array(vertexCount),
+      compactValues: new Float32Array(vertexCount),
+      localXs,
+      localZs,
+      indices: new Uint32Array(indices)
+    };
+    this.vertexDataApplied = false;
+    this.uvCenterX = Number.NaN;
+    this.uvCenterZ = Number.NaN;
   }
 
   markDirty() { this.dirty = true; }
@@ -76,28 +150,12 @@ export class LocalSandSurface {
   }
 
   rebuild() {
+    const {
+      row, positions, normals, uvs, colors, radial, deformations, looseValues,
+      compactValues, localXs, localZs, indices
+    } = this.buffers;
     const segments = this.segments;
-    const diameter = this.radius * 2;
-    const uniformStep = diameter / segments;
-    const row = segments + 1;
-    const vertexCount = row * row;
-    const positions = new Array(vertexCount * 3);
-    const normals = new Array(vertexCount * 3).fill(0);
-    const uvs = new Array(vertexCount * 2);
-    const colors = new Array(vertexCount * 4);
-    const radial = new Array(vertexCount);
-    const deformations = new Array(vertexCount);
-    const looseValues = new Array(vertexCount);
-    const compactValues = new Array(vertexCount);
-    const localXs = new Array(row);
-    const localZs = new Array(row);
-    const indices = [];
-
-    for (let i = 0; i <= segments; i += 1) {
-      const uniform = -this.radius + i * uniformStep;
-      localXs[i] = warpLocalAxis(uniform, this.radius);
-      localZs[i] = warpLocalAxis(uniform, this.radius);
-    }
+    const uvChanged = this.uvCenterX !== this.centerX || this.uvCenterZ !== this.centerZ;
 
     let p = 0, uv = 0, c = 0, vertex = 0;
     for (let iz = 0; iz <= segments; iz += 1) {
@@ -106,8 +164,7 @@ export class LocalSandSurface {
         const lx = localXs[ix];
         const gx = this.centerX + lx;
         const gz = this.centerZ + lz;
-        const r = Math.hypot(lx, lz) / this.radius;
-        radial[vertex] = r;
+        const r = radial[vertex];
         const deformFade = 1 - smoothstep(0.70, 0.88, r);
         const rawDeformation = clamp(this.sand.sampleOffset(gx, gz), -0.11, 0.075);
         const deformation = rawDeformation * deformFade;
@@ -116,12 +173,13 @@ export class LocalSandSurface {
         deformations[vertex] = deformation;
         looseValues[vertex] = loose;
         compactValues[vertex] = compaction;
-        positions[p] = lx;
         positions[p + 1] = this.world.sampleBaseHeight(gx, gz) + deformation;
-        positions[p + 2] = lz;
         p += 3;
-        uvs[uv] = gx * 0.055;
-        uvs[uv + 1] = gz * 0.055;
+
+        if (uvChanged) {
+          uvs[uv] = gx * 0.055;
+          uvs[uv + 1] = gz * 0.055;
+        }
         uv += 2;
 
         const compactBowl = smoothstep(0.004, 0.060, -deformation);
@@ -137,17 +195,12 @@ export class LocalSandSurface {
       }
     }
 
-    const renderRadius = this.radius * 0.992;
-    for (let z = 0; z < segments; z += 1) {
-      for (let x = 0; x < segments; x += 1) {
-        const cellX = (localXs[x] + localXs[x + 1]) * 0.5;
-        const cellZ = (localZs[z] + localZs[z + 1]) * 0.5;
-        if (Math.hypot(cellX, cellZ) >= renderRadius) continue;
-        const a = z * row + x, b = a + 1, d = a + row, e = d + 1;
-        appendBabylonGroundCell(indices, a, b, d, e);
-      }
+    if (uvChanged) {
+      this.uvCenterX = this.centerX;
+      this.uvCenterZ = this.centerZ;
     }
 
+    normals.fill(0);
     VertexData.ComputeNormals(positions, indices, normals);
 
     for (let iz = 0; iz <= segments; iz += 1) {
@@ -181,13 +234,22 @@ export class LocalSandSurface {
       }
     }
 
-    const vd = new VertexData();
-    vd.positions = positions;
-    vd.normals = normals;
-    vd.uvs = uvs;
-    vd.colors = colors;
-    vd.indices = indices;
-    vd.applyToMesh(this.mesh, true);
+    if (!this.vertexDataApplied) {
+      const vd = new VertexData();
+      vd.positions = positions;
+      vd.normals = normals;
+      vd.uvs = uvs;
+      vd.colors = colors;
+      vd.indices = indices;
+      vd.applyToMesh(this.mesh, true);
+      this.vertexDataApplied = true;
+    } else {
+      this.mesh.updateVerticesData(VertexBuffer.PositionKind, positions, true, false);
+      this.mesh.updateVerticesData(VertexBuffer.NormalKind, normals, false, false);
+      if (uvChanged) this.mesh.updateVerticesData(VertexBuffer.UVKind, uvs, false, false);
+      this.mesh.updateVerticesData(VertexBuffer.ColorKind, colors, false, false);
+    }
+
     this.mesh.position.x = this.centerX - this.world.offsetX;
     this.mesh.position.z = this.centerZ - this.world.offsetZ;
     this.mesh.refreshBoundingInfo();
