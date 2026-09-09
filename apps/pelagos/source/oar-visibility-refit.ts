@@ -1,8 +1,10 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
 import type { ShipState, ShipTelemetry } from './core';
 import { clamp, lerp, sampleWave, smoothTo } from './core';
-import { getActiveShipLoadout } from './ship-loadout';
+import { getActiveShipLoadout, getShipLoadoutRevision } from './ship-loadout';
 import type { EnvironmentFrame } from './world';
 import { OceanWorld } from './world';
 
@@ -13,10 +15,21 @@ export type OarVisualPose = {
   recovery: number;
 };
 
+type OarVisualEntry = {
+  pivot: TransformNode;
+  shaft: Mesh;
+  blade: Mesh;
+  side: number;
+  index: number;
+};
+
 type OarVisualMemory = {
   phase: number;
   deploy: number;
   previousPhase: number;
+  revision: number;
+  entries: OarVisualEntry[];
+  splash: ParticleSystem | null;
 };
 
 const memories = new WeakMap<OceanWorld, OarVisualMemory>();
@@ -50,10 +63,40 @@ export function oarVisualPose(phase: number, strokeAmplitude = 0.76, dipAmplitud
   };
 }
 
+function collectEntries(world: OceanWorld): OarVisualEntry[] {
+  const entries: OarVisualEntry[] = [];
+  for (const pivot of world.scene.transformNodes) {
+    const match = /^modular-oar-(-?1)-(\d+)$/.exec(pivot.name);
+    if (!match) continue;
+    const side = Number(match[1]);
+    const index = Number(match[2]);
+    const shaft = world.scene.getMeshByName(`modular-oar-shaft-${side}-${index}`) as Mesh | null;
+    const blade = world.scene.getMeshByName(`modular-oar-blade-${side}-${index}`) as Mesh | null;
+    if (!shaft || !blade) continue;
+    entries.push({ pivot, shaft, blade, side, index });
+  }
+  return entries;
+}
+
 function memoryFor(world: OceanWorld): OarVisualMemory {
+  const revision = getShipLoadoutRevision();
   const existing = memories.get(world);
-  if (existing) return existing;
-  const memory = { phase: 0.08, deploy: 0, previousPhase: 0.08 };
+  if (existing) {
+    if (existing.revision !== revision || existing.entries.length === 0 || existing.entries.some((entry) => entry.pivot.isDisposed())) {
+      existing.entries = collectEntries(world);
+      existing.revision = revision;
+    }
+    return existing;
+  }
+  const splash = world.scene.particleSystems.find((system: { name: string }) => system.name === 'oar-splash') as ParticleSystem | undefined;
+  const memory: OarVisualMemory = {
+    phase: 0.08,
+    deploy: 0,
+    previousPhase: 0.08,
+    revision,
+    entries: collectEntries(world),
+    splash: splash ?? null
+  };
   memories.set(world, memory);
   return memory;
 }
@@ -86,11 +129,11 @@ function updateVisibleOars(
   let strongestPower = 0;
   let splashPoint: Vector3 | null = null;
 
-  for (const pivot of world.scene.transformNodes) {
-    const match = /^modular-oar-(-?1)-(\d+)$/.exec(pivot.name);
-    if (!match) continue;
-    const side = Number(match[1]);
-    const index = Number(match[2]);
+  // Oar node references are cached per shipyard revision. This keeps the per-frame mobile cost
+  // proportional to the 10–16 actual oars rather than scanning every scene node and doing name
+  // lookups for each blade on every render frame.
+  for (const entry of memory.entries) {
+    const { pivot, shaft, blade, side, index } = entry;
     const phase = (memory.phase + index * 0.022 + (side > 0 ? 0.010 : 0)) % 1;
     const pose = oarVisualPose(phase, loadout.oars.strokeAmplitude, loadout.oars.dipAmplitude);
 
@@ -103,41 +146,32 @@ function updateVisibleOars(
     pivot.rotation.y = side * pose.sweep * memory.deploy;
     pivot.rotation.z = -side * pose.dip * memory.deploy;
 
-    const shaft = world.scene.getMeshByName(`modular-oar-shaft-${side}-${index}`);
-    if (shaft) {
-      shaft.position.x = side * loadout.oars.shaftLength * 0.23;
-      shaft.scaling.y = 1;
-      shaft.visibility = visible;
-      shaft.setEnabled(visible > 0.015);
-    }
+    shaft.position.x = side * loadout.oars.shaftLength * 0.23;
+    shaft.scaling.y = 1;
+    shaft.visibility = visible;
+    shaft.setEnabled(visible > 0.015);
 
-    const blade = world.scene.getMeshByName(`modular-oar-blade-${side}-${index}`);
-    if (blade) {
-      blade.position.x = side * loadout.oars.shaftLength * 0.79;
-      blade.rotation.x = pose.recovery * 1.34 * memory.deploy;
-      blade.visibility = visible;
-      blade.setEnabled(visible > 0.015);
-      if (visible > 0.30) visibleCount += 1;
+    blade.position.x = side * loadout.oars.shaftLength * 0.79;
+    blade.rotation.x = pose.recovery * 1.34 * memory.deploy;
+    blade.visibility = visible;
+    blade.setEnabled(visible > 0.015);
+    if (visible > 0.30) visibleCount += 1;
 
-      if (pose.power > strongestPower && visible > 0.72) {
-        const point = blade.getAbsolutePosition();
-        const water = sampleWave(point.x + originX, point.z + originZ, time, environment.waveScale);
-        const immersion = water.height - point.y;
-        // Choose a blade close to the surface for the shared particle emitter. Power strokes stay
-        // shallow enough to remain visible while still intersecting the water.
-        if (immersion > -0.30 && immersion < 0.34) {
-          strongestPower = pose.power;
-          splashPoint = new Vector3(point.x, water.height + 0.018, point.z);
-        }
+    if (pose.power > strongestPower && visible > 0.72) {
+      const point = blade.getAbsolutePosition();
+      const water = sampleWave(point.x + originX, point.z + originZ, time, environment.waveScale);
+      const immersion = water.height - point.y;
+      if (immersion > -0.30 && immersion < 0.34) {
+        strongestPower = pose.power;
+        splashPoint = new Vector3(point.x, water.height + 0.018, point.z);
       }
     }
   }
 
-  const splash = world.scene.particleSystems.find((system: { name: string }) => system.name === 'oar-splash') as ParticleSystem | undefined;
-  if (splashPoint && splash && strongestPower > 0.52 && active > 0.35) {
-    if (splash.emitter instanceof Vector3) splash.emitter.copyFrom(splashPoint);
+  if (splashPoint && memory.splash && strongestPower > 0.52 && active > 0.35) {
+    if (memory.splash.emitter instanceof Vector3) memory.splash.emitter.copyFrom(splashPoint);
     const wrapped = memory.phase < memory.previousPhase;
-    splash.manualEmitCount = Math.max(splash.manualEmitCount, wrapped ? 8 : 2 + Math.round(strongestPower * 3));
+    memory.splash.manualEmitCount = Math.max(memory.splash.manualEmitCount, wrapped ? 8 : 2 + Math.round(strongestPower * 3));
   }
 
   if (typeof document !== 'undefined') {
@@ -147,9 +181,9 @@ function updateVisibleOars(
   }
 }
 
-const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosOarVisibilityV1?: boolean };
-if (!prototype.__pelagosOarVisibilityV1) {
-  prototype.__pelagosOarVisibilityV1 = true;
+const prototype = OceanWorld.prototype as typeof OceanWorld.prototype & { __pelagosOarVisibilityV2?: boolean };
+if (!prototype.__pelagosOarVisibilityV2) {
+  prototype.__pelagosOarVisibilityV2 = true;
   const previousUpdate = OceanWorld.prototype.update;
   OceanWorld.prototype.update = function oarVisibilityUpdate(
     state: ShipState,
