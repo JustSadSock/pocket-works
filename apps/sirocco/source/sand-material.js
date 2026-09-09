@@ -95,6 +95,12 @@ export function createSandMaterials(scene) {
   const far = makeSandMaterial(scene, 'sand-pbr-far', albedo, normal, false);
   const local = makeSandMaterial(scene, 'sand-pbr-physical-local', albedo, normal, true);
 
+  // The fine physical patch intentionally overlaps the coarse terrain by a
+  // narrow safety band so no hole can open while the snapped patch moves.
+  // Prefer it in depth without lifting the geometry: lifting created the old
+  // visible dark island, while polygon offset prevents WebKit z-fighting.
+  local.zOffset = -1;
+
   return {
     near,
     far,
