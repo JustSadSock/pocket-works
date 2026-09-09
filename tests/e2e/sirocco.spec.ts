@@ -115,6 +115,7 @@ test.describe('SIROCCO deterministic visual QA', () => {
       game.sandSurface.update(c, true);
       game.rig.update(c, 1 / 60);
       game.characterPolish?.update(c, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
       game.camera.update(c, 1 / 60);
     });
     await page.waitForTimeout(650);
@@ -153,14 +154,13 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(walked!.sandBudgetScale).toBeLessThanOrEqual(1);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-after-real-walk', { fullPage: false });
 
-    // Deliberately inspect the authored body at a normal downward glance before
-    // the extreme clipping test. This is the frame the player actually sees.
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
       game.controller.bodyYaw = game.controller.yaw;
       game.controller.pitch = 0.68;
       game.rig.update(game.controller, 1 / 60);
       game.characterPolish?.update(game.controller, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
       game.camera.update(game.controller, 1 / 60);
     });
     await page.waitForTimeout(180);
@@ -170,6 +170,10 @@ test.describe('SIROCCO deterministic visual QA', () => {
       const game = window.__SIROCCO_QA__;
       game.controller.pitch = 1.05;
       game.controller.yaw += 1.35;
+      game.rig.update(game.controller, 1 / 60);
+      game.characterPolish?.update(game.controller, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
+      game.camera.update(game.controller, 1 / 60);
     });
     await page.waitForTimeout(140);
     await attachCriticalScreenshot(page, testInfo, 'sirocco-look-down-yaw-diverged', { fullPage: false });
@@ -180,6 +184,10 @@ test.describe('SIROCCO deterministic visual QA', () => {
       c.yaw = 0.15;
       c.bodyYaw = 0.15;
       c.pitch = 0.52;
+      game.rig.update(c, 1 / 60);
+      game.characterPolish?.update(c, 1 / 60);
+      game.updateFirstPersonGarmentVisibility?.();
+      game.camera.update(c, 1 / 60);
       const yaw = c.bodyYaw;
       const fx = Math.sin(yaw), fz = Math.cos(yaw);
       const rx = Math.cos(yaw), rz = -Math.sin(yaw);
