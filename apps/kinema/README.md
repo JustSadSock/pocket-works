@@ -6,6 +6,7 @@ KINEMA is a focused third-person character motion study for Pocket Works. The en
 
 - Landscape phone first.
 - Left analog joystick controls travel direction and continuously maps input magnitude from slow walk to full run.
+- Very short joystick gestures are buffered for one simulation frame so quick mobile input is not lost between WebGL frames.
 - Drag anywhere on the right side to orbit the third-person camera.
 - The default camera sits behind the character; the Blender visual root is explicitly aligned to the runtime forward axis.
 - Desktop QA fallback: WASD moves; arrow keys orbit the camera.
@@ -13,21 +14,22 @@ KINEMA is a focused third-person character motion study for Pocket Works. The en
 
 ## 3D production
 
-`asset-forge/character.py` authors the character in Blender rather than assembling the visible body from Babylon runtime primitives. `asset-forge/character_blender52.py` is the Blender 5.2 production entrypoint: it handles the layered-Action compatibility change and applies the final proportion pass before export.
+`asset-forge/character.py` contains the stable procedural Blender authoring, armature and action/export foundation. `asset-forge/character_blender52.py` applies the final human proportion/rest-pose pass for Blender 5.2, and `asset-forge/character_blender52_v16.py` adds the final asymmetric weight-shifting Idle before export.
 
-The current v1.2 character includes:
+The current v1.6 character includes:
 
-- a metric ~1.82 m clothed human silhouette with relaxed arm placement and more natural proportions;
+- a metric ~1.82 m clothed human silhouette with close-hanging relaxed arms and shaped knees/calves;
 - continuous weighted torso, sleeves and trouser legs instead of visibly disconnected limb pieces;
 - weighted elbow/knee transitions on one real armature;
-- slimmer sleeves and legs, human-scale hands/feet and restrained facial features;
+- human-scale hands and compact footwear with restrained facial and hair geometry;
 - layered field jacket, shirt, belt, cargo trousers, boots/laces, watch, face and hair details;
-- embedded fabric, skin, twill, hair and leather albedo variation with PBR material response;
+- embedded fabric, skin, twill, hair and leather variation with PBR material response;
+- a naturalized Idle with subtle pelvis/chest counter-rotation, unequal elbow bend, weight transfer and restrained head motion;
 - named Blender actions: `Idle`, `Walk`, `Jog`, `Run`, `WalkBack`, `StrafeLeft`, `StrafeRight`, `PivotLeft`, `PivotRight`.
 
 The Asset Forge manifest requires both armature and animation on re-import. Generated output is `public/models/kinema-character.glb`.
 
-Babylon.js owns runtime concerns: safe Blender action-name resolution, phase-synchronized animation blending, analog speed, character heading inertia, acceleration lean, camera lag/FOV, lighting, PBR response and real-time shadows.
+Babylon.js owns runtime concerns: safe Blender action-name resolution, phase-synchronized animation blending, analog speed, character heading inertia, acceleration lean, camera lag/FOV, lighting, PBR response and real-time shadows. WebKit/Safari also receives a no-UV material fallback for affected skinned meshes plus a two-frame scene warmup before the loading screen is removed.
 
 ## Validation
 
@@ -37,4 +39,4 @@ npm run typecheck --workspace @pocket-works/kinema
 npm run build --workspace @pocket-works/kinema
 ```
 
-After Asset Forge generates the GLB, the standard Pocket Works mobile gameplay QA must exercise the production-like build and its landscape screenshots must be visually inspected before merge.
+The release mobile QA exercises the production-like build in Chromium and WebKit, records KINEMA telemetry (`peakSpeed`, `peakGait`, `travelDistance`, animation/material readiness) and captures landscape screenshots for visual inspection before merge.
