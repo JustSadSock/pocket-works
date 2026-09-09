@@ -163,7 +163,9 @@ button { color: inherit; }
   z-index: 8;
   left: max(22px, calc(env(safe-area-inset-left) + 10px));
   bottom: max(22px, calc(env(safe-area-inset-bottom) + 8px));
-  width: 150px;
+  /* The visible ring stays 126px. The wider parent is an intentional safety hit-area,
+     especially after the landscape compact transform on short iPhone viewports. */
+  width: 174px;
   height: 150px;
   touch-action: none;
 }
