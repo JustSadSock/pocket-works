@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "pit-loop",
+  "name": "PIT LOOP",
+  "shortName": "PIT LOOP",
+  "description": "Два автономных бойца бесконечно сходятся в коротких минималистичных поединках.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-09",
+  "releaseDateTime": "2026-09-09T21:08:00+03:00",
+  "changelog": [
+    "Добавлен полностью автономный бой двух минималистичных бойцов с атаками, блоками, уклонениями, нокаутами и автоматическими реваншами.",
+    "Добавлены пауза, скорость симуляции, счёт побед, локальное сохранение и полноценный офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#c94b38",
+  "backgroundColor": "#e8e0d0",
+  "themeColor": "#e8e0d0",
+  "orientation": "any",
+  "cacheName": "pit-loop-v1.0.0",
+  "storageNamespace": "pocket-works:pit-loop",
+  "tags": ["game", "simulation", "spectator", "combat", "offline"],
+  "order": 86
+}
