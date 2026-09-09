@@ -14,11 +14,17 @@ The Blender animation groups are the base motion layer. Aerodynamic secondary mo
 
 ## Blender production
 
-`asset-forge/dragon.py` deterministically creates the authored dragon mesh, PBR materials, armature, skinning and named animation actions. The current production source uses a lean overlapping torso, a longer articulated neck and tail, scalloped multi-rib wing membranes, tucked four-limb anatomy, head horns, cheek spines, a denser dorsal ridge and a staggered irregular scale texture without long periodic bands. The generated GLB is rebuilt and re-import validated by the repository Blender Asset Forge with armature and animation requirements enabled. `asset-forge/biome_props.py` produces authored tree/rock prop geometry for world instancing.
+`asset-forge/dragon.py` deterministically creates the authored dragon mesh, PBR materials, armature, skinning and named animation actions. The current production source uses a lean overlapping torso, a longer articulated neck and tail, scalloped multi-rib wing membranes, tucked four-limb anatomy, head horns, cheek spines, a denser dorsal ridge, irregular scale texturing and a separate leather-membrane texture with visible veins. The generated GLB is rebuilt and re-import validated by the repository Blender Asset Forge with armature and animation requirements enabled.
+
+`asset-forge/biome_props.py` produces authored fir, broadleaf and rock geometry for world instancing. Their origins are normalized to the actual base of each asset before export, so runtime placement at terrain height exposes the full trunk/rock silhouette instead of burying joined Blender geometry below the ground.
 
 ## World
 
-The world is streamed in disposable terrain chunks. Multi-scale elevation, ridges, moisture and temperature choose blended biomes; a broad valley plus submerged channel carves the river, while deterministic basins form lakes. River meshes use an independent x-column streamer rather than waiting for terrain z-chunks, so the visible waterway is present continuously from the opening frame and remains independent of terrain disposal. Forests combine fir, aspen and broadleaf silhouettes with riparian selection, age variation, clearings and understory. Procedural birds and ground herds make the landscape feel inhabited. Distant terrain is cheaper than near terrain and old chunks are disposed instead of accumulating forever.
+The world is streamed in disposable terrain chunks. Multi-scale elevation, ridges, moisture and temperature choose blended biomes; a broad valley plus submerged channel carves the river, while deterministic basins form lakes. River meshes use an independent x-column streamer rather than waiting for terrain z-chunks, so the visible waterway is present continuously from the opening frame and remains independent of terrain disposal.
+
+Forests combine streamed fir/aspen/broadleaf populations, larger authored Blender grove clusters and low-flight understory. A thin-instanced grass field supplies near-ground parallax at roughly one draw call, while a spatially indexed obstacle field derives canopy/rock collision from the same visible instances so neither the dragon nor chase camera can pass through a tree that is actually on screen. Procedural birds and ground herds make the landscape feel inhabited.
+
+Terrain presentation uses a lightweight per-fragment material pass layered over biome vertex colours: multi-frequency mottling, soil/rock exposure from surface slope, directional lighting and distance haze break up the former flat dark-green surface without replacing the procedural geography. Vegetation materials are colour-corrected into a shared natural palette instead of independently saturated greens. A sparse billboard cloud layer provides large-scale atmospheric depth without volumetric-cloud cost on iPhone.
 
 ## Mobile controls
 
@@ -32,4 +38,6 @@ The UI deliberately stays sparse. Flight state is communicated by the dragon, ho
 
 ## Quality strategy
 
-AETHERWING dynamically adjusts hardware scaling, terrain detail radius and vegetation density. Expensive terrain work is spread over frames while the lightweight river strip is guaranteed immediately around the player. Streamed geometry is disposed behind the player without destroying shared terrain/water materials, and the render loop pauses when the page is hidden. The mobile QA journey crosses chunk boundaries and explicitly checks that shared materials, terrain and river streaming survive the transition in Chromium and WebKit.
+AETHERWING dynamically adjusts hardware scaling, terrain detail radius and vegetation density. Expensive terrain work is spread over frames while the lightweight river strip is guaranteed immediately around the player. Streamed geometry is disposed behind the player without destroying shared terrain/water materials, and the render loop pauses when the page is hidden.
+
+The app-local unit suite covers aerodynamic behaviour, low-FPS substep consistency and visible-canopy collision. The Chromium/WebKit mobile QA journey crosses chunk boundaries and validates the authored dragon/biome assets, terrain and water lifecycle, grove/ground-detail population, obstacle clearance, camera framing, sound toggle and climb → dive → bank → brake control flow.
