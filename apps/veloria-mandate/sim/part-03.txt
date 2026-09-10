@@ -1,0 +1,39 @@
+3)).map(([id,d])=>({id,...d,apply:undefined})).sort((a,b)=>((s.decreesUsed[a.id]||0)-(s.decreesUsed[b.id]||0))).slice(0,8)}
+function normalize(s){for(const k of ['treasury','debt','authority','legitimacy','metropoleFavor','suspicion','discrepancy','autonomy','trade','foodStock','foodPrice','corruption','inequality','garrisonPay','externalPressure','imperialStability'])s[k]=round(clamp(s[k],k==='debt'?0:0,k==='treasury'||k==='debt'?180:100));for(const d of s.districts){for(const k of ['food','wealth','infra','unrest','disease','control','production','scar'])d[k]=round(clamp(d[k]));d.pop=round(Math.max(1,d.pop))}for(const f of Object.values(s.factions)){f.power=round(clamp(f.power));f.loyalty=round(clamp(f.loyalty))}for(const c of s.characters){c.relation=round(clamp(c.relation));c.influence=round(clamp(c.influence));c.corruption=round(clamp(c.corruption));c.ambition=round(clamp(c.ambition))}recompute(s)}
+export function enactDecree(s,id){const d=EFFECTS[id];if(s.decreeTurn===s.turn)return{ok:false,reason:'В этом месяце крупный указ уже подписан'};if(!d)throw new Error('unknown decree');if(s.authority<d.cost)return{ok:false,reason:'Недостаточно полномочий'};if(d.late&&s.turn<18)return{ok:false,reason:'Эта политика ещё не созрела'};s.authority-=d.cost;d.apply(s);s.decreesUsed[id]=(s.decreesUsed[id]||0)+1;s.decreeTurn=s.turn;s.lastAction=d.label;s.history.push({turn:s.turn,type:'decree',text:d.label});s.news.unshift(`Указ: ${d.label}.`);normalize(s);return{ok:true}}
+function incidentCandidates(s){const a=[];if(s.foodPrice>55||s.foodStock<38)a.push({id:'bread',w:20+s.foodPrice*.4});if(s.corruption>48)a.push({id:'customs',w:12+s.corruption*.35});if(s.unrest>45)a.push({id:'strike',w:15+s.unrest*.4});if(s.disease>28)a.push({id:'fever',w:8+s.disease*.45});if(s.garrisonPay<52||s.treasury<28)a.push({id:'mutiny',w:9+(100-s.garrisonPay)*.28});if(s.externalPressure>48)a.push({id:'blockade',w:10+s.externalPressure*.3});if(s.inequality>58)a.push({id:'land',w:8+s.inequality*.3});if(s.auditRisk>52)a.push({id:'audit',w:8+s.auditRisk*.45});if(s.turn>15&&s.autonomy>28)a.push({id:'charter',w:10+s.autonomy*.25});return a}
+function weighted(r,a){const total=a.reduce((x,y)=>x+y.w,0);let n=r()*total;for(const x of a){n-=x.w;if(n<=0)return x.id}return a[a.length-1]?.id}
+function eventFor(id,s,r){const actor=pick(r,s.characters);const templates={
+ bread:{title:'Хлебный причал',text:`В ${pick(r,s.districts).name} толпа перехватила баржи с зерном. Газета называет это «самораспределением», гарнизон — грабежом.`,actor:actor.id,choices:[
+  {label:'Выкупить зерно и раздать',hint:'дорого, но быстро',effect:{treasury:-9,foodPrice:-10,legitimacy:5,workers:7}},
+  {label:'Пусть рынок переживёт неделю',hint:'не тратить казну',effect:{foodPrice:5,unrest:7,merchants:5}},
+  {label:'Вернуть груз силами гарнизона',hint:'порядок сейчас, память надолго',effect:{unrest:-4,control:8,legitimacy:-7,garrison:8,scar:8}}
+ ]},
+ customs:{title:'Книга, которой нет',text:`В таможне исчез второй реестр пошлин. ${actor.name} утверждает, что это «сбой переплёта», но цифры не сходятся.`,actor:actor.id,choices:[
+  {label:'Тихо закрыть недостачу',hint:'система останется вашей',effect:{treasury:6,corruption:8,suspicion:6,actorRel:5}},
+  {label:'Открыть публичное расследование',hint:'враг появится сразу',effect:{corruption:-12,legitimacy:6,treasury:-3,actorRel:-15}},
+  {label:'Сделать информатора своим',hint:'отложенная страховка',effect:{corruption:-4,suspicion:-3,actorRel:-4,delayed:{after:4,kind:'blackmail'}}}
+ ]},
+ strike:{title:'Три свистка',text:`Шахты хребта остановились после трёх свистков. Рабочие требуют безопасных смен, владельцы — войска. ${actor.name} уже выбирает сторону.`,actor:actor.id,choices:[
+  {label:'Признать комитет рабочих',hint:'меньше добычи, больше голоса',effect:{unrest:-10,production:-7,legitimacy:5,workers:12,planters:-7}},
+  {label:'Навязать арбитраж',hint:'компромисс зависит от авторитета',effect:{authority:-6,unrest:-5,workers:4,planters:3}},
+  {label:'Охранять штрейкбрехеров',hint:'производство важнее мира',effect:{production:8,unrest:9,control:5,garrison:6,workers:-12}}
+ ]},
+ fever:{title:'Синяя лихорадка',text:`В порту закрыты два двора: у заболевших синеют губы. Врачи спорят, зараза это или отравление дешёвым ромом.`,actor:actor.id,choices:[
+  {label:'Карантин порта',hint:'ударит по торговле',effect:{disease:-12,trade:-10,treasury:-5}},
+  {label:'Санитарные посты без закрытия',hint:'умеренная цена и риск',effect:{disease:-7,treasury:-7,legitimacy:3}},
+  {label:'Не объявлять эпидемию',hint:'рынок не заметит — пока',effect:{trade:4,disease:8,discrepancy:6,suspicion:3,delayed:{after:3,kind:'fever_return'}}}
+ ]},
+ mutiny:{title:'Жалование не пришло',text:`Корабль с жалованием гарнизона задержан. Офицеры обещают порядок ещё девять дней. Солдаты обещаний не давали.`,actor:s.characters.find(c=>c.faction==='garrison')?.id,choices:[
+  {label:'Заплатить из колониальной казны',hint:'спокойствие покупается',effect:{treasury:-12,garrisonPay:18,garrison:8}},
+  {label:'Выдать долговые расписки',hint:'дёшево сейчас',effect:{debt:9,garrisonPay:9,suspicion:2}},
+  {label:'Сменить командиров',hint:'рискованный показ силы',effect:{authority:-8,garrisonPay:-5,control:5,garrison:-10,actorRel:-12}}
+ ]},
+ blockade:{title:'Чужие флаги у пролива',text:`Эскадра Республики Орс закрыла северный пролив «для досмотра». Страховщики уже подняли ставки.`,actor:actor.id,choices:[
+  {label:'Платить конвоиры',hint:'дорого, но торговля идёт',effect:{treasury:-10,trade:-3,externalPressure:-8}},
+  {label:'Пустить контрабандные маршруты',hint:'товар пойдёт, коррупция тоже',effect:{trade:6,corruption:9,suspicion:4}},
+  {label:'Просить имперский флот',hint:'помощь создаёт обязательства',effect:{metropoleFavor:5,externalPressure:-12,autonomy:-5,delayed:{after:5,kind:'imperial_bill'}}}
+ ]},
+ land:{title:'Карта против памяти',text:`Новая межа отрезала три деревни от пастбищ. Бумаги у землевладельцев идеальны; память общин старше бумаги.`,actor:s.characters.find(c=>c.faction==='locals')?.id,choices:[
+  {label:'Отменить спорные акты',hint:'право общин против капитала',effect:{locals:12,planters:-12,legitimacy:5,production:-4}},
+  {label:'Компенсация из казны',h

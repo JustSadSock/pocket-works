@@ -1,0 +1,75 @@
+const { createVersionedStore, createAudioFeedback } = globalThis.__VELORIA_DEPS__;
+
+
+const STORAGE_NAMESPACE = 'pocket-works:veloria-mandate';
+const store = createVersionedStore({
+  namespace: STORAGE_NAMESPACE,
+  version: 1,
+  defaults: { campaign: null, settings: { sound: true }, bestScore: null },
+  validate: (v) => v && typeof v === 'object' && !Array.isArray(v)
+});
+const audio = createAudioFeedback({ enabled: store.get('settings')?.sound !== false, volume: .12 });
+const root = document.querySelector('#app');
+let state = store.get('campaign');
+let screen = state && !state.ending ? 'game' : 'start';
+let tab = 'district';
+let preset = state?.preset || 'standard';
+let seed = state?.seed || randomSeed();
+let selectedPerson = null;
+let overlay = null;
+let toastTimer = 0;
+
+const esc = (v='') => String(v).replace(/[&<>'"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+const pct = (v) => Math.max(0, Math.min(100, Number(v)||0));
+const fmt = (v) => Math.round(Number(v)||0);
+function randomSeed(){ return `VEL-${Math.random().toString(36).slice(2,7).toUpperCase()}-${Date.now().toString(36).slice(-3).toUpperCase()}`; }
+function save(){ if(state) store.set('campaign', state); }
+function pulse(type='click'){ audio.play(type); if(navigator.vibrate && type !== 'click') navigator.vibrate(type==='error'?[30,30,45]:18); }
+function toast(message){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');el.className='toast';document.querySelector('.app-shell')?.append(el)} el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1600); }
+function setCampaign(next){ state=next; save(); screen='game'; tab='district'; selectedPerson=null; overlay=null; render(); }
+function dangerous(v, invert=false){ return invert ? v<35 : v>68; }
+function metricClass(v,invert=false){ return dangerous(v,invert)?'warn':(invert?v>68:v<34)?'good':''; }
+
+function startScreen(){
+  const hasSave = Boolean(state && !state.ending);
+  return `<section class="screen cover" data-ui>
+    <div class="cover-map" aria-hidden="true">
+      <svg viewBox="0 0 520 640" preserveAspectRatio="xMidYMid slice">
+        <defs><pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#183b39" stroke-width=".7" opacity=".18"/></pattern></defs>
+        <rect width="520" height="640" fill="#d9cfb6"/><rect width="520" height="640" fill="url(#grid)"/>
+        <path d="M35 428C78 371 99 322 151 297s83-10 115-49 33-93 77-123 90-23 143-76v498H35z" fill="#b9b08f" stroke="#183b39" stroke-width="3"/>
+        <path d="M102 477c52-37 78-73 118-70 44 3 61 39 105 27 39-11 63-48 112-72" fill="none" stroke="#2b6478" stroke-width="5" stroke-dasharray="13 10" opacity=".65"/>
+        <g fill="#e9e1cd" stroke="#183b39" stroke-width="3">
+          <circle cx="116" cy="412" r="16"/><circle cx="190" cy="325" r="16"/><circle cx="284" cy="414" r="16"/><circle cx="363" cy="267" r="16"/><circle cx="419" cy="153" r="16"/>
+        </g>
+        <path d="M48 78h188M48 96h128" stroke="#b7633d" stroke-width="8"/>
+        <text x="48" y="151" font-family="Georgia" font-size="58" fill="#183b39" font-weight="700">VELORIA</text>
+        <text x="51" y="182" font-family="sans-serif" font-size="14" fill="#b7633d" font-weight="800" letter-spacing="4">IMPERIAL SURVEY 1887</text>
+        <path d="M370 485c25 0 46 20 46 46s-21 46-46 46-46-20-46-46 21-46 46-46z" fill="none" stroke="#b7633d" stroke-width="8"/>
+        <path d="M370 502v58M341 531h58" stroke="#b7633d" stroke-width="7"/>
+      </svg>
+    </div>
+    <div class="cover-copy">
+      <div class="eyebrow">Pocket Works / Governor Simulation</div>
+      <h1>VELORIA <span>// MANDATE</span></h1>
+      <p class="lede">Ты управляешь колонией, в которой никто не показывает тебе всю правду. Ещё хуже: метрополия видит только ту правду, которую отправляешь ты.</p>
+      <div class="rule"></div>
+      <div class="smallcaps">Новый мандат</div>
+      <div class="preset-grid">${Object.entries(presetData).map(([id,p])=>`<button class="preset" data-preset="${id}" aria-pressed="${preset===id}" data-native-press><b>${esc(p.name)}</b><small>${presetCopy(id)}</small></button>`).join('')}</div>
+      <div class="seed-row"><input id="seedInput" value="${esc(seed)}" maxlength="28" aria-label="Seed мира"><button class="btn ghost" id="rerollSeed" data-native-press>↻</button></div>
+      <div class="cover-actions" style="margin-top:10px">
+        <button class="btn primary" id="newGame" data-native-press>Принять мандат</button>
+        ${hasSave?`<button class="btn rust" id="resumeGame" data-native-press>Продолжить — ${esc(monthLabel(state))}, ход ${state.turn}/36</button>`:''}
+        <div class="button-row"><button class="btn ghost" id="rulesStart" data-native-press>Как играть</button><button class="btn ghost" id="soundStart" data-native-press>${audio.enabled?'Звук: вкл':'Звук: выкл'}</button><a class="btn ghost" href="../../" data-app-control data-native-press style="text-decoration:none;text-align:center">В Pocket Works</a></div>
+      </div>
+    </div>
+  </section>`;
+}
+function presetCopy(id){return({standard:'Сбалансированная колония с несколькими трещинами.',gold:'Богатство, дорогая земля и вкус коррупции.',frontier:'Поддержка далеко. Полномочия — почти твои.',powder:'Сильные фракции уже ненавидят друг друга.',collapse:'Аурелия рушится быстрее, чем успевает писать приказы.'})[id]}
+
+function mapMarkup(){
+  const node = (d) => { const hot=d.unrest>60||d.disease>52; return `<g class="district-node ${hot?'hot':''} ${state.selectedDistrict===d.id?'selected':''}" data-district="${d.id}" transform="translate(${d.x*5.2} ${d.y*4.4})" data-native-press>
+    <circle class="pulse" r="12"/><circle class="main" r="13"/><text x="19" y="4">${esc(d.name.replace('Порт ','').replace('Киноварный ','').replace('Туманные ',''))}</text></g>`};
+  return `<div class="map-panel" data-ui>
+    <svg viewBox="0 0 520 440" role="application" aria-label="Карта Велории">
+      <defs><pattern id="mgrid" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M22 0H0V22" fill="none" stroke="#183b39" 

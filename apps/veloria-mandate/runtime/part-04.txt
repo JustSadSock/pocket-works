@@ -1,0 +1,43 @@
+tle)}</h2><p class="event-copy">${esc(e.text)}</p><div class="scoreboard"><div><span>Счёт</span><b>${state.score}</b></div><div><span>Легитимность</span><b>${fmt(state.legitimacy)}</b></div><div><span>Автономия</span><b>${fmt(state.autonomy)}</b></div><div><span>Аудит</span><b>${fmt(state.auditRisk)}</b></div></div><button class="btn primary" id="endingNew" data-native-press>Начать другую Велорию</button><a class="btn ghost" href="../../" data-app-control data-native-press style="display:grid;place-items:center;text-decoration:none;margin-top:8px">Вернуться в Pocket Works</a></div></section>`}
+function render(){
+  root.innerHTML = screen==='start' ? startScreen() : gameScreen();
+  if(screen==='game'){
+    if(state.ending) root.insertAdjacentHTML('beforeend',endingOverlay());
+    else if(state.event) root.insertAdjacentHTML('beforeend',eventOverlay());
+    else if(needsDispatch(state)) root.insertAdjacentHTML('beforeend',dispatchOverlay());
+    if(overlay==='pause') root.insertAdjacentHTML('beforeend',pauseOverlay());
+    if(overlay==='rules') root.insertAdjacentHTML('beforeend',rulesOverlay());
+    if(overlay==='chronicle') root.insertAdjacentHTML('beforeend',chronicleOverlay());
+  } else if(overlay==='rules') root.insertAdjacentHTML('beforeend',rulesOverlay());
+  bind();
+}
+function bind(){
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{preset=b.dataset.preset;pulse();render()}));
+  document.querySelector('#rerollSeed')?.addEventListener('click',()=>{seed=randomSeed();pulse();render()});
+  document.querySelector('#seedInput')?.addEventListener('input',(e)=>{seed=e.target.value||randomSeed()});
+  document.querySelector('#newGame')?.addEventListener('click',()=>{audio.unlock();setCampaign(createGame(seed,preset));pulse('success')});
+  document.querySelector('#resumeGame')?.addEventListener('click',()=>{screen='game';overlay=null;pulse();render()});
+  document.querySelector('#rulesStart')?.addEventListener('click',()=>{overlay='rules';pulse();render()});
+  document.querySelector('#soundStart')?.addEventListener('click',toggleSound);
+  document.querySelectorAll('[data-district]').forEach(n=>n.addEventListener('click',()=>{state.selectedDistrict=n.dataset.district;tab='district';pulse();save();render()}));
+  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;pulse();render()}));
+  document.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>{selectedPerson=selectedPerson===b.dataset.person?null:b.dataset.person;pulse();render()}));
+  document.querySelectorAll('[data-decree]').forEach(b=>b.addEventListener('click',()=>{const r=enactDecree(state,b.dataset.decree);if(r.ok){pulse('success');save();toast('Указ подписан');render()}else{pulse('error');toast(r.reason)}}));
+  document.querySelector('#advance')?.addEventListener('click',()=>{if(state.event||needsDispatch(state)||state.ending)return;const r=advanceTurn(state);if(r.ok){pulse();save();render()}else toast(r.reason)});
+  document.querySelectorAll('[data-choice]').forEach(b=>b.addEventListener('click',()=>{resolveEvent(state,Number(b.dataset.choice));pulse('success');save();render()}));
+  document.querySelectorAll('[data-dispatch]').forEach(b=>b.addEventListener('click',()=>{const r=submitDispatch(state,b.dataset.dispatch);if(r.ok){pulse('success');save();render()}}));
+  document.querySelector('#pause')?.addEventListener('click',()=>{overlay='pause';pulse();render()});
+  document.querySelector('#closePause')?.addEventListener('click',()=>{overlay=null;pulse();render()});
+  document.querySelector('#showRules')?.addEventListener('click',()=>{overlay='rules';pulse();render()});
+  document.querySelector('#showChronicle')?.addEventListener('click',()=>{overlay='chronicle';pulse();render()});
+  document.querySelector('#closeChronicle')?.addEventListener('click',()=>{overlay='pause';pulse();render()});
+  document.querySelector('#closeRules')?.addEventListener('click',()=>{overlay=screen==='game'?'pause':null;pulse();render()});
+  document.querySelector('#toggleSound')?.addEventListener('click',toggleSound);
+  document.querySelector('#restart')?.addEventListener('click',()=>{screen='start';overlay=null;seed=randomSeed();pulse();render()});
+  document.querySelector('#endingNew')?.addEventListener('click',()=>{const best=store.get('bestScore');if(best==null||state.score>best)store.set('bestScore',state.score);state=null;store.set('campaign',null);screen='start';seed=randomSeed();pulse('success');render()});
+}
+function toggleSound(){const next=!audio.enabled;audio.setEnabled(next);store.set('settings',{sound:next});if(next)audio.unlock().then(()=>audio.play('click'));render()}
+
+window.addEventListener('pagehide',save);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+try{render()}catch(error){console.error('[VELORIA] startup failed',error);root.innerHTML=`<section class="screen" style="display:grid;place-content:center;text-align:center;padding:30px"><h1 style="font-family:Georgia,serif">VELORIA не загрузилась</h1><p>Сохранение не удалено. Перезапустите приложение.</p><a class="btn primary" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a></section>`}
