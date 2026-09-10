@@ -33,4 +33,4 @@
 
 `tests/sim.mjs` прогоняет 30 партий на разных seeds и стратегиях (`economy`, `reform`, `iron`, `balanced`, `reckless`), проверяя наличие нескольких финалов, возможность победы и возможность поражения.
 
-Локально: `node apps/veloria-mandate/tests/sim.mjs`.
+Локально: `node apps/veloria-mandate/tests/sim.mjs`. Исполняемый runtime собирается из app-local текстовых частей загрузчиком `app.js`, чтобы приложение оставалось Quick runtime без корневых зависимостей.
