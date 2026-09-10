@@ -1,0 +1,31 @@
+stroke-width=".5" opacity=".13"/></pattern></defs>
+      <rect width="520" height="440" fill="#d8cdae"/><rect width="520" height="440" fill="url(#mgrid)"/>
+      <path class="island" d="M77 70c44-41 96-54 142-26 32 19 53 58 93 61 44 4 67-44 109-37 43 6 75 71 55 113-17 36-62 35-76 70-17 40 12 82-14 112-31 36-92 3-129 17-43 16-66 49-112 36-45-13-72-58-61-101 10-40 53-62 44-101-8-34-64-45-69-86-3-21 5-41 18-58z"/>
+      <path class="trade-route" d="M406 308C327 276 250 331 144 268S72 137 188 101"/><path class="trade-route" d="M414 130C350 167 317 220 290 315"/>
+      ${state.districts.map(node).join('')}
+      <g transform="translate(420 364)"><circle r="34" fill="none" stroke="#b7633d" stroke-width="4"/><path d="M0-25V25M-25 0H25" stroke="#b7633d" stroke-width="3"/><text x="-20" y="51" font-size="9" font-weight="900" fill="#b7633d">VELORIA</text></g>
+    </svg>
+    <div class="map-weather">${weatherCopy()}</div><div class="map-legend"><span><i class="l-unrest"></i>кризис</span><span><i class="l-wealth"></i>богатство</span><span><i class="l-control"></i>контроль</span></div>
+  </div>`;
+}
+function weatherCopy(){ if(state.externalPressure>68)return 'Северный пролив: военные суда'; if(state.disease>48)return 'Порт: санитарный флаг'; if(state.foodPrice>66)return 'Рынок: зерно дорожает'; return ['Пассат с моря','Дожди над хребтом','Туман в Марках','Порт работает всю ночь'][state.turn%4]; }
+function metricsMarkup(){ return `<div class="metrics" data-ui>
+  ${metric('Казна',state.treasury,'₰',true)}${metric('Легитимность',state.legitimacy,'%',true)}${metric('Беспорядки',state.unrest,'%',false)}${metric('Аудит',state.auditRisk,'%',false)}
+  </div>`; }
+function metric(label,val,suffix,invert){ return `<div class="metric ${metricClass(val,invert)}"><span>${label}</span><b>${fmt(val)}${suffix}</b></div>`; }
+
+function districtPane(){ const d=state.districts.find(x=>x.id===state.selectedDistrict)||state.districts[0]; return `<div class="district-card">
+  <div class="kind">${esc(d.kind)} / ${fmt(d.pop)} тыс. жителей</div><h2>${esc(d.name)}</h2>
+  <div class="stat-grid">${stat('Производство',d.production)}${stat('Инфраструктура',d.infra)}${stat('Богатство',d.wealth)}${stat('Беспорядки',d.unrest,true)}${stat('Болезни',d.disease,true)}${stat('Контроль',d.control)}</div>
+  <div class="district-note">${districtNarrative(d)}</div>
+  <div class="smallcaps">Колония в целом</div>
+  <div class="stat-grid">${stat('Торговля',state.trade)}${stat('Цена еды',state.foodPrice,true)}${stat('Коррупция',state.corruption,true)}${stat('Неравенство',state.inequality,true)}${stat('Автономия',state.autonomy)}${stat('Долг',Math.min(100,state.debt/1.8),true,`${fmt(state.debt)} ₰`)}</div>
+  <p class="smallcaps" style="margin-top:14px">Имперский курс: <span style="color:var(--ink)">${esc(policyLabel(state.imperialPolicy))}</span> · стабильность Аурелии ${fmt(state.imperialStability)}%</p>
+ </div>`; }
+function stat(label,val,bad=false,custom=null){return `<div class="stat"><span>${label}</span><b class="${bad&&val>65?'trend up':''}">${custom??fmt(val)}</b><div class="bar"><i style="width:${pct(val)}%"></i></div></div>`}
+function districtNarrative(d){const bits=[];if(d.unrest>65)bits.push('улицы и казармы нервничают');else if(d.unrest<25)bits.push('район необычно тих');if(d.disease>48)bits.push('врачи не успевают за больными');if(d.wealth>65)bits.push('земля и лавки резко дорожают');if(d.control<42)bits.push('приказы губернатора здесь скорее просьбы');if(d.production>70)bits.push('производство бьёт рекорды');return (bits.length?bits.join(', '):'район живёт без явного кризиса')+'. Точные причины зависят от того, кому верить.'}
+function reportsPane(){return `<div><div class="smallcaps">Не данные. Свидетельства.</div><h2>Стол донесений</h2><p class="district-note">Чем ниже надёжность источника, тем сильнее цифры внутри симуляции могут отличаться от его слов.</p><div class="report-list">${state.reports.map(r=>`<article class="report"><div class="report-head"><div><small>${esc(r.label)} · ${esc(r.topic)}</small><b>${esc(r.source)}</b></div><span class="reliability">${r.reliability}%</span></div><p>${esc(r.claim)}</p></article>`).join('')}</div></div>`}
+function decreePane(){const used=state.decreeTurn===state.turn;return `<div><div class="smallcaps">Один крупный указ в месяц</div><h2>${used?'Печать уже поставлена':'Папка указов'}</h2><p class="district-note">Указы меняют системы, а не просто «дают бонус». Некоторые решения окупаются только через месяцы.</p><div class="decree-list">${availableDecrees(state).map(d=>`<article class="decree ${used?'used':''}"><div><b>${esc(d.label)}</b><small>полномочия −${d.cost}${d.late?' · поздняя игра':''}</small><p>${esc(d.desc)}</p></div><button data-decree="${d.id}" data-native-press ${used||state.authority<d.cost?'disabled':''}>Подписать</button></article>`).join('')}</div></div>`}
+function peoplePane(){return `<div><div class="smallcaps">Люди помнят</div><h2>Круг губернатора</h2><div class="people-list">${state.characters.map(c=>{const i=inspectCharacter(state,c.id);const f=state.factions[c.faction];return `<article class="person" data-person="${c.id}" data-native-press><div class="person-head"><div><small>${esc(c.role)}</small><b>${esc(c.name)}</b></div><span class="relation">${fmt(c.relation)}</span></div><p>${c.traits.map(t=>esc(t.label)).join(' · ')}</p><div class="faction-strip"><i><em style="width:${pct(f.loyalty)}%"></em></i><b>${esc(f.name)} ${fmt(f.loyalty)}</b></div>${selectedPerson===c.id?`<div class="memory"><b>Оценка коррупции:</b> ${i.corruptionBand[0]}–${i.corruptionBand[1]}%<br><b>Скрытая схема:</b> ${esc(schemeLabel(i.schemeKnown))}${c.memory.length?'<br><br>'+c.memory.map(m=>`• ${esc(m.text)}`).join('<br>'):'<br><br>Пока личной памяти о вас нет.'}</div>`:''}</article>`}).join('')}</div></div>`}
+function schemeLabel(x){return ({unknown:'неизвестно',none:'не выявлена',embezzlement:'расхождения в расходах',patronage:'сеть покровительства'})[x]||x}
+function newsPane(){return `<div><div class="smallcaps">Не история по скрипту</div><h2>Хроника мандата</h2><div class="news-list">${state.news.map(n=>`<div class="news-item">${esc(n)}</div>`).join('')}${state.history.slice(-8).reverse().map
