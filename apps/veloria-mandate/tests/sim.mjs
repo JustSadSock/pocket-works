@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {createGame,availableDecrees,enactDecree,advanceTurn,resolveEvent,needsDispatch,submitDispatch,stateSummary} from '../sim-core.mjs';
+import {readFile} from 'node:fs/promises';
+const simSource=(await Promise.all(['../sim/part-01.txt','../sim/part-02.txt','../sim/part-03.txt','../sim/part-04.txt','../sim/part-05.txt'].map(async p=>readFile(new URL(p,import.meta.url),'utf8')))).join('');
+const {createGame,availableDecrees,enactDecree,advanceTurn,resolveEvent,needsDispatch,submitDispatch,stateSummary}=await import(`data:text/javascript;base64,${Buffer.from(simSource).toString('base64')}`);
 
 function choose(s,mode){
   const ds=availableDecrees(s);
