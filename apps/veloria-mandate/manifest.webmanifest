@@ -1,0 +1,13 @@
+{
+  "name":"VELORIA // MANDATE",
+  "short_name":"VELORIA",
+  "description":"Симулятор колониального губернатора о двойной реальности, политике и эмерджентных кризисах.",
+  "id":"./",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "orientation":"landscape",
+  "background_color":"#e7dfc9",
+  "theme_color":"#e7dfc9",
+  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
