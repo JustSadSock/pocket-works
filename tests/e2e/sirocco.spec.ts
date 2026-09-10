@@ -5,6 +5,7 @@ declare global {
   interface Window {
     __SIROCCO_QA_READY__?: boolean;
     __SIROCCO_QA__?: any;
+    __SIROCCO_PRESENCE__?: any;
   }
 }
 
@@ -58,7 +59,7 @@ async function qaState(page: import('@playwright/test').Page) {
 }
 
 test.describe('SIROCCO deterministic visual QA', () => {
-  test('landscape walk, Blender landmarks, terrain LOD and physical sand stay coherent', async ({ page }, testInfo) => {
+  test('landscape walk, Blender landmarks, terrain LOD, physical sand and wind stay coherent', async ({ page }, testInfo) => {
     test.skip(!testInfo.project.name.includes('landscape'), 'SIROCCO is landscape-first.');
     const monitor = monitorUnexpectedBrowserOutput(page);
 
@@ -67,6 +68,9 @@ test.describe('SIROCCO deterministic visual QA', () => {
     await expect(page.locator('#enter-button')).toBeVisible();
     await page.locator('#enter-button').dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'touch' });
     await page.waitForTimeout(750);
+
+    const presenceReady = await page.evaluate(() => Boolean(window.__SIROCCO_PRESENCE__));
+    expect(presenceReady).toBe(true);
 
     await page.evaluate(() => {
       const game = window.__SIROCCO_QA__;
@@ -221,8 +225,59 @@ test.describe('SIROCCO deterministic visual QA', () => {
     expect(deformed!.sandBudgetScale).toBeGreaterThanOrEqual(0.34);
     expect(deformed!.camera!.minZ).toBeGreaterThanOrEqual(0.20);
 
+    const windResult = await page.evaluate(() => {
+      const game = window.__SIROCCO_QA__;
+      const presence = window.__SIROCCO_PRESENCE__;
+      const c = game.controller;
+      game.sand.clear();
+      const cellSize = game.sand.cellSize;
+      const ix = Math.round(c.globalX / cellSize);
+      const iz = Math.round(c.globalZ / cellSize);
+      game.sand.addCell(ix, iz, 0.030, 0.90, 0);
+      game.sand.addCell(ix - 2, iz, -0.032, 0.04, 0.72);
+      const sourceBefore = game.sand.getCell(ix, iz);
+      const targetBefore = game.sand.getCell(ix + 1, iz);
+      const cavityBefore = game.sand.getCell(ix - 2, iz);
+      let moved = false;
+      const forcedWind = { x: 1, z: 0, strength: 0.92, gust: 0.94, pulse: 0.8 };
+      for (let i = 0; i < 8; i += 1) moved = presence.erosion.update(0.50, c.globalX, c.globalZ, forcedWind) || moved;
+      presence.wind.nextPulse = 0;
+      const wind = presence.wind.update(1 / 60, c.globalX, c.globalZ);
+      game.sandSurface.markDirty();
+      game.sandSurface.update(c, true);
+      for (let i = 0; i < 4; i += 1) {
+        game.particles.wind(0.5, c.localPosition, forcedWind, (localX, localZ) => {
+          const gx = localX + c.worldOffsetX;
+          const gz = localZ + c.worldOffsetZ;
+          return game.sandSurface.sampleHeight(gx, gz);
+        });
+      }
+      return {
+        moved,
+        sourceBefore,
+        sourceAfter: game.sand.getCell(ix, iz),
+        targetBefore,
+        targetAfter: game.sand.getCell(ix + 1, iz),
+        cavityBefore,
+        cavityAfter: game.sand.getCell(ix - 2, iz),
+        wind,
+        driftCapacity: game.particles?.drift?.getCapacity?.() ?? 0,
+        erosionBudget: presence.erosion.budget
+      };
+    });
+    expect(windResult.moved).toBe(true);
+    expect(windResult.sourceAfter).toBeLessThan(windResult.sourceBefore);
+    expect(windResult.targetAfter).toBeGreaterThan(windResult.targetBefore);
+    expect(windResult.cavityAfter).toBeGreaterThan(windResult.cavityBefore);
+    expect(windResult.wind.strength).toBeGreaterThan(0.2);
+    expect(windResult.wind.gust).toBeGreaterThanOrEqual(0);
+    expect(windResult.driftCapacity).toBeGreaterThanOrEqual(100);
+    expect(windResult.erosionBudget).toBeLessThanOrEqual(50);
+    await page.waitForTimeout(650);
+    await attachCriticalScreenshot(page, testInfo, 'sirocco-wind-presence', { fullPage: false });
+
     await testInfo.attach('sirocco-state.json', {
-      body: Buffer.from(JSON.stringify({ initial, preWalk, walked, deformed }, null, 2)),
+      body: Buffer.from(JSON.stringify({ initial, preWalk, walked, deformed, windResult }, null, 2)),
       contentType: 'application/json'
     });
     monitor.assertClean();

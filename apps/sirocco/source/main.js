@@ -1,5 +1,6 @@
 import './styles.css';
 import { SiroccoGame } from './game.js';
+import { DesertPresence } from './presence.js';
 
 const canvas = document.querySelector('#render-canvas');
 const loading = document.querySelector('#loading');
@@ -21,6 +22,7 @@ const errorText = document.querySelector('#error-text');
 const reloadButton = document.querySelector('#reload-button');
 
 const game = new SiroccoGame(canvas);
+let presence = null;
 const qaEnabled = new URLSearchParams(location.search).get('qa') === '1';
 if (qaEnabled) window.__SIROCCO_QA__ = game;
 
@@ -39,6 +41,9 @@ async function boot() {
   try {
     updateOrientation();
     await game.init(report);
+    presence = new DesertPresence(game);
+    presence.start();
+    if (qaEnabled) window.__SIROCCO_PRESENCE__ = presence;
     game.setPaused(true);
     qualitySelect.value = game.quality.mode;
     sensitivity.value = String(game.input.sensitivity);
@@ -73,5 +78,6 @@ reloadButton.addEventListener('click', () => location.reload());
 exitButton.addEventListener('click', exitToLauncher);
 window.addEventListener('orientationchange', updateOrientation);
 window.addEventListener('resize', updateOrientation);
+window.addEventListener('pagehide', () => presence?.dispose(), { once: true });
 
 boot();

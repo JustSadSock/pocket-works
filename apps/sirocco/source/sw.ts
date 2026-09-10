@@ -4,15 +4,15 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'sirocco-';
-const CACHE_NAME = 'sirocco-v1.6.0';
-const APP_VERSION = '1.6.0';
+const CACHE_NAME = 'sirocco-v1.7.0';
+const APP_VERSION = '1.7.0';
 const RELEASE_DATE = '2026-09-09';
 const RELEASE_NOTES = [
-  'Песок v2 различает рыхлый и уплотнённый слой: свежие валики осыпаются, повторный след уплотняется и становится твёрже.',
-  'Локальная сетка сгущает тот же vertex budget вокруг ног, поэтому следы плавнее без возврата старых лагов.',
-  'Sand physics сам снижает avalanche/settling budget при дорогом WebKit-тике и постепенно восстанавливает его.',
-  'Бедуин получил отдельную фактуру кожи, льна и куфии, а first-person камера ещё надёжнее вынесена из головы.',
-  'Chromium/WebKit QA проверяет физический песок, тело, экстремальную камеру, Blender-окружение и CPU-бюджет.'
+  'Ветер теперь единый для звука, низких песчаных струй, дымки и вторичного движения одежды.',
+  'Свежие рыхлые валики следов понемногу переносятся по ветру, а глубокие впадины постепенно смягчаются наносимым песком.',
+  'Добавлен отдельный низкий слой ветрового песка, который появляется только во время заметных порывов.',
+  'Presence layer имеет собственный ограниченный erosion budget и не вмешивается в основной terrain/locomotion loop.',
+  'Node + Chromium/WebKit QA отдельно проверяет gust-state, перенос рыхлого песка, штиль и mobile landscape rendering.'
 ];
 setCacheNameDetails({ prefix: 'sirocco', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
