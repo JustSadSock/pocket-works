@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#27312b">
+  <meta name="description" content="СТРЕЛКА — карманная железнодорожная аркада для Pocket Works.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СТРЕЛКА">
+  <title>СТРЕЛКА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+    <canvas id="yard" aria-label="Железнодорожная развилка" data-gesture-surface data-block-callout></canvas>
+
+    <header class="instrument-bar" data-ui>
+      <a class="cabinet-button back-button" href="../../" data-app-control data-native-press>В POCKET WORKS</a>
+      <div class="brand-plate" aria-label="Название игры">
+        <strong>СТРЕЛКА</strong>
+        <span>ДИСПЕТЧЕРСКИЙ ПУЛЬТ № 03</span>
+      </div>
+      <button class="cabinet-button icon-button" id="soundButton" type="button" aria-pressed="true" data-native-press>ЗВУК</button>
+    </header>
+
+    <section class="scoreboard" data-ui aria-live="polite">
+      <div><span>СЧЁТ</span><strong id="scoreValue">00000</strong></div>
+      <div><span>СЕРИЯ</span><strong id="streakValue">00</strong></div>
+      <div class="faults"><span>ОШИБКИ</span><div id="faultLamps" aria-label="Осталось ошибок"></div></div>
+      <button id="pauseButton" class="cabinet-button pause-button" type="button" data-native-press hidden>ПАУЗА</button>
+    </section>
+
+    <section class="destination-panel" data-ui>
+      <span class="panel-caption">СЛЕДУЮЩИЙ СОСТАВ</span>
+      <div class="destination-display">
+        <i id="destinationLamp"></i>
+        <strong id="destinationCode">—</strong>
+        <span id="trainType">ОЖИДАНИЕ</span>
+      </div>
+      <div class="lockout-line"><span id="lockoutStatus">РЫЧАГ СВОБОДЕН</span></div>
+    </section>
+
+    <section class="lever-console" data-ui>
+      <div class="route-labels" aria-label="Выбор пути">
+        <button type="button" data-route-label="0" data-native-press>А</button>
+        <button type="button" data-route-label="1" data-native-press>Б</button>
+        <button type="button" data-route-label="2" data-native-press>В</button>
+      </div>
+      <div id="leverRail" class="lever-rail" data-gesture-surface data-block-callout>
+        <div class="detents"><i></i><i></i><i></i></div>
+        <button id="leverHandle" class="lever-handle" type="button" aria-label="Перевести стрелку" data-pressable>
+          <span class="lever-shaft"></span>
+          <span class="lever-knob">ПУТЬ <b id="leverCode">Б</b></span>
+        </button>
+      </div>
+      <p class="lever-hint" id="leverHint">ПЕРЕТАЩИ РЫЧАГ К НУЖНОЙ БУКВЕ</p>
+    </section>
+
+    <div id="toast" class="signal-toast" data-ui aria-live="assertive"></div>
+
+    <section id="menuScreen" class="screen menu-screen" data-ui>
+      <div class="menu-illustration" aria-hidden="true">
+        <div class="signal-mast"><i></i><i></i><i></i></div>
+        <div class="route-diagram"><span></span><span></span><span></span></div>
+      </div>
+      <div class="menu-copy">
+        <p class="serial">РЕЛЕЙНЫЙ ПОСТ / СМЕНА 01</p>
+        <h1>СТРЕЛКА</h1>
+        <p>Состав сообщает нужную платформу. Переведи рычаг до того, как локомотив пересечёт чёрно-жёлтую линию. После неё механизм блокируется — и начинается честный железнодорожный пиздец.</p>
+      </div>
+      <div class="menu-actions">
+        <button id="startButton" class="primary-action" type="button" data-native-press>ПРИНЯТЬ СМЕНУ</button>
+        <button id="howButton" class="secondary-action" type="button" data-native-press>КАК ИГРАТЬ</button>
+        <button id="settingsButton" class="secondary-action" type="button" data-native-press>НАСТРОЙКИ</button>
+        <a class="secondary-action link-action" href="../../" data-app-control data-native-press>ВЕРНУТЬСЯ В POCKET WORKS</a>
+      </div>
+      <div class="record-strip"><span>РЕКОРД <b id="bestScoreValue">0</b></span><span>ЛУЧШАЯ СЕРИЯ <b id="bestStreakValue">0</b></span></div>
+    </section>
+
+    <section id="howScreen" class="screen utility-screen hidden" data-ui>
+      <div class="screen-head"><div><span>ИНСТРУКЦИЯ 03-Б</span><h2>Три правила</h2></div><button class="close-button" type="button" data-close-screen data-native-press>ЗАКРЫТЬ</button></div>
+      <div class="rule-list">
+        <article><b>01</b><div><h3>Смотри на букву состава</h3><p>А, Б или В — это нужная платформа. Цвет лампы дублирует букву, но буква важнее.</p></div></article>
+        <article><b>02</b><div><h3>Переводи рычаг заранее</h3><p>Тяни рукоять влево, по центру или вправо. Можно просто нажать на букву над нужным положением.</p></div></article>
+        <article><b>03</b><div><h3>Не спорь с блокировкой</h3><p>Когда состав проходит полосатую линию, стрелку уже не перевести. Три ошибки — смена окончена.</p></div></article>
+      </div>
+      <button id="howStartButton" class="primary-action" type="button" data-native-press>ПОНЯТНО, ЗАПУСКАЙ</button>
+    </section>
+
+    <section id="settingsScreen" class="screen utility-screen hidden" data-ui>
+      <div class="screen-head"><div><span>ЩИТОК ОБСЛУЖИВАНИЯ</span><h2>Настройки</h2></div><button class="close-button" type="button" data-close-screen data-native-press>ЗАКРЫТЬ</button></div>
+      <div class="setting-row"><div><strong>Звук реле и колёс</strong><small>Процедурный Web Audio, без загружаемых файлов</small></div><button id="soundSetting" class="toggle-button" type="button" aria-pressed="true" data-native-press>ВКЛ</button></div>
+      <div class="setting-row"><div><strong>Виброотдача</strong><small>Работает там, где браузер не делает вид, что он слишком важный</small></div><button id="vibrationSetting" class="toggle-button" type="button" aria-pressed="true" data-native-press>ВКЛ</button></div>
+      <button class="secondary-action full-width" type="button" data-workshop-trigger data-native-press>WORKSHOP MODE</button>
+      <button id="resetRecordsButton" class="secondary-action danger-action full-width" type="button" data-native-press>СБРОСИТЬ РЕКОРДЫ</button>
+    </section>
+
+    <section id="pauseScreen" class="screen compact-screen hidden" data-ui>
+      <span class="serial">СИГНАЛ ЗАКРЫТ</span>
+      <h2>Пауза</h2>
+      <p>Составы замерли, диспетчер выдохнул. Редкий случай, когда железная дорога уважает личные границы.</p>
+      <button id="resumeButton" class="primary-action" type="button" data-native-press>ПРОДОЛЖИТЬ СМЕНУ</button>
+      <button id="pauseSettingsButton" class="secondary-action" type="button" data-native-press>НАСТРОЙКИ</button>
+      <button id="quitButton" class="secondary-action" type="button" data-native-press>ЗАВЕРШИТЬ СМЕНУ</button>
+      <a class="secondary-action link-action" href="../../" data-app-control data-native-press>ВЕРНУТЬСЯ В POCKET WORKS</a>
+    </section>
+
+    <section id="gameOverScreen" class="screen compact-screen hidden" data-ui>
+      <span class="serial">СМЕНА ЗАВЕРШЕНА</span>
+      <h2 id="gameOverTitle">Пульт снят с питания</h2>
+      <p id="gameOverText">Три состава одновременно доказали, что импровизация — не метод управления транспортом.</p>
+      <div class="final-board"><div><span>СЧЁТ</span><b id="finalScore">0</b></div><div><span>СЕРИЯ</span><b id="finalStreak">0</b></div><div><span>СОСТАВЫ</span><b id="finalTrains">0</b></div></div>
+      <button id="restartButton" class="primary-action" type="button" data-native-press>ЕЩЁ ОДНА СМЕНА</button>
+      <button id="gameOverMenuButton" class="secondary-action" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
+      <a class="secondary-action link-action" href="../../" data-app-control data-native-press>ВЕРНУТЬСЯ В POCKET WORKS</a>
+    </section>
+
+    <section id="confirmScreen" class="screen compact-screen hidden" data-ui>
+      <span class="serial">ПОДТВЕРЖДЕНИЕ</span>
+      <h2>Сбросить рекорды?</h2>
+      <p>Это необратимо. Железная дорога забудет твои подвиги быстрее, чем бухгалтерия забывает премии.</p>
+      <button id="confirmResetButton" class="primary-action danger-solid" type="button" data-native-press>ДА, СБРОСИТЬ</button>
+      <button id="cancelResetButton" class="secondary-action" type="button" data-native-press>ОТМЕНА</button>
+    </section>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТРЕЛКА" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
