@@ -1,15 +1,15 @@
 const CACHE_PREFIX='veloria-mandate-';
-const CACHE_NAME='veloria-mandate-v1.0.0-p1';
+const CACHE_NAME='veloria-mandate-v1.0.0-p2';
 const APP_VERSION='1.0.0';
 const RELEASE_DATE='2026-09-10';
-const CACHE_PROTOCOL=1;
+const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=[
   'Трёхлетняя процедурная кампания с районами, фракциями, советниками и внешним миром.',
   'Квартальные депеши позволяют манипулировать метрополией, но создают риск аудита.',
   'Состояние-зависимые кризисы, отложенные последствия, несколько финалов, автосохранение и офлайн.'
 ];
 const APP_SHELL=[
-  './','./index.html','./app.config.json','./app.js','./manifest.webmanifest','./icons/icon.svg','./README.md','./sim/part-01.txt','./sim/part-02.txt','./sim/part-03.txt','./sim/part-04.txt','./sim/part-05.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./styles-01.css','./styles-02.css','./styles-03.css',
+  './','./index.html','./app.config.json','./app.js','./manifest.webmanifest','./icons/icon.svg','./README.md','./styles.css','./sim/part-01.txt','./sim/part-02.txt','./sim/part-03.txt','./sim/part-04.txt','./sim/part-05.txt','./runtime/part-01.txt','./runtime/part-02.txt','./runtime/part-03.txt','./runtime/part-04.txt','./styles-01.css','./styles-02.css','./styles-03.css',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/capabilities/storage.js','../../shared/capabilities/audio.js','../../shared/update-manager.css','../../shared/update-manager.js'
 ];
 const SCOPE_URL=new URL('./',self.registration.scope);
