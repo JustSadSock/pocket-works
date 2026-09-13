@@ -9,8 +9,9 @@
   right: 8px;
   width: 6px;
   height: 6px;
-  background: var(--accent, #c8ff45);
-  box-shadow: 0 0 0 2px #0e100e;
+  border-radius: 50%;
+  background: var(--accent, #c8a460);
+  box-shadow: 0 0 0 2px var(--room, #1d1c19);
 }
 
 [data-whats-new-count] {
@@ -26,9 +27,9 @@
 
 .launcher-release-digest {
   bottom: max(12px, env(safe-area-inset-bottom));
-  --app-update-accent: #c8ff45;
-  --app-update-background: #11130f;
-  --app-update-border: color-mix(in srgb, #c8ff45 42%, #f4f1e8);
+  --app-update-accent: #c8a460;
+  --app-update-background: #343129;
+  --app-update-border: rgba(231,224,210,.16);
 }
 
 .launcher-release-digest .app-update-prompt__actions {
@@ -72,7 +73,7 @@
 
 .pw-update-progress__copy span {
   flex: 0 0 auto;
-  color: var(--accent, #c8ff45);
+  color: var(--accent, #c8a460);
   font-variant-numeric: tabular-nums;
 }
 
@@ -86,7 +87,7 @@
   display: block;
   width: 0;
   height: 100%;
-  background: var(--accent, #c8ff45);
+  background: var(--accent, #c8a460);
   transition: width 180ms ease;
 }
 

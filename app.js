@@ -57,12 +57,16 @@ const detailOpen = document.querySelector('#detail-open');
 const detailFavorite = document.querySelector('#detail-favorite');
 const detailCopy = document.querySelector('#detail-copy');
 const installNote = document.querySelector('#install-note');
+const launchStage = document.querySelector('#launch-stage');
+const launchObject = launchStage?.querySelector('.launch-stage__object');
+const launchName = launchStage?.querySelector('.launch-stage__object strong');
 
 let registry = [];
 let offlineReady = new Set();
 let panelOpen = false;
 let lastFocusedElement = null;
 let lastSyncAt = null;
+let launchInProgress = false;
 
 function defaultShelfState() {
   return {
@@ -167,7 +171,7 @@ function configurePreview(element, app) {
   const rotation = -24 + ((seed >>> 9) % 49);
 
   element.dataset.preset = app.preset || 'vanilla';
-  element.style.setProperty('--entry-accent', app.accent || '#c8ff45');
+  element.style.setProperty('--entry-accent', app.accent || '#c8a460');
   element.style.setProperty('--preview-x', `${x}%`);
   element.style.setProperty('--preview-y', `${y}%`);
   element.style.setProperty('--preview-r', `${rotation}deg`);
@@ -208,6 +212,82 @@ function recordRecent(slug) {
   shelfState.recents[slug] = Date.now();
   shelfState.selected = slug;
   persistShelfState();
+}
+
+function shouldUseNativeNavigation(event, link) {
+  return event.defaultPrevented
+    || event.button !== 0
+    || event.metaKey
+    || event.ctrlKey
+    || event.shiftKey
+    || event.altKey
+    || link?.target === '_blank'
+    || link?.hasAttribute('download');
+}
+
+function launchApp(event, slug, link) {
+  const app = registry.find((item) => item.slug === slug);
+  if (!app || !link || shouldUseNativeNavigation(event, link)) {
+    if (app) recordRecent(app.slug);
+    return;
+  }
+
+  event.preventDefault();
+  if (launchInProgress) return;
+  launchInProgress = true;
+  recordRecent(app.slug);
+
+  try {
+    sessionStorage.setItem('pocket-works:return-object', app.slug);
+    sessionStorage.setItem('pocket-works:return-scroll', String(window.scrollY));
+  } catch {
+    // Spatial continuity is an enhancement; navigation must always work.
+  }
+
+  if (!launchStage || reducedMotionQuery.matches) {
+    window.location.assign(link.href);
+    return;
+  }
+
+  const sourcePreview = link.closest('.app-entry')?.querySelector('.app-preview') || detailPreview;
+  const iconImage = sourcePreview?.style.getPropertyValue('--app-icon-image')
+    || `url("${new URL(`${app.path}icons/icon.svg?v=${encodeURIComponent(app.version || '0')}`, document.baseURI).href}")`;
+
+  launchStage.style.setProperty('--launch-icon', iconImage);
+  launchStage.style.setProperty('--launch-accent', app.accent || '#c8a460');
+  if (launchName) launchName.textContent = app.name;
+  launchStage.classList.add('is-launching');
+  body.classList.add('is-launching-app');
+  navigator.vibrate?.(10);
+
+  window.setTimeout(() => window.location.assign(link.href), 515);
+}
+
+function restoreLibraryPosition() {
+  let slug = null;
+  let scrollY = 0;
+  try {
+    slug = sessionStorage.getItem('pocket-works:return-object');
+    scrollY = Number(sessionStorage.getItem('pocket-works:return-scroll')) || 0;
+    sessionStorage.removeItem('pocket-works:return-object');
+    sessionStorage.removeItem('pocket-works:return-scroll');
+  } catch {
+    return;
+  }
+
+  if (!slug) return;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: scrollY, behavior: 'instant' });
+    const entry = list.querySelector(`.app-entry[data-slug="${CSS.escape(slug)}"]`);
+    if (!entry || reducedMotionQuery.matches) return;
+    entry.animate(
+      [
+        { transform: 'translateY(-10px) scale(1.018)', filter: 'brightness(1.13)' },
+        { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' }
+      ],
+      { duration: 620, easing: 'cubic-bezier(.16,.78,.22,1)' }
+    );
+  });
 }
 
 function toggleFavorite(slug) {
@@ -345,7 +425,7 @@ function renderApps(apps) {
     const preview = fragment.querySelector('.app-preview');
 
     entry.dataset.slug = app.slug;
-    entry.style.setProperty('--entry-accent', app.accent || '#c8ff45');
+    entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
     entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
     entry.classList.toggle('is-selected', shelfState.selected === app.slug);
 
@@ -402,7 +482,7 @@ function renderDetail(app) {
 
   detailEmpty.hidden = true;
   detailContent.hidden = false;
-  detailPanel.style.setProperty('--detail-accent', app.accent || '#c8ff45');
+  detailPanel.style.setProperty('--detail-accent', app.accent || '#c8a460');
   detailKicker.textContent = `${app.status} / ${app.preset || 'application'}`;
   detailName.textContent = app.name;
   detailDescription.textContent = app.description;
@@ -634,10 +714,10 @@ list.addEventListener('click', (event) => {
   }
 
   const open = event.target.closest('[data-action="open"]');
-  if (open) recordRecent(open.dataset.slug);
+  if (open) launchApp(event, open.dataset.slug, open);
 });
 
-detailOpen.addEventListener('click', () => recordRecent(detailOpen.dataset.slug));
+detailOpen.addEventListener('click', (event) => launchApp(event, detailOpen.dataset.slug, detailOpen));
 detailFavorite.addEventListener('click', () => toggleFavorite(detailFavorite.dataset.slug));
 detailCopy.addEventListener('click', () => copyAppLink(detailCopy.dataset.slug));
 detailClose.addEventListener('click', () => closeDetailPanel());
@@ -712,4 +792,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 updateSystemStatus();
-loadRegistry();
+loadRegistry().then(() => {
+  body.classList.add('is-library-ready');
+  restoreLibraryPosition();
+});

@@ -1,5 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#11120f"/>
-  <path d="M96 116h320v280H96z" fill="none" stroke="#d9d4c5" stroke-width="24"/>
-  <path d="M138 164h116v92H138zM278 164h96v176h-96zM138 280h116v60H138z" fill="#c8ff45"/>
+  <defs>
+    <linearGradient id="room" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3a372e"/><stop offset="1" stop-color="#1d1c19"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ddc18a"/><stop offset="1" stop-color="#a47a3e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#room)"/>
+  <path d="M106 116c0-13 11-24 24-24h252c13 0 24 11 24 24v280c0 13-11 24-24 24H130c-13 0-24-11-24-24z" fill="#26251f" stroke="#6e6758" stroke-width="12"/>
+  <path d="M151 151h66v210h-66z" rx="4" fill="#d7d0c1"/>
+  <path d="M230 135h72v226h-72z" fill="url(#brass)"/>
+  <path d="m320 166 57-8 28 198-57 8z" fill="#aaa294"/>
+  <path d="M171 178h26M250 167h32M250 329h32" stroke="#4d493f" stroke-width="8" stroke-linecap="round" opacity=".8"/>
+  <path d="M126 382h260" stroke="#0f0f0d" stroke-width="18" stroke-linecap="round" opacity=".7"/>
+  <path d="M122 105h268" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".08"/>
 </svg>

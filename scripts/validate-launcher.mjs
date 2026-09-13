@@ -185,8 +185,8 @@ for (const token of [
 requireText(worker, "event.data?.type === 'GET_UPDATE_INFO'", 'sw.js managed updates');
 requireText(worker, "event.data?.type === 'SKIP_WAITING'", 'sw.js managed updates');
 
-if (manifest.background_color !== '#0e100e' || manifest.theme_color !== '#0e100e') {
-  errors.push('manifest colors must match the launcher surface #0e100e');
+if (manifest.background_color !== '#1d1c19' || manifest.theme_color !== '#201f1c') {
+  errors.push('manifest colors must match the tactile library surfaces #1d1c19 / #201f1c');
 }
 
 if (registry.length === 0) {

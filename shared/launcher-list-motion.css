@@ -51,7 +51,7 @@ html.is-launcher-ui-ready .search-field {
 }
 
 html.is-launcher-ui-ready .search-field:focus-within {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.48), 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 html.is-launcher-ui-ready .search-field.has-value > span {
@@ -139,9 +139,10 @@ html.is-launcher-ui-ready.is-offline .status-light {
   bottom: calc(var(--safe-bottom, 22px) + 14px);
   max-width: min(92vw, 440px);
   padding: 12px 15px;
-  border: 1px solid var(--line-bright);
-  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
-  box-shadow: 0 16px 44px rgba(0,0,0,.38);
+  border: 1px solid var(--line-high, rgba(231,224,210,.24));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-strong, #353229) 96%, transparent);
+  box-shadow: 0 18px 45px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.06);
   color: var(--paper);
   font-size: .7rem;
   line-height: 1.35;
@@ -176,7 +177,9 @@ html.is-launcher-ui-ready.is-offline .status-light {
   }
 
   html.is-launcher-ui-ready .app-entry:hover {
-    background: color-mix(in srgb, var(--entry-accent) 3%, transparent);
+    background:
+      radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--entry-accent) 8%, transparent), transparent 34%),
+      linear-gradient(142deg, #353229, #292720 58%, #24231e);
   }
 }
 
@@ -195,8 +198,8 @@ html.is-launcher-ui-ready.is-offline .status-light {
 }
 
 @keyframes launcher-status-breathe {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(200,255,69,.06); }
-  50% { box-shadow: 0 0 0 7px rgba(200,255,69,.015); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(145,167,119,.09); }
+  50% { box-shadow: 0 0 0 6px rgba(145,167,119,.025); }
 }
 
 @media (prefers-reduced-motion: reduce) {

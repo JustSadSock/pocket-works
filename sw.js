@@ -1,11 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.9.7';
-const APP_VERSION = '0.9.7';
-const RELEASE_DATE = '2026-08-12';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.0';
+const APP_VERSION = '0.10.0';
+const RELEASE_DATE = '2026-09-13';
 const CACHE_PROTOCOL = 6;
 const RELEASE_NOTES = [
-  'WHAT’S NEW now advances from a compact acknowledged release cursor instead of a fragile full-registry history snapshot.',
-  'Legacy oversized registry-history and digest-ledger entries are removed during migration, preventing localStorage quota failures from resurrecting old changes.'
+  'The launcher is now a tactile, spatial library with weighted surfaces, calmer materials and real application objects.',
+  'Opening a work now expands it from the shelf, while returning restores its place and scroll position.',
+  'Search, filters, details, update progress and mobile sheets share a quieter physical motion system.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
