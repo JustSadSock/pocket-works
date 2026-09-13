@@ -2,14 +2,14 @@
   "id": "/",
   "name": "Pocket Works",
   "short_name": "Pocket Works",
-  "description": "A personal shelf for small installable offline-first applications.",
+  "description": "A tactile personal library of small installable offline-first applications.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#0e100e",
-  "theme_color": "#0e100e",
+  "background_color": "#1d1c19",
+  "theme_color": "#201f1c",
   "categories": ["utilities", "productivity", "developer tools"],
   "icons": [
     {

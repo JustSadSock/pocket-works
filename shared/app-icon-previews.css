@@ -1,7 +1,7 @@
 .app-preview.has-app-icon {
   background:
-    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--entry-accent) 13%, transparent), transparent 58%),
-    #090a09;
+    radial-gradient(circle at 48% 42%, color-mix(in srgb, var(--entry-accent) 11%, transparent), transparent 58%),
+    linear-gradient(145deg, #24231e, #181814);
 }
 
 .app-preview.has-app-icon > .preview-grid,
@@ -21,7 +21,7 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 10px 24px rgba(0,0,0,.34));
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.42));
   transform: translateZ(0);
 }
 
@@ -40,6 +40,6 @@
 }
 
 @keyframes app-icon-settle {
-  from { opacity: 0; transform: scale(.94); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(8px) scale(.92) rotate(-2deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
 }
