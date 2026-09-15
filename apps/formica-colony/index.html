@@ -1,12 +1,138 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#e9dcc0"><meta name="description" content="FORMICA // COLONY — живая 2D-симуляция муравьиной колонии в вертикальном срезе грунта."><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="FORMICA"><title>FORMICA // COLONY</title><link rel="manifest" href="./manifest.webmanifest?v=1.0.0"><link rel="icon" href="./icons/icon.svg?v=1.0.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg?v=1.0.0"><link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.0.0"><link rel="stylesheet" href="../../shared/update-manager.css?v=1.0.0"><link rel="stylesheet" href="./styles.css?v=1.0.0"></head>
-<body data-fullscreen-app><main class="app-shell" data-app-shell><canvas id="worldCanvas" data-gesture-surface data-block-callout role="application" aria-label="Вертикальный срез муравьиной колонии"></canvas>
-<header class="topbar" id="topbar" data-ui hidden><div class="topline"><a class="pw-link" href="../../" data-app-control data-native-press>Pocket Works</a><div class="brand-mark"><span>FORMICA</span><small>FIELD OBSERVATORY</small></div><button id="pauseButton" class="text-button" type="button" data-native-press>Пауза</button></div><div class="readout-strip"><div><span>РАБОЧИЕ</span><strong id="workersValue">9</strong></div><div><span>РАСПЛОД</span><strong id="broodValue">3</strong></div><div><span>ПИЩА</span><strong id="foodValue">0.0</strong></div><div><span>ДЕНЬ</span><strong id="dayValue">1</strong></div></div></header>
-<div class="surface-badge" id="surfaceBadge" data-ui hidden>весна · 22°</div><nav class="observer-tools" id="observerTools" data-ui hidden aria-label="Инструменты наблюдения"><div class="speed-switch" role="group" aria-label="Скорость времени"><button type="button" data-speed="1" aria-pressed="true" data-native-press>1×</button><button type="button" data-speed="4" aria-pressed="false" data-native-press>4×</button><button type="button" data-speed="16" aria-pressed="false" data-native-press>16×</button></div><button id="viewButton" class="tool-button" type="button" data-native-press><span>СЛОЙ</span><strong id="viewLabel">Срез</strong></button><button id="historyButton" class="tool-button" type="button" data-native-press><span>ЖУРНАЛ</span><strong>История</strong></button></nav>
-<div class="view-legend" id="legend" data-ui hidden data-view="normal"><div data-legend="pheromone"><i class="food"></i>пища <i class="build"></i>стройка <i class="alarm"></i>тревога</div><div data-legend="moisture"><i class="wet"></i>насыщение грунта водой</div><div data-legend="temperature"><i class="cold"></i>холоднее <i class="warm"></i>теплее</div></div>
-<section class="inspector" id="inspector" data-ui hidden aria-live="polite"><div class="inspect-copy"><span id="inspectKicker">WORKER #1</span><strong id="inspectTitle">исследует гнездо</strong><p id="inspectBody">Возраст 1 дн. · энергия 88%</p></div><div class="inspect-actions"><button id="followButton" type="button" data-native-press>Следить</button><button id="inspectClose" type="button" data-native-press>Закрыть</button></div></section>
-<section class="start-screen" id="startScreen" data-ui><div class="start-header"><a href="../../" data-app-control data-native-press>← Pocket Works</a><span>MYRMECOLOGY / LIVE SYSTEM</span></div><div class="hero-specimen" aria-hidden="true"><svg viewBox="0 0 420 450"><defs><linearGradient id="soil" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9b7652"/><stop offset=".55" stop-color="#76533d"/><stop offset="1" stop-color="#513b31"/></linearGradient></defs><rect width="420" height="450" fill="#d9d2b8"/><path d="M0 98 C70 91 137 104 210 95 C286 87 352 103 420 96 L420 450 L0 450 Z" fill="url(#soil)"/><path d="M212 96 C207 131 213 165 196 194 C180 220 143 234 134 268 C127 297 159 310 196 300 C233 290 244 258 229 236 C217 218 211 207 226 194 C249 175 277 184 292 205 C314 238 297 270 270 286 C247 300 259 328 288 338 C318 349 332 378 312 405" fill="none" stroke="#31251f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="171" cy="277" rx="48" ry="29" fill="#31251f"/><ellipse cx="284" cy="218" rx="42" ry="25" fill="#31251f"/><ellipse cx="289" cy="355" rx="52" ry="31" fill="#31251f"/><g fill="#281b17"><ellipse cx="201" cy="134" rx="5" ry="3"/><ellipse cx="189" cy="248" rx="5" ry="3"/><ellipse cx="271" cy="209" rx="5" ry="3"/><ellipse cx="278" cy="342" rx="5" ry="3"/></g></svg><div class="specimen-caption"><span>VERTICAL CUT</span><b>живой грунт / физические ресурсы / локальные правила</b></div></div><div class="start-copy"><p class="eyebrow">FORMICA // COLONY</p><h1>Колония,<br>которой ты не командуешь.</h1><p>Наблюдай, как конкретные муравьи ищут пищу, охотятся, выносят грунт и выращивают расплод. Никаких абстрактных запасов и назначенных профессий.</p></div><div class="start-actions"><button id="continueButton" class="primary-action" type="button" data-native-press hidden><span>Продолжить наблюдение</span><small>вернуться к сохранённой колонии</small></button><button id="newButton" class="secondary-action" type="button" data-native-press><span>Новая колония</span><small>королева + 9 рабочих</small></button></div></section>
-<section class="sheet-layer" id="pauseLayer" data-ui hidden><button class="sheet-backdrop" type="button" aria-label="Закрыть паузу"></button><div class="pause-sheet" role="dialog" aria-modal="true" aria-labelledby="pauseTitle"><div class="sheet-rule"></div><span class="sheet-kicker">FIELD OBSERVATORY</span><h2 id="pauseTitle">Наблюдение приостановлено</h2><p id="saveNote">Сохранено локально</p><button id="resumeButton" class="primary-action compact" type="button" data-native-press><span>Продолжить</span></button><button id="soundToggle" class="setting-line" type="button" data-native-press><span><b>Звук</b><small>тихие события колонии</small></span><strong>Вкл</strong></button><button id="resetButton" class="danger-line" type="button" data-native-press>Начать новую колонию</button><a class="sheet-link" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a></div></section>
-<section class="sheet-layer" id="historyLayer" data-ui hidden><button class="sheet-backdrop" type="button" aria-label="Закрыть журнал"></button><div class="history-sheet" role="dialog" aria-modal="true" aria-labelledby="historyTitle"><header><div><span>COLONY RECORD</span><h2 id="historyTitle">История колонии</h2></div><button id="historyClose" type="button" data-native-press>Закрыть</button></header><div class="history-list" id="historyList"></div></div></section>
-<section class="confirm-layer" id="confirmLayer" data-ui hidden><div class="confirm-box" role="dialog" aria-modal="true"><span>НЕОБРАТИМО</span><h2>Начать с новой королевы?</h2><p>Текущая история колонии и её физическое состояние будут заменены.</p><div><button id="confirmCancel" type="button" data-native-press>Отмена</button><button id="confirmReset" type="button" data-native-press>Начать заново</button></div></div></section>
-<section class="extinct-layer" id="extinctLayer" data-ui hidden><div class="extinct-box"><span>COLONY RECORD CLOSED</span><h2>Колония исчезла.</h2><p id="extinctStats"></p><button id="extinctNew" class="primary-action compact" type="button" data-native-press><span>Новая колония</span></button><a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a></div></section><div class="toast" id="toast" data-ui aria-live="polite"></div></main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FORMICA // COLONY" data-app-version="1.0.0"></script><script type="module" src="./app.js?v=1.0.0"></script></body></html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#e8dcc1">
+  <meta name="description" content="FORMICA // COLONY — живая 2D-симуляция муравьиной колонии в вертикальном срезе грунта.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FORMICA">
+  <title>FORMICA // COLONY</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=1.1.0">
+  <link rel="icon" href="./icons/icon.svg?v=1.1.0" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg?v=1.1.0">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css?v=1.1.0">
+  <link rel="stylesheet" href="../../shared/update-manager.css?v=1.1.0">
+  <link rel="stylesheet" href="./styles.css?v=1.1.0">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <canvas id="worldCanvas" data-gesture-surface data-block-callout role="application" aria-label="Вертикальный срез муравьиной колонии"></canvas>
+
+    <header class="topbar" id="topbar" data-ui hidden>
+      <div class="topline">
+        <a class="pw-link" href="../../" data-app-control data-native-press>Pocket Works</a>
+        <div class="brand-mark"><span>FORMICA</span><small>FIELD OBSERVATORY</small></div>
+        <button id="pauseButton" class="text-button" type="button" data-native-press>Пауза</button>
+      </div>
+      <div class="readout-strip" aria-label="Состояние колонии">
+        <div><span>РАБОЧИЕ</span><strong id="workersValue">9</strong></div>
+        <div><span>РАСПЛОД</span><strong id="broodValue">3</strong></div>
+        <div><span>ПИЩА</span><strong id="foodValue">0.0</strong></div>
+        <div><span>ДЕНЬ</span><strong id="dayValue">1</strong></div>
+      </div>
+    </header>
+
+    <div class="surface-badge" id="surfaceBadge" data-ui hidden>весна · 20°</div>
+
+    <nav class="observer-tools" id="observerTools" data-ui hidden aria-label="Инструменты наблюдения">
+      <div class="speed-switch" role="group" aria-label="Скорость времени">
+        <button type="button" data-speed="1" aria-pressed="true" data-native-press>1×</button>
+        <button type="button" data-speed="4" aria-pressed="false" data-native-press>4×</button>
+        <button type="button" data-speed="16" aria-pressed="false" data-native-press>16×</button>
+      </div>
+      <button id="viewButton" class="tool-button" type="button" data-native-press><span>НАБЛЮДЕНИЕ</span><strong id="viewLabel">Срез</strong></button>
+      <button id="historyButton" class="tool-button" type="button" data-native-press><span>ЗАПИСИ</span><strong>Журнал</strong></button>
+    </nav>
+
+    <div class="view-legend" id="legend" data-ui hidden data-view="normal">
+      <div data-legend="pheromone"><i class="food"></i>пища <i class="build"></i>стройка <i class="alarm"></i>тревога</div>
+      <div data-legend="moisture"><i class="wet"></i>насыщение грунта водой</div>
+      <div data-legend="temperature"><i class="cold"></i>холоднее <i class="warm"></i>теплее</div>
+    </div>
+
+    <section class="inspector" id="inspector" data-ui hidden aria-live="polite">
+      <div class="inspect-copy">
+        <span id="inspectKicker">WORKER #1</span>
+        <strong id="inspectTitle">исследует гнездо</strong>
+        <p id="inspectBody">Возраст 1 дн. · энергия 88%</p>
+      </div>
+      <div class="inspect-actions">
+        <button id="followButton" type="button" data-native-press>Следить</button>
+        <button id="inspectClose" type="button" data-native-press>Закрыть</button>
+      </div>
+    </section>
+
+    <section class="start-screen" id="startScreen" data-ui>
+      <div class="start-header">
+        <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+        <span>MYRMECOLOGY / LIVE SYSTEM</span>
+      </div>
+      <div class="hero-specimen" aria-hidden="true">
+        <svg viewBox="0 0 420 330" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="heroSky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c8d1bc"/><stop offset="1" stop-color="#d8d4b6"/></linearGradient>
+            <linearGradient id="heroSoil" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#997353"/><stop offset=".55" stop-color="#74533f"/><stop offset="1" stop-color="#584036"/></linearGradient>
+          </defs>
+          <rect width="420" height="330" fill="url(#heroSky)"/>
+          <path d="M0 77C80 70 137 82 211 75C283 69 344 82 420 74V330H0Z" fill="url(#heroSoil)"/>
+          <g fill="none" stroke="#4f3327" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M215 76C211 105 203 126 216 148C229 170 222 190 201 205C178 222 160 239 164 259" stroke-width="22"/>
+            <path d="M202 204C174 197 142 203 126 225" stroke-width="19"/>
+            <path d="M205 205C234 194 260 199 278 221" stroke-width="18"/>
+          </g>
+          <ellipse cx="123" cy="234" rx="39" ry="25" fill="#4f3327"/>
+          <ellipse cx="285" cy="229" rx="34" ry="21" fill="#4f3327"/>
+          <ellipse cx="183" cy="266" rx="44" ry="27" fill="#4f3327"/>
+          <g stroke="#5d714d" stroke-width="3" stroke-linecap="round"><path d="M28 79Q22 48 31 31"/><path d="M67 79Q80 55 78 39"/><path d="M344 78Q336 48 346 29"/><path d="M378 77Q391 59 394 39"/></g>
+          <g fill="#2b1b16"><ellipse cx="209" cy="128" rx="5" ry="3"/><ellipse cx="170" cy="215" rx="5" ry="3"/><ellipse cx="247" cy="211" rx="5" ry="3"/><ellipse cx="166" cy="260" rx="5" ry="3"/></g>
+          <g fill="#e6d8b7"><ellipse cx="139" cy="232" rx="4" ry="3"/><ellipse cx="146" cy="236" rx="4" ry="3"/><ellipse cx="133" cy="238" rx="4" ry="3"/></g>
+        </svg>
+        <div class="specimen-caption"><span>VERTICAL CUT</span><b>живой грунт / физические ресурсы / локальные правила</b></div>
+      </div>
+      <div class="start-copy">
+        <p class="eyebrow">FORMICA // COLONY</p>
+        <h1>Колония живёт сама.</h1>
+        <p>Следи за конкретными муравьями, физической пищей, охотой, расплодом и тем, как гнездо постепенно возникает из вынесенного грунта. Ты ничего не назначаешь — только наблюдаешь.</p>
+      </div>
+      <div class="start-actions">
+        <button id="continueButton" class="primary-action" type="button" data-native-press hidden><span>Продолжить наблюдение</span><small>вернуться к сохранённой колонии</small></button>
+        <button id="newButton" class="secondary-action" type="button" data-native-press><span>Новая колония</span><small>королева + 9 рабочих</small></button>
+      </div>
+    </section>
+
+    <section class="sheet-layer" id="pauseLayer" data-ui hidden>
+      <button class="sheet-backdrop" type="button" aria-label="Закрыть паузу"></button>
+      <div class="pause-sheet" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+        <div class="sheet-rule"></div><span class="sheet-kicker">FIELD OBSERVATORY</span>
+        <h2 id="pauseTitle">Наблюдение приостановлено</h2><p id="saveNote">Сохранено локально</p>
+        <button id="resumeButton" class="primary-action compact" type="button" data-native-press><span>Продолжить</span></button>
+        <button id="soundToggle" class="setting-line" type="button" data-native-press><span><b>Звук</b><small>тихие события колонии</small></span><strong>Вкл</strong></button>
+        <button id="resetButton" class="danger-line" type="button" data-native-press>Начать новую колонию</button>
+        <a class="sheet-link" href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section class="sheet-layer" id="historyLayer" data-ui hidden>
+      <button class="sheet-backdrop" type="button" aria-label="Закрыть журнал"></button>
+      <div class="history-sheet" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+        <header><div><span>COLONY RECORD</span><h2 id="historyTitle">История колонии</h2></div><button id="historyClose" type="button" data-native-press>Закрыть</button></header>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </section>
+
+    <section class="confirm-layer" id="confirmLayer" data-ui hidden>
+      <div class="confirm-box" role="dialog" aria-modal="true"><span>НЕОБРАТИМО</span><h2>Начать с новой королевы?</h2><p>Текущая история колонии и её физическое состояние будут заменены.</p><div><button id="confirmCancel" type="button" data-native-press>Отмена</button><button id="confirmReset" type="button" data-native-press>Начать заново</button></div></div>
+    </section>
+
+    <section class="extinct-layer" id="extinctLayer" data-ui hidden>
+      <div class="extinct-box"><span>COLONY RECORD CLOSED</span><h2>Колония исчезла.</h2><p id="extinctStats"></p><button id="extinctNew" class="primary-action compact" type="button" data-native-press><span>Новая колония</span></button><a href="../../" data-app-control data-native-press>Вернуться в Pocket Works</a></div>
+    </section>
+
+    <div class="toast" id="toast" data-ui aria-live="polite"></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FORMICA // COLONY" data-app-version="1.1.0"></script>
+  <script type="module" src="./app.js?v=1.1.0"></script>
+</body>
+</html>
