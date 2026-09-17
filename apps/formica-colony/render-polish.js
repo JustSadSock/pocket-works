@@ -3,16 +3,32 @@ import { WorldRenderer } from './render.js';
 
 const { nx, ny, SOIL } = gridInfo();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const lerp = (a, b, t) => Math.round(a + (b - a) * t);
 
 function rasterSlot(renderer, name) {
   if (!renderer[name]) {
     const canvas = document.createElement('canvas');
     canvas.width = nx;
     canvas.height = ny;
-    renderer[name] = { canvas, ctx: canvas.getContext('2d'), image: null, stamp: -Infinity, excavated: -1 };
+    renderer[name] = { canvas, ctx: canvas.getContext('2d'), image: null };
   }
   return renderer[name];
+}
+
+function cavitySlot(renderer) {
+  if (!renderer._pwCavityRaster) {
+    const scale = 4;
+    const canvas = document.createElement('canvas');
+    canvas.width = nx * scale;
+    canvas.height = ny * scale;
+    renderer._pwCavityRaster = {
+      canvas,
+      ctx: canvas.getContext('2d'),
+      scale,
+      stamp: -Infinity,
+      excavated: -1
+    };
+  }
+  return renderer._pwCavityRaster;
 }
 
 function ensureImage(slot) {
@@ -32,46 +48,46 @@ function paintScaled(g, canvas, composite = 'source-over', filter = 'none') {
   g.imageSmoothingEnabled = true;
   if ('imageSmoothingQuality' in g) g.imageSmoothingQuality = 'high';
   g.filter = filter;
-  g.drawImage(canvas, 0, 0, nx, ny, 0, 0, WORLD.width, WORLD.height);
+  g.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, WORLD.width, WORLD.height);
   g.restore();
 }
 
 WorldRenderer.prototype.cavities = function polishedCavities(w, g) {
-  const slot = rasterSlot(this, '_pwCavityRaster');
+  const slot = cavitySlot(this);
   const now = performance.now();
   const shouldRefresh = slot.excavated !== w.stats.excavated || now - slot.stamp > 220;
 
   if (shouldRefresh) {
-    const image = ensureImage(slot);
-    const data = image.data;
-    data.fill(0);
+    const { ctx, canvas, scale } = slot;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const surfaceRow = Math.floor(WORLD.surfaceY / WORLD.cell);
+    const grad = ctx.createLinearGradient(0, surfaceRow * scale, 0, ny * scale);
+    grad.addColorStop(0, '#79614a');
+    grad.addColorStop(0.52, '#674f3d');
+    grad.addColorStop(1, '#564035');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
 
+    // One continuous metaball-like path at 4x the simulation-grid resolution.
+    // Physics stays discrete, but adjacent excavated cells merge into a crisp natural wall.
+    const radius = scale * 0.86;
     for (let y = surfaceRow; y < ny; y += 1) {
-      const depth = clamp((y * WORLD.cell - WORLD.surfaceY) / (WORLD.height - WORLD.surfaceY), 0, 1);
-      const r = lerp(121, 86, depth);
-      const gg = lerp(99, 68, depth);
-      const b = lerp(77, 56, depth);
       for (let x = 0; x < nx; x += 1) {
         const i = y * nx + x;
         if (w.soil[i] !== SOIL.AIR) continue;
-        const p = i * 4;
-        data[p] = r;
-        data[p + 1] = gg;
-        data[p + 2] = b;
-        data[p + 3] = 255;
+        const cx = (x + 0.5) * scale;
+        const cy = (y + 0.5) * scale;
+        ctx.moveTo(cx + radius, cy);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       }
     }
+    ctx.fill();
 
-    commit(slot, image);
     slot.excavated = w.stats.excavated;
     slot.stamp = now;
   }
 
-  // The simulation remains cellular, but the observer sees a continuous excavated volume.
-  // Bilinear expansion of the 1px-per-cell mask removes the bead-like circles without
-  // hiding real changes to the topology of the nest.
-  paintScaled(g, slot.canvas, 'source-over', 'drop-shadow(0 0 2.4px rgba(42,27,20,.82))');
+  paintScaled(g, slot.canvas, 'source-over', 'drop-shadow(0 0 1.15px rgba(39,25,19,.76))');
 };
 
 WorldRenderer.prototype.moistureOverlay = function polishedMoisture(w, g) {
