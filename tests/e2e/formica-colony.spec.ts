@@ -18,6 +18,46 @@ async function state(page: any): Promise<FormicaState> {
   return page.evaluate(() => (window as any).__FORMICA_TEST_STATE__ as FormicaState);
 }
 
+async function panWorld(page: any, testInfo: any, box: { x: number; y: number; width: number; height: number }) {
+  const sx = box.x + box.width * 0.52;
+  const sy = box.y + box.height * 0.6;
+  const ex = box.x + box.width * 0.38;
+  const ey = box.y + box.height * 0.52;
+
+  if (!testInfo.project.name.startsWith('webkit')) {
+    await page.mouse.move(sx, sy);
+    await page.mouse.down();
+    await page.mouse.move(ex, ey, { steps: 8 });
+    await page.mouse.up();
+    return;
+  }
+
+  // Playwright's mouse backend on an emulated touch-only WebKit device can omit
+  // PointerEvents. Exercise the application's real pointer handlers directly instead
+  // of accepting a retry-only pass or weakening the camera assertion.
+  await page.evaluate(({ sx, sy, ex, ey }) => {
+    const canvas = document.querySelector('#worldCanvas') as HTMLCanvasElement;
+    Object.defineProperty(canvas, 'setPointerCapture', { configurable: true, value: () => {} });
+    const fire = (type: string, x: number, y: number) => canvas.dispatchEvent(new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 41,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: x,
+      clientY: y,
+      buttons: type === 'pointerup' ? 0 : 1
+    }));
+    fire('pointerdown', sx, sy);
+    for (let i = 1; i <= 8; i += 1) {
+      const t = i / 8;
+      fire('pointermove', sx + (ex - sx) * t, sy + (ey - sy) * t);
+    }
+    fire('pointerup', ex, ey);
+    delete (canvas as any).setPointerCapture;
+  }, { sx, sy, ex, ey });
+}
+
 test.describe('FORMICA colony mobile journey', () => {
   test('launches, simulates, saves, observes and restores on a phone', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
@@ -55,10 +95,7 @@ test.describe('FORMICA colony mobile journey', () => {
     const initialCamera = s.camera;
     const box = await page.locator('#worldCanvas').boundingBox();
     expect(box).not.toBeNull();
-    await page.mouse.move(box!.x + box!.width * 0.52, box!.y + box!.height * 0.6);
-    await page.mouse.down();
-    await page.mouse.move(box!.x + box!.width * 0.38, box!.y + box!.height * 0.52, { steps: 8 });
-    await page.mouse.up();
+    await panWorld(page, testInfo, box!);
     await page.waitForTimeout(180);
     s = await state(page);
     expect(Math.abs(s.camera.x - initialCamera.x) + Math.abs(s.camera.y - initialCamera.y)).toBeGreaterThan(8);
