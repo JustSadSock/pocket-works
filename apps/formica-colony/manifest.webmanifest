@@ -1,13 +1,15 @@
 {
-  "name":"FORMICA // COLONY",
-  "short_name":"FORMICA",
-  "description":"Живая 2D-симуляция муравьиной колонии с физическими ресурсами, постепенным рытьём и феромонным поведением.",
-  "id":"./",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "orientation":"portrait",
-  "background_color":"#e9dcc0",
-  "theme_color":"#e9dcc0",
-  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "FORMICA // COLONY",
+  "short_name": "FORMICA",
+  "description": "Живая 2D-симуляция муравьиной колонии с физическими ресурсами и автономным поведением.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8dcc1",
+  "theme_color": "#e8dcc1",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
 }
