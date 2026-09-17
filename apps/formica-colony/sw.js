@@ -1,15 +1,15 @@
 const CACHE_PREFIX = 'formica-colony-';
-const CACHE_NAME = 'formica-colony-v1.1.0-p1';
+const CACHE_NAME = 'formica-colony-v1.1.0-p2';
 const APP_VERSION = '1.1.0';
-const RELEASE_DATE = '2026-09-16';
-const CACHE_PROTOCOL = 1;
+const RELEASE_DATE = '2026-09-17';
+const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Полностью переработан визуальный срез: органические тоннели, слои почвы, корни, камни и более естественные муравьи.',
-  'Исправлено перемещение сквозь грунт, добавлена навигация по реальным ходам и сбалансированы пища, расплод и добыча.',
-  'Сохранения стали компактными и проверяются после записи; добавлен отдельный мобильный Playwright-сценарий.'
+  'Сглажены стенки ходов и камер: клеточная физика больше не читается как цепочка пузырей.',
+  'Феромоны, влажность и температура теперь отображаются как непрерывные научные поля без повторяющегося кругового узора.',
+  'Исправлено перемещение сквозь грунт, компактные сохранения и мобильные касания интерфейса.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js', './sim.js', './render.js', './manifest.webmanifest', './icons/icon.svg',
+  './', './index.html', './app.config.json', './styles.css', './app.js', './sim.js', './render.js', './render-polish.js', './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js', '../../shared/update-manager.css', '../../shared/update-manager.js'
 ];
 
