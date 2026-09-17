@@ -26,13 +26,16 @@ test.describe('FORMICA colony mobile journey', () => {
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     page.on('pageerror', (error) => pageErrors.push(error.message));
 
-    const response = await page.goto('/apps/formica-colony/', { waitUntil: 'domcontentloaded' });
-    expect(response?.status()).toBeLessThan(400);
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
+      const marker = '__formica_qa_storage_reset__';
+      if (sessionStorage.getItem(marker)) return;
       localStorage.removeItem('pocket-works:formica-colony:save');
       localStorage.removeItem('pocket-works:formica-colony:settings');
+      sessionStorage.setItem(marker, '1');
     });
-    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    const response = await page.goto('/apps/formica-colony/', { waitUntil: 'load' });
+    expect(response?.status()).toBeLessThan(400);
 
     await expect(page.locator('#newButton')).toBeVisible();
     await page.locator('#newButton').click();
@@ -90,7 +93,7 @@ test.describe('FORMICA colony mobile journey', () => {
 
     await attachCriticalScreenshot(page, testInfo, 'formica-paused-polished', { fullPage: false });
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'load' });
     await expect(page.locator('#continueButton')).toBeVisible();
     await page.locator('#continueButton').click();
     await page.waitForFunction(() => (window as any).__FORMICA_TEST_STATE__?.phase === 'running');
