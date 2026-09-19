@@ -107,10 +107,10 @@ export function computeImpactSeverity(input: ImpactInput, state: DamageState) {
 const zoneComponents: Record<DamageZone, Array<[ComponentName, number]>> = {
   front: [
     ['frontStructure', 1], ['engine', 0.74], ['cooling', 0.86], ['steering', 0.35],
-    ['suspensionFL', 0.32], ['suspensionFR', 0.32], ['headlightL', 0.62], ['headlightR', 0.62], ['windshield', 0.18], ['chassis', 0.16]
+    ['suspensionFL', 0.32], ['suspensionFR', 0.32], ['wheelFL', 0.14], ['wheelFR', 0.14], ['headlightL', 0.62], ['headlightR', 0.62], ['windshield', 0.18], ['chassis', 0.16]
   ],
   rear: [
-    ['rearStructure', 1], ['transmission', 0.24], ['suspensionRL', 0.27], ['suspensionRR', 0.27],
+    ['rearStructure', 1], ['transmission', 0.24], ['suspensionRL', 0.27], ['suspensionRR', 0.27], ['wheelRL', 0.12], ['wheelRR', 0.12],
     ['taillightL', 0.72], ['taillightR', 0.72], ['chassis', 0.14]
   ],
   left: [
