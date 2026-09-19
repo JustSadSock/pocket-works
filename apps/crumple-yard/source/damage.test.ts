@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyImpact, computeImpactSeverity, createDamageState, deriveDamageEffects, type ImpactInput } from './damage';
+import { applyImpact, computeImpactSeverity, createDamageState, deriveDamageEffects, stepDrivetrainDamage, stepThermalDamage, type ImpactInput } from './damage';
 
 const base: ImpactInput = {
   force: 18000,
@@ -113,5 +113,57 @@ describe('crash scenario matrix', () => {
     const failed = deriveDamageEffects(state);
     expect(failed.wheelGrip[1]).toBeLessThan(degraded.wheelGrip[1]);
     expect(Math.abs(failed.steeringPull)).toBeGreaterThan(Math.abs(degraded.steeringPull));
+  });
+});
+
+
+describe('mechanical depth 1.1', () => {
+  it('turns suspension damage into persistent camber, toe and rolling drag', () => {
+    const state = createDamageState();
+    state.components.suspensionFL = 0.22;
+    state.components.wheelFL = 0.48;
+    const effects = deriveDamageEffects(state);
+    expect(Math.abs(effects.wheelAlignment[0].camber)).toBeGreaterThan(0.35);
+    expect(Math.abs(effects.wheelAlignment[0].toe)).toBeGreaterThan(0.08);
+    expect(effects.wheelAlignment[0].drag).toBeGreaterThan(0.5);
+    expect(effects.wheelAlignment[1].drag).toBeLessThan(0.05);
+  });
+
+  it('creates steering rack play before steering is completely lost', () => {
+    const state = createDamageState();
+    state.components.steering = 0.42;
+    const effects = deriveDamageEffects(state);
+    expect(effects.steeringPlay).toBeGreaterThan(0.2);
+    expect(effects.steeringAuthority).toBeGreaterThan(0);
+    expect(effects.steeringAuthority).toBeLessThan(0.8);
+  });
+
+  it('leaks coolant gradually after radiator damage and then overheats under load', () => {
+    const state = createDamageState();
+    state.components.cooling = 0.24;
+    const initialCoolant = state.coolant;
+    for (let i = 0; i < 1800; i += 1) stepThermalDamage(state, 1, 7, 1 / 60);
+    expect(state.coolant).toBeLessThan(initialCoolant);
+    expect(state.temperature).toBeGreaterThan(0.8);
+    expect(deriveDamageEffects(state).radiatorLeak).toBeGreaterThan(0.7);
+  });
+
+  it('accumulates drivetrain stress under throttle when transmission is damaged', () => {
+    const state = createDamageState();
+    state.components.transmission = 0.35;
+    for (let i = 0; i < 600; i += 1) stepDrivetrainDamage(state, 1, 4, 1 / 60);
+    const effects = deriveDamageEffects(state);
+    expect(state.drivetrainStress).toBeGreaterThan(0.4);
+    expect(effects.transmissionShock).toBeGreaterThan(0.45);
+    expect(effects.transmissionEfficiency).toBeLessThan(state.components.transmission);
+  });
+
+  it('makes engine output rough before total engine failure', () => {
+    const state = createDamageState();
+    state.components.engine = 0.38;
+    state.temperature = 1.03;
+    const effects = deriveDamageEffects(state);
+    expect(effects.engineRoughness).toBeGreaterThan(0.4);
+    expect(effects.enginePower).toBeGreaterThan(0);
   });
 });

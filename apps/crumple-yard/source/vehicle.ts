@@ -17,6 +17,7 @@ import {
   clamp,
   createDamageState,
   deriveDamageEffects,
+  stepDrivetrainDamage,
   stepThermalDamage,
   type DamageState,
   type DamageZone,
@@ -69,6 +70,8 @@ export class Vehicle {
   private taillights: Mesh[] = [];
   private windshield: Mesh;
   private lastSteer = 0;
+  private steeringSlack = 0;
+  private powerPulse = 0;
   private panelDetached = new Set<string>();
   private wheelDetached = new Set<number>();
   private active = true;
@@ -259,19 +262,30 @@ export class Vehicle {
       brake = 0;
     }
 
-    const steerTarget = (input.steer + effects.steeringPull) * this.spec.steerMax * effects.steeringAuthority;
+    const requestedSteer = input.steer + effects.steeringPull;
+    const deadband = effects.steeringPlay * 0.55;
+    const rackInput = Math.abs(requestedSteer) <= deadband
+      ? 0
+      : Math.sign(requestedSteer) * (Math.abs(requestedSteer) - deadband) / Math.max(0.15, 1 - deadband);
+    this.steeringSlack += (rackInput - this.steeringSlack) * (1 - Math.exp(-dt * (4.2 + effects.steeringAuthority * 6)));
+    const steerTarget = this.steeringSlack * this.spec.steerMax * effects.steeringAuthority;
     const steerResponse = 1 - Math.exp(-dt * (speedAbs > 17 ? 5.4 : 8.8));
     this.lastSteer += (steerTarget - this.lastSteer) * steerResponse;
-    this.controller.setWheelSteering(0, this.lastSteer);
-    this.controller.setWheelSteering(1, this.lastSteer);
+    this.controller.setWheelSteering(0, this.lastSteer + effects.wheelAlignment[0].toe);
+    this.controller.setWheelSteering(1, this.lastSteer + effects.wheelAlignment[1].toe);
 
-    const power = (input.throttle - reverse) * this.spec.engineForce * effects.enginePower * effects.transmissionEfficiency;
+    this.powerPulse += dt * (9 + speedAbs * 0.12);
+    const misfire = 1 - effects.engineRoughness * (0.08 + 0.11 * (0.5 + 0.5 * Math.sin(this.powerPulse * 2.7)));
+    const gearboxLurch = 1 - effects.transmissionShock * (0.04 + 0.08 * Math.max(0, Math.sin(this.powerPulse * 0.73)));
+    const power = (input.throttle - reverse) * this.spec.engineForce * effects.enginePower * effects.transmissionEfficiency * misfire * gearboxLurch;
     const drivetrain = this.spec.id === 'kestrel' ? [0, 1] : this.spec.id === 'meridian' ? [2, 3] : [0, 1, 2, 3];
     for (let i = 0; i < 4; i += 1) {
       const driveShare = drivetrain.includes(i) ? 1 / drivetrain.length : 0;
-      this.controller.setWheelEngineForce(i, power * driveShare);
-      this.controller.setWheelBrake(i, brake * this.spec.brakeForce * effects.brakeAuthority);
-      this.controller.setWheelFrictionSlip(i, Math.max(0.18, this.spec.tireGrip * effects.wheelGrip[i]));
+      const alignment = effects.wheelAlignment[i];
+      const rollingLoss = 1 - alignment.drag * 0.32;
+      this.controller.setWheelEngineForce(i, power * driveShare * rollingLoss);
+      this.controller.setWheelBrake(i, brake * this.spec.brakeForce * effects.brakeAuthority + alignment.drag * speedAbs * 0.12);
+      this.controller.setWheelFrictionSlip(i, Math.max(0.18, this.spec.tireGrip * effects.wheelGrip[i] * (1 - Math.abs(alignment.toe) * 0.45)));
     }
 
     const supports = [effects.frontSupportL, effects.frontSupportR, effects.rearSupportL, effects.rearSupportR];
@@ -283,6 +297,7 @@ export class Vehicle {
     }
 
     stepThermalDamage(this.damage, input.throttle - reverse, speedAbs, dt);
+    stepDrivetrainDamage(this.damage, input.throttle - reverse, speedAbs, dt);
     this.controller.updateVehicle(dt, undefined, undefined, (collider) => collider.handle !== this.collider.handle);
   }
 
@@ -302,13 +317,18 @@ export class Vehicle {
       if (this.wheelDetached.has(i)) continue;
       const suspension = this.controller.wheelSuspensionLength(i) ?? this.spec.suspensionRest;
       const support = [effects.frontSupportL, effects.frontSupportR, effects.rearSupportL, effects.rearSupportR][i];
-      const collapse = (1 - support) * 0.12;
-      const camber = (i % 2 === 0 ? -1 : 1) * (1 - support) * 0.4;
-      this.wheels[i].position.set(xPositions[i], y - suspension + this.spec.suspensionRest - collapse, zPositions[i]);
+      const collapse = (1 - support) * (0.1 + this.spec.suspensionTravel * 0.22);
+      const alignment = effects.wheelAlignment[i];
+      const archIntrusion = alignment.drag > 0.58 ? (alignment.drag - 0.58) * 0.055 : 0;
+      this.wheels[i].position.set(
+        xPositions[i] + Math.sin(alignment.camber) * this.spec.wheelRadius * 0.18,
+        y - suspension + this.spec.suspensionRest - collapse + archIntrusion,
+        zPositions[i]
+      );
       this.wheels[i].rotationQuaternion = Quaternion.RotationYawPitchRoll(
-        i < 2 ? (this.controller.wheelSteering(i) ?? 0) : 0,
+        (i < 2 ? (this.controller.wheelSteering(i) ?? 0) : 0) + alignment.toe,
         this.controller.wheelRotation(i) ?? 0,
-        Math.PI / 2 + camber
+        Math.PI / 2 + alignment.camber
       );
       this.wheels[i].setEnabled(true);
       const wheelHealth = [this.damage.components.wheelFL, this.damage.components.wheelFR, this.damage.components.wheelRL, this.damage.components.wheelRR][i];

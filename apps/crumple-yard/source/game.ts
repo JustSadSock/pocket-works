@@ -23,7 +23,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 type QaState = {
   version: string;
@@ -43,6 +43,10 @@ type QaState = {
     steeringPull: number;
     enginePower: number;
     coolingEfficiency: number;
+    steeringPlay: number;
+    transmissionShock: number;
+    engineRoughness: number;
+    coolant: number;
   };
   deformation: number;
   aiCars: number;
@@ -209,7 +213,11 @@ export class CrumpleGame {
         steeringAuthority: 1,
         steeringPull: 0,
         enginePower: 1,
-        coolingEfficiency: 1
+        coolingEfficiency: 1,
+        steeringPlay: 0,
+        transmissionShock: 0,
+        engineRoughness: 0,
+        coolant: 1
       },
       deformation: 0,
       aiCars: 0,
@@ -591,7 +599,11 @@ export class CrumpleGame {
         steeringAuthority: Number(effects.steeringAuthority.toFixed(3)),
         steeringPull: Number(effects.steeringPull.toFixed(3)),
         enginePower: Number(effects.enginePower.toFixed(3)),
-        coolingEfficiency: Number(effects.coolingEfficiency.toFixed(3))
+        coolingEfficiency: Number(effects.coolingEfficiency.toFixed(3)),
+        steeringPlay: Number(effects.steeringPlay.toFixed(3)),
+        transmissionShock: Number(effects.transmissionShock.toFixed(3)),
+        engineRoughness: Number(effects.engineRoughness.toFixed(3)),
+        coolant: Number(this.player.damage.coolant.toFixed(3))
       },
       deformation: Number(this.player.shell.deformationScore().toFixed(4)),
       aiCars: this.traffic.agents.length,
