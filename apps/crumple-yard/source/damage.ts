@@ -198,7 +198,7 @@ export function deriveDamageEffects(state: DamageState): DamageEffects {
     const wheelDamage = 1 - wheels[i];
     return {
       camber: side * (damage * 0.52 + wheelDamage * 0.16),
-      toe: side * damage * (front ? 0.19 : 0.1) + steeringPull * (front ? 0.32 : 0.08),
+      toe: side * damage * (front ? 0.19 : 0.1),
       drag: clamp(damage * 0.42 + wheelDamage * 0.58)
     };
   }) as DamageEffects['wheelAlignment'];
@@ -242,7 +242,7 @@ export function stepThermalDamage(state: DamageState, throttle: number, speedMps
 export function stepDrivetrainDamage(state: DamageState, throttle: number, speedMps: number, dt: number) {
   const transmissionDamage = 1 - state.components.transmission;
   const shockLoad = Math.abs(throttle) * transmissionDamage * clamp(1 - speedMps / 34, 0.2, 1);
-  state.drivetrainStress = clamp(state.drivetrainStress + shockLoad * 0.12 * dt - 0.045 * dt);
+  state.drivetrainStress = clamp(state.drivetrainStress + shockLoad * 0.18 * dt - 0.03 * dt);
   if (state.drivetrainStress > 0.82) {
     state.components.transmission = clamp(state.components.transmission - (state.drivetrainStress - 0.82) * 0.012 * dt);
   }
