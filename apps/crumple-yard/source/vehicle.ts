@@ -2,6 +2,7 @@ import {
   Color3,
   Mesh,
   MeshBuilder,
+  Matrix,
   PBRMaterial,
   Quaternion,
   Scene,
@@ -383,7 +384,7 @@ export class Vehicle {
     if (!panel) return;
     panel.computeWorldMatrix(true);
     const worldPosition = panel.getAbsolutePosition().clone();
-    const worldRotation = this.root.absoluteRotationQuaternion.clone();
+    const worldRotation = (this.root.rotationQuaternion ?? Quaternion.Identity()).clone();
     panel.parent = null;
     panel.position.copyFrom(worldPosition);
     panel.rotationQuaternion = worldRotation;
@@ -440,7 +441,9 @@ export class Vehicle {
 
   forward() {
     const q = this.root.rotationQuaternion ?? Quaternion.Identity();
-    return Vector3.TransformNormal(Vector3.Forward(), q.toRotationMatrix()).normalize();
+    const rotation = Matrix.Zero();
+    q.toRotationMatrix(rotation);
+    return Vector3.TransformNormal(Vector3.Forward(), rotation).normalize();
   }
 
   effects() {
