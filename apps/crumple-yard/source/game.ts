@@ -221,7 +221,9 @@ export class CrumpleGame {
       lastImpact: null,
       errors: []
     };
-    (window as typeof window & { __CRUMPLE_TEST_STATE__?: QaState }).__CRUMPLE_TEST_STATE__ = this.qa;
+    const testWindow = window as typeof window & { __CRUMPLE_TEST_STATE__?: QaState; __POCKET_WORKS_TEST_STATE__?: QaState };
+    testWindow.__CRUMPLE_TEST_STATE__ = this.qa;
+    testWindow.__POCKET_WORKS_TEST_STATE__ = this.qa;
   }
 
   async boot() {
