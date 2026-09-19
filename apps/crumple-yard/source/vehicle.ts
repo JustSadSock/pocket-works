@@ -300,7 +300,7 @@ export class Vehicle {
     const zPositions = [z, z, -z, -z];
     for (let i = 0; i < 4; i += 1) {
       if (this.wheelDetached.has(i)) continue;
-      const suspension = this.controller.wheelSuspensionLength(i);
+      const suspension = this.controller.wheelSuspensionLength(i) ?? this.spec.suspensionRest;
       const support = [effects.frontSupportL, effects.frontSupportR, effects.rearSupportL, effects.rearSupportR][i];
       const collapse = (1 - support) * 0.12;
       const camber = (i % 2 === 0 ? -1 : 1) * (1 - support) * 0.4;
