@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#c9c6bb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CRUMPLE">
+  <meta name="pocket-works-build" content="1.0.0">
+  <title>CRUMPLE // YARD — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell crumple-shell" data-app-shell>
+    <canvas id="renderCanvas" data-gesture-surface aria-label="3D crash-test yard"></canvas>
+
+    <div id="loadingScreen" class="loading-screen" data-ui>
+      <div class="loading-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>CRUMPLE // YARD</p>
+      <strong id="loadingText">Инициализация физики столкновений…</strong>
+    </div>
+
+    <section id="menuScreen" class="menu-screen" hidden data-ui>
+      <header class="menu-rail">
+        <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+        <span>IMPACT LAB / 01</span>
+      </header>
+
+      <div class="menu-copy">
+        <p class="kicker">PHYSICAL DEFORMATION TEST YARD</p>
+        <h1>CRUMPLE</h1>
+        <p>Не «полоска здоровья». Кузов помнит точку, силу и направление каждого удара — а механика потом едет на том, что от неё осталось.</p>
+      </div>
+
+      <div class="car-selector" role="radiogroup" aria-label="Выбор автомобиля">
+        <button class="car-choice" type="button" data-car="kestrel" role="radio" aria-checked="false" data-native-press>
+          <span class="car-code">01</span>
+          <span class="car-name">KESTREL</span>
+          <small>1080 кг · FWD · острый руль</small>
+          <span class="car-bar"><i style="--value:.42"></i><b>масса</b></span>
+          <span class="car-bar"><i style="--value:.82"></i><b>манёвр</b></span>
+        </button>
+        <button class="car-choice" type="button" data-car="meridian" role="radio" aria-checked="true" data-native-press>
+          <span class="car-code">02</span>
+          <span class="car-name">MERIDIAN</span>
+          <small>1490 кг · RWD · баланс</small>
+          <span class="car-bar"><i style="--value:.62"></i><b>масса</b></span>
+          <span class="car-bar"><i style="--value:.67"></i><b>манёвр</b></span>
+        </button>
+        <button class="car-choice" type="button" data-car="bastion" role="radio" aria-checked="false" data-native-press>
+          <span class="car-code">03</span>
+          <span class="car-name">BASTION</span>
+          <small>2220 кг · AWD · тяжёлый</small>
+          <span class="car-bar"><i style="--value:.93"></i><b>масса</b></span>
+          <span class="car-bar"><i style="--value:.46"></i><b>манёвр</b></span>
+        </button>
+      </div>
+
+      <div class="preset-row">
+        <div>
+          <span>КУЗОВ / КОЛЁСА</span>
+          <strong id="presetName">OXIDE</strong>
+        </div>
+        <div id="presetButtons" class="preset-buttons" aria-label="Визуальный пресет"></div>
+      </div>
+
+      <div class="menu-actions">
+        <button id="soundMenuButton" class="utility-button" type="button" data-native-press>ЗВУК · ВКЛ</button>
+        <button id="startButton" class="start-button" type="button" data-native-press disabled>
+          <span>ВЫЕХАТЬ В ЯРД</span>
+          <small>газ справа · руль слева · разбить по вкусу</small>
+        </button>
+      </div>
+    </section>
+
+    <section id="hud" class="hud" hidden data-ui>
+      <header class="hud-top">
+        <button id="pauseButton" type="button" data-native-press>МЕНЮ</button>
+        <div class="speed-readout">
+          <strong id="speedValue">0</strong><span>КМ/Ч</span>
+        </div>
+        <div class="hud-identity"><span id="vehicleName">MERIDIAN</span><small id="driveState">DRIVEABLE</small></div>
+      </header>
+
+      <aside class="damage-strip" aria-label="Состояние автомобиля">
+        <div><span>STRUCT</span><i><b id="structBar"></b></i><strong id="structValue">100</strong></div>
+        <div><span>STEER</span><i><b id="steerBar"></b></i><strong id="steerValue">100</strong></div>
+        <div><span>POWER</span><i><b id="powerBar"></b></i><strong id="powerValue">100</strong></div>
+      </aside>
+
+      <div id="impactReadout" class="impact-readout" aria-live="polite">
+        <span id="impactZone">NO IMPACT</span>
+        <strong id="impactInfo">кузов цел</strong>
+      </div>
+
+      <div class="mobile-controls">
+        <div id="steerPad" class="steer-pad" data-touch-action="none" data-block-callout aria-label="Рулевое управление">
+          <div class="steer-scale" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <div id="steerThumb" class="steer-thumb" role="slider" aria-label="Поворот" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+            <span>РУЛЬ</span>
+          </div>
+        </div>
+        <div class="pedals">
+          <button id="brakePedal" class="pedal brake" type="button" data-touch-action="none" data-block-callout><span>ТОРМОЗ</span><small>R</small></button>
+          <button id="drivePedal" class="pedal drive" type="button" data-touch-action="none" data-block-callout><span>ГАЗ</span><small>D</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pauseLayer" class="sheet-layer" hidden data-ui>
+      <button class="sheet-backdrop" id="pauseBackdrop" type="button" aria-label="Вернуться в игру"></button>
+      <div class="pause-sheet">
+        <span class="sheet-code">SESSION / PAUSED</span>
+        <h2>Машина помнит всё.</h2>
+        <p id="pauseSummary">Повреждения остаются до ремонта или смены машины.</p>
+        <button id="resumeButton" class="sheet-primary" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button id="repairButton" class="sheet-row" type="button" data-native-press><span>Новая такая же машина</span><b>РЕМОНТ</b></button>
+        <button id="garageButton" class="sheet-row" type="button" data-native-press><span>Сменить автомобиль</span><b>ГАРАЖ</b></button>
+        <button id="soundPauseButton" class="sheet-row" type="button" data-native-press><span>Процедурный звук</span><b>ВКЛ</b></button>
+        <a class="sheet-row" href="../../" data-app-control data-native-press><span>Вернуться в библиотеку</span><b>POCKET WORKS</b></a>
+      </div>
+    </section>
+
+    <section id="immobileLayer" class="immobile-layer" hidden data-ui>
+      <div>
+        <span>MACHINE / TERMINAL</span>
+        <h2>Она ещё машина. Технически.</h2>
+        <p id="immobileReason">Силовая структура или привод больше не позволяют нормально ехать.</p>
+        <button id="immobileRepair" type="button" data-native-press>НОВАЯ МАШИНА</button>
+        <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+      </div>
+    </section>
+
+    <section id="errorScreen" class="error-screen" hidden data-ui>
+      <span>BOOT FAILURE</span>
+      <h2>Физика не поднялась.</h2>
+      <p id="errorText">WebGL или WebAssembly недоступны.</p>
+      <button id="retryButton" type="button" data-native-press>ПОВТОРИТЬ</button>
+      <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+    </section>
+
+    <button id="workshopButton" class="workshop-anchor" type="button" data-workshop-trigger hidden>Workshop</button>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
