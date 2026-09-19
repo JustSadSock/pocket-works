@@ -498,7 +498,7 @@ export class Vehicle {
       kind: 'prop',
       stiffness: 0.55,
       contactArea: 0.34,
-      material: 'metal',
+      material: 'steel',
       mass: 9,
       label: name
     });
