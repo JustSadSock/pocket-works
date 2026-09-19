@@ -306,8 +306,8 @@ export class Vehicle {
       const camber = (i % 2 === 0 ? -1 : 1) * (1 - support) * 0.4;
       this.wheels[i].position.set(xPositions[i], y - suspension + this.spec.suspensionRest - collapse, zPositions[i]);
       this.wheels[i].rotationQuaternion = Quaternion.RotationYawPitchRoll(
-        i < 2 ? this.controller.wheelSteering(i) : 0,
-        this.controller.wheelRotation(i),
+        i < 2 ? (this.controller.wheelSteering(i) ?? 0) : 0,
+        this.controller.wheelRotation(i) ?? 0,
         Math.PI / 2 + camber
       );
       this.wheels[i].setEnabled(true);
