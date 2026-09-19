@@ -1,6 +1,6 @@
 import { Vector3 } from '@babylonjs/core';
 import RAPIER from '@dimforge/rapier3d-compat';
-import type { CollisionRegistry } from './physics-types';
+import type { CollisionMeta, CollisionRegistry } from './physics-types';
 import type { Vehicle, VehicleImpactResult } from './vehicle';
 
 export type CollisionFeedback = {
@@ -83,20 +83,14 @@ export class CollisionSystem {
 
   private applyForVehicle(
     vehicle: Vehicle,
-    other: CollisionRegistry extends Map<number, infer M> ? M | undefined : never,
+    other: CollisionMeta | undefined,
     point: Vector3,
     normal: Vector3,
     force: number,
     relativeSpeed: number,
     dt: number
   ) {
-    const meta = other as {
-      stiffness: number;
-      contactArea: number;
-      mass: number;
-      material: 'concrete' | 'steel' | 'soft' | 'car';
-      label: string;
-    } | undefined;
+    const meta = other;
     const forward = vehicle.forward();
     const angleCos = Math.abs(Vector3.Dot(forward, normal.normalizeToNew()));
     const result = vehicle.applyCollision(point, normal, {
