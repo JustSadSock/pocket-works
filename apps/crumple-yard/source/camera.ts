@@ -1,4 +1,4 @@
-import { FreeCamera, Quaternion, Vector3 } from '@babylonjs/core';
+import { FreeCamera, Matrix, Quaternion, Vector3 } from '@babylonjs/core';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Vehicle } from './vehicle';
 
@@ -69,7 +69,9 @@ export class ChaseCamera {
     this.shakePhase += dt * 37;
     if (this.shake > 0.002) {
       const q = vehicle.root.rotationQuaternion ?? Quaternion.Identity();
-      const right = Vector3.TransformNormal(Vector3.Right(), q.toRotationMatrix()).normalize();
+      const rotation = Matrix.Zero();
+      q.toRotationMatrix(rotation);
+      const right = Vector3.TransformNormal(Vector3.Right(), rotation).normalize();
       this.camera.position.addInPlace(right.scale(Math.sin(this.shakePhase) * this.shake));
       this.camera.position.y += Math.sin(this.shakePhase * 1.37) * this.shake * 0.45;
     }
