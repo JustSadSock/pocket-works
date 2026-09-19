@@ -53,8 +53,10 @@ export class CollisionSystem {
       const normal2 = contact ? vector(contact.normal2) : fallbackNormal.scale(-1);
       const relative = velocity(collider1).subtract(velocity(collider2));
       const contactNormal = contact ? normal1 : fallbackNormal;
+      const relativeLength = relative.length();
       const closingSpeed = Math.abs(Vector3.Dot(relative, contactNormal));
-      const combinedSpeed = Math.max(closingSpeed, relative.length() * 0.42);
+      const combinedSpeed = Math.max(closingSpeed, relativeLength * 0.42);
+      const incidence = Math.max(0.18, Math.min(1, closingSpeed / Math.max(0.1, relativeLength)));
 
       if (meta1?.vehicle) {
         this.applyForVehicle(
@@ -64,6 +66,7 @@ export class CollisionSystem {
           normal1,
           force,
           combinedSpeed,
+          incidence,
           dt
         );
       }
@@ -75,6 +78,7 @@ export class CollisionSystem {
           normal2,
           force,
           combinedSpeed,
+          incidence,
           dt
         );
       }
@@ -88,11 +92,10 @@ export class CollisionSystem {
     normal: Vector3,
     force: number,
     relativeSpeed: number,
+    incidence: number,
     dt: number
   ) {
     const meta = other;
-    const forward = vehicle.forward();
-    const angleCos = Math.abs(Vector3.Dot(forward, normal.normalizeToNew()));
     const result = vehicle.applyCollision(point, normal, {
       force,
       dt,
@@ -100,7 +103,7 @@ export class CollisionSystem {
       otherMass: meta?.mass ?? Number.POSITIVE_INFINITY,
       obstacleStiffness: meta?.stiffness ?? 1.35,
       contactArea: meta?.contactArea ?? 0.7,
-      angleCos: Math.max(0.18, angleCos)
+      angleCos: incidence
     });
     if (result.severity < 0.006) return;
     this.onImpact({
