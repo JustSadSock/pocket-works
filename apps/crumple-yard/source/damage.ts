@@ -31,6 +31,8 @@ export type DamageState = {
   temperature: number;
   peakImpact: number;
   impactCount: number;
+  coolant: number;
+  drivetrainStress: number;
 };
 
 export type ImpactInput = {
@@ -60,6 +62,16 @@ export type DamageEffects = {
   coolingEfficiency: number;
   transmissionEfficiency: number;
   driveable: boolean;
+  steeringPlay: number;
+  transmissionShock: number;
+  engineRoughness: number;
+  radiatorLeak: number;
+  wheelAlignment: [
+    { camber: number; toe: number; drag: number },
+    { camber: number; toe: number; drag: number },
+    { camber: number; toe: number; drag: number },
+    { camber: number; toe: number; drag: number }
+  ];
 };
 
 const componentNames: ComponentName[] = [
@@ -77,7 +89,9 @@ export function createDamageState(): DamageState {
     components: Object.fromEntries(componentNames.map((name) => [name, 1])) as Record<ComponentName, number>,
     temperature: 0.28,
     peakImpact: 0,
-    impactCount: 0
+    impactCount: 0,
+    coolant: 1,
+    drivetrainStress: 0
   };
 }
 
@@ -171,6 +185,24 @@ export function deriveDamageEffects(state: DamageState): DamageEffects {
     clamp(c.wheelRR * (0.45 + 0.55 * c.suspensionRR))
   ];
 
+  const steeringPlay = clamp((1 - c.steering) * 0.48 + (1 - structuralIntegrity) * 0.08, 0, 0.5);
+  const transmissionShock = clamp((1 - c.transmission) * 0.72 + state.drivetrainStress * 0.28);
+  const engineRoughness = clamp((1 - c.engine) * 0.62 + Math.max(0, state.temperature - 0.82) * 0.9 + (1 - state.coolant) * 0.35);
+  const radiatorLeak = clamp((1 - c.cooling) * 1.15);
+  const suspension = [c.suspensionFL, c.suspensionFR, c.suspensionRL, c.suspensionRR];
+  const wheels = [c.wheelFL, c.wheelFR, c.wheelRL, c.wheelRR];
+  const wheelAlignment = suspension.map((health, i) => {
+    const side = i % 2 === 0 ? -1 : 1;
+    const front = i < 2;
+    const damage = 1 - health;
+    const wheelDamage = 1 - wheels[i];
+    return {
+      camber: side * (damage * 0.52 + wheelDamage * 0.16),
+      toe: side * damage * (front ? 0.19 : 0.1) + steeringPull * (front ? 0.32 : 0.08),
+      drag: clamp(damage * 0.42 + wheelDamage * 0.58)
+    };
+  }) as DamageEffects['wheelAlignment'];
+
   return {
     enginePower,
     steeringAuthority,
@@ -182,20 +214,37 @@ export function deriveDamageEffects(state: DamageState): DamageEffects {
     rearSupportR: c.suspensionRR,
     wheelGrip,
     structuralIntegrity,
-    coolingEfficiency: c.cooling,
-    transmissionEfficiency: c.transmission,
-    driveable: enginePower > 0.055 && structuralIntegrity > 0.08
+    coolingEfficiency: c.cooling * (0.3 + 0.7 * state.coolant),
+    transmissionEfficiency: clamp(c.transmission * (1 - state.drivetrainStress * 0.22)),
+    driveable: enginePower > 0.055 && structuralIntegrity > 0.08,
+    steeringPlay,
+    transmissionShock,
+    engineRoughness,
+    radiatorLeak,
+    wheelAlignment
   };
 }
 
 export function stepThermalDamage(state: DamageState, throttle: number, speedMps: number, dt: number) {
   const cooling = state.components.cooling;
-  const load = Math.abs(throttle) * (0.25 + 0.75 * (1 - cooling));
-  const airflow = clamp(speedMps / 28, 0, 1) * cooling;
-  state.temperature = clamp(state.temperature + (load * 0.078 - airflow * 0.052 - 0.018) * dt, 0.18, 1.25);
+  const leakRate = Math.pow(1 - cooling, 1.65) * (0.006 + Math.abs(throttle) * 0.006);
+  state.coolant = clamp(state.coolant - leakRate * dt, 0, 1);
+  const effectiveCooling = cooling * (0.18 + state.coolant * 0.82);
+  const load = Math.abs(throttle) * (0.24 + 0.92 * (1 - effectiveCooling));
+  const airflow = clamp(speedMps / 28, 0, 1) * effectiveCooling;
+  state.temperature = clamp(state.temperature + (load * 0.086 - airflow * 0.052 - 0.017) * dt, 0.18, 1.25);
   if (state.temperature > 1) {
     const over = state.temperature - 1;
-    state.components.engine = clamp(state.components.engine - over * 0.028 * dt);
+    state.components.engine = clamp(state.components.engine - over * 0.032 * dt);
+  }
+}
+
+export function stepDrivetrainDamage(state: DamageState, throttle: number, speedMps: number, dt: number) {
+  const transmissionDamage = 1 - state.components.transmission;
+  const shockLoad = Math.abs(throttle) * transmissionDamage * clamp(1 - speedMps / 34, 0.2, 1);
+  state.drivetrainStress = clamp(state.drivetrainStress + shockLoad * 0.12 * dt - 0.045 * dt);
+  if (state.drivetrainStress > 0.82) {
+    state.components.transmission = clamp(state.components.transmission - (state.drivetrainStress - 0.82) * 0.012 * dt);
   }
 }
 
