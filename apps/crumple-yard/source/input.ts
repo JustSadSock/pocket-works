@@ -41,11 +41,11 @@ export class MobileDriveInput {
     this.bindPedal(brakePedal, 'brake');
 
     addEventListener('keydown', (event) => {
-      this.keys.add(event.code);
+      this.keys.add((event as KeyboardEvent).code);
       this.updateKeyboard();
     });
     addEventListener('keyup', (event) => {
-      this.keys.delete(event.code);
+      this.keys.delete((event as KeyboardEvent).code);
       this.updateKeyboard();
     });
     addEventListener('blur', () => this.reset());
