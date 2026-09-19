@@ -14,6 +14,7 @@ import type { DriveInputState } from './input';
 import type { VehicleSpec, VisualPreset } from './config';
 import {
   applyImpact,
+  clamp,
   createDamageState,
   deriveDamageEffects,
   stepThermalDamage,
@@ -69,6 +70,7 @@ export class Vehicle {
   private windshield: Mesh;
   private lastSteer = 0;
   private panelDetached = new Set<string>();
+  private wheelDetached = new Set<number>();
   private active = true;
   private lastInput: DriveInputState = { steer: 0, throttle: 0, brake: 0 };
 
@@ -274,8 +276,8 @@ export class Vehicle {
 
     const supports = [effects.frontSupportL, effects.frontSupportR, effects.rearSupportL, effects.rearSupportR];
     for (let i = 0; i < 4; i += 1) {
-      const support = supports[i];
-      this.controller.setWheelMaxSuspensionForce(i, this.spec.maxSuspensionForce * (0.08 + support * 0.92));
+      const support = supports[i] * (0.08 + effects.wheelGrip[i] * 0.92);
+      this.controller.setWheelMaxSuspensionForce(i, this.spec.maxSuspensionForce * support);
       this.controller.setWheelSuspensionStiffness(i, this.spec.suspensionStiffness * (0.18 + support * 0.82));
       this.controller.setWheelSuspensionRestLength(i, this.spec.suspensionRest * (0.7 + support * 0.3));
     }
@@ -297,6 +299,7 @@ export class Vehicle {
     const xPositions = [-x, x, -x, x];
     const zPositions = [z, z, -z, -z];
     for (let i = 0; i < 4; i += 1) {
+      if (this.wheelDetached.has(i)) continue;
       const suspension = this.controller.wheelSuspensionLength(i);
       const support = [effects.frontSupportL, effects.frontSupportR, effects.rearSupportL, effects.rearSupportR][i];
       const collapse = (1 - support) * 0.12;
@@ -307,7 +310,9 @@ export class Vehicle {
         this.controller.wheelRotation(i),
         Math.PI / 2 + camber
       );
-      this.wheels[i].setEnabled(effects.wheelGrip[i] > 0.025);
+      this.wheels[i].setEnabled(true);
+      const wheelHealth = [this.damage.components.wheelFL, this.damage.components.wheelFR, this.damage.components.wheelRL, this.damage.components.wheelRR][i];
+      if (wheelHealth < 0.035) this.detachWheel(i);
     }
 
     this.headlights[0].material = this.damage.components.headlightL > 0.18 ? this.lampOn : this.lampOff;
@@ -340,6 +345,7 @@ export class Vehicle {
       ownMass: this.spec.mass,
       crushResistance: this.spec.crushResistance
     });
+    if (severity > 0) this.applyContactBias(worldPoint, zone, severity);
     if (severity <= 0) return { severity: 0, zone, glass: false };
 
     this.shell.deform(worldPoint, worldNormal, severity, zone);
@@ -350,6 +356,40 @@ export class Vehicle {
       (zone === 'left' && this.damage.components.sideGlassL < 0.5) ||
       (zone === 'right' && this.damage.components.sideGlassR < 0.5);
     return { severity, zone, glass };
+  }
+
+  private applyContactBias(worldPoint: Vector3, zone: DamageZone, severity: number) {
+    const local = this.shell.worldToLocal(worldPoint);
+    const lateral = Math.min(1, Math.abs(local.x) / Math.max(0.1, this.spec.width * 0.5));
+    const longitudinal = Math.min(1, Math.abs(local.z) / Math.max(0.1, this.spec.length * 0.5));
+    const c = this.damage.components;
+    const hit = (name: keyof typeof c, weight: number) => {
+      c[name] = clamp(c[name] - severity * weight);
+    };
+
+    if (zone === 'front') {
+      const left = local.x < 0;
+      hit(left ? 'suspensionFL' : 'suspensionFR', 0.24 * (0.45 + lateral));
+      hit(left ? 'wheelFL' : 'wheelFR', 0.2 * (0.35 + lateral));
+      hit(left ? 'headlightL' : 'headlightR', 0.28 * (0.4 + lateral));
+      if (Math.abs(local.x) < this.spec.width * 0.2) {
+        hit('cooling', 0.12);
+        hit('engine', 0.08);
+      }
+    } else if (zone === 'rear') {
+      const left = local.x < 0;
+      hit(left ? 'suspensionRL' : 'suspensionRR', 0.2 * (0.45 + lateral));
+      hit(left ? 'wheelRL' : 'wheelRR', 0.17 * (0.35 + lateral));
+      hit(left ? 'taillightL' : 'taillightR', 0.26 * (0.4 + lateral));
+    } else if (zone === 'left' || zone === 'right') {
+      const front = local.z > 0;
+      const side = zone === 'left' ? 'L' : 'R';
+      const suspension = ('suspension' + (front ? 'F' : 'R') + side) as keyof typeof c;
+      const wheel = ('wheel' + (front ? 'F' : 'R') + side) as keyof typeof c;
+      hit(suspension, 0.23 * (0.55 + longitudinal));
+      hit(wheel, 0.19 * (0.45 + longitudinal));
+      hit('chassis', 0.055 * (0.4 + longitudinal));
+    }
   }
 
   private applyPanelState(zone: DamageZone, severity: number) {
@@ -376,6 +416,49 @@ export class Vehicle {
       if (door && !this.panelDetached.has('door-right')) door.rotation.z = -zoneDamage * 0.08;
       if (zoneDamage > 0.93) this.detachPanel('door-right', new Vector3(0.7, 0.2, 0));
     }
+  }
+
+  private detachWheel(index: number) {
+    if (this.wheelDetached.has(index)) return;
+    const wheel = this.wheels[index];
+    wheel.computeWorldMatrix(true);
+    const worldPosition = wheel.getAbsolutePosition().clone();
+    const rootRotation = (this.root.rotationQuaternion ?? Quaternion.Identity()).clone();
+    wheel.parent = null;
+    wheel.position.copyFrom(worldPosition);
+    wheel.rotationQuaternion = rootRotation;
+    this.wheelDetached.add(index);
+    this.controller.setWheelEngineForce(index, 0);
+    this.controller.setWheelBrake(index, 0);
+    this.controller.setWheelFrictionSlip(index, 0.02);
+    this.controller.setWheelMaxSuspensionForce(index, 0);
+
+    const bodyVelocity = this.body.linvel();
+    const body = this.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(worldPosition.x, worldPosition.y, worldPosition.z)
+        .setRotation({ x: rootRotation.x, y: rootRotation.y, z: rootRotation.z, w: rootRotation.w })
+        .setLinvel(bodyVelocity.x, bodyVelocity.y + 0.35, bodyVelocity.z)
+        .setAngularDamping(0.25)
+        .setLinearDamping(0.08)
+        .setCanSleep(true)
+    );
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.ball(this.spec.wheelRadius * 0.82)
+        .setMass(18)
+        .setFriction(0.92)
+        .setRestitution(0.16),
+      body
+    );
+    this.registry.set(collider.handle, {
+      kind: 'prop',
+      stiffness: 0.72,
+      contactArea: 0.22,
+      material: 'soft',
+      mass: 18,
+      label: 'detached-wheel-' + WHEEL_NAMES[index]
+    });
+    this.detached.push({ body, mesh: wheel });
   }
 
   private detachPanel(name: string, impulse: Vector3) {
