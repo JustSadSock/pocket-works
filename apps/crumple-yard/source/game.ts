@@ -213,7 +213,11 @@ export class CrumpleGame {
         steeringAuthority: 1,
         steeringPull: 0,
         enginePower: 1,
-        coolingEfficiency: 1
+        coolingEfficiency: 1,
+        steeringPlay: 0,
+        transmissionShock: 0,
+        engineRoughness: 0,
+        coolant: 1
       },
       deformation: 0,
       aiCars: 0,
