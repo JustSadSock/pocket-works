@@ -238,3 +238,16 @@ Before delivering an application to the user or merging it into `main`:
 8. Merge or deliver only after the final tested commit is the same commit that was visually reviewed and all relevant checks are clean.
 
 For Pocket Works game/application PRs, `.github/workflows/ai-mobile-gameplay-qa.yml` is the standard exploratory mobile screenshot pass when applicable. The broader Playwright matrix remains available through the repository browser-quality workflow and local `npm run test:e2e` after building the quality site.
+
+## 15. PocketLAN local networking
+
+Local device-to-device features use `shared/capabilities/lan.js` and the contract in `docs/POCKET-LAN.md`.
+
+- Do not equate `navigator.onLine` with LAN reachability. A LAN may work with no WAN/internet route, and an internet-connected guest network may still isolate peers.
+- Prefer `getCapabilities().automaticDiscovery` plus `discoverRooms()` / `joinRoom()` when the PocketWorks native LAN provider is present.
+- Without a native provider, preserve zero-server operation with the WebRTC manual pairing flow: `createInvite()`, `joinInvite()`, `completeInvite()`. Do not add STUN, TURN or cloud signaling unless the product explicitly requires internet play.
+- Any app importing PocketLAN must cache `../../shared/capabilities/lan.js` in its app-owned Service Worker/offline bundle.
+- Treat every peer and payload as untrusted input. Validate message types and payload shapes, cap message frequency/size and never execute received HTML or code.
+- Realtime games should default to a host-authoritative simulation unless deterministic lockstep is an explicit design choice.
+- User-facing LAN UX must talk about the same Wi-Fi/hotspot/local network, make clear that global internet is not required, and explain client-isolated/Guest Wi-Fi failures without exposing raw SDP, ICE candidates, ports or IP addresses.
+- A LAN failure must never disable unrelated offline/local functionality.

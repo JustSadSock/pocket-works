@@ -100,6 +100,7 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 │   ├── HOSTING.md
 │   ├── DEPLOYMENT-PIPELINE.md
 │   ├── SHARED-CAPABILITIES.md
+│   ├── POCKET-LAN.md
 │   ├── ENHANCED-APPS.md
 │   ├── QUALITY-GATES.md
 │   ├── ENVIRONMENT-ROADMAP.md
@@ -118,6 +119,12 @@ The opt-in, visually neutral shared modules provide interruptible animation, ver
 Pocket Forge wires Workshop Mode into generated apps. Open it through the visible **Workshop** control or `Ctrl/Command + Shift + W`. It can export a diagnostics report and clear only data owned by the current app.
 
 The full API and dependency policy are documented in [`docs/SHARED-CAPABILITIES.md`](./docs/SHARED-CAPABILITIES.md).
+
+## PocketLAN local networking
+
+`shared/capabilities/lan.js` is the shared device-to-device networking contract for local multiplayer, controllers, collaborative tools and similar peer features. It prefers an injected native LAN provider with automatic room discovery, and falls back in a normal PWA to direct WebRTC DataChannels with an offline pairing exchange and no STUN/TURN/signaling server.
+
+Global internet is not required when peers can reach each other on the same local network or hotspot. LAN-enabled apps opt in and cache the module themselves. Architecture, integration examples, UX rules and the physical-network test matrix are documented in [`docs/POCKET-LAN.md`](./docs/POCKET-LAN.md).
 
 ## Registry
 
