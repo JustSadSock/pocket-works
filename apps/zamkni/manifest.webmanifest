@@ -1,0 +1,21 @@
+{
+  "id": "/apps/zamkni/",
+  "name": "ЗАМКНИ",
+  "short_name": "ЗАМКНИ",
+  "description": "Пошаговая игра на замыкание квадратов с ИИ и локальным мультиплеером PocketLAN.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f2eee4",
+  "theme_color": "#f2eee4",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

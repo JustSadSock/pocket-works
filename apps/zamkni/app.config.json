@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "slug": "zamkni",
+  "name": "ЗАМКНИ",
+  "shortName": "ЗАМКНИ",
+  "description": "Быстрая пошаговая игра: проводите линии, замыкайте квадраты и играйте против ИИ или до четырёх игроков через локальный PocketLAN.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-20",
+  "releaseDateTime": "2026-09-20T14:00:00+03:00",
+  "changelog": [
+    "Первый релиз: логическая игра 5×5 на замыкание квадратов.",
+    "Добавлены режимы против ИИ, 1v1, 2v2, трое и четверо каждый сам за себя.",
+    "Локальный мультиплеер использует общий PocketLAN: автоматическое обнаружение при native-provider и офлайн pairing в браузере.",
+    "Хост авторитетно проверяет ходы и синхронизирует состояние матча между всеми игроками."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d65f45",
+  "backgroundColor": "#f2eee4",
+  "themeColor": "#f2eee4",
+  "orientation": "portrait",
+  "cacheName": "zamkni-v1.0.0",
+  "storageNamespace": "pocket-works:zamkni",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "logic",
+    "turn-based",
+    "PocketLAN",
+    "local multiplayer",
+    "AI",
+    "2v2",
+    "4 players",
+    "touch"
+  ],
+  "order": 149
+}
