@@ -70,7 +70,7 @@ $('#pauseButton').addEventListener('click', () => settingsDialog.showModal());
 $('#closeSettingsButton').addEventListener('click', () => settingsDialog.close());
 $('#soundToggle').addEventListener('change', () => {
   settings.sound = $('#soundToggle').checked;
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  safeSetJson(SETTINGS_KEY, settings);
 });
 $('#leaveMatchButton').addEventListener('click', () => { settingsDialog.close(); leaveToHome(); });
 $('#lobbyBackButton').addEventListener('click', leaveToHome);
@@ -98,11 +98,29 @@ function loadJson(key, fallback) {
   }
 }
 
+function safeSetJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemove(key) {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function persistProfileName() {
   const value = $('#playerNameInput').value.trim().slice(0, 24) || 'Игрок';
   profile = { ...profile, name: value };
   $('#playerNameInput').value = value;
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  safeSetJson(PROFILE_KEY, profile);
   return value;
 }
 
@@ -152,14 +170,14 @@ function startAiGame() {
   localSeat = 0;
   const name = persistProfileName();
   game = createGame({ mode, players: makePlayers(2, [{ ...profile, name }], true) });
-  saveAiGame();
   openGame();
+  saveAiGame();
 }
 
 function continueAiGame() {
   const saved = loadJson(AI_SAVE, null);
   if (!validateGameState(saved) || saved.mode !== 'ai' || saved.finished) {
-    localStorage.removeItem(AI_SAVE);
+    safeRemove(AI_SAVE);
     restoreAiCard();
     return startAiGame();
   }
@@ -171,8 +189,8 @@ function continueAiGame() {
 }
 
 function saveAiGame() {
-  if (mode === 'ai' && game && !game.finished) localStorage.setItem(AI_SAVE, JSON.stringify(game));
-  else if (mode === 'ai' && game?.finished) localStorage.removeItem(AI_SAVE);
+  if (mode === 'ai' && game && !game.finished) safeSetJson(AI_SAVE, game);
+  else if (mode === 'ai' && game?.finished) safeRemove(AI_SAVE);
   restoreAiCard();
 }
 

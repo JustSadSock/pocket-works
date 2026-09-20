@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'zamkni-';
-const CACHE_NAME = 'zamkni-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'zamkni-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-09-20';
 const CACHE_PROTOCOL = 1;
 const RELEASE_NOTES = [
+  'Исправлен надёжный запуск одиночной партии при недоступном localStorage.',
   'Первый релиз: логическая игра 5×5 на замыкание квадратов.',
   'Режимы: ИИ, 1v1, 2v2, трое и четверо каждый сам за себя.',
   'Локальный мультиплеер работает через общий PocketLAN.'
