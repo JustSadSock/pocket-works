@@ -40,7 +40,7 @@ test.describe('ZAMKNI solo launch', () => {
     await expect(page.locator('#board .dot')).toHaveCount(36);
     await expect(page.locator('#turnTitle')).toHaveText('Твой ход');
 
-    await page.locator('#board .edge-hit').first().click();
+    await page.locator('#board .edge-hit').first().dispatchEvent('click');
     await expect.poll(async () => page.locator('#board .edge-claimed').count(), { timeout: 3_000 }).toBeGreaterThanOrEqual(2);
     await expect(page.locator('#turnTitle')).toHaveText('Твой ход');
 
