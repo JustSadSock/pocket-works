@@ -60,6 +60,25 @@ Creates quiet procedural interaction feedback through Web Audio. Audio is unlock
 
 Feature-detected helpers for device orientation, device motion, fullscreen and orientation locking. Permission denial and unsupported APIs return a usable failure value instead of throwing through the application.
 
+### `shared/capabilities/lan.js`
+
+Use for direct local device-to-device sessions such as multiplayer, shared controllers and collaborative tools. `createPocketLan()` keeps application code transport-agnostic: a native Pocket Works shell can provide automatic Bonjour/mDNS room discovery and direct local sockets through `globalThis.PocketWorksLAN`, while a browser-only PWA falls back to direct WebRTC DataChannels with a fully offline manual pairing exchange.
+
+```js
+import { createPocketLan } from '../../shared/capabilities/lan.js';
+
+const lan = createPocketLan({
+  applicationId: 'example-game',
+  protocolVersion: 1,
+  displayName: 'Player'
+});
+
+const capabilities = await lan.getCapabilities();
+const room = await lan.hostRoom({ name: 'Local match', maxPlayers: 2 });
+```
+
+The browser fallback deliberately uses no STUN, TURN or cloud signaling service. Automatic zero-server room discovery requires a native LAN provider; browser-only apps should present the documented pairing flow instead of exposing SDP/ICE details. Read [`docs/POCKET-LAN.md`](./POCKET-LAN.md) before implementing a LAN feature.
+
 ### `shared/capabilities/diagnostics.js`
 
 Collects viewport, DPR, FPS, network, visibility, display mode, sensor support, Service Worker state, app-owned storage size, app-owned caches and captured runtime errors.
@@ -104,7 +123,7 @@ Destructive actions require a second tap within four seconds. Workshop Mode neve
 
 ## Offline contract
 
-An application that imports a capability must include it and all of its transitive shared imports in its Service Worker app shell. Pocket Forge currently includes the complete lightweight capability set so Workshop Mode remains available offline.
+An application that imports a capability must include it and all of its transitive shared imports in its Service Worker app shell. Pocket Forge currently includes the complete lightweight capability set so Workshop Mode remains available offline. PocketLAN is intentionally opt-in: a LAN-enabled app must cache `../../shared/capabilities/lan.js` (or its bundled equivalent) explicitly.
 
 ## Dependency policy
 
