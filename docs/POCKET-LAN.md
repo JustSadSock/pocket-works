@@ -1,42 +1,50 @@
-# PocketLAN â€” local device-to-device networking
+# PocketLAN - local device-to-device networking
 
-PocketLAN is the shared Pocket Works contract for multiplayer, collaboration, controller links and any other device-to-device feature that should work on a local network without a cloud backend.
+PocketLAN is the shared Pocket Works contract for multiplayer, collaboration, controller links and other device-to-device features that should work on a local network without a cloud backend.
 
 The application-facing API lives in `shared/capabilities/lan.js`.
 
-## What â€œlocal networkâ€ means
+## Network model
 
-PocketLAN is transport-agnostic. Devices do not have to use the same physical connection method; they need IP reachability inside the same local network.
+PocketLAN is transport-agnostic. Devices do not need the same physical connection method; they need peer reachability inside the same local network.
 
-Supported topology examples for the native provider:
+Expected topologies for a native LAN provider include:
 
 - two phones on the same Wi-Fi router;
-- one device on Wi-Fi and another on Ethernet behind the same LAN/router;
+- one device on Wi-Fi and another on Ethernet behind the same routed LAN;
 - devices connected to the same phone hotspot, even when that hotspot has no global internet connection;
 - a normal home mesh where peers are allowed to communicate;
 - a LAN with no WAN/internet route at all.
 
-A network can still block peer traffic. Guest Wi-Fi, AP/client isolation, separate VLANs, enterprise firewall policy or multicast filtering may prevent discovery or direct connections. Applications must show a useful â€œlocal devices cannot reach each otherâ€ state rather than claiming that internet access is required.
+A network can still block peer traffic. Guest Wi-Fi, AP/client isolation, separate VLANs, enterprise firewall policy or multicast filtering can prevent discovery or direct connections. User-facing copy should describe that as a local-network isolation problem, not as a missing internet connection.
+
+Do not use `navigator.onLine` as a LAN-readiness test.
 
 ## Architecture
 
 PocketLAN deliberately has two provider tiers behind one application contract.
 
-### 1. Native LAN provider â€” preferred UX
+### Native LAN provider - preferred UX
 
-A future/native Pocket Works shell injects `globalThis.PocketWorksLAN` with a `createClient(config)` function. `createPocketLan()` automatically delegates to it.
+A future/native Pocket Works shell can inject:
+
+```js
+globalThis.PocketWorksLAN
+```
+
+with a `createClient(config)` function. `createPocketLan()` automatically delegates to it.
 
 The native provider is responsible for:
 
-- Bonjour/mDNS or the platform-equivalent service discovery;
+- Bonjour/mDNS or a platform-equivalent local service discovery mechanism;
 - direct local socket transport;
-- reliable ordered traffic for lobby, commands and durable events;
-- low-latency realtime traffic for input/state snapshots where the platform supports it;
-- local-network permission prompts and clear denial/error results;
+- reliable ordered traffic for lobby state, commands and durable events;
+- low-latency realtime traffic for replaceable input/state snapshots where supported;
+- local-network permission prompts and useful denial/error results;
 - room lifecycle, reconnect and peer identity;
-- preserving the public PocketLAN room/message API documented here.
+- preserving the public PocketLAN room/message API.
 
-On Apple platforms the intended implementation is Network.framework + Bonjour/mDNS. Android or desktop wrappers may use their platform equivalents. Applications must never import those platform APIs directly.
+On Apple platforms the intended implementation is Network.framework plus Bonjour/mDNS. Android or desktop wrappers may use platform equivalents. Applications must not import those platform APIs directly.
 
 The injected bridge client must implement at least:
 
@@ -55,22 +63,28 @@ await client.hostRoom(options);
 await client.joinRoom(roomDescriptor, options);
 ```
 
-`getCapabilities()` should report `mode: 'native-lan'`, `automaticDiscovery: true` and the supported reliable/realtime features.
+`getCapabilities()` should report `mode: 'native-lan'` and `automaticDiscovery: true` when automatic room discovery is available.
 
-### 2. Browser WebRTC fallback â€” works today, no server
+### Browser WebRTC fallback - works without a server
 
-A normal PWA/browser cannot advertise a Bonjour service, listen on arbitrary TCP/UDP ports or scan the LAN. PocketLAN does not fake those capabilities.
+A normal PWA/browser cannot advertise a Bonjour service, listen on arbitrary TCP/UDP ports or scan the LAN. PocketLAN does not pretend otherwise.
 
-When no native provider exists, `createPocketLan()` uses WebRTC DataChannel with `iceServers: []`. This means:
+When no native provider exists, `createPocketLan()` uses WebRTC DataChannel with:
 
-- there is no STUN server;
-- there is no TURN relay;
-- there is no signaling server;
-- media is not requested;
-- the resulting gameplay connection is direct peer-to-peer;
-- global internet is not required when peers can reach each other locally.
+```js
+{ iceServers: [] }
+```
 
-Because the browser cannot do zero-server LAN discovery, the two devices exchange an offline pairing package. The core exposes the package as a portable `PWL1...` string. An app may present it as QR, Nearby Share/AirDrop, copy/paste or another local UX without changing the network protocol.
+Therefore the fallback has:
+
+- no STUN server;
+- no TURN relay;
+- no cloud signaling server;
+- no media requirement;
+- a direct peer-to-peer gameplay connection;
+- no global internet requirement when peers can reach each other locally.
+
+Because a browser cannot perform zero-server LAN discovery, peers exchange one offline pairing package before the direct connection is established. The core represents that package as a portable `PWL1...` string. A product UI may move it by QR, local share/AirDrop/Nearby Share, copy/paste or another offline channel.
 
 ## Basic integration
 
@@ -91,13 +105,15 @@ const lan = createPocketLan({
 const capabilities = await lan.getCapabilities();
 ```
 
-Use a stable `applicationId` owned by the app. Increment `protocolVersion` when wire-level gameplay messages become incompatible.
+Use a stable app-owned `applicationId`. Increment `protocolVersion` when wire-level gameplay messages become incompatible.
 
-### Native automatic room flow
+## Native automatic room flow
+
+Host:
 
 ```js
 const room = await lan.hostRoom({
-  name: 'Ilyaâ€™s game',
+  name: "Ilya's game",
   maxPlayers: 4,
   metadata: { mode: 'duel', map: 'yard' }
 });
@@ -107,45 +123,49 @@ room.on('message', ({ peer, type, payload }) => {
 });
 ```
 
-On the joining device:
+Joining device:
 
 ```js
 const rooms = await lan.discoverRooms({ timeoutMs: 1500 });
 const room = await lan.joinRoom(rooms[0]);
 ```
 
-Applications should prefer this flow whenever `capabilities.automaticDiscovery === true`.
+Prefer this flow whenever `capabilities.automaticDiscovery === true`.
 
-### Browser/offline manual pairing flow
+## Browser/offline manual pairing flow
 
 Host:
 
 ```js
-const room = await lan.hostRoom({ name: 'Local match', maxPlayers: 2 });
+const room = await lan.hostRoom({
+  name: 'Local match',
+  maxPlayers: 2
+});
+
 const offer = await room.createInvite();
-// Render/share `offer` locally. A QR UI is recommended on phones.
+// Render/share offer locally. QR is recommended on phones.
 ```
 
 Joining device:
 
 ```js
 const { room, answer } = await lan.joinInvite(offerFromHost);
-// Return `answer` to the host locally.
+// Return answer to the host through the same offline UX.
 ```
 
-Host finishes the pairing:
+Host finishes pairing:
 
 ```js
 await room.completeInvite(answerFromClient);
 ```
 
-After that exchange, the pairing UI is no longer involved. Messages travel directly between devices.
+Once `completeInvite()` succeeds, the pairing UI is no longer involved. Gameplay messages travel directly between peers.
 
-A host can call `createInvite()` repeatedly for more peers up to `maxPlayers`. Pending invites can be removed with `cancelInvite()`.
+A host can call `createInvite()` repeatedly for additional peers up to `maxPlayers`. A pending invite can be removed with `cancelInvite()`.
 
 ## Messaging
 
-PocketLAN exposes two semantics rather than forcing game code to care about TCP, UDP or DataChannel details.
+PocketLAN exposes semantics instead of forcing game code to care about TCP, UDP or DataChannel details.
 
 Reliable/default:
 
@@ -154,39 +174,45 @@ room.send(peerId, 'ready', { ready: true });
 room.broadcast('round-start', { seed, startsAt });
 ```
 
-Realtime/unreliable:
+Realtime/replaceable:
 
 ```js
-room.broadcast('input', { frame, steer, throttle }, { reliability: 'realtime' });
+room.broadcast(
+  'input',
+  { frame, steer, throttle },
+  { reliability: 'realtime' }
+);
 ```
 
-Use reliable traffic for lobby state, purchases, inventory, match transitions, authoritative events and anything that must arrive in order. Use realtime traffic for frequent inputs, aim vectors, transforms and replaceable snapshots where a stale packet is worse than a missing packet.
+Use reliable traffic for lobby state, purchases, inventory, match transitions, authoritative events and anything that must arrive in order.
 
-PocketLAN validates application/protocol identity and enforces conservative message-size limits. Applications must still validate every payload. A peer is untrusted input.
+Use realtime traffic for frequent inputs, aim vectors, transforms and replaceable snapshots where a stale packet is worse than a missing packet.
+
+PocketLAN validates application/protocol identity and bounds serialized message size. The application must still validate every received `type` and payload shape before mutating state.
 
 ## Recommended simulation model
 
-For realtime games, prefer an authoritative host:
+For realtime games, default to a host-authoritative simulation:
 
 ```text
 clients -> compact input commands -> host simulation
 host -> snapshots/events -> clients
 ```
 
-Do not run two independent authoritative simulations and hope they remain deterministic unless the game was explicitly engineered for lockstep networking.
+Useful starting points:
 
-Useful defaults:
-
-- inputs: 20â€“60 Hz depending on the game;
-- snapshots: 10â€“30 Hz with interpolation;
-- durable game events: reliable channel;
+- inputs: 20-60 Hz depending on the game;
+- snapshots: 10-30 Hz with interpolation;
+- durable events: reliable channel;
 - cosmetic/transient state: realtime channel;
-- include simulation tick/frame numbers in gameplay messages;
+- include simulation tick/frame numbers;
 - cap queues and drop stale realtime state.
 
-Host migration is not part of the browser fallback contract. If a game needs seamless host migration, design it as a game-level protocol and use native-provider capabilities when available.
+Do not run multiple independent authoritative simulations and assume they will remain synchronized unless the game is deliberately engineered for deterministic lockstep.
 
-## Room and event surface
+Host migration is not part of the browser fallback contract. If a game needs seamless host migration, design it as an explicit game-level protocol and use native-provider capabilities when available.
+
+## Room surface
 
 Browser rooms expose:
 
@@ -196,42 +222,90 @@ Browser rooms expose:
 - `room.broadcast(type, payload, options)`;
 - `room.on('peerjoin' | 'peerleave' | 'message' | 'state' | 'error' | 'close', callback)`;
 - `room.close()`;
-- host-only fallback helpers `createInvite()`, `completeInvite()` and `cancelInvite()`.
+- host-only fallback helpers `createInvite()`, `completeInvite()`, `cancelInvite()`.
 
-Native rooms should preserve the same common surface. Provider-specific diagnostics may be added without making applications depend on them.
+Native rooms should preserve the same common surface so app code does not fork by transport.
 
 ## Lifecycle
 
-A LAN-enabled app must:
+A LAN-enabled app should:
 
-1. create PocketLAN only after application identity/profile state is ready;
+1. create PocketLAN only after local player/profile identity is ready;
 2. close the room when the user explicitly leaves the multiplayer session;
-3. decide whether `pagehide`/backgrounding means suspend/reconnect or leave, based on the game;
+3. define whether page/background transitions mean suspend/reconnect or leave;
 4. stop high-frequency sends while hidden;
-5. show reconnect/disconnected states instead of silently freezing;
-6. never erase unrelated local progress when a network session fails.
+5. show disconnected/reconnecting state instead of silently freezing;
+6. preserve unrelated local progress if networking fails.
 
-For an offline-first app, multiplayer is an additional capability. The rest of the application should continue to work when no peer is available.
+For an offline-first app, multiplayer is an additional capability. Networking failure must not break unrelated offline/local functionality.
 
-## Service Worker / offline packaging
+## Service Worker and offline packaging
 
-PocketLAN has no remote runtime dependency. Any app that imports it must cache the module in its own Service Worker shell:
+PocketLAN has no remote runtime dependency.
+
+Any app that imports it must cache the module in its own Service Worker app shell:
 
 ```js
 '../../shared/capabilities/lan.js'
 ```
 
-Enhanced apps must make the equivalent file available in their production bundle/cache. Do not add a cloud signaling dependency merely to make development easier.
+Enhanced apps must make the equivalent module available through their production bundle/cache.
 
-## User experience requirements
+Do not add a cloud signaling dependency merely to make development easier.
 
-Native provider:
+## UX requirements
 
-- primary action: **Create local game**;
-- nearby rooms should appear automatically;
-- do not ask users for IP addresses or ports;
+### Native provider
+
+- primary action: Create local game;
+- nearby rooms appear automatically;
+- never ask normal users for IP addresses or ports;
 - explain the local-network permission in product language;
-- if nothing is found, suggest the same Wi-Fi/hotspot and mention guest-network isolation;
-- internet status is irrelevant and must not be used as a â€œLAN unavailableâ€ signal.
+- if no room is found, suggest the same Wi-Fi/hotspot and mention Guest Wi-Fi/client isolation;
+- internet status is irrelevant and must not be used as a LAN-unavailable signal.
 
-Browser fallback66³°¢Ò6ÆV&Ç’Æ&VÂv†–6‚FWf–6R66ç2÷6†&W2æW‡C°¢Ò&WF–â6æ6VÂ÷&WG'’7F–öã°¢Òöæ6R—&VBÂ†–FR6–væÆ–ærFWF–Ç2æB6†÷ræ÷&ÖÂÆ–W"&W6Væ6R÷–ærU‚à ¤æWfW"W‡÷6R&r4EÂ”4R6æF–FFW2Â6ö6¶WBFG&W76W2÷"'&÷w6W"W'&÷"7G&–æw2Fòæ÷&ÖÂW6W'2à ¢226V7W&—G’æB6ö×F–&–Æ—G ¢ÒG&VBVW'22VçG'W7FVBà¢ÒfÆ–FFRÖW76vRG—VæB–ÆöB6†R&Vf÷&R×WFF–ærvÖR7FFRà¢ÒæWfW"W†V7WFR&V6V—fVB6öFR÷"…DÔÂà¢Ò¶VW6V7&WG2ÂWF‚Fö¶Vç2æBVç&VÆFVBÆö6Â7FFR÷WBöb&ööÒÖWFFFà¢ÒW6RÆ–6F–öä–FFò&WfVçB66–FVçFÂ7&÷72Ö—&–ærà¢ÒW6R&÷Fö6öÅfW'6–öæFò&V¦V7B–æ6ö×F–&ÆR'V–ÆG2FVÆ–&W&FVÇ’à¢Ò&÷VæBÖW76vR6—¦RæB6VæBg&WVVæ7’à¢ÒW6RÖÆWfVÂWF†÷&—¦F–öâ–bÄâ7F–öâ6âffV7BfÇV&ÆR÷W'6—7FVçBFFà ¥F†RfÆÆ&6²—&–ær6¶vR—26öææV7F–öâÖWFFFÂæ÷BW6W"–FVçF—G’÷"WF†VçF–6F–öâ7—7FVÒà ¢22FW7BÖG&—€ ¤&Vf÷&R6†—–ærÄâfVGW&RÂFW7BBÖ–æ–×VÓ  £â6ÖRv’Ôf’Â–çFW&æWBf–Æ&ÆS°£"â6ÖRv’Ôf’ÂtâövÆö&Â–çFW&æWB–çFVçF–öæÆÇ’Væf–Æ&ÆS°£2âöæR†öæR†÷G7÷Bv—F‚æòW7G&VÒ–çFW&æWB²æ÷F†W"†öæR6öææV7FVBFò—C°£Bâv’Ôf’²WF†W&æWBöâF†R6ÖR&÷WFVBÄâv†VâF†RF&vWBFWf–6W27W÷'B—C°£Râ&6¶w&÷VæB÷&W7VÖRæBFV×÷&'’v’Ôf’Æ÷73°£bâ–æ6ö×F–&ÆR&÷Fö6öÅfW'6–öæ°£râ&ööÒgVÆÂò†÷7BÆVfW2òVW"ÆVfW3°£‚âwVW7Bv’Ôf’÷"6Æ–VçBÖ—6öÆFVBæWGv÷&³¢W6VgVÂf–ÇW&RwV–Fæ6RÂæò–æf–æ—FR7–ææW#°£’â&WVFVB7&VFRö¦ö–âöÆVfRv—F†÷WBÆV¶VB6W76–öç3°£â&VÇF–ÖR6¶WBÆ÷72÷7FÆR×7FFR&V†f–÷"f÷"7F–öâvÖW2à ¤'&÷w6W"fÆÆ&6²Ç6òæVVG2F†R6ö×ÆWFRöffW"öç7vW"—&–ærfÆ÷rFW7FVB–â6f&’õvV$¶—BæB6‡&öÖ—VÒà ¢22v†Vâæ÷BFòW6Rö6¶WDÄà ¥W6Rö6¶WDÄâf÷"æV&'’VW'2F†B6†÷VÆB6öÖ×Væ–6FRv—F†÷WB6Æ÷VB&6¶VæBâFòæ÷BW6R—Bf÷"vÆö&ÂÖF6†Ö¶–ærÂ7–æ6‡&öæ÷W2–çFW&æWBÆ’Â7&÷72ÖæWGv÷&²g&–VæG2Â6Æ÷VB6fW2÷"6W'fW"ÖWF†÷&—FF—fR6ö×WF—F—fR6V7W&—G’âF†÷6R&WV—&Râ–çFW&æWB6W'f–6R'’FVf–æ—F–öâà 
+### Browser fallback
+
+- present pairing as a short guided two-device flow;
+- QR is the preferred phone UI, with copy/share as fallback;
+- clearly indicate which device scans/shares next;
+- keep cancel/retry available;
+- after pairing, hide signaling details and show normal player/ping presence.
+
+Never expose raw SDP, ICE candidates, socket addresses or browser error strings to normal users.
+
+## Security and compatibility
+
+- Treat peers as untrusted input.
+- Validate message types and payload shapes.
+- Never execute received code or HTML.
+- Keep secrets, auth tokens and unrelated local state out of room metadata.
+- Use `applicationId` to prevent accidental cross-app pairing.
+- Use `protocolVersion` to reject incompatible builds.
+- Bound message size and send frequency.
+- Use app-level authorization if a LAN action can modify valuable persistent data.
+
+The pairing package is connection metadata, not user identity or authentication.
+
+## Test matrix
+
+Before shipping a LAN feature, test at minimum:
+
+1. same Wi-Fi with internet available;
+2. same Wi-Fi with WAN/global internet intentionally unavailable;
+3. one phone hotspot with no upstream internet plus another phone connected to it;
+4. Wi-Fi plus Ethernet on the same routed LAN when target devices support it;
+5. temporary Wi-Fi loss and resume;
+6. incompatible `protocolVersion`;
+7. room full, host leaves and peer leaves;
+8. Guest Wi-Fi/client-isolated network with useful failure guidance;
+9. repeated create/join/leave without leaked sessions;
+10. realtime packet loss/stale-state behavior for action games.
+
+The browser fallback also needs the complete offer/answer pairing flow exercised in Safari/WebKit and Chromium.
+
+## When not to use PocketLAN
+
+Use PocketLAN for nearby peers that should communicate without a cloud backend.
+
+Do not use it for global matchmaking, asynchronous internet play, cross-network friends, cloud saves or server-authoritative competitive security. Those require an internet service by definition.
