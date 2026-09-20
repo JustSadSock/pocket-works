@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2eee4">
+  <meta name="description" content="ЗАМКНИ — быстрая пошаговая игра на 1–4 игроков с ИИ и локальным мультиплеером PocketLAN.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ЗАМКНИ">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+  <title>ЗАМКНИ</title>
+</head>
+<body>
+  <main id="app" class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="topbar" data-ui>
+      <a class="shelf-link" href="../../" data-app-control>← Pocket Works</a>
+      <strong class="wordmark">ЗАМКНИ</strong>
+      <button id="openSettingsButton" class="icon-button" type="button" data-native-press aria-label="Настройки">•••</button>
+    </header>
+
+    <section id="homeScreen" class="screen home-screen" aria-labelledby="homeTitle">
+      <div class="hero-grid" aria-hidden="true">
+        <i class="hero-dot d1"></i><i class="hero-dot d2"></i><i class="hero-dot d3"></i><i class="hero-dot d4"></i>
+        <i class="hero-line top"></i><i class="hero-line left"></i><i class="hero-line bottom"></i>
+        <span class="hero-gap">?</span>
+      </div>
+      <div class="home-copy">
+        <p class="kicker">ПОШАГОВАЯ ЛОГИКА · БЕЗ РАНДОМА</p>
+        <h1 id="homeTitle">Проведи линию.<br>Замкни квадрат.</h1>
+        <p>Кто закрыл клетку — забирает её и ходит ещё раз. Последний квадрат решает всё.</p>
+      </div>
+
+      <button id="continueAiButton" class="mode-row continue-row" type="button" hidden data-native-press>
+        <span><b>Продолжить против ИИ</b><small id="continueAiMeta"></small></span><em>→</em>
+      </button>
+
+      <div class="mode-list" aria-label="Режимы игры">
+        <button class="mode-row" type="button" data-mode="ai" data-native-press>
+          <span class="mode-mark">1</span><span><b>Против ИИ</b><small>быстрая одиночная партия</small></span><em>→</em>
+        </button>
+        <button class="mode-row" type="button" data-mode="duel" data-native-press>
+          <span class="mode-mark">2</span><span><b>Против игрока</b><small>1 на 1 через PocketLAN</small></span><em>→</em>
+        </button>
+        <button class="mode-row" type="button" data-mode="team" data-native-press>
+          <span class="mode-mark">4</span><span><b>Два на два</b><small>команды ходят по очереди</small></span><em>→</em>
+        </button>
+        <button class="mode-row" type="button" data-mode="ffa3" data-native-press>
+          <span class="mode-mark">3</span><span><b>Трое</b><small>каждый сам за себя</small></span><em>→</em>
+        </button>
+        <button class="mode-row" type="button" data-mode="ffa4" data-native-press>
+          <span class="mode-mark">4</span><span><b>Четверо</b><small>каждый сам за себя</small></span><em>→</em>
+        </button>
+      </div>
+      <button id="rulesButton" class="text-button" type="button">Как играть</button>
+    </section>
+
+    <section id="lobbyScreen" class="screen lobby-screen" hidden aria-labelledby="lobbyTitle">
+      <div class="section-head">
+        <button id="lobbyBackButton" class="back-button" type="button">← Меню</button>
+        <p id="lobbyModeLabel" class="kicker">ЛОКАЛЬНАЯ ИГРА</p>
+        <h1 id="lobbyTitle">Соберите игроков</h1>
+      </div>
+
+      <label class="name-field">
+        <span>Твоё имя</span>
+        <input id="playerNameInput" type="text" maxlength="24" autocomplete="nickname" enterkeyhint="done">
+      </label>
+
+      <div id="lobbyChoice" class="lobby-choice">
+        <button id="hostButton" class="big-action" type="button" data-native-press><b>Создать игру</b><small>этот телефон будет хостом</small></button>
+        <button id="joinButton" class="big-action secondary" type="button" data-native-press><b>Присоединиться</b><small>найти или получить приглашение</small></button>
+      </div>
+
+      <div id="lobbyStatusPanel" class="lobby-status" hidden>
+        <div class="status-line"><span id="lanStatusDot" class="status-dot"></span><strong id="lanStatusText">Подготовка локальной сети…</strong></div>
+        <p id="lanStatusHint">Глобальный интернет не требуется.</p>
+      </div>
+
+      <div id="slotsPanel" class="slots-panel" hidden>
+        <div class="section-label"><span>ИГРОКИ</span><strong id="slotsCount">1 / 2</strong></div>
+        <div id="slotsList" class="slots-list"></div>
+      </div>
+
+      <div id="nativeRoomsPanel" class="pairing-panel" hidden>
+        <div class="section-label"><span>КОМНАТЫ РЯДОМ</span><button id="refreshRoomsButton" type="button">Обновить</button></div>
+        <div id="nativeRoomsList" class="native-rooms-list"></div>
+      </div>
+
+      <div id="hostPairingPanel" class="pairing-panel" hidden>
+        <div class="pair-step">
+          <span class="step-number">1</span>
+          <div><b>Передай приглашение следующему игроку</b><p>На iPhone удобнее открыть «Поделиться» и отправить через AirDrop. Можно просто скопировать текст.</p></div>
+        </div>
+        <textarea id="offerOutput" class="signal-box" readonly spellcheck="false" aria-label="Код приглашения"></textarea>
+        <div class="pair-actions">
+          <button id="newInviteButton" type="button">Новое приглашение</button>
+          <button id="shareOfferButton" type="button">Поделиться</button>
+          <button id="copyOfferButton" type="button">Копировать</button>
+        </div>
+        <div class="pair-step second-step">
+          <span class="step-number">2</span>
+          <div><b>Вставь ответ игрока</b><p>После этого телефоны соединятся напрямую по локальной сети.</p></div>
+        </div>
+        <textarea id="answerInput" class="signal-box input" placeholder="Вставь ответ PWL1…" spellcheck="false"></textarea>
+        <button id="completeInviteButton" class="wide-action" type="button">Подключить игрока</button>
+      </div>
+
+      <div id="joinPairingPanel" class="pairing-panel" hidden>
+        <div class="pair-step">
+          <span class="step-number">1</span>
+          <div><b>Вставь приглашение хоста</b><p>Оно начинается с PWL1 и не требует интернета.</p></div>
+        </div>
+        <textarea id="offerInput" class="signal-box input" placeholder="Вставь приглашение PWL1…" spellcheck="false"></textarea>
+        <button id="acceptInviteButton" class="wide-action" type="button">Создать ответ</button>
+        <div id="answerOutputBlock" hidden>
+          <div class="pair-step second-step">
+            <span class="step-number">2</span>
+            <div><b>Верни ответ хосту</b><p>Когда хост подтвердит его, соединение откроется автоматически.</p></div>
+          </div>
+          <textarea id="answerOutput" class="signal-box" readonly spellcheck="false" aria-label="Ответ хосту"></textarea>
+          <div class="pair-actions">
+            <button id="shareAnswerButton" type="button">Поделиться</button>
+            <button id="copyAnswerButton" type="button">Копировать</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="startNetworkGameButton" class="start-match-button" type="button" hidden disabled>Начать матч</button>
+      <div id="lobbyMessage" class="inline-message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen" hidden aria-label="Игровая партия">
+      <div class="game-head">
+        <div id="scoreStrip" class="score-strip"></div>
+        <button id="pauseButton" class="pause-button" type="button">Пауза</button>
+      </div>
+      <div class="turn-card">
+        <span id="turnColor" class="turn-color"></span>
+        <div><strong id="turnTitle">Твой ход</strong><small id="turnHint">Проведи одну линию</small></div>
+        <span id="teamScore" class="team-score" hidden></span>
+      </div>
+      <div class="board-wrap" data-gesture-surface data-touch-action="none">
+        <svg id="board" viewBox="0 0 600 600" role="group" aria-label="Поле ЗАМКНИ 5 на 5"></svg>
+      </div>
+      <p id="gameMessage" class="game-message" aria-live="polite">Замкнёшь квадрат — получишь ещё один ход.</p>
+    </section>
+
+    <dialog id="rulesDialog" class="sheet-dialog">
+      <form method="dialog" class="sheet">
+        <div class="sheet-head"><div><p class="kicker">ПРАВИЛА</p><h2>Четыре стороны — твоя клетка.</h2></div><button value="close" aria-label="Закрыть">×</button></div>
+        <ol class="rule-list">
+          <li><b>Проведи одну свободную линию</b><span>между соседними точками.</span></li>
+          <li><b>Замкнул квадрат — забрал его</b><span>и сразу ходишь ещё раз.</span></li>
+          <li><b>Когда линий не осталось</b><span>побеждает игрок или команда с большим числом клеток.</span></li>
+        </ol>
+        <p class="rule-note">В 2×2 командах партнёры сидят через одного: A → B → A → B. Клетки сохраняют цвет конкретного игрока, но очки складываются по командам.</p>
+        <button class="wide-action" value="close">Понятно</button>
+      </form>
+    </dialog>
+
+    <dialog id="settingsDialog" class="sheet-dialog compact">
+      <div class="sheet">
+        <div class="sheet-head"><div><p class="kicker">ЗАМКНИ</p><h2>Пауза и настройки</h2></div><button id="closeSettingsButton" type="button" aria-label="Закрыть">×</button></div>
+        <label class="toggle-row"><span><b>Звук</b><small>линии, клетки и завершение</small></span><input id="soundToggle" type="checkbox" checked></label>
+        <button id="openRulesFromSettings" class="settings-action" type="button">Правила</button>
+        <button id="leaveMatchButton" class="settings-action danger" type="button">Выйти в меню</button>
+        <a class="settings-action shelf-action" href="../../" data-app-control>Вернуться в Pocket Works</a>
+        <button class="workshop-trigger" type="button" data-workshop-trigger>Workshop</button>
+      </div>
+    </dialog>
+
+    <div id="resultOverlay" class="result-overlay" hidden>
+      <div class="result-panel">
+        <p class="kicker">ПАРТИЯ ЗАВЕРШЕНА</p>
+        <h2 id="resultTitle">Победа</h2>
+        <p id="resultText"></p>
+        <div id="resultScores" class="result-scores"></div>
+        <button id="rematchButton" class="wide-action" type="button">Ещё раз</button>
+        <button id="resultHomeButton" class="text-button" type="button">В меню</button>
+        <a class="text-button shelf-result" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЗАМКНИ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
