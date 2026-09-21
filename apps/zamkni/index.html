@@ -96,39 +96,55 @@
       <div id="hostPairingPanel" class="pairing-panel" hidden>
         <div class="pair-step">
           <span class="step-number">1</span>
-          <div><b>Передай приглашение следующему игроку</b><p>На iPhone удобнее открыть «Поделиться» и отправить через AirDrop. Можно просто скопировать текст.</p></div>
+          <div><b>Покажи этот QR следующему игроку</b><p>На втором телефоне нажми «Сканировать приглашение» и наведи камеру. Интернет не нужен.</p></div>
         </div>
-        <textarea id="offerOutput" class="signal-box" readonly spellcheck="false" aria-label="Код приглашения"></textarea>
-        <div class="pair-actions">
-          <button id="newInviteButton" type="button">Новое приглашение</button>
+        <div class="qr-card">
+          <div id="offerQr" class="qr-code" aria-label="QR приглашения"></div>
+          <p id="offerQrHint" class="qr-caption">Подготавливаем QR…</p>
+        </div>
+        <div class="pair-actions qr-actions">
+          <button id="newInviteButton" type="button">Новый QR</button>
+          <button id="scanAnswerButton" type="button">Сканировать ответ</button>
           <button id="shareOfferButton" type="button">Поделиться</button>
-          <button id="copyOfferButton" type="button">Копировать</button>
         </div>
-        <div class="pair-step second-step">
-          <span class="step-number">2</span>
-          <div><b>Вставь ответ игрока</b><p>После этого телефоны соединятся напрямую по локальной сети.</p></div>
-        </div>
-        <textarea id="answerInput" class="signal-box input" placeholder="Вставь ответ PWL1…" spellcheck="false"></textarea>
-        <button id="completeInviteButton" class="wide-action" type="button">Подключить игрока</button>
+        <details class="manual-pairing">
+          <summary>Другой способ</summary>
+          <p>Если камера недоступна, передай длинный PWL1-код вручную.</p>
+          <textarea id="offerOutput" class="signal-box" readonly spellcheck="false" aria-label="Код приглашения"></textarea>
+          <button id="copyOfferButton" class="manual-action" type="button">Копировать приглашение</button>
+          <textarea id="answerInput" class="signal-box input" placeholder="Вставь ответ PWL1…" spellcheck="false"></textarea>
+          <button id="completeInviteButton" class="manual-action primary" type="button">Подключить игрока</button>
+        </details>
       </div>
 
       <div id="joinPairingPanel" class="pairing-panel" hidden>
         <div class="pair-step">
           <span class="step-number">1</span>
-          <div><b>Вставь приглашение хоста</b><p>Оно начинается с PWL1 и не требует интернета.</p></div>
+          <div><b>Отсканируй QR хоста</b><p>Камера работает локально: изображение никуда не отправляется.</p></div>
         </div>
-        <textarea id="offerInput" class="signal-box input" placeholder="Вставь приглашение PWL1…" spellcheck="false"></textarea>
-        <button id="acceptInviteButton" class="wide-action" type="button">Создать ответ</button>
+        <button id="scanOfferButton" class="scan-primary" type="button">Сканировать приглашение</button>
+        <details class="manual-pairing">
+          <summary>Вставить код вручную</summary>
+          <textarea id="offerInput" class="signal-box input" placeholder="Вставь приглашение PWL1…" spellcheck="false"></textarea>
+          <button id="acceptInviteButton" class="manual-action primary" type="button">Создать ответ</button>
+        </details>
         <div id="answerOutputBlock" hidden>
           <div class="pair-step second-step">
             <span class="step-number">2</span>
-            <div><b>Верни ответ хосту</b><p>Когда хост подтвердит его, соединение откроется автоматически.</p></div>
+            <div><b>Покажи этот QR хосту</b><p>Хост нажимает «Сканировать ответ». После этого соединение откроется напрямую.</p></div>
           </div>
-          <textarea id="answerOutput" class="signal-box" readonly spellcheck="false" aria-label="Ответ хосту"></textarea>
-          <div class="pair-actions">
+          <div class="qr-card">
+            <div id="answerQr" class="qr-code" aria-label="QR ответа"></div>
+            <p id="answerQrHint" class="qr-caption">Подготавливаем QR…</p>
+          </div>
+          <div class="pair-actions qr-actions two">
             <button id="shareAnswerButton" type="button">Поделиться</button>
-            <button id="copyAnswerButton" type="button">Копировать</button>
+            <button id="copyAnswerButton" type="button">Копировать код</button>
           </div>
+          <details class="manual-pairing compact">
+            <summary>Показать длинный код</summary>
+            <textarea id="answerOutput" class="signal-box" readonly spellcheck="false" aria-label="Ответ хосту"></textarea>
+          </details>
         </div>
       </div>
 
@@ -176,6 +192,23 @@
       </div>
     </dialog>
 
+    <dialog id="qrScannerDialog" class="qr-scanner-dialog">
+      <div class="qr-scanner-sheet">
+        <div class="qr-scanner-head">
+          <div><p class="kicker">POCKETLAN · QR</p><h2 id="qrScannerTitle">Сканирование</h2></div>
+          <button id="closeQrScannerButton" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <div class="qr-camera">
+          <video id="qrVideo" playsinline muted></video>
+          <div class="qr-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <canvas id="qrScanCanvas" hidden></canvas>
+        <p id="qrScannerStatus">Наведи камеру на QR-код второго телефона.</p>
+        <label class="qr-photo-action" for="qrImageInput">Выбрать QR из Фото</label>
+        <input id="qrImageInput" type="file" accept="image/*" hidden>
+      </div>
+    </dialog>
+
     <div id="resultOverlay" class="result-overlay" hidden>
       <div class="result-panel">
         <p class="kicker">ПАРТИЯ ЗАВЕРШЕНА</p>
@@ -191,7 +224,9 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЗАМКНИ" data-app-version="1.0.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЗАМКНИ" data-app-version="1.1.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
