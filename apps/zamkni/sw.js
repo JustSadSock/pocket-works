@@ -21,6 +21,7 @@ const APP_SHELL = [
   './app.config.json',
   './styles.css',
   './app.js',
+  './qr-codec.js',
   './game.js',
   './ai.js',
   './manifest.webmanifest',
