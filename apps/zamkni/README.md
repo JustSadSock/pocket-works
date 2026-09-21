@@ -58,3 +58,10 @@ npm run validate:all
 PWL1 перед упаковкой в QR локально сжимается в формат `PWQ1`, чтобы код был менее плотным. После сканирования он разворачивается обратно в исходный PWL1 и только затем передаётся в PocketLAN. Фото/видео не отправляются в сеть: распознавание выполняется локально в браузере.
 
 Для Safari/iOS используется локальный JS-декодер QR, потому что системный `BarcodeDetector` в Safari не доступен как стабильный веб-API. Библиотеки QR закреплены по версии и кешируются Service Worker после первого успешного онлайн-запуска. Если QR-модуль недоступен, длинный PWL1 и системное «Поделиться» остаются запасным способом.
+
+## QR libraries
+
+- `qrcodejs@1.0.0` — QR rendering, MIT license.
+- `jsqr@1.4.0` — local QR decoding, Apache-2.0 license.
+
+Both URLs are version-pinned and cached by the app Service Worker. They are used only for QR transport; PocketLAN itself remains unchanged.
