@@ -620,10 +620,8 @@ async function decodePairingQrPayload(payload) {
 }
 
 async function transformBytes(bytes, transform) {
-  const writer = transform.writable.getWriter();
-  await writer.write(bytes);
-  await writer.close();
-  return new Uint8Array(await new Response(transform.readable).arrayBuffer());
+  const stream = new Blob([bytes]).stream().pipeThrough(transform);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 function bytesToBase64Url(bytes) {
@@ -642,7 +640,6 @@ function base64UrlToBytes(value) {
 
 async function scanPairingSignal(expectedKind) {
   if (typeof globalThis.jsQR !== 'function') throw new Error('QR-сканер ещё не загружен. Открой длинный код или попробуй снова.');
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Камера недоступна в этом браузере. Используй QR из Фото или ручной код.');
   stopQrCamera();
   qrScanExpectedKind = expectedKind;
   $('#qrScannerTitle').textContent = expectedKind === 'offer' ? 'Сканируй приглашение' : 'Сканируй ответ';
@@ -656,6 +653,7 @@ async function scanPairingSignal(expectedKind) {
   });
 
   try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera unavailable');
     qrStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
@@ -1034,7 +1032,11 @@ function resetNetworkState() {
   $('#answerOutputBlock').hidden = true;
   $('#offerQr')?.replaceChildren();
   $('#answerQr')?.replaceChildren();
-  stopQrCamera();
+  if (qrScanResolve || qrScanReject) finishQrScan(null, new Error('QR scan cancelled'));
+  else {
+    if ($('#qrScannerDialog')?.open) $('#qrScannerDialog').close();
+    stopQrCamera();
+  }
 }
 
 function leaveToHome() {
