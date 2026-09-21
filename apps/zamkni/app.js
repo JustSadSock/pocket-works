@@ -1,13 +1,14 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
-import { createPocketLan } from '../../shared/capabilities/lan.js';
+import { createPocketLan, decodePocketLanSignal } from '../../shared/capabilities/lan.js';
 import { applyMove, createGame, getTeamScores, validateGameState } from './game.js';
 import { chooseAiMove } from './ai.js';
+import { decodePairingQrPayload, encodePairingQrPayload } from './qr-codec.js';
 
 installMobileRuntime();
 createWorkshopMode({
   appName: 'ЗАМКНИ',
-  version: '1.0.0',
+  version: '1.1.0',
   cachePrefix: 'zamkni-',
   storageNamespace: 'pocket-works:zamkni'
 });
@@ -54,6 +55,12 @@ let pendingRoom = null;
 let pendingAnswer = '';
 let toastTimer = 0;
 let audioContext = null;
+let qrStream = null;
+let qrScanFrame = 0;
+let qrScanResolve = null;
+let qrScanReject = null;
+let qrScanExpectedKind = null;
+let qrScanLastAt = 0;
 
 $('#playerNameInput').value = profile.name;
 $('#soundToggle').checked = settings.sound;
@@ -80,6 +87,8 @@ $('#hostButton').addEventListener('click', hostNetworkGame);
 $('#joinButton').addEventListener('click', joinNetworkGame);
 $('#refreshRoomsButton').addEventListener('click', discoverNativeRooms);
 $('#newInviteButton').addEventListener('click', createBrowserInvite);
+$('#scanAnswerButton').addEventListener('click', scanAndCompleteAnswer);
+$('#scanOfferButton').addEventListener('click', scanAndAcceptOffer);
 $('#shareOfferButton').addEventListener('click', () => shareSignal($('#offerOutput').value, 'Приглашение ЗАМКНИ'));
 $('#copyOfferButton').addEventListener('click', () => copySignal($('#offerOutput').value));
 $('#completeInviteButton').addEventListener('click', completeBrowserInvite);
@@ -88,6 +97,10 @@ $('#shareAnswerButton').addEventListener('click', () => shareSignal($('#answerOu
 $('#copyAnswerButton').addEventListener('click', () => copySignal($('#answerOutput').value));
 $('#startNetworkGameButton').addEventListener('click', startNetworkMatch);
 $('#playerNameInput').addEventListener('change', persistProfileName);
+$('#closeQrScannerButton').addEventListener('click', () => finishQrScan(null, new Error('QR scan cancelled')));
+$('#qrImageInput').addEventListener('change', handleQrImageFile);
+$('#qrScannerDialog').addEventListener('cancel', (event) => { event.preventDefault(); finishQrScan(null, new Error('QR scan cancelled')); });
+$('#qrScannerDialog').addEventListener('close', stopQrCamera);
 
 function loadJson(key, fallback) {
   try {
@@ -434,9 +447,9 @@ async function joinNetworkGame() {
       $('#nativeRoomsPanel').hidden = false;
       await discoverNativeRooms();
     } else if (caps.manualPairing) {
-      setLanStatus('Ручное pairing через PocketLAN', 'ok');
+      setLanStatus('QR-pairing через PocketLAN', 'ok');
       $('#joinPairingPanel').hidden = false;
-      $('#lanStatusHint').textContent = 'Интернет не нужен. Получи приглашение PWL1 от хоста.';
+      $('#lanStatusHint').textContent = 'Интернет не нужен. Отсканируй QR, который показывает хост.';
     } else {
       throw new Error(caps.reason || 'PocketLAN unavailable');
     }
@@ -490,7 +503,8 @@ async function createBrowserInvite() {
     const invite = await room.createInvite();
     $('#offerOutput').value = invite;
     $('#answerInput').value = '';
-    $('#lobbyMessage').textContent = 'Приглашение готово. Передай его одному игроку.';
+    await renderPairingQr($('#offerQr'), $('#offerQrHint'), invite, 'приглашение');
+    $('#lobbyMessage').textContent = 'QR готов. Покажи его следующему игроку.';
   } catch (error) {
     showLobbyError(humanNetworkError(error));
   } finally {
@@ -498,9 +512,9 @@ async function createBrowserInvite() {
   }
 }
 
-async function completeBrowserInvite() {
-  const answer = $('#answerInput').value.trim();
-  if (!answer) return showLobbyError('Сначала вставь ответ второго телефона.');
+async function completeBrowserInvite(answerOverride = '') {
+  const answer = answerOverride || $('#answerInput').value.trim();
+  if (!answer) return showLobbyError('Сначала отсканируй ответ второго телефона или вставь его вручную.');
   try {
     $('#completeInviteButton').disabled = true;
     await room.completeInvite(answer);
@@ -513,9 +527,9 @@ async function completeBrowserInvite() {
   }
 }
 
-async function acceptBrowserInvite() {
-  const offer = $('#offerInput').value.trim();
-  if (!offer) return showLobbyError('Вставь приглашение хоста.');
+async function acceptBrowserInvite(offerOverride = '') {
+  const offer = offerOverride || $('#offerInput').value.trim();
+  if (!offer) return showLobbyError('Вставь приглашение хоста или отсканируй QR.');
   try {
     $('#acceptInviteButton').disabled = true;
     const result = await lan.joinInvite(offer);
@@ -526,12 +540,187 @@ async function acceptBrowserInvite() {
     bindRoomEvents();
     $('#answerOutput').value = pendingAnswer;
     $('#answerOutputBlock').hidden = false;
-    $('#lobbyMessage').textContent = 'Ответ готов. Верни его хосту и оставь этот экран открытым.';
+    await renderPairingQr($('#answerQr'), $('#answerQrHint'), pendingAnswer, 'ответ');
+    $('#lobbyMessage').textContent = 'Ответ готов. Покажи QR хосту и оставь этот экран открытым.';
   } catch (error) {
     showLobbyError(humanNetworkError(error));
   } finally {
     $('#acceptInviteButton').disabled = false;
   }
+}
+
+async function scanAndAcceptOffer() {
+  try {
+    const signal = await scanPairingSignal('offer');
+    if (!signal) return;
+    $('#offerInput').value = signal;
+    await acceptBrowserInvite(signal);
+  } catch (error) {
+    if (error?.message !== 'QR scan cancelled') showLobbyError(humanQrError(error));
+  }
+}
+
+async function scanAndCompleteAnswer() {
+  try {
+    const signal = await scanPairingSignal('answer');
+    if (!signal) return;
+    $('#answerInput').value = signal;
+    await completeBrowserInvite(signal);
+  } catch (error) {
+    if (error?.message !== 'QR scan cancelled') showLobbyError(humanQrError(error));
+  }
+}
+
+async function renderPairingQr(container, hint, signal, label) {
+  container.replaceChildren();
+  if (typeof globalThis.QRCode !== 'function') {
+    hint.textContent = 'QR-модуль ещё не загружен. Используй «Поделиться» или длинный код.';
+    return false;
+  }
+  const payload = await encodePairingQrPayload(signal);
+  try {
+    new globalThis.QRCode(container, {
+      text: payload,
+      width: 280,
+      height: 280,
+      colorDark: '#202625',
+      colorLight: '#faf7f0',
+      correctLevel: globalThis.QRCode.CorrectLevel.L
+    });
+    hint.textContent = payload.startsWith('PWQ1.') ? `Сжатый QR: ${label} передаётся полностью офлайн.` : `QR: ${label} передаётся полностью офлайн.`;
+    return true;
+  } catch {
+    container.replaceChildren();
+    hint.textContent = 'Сигнал слишком большой для QR. Используй «Поделиться» или длинный код ниже.';
+    return false;
+  }
+}
+
+async function scanPairingSignal(expectedKind) {
+  if (typeof globalThis.jsQR !== 'function') throw new Error('QR-сканер ещё не загружен. Открой длинный код или попробуй снова.');
+  stopQrCamera();
+  qrScanExpectedKind = expectedKind;
+  $('#qrScannerTitle').textContent = expectedKind === 'offer' ? 'Сканируй приглашение' : 'Сканируй ответ';
+  $('#qrScannerStatus').textContent = 'Наведи камеру на QR-код второго телефона.';
+  $('#qrImageInput').value = '';
+  $('#qrScannerDialog').showModal();
+
+  const promise = new Promise((resolve, reject) => {
+    qrScanResolve = resolve;
+    qrScanReject = reject;
+  });
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera unavailable');
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    const video = $('#qrVideo');
+    video.srcObject = qrStream;
+    await video.play();
+    qrScanLastAt = 0;
+    qrScanFrame = requestAnimationFrame(scanQrFrame);
+  } catch {
+    $('#qrScannerStatus').textContent = 'Камера не открылась. Разреши доступ или выбери QR из Фото.';
+  }
+
+  return promise;
+}
+
+async function scanQrFrame(now) {
+  if (!qrScanResolve || !$('#qrScannerDialog').open) return;
+  qrScanFrame = requestAnimationFrame(scanQrFrame);
+  if (now - qrScanLastAt < 110) return;
+  qrScanLastAt = now;
+  const video = $('#qrVideo');
+  if (!video.videoWidth || video.readyState < 2) return;
+  const canvas = $('#qrScanCanvas');
+  const scale = Math.min(1, 720 / video.videoWidth);
+  canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+  canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const code = globalThis.jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
+  if (!code?.data) return;
+  await acceptScannedQr(code.data);
+}
+
+async function acceptScannedQr(raw) {
+  try {
+    const signal = await decodePairingQrPayload(raw);
+    const parsed = decodePocketLanSignal(signal);
+    if (parsed.kind !== qrScanExpectedKind) {
+      $('#qrScannerStatus').textContent = qrScanExpectedKind === 'offer' ? 'Это ответ. Нужен QR приглашения хоста.' : 'Это приглашение. Нужен QR ответа игрока.';
+      return false;
+    }
+    playTone('claim');
+    finishQrScan(signal);
+    return true;
+  } catch (error) {
+    $('#qrScannerStatus').textContent = humanQrError(error);
+    return false;
+  }
+}
+
+async function handleQrImageFile(event) {
+  const file = event.target.files?.[0];
+  if (!file || typeof globalThis.jsQR !== 'function') return;
+  try {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    try {
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = url;
+      });
+      const canvas = $('#qrScanCanvas');
+      const scale = Math.min(1, 1200 / image.naturalWidth);
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const data = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = globalThis.jsQR(data.data, data.width, data.height, { inversionAttempts: 'attemptBoth' });
+      if (!code?.data) throw new Error('QR не найден на изображении.');
+      await acceptScannedQr(code.data);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    $('#qrScannerStatus').textContent = humanQrError(error);
+  }
+}
+
+function finishQrScan(value, error = null) {
+  stopQrCamera();
+  if ($('#qrScannerDialog').open) $('#qrScannerDialog').close();
+  const resolve = qrScanResolve;
+  const reject = qrScanReject;
+  qrScanResolve = null;
+  qrScanReject = null;
+  qrScanExpectedKind = null;
+  if (error) reject?.(error);
+  else resolve?.(value);
+}
+
+function stopQrCamera() {
+  cancelAnimationFrame(qrScanFrame);
+  qrScanFrame = 0;
+  for (const track of qrStream?.getTracks?.() || []) track.stop();
+  qrStream = null;
+  const video = $('#qrVideo');
+  if (video) video.srcObject = null;
+}
+
+function humanQrError(error) {
+  const text = String(error?.message || error || '');
+  if (/permission|denied|notallowed/i.test(text)) return 'Доступ к камере запрещён. Разреши камеру или выбери QR из Фото.';
+  if (/notfound|device/i.test(text)) return 'Камера не найдена. Выбери QR из Фото или используй длинный код.';
+  if (/PocketLAN|PWL1|PWQ1|QR/i.test(text)) return text;
+  return 'Не удалось прочитать QR. Держи оба телефона ровно и попробуй ещё раз.';
 }
 
 function bindRoomEvents() {
@@ -799,6 +988,13 @@ function resetNetworkState() {
   $('#answerOutput').value = '';
   $('#answerInput').value = '';
   $('#answerOutputBlock').hidden = true;
+  $('#offerQr')?.replaceChildren();
+  $('#answerQr')?.replaceChildren();
+  if (qrScanResolve || qrScanReject) finishQrScan(null, new Error('QR scan cancelled'));
+  else {
+    if ($('#qrScannerDialog')?.open) $('#qrScannerDialog').close();
+    stopQrCamera();
+  }
 }
 
 function leaveToHome() {
