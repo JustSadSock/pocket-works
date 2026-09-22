@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Сценограф</title>
+  <desc id="description">Латунный фонарь отбрасывает силуэт птицы на бумажную сцену.</desc>
+  <rect width="512" height="512" rx="112" fill="#eee9d8"/>
+  <path d="M52 417V220C52 113 133 52 256 52s204 61 204 168v197" fill="#f8f3e6" stroke="#304642" stroke-width="19" stroke-linecap="round"/>
+  <path d="M73 412h366" stroke="#304642" stroke-width="18" stroke-linecap="round"/>
+  <path d="M183 174 412 136v213L183 216Z" fill="#d8a96b" opacity=".25"/>
+  <path d="M185 185 403 156M185 207l218 119" fill="none" stroke="#d8a96b" stroke-width="3" opacity=".6"/>
+  <path d="M113 220 145 156q11-20 32-11l33 14-24 79-48-4Z" fill="#a75c3a" stroke="#3a403b" stroke-width="9" stroke-linejoin="round"/>
+  <circle cx="194" cy="199" r="17" fill="#e3ae6c" stroke="#f8f3e6" stroke-width="5"/>
+  <path d="m151 234-11 129m-28 0h59" fill="none" stroke="#3a403b" stroke-width="14" stroke-linecap="round"/>
+  <path d="M240 290c32-8 54-21 70-39-16-24-26-55-22-82 29 16 54 39 68 65 20-8 43-3 58 10l18 8-22 13c-4 37-35 68-71 71-36 2-59-19-76-37l-35 13Z" fill="#285652" stroke="#243d3b" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M324 262c15 18 27 25 47 28" fill="none" stroke="#eee9d8" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="391" cy="248" r="6" fill="#eee9d8"/>
+  <path d="M289 338c13 10 31 14 49 13" fill="none" stroke="#a75c3a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M91 380h330" stroke="#c6b99e" stroke-width="3" stroke-linecap="round"/>
+</svg>

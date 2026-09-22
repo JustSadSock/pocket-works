@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eee9d8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Сценограф">
+  <title>Сценограф — театр света и теней</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="shelf-link" href="../../" data-app-control>← В Pocket Works</a>
+      <span class="topbar-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <button id="sound-toggle" class="sound-toggle" type="button" data-native-press aria-pressed="false">Звук: выкл</button>
+    </header>
+
+    <div class="game-column">
+      <div class="scene-meta" id="scene-meta" hidden data-ui>
+        <div>
+          <span class="eyebrow" id="scene-count">СЦЕНА 01 / 07</span>
+          <h1 id="scene-title">Сцена</h1>
+          <p id="scene-hint">Найдите силуэт.</p>
+        </div>
+        <button id="pause-button" class="text-button" type="button" data-native-press>Пауза</button>
+      </div>
+
+      <section class="theatre-case" aria-label="Теневой театр">
+        <div class="case-head" data-ui>
+          <span>SCENOGRAPH / ТЕАТР ТЕНЕЙ</span>
+          <span id="case-mode">ПРОЛОГ</span>
+        </div>
+        <canvas id="theatre" data-gesture-surface data-block-callout tabindex="0" aria-label="Экран теней и стол с бумажными фигурами. Перетаскивайте фигуры и лампу на нижней части."></canvas>
+        <div class="case-foot" data-ui>
+          <span>СВЕТ → ФИГУРА → ТЕНЬ</span>
+          <span class="case-serial">№ 001—007</span>
+        </div>
+
+        <section id="menu-panel" class="overlay-panel menu-panel" aria-labelledby="menu-title">
+          <p class="eyebrow">МАЛЕНЬКИЙ ТЕАТР НЕВОЗМОЖНОГО</p>
+          <h1 id="menu-title">Сцено<span>граф</span></h1>
+          <p class="menu-lead">Лампа, бумага и несколько движений пальцем. Совместите тени — и история оживёт.</p>
+          <div class="menu-actions">
+            <button id="start-button" class="primary-button" type="button" data-native-press>Открыть занавес <span aria-hidden="true">↗</span></button>
+            <button id="studio-button" class="secondary-button" type="button" data-native-press>Свободная мастерская</button>
+          </div>
+          <div id="chapter-strip" class="chapter-strip" aria-label="Пройденные сцены"></div>
+        </section>
+
+        <section id="pause-panel" class="overlay-panel modal-panel" aria-labelledby="pause-title" hidden>
+          <p class="eyebrow">АНТРАКТ</p>
+          <h2 id="pause-title">Свет подождёт.</h2>
+          <p>Ваши фигуры останутся на месте.</p>
+          <div class="modal-actions">
+            <button id="resume-button" class="primary-button" type="button" data-native-press>Продолжить</button>
+            <button id="pause-menu-button" class="secondary-button" type="button" data-native-press>К сценам</button>
+            <a href="../../" class="underlined-link" data-app-control>В Pocket Works</a>
+          </div>
+        </section>
+
+        <section id="reveal-panel" class="overlay-panel modal-panel reveal-panel" aria-labelledby="reveal-title" hidden>
+          <p class="eyebrow">ТЕНЬ ОЖИЛА</p>
+          <div class="reveal-glyph" aria-hidden="true">✦</div>
+          <h2 id="reveal-title">Птица</h2>
+          <p id="reveal-text">Начало истории.</p>
+          <div class="modal-actions">
+            <button id="next-button" class="primary-button" type="button" data-native-press>Следующая сцена <span aria-hidden="true">↗</span></button>
+            <button id="reveal-menu-button" class="secondary-button" type="button" data-native-press>К сценам</button>
+            <a href="../../" class="underlined-link" data-app-control>В Pocket Works</a>
+          </div>
+        </section>
+      </section>
+
+      <section id="play-controls" class="play-controls" aria-label="Управление сценой" hidden>
+        <div class="score-line" data-ui>
+          <div><span class="eyebrow">СОВПАДЕНИЕ</span><strong id="score-value">0%</strong></div>
+          <div class="score-track" role="meter" aria-label="Совпадение силуэта" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="score-meter"><span id="score-fill"></span></div>
+        </div>
+        <div class="piece-line"><span class="eyebrow">ФИГУРЫ</span><div id="piece-tabs" class="piece-tabs"></div></div>
+        <div class="edit-line">
+          <button id="rotate-left" class="icon-action" type="button" data-native-press aria-label="Повернуть выбранную фигуру влево">↶ <small>15°</small></button>
+          <button id="rotate-right" class="icon-action" type="button" data-native-press aria-label="Повернуть выбранную фигуру вправо">↷ <small>15°</small></button>
+          <label class="lamp-control" for="lamp-range"><span class="eyebrow">ПОЛОЖЕНИЕ ЛАМПЫ</span><input id="lamp-range" type="range" min="0.08" max="0.92" step="0.005" value="0.5" aria-label="Положение лампы"></label>
+        </div>
+        <div class="utility-line">
+          <button id="hint-button" class="text-button" type="button" data-native-press aria-pressed="false">Показать намёк</button>
+          <button id="reset-button" class="text-button" type="button" data-native-press>Начать сцену заново</button>
+        </div>
+      </section>
+
+      <section id="studio-controls" class="studio-controls" aria-label="Мастерская" hidden>
+        <div class="studio-head"><div><span class="eyebrow">СВОБОДНАЯ МАСТЕРСКАЯ</span><h1>Сочините свою тень.</h1></div><button id="studio-menu-button" class="text-button" type="button" data-native-press>К сценам</button></div>
+        <p class="studio-note">Выберите фигуру, переместите её на столе, поверните и настройте свет. Можно добавить до пяти фигур.</p>
+        <div class="piece-line"><span class="eyebrow">НА СТОЛЕ</span><div id="studio-piece-tabs" class="piece-tabs"></div></div>
+        <div class="edit-line">
+          <button id="studio-rotate-left" class="icon-action" type="button" data-native-press aria-label="Повернуть выбранную фигуру влево">↶ <small>15°</small></button>
+          <button id="studio-rotate-right" class="icon-action" type="button" data-native-press aria-label="Повернуть выбранную фигуру вправо">↷ <small>15°</small></button>
+          <label class="lamp-control" for="studio-lamp-range"><span class="eyebrow">ПОЛОЖЕНИЕ ЛАМПЫ</span><input id="studio-lamp-range" type="range" min="0.08" max="0.92" step="0.005" value="0.5" aria-label="Положение лампы"></label>
+        </div>
+        <div class="palette-line"><span class="eyebrow">ДОБАВИТЬ</span><div id="shape-palette" class="shape-palette"></div></div>
+        <div class="utility-line studio-actions"><button id="delete-piece" class="text-button" type="button" data-native-press>Убрать фигуру</button><button id="export-button" class="primary-button" type="button" data-native-press>Сохранить открытку ↗</button></div>
+      </section>
+
+      <output id="feedback" class="feedback" aria-live="polite">Передвигайте фигуры на нижнем столе.</output>
+    </div>
+
+    <footer class="app-footer" data-ui><span>№ 001 / СВЕТ И БУМАГА</span><button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button></footer>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Сценограф" data-app-version="0.1.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
