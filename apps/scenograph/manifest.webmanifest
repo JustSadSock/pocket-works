@@ -1,0 +1,26 @@
+{
+  "id": "/apps/scenograph/",
+  "name": "Сценограф",
+  "short_name": "Сценограф",
+  "description": "Семь теневых миниатюр и свободная мастерская бумажных силуэтов.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#eee9d8",
+  "theme_color": "#eee9d8",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

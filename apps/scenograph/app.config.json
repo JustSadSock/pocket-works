@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "scenograph",
+  "name": "Сценограф",
+  "shortName": "Сценограф",
+  "description": "Поставьте семь теневых миниатюр, двигая свет и бумажные фигуры, а затем создайте собственную сцену.",
+  "version": "0.1.0",
+  "releaseDate": "2026-09-22",
+  "releaseDateTime": "2026-09-22T20:56:44.377Z",
+  "changelog": [
+    "Семь теневых миниатюр с точной настройкой света и силуэтов, подсказками и сохранением прогресса.",
+    "Свободная мастерская позволяет создавать композиции и сохранять их как PNG-открытки.",
+    "Приложение устанавливается на устройство и работает офлайн после первой загрузки."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#b36139",
+  "backgroundColor": "#eee9d8",
+  "themeColor": "#eee9d8",
+  "orientation": "portrait",
+  "cacheName": "scenograph-v0.1.0-p2",
+  "storageNamespace": "pocket-works:scenograph",
+  "tags": [
+    "game",
+    "puzzle",
+    "creative",
+    "shadow-theatre",
+    "offline",
+    "export"
+  ],
+  "order": 110
+}
