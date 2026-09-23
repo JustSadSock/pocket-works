@@ -1,23 +1,18 @@
-import {
-  AbstractMesh,
-  Color3,
-  Color4,
-  DirectionalLight,
-  Engine,
-  HemisphericLight,
-  ImageProcessingConfiguration,
-  MeshBuilder,
-  PBRMaterial,
-  Quaternion,
-  Scene,
-  SceneLoader,
-  ShadowGenerator,
-  TransformNode,
-  UniversalCamera,
-  Vector3,
-  VertexBuffer
-} from '@babylonjs/core';
-import '@babylonjs/loaders/glTF';
+import { Engine } from '@babylonjs/core/Engines/engine';
+import { Scene } from '@babylonjs/core/scene';
+import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import './styles.css';
 import { LocomotionMixer } from './animation';
 import { FootstepAudio } from './audio';
@@ -31,7 +26,7 @@ import {
   speedFromMagnitude
 } from './locomotion';
 
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const STORAGE_KEY = 'pocket-works:kinema:settings';
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 type GaitName = 'idle' | 'walk' | 'jog' | 'run';
@@ -51,6 +46,7 @@ type QaState = {
   directionalClips: number;
   noUvMaterialFallbacks: number;
   materialsReady: boolean;
+  renderScale: number;
 };
 
 declare global {
@@ -134,7 +130,8 @@ async function start(): Promise<void> {
     animationClips: 0,
     directionalClips: 0,
     noUvMaterialFallbacks: 0,
-    materialsReady: false
+    materialsReady: false,
+    renderScale: 1
   };
   window.__AI_TEST_STATE__ = qa;
 
@@ -185,16 +182,16 @@ async function start(): Promise<void> {
   };
 
   try {
-    loadingBar.style.width = '16%';
-    loadingText.textContent = 'Babylon.js / camera / light';
+    loadingBar.style.width = '12%';
+    loadingText.textContent = 'Babylon.js / lean boot';
     const engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
       stencil: true,
       powerPreference: 'high-performance'
     }, false);
     const deviceRatio = window.devicePixelRatio || 1;
-    const targetRatio = Math.min(deviceRatio, 1.6);
-    engine.setHardwareScalingLevel(Math.max(1, deviceRatio / targetRatio));
+    const bootRatio = Math.min(deviceRatio, 1.35);
+    engine.setHardwareScalingLevel(Math.max(1, deviceRatio / bootRatio));
 
     const scene = new Scene(engine);
     scene.clearColor = Color4.FromHexString('#d5d0c7ff');
@@ -232,11 +229,11 @@ async function start(): Promise<void> {
     floor.material = floorMat;
     floor.receiveShadows = true;
 
-    const shadows = new ShadowGenerator(innerWidth >= 900 ? 2048 : 1024, sun);
+    const shadows = new ShadowGenerator(innerWidth >= 780 ? 2048 : 1024, sun);
     shadows.usePercentageCloserFiltering = true;
     shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
     shadows.bias = 0.00032;
-    shadows.normalBias = 0.015;
+    shadows.normalBias = 0.012;
 
     const characterRoot = new TransformNode('character-root', scene);
     characterRoot.position.set(0, 0.015, 0);
@@ -249,8 +246,10 @@ async function start(): Promise<void> {
     modelRoot.rotationQuaternion = Quaternion.FromEulerAngles(0, Math.PI, 0);
 
     qa.loadingState = 'loading-model';
-    loadingBar.style.width = '39%';
-    loadingText.textContent = 'Blender / body / clothing / textures';
+    loadingBar.style.width = '34%';
+    loadingText.textContent = 'glTF loader / Blender character';
+    await import('@babylonjs/loaders/glTF');
+    loadingBar.style.width = '46%';
     const result = await SceneLoader.ImportMeshAsync('', './models/', 'kinema-character.glb', scene);
     if (!result.meshes.length) throw new Error('Blender GLB загрузился без геометрии.');
     qa.noUvMaterialFallbacks = stabilizeNoUvMaterials(result.meshes);
@@ -267,9 +266,14 @@ async function start(): Promise<void> {
     const mixer = new LocomotionMixer(result.animationGroups);
     qa.directionalClips = mixer.directionalClipCount;
 
+    const finalRatio = Math.min(deviceRatio, 1.85);
+    engine.setHardwareScalingLevel(Math.max(1, deviceRatio / finalRatio));
+    qa.renderScale = finalRatio;
+    engine.resize();
+
     qa.loadingState = 'warming';
     loadingBar.style.width = '94%';
-    loadingText.textContent = 'Safari / shaders / first frame';
+    loadingText.textContent = 'Safari / high-resolution warmup';
     await warmScene(scene);
     loadingBar.style.width = '100%';
     loadingText.textContent = `${result.animationGroups.length} clips / ready`;
