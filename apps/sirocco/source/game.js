@@ -173,20 +173,22 @@ export class SiroccoGame {
   updateFirstPersonGarmentVisibility() {
     if (!this.rig || !this.controller) return;
     const pitch = this.controller.pitch;
-    const closeLook = pitch > 0.56;
-    const verticalLook = pitch > 0.88;
+    const yawDivergence = Math.abs(Math.atan2(
+      Math.sin(this.controller.yaw - this.controller.bodyYaw),
+      Math.cos(this.controller.yaw - this.controller.bodyYaw)
+    ));
+    const fullBodySafe = pitch < 0.36 && yawDivergence < 0.54;
     const set = (mesh, visible) => mesh?.setEnabled?.(visible);
 
-    // Keep the skinned human, sleeves, hands, trouser cuffs and boots visible,
-    // but cull static garment shells that become screen-sized when the eye is
-    // inside/above them. This mirrors a real first-person body mask without
-    // duplicating the skeleton or breaking bone-driven footsteps.
-    set(this.rig.robeTorso, !closeLook);
-    set(this.rig.belt, !closeLook);
-    set(this.rig.scarfCollar, !closeLook);
-    for (const tail of this.rig.scarfTails || []) set(tail, !closeLook);
-    set(this.rig.frontFold, !verticalLook);
-    set(this.rig.robeSkirt, !verticalLook);
+    // CharacterPolish owns the same threshold. Never re-enable a closed shell
+    // after it was culled: the previous 0.56/0.88 split made the sash and thobe
+    // pop back into the camera at medium look-down angles.
+    set(this.rig.robeTorso, fullBodySafe);
+    set(this.rig.belt, fullBodySafe);
+    set(this.rig.scarfCollar, fullBodySafe);
+    for (const tail of this.rig.scarfTails || []) set(tail, fullBodySafe);
+    set(this.rig.frontFold, fullBodySafe);
+    set(this.rig.robeSkirt, fullBodySafe);
   }
 
   frame() {
