@@ -1,289 +1,416 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {
-  SIGILS, RELICS, cardById, sigilInfo, nodeLabel, createProfile, createRun, hydrateRun,
-  resolveNode, chooseCardReward, chooseRelic, hearthUpgrade, altarSelect, afterBattleVictory,
-  skipReward, playCard, sacrificeUnit, endTurn
+  VERSION,BALANCE_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
+  createProfile,createRun,hydrateRun,resolveNode,chooseCardReward,chooseRelic,chooseItem,
+  hearthUpgrade,altarSelect,afterBattleVictory,skipReward,playCard,sacrificeUnit,endTurn,useItem
 } from './game-core.js';
 
 installMobileRuntime();
 
-const RUN_KEY='pocket-works:morok:run:v1';
-const PROFILE_KEY='pocket-works:morok:profile:v1';
-const PREF_KEY='pocket-works:morok:prefs:v1';
-const $=(s,root=document)=>root.querySelector(s);
-const $$=(s,root=document)=>[...root.querySelectorAll(s)];
+const RUN_KEY='pocket-works:morok:run:v2';
+const OLD_RUN_KEY='pocket-works:morok:run:v1';
+const PROFILE_KEY='pocket-works:morok:profile:v2';
+const PREF_KEY='pocket-works:morok:prefs:v2';
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+
 const el={
-  scene:$('#scene'), location:$('#locationLabel'), back:$('#backBtn'), menu:$('#menuBtn'),
-  start:$('#startScreen'),trail:$('#trailScreen'),battle:$('#battleScreen'),event:$('#eventScreen'),result:$('#resultScreen'),
-  continue:$('#continueBtn'),continueMeta:$('#continueMeta'),newRun:$('#newRunBtn'),rules:$('#rulesBtn'),
-  runHp:$('#runHp'),deckCount:$('#deckCount'),relicCount:$('#relicCount'),trailChapter:$('#trailChapter'),trailTitle:$('#trailTitle'),trailHint:$('#trailHint'),trailPath:$('#trailPath'),deckBtn:$('#deckBtn'),deckBadge:$('#deckBadge'),
-  enemyHpFill:$('#enemyHpFill'),enemyHpText:$('#enemyHpText'),playerHpFill:$('#playerHpFill'),playerHpText:$('#playerHpText'),round:$('#roundText'),
-  intentRow:$('#intentRow'),enemyRow:$('#enemyRow'),playerRow:$('#playerRow'),battleMessage:$('#battleMessage'),ember:$('#emberText'),remains:$('#remainsText'),heritage:$('#heritageSlot'),endTurn:$('#endTurnBtn'),hand:$('#hand'),selectionStrip:$('#selectionStrip'),selectionTitle:$('#selectionTitle'),selectionText:$('#selectionText'),sacrifice:$('#sacrificeBtn'),
-  eventKicker:$('#eventKicker'),eventTitle:$('#eventTitle'),eventHint:$('#eventHint'),eventChoices:$('#eventChoices'),eventSkip:$('#eventSkip'),
-  resultRune:$('#resultRune'),resultKicker:$('#resultKicker'),resultTitle:$('#resultTitle'),resultText:$('#resultText'),resultDepth:$('#resultDepth'),resultKills:$('#resultKills'),resultSacrifices:$('#resultSacrifices'),again:$('#againBtn'),resultHome:$('#resultHomeBtn'),
-  deckSheet:$('#deckSheet'),deckList:$('#deckList'),relicList:$('#relicList'),menuSheet:$('#menuSheet'),rulesSheet:$('#rulesSheet'),sound:$('#soundToggle'),haptic:$('#hapticToggle'),menuRules:$('#menuRulesBtn'),abandon:$('#abandonBtn'),
+  app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),
+  table:$('#table'),scale:$('#balanceScale'),scaleBeam:$('#scaleBeam'),enemyWeight:$('#enemyWeight'),playerWeight:$('#playerWeight'),scaleLabel:$('#scaleLabel'),
+  ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),
+  heritage:$('#heritageToken'),sacrifice:$('#sacrificeBtn'),items:$('#itemRack'),endTurn:$('#endTurnBtn'),deckBtn:$('#deckBtn'),deckCount:$('#deckCount'),hand:$('#hand'),
+  menu:$('#menuTray'),continue:$('#continueBtn'),continueMeta:$('#continueMeta'),newRun:$('#newRunBtn'),rules:$('#rulesBtn'),
+  route:$('#routeTablet'),routeDepth:$('#routeDepth'),routeTitle:$('#routeTitle'),routeChoices:$('#routeChoices'),routeRelics:$('#routeRelics'),routeItems:$('#routeItems'),
+  event:$('#eventTray'),eventKicker:$('#eventKicker'),eventTitle:$('#eventTitle'),eventHint:$('#eventHint'),eventChoices:$('#eventChoices'),eventSkip:$('#eventSkip'),
+  result:$('#resultPlaque'),resultKicker:$('#resultKicker'),resultTitle:$('#resultTitle'),resultText:$('#resultText'),resultDepth:$('#resultDepth'),resultKills:$('#resultKills'),resultSacrifices:$('#resultSacrifices'),again:$('#againBtn'),resultHome:$('#resultHomeBtn'),
+  focus:$('#cardFocus'),focusClose:$('#focusClose'),focusCard:$('#focusCard'),focusName:$('#focusName'),focusText:$('#focusText'),focusSigils:$('#focusSigils'),
+  ledger:$('#deckLedger'),ledgerClose:$('#ledgerClose'),ledgerStats:$('#ledgerStats'),relicStrip:$('#relicStrip'),deckList:$('#deckList'),
+  settingsBtn:$('#settingsBtn'),settings:$('#settingsPanel'),settingsClose:$('#settingsClose'),sound:$('#soundToggle'),haptic:$('#hapticToggle'),rulesFromSettings:$('#rulesFromSettings'),abandon:$('#abandonBtn'),
+  rulesPanel:$('#rulesPanel'),rulesClose:$('#rulesClose'),
   confirm:$('#confirmBox'),confirmText:$('#confirmText'),confirmCancel:$('#confirmCancel'),confirmOk:$('#confirmOk'),toast:$('#toast')
 };
-const screens=[el.start,el.trail,el.battle,el.event,el.result];
-let current='start';
+
+let mode='menu';
 let run=null;
-let profile=loadJSON(PROFILE_KEY,createProfile());
-let prefs={sound:true,haptic:true,...loadJSON(PREF_KEY,{})};
+let profile=load(PROFILE_KEY,createProfile());
+let prefs={sound:true,haptic:true,...load(PREF_KEY,{})};
 let selectedCard=null;
 let selectedUnit=null;
-let selectedHeritageSigil=null;
+let selectedItem=null;
+let heritageChoice=null;
+let eventStage=null;
 let confirmAction=null;
 let toastTimer=0;
-let renderedResultFor=null;
+let resultCommitted=false;
 
-function loadJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
-function persist(){
-  try{if(run)localStorage.setItem(RUN_KEY,JSON.stringify(run));else localStorage.removeItem(RUN_KEY);localStorage.setItem(PROFILE_KEY,JSON.stringify(profile));localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}catch(err){console.warn('[MOROK] persist failed',err)}
-}
-function readSavedRun(){try{const raw=localStorage.getItem(RUN_KEY);return raw?hydrateRun(raw):null}catch(err){console.warn(err);return null}}
-
-class AudioEngine{
-  constructor(){this.ctx=null;this.noise=null}
-  async ensure(){if(!prefs.sound)return null;if(!this.ctx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;this.ctx=new A();}if(this.ctx.state==='suspended')await this.ctx.resume();return this.ctx}
-  tone(kind='tap'){
-    if(!prefs.sound)return;void this.ensure().then(ctx=>{if(!ctx)return;const now=ctx.currentTime;const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();
-      const map={tap:[160,.035,.025],card:[230,.065,.05],play:[95,.12,.075],hit:[58,.08,.12],death:[42,.18,.12],reward:[330,.18,.06],bad:[75,.09,.06],turn:[115,.12,.045],win:[210,.4,.07]};const [hz,dur,vol]=map[kind]||map.tap;
-      o.type=kind==='reward'||kind==='win'?'triangle':'square';o.frequency.setValueAtTime(hz,now);o.frequency.exponentialRampToValueAtTime(Math.max(30,hz*(kind==='bad'?.55:1.35)),now+dur);
-      f.type='lowpass';f.frequency.value=kind==='hit'?420:950;g.gain.setValueAtTime(vol,now);g.gain.exponentialRampToValueAtTime(.0001,now+dur);o.connect(f).connect(g).connect(ctx.destination);o.start(now);o.stop(now+dur+.01);
-    }).catch(()=>{});
+function load(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
+function readRun(){
+  for(const key of [RUN_KEY,OLD_RUN_KEY]){
+    try{const raw=localStorage.getItem(key);if(raw){const parsed=hydrateRun(raw);if(key===OLD_RUN_KEY){localStorage.removeItem(OLD_RUN_KEY);localStorage.setItem(RUN_KEY,JSON.stringify(parsed))}return parsed}}catch(e){console.warn('[MOROK] bad save',e)}
   }
+  return null;
 }
-const audio=new AudioEngine();
-function haptic(pattern=8){if(prefs.haptic&&navigator.vibrate)navigator.vibrate(pattern)}
-function feedback(kind='tap'){audio.tone(kind);if(kind==='hit'||kind==='death')haptic(kind==='death'?[12,25,18]:11);else if(kind==='bad')haptic([8,28,8]);else haptic(5)}
-
-function showToast(text){clearTimeout(toastTimer);el.toast.textContent=text;el.toast.classList.add('show');toastTimer=setTimeout(()=>el.toast.classList.remove('show'),1500)}
-function showScreen(name){
-  current=name;screens.forEach(s=>s.classList.remove('active'));el[name]?.classList.add('active');
-  el.location.textContent=({start:'ЗАЛ',trail:`ГЛУБИНА ${(run?.depth??0)+1}`,battle:'СХВАТКА',event:'СЛЕД',result:'КОНЕЦ'})[name]||'ЗАЛ';
-  el.back.style.visibility=name==='start'?'hidden':'visible';selectedCard=null;selectedUnit=null;selectedHeritageSigil=null;
+function save(){
+  try{
+    if(run)localStorage.setItem(RUN_KEY,JSON.stringify(run));else localStorage.removeItem(RUN_KEY);
+    localStorage.setItem(PROFILE_KEY,JSON.stringify(profile));localStorage.setItem(PREF_KEY,JSON.stringify(prefs));
+  }catch(e){console.warn('[MOROK] save failed',e)}
+}
+function setHidden(node,hidden){if(node)node.hidden=hidden}
+function hidePanels(){el.settings.hidden=true;el.rulesPanel.hidden=true;el.ledger.hidden=true;el.focus.hidden=true}
+function setMode(next){
+  mode=next;el.app.dataset.mode=next;
+  setHidden(el.menu,next!=='menu');setHidden(el.route,next!=='route');setHidden(el.event,next!=='event');setHidden(el.result,next!=='result');
+  selectedCard=null;selectedUnit=null;selectedItem=null;heritageChoice=null;eventStage=null;
   render();
 }
-function closeSheets(){$$('.sheet').forEach(s=>s.hidden=true)}
-function openSheet(sheet){closeSheets();sheet.hidden=false;feedback('tap')}
-function roman(n){const m=['I','II','III','IV','V','VI','VII','VIII','IX','X'];return m[n-1]||String(n)}
-function iconFor(type){return({battle:'╳',boss:'♜',cache:'⌗',altar:'†',hearth:'⌂',omen:'◉'})[type]||'·'}
+function toast(text){clearTimeout(toastTimer);el.toast.textContent=text;el.toast.classList.add('show');toastTimer=setTimeout(()=>el.toast.classList.remove('show'),1500)}
+function confirm(text,fn){el.confirmText.textContent=text;confirmAction=fn;el.confirm.hidden=false;feedback('warning')}
 
-function startNewRun(){profile.totalRuns=(profile.totalRuns||0)+1;run=createRun(Date.now(),profile);persist();feedback('reward');showScreen('trail')}
-function continueRun(){run=readSavedRun();if(!run){showToast('Сохранение сгнило. Начинаем заново.');startNewRun();return;}showScreen(run.result?'result':run.battle?'battle':run.pending?'event':'trail')}
-function finishProfileIfNeeded(){
-  if(!run?.result||run.resultProfiled)return;
-  profile.bestDepth=Math.max(profile.bestDepth||0,run.depth+1);
-  if(run.result==='won')profile.wins=(profile.wins||0)+1;
-  run.resultProfiled=true;persist();
+class MaterialAudio{
+  constructor(){this.ctx=null;this.noiseBuffer=null;this.ambience=null;this.ambGain=null}
+  async ensure(){
+    if(!prefs.sound)return null;
+    const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;
+    if(!this.ctx){this.ctx=new A();this.makeNoise();this.startAmbience()}
+    if(this.ctx.state==='suspended')await this.ctx.resume();
+    return this.ctx;
+  }
+  makeNoise(){
+    if(!this.ctx)return;const len=this.ctx.sampleRate*2.5,b=this.ctx.createBuffer(1,len,this.ctx.sampleRate),d=b.getChannelData(0);
+    let last=0;for(let i=0;i<len;i++){const white=Math.random()*2-1;last=last*.985+white*.015;d[i]=white*.22+last*.78}this.noiseBuffer=b;
+  }
+  startAmbience(){
+    if(!this.ctx||!this.noiseBuffer||this.ambience)return;
+    const s=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+    s.buffer=this.noiseBuffer;s.loop=true;f.type='lowpass';f.frequency.value=480;g.gain.value=.012;s.connect(f).connect(g).connect(this.ctx.destination);s.start();this.ambience=s;this.ambGain=g;
+  }
+  burst({dur=.08,gain=.08,freq=700,type='bandpass',rate=1}={}){
+    if(!this.ctx||!this.noiseBuffer)return;const n=this.ctx.currentTime,s=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+    s.buffer=this.noiseBuffer;s.playbackRate.value=rate;f.type=type;f.frequency.value=freq;f.Q.value=.7;g.gain.setValueAtTime(gain,n);g.gain.exponentialRampToValueAtTime(.0001,n+dur);s.connect(f).connect(g).connect(this.ctx.destination);s.start(n,Math.random());s.stop(n+dur);
+  }
+  tone(freq=120,dur=.12,gain=.04,type='sine'){
+    if(!this.ctx)return;const n=this.ctx.currentTime,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.setValueAtTime(freq,n);o.frequency.exponentialRampToValueAtTime(Math.max(32,freq*.68),n+dur);g.gain.setValueAtTime(gain,n);g.gain.exponentialRampToValueAtTime(.0001,n+dur);o.connect(g).connect(this.ctx.destination);o.start(n);o.stop(n+dur+.01);
+  }
+  play(kind='wood'){
+    if(!prefs.sound)return;void this.ensure().then(()=> {
+      if(kind==='card'){this.burst({dur:.055,gain:.08,freq:1700,type:'highpass',rate:1.35});setTimeout(()=>this.tone(92,.055,.025,'triangle'),18)}
+      else if(kind==='wood'){this.burst({dur:.07,gain:.11,freq:430,type:'bandpass',rate:.65});this.tone(72,.08,.035,'sine')}
+      else if(kind==='bone'){this.burst({dur:.025,gain:.09,freq:2600,type:'bandpass',rate:1.9});setTimeout(()=>this.burst({dur:.02,gain:.055,freq:3200,type:'bandpass',rate:2.1}),35)}
+      else if(kind==='knife'){this.burst({dur:.12,gain:.085,freq:2800,type:'highpass',rate:1.6});setTimeout(()=>this.burst({dur:.08,gain:.1,freq:380,type:'lowpass',rate:.6}),55)}
+      else if(kind==='bell'){this.tone(410,.65,.035,'sine');this.tone(615,.55,.016,'sine');this.tone(820,.4,.009,'sine')}
+      else if(kind==='impact'){this.burst({dur:.15,gain:.13,freq:250,type:'lowpass',rate:.48});this.tone(48,.18,.05,'triangle')}
+      else if(kind==='paper'){this.burst({dur:.16,gain:.035,freq:2100,type:'highpass',rate:1.1})}
+      else if(kind==='warning'){this.tone(66,.18,.04,'triangle')}
+      else if(kind==='reward'){this.tone(220,.22,.025,'sine');setTimeout(()=>this.tone(330,.26,.018,'sine'),70)}
+      else if(kind==='loss'){this.tone(72,.45,.05,'triangle');setTimeout(()=>this.burst({dur:.3,gain:.06,freq:180,type:'lowpass',rate:.4}),40)}
+    }).catch(()=>{});
+  }
+  setEnabled(on){if(this.ambGain)this.ambGain.gain.value=on?.012:0}
 }
-function abandonRun(){run=null;persist();closeSheets();showScreen('start')}
+const audio=new MaterialAudio();
+function haptic(pattern=7){if(prefs.haptic&&navigator.vibrate)navigator.vibrate(pattern)}
+function feedback(kind='wood'){
+  audio.play(kind);
+  if(kind==='knife'||kind==='impact')haptic([11,22,13]);else if(kind==='warning')haptic([7,28,7]);else if(kind==='bell')haptic(12);else haptic(5);
+}
+
+const opponentLines={
+  menu:['Садись.','Карты уже перемешаны.','Не заставляй меня ждать.'],
+  route:['Выбирай дверь. Остальные я закрою.','Маршрут любит нерешительных. Они дольше живут.','Только одна из дверей врёт.'],
+  play:['Хм.','Эту я запомню.','Не самая плохая карта.','Продолжай.'],
+  sacrifice:['Кровь дешевле хорошей карты.','Теперь она принадлежит следующей.','Вот так уже интереснее.'],
+  damage:['Слышал? Это качнулись весы.','Ещё немного веса.','Стол считает всё.'],
+  hurt:['Моя чаша тяжелее.','Не отвлекайся на красивую колоду.','Ты оставил линию пустой.'],
+  mutation:['Ты испортил карту. Хорошо.','Теперь у неё есть история.','Второй шрам всегда меняет характер.']
+};
+function pick(arr,seed=Date.now()){if(!arr?.length)return'';return arr[Math.abs((seed|0))%arr.length]}
+function talk(text){el.speech.textContent=text}
+function contextualTalk(kind){talk(pick(opponentLines[kind]||opponentLines.play,(run?.seed||0)+(run?.stats?.cardsPlayed||0)+(run?.battle?.round||0)))}
+function setOpponent(){
+  const boss=run?.battle?.bossId?bossInfo(run.battle.bossId):null;
+  el.opponent.dataset.boss=boss?.id||'dealer';
+  el.maskMark.textContent=boss?.id==='warden'?'⊠':boss?.id==='bellkeeper'?'◉':boss?.id==='prior'?'◇':'†';
+  if(mode==='menu')talk(pick(opponentLines.menu,profile.totalRuns||0));
+  else if(mode==='route')contextualTalk('route');
+  else if(mode==='battle'&&boss)talk(boss.text);
+  else if(mode==='battle')talk(run?.battle?.log?.[0]||'Твой ход.');
+  else if(mode==='event')talk('Я положил это перед тобой не просто так.');
+  else if(mode==='result')talk(run?.result==='won'?'Ты всё-таки дошёл.':'Карты останутся. Ты — нет.');
+}
+
+function newRun(){
+  profile.totalRuns=(profile.totalRuns||0)+1;run=createRun(Date.now(),profile);resultCommitted=false;save();void audio.ensure();feedback('card');setMode('route');
+}
+function continueRun(){
+  run=readRun();if(!run){newRun();return}
+  resultCommitted=!!run.resultProfiled;void audio.ensure();setMode(run.result?'result':run.battle?'battle':run.pending?'event':'route');
+}
+function finishProfile(){
+  if(!run?.result||resultCommitted)return;
+  profile.bestDepth=Math.max(profile.bestDepth||0,Math.min(run.depth+1,run.maxDepth));if(run.result==='won')profile.wins=(profile.wins||0)+1;
+  run.resultProfiled=true;resultCommitted=true;save();
+}
+function abandon(){run=null;save();hidePanels();setMode('menu')}
 
 function render(){
-  renderStart();
+  renderMenu();setOpponent();
   if(!run)return;
-  if(current==='trail')renderTrail();
-  if(current==='battle')renderBattle();
-  if(current==='event')renderEvent();
-  if(current==='result')renderResult();
+  el.deckCount.textContent=run.deck.length;
+  if(mode==='route')renderRoute();
+  if(mode==='battle')renderBattle();
+  if(mode==='event')renderEvent();
+  if(mode==='result')renderResult();
 }
-function renderStart(){
-  const saved=readSavedRun();el.continue.hidden=!saved;
-  if(saved){el.continueMeta.textContent=saved.result?(saved.result==='won'?'ПОБЕДА СОХРАНЕНА':'ПОСЛЕДНИЙ СЛЕД'):`ГЛУБИНА ${saved.depth+1} · ${saved.hp}/${saved.maxHp}`;}
+function renderMenu(){
+  const saved=readRun();el.continue.hidden=!saved;
+  if(saved)el.continueMeta.textContent=saved.result?(saved.result==='won'?'последняя сдача завершена':'записано поражение'):`глубина ${saved.depth+1} · ${saved.deck.length} карт`;
   el.sound.querySelector('b').textContent=prefs.sound?'ВКЛ':'ВЫКЛ';el.haptic.querySelector('b').textContent=prefs.haptic?'ВКЛ':'ВЫКЛ';
 }
-function renderTrail(){
-  if(run.result){showScreen('result');return;}
-  el.runHp.textContent=run.hp;el.deckCount.textContent=run.deck.length;el.deckBadge.textContent=run.deck.length;el.relicCount.textContent=run.relics.length;
-  el.trailChapter.textContent=`ГЛУБИНА ${roman(run.depth+1)} / ${run.maxDepth}`;
-  const stage=run.trail[run.depth]||[];el.trailTitle.textContent=stage.length===1&&stage[0].type==='boss'?'Кто-то стоит между деревьями':'Тропа раздваивается';
-  el.trailHint.textContent=stage.length===1?'Назад дороги уже нет.':'Выбор закрывает остальные следы.';
-  el.trailPath.replaceChildren();
-  const future=[];for(let d=Math.min(run.maxDepth-1,run.depth+2);d>=run.depth;d--)future.push(d);
-  for(const depth of future){
-    const row=document.createElement('div');row.className=`stage-row ${depth===run.depth?'current':'future'}`;
-    for(const node of run.trail[depth]){
-      const b=document.createElement('button');b.type='button';b.className='stage-node';b.dataset.nativePress='';b.disabled=depth!==run.depth;
-      b.innerHTML=`<b>${iconFor(node.type)}</b><span>${nodeLabel(node.type)}</span><small>${node.elite&&node.type==='battle'?'СИЛЬНЫЙ СЛЕД':depth===run.depth?'ВЫБРАТЬ':'СКОРО'}</small>`;
-      if(depth===run.depth)b.addEventListener('click',()=>chooseNode(node));row.append(b);
-    }
-    el.trailPath.append(row);
-  }
-}
-function chooseNode(node){
-  feedback(node.type==='boss'?'death':'tap');const r=resolveNode(run,node);if(!r.ok){showToast(r.reason||'Не сейчас.');return;}persist();
-  if(r.type==='battle')showScreen('battle');else showScreen('event');
-}
-
-function renderBattle(){
-  const b=run?.battle;if(!b){if(run?.pending?.type==='card-choice')showScreen('event');else showScreen(run?.result?'result':'trail');return;}
-  el.enemyHpFill.style.transform=`scaleX(${Math.max(0,b.enemyHp/b.enemyMaxHp)})`;el.enemyHpText.textContent=`${Math.max(0,b.enemyHp)}/${b.enemyMaxHp}`;
-  el.playerHpFill.style.transform=`scaleX(${Math.max(0,b.playerHp/b.playerMaxHp)})`;el.playerHpText.textContent=`${Math.max(0,b.playerHp)}/${b.playerMaxHp}`;el.round.textContent=b.round;
-  el.ember.textContent=b.ember;el.remains.textContent=b.remains;
-  el.heritage.innerHTML=b.heritage?`<span>${sigilInfo(b.heritage).mark}</span><small>${sigilInfo(b.heritage).name}</small>`:'<span>∅</span><small>НАСЛЕДИЕ</small>';
-  el.battleMessage.textContent=b.log?.[0]||'Камень ждёт твоего хода.';
-  renderLaneRow(el.intentRow,[0,1,2,3].map(l=>b.intent.find(i=>i.lane===l)?.unit||null),'intent');
-  renderLaneRow(el.enemyRow,b.enemy,'enemy');renderLaneRow(el.playerRow,b.player,'player');renderHand(b);
-  renderSelection();highlightTargets();
-}
-function renderLaneRow(root,units,side){
-  root.replaceChildren();units.forEach((unit,lane)=>{
-    const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.lane=lane;btn.dataset.side=side;btn.setAttribute('aria-label',unit?unit.name:`Пустая линия ${lane+1}`);
-    if(side==='intent'){
-      if(unit){const wrap=document.createElement('div');wrap.className='intent-unit';const art=document.createElement('canvas');wrap.append(art);const stat=document.createElement('b');stat.textContent=`${unit.atk}/${unit.hp}`;wrap.append(stat);btn.append(wrap);drawArt(art,unit,true);}btn.disabled=true;
-    } else if(unit){
-      const u=document.createElement('div');u.className='unit';const art=document.createElement('canvas');u.append(art);const stats=document.createElement('div');stats.className='unit-stats';stats.innerHTML=`<i>⚔${unit.atk}</i><span class="hp">♥${unit.hp}</span><span class="sig">${unit.sigils.map(s=>sigilInfo(s).mark).join('')}</span>`;u.append(stats);btn.append(u);drawArt(art,unit,false);
-    }
-    if(side==='player'&&lane===selectedUnit)btn.classList.add('selected');
-    if(side!=='intent')btn.addEventListener('click',()=>onLaneTap(side,lane,btn));root.append(btn);
+const roman=n=>['I','II','III','IV','V','VI','VII','VIII','IX'][n-1]||String(n);
+const nodeIcon=t=>({battle:'╳',boss:'♜',cache:'▣',altar:'†',hearth:'⌂',omen:'◇',item:'⌗'})[t]||'·';
+function renderRoute(){
+  if(run.result){setMode('result');return}
+  const stage=run.trail[run.depth]||[];
+  el.routeDepth.textContent=`ГЛУБИНА ${roman(run.depth+1)} / ${roman(run.maxDepth)}`;
+  el.routeTitle.textContent=stage.length===1?(stage[0].type==='boss'?`${bossInfo(stage[0].bossId)?.name||'Кто-то'} ждёт за дверью.`:'Осталась одна дверь.'):'На камне вырезаны разные пути.';
+  el.routeRelics.textContent=`${run.relics.length} знаков`;el.routeItems.textContent=`${run.items.length}/3 предметов`;el.routeChoices.replaceChildren();
+  stage.forEach(node=>{
+    const b=document.createElement('button');b.type='button';b.className='route-node';
+    const boss=node.type==='boss'?bossInfo(node.bossId):null;
+    b.innerHTML=`<b>${nodeIcon(node.type)}</b><span>${boss?.name||nodeLabel(node.type)}</span><small>${node.elite&&node.type==='battle'?'УСИЛЕННАЯ СДАЧА':node.type==='boss'?'ПРАВИЛА ИЗМЕНЯТСЯ':'ОТКРЫТЬ'}</small>`;
+    b.addEventListener('click',()=>{feedback(node.type==='boss'?'bell':'wood');const r=resolveNode(run,node);if(!r.ok){toast(r.reason);return}save();setMode(r.type==='battle'?'battle':'event')});el.routeChoices.append(b);
   });
 }
-function renderHand(b){
-  el.hand.replaceChildren();for(const card of b.hand){const cardEl=createCardElement(card,true);cardEl.tabIndex=0;cardEl.setAttribute('role','button');cardEl.setAttribute('aria-label',`${card.name}. ${card.text||''}`);if(card.instanceId===selectedCard)cardEl.classList.add('selected');const affordable=isPotentiallyAffordable(card,b);if(!affordable)cardEl.classList.add('disabled');const choose=()=>{selectedCard=selectedCard===card.instanceId?null:card.instanceId;selectedUnit=null;selectedHeritageSigil=null;feedback('card');renderBattle();};cardEl.addEventListener('click',choose);cardEl.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();choose();}});el.hand.append(cardEl);}
+
+function renderScale(){
+  const b=run.battle,val=Math.max(-BALANCE_LIMIT,Math.min(BALANCE_LIMIT,b.balance)),deg=val*4.2;
+  el.scaleBeam.style.transform=`rotate(${deg}deg)`;el.enemyWeight.textContent=val<0?Math.abs(val):0;el.playerWeight.textContent=val>0?val:0;
+  el.scaleLabel.textContent=val===0?'РАВНОВЕСИЕ':val>0?`ТВОЯ ЧАША +${val}`:`ЕГО ЧАША +${Math.abs(val)}`;
 }
-function isPotentiallyAffordable(card,b){return card.costType==='ember'?b.ember>=Math.max(0,card.cost-1):card.costType==='remains'?b.remains>=card.cost:true}
-function selectedCardObject(){return run?.battle?.hand.find(c=>c.instanceId===selectedCard)||null}
-function onLaneTap(side,lane,node){
-  const b=run.battle;const card=selectedCardObject();
-  if(card){
-    let targetLane=null,playLane=null;
-    if(card.type==='creature'&&side==='player')playLane=lane;
-    else if(card.type==='rite'){
-      if(['bark','needle','molt'].includes(card.rite)&&side==='player')targetLane=lane;
-      else if(card.rite==='salt'&&side==='enemy')targetLane=lane;
-      else if(['milk','whisper'].includes(card.rite))targetLane=0;
-      else {invalid(node,'Эта карта смотрит не туда.');return;}
-    } else {invalid(node,'Зверей ставят на нижнюю линию.');return;}
-    const r=playCard(run,b,card.instanceId,playLane,targetLane);if(!r.ok){invalid(node,r.reason);return;}
-    selectedCard=null;feedback(card.type==='rite'?'hit':'play');persist();renderBattle();checkBattleState();return;
+function renderBattle(){
+  const b=run.battle;if(!b){setMode(run.pending?'event':'route');return}
+  renderScale();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
+  renderIntent(b);renderRows(b);renderHand(b);renderItems(b);renderSelection(b);
+}
+function renderIntent(b){
+  el.intent.replaceChildren();
+  for(let lane=0;lane<4;lane++){
+    const p=b.intent.find(x=>x.lane===lane),n=document.createElement('div');n.className='intent-card'+(p?'':' empty');
+    if(p){n.innerHTML=artSvg(p.unit,true)+`<b>${p.unit.atk}/${p.unit.hp}</b>`}el.intent.append(n);
   }
-  if(side==='player'&&b.player[lane]){selectedUnit=selectedUnit===lane?null:lane;const unit=b.player[lane];selectedHeritageSigil=unit?.sigils?.[0]||null;feedback('tap');renderBattle();}
 }
-function invalid(node,msg){node?.classList.add('invalid');setTimeout(()=>node?.classList.remove('invalid'),350);feedback('bad');showToast(msg||'Не получится.')}
+function renderRows(b){
+  renderRow(el.enemy,b.enemy,'enemy',b);renderRow(el.player,b.player,'player',b);
+}
+function renderRow(root,units,side,b){
+  root.replaceChildren();for(let lane=0;lane<4;lane++){
+    const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.side=side;btn.dataset.lane=lane;
+    if(lane===b.lockedLane)btn.classList.add('locked');const u=units[lane];
+    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
+    btn.addEventListener('click',()=>laneTap(side,lane,btn));root.append(btn);
+  }
+}
+function cardAffordable(card,b){
+  if(card.costType==='remains')return b.remains>=card.cost;
+  if(card.costType==='ember')return b.ember>=Math.max(0,card.cost-(run.relics.includes('moth-lantern')&&!b.firstDiscountUsed?1:0));
+  return true;
+}
+function renderHand(b){
+  el.hand.replaceChildren();
+  b.hand.forEach(card=>{
+    const n=createCard(card,true);if(card.instanceId===selectedCard)n.classList.add('selected');if(!cardAffordable(card,b))n.classList.add('disabled');
+    attachCardInput(n,card,()=>selectHandCard(card));el.hand.append(n);
+  });
+}
+function attachCardInput(node,card,onTap){
+  let timer=0,long=false;
+  node.addEventListener('pointerdown',()=>{long=false;timer=setTimeout(()=>{long=true;openFocus(card);feedback('paper')},420)});
+  const cancel=()=>clearTimeout(timer);node.addEventListener('pointerup',cancel);node.addEventListener('pointercancel',cancel);node.addEventListener('pointerleave',cancel);
+  node.addEventListener('click',e=>{if(long){e.preventDefault();long=false;return}onTap?.()});
+  node.addEventListener('contextmenu',e=>{e.preventDefault();openFocus(card)});
+}
+function selectHandCard(card){
+  const b=run.battle;
+  if(card.type==='rite'&&['milk','whisper','lash'].includes(card.rite)){
+    const r=playCard(run,b,card.instanceId,null,0);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(card.rite==='lash'?'impact':'paper');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Первая печать сломана. Вторая будет хуже.')}return;
+  }
+  selectedCard=selectedCard===card.instanceId?null:card.instanceId;selectedUnit=null;selectedItem=null;heritageChoice=null;feedback('card');renderBattle();highlightTargets();
+}
+function selectedCardObj(){return run?.battle?.hand.find(c=>c.instanceId===selectedCard)||null}
 function highlightTargets(){
-  $$('.lane').forEach(n=>n.classList.remove('valid-target'));const card=selectedCardObject();if(!card)return;
-  if(card.type==='creature'){$$('#playerRow .lane').forEach((n,i)=>{if(!run.battle.player[i])n.classList.add('valid-target')});return;}
-  if(['bark','needle','molt'].includes(card.rite)){$$('#playerRow .lane').forEach((n,i)=>{if(run.battle.player[i])n.classList.add('valid-target')});}
-  if(card.rite==='salt'){$$('#enemyRow .lane').forEach((n,i)=>{if(run.battle.enemy[i])n.classList.add('valid-target')});}
+  $$('.lane').forEach(n=>n.classList.remove('valid'));const b=run?.battle,c=selectedCardObj();if(!b)return;
+  if(selectedItem==='knife'){$$('#playerRow .lane').forEach((n,i)=>{if(b.player[i])n.classList.add('valid')});return}
+  if(!c)return;
+  if(c.type==='creature')$$('#playerRow .lane').forEach((n,i)=>{if(!b.player[i]&&i!==b.lockedLane)n.classList.add('valid')});
+  if(['bark','needle','molt','nails'].includes(c.rite))$$('#playerRow .lane').forEach((n,i)=>{if(b.player[i])n.classList.add('valid')});
+  if(c.rite==='salt')$$('#enemyRow .lane').forEach((n,i)=>{if(b.enemy[i])n.classList.add('valid')});
 }
-function renderSelection(){
-  const b=run.battle;const unit=selectedUnit!=null?b.player[selectedUnit]:null;el.selectionStrip.hidden=!unit;
-  if(!unit)return;el.selectionTitle.textContent=unit.name;
-  if(unit.sigils.length){if(!selectedHeritageSigil||!unit.sigils.includes(selectedHeritageSigil))selectedHeritageSigil=unit.sigils[0];const s=sigilInfo(selectedHeritageSigil);el.selectionText.textContent=`Наследие: ${s.mark} ${s.name}${unit.sigils.length>1?' · нажми сменить':''}`;el.selectionText.style.cursor=unit.sigils.length>1?'pointer':'default';}
-  else{selectedHeritageSigil=null;el.selectionText.textContent='Без метки: останутся только Останки.'}
-  el.sacrifice.disabled=b.sacrificedThisTurn;
-  el.sacrifice.textContent=b.sacrificedThisTurn?'РИТУАЛ УЖЕ БЫЛ':'ПРИНЕСТИ В ЖЕРТВУ';
+function laneTap(side,lane,node){
+  const b=run.battle;
+  if(selectedItem==='knife'){
+    if(side!=='player'||!b.player[lane]){bad(node,'Нож требует твою карту.');return}
+    const r=useItem(run,b,'knife',lane);selectedItem=null;selectedUnit=null;feedback('knife');save();renderBattle();if(r.ended)resolveBattleEnd(r);return;
+  }
+  const card=selectedCardObj();
+  if(card){
+    let playLane=null,target=null;
+    if(card.type==='creature'&&side==='player')playLane=lane;
+    else if(['bark','needle','molt','nails'].includes(card.rite)&&side==='player')target=lane;
+    else if(card.rite==='salt'&&side==='enemy')target=lane;
+    else{bad(node,'Эта карта требует другую цель.');return}
+    const r=playCard(run,b,card.instanceId,playLane,target);if(!r.ok){bad(node,r.reason);return}
+    feedback(card.type==='creature'?'wood':'impact');contextualTalk(card.mutationLevel?'mutation':'play');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase)talk('Первая печать сломана. Он не закончил.');return;
+  }
+  if(side==='player'&&b.player[lane]){
+    selectedUnit=selectedUnit===lane?null:lane;heritageChoice=selectedUnit!==null?b.player[lane].sigils[0]||null:null;feedback('bone');renderBattle();
+  }
 }
-function cycleHeritage(){const b=run?.battle,unit=selectedUnit!=null?b?.player[selectedUnit]:null;if(!unit||unit.sigils.length<2)return;const i=Math.max(0,unit.sigils.indexOf(selectedHeritageSigil));selectedHeritageSigil=unit.sigils[(i+1)%unit.sigils.length];feedback('tap');renderSelection();}
-function doSacrifice(){const b=run.battle;if(selectedUnit==null)return;const r=sacrificeUnit(run,b,selectedUnit,selectedHeritageSigil);if(!r.ok){showToast(r.reason);feedback('bad');return;}selectedUnit=null;selectedHeritageSigil=null;feedback('death');persist();renderBattle();checkBattleState()}
-function doEndTurn(){const b=run?.battle;if(!b)return;selectedCard=null;selectedUnit=null;const prevEnemy=b.enemyHp,prevPlayer=b.playerHp;const r=endTurn(run,b);feedback(r.ended?(r.winner==='player'?'win':'death'):'turn');if(b.enemyHp<prevEnemy||b.playerHp<prevPlayer)haptic(12);persist();renderBattle();checkBattleState();}
-function checkBattleState(){const b=run?.battle;if(!b?.ended)return;if(b.winner==='player'){setTimeout(()=>{afterBattleVictory(run);persist();if(run.result==='won')showScreen('result');else showScreen('event');},280);}else{setTimeout(()=>showScreen('result'),280);}}
+function bad(node,msg){node?.classList.add('invalid');setTimeout(()=>node?.classList.remove('invalid'),260);toast(msg||'Нельзя.');feedback('warning')}
+function renderSelection(b){
+  const u=selectedUnit!==null?b.player[selectedUnit]:null;el.sacrifice.hidden=!u||b.sacrificedThisTurn;el.heritage.hidden=!u||!u.sigils.length;
+  if(u?.sigils.length){if(!heritageChoice||!u.sigils.includes(heritageChoice))heritageChoice=u.sigils[0];const s=sigilInfo(heritageChoice);el.heritage.querySelector('span').textContent=s.mark;el.heritage.querySelector('small').textContent=s.name.toUpperCase();el.heritage.setAttribute('role','button');el.heritage.tabIndex=0}
+}
+function cycleHeritage(){
+  const u=selectedUnit!==null?run?.battle?.player[selectedUnit]:null;if(!u||u.sigils.length<2)return;const i=Math.max(0,u.sigils.indexOf(heritageChoice));heritageChoice=u.sigils[(i+1)%u.sigils.length];feedback('bone');renderSelection(run.battle);
+}
+function doSacrifice(){
+  if(selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
+  selectedUnit=null;heritageChoice=null;feedback('knife');contextualTalk('sacrifice');save();renderBattle();
+}
+function renderItems(b){
+  el.items.replaceChildren();run.items.slice(0,3).forEach(id=>{
+    const item=itemInfo(id);if(!item)return;const btn=document.createElement('button');btn.type='button';btn.className='item'+(selectedItem===id?' selected':'');btn.innerHTML=`<b>${item.mark}</b><small>${item.name}</small>`;
+    btn.addEventListener('click',()=>{
+      if(item.target==='player'){selectedItem=selectedItem===id?null:id;selectedCard=null;feedback('bone');renderBattle();highlightTargets();return}
+      const r=useItem(run,b,id,null);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(id==='bell'?'bell':id==='teeth'?'bone':'paper');selectedItem=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);
+    });el.items.append(btn);
+  });
+}
+function doEndTurn(){
+  const b=run?.battle;if(!b)return;selectedCard=null;selectedItem=null;selectedUnit=null;const before=b.balance,r=endTurn(run,b);feedback('bell');
+  if(b.balance!==before){feedback('impact');contextualTalk(b.balance>before?'damage':'hurt')}save();renderBattle();
+  if(r.ended)resolveBattleEnd(r);else if(r.phase){talk(`${bossInfo(b.bossId)?.name||'Он'} перевернул вторую маску.`);feedback('warning')}
+}
+function resolveBattleEnd(r){
+  if(r.winner==='player'){
+    talk('Хватит. Забирай то, что осталось.');setTimeout(()=>{afterBattleVictory(run);save();setMode(run.result?'result':'event')},430);
+  }else{
+    feedback('loss');talk('Весы решили.');setTimeout(()=>setMode('result'),430);
+  }
+}
 
 function renderEvent(){
-  const p=run?.pending;if(!p){showScreen(run?.result?'result':'trail');return;}
-  if(p.type==='battle'){showScreen('battle');return;}if(p.type==='run-win'){showScreen('result');return;}
-  el.eventChoices.replaceChildren();el.eventSkip.hidden=true;el.eventKicker.textContent=({ 'card-choice':'ДОБЫЧА','relic-choice':'ЗНАК','hearth':'КОСТЁР','altar':'АЛТАРЬ'})[p.type]||'СЛЕД';el.eventTitle.textContent=p.title||'Камень что-то оставил';
-  if(p.type==='card-choice'){el.eventHint.textContent='Возьми одну карту. Или не бери — толстая колода тоже умеет убивать.';for(const card of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';wrap.append(createCardElement(card,false));const b=document.createElement('button');b.className='choice-action';b.textContent='ВЗЯТЬ В КОЛОДУ';b.addEventListener('click',()=>{chooseCardReward(run,card.instanceId);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}el.eventSkip.hidden=false;}
-  if(p.type==='relic-choice'){el.eventHint.textContent='Один Знак останется до конца забега.';for(const relic of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='relic-choice';b.innerHTML=`<small>ЗНАК МОРОКА</small><b>${relic.name}</b><span>${relic.text}</span>`;b.addEventListener('click',()=>{chooseRelic(run,relic.id);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}}
+  const p=run.pending;if(!p){setMode(run.result?'result':'route');return}
+  if(p.type==='battle'){setMode('battle');return}
+  if(p.type==='run-win'){run.result='won';save();setMode('result');return}
+  el.eventChoices.replaceChildren();el.eventSkip.hidden=true;
+  const meta={
+    'card-choice':['КАРТЫ','Выбери ту, которую готов испортить.','Остальные уйдут обратно под стол.'],
+    'relic-choice':['ЗНАК','Один знак останется до конца сдачи.','Он меняет правило, а не цифру.'],
+    'item-choice':['ШКАФ','Возьми предмет.','В руке помещается только три.'],
+    hearth:['ЖАРОВНЯ','Оставь новый шрам.','Второй шрам мутирует карту.'],
+    altar:['АЛТАРЬ','Одна карта отдаст метку другой.','Жертва исчезнет навсегда.']
+  }[p.type]||['НА СТОЛЕ',p.title||'Что-то лежит перед тобой.',''];
+  el.eventKicker.textContent=meta[0];el.eventTitle.textContent=p.title||meta[1];el.eventHint.textContent=meta[2]||meta[1];
+  if(p.type==='card-choice')renderCardReward(p);
+  if(p.type==='relic-choice')renderRelicReward(p);
+  if(p.type==='item-choice')renderItemReward(p);
   if(p.type==='hearth')renderHearth(p);
   if(p.type==='altar')renderAltar(p);
 }
-function renderHearth(p){
-  el.eventHint.textContent='Выбери зверя. Костёр залатает тебя на 4 сердца и оставит на карте постоянный шрам.';
-  for(const card of run.deck.filter(c=>c.type==='creature')){const wrap=document.createElement('div');wrap.className='choice-wrap';const choice=document.createElement('button');choice.className='deck-choice';choice.innerHTML=`<small>${card.upgrades?'ШРАМОВ: '+card.upgrades:'БЕЗ ШРАМОВ'}</small><b>${card.name}</b><span>⚔ ${card.atk} · ♥ ${card.hp} · ${card.sigils.map(s=>sigilInfo(s).name).join(' / ')||'без меток'}</span>`;choice.addEventListener('click',()=>showUpgradeChoice(card));wrap.append(choice);el.eventChoices.append(wrap);}
+function choiceWrap(){const w=document.createElement('div');w.className='event-choice';return w}
+function renderCardReward(p){
+  p.choices.forEach(card=>{const w=choiceWrap(),c=createCard(card,false),b=document.createElement('button');b.type='button';b.className='choice-button';b.textContent='ВЗЯТЬ';attachCardInput(c,card,()=>{chooseCardReward(run,card.instanceId);feedback('reward');save();setMode('route')});b.addEventListener('click',()=>{chooseCardReward(run,card.instanceId);feedback('reward');save();setMode('route')});w.append(c,b);el.eventChoices.append(w)});el.eventSkip.hidden=false;
 }
-function showUpgradeChoice(card){el.eventTitle.textContent=card.name;el.eventHint.textContent='Какой шрам оставить?';el.eventChoices.replaceChildren();for(const option of [{mode:'fang',name:'Клык',text:'+1 атака навсегда.'},{mode:'hide',name:'Шкура',text:'+2 здоровья навсегда.'}]){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='relic-choice';b.innerHTML=`<small>КОСТЁР</small><b>${option.name}</b><span>${option.text}</span>`;b.addEventListener('click',()=>{hearthUpgrade(run,card.instanceId,option.mode);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}}
+function renderRelicReward(p){
+  p.choices.forEach(raw=>{const r=typeof raw==='string'?RELICS.find(x=>x.id===raw):raw;if(!r)return;const w=choiceWrap(),o=document.createElement('div'),b=document.createElement('button');o.className='choice-object';o.innerHTML=`<span class="big-mark">◇</span><b>${r.name}</b><p>${r.text}</p>`;b.className='choice-button';b.textContent='ВЗЯТЬ ЗНАК';b.addEventListener('click',()=>{chooseRelic(run,r.id);feedback('reward');save();setMode(run.result?'result':'route')});w.append(o,b);el.eventChoices.append(w)})
+}
+function renderItemReward(p){
+  p.choices.forEach(raw=>{const item=typeof raw==='string'?itemInfo(raw):raw;if(!item)return;const w=choiceWrap(),o=document.createElement('div'),b=document.createElement('button');o.className='choice-object';o.innerHTML=`<span class="big-mark">${item.mark}</span><b>${item.name}</b><p>${item.text}</p>`;b.className='choice-button';b.textContent=run.items.length>=3?'ЗАМЕНИТЬ СТАРЫЙ':'ВЗЯТЬ';b.addEventListener('click',()=>{chooseItem(run,item.id);feedback('bone');save();setMode('route')});w.append(o,b);el.eventChoices.append(w)})
+}
+function renderHearth(){
+  if(eventStage?.type==='upgrade'){renderUpgradeModes(eventStage.card);return}
+  run.deck.filter(c=>c.type==='creature').forEach(card=>{const w=choiceWrap(),c=createCard(card,false),b=document.createElement('button');b.type='button';b.className='choice-button';b.textContent=card.upgrades?'ЕЩЁ ОДИН ШРАМ':'ОСТАВИТЬ ШРАМ';b.addEventListener('click',()=>{eventStage={type:'upgrade',card};renderEvent()});attachCardInput(c,card,()=>{eventStage={type:'upgrade',card};renderEvent()});w.append(c,b);el.eventChoices.append(w)})
+}
+function renderUpgradeModes(card){
+  el.eventTitle.textContent=card.name;el.eventHint.textContent=card.upgrades>=1?'Второй шрам вызовет мутацию. Выбери, что усилить.':'Клык усиливает атаку. Кожа — живучесть.';
+  [['fang','КЛЫК','+1 атака'],['hide','КОЖА','+2 здоровья']].forEach(([mode,name,text])=>{const w=choiceWrap(),o=document.createElement('div'),b=document.createElement('button');o.className='choice-object';o.innerHTML=`<span class="big-mark">${mode==='fang'?'⌁':'□'}</span><b>${name}</b><p>${text}${card.upgrades>=1?' · + случайная метка':''}</p>`;b.className='choice-button';b.textContent='ПРИЖЕЧЬ';b.addEventListener('click',()=>{hearthUpgrade(run,card.instanceId,mode);feedback('knife');if(card.mutationLevel)contextualTalk('mutation');save();setMode('route')});w.append(o,b);el.eventChoices.append(w)})
+}
 function renderAltar(p){
   const donor=p.donor?run.deck.find(c=>c.instanceId===p.donor):null;
-  el.eventHint.textContent=donor?`Теперь выбери, кто заберёт метку «${sigilInfo(donor.sigils[0]).name}». ${donor.name} исчезнет из колоды.`:'Выбери жертву. Её первая метка перейдёт другому зверю навсегда, сама карта исчезнет.';
-  const cards=run.deck.filter(c=>c.type==='creature'&&(!donor||c.instanceId!==donor.instanceId));
-  for(const card of cards){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='deck-choice';b.innerHTML=`<small>${donor?'ПРИНЯТЬ НАСЛЕДИЕ':'ЖЕРТВА'}</small><b>${card.name}</b><span>${card.sigils.map(s=>`${sigilInfo(s).mark} ${sigilInfo(s).name}`).join(' · ')||'Нет меток'}</span>`;b.addEventListener('click',()=>{const r=altarSelect(run,card.instanceId);if(!r.ok){showToast(r.reason||'Алтарь молчит.');feedback('bad');return;}feedback(donor?'reward':'death');persist();if(r.stage==='receiver')renderEvent();else showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}
+  el.eventHint.textContent=donor?`${donor.name} отдаст «${sigilInfo(donor.sigils[0]).name}». Выбери получателя.`:'Первая метка выбранной карты станет чужой. Сама карта исчезнет.';
+  run.deck.filter(c=>c.type==='creature'&&(!donor||c.instanceId!==donor.instanceId)).forEach(card=>{const w=choiceWrap(),c=createCard(card,false),b=document.createElement('button');b.type='button';b.className='choice-button';b.textContent=donor?'ПРИНЯТЬ МЕТКУ':'ОТДАТЬ КАРТУ';const act=()=>{const r=altarSelect(run,card.instanceId);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(donor?'reward':'knife');save();if(r.stage==='receiver')renderEvent();else setMode('route')};b.addEventListener('click',act);attachCardInput(c,card,act);w.append(c,b);el.eventChoices.append(w)})
 }
 
 function renderResult(){
-  if(!run)return;finishProfileIfNeeded();
-  const won=run.result==='won';el.resultRune.textContent=won?'◉':'†';el.resultKicker.textContent=won?'ПЕЧАТЬ СЛОМАНА':'МОРОК СОМКНУЛСЯ';el.resultTitle.textContent=won?'Ты открыл последнюю дверь':'Забег окончен';el.resultText.textContent=won?'Хозяин исчез, но карты всё ещё шевелятся в руке. В следующем забеге залы соберутся иначе.':'Колода закончилась раньше, чем коридоры. Следующий маршрут уже будет другим.';el.resultDepth.textContent=Math.min(run.depth+1,run.maxDepth);el.resultKills.textContent=run.stats.kills;el.resultSacrifices.textContent=run.stats.sacrifices;
-  if(renderedResultFor!==run.seed){renderedResultFor=run.seed;feedback(won?'win':'death');}
+  finishProfile();const won=run.result==='won';el.resultKicker.textContent=won?'ПОСЛЕДНЯЯ ПЕЧАТЬ СЛОМАНА':'ВЕСЫ ОПУСТИЛИСЬ';el.resultTitle.textContent=won?'Ты пережил стол.':'Сдача окончена.';
+  el.resultText.textContent=won?'Приор убрал маску, но под ней ничего не было. Следующая сдача соберёт другие двери, предметы и мутации.':'Колода останется в памяти стола. Следующая сдача начнётся чистой, но ты уже знаешь, где правила можно сломать.';
+  el.resultDepth.textContent=Math.min(run.depth+1,run.maxDepth);el.resultKills.textContent=run.stats.kills;el.resultSacrifices.textContent=run.stats.sacrifices;
 }
 
-function createCardElement(card,compact=false){
-  const root=document.createElement('article');root.className=`card ${card.type==='rite'?'rite':''} ${card.rarity==='rare'?'rare':''} ${compact?'compact':''}`;root.dataset.card=card.instanceId||card.id;
-  const resource=card.costType==='remains'?'●':'✦';root.innerHTML=`<div class="card-head"><span class="cost">${resource}${card.cost}</span><span class="card-name"></span></div><canvas class="art"></canvas><div class="card-text"></div><div class="card-foot"><span>${card.type==='creature'?`⚔${card.atk} · ♥${card.hp}`:'РИТУАЛ'}</span><span class="sigils">${card.sigils?.map(s=>sigilInfo(s).mark).join('')||'·'}</span></div>`;
-  $('.card-name',root).textContent=card.name;$('.card-text',root).textContent=card.text||card.sigils?.map(s=>sigilInfo(s).text).join(' ');drawArt($('.art',root),card,false);return root;
+function createCard(card,interactive=false){
+  const n=document.createElement(interactive?'button':'article');if(interactive)n.type='button';
+  n.className=`game-card ${card.type==='rite'?'rite ':''}${card.rarity==='rare'?'rare ':''}${card.mutationLevel?'mutated ':''}`;n.dataset.card=card.instanceId||card.id;
+  const resource=card.costType==='remains'?'●':'✦';
+  n.innerHTML=`<div class="card-head"><span class="card-cost">${resource}${card.cost}</span><span class="card-name"></span></div><div class="card-art">${artSvg(card,false)}</div><div class="card-desc"></div><div class="card-foot"><b>${card.type==='creature'?`⚔${card.atk} · ♥${card.hp}`:'РИТУАЛ'}</b><i>${card.sigils?.map(s=>sigilInfo(s).mark).join('')||'·'}</i></div>${card.mutationLevel?'<span class="card-mark">✕</span>':''}`;
+  $('.card-name',n).textContent=card.name;$('.card-desc',n).textContent=card.text||card.sigils?.map(s=>sigilInfo(s).text).join(' ')||'';return n;
 }
-function renderDeckSheet(){
-  if(!run)return;el.deckList.replaceChildren();el.relicList.replaceChildren();
-  if(!run.relics.length){const e=document.createElement('div');e.className='relic-chip';e.innerHTML='<b>Знаков пока нет</b><p>Они меняют правила всего забега.</p>';el.relicList.append(e);}else for(const id of run.relics){const r=RELICS.find(x=>x.id===id);if(!r)continue;const d=document.createElement('div');d.className='relic-chip';d.innerHTML=`<b>${r.name}</b><p>${r.text}</p>`;el.relicList.append(d);}
-  for(const card of run.deck)el.deckList.append(createCardElement(card,true));
+function openFocus(card){
+  el.focusCard.replaceChildren(createCard(card,false));el.focusName.textContent=card.name;el.focusText.textContent=card.text||'';
+  el.focusSigils.replaceChildren();(card.sigils||[]).forEach(id=>{const s=sigilInfo(id),x=document.createElement('span');x.className='sigil-pill';x.textContent=`${s.mark} ${s.name} — ${s.text}`;el.focusSigils.append(x)});el.focus.hidden=false;
 }
+function artSvg(card,enemy=false){
+  const id=String(card.portrait||card.id).replace('enemy-',''),f=card.faction||'enemy';
+  const pal={beast:['#1a1712','#76543a','#c59a63'],carrion:['#171512','#5f5042','#b49b78'],fungal:['#151812','#58604a','#b99b60'],spirit:['#151918','#6c7c75','#c4bda8'],enemy:['#171210','#704032','#bb7655'],rite:['#1a100d','#703526','#c78951']}[f]||['#171210','#704032','#bb7655'];
+  let archetype='beast';
+  if(/crow|owl|nightjar|bird/.test(id))archetype='bird';else if(/moth/.test(id))archetype='moth';else if(/adder|leech/.test(id))archetype='serpent';else if(/mushroom|weaver|choir|toad/.test(id))archetype='fungus';else if(/stag|doe|moose|ram|ox/.test(id))archetype='horned';else if(/hare|rat/.test(id))archetype='small';else if(/widow|king/.test(id))archetype='figure';
+  const h=hashString(id),dots=Array.from({length:12},(_,i)=>`<rect x="${4+((h+i*17)%70)}" y="${4+((h*3+i*11)%40)}" width="${i%3?1:2}" height="1" fill="${pal[2]}" opacity=".2"/>`).join('');
+  const ground=`<path d="M0 42 L80 42 L80 52 L0 52Z" fill="#0e0c09"/><path d="M0 42 L15 39 L28 43 L44 38 L61 42 L80 39 L80 52 L0 52Z" fill="#252019"/>`;
+  let body='';
+  if(card.type==='rite')body=riteArt(id,pal);
+  else if(archetype==='bird')body=`<polygon points="19,30 31,19 47,21 55,27 46,34 31,35" fill="${pal[1]}"/><polygon points="23,28 8,22 18,37 34,33" fill="${pal[2]}"/><rect x="48" y="19" width="10" height="9" fill="${pal[1]}"/><polygon points="58,22 68,25 58,28" fill="${pal[2]}"/><rect x="52" y="21" width="2" height="2" fill="#d59054"/><rect x="32" y="34" width="2" height="8" fill="${pal[2]}"/><rect x="43" y="33" width="2" height="9" fill="${pal[2]}"/>`;
+  else if(archetype==='moth')body=`<rect x="38" y="13" width="4" height="27" fill="${pal[2]}"/><polygon points="38,18 17,9 8,16 16,34 38,29" fill="${pal[1]}"/><polygon points="42,18 63,9 72,16 64,34 42,29" fill="${pal[1]}"/><polygon points="34,21 17,14 18,27 35,27" fill="${pal[2]}"/><polygon points="46,21 63,14 62,27 45,27" fill="${pal[2]}"/><rect x="36" y="8" width="2" height="7" fill="${pal[2]}"/><rect x="42" y="8" width="2" height="7" fill="${pal[2]}"/>`;
+  else if(archetype==='serpent')body=`<path d="M9 33 C19 16,31 42,43 25 S62 17,70 24" fill="none" stroke="${pal[1]}" stroke-width="7"/><path d="M9 33 C19 16,31 42,43 25 S62 17,70 24" fill="none" stroke="${pal[2]}" stroke-width="2"/><polygon points="67,19 76,24 68,30 62,25" fill="${pal[1]}"/><rect x="70" y="22" width="2" height="2" fill="#d59054"/>`;
+  else if(archetype==='fungus')body=`<rect x="21" y="26" width="7" height="16" fill="${pal[2]}"/><polygon points="10,27 18,15 31,14 39,26" fill="${pal[1]}"/><rect x="46" y="23" width="6" height="19" fill="${pal[2]}"/><polygon points="36,24 44,12 56,12 65,24" fill="${pal[1]}"/><rect x="27" y="18" width="4" height="2" fill="${pal[2]}"/><rect x="51" y="16" width="3" height="2" fill="${pal[2]}"/>`;
+  else if(archetype==='horned')body=`<polygon points="18,28 24,19 52,20 61,27 55,35 24,35" fill="${pal[1]}"/><polygon points="54,19 66,17 72,24 63,30 53,26" fill="${pal[1]}"/><rect x="27" y="34" width="5" height="10" fill="${pal[1]}"/><rect x="48" y="34" width="5" height="10" fill="${pal[1]}"/><path d="M61 18 L58 9 L52 5 M64 18 L70 10 L74 8" stroke="${pal[2]}" stroke-width="3" fill="none"/><rect x="66" y="21" width="2" height="2" fill="#d59054"/>`;
+  else if(archetype==='small')body=`<polygon points="24,30 30,22 47,23 54,29 48,36 30,36" fill="${pal[1]}"/><polygon points="47,23 52,9 56,10 54,25" fill="${pal[2]}"/><polygon points="42,23 44,11 48,10 48,24" fill="${pal[2]}"/><rect x="51" y="26" width="2" height="2" fill="#d59054"/><rect x="27" y="35" width="4" height="7" fill="${pal[1]}"/><rect x="44" y="35" width="4" height="7" fill="${pal[1]}"/>`;
+  else if(archetype==='figure')body=`<polygon points="34,11 46,11 50,21 47,28 55,43 25,43 33,28 30,21" fill="${pal[1]}"/><rect x="35" y="15" width="3" height="2" fill="#d59054"/><rect x="42" y="15" width="3" height="2" fill="#d59054"/><path d="M28 31 L15 38 M52 31 L66 38" stroke="${pal[2]}" stroke-width="3"/><rect x="39" y="20" width="2" height="8" fill="${pal[2]}"/>`;
+  else body=`<polygon points="14,29 22,20 51,20 61,27 55,36 24,36" fill="${pal[1]}"/><polygon points="51,20 64,18 71,25 63,31 53,28" fill="${pal[1]}"/><polygon points="62,18 64,10 68,18" fill="${pal[2]}"/><polygon points="56,19 58,11 62,19" fill="${pal[2]}"/><polygon points="17,27 7,20 12,33" fill="${pal[2]}"/><rect x="25" y="35" width="5" height="9" fill="${pal[1]}"/><rect x="48" y="35" width="5" height="9" fill="${pal[1]}"/><rect x="65" y="22" width="2" height="2" fill="#d59054"/>`;
+  return `<svg viewBox="0 0 80 52" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" aria-hidden="true"><rect width="80" height="52" fill="${pal[0]}"/>${dots}${ground}${body}${enemy?'<rect x="2" y="2" width="76" height="48" fill="none" stroke="#8b3a2b" stroke-width="2"/>':''}</svg>`;
+}
+function riteArt(id,p){
+  if(id==='salt')return`<path d="M18 32 L40 11 L62 32 L40 41Z" fill="none" stroke="${p[2]}" stroke-width="3"/><rect x="38" y="17" width="4" height="17" fill="${p[1]}"/><rect x="31" y="24" width="18" height="4" fill="${p[1]}"/>`;
+  if(id==='needle'||id==='nails')return`<path d="M18 38 L59 12" stroke="${p[2]}" stroke-width="3"/><path d="M25 42 L62 18" stroke="${p[1]}" stroke-width="2"/><rect x="52" y="9" width="10" height="4" fill="${p[2]}"/>`;
+  if(id==='milk')return`<polygon points="27,16 53,16 58,39 22,39" fill="${p[1]}"/><rect x="31" y="10" width="18" height="8" fill="${p[2]}"/><path d="M30 27 Q40 20 50 27 Q40 34 30 27" fill="#d4c4a2"/>`;
+  if(id==='molt')return`<path d="M17 35 Q24 12 40 14 Q57 13 63 35 Q48 27 40 39 Q31 27 17 35Z" fill="${p[1]}"/><path d="M40 15 L40 39" stroke="${p[2]}" stroke-width="2"/>`;
+  if(id==='whisper')return`<path d="M12 30 Q24 13 39 28 T68 24" fill="none" stroke="${p[2]}" stroke-width="3"/><path d="M18 36 Q30 22 42 34 T65 31" fill="none" stroke="${p[1]}" stroke-width="2"/>`;
+  if(id==='lash')return`<path d="M12 35 C20 7 58 8 67 32 C50 19 32 44 17 24" fill="none" stroke="${p[2]}" stroke-width="4"/>`;
+  return`<rect x="27" y="11" width="26" height="29" fill="${p[1]}"/><path d="M31 25 L49 25 M40 16 L40 35" stroke="${p[2]}" stroke-width="3"/>`;
+}
+function hashString(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return Math.abs(h)}
 
-function confirm(text,action){el.confirmText.textContent=text;confirmAction=action;el.confirm.hidden=false;feedback('bad')}
-function updatePrefs(){el.sound.querySelector('b').textContent=prefs.sound?'ВКЛ':'ВЫКЛ';el.haptic.querySelector('b').textContent=prefs.haptic?'ВКЛ':'ВЫКЛ';persist()}
-
-// Pixel art renderer ---------------------------------------------------------
-const palette={beast:['#20271f','#72533a','#c1a56f'],carrion:['#171918','#4a4038','#a79276'],fungal:['#171b16','#4b5b42','#c1a15f'],spirit:['#17201d','#6e8278','#d1cbb4'],enemy:['#171312','#61352d','#b47655'],rite:['#1c1411','#6f3528','#c88b56']};
-function drawArt(canvas,card,ghost=false){
-  const w=64,h=40;canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;const p=palette[card.faction]||palette.enemy;
-  c.fillStyle=p[0];c.fillRect(0,0,w,h);c.fillStyle='#242b24';for(let x=1;x<w;x+=7){const ht=8+((x*13)%15);c.fillRect(x,h-ht,2,ht);c.fillRect(x-2,h-ht+4,6,2)}
-  c.fillStyle=ghost?'#5d6158':'#7a6a50';c.fillRect(0,31,w,9);c.fillStyle='rgba(210,190,150,.12)';for(let y=2;y<30;y+=5)for(let x=(y%3);x<w;x+=9)c.fillRect(x,y,1,1);
-  if(card.type==='rite'){drawRite(c,card.id,p);return;}
-  const id=String(card.id).replace('enemy-','');c.fillStyle=p[1];c.strokeStyle=p[2];
-  if(['crow','owl','nightjar'].includes(id))drawBird(c,id,p);else if(['moth'].includes(id))drawMoth(c,p);else if(['mushroom','toad','weaver'].includes(id))drawFungal(c,id,p);else drawBeast(c,id,p);
-  if(ghost){c.globalCompositeOperation='source-atop';c.fillStyle='rgba(210,205,185,.25)';c.fillRect(0,0,w,h);c.globalCompositeOperation='source-over'}
+function renderLedger(){
+  if(!run)return;el.ledgerStats.textContent=`${run.deck.length} карт · ${run.relics.length} знаков · ${run.items.length} предметов`;el.relicStrip.replaceChildren();el.deckList.replaceChildren();
+  if(!run.relics.length){const d=document.createElement('div');d.className='relic-chip';d.innerHTML='<b>Пусто</b><p>Знаки появятся после ритуалов и боссов.</p>';el.relicStrip.append(d)}
+  run.relics.forEach(id=>{const r=RELICS.find(x=>x.id===id);if(!r)return;const d=document.createElement('div');d.className='relic-chip';d.innerHTML=`<b>${r.name}</b><p>${r.text}</p>`;el.relicStrip.append(d)});
+  run.deck.forEach(card=>{const c=createCard(card,false);attachCardInput(c,card,()=>openFocus(card));el.deckList.append(c)});
 }
-function px(c,x,y,w,h,color){if(color)c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
-function drawBeast(c,id,p){
-  let bx=20,by=20,bw=25,bh=10; if(id==='hare'){bx=23;bw=18;bh=8;by=22} if(id==='moose'||id==='stag'){bw=27;bh=11;by=19}
-  px(c,bx,by,bw,bh,p[1]);px(c,bx+bw-2,by-5,9,8,p[1]);px(c,bx+3,by+bh,4,8,p[1]);px(c,bx+bw-7,by+bh,4,8,p[1]);px(c,bx-7,by+2,8,3,p[1]);
-  if(['wolf','fox','hound'].includes(id)){px(c,bx+bw+1,by-9,3,5,p[2]);px(c,bx+bw+5,by-8,3,4,p[2]);px(c,bx-9,by-2,10,2,p[2]);}
-  if(id==='hare'){px(c,bx+bw+1,by-12,3,9,p[2]);px(c,bx+bw+5,by-11,2,8,p[2]);}
-  if(['stag','moose'].includes(id)){for(const s of [-1,1]){const ox=bx+bw+2+s*3;px(c,ox,by-14,2,10,p[2]);px(c,ox+(s<0?-4:2),by-13,5,2,p[2]);px(c,ox+(s<0?-5:2),by-17,2,5,p[2]);}}
-  if(id==='ram'){px(c,bx+bw+1,by-9,8,2,p[2]);px(c,bx+bw+6,by-7,2,7,p[2]);px(c,bx+bw+2,by-2,6,2,p[2]);}
-  if(id==='boar'){px(c,bx+bw+5,by,5,2,p[2]);px(c,bx+bw+7,by-2,2,2,p[2]);}
-  if(id==='adder'){c.clearRect(18,18,35,17);for(let i=0;i<7;i++)px(c,16+i*6,22+(i%2)*4,8,4,p[1]);px(c,52,20,7,6,p[2]);}
-  if(id==='doe'){px(c,bx+bw+2,by-10,2,6,p[2]);px(c,bx+bw+6,by-9,2,5,p[2]);}
-  px(c,bx+bw+4,by-3,1,1,'#d86c45');
-}
-function drawBird(c,id,p){px(c,27,17,15,13,p[1]);px(c,19,19,12,7,p[2]);px(c,40,16,9,7,p[1]);px(c,48,18,6,2,p[2]);px(c,31,29,2,5,p[2]);px(c,38,29,2,5,p[2]);if(id==='owl'){px(c,42,17,2,2,'#d0a65a');px(c,46,17,2,2,'#d0a65a')}else px(c,46,17,1,1,'#b95138')}
-function drawMoth(c,p){px(c,30,14,4,17,p[2]);px(c,13,13,17,12,p[1]);px(c,34,13,17,12,p[1]);px(c,18,17,8,5,p[2]);px(c,38,17,8,5,p[2]);px(c,30,9,1,6,p[2]);px(c,34,9,1,6,p[2]);}
-function drawFungal(c,id,p){if(id==='toad'){drawBeast(c,'hare',p);px(c,28,14,14,5,p[2]);return;}for(let i=0;i<(id==='weaver'?4:3);i++){const x=17+i*10,y=18+(i%2)*4;px(c,x,y,4,13,p[2]);px(c,x-5,y-4,14,5,p[1]);px(c,x-2,y-6,8,3,p[2]);}if(id==='weaver'){px(c,9,27,46,2,p[2]);px(c,14,24,2,8,p[2]);px(c,48,23,2,9,p[2]);}}
-function drawRite(c,id,p){c.fillStyle=p[2];if(id==='salt'){for(let i=0;i<14;i++)px(c,14+(i*11)%38,13+(i*7)%16,2,2,p[2]);}else if(id==='bark'){px(c,25,8,14,25,p[1]);for(let y=11;y<31;y+=5)px(c,28,y,8,1,p[2]);}else if(id==='needle'){px(c,31,7,2,26,p[2]);px(c,27,12,10,1,p[1]);}else if(id==='milk'){px(c,24,12,18,18,p[2]);px(c,28,8,10,6,p[1]);px(c,28,19,10,8,p[0]);}else if(id==='molt'){px(c,19,25,28,3,p[2]);px(c,27,10,10,16,p[1]);px(c,23,13,18,2,p[2]);}else{for(let i=0;i<3;i++){c.strokeStyle=p[2];c.strokeRect(18+i*6,10+i*4,28-i*12,20-i*8);}}}
+function openLedger(){if(!run)return;renderLedger();el.ledger.hidden=false;feedback('paper')}
+function openRules(){el.settings.hidden=true;el.rulesPanel.hidden=false;feedback('paper')}
 
-// Background scene ---------------------------------------------------------------
-const ctx=el.scene.getContext('2d',{alpha:false});let lastFrame=0,sceneTime=0;
-function sizeScene(){const r=el.scene.getBoundingClientRect();const ratio=Math.max(1.55,Math.min(2.25,r.height/Math.max(1,r.width)));el.scene.width=240;el.scene.height=Math.round(240*ratio);ctx.imageSmoothingEnabled=false}
-function sceneLoop(t){if(!document.hidden&&t-lastFrame>33){sceneTime=t/1000;drawScene();lastFrame=t}requestAnimationFrame(sceneLoop)}
-function drawScene(){const w=el.scene.width,h=el.scene.height;ctx.fillStyle='#090a09';ctx.fillRect(0,0,w,h);drawVault(w,h);drawBanners(w,h);drawCandles(w,h);if(current==='battle')drawStoneTable(w,h);else drawFlagstones(w,h);drawDust(w,h)}
-function drawVault(w,h){
-  ctx.fillStyle='#171915';ctx.fillRect(0,0,w,h*.7);
-  for(let y=16;y<h*.7;y+=15){const off=((y/15)|0)%2?13:0;for(let x=-off;x<w;x+=27){ctx.fillStyle=((x+y)%5)?'#22241f':'#2b2d26';ctx.fillRect(x,y,25,13);ctx.fillStyle='#11130f';ctx.fillRect(x,y+13,25,2);ctx.fillRect(x+25,y,2,15)}}
-  ctx.fillStyle='#090a08';ctx.fillRect(79,45,82,102);ctx.beginPath();ctx.arc(120,66,41,Math.PI,0);ctx.fill();
-  ctx.fillStyle='#2b2a24';ctx.fillRect(74,43,5,109);ctx.fillRect(161,43,5,109);ctx.fillRect(70,147,100,5);
-  ctx.fillStyle='#3b382e';for(let i=0;i<7;i++)ctx.fillRect(73+i*15,39+(i%2),11,3);
-}
-function drawGate(w,h){
-  const cx=Math.floor(w/2);
-  ctx.fillStyle='#0a0a08';ctx.fillRect(cx-28,91,56,87);
-  ctx.fillStyle='#3a3429';ctx.fillRect(cx-31,88,5,94);ctx.fillRect(cx+26,88,5,94);
-  ctx.fillStyle='#26231d';for(let y=98;y<174;y+=13){ctx.fillRect(cx-26,y,52,2);ctx.fillRect(cx-1,y,2,11)}
-  ctx.fillStyle='#6b2d24';ctx.fillRect(cx-2,105,4,58);ctx.fillStyle='#a84932';ctx.fillRect(cx-1,111,2,42);
-  ctx.fillStyle='#2b2821';for(let i=0;i<5;i++){ctx.fillRect(cx-35-i*4,179+i*7,70+i*8,5)}
-}
-function drawBanners(w,h){for(const x of [27,w-52]){ctx.fillStyle='#3a1816';ctx.fillRect(x,43,25,75);ctx.fillStyle='#6d3028';ctx.fillRect(x+4,46,17,66);ctx.fillStyle='#b29361';ctx.fillRect(x+11,59,3,27);ctx.fillRect(x+7,70,11,3)}}
-function drawCandles(w,h){const flick=Math.round((Math.sin(sceneTime*12)+1)*2);for(const x of [16,w-18,62,w-64]){const y=Math.round(h*.61+(x%3)*4);ctx.fillStyle='#c1aa7b';ctx.fillRect(x,y,3,12);ctx.fillStyle='#8f3d29';ctx.fillRect(x+1,y-5-flick,1,5+flick);ctx.fillStyle='#e39b55';ctx.fillRect(x,y-3-flick,3,2+flick)}}
-function drawFlagstones(w,h){ctx.fillStyle='#171713';ctx.fillRect(0,h*.69,w,h*.31);ctx.fillStyle='#28271f';for(let y=Math.floor(h*.7);y<h;y+=17)ctx.fillRect(0,y,w,1);for(let x=12;x<w;x+=28)ctx.fillRect(x,h*.69,1,h*.31);ctx.fillStyle='#3f3021';ctx.fillRect(116,h*.75,8,h*.17);ctx.fillRect(105,h*.78,30,3)}
-function drawStoneTable(w,h){ctx.fillStyle='#1e1b17';ctx.beginPath();ctx.moveTo(18,h*.56);ctx.lineTo(w-18,h*.56);ctx.lineTo(w+18,h);ctx.lineTo(-18,h);ctx.fill();ctx.fillStyle='#42382d';for(let x=19;x<w;x+=27)ctx.fillRect(x,h*.59,1,h*.34);for(let y=h*.64;y<h;y+=24)ctx.fillRect(0,y,w,1);ctx.fillStyle='#5e3328';ctx.fillRect(8,h*.555,w-16,2)}
-function drawDust(w,h){ctx.fillStyle='rgba(164,158,142,.045)';for(let i=0;i<5;i++){const x=((sceneTime*4+i*57)%(w+70))-35;const y=Math.round(h*.24+i*17+Math.sin(sceneTime*.25+i)*3);ctx.fillRect(x,y,70,3)}}
+el.continue.addEventListener('click',continueRun);el.newRun.addEventListener('click',newRun);el.again.addEventListener('click',newRun);
+el.resultHome.addEventListener('click',()=>{run=null;save();setMode('menu')});
+el.eventSkip.addEventListener('click',()=>{if(skipReward(run).ok){feedback('paper');save();setMode('route')}});
+el.endTurn.addEventListener('click',doEndTurn);el.sacrifice.addEventListener('click',doSacrifice);el.heritage.addEventListener('click',cycleHeritage);el.heritage.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cycleHeritage()}});
+el.deckBtn.addEventListener('click',openLedger);el.ledgerClose.addEventListener('click',()=>{el.ledger.hidden=true;feedback('paper')});
+el.focusClose.addEventListener('click',()=>{el.focus.hidden=true;feedback('paper')});
+el.settingsBtn.addEventListener('click',()=>{el.settings.hidden=false;feedback('wood')});el.settingsClose.addEventListener('click',()=>{el.settings.hidden=true;feedback('wood')});
+el.rules.addEventListener('click',openRules);el.rulesFromSettings.addEventListener('click',openRules);el.rulesClose.addEventListener('click',()=>{el.rulesPanel.hidden=true;feedback('paper')});
+el.sound.addEventListener('click',()=>{prefs.sound=!prefs.sound;save();audio.setEnabled(prefs.sound);if(prefs.sound)void audio.ensure().then(()=>audio.play('bell'));renderMenu()});
+el.haptic.addEventListener('click',()=>{prefs.haptic=!prefs.haptic;save();if(prefs.haptic)haptic(12);renderMenu()});
+el.abandon.addEventListener('click',()=>confirm('Бросить текущую сдачу? Колода и все мутации исчезнут.',abandon));
+el.confirmCancel.addEventListener('click',()=>{el.confirm.hidden=true;confirmAction=null});el.confirmOk.addEventListener('click',()=>{const fn=confirmAction;el.confirm.hidden=true;confirmAction=null;fn?.()});
+window.addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 
-// Events -------------------------------------------------------------------
-el.continue.addEventListener('click',()=>{void audio.ensure();continueRun()});el.newRun.addEventListener('click',()=>{void audio.ensure();const saved=readSavedRun();if(saved&&!saved.result)confirm('Начать новый забег? Текущий путь и колода исчезнут.',startNewRun);else startNewRun()});el.again.addEventListener('click',startNewRun);el.resultHome.addEventListener('click',()=>{run=null;persist();showScreen('start')});
-el.rules.addEventListener('click',()=>openSheet(el.rulesSheet));el.menuRules.addEventListener('click',()=>openSheet(el.rulesSheet));el.menu.addEventListener('click',()=>openSheet(el.menuSheet));el.deckBtn.addEventListener('click',()=>{renderDeckSheet();openSheet(el.deckSheet)});
-$$('[data-close-sheet]').forEach(b=>b.addEventListener('click',()=>{$(`#${b.dataset.closeSheet}`).hidden=true;feedback('tap')}));
-el.sound.addEventListener('click',()=>{prefs.sound=!prefs.sound;updatePrefs();if(prefs.sound)audio.tone('reward')});el.haptic.addEventListener('click',()=>{prefs.haptic=!prefs.haptic;updatePrefs();if(prefs.haptic)haptic(10)});
-el.abandon.addEventListener('click',()=>confirm('Бросить текущий забег? Колода и тропа исчезнут.',abandonRun));el.confirmCancel.addEventListener('click',()=>{el.confirm.hidden=true;confirmAction=null});el.confirmOk.addEventListener('click',()=>{const a=confirmAction;el.confirm.hidden=true;confirmAction=null;a?.()});
-el.eventSkip.addEventListener('click',()=>{if(skipReward(run).ok){feedback('tap');persist();showScreen('trail')}});el.endTurn.addEventListener('click',doEndTurn);el.sacrifice.addEventListener('click',doSacrifice);el.selectionText.addEventListener('click',cycleHeritage);
-el.back.addEventListener('click',()=>{if(current==='trail'){persist();showScreen('start')}else if(current==='battle'||current==='event')openSheet(el.menuSheet);else if(current==='result')showScreen('start')});
-window.addEventListener('resize',sizeScene);document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('pagehide',persist);
-
-function boot(){sizeScene();updatePrefs();const saved=readSavedRun();if(saved&&saved.result){run=saved;}showScreen('start');requestAnimationFrame(sceneLoop)}
-boot();
+renderMenu();setMode('menu');
