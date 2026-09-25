@@ -353,7 +353,7 @@ export class MeltCryptGame {
     const canContinue = Boolean(this.meta.run && Number(this.meta.run.hp) > 0 && Number(this.meta.run.floor) > 0);
     this.el['continue-button'].hidden = !canContinue;
     this.el['title-best'].textContent = 'BEST FLOOR ' + String(this.meta.bestFloor || 0).padStart(2, '0');
-    this.el['title-codex'].textContent = 'GRAMMAR TIER ' + this.generatorTier() + ' · ' + this.meta.codex.length + ' enemies / ' + this.meta.weaponCodex.length + ' weapons';
+    this.el['title-codex'].textContent = this.meta.codex.length + ' CREATURES STUDIED · ' + this.meta.weaponCodex.length + ' WEAPONS FOUND';
     this.updatePsyche(0.04);
     this.updateOrientation();
   }
