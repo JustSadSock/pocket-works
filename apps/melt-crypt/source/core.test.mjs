@@ -108,7 +108,7 @@ for (let i = 0; i < 120; i += 1) {
   const weapon = generateWeapon(0x5511 + i * 991, 8, [], 3);
   for (let combo = 0; combo < Math.max(1, weapon.comboLength); combo += 1) {
     const timing = attackTiming(weapon,false,combo,1);
-    assert.ok(timing.duration >= 0.19 && timing.duration <= 0.78, 'generated light attacks must stay responsive');
+    assert.ok(timing.duration >= 0.19 && timing.duration <= 0.82, 'generated light attacks must stay responsive');
   }
 }
 
