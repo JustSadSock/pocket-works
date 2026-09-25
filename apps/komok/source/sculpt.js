@@ -272,7 +272,11 @@ class SoftAudio {
   }
   async unlock() {
     if (!soundEnabled) return null;
-    if (!this.ctx) {\n      const AudioCtor = window.AudioContext || window.webkitAudioContext;\n      if (!AudioCtor) return null;\n      this.ctx = new AudioCtor();\n    }
+    if (!this.ctx) {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return null;
+      this.ctx = new AudioCtor();
+    }
     if (this.ctx.state === 'suspended') await this.ctx.resume();
     return this.ctx;
   }
