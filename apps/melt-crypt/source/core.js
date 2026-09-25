@@ -65,7 +65,8 @@ export function generateDungeon(seed, floor = 1) {
   const rooms = [];
   const occupied = new Map();
   const addRoom = (gx, gz, role = 'room') => {
-    const module = choice(rng, ROOM_MODULES);
+    const safeModules = ROOM_MODULES.filter((module) => ['none','ribs','gallery','hooks'].includes(module.obstacle));
+    const module = choice(rng, role === 'room' ? ROOM_MODULES : safeModules);
     const room = {
       id: rooms.length,
       gx, gz, role,
