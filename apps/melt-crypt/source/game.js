@@ -462,7 +462,12 @@ export class MeltCryptGame {
     this.updateRoomLabel(start);
     this.updateHud();
     this.drawMinimap();
-    this.showFloorBanner('ENTERING', 'FLOOR ' + String(this.run.floor).padStart(2, '0'), this.floorSubtitle());
+    if(this.run.floor===1&&this.run.totalKills===0){
+      this.showFloorBanner('GRAVE CLEAVER','TAP: CHAIN  ·  HOLD: HEAVY','DODGE · PARRY · read the weapon hand');
+      this.weaponBannerTimer=2.8;
+    }else{
+      this.showFloorBanner('ENTERING', 'FLOOR ' + String(this.run.floor).padStart(2, '0'), this.floorSubtitle());
+    }
     this.meta.bestFloor = Math.max(this.meta.bestFloor || 0, this.run.floor);
     this.meta.run = clone(this.run);
     this.saveMeta();
@@ -763,23 +768,24 @@ export class MeltCryptGame {
     if (!enabled) {
       this.root.style.setProperty('--psy-opacity', '0');
       this.root.style.setProperty('--game-hue', '0deg');
-      this.root.style.setProperty('--game-sat', '1.04');
+      this.root.style.setProperty('--game-sat', '.94');
+      this.root.style.setProperty('--game-contrast', '1');
       this.root.style.setProperty('--game-scale', '1');
       return;
     }
-    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.04) : 0.04;
-    const warp = this.effects.warp > 0 ? 0.12 : 0;
-    const opacity = 0.028 + mutation * 0.035 + warp;
-    const hue = Math.sin(this.elapsed * 0.31) * (1.5 + mutation * 2 + warp * 12);
+    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.035) : 0;
+    const warp = this.effects.warp > 0 ? 1 : 0;
+    const opacity = 0.014 + mutation * 0.012 + warp * 0.07;
+    const hue = warp ? Math.sin(this.elapsed * 0.72) * 5.5 : 0;
     this.root.style.setProperty('--psy-opacity', String(opacity));
-    this.root.style.setProperty('--psy-spin', String((this.elapsed * 4) % 360) + 'deg');
-    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.6) * 13) + '%');
-    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.47) * 12) + '%');
-    this.root.style.setProperty('--psy-blur', this.effects.warp > 0 ? '0.8px' : '0px');
+    this.root.style.setProperty('--psy-spin', String((this.elapsed * 2.4) % 360) + 'deg');
+    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.45) * 9) + '%');
+    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.4) * 8) + '%');
+    this.root.style.setProperty('--psy-blur', warp ? '0.55px' : '0px');
     this.root.style.setProperty('--game-hue', String(hue) + 'deg');
-    this.root.style.setProperty('--game-sat', String(1.05 + mutation * 0.08 + warp * 0.22));
-    this.root.style.setProperty('--game-contrast', String(1.06 + warp * 0.18));
-    this.root.style.setProperty('--game-scale', this.effects.warp > 0 ? String(1.002 + Math.sin(this.elapsed * 4) * 0.002) : '1');
+    this.root.style.setProperty('--game-sat', String(0.94 + mutation * 0.025 + warp * 0.08));
+    this.root.style.setProperty('--game-contrast', String(1 + warp * 0.07));
+    this.root.style.setProperty('--game-scale', warp ? String(1.001 + Math.sin(this.elapsed * 4) * 0.0015) : '1');
   }
 
   updatePlayer(dt) {
@@ -823,7 +829,7 @@ export class MeltCryptGame {
 
     this.controller.syncCamera(bob);
     this.camera.rotation.y = this.lookYaw + hitYaw + lateralBob;
-    this.camera.rotation.x = clamp(this.lookPitch + hitPitch - fx.recoil * 0.018, -1.3, 1.3);
+    this.camera.rotation.x = clamp(this.lookPitch + hitPitch - fx.recoil * 0.042, -1.3, 1.3);
     this.camera.rotation.z = fx.lean + Math.sin(this.elapsed * 41) * fx.hit * 0.008;
 
     const targetFov = 0.95 + fx.dash * 0.09 + (autoSprint ? 0.035 : 0);
@@ -1074,8 +1080,8 @@ export class MeltCryptGame {
 
     const hitDirection=enemy.visual.root.position.subtract(this.controller.position).normalize();
     this.visuals.createHitEffect(enemy.visual.root.position.add(new Vector3(0,Math.max(0.55,enemy.genome.size),0)),hitDirection,heavy?1.5:0.8,weak);
-    this.hitStop=Math.max(this.hitStop,blocked?0.018:heavy||didStagger?0.065:0.035);
-    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?0.7:0.32);
+    this.hitStop=Math.max(this.hitStop,blocked?0.014:heavy||didStagger?0.072:0.038);
+    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?1:0.48);
     this.audio.tone(blocked?'armor':'hit',weak||critical?1.08:blocked?0.9:0.82);
     navigator.vibrate?.(heavy||didStagger?[8,18,8]:4);
 
@@ -1320,6 +1326,9 @@ export class MeltCryptGame {
     enemy.tellTimer=enemy.tellDuration;
     enemy.attackFollow=0;
     enemy.animAttack={kind,progress:0};
+    if(kind==='heavy-sweep'||kind==='slam'||kind==='horn-charge')this.audio.tone('cue',0.42);
+    else if(kind==='bolt'||kind==='arc-pulse')this.audio.tone('blink',0.3);
+    else if(kind==='flurry')this.audio.tone('ready',0.3);
   }
 
   updateEnemies(dt) {
