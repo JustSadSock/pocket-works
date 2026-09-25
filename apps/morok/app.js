@@ -388,8 +388,8 @@ async function doEndTurn(){
   const b=run?.battle;if(!b||resolvingTurn)return;
   resolvingTurn=true;el.app.dataset.resolving='true';selectedCard=null;selectedItem=null;selectedUnit=null;
   const beforeSeals={...(b.seals||{player:0,enemy:0})};const r=endTurn(run,b);save();
-  await animateCombat(r.events||[],beforeSeals);
-  renderBattle();resolvingTurn=false;delete el.app.dataset.resolving;
+  try{await animateCombat(r.events||[],beforeSeals)}
+  finally{renderBattle();resolvingTurn=false;delete el.app.dataset.resolving;el.combatCaption.hidden=true;el.turnCue.hidden=true}
   if(r.ended)resolveBattleEnd(r);
   else if(r.phase)talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');
   else talk(`Ход ${b.round}. Твой ход.`)
