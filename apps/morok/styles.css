@@ -163,3 +163,5 @@ button:focus-visible,a:focus-visible{outline:2px solid #c58d53;outline-offset:2p
 @media (max-width:350px){.board{left:19%;right:19%}.intent-rack{left:22%;right:22%}.game-card{width:68px}.route-node{width:75px}.event-choice{width:84px}.event-choice .game-card{width:84px}.ledger-grid{grid-template-columns:repeat(2,1fr)}}
 @media (orientation:landscape) and (pointer:coarse){.portrait-only{display:grid}.app>*:not(.portrait-only){visibility:hidden}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+.item.selected{border-color:#b37a4c;box-shadow:0 0 0 1px #b37a4c,2px 3px 0 #0c0907}.lane.invalid{animation:shake .16s linear 2;border-color:#9a3025}.event-choices{overflow-x:auto;justify-content:flex-start;padding:0 8px 6px;scroll-snap-type:x proximity;scrollbar-width:none}.event-choices::-webkit-scrollbar{display:none}.event-choice{flex:0 0 92px;scroll-snap-align:center}@keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
