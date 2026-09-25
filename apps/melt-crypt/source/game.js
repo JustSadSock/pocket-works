@@ -1132,7 +1132,7 @@ export class MeltCryptGame {
 
     const hit=enemy.lastHit||{};
     enemy.dying=true;
-    enemy.deathKind=hit.heavy&&this.run.weapon?.core==='maul'?'slam':hit.knock>1.8?'launch':hit.critical?'spin':'normal';
+    enemy.deathKind=hit.weak&&hit.heavy?'execution':hit.heavy&&this.run.weapon?.core==='maul'?'slam':hit.knock>1.8?'launch':hit.critical?'spin':'normal';
     enemy.deathDuration=enemy.deathKind==='launch'?0.92:enemy.deathKind==='slam'?0.72:0.8;
     enemy.deathTimer=enemy.deathDuration;
     enemy.tellTimer=0;
