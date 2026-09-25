@@ -48,13 +48,13 @@
     <div class="table-edge"></div>
     <div class="scratch scratch-a"></div><div class="scratch scratch-b"></div><div class="blood-stain"></div>
 
-    <div class="scale" id="balanceScale" aria-label="Баланс боя">
-      <div class="scale-post"><i></i></div>
-      <div class="scale-beam" id="scaleBeam"><i class="chain chain-left"></i><i class="chain chain-right"></i></div>
-      <div class="scale-pan pan-left"><span id="enemyWeight">0</span></div>
-      <div class="scale-pan pan-right"><span id="playerWeight">0</span></div>
-      <small id="scaleLabel">РАВНОВЕСИЕ</small>
+    <div class="seal-plate" id="sealPlate" aria-label="Печати боя">
+      <div class="seal-side enemy-seals"><small>ПЕЧАТИ ПРОТИВНИКА</small><div id="enemySeals" class="seal-row"></div></div>
+      <div class="seal-core"><i></i><b id="sealStatus">0 / 6</b></div>
+      <div class="seal-side player-seals"><small>ТВОИ ПЕЧАТИ</small><div id="playerSeals" class="seal-row"></div></div>
     </div>
+    <div class="combat-caption" id="combatCaption" hidden><b id="combatCaptionMain"></b><span id="combatCaptionSub"></span></div>
+    <div class="turn-cue" id="turnCue" hidden><small>НОВЫЙ ХОД</small><b id="turnCueText">ХОД 2</b></div>
 
     <div class="brazier prop" id="brazier" aria-label="Уголь">
       <div class="bowl"><i></i><i></i><i></i></div>
@@ -143,7 +143,7 @@
   <section class="rules-panel" id="rulesPanel" hidden>
     <header><b>ПРАВИЛА</b><button id="rulesClose" type="button">×</button></header>
     <ol>
-      <li><b>Весы.</b><span>Прямой урон кладёт вес на твою чашу. Дойди до шести раньше противника.</span></li>
+      <li><b>Печати.</b><span>Прямой урон ломает печати противника. Разрушь все шесть раньше, чем противник разрушит твои.</span></li>
       <li><b>Жертва.</b><span>Свою карту можно разрезать раз за ход: получишь кости и унаследуешь одну её метку следующей картой.</span></li>
       <li><b>Намерения.</b><span>Маленькие карты за руками противника показывают, что появится после твоего хода.</span></li>
       <li><b>Улучшения.</b><span>Алтарь переносит метку навсегда и удаляет карту-донора. Второе улучшение у жаровни добавляет случайную метку. Предметы расходуются после применения.</span></li>
@@ -158,7 +158,7 @@
   <div class="portrait-only"><b>МОРОК ИГРАЕТСЯ ВЕРТИКАЛЬНО</b><span>Поверни телефон.</span></div>
 </main>
 
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="2.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="2.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
