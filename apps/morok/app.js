@@ -60,7 +60,7 @@ function feedback(kind='tap'){audio.tone(kind);if(kind==='hit'||kind==='death')h
 function showToast(text){clearTimeout(toastTimer);el.toast.textContent=text;el.toast.classList.add('show');toastTimer=setTimeout(()=>el.toast.classList.remove('show'),1500)}
 function showScreen(name){
   current=name;screens.forEach(s=>s.classList.remove('active'));el[name]?.classList.add('active');
-  el.location.textContent=({start:'ЗАЛ',trail:`ГЛУБИНА ${(run?.depth??0)+1}`,battle:'СХВАТКА',event:'СЛЕД',result:'КОНЕЦ'})[name]||'ЧАЩА';
+  el.location.textContent=({start:'ЗАЛ',trail:`ГЛУБИНА ${(run?.depth??0)+1}`,battle:'СХВАТКА',event:'СЛЕД',result:'КОНЕЦ'})[name]||'ЗАЛ';
   el.back.style.visibility=name==='start'?'hidden':'visible';selectedCard=null;selectedUnit=null;selectedHeritageSigil=null;
   render();
 }
@@ -184,7 +184,7 @@ function renderEvent(){
   if(p.type==='battle'){showScreen('battle');return;}if(p.type==='run-win'){showScreen('result');return;}
   el.eventChoices.replaceChildren();el.eventSkip.hidden=true;el.eventKicker.textContent=({ 'card-choice':'ДОБЫЧА','relic-choice':'ЗНАК','hearth':'КОСТЁР','altar':'АЛТАРЬ'})[p.type]||'СЛЕД';el.eventTitle.textContent=p.title||'Камень что-то оставил';
   if(p.type==='card-choice'){el.eventHint.textContent='Возьми одну карту. Или не бери — толстая колода тоже умеет убивать.';for(const card of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';wrap.append(createCardElement(card,false));const b=document.createElement('button');b.className='choice-action';b.textContent='ВЗЯТЬ В КОЛОДУ';b.addEventListener('click',()=>{chooseCardReward(run,card.instanceId);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}el.eventSkip.hidden=false;}
-  if(p.type==='relic-choice'){el.eventHint.textContent='Один Знак останется до конца забега.';for(const relic of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='relic-choice';b.innerHTML=`<small>ЗНАК ЛЕСА</small><b>${relic.name}</b><span>${relic.text}</span>`;b.addEventListener('click',()=>{chooseRelic(run,relic.id);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}}
+  if(p.type==='relic-choice'){el.eventHint.textContent='Один Знак останется до конца забега.';for(const relic of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='relic-choice';b.innerHTML=`<small>ЗНАК МОРОКА</small><b>${relic.name}</b><span>${relic.text}</span>`;b.addEventListener('click',()=>{chooseRelic(run,relic.id);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}}
   if(p.type==='hearth')renderHearth(p);
   if(p.type==='altar')renderAltar(p);
 }
@@ -197,12 +197,12 @@ function renderAltar(p){
   const donor=p.donor?run.deck.find(c=>c.instanceId===p.donor):null;
   el.eventHint.textContent=donor?`Теперь выбери, кто заберёт метку «${sigilInfo(donor.sigils[0]).name}». ${donor.name} исчезнет из колоды.`:'Выбери жертву. Её первая метка перейдёт другому зверю навсегда, сама карта исчезнет.';
   const cards=run.deck.filter(c=>c.type==='creature'&&(!donor||c.instanceId!==donor.instanceId));
-  for(const card of cards){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='deck-choice';b.innerHTML=`<small>${donor?'ПРИНЯТЬ НАСЛЕДИЕ':'ОТДАТЬ ЛЕСУ'}</small><b>${card.name}</b><span>${card.sigils.map(s=>`${sigilInfo(s).mark} ${sigilInfo(s).name}`).join(' · ')||'Нет меток'}</span>`;b.addEventListener('click',()=>{const r=altarSelect(run,card.instanceId);if(!r.ok){showToast(r.reason||'Алтарь молчит.');feedback('bad');return;}feedback(donor?'reward':'death');persist();if(r.stage==='receiver')renderEvent();else showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}
+  for(const card of cards){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='deck-choice';b.innerHTML=`<small>${donor?'ПРИНЯТЬ НАСЛЕДИЕ':'ЖЕРТВА'}</small><b>${card.name}</b><span>${card.sigils.map(s=>`${sigilInfo(s).mark} ${sigilInfo(s).name}`).join(' · ')||'Нет меток'}</span>`;b.addEventListener('click',()=>{const r=altarSelect(run,card.instanceId);if(!r.ok){showToast(r.reason||'Алтарь молчит.');feedback('bad');return;}feedback(donor?'reward':'death');persist();if(r.stage==='receiver')renderEvent();else showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}
 }
 
 function renderResult(){
   if(!run)return;finishProfileIfNeeded();
-  const won=run.result==='won';el.resultRune.textContent=won?'◉':'†';el.resultKicker.textContent=won?'ЛЕС МОРГНУЛ ПЕРВЫМ':'ЛЕС ЗАКРЫЛ ГЛАЗА';el.resultTitle.textContent=won?'Ты дошёл до сердца чащи':'Забег окончен';el.resultText.textContent=won?'Хозяин исчез, но карты всё ещё шевелятся в руке. В следующем забеге лес соберётся иначе.':'Колода закончилась позже, чем терпение леса. Следующая тропа уже будет другой.';el.resultDepth.textContent=Math.min(run.depth+1,run.maxDepth);el.resultKills.textContent=run.stats.kills;el.resultSacrifices.textContent=run.stats.sacrifices;
+  const won=run.result==='won';el.resultRune.textContent=won?'◉':'†';el.resultKicker.textContent=won?'ПЕЧАТЬ СЛОМАНА':'МОРОК СОМКНУЛСЯ';el.resultTitle.textContent=won?'Ты открыл последнюю дверь':'Забег окончен';el.resultText.textContent=won?'Хозяин исчез, но карты всё ещё шевелятся в руке. В следующем забеге залы соберутся иначе.':'Колода закончилась раньше, чем коридоры. Следующий маршрут уже будет другим.';el.resultDepth.textContent=Math.min(run.depth+1,run.maxDepth);el.resultKills.textContent=run.stats.kills;el.resultSacrifices.textContent=run.stats.sacrifices;
   if(renderedResultFor!==run.seed){renderedResultFor=run.seed;feedback(won?'win':'death');}
 }
 
