@@ -5,12 +5,12 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'КОМОК';
-const version = '1.0.0';
+const version = '1.0.1';
 const storageNamespace = 'pocket-works:komok';
 const releaseNotes = [
-  'Настоящая деформируемая 3D-глина с вытягиванием, вдавливанием и сглаживанием.',
-  'Однопальцевая лепка, вращение по фону и двухпальцевый масштаб без переключения режимов.',
-  'Матовая процедурная фактура, мягкий студийный свет, undo, автосохранение и тихий Web Audio.'
+  'Сваренная icosphere-сетка устраняет разрывы и белые треугольники при сглаживании.',
+  'Глиняная фактура больше не ломает нормали в WebKit, а портретная камера держит скульптуру целиком в кадре.',
+  'Сохранения геометрии стали значительно компактнее и устойчивее к переполнению localStorage.'
 ];
 
 const runtime = installMobileRuntime();
