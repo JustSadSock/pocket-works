@@ -20,7 +20,7 @@
 
 ```bash
 node --check apps/morok/app.js
-node --check apps/morok/game-core.mjs
+node --check apps/morok/game-core.js
 node --test apps/morok/tests/game.test.mjs
 npm run registry:check
 ```
