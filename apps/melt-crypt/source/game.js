@@ -130,6 +130,7 @@ export class MeltCryptGame {
     this.fireCooldown = 0;
     this.dashCooldown = 0;
     this.skillCooldown = 0;
+    this.skillAnim = 0;
     this.hitStop = 0;
     this.parryWindow = 0;
     this.wardTimer = 0;
@@ -387,6 +388,7 @@ export class MeltCryptGame {
     this.fireCooldown = 0;
     this.dashCooldown = 0;
     this.skillCooldown = 0;
+    this.skillAnim = 0;
     this.attackHold = 0;
     this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
     this.effects = { warp: 0, slow: 0, speed: 0, rage: 0, haste: 0 };
@@ -618,6 +620,7 @@ export class MeltCryptGame {
     this.fireCooldown = Math.max(0, this.fireCooldown - dt);
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    this.skillAnim = Math.max(0, this.skillAnim - dt);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.parryWindow = Math.max(0, this.parryWindow - dt);
     this.wardTimer = Math.max(0, this.wardTimer - dt);
@@ -776,7 +779,7 @@ export class MeltCryptGame {
     if (!this.run?.weapon) return;
     const charge = !this.attackState.active && attackHeld ? clamp(this.attackHold / 0.62, 0, 1) : 0;
     if (!this.attackState.active) {
-      this.visuals.setWeaponPose({ charge });
+      this.visuals.setWeaponPose({ charge, skill: this.skillAnim > 0 ? 1 - this.skillAnim / 0.42 : 0 });
       return;
     }
 
@@ -1280,7 +1283,7 @@ export class MeltCryptGame {
     mesh.position.copyFrom(enemy.visual.root.position.add(new Vector3(0, 1.0 * enemy.genome.size, 0)));
     const targetY = this.camera.position.y - mesh.position.y;
     const velocity = new Vector3(direction.x, targetY * 0.13, direction.z).normalize().scale(speed);
-    this.projectiles.push({ mesh, velocity, damage: enemy.genome.damage * 0.82, life: 4.2, hue: enemy.genome.accentHue });
+    this.projectiles.push({ mesh, velocity, damage: enemy.genome.damage * 0.82, life: 4.2, hue: enemy.genome.accentHue, source: enemy });
   }
 
   updateProjectiles(dt) {
@@ -1290,8 +1293,8 @@ export class MeltCryptGame {
       projectile.mesh.position.addInPlace(projectile.velocity.scale(dt));
       projectile.mesh.rotation.y += dt * 4;
       projectile.mesh.rotation.x += dt * 2.4;
-      if (Vector3.Distance(projectile.mesh.position, this.camera.position) < 0.52) {
-        this.hurtPlayer(projectile.damage);
+      if (Vector3.Distance(projectile.mesh.position, this.controller.position.add(new Vector3(0,1,0))) < 0.58) {
+        this.hurtPlayer(projectile.damage, projectile.source);
         projectile.life = 0;
       }
       if (projectile.life <= 0) {
@@ -1303,16 +1306,137 @@ export class MeltCryptGame {
     this.projectiles = this.projectiles.filter((projectile) => Boolean(projectile.mesh));
   }
 
-  hurtPlayer(amount) {
-    if (this.invulnerable > 0 || this.phase !== 'playing') return;
-    this.invulnerable = 0.38;
-    this.run.hp -= Math.max(1, amount);
-    this.damageFlash = 0.95;
-    this.cameraFx.hit = 1;
-    this.audio.tone('hurt', 1);
-    navigator.vibrate?.([12, 28, 12]);
+  hurtPlayer(amount, source = null) {
+    if (this.phase !== 'playing') return;
+
+    if (this.parryWindow > 0 && source && !source.dead) {
+      this.parryWindow = 0;
+      source.stagger += 3;
+      source.staggerTime = Math.max(source.staggerTime,0.7);
+      const away=source.visual?.root?.position.subtract(this.controller.position);
+      if(away&&away.lengthSquared()>0.001)source.knockVelocity=away.normalize().scale(3.2);
+      this.hitStop=Math.max(this.hitStop,0.055);
+      this.cameraFx.recoil=Math.max(this.cameraFx.recoil,0.55);
+      this.toast('PARRIED.');
+      this.audio.tone('hit',1.1);
+      navigator.vibrate?.([6,18,6]);
+      return;
+    }
+
+    if (this.invulnerable > 0) {
+      if ((this.justDodged || 0) > 0.04 && this.run.weapon?.traitSpec?.effect === 'dodge-haste') {
+        this.effects.haste = Math.max(this.effects.haste || 0, 3.4);
+        this.toast('PERFECT DODGE — WEAPON HASTENED.');
+      }
+      return;
+    }
+
+    this.invulnerable = 0.34;
+    const ward = this.wardTimer > 0 ? 0.36 : 1;
+    this.run.hp -= Math.max(1, amount * ward);
+    this.damageFlash = ward < 1 ? 0.36 : 0.88;
+    this.cameraFx.hit = ward < 1 ? 0.35 : 0.9;
+    this.audio.tone('hurt', ward < 1 ? 0.55 : 1);
+    navigator.vibrate?.(ward < 1 ? 7 : [12, 28, 12]);
     if (this.run.hp <= 0) this.die();
   }
+
+  useWeaponSkill() {
+    const weapon=this.run.weapon;
+    if(!weapon)return;
+    if(this.skillCooldown>0.02){
+      this.toast(weapon.skillSpec.label + ' / ' + this.skillCooldown.toFixed(1) + 's');
+      return;
+    }
+    const skill=weapon.skill;
+    this.skillCooldown=weapon.skillSpec.cooldown;
+    this.skillAnim=0.42;
+    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,0.24);
+    navigator.vibrate?.(6);
+
+    if(skill==='parry'){
+      this.parryWindow=0.42;
+      this.toast('PARRY WINDOW.');
+      this.audio.tone('dash',0.7);
+    } else if(skill==='shield'){
+      this.wardTimer=2.2;
+      this.toast('WARD: DAMAGE DAMPED.');
+      this.audio.tone('gate',0.55);
+    } else if(skill==='projectile'){
+      const target=this.applyAimAssist(weapon,false)||this.findAimTarget(9,34);
+      const start=this.camera.position.add(this.camera.getForwardRay().direction.scale(0.45));
+      let end=start.add(this.camera.getForwardRay().direction.scale(8));
+      if(target?.visual){
+        end=target.visual.root.position.add(new Vector3(0,0.8,0));
+        this.damageEnemy(target,weapon.damage*0.92*(this.run.damage||1),{stagger:0.72});
+      }
+      this.visuals.createTracer(start,end,2);
+      this.audio.tone('shot',0.9);
+    } else if(skill==='hook'){
+      const target=this.findAimTarget(5.2,42);
+      if(target?.visual){
+        const toward=this.controller.position.subtract(target.visual.root.position);toward.y=0;
+        if(toward.lengthSquared()>0.001){
+          toward.normalize();
+          target.visual.root.position.addInPlace(toward.scale(Math.min(2.2,Vector3.Distance(target.visual.root.position,this.controller.position)-0.8)));
+        }
+        this.damageEnemy(target,weapon.damage*0.52*(this.run.damage||1),{stagger:0.9,knock:0.3});
+        this.toast('HOOKED.');
+      } else this.toast('HOOK FOUND ONLY AIR.');
+    } else if(skill==='aoe'){
+      let hits=0;
+      for(const enemy of this.enemies){
+        if(enemy.dead||!enemy.visual||enemy.roomId!==this.currentRoomId)continue;
+        if(Vector3.Distance(enemy.visual.root.position,this.controller.position)<3.25){
+          this.damageEnemy(enemy,weapon.damage*0.72*(this.run.damage||1),{stagger:1.7,heavy:true,knock:1.4});
+          hits+=1;
+        }
+      }
+      this.hitStop=Math.max(this.hitStop,hits?0.055:0.02);
+      this.toast(hits?'GROUND RUPTURE.':'THE FLOOR REMAINS UNIMPRESSED.');
+    } else if(skill==='dash-cut'){
+      this.applyAimAssist(weapon,true);
+      const forward=new Vector3(Math.sin(this.lookYaw),0,Math.cos(this.lookYaw));
+      this.controller.nudge(forward,2.4);
+      this.controller.syncCamera();
+      this.performMeleeHit({heavy:false,dashAttack:true});
+      this.invulnerable=Math.max(this.invulnerable,0.16);
+      this.toast('PHASE CUT.');
+    } else if(skill==='execution'){
+      const target=this.findAimTarget(2.25,34);
+      if(target?.visual){
+        const execute=target.hp/target.maxHp<=0.38;
+        this.damageEnemy(target,weapon.damage*(execute?3.4:0.72)*(this.run.damage||1),{
+          stagger:execute?3.5:1.2,heavy:true,weak:execute,knock:1.2
+        });
+        this.toast(execute?'EXECUTION.':'NOT READY TO DIE YET.');
+      } else this.toast('NO BODY IN REACH.');
+    } else {
+      let hits=0;
+      for(const enemy of this.enemies){
+        if(enemy.dead||!enemy.visual||enemy.roomId!==this.currentRoomId)continue;
+        if(Vector3.Distance(enemy.visual.root.position,this.controller.position)<4){
+          enemy.stagger+=1.65;
+          enemy.staggerTime=Math.max(enemy.staggerTime,0.28);
+          this.visuals.createHitEffect(enemy.visual.root.position.add(new Vector3(0,0.7,0)),new Vector3(0,1,0),0.45,false);
+          hits+=1;
+        }
+      }
+      this.toast(hits?'STAGGER PULSE.':'PULSE FOUND NOTHING.');
+      this.audio.tone('blink',0.7);
+    }
+
+    if(weapon.traitSpec?.effect==='skill-echo'&&!this.contextTarget){
+      const previousCooldown=this.skillCooldown;
+      setTimeout(()=>{
+        if(this.phase!=='playing'||this.run.weapon?.signature!==weapon.signature)return;
+        this.skillCooldown=0;
+        if(skill==='projectile'||skill==='pulse'||skill==='aoe')this.useWeaponSkill();
+        this.skillCooldown=Math.max(previousCooldown*0.55,this.skillCooldown);
+      },180);
+    }
+  }
+
 
   updateContext() {
     let nearest = null;
