@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "melt-crypt",
+  "name": "MELT//CRYPT",
+  "shortName": "MELT CRYPT",
+  "description": "Психоделический first-person dungeon roguelike с процедурно мутирующими монстрами, пиксельным 3D-рендером, странным лутом, зельями и бесконечными подземельями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-25",
+  "releaseDateTime": "2026-09-25T18:29:00+03:00",
+  "changelog": [
+    "Добавлен законченный first-person roguelike-цикл: процедурные этажи, бой, зачистка комнат, выход на следующий уровень, смерть и новая попытка.",
+    "Каждый монстр получает процедурный геном внешности и поведения: архетип тела, палитру, рога, глаза, конечности, ауру, скорость, здоровье, размер и одну из нескольких способностей.",
+    "Добавлены психоделический пиксельный рендер, кислотное освещение, кристаллы, динамический туман, экранные эффекты от зелий и визуальные реакции на урон.",
+    "Добавлены реликвии, зелья, странные находки, сундуки, кодекс открытий, сохранение прогресса и полноценное мобильное/десктопное управление."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#d7ff55",
+  "backgroundColor": "#110c17",
+  "themeColor": "#17101f",
+  "orientation": "landscape",
+  "cacheName": "melt-crypt-v1.0.0",
+  "storageNamespace": "pocket-works:melt-crypt",
+  "tags": ["game","3D","Babylon.js","roguelike","dungeon","first-person","procedural","pixel","psychedelic","mobile","offline","landscape"],
+  "order": 18
+}
