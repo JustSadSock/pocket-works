@@ -919,7 +919,7 @@ export class MeltCryptGame {
     const { critical=false, stagger=0, heavy=false, weak=false, blocked=false, knock=0 }=options;
     enemy.hp -= Math.max(0.1, amount);
     enemy.stagger += stagger;
-    const staggerResist=(enemy.genome.defenseSpec?.staggerResist||0)+(enemy.genome.mutationSpec?.staggerResist||0);
+    const staggerResist=(enemy.genome.defenseSpec?.staggerResist||0)+(enemy.genome.mutationSpec?.staggerResist||0)+(enemy.genome.headSpec?.staggerResist||0);
     const threshold=2.15+staggerResist*2.2;
     const didStagger=enemy.stagger>=threshold;
 
@@ -1207,7 +1207,8 @@ export class MeltCryptGame {
         root.rotation.z = genome.locomotion === 'crawler' ? Math.sin(motionT * 5) * 0.035 : 0;
         root.rotation.x = 0;
         const desiredYaw = Math.atan2(dx, dz);
-        root.rotation.y += this.normalizeAngle(desiredYaw - root.rotation.y) * Math.min(1, dt * (genome.locomotion === 'heavy-biped' ? 4.2 : 7.5));
+        const tracking=(genome.headSpec?.tracking||1);
+        root.rotation.y += this.normalizeAngle(desiredYaw - root.rotation.y) * Math.min(1, dt * (genome.locomotion === 'heavy-biped' ? 4.2 : 7.5) * tracking);
         enemy.facing = root.rotation.y;
       }
 
@@ -1224,16 +1225,35 @@ export class MeltCryptGame {
         const attack = genome.ability;
         const cadence = Math.max(0.42, 1 / Math.max(0.35, genome.cadence || 1));
 
-        if (genome.mutation === 'arc-growth' && enemy.specialTimer <= 0 && distance < 7.2) {
+        if (genome.headSpec?.charge && enemy.specialTimer <= 0 && distance > 2.0 && distance < 5.5) {
+          enemy.attackKind = 'horn-charge';
+          enemy.attackSource = 'head';
+          enemy.tellTimer = 0.46;
+          enemy.specialTimer = 4.1 + this.runRng() * 1.2;
+        } else if (genome.mutation === 'arc-growth' && enemy.specialTimer <= 0 && distance < 7.2) {
           enemy.attackKind = 'arc-pulse';
+          enemy.attackSource = 'mutation';
           enemy.tellTimer = 0.52;
           enemy.specialTimer = 4.3 + this.runRng() * 1.3;
         } else if (genome.mutation === 'long-legs' && enemy.specialTimer <= 0 && distance > 2.1 && distance < 6.5) {
           enemy.attackKind = 'leg-dash';
+          enemy.attackSource = 'mutation';
           enemy.tellTimer = 0.38;
           enemy.specialTimer = 3.6 + this.runRng();
+        } else if (enemy.specialTimer <= 0 && genome.secondaryAbility && genome.secondaryAbility !== attack) {
+          const secondary=genome.secondaryAbility;
+          const ranged=secondary==='bolt';
+          const valid=ranged ? distance<7.3 : secondary==='hook-pull' ? distance<4.8 : distance<Math.max(1.5,(genome.secondaryReach||1)+0.7);
+          if(valid){
+            enemy.attackKind=secondary;
+            enemy.attackSource='secondary';
+            const tells={ 'heavy-sweep':0.62,slam:0.7,flurry:0.18,thrust:0.34,'shield-bash':0.36,bolt:0.48,'hook-pull':0.44,cleave:0.3 };
+            enemy.tellTimer=tells[secondary]||0.34;
+            enemy.specialTimer=Math.max(2.4,1.65/Math.max(0.35,genome.secondaryCadence||1))+this.runRng()*0.9;
+          }
         } else if (enemy.attackTimer <= 0) {
           enemy.attackKind = attack;
+          enemy.attackSource = 'primary';
           const tells = {
             'heavy-sweep':0.62, slam:0.7, flurry:0.18, thrust:0.34,
             'shield-bash':0.36, bolt:0.48, 'hook-pull':0.44, cleave:0.3
@@ -1274,8 +1294,13 @@ export class MeltCryptGame {
     if (enemy.dead || !enemy.visual || enemy.staggerTime > 0) return;
     const genome=enemy.genome;
     const kind=enemy.attackKind;
+    const sourceDamage=enemy.attackSource==='secondary'?(genome.secondaryDamage||genome.damage):genome.damage;
+    let connected=false;
     const melee=(range,multiplier=1)=>{
-      if(distance <= range + genome.size * 0.28) this.hurtPlayer(genome.damage * multiplier, enemy);
+      if(distance <= range + genome.size * 0.28){
+        this.hurtPlayer(sourceDamage * multiplier, enemy);
+        connected=true;
+      }
     };
 
     if(kind==='bolt'){
@@ -1300,6 +1325,10 @@ export class MeltCryptGame {
       const travel=Math.min(2.4,Math.max(0,distance-0.7));
       enemy.visual.root.position.addInPlace(direction.scale(travel));
       melee(1.25,1.12);
+    } else if(kind==='horn-charge'){
+      const travel=Math.min(2.15,Math.max(0,distance-0.65));
+      enemy.visual.root.position.addInPlace(direction.scale(travel));
+      melee(1.35,1.18);
     } else if(kind==='heavy-sweep'){
       melee(1.55,1.12);
     } else if(kind==='slam'){
@@ -1315,6 +1344,15 @@ export class MeltCryptGame {
     } else {
       melee(1.45,0.92);
     }
+
+    if(connected&&genome.headSpec?.bite&&kind!=='bolt'&&kind!=='arc-pulse'){
+      setTimeout(()=>{
+        if(!enemy.dead&&this.phase==='playing'&&Vector3.Distance(enemy.visual.root.position,this.controller.position)<1.35){
+          this.hurtPlayer(sourceDamage*0.34,enemy);
+        }
+      },105);
+    }
+    enemy.attackSource=null;
   }
 
 
