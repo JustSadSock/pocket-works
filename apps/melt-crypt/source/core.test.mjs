@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { createMonsterGenome, generateDungeon, makeRng, rollLoot } from './core.js';
+import { createMonsterGenome, generateDungeon, makeRng, mapLookDelta, rollLoot } from './core.js';
 
 const rngA = makeRng(12345);
 const rngB = makeRng(12345);
 for (let i = 0; i < 20; i += 1) assert.equal(rngA(), rngB(), 'seeded RNG must be deterministic');
+assert.ok(mapLookDelta(0, -12, 0.0032, 1).y < 0, 'upward drag must produce upward camera pitch');
+assert.ok(mapLookDelta(0, 12, 0.0032, 1).y > 0, 'downward drag must produce downward camera pitch');
 
 for (let floor = 1; floor <= 12; floor += 1) {
   const dungeon = generateDungeon(0xdeadbeef, floor);
