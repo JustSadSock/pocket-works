@@ -97,6 +97,7 @@ function randomSeed() {
 
 function potionById(id) { return POTIONS.find((item) => item.id === id); }
 function relicById(id) { return RELICS.find((item) => item.id === id); }
+function weaponSafeDamage(weapon) { return Number(weapon?.damage) || 12; }
 
 export class MeltCryptGame {
   constructor(root) {
@@ -572,7 +573,7 @@ export class MeltCryptGame {
       if (this.discoveryTimer <= 0) this.el.discovery.hidden = true;
     }
 
-    this.visuals?.update(this.elapsed, this.effects.warp > 0 ? 1 : this.effects.rage > 0 ? 0.45 : 0);
+    this.visuals?.update(this.elapsed, this.effects.warp > 0 ? 0.35 : 0);
     this.updatePsyche(dt);
     if (this.phase !== 'playing') return;
 
@@ -580,27 +581,47 @@ export class MeltCryptGame {
     if (actions.pause) { this.pauseGame(); return; }
 
     this.updateEffects(dt);
+    if (this.hitStop > 0) {
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      this.updateHud();
+      return;
+    }
+
+    if (actions.attackStart && !this.attackState.active) this.attackHold = 0;
+    if (actions.attackHeld && !this.attackState.active) this.attackHold += dt;
+    if (actions.attackRelease && !this.attackState.active) {
+      const heavy = this.attackHold >= 0.34;
+      this.startAttack(heavy, this.justDodged > 0.02);
+      this.attackHold = 0;
+    }
+    if (actions.dodge && this.dashCooldown <= 0) this.startDash();
+    if (actions.skill) {
+      if (this.contextTarget) this.useAction();
+      else this.useWeaponSkill();
+    }
+
     this.updatePlayer(dt, actions);
+    this.updateAttack(dt, actions.attackHeld);
     this.updateCurrentRoom();
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updateDrops(dt);
     this.updateContext();
     this.updateHud();
+
     this.minimapTimer -= dt;
     if (this.minimapTimer <= 0) {
       this.minimapTimer = 0.16;
       this.drawMinimap();
     }
 
-    if (actions.fire && this.fireCooldown <= 0) this.fireWeapon();
-    if (actions.dash && this.dashCooldown <= 0) this.startDash();
-    if (actions.potion) this.drinkPotion();
-    if (actions.use) this.useAction();
-
     this.fireCooldown = Math.max(0, this.fireCooldown - dt);
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+    this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
+    this.parryWindow = Math.max(0, this.parryWindow - dt);
+    this.wardTimer = Math.max(0, this.wardTimer - dt);
+    this.justDodged = Math.max(0, (this.justDodged || 0) - dt);
   }
 
   updateEffects(dt) {
@@ -614,30 +635,29 @@ export class MeltCryptGame {
     if (!enabled) {
       this.root.style.setProperty('--psy-opacity', '0');
       this.root.style.setProperty('--game-hue', '0deg');
-      this.root.style.setProperty('--game-sat', '1.05');
+      this.root.style.setProperty('--game-sat', '1.04');
       this.root.style.setProperty('--game-scale', '1');
       return;
     }
-    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.055) : 0.06;
-    const warp = this.effects.warp > 0 ? 0.32 : 0;
-    const rage = this.effects.rage > 0 ? 0.1 : 0;
-    const opacity = 0.045 + mutation * 0.08 + warp + rage;
-    const hue = Math.sin(this.elapsed * (this.effects.warp > 0 ? 2.6 : 0.26)) * (4 + mutation * 14 + warp * 70);
+    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.04) : 0.04;
+    const warp = this.effects.warp > 0 ? 0.12 : 0;
+    const opacity = 0.028 + mutation * 0.035 + warp;
+    const hue = Math.sin(this.elapsed * 0.31) * (1.5 + mutation * 2 + warp * 12);
     this.root.style.setProperty('--psy-opacity', String(opacity));
-    this.root.style.setProperty('--psy-spin', String((this.elapsed * 11) % 360) + 'deg');
-    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.8) * 20) + '%');
-    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.61) * 18) + '%');
-    this.root.style.setProperty('--psy-blur', this.effects.warp > 0 ? '1.5px' : '0px');
+    this.root.style.setProperty('--psy-spin', String((this.elapsed * 4) % 360) + 'deg');
+    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.6) * 13) + '%');
+    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.47) * 12) + '%');
+    this.root.style.setProperty('--psy-blur', this.effects.warp > 0 ? '0.8px' : '0px');
     this.root.style.setProperty('--game-hue', String(hue) + 'deg');
-    this.root.style.setProperty('--game-sat', String(1.1 + mutation * 0.32 + warp * 0.55));
-    this.root.style.setProperty('--game-contrast', String(1.04 + rage * 0.8));
-    this.root.style.setProperty('--game-scale', this.effects.warp > 0 ? String(1.003 + Math.sin(this.elapsed * 4) * 0.004) : '1');
+    this.root.style.setProperty('--game-sat', String(1.05 + mutation * 0.08 + warp * 0.22));
+    this.root.style.setProperty('--game-contrast', String(1.06 + warp * 0.18));
+    this.root.style.setProperty('--game-scale', this.effects.warp > 0 ? String(1.002 + Math.sin(this.elapsed * 4) * 0.002) : '1');
   }
 
-  updatePlayer(dt, actions) {
+  updatePlayer(dt) {
     const look = this.input.consumeLook();
     this.lookYaw += look.x;
-    this.lookPitch = clamp(this.lookPitch + look.y, -1.33, 1.33);
+    this.lookPitch = clamp(this.lookPitch + look.y, -1.28, 1.28);
 
     const move = this.input.getMove();
     const yaw = this.lookYaw;
@@ -646,35 +666,38 @@ export class MeltCryptGame {
     let direction = forward.scale(move.y).add(right.scale(move.x));
     if (direction.lengthSquared() > 1) direction.normalize();
 
+    const autoSprint = move.magnitude > 0.84;
     if (this.dashTimer > 0) {
       this.dashTimer = Math.max(0, this.dashTimer - dt);
       direction = this.dashDirection.clone();
-      this.camera.cameraDirection.copyFrom(direction.scale(12.5 * dt));
+      this.controller.movePlanar(direction.x * 13.8 * dt, direction.z * 13.8 * dt);
     } else {
-      const speed = this.run.speed * (this.effects.speed > 0 ? 1.52 : 1);
-      this.camera.cameraDirection.copyFrom(direction.scale(speed * dt));
+      let speed = this.run.speed * (autoSprint ? 1.24 : 1);
+      if (this.effects.speed > 0) speed *= 1.3;
+      if (this.attackState.active && this.run.weapon?.movement === 'rooted') speed *= 0.48;
+      this.controller.movePlanar(direction.x * speed * dt, direction.z * speed * dt);
     }
 
     const fx = this.cameraFx;
-    fx.recoil = Math.max(0, fx.recoil - dt * 6.8);
-    fx.hit = Math.max(0, fx.hit - dt * 3.4);
-    fx.dash = Math.max(0, fx.dash - dt * 4.8);
-    fx.step += dt * (5.2 + move.magnitude * 6.4);
-    fx.lean += ((-move.x * 0.026) - fx.lean) * Math.min(1, dt * 9);
+    fx.recoil = Math.max(0, fx.recoil - dt * 7.5);
+    fx.hit = Math.max(0, fx.hit - dt * 4.1);
+    fx.dash = Math.max(0, fx.dash - dt * 5.4);
+    fx.step += dt * (5.4 + move.magnitude * (autoSprint ? 9.2 : 6.8));
+    fx.lean += ((-move.x * (autoSprint ? 0.035 : 0.024)) - fx.lean) * Math.min(1, dt * 10);
 
-    const moving = move.magnitude * (this.dashTimer > 0 ? 0.35 : 1);
-    const bob = Math.sin(fx.step) * 0.022 * moving;
-    const lateralBob = Math.cos(fx.step * 0.5) * 0.004 * moving;
-    const hitYaw = Math.sin(this.elapsed * 47) * fx.hit * 0.018;
-    const hitPitch = Math.cos(this.elapsed * 53) * fx.hit * 0.014;
-    const recoilPitch = fx.recoil * 0.034;
+    const moving = move.magnitude * (this.dashTimer > 0 ? 0.32 : 1);
+    const bobAmp = autoSprint ? 0.032 : 0.021;
+    const bob = Math.sin(fx.step) * bobAmp * moving;
+    const lateralBob = Math.cos(fx.step * 0.5) * 0.0045 * moving;
+    const hitYaw = Math.sin(this.elapsed * 47) * fx.hit * 0.016;
+    const hitPitch = Math.cos(this.elapsed * 53) * fx.hit * 0.012;
 
+    this.controller.syncCamera(bob);
     this.camera.rotation.y = this.lookYaw + hitYaw + lateralBob;
-    this.camera.rotation.x = clamp(this.lookPitch - recoilPitch + hitPitch, -1.36, 1.36);
-    this.camera.rotation.z = fx.lean + Math.sin(this.elapsed * 41) * fx.hit * 0.01;
-    this.camera.position.y = 1.58 + bob;
+    this.camera.rotation.x = clamp(this.lookPitch + hitPitch - fx.recoil * 0.018, -1.3, 1.3);
+    this.camera.rotation.z = fx.lean + Math.sin(this.elapsed * 41) * fx.hit * 0.008;
 
-    const targetFov = 0.95 + fx.dash * 0.085 + (this.effects.speed > 0 ? 0.025 : 0);
+    const targetFov = 0.95 + fx.dash * 0.09 + (autoSprint ? 0.035 : 0);
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 10);
   }
 
@@ -687,46 +710,220 @@ export class MeltCryptGame {
     if (direction.lengthSquared() < 0.04) direction = forward;
     direction.normalize();
     this.dashDirection.copyFrom(direction);
-    this.dashTimer = 0.16;
-    this.dashCooldown = Math.max(0.7, 1.72 * (1 - (this.run.dashReduction || 0)));
-    this.invulnerable = Math.max(this.invulnerable, 0.2);
+    this.dashTimer = 0.18;
+    this.justDodged = 0.44;
+    this.dashCooldown = Math.max(0.62, 1.45 * (1 - (this.run.dashReduction || 0)));
+    this.invulnerable = Math.max(this.invulnerable, 0.22);
     this.cameraFx.dash = 1;
     this.audio.tone('dash');
     navigator.vibrate?.(8);
   }
 
-  fireWeapon() {
-    this.fireCooldown = 0.235;
-    const ray = this.camera.getForwardRay(32);
-    const pick = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable && Boolean(mesh.metadata?.enemy || mesh.metadata?.solid), true);
-    const start = ray.origin.add(ray.direction.scale(0.5));
-    const end = pick?.hit && pick.pickedPoint ? pick.pickedPoint : ray.origin.add(ray.direction.scale(32));
-    this.visuals.createTracer(start, end, 318 + (this.run.floor * 11) % 40);
-    this.visuals.setWeaponRecoil(1);
-    this.cameraFx.recoil = Math.min(1.35, this.cameraFx.recoil + 0.62);
-    this.audio.tone('shot', 0.85);
-    navigator.vibrate?.(5);
+  normalizeAngle(value) {
+    let angle = value;
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    while (angle < -Math.PI) angle += Math.PI * 2;
+    return angle;
+  }
 
-    const enemy = pick?.pickedMesh?.metadata?.enemy;
-    if (enemy && !enemy.dead) {
-      const critical = this.runRng() < (this.run.crit || 0);
-      const multiplier = this.effects.rage > 0 ? 2 : 1;
-      const damage = this.run.damage * multiplier * (critical ? 1.85 : 1) * (0.92 + this.runRng() * 0.16);
-      this.damageEnemy(enemy, damage, critical);
+  findAimTarget(range = 3, coneDegrees = 38) {
+    const origin = this.controller.position;
+    const forward = new Vector3(Math.sin(this.lookYaw), 0, Math.cos(this.lookYaw));
+    const cone = coneDegrees * Math.PI / 180;
+    let best = null;
+    let bestScore = Infinity;
+    for (const enemy of this.enemies) {
+      if (enemy.dead || !enemy.visual || enemy.roomId !== this.currentRoomId) continue;
+      const delta = enemy.visual.root.position.subtract(origin);
+      delta.y = 0;
+      const distance = delta.length();
+      if (distance > range || distance < 0.001) continue;
+      delta.scaleInPlace(1 / distance);
+      const angle = Math.acos(clamp(Vector3.Dot(forward, delta), -1, 1));
+      if (angle > cone) continue;
+      const score = angle * 2.2 + distance * 0.055;
+      if (score < bestScore) { bestScore = score; best = enemy; }
+    }
+    return best;
+  }
+
+  applyAimAssist(weapon, dashAttack = false) {
+    const target = this.findAimTarget((weapon?.reach || 1) + (dashAttack ? 1.5 : 0.9), dashAttack ? 48 : 38);
+    if (!target) return null;
+    const dx = target.visual.root.position.x - this.controller.position.x;
+    const dz = target.visual.root.position.z - this.controller.position.z;
+    const targetYaw = Math.atan2(dx, dz);
+    const delta = this.normalizeAngle(targetYaw - this.lookYaw);
+    const maxCorrection = (weapon.magnetism || 12) * (dashAttack ? 1.2 : 1) * Math.PI / 180;
+    this.lookYaw += clamp(delta, -maxCorrection, maxCorrection) * (dashAttack ? 0.95 : 0.72);
+    return target;
+  }
+
+  startAttack(heavy = false, dashAttack = false) {
+    const weapon = this.run.weapon;
+    if (!weapon || this.attackState.active || this.fireCooldown > 0.02) return;
+    this.applyAimAssist(weapon, dashAttack);
+    const haste = this.effects.haste > 0 ? 0.78 : 1;
+    const duration = clamp(weapon.recovery * (heavy ? 1.18 : 0.82) * haste, 0.22, 1.45);
+    const combo = ((this.attackState.combo || 0) + 1) % Math.max(1, weapon.comboLength || 1);
+    this.attackState = { active:true, timer:duration, duration, heavy, combo, hitDone:false, dashAttack };
+    this.fireCooldown = duration * 0.82;
+    this.audio.tone('shot', heavy ? 0.62 : 0.86);
+    navigator.vibrate?.(heavy ? 10 : 5);
+  }
+
+  updateAttack(dt, attackHeld) {
+    if (!this.run?.weapon) return;
+    const charge = !this.attackState.active && attackHeld ? clamp(this.attackHold / 0.62, 0, 1) : 0;
+    if (!this.attackState.active) {
+      this.visuals.setWeaponPose({ charge });
+      return;
+    }
+
+    const state = this.attackState;
+    state.timer = Math.max(0, state.timer - dt);
+    const progress = 1 - state.timer / Math.max(0.001, state.duration);
+    this.visuals.setWeaponPose({
+      swing: progress,
+      charge: 0,
+      skill: 0,
+      combo: state.combo,
+      heavy: state.heavy
+    });
+
+    const activeStart = state.heavy ? 0.39 : 0.25;
+    const activeEnd = state.heavy ? 0.7 : 0.58;
+    if (!state.hitDone && progress >= activeStart && progress <= activeEnd) {
+      state.hitDone = true;
+      this.performMeleeHit(state);
+    }
+
+    const weapon=this.run.weapon;
+    if (progress < 0.44 && weapon.movement !== 'rooted') {
+      const push = weapon.movement === 'lunge' ? 2.0 : weapon.movement === 'step-in' ? 1.2 : 0.5;
+      const forward = new Vector3(Math.sin(this.lookYaw),0,Math.cos(this.lookYaw));
+      this.controller.movePlanar(forward.x * push * dt, forward.z * push * dt);
+    }
+
+    if (state.timer <= 0) {
+      this.attackState = { ...state, active:false, timer:0, hitDone:false };
+      this.visuals.setWeaponPose({});
     }
   }
 
-  damageEnemy(enemy, amount, critical = false) {
-    if (enemy.dead) return;
-    enemy.hp -= amount;
-    enemy.visual.root.scaling.scaleInPlace(critical ? 1.035 : 1.016);
-    setTimeout(() => {
-      if (!enemy.dead && enemy.visual?.root) enemy.visual.root.scaling.setAll(enemy.genome.size);
-    }, 55);
-    this.audio.tone('hit', critical ? 1.1 : 0.75);
-    if (critical) this.toast('CRITICAL THOUGHT.');
+  getEnemyHitRegion(enemy) {
+    const genome=enemy.genome;
+    const root=enemy.visual.root;
+    const toPlayer=this.controller.position.subtract(root.position);
+    toPlayer.y=0;
+    if(toPlayer.lengthSquared()>0.0001)toPlayer.normalize();
+    const forward=new Vector3(Math.sin(root.rotation.y),0,Math.cos(root.rotation.y));
+    const right=new Vector3(Math.cos(root.rotation.y),0,-Math.sin(root.rotation.y));
+    const frontDot=Vector3.Dot(forward,toPlayer);
+    const sideDot=Vector3.Dot(right,toPlayer);
+
+    if (genome.mutation === 'back-core' && frontDot < -0.28) return { name:'weak-core', multiplier:1.9, weak:true };
+    if (genome.mutation === 'blood-sacs' && frontDot < -0.1) return { name:'blood-sac', multiplier:1.48, weak:true };
+    if (genome.defense === 'right-shield' && sideDot > 0.15) return { name:'shield', multiplier:0.14, blocked:true };
+    if (genome.defense === 'left-shield' && sideDot < -0.15) return { name:'shield', multiplier:0.14, blocked:true };
+
+    const aimedLegs=this.lookPitch>0.27;
+    const aimedHead=this.lookPitch<-0.22;
+    if (aimedHead && genome.head === 'armored') return { name:'armored-head', multiplier:0.32, blocked:true };
+    if (aimedLegs && genome.defense === 'leg-plates') return { name:'armored-legs', multiplier:0.42, blocked:true };
+    if (!aimedLegs && !aimedHead && genome.defense === 'chest-plate') return { name:'chest-plate', multiplier:0.3, blocked:true };
+    if (!aimedLegs && !aimedHead && genome.defense === 'bone-cage') return { name:'bone-cage', multiplier:0.54, blocked:true };
+    return { name: aimedLegs ? 'legs' : aimedHead ? 'head' : 'body', multiplier: aimedHead ? 1.24 : 1, weak:false };
+  }
+
+  performMeleeHit(state) {
+    const weapon=this.run.weapon;
+    const origin=this.controller.position;
+    const forward=new Vector3(Math.sin(this.lookYaw),0,Math.cos(this.lookYaw));
+    const reach=weapon.reach + (state.heavy ? 0.16 : 0) + (state.dashAttack ? 0.58 : 0);
+    const halfArc=Math.max(0.16,weapon.arc*0.62);
+    const candidates=[];
+    for(const enemy of this.enemies){
+      if(enemy.dead||!enemy.visual||enemy.roomId!==this.currentRoomId)continue;
+      const delta=enemy.visual.root.position.subtract(origin);delta.y=0;
+      const distance=delta.length();
+      if(distance>reach+enemy.genome.size*0.34||distance<0.001)continue;
+      delta.scaleInPlace(1/distance);
+      const angle=Math.acos(clamp(Vector3.Dot(forward,delta),-1,1));
+      if(angle<=halfArc)candidates.push({enemy,distance,angle});
+    }
+    candidates.sort((a,b)=>a.angle-b.angle||a.distance-b.distance);
+    const maxTargets=weapon.core==='glaive'||weapon.core==='maul'?3:weapon.core==='twin'?2:1;
+    const hits=candidates.slice(0,maxTargets);
+    if(!hits.length){
+      this.cameraFx.recoil=Math.max(this.cameraFx.recoil,state.heavy?0.18:0.08);
+      return;
+    }
+
+    for(const hit of hits){
+      const enemy=hit.enemy;
+      const region=this.getEnemyHitRegion(enemy);
+      const critical=!region.blocked && this.runRng()<(this.run.crit||0);
+      const base=weapon.damage*(this.run.damage||1)*(state.heavy?1.72:1)*(state.dashAttack?1.24:1)*(critical?1.55:1);
+      const amount=base*region.multiplier;
+      const stagger=weapon.stagger*(state.heavy?1.8:1)*(state.dashAttack?1.22:1);
+      this.damageEnemy(enemy,amount,{
+        critical,stagger,heavy:state.heavy,weak:region.weak,blocked:region.blocked,
+        knock:(state.heavy?1.7:0.7)+(weapon.stagger>1.3?0.5:0)
+      });
+    }
+  }
+
+  damageEnemy(enemy, amount, options = {}) {
+    if (enemy.dead || !enemy.visual) return;
+    const { critical=false, stagger=0, heavy=false, weak=false, blocked=false, knock=0 }=options;
+    enemy.hp -= Math.max(0.1, amount);
+    enemy.stagger += stagger;
+    const staggerResist=(enemy.genome.defenseSpec?.staggerResist||0)+(enemy.genome.mutationSpec?.staggerResist||0);
+    const threshold=2.15+staggerResist*2.2;
+    const didStagger=enemy.stagger>=threshold;
+
+    if(didStagger){
+      enemy.stagger=0;
+      enemy.staggerTime=Math.max(enemy.staggerTime,heavy?0.9:0.52);
+      enemy.tellTimer=0;
+      enemy.attackKind=null;
+      if(knock>0){
+        const away=enemy.visual.root.position.subtract(this.controller.position);away.y=0;
+        if(away.lengthSquared()>0.001)enemy.knockVelocity=away.normalize().scale(knock*(heavy?3.3:2.1));
+      }
+    }
+
+    const hitDirection=enemy.visual.root.position.subtract(this.controller.position).normalize();
+    this.visuals.createHitEffect(enemy.visual.root.position.add(new Vector3(0,Math.max(0.55,enemy.genome.size),0)),hitDirection,heavy?1.5:0.8,weak);
+    this.hitStop=Math.max(this.hitStop,blocked?0.018:heavy||didStagger?0.065:0.035);
+    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?0.7:0.32);
+    this.audio.tone('hit',weak||critical?1.08:blocked?0.48:0.78);
+    navigator.vibrate?.(heavy||didStagger?[8,18,8]:4);
+
+    if(blocked&&!weak&&this.runRng()<0.3)this.toast('ARMOR ATE MOST OF THAT HIT.');
+    if(weak)this.toast('WEAK POINT.');
+    else if(critical)this.toast('CLEAN HIT.');
+
+    const trait=this.run.weapon?.traitSpec?.effect;
+    if(didStagger&&trait==='stagger-blast'){
+      for(const other of this.enemies){
+        if(other===enemy||other.dead||!other.visual||other.roomId!==enemy.roomId)continue;
+        if(Vector3.Distance(other.visual.root.position,enemy.visual.root.position)<2.2){
+          other.hp-=weaponSafeDamage(this.run.weapon)*0.22;
+          other.stagger+=0.7;
+          if(other.hp<=0)this.killEnemy(other);
+        }
+      }
+    }
+    if(didStagger&&trait==='chain-stagger'){
+      const other=this.enemies.find((candidate)=>candidate!==enemy&&!candidate.dead&&candidate.visual&&candidate.roomId===enemy.roomId&&Vector3.Distance(candidate.visual.root.position,enemy.visual.root.position)<2.5);
+      if(other){other.stagger+=1.15;this.visuals.createHitEffect(other.visual.root.position.add(new Vector3(0,0.8,0)),hitDirection,0.55,false);}
+    }
+
     if (enemy.hp <= 0) this.killEnemy(enemy);
   }
+
 
   killEnemy(enemy) {
     if (enemy.dead) return;
