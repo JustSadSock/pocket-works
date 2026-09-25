@@ -13,6 +13,7 @@ Each application lives in `apps/<slug>/`. Its `app.config.json` is the source of
 - Deploy command: `npx wrangler deploy --assets ./dist-site/`
 - Worker config: [`wrangler.jsonc`](./wrangler.jsonc)
 - Hosting details: [`docs/HOSTING.md`](./docs/HOSTING.md)
+- Internet multiplayer backend: [`docs/POCKET-SERVER.md`](./docs/POCKET-SERVER.md)
 
 Every squash merge into `main` triggers a Cloudflare production build. The resulting Cloudflare deployment is the only production source of truth.
 

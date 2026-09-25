@@ -12,7 +12,7 @@ const rootFiles=[
   'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
-const appDevEntries=new Set(['package.json','vite.config.ts','tsconfig.json','README.md','source','public','.dist']);
+const appDevEntries=new Set(['package.json','vite.config.ts','tsconfig.json','README.md','source','public','.dist','server']);
 
 async function copyDirectoryFiltered(source,destination,shouldSkip){
   await mkdir(destination,{recursive:true});
