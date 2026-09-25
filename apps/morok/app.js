@@ -255,11 +255,19 @@ function sizeScene(){const r=el.scene.getBoundingClientRect();const ratio=Math.m
 function sceneLoop(t){if(!document.hidden&&t-lastFrame>33){sceneTime=t/1000;drawScene();lastFrame=t}requestAnimationFrame(sceneLoop)}
 function drawScene(){const w=el.scene.width,h=el.scene.height;ctx.fillStyle='#090a09';ctx.fillRect(0,0,w,h);drawVault(w,h);drawBanners(w,h);drawCandles(w,h);if(current==='battle')drawStoneTable(w,h);else drawFlagstones(w,h);drawDust(w,h)}
 function drawVault(w,h){
-  ctx.fillStyle='#111310';ctx.fillRect(0,0,w,h*.7);
-  for(let y=16;y<h*.7;y+=15){const off=((y/15)|0)%2?13:0;for(let x=-off;x<w;x+=27){ctx.fillStyle=((x+y)%5)?'#191b18':'#20211d';ctx.fillRect(x,y,25,13);ctx.fillStyle='#0c0e0c';ctx.fillRect(x,y+13,25,2);ctx.fillRect(x+25,y,2,15)}}
-  ctx.fillStyle='#070807';ctx.fillRect(79,45,82,102);ctx.beginPath();ctx.arc(120,66,41,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#171915';ctx.fillRect(0,0,w,h*.7);
+  for(let y=16;y<h*.7;y+=15){const off=((y/15)|0)%2?13:0;for(let x=-off;x<w;x+=27){ctx.fillStyle=((x+y)%5)?'#22241f':'#2b2d26';ctx.fillRect(x,y,25,13);ctx.fillStyle='#11130f';ctx.fillRect(x,y+13,25,2);ctx.fillRect(x+25,y,2,15)}}
+  ctx.fillStyle='#090a08';ctx.fillRect(79,45,82,102);ctx.beginPath();ctx.arc(120,66,41,Math.PI,0);ctx.fill();
   ctx.fillStyle='#2b2a24';ctx.fillRect(74,43,5,109);ctx.fillRect(161,43,5,109);ctx.fillRect(70,147,100,5);
   ctx.fillStyle='#3b382e';for(let i=0;i<7;i++)ctx.fillRect(73+i*15,39+(i%2),11,3);
+}
+function drawGate(w,h){
+  const cx=Math.floor(w/2);
+  ctx.fillStyle='#0a0a08';ctx.fillRect(cx-28,91,56,87);
+  ctx.fillStyle='#3a3429';ctx.fillRect(cx-31,88,5,94);ctx.fillRect(cx+26,88,5,94);
+  ctx.fillStyle='#26231d';for(let y=98;y<174;y+=13){ctx.fillRect(cx-26,y,52,2);ctx.fillRect(cx-1,y,2,11)}
+  ctx.fillStyle='#6b2d24';ctx.fillRect(cx-2,105,4,58);ctx.fillStyle='#a84932';ctx.fillRect(cx-1,111,2,42);
+  ctx.fillStyle='#2b2821';for(let i=0;i<5;i++){ctx.fillRect(cx-35-i*4,179+i*7,70+i*8,5)}
 }
 function drawBanners(w,h){for(const x of [27,w-52]){ctx.fillStyle='#3a1816';ctx.fillRect(x,43,25,75);ctx.fillStyle='#6d3028';ctx.fillRect(x+4,46,17,66);ctx.fillStyle='#b29361';ctx.fillRect(x+11,59,3,27);ctx.fillRect(x+7,70,11,3)}}
 function drawCandles(w,h){const flick=Math.round((Math.sin(sceneTime*12)+1)*2);for(const x of [16,w-18,62,w-64]){const y=Math.round(h*.61+(x%3)*4);ctx.fillStyle='#c1aa7b';ctx.fillRect(x,y,3,12);ctx.fillStyle='#8f3d29';ctx.fillRect(x+1,y-5-flick,1,5+flick);ctx.fillStyle='#e39b55';ctx.fillRect(x,y-3-flick,3,2+flick)}}
