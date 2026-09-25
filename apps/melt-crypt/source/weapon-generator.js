@@ -58,15 +58,21 @@ const ADJECTIVES=['Crooked','Red','Grave','Hollow','Choir','Iron','Sour','Mourni
 
 export function weaponSignature(w){return [w.core,w.head,w.handle,w.secondary,w.trait,w.skill].join('/');}
 
-export function generateWeapon(seed,floor=1,recent=[]){
+export function generateWeapon(seed,floor=1,recent=[],tier=3){
   const history=recent.slice(-18);
+  const level=clamp(Math.floor(tier)||1,1,3);
+  const cores=WEAPON_CORES.slice(0,[0,4,5,6][level]);
+  const heads=WEAPON_HEADS.slice(0,[0,6,8,10][level]);
+  const skills=WEAPON_SKILLS.slice(0,[0,5,7,8][level]);
+  const traits=TRAITS.slice(0,[0,4,5,6][level]);
   let result;
   for(let attempt=0;attempt<24;attempt+=1){
     const rng=makeRng((Number(seed)^Math.imul(floor+31,0x9e3779b1)^Math.imul(attempt+1,0x45d9f3b))>>>0);
-    const core=choice(rng,WEAPON_CORES), head=choice(rng,WEAPON_HEADS), handle=choice(rng,HANDLES), secondary=choice(rng,SECONDARIES), trait=choice(rng,TRAITS);
-    let skill=secondary.skillBias?WEAPON_SKILLS.find(s=>s.id===secondary.skillBias):choice(rng,WEAPON_SKILLS);
-    if(core.id==='maul' && rng()<0.5) skill=WEAPON_SKILLS.find(s=>s.id==='aoe');
-    if(core.id==='claws' && rng()<0.45) skill=WEAPON_SKILLS.find(s=>s.id==='dash-cut');
+    const core=choice(rng,cores), head=choice(rng,heads), handle=choice(rng,HANDLES), secondary=choice(rng,SECONDARIES), trait=choice(rng,traits);
+    let skill=secondary.skillBias?skills.find(s=>s.id===secondary.skillBias):choice(rng,skills);
+    if(!skill)skill=choice(rng,skills);
+    if(core.id==='maul' && rng()<0.5) skill=skills.find(s=>s.id==='aoe')||skill;
+    if(core.id==='claws' && rng()<0.45) skill=skills.find(s=>s.id==='dash-cut')||skill;
     const cadence=clamp(core.cadence*(head.id==='slab'?0.82:1)*(handle.id==='short'?1.12:handle.id==='long'?0.88:1),0.42,1.85);
     const reach=core.reach*handle.reach;
     const damage=(12+floor*1.05)*core.baseDamage*head.damage;
