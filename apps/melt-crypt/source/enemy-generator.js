@@ -20,10 +20,10 @@ export const LOCOMOTIONS = [
 export const HEADS = [
   { id:'bare', label:'bare head', headArmor:0, cue:'open face' },
   { id:'armored', label:'armored head', headArmor:0.78, cue:'metal shell' },
-  { id:'horned', label:'horned skull', headArmor:0.15, cue:'horns' },
-  { id:'many-eyes', label:'many eyes', headArmor:0.05, cue:'eye cluster' },
-  { id:'split-jaw', label:'split jaw', headArmor:0.08, cue:'wide jaw' },
-  { id:'crowned', label:'crowned head', headArmor:0.22, cue:'crown plates' }
+  { id:'horned', label:'horned skull', headArmor:0.15, cue:'horns = short charge', charge:true },
+  { id:'many-eyes', label:'many eyes', headArmor:0.05, cue:'eye cluster = faster tracking', tracking:1.35 },
+  { id:'split-jaw', label:'split jaw', headArmor:0.08, cue:'wide jaw = follow-up bite', bite:true },
+  { id:'crowned', label:'crowned head', headArmor:0.22, cue:'crown plates = stagger resistance', staggerResist:0.28 }
 ];
 
 export const ARM_MODULES = [
@@ -109,7 +109,9 @@ function build(seed,floor,danger,salt=0,tier=3) {
     bodySpec:body, locomotionSpec:locomotion, headSpec:head, leftArmSpec:left, rightArmSpec:right,
     defenseSpec:defense, mutationSpec:mutation,
     size, speed, maxHp, damage:Math.round(baseDamage*right.damage*(elite?1.22:1)),
+    secondaryDamage:Math.round(baseDamage*left.damage*(elite?1.16:1)),
     cadence:right.cadence*locomotion.cadence, reach:right.reach, stagger:right.stagger,
+    secondaryAbility:left.attack, secondaryReach:left.reach, secondaryCadence:left.cadence,
     elite, hue, accentHue, motion:locomotion.id, phase:rng()*Math.PI*2,
     eyes: head.id==='many-eyes'?5:head.id==='split-jaw'?2:1,
     horns: head.id==='horned'?3:head.id==='crowned'?2:0,
