@@ -514,8 +514,10 @@ export class CryptVisuals {
     root.position.copyFrom(position);
     const bodyMat = simpleMaterial(this.scene, 'monster-body-' + genome.seed, genome.hue, 0.72, genome.elite ? 0.48 : 0.38, genome.elite ? 0.22 : 0.04);
     const accentMat = simpleMaterial(this.scene, 'monster-accent-' + genome.seed, genome.accentHue, 0.9, 0.52, 0.66);
-    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, (genome.accentHue + 80) % 360, 0.95, 0.63, 1);
-    const materials = [bodyMat, accentMat, eyeMat];
+    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, 8, 0.95, 0.58, 1);
+    const armorMat = simpleMaterial(this.scene, 'monster-armor-' + genome.seed, 350, 0.16, 0.22, 0.02);
+    const boneMat = simpleMaterial(this.scene, 'monster-bone-' + genome.seed, 38, 0.16, 0.58, 0.01);
+    const materials = [bodyMat, accentMat, eyeMat, armorMat, boneMat];
     const parts = [];
     const bodyPart = (mesh, material = bodyMat) => { mesh.parent = root; mesh.material = material; mesh.isPickable = true; parts.push(mesh); return mesh; };
 
@@ -602,6 +604,135 @@ export class CryptVisuals {
       headY = 1.08; frontZ = 0.76;
     }
 
+    const attachArm = (moduleId, side) => {
+      const armY = Math.max(0.72, headY - 0.58);
+      const shoulderX = side * 0.72;
+      const arm = bodyPart(flat(MeshBuilder.CreateCylinder('module-arm-' + side + '-' + moduleId, {
+        height: moduleId === 'crusher' ? 0.86 : 0.72,
+        diameterTop: moduleId === 'crusher' ? 0.24 : 0.14,
+        diameterBottom: moduleId === 'crusher' ? 0.34 : 0.2,
+        tessellation: 6
+      }, this.scene)), moduleId === 'caster' ? accentMat : bodyMat);
+      arm.position.set(shoulderX, armY, 0.1);
+      arm.rotation.z = side * 0.38;
+
+      if (moduleId === 'hammer') {
+        const haft=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-hammer-haft-'+side,{height:1.2,diameter:0.09,tessellation:5},this.scene)),boneMat);
+        haft.position.set(side*0.93,armY-0.18,0.43); haft.rotation.x=Math.PI/2; haft.rotation.z=side*0.12;
+        const head=bodyPart(flat(MeshBuilder.CreateBox('enemy-hammer-head-'+side,{width:0.62,height:0.3,depth:0.34},this.scene)),armorMat);
+        head.position.set(side*0.93,armY-0.18,0.98); head.metadata={hitRegion:'weapon'};
+      } else if (moduleId === 'claws') {
+        for(let i=0;i<3;i+=1){
+          const claw=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-claw-'+side+'-'+i,{height:0.5,diameterTop:0,diameterBottom:0.08,tessellation:5},this.scene)),boneMat);
+          claw.rotation.x=Math.PI/2; claw.position.set(side*(0.83+i*0.03),armY-0.14+(i-1)*0.07,0.55);
+        }
+      } else if (moduleId === 'spear') {
+        const spear=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-spear-'+side,{height:1.75,diameterTop:0.035,diameterBottom:0.08,tessellation:5},this.scene)),boneMat);
+        spear.rotation.x=Math.PI/2; spear.position.set(side*0.86,armY-0.05,0.82);
+        const tip=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-spear-tip-'+side,{height:0.42,diameterTop:0,diameterBottom:0.15,tessellation:5},this.scene)),accentMat);
+        tip.rotation.x=Math.PI/2; tip.position.set(side*0.86,armY-0.05,1.78);
+      } else if (moduleId === 'shield') {
+        const shield=bodyPart(flat(MeshBuilder.CreateBox('enemy-arm-shield-'+side,{width:0.72,height:1.0,depth:0.12},this.scene)),armorMat);
+        shield.position.set(side*0.92,armY+0.03,0.42); shield.rotation.y=side*0.2; shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+      } else if (moduleId === 'caster') {
+        const growth=bodyPart(flat(MeshBuilder.CreateIcoSphere('enemy-caster-growth-'+side,{radius:0.28,subdivisions:1},this.scene)),eyeMat);
+        growth.position.set(side*0.9,armY+0.02,0.42); growth.scaling.set(0.7,1.25,0.8); growth.metadata={hitRegion:'caster'};
+        const ring=bodyPart(MeshBuilder.CreateTorus('enemy-caster-ring-'+side,{diameter:0.72,thickness:0.045,tessellation:10},this.scene),accentMat);
+        ring.position.set(side*0.9,armY+0.02,0.46); ring.rotation.x=Math.PI/2;
+      } else if (moduleId === 'hook') {
+        const hook=bodyPart(MeshBuilder.CreateTorus('enemy-hook-'+side,{diameter:0.72,thickness:0.09,tessellation:8},this.scene),boneMat);
+        hook.position.set(side*0.9,armY-0.08,0.58); hook.rotation.x=Math.PI/2; hook.scaling.x=0.62;
+      } else if (moduleId === 'crusher') {
+        const fist=bodyPart(flat(MeshBuilder.CreateIcoSphere('enemy-crusher-'+side,{radius:0.42,subdivisions:1},this.scene)),armorMat);
+        fist.position.set(side*0.92,armY-0.32,0.38); fist.scaling.set(1.08,0.9,1.15); fist.metadata={hitRegion:'weapon'};
+      } else {
+        const blade=bodyPart(flat(MeshBuilder.CreateBox('enemy-cleaver-'+side,{width:0.28,height:0.82,depth:0.1},this.scene)),boneMat);
+        blade.position.set(side*0.9,armY-0.18,0.58); blade.rotation.z=side*0.14; blade.metadata={hitRegion:'weapon'};
+      }
+    };
+
+    attachArm(genome.leftArm, -1);
+    attachArm(genome.rightArm, 1);
+
+    if (genome.defense === 'chest-plate' || genome.defense === 'bone-cage') {
+      const plate=bodyPart(flat(MeshBuilder.CreateBox('readable-chest-defense',{
+        width: genome.defense==='bone-cage'?1.0:1.12,
+        height: genome.defense==='bone-cage'?0.82:0.94,
+        depth:0.15
+      },this.scene)),genome.defense==='bone-cage'?boneMat:armorMat);
+      plate.position.set(0,Math.max(0.82,headY-0.72),0.58);
+      plate.metadata={hitRegion:'chest-armored'};
+      if(genome.defense==='bone-cage'){
+        for(const x of [-0.32,0,0.32]){
+          const rib=bodyPart(MeshBuilder.CreateTorus('bone-cage-rib-'+x,{diameter:0.66,thickness:0.045,tessellation:8},this.scene),boneMat);
+          rib.position.set(x,Math.max(0.82,headY-0.72),0.4); rib.rotation.y=Math.PI/2; rib.scaling.x=0.45;
+        }
+      }
+    }
+    if (genome.defense === 'leg-plates') {
+      for(const side of [-1,1]){
+        const greave=bodyPart(flat(MeshBuilder.CreateBox('leg-plate-'+side,{width:0.28,height:0.66,depth:0.22},this.scene)),armorMat);
+        greave.position.set(side*0.31,0.38,0.1); greave.metadata={hitRegion:'legs-armored'};
+      }
+    }
+    if (genome.defense === 'left-shield' || genome.defense === 'right-shield') {
+      const side=genome.defense==='left-shield'?-1:1;
+      const shield=bodyPart(flat(MeshBuilder.CreateBox('defense-shield-'+side,{width:0.76,height:1.12,depth:0.12},this.scene)),armorMat);
+      shield.position.set(side*0.96,Math.max(0.84,headY-0.58),0.36); shield.rotation.y=side*0.18;
+      shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+    }
+    if (genome.head === 'armored') {
+      const helm=bodyPart(flat(MeshBuilder.CreateIcoSphere('armored-head-shell',{radius:0.5,subdivisions:1},this.scene)),armorMat);
+      helm.position.set(0,headY,0.01); helm.scaling.set(1.08,0.82,0.86); helm.metadata={hitRegion:'head-armored'};
+    }
+
+    if (genome.locomotion === 'floating') {
+      const hover=bodyPart(MeshBuilder.CreateTorus('hover-ring',{diameter:1.25,thickness:0.065,tessellation:12},this.scene),accentMat);
+      hover.position.y=0.2; hover.rotation.x=Math.PI/2;
+    } else if (genome.locomotion === 'fast-biped' || genome.mutation === 'long-legs') {
+      for(const side of [-1,1]){
+        const leg=bodyPart(flat(MeshBuilder.CreateCylinder('long-runner-leg-'+side,{height:1.35,diameterTop:0.11,diameterBottom:0.18,tessellation:5},this.scene)),bodyMat);
+        leg.position.set(side*0.3,0.5,-0.08); leg.rotation.z=side*0.1;
+      }
+    } else if (genome.locomotion === 'hopper') {
+      for(const side of [-1,1]){
+        const leg=bodyPart(flat(MeshBuilder.CreateCylinder('hopper-leg-'+side,{height:1.05,diameterTop:0.12,diameterBottom:0.22,tessellation:5},this.scene)),boneMat);
+        leg.position.set(side*0.38,0.38,-0.15); leg.rotation.z=side*0.52;
+      }
+    }
+
+    if (genome.mutation === 'back-core') {
+      const core=bodyPart(flat(MeshBuilder.CreateIcoSphere('volatile-back-core',{radius:0.32,subdivisions:1},this.scene)),eyeMat);
+      core.position.set(0,Math.max(0.82,headY-0.62),-0.62); core.scaling.z=0.78; core.metadata={hitRegion:'weak'};
+      const ring=bodyPart(MeshBuilder.CreateTorus('volatile-back-ring',{diameter:0.82,thickness:0.045,tessellation:10},this.scene),accentMat);
+      ring.position.copyFrom(core.position); ring.rotation.x=Math.PI/2;
+    } else if (genome.mutation === 'spikes') {
+      for(let i=0;i<6;i+=1){
+        const angle=i/6*Math.PI*2;
+        const spike=bodyPart(flat(MeshBuilder.CreateCylinder('contact-spike-'+i,{height:0.48,diameterTop:0,diameterBottom:0.14,tessellation:5},this.scene)),boneMat);
+        spike.position.set(Math.cos(angle)*0.62,Math.max(0.68,headY-0.72),Math.sin(angle)*0.58);
+        spike.rotation.z=Math.cos(angle)*1.18; spike.rotation.x=-Math.sin(angle)*1.18;
+      }
+    } else if (genome.mutation === 'arc-growth') {
+      const growth=bodyPart(flat(MeshBuilder.CreateIcoSphere('arcane-growth',{radius:0.34,subdivisions:1},this.scene)),eyeMat);
+      growth.position.set(-0.42,headY+0.14,-0.24); growth.scaling.set(0.75,1.35,0.78); growth.metadata={hitRegion:'caster'};
+    } else if (genome.mutation === 'blood-sacs') {
+      for(const side of [-1,1]){
+        const sac=bodyPart(flat(MeshBuilder.CreateIcoSphere('blood-sac-'+side,{radius:0.24,subdivisions:1},this.scene)),accentMat);
+        sac.position.set(side*0.34,Math.max(0.7,headY-0.74),-0.58); sac.scaling.y=1.3; sac.metadata={hitRegion:'weak'};
+      }
+    } else if (genome.mutation === 'bone-plates') {
+      for(let i=0;i<3;i+=1){
+        const plate=bodyPart(flat(MeshBuilder.CreateBox('mutation-bone-plate-'+i,{width:0.62-i*0.08,height:0.18,depth:0.1},this.scene)),boneMat);
+        plate.position.set(0,Math.max(0.72,headY-0.9)+i*0.28,-0.54); plate.rotation.x=-0.18; plate.metadata={hitRegion:'armor'};
+      }
+    } else if (genome.mutation === 'split-jaw') {
+      for(const side of [-1,1]){
+        const jaw=bodyPart(flat(MeshBuilder.CreateBox('split-jaw-'+side,{width:0.34,height:0.13,depth:0.52},this.scene)),boneMat);
+        jaw.position.set(side*0.2,headY-0.18,frontZ+0.18); jaw.rotation.z=side*0.28;
+      }
+    }
+
     const eyeSpread = Math.min(0.34, 0.1 + genome.eyes * 0.035);
     for (let i = 0; i < genome.eyes; i += 1) {
       const eye = bodyPart(flat(MeshBuilder.CreateIcoSphere('eye-' + i, { radius: genome.eyes > 3 ? 0.075 : 0.095, subdivisions: 1 }, this.scene)), eyeMat);
@@ -627,7 +758,7 @@ export class CryptVisuals {
     }
 
     let aura = null;
-    if (genome.elite || genome.ability === 'blink' || genome.ability === 'burst') {
+    if (genome.elite || genome.mutation === 'arc-growth' || genome.rightArm === 'caster') {
       aura = bodyPart(MeshBuilder.CreateTorus('monster-aura', { diameter: 2.0, thickness: genome.elite ? 0.07 : 0.045, tessellation: 14 }, this.scene), accentMat);
       aura.position.y = 0.12; aura.rotation.x = Math.PI / 2;
     }
@@ -637,7 +768,7 @@ export class CryptVisuals {
   }
 
   tagEnemy(visual, enemy) {
-    for (const mesh of visual.parts) mesh.metadata = { enemy };
+    for (const mesh of visual.parts) mesh.metadata = { ...(mesh.metadata || {}), enemy };
   }
 
   disposeMonsterVisual(visual) {
