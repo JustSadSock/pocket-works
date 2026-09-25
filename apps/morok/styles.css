@@ -360,3 +360,15 @@ button:focus-visible,a:focus-visible{outline:2px solid #c58d53;outline-offset:2p
   .seal-plate{width:51%}
   .seal-row{gap:2px}.seal-mark{width:13px;height:13px}
 }
+
+/* final 2.2 portrait safe-area correction */
+.brazier{right:8%}.bones{right:8%}.turn-bell{right:8%}
+.item-rack{left:8%}.deck-book{left:9%}
+.heritage-token{left:7%}.sacrifice-knife{left:5%}
+.app[data-mode="menu"] .seal-plate,.app[data-mode="route"] .seal-plate,.app[data-mode="event"] .seal-plate{opacity:.62}
+.seal-mark{background:linear-gradient(135deg,#b09a70,#5f4c35);border-color:#17120d;box-shadow:inset 2px 2px rgba(247,220,166,.22),0 2px 0 #0d0a07}
+@media (max-width:360px){
+  .brazier,.bones,.turn-bell{right:7%}
+  .item-rack{left:7%}.deck-book{left:8%}
+  .heritage-token{left:6%}.sacrifice-knife{left:4%}
+}
