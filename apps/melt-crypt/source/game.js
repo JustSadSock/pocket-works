@@ -52,7 +52,7 @@ const ABILITY_COPY = {
 
 function defaultMeta() {
   return {
-    version: 2,
+    version: 3,
     settings: { quality: 'pixel', sensitivity: 1, psyche: true, sound: true },
     bestFloor: 0,
     runs: 0,
@@ -70,6 +70,7 @@ function loadMeta() {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!parsed || typeof parsed !== 'object') return fallback;
     const legacy = Number(parsed.version || 1) < 2;
+    const legacyCombat = Number(parsed.version || 1) < 3;
     const legacyRun = parsed.run && typeof parsed.run === 'object'
       ? {
           ...parsed.run,
@@ -88,12 +89,12 @@ function loadMeta() {
     return {
       ...fallback,
       ...parsed,
-      version: 2,
+      version: 3,
       settings: { ...fallback.settings, ...(parsed.settings || {}) },
       codex: legacy ? [] : Array.isArray(parsed.codex) ? parsed.codex.slice(0, 128) : [],
       lootCodex: legacy ? [] : Array.isArray(parsed.lootCodex) ? parsed.lootCodex.slice(0, 96) : [],
       weaponCodex: legacy ? [] : Array.isArray(parsed.weaponCodex) ? parsed.weaponCodex.slice(0, 128) : [],
-      run: legacy ? legacyRun : parsed.run && typeof parsed.run === 'object' ? parsed.run : null
+      run: legacyCombat ? null : legacy ? legacyRun : parsed.run && typeof parsed.run === 'object' ? parsed.run : null
     };
   } catch {
     return fallback;
