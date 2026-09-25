@@ -1,6 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {
-  VERSION,BALANCE_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
+  VERSION,SEAL_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
   createProfile,createRun,hydrateRun,resolveNode,chooseCardReward,chooseRelic,chooseItem,
   hearthUpgrade,altarSelect,afterBattleVictory,skipReward,playCard,sacrificeUnit,endTurn,useItem
 } from './game-core.js';
@@ -16,7 +16,8 @@ const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
 const el={
   app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),wallSeal:$('#wallSeal'),
-  table:$('#table'),scale:$('#balanceScale'),scaleBeam:$('#scaleBeam'),enemyWeight:$('#enemyWeight'),playerWeight:$('#playerWeight'),scaleLabel:$('#scaleLabel'),
+  table:$('#table'),sealPlate:$('#sealPlate'),enemySeals:$('#enemySeals'),playerSeals:$('#playerSeals'),sealStatus:$('#sealStatus'),
+  combatCaption:$('#combatCaption'),combatCaptionMain:$('#combatCaptionMain'),combatCaptionSub:$('#combatCaptionSub'),turnCue:$('#turnCue'),turnCueText:$('#turnCueText'),
   ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),
   heritage:$('#heritageToken'),sacrifice:$('#sacrificeBtn'),items:$('#itemRack'),endTurn:$('#endTurnBtn'),deckBtn:$('#deckBtn'),deckCount:$('#deckCount'),hand:$('#hand'),
   menu:$('#menuTray'),continue:$('#continueBtn'),continueMeta:$('#continueMeta'),newRun:$('#newRunBtn'),rules:$('#rulesBtn'),
@@ -47,6 +48,8 @@ let beatTimer=0;
 let trackedBattleSeed=null;
 let seenPlayerUnits=new Set();
 let seenEnemyUnits=new Set();
+let resolvingTurn=false;
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function load(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function readRun(){
@@ -154,8 +157,8 @@ const opponentLines={
   route:['Выбери следующий узел.','Выбери путь.','Следующий этап готов.'],
   play:['Карта разыграна.','Принято.','Продолжай ход.'],
   sacrifice:['Жертва принята. Наследие сохранено.','Получены Останки. Метка перейдёт следующему существу.'],
-  damage:['Весы сместились в твою сторону.','Ты получил преимущество на весах.'],
-  hurt:['Весы сместились в мою сторону.','Преимущество на весах у меня.'],
+  damage:['Печать противника повреждена.','Прямой удар прошёл.'],
+  hurt:['Твоя печать повреждена.','Противник нанёс прямой удар.'],
   mutation:['Карта получила постоянную мутацию.','Новая метка сохранится до конца забега.']
 };
 function pick(arr,seed=Date.now()){if(!arr?.length)return'';return arr[Math.abs((seed|0))%arr.length]}
@@ -217,14 +220,13 @@ function renderRoute(){
   });
 }
 
-function renderScale(){
-  const b=run.battle,val=Math.max(-BALANCE_LIMIT,Math.min(BALANCE_LIMIT,b.balance)),deg=val*4.2;
-  el.scaleBeam.style.transform=`rotate(${deg}deg)`;el.enemyWeight.textContent=val<0?Math.abs(val):0;el.playerWeight.textContent=val>0?val:0;
-  el.scaleLabel.textContent=val===0?'РАВНОВЕСИЕ':val>0?`ТВОЯ ЧАША +${val}`:`ЕГО ЧАША +${Math.abs(val)}`;
+function renderSeals(scores=run?.battle?.seals||{player:0,enemy:0},breaking=null){
+  const make=(root,broken,side)=>{root.replaceChildren();for(let i=0;i<SEAL_LIMIT;i++){const mark=document.createElement('i');mark.className='seal-mark'+(i<broken?' broken':'');if(breaking?.side===side&&breaking.index===i)mark.classList.add('breaking');root.append(mark)}};
+  make(el.enemySeals,scores.player,'player');make(el.playerSeals,scores.enemy,'enemy');el.sealStatus.textContent=`${scores.player} : ${scores.enemy}`
 }
 function renderBattle(){
   const b=run.battle;if(!b){setMode(run.pending?'event':'route');return}
-  renderScale();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
+  renderSeals();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
   renderIntent(b);renderRows(b);renderHand(b);renderItems(b);renderSelection(b);
 }
 function renderIntent(b){
