@@ -1,5 +1,5 @@
 import { bindPointerGesture } from '../../../shared/mobile-runtime.js';
-import { clamp } from './core.js';
+import { clamp, mapLookDelta } from './core.js';
 
 export class CryptInput {
   constructor(root, canvas, sensitivity = 1) {
@@ -181,10 +181,7 @@ export class CryptInput {
   consumeLook() {
     const fine = matchMedia('(pointer:fine)').matches;
     const multiplier = fine ? 0.0022 : 0.0032;
-    const result = {
-      x: this.lookAccum.x * multiplier * this.sensitivity,
-      y: this.lookAccum.y * multiplier * this.sensitivity
-    };
+    const result = mapLookDelta(this.lookAccum.x, this.lookAccum.y, multiplier, this.sensitivity);
     this.lookAccum.x = 0;
     this.lookAccum.y = 0;
     return result;
