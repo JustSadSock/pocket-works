@@ -297,6 +297,11 @@ export class CryptVisuals {
     this.ambientProps.length = 0;
     this.decorMaterials.length = 0;
     this.collisionBoxes.length = 0;
+    for (const fx of this.impactFx) {
+      fx.shards?.forEach((shard) => shard.mesh?.dispose?.());
+      fx.material?.dispose?.();
+    }
+    this.impactFx.length = 0;
     this.roomCenters.clear();
     this.gate = null;
   }
@@ -944,7 +949,7 @@ export class CryptVisuals {
   createLootVisual(loot, position, seed) {
     const node = new TransformNode('loot-' + seed, this.scene);
     node.position.copyFrom(position);
-    const hue = loot.type === 'relic' ? 76 : (315 + seed % 80) % 360;
+    const hue = loot.type === 'relic' ? 22 : 350 + (seed % 18);
     const mat = simpleMaterial(this.scene, 'loot-mat-' + seed, hue, 0.9, 0.56, 0.95);
     let mesh;
     if (loot.type === 'relic') {
