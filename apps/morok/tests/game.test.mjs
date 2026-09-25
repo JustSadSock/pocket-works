@@ -4,7 +4,7 @@ import {
   createProfile, createRun, createBattle, playCard, sacrificeUnit, endTurn,
   resolveNode, chooseCardReward, chooseRelic, hearthUpgrade, altarSelect,
   afterBattleVictory, cardById, cloneCard, rollCardChoices, rollRelicChoices
-} from '../game-core.mjs';
+} from '../game-core.js';
 
 test('run generation is structurally deterministic and ends in boss',()=>{
   const a=createRun(12345,createProfile());
