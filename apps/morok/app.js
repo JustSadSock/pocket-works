@@ -268,7 +268,7 @@ function drawStoneTable(w,h){ctx.fillStyle='#1e1b17';ctx.beginPath();ctx.moveTo(
 function drawDust(w,h){ctx.fillStyle='rgba(164,158,142,.045)';for(let i=0;i<5;i++){const x=((sceneTime*4+i*57)%(w+70))-35;const y=Math.round(h*.24+i*17+Math.sin(sceneTime*.25+i)*3);ctx.fillRect(x,y,70,3)}}
 
 // Events -------------------------------------------------------------------
-el.continue.addEventListener('click',()=>{void audio.ensure();continueRun()});el.newRun.addEventListener('click',()=>{void audio.ensure();startNewRun()});el.again.addEventListener('click',startNewRun);el.resultHome.addEventListener('click',()=>{run=null;persist();showScreen('start')});
+el.continue.addEventListener('click',()=>{void audio.ensure();continueRun()});el.newRun.addEventListener('click',()=>{void audio.ensure();const saved=readSavedRun();if(saved&&!saved.result)confirm('Начать новый забег? Текущий путь и колода исчезнут.',startNewRun);else startNewRun()});el.again.addEventListener('click',startNewRun);el.resultHome.addEventListener('click',()=>{run=null;persist();showScreen('start')});
 el.rules.addEventListener('click',()=>openSheet(el.rulesSheet));el.menuRules.addEventListener('click',()=>openSheet(el.rulesSheet));el.menu.addEventListener('click',()=>openSheet(el.menuSheet));el.deckBtn.addEventListener('click',()=>{renderDeckSheet();openSheet(el.deckSheet)});
 $$('[data-close-sheet]').forEach(b=>b.addEventListener('click',()=>{$(`#${b.dataset.closeSheet}`).hidden=true;feedback('tap')}));
 el.sound.addEventListener('click',()=>{prefs.sound=!prefs.sound;updatePrefs();if(prefs.sound)audio.tone('reward')});el.haptic.addEventListener('click',()=>{prefs.haptic=!prefs.haptic;updatePrefs();if(prefs.haptic)haptic(10)});
