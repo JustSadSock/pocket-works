@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "dead-air-13",
+  "name": "DEAD AIR // 13",
+  "shortName": "DEAD AIR",
+  "description": "Горизонтальный мобильный 2D boss-rush/run-and-gun с авторскими боями, нарастающей сложностью, кампанией и повторными испытаниями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-26",
+  "releaseDateTime": "2026-09-26T02:02:00+03:00",
+  "changelog": [
+    "Полная сюжетная кампания с постепенным ростом сложности, промежуточными секциями и самостоятельными босс-боями.",
+    "Мобильное горизонтальное управление, автоматическая стрельба, рывок, парирование и специальные атаки.",
+    "Система рейтингов, открываемых испытаний, повторных прохождений, статистики и локальных сохранений.",
+    "Собственный рисованный broadcast-print визуальный язык, процедурная анимация, звук, haptics и офлайн PWA."
+  ],
+  "status": "active",
+  "preset": "phaser",
+  "runtime": "enhanced",
+  "accent": "#e64e36",
+  "backgroundColor": "#161718",
+  "themeColor": "#161718",
+  "orientation": "landscape",
+  "cacheName": "dead-air-13-v1.0.0",
+  "storageNamespace": "pocket-works:dead-air-13",
+  "tags": ["PWA", "offline", "game", "2D", "Phaser", "boss-rush", "run-and-gun", "landscape", "mobile", "campaign", "action"],
+  "order": 205
+}
