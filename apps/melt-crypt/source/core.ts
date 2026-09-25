@@ -1,9 +1,9 @@
 export {
   POTIONS,
+  ROOM_MODULES,
   RELICS,
   choice,
   clamp,
-  createMonsterGenome,
   generateDungeon,
   hashString,
   makeRng,
