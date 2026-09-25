@@ -251,3 +251,7 @@ Local device-to-device features use `shared/capabilities/lan.js` and the contrac
 - Realtime games should default to a host-authoritative simulation unless deterministic lockstep is an explicit design choice.
 - User-facing LAN UX must talk about the same Wi-Fi/hotspot/local network, make clear that global internet is not required, and explain client-isolated/Guest Wi-Fi failures without exposing raw SDP, ICE candidates, ports or IP addresses.
 - A LAN failure must never disable unrelated offline/local functionality.
+
+## 16. PocketNet internet networking
+
+Internet multiplayer uses the platform contract in `docs/POCKET-SERVER.md`. Keep each game's authoritative server logic in `apps/<slug>/server/module.ts` with `module.json`, and use `shared/capabilities/net.js` from the client. The `main` workflow builds and publishes game modules independently; do not edit the server core to add a game. PocketLAN remains the local no-internet mode. A game PR that only adds its own server module and client stays within its app directory; changes to PocketNet, Pocket Server core or CI are separate platform work.

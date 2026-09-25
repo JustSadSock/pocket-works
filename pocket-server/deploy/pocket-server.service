@@ -1,0 +1,22 @@
+[Unit]
+Description=PocketWorks Pocket Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pocketserver
+Group=pocketserver
+WorkingDirectory=/opt/pocket-works/pocket-server
+EnvironmentFile=/etc/pocket-server.env
+ExecStart=/usr/bin/node src/main.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pocket-server
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

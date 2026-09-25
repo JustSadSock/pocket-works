@@ -1,0 +1,45 @@
+name: Pocket Server modules
+
+on:
+  pull_request:
+    paths:
+      - 'apps/*/server/**'
+      - 'pocket-server/**'
+      - 'shared/capabilities/net.js'
+      - 'scripts/prepare-site.mjs'
+      - '.github/workflows/pocket-server-modules.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/*/server/**'
+      - 'pocket-server/**'
+      - '.github/workflows/pocket-server-modules.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pocket-server-modules
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install module tooling
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Validate module runtime
+        run: npm test --prefix pocket-server
+      - name: Build game modules
+        run: node pocket-server/scripts/modules.mjs
+      - name: Publish to Lightsail
+        if: ${{ github.event_name == 'push' && vars.POCKET_SERVER_URL != '' }}
+        env:
+          POCKET_SERVER_URL: ${{ vars.POCKET_SERVER_URL }}
+          POCKET_DEPLOY_TOKEN: ${{ secrets.POCKET_DEPLOY_TOKEN }}
+        run: node pocket-server/scripts/modules.mjs --publish
