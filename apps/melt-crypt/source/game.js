@@ -1684,6 +1684,23 @@ export class MeltCryptGame {
   }
 
 
+  weaponComparison(next) {
+    const current=this.run?.weapon;
+    if(!current||!next)return '';
+    const arrow=(a,b,goodHigh=true)=>{
+      const delta=(a-b)/Math.max(0.001,Math.abs(b));
+      if(Math.abs(delta)<0.09)return '≈';
+      const up=delta>0;
+      return (up===goodHigh)?'↑':'↓';
+    };
+    return [
+      'SPD '+arrow(next.cadence,current.cadence,true),
+      'RNG '+arrow(next.reach,current.reach,true),
+      'STG '+arrow(next.stagger,current.stagger,true),
+      next.skillSpec?.label||'SKILL'
+    ].join('  ');
+  }
+
   updateContext() {
     let nearest = null;
     let best = 2.15;
@@ -1715,7 +1732,7 @@ export class MeltCryptGame {
     if (nearest.type === 'weapon-drop') {
       const weapon=nearest.drop.weapon;
       this.el['context-label'].textContent='EQUIP';
-      this.el['context-copy'].textContent=weapon.name+' · '+weapon.skillSpec.label+' · reach '+weapon.reach.toFixed(1);
+      this.el['context-copy'].textContent=weapon.name+'  ·  '+this.weaponComparison(weapon);
       this.el['use-button-label'].textContent='EQUIP';
     } else if (nearest.type === 'gate') {
       const missing = Math.max(0, this.dungeon.requiredKills - this.floorKills);
@@ -1759,7 +1776,7 @@ export class MeltCryptGame {
       this.visuals.setInteractiveUsed(target);
       room.opened = true;
       const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
-      this.spawnWeaponDrop(target.position.add(new Vector3(0.75,0,0.5)),target.roomId);
+      this.spawnWeaponChoice(target.roomId,3);
       if(this.runRng()<0.48){
         const relic=rollLoot(seed,this.run.floor,'relic').item;
         this.discoverLoot(relic);
