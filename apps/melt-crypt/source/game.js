@@ -38,12 +38,14 @@ const ROOM_NAMES = [
   'HALL OF SLIGHTLY WRONG DOORS'
 ];
 const ABILITY_COPY = {
-  spit: 'spits compressed bad decisions',
-  blink: 'teleports when reality looks away',
-  rush: 'charges after a short warning',
-  split: 'files for mitosis on death',
-  leech: 'steals back health in melee',
-  burst: 'periodically vomits projectiles in every direction'
+  'heavy-sweep': 'huge hammer: slow wide hit, brutal stagger',
+  flurry: 'claws: short reach, fast repeated attacks',
+  thrust: 'long spear: narrow attack with extra reach',
+  'shield-bash': 'shield arm: blocks that side and bashes up close',
+  bolt: 'glowing arm growth: ranged projectile',
+  'hook-pull': 'hook arm: catches and drags targets inward',
+  slam: 'oversized fist: slow impact with heavy knockback',
+  cleave: 'broad blade: readable mid-speed sweep'
 };
 
 function defaultMeta() {
@@ -468,13 +470,31 @@ export class MeltCryptGame {
   }
 
   discoverMonster(genome) {
-    const sig = [genome.body, genome.ability, genome.eyes, genome.horns, genome.limbs, genome.crest, genome.halo ? 1 : 0, genome.motion, genome.elite ? 1 : 0].join('/');
+    const sig = genome.signature;
     if (this.meta.codex.some((entry) => entry.sig === sig)) return;
-    this.meta.codex.push({ sig, name: genome.name, body: genome.body, ability: genome.ability });
-    this.meta.codex = this.meta.codex.slice(-96);
+    this.meta.codex.push({
+      sig, name: genome.name, body: genome.body, locomotion: genome.locomotion,
+      weapon: genome.rightArm, defense: genome.defense, mutation: genome.mutation
+    });
+    this.meta.codex = this.meta.codex.slice(-128);
     if (this.run) this.run.discoveries += 1;
     this.saveMeta();
-    this.showDiscovery(genome.name, ABILITY_COPY[genome.ability] || 'behaves in a legally distinct manner');
+    const attack = ABILITY_COPY[genome.ability] || genome.rightArmSpec?.cue || 'read the silhouette';
+    const defense = genome.defenseSpec?.cue ? ' · ' + genome.defenseSpec.cue : '';
+    const mutation = genome.mutationSpec?.cue && genome.mutation !== 'none' ? ' · ' + genome.mutationSpec.cue : '';
+    this.showDiscovery(genome.name, attack + defense + mutation);
+  }
+
+  discoverWeapon(weapon) {
+    if (!weapon || this.meta.weaponCodex.some((entry) => entry.sig === weapon.signature)) return;
+    this.meta.weaponCodex.push({
+      sig: weapon.signature, name: weapon.name, core: weapon.core, head: weapon.head,
+      skill: weapon.skill, trait: weapon.trait
+    });
+    this.meta.weaponCodex = this.meta.weaponCodex.slice(-128);
+    if (this.run) this.run.discoveries += 1;
+    this.saveMeta();
+    this.showDiscovery(weapon.name, weapon.headSpec.label + ' · ' + weapon.handleSpec.label + ' · skill: ' + weapon.skillSpec.label);
   }
 
   discoverLoot(item) {
@@ -496,17 +516,21 @@ export class MeltCryptGame {
   spawnRoom(room) {
     if (room.spawned) return;
     room.spawned = true;
+    this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
     for (let index = 0; index < room.monsterSeeds.length; index += 1) {
       const seed = room.monsterSeeds[index];
-      const genome = createMonsterGenome(seed, this.run.floor, room.danger);
+      const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures);
+      this.recentEnemySignatures.push(genome.signature);
+      this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
       const rng = makeRng(seed ^ 0xa511e9b3);
-      let ox = (rng() - 0.5) * (room.sizeX - 3);
-      let oz = (rng() - 0.5) * (room.sizeZ - 3);
-      if (Math.hypot(ox, oz) < 2.4) { ox += ox < 0 ? -2.3 : 2.3; oz += oz < 0 ? -1.1 : 1.1; }
+      let ox = (rng() - 0.5) * (room.sizeX - 3.4);
+      let oz = (rng() - 0.5) * (room.sizeZ - 3.4);
+      if (Math.hypot(ox, oz) < 2.6) { ox += ox < 0 ? -2.5 : 2.5; oz += oz < 0 ? -1.3 : 1.3; }
       const center = this.visuals.roomCenters.get(room.id);
       const position = new Vector3(center.x + ox, 0, center.z + oz);
       this.spawnEnemy(genome, room.id, position, false);
     }
+    this.run.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
     if (!room.monsterSeeds.length) room.cleared = true;
   }
 
@@ -519,12 +543,15 @@ export class MeltCryptGame {
       maxHp: genome.maxHp,
       dead: false,
       child,
-      attackTimer: 0,
-      abilityTimer: genome.cooldown * (0.45 + this.runRng() * 0.55),
-      rushTell: 0,
-      rushTime: 0,
-      rushHit: false,
-      chargeDirection: new Vector3(),
+      attackTimer: 0.35 + this.runRng() * 0.45,
+      specialTimer: 1.2 + this.runRng() * 1.4,
+      tellTimer: 0,
+      attackKind: null,
+      attackHit: false,
+      stagger: 0,
+      staggerTime: 0,
+      knockVelocity: new Vector3(),
+      facing: 0,
       visual: null
     };
     enemy.visual = this.visuals.createMonsterVisual(genome, position);
