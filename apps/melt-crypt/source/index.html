@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#17101f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <title>MELT//CRYPT — Pocket Works</title>
+</head>
+<body data-gesture-surface data-block-callout>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app aria-label="MELT CRYPT roguelike">
+  <canvas id="render-canvas" aria-label="Психоделическое подземелье" data-gesture-surface></canvas>
+  <div id="psy-layer" aria-hidden="true"></div>
+  <div id="damage-layer" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div id="move-zone" class="touch-zone move-zone" data-gesture-surface data-touch-action="none" aria-hidden="true"></div>
+  <div id="look-zone" class="touch-zone look-zone" data-gesture-surface data-touch-action="none" aria-hidden="true"></div>
+  <div id="joystick-base" aria-hidden="true"><div id="joystick-knob"></div></div>
+
+  <header id="hud" data-ui hidden>
+    <div class="hud-left">
+      <div class="sigil" aria-hidden="true"><i></i><b></b><em></em></div>
+      <div class="floor-copy"><span>MELT//CRYPT</span><b id="floor-label">FLOOR 01</b></div>
+      <div class="health-block"><span>FLESH</span><div class="health-track"><i id="health-fill"></i></div><b id="health-label">100/100</b></div>
+    </div>
+    <div class="hud-center">
+      <span id="room-label">THE FOYER THAT REGRETS YOU</span>
+      <b id="mutation-label">MUTATION 0%</b>
+    </div>
+    <div class="hud-right">
+      <div class="kill-block"><span>GATE DEBT</span><b id="kill-label">0 / 0</b></div>
+      <canvas id="minimap" width="148" height="92" aria-label="Карта этажа"></canvas>
+      <button id="pause-button" class="pause-button" type="button" data-native-press aria-label="Пауза"><i></i><i></i></button>
+    </div>
+  </header>
+
+  <div id="reticle" hidden aria-hidden="true"><i></i><b></b></div>
+  <div id="weapon-readout" hidden data-ui><span id="weapon-name">THOUGHT REPEATER</span><b id="weapon-state">READY</b></div>
+  <div id="potion-readout" hidden data-ui><span>FLASK QUEUE</span><b id="potion-name">EMPTY</b><em id="potion-count">0</em></div>
+  <div id="context-prompt" hidden data-ui><b id="context-label">USE</b><span id="context-copy"></span></div>
+
+  <div class="action-cluster" id="action-cluster" hidden data-ui>
+    <button id="fire-button" class="action fire" type="button" data-gesture-surface data-native-press><span>FIRE</span><i></i></button>
+    <button id="use-button" class="action use" type="button" data-gesture-surface data-native-press><span id="use-button-label">FLASK</span></button>
+    <button id="dash-button" class="action dash" type="button" data-gesture-surface data-native-press><span>DODGE</span><i id="dash-meter"></i></button>
+  </div>
+
+  <div id="floor-banner" class="floor-banner" hidden data-ui><span id="floor-banner-top">DESCENDING</span><b id="floor-banner-main">FLOOR 02</b><em id="floor-banner-copy">the walls learned a new color</em></div>
+  <div id="toast" class="toast" aria-live="polite" data-ui></div>
+  <div id="discovery" class="discovery" hidden data-ui><span>NEW DISCOVERY</span><b id="discovery-name"></b><p id="discovery-copy"></p></div>
+
+  <section id="loading" class="screen loading" data-ui>
+    <div class="load-art" aria-hidden="true"><i></i><i></i><i></i><b></b><em></em></div>
+    <p>POCKET WORKS / ILLEGAL DUNGEON RUNTIME</p>
+    <h1>MELT//CRYPT</h1>
+    <span id="loading-text">teaching stone to hallucinate…</span>
+    <div class="loading-track"><i id="loading-bar"></i></div>
+  </section>
+
+  <section id="title-screen" class="screen title-screen" hidden data-ui>
+    <div class="title-noise" aria-hidden="true"></div>
+    <div class="title-column">
+      <p class="eyebrow">FIRST PERSON / PROCEDURAL MUTATION ROGUELIKE</p>
+      <div class="title-lockup"><span>MELT</span><i>//</i><b>CRYPT</b></div>
+      <p class="title-copy">Каждый заход подземелье разводит новую фауну. Внешность, палитра, тело и способности монстров мутируют вместе.</p>
+      <div class="title-actions">
+        <button id="new-run-button" class="primary-action" type="button" aria-label="Start new run" data-native-press>NEW RUN <i>→</i></button>
+        <button id="continue-button" class="secondary-action" type="button" data-native-press hidden>CONTINUE RUN</button>
+        <button id="title-settings-button" class="secondary-action" type="button" data-native-press>SETTINGS</button>
+        <button id="title-exit-button" class="launcher-link" type="button" data-native-press>Return to Pocket Works</button>
+      </div>
+    </div>
+    <aside class="title-specimen">
+      <div class="specimen-eye" aria-hidden="true"><i></i><b></b><em></em></div>
+      <p>SPECIMEN FEED</p>
+      <b id="title-best">BEST FLOOR 00</b>
+      <span id="title-codex">0 phenotypes archived</span>
+      <small>The crypt does not contain handcrafted species. It contains bad ideas with legs.</small>
+    </aside>
+  </section>
+
+  <section id="pause-screen" class="screen overlay pause-screen" hidden data-ui>
+    <div class="pause-panel">
+      <p>THE CRYPT IS HOLDING ITS BREATH</p>
+      <h2>PAUSED</h2>
+      <div class="pause-stats"><span>Floor <b id="pause-floor">1</b></span><span>Kills <b id="pause-kills">0</b></span><span>Relics <b id="pause-relics">0</b></span></div>
+      <button id="resume-button" class="primary-action" type="button" data-native-press>RESUME</button>
+      <button id="pause-settings-button" class="secondary-action" type="button" data-native-press>SETTINGS</button>
+      <button id="abandon-button" class="secondary-action danger-action" type="button" data-native-press>ABANDON RUN</button>
+      <button id="pause-exit-button" class="launcher-link inline" type="button" data-native-press>Return to Pocket Works</button>
+    </div>
+  </section>
+
+  <section id="settings-screen" class="screen overlay settings-screen" hidden data-ui>
+    <div class="settings-panel">
+      <header><div><p>LOCAL REALITY SETTINGS</p><h2>SETTINGS</h2></div><button id="settings-close" type="button" data-native-press>DONE</button></header>
+      <label><span><b>PIXEL DENSITY</b><small>Ниже — пиксельнее и быстрее.</small></span><select id="quality-select"><option value="crisp">CRISP</option><option value="pixel" selected>PIXEL</option><option value="raw">RAW</option></select></label>
+      <label><span><b>LOOK SENSITIVITY</b><small>Правая половина экрана / мышь.</small></span><input id="sensitivity-input" type="range" min="0.55" max="1.8" step="0.05" value="1" /></label>
+      <label><span><b>PSYCHEDELIC FX</b><small>Hue drift, screen warp and mutation overlays.</small></span><input id="psy-toggle" type="checkbox" checked /></label>
+      <label><span><b>GENERATIVE AUDIO</b><small>Дроны, выстрелы, удары и вопли из Web Audio.</small></span><input id="sound-toggle" type="checkbox" checked /></label>
+      <p class="control-note"><b>DESKTOP</b> WASD · mouse · LMB fire · E use · Q flask · Space dodge · Esc pause<br><b>TOUCH</b> left move · right look · FIRE / USE / DODGE</p>
+    </div>
+  </section>
+
+  <section id="death-screen" class="screen death-screen" hidden data-ui>
+    <div class="death-slice" aria-hidden="true"></div>
+    <p>RUN TERMINATED BY LOCAL FAUNA</p>
+    <h2>YOU WERE<br>DELICIOUS.</h2>
+    <div class="death-stats"><span>FLOOR <b id="death-floor">1</b></span><span>KILLS <b id="death-kills">0</b></span><span>DISCOVERIES <b id="death-discoveries">0</b></span></div>
+    <button id="death-new-button" class="primary-action" type="button" data-native-press>RUN IT BACK</button>
+    <button id="death-exit-button" class="launcher-link inline" type="button" data-native-press>Return to Pocket Works</button>
+  </section>
+
+  <section id="rotate-screen" class="screen rotate-screen" hidden data-ui>
+    <div class="rotate-device" aria-hidden="true"><i></i></div><b>TURN THE DEVICE</b><span>MELT//CRYPT lives sideways.</span>
+  </section>
+
+  <section id="error-screen" class="screen error-screen" hidden data-ui>
+    <div><p>THE CRYPT FAILED TO MATERIALIZE</p><code id="error-text"></code><button id="reload-button" class="primary-action" type="button" data-native-press>RELOAD</button><button id="error-exit-button" class="launcher-link inline" type="button" data-native-press>Return to Pocket Works</button></div>
+  </section>
+</main>
+<script type="module" src="./main.ts"></script>
+</body>
+</html>
