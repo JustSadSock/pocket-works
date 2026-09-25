@@ -3,7 +3,7 @@ import {
   SIGILS, RELICS, cardById, sigilInfo, nodeLabel, createProfile, createRun, hydrateRun,
   resolveNode, chooseCardReward, chooseRelic, hearthUpgrade, altarSelect, afterBattleVictory,
   skipReward, playCard, sacrificeUnit, endTurn
-} from './game-core.mjs';
+} from './game-core.js';
 
 installMobileRuntime();
 
