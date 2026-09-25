@@ -1836,22 +1836,21 @@ export class MeltCryptGame {
     this.el['health-label'].textContent = Math.max(0, Math.ceil(this.run.hp)) + '/' + Math.ceil(this.run.maxHp);
     this.el['floor-label'].textContent = 'FLOOR ' + String(this.run.floor).padStart(2, '0');
     this.el['kill-label'].textContent = this.floorKills + ' / ' + this.dungeon.requiredKills;
-    const variety = Math.min(999,this.meta.codex.length);
-    this.el['mutation-label'].textContent = 'TIER ' + this.generatorTier() + ' · SIGNATURES ' + variety;
+    this.el['mutation-label'].textContent = '';
 
     const weapon=this.run.weapon;
     if(weapon){
       this.el['weapon-name'].textContent=weapon.name.toUpperCase();
-      this.el['weapon-state'].textContent=this.attackState.active
-        ? (this.attackState.heavy?'HEAVY':'COMBO '+(this.attackState.combo+1))
-        : this.skillCooldown>0.02
-          ? weapon.skillSpec.label+' '+this.skillCooldown.toFixed(1)
-          : weapon.skillSpec.label+' READY';
+      this.el['weapon-state'].textContent=weapon.skillSpec.label;
       if(!this.contextTarget)this.el['use-button-label'].textContent=weapon.skillSpec.label;
+      const skillMax=Math.max(0.1,weapon.skillSpec?.cooldown||1);
+      this.root.style.setProperty('--skill-ready',String(clamp(1-this.skillCooldown/skillMax,0,1)));
     }
 
     const maxDash = Math.max(0.62, 1.45 * (1 - (this.run.dashReduction || 0)));
-    this.el['dash-meter'].style.transform = 'scaleX(' + clamp(1 - this.dashCooldown / maxDash, 0, 1) + ')';
+    const dashReady=clamp(1 - this.dashCooldown / maxDash, 0, 1);
+    this.el['dash-meter'].style.transform = 'scaleX(' + dashReady + ')';
+    this.root.style.setProperty('--dash-ready',String(dashReady));
     this.root.style.setProperty('--attack-charge',String(clamp(this.attackHold/0.62,0,1)));
   }
 
