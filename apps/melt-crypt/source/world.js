@@ -162,8 +162,8 @@ export class CryptVisuals {
   }
 
   buildRoom(root, room, x, z, wallMat, floorMat, ceilingMat, trimMat, crystalA, crystalB, floor) {
-    const floor = setSolid(MeshBuilder.CreateBox('room-floor-' + room.id, { width: room.sizeX, height: 0.35, depth: room.sizeZ }, this.scene));
-    floor.parent = root; floor.position.set(x, -0.23, z); floor.material = floorMat; floor.isPickable = false;
+    const floorMesh = setSolid(MeshBuilder.CreateBox('room-floor-' + room.id, { width: room.sizeX, height: 0.35, depth: room.sizeZ }, this.scene));
+    floorMesh.parent = root; floorMesh.position.set(x, -0.23, z); floorMesh.material = floorMat; floorMesh.isPickable = false;
     const ceiling = setSolid(MeshBuilder.CreateBox('room-ceiling-' + room.id, { width: room.sizeX, height: 0.28, depth: room.sizeZ }, this.scene));
     ceiling.parent = root; ceiling.position.set(x, 4.28, z); ceiling.material = ceilingMat; ceiling.isPickable = false;
 
