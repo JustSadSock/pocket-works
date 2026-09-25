@@ -152,7 +152,7 @@ export class MeltCryptGame {
     this.parryWindow = 0;
     this.wardTimer = 0;
     this.attackHold = 0;
-    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
+    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:-1, hitDone:false, dashAttack:false };
     this.recentEnemySignatures = [];
     this.recentWeaponSignatures = [];
     this.dashTimer = 0;
@@ -418,7 +418,7 @@ export class MeltCryptGame {
     this.skillCooldown = 0;
     this.skillAnim = 0;
     this.attackHold = 0;
-    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
+    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:-1, hitDone:false, dashAttack:false };
     this.effects = { warp: 0, slow: 0, speed: 0, rage: 0, haste: 0 };
     this.runRng = makeRng((this.run.seed ^ Math.imul(this.run.floor, 0x7f4a7c15)) >>> 0);
     this.dungeon = generateDungeon(this.run.seed, this.run.floor);
@@ -1116,7 +1116,7 @@ export class MeltCryptGame {
     this.visuals.setPlayerWeapon(weapon);
     this.discoverWeapon(weapon);
     this.skillCooldown=0;
-    this.attackState={active:false,timer:0,duration:0,heavy:false,combo:0,hitDone:false,dashAttack:false};
+    this.attackState={active:false,timer:0,duration:0,heavy:false,combo:-1,hitDone:false,dashAttack:false};
     this.toast('EQUIPPED: ' + weapon.name + ' / ' + weapon.skillSpec.label);
     this.audio.tone('loot',1);
     navigator.vibrate?.([5,16,5]);
