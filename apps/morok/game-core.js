@@ -180,7 +180,7 @@ export function playCard(run,battle,cardInstanceId,lane=null,targetLane=null){
     const copy={...card,sigils:[...card.sigils]};if(battle.heritage&&!copy.sigils.includes(battle.heritage)){copy.sigils.push(battle.heritage);battle.heritageCharges--;if(battle.heritageCharges<=0)battle.heritage=null}
     battle.player[lane]=makePlayerUnit(copy);battle.log.unshift(`${copy.name} лёг на стол.`)
   }else{resolveRite(run,battle,card,targetLane);battle.discard.push(card)}
-  run.stats.cardsPlayed++;return{ok:true}
+  run.stats.cardsPlayed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner,phase:!!ended?.phase}
 }
 function resolveRite(run,battle,card,targetLane){
   if(card.rite==='bark'){const u=battle.player[targetLane];u.maxHp+=3;u.hp+=3;if(!u.sigils.includes('ward'))u.sigils.push('ward');u.wardUsed=false}
@@ -194,7 +194,7 @@ function resolveRite(run,battle,card,targetLane){
 }
 export function sacrificeUnit(run,battle,lane,sigil=null){
   if(battle.sacrificedThisTurn)return{ok:false,reason:'Одной жертвы за ход достаточно.'};const unit=battle.player[lane];if(!unit)return{ok:false,reason:'Здесь некого резать.'};
-  const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=new Set(run.relics).has('red-thread')?2:1;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие: ${SIGILS[pick]?.name||pick}.`:'На столе осталась только кровь.');return{ok:true,heritage:pick}
+  const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие: ${SIGILS[pick]?.name||pick}.`:'На столе осталась только кровь.');return{ok:true,heritage:pick}
 }
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
 function damageUnit(run,battle,side,lane,amount,attacker){
@@ -248,7 +248,7 @@ export function useItem(run,battle,itemId,targetLane=null){
   if(itemId==='knife'){killUnit(run,battle,'player',targetLane,'item');battle.remains+=3}
   if(itemId==='smoke')battle.intent=[];
   if(itemId==='bell')battle.ember+=2;
-  if(itemId==='thread'){battle.heritageCharges=2;if(!battle.heritage)battle.log.unshift('Нить ждёт следующего Наследия.')}
+  if(itemId==='thread'){battle.threadPrimed=true;battle.log.unshift('Нить ждёт следующего Наследия.')}
   if(itemId==='mirror'){const candidates=battle.enemy.filter(Boolean).sort((a,b)=>(b.atk+b.hp)-(a.atk+a.hp));if(candidates[0]&&battle.hand.length<7){const u=candidates[0];battle.hand.push(cloneCard('hare',{name:`Отражение: ${u.name}`,atk:1,hp:1,cost:0,sigils:[...u.sigils].slice(0,1),portrait:u.portrait}))}}
   if(itemId==='teeth')battle.balance=Math.min(BALANCE_LIMIT,battle.balance+2);
   run.items.splice(idx,1);run.stats.itemsUsed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner}
@@ -280,7 +280,7 @@ export function altarSelect(run,id){
 }
 export function afterBattleVictory(run){
   if(!run.battle||run.battle.winner!=='player')return{ok:false};const bossId=run.battle.bossId;run.battle=null;
-  if(bossId){completeNode(run);if(run.depth>=run.maxDepth){run.result='won';run.pending={type:'run-win'};return{ok:true,won:true}}run.pending={type:'relic-choice',title:`Трофей после: ${BOSSES[bossId].name}`,choices:rollRelicChoices(run,3),nodeId:'boss-trophy'};return{ok:true,boss:true}}
+  if(bossId){if(run.depth>=run.maxDepth-1||bossId==='prior'){run.result='won';run.pending={type:'run-win'};return{ok:true,won:true}}run.pending={type:'relic-choice',title:`Трофей после: ${BOSSES[bossId].name}`,choices:rollRelicChoices(run,3),nodeId:'boss-trophy'};return{ok:true,boss:true}}
   run.pending={type:'card-choice',title:'Противник оставил три карты',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'battle'),nodeId:'battle-reward'};return{ok:true}
 }
 export function completeNode(run){run.pending=null;run.battle=null;run.depth++;if(run.depth>=run.maxDepth&&!run.result)run.result='won';return run}
