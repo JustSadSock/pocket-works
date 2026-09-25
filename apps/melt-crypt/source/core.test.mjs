@@ -45,6 +45,9 @@ for (let floor = 1; floor <= 14; floor += 1) {
   for (const room of dungeon.rooms) {
     seenModules.add(room.module);
     assert.ok(ROOM_MODULES.some((module) => module.id === room.module), 'room module must come from authored grammar');
+    if (room.role !== 'room') {
+      assert.ok(['none','ribs','gallery','hooks'].includes(room.obstacle), 'interactive room centers must stay structurally clear');
+    }
     for (const [side, nextId] of Object.entries(room.links)) {
       if (nextId === null) continue;
       const next = dungeon.rooms[nextId];
