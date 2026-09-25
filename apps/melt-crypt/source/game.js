@@ -177,6 +177,7 @@ export class MeltCryptGame {
     this.combatActive = false;
     this.weaponBannerTimer = 0;
     this.attackCommitted = false;
+    this.footstepTimer = 0;
   }
 
   async init(report = () => {}) {
@@ -827,6 +828,12 @@ export class MeltCryptGame {
 
     const targetFov = 0.95 + fx.dash * 0.09 + (autoSprint ? 0.035 : 0);
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 10);
+
+    this.footstepTimer=Math.max(0,this.footstepTimer-dt);
+    if(move.magnitude>0.28&&this.dashTimer<=0&&this.footstepTimer<=0){
+      this.audio.footstep(autoSprint?1:0.72);
+      this.footstepTimer=autoSprint?0.27:0.41;
+    }
   }
 
   startDash() {
@@ -1069,7 +1076,7 @@ export class MeltCryptGame {
     this.visuals.createHitEffect(enemy.visual.root.position.add(new Vector3(0,Math.max(0.55,enemy.genome.size),0)),hitDirection,heavy?1.5:0.8,weak);
     this.hitStop=Math.max(this.hitStop,blocked?0.018:heavy||didStagger?0.065:0.035);
     this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?0.7:0.32);
-    this.audio.tone('hit',weak||critical?1.08:blocked?0.48:0.78);
+    this.audio.tone(blocked?'armor':'hit',weak||critical?1.08:blocked?0.9:0.82);
     navigator.vibrate?.(heavy||didStagger?[8,18,8]:4);
 
     if(blocked&&!weak&&this.runRng()<0.3)this.toast('ARMOR ATE MOST OF THAT HIT.');
@@ -1542,7 +1549,7 @@ export class MeltCryptGame {
       this.hitStop=Math.max(this.hitStop,0.055);
       this.cameraFx.recoil=Math.max(this.cameraFx.recoil,0.55);
       this.toast('PARRIED.');
-      this.audio.tone('hit',1.1);
+      this.audio.tone('parry',1.1);
       navigator.vibrate?.([6,18,6]);
       return;
     }
