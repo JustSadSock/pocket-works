@@ -106,7 +106,7 @@ export class MeltCryptGame {
     this.el = {};
     [
       'psy-layer','damage-layer','hud','floor-label','health-fill','health-label','room-label','mutation-label','kill-label',
-      'minimap','pause-button','reticle','weapon-readout','weapon-state','potion-readout','potion-name','potion-count',
+      'minimap','pause-button','reticle','weapon-readout','weapon-name','weapon-state','potion-readout','potion-name','potion-count',
       'context-prompt','context-label','context-copy','action-cluster','use-button-label','dash-meter','floor-banner',
       'floor-banner-top','floor-banner-main','floor-banner-copy','toast','discovery','discovery-name','discovery-copy',
       'loading','loading-text','loading-bar','title-screen','new-run-button','continue-button','title-settings-button',
@@ -303,7 +303,8 @@ export class MeltCryptGame {
   }
 
   setGameplayUi(visible) {
-    ['hud','reticle','weapon-readout','potion-readout','action-cluster'].forEach((key) => { this.el[key].hidden = !visible; });
+    ['hud','reticle','weapon-readout','action-cluster'].forEach((key) => { this.el[key].hidden = !visible; });
+    this.el['potion-readout'].hidden = true;
     if (!visible) this.el['context-prompt'].hidden = true;
   }
 
@@ -1341,7 +1342,7 @@ export class MeltCryptGame {
     if (this.run.hp <= 0) this.die();
   }
 
-  useWeaponSkill() {
+  useWeaponSkill(isEcho = false) {
     const weapon=this.run.weapon;
     if(!weapon)return;
     if(this.skillCooldown>0.02){
@@ -1426,12 +1427,12 @@ export class MeltCryptGame {
       this.audio.tone('blink',0.7);
     }
 
-    if(weapon.traitSpec?.effect==='skill-echo'&&!this.contextTarget){
+    if(!isEcho&&weapon.traitSpec?.effect==='skill-echo'&&!this.contextTarget){
       const previousCooldown=this.skillCooldown;
       setTimeout(()=>{
         if(this.phase!=='playing'||this.run.weapon?.signature!==weapon.signature)return;
         this.skillCooldown=0;
-        if(skill==='projectile'||skill==='pulse'||skill==='aoe')this.useWeaponSkill();
+        if(skill==='projectile'||skill==='pulse'||skill==='aoe')this.useWeaponSkill(true);
         this.skillCooldown=Math.max(previousCooldown*0.55,this.skillCooldown);
       },180);
     }
@@ -1440,21 +1441,38 @@ export class MeltCryptGame {
 
   updateContext() {
     let nearest = null;
-    let best = 2.05;
+    let best = 2.15;
+    const player=this.controller.position;
+
     for (const target of this.visuals.interactives) {
       if (target.used && target.type !== 'gate') continue;
       if (target.roomId !== this.currentRoomId) continue;
-      const distance = Math.hypot(this.camera.position.x - target.position.x, this.camera.position.z - target.position.z);
+      const distance = Math.hypot(player.x - target.position.x, player.z - target.position.z);
       if (distance < best) { best = distance; nearest = target; }
     }
+
+    for(const drop of this.drops){
+      if(drop.type!=='weapon'||!drop.visual)continue;
+      if(drop.roomId!==this.currentRoomId)continue;
+      const position=drop.visual.node.position;
+      const distance=Math.hypot(player.x-position.x,player.z-position.z);
+      if(distance<best){best=distance;nearest={type:'weapon-drop',roomId:drop.roomId,position,drop};}
+    }
+
     this.contextTarget = nearest;
     if (!nearest) {
       this.el['context-prompt'].hidden = true;
-      this.el['use-button-label'].textContent = this.run.potions.length ? 'FLASK' : 'USE';
+      this.el['use-button-label'].textContent = this.run.weapon?.skillSpec?.label || 'SKILL';
       return;
     }
+
     this.el['context-prompt'].hidden = false;
-    if (nearest.type === 'gate') {
+    if (nearest.type === 'weapon-drop') {
+      const weapon=nearest.drop.weapon;
+      this.el['context-label'].textContent='EQUIP';
+      this.el['context-copy'].textContent=weapon.name+' · '+weapon.skillSpec.label+' · reach '+weapon.reach.toFixed(1);
+      this.el['use-button-label'].textContent='EQUIP';
+    } else if (nearest.type === 'gate') {
       const missing = Math.max(0, this.dungeon.requiredKills - this.floorKills);
       this.el['context-label'].textContent = nearest.unlocked ? 'DESCEND' : 'LOCKED';
       this.el['context-copy'].textContent = nearest.unlocked ? 'enter the next floor' : missing + ' more kills required';
@@ -1462,18 +1480,25 @@ export class MeltCryptGame {
     } else if (nearest.type === 'chest') {
       const room = this.dungeon.rooms[nearest.roomId];
       this.el['context-label'].textContent = room.cleared ? 'OPEN' : 'BUSY';
-      this.el['context-copy'].textContent = room.cleared ? 'unsupervised treasury' : 'the monsters are still using it';
+      this.el['context-copy'].textContent = room.cleared ? 'contains a generated weapon' : 'clear the room first';
       this.el['use-button-label'].textContent = 'OPEN';
     } else {
       this.el['context-label'].textContent = 'TOUCH';
-      this.el['context-copy'].textContent = 'bad idea chapel';
+      this.el['context-copy'].textContent = 'the shrine changes mechanics, not percentages';
       this.el['use-button-label'].textContent = 'TOUCH';
     }
   }
 
   useAction() {
     const target = this.contextTarget;
-    if (!target) { this.drinkPotion(); return; }
+    if (!target) { this.useWeaponSkill(); return; }
+
+    if(target.type==='weapon-drop'){
+      this.collectDrop(target.drop);
+      this.contextTarget=null;
+      return;
+    }
+
     if (target.type === 'gate') {
       if (!target.unlocked) {
         this.toast('THE DESCENT OFFICE REQUIRES MORE VIOLENCE.');
@@ -1482,25 +1507,25 @@ export class MeltCryptGame {
       this.descend();
       return;
     }
+
     if (target.type === 'chest') {
       const room = this.dungeon.rooms[target.roomId];
       if (!room.cleared) { this.toast('CHEST REFUSES TO OPEN WHILE SUPERVISED.'); return; }
       this.visuals.setInteractiveUsed(target);
       room.opened = true;
-      const relicSeed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
-      const relic = rollLoot(relicSeed, this.run.floor, 'relic').item;
-      this.discoverLoot(relic);
-      this.applyRelic(relic);
-      if (this.runRng() < 0.72) {
-        const potion = rollLoot(relicSeed ^ 0x54a11ce, this.run.floor, 'potion').item;
-        this.discoverLoot(potion);
-        if (this.run.potions.length < 5) this.run.potions.push(potion.id);
+      const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
+      this.spawnWeaponDrop(target.position.add(new Vector3(0.75,0,0.5)),target.roomId);
+      if(this.runRng()<0.48){
+        const relic=rollLoot(seed,this.run.floor,'relic').item;
+        this.discoverLoot(relic);
+        this.applyRelic(relic);
       }
       this.audio.tone('loot', 1);
-      this.toast('TREASURY DISAGREES WITH YOUR INVENTORY.');
+      this.toast('THE CHEST GREW A NEW WEAPON.');
       this.saveRun();
       return;
     }
+
     if (target.type === 'shrine') {
       this.visuals.setInteractiveUsed(target);
       const room = this.dungeon.rooms[target.roomId];
@@ -1512,29 +1537,28 @@ export class MeltCryptGame {
 
   triggerShrine(roomId) {
     const roll = this.runRng();
-    if (roll < 0.25) {
-      this.run.hp = Math.min(this.run.maxHp, this.run.hp + 24);
-      this.effects.warp = 4;
-      this.toast('THE SHRINE FORGIVES A WOUND IT DID NOT CAUSE.');
-    } else if (roll < 0.5) {
-      this.run.damage *= 1.08;
-      this.run.maxHp = Math.max(35, this.run.maxHp - 5);
-      this.run.hp = Math.min(this.run.hp, this.run.maxHp);
-      this.toast('THE SHRINE TRADED FIVE FLESH FOR EIGHT PERCENT OPINION.');
+    if (roll < 0.27) {
+      this.run.hp = Math.min(this.run.maxHp, this.run.hp + 28);
+      this.effects.warp = 2.4;
+      this.toast('THE SHRINE CLOSED SOME OF YOUR HOLES.');
+    } else if (roll < 0.53) {
+      const center=this.visuals.roomCenters.get(roomId);
+      this.spawnWeaponDrop(center.add(new Vector3(1.15,0,-0.6)),roomId);
+      this.toast('THE SHRINE COUGHED UP A WEAPON.');
     } else if (roll < 0.76) {
-      const potion = rollLoot(Math.floor(this.runRng() * 0xffffffff), this.run.floor, 'potion').item;
-      this.discoverLoot(potion);
-      if (this.run.potions.length < 5) this.run.potions.push(potion.id);
-      else this.consumePotion(potion.id, true);
-      this.toast('THE SHRINE DISPENSED A BEVERAGE WITHOUT A LICENSE.');
+      this.skillCooldown=0;
+      this.dashCooldown=0;
+      this.run.hp=Math.min(this.run.maxHp,this.run.hp+10);
+      this.effects.haste=Math.max(this.effects.haste||0,4);
+      this.toast('THE SHRINE MADE YOUR HANDS IMPATIENT.');
     } else {
       const room = this.dungeon.rooms[roomId];
       const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
-      const genome = createMonsterGenome(seed, this.run.floor + 2, room.danger + 0.8);
+      const genome = generateEnemyBlueprint(seed, this.run.floor + 2, room.danger + 0.8, this.recentEnemySignatures);
       genome.name = 'AUDITOR ' + genome.name;
-      genome.maxHp = Math.round(genome.maxHp * 1.45);
-      genome.damage = Math.round(genome.damage * 1.25);
-      genome.size *= 1.12;
+      genome.maxHp = Math.round(genome.maxHp * 1.42);
+      genome.damage = Math.round(genome.damage * 1.22);
+      genome.size *= 1.1;
       genome.elite = true;
       const center = this.visuals.roomCenters.get(roomId);
       this.spawnEnemy(genome, roomId, center.add(new Vector3(1.7, 0, -1.1)), false);
@@ -1543,6 +1567,7 @@ export class MeltCryptGame {
     }
     this.saveRun();
   }
+
 
   descend() {
     if (this.phase !== 'playing') return;
@@ -1566,16 +1591,25 @@ export class MeltCryptGame {
     this.el['health-label'].textContent = Math.max(0, Math.ceil(this.run.hp)) + '/' + Math.ceil(this.run.maxHp);
     this.el['floor-label'].textContent = 'FLOOR ' + String(this.run.floor).padStart(2, '0');
     this.el['kill-label'].textContent = this.floorKills + ' / ' + this.dungeon.requiredKills;
-    const mutation = clamp(Math.round((this.run.floor - 1) * 8.5 + this.meta.codex.length * 0.35), 0, 999);
-    this.el['mutation-label'].textContent = 'MUTATION ' + mutation + '%';
-    this.el['weapon-state'].textContent = this.fireCooldown > 0.02 ? 'CYCLING' : this.effects.rage > 0 ? 'SCREAMING' : 'READY';
+    const variety = Math.min(999,this.meta.codex.length);
+    this.el['mutation-label'].textContent = 'SIGNATURES ' + variety;
 
-    const potion = potionById(this.run.potions[0]);
-    this.el['potion-name'].textContent = potion ? potion.name.toUpperCase() : 'EMPTY';
-    this.el['potion-count'].textContent = String(this.run.potions.length);
-    const maxDash = Math.max(0.7, 1.72 * (1 - (this.run.dashReduction || 0)));
+    const weapon=this.run.weapon;
+    if(weapon){
+      this.el['weapon-name'].textContent=weapon.name.toUpperCase();
+      this.el['weapon-state'].textContent=this.attackState.active
+        ? (this.attackState.heavy?'HEAVY':'COMBO '+(this.attackState.combo+1))
+        : this.skillCooldown>0.02
+          ? weapon.skillSpec.label+' '+this.skillCooldown.toFixed(1)
+          : weapon.skillSpec.label+' READY';
+      if(!this.contextTarget)this.el['use-button-label'].textContent=weapon.skillSpec.label;
+    }
+
+    const maxDash = Math.max(0.62, 1.45 * (1 - (this.run.dashReduction || 0)));
     this.el['dash-meter'].style.transform = 'scaleX(' + clamp(1 - this.dashCooldown / maxDash, 0, 1) + ')';
+    this.root.style.setProperty('--attack-charge',String(clamp(this.attackHold/0.62,0,1)));
   }
+
 
   drawMinimap() {
     if (!this.dungeon) return;
