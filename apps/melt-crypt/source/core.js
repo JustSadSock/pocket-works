@@ -40,8 +40,8 @@ export function generateDungeon(seed, floor = 1) {
     const room = {
       id: rooms.length,
       gx, gz, role,
-      sizeX: 11.8 + Math.floor(rng() * 3) * 0.55,
-      sizeZ: 11.8 + Math.floor(rng() * 3) * 0.55,
+      sizeX: 11.9 + Math.floor(rng() * 3) * 0.3,
+      sizeZ: 11.9 + Math.floor(rng() * 3) * 0.3,
       links: { n: null, e: null, s: null, w: null },
       danger: 0,
       monsterSeeds: [],
@@ -117,7 +117,7 @@ export function generateDungeon(seed, floor = 1) {
     gateId: gate.id,
     requiredKills: Math.max(3, Math.ceil(totalMonsters * 0.62)),
     totalMonsters,
-    spacing: 12.15
+    spacing: 12.7
   };
 }
 
