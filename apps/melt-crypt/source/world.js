@@ -335,11 +335,57 @@ export class CryptVisuals {
   }
 
   registerCollisionBox(x, y, z, width, height, depth) {
-    this.collisionBoxes.push({
+    const box={
       minX: x - width / 2, maxX: x + width / 2,
       minY: y - height / 2, maxY: y + height / 2,
       minZ: z - depth / 2, maxZ: z + depth / 2
-    });
+    };
+    this.collisionBoxes.push(box);
+    return box;
+  }
+
+  sealRoom(room) {
+    if (!room || room.combatSeal) return;
+    const center=this.roomCenters.get(room.id);
+    if(!center)return;
+    const mat=simpleMaterial(this.scene,'combat-seal-'+room.id,355,0.74,0.3,0.24);
+    mat.alpha=0.9;
+    this.materials.push(mat);
+    const meshes=[],colliders=[];
+    const gap=4.25,thickness=0.18,height=3.15;
+    for(const side of ['n','e','s','w']){
+      if(room.links[side]===null)continue;
+      const northSouth=side==='n'||side==='s';
+      const sign=(side==='n'||side==='w')?-1:1;
+      const axisPos=northSouth?room.sizeZ/2:room.sizeX/2;
+      const px=center.x+(northSouth?0:sign*axisPos);
+      const pz=center.z+(northSouth?sign*axisPos:0);
+      const blocker=this.registerCollisionBox(px,1.5,pz,northSouth?gap:thickness,3,northSouth?thickness:gap);
+      colliders.push(blocker);
+      for(let i=0;i<4;i+=1){
+        const bar=flat(MeshBuilder.CreateBox('combat-seal-bar-'+room.id+'-'+side+'-'+i,northSouth
+          ? {width:0.13,height:height,depth:0.11}
+          : {width:0.11,height:height,depth:0.13},this.scene));
+        bar.parent=this.root;
+        if(northSouth)bar.position.set(px-gap*0.36+i*gap*0.24,1.55,pz);
+        else bar.position.set(px,1.55,pz-gap*0.36+i*gap*0.24);
+        bar.material=mat;bar.isPickable=false;
+        bar.rotation[northSouth?'z':'x']=(i-1.5)*0.035;
+        meshes.push(bar);
+      }
+    }
+    room.combatSeal={meshes,colliders,material:mat};
+  }
+
+  unsealRoom(room) {
+    const seal=room?.combatSeal;
+    if(!seal)return;
+    for(const collider of seal.colliders){
+      const index=this.collisionBoxes.indexOf(collider);
+      if(index>=0)this.collisionBoxes.splice(index,1);
+    }
+    seal.meshes.forEach((mesh)=>mesh.dispose());
+    room.combatSeal=null;
   }
 
   buildDungeon(dungeon, floor) {
