@@ -444,7 +444,7 @@ export class MeltCryptGame {
   }
 
   discoverMonster(genome) {
-    const sig = [genome.body, genome.ability, genome.eyes, genome.horns, genome.limbs, genome.elite ? 1 : 0].join('/');
+    const sig = [genome.body, genome.ability, genome.eyes, genome.horns, genome.limbs, genome.crest, genome.halo ? 1 : 0, genome.motion, genome.elite ? 1 : 0].join('/');
     if (this.meta.codex.some((entry) => entry.sig === sig)) return;
     this.meta.codex.push({ sig, name: genome.name, body: genome.body, ability: genome.ability });
     this.meta.codex = this.meta.codex.slice(-96);
