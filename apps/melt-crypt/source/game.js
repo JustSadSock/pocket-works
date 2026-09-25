@@ -877,11 +877,31 @@ export class MeltCryptGame {
       const critical=!region.blocked && this.runRng()<(this.run.crit||0);
       const base=weapon.damage*(this.run.damage||1)*(state.heavy?1.72:1)*(state.dashAttack?1.24:1)*(critical?1.55:1);
       const amount=base*region.multiplier;
-      const stagger=weapon.stagger*(state.heavy?1.8:1)*(state.dashAttack?1.22:1);
+      const redline = weapon.traitSpec?.effect === 'lowhp-stagger' && this.run.hp / this.run.maxHp < 0.35 ? 1.42 : 1;
+      const stagger=weapon.stagger*(state.heavy?1.8:1)*(state.dashAttack?1.22:1)*redline;
       this.damageEnemy(enemy,amount,{
         critical,stagger,heavy:state.heavy,weak:region.weak,blocked:region.blocked,
         knock:(state.heavy?1.7:0.7)+(weapon.stagger>1.3?0.5:0)
       });
+
+      if (!region.blocked && this.hasRelic('chain-suture')) {
+        const chained=this.enemies.find((candidate)=>candidate!==enemy&&!candidate.dead&&candidate.visual&&candidate.roomId===enemy.roomId&&Vector3.Distance(candidate.visual.root.position,enemy.visual.root.position)<2.25);
+        if(chained){
+          chained.stagger+=0.62;
+          this.visuals.createHitEffect(chained.visual.root.position.add(new Vector3(0,0.65,0)),forward,0.34,false);
+        }
+      }
+
+      if (state.heavy && !region.blocked && this.hasRelic('grave-aftershock')) {
+        for(const other of this.enemies){
+          if(other===enemy||other.dead||!other.visual||other.roomId!==enemy.roomId)continue;
+          if(Vector3.Distance(other.visual.root.position,enemy.visual.root.position)<1.8){
+            other.hp-=weapon.damage*0.2*(this.run.damage||1);
+            other.stagger+=0.42;
+            if(other.hp<=0)this.killEnemy(other);
+          }
+        }
+      }
     }
   }
 
@@ -1382,6 +1402,16 @@ export class MeltCryptGame {
         this.damageEnemy(target,weapon.damage*0.92*(this.run.damage||1),{stagger:0.72});
       }
       this.visuals.createTracer(start,end,2);
+
+      if(this.hasRelic('second-mouth')){
+        const second=this.enemies
+          .filter((enemy)=>enemy!==target&&!enemy.dead&&enemy.visual&&enemy.roomId===this.currentRoomId)
+          .filter((enemy)=>Vector3.Distance(enemy.visual.root.position,this.controller.position)<8.5)
+          .sort((a,b)=>Vector3.Distance(a.visual.root.position,end)-Vector3.Distance(b.visual.root.position,end))[0];
+        const secondEnd=second?.visual ? second.visual.root.position.add(new Vector3(0,0.72,0)) : end.add(new Vector3(0.42,0,-0.25));
+        this.visuals.createTracer(start.add(new Vector3(0.08,-0.03,0)),secondEnd,8);
+        if(second)this.damageEnemy(second,weapon.damage*0.46*(this.run.damage||1),{stagger:0.38});
+      }
       this.audio.tone('shot',0.9);
     } else if(skill==='hook'){
       const target=this.findAimTarget(5.2,42);
@@ -1435,6 +1465,11 @@ export class MeltCryptGame {
       }
       this.toast(hits?'STAGGER PULSE.':'PULSE FOUND NOTHING.');
       this.audio.tone('blink',0.7);
+    }
+
+    if(!isEcho&&this.hasRelic('borrowed-second')&&this.runRng()<0.28){
+      this.skillCooldown*=0.45;
+      this.toast('BORROWED SECOND: SKILL COOLDOWN CUT.');
     }
 
     if(!isEcho&&weapon.traitSpec?.effect==='skill-echo'&&!this.contextTarget){
