@@ -1123,95 +1123,157 @@ export class MeltCryptGame {
   }
 
   updateEnemies(dt) {
-    const player = this.camera.position;
+    const player = this.controller.position;
     let activeCount = 0;
     for (const enemy of this.enemies) {
       if (enemy.dead || !enemy.visual) continue;
       const root = enemy.visual.root;
-      const motionT = this.elapsed * enemy.genome.wobble + enemy.genome.phase;
-      const motion = enemy.genome.motion || 'breathe';
-      root.position.y = Math.sin(motionT * (motion === 'skitter' ? 4.2 : 2)) * (motion === 'pulse' ? 0.075 : 0.045);
-      root.rotation.z = motion === 'tilt' ? Math.sin(motionT * 1.7) * 0.095
-        : motion === 'skitter' ? Math.sin(motionT * 5.6) * 0.035
-        : Math.sin(motionT) * 0.018;
-      root.rotation.x = motion === 'pulse' ? Math.cos(motionT * 1.5) * 0.035 : 0;
+      const genome = enemy.genome;
+      const motionT = this.elapsed * (genome.wobble || 1) + genome.phase;
+      const floatY = genome.locomotion === 'floating' ? 0.18 + Math.sin(motionT * 1.7) * 0.12
+        : genome.locomotion === 'hopper' ? Math.max(0, Math.sin(motionT * 2.5)) * 0.08
+        : Math.sin(motionT * 2.2) * 0.025;
+      root.position.y = floatY;
+
       if (enemy.visual.aura) {
-        enemy.visual.aura.rotation.y += dt * (0.8 + enemy.genome.wobble);
-        enemy.visual.aura.rotation.z += dt * 0.33;
+        enemy.visual.aura.rotation.y += dt * 1.1;
+        enemy.visual.aura.rotation.z += dt * 0.3;
       }
       if (enemy.roomId !== this.currentRoomId) continue;
       activeCount += 1;
 
       enemy.attackTimer = Math.max(0, enemy.attackTimer - dt);
-      enemy.abilityTimer -= dt;
+      enemy.specialTimer = Math.max(0, enemy.specialTimer - dt);
+      enemy.staggerTime = Math.max(0, enemy.staggerTime - dt);
+
       const dx = player.x - root.position.x;
       const dz = player.z - root.position.z;
       const distance = Math.max(0.001, Math.hypot(dx, dz));
       const direction = new Vector3(dx / distance, 0, dz / distance);
-      root.rotation.y = Math.atan2(dx, dz);
-      const slow = this.effects.slow > 0 ? 0.6 : 1;
+      const slow = this.effects.slow > 0 ? 0.62 : 1;
 
-      if (enemy.rushTell > 0) {
-        enemy.rushTell -= dt;
-        root.scaling.x = enemy.genome.size * (1 + Math.sin(this.elapsed * 28) * 0.08);
-        if (enemy.rushTell <= 0) {
-          root.scaling.setAll(enemy.genome.size);
-          enemy.rushTime = 0.42;
-          enemy.rushHit = false;
-        }
-      } else if (enemy.rushTime > 0) {
-        enemy.rushTime -= dt;
-        root.position.addInPlace(enemy.chargeDirection.scale(enemy.genome.speed * slow * 4.1 * dt));
-        if (!enemy.rushHit && Vector3.Distance(root.position, player) < 1.05 + enemy.genome.size * 0.28) {
-          enemy.rushHit = true;
-          this.hurtPlayer(enemy.genome.damage * 1.25);
-        }
+      if (enemy.knockVelocity.lengthSquared() > 0.01) {
+        root.position.addInPlace(enemy.knockVelocity.scale(dt));
+        enemy.knockVelocity.scaleInPlace(Math.max(0,1-dt*7));
+      }
+
+      if (enemy.staggerTime > 0) {
+        root.rotation.z = Math.sin(this.elapsed * 34) * 0.08;
+        root.rotation.x = -0.08;
       } else {
-        if (enemy.genome.ability === 'blink' && enemy.abilityTimer <= 0 && distance < 8.5) {
-          const room = this.dungeon.rooms[enemy.roomId];
-          const center = this.visuals.roomCenters.get(room.id);
-          const angle = this.runRng() * Math.PI * 2;
-          const radius = 2.1 + this.runRng() * 1.25;
-          root.position.x = clamp(player.x + Math.cos(angle) * radius, center.x - room.sizeX * 0.38, center.x + room.sizeX * 0.38);
-          root.position.z = clamp(player.z + Math.sin(angle) * radius, center.z - room.sizeZ * 0.38, center.z + room.sizeZ * 0.38);
-          enemy.abilityTimer = enemy.genome.cooldown + 0.8;
-          this.audio.tone('blink', 0.7);
-        } else if (enemy.genome.ability === 'spit' && enemy.abilityTimer <= 0 && distance < 9.5) {
-          this.spawnEnemyProjectile(enemy, direction, 5.4);
-          enemy.abilityTimer = enemy.genome.cooldown;
-        } else if (enemy.genome.ability === 'burst' && enemy.abilityTimer <= 0 && distance < 8) {
-          for (let i = 0; i < 8; i += 1) {
-            const angle = i / 8 * Math.PI * 2 + this.elapsed * 0.2;
-            this.spawnEnemyProjectile(enemy, new Vector3(Math.cos(angle), 0, Math.sin(angle)), 4.25);
-          }
-          enemy.abilityTimer = enemy.genome.cooldown + 1.1;
-        } else if (enemy.genome.ability === 'rush' && enemy.abilityTimer <= 0 && distance > 2 && distance < 8) {
-          enemy.rushTell = 0.52;
-          enemy.chargeDirection.copyFrom(direction);
-          enemy.abilityTimer = enemy.genome.cooldown + 1.35;
-          this.toast('SOMETHING HAS COMMITTED TO A STRAIGHT LINE.');
+        root.rotation.z = genome.locomotion === 'crawler' ? Math.sin(motionT * 5) * 0.035 : 0;
+        root.rotation.x = 0;
+        const desiredYaw = Math.atan2(dx, dz);
+        root.rotation.y += this.normalizeAngle(desiredYaw - root.rotation.y) * Math.min(1, dt * (genome.locomotion === 'heavy-biped' ? 4.2 : 7.5));
+        enemy.facing = root.rotation.y;
+      }
+
+      if (enemy.tellTimer > 0 && enemy.staggerTime <= 0) {
+        enemy.tellTimer -= dt;
+        const tellPulse = 1 + Math.sin(this.elapsed * 30) * 0.045;
+        root.scaling.set(genome.size * tellPulse, genome.size / tellPulse, genome.size * tellPulse);
+        if (enemy.tellTimer <= 0) {
+          root.scaling.setAll(genome.size);
+          this.executeEnemyAttack(enemy, distance, direction);
+          enemy.attackKind = null;
+        }
+      } else if (enemy.staggerTime <= 0) {
+        const attack = genome.ability;
+        const cadence = Math.max(0.42, 1 / Math.max(0.35, genome.cadence || 1));
+
+        if (genome.mutation === 'arc-growth' && enemy.specialTimer <= 0 && distance < 7.2) {
+          enemy.attackKind = 'arc-pulse';
+          enemy.tellTimer = 0.52;
+          enemy.specialTimer = 4.3 + this.runRng() * 1.3;
+        } else if (genome.mutation === 'long-legs' && enemy.specialTimer <= 0 && distance > 2.1 && distance < 6.5) {
+          enemy.attackKind = 'leg-dash';
+          enemy.tellTimer = 0.38;
+          enemy.specialTimer = 3.6 + this.runRng();
+        } else if (enemy.attackTimer <= 0) {
+          enemy.attackKind = attack;
+          const tells = {
+            'heavy-sweep':0.62, slam:0.7, flurry:0.18, thrust:0.34,
+            'shield-bash':0.36, bolt:0.48, 'hook-pull':0.44, cleave:0.3
+          };
+          enemy.tellTimer = tells[attack] || 0.34;
+          enemy.attackTimer = cadence * (0.9 + this.runRng() * 0.22);
         }
 
-        const preferred = enemy.genome.ability === 'spit' || enemy.genome.ability === 'burst' ? 3.4 : 1.0;
-        if (distance > preferred && enemy.rushTell <= 0) {
-          root.position.addInPlace(direction.scale(enemy.genome.speed * slow * dt));
+        let preferred = 1.05;
+        if (attack === 'bolt') preferred = 4.5;
+        else if (attack === 'hook-pull') preferred = 2.7;
+        else if (attack === 'thrust') preferred = 1.75;
+        else if (attack === 'heavy-sweep' || attack === 'slam') preferred = 1.3;
+        else if (attack === 'flurry') preferred = 0.82;
+
+        if (!enemy.attackKind && distance > preferred) {
+          const locomotionBoost = genome.locomotion === 'hopper' && distance > 2.4 ? 1.24 : 1;
+          root.position.addInPlace(direction.scale(genome.speed * slow * locomotionBoost * dt));
+        } else if (!enemy.attackKind && attack === 'bolt' && distance < 3.1) {
+          root.position.addInPlace(direction.scale(-genome.speed * 0.55 * slow * dt));
         }
+      }
+
+      if (genome.mutation === 'spikes' && distance < 0.82 + genome.size * 0.42 && enemy.attackTimer <= 0.18) {
+        this.hurtPlayer(genome.damage * (genome.mutationSpec.contactDamage || 0.3), enemy);
+        enemy.attackTimer = Math.max(enemy.attackTimer,0.65);
       }
 
       const room = this.dungeon.rooms[enemy.roomId];
       const center = this.visuals.roomCenters.get(room.id);
-      root.position.x = clamp(root.position.x, center.x - room.sizeX * 0.42, center.x + room.sizeX * 0.42);
-      root.position.z = clamp(root.position.z, center.z - room.sizeZ * 0.42, center.z + room.sizeZ * 0.42);
-
-      const meleeDistance = 0.7 + enemy.genome.size * 0.5;
-      if (distance < meleeDistance && enemy.attackTimer <= 0 && enemy.rushTell <= 0) {
-        this.hurtPlayer(enemy.genome.damage);
-        enemy.attackTimer = 0.8 + this.runRng() * 0.35;
-        if (enemy.genome.ability === 'leech') enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.genome.damage * 0.75);
-      }
+      root.position.x = clamp(root.position.x, center.x - room.sizeX * 0.41, center.x + room.sizeX * 0.41);
+      root.position.z = clamp(root.position.z, center.z - room.sizeZ * 0.41, center.z + room.sizeZ * 0.41);
     }
     this.audio.setDanger(Math.min(1, activeCount / 4));
   }
+
+  executeEnemyAttack(enemy, distance, direction) {
+    if (enemy.dead || !enemy.visual || enemy.staggerTime > 0) return;
+    const genome=enemy.genome;
+    const kind=enemy.attackKind;
+    const melee=(range,multiplier=1)=>{
+      if(distance <= range + genome.size * 0.28) this.hurtPlayer(genome.damage * multiplier, enemy);
+    };
+
+    if(kind==='bolt'){
+      this.spawnEnemyProjectile(enemy,direction,5.7);
+    } else if(kind==='arc-pulse'){
+      for(let i=0;i<6;i+=1){
+        const angle=i/6*Math.PI*2;
+        this.spawnEnemyProjectile(enemy,new Vector3(Math.cos(angle),0,Math.sin(angle)),4.5);
+      }
+      this.audio.tone('blink',0.62);
+    } else if(kind==='hook-pull'){
+      if(distance<4.8){
+        melee(4.8,0.58);
+        const toward=enemy.visual.root.position.subtract(this.controller.position);toward.y=0;
+        if(toward.lengthSquared()>0.001){
+          toward.normalize();
+          this.controller.movePlanar(toward.x*1.15,toward.z*1.15);
+          this.controller.syncCamera();
+        }
+      }
+    } else if(kind==='leg-dash'){
+      const travel=Math.min(2.4,Math.max(0,distance-0.7));
+      enemy.visual.root.position.addInPlace(direction.scale(travel));
+      melee(1.25,1.12);
+    } else if(kind==='heavy-sweep'){
+      melee(1.55,1.12);
+    } else if(kind==='slam'){
+      melee(1.35,1.25);
+      if(distance<2.15)this.cameraFx.hit=Math.max(this.cameraFx.hit,0.48);
+    } else if(kind==='flurry'){
+      melee(1.05,0.72);
+      if(distance<1.05)setTimeout(()=>{ if(!enemy.dead&&this.phase==='playing')this.hurtPlayer(genome.damage*0.55,enemy); },120);
+    } else if(kind==='thrust'){
+      melee(2.05,1.0);
+    } else if(kind==='shield-bash'){
+      melee(1.15,0.72);
+    } else {
+      melee(1.45,0.92);
+    }
+  }
+
 
   spawnEnemyProjectile(enemy, direction, speed) {
     const mesh = this.visuals.createProjectile(enemy.genome.accentHue, enemy.genome.elite ? 0.17 : 0.12);
