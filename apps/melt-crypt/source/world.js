@@ -85,6 +85,8 @@ export class CryptVisuals {
     this.weaponRecoil = 0;
     this.weaponKick = 0;
     this.roomCenters = new Map();
+    this.ambientProps = [];
+    this.decorMaterials = [];
 
     this.hemi = new HemisphericLight('crypt-hemi', new Vector3(0.2, 1, 0.1), scene);
     this.hemi.intensity = 0.34;
@@ -131,6 +133,8 @@ export class CryptVisuals {
     for (const material of this.materials) material.dispose(true, true);
     this.materials.length = 0;
     this.interactives.length = 0;
+    this.ambientProps.length = 0;
+    this.decorMaterials.length = 0;
     this.roomCenters.clear();
     this.gate = null;
   }
@@ -146,7 +150,11 @@ export class CryptVisuals {
     const trim = simpleMaterial(this.scene, 'trim-' + floor, (this.floorHue + 102) % 360, 0.74, 0.38, 0.16);
     const crystalA = simpleMaterial(this.scene, 'crystal-a-' + floor, (this.floorHue + 105) % 360, 0.92, 0.52, 0.92);
     const crystalB = simpleMaterial(this.scene, 'crystal-b-' + floor, (this.floorHue + 205) % 360, 0.92, 0.52, 0.82);
-    this.materials.push(wall, floorMat, ceilingMat, trim, crystalA, crystalB);
+    const decorA = simpleMaterial(this.scene, 'decor-a-' + floor, (this.floorHue + 42) % 360, 0.82, 0.44, 0.34);
+    const decorB = simpleMaterial(this.scene, 'decor-b-' + floor, (this.floorHue + 158) % 360, 0.86, 0.46, 0.42);
+    const bone = simpleMaterial(this.scene, 'decor-bone-' + floor, 46, 0.25, 0.68, 0.03);
+    this.materials.push(wall, floorMat, ceilingMat, trim, crystalA, crystalB, decorA, decorB, bone);
+    this.decorMaterials = [crystalA, crystalB, decorA, decorB, bone];
 
     const spacing = dungeon.spacing;
     for (const room of dungeon.rooms) {
@@ -155,6 +163,7 @@ export class CryptVisuals {
       this.roomCenters.set(room.id, new Vector3(x, 0, z));
       this.buildRoom(root, room, x, z, wall, floorMat, ceilingMat, trim, crystalA, crystalB, floor);
     }
+    this.buildConnectors(root, dungeon, floorMat, trim);
 
     const start = dungeon.rooms[dungeon.startId];
     this.camera.position.set(start.gx * spacing, 1.58, start.gz * spacing);
@@ -162,13 +171,14 @@ export class CryptVisuals {
   }
 
   buildRoom(root, room, x, z, wallMat, floorMat, ceilingMat, trimMat, crystalA, crystalB, floor) {
-    const floorMesh = setSolid(MeshBuilder.CreateBox('room-floor-' + room.id, { width: room.sizeX, height: 0.35, depth: room.sizeZ }, this.scene));
-    floorMesh.parent = root; floorMesh.position.set(x, -0.23, z); floorMesh.material = floorMat; floorMesh.isPickable = false;
-    const ceiling = setSolid(MeshBuilder.CreateBox('room-ceiling-' + room.id, { width: room.sizeX, height: 0.28, depth: room.sizeZ }, this.scene));
-    ceiling.parent = root; ceiling.position.set(x, 4.28, z); ceiling.material = ceilingMat; ceiling.isPickable = false;
+    const floorMesh = MeshBuilder.CreateBox('room-floor-' + room.id, { width: room.sizeX, height: 0.35, depth: room.sizeZ }, this.scene);
+    floorMesh.parent = root; floorMesh.position.set(x, -0.23, z); floorMesh.material = floorMat; floorMesh.isPickable = false; floorMesh.checkCollisions = false;
+    const ceiling = MeshBuilder.CreateBox('room-ceiling-' + room.id, { width: room.sizeX, height: 0.28, depth: room.sizeZ }, this.scene);
+    ceiling.parent = root; ceiling.position.set(x, 4.28, z); ceiling.material = ceilingMat; ceiling.isPickable = false; ceiling.checkCollisions = false;
 
-    const gap = 3.1;
+    const gap = 4.6;
     const thickness = 0.42;
+    const connectedThickness = 0.22;
     const height = 4.25;
     const wallY = 1.98;
 
@@ -188,19 +198,21 @@ export class CryptVisuals {
         const segment = Math.max(0.8, (length - gap) / 2);
         for (const offsetSign of [-1, 1]) {
           const mesh = setSolid(MeshBuilder.CreateBox('wall-' + room.id + '-' + side + '-' + offsetSign, northSouth
-            ? { width: segment, height, depth: thickness }
-            : { width: thickness, height, depth: segment }, this.scene));
+            ? { width: segment, height, depth: connectedThickness }
+            : { width: connectedThickness, height, depth: segment }, this.scene));
           mesh.parent = root;
           if (northSouth) mesh.position.set(x + offsetSign * (gap / 2 + segment / 2), wallY, z + sign * axisPos);
           else mesh.position.set(x + sign * axisPos, wallY, z + offsetSign * (gap / 2 + segment / 2));
           mesh.material = wallMat;
         }
-        const lintel = setSolid(MeshBuilder.CreateBox('lintel-' + room.id + '-' + side, northSouth
-          ? { width: gap, height: 0.72, depth: thickness + 0.08 }
-          : { width: thickness + 0.08, height: 0.72, depth: gap }, this.scene));
+        const lintel = MeshBuilder.CreateBox('lintel-' + room.id + '-' + side, northSouth
+          ? { width: gap, height: 0.72, depth: connectedThickness + 0.08 }
+          : { width: connectedThickness + 0.08, height: 0.72, depth: gap }, this.scene);
         lintel.parent = root;
         lintel.position.set(x + (northSouth ? 0 : sign * axisPos), 3.89, z + (northSouth ? sign * axisPos : 0));
         lintel.material = trimMat;
+        lintel.isPickable = false;
+        lintel.checkCollisions = false;
       }
     };
     wallPair('n', room.links.n !== null);
@@ -235,9 +247,88 @@ export class CryptVisuals {
       crystal.isPickable = false;
     }
 
+    this.createRoomDecor(root, room, x, z, floor);
     if (room.role === 'chest') this.createChest(root, room, x, z, trimMat, crystalA);
     if (room.role === 'shrine') this.createShrine(root, room, x, z, trimMat, crystalB);
     if (room.role === 'gate') this.createGate(root, room, x, z, floor);
+  }
+
+  buildConnectors(root, dungeon, floorMat, trimMat) {
+    const spacing = dungeon.spacing;
+    const corridorWidth = 4.35;
+    for (const room of dungeon.rooms) {
+      const x = room.gx * spacing;
+      const z = room.gz * spacing;
+      for (const side of ['e', 's']) {
+        const nextId = room.links[side];
+        if (nextId === null) continue;
+        const next = dungeon.rooms[nextId];
+        const nx = next.gx * spacing;
+        const nz = next.gz * spacing;
+        const eastWest = side === 'e';
+        const bridge = MeshBuilder.CreateBox('bridge-' + room.id + '-' + side, eastWest
+          ? { width: Math.abs(nx - x) + 0.8, height: 0.18, depth: corridorWidth }
+          : { width: corridorWidth, height: 0.18, depth: Math.abs(nz - z) + 0.8 }, this.scene);
+        bridge.parent = root;
+        bridge.position.set((x + nx) * 0.5, -0.16, (z + nz) * 0.5);
+        bridge.material = floorMat;
+        bridge.isPickable = false;
+        bridge.checkCollisions = false;
+
+        const marker = MeshBuilder.CreateBox('threshold-' + room.id + '-' + side, eastWest
+          ? { width: 0.12, height: 0.025, depth: corridorWidth * 0.72 }
+          : { width: corridorWidth * 0.72, height: 0.025, depth: 0.12 }, this.scene);
+        marker.parent = root;
+        marker.position.set((x + nx) * 0.5, -0.045, (z + nz) * 0.5);
+        marker.material = trimMat;
+        marker.isPickable = false;
+      }
+    }
+  }
+
+  createRoomDecor(root, room, x, z, floor) {
+    const rng = makeRng((room.id + 19) * 104729 ^ floor * 65537);
+    const [crystalA, crystalB, decorA, decorB, bone] = this.decorMaterials;
+    const count = 4 + Math.floor(rng() * 5);
+    for (let i = 0; i < count; i += 1) {
+      let px = x + (rng() - 0.5) * (room.sizeX - 2.2);
+      let pz = z + (rng() - 0.5) * (room.sizeZ - 2.2);
+      if (Math.hypot(px - x, pz - z) < 2.1) {
+        const angle = rng() * Math.PI * 2;
+        px = x + Math.cos(angle) * (2.4 + rng() * 1.4);
+        pz = z + Math.sin(angle) * (2.4 + rng() * 1.4);
+      }
+      const node = new TransformNode('decor-' + room.id + '-' + i, this.scene);
+      node.parent = root;
+      node.position.set(px, 0, pz);
+      const kind = rng();
+
+      if (kind < 0.3) {
+        const stem = flat(MeshBuilder.CreateCylinder('fungus-stem', { height: 0.32 + rng() * 0.45, diameterTop: 0.08, diameterBottom: 0.14, tessellation: 5 }, this.scene));
+        stem.parent = node; stem.position.y = 0.18; stem.material = bone; stem.isPickable = false;
+        const cap = flat(MeshBuilder.CreateIcoSphere('fungus-cap', { radius: 0.18 + rng() * 0.13, subdivisions: 1 }, this.scene));
+        cap.parent = node; cap.position.y = 0.48 + rng() * 0.18; cap.scaling.y = 0.45; cap.material = rng() < 0.5 ? decorA : decorB; cap.isPickable = false;
+        this.ambientProps.push({ node, kind: 'bob', phase: rng() * Math.PI * 2, baseY: 0, speed: 0.7 + rng() });
+      } else if (kind < 0.56) {
+        const plinth = flat(MeshBuilder.CreateCylinder('rune-plinth', { height: 0.18, diameter: 0.72 + rng() * 0.35, tessellation: 7 }, this.scene));
+        plinth.parent = node; plinth.position.y = 0.05; plinth.material = bone; plinth.isPickable = false;
+        const ring = MeshBuilder.CreateTorus('rune-ring', { diameter: 0.58 + rng() * 0.2, thickness: 0.035, tessellation: 10 }, this.scene);
+        ring.parent = node; ring.position.y = 0.16; ring.rotation.x = Math.PI / 2; ring.material = rng() < 0.5 ? crystalA : crystalB; ring.isPickable = false;
+        this.ambientProps.push({ node, ring, kind: 'spin', phase: rng() * Math.PI * 2, baseY: 0, speed: 0.45 + rng() * 0.7 });
+      } else if (kind < 0.78) {
+        for (let b = 0; b < 3; b += 1) {
+          const shard = flat(MeshBuilder.CreateCylinder('bone-shard', { height: 0.45 + rng() * 0.35, diameter: 0.07 + rng() * 0.04, tessellation: 5 }, this.scene));
+          shard.parent = node; shard.position.set((rng() - 0.5) * 0.45, 0.09, (rng() - 0.5) * 0.45);
+          shard.rotation.z = (rng() - 0.5) * 2.4; shard.rotation.x = (rng() - 0.5) * 1.2; shard.material = bone; shard.isPickable = false;
+        }
+      } else {
+        const obelisk = flat(MeshBuilder.CreateCylinder('small-obelisk', { height: 0.9 + rng() * 0.8, diameterTop: 0.05, diameterBottom: 0.26 + rng() * 0.18, tessellation: 5 }, this.scene));
+        obelisk.parent = node; obelisk.position.y = 0.45; obelisk.rotation.z = (rng() - 0.5) * 0.14; obelisk.material = rng() < 0.5 ? decorA : decorB; obelisk.isPickable = false;
+        const eye = flat(MeshBuilder.CreateIcoSphere('obelisk-eye', { radius: 0.085, subdivisions: 1 }, this.scene));
+        eye.parent = node; eye.position.set(0, 0.7, 0.15); eye.material = rng() < 0.5 ? crystalA : crystalB; eye.isPickable = false;
+        this.ambientProps.push({ node, kind: 'tilt', phase: rng() * Math.PI * 2, baseY: 0, speed: 0.35 + rng() * 0.45 });
+      }
+    }
   }
 
   createChest(root, room, x, z, dark, glow) {
@@ -355,12 +446,46 @@ export class CryptVisuals {
       head.position.y = 1.92; head.scaling.y = 1.15; headY = 1.92; frontZ = 0.43;
       const halo = bodyPart(MeshBuilder.CreateTorus('bishop-halo', { diameter: 1.12, thickness: 0.07, tessellation: 12 }, this.scene), eyeMat);
       halo.position.y = 2.55; halo.rotation.x = Math.PI / 2;
-    } else {
+    } else if (genome.body === 'serpent') {
       for (let i = 0; i < 5; i += 1) {
         const segment = bodyPart(flat(MeshBuilder.CreateIcoSphere('serpent-segment-' + i, { radius: 0.46 - i * 0.035, subdivisions: 1 }, this.scene)), i === 0 ? accentMat : bodyMat);
         segment.position.set(0, 0.72 + Math.sin(i * 0.9) * 0.12, 0.65 - i * 0.42);
       }
       headY = 0.76; frontZ = 1.05;
+    } else if (genome.body === 'tripod') {
+      const core = bodyPart(flat(MeshBuilder.CreateIcoSphere('tripod-core', { radius: 0.58, subdivisions: 1 }, this.scene)));
+      core.position.y = 1.05; core.scaling.set(0.9, 1.15, 0.82);
+      for (let i = 0; i < 3; i += 1) {
+        const angle = i / 3 * Math.PI * 2;
+        const leg = bodyPart(flat(MeshBuilder.CreateCylinder('tripod-leg-' + i, { height: 1.25, diameterTop: 0.12, diameterBottom: 0.2, tessellation: 5 }, this.scene)), i === 0 ? accentMat : bodyMat);
+        leg.position.set(Math.cos(angle) * 0.5, 0.48, Math.sin(angle) * 0.5);
+        leg.rotation.z = Math.cos(angle) * 0.55;
+        leg.rotation.x = -Math.sin(angle) * 0.55;
+      }
+      headY = 1.12; frontZ = 0.58;
+    } else if (genome.body === 'lantern') {
+      const bell = bodyPart(flat(MeshBuilder.CreateCylinder('lantern-bell', { height: 1.05, diameterTop: 0.58, diameterBottom: 1.18, tessellation: 7 }, this.scene)));
+      bell.position.y = 1.25; bell.scaling.y = 0.82;
+      const crown = bodyPart(flat(MeshBuilder.CreateIcoSphere('lantern-crown', { radius: 0.42, subdivisions: 1 }, this.scene)), accentMat);
+      crown.position.y = 1.95; crown.scaling.y = 0.62;
+      for (let i = 0; i < 4; i += 1) {
+        const tendril = bodyPart(flat(MeshBuilder.CreateCylinder('lantern-tendril-' + i, { height: 0.74, diameterTop: 0.06, diameterBottom: 0.11, tessellation: 5 }, this.scene)));
+        const angle = i / 4 * Math.PI * 2;
+        tendril.position.set(Math.cos(angle) * 0.36, 0.48, Math.sin(angle) * 0.36);
+        tendril.rotation.z = Math.cos(angle) * 0.38;
+        tendril.rotation.x = -Math.sin(angle) * 0.38;
+      }
+      headY = 1.7; frontZ = 0.58;
+    } else {
+      const skull = bodyPart(flat(MeshBuilder.CreateIcoSphere('jaw-skull', { radius: 0.72, subdivisions: 1 }, this.scene)));
+      skull.position.y = 1.02; skull.scaling.set(1.15, 0.72, 0.82);
+      const lower = bodyPart(flat(MeshBuilder.CreateBox('jaw-lower', { width: 1.0, height: 0.18, depth: 0.62 }, this.scene)), accentMat);
+      lower.position.set(0, 0.58, 0.38); lower.rotation.x = -0.16;
+      for (let i = 0; i < 5; i += 1) {
+        const tooth = bodyPart(flat(MeshBuilder.CreateCylinder('jaw-tooth-' + i, { height: 0.22, diameterTop: 0, diameterBottom: 0.08, tessellation: 5 }, this.scene)), eyeMat);
+        tooth.position.set((i - 2) * 0.18, 0.72, 0.72); tooth.rotation.x = Math.PI;
+      }
+      headY = 1.08; frontZ = 0.76;
     }
 
     const eyeSpread = Math.min(0.34, 0.1 + genome.eyes * 0.035);
@@ -375,6 +500,16 @@ export class CryptVisuals {
       const t = genome.horns === 1 ? 0 : i / (genome.horns - 1) - 0.5;
       horn.position.set(t * 0.72, headY + 0.48, 0.02);
       horn.rotation.z = t * 0.46;
+    }
+    for (let i = 0; i < genome.crest; i += 1) {
+      const plate = bodyPart(flat(MeshBuilder.CreateCylinder('crest-' + i, { height: 0.3 + i * 0.05, diameterTop: 0, diameterBottom: 0.16, tessellation: 4 }, this.scene)), eyeMat);
+      plate.position.set(0, headY + 0.18 + i * 0.15, -0.2 - i * 0.08);
+      plate.rotation.x = -0.52;
+    }
+    if (genome.halo) {
+      const halo = bodyPart(MeshBuilder.CreateTorus('mutation-halo', { diameter: 1.05 + genome.size * 0.2, thickness: 0.045, tessellation: 12 }, this.scene), eyeMat);
+      halo.position.y = headY + 0.62;
+      halo.rotation.x = Math.PI / 2;
     }
 
     let aura = null;
@@ -451,6 +586,11 @@ export class CryptVisuals {
     this.interactives.forEach((target, index) => {
       if (target.type === 'shrine' && !target.used) target.eye.rotation.y = time * 0.8 + index;
       if (target.type === 'chest' && !target.used) target.lock.rotation.y = -time * 1.2;
+    });
+    this.ambientProps.forEach((prop) => {
+      if (prop.kind === 'spin' && prop.ring) prop.ring.rotation.z = time * prop.speed + prop.phase;
+      else if (prop.kind === 'bob') prop.node.position.y = prop.baseY + Math.sin(time * prop.speed * 2 + prop.phase) * 0.035;
+      else if (prop.kind === 'tilt') prop.node.rotation.z = Math.sin(time * prop.speed + prop.phase) * 0.045;
     });
     this.weaponRecoil += (0 - this.weaponRecoil) * 0.2;
     this.weaponKick += (this.weaponRecoil - this.weaponKick) * 0.45;
