@@ -328,7 +328,7 @@ function attachCardInput(node,card,onTap){
   node.addEventListener('contextmenu',e=>{e.preventDefault();openFocus(card)});
 }
 function selectHandCard(card){
-  const b=run.battle;
+  if(resolvingTurn)return;const b=run.battle;
   if(card.type==='rite'&&['milk','whisper','lash'].includes(card.rite)){
     const r=playCard(run,b,card.instanceId,null,0);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(card.rite==='lash'?'impact':'paper');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');opponentAction('boss');sceneBeat('boss')}return;
   }
@@ -344,7 +344,7 @@ function highlightTargets(){
   if(c.rite==='salt')$$('#enemyRow .lane').forEach((n,i)=>{if(b.enemy[i])n.classList.add('valid')});
 }
 function laneTap(side,lane,node){
-  const b=run.battle;
+  if(resolvingTurn)return;const b=run.battle;
   if(selectedItem==='knife'){
     if(side!=='player'||!b.player[lane]){bad(node,'Нож требует твою карту.');return}
     const r=useItem(run,b,'knife',lane);selectedItem=null;selectedUnit=null;feedback('knife');save();renderBattle();if(r.ended)resolveBattleEnd(r);return;
@@ -372,7 +372,7 @@ function cycleHeritage(){
   const u=selectedUnit!==null?run?.battle?.player[selectedUnit]:null;if(!u||u.sigils.length<2)return;const i=Math.max(0,u.sigils.indexOf(heritageChoice));heritageChoice=u.sigils[(i+1)%u.sigils.length];feedback('bone');renderSelection(run.battle);
 }
 function doSacrifice(){
-  if(selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
+  if(resolvingTurn||selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
   selectedUnit=null;heritageChoice=null;feedback('knife');contextualTalk('sacrifice');opponentAction('react');sceneBeat('impact');save();renderBattle();
 }
 function renderItems(b){
@@ -384,14 +384,15 @@ function renderItems(b){
     });el.items.append(btn);
   });
 }
-function doEndTurn(){
-  const b=run?.battle;if(!b)return;selectedCard=null;selectedItem=null;selectedUnit=null;
-  opponentAction(b.bossId?'boss':'deal');
-  const before=b.balance,r=endTurn(run,b);feedback('bell');
-  if(b.balance!==before){feedback('impact');contextualTalk(b.balance>before?'damage':'hurt');sceneBeat('impact')}
-  save();renderBattle();
+async function doEndTurn(){
+  const b=run?.battle;if(!b||resolvingTurn)return;
+  resolvingTurn=true;el.app.dataset.resolving='true';selectedCard=null;selectedItem=null;selectedUnit=null;
+  const beforeSeals={...(b.seals||{player:0,enemy:0})};const r=endTurn(run,b);save();
+  await animateCombat(r.events||[],beforeSeals);
+  renderBattle();resolvingTurn=false;delete el.app.dataset.resolving;
   if(r.ended)resolveBattleEnd(r);
-  else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');feedback('warning');opponentAction('boss');sceneBeat('boss')}
+  else if(r.phase)talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');
+  else talk(`Ход ${b.round}. Твой ход.`)
 }
 function resolveBattleEnd(r){
   if(r.winner==='player'){
