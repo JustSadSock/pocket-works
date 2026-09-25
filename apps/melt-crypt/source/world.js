@@ -640,8 +640,6 @@ export class CryptVisuals {
       for (const side of [-1, 1]) {
         const leg = bodyPart(flat(MeshBuilder.CreateCylinder('brute-leg-' + side, { height: 0.9, diameterTop: 0.23, diameterBottom: 0.3, tessellation: 6 }, this.scene)));
         leg.position.set(side * 0.34, 0.43, 0); leg.material = bodyMat;
-        const arm = bodyPart(flat(MeshBuilder.CreateCylinder('brute-arm-' + side, { height: 1.05, diameterTop: 0.2, diameterBottom: 0.27, tessellation: 6 }, this.scene)), accentMat);
-        arm.position.set(side * 0.8, 1.12, 0); arm.rotation.z = side * 0.22;
       }
     } else if (genome.body === 'orb') {
       const orb = bodyPart(flat(MeshBuilder.CreateIcoSphere('orb-body', { radius: 0.78, subdivisions: 2 }, this.scene)));
@@ -772,9 +770,12 @@ export class CryptVisuals {
     }
     if (genome.defense === 'left-shield' || genome.defense === 'right-shield') {
       const side=genome.defense==='left-shield'?-1:1;
-      const shield=bodyPart(flat(MeshBuilder.CreateBox('defense-shield-'+side,{width:0.76,height:1.12,depth:0.12},this.scene)),armorMat);
-      shield.position.set(side*0.96,Math.max(0.84,headY-0.58),0.36); shield.rotation.y=side*0.18;
-      shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+      const matchingArm=side<0?genome.leftArm:genome.rightArm;
+      if(matchingArm!=='shield'){
+        const shield=bodyPart(flat(MeshBuilder.CreateBox('defense-shield-'+side,{width:0.76,height:1.12,depth:0.12},this.scene)),armorMat);
+        shield.position.set(side*0.96,Math.max(0.84,headY-0.58),0.36); shield.rotation.y=side*0.18;
+        shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+      }
     }
     if (genome.head === 'armored') {
       const helm=bodyPart(flat(MeshBuilder.CreateIcoSphere('armored-head-shell',{radius:0.5,subdivisions:1},this.scene)),armorMat);
