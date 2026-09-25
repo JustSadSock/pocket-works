@@ -103,6 +103,13 @@ function build(seed,floor,danger,salt=0) {
     size, speed, maxHp, damage:Math.round(baseDamage*right.damage*(elite?1.22:1)),
     cadence:right.cadence*locomotion.cadence, reach:right.reach, stagger:right.stagger,
     elite, hue, accentHue, motion:locomotion.id, phase:rng()*Math.PI*2,
+    eyes: head.id==='many-eyes'?5:head.id==='split-jaw'?2:1,
+    horns: head.id==='horned'?3:head.id==='crowned'?2:0,
+    crest: head.id==='crowned'?3:0,
+    halo: mutation.id==='arc-growth',
+    limbs: locomotion.id==='crawler'?6:locomotion.id==='floating'?0:2,
+    wobble: locomotion.id==='hopper'?1.5:locomotion.id==='fast-biped'?1.25:0.85,
+    ability:right.attack,
     name:`${elite?'EXALTED ':''}${choice(rng,PREFIXES)} ${choice(rng,NOUNS)}`
   };
   enemy.signature=enemySignature(enemy);
