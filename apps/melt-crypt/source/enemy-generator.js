@@ -89,7 +89,7 @@ function build(seed,floor,danger,salt=0,tier=3) {
   const right=choice(rng,arms);
   const neutralHead=heads.find((x)=>x.id==='bare')||heads[0];
   const neutralDefense=defenses.find((x)=>x.id==='open')||defenses[0];
-  const neutralMutation=mutations.find((x)=>x.id==='none')||mutations[mutations.length-1];
+  const neutralMutation=MUTATIONS.find((x)=>x.id==='none');
   let head=neutralHead,defense=neutralDefense,mutation=neutralMutation;
   let left={id:'empty',label:'bare off-hand',attack:null,damage:0,reach:0,cadence:0,stagger:0,cue:'bare off-hand'};
 
