@@ -72,20 +72,28 @@ export function signatureDistance(a,b) {
   return diff;
 }
 
-function build(seed,floor,danger,salt=0) {
+function build(seed,floor,danger,salt=0,tier=3) {
   const rng=makeRng((Number(seed)^Math.imul(floor+17,0x45d9f3b)^Math.imul(salt+1,0x27d4eb2d))>>>0);
-  const body=choice(rng,ENEMY_BODIES);
-  let locomotion=choice(rng,LOCOMOTIONS);
-  if(body.id==='crawler' && rng()<0.72) locomotion=LOCOMOTIONS.find(x=>x.id==='crawler');
-  if(body.id==='serpent' && rng()<0.7) locomotion=LOCOMOTIONS.find(x=>x.id==='floating');
-  const head=choice(rng,HEADS);
-  const right=choice(rng,ARM_MODULES);
-  let left=choice(rng,ARM_MODULES);
-  if(right.id==='shield' && left.id==='shield') left=ARM_MODULES.find(x=>x.id==='blade');
-  let defense=choice(rng,DEFENSES);
+  const level=clamp(Math.floor(tier)||1,1,3);
+  const bodies=ENEMY_BODIES.slice(0,[0,4,5,6][level]);
+  const locomotions=LOCOMOTIONS.slice(0,[0,3,4,5][level]);
+  const heads=HEADS.slice(0,[0,4,5,6][level]);
+  const arms=ARM_MODULES.slice(0,[0,5,7,8][level]);
+  const defenses=DEFENSES.slice(0,[0,4,5,6][level]);
+  const mutations=MUTATIONS.slice(0,[0,5,7,8][level]);
+
+  const body=choice(rng,bodies);
+  let locomotion=choice(rng,locomotions);
+  if(body.id==='crawler' && rng()<0.72) locomotion=locomotions.find(x=>x.id==='crawler')||locomotion;
+  if(body.id==='serpent' && rng()<0.7) locomotion=locomotions.find(x=>x.id==='floating')||locomotion;
+  const head=choice(rng,heads);
+  const right=choice(rng,arms);
+  let left=choice(rng,arms);
+  if(right.id==='shield' && left.id==='shield') left=arms.find(x=>x.id==='blade')||arms.find(x=>x.id==='claws')||arms[0];
+  let defense=choice(rng,defenses);
   if(left.id==='shield') defense=DEFENSES.find(x=>x.id==='left-shield');
   if(right.id==='shield') defense=DEFENSES.find(x=>x.id==='right-shield');
-  const mutation=choice(rng,MUTATIONS);
+  const mutation=choice(rng,mutations);
   const threat=clamp(danger*(0.9+rng()*0.25),0.6,4);
   const elite=rng()<Math.min(0.06+floor*0.01,0.18);
   const size=clamp(body.scale*(0.9+rng()*0.2)*(elite?1.12:1),0.72,1.42);
@@ -116,11 +124,11 @@ function build(seed,floor,danger,salt=0) {
   return enemy;
 }
 
-export function generateEnemyBlueprint(seed,floor=1,danger=1,recent=[]) {
-  let candidate=build(seed,floor,danger,0);
+export function generateEnemyBlueprint(seed,floor=1,danger=1,recent=[],tier=3) {
+  let candidate=build(seed,floor,danger,0,tier);
   const history=recent.slice(-30);
   for(let attempt=0;attempt<32;attempt+=1){
-    candidate=build(seed,floor,danger,attempt);
+    candidate=build(seed,floor,danger,attempt,tier);
     const tooSimilar=history.some(sig=>signatureDistance(candidate.signature,sig)<5);
     if(!tooSimilar) return candidate;
   }
