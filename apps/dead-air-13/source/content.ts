@@ -19,7 +19,10 @@ export const STAGES: StageDefinition[] = [
   { id:13, code:'CH 13', name:'CONTROL ROOM', strap:'Do not touch the dial.', bossKind:'director', palette:p(0xe6dbc7,0x111315,0xe1513c,0x3a8b85,0xf0c342,0xff55cf,0x202426), runLength:25500, encounterCount:10, baseBossHp:6200, enemyDensity:1.50, gravity:1220, moveSpeed:312, bossScale:1.12, unlockAfter:12 }
 ];
 
-export const stageById = (id: number): StageDefinition => STAGES[Math.max(0, Math.min(STAGES.length - 1, id - 1))];
+export const stageById = (id: number): StageDefinition => {
+  const safeId = Number.isFinite(id) ? Math.trunc(id) : 1;
+  return STAGES[Math.max(0, Math.min(STAGES.length - 1, safeId - 1))];
+};
 
 export const BOSS_ROTATION: BossKind[] = STAGES.map((stage) => stage.bossKind);
 
