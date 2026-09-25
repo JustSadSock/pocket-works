@@ -376,6 +376,7 @@ export class MeltCryptGame {
     for (const drop of this.drops) {
       drop.visual?.node?.dispose(false, true);
       drop.visual?.material?.dispose();
+      drop.visual?.materials?.forEach((material) => material?.dispose?.());
     }
     this.enemies.length = 0;
     this.projectiles.length = 0;
@@ -527,10 +528,15 @@ export class MeltCryptGame {
       this.recentEnemySignatures.push(genome.signature);
       this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
       const rng = makeRng(seed ^ 0xa511e9b3);
-      let ox = (rng() - 0.5) * (room.sizeX - 3.4);
-      let oz = (rng() - 0.5) * (room.sizeZ - 3.4);
-      if (Math.hypot(ox, oz) < 2.6) { ox += ox < 0 ? -2.5 : 2.5; oz += oz < 0 ? -1.3 : 1.3; }
       const center = this.visuals.roomCenters.get(room.id);
+      let ox = 0, oz = 0;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        ox = (rng() - 0.5) * (room.sizeX - 3.4);
+        oz = (rng() - 0.5) * (room.sizeZ - 3.4);
+        if (Math.hypot(ox, oz) < 2.6) { ox += ox < 0 ? -2.5 : 2.5; oz += oz < 0 ? -1.3 : 1.3; }
+        const wx = center.x + ox, wz = center.z + oz;
+        if (!this.controller.overlapsAt(wx, wz, 0)) break;
+      }
       const position = new Vector3(center.x + ox, 0, center.z + oz);
       this.spawnEnemy(genome, room.id, position, false);
     }
@@ -674,7 +680,8 @@ export class MeltCryptGame {
     if (this.dashTimer > 0) {
       this.dashTimer = Math.max(0, this.dashTimer - dt);
       direction = this.dashDirection.clone();
-      this.controller.movePlanar(direction.x * 13.8 * dt, direction.z * 13.8 * dt);
+      const dashSpeed = this.hasRelic('blink-tendon') ? 16.6 : 13.8;
+      this.controller.movePlanar(direction.x * dashSpeed * dt, direction.z * dashSpeed * dt);
     } else {
       let speed = this.run.speed * (autoSprint ? 1.24 : 1);
       if (this.effects.speed > 0) speed *= 1.3;
@@ -910,7 +917,7 @@ export class MeltCryptGame {
     else if(critical)this.toast('CLEAN HIT.');
 
     const trait=this.run.weapon?.traitSpec?.effect;
-    if(didStagger&&trait==='stagger-blast'){
+    if(didStagger&&(trait==='stagger-blast'||this.hasRelic('rupture-heart'))){
       for(const other of this.enemies){
         if(other===enemy||other.dead||!other.visual||other.roomId!==enemy.roomId)continue;
         if(Vector3.Distance(other.visual.root.position,enemy.visual.root.position)<2.2){
@@ -955,7 +962,9 @@ export class MeltCryptGame {
     this.run.totalKills += 1;
     this.floorKills += 1;
     if (this.run.lifesteal > 0) this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.lifesteal);
-    if (this.run.weapon?.traitSpec?.effect === 'heal-exec') this.run.hp = Math.min(this.run.maxHp, this.run.hp + 2.5);
+    if (this.run.weapon?.traitSpec?.effect === 'heal-exec' || this.hasRelic('execution-thread')) {
+      this.run.hp = Math.min(this.run.maxHp, this.run.hp + 2.5);
+    }
 
     const dropRoll=this.runRng();
     if(dropRoll<0.13) this.spawnWeaponDrop(deathPosition, roomId);
@@ -1054,17 +1063,18 @@ export class MeltCryptGame {
 
 
   applyRelic(item) {
-    this.run.relics.push(item.id);
-    if (item.stat === 'speed') this.run.speed *= 1 + item.amount;
-    if (item.stat === 'damage') this.run.damage *= 1 + item.amount;
-    if (item.stat === 'maxHp') {
-      this.run.maxHp += item.amount;
-      this.run.hp = Math.min(this.run.maxHp, this.run.hp + item.amount);
+    if (!item || this.run.relics.includes(item.id)) {
+      if (item) this.toast('THE CRYPT REFUSES TO STACK IDENTICAL ORGANS.');
+      return;
     }
-    if (item.stat === 'crit') this.run.crit = clamp((this.run.crit || 0) + item.amount, 0, 0.55);
-    if (item.stat === 'lifesteal') this.run.lifesteal = (this.run.lifesteal || 0) + item.amount;
-    if (item.stat === 'dash') this.run.dashReduction = clamp((this.run.dashReduction || 0) + item.amount, 0, 0.62);
+    this.run.relics.push(item.id);
+    this.toast('MECHANIC ACQUIRED: ' + item.name.toUpperCase());
   }
+
+  hasRelic(id) {
+    return Boolean(this.run?.relics?.includes(id));
+  }
+
 
   drinkPotion() {
     if (!this.run.potions.length) {
@@ -1325,7 +1335,7 @@ export class MeltCryptGame {
     }
 
     if (this.invulnerable > 0) {
-      if ((this.justDodged || 0) > 0.04 && this.run.weapon?.traitSpec?.effect === 'dodge-haste') {
+      if ((this.justDodged || 0) > 0.04 && (this.run.weapon?.traitSpec?.effect === 'dodge-haste' || this.hasRelic('perfect-nerve'))) {
         this.effects.haste = Math.max(this.effects.haste || 0, 3.4);
         this.toast('PERFECT DODGE — WEAPON HASTENED.');
       }
@@ -1704,8 +1714,8 @@ export class MeltCryptGame {
       const room = roomByPoint(this.dungeon, drop.visual.node.position.x, drop.visual.node.position.z);
       if (!room?.visited) continue;
       const p = projectIntoRoom(room, drop.visual.node.position.x, drop.visual.node.position.z);
-      ctx.fillStyle = drop.loot.type === 'relic' ? '#d7ff55' : '#a76dff';
-      ctx.fillRect(Math.round(p.x - 1), Math.round(p.z - 1), 3, 3);
+      ctx.fillStyle = drop.type === 'weapon' ? '#d96843' : drop.loot?.type === 'relic' ? '#c9363f' : '#e6a35c';
+      ctx.fillRect(Math.round(p.x - 1), Math.round(p.z - 1), drop.type === 'weapon' ? 4 : 3, drop.type === 'weapon' ? 4 : 3);
     }
   }
 
