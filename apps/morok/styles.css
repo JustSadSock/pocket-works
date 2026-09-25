@@ -192,8 +192,8 @@ button:focus-visible,a:focus-visible{outline:2px solid #c58d53;outline-offset:2p
 .card-art{box-shadow:inset 0 0 0 1px rgba(225,196,144,.08)}
 .card-desc{font-size:6.2px;line-height:1.25}
 .unit-card{backface-visibility:hidden}
-.unit-card.player{animation:unitPlacePlayer .18s cubic-bezier(.2,.8,.2,1)}
-.unit-card.enemy{animation:unitPlaceEnemy .24s cubic-bezier(.2,.8,.2,1)}
+.unit-card.just-placed.player{animation:unitPlacePlayer .18s cubic-bezier(.2,.8,.2,1)}
+.unit-card.just-placed.enemy{animation:unitPlaceEnemy .24s cubic-bezier(.2,.8,.2,1)}
 
 .opponent[data-action="deal"] .hand-right{animation:dealerDeal .38s cubic-bezier(.2,.75,.2,1)}
 .opponent[data-action="deal"] .hand-left{animation:dealerBrace .38s ease}
