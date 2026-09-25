@@ -820,7 +820,11 @@ export class MeltCryptGame {
 
     const weapon=this.run.weapon;
     if (progress < 0.44 && weapon.movement !== 'rooted') {
-      const push = weapon.movement === 'lunge' ? 2.0 : weapon.movement === 'step-in' ? 1.2 : 0.5;
+      const push = state.heavy && weapon.core === 'claws' ? 3.0
+        : state.heavy && weapon.core === 'spear' ? 2.35
+        : weapon.movement === 'lunge' ? 2.0
+        : weapon.movement === 'step-in' ? 1.2
+        : 0.5;
       const forward = new Vector3(Math.sin(this.lookYaw),0,Math.cos(this.lookYaw));
       this.controller.movePlanar(forward.x * push * dt, forward.z * push * dt);
     }
@@ -860,8 +864,15 @@ export class MeltCryptGame {
     const weapon=this.run.weapon;
     const origin=this.controller.position;
     const forward=new Vector3(Math.sin(this.lookYaw),0,Math.cos(this.lookYaw));
-    const reach=weapon.reach + (state.heavy ? 0.16 : 0) + (state.dashAttack ? 0.58 : 0);
-    const halfArc=Math.max(0.16,weapon.arc*0.62);
+    const heavyReach = state.heavy
+      ? weapon.core === 'spear' ? 0.82
+        : weapon.core === 'claws' ? 0.36
+        : weapon.core === 'glaive' ? 0.42
+        : 0.16
+      : 0;
+    const reach=weapon.reach + heavyReach + (state.dashAttack ? 0.58 : 0);
+    const heavyArc = state.heavy && weapon.core === 'maul' ? 1.28 : 1;
+    const halfArc=Math.max(0.16,weapon.arc*0.62*heavyArc);
     const candidates=[];
     for(const enemy of this.enemies){
       if(enemy.dead||!enemy.visual||enemy.roomId!==this.currentRoomId)continue;
@@ -884,13 +895,18 @@ export class MeltCryptGame {
       const enemy=hit.enemy;
       const region=this.getEnemyHitRegion(enemy);
       const critical=!region.blocked && this.runRng()<(this.run.crit||0);
-      const base=weapon.damage*(this.run.damage||1)*(state.heavy?1.72:1)*(state.dashAttack?1.24:1)*(critical?1.55:1);
+      const heavyMultiplier = !state.heavy ? 1
+        : weapon.core === 'maul' ? 2.05
+        : weapon.core === 'spear' ? 1.82
+        : weapon.core === 'claws' ? 1.48
+        : 1.72;
+      const base=weapon.damage*(this.run.damage||1)*heavyMultiplier*(state.dashAttack?1.24:1)*(critical?1.55:1);
       const amount=base*region.multiplier;
       const redline = weapon.traitSpec?.effect === 'lowhp-stagger' && this.run.hp / this.run.maxHp < 0.35 ? 1.42 : 1;
       const stagger=weapon.stagger*(state.heavy?1.8:1)*(state.dashAttack?1.22:1)*redline;
       this.damageEnemy(enemy,amount,{
         critical,stagger,heavy:state.heavy,weak:region.weak,blocked:region.blocked,
-        knock:(state.heavy?1.7:0.7)+(weapon.stagger>1.3?0.5:0)
+        knock:(state.heavy?(weapon.core==='maul'?2.7:1.7):0.7)+(weapon.stagger>1.3?0.5:0)
       });
 
       if (!region.blocked && this.hasRelic('chain-suture')) {
