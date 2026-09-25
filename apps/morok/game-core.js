@@ -272,7 +272,7 @@ function doAttacks(run,battle,side){
     for(let n=0;n<attacks;n++){
       if(!attacker||attacker.hp<=0)break;
       const defender=foe[lane],amount=attackValue(attacker,own,lane,!defender);
-      recordBattleEvent(battle,{type:'attack',side,lane,attackerId:attacker.instanceId,name:attacker.name,targetSide:side==='player'?'enemy':'player',targetLane:lane,targetId:defender?.instanceId||null,direct:!defender,amount,strike:n+1,strikes:attacks});
+      recordBattleEvent(battle,{type:'attack',side,lane,attackerId:attacker.instanceId,name:attacker.name,targetSide:side==='player'?'enemy':'player',targetLane:lane,targetId:defender?.instanceId||null,targetName:defender?.name||null,direct:!defender,amount,strike:n+1,strikes:attacks});
       if(defender){
         damageUnit(run,battle,side==='player'?'enemy':'player',lane,amount,attacker,'attack');
         if(attacker.sigils.includes('hunger')&&!foe[lane]){attacker.atk++;recordBattleEvent(battle,{type:'buff',side,lane,unitId:attacker.instanceId,name:attacker.name,stat:'atk',amount:1})}
