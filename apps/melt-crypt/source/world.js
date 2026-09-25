@@ -907,7 +907,10 @@ export class CryptVisuals {
       arm.position.set(shoulderX, armY, 0.1);
       arm.rotation.z = side * 0.38;
 
-      if (moduleId === 'hammer') {
+      if (moduleId === 'empty') {
+        const hand=bodyPart(flat(MeshBuilder.CreateIcoSphere('enemy-empty-hand-'+side,{radius:0.16,subdivisions:1},this.scene)),bodyMat);
+        hand.position.set(side*0.82,armY-0.28,0.18);
+      } else if (moduleId === 'hammer') {
         const haft=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-hammer-haft-'+side,{height:1.2,diameter:0.09,tessellation:5},this.scene)),boneMat);
         haft.position.set(side*0.93,armY-0.18,0.43); haft.rotation.x=Math.PI/2; haft.rotation.z=side*0.12;
         const head=bodyPart(flat(MeshBuilder.CreateBox('enemy-hammer-head-'+side,{width:0.62,height:0.3,depth:0.34},this.scene)),armorMat);
