@@ -107,7 +107,7 @@ function renderMenu() {
     : 'Новый эфир';
   challengeButton.disabled = !save.campaignComplete;
   challengeMeta.textContent = save.campaignComplete
-    ? `Encore · пройдено ${save.encoreClears}`
+    ? `Encore · ${save.encoreClears % 13}/13 · циклов ${Math.floor(save.encoreClears / 13)}`
     : 'Закрыто до прохождения';
   syncSoundLabels();
 }
@@ -162,7 +162,7 @@ function startStage(stageId: number, mode: 'campaign'|'archive'|'encore' = 'camp
   stageLabel.textContent = mode === 'encore' ? 'ENCORE' : stageById(stageId).code;
   stageName.textContent = mode === 'encore' ? 'UNSTABLE ARCHIVE' : stageById(stageId).name;
   void audio.unlock();
-  controller.startStage(stageId, mode, mode === 'encore' ? Date.now() : undefined);
+  controller.startStage(stageId, mode, mode === 'encore' ? save.encoreClears : undefined);
 }
 
 function showResult(stats: StageStats) {
@@ -174,7 +174,7 @@ function showResult(stats: StageStats) {
   resultDamage.textContent = String(stats.damageTaken);
   resultParries.textContent = String(stats.parries);
   resultScore.textContent = String(stats.score);
-  nextButton.textContent = stats.mode === 'campaign' && stats.stageId < 13 ? 'СЛЕДУЮЩИЙ КАНАЛ' : 'В АРХИВ';
+  nextButton.textContent = stats.mode === 'campaign' && stats.stageId < 13 ? 'СЛЕДУЮЩИЙ КАНАЛ' : stats.mode === 'encore' ? 'СЛЕДУЮЩИЙ ENCORE' : 'В АРХИВ';
 }
 
 continueButton.addEventListener('click', () => {
@@ -186,7 +186,7 @@ $('selectBack').addEventListener('click', () => { audio.ui(); showMenu(); });
 challengeButton.addEventListener('click', () => {
   if (!save.campaignComplete) return;
   audio.ui();
-  const stage = 1 + Math.floor(Math.random() * 13);
+  const stage = 1 + (save.encoreClears % 13);
   startStage(stage, 'encore');
 });
 soundButton.addEventListener('click', toggleSound);
@@ -218,6 +218,7 @@ nextButton.addEventListener('click', () => {
   if (!currentStats) return;
   audio.ui();
   if (currentStats.mode === 'campaign' && currentStats.stageId < 13) startStage(currentStats.stageId + 1, 'campaign');
+  else if (currentStats.mode === 'encore') startStage(1 + (save.encoreClears % 13), 'encore');
   else showArchive();
 });
 $('errorRetry').addEventListener('click', () => location.reload());
