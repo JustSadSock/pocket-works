@@ -7,7 +7,7 @@ const RELEASE_NOTES=[
   'Система Наследия позволяет жертвовать существом и переносить одну его метку в следующего разыгранного зверя.',
   'Пиксельный 2.5D каменный зал, процедурный Web Audio, сохранение забега и полностью офлайн-режим.'
 ];
-const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./game-core.mjs','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./game-core.js','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)))});
 self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES});if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
