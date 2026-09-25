@@ -561,28 +561,84 @@ export class MeltCryptGame {
   spawnRoom(room) {
     if (room.spawned) return;
     room.spawned = true;
-    this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
-    for (let index = 0; index < room.monsterSeeds.length; index += 1) {
-      const seed = room.monsterSeeds[index];
-      const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures, this.generatorTier());
-      this.recentEnemySignatures.push(genome.signature);
-      this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
-      const rng = makeRng(seed ^ 0xa511e9b3);
-      const center = this.visuals.roomCenters.get(room.id);
-      let ox = 0, oz = 0;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        ox = (rng() - 0.5) * (room.sizeX - 3.4);
-        oz = (rng() - 0.5) * (room.sizeZ - 3.4);
-        if (Math.hypot(ox, oz) < 2.6) { ox += ox < 0 ? -2.5 : 2.5; oz += oz < 0 ? -1.3 : 1.3; }
-        const wx = center.x + ox, wz = center.z + oz;
-        if (!this.controller.overlapsAt(wx, wz, 0)) break;
-      }
-      const position = new Vector3(center.x + ox, 0, center.z + oz);
-      this.spawnEnemy(genome, room.id, position, false);
-    }
-    this.run.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
-    if (!room.monsterSeeds.length) room.cleared = true;
+    room.cleared = false;
+    const firstCombat = this.run.floor === 1 && !this.run.firstCombatRewarded && room.role === 'room';
+    const plan = buildEncounterPlan(room,this.run.floor,this.run.seed,{firstCombat});
+    this.visuals.sealRoom(room);
+    this.setCombatActive(true);
+    this.handleEncounterEvents(this.encounterDirector.begin(plan),room);
   }
+
+  spawnEncounterSeed(seed, room) {
+    this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
+    const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures, this.generatorTier());
+    this.recentEnemySignatures.push(genome.signature);
+    this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
+    this.run.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
+
+    const rng = makeRng(seed ^ 0xa511e9b3);
+    const center = this.visuals.roomCenters.get(room.id);
+    let ox = 0, oz = 0;
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      ox = (rng() - 0.5) * (room.sizeX - 3.4);
+      oz = (rng() - 0.5) * (room.sizeZ - 3.4);
+      if (Math.hypot(ox, oz) < 2.8) { ox += ox < 0 ? -2.6 : 2.6; oz += oz < 0 ? -1.4 : 1.4; }
+      const wx = center.x + ox, wz = center.z + oz;
+      if (!this.controller.overlapsAt(wx, wz, 0)) break;
+    }
+    const position = new Vector3(center.x + ox, 0, center.z + oz);
+    return this.spawnEnemy(genome, room.id, position, false);
+  }
+
+  setCombatActive(value) {
+    this.combatActive=Boolean(value);
+    this.root.classList.toggle('combat-active',this.combatActive);
+    this.audio?.setCombat?.(this.combatActive);
+  }
+
+  handleEncounterEvents(events,room) {
+    for(const event of events||[]){
+      if(event.type==='cue'){
+        this.audio?.encounterCue?.(event.kind);
+        if(event.text)this.toast(event.text);
+      } else if(event.type==='spawn'){
+        for(const seed of event.seeds)this.spawnEncounterSeed(seed,room);
+      } else if(event.type==='clear'){
+        room.cleared=true;
+        this.visuals.unsealRoom(room);
+        this.setCombatActive(false);
+        this.audio?.encounterCue?.('clear');
+        this.toast('ROOM CLEAR.');
+        if(event.reward==='weapon-choice'&&!this.run.firstCombatRewarded){
+          this.run.firstCombatRewarded=true;
+          this.spawnWeaponChoice(room.id,3);
+        }
+        this.drawMinimap();
+        this.saveRun();
+      }
+    }
+  }
+
+  updateEncounter(dt) {
+    const room=this.dungeon?.rooms?.[this.currentRoomId];
+    if(!room||!room.spawned||room.cleared)return;
+    const alive=this.enemies.filter((enemy)=>!enemy.dead&&!enemy.dying&&enemy.roomId===room.id).length;
+    this.handleEncounterEvents(this.encounterDirector.tick(dt,alive),room);
+  }
+
+  spawnWeaponChoice(roomId,count=3) {
+    const room=this.dungeon.rooms[roomId];
+    const center=this.visuals.roomCenters.get(roomId);
+    if(!room||!center)return;
+    const group='choice-'+roomId+'-'+Date.now();
+    const offsets=count===3?[[-1.55,0.7],[0,1.1],[1.55,0.7]]:[[0,0.9]];
+    offsets.slice(0,count).forEach(([x,z],index)=>{
+      this.spawnWeaponDrop(center.add(new Vector3(x,0,z)),roomId,{choiceGroup:group,seedSalt:0x99e1+index*733});
+    });
+    this.toast('CHOOSE A WEAPON.');
+    this.weaponBannerTimer=2.8;
+  }
+
 
   spawnEnemy(genome, roomId, position, child = false) {
     const enemy = {
@@ -1059,16 +1115,10 @@ export class MeltCryptGame {
     }
 
     const dropRoll=this.runRng();
-    if(dropRoll<0.13) this.spawnWeaponDrop(deathPosition, roomId);
-    else if(dropRoll<0.3) this.spawnDrop(deathPosition);
+    if(dropRoll<0.28) this.spawnWeaponDrop(deathPosition, roomId);
+    else if(dropRoll<0.43) this.spawnDrop(deathPosition);
 
     const room = this.dungeon.rooms[roomId];
-    const aliveInRoom = this.enemies.some((candidate) => !candidate.dead && candidate.roomId === roomId);
-    if (!aliveInRoom) {
-      room.cleared = true;
-      if (room.id === this.currentRoomId) this.toast('ROOM QUIET. SUSPICIOUS.');
-      this.drawMinimap();
-    }
 
     const unlocked = this.floorKills >= this.dungeon.requiredKills;
     if (unlocked && !this.visuals.gate?.unlocked) {
@@ -1080,13 +1130,15 @@ export class MeltCryptGame {
     this.saveRun();
   }
 
-  spawnWeaponDrop(position, roomId = this.currentRoomId) {
-    const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
+  spawnWeaponDrop(position, roomId = this.currentRoomId, options = {}) {
+    const seed = options.seedSalt
+      ? ((this.run.seed ^ Math.imul(this.floorKills + 11, options.seedSalt)) >>> 0)
+      : (Math.floor(this.runRng() * 0xffffffff) >>> 0);
     const recent = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures : [];
     const weapon = generateWeapon(seed, this.run.floor, recent, this.generatorTier());
     this.run.recentWeaponSignatures = [...recent, weapon.signature].slice(-18);
     const visual = this.visuals.createWeaponDropVisual(weapon, position.add(new Vector3(0,0.03,0)));
-    this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0 });
+    this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0, choiceGroup:options.choiceGroup||null });
     this.drawMinimap();
   }
 
@@ -1116,9 +1168,15 @@ export class MeltCryptGame {
   collectDrop(drop) {
     if (drop.type === 'weapon') {
       this.equipWeapon(drop.weapon);
-      drop.visual.node.dispose(false,true);
-      drop.visual.materials?.forEach((material)=>material.dispose());
-      drop.visual=null;
+      const group=drop.choiceGroup;
+      for(const candidate of this.drops){
+        if(candidate.type!=='weapon'||!candidate.visual)continue;
+        if(candidate===drop||(group&&candidate.choiceGroup===group)){
+          candidate.visual.node.dispose(false,true);
+          candidate.visual.materials?.forEach((material)=>material.dispose());
+          candidate.visual=null;
+        }
+      }
       this.drawMinimap();
       return;
     }
