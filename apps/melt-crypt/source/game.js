@@ -508,7 +508,7 @@ export class MeltCryptGame {
     this.meta.weaponCodex = this.meta.weaponCodex.slice(-128);
     if (this.run) this.run.discoveries += 1;
     this.saveMeta();
-    this.showDiscovery(weapon.name, weapon.headSpec.label + ' · ' + weapon.handleSpec.label + ' · skill: ' + weapon.skillSpec.label);
+    this.showDiscovery(weapon.name, weapon.headSpec.label + ' · ' + weapon.handleSpec.label + ' · ' + weapon.traitSpec.label + ': ' + weapon.traitSpec.copy + ' · skill: ' + weapon.skillSpec.label);
   }
 
   discoverLoot(item) {
