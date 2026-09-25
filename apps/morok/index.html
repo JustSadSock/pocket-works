@@ -2,135 +2,162 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#090b09">
-  <meta name="description" content="МОРОК — мрачный пиксельный roguelike-декбилдер для Pocket Works.">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0908">
+  <meta name="description" content="МОРОК — физический пиксельный ritual-deckbuilder для Pocket Works.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="МОРОК">
   <title>МОРОК — Pocket Works</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
-<main id="app" class="app-shell" data-app-shell>
-  <canvas id="scene" aria-hidden="true"></canvas>
-  <div class="veil" aria-hidden="true"></div>
-  <div class="grain" aria-hidden="true"></div>
+<main id="app" class="app" data-app-shell data-mode="menu">
+  <div class="room" aria-hidden="true">
+    <div class="back-wall"></div>
+    <div class="arch arch-left"></div><div class="arch arch-right"></div>
+    <div class="banner banner-left"><i></i></div><div class="banner banner-right"><i></i></div>
+    <div class="wall-candle candle-a"><i></i></div><div class="wall-candle candle-b"><i></i></div>
+    <div class="red-slit"></div>
+    <div class="dust"></div>
+  </div>
 
-  <header class="chrome" data-ui>
-    <button class="glyph-button" id="backBtn" type="button" aria-label="Назад" data-native-press>‹</button>
-    <div class="brandline"><b>МОРОК</b><span id="locationLabel">ЗАЛ</span></div>
-    <button class="glyph-button" id="menuBtn" type="button" aria-label="Меню" data-native-press>≡</button>
-  </header>
+  <a class="pw-exit" href="../../" data-app-control aria-label="Вернуться в Pocket Works">PW</a>
+  <button class="settings-glyph" id="settingsBtn" type="button" aria-label="Настройки">⚙</button>
 
-  <section class="screen start-screen active" id="startScreen" data-ui>
-    <div class="start-mark" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="start-copy">
-      <p class="kicker">КАРТОЧНЫЙ РОГАЛИК / КАМЕННЫЙ МОРОК</p>
-      <h1>МОРОК</h1>
-      <p class="lede">Каждый забег перестраивает коридоры, противников и награды. Забирай метки существ, скрещивай их свойства и собери колоду, которая переживёт хозяина зала.</p>
+  <section class="opponent" id="opponent" aria-live="polite">
+    <div class="opponent-shadow"></div>
+    <div class="shoulders"></div>
+    <div class="hood"></div>
+    <div class="mask" id="opponentMask">
+      <span class="mask-cut cut-a"></span><span class="mask-cut cut-b"></span>
+      <i class="eye eye-left"></i><i class="eye eye-right"></i>
+      <b class="mask-mark">†</b>
     </div>
-    <div class="start-actions">
-      <button class="primary torn" id="continueBtn" type="button" data-native-press hidden><span>ПРОДОЛЖИТЬ</span><small id="continueMeta">ГЛУБИНА 1</small></button>
-      <button class="primary torn" id="newRunBtn" type="button" data-native-press><span>НОВЫЙ ЗАБЕГ</span><small>СЛУЧАЙНОЕ СЕМЯ</small></button>
-      <button class="text-button" id="rulesBtn" type="button" data-native-press>Как здесь выживать</button>
-    </div>
-    <a class="pocket-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+    <div class="hand-model hand-left"><i></i><i></i><i></i></div>
+    <div class="hand-model hand-right"><i></i><i></i><i></i></div>
+    <div class="speech" id="opponentSpeech">Садись.</div>
   </section>
 
-  <section class="screen trail-screen" id="trailScreen" data-ui>
-    <div class="run-strip">
-      <span><b id="runHp">15</b><small>СЕРДЦА</small></span>
-      <span><b id="deckCount">10</b><small>КОЛОДА</small></span>
-      <span><b id="relicCount">0</b><small>ЗНАКИ</small></span>
-    </div>
-    <div class="trail-copy"><p id="trailChapter">ГЛУБИНА I</p><h2 id="trailTitle">Тропа раздваивается</h2><span id="trailHint">Выбор закрывает остальные следы.</span></div>
-    <div class="trail-path" id="trailPath" aria-label="Карта забега"></div>
-    <button class="deck-tab" id="deckBtn" type="button" data-native-press>КОЛОДА <b id="deckBadge">10</b></button>
-  </section>
+  <section class="table" id="table">
+    <div class="table-edge"></div>
+    <div class="scratch scratch-a"></div><div class="scratch scratch-b"></div><div class="blood-stain"></div>
 
-  <section class="screen battle-screen" id="battleScreen" data-ui>
-    <div class="battle-head">
-      <div class="heartbar enemy"><span>ХОЗЯИН</span><div><i id="enemyHpFill"></i></div><b id="enemyHpText">12/12</b></div>
-      <div class="round"><small>ХОД</small><b id="roundText">1</b></div>
-      <div class="heartbar player"><span>ТЫ</span><div><i id="playerHpFill"></i></div><b id="playerHpText">15/15</b></div>
+    <div class="scale" id="balanceScale" aria-label="Баланс боя">
+      <div class="scale-post"><i></i></div>
+      <div class="scale-beam" id="scaleBeam"><i class="chain chain-left"></i><i class="chain chain-right"></i></div>
+      <div class="scale-pan pan-left"><span id="enemyWeight">0</span></div>
+      <div class="scale-pan pan-right"><span id="playerWeight">0</span></div>
+      <small id="scaleLabel">РАВНОВЕСИЕ</small>
     </div>
+
+    <div class="brazier prop" id="brazier" aria-label="Уголь">
+      <div class="bowl"><i></i><i></i><i></i></div>
+      <b id="emberText">3</b><small>УГОЛЬ</small>
+    </div>
+    <div class="bones prop" id="bones" aria-label="Останки">
+      <div class="bone-pile"><i></i><i></i><i></i><i></i></div>
+      <b id="remainsText">0</b><small>КОСТИ</small>
+    </div>
+
+    <div class="intent-rack" id="intentRack" aria-label="Намерения противника"></div>
 
     <div class="board" id="board" data-gesture-surface data-block-callout>
-      <div class="intent-label">СЛЕДУЮЩИМИ ВОЙДУТ</div>
-      <div class="lane-row intent-row" id="intentRow"></div>
-      <div class="lane-row enemy-row" id="enemyRow"></div>
-      <div class="scar-line"><i></i><span id="battleMessage">Камень ждёт твоего хода.</span><i></i></div>
-      <div class="lane-row player-row" id="playerRow"></div>
+      <div class="row enemy-row" id="enemyRow"></div>
+      <div class="board-divider"><span id="roundText">ХОД 1</span><i></i></div>
+      <div class="row player-row" id="playerRow"></div>
     </div>
 
-    <div class="battle-bottom">
-      <div class="resources">
-        <div><span class="res-icon ember">✦</span><b id="emberText">3</b><small>УГОЛЬ</small></div>
-        <div><span class="res-icon remains">●</span><b id="remainsText">0</b><small>ОСТАНКИ</small></div>
-        <div class="heritage-slot" id="heritageSlot"><span>∅</span><small>НАСЛЕДИЕ</small></div>
-        <button class="end-turn" id="endTurnBtn" type="button" data-native-press>КОНЕЦ ХОДА <b>→</b></button>
+    <div class="heritage-token" id="heritageToken" hidden><span>▲</span><small>НАСЛЕДИЕ</small></div>
+    <button class="sacrifice-knife" id="sacrificeBtn" type="button" hidden><i></i><span>ЖЕРТВА</span></button>
+
+    <div class="item-rack" id="itemRack" aria-label="Предметы"></div>
+    <button class="turn-bell" id="endTurnBtn" type="button" aria-label="Закончить ход"><i></i><span>ХОД</span></button>
+    <button class="deck-book" id="deckBtn" type="button" aria-label="Открыть колоду"><i></i><span id="deckCount">10</span></button>
+
+    <div class="hand" id="hand" aria-label="Карты в руке"></div>
+
+    <section class="table-prop menu-tray" id="menuTray">
+      <div class="title-plaque">
+        <span>RITUS · II</span>
+        <h1>МОРОК</h1>
+        <p>Карты помнят то, что ты им сделал.</p>
       </div>
-      <div class="selection-strip" id="selectionStrip" hidden>
-        <div><b id="selectionTitle">Зверь</b><span id="selectionText">Описание</span></div>
-        <button id="sacrificeBtn" type="button" data-native-press>ПРИНЕСТИ В ЖЕРТВУ</button>
+      <div class="menu-slips">
+        <button id="continueBtn" type="button" hidden><b>ПРОДОЛЖИТЬ</b><small id="continueMeta"></small></button>
+        <button id="newRunBtn" type="button"><b>НОВАЯ СДАЧА</b><small>другая колода · другой путь</small></button>
+        <button id="rulesBtn" type="button"><b>ПРАВИЛА</b><small>прочитать выцарапанное</small></button>
       </div>
-      <div class="hand" id="hand" aria-label="Карты в руке"></div>
+    </section>
+
+    <section class="table-prop route-tablet" id="routeTablet" hidden>
+      <header><small id="routeDepth">ГЛУБИНА I / IX</small><b id="routeTitle">Перед тобой две двери.</b></header>
+      <div class="route-grooves" id="routeChoices"></div>
+      <footer><span id="routeRelics">0 знаков</span><span id="routeItems">0 предметов</span></footer>
+    </section>
+
+    <section class="table-prop event-tray" id="eventTray" hidden>
+      <header><small id="eventKicker">НА СТОЛЕ</small><b id="eventTitle">Три карты.</b><p id="eventHint">Возьми одну.</p></header>
+      <div class="event-choices" id="eventChoices"></div>
+      <button class="leave-button" id="eventSkip" type="button" hidden>Оставить всё</button>
+    </section>
+
+    <section class="table-prop result-plaque" id="resultPlaque" hidden>
+      <small id="resultKicker">СВЕЧА ПОГАСЛА</small>
+      <b id="resultTitle">Сдача окончена.</b>
+      <p id="resultText"></p>
+      <div class="result-stats"><span><b id="resultDepth">1</b><i>глубина</i></span><span><b id="resultKills">0</b><i>убито</i></span><span><b id="resultSacrifices">0</b><i>жертв</i></span></div>
+      <button id="againBtn" type="button">ЕЩЁ ОДНА СДАЧА</button>
+      <button id="resultHomeBtn" type="button">убрать карты</button>
+    </section>
+  </section>
+
+  <div class="card-focus" id="cardFocus" hidden>
+    <button class="focus-close" id="focusClose" type="button" aria-label="Закрыть">×</button>
+    <div id="focusCard"></div>
+    <div class="focus-copy"><b id="focusName"></b><p id="focusText"></p><div id="focusSigils"></div></div>
+  </div>
+
+  <section class="ledger" id="deckLedger" hidden>
+    <div class="ledger-cover"><span>КНИГА</span><button id="ledgerClose" type="button">×</button></div>
+    <div class="ledger-page">
+      <header><b>ТВОЯ КОЛОДА</b><span id="ledgerStats"></span></header>
+      <div class="relic-strip" id="relicStrip"></div>
+      <div class="ledger-grid" id="deckList"></div>
     </div>
   </section>
 
-  <section class="screen event-screen" id="eventScreen" data-ui>
-    <div class="event-heading"><p id="eventKicker">СОБЫТИЕ</p><h2 id="eventTitle">Следы под снегом</h2><span id="eventHint">Возьми одну карту.</span></div>
-    <div class="event-choices" id="eventChoices"></div>
-    <button class="text-button event-skip" id="eventSkip" type="button" data-native-press hidden>Уйти ни с чем</button>
+  <section class="settings-panel" id="settingsPanel" hidden>
+    <header><b>НАСТРОЙКИ</b><button id="settingsClose" type="button">×</button></header>
+    <button id="soundToggle" type="button"><span>Звук</span><b>ВКЛ</b></button>
+    <button id="hapticToggle" type="button"><span>Вибрация</span><b>ВКЛ</b></button>
+    <button id="rulesFromSettings" type="button"><span>Правила</span><b>→</b></button>
+    <button id="abandonBtn" type="button"><span>Бросить сдачу</span><b>†</b></button>
   </section>
 
-  <section class="screen result-screen" id="resultScreen" data-ui>
-    <div class="result-rune" id="resultRune">†</div>
-    <p class="kicker" id="resultKicker">МОРОК СОМКНУЛСЯ</p>
-    <h2 id="resultTitle">Забег окончен</h2>
-    <p id="resultText">У тебя была неплохая колода. У зала — ещё один этаж.</p>
-    <div class="result-stats"><span><b id="resultDepth">1</b><small>ГЛУБИНА</small></span><span><b id="resultKills">0</b><small>УБИТО</small></span><span><b id="resultSacrifices">0</b><small>ОТДАНО</small></span></div>
-    <button class="primary torn" id="againBtn" type="button" data-native-press><span>ЕЩЁ РАЗ</span><small>НОВОЕ СЕМЯ</small></button>
-    <button class="text-button" id="resultHomeBtn" type="button" data-native-press>В главное меню</button>
+  <section class="rules-panel" id="rulesPanel" hidden>
+    <header><b>ВЫЦАРАПАНО НА ОБОРОТЕ СТОЛА</b><button id="rulesClose" type="button">×</button></header>
+    <ol>
+      <li><b>Весы.</b><span>Прямой урон кладёт вес на твою чашу. Дойди до шести раньше противника.</span></li>
+      <li><b>Жертва.</b><span>Свою карту можно разрезать раз за ход: получишь кости и унаследуешь одну её метку следующей картой.</span></li>
+      <li><b>Намерения.</b><span>Маленькие карты за руками противника показывают, что появится после твоего хода.</span></li>
+      <li><b>Ломай правила.</b><span>Алтарь переносит метки навсегда, второй шрам у жаровни вызывает мутацию, предметы исчезают после использования.</span></li>
+      <li><b>Боссы.</b><span>Смотритель запирает линии, Звонарь ускоряет стол, Приор меняет правила между фазами.</span></li>
+    </ol>
   </section>
 
-  <section class="sheet" id="deckSheet" hidden data-ui>
-    <div class="sheet-head"><div><p>ТВОЯ СТАЯ</p><h2>Колода</h2></div><button class="glyph-button" data-close-sheet="deckSheet" type="button" data-native-press>×</button></div>
-    <div class="relic-list" id="relicList"></div>
-    <div class="deck-list" id="deckList"></div>
-  </section>
-
-  <section class="sheet compact-sheet" id="menuSheet" hidden data-ui>
-    <div class="sheet-head"><div><p>МОРОК / 1.0</p><h2>Пауза</h2></div><button class="glyph-button" data-close-sheet="menuSheet" type="button" data-native-press>×</button></div>
-    <button class="sheet-row" id="soundToggle" type="button" data-native-press><span>Звук</span><b>ВКЛ</b></button>
-    <button class="sheet-row" id="hapticToggle" type="button" data-native-press><span>Вибрация</span><b>ВКЛ</b></button>
-    <button class="sheet-row" id="menuRulesBtn" type="button" data-native-press><span>Правила</span><b>→</b></button>
-    <button class="sheet-row danger" id="abandonBtn" type="button" data-native-press><span>Бросить забег</span><b>×</b></button>
-    <a class="sheet-row" href="../../" data-app-control data-native-press><span>В Pocket Works</span><b>↙</b></a>
-  </section>
-
-  <section class="sheet rules-sheet" id="rulesSheet" hidden data-ui>
-    <div class="sheet-head"><div><p>30 СЕКУНД</p><h2>Как выживать</h2></div><button class="glyph-button" data-close-sheet="rulesSheet" type="button" data-native-press>×</button></div>
-    <div class="rule"><b>01</b><p><strong>Карта → линия.</strong> Нажми карту, затем свободную нижнюю линию. Ритуалы требуют подходящей цели.</p></div>
-    <div class="rule"><b>02</b><p><strong>Враги предупреждают.</strong> Верхний полупрозрачный ряд показывает, кто войдёт на доску после твоего хода.</p></div>
-    <div class="rule"><b>03</b><p><strong>Принеси зверя в жертву.</strong> Нажми своего зверя и «Принести в жертву»: получишь Останки и сохранишь первую его метку как Наследие следующему зверю.</p></div>
-    <div class="rule"><b>04</b><p><strong>Ломай колоду.</strong> Алтари переносят метки навсегда, костры усиливают карту, Знаки меняют правила всего забега.</p></div>
-  </section>
-
-  <section class="confirm" id="confirmBox" hidden data-ui>
-    <div><p id="confirmText">Точно?</p><div><button id="confirmCancel" type="button" data-native-press>НЕТ</button><button id="confirmOk" type="button" data-native-press>ДА</button></div></div>
-  </section>
-
+  <div class="confirm" id="confirmBox" hidden>
+    <div><p id="confirmText">Точно?</p><span><button id="confirmCancel" type="button">НЕТ</button><button id="confirmOk" type="button">ДА</button></span></div>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="rotate-block" id="rotateBlock"><div class="phone-glyph"></div><b>МОРОК ИГРАЕТСЯ ВЕРТИКАЛЬНО</b><span>Поверни телефон.</span></div>
+  <div class="portrait-only"><b>МОРОК ИГРАЕТСЯ ВЕРТИКАЛЬНО</b><span>Поверни телефон.</span></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="1.0.0"></script>
+
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="2.0.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

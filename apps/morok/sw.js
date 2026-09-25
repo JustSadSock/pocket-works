@@ -1,11 +1,11 @@
 const CACHE_PREFIX='morok-';
-const CACHE_NAME='morok-v1.0.0';
-const APP_VERSION='1.0.0';
-const RELEASE_DATE='2026-09-25';
+const CACHE_NAME='morok-v2.0.0';
+const APP_VERSION='2.0.0';
+const RELEASE_DATE='2026-09-26';
 const RELEASE_NOTES=[
-  'Первый полноценный релиз: процедурная карта забега, карточные бои на четыре линии, награды и четыре типа событий.',
-  'Система Наследия позволяет жертвовать существом и переносить одну его метку в следующего разыгранного зверя.',
-  'Пиксельный 2.5D каменный зал, процедурный Web Audio, сохранение забега и полностью офлайн-режим.'
+  'Полностью пересобрана подача: одна физическая пиксельная 2.5D-сцена за ритуальным столом вместо набора экранов и панелей.',
+  'Бой читается через чашу весов, кости, жаровню, предметы и противника напротив.',
+  'Добавлены три босса, расходуемые предметы, более грязные мутации карт и материальный Web Audio.'
 ];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./game-core.js','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)))});
