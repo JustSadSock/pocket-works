@@ -196,7 +196,6 @@ export class MeltCryptGame {
     document.addEventListener('visibilitychange', this.onVisibility);
     window.addEventListener('pagehide', () => this.saveRun());
 
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
     report('the crypt has decided to cooperate…', 1);
     this.showTitle();
   }
@@ -301,6 +300,7 @@ export class MeltCryptGame {
     this.el['title-best'].textContent = 'BEST FLOOR ' + String(this.meta.bestFloor || 0).padStart(2, '0');
     this.el['title-codex'].textContent = String(this.meta.codex.length) + ' phenotypes archived';
     this.updatePsyche(0.04);
+    this.updateOrientation();
   }
 
   startNewRun() {
@@ -390,6 +390,7 @@ export class MeltCryptGame {
     this.meta.bestFloor = Math.max(this.meta.bestFloor || 0, this.run.floor);
     this.meta.run = clone(this.run);
     this.saveMeta();
+    this.updateOrientation();
   }
 
   floorSubtitle() {
@@ -672,11 +673,13 @@ export class MeltCryptGame {
     if (!aliveInRoom) {
       room.cleared = true;
       if (room.id === this.currentRoomId) this.toast('ROOM QUIET. SUSPICIOUS.');
+      this.drawMinimap();
     }
 
     const unlocked = this.floorKills >= this.dungeon.requiredKills;
     if (unlocked && !this.visuals.gate?.unlocked) {
       this.visuals.setGateUnlocked(true);
+      this.drawMinimap();
       this.audio.tone('gate', 1);
       this.toast('DESCENT OFFICE IS NOW ACCEPTING CLIENTS.');
     }
@@ -968,6 +971,7 @@ export class MeltCryptGame {
       const room = this.dungeon.rooms[target.roomId];
       if (!room.cleared) { this.toast('CHEST REFUSES TO OPEN WHILE SUPERVISED.'); return; }
       this.visuals.setInteractiveUsed(target);
+      room.opened = true;
       const relicSeed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
       const relic = rollLoot(relicSeed, this.run.floor, 'relic').item;
       this.discoverLoot(relic);
