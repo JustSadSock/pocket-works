@@ -176,7 +176,18 @@ export class CryptVisuals {
       return mesh;
     };
 
-    if (visual === 'hammer' || visual === 'slab' || visual === 'bell') {
+    if (weapon.starter) {
+      const spine=add(flat(MeshBuilder.CreateBox('starter-cleaver-spine',{width:0.12,height:0.46,depth:0.075},this.scene)),bone);
+      spine.position.set(-0.06,0.03,headZ);spine.rotation.z=-0.12;
+      const blade=add(flat(MeshBuilder.CreateBox('starter-cleaver-blade',{width:0.34,height:0.39,depth:0.065},this.scene)),blood);
+      blade.position.set(0.08,0.055,headZ+0.015);blade.rotation.z=-0.3;blade.scaling.x=1.08;
+      const tip=add(flat(MeshBuilder.CreateCylinder('starter-cleaver-tip',{height:0.28,diameterTop:0,diameterBottom:0.22,tessellation:4},this.scene)),blood);
+      tip.position.set(0.17,0.22,headZ+0.015);tip.rotation.z=-0.82;
+      for(let i=0;i<3;i+=1){
+        const notch=add(flat(MeshBuilder.CreateCylinder('starter-cleaver-notch-'+i,{height:0.11,diameterTop:0,diameterBottom:0.055,tessellation:4},this.scene)),bone);
+        notch.position.set(-0.11+i*0.08,-0.15,headZ+0.03);notch.rotation.z=Math.PI;
+      }
+    } else if (visual === 'hammer' || visual === 'slab' || visual === 'bell') {
       const head = add(flat(MeshBuilder.CreateBox('weapon-heavy-head', {
         width: visual === 'slab' ? 0.46 : 0.38,
         height: visual === 'bell' ? 0.38 : 0.25,
@@ -1116,6 +1127,10 @@ export class CryptVisuals {
       part.rotation.x += motion.armSecondary*0.66;
       part.rotation.z -= motion.armSecondary*0.16;
     });
+
+    const tell=enemy.animAttack&& !enemy.dying ? Math.max(0,1-Math.abs((enemy.animAttack.progress||0)-0.48)/0.48) : 0;
+    if(visual.materials[1])visual.materials[1].emissiveColor=hslColor(enemy.genome.accentHue,0.72,0.42).scale(0.06+tell*0.22);
+    if(visual.materials[2])visual.materials[2].emissiveColor=hslColor(12,0.86,0.56).scale(0.28+tell*0.34);
   }
 
   tagEnemy(visual, enemy) {
