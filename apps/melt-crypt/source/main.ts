@@ -17,7 +17,7 @@ const releaseNotes = [
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName, version, releaseNotes });
+registerEnhancedUpdate({ appName, version: '1.0.0', releaseNotes });
 createWorkshopMode({ appName, version, cachePrefix: 'melt-crypt-', storageNamespace, onReset: () => location.reload() });
 
 void import('./main.js');
