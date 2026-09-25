@@ -48,7 +48,15 @@ export const ROOM_MODULES = [
   { id:'bell-room', sizeX:12.7, sizeZ:12.7, obstacle:'bell' },
   { id:'butcher-aisle', sizeX:11.3, sizeZ:13.0, obstacle:'hooks' },
   { id:'grave-grid', sizeX:12.8, sizeZ:12.8, obstacle:'grid' },
-  { id:'empty-sanctum', sizeX:12.2, sizeZ:12.2, obstacle:'none' }
+  { id:'empty-sanctum', sizeX:12.2, sizeZ:12.2, obstacle:'none' },
+  { id:'broken-bridge', sizeX:12.8, sizeZ:12.8, obstacle:'bridge' },
+  { id:'sunken-choir', sizeX:12.6, sizeZ:12.6, obstacle:'sunken' },
+  { id:'altar-steps', sizeX:12.4, sizeZ:12.4, obstacle:'steps' },
+  { id:'knife-corridor', sizeX:10.8, sizeZ:13.2, obstacle:'knife' },
+  { id:'red-amphitheater', sizeX:13.1, sizeZ:13.1, obstacle:'amphitheater' },
+  { id:'hanging-gallery', sizeX:12.8, sizeZ:11.6, obstacle:'hanging' },
+  { id:'triple-arch', sizeX:12.6, sizeZ:12.6, obstacle:'arches' },
+  { id:'execution-ring', sizeX:13.0, sizeZ:13.0, obstacle:'execution-ring' }
 ];
 
 const DIRECTIONS = [
