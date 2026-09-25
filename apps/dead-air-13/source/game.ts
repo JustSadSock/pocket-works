@@ -110,10 +110,11 @@ class PlayScene extends Phaser.Scene {
     super('play');
   }
 
-  init(data: StartData = { stageId: 1, mode: 'campaign' }) {
+  init(data: Partial<StartData> = {}) {
+    const stageId = Number.isFinite(data.stageId) ? Number(data.stageId) : 1;
     this.mode = data.mode || 'campaign';
-    this.runSeed = data.seed ?? (data.stageId * 947 + (this.mode === 'encore' ? Date.now() % 100000 : 0));
-    this.stage = this.mode === 'encore' ? encoreStage(this.runSeed) : stageById(data.stageId);
+    this.runSeed = data.seed ?? (stageId * 947 + (this.mode === 'encore' ? Date.now() % 100000 : 0));
+    this.stage = this.mode === 'encore' ? encoreStage(this.runSeed) : stageById(stageId);
     this.hp = MAX_HP;
     this.signal = 0;
     this.bossActive = false;
