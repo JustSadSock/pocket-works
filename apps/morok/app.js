@@ -44,6 +44,9 @@ let toastTimer=0;
 let resultCommitted=false;
 let motionTimer=0;
 let beatTimer=0;
+let trackedBattleSeed=null;
+let seenPlayerUnits=new Set();
+let seenEnemyUnits=new Set();
 
 function load(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function readRun(){
@@ -232,13 +235,17 @@ function renderIntent(b){
   }
 }
 function renderRows(b){
-  renderRow(el.enemy,b.enemy,'enemy',b);renderRow(el.player,b.player,'player',b);
+  if(trackedBattleSeed!==b.seed){trackedBattleSeed=b.seed;seenPlayerUnits=new Set();seenEnemyUnits=new Set()}
+  const nextEnemy=new Set(b.enemy.filter(Boolean).map(u=>u.instanceId));
+  const nextPlayer=new Set(b.player.filter(Boolean).map(u=>u.instanceId));
+  renderRow(el.enemy,b.enemy,'enemy',b,seenEnemyUnits);renderRow(el.player,b.player,'player',b,seenPlayerUnits);
+  seenEnemyUnits=nextEnemy;seenPlayerUnits=nextPlayer;
 }
-function renderRow(root,units,side,b){
+function renderRow(root,units,side,b,seen){
   root.replaceChildren();for(let lane=0;lane<4;lane++){
     const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.side=side;btn.dataset.lane=lane;
     if(lane===b.lockedLane)btn.classList.add('locked');const u=units[lane];
-    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
+    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
     btn.addEventListener('click',()=>laneTap(side,lane,btn));root.append(btn);
   }
 }
