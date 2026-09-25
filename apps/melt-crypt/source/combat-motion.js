@@ -35,7 +35,7 @@ export function attackTiming(weapon,heavy=false,combo=0,haste=1){
   const raw=heavy?pack.heavy:pack.light[Math.abs(combo)%pack.light.length];
   const baseline={cleaver:1,spear:0.88,maul:0.58,claws:1.62,glaive:0.78,twin:1.35}[weapon?.core]||1;
   const cadenceScale=weapon?.starter?1:clamp(baseline/Math.max(0.2,weapon?.cadence||baseline),0.78,1.22);
-  const duration=clamp(raw*cadenceScale*haste,0.19,1.05);
+  const duration=clamp(raw*cadenceScale*haste,0.19,heavy?1.05:0.82);
   const impact=heavy?pack.heavyImpact:pack.impact[Math.abs(combo)%pack.impact.length];
   return {duration,impactStart:Math.max(0.18,impact-0.035),impactEnd:Math.min(0.8,impact+0.09),follow:pack.follow};
 }
