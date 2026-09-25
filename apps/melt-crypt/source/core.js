@@ -121,7 +121,7 @@ export function generateDungeon(seed, floor = 1) {
   };
 }
 
-const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent'];
+const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent', 'tripod', 'lantern', 'jaw'];
 const ABILITIES = ['spit', 'blink', 'rush', 'split', 'leech', 'burst'];
 const PREFIXES = ['Wet', 'Velvet', 'Illegal', 'Choir', 'Sideways', 'Taxable', 'Mild', 'Invisible', 'Monday', 'Fermented', 'Polite', 'Inverse'];
 const NOUNS = ['Maw', 'Clerk', 'Angel', 'Slug', 'Bishop', 'Chair', 'Witness', 'Moth', 'Accountant', 'Crumb', 'Oracle', 'Intern'];
@@ -143,7 +143,10 @@ export function createMonsterGenome(seed, floor = 1, danger = 1, inherited = nul
     size: elite ? size * 1.14 : size,
     eyes: clamp(1 + Math.floor(rng() * 5), 1, 5),
     horns: Math.floor(rng() * 5),
-    limbs: body === 'orb' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
+    limbs: body === 'orb' || body === 'lantern' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
+    crest: Math.floor(rng() * 4),
+    halo: rng() < 0.24,
+    motion: choice(rng, ['breathe', 'skitter', 'tilt', 'pulse']),
     wobble: 0.35 + rng() * 1.45,
     phase: rng() * Math.PI * 2,
     elite,
