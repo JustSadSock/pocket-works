@@ -308,6 +308,15 @@ export class MeltCryptGame {
     if (!visible) this.el['context-prompt'].hidden = true;
   }
 
+  generatorTier() {
+    const best = Number(this.meta.bestFloor) || 0;
+    const runs = Number(this.meta.runs) || 0;
+    const vocabulary = (this.meta.codex?.length || 0) + (this.meta.weaponCodex?.length || 0);
+    if (best >= 4 || vocabulary >= 28) return 3;
+    if (best >= 2 || runs >= 2 || vocabulary >= 10) return 2;
+    return 1;
+  }
+
   showTitle() {
     this.phase = 'title';
     this.input?.reset();
@@ -318,14 +327,14 @@ export class MeltCryptGame {
     const canContinue = Boolean(this.meta.run && Number(this.meta.run.hp) > 0 && Number(this.meta.run.floor) > 0);
     this.el['continue-button'].hidden = !canContinue;
     this.el['title-best'].textContent = 'BEST FLOOR ' + String(this.meta.bestFloor || 0).padStart(2, '0');
-    this.el['title-codex'].textContent = String(this.meta.codex.length) + ' phenotypes archived';
+    this.el['title-codex'].textContent = 'GRAMMAR TIER ' + this.generatorTier() + ' · ' + this.meta.codex.length + ' enemies / ' + this.meta.weaponCodex.length + ' weapons';
     this.updatePsyche(0.04);
     this.updateOrientation();
   }
 
   startNewRun() {
     const seed = randomSeed();
-    const starterWeapon = generateWeapon(seed ^ 0x51a7e, 1, []);
+    const starterWeapon = generateWeapon(seed ^ 0x51a7e, 1, [], this.generatorTier());
     this.run = {
       seed,
       floor: 1,
@@ -358,7 +367,7 @@ export class MeltCryptGame {
     this.run.relics = Array.isArray(this.run.relics) ? this.run.relics : [];
     this.run.potions = Array.isArray(this.run.potions) ? this.run.potions : [];
     this.run.discoveries = Number(this.run.discoveries) || 0;
-    this.run.weapon = this.run.weapon || generateWeapon(this.run.seed ^ 0x51a7e, this.run.floor || 1, []);
+    this.run.weapon = this.run.weapon || generateWeapon(this.run.seed ^ 0x51a7e, this.run.floor || 1, [], this.generatorTier());
     this.run.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
     this.run.recentWeaponSignatures = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures.slice(-18) : [this.run.weapon.signature];
     void this.audio.ensure();
@@ -524,7 +533,7 @@ export class MeltCryptGame {
     this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
     for (let index = 0; index < room.monsterSeeds.length; index += 1) {
       const seed = room.monsterSeeds[index];
-      const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures);
+      const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures, this.generatorTier());
       this.recentEnemySignatures.push(genome.signature);
       this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
       const rng = makeRng(seed ^ 0xa511e9b3);
@@ -1011,7 +1020,7 @@ export class MeltCryptGame {
   spawnWeaponDrop(position, roomId = this.currentRoomId) {
     const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
     const recent = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures : [];
-    const weapon = generateWeapon(seed, this.run.floor, recent);
+    const weapon = generateWeapon(seed, this.run.floor, recent, this.generatorTier());
     this.run.recentWeaponSignatures = [...recent, weapon.signature].slice(-18);
     const visual = this.visuals.createWeaponDropVisual(weapon, position.add(new Vector3(0,0.03,0)));
     this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0 });
@@ -1599,7 +1608,7 @@ export class MeltCryptGame {
     } else {
       const room = this.dungeon.rooms[roomId];
       const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
-      const genome = generateEnemyBlueprint(seed, this.run.floor + 2, room.danger + 0.8, this.recentEnemySignatures);
+      const genome = generateEnemyBlueprint(seed, this.run.floor + 2, room.danger + 0.8, this.recentEnemySignatures, this.generatorTier());
       genome.name = 'AUDITOR ' + genome.name;
       genome.maxHp = Math.round(genome.maxHp * 1.42);
       genome.damage = Math.round(genome.damage * 1.22);
@@ -1637,7 +1646,7 @@ export class MeltCryptGame {
     this.el['floor-label'].textContent = 'FLOOR ' + String(this.run.floor).padStart(2, '0');
     this.el['kill-label'].textContent = this.floorKills + ' / ' + this.dungeon.requiredKills;
     const variety = Math.min(999,this.meta.codex.length);
-    this.el['mutation-label'].textContent = 'SIGNATURES ' + variety;
+    this.el['mutation-label'].textContent = 'TIER ' + this.generatorTier() + ' · SIGNATURES ' + variety;
 
     const weapon=this.run.weapon;
     if(weapon){
