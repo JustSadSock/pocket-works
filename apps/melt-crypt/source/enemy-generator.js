@@ -99,14 +99,13 @@ function build(seed,floor,danger,salt=0,tier=3) {
     const pool=heads.filter((x)=>x.id!=='bare');
     if(pool.length)head=choice(rng,pool);
   }else if(focus==='defense'){
-    const pool=defenses.filter((x)=>x.id!=='open');
+    const pool=defenses.filter((x)=>x.id!=='open' && (x.id!=='right-shield' || right.id==='shield'));
     if(pool.length)defense=choice(rng,pool);
   }else{
     const pool=mutations.filter((x)=>x.id!=='none');
     if(pool.length)mutation=choice(rng,pool);
   }
   if(defense.id==='left-shield') left=arms.find((x)=>x.id==='shield')||left;
-  if(defense.id==='right-shield'&&right.id!=='shield') defense=neutralDefense;
   const threat=clamp(danger*(0.9+rng()*0.25),0.6,4);
   const elite=rng()<Math.min(0.06+floor*0.01,0.18);
   const size=clamp(body.scale*(0.9+rng()*0.2)*(elite?1.12:1),0.72,1.42);
