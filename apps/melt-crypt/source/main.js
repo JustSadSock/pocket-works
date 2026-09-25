@@ -1,8 +1,5 @@
-import './styles.css';
-import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { MeltCryptGame } from './game.js';
 
-installMobileRuntime();
 
 const root = document.querySelector('#app');
 const loading = document.querySelector('#loading');
