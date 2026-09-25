@@ -1,11 +1,13 @@
 import {
   ArcRotateCamera,
+  Camera,
   Color3,
   Color4,
   DirectionalLight,
   DynamicTexture,
   Engine,
   HemisphericLight,
+  Mesh,
   MeshBuilder,
   PBRMaterial,
   Scene,
@@ -16,7 +18,7 @@ import {
   VertexBuffer,
   VertexData
 } from '@babylonjs/core';
-import { brushFalloff, brushRadius, clamp, decodeFloat32, encodeFloat32 } from './core.js';
+import { brushFalloff, brushRadius, clamp, decodePositions, encodePositions } from './core.js';
 
 const canvas = document.querySelector('#renderCanvas');
 const loading = document.querySelector('#loading');
@@ -36,7 +38,8 @@ const toolButtons = [...document.querySelectorAll('[data-tool]')];
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('Не найден холст скульптора.');
 if (!(brushSizeInput instanceof HTMLInputElement)) throw new Error('Не найден регулятор кисти.');
 
-const STORAGE_KEY = 'pocket-works:komok:state:v1';
+const STORAGE_KEY = 'pocket-works:komok:state:v2';
+const LEGACY_STORAGE_KEY = 'pocket-works:komok:state:v1';
 const MAX_UNDO = 14;
 const engine = new Engine(canvas, true, { antialias: true, preserveDrawingBuffer: false, stencil: true, adaptToDeviceRatio: false });
 engine.setHardwareScalingLevel(Math.min(1.45, Math.max(1, window.devicePixelRatio * 0.62)));
@@ -47,10 +50,11 @@ scene.ambientColor = new Color3(0.24, 0.22, 0.20);
 scene.skipPointerMovePicking = true;
 
 const camera = new ArcRotateCamera('camera', -Math.PI / 2.25, 1.22, 5.35, new Vector3(0, 1.68, 0), scene);
-camera.lowerRadiusLimit = 3.55;
-camera.upperRadiusLimit = 7.2;
+camera.lowerRadiusLimit = 3.8;
+camera.upperRadiusLimit = 8.4;
 camera.lowerBetaLimit = 0.52;
 camera.upperBetaLimit = 1.52;
+camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED;
 camera.fov = 0.72;
 camera.minZ = 0.05;
 camera.inertia = 0;
@@ -94,7 +98,74 @@ plinth.material = standardMaterial('warm plaster', new Color3(0.89, 0.85, 0.79),
 plinth.receiveShadows = true;
 shadows.addShadowCaster(plinth);
 
-function seededNoiseTexture() {
+function createWeldedIcosphere(name, radius = 1.36, subdivisions = 4) {
+  const t = (1 + Math.sqrt(5)) / 2;
+  let vertices = [
+    [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+    [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+    [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]
+  ].map(([x, y, z]) => {
+    const inv = radius / Math.hypot(x, y, z);
+    return [x * inv, y * inv, z * inv];
+  });
+  let faces = [
+    [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+    [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+    [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+    [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+  ];
+
+  for (let level = 0; level < subdivisions; level += 1) {
+    const cache = new Map();
+    const midpoint = (a, b) => {
+      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+      if (cache.has(key)) return cache.get(key);
+      const av = vertices[a];
+      const bv = vertices[b];
+      const x = (av[0] + bv[0]) * .5;
+      const y = (av[1] + bv[1]) * .5;
+      const z = (av[2] + bv[2]) * .5;
+      const inv = radius / Math.hypot(x, y, z);
+      const index = vertices.length;
+      vertices.push([x * inv, y * inv, z * inv]);
+      cache.set(key, index);
+      return index;
+    };
+    const next = [];
+    for (const [a, b, d] of faces) {
+      const ab = midpoint(a, b);
+      const bd = midpoint(b, d);
+      const da = midpoint(d, a);
+      next.push([a, ab, da], [b, bd, ab], [d, da, bd], [ab, bd, da]);
+    }
+    faces = next;
+  }
+
+  const positionData = new Float32Array(vertices.length * 3);
+  const uvData = new Float32Array(vertices.length * 2);
+  for (let i = 0; i < vertices.length; i += 1) {
+    const [x, y, z] = vertices[i];
+    positionData[i * 3] = x;
+    positionData[i * 3 + 1] = y;
+    positionData[i * 3 + 2] = z;
+    uvData[i * 2] = .5 + Math.atan2(z, x) / (Math.PI * 2);
+    uvData[i * 2 + 1] = .5 - Math.asin(clamp(y / radius, -1, 1)) / Math.PI;
+  }
+  const indexData = faces.flat();
+  const normalData = new Float32Array(positionData.length);
+  VertexData.ComputeNormals(positionData, indexData, normalData);
+
+  const mesh = new Mesh(name, scene);
+  const data = new VertexData();
+  data.positions = positionData;
+  data.indices = indexData;
+  data.normals = normalData;
+  data.uvs = uvData;
+  data.applyToMesh(mesh, true);
+  return mesh;
+}
+
+function seededClayTexture() {
   const texture = new DynamicTexture('clay grain', { width: 256, height: 256 }, scene, false);
   const ctx = texture.getContext();
   const image = ctx.createImageData(256, 256);
@@ -107,8 +178,8 @@ function seededNoiseTexture() {
   };
   for (let y = 0; y < 256; y += 1) {
     for (let x = 0; x < 256; x += 1) {
-      const coarse = Math.sin(x * .18) * Math.sin(y * .15) * 4;
-      const value = clamp(126 + (rnd() - .5) * 24 + coarse, 92, 164);
+      const wave = Math.sin(x * .11 + y * .07) * 2;
+      const value = clamp(239 + (rnd() - .5) * 12 + wave, 224, 250);
       const i = (y * 256 + x) * 4;
       image.data[i] = value;
       image.data[i + 1] = value;
@@ -120,20 +191,19 @@ function seededNoiseTexture() {
   texture.update(false);
   texture.wrapU = Texture.WRAP_ADDRESSMODE;
   texture.wrapV = Texture.WRAP_ADDRESSMODE;
-  texture.uScale = 5.5;
-  texture.vScale = 5.5;
-  texture.level = .16;
+  texture.uScale = 6;
+  texture.vScale = 6;
   return texture;
 }
 
 const clayMaterial = new PBRMaterial('red earthen clay', scene);
-clayMaterial.albedoColor = new Color3(0.67, 0.35, 0.24);
+clayMaterial.albedoColor = new Color3(0.70, 0.39, 0.28);
+clayMaterial.albedoTexture = seededClayTexture();
 clayMaterial.metallic = 0;
-clayMaterial.roughness = .91;
-clayMaterial.environmentIntensity = .45;
-clayMaterial.bumpTexture = seededNoiseTexture();
+clayMaterial.roughness = .93;
+clayMaterial.environmentIntensity = .34;
 
-const clay = MeshBuilder.CreateIcoSphere('clay', { radius: 1.36, subdivisions: 5, flat: false, updatable: true }, scene);
+const clay = createWeldedIcosphere('clay', 1.36, 4);
 clay.position.y = 1.68;
 clay.material = clayMaterial;
 clay.receiveShadows = true;
@@ -162,7 +232,8 @@ function makeInitialBlob() {
     const x = positions[i], y = positions[i + 1], z = positions[i + 2];
     const ny = y / 1.36;
     const angle = Math.atan2(z, x);
-    const organic = 1 + Math.sin(angle * 3 + ny * 2.1) * .018 + Math.cos(angle * 5 - ny * 1.6) * .012;
+    const grain = Math.sin(x * 27 + y * 31 + z * 19) * .0025 + Math.sin(x * 51 - y * 43 + z * 37) * .0013;
+    const organic = 1 + Math.sin(angle * 3 + ny * 2.1) * .018 + Math.cos(angle * 5 - ny * 1.6) * .012 + grain;
     positions[i] = x * organic * (.99 + ny * .015);
     positions[i + 1] = y * 1.08 * organic + .045 * (1 - ny * ny);
     positions[i + 2] = z * organic * (1.0 - ny * .01);
@@ -189,8 +260,8 @@ function safeLoad() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const saved = JSON.parse(raw);
-    if (saved?.version !== 1 || typeof saved.positions !== 'string') return false;
-    const decoded = decodeFloat32(saved.positions);
+    if (saved?.version !== 2 || typeof saved.positions !== 'string') return false;
+    const decoded = decodePositions(saved.positions);
     if (decoded.length !== positions.length) return false;
     positions.set(decoded);
     tool = ['raise', 'press', 'smooth'].includes(saved.tool) ? saved.tool : 'raise';
@@ -226,14 +297,15 @@ function saveNow() {
   clearTimeout(saveTimer);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 1,
-      positions: encodeFloat32(positions),
+      version: 2,
+      positions: encodePositions(positions),
       tool,
       brushSlider,
       soundEnabled,
       tutorialSeen,
       camera: { alpha: camera.alpha, beta: camera.beta, radius: camera.radius }
     }));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
     saveStatus.textContent = 'сохранено';
     saveStatus.classList.remove('saving');
   } catch (error) {
@@ -580,8 +652,9 @@ cancelNew.addEventListener('click', () => {
 });
 confirmNew.addEventListener('click', () => {
   confirmPanel.hidden = true;
-  pushUndo();
+  undoStack.length = 0;
   makeInitialBlob();
+  updateUi();
   camera.alpha = -Math.PI / 2.25;
   camera.beta = 1.22;
   camera.radius = 5.35;
@@ -611,10 +684,14 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('appdatareset', () => {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
   location.reload();
 });
 
-if (!safeLoad()) makeInitialBlob();
+if (!safeLoad()) {
+  makeInitialBlob();
+  queueSave(80);
+}
 if (tutorialSeen) hint.classList.add('hide');
 updateUi();
 
