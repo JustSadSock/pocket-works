@@ -1,4 +1,4 @@
-export const VERSION='2.1.0';
+export const VERSION='2.2.0';
 export const LANES=4;
 export const BALANCE_LIMIT=6;
 
@@ -56,7 +56,7 @@ export const CARD_LIBRARY=[
   R('bark','Кожаная стяжка',1,'Союзник получает +3 здоровья и Оберег.','bark'),
   R('needle','Костяная игла',1,'Союзник получает +1/+1. Затем возьми карту.','needle'),
   R('salt','Чёрная соль',1,'Нанеси 2 урона вражеской карте.','salt'),
-  R('milk','Груз на чашу',2,'Сдвинь весы на 2 в свою сторону.','milk'),
+  R('milk','Нажим',2,'Сдвинь маркер давления на 2 в сторону противника.','milk'),
   R('molt','Снятая кожа',1,'Уничтожь союзника. Возьми 2 карты и получи 2 Останка.','molt','uncommon'),
   R('whisper','Добор',2,'Возьми 3 карты.','whisper','uncommon'),
   R('nails','Три гвоздя',2,'Союзник получает Шип и +2 здоровья.','nails','uncommon'),
@@ -89,7 +89,7 @@ export const ITEMS=[
   {id:'bell',name:'Железный колокол',mark:'◉',text:'+2 Угля сейчас.',target:'none'},
   {id:'thread',name:'Чёрная нить',mark:'⌁',text:'Следующее Наследие применяется дважды.',target:'none'},
   {id:'mirror',name:'Осколок зеркала',mark:'◇',text:'Возьми копию самой сильной вражеской карты 1/1.',target:'none'},
-  {id:'teeth',name:'Горсть зубов',mark:'∴',text:'Сдвинь весы на 2 к себе.',target:'none'}
+  {id:'teeth',name:'Горсть зубов',mark:'∴',text:'Сдвинь маркер давления на 2 в сторону противника.',target:'none'}
 ];
 
 export const BOSSES={
@@ -198,50 +198,133 @@ export function sacrificeUnit(run,battle,lane,sigil=null){
   const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick}
 }
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
-function damageUnit(run,battle,side,lane,amount,attacker){
-  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;if(unit.sigils.includes('ward')&&!unit.wardUsed){unit.wardUsed=true;battle.log.unshift(`${unit.name}: Оберег поглотил удар.`);return 0}
-  unit.hp-=amount;if(attacker&&unit.sigils.includes('thorn'))attacker.hp-=1;if(attacker&&attacker.sigils.includes('bleed')&&unit.hp>0)unit.hp-=1;
-  if(attacker&&attacker.sigils.includes('chain')){for(const adj of[lane-1,lane+1])if(adj>=0&&adj<LANES&&board[adj]){board[adj].hp-=1;if(board[adj].hp<=0)killUnit(run,battle,side,adj,'chain')}}
-  if(unit.hp<=0)killUnit(run,battle,side,lane,'combat');if(attacker&&attacker.hp<=0){const other=side==='player'?'enemy':'player',otherBoard=other==='player'?battle.player:battle.enemy,idx=otherBoard.indexOf(attacker);if(idx>=0)killUnit(run,battle,other,idx,'thorns')}return amount
+function damageUnit(run,battle,side,lane,amount,attacker,source='attack'){
+  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;
+  if(unit.sigils.includes('ward')&&!unit.wardUsed){
+    unit.wardUsed=true;recordBattleEvent(battle,{type:'ward',side,lane,unitId:unit.instanceId,name:unit.name});battle.log.unshift(`${unit.name}: Оберег поглотил удар.`);return 0
+  }
+  const before=unit.hp;unit.hp-=amount;
+  recordBattleEvent(battle,{type:'damage',side,lane,unitId:unit.instanceId,name:unit.name,amount,hpBefore:before,hpAfter:Math.max(0,unit.hp),source});
+  if(attacker&&unit.sigils.includes('thorn')){
+    const thornBefore=attacker.hp;attacker.hp-=1;
+    const attackerSide=side==='player'?'enemy':'player',attackerBoard=attackerSide==='player'?battle.player:battle.enemy,attackerLane=attackerBoard.indexOf(attacker);
+    recordBattleEvent(battle,{type:'damage',side:attackerSide,lane:attackerLane,unitId:attacker.instanceId,name:attacker.name,amount:1,hpBefore:thornBefore,hpAfter:Math.max(0,attacker.hp),source:'thorn'})
+  }
+  if(attacker&&attacker.sigils.includes('bleed')&&unit.hp>0){
+    const bleedBefore=unit.hp;unit.hp-=1;
+    recordBattleEvent(battle,{type:'damage',side,lane,unitId:unit.instanceId,name:unit.name,amount:1,hpBefore:bleedBefore,hpAfter:Math.max(0,unit.hp),source:'bleed'})
+  }
+  if(attacker&&attacker.sigils.includes('chain')){
+    for(const adj of[lane-1,lane+1])if(adj>=0&&adj<LANES&&board[adj]){
+      const chained=board[adj],chainBefore=chained.hp;chained.hp-=1;
+      recordBattleEvent(battle,{type:'damage',side,lane:adj,unitId:chained.instanceId,name:chained.name,amount:1,hpBefore:chainBefore,hpAfter:Math.max(0,chained.hp),source:'chain'});
+      if(chained.hp<=0)killUnit(run,battle,side,adj,'chain')
+    }
+  }
+  if(unit.hp<=0)killUnit(run,battle,side,lane,'combat');
+  if(attacker&&attacker.hp<=0){
+    const other=side==='player'?'enemy':'player',otherBoard=other==='player'?battle.player:battle.enemy,idx=otherBoard.indexOf(attacker);
+    if(idx>=0)killUnit(run,battle,other,idx,'thorns')
+  }
+  return amount
 }
 function notifyDeath(run,battle,side){
   const board=side==='player'?battle.player:battle.enemy;for(const u of board)if(u?.sigils.includes('scavenger')&&side==='player')battle.remains++;
   if(side==='player'&&new Set(run.relics).has('crow-bell')&&!battle.firstDeathBonusUsed){battle.remains+=2;battle.firstDeathBonusUsed=true}
 }
 function killUnit(run,battle,side,lane,cause='combat'){
-  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return;board[lane]=null;if(side==='enemy')run.stats.kills++;notifyDeath(run,battle,side);
+  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return;
+  recordBattleEvent(battle,{type:'death',side,lane,unitId:unit.instanceId,name:unit.name,cause});
+  board[lane]=null;if(side==='enemy')run.stats.kills++;notifyDeath(run,battle,side);
   if(side==='player'&&unit.sigils.includes('martyr'))battle.remains+=2;
-  if(unit.sigils.includes('brood')){const base=side==='player'?cardById('leech'):enemyById('enemy-rat');const child=side==='player'?makePlayerUnit(cloneCard(base,{atk:1,hp:1,sigils:[]})):makeEnemyUnit('enemy-rat',0);child.atk=1;child.hp=1;child.maxHp=1;child.sigils=[];board[lane]=child}
-  if(side==='player'&&unit.sigils.includes('echo')&&cause!=='rite'&&battle.hand.length<7){const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp,sigils:[...unit.sigils]}))}
+  if(unit.sigils.includes('brood')){
+    const base=side==='player'?cardById('leech'):enemyById('enemy-rat');
+    const child=side==='player'?makePlayerUnit(cloneCard(base,{atk:1,hp:1,sigils:[]})):makeEnemyUnit('enemy-rat',0);
+    child.atk=1;child.hp=1;child.maxHp=1;child.sigils=[];board[lane]=child;
+    recordBattleEvent(battle,{type:'spawn',side,lane,unit:{...child,sigils:[...child.sigils]},source:'brood'})
+  }
+  if(side==='player'&&unit.sigils.includes('echo')&&cause!=='rite'&&battle.hand.length<7){
+    const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp,sigils:[...unit.sigils]}))
+  }
   if(side==='player'&&unit.sigils.includes('parasite')&&battle.hand.length<7)battle.hand.push(cloneCard('leech',{name:'Личинка',cost:0,costType:'ember',atk:1,hp:1,sigils:[]}));
   battle.log.unshift(`${unit.name}: карта уничтожена.`)
 }
-function spawnIntent(battle){for(const p of battle.intent)if(!battle.enemy[p.lane]&&p.lane!==battle.lockedLane)battle.enemy[p.lane]=p.unit;battle.intent=[]}
-function directDamage(run,battle,side,amount){let dealt=amount;if(side==='player'&&new Set(run.relics).has('wet-teeth')&&!battle.firstDirectUsed){dealt++;battle.firstDirectUsed=true}battle.balance+=side==='player'?dealt:-dealt;battle.log.unshift(`Весы: ${side==='player'?'+':'-'}${dealt}.`)}
+function spawnIntent(battle){
+  for(const p of battle.intent)if(!battle.enemy[p.lane]&&p.lane!==battle.lockedLane){
+    battle.enemy[p.lane]=p.unit;
+    recordBattleEvent(battle,{type:'spawn',side:'enemy',lane:p.lane,unit:{...p.unit,sigils:[...p.unit.sigils]},source:'intent'})
+  }
+  battle.intent=[]
+}
+function directDamage(run,battle,side,amount,attacker=null,lane=null){
+  let dealt=amount;if(side==='player'&&new Set(run.relics).has('wet-teeth')&&!battle.firstDirectUsed){dealt++;battle.firstDirectUsed=true}
+  const before=battle.balance;battle.balance+=side==='player'?dealt:-dealt;
+  recordBattleEvent(battle,{type:'pressure',side,lane,attackerId:attacker?.instanceId||null,name:attacker?.name||null,amount:dealt,before,after:battle.balance});
+  battle.log.unshift(`Давление: ${side==='player'?'+':'-'}${dealt}.`)
+}
 function doAttacks(run,battle,side){
   const own=side==='player'?battle.player:battle.enemy,foe=side==='player'?battle.enemy:battle.player;
-  for(let lane=0;lane<LANES;lane++){const attacker=own[lane];if(!attacker)continue;const attacks=attacker.sigils.includes('twin')?2:1;for(let n=0;n<attacks;n++){if(!attacker||attacker.hp<=0)break;const defender=foe[lane];if(defender){damageUnit(run,battle,side==='player'?'enemy':'player',lane,attackValue(attacker,own,lane,false),attacker);if(attacker.sigils.includes('hunger')&&!foe[lane])attacker.atk++}else directDamage(run,battle,side,attackValue(attacker,own,lane,true));if(Math.abs(battle.balance)>=BALANCE_LIMIT)break}if(Math.abs(battle.balance)>=BALANCE_LIMIT)break}
+  for(let lane=0;lane<LANES;lane++){
+    const attacker=own[lane];if(!attacker)continue;
+    const attacks=attacker.sigils.includes('twin')?2:1;
+    for(let n=0;n<attacks;n++){
+      if(!attacker||attacker.hp<=0)break;
+      const defender=foe[lane],amount=attackValue(attacker,own,lane,!defender);
+      recordBattleEvent(battle,{type:'attack',side,lane,attackerId:attacker.instanceId,name:attacker.name,targetSide:side==='player'?'enemy':'player',targetLane:lane,targetId:defender?.instanceId||null,direct:!defender,amount,strike:n+1,strikes:attacks});
+      if(defender){
+        damageUnit(run,battle,side==='player'?'enemy':'player',lane,amount,attacker,'attack');
+        if(attacker.sigils.includes('hunger')&&!foe[lane]){attacker.atk++;recordBattleEvent(battle,{type:'buff',side,lane,unitId:attacker.instanceId,name:attacker.name,stat:'atk',amount:1})}
+      }else directDamage(run,battle,side,amount,attacker,lane);
+      if(Math.abs(battle.balance)>=BALANCE_LIMIT)break
+    }
+    if(Math.abs(battle.balance)>=BALANCE_LIMIT)break
+  }
 }
 function bossHook(run,battle){
   battle.lockedLane=null;
-  if(battle.bossId==='warden'&&battle.round%3===0){const open=[0,1,2,3].filter(i=>battle.player[i]||!battle.enemy[i]);battle.lockedLane=open[battle.round%open.length]??0;battle.log.unshift(`Смотритель заблокировал линию ${battle.lockedLane+1}.`)}
+  if(battle.bossId==='warden'&&battle.round%3===0){
+    const open=[0,1,2,3].filter(i=>battle.player[i]||!battle.enemy[i]);battle.lockedLane=open[battle.round%open.length]??0;
+    recordBattleEvent(battle,{type:'lock',lane:battle.lockedLane,bossId:'warden'});
+    battle.log.unshift(`Смотритель заблокировал линию ${battle.lockedLane+1}.`)
+  }
   if(battle.bossId==='bellkeeper'&&battle.round%2===0)planIntent(battle,1);
   if(battle.bossId==='prior'&&battle.phase===2){battle.maxEmber=2;battle.ember=Math.min(battle.ember,2)}
 }
 function phaseOrFinish(run,battle){
   if(battle.balance>=BALANCE_LIMIT){
-    if(battle.bossId&&battle.phase<battle.phasesTotal){battle.phase++;battle.balance=0;battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);battle.log.unshift(`Безликий приор: вторая фаза. Максимум Угля снижен до 2.`);return{ok:true,phase:true}}
+    if(battle.bossId&&battle.phase<battle.phasesTotal){
+      battle.phase++;battle.balance=0;battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);
+      recordBattleEvent(battle,{type:'phase',bossId:battle.bossId,phase:battle.phase,pressureReset:true});
+      battle.log.unshift('Безликий приор: вторая фаза. Максимум Угля снижен до 2.');return{ok:true,phase:true}
+    }
     return finishBattle(run,battle,'player')
   }
   if(battle.balance<=-BALANCE_LIMIT)return finishBattle(run,battle,'enemy');
   return null
 }
 export function endTurn(run,battle){
-  if(battle.ended)return{ok:false,reason:'Сдача окончена.'};battle.firstDirectUsed=false;doAttacks(run,battle,'player');let end=phaseOrFinish(run,battle);if(end?.ended)return end;if(end?.phase)return end;
-  doAttacks(run,battle,'enemy');end=phaseOrFinish(run,battle);if(end)return end;spawnIntent(battle);battle.round++;battle.ember=battle.maxEmber+(new Set(run.relics).has('small-bell')&&battle.round%3===0?1:0);battle.sacrificedThisTurn=false;drawCards(battle,1);bossHook(run,battle);
-  const count=battle.bossId?(battle.bossId==='bellkeeper'&&battle.round%2===0?2:1):(battle.elite&&battle.round%3===0?2:1);planIntent(battle,count);return{ok:true}
+  if(battle.ended)return{ok:false,reason:'Сдача окончена.',events:[]};
+  battle.events=[];battle.firstDirectUsed=false;
+  recordBattleEvent(battle,{type:'sequence',label:'player'});
+  doAttacks(run,battle,'player');
+  let end=phaseOrFinish(run,battle);
+  if(end?.ended||end?.phase)return{...end,events:[...battle.events]};
+  recordBattleEvent(battle,{type:'sequence',label:'enemy'});
+  doAttacks(run,battle,'enemy');
+  end=phaseOrFinish(run,battle);
+  if(end)return{...end,events:[...battle.events]};
+  spawnIntent(battle);
+  battle.round++;battle.ember=battle.maxEmber+(new Set(run.relics).has('small-bell')&&battle.round%3===0?1:0);battle.sacrificedThisTurn=false;drawCards(battle,1);bossHook(run,battle);
+  const count=battle.bossId?(battle.bossId==='bellkeeper'&&battle.round%2===0?2:1):(battle.elite&&battle.round%3===0?2:1);planIntent(battle,count);
+  recordBattleEvent(battle,{type:'round',round:battle.round,ember:battle.ember,lockedLane:battle.lockedLane});
+  return{ok:true,events:[...battle.events]}
 }
-function finishBattle(run,battle,winner){battle.ended=true;battle.winner=winner;if(winner==='player')run.log.unshift('Бой выигран.');else run.result='lost';return{ok:true,ended:true,winner}}
+function finishBattle(run,battle,winner){
+  battle.ended=true;battle.winner=winner;
+  recordBattleEvent(battle,{type:'battle-end',winner});
+  if(winner==='player')run.log.unshift('Бой выигран.');else run.result='lost';
+  return{ok:true,ended:true,winner}
+}
 
 export function useItem(run,battle,itemId,targetLane=null){
   const idx=run.items.indexOf(itemId);if(idx<0)return{ok:false,reason:'Этого предмета уже нет.'};const item=itemInfo(itemId);if(!item)return{ok:false,reason:'Неизвестный предмет.'};
