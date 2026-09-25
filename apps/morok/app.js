@@ -247,9 +247,24 @@ function renderRow(root,units,side,b,seen){
   root.replaceChildren();for(let lane=0;lane<4;lane++){
     const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.side=side;btn.dataset.lane=lane;
     if(lane===b.lockedLane)btn.classList.add('locked');const u=units[lane];
-    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
+    if(u){const cardNode=makeUnitNode(u,side,`${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`);btn.append(cardNode)}
     btn.addEventListener('click',()=>laneTap(side,lane,btn));root.append(btn);
   }
+}
+function makeUnitNode(u,side,extra=''){
+  const node=document.createElement('div');node.className=`unit-card ${side}${extra}`;node.dataset.unitId=u.instanceId||'';node.dataset.unitName=u.name||'';
+  node.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${(u.sigils||[]).map(s=>sigilInfo(s).mark).join('')}</i></div>`;
+  return node
+}
+function unitNodeById(id){if(!id)return null;return $$('.unit-card').find(n=>n.dataset.unitId===id)||null}
+function laneNode(side,lane){return (side==='player'?el.player:el.enemy)?.children?.[lane]||null}
+function showCombatCaption(main='',sub='',kind=''){
+  el.combatCaptionMain.textContent=main;el.combatCaptionSub.textContent=sub;el.combatCaption.className='combat-caption'+(kind?' '+kind:'');el.combatCaption.hidden=false
+}
+function hideCombatCaption(){el.combatCaption.hidden=true}
+function floatDamage(side,lane,text,kind=''){
+  const laneEl=laneNode(side,lane);if(!laneEl)return;
+  const n=document.createElement('span');n.className='damage-float'+(kind?' '+kind:'');n.textContent=text;laneEl.append(n);setTimeout(()=>n.remove(),520)
 }
 function cardAffordable(card,b){
   if(card.costType==='remains')return b.remains>=card.cost;
