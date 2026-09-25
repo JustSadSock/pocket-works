@@ -134,5 +134,6 @@ export function deathMotion(kind='normal',progress=0){
   if(kind==='slam')return {y:-0.58*q,rx:-1.32*q,rz:0,scaleY:1-0.38*q};
   if(kind==='launch')return {y:0.52*Math.sin(p*Math.PI)-0.35*q,rx:-0.48*q,rz:1.34*q,scaleY:1};
   if(kind==='spin')return {y:-0.24*q,rx:-0.22*q,rz:2.1*q,scaleY:1};
+  if(kind==='execution')return {y:-0.5*q,rx:-1.18*q,rz:0.22*q,scaleY:1-0.24*q};
   return {y:-0.32*q,rx:-0.78*q,rz:0.68*q,scaleY:1-0.12*q};
 }
