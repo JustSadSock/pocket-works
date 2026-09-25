@@ -249,7 +249,7 @@ export class CryptVisuals {
     lid.parent = node; lid.rotation.z = Math.PI / 2; lid.position.y = 0.67; lid.scaling.z = 0.52; lid.material = dark; lid.isPickable = false;
     const lock = flat(MeshBuilder.CreateIcoSphere('chest-lock-' + room.id, { radius: 0.11, subdivisions: 1 }, this.scene));
     lock.parent = node; lock.position.set(0, 0.52, 0.39); lock.material = glow; lock.isPickable = false;
-    this.interactives.push({ type: 'chest', roomId: room.id, node, position: node.getAbsolutePosition(), used: false, lock });
+    this.interactives.push({ type: 'chest', roomId: room.id, node, position: new Vector3(x, 0, z), used: false, lock });
   }
 
   createShrine(root, room, x, z, dark, glow) {
@@ -261,7 +261,7 @@ export class CryptVisuals {
     eye.parent = node; eye.position.y = 1.14; eye.scaling.y = 0.55; eye.material = glow; eye.isPickable = false;
     const stalk = flat(MeshBuilder.CreateCylinder('shrine-stalk-' + room.id, { height: 0.72, diameterTop: 0.14, diameterBottom: 0.28, tessellation: 5 }, this.scene));
     stalk.parent = node; stalk.position.y = 0.76; stalk.material = dark; stalk.isPickable = false;
-    this.interactives.push({ type: 'shrine', roomId: room.id, node, position: node.getAbsolutePosition(), used: false, eye });
+    this.interactives.push({ type: 'shrine', roomId: room.id, node, position: new Vector3(x, 0, z), used: false, eye });
   }
 
   createGate(root, room, x, z, floor) {
@@ -283,7 +283,7 @@ export class CryptVisuals {
       spire.material = glowMat; spire.isPickable = false;
       spires.push(spire);
     }
-    this.gate = { type: 'gate', roomId: room.id, node, position: node.getAbsolutePosition(), used: false, ring, inner, spires, glowMat, unlocked: false };
+    this.gate = { type: 'gate', roomId: room.id, node, position: new Vector3(x, 0, z), used: false, ring, inner, spires, glowMat, unlocked: false };
     this.interactives.push(this.gate);
   }
 
