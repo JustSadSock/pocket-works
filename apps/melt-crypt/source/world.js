@@ -393,14 +393,14 @@ export class CryptVisuals {
     this.floorHue = 354;
     const root = new TransformNode('dungeon-floor-' + floor, this.scene);
     this.root = root;
-    const wall = pixelMaterial(this.scene, 'wall-' + floor, 352, 0.145, 0.34);
-    const floorMat = pixelMaterial(this.scene, 'floor-' + floor, 4, 0.085, 0.28);
-    const ceilingMat = pixelMaterial(this.scene, 'ceiling-' + floor, 348, 0.065, 0.22);
-    const trim = simpleMaterial(this.scene, 'trim-' + floor, 8, 0.58, 0.28, 0.08);
-    const crystalA = simpleMaterial(this.scene, 'crystal-a-' + floor, 2, 0.9, 0.44, 0.72);
-    const crystalB = simpleMaterial(this.scene, 'crystal-b-' + floor, 22, 0.74, 0.44, 0.45);
-    const decorA = simpleMaterial(this.scene, 'decor-a-' + floor, 346, 0.68, 0.32, 0.16);
-    const decorB = simpleMaterial(this.scene, 'decor-b-' + floor, 12, 0.76, 0.36, 0.2);
+    const wall = pixelMaterial(this.scene, 'wall-' + floor, 350, 0.20, 0.18);
+    const floorMat = pixelMaterial(this.scene, 'floor-' + floor, 6, 0.16, 0.14);
+    const ceilingMat = pixelMaterial(this.scene, 'ceiling-' + floor, 348, 0.105, 0.13);
+    const trim = simpleMaterial(this.scene, 'trim-' + floor, 8, 0.34, 0.30, 0.02);
+    const crystalA = simpleMaterial(this.scene, 'crystal-a-' + floor, 2, 0.76, 0.38, 0.28);
+    const crystalB = simpleMaterial(this.scene, 'crystal-b-' + floor, 22, 0.55, 0.40, 0.16);
+    const decorA = simpleMaterial(this.scene, 'decor-a-' + floor, 346, 0.48, 0.32, 0.05);
+    const decorB = simpleMaterial(this.scene, 'decor-b-' + floor, 12, 0.52, 0.36, 0.06);
     const bone = simpleMaterial(this.scene, 'decor-bone-' + floor, 38, 0.18, 0.62, 0.02);
     this.materials.push(wall, floorMat, ceilingMat, trim, crystalA, crystalB, decorA, decorB, bone);
     this.decorMaterials = [crystalA, crystalB, decorA, decorB, bone];
@@ -766,7 +766,7 @@ export class CryptVisuals {
     const node = new TransformNode('gate-node', this.scene);
     node.parent = root; node.position.set(x, 0, z);
     const frameMat = simpleMaterial(this.scene, 'gate-frame-' + floor, (this.floorHue + 30) % 360, 0.42, 0.21);
-    const glowMat = simpleMaterial(this.scene, 'gate-glow-' + floor, 340, 0.88, 0.48, 0.72);
+    const glowMat = simpleMaterial(this.scene, 'gate-glow-' + floor, 355, 0.72, 0.44, 0.3);
     this.materials.push(frameMat, glowMat);
     const ring = MeshBuilder.CreateTorus('descent-ring', { diameter: 2.45, thickness: 0.22, tessellation: 16 }, this.scene);
     ring.parent = node; ring.position.y = 1.45; ring.rotation.x = Math.PI / 2; ring.material = frameMat; ring.isPickable = false;
@@ -805,11 +805,11 @@ export class CryptVisuals {
   createMonsterVisual(genome, position) {
     const root = new TransformNode('monster-' + genome.seed, this.scene);
     root.position.copyFrom(position);
-    const bodyMat = simpleMaterial(this.scene, 'monster-body-' + genome.seed, genome.hue, 0.72, genome.elite ? 0.48 : 0.38, genome.elite ? 0.22 : 0.04);
-    const accentMat = simpleMaterial(this.scene, 'monster-accent-' + genome.seed, genome.accentHue, 0.9, 0.52, 0.66);
-    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, 8, 0.95, 0.58, 1);
-    const armorMat = simpleMaterial(this.scene, 'monster-armor-' + genome.seed, 350, 0.16, 0.22, 0.02);
-    const boneMat = simpleMaterial(this.scene, 'monster-bone-' + genome.seed, 38, 0.16, 0.58, 0.01);
+    const bodyMat = simpleMaterial(this.scene, 'monster-body-' + genome.seed, genome.hue, 0.52, genome.elite ? 0.54 : 0.46, genome.elite ? 0.08 : 0.01);
+    const accentMat = simpleMaterial(this.scene, 'monster-accent-' + genome.seed, genome.accentHue, 0.72, 0.52, 0.2);
+    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, 12, 0.88, 0.62, 0.62);
+    const armorMat = simpleMaterial(this.scene, 'monster-armor-' + genome.seed, 350, 0.12, 0.30, 0);
+    const boneMat = simpleMaterial(this.scene, 'monster-bone-' + genome.seed, 38, 0.12, 0.64, 0);
     const materials = [bodyMat, accentMat, eyeMat, armorMat, boneMat];
     const parts = [];
     const bodyPart = (mesh, material = bodyMat) => { mesh.parent = root; mesh.material = material; mesh.isPickable = true; parts.push(mesh); return mesh; };
