@@ -304,6 +304,8 @@ export class CryptVisuals {
         mesh.parent = root;
         mesh.position.set(x + (northSouth ? 0 : sign * axisPos), wallY, z + (northSouth ? sign * axisPos : 0));
         mesh.material = wallMat;
+        this.registerCollisionBox(mesh.position.x, wallY, mesh.position.z,
+          northSouth ? length : thickness, height, northSouth ? thickness : length);
       } else {
         const segment = Math.max(0.8, (length - gap) / 2);
         for (const offsetSign of [-1, 1]) {
@@ -314,6 +316,8 @@ export class CryptVisuals {
           if (northSouth) mesh.position.set(x + offsetSign * (gap / 2 + segment / 2), wallY, z + sign * axisPos);
           else mesh.position.set(x + sign * axisPos, wallY, z + offsetSign * (gap / 2 + segment / 2));
           mesh.material = wallMat;
+          this.registerCollisionBox(mesh.position.x, wallY, mesh.position.z,
+            northSouth ? segment : connectedThickness, height, northSouth ? connectedThickness : segment);
         }
         const lintel = MeshBuilder.CreateBox('lintel-' + room.id + '-' + side, northSouth
           ? { width: gap, height: 0.72, depth: connectedThickness + 0.08 }
