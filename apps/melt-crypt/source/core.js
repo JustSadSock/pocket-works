@@ -152,43 +152,6 @@ export function generateDungeon(seed, floor = 1) {
   };
 }
 
-const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent', 'tripod', 'lantern', 'jaw'];
-const ABILITIES = ['spit', 'blink', 'rush', 'split', 'leech', 'burst'];
-const PREFIXES = ['Wet', 'Velvet', 'Illegal', 'Choir', 'Sideways', 'Taxable', 'Mild', 'Invisible', 'Monday', 'Fermented', 'Polite', 'Inverse'];
-const NOUNS = ['Maw', 'Clerk', 'Angel', 'Slug', 'Bishop', 'Chair', 'Witness', 'Moth', 'Accountant', 'Crumb', 'Oracle', 'Intern'];
-
-export function createMonsterGenome(seed, floor = 1, danger = 1, inherited = null) {
-  const rng = makeRng((Number(seed) ^ Math.imul(floor + 11, 0x27d4eb2d)) >>> 0);
-  const body = inherited?.body || choice(rng, BODY_TYPES);
-  const ability = inherited?.ability || choice(rng, ABILITIES);
-  const hue = inherited ? (inherited.hue + (rng() * 36 - 18) + 360) % 360 : Math.floor(rng() * 360);
-  const size = clamp((inherited?.size || 1) * (0.78 + rng() * 0.52), 0.55, 1.65);
-  const threat = clamp(danger * (0.84 + rng() * 0.38), 0.55, 4);
-  const elite = rng() < Math.min(0.08 + floor * 0.012, 0.24);
-  return {
-    seed: Number(seed) >>> 0,
-    body,
-    ability,
-    hue,
-    accentHue: (hue + 90 + Math.floor(rng() * 190)) % 360,
-    size: elite ? size * 1.14 : size,
-    eyes: clamp(1 + Math.floor(rng() * 5), 1, 5),
-    horns: Math.floor(rng() * 5),
-    limbs: body === 'orb' || body === 'lantern' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
-    crest: Math.floor(rng() * 4),
-    halo: rng() < 0.24,
-    motion: choice(rng, ['breathe', 'skitter', 'tilt', 'pulse']),
-    wobble: 0.35 + rng() * 1.45,
-    phase: rng() * Math.PI * 2,
-    elite,
-    maxHp: Math.round((18 + floor * 5.2) * threat * (elite ? 1.8 : 1) * (0.8 + size * 0.3)),
-    speed: clamp((2.0 + rng() * 1.7 + floor * 0.045) / Math.sqrt(size), 1.35, 5.2),
-    damage: Math.round((5 + floor * 1.3) * threat * (elite ? 1.3 : 1)),
-    cooldown: clamp(1.15 + rng() * 1.8 - floor * 0.025, 0.62, 3.2),
-    name: `${elite ? 'EXALTED ' : ''}${choice(rng, PREFIXES)} ${choice(rng, NOUNS)}`
-  };
-}
-
 export const RELICS = [
   { id:'second-mouth', name:'Second Mouth', copy:'Blood Arc fires a second reduced arc.', effect:'double-projectile' },
   { id:'rupture-heart', name:'Rupture Heart', copy:'Staggering an enemy causes a small blast around it.', effect:'stagger-blast' },
