@@ -7,6 +7,7 @@ export {
   generateDungeon,
   hashString,
   makeRng,
+  mapLookDelta,
   rollLoot,
   roomByPoint
 } from './core.js';

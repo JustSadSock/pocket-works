@@ -27,14 +27,14 @@
     <div class="hud-left">
       <div class="sigil" aria-hidden="true"><i></i><b></b><em></em></div>
       <div class="floor-copy"><span>MELT//CRYPT</span><b id="floor-label">FLOOR 01</b></div>
-      <div class="health-block"><span>FLESH</span><div class="health-track"><i id="health-fill"></i></div><b id="health-label">100/100</b></div>
+      <div class="health-block"><span>HP</span><div class="health-track"><i id="health-fill"></i></div><b id="health-label">100/100</b></div>
     </div>
     <div class="hud-center">
       <span id="room-label">THE FOYER THAT REGRETS YOU</span>
       <b id="mutation-label">MUTATION 0%</b>
     </div>
     <div class="hud-right">
-      <div class="kill-block"><span>GATE DEBT</span><b id="kill-label">0 / 0</b></div>
+      <div class="kill-block"><span>EXIT</span><b id="kill-label">0 / 0</b></div>
       <canvas id="minimap" width="148" height="92" aria-label="Карта этажа"></canvas>
       <button id="pause-button" class="pause-button" type="button" data-native-press aria-label="Пауза"><i></i><i></i></button>
     </div>
@@ -42,13 +42,13 @@
 
   <div id="reticle" hidden aria-hidden="true"><i></i><b></b></div>
   <div id="weapon-readout" hidden data-ui><span id="weapon-name">THOUGHT REPEATER</span><b id="weapon-state">READY</b></div>
-  <div id="potion-readout" hidden data-ui><span>FLASK QUEUE</span><b id="potion-name">EMPTY</b><em id="potion-count">0</em></div>
+  <div id="potion-readout" hidden data-ui><span>FLASK</span><b id="potion-name">EMPTY</b><em id="potion-count">0</em></div>
   <div id="context-prompt" hidden data-ui><b id="context-label">USE</b><span id="context-copy"></span></div>
 
   <div class="action-cluster" id="action-cluster" hidden data-ui>
     <button id="fire-button" class="action fire" type="button" data-gesture-surface data-native-press><span>FIRE</span><i></i></button>
     <button id="use-button" class="action use" type="button" data-gesture-surface data-native-press><span id="use-button-label">FLASK</span></button>
-    <button id="dash-button" class="action dash" type="button" data-gesture-surface data-native-press><span>DODGE</span><i id="dash-meter"></i></button>
+    <button id="dash-button" class="action dash" type="button" data-gesture-surface data-native-press><span>DASH</span><i id="dash-meter"></i></button>
   </div>
 
   <div id="floor-banner" class="floor-banner" hidden data-ui><span id="floor-banner-top">DESCENDING</span><b id="floor-banner-main">FLOOR 02</b><em id="floor-banner-copy">the walls learned a new color</em></div>

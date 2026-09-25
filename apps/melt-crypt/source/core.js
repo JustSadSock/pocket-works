@@ -23,6 +23,13 @@ export function makeRng(seed) {
 
 export const choice = (rng, list) => list[Math.floor(rng() * list.length) % list.length];
 
+export function mapLookDelta(dx, dy, multiplier, sensitivity) {
+  return {
+    x: dx * multiplier * sensitivity,
+    y: dy * multiplier * sensitivity
+  };
+}
+
 const DIRECTIONS = [
   { dx: 1, dz: 0, dir: 'e', opposite: 'w' },
   { dx: -1, dz: 0, dir: 'w', opposite: 'e' },
@@ -40,8 +47,8 @@ export function generateDungeon(seed, floor = 1) {
     const room = {
       id: rooms.length,
       gx, gz, role,
-      sizeX: 11.8 + Math.floor(rng() * 3) * 0.55,
-      sizeZ: 11.8 + Math.floor(rng() * 3) * 0.55,
+      sizeX: 11.9 + Math.floor(rng() * 3) * 0.3,
+      sizeZ: 11.9 + Math.floor(rng() * 3) * 0.3,
       links: { n: null, e: null, s: null, w: null },
       danger: 0,
       monsterSeeds: [],
@@ -117,11 +124,11 @@ export function generateDungeon(seed, floor = 1) {
     gateId: gate.id,
     requiredKills: Math.max(3, Math.ceil(totalMonsters * 0.62)),
     totalMonsters,
-    spacing: 12.15
+    spacing: 12.7
   };
 }
 
-const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent'];
+const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent', 'tripod', 'lantern', 'jaw'];
 const ABILITIES = ['spit', 'blink', 'rush', 'split', 'leech', 'burst'];
 const PREFIXES = ['Wet', 'Velvet', 'Illegal', 'Choir', 'Sideways', 'Taxable', 'Mild', 'Invisible', 'Monday', 'Fermented', 'Polite', 'Inverse'];
 const NOUNS = ['Maw', 'Clerk', 'Angel', 'Slug', 'Bishop', 'Chair', 'Witness', 'Moth', 'Accountant', 'Crumb', 'Oracle', 'Intern'];
@@ -143,7 +150,10 @@ export function createMonsterGenome(seed, floor = 1, danger = 1, inherited = nul
     size: elite ? size * 1.14 : size,
     eyes: clamp(1 + Math.floor(rng() * 5), 1, 5),
     horns: Math.floor(rng() * 5),
-    limbs: body === 'orb' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
+    limbs: body === 'orb' || body === 'lantern' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
+    crest: Math.floor(rng() * 4),
+    halo: rng() < 0.24,
+    motion: choice(rng, ['breathe', 'skitter', 'tilt', 'pulse']),
     wobble: 0.35 + rng() * 1.45,
     phase: rng() * Math.PI * 2,
     elite,
