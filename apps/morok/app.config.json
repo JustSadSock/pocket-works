@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "morok",
+  "name": "МОРОК",
+  "shortName": "МОРОК",
+  "description": "Мрачный портретный roguelike-декбилдер: собирай зверей леса, наследуй их метки через ритуалы и веди мутирующую колоду всё глубже в ночную чащу.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-25",
+  "releaseDateTime": "2026-09-25T23:59:00+03:00",
+  "changelog": [
+    "Первый полноценный релиз: процедурная карта забега, карточные бои на четыре линии, награды и четыре типа событий.",
+    "Система Наследия позволяет жертвовать существом и переносить одну его метку в следующего разыгранного зверя.",
+    "Пиксельный 2.5D лес, процедурный Web Audio, сохранение забега и полностью офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#b54b31",
+  "backgroundColor": "#090b09",
+  "themeColor": "#090b09",
+  "orientation": "portrait",
+  "cacheName": "morok-v1.0.0",
+  "storageNamespace": "pocket-works:morok",
+  "tags": ["PWA", "offline", "game", "roguelike", "deckbuilder", "pixel-art", "canvas", "portrait", "audio"],
+  "order": 82
+}
