@@ -511,9 +511,12 @@ export class MeltCryptGame {
     if (this.run) this.run.discoveries += 1;
     this.saveMeta();
     const attack = ABILITY_COPY[genome.ability] || genome.rightArmSpec?.cue || 'read the silhouette';
-    const defense = genome.defenseSpec?.cue ? ' · ' + genome.defenseSpec.cue : '';
+    const secondary = genome.leftArm !== genome.rightArm && genome.leftArmSpec?.cue ? ' · off-arm: ' + genome.leftArmSpec.cue : '';
+    const locomotion = genome.locomotionSpec?.label ? ' · ' + genome.locomotionSpec.label : '';
+    const head = genome.headSpec?.cue && genome.head !== 'bare' ? ' · ' + genome.headSpec.cue : '';
+    const defense = genome.defenseSpec?.cue && genome.defense !== 'open' ? ' · ' + genome.defenseSpec.cue : '';
     const mutation = genome.mutationSpec?.cue && genome.mutation !== 'none' ? ' · ' + genome.mutationSpec.cue : '';
-    this.showDiscovery(genome.name, attack + defense + mutation);
+    this.showDiscovery(genome.name, attack + secondary + locomotion + head + defense + mutation);
   }
 
   discoverWeapon(weapon) {
