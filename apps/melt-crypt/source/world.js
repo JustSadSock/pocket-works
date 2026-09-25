@@ -223,6 +223,66 @@ export class CryptVisuals {
       off.position.set(-0.26,-0.04,0.42);
       off.rotation.z=0.18;
     }
+
+    // Skill geometry is intentionally redundant with mechanics: it is a readable legend on the weapon.
+    if (weapon.skill === 'parry') {
+      const cross = add(flat(MeshBuilder.CreateBox('skill-parry-cross',{width:0.42,height:0.055,depth:0.065},this.scene)),bone);
+      cross.position.z=0.32;
+    } else if (weapon.skill === 'projectile') {
+      const orb=add(flat(MeshBuilder.CreateIcoSphere('skill-projectile-core',{radius:0.08,subdivisions:1},this.scene)),glow);
+      orb.position.set(0,0.08,0.43);
+    } else if (weapon.skill === 'shield') {
+      const plate=add(flat(MeshBuilder.CreateBox('skill-ward-plate',{width:0.24,height:0.31,depth:0.055},this.scene)),bone);
+      plate.position.set(0.17,0,0.35);plate.rotation.y=0.25;
+    } else if (weapon.skill === 'hook') {
+      const hook=add(MeshBuilder.CreateTorus('skill-hook-glyph',{diameter:0.25,thickness:0.04,tessellation:8},this.scene),blood);
+      hook.position.set(0.12,-0.04,0.44);hook.rotation.x=Math.PI/2;hook.scaling.x=0.55;
+    } else if (weapon.skill === 'aoe') {
+      const weight=add(flat(MeshBuilder.CreateIcoSphere('skill-rupture-weight',{radius:0.105,subdivisions:1},this.scene)),dark);
+      weight.position.set(0,-0.08,0.3);
+      for(let i=0;i<3;i+=1){
+        const spike=add(flat(MeshBuilder.CreateCylinder('skill-rupture-spike-'+i,{height:0.13,diameterTop:0,diameterBottom:0.055,tessellation:4},this.scene)),blood);
+        spike.position.set((i-1)*0.08,-0.13,0.3);spike.rotation.z=Math.PI;
+      }
+    } else if (weapon.skill === 'dash-cut') {
+      for(const side of [-1,1]){
+        const fin=add(flat(MeshBuilder.CreateBox('skill-phase-fin-'+side,{width:0.055,height:0.24,depth:0.06},this.scene)),glow);
+        fin.position.set(side*0.12,0.04,0.42);fin.rotation.z=side*0.38;
+      }
+    } else if (weapon.skill === 'execution') {
+      for(let i=0;i<3;i+=1){
+        const tooth=add(flat(MeshBuilder.CreateCylinder('skill-execution-tooth-'+i,{height:0.13,diameterTop:0,diameterBottom:0.05,tessellation:4},this.scene)),bone);
+        tooth.position.set((i-1)*0.07,0.13,0.42);tooth.rotation.z=Math.PI;
+      }
+    } else if (weapon.skill === 'pulse') {
+      const pulse=add(MeshBuilder.CreateTorus('skill-pulse-ring',{diameter:0.29,thickness:0.03,tessellation:10},this.scene),glow);
+      pulse.position.z=0.43;pulse.rotation.x=Math.PI/2;
+    }
+
+    // Traits also have a persistent marker so they become learnable instead of hidden affixes.
+    if (weapon.trait === 'hungry') {
+      const fang=add(flat(MeshBuilder.CreateCylinder('trait-hungry-fang',{height:0.18,diameterTop:0,diameterBottom:0.07,tessellation:5},this.scene)),bone);
+      fang.position.set(-0.11,-0.08,0.24);fang.rotation.z=0.5;
+    } else if (weapon.trait === 'chain') {
+      for(let i=0;i<3;i+=1){
+        const link=add(MeshBuilder.CreateTorus('trait-chain-link-'+i,{diameter:0.12,thickness:0.018,tessellation:7},this.scene),bone);
+        link.position.set(-0.12+i*0.05,-0.09,0.24+i*0.035);link.rotation.y=i%2?Math.PI/2:0;
+      }
+    } else if (weapon.trait === 'afterimage') {
+      const echo=add(flat(MeshBuilder.CreateBox('trait-afterimage-fin',{width:0.035,height:0.28,depth:0.04},this.scene)),glow);
+      echo.position.set(-0.13,0,0.29);echo.rotation.z=-0.25;
+    } else if (weapon.trait === 'rupture') {
+      const spike=add(flat(MeshBuilder.CreateCylinder('trait-rupture-spike',{height:0.22,diameterTop:0,diameterBottom:0.07,tessellation:5},this.scene)),blood);
+      spike.position.set(0.12,-0.06,0.26);spike.rotation.z=-0.62;
+    } else if (weapon.trait === 'echo') {
+      for(const scale of [1,0.72]){
+        const ring=add(MeshBuilder.CreateTorus('trait-echo-ring-'+scale,{diameter:0.18*scale,thickness:0.018,tessellation:8},this.scene),glow);
+        ring.position.set(0.13,0.05,0.29);ring.rotation.x=Math.PI/2;
+      }
+    } else if (weapon.trait === 'redline') {
+      const vein=add(flat(MeshBuilder.CreateBox('trait-redline-vein',{width:0.028,height:0.32,depth:0.035},this.scene)),blood);
+      vein.position.set(0.1,0,0.3);vein.rotation.z=0.16;
+    }
   }
 
   setWeaponPose({ swing = 0, charge = 0, skill = 0, combo = 0, heavy = false } = {}) {
