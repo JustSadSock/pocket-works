@@ -967,18 +967,93 @@ export class CryptVisuals {
     const node = new TransformNode('weapon-drop-' + weapon.seed, this.scene);
     node.position.copyFrom(position);
     const dark = simpleMaterial(this.scene, 'drop-weapon-dark-' + weapon.seed, 350, 0.28, 0.16);
-    const glow = simpleMaterial(this.scene, 'drop-weapon-glow-' + weapon.seed, 6, 0.88, 0.46, 0.72);
-    const shaft = flat(MeshBuilder.CreateCylinder('drop-weapon-shaft', { height: 0.72, diameter: 0.08, tessellation: 5 }, this.scene));
-    shaft.parent=node; shaft.position.y=0.52; shaft.rotation.z=0.5; shaft.material=dark; shaft.isPickable=false;
-    const head = flat(MeshBuilder.CreateBox('drop-weapon-head', {
-      width: weapon.head === 'crusher' || weapon.head === 'slab' ? 0.42 : 0.24,
-      height: weapon.head === 'needle' ? 0.5 : 0.26,
-      depth: 0.1
-    }, this.scene));
-    head.parent=node; head.position.set(0.2,0.78,0); head.rotation.z=0.5; head.material=glow; head.isPickable=false;
-    const ring=MeshBuilder.CreateTorus('drop-weapon-ring',{diameter:0.72,thickness:0.035,tessellation:10},this.scene);
-    ring.parent=node; ring.position.y=0.22; ring.rotation.x=Math.PI/2; ring.material=glow; ring.isPickable=false;
-    return { node, materials:[dark,glow], weapon, ring, mesh:head };
+    const blood = simpleMaterial(this.scene, 'drop-weapon-red-' + weapon.seed, 2, 0.76, 0.34, 0.12);
+    const bone = simpleMaterial(this.scene, 'drop-weapon-bone-' + weapon.seed, 38, 0.18, 0.62);
+    const glow = simpleMaterial(this.scene, 'drop-weapon-glow-' + weapon.seed, 10, 0.86, 0.46, 0.62);
+    const materials=[dark,blood,bone,glow];
+    const add=(mesh,material=blood)=>{mesh.parent=node;mesh.material=material;mesh.isPickable=false;return mesh;};
+
+    const length=weapon.handleSpec?.visualLength||1;
+    const shaft=add(flat(MeshBuilder.CreateCylinder('drop-weapon-shaft',{
+      height:0.72*length,diameterTop:0.065,diameterBottom:0.09,tessellation:6
+    },this.scene)),dark);
+    shaft.position.y=0.42+length*0.11;
+    shaft.rotation.z=0.42;
+
+    const tipY=0.72+length*0.28;
+    const visual=weapon.headSpec?.visual||'crescent';
+    if(visual==='hammer'||visual==='slab'||visual==='bell'){
+      const head=add(flat(MeshBuilder.CreateBox('drop-heavy-head',{
+        width:visual==='slab'?0.5:0.4,height:visual==='bell'?0.38:0.25,depth:0.22
+      },this.scene)),visual==='bell'?bone:blood);
+      head.position.set(-0.12,tipY,0);head.rotation.z=0.42;
+    } else if(visual==='spear'||visual==='fork'){
+      const point=add(flat(MeshBuilder.CreateCylinder('drop-point',{
+        height:0.5,diameterTop:0,diameterBottom:0.16,tessellation:5
+      },this.scene)),bone);
+      point.position.set(-0.15,tipY+0.12,0);point.rotation.z=0.42;
+    } else if(visual==='fangs'){
+      for(const side of [-1,1]){
+        const fang=add(flat(MeshBuilder.CreateCylinder('drop-fang-'+side,{
+          height:0.33,diameterTop:0,diameterBottom:0.085,tessellation:5
+        },this.scene)),bone);
+        fang.position.set(-0.14+side*0.07,tipY+side*0.025,0);fang.rotation.z=0.42;
+      }
+    } else {
+      const blade=add(flat(MeshBuilder.CreateBox('drop-blade-'+visual,{
+        width:visual==='axe'?0.34:0.22,height:visual==='saw'?0.3:0.37,depth:0.075
+      },this.scene)),blood);
+      blade.position.set(-0.13,tipY,0);blade.rotation.z=visual==='hook'?-0.25:0.42;
+    }
+
+    if(weapon.secondary==='core'){
+      const core=add(flat(MeshBuilder.CreateIcoSphere('drop-secondary-core',{radius:0.1,subdivisions:1},this.scene)),glow);
+      core.position.set(0.02,0.51,0);
+    } else if(weapon.secondary==='ring'){
+      const ring=add(MeshBuilder.CreateTorus('drop-secondary-ring',{diameter:0.28,thickness:0.035,tessellation:10},this.scene),glow);
+      ring.position.set(0.02,0.5,0);ring.rotation.x=Math.PI/2;
+    } else if(weapon.secondary==='guard'){
+      const guard=add(flat(MeshBuilder.CreateBox('drop-secondary-guard',{width:0.34,height:0.065,depth:0.08},this.scene)),bone);
+      guard.position.set(0.02,0.5,0);guard.rotation.z=0.42;
+    } else if(weapon.secondary==='hook'){
+      const hook=add(MeshBuilder.CreateTorus('drop-secondary-hook',{diameter:0.25,thickness:0.04,tessellation:8},this.scene),blood);
+      hook.position.set(0.12,0.45,0);hook.scaling.x=0.55;
+    } else if(weapon.secondary==='counterweight'){
+      const weight=add(flat(MeshBuilder.CreateIcoSphere('drop-counterweight',{radius:0.11,subdivisions:1},this.scene)),dark);
+      weight.position.set(0.22,0.22,0);
+    }
+
+    const skillMarker=weapon.skill==='projectile'||weapon.skill==='pulse'||weapon.skill==='dash-cut';
+    if(skillMarker){
+      const marker=add(MeshBuilder.CreateTorus('drop-skill-marker',{diameter:0.38,thickness:0.028,tessellation:10},this.scene),glow);
+      marker.position.set(0,0.18,0);marker.rotation.x=Math.PI/2;
+    } else if(weapon.skill==='parry'||weapon.skill==='shield'){
+      const guard=add(flat(MeshBuilder.CreateBox('drop-skill-guard',{width:0.42,height:0.06,depth:0.08},this.scene)),bone);
+      guard.position.set(0.05,0.36,0);guard.rotation.z=0.42;
+    } else if(weapon.skill==='hook'){
+      const marker=add(MeshBuilder.CreateTorus('drop-skill-hook',{diameter:0.34,thickness:0.04,tessellation:8},this.scene),blood);
+      marker.position.set(0.15,0.28,0);marker.scaling.x=0.55;
+    } else if(weapon.skill==='execution'){
+      for(let i=0;i<3;i+=1){
+        const tooth=add(flat(MeshBuilder.CreateCylinder('drop-execution-tooth-'+i,{height:0.13,diameterTop:0,diameterBottom:0.05,tessellation:4},this.scene)),bone);
+        tooth.position.set((i-1)*0.07,0.24,0);
+      }
+    }
+
+    if(weapon.trait==='chain'||weapon.trait==='echo'){
+      const loops=weapon.trait==='echo'?2:3;
+      for(let i=0;i<loops;i+=1){
+        const loop=add(MeshBuilder.CreateTorus('drop-trait-loop-'+i,{diameter:0.13-i*0.018,thickness:0.017,tessellation:7},this.scene),weapon.trait==='echo'?glow:bone);
+        loop.position.set(0.16+i*0.035,0.34+i*0.045,0);
+      }
+    } else {
+      const trait=add(flat(MeshBuilder.CreateIcoSphere('drop-trait-marker',{radius:0.055,subdivisions:1},this.scene)),weapon.trait==='redline'||weapon.trait==='rupture'?blood:bone);
+      trait.position.set(0.16,0.34,0);
+    }
+
+    const ring=MeshBuilder.CreateTorus('drop-weapon-floor-ring',{diameter:0.78,thickness:0.028,tessellation:12},this.scene);
+    ring.parent=node;ring.position.y=0.08;ring.rotation.x=Math.PI/2;ring.material=glow;ring.isPickable=false;
+    return { node, materials, weapon, ring };
   }
 
   createHitEffect(position, direction, power = 1, weak = false) {
