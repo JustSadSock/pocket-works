@@ -30,6 +30,27 @@ export function mapLookDelta(dx, dy, multiplier, sensitivity) {
   };
 }
 
+export const ROOM_MODULES = [
+  { id:'open-arena', sizeX:12.8, sizeZ:12.8, obstacle:'none' },
+  { id:'pillar-four', sizeX:12.6, sizeZ:12.6, obstacle:'pillars' },
+  { id:'central-well', sizeX:12.8, sizeZ:12.8, obstacle:'well' },
+  { id:'ribbed-nave', sizeX:11.2, sizeZ:13.0, obstacle:'ribs' },
+  { id:'wide-gallery', sizeX:13.0, sizeZ:10.8, obstacle:'gallery' },
+  { id:'close-quarters', sizeX:10.8, sizeZ:10.8, obstacle:'corners' },
+  { id:'split-hall-n', sizeX:12.8, sizeZ:12.4, obstacle:'split-n' },
+  { id:'split-hall-e', sizeX:12.4, sizeZ:12.8, obstacle:'split-e' },
+  { id:'ossuary-ring', sizeX:12.8, sizeZ:12.8, obstacle:'ring' },
+  { id:'cross-vault', sizeX:12.6, sizeZ:12.6, obstacle:'cross' },
+  { id:'procession', sizeX:10.9, sizeZ:13.1, obstacle:'lanes' },
+  { id:'red-court', sizeX:13.1, sizeZ:10.9, obstacle:'lanes-e' },
+  { id:'cage-floor', sizeX:12.5, sizeZ:12.5, obstacle:'cages' },
+  { id:'collapsed-bay', sizeX:12.5, sizeZ:12.5, obstacle:'debris' },
+  { id:'bell-room', sizeX:12.7, sizeZ:12.7, obstacle:'bell' },
+  { id:'butcher-aisle', sizeX:11.3, sizeZ:13.0, obstacle:'hooks' },
+  { id:'grave-grid', sizeX:12.8, sizeZ:12.8, obstacle:'grid' },
+  { id:'empty-sanctum', sizeX:12.2, sizeZ:12.2, obstacle:'none' }
+];
+
 const DIRECTIONS = [
   { dx: 1, dz: 0, dir: 'e', opposite: 'w' },
   { dx: -1, dz: 0, dir: 'w', opposite: 'e' },
@@ -44,11 +65,15 @@ export function generateDungeon(seed, floor = 1) {
   const rooms = [];
   const occupied = new Map();
   const addRoom = (gx, gz, role = 'room') => {
+    const safeModules = ROOM_MODULES.filter((module) => ['none','ribs','gallery','hooks'].includes(module.obstacle));
+    const module = choice(rng, role === 'room' ? ROOM_MODULES : safeModules);
     const room = {
       id: rooms.length,
       gx, gz, role,
-      sizeX: 11.9 + Math.floor(rng() * 3) * 0.3,
-      sizeZ: 11.9 + Math.floor(rng() * 3) * 0.3,
+      module: module.id,
+      obstacle: module.obstacle,
+      sizeX: module.sizeX,
+      sizeZ: module.sizeZ,
       links: { n: null, e: null, s: null, w: null },
       danger: 0,
       monsterSeeds: [],
@@ -124,56 +149,20 @@ export function generateDungeon(seed, floor = 1) {
     gateId: gate.id,
     requiredKills: Math.max(3, Math.ceil(totalMonsters * 0.62)),
     totalMonsters,
-    spacing: 12.7
-  };
-}
-
-const BODY_TYPES = ['crawler', 'brute', 'orb', 'bishop', 'serpent', 'tripod', 'lantern', 'jaw'];
-const ABILITIES = ['spit', 'blink', 'rush', 'split', 'leech', 'burst'];
-const PREFIXES = ['Wet', 'Velvet', 'Illegal', 'Choir', 'Sideways', 'Taxable', 'Mild', 'Invisible', 'Monday', 'Fermented', 'Polite', 'Inverse'];
-const NOUNS = ['Maw', 'Clerk', 'Angel', 'Slug', 'Bishop', 'Chair', 'Witness', 'Moth', 'Accountant', 'Crumb', 'Oracle', 'Intern'];
-
-export function createMonsterGenome(seed, floor = 1, danger = 1, inherited = null) {
-  const rng = makeRng((Number(seed) ^ Math.imul(floor + 11, 0x27d4eb2d)) >>> 0);
-  const body = inherited?.body || choice(rng, BODY_TYPES);
-  const ability = inherited?.ability || choice(rng, ABILITIES);
-  const hue = inherited ? (inherited.hue + (rng() * 36 - 18) + 360) % 360 : Math.floor(rng() * 360);
-  const size = clamp((inherited?.size || 1) * (0.78 + rng() * 0.52), 0.55, 1.65);
-  const threat = clamp(danger * (0.84 + rng() * 0.38), 0.55, 4);
-  const elite = rng() < Math.min(0.08 + floor * 0.012, 0.24);
-  return {
-    seed: Number(seed) >>> 0,
-    body,
-    ability,
-    hue,
-    accentHue: (hue + 90 + Math.floor(rng() * 190)) % 360,
-    size: elite ? size * 1.14 : size,
-    eyes: clamp(1 + Math.floor(rng() * 5), 1, 5),
-    horns: Math.floor(rng() * 5),
-    limbs: body === 'orb' || body === 'lantern' ? 0 : [2, 4, 6][Math.floor(rng() * 3)],
-    crest: Math.floor(rng() * 4),
-    halo: rng() < 0.24,
-    motion: choice(rng, ['breathe', 'skitter', 'tilt', 'pulse']),
-    wobble: 0.35 + rng() * 1.45,
-    phase: rng() * Math.PI * 2,
-    elite,
-    maxHp: Math.round((18 + floor * 5.2) * threat * (elite ? 1.8 : 1) * (0.8 + size * 0.3)),
-    speed: clamp((2.0 + rng() * 1.7 + floor * 0.045) / Math.sqrt(size), 1.35, 5.2),
-    damage: Math.round((5 + floor * 1.3) * threat * (elite ? 1.3 : 1)),
-    cooldown: clamp(1.15 + rng() * 1.8 - floor * 0.025, 0.62, 3.2),
-    name: `${elite ? 'EXALTED ' : ''}${choice(rng, PREFIXES)} ${choice(rng, NOUNS)}`
+    spacing: 14.0
   };
 }
 
 export const RELICS = [
-  { id: 'tax-boots', name: 'Boots of Tax Evasion', copy: '+12% movement speed. Authorities hate this.', stat: 'speed', amount: 0.12 },
-  { id: 'unstable-spoon', name: 'Unstable Spoon', copy: '+18% weapon damage. It bends you back.', stat: 'damage', amount: 0.18 },
-  { id: 'pocket-spine', name: 'Pocket Spine', copy: '+18 max HP and an upsetting sense of posture.', stat: 'maxHp', amount: 18 },
-  { id: 'wet-key', name: 'Wet Key', copy: '+8% critical chance. It opens nothing obvious.', stat: 'crit', amount: 0.08 },
-  { id: 'necromancy-diploma', name: 'Questionable Necromancy Diploma', copy: 'Kills restore 1.5 HP. Accreditation pending.', stat: 'lifesteal', amount: 1.5 },
-  { id: 'moon-receipt', name: 'Receipt for One Moon', copy: '-18% dash cooldown. Non-refundable.', stat: 'dash', amount: 0.18 }
+  { id:'second-mouth', name:'Second Mouth', copy:'Blood Arc fires a second reduced arc.', effect:'double-projectile' },
+  { id:'rupture-heart', name:'Rupture Heart', copy:'Staggering an enemy causes a small blast around it.', effect:'stagger-blast' },
+  { id:'execution-thread', name:'Execution Thread', copy:'Executions and kills restore a small amount of health.', effect:'heal-execution' },
+  { id:'chain-suture', name:'Chain Suture', copy:'Clean melee hits can jump stagger into one nearby enemy.', effect:'chain-hit' },
+  { id:'blink-tendon', name:'Blink Tendon', copy:'Dodges travel farther without ignoring collision.', effect:'long-dodge' },
+  { id:'perfect-nerve', name:'Perfect Nerve', copy:'A perfect dodge briefly accelerates any weapon.', effect:'perfect-haste' },
+  { id:'grave-aftershock', name:'Grave Aftershock', copy:'Heavy hits emit a short secondary impact around the target.', effect:'heavy-aftershock' },
+  { id:'borrowed-second', name:'Borrowed Second', copy:'Weapon Skill hits have a chance to refund part of their cooldown.', effect:'skill-refund' }
 ];
-
 export const POTIONS = [
   { id: 'prophecy-mouthwash', name: 'Mouthwash of Prophecy', copy: 'Heal 28. See six seconds slightly too far sideways.', effect: 'heal-warp' },
   { id: 'liquid-tuesday', name: 'Liquid Tuesday', copy: 'Enemies move 40% slower for seven seconds.', effect: 'slow' },

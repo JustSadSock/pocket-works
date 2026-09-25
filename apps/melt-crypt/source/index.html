@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#17101f" />
+  <meta name="theme-color" content="#16090b" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -31,7 +31,7 @@
     </div>
     <div class="hud-center">
       <span id="room-label">THE FOYER THAT REGRETS YOU</span>
-      <b id="mutation-label">MUTATION 0%</b>
+      <b id="mutation-label">SIGNATURES 0</b>
     </div>
     <div class="hud-right">
       <div class="kill-block"><span>EXIT</span><b id="kill-label">0 / 0</b></div>
@@ -41,17 +41,17 @@
   </header>
 
   <div id="reticle" hidden aria-hidden="true"><i></i><b></b></div>
-  <div id="weapon-readout" hidden data-ui><span id="weapon-name">THOUGHT REPEATER</span><b id="weapon-state">READY</b></div>
+  <div id="weapon-readout" hidden data-ui><span id="weapon-name">GRAVE CRESCENT</span><b id="weapon-state">READY</b></div>
   <div id="potion-readout" hidden data-ui><span>FLASK</span><b id="potion-name">EMPTY</b><em id="potion-count">0</em></div>
   <div id="context-prompt" hidden data-ui><b id="context-label">USE</b><span id="context-copy"></span></div>
 
   <div class="action-cluster" id="action-cluster" hidden data-ui>
-    <button id="fire-button" class="action fire" type="button" data-gesture-surface data-native-press><span>FIRE</span><i></i></button>
-    <button id="use-button" class="action use" type="button" data-gesture-surface data-native-press><span id="use-button-label">FLASK</span></button>
-    <button id="dash-button" class="action dash" type="button" data-gesture-surface data-native-press><span>DASH</span><i id="dash-meter"></i></button>
+    <button id="fire-button" class="action fire" type="button" data-gesture-surface data-native-press><span>ATTACK</span><i></i></button>
+    <button id="dash-button" class="action dash" type="button" data-gesture-surface data-native-press><span>DODGE</span><i id="dash-meter"></i></button>
+    <button id="use-button" class="action use" type="button" data-gesture-surface data-native-press><span id="use-button-label">SKILL</span></button>
   </div>
 
-  <div id="floor-banner" class="floor-banner" hidden data-ui><span id="floor-banner-top">DESCENDING</span><b id="floor-banner-main">FLOOR 02</b><em id="floor-banner-copy">the walls learned a new color</em></div>
+  <div id="floor-banner" class="floor-banner" hidden data-ui><span id="floor-banner-top">DESCENDING</span><b id="floor-banner-main">FLOOR 02</b><em id="floor-banner-copy">the walls learned a new shape</em></div>
   <div id="toast" class="toast" aria-live="polite" data-ui></div>
   <div id="discovery" class="discovery" hidden data-ui><span>NEW DISCOVERY</span><b id="discovery-name"></b><p id="discovery-copy"></p></div>
 
@@ -66,9 +66,9 @@
   <section id="title-screen" class="screen title-screen" hidden data-ui>
     <div class="title-noise" aria-hidden="true"></div>
     <div class="title-column">
-      <p class="eyebrow">FIRST PERSON / PROCEDURAL MUTATION ROGUELIKE</p>
+      <p class="eyebrow">FIRST PERSON / READABLE MUTATION ROGUELIKE</p>
       <div class="title-lockup"><span>MELT</span><i>//</i><b>CRYPT</b></div>
-      <p class="title-copy">Каждый заход подземелье разводит новую фауну. Внешность, палитра, тело и способности монстров мутируют вместе.</p>
+      <p class="title-copy">Один тёмно-красный мир. Враги и оружие собираются из читаемых частей: если у твари молот, щит, длинные ноги или светящееся ядро — это и есть её правила боя.</p>
       <div class="title-actions">
         <button id="new-run-button" class="primary-action" type="button" aria-label="Start new run" data-native-press>NEW RUN <i>→</i></button>
         <button id="continue-button" class="secondary-action" type="button" data-native-press hidden>CONTINUE RUN</button>
@@ -80,8 +80,8 @@
       <div class="specimen-eye" aria-hidden="true"><i></i><b></b><em></em></div>
       <p>SPECIMEN FEED</p>
       <b id="title-best">BEST FLOOR 00</b>
-      <span id="title-codex">0 phenotypes archived</span>
-      <small>The crypt does not contain handcrafted species. It contains bad ideas with legs.</small>
+      <span id="title-codex">0 signatures archived</span>
+      <small>Read the body. Read the weapon. Kill the rule, not the stat block.</small>
     </aside>
   </section>
 
@@ -102,9 +102,9 @@
       <header><div><p>LOCAL REALITY SETTINGS</p><h2>SETTINGS</h2></div><button id="settings-close" type="button" data-native-press>DONE</button></header>
       <label><span><b>PIXEL DENSITY</b><small>Ниже — пиксельнее и быстрее.</small></span><select id="quality-select"><option value="crisp">CRISP</option><option value="pixel" selected>PIXEL</option><option value="raw">RAW</option></select></label>
       <label><span><b>LOOK SENSITIVITY</b><small>Правая половина экрана / мышь.</small></span><input id="sensitivity-input" type="range" min="0.55" max="1.8" step="0.05" value="1" /></label>
-      <label><span><b>PSYCHEDELIC FX</b><small>Hue drift, screen warp and mutation overlays.</small></span><input id="psy-toggle" type="checkbox" checked /></label>
-      <label><span><b>GENERATIVE AUDIO</b><small>Дроны, выстрелы, удары и вопли из Web Audio.</small></span><input id="sound-toggle" type="checkbox" checked /></label>
-      <p class="control-note"><b>DESKTOP</b> WASD · mouse · LMB fire · E use · Q flask · Space dodge · Esc pause<br><b>TOUCH</b> left move · right look · FIRE / USE / DODGE</p>
+      <label><span><b>PSYCHEDELIC FX</b><small>Лёгкие искажения, hit FX и редкие мутационные вспышки — без смены палитры мира.</small></span><input id="psy-toggle" type="checkbox" checked /></label>
+      <label><span><b>GENERATIVE AUDIO</b><small>Дроны, удары, парирования, рывки и вопли из Web Audio.</small></span><input id="sound-toggle" type="checkbox" checked /></label>
+      <p class="control-note"><b>DESKTOP</b> WASD · mouse · LMB tap attack / hold heavy · E/F skill · Space dodge · Esc pause<br><b>TOUCH</b> left move · full stick auto-sprint · right look · ATTACK / SKILL / DODGE</p>
     </div>
   </section>
 

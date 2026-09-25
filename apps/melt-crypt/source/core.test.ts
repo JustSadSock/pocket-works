@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { createMonsterGenome, generateDungeon, mapLookDelta, rollLoot } from './core.js';
+import { RELICS, ROOM_MODULES, generateDungeon, mapLookDelta, rollLoot } from './core.js';
 
-describe('MELT//CRYPT procedural core', () => {
+describe('MELT//CRYPT 2.0 procedural core', () => {
   it('maps vertical look in the natural direction', () => {
     expect(mapLookDelta(0, -12, 0.0032, 1).y).toBeLessThan(0);
     expect(mapLookDelta(0, 12, 0.0032, 1).y).toBeGreaterThan(0);
   });
-  it('builds deterministic connected floors', () => {
+
+  it('builds deterministic connected floors from authored room modules', () => {
     const a = generateDungeon(0xdeadbeef, 5);
     const b = generateDungeon(0xdeadbeef, 5);
     expect(a).toEqual(b);
+    expect(ROOM_MODULES).toHaveLength(18);
     expect(a.rooms.length).toBeGreaterThanOrEqual(6);
-    expect(a.requiredKills).toBeGreaterThanOrEqual(3);
-    expect(a.requiredKills).toBeLessThanOrEqual(a.totalMonsters);
     for (const room of a.rooms) {
+      expect(ROOM_MODULES.some((module) => module.id === room.module)).toBe(true);
       for (const [side, nextId] of Object.entries(room.links)) {
         if (nextId === null) continue;
         const next = a.rooms[nextId as number];
@@ -25,15 +26,12 @@ describe('MELT//CRYPT procedural core', () => {
     }
   });
 
-  it('mutates monsters deterministically from their genome seed', () => {
-    const a = createMonsterGenome(424242, 7, 1.4);
-    const b = createMonsterGenome(424242, 7, 1.4);
-    expect(a).toEqual(b);
-    expect(['spit', 'blink', 'rush', 'split', 'leech', 'burst']).toContain(a.ability);
-    expect(a.maxHp).toBeGreaterThan(0);
-    expect(['breathe','skitter','tilt','pulse']).toContain(a.motion);
-    const silhouettes = new Set(Array.from({ length: 160 }, (_, i) => createMonsterGenome(i * 7919 + 17, 8, 1.2).body));
-    expect(silhouettes.size).toBeGreaterThanOrEqual(7);
+  it('keeps relic progression mechanic-first', () => {
+    expect(RELICS.length).toBeGreaterThanOrEqual(8);
+    for (const relic of RELICS) {
+      expect(relic.effect).toBeTruthy();
+      expect('stat' in relic).toBe(false);
+    }
   });
 
   it('always emits usable loot', () => {

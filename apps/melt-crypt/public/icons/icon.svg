@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MELT CRYPT">
 <rect width="512" height="512" fill="#120d19"/>
-<path d="M70 76h372v360H70z" fill="#1c1426" stroke="#d7ff55" stroke-width="18"/>
+<path d="M70 76h372v360H70z" fill="#1c1426" stroke="#e6a35c" stroke-width="18"/>
 <path d="M108 114h296v284H108z" fill="#271636"/>
-<path d="M108 114h82v82h-82zm214 0h82v82h-82zM108 316h82v82h-82zm214 0h82v82h-82z" fill="#ff4fd8"/>
-<path d="M199 154h114v43h48v118h-48v43H199v-43h-48V197h48z" fill="#54e7ff"/>
+<path d="M108 114h82v82h-82zm214 0h82v82h-82zM108 316h82v82h-82zm214 0h82v82h-82z" fill="#c9363f"/>
+<path d="M199 154h114v43h48v118h-48v43H199v-43h-48V197h48z" fill="#d96843"/>
 <path d="M216 211h80v90h-80z" fill="#120d19"/>
-<path d="M226 224h18v18h-18zm42 0h18v18h-18z" fill="#d7ff55"/>
-<path d="M233 276h46v12h-46z" fill="#ff4fd8"/>
-<path d="M91 92h35v12H91zm295 316h35v12h-35z" fill="#fff0c9"/>
+<path d="M226 224h18v18h-18zm42 0h18v18h-18z" fill="#e6a35c"/>
+<path d="M233 276h46v12h-46z" fill="#c9363f"/>
+<path d="M91 92h35v12H91zm295 316h35v12h-35z" fill="#ead8bc"/>
 </svg>

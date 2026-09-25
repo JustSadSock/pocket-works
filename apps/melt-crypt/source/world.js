@@ -87,6 +87,10 @@ export class CryptVisuals {
     this.roomCenters = new Map();
     this.ambientProps = [];
     this.decorMaterials = [];
+    this.collisionBoxes = [];
+    this.impactFx = [];
+    this.weaponBlueprint = null;
+    this.weaponPose = { swing: 0, charge: 0, skill: 0, combo: 0, heavy: false };
 
     this.hemi = new HemisphericLight('crypt-hemi', new Vector3(0.2, 1, 0.1), scene);
     this.hemi.intensity = 0.34;
@@ -103,29 +107,186 @@ export class CryptVisuals {
   }
 
   createWeapon() {
-    const root = new TransformNode('thought-repeater', this.scene);
+    const root = new TransformNode('modular-melee-weapon', this.scene);
     root.parent = this.camera;
-    root.position = new Vector3(0.33, -0.31, 0.72);
-    root.rotation = new Vector3(-0.06, 0.04, -0.03);
-
-    const dark = simpleMaterial(this.scene, 'weapon-dark', 275, 0.35, 0.14);
-    const acid = simpleMaterial(this.scene, 'weapon-acid', 78, 0.9, 0.55, 0.75);
-    const pink = simpleMaterial(this.scene, 'weapon-pink', 318, 0.9, 0.54, 0.55);
-    dark.disableLighting = false;
-
-    const body = flat(MeshBuilder.CreateCylinder('repeater-body', { height: 0.52, diameterTop: 0.16, diameterBottom: 0.22, tessellation: 8 }, this.scene));
-    body.parent = root; body.rotation.x = Math.PI / 2; body.position.z = 0.03; body.material = dark; body.isPickable = false;
-    const muzzle = flat(MeshBuilder.CreateCylinder('repeater-muzzle', { height: 0.19, diameterTop: 0.12, diameterBottom: 0.15, tessellation: 8 }, this.scene));
-    muzzle.parent = root; muzzle.rotation.x = Math.PI / 2; muzzle.position.z = 0.34; muzzle.material = pink; muzzle.isPickable = false;
-    const coil = MeshBuilder.CreateTorus('repeater-coil', { diameter: 0.27, thickness: 0.035, tessellation: 12 }, this.scene);
-    coil.parent = root; coil.rotation.x = Math.PI / 2; coil.position.z = 0.08; coil.material = acid; coil.isPickable = false;
-    const grip = flat(MeshBuilder.CreateCylinder('repeater-grip', { height: 0.26, diameterTop: 0.12, diameterBottom: 0.16, tessellation: 6 }, this.scene));
-    grip.parent = root; grip.rotation.z = 0.22; grip.position.set(0, -0.17, -0.08); grip.material = dark; grip.isPickable = false;
-    const sight = flat(MeshBuilder.CreateIcoSphere('repeater-sight', { radius: 0.055, subdivisions: 1 }, this.scene));
-    sight.parent = root; sight.position.set(0, 0.11, 0.17); sight.material = acid; sight.isPickable = false;
-
+    root.position = new Vector3(0.38, -0.34, 0.63);
+    root.rotation = new Vector3(-0.16, 0.08, -0.08);
     this.weaponRoot = root;
-    this.weaponMaterials = [dark, acid, pink];
+    this.weaponMaterials = [];
+  }
+
+  setPlayerWeapon(weapon) {
+    this.weaponBlueprint = weapon || null;
+    if (!this.weaponRoot) this.createWeapon();
+    for (const child of this.weaponRoot.getChildren()) child.dispose(false, true);
+    this.weaponMaterials.forEach((material) => material.dispose(true, true));
+    this.weaponMaterials.length = 0;
+    if (!weapon) return;
+
+    const dark = simpleMaterial(this.scene, 'player-weapon-dark-' + weapon.seed, 355, 0.32, 0.13);
+    const blood = simpleMaterial(this.scene, 'player-weapon-red-' + weapon.seed, 2, 0.78, 0.34, 0.08);
+    const bone = simpleMaterial(this.scene, 'player-weapon-bone-' + weapon.seed, 38, 0.22, 0.64);
+    const glow = simpleMaterial(this.scene, 'player-weapon-glow-' + weapon.seed, 8, 0.92, 0.48, 0.7);
+    this.weaponMaterials.push(dark, blood, bone, glow);
+
+    const length = weapon.handleSpec?.visualLength || 1;
+    const shaft = flat(MeshBuilder.CreateCylinder('weapon-shaft', {
+      height: 0.62 * length, diameterTop: 0.075, diameterBottom: 0.095, tessellation: 6
+    }, this.scene));
+    shaft.parent = this.weaponRoot;
+    shaft.rotation.x = Math.PI / 2;
+    shaft.position.z = 0.14 + length * 0.15;
+    shaft.material = weapon.core === 'claws' ? bone : dark;
+    shaft.isPickable = false;
+
+    const headZ = 0.44 + length * 0.31;
+    const visual = weapon.headSpec?.visual || 'crescent';
+    const add = (mesh, material = blood) => {
+      mesh.parent = this.weaponRoot;
+      mesh.material = material;
+      mesh.isPickable = false;
+      return mesh;
+    };
+
+    if (visual === 'hammer' || visual === 'slab' || visual === 'bell') {
+      const head = add(flat(MeshBuilder.CreateBox('weapon-heavy-head', {
+        width: visual === 'slab' ? 0.46 : 0.38,
+        height: visual === 'bell' ? 0.38 : 0.25,
+        depth: visual === 'slab' ? 0.18 : 0.28
+      }, this.scene)), visual === 'bell' ? bone : blood);
+      head.position.set(0, 0.02, headZ);
+      if (visual === 'bell') head.scaling.y = 1.25;
+    } else if (visual === 'spear' || visual === 'fork') {
+      const point = add(flat(MeshBuilder.CreateCylinder('weapon-point', {
+        height: visual === 'fork' ? 0.42 : 0.52, diameterTop: 0, diameterBottom: 0.18, tessellation: 5
+      }, this.scene)), bone);
+      point.rotation.x = Math.PI / 2;
+      point.position.z = headZ + 0.12;
+      if (visual === 'fork') {
+        for (const side of [-1, 1]) {
+          const tine = add(flat(MeshBuilder.CreateCylinder('weapon-fork-tine-' + side, {
+            height: 0.34, diameterTop: 0, diameterBottom: 0.075, tessellation: 5
+          }, this.scene)), blood);
+          tine.rotation.x = Math.PI / 2;
+          tine.position.set(side * 0.11, 0, headZ + 0.18);
+        }
+      }
+    } else if (visual === 'fangs') {
+      for (const side of [-1, 1]) {
+        const fang = add(flat(MeshBuilder.CreateCylinder('weapon-fang-' + side, {
+          height: 0.34, diameterTop: 0, diameterBottom: 0.1, tessellation: 5
+        }, this.scene)), bone);
+        fang.rotation.x = Math.PI / 2;
+        fang.position.set(side * 0.1, side * 0.035, headZ + 0.12);
+      }
+    } else {
+      const blade = add(flat(MeshBuilder.CreateBox('weapon-blade-' + visual, {
+        width: visual === 'axe' ? 0.34 : 0.22,
+        height: visual === 'saw' ? 0.28 : 0.34,
+        depth: 0.075
+      }, this.scene)), blood);
+      blade.position.set(visual === 'hook' ? 0.08 : 0, 0.04, headZ);
+      blade.rotation.z = visual === 'crescent' ? -0.36 : visual === 'hook' ? -0.62 : 0;
+      if (visual === 'saw') {
+        for (let i=0;i<4;i+=1) {
+          const tooth=add(flat(MeshBuilder.CreateCylinder('weapon-saw-tooth-'+i,{
+            height:0.11,diameterTop:0,diameterBottom:0.055,tessellation:4
+          },this.scene)),bone);
+          tooth.position.set((i-1.5)*0.07,0.19,headZ);
+          tooth.rotation.z=Math.PI;
+        }
+      }
+    }
+
+    if (weapon.secondary === 'core') {
+      const core = add(flat(MeshBuilder.CreateIcoSphere('weapon-core', { radius: 0.095, subdivisions: 1 }, this.scene)), glow);
+      core.position.set(0, 0.02, 0.36);
+    } else if (weapon.secondary === 'ring') {
+      const ring = add(MeshBuilder.CreateTorus('weapon-ring', { diameter: 0.25, thickness: 0.035, tessellation: 10 }, this.scene), glow);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.z = 0.35;
+    } else if (weapon.secondary === 'guard') {
+      const guard = add(flat(MeshBuilder.CreateBox('weapon-guard', { width: 0.36, height: 0.07, depth: 0.08 }, this.scene)), bone);
+      guard.position.z = 0.28;
+    } else if (weapon.secondary === 'hook') {
+      const hook = add(MeshBuilder.CreateTorus('weapon-rear-hook', { diameter: 0.22, thickness: 0.045, tessellation: 8 }, this.scene), blood);
+      hook.rotation.x = Math.PI / 2;
+      hook.position.set(0.1, -0.08, 0.3);
+      hook.scaling.x = 0.65;
+    } else if (weapon.secondary === 'counterweight') {
+      const weight = add(flat(MeshBuilder.CreateIcoSphere('weapon-counterweight', { radius: 0.11, subdivisions: 1 }, this.scene)), dark);
+      weight.position.z = -0.16;
+    }
+
+    if (weapon.core === 'twin' || weapon.core === 'claws') {
+      const off = add(flat(MeshBuilder.CreateBox('weapon-offhand-hint',{width:0.12,height:0.34,depth:0.07},this.scene)),blood);
+      off.position.set(-0.26,-0.04,0.42);
+      off.rotation.z=0.18;
+    }
+
+    // Skill geometry is intentionally redundant with mechanics: it is a readable legend on the weapon.
+    if (weapon.skill === 'parry') {
+      const cross = add(flat(MeshBuilder.CreateBox('skill-parry-cross',{width:0.42,height:0.055,depth:0.065},this.scene)),bone);
+      cross.position.z=0.32;
+    } else if (weapon.skill === 'projectile') {
+      const orb=add(flat(MeshBuilder.CreateIcoSphere('skill-projectile-core',{radius:0.08,subdivisions:1},this.scene)),glow);
+      orb.position.set(0,0.08,0.43);
+    } else if (weapon.skill === 'shield') {
+      const plate=add(flat(MeshBuilder.CreateBox('skill-ward-plate',{width:0.24,height:0.31,depth:0.055},this.scene)),bone);
+      plate.position.set(0.17,0,0.35);plate.rotation.y=0.25;
+    } else if (weapon.skill === 'hook') {
+      const hook=add(MeshBuilder.CreateTorus('skill-hook-glyph',{diameter:0.25,thickness:0.04,tessellation:8},this.scene),blood);
+      hook.position.set(0.12,-0.04,0.44);hook.rotation.x=Math.PI/2;hook.scaling.x=0.55;
+    } else if (weapon.skill === 'aoe') {
+      const weight=add(flat(MeshBuilder.CreateIcoSphere('skill-rupture-weight',{radius:0.105,subdivisions:1},this.scene)),dark);
+      weight.position.set(0,-0.08,0.3);
+      for(let i=0;i<3;i+=1){
+        const spike=add(flat(MeshBuilder.CreateCylinder('skill-rupture-spike-'+i,{height:0.13,diameterTop:0,diameterBottom:0.055,tessellation:4},this.scene)),blood);
+        spike.position.set((i-1)*0.08,-0.13,0.3);spike.rotation.z=Math.PI;
+      }
+    } else if (weapon.skill === 'dash-cut') {
+      for(const side of [-1,1]){
+        const fin=add(flat(MeshBuilder.CreateBox('skill-phase-fin-'+side,{width:0.055,height:0.24,depth:0.06},this.scene)),glow);
+        fin.position.set(side*0.12,0.04,0.42);fin.rotation.z=side*0.38;
+      }
+    } else if (weapon.skill === 'execution') {
+      for(let i=0;i<3;i+=1){
+        const tooth=add(flat(MeshBuilder.CreateCylinder('skill-execution-tooth-'+i,{height:0.13,diameterTop:0,diameterBottom:0.05,tessellation:4},this.scene)),bone);
+        tooth.position.set((i-1)*0.07,0.13,0.42);tooth.rotation.z=Math.PI;
+      }
+    } else if (weapon.skill === 'pulse') {
+      const pulse=add(MeshBuilder.CreateTorus('skill-pulse-ring',{diameter:0.29,thickness:0.03,tessellation:10},this.scene),glow);
+      pulse.position.z=0.43;pulse.rotation.x=Math.PI/2;
+    }
+
+    // Traits also have a persistent marker so they become learnable instead of hidden affixes.
+    if (weapon.trait === 'hungry') {
+      const fang=add(flat(MeshBuilder.CreateCylinder('trait-hungry-fang',{height:0.18,diameterTop:0,diameterBottom:0.07,tessellation:5},this.scene)),bone);
+      fang.position.set(-0.11,-0.08,0.24);fang.rotation.z=0.5;
+    } else if (weapon.trait === 'chain') {
+      for(let i=0;i<3;i+=1){
+        const link=add(MeshBuilder.CreateTorus('trait-chain-link-'+i,{diameter:0.12,thickness:0.018,tessellation:7},this.scene),bone);
+        link.position.set(-0.12+i*0.05,-0.09,0.24+i*0.035);link.rotation.y=i%2?Math.PI/2:0;
+      }
+    } else if (weapon.trait === 'afterimage') {
+      const echo=add(flat(MeshBuilder.CreateBox('trait-afterimage-fin',{width:0.035,height:0.28,depth:0.04},this.scene)),glow);
+      echo.position.set(-0.13,0,0.29);echo.rotation.z=-0.25;
+    } else if (weapon.trait === 'rupture') {
+      const spike=add(flat(MeshBuilder.CreateCylinder('trait-rupture-spike',{height:0.22,diameterTop:0,diameterBottom:0.07,tessellation:5},this.scene)),blood);
+      spike.position.set(0.12,-0.06,0.26);spike.rotation.z=-0.62;
+    } else if (weapon.trait === 'echo') {
+      for(const scale of [1,0.72]){
+        const ring=add(MeshBuilder.CreateTorus('trait-echo-ring-'+scale,{diameter:0.18*scale,thickness:0.018,tessellation:8},this.scene),glow);
+        ring.position.set(0.13,0.05,0.29);ring.rotation.x=Math.PI/2;
+      }
+    } else if (weapon.trait === 'redline') {
+      const vein=add(flat(MeshBuilder.CreateBox('trait-redline-vein',{width:0.028,height:0.32,depth:0.035},this.scene)),blood);
+      vein.position.set(0.1,0,0.3);vein.rotation.z=0.16;
+    }
+  }
+
+  setWeaponPose({ swing = 0, charge = 0, skill = 0, combo = 0, heavy = false } = {}) {
+    this.weaponPose = { swing, charge, skill, combo, heavy };
   }
 
   clearDungeon() {
@@ -135,24 +296,38 @@ export class CryptVisuals {
     this.interactives.length = 0;
     this.ambientProps.length = 0;
     this.decorMaterials.length = 0;
+    this.collisionBoxes.length = 0;
+    for (const fx of this.impactFx) {
+      fx.shards?.forEach((shard) => shard.mesh?.dispose?.());
+      fx.material?.dispose?.();
+    }
+    this.impactFx.length = 0;
     this.roomCenters.clear();
     this.gate = null;
   }
 
+  registerCollisionBox(x, y, z, width, height, depth) {
+    this.collisionBoxes.push({
+      minX: x - width / 2, maxX: x + width / 2,
+      minY: y - height / 2, maxY: y + height / 2,
+      minZ: z - depth / 2, maxZ: z + depth / 2
+    });
+  }
+
   buildDungeon(dungeon, floor) {
     this.clearDungeon();
-    this.floorHue = (286 + floor * 37) % 360;
+    this.floorHue = 354;
     const root = new TransformNode('dungeon-floor-' + floor, this.scene);
     this.root = root;
-    const wall = pixelMaterial(this.scene, 'wall-' + floor, (this.floorHue + 330) % 360, 0.17, 0.32);
-    const floorMat = pixelMaterial(this.scene, 'floor-' + floor, (this.floorHue + 25) % 360, 0.11, 0.26);
-    const ceilingMat = pixelMaterial(this.scene, 'ceiling-' + floor, (this.floorHue + 350) % 360, 0.075, 0.22);
-    const trim = simpleMaterial(this.scene, 'trim-' + floor, (this.floorHue + 102) % 360, 0.74, 0.38, 0.16);
-    const crystalA = simpleMaterial(this.scene, 'crystal-a-' + floor, (this.floorHue + 105) % 360, 0.92, 0.52, 0.92);
-    const crystalB = simpleMaterial(this.scene, 'crystal-b-' + floor, (this.floorHue + 205) % 360, 0.92, 0.52, 0.82);
-    const decorA = simpleMaterial(this.scene, 'decor-a-' + floor, (this.floorHue + 42) % 360, 0.82, 0.44, 0.34);
-    const decorB = simpleMaterial(this.scene, 'decor-b-' + floor, (this.floorHue + 158) % 360, 0.86, 0.46, 0.42);
-    const bone = simpleMaterial(this.scene, 'decor-bone-' + floor, 46, 0.25, 0.68, 0.03);
+    const wall = pixelMaterial(this.scene, 'wall-' + floor, 352, 0.145, 0.34);
+    const floorMat = pixelMaterial(this.scene, 'floor-' + floor, 4, 0.085, 0.28);
+    const ceilingMat = pixelMaterial(this.scene, 'ceiling-' + floor, 348, 0.065, 0.22);
+    const trim = simpleMaterial(this.scene, 'trim-' + floor, 8, 0.58, 0.28, 0.08);
+    const crystalA = simpleMaterial(this.scene, 'crystal-a-' + floor, 2, 0.9, 0.44, 0.72);
+    const crystalB = simpleMaterial(this.scene, 'crystal-b-' + floor, 22, 0.74, 0.44, 0.45);
+    const decorA = simpleMaterial(this.scene, 'decor-a-' + floor, 346, 0.68, 0.32, 0.16);
+    const decorB = simpleMaterial(this.scene, 'decor-b-' + floor, 12, 0.76, 0.36, 0.2);
+    const bone = simpleMaterial(this.scene, 'decor-bone-' + floor, 38, 0.18, 0.62, 0.02);
     this.materials.push(wall, floorMat, ceilingMat, trim, crystalA, crystalB, decorA, decorB, bone);
     this.decorMaterials = [crystalA, crystalB, decorA, decorB, bone];
 
@@ -194,6 +369,8 @@ export class CryptVisuals {
         mesh.parent = root;
         mesh.position.set(x + (northSouth ? 0 : sign * axisPos), wallY, z + (northSouth ? sign * axisPos : 0));
         mesh.material = wallMat;
+        this.registerCollisionBox(mesh.position.x, wallY, mesh.position.z,
+          northSouth ? length : thickness, height, northSouth ? thickness : length);
       } else {
         const segment = Math.max(0.8, (length - gap) / 2);
         for (const offsetSign of [-1, 1]) {
@@ -204,6 +381,8 @@ export class CryptVisuals {
           if (northSouth) mesh.position.set(x + offsetSign * (gap / 2 + segment / 2), wallY, z + sign * axisPos);
           else mesh.position.set(x + sign * axisPos, wallY, z + offsetSign * (gap / 2 + segment / 2));
           mesh.material = wallMat;
+          this.registerCollisionBox(mesh.position.x, wallY, mesh.position.z,
+            northSouth ? segment : connectedThickness, height, northSouth ? connectedThickness : segment);
         }
         const lintel = MeshBuilder.CreateBox('lintel-' + room.id + '-' + side, northSouth
           ? { width: gap, height: 0.72, depth: connectedThickness + 0.08 }
@@ -248,6 +427,7 @@ export class CryptVisuals {
     }
 
     this.createRoomDecor(root, room, x, z, floor);
+    this.createRoomModuleGeometry(root, room, x, z, trimMat);
     if (room.role === 'chest') this.createChest(root, room, x, z, trimMat, crystalA);
     if (room.role === 'shrine') this.createShrine(root, room, x, z, trimMat, crystalB);
     if (room.role === 'gate') this.createGate(root, room, x, z, floor);
@@ -331,6 +511,100 @@ export class CryptVisuals {
     }
   }
 
+  createRoomModuleGeometry(root, room, x, z, material) {
+    const obstacle = room.obstacle || 'none';
+    const bone = this.decorMaterials[4] || material;
+    const red = this.decorMaterials[2] || material;
+
+    const box = (name, px, pz, width, depth, height = 1.45, mat = material, collides = true) => {
+      const mesh = flat(MeshBuilder.CreateBox(name, { width, height, depth }, this.scene));
+      mesh.parent = root;
+      mesh.position.set(px, height * 0.5 - 0.02, pz);
+      mesh.material = mat;
+      mesh.isPickable = false;
+      mesh.checkCollisions = false;
+      if (collides) this.registerCollisionBox(px, mesh.position.y, pz, width, height, depth);
+      return mesh;
+    };
+    const pillar = (name, px, pz, diameter = 0.62, height = 2.7, mat = material, collides = true) => {
+      const mesh = flat(MeshBuilder.CreateCylinder(name, { height, diameter, tessellation: 7 }, this.scene));
+      mesh.parent = root;
+      mesh.position.set(px, height * 0.5 - 0.02, pz);
+      mesh.material = mat;
+      mesh.isPickable = false;
+      if (collides) this.registerCollisionBox(px, mesh.position.y, pz, diameter * 0.82, height, diameter * 0.82);
+      return mesh;
+    };
+
+    if (obstacle === 'pillars') {
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) pillar('combat-pillar', x + sx * 2.35, z + sz * 2.35, 0.68, 3.1);
+    } else if (obstacle === 'well' || obstacle === 'bell') {
+      const ring = MeshBuilder.CreateTorus('central-' + obstacle, {
+        diameter: obstacle === 'well' ? 2.45 : 1.75,
+        thickness: obstacle === 'well' ? 0.22 : 0.14,
+        tessellation: 14
+      }, this.scene);
+      ring.parent = root;
+      ring.position.set(x, obstacle === 'well' ? 0.2 : 1.55, z);
+      ring.rotation.x = Math.PI / 2;
+      ring.material = obstacle === 'well' ? bone : red;
+      ring.isPickable = false;
+      if (obstacle === 'well') this.registerCollisionBox(x, 0.55, z, 2.0, 1.1, 2.0);
+      if (obstacle === 'bell') {
+        const bell = flat(MeshBuilder.CreateCylinder('hanging-bell', { height: 1.05, diameterTop: 0.46, diameterBottom: 1.05, tessellation: 8 }, this.scene));
+        bell.parent = root; bell.position.set(x, 2.0, z); bell.material = red; bell.isPickable = false;
+      }
+    } else if (obstacle === 'ribs' || obstacle === 'gallery') {
+      const alongZ = obstacle === 'ribs';
+      for (const side of [-1, 1]) {
+        for (const offset of [-3.0, 0, 3.0]) {
+          const px = x + (alongZ ? side * 3.55 : offset);
+          const pz = z + (alongZ ? offset : side * 3.55);
+          pillar('side-rib', px, pz, 0.42, 3.5, bone, false);
+        }
+      }
+    } else if (obstacle === 'corners') {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) box('corner-block',x+sx*2.7,z+sz*2.7,1.35,1.35,1.7,material,true);
+    } else if (obstacle === 'split-n') {
+      box('split-n-left',x-2.35,z,2.6,0.48,2.1,material,true);
+      box('split-n-right',x+2.35,z,2.6,0.48,2.1,material,true);
+    } else if (obstacle === 'split-e') {
+      box('split-e-top',x,z-2.35,0.48,2.6,2.1,material,true);
+      box('split-e-bottom',x,z+2.35,0.48,2.6,2.1,material,true);
+    } else if (obstacle === 'ring') {
+      for (let i=0;i<6;i+=1) {
+        const a=i/6*Math.PI*2;
+        pillar('ossuary-ring-pillar-'+i,x+Math.cos(a)*2.65,z+Math.sin(a)*2.65,0.46,2.25,bone,true);
+      }
+    } else if (obstacle === 'cross') {
+      pillar('cross-vault-center',x,z,0.92,3.3,material,true);
+      for (const [dx,dz] of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]]) pillar('cross-vault-side',x+dx,z+dz,0.38,2.8,bone,false);
+    } else if (obstacle === 'lanes' || obstacle === 'lanes-e') {
+      const alongZ = obstacle === 'lanes';
+      for (const side of [-1,1]) {
+        const px=x+(alongZ?side*2.45:0), pz=z+(alongZ?0:side*2.45);
+        box('lane-divider',px,pz,alongZ?0.52:3.0,alongZ?3.0:0.52,1.35,material,true);
+      }
+    } else if (obstacle === 'cages') {
+      for (const side of [-1,1]) {
+        const cage=box('iron-cage',x+side*2.45,z,1.45,1.45,1.85,material,true);
+        cage.visibility=0.78;
+      }
+    } else if (obstacle === 'debris') {
+      box('fallen-slab-a',x-1.7,z+1.2,1.9,0.72,0.28,bone,true);
+      box('fallen-slab-b',x+1.45,z-1.5,1.35,0.8,0.22,material,true);
+    } else if (obstacle === 'hooks') {
+      for (const side of [-1,1]) for (const offset of [-2.4,0,2.4]) {
+        const hook=MeshBuilder.CreateTorus('ceiling-hook',{diameter:0.44,thickness:0.055,tessellation:8},this.scene);
+        hook.parent=root;hook.position.set(x+side*2.55,2.65,z+offset);hook.scaling.x=0.55;hook.material=bone;hook.isPickable=false;
+      }
+    } else if (obstacle === 'grid') {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) pillar('grave-grid-marker',x+sx*1.95,z+sz*1.95,0.5,1.55,bone,true);
+      const low=box('grave-grid-low',x,z,1.15,1.15,0.26,red,true);
+      low.position.y=0.11;
+    }
+  }
+
   createChest(root, room, x, z, dark, glow) {
     const node = new TransformNode('chest-node-' + room.id, this.scene);
     node.parent = root; node.position.set(x, 0, z);
@@ -381,9 +655,9 @@ export class CryptVisuals {
   setGateUnlocked(value) {
     if (!this.gate || this.gate.unlocked === Boolean(value)) return;
     this.gate.unlocked = Boolean(value);
-    const hue = value ? 82 : 340;
-    this.gate.glowMat.diffuseColor = hslColor(hue, 0.9, 0.54);
-    this.gate.glowMat.emissiveColor = hslColor(hue, 0.95, 0.5).scale(value ? 1.05 : 0.72);
+    const hue = value ? 24 : 350;
+    this.gate.glowMat.diffuseColor = hslColor(hue, value ? 0.72 : 0.88, value ? 0.58 : 0.46);
+    this.gate.glowMat.emissiveColor = hslColor(hue, 0.9, 0.48).scale(value ? 0.92 : 0.62);
   }
 
   setInteractiveUsed(target) {
@@ -400,8 +674,10 @@ export class CryptVisuals {
     root.position.copyFrom(position);
     const bodyMat = simpleMaterial(this.scene, 'monster-body-' + genome.seed, genome.hue, 0.72, genome.elite ? 0.48 : 0.38, genome.elite ? 0.22 : 0.04);
     const accentMat = simpleMaterial(this.scene, 'monster-accent-' + genome.seed, genome.accentHue, 0.9, 0.52, 0.66);
-    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, (genome.accentHue + 80) % 360, 0.95, 0.63, 1);
-    const materials = [bodyMat, accentMat, eyeMat];
+    const eyeMat = simpleMaterial(this.scene, 'monster-eye-' + genome.seed, 8, 0.95, 0.58, 1);
+    const armorMat = simpleMaterial(this.scene, 'monster-armor-' + genome.seed, 350, 0.16, 0.22, 0.02);
+    const boneMat = simpleMaterial(this.scene, 'monster-bone-' + genome.seed, 38, 0.16, 0.58, 0.01);
+    const materials = [bodyMat, accentMat, eyeMat, armorMat, boneMat];
     const parts = [];
     const bodyPart = (mesh, material = bodyMat) => { mesh.parent = root; mesh.material = material; mesh.isPickable = true; parts.push(mesh); return mesh; };
 
@@ -429,8 +705,6 @@ export class CryptVisuals {
       for (const side of [-1, 1]) {
         const leg = bodyPart(flat(MeshBuilder.CreateCylinder('brute-leg-' + side, { height: 0.9, diameterTop: 0.23, diameterBottom: 0.3, tessellation: 6 }, this.scene)));
         leg.position.set(side * 0.34, 0.43, 0); leg.material = bodyMat;
-        const arm = bodyPart(flat(MeshBuilder.CreateCylinder('brute-arm-' + side, { height: 1.05, diameterTop: 0.2, diameterBottom: 0.27, tessellation: 6 }, this.scene)), accentMat);
-        arm.position.set(side * 0.8, 1.12, 0); arm.rotation.z = side * 0.22;
       }
     } else if (genome.body === 'orb') {
       const orb = bodyPart(flat(MeshBuilder.CreateIcoSphere('orb-body', { radius: 0.78, subdivisions: 2 }, this.scene)));
@@ -488,6 +762,138 @@ export class CryptVisuals {
       headY = 1.08; frontZ = 0.76;
     }
 
+    const attachArm = (moduleId, side) => {
+      const armY = Math.max(0.72, headY - 0.58);
+      const shoulderX = side * 0.72;
+      const arm = bodyPart(flat(MeshBuilder.CreateCylinder('module-arm-' + side + '-' + moduleId, {
+        height: moduleId === 'crusher' ? 0.86 : 0.72,
+        diameterTop: moduleId === 'crusher' ? 0.24 : 0.14,
+        diameterBottom: moduleId === 'crusher' ? 0.34 : 0.2,
+        tessellation: 6
+      }, this.scene)), moduleId === 'caster' ? accentMat : bodyMat);
+      arm.position.set(shoulderX, armY, 0.1);
+      arm.rotation.z = side * 0.38;
+
+      if (moduleId === 'hammer') {
+        const haft=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-hammer-haft-'+side,{height:1.2,diameter:0.09,tessellation:5},this.scene)),boneMat);
+        haft.position.set(side*0.93,armY-0.18,0.43); haft.rotation.x=Math.PI/2; haft.rotation.z=side*0.12;
+        const head=bodyPart(flat(MeshBuilder.CreateBox('enemy-hammer-head-'+side,{width:0.62,height:0.3,depth:0.34},this.scene)),armorMat);
+        head.position.set(side*0.93,armY-0.18,0.98); head.metadata={hitRegion:'weapon'};
+      } else if (moduleId === 'claws') {
+        for(let i=0;i<3;i+=1){
+          const claw=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-claw-'+side+'-'+i,{height:0.5,diameterTop:0,diameterBottom:0.08,tessellation:5},this.scene)),boneMat);
+          claw.rotation.x=Math.PI/2; claw.position.set(side*(0.83+i*0.03),armY-0.14+(i-1)*0.07,0.55);
+        }
+      } else if (moduleId === 'spear') {
+        const spear=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-spear-'+side,{height:1.75,diameterTop:0.035,diameterBottom:0.08,tessellation:5},this.scene)),boneMat);
+        spear.rotation.x=Math.PI/2; spear.position.set(side*0.86,armY-0.05,0.82);
+        const tip=bodyPart(flat(MeshBuilder.CreateCylinder('enemy-spear-tip-'+side,{height:0.42,diameterTop:0,diameterBottom:0.15,tessellation:5},this.scene)),accentMat);
+        tip.rotation.x=Math.PI/2; tip.position.set(side*0.86,armY-0.05,1.78);
+      } else if (moduleId === 'shield') {
+        const shield=bodyPart(flat(MeshBuilder.CreateBox('enemy-arm-shield-'+side,{width:0.72,height:1.0,depth:0.12},this.scene)),armorMat);
+        shield.position.set(side*0.92,armY+0.03,0.42); shield.rotation.y=side*0.2; shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+      } else if (moduleId === 'caster') {
+        const growth=bodyPart(flat(MeshBuilder.CreateIcoSphere('enemy-caster-growth-'+side,{radius:0.28,subdivisions:1},this.scene)),eyeMat);
+        growth.position.set(side*0.9,armY+0.02,0.42); growth.scaling.set(0.7,1.25,0.8); growth.metadata={hitRegion:'caster'};
+        const ring=bodyPart(MeshBuilder.CreateTorus('enemy-caster-ring-'+side,{diameter:0.72,thickness:0.045,tessellation:10},this.scene),accentMat);
+        ring.position.set(side*0.9,armY+0.02,0.46); ring.rotation.x=Math.PI/2;
+      } else if (moduleId === 'hook') {
+        const hook=bodyPart(MeshBuilder.CreateTorus('enemy-hook-'+side,{diameter:0.72,thickness:0.09,tessellation:8},this.scene),boneMat);
+        hook.position.set(side*0.9,armY-0.08,0.58); hook.rotation.x=Math.PI/2; hook.scaling.x=0.62;
+      } else if (moduleId === 'crusher') {
+        const fist=bodyPart(flat(MeshBuilder.CreateIcoSphere('enemy-crusher-'+side,{radius:0.42,subdivisions:1},this.scene)),armorMat);
+        fist.position.set(side*0.92,armY-0.32,0.38); fist.scaling.set(1.08,0.9,1.15); fist.metadata={hitRegion:'weapon'};
+      } else {
+        const blade=bodyPart(flat(MeshBuilder.CreateBox('enemy-cleaver-'+side,{width:0.28,height:0.82,depth:0.1},this.scene)),boneMat);
+        blade.position.set(side*0.9,armY-0.18,0.58); blade.rotation.z=side*0.14; blade.metadata={hitRegion:'weapon'};
+      }
+    };
+
+    attachArm(genome.leftArm, -1);
+    attachArm(genome.rightArm, 1);
+
+    if (genome.defense === 'chest-plate' || genome.defense === 'bone-cage') {
+      const plate=bodyPart(flat(MeshBuilder.CreateBox('readable-chest-defense',{
+        width: genome.defense==='bone-cage'?1.0:1.12,
+        height: genome.defense==='bone-cage'?0.82:0.94,
+        depth:0.15
+      },this.scene)),genome.defense==='bone-cage'?boneMat:armorMat);
+      plate.position.set(0,Math.max(0.82,headY-0.72),0.58);
+      plate.metadata={hitRegion:'chest-armored'};
+      if(genome.defense==='bone-cage'){
+        for(const x of [-0.32,0,0.32]){
+          const rib=bodyPart(MeshBuilder.CreateTorus('bone-cage-rib-'+x,{diameter:0.66,thickness:0.045,tessellation:8},this.scene),boneMat);
+          rib.position.set(x,Math.max(0.82,headY-0.72),0.4); rib.rotation.y=Math.PI/2; rib.scaling.x=0.45;
+        }
+      }
+    }
+    if (genome.defense === 'leg-plates') {
+      for(const side of [-1,1]){
+        const greave=bodyPart(flat(MeshBuilder.CreateBox('leg-plate-'+side,{width:0.28,height:0.66,depth:0.22},this.scene)),armorMat);
+        greave.position.set(side*0.31,0.38,0.1); greave.metadata={hitRegion:'legs-armored'};
+      }
+    }
+    if (genome.defense === 'left-shield' || genome.defense === 'right-shield') {
+      const side=genome.defense==='left-shield'?-1:1;
+      const matchingArm=side<0?genome.leftArm:genome.rightArm;
+      if(matchingArm!=='shield'){
+        const shield=bodyPart(flat(MeshBuilder.CreateBox('defense-shield-'+side,{width:0.76,height:1.12,depth:0.12},this.scene)),armorMat);
+        shield.position.set(side*0.96,Math.max(0.84,headY-0.58),0.36); shield.rotation.y=side*0.18;
+        shield.metadata={hitRegion:side<0?'shield-left':'shield-right'};
+      }
+    }
+    if (genome.head === 'armored') {
+      const helm=bodyPart(flat(MeshBuilder.CreateIcoSphere('armored-head-shell',{radius:0.5,subdivisions:1},this.scene)),armorMat);
+      helm.position.set(0,headY,0.01); helm.scaling.set(1.08,0.82,0.86); helm.metadata={hitRegion:'head-armored'};
+    }
+
+    if (genome.locomotion === 'floating') {
+      const hover=bodyPart(MeshBuilder.CreateTorus('hover-ring',{diameter:1.25,thickness:0.065,tessellation:12},this.scene),accentMat);
+      hover.position.y=0.2; hover.rotation.x=Math.PI/2;
+    } else if (genome.locomotion === 'fast-biped' || genome.mutation === 'long-legs') {
+      for(const side of [-1,1]){
+        const leg=bodyPart(flat(MeshBuilder.CreateCylinder('long-runner-leg-'+side,{height:1.35,diameterTop:0.11,diameterBottom:0.18,tessellation:5},this.scene)),bodyMat);
+        leg.position.set(side*0.3,0.5,-0.08); leg.rotation.z=side*0.1;
+      }
+    } else if (genome.locomotion === 'hopper') {
+      for(const side of [-1,1]){
+        const leg=bodyPart(flat(MeshBuilder.CreateCylinder('hopper-leg-'+side,{height:1.05,diameterTop:0.12,diameterBottom:0.22,tessellation:5},this.scene)),boneMat);
+        leg.position.set(side*0.38,0.38,-0.15); leg.rotation.z=side*0.52;
+      }
+    }
+
+    if (genome.mutation === 'back-core') {
+      const core=bodyPart(flat(MeshBuilder.CreateIcoSphere('volatile-back-core',{radius:0.32,subdivisions:1},this.scene)),eyeMat);
+      core.position.set(0,Math.max(0.82,headY-0.62),-0.62); core.scaling.z=0.78; core.metadata={hitRegion:'weak'};
+      const ring=bodyPart(MeshBuilder.CreateTorus('volatile-back-ring',{diameter:0.82,thickness:0.045,tessellation:10},this.scene),accentMat);
+      ring.position.copyFrom(core.position); ring.rotation.x=Math.PI/2;
+    } else if (genome.mutation === 'spikes') {
+      for(let i=0;i<6;i+=1){
+        const angle=i/6*Math.PI*2;
+        const spike=bodyPart(flat(MeshBuilder.CreateCylinder('contact-spike-'+i,{height:0.48,diameterTop:0,diameterBottom:0.14,tessellation:5},this.scene)),boneMat);
+        spike.position.set(Math.cos(angle)*0.62,Math.max(0.68,headY-0.72),Math.sin(angle)*0.58);
+        spike.rotation.z=Math.cos(angle)*1.18; spike.rotation.x=-Math.sin(angle)*1.18;
+      }
+    } else if (genome.mutation === 'arc-growth') {
+      const growth=bodyPart(flat(MeshBuilder.CreateIcoSphere('arcane-growth',{radius:0.34,subdivisions:1},this.scene)),eyeMat);
+      growth.position.set(-0.42,headY+0.14,-0.24); growth.scaling.set(0.75,1.35,0.78); growth.metadata={hitRegion:'caster'};
+    } else if (genome.mutation === 'blood-sacs') {
+      for(const side of [-1,1]){
+        const sac=bodyPart(flat(MeshBuilder.CreateIcoSphere('blood-sac-'+side,{radius:0.24,subdivisions:1},this.scene)),accentMat);
+        sac.position.set(side*0.34,Math.max(0.7,headY-0.74),-0.58); sac.scaling.y=1.3; sac.metadata={hitRegion:'weak'};
+      }
+    } else if (genome.mutation === 'bone-plates') {
+      for(let i=0;i<3;i+=1){
+        const plate=bodyPart(flat(MeshBuilder.CreateBox('mutation-bone-plate-'+i,{width:0.62-i*0.08,height:0.18,depth:0.1},this.scene)),boneMat);
+        plate.position.set(0,Math.max(0.72,headY-0.9)+i*0.28,-0.54); plate.rotation.x=-0.18; plate.metadata={hitRegion:'armor'};
+      }
+    } else if (genome.mutation === 'split-jaw') {
+      for(const side of [-1,1]){
+        const jaw=bodyPart(flat(MeshBuilder.CreateBox('split-jaw-'+side,{width:0.34,height:0.13,depth:0.52},this.scene)),boneMat);
+        jaw.position.set(side*0.2,headY-0.18,frontZ+0.18); jaw.rotation.z=side*0.28;
+      }
+    }
+
     const eyeSpread = Math.min(0.34, 0.1 + genome.eyes * 0.035);
     for (let i = 0; i < genome.eyes; i += 1) {
       const eye = bodyPart(flat(MeshBuilder.CreateIcoSphere('eye-' + i, { radius: genome.eyes > 3 ? 0.075 : 0.095, subdivisions: 1 }, this.scene)), eyeMat);
@@ -513,7 +919,7 @@ export class CryptVisuals {
     }
 
     let aura = null;
-    if (genome.elite || genome.ability === 'blink' || genome.ability === 'burst') {
+    if (genome.elite || genome.mutation === 'arc-growth' || genome.rightArm === 'caster') {
       aura = bodyPart(MeshBuilder.CreateTorus('monster-aura', { diameter: 2.0, thickness: genome.elite ? 0.07 : 0.045, tessellation: 14 }, this.scene), accentMat);
       aura.position.y = 0.12; aura.rotation.x = Math.PI / 2;
     }
@@ -523,7 +929,7 @@ export class CryptVisuals {
   }
 
   tagEnemy(visual, enemy) {
-    for (const mesh of visual.parts) mesh.metadata = { enemy };
+    for (const mesh of visual.parts) mesh.metadata = { ...(mesh.metadata || {}), enemy };
   }
 
   disposeMonsterVisual(visual) {
@@ -543,7 +949,7 @@ export class CryptVisuals {
   createLootVisual(loot, position, seed) {
     const node = new TransformNode('loot-' + seed, this.scene);
     node.position.copyFrom(position);
-    const hue = loot.type === 'relic' ? 76 : (315 + seed % 80) % 360;
+    const hue = loot.type === 'relic' ? 22 : 350 + (seed % 18);
     const mat = simpleMaterial(this.scene, 'loot-mat-' + seed, hue, 0.9, 0.56, 0.95);
     let mesh;
     if (loot.type === 'relic') {
@@ -555,6 +961,120 @@ export class CryptVisuals {
     }
     mesh.parent = node; mesh.position.y = 0.42; mesh.material = mat; mesh.isPickable = false;
     return { node, material: mat, mesh };
+  }
+
+  createWeaponDropVisual(weapon, position) {
+    const node = new TransformNode('weapon-drop-' + weapon.seed, this.scene);
+    node.position.copyFrom(position);
+    const dark = simpleMaterial(this.scene, 'drop-weapon-dark-' + weapon.seed, 350, 0.28, 0.16);
+    const blood = simpleMaterial(this.scene, 'drop-weapon-red-' + weapon.seed, 2, 0.76, 0.34, 0.12);
+    const bone = simpleMaterial(this.scene, 'drop-weapon-bone-' + weapon.seed, 38, 0.18, 0.62);
+    const glow = simpleMaterial(this.scene, 'drop-weapon-glow-' + weapon.seed, 10, 0.86, 0.46, 0.62);
+    const materials=[dark,blood,bone,glow];
+    const add=(mesh,material=blood)=>{mesh.parent=node;mesh.material=material;mesh.isPickable=false;return mesh;};
+
+    const length=weapon.handleSpec?.visualLength||1;
+    const shaft=add(flat(MeshBuilder.CreateCylinder('drop-weapon-shaft',{
+      height:0.72*length,diameterTop:0.065,diameterBottom:0.09,tessellation:6
+    },this.scene)),dark);
+    shaft.position.y=0.42+length*0.11;
+    shaft.rotation.z=0.42;
+
+    const tipY=0.72+length*0.28;
+    const visual=weapon.headSpec?.visual||'crescent';
+    if(visual==='hammer'||visual==='slab'||visual==='bell'){
+      const head=add(flat(MeshBuilder.CreateBox('drop-heavy-head',{
+        width:visual==='slab'?0.5:0.4,height:visual==='bell'?0.38:0.25,depth:0.22
+      },this.scene)),visual==='bell'?bone:blood);
+      head.position.set(-0.12,tipY,0);head.rotation.z=0.42;
+    } else if(visual==='spear'||visual==='fork'){
+      const point=add(flat(MeshBuilder.CreateCylinder('drop-point',{
+        height:0.5,diameterTop:0,diameterBottom:0.16,tessellation:5
+      },this.scene)),bone);
+      point.position.set(-0.15,tipY+0.12,0);point.rotation.z=0.42;
+    } else if(visual==='fangs'){
+      for(const side of [-1,1]){
+        const fang=add(flat(MeshBuilder.CreateCylinder('drop-fang-'+side,{
+          height:0.33,diameterTop:0,diameterBottom:0.085,tessellation:5
+        },this.scene)),bone);
+        fang.position.set(-0.14+side*0.07,tipY+side*0.025,0);fang.rotation.z=0.42;
+      }
+    } else {
+      const blade=add(flat(MeshBuilder.CreateBox('drop-blade-'+visual,{
+        width:visual==='axe'?0.34:0.22,height:visual==='saw'?0.3:0.37,depth:0.075
+      },this.scene)),blood);
+      blade.position.set(-0.13,tipY,0);blade.rotation.z=visual==='hook'?-0.25:0.42;
+    }
+
+    if(weapon.secondary==='core'){
+      const core=add(flat(MeshBuilder.CreateIcoSphere('drop-secondary-core',{radius:0.1,subdivisions:1},this.scene)),glow);
+      core.position.set(0.02,0.51,0);
+    } else if(weapon.secondary==='ring'){
+      const ring=add(MeshBuilder.CreateTorus('drop-secondary-ring',{diameter:0.28,thickness:0.035,tessellation:10},this.scene),glow);
+      ring.position.set(0.02,0.5,0);ring.rotation.x=Math.PI/2;
+    } else if(weapon.secondary==='guard'){
+      const guard=add(flat(MeshBuilder.CreateBox('drop-secondary-guard',{width:0.34,height:0.065,depth:0.08},this.scene)),bone);
+      guard.position.set(0.02,0.5,0);guard.rotation.z=0.42;
+    } else if(weapon.secondary==='hook'){
+      const hook=add(MeshBuilder.CreateTorus('drop-secondary-hook',{diameter:0.25,thickness:0.04,tessellation:8},this.scene),blood);
+      hook.position.set(0.12,0.45,0);hook.scaling.x=0.55;
+    } else if(weapon.secondary==='counterweight'){
+      const weight=add(flat(MeshBuilder.CreateIcoSphere('drop-counterweight',{radius:0.11,subdivisions:1},this.scene)),dark);
+      weight.position.set(0.22,0.22,0);
+    }
+
+    const skillMarker=weapon.skill==='projectile'||weapon.skill==='pulse'||weapon.skill==='dash-cut';
+    if(skillMarker){
+      const marker=add(MeshBuilder.CreateTorus('drop-skill-marker',{diameter:0.38,thickness:0.028,tessellation:10},this.scene),glow);
+      marker.position.set(0,0.18,0);marker.rotation.x=Math.PI/2;
+    } else if(weapon.skill==='parry'||weapon.skill==='shield'){
+      const guard=add(flat(MeshBuilder.CreateBox('drop-skill-guard',{width:0.42,height:0.06,depth:0.08},this.scene)),bone);
+      guard.position.set(0.05,0.36,0);guard.rotation.z=0.42;
+    } else if(weapon.skill==='hook'){
+      const marker=add(MeshBuilder.CreateTorus('drop-skill-hook',{diameter:0.34,thickness:0.04,tessellation:8},this.scene),blood);
+      marker.position.set(0.15,0.28,0);marker.scaling.x=0.55;
+    } else if(weapon.skill==='execution'){
+      for(let i=0;i<3;i+=1){
+        const tooth=add(flat(MeshBuilder.CreateCylinder('drop-execution-tooth-'+i,{height:0.13,diameterTop:0,diameterBottom:0.05,tessellation:4},this.scene)),bone);
+        tooth.position.set((i-1)*0.07,0.24,0);
+      }
+    }
+
+    if(weapon.trait==='chain'||weapon.trait==='echo'){
+      const loops=weapon.trait==='echo'?2:3;
+      for(let i=0;i<loops;i+=1){
+        const loop=add(MeshBuilder.CreateTorus('drop-trait-loop-'+i,{diameter:0.13-i*0.018,thickness:0.017,tessellation:7},this.scene),weapon.trait==='echo'?glow:bone);
+        loop.position.set(0.16+i*0.035,0.34+i*0.045,0);
+      }
+    } else {
+      const trait=add(flat(MeshBuilder.CreateIcoSphere('drop-trait-marker',{radius:0.055,subdivisions:1},this.scene)),weapon.trait==='redline'||weapon.trait==='rupture'?blood:bone);
+      trait.position.set(0.16,0.34,0);
+    }
+
+    const ring=MeshBuilder.CreateTorus('drop-weapon-floor-ring',{diameter:0.78,thickness:0.028,tessellation:12},this.scene);
+    ring.parent=node;ring.position.y=0.08;ring.rotation.x=Math.PI/2;ring.material=glow;ring.isPickable=false;
+    return { node, materials, weapon, ring };
+  }
+
+  createHitEffect(position, direction, power = 1, weak = false) {
+    const count = Math.min(10, 4 + Math.round(power * 3));
+    const mat = simpleMaterial(this.scene, 'hit-fx-' + Math.random(), weak ? 18 : 354, 0.9, weak ? 0.5 : 0.32, weak ? 0.65 : 0.16);
+    const fx={ life:0.32, material:mat, shards:[] };
+    for(let i=0;i<count;i+=1){
+      const shard=flat(MeshBuilder.CreateBox('blood-shard',{width:0.035+Math.random()*0.035,height:0.035+Math.random()*0.05,depth:0.11+Math.random()*0.1},this.scene));
+      shard.position.copyFrom(position);
+      shard.material=mat; shard.isPickable=false;
+      const spread=new Vector3((Math.random()-0.5)*1.8,0.45+Math.random()*1.1,(Math.random()-0.5)*1.8);
+      const base=direction?.clone?.()||new Vector3(0,0,1);
+      base.normalize().scaleInPlace(1.2+power*0.7);
+      fx.shards.push({mesh:shard,velocity:base.add(spread)});
+    }
+    this.impactFx.push(fx);
+
+    const poolMat = simpleMaterial(this.scene,'blood-decal-'+Math.random(),350,0.72,0.16,0);
+    const pool=flat(MeshBuilder.CreateCylinder('blood-decal',{height:0.008,diameter:0.34+Math.min(0.5,power*0.16),tessellation:9},this.scene));
+    pool.position.set(position.x,0.012,position.z); pool.material=poolMat; pool.isPickable=false;
+    setTimeout(()=>{pool.dispose();poolMat.dispose();},4200);
   }
 
   createTracer(start, end, hue = 316) {
@@ -575,9 +1095,9 @@ export class CryptVisuals {
   }
 
   update(time, psyche = 0) {
-    const hue = (this.floorHue + time * 5.5 + psyche * 120) % 360;
-    this.lantern.diffuse = hslColor(hue, 0.74, 0.53);
-    this.hemi.diffuse = hslColor((hue + 250) % 360, 0.32, 0.58);
+    const hue = 354 + Math.sin(time * 0.34) * (3 + psyche * 5);
+    this.lantern.diffuse = hslColor(hue, 0.78, 0.48);
+    this.hemi.diffuse = hslColor(350, 0.3, 0.48);
     if (this.gate) {
       this.gate.ring.rotation.z = time * 0.22;
       this.gate.inner.rotation.y = -time * 0.7;
@@ -592,11 +1112,37 @@ export class CryptVisuals {
       else if (prop.kind === 'bob') prop.node.position.y = prop.baseY + Math.sin(time * prop.speed * 2 + prop.phase) * 0.035;
       else if (prop.kind === 'tilt') prop.node.rotation.z = Math.sin(time * prop.speed + prop.phase) * 0.045;
     });
-    this.weaponRecoil += (0 - this.weaponRecoil) * 0.2;
-    this.weaponKick += (this.weaponRecoil - this.weaponKick) * 0.45;
-    this.weaponRoot.position.z = 0.72 - this.weaponKick * 0.11;
-    this.weaponRoot.position.y = -0.31 - this.weaponKick * 0.025;
-    this.weaponRoot.rotation.z = -0.03 + Math.sin(time * 2.6) * 0.006;
+    for (const fx of this.impactFx) {
+      fx.life -= 1 / 60;
+      for (const shard of fx.shards) {
+        shard.mesh.position.addInPlace(shard.velocity.scale(1 / 60));
+        shard.velocity.y -= 5.8 / 60;
+        shard.mesh.rotation.x += 0.18;
+        shard.mesh.rotation.z += 0.12;
+      }
+      if (fx.life <= 0) {
+        fx.shards.forEach((shard)=>shard.mesh.dispose());
+        fx.material.dispose();
+      }
+    }
+    this.impactFx = this.impactFx.filter((fx)=>fx.life>0);
+
+    const pose=this.weaponPose||{};
+    const swing=Math.max(0,Math.min(1,pose.swing||0));
+    const charge=Math.max(0,Math.min(1,pose.charge||0));
+    const skill=Math.max(0,Math.min(1,pose.skill||0));
+    const swingCurve=Math.sin(swing*Math.PI);
+    const side=(pose.combo||0)%2===0?1:-1;
+    this.weaponRoot.position.x = 0.38 + side * swingCurve * 0.08 - charge * 0.03;
+    this.weaponRoot.position.y = -0.34 - swingCurve * 0.08 + charge * 0.08;
+    this.weaponRoot.position.z = 0.63 + charge * 0.13 - swingCurve * (pose.heavy ? 0.18 : 0.09);
+    this.weaponRoot.rotation.x = -0.16 - swingCurve * (pose.heavy ? 0.86 : 0.48) + charge * 0.28;
+    this.weaponRoot.rotation.y = 0.08 + side * swingCurve * (pose.heavy ? 0.52 : 0.82);
+    this.weaponRoot.rotation.z = -0.08 + side * swingCurve * 0.46 + Math.sin(time * 2.2) * 0.004;
+    if (skill > 0) {
+      this.weaponRoot.rotation.y += Math.sin(skill * Math.PI * 2) * 0.34;
+      this.weaponRoot.position.z -= Math.sin(skill * Math.PI) * 0.16;
+    }
   }
 
   dispose() {
