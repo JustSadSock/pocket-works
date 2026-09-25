@@ -183,7 +183,7 @@ export class CryptInput {
     const multiplier = fine ? 0.0022 : 0.0032;
     const result = {
       x: this.lookAccum.x * multiplier * this.sensitivity,
-      y: -this.lookAccum.y * multiplier * this.sensitivity
+      y: this.lookAccum.y * multiplier * this.sensitivity
     };
     this.lookAccum.x = 0;
     this.lookAccum.y = 0;
