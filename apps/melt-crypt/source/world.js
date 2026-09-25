@@ -495,9 +495,9 @@ export class CryptVisuals {
   setGateUnlocked(value) {
     if (!this.gate || this.gate.unlocked === Boolean(value)) return;
     this.gate.unlocked = Boolean(value);
-    const hue = value ? 82 : 340;
-    this.gate.glowMat.diffuseColor = hslColor(hue, 0.9, 0.54);
-    this.gate.glowMat.emissiveColor = hslColor(hue, 0.95, 0.5).scale(value ? 1.05 : 0.72);
+    const hue = value ? 24 : 350;
+    this.gate.glowMat.diffuseColor = hslColor(hue, value ? 0.72 : 0.88, value ? 0.58 : 0.46);
+    this.gate.glowMat.emissiveColor = hslColor(hue, 0.9, 0.48).scale(value ? 0.92 : 0.62);
   }
 
   setInteractiveUsed(target) {
@@ -802,6 +802,45 @@ export class CryptVisuals {
     return { node, material: mat, mesh };
   }
 
+  createWeaponDropVisual(weapon, position) {
+    const node = new TransformNode('weapon-drop-' + weapon.seed, this.scene);
+    node.position.copyFrom(position);
+    const dark = simpleMaterial(this.scene, 'drop-weapon-dark-' + weapon.seed, 350, 0.28, 0.16);
+    const glow = simpleMaterial(this.scene, 'drop-weapon-glow-' + weapon.seed, 6, 0.88, 0.46, 0.72);
+    const shaft = flat(MeshBuilder.CreateCylinder('drop-weapon-shaft', { height: 0.72, diameter: 0.08, tessellation: 5 }, this.scene));
+    shaft.parent=node; shaft.position.y=0.52; shaft.rotation.z=0.5; shaft.material=dark; shaft.isPickable=false;
+    const head = flat(MeshBuilder.CreateBox('drop-weapon-head', {
+      width: weapon.head === 'crusher' || weapon.head === 'slab' ? 0.42 : 0.24,
+      height: weapon.head === 'needle' ? 0.5 : 0.26,
+      depth: 0.1
+    }, this.scene));
+    head.parent=node; head.position.set(0.2,0.78,0); head.rotation.z=0.5; head.material=glow; head.isPickable=false;
+    const ring=MeshBuilder.CreateTorus('drop-weapon-ring',{diameter:0.72,thickness:0.035,tessellation:10},this.scene);
+    ring.parent=node; ring.position.y=0.22; ring.rotation.x=Math.PI/2; ring.material=glow; ring.isPickable=false;
+    return { node, materials:[dark,glow], weapon, ring, mesh:head };
+  }
+
+  createHitEffect(position, direction, power = 1, weak = false) {
+    const count = Math.min(10, 4 + Math.round(power * 3));
+    const mat = simpleMaterial(this.scene, 'hit-fx-' + Math.random(), weak ? 18 : 354, 0.9, weak ? 0.5 : 0.32, weak ? 0.65 : 0.16);
+    const fx={ life:0.32, material:mat, shards:[] };
+    for(let i=0;i<count;i+=1){
+      const shard=flat(MeshBuilder.CreateBox('blood-shard',{width:0.035+Math.random()*0.035,height:0.035+Math.random()*0.05,depth:0.11+Math.random()*0.1},this.scene));
+      shard.position.copyFrom(position);
+      shard.material=mat; shard.isPickable=false;
+      const spread=new Vector3((Math.random()-0.5)*1.8,0.45+Math.random()*1.1,(Math.random()-0.5)*1.8);
+      const base=direction?.clone?.()||new Vector3(0,0,1);
+      base.normalize().scaleInPlace(1.2+power*0.7);
+      fx.shards.push({mesh:shard,velocity:base.add(spread)});
+    }
+    this.impactFx.push(fx);
+
+    const poolMat = simpleMaterial(this.scene,'blood-decal-'+Math.random(),350,0.72,0.16,0);
+    const pool=flat(MeshBuilder.CreateCylinder('blood-decal',{height:0.008,diameter:0.34+Math.min(0.5,power*0.16),tessellation:9},this.scene));
+    pool.position.set(position.x,0.012,position.z); pool.material=poolMat; pool.isPickable=false;
+    setTimeout(()=>{pool.dispose();poolMat.dispose();},4200);
+  }
+
   createTracer(start, end, hue = 316) {
     const delta = end.subtract(start);
     const distance = delta.length();
@@ -820,9 +859,9 @@ export class CryptVisuals {
   }
 
   update(time, psyche = 0) {
-    const hue = (this.floorHue + time * 5.5 + psyche * 120) % 360;
-    this.lantern.diffuse = hslColor(hue, 0.74, 0.53);
-    this.hemi.diffuse = hslColor((hue + 250) % 360, 0.32, 0.58);
+    const hue = 354 + Math.sin(time * 0.34) * (3 + psyche * 5);
+    this.lantern.diffuse = hslColor(hue, 0.78, 0.48);
+    this.hemi.diffuse = hslColor(350, 0.3, 0.48);
     if (this.gate) {
       this.gate.ring.rotation.z = time * 0.22;
       this.gate.inner.rotation.y = -time * 0.7;
@@ -837,11 +876,37 @@ export class CryptVisuals {
       else if (prop.kind === 'bob') prop.node.position.y = prop.baseY + Math.sin(time * prop.speed * 2 + prop.phase) * 0.035;
       else if (prop.kind === 'tilt') prop.node.rotation.z = Math.sin(time * prop.speed + prop.phase) * 0.045;
     });
-    this.weaponRecoil += (0 - this.weaponRecoil) * 0.2;
-    this.weaponKick += (this.weaponRecoil - this.weaponKick) * 0.45;
-    this.weaponRoot.position.z = 0.72 - this.weaponKick * 0.11;
-    this.weaponRoot.position.y = -0.31 - this.weaponKick * 0.025;
-    this.weaponRoot.rotation.z = -0.03 + Math.sin(time * 2.6) * 0.006;
+    for (const fx of this.impactFx) {
+      fx.life -= 1 / 60;
+      for (const shard of fx.shards) {
+        shard.mesh.position.addInPlace(shard.velocity.scale(1 / 60));
+        shard.velocity.y -= 5.8 / 60;
+        shard.mesh.rotation.x += 0.18;
+        shard.mesh.rotation.z += 0.12;
+      }
+      if (fx.life <= 0) {
+        fx.shards.forEach((shard)=>shard.mesh.dispose());
+        fx.material.dispose();
+      }
+    }
+    this.impactFx = this.impactFx.filter((fx)=>fx.life>0);
+
+    const pose=this.weaponPose||{};
+    const swing=Math.max(0,Math.min(1,pose.swing||0));
+    const charge=Math.max(0,Math.min(1,pose.charge||0));
+    const skill=Math.max(0,Math.min(1,pose.skill||0));
+    const swingCurve=Math.sin(swing*Math.PI);
+    const side=(pose.combo||0)%2===0?1:-1;
+    this.weaponRoot.position.x = 0.38 + side * swingCurve * 0.08 - charge * 0.03;
+    this.weaponRoot.position.y = -0.34 - swingCurve * 0.08 + charge * 0.08;
+    this.weaponRoot.position.z = 0.63 + charge * 0.13 - swingCurve * (pose.heavy ? 0.18 : 0.09);
+    this.weaponRoot.rotation.x = -0.16 - swingCurve * (pose.heavy ? 0.86 : 0.48) + charge * 0.28;
+    this.weaponRoot.rotation.y = 0.08 + side * swingCurve * (pose.heavy ? 0.52 : 0.82);
+    this.weaponRoot.rotation.z = -0.08 + side * swingCurve * 0.46 + Math.sin(time * 2.2) * 0.004;
+    if (skill > 0) {
+      this.weaponRoot.rotation.y += Math.sin(skill * Math.PI * 2) * 0.34;
+      this.weaponRoot.position.z -= Math.sin(skill * Math.PI) * 0.16;
+    }
   }
 
   dispose() {
