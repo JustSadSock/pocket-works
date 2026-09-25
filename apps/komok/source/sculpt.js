@@ -272,7 +272,7 @@ class SoftAudio {
   }
   async unlock() {
     if (!soundEnabled) return null;
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.ctx) {\n      const AudioCtor = window.AudioContext || window.webkitAudioContext;\n      if (!AudioCtor) return null;\n      this.ctx = new AudioCtor();\n    }
     if (this.ctx.state === 'suspended') await this.ctx.resume();
     return this.ctx;
   }
@@ -336,7 +336,7 @@ let lastSculptAt = 0;
 
 function sculptAt(clientX, clientY, pressure = .5) {
   const now = performance.now();
-  if (now - lastSculptAt < 15) return false;
+  if (now - lastSculptAt < 26) return false;
   lastSculptAt = now;
   const hit = pointToLocal(clientX, clientY);
   if (!hit) return false;
