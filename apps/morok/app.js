@@ -15,7 +15,7 @@ const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
 const el={
-  app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),
+  app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),wallSeal:$('#wallSeal'),
   table:$('#table'),scale:$('#balanceScale'),scaleBeam:$('#scaleBeam'),enemyWeight:$('#enemyWeight'),playerWeight:$('#playerWeight'),scaleLabel:$('#scaleLabel'),
   ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),
   heritage:$('#heritageToken'),sacrifice:$('#sacrificeBtn'),items:$('#itemRack'),endTurn:$('#endTurnBtn'),deckBtn:$('#deckBtn'),deckCount:$('#deckCount'),hand:$('#hand'),
@@ -42,6 +42,11 @@ let eventStage=null;
 let confirmAction=null;
 let toastTimer=0;
 let resultCommitted=false;
+let motionTimer=0;
+let beatTimer=0;
+let trackedBattleSeed=null;
+let seenPlayerUnits=new Set();
+let seenEnemyUnits=new Set();
 
 function load(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function readRun(){
@@ -66,6 +71,35 @@ function setMode(next){
 }
 function toast(text){clearTimeout(toastTimer);el.toast.textContent=text;el.toast.classList.add('show');toastTimer=setTimeout(()=>el.toast.classList.remove('show'),1500)}
 function confirm(text,fn){el.confirmText.textContent=text;confirmAction=fn;el.confirm.hidden=false;feedback('warning')}
+function opponentAction(action='react'){
+  clearTimeout(motionTimer);el.opponent.dataset.action=action;
+  motionTimer=setTimeout(()=>{delete el.opponent.dataset.action},520);
+}
+function sceneBeat(kind='impact'){
+  clearTimeout(beatTimer);el.app.dataset.beat=kind;
+  beatTimer=setTimeout(()=>{delete el.app.dataset.beat},460);
+}
+function updateWallSeal(){
+  const available=!!run && run.depth>=3 && !run.secrets?.wallSeal && mode!=='menu' && mode!=='result';
+  el.wallSeal.classList.toggle('available',available);
+  el.wallSeal.classList.toggle('used',!!run?.secrets?.wallSeal);
+}
+function claimWallSeal(){
+  if(!run||run.depth<3||run.secrets?.wallSeal)return;
+  run.secrets={...(run.secrets||{}),wallSeal:true};
+  const gainId=['small-bell','red-thread','black-candle'].find(id=>!run.relics.includes(id));
+  if(gainId){
+    run.relics.push(gainId);
+    const relic=RELICS.find(x=>x.id===gainId);
+    toast(`Скрытый знак найден: ${relic.name}. ${relic.text}`);
+  }else{
+    if(run.items.length>=3)run.items.shift();
+    run.items.push('bell');
+    toast('Скрытый знак найден: добавлен Железный колокол.');
+  }
+  el.wallSeal.classList.add('revealed');feedback('reward');sceneBeat('reward');save();render();
+  setTimeout(()=>el.wallSeal.classList.remove('revealed'),900);
+}
 
 class MaterialAudio{
   constructor(){this.ctx=null;this.noiseBuffer=null;this.ambience=null;this.ambGain=null}
@@ -116,13 +150,13 @@ function feedback(kind='wood'){
 }
 
 const opponentLines={
-  menu:['Садись.','Карты уже перемешаны.','Не заставляй меня ждать.'],
-  route:['Выбирай дверь. Остальные я закрою.','Маршрут любит нерешительных. Они дольше живут.','Только одна из дверей врёт.'],
-  play:['Хм.','Эту я запомню.','Не самая плохая карта.','Продолжай.'],
-  sacrifice:['Кровь дешевле хорошей карты.','Теперь она принадлежит следующей.','Вот так уже интереснее.'],
-  damage:['Слышал? Это качнулись весы.','Ещё немного веса.','Стол считает всё.'],
-  hurt:['Моя чаша тяжелее.','Не отвлекайся на красивую колоду.','Ты оставил линию пустой.'],
-  mutation:['Ты испортил карту. Хорошо.','Теперь у неё есть история.','Второй шрам всегда меняет характер.']
+  menu:['Начинаем.','Колода готова.','Продолжим.'],
+  route:['Выбери следующий узел.','Выбери путь.','Следующий этап готов.'],
+  play:['Карта разыграна.','Принято.','Продолжай ход.'],
+  sacrifice:['Жертва принята. Наследие сохранено.','Получены Останки. Метка перейдёт следующему существу.'],
+  damage:['Весы сместились в твою сторону.','Ты получил преимущество на весах.'],
+  hurt:['Весы сместились в мою сторону.','Преимущество на весах у меня.'],
+  mutation:['Карта получила постоянную мутацию.','Новая метка сохранится до конца забега.']
 };
 function pick(arr,seed=Date.now()){if(!arr?.length)return'';return arr[Math.abs((seed|0))%arr.length]}
 function talk(text){el.speech.textContent=text}
@@ -135,8 +169,8 @@ function setOpponent(){
   else if(mode==='route')contextualTalk('route');
   else if(mode==='battle'&&boss)talk(boss.text);
   else if(mode==='battle')talk(run?.battle?.log?.[0]||'Твой ход.');
-  else if(mode==='event')talk('Я положил это перед тобой не просто так.');
-  else if(mode==='result')talk(run?.result==='won'?'Ты всё-таки дошёл.':'Карты останутся. Ты — нет.');
+  else if(mode==='event')talk('Выбери один вариант.');
+  else if(mode==='result')talk(run?.result==='won'?'Забег пройден.':'Забег завершён.');
 }
 
 function newRun(){
@@ -154,7 +188,7 @@ function finishProfile(){
 function abandon(){run=null;save();hidePanels();setMode('menu')}
 
 function render(){
-  renderMenu();setOpponent();
+  renderMenu();setOpponent();updateWallSeal();
   if(!run)return;
   el.deckCount.textContent=run.deck.length;
   if(mode==='route')renderRoute();
@@ -173,7 +207,7 @@ function renderRoute(){
   if(run.result){setMode('result');return}
   const stage=run.trail[run.depth]||[];
   el.routeDepth.textContent=`ГЛУБИНА ${roman(run.depth+1)} / ${roman(run.maxDepth)}`;
-  el.routeTitle.textContent=stage.length===1?(stage[0].type==='boss'?`${bossInfo(stage[0].bossId)?.name||'Кто-то'} ждёт за дверью.`:'Осталась одна дверь.'):'На камне вырезаны разные пути.';
+  el.routeTitle.textContent=stage.length===1?(stage[0].type==='boss'?`${bossInfo(stage[0].bossId)?.name||'Босс'} · бой с боссом`:'Доступен один следующий узел.'):'Выбери следующий узел.';
   el.routeRelics.textContent=`${run.relics.length} знаков`;el.routeItems.textContent=`${run.items.length}/3 предметов`;el.routeChoices.replaceChildren();
   stage.forEach(node=>{
     const b=document.createElement('button');b.type='button';b.className='route-node';
@@ -201,13 +235,17 @@ function renderIntent(b){
   }
 }
 function renderRows(b){
-  renderRow(el.enemy,b.enemy,'enemy',b);renderRow(el.player,b.player,'player',b);
+  if(trackedBattleSeed!==b.seed){trackedBattleSeed=b.seed;seenPlayerUnits=new Set();seenEnemyUnits=new Set()}
+  const nextEnemy=new Set(b.enemy.filter(Boolean).map(u=>u.instanceId));
+  const nextPlayer=new Set(b.player.filter(Boolean).map(u=>u.instanceId));
+  renderRow(el.enemy,b.enemy,'enemy',b,seenEnemyUnits);renderRow(el.player,b.player,'player',b,seenPlayerUnits);
+  seenEnemyUnits=nextEnemy;seenPlayerUnits=nextPlayer;
 }
-function renderRow(root,units,side,b){
+function renderRow(root,units,side,b,seen){
   root.replaceChildren();for(let lane=0;lane<4;lane++){
     const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.side=side;btn.dataset.lane=lane;
     if(lane===b.lockedLane)btn.classList.add('locked');const u=units[lane];
-    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
+    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
     btn.addEventListener('click',()=>laneTap(side,lane,btn));root.append(btn);
   }
 }
@@ -233,7 +271,7 @@ function attachCardInput(node,card,onTap){
 function selectHandCard(card){
   const b=run.battle;
   if(card.type==='rite'&&['milk','whisper','lash'].includes(card.rite)){
-    const r=playCard(run,b,card.instanceId,null,0);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(card.rite==='lash'?'impact':'paper');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Первая печать сломана. Вторая будет хуже.')}return;
+    const r=playCard(run,b,card.instanceId,null,0);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(card.rite==='lash'?'impact':'paper');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');opponentAction('boss');sceneBeat('boss')}return;
   }
   selectedCard=selectedCard===card.instanceId?null:card.instanceId;selectedUnit=null;selectedItem=null;heritageChoice=null;feedback('card');renderBattle();highlightTargets();
 }
@@ -260,7 +298,7 @@ function laneTap(side,lane,node){
     else if(card.rite==='salt'&&side==='enemy')target=lane;
     else{bad(node,'Эта карта требует другую цель.');return}
     const r=playCard(run,b,card.instanceId,playLane,target);if(!r.ok){bad(node,r.reason);return}
-    feedback(card.type==='creature'?'wood':'impact');contextualTalk(card.mutationLevel?'mutation':'play');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase)talk('Первая печать сломана. Он не закончил.');return;
+    feedback(card.type==='creature'?'wood':'impact');contextualTalk(card.mutationLevel?'mutation':'play');sceneBeat(card.type==='creature'?'reward':'impact');if(card.mutationLevel)opponentAction('react');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');opponentAction('boss');sceneBeat('boss')}return;
   }
   if(side==='player'&&b.player[lane]){
     selectedUnit=selectedUnit===lane?null:lane;heritageChoice=selectedUnit!==null?b.player[lane].sigils[0]||null:null;feedback('bone');renderBattle();
@@ -276,7 +314,7 @@ function cycleHeritage(){
 }
 function doSacrifice(){
   if(selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
-  selectedUnit=null;heritageChoice=null;feedback('knife');contextualTalk('sacrifice');save();renderBattle();
+  selectedUnit=null;heritageChoice=null;feedback('knife');contextualTalk('sacrifice');opponentAction('react');sceneBeat('impact');save();renderBattle();
 }
 function renderItems(b){
   el.items.replaceChildren();run.items.slice(0,3).forEach(id=>{
@@ -288,15 +326,19 @@ function renderItems(b){
   });
 }
 function doEndTurn(){
-  const b=run?.battle;if(!b)return;selectedCard=null;selectedItem=null;selectedUnit=null;const before=b.balance,r=endTurn(run,b);feedback('bell');
-  if(b.balance!==before){feedback('impact');contextualTalk(b.balance>before?'damage':'hurt')}save();renderBattle();
-  if(r.ended)resolveBattleEnd(r);else if(r.phase){talk(`${bossInfo(b.bossId)?.name||'Он'} перевернул вторую маску.`);feedback('warning')}
+  const b=run?.battle;if(!b)return;selectedCard=null;selectedItem=null;selectedUnit=null;
+  opponentAction(b.bossId?'boss':'deal');
+  const before=b.balance,r=endTurn(run,b);feedback('bell');
+  if(b.balance!==before){feedback('impact');contextualTalk(b.balance>before?'damage':'hurt');sceneBeat('impact')}
+  save();renderBattle();
+  if(r.ended)resolveBattleEnd(r);
+  else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');feedback('warning');opponentAction('boss');sceneBeat('boss')}
 }
 function resolveBattleEnd(r){
   if(r.winner==='player'){
-    talk('Хватит. Забирай то, что осталось.');setTimeout(()=>{afterBattleVictory(run);save();setMode(run.result?'result':'event')},430);
+    talk('Победа. Выбери награду.');setTimeout(()=>{afterBattleVictory(run);save();setMode(run.result?'result':'event')},430);
   }else{
-    feedback('loss');talk('Весы решили.');setTimeout(()=>setMode('result'),430);
+    feedback('loss');talk('Поражение.');setTimeout(()=>setMode('result'),430);
   }
 }
 
@@ -306,12 +348,12 @@ function renderEvent(){
   if(p.type==='run-win'){run.result='won';save();setMode('result');return}
   el.eventChoices.replaceChildren();el.eventSkip.hidden=true;
   const meta={
-    'card-choice':['КАРТЫ','Выбери ту, которую готов испортить.','Остальные уйдут обратно под стол.'],
-    'relic-choice':['ЗНАК','Один знак останется до конца сдачи.','Он меняет правило, а не цифру.'],
-    'item-choice':['ШКАФ','Возьми предмет.','В руке помещается только три.'],
-    hearth:['ЖАРОВНЯ','Оставь новый шрам.','Второй шрам мутирует карту.'],
-    altar:['АЛТАРЬ','Одна карта отдаст метку другой.','Жертва исчезнет навсегда.']
-  }[p.type]||['НА СТОЛЕ',p.title||'Что-то лежит перед тобой.',''];
+    'card-choice':['КАРТЫ','Выбери одну карту.','Выбранная карта будет добавлена в колоду.'],
+    'relic-choice':['ЗНАК','Выбери один постоянный знак.','Его эффект действует до конца забега.'],
+    'item-choice':['ПРЕДМЕТ','Выбери один расходуемый предмет.','Одновременно можно нести до трёх предметов.'],
+    hearth:['УЛУЧШЕНИЕ','Усиль одну карту.','Второе улучшение добавит случайную постоянную метку.'],
+    altar:['ПЕРЕНОС МЕТКИ','Перенеси метку между картами.','Карта-донор будет удалена из колоды.']
+  }[p.type]||['СОБЫТИЕ',p.title||'Выбери действие.',''];
   el.eventKicker.textContent=meta[0];el.eventTitle.textContent=p.title||meta[1];el.eventHint.textContent=meta[2]||meta[1];
   if(p.type==='card-choice')renderCardReward(p);
   if(p.type==='relic-choice')renderRelicReward(p);
@@ -334,18 +376,18 @@ function renderHearth(){
   run.deck.filter(c=>c.type==='creature').forEach(card=>{const w=choiceWrap(),c=createCard(card,false),b=document.createElement('button');b.type='button';b.className='choice-button';b.textContent=card.upgrades?'ЕЩЁ ОДИН ШРАМ':'ОСТАВИТЬ ШРАМ';b.addEventListener('click',()=>{eventStage={type:'upgrade',card};renderEvent()});attachCardInput(c,card,()=>{eventStage={type:'upgrade',card};renderEvent()});w.append(c,b);el.eventChoices.append(w)})
 }
 function renderUpgradeModes(card){
-  el.eventTitle.textContent=card.name;el.eventHint.textContent=card.upgrades>=1?'Второй шрам вызовет мутацию. Выбери, что усилить.':'Клык усиливает атаку. Кожа — живучесть.';
+  el.eventTitle.textContent=card.name;el.eventHint.textContent=card.upgrades>=1?'Второе улучшение добавит случайную постоянную метку. Выбери параметр.':'Клык: +1 атака. Кожа: +2 здоровья.';
   [['fang','КЛЫК','+1 атака'],['hide','КОЖА','+2 здоровья']].forEach(([mode,name,text])=>{const w=choiceWrap(),o=document.createElement('div'),b=document.createElement('button');o.className='choice-object';o.innerHTML=`<span class="big-mark">${mode==='fang'?'⌁':'□'}</span><b>${name}</b><p>${text}${card.upgrades>=1?' · + случайная метка':''}</p>`;b.className='choice-button';b.textContent='ПРИЖЕЧЬ';b.addEventListener('click',()=>{hearthUpgrade(run,card.instanceId,mode);feedback('knife');if(card.mutationLevel)contextualTalk('mutation');save();setMode('route')});w.append(o,b);el.eventChoices.append(w)})
 }
 function renderAltar(p){
   const donor=p.donor?run.deck.find(c=>c.instanceId===p.donor):null;
-  el.eventHint.textContent=donor?`${donor.name} отдаст «${sigilInfo(donor.sigils[0]).name}». Выбери получателя.`:'Первая метка выбранной карты станет чужой. Сама карта исчезнет.';
+  el.eventHint.textContent=donor?`${donor.name}: перенос «${sigilInfo(donor.sigils[0]).name}». Выбери карту-получателя.`:'Выбери карту-донора. Её первая метка перейдёт другой карте, а донор будет удалён.';
   run.deck.filter(c=>c.type==='creature'&&(!donor||c.instanceId!==donor.instanceId)).forEach(card=>{const w=choiceWrap(),c=createCard(card,false),b=document.createElement('button');b.type='button';b.className='choice-button';b.textContent=donor?'ПРИНЯТЬ МЕТКУ':'ОТДАТЬ КАРТУ';const act=()=>{const r=altarSelect(run,card.instanceId);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(donor?'reward':'knife');save();if(r.stage==='receiver')renderEvent();else setMode('route')};b.addEventListener('click',act);attachCardInput(c,card,act);w.append(c,b);el.eventChoices.append(w)})
 }
 
 function renderResult(){
-  finishProfile();const won=run.result==='won';el.resultKicker.textContent=won?'ПОСЛЕДНЯЯ ПЕЧАТЬ СЛОМАНА':'ВЕСЫ ОПУСТИЛИСЬ';el.resultTitle.textContent=won?'Ты пережил стол.':'Сдача окончена.';
-  el.resultText.textContent=won?'Приор убрал маску, но под ней ничего не было. Следующая сдача соберёт другие двери, предметы и мутации.':'Колода останется в памяти стола. Следующая сдача начнётся чистой, но ты уже знаешь, где правила можно сломать.';
+  finishProfile();const won=run.result==='won';el.resultKicker.textContent=won?'ЗАБЕГ ПРОЙДЕН':'ПОРАЖЕНИЕ';el.resultTitle.textContent=won?'Все девять этапов пройдены.':'Забег завершён.';
+  el.resultText.textContent=won?'Следующий забег создаст новый маршрут, награды и сочетания карт.':'Начни новый забег: маршрут, награды и порядок карт будут собраны заново.';
   el.resultDepth.textContent=Math.min(run.depth+1,run.maxDepth);el.resultKills.textContent=run.stats.kills;el.resultSacrifices.textContent=run.stats.sacrifices;
 }
 
@@ -377,7 +419,16 @@ function artSvg(card,enemy=false){
   else if(archetype==='small')body=`<polygon points="24,30 30,22 47,23 54,29 48,36 30,36" fill="${pal[1]}"/><polygon points="47,23 52,9 56,10 54,25" fill="${pal[2]}"/><polygon points="42,23 44,11 48,10 48,24" fill="${pal[2]}"/><rect x="51" y="26" width="2" height="2" fill="#d59054"/><rect x="27" y="35" width="4" height="7" fill="${pal[1]}"/><rect x="44" y="35" width="4" height="7" fill="${pal[1]}"/>`;
   else if(archetype==='figure')body=`<polygon points="34,11 46,11 50,21 47,28 55,43 25,43 33,28 30,21" fill="${pal[1]}"/><rect x="35" y="15" width="3" height="2" fill="#d59054"/><rect x="42" y="15" width="3" height="2" fill="#d59054"/><path d="M28 31 L15 38 M52 31 L66 38" stroke="${pal[2]}" stroke-width="3"/><rect x="39" y="20" width="2" height="8" fill="${pal[2]}"/>`;
   else body=`<polygon points="14,29 22,20 51,20 61,27 55,36 24,36" fill="${pal[1]}"/><polygon points="51,20 64,18 71,25 63,31 53,28" fill="${pal[1]}"/><polygon points="62,18 64,10 68,18" fill="${pal[2]}"/><polygon points="56,19 58,11 62,19" fill="${pal[2]}"/><polygon points="17,27 7,20 12,33" fill="${pal[2]}"/><rect x="25" y="35" width="5" height="9" fill="${pal[1]}"/><rect x="48" y="35" width="5" height="9" fill="${pal[1]}"/><rect x="65" y="22" width="2" height="2" fill="#d59054"/>`;
-  return `<svg viewBox="0 0 80 52" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" aria-hidden="true"><rect width="80" height="52" fill="${pal[0]}"/>${dots}${ground}${body}${enemy?'<rect x="2" y="2" width="76" height="48" fill="none" stroke="#8b3a2b" stroke-width="2"/>':''}</svg>`;
+  const traits=(card.sigils||[]);
+  let traitArt='';
+  if(traits.includes('thorn'))traitArt+='<path d="M8 36 l4 -7 4 7 4 -7 4 7 M56 36 l4 -7 4 7 4 -7 4 7" fill="none" stroke="#b28a5d" stroke-width="2"/>';
+  if(traits.includes('twin'))traitArt+='<rect x="31" y="18" width="3" height="3" fill="#d59054"/><rect x="45" y="18" width="3" height="3" fill="#d59054"/>';
+  if(traits.includes('ward'))traitArt+='<path d="M6 6 H74 V46 H6 Z" fill="none" stroke="#9aab9f" stroke-width="2" stroke-dasharray="5 3"/>';
+  if(traits.includes('bleed'))traitArt+='<path d="M18 9 L58 42 M28 7 L67 36" stroke="#8f3025" stroke-width="2"/>';
+  if(traits.includes('chain'))traitArt+='<path d="M11 14 h7 v5 h-7z M18 18 h7 v5 h-7z M55 29 h7 v5 h-7z M62 33 h7 v5 h-7z" fill="none" stroke="#92836c" stroke-width="2"/>';
+  if(traits.includes('parasite'))traitArt+='<circle cx="23" cy="17" r="3" fill="#657055"/><circle cx="57" cy="31" r="2" fill="#657055"/><circle cx="30" cy="35" r="2" fill="#657055"/>';
+  const mutation=(card.mutationLevel||0)>0?'<path d="M15 12 L28 23 L19 34 M62 10 L51 21 L64 31" fill="none" stroke="#8d2f24" stroke-width="2"/><rect x="38" y="10" width="4" height="4" fill="#b14b34"/>':'';
+  return `<svg viewBox="0 0 80 52" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" aria-hidden="true"><rect width="80" height="52" fill="${pal[0]}"/>${dots}${ground}${body}${traitArt}${mutation}${enemy?'<rect x="2" y="2" width="76" height="48" fill="none" stroke="#8b3a2b" stroke-width="2"/>':''}</svg>`;
 }
 function riteArt(id,p){
   if(id==='salt')return`<path d="M18 32 L40 11 L62 32 L40 41Z" fill="none" stroke="${p[2]}" stroke-width="3"/><rect x="38" y="17" width="4" height="17" fill="${p[1]}"/><rect x="31" y="24" width="18" height="4" fill="${p[1]}"/>`;
@@ -409,8 +460,9 @@ el.settingsBtn.addEventListener('click',()=>{el.settings.hidden=false;feedback('
 el.rules.addEventListener('click',openRules);el.rulesFromSettings.addEventListener('click',openRules);el.rulesClose.addEventListener('click',()=>{el.rulesPanel.hidden=true;feedback('paper')});
 el.sound.addEventListener('click',()=>{prefs.sound=!prefs.sound;save();audio.setEnabled(prefs.sound);if(prefs.sound)void audio.ensure().then(()=>audio.play('bell'));renderMenu()});
 el.haptic.addEventListener('click',()=>{prefs.haptic=!prefs.haptic;save();if(prefs.haptic)haptic(12);renderMenu()});
-el.abandon.addEventListener('click',()=>confirm('Бросить текущую сдачу? Колода и все мутации исчезнут.',abandon));
+el.abandon.addEventListener('click',()=>confirm('Завершить текущий забег? Текущая колода и её изменения будут потеряны.',abandon));
 el.confirmCancel.addEventListener('click',()=>{el.confirm.hidden=true;confirmAction=null});el.confirmOk.addEventListener('click',()=>{const fn=confirmAction;el.confirm.hidden=true;confirmAction=null;fn?.()});
+el.wallSeal.addEventListener('click',claimWallSeal);
 window.addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 
 renderMenu();setMode('menu');

@@ -1,11 +1,11 @@
 const CACHE_PREFIX='morok-';
-const CACHE_NAME='morok-v2.0.0';
-const APP_VERSION='2.0.0';
+const CACHE_NAME='morok-v2.1.0';
+const APP_VERSION='2.1.0';
 const RELEASE_DATE='2026-09-26';
 const RELEASE_NOTES=[
-  'Полностью пересобрана подача: одна физическая пиксельная 2.5D-сцена за ритуальным столом вместо набора экранов и панелей.',
-  'Бой читается через чашу весов, кости, жаровню, предметы и противника напротив.',
-  'Добавлены три босса, расходуемые предметы, более грязные мутации карт и материальный Web Audio.'
+  'Камера поднята, а карты и подписи довёрнуты к игроку для нормального чтения на телефоне.',
+  'Добавлены физические анимации рук, ударов по столу и новых карт; мутации сильнее меняют внешний вид.',
+  'Интерфейс, карточные описания и реплики переписаны в коротком и серьёзном тоне.'
 ];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./game-core.js','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)))});

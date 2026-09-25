@@ -56,7 +56,7 @@ test('second hearth scar mutates a creature with a new sigil',()=>{
   const run=createRun(18,createProfile()),card=run.deck.find(c=>c.type==='creature'),baseSigils=card.sigils.length;
   run.pending={type:'hearth'};assert.equal(hearthUpgrade(run,card.instanceId,'fang').ok,true);
   run.pending={type:'hearth'};assert.equal(hearthUpgrade(run,card.instanceId,'hide').ok,true);
-  assert.equal(card.upgrades,2);assert.equal(card.mutationLevel,1);assert.ok(card.sigils.length>baseSigils);assert.match(card.name,/Шрамированный/);
+  assert.equal(card.upgrades,2);assert.equal(card.mutationLevel,1);assert.ok(card.sigils.length>baseSigils);assert.match(card.name,/Мутировавший/);
 });
 
 test('altar permanently transfers a sigil and removes donor',()=>{
@@ -84,5 +84,5 @@ test('ordinary card reward advances one depth and choices are unique',()=>{
 
 test('v1 saves migrate into v2 without keeping stale battle state',()=>{
   const old=createRun(88,createProfile());old.version=1;delete old.items;old.battle={stale:true};old.pending={type:'battle'};
-  const migrated=hydrateRun(JSON.stringify(old));assert.equal(migrated.version,2);assert.ok(Array.isArray(migrated.items));assert.equal(migrated.battle,null);assert.equal(migrated.pending,null);
+  const migrated=hydrateRun(JSON.stringify(old));assert.equal(migrated.version,2);assert.ok(Array.isArray(migrated.items));assert.equal(migrated.battle,null);assert.equal(migrated.pending,null);assert.deepEqual(migrated.secrets,{});
 });

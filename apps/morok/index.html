@@ -24,6 +24,7 @@
     <div class="wall-candle candle-a"><i></i></div><div class="wall-candle candle-b"><i></i></div>
     <div class="red-slit"></div>
     <div class="dust"></div>
+    <button class="wall-seal" id="wallSeal" type="button" aria-label="Знак на стене"><i></i></button>
   </div>
 
   <a class="pw-exit" href="../../" data-app-control aria-label="Вернуться в Pocket Works">PW</a>
@@ -85,12 +86,12 @@
       <div class="title-plaque">
         <span>RITUS · II</span>
         <h1>МОРОК</h1>
-        <p>Карты помнят то, что ты им сделал.</p>
+        <p>Собирай колоду, меняй карты и пройди девять этапов.</p>
       </div>
       <div class="menu-slips">
         <button id="continueBtn" type="button" hidden><b>ПРОДОЛЖИТЬ</b><small id="continueMeta"></small></button>
         <button id="newRunBtn" type="button"><b>НОВАЯ СДАЧА</b><small>другая колода · другой путь</small></button>
-        <button id="rulesBtn" type="button"><b>ПРАВИЛА</b><small>прочитать выцарапанное</small></button>
+        <button id="rulesBtn" type="button"><b>ПРАВИЛА</b><small>бой, ресурсы и улучшения</small></button>
       </div>
     </section>
 
@@ -140,12 +141,12 @@
   </section>
 
   <section class="rules-panel" id="rulesPanel" hidden>
-    <header><b>ВЫЦАРАПАНО НА ОБОРОТЕ СТОЛА</b><button id="rulesClose" type="button">×</button></header>
+    <header><b>ПРАВИЛА</b><button id="rulesClose" type="button">×</button></header>
     <ol>
       <li><b>Весы.</b><span>Прямой урон кладёт вес на твою чашу. Дойди до шести раньше противника.</span></li>
       <li><b>Жертва.</b><span>Свою карту можно разрезать раз за ход: получишь кости и унаследуешь одну её метку следующей картой.</span></li>
       <li><b>Намерения.</b><span>Маленькие карты за руками противника показывают, что появится после твоего хода.</span></li>
-      <li><b>Ломай правила.</b><span>Алтарь переносит метки навсегда, второй шрам у жаровни вызывает мутацию, предметы исчезают после использования.</span></li>
+      <li><b>Улучшения.</b><span>Алтарь переносит метку навсегда и удаляет карту-донора. Второе улучшение у жаровни добавляет случайную метку. Предметы расходуются после применения.</span></li>
       <li><b>Боссы.</b><span>Смотритель запирает линии, Звонарь ускоряет стол, Приор меняет правила между фазами.</span></li>
     </ol>
   </section>
@@ -157,7 +158,7 @@
   <div class="portrait-only"><b>МОРОК ИГРАЕТСЯ ВЕРТИКАЛЬНО</b><span>Поверни телефон.</span></div>
 </main>
 
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="2.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="2.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
