@@ -1,6 +1,7 @@
 export const VERSION='2.2.0';
 export const LANES=4;
-export const BALANCE_LIMIT=6;
+export const SEAL_LIMIT=6;
+export const BALANCE_LIMIT=SEAL_LIMIT;
 
 export const SIGILS={
   pack:{name:'Стая',mark:'▲',text:'+1 атака за каждого соседнего союзника.'},
@@ -153,7 +154,7 @@ function planIntent(battle,count=1){
 export function createBattle(run,bossId=null,elite=false){
   const rng=rngFrom(run.seed^hashSeed(`battle:${run.depth}:${bossId||'none'}:${elite}`)),relics=new Set(run.relics);
   const battle={
-    seed:hashSeed(`${run.seed}:${run.depth}:${Date.now()}`),depth:run.depth,bossId,elite,round:1,balance:0,balanceLimit:BALANCE_LIMIT,
+    seed:hashSeed(`${run.seed}:${run.depth}:${Date.now()}`),depth:run.depth,bossId,elite,round:1,seals:{player:0,enemy:0},sealLimit:SEAL_LIMIT,
     phase:1,phasesTotal:bossId?(BOSSES[bossId]?.phases||1):1,lockedLane:null,
     ember:3+(relics.has('black-candle')?1:0),maxEmber:3,remains:0,player:Array(LANES).fill(null),enemy:Array(LANES).fill(null),intent:[],
     hand:[],drawPile:shuffle(run.deck.map(c=>({...c,sigils:[...c.sigils]})),rng),discard:[],heritage:null,heritageCharges:1,
@@ -187,7 +188,7 @@ function resolveRite(run,battle,card,targetLane){
   if(card.rite==='bark'){const u=battle.player[targetLane];u.maxHp+=3;u.hp+=3;if(!u.sigils.includes('ward'))u.sigils.push('ward');u.wardUsed=false}
   else if(card.rite==='needle'){const u=battle.player[targetLane];u.atk+=1;u.maxHp+=1;u.hp+=1;drawCards(battle,1)}
   else if(card.rite==='salt')damageUnit(run,battle,'enemy',targetLane,2,null);
-  else if(card.rite==='milk')battle.balance=Math.min(BALANCE_LIMIT,battle.balance+2);
+  else if(card.rite==='milk'){battle.seals.player=Math.min(SEAL_LIMIT,battle.seals.player+2);recordBattleEvent(battle,{type:'seal',side:'player',amount:2,before:battle.seals.player-2,after:battle.seals.player,source:'rite'})}
   else if(card.rite==='molt'){killUnit(run,battle,'player',targetLane,'rite');battle.remains+=2;drawCards(battle,2)}
   else if(card.rite==='whisper')drawCards(battle,3);
   else if(card.rite==='nails'){const u=battle.player[targetLane];u.maxHp+=2;u.hp+=2;if(!u.sigils.includes('thorn'))u.sigils.push('thorn')}
@@ -198,6 +199,7 @@ export function sacrificeUnit(run,battle,lane,sigil=null){
   const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick}
 }
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
+function recordBattleEvent(battle,event){(battle.events||(battle.events=[])).push(event)}
 function damageUnit(run,battle,side,lane,amount,attacker,source='attack'){
   const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;
   if(unit.sigils.includes('ward')&&!unit.wardUsed){
@@ -258,9 +260,9 @@ function spawnIntent(battle){
 }
 function directDamage(run,battle,side,amount,attacker=null,lane=null){
   let dealt=amount;if(side==='player'&&new Set(run.relics).has('wet-teeth')&&!battle.firstDirectUsed){dealt++;battle.firstDirectUsed=true}
-  const before=battle.balance;battle.balance+=side==='player'?dealt:-dealt;
-  recordBattleEvent(battle,{type:'pressure',side,lane,attackerId:attacker?.instanceId||null,name:attacker?.name||null,amount:dealt,before,after:battle.balance});
-  battle.log.unshift(`Давление: ${side==='player'?'+':'-'}${dealt}.`)
+  const before=battle.seals[side];battle.seals[side]=Math.min(SEAL_LIMIT,before+dealt);
+  recordBattleEvent(battle,{type:'seal',side,lane,attackerId:attacker?.instanceId||null,name:attacker?.name||null,amount:dealt,before,after:battle.seals[side],source:'direct'});
+  battle.log.unshift(`Печати: ${side==='player'?'противник':'игрок'} получает ${dealt} прямого урона.`)
 }
 function doAttacks(run,battle,side){
   const own=side==='player'?battle.player:battle.enemy,foe=side==='player'?battle.enemy:battle.player;
@@ -275,9 +277,9 @@ function doAttacks(run,battle,side){
         damageUnit(run,battle,side==='player'?'enemy':'player',lane,amount,attacker,'attack');
         if(attacker.sigils.includes('hunger')&&!foe[lane]){attacker.atk++;recordBattleEvent(battle,{type:'buff',side,lane,unitId:attacker.instanceId,name:attacker.name,stat:'atk',amount:1})}
       }else directDamage(run,battle,side,amount,attacker,lane);
-      if(Math.abs(battle.balance)>=BALANCE_LIMIT)break
+      if(battle.seals.player>=SEAL_LIMIT||battle.seals.enemy>=SEAL_LIMIT)break
     }
-    if(Math.abs(battle.balance)>=BALANCE_LIMIT)break
+    if(battle.seals.player>=SEAL_LIMIT||battle.seals.enemy>=SEAL_LIMIT)break
   }
 }
 function bossHook(run,battle){
@@ -291,15 +293,15 @@ function bossHook(run,battle){
   if(battle.bossId==='prior'&&battle.phase===2){battle.maxEmber=2;battle.ember=Math.min(battle.ember,2)}
 }
 function phaseOrFinish(run,battle){
-  if(battle.balance>=BALANCE_LIMIT){
+  if(battle.seals.player>=SEAL_LIMIT){
     if(battle.bossId&&battle.phase<battle.phasesTotal){
-      battle.phase++;battle.balance=0;battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);
-      recordBattleEvent(battle,{type:'phase',bossId:battle.bossId,phase:battle.phase,pressureReset:true});
+      battle.phase++;battle.seals={player:0,enemy:0};battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);
+      recordBattleEvent(battle,{type:'phase',bossId:battle.bossId,phase:battle.phase,sealsReset:true});
       battle.log.unshift('Безликий приор: вторая фаза. Максимум Угля снижен до 2.');return{ok:true,phase:true}
     }
     return finishBattle(run,battle,'player')
   }
-  if(battle.balance<=-BALANCE_LIMIT)return finishBattle(run,battle,'enemy');
+  if(battle.seals.enemy>=SEAL_LIMIT)return finishBattle(run,battle,'enemy');
   return null
 }
 export function endTurn(run,battle){
@@ -334,7 +336,7 @@ export function useItem(run,battle,itemId,targetLane=null){
   if(itemId==='bell')battle.ember+=2;
   if(itemId==='thread'){battle.threadPrimed=true;battle.log.unshift('Чёрная нить активна: следующее Наследие применится дважды.')}
   if(itemId==='mirror'){const candidates=battle.enemy.filter(Boolean).sort((a,b)=>(b.atk+b.hp)-(a.atk+a.hp));if(candidates[0]&&battle.hand.length<7){const u=candidates[0];battle.hand.push(cloneCard('hare',{name:`Отражение: ${u.name}`,atk:1,hp:1,cost:0,sigils:[...u.sigils].slice(0,1),portrait:u.portrait}))}}
-  if(itemId==='teeth')battle.balance=Math.min(BALANCE_LIMIT,battle.balance+2);
+  if(itemId==='teeth'){const before=battle.seals.player;battle.seals.player=Math.min(SEAL_LIMIT,before+2);recordBattleEvent(battle,{type:'seal',side:'player',amount:2,before,after:battle.seals.player,source:'item'})}
   run.items.splice(idx,1);run.stats.itemsUsed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner}
 }
 
@@ -370,4 +372,4 @@ export function afterBattleVictory(run){
 export function completeNode(run){run.pending=null;run.battle=null;run.depth++;if(run.depth>=run.maxDepth&&!run.result)run.result='won';return run}
 export function skipReward(run){if(run.pending?.type==='card-choice'){completeNode(run);return{ok:true}}return{ok:false}}
 export function serializeRun(run){return JSON.stringify(run)}
-export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}parsed.secrets=parsed.secrets||{};return parsed}
+export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}parsed.secrets=parsed.secrets||{};if(parsed.battle&&!parsed.battle.seals){const legacy=Number(parsed.battle.balance)||0;parsed.battle.seals={player:Math.max(0,legacy),enemy:Math.max(0,-legacy)};parsed.battle.sealLimit=SEAL_LIMIT;delete parsed.battle.balance;delete parsed.battle.balanceLimit}return parsed}
