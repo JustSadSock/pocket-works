@@ -140,7 +140,7 @@ export class MeltCryptGame {
     this.dashTimer = 0;
     this.dashDirection = new Vector3(0, 0, 1);
     this.invulnerable = 0;
-    this.effects = { warp: 0, slow: 0, speed: 0, rage: 0 };
+    this.effects = { warp: 0, slow: 0, speed: 0, rage: 0, haste: 0 };
     this.damageFlash = 0;
     this.elapsed = 0;
     this.runRng = Math.random;
@@ -389,7 +389,7 @@ export class MeltCryptGame {
     this.skillCooldown = 0;
     this.attackHold = 0;
     this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
-    this.effects = { warp: 0, slow: 0, speed: 0, rage: 0 };
+    this.effects = { warp: 0, slow: 0, speed: 0, rage: 0, haste: 0 };
     this.runRng = makeRng((this.run.seed ^ Math.imul(this.run.floor, 0x7f4a7c15)) >>> 0);
     this.dungeon = generateDungeon(this.run.seed, this.run.floor);
     this.visuals.buildDungeon(this.dungeon, this.run.floor);
@@ -929,30 +929,36 @@ export class MeltCryptGame {
     if (enemy.dead) return;
     enemy.dead = true;
     const deathPosition = enemy.visual.root.position.clone();
+    const mutation = enemy.genome.mutation;
+    const roomId = enemy.roomId;
+
+    if (mutation === 'back-core' || mutation === 'blood-sacs') {
+      const radius = mutation === 'back-core' ? 2.7 : 2.15;
+      const damage = enemy.genome.damage * (mutation === 'back-core' ? 0.7 : 0.5);
+      this.visuals.createHitEffect(deathPosition.add(new Vector3(0,0.75,0)), new Vector3(0,1,0), 1.7, true);
+      if (Vector3.Distance(deathPosition, this.controller.position) < radius) this.hurtPlayer(damage, enemy);
+      for (const other of this.enemies) {
+        if (other === enemy || other.dead || !other.visual || other.roomId !== roomId) continue;
+        if (Vector3.Distance(other.visual.root.position, deathPosition) < radius) {
+          this.damageEnemy(other, damage * 0.8, { stagger:1.4, knock:1.2, weak:true });
+        }
+      }
+      this.hitStop=Math.max(this.hitStop,0.055);
+    }
+
     this.visuals.disposeMonsterVisual(enemy.visual);
     enemy.visual = null;
     this.run.totalKills += 1;
     this.floorKills += 1;
     if (this.run.lifesteal > 0) this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.lifesteal);
+    if (this.run.weapon?.traitSpec?.effect === 'heal-exec') this.run.hp = Math.min(this.run.maxHp, this.run.hp + 2.5);
 
-    if (enemy.genome.ability === 'split' && !enemy.child) {
-      for (let i = 0; i < 2; i += 1) {
-        const seed = (enemy.genome.seed ^ (0x9e3779b9 + i * 991)) >>> 0;
-        const childGenome = createMonsterGenome(seed, this.run.floor, 0.64, enemy.genome);
-        childGenome.size *= 0.62;
-        childGenome.maxHp = Math.max(7, Math.round(childGenome.maxHp * 0.42));
-        childGenome.damage = Math.max(2, Math.round(childGenome.damage * 0.58));
-        childGenome.name = 'SMALLER ' + childGenome.name;
-        const offset = new Vector3((i ? 1 : -1) * 0.52, 0, 0.28);
-        this.spawnEnemy(childGenome, enemy.roomId, deathPosition.add(offset), true);
-      }
-      this.toast('IT HAS SUBMITTED TWO COPIES OF ITSELF.');
-    }
+    const dropRoll=this.runRng();
+    if(dropRoll<0.13) this.spawnWeaponDrop(deathPosition, roomId);
+    else if(dropRoll<0.3) this.spawnDrop(deathPosition);
 
-    if (this.runRng() < 0.22 + Math.min(0.12, this.run.floor * 0.008)) this.spawnDrop(deathPosition);
-
-    const room = this.dungeon.rooms[enemy.roomId];
-    const aliveInRoom = this.enemies.some((candidate) => !candidate.dead && candidate.roomId === enemy.roomId);
+    const room = this.dungeon.rooms[roomId];
+    const aliveInRoom = this.enemies.some((candidate) => !candidate.dead && candidate.roomId === roomId);
     if (!aliveInRoom) {
       room.cleared = true;
       if (room.id === this.currentRoomId) this.toast('ROOM QUIET. SUSPICIOUS.');
@@ -969,6 +975,17 @@ export class MeltCryptGame {
     this.saveRun();
   }
 
+  spawnWeaponDrop(position, roomId = this.currentRoomId) {
+    const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
+    const recent = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures : [];
+    const weapon = generateWeapon(seed, this.run.floor, recent);
+    this.run.recentWeaponSignatures = [...recent, weapon.signature].slice(-18);
+    const visual = this.visuals.createWeaponDropVisual(weapon, position.add(new Vector3(0,0.03,0)));
+    this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0 });
+    this.drawMinimap();
+  }
+
+
   spawnDrop(position, forced = null) {
     const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
     const loot = rollLoot(seed, this.run.floor, forced);
@@ -978,39 +995,59 @@ export class MeltCryptGame {
   }
 
   updateDrops(dt) {
-    const player = this.camera.position;
+    const player = this.controller.position;
     for (const drop of this.drops) {
       if (!drop.visual) continue;
       drop.age += dt;
-      drop.visual.node.rotation.y += dt * 1.6;
+      drop.visual.node.rotation.y += dt * (drop.type === 'weapon' ? 0.8 : 1.6);
       drop.visual.node.position.y = Math.sin(drop.age * 2.8 + drop.seed) * 0.08;
       const dx = drop.visual.node.position.x - player.x;
       const dz = drop.visual.node.position.z - player.z;
-      if (Math.hypot(dx, dz) < 1.15) this.collectDrop(drop);
+      if (drop.type !== 'weapon' && Math.hypot(dx, dz) < 1.15) this.collectDrop(drop);
     }
     this.drops = this.drops.filter((drop) => Boolean(drop.visual));
   }
 
   collectDrop(drop) {
+    if (drop.type === 'weapon') {
+      this.equipWeapon(drop.weapon);
+      drop.visual.node.dispose(false,true);
+      drop.visual.materials?.forEach((material)=>material.dispose());
+      drop.visual=null;
+      this.drawMinimap();
+      return;
+    }
+
     const loot = drop.loot;
     this.discoverLoot(loot.item);
     if (loot.type === 'relic') {
       this.applyRelic(loot.item);
       this.toast('RELIC ACQUIRED: ' + loot.item.name.toUpperCase());
-    } else if (this.run.potions.length < 5) {
-      this.run.potions.push(loot.item.id);
-      this.toast('BOTTLED: ' + loot.item.name.toUpperCase());
     } else {
-      this.toast('FLASK QUEUE FULL. DRANK IT OFF THE FLOOR.');
       this.consumePotion(loot.item.id, true);
+      this.toast('DRANK OFF THE FLOOR: ' + loot.item.name.toUpperCase());
     }
     drop.visual.node.dispose(false, true);
-    drop.visual.material.dispose();
+    drop.visual.material?.dispose();
     drop.visual = null;
     this.drawMinimap();
     this.audio.tone('loot', 1);
     this.saveRun();
   }
+
+  equipWeapon(weapon) {
+    if (!weapon) return;
+    this.run.weapon=weapon;
+    this.visuals.setPlayerWeapon(weapon);
+    this.discoverWeapon(weapon);
+    this.skillCooldown=0;
+    this.attackState={active:false,timer:0,duration:0,heavy:false,combo:0,hitDone:false,dashAttack:false};
+    this.toast('EQUIPPED: ' + weapon.name + ' / ' + weapon.skillSpec.label);
+    this.audio.tone('loot',1);
+    navigator.vibrate?.([5,16,5]);
+    this.saveRun();
+  }
+
 
   applyRelic(item) {
     this.run.relics.push(item.id);
