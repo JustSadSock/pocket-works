@@ -263,7 +263,7 @@ class PlayScene extends Phaser.Scene {
         g.fillStyle(paper).fillCircle(78,56,35).fillCircle(115,45,42).fillCircle(152,58,34);
         g.fillStyle(accent).fillRect(70,138,90,46);
         g.fillStyle(ink).fillCircle(92,106,8).fillCircle(140,106,8);
-        g.lineStyle(6, ink).strokeArc(116,128,31,0.15,Math.PI-0.15,false);
+        g.lineStyle(6, ink).beginPath().arc(116,128,31,0.15,Math.PI-0.15,false).strokePath();
         break;
       case 'sport':
         g.fillStyle(secondary).fillCircle(115,115,70);
@@ -418,7 +418,7 @@ class PlayScene extends Phaser.Scene {
   private createPlayer() {
     this.player = this.physics.add.sprite(210, GROUND_Y-90, 'da-player');
     this.player.setDepth(20).setCollideWorldBounds(true).setBounce(0);
-    this.player.body.setSize(PLAYER_W, PLAYER_H).setOffset(8, 10);
+    (this.player.body as Phaser.Physics.Arcade.Body).setSize(PLAYER_W, PLAYER_H).setOffset(8, 10);
     this.player.setDragX(1250).setMaxVelocity(440, 900);
   }
 
@@ -428,7 +428,7 @@ class PlayScene extends Phaser.Scene {
     this.previousBossHp = this.bossMaxHp;
     this.boss = this.physics.add.sprite(x, GROUND_Y-180, 'da-boss');
     this.boss.setScale(this.stage.bossScale).setDepth(18).setVisible(false).setActive(false);
-    this.boss.body.setAllowGravity(false).setImmovable(true).setSize(150,170).setOffset(40,30);
+    (this.boss.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setImmovable(true).setSize(150,170).setOffset(40,30);
     this.boss.setData('hp', this.bossMaxHp);
   }
 
@@ -466,7 +466,7 @@ class PlayScene extends Phaser.Scene {
       this.player.setVelocityX(axis * speed);
       this.player.setFlipX(axis < 0);
     } else if (time >= this.dashUntil) {
-      this.player.setVelocityX(this.player.body.velocity.x * 0.78);
+      this.player.setVelocityX((this.player.body as Phaser.Physics.Arcade.Body).velocity.x * 0.78);
     }
 
     const grounded = (this.player.body as Phaser.Physics.Arcade.Body).blocked.down || (this.player.body as Phaser.Physics.Arcade.Body).touching.down;
@@ -490,7 +490,7 @@ class PlayScene extends Phaser.Scene {
         this.dashUntil = time + 210;
         this.invulnerableUntil = Math.max(this.invulnerableUntil, time + 235);
         const direction = axis || (this.player.flipX ? -1 : 1);
-        this.player.setVelocity(direction * 620, Math.min(0, this.player.body.velocity.y));
+        this.player.setVelocity(direction * 620, Math.min(0, (this.player.body as Phaser.Physics.Arcade.Body).velocity.y));
         this.player.setTint(this.stage.palette.paper);
         this.time.delayedCall(230, () => this.player?.clearTint());
         this.cameras.main.shake(70, 0.0025);
@@ -541,9 +541,10 @@ class PlayScene extends Phaser.Scene {
     if (!bullet) return;
     bullet.enableBody(true, this.player.x, this.player.y-6, true, true);
     bullet.setDepth(17).setScale(1).setTint(this.stage.palette.paper);
-    bullet.body.setAllowGravity(false);
+    const bulletBody = bullet.body as Phaser.Physics.Arcade.Body;
+    bulletBody.setAllowGravity(false);
     const angle = Phaser.Math.Angle.Between(this.player.x,this.player.y,target.x,target.y);
-    this.physics.velocityFromRotation(angle, 780, bullet.body.velocity);
+    this.physics.velocityFromRotation(angle, 780, bulletBody.velocity);
     bullet.setRotation(angle);
     bullet.setData('born', time);
     audio.shot();
@@ -569,8 +570,9 @@ class PlayScene extends Phaser.Scene {
     const key = kind === 'flyer' ? 'da-enemy-flyer' : kind === 'turret' ? 'da-enemy-turret' : 'da-enemy-walker';
     const enemy = this.enemies.create(x,y,key) as Phaser.Physics.Arcade.Sprite;
     enemy.setDepth(12).setData('kind',kind).setData('hp',kind==='turret'?70:kind==='flyer'?48:58).setData('nextShot',0).setData('originY',y);
-    enemy.body.setSize(kind==='flyer'?48:45,kind==='turret'?54:42);
-    enemy.body.setAllowGravity(kind!=='flyer');
+    const enemyBody = enemy.body as Phaser.Physics.Arcade.Body;
+    enemyBody.setSize(kind==='flyer'?48:45,kind==='turret'?54:42);
+    enemyBody.setAllowGravity(kind!=='flyer');
     if (kind==='turret') enemy.setImmovable(true);
     return enemy;
   }
@@ -617,7 +619,7 @@ class PlayScene extends Phaser.Scene {
       if (bullet.getData('homing')) {
         const angle = Phaser.Math.Angle.Between(bullet.x,bullet.y,this.player.x,this.player.y);
         const desired = new Phaser.Math.Vector2(Math.cos(angle),Math.sin(angle)).scale(Number(bullet.getData('speed')||240));
-        bullet.body.velocity.lerp(desired, Math.min(1, delta/1100));
+        (bullet.body as Phaser.Physics.Arcade.Body).velocity.lerp(desired, Math.min(1, delta/1100));
       }
       if (time - Number(bullet.getData('born')||time) > 5200 || bullet.y > WORLD_H+120 || bullet.y < -140) bullet.disableBody(true,true);
     }
@@ -690,8 +692,9 @@ class PlayScene extends Phaser.Scene {
       this.burst(this.player.x,this.player.y,this.stage.palette.parry,10);
       return;
     }
+    const impactDirection = (bullet.body as Phaser.Physics.Arcade.Body).velocity.x > 0 ? 1 : -1;
     bullet.disableBody(true,true);
-    this.damagePlayer(1, bullet.body.velocity.x>0?1:-1);
+    this.damagePlayer(1, impactDirection);
   }
 
   private damagePlayer(amount: number, direction: number) {
@@ -760,7 +763,7 @@ class PlayScene extends Phaser.Scene {
     this.bossStartedAt=this.time.now;
     this.boss.setVisible(true).setActive(true);
     this.boss.enableBody(false,this.stage.runLength+1070,GROUND_Y-180,true,true);
-    this.boss.body.setAllowGravity(false).setImmovable(true);
+    (this.boss.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setImmovable(true);
     this.boss.setData('hp',this.bossMaxHp);
     const leftX=this.stage.runLength+30;
     const rightX=this.stage.runLength+1430;
@@ -853,10 +856,11 @@ class PlayScene extends Phaser.Scene {
     const bullet=this.hostileBullets.get(x,y,parry?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
     if(!bullet) return;
     bullet.enableBody(true,x,y,true,true);
-    bullet.body.setAllowGravity(false);
+    const bulletBody = bullet.body as Phaser.Physics.Arcade.Body;
+    bulletBody.setAllowGravity(false);
     bullet.setDepth(16).setScale(1);
     const angle=Phaser.Math.Angle.Between(x,y,tx,ty);
-    this.physics.velocityFromRotation(angle,speed,bullet.body.velocity);
+    this.physics.velocityFromRotation(angle,speed,bulletBody.velocity);
     bullet.setData('born',this.time.now).setData('parry',parry).setData('homing',homing).setData('speed',speed);
   }
 
@@ -880,7 +884,7 @@ class PlayScene extends Phaser.Scene {
       const bullet=this.hostileBullets.get(x,-30,Math.random()<0.17?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
       if(!bullet) return;
       bullet.enableBody(true,x,-20,true,true);
-      bullet.body.setAllowGravity(false);
+      (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
       bullet.setVelocity(heavy?Phaser.Math.Between(-70,70):0,heavy?440:360+this.bossPhase*30);
       bullet.setData('born',this.time.now).setData('parry',bullet.texture.key==='da-parry');
       if(heavy) bullet.setScale(1.3);
@@ -904,7 +908,7 @@ class PlayScene extends Phaser.Scene {
     const overlay=this.add.rectangle(640,360,1280,720,this.stage.palette.secondary,0.05).setScrollFactor(0).setDepth(45);
     this.tweens.add({targets:overlay,alpha:0.16,duration:160,yoyo:true,repeat:4,onComplete:()=>overlay.destroy()});
     const timer=this.time.addEvent({delay:40,repeat:18+phase*5,callback:()=>{
-      if(this.player.active) this.player.setVelocityX(this.player.body.velocity.x+dir*(18+phase*5));
+      if(this.player.active) this.player.setVelocityX((this.player.body as Phaser.Physics.Arcade.Body).velocity.x+dir*(18+phase*5));
     }});
     void timer;
   }
@@ -916,7 +920,7 @@ class PlayScene extends Phaser.Scene {
       const bullet=this.hostileBullets.get(x,GROUND_Y-25,i===phase?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
       if(!bullet) return;
       bullet.enableBody(true,x,GROUND_Y-25,true,true);
-      bullet.body.setAllowGravity(false);
+      (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
       bullet.setScale(1.5,0.7).setVelocityX(dir*(360+phase*35));
       bullet.setData('born',this.time.now).setData('parry',i===phase);
     });
@@ -927,7 +931,7 @@ class PlayScene extends Phaser.Scene {
       const bullet=this.hostileBullets.get(this.boss.x-80,this.boss.y-20,i===count-1?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
       if(!bullet) continue;
       bullet.enableBody(true,this.boss.x-80,this.boss.y-20,true,true);
-      bullet.body.setAllowGravity(true);
+      (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(true);
       bullet.setBounce(0.86).setCollideWorldBounds(true).setVelocity(-260-i*18,-330-i*25).setScale(1.25);
       bullet.setData('born',this.time.now).setData('parry',i===count-1);
     }
@@ -960,7 +964,7 @@ class PlayScene extends Phaser.Scene {
       const x=this.boss.x-dir*60;
       const bullet=this.hostileBullets.get(x,y,i===2?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
       if(!bullet) return;
-      bullet.enableBody(true,x,y,true,true); bullet.body.setAllowGravity(false);
+      bullet.enableBody(true,x,y,true,true); (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
       bullet.setVelocityX(dir*(430+phase*30)).setScale(1.25,1.8);
       bullet.setData('born',this.time.now).setData('parry',i===2);
     });
@@ -1008,7 +1012,7 @@ class PlayScene extends Phaser.Scene {
       const y=180+((i*97)%390);
       const bullet=this.hostileBullets.get(this.boss.x-70,y,i%5===0?'da-parry':'da-hostile') as Phaser.Physics.Arcade.Image|null;
       if(!bullet) return;
-      bullet.enableBody(true,this.boss.x-70,y,true,true); bullet.body.setAllowGravity(false);
+      bullet.enableBody(true,this.boss.x-70,y,true,true); (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
       bullet.setVelocity(-300-phase*30,Math.sin(i)*85).setData('born',this.time.now).setData('parry',i%5===0);
     });
   }
