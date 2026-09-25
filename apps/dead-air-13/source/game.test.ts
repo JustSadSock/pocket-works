@@ -13,6 +13,7 @@ describe('DEAD AIR campaign', () => {
   it('clamps stage lookup to campaign bounds', () => {
     expect(stageById(-50).id).toBe(1);
     expect(stageById(99).id).toBe(13);
+    expect(stageById(Number.NaN).id).toBe(1);
   });
 
   it('unlocks the next stage and preserves best records', () => {
