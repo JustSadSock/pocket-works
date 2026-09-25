@@ -5,7 +5,7 @@ const RELEASE_DATE='2026-09-25';
 const RELEASE_NOTES=[
   'Первый полноценный релиз: процедурная карта забега, карточные бои на четыре линии, награды и четыре типа событий.',
   'Система Наследия позволяет жертвовать существом и переносить одну его метку в следующего разыгранного зверя.',
-  'Пиксельный 2.5D лес, процедурный Web Audio, сохранение забега и полностью офлайн-режим.'
+  'Пиксельный 2.5D каменный зал, процедурный Web Audio, сохранение забега и полностью офлайн-режим.'
 ];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./game-core.mjs','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)))});
