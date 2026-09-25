@@ -266,6 +266,48 @@ function floatDamage(side,lane,text,kind=''){
   const laneEl=laneNode(side,lane);if(!laneEl)return;
   const n=document.createElement('span');n.className='damage-float'+(kind?' '+kind:'');n.textContent=text;laneEl.append(n);setTimeout(()=>n.remove(),520)
 }
+async function animateCombat(events,beforeSeals){
+  let visual={player:beforeSeals.player||0,enemy:beforeSeals.enemy||0};
+  for(const event of events||[]){
+    if(event.type==='sequence'){
+      showCombatCaption(event.label==='player'?'ТВОЯ АТАКА':'АТАКА ПРОТИВНИКА',event.label==='player'?'Существа атакуют слева направо.':'Смотри за линиями.','');
+      if(event.label==='enemy')opponentAction('deal');await wait(220);hideCombatCaption();continue
+    }
+    if(event.type==='attack'){
+      const attacker=unitNodeById(event.attackerId);showCombatCaption(event.name,event.direct?'Прямой удар':`→ ${event.targetName||'цель'}`,event.direct?'direct':'');
+      attacker?.classList.add(event.side==='player'?'combat-attacker-player':'combat-attacker-enemy');feedback('wood');await wait(185);
+      attacker?.classList.remove('combat-attacker-player','combat-attacker-enemy');continue
+    }
+    if(event.type==='ward'){
+      const target=unitNodeById(event.unitId);target?.classList.add('combat-ward');floatDamage(event.side,event.lane,'0','ward');showCombatCaption('ОБЕРЕГ',`${event.name}: урон заблокирован`,'ward');feedback('bone');
+      await wait(310);target?.classList.remove('combat-ward');hideCombatCaption();continue
+    }
+    if(event.type==='damage'){
+      const target=unitNodeById(event.unitId);target?.classList.add('combat-hit');floatDamage(event.side,event.lane,`−${event.amount}`,event.source==='attack'?'':'minor');
+      const sourceLabel={thorn:'Шип',bleed:'Разрез',chain:'Цепь'}[event.source]||'Урон';
+      showCombatCaption(`−${event.amount} HP`,`${event.name} · ${sourceLabel}`,'');feedback(event.amount>=3?'impact':'wood');
+      const hp=target?.querySelector('.unit-stats span');if(hp)hp.textContent=`♥${event.hpAfter}`;await wait(event.source==='attack'?260:190);
+      target?.classList.remove('combat-hit');hideCombatCaption();continue
+    }
+    if(event.type==='death'){
+      const target=unitNodeById(event.unitId);showCombatCaption('КАРТА УНИЧТОЖЕНА',event.name,'death');target?.classList.add('combat-dying');feedback('impact');await wait(330);if(target)target.style.visibility='hidden';hideCombatCaption();continue
+    }
+    if(event.type==='spawn'){
+      const laneEl=laneNode(event.side,event.lane);if(laneEl){laneEl.replaceChildren();const node=makeUnitNode(event.unit,event.side,' resolution-spawn');laneEl.append(node);showCombatCaption(event.source==='intent'?'ПРОТИВНИК РАЗЫГРАЛ КАРТУ':'ПОЯВИЛОСЬ СУЩЕСТВО',event.unit.name,'');feedback('card');await wait(330);hideCombatCaption()}continue
+    }
+    if(event.type==='seal'){
+      const from=event.before,to=event.after;visual[event.side]=from;showCombatCaption(event.side==='player'?'ПЕЧАТЬ ПРОТИВНИКА':'ТВОЯ ПЕЧАТЬ',`прямой урон: ${event.amount}`,'direct');
+      for(let i=from;i<to;i++){visual[event.side]=i+1;renderSeals(visual,{side:event.side,index:i});feedback('bone');sceneBeat('impact');await wait(170)}
+      await wait(100);hideCombatCaption();continue
+    }
+    if(event.type==='buff'){showCombatCaption('+1 АТАКА',`${event.name} · Голод`,'');await wait(190);hideCombatCaption();continue}
+    if(event.type==='lock'){showCombatCaption(`ЛИНИЯ ${event.lane+1} ЗАБЛОКИРОВАНА`,'Смотритель','');feedback('warning');opponentAction('boss');await wait(380);hideCombatCaption();continue}
+    if(event.type==='phase'){showCombatCaption('ФАЗА II','Приор: печати восстановлены, максимум Угля — 2.','death');renderSeals({player:0,enemy:0});feedback('warning');opponentAction('boss');sceneBeat('boss');await wait(650);hideCombatCaption();continue}
+    if(event.type==='round'){el.turnCueText.textContent=`ХОД ${event.round}`;el.turnCue.hidden=false;feedback('bell');await wait(520);el.turnCue.hidden=true;continue}
+    if(event.type==='battle-end'){showCombatCaption(event.winner==='player'?'ПОБЕДА':'ПОРАЖЕНИЕ',event.winner==='player'?'Все печати противника разрушены.':'Все твои печати разрушены.',event.winner==='player'?'':'death');await wait(520);hideCombatCaption()}
+  }
+  renderSeals(run?.battle?.seals||visual)
+}
 function cardAffordable(card,b){
   if(card.costType==='remains')return b.remains>=card.cost;
   if(card.costType==='ember')return b.ember>=Math.max(0,card.cost-(run.relics.includes('moth-lantern')&&!b.firstDiscountUsed?1:0));
