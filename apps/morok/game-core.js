@@ -1,4 +1,4 @@
-export const VERSION='2.0.0';
+export const VERSION='2.1.0';
 export const LANES=4;
 export const BALANCE_LIMIT=6;
 
@@ -23,42 +23,42 @@ const C=(id,name,faction,costType,cost,atk,hp,sigils,text,rarity='common',portra
 const R=(id,name,cost,text,rite,rarity='common')=>({id,name,type:'rite',faction:'rite',costType:'ember',cost,atk:0,hp:0,sigils:[],text,rite,rarity,portrait:id});
 
 export const CARD_LIBRARY=[
-  C('hare','Пыльный заяц','beast','ember',0,0,1,['echo'],'Бесплатная жертва. Иногда возвращается.'),
-  C('crow','Ворон-вор','carrion','ember',1,1,1,['scavenger'],'Питается тем, что ты всё равно потерял.'),
-  C('wolf','Серый волк','beast','ember',2,2,2,['pack'],'Один волк — карта. Два — уже проблема.'),
-  C('boar','Кабан в шрамах','beast','remains',2,2,4,['thorn'],'Бьёт в ответ даже умирая.'),
-  C('stag','Королевский олень','beast','remains',3,3,4,['root'],'Тяжёлая карта, которую трудно снять со стола.','uncommon'),
-  C('moth','Пепельная моль','spirit','ember',1,1,1,['brood'],'Умирает не одна.'),
-  C('owl','Слепая сова','spirit','ember',2,2,2,['lurk'],'Любит пустые линии.'),
-  C('fox','Рыжая лиса','beast','ember',2,2,2,['hunger'],'Каждое добивание делает её опаснее.'),
-  C('toad','Могильная жаба','fungal','remains',1,1,3,['scavenger'],'Смерти рядом превращает в ресурс.'),
-  C('mushroom','Грибница','fungal','ember',1,0,4,['thorn','root'],'Плохая идея бить её руками.','uncommon'),
-  C('adder','Гадюка','beast','remains',2,2,1,['bleed'],'Прокусывает даже толстые карты.'),
-  C('doe','Белая лань','spirit','ember',2,1,3,['ward'],'Первый удар проходит насквозь.'),
-  C('hound','Псарь без хозяина','carrion','remains',3,3,3,['hunger','scavenger'],'Смерть делает его богаче и злее.','rare'),
-  C('ram','Костяной баран','carrion','remains',4,4,5,['thorn','lurk'],'Если линия пуста, весы качнутся сильно.','rare'),
-  C('weaver','Ткач жил','fungal','ember',3,1,6,['root','pack'],'Даже слабые соседи рядом с ним становятся угрозой.','rare'),
-  C('nightjar','Козодой','spirit','ember',3,3,2,['ward','echo'],'Упрямо не остаётся мёртвым.','rare'),
-  C('moose','Старый лось','beast','remains',5,5,7,['root'],'Почти отдельный босс в твоей руке.','rare'),
-  C('butcher-bird','Птица-мясник','carrion','ember',3,2,2,['twin'],'Две атаки превращают любой бонус в проблему.','rare'),
-  C('saint-rat','Святая крыса','carrion','ember',1,0,2,['martyr','echo'],'Умирает, платит тебе и иногда возвращается.','uncommon'),
-  C('bell-rat','Звонкая крыса','carrion','ember',2,1,2,['martyr','twin'],'Дважды кусает и выгодно умирает.','uncommon'),
-  C('leech','Чёрная пиявка','fungal','remains',1,1,2,['parasite'],'После смерти остаётся личинка.'),
-  C('chain-dog','Цепной пёс','beast','ember',3,3,3,['chain'],'Удар по линии задевает соседей.','uncommon'),
-  C('crypt-ox','Подземный вол','carrion','remains',4,2,8,['root','martyr'],'Долго живёт, выгодно умирает.','rare'),
-  C('two-face','Двуликий ягнёнок','spirit','ember',2,1,2,['twin','echo'],'Слишком много ценности в слишком маленькой карте.','rare'),
-  C('needle-hare','Игольчатый заяц','beast','ember',1,1,1,['thorn','echo'],'Возвращающийся раздражитель.','uncommon'),
-  C('widow','Вдова колодца','spirit','remains',3,2,4,['bleed','ward'],'Снимает защиту с дорогих карт.','rare'),
-  C('choir','Хор личинок','fungal','ember',2,0,5,['brood','martyr'],'Хорошая жертва и плохая цель.','uncommon'),
-  C('lantern-wolf','Фонарный волк','spirit','ember',3,3,2,['pack','lurk'],'Стая плюс пустая линия — неприятная арифметика.','rare'),
-  C('grave-king','Могильный король','carrion','remains',6,5,6,['scavenger','hunger','martyr'],'Колода вокруг него превращает смерть в двигатель.','rare'),
-  C('mirror-doe','Зеркальная лань','spirit','ember',4,2,4,['ward','twin'],'Первый удар игнорирует, затем отвечает дважды.','rare'),
-  R('bark','Кожаная стяжка',1,'Союзник получает +0/+3 и Оберег.','bark'),
-  R('needle','Костяная игла',1,'Союзник получает +1/+1. Возьми карту.','needle'),
+  C('hare','Пыльный заяц','beast','ember',0,0,1,['echo'],'Бесплатное существо. После смерти Эхо возвращает его в руку.'),
+  C('crow','Ворон-вор','carrion','ember',1,1,1,['scavenger'],'Получает Останки за гибель союзников.'),
+  C('wolf','Серый волк','beast','ember',2,2,2,['pack'],'Сильнее рядом с союзными существами.'),
+  C('boar','Кабан в шрамах','beast','remains',2,2,4,['thorn'],'Наносит ответный урон атакующему.'),
+  C('stag','Королевский олень','beast','remains',3,3,4,['root'],'Получает дополнительное здоровье при выходе на стол.','uncommon'),
+  C('moth','Пепельная моль','spirit','ember',1,1,1,['brood'],'После смерти оставляет существо 1/1.'),
+  C('owl','Слепая сова','spirit','ember',2,2,2,['lurk'],'Наносит больше прямого урона по пустой линии.'),
+  C('fox','Рыжая лиса','beast','ember',2,2,2,['hunger'],'Усиливает атаку после добивания.'),
+  C('toad','Могильная жаба','fungal','remains',1,1,3,['scavenger'],'Преобразует гибель союзников в Останки.'),
+  C('mushroom','Грибница','fungal','ember',1,0,4,['thorn','root'],'Защитная карта с ответным уроном и дополнительным здоровьем.','uncommon'),
+  C('adder','Гадюка','beast','remains',2,2,1,['bleed'],'После удара наносит цели ещё 1 урона.'),
+  C('doe','Белая лань','spirit','ember',2,1,3,['ward'],'Игнорирует первый полученный урон.'),
+  C('hound','Псарь без хозяина','carrion','remains',3,3,3,['hunger','scavenger'],'Усиливается от добиваний и получает Останки за смерти союзников.','rare'),
+  C('ram','Костяной баран','carrion','remains',4,4,5,['thorn','lurk'],'Сильный фронтлайн с бонусом к прямому урону.','rare'),
+  C('weaver','Ткач жил','fungal','ember',3,1,6,['root','pack'],'Живучее существо, усиливающееся рядом с союзниками.','rare'),
+  C('nightjar','Козодой','spirit','ember',3,3,2,['ward','echo'],'Игнорирует первый удар и возвращается в руку после смерти.','rare'),
+  C('moose','Старый лось','beast','remains',5,5,7,['root'],'Дорогое существо с высоким уроном и запасом здоровья.','rare'),
+  C('butcher-bird','Птица-мясник','carrion','ember',3,2,2,['twin'],'Атакует дважды.','rare'),
+  C('saint-rat','Святая крыса','carrion','ember',1,0,2,['martyr','echo'],'После смерти даёт Останки и возвращается в руку.','uncommon'),
+  C('bell-rat','Звонкая крыса','carrion','ember',2,1,2,['martyr','twin'],'Атакует дважды и даёт Останки после смерти.','uncommon'),
+  C('leech','Чёрная пиявка','fungal','remains',1,1,2,['parasite'],'После смерти добавляет бесплатную Личинку в руку.'),
+  C('chain-dog','Цепной пёс','beast','ember',3,3,3,['chain'],'Удар дополнительно ранит соседние вражеские карты.','uncommon'),
+  C('crypt-ox','Подземный вол','carrion','remains',4,2,8,['root','martyr'],'Высокий запас здоровья; после смерти даёт Останки.','rare'),
+  C('two-face','Двуликий ягнёнок','spirit','ember',2,1,2,['twin','echo'],'Атакует дважды и возвращается в руку после смерти.','rare'),
+  C('needle-hare','Игольчатый заяц','beast','ember',1,1,1,['thorn','echo'],'Отвечает уроном и возвращается в руку после смерти.','uncommon'),
+  C('widow','Вдова колодца','spirit','remains',3,2,4,['bleed','ward'],'Игнорирует первый урон и наносит дополнительный урон после атаки.','rare'),
+  C('choir','Хор личинок','fungal','ember',2,0,5,['brood','martyr'],'После смерти создаёт существо 1/1 и даёт Останки.','uncommon'),
+  C('lantern-wolf','Фонарный волк','spirit','ember',3,3,2,['pack','lurk'],'Получает бонус от соседей и от прямой атаки по пустой линии.','rare'),
+  C('grave-king','Могильный король','carrion','remains',6,5,6,['scavenger','hunger','martyr'],'Строится вокруг смертей союзников: получает ресурс, усиливается и окупает собственную смерть.','rare'),
+  C('mirror-doe','Зеркальная лань','spirit','ember',4,2,4,['ward','twin'],'Игнорирует первый урон и атакует дважды.','rare'),
+  R('bark','Кожаная стяжка',1,'Союзник получает +3 здоровья и Оберег.','bark'),
+  R('needle','Костяная игла',1,'Союзник получает +1/+1. Затем возьми карту.','needle'),
   R('salt','Чёрная соль',1,'Нанеси 2 урона вражеской карте.','salt'),
-  R('milk','Горькое причастие',2,'Сдвинь чашу весов на 2 к себе.','milk'),
+  R('milk','Груз на чашу',2,'Сдвинь весы на 2 в свою сторону.','milk'),
   R('molt','Снятая кожа',1,'Уничтожь союзника. Возьми 2 карты и получи 2 Останка.','molt','uncommon'),
-  R('whisper','Шёпот под столом',2,'Возьми 3 карты.','whisper','uncommon'),
+  R('whisper','Добор',2,'Возьми 3 карты.','whisper','uncommon'),
   R('nails','Три гвоздя',2,'Союзник получает Шип и +2 здоровья.','nails','uncommon'),
   R('lash','Ремень смотрителя',2,'Нанеси 1 урона всем вражеским картам.','lash','rare')
 ];
@@ -116,7 +116,7 @@ function startingItems(seed){const rng=rngFrom(seed^0x51f15e);return shuffle(ITE
 export function createRun(seed=Date.now(),profile=createProfile()){
   const runSeed=hashSeed(seed);return{
     version:2,seed:runSeed,depth:0,maxDepth:9,deck:starterDeck(),relics:[],items:startingItems(runSeed),
-    battle:null,pending:null,result:null,trail:generateTrail(runSeed),log:['За спиной щёлкнул замок.'],stats:{kills:0,sacrifices:0,cardsPlayed:0,itemsUsed:0},
+    battle:null,pending:null,result:null,secrets:{},trail:generateTrail(runSeed),log:['Забег начался.'],stats:{kills:0,sacrifices:0,cardsPlayed:0,itemsUsed:0},
     profileSnapshot:{wins:profile.wins||0}
   }
 }
@@ -179,7 +179,7 @@ export function playCard(run,battle,cardInstanceId,lane=null,targetLane=null){
   payCost(battle,card,check.cost);if(card.costType==='ember'&&new Set(run.relics).has('moth-lantern')&&!battle.firstDiscountUsed)battle.firstDiscountUsed=true;battle.hand.splice(index,1);
   if(card.type==='creature'){
     const copy={...card,sigils:[...card.sigils]};if(battle.heritage&&!copy.sigils.includes(battle.heritage)){copy.sigils.push(battle.heritage);battle.heritageCharges--;if(battle.heritageCharges<=0)battle.heritage=null}
-    battle.player[lane]=makePlayerUnit(copy);battle.log.unshift(`${copy.name} лёг на стол.`)
+    battle.player[lane]=makePlayerUnit(copy);battle.log.unshift(`${copy.name}: карта разыграна.`)
   }else{resolveRite(run,battle,card,targetLane);battle.discard.push(card)}
   run.stats.cardsPlayed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner,phase:!!ended?.phase}
 }
@@ -194,12 +194,12 @@ function resolveRite(run,battle,card,targetLane){
   else if(card.rite==='lash'){for(let i=0;i<LANES;i++)if(battle.enemy[i])damageUnit(run,battle,'enemy',i,1,null)}
 }
 export function sacrificeUnit(run,battle,lane,sigil=null){
-  if(battle.sacrificedThisTurn)return{ok:false,reason:'Одной жертвы за ход достаточно.'};const unit=battle.player[lane];if(!unit)return{ok:false,reason:'Здесь некого резать.'};
-  const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие: ${SIGILS[pick]?.name||pick}.`:'На столе осталась только кровь.');return{ok:true,heritage:pick}
+  if(battle.sacrificedThisTurn)return{ok:false,reason:'Жертву можно провести только один раз за ход.'};const unit=battle.player[lane];if(!unit)return{ok:false,reason:'Здесь нет существа для жертвы.'};
+  const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick}
 }
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
 function damageUnit(run,battle,side,lane,amount,attacker){
-  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;if(unit.sigils.includes('ward')&&!unit.wardUsed){unit.wardUsed=true;battle.log.unshift(`${unit.name}: печать поглотила удар.`);return 0}
+  const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;if(unit.sigils.includes('ward')&&!unit.wardUsed){unit.wardUsed=true;battle.log.unshift(`${unit.name}: Оберег поглотил удар.`);return 0}
   unit.hp-=amount;if(attacker&&unit.sigils.includes('thorn'))attacker.hp-=1;if(attacker&&attacker.sigils.includes('bleed')&&unit.hp>0)unit.hp-=1;
   if(attacker&&attacker.sigils.includes('chain')){for(const adj of[lane-1,lane+1])if(adj>=0&&adj<LANES&&board[adj]){board[adj].hp-=1;if(board[adj].hp<=0)killUnit(run,battle,side,adj,'chain')}}
   if(unit.hp<=0)killUnit(run,battle,side,lane,'combat');if(attacker&&attacker.hp<=0){const other=side==='player'?'enemy':'player',otherBoard=other==='player'?battle.player:battle.enemy,idx=otherBoard.indexOf(attacker);if(idx>=0)killUnit(run,battle,other,idx,'thorns')}return amount
@@ -214,23 +214,23 @@ function killUnit(run,battle,side,lane,cause='combat'){
   if(unit.sigils.includes('brood')){const base=side==='player'?cardById('leech'):enemyById('enemy-rat');const child=side==='player'?makePlayerUnit(cloneCard(base,{atk:1,hp:1,sigils:[]})):makeEnemyUnit('enemy-rat',0);child.atk=1;child.hp=1;child.maxHp=1;child.sigils=[];board[lane]=child}
   if(side==='player'&&unit.sigils.includes('echo')&&cause!=='rite'&&battle.hand.length<7){const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp,sigils:[...unit.sigils]}))}
   if(side==='player'&&unit.sigils.includes('parasite')&&battle.hand.length<7)battle.hand.push(cloneCard('leech',{name:'Личинка',cost:0,costType:'ember',atk:1,hp:1,sigils:[]}));
-  battle.log.unshift(`${unit.name} убран со стола.`)
+  battle.log.unshift(`${unit.name}: карта уничтожена.`)
 }
 function spawnIntent(battle){for(const p of battle.intent)if(!battle.enemy[p.lane]&&p.lane!==battle.lockedLane)battle.enemy[p.lane]=p.unit;battle.intent=[]}
-function directDamage(run,battle,side,amount){let dealt=amount;if(side==='player'&&new Set(run.relics).has('wet-teeth')&&!battle.firstDirectUsed){dealt++;battle.firstDirectUsed=true}battle.balance+=side==='player'?dealt:-dealt;battle.log.unshift(`${dealt} на чашу весов.`)}
+function directDamage(run,battle,side,amount){let dealt=amount;if(side==='player'&&new Set(run.relics).has('wet-teeth')&&!battle.firstDirectUsed){dealt++;battle.firstDirectUsed=true}battle.balance+=side==='player'?dealt:-dealt;battle.log.unshift(`Весы: ${side==='player'?'+':'-'}${dealt}.`)}
 function doAttacks(run,battle,side){
   const own=side==='player'?battle.player:battle.enemy,foe=side==='player'?battle.enemy:battle.player;
   for(let lane=0;lane<LANES;lane++){const attacker=own[lane];if(!attacker)continue;const attacks=attacker.sigils.includes('twin')?2:1;for(let n=0;n<attacks;n++){if(!attacker||attacker.hp<=0)break;const defender=foe[lane];if(defender){damageUnit(run,battle,side==='player'?'enemy':'player',lane,attackValue(attacker,own,lane,false),attacker);if(attacker.sigils.includes('hunger')&&!foe[lane])attacker.atk++}else directDamage(run,battle,side,attackValue(attacker,own,lane,true));if(Math.abs(battle.balance)>=BALANCE_LIMIT)break}if(Math.abs(battle.balance)>=BALANCE_LIMIT)break}
 }
 function bossHook(run,battle){
   battle.lockedLane=null;
-  if(battle.bossId==='warden'&&battle.round%3===0){const open=[0,1,2,3].filter(i=>battle.player[i]||!battle.enemy[i]);battle.lockedLane=open[battle.round%open.length]??0;battle.log.unshift(`Смотритель затянул цепь на линии ${battle.lockedLane+1}.`)}
+  if(battle.bossId==='warden'&&battle.round%3===0){const open=[0,1,2,3].filter(i=>battle.player[i]||!battle.enemy[i]);battle.lockedLane=open[battle.round%open.length]??0;battle.log.unshift(`Смотритель заблокировал линию ${battle.lockedLane+1}.`)}
   if(battle.bossId==='bellkeeper'&&battle.round%2===0)planIntent(battle,1);
   if(battle.bossId==='prior'&&battle.phase===2){battle.maxEmber=2;battle.ember=Math.min(battle.ember,2)}
 }
 function phaseOrFinish(run,battle){
   if(battle.balance>=BALANCE_LIMIT){
-    if(battle.bossId&&battle.phase<battle.phasesTotal){battle.phase++;battle.balance=0;battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);battle.log.unshift(`${BOSSES[battle.bossId].name} сменил маску. Правила стола изменились.`);return{ok:true,phase:true}}
+    if(battle.bossId&&battle.phase<battle.phasesTotal){battle.phase++;battle.balance=0;battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);battle.log.unshift(`Безликий приор: вторая фаза. Максимум Угля снижен до 2.`);return{ok:true,phase:true}}
     return finishBattle(run,battle,'player')
   }
   if(battle.balance<=-BALANCE_LIMIT)return finishBattle(run,battle,'enemy');
@@ -241,7 +241,7 @@ export function endTurn(run,battle){
   doAttacks(run,battle,'enemy');end=phaseOrFinish(run,battle);if(end)return end;spawnIntent(battle);battle.round++;battle.ember=battle.maxEmber+(new Set(run.relics).has('small-bell')&&battle.round%3===0?1:0);battle.sacrificedThisTurn=false;drawCards(battle,1);bossHook(run,battle);
   const count=battle.bossId?(battle.bossId==='bellkeeper'&&battle.round%2===0?2:1):(battle.elite&&battle.round%3===0?2:1);planIntent(battle,count);return{ok:true}
 }
-function finishBattle(run,battle,winner){battle.ended=true;battle.winner=winner;if(winner==='player')run.log.unshift('Противник медленно убрал руки со стола.');else run.result='lost';return{ok:true,ended:true,winner}}
+function finishBattle(run,battle,winner){battle.ended=true;battle.winner=winner;if(winner==='player')run.log.unshift('Бой выигран.');else run.result='lost';return{ok:true,ended:true,winner}}
 
 export function useItem(run,battle,itemId,targetLane=null){
   const idx=run.items.indexOf(itemId);if(idx<0)return{ok:false,reason:'Этого предмета уже нет.'};const item=itemInfo(itemId);if(!item)return{ok:false,reason:'Неизвестный предмет.'};
@@ -249,20 +249,20 @@ export function useItem(run,battle,itemId,targetLane=null){
   if(itemId==='knife'){killUnit(run,battle,'player',targetLane,'item');battle.remains+=3}
   if(itemId==='smoke')battle.intent=[];
   if(itemId==='bell')battle.ember+=2;
-  if(itemId==='thread'){battle.threadPrimed=true;battle.log.unshift('Нить ждёт следующего Наследия.')}
+  if(itemId==='thread'){battle.threadPrimed=true;battle.log.unshift('Чёрная нить активна: следующее Наследие применится дважды.')}
   if(itemId==='mirror'){const candidates=battle.enemy.filter(Boolean).sort((a,b)=>(b.atk+b.hp)-(a.atk+a.hp));if(candidates[0]&&battle.hand.length<7){const u=candidates[0];battle.hand.push(cloneCard('hare',{name:`Отражение: ${u.name}`,atk:1,hp:1,cost:0,sigils:[...u.sigils].slice(0,1),portrait:u.portrait}))}}
   if(itemId==='teeth')battle.balance=Math.min(BALANCE_LIMIT,battle.balance+2);
   run.items.splice(idx,1);run.stats.itemsUsed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner}
 }
 
 export function resolveNode(run,node){
-  if(!node||run.pending)return{ok:false,reason:'Сначала закончи текущий ритуал.'};
+  if(!node||run.pending)return{ok:false,reason:'Сначала заверши текущее событие.'};
   if(node.type==='battle'||node.type==='boss'){run.battle=createBattle(run,node.type==='boss'?node.bossId:null,!!node.elite);run.pending={type:'battle',nodeId:node.id,bossId:node.bossId||null};return{ok:true,type:'battle'}}
-  if(node.type==='cache')run.pending={type:'card-choice',title:'Три карты на грязном подносе',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'cache'),nodeId:node.id};
-  if(node.type==='omen')run.pending={type:'relic-choice',title:'Знак под воском',choices:rollRelicChoices(run,3),nodeId:node.id};
-  if(node.type==='item')run.pending={type:'item-choice',title:'Шкаф с чужими вещами',choices:rollItemChoices(run,3),nodeId:node.id};
-  if(node.type==='hearth')run.pending={type:'hearth',title:'Жаровня ещё тёплая',nodeId:node.id};
-  if(node.type==='altar')run.pending={type:'altar',title:'Камень принимает только одно имя',nodeId:node.id,donor:null};
+  if(node.type==='cache')run.pending={type:'card-choice',title:'Выбор карты',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'cache'),nodeId:node.id};
+  if(node.type==='omen')run.pending={type:'relic-choice',title:'Выбор знака',choices:rollRelicChoices(run,3),nodeId:node.id};
+  if(node.type==='item')run.pending={type:'item-choice',title:'Выбор предмета',choices:rollItemChoices(run,3),nodeId:node.id};
+  if(node.type==='hearth')run.pending={type:'hearth',title:'Улучшение карты',nodeId:node.id};
+  if(node.type==='altar')run.pending={type:'altar',title:'Перенос метки',nodeId:node.id,donor:null};
   return{ok:true,type:run.pending?.type}
 }
 export function chooseCardReward(run,id){const p=run.pending;if(!p||p.type!=='card-choice')return{ok:false};const card=p.choices.find(c=>c.instanceId===id);if(!card)return{ok:false};run.deck.push(card);completeNode(run);return{ok:true}}
@@ -271,20 +271,20 @@ export function chooseItem(run,id){const p=run.pending;if(!p||p.type!=='item-cho
 export function hearthUpgrade(run,id,mode='fang'){
   const p=run.pending;if(!p||p.type!=='hearth')return{ok:false};const card=run.deck.find(c=>c.instanceId===id&&c.type==='creature');if(!card)return{ok:false};
   if(mode==='fang')card.atk++;else card.hp+=2;card.upgrades=(card.upgrades||0)+1;
-  if(card.upgrades>=2&&card.mutationLevel<1){const pool=['twin','martyr','bleed','ward','parasite','chain'].filter(s=>!card.sigils.includes(s));const rng=rngFrom(run.seed^hashSeed(card.instanceId));const sigil=pool[Math.floor(rng()*pool.length)];if(sigil){card.sigils.push(sigil);card.mutationLevel=1;card.name='Шрамированный '+card.name}}
+  if(card.upgrades>=2&&card.mutationLevel<1){const pool=['twin','martyr','bleed','ward','parasite','chain'].filter(s=>!card.sigils.includes(s));const rng=rngFrom(run.seed^hashSeed(card.instanceId));const sigil=pool[Math.floor(rng()*pool.length)];if(sigil){card.sigils.push(sigil);card.mutationLevel=1;card.name='Мутировавший '+card.name}}
   completeNode(run);return{ok:true}
 }
 export function altarSelect(run,id){
   const p=run.pending;if(!p||p.type!=='altar')return{ok:false};const card=run.deck.find(c=>c.instanceId===id&&c.type==='creature');if(!card)return{ok:false};
   if(!p.donor){if(!card.sigils.length)return{ok:false,reason:'У этой карты нечего переносить.'};p.donor=id;return{ok:true,stage:'receiver'}}
-  if(p.donor===id)return{ok:false,reason:'Нужны две разные карты.'};const donor=run.deck.find(c=>c.instanceId===p.donor);if(!donor)return{ok:false};const sigil=donor.sigils[0];if(sigil&&!card.sigils.includes(sigil))card.sigils.push(sigil);card.mutationLevel=(card.mutationLevel||0)+1;card.name=card.mutationLevel>1?'Изуродованный '+card.name:card.name;run.deck=run.deck.filter(c=>c.instanceId!==donor.instanceId);completeNode(run);return{ok:true,transferred:sigil}
+  if(p.donor===id)return{ok:false,reason:'Нужны две разные карты.'};const donor=run.deck.find(c=>c.instanceId===p.donor);if(!donor)return{ok:false};const sigil=donor.sigils[0];if(sigil&&!card.sigils.includes(sigil))card.sigils.push(sigil);card.mutationLevel=(card.mutationLevel||0)+1;card.name=card.mutationLevel>1?'Изменённый '+card.name:card.name;run.deck=run.deck.filter(c=>c.instanceId!==donor.instanceId);completeNode(run);return{ok:true,transferred:sigil}
 }
 export function afterBattleVictory(run){
   if(!run.battle||run.battle.winner!=='player')return{ok:false};const bossId=run.battle.bossId;run.battle=null;
   if(bossId){if(run.depth>=run.maxDepth-1||bossId==='prior'){run.result='won';run.pending={type:'run-win'};return{ok:true,won:true}}run.pending={type:'relic-choice',title:`Трофей после: ${BOSSES[bossId].name}`,choices:rollRelicChoices(run,3),nodeId:'boss-trophy'};return{ok:true,boss:true}}
-  run.pending={type:'card-choice',title:'Противник оставил три карты',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'battle'),nodeId:'battle-reward'};return{ok:true}
+  run.pending={type:'card-choice',title:'Награда за бой',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'battle'),nodeId:'battle-reward'};return{ok:true}
 }
 export function completeNode(run){run.pending=null;run.battle=null;run.depth++;if(run.depth>=run.maxDepth&&!run.result)run.result='won';return run}
 export function skipReward(run){if(run.pending?.type==='card-choice'){completeNode(run);return{ok:true}}return{ok:false}}
 export function serializeRun(run){return JSON.stringify(run)}
-export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}return parsed}
+export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}parsed.secrets=parsed.secrets||{};return parsed}
