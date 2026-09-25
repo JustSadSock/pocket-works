@@ -571,6 +571,11 @@ export class MeltCryptGame {
     room.cleared = false;
     const firstCombat = this.run.floor === 1 && !this.run.firstCombatRewarded && room.role === 'room';
     const plan = buildEncounterPlan(room,this.run.floor,this.run.seed,{firstCombat});
+    const center=this.visuals.roomCenters.get(room.id);
+    if(center){
+      const inward=center.subtract(this.controller.position);inward.y=0;
+      if(inward.lengthSquared()>0.001){inward.normalize();this.controller.nudge(inward,0.46);this.controller.syncCamera();}
+    }
     this.visuals.sealRoom(room);
     this.setCombatActive(true);
     this.handleEncounterEvents(this.encounterDirector.begin(plan),room);
@@ -640,7 +645,16 @@ export class MeltCryptGame {
     const group='choice-'+roomId+'-'+Date.now();
     const offsets=count===3?[[-1.55,0.7],[0,1.1],[1.55,0.7]]:[[0,0.9]];
     offsets.slice(0,count).forEach(([x,z],index)=>{
-      this.spawnWeaponDrop(center.add(new Vector3(x,0,z)),roomId,{choiceGroup:group,seedSalt:0x99e1+index*733});
+      let point=center.add(new Vector3(x,0,z));
+      if(this.controller.overlapsAt(point.x,point.z,0)){
+        const angle=index/count*Math.PI*2;
+        for(let step=0;step<6;step+=1){
+          const radius=2.0+step*0.38;
+          const candidate=center.add(new Vector3(Math.cos(angle)*radius,0,Math.sin(angle)*radius));
+          if(!this.controller.overlapsAt(candidate.x,candidate.z,0)){point=candidate;break;}
+        }
+      }
+      this.spawnWeaponDrop(point,roomId,{choiceGroup:group,seedSalt:0x99e1+index*733});
     });
     this.toast('CHOOSE A WEAPON.');
     this.weaponBannerTimer=2.8;
