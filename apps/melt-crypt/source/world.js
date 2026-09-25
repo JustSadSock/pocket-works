@@ -362,6 +362,7 @@ export class CryptVisuals {
     }
 
     this.createRoomDecor(root, room, x, z, floor);
+    this.createRoomModuleGeometry(root, room, x, z, trimMat);
     if (room.role === 'chest') this.createChest(root, room, x, z, trimMat, crystalA);
     if (room.role === 'shrine') this.createShrine(root, room, x, z, trimMat, crystalB);
     if (room.role === 'gate') this.createGate(root, room, x, z, floor);
@@ -442,6 +443,100 @@ export class CryptVisuals {
         eye.parent = node; eye.position.set(0, 0.7, 0.15); eye.material = rng() < 0.5 ? crystalA : crystalB; eye.isPickable = false;
         this.ambientProps.push({ node, kind: 'tilt', phase: rng() * Math.PI * 2, baseY: 0, speed: 0.35 + rng() * 0.45 });
       }
+    }
+  }
+
+  createRoomModuleGeometry(root, room, x, z, material) {
+    const obstacle = room.obstacle || 'none';
+    const bone = this.decorMaterials[4] || material;
+    const red = this.decorMaterials[2] || material;
+
+    const box = (name, px, pz, width, depth, height = 1.45, mat = material, collides = true) => {
+      const mesh = flat(MeshBuilder.CreateBox(name, { width, height, depth }, this.scene));
+      mesh.parent = root;
+      mesh.position.set(px, height * 0.5 - 0.02, pz);
+      mesh.material = mat;
+      mesh.isPickable = false;
+      mesh.checkCollisions = false;
+      if (collides) this.registerCollisionBox(px, mesh.position.y, pz, width, height, depth);
+      return mesh;
+    };
+    const pillar = (name, px, pz, diameter = 0.62, height = 2.7, mat = material, collides = true) => {
+      const mesh = flat(MeshBuilder.CreateCylinder(name, { height, diameter, tessellation: 7 }, this.scene));
+      mesh.parent = root;
+      mesh.position.set(px, height * 0.5 - 0.02, pz);
+      mesh.material = mat;
+      mesh.isPickable = false;
+      if (collides) this.registerCollisionBox(px, mesh.position.y, pz, diameter * 0.82, height, diameter * 0.82);
+      return mesh;
+    };
+
+    if (obstacle === 'pillars') {
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) pillar('combat-pillar', x + sx * 2.35, z + sz * 2.35, 0.68, 3.1);
+    } else if (obstacle === 'well' || obstacle === 'bell') {
+      const ring = MeshBuilder.CreateTorus('central-' + obstacle, {
+        diameter: obstacle === 'well' ? 2.45 : 1.75,
+        thickness: obstacle === 'well' ? 0.22 : 0.14,
+        tessellation: 14
+      }, this.scene);
+      ring.parent = root;
+      ring.position.set(x, obstacle === 'well' ? 0.2 : 1.55, z);
+      ring.rotation.x = Math.PI / 2;
+      ring.material = obstacle === 'well' ? bone : red;
+      ring.isPickable = false;
+      if (obstacle === 'well') this.registerCollisionBox(x, 0.55, z, 2.0, 1.1, 2.0);
+      if (obstacle === 'bell') {
+        const bell = flat(MeshBuilder.CreateCylinder('hanging-bell', { height: 1.05, diameterTop: 0.46, diameterBottom: 1.05, tessellation: 8 }, this.scene));
+        bell.parent = root; bell.position.set(x, 2.0, z); bell.material = red; bell.isPickable = false;
+      }
+    } else if (obstacle === 'ribs' || obstacle === 'gallery') {
+      const alongZ = obstacle === 'ribs';
+      for (const side of [-1, 1]) {
+        for (const offset of [-3.0, 0, 3.0]) {
+          const px = x + (alongZ ? side * 3.55 : offset);
+          const pz = z + (alongZ ? offset : side * 3.55);
+          pillar('side-rib', px, pz, 0.42, 3.5, bone, false);
+        }
+      }
+    } else if (obstacle === 'corners') {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) box('corner-block',x+sx*2.7,z+sz*2.7,1.35,1.35,1.7,material,true);
+    } else if (obstacle === 'split-n') {
+      box('split-n-left',x-2.35,z,2.6,0.48,2.1,material,true);
+      box('split-n-right',x+2.35,z,2.6,0.48,2.1,material,true);
+    } else if (obstacle === 'split-e') {
+      box('split-e-top',x,z-2.35,0.48,2.6,2.1,material,true);
+      box('split-e-bottom',x,z+2.35,0.48,2.6,2.1,material,true);
+    } else if (obstacle === 'ring') {
+      for (let i=0;i<6;i+=1) {
+        const a=i/6*Math.PI*2;
+        pillar('ossuary-ring-pillar-'+i,x+Math.cos(a)*2.65,z+Math.sin(a)*2.65,0.46,2.25,bone,true);
+      }
+    } else if (obstacle === 'cross') {
+      pillar('cross-vault-center',x,z,0.92,3.3,material,true);
+      for (const [dx,dz] of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]]) pillar('cross-vault-side',x+dx,z+dz,0.38,2.8,bone,false);
+    } else if (obstacle === 'lanes' || obstacle === 'lanes-e') {
+      const alongZ = obstacle === 'lanes';
+      for (const side of [-1,1]) {
+        const px=x+(alongZ?side*2.45:0), pz=z+(alongZ?0:side*2.45);
+        box('lane-divider',px,pz,alongZ?0.52:3.0,alongZ?3.0:0.52,1.35,material,true);
+      }
+    } else if (obstacle === 'cages') {
+      for (const side of [-1,1]) {
+        const cage=box('iron-cage',x+side*2.45,z,1.45,1.45,1.85,material,true);
+        cage.visibility=0.78;
+      }
+    } else if (obstacle === 'debris') {
+      box('fallen-slab-a',x-1.7,z+1.2,1.9,0.72,0.28,bone,true);
+      box('fallen-slab-b',x+1.45,z-1.5,1.35,0.8,0.22,material,true);
+    } else if (obstacle === 'hooks') {
+      for (const side of [-1,1]) for (const offset of [-2.4,0,2.4]) {
+        const hook=MeshBuilder.CreateTorus('ceiling-hook',{diameter:0.44,thickness:0.055,tessellation:8},this.scene);
+        hook.parent=root;hook.position.set(x+side*2.55,2.65,z+offset);hook.scaling.x=0.55;hook.material=bone;hook.isPickable=false;
+      }
+    } else if (obstacle === 'grid') {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) pillar('grave-grid-marker',x+sx*1.95,z+sz*1.95,0.5,1.55,bone,true);
+      const low=box('grave-grid-low',x,z,1.15,1.15,0.26,red,true);
+      low.position.y=0.11;
     }
   }
 
