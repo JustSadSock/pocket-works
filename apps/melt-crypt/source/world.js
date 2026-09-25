@@ -676,6 +676,65 @@ export class CryptVisuals {
       for (const sx of [-1,1]) for (const sz of [-1,1]) pillar('grave-grid-marker',x+sx*1.95,z+sz*1.95,0.5,1.55,bone,true);
       const low=box('grave-grid-low',x,z,1.15,1.15,0.26,red,true);
       low.position.y=0.11;
+    } else if (obstacle === 'bridge') {
+      box('bridge-spine',x,z,3.1,8.2,0.18,bone,false);
+      for(const side of [-1,1]) {
+        box('bridge-rail-'+side,x+side*2.55,z,0.16,7.7,0.92,material,true);
+      }
+      for(const side of [-1,1]) {
+        const voidMesh=flat(MeshBuilder.CreateBox('bridge-void-'+side,{width:1.35,height:0.025,depth:7.8},this.scene));
+        voidMesh.parent=root;voidMesh.position.set(x+side*4.05,0.005,z);voidMesh.material=red;voidMesh.visibility=.18;voidMesh.isPickable=false;
+      }
+    } else if (obstacle === 'sunken') {
+      for(const side of [-1,1]) {
+        box('choir-step-a-'+side,x+side*3.1,z,1.2,5.8,0.22,bone,true);
+        box('choir-step-b-'+side,x+side*4.0,z,0.65,6.8,0.31,material,true);
+      }
+      for(const zOff of [-2.8,2.8]) pillar('choir-column-'+zOff,x,z+zOff,0.46,3.2,bone,false);
+    } else if (obstacle === 'steps') {
+      for(let i=0;i<3;i+=1) {
+        const h=0.16+i*0.08;
+        box('altar-step-'+i,x,z-2.4+i*0.75,4.2-i*0.55,0.72,h,bone,true);
+      }
+      pillar('altar-totem',x,z-0.55,0.58,2.2,red,true);
+    } else if (obstacle === 'knife') {
+      for(const side of [-1,1]) {
+        for(const zOff of [-3,-1,1,3]) {
+          const blade=flat(MeshBuilder.CreateBox('wall-blade-'+side+'-'+zOff,{width:0.55,height:1.15,depth:0.08},this.scene));
+          blade.parent=root;blade.position.set(x+side*4.35,1.25,z+zOff);blade.rotation.z=side*0.52;blade.material=bone;blade.isPickable=false;
+        }
+      }
+      box('knife-center-cover',x,z,1.1,1.6,1.05,material,true);
+    } else if (obstacle === 'amphitheater') {
+      for(let i=0;i<8;i+=1) {
+        const a=i/8*Math.PI*2;
+        const px=x+Math.cos(a)*3.9,pz=z+Math.sin(a)*3.9;
+        box('arena-seat-'+i,px,pz,1.15,0.72,0.34,bone,true).rotation.y=-a;
+      }
+      const mark=MeshBuilder.CreateTorus('arena-mark',{diameter:4.6,thickness:0.07,tessellation:18},this.scene);
+      mark.parent=root;mark.position.set(x,0.06,z);mark.rotation.x=Math.PI/2;mark.material=red;mark.isPickable=false;
+    } else if (obstacle === 'hanging') {
+      for(const xOff of [-3.1,0,3.1]) {
+        const chain=flat(MeshBuilder.CreateCylinder('gallery-chain-'+xOff,{height:3.4,diameter:0.045,tessellation:5},this.scene));
+        chain.parent=root;chain.position.set(x+xOff,2.25,z);chain.material=bone;chain.isPickable=false;
+        const cage=flat(MeshBuilder.CreateBox('gallery-cage-'+xOff,{width:0.75,height:0.9,depth:0.75},this.scene));
+        cage.parent=root;cage.position.set(x+xOff,0.8,z);cage.material=material;cage.visibility=.72;cage.isPickable=false;
+        this.registerCollisionBox(x+xOff,0.8,z,0.7,1.4,0.7);
+      }
+    } else if (obstacle === 'arches') {
+      for(const xOff of [-2.6,0,2.6]) {
+        pillar('arch-left-'+xOff,x+xOff-0.62,z,0.34,3.1,bone,false);
+        pillar('arch-right-'+xOff,x+xOff+0.62,z,0.34,3.1,bone,false);
+        box('arch-top-'+xOff,x+xOff,z,1.55,0.34,0.3,bone,false).position.y=2.8;
+      }
+    } else if (obstacle === 'execution-ring') {
+      for(let i=0;i<6;i+=1) {
+        const a=i/6*Math.PI*2;
+        const px=x+Math.cos(a)*3.15,pz=z+Math.sin(a)*3.15;
+        pillar('execution-stake-'+i,px,pz,0.36,2.0,i%2?bone:material,true);
+      }
+      const slab=box('execution-slab',x,z,2.0,0.9,0.3,red,true);
+      slab.position.y=0.14;
     }
   }
 
@@ -1179,8 +1238,15 @@ export class CryptVisuals {
       trait.position.set(0.16,0.34,0);
     }
 
-    const ring=MeshBuilder.CreateTorus('drop-weapon-floor-ring',{diameter:0.78,thickness:0.028,tessellation:12},this.scene);
+    node.scaling.setAll(1.18);
+    const ring=MeshBuilder.CreateTorus('drop-weapon-floor-ring',{diameter:0.92,thickness:0.035,tessellation:12},this.scene);
     ring.parent=node;ring.position.y=0.08;ring.rotation.x=Math.PI/2;ring.material=glow;ring.isPickable=false;
+    const beamMat=simpleMaterial(this.scene,'weapon-beacon-'+weapon.seed,8,0.66,0.44,0.18);
+    beamMat.alpha=0.26;materials.push(beamMat);
+    for(const side of [-1,1]) {
+      const beam=MeshBuilder.CreateBox('weapon-beacon-line-'+side,{width:0.025,height:2.4,depth:0.025},this.scene);
+      beam.parent=node;beam.position.set(side*0.18,1.2,0);beam.material=beamMat;beam.isPickable=false;
+    }
     return { node, materials, weapon, ring };
   }
 
