@@ -235,3 +235,11 @@ button:focus-visible,a:focus-visible{outline:2px solid #c58d53;outline-offset:2p
 @keyframes propPresent{
   from{opacity:0;transform:translateX(-50%) rotateX(-26deg) translateY(-12px) scale(.97)}
 }
+
+.wall-seal{position:absolute;z-index:6;right:8%;top:26%;width:34px;height:34px;padding:0;background:transparent;border:0;opacity:.08;pointer-events:auto;transition:opacity .2s ease,transform .2s ease}
+.wall-seal i,.wall-seal:before,.wall-seal:after{content:"";position:absolute;left:50%;top:50%;background:#8d6545;transform:translate(-50%,-50%)}
+.wall-seal i{width:18px;height:18px;background:transparent;border:2px solid #8d6545;transform:translate(-50%,-50%) rotate(45deg)}
+.wall-seal:before{width:2px;height:29px}.wall-seal:after{width:29px;height:2px}
+.wall-seal.available{opacity:.22}.wall-seal.available:active{opacity:.7;transform:scale(.94)}
+.wall-seal.used{opacity:.04;pointer-events:none}
+.wall-seal.revealed{opacity:.72;filter:drop-shadow(0 0 8px rgba(181,94,53,.45))}
