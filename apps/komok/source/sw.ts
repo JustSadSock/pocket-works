@@ -5,13 +5,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'komok-';
-const CACHE_NAME = 'komok-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'komok-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-09-26';
 const RELEASE_NOTES = [
-  'Добавлена настоящая деформируемая 3D-глина с тремя кистями.',
-  'Камера управляется фоном и двумя пальцами, не мешая лепке.',
-  'Форма автоматически сохраняется локально вместе с настройками.'
+  'Исправлены разрывы сетки и белые треугольные артефакты при сглаживании.',
+  'Портретная камера теперь удерживает комок целиком в кадре.',
+  'Сохранение геометрии стало компактнее и устойчивее.'
 ];
 
 setCacheNameDetails({ prefix: 'komok', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
