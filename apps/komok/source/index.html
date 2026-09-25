@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#e7dfd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="КОМОК">
+  <title>КОМОК</title>
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <canvas id="renderCanvas" data-gesture-surface data-block-callout aria-label="Трёхмерная глиняная скульптура"></canvas>
+
+    <div class="loading" id="loading" aria-live="polite">
+      <div class="loading-mark" aria-hidden="true"></div>
+      <span>разминаем глину</span>
+    </div>
+
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../index.html" data-app-control data-native-press aria-label="Назад в Pocket Works">←</a>
+      <div class="brand">
+        <strong>КОМОК</strong>
+        <span id="saveStatus">сохранено</span>
+      </div>
+      <div class="top-actions">
+        <button id="undoButton" class="top-button" type="button" data-native-press aria-label="Отменить последний мазок" disabled>↶</button>
+        <button id="newButton" class="top-button" type="button" data-native-press aria-label="Новый комок">＋</button>
+        <button id="soundButton" class="top-button sound-on" type="button" data-native-press aria-label="Выключить звук">♪</button>
+      </div>
+    </header>
+
+    <div class="hint" id="hint" data-ui>
+      <span>по глине — лепить</span>
+      <i></i>
+      <span>по фону — вращать</span>
+      <i></i>
+      <span>2 пальца — масштаб</span>
+    </div>
+
+    <div class="brush-cursor" id="brushCursor" aria-hidden="true"></div>
+
+    <section class="tool-dock" aria-label="Инструменты лепки" data-ui>
+      <div class="tools" role="group" aria-label="Кисть">
+        <button class="tool active" data-tool="raise" type="button" data-native-press>
+          <span class="tool-glyph">＋</span><small>тянуть</small>
+        </button>
+        <button class="tool" data-tool="press" type="button" data-native-press>
+          <span class="tool-glyph">−</span><small>давить</small>
+        </button>
+        <button class="tool" data-tool="smooth" type="button" data-native-press>
+          <span class="tool-glyph">≈</span><small>гладить</small>
+        </button>
+      </div>
+      <label class="size-control">
+        <span>кисть</span>
+        <input id="brushSize" type="range" min="18" max="80" step="1" value="46" aria-label="Размер кисти">
+      </label>
+    </section>
+
+    <section class="confirm-panel" id="confirmPanel" hidden data-ui aria-labelledby="confirmTitle">
+      <strong id="confirmTitle">Новый комок?</strong>
+      <p>Текущая форма будет заменена. Отменить это действие уже не получится.</p>
+      <div>
+        <button id="cancelNew" type="button" data-native-press>оставить</button>
+        <button id="confirmNew" class="danger" type="button" data-native-press>начать заново</button>
+      </div>
+    </section>
+
+    <section class="error-panel" id="errorPanel" hidden data-ui>
+      <strong>Глина не загрузилась</strong>
+      <p id="errorText">Попробуй открыть приложение ещё раз.</p>
+      <button id="retryButton" type="button" data-native-press>перезапустить</button>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
