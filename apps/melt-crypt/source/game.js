@@ -442,12 +442,12 @@ export class MeltCryptGame {
 
   floorSubtitle() {
     const lines = [
-      'the walls learned a new color',
-      'local biology has become entrepreneurial',
+      'the walls learned a new shape',
+      'the same stone arranged a different argument',
       'the floor plan denies responsibility',
       'something is singing through masonry',
       'all doors are technically opinions',
-      'the ecosystem has read your previous run'
+      'the grammar remembers what you survived'
     ];
     return lines[(this.run.floor - 1) % lines.length];
   }
@@ -1756,12 +1756,12 @@ export class MeltCryptGame {
     }
 
     const roomColor = (room) => {
-      if (room.id === this.currentRoomId) return '#f4f7e9';
-      if (room.role === 'gate') return this.visuals.gate?.unlocked ? '#d7ff55' : '#ff4fd8';
-      if (room.role === 'chest' && !room.opened) return '#ffd166';
-      if (room.role === 'shrine' && !room.shrineUsed) return '#5de7ff';
-      if (!room.cleared) return '#ff6b8a';
-      return 'rgba(196,205,214,.48)';
+      if (room.id === this.currentRoomId) return '#ead8bc';
+      if (room.role === 'gate') return this.visuals.gate?.unlocked ? '#d96843' : '#8e2029';
+      if (room.role === 'chest' && !room.opened) return '#e6a35c';
+      if (room.role === 'shrine' && !room.shrineUsed) return '#c7593f';
+      if (!room.cleared) return '#b92835';
+      return 'rgba(143,104,95,.56)';
     };
 
     for (const room of visited) {
@@ -1771,7 +1771,7 @@ export class MeltCryptGame {
       ctx.fillStyle = roomColor(room);
       ctx.fillRect(Math.round(rect.x), Math.round(rect.z), rect.size, rect.size);
       if (room.id === this.currentRoomId) {
-        ctx.strokeStyle = '#d7ff55';
+        ctx.strokeStyle = '#d96843';
         ctx.lineWidth = 1;
         ctx.strokeRect(Math.round(rect.x - 2), Math.round(rect.z - 2), rect.size + 4, rect.size + 4);
       }
@@ -1803,7 +1803,7 @@ export class MeltCryptGame {
       const room = this.dungeon.rooms[enemy.roomId];
       if (!room?.visited) continue;
       const p = projectIntoRoom(room, enemy.visual.root.position.x, enemy.visual.root.position.z);
-      ctx.fillStyle = enemy.genome.elite ? '#ff3df2' : '#ff415f';
+      ctx.fillStyle = enemy.genome.elite ? '#e6a35c' : '#c9363f';
       ctx.fillRect(Math.round(p.x - 1), Math.round(p.z - 1), enemy.genome.elite ? 4 : 3, enemy.genome.elite ? 4 : 3);
     }
 
