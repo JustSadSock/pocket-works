@@ -21,6 +21,8 @@ import { CryptVisuals, hslColor } from './world.js';
 import { generateEnemyBlueprint } from './enemy-generator.js';
 import { generateWeapon } from './weapon-generator.js';
 import { CapsuleController } from './player-controller.js';
+import { STARTER_WEAPON, attackTiming } from './combat-motion.js';
+import { EncounterDirector, buildEncounterPlan } from './encounter-director.js';
 
 const STORAGE_KEY = 'pocket-works:melt-crypt';
 const ROOM_NAMES = [
@@ -171,6 +173,10 @@ export class MeltCryptGame {
     this.lookPitch = 0;
     this.cameraFx = { recoil: 0, hit: 0, dash: 0, step: 0, lean: 0 };
     this.roomTitleCache = new Map();
+    this.encounterDirector = new EncounterDirector();
+    this.combatActive = false;
+    this.weaponBannerTimer = 0;
+    this.attackCommitted = false;
   }
 
   async init(report = () => {}) {
@@ -192,8 +198,9 @@ export class MeltCryptGame {
     this.scene.fogMode = Scene.FOGMODE_EXP2;
     this.scene.fogDensity = 0.024;
     this.scene.fogColor = new Color3(0.09, 0.045, 0.12);
-    this.scene.imageProcessingConfiguration.contrast = 1.14;
-    this.scene.imageProcessingConfiguration.exposure = 1.05;
+    this.scene.imageProcessingConfiguration.contrast = 1.04;
+    this.scene.imageProcessingConfiguration.exposure = 0.98;
+    this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
 
     this.camera = new FreeCamera('crypt-player', new Vector3(0, 1.58, 0), this.scene);
     this.camera.minZ = 0.035;
@@ -351,7 +358,7 @@ export class MeltCryptGame {
 
   startNewRun() {
     const seed = randomSeed();
-    const starterWeapon = generateWeapon(seed ^ 0x51a7e, 1, [], this.generatorTier());
+    const starterWeapon = clone(STARTER_WEAPON);
     this.run = {
       seed,
       floor: 1,
@@ -367,6 +374,7 @@ export class MeltCryptGame {
       weapon: starterWeapon,
       recentEnemySignatures: [],
       recentWeaponSignatures: [starterWeapon.signature],
+      firstCombatRewarded: false,
       totalKills: 0,
       discoveries: 0,
       startedAt: Date.now()
@@ -384,7 +392,8 @@ export class MeltCryptGame {
     this.run.relics = Array.isArray(this.run.relics) ? this.run.relics : [];
     this.run.potions = Array.isArray(this.run.potions) ? this.run.potions : [];
     this.run.discoveries = Number(this.run.discoveries) || 0;
-    this.run.weapon = this.run.weapon || generateWeapon(this.run.seed ^ 0x51a7e, this.run.floor || 1, [], this.generatorTier());
+    this.run.weapon = this.run.weapon || clone(STARTER_WEAPON);
+    this.run.firstCombatRewarded = Boolean(this.run.firstCombatRewarded);
     this.run.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
     this.run.recentWeaponSignatures = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures.slice(-18) : [this.run.weapon.signature];
     void this.audio.ensure();
@@ -437,10 +446,12 @@ export class MeltCryptGame {
     start.cleared = true;
     this.roomTitleCache.clear();
     this.contextTarget = null;
+    this.encounterDirector.cancel();
+    this.setCombatActive(false);
 
-    const fog = hslColor(352, 0.46, 0.075);
+    const fog = hslColor(352, 0.28, 0.105);
     this.scene.fogColor.copyFrom(fog);
-    this.scene.clearColor = new Color4(0.035, 0.012, 0.016, 1);
+    this.scene.clearColor = new Color4(0.045, 0.026, 0.026, 1);
     this.audio.setFloor(this.run.floor);
 
     this.hideScreens();
@@ -625,13 +636,23 @@ export class MeltCryptGame {
       return;
     }
 
-    if (actions.attackStart && !this.attackState.active) this.attackHold = 0;
-    if (actions.attackHeld && !this.attackState.active) this.attackHold += dt;
-    if (actions.attackRelease && !this.attackState.active) {
-      const heavy = this.attackHold >= 0.34;
-      this.startAttack(heavy, this.justDodged > 0.02);
+    if (actions.attackStart && !this.attackState.active) {
+      this.attackHold = 0;
+      this.attackCommitted = false;
+      this.audio.tone('ready',0.38);
+    }
+    if (actions.attackHeld && !this.attackState.active) {
+      this.attackHold += dt;
+      if (this.attackHold >= 0.3 && !this.attackCommitted) {
+        this.attackCommitted = true;
+        this.startAttack(true, this.justDodged > 0.02);
+      }
+    }
+    if (actions.attackRelease && !this.attackState.active && !this.attackCommitted) {
+      this.startAttack(false, this.justDodged > 0.02);
       this.attackHold = 0;
     }
+    if (actions.attackRelease) this.attackCommitted = false;
     if (actions.dodge && this.dashCooldown <= 0) this.startDash();
     if (actions.skill) {
       if (this.contextTarget) this.useAction();
@@ -642,6 +663,7 @@ export class MeltCryptGame {
     this.updateAttack(dt, actions.attackHeld);
     this.updateCurrentRoom();
     this.updateEnemies(dt);
+    this.updateEncounter(dt);
     this.updateProjectiles(dt);
     this.updateDrops(dt);
     this.updateContext();
@@ -661,6 +683,8 @@ export class MeltCryptGame {
     this.parryWindow = Math.max(0, this.parryWindow - dt);
     this.wardTimer = Math.max(0, this.wardTimer - dt);
     this.justDodged = Math.max(0, (this.justDodged || 0) - dt);
+    this.weaponBannerTimer = Math.max(0, this.weaponBannerTimer - dt);
+    this.root.classList.toggle('weapon-banner-active', this.weaponBannerTimer > 0);
   }
 
   updateEffects(dt) {
@@ -803,13 +827,16 @@ export class MeltCryptGame {
     const weapon = this.run.weapon;
     if (!weapon || this.attackState.active || this.fireCooldown > 0.02) return;
     this.applyAimAssist(weapon, dashAttack);
+    const combo = ((this.attackState.combo ?? -1) + 1) % Math.max(1, weapon.comboLength || 1);
     const haste = this.effects.haste > 0 ? 0.78 : 1;
-    const duration = clamp(weapon.recovery * (heavy ? 1.18 : 0.82) * haste, 0.22, 1.45);
-    const combo = ((this.attackState.combo || 0) + 1) % Math.max(1, weapon.comboLength || 1);
-    this.attackState = { active:true, timer:duration, duration, heavy, combo, hitDone:false, dashAttack };
-    this.fireCooldown = duration * 0.82;
-    this.audio.tone('shot', heavy ? 0.62 : 0.86);
-    navigator.vibrate?.(heavy ? 10 : 5);
+    const timing = attackTiming(weapon,heavy,combo,haste);
+    this.attackState = {
+      active:true,timer:timing.duration,duration:timing.duration,heavy,combo,
+      hitDone:false,dashAttack,impactStart:timing.impactStart,impactEnd:timing.impactEnd
+    };
+    this.fireCooldown = timing.duration * 0.76;
+    this.audio.tone(heavy ? 'heavy-swing' : 'swing', heavy ? 1 : 0.82);
+    navigator.vibrate?.(heavy ? 10 : 4);
   }
 
   updateAttack(dt, attackHeld) {
@@ -831,8 +858,8 @@ export class MeltCryptGame {
       heavy: state.heavy
     });
 
-    const activeStart = state.heavy ? 0.39 : 0.25;
-    const activeEnd = state.heavy ? 0.7 : 0.58;
+    const activeStart = state.impactStart ?? 0.34;
+    const activeEnd = state.impactEnd ?? 0.56;
     if (!state.hitDone && progress >= activeStart && progress <= activeEnd) {
       state.hitDone = true;
       this.performMeleeHit(state);
@@ -1120,8 +1147,9 @@ export class MeltCryptGame {
     this.discoverWeapon(weapon);
     this.skillCooldown=0;
     this.attackState={active:false,timer:0,duration:0,heavy:false,combo:-1,hitDone:false,dashAttack:false};
+    this.weaponBannerTimer=2.4;
     this.toast('EQUIPPED: ' + weapon.name + ' / ' + weapon.skillSpec.label);
-    this.audio.tone('loot',1);
+    this.audio.tone('equip',1);
     navigator.vibrate?.([5,16,5]);
     this.saveRun();
   }
