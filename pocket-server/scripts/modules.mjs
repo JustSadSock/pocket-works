@@ -10,7 +10,9 @@ const token = process.env.POCKET_DEPLOY_TOKEN;
 const publishing = process.argv.includes('--publish');
 if (publishing && (!url || !/^https:\/\//.test(url) && !/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(url) || !token)) throw new Error('POCKET_SERVER_URL (HTTPS, or local HTTP) and POCKET_DEPLOY_TOKEN are required');
 let count = 0;
-for (const gameId of await readdir(apps)) {
+for (const entry of await readdir(apps, { withFileTypes: true })) {
+  if (!entry.isDirectory() || entry.name.startsWith('_')) continue;
+  const gameId = entry.name;
   const folder = path.join(apps, gameId, 'server');
   let config;
   try { config = JSON.parse(await readFile(path.join(folder, 'module.json'), 'utf8')); }
