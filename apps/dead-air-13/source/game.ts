@@ -110,7 +110,7 @@ class PlayScene extends Phaser.Scene {
     super('play');
   }
 
-  init(data: StartData) {
+  init(data: StartData = { stageId: 1, mode: 'campaign' }) {
     this.mode = data.mode || 'campaign';
     this.runSeed = data.seed ?? (data.stageId * 947 + (this.mode === 'encore' ? Date.now() % 100000 : 0));
     this.stage = this.mode === 'encore' ? encoreStage(this.runSeed) : stageById(data.stageId);
@@ -142,6 +142,7 @@ class PlayScene extends Phaser.Scene {
   create() {
     this.makeTextures();
     this.physics.world.setBounds(0, 0, this.stage.runLength + 1800, WORLD_H);
+    this.physics.world.gravity.y = this.stage.gravity;
     this.cameras.main.setBackgroundColor(this.stage.palette.sky);
     this.cameras.main.setBounds(0, 0, this.stage.runLength + 1800, WORLD_H);
     this.drawBackdrop();
@@ -469,7 +470,7 @@ class PlayScene extends Phaser.Scene {
     }
 
     const grounded = (this.player.body as Phaser.Physics.Arcade.Body).blocked.down || (this.player.body as Phaser.Physics.Arcade.Body).touching.down;
-    const jumpPressed = inputState.jumpQueued || Phaser.Input.Keyboard.JustDown(this.cursors?.up) || Phaser.Input.Keyboard.JustDown(this.keySpace);
+    const jumpPressed = inputState.jumpQueued || (!!this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.up)) || (!!this.keySpace && Phaser.Input.Keyboard.JustDown(this.keySpace));
     if (jumpPressed) {
       inputState.jumpQueued = false;
       if (grounded) {
@@ -481,7 +482,7 @@ class PlayScene extends Phaser.Scene {
       }
     }
 
-    const dashPressed = inputState.dashQueued || Phaser.Input.Keyboard.JustDown(this.keyShift);
+    const dashPressed = inputState.dashQueued || (!!this.keyShift && Phaser.Input.Keyboard.JustDown(this.keyShift));
     if (dashPressed) {
       inputState.dashQueued = false;
       if (time - this.lastDashAt > 620) {
@@ -497,7 +498,7 @@ class PlayScene extends Phaser.Scene {
       }
     }
 
-    const specialPressed = inputState.specialQueued || Phaser.Input.Keyboard.JustDown(this.keyE);
+    const specialPressed = inputState.specialQueued || (!!this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE));
     if (specialPressed) {
       inputState.specialQueued = false;
       if (this.signal >= 1) this.useSpecial();
