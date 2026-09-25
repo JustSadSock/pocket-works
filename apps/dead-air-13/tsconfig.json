@@ -1,17 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "target": "ES2023",
+    "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowJs": true,
-    "checkJs": false,
     "strict": true,
     "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "types": ["vite/client", "vitest/globals"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": ["node", "vite/client", "vite-plugin-pwa/client"]
   },
-  "include": ["source/**/*.ts", "vite.config.ts"]
+  "include": ["source", "vite.config.ts", "../../shared/**/*.ts"]
 }
