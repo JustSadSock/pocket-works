@@ -191,7 +191,7 @@ function finishProfile(){
 function abandon(){run=null;save();hidePanels();setMode('menu')}
 
 function render(){
-  renderMenu();setOpponent();updateWallSeal();
+  renderMenu();setOpponent();updateWallSeal();renderSeals(run?.battle?.seals||{player:0,enemy:0});
   if(!run)return;
   el.deckCount.textContent=run.deck.length;
   if(mode==='route')renderRoute();
