@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="КОМОК">
+  <rect width="512" height="512" rx="116" fill="#eee7dc"/>
+  <path d="M141 351c-39-41-46-118-17-181 27-59 83-96 145-90 70 7 128 67 130 138 2 70-38 143-104 178-54 28-116 8-154-45Z" fill="#b96f50"/>
+  <path d="M182 198c28-39 83-53 123-30 38 22 54 71 35 111-19 39-69 58-110 42-42-17-69-74-48-123Z" fill="#c9805e" opacity=".82"/>
+  <path d="M226 194c-19 25-20 67 3 90 22 22 60 21 81 0M206 222c-8 30 2 67 29 84 27 18 67 12 86-14M195 257c3 31 24 60 55 68 31 8 65-6 80-34" fill="none" stroke="#7d4938" stroke-width="13" stroke-linecap="round" opacity=".62"/>
+  <path d="M152 357c52 37 133 42 191 6" fill="none" stroke="#8f5541" stroke-width="12" stroke-linecap="round" opacity=".35"/>
+</svg>
