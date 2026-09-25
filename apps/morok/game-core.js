@@ -42,6 +42,7 @@ export const CARD_LIBRARY=[
   C('moose','Старый лось','beast','remains',5,5,7,['root'],'Почти отдельный босс в твоей руке.','rare'),
   C('butcher-bird','Птица-мясник','carrion','ember',3,2,2,['twin'],'Две атаки превращают любой бонус в проблему.','rare'),
   C('saint-rat','Святая крыса','carrion','ember',1,0,2,['martyr','echo'],'Умирает, платит тебе и иногда возвращается.','uncommon'),
+  C('bell-rat','Звонкая крыса','carrion','ember',2,1,2,['martyr','twin'],'Дважды кусает и выгодно умирает.','uncommon'),
   C('leech','Чёрная пиявка','fungal','remains',1,1,2,['parasite'],'После смерти остаётся личинка.'),
   C('chain-dog','Цепной пёс','beast','ember',3,3,3,['chain'],'Удар по линии задевает соседей.','uncommon'),
   C('crypt-ox','Подземный вол','carrion','remains',4,2,8,['root','martyr'],'Долго живёт, выгодно умирает.','rare'),
