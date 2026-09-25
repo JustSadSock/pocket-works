@@ -67,14 +67,31 @@ function loadMeta() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!parsed || typeof parsed !== 'object') return fallback;
+    const legacy = Number(parsed.version || 1) < 2;
+    const legacyRun = parsed.run && typeof parsed.run === 'object'
+      ? {
+          ...parsed.run,
+          damage: 1,
+          speed: Math.max(5.05, Number(parsed.run.speed) || 0),
+          crit: 0.05,
+          lifesteal: 0,
+          dashReduction: 0,
+          relics: [],
+          potions: [],
+          weapon: null,
+          recentEnemySignatures: [],
+          recentWeaponSignatures: []
+        }
+      : null;
     return {
       ...fallback,
       ...parsed,
+      version: 2,
       settings: { ...fallback.settings, ...(parsed.settings || {}) },
-      codex: Array.isArray(parsed.codex) ? parsed.codex.slice(0, 96) : [],
-      lootCodex: Array.isArray(parsed.lootCodex) ? parsed.lootCodex.slice(0, 96) : [],
-      weaponCodex: Array.isArray(parsed.weaponCodex) ? parsed.weaponCodex.slice(0, 128) : [],
-      run: parsed.run && typeof parsed.run === 'object' ? parsed.run : null
+      codex: legacy ? [] : Array.isArray(parsed.codex) ? parsed.codex.slice(0, 128) : [],
+      lootCodex: legacy ? [] : Array.isArray(parsed.lootCodex) ? parsed.lootCodex.slice(0, 96) : [],
+      weaponCodex: legacy ? [] : Array.isArray(parsed.weaponCodex) ? parsed.weaponCodex.slice(0, 128) : [],
+      run: legacy ? legacyRun : parsed.run && typeof parsed.run === 'object' ? parsed.run : null
     };
   } catch {
     return fallback;
