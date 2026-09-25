@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090b09">
-  <meta name="description" content="МОРОК — мрачный лесной roguelike-декбилдер для Pocket Works.">
+  <meta name="description" content="МОРОК — мрачный пиксельный roguelike-декбилдер для Pocket Works.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="МОРОК">
@@ -24,16 +24,16 @@
 
   <header class="chrome" data-ui>
     <button class="glyph-button" id="backBtn" type="button" aria-label="Назад" data-native-press>‹</button>
-    <div class="brandline"><b>МОРОК</b><span id="locationLabel">ЧАЩА</span></div>
+    <div class="brandline"><b>МОРОК</b><span id="locationLabel">ЗАЛ</span></div>
     <button class="glyph-button" id="menuBtn" type="button" aria-label="Меню" data-native-press>≡</button>
   </header>
 
   <section class="screen start-screen active" id="startScreen" data-ui>
     <div class="start-mark" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="start-copy">
-      <p class="kicker">КАРТОЧНЫЙ РОГАЛИК / НОЧНАЯ ЧАЩА</p>
+      <p class="kicker">КАРТОЧНЫЙ РОГАЛИК / КАМЕННЫЙ МОРОК</p>
       <h1>МОРОК</h1>
-      <p class="lede">Лес не выдаёт одинаковых зверей дважды. Забирай их метки, скрещивай привычки и собери колоду, которая переживёт хозяина чащи.</p>
+      <p class="lede">Каждый забег перестраивает коридоры, противников и награды. Забирай метки существ, скрещивай их свойства и собери колоду, которая переживёт хозяина зала.</p>
     </div>
     <div class="start-actions">
       <button class="primary torn" id="continueBtn" type="button" data-native-press hidden><span>ПРОДОЛЖИТЬ</span><small id="continueMeta">ГЛУБИНА 1</small></button>
@@ -65,7 +65,7 @@
       <div class="intent-label">СЛЕДУЮЩИМИ ВОЙДУТ</div>
       <div class="lane-row intent-row" id="intentRow"></div>
       <div class="lane-row enemy-row" id="enemyRow"></div>
-      <div class="scar-line"><i></i><span id="battleMessage">Лес ждёт твоего хода.</span><i></i></div>
+      <div class="scar-line"><i></i><span id="battleMessage">Камень ждёт твоего хода.</span><i></i></div>
       <div class="lane-row player-row" id="playerRow"></div>
     </div>
 
@@ -78,7 +78,7 @@
       </div>
       <div class="selection-strip" id="selectionStrip" hidden>
         <div><b id="selectionTitle">Зверь</b><span id="selectionText">Описание</span></div>
-        <button id="sacrificeBtn" type="button" data-native-press>ОТДАТЬ ЛЕСУ</button>
+        <button id="sacrificeBtn" type="button" data-native-press>ПРИНЕСТИ В ЖЕРТВУ</button>
       </div>
       <div class="hand" id="hand" aria-label="Карты в руке"></div>
     </div>
@@ -92,9 +92,9 @@
 
   <section class="screen result-screen" id="resultScreen" data-ui>
     <div class="result-rune" id="resultRune">†</div>
-    <p class="kicker" id="resultKicker">ЛЕС ЗАКРЫЛ ГЛАЗА</p>
+    <p class="kicker" id="resultKicker">МОРОК СОМКНУЛСЯ</p>
     <h2 id="resultTitle">Забег окончен</h2>
-    <p id="resultText">У тебя была неплохая колода. У леса — терпение.</p>
+    <p id="resultText">У тебя была неплохая колода. У зала — ещё один этаж.</p>
     <div class="result-stats"><span><b id="resultDepth">1</b><small>ГЛУБИНА</small></span><span><b id="resultKills">0</b><small>УБИТО</small></span><span><b id="resultSacrifices">0</b><small>ОТДАНО</small></span></div>
     <button class="primary torn" id="againBtn" type="button" data-native-press><span>ЕЩЁ РАЗ</span><small>НОВОЕ СЕМЯ</small></button>
     <button class="text-button" id="resultHomeBtn" type="button" data-native-press>В главное меню</button>
@@ -119,7 +119,7 @@
     <div class="sheet-head"><div><p>30 СЕКУНД</p><h2>Как выживать</h2></div><button class="glyph-button" data-close-sheet="rulesSheet" type="button" data-native-press>×</button></div>
     <div class="rule"><b>01</b><p><strong>Карта → линия.</strong> Нажми карту, затем свободную нижнюю линию. Ритуалы требуют подходящей цели.</p></div>
     <div class="rule"><b>02</b><p><strong>Враги предупреждают.</strong> Верхний полупрозрачный ряд показывает, кто войдёт на доску после твоего хода.</p></div>
-    <div class="rule"><b>03</b><p><strong>Отдай зверя лесу.</strong> Нажми своего зверя и «Отдать лесу»: получишь Останки и сохранишь первую его метку как Наследие следующему зверю.</p></div>
+    <div class="rule"><b>03</b><p><strong>Принеси зверя в жертву.</strong> Нажми своего зверя и «Принести в жертву»: получишь Останки и сохранишь первую его метку как Наследие следующему зверю.</p></div>
     <div class="rule"><b>04</b><p><strong>Ломай колоду.</strong> Алтари переносят метки навсегда, костры усиливают карту, Знаки меняют правила всего забега.</p></div>
   </section>
 
