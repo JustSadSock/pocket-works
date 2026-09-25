@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createMonsterGenome, generateDungeon, rollLoot } from './core.js';
+import { createMonsterGenome, generateDungeon, mapLookDelta, rollLoot } from './core.js';
 
 describe('MELT//CRYPT procedural core', () => {
+  it('maps vertical look in the natural direction', () => {
+    expect(mapLookDelta(0, -12, 0.0032, 1).y).toBeLessThan(0);
+    expect(mapLookDelta(0, 12, 0.0032, 1).y).toBeGreaterThan(0);
+  });
   it('builds deterministic connected floors', () => {
     const a = generateDungeon(0xdeadbeef, 5);
     const b = generateDungeon(0xdeadbeef, 5);
