@@ -60,7 +60,7 @@ function feedback(kind='tap'){audio.tone(kind);if(kind==='hit'||kind==='death')h
 function showToast(text){clearTimeout(toastTimer);el.toast.textContent=text;el.toast.classList.add('show');toastTimer=setTimeout(()=>el.toast.classList.remove('show'),1500)}
 function showScreen(name){
   current=name;screens.forEach(s=>s.classList.remove('active'));el[name]?.classList.add('active');
-  el.location.textContent=({start:'ЧАЩА',trail:`ГЛУБИНА ${(run?.depth??0)+1}`,battle:'СХВАТКА',event:'СЛЕД',result:'КОНЕЦ'})[name]||'ЧАЩА';
+  el.location.textContent=({start:'ЗАЛ',trail:`ГЛУБИНА ${(run?.depth??0)+1}`,battle:'СХВАТКА',event:'СЛЕД',result:'КОНЕЦ'})[name]||'ЧАЩА';
   el.back.style.visibility=name==='start'?'hidden':'visible';selectedCard=null;selectedUnit=null;selectedHeritageSigil=null;
   render();
 }
@@ -121,7 +121,7 @@ function renderBattle(){
   el.playerHpFill.style.transform=`scaleX(${Math.max(0,b.playerHp/b.playerMaxHp)})`;el.playerHpText.textContent=`${Math.max(0,b.playerHp)}/${b.playerMaxHp}`;el.round.textContent=b.round;
   el.ember.textContent=b.ember;el.remains.textContent=b.remains;
   el.heritage.innerHTML=b.heritage?`<span>${sigilInfo(b.heritage).mark}</span><small>${sigilInfo(b.heritage).name}</small>`:'<span>∅</span><small>НАСЛЕДИЕ</small>';
-  el.battleMessage.textContent=b.log?.[0]||'Лес ждёт твоего хода.';
+  el.battleMessage.textContent=b.log?.[0]||'Камень ждёт твоего хода.';
   renderLaneRow(el.intentRow,[0,1,2,3].map(l=>b.intent.find(i=>i.lane===l)?.unit||null),'intent');
   renderLaneRow(el.enemyRow,b.enemy,'enemy');renderLaneRow(el.playerRow,b.player,'player');renderHand(b);
   renderSelection();highlightTargets();
@@ -172,7 +172,7 @@ function renderSelection(){
   if(unit.sigils.length){if(!selectedHeritageSigil||!unit.sigils.includes(selectedHeritageSigil))selectedHeritageSigil=unit.sigils[0];const s=sigilInfo(selectedHeritageSigil);el.selectionText.textContent=`Наследие: ${s.mark} ${s.name}${unit.sigils.length>1?' · нажми сменить':''}`;el.selectionText.style.cursor=unit.sigils.length>1?'pointer':'default';}
   else{selectedHeritageSigil=null;el.selectionText.textContent='Без метки: останутся только Останки.'}
   el.sacrifice.disabled=b.sacrificedThisTurn;
-  el.sacrifice.textContent=b.sacrificedThisTurn?'РИТУАЛ УЖЕ БЫЛ':'ОТДАТЬ ЛЕСУ';
+  el.sacrifice.textContent=b.sacrificedThisTurn?'РИТУАЛ УЖЕ БЫЛ':'ПРИНЕСТИ В ЖЕРТВУ';
 }
 function cycleHeritage(){const b=run?.battle,unit=selectedUnit!=null?b?.player[selectedUnit]:null;if(!unit||unit.sigils.length<2)return;const i=Math.max(0,unit.sigils.indexOf(selectedHeritageSigil));selectedHeritageSigil=unit.sigils[(i+1)%unit.sigils.length];feedback('tap');renderSelection();}
 function doSacrifice(){const b=run.battle;if(selectedUnit==null)return;const r=sacrificeUnit(run,b,selectedUnit,selectedHeritageSigil);if(!r.ok){showToast(r.reason);feedback('bad');return;}selectedUnit=null;selectedHeritageSigil=null;feedback('death');persist();renderBattle();checkBattleState()}
@@ -182,7 +182,7 @@ function checkBattleState(){const b=run?.battle;if(!b?.ended)return;if(b.winner=
 function renderEvent(){
   const p=run?.pending;if(!p){showScreen(run?.result?'result':'trail');return;}
   if(p.type==='battle'){showScreen('battle');return;}if(p.type==='run-win'){showScreen('result');return;}
-  el.eventChoices.replaceChildren();el.eventSkip.hidden=true;el.eventKicker.textContent=({ 'card-choice':'ДОБЫЧА','relic-choice':'ЗНАК','hearth':'КОСТЁР','altar':'АЛТАРЬ'})[p.type]||'СЛЕД';el.eventTitle.textContent=p.title||'Лес что-то оставил';
+  el.eventChoices.replaceChildren();el.eventSkip.hidden=true;el.eventKicker.textContent=({ 'card-choice':'ДОБЫЧА','relic-choice':'ЗНАК','hearth':'КОСТЁР','altar':'АЛТАРЬ'})[p.type]||'СЛЕД';el.eventTitle.textContent=p.title||'Камень что-то оставил';
   if(p.type==='card-choice'){el.eventHint.textContent='Возьми одну карту. Или не бери — толстая колода тоже умеет убивать.';for(const card of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';wrap.append(createCardElement(card,false));const b=document.createElement('button');b.className='choice-action';b.textContent='ВЗЯТЬ В КОЛОДУ';b.addEventListener('click',()=>{chooseCardReward(run,card.instanceId);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}el.eventSkip.hidden=false;}
   if(p.type==='relic-choice'){el.eventHint.textContent='Один Знак останется до конца забега.';for(const relic of p.choices){const wrap=document.createElement('div');wrap.className='choice-wrap';const b=document.createElement('button');b.className='relic-choice';b.innerHTML=`<small>ЗНАК ЛЕСА</small><b>${relic.name}</b><span>${relic.text}</span>`;b.addEventListener('click',()=>{chooseRelic(run,relic.id);feedback('reward');persist();showScreen('trail')});wrap.append(b);el.eventChoices.append(wrap);}}
   if(p.type==='hearth')renderHearth(p);
@@ -249,17 +249,23 @@ function drawMoth(c,p){px(c,30,14,4,17,p[2]);px(c,13,13,17,12,p[1]);px(c,34,13,1
 function drawFungal(c,id,p){if(id==='toad'){drawBeast(c,'hare',p);px(c,28,14,14,5,p[2]);return;}for(let i=0;i<(id==='weaver'?4:3);i++){const x=17+i*10,y=18+(i%2)*4;px(c,x,y,4,13,p[2]);px(c,x-5,y-4,14,5,p[1]);px(c,x-2,y-6,8,3,p[2]);}if(id==='weaver'){px(c,9,27,46,2,p[2]);px(c,14,24,2,8,p[2]);px(c,48,23,2,9,p[2]);}}
 function drawRite(c,id,p){c.fillStyle=p[2];if(id==='salt'){for(let i=0;i<14;i++)px(c,14+(i*11)%38,13+(i*7)%16,2,2,p[2]);}else if(id==='bark'){px(c,25,8,14,25,p[1]);for(let y=11;y<31;y+=5)px(c,28,y,8,1,p[2]);}else if(id==='needle'){px(c,31,7,2,26,p[2]);px(c,27,12,10,1,p[1]);}else if(id==='milk'){px(c,24,12,18,18,p[2]);px(c,28,8,10,6,p[1]);px(c,28,19,10,8,p[0]);}else if(id==='molt'){px(c,19,25,28,3,p[2]);px(c,27,10,10,16,p[1]);px(c,23,13,18,2,p[2]);}else{for(let i=0;i<3;i++){c.strokeStyle=p[2];c.strokeRect(18+i*6,10+i*4,28-i*12,20-i*8);}}}
 
-// Background scene ----------------------------------------------------------
+// Background scene ---------------------------------------------------------------
 const ctx=el.scene.getContext('2d',{alpha:false});let lastFrame=0,sceneTime=0;
-function sizeScene(){const r=el.scene.getBoundingClientRect();const ratio=Math.max(1,Math.min(2,r.height/r.width));el.scene.width=240;el.scene.height=Math.round(240*ratio);ctx.imageSmoothingEnabled=false}
-function sceneLoop(t){if(document.hidden){requestAnimationFrame(sceneLoop);return}if(t-lastFrame>33){sceneTime=t/1000;drawScene();lastFrame=t}requestAnimationFrame(sceneLoop)}
-function drawScene(){const w=el.scene.width,h=el.scene.height;ctx.fillStyle='#080b09';ctx.fillRect(0,0,w,h);drawSky(w,h);drawForest(w,h);if(current==='battle')drawBattleGround(w,h);else drawPathGround(w,h);drawMist(w,h)}
-function drawSky(w,h){const bands=['#09100f','#0b1513','#101a16','#152018'];for(let i=0;i<bands.length;i++){ctx.fillStyle=bands[i];ctx.fillRect(0,i*h*.12,w,h*.13+1)}const moonX=178,moonY=58;ctx.fillStyle='#707970';ctx.fillRect(moonX-6,moonY-6,12,12);ctx.fillStyle='#a3a99c';ctx.fillRect(moonX-4,moonY-7,8,14);ctx.fillStyle='#0d1512';ctx.fillRect(moonX+1,moonY-5,6,10)}
-function tree(x,base,s,shade){ctx.fillStyle=shade;ctx.fillRect(x-1,base-36*s,2,36*s);for(let y=0;y<4;y++){const yy=base-(12+y*7)*s,ww=(13-y*2)*s;ctx.beginPath();ctx.moveTo(x,yy-15*s);ctx.lineTo(x-ww,yy+7*s);ctx.lineTo(x+ww,yy+7*s);ctx.fill()}}
-function drawForest(w,h){const shift=Math.round(Math.sin(sceneTime*.12)*2);for(let layer=0;layer<3;layer++){const base=h*(.54+layer*.065),s=.65+layer*.22,shade=['#111b18','#14201a','#18241c'][layer];for(let i=-1;i<10;i++)tree(i*29+shift*(layer+1)+(layer*11)%23,base,s,shade)}}
-function drawPathGround(w,h){ctx.fillStyle='#11150f';ctx.fillRect(0,h*.55,w,h*.45);ctx.fillStyle='#1a1c15';ctx.beginPath();ctx.moveTo(104,h*.55);ctx.lineTo(140,h*.55);ctx.lineTo(205,h);ctx.lineTo(35,h);ctx.fill();ctx.fillStyle='#29261b';for(let i=0;i<26;i++){const y=Math.floor(h*.58+((i*37)%Math.floor(h*.4))),x=Math.floor(45+((i*53)%150));ctx.fillRect(x,y,2+(i%4),1)}ctx.fillStyle='#6c3928';ctx.fillRect(119,h*.62,2,10);ctx.fillRect(116,h*.66,8,2)}
-function drawBattleGround(w,h){ctx.fillStyle='#11130f';ctx.fillRect(0,h*.46,w,h*.54);ctx.fillStyle='#201b14';ctx.beginPath();ctx.moveTo(10,h*.55);ctx.lineTo(w-10,h*.55);ctx.lineTo(w+10,h);ctx.lineTo(-10,h);ctx.fill();ctx.fillStyle='#44301f';for(let x=12;x<w;x+=26){ctx.fillRect(x,h*.58,1,h*.32)}for(let y=h*.6;y<h*.9;y+=22)ctx.fillRect(0,y,w,1);const flick=(Math.sin(sceneTime*11)+1)*2;ctx.fillStyle='#8d3d27';ctx.fillRect(7,h*.54,2,8+flick);ctx.fillRect(w-9,h*.54,2,8+flick);ctx.fillStyle='#d27b3e';ctx.fillRect(8,h*.53,1,4+flick);ctx.fillRect(w-8,h*.53,1,4+flick)}
-function drawMist(w,h){ctx.fillStyle='rgba(128,139,126,.045)';for(let i=0;i<5;i++){const y=Math.round(h*.34+i*19+Math.sin(sceneTime*.2+i)*3),x=Math.round(((sceneTime*3+i*53)%(w+70))-35);ctx.fillRect(x,y,70,3)}}
+function sizeScene(){const r=el.scene.getBoundingClientRect();const ratio=Math.max(1.55,Math.min(2.25,r.height/Math.max(1,r.width)));el.scene.width=240;el.scene.height=Math.round(240*ratio);ctx.imageSmoothingEnabled=false}
+function sceneLoop(t){if(!document.hidden&&t-lastFrame>33){sceneTime=t/1000;drawScene();lastFrame=t}requestAnimationFrame(sceneLoop)}
+function drawScene(){const w=el.scene.width,h=el.scene.height;ctx.fillStyle='#090a09';ctx.fillRect(0,0,w,h);drawVault(w,h);drawBanners(w,h);drawCandles(w,h);if(current==='battle')drawStoneTable(w,h);else drawFlagstones(w,h);drawDust(w,h)}
+function drawVault(w,h){
+  ctx.fillStyle='#111310';ctx.fillRect(0,0,w,h*.7);
+  for(let y=16;y<h*.7;y+=15){const off=((y/15)|0)%2?13:0;for(let x=-off;x<w;x+=27){ctx.fillStyle=((x+y)%5)?'#191b18':'#20211d';ctx.fillRect(x,y,25,13);ctx.fillStyle='#0c0e0c';ctx.fillRect(x,y+13,25,2);ctx.fillRect(x+25,y,2,15)}}
+  ctx.fillStyle='#070807';ctx.fillRect(79,45,82,102);ctx.beginPath();ctx.arc(120,66,41,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#2b2a24';ctx.fillRect(74,43,5,109);ctx.fillRect(161,43,5,109);ctx.fillRect(70,147,100,5);
+  ctx.fillStyle='#3b382e';for(let i=0;i<7;i++)ctx.fillRect(73+i*15,39+(i%2),11,3);
+}
+function drawBanners(w,h){for(const x of [27,w-52]){ctx.fillStyle='#3a1816';ctx.fillRect(x,43,25,75);ctx.fillStyle='#6d3028';ctx.fillRect(x+4,46,17,66);ctx.fillStyle='#b29361';ctx.fillRect(x+11,59,3,27);ctx.fillRect(x+7,70,11,3)}}
+function drawCandles(w,h){const flick=Math.round((Math.sin(sceneTime*12)+1)*2);for(const x of [16,w-18,62,w-64]){const y=Math.round(h*.61+(x%3)*4);ctx.fillStyle='#c1aa7b';ctx.fillRect(x,y,3,12);ctx.fillStyle='#8f3d29';ctx.fillRect(x+1,y-5-flick,1,5+flick);ctx.fillStyle='#e39b55';ctx.fillRect(x,y-3-flick,3,2+flick)}}
+function drawFlagstones(w,h){ctx.fillStyle='#171713';ctx.fillRect(0,h*.69,w,h*.31);ctx.fillStyle='#28271f';for(let y=Math.floor(h*.7);y<h;y+=17)ctx.fillRect(0,y,w,1);for(let x=12;x<w;x+=28)ctx.fillRect(x,h*.69,1,h*.31);ctx.fillStyle='#3f3021';ctx.fillRect(116,h*.75,8,h*.17);ctx.fillRect(105,h*.78,30,3)}
+function drawStoneTable(w,h){ctx.fillStyle='#1e1b17';ctx.beginPath();ctx.moveTo(18,h*.56);ctx.lineTo(w-18,h*.56);ctx.lineTo(w+18,h);ctx.lineTo(-18,h);ctx.fill();ctx.fillStyle='#42382d';for(let x=19;x<w;x+=27)ctx.fillRect(x,h*.59,1,h*.34);for(let y=h*.64;y<h;y+=24)ctx.fillRect(0,y,w,1);ctx.fillStyle='#5e3328';ctx.fillRect(8,h*.555,w-16,2)}
+function drawDust(w,h){ctx.fillStyle='rgba(164,158,142,.045)';for(let i=0;i<5;i++){const x=((sceneTime*4+i*57)%(w+70))-35;const y=Math.round(h*.24+i*17+Math.sin(sceneTime*.25+i)*3);ctx.fillRect(x,y,70,3)}}
 
 // Events -------------------------------------------------------------------
 el.continue.addEventListener('click',()=>{void audio.ensure();continueRun()});el.newRun.addEventListener('click',()=>{void audio.ensure();startNewRun()});el.again.addEventListener('click',startNewRun);el.resultHome.addEventListener('click',()=>{run=null;persist();showScreen('start')});
