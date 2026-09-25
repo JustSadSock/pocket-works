@@ -9,10 +9,10 @@ const appName = 'MELT//CRYPT';
 const version = '1.0.0';
 const storageNamespace = 'pocket-works:melt-crypt';
 const releaseNotes = [
-  'Added a complete first-person roguelike loop with procedural floors, combat, room clearing and descent.',
-  'Every monster mutates a procedural body, palette, anatomy, stats and combat ability.',
-  'Added pixel-3D rendering, psychedelic lighting, fog, crystals and potion-driven screen effects.',
-  'Added relics, bizarre potions, shrines, chests, discoveries, local persistence and touch/desktop controls.'
+  "Добавлен законченный first-person roguelike-цикл: процедурные этажи, бой, зачистка комнат, выход на следующий уровень, смерть и новая попытка.",
+  "Каждый монстр получает процедурный геном внешности и поведения: архетип тела, палитру, рога, глаза, конечности, ауру, скорость, здоровье, размер и одну из нескольких способностей.",
+  "Добавлены психоделический пиксельный рендер, кислотное освещение, кристаллы, динамический туман, экранные эффекты от зелий и визуальные реакции на урон.",
+  "Добавлены реликвии, зелья, странные находки, сундуки, кодекс открытий, сохранение прогресса и полноценное мобильное/десктопное управление."
 ];
 
 const runtime = installMobileRuntime();
