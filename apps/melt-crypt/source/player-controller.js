@@ -35,19 +35,19 @@ export class CapsuleController {
     return null;
   }
 
-  movePlanar(dx,dz){
-    if(!dx&&!dz) return;
-    const oldX=this.position.x, oldZ=this.position.z, oldY=this.position.y;
-    let targetX=oldX+dx,targetZ=oldZ+dz;
+  moveSingle(dx,dz){
+    if(!dx&&!dz)return;
+    const oldX=this.position.x,oldZ=this.position.z,oldY=this.position.y;
+    const targetX=oldX+dx,targetZ=oldZ+dz;
 
     const tryStep=(x,z)=>{
       const hit=this.overlapsAt(x,z,oldY);
-      if(!hit) return {ok:true,y:oldY};
+      if(!hit)return{ok:true,y:oldY};
       if(hit.maxY<=oldY+this.stepHeight+0.02){
         const steppedY=hit.maxY+0.015;
-        if(!this.overlapsAt(x,z,steppedY)) return {ok:true,y:steppedY};
+        if(!this.overlapsAt(x,z,steppedY))return{ok:true,y:steppedY};
       }
-      return {ok:false,y:oldY};
+      return{ok:false,y:oldY};
     };
 
     let test=tryStep(targetX,targetZ);
@@ -57,19 +57,21 @@ export class CapsuleController {
     }
 
     test=tryStep(targetX,oldZ);
-    if(test.ok){
-      this.position.x=targetX;
-      this.position.y=test.y;
-    }
+    if(test.ok){this.position.x=targetX;this.position.y=test.y;}
     test=tryStep(this.position.x,targetZ);
-    if(test.ok){
-      this.position.z=targetZ;
-      this.position.y=Math.max(this.position.y,test.y);
-    }
+    if(test.ok){this.position.z=targetZ;this.position.y=Math.max(this.position.y,test.y);}
 
-    if(this.position.y>0 && !this.overlapsAt(this.position.x,this.position.z,Math.max(0,this.position.y-this.stepHeight))){
+    if(this.position.y>0&&!this.overlapsAt(this.position.x,this.position.z,Math.max(0,this.position.y-this.stepHeight))){
       this.position.y=Math.max(0,this.position.y-this.stepHeight);
     }
+  }
+
+  movePlanar(dx,dz){
+    const distance=Math.hypot(dx,dz);
+    if(distance<=0)return;
+    const maxStep=Math.max(0.08,this.radius*0.58);
+    const steps=Math.max(1,Math.ceil(distance/maxStep));
+    for(let i=0;i<steps;i+=1)this.moveSingle(dx/steps,dz/steps);
   }
 
   nudge(direction,amount){
