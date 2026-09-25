@@ -1032,6 +1032,9 @@ export class MeltCryptGame {
     }
     if (target.type === 'shrine') {
       this.visuals.setInteractiveUsed(target);
+      const room = this.dungeon.rooms[target.roomId];
+      room.shrineUsed = true;
+      this.drawMinimap();
       this.triggerShrine(target.roomId);
     }
   }
