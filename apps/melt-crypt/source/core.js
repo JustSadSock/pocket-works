@@ -23,6 +23,13 @@ export function makeRng(seed) {
 
 export const choice = (rng, list) => list[Math.floor(rng() * list.length) % list.length];
 
+export function mapLookDelta(dx, dy, multiplier, sensitivity) {
+  return {
+    x: dx * multiplier * sensitivity,
+    y: dy * multiplier * sensitivity
+  };
+}
+
 const DIRECTIONS = [
   { dx: 1, dz: 0, dir: 'e', opposite: 'w' },
   { dx: -1, dz: 0, dir: 'w', opposite: 'e' },
