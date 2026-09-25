@@ -658,6 +658,14 @@ export class MeltCryptGame {
       staggerTime: 0,
       knockVelocity: new Vector3(),
       facing: 0,
+      animAttack: null,
+      tellDuration: 0,
+      attackFollow: 0,
+      dying: false,
+      deathTimer: 0,
+      deathDuration: 0,
+      deathKind: 'normal',
+      lastHit: null,
       visual: null
     };
     enemy.visual = this.visuals.createMonsterVisual(genome, position);
@@ -1038,6 +1046,7 @@ export class MeltCryptGame {
     const { critical=false, stagger=0, heavy=false, weak=false, blocked=false, knock=0 }=options;
     enemy.hp -= Math.max(0.1, amount);
     enemy.stagger += stagger;
+    enemy.lastHit={critical,stagger,heavy,weak,blocked,knock};
     const staggerResist=(enemy.genome.defenseSpec?.staggerResist||0)+(enemy.genome.mutationSpec?.staggerResist||0)+(enemy.genome.headSpec?.staggerResist||0);
     const threshold=2.15+staggerResist*2.2;
     const didStagger=enemy.stagger>=threshold;
@@ -1047,6 +1056,9 @@ export class MeltCryptGame {
       enemy.staggerTime=Math.max(enemy.staggerTime,heavy?0.9:0.52);
       enemy.tellTimer=0;
       enemy.attackKind=null;
+      enemy.attackFollow=0;
+      enemy.animAttack=null;
+      this.audio.tone('stagger',heavy?1:0.75);
       if(knock>0){
         const away=enemy.visual.root.position.subtract(this.controller.position);away.y=0;
         if(away.lengthSquared()>0.001)enemy.knockVelocity=away.normalize().scale(knock*(heavy?3.3:2.1));
@@ -1105,8 +1117,15 @@ export class MeltCryptGame {
       this.hitStop=Math.max(this.hitStop,0.055);
     }
 
-    this.visuals.disposeMonsterVisual(enemy.visual);
-    enemy.visual = null;
+    const hit=enemy.lastHit||{};
+    enemy.dying=true;
+    enemy.deathKind=hit.heavy&&this.run.weapon?.core==='maul'?'slam':hit.knock>1.8?'launch':hit.critical?'spin':'normal';
+    enemy.deathDuration=enemy.deathKind==='launch'?0.92:enemy.deathKind==='slam'?0.72:0.8;
+    enemy.deathTimer=enemy.deathDuration;
+    enemy.tellTimer=0;
+    enemy.attackKind=null;
+    enemy.animAttack=null;
+    this.audio.tone('death',hit.heavy?1.15:0.82);
     this.run.totalKills += 1;
     this.floorKills += 1;
     if (this.run.lifesteal > 0) this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.lifesteal);
@@ -1287,18 +1306,33 @@ export class MeltCryptGame {
     if (room.role === 'gate' && !this.visuals.gate.unlocked) this.toast('DESCENT REQUIRES ' + Math.max(0, this.dungeon.requiredKills - this.floorKills) + ' MORE APOLOGIES.');
   }
 
+  beginEnemyAttack(enemy,kind,source,tell) {
+    enemy.attackKind=kind;
+    enemy.attackSource=source;
+    enemy.tellDuration=Math.max(0.08,tell);
+    enemy.tellTimer=enemy.tellDuration;
+    enemy.attackFollow=0;
+    enemy.animAttack={kind,progress:0};
+  }
+
   updateEnemies(dt) {
     const player = this.controller.position;
     let activeCount = 0;
     for (const enemy of this.enemies) {
-      if (enemy.dead || !enemy.visual) continue;
+      if (!enemy.visual) continue;
+      if (enemy.dying) {
+        enemy.deathTimer=Math.max(0,enemy.deathTimer-dt);
+        this.visuals.animateEnemyVisual(enemy,this.elapsed);
+        if(enemy.deathTimer<=0){
+          this.visuals.disposeMonsterVisual(enemy.visual);
+          enemy.visual=null;
+          enemy.dying=false;
+        }
+        continue;
+      }
+      if (enemy.dead) continue;
       const root = enemy.visual.root;
       const genome = enemy.genome;
-      const motionT = this.elapsed * (genome.wobble || 1) + genome.phase;
-      const floatY = genome.locomotion === 'floating' ? 0.18 + Math.sin(motionT * 1.7) * 0.12
-        : genome.locomotion === 'hopper' ? Math.max(0, Math.sin(motionT * 2.5)) * 0.08
-        : Math.sin(motionT * 2.2) * 0.025;
-      root.position.y = floatY;
 
       if (enemy.visual.aura) {
         enemy.visual.aura.rotation.y += dt * 1.1;
@@ -1322,12 +1356,7 @@ export class MeltCryptGame {
         enemy.knockVelocity.scaleInPlace(Math.max(0,1-dt*7));
       }
 
-      if (enemy.staggerTime > 0) {
-        root.rotation.z = Math.sin(this.elapsed * 34) * 0.08;
-        root.rotation.x = -0.08;
-      } else {
-        root.rotation.z = genome.locomotion === 'crawler' ? Math.sin(motionT * 5) * 0.035 : 0;
-        root.rotation.x = 0;
+      if (enemy.staggerTime <= 0) {
         const desiredYaw = Math.atan2(dx, dz);
         const tracking=(genome.headSpec?.tracking||1);
         root.rotation.y += this.normalizeAngle(desiredYaw - root.rotation.y) * Math.min(1, dt * (genome.locomotion === 'heavy-biped' ? 4.2 : 7.5) * tracking);
@@ -1336,51 +1365,45 @@ export class MeltCryptGame {
 
       if (enemy.tellTimer > 0 && enemy.staggerTime <= 0) {
         enemy.tellTimer -= dt;
-        const tellPulse = 1 + Math.sin(this.elapsed * 30) * 0.045;
-        root.scaling.set(genome.size * tellPulse, genome.size / tellPulse, genome.size * tellPulse);
+        if(enemy.animAttack)enemy.animAttack.progress=Math.min(0.7,(1-enemy.tellTimer/Math.max(0.001,enemy.tellDuration))*0.7);
         if (enemy.tellTimer <= 0) {
-          root.scaling.setAll(genome.size);
           this.executeEnemyAttack(enemy, distance, direction);
+          enemy.attackFollow=0.24;
+          if(enemy.animAttack)enemy.animAttack.progress=0.72;
           enemy.attackKind = null;
         }
+      } else if(enemy.attackFollow>0 && enemy.staggerTime<=0){
+        enemy.attackFollow=Math.max(0,enemy.attackFollow-dt);
+        if(enemy.animAttack)enemy.animAttack.progress=0.72+(1-enemy.attackFollow/0.24)*0.28;
+        if(enemy.attackFollow<=0)enemy.animAttack=null;
       } else if (enemy.staggerTime <= 0) {
         const attack = genome.ability;
         const cadence = Math.max(0.42, 1 / Math.max(0.35, genome.cadence || 1));
 
         if (genome.headSpec?.charge && enemy.specialTimer <= 0 && distance > 2.0 && distance < 5.5) {
-          enemy.attackKind = 'horn-charge';
-          enemy.attackSource = 'head';
-          enemy.tellTimer = 0.46;
+          this.beginEnemyAttack(enemy,'horn-charge','head',0.46);
           enemy.specialTimer = 4.1 + this.runRng() * 1.2;
         } else if (genome.mutation === 'arc-growth' && enemy.specialTimer <= 0 && distance < 7.2) {
-          enemy.attackKind = 'arc-pulse';
-          enemy.attackSource = 'mutation';
-          enemy.tellTimer = 0.52;
+          this.beginEnemyAttack(enemy,'arc-pulse','mutation',0.52);
           enemy.specialTimer = 4.3 + this.runRng() * 1.3;
         } else if (genome.mutation === 'long-legs' && enemy.specialTimer <= 0 && distance > 2.1 && distance < 6.5) {
-          enemy.attackKind = 'leg-dash';
-          enemy.attackSource = 'mutation';
-          enemy.tellTimer = 0.38;
+          this.beginEnemyAttack(enemy,'leg-dash','mutation',0.38);
           enemy.specialTimer = 3.6 + this.runRng();
         } else if (enemy.specialTimer <= 0 && genome.secondaryAbility && genome.secondaryAbility !== attack) {
           const secondary=genome.secondaryAbility;
           const ranged=secondary==='bolt';
           const valid=ranged ? distance<7.3 : secondary==='hook-pull' ? distance<4.8 : distance<Math.max(1.5,(genome.secondaryReach||1)+0.7);
           if(valid){
-            enemy.attackKind=secondary;
-            enemy.attackSource='secondary';
             const tells={ 'heavy-sweep':0.62,slam:0.7,flurry:0.18,thrust:0.34,'shield-bash':0.36,bolt:0.48,'hook-pull':0.44,cleave:0.3 };
-            enemy.tellTimer=tells[secondary]||0.34;
+            this.beginEnemyAttack(enemy,secondary,'secondary',tells[secondary]||0.34);
             enemy.specialTimer=Math.max(2.4,1.65/Math.max(0.35,genome.secondaryCadence||1))+this.runRng()*0.9;
           }
         } else if (enemy.attackTimer <= 0) {
-          enemy.attackKind = attack;
-          enemy.attackSource = 'primary';
           const tells = {
             'heavy-sweep':0.62, slam:0.7, flurry:0.18, thrust:0.34,
             'shield-bash':0.36, bolt:0.48, 'hook-pull':0.44, cleave:0.3
           };
-          enemy.tellTimer = tells[attack] || 0.34;
+          this.beginEnemyAttack(enemy,attack,'primary',tells[attack]||0.34);
           enemy.attackTimer = cadence * (0.9 + this.runRng() * 0.22);
         }
 
@@ -1408,6 +1431,7 @@ export class MeltCryptGame {
       const center = this.visuals.roomCenters.get(room.id);
       root.position.x = clamp(root.position.x, center.x - room.sizeX * 0.41, center.x + room.sizeX * 0.41);
       root.position.z = clamp(root.position.z, center.z - room.sizeZ * 0.41, center.z + room.sizeZ * 0.41);
+      this.visuals.animateEnemyVisual(enemy,this.elapsed);
     }
     this.audio.setDanger(Math.min(1, activeCount / 4));
   }
