@@ -10,7 +10,6 @@ import {
   POTIONS,
   RELICS,
   clamp,
-  createMonsterGenome,
   generateDungeon,
   makeRng,
   rollLoot,
@@ -19,6 +18,9 @@ import {
 import { CryptInput } from './input.js';
 import { CryptAudio } from './audio.js';
 import { CryptVisuals, hslColor } from './world.js';
+import { generateEnemyBlueprint } from './enemy-generator.js';
+import { generateWeapon } from './weapon-generator.js';
+import { CapsuleController } from './player-controller.js';
 
 const STORAGE_KEY = 'pocket-works:melt-crypt';
 const ROOM_NAMES = [
@@ -46,13 +48,14 @@ const ABILITY_COPY = {
 
 function defaultMeta() {
   return {
-    version: 1,
+    version: 2,
     settings: { quality: 'pixel', sensitivity: 1, psyche: true, sound: true },
     bestFloor: 0,
     runs: 0,
     deaths: 0,
     codex: [],
     lootCodex: [],
+    weaponCodex: [],
     run: null
   };
 }
@@ -68,6 +71,7 @@ function loadMeta() {
       settings: { ...fallback.settings, ...(parsed.settings || {}) },
       codex: Array.isArray(parsed.codex) ? parsed.codex.slice(0, 96) : [],
       lootCodex: Array.isArray(parsed.lootCodex) ? parsed.lootCodex.slice(0, 96) : [],
+      weaponCodex: Array.isArray(parsed.weaponCodex) ? parsed.weaponCodex.slice(0, 128) : [],
       run: parsed.run && typeof parsed.run === 'object' ? parsed.run : null
     };
   } catch {
@@ -122,6 +126,14 @@ export class MeltCryptGame {
     this.drops = [];
     this.fireCooldown = 0;
     this.dashCooldown = 0;
+    this.skillCooldown = 0;
+    this.hitStop = 0;
+    this.parryWindow = 0;
+    this.wardTimer = 0;
+    this.attackHold = 0;
+    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
+    this.recentEnemySignatures = [];
+    this.recentWeaponSignatures = [];
     this.dashTimer = 0;
     this.dashDirection = new Vector3(0, 0, 1);
     this.invulnerable = 0;
@@ -167,13 +179,12 @@ export class MeltCryptGame {
     this.camera.maxZ = 90;
     this.camera.fov = 0.95;
     this.camera.inertia = 0;
-    this.camera.checkCollisions = true;
-    this.camera.ellipsoid = new Vector3(0.32, 0.78, 0.32);
-    this.camera.ellipsoidOffset = new Vector3(0, -0.78, 0);
+    this.camera.checkCollisions = false;
     this.scene.activeCamera = this.camera;
 
     report('growing an inadvisable weapon…', 0.55);
     this.visuals = new CryptVisuals(this.scene, this.camera);
+    this.controller = new CapsuleController(this.camera, () => this.visuals.collisionBoxes);
     this.input = new CryptInput(this.root, this.canvas, this.meta.settings.sensitivity);
     this.audio = new CryptAudio(this.meta.settings.sound);
     this.bindUi();
@@ -308,18 +319,23 @@ export class MeltCryptGame {
   }
 
   startNewRun() {
+    const seed = randomSeed();
+    const starterWeapon = generateWeapon(seed ^ 0x51a7e, 1, []);
     this.run = {
-      seed: randomSeed(),
+      seed,
       floor: 1,
       hp: 100,
       maxHp: 100,
-      damage: 14,
-      speed: 4.45,
-      crit: 0.06,
+      damage: 1,
+      speed: 5.05,
+      crit: 0.05,
       lifesteal: 0,
       dashReduction: 0,
       relics: [],
-      potions: ['prophecy-mouthwash'],
+      potions: [],
+      weapon: starterWeapon,
+      recentEnemySignatures: [],
+      recentWeaponSignatures: [starterWeapon.signature],
       totalKills: 0,
       discoveries: 0,
       startedAt: Date.now()
@@ -337,6 +353,9 @@ export class MeltCryptGame {
     this.run.relics = Array.isArray(this.run.relics) ? this.run.relics : [];
     this.run.potions = Array.isArray(this.run.potions) ? this.run.potions : [];
     this.run.discoveries = Number(this.run.discoveries) || 0;
+    this.run.weapon = this.run.weapon || generateWeapon(this.run.seed ^ 0x51a7e, this.run.floor || 1, []);
+    this.run.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
+    this.run.recentWeaponSignatures = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures.slice(-18) : [this.run.weapon.signature];
     void this.audio.ensure();
     this.loadFloor();
   }
@@ -364,26 +383,31 @@ export class MeltCryptGame {
     this.floorKills = 0;
     this.fireCooldown = 0;
     this.dashCooldown = 0;
+    this.skillCooldown = 0;
+    this.attackHold = 0;
+    this.attackState = { active:false, timer:0, duration:0, heavy:false, combo:0, hitDone:false, dashAttack:false };
     this.effects = { warp: 0, slow: 0, speed: 0, rage: 0 };
     this.runRng = makeRng((this.run.seed ^ Math.imul(this.run.floor, 0x7f4a7c15)) >>> 0);
     this.dungeon = generateDungeon(this.run.seed, this.run.floor);
     this.visuals.buildDungeon(this.dungeon, this.run.floor);
     this.visuals.setGateUnlocked(false);
+    this.visuals.setPlayerWeapon(this.run.weapon);
     this.currentRoomId = this.dungeon.startId;
     this.lookYaw = 0;
     this.lookPitch = 0;
     this.cameraFx = { recoil: 0, hit: 0, dash: 0, step: 0, lean: 0 };
     const start = this.dungeon.rooms[this.currentRoomId];
+    const startCenter = this.visuals.roomCenters.get(start.id);
+    this.controller.teleport(startCenter.x, startCenter.z, 0);
     start.visited = true;
     start.spawned = true;
     start.cleared = true;
     this.roomTitleCache.clear();
     this.contextTarget = null;
 
-    const hue = (286 + this.run.floor * 37) % 360;
-    const fog = hslColor(hue, 0.5, 0.09);
+    const fog = hslColor(352, 0.46, 0.075);
     this.scene.fogColor.copyFrom(fog);
-    this.scene.clearColor = new Color4(fog.r * 0.55, fog.g * 0.55, fog.b * 0.55, 1);
+    this.scene.clearColor = new Color4(0.035, 0.012, 0.016, 1);
     this.audio.setFloor(this.run.floor);
 
     this.hideScreens();
