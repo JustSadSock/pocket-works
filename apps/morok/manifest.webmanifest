@@ -2,7 +2,7 @@
   "id": "/apps/morok/",
   "name": "МОРОК",
   "short_name": "МОРОК",
-  "description": "Мрачный портретный roguelike-декбилдер о мутирующей лесной колоде.",
+  "description": "Мрачный портретный roguelike-декбилдер о мутирующей колоде в каменной цитадели.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
