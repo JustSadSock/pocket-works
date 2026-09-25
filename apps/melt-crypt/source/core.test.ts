@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RELICS, ROOM_MODULES, generateDungeon, mapLookDelta, rollLoot } from './core.js';
 
-describe('MELT//CRYPT 2.0 procedural core', () => {
+describe('MELT//CRYPT Combat Rebuild core', () => {
   it('maps vertical look in the natural direction', () => {
     expect(mapLookDelta(0, -12, 0.0032, 1).y).toBeLessThan(0);
     expect(mapLookDelta(0, 12, 0.0032, 1).y).toBeGreaterThan(0);
@@ -11,7 +11,7 @@ describe('MELT//CRYPT 2.0 procedural core', () => {
     const a = generateDungeon(0xdeadbeef, 5);
     const b = generateDungeon(0xdeadbeef, 5);
     expect(a).toEqual(b);
-    expect(ROOM_MODULES).toHaveLength(18);
+    expect(ROOM_MODULES).toHaveLength(26);
     expect(a.rooms.length).toBeGreaterThanOrEqual(6);
     for (const room of a.rooms) {
       expect(ROOM_MODULES.some((module) => module.id === room.module)).toBe(true);

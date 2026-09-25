@@ -6,15 +6,15 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'melt-crypt-';
-const CACHE_NAME = 'melt-crypt-v2.0.0';
-const APP_VERSION = '2.0.0';
-const RELEASE_DATE = '2026-09-25';
+const CACHE_NAME = 'melt-crypt-v3.0.0';
+const APP_VERSION = '3.0.0';
+const RELEASE_DATE = '2026-09-26';
 const RELEASE_NOTES = [
-  "Полностью заменён старый генератор мобов на читаемую модульную грамматику: 6 тел, 5 locomotion-пакетов, 8 arm/weapon-модулей, 6 защит и 8 видимых мутаций; последние 30 enemy signatures защищены от близких повторов.",
-  "Стрельба заменена мобильной melee-системой ATTACK / DODGE / WEAPON SKILL: tap/hold атаки, weapon-specific reach/arc/cadence/recovery/combo, dash attacks, мягкий aim assist, parry/ward/hook/projectile/AoE/phase cut/execution/pulse.",
-  "Добавлен генератор оружия из 6 cores, 10 рабочих голов и 8 skills: длина, масса, крюк, guard, glowing core, trait и skill видны на модели и реально меняют правила боя; сундуки и часть врагов создают новые weapon signatures.",
-  "Игрок переведён на swept capsule-controller со step-height и auto-sprint; dodge и skills больше не туннелят сквозь стены. Добавлены hit-stop, event camera impulse, stagger, knockback, blood FX и читаемые weak points/armor.",
-  "Мир зафиксирован в одной тёмно-красной эстетике и получил 18 архитектурных room modules. Roguelike-реликвии и meta-прогрессия теперь в первую очередь открывают новые механики и расширяют словарь генераторов, а не раздают процентные статы."
+  "Combat Rebuild: стартовый GRAVE CLEAVER теперь фиксированный и вручную настроенный; все шесть weapon cores получили отдельные attack motion packages с anticipation, impact, follow-through и ограничением обычного удара до отзывчивого диапазона.",
+  "Враги получили locomotion/attack/stagger/death-анимации, телеграфы и несколько типов смерти; encounter director закрывает комнату, выпускает противников волнами и открывает её после зачистки.",
+  "Первая боевая комната гарантированно предлагает три разных оружия, каждый сундук тоже даёт выбор из трёх, а шанс обычного weapon drop повышен; лежащее оружие отмечено заметным beacon и показывает сравнение SPD/RNG/STG до поднятия.",
+  "Перестроены game feel и звук: многослойные swing/impact/armor/parry/stagger/death SFX, combat pulse, шаги, более сильный event-only camera impulse, hit-stop, knockback, blood FX и execution payoff.",
+  "HUD и изображение очищены: системные signatures/grammar скрыты из боя, карта гаснет во время encounter, уменьшены saturation/contrast/emissive, враги отделены по яркости от окружения; крипта расширена до 26 authored room modules без новых биомов."
 ];
 
 setCacheNameDetails({ prefix: 'melt-crypt', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });

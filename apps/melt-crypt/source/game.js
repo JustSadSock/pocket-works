@@ -21,6 +21,8 @@ import { CryptVisuals, hslColor } from './world.js';
 import { generateEnemyBlueprint } from './enemy-generator.js';
 import { generateWeapon } from './weapon-generator.js';
 import { CapsuleController } from './player-controller.js';
+import { STARTER_WEAPON, attackTiming } from './combat-motion.js';
+import { EncounterDirector, buildEncounterPlan } from './encounter-director.js';
 
 const STORAGE_KEY = 'pocket-works:melt-crypt';
 const ROOM_NAMES = [
@@ -50,7 +52,7 @@ const ABILITY_COPY = {
 
 function defaultMeta() {
   return {
-    version: 2,
+    version: 3,
     settings: { quality: 'pixel', sensitivity: 1, psyche: true, sound: true },
     bestFloor: 0,
     runs: 0,
@@ -68,6 +70,7 @@ function loadMeta() {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!parsed || typeof parsed !== 'object') return fallback;
     const legacy = Number(parsed.version || 1) < 2;
+    const legacyCombat = Number(parsed.version || 1) < 3;
     const legacyRun = parsed.run && typeof parsed.run === 'object'
       ? {
           ...parsed.run,
@@ -86,12 +89,12 @@ function loadMeta() {
     return {
       ...fallback,
       ...parsed,
-      version: 2,
+      version: 3,
       settings: { ...fallback.settings, ...(parsed.settings || {}) },
       codex: legacy ? [] : Array.isArray(parsed.codex) ? parsed.codex.slice(0, 128) : [],
       lootCodex: legacy ? [] : Array.isArray(parsed.lootCodex) ? parsed.lootCodex.slice(0, 96) : [],
       weaponCodex: legacy ? [] : Array.isArray(parsed.weaponCodex) ? parsed.weaponCodex.slice(0, 128) : [],
-      run: legacy ? legacyRun : parsed.run && typeof parsed.run === 'object' ? parsed.run : null
+      run: legacyCombat ? null : legacy ? legacyRun : parsed.run && typeof parsed.run === 'object' ? parsed.run : null
     };
   } catch {
     return fallback;
@@ -171,6 +174,11 @@ export class MeltCryptGame {
     this.lookPitch = 0;
     this.cameraFx = { recoil: 0, hit: 0, dash: 0, step: 0, lean: 0 };
     this.roomTitleCache = new Map();
+    this.encounterDirector = new EncounterDirector();
+    this.combatActive = false;
+    this.weaponBannerTimer = 0;
+    this.attackCommitted = false;
+    this.footstepTimer = 0;
   }
 
   async init(report = () => {}) {
@@ -192,8 +200,9 @@ export class MeltCryptGame {
     this.scene.fogMode = Scene.FOGMODE_EXP2;
     this.scene.fogDensity = 0.024;
     this.scene.fogColor = new Color3(0.09, 0.045, 0.12);
-    this.scene.imageProcessingConfiguration.contrast = 1.14;
-    this.scene.imageProcessingConfiguration.exposure = 1.05;
+    this.scene.imageProcessingConfiguration.contrast = 1.04;
+    this.scene.imageProcessingConfiguration.exposure = 0.98;
+    this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
 
     this.camera = new FreeCamera('crypt-player', new Vector3(0, 1.58, 0), this.scene);
     this.camera.minZ = 0.035;
@@ -344,14 +353,14 @@ export class MeltCryptGame {
     const canContinue = Boolean(this.meta.run && Number(this.meta.run.hp) > 0 && Number(this.meta.run.floor) > 0);
     this.el['continue-button'].hidden = !canContinue;
     this.el['title-best'].textContent = 'BEST FLOOR ' + String(this.meta.bestFloor || 0).padStart(2, '0');
-    this.el['title-codex'].textContent = 'GRAMMAR TIER ' + this.generatorTier() + ' · ' + this.meta.codex.length + ' enemies / ' + this.meta.weaponCodex.length + ' weapons';
+    this.el['title-codex'].textContent = this.meta.codex.length + ' CREATURES STUDIED · ' + this.meta.weaponCodex.length + ' WEAPONS FOUND';
     this.updatePsyche(0.04);
     this.updateOrientation();
   }
 
   startNewRun() {
     const seed = randomSeed();
-    const starterWeapon = generateWeapon(seed ^ 0x51a7e, 1, [], this.generatorTier());
+    const starterWeapon = clone(STARTER_WEAPON);
     this.run = {
       seed,
       floor: 1,
@@ -367,6 +376,7 @@ export class MeltCryptGame {
       weapon: starterWeapon,
       recentEnemySignatures: [],
       recentWeaponSignatures: [starterWeapon.signature],
+      firstCombatRewarded: false,
       totalKills: 0,
       discoveries: 0,
       startedAt: Date.now()
@@ -384,7 +394,8 @@ export class MeltCryptGame {
     this.run.relics = Array.isArray(this.run.relics) ? this.run.relics : [];
     this.run.potions = Array.isArray(this.run.potions) ? this.run.potions : [];
     this.run.discoveries = Number(this.run.discoveries) || 0;
-    this.run.weapon = this.run.weapon || generateWeapon(this.run.seed ^ 0x51a7e, this.run.floor || 1, [], this.generatorTier());
+    this.run.weapon = this.run.weapon || clone(STARTER_WEAPON);
+    this.run.firstCombatRewarded = Boolean(this.run.firstCombatRewarded);
     this.run.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
     this.run.recentWeaponSignatures = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures.slice(-18) : [this.run.weapon.signature];
     void this.audio.ensure();
@@ -437,10 +448,12 @@ export class MeltCryptGame {
     start.cleared = true;
     this.roomTitleCache.clear();
     this.contextTarget = null;
+    this.encounterDirector.cancel();
+    this.setCombatActive(false);
 
-    const fog = hslColor(352, 0.46, 0.075);
+    const fog = hslColor(352, 0.28, 0.105);
     this.scene.fogColor.copyFrom(fog);
-    this.scene.clearColor = new Color4(0.035, 0.012, 0.016, 1);
+    this.scene.clearColor = new Color4(0.045, 0.026, 0.026, 1);
     this.audio.setFloor(this.run.floor);
 
     this.hideScreens();
@@ -450,7 +463,12 @@ export class MeltCryptGame {
     this.updateRoomLabel(start);
     this.updateHud();
     this.drawMinimap();
-    this.showFloorBanner('ENTERING', 'FLOOR ' + String(this.run.floor).padStart(2, '0'), this.floorSubtitle());
+    if(this.run.floor===1&&this.run.totalKills===0){
+      this.showFloorBanner('GRAVE CLEAVER','TAP: CHAIN  ·  HOLD: HEAVY','DODGE · PARRY · read the weapon hand');
+      this.weaponBannerTimer=2.8;
+    }else{
+      this.showFloorBanner('ENTERING', 'FLOOR ' + String(this.run.floor).padStart(2, '0'), this.floorSubtitle());
+    }
     this.meta.bestFloor = Math.max(this.meta.bestFloor || 0, this.run.floor);
     this.meta.run = clone(this.run);
     this.saveMeta();
@@ -550,28 +568,98 @@ export class MeltCryptGame {
   spawnRoom(room) {
     if (room.spawned) return;
     room.spawned = true;
-    this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
-    for (let index = 0; index < room.monsterSeeds.length; index += 1) {
-      const seed = room.monsterSeeds[index];
-      const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures, this.generatorTier());
-      this.recentEnemySignatures.push(genome.signature);
-      this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
-      const rng = makeRng(seed ^ 0xa511e9b3);
-      const center = this.visuals.roomCenters.get(room.id);
-      let ox = 0, oz = 0;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        ox = (rng() - 0.5) * (room.sizeX - 3.4);
-        oz = (rng() - 0.5) * (room.sizeZ - 3.4);
-        if (Math.hypot(ox, oz) < 2.6) { ox += ox < 0 ? -2.5 : 2.5; oz += oz < 0 ? -1.3 : 1.3; }
-        const wx = center.x + ox, wz = center.z + oz;
-        if (!this.controller.overlapsAt(wx, wz, 0)) break;
-      }
-      const position = new Vector3(center.x + ox, 0, center.z + oz);
-      this.spawnEnemy(genome, room.id, position, false);
+    room.cleared = false;
+    const firstCombat = this.run.floor === 1 && !this.run.firstCombatRewarded && room.role === 'room';
+    const plan = buildEncounterPlan(room,this.run.floor,this.run.seed,{firstCombat});
+    const center=this.visuals.roomCenters.get(room.id);
+    if(center){
+      const inward=center.subtract(this.controller.position);inward.y=0;
+      if(inward.lengthSquared()>0.001){inward.normalize();this.controller.nudge(inward,0.46);this.controller.syncCamera();}
     }
-    this.run.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
-    if (!room.monsterSeeds.length) room.cleared = true;
+    this.visuals.sealRoom(room);
+    this.setCombatActive(true);
+    this.handleEncounterEvents(this.encounterDirector.begin(plan),room);
   }
+
+  spawnEncounterSeed(seed, room) {
+    this.recentEnemySignatures = Array.isArray(this.run.recentEnemySignatures) ? this.run.recentEnemySignatures.slice(-30) : [];
+    const genome = generateEnemyBlueprint(seed, this.run.floor, room.danger, this.recentEnemySignatures, this.generatorTier());
+    this.recentEnemySignatures.push(genome.signature);
+    this.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
+    this.run.recentEnemySignatures = this.recentEnemySignatures.slice(-30);
+
+    const rng = makeRng(seed ^ 0xa511e9b3);
+    const center = this.visuals.roomCenters.get(room.id);
+    let ox = 0, oz = 0;
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      ox = (rng() - 0.5) * (room.sizeX - 3.4);
+      oz = (rng() - 0.5) * (room.sizeZ - 3.4);
+      if (Math.hypot(ox, oz) < 2.8) { ox += ox < 0 ? -2.6 : 2.6; oz += oz < 0 ? -1.4 : 1.4; }
+      const wx = center.x + ox, wz = center.z + oz;
+      if (!this.controller.overlapsAt(wx, wz, 0)) break;
+    }
+    const position = new Vector3(center.x + ox, 0, center.z + oz);
+    return this.spawnEnemy(genome, room.id, position, false);
+  }
+
+  setCombatActive(value) {
+    this.combatActive=Boolean(value);
+    this.root.classList.toggle('combat-active',this.combatActive);
+    this.audio?.setCombat?.(this.combatActive);
+  }
+
+  handleEncounterEvents(events,room) {
+    for(const event of events||[]){
+      if(event.type==='cue'){
+        this.audio?.encounterCue?.(event.kind);
+        if(event.text)this.toast(event.text);
+      } else if(event.type==='spawn'){
+        for(const seed of event.seeds)this.spawnEncounterSeed(seed,room);
+      } else if(event.type==='clear'){
+        room.cleared=true;
+        this.visuals.unsealRoom(room);
+        this.setCombatActive(false);
+        this.audio?.encounterCue?.('clear');
+        this.toast('ROOM CLEAR.');
+        if(event.reward==='weapon-choice'&&!this.run.firstCombatRewarded){
+          this.run.firstCombatRewarded=true;
+          this.spawnWeaponChoice(room.id,3);
+        }
+        this.drawMinimap();
+        this.saveRun();
+      }
+    }
+  }
+
+  updateEncounter(dt) {
+    const room=this.dungeon?.rooms?.[this.currentRoomId];
+    if(!room||!room.spawned||room.cleared)return;
+    const alive=this.enemies.filter((enemy)=>!enemy.dead&&!enemy.dying&&enemy.roomId===room.id).length;
+    this.handleEncounterEvents(this.encounterDirector.tick(dt,alive),room);
+  }
+
+  spawnWeaponChoice(roomId,count=3) {
+    const room=this.dungeon.rooms[roomId];
+    const center=this.visuals.roomCenters.get(roomId);
+    if(!room||!center)return;
+    const group='choice-'+roomId+'-'+Date.now();
+    const offsets=count===3?[[-1.55,0.7],[0,1.1],[1.55,0.7]]:[[0,0.9]];
+    offsets.slice(0,count).forEach(([x,z],index)=>{
+      let point=center.add(new Vector3(x,0,z));
+      if(this.controller.overlapsAt(point.x,point.z,0)){
+        const angle=index/count*Math.PI*2;
+        for(let step=0;step<6;step+=1){
+          const radius=2.0+step*0.38;
+          const candidate=center.add(new Vector3(Math.cos(angle)*radius,0,Math.sin(angle)*radius));
+          if(!this.controller.overlapsAt(candidate.x,candidate.z,0)){point=candidate;break;}
+        }
+      }
+      this.spawnWeaponDrop(point,roomId,{choiceGroup:group,seedSalt:0x99e1+index*733});
+    });
+    this.toast('CHOOSE A WEAPON.');
+    this.weaponBannerTimer=2.8;
+  }
+
 
   spawnEnemy(genome, roomId, position, child = false) {
     const enemy = {
@@ -591,6 +679,14 @@ export class MeltCryptGame {
       staggerTime: 0,
       knockVelocity: new Vector3(),
       facing: 0,
+      animAttack: null,
+      tellDuration: 0,
+      attackFollow: 0,
+      dying: false,
+      deathTimer: 0,
+      deathDuration: 0,
+      deathKind: 'normal',
+      lastHit: null,
       visual: null
     };
     enemy.visual = this.visuals.createMonsterVisual(genome, position);
@@ -625,13 +721,23 @@ export class MeltCryptGame {
       return;
     }
 
-    if (actions.attackStart && !this.attackState.active) this.attackHold = 0;
-    if (actions.attackHeld && !this.attackState.active) this.attackHold += dt;
-    if (actions.attackRelease && !this.attackState.active) {
-      const heavy = this.attackHold >= 0.34;
-      this.startAttack(heavy, this.justDodged > 0.02);
+    if (actions.attackStart && !this.attackState.active) {
+      this.attackHold = 0;
+      this.attackCommitted = false;
+      this.audio.tone('ready',0.38);
+    }
+    if (actions.attackHeld && !this.attackState.active) {
+      this.attackHold += dt;
+      if (this.attackHold >= 0.3 && !this.attackCommitted) {
+        this.attackCommitted = true;
+        this.startAttack(true, this.justDodged > 0.02);
+      }
+    }
+    if (actions.attackRelease && !this.attackState.active && !this.attackCommitted) {
+      this.startAttack(false, this.justDodged > 0.02);
       this.attackHold = 0;
     }
+    if (actions.attackRelease) this.attackCommitted = false;
     if (actions.dodge && this.dashCooldown <= 0) this.startDash();
     if (actions.skill) {
       if (this.contextTarget) this.useAction();
@@ -642,6 +748,7 @@ export class MeltCryptGame {
     this.updateAttack(dt, actions.attackHeld);
     this.updateCurrentRoom();
     this.updateEnemies(dt);
+    this.updateEncounter(dt);
     this.updateProjectiles(dt);
     this.updateDrops(dt);
     this.updateContext();
@@ -661,6 +768,8 @@ export class MeltCryptGame {
     this.parryWindow = Math.max(0, this.parryWindow - dt);
     this.wardTimer = Math.max(0, this.wardTimer - dt);
     this.justDodged = Math.max(0, (this.justDodged || 0) - dt);
+    this.weaponBannerTimer = Math.max(0, this.weaponBannerTimer - dt);
+    this.root.classList.toggle('weapon-banner-active', this.weaponBannerTimer > 0);
   }
 
   updateEffects(dt) {
@@ -674,23 +783,24 @@ export class MeltCryptGame {
     if (!enabled) {
       this.root.style.setProperty('--psy-opacity', '0');
       this.root.style.setProperty('--game-hue', '0deg');
-      this.root.style.setProperty('--game-sat', '1.04');
+      this.root.style.setProperty('--game-sat', '.94');
+      this.root.style.setProperty('--game-contrast', '1');
       this.root.style.setProperty('--game-scale', '1');
       return;
     }
-    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.04) : 0.04;
-    const warp = this.effects.warp > 0 ? 0.12 : 0;
-    const opacity = 0.028 + mutation * 0.035 + warp;
-    const hue = Math.sin(this.elapsed * 0.31) * (1.5 + mutation * 2 + warp * 12);
+    const mutation = this.run ? Math.min(1, (this.run.floor - 1) * 0.035) : 0;
+    const warp = this.effects.warp > 0 ? 1 : 0;
+    const opacity = 0.014 + mutation * 0.012 + warp * 0.07;
+    const hue = warp ? Math.sin(this.elapsed * 0.72) * 5.5 : 0;
     this.root.style.setProperty('--psy-opacity', String(opacity));
-    this.root.style.setProperty('--psy-spin', String((this.elapsed * 4) % 360) + 'deg');
-    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.6) * 13) + '%');
-    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.47) * 12) + '%');
-    this.root.style.setProperty('--psy-blur', this.effects.warp > 0 ? '0.8px' : '0px');
+    this.root.style.setProperty('--psy-spin', String((this.elapsed * 2.4) % 360) + 'deg');
+    this.root.style.setProperty('--psy-x', String(58 + Math.sin(this.elapsed * 0.45) * 9) + '%');
+    this.root.style.setProperty('--psy-y', String(43 + Math.cos(this.elapsed * 0.4) * 8) + '%');
+    this.root.style.setProperty('--psy-blur', warp ? '0.55px' : '0px');
     this.root.style.setProperty('--game-hue', String(hue) + 'deg');
-    this.root.style.setProperty('--game-sat', String(1.05 + mutation * 0.08 + warp * 0.22));
-    this.root.style.setProperty('--game-contrast', String(1.06 + warp * 0.18));
-    this.root.style.setProperty('--game-scale', this.effects.warp > 0 ? String(1.002 + Math.sin(this.elapsed * 4) * 0.002) : '1');
+    this.root.style.setProperty('--game-sat', String(0.94 + mutation * 0.025 + warp * 0.08));
+    this.root.style.setProperty('--game-contrast', String(1 + warp * 0.07));
+    this.root.style.setProperty('--game-scale', warp ? String(1.001 + Math.sin(this.elapsed * 4) * 0.0015) : '1');
   }
 
   updatePlayer(dt) {
@@ -734,11 +844,17 @@ export class MeltCryptGame {
 
     this.controller.syncCamera(bob);
     this.camera.rotation.y = this.lookYaw + hitYaw + lateralBob;
-    this.camera.rotation.x = clamp(this.lookPitch + hitPitch - fx.recoil * 0.018, -1.3, 1.3);
+    this.camera.rotation.x = clamp(this.lookPitch + hitPitch - fx.recoil * 0.042, -1.3, 1.3);
     this.camera.rotation.z = fx.lean + Math.sin(this.elapsed * 41) * fx.hit * 0.008;
 
     const targetFov = 0.95 + fx.dash * 0.09 + (autoSprint ? 0.035 : 0);
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 10);
+
+    this.footstepTimer=Math.max(0,this.footstepTimer-dt);
+    if(move.magnitude>0.28&&this.dashTimer<=0&&this.footstepTimer<=0){
+      this.audio.footstep(autoSprint?1:0.72);
+      this.footstepTimer=autoSprint?0.27:0.41;
+    }
   }
 
   startDash() {
@@ -803,13 +919,16 @@ export class MeltCryptGame {
     const weapon = this.run.weapon;
     if (!weapon || this.attackState.active || this.fireCooldown > 0.02) return;
     this.applyAimAssist(weapon, dashAttack);
+    const combo = ((this.attackState.combo ?? -1) + 1) % Math.max(1, weapon.comboLength || 1);
     const haste = this.effects.haste > 0 ? 0.78 : 1;
-    const duration = clamp(weapon.recovery * (heavy ? 1.18 : 0.82) * haste, 0.22, 1.45);
-    const combo = ((this.attackState.combo || 0) + 1) % Math.max(1, weapon.comboLength || 1);
-    this.attackState = { active:true, timer:duration, duration, heavy, combo, hitDone:false, dashAttack };
-    this.fireCooldown = duration * 0.82;
-    this.audio.tone('shot', heavy ? 0.62 : 0.86);
-    navigator.vibrate?.(heavy ? 10 : 5);
+    const timing = attackTiming(weapon,heavy,combo,haste);
+    this.attackState = {
+      active:true,timer:timing.duration,duration:timing.duration,heavy,combo,
+      hitDone:false,dashAttack,impactStart:timing.impactStart,impactEnd:timing.impactEnd
+    };
+    this.fireCooldown = timing.duration * 0.76;
+    this.audio.tone(heavy ? 'heavy-swing' : 'swing', heavy ? 1 : 0.82);
+    navigator.vibrate?.(heavy ? 10 : 4);
   }
 
   updateAttack(dt, attackHeld) {
@@ -831,8 +950,8 @@ export class MeltCryptGame {
       heavy: state.heavy
     });
 
-    const activeStart = state.heavy ? 0.39 : 0.25;
-    const activeEnd = state.heavy ? 0.7 : 0.58;
+    const activeStart = state.impactStart ?? 0.34;
+    const activeEnd = state.impactEnd ?? 0.56;
     if (!state.hitDone && progress >= activeStart && progress <= activeEnd) {
       state.hitDone = true;
       this.performMeleeHit(state);
@@ -955,6 +1074,7 @@ export class MeltCryptGame {
     const { critical=false, stagger=0, heavy=false, weak=false, blocked=false, knock=0 }=options;
     enemy.hp -= Math.max(0.1, amount);
     enemy.stagger += stagger;
+    enemy.lastHit={critical,stagger,heavy,weak,blocked,knock};
     const staggerResist=(enemy.genome.defenseSpec?.staggerResist||0)+(enemy.genome.mutationSpec?.staggerResist||0)+(enemy.genome.headSpec?.staggerResist||0);
     const threshold=2.15+staggerResist*2.2;
     const didStagger=enemy.stagger>=threshold;
@@ -964,6 +1084,9 @@ export class MeltCryptGame {
       enemy.staggerTime=Math.max(enemy.staggerTime,heavy?0.9:0.52);
       enemy.tellTimer=0;
       enemy.attackKind=null;
+      enemy.attackFollow=0;
+      enemy.animAttack=null;
+      this.audio.tone('stagger',heavy?1:0.75);
       if(knock>0){
         const away=enemy.visual.root.position.subtract(this.controller.position);away.y=0;
         if(away.lengthSquared()>0.001)enemy.knockVelocity=away.normalize().scale(knock*(heavy?3.3:2.1));
@@ -972,9 +1095,9 @@ export class MeltCryptGame {
 
     const hitDirection=enemy.visual.root.position.subtract(this.controller.position).normalize();
     this.visuals.createHitEffect(enemy.visual.root.position.add(new Vector3(0,Math.max(0.55,enemy.genome.size),0)),hitDirection,heavy?1.5:0.8,weak);
-    this.hitStop=Math.max(this.hitStop,blocked?0.018:heavy||didStagger?0.065:0.035);
-    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?0.7:0.32);
-    this.audio.tone('hit',weak||critical?1.08:blocked?0.48:0.78);
+    this.hitStop=Math.max(this.hitStop,blocked?0.014:heavy||didStagger?0.072:0.038);
+    this.cameraFx.recoil=Math.max(this.cameraFx.recoil,heavy?1:0.48);
+    this.audio.tone(blocked?'armor':'hit',weak||critical?1.08:blocked?0.9:0.82);
     navigator.vibrate?.(heavy||didStagger?[8,18,8]:4);
 
     if(blocked&&!weak&&this.runRng()<0.3)this.toast('ARMOR ATE MOST OF THAT HIT.');
@@ -1022,8 +1145,15 @@ export class MeltCryptGame {
       this.hitStop=Math.max(this.hitStop,0.055);
     }
 
-    this.visuals.disposeMonsterVisual(enemy.visual);
-    enemy.visual = null;
+    const hit=enemy.lastHit||{};
+    enemy.dying=true;
+    enemy.deathKind=hit.weak&&hit.heavy?'execution':hit.heavy&&this.run.weapon?.core==='maul'?'slam':hit.knock>1.8?'launch':hit.critical?'spin':'normal';
+    enemy.deathDuration=enemy.deathKind==='launch'?0.92:enemy.deathKind==='slam'?0.72:0.8;
+    enemy.deathTimer=enemy.deathDuration;
+    enemy.tellTimer=0;
+    enemy.attackKind=null;
+    enemy.animAttack=null;
+    this.audio.tone('death',hit.heavy?1.15:0.82);
     this.run.totalKills += 1;
     this.floorKills += 1;
     if (this.run.lifesteal > 0) this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.lifesteal);
@@ -1032,16 +1162,10 @@ export class MeltCryptGame {
     }
 
     const dropRoll=this.runRng();
-    if(dropRoll<0.13) this.spawnWeaponDrop(deathPosition, roomId);
-    else if(dropRoll<0.3) this.spawnDrop(deathPosition);
+    if(dropRoll<0.28) this.spawnWeaponDrop(deathPosition, roomId);
+    else if(dropRoll<0.43) this.spawnDrop(deathPosition);
 
     const room = this.dungeon.rooms[roomId];
-    const aliveInRoom = this.enemies.some((candidate) => !candidate.dead && candidate.roomId === roomId);
-    if (!aliveInRoom) {
-      room.cleared = true;
-      if (room.id === this.currentRoomId) this.toast('ROOM QUIET. SUSPICIOUS.');
-      this.drawMinimap();
-    }
 
     const unlocked = this.floorKills >= this.dungeon.requiredKills;
     if (unlocked && !this.visuals.gate?.unlocked) {
@@ -1053,13 +1177,15 @@ export class MeltCryptGame {
     this.saveRun();
   }
 
-  spawnWeaponDrop(position, roomId = this.currentRoomId) {
-    const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
+  spawnWeaponDrop(position, roomId = this.currentRoomId, options = {}) {
+    const seed = options.seedSalt
+      ? ((this.run.seed ^ Math.imul(this.floorKills + 11, options.seedSalt)) >>> 0)
+      : (Math.floor(this.runRng() * 0xffffffff) >>> 0);
     const recent = Array.isArray(this.run.recentWeaponSignatures) ? this.run.recentWeaponSignatures : [];
     const weapon = generateWeapon(seed, this.run.floor, recent, this.generatorTier());
     this.run.recentWeaponSignatures = [...recent, weapon.signature].slice(-18);
     const visual = this.visuals.createWeaponDropVisual(weapon, position.add(new Vector3(0,0.03,0)));
-    this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0 });
+    this.drops.push({ seed, type:'weapon', weapon, roomId, visual, age:0, choiceGroup:options.choiceGroup||null });
     this.drawMinimap();
   }
 
@@ -1089,9 +1215,15 @@ export class MeltCryptGame {
   collectDrop(drop) {
     if (drop.type === 'weapon') {
       this.equipWeapon(drop.weapon);
-      drop.visual.node.dispose(false,true);
-      drop.visual.materials?.forEach((material)=>material.dispose());
-      drop.visual=null;
+      const group=drop.choiceGroup;
+      for(const candidate of this.drops){
+        if(candidate.type!=='weapon'||!candidate.visual)continue;
+        if(candidate===drop||(group&&candidate.choiceGroup===group)){
+          candidate.visual.node.dispose(false,true);
+          candidate.visual.materials?.forEach((material)=>material.dispose());
+          candidate.visual=null;
+        }
+      }
       this.drawMinimap();
       return;
     }
@@ -1120,8 +1252,9 @@ export class MeltCryptGame {
     this.discoverWeapon(weapon);
     this.skillCooldown=0;
     this.attackState={active:false,timer:0,duration:0,heavy:false,combo:-1,hitDone:false,dashAttack:false};
+    this.weaponBannerTimer=2.4;
     this.toast('EQUIPPED: ' + weapon.name + ' / ' + weapon.skillSpec.label);
-    this.audio.tone('loot',1);
+    this.audio.tone('equip',1);
     navigator.vibrate?.([5,16,5]);
     this.saveRun();
   }
@@ -1201,18 +1334,36 @@ export class MeltCryptGame {
     if (room.role === 'gate' && !this.visuals.gate.unlocked) this.toast('DESCENT REQUIRES ' + Math.max(0, this.dungeon.requiredKills - this.floorKills) + ' MORE APOLOGIES.');
   }
 
+  beginEnemyAttack(enemy,kind,source,tell) {
+    enemy.attackKind=kind;
+    enemy.attackSource=source;
+    enemy.tellDuration=Math.max(0.08,tell);
+    enemy.tellTimer=enemy.tellDuration;
+    enemy.attackFollow=0;
+    enemy.animAttack={kind,progress:0};
+    if(kind==='heavy-sweep'||kind==='slam'||kind==='horn-charge')this.audio.tone('cue',0.42);
+    else if(kind==='bolt'||kind==='arc-pulse')this.audio.tone('blink',0.3);
+    else if(kind==='flurry')this.audio.tone('ready',0.3);
+  }
+
   updateEnemies(dt) {
     const player = this.controller.position;
     let activeCount = 0;
     for (const enemy of this.enemies) {
-      if (enemy.dead || !enemy.visual) continue;
+      if (!enemy.visual) continue;
+      if (enemy.dying) {
+        enemy.deathTimer=Math.max(0,enemy.deathTimer-dt);
+        this.visuals.animateEnemyVisual(enemy,this.elapsed);
+        if(enemy.deathTimer<=0){
+          this.visuals.disposeMonsterVisual(enemy.visual);
+          enemy.visual=null;
+          enemy.dying=false;
+        }
+        continue;
+      }
+      if (enemy.dead) continue;
       const root = enemy.visual.root;
       const genome = enemy.genome;
-      const motionT = this.elapsed * (genome.wobble || 1) + genome.phase;
-      const floatY = genome.locomotion === 'floating' ? 0.18 + Math.sin(motionT * 1.7) * 0.12
-        : genome.locomotion === 'hopper' ? Math.max(0, Math.sin(motionT * 2.5)) * 0.08
-        : Math.sin(motionT * 2.2) * 0.025;
-      root.position.y = floatY;
 
       if (enemy.visual.aura) {
         enemy.visual.aura.rotation.y += dt * 1.1;
@@ -1236,12 +1387,7 @@ export class MeltCryptGame {
         enemy.knockVelocity.scaleInPlace(Math.max(0,1-dt*7));
       }
 
-      if (enemy.staggerTime > 0) {
-        root.rotation.z = Math.sin(this.elapsed * 34) * 0.08;
-        root.rotation.x = -0.08;
-      } else {
-        root.rotation.z = genome.locomotion === 'crawler' ? Math.sin(motionT * 5) * 0.035 : 0;
-        root.rotation.x = 0;
+      if (enemy.staggerTime <= 0) {
         const desiredYaw = Math.atan2(dx, dz);
         const tracking=(genome.headSpec?.tracking||1);
         root.rotation.y += this.normalizeAngle(desiredYaw - root.rotation.y) * Math.min(1, dt * (genome.locomotion === 'heavy-biped' ? 4.2 : 7.5) * tracking);
@@ -1250,51 +1396,45 @@ export class MeltCryptGame {
 
       if (enemy.tellTimer > 0 && enemy.staggerTime <= 0) {
         enemy.tellTimer -= dt;
-        const tellPulse = 1 + Math.sin(this.elapsed * 30) * 0.045;
-        root.scaling.set(genome.size * tellPulse, genome.size / tellPulse, genome.size * tellPulse);
+        if(enemy.animAttack)enemy.animAttack.progress=Math.min(0.7,(1-enemy.tellTimer/Math.max(0.001,enemy.tellDuration))*0.7);
         if (enemy.tellTimer <= 0) {
-          root.scaling.setAll(genome.size);
           this.executeEnemyAttack(enemy, distance, direction);
+          enemy.attackFollow=0.24;
+          if(enemy.animAttack)enemy.animAttack.progress=0.72;
           enemy.attackKind = null;
         }
+      } else if(enemy.attackFollow>0 && enemy.staggerTime<=0){
+        enemy.attackFollow=Math.max(0,enemy.attackFollow-dt);
+        if(enemy.animAttack)enemy.animAttack.progress=0.72+(1-enemy.attackFollow/0.24)*0.28;
+        if(enemy.attackFollow<=0)enemy.animAttack=null;
       } else if (enemy.staggerTime <= 0) {
         const attack = genome.ability;
         const cadence = Math.max(0.42, 1 / Math.max(0.35, genome.cadence || 1));
 
         if (genome.headSpec?.charge && enemy.specialTimer <= 0 && distance > 2.0 && distance < 5.5) {
-          enemy.attackKind = 'horn-charge';
-          enemy.attackSource = 'head';
-          enemy.tellTimer = 0.46;
+          this.beginEnemyAttack(enemy,'horn-charge','head',0.46);
           enemy.specialTimer = 4.1 + this.runRng() * 1.2;
         } else if (genome.mutation === 'arc-growth' && enemy.specialTimer <= 0 && distance < 7.2) {
-          enemy.attackKind = 'arc-pulse';
-          enemy.attackSource = 'mutation';
-          enemy.tellTimer = 0.52;
+          this.beginEnemyAttack(enemy,'arc-pulse','mutation',0.52);
           enemy.specialTimer = 4.3 + this.runRng() * 1.3;
         } else if (genome.mutation === 'long-legs' && enemy.specialTimer <= 0 && distance > 2.1 && distance < 6.5) {
-          enemy.attackKind = 'leg-dash';
-          enemy.attackSource = 'mutation';
-          enemy.tellTimer = 0.38;
+          this.beginEnemyAttack(enemy,'leg-dash','mutation',0.38);
           enemy.specialTimer = 3.6 + this.runRng();
         } else if (enemy.specialTimer <= 0 && genome.secondaryAbility && genome.secondaryAbility !== attack) {
           const secondary=genome.secondaryAbility;
           const ranged=secondary==='bolt';
           const valid=ranged ? distance<7.3 : secondary==='hook-pull' ? distance<4.8 : distance<Math.max(1.5,(genome.secondaryReach||1)+0.7);
           if(valid){
-            enemy.attackKind=secondary;
-            enemy.attackSource='secondary';
             const tells={ 'heavy-sweep':0.62,slam:0.7,flurry:0.18,thrust:0.34,'shield-bash':0.36,bolt:0.48,'hook-pull':0.44,cleave:0.3 };
-            enemy.tellTimer=tells[secondary]||0.34;
+            this.beginEnemyAttack(enemy,secondary,'secondary',tells[secondary]||0.34);
             enemy.specialTimer=Math.max(2.4,1.65/Math.max(0.35,genome.secondaryCadence||1))+this.runRng()*0.9;
           }
         } else if (enemy.attackTimer <= 0) {
-          enemy.attackKind = attack;
-          enemy.attackSource = 'primary';
           const tells = {
             'heavy-sweep':0.62, slam:0.7, flurry:0.18, thrust:0.34,
             'shield-bash':0.36, bolt:0.48, 'hook-pull':0.44, cleave:0.3
           };
-          enemy.tellTimer = tells[attack] || 0.34;
+          this.beginEnemyAttack(enemy,attack,'primary',tells[attack]||0.34);
           enemy.attackTimer = cadence * (0.9 + this.runRng() * 0.22);
         }
 
@@ -1322,6 +1462,7 @@ export class MeltCryptGame {
       const center = this.visuals.roomCenters.get(room.id);
       root.position.x = clamp(root.position.x, center.x - room.sizeX * 0.41, center.x + room.sizeX * 0.41);
       root.position.z = clamp(root.position.z, center.z - room.sizeZ * 0.41, center.z + room.sizeZ * 0.41);
+      this.visuals.animateEnemyVisual(enemy,this.elapsed);
     }
     this.audio.setDanger(Math.min(1, activeCount / 4));
   }
@@ -1432,7 +1573,7 @@ export class MeltCryptGame {
       this.hitStop=Math.max(this.hitStop,0.055);
       this.cameraFx.recoil=Math.max(this.cameraFx.recoil,0.55);
       this.toast('PARRIED.');
-      this.audio.tone('hit',1.1);
+      this.audio.tone('parry',1.1);
       navigator.vibrate?.([6,18,6]);
       return;
     }
@@ -1567,6 +1708,23 @@ export class MeltCryptGame {
   }
 
 
+  weaponComparison(next) {
+    const current=this.run?.weapon;
+    if(!current||!next)return '';
+    const arrow=(a,b,goodHigh=true)=>{
+      const delta=(a-b)/Math.max(0.001,Math.abs(b));
+      if(Math.abs(delta)<0.09)return '≈';
+      const up=delta>0;
+      return (up===goodHigh)?'↑':'↓';
+    };
+    return [
+      'SPD '+arrow(next.cadence,current.cadence,true),
+      'RNG '+arrow(next.reach,current.reach,true),
+      'STG '+arrow(next.stagger,current.stagger,true),
+      next.skillSpec?.label||'SKILL'
+    ].join('  ');
+  }
+
   updateContext() {
     let nearest = null;
     let best = 2.15;
@@ -1598,7 +1756,7 @@ export class MeltCryptGame {
     if (nearest.type === 'weapon-drop') {
       const weapon=nearest.drop.weapon;
       this.el['context-label'].textContent='EQUIP';
-      this.el['context-copy'].textContent=weapon.name+' · '+weapon.skillSpec.label+' · reach '+weapon.reach.toFixed(1);
+      this.el['context-copy'].textContent=weapon.name+'  ·  '+this.weaponComparison(weapon);
       this.el['use-button-label'].textContent='EQUIP';
     } else if (nearest.type === 'gate') {
       const missing = Math.max(0, this.dungeon.requiredKills - this.floorKills);
@@ -1642,7 +1800,7 @@ export class MeltCryptGame {
       this.visuals.setInteractiveUsed(target);
       room.opened = true;
       const seed = Math.floor(this.runRng() * 0xffffffff) >>> 0;
-      this.spawnWeaponDrop(target.position.add(new Vector3(0.75,0,0.5)),target.roomId);
+      this.spawnWeaponChoice(target.roomId,3);
       if(this.runRng()<0.48){
         const relic=rollLoot(seed,this.run.floor,'relic').item;
         this.discoverLoot(relic);
@@ -1719,22 +1877,21 @@ export class MeltCryptGame {
     this.el['health-label'].textContent = Math.max(0, Math.ceil(this.run.hp)) + '/' + Math.ceil(this.run.maxHp);
     this.el['floor-label'].textContent = 'FLOOR ' + String(this.run.floor).padStart(2, '0');
     this.el['kill-label'].textContent = this.floorKills + ' / ' + this.dungeon.requiredKills;
-    const variety = Math.min(999,this.meta.codex.length);
-    this.el['mutation-label'].textContent = 'TIER ' + this.generatorTier() + ' · SIGNATURES ' + variety;
+    this.el['mutation-label'].textContent = '';
 
     const weapon=this.run.weapon;
     if(weapon){
       this.el['weapon-name'].textContent=weapon.name.toUpperCase();
-      this.el['weapon-state'].textContent=this.attackState.active
-        ? (this.attackState.heavy?'HEAVY':'COMBO '+(this.attackState.combo+1))
-        : this.skillCooldown>0.02
-          ? weapon.skillSpec.label+' '+this.skillCooldown.toFixed(1)
-          : weapon.skillSpec.label+' READY';
+      this.el['weapon-state'].textContent=weapon.skillSpec.label;
       if(!this.contextTarget)this.el['use-button-label'].textContent=weapon.skillSpec.label;
+      const skillMax=Math.max(0.1,weapon.skillSpec?.cooldown||1);
+      this.root.style.setProperty('--skill-ready',String(clamp(1-this.skillCooldown/skillMax,0,1)));
     }
 
     const maxDash = Math.max(0.62, 1.45 * (1 - (this.run.dashReduction || 0)));
-    this.el['dash-meter'].style.transform = 'scaleX(' + clamp(1 - this.dashCooldown / maxDash, 0, 1) + ')';
+    const dashReady=clamp(1 - this.dashCooldown / maxDash, 0, 1);
+    this.el['dash-meter'].style.transform = 'scaleX(' + dashReady + ')';
+    this.root.style.setProperty('--dash-ready',String(dashReady));
     this.root.style.setProperty('--attack-charge',String(clamp(this.attackHold/0.62,0,1)));
   }
 

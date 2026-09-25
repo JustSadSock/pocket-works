@@ -5,6 +5,8 @@ import {
   generateEnemyBlueprint, signatureDistance
 } from './enemy-generator.js';
 import { WEAPON_CORES, WEAPON_HEADS, WEAPON_SKILLS, generateWeapon } from './weapon-generator.js';
+import { STARTER_WEAPON, attackTiming } from './combat-motion.js';
+import { EncounterDirector, buildEncounterPlan } from './encounter-director.js';
 import { CapsuleController } from './player-controller.js';
 
 const rngA = makeRng(12345);
@@ -23,7 +25,7 @@ assert.ok(HEADS.length >= 6, 'heads must be a meaningful readable module');
 assert.equal(WEAPON_CORES.length, 6, 'weapon grammar must expose six cores');
 assert.equal(WEAPON_HEADS.length, 10, 'weapon grammar must expose ten working heads');
 assert.equal(WEAPON_SKILLS.length, 8, 'weapon grammar must expose eight skills');
-assert.equal(ROOM_MODULES.length, 18, 'the crypt should vary architecture without changing biome');
+assert.equal(ROOM_MODULES.length, 26, 'the crypt should vary architecture without changing biome');
 
 const seenModules = new Set();
 for (let floor = 1; floor <= 14; floor += 1) {
@@ -58,14 +60,16 @@ for (let floor = 1; floor <= 14; floor += 1) {
     }
   }
 }
-assert.ok(seenModules.size >= 14, 'many authored room modules should appear across sampled runs');
+assert.ok(seenModules.size >= 18, 'many authored room modules should appear across sampled runs');
 
 const enemyHistory = [];
 for (let i = 0; i < 36; i += 1) {
   const enemy = generateEnemyBlueprint(17011 + i * 7919, 7, 1.25, enemyHistory, 3);
   assert.ok(enemy.maxHp > 0 && enemy.speed > 0 && enemy.damage > 0);
   assert.equal(enemy.ability, enemy.rightArmSpec.attack, 'primary ability must be visible on the right arm');
-  assert.equal(enemy.secondaryAbility, enemy.leftArmSpec.attack, 'secondary ability must be visible on the left arm');
+  assert.equal(enemy.secondaryAbility, enemy.leftArmSpec.attack || null, 'secondary ability must match the visible off-hand');
+  const visibleSpecials = Number(enemy.head !== 'bare') + Number(enemy.defense !== 'open') + Number(enemy.mutation !== 'none');
+  assert.equal(visibleSpecials, 1, 'enemy should present exactly one dominant special feature beyond silhouette and main weapon');
   for (const signature of enemyHistory.slice(-30)) {
     assert.ok(signatureDistance(enemy.signature, signature) >= 5, 'recent enemies must differ in several meaningful components');
   }
@@ -92,6 +96,36 @@ const tierOneHeads = new Set(Array.from({ length: 160 }, (_, i) => generateWeapo
 const tierThreeHeads = new Set(Array.from({ length: 160 }, (_, i) => generateWeapon(i * 733 + 1, 4, [], 3).head));
 assert.ok(tierOneHeads.size < tierThreeHeads.size, 'meta progression must expand weapon vocabulary');
 
+
+// The starter is authored, fast and deterministic rather than a random roll.
+assert.equal(STARTER_WEAPON.name, 'GRAVE CLEAVER');
+assert.equal(STARTER_WEAPON.core, 'cleaver');
+assert.ok(attackTiming(STARTER_WEAPON,false,0,1).duration <= 0.31);
+assert.ok(attackTiming(STARTER_WEAPON,false,1,1).duration <= 0.35);
+assert.ok(attackTiming(STARTER_WEAPON,true,0,1).duration <= 0.73);
+
+for (let i = 0; i < 120; i += 1) {
+  const weapon = generateWeapon(0x5511 + i * 991, 8, [], 3);
+  for (let combo = 0; combo < Math.max(1, weapon.comboLength); combo += 1) {
+    const timing = attackTiming(weapon,false,combo,1);
+    assert.ok(timing.duration >= 0.19 && timing.duration <= 0.82, 'generated light attacks must stay responsive');
+  }
+}
+
+// First contact is staged and guarantees a weapon-choice reward.
+const encounterRoom = { id: 4, monsterSeeds: [11], role: 'room' };
+const plan = buildEncounterPlan(encounterRoom,1,0xfeed,{ firstCombat:true });
+assert.equal(plan.waves.length,3);
+assert.ok(plan.waves.every((wave)=>wave.length===1));
+assert.equal(plan.reward,'weapon-choice');
+const director = new EncounterDirector();
+let events = director.begin(plan);
+assert.equal(events[0].type,'cue');
+events = director.tick(1,0);
+assert.ok(events.some((event)=>event.type==='spawn'));
+events = director.tick(0.1,0);
+assert.ok(events.some((event)=>event.type==='cue'));
+
 assert.ok(RELICS.length >= 8);
 assert.ok(RELICS.every((relic) => relic.effect && !('stat' in relic)), 'relics must add mechanics instead of percentage stats');
 
@@ -116,4 +150,4 @@ stepController.movePlanar(0.6, 0);
 assert.ok(stepController.position.x > 0.45, 'capsule should traverse a low step');
 assert.ok(stepController.position.y > 0, 'step-height should lift the capsule over low geometry');
 
-console.log('MELT//CRYPT 2.0 grammar and combat invariants passed');
+console.log('MELT//CRYPT Combat Rebuild invariants passed');

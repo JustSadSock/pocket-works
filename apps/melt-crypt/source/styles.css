@@ -424,3 +424,149 @@ button{border:0;color:inherit}
   #weapon-readout{max-width:38vw;min-width:130px}
   #weapon-readout span{max-width:30vw}
 }
+
+
+/* 3.0 Combat Rebuild: hierarchy before telemetry */
+#render-canvas{
+  filter:saturate(var(--game-sat,.94)) contrast(var(--game-contrast,1)) hue-rotate(var(--game-hue,0deg)) brightness(1.04);
+}
+#psy-layer{opacity:calc(var(--psy-opacity,.025) * .55)}
+.scanlines{opacity:.045}
+
+#hud{
+  grid-template-columns:auto 1fr auto;
+  top:max(8px,env(safe-area-inset-top));
+  left:max(9px,env(safe-area-inset-left));
+  right:max(9px,env(safe-area-inset-right));
+  text-shadow:0 2px 8px rgba(0,0,0,.72);
+}
+.hud-center,.kill-block{display:none!important}
+.hud-left{
+  min-height:38px;
+  padding:5px 8px 6px;
+  background:linear-gradient(90deg,rgba(10,6,7,.78),rgba(10,6,7,.18));
+  border:0;
+  border-left:2px solid rgba(169,31,43,.85);
+  clip-path:none;
+}
+.floor-copy{min-width:auto}
+.floor-copy b{font-size:8px;color:rgba(234,216,188,.48)}
+.health-block{grid-template-columns:auto minmax(80px,118px) auto;gap:6px}
+.health-track{height:5px;width:min(118px,17vw);background:rgba(234,216,188,.11)}
+.health-block>b{font-size:7px;opacity:.72}
+#minimap{
+  width:78px;height:48px;
+  padding:2px;
+  opacity:.42;
+  border:0;
+  background:rgba(8,5,6,.32);
+  transition:opacity .22s ease,transform .22s ease;
+}
+.combat-active #minimap{opacity:0;transform:translateY(-5px)}
+.pause-button{
+  width:38px;height:38px;
+  background:rgba(9,6,7,.34);
+  border-color:rgba(234,216,188,.12);
+  opacity:.66;
+}
+.pause-button i{height:11px;width:2px}
+
+#reticle{width:16px;height:16px;margin:-8px;opacity:.58}
+#reticle:before{width:3px;top:7px}
+#reticle:after{width:3px;top:7px}
+#reticle i{height:3px;left:7px}
+#reticle b{height:3px;left:7px}
+
+#weapon-readout{
+  left:max(12px,env(safe-area-inset-left));
+  bottom:max(11px,env(safe-area-inset-bottom));
+  transform:translateY(8px);
+  min-width:0;
+  max-width:40vw;
+  padding:5px 8px;
+  opacity:0;
+  background:rgba(8,5,6,.62);
+  border:0;
+  border-left:2px solid var(--blood);
+  transition:opacity .18s ease,transform .18s ease;
+}
+.weapon-banner-active #weapon-readout{opacity:.94;transform:translateY(0)}
+#weapon-readout span{font-size:7px;max-width:34vw}
+#weapon-readout b{font-size:7px;color:rgba(230,163,92,.74)}
+
+#context-prompt{
+  bottom:78px;
+  max-width:62vw;
+  min-height:28px;
+  padding:5px 8px;
+  gap:7px;
+  background:rgba(8,5,6,.8);
+  border:0;
+  border-left:2px solid var(--ember);
+  box-shadow:0 5px 18px rgba(0,0,0,.28);
+}
+#context-prompt b{font-size:8px}
+#context-prompt span{font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.action-cluster{
+  grid-template-columns:84px 58px 84px;
+  gap:7px;
+  bottom:max(10px,env(safe-area-inset-bottom));
+  right:max(10px,env(safe-area-inset-right));
+}
+.action{
+  height:50px;
+  background:rgba(9,6,7,.54);
+  border:1px solid rgba(234,216,188,.13);
+  color:rgba(234,216,188,.8);
+  backdrop-filter:blur(2px);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  transition:transform .07s ease,background .08s ease,border-color .08s ease;
+}
+.action.fire{
+  height:68px;
+  background:linear-gradient(180deg,rgba(93,18,25,.72),rgba(24,8,10,.64));
+  border-color:rgba(201,54,63,.55);
+  color:#eed1c6;
+}
+.action.fire:before{
+  width:11px;height:11px;top:11px;
+  border-color:rgba(217,104,67,.66);
+}
+.action.fire span{bottom:15px}
+.action.fire i{bottom:6px;height:2px;box-shadow:none}
+.action.dash{color:#d8a083;border-color:rgba(217,104,67,.3)}
+.action.use{
+  color:#e2b77f;
+  border-color:rgba(230,163,92,.34);
+  overflow:hidden;
+}
+.action.use:after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  pointer-events:none;
+  opacity:.36;
+  background:conic-gradient(var(--ember) calc(var(--skill-ready,1) * 1turn),transparent 0);
+  -webkit-mask:radial-gradient(circle,transparent 62%,#000 64%);
+  mask:radial-gradient(circle,transparent 62%,#000 64%);
+}
+.action.pressed{background:rgba(201,54,63,.22);transform:translateY(2px) scale(.98)}
+
+.toast{top:58px;font-size:8px;max-width:54vw}
+.discovery{
+  bottom:max(76px,calc(env(safe-area-inset-bottom) + 76px));
+  width:min(290px,36vw);
+  padding:8px 10px;
+  background:rgba(11,6,7,.9);
+  box-shadow:6px 6px 0 rgba(0,0,0,.16);
+}
+.discovery p{font-size:8px;line-height:1.3}
+
+@media (max-width:720px){
+  .action-cluster{grid-template-columns:76px 52px 78px}
+  .action.fire{height:64px}
+  #minimap{width:66px;height:42px}
+  .health-track{width:min(104px,22vw)}
+  #weapon-readout{max-width:34vw}
+}

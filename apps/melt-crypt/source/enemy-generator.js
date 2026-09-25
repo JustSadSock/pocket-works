@@ -86,14 +86,26 @@ function build(seed,floor,danger,salt=0,tier=3) {
   let locomotion=choice(rng,locomotions);
   if(body.id==='crawler' && rng()<0.72) locomotion=locomotions.find(x=>x.id==='crawler')||locomotion;
   if(body.id==='serpent' && rng()<0.7) locomotion=locomotions.find(x=>x.id==='floating')||locomotion;
-  const head=choice(rng,heads);
   const right=choice(rng,arms);
-  let left=choice(rng,arms);
-  if(right.id==='shield' && left.id==='shield') left=arms.find(x=>x.id==='blade')||arms.find(x=>x.id==='claws')||arms[0];
-  let defense=choice(rng,defenses);
-  if(left.id==='shield') defense=DEFENSES.find(x=>x.id==='left-shield');
-  if(right.id==='shield') defense=DEFENSES.find(x=>x.id==='right-shield');
-  const mutation=choice(rng,mutations);
+  const neutralHead=heads.find((x)=>x.id==='bare')||heads[0];
+  const neutralDefense=defenses.find((x)=>x.id==='open')||defenses[0];
+  const neutralMutation=MUTATIONS.find((x)=>x.id==='none');
+  let head=neutralHead,defense=neutralDefense,mutation=neutralMutation;
+  let left={id:'empty',label:'bare off-hand',attack:null,damage:0,reach:0,cadence:0,stagger:0,cue:'bare off-hand'};
+
+  const featureKinds=['head','defense','mutation'];
+  const focus=choice(rng,featureKinds);
+  if(focus==='head'){
+    const pool=heads.filter((x)=>x.id!=='bare');
+    if(pool.length)head=choice(rng,pool);
+  }else if(focus==='defense'){
+    const pool=defenses.filter((x)=>x.id!=='open' && (x.id!=='right-shield' || right.id==='shield'));
+    if(pool.length)defense=choice(rng,pool);
+  }else{
+    const pool=mutations.filter((x)=>x.id!=='none');
+    if(pool.length)mutation=choice(rng,pool);
+  }
+  if(defense.id==='left-shield') left=arms.find((x)=>x.id==='shield')||left;
   const threat=clamp(danger*(0.9+rng()*0.25),0.6,4);
   const elite=rng()<Math.min(0.06+floor*0.01,0.18);
   const size=clamp(body.scale*(0.9+rng()*0.2)*(elite?1.12:1),0.72,1.42);
@@ -109,9 +121,9 @@ function build(seed,floor,danger,salt=0,tier=3) {
     bodySpec:body, locomotionSpec:locomotion, headSpec:head, leftArmSpec:left, rightArmSpec:right,
     defenseSpec:defense, mutationSpec:mutation,
     size, speed, maxHp, damage:Math.round(baseDamage*right.damage*(elite?1.22:1)),
-    secondaryDamage:Math.round(baseDamage*left.damage*(elite?1.16:1)),
+    secondaryDamage:left.attack?Math.round(baseDamage*left.damage*(elite?1.16:1)):0,
     cadence:right.cadence*locomotion.cadence, reach:right.reach, stagger:right.stagger,
-    secondaryAbility:left.attack, secondaryReach:left.reach, secondaryCadence:left.cadence,
+    secondaryAbility:left.attack||null, secondaryReach:left.reach||0, secondaryCadence:left.cadence||0,
     elite, hue, accentHue, motion:locomotion.id, phase:rng()*Math.PI*2,
     eyes: head.id==='many-eyes'?5:head.id==='split-jaw'?2:1,
     horns: head.id==='horned'?3:head.id==='crowned'?2:0,
