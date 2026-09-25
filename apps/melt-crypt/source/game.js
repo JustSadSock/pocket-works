@@ -133,6 +133,10 @@ export class MeltCryptGame {
     this.abandonArmed = false;
     this.discoveryTimer = 0;
     this.floorBannerTimer = 0;
+    this.minimapTimer = 0;
+    this.lookYaw = 0;
+    this.lookPitch = 0;
+    this.cameraFx = { recoil: 0, hit: 0, dash: 0, step: 0, lean: 0 };
     this.roomTitleCache = new Map();
   }
 
@@ -164,7 +168,7 @@ export class MeltCryptGame {
     this.camera.fov = 0.95;
     this.camera.inertia = 0;
     this.camera.checkCollisions = true;
-    this.camera.ellipsoid = new Vector3(0.38, 0.78, 0.38);
+    this.camera.ellipsoid = new Vector3(0.32, 0.78, 0.32);
     this.camera.ellipsoidOffset = new Vector3(0, -0.78, 0);
     this.scene.activeCamera = this.camera;
 
@@ -366,6 +370,9 @@ export class MeltCryptGame {
     this.visuals.buildDungeon(this.dungeon, this.run.floor);
     this.visuals.setGateUnlocked(false);
     this.currentRoomId = this.dungeon.startId;
+    this.lookYaw = 0;
+    this.lookPitch = 0;
+    this.cameraFx = { recoil: 0, hit: 0, dash: 0, step: 0, lean: 0 };
     const start = this.dungeon.rooms[this.currentRoomId];
     start.visited = true;
     start.spawned = true;
@@ -529,6 +536,11 @@ export class MeltCryptGame {
     this.updateDrops(dt);
     this.updateContext();
     this.updateHud();
+    this.minimapTimer -= dt;
+    if (this.minimapTimer <= 0) {
+      this.minimapTimer = 0.16;
+      this.drawMinimap();
+    }
 
     if (actions.fire && this.fireCooldown <= 0) this.fireWeapon();
     if (actions.dash && this.dashCooldown <= 0) this.startDash();
@@ -573,11 +585,11 @@ export class MeltCryptGame {
 
   updatePlayer(dt, actions) {
     const look = this.input.consumeLook();
-    this.camera.rotation.y += look.x;
-    this.camera.rotation.x = clamp(this.camera.rotation.x + look.y, -1.33, 1.33);
+    this.lookYaw += look.x;
+    this.lookPitch = clamp(this.lookPitch + look.y, -1.33, 1.33);
 
     const move = this.input.getMove();
-    const yaw = this.camera.rotation.y;
+    const yaw = this.lookYaw;
     const forward = new Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     const right = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     let direction = forward.scale(move.y).add(right.scale(move.x));
@@ -591,12 +603,33 @@ export class MeltCryptGame {
       const speed = this.run.speed * (this.effects.speed > 0 ? 1.52 : 1);
       this.camera.cameraDirection.copyFrom(direction.scale(speed * dt));
     }
-    if (Math.abs(this.camera.position.y - 1.58) > 0.03) this.camera.position.y = 1.58;
+
+    const fx = this.cameraFx;
+    fx.recoil = Math.max(0, fx.recoil - dt * 6.8);
+    fx.hit = Math.max(0, fx.hit - dt * 3.4);
+    fx.dash = Math.max(0, fx.dash - dt * 4.8);
+    fx.step += dt * (5.2 + move.magnitude * 6.4);
+    fx.lean += ((-move.x * 0.026) - fx.lean) * Math.min(1, dt * 9);
+
+    const moving = move.magnitude * (this.dashTimer > 0 ? 0.35 : 1);
+    const bob = Math.sin(fx.step) * 0.022 * moving;
+    const lateralBob = Math.cos(fx.step * 0.5) * 0.004 * moving;
+    const hitYaw = Math.sin(this.elapsed * 47) * fx.hit * 0.018;
+    const hitPitch = Math.cos(this.elapsed * 53) * fx.hit * 0.014;
+    const recoilPitch = fx.recoil * 0.034;
+
+    this.camera.rotation.y = this.lookYaw + hitYaw + lateralBob;
+    this.camera.rotation.x = clamp(this.lookPitch - recoilPitch + hitPitch, -1.36, 1.36);
+    this.camera.rotation.z = fx.lean + Math.sin(this.elapsed * 41) * fx.hit * 0.01;
+    this.camera.position.y = 1.58 + bob;
+
+    const targetFov = 0.95 + fx.dash * 0.085 + (this.effects.speed > 0 ? 0.025 : 0);
+    this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 10);
   }
 
   startDash() {
     const move = this.input.getMove();
-    const yaw = this.camera.rotation.y;
+    const yaw = this.lookYaw;
     const forward = new Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     const right = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     let direction = forward.scale(move.y).add(right.scale(move.x));
@@ -606,6 +639,7 @@ export class MeltCryptGame {
     this.dashTimer = 0.16;
     this.dashCooldown = Math.max(0.7, 1.72 * (1 - (this.run.dashReduction || 0)));
     this.invulnerable = Math.max(this.invulnerable, 0.2);
+    this.cameraFx.dash = 1;
     this.audio.tone('dash');
     navigator.vibrate?.(8);
   }
@@ -618,6 +652,7 @@ export class MeltCryptGame {
     const end = pick?.hit && pick.pickedPoint ? pick.pickedPoint : ray.origin.add(ray.direction.scale(32));
     this.visuals.createTracer(start, end, 318 + (this.run.floor * 11) % 40);
     this.visuals.setWeaponRecoil(1);
+    this.cameraFx.recoil = Math.min(1.35, this.cameraFx.recoil + 0.62);
     this.audio.tone('shot', 0.85);
     navigator.vibrate?.(5);
 
@@ -691,6 +726,7 @@ export class MeltCryptGame {
     const loot = rollLoot(seed, this.run.floor, forced);
     const visual = this.visuals.createLootVisual(loot, position.add(new Vector3(0, 0.03, 0)), seed);
     this.drops.push({ seed, loot, visual, age: 0 });
+    this.drawMinimap();
   }
 
   updateDrops(dt) {
@@ -723,6 +759,7 @@ export class MeltCryptGame {
     drop.visual.node.dispose(false, true);
     drop.visual.material.dispose();
     drop.visual = null;
+    this.drawMinimap();
     this.audio.tone('loot', 1);
     this.saveRun();
   }
@@ -806,7 +843,13 @@ export class MeltCryptGame {
     for (const enemy of this.enemies) {
       if (enemy.dead || !enemy.visual) continue;
       const root = enemy.visual.root;
-      root.position.y = Math.sin(this.elapsed * enemy.genome.wobble * 2 + enemy.genome.phase) * 0.045;
+      const motionT = this.elapsed * enemy.genome.wobble + enemy.genome.phase;
+      const motion = enemy.genome.motion || 'breathe';
+      root.position.y = Math.sin(motionT * (motion === 'skitter' ? 4.2 : 2)) * (motion === 'pulse' ? 0.075 : 0.045);
+      root.rotation.z = motion === 'tilt' ? Math.sin(motionT * 1.7) * 0.095
+        : motion === 'skitter' ? Math.sin(motionT * 5.6) * 0.035
+        : Math.sin(motionT) * 0.018;
+      root.rotation.x = motion === 'pulse' ? Math.cos(motionT * 1.5) * 0.035 : 0;
       if (enemy.visual.aura) {
         enemy.visual.aura.rotation.y += dt * (0.8 + enemy.genome.wobble);
         enemy.visual.aura.rotation.z += dt * 0.33;
@@ -918,6 +961,7 @@ export class MeltCryptGame {
     this.invulnerable = 0.38;
     this.run.hp -= Math.max(1, amount);
     this.damageFlash = 0.95;
+    this.cameraFx.hit = 1;
     this.audio.tone('hurt', 1);
     navigator.vibrate?.([12, 28, 12]);
     if (this.run.hp <= 0) this.die();
@@ -1066,16 +1110,23 @@ export class MeltCryptGame {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const visited = this.dungeon.rooms.filter((room) => room.visited);
     if (!visited.length) return;
+
     const minX = Math.min(...visited.map((room) => room.gx));
     const maxX = Math.max(...visited.map((room) => room.gx));
     const minZ = Math.min(...visited.map((room) => room.gz));
     const maxZ = Math.max(...visited.map((room) => room.gz));
-    const cell = Math.min(17, Math.floor(Math.min(canvas.width / (maxX - minX + 2), canvas.height / (maxZ - minZ + 2))));
+    const cell = Math.min(18, Math.floor(Math.min(canvas.width / (maxX - minX + 2), canvas.height / (maxZ - minZ + 2))));
     const ox = Math.floor((canvas.width - (maxX - minX + 1) * cell) / 2);
     const oz = Math.floor((canvas.height - (maxZ - minZ + 1) * cell) / 2);
+    const roomRect = (room) => ({
+      x: ox + (room.gx - minX) * cell + 2,
+      z: oz + (room.gz - minZ) * cell + 2,
+      size: Math.max(6, cell - 4)
+    });
 
+    ctx.lineCap = 'square';
     ctx.lineWidth = Math.max(2, Math.floor(cell * 0.18));
-    ctx.strokeStyle = 'rgba(255,240,201,.28)';
+    ctx.strokeStyle = 'rgba(210,226,232,.28)';
     for (const room of visited) {
       const cx = ox + (room.gx - minX) * cell + cell / 2;
       const cz = oz + (room.gz - minZ) * cell + cell / 2;
@@ -1087,15 +1138,66 @@ export class MeltCryptGame {
         ctx.beginPath(); ctx.moveTo(cx, cz); ctx.lineTo(tx, tz); ctx.stroke();
       }
     }
+
+    const roomColor = (room) => {
+      if (room.id === this.currentRoomId) return '#f4f7e9';
+      if (room.role === 'gate') return this.visuals.gate?.unlocked ? '#d7ff55' : '#ff4fd8';
+      if (room.role === 'chest' && !room.opened) return '#ffd166';
+      if (room.role === 'shrine' && !room.shrineUsed) return '#5de7ff';
+      if (!room.cleared) return '#ff6b8a';
+      return 'rgba(196,205,214,.48)';
+    };
+
     for (const room of visited) {
-      const x = ox + (room.gx - minX) * cell + 2;
-      const z = oz + (room.gz - minZ) * cell + 2;
-      const size = Math.max(5, cell - 4);
-      ctx.fillStyle = room.id === this.currentRoomId ? '#d7ff55' : room.role === 'gate' ? '#ff4fd8' : room.cleared ? 'rgba(255,240,201,.68)' : '#54e7ff';
-      ctx.fillRect(Math.round(x), Math.round(z), size, size);
-      if (room.role === 'chest' && !room.opened) {
-        ctx.fillStyle = '#fff0c9'; ctx.fillRect(Math.round(x + size / 2 - 1), Math.round(z + size / 2 - 1), 3, 3);
+      const rect = roomRect(room);
+      ctx.fillStyle = 'rgba(10,12,18,.62)';
+      ctx.fillRect(Math.round(rect.x - 1), Math.round(rect.z - 1), rect.size + 2, rect.size + 2);
+      ctx.fillStyle = roomColor(room);
+      ctx.fillRect(Math.round(rect.x), Math.round(rect.z), rect.size, rect.size);
+      if (room.id === this.currentRoomId) {
+        ctx.strokeStyle = '#d7ff55';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(rect.x - 2), Math.round(rect.z - 2), rect.size + 4, rect.size + 4);
       }
+      if (room.role === 'chest' && !room.opened) {
+        ctx.fillStyle = '#241722';
+        ctx.fillRect(Math.round(rect.x + rect.size * 0.34), Math.round(rect.z + rect.size * 0.34), Math.max(2, rect.size * 0.32), Math.max(2, rect.size * 0.32));
+      }
+      if (room.role === 'shrine' && !room.shrineUsed) {
+        ctx.fillStyle = '#241722';
+        ctx.beginPath();
+        ctx.arc(rect.x + rect.size / 2, rect.z + rect.size / 2, Math.max(1.4, rect.size * 0.16), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const projectIntoRoom = (room, worldX, worldZ) => {
+      const rect = roomRect(room);
+      const center = this.visuals.roomCenters.get(room.id);
+      const rx = clamp((worldX - center.x) / Math.max(1, room.sizeX * 0.5), -1, 1);
+      const rz = clamp((worldZ - center.z) / Math.max(1, room.sizeZ * 0.5), -1, 1);
+      return {
+        x: rect.x + rect.size * (0.5 + rx * 0.32),
+        z: rect.z + rect.size * (0.5 + rz * 0.32)
+      };
+    };
+
+    for (const enemy of this.enemies) {
+      if (enemy.dead || !enemy.visual) continue;
+      const room = this.dungeon.rooms[enemy.roomId];
+      if (!room?.visited) continue;
+      const p = projectIntoRoom(room, enemy.visual.root.position.x, enemy.visual.root.position.z);
+      ctx.fillStyle = enemy.genome.elite ? '#ff3df2' : '#ff415f';
+      ctx.fillRect(Math.round(p.x - 1), Math.round(p.z - 1), enemy.genome.elite ? 4 : 3, enemy.genome.elite ? 4 : 3);
+    }
+
+    for (const drop of this.drops) {
+      if (!drop.visual) continue;
+      const room = roomByPoint(this.dungeon, drop.visual.node.position.x, drop.visual.node.position.z);
+      if (!room?.visited) continue;
+      const p = projectIntoRoom(room, drop.visual.node.position.x, drop.visual.node.position.z);
+      ctx.fillStyle = drop.loot.type === 'relic' ? '#d7ff55' : '#a76dff';
+      ctx.fillRect(Math.round(p.x - 1), Math.round(p.z - 1), 3, 3);
     }
   }
 
