@@ -255,3 +255,61 @@ Local device-to-device features use `shared/capabilities/lan.js` and the contrac
 ## 16. PocketNet internet networking
 
 Internet multiplayer uses the platform contract in `docs/POCKET-SERVER.md`. Keep each game's authoritative server logic in `apps/<slug>/server/module.ts` with `module.json`, and use `shared/capabilities/net.js` from the client. The `main` workflow builds and publishes game modules independently; do not edit the server core to add a game. PocketLAN remains the local no-internet mode. A game PR that only adds its own server module and client stays within its app directory; changes to PocketNet, Pocket Server core or CI are separate platform work.
+
+
+## 17. Godot Web multi-runtime
+
+Pocket Works supports Godot as an optional browser build runtime. The full contract is documented in docs/GODOT-WEB-RUNTIME.md.
+
+### Runtime selection
+
+- Quick and Enhanced remain the default runtimes when browser-native code is sufficient.
+- Choose Godot only when a game materially benefits from a full scene graph, character animation, non-trivial 3D physics, navigation, authored particles or complex environment composition.
+- Do not migrate an existing working Babylon/TypeScript app merely because Godot exists.
+- Runtime choice is an implementation decision, not a product feature. The launcher experience, app isolation, update contract and Cloudflare production path remain the same.
+
+### Agent workflow
+
+- A Godot application uses runtime godot and preset godot-web in app.config.json.
+- Repository agents author project.godot, export_presets.cfg, source/**, assets/** and optional asset-forge/** directly as text/source.
+- Do not require the user to open the Godot editor.
+- Do not hand-edit apps/<slug>/web/**. It is deterministic generated output owned by the Godot Web Runtime GitHub Action.
+- Generated web output must be current and committed before merge. Pull-request CI rebuilds affected Godot apps and rejects stale exports.
+- App PR isolation still applies: a Godot game owns everything under its own apps/<slug>/ directory.
+- Changes to the Godot template, exporter, pinned engine, bridge or workflow are platform changes and require the platform-change label.
+
+### Web target rules
+
+- Use the Compatibility renderer.
+- Keep Web thread support disabled unless a separate platform change explicitly introduces and validates cross-origin isolation for every production path.
+- Keep extensions support disabled by default.
+- Prefer GDScript. Do not introduce C# or GDExtension into a Web app without a platform-level compatibility decision.
+- Do not add CDN-hosted engine files, remote runtime scripts or another production host.
+- Godot's built-in PWA layer stays disabled. Pocket Works owns the manifest, Service Worker, offline cache, managed update contract and release fingerprint.
+- Cloudflare production builds must never download or install Godot. GitHub Actions is the canonical Godot exporter.
+
+### PocketWorks bridge
+
+Every Godot app must preserve the PocketWorks autoload contract from apps/_godot-template/source/pocket_works.gd.
+
+At minimum it provides launcher exit, namespaced local storage and window.__AI_TEST_STATE__ publication for browser QA.
+
+A finished Godot game must expose a visible text-labelled route back to Pocket Works from the initial menu, pause state and completion/game-over state, just like the browser-native runtimes.
+
+### Blender integration
+
+Godot and Blender Asset Forge are complementary.
+
+- Keep deterministic Blender authoring in the app's asset-forge/ directory.
+- Commit generated GLB assets inside the owning app.
+- Let Godot import the committed GLB during its headless Web export.
+- Prefer real authored meshes, armatures and named animation clips for visually important objects instead of rebuilding them from Godot primitives solely for agent convenience.
+
+### QA
+
+Godot games remain browser products after export.
+
+- Expose meaningful runtime state through PocketWorks.publish_test_state().
+- Run Chromium and WebKit gameplay QA against the generated Web build.
+- Inspect screenshots, console errors, failed requests, touch behavior, safe areas, orientation, suspend/resume and offline reload.
+- Treat a successful headless export as a build check, not as visual or gameplay sign-off.
