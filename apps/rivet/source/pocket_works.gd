@@ -15,6 +15,10 @@ func publish_test_state(state: Dictionary) -> void:
 	if OS.has_feature("web"):
 		_web_eval("window.__AI_TEST_STATE__=" + JSON.stringify(state) + ";")
 
+func set_boot_stage(stage: String) -> void:
+	if OS.has_feature("web"):
+		_web_eval("window.__RIVET_BOOT_STAGE__=" + JSON.stringify(stage) + ";")
+
 func storage_set(key: String, value: Variant) -> void:
 	if not OS.has_feature("web"):
 		return
