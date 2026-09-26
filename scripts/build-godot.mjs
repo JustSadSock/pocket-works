@@ -88,7 +88,7 @@ function htmlShell(html, config) {
 
   const registration = [
     '<script data-pocketworks-godot-bootstrap>',
-    "if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}",
+    "if('serviceWorker' in navigator){window.addEventListener('load',()=>{if(!globalThis.__POCKET_WORKS_RELEASE__)navigator.serviceWorker.register('./sw.js').catch(()=>{});});}",
     '</script>'
   ].join('\n');
 
