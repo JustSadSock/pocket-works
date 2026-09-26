@@ -213,10 +213,10 @@ button { border: 0; }
   position:absolute;
   right:max(var(--safe-right),14px);
   bottom:max(var(--safe-bottom),10px);
-  width:min(40vw,420px);
+  width:min(46vw,500px);
   height:132px;
   display:grid;
-  grid-template-columns:.82fr 1.08fr 1fr;
+  grid-template-columns:.72fr 1.08fr 1fr .9fr;
   gap:9px;
   align-items:end;
 }
@@ -234,8 +234,10 @@ button { border: 0; }
   touch-action:none;
   transition:transform .05s ease, background .05s ease;
 }
-.action.jump { min-height:122px; border-top:6px solid var(--cream); }
-.action.special { min-height:101px; border-top:6px solid var(--pink); }
+.action.fire { min-height:124px; border-top:6px solid var(--red); background:rgba(34,25,24,.90); }
+.action.fire small { color:#ff9b88; }
+.action.jump { min-height:112px; border-top:6px solid var(--cream); }
+.action.special { min-height:96px; border-top:6px solid var(--pink); }
 .action span { font-size:8px; font-weight:900; letter-spacing:.06em; }
 .action small { margin-top:8px; color:var(--pink); font-size:7px; letter-spacing:.1em; }
 .action.is-pressed { transform:translateY(5px); background:var(--red); color:var(--ink); }
@@ -291,8 +293,9 @@ button { border: 0; }
   .move-pad { height:92px; }
   .action-pad { height:106px; }
   .action { min-height:66px; }
-  .action.jump { min-height:98px; }
-  .action.special { min-height:82px; }
+  .action.fire { min-height:100px; }
+  .action.jump { min-height:92px; }
+  .action.special { min-height:78px; }
 }
 
 @media (orientation: portrait) {
