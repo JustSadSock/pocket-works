@@ -106,21 +106,22 @@ test.describe('Godot production transport', () => {
       }).toBe(true);
 
       expect(runtime, `${app.slug} never reached a stable Godot runtime context`).not.toBeNull();
+      const stableRuntime = runtime!;
 
-      expect(runtime.state, `${app.slug} never published its Godot QA bridge`).not.toBeNull();
-      expect(runtime.startupOverlayExists, `${app.slug} remained stuck on the Godot startup overlay`).toBe(false);
-      expect(runtime.canvas?.width ?? 0).toBeGreaterThan(0);
-      expect(runtime.canvas?.height ?? 0).toBeGreaterThan(0);
+      expect(stableRuntime.state, `${app.slug} never published its Godot QA bridge`).not.toBeNull();
+      expect(stableRuntime.startupOverlayExists, `${app.slug} remained stuck on the Godot startup overlay`).toBe(false);
+      expect(stableRuntime.canvas?.width ?? 0).toBeGreaterThan(0);
+      expect(stableRuntime.canvas?.height ?? 0).toBeGreaterThan(0);
       expect(pageErrors, `Unhandled browser errors while starting ${app.slug}`).toEqual([]);
 
       if (canonicalWasmSize(app.slug) > 24 * 1024 * 1024) {
-        expect(runtime.chunkBootstrap, `${app.slug} oversized WASM did not receive the production chunk bootstrap`).toBe(true);
+        expect(stableRuntime.chunkBootstrap, `${app.slug} oversized WASM did not receive the production chunk bootstrap`).toBe(true);
         expect(chunkResponses.length, `${app.slug} never requested its WASM chunks`).toBeGreaterThanOrEqual(2);
         expect(chunkResponses.every((item) => item.encoding === null), `${app.slug} WASM chunks must not rely on HTTP Content-Encoding`).toBe(true);
       }
 
       await testInfo.attach('godot-transport-state', {
-        body: Buffer.from(JSON.stringify({ app, runtime, chunkResponses, consoleErrors, pageErrors }, null, 2)),
+        body: Buffer.from(JSON.stringify({ app, runtime: stableRuntime, chunkResponses, consoleErrors, pageErrors }, null, 2)),
         contentType: 'application/json'
       });
     });
