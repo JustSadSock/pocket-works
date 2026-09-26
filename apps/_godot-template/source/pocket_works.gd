@@ -27,10 +27,10 @@ func storage_get(key: String, fallback: Variant = null) -> Variant:
 	if not OS.has_feature("web"):
 		return fallback
 	var full_key := STORAGE_NAMESPACE + ":" + key
-	var value := _web_eval("localStorage.getItem(" + JSON.stringify(full_key) + ");")
+	var value: Variant = _web_eval("localStorage.getItem(" + JSON.stringify(full_key) + ");")
 	if value == null or typeof(value) != TYPE_STRING or value == "":
 		return fallback
-	var parsed := JSON.parse_string(value)
+	var parsed: Variant = JSON.parse_string(value)
 	return fallback if parsed == null else parsed
 
 func storage_remove(key: String) -> void:
