@@ -115,7 +115,6 @@ func _ready() -> void:
 	best_kills = int(PocketWorks.storage_get("best-kills", 0))
 	clears = int(PocketWorks.storage_get("clears", 0))
 	sound_enabled = bool(PocketWorks.storage_get("sound", true))
-	_build_audio()
 	_build_ui()
 	_reset_run()
 	run_active = false
@@ -440,7 +439,14 @@ func _make_wave(freq: float, duration: float, kind: String) -> AudioStreamWAV:
 	return stream
 
 func _play_sfx(name: String, pitch := 1.0) -> void:
-	if not sound_enabled or not sfx.has(name) or audio_players.is_empty():
+	if not sound_enabled:
+		return
+	if OS.has_feature("web"):
+		PocketWorks.play_tone(name, pitch)
+		return
+	if audio_players.is_empty():
+		_build_audio()
+	if not sfx.has(name) or audio_players.is_empty():
 		return
 	var player := audio_players[audio_cursor % audio_players.size()]
 	audio_cursor += 1
