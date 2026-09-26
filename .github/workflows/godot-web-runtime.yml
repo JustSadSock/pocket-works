@@ -2,8 +2,6 @@ name: Godot Web Runtime
 
 on:
   push:
-    branches-ignore:
-      - main
     paths:
       - "apps/**"
       - "scripts/build-godot.mjs"
@@ -127,8 +125,8 @@ jobs:
       - name: Validate Godot runtime contract
         run: node scripts/validate-godot.mjs
 
-      - name: Require committed exports in pull requests
-        if: github.event_name == 'pull_request'
+      - name: Require committed exports in pull requests and main
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main')
         shell: bash
         run: |
           set -euo pipefail
@@ -140,7 +138,7 @@ jobs:
           fi
 
       - name: Commit generated exports back to feature branch
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && inputs.app != '')
+        if: (github.event_name == 'push' && github.ref_name != 'main') || (github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && inputs.app != '')
         shell: bash
         run: |
           set -euo pipefail
