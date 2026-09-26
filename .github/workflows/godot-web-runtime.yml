@@ -57,8 +57,9 @@ jobs:
         run: |
           set -euo pipefail
           npm run validate:scripts
-          npm run validate:configs
+          node scripts/app-config.test.mjs
           npm run test:forge:godot
+          node scripts/validate-godot.mjs
 
       - name: Restore pinned Godot toolchain
         id: godot-cache
