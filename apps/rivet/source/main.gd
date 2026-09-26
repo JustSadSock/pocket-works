@@ -1405,7 +1405,7 @@ func _draw_player() -> void:
 	var pos := player_pos
 	var angle := aim_dir.angle()
 	var shadow_scale: float = 1.0 + absf(sin(elapsed * 4.0)) * 0.04
-	draw_ellipse(pos + Vector2(0, 20), Vector2(38, 15) * shadow_scale, Color(0.12, 0.13, 0.12, 0.22))
+	_draw_ellipse(pos + Vector2(0, 20), Vector2(38, 15) * shadow_scale, Color(0.12, 0.13, 0.12, 0.22))
 
 	if chassis_id == "treads":
 		_draw_rot_rect(pos + Vector2(-3, 2), Vector2(78, 48), angle, C_DARK)
@@ -1455,7 +1455,7 @@ func _draw_enemy(e: Dictionary) -> void:
 	var to_player := (player_pos - pos).normalized()
 	var angle := to_player.angle()
 
-	draw_ellipse(pos + Vector2(0, float(e["radius"]) * 0.58), Vector2(float(e["radius"]) * 1.0, float(e["radius"]) * 0.42), Color(0.12, 0.13, 0.12, 0.22))
+	_draw_ellipse(pos + Vector2(0, float(e["radius"]) * 0.58), Vector2(float(e["radius"]) * 1.0, float(e["radius"]) * 0.42), Color(0.12, 0.13, 0.12, 0.22))
 
 	match kind:
 		"scrapper":
@@ -1553,7 +1553,7 @@ func _draw_rot_rect(center: Vector2, size: Vector2, angle: float, color: Color) 
 	var stretch := Vector2(absf(cos(angle)) * size.x + absf(sin(angle)) * size.y, absf(sin(angle)) * size.x + absf(cos(angle)) * size.y)
 	draw_rect(Rect2(center - stretch * 0.5, stretch), color, true)
 
-func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
+func _draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_circle(center, maxf(radius.x, radius.y), color)
 
 func _publish_state(state_name: String) -> void:
