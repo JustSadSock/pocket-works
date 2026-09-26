@@ -45,7 +45,7 @@ var running := false
 var paused_game := false
 var upgrade_open := false
 
-var mode := "forge"
+var mode := "classic"
 var sound_enabled := true
 var asset_ready := false
 var audio_ready := false
@@ -81,9 +81,9 @@ func _ready() -> void:
 	rng.randomize()
 	PocketWorks.set_document_title("Arena Shift")
 	best_kills = int(PocketWorks.storage_get("best-kills", 0))
-	mode = str(PocketWorks.storage_get("mode", "forge"))
+	mode = str(PocketWorks.storage_get("mode", "classic"))
 	if mode != "classic" and mode != "forge":
-		mode = "forge"
+		mode = "classic"
 	sound_enabled = bool(PocketWorks.storage_get("sound", true))
 	_build_world()
 	_build_legacy()
