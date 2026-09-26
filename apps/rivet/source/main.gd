@@ -5,6 +5,7 @@ const STICK_SCRIPT := preload("res://source/touch_stick.gd")
 const VIEW := Vector2(1280, 720)
 const ARENA := Rect2(104, 116, 1072, 500)
 const TOTAL_ROOMS := 7
+const DIAGNOSTIC_BOOT := true
 
 const C_BG := Color("#d6cec0")
 const C_PAPER := Color("#eee7da")
@@ -109,6 +110,17 @@ var audio_cursor := 0
 
 func _ready() -> void:
 	Engine.max_fps = 60
+	if DIAGNOSTIC_BOOT:
+		PocketWorks.set_document_title("RIVET PROBE")
+		_build_probe_ui()
+		set_process(false)
+		PocketWorks.publish_test_state({
+			"loadingState": "ready",
+			"runtime": "godot",
+			"app": "rivet",
+			"diagnostic": "probe-ui"
+		})
+		return
 	rng.randomize()
 	PocketWorks.set_document_title("RIVET")
 	best_room = int(PocketWorks.storage_get("best-room", 1))
@@ -122,6 +134,41 @@ func _ready() -> void:
 	start_overlay.visible = true
 	_publish_state("ready")
 	queue_redraw()
+
+func _build_probe_ui() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var bg := ColorRect.new()
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.color = C_BG
+	layer.add_child(bg)
+	var panel := ColorRect.new()
+	panel.position = Vector2(390, 190)
+	panel.size = Vector2(500, 340)
+	panel.color = C_PAPER
+	layer.add_child(panel)
+	var title := Label.new()
+	title.text = "RIVET PROBE"
+	title.position = Vector2(115, 72)
+	title.size = Vector2(270, 64)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_color_override("font_color", C_INK)
+	panel.add_child(title)
+	var copy := Label.new()
+	copy.text = "Boot path isolated successfully."
+	copy.position = Vector2(75, 155)
+	copy.size = Vector2(350, 42)
+	copy.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	copy.add_theme_font_size_override("font_size", 18)
+	copy.add_theme_color_override("font_color", C_MID)
+	panel.add_child(copy)
+	var exit := Button.new()
+	exit.text = "POCKET WORKS"
+	exit.position = Vector2(125, 235)
+	exit.size = Vector2(250, 56)
+	exit.pressed.connect(PocketWorks.exit_to_launcher)
+	panel.add_child(exit)
 
 func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
