@@ -161,7 +161,6 @@ class PlayScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true, 0.11, 0.11, -180, 70);
     this.cameras.main.setDeadzone(240, 160);
-    this.cameras.main.fadeIn(320, 16, 18, 18);
 
     this.fx = this.add.graphics().setDepth(60);
     this.createNoiseOverlay();
