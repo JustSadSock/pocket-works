@@ -247,9 +247,9 @@ class PlayScene extends Phaser.Scene {
       g.fillStyle(parry).fillCircle(10,10,9);
       g.lineStyle(3, paper).strokeCircle(10,10,7);
     });
-    make('da-boss-p1', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 1));
-    make('da-boss-p2', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 2));
-    make('da-boss-p3', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 3));
+    make(`da-boss-${this.stage.id}-p1`, 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 1));
+    make(`da-boss-${this.stage.id}-p2`, 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 2));
+    make(`da-boss-${this.stage.id}-p3`, 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 3));
   }
 
   private drawBossTexture(g: Phaser.GameObjects.Graphics, kind: BossKind, phase = 1) {
@@ -498,7 +498,7 @@ class PlayScene extends Phaser.Scene {
     const x = this.stage.runLength + 1070;
     this.bossMaxHp = Math.round(this.stage.baseBossHp * (this.mode === 'archive' ? 1.06 : 1));
     this.previousBossHp = this.bossMaxHp;
-    this.boss = this.physics.add.sprite(x, GROUND_Y-180, 'da-boss-p1');
+    this.boss = this.physics.add.sprite(x, GROUND_Y-180, `da-boss-${this.stage.id}-p1`);
     this.boss.setScale(this.stage.bossScale).setDepth(18).setVisible(false).setActive(false);
     (this.boss.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setImmovable(true).setSize(150,170).setOffset(40,30);
     this.boss.setData('hp', this.bossMaxHp);
@@ -806,7 +806,7 @@ class PlayScene extends Phaser.Scene {
     this.bossLastAttack=this.time.now;
     this.glitchUntil=this.time.now+820;
     this.boss.setData('scriptedUntil',this.time.now+760);
-    this.boss.setTexture(`da-boss-p${nextPhase}`);
+    this.boss.setTexture(`da-boss-${this.stage.id}-p${nextPhase}`);
     for(const child of this.hostileBullets.getChildren()) {
       const bullet=child as Phaser.Physics.Arcade.Image;
       if(bullet.active) bullet.disableBody(true,true);
