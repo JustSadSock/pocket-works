@@ -165,9 +165,12 @@ jobs:
         run: node scripts/validate-godot.mjs
 
       - name: Assemble and validate Pocket Works production output
+        if: github.event_name == 'pull_request' || github.ref_name == 'main'
         shell: bash
         run: |
           set -euo pipefail
+          npm install --no-audit --no-fund
+          npm run build:enhanced
           npm run prepare:site
           npm run validate:site
           rm -rf dist-site
