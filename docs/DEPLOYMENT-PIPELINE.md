@@ -10,7 +10,7 @@ Cloudflare Workers Builds is the production deployment path. The connected build
 npm run deploy:site
 ```
 
-Godot Web payloads remain committed and deterministic, but `prepare:site` may apply transport-only packaging inside `dist-site`. In particular, any Godot WASM that would exceed Cloudflare Workers' 25 MiB static-asset ceiling is Brotli-packed in place and paired with a generated `_headers` rule so the browser still requests the normal `.wasm` URL. The committed app export is never rewritten.
+Godot Web payloads remain committed and deterministic, but `prepare:site` may apply transport-only packaging inside `dist-site`. In particular, any Godot WASM that would exceed Cloudflare Workers' 25 MiB static-asset ceiling is split into deterministic 16 MiB assets. Production HTML reconstructs those parts behind the original `.wasm` request before Godot sees them, avoiding HTTP content-encoding edge cases in Safari/WebKit. The committed app export is never rewritten.
 
 Then publish the resulting static directory with:
 
