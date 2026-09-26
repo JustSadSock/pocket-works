@@ -4,7 +4,7 @@ const p = (paper: number, ink: number, accent: number, secondary: number, hazard
   ({ paper, ink, accent, secondary, hazard, parry, sky });
 
 export const STAGES: StageDefinition[] = [
-  { id:1, code:'CH 01', name:'LOCAL WEATHER', strap:'Tonight: impossible conditions.', bossKind:'weather', palette:p(0xeadfc6,0x1a2220,0xe95d3f,0x5b817d,0xe7bb49,0xff64c8,0x96b8ad), runLength:8200, encounterCount:4, baseBossHp:1380, enemyDensity:0.86, gravity:1180, moveSpeed:294, bossScale:1.0, unlockAfter:0 },
+  { id:1, code:'CH 01', name:'LOCAL WEATHER', strap:'Tonight: impossible conditions.', bossKind:'weather', palette:p(0xeadfc6,0x1a2220,0xe95d3f,0x5b817d,0xe7bb49,0xff64c8,0x96b8ad), runLength:8200, encounterCount:4, baseBossHp:1450, enemyDensity:0.86, gravity:1180, moveSpeed:294, bossScale:1.0, unlockAfter:0 },
   { id:2, code:'CH 02', name:'DINNER AT ELEVEN', strap:'A recipe with no exit.', bossKind:'chef', palette:p(0xf1d2a5,0x2a211e,0xc8422d,0x7b8e55,0xe8902e,0xff6bc9,0x8a6f56), runLength:9000, encounterCount:4, baseBossHp:1560, enemyDensity:0.94, gravity:1200, moveSpeed:298, bossScale:1.0, unlockAfter:1 },
   { id:3, code:'CH 03', name:'SUNDAY FINAL', strap:'The crowd wants overtime.', bossKind:'sport', palette:p(0xe8e1c9,0x151a1d,0x2f6cb1,0xd25e39,0xf1c84a,0xff63cb,0x7ea29d), runLength:9800, encounterCount:5, baseBossHp:1760, enemyDensity:1.00, gravity:1220, moveSpeed:302, bossScale:1.02, unlockAfter:2 },
   { id:4, code:'CH 04', name:'SMILE CLUB', strap:'Everybody is happy. Keep smiling.', bossKind:'puppet', palette:p(0xf3d7cf,0x2e2730,0x7d66bd,0xf09cbd,0xd94a5b,0xff55c8,0xa8d0cc), runLength:14300, encounterCount:6, baseBossHp:2650, enemyDensity:1.02, gravity:1160, moveSpeed:294, bossScale:1.03, unlockAfter:3 },
