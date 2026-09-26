@@ -70,4 +70,5 @@ export type InputState = {
   jumpQueued: boolean;
   dashQueued: boolean;
   specialQueued: boolean;
+  fireHeld: boolean;
 };
