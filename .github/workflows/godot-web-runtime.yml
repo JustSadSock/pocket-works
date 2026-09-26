@@ -111,7 +111,9 @@ jobs:
           smoke="$RUNNER_TEMP/pocketworks-godot-smoke"
           rm -rf "$smoke"
           mkdir -p "$smoke"
-          "$GODOT_BIN" --headless --path apps/_godot-template --export-release Web "$smoke/index.html"
+          echo "Installed Web export templates:"
+          find "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable" -maxdepth 1 -type f -printf "%f\n" | sort
+          "$GODOT_BIN" --verbose --headless --path apps/_godot-template --export-release Web "$smoke/index.html"
           test -s "$smoke/index.html"
           find "$smoke" -maxdepth 1 -type f -name '*.wasm' -print -quit | grep -q .
           find "$smoke" -maxdepth 1 -type f -name '*.pck' -print -quit | grep -q .
