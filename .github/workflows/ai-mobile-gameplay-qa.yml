@@ -92,12 +92,22 @@ jobs:
               .map((file) => /^apps\/([^/]+)\//.exec(file)?.[1])
               .filter((slug) => slug && !slug.startsWith('_')))]
               .sort();
+            const godotTransportFiles = new Set([
+              'scripts/prepare-site.mjs',
+              'scripts/validate-site.mjs',
+              'scripts/validate-deploy-pipeline.mjs',
+              'scripts/build-godot.mjs',
+              '.github/workflows/godot-web-runtime.yml'
+            ]);
+            const godotTransportQa = files.some((file) => godotTransportFiles.has(file));
             fs.appendFileSync(process.env.GITHUB_ENV, `PW_APP_TARGETS=${targets.join(',')}\n`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PW_GODOT_TRANSPORT_QA=${godotTransportQa ? '1' : '0'}\n`);
             if (targets.length) {
               console.log(`Exploratory QA targets changed apps: ${targets.join(',')}`);
             } else {
               console.log('No changed app slug detected; exploratory QA will sample the newest active apps.');
             }
+            if (godotTransportQa) console.log('Godot production transport changed; dedicated browser boot gate enabled.');
           }).catch((error) => {
             console.error(error);
             process.exitCode = 1;
@@ -128,6 +138,9 @@ jobs:
           fi
           if [[ ",${PW_APP_TARGETS:-}," == *",zamkni,"* ]]; then
             TESTS+=(tests/e2e/zamkni.spec.ts)
+          fi
+          if [[ "${PW_GODOT_TRANSPORT_QA:-0}" == "1" ]]; then
+            TESTS+=(tests/e2e/godot-runtime.spec.ts)
           fi
           npx playwright test "${TESTS[@]}"
 

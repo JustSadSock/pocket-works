@@ -153,9 +153,11 @@ The GitHub Actions cache stores the editor and export templates so later builds 
 
 npm run deploy:site does not invoke Godot.
 
-Cloudflare Workers static assets have a hard 25 MiB per-file upload limit. Official Godot Web templates can exceed that limit even with threads/extensions disabled. Pocket Works therefore applies a transport-only packaging step during `prepare:site`: oversized Godot `.wasm` files are Brotli-compressed in place inside `dist-site`, while a generated root `_headers` rule serves the same public `.wasm` URL with `Content-Encoding: br` and `Content-Type: application/wasm`. Browsers transparently decode the response before WebAssembly instantiation, so app exports and Godot loader code remain unchanged.
+Cloudflare Workers static assets have a hard 25 MiB per-file upload limit. Official Godot Web templates can exceed that limit even with threads/extensions disabled. Pocket Works therefore applies a transport-only packaging step during `prepare:site`: oversized Godot `.wasm` files are split into deterministic 16 MiB parts inside `dist-site`. The production HTML injects a tiny bootstrap before the Godot loader that intercepts only the original WASM request, downloads the parts in parallel, and exposes them back to Godot as one normal `application/wasm` byte stream.
 
-The committed `apps/<slug>/web/**` export always remains the canonical uncompressed Godot output. Compression exists only in the disposable production directory. `validate:site` round-trips every packed WASM against its committed source and rejects any physical asset still larger than 25 MiB.
+The public Godot contract remains unchanged: the engine still asks for `index.wasm`, progress is measured against the original byte size, and there is no HTTP `Content-Encoding` layer between Safari and `WebAssembly.instantiateStreaming()`. This avoids the iOS/WebKit failure mode where compressed transfer bytes can diverge from Godot's expected uncompressed size or leave streaming compilation unresolved.
+
+The committed `apps/<slug>/web/**` export always remains the canonical unsplit Godot output. Chunking exists only in the disposable production directory. `validate:site` concatenates every production chunk and compares it byte-for-byte with the committed WASM, verifies the Service Worker precaches the parts for offline launch, and rejects any physical asset still larger than 25 MiB.
 
 
 For a Godot application, scripts/prepare-site.mjs:

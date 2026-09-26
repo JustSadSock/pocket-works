@@ -1,14 +1,12 @@
 import { access, readFile, readdir, stat } from 'node:fs/promises';
-import { brotliDecompress } from 'node:zlib';
-import { promisify } from 'node:util';
 import path from 'node:path';
 import { collectAppConfigs } from './app-config.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
-const brotliDecompressAsync=promisify(brotliDecompress);
 const CLOUDFLARE_ASSET_LIMIT=25*1024*1024;
-const WASM_PACK_THRESHOLD=24*1024*1024;
+const WASM_SPLIT_THRESHOLD=24*1024*1024;
+const WASM_CHUNK_SIZE=16*1024*1024;
 const errors=[];
 async function exists(target){try{await access(target);return true;}catch{return false;}}
 async function walkFiles(directory,prefix=''){
@@ -38,7 +36,6 @@ try{registry=JSON.parse(await readFile(path.join(output,'apps.json'),'utf8'));}
 catch(error){errors.push(`dist-site/apps.json is invalid: ${error.message}`);}
 const registryBySlug=new Map(registry.map(app=>[app.slug,app]));
 const configs=await collectAppConfigs(root);
-const cloudflareHeaders=await exists(path.join(output,'_headers'))?await readFile(path.join(output,'_headers'),'utf8'):'';
 
 for(const config of configs){
   const directory=path.join(output,'apps',config.slug);
@@ -50,29 +47,58 @@ for(const config of configs){
   }
   if(config.runtime==='godot'&&await exists(directory)){
     const entries=await readdir(directory,{withFileTypes:true});
-    const wasmEntries=entries.filter(entry=>entry.isFile()&&entry.name.endsWith('.wasm'));
-    if(wasmEntries.length===0)errors.push(`dist-site/apps/${config.slug} is missing Godot .wasm payload`);
     if(!entries.some(entry=>entry.isFile()&&entry.name.endsWith('.pck')))errors.push(`dist-site/apps/${config.slug} is missing Godot .pck payload`);
 
-    for(const entry of wasmEntries){
-      const deployedPath=path.join(directory,entry.name);
-      const sourcePath=path.join(root,'apps',config.slug,'web',entry.name);
-      if(!(await exists(sourcePath)))continue;
-      const sourceInfo=await stat(sourcePath);
-      if(sourceInfo.size<=WASM_PACK_THRESHOLD)continue;
+    const sourceDirectory=path.join(root,'apps',config.slug,'web');
+    const sourceEntries=(await readdir(sourceDirectory,{withFileTypes:true})).filter(entry=>entry.isFile()&&entry.name.endsWith('.wasm'));
+    if(sourceEntries.length===0)errors.push(`apps/${config.slug}/web is missing canonical Godot .wasm payload`);
 
-      const route=`/apps/${config.slug}/${entry.name}`;
-      if(!cloudflareHeaders.includes(`${route}\n  Content-Encoding: br`)){
-        errors.push(`${route} is oversized in source but dist-site/_headers does not mark it Brotli encoded`);
+    const htmlPath=path.join(directory,'index.html');
+    const swPath=path.join(directory,'sw.js');
+    const html=await readFile(htmlPath,'utf8');
+    const sw=await readFile(swPath,'utf8');
+
+    for(const sourceEntry of sourceEntries){
+      const sourcePath=path.join(sourceDirectory,sourceEntry.name);
+      const source=await readFile(sourcePath);
+      const deployedPath=path.join(directory,sourceEntry.name);
+      if(source.length<=WASM_SPLIT_THRESHOLD){
+        if(!(await exists(deployedPath))){
+          errors.push(`dist-site/apps/${config.slug} is missing unsplit Godot WASM ${sourceEntry.name}`);
+          continue;
+        }
+        const deployed=await readFile(deployedPath);
+        if(!deployed.equals(source))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} differs from committed Godot WASM`);
         continue;
       }
-      try{
-        const [packed,source]=await Promise.all([readFile(deployedPath),readFile(sourcePath)]);
-        const unpacked=await brotliDecompressAsync(packed);
-        if(!Buffer.from(unpacked).equals(source))errors.push(`${route} Brotli payload does not round-trip to the committed Godot WASM`);
-      }catch(error){
-        errors.push(`${route} Brotli validation failed: ${error.message}`);
+
+      if(await exists(deployedPath))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} must be split because it exceeds the Cloudflare-safe threshold`);
+      const prefix=`${sourceEntry.name}.part-`;
+      const partNames=entries
+        .filter(entry=>entry.isFile()&&entry.name.startsWith(prefix))
+        .map(entry=>entry.name)
+        .sort();
+      const expectedPartCount=Math.ceil(source.length/WASM_CHUNK_SIZE);
+      if(partNames.length!==expectedPartCount){
+        errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} expected ${expectedPartCount} chunks but found ${partNames.length}`);
+        continue;
       }
+      const expectedNames=Array.from({length:expectedPartCount},(_,index)=>`${prefix}${String(index).padStart(3,'0')}`);
+      if(partNames.some((name,index)=>name!==expectedNames[index])){
+        errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} chunk sequence is not contiguous`);
+        continue;
+      }
+
+      const parts=await Promise.all(partNames.map(name=>readFile(path.join(directory,name))));
+      const reconstructed=Buffer.concat(parts);
+      if(!reconstructed.equals(source))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} chunks do not reconstruct the committed Godot WASM byte-for-byte`);
+      if(!html.includes('data-pocketworks-wasm-chunks')||!html.includes(JSON.stringify('./'+sourceEntry.name))){
+        errors.push(`dist-site/apps/${config.slug}/index.html is missing the Godot WASM chunk bootstrap for ${sourceEntry.name}`);
+      }
+      for(const partName of partNames){
+        if(!sw.includes(JSON.stringify('./'+partName)))errors.push(`dist-site/apps/${config.slug}/sw.js does not precache ${partName}`);
+      }
+      if(sw.includes(JSON.stringify('./'+sourceEntry.name)))errors.push(`dist-site/apps/${config.slug}/sw.js must not precache missing split source ${sourceEntry.name}`);
     }
   }
   const forbidden=config.runtime==='godot'

@@ -1,17 +1,15 @@
 import { createHash } from 'node:crypto';
 import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { brotliCompress, constants as zlibConstants } from 'node:zlib';
-import { promisify } from 'node:util';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 import { buildRegistry } from './build-registry.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
-const brotliCompressAsync=promisify(brotliCompress);
 const FINGERPRINT_PLACEHOLDER='__PW_RELEASE_FINGERPRINT__';
 const CLOUDFLARE_ASSET_LIMIT=25*1024*1024;
-const WASM_PACK_THRESHOLD=24*1024*1024;
+const WASM_SPLIT_THRESHOLD=24*1024*1024;
+const WASM_CHUNK_SIZE=16*1024*1024;
 const rootFiles=[
   'index.html','styles.css','launcher-performance.css','launcher-sync.css','app.js',
   'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
@@ -99,31 +97,120 @@ async function walkFiles(directory,prefix=''){
   return files.sort();
 }
 
-async function packOversizedGodotWasm(directory,slug,headerRules){
-  for(const relative of await walkFiles(directory)){
+function wasmChunkBootstrap(relative,parts,totalSize,version){
+  const target='./'+relative;
+  const chunkUrls=parts.map(part=>'./'+part+'?pw_release='+encodeURIComponent(version));
+  return `<script data-pocketworks-wasm-chunks>
+(() => {
+  const targetUrl = new URL(${JSON.stringify(target)}, window.location.href);
+  const chunkUrls = ${JSON.stringify(chunkUrls)};
+  const totalSize = ${totalSize};
+  const nativeFetch = window.fetch.bind(window);
+
+  window.fetch = function pocketWorksChunkFetch(input, init) {
+    let requested;
+    try {
+      const raw = input instanceof Request ? input.url : input;
+      requested = new URL(raw, window.location.href);
+    } catch {
+      return nativeFetch(input, init);
+    }
+    if (requested.origin !== targetUrl.origin || requested.pathname !== targetUrl.pathname) {
+      return nativeFetch(input, init);
+    }
+
+    const signal = input instanceof Request ? input.signal : init?.signal;
+    const credentials = input instanceof Request ? input.credentials : (init?.credentials || 'same-origin');
+    const requests = chunkUrls.map((chunk) => nativeFetch(new URL(chunk, window.location.href), {
+      credentials,
+      signal
+    }).then((response) => {
+      if (!response.ok) throw new Error('Failed loading Godot WASM chunk: ' + response.url + ' (' + response.status + ')');
+      return response;
+    }));
+
+    return Promise.all(requests).then((responses) => {
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            let emitted = 0;
+            for (const response of responses) {
+              if (!response.body) {
+                const bytes = new Uint8Array(await response.arrayBuffer());
+                emitted += bytes.byteLength;
+                controller.enqueue(bytes);
+                continue;
+              }
+              const reader = response.body.getReader();
+              while (true) {
+                const result = await reader.read();
+                if (result.done) break;
+                emitted += result.value.byteLength;
+                controller.enqueue(result.value);
+              }
+            }
+            if (emitted !== totalSize) {
+              throw new Error('Godot WASM chunk size mismatch: expected ' + totalSize + ', received ' + emitted);
+            }
+            controller.close();
+          } catch (error) {
+            controller.error(error);
+          }
+        }
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/wasm',
+          'X-PocketWorks-Wasm-Chunks': String(chunkUrls.length)
+        }
+      });
+    });
+  };
+})();
+</script>`;
+}
+
+async function splitOversizedGodotWasm(directory,slug,version){
+  const webFiles=await walkFiles(directory);
+  const splitRecords=[];
+  for(const relative of webFiles){
     if(!relative.endsWith('.wasm'))continue;
     const file=path.join(directory,relative);
-    const before=await stat(file);
-    if(before.size<=WASM_PACK_THRESHOLD)continue;
+    const info=await stat(file);
+    if(info.size<=WASM_SPLIT_THRESHOLD)continue;
 
     const source=await readFile(file);
-    const packed=await brotliCompressAsync(source,{
-      params:{
-        [zlibConstants.BROTLI_PARAM_QUALITY]:7,
-        [zlibConstants.BROTLI_PARAM_SIZE_HINT]:source.length
-      }
-    });
-    if(packed.length>=CLOUDFLARE_ASSET_LIMIT){
-      throw new Error(
-        `Godot WebAssembly for ${slug}/${relative} remains ${(packed.length/1024/1024).toFixed(2)} MiB after Brotli; Cloudflare Workers assets require < 25 MiB`
-      );
+    const parts=[];
+    for(let offset=0,index=0;offset<source.length;offset+=WASM_CHUNK_SIZE,index+=1){
+      const part=`${relative}.part-${String(index).padStart(3,'0')}`;
+      await writeFile(path.join(directory,part),source.subarray(offset,Math.min(source.length,offset+WASM_CHUNK_SIZE)));
+      parts.push(part);
     }
-    await writeFile(file,packed);
-    headerRules.push(`/apps/${slug}/${relative}\n  Content-Encoding: br\n  Content-Type: application/wasm`);
+    await rm(file);
+
+    const indexPath=path.join(directory,'index.html');
+    let html=await readFile(indexPath,'utf8');
+    const bootstrap=wasmChunkBootstrap(relative,parts,source.length,version);
+    const loaderMatch=html.match(/<script\s+src=["'][^"']+\.js["'][^>]*><\/script>/i);
+    if(!loaderMatch)throw new Error(`Godot app ${slug} has no engine loader script to precede with the WASM chunk bootstrap`);
+    html=html.replace(loaderMatch[0],bootstrap+'\n\t\t'+loaderMatch[0]);
+    await writeFile(indexPath,html,'utf8');
+
+    const swPath=path.join(directory,'sw.js');
+    let sw=await readFile(swPath,'utf8');
+    const originalJson=JSON.stringify('./'+relative);
+    const partJson=parts.map(part=>JSON.stringify('./'+part)).join(',\n  ');
+    if(!sw.includes(originalJson))throw new Error(`Godot app ${slug} service worker does not cache ${relative}`);
+    sw=sw.replace(originalJson,partJson);
+    await writeFile(swPath,sw,'utf8');
+
+    splitRecords.push({relative,parts,totalSize:source.length});
     console.log(
-      `Packed Godot WASM ${slug}/${relative}: ${(before.size/1024/1024).toFixed(2)} MiB -> ${(packed.length/1024/1024).toFixed(2)} MiB (br)`
+      `Split Godot WASM ${slug}/${relative}: ${(source.length/1024/1024).toFixed(2)} MiB -> ${parts.length} chunk(s), max ${(WASM_CHUNK_SIZE/1024/1024).toFixed(0)} MiB`
     );
   }
+  return splitRecords;
 }
 
 async function canonicalFingerprint(directory){
@@ -188,7 +275,6 @@ await copyDirectoryFiltered(
 
 const configs=await collectAppConfigs(root);
 const fingerprints=new Map();
-const cloudflareHeaderRules=[];
 for(const config of configs){
   const source=path.join(root,'apps',config.slug);
   const destination=path.join(output,'apps',config.slug);
@@ -198,19 +284,11 @@ for(const config of configs){
     catch{throw new Error(`Godot app ${config.slug} has no committed web/index.html; run the Godot Web Runtime workflow before deployment`);}
     await copyDirectoryFiltered(generated,destination,name=>name.endsWith('.map'));
     await cp(path.join(source,'app.config.json'),path.join(destination,'app.config.json'));
-    await packOversizedGodotWasm(destination,config.slug,cloudflareHeaderRules);
+    await splitOversizedGodotWasm(destination,config.slug,config.version);
   }else{
     await copyDirectoryFiltered(source,destination,name=>appDevEntries.has(name)||name.endsWith('.map'));
   }
   fingerprints.set(config.slug,await stampRelease(destination,config));
-}
-
-if(cloudflareHeaderRules.length){
-  await writeFile(
-    path.join(output,'_headers'),
-    `# Generated by scripts/prepare-site.mjs for Cloudflare asset-size compatibility\n${cloudflareHeaderRules.join('\n\n')}\n`,
-    'utf8'
-  );
 }
 
 const registryPath=path.join('dist-site','apps.json');
