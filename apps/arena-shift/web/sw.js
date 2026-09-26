@@ -1,7 +1,7 @@
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 const RELEASE_DATE = "2026-09-26";
-const RELEASE_NOTES = ["Launch release with a shared combat simulation and live Classic/Forge renderer switching.","Adds touch-first arena combat, upgrades, escalating waves, boss encounter and persisted best run.","Forge mode is authored for the Godot Web runtime and consumes Blender and Audio Forge outputs."];
-const CACHE_NAME = "arena-shift-v1.0.0";
+const RELEASE_NOTES = ["Fixes iPhone and Safari startup stalls by using Pocket Works' chunked Godot WebAssembly production transport.","Refreshes the app cache namespace so devices replace the previous 1.0.0 loader instead of reusing stale startup files.","Gameplay, saves and the live Classic/Forge shared simulation are unchanged."];
+const CACHE_NAME = "arena-shift-v1.0.1";
 const CACHE_PREFIX = "arena-shift-";
 const FILES = [
   "./icons/icon.svg",
