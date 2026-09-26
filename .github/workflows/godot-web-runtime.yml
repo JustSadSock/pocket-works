@@ -42,7 +42,7 @@ env:
 
 jobs:
   build:
-    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[godot-export]')
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]' || !contains(github.event.head_commit.message, '[godot-export]')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -68,7 +68,7 @@ jobs:
           npm run validate:pipeline
           node scripts/app-config.test.mjs
           npm run test:forge:godot
-          node scripts/validate-godot.mjs
+          node scripts/validate-godot.mjs --source-only
 
       - name: Restore pinned Godot toolchain
         id: godot-cache
@@ -145,7 +145,7 @@ jobs:
             --skip-build
 
           node scripts/build-godot.mjs --app "$slug"
-          node scripts/validate-godot.mjs
+          node scripts/validate-godot.mjs --app "$slug"
 
           test -s "apps/$slug/web/index.html"
           test -s "apps/$slug/web/manifest.webmanifest"

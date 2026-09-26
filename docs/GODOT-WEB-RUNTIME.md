@@ -142,6 +142,11 @@ The Godot workflow also reacts to app-local generated asset changes, so a Blende
 On a normal feature-branch push, changed Godot applications are exported and apps/<slug>/web is committed back with the marker [godot-export].
 
 That marker prevents an infinite workflow loop.
+The skip is actor-scoped: only a push authored by `github-actions[bot]` with `[godot-export]` in its commit message is ignored. Human/squash commits must still run even if their multi-line squash body mentions the generated export commit.
+
+Before downloading or running Godot, the workflow runs the validator in source-only mode. This checks project structure, Web export settings, the PocketWorks bridge and required app source without requiring the previously committed `web/**` output to already match a just-bumped app version. After the headless export completes, the normal full validator runs and enforces generated Web metadata/freshness.
+
+The forge smoke app is validated with `node scripts/validate-godot.mjs --app <slug>` so its isolated pipeline test cannot be blocked by an unrelated registered app whose committed `web/**` is intentionally stale while that app is waiting for the later export step. Targeted validation still checks the shared template and the complete source/Web contract for the named app.
 
 For pull requests, the workflow performs the same deterministic build and fails if the committed web output differs from the generated result. PR and main runs also install the normal repository dependencies, rebuild Enhanced apps, assemble dist-site and run validate:site so the generated Godot payload is checked inside the same production package Cloudflare will serve.
 
@@ -172,6 +177,8 @@ This keeps Cloudflare deployment fast and deterministic.
 ## Offline and updates
 
 Godot's built-in PWA export is disabled. scripts/build-godot.mjs generates the Pocket Works-owned manifest and Service Worker instead.
+
+In production, the release guard is the single owner of Service Worker registration and always uses the stable `./sw.js` script URL with `updateViaCache: 'none'`. Release version and fingerprint identity live in Pocket Works release metadata (`release.json`, stamped HTML metadata and the worker's own update info), not in Service Worker URL query parameters. The Godot HTML shell keeps a fallback registration only for direct/generated previews where the production release guard is absent. Do not create competing registrations for the same scope: WebKit can reject script-URL churn as an AbortError/access-control failure.
 
 The generated worker:
 

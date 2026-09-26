@@ -97,6 +97,7 @@ jobs:
               'scripts/validate-site.mjs',
               'scripts/validate-deploy-pipeline.mjs',
               'scripts/build-godot.mjs',
+              'tests/e2e/godot-runtime.spec.ts',
               '.github/workflows/godot-web-runtime.yml'
             ]);
             const godotTransportQa = files.some((file) => godotTransportFiles.has(file));
