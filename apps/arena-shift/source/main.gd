@@ -193,8 +193,8 @@ func _build_world() -> void:
 	camera = Camera3D.new()
 	camera.fov = 50.0
 	camera.position = Vector3(0, 12.6, 13.8)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
 	world_root.add_child(camera)
+	camera.look_at(Vector3.ZERO, Vector3.UP)
 	camera.current = true
 
 	player_node = Node3D.new()
@@ -522,9 +522,9 @@ func _style_button(button: Button, accent: bool) -> void:
 	normal.corner_radius_top_right = 6
 	normal.corner_radius_bottom_left = 6
 	normal.corner_radius_bottom_right = 6
-	var hover := normal.duplicate()
+	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("#e77956") if accent else Color("#ddd5c3")
-	var pressed := normal.duplicate()
+	var pressed := normal.duplicate() as StyleBoxFlat
 	pressed.bg_color = Color("#b64d31") if accent else Color("#c8c0af")
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
@@ -769,7 +769,7 @@ func _process(delta: float) -> void:
 		_play_player_anim("idle")
 
 	spawn_timer -= delta
-	var desired := min(3 + wave * 2, 12)
+	var desired: int = mini(3 + wave * 2, 12)
 	if not boss_active and enemies.size() < desired and spawn_timer <= 0.0:
 		_spawn_enemy(false)
 		spawn_timer = max(0.34, 1.1 - float(wave) * 0.09)
