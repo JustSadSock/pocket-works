@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "arena-shift",
+  "name": "Arena Shift",
+  "shortName": "Arena Shift",
+  "description": "One arena, one simulation, two Pocket Works generations. Switch live between Classic and Forge rendering while the same fight continues.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-26",
+  "releaseDateTime": "2026-09-26T05:38:00+03:00",
+  "status": "active",
+  "preset": "godot-web",
+  "runtime": "godot",
+  "accent": "#d95f3b",
+  "backgroundColor": "#d8d0bd",
+  "themeColor": "#2f332d",
+  "orientation": "landscape",
+  "cacheName": "arena-shift-v1.0.0",
+  "storageNamespace": "pocket-works:arena-shift",
+  "tags": ["game", "action", "godot", "blender", "architecture"],
+  "order": 980,
+  "changelog": [
+    "Launch release with a shared combat simulation and live Classic/Forge renderer switching.",
+    "Adds touch-first arena combat, upgrades, escalating waves, boss encounter and persisted best run.",
+    "Forge mode is authored for the Godot Web runtime and consumes Blender and Audio Forge outputs."
+  ]
+}
