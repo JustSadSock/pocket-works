@@ -1001,15 +1001,45 @@ func _sync_visuals(delta: float) -> void:
 	})
 
 func _play_player_anim(wanted: String) -> void:
-	if animation_player == null or wanted == current_anim:
+	if animation_player == null:
 		return
 	var list := animation_player.get_animation_list()
 	for name in list:
 		var lower := str(name).to_lower()
 		if lower.contains(wanted):
-			animation_player.play(name, 0.12)
-			current_anim = wanted
+			if wanted != current_anim or not animation_player.is_playing():
+				animation_player.play(name, 0.10)
+				current_anim = wanted
 			return
+
+	# Asset Forge intentionally exports one deterministic authored timeline.
+	# Reuse its authored idle / locomotion / strike segments as a runtime state machine.
+	var fallback: StringName = &""
+	for name in list:
+		if str(name).to_lower() != "reset":
+			fallback = name
+			break
+	if fallback == &"":
+		return
+	var start := 0.0
+	var finish := 0.78
+	match wanted:
+		"run":
+			start = 1.08
+			finish = 1.46
+		"attack":
+			start = 1.62
+			finish = 1.90
+		_:
+			start = 0.0
+			finish = 0.78
+	var needs_restart := wanted != current_anim or animation_player.current_animation != fallback or not animation_player.is_playing()
+	if not needs_restart and animation_player.current_animation_position >= finish:
+		needs_restart = true
+	if needs_restart:
+		animation_player.play(fallback, 0.08)
+		animation_player.seek(start, true)
+		current_anim = wanted
 
 func _play_sfx(player: AudioStreamPlayer, pitch: float) -> void:
 	if not sound_enabled or player == null or player.stream == null:
