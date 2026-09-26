@@ -36,3 +36,7 @@ The active modules change weapon behavior, mobility, survivability and the machi
 - Local Pocket Works storage preserves clears, best room, best kill count and sound preference.
 - PocketWorks.publish_test_state() exposes gameplay state for browser QA.
 - Start, pause and result states all provide a text-labelled **POCKET WORKS** exit.
+
+## QA contract
+
+The Web build is considered healthy only after RIVET publishes a Pocket Works gameplay state (`ready`, `running`, or another live game state). The mobile QA gate also records the last boot stage so a loader-only canvas cannot pass as a working game.
