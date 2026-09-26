@@ -66,9 +66,8 @@ function htmlShell(html, config) {
   if (/<meta[^>]+name=["']viewport["'][^>]*>/i.test(html)) html = html.replace(/<meta[^>]+name=["']viewport["'][^>]*>/i, viewport);
   else html = html.replace(/<head>/i, '<head>\n  ' + viewport);
 
-  const head = [
+  const shellHead = [
     '  <meta name="theme-color" content="' + config.themeColor + '">',
-    '  <link rel="manifest" href="./manifest.webmanifest">',
     '  <style id="pocketworks-godot-shell">',
     '    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:' + config.backgroundColor + ';overscroll-behavior:none}',
     '    body{box-sizing:border-box;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}',
@@ -76,7 +75,8 @@ function htmlShell(html, config) {
     '  </style>'
   ].join('\n');
 
-  if (!html.includes('manifest.webmanifest')) html = html.replace(/<\/head>/i, head + '\n</head>');
+  if (!html.includes('pocketworks-godot-shell')) html = html.replace(/<\/head>/i, shellHead + '\n</head>');
+  if (!html.includes('manifest.webmanifest')) html = html.replace(/<\/head>/i, '  <link rel="manifest" href="./manifest.webmanifest">\n</head>');
 
   const registration = [
     '<script data-pocketworks-godot-bootstrap>',
