@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "impact",
+      "type": "sfx",
+      "preset": "hitHurt",
+      "seed": 2609,
+      "output": "assets/audio/generated/impact.ogg",
+      "post": { "normalizeDb": -5, "highpass": 90, "lowpass": 9500 }
+    },
+    {
+      "name": "dash",
+      "type": "sfx",
+      "preset": "jump",
+      "seed": 2610,
+      "output": "assets/audio/generated/dash.ogg",
+      "post": { "normalizeDb": -7, "highpass": 180, "lowpass": 10500 }
+    },
+    {
+      "name": "upgrade",
+      "type": "sfx",
+      "preset": "powerUp",
+      "seed": 2611,
+      "output": "assets/audio/generated/upgrade.ogg",
+      "post": { "normalizeDb": -7, "highpass": 100, "lowpass": 12000 }
+    },
+    {
+      "name": "yard",
+      "type": "ambient",
+      "generator": "brownnoise",
+      "duration": 8,
+      "channels": 2,
+      "output": "assets/audio/generated/yard.ogg",
+      "post": { "normalizeDb": -22, "highpass": 45, "lowpass": 1800, "fadeIn": 0.3, "fadeOut": 0.3 }
+    }
+  ]
+}
