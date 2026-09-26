@@ -52,6 +52,14 @@ jobs:
         with:
           node-version: 22
 
+      - name: Validate runtime source before downloading Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run validate:scripts
+          npm run validate:configs
+          npm run test:forge:godot
+
       - name: Restore pinned Godot toolchain
         id: godot-cache
         uses: actions/cache@v4
