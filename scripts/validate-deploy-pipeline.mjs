@@ -32,7 +32,7 @@ if (scripts['build:site'] !== 'npm run deploy:site') {
   errors.push('package.json build:site must remain an alias of deploy:site');
 }
 
-for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'validate:all', 'test:forge', 'test:enhanced', 'registry:build']) {
+for (const forbidden of ['prepare:sente-engine', 'test:sente-ai', 'health', 'validate:all', 'test:forge', 'test:enhanced', 'build:godot', 'registry:build']) {
   if ((scripts['deploy:site'] || '').includes(forbidden)) {
     errors.push(`deploy:site must not include heavy or redundant step ${forbidden}`);
   }
@@ -68,4 +68,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Deployment pipeline is valid: Cloudflare builds Enhanced apps before packaging, while GitHub CI owns exhaustive validation.');
+console.log('Deployment pipeline is valid: Cloudflare builds browser-native apps and packages committed Godot exports, while GitHub CI owns heavyweight generation and exhaustive validation.');
