@@ -7,7 +7,8 @@ export const inputState: InputState = {
   axis: 0,
   jumpQueued: false,
   dashQueued: false,
-  specialQueued: false
+  specialQueued: false,
+  fireHeld: false
 };
 
 export const audio = new BroadcastAudio();
@@ -76,6 +77,7 @@ class PlayScene extends Phaser.Scene {
   private keySpace?: Phaser.Input.Keyboard.Key;
   private keyShift?: Phaser.Input.Keyboard.Key;
   private keyE?: Phaser.Input.Keyboard.Key;
+  private keyFire?: Phaser.Input.Keyboard.Key;
   private lastShotAt = 0;
   private lastJumpAt = -9999;
   private lastDashAt = -9999;
@@ -89,6 +91,7 @@ class PlayScene extends Phaser.Scene {
   private bossAttackIndex = 0;
   private bossMaxHp = 1;
   private bossPhase = 1;
+  private bossAttackLockedUntil = 0;
   private stageStartedAt = 0;
   private damageTaken = 0;
   private parries = 0;
@@ -120,6 +123,7 @@ class PlayScene extends Phaser.Scene {
     this.bossActive = false;
     this.bossPhase = 1;
     this.bossAttackIndex = 0;
+    this.bossAttackLockedUntil = 0;
     this.finishLocked = false;
     this.encounterIndex = 0;
     this.encounterActive = false;
@@ -177,6 +181,7 @@ class PlayScene extends Phaser.Scene {
     this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.keyShift = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
   }
 
   private makeTextures() {
@@ -242,10 +247,12 @@ class PlayScene extends Phaser.Scene {
       g.fillStyle(parry).fillCircle(10,10,9);
       g.lineStyle(3, paper).strokeCircle(10,10,7);
     });
-    make('da-boss', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind));
+    make('da-boss-p1', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 1));
+    make('da-boss-p2', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 2));
+    make('da-boss-p3', 230, 230, (g) => this.drawBossTexture(g, this.stage.bossKind, 3));
   }
 
-  private drawBossTexture(g: Phaser.GameObjects.Graphics, kind: BossKind) {
+  private drawBossTexture(g: Phaser.GameObjects.Graphics, kind: BossKind, phase = 1) {
     const { ink, paper, accent, secondary, hazard } = this.stage.palette;
     const base = () => {
       g.fillStyle(ink).fillEllipse(115,120,176,176);
@@ -337,6 +344,46 @@ class PlayScene extends Phaser.Scene {
         g.lineStyle(6,hazard).strokeCircle(115,115,91);
         break;
     }
+
+    if (phase === 2) {
+      if (kind === 'weather') {
+        g.fillStyle(ink).fillCircle(115,108,29);
+        g.fillStyle(paper).fillCircle(115,108,13);
+        g.fillStyle(hazard).fillTriangle(63,121,91,121,71,184);
+        g.fillTriangle(143,116,172,116,151,184);
+      } else if (kind === 'chef') {
+        g.fillStyle(ink).fillRoundedRect(68,118,94,57,18);
+        g.fillStyle(hazard).fillRect(82,137,66,12);
+        g.lineStyle(7,secondary).strokeCircle(48,119,28).strokeCircle(183,119,28);
+      } else if (kind === 'sport') {
+        g.lineStyle(10,hazard).strokeCircle(115,115,86);
+        g.fillStyle(ink).fillRect(48,103,134,24);
+        g.fillStyle(paper).fillRect(68,109,94,12);
+      } else {
+        g.lineStyle(6,accent,0.9).strokeCircle(115,115,94);
+      }
+    } else if (phase === 3) {
+      if (kind === 'weather') {
+        g.fillStyle(ink).fillCircle(115,91,40);
+        g.fillStyle(hazard).fillCircle(115,91,19);
+        g.fillStyle(secondary).fillTriangle(72,119,158,119,115,218);
+        g.lineStyle(7,paper).strokeLineShape(new Phaser.Geom.Line(62,150,168,150));
+      } else if (kind === 'chef') {
+        g.fillStyle(hazard).fillRoundedRect(58,102,114,76,24);
+        g.fillStyle(ink).fillRect(72,124,86,30);
+        g.fillStyle(paper).fillTriangle(42,70,60,111,24,111).fillTriangle(188,70,206,111,170,111);
+        g.lineStyle(6,secondary).strokeCircle(115,115,96);
+      } else if (kind === 'sport') {
+        g.fillStyle(ink).fillCircle(115,115,73);
+        g.lineStyle(8,hazard).strokeCircle(115,115,76);
+        g.lineStyle(5,paper).strokeLineShape(new Phaser.Geom.Line(51,78,179,152));
+        g.strokeLineShape(new Phaser.Geom.Line(51,152,179,78));
+        g.fillStyle(accent).fillCircle(115,115,18);
+      } else {
+        g.lineStyle(8,hazard,0.95).strokeCircle(115,115,98);
+        g.fillStyle(accent,0.35).fillCircle(115,115,62);
+      }
+    }
   }
 
   private drawBackdrop() {
@@ -426,7 +473,7 @@ class PlayScene extends Phaser.Scene {
     const x = this.stage.runLength + 1070;
     this.bossMaxHp = Math.round(this.stage.baseBossHp * (this.mode === 'archive' ? 1.06 : 1));
     this.previousBossHp = this.bossMaxHp;
-    this.boss = this.physics.add.sprite(x, GROUND_Y-180, 'da-boss');
+    this.boss = this.physics.add.sprite(x, GROUND_Y-180, 'da-boss-p1');
     this.boss.setScale(this.stage.bossScale).setDepth(18).setVisible(false).setActive(false);
     (this.boss.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setImmovable(true).setSize(150,170).setOffset(40,30);
     this.boss.setData('hp', this.bossMaxHp);
@@ -451,7 +498,7 @@ class PlayScene extends Phaser.Scene {
     this.checkBossStart();
     if (this.bossActive) this.updateBoss(time, delta);
     this.updateCameraFx(time);
-    this.autoFire(time);
+    this.fireWeapon(time);
     this.pushHud();
   }
 
@@ -473,7 +520,9 @@ class PlayScene extends Phaser.Scene {
     const jumpPressed = inputState.jumpQueued || (!!this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.up)) || (!!this.keySpace && Phaser.Input.Keyboard.JustDown(this.keySpace));
     if (jumpPressed) {
       inputState.jumpQueued = false;
-      if (grounded) {
+      if (!grounded && this.tryAirParry(time)) {
+        this.lastJumpAt = time;
+      } else if (grounded) {
         this.player.setVelocityY(-515);
         this.lastJumpAt = time;
         audio.jump();
@@ -505,6 +554,37 @@ class PlayScene extends Phaser.Scene {
     }
   }
 
+  private tryAirParry(time: number) {
+    let nearest: Phaser.Physics.Arcade.Image | null = null;
+    let nearestDistance = 132;
+    for (const child of this.hostileBullets.getChildren()) {
+      const bullet = child as Phaser.Physics.Arcade.Image;
+      if (!bullet.active || !bullet.getData('parry')) continue;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, bullet.x, bullet.y);
+      if (distance < nearestDistance) {
+        nearest = bullet;
+        nearestDistance = distance;
+      }
+    }
+    if (!nearest) return false;
+    const direction = Math.sign(nearest.x - this.player.x) || (this.player.flipX ? -1 : 1);
+    this.player.x += direction * Math.min(22, nearestDistance * 0.18);
+    nearest.disableBody(true, true);
+    this.parries++;
+    this.score += 460;
+    this.signal = Math.min(MAX_SIGNAL, this.signal + 1);
+    this.player.setVelocity(direction * 95, -430);
+    this.invulnerableUntil = Math.max(this.invulnerableUntil, time + 220);
+    this.player.setTint(this.stage.palette.parry);
+    this.time.delayedCall(90, () => this.player?.active && this.player.clearTint());
+    this.cameras.main.flash(95, 255, 112, 210, false);
+    this.cameras.main.shake(85, 0.004);
+    audio.parry();
+    this.burst(this.player.x, this.player.y, this.stage.palette.parry, 13);
+    emit('dead-air:haptic',{type:'parry'});
+    return true;
+  }
+
   private useSpecial() {
     this.signal = Math.max(0, this.signal - 1);
     audio.special();
@@ -530,38 +610,51 @@ class PlayScene extends Phaser.Scene {
     if (this.bossActive && Phaser.Math.Distance.Between(this.player.x,this.player.y,this.boss.x,this.boss.y) < 520) this.damageBoss(135);
   }
 
-  private autoFire(time: number) {
-    const interval = this.mode === 'encore' ? 250 : 235;
-    if (time - this.lastShotAt < interval) return;
-    const target = this.findTarget();
-    if (!target) return;
+  private fireWeapon(time: number) {
+    const firing = inputState.fireHeld || Boolean(this.keyFire?.isDown);
+    if (!firing || time - this.lastShotAt < (this.mode === 'encore' ? 178 : 168)) return;
     this.lastShotAt = time;
     this.shotsFired++;
-    const bullet = this.playerBullets.get(this.player.x + (this.player.flipX?-18:18), this.player.y-6, 'da-shot') as Phaser.Physics.Arcade.Image | null;
+    const direction = this.player.flipX ? -1 : 1;
+    const bullet = this.playerBullets.get(this.player.x + direction*24, this.player.y-6, 'da-shot') as Phaser.Physics.Arcade.Image | null;
     if (!bullet) return;
-    bullet.enableBody(true, this.player.x, this.player.y-6, true, true);
+    bullet.enableBody(true, this.player.x + direction*24, this.player.y-6, true, true);
     bullet.setDepth(17).setScale(1).setTint(this.stage.palette.paper);
     const bulletBody = bullet.body as Phaser.Physics.Arcade.Body;
     bulletBody.setAllowGravity(false);
-    const angle = Phaser.Math.Angle.Between(this.player.x,this.player.y,target.x,target.y);
-    this.physics.velocityFromRotation(angle, 780, bulletBody.velocity);
+    const target = this.findAimAssistTarget(direction);
+    const angle = target ? Phaser.Math.Angle.Between(this.player.x,this.player.y,target.x,target.y) : (direction < 0 ? Math.PI : 0);
+    this.physics.velocityFromRotation(angle, 930, bulletBody.velocity);
     bullet.setRotation(angle);
     bullet.setData('born', time);
+    this.player.setScale(0.985, 1.015);
+    this.time.delayedCall(34, () => this.player?.active && this.player.setScale(1));
     audio.shot();
   }
 
-  private findTarget(): Phaser.GameObjects.Components.Transform | null {
+  private findAimAssistTarget(direction: number): Phaser.GameObjects.Components.Transform | null {
     let best: Phaser.GameObjects.Components.Transform | null = null;
-    let dist = 950;
-    if (this.bossActive && this.boss.active) {
-      const d = Phaser.Math.Distance.Between(this.player.x,this.player.y,this.boss.x,this.boss.y);
-      if (d < dist) { best = this.boss; dist = d; }
-    }
+    let bestScore = Number.POSITIVE_INFINITY;
+    const consider = (target: Phaser.GameObjects.Components.Transform) => {
+      const dx = target.x - this.player.x;
+      const dy = target.y - this.player.y;
+      if (dx * direction <= 0 || Math.abs(dy) > 330) return;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1050) return;
+      const forwardAngle = direction < 0 ? Math.PI : 0;
+      const targetAngle = Math.atan2(dy, dx);
+      const delta = Math.abs(Phaser.Math.Angle.Wrap(targetAngle - forwardAngle));
+      if (delta > 0.5) return;
+      const score = distance + delta * 620;
+      if (score < bestScore) {
+        best = target;
+        bestScore = score;
+      }
+    };
+    if (this.bossActive && this.boss.active) consider(this.boss);
     for (const child of this.enemies.getChildren()) {
       const enemy = child as Phaser.Physics.Arcade.Sprite;
-      if (!enemy.active) continue;
-      const d = Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y);
-      if (d < dist) { best = enemy; dist = d; }
+      if (enemy.active) consider(enemy);
     }
     return best;
   }
