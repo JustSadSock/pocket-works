@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1411">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KŌAN Mahjong">
+  <title>KŌAN · Mahjong Dojo</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <button class="ghost-button back-button" id="back-button" type="button" aria-label="Назад" data-native-press>←</button>
+      <div class="brand" aria-label="KŌAN Mahjong Dojo">
+        <span class="brand-mark">光</span>
+        <span><b>KŌAN</b><small>MAHJONG DOJO</small></span>
+      </div>
+      <div class="top-actions">
+        <button class="ghost-button" id="sound-button" type="button" aria-label="Звук" data-native-press>♪</button>
+        <button class="ghost-button" id="close-button" type="button" aria-label="Выйти в Pocket Works" data-native-press>×</button>
+      </div>
+    </header>
+
+    <section class="view is-active" id="home-view" data-view="home">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">РИИЧИ · ОТ НУЛЯ ДО СИЛЬНОЙ ИГРЫ</p>
+          <h1>Учись видеть руку, а не просто костяшки.</h1>
+          <p>Короткие уроки, бесконечные задачи на эффективность и настоящие закрытые партии против трёх ботов.</p>
+        </div>
+        <div class="hero-emblem" aria-hidden="true">
+          <span>東</span><i></i><b>一</b>
+        </div>
+      </div>
+
+      <div class="home-stats" id="home-stats">
+        <div><span id="stat-rank">—</span><small>уровень</small></div>
+        <div><span id="stat-streak">0</span><small>серия</small></div>
+        <div><span id="stat-accuracy">—</span><small>точность</small></div>
+      </div>
+
+      <div class="mode-grid">
+        <button class="mode-card academy-card" data-open="academy" type="button" data-native-press>
+          <span class="mode-index">01</span>
+          <span class="mode-title">Академия</span>
+          <span class="mode-copy">6 интерактивных уроков: чтение, структура руки, сянтэн, ожидания, риичи и яку.</span>
+          <span class="mode-meta" id="academy-progress">0 / 6</span>
+        </button>
+        <button class="mode-card drill-card" data-open="drill" type="button" data-native-press>
+          <span class="mode-index">02</span>
+          <span class="mode-title">Лаборатория</span>
+          <span class="mode-copy">Бесконечные руки. Выбери сброс, сравни с лучшим и пойми, почему.</span>
+          <span class="mode-meta">∞ рук</span>
+        </button>
+        <button class="mode-card table-card" data-open="table" type="button" data-native-press>
+          <span class="mode-index">03</span>
+          <span class="mode-title">Стол</span>
+          <span class="mode-copy">Закрытая партия против 3 ботов с риичи, цумо, рон и тренером решений.</span>
+          <span class="mode-meta">3 сложности</span>
+        </button>
+        <button class="mode-card codex-card" data-open="codex" type="button" data-native-press>
+          <span class="mode-index">04</span>
+          <span class="mode-title">Кодекс</span>
+          <span class="mode-copy">Краткая шпаргалка по костям, яку, ожиданиям и базовой стратегии.</span>
+          <span class="mode-meta">быстрый доступ</span>
+        </button>
+      </div>
+
+      <button class="continue-strip" id="continue-button" type="button" data-native-press>
+        <span><small>РЕКОМЕНДУЕТСЯ СЕЙЧАС</small><b id="continue-label">Начать с Академии</b></span>
+        <span>→</span>
+      </button>
+      <button class="launcher-exit" id="home-exit-button" type="button" data-native-press>← Вернуться в Pocket Works</button>
+    </section>
+
+    <section class="view" id="academy-view" data-view="academy">
+      <div class="section-head">
+        <p class="eyebrow">АКАДЕМИЯ</p>
+        <h2>Шесть ступеней. Без лекционной каши.</h2>
+        <p>Каждый урок заканчивается короткой проверкой. Ошибка не штрафует — она объясняется.</p>
+      </div>
+      <div class="lesson-list" id="lesson-list"></div>
+    </section>
+
+    <section class="view" id="lesson-view" data-view="lesson">
+      <div class="lesson-shell">
+        <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+        <p class="eyebrow" id="lesson-kicker">УРОК</p>
+        <h2 id="lesson-title"></h2>
+        <p class="lesson-copy" id="lesson-copy"></p>
+        <div class="lesson-stage" id="lesson-stage"></div>
+        <div class="lesson-feedback" id="lesson-feedback" role="status"></div>
+        <button class="primary-button" id="lesson-next" type="button" data-native-press>Дальше</button>
+      </div>
+    </section>
+
+    <section class="view" id="drill-view" data-view="drill">
+      <div class="section-head compact-head">
+        <div>
+          <p class="eyebrow">ЛАБОРАТОРИЯ ЭФФЕКТИВНОСТИ</p>
+          <h2>Какую кость выбросить?</h2>
+        </div>
+        <button class="pill-button" id="drill-difficulty" type="button" data-native-press>Клуб</button>
+      </div>
+      <div class="coach-line" id="drill-coach">Выбери сброс. После хода покажу лучший вариант, сянтэн и укеирэ.</div>
+      <div class="hand-zone lab-hand" id="drill-hand" aria-label="Рука для тренировки"></div>
+      <div class="analysis-panel" id="drill-analysis" hidden></div>
+      <div class="drill-footer">
+        <div><small>СЕРИЯ</small><b id="drill-streak">0</b></div>
+        <div><small>ТОЧНОСТЬ</small><b id="drill-accuracy">—</b></div>
+        <button class="primary-button" id="next-drill" type="button" data-native-press>Следующая рука</button>
+      </div>
+    </section>
+
+    <section class="view" id="table-setup-view" data-view="table-setup">
+      <div class="section-head">
+        <p class="eyebrow">СТОЛ</p>
+        <h2>Выбери, насколько тренер будет держать тебя за руку.</h2>
+      </div>
+      <div class="difficulty-stack" id="difficulty-stack">
+        <button class="difficulty-card" data-difficulty="learner" type="button" data-native-press>
+          <b>Ученик</b><span>Подсветка сильных сбросов и пояснение до решения. Боты мягче.</span><i>для первых партий</i>
+        </button>
+        <button class="difficulty-card is-selected" data-difficulty="club" type="button" data-native-press>
+          <b>Клуб</b><span>Подсказка только по запросу. Боты считают сянтэн и укеирэ.</span><i>рекомендуется</i>
+        </button>
+        <button class="difficulty-card" data-difficulty="sharp" type="button" data-native-press>
+          <b>Острый стол</b><span>Анализ только после сброса. Боты режут слабые формы и быстрее риичат.</span><i>после академии</i>
+        </button>
+      </div>
+      <button class="primary-button wide-button" id="start-table" type="button" data-native-press>Сесть за стол</button>
+    </section>
+
+    <section class="view table-view" id="table-view" data-view="table">
+      <div class="table-status">
+        <span id="round-label">Восток 1</span>
+        <span id="wall-label">70 в стене</span>
+        <div class="table-status-actions">
+          <button class="pill-button" id="table-hint" type="button" data-native-press>Подсказка</button>
+          <button class="pill-button" id="pause-button" type="button" data-native-press>Пауза</button>
+        </div>
+      </div>
+
+      <div class="mahjong-table" id="mahjong-table">
+        <div class="opponent opponent-top">
+          <div class="player-badge"><b>Запад</b><span id="bot2-state">думает</span></div>
+          <div class="concealed-row" id="bot2-hand"></div>
+          <div class="river mini-river" id="bot2-river"></div>
+        </div>
+        <div class="side-player left-player">
+          <div class="player-badge"><b>Юг</b><span id="bot1-state">готов</span></div>
+          <div class="river side-river" id="bot1-river"></div>
+        </div>
+        <div class="side-player right-player">
+          <div class="player-badge"><b>Север</b><span id="bot3-state">готов</span></div>
+          <div class="river side-river" id="bot3-river"></div>
+        </div>
+        <div class="center-well">
+          <span class="round-wind">東</span>
+          <b id="turn-label">Твой ход</b>
+          <small id="table-message">Возьми кость и выбери сброс</small>
+        </div>
+        <div class="river player-river" id="player-river"></div>
+        <div class="player-seat">
+          <div class="player-info"><b>Ты · Восток</b><span id="player-status">13 костей</span></div>
+          <div class="hand-zone table-hand" id="player-hand"></div>
+          <div class="table-actions">
+            <button class="secondary-button" id="riichi-button" type="button" disabled data-native-press>Риичи</button>
+            <button class="secondary-button win-button" id="win-button" type="button" hidden data-native-press>Цумо</button>
+            <button class="primary-button" id="draw-button" type="button" data-native-press>Взять</button>
+          </div>
+        </div>
+      </div>
+      <div class="coach-drawer" id="table-coach" hidden></div>
+    </section>
+
+    <section class="view" id="codex-view" data-view="codex">
+      <div class="section-head">
+        <p class="eyebrow">КОДЕКС</p>
+        <h2>Вся база на расстоянии одного свайпа.</h2>
+      </div>
+      <div class="codex-tabs" id="codex-tabs">
+        <button class="is-active" data-tab="tiles" type="button" data-native-press>Кости</button>
+        <button data-tab="shape" type="button" data-native-press>Рука</button>
+        <button data-tab="yaku" type="button" data-native-press>Яку</button>
+        <button data-tab="strategy" type="button" data-native-press>Стратегия</button>
+      </div>
+      <div class="codex-content" id="codex-content"></div>
+    </section>
+
+    <section class="modal-layer" id="result-modal" hidden aria-modal="true" role="dialog">
+      <div class="result-card">
+        <p class="eyebrow" id="result-kicker">РАЗБОР</p>
+        <h2 id="result-title">Готово</h2>
+        <p id="result-copy"></p>
+        <div id="result-extra"></div>
+        <div class="result-actions">
+          <button class="secondary-button" id="result-exit" type="button" data-native-press>← Pocket Works</button>
+          <button class="secondary-button" id="result-home" type="button" data-native-press>В меню</button>
+          <button class="primary-button" id="result-again" type="button" data-native-press>Ещё раз</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal-layer" id="pause-modal" hidden aria-modal="true" role="dialog" aria-labelledby="pause-title">
+      <div class="result-card pause-card">
+        <p class="eyebrow">ПАУЗА</p>
+        <h2 id="pause-title">Стол замер.</h2>
+        <p>Раздача останется в памяти до выхода из неё. Можно продолжить или вернуться в оболочку.</p>
+        <div class="result-actions pause-actions">
+          <button class="secondary-button" id="pause-exit" type="button" data-native-press>← Pocket Works</button>
+          <button class="secondary-button" id="pause-home" type="button" data-native-press>Завершить раздачу</button>
+          <button class="primary-button" id="pause-resume" type="button" data-native-press>Продолжить</button>
+        </div>
+      </div>
+    </section>
+
+    <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+  </main>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="KŌAN · Mahjong Dojo" data-app-version="0.1.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
