@@ -167,16 +167,32 @@ function serviceWorkerSource(config, files) {
 async function buildApp(config) {
   const directory = path.join(root, 'apps', config.slug);
   const output = path.join(directory, 'web');
-  await rm(output, { recursive: true, force: true });
-  await mkdir(output, { recursive: true });
-
   const target = path.join(output, 'index.html');
-  const result = spawnSync(GODOT_BIN, ['--headless', '--path', directory, '--export-release', 'Web', target], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: false
-  });
-  if (result.status !== 0) throw new Error('Godot export failed for ' + config.slug);
+
+  let exported = false;
+  const attempts = 2;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await rm(output, { recursive: true, force: true });
+    await mkdir(output, { recursive: true });
+
+    const result = spawnSync(GODOT_BIN, ['--headless', '--path', directory, '--export-release', 'Web', target], {
+      cwd: root,
+      stdio: 'inherit',
+      shell: false
+    });
+    if (result.status === 0) {
+      exported = true;
+      break;
+    }
+
+    const detail = result.signal ? `signal ${result.signal}` : `exit ${result.status}`;
+    if (attempt < attempts) {
+      console.warn(`Godot export for ${config.slug} ended with ${detail}; retrying once with the warmed import cache.`);
+    } else {
+      throw new Error(`Godot export failed for ${config.slug} after ${attempts} attempts (${detail})`);
+    }
+  }
+  if (!exported) throw new Error('Godot export failed for ' + config.slug);
 
   const indexPath = path.join(output, 'index.html');
   if (!(await exists(indexPath))) throw new Error(config.slug + ' export did not create web/index.html');
