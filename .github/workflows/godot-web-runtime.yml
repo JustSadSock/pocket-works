@@ -9,6 +9,7 @@ on:
       - "scripts/prepare-site.mjs"
       - "scripts/validate-site.mjs"
       - "scripts/validate-deploy-pipeline.mjs"
+      - "scripts/serve-site.mjs"
       - "scripts/app-config.mjs"
       - ".github/workflows/godot-web-runtime.yml"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - "scripts/prepare-site.mjs"
       - "scripts/validate-site.mjs"
       - "scripts/validate-deploy-pipeline.mjs"
+      - "scripts/serve-site.mjs"
       - "scripts/app-config.mjs"
       - ".github/workflows/godot-web-runtime.yml"
   workflow_dispatch:
@@ -63,6 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run validate:scripts
+          npm run validate:pipeline
           node scripts/app-config.test.mjs
           npm run test:forge:godot
           node scripts/validate-godot.mjs
@@ -179,6 +182,7 @@ jobs:
           npm run build:enhanced
           npm run prepare:site
           npm run validate:site
+          npx --yes wrangler@4.141.0 deploy --dry-run --assets ./dist-site/
           rm -rf dist-site
 
       - name: Require committed exports in pull requests and main
