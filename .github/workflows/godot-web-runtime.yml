@@ -28,7 +28,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: godot-web-\${{ github.workflow }}-\${{ github.ref }}
+  group: godot-web-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -46,7 +46,7 @@ jobs:
       - name: Checkout feature head
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -69,23 +69,23 @@ jobs:
         run: |
           set -euo pipefail
           release="4.7.2-stable"
-          editor="Godot_v\${release}_linux.x86_64.zip"
-          templates="Godot_v\${release}_export_templates.tpz"
-          base="https://github.com/godotengine/godot-builds/releases/download/\${release}"
+          editor="Godot_v${release}_linux.x86_64.zip"
+          templates="Godot_v${release}_export_templates.tpz"
+          base="https://github.com/godotengine/godot-builds/releases/download/${release}"
 
           mkdir -p "$RUNNER_TEMP/godot-download" .godot-ci/editor
           cd "$RUNNER_TEMP/godot-download"
-          curl -fsSLO "\${base}/\${editor}"
-          curl -fsSLO "\${base}/\${templates}"
-          curl -fsSLO "\${base}/SHA512-SUMS.txt"
-          grep " \${editor}$" SHA512-SUMS.txt | sha512sum --check --strict
-          grep " \${templates}$" SHA512-SUMS.txt | sha512sum --check --strict
+          curl -fsSLO "${base}/${editor}"
+          curl -fsSLO "${base}/${templates}"
+          curl -fsSLO "${base}/SHA512-SUMS.txt"
+          grep " ${editor}$" SHA512-SUMS.txt | sha512sum --check --strict
+          grep " ${templates}$" SHA512-SUMS.txt | sha512sum --check --strict
 
           unzip -q "$editor" -d "$GITHUB_WORKSPACE/.godot-ci/editor"
-          rm -rf "$HOME/.local/share/godot/export_templates/\${GODOT_VERSION}.stable"
-          mkdir -p "$HOME/.local/share/godot/export_templates/\${GODOT_VERSION}.stable"
+          rm -rf "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           unzip -q "$templates" -d "$RUNNER_TEMP/godot-templates"
-          cp -a "$RUNNER_TEMP/godot-templates/templates/." "$HOME/.local/share/godot/export_templates/\${GODOT_VERSION}.stable/"
+          cp -a "$RUNNER_TEMP/godot-templates/templates/." "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
       - name: Resolve Godot binary
         shell: bash
@@ -114,12 +114,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "\${{ github.event_name }}" == "workflow_dispatch" && -n "\${{ inputs.app }}" ]]; then
-            node scripts/build-godot.mjs --app "\${{ inputs.app }}"
-          elif [[ "\${{ github.event_name }}" == "pull_request" ]]; then
-            node scripts/build-godot.mjs --changed-from "\${{ github.event.pull_request.base.sha }}"
-          elif [[ "\${{ github.event_name }}" == "push" ]]; then
-            node scripts/build-godot.mjs --changed-from "\${{ github.event.before }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.app }}" ]]; then
+            node scripts/build-godot.mjs --app "${{ inputs.app }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            node scripts/build-godot.mjs --changed-from "${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            node scripts/build-godot.mjs --changed-from "${{ github.event.before }}"
           else
             echo "No app requested; template smoke test only."
           fi
@@ -153,4 +153,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Generate Godot Web exports [godot-export]"
-          git push origin "HEAD:\${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
