@@ -53,6 +53,7 @@ const enhancedRegistration=files.enhancedUpdateManager.indexOf('registerSW({');
 if(enhancedHandoff<0||enhancedRegistration<0||enhancedHandoff>enhancedRegistration)errors.push('Enhanced update handoff must run before vite-plugin-pwa registration');
 if(files.updater.includes('verifyServerRelease'))errors.push('Updater must not reread HTML, config and worker source per application');
 if(files.guard.includes('XMLHttpRequest'))errors.push('Release guard must not block startup with synchronous XHR');
+if(files.guard.includes("workerUrl.searchParams.set('pw_release'"))errors.push('Release guard Service Worker URL must remain stable; release identity belongs in release metadata, not the worker script URL');
 if(files.progressionRuntime.includes('queueMicrotask'))errors.push('Progression runtime must not create a microtask mutation loop');
 if(files.progressionRuntime.includes('button.click()'))errors.push('Progression runtime must not recursively synthesize the charter seal click');
 if(files.compositionRuntime.includes('queueMicrotask'))errors.push('Composition runtime must not create a microtask mutation loop');
