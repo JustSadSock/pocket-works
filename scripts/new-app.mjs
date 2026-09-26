@@ -6,13 +6,14 @@ import {
   APP_PRESETS,
   APP_RUNTIMES,
   ENHANCED_APP_PRESETS,
+  GODOT_APP_PRESETS,
   QUICK_APP_PRESETS,
   validateAppConfig
 } from './app-config.mjs';
 import { getPreset } from './presets.mjs';
 import { getEnhancedPreset } from './enhanced-presets.mjs';
 
-const textExtensions = new Set(['.css', '.html', '.js', '.ts', '.json', '.md', '.svg', '.webmanifest']);
+const textExtensions = new Set(['.css', '.html', '.js', '.ts', '.json', '.md', '.svg', '.webmanifest', '.gd', '.tscn', '.tres', '.godot', '.cfg', '.gdshader']);
 
 function parseArguments(argv) {
   const options = {};
@@ -89,7 +90,7 @@ function buildEnhancedApp(root, slug) {
 }
 
 function printHelp() {
-  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n  npm run new:app -- <slug> --runtime=enhanced --preset=pixi [options]\n\nRuntimes:\n  ${APP_RUNTIMES.join(', ')}\n\nQuick presets:\n  ${QUICK_APP_PRESETS.join(', ')}\n\nEnhanced presets:\n  ${ENHANCED_APP_PRESETS.join(', ')}\n\nAll presets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --runtime=quick|enhanced\n  --name="Human Name"\n  --short-name="Home Label"\n  --description="One sentence purpose"\n  --release-note="Initial release note"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n  --skip-build\n`);
+  console.log(`Pocket Forge\n\nUsage:\n  npm run new:app -- <slug> --preset=interactive [options]\n  npm run new:app -- <slug> --runtime=enhanced --preset=pixi [options]\n  npm run new:app -- <slug> --runtime=godot --preset=godot-web [options]\n\nRuntimes:\n  ${APP_RUNTIMES.join(', ')}\n\nQuick presets:\n  ${QUICK_APP_PRESETS.join(', ')}\n\nEnhanced presets:\n  ${ENHANCED_APP_PRESETS.join(', ')}\n\nGodot presets:\n  ${GODOT_APP_PRESETS.join(', ')}\n\nAll presets:\n  ${APP_PRESETS.join(', ')}\n\nOptions:\n  --runtime=quick|enhanced|godot\n  --name="Human Name"\n  --short-name="Home Label"\n  --description="One sentence purpose"\n  --release-note="Initial release note"\n  --accent=#ff4d1f\n  --background=#10110f\n  --theme=#10110f\n  --orientation=portrait|landscape|any\n  --status=active|experimental\n  --order=100\n  --skip-health\n  --skip-build\n`);
 }
 
 export async function createApp(argv = process.argv.slice(2), root = process.cwd()) {
@@ -103,9 +104,14 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const runtime = typeof options.runtime === 'string' ? options.runtime : 'quick';
   if (!APP_RUNTIMES.includes(runtime)) throw new Error(`Unknown runtime ${runtime}. Available: ${APP_RUNTIMES.join(', ')}`);
 
-  const defaultPreset = runtime === 'enhanced' ? 'vite' : 'vanilla';
+  const defaultPreset = runtime === 'enhanced' ? 'vite' : runtime === 'godot' ? 'godot-web' : 'vanilla';
   const presetName = typeof options.preset === 'string' ? options.preset : defaultPreset;
-  const preset = runtime === 'enhanced' ? getEnhancedPreset(presetName) : getPreset(presetName);
+  const preset = runtime === 'enhanced'
+    ? getEnhancedPreset(presetName)
+    : runtime === 'godot'
+      ? (GODOT_APP_PRESETS.includes(presetName) ? { label: 'Godot Web', description: 'Godot WebAssembly game runtime for complex 3D, animation and physics.', tags: ['PWA', 'offline', 'game', '3D', 'Godot', 'WebAssembly', 'iPhone'] } : null)
+      : getPreset(presetName);
+  if (!preset) throw new Error(`Unknown preset ${presetName} for runtime ${runtime}`);
   const name = typeof options.name === 'string' ? options.name : humanize(slug);
   const shortName = typeof options['short-name'] === 'string' ? options['short-name'] : name.slice(0, 20);
   const description = typeof options.description === 'string' ? options.description : preset.description;
@@ -144,7 +150,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const configErrors = validateAppConfig(config, slug);
   if (configErrors.length > 0) throw new Error(configErrors.join('\n'));
 
-  const templateName = runtime === 'enhanced' ? '_enhanced-template' : '_template';
+  const templateName = runtime === 'enhanced' ? '_enhanced-template' : runtime === 'godot' ? '_godot-template' : '_template';
   const templateDirectory = path.join(root, 'apps', templateName);
   const appDirectory = path.join(root, 'apps', slug);
   if (await pathExists(appDirectory)) throw new Error(`apps/${slug} already exists`);
@@ -208,6 +214,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     await writeFile(path.join(iconDirectory, 'icon.svg'), icon, 'utf8');
 
     if (runtime === 'enhanced' && !options['skip-build']) buildEnhancedApp(root, slug);
+    if (runtime === 'godot') console.log('Godot source created. GitHub Actions will generate apps/' + slug + '/web/ on the feature branch.');
     if (!options['skip-health']) runValidation(root);
   } catch (error) {
     await rm(appDirectory, { recursive: true, force: true });

@@ -6,7 +6,7 @@ The default target is installed-software behavior, not merely a responsive websi
 
 ## 1. Shared mobile runtime contract
 
-Every new app must adopt the shared runtime unless a documented technical reason makes it impossible.
+Every new Quick or Enhanced app must adopt the shared JavaScript mobile runtime unless a documented technical reason makes it impossible. Godot Web apps use the Godot bridge contract in section 10 instead of importing the JavaScript mobile runtime into the engine.
 
 Required HTML wiring:
 
@@ -206,3 +206,21 @@ Before marking an app done, verify on a real phone or mobile emulation:
 - no browser alert, prompt, dead link or generic web behavior breaks the application illusion.
 
 When accessibility and app-like behavior conflict, solve the interaction deliberately rather than disabling accessibility by default.
+
+
+## 10. Godot Web application rules
+
+These rules apply when app.config.json declares runtime godot.
+
+- Start from apps/_godot-template. Do not create a one-off Godot export contract.
+- Keep authored project files under project.godot, export_presets.cfg, source/** and assets/**.
+- Keep the PocketWorks autoload at source/pocket_works.gd and preserve its storage namespace, launcher-exit and QA-state APIs.
+- Use Compatibility rendering and the repository Web export preset. Do not enable threads or extensions inside one app.
+- The app must remain touch-first and safe-area aware after Web export even though its UI is rendered by Godot rather than DOM/CSS.
+- Provide a visible text-labelled Pocket Works exit control from start, pause and completion/game-over states.
+- Persist user-created or progression state through the PocketWorks bridge or an app-owned storage layer that preserves the app storageNamespace. Do not write unnamespaced browser storage.
+- Publish useful state through PocketWorks.publish_test_state() for automated gameplay QA. Include loading state and, when relevant, player position, health, current phase, active enemies, asset readiness and other invariants that make failures observable.
+- Do not hand-edit web/**. Push source changes and let the Godot Web Runtime workflow produce and commit the browser export.
+- If asset-forge/** changes produce a new GLB, treat the subsequent Godot re-export as part of the same app release.
+- Do not add a remote Godot loader, CDN dependency, alternate host or app-specific CI installation script.
+- A Godot app is still an offline-first iOS/browser PWA product. Test the generated build in WebKit and Chromium, including orientation, touch cancellation, suspension/resume, offline reload and the explicit launcher return path.

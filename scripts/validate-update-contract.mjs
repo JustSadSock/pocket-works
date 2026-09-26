@@ -1,8 +1,9 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 const root=process.cwd(),errors=[];
 const fail=message=>errors.push(message);
+async function exists(relative){try{await access(path.join(root,relative));return true}catch{return false}}
 async function read(relative){try{return await readFile(path.join(root,relative),'utf8')}catch(error){fail(`${relative} could not be read: ${error.message}`);return''}}
 function requireIncludes(source,fragments,label){for(const fragment of fragments)if(!source.includes(fragment))fail(`${label} must include ${fragment}`)}
 function staticString(source,name){return source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*['"]([^'"]+)['"]`))?.[1]||null}
@@ -24,6 +25,6 @@ validateFresh(rootWorker,'root sw.js',{passThroughApps:true});
 
 const templateWorker=await read('apps/_template/sw.js');requireIncludes(templateWorker,['GET_UPDATE_INFO','SKIP_WAITING'],'apps/_template/sw.js');validateFresh(templateWorker,'apps/_template/sw.js');
 const configs=await collectAppConfigs(root);
-for(const config of configs){const directory=`apps/${config.slug}`;if(runtimeForConfig(config)==='enhanced'){const main=await read(`${directory}/source/main.ts`),worker=await read(`${directory}/source/sw.ts`);requireIncludes(main,['registerEnhancedUpdate',`version: '${config.version}'`],`${directory}/source/main.ts`);validateEnhanced(worker,`${directory}/source/sw.ts`,config)}else{const index=await read(`${directory}/index.html`),worker=await read(`${directory}/sw.js`);if(config.slug==='blazon'){requireIncludes(index,['../../shared/update-manager.css'],`${directory}/index.html`);validateCoherentWorker(worker,`${directory}/sw.js`,config)}else{requireIncludes(index,['../../shared/update-manager.js','data-update-manager',`data-app-version="${config.version}"`],`${directory}/index.html`);validateQuickWorker(worker,`${directory}/sw.js`,config)}}}
+for(const config of configs){const directory=`apps/${config.slug}`,runtime=runtimeForConfig(config);if(runtime==='enhanced'){const main=await read(`${directory}/source/main.ts`),worker=await read(`${directory}/source/sw.ts`);requireIncludes(main,['registerEnhancedUpdate',`version: '${config.version}'`],`${directory}/source/main.ts`);validateEnhanced(worker,`${directory}/source/sw.ts`,config)}else if(runtime==='godot'){const workerPath=`${directory}/web/sw.js`;if(await exists(workerPath)){const worker=await read(workerPath);validateQuickWorker(worker,workerPath,config)}}else{const index=await read(`${directory}/index.html`),worker=await read(`${directory}/sw.js`);if(config.slug==='blazon'){requireIncludes(index,['../../shared/update-manager.css'],`${directory}/index.html`);validateCoherentWorker(worker,`${directory}/sw.js`,config)}else{requireIncludes(index,['../../shared/update-manager.js','data-update-manager',`data-app-version="${config.version}"`],`${directory}/index.html`);validateQuickWorker(worker,`${directory}/sw.js`,config)}}}
 if(errors.length){console.error(`Update contract validation failed with ${errors.length} issue(s):`);errors.forEach(error=>console.error(`- ${error}`));process.exit(1)}
 console.log(`Managed update contract passed for ${configs.length} application releases.`);
