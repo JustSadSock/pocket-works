@@ -217,14 +217,16 @@
       location.replace(target.href);
     });
 
-    const workerUrl=new URL('./sw.js',location.href);
-    navigator.serviceWorker.register(workerUrl.href,{updateViaCache:'none'})
-      .then(async registration=>{
-        await registration.update();
-        if(registration.waiting&&workerMatches(registration.waiting)){
-          registration.waiting.postMessage({type:'SKIP_WAITING'});
-        }
-      })
-      .catch(()=>{});
+    window.addEventListener('load',()=>{
+      const workerUrl=new URL('./sw.js',location.href);
+      navigator.serviceWorker.register(workerUrl.href,{updateViaCache:'none'})
+        .then(async registration=>{
+          await registration.update();
+          if(registration.waiting&&workerMatches(registration.waiting)){
+            registration.waiting.postMessage({type:'SKIP_WAITING'});
+          }
+        })
+        .catch(()=>{});
+    },{once:true});
   }
 })();
