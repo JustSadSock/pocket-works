@@ -439,7 +439,8 @@ test.describe('AI exploratory mobile gameplay', () => {
           },
           canvases,
           visibleControls: visibleElements,
-          bridgeState: typeof bridgeState === 'function' ? '[function]' : bridgeState
+          bridgeState: typeof bridgeState === 'function' ? '[function]' : bridgeState,
+          rivetBootStage: (window as any).__RIVET_BOOT_STAGE__ ?? null
         };
       });
 
@@ -461,6 +462,12 @@ test.describe('AI exploratory mobile gameplay', () => {
         );
       });
       expect(actionablePageErrors, `Unhandled page errors during exploration of ${app.slug}`).toEqual([]);
+      // RIVET must publish a real gameplay state; loader-only Godot output is a failed boot.
+      if (app.slug === 'rivet') {
+        expect(state.bridgeState, `RIVET never published gameplay state; last boot stage: ${state.rivetBootStage ?? 'none'}`).not.toBeNull();
+        const loadingState = typeof state.bridgeState === 'object' && state.bridgeState ? (state.bridgeState as any).loadingState : null;
+        expect(['ready', 'running', 'paused', 'workbench', 'complete', 'game-over'], `RIVET did not finish booting; last boot stage: ${state.rivetBootStage ?? 'none'}`).toContain(loadingState);
+      }
       expect(state.document.scrollWidth - state.viewport.width, `${app.slug} horizontally overflows the emulated phone viewport`).toBeLessThanOrEqual(4);
     });
   }

@@ -1,0 +1,25 @@
+{
+  "id": "/apps/rivet/",
+  "name": "RIVET",
+  "short_name": "RIVET",
+  "description": "Touch-first 2D action roguelite about rebuilding a combat machine between compact industrial arena fights.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "landscape",
+  "background_color": "#d6cec0",
+  "theme_color": "#343935",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slug": "rivet",
+  "name": "RIVET",
+  "shortName": "RIVET",
+  "description": "Touch-first 2D action roguelite about rebuilding a combat machine between compact industrial arena fights.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-26",
+  "releaseDateTime": "2026-09-26T12:13:00+03:00",
+  "status": "active",
+  "preset": "godot-web",
+  "runtime": "godot",
+  "accent": "#b85c3f",
+  "backgroundColor": "#d6cec0",
+  "themeColor": "#343935",
+  "orientation": "landscape",
+  "cacheName": "rivet-v1.0.0",
+  "storageNamespace": "pocket-works:rivet",
+  "tags": ["game", "2D", "action", "roguelite", "godot", "mobile", "landscape", "offline"],
+  "order": 1010,
+  "changelog": [
+    "Launch release with a seven-cell combat run, final boss and deterministic Pocket Works Godot Web integration.",
+    "Adds touch-first movement, held fire, auto-aim, ram dash, enemy telegraphs, hit-stop, recoil, shake, particles and procedural audio.",
+    "Adds a mid-run workbench with weapon, chassis and core replacements that materially change attack and movement behavior.",
+    "Persists clears, best room, best kill count and sound preference through the Pocket Works storage bridge."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "runtime": "godot",
+  "engine": "godot",
+  "engineVersion": "4.7.2",
+  "slug": "rivet",
+  "version": "1.0.0",
+  "sourceFingerprint": "c3266e76653ea4014285df53b5ac5f8e418eab3e1c46cbc08819a995670d7f1a"
+}
