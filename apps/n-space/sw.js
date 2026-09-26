@@ -23,6 +23,7 @@ const APP_SHELL = [
   '../../shared/workshop-mode.css',
   '../../shared/workshop-mode.js',
   '../../shared/capabilities/storage.js',
+  '../../shared/capabilities/device.js',
   '../../shared/capabilities/diagnostics.js',
   '../../shared/capabilities/transfer.js'
 ];
