@@ -1062,7 +1062,6 @@ func _update_bullets(delta: float) -> void:
 		var b: Dictionary = bullets[i]
 		b["life"] = float(b["life"]) - delta
 		b["pos"] = b["pos"] + b["vel"] * delta
-		var exploded := false
 		if str(b["kind"]) == "mortar" and float(b["life"]) <= 0.0:
 			_explode_mortar(b["pos"], float(b["damage"]))
 			bullets.remove_at(i)
@@ -1071,6 +1070,7 @@ func _update_bullets(delta: float) -> void:
 			bullets.remove_at(i)
 			continue
 
+		var consumed := false
 		for j in range(enemies.size() - 1, -1, -1):
 			if j >= enemies.size():
 				continue
@@ -1078,26 +1078,17 @@ func _update_bullets(delta: float) -> void:
 			if (b["pos"] as Vector2).distance_to(e["pos"]) <= float(b["radius"]) + float(e["radius"]):
 				if str(b["kind"]) == "mortar":
 					_explode_mortar(b["pos"], float(b["damage"]))
-					exploded = true
 				else:
 					var push := (b["vel"] as Vector2).normalized()
 					_damage_enemy(j, float(b["damage"]), push, false)
+				consumed = true
 				break
 
-		if exploded:
+		if consumed:
 			if i < bullets.size():
 				bullets.remove_at(i)
 			continue
-
-		var hit_something := false
-		for e in enemies:
-			if (b["pos"] as Vector2).distance_to(e["pos"]) <= float(b["radius"]) + float(e["radius"]):
-				hit_something = true
-				break
-		if hit_something and i < bullets.size():
-			bullets.remove_at(i)
-		else:
-			bullets[i] = b
+		bullets[i] = b
 
 func _explode_mortar(pos: Vector2, damage: float) -> void:
 	_add_effect({"kind": "blast", "pos": pos, "life": 0.34, "max": 0.34, "color": C_RUST})
@@ -1290,10 +1281,10 @@ func _update_ui() -> void:
 		str(MODULES[chassis_id]["name"]),
 		str(MODULES[core_id]["name"])
 	]
-	if core_id == "boiler":
-		core_label.text = "BOILER %d%%" % int(heat * 100.0)
-	elif overheat > 0.0:
+	if overheat > 0.0:
 		core_label.text = "VENTING"
+	elif core_id == "boiler":
+		core_label.text = "BOILER %d%%" % int(heat * 100.0)
 	else:
 		core_label.text = str(MODULES[core_id]["desc"])
 	dash_button.text = "RAM" if dash_cd <= 0.0 else "%.1f" % dash_cd
