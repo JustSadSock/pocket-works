@@ -145,6 +145,8 @@ That marker prevents an infinite workflow loop.
 
 Before downloading or running Godot, the workflow runs the validator in source-only mode. This checks project structure, Web export settings, the PocketWorks bridge and required app source without requiring the previously committed `web/**` output to already match a just-bumped app version. After the headless export completes, the normal full validator runs and enforces generated Web metadata/freshness.
 
+The forge smoke app is validated with `node scripts/validate-godot.mjs --app <slug>` so its isolated pipeline test cannot be blocked by an unrelated registered app whose committed `web/**` is intentionally stale while that app is waiting for the later export step. Targeted validation still checks the shared template and the complete source/Web contract for the named app.
+
 For pull requests, the workflow performs the same deterministic build and fails if the committed web output differs from the generated result. PR and main runs also install the normal repository dependencies, rebuild Enhanced apps, assemble dist-site and run validate:site so the generated Godot payload is checked inside the same production package Cloudflare will serve.
 
 Feature-branch push runs intentionally skip that full repository integration build and focus on source validation, Godot export and app-local output generation. This keeps the edit/export loop materially lighter while PR/main remains the production boundary.

@@ -4,6 +4,8 @@ import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 
 const root = process.cwd();
 const sourceOnly = process.argv.includes('--source-only');
+const appArgIndex = process.argv.indexOf('--app');
+const targetSlug = appArgIndex >= 0 ? process.argv[appArgIndex + 1] || '' : '';
 const errors = [];
 const fail = (message) => errors.push(message);
 
@@ -122,7 +124,9 @@ async function validateWeb(config) {
 
 await validateProject('apps/_godot-template', '__APP_STORAGE_NAMESPACE__', true);
 
-const configs = (await collectAppConfigs(root)).filter((config) => runtimeForConfig(config) === 'godot');
+const allConfigs = (await collectAppConfigs(root)).filter((config) => runtimeForConfig(config) === 'godot');
+const configs = targetSlug ? allConfigs.filter((config) => config.slug === targetSlug) : allConfigs;
+if (targetSlug && configs.length === 0) fail('Unknown registered Godot app slug: ' + targetSlug);
 let built = 0;
 for (const config of configs) {
   const directory = 'apps/' + config.slug;
@@ -137,6 +141,7 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
+const scopeLabel = targetSlug ? 'target app ' + targetSlug : configs.length + ' registered app(s)';
 console.log(sourceOnly
-  ? 'Godot source contract passed for ' + configs.length + ' registered app(s); generated Web freshness was intentionally deferred until export.'
-  : 'Godot Web runtime contract passed for ' + configs.length + ' registered app(s); ' + built + ' have committed Web exports.');
+  ? 'Godot source contract passed for ' + scopeLabel + '; generated Web freshness was intentionally deferred until export.'
+  : 'Godot Web runtime contract passed for ' + scopeLabel + '; ' + built + ' have committed Web exports.');
