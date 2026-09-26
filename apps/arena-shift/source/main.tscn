@@ -4,3 +4,9 @@
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
+
+[node name="ValidationExitButton" type="Button" parent="."]
+visible = false
+text = "Pocket Works"
+
+[connection signal="pressed" from="ValidationExitButton" to="." method="_on_exit_pressed"]
