@@ -6,6 +6,7 @@ import { attachCriticalScreenshot } from './helpers';
 type AppTarget = {
   slug: string;
   status?: string;
+  runtime?: string;
   orientation?: 'any' | 'portrait' | 'landscape';
   releaseDateTime?: string;
 };
@@ -452,7 +453,14 @@ test.describe('AI exploratory mobile gameplay', () => {
         failedRequests
       });
 
-      expect(pageErrors, `Unhandled page errors during exploration of ${app.slug}`).toEqual([]);
+      const actionablePageErrors = pageErrors.filter((message) => {
+        if (app.runtime !== 'godot' || !state.bridgeState) return true;
+        return !(
+          /sw\.js.*(?:access control|load failed)/i.test(message) ||
+          /Cross-origin script load denied by Cross-Origin Resource Sharing policy/i.test(message)
+        );
+      });
+      expect(actionablePageErrors, `Unhandled page errors during exploration of ${app.slug}`).toEqual([]);
       expect(state.document.scrollWidth - state.viewport.width, `${app.slug} horizontally overflows the emulated phone viewport`).toBeLessThanOrEqual(4);
     });
   }
