@@ -1088,7 +1088,7 @@ class PlayScene extends Phaser.Scene {
 
 export function createDeadAirGame(parent: string): DeadAirController {
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    type: Phaser.CANVAS,
     parent,
     width: 1280,
     height: 720,
