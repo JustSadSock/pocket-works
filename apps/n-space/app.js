@@ -91,7 +91,7 @@ function planeKeys(dimension) {
 function sanitizeState(raw) {
   const dimension = clamp(Math.round(Number(raw.dimension) || DEFAULTS.dimension), 1, 5);
   const shape = SHAPES.has(raw.shape) ? raw.shape : DEFAULTS.shape;
-  const target = clamp(Math.round(Number(raw.target) || DEFAULTS.target), 1, Math.min(3, dimension));
+  const target = clamp(Math.round(Number(raw.target) || DEFAULTS.target), 1, Math.min(4, dimension));
   const method = METHODS.has(raw.method) ? raw.method : DEFAULTS.method;
   const zoom = clamp(Number(raw.zoom) || 1, 0.55, 1.8);
   const angles = {};
@@ -286,7 +286,22 @@ function toScreen(point, target, width, height, mini = false) {
   let y = target > 1 ? point[1] || 0 : 0;
   let depth = 0;
 
-  if (target === 3) {
+  if (target === 4) {
+    let z = point[2] || 0;
+    const w = point[3] || 0;
+    if (state.method === 'perspective') {
+      const hyperCamera = 3.35;
+      const hyperFactor = clamp(hyperCamera / (hyperCamera - w), 0.28, 3.2);
+      x *= hyperFactor;
+      y *= hyperFactor;
+      z *= hyperFactor;
+    }
+    const camera = 4.2;
+    const factor = clamp(camera / (camera - z), 0.42, 2.7);
+    x *= factor;
+    y *= factor;
+    depth = z;
+  } else if (target === 3) {
     const z = point[2] || 0;
     const camera = 4.2;
     const factor = clamp(camera / (camera - z), 0.42, 2.7);
@@ -423,7 +438,7 @@ function drawGraph(ctx, scene, width, height, target, mini) {
   for (const edge of edges) {
     const a = scene.screen[edge.a];
     const b = scene.screen[edge.b];
-    const depthAlpha = target === 3 ? clamp(0.30 + (edge.depth + 1.5) * 0.16, 0.20, 0.80) : 0.62;
+    const depthAlpha = target >= 3 ? clamp(0.30 + (edge.depth + 1.5) * 0.16, 0.20, 0.80) : 0.62;
     ctx.strokeStyle = mixAlpha(AXIS_COLORS[edge.axis % AXIS_COLORS.length], mini ? depthAlpha * 0.72 : depthAlpha);
     ctx.lineWidth = mini ? 1 : (edge.axis >= target ? 1.65 : 1.25);
     ctx.beginPath();
@@ -633,7 +648,7 @@ function setDimension(value) {
   const dimension = clamp(Math.round(value), 1, 5);
   if (dimension === state.dimension) return;
   state.dimension = dimension;
-  state.target = Math.min(state.target, Math.min(3, dimension));
+  state.target = Math.min(state.target, Math.min(4, dimension));
   const keys = planeKeys(dimension);
   if (!keys.includes(state.plane)) {
     state.plane = keys.find((key) => parsePlane(key)[1] === dimension - 1) || keys[0] || '';
