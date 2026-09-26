@@ -175,7 +175,7 @@ This keeps Cloudflare deployment fast and deterministic.
 
 Godot's built-in PWA export is disabled. scripts/build-godot.mjs generates the Pocket Works-owned manifest and Service Worker instead.
 
-In production, the release guard owns Service Worker registration so the worker script URL carries the release/fingerprint identity exactly once. The Godot HTML shell keeps a fallback registration only for direct/generated previews where the production release guard is absent. Do not register both forms for the same scope: WebKit can reject the competing script update as an AbortError/CORS failure.
+In production, the release guard is the single owner of Service Worker registration and always uses the stable `./sw.js` script URL with `updateViaCache: 'none'`. Release version and fingerprint identity live in Pocket Works release metadata (`release.json`, stamped HTML metadata and the worker's own update info), not in Service Worker URL query parameters. The Godot HTML shell keeps a fallback registration only for direct/generated previews where the production release guard is absent. Do not create competing registrations for the same scope: WebKit can reject script-URL churn as an AbortError/access-control failure.
 
 The generated worker:
 
