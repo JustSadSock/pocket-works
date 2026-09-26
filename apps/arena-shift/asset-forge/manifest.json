@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "sentinel",
+      "script": "sentinel.py",
+      "output": "assets/sentinel.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    }
+  ]
+}
