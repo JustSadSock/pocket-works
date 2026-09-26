@@ -8,10 +8,11 @@ async function read(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
-const [packageSource, wranglerSource, workflow, prepareSite, validateSite] = await Promise.all([
+const [packageSource, wranglerSource, workflow, godotWorkflow, prepareSite, validateSite] = await Promise.all([
   read('package.json'),
   read('wrangler.jsonc'),
   read('.github/workflows/validate-production.yml'),
+  read('.github/workflows/godot-web-runtime.yml'),
   read('scripts/prepare-site.mjs'),
   read('scripts/validate-site.mjs')
 ]);
@@ -70,6 +71,11 @@ if (workflow.includes('git add apps.json')) {
 
 if (workflow.includes('npm run deploy:site') || workflow.includes('npm run build:site')) {
   errors.push('GitHub production validation must not substitute the production deploy path for ci:full');
+}
+
+const godotBotSkip = "github.actor != 'github-actions[bot]' || !contains(github.event.head_commit.message, '[godot-export]')";
+if (!godotWorkflow.includes(godotBotSkip)) {
+  errors.push('Godot Web Runtime may skip [godot-export] pushes only when the actor is github-actions[bot]; squash/main commits must still run full validation');
 }
 
 if (errors.length > 0) {
