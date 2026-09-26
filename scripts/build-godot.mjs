@@ -170,7 +170,7 @@ async function buildApp(config) {
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
 
-  const target = path.join('web', 'index.html');
+  const target = path.join(output, 'index.html');
   const result = spawnSync(GODOT_BIN, ['--headless', '--path', directory, '--export-release', 'Web', target], {
     cwd: root,
     stdio: 'inherit',
