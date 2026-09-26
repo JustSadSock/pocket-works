@@ -563,7 +563,7 @@ function updateUi() {
     button.setAttribute('aria-pressed', String(Number(button.dataset.dimension) === state.dimension));
   }
 
-  if (state.target > state.dimension) state.target = Math.min(3, state.dimension);
+  if (state.target > state.dimension) state.target = Math.min(4, state.dimension);
   for (const button of ui.targetButtons) {
     const target = Number(button.dataset.target);
     button.disabled = target > state.dimension;
