@@ -6,7 +6,7 @@ Landscape-first Enhanced Pocket Works action game built with Phaser 3.
 
 - Campaign of 13 sequential broadcasts.
 - Each stage combines traversal/combat encounters with a multi-phase boss.
-- Automatic target fire keeps touch input focused on movement, jumping, dash/parry timing and specials.
+- Held FIRE gives the player direct attack timing and facing control, with only a narrow forward aim assist for touch play.
 - Local persistence stores unlocked channels, completion, best grades, scores, clear times, deaths, sound preference and post-campaign progress.
 - Completed stages can be replayed from the archive; finishing the campaign unlocks an unstable Encore run.
 
@@ -17,15 +17,16 @@ The application intentionally keeps future stage details out of launcher/menu co
 ### Touch
 
 - Left pad: horizontal movement.
-- JUMP: jump; timing against pink attacks performs a parry.
+- JUMP: jump; press again in the air near a pink attack to parry it.
+- FIRE: hold to shoot in the facing direction; a narrow forward cone gently corrects toward valid targets.
 - DASH: short invulnerable burst.
 - SPECIAL: spends one signal pip on an area attack / projectile clear.
-- Shooting is automatic against a nearby hostile target.
 
 ### Keyboard
 
 - A/D or arrows: move.
-- Space/up: jump.
+- Space/up: jump / aerial parry.
+- Z: fire.
 - Shift: dash.
 - E: special.
 
