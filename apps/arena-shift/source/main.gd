@@ -203,13 +203,17 @@ func _build_world() -> void:
 	world_root.add_child(player_node)
 	asset_ready = ResourceLoader.exists("res://assets/sentinel.glb")
 	if asset_ready:
-		var packed = load("res://assets/sentinel.glb")
-		if packed is PackedScene:
-			var model := packed.instantiate()
+		var packed := load("res://assets/sentinel.glb") as PackedScene
+		if packed != null:
+			var model: Node = packed.instantiate()
 			model.name = "BlenderSentinel"
-			model.scale = Vector3.ONE * 0.78
+			if model is Node3D:
+				(model as Node3D).scale = Vector3.ONE * 0.78
 			player_node.add_child(model)
 			animation_player = _find_animation_player(model)
+		else:
+			asset_ready = false
+			_build_fallback_player()
 	else:
 		_build_fallback_player()
 
