@@ -1,0 +1,27 @@
+; Arena Shift — Pocket Works Godot Web application.
+config_version=5
+
+[application]
+config/name="Arena Shift"
+run/main_scene="res://source/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.847, 0.816, 0.741, 1)
+
+[autoload]
+PocketWorks="*res://source/pocket_works.gd"
+
+[display]
+window/size/viewport_width=2532
+window/size/viewport_height=1170
+window/size/window_width_override=844
+window/size/window_height_override=390
+window/stretch/mode="canvas_items"
+window/handheld/orientation=3
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+rendering/scaling_3d/scale=0.65
+rendering/scaling_3d/mode=0
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.84, 0.82, 0.76, 1)

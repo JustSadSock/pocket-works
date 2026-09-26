@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "runtime": "godot",
+  "engine": "godot",
+  "engineVersion": "4.7.2",
+  "slug": "arena-shift",
+  "version": "1.0.0",
+  "sourceFingerprint": "ec5db49824eece7f12e7a4d83e15108c086477c360cfae597620045b1e2a4f93"
+}

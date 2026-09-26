@@ -1,0 +1,25 @@
+{
+  "id": "/apps/arena-shift/",
+  "name": "Arena Shift",
+  "short_name": "Arena Shift",
+  "description": "One arena, one simulation, two Pocket Works generations. Switch live between Classic and Forge rendering while the same fight continues.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "landscape",
+  "background_color": "#d8d0bd",
+  "theme_color": "#2f332d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
