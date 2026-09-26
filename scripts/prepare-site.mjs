@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { collectAppConfigs } from './app-config.mjs';
+import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 import { buildRegistry } from './build-registry.mjs';
 
 const root=process.cwd();
@@ -12,7 +12,7 @@ const rootFiles=[
   'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
-const appDevEntries=new Set(['package.json','vite.config.ts','tsconfig.json','README.md','source','public','.dist','server']);
+const appDevEntries=new Set(['package.json','vite.config.ts','tsconfig.json','README.md','source','public','.dist','server','web','.godot','project.godot','export_presets.cfg']);
 
 async function copyDirectoryFiltered(source,destination,shouldSkip){
   await mkdir(destination,{recursive:true});
@@ -122,6 +122,7 @@ async function stampRelease(destination,config){
   await writeFile(indexPath,stampHtml(await readFile(indexPath,'utf8'),config),'utf8');
 
   for(const relative of await walkFiles(destination)){
+    if(runtimeForConfig(config)==='godot')break;
     if(!relative.endsWith('.js'))continue;
     const file=path.join(destination,relative);
     await writeFile(file,stampJavaScript(await readFile(file,'utf8'),config,relative),'utf8');
@@ -158,7 +159,15 @@ const fingerprints=new Map();
 for(const config of configs){
   const source=path.join(root,'apps',config.slug);
   const destination=path.join(output,'apps',config.slug);
-  await copyDirectoryFiltered(source,destination,name=>appDevEntries.has(name)||name.endsWith('.map'));
+  if(runtimeForConfig(config)==='godot'){
+    const generated=path.join(source,'web');
+    try{await access(path.join(generated,'index.html'));}
+    catch{throw new Error(`Godot app ${config.slug} has no committed web/index.html; run the Godot Web Runtime workflow before deployment`);}
+    await copyDirectoryFiltered(generated,destination,name=>name.endsWith('.map'));
+    await cp(path.join(source,'app.config.json'),path.join(destination,'app.config.json'));
+  }else{
+    await copyDirectoryFiltered(source,destination,name=>appDevEntries.has(name)||name.endsWith('.map'));
+  }
   fingerprints.set(config.slug,await stampRelease(destination,config));
 }
 

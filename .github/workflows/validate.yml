@@ -72,6 +72,9 @@ jobs:
       - name: Validate Enhanced runtime
         run: npm run validate:enhanced
 
+      - name: Validate Godot source contract
+        run: npm run validate:godot
+
       - name: Validate browser quality contract
         run: npm run validate:quality
 
@@ -80,6 +83,9 @@ jobs:
 
       - name: Smoke-test Quick presets
         run: npm run test:forge:quick
+
+      - name: Smoke-test Godot source preset
+        run: npm run test:forge:godot
 
       - name: Assemble production site and generated registry
         run: npm run prepare:site

@@ -37,7 +37,7 @@ catch (error) { fail(`application manifests could not build the registry: ${erro
 
 const quickTargets = [
   { slug: '_template', registered: false },
-  ...registry.filter((app) => app.runtime !== 'enhanced').map((app) => ({ slug: app.slug, registered: true }))
+  ...registry.filter((app) => app.runtime === 'quick').map((app) => ({ slug: app.slug, registered: true }))
 ];
 
 for (const target of quickTargets) {
@@ -68,10 +68,25 @@ for (const target of enhancedTargets) {
   }
 }
 
+const godotTargets = [
+  { slug: '_godot-template', registered: false },
+  ...registry.filter((app) => app.runtime === 'godot').map((app) => ({ slug: app.slug, registered: true }))
+];
+
+for (const target of godotTargets) {
+  const directory = `apps/${target.slug}`;
+  const project = await read(`${directory}/project.godot`);
+  const bridge = await read(`${directory}/source/pocket_works.gd`);
+  const main = await read(`${directory}/source/main.gd`);
+  requireIncludes(project, ['renderer/rendering_method="gl_compatibility"', 'PocketWorks="*res://source/pocket_works.gd"'], `${directory}/project.godot`);
+  requireIncludes(bridge, ['JavaScriptBridge', 'exit_to_launcher', 'publish_test_state', 'storage_set', 'storage_get'], `${directory}/source/pocket_works.gd`);
+  requireIncludes(main, ['PocketWorks.exit_to_launcher', 'PocketWorks.publish_test_state'], `${directory}/source/main.gd`);
+}
+
 if (errors.length > 0) {
   console.error(`Mobile runtime validation failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
 
-console.log(`Mobile runtime validation passed for Quick and Enhanced templates plus ${registry.length} self-registered app${registry.length === 1 ? '' : 's'}.`);
+console.log(`Mobile runtime validation passed for Quick, Enhanced and Godot templates plus ${registry.length} self-registered app${registry.length === 1 ? '' : 's'}.`);

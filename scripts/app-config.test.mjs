@@ -60,6 +60,15 @@ assert.deepEqual(tolerant.changelog, ['Initial release']);
 assert.equal(tolerant.order, 1);
 assert.deepEqual(validateAppConfig(tolerant, 'demo-app'), []);
 
+const godot = normalizeAppConfig({
+  ...base,
+  runtime: 'godot-web',
+  preset: 'godot-web'
+}, 'demo-app');
+assert.equal(godot.runtime, 'godot');
+assert.equal(godot.preset, 'godot-web');
+assert.deepEqual(validateAppConfig(godot, 'demo-app'), []);
+
 const timezoneBoundary = normalizeAppConfig({
   ...base,
   releaseDate: '2026-09-08',

@@ -66,13 +66,14 @@ requireFragments(enhancedTemplateMain, ['shared/workshop-mode', 'createWorkshopM
 const configs = await collectAppConfigs(root);
 for (const config of configs) {
   const directory = `apps/${config.slug}`;
-  if (runtimeForConfig(config) === 'enhanced') {
+  const runtime = runtimeForConfig(config);
+  if (runtime === 'enhanced') {
     const index = await read(`${directory}/source/index.html`);
     const app = await read(`${directory}/source/main.ts`);
     requireFragments(index, ['data-workshop-trigger', 'data-app-shell'], `${directory}/source/index.html`);
     requireFragments(app, ['shared/workshop-mode', 'createWorkshopMode', `cachePrefix: '${config.slug}-'`], `${directory}/source/main.ts`);
     if (!hasStorageNamespace(app, config.storageNamespace)) fail(`${directory}/source/main.ts must include storage namespace ${config.storageNamespace}`);
-  } else {
+  } else if (runtime === 'quick') {
     const index = await read(`${directory}/index.html`);
     const app = await read(`${directory}/app.js`);
     const workshopBootstrap = await readOptional(`${directory}/workshop.js`);
@@ -84,6 +85,10 @@ for (const config of configs) {
     if (!hasStorageNamespace(integrationSource, config.storageNamespace)) fail(`${directory} Workshop integration must include storage namespace ${config.storageNamespace}`);
     if (app.includes("navigator.serviceWorker.register('./sw.js')")) fail(`${directory}/app.js must leave Service Worker registration to update-manager`);
     for (const offlineFile of requiredOfflineFiles) if (!worker.includes(offlineFile)) fail(`${directory}/sw.js must cache ${offlineFile}`);
+  } else if (runtime === 'godot') {
+    const bridge = await read(`${directory}/source/pocket_works.gd`);
+    requireFragments(bridge, ['JavaScriptBridge', 'exit_to_launcher', 'publish_test_state', 'storage_set', 'storage_get', 'storage_remove'], `${directory}/source/pocket_works.gd`);
+    if (!bridge.includes(config.storageNamespace)) fail(`${directory}/source/pocket_works.gd must include storage namespace ${config.storageNamespace}`);
   }
 }
 
@@ -93,4 +98,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Shared capabilities and Workshop Mode passed for Quick and Enhanced templates plus ${configs.length} published app${configs.length === 1 ? '' : 's'}.`);
+console.log(`Shared capabilities and Workshop Mode passed for Quick and Enhanced templates, with the Godot bridge validated for ${configs.length} published app${configs.length === 1 ? '' : 's'}.`);

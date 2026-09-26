@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/komok",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node source/core.test.mjs && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs komok",
+    "test": "node source/core.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1"
+  }
+}

@@ -21,7 +21,7 @@ Every squash merge into `main` triggers a Cloudflare production build. The resul
 
 Pocket Works is not a static link index. The root PWA provides search, filters, favorites, recents, procedural previews, release details, offline readiness, a desktop focus bay, mobile detail sheet and local registry fallback.
 
-## Two application runtimes
+## Three application runtimes
 
 ### Quick PWA
 
@@ -56,10 +56,22 @@ Enhanced presets:
 
 Enhanced source lives under `source/`. Vite builds deployable `index.html`, `app.js`, `styles.css`, `manifest.webmanifest` and `sw.js` into the app directory. Complete commands and architecture are documented in [`docs/ENHANCED-APPS.md`](./docs/ENHANCED-APPS.md).
 
+### Godot Web
+
+Godot applications are text-authored engine projects for games that materially benefit from a full scene graph, skeletal animation, 3D physics, navigation, particles or complex environment composition. Repository agents write the project files directly; the user does not need to open the Godot editor.
+
+```bash
+npm run new:app -- colossus-next --runtime=godot --preset=godot-web --orientation=landscape
+```
+
+GitHub Actions runs pinned Godot 4.7.2 headlessly, exports HTML + WebAssembly + PCK into `apps/<slug>/web/`, validates the result and commits the generated export back to the feature branch. Cloudflare never installs Godot; production only packages the committed static Web export.
+
+The iOS/browser target uses the Compatibility renderer with threads and extensions disabled. Pocket Works owns PWA metadata, offline caching, managed updates and release fingerprints. Full architecture: [`docs/GODOT-WEB-RUNTIME.md`](./docs/GODOT-WEB-RUNTIME.md).
+
 ## Useful Forge options
 
 ```text
---runtime=quick|enhanced
+--runtime=quick|enhanced|godot
 --description="One sentence purpose"
 --release-note="Initial user-visible release note"
 --accent=#ff4d1f
@@ -86,6 +98,8 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 │   ├── presets.mjs
 │   ├── enhanced-presets.mjs
 │   ├── build-enhanced.mjs
+│   ├── build-godot.mjs
+│   ├── validate-godot.mjs
 │   ├── test-enhanced.mjs
 │   ├── serve-site.mjs
 │   └── validate*.mjs
@@ -103,6 +117,7 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
 │   ├── SHARED-CAPABILITIES.md
 │   ├── POCKET-LAN.md
 │   ├── ENHANCED-APPS.md
+│   ├── GODOT-WEB-RUNTIME.md
 │   ├── QUALITY-GATES.md
 │   ├── ENVIRONMENT-ROADMAP.md
 │   └── IMPLEMENTATION-PLAN.md
@@ -110,6 +125,7 @@ Pocket Forge creates the directory, starter mechanic, manifest, icon, Service Wo
     ├── AGENTS.md
     ├── _template/
     ├── _enhanced-template/
+    ├── _godot-template/
     └── <app-slug>/
 ```
 
@@ -138,7 +154,7 @@ npm run prepare:site
 
 `registry:check` validates all manifests without mutating the repository. `prepare:site` generates `dist-site/apps.json` together with the deployable production directory.
 
-The generated registry includes each app's runtime (`quick` or `enhanced`) alongside version, preset, release notes and storage namespace.
+The generated registry includes each app's runtime (`quick`, `enhanced` or `godot`) alongside version, preset, release notes and storage namespace.
 
 ## Managed updates
 
@@ -160,7 +176,7 @@ Run the structural, generator and unit-test suite used by GitHub Actions:
 npm run health
 ```
 
-This builds Enhanced apps, validates both runtime contracts, checks PWA scope and metadata, runs TypeScript and Vitest, and smoke-tests all five Quick plus four Enhanced Forge presets.
+This builds Enhanced apps, validates all three runtime contracts, checks PWA scope and metadata, runs TypeScript and Vitest, and smoke-tests the Quick and Enhanced Forge presets. Godot source validation is local; the pinned headless export smoke test runs in GitHub Actions.
 
 For production packaging only:
 
@@ -196,7 +212,7 @@ The browser suite covers portrait and landscape layouts, launcher user flows, Sc
 ## Finish an app
 
 1. Read `AGENTS.md` and `apps/AGENTS.md`.
-2. Choose Quick or Enhanced based on product complexity rather than prestige.
+2. Choose Quick, Enhanced or Godot based on product needs rather than prestige; use Godot only when its scene/animation/physics toolchain materially helps.
 3. Replace the starter mechanic with the actual product loop.
 4. Preserve app identity, cache ownership and storage namespace.
 5. Replace the generated icon with a deliberate application symbol.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BALANCE_LIMIT, createProfile, createRun, createBattle, playCard, sacrificeUnit, endTurn,
+  SEAL_LIMIT, createProfile, createRun, createBattle, playCard, sacrificeUnit, endTurn,
   resolveNode, chooseCardReward, chooseRelic, chooseItem, hearthUpgrade, altarSelect,
   afterBattleVictory, cardById, cloneCard, rollCardChoices, rollRelicChoices, useItem, hydrateRun
 } from '../game-core.js';
@@ -14,13 +14,16 @@ test('run is deterministic and contains three rule-changing bosses',()=>{
   assert.equal(a.items.length,2);
 });
 
-test('direct damage moves the physical balance and wins at six',()=>{
+test('direct damage breaks independent enemy seals and wins at six',()=>{
   const run=createRun(7,createProfile()),battle=createBattle(run);run.battle=battle;
-  battle.balance=BALANCE_LIMIT-2;battle.enemy.fill(null);battle.intent=[];
+  battle.seals.player=SEAL_LIMIT-2;battle.seals.enemy=4;battle.enemy.fill(null);battle.intent=[];
   battle.hand=[cloneCard('wolf')];battle.ember=9;
   const wolf=battle.hand[0];assert.equal(playCard(run,battle,wolf.instanceId,0).ok,true);
   const r=endTurn(run,battle);
-  assert.equal(r.ended,true);assert.equal(r.winner,'player');assert.ok(battle.balance>=BALANCE_LIMIT);
+  assert.equal(r.ended,true);assert.equal(r.winner,'player');assert.equal(battle.seals.player,SEAL_LIMIT);assert.equal(battle.seals.enemy,4);
+  assert.ok(r.events.some(e=>e.type==='attack'&&e.direct));
+  assert.ok(r.events.some(e=>e.type==='seal'&&e.side==='player'&&e.amount===2));
+  assert.equal(r.events.at(-1).type,'battle-end');
 });
 
 test('sacrifice passes heritage and black thread can pass it twice',()=>{
@@ -38,8 +41,29 @@ test('warden locks a lane and prior changes phase instead of instantly losing',(
   warden.round=2;warden.intent=[];warden.enemy.fill(null);warden.player.fill(null);endTurn(run,warden);
   assert.equal(warden.round,3);assert.notEqual(warden.lockedLane,null);
 
-  const prior=createBattle(run,'prior');prior.balance=BALANCE_LIMIT;
-  const p=endTurn(run,prior);assert.equal(p.phase,true);assert.equal(prior.phase,2);assert.equal(prior.ended,false);assert.equal(prior.balance,0);
+  const prior=createBattle(run,'prior');prior.seals.player=SEAL_LIMIT;
+  const p=endTurn(run,prior);assert.equal(p.phase,true);assert.equal(prior.phase,2);assert.equal(prior.ended,false);assert.deepEqual(prior.seals,{player:0,enemy:0});
+  assert.ok(p.events.some(e=>e.type==='phase'));
+});
+
+test('combat timeline reports attack damage death and next round in order',()=>{
+  const run=createRun(91,createProfile()),battle=createBattle(run);run.battle=battle;battle.intent=[];battle.enemy.fill(null);
+  battle.hand=[cloneCard('wolf')];battle.ember=9;const wolf=battle.hand[0];playCard(run,battle,wolf.instanceId,0);
+  battle.enemy[0]={...cloneCard('hare'),side:'enemy',instanceId:'timeline-target',atk:0,hp:1,maxHp:1,sigils:[]};
+  const r=endTurn(run,battle),types=r.events.map(e=>e.type);
+  const attack=types.indexOf('attack'),damage=types.indexOf('damage'),death=types.indexOf('death'),round=types.lastIndexOf('round');
+  assert.ok(attack>=0&&damage>attack&&death>damage&&round>death);
+  assert.equal(r.events[damage].amount,2);
+});
+
+test('thorn damage is emitted against the attacker before its death if lethal',()=>{
+  const run=createRun(92,createProfile()),battle=createBattle(run);run.battle=battle;battle.intent=[];battle.enemy.fill(null);
+  battle.hand=[cloneCard('hare',{atk:1,hp:1,sigils:[]})];battle.ember=9;playCard(run,battle,battle.hand[0].instanceId,0);
+  battle.enemy[0]={...cloneCard('boar'),side:'enemy',instanceId:'thorn-target',atk:0,hp:4,maxHp:4,sigils:['thorn']};
+  const r=endTurn(run,battle);
+  const thornIndex=r.events.findIndex(e=>e.type==='damage'&&e.source==='thorn'&&e.side==='player');
+  const deathIndex=r.events.findIndex(e=>e.type==='death'&&e.side==='player');
+  assert.ok(thornIndex>=0&&deathIndex>thornIndex);
 });
 
 test('cabinet gives a consumable item and using it removes it',()=>{
@@ -56,7 +80,7 @@ test('second hearth scar mutates a creature with a new sigil',()=>{
   const run=createRun(18,createProfile()),card=run.deck.find(c=>c.type==='creature'),baseSigils=card.sigils.length;
   run.pending={type:'hearth'};assert.equal(hearthUpgrade(run,card.instanceId,'fang').ok,true);
   run.pending={type:'hearth'};assert.equal(hearthUpgrade(run,card.instanceId,'hide').ok,true);
-  assert.equal(card.upgrades,2);assert.equal(card.mutationLevel,1);assert.ok(card.sigils.length>baseSigils);assert.match(card.name,/Шрамированный/);
+  assert.equal(card.upgrades,2);assert.equal(card.mutationLevel,1);assert.ok(card.sigils.length>baseSigils);assert.match(card.name,/Мутировавший/);
 });
 
 test('altar permanently transfers a sigil and removes donor',()=>{
@@ -84,5 +108,10 @@ test('ordinary card reward advances one depth and choices are unique',()=>{
 
 test('v1 saves migrate into v2 without keeping stale battle state',()=>{
   const old=createRun(88,createProfile());old.version=1;delete old.items;old.battle={stale:true};old.pending={type:'battle'};
-  const migrated=hydrateRun(JSON.stringify(old));assert.equal(migrated.version,2);assert.ok(Array.isArray(migrated.items));assert.equal(migrated.battle,null);assert.equal(migrated.pending,null);
+  const migrated=hydrateRun(JSON.stringify(old));assert.equal(migrated.version,2);assert.ok(Array.isArray(migrated.items));assert.equal(migrated.battle,null);assert.equal(migrated.pending,null);assert.deepEqual(migrated.secrets,{});
+});
+
+test('active v2 balance saves migrate to independent seals',()=>{
+  const run=createRun(93,createProfile());run.battle=createBattle(run);delete run.battle.seals;run.battle.balance=-3;run.battle.balanceLimit=6;
+  const migrated=hydrateRun(JSON.stringify(run));assert.deepEqual(migrated.battle.seals,{player:0,enemy:3});assert.equal('balance' in migrated.battle,false);
 });
