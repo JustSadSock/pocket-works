@@ -119,6 +119,34 @@ jobs:
           find "$smoke" -maxdepth 1 -type f -name '*.pck' -print -quit | grep -q .
           rm -rf apps/_godot-template/.godot
 
+      - name: Smoke-test full Pocket Forge to Web pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          slug="godot-ci-smoke"
+          rm -rf "apps/$slug"
+          trap 'rm -rf "apps/$slug"' EXIT
+
+          node scripts/new-app.mjs "$slug" \
+            --runtime=godot \
+            --preset=godot-web \
+            --name="Godot CI Smoke" \
+            --orientation=landscape \
+            --skip-health \
+            --skip-build
+
+          node scripts/build-godot.mjs --app "$slug"
+          node scripts/validate-godot.mjs
+
+          test -s "apps/$slug/web/index.html"
+          test -s "apps/$slug/web/manifest.webmanifest"
+          test -s "apps/$slug/web/sw.js"
+          test -s "apps/$slug/web/pocketworks-build.json"
+          find "apps/$slug/web" -maxdepth 1 -type f -name '*.wasm' -print -quit | grep -q .
+          find "apps/$slug/web" -maxdepth 1 -type f -name '*.pck' -print -quit | grep -q .
+          grep -q 'pocketworks-godot-shell' "apps/$slug/web/index.html"
+          grep -q "serviceWorker.register('./sw.js')" "apps/$slug/web/index.html"
+
       - name: Export affected Godot applications
         shell: bash
         run: |
