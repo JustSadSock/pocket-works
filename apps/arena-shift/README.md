@@ -28,3 +28,7 @@ Generated web output is not hand-edited.
 ## Web performance
 
 The Web build starts new installs in Classic presentation so the architectural progression is experienced in order and the initial frame stays light on mobile browsers. Forge rendering uses a reduced internal 3D scale and a 30 FPS ceiling while retaining the authored Blender character, lights, particles, camera motion and generated audio. Renderer choice is persisted after the player switches modes.
+
+## 1.0.1
+
+Maintenance release for the Godot Web transport. Production uses the Pocket Works Safari-safe chunked WASM path and a fresh app cache namespace so iOS devices replace the 1.0.0 loader instead of reusing its cached startup payload. Gameplay and saved state are unchanged.
