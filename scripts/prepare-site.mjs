@@ -109,7 +109,7 @@ async function packOversizedGodotWasm(directory,slug,headerRules){
     const source=await readFile(file);
     const packed=await brotliCompressAsync(source,{
       params:{
-        [zlibConstants.BROTLI_PARAM_QUALITY]:11,
+        [zlibConstants.BROTLI_PARAM_QUALITY]:7,
         [zlibConstants.BROTLI_PARAM_SIZE_HINT]:source.length
       }
     });
