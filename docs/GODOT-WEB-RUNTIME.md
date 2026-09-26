@@ -143,7 +143,7 @@ On a normal feature-branch push, changed Godot applications are exported and app
 
 That marker prevents an infinite workflow loop.
 
-Before downloading or running Godot, the workflow runs the validator in source-only mode. This checks project structure, Web export settings, the PocketWorks bridge and required app source without requiring the previously committed `web/**` output to already match a just-bumped app version. After the headless export completes, the normal full validator runs and enforces generated Web metadata/freshness.
+Before downloading or running Godot, the workflow runs the validator in source-only mode. This checks project structure, Web export settings, the PocketWorks bridge and required app source without requiring the previously committed `web/**` output to already match a just-bumped app version. The temporary `godot-ci-smoke` export is validated with `--app godot-ci-smoke` so an intentionally stale committed export from the real app being rebuilt cannot block the smoke fixture. After the affected app export completes, the normal full validator runs and enforces generated Web metadata/freshness.
 
 For pull requests, the workflow performs the same deterministic build and fails if the committed web output differs from the generated result. PR and main runs also install the normal repository dependencies, rebuild Enhanced apps, assemble dist-site and run validate:site so the generated Godot payload is checked inside the same production package Cloudflare will serve.
 

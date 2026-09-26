@@ -3,7 +3,15 @@ import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 
 const root = process.cwd();
-const sourceOnly = process.argv.includes('--source-only');
+const argv = process.argv.slice(2);
+const sourceOnly = argv.includes('--source-only');
+function optionValue(name) {
+  const inline = argv.find((argument) => argument.startsWith(name + '='));
+  if (inline) return inline.slice(name.length + 1);
+  const index = argv.indexOf(name);
+  return index >= 0 ? argv[index + 1] : null;
+}
+const requestedApp = optionValue('--app');
 const errors = [];
 const fail = (message) => errors.push(message);
 
@@ -122,7 +130,9 @@ async function validateWeb(config) {
 
 await validateProject('apps/_godot-template', '__APP_STORAGE_NAMESPACE__', true);
 
-const configs = (await collectAppConfigs(root)).filter((config) => runtimeForConfig(config) === 'godot');
+const allConfigs = (await collectAppConfigs(root)).filter((config) => runtimeForConfig(config) === 'godot');
+const configs = requestedApp ? allConfigs.filter((config) => config.slug === requestedApp) : allConfigs;
+if (requestedApp && configs.length === 0) fail('Requested Godot app is not registered: ' + requestedApp);
 let built = 0;
 for (const config of configs) {
   const directory = 'apps/' + config.slug;

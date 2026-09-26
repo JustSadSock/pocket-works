@@ -145,7 +145,7 @@ jobs:
             --skip-build
 
           node scripts/build-godot.mjs --app "$slug"
-          node scripts/validate-godot.mjs
+          node scripts/validate-godot.mjs --app "$slug"
 
           test -s "apps/$slug/web/index.html"
           test -s "apps/$slug/web/manifest.webmanifest"
