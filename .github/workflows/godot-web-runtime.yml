@@ -164,6 +164,14 @@ jobs:
       - name: Validate Godot runtime contract
         run: node scripts/validate-godot.mjs
 
+      - name: Assemble and validate Pocket Works production output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run prepare:site
+          npm run validate:site
+          rm -rf dist-site
+
       - name: Require committed exports in pull requests and main
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main')
         shell: bash
