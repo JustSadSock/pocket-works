@@ -5,8 +5,9 @@ export const APP_CONFIG_FILE = 'app.config.json';
 export const APP_CONFIG_SCHEMA_VERSION = 1;
 export const QUICK_APP_PRESETS = ['vanilla', 'interactive', 'canvas', 'game-2d', 'audio'];
 export const ENHANCED_APP_PRESETS = ['vite', 'pixi', 'phaser', 'tone'];
-export const APP_PRESETS = [...QUICK_APP_PRESETS, ...ENHANCED_APP_PRESETS];
-export const APP_RUNTIMES = ['quick', 'enhanced'];
+export const GODOT_APP_PRESETS = ['godot-web'];
+export const APP_PRESETS = [...QUICK_APP_PRESETS, ...ENHANCED_APP_PRESETS, ...GODOT_APP_PRESETS];
+export const APP_RUNTIMES = ['quick', 'enhanced', 'godot'];
 export const APP_STATUSES = ['active', 'experimental', 'archived'];
 export const APP_ORIENTATIONS = ['any', 'portrait', 'landscape'];
 
@@ -23,7 +24,8 @@ const STATUS_ALIASES = new Map([
 ]);
 const RUNTIME_ALIASES = new Map([
   ['quick', 'quick'], ['standard', 'quick'], ['basic', 'quick'], ['static', 'quick'],
-  ['enhanced', 'enhanced'], ['advanced', 'enhanced'], ['vite', 'enhanced']
+  ['enhanced', 'enhanced'], ['advanced', 'enhanced'], ['vite', 'enhanced'],
+  ['godot', 'godot'], ['godot-web', 'godot'], ['wasm', 'godot']
 ]);
 const ORIENTATION_ALIASES = new Map([
   ['any', 'any'], ['auto', 'any'], ['both', 'any'], ['free', 'any'], ['unspecified', 'any'],
@@ -130,7 +132,7 @@ export function validateAppConfig(source, directoryName = source?.slug) {
   if (!isoDateTimePattern.test(config.releaseDateTime || '') || Number.isNaN(Date.parse(config.releaseDateTime || ''))) errors.push('releaseDateTime must resolve to an ISO 8601 timestamp');
   if (!APP_STATUSES.includes(config.status)) errors.push(`status must resolve to one of: ${APP_STATUSES.join(', ')}`);
 
-  const allowedPresets = runtime === 'enhanced' ? ENHANCED_APP_PRESETS : QUICK_APP_PRESETS;
+  const allowedPresets = runtime === 'enhanced' ? ENHANCED_APP_PRESETS : runtime === 'godot' ? GODOT_APP_PRESETS : QUICK_APP_PRESETS;
   if (!allowedPresets.includes(config.preset)) errors.push(`preset ${config.preset} is not valid for the ${runtime} runtime; expected one of: ${allowedPresets.join(', ')}`);
   if (!APP_ORIENTATIONS.includes(config.orientation)) errors.push(`orientation must resolve to one of: ${APP_ORIENTATIONS.join(', ')}`);
   for (const key of ['accent', 'backgroundColor', 'themeColor']) if (!colorPattern.test(config[key] || '')) errors.push(`${key} must resolve to a six-digit hex color`);
