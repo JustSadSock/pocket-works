@@ -243,3 +243,132 @@ button:focus-visible,a:focus-visible{outline:2px solid #c58d53;outline-offset:2p
 .wall-seal.available{opacity:.22}.wall-seal.available:active{opacity:.7;transform:scale(.94)}
 .wall-seal.used{opacity:.04;pointer-events:none}
 .wall-seal.revealed{opacity:.72;filter:drop-shadow(0 0 8px rgba(181,94,53,.45))}
+
+/* 2.2 combat readability, safe table layout, seal victory system */
+.table{left:-1%;right:-1%;top:35%;bottom:-7%;overflow:visible}
+.board{left:19%;right:19%;top:25%;height:37%}
+.intent-rack{left:22%;right:22%;top:15%;height:49px}
+.brazier{right:4%;top:10%}.bones{right:4%;top:31%}
+.item-rack{left:4%;top:33%}
+.turn-bell{right:4%;top:56%}
+.deck-book{left:4%;top:53%}
+.heritage-token{left:5%;top:60%}
+.sacrifice-knife{left:3%;top:69%}
+.hand{left:15%;right:15%;top:64%;height:27%}
+
+.seal-plate{
+  position:absolute;z-index:19;left:50%;top:1.5%;width:min(49%,190px);height:84px;
+  transform:translateX(-50%) rotateX(-26deg);transform-origin:bottom;
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.06),transparent 18% 82%,rgba(0,0,0,.2)),
+    repeating-linear-gradient(0deg,#40382d 0 7px,#302a22 7px 9px);
+  border:2px solid #17130f;border-top-color:#76654d;border-left-color:#5f513e;
+  box-shadow:0 8px 0 #100c09,0 13px 18px rgba(0,0,0,.45),inset 0 0 0 2px #211c16;
+  padding:5px 8px;color:#c8b38d;
+}
+.seal-plate:before,.seal-plate:after{content:"";position:absolute;top:7px;bottom:7px;width:3px;background:#17130f;box-shadow:1px 0 #78654c}
+.seal-plate:before{left:4px}.seal-plate:after{right:4px}
+.seal-side{display:grid;grid-template-columns:1fr;gap:2px}
+.seal-side small{font-size:4.7px;letter-spacing:.12em;color:#9e8c70;line-height:1}
+.seal-side.player-seals{position:absolute;left:8px;right:8px;bottom:5px}
+.seal-row{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;height:18px;align-items:center}
+.seal-mark{
+  position:relative;display:block;width:15px;height:15px;margin:auto;
+  background:linear-gradient(135deg,#927b58,#514331);
+  border:2px solid #1e1812;border-radius:2px;
+  box-shadow:inset 2px 2px rgba(231,204,154,.16),0 2px 0 #130f0b;
+  transform:rotate(45deg);transition:transform .2s ease,filter .2s ease,background .2s ease;
+}
+.seal-mark:before,.seal-mark:after{content:"";position:absolute;left:50%;top:50%;width:7px;height:1px;background:#2c241b;transform:translate(-50%,-50%)}
+.seal-mark:after{transform:translate(-50%,-50%) rotate(90deg)}
+.seal-mark.broken{
+  background:#281713;border-color:#551f18;filter:brightness(.72);
+  transform:rotate(45deg) scale(.84) translate(1px,1px);box-shadow:inset 0 0 8px #120907,0 1px 0 #080605;
+}
+.seal-mark.broken:before{width:12px;background:#a64330;transform:translate(-50%,-50%) rotate(31deg)}
+.seal-mark.broken:after{height:1px;width:10px;background:#6f2c23;transform:translate(-50%,-50%) rotate(-37deg)}
+.seal-mark.breaking{animation:sealBreak .34s cubic-bezier(.2,.85,.2,1)}
+.seal-core{
+  position:absolute;left:50%;top:50%;width:56px;height:24px;transform:translate(-50%,-50%);
+  display:grid;place-items:center;background:#16120e;border:1px solid #675640;
+  box-shadow:inset 0 0 0 2px #0c0907,0 2px 0 #0d0a07
+}
+.seal-core i{position:absolute;inset:4px;border:1px solid #3e3428}
+.seal-core b{font:8px Georgia,serif;color:#d3bc91;z-index:1}
+
+.combat-caption{
+  position:absolute;z-index:55;left:50%;top:43%;min-width:130px;max-width:60%;
+  transform:translate(-50%,-50%) rotateX(-26deg);
+  background:#100d0a;border:1px solid #6a543b;box-shadow:4px 5px 0 rgba(0,0,0,.5);
+  text-align:center;padding:6px 9px;pointer-events:none
+}
+.combat-caption b{display:block;font:10px/1.2 Georgia,serif;color:#dac49a}
+.combat-caption span{display:block;margin-top:2px;font-size:6px;color:#a99575}
+.combat-caption.direct{border-color:#8b3d2d}.combat-caption.ward{border-color:#77877f}.combat-caption.death{border-color:#6f251d}
+.turn-cue{
+  position:absolute;z-index:58;left:50%;top:47%;transform:translate(-50%,-50%) rotateX(-26deg);
+  width:116px;padding:8px 10px;background:#18120d;border-block:2px solid #795b3d;text-align:center;pointer-events:none;
+  box-shadow:0 5px 12px rgba(0,0,0,.4)
+}
+.turn-cue small{display:block;font-size:5px;letter-spacing:.18em;color:#9c8668}.turn-cue b{display:block;font:16px Georgia,serif;margin-top:2px}
+
+.unit-card.combat-attacker-player{animation:attackPlayer .26s cubic-bezier(.15,.8,.2,1)!important;z-index:12}
+.unit-card.combat-attacker-enemy{animation:attackEnemy .26s cubic-bezier(.15,.8,.2,1)!important;z-index:12}
+.unit-card.combat-hit{animation:combatHit .22s linear!important;filter:brightness(1.35) contrast(1.15)}
+.unit-card.combat-ward{animation:wardPulse .36s ease!important;box-shadow:0 0 0 2px #a3b0a7,0 0 18px rgba(174,200,185,.35),3px 4px 0 #100b07}
+.unit-card.combat-dying{animation:cardDeath .34s cubic-bezier(.4,0,.8,.2) forwards!important;transform-origin:50% 70%}
+.unit-card.resolution-spawn{animation:spawnDrop .34s cubic-bezier(.15,.8,.2,1)!important}
+.damage-float{
+  position:absolute;z-index:45;left:50%;top:37%;transform:translate(-50%,-50%) rotateX(-26deg);
+  min-width:28px;padding:3px 5px;background:#210e0b;color:#e5c2a0;border:1px solid #8e382a;
+  font:bold 12px Georgia,serif;text-align:center;pointer-events:none;animation:damageRise .48s ease forwards
+}
+.damage-float.minor{font-size:9px;background:#16110d;border-color:#6c5840}
+.damage-float.ward{background:#101615;border-color:#70847b;color:#c9d4ce}
+.app[data-resolving="true"] .hand,
+.app[data-resolving="true"] .turn-bell,
+.app[data-resolving="true"] .item-rack,
+.app[data-resolving="true"] .deck-book,
+.app[data-resolving="true"] .sacrifice-knife,
+.app[data-resolving="true"] .heritage-token{pointer-events:none;filter:brightness(.62)}
+.app[data-resolving="true"] .lane{pointer-events:none}
+
+@keyframes attackPlayer{
+  0%,100%{transform:translateZ(3px) rotateX(-18deg)}
+  48%{transform:translateY(-20px) translateZ(16px) rotateX(-10deg) scale(1.08)}
+}
+@keyframes attackEnemy{
+  0%,100%{transform:translateZ(3px) rotateX(-18deg)}
+  48%{transform:translateY(20px) translateZ(16px) rotateX(-10deg) scale(1.08)}
+}
+@keyframes combatHit{25%{transform:translateX(-3px) translateZ(4px) rotateX(-18deg)}75%{transform:translateX(3px) translateZ(4px) rotateX(-18deg)}}
+@keyframes wardPulse{50%{transform:translateZ(8px) rotateX(-18deg) scale(1.05)}}
+@keyframes cardDeath{
+  35%{filter:brightness(.65) saturate(.45);transform:translateZ(2px) rotateX(-18deg) scale(.98)}
+  100%{opacity:0;filter:brightness(.2) saturate(0);transform:translateY(12px) translateZ(-8px) rotate(7deg) scale(.7)}
+}
+@keyframes spawnDrop{from{opacity:0;transform:translateY(-18px) translateZ(18px) rotateX(-30deg) scale(1.12)}}
+@keyframes damageRise{0%{opacity:0;transform:translate(-50%,8px) rotateX(-26deg) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) rotateX(-26deg) scale(1.08)}}
+@keyframes sealBreak{45%{transform:rotate(45deg) scale(1.22);filter:brightness(1.7)}100%{transform:rotate(45deg) scale(.84)}}
+
+@media (max-width:360px){
+  .table{left:0;right:0}
+  .board{left:18%;right:18%}
+  .intent-rack{left:20%;right:20%}
+  .brazier,.bones,.turn-bell{right:2.5%}
+  .item-rack,.deck-book{left:2.5%}
+  .seal-plate{width:51%}
+  .seal-row{gap:2px}.seal-mark{width:13px;height:13px}
+}
+
+/* final 2.2 portrait safe-area correction */
+.brazier{right:8%}.bones{right:8%}.turn-bell{right:8%}
+.item-rack{left:8%}.deck-book{left:9%}
+.heritage-token{left:7%}.sacrifice-knife{left:5%}
+.app[data-mode="menu"] .seal-plate,.app[data-mode="route"] .seal-plate,.app[data-mode="event"] .seal-plate{opacity:.62}
+.seal-mark{background:linear-gradient(135deg,#b09a70,#5f4c35);border-color:#17120d;box-shadow:inset 2px 2px rgba(247,220,166,.22),0 2px 0 #0d0a07}
+@media (max-width:360px){
+  .brazier,.bones,.turn-bell{right:7%}
+  .item-rack{left:7%}.deck-book{left:8%}
+  .heritage-token{left:6%}.sacrifice-knife{left:4%}
+}

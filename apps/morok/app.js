@@ -1,6 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {
-  VERSION,BALANCE_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
+  VERSION,SEAL_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
   createProfile,createRun,hydrateRun,resolveNode,chooseCardReward,chooseRelic,chooseItem,
   hearthUpgrade,altarSelect,afterBattleVictory,skipReward,playCard,sacrificeUnit,endTurn,useItem
 } from './game-core.js';
@@ -16,7 +16,8 @@ const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
 const el={
   app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),wallSeal:$('#wallSeal'),
-  table:$('#table'),scale:$('#balanceScale'),scaleBeam:$('#scaleBeam'),enemyWeight:$('#enemyWeight'),playerWeight:$('#playerWeight'),scaleLabel:$('#scaleLabel'),
+  table:$('#table'),sealPlate:$('#sealPlate'),enemySeals:$('#enemySeals'),playerSeals:$('#playerSeals'),sealStatus:$('#sealStatus'),
+  combatCaption:$('#combatCaption'),combatCaptionMain:$('#combatCaptionMain'),combatCaptionSub:$('#combatCaptionSub'),turnCue:$('#turnCue'),turnCueText:$('#turnCueText'),
   ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),
   heritage:$('#heritageToken'),sacrifice:$('#sacrificeBtn'),items:$('#itemRack'),endTurn:$('#endTurnBtn'),deckBtn:$('#deckBtn'),deckCount:$('#deckCount'),hand:$('#hand'),
   menu:$('#menuTray'),continue:$('#continueBtn'),continueMeta:$('#continueMeta'),newRun:$('#newRunBtn'),rules:$('#rulesBtn'),
@@ -47,6 +48,8 @@ let beatTimer=0;
 let trackedBattleSeed=null;
 let seenPlayerUnits=new Set();
 let seenEnemyUnits=new Set();
+let resolvingTurn=false;
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function load(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function readRun(){
@@ -154,8 +157,8 @@ const opponentLines={
   route:['Выбери следующий узел.','Выбери путь.','Следующий этап готов.'],
   play:['Карта разыграна.','Принято.','Продолжай ход.'],
   sacrifice:['Жертва принята. Наследие сохранено.','Получены Останки. Метка перейдёт следующему существу.'],
-  damage:['Весы сместились в твою сторону.','Ты получил преимущество на весах.'],
-  hurt:['Весы сместились в мою сторону.','Преимущество на весах у меня.'],
+  damage:['Печать противника повреждена.','Прямой удар прошёл.'],
+  hurt:['Твоя печать повреждена.','Противник нанёс прямой удар.'],
   mutation:['Карта получила постоянную мутацию.','Новая метка сохранится до конца забега.']
 };
 function pick(arr,seed=Date.now()){if(!arr?.length)return'';return arr[Math.abs((seed|0))%arr.length]}
@@ -188,7 +191,7 @@ function finishProfile(){
 function abandon(){run=null;save();hidePanels();setMode('menu')}
 
 function render(){
-  renderMenu();setOpponent();updateWallSeal();
+  renderMenu();setOpponent();updateWallSeal();renderSeals(run?.battle?.seals||{player:0,enemy:0});
   if(!run)return;
   el.deckCount.textContent=run.deck.length;
   if(mode==='route')renderRoute();
@@ -217,14 +220,13 @@ function renderRoute(){
   });
 }
 
-function renderScale(){
-  const b=run.battle,val=Math.max(-BALANCE_LIMIT,Math.min(BALANCE_LIMIT,b.balance)),deg=val*4.2;
-  el.scaleBeam.style.transform=`rotate(${deg}deg)`;el.enemyWeight.textContent=val<0?Math.abs(val):0;el.playerWeight.textContent=val>0?val:0;
-  el.scaleLabel.textContent=val===0?'РАВНОВЕСИЕ':val>0?`ТВОЯ ЧАША +${val}`:`ЕГО ЧАША +${Math.abs(val)}`;
+function renderSeals(scores=run?.battle?.seals||{player:0,enemy:0},breaking=null){
+  const make=(root,broken,side)=>{root.replaceChildren();for(let i=0;i<SEAL_LIMIT;i++){const mark=document.createElement('i');mark.className='seal-mark'+(i<broken?' broken':'');if(breaking?.side===side&&breaking.index===i)mark.classList.add('breaking');root.append(mark)}};
+  make(el.enemySeals,scores.player,'player');make(el.playerSeals,scores.enemy,'enemy');el.sealStatus.textContent=`${scores.player} : ${scores.enemy}`
 }
 function renderBattle(){
   const b=run.battle;if(!b){setMode(run.pending?'event':'route');return}
-  renderScale();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
+  renderSeals();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
   renderIntent(b);renderRows(b);renderHand(b);renderItems(b);renderSelection(b);
 }
 function renderIntent(b){
@@ -245,9 +247,66 @@ function renderRow(root,units,side,b,seen){
   root.replaceChildren();for(let lane=0;lane<4;lane++){
     const btn=document.createElement('button');btn.type='button';btn.className='lane';btn.dataset.side=side;btn.dataset.lane=lane;
     if(lane===b.lockedLane)btn.classList.add('locked');const u=units[lane];
-    if(u){const c=document.createElement('div');c.className=`unit-card ${side}${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`;c.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${u.sigils.map(s=>sigilInfo(s).mark).join('')}</i></div>`;btn.append(c)}
+    if(u){const cardNode=makeUnitNode(u,side,`${side==='player'&&selectedUnit===lane?' selected':''}${seen.has(u.instanceId)?'':' just-placed'}`);btn.append(cardNode)}
     btn.addEventListener('click',()=>laneTap(side,lane,btn));root.append(btn);
   }
+}
+function makeUnitNode(u,side,extra=''){
+  const node=document.createElement('div');node.className=`unit-card ${side}${extra}`;node.dataset.unitId=u.instanceId||'';node.dataset.unitName=u.name||'';
+  node.innerHTML=`${artSvg(u,side==='enemy')}<div class="unit-stats"><b>⚔${u.atk}</b><span>♥${u.hp}</span><i>${(u.sigils||[]).map(s=>sigilInfo(s).mark).join('')}</i></div>`;
+  return node
+}
+function unitNodeById(id){if(!id)return null;return $$('.unit-card').find(n=>n.dataset.unitId===id)||null}
+function laneNode(side,lane){return (side==='player'?el.player:el.enemy)?.children?.[lane]||null}
+function showCombatCaption(main='',sub='',kind=''){
+  el.combatCaptionMain.textContent=main;el.combatCaptionSub.textContent=sub;el.combatCaption.className='combat-caption'+(kind?' '+kind:'');el.combatCaption.hidden=false
+}
+function hideCombatCaption(){el.combatCaption.hidden=true}
+function floatDamage(side,lane,text,kind=''){
+  const laneEl=laneNode(side,lane);if(!laneEl)return;
+  const n=document.createElement('span');n.className='damage-float'+(kind?' '+kind:'');n.textContent=text;laneEl.append(n);setTimeout(()=>n.remove(),520)
+}
+async function animateCombat(events,beforeSeals){
+  let visual={player:beforeSeals.player||0,enemy:beforeSeals.enemy||0};
+  for(const event of events||[]){
+    if(event.type==='sequence'){
+      showCombatCaption(event.label==='player'?'ТВОЯ АТАКА':'АТАКА ПРОТИВНИКА',event.label==='player'?'Существа атакуют слева направо.':'Смотри за линиями.','');
+      if(event.label==='enemy')opponentAction('deal');await wait(220);hideCombatCaption();continue
+    }
+    if(event.type==='attack'){
+      const attacker=unitNodeById(event.attackerId);showCombatCaption(event.name,event.direct?'Прямой удар':`→ ${event.targetName||'цель'}`,event.direct?'direct':'');
+      attacker?.classList.add(event.side==='player'?'combat-attacker-player':'combat-attacker-enemy');feedback('wood');await wait(185);
+      attacker?.classList.remove('combat-attacker-player','combat-attacker-enemy');continue
+    }
+    if(event.type==='ward'){
+      const target=unitNodeById(event.unitId);target?.classList.add('combat-ward');floatDamage(event.side,event.lane,'0','ward');showCombatCaption('ОБЕРЕГ',`${event.name}: урон заблокирован`,'ward');feedback('bone');
+      await wait(310);target?.classList.remove('combat-ward');hideCombatCaption();continue
+    }
+    if(event.type==='damage'){
+      const target=unitNodeById(event.unitId);target?.classList.add('combat-hit');floatDamage(event.side,event.lane,`−${event.amount}`,event.source==='attack'?'':'minor');
+      const sourceLabel={thorn:'Шип',bleed:'Разрез',chain:'Цепь'}[event.source]||'Урон';
+      showCombatCaption(`−${event.amount} HP`,`${event.name} · ${sourceLabel}`,'');feedback(event.amount>=3?'impact':'wood');
+      const hp=target?.querySelector('.unit-stats span');if(hp)hp.textContent=`♥${event.hpAfter}`;await wait(event.source==='attack'?260:190);
+      target?.classList.remove('combat-hit');hideCombatCaption();continue
+    }
+    if(event.type==='death'){
+      const target=unitNodeById(event.unitId);showCombatCaption('КАРТА УНИЧТОЖЕНА',event.name,'death');target?.classList.add('combat-dying');feedback('impact');await wait(330);if(target)target.style.visibility='hidden';hideCombatCaption();continue
+    }
+    if(event.type==='spawn'){
+      const laneEl=laneNode(event.side,event.lane);if(laneEl){laneEl.replaceChildren();const node=makeUnitNode(event.unit,event.side,' resolution-spawn');laneEl.append(node);showCombatCaption(event.source==='intent'?'ПРОТИВНИК РАЗЫГРАЛ КАРТУ':'ПОЯВИЛОСЬ СУЩЕСТВО',event.unit.name,'');feedback('card');await wait(330);hideCombatCaption()}continue
+    }
+    if(event.type==='seal'){
+      const from=event.before,to=event.after;visual[event.side]=from;showCombatCaption(event.side==='player'?'ПЕЧАТЬ ПРОТИВНИКА':'ТВОЯ ПЕЧАТЬ',`прямой урон: ${event.amount}`,'direct');
+      for(let i=from;i<to;i++){visual[event.side]=i+1;renderSeals(visual,{side:event.side,index:i});feedback('bone');sceneBeat('impact');await wait(170)}
+      await wait(100);hideCombatCaption();continue
+    }
+    if(event.type==='buff'){showCombatCaption('+1 АТАКА',`${event.name} · Голод`,'');await wait(190);hideCombatCaption();continue}
+    if(event.type==='lock'){showCombatCaption(`ЛИНИЯ ${event.lane+1} ЗАБЛОКИРОВАНА`,'Смотритель','');feedback('warning');opponentAction('boss');await wait(380);hideCombatCaption();continue}
+    if(event.type==='phase'){showCombatCaption('ФАЗА II','Приор: печати восстановлены, максимум Угля — 2.','death');renderSeals({player:0,enemy:0});feedback('warning');opponentAction('boss');sceneBeat('boss');await wait(650);hideCombatCaption();continue}
+    if(event.type==='round'){el.turnCueText.textContent=`ХОД ${event.round}`;el.turnCue.hidden=false;feedback('bell');await wait(520);el.turnCue.hidden=true;continue}
+    if(event.type==='battle-end'){showCombatCaption(event.winner==='player'?'ПОБЕДА':'ПОРАЖЕНИЕ',event.winner==='player'?'Все печати противника разрушены.':'Все твои печати разрушены.',event.winner==='player'?'':'death');await wait(520);hideCombatCaption()}
+  }
+  renderSeals(run?.battle?.seals||visual)
 }
 function cardAffordable(card,b){
   if(card.costType==='remains')return b.remains>=card.cost;
@@ -269,7 +328,7 @@ function attachCardInput(node,card,onTap){
   node.addEventListener('contextmenu',e=>{e.preventDefault();openFocus(card)});
 }
 function selectHandCard(card){
-  const b=run.battle;
+  if(resolvingTurn)return;const b=run.battle;
   if(card.type==='rite'&&['milk','whisper','lash'].includes(card.rite)){
     const r=playCard(run,b,card.instanceId,null,0);if(!r.ok){toast(r.reason);feedback('warning');return}feedback(card.rite==='lash'?'impact':'paper');selectedCard=null;save();renderBattle();if(r.ended)resolveBattleEnd(r);else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');opponentAction('boss');sceneBeat('boss')}return;
   }
@@ -285,7 +344,7 @@ function highlightTargets(){
   if(c.rite==='salt')$$('#enemyRow .lane').forEach((n,i)=>{if(b.enemy[i])n.classList.add('valid')});
 }
 function laneTap(side,lane,node){
-  const b=run.battle;
+  if(resolvingTurn)return;const b=run.battle;
   if(selectedItem==='knife'){
     if(side!=='player'||!b.player[lane]){bad(node,'Нож требует твою карту.');return}
     const r=useItem(run,b,'knife',lane);selectedItem=null;selectedUnit=null;feedback('knife');save();renderBattle();if(r.ended)resolveBattleEnd(r);return;
@@ -313,7 +372,7 @@ function cycleHeritage(){
   const u=selectedUnit!==null?run?.battle?.player[selectedUnit]:null;if(!u||u.sigils.length<2)return;const i=Math.max(0,u.sigils.indexOf(heritageChoice));heritageChoice=u.sigils[(i+1)%u.sigils.length];feedback('bone');renderSelection(run.battle);
 }
 function doSacrifice(){
-  if(selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
+  if(resolvingTurn||selectedUnit===null)return;const r=sacrificeUnit(run,run.battle,selectedUnit,heritageChoice);if(!r.ok){toast(r.reason);feedback('warning');return}
   selectedUnit=null;heritageChoice=null;feedback('knife');contextualTalk('sacrifice');opponentAction('react');sceneBeat('impact');save();renderBattle();
 }
 function renderItems(b){
@@ -325,14 +384,15 @@ function renderItems(b){
     });el.items.append(btn);
   });
 }
-function doEndTurn(){
-  const b=run?.battle;if(!b)return;selectedCard=null;selectedItem=null;selectedUnit=null;
-  opponentAction(b.bossId?'boss':'deal');
-  const before=b.balance,r=endTurn(run,b);feedback('bell');
-  if(b.balance!==before){feedback('impact');contextualTalk(b.balance>before?'damage':'hurt');sceneBeat('impact')}
-  save();renderBattle();
+async function doEndTurn(){
+  const b=run?.battle;if(!b||resolvingTurn)return;
+  resolvingTurn=true;el.app.dataset.resolving='true';selectedCard=null;selectedItem=null;selectedUnit=null;
+  const beforeSeals={...(b.seals||{player:0,enemy:0})};const r=endTurn(run,b);save();
+  try{await animateCombat(r.events||[],beforeSeals)}
+  finally{renderBattle();resolvingTurn=false;delete el.app.dataset.resolving;el.combatCaption.hidden=true;el.turnCue.hidden=true}
   if(r.ended)resolveBattleEnd(r);
-  else if(r.phase){talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');feedback('warning');opponentAction('boss');sceneBeat('boss')}
+  else if(r.phase)talk('Приор перешёл во вторую фазу: максимум Угля снижен до 2.');
+  else talk(`Ход ${b.round}. Твой ход.`)
 }
 function resolveBattleEnd(r){
   if(r.winner==='player'){
