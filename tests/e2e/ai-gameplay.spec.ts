@@ -454,7 +454,7 @@ test.describe('AI exploratory mobile gameplay', () => {
       });
 
       expect(pageErrors, `Unhandled page errors during exploration of ${app.slug}`).toEqual([]);
-      // RIVET must publish a real gameplay state; a loader-only canvas is a failed boot.
+      // RIVET must publish a real gameplay state; a loader-only Godot canvas is a failed boot.
       if (app.slug === 'rivet') {
         expect(state.bridgeState, `RIVET never published gameplay state; last boot stage: ${state.rivetBootStage ?? 'none'}`).not.toBeNull();
         const loadingState = typeof state.bridgeState === 'object' && state.bridgeState ? (state.bridgeState as any).loadingState : null;
