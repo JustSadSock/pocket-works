@@ -25,11 +25,22 @@ const configs=await collectAppConfigs(root);
 
 for(const config of configs){
   const directory=path.join(output,'apps',config.slug);
-  for(const file of ['index.html','styles.css','app.js','app.config.json','release.json','manifest.webmanifest','sw.js','icons']){
+  const required=config.runtime==='godot'
+    ? ['index.html','app.config.json','release.json','manifest.webmanifest','sw.js','icons','pocketworks-build.json']
+    : ['index.html','styles.css','app.js','app.config.json','release.json','manifest.webmanifest','sw.js','icons'];
+  for(const file of required){
     if(!(await exists(path.join(directory,file))))errors.push(`dist-site/apps/${config.slug} is missing ${file}`);
   }
-  for(const forbidden of ['source','public','.dist','package.json','vite.config.ts','tsconfig.json']){
-    if(await exists(path.join(directory,forbidden)))errors.push(`dist-site/apps/${config.slug} must not publish ${forbidden}`);
+  if(config.runtime==='godot'&&await exists(directory)){
+    const entries=await readdir(directory,{withFileTypes:true});
+    if(!entries.some(entry=>entry.isFile()&&entry.name.endsWith('.wasm')))errors.push(`dist-site/apps/${config.slug} is missing Godot .wasm payload`);
+    if(!entries.some(entry=>entry.isFile()&&entry.name.endsWith('.pck')))errors.push(`dist-site/apps/${config.slug} is missing Godot .pck payload`);
+  }
+  const forbidden=config.runtime==='godot'
+    ? ['source','web','.godot','project.godot','export_presets.cfg','package.json','vite.config.ts','tsconfig.json']
+    : ['source','public','.dist','package.json','vite.config.ts','tsconfig.json'];
+  for(const item of forbidden){
+    if(await exists(path.join(directory,item)))errors.push(`dist-site/apps/${config.slug} must not publish ${item}`);
   }
 
   let release=null;
