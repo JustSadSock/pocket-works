@@ -33,7 +33,7 @@ func sync_state(state: Dictionary) -> void:
 
 func _world_to_screen(p: Vector2) -> Vector2:
 	var usable := Rect2(Vector2(0, 36), Vector2(size.x, max(size.y - 36, 1.0)))
-	var s := min(usable.size.x, usable.size.y) / (arena_radius * 2.55)
+	var s: float = minf(usable.size.x, usable.size.y) / (arena_radius * 2.55)
 	return usable.position + usable.size * 0.5 + Vector2(p.x, p.y) * s
 
 func _scale() -> float:
@@ -61,12 +61,12 @@ func _draw() -> void:
 		var life: float = float(effect.get("life", 0.0))
 		var kind: String = str(effect.get("kind", "hit"))
 		var col := ACCENT if kind != "heal" else Color("#7d9b6e")
-		var r := (0.22 + (1.0 - clamp(life,0.0,1.0)) * 0.65) * scale
+		var r: float = (0.22 + (1.0 - clampf(life, 0.0, 1.0)) * 0.65) * scale
 		draw_arc(_world_to_screen(ep), r, 0.0, TAU, 32, Color(col, clamp(life,0.0,1.0)), 3.0)
 		for k in range(5):
 			var ang := float(k) * TAU / 5.0 + (1.0 - life) * 0.9
-			var p1 := _world_to_screen(ep) + Vector2(cos(ang), sin(ang)) * r * 0.65
-			var p2 := _world_to_screen(ep) + Vector2(cos(ang), sin(ang)) * r * 1.15
+			var p1: Vector2 = _world_to_screen(ep) + Vector2(cos(ang), sin(ang)) * r * 0.65
+			var p2: Vector2 = _world_to_screen(ep) + Vector2(cos(ang), sin(ang)) * r * 1.15
 			draw_line(p1, p2, Color(col, clamp(life,0.0,1.0)), 2.0)
 
 	for enemy in enemies:
@@ -91,7 +91,7 @@ func _draw() -> void:
 			draw_arc(sp, radius, 0.0, TAU, 32, INK, 2.5)
 			var eye_dir := ( _world_to_screen(player_pos) - sp ).normalized()
 			draw_circle(sp + eye_dir * radius * 0.35, max(radius * 0.14, 2.0), LIGHT)
-		var bar_w := max(radius * 1.7, 24.0)
+		var bar_w: float = maxf(radius * 1.7, 24.0)
 		var bar_rect := Rect2(sp + Vector2(-bar_w*0.5, -radius-11.0), Vector2(bar_w, 4.0))
 		draw_rect(bar_rect, Color(0.19,0.21,0.18,0.18))
 		draw_rect(Rect2(bar_rect.position, Vector2(bar_w * clamp(hp_ratio,0.0,1.0), 4.0)), ACCENT)
