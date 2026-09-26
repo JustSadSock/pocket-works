@@ -57,6 +57,11 @@ export class BroadcastAudio {
   jump() { this.tone(170, 0.08, 'triangle', 0.07, 210); }
   dash() { this.tone(95, 0.11, 'sawtooth', 0.06, 330); }
   hit() { this.tone(82 + Math.random()*25, 0.055, 'square', 0.045, -30); }
+  impact() { this.tone(118 + Math.random()*34, 0.038, 'square', 0.038, -55); }
+  phase() {
+    this.tone(96, 0.20, 'sawtooth', 0.075, 260);
+    setTimeout(() => this.tone(188, 0.16, 'square', 0.06, 420), 80);
+  }
   hurt() { this.tone(130, 0.18, 'sawtooth', 0.11, -85); }
   parry() { this.tone(610, 0.11, 'triangle', 0.10, 620); }
   special() { this.tone(180, 0.24, 'sawtooth', 0.09, 760); }

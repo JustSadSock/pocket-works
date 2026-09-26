@@ -9,11 +9,11 @@ import { STAGES, stageById } from './content';
 import { clearSave, loadSave, persistSave, recordDeath, recordStage } from './save';
 import type { SaveState, StageStats } from './types';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const RELEASE_NOTES = [
-  'Полная кампания с постепенным ростом сложности и авторскими босс-боями.',
-  'Горизонтальное мобильное управление, автоматическая стрельба, рывок, парирование и специальные атаки.',
-  'Рейтинги, повторные испытания, локальный прогресс и офлайн PWA.'
+  'Combat-feel overhaul: ручной огонь с мягким aim assist, более читаемый темп и сильнее отдача попаданий.',
+  'Первые три босса получили отдельные визуальные фазы, телеграфы атак и более выразительные переходы.',
+  'Воздушное парирование теперь активируется повторным JUMP рядом с розовой угрозой.'
 ];
 
 const runtime = installMobileRuntime();
@@ -49,6 +49,7 @@ const specialPips = $('specialPips');
 const movePad = $('movePad');
 const moveThumb = $('moveThumb');
 const dashButton = $<HTMLButtonElement>('dashButton');
+const fireButton = $<HTMLButtonElement>('fireButton');
 const jumpButton = $<HTMLButtonElement>('jumpButton');
 const specialButton = $<HTMLButtonElement>('specialButton');
 const resultGrade = $('resultGrade');
@@ -70,6 +71,7 @@ let currentStats: StageStats | null = null;
 audio.setEnabled(save.sound);
 
 function hideAll() {
+  inputState.fireHeld = false;
   menuScreen.hidden = true;
   selectScreen.hidden = true;
   hud.hidden = true;
@@ -239,6 +241,23 @@ function queueButton(button: HTMLButtonElement, key: 'jumpQueued'|'dashQueued'|'
 queueButton(jumpButton, 'jumpQueued');
 queueButton(dashButton, 'dashQueued');
 queueButton(specialButton, 'specialQueued');
+
+function bindHeldButton(button: HTMLButtonElement) {
+  const set = (pressed: boolean) => {
+    inputState.fireHeld = pressed;
+    button.classList.toggle('is-pressed', pressed);
+    if (pressed) void audio.unlock();
+  };
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    set(true);
+  });
+  button.addEventListener('pointerup', () => set(false));
+  button.addEventListener('pointercancel', () => set(false));
+  button.addEventListener('lostpointercapture', () => set(false));
+}
+bindHeldButton(fireButton);
 
 movePad.addEventListener('pointerdown', (event) => {
   event.preventDefault();

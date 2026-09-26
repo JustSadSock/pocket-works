@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'dead-air-13-';
-const CACHE_NAME = 'dead-air-13-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'dead-air-13-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-09-26';
 const RELEASE_NOTES = [
-  'Полная кампания с постепенным ростом сложности и авторскими босс-боями.',
-  'Горизонтальное мобильное управление, автоматическая стрельба, рывок, парирование и специальные атаки.',
-  'Рейтинги, повторные испытания, локальный прогресс и офлайн PWA.'
+  'Combat-feel overhaul: ручной огонь с мягким aim assist, более читаемый темп и сильнее отдача попаданий.',
+  'Первые три босса получили отдельные визуальные фазы, телеграфы атак и более выразительные переходы.',
+  'Воздушное парирование теперь активируется повторным JUMP рядом с розовой угрозой.'
 ];
 
 setCacheNameDetails({ prefix: 'dead-air-13', suffix: 'v' + APP_VERSION, precache: 'precache', runtime: 'runtime' });
