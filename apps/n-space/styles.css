@@ -300,7 +300,7 @@ a:focus-visible {
 
 .segmented {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border: 1px solid var(--line-strong);
 }
 
@@ -353,7 +353,7 @@ a:focus-visible {
 .projection-strip {
   grid-area: projections;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: 116px;
   border-bottom: 1px solid var(--line-strong);
 }
