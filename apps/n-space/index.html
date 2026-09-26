@@ -65,6 +65,7 @@
         <div class="field">
           <span>Проекция</span>
           <div class="segmented" id="target-controls" role="group" aria-label="Целевое измерение">
+            <button type="button" data-target="4" data-native-press>4D</button>
             <button type="button" data-target="3" data-native-press>3D</button>
             <button type="button" data-target="2" data-native-press>2D</button>
             <button type="button" data-target="1" data-native-press>1D</button>
@@ -98,6 +99,10 @@
       </aside>
 
       <section class="projection-strip" aria-label="Цепочка проекций" data-ui>
+        <div class="projection-cell" data-mini-cell="4">
+          <header><span>4D</span><small>гиперпространство</small></header>
+          <canvas class="mini-canvas" data-mini-target="4" aria-label="Четырёхмерная проекция"></canvas>
+        </div>
         <div class="projection-cell" data-mini-cell="3">
           <header><span>3D</span><small>пространство</small></header>
           <canvas class="mini-canvas" data-mini-target="3" aria-label="Трёхмерная проекция"></canvas>
