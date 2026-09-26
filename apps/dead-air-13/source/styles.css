@@ -274,11 +274,10 @@ button { border: 0; }
   z-index:100;
   inset:0;
   pointer-events:none;
-  mix-blend-mode:soft-light;
-  opacity:.18;
+  opacity:.11;
   background:
-    repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,rgba(0,0,0,.06) 1px 3px),
-    radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 105%);
+    repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,rgba(0,0,0,.05) 1px 3px),
+    radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.42) 108%);
 }
 
 @media (max-height: 520px) {
