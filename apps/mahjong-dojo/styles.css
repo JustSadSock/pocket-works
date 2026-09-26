@@ -196,6 +196,12 @@ body[data-view]:not([data-view="home"]) .back-button { visibility: visible; }
   border:1px solid rgba(199,154,82,.26);
   background: radial-gradient(circle at 50% 38%, rgba(199,154,82,.08), transparent 55%), #100d0b;
 }
+.lesson-stage .hand-zone {
+  width:100%; justify-content:flex-start; overflow-x:auto; overflow-y:hidden;
+  padding:10px 4px 18px; scroll-padding-inline:4px; overscroll-behavior-inline:contain;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+}
+.lesson-stage .hand-zone::-webkit-scrollbar { display:none; }
 .lesson-stage .choice-row { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .lesson-stage .choice-button { min-height:46px; padding:0 14px; border:1px solid #6b5943; background:#201a15; color:var(--ivory); cursor:pointer; }
 .lesson-stage .choice-button.is-correct { border-color:#54856f; color:#bde0cd; }
