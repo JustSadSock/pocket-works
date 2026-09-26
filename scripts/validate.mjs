@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
 
@@ -103,7 +103,8 @@ async function validateServiceWorker(label, relativePath, expectedPrefix, runtim
   const broadCleanup = /\.filter\s*\(\s*\(?\s*key\s*\)?\s*=>\s*key\s*!==\s*CACHE_NAME\s*\)/;
   if (broadCleanup.test(source)) fail(`${label} deletes caches without checking ownership; cleanup must be prefix-scoped`);
   if (source.includes('caches.keys()') && !source.includes('startsWith(')) fail(`${label} cache cleanup must use an ownership prefix`);
-  for (const shellFile of ['./index.html', './styles.css', './app.js', './manifest.webmanifest']) {
+  const shellFiles = runtime === 'godot' ? ['./index.html', './manifest.webmanifest'] : ['./index.html', './styles.css', './app.js', './manifest.webmanifest'];
+  for (const shellFile of shellFiles) {
     if (!source.includes(shellFile)) fail(`${label} app shell must include ${shellFile}`);
   }
 }
@@ -148,7 +149,7 @@ for (const [index, app] of apps.entries()) {
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(app.version || '')) fail(`${prefix}.version must use semantic versioning`);
   if (!/^#[0-9a-f]{6}$/i.test(app.accent || '')) fail(`${prefix}.accent must be a six-digit hex color`);
   if (!['active', 'experimental', 'archived'].includes(app.status)) fail(`${prefix}.status must be active, experimental or archived`);
-  if (!['quick', 'enhanced'].includes(app.runtime)) fail(`${prefix}.runtime must be quick or enhanced`);
+  if (!['quick', 'enhanced', 'godot'].includes(app.runtime)) fail(`${prefix}.runtime must be quick, enhanced or godot`);
   if (!Array.isArray(app.tags) || app.tags.some((tag) => typeof tag !== 'string' || tag.trim() === '')) fail(`${prefix}.tags must be an array of non-empty strings`);
 
   const expectedPath = `./apps/${app.slug}/`;
@@ -159,6 +160,29 @@ for (const [index, app] of apps.entries()) {
   paths.add(app.path);
 
   const appDirectory = path.join('apps', app.slug);
+  if (app.runtime === 'godot') {
+    for (const requiredFile of ['project.godot', 'export_presets.cfg', 'source/main.tscn', 'source/main.gd', 'source/pocket_works.gd', 'README.md', 'icons/icon.svg']) {
+      if (!(await exists(path.join(root, appDirectory, requiredFile)))) fail(`${app.slug} is missing ${requiredFile}`);
+    }
+
+    const webDirectory = path.join(appDirectory, 'web');
+    if (await exists(path.join(root, webDirectory, 'index.html'))) {
+      for (const requiredFile of ['index.html', 'manifest.webmanifest', 'sw.js', 'pocketworks-build.json', 'icons/icon.svg']) {
+        if (!(await exists(path.join(root, webDirectory, requiredFile)))) fail(`${app.slug}/web is missing ${requiredFile}`);
+      }
+      const webFiles = await readdir(path.join(root, webDirectory));
+      if (!webFiles.some((file) => file.endsWith('.wasm'))) fail(`${app.slug}/web must include a .wasm engine payload`);
+      if (!webFiles.some((file) => file.endsWith('.pck'))) fail(`${app.slug}/web must include a .pck project payload`);
+      const godotHtml = await readText(path.join(webDirectory, 'index.html'));
+      if (!godotHtml.includes('viewport-fit=cover')) fail(`${app.slug}/web/index.html must include viewport-fit=cover`);
+      if (!godotHtml.includes('./manifest.webmanifest')) fail(`${app.slug}/web/index.html must reference ./manifest.webmanifest`);
+      if (!godotHtml.includes("serviceWorker.register('./sw.js')")) fail(`${app.slug}/web/index.html must register ./sw.js`);
+      await validateManifest(`${app.slug}/web/manifest.webmanifest`, path.join(webDirectory, 'manifest.webmanifest'), { id: `/apps/${app.slug}/`, name: app.name });
+      await validateServiceWorker(`${app.slug}/web/sw.js`, path.join(webDirectory, 'sw.js'), `${app.slug}-`, 'godot');
+    }
+    continue;
+  }
+
   for (const requiredFile of appRequiredFiles) {
     if (!(await exists(path.join(root, appDirectory, requiredFile)))) fail(`${app.slug} is missing ${requiredFile}`);
   }
