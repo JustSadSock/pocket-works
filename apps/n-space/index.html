@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eeece4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="N·SPACE">
+  <title>N·SPACE</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="launcher-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <div class="brand">
+        <strong>N·SPACE</strong>
+        <span id="top-status">4D → 3D</span>
+      </div>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </header>
+
+    <section class="workspace" aria-label="Лаборатория многомерной геометрии">
+      <div class="dimension-rail" role="group" aria-label="Размерность пространства" data-ui>
+        <button type="button" data-dimension="1" data-native-press>1D</button>
+        <button type="button" data-dimension="2" data-native-press>2D</button>
+        <button type="button" data-dimension="3" data-native-press>3D</button>
+        <button type="button" data-dimension="4" data-native-press>4D</button>
+        <button type="button" data-dimension="5" data-native-press>5D</button>
+      </div>
+
+      <div class="visual-stage">
+        <canvas
+          id="space-canvas"
+          tabindex="0"
+          data-gesture-surface
+          data-block-callout
+          aria-label="Проекция многомерной фигуры. Проведите пальцем для вращения, коснитесь вершины для чтения координат."
+        ></canvas>
+        <div class="stage-label" id="stage-label" data-ui>4D → 3D · перспективная</div>
+        <div class="gesture-hint" id="gesture-hint" data-ui>↔ основная плоскость · ↕ связанная плоскость · щипок — масштаб</div>
+        <div class="vertex-readout" id="vertex-readout" data-ui aria-live="polite">
+          <b id="vertex-name">V0</b>
+          <span id="vertex-coordinates">Коснитесь вершины</span>
+        </div>
+      </div>
+
+      <aside class="control-deck" data-ui aria-label="Параметры симуляции">
+        <label class="field">
+          <span>Фигура</span>
+          <select id="shape-select">
+            <option value="hypercube">Гиперкуб</option>
+            <option value="simplex">Симплекс</option>
+            <option value="cross">Кросс-политоп</option>
+          </select>
+        </label>
+
+        <div class="field">
+          <span>Проекция</span>
+          <div class="segmented" id="target-controls" role="group" aria-label="Целевое измерение">
+            <button type="button" data-target="3" data-native-press>3D</button>
+            <button type="button" data-target="2" data-native-press>2D</button>
+            <button type="button" data-target="1" data-native-press>1D</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Метод</span>
+          <select id="method-select">
+            <option value="perspective">Перспективная</option>
+            <option value="orthographic">Ортографическая</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Плоскость вращения</span>
+          <select id="plane-select"></select>
+        </label>
+
+        <label class="field zoom-field">
+          <span>Масштаб <output id="zoom-output">100%</output></span>
+          <input id="zoom-range" type="range" min="55" max="180" step="1" value="100">
+        </label>
+
+        <div class="actions">
+          <button id="auto-button" type="button" data-native-press aria-pressed="false">Авто: выкл</button>
+          <button id="reset-button" type="button" data-native-press>Сбросить вид</button>
+        </div>
+
+        <p class="stats" id="stats">—</p>
+      </aside>
+
+      <section class="projection-strip" aria-label="Цепочка проекций" data-ui>
+        <div class="projection-cell" data-mini-cell="3">
+          <header><span>3D</span><small>пространство</small></header>
+          <canvas class="mini-canvas" data-mini-target="3" aria-label="Трёхмерная проекция"></canvas>
+        </div>
+        <div class="projection-cell" data-mini-cell="2">
+          <header><span>2D</span><small>плоскость</small></header>
+          <canvas class="mini-canvas" data-mini-target="2" aria-label="Двумерная проекция"></canvas>
+        </div>
+        <div class="projection-cell" data-mini-cell="1">
+          <header><span>1D</span><small>линия</small></header>
+          <canvas class="mini-canvas" data-mini-target="1" aria-label="Одномерная проекция"></canvas>
+        </div>
+      </section>
+
+      <p class="explain" id="explain" data-ui>
+        Координаты существуют в выбранной размерности; экран показывает только их проекцию. Вращение XW или XV смешивает видимые и скрытые оси, поэтому «невидимое» измерение начинает менять тень фигуры.
+      </p>
+    </section>
+    <div class="fatal" id="fatal" hidden role="alert"></div>
+  </main>
+
+  <script
+    type="module"
+    src="../../shared/update-manager.js"
+    data-update-manager
+    data-service-worker="./sw.js"
+    data-app-name="N·SPACE"
+    data-app-version="1.0.0"
+  ></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
