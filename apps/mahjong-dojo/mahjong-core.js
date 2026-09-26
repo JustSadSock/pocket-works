@@ -175,7 +175,7 @@ export function ukeireForThirteen(tiles) {
 }
 
 export function analyzeDiscards(hand) {
-  if (hand.length % 3 !== 2) throw new RangeError(gDiscard analysis expects a 14-tile hand');
+  if (hand.length % 3 !== 2) throw new RangeError('Discard analysis expects a 14-tile hand');
   const seen = new Set();
   const rows = [];
   for (let index = 0; index < hand.length; index++) {
