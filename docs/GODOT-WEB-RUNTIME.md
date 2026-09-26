@@ -142,6 +142,7 @@ The Godot workflow also reacts to app-local generated asset changes, so a Blende
 On a normal feature-branch push, changed Godot applications are exported and apps/<slug>/web is committed back with the marker [godot-export].
 
 That marker prevents an infinite workflow loop.
+The skip is actor-scoped: only a push authored by `github-actions[bot]` with `[godot-export]` in its commit message is ignored. Human/squash commits must still run even if their multi-line squash body mentions the generated export commit.
 
 Before downloading or running Godot, the workflow runs the validator in source-only mode. This checks project structure, Web export settings, the PocketWorks bridge and required app source without requiring the previously committed `web/**` output to already match a just-bumped app version. After the headless export completes, the normal full validator runs and enforces generated Web metadata/freshness.
 
