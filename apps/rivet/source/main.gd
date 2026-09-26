@@ -804,7 +804,7 @@ func _capacitor_pulse() -> void:
 	_add_effect({"kind": "ring", "pos": player_pos, "life": 0.32, "max": 0.32, "color": C_BLUE})
 	for i in range(enemies.size() - 1, -1, -1):
 		if i < enemies.size() and player_pos.distance_to(enemies[i]["pos"]) < 148.0:
-			var push := (enemies[i]["pos"] - player_pos).normalized()
+			var push: Vector2 = ((enemies[i]["pos"] as Vector2) - player_pos).normalized()
 			_damage_enemy(i, 18.0, push, false)
 	shake = maxf(shake, 2.8)
 
@@ -997,7 +997,7 @@ func _update_drone(e: Dictionary, delta: float) -> Dictionary:
 	e["pos"] = e["pos"] + e["vel"] * delta
 	e["attack_cd"] = float(e["attack_cd"]) - delta
 	if float(e["attack_cd"]) <= 0.0:
-		var dir := (player_pos - e["pos"]).normalized()
+		var dir: Vector2 = (player_pos - (e["pos"] as Vector2)).normalized()
 		_enemy_shot(e["pos"], dir, 320.0, 7.0)
 		e["attack_cd"] = rng.randf_range(1.05, 1.42)
 	return e
@@ -1097,7 +1097,7 @@ func _explode_mortar(pos: Vector2, damage: float) -> void:
 			var d := pos.distance_to(enemies[i]["pos"])
 			if d <= 128.0:
 				var scale := 1.0 - d / 170.0
-				var push := (enemies[i]["pos"] - pos).normalized()
+				var push: Vector2 = ((enemies[i]["pos"] as Vector2) - pos).normalized()
 				_damage_enemy(i, damage * maxf(0.45, scale), push, true)
 	shake = maxf(shake, 7.0)
 	_play_sfx("hit", 0.68)
@@ -1376,7 +1376,7 @@ func _draw_world() -> void:
 func _draw_player() -> void:
 	var pos := player_pos
 	var angle := aim_dir.angle()
-	var shadow_scale := 1.0 + abs(sin(elapsed * 4.0)) * 0.04
+	var shadow_scale: float = 1.0 + absf(sin(elapsed * 4.0)) * 0.04
 	draw_ellipse(pos + Vector2(0, 20), Vector2(38, 15) * shadow_scale, Color(0.12, 0.13, 0.12, 0.22))
 
 	if chassis_id == "treads":
