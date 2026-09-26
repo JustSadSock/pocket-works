@@ -61,19 +61,51 @@ test.describe('Godot production transport', () => {
       const response = await page.goto(`/apps/${app.slug}/`, { waitUntil: 'domcontentloaded' });
       expect(response?.status()).toBeLessThan(400);
 
-      await page.waitForFunction(() => (window as any).__AI_TEST_STATE__ != null, undefined, { timeout: 75_000 });
+      let runtime: {
+        state: unknown;
+        chunkBootstrap: boolean;
+        startupOverlayExists: boolean;
+        canvas: { width: number; height: number } | null;
+      } | null = null;
 
-      const runtime = await page.evaluate(() => ({
-        state: (window as any).__AI_TEST_STATE__ ?? null,
-        chunkBootstrap: Boolean(document.querySelector('script[data-pocketworks-wasm-chunks]')),
-        startupOverlayExists: Boolean(document.getElementById('status')),
-        canvas: (() => {
-          const canvas = document.querySelector('canvas');
-          if (!canvas) return null;
-          const rect = canvas.getBoundingClientRect();
-          return { width: rect.width, height: rect.height };
-        })()
-      }));
+      await expect.poll(async () => {
+        try {
+          const snapshot = await page.evaluate(() => ({
+            state: (window as any).__AI_TEST_STATE__ ?? null,
+            chunkBootstrap: Boolean(document.querySelector('script[data-pocketworks-wasm-chunks]')),
+            startupOverlayExists: Boolean(document.getElementById('status')),
+            canvas: (() => {
+              const canvas = document.querySelector('canvas');
+              if (!canvas) return null;
+              const rect = canvas.getBoundingClientRect();
+              return { width: rect.width, height: rect.height };
+            })()
+          }));
+          runtime = snapshot;
+          return Boolean(
+            snapshot.state &&
+            !snapshot.startupOverlayExists &&
+            snapshot.canvas &&
+            snapshot.canvas.width > 0 &&
+            snapshot.canvas.height > 0
+          );
+        } catch (error) {
+          const message = String(error);
+          if (
+            message.includes('Execution context was destroyed') ||
+            message.includes('most likely because of a navigation') ||
+            message.includes('Cannot find context with specified id')
+          ) {
+            return false;
+          }
+          throw error;
+        }
+      }, {
+        timeout: 75_000,
+        intervals: [250, 500, 1_000]
+      }).toBe(true);
+
+      expect(runtime, `${app.slug} never reached a stable Godot runtime context`).not.toBeNull();
 
       expect(runtime.state, `${app.slug} never published its Godot QA bridge`).not.toBeNull();
       expect(runtime.startupOverlayExists, `${app.slug} remained stuck on the Godot startup overlay`).toBe(false);
