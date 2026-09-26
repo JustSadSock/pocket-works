@@ -106,21 +106,30 @@ var sound_button: Button
 var sfx: Dictionary = {}
 var audio_players: Array[AudioStreamPlayer] = []
 var audio_cursor := 0
+var boot_first_process := true
+var boot_first_draw := true
 
 func _ready() -> void:
+	PocketWorks.set_boot_stage("ready-enter")
 	Engine.max_fps = 60
 	rng.randomize()
+	PocketWorks.set_boot_stage("title-enter")
 	PocketWorks.set_document_title("RIVET")
+	PocketWorks.set_boot_stage("storage-enter")
 	best_room = int(PocketWorks.storage_get("best-room", 1))
 	best_kills = int(PocketWorks.storage_get("best-kills", 0))
 	clears = int(PocketWorks.storage_get("clears", 0))
 	sound_enabled = bool(PocketWorks.storage_get("sound", true))
+	PocketWorks.set_boot_stage("ui-enter")
 	_build_ui()
+	PocketWorks.set_boot_stage("ui-built")
 	_reset_run()
+	PocketWorks.set_boot_stage("reset-done")
 	run_active = false
 	hud.visible = false
 	start_overlay.visible = true
 	_publish_state("ready")
+	PocketWorks.set_boot_stage("ready")
 	queue_redraw()
 
 func _build_ui() -> void:
@@ -577,6 +586,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
+	if boot_first_process:
+		boot_first_process = false
+		PocketWorks.set_boot_stage("process-enter")
 	elapsed += delta
 	recoil = move_toward(recoil, 0.0, delta * 7.0)
 	shake = move_toward(shake, 0.0, delta * 18.0)
@@ -1325,10 +1337,19 @@ func _add_sparks(pos: Vector2, color: Color, count: int) -> void:
 		})
 
 func _draw() -> void:
+	if boot_first_draw:
+		PocketWorks.set_boot_stage("draw-enter")
 	_draw_background()
+	if boot_first_draw:
+		PocketWorks.set_boot_stage("draw-background-done")
 	_draw_world()
+	if boot_first_draw:
+		PocketWorks.set_boot_stage("draw-world-done")
 	if flash > 0.01:
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0.90, 0.77, 0.60, flash * 0.26), true)
+	if boot_first_draw:
+		boot_first_draw = false
+		PocketWorks.set_boot_stage("draw-done")
 
 func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), C_BG, true)
