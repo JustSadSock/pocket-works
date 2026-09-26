@@ -1066,3 +1066,7 @@ func _publish_state(state_name: String) -> void:
 		"generatedAudioReady": audio_ready,
 		"bestKills": best_kills
 	})
+
+
+func _on_exit_pressed() -> void:
+	PocketWorks.exit_to_launcher()
