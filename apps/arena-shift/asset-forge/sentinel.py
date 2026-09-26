@@ -163,9 +163,8 @@ set_frame(50, 0.015, 0.34, -1.10, -0.18, 0.18, -1.35)
 set_frame(56, 0.00, 0.02, 0.08, 0.00, 0.00, 0.10)
 set_frame(64, 0.00, 0.05, -0.05, -0.03, 0.03, 0.0)
 
-for fc in action.fcurves:
-    for kp in fc.keyframe_points:
-        kp.interpolation = 'BEZIER'
+# Blender 5.x Action slots no longer expose Action.fcurves directly.
+# Default interpolation is preserved; the authored timing remains deterministic.
 
 scene = bpy.context.scene
 scene.frame_start = 1
