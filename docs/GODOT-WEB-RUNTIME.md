@@ -153,6 +153,11 @@ The GitHub Actions cache stores the editor and export templates so later builds 
 
 npm run deploy:site does not invoke Godot.
 
+Cloudflare Workers static assets have a hard 25 MiB per-file upload limit. Official Godot Web templates can exceed that limit even with threads/extensions disabled. Pocket Works therefore applies a transport-only packaging step during `prepare:site`: oversized Godot `.wasm` files are Brotli-compressed in place inside `dist-site`, while a generated root `_headers` rule serves the same public `.wasm` URL with `Content-Encoding: br` and `Content-Type: application/wasm`. Browsers transparently decode the response before WebAssembly instantiation, so app exports and Godot loader code remain unchanged.
+
+The committed `apps/<slug>/web/**` export always remains the canonical uncompressed Godot output. Compression exists only in the disposable production directory. `validate:site` round-trips every packed WASM against its committed source and rejects any physical asset still larger than 25 MiB.
+
+
 For a Godot application, scripts/prepare-site.mjs:
 
 1. requires apps/<slug>/web/index.html to exist;

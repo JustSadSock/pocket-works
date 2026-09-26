@@ -19,12 +19,38 @@ const mimeTypes = new Map([
   ['.svg', 'image/svg+xml'],
   ['.webmanifest', 'application/manifest+json; charset=utf-8'],
   ['.webp', 'image/webp'],
-  ['.woff2', 'font/woff2']
+  ['.woff2', 'font/woff2'],
+  ['.wasm', 'application/wasm']
 ]);
 
 function isInsideRoot(candidate) {
   return candidate === root || candidate.startsWith(`${root}${path.sep}`);
 }
+
+async function loadStaticHeaders() {
+  const rules = new Map();
+  let source = '';
+  try { source = await readFile(path.join(root, '_headers'), 'utf8'); } catch { return rules; }
+
+  let current = null;
+  for (const raw of source.split(/\r?\n/)) {
+    const line = raw.trimEnd();
+    if (!line.trim() || line.trimStart().startsWith('#')) continue;
+    if (!/^\s/.test(raw)) {
+      current = line.trim();
+      if (!current.includes('*') && !current.includes(':')) rules.set(current, {});
+      else current = null;
+      continue;
+    }
+    if (!current) continue;
+    const match = line.trim().match(/^([^:]+):\s*(.*)$/);
+    if (!match) continue;
+    rules.get(current)[match[1].trim()] = match[2].trim();
+  }
+  return rules;
+}
+
+const staticHeaders = await loadStaticHeaders();
 
 async function resolveRequestPath(requestUrl) {
   const pathname = decodeURIComponent(new URL(requestUrl || '/', `http://${host}:${port}`).pathname);
@@ -52,16 +78,19 @@ const server = createServer(async (request, response) => {
     }
 
     const body = await readFile(filePath);
+    const requestPath = decodeURIComponent(new URL(request.url || '/', `http://${host}:${port}`).pathname);
     const extension = path.extname(filePath).toLowerCase();
     const cacheControl = filePath.endsWith('sw.js') || extension === '.webmanifest' || filePath.endsWith('apps.json')
       ? 'no-store'
       : 'public, max-age=0, must-revalidate';
 
-    response.writeHead(200, {
+    const headers = {
       'Content-Type': mimeTypes.get(extension) || 'application/octet-stream',
       'Cache-Control': cacheControl,
-      'X-Content-Type-Options': 'nosniff'
-    });
+      'X-Content-Type-Options': 'nosniff',
+      ...(staticHeaders.get(requestPath) || {})
+    };
+    response.writeHead(200, headers);
     response.end(request.method === 'HEAD' ? undefined : body);
   } catch (error) {
     const status = error?.code === 'ENOENT' ? 404 : 500;

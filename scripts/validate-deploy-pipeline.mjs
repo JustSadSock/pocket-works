@@ -8,10 +8,13 @@ async function read(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
-const [packageSource, wranglerSource, workflow] = await Promise.all([
+const [packageSource, wranglerSource, workflow, prepareSite, validateSite, previewServer] = await Promise.all([
   read('package.json'),
   read('wrangler.jsonc'),
-  read('.github/workflows/validate-production.yml')
+  read('.github/workflows/validate-production.yml'),
+  read('scripts/prepare-site.mjs'),
+  read('scripts/validate-site.mjs'),
+  read('scripts/serve-site.mjs')
 ]);
 
 const packageJson = JSON.parse(packageSource);
@@ -48,6 +51,18 @@ if (wrangler.assets?.directory !== './dist-site') {
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(wrangler.compatibility_date || '')) {
   errors.push('wrangler.jsonc must define an explicit compatibility_date');
+}
+
+if (!prepareSite.includes('Content-Encoding: br') || !prepareSite.includes('BROTLI_PARAM_QUALITY')) {
+  errors.push('prepare-site must Brotli-pack oversized Godot WASM while preserving its public .wasm URL');
+}
+
+if (!validateSite.includes('CLOUDFLARE_ASSET_LIMIT') || !validateSite.includes('brotliDecompress')) {
+  errors.push('validate-site must enforce Cloudflare\'s 25 MiB asset limit and verify packed Godot WASM round-trips');
+}
+
+if (!previewServer.includes("readFile(path.join(root, '_headers')") || !previewServer.includes('staticHeaders.get(requestPath)')) {
+  errors.push('production preview server must honor generated exact-path _headers rules so browser QA matches Cloudflare transport');
 }
 
 if (!workflow.includes('npm run ci:full')) {
