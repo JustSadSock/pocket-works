@@ -218,8 +218,6 @@
     });
 
     const workerUrl=new URL('./sw.js',location.href);
-    workerUrl.searchParams.set('pw_release',declared);
-    if(fingerprint)workerUrl.searchParams.set('pw_fp',fingerprint);
     navigator.serviceWorker.register(workerUrl.href,{updateViaCache:'none'})
       .then(async registration=>{
         await registration.update();
