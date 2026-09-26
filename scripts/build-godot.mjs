@@ -43,22 +43,30 @@ function optionValue(argv, name) {
   return index >= 0 ? argv[index + 1] : null;
 }
 
-function changedSlugs(base) {
+function changedScope(base) {
   let output = '';
   try {
     output = execFileSync('git', ['diff', '--name-only', base + '..HEAD'], { encoding: 'utf8' });
   } catch {
     try { output = execFileSync('git', ['diff', '--name-only', 'HEAD^..HEAD'], { encoding: 'utf8' }); }
-    catch { return []; }
+    catch { return { rebuildAll: false, slugs: [] }; }
   }
 
   const slugs = new Set();
+  let rebuildAll = false;
   for (const file of output.split(/\r?\n/)) {
+    if (
+      file === 'scripts/build-godot.mjs' ||
+      file === 'scripts/app-config.mjs' ||
+      file === '.github/workflows/godot-web-runtime.yml' ||
+      file.startsWith('apps/_godot-template/')
+    ) rebuildAll = true;
+
     const match = file.match(/^apps\/([^/]+)\/(.+)$/);
     if (!match || match[1].startsWith('_') || match[2].startsWith('web/')) continue;
     slugs.add(match[1]);
   }
-  return [...slugs].sort();
+  return { rebuildAll, slugs: [...slugs].sort() };
 }
 
 function htmlShell(html, config) {
@@ -224,8 +232,10 @@ const bySlug = new Map(configs.map((config) => [config.slug, config]));
 
 let targetSlugs;
 if (requestedApp) targetSlugs = [requestedApp];
-else if (changedFrom) targetSlugs = changedSlugs(changedFrom);
-else targetSlugs = configs.map((config) => config.slug);
+else if (changedFrom) {
+  const scope = changedScope(changedFrom);
+  targetSlugs = scope.rebuildAll ? configs.map((config) => config.slug) : scope.slugs;
+} else targetSlugs = configs.map((config) => config.slug);
 
 const targets = [];
 for (const slug of targetSlugs) {
