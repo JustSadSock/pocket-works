@@ -3,6 +3,7 @@ import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 
 const root = process.cwd();
+const sourceOnly = process.argv.includes('--source-only');
 const errors = [];
 const fail = (message) => errors.push(message);
 
@@ -127,7 +128,7 @@ for (const config of configs) {
   const directory = 'apps/' + config.slug;
   await validateProject(directory, config.storageNamespace);
   for (const required of ['icons/icon.svg', 'README.md']) if (!(await exists(directory + '/' + required))) fail(directory + ' is missing ' + required);
-  if (await validateWeb(config)) built += 1;
+  if (!sourceOnly && await validateWeb(config)) built += 1;
 }
 
 if (errors.length > 0) {
@@ -136,4 +137,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Godot Web runtime contract passed for ' + configs.length + ' registered app(s); ' + built + ' have committed Web exports.');
+console.log(sourceOnly
+  ? 'Godot source contract passed for ' + configs.length + ' registered app(s); generated Web freshness was intentionally deferred until export.'
+  : 'Godot Web runtime contract passed for ' + configs.length + ' registered app(s); ' + built + ' have committed Web exports.');

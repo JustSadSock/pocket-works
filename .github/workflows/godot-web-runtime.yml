@@ -68,7 +68,7 @@ jobs:
           npm run validate:pipeline
           node scripts/app-config.test.mjs
           npm run test:forge:godot
-          node scripts/validate-godot.mjs
+          node scripts/validate-godot.mjs --source-only
 
       - name: Restore pinned Godot toolchain
         id: godot-cache
