@@ -23,3 +23,8 @@ The audio-forge directory generates the app-local OGG bank through Audio Asset F
 The Godot Web Runtime workflow exports web/ from the authored project and commits deterministic output back to the feature branch.
 
 Generated web output is not hand-edited.
+
+
+## Web performance
+
+The Web build starts new installs in Classic presentation so the architectural progression is experienced in order and the initial frame stays light on mobile browsers. Forge rendering uses a reduced internal 3D scale and a 30 FPS ceiling while retaining the authored Blender character, lights, particles, camera motion and generated audio. Renderer choice is persisted after the player switches modes.
