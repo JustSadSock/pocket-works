@@ -77,6 +77,7 @@ var animation_player: AnimationPlayer
 var current_anim := ""
 
 func _ready() -> void:
+	Engine.max_fps = 30
 	rng.randomize()
 	PocketWorks.set_document_title("Arena Shift")
 	best_kills = int(PocketWorks.storage_get("best-kills", 0))
@@ -89,6 +90,7 @@ func _ready() -> void:
 	_build_ui()
 	_build_audio()
 	_reset_run()
+	_sync_visuals(0.0)
 	running = false
 	start_overlay.visible = true
 	_apply_mode(false)
@@ -114,7 +116,7 @@ func _build_world() -> void:
 	sun.rotation_degrees = Vector3(-58, -28, 0)
 	sun.light_color = Color("#fff0cf")
 	sun.light_energy = 1.55
-	sun.shadow_enabled = true
+	sun.shadow_enabled = false
 	world_root.add_child(sun)
 
 	var fill := DirectionalLight3D.new()
@@ -737,7 +739,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if not running or paused_game or upgrade_open or run_finished:
-		_sync_visuals(delta)
 		return
 
 	elapsed += delta
