@@ -436,19 +436,44 @@ class PlayScene extends Phaser.Scene {
       this.platforms.add(ground);
     }
 
-    for (let x=620;x<this.stage.runLength-250;x+=320+Math.floor(rnd()*210)) {
-      if (rnd() < 0.78) {
-        const y = 505 - Math.floor(rnd()*170);
-        const platform = this.physics.add.staticImage(x, y, 'da-platform');
-        platform.setScale(0.65+rnd()*0.62, 1).refreshBody().setDepth(3);
+    if (this.stage.id <= 3 && this.mode !== 'encore') {
+      type EarlyEnemy = [number, 'walker'|'flyer'|'turret'];
+      const layouts: Record<number,{platforms:Array<[number,number,number]>,enemies:EarlyEnemy[]}> = {
+        1: {
+          platforms:[[720,500,.95],[1160,430,.72],[1580,505,1.05],[2070,390,.76],[2580,472,1.12],[3160,350,.72],[3720,505,.9],[4280,418,1.06],[4860,318,.72],[5440,468,.95],[6040,382,.82],[6660,502,1.08],[7300,420,.82]],
+          enemies:[[980,'walker'],[1510,'flyer'],[2210,'turret'],[2840,'walker'],[3440,'flyer'],[4050,'walker'],[4680,'turret'],[5320,'flyer'],[5960,'walker'],[6840,'turret'],[7460,'flyer']]
+        },
+        2: {
+          platforms:[[680,470,.8],[1080,360,.72],[1510,485,1.12],[1980,330,.68],[2450,430,.86],[2920,520,1.1],[3470,390,.72],[3960,285,.7],[4480,455,1.04],[5050,355,.8],[5620,500,1.15],[6230,410,.72],[6880,305,.7],[7540,470,1.0],[8240,365,.78]],
+          enemies:[[860,'walker'],[1330,'flyer'],[1840,'turret'],[2310,'flyer'],[2760,'walker'],[3290,'turret'],[3810,'flyer'],[4320,'walker'],[4890,'flyer'],[5480,'turret'],[6070,'walker'],[6650,'flyer'],[7310,'turret'],[8020,'walker']]
+        },
+        3: {
+          platforms:[[720,510,1.12],[1180,405,.78],[1620,300,.66],[2100,455,.92],[2570,350,.72],[3070,495,1.08],[3600,372,.76],[4120,270,.68],[4640,430,.92],[5190,515,1.12],[5780,390,.74],[6360,292,.68],[6950,455,.96],[7560,348,.74],[8200,500,1.08],[8850,390,.82]],
+          enemies:[[920,'walker'],[1390,'flyer'],[1880,'turret'],[2380,'walker'],[2860,'flyer'],[3370,'turret'],[3890,'walker'],[4410,'flyer'],[4930,'turret'],[5480,'walker'],[6040,'flyer'],[6610,'turret'],[7210,'walker'],[7840,'flyer'],[8520,'turret'],[9140,'walker']]
+        }
+      };
+      const layout=layouts[this.stage.id];
+      for (const [x,y,scale] of layout.platforms) {
+        const platform=this.physics.add.staticImage(x,y,'da-platform');
+        platform.setScale(scale,1).refreshBody().setDepth(3);
         this.platforms.add(platform);
       }
-    }
+      for (const [x,kind] of layout.enemies) this.spawnEnemy(x,kind==='flyer'?365:GROUND_Y-80,kind);
+    } else {
+      for (let x=620;x<this.stage.runLength-250;x+=320+Math.floor(rnd()*210)) {
+        if (rnd() < 0.78) {
+          const y = 505 - Math.floor(rnd()*170);
+          const platform = this.physics.add.staticImage(x, y, 'da-platform');
+          platform.setScale(0.65+rnd()*0.62, 1).refreshBody().setDepth(3);
+          this.platforms.add(platform);
+        }
+      }
 
-    const ambientCount = Math.floor((this.stage.runLength / 520) * this.stage.enemyDensity);
-    for (let i=0;i<ambientCount;i++) {
-      const x = 900 + rnd()*(this.stage.runLength-1300);
-      this.spawnEnemy(x, GROUND_Y-70, i%3===1?'flyer':i%5===0?'turret':'walker');
+      const ambientCount = Math.floor((this.stage.runLength / 520) * this.stage.enemyDensity);
+      for (let i=0;i<ambientCount;i++) {
+        const x = 900 + rnd()*(this.stage.runLength-1300);
+        this.spawnEnemy(x, GROUND_Y-70, i%3===1?'flyer':i%5===0?'turret':'walker');
+      }
     }
 
     const arenaStart = this.stage.runLength + 250;
@@ -720,9 +745,12 @@ class PlayScene extends Phaser.Scene {
 
   private onPlayerBulletEnemy(bullet: Phaser.Physics.Arcade.Image, enemy: Phaser.Physics.Arcade.Sprite) {
     if (!bullet.active || !enemy.active) return;
+    const impactX=bullet.x, impactY=bullet.y;
     bullet.disableBody(true,true);
     this.shotsHit++;
-    this.damageEnemy(enemy, 9);
+    this.burst(impactX,impactY,this.stage.palette.paper,2);
+    if (this.shotsHit%3===0) audio.impact();
+    this.damageEnemy(enemy, 10);
   }
 
   private damageEnemy(enemy: Phaser.Physics.Arcade.Sprite, amount: number) {
@@ -740,9 +768,12 @@ class PlayScene extends Phaser.Scene {
 
   private onPlayerBulletBoss(bullet: Phaser.Physics.Arcade.Image) {
     if (!bullet.active || !this.bossActive || !this.boss.active) return;
+    const impactX=bullet.x, impactY=bullet.y;
     bullet.disableBody(true,true);
     this.shotsHit++;
-    this.damageBoss(8);
+    this.burst(impactX,impactY,this.stage.palette.paper,2);
+    if (this.shotsHit%3===0) audio.impact();
+    this.damageBoss(10);
   }
 
   private damageBoss(amount: number) {
@@ -752,21 +783,50 @@ class PlayScene extends Phaser.Scene {
     this.score += amount*2;
     this.boss.setTint(this.stage.palette.paper);
     this.time.delayedCall(42,()=>this.boss?.active&&this.boss.clearTint());
-    if (this.previousBossHp - hp >= 70) {
+    if (amount <= 12) {
+      const base=this.stage.bossScale;
+      this.tweens.add({targets:this.boss,scaleX:base*0.965,scaleY:base*1.035,duration:38,yoyo:true,ease:'Quad.easeOut'});
+    }
+    if (this.previousBossHp - hp >= 54) {
       this.previousBossHp = hp;
       audio.hit();
-      this.burst(this.boss.x+Phaser.Math.Between(-55,55),this.boss.y+Phaser.Math.Between(-60,60),this.stage.palette.accent,4);
+      this.cameras.main.shake(45,0.0018);
+      this.burst(this.boss.x+Phaser.Math.Between(-55,55),this.boss.y+Phaser.Math.Between(-60,60),this.stage.palette.accent,5);
     }
     const ratio = hp/this.bossMaxHp;
     const nextPhase = ratio <= 0.33 ? 3 : ratio <= 0.66 ? 2 : 1;
-    if (nextPhase !== this.bossPhase) {
-      this.bossPhase = nextPhase;
-      this.glitchUntil = this.time.now + 650;
-      this.cameras.main.flash(180, 236, 80, 61, false);
-      this.cameras.main.shake(220,0.007);
-      this.bossAttackIndex += 2;
-    }
+    if (nextPhase !== this.bossPhase) this.enterBossPhase(nextPhase);
     if (hp<=0) this.completeStage();
+  }
+
+  private enterBossPhase(nextPhase:number) {
+    this.bossPhase=nextPhase;
+    this.bossAttackIndex=0;
+    this.bossAttackLockedUntil=this.time.now+880;
+    this.bossLastAttack=this.time.now;
+    this.glitchUntil=this.time.now+820;
+    this.boss.setData('scriptedUntil',this.time.now+760);
+    this.boss.setTexture(`da-boss-p${nextPhase}`);
+    for(const child of this.hostileBullets.getChildren()) {
+      const bullet=child as Phaser.Physics.Arcade.Image;
+      if(bullet.active) bullet.disableBody(true,true);
+    }
+    audio.phase();
+    this.cameras.main.flash(220,236,80,61,false);
+    this.cameras.main.shake(300,0.010);
+    const base=this.stage.bossScale;
+    this.tweens.add({
+      targets:this.boss,
+      scaleX:base*1.24,
+      scaleY:base*0.78,
+      angle:nextPhase===2?-7:8,
+      duration:180,
+      ease:'Back.easeOut',
+      yoyo:true,
+      hold:80,
+      onComplete:()=>this.boss?.active&&this.boss.setScale(base).setAngle(0)
+    });
+    this.burst(this.boss.x,this.boss.y,this.stage.palette.hazard,18);
   }
 
   private onHostileBulletPlayer(bullet: Phaser.Physics.Arcade.Image) {
