@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#161718">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DEAD AIR">
+  <meta name="pocket-works-build" content="1.0.0">
+  <title>DEAD AIR // 13 — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell dead-air-shell" data-app-shell>
+    <div id="gameMount" class="game-mount" data-gesture-surface aria-label="Игровое поле DEAD AIR"></div>
+
+    <section id="bootScreen" class="boot-screen" data-ui>
+      <div class="station-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p>DEAD AIR // 13</p>
+      <strong id="bootStatus">Синхронизация сигнала…</strong>
+    </section>
+
+    <section id="menuScreen" class="menu-screen" hidden data-ui>
+      <header class="menu-top">
+        <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+        <button id="soundButton" type="button" data-native-press>ЗВУК · ВКЛ</button>
+      </header>
+      <div class="menu-brand">
+        <span>OVERNIGHT BROADCAST / 00:13</span>
+        <h1>DEAD<br>AIR</h1>
+        <p>Пройди эфир до конца. Остальное лучше не знать заранее.</p>
+      </div>
+      <div class="menu-actions">
+        <button id="continueButton" class="primary" type="button" data-native-press>
+          <span>ПРОДОЛЖИТЬ</span><small id="continueMeta">Новый эфир</small>
+        </button>
+        <button id="selectButton" type="button" data-native-press>
+          <span>ВЫБОР КАНАЛА</span><small>Пройденные передачи и рейтинги</small>
+        </button>
+        <button id="challengeButton" type="button" data-native-press disabled>
+          <span>ПОСЛЕ ЭФИРА</span><small id="challengeMeta">Закрыто до прохождения</small>
+        </button>
+      </div>
+      <footer class="menu-foot">
+        <span>LANDSCAPE / HEADPHONES RECOMMENDED</span>
+        <button id="workshopButton" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
+      </footer>
+    </section>
+
+    <section id="selectScreen" class="select-screen" hidden data-ui>
+      <header class="select-head">
+        <button id="selectBack" type="button" data-native-press>← НАЗАД</button>
+        <div><span>АРХИВ ЭФИРА</span><strong id="archiveProgress">0 / 13</strong></div>
+      </header>
+      <div id="channelGrid" class="channel-grid"></div>
+    </section>
+
+    <section id="hud" class="hud" hidden data-ui>
+      <header class="hud-top">
+        <button id="pauseButton" type="button" data-native-press>II</button>
+        <div class="hud-title"><span id="stageLabel">CH 01</span><strong id="stageName">...</strong></div>
+        <div class="hud-meter"><span>HP</span><i><b id="hpBar"></b></i><strong id="hpValue">5</strong></div>
+        <div class="hud-meter signal"><span>SIGNAL</span><i><b id="signalBar"></b></i><strong id="signalValue">0</strong></div>
+      </header>
+
+      <div class="move-pad" id="movePad" data-touch-action="none" data-block-callout>
+        <div class="move-track"><i></i><i></i><span id="moveThumb"></span></div>
+      </div>
+      <div class="action-pad">
+        <button id="dashButton" class="action dash" type="button" data-touch-action="none" data-block-callout><span>DASH</span></button>
+        <button id="jumpButton" class="action jump" type="button" data-touch-action="none" data-block-callout><span>JUMP</span></button>
+        <button id="specialButton" class="action special" type="button" data-touch-action="none" data-block-callout><span>SPECIAL</span><small id="specialPips">○○○</small></button>
+      </div>
+    </section>
+
+    <section id="pauseScreen" class="pause-screen" hidden data-ui>
+      <div class="pause-card">
+        <span>SIGNAL INTERRUPTED</span>
+        <h2>Пауза</h2>
+        <button id="resumeButton" class="primary" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button id="restartButton" type="button" data-native-press>НАЧАТЬ КАНАЛ ЗАНОВО</button>
+        <button id="pauseSoundButton" type="button" data-native-press>ЗВУК · ВКЛ</button>
+        <button id="quitButton" type="button" data-native-press>ВЫЙТИ В МЕНЮ</button>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="result-screen" hidden data-ui>
+      <div class="result-card">
+        <span id="resultKicker">TRANSMISSION COMPLETE</span>
+        <div id="resultGrade" class="grade">A</div>
+        <h2 id="resultTitle">Эфир завершён</h2>
+        <div class="result-stats">
+          <div><span>ВРЕМЯ</span><strong id="resultTime">00:00</strong></div>
+          <div><span>УРОН</span><strong id="resultDamage">0</strong></div>
+          <div><span>ПАРИ</span><strong id="resultParries">0</strong></div>
+          <div><span>СЧЁТ</span><strong id="resultScore">0</strong></div>
+        </div>
+        <button id="nextButton" class="primary" type="button" data-native-press>ДАЛЬШЕ</button>
+        <button id="retryButton" type="button" data-native-press>ПОВТОРИТЬ</button>
+        <button id="resultMenuButton" type="button" data-native-press>В АРХИВ</button>
+      </div>
+    </section>
+
+    <section id="errorScreen" class="error-screen" hidden data-ui>
+      <span>NO SIGNAL</span>
+      <h2>Эфир не поднялся.</h2>
+      <p id="errorText">Игровой рендеринг недоступен.</p>
+      <button id="errorRetry" type="button" data-native-press>ПОВТОРИТЬ</button>
+      <a href="../../" data-app-control data-native-press>← Pocket Works</a>
+    </section>
+
+    <div class="crt-overlay" aria-hidden="true"></div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
