@@ -6,6 +6,9 @@ on:
       - "apps/**"
       - "scripts/build-godot.mjs"
       - "scripts/validate-godot.mjs"
+      - "scripts/prepare-site.mjs"
+      - "scripts/validate-site.mjs"
+      - "scripts/validate-deploy-pipeline.mjs"
       - "scripts/app-config.mjs"
       - ".github/workflows/godot-web-runtime.yml"
   pull_request:
@@ -13,6 +16,9 @@ on:
       - "apps/**"
       - "scripts/build-godot.mjs"
       - "scripts/validate-godot.mjs"
+      - "scripts/prepare-site.mjs"
+      - "scripts/validate-site.mjs"
+      - "scripts/validate-deploy-pipeline.mjs"
       - "scripts/app-config.mjs"
       - ".github/workflows/godot-web-runtime.yml"
   workflow_dispatch:
