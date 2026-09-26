@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "n-space",
+  "name": "N·SPACE",
+  "shortName": "N·SPACE",
+  "description": "Интерактивная лаборатория 1D–5D фигур, вращений и проекций между измерениями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-26",
+  "releaseDateTime": "2026-09-26T14:55:00+03:00",
+  "changelog": [
+    "Добавлены гиперкубы, симплексы и кросс-политопы от 1D до 5D.",
+    "Добавлены вращения по произвольным плоскостям и перспективные/ортографические проекции в 3D, 2D и 1D.",
+    "Добавлены касание вершин, координатный инспектор, цепочка проекций и сохранение состояния."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#2459d6",
+  "backgroundColor": "#eeece4",
+  "themeColor": "#eeece4",
+  "orientation": "any",
+  "cacheName": "n-space-v1.0.0",
+  "storageNamespace": "pocket-works:n-space",
+  "tags": ["PWA", "offline", "math", "geometry", "canvas", "simulation"],
+  "order": 42
+}
