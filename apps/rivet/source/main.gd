@@ -104,7 +104,6 @@ func _process(delta: float) -> void:
 	if running:
 		player_pos.x = 640.0 + sin(Time.get_ticks_msec() * 0.0018) * 160.0
 	queue_redraw()
-	void(delta)
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), BG, true)
