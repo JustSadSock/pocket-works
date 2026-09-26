@@ -72,6 +72,9 @@ jobs:
       - name: Validate Enhanced runtime
         run: npm run validate:enhanced
 
+      - name: Validate Godot source contract
+        run: npm run validate:godot
+
       - name: Validate browser quality contract
         run: npm run validate:quality
 
