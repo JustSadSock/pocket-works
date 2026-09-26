@@ -1,0 +1,21 @@
+{
+  "id": "/apps/n-space/",
+  "name": "N·SPACE",
+  "short_name": "N·SPACE",
+  "description": "Интерактивная лаборатория 1D–5D фигур, вращений и проекций между измерениями.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#eeece4",
+  "theme_color": "#eeece4",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
