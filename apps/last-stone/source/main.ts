@@ -67,9 +67,18 @@ function modal(title:string,copy:string,primary:string,action:()=>void,secondary
   other.textContent=secondary?.label??'';
   if(secondary)bindModalAction(other,secondary.action);
   else {other.onclick=null;other.onpointerup=null;other.ontouchend=null;}
+  setModalLock(true);
   $('modal-backdrop').classList.remove('hidden');
 }
-function hideModal(){$('modal-backdrop').classList.add('hidden');}
+function setModalLock(locked:boolean){
+  const start=$<HTMLButtonElement>('start');
+  start.disabled=locked;
+  for(const surface of document.querySelectorAll<HTMLElement>('[data-ui]'))surface.inert=locked;
+}
+function hideModal(){
+  $('modal-backdrop').classList.add('hidden');
+  setModalLock(false);
+}
 function intro(){
   modal('Замок держится на ваших решениях.',
     'Выберите постройку внизу: на земле появится строительная сетка. Коснитесь клетки — она подсветится, а постройка встанет в неё. Камеру можно вращать пальцем. Перед штурмом разведка покажет направление удара.',
