@@ -65,3 +65,5 @@ The mobile presentation was rebuilt around legibility and physicality rather tha
 The former horizontal slider is now a mechanical gate lever with an arced travel path and hard decision detents. The diorama gained authored tone correction plus runtime clutter, road ruts, riverbank reeds and stones, bridge joinery, fencing, dock props, lanterns, forge smoke and lightweight ambient inhabitants.
 
 Visitor animation now includes idle weight shifts, role silhouettes, turn-around motion and decision reactions. WebAudio ambience reacts to weather and population. Campaigns also roll one of three regional conditions so repeated runs apply different systemic pressure.
+
+Web boot is staged: the menu renders first, the core diorama is built across subsequent frames, and ambient inhabitants/audio are activated only after the player enters a shift.
