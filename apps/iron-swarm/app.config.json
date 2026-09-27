@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "iron-swarm",
+  "name": "ЖЕЛЕЗНЫЙ РОЙ",
+  "shortName": "ЖЕЛЕЗНЫЙ РОЙ",
+  "description": "Аркадный survivor про ремонтного меха: собирай вращающийся риг из оружия и брони, разворачивай его под удар и переживай всё более плотный рой.",
+  "version": "0.1.0",
+  "releaseDate": "2026-09-27",
+  "releaseDateTime": "2026-09-27T20:20:00+02:00",
+  "changelog": [
+    "Первый релиз: пяти-минутный survivor-забег, вращаемый модульный риг, шесть типов модулей, три класса обычных врагов и финальный Crusher.",
+    "Добавлены мобильное двухпальцевое управление, физические импульсы толпы, уровень/выбор улучшений, процедурный звук, пауза и сохранение незавершённого забега.",
+    "Сцена оформлена как светлая индустриальная пустошь с адаптивным качеством, камерой с импульсами и отдельным интерфейсом под landscape-телефон."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#d8893c",
+  "backgroundColor": "#b9ad91",
+  "themeColor": "#393b35",
+  "orientation": "landscape",
+  "cacheName": "iron-swarm-v0.1.0",
+  "storageNamespace": "pocket-works:iron-swarm",
+  "tags": ["PWA","offline","game","3D","Babylon.js","survivor","roguelike","physics","landscape","mobile"],
+  "order": 16
+}
