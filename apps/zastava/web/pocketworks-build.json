@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "runtime": "godot",
+  "engine": "godot",
+  "engineVersion": "4.7.2",
+  "slug": "zastava",
+  "version": "1.0.0",
+  "sourceFingerprint": "f91795138eb7c248be5dacd4d8d2b3bdc0ccf1cb35c6f9a77abaa94bc9f56559"
+}

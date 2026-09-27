@@ -1,0 +1,25 @@
+{
+  "id": "/apps/zastava/",
+  "name": "ЗАСТАВА",
+  "short_name": "ЗАСТАВА",
+  "description": "Живая пограничная диорама: решайте, кого пропускать через мост, и наблюдайте, как решения физически меняют поселение.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#879087",
+  "theme_color": "#36413d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
