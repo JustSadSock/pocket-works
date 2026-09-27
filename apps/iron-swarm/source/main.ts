@@ -5,10 +5,16 @@ import './styles.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
-import {
-  Color3,Color4,DirectionalLight,Engine,FreeCamera,HemisphericLight,Matrix,MeshBuilder,
-  Quaternion,Scene,StandardMaterial,TransformNode,Vector3
-} from '@babylonjs/core';
+import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
+import { Engine } from '@babylonjs/core/Engines/engine';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { Scene } from '@babylonjs/core/scene';
 import {
   BOSS_TIME,RUN_DURATION,applyUpgrade,createGame,getUpgradeChoices,pauseGame,restoreGame,
   resumeGame,serializeGame,startGame,stepGame,type ModuleKind
