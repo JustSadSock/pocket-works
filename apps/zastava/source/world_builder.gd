@@ -35,6 +35,7 @@ var live_scene_building := false
 var pending_state: Dictionary = {}
 var pending_weather := "clear"
 var current_time_progress := 0.28
+var time_tween: Tween
 
 const C_GRASS := Color("#66735f")
 const C_GRASS_DARK := Color("#505d4d")
@@ -488,6 +489,13 @@ func set_weather(kind: String) -> void:
 		environment.environment.background_color = Color("#737e78")
 		environment.environment.ambient_light_energy = 0.46
 
+func transition_time(target: float, duration: float = 0.45) -> void:
+	if time_tween and time_tween.is_running():
+		time_tween.kill()
+	var start := current_time_progress
+	time_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	time_tween.tween_method(set_time, start, clampf(target, 0.0, 1.0), maxf(0.05, duration))
+
 func set_time(progress: float) -> void:
 	current_time_progress = progress
 	if environment == null or sun == null:
@@ -500,8 +508,8 @@ func set_time(progress: float) -> void:
 		sun.light_energy = lerp(0.92, 0.68, max(0.0, (t - 0.55) / 0.17))
 	else:
 		sun.light_color = Color("#bf8b72")
-		sun.light_energy = lerp(0.78, 0.30, (t - 0.72) / 0.28)
-	environment.environment.ambient_light_color = Color("#b8b09b").lerp(Color("#68737c"), max(0.0, (t - 0.58) / 0.42))
+		sun.light_energy = lerp(0.70, 0.46, (t - 0.72) / 0.28)
+	environment.environment.ambient_light_color = Color("#b8b09b").lerp(Color("#777d78"), max(0.0, (t - 0.58) / 0.42))
 	var lamp_energy := clampf((t - 0.62) / 0.20, 0.0, 1.0) * 0.78
 	for lamp in lanterns:
 		lamp.light_energy = lamp_energy
