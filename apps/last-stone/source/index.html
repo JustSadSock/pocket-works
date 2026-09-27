@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#202b2b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Последний камень</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" data-app-shell>
+    <canvas id="world" aria-label="Трёхмерное поле строительства крепости"></canvas>
+    <div class="scene-shade"></div>
+    <header class="topbar" data-ui>
+      <div class="identity"><span class="sigil">✣</span><div><strong>ПОСЛЕДНИЙ КАМЕНЬ</strong><small id="wave-name">ОСАДА I / XII</small></div></div>
+      <div class="resources"><span><i class="resource-mark stone"></i><b id="stone">125</b><small>камень</small></span>
+        <span><i class="resource-mark wood"></i><b id="timber">50</b><small>дерево</small></span>
+        <span><i class="resource-mark iron"></i><b id="iron">12</b><small>железо</small></span></div>
+      <div class="top-actions">
+        <button id="sound" class="icon-button" type="button" aria-label="Отключить звук">◖))</button>
+        <button id="help" class="icon-button" type="button" aria-label="Помощь">?</button>
+        <button class="exit" id="exit" type="button">← PocketWorks</button>
+        <button class="workshop-trigger" type="button" data-workshop-trigger>⋯</button>
+      </div>
+    </header>
+    <section class="readout" data-ui>
+      <div class="keep-meter"><span>ДОНЖОН</span><div class="meter"><div id="keep-fill"></div></div><b id="keep">100%</b></div>
+      <p id="notice" role="status" aria-live="polite">Поставьте укрепления вокруг донжона.</p>
+    </section>
+    <div class="camera-actions" data-ui><button id="orbit" type="button" aria-label="Повернуть камеру">⤾ <span>Повернуть</span></button><button id="overview" type="button" aria-label="Общий вид">⌂ <span>Общий вид</span></button></div>
+    <div class="siege-strip hidden" id="siege-strip" data-ui>
+      <strong id="siege-title">ШТУРМ</strong><span id="siege-count">0 / 6</span>
+      <button id="speed" type="button">×1</button><button id="pause" type="button">Пауза</button>
+    </div>
+    <footer class="dock" id="dock" data-ui>
+      <div class="intel"><b id="intel-title">СЕВЕРНЫЙ ТРАКТ</b><span id="intel-copy">Пехота. Сначала укрепите направление удара.</span></div>
+      <div class="tools" id="tools"></div>
+      <div class="dock-actions"><button id="repair" type="button">Ремонт</button><button id="remove" type="button">Разобрать</button>
+        <button id="start" class="start" type="button">НАЧАТЬ ОСАДУ <span>↗</span></button></div>
+    </footer>
+    <div class="modal-backdrop" id="modal-backdrop">
+      <section class="modal" id="modal" role="dialog" aria-modal="true">
+        <span class="modal-index">✣ &nbsp; ПОСЛЕДНИЙ КАМЕНЬ</span>
+        <h1 id="modal-title">Замок держится на ваших решениях.</h1>
+        <p id="modal-copy">Размещайте стены и башни касанием земли. Враги ищут проход к донжону; после штурма вы получите материалы на ремонт и усиление.</p>
+        <div class="modal-actions"><button id="modal-secondary" class="hidden" type="button">Начать заново</button><button id="modal-primary" type="button">К СТРОИТЕЛЬСТВУ →</button></div>
+      </section>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

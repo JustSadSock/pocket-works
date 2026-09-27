@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Последний камень">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#738d85"/><stop offset="1" stop-color="#324740"/></linearGradient>
+    <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#d9c5a5"/><stop offset="1" stop-color="#9f917b"/></linearGradient></defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <path d="M0 385 128 351l168 27 216-62v196H0Z" fill="#435b48"/>
+  <path d="M73 172h89v190H73zM351 172h89v190h-89z" fill="#827b6d"/>
+  <path d="M77 134h18v26h17v-26h18v26h18v-26h18v55H77zM347 134h18v26h17v-26h18v26h18v-26h18v55h-89z" fill="#d9c5a5"/>
+  <path d="M151 250h210v139H151z" fill="url(#wall)"/>
+  <path d="M149 219h26v27h27v-27h26v27h27v-27h26v27h27v-27h27v27h27v-27h25v53H149z" fill="#dfcdb0"/>
+  <path d="M225 389v-69c0-18 13-34 31-34s31 16 31 34v69z" fill="#463f38"/>
+  <path d="M256 163V74" fill="none" stroke="#3e4b43" stroke-width="9"/>
+  <path d="M260 79h105l-27 41 27 38H260z" fill="#b7654a"/>
+  <path d="m51 418 100-15 65 17 74-26 86 15 82-18 54 8v113H0v-85z" fill="#293e36" opacity=".65"/>
+</svg>
