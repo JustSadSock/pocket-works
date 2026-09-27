@@ -9,7 +9,7 @@ describe('Last Raven campaign',()=>{
   it('moves visitor -> letter -> night and consumes supplies',()=>{
     const s=createGame(7);startGame(s);const first=s.current?.choices.find(c=>canChoose(s,c.id));expect(first).toBeTruthy();choose(s,first!.id);
     expect(s.phase).toBe('letter');const second=s.current!.choices.find(c=>canChoose(s,c.id))!;choose(s,second.id);expect(s.phase).toBe('night');
-    expect(s.resources.food).toBeLessThan(24);
+    expect(s.resources.wood).toBeLessThan(18);
   });
   it('rejects decisions that cannot be paid for',()=>{
     const s=createGame(12);startGame(s);s.current={id:'test',kind:'visitor',title:'test',source:'test',visual:'trader',body:'test',choices:[{id:'admit',label:'x',hint:'x',effects:{gold:-99}}]};
