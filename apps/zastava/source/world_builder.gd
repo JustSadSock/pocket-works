@@ -155,9 +155,27 @@ func _try_authored_core() -> bool:
 	if packed is PackedScene:
 		var instance := (packed as PackedScene).instantiate()
 		instance.name = "AuthoredCore"
+		_tint_authored_core(instance)
 		add_child(instance)
 		return true
 	return false
+
+func _tint_authored_core(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_node := node as MeshInstance3D
+		var n := String(mesh_node.name).to_lower()
+		var tint := C_STONE
+		if n.contains("roof") or n.contains("banner"):
+			tint = C_ROOF if n.contains("roof") else Color("#6d4a3e")
+		elif n.contains("iron") or n.contains("drum") or n.contains("chain"):
+			tint = C_METAL
+		elif n.contains("booth") or n.contains("winch") or n.contains("oak"):
+			tint = C_WOOD_LIGHT
+		elif n.contains("slit") or n.contains("mortar") or n.contains("cap"):
+			tint = C_STONE_DARK
+		mesh_node.material_override = _mat(tint)
+	for child in node.get_children():
+		_tint_authored_core(child)
 
 func _build_village_architecture() -> void:
 	village_root = Node3D.new()
