@@ -62,7 +62,7 @@ func _begin_drag(pos: Vector2) -> void:
 func _update_drag(pos: Vector2) -> void:
 	if not dragging:
 		return
-	var half := max(1.0, size.x * 0.5 - 72.0)
+	var half := maxf(1.0, size.x * 0.5 - 72.0)
 	handle_x = clamp((pos.x - size.x * 0.5) / half, -1.0, 1.0)
 	queue_redraw()
 
@@ -111,7 +111,7 @@ func _draw() -> void:
 	draw_circle(Vector2(right_x, center.y), 22, RIGHT)
 	draw_circle(center, 18, METAL.lightened(0.18))
 
-	var half := max(1.0, size.x * 0.5 - 72.0)
+	var half := maxf(1.0, size.x * 0.5 - 72.0)
 	var knob := Vector2(center.x + handle_x * half, center.y - 18)
 	var stem_start := center + Vector2(0, 2)
 	draw_line(stem_start, knob, METAL, 18.0, true)
@@ -121,7 +121,7 @@ func _draw() -> void:
 	draw_circle(knob - Vector2(8, 10), 6, WOOD.lightened(0.22))
 
 	if enabled:
-		var a := abs(handle_x)
+		var a: float = absf(handle_x)
 		if a > 0.30:
 			var signal_color := LEFT if handle_x < 0 else RIGHT
 			draw_circle(knob, 38 + a * 4.0, Color(signal_color, 0.18), false, 5.0)
