@@ -1,5 +1,7 @@
 extends Node3D
 
+signal boot_completed
+
 const VISITOR_SCRIPT := preload("res://source/visitor_actor.gd")
 
 var sun: DirectionalLight3D
@@ -27,6 +29,12 @@ var trade_details: Node3D
 var lanterns: Array[OmniLight3D] = []
 var forge_smoke: GPUParticles3D
 var motion_clock := 0.0
+var boot_ready := false
+var live_scene_ready := false
+var live_scene_building := false
+var pending_state: Dictionary = {}
+var pending_weather := "clear"
+var current_time_progress := 0.28
 
 const C_GRASS := Color("#66735f")
 const C_GRASS_DARK := Color("#505d4d")
@@ -41,14 +49,65 @@ const C_METAL := Color("#444d49")
 const C_CLOTH := Color("#79634e")
 
 func _ready() -> void:
+	# Keep _ready intentionally tiny. Godot does not dismiss its Web splash until
+	# the first rendered frame; building the whole diorama here made Chromium sit
+	# on the engine splash while meshes, GLB materials and particles were created.
+	set_process(false)
 	_build_environment()
+
+func finish_boot(initial_state: Dictionary, weather: String) -> void:
+	if boot_ready:
+		set_state(initial_state)
+		set_weather(weather)
+		boot_completed.emit()
+		return
+	pending_state = initial_state.duplicate(true)
+	pending_weather = weather
+
+	PocketWorks.set_boot_stage("world-landscape")
 	_build_landscape()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-gatehouse")
 	authored_core = _try_authored_core()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-village")
 	_build_village_architecture()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-mechanism")
 	_build_moving_bridge()
-	_build_living_details()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-weather")
 	_build_weather()
-	set_time(0.28)
+	await get_tree().process_frame
+
+	boot_ready = true
+	set_time(current_time_progress)
+	set_state(pending_state)
+	set_weather(pending_weather)
+	PocketWorks.set_boot_stage("world-ready")
+	boot_completed.emit()
+
+func activate_live_scene(state: Dictionary) -> void:
+	if live_scene_ready or live_scene_building or not boot_ready:
+		return
+	live_scene_building = true
+	PocketWorks.set_boot_stage("live-details")
+	await get_tree().process_frame
+	_build_living_details()
+	await get_tree().process_frame
+	live_scene_ready = true
+	live_scene_building = false
+	set_state(state)
+	set_time(current_time_progress)
+	set_process(true)
+	PocketWorks.set_boot_stage("live-ready")
+
+func is_boot_ready() -> bool:
+	return boot_ready
 
 func _build_environment() -> void:
 	environment = WorldEnvironment.new()
@@ -335,6 +394,8 @@ func _build_living_details() -> void:
 	add_child(forge_smoke)
 
 func _process(delta: float) -> void:
+	if not live_scene_ready:
+		return
 	motion_clock += delta
 	for i in range(ambient_people.size()):
 		var p := ambient_people[i]
@@ -412,6 +473,9 @@ func _precipitation(is_snow: bool) -> GPUParticles3D:
 
 func set_weather(kind: String) -> void:
 	current_weather = kind
+	pending_weather = kind
+	if not boot_ready or rain == null or snow == null:
+		return
 	rain.emitting = kind == "rain"
 	snow.emitting = kind == "snow"
 	if kind == "rain":
@@ -425,6 +489,9 @@ func set_weather(kind: String) -> void:
 		environment.environment.ambient_light_energy = 0.46
 
 func set_time(progress: float) -> void:
+	current_time_progress = progress
+	if environment == null or sun == null:
+		return
 	var t: float = clampf(progress, 0.0, 1.0)
 	sun.rotation_degrees.x = lerp(-35.0, -72.0, abs(t - 0.5) * 1.5)
 	sun.rotation_degrees.y = lerp(-55.0, 45.0, t)
@@ -440,6 +507,9 @@ func set_time(progress: float) -> void:
 		lamp.light_energy = lamp_energy
 
 func set_state(state: Dictionary) -> void:
+	pending_state = state.duplicate(true)
+	if not boot_ready or village_root == null:
+		return
 	var population := int(state.get("population", 18))
 	var trade := int(state.get("trade", 8))
 	var guard := int(state.get("guard", 6))
@@ -480,6 +550,8 @@ func _set_visible_animated(node: Node3D, desired: bool) -> void:
 		node.visible = false
 
 func operate_gate(opened: bool) -> void:
+	if not boot_ready or bridge_pivot == null or gate_bar == null:
+		return
 	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	if opened:
 		tw.tween_property(gate_bar, "position", Vector3(0, 2.30, -1.23), 0.62)
@@ -489,6 +561,8 @@ func operate_gate(opened: bool) -> void:
 		tw.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.42).set_delay(0.18)
 
 func spawn_visitor(profile: Dictionary, variant: int) -> void:
+	if not boot_ready:
+		return
 	if is_instance_valid(visitor):
 		visitor.queue_free()
 	visitor = VISITOR_SCRIPT.new()
