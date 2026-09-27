@@ -63,7 +63,9 @@ export class World {
     material('ghost','#d6b97e').alpha=.48;material('invalid','#bd553f').alpha=.5;
     material('damage','#82534a');material('arrow','#292b2b');
     this.ground=MeshBuilder.CreateGround('selection-ground',{width:SIZE*2.25,height:SIZE*2.25},this.scene);
-    this.ground.isVisible=false;this.ground.isPickable=true;
+    // Keep the interaction plane enabled for debugging, but do not depend on mesh picking:
+    // Babylon skips meshes with isVisible=false during picking.
+    this.ground.isVisible=true;this.ground.visibility=0;this.ground.isPickable=false;
     this.ghost=MeshBuilder.CreateBox('preview',{width:2.03,height:1.7,depth:2.03},this.scene);
     this.ghost.material=this.mats.ghost;this.ghost.isPickable=false;this.ghost.setEnabled(false);
     this.makeEnvironment();
@@ -118,10 +120,14 @@ export class World {
     plinth.receiveShadows=true;
   }
   private pick():[number,number]|null{
+    // Intersect the camera ray with the castle's build plane directly.
+    // This remains reliable even when every visible world mesh is non-pickable.
     const ray=this.scene.createPickingRay(this.scene.pointerX,this.scene.pointerY,null,this.camera);
-    const hit=ray.intersectsMesh(this.ground);
-    if(!hit.hit||!hit.pickedPoint)return null;
-    const x=Math.round(hit.pickedPoint.x/2.25+CENTER),z=Math.round(hit.pickedPoint.z/2.25+CENTER);
+    if(Math.abs(ray.direction.y)<1e-5)return null;
+    const distance=-ray.origin.y/ray.direction.y;
+    if(distance<0)return null;
+    const point=ray.origin.add(ray.direction.scale(distance));
+    const x=Math.round(point.x/2.25+CENTER),z=Math.round(point.z/2.25+CENTER);
     return x>=0&&z>=0&&x<SIZE&&z<SIZE?[x,z]:null;
   }
   preview(x:number,z:number,kind:Kind|null,valid:boolean){
