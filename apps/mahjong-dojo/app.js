@@ -983,13 +983,21 @@ ui.lessonStage.addEventListener('click', (event) => {
   if ((step.kind === 'choice' || step.kind === 'tile-choice') && choice) solveLesson(choice.dataset.answer === step.answer, step.explain, choice);
   if (step.kind === 'discard' && tile) solveLesson(tileCode(Number(tile.dataset.tile)) === step.answer, step.explain, tile);
   if (step.kind === 'wait' && choice) {
-    choice.classList.toggle('is-correct');
+    choice.classList.toggle('is-selected');
     const value = choice.dataset.answer;
     if (state.lessonSelections.has(value)) state.lessonSelections.delete(value); else state.lessonSelections.add(value);
     const expected = new Set(step.answers);
     const exact = state.lessonSelections.size === expected.size && [...expected].every((item) => state.lessonSelections.has(item));
-    if (exact) solveLesson(true, step.explain, null);
-    else { ui.lessonFeedback.className='lesson-feedback'; ui.lessonFeedback.textContent='Можно выбрать несколько вариантов.'; }
+    if (exact) {
+      for (const button of ui.lessonStage.querySelectorAll('[data-answer]')) {
+        button.classList.toggle('is-correct', expected.has(button.dataset.answer));
+        button.classList.remove('is-selected');
+      }
+      solveLesson(true, step.explain, null);
+    } else {
+      ui.lessonFeedback.className='lesson-feedback';
+      ui.lessonFeedback.textContent='Можно выбрать несколько вариантов. Выбранные кости можно нажать ещё раз, чтобы снять выбор.';
+    }
   }
 });
 ui.lessonNext.addEventListener('click', () => {
