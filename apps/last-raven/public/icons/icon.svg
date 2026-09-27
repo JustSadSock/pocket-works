@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Последний ворон">
+  <rect width="512" height="512" rx="78" fill="#20282b"/>
+  <path d="M62 392h388v50H62z" fill="#dbe3e0"/>
+  <path d="M92 392V224h62v-44h52v44h100v-44h52v44h62v168H92z" fill="#758184"/>
+  <path d="M185 392V286h142v106h-44v-70h-54v70z" fill="#172023"/>
+  <path d="M92 224l31-38 31 38 26-44 26 44h100l26-44 26 44 31-38 31 38" fill="none" stroke="#dbe3e0" stroke-width="18" stroke-linejoin="miter"/>
+  <g fill="#111719">
+    <ellipse cx="283" cy="143" rx="39" ry="25"/>
+    <path d="M257 141L142 94l87 82zM309 141l110-54-78 90z"/>
+    <path d="M309 140l43 19-39 9z"/>
+  </g>
+  <circle cx="297" cy="137" r="4" fill="#d9e2df"/>
+  <path d="M255 392h2" stroke="#a65f61" stroke-width="20" stroke-linecap="square"/>
+</svg>
