@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "last-raven",
+  "name": "ПОСЛЕДНИЙ ВОРОН",
+  "shortName": "ВОРОН",
+  "description": "Камерная стратегия о северном замке: решай, кого впускать, кому верить и какие вести отправлять, пока война подбирается к воротам.",
+  "version": "0.1.0",
+  "releaseDate": "2026-09-27",
+  "releaseDateTime": "2026-09-27T21:12:00+02:00",
+  "changelog": [
+    "Первый релиз: 12-дневная кампания с воротами, посетителями, письмами, ресурсами и отложенными последствиями.",
+    "Добавлены отношения со Старками, Болтонами, Ночным Дозором и свободными людьми, а также неполная информация и цепочки слухов.",
+    "Замок визуализирует состояние кампании: снег, дым, освещение, население, запасы и короткая автоматическая осада в финале."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#8aa0a7",
+  "backgroundColor": "#7d8584",
+  "themeColor": "#20282b",
+  "orientation": "portrait",
+  "cacheName": "last-raven-v0.1.0",
+  "storageNamespace": "pocket-works:last-raven",
+  "tags": ["PWA","offline","game","3D","Babylon.js","strategy","simulation","portrait","mobile","narrative"],
+  "order": 17
+}
