@@ -44,11 +44,11 @@ func walk_to(z_value: float) -> void:
 	target_z = z_value
 	walk_path([Vector3(position.x, base_y, z_value)])
 
-func walk_path(points: Array[Vector3]) -> void:
+func walk_path(points: Array[Vector3], leave_after: bool = false) -> void:
 	path_points.clear()
 	for point in points:
 		path_points.append(point)
-	leaving = false
+	leaving = leave_after
 	_advance_path_segment()
 
 func depart(accepted: bool) -> void:
