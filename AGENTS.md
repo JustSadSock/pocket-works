@@ -213,7 +213,7 @@ Pocket Works provides a shared Blender Asset Forge documented in `docs/ASSET-FOR
 - When a 3D object benefits from authored animation, prefer a real armature and readable named animation actions in the exported GLB.
 - Use Blender actions for authored motion such as `Idle`, `Walk`, `Run`, `Attack`, `Hit` and `Death`; use runtime Babylon logic for blending, IK, foot planting, look/aim targets, springs, inertia and gameplay-dependent contact response.
 - Do not fake articulated characters as unrelated meshes when a small skeleton is the cleaner production solution.
-- Validate animated GLBs by re-importing them through Asset Forge with `requireArmature` / `requireAnimation` where appropriate.
+- Validate animated GLBs by re-importing them through Asset Forge with `requireArmature` / `requireAnimation` where appropriate. Enhanced apps may opt into the app-local GLB compiler (`docs/ASSET-COMPILER.md`); compare source and compiled animations visually before shipping.
 
 ### Audio rule
 
