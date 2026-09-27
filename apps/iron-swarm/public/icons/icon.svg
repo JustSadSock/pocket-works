@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ЖЕЛЕЗНЫЙ РОЙ">
+  <rect width="512" height="512" rx="72" fill="#b9ad91"/>
+  <path d="M78 154h356v204H78z" fill="#3a3c36"/>
+  <path d="M98 174h316v164H98z" fill="#d8c7a4"/>
+  <g fill="#3a3c36">
+    <circle cx="256" cy="256" r="72"/>
+    <rect x="246" y="78" width="20" height="105"/>
+    <rect x="246" y="329" width="20" height="105"/>
+    <rect x="78" y="246" width="105" height="20"/>
+    <rect x="329" y="246" width="105" height="20"/>
+  </g>
+  <g fill="#d8893c">
+    <circle cx="256" cy="118" r="30"/>
+    <path d="M386 226h64v60h-64z"/>
+    <path d="M102 223l58 18v30l-58 18z"/>
+    <path d="M231 354h50l17 62h-84z"/>
+  </g>
+  <circle cx="256" cy="256" r="30" fill="#ead9b7"/>
+</svg>
