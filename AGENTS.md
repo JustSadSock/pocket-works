@@ -131,6 +131,8 @@ Do not default to generic AI-generated interface patterns. Avoid unless the conc
 - emoji as the primary icon system;
 - identical geometry, navigation and palette across recent apps.
 
+For new games with a substantial visual scene, create `apps/<slug>/visual.pw.json` before writing scene rendering or assets. Use `docs/examples/visual.pw.json` as the schema example; run `npm run validate:visual` and evaluate screenshots against its direction and `avoid` list. Keep the manifest app-local. Existing apps are not required to adopt it retroactively. The optional `@pocketworks/visual-kit` workspace package is documented in `docs/VISUAL-FOUNDATION.md`.
+
 Before coding, define internally:
 
 1. visual premise;
