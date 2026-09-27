@@ -295,18 +295,29 @@ var sound_button: Button
 var end_title: Label
 var end_copy: Label
 var pause_button: Button
+var world_boot_ready := false
+var continue_ready_text := "НАЧАТЬ СМЕНУ"
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	PocketWorks.set_boot_stage("ready-enter")
 	PocketWorks.set_document_title("ЗАСТАВА")
 	sound_enabled = bool(PocketWorks.storage_get("sound", true))
-	world = WORLD_SCRIPT.new()
-	add_child(world)
+
+	# Build the menu before the 3D world. This lets the first Web frame land fast
+	# enough for mobile Chromium to dismiss Godot's engine splash.
 	_build_ui()
 	_load_or_prepare()
-	PocketWorks.set_boot_stage("ready")
-	_publish_state("ready")
+	continue_button.disabled = true
+	continue_button.text = "ПОДГОТОВКА ЗАСТАВЫ…"
+
+	world = WORLD_SCRIPT.new()
+	add_child(world)
+	world.boot_completed.connect(_on_world_boot_completed)
+
+	PocketWorks.set_boot_stage("menu-visible")
+	_publish_state("menu")
+	call_deferred("_begin_world_boot")
 
 func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
@@ -512,14 +523,28 @@ func _load_or_prepare() -> void:
 		rng.state = int(state.get("rng_state", 1))
 		if not state.has("condition"):
 			state["condition"] = "ordinary"
-		continue_button.text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
+		continue_ready_text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
 	else:
 		_reset_state()
-		continue_button.text = "НАЧАТЬ СМЕНУ"
+		continue_ready_text = "НАЧАТЬ СМЕНУ"
+	continue_button.text = continue_ready_text
 	hud.visible = false
 	start_overlay.visible = true
+
+func _begin_world_boot() -> void:
+	# Yield once so the menu is actually painted before any mesh creation begins.
+	await get_tree().process_frame
+	PocketWorks.set_boot_stage("world-boot-start")
+	world.finish_boot(state, String(state.get("weather", "clear")))
+
+func _on_world_boot_completed() -> void:
+	world_boot_ready = true
+	continue_button.disabled = false
+	continue_button.text = continue_ready_text
 	world.set_state(state)
 	world.set_weather(String(state.get("weather", "clear")))
+	PocketWorks.set_boot_stage("ready")
+	_publish_state("ready")
 
 func _reset_state() -> void:
 	rng.seed = int(Time.get_unix_time_from_system()) ^ 0x5A57A
@@ -549,27 +574,44 @@ func _reset_state() -> void:
 	_save()
 
 func _start_or_continue() -> void:
+	if not world_boot_ready:
+		return
 	start_overlay.visible = false
 	hud.visible = true
 	paused_game = false
 	world.set_state(state)
-	PocketWorks.set_ambience(sound_enabled, String(state.get("weather", "clear")), int(state.get("population", 18)))
 	_begin_day_if_needed()
 	_show_next()
+	call_deferred("_activate_live_presentation")
+
+func _activate_live_presentation() -> void:
+	if not world_boot_ready:
+		return
+	await get_tree().process_frame
+	world.activate_live_scene(state)
+	PocketWorks.set_ambience(sound_enabled, String(state.get("weather", "clear")), int(state.get("population", 18)))
 
 func _confirm_new_game() -> void:
 	confirm_overlay.visible = true
 
 func _new_game() -> void:
 	_reset_state()
+	continue_ready_text = "НАЧАТЬ СМЕНУ"
 	confirm_overlay.visible = false
 	end_overlay.visible = false
 	pause_overlay.visible = false
+	if not world_boot_ready:
+		start_overlay.visible = true
+		hud.visible = false
+		continue_button.disabled = true
+		continue_button.text = "ПОДГОТОВКА ЗАСТАВЫ…"
+		return
 	start_overlay.visible = false
 	hud.visible = true
 	world.set_state(state)
 	_begin_day_if_needed()
 	_show_next()
+	call_deferred("_activate_live_presentation")
 
 func _begin_day_if_needed() -> void:
 	if int(state.get("visitors_today", 0)) != 0:
@@ -930,7 +972,8 @@ func _publish_state(stage: String) -> void:
 			"trust":int(state.get("trust", 0))
 		},
 		"weather":String(state.get("weather", "clear")),
-		"campaignOver":campaign_over
+		"campaignOver":campaign_over,
+		"worldBootReady":world_boot_ready
 	})
 
 func _on_exit_pressed() -> void:
