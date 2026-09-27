@@ -12,9 +12,9 @@ import {
 
 function runGame(){
 installMobileRuntime();
-registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.2',
-  releaseNotes:['Исправлена стартовая кнопка на iPhone и обновление старой закэшированной сборки.'] });
-createWorkshopMode({appName:'Последний камень',version:'1.0.2',
+registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.3',
+  releaseNotes:['Стартовая блокирующая плашка убрана: игра сразу открывается в режиме строительства.'] });
+createWorkshopMode({appName:'Последний камень',version:'1.0.3',
   cachePrefix:'last-stone-',storageNamespace:'pocket-works:last-stone'});
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -164,7 +164,7 @@ function end(){
 }
 function restart(){
   modal('Начать новую кампанию?','Текущая крепость и её прогресс будут удалены.',
-    'ДА, НАЧАТЬ ЗАНОВО',()=>{state=newGame();selected='wall';save();world.update(state,0);draw();intro();},
+    'ДА, НАЧАТЬ ЗАНОВО',()=>{state=newGame();selected='wall';save();world.update(state,0);draw();message('Выберите постройку и коснитесь клетки на земле.');},
     {label:'Отмена',action:()=>{}});
 }
 function frame(now:number){
@@ -192,7 +192,7 @@ function frame(now:number){
 }
 world.update(state,0);draw();
 if(state.phase==='won'||state.phase==='lost')end();
-else if(!localStorage.getItem(storage))intro();
+else if(!localStorage.getItem(storage))message('Выберите постройку внизу и коснитесь клетки на земле.');
 requestAnimationFrame(frame);
 }
 
