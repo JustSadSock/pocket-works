@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'mahjong-dojo-';
-const CACHE_NAME = 'mahjong-dojo-v0.1.0-p1';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-09-26';
+const CACHE_NAME = 'mahjong-dojo-v0.2.0-p1';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-09-27';
 const CACHE_PROTOCOL = 1;
 const RELEASE_NOTES = [
   'Шесть интерактивных уроков по закрытому риичи-маджонгу.',
