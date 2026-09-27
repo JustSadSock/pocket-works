@@ -206,8 +206,9 @@ void fragment() {
 
 	# Give the rectangular water mesh actual banks. Each bank is split around the
 	# bridge corridor, so land can never visually cover the usable crossing.
-	for side in [-1.0, 1.0]:
-		var bank_x := side * 3.85
+	for side_index in range(2):
+		var side: float = -1.0 if side_index == 0 else 1.0
+		var bank_x: float = side * 3.85
 		add_child(_box("NearBank", Vector3(5.45, 0.18, 0.56), C_GRASS_DARK.lightened(0.04), Vector3(bank_x, 0.015, RIVER_Z_MIN - 0.08)))
 		add_child(_box("FarBankLip", Vector3(5.45, 0.18, 0.56), C_GRASS_DARK.lightened(0.02), Vector3(bank_x, 0.015, RIVER_Z_MAX + 0.08)))
 		var wet_near := _box("WetBank", Vector3(5.35, 0.028, 0.14), C_ROAD.darkened(0.22), Vector3(bank_x, 0.07, RIVER_Z_MIN + 0.12))
@@ -604,16 +605,16 @@ func transition_time(target: float, duration: float = 0.75) -> void:
 	time_tween.tween_method(set_time, start, unwrapped_target, maxf(0.10, duration))
 
 func set_time(progress: float) -> void:
-	var t := fposmod(progress, 1.0)
+	var t: float = fposmod(progress, 1.0)
 	current_time_progress = t
 	if environment == null or sun == null:
 		return
 
 	# Continuous 24h cycle. Noon is 0.50, sunrise/sunset sit near 0.25/0.75.
 	# Night stays readable; there is no piecewise jump at the end of a day.
-	var sun_height := sin((t - 0.25) * TAU)
-	var daylight := clampf((sun_height + 0.18) / 1.18, 0.0, 1.0)
-	var horizon := pow(1.0 - absf(sun_height), 2.0) * daylight
+	var sun_height: float = sin((t - 0.25) * TAU)
+	var daylight: float = clampf((sun_height + 0.18) / 1.18, 0.0, 1.0)
+	var horizon: float = pow(1.0 - absf(sun_height), 2.0) * daylight
 	sun.rotation_degrees.x = lerpf(8.0, -58.0, daylight)
 	sun.rotation_degrees.y = t * 360.0 - 120.0
 	sun.light_color = Color("#8da0b5").lerp(Color("#efd5ad"), daylight).lerp(Color("#d79369"), horizon * 0.42)
