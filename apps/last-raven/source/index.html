@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#20282b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПОСЛЕДНИЙ ВОРОН">
+  <title>ПОСЛЕДНИЙ ВОРОН</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell>
+    <canvas id="world" aria-label="Северный замок"></canvas>
+    <div class="weather-veil" aria-hidden="true"></div>
+
+    <header class="topbar" data-ui>
+      <button id="exit" class="crest-button" type="button" aria-label="Назад в PocketWorks">←</button>
+      <div class="day-block"><small>ДЕНЬ</small><b id="day">1 / 12</b></div>
+      <div class="weather-block"><span id="weather-mark">СНЕГ</span><b id="temperature">−7°</b></div>
+      <div class="top-actions">
+        <button id="intel" type="button">СВЕДЕНИЯ</button>
+        <button id="sound" type="button" aria-label="Звук">ЗВУК</button>
+        <button class="workshop-trigger" type="button" data-workshop-trigger aria-label="Workshop">•••</button>
+      </div>
+    </header>
+
+    <section class="resources" data-ui aria-label="Запасы замка">
+      <span><small>ЕДА</small><b id="food">24</b></span>
+      <span><small>ДРОВА</small><b id="wood">18</b></span>
+      <span><small>СТРАЖА</small><b id="guards">18</b></span>
+      <span><small>ДУХ</small><b id="morale">58</b></span>
+      <span><small>ЗОЛОТО</small><b id="gold">9</b></span>
+      <span><small>ЛЕКАРСТВА</small><b id="medicine">4</b></span>
+    </section>
+
+    <section id="start-screen" class="start-screen" data-ui>
+      <div class="start-raven" aria-hidden="true"><i></i><i></i><b></b></div>
+      <p class="eyebrow">СЕВЕР · МАЛЫЙ ЗАМОК · ВОЙНА РЯДОМ</p>
+      <h1>ПОСЛЕДНИЙ<br><em>ВОРОН</em></h1>
+      <p class="lead">Двенадцать дней держите замок между чужими армиями. Решайте, кого впускать, кому верить и какие письма лучше никогда не отправлять.</p>
+      <div class="start-rule"><span>1 замок</span><span>4 силы</span><span>12 дней</span></div>
+      <button id="continue" class="wide secondary hidden" type="button">ПРОДОЛЖИТЬ С ДНЯ <b id="continue-day">1</b></button>
+      <button id="new-game" class="wide primary" type="button">ПРИНЯТЬ КЛЮЧИ ОТ ЗАМКА</button>
+      <button id="start-exit" class="quiet" type="button">← В PocketWorks</button>
+    </section>
+
+    <section id="encounter" class="encounter hidden" data-ui aria-live="polite">
+      <div class="case-head">
+        <span id="phase-kicker">У ВОРОТ</span>
+        <span id="source">—</span>
+      </div>
+      <h2 id="event-title">—</h2>
+      <p id="event-body">—</p>
+      <div id="choices" class="choices"></div>
+    </section>
+
+    <section id="night-panel" class="night-panel hidden" data-ui>
+      <small>ВОРОТА ЗАПЕРТЫ · КАРАУЛ СМЕНЁН</small>
+      <h2>Ночь.</h2>
+      <p id="night-copy"></p>
+      <button id="next-day" class="wide primary" type="button">ДОЖДАТЬСЯ РАССВЕТА</button>
+    </section>
+
+    <section id="intel-panel" class="intel-panel hidden" data-ui>
+      <div class="drawer-head"><b>СВЕДЕНИЯ КАСТЕЛЯНА</b><button id="close-intel" type="button">×</button></div>
+      <div class="factions">
+        <span><i class="wolf"></i><small>СТАРКИ</small><b id="rel-stark">—</b></span>
+        <span><i class="flayed"></i><small>БОЛТОНЫ</small><b id="rel-bolton">—</b></span>
+        <span><i class="watch"></i><small>ДОЗОР</small><b id="rel-watch">—</b></span>
+        <span><i class="free"></i><small>СВОБОДНЫЕ</small><b id="rel-freefolk">—</b></span>
+      </div>
+      <h3>ЧТО МЫ ЗНАЕМ</h3>
+      <div id="knowledge" class="knowledge"><p>Пока только слухи.</p></div>
+      <h3>ПОСЛЕДНИЕ СОБЫТИЯ</h3>
+      <div id="history" class="history"></div>
+    </section>
+
+    <section id="siege-panel" class="siege-panel hidden" data-ui>
+      <div class="siege-title"><span>ШТУРМ</span><b id="siege-time">00:24</b></div>
+      <div class="siege-meter"><label>СТЕНА</label><div><i id="wall-fill"></i></div><b id="wall-text">100</b></div>
+      <div class="siege-meter enemy"><label>АТАКУЮЩИЕ</label><div><i id="enemy-fill"></i></div><b id="enemy-text">100</b></div>
+      <p>Теперь решения уже приняты. Остаётся смотреть, что они стоили.</p>
+    </section>
+
+    <section id="end-screen" class="end-screen hidden" data-ui>
+      <small id="end-kicker">РАССВЕТ</small>
+      <h2 id="end-title">Замок устоял.</h2>
+      <p id="end-copy"></p>
+      <div class="end-grid"><span><small>ДНИ</small><b>12</b></span><span><small>СТРАЖА</small><b id="end-guards">—</b></span><span><small>ДУХ</small><b id="end-morale">—</b></span></div>
+      <button id="again" class="wide primary" type="button">ЕЩЁ ОДНА КАМПАНИЯ</button>
+      <button id="end-exit" class="quiet" type="button">← В PocketWorks</button>
+    </section>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
