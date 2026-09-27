@@ -5,11 +5,11 @@
   "name": "Последний камень",
   "shortName": "Камень",
   "description": "Построй крепость из ограниченных ресурсов и выдержи двенадцать осад.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "releaseDate": "2026-09-27",
-  "releaseDateTime": "2026-09-27T16:16:00.000Z",
+  "releaseDateTime": "2026-09-27T17:03:00.000Z",
   "changelog": [
-    "Добавлена видимая строительная сетка, подсветка выбранной клетки и исправлено управление строительством на телефоне."
+    "Исправлена стартовая кнопка на iPhone, убран проблемный blur поверх WebGL и усилено обновление закэшированной сборки."
   ],
   "status": "active",
   "preset": "vite",
@@ -17,7 +17,7 @@
   "backgroundColor": "#202b2b",
   "themeColor": "#202b2b",
   "orientation": "landscape",
-  "cacheName": "last-stone-v1.0.1",
+  "cacheName": "last-stone-v1.0.2",
   "storageNamespace": "pocket-works:last-stone",
   "tags": [
     "PWA",

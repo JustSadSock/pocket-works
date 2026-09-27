@@ -36,8 +36,8 @@ button:active{transform:translateY(2px);filter:brightness(1.18)}
 .dock-actions{display:flex;align-items:center;gap:5px}.dock-actions button{min-height:44px;background:#3c4b43;border:1px solid #a89c83;color:#f1e8d6;padding:0 9px;font-size:11px;font-weight:700}
 .dock-actions button.active{background:#786042}.dock-actions .start{min-height:64px;max-width:145px;background:#d5aa70;color:#172622;border:1px solid #f1d3a3;letter-spacing:.055em}
 .start span{display:inline-block;font-size:17px}
-.modal-backdrop{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#172321b6;backdrop-filter:blur(4px);padding:18px}
-.modal{width:min(490px,100%);padding:27px 29px 25px;background:#e8dfc9;color:#24332d;border:4px double #8a775c;box-shadow:0 20px 90px #0f1d1cb3}
+.modal-backdrop{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#172321e3;padding:18px;pointer-events:auto;touch-action:manipulation}
+.modal{position:relative;z-index:1;pointer-events:auto;width:min(490px,100%);padding:27px 29px 25px;background:#e8dfc9;color:#24332d;border:4px double #8a775c;box-shadow:0 20px 90px #0f1d1cb3}
 .modal-index{font:700 10px ui-monospace,monospace;letter-spacing:.16em;color:#8d563b}
 .modal h1{font:700 clamp(25px,4vw,37px)/1.02 Georgia,serif;letter-spacing:-.03em;margin:17px 0}
 .modal p{font-size:14px;line-height:1.5;margin:0 0 23px;color:#405047}
@@ -56,3 +56,5 @@ button:active{transform:translateY(2px);filter:brightness(1.18)}
   .camera-actions span{display:none}.readout{max-width:67%;left:8px}.readout p{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.modal-actions button{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation;-webkit-user-select:none;user-select:none}

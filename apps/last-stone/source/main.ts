@@ -12,9 +12,9 @@ import {
 
 function runGame(){
 installMobileRuntime();
-registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.1',
-  releaseNotes:['Добавлена видимая строительная сетка и надёжная подсветка клетки под пальцем.'] });
-createWorkshopMode({appName:'Последний камень',version:'1.0.1',
+registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.2',
+  releaseNotes:['Исправлена стартовая кнопка на iPhone и обновление старой закэшированной сборки.'] });
+createWorkshopMode({appName:'Последний камень',version:'1.0.2',
   cachePrefix:'last-stone-',storageNamespace:'pocket-works:last-stone'});
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -43,19 +43,46 @@ function beep(note=180,duration=.07,volume=.035){
   }catch { /* Audio is optional. */ }
 }
 function message(value:string){const el=$('toast');el.textContent=value;el.classList.add('show');clearTimeout(noticeTime);noticeTime=window.setTimeout(()=>el.classList.remove('show'),2400);}
+function bindModalAction(button:HTMLButtonElement,action:()=>void){
+  let fired=false;
+  const activate=(event:Event)=>{
+    if(fired)return;
+    fired=true;
+    event.preventDefault();
+    event.stopPropagation();
+    hideModal();
+    action();
+  };
+  button.onclick=activate;
+  button.onpointerup=activate;
+  button.ontouchend=activate;
+}
 function modal(title:string,copy:string,primary:string,action:()=>void,secondary?:{label:string;action:()=>void}){
   $('modal-title').textContent=title;$('modal-copy').textContent=copy;
-  $('modal-primary').textContent=primary;
-  $('modal-primary').onclick=()=>{hideModal();action();};
-  const other=$<HTMLButtonElement>('modal-secondary');other.classList.toggle('hidden',!secondary);
-  other.textContent=secondary?.label??'';other.onclick=secondary?()=>{hideModal();secondary.action();}:null;
+  const primaryButton=$<HTMLButtonElement>('modal-primary');
+  primaryButton.textContent=primary;
+  bindModalAction(primaryButton,action);
+  const other=$<HTMLButtonElement>('modal-secondary');
+  other.classList.toggle('hidden',!secondary);
+  other.textContent=secondary?.label??'';
+  if(secondary)bindModalAction(other,secondary.action);
+  else {other.onclick=null;other.onpointerup=null;other.ontouchend=null;}
+  setModalLock(true);
   $('modal-backdrop').classList.remove('hidden');
 }
-function hideModal(){$('modal-backdrop').classList.add('hidden');}
+function setModalLock(locked:boolean){
+  const start=$<HTMLButtonElement>('start');
+  start.disabled=locked;
+  for(const surface of document.querySelectorAll<HTMLElement>('[data-ui]'))surface.inert=locked;
+}
+function hideModal(){
+  $('modal-backdrop').classList.add('hidden');
+  setModalLock(false);
+}
 function intro(){
   modal('Замок держится на ваших решениях.',
     'Выберите постройку внизу: на земле появится строительная сетка. Коснитесь клетки — она подсветится, а постройка встанет в неё. Камеру можно вращать пальцем. Перед штурмом разведка покажет направление удара.',
-    'К СТРОИТЕЛЬСТВУ →',()=>{});
+    'НАЧАТЬ СТРОИТЕЛЬСТВО →',()=>{});
 }
 const tools=$('tools');
 for(const kind of names){
