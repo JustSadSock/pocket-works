@@ -204,6 +204,7 @@ body[data-view]:not([data-view="home"]) .back-button { visibility: visible; }
 .lesson-stage .hand-zone::-webkit-scrollbar { display:none; }
 .lesson-stage .choice-row { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .lesson-stage .choice-button { min-height:46px; padding:0 14px; border:1px solid #6b5943; background:#201a15; color:var(--ivory); cursor:pointer; }
+.lesson-stage .choice-button.is-selected { border-color:var(--copper); background:#332719; color:var(--ivory); }
 .lesson-stage .choice-button.is-correct { border-color:#54856f; color:#bde0cd; }
 .lesson-stage .choice-button.is-wrong { border-color:#a94a3e; color:#efb5ad; }
 .lesson-stage .lesson-big { text-align:center; font:650 1.25rem/1.4 Georgia,serif; }
