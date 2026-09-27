@@ -54,3 +54,5 @@ That split keeps the simulation testable and prevents visual iteration from rewr
 The scene favors a stable 60 fps interaction budget over expensive desktop effects. Lighting is one shadowed directional source plus ambient environment light; no real-time GI or planar reflections are required. Repeating background props are low-detail and important architecture receives authored bevels through Blender.
 
 The final Godot Web export is regenerated after Asset Forge output changes.
+
+CI sign-off uses the committed Godot Web export produced from the same authored asset set.
