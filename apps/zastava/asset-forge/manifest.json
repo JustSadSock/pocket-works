@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "zastava-core",
+      "script": "diorama.py",
+      "output": "assets/zastava_core.glb"
+    }
+  ]
+}
