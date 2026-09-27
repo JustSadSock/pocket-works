@@ -1,0 +1,399 @@
+extends Node3D
+
+const VISITOR_SCRIPT := preload("res://source/visitor_actor.gd")
+
+var sun: DirectionalLight3D
+var environment: WorldEnvironment
+var camera: Camera3D
+var bridge_pivot: Node3D
+var gate_bar: Node3D
+var village_root: Node3D
+var houses: Array[Node3D] = []
+var market: Node3D
+var forge: Node3D
+var barracks: Node3D
+var tents: Node3D
+var rain: GPUParticles3D
+var snow: GPUParticles3D
+var visitor: Node3D
+var current_weather := "clear"
+var authored_core := false
+var last_growth_level := 0
+
+const C_GRASS := Color("#7e8a73")
+const C_GRASS_DARK := Color("#65715f")
+const C_STONE := Color("#a59d89")
+const C_STONE_DARK := Color("#726f66")
+const C_WOOD := Color("#765b48")
+const C_WOOD_LIGHT := Color("#a07b58")
+const C_ROOF := Color("#6f4d43")
+const C_ROAD := Color("#8c7d67")
+const C_WATER := Color("#627d82")
+const C_METAL := Color("#555d59")
+const C_CLOTH := Color("#8a725a")
+
+func _ready() -> void:
+	_build_environment()
+	_build_landscape()
+	authored_core = _try_authored_core()
+	_build_village_architecture()
+	_build_moving_bridge()
+	_build_weather()
+	set_time(0.28)
+
+func _build_environment() -> void:
+	environment = WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color("#9aa39a")
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color("#c5c2ae")
+	env.ambient_light_energy = 0.68
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.environment = env
+	add_child(environment)
+
+	sun = DirectionalLight3D.new()
+	sun.light_color = Color("#f0d7aa")
+	sun.light_energy = 1.25
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 28.0
+	sun.rotation_degrees = Vector3(-48, -24, 0)
+	add_child(sun)
+
+	camera = Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 20.5
+	camera.position = Vector3(8.7, 12.8, 14.0)
+	camera.look_at_from_position(camera.position, Vector3(0, 0.2, -0.5))
+	camera.current = true
+	add_child(camera)
+
+func _build_landscape() -> void:
+	var ground := _box("Ground", Vector3(13.2, 0.25, 21.0), C_GRASS, Vector3(0, -0.20, -1.1))
+	add_child(ground)
+	var far_bank := _box("FarBank", Vector3(13.2, 0.32, 6.0), C_GRASS_DARK, Vector3(0, -0.12, 8.0))
+	add_child(far_bank)
+
+	var water_mesh := MeshInstance3D.new()
+	water_mesh.name = "River"
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(13.4, 5.6)
+	plane.subdivide_width = 36
+	plane.subdivide_depth = 16
+	water_mesh.mesh = plane
+	water_mesh.position = Vector3(0, -0.03, 1.0)
+	var shader := Shader.new()
+	shader.code = """
+shader_type spatial;
+render_mode cull_disabled;
+void vertex() {
+	float a = sin(VERTEX.x * 1.7 + TIME * 1.15) * 0.045;
+	float b = sin(VERTEX.z * 2.4 - TIME * 0.82) * 0.028;
+	VERTEX.y += a + b;
+}
+void fragment() {
+	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.7) * 0.5 + 0.5;
+	ALBEDO = mix(vec3(0.31,0.43,0.46), vec3(0.43,0.55,0.56), ripple * 0.18);
+	ROUGHNESS = 0.30;
+	METALLIC = 0.02;
+}
+"""
+	var sm := ShaderMaterial.new()
+	sm.shader = shader
+	water_mesh.material_override = sm
+	add_child(water_mesh)
+
+	var road_a := _box("RoadNear", Vector3(2.0, 0.05, 7.4), C_ROAD, Vector3(0, 0.01, -5.3))
+	road_a.rotation_degrees.y = -2
+	add_child(road_a)
+	var road_b := _box("RoadFar", Vector3(1.75, 0.05, 7.0), C_ROAD.darkened(0.05), Vector3(0, 0.01, 6.1))
+	add_child(road_b)
+
+	for i in range(9):
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var z := -8.8 + float(i) * 2.0
+		var tree := _tree(Vector3(side * (4.7 + float(i % 3) * 0.45), 0, z), 0.8 + float(i % 4) * 0.08)
+		add_child(tree)
+	for i in range(6):
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var tree := _tree(Vector3(side * (4.5 + float(i % 2) * 0.55), 0, 5.4 + float(i) * 0.8), 0.72)
+		add_child(tree)
+
+func _try_authored_core() -> bool:
+	var path := "res://assets/zastava_core.glb"
+	if not ResourceLoader.exists(path):
+		return false
+	var packed := load(path)
+	if packed is PackedScene:
+		var instance := (packed as PackedScene).instantiate()
+		instance.name = "AuthoredCore"
+		add_child(instance)
+		return true
+	return false
+
+func _build_village_architecture() -> void:
+	village_root = Node3D.new()
+	village_root.name = "Village"
+	add_child(village_root)
+
+	if not authored_core:
+		_build_gatehouse()
+	for spec in [
+		[Vector3(-3.3, 0, -4.8), 0.85, 0.0],
+		[Vector3(3.15, 0, -5.4), 0.78, 180.0],
+		[Vector3(-3.9, 0, -7.3), 0.70, 10.0],
+		[Vector3(3.8, 0, -8.0), 0.72, -8.0],
+		[Vector3(-2.4, 0, -9.3), 0.68, -8.0],
+		[Vector3(2.2, 0, -9.6), 0.74, 8.0]
+	]:
+		var house := _house(spec[0], spec[1], spec[2])
+		house.visible = false
+		houses.append(house)
+		village_root.add_child(house)
+
+	market = _market(Vector3(2.85, 0, -3.45))
+	market.visible = false
+	village_root.add_child(market)
+	forge = _forge(Vector3(-2.9, 0, -3.55))
+	forge.visible = false
+	village_root.add_child(forge)
+	barracks = _barracks(Vector3(3.75, 0, -6.7))
+	barracks.visible = false
+	village_root.add_child(barracks)
+	tents = _tents(Vector3(-4.0, 0, -6.7))
+	tents.visible = false
+	village_root.add_child(tents)
+
+func _build_gatehouse() -> void:
+	for x in [-1.65, 1.65]:
+		var tower := Node3D.new()
+		tower.position = Vector3(x, 0, -1.95)
+		tower.add_child(_box("Tower", Vector3(1.65, 3.1, 1.45), C_STONE, Vector3(0, 1.55, 0)))
+		var roof := _roof(Vector3(1.95, 0.62, 1.75), C_ROOF)
+		roof.position = Vector3(0, 3.38, 0)
+		tower.add_child(roof)
+		for y in [1.25, 2.15]:
+			var slit := _box("Slit", Vector3(0.12, 0.38, 0.05), C_STONE_DARK, Vector3(0, y, 0.74))
+			tower.add_child(slit)
+		village_root.add_child(tower)
+	var wall_l := _box("WallL", Vector3(2.1, 2.1, 0.85), C_STONE, Vector3(-3.5, 1.05, -2.0))
+	var wall_r := _box("WallR", Vector3(2.1, 2.1, 0.85), C_STONE, Vector3(3.5, 1.05, -2.0))
+	village_root.add_child(wall_l)
+	village_root.add_child(wall_r)
+
+func _build_moving_bridge() -> void:
+	bridge_pivot = Node3D.new()
+	bridge_pivot.name = "BridgePivot"
+	bridge_pivot.position = Vector3(0, 0.18, -1.0)
+	add_child(bridge_pivot)
+	var deck := _box("Deck", Vector3(1.8, 0.24, 4.3), C_WOOD_LIGHT, Vector3(0, 0, 2.15))
+	bridge_pivot.add_child(deck)
+	for x in [-0.82, 0.82]:
+		var rail := _box("Rail", Vector3(0.10, 0.48, 4.3), C_WOOD, Vector3(x, 0.34, 2.15))
+		bridge_pivot.add_child(rail)
+
+	gate_bar = Node3D.new()
+	gate_bar.name = "Gate"
+	gate_bar.position = Vector3(0, 0, -1.23)
+	add_child(gate_bar)
+	for x in [-0.70, -0.35, 0.0, 0.35, 0.70]:
+		gate_bar.add_child(_box("Iron", Vector3(0.09, 2.55, 0.09), C_METAL, Vector3(x, 1.25, 0)))
+	gate_bar.add_child(_box("Cross", Vector3(1.65, 0.11, 0.10), C_METAL, Vector3(0, 1.18, 0)))
+
+func _build_weather() -> void:
+	rain = _precipitation(false)
+	add_child(rain)
+	snow = _precipitation(true)
+	add_child(snow)
+
+func _precipitation(is_snow: bool) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = 220 if is_snow else 360
+	p.lifetime = 2.8 if is_snow else 1.2
+	p.visibility_aabb = AABB(Vector3(-8, -1, -11), Vector3(16, 14, 24))
+	var proc := ParticleProcessMaterial.new()
+	proc.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	proc.emission_box_extents = Vector3(7.0, 0.3, 10.0)
+	proc.direction = Vector3(0.15, -1, 0.06)
+	proc.spread = 8.0 if is_snow else 3.0
+	proc.gravity = Vector3(0, -0.9 if is_snow else -10.5, 0)
+	proc.initial_velocity_min = 0.35 if is_snow else 5.5
+	proc.initial_velocity_max = 0.75 if is_snow else 7.5
+	p.process_material = proc
+	var drop := BoxMesh.new()
+	drop.size = Vector3(0.025 if is_snow else 0.018, 0.05 if is_snow else 0.34, 0.025)
+	var dm := StandardMaterial3D.new()
+	dm.albedo_color = Color(0.88, 0.91, 0.90, 0.9) if is_snow else Color(0.70, 0.79, 0.80, 0.58)
+	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	drop.material = dm
+	p.draw_pass_1 = drop
+	p.position = Vector3(0, 7.0, -1)
+	p.emitting = false
+	return p
+
+func set_weather(kind: String) -> void:
+	current_weather = kind
+	rain.emitting = kind == "rain"
+	snow.emitting = kind == "snow"
+	if kind == "rain":
+		environment.environment.background_color = Color("#7e8988")
+		environment.environment.ambient_light_energy = 0.50
+	elif kind == "snow":
+		environment.environment.background_color = Color("#aeb7b5")
+		environment.environment.ambient_light_energy = 0.76
+	else:
+		environment.environment.background_color = Color("#9aa39a")
+		environment.environment.ambient_light_energy = 0.68
+
+func set_time(progress: float) -> void:
+	var t := clamp(progress, 0.0, 1.0)
+	sun.rotation_degrees.x = lerp(-35.0, -72.0, abs(t - 0.5) * 1.5)
+	sun.rotation_degrees.y = lerp(-55.0, 45.0, t)
+	if t < 0.72:
+		sun.light_color = Color("#f0d7aa").lerp(Color("#e6b07c"), max(0.0, (t - 0.5) / 0.22))
+		sun.light_energy = lerp(1.25, 0.86, max(0.0, (t - 0.55) / 0.17))
+	else:
+		sun.light_color = Color("#bf8b72")
+		sun.light_energy = lerp(0.78, 0.30, (t - 0.72) / 0.28)
+	environment.environment.ambient_light_color = Color("#c5c2ae").lerp(Color("#77808b"), max(0.0, (t - 0.58) / 0.42))
+
+func set_state(state: Dictionary) -> void:
+	var population := int(state.get("population", 18))
+	var trade := int(state.get("trade", 8))
+	var guard := int(state.get("guard", 6))
+	var trust := int(state.get("trust", 55))
+	var growth := clampi(int(population / 18), 0, houses.size())
+	for i in range(houses.size()):
+		_set_visible_animated(houses[i], i < growth)
+	if market:
+		_set_visible_animated(market, trade >= 18)
+	if forge:
+		_set_visible_animated(forge, bool(state.get("has_forge", false)))
+	if barracks:
+		_set_visible_animated(barracks, guard >= 11)
+	if tents:
+		_set_visible_animated(tents, population >= 52 and trust < 58)
+	if growth > last_growth_level:
+		last_growth_level = growth
+
+func _set_visible_animated(node: Node3D, desired: bool) -> void:
+	if node.visible == desired:
+		return
+	if desired:
+		node.visible = true
+		node.scale = Vector3(0.05, 0.05, 0.05)
+		var tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(node, "scale", Vector3.ONE, 0.55)
+	else:
+		node.visible = false
+
+func operate_gate(opened: bool) -> void:
+	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	if opened:
+		tw.tween_property(gate_bar, "position", Vector3(0, 2.25, -1.23), 0.55)
+		tw.tween_property(bridge_pivot, "rotation", Vector3.ZERO, 0.55)
+	else:
+		tw.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.36)
+		tw.tween_property(bridge_pivot, "rotation", Vector3(-0.78, 0, 0), 0.48)
+
+func spawn_visitor(profile: Dictionary, variant: int) -> void:
+	if is_instance_valid(visitor):
+		visitor.queue_free()
+	visitor = VISITOR_SCRIPT.new()
+	add_child(visitor)
+	visitor.position = Vector3(0.0, 0.0, 8.2)
+	visitor.configure(profile, variant)
+	visitor.walk_to(1.72)
+
+func visitor_react(accepted: bool) -> void:
+	if is_instance_valid(visitor):
+		visitor.react(accepted)
+		visitor.depart(accepted)
+
+func _house(pos: Vector3, scale_factor: float, yaw: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation_degrees.y = yaw
+	root.scale = Vector3.ONE * scale_factor
+	root.add_child(_box("Walls", Vector3(1.75, 1.35, 1.45), Color("#b4a78b"), Vector3(0, 0.67, 0)))
+	var roof := _roof(Vector3(2.05, 0.75, 1.75), C_ROOF)
+	roof.position = Vector3(0, 1.60, 0)
+	root.add_child(roof)
+	root.add_child(_box("Door", Vector3(0.38, 0.70, 0.06), C_WOOD, Vector3(0, 0.38, 0.755)))
+	return root
+
+func _market(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for x in [-0.65, 0.65]:
+		root.add_child(_box("Post", Vector3(0.10, 1.45, 0.10), C_WOOD, Vector3(x, 0.72, 0)))
+	root.add_child(_box("Counter", Vector3(1.7, 0.16, 0.62), C_WOOD_LIGHT, Vector3(0, 0.55, 0)))
+	var canopy := _box("Canopy", Vector3(1.95, 0.12, 1.0), Color("#9a6657"), Vector3(0, 1.45, 0))
+	root.add_child(canopy)
+	return root
+
+func _forge(pos: Vector3) -> Node3D:
+	var root := _house(pos, 0.86, 5)
+	var chimney := _box("Chimney", Vector3(0.34, 1.35, 0.34), C_STONE_DARK, Vector3(0.52, 2.05, -0.30))
+	root.add_child(chimney)
+	return root
+
+func _barracks(pos: Vector3) -> Node3D:
+	var root := _house(pos, 1.05, -4)
+	var banner := _box("Banner", Vector3(0.05, 1.6, 0.05), C_WOOD, Vector3(1.1, 1.35, 0.2))
+	root.add_child(banner)
+	root.add_child(_box("Cloth", Vector3(0.55, 0.42, 0.04), Color("#6f5c52"), Vector3(1.38, 1.75, 0.2)))
+	return root
+
+func _tents(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(3):
+		var tent := _roof(Vector3(1.25, 0.75, 1.45), C_CLOTH.lightened(float(i) * 0.03))
+		tent.position = Vector3(float(i % 2) * 1.4, 0.38, float(i / 2) * 1.3)
+		root.add_child(tent)
+	return root
+
+func _tree(pos: Vector3, scale_factor: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.scale = Vector3.ONE * scale_factor
+	var trunk := _box("Trunk", Vector3(0.30, 1.2, 0.30), C_WOOD, Vector3(0, 0.60, 0))
+	root.add_child(trunk)
+	var crown := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.88
+	mesh.height = 1.6
+	mesh.radial_segments = 7
+	mesh.rings = 4
+	crown.mesh = mesh
+	crown.position = Vector3(0, 1.72, 0)
+	crown.material_override = _mat(C_GRASS_DARK.darkened(0.06))
+	root.add_child(crown)
+	return root
+
+func _roof(size: Vector3, color: Color) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := PrismMesh.new()
+	mesh.size = size
+	mesh_instance.mesh = mesh
+	mesh_instance.material_override = _mat(color)
+	mesh_instance.rotation_degrees.y = 90
+	return mesh_instance
+
+func _box(name_value: String, size: Vector3, color: Color, pos: Vector3) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = name_value
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh_instance.mesh = mesh
+	mesh_instance.position = pos
+	mesh_instance.material_override = _mat(color)
+	return mesh_instance
+
+func _mat(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.86
+	return material

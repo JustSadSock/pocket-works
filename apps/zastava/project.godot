@@ -1,0 +1,25 @@
+; ZASTAVA — Pocket Works Godot Web application.
+config_version=5
+
+[application]
+config/name="ЗАСТАВА"
+run/main_scene="res://source/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.529, 0.565, 0.529, 1)
+
+[autoload]
+PocketWorks="*res://source/pocket_works.gd"
+
+[display]
+window/size/viewport_width=585
+window/size/viewport_height=1266
+window/size/window_width_override=390
+window/size/window_height_override=844
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.529, 0.565, 0.529, 1)
