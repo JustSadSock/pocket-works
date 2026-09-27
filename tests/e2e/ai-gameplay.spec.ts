@@ -303,6 +303,37 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   });
 }
 
+async function runLastStoneJourney(page: Page, testInfo: TestInfo) {
+  await page.waitForFunction(() => (window as any).__AI_TEST_STATE__?.app === 'last-stone', undefined, { timeout: 15_000 });
+
+  const modal = page.locator('#modal-backdrop');
+  await expect(modal, 'Last Stone must not boot behind a blocking intro modal').toBeHidden();
+
+  const wall = page.getByRole('button', { name: /Стена/i });
+  await expect(wall).toBeVisible();
+  await wall.click();
+
+  const before = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.pieces?.length ?? 0);
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  const points = [
+    { x: Math.round(viewport!.width * 0.34), y: Math.round(viewport!.height * 0.48) },
+    { x: Math.round(viewport!.width * 0.66), y: Math.round(viewport!.height * 0.48) },
+    { x: Math.round(viewport!.width * 0.50), y: Math.round(viewport!.height * 0.38) }
+  ];
+
+  for (const point of points) {
+    await page.touchscreen.tap(point.x, point.y);
+    await page.waitForTimeout(220);
+    const count = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.pieces?.length ?? 0);
+    if (count > before) break;
+  }
+
+  const after = await page.evaluate(() => (window as any).__AI_TEST_STATE__ ?? null);
+  expect(after?.pieces?.length ?? 0, 'Touching the visible Last Stone build grid must place a structure').toBeGreaterThan(before);
+  await attachCriticalScreenshot(page, testInfo, 'last-stone-build-ready', { fullPage: false });
+}
+
 async function runZastavaJourney(page: Page, testInfo: TestInfo) {
   await page.waitForFunction(() => {
     const state = (window as any).__AI_TEST_STATE__;
@@ -405,6 +436,8 @@ test.describe('AI exploratory mobile gameplay', () => {
         await runRelicSiegeJourney(page, testInfo);
       } else if (app.slug === 'zastava') {
         await runZastavaJourney(page, testInfo);
+      } else if (app.slug === 'last-stone') {
+        await runLastStoneJourney(page, testInfo);
       } else {
         await clickLikelyStartControl(page);
 
