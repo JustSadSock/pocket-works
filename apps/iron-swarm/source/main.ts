@@ -72,7 +72,7 @@ for(let i=0;i<18;i++){const a=i/18*Math.PI*2,x=Math.cos(a)*29,z=Math.sin(a)*29;c
 const mech=new TransformNode('mech',scene);
 const body=MeshBuilder.CreateBox('body',{width:1.45,height:.72,depth:1.25},scene);body.parent=mech;body.position.y=.75;body.material=M.steel;
 const cab=MeshBuilder.CreateBox('cab',{width:.86,height:.58,depth:.88},scene);cab.parent=mech;cab.position.set(.12,1.32,-.04);cab.material=M.cream;
-const eye=MeshBuilder.CreateBox('eye',{width:.7,height:.13,depth:.08},scene);eye.parent=mech;eye.position.set(.12,1.39,-.49);eye.material=M.rust;
+const eye=MeshBuilder.CreateBox('eye',{width:.7,height:.13,depth:.08},scene);eye.parent=mech;eye.position.set(.12,1.39,.49);eye.material=M.rust;
 for(const x of [-.62,.62]){const wheel=MeshBuilder.CreateCylinder('wheel',{diameter:.58,height:.28,tessellation:12},scene);wheel.parent=mech;wheel.position.set(x,.42,0);wheel.rotation.z=Math.PI/2;wheel.material=M.dark}
 
 const rig=new TransformNode('rig',scene);rig.parent=mech;rig.position.y=.85;
@@ -88,7 +88,7 @@ function makeModule(kind,slot){const root=new TransformNode('module-'+kind,scene
   if(kind==='engine'){addBox(root,.75,.58,.65,.05,.14,0,M.steel);addBox(root,.28,.72,.2,.35,.2,.32,M.rust);addBox(root,.28,.72,.2,.35,.2,-.32,M.rust)}
   return root
 }
-function rebuildModules(){for(const n of moduleNodes)n.dispose(false,true);moduleNodes=[];for(const m of state.modules)moduleNodes.push(makeModule(m.kind,m.slot));renderRigReadout()}
+function rebuildModules(){for(const n of moduleNodes)n.dispose(false,false);moduleNodes=[];for(const m of state.modules)moduleNodes.push(makeModule(m.kind,m.slot));renderRigReadout()}
 rebuildModules();
 
 function proto(name,kind){let mesh;if(kind==='runner')mesh=MeshBuilder.CreateCylinder(name,{diameter:.75,height:.65,tessellation:8},scene);else if(kind==='brute')mesh=MeshBuilder.CreateBox(name,{size:1.25},scene);else if(kind==='boss')mesh=MeshBuilder.CreateBox(name,{width:2.6,height:1.6,depth:3.2},scene);else mesh=MeshBuilder.CreateSphere(name,{diameter:1,segments:8},scene);mesh.material=kind==='runner'?M.runner:kind==='brute'?M.brute:kind==='boss'?M.boss:M.enemy;mesh.isPickable=false;return mesh}
