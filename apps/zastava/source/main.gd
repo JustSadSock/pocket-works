@@ -297,6 +297,9 @@ var end_copy: Label
 var pause_button: Button
 var world_boot_ready := false
 var continue_ready_text := "НАЧАТЬ СМЕНУ"
+var fallback_lever_dragging := false
+var fallback_lever_touch := -1
+var fallback_lever_x := 0.0
 
 func _ready() -> void:
 	Engine.max_fps = 60
@@ -334,7 +337,7 @@ func _build_ui() -> void:
 	# Keep the resource band below the iOS safe area. Opaque by design: no scene blur
 	# or low-contrast text can leak through it.
 	var top := PanelContainer.new()
-	top.position = Vector2(18, 72)
+	top.position = Vector2(18, 92)
 	top.size = Vector2(549, 116)
 	top.add_theme_stylebox_override("panel", _panel_style(Color("#1c2421"), Color("#786f5e"), 2))
 	hud.add_child(top)
@@ -979,6 +982,62 @@ func _publish_state(stage: String) -> void:
 func _on_exit_pressed() -> void:
 	_save()
 	PocketWorks.exit_to_launcher()
+
+func _input(event: InputEvent) -> void:
+	# The lever owns normal GUI input. This scene-level path is intentionally
+	# redundant: mobile browsers occasionally route a drag as raw canvas input
+	# instead of Control GUI input. A gate mechanism should not miss a finger.
+	if decision_locked or paused_game or campaign_over or lever == null:
+		fallback_lever_dragging = false
+		fallback_lever_touch = -1
+		return
+
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed and fallback_lever_touch == -1 and _in_lever_hitbox(touch.position):
+			fallback_lever_touch = touch.index
+			fallback_lever_dragging = true
+			_preview_fallback_lever(touch.position.x)
+		elif not touch.pressed and touch.index == fallback_lever_touch:
+			_finish_fallback_lever(touch.position.x)
+			fallback_lever_touch = -1
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if fallback_lever_dragging and drag.index == fallback_lever_touch:
+			_preview_fallback_lever(drag.position.x)
+	elif event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index == MOUSE_BUTTON_LEFT:
+			if mouse.pressed and _in_lever_hitbox(mouse.position):
+				fallback_lever_dragging = true
+				_preview_fallback_lever(mouse.position.x)
+			elif not mouse.pressed and fallback_lever_dragging:
+				_finish_fallback_lever(mouse.position.x)
+	elif event is InputEventMouseMotion and fallback_lever_dragging:
+		_preview_fallback_lever((event as InputEventMouseMotion).position.x)
+
+func _in_lever_hitbox(pos: Vector2) -> bool:
+	return pos.x >= 24.0 and pos.x <= 561.0 and pos.y >= 1008.0 and pos.y <= 1202.0
+
+func _lever_normalized_from_x(x: float) -> float:
+	return clampf((x - 292.5) / 178.0, -1.0, 1.0)
+
+func _preview_fallback_lever(x: float) -> void:
+	fallback_lever_x = _lever_normalized_from_x(x)
+	lever.preview_external(fallback_lever_x)
+
+func _finish_fallback_lever(x: float) -> void:
+	if not fallback_lever_dragging:
+		return
+	fallback_lever_dragging = false
+	var value := _lever_normalized_from_x(x)
+	lever.preview_external(value)
+	if value >= 0.52:
+		_on_decision(1)
+	elif value <= -0.52:
+		_on_decision(-1)
+	else:
+		lever.reset()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_CLOSE_REQUEST:
