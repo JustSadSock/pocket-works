@@ -247,7 +247,7 @@ func set_weather(kind: String) -> void:
 		environment.environment.ambient_light_energy = 0.68
 
 func set_time(progress: float) -> void:
-	var t := clamp(progress, 0.0, 1.0)
+	var t: float = clampf(progress, 0.0, 1.0)
 	sun.rotation_degrees.x = lerp(-35.0, -72.0, abs(t - 0.5) * 1.5)
 	sun.rotation_degrees.y = lerp(-55.0, 45.0, t)
 	if t < 0.72:
