@@ -279,6 +279,7 @@ var guard_label: Label
 var trust_label: Label
 var weather_label: Label
 var condition_label: Label
+var version_label: Label
 var result_panel: PanelContainer
 var visitor_panel: PanelContainer
 var visitor_name: Label
@@ -337,8 +338,8 @@ func _build_ui() -> void:
 	# Keep the resource band below the iOS safe area. Opaque by design: no scene blur
 	# or low-contrast text can leak through it.
 	var top := PanelContainer.new()
-	top.position = Vector2(18, 92)
-	top.size = Vector2(549, 116)
+	top.position = Vector2(18, 170)
+	top.size = Vector2(549, 112)
 	top.add_theme_stylebox_override("panel", _panel_style(Color("#1c2421"), Color("#786f5e"), 2))
 	hud.add_child(top)
 	var top_box := VBoxContainer.new()
@@ -358,6 +359,10 @@ func _build_ui() -> void:
 	weather_label.custom_minimum_size = Vector2(62, 0)
 	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(weather_label)
+	version_label = _label("v1.1.1", 10, Color(C_MUTED, 0.68))
+	version_label.custom_minimum_size = Vector2(48, 0)
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	top_row.add_child(version_label)
 	pause_button = Button.new()
 	pause_button.text = "II"
 	pause_button.custom_minimum_size = Vector2(46, 34)
@@ -378,23 +383,23 @@ func _build_ui() -> void:
 	result_panel.position = Vector2(50, 746)
 	result_panel.size = Vector2(485, 62)
 	result_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	result_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.10,0.13,0.12,0.96), Color("#665f52"), 1))
+	result_panel.add_theme_stylebox_override("panel", _panel_style(Color(0,0,0,0), Color(0,0,0,0), 0))
 	result_panel.modulate.a = 0.0
 	hud.add_child(result_panel)
 	result_hint = Label.new()
 	result_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	result_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	result_hint.add_theme_font_size_override("font_size", 15)
+	result_hint.add_theme_font_size_override("font_size", 16)
 	result_hint.add_theme_color_override("font_color", C_TEXT)
-	result_hint.add_theme_constant_override("outline_size", 2)
+	result_hint.add_theme_constant_override("outline_size", 3)
 	result_hint.add_theme_color_override("font_outline_color", Color("#101411"))
 	result_panel.add_child(result_hint)
 
 	visitor_panel = PanelContainer.new()
 	visitor_panel.position = Vector2(26, 814)
 	visitor_panel.size = Vector2(533, 182)
-	visitor_panel.add_theme_stylebox_override("panel", _panel_style(Color("#1c2421"), Color("#746b5b"), 2))
+	visitor_panel.add_theme_stylebox_override("panel", _panel_style(Color("#28322d"), Color("#817765"), 2))
 	hud.add_child(visitor_panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 22)
@@ -624,7 +629,7 @@ func _begin_day_if_needed() -> void:
 	state["weather"] = _pick_weather(day)
 	world.set_weather(String(state["weather"]))
 	PocketWorks.set_ambience(sound_enabled, String(state["weather"]), int(state.get("population", 18)))
-	world.set_time(0.20)
+	world.transition_time(0.20, 0.38)
 	_process_scheduled()
 	_daily_background(day)
 	_refresh_hud()
@@ -657,6 +662,7 @@ func _show_next() -> void:
 	current_visitor = _pick_visitor()
 	visitor_name.text = String(current_visitor["name"])
 	visitor_role.text = String(current_visitor["role"]).to_upper()
+	visitor_role.add_theme_color_override("font_color", C_SAND)
 	visitor_line.text = "«" + String(current_visitor["line"]) + "»"
 	decision_locked = false
 	lever.set_enabled(true)
@@ -664,7 +670,7 @@ func _show_next() -> void:
 	var variant := rng.randi_range(0, 11)
 	world.spawn_visitor(current_visitor, variant)
 	var index := int(state["visitors_today"])
-	world.set_time(0.25 + float(index) * 0.20)
+	world.transition_time(0.25 + float(index) * 0.18, 0.44)
 	_publish_state("awaiting_decision")
 
 func _pick_visitor() -> Dictionary:
@@ -723,6 +729,9 @@ func _on_decision(value: int) -> void:
 	var summary := _effect_summary(current_visitor.get(key, {}))
 	if not summary.is_empty():
 		result_text += "\n" + summary
+	visitor_role.text = "ПРОПУЩЕН" if accepted else "ОТКАЗАНО"
+	visitor_role.add_theme_color_override("font_color", C_GREEN.lightened(0.18) if accepted else C_RED.lightened(0.18))
+	visitor_line.text = result_text
 	_flash(result_text, C_GREEN if accepted else C_RED)
 	state["visitors_today"] = int(state["visitors_today"]) + 1
 	state["rng_state"] = rng.state
@@ -769,7 +778,6 @@ func _show_consequence(item: Dictionary) -> void:
 	lever.set_enabled(false)
 	world.set_state(state)
 	_refresh_hud()
-	_flash(String(item.get("text", "")), C_SAND)
 	if sound_enabled:
 		PocketWorks.play_sfx("bell", 0.92)
 	var timer := get_tree().create_timer(2.2)
@@ -792,7 +800,7 @@ func _end_day() -> void:
 	decision_locked = true
 	lever.set_enabled(false)
 	world.operate_gate(false)
-	world.set_time(0.90)
+	world.transition_time(0.74, 0.62)
 	var population := int(state["population"])
 	var upkeep := maxi(2, int(ceil(float(population) / 11.0)))
 	state["food"] = int(state["food"]) - upkeep
@@ -900,13 +908,13 @@ func _refresh_hud() -> void:
 	PocketWorks.set_ambience(sound_enabled, w, int(state.get("population", 18)))
 
 func _flash(text_value: String, color: Color) -> void:
-	result_hint.text = text_value
-	result_hint.add_theme_color_override("font_color", color.lightened(0.20))
-	result_panel.modulate.a = 0.0
+	result_hint.text = text_value.split("\n")[0]
+	result_hint.add_theme_color_override("font_color", color.lightened(0.28))
+	result_hint.modulate.a = 0.0
 	var tw := create_tween()
-	tw.tween_property(result_panel, "modulate:a", 1.0, 0.10)
-	tw.tween_interval(1.12)
-	tw.tween_property(result_panel, "modulate:a", 0.0, 0.26)
+	tw.tween_property(result_hint, "modulate:a", 1.0, 0.10)
+	tw.tween_interval(0.86)
+	tw.tween_property(result_hint, "modulate:a", 0.0, 0.24)
 
 func _effect_summary(effects: Dictionary) -> String:
 	var parts: Array[String] = []
