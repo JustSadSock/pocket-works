@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#393b35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ЖЕЛЕЗНЫЙ РОЙ">
+  <title>ЖЕЛЕЗНЫЙ РОЙ</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell>
+    <canvas id="world" aria-label="Индустриальная арена Железного Роя"></canvas>
+    <div class="dust-vignette" aria-hidden="true"></div>
+
+    <header class="hud" data-ui>
+      <div class="brand-block">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div><strong>ЖЕЛЕЗНЫЙ РОЙ</strong><small id="phase-label">ПОДГОТОВКА</small></div>
+      </div>
+      <div class="meters">
+        <div class="meter hp"><span>КОРПУС</span><div><i id="hp-fill"></i></div><b id="hp-text">100</b></div>
+        <div class="meter xp"><span>ЛОМ · УР. <b id="level">1</b></span><div><i id="xp-fill"></i></div><b id="xp-text">0/10</b></div>
+      </div>
+      <div class="run-data">
+        <span><small>ВРЕМЯ</small><b id="timer">05:00</b></span>
+        <span><small>УНИЧТОЖЕНО</small><b id="kills">0</b></span>
+      </div>
+      <div class="hud-actions">
+        <button id="sound" class="square-control" type="button" aria-label="Отключить звук">SND</button>
+        <button id="pause" class="square-control" type="button" aria-label="Пауза">II</button>
+        <button id="exit" class="text-control" type="button">← PocketWorks</button>
+        <button class="workshop-trigger square-control" type="button" data-workshop-trigger aria-label="Workshop">•••</button>
+      </div>
+    </header>
+
+    <div id="boss-bar" class="boss-bar hidden" data-ui>
+      <span>CRUSHER / ТЯЖЁЛАЯ МАШИНА</span><div><i id="boss-fill"></i></div>
+    </div>
+
+    <section class="rig-readout" data-ui aria-label="Модули рига">
+      <span class="readout-label">РИГ</span>
+      <div id="rig-slots" class="rig-slots"></div>
+    </section>
+
+    <div id="move-zone" class="touch-zone move-zone" data-gesture-surface data-touch-action="none" aria-label="Движение">
+      <div class="move-pad"><span class="cross x"></span><span class="cross y"></span><i id="move-thumb"></i></div>
+      <small>ДВИЖЕНИЕ</small>
+    </div>
+    <div id="rig-zone" class="touch-zone rig-zone" data-gesture-surface data-touch-action="none" aria-label="Поворот оружейного рига">
+      <div class="rotation-glyph"><span>↻</span><i></i></div>
+      <small>ВЕДИТЕ ПАЛЬЦЕМ · РИГ</small>
+    </div>
+
+    <section id="start-screen" class="screen-panel start-screen" data-ui>
+      <div class="panel-rule"><span>PW / SURVIVOR 01</span><b>5:00</b></div>
+      <h1>Собери машину,<br><em>которая переживёт рой.</em></h1>
+      <p>Левый палец ведёт мех. Правый разворачивает весь оружейный риг. Пушки, пила и щит находятся там, где вы их видите — встречайте толпу правильной стороной.</p>
+      <div class="start-stats"><span><small>ЛУЧШИЙ РЕЗУЛЬТАТ</small><b id="best-kills">—</b></span><span><small>ЗАБЕГОВ</small><b id="run-count">0</b></span></div>
+      <div class="panel-actions">
+        <button id="continue-run" class="secondary hidden" type="button">ПРОДОЛЖИТЬ</button>
+        <button id="new-run" class="primary" type="button">ЗАПУСТИТЬ МЕХ <span>→</span></button>
+      </div>
+      <button id="start-exit" class="panel-exit" type="button">← В PocketWorks</button>
+    </section>
+
+    <section id="upgrade-screen" class="screen-panel upgrade-screen hidden" data-ui aria-live="polite">
+      <div class="panel-rule"><span>ПОЛЕВАЯ СБОРКА</span><b id="upgrade-level">УР. 2</b></div>
+      <h2>Что приварить к машине?</h2>
+      <div id="upgrade-options" class="upgrade-options"></div>
+    </section>
+
+    <section id="pause-screen" class="screen-panel compact-panel hidden" data-ui>
+      <div class="panel-rule"><span>СИСТЕМА ОСТАНОВЛЕНА</span><b>PAUSE</b></div>
+      <h2>Мех стоит. Рой — тоже.</h2>
+      <div class="panel-actions vertical">
+        <button id="resume" class="primary" type="button">ПРОДОЛЖИТЬ</button>
+        <button id="restart" class="secondary" type="button">НАЧАТЬ ЗАНОВО</button>
+        <button id="pause-exit" class="secondary" type="button">← В PocketWorks</button>
+      </div>
+    </section>
+
+    <section id="end-screen" class="screen-panel compact-panel hidden" data-ui>
+      <div class="panel-rule"><span id="end-code">ЗАБЕГ ЗАВЕРШЁН</span><b id="end-time">00:00</b></div>
+      <h2 id="end-title">Машина остановилась.</h2>
+      <p id="end-copy">Результат сохранён.</p>
+      <div class="end-stats"><span><small>УНИЧТОЖЕНО</small><b id="end-kills">0</b></span><span><small>УРОВЕНЬ</small><b id="end-level">1</b></span></div>
+      <div class="panel-actions vertical">
+        <button id="play-again" class="primary" type="button">ЕЩЁ ЗАБЕГ</button>
+        <button id="end-exit" class="secondary" type="button">← В PocketWorks</button>
+      </div>
+    </section>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="damage-flash" aria-hidden="true"></div>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
