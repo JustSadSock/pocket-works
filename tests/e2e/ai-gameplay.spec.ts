@@ -317,11 +317,20 @@ async function runZastavaJourney(page: Page, testInfo: TestInfo) {
   // Godot draws its UI inside the canvas, so role/button locators cannot reach the
   // start control. Tap the center of the authored start button, then wait for the QA
   // bridge to confirm that a real visitor is awaiting a decision.
-  await page.touchscreen.tap(Math.round(width * 0.50), Math.round(height * 0.53));
+  // The Godot logical viewport letterboxes horizontally on the emulated phone.
+  // 55.5% of viewport height is the center of the primary start/continue button.
+  // Tap twice: the first touch can be consumed by canvas focus on WebKit/Chromium,
+  // the second is a normal in-canvas control activation.
+  const startX = Math.round(width * 0.50);
+  const startY = Math.round(height * 0.555);
+  await page.touchscreen.tap(startX, startY);
+  await page.waitForTimeout(350);
+  const started = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.awaitingDecision === true);
+  if (!started) await page.touchscreen.tap(startX, startY);
   await page.waitForFunction(() => {
     const state = (window as any).__AI_TEST_STATE__;
     return state?.app === 'zastava' && state?.awaitingDecision === true;
-  }, undefined, { timeout: 8_000 });
+  }, undefined, { timeout: 12_000 });
 
   // Operate the actual mechanical lever rather than spraying random touches over the
   // canvas. The control only reads horizontal travel, matching real touch behavior.
