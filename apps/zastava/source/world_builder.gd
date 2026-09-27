@@ -195,12 +195,12 @@ void fragment() {
 	# Trees are curated outside the rectangular river footprint. Procedural z
 	# stepping used to place trunks directly in the water.
 	for spec in [
-		[Vector3(-5.15,0,-8.4),0.82], [Vector3(5.20,0,-7.2),0.78],
-		[Vector3(-4.75,0,-5.7),0.86], [Vector3(5.10,0,-4.35),0.74],
-		[Vector3(-5.35,0,-3.55),0.76], [Vector3(4.95,0,-3.65),0.72],
-		[Vector3(-5.00,0,6.25),0.70], [Vector3(4.70,0,6.55),0.74],
-		[Vector3(-5.45,0,7.55),0.68], [Vector3(5.05,0,8.00),0.72],
-		[Vector3(-4.80,0,9.15),0.76], [Vector3(5.30,0,9.45),0.70]
+		[Vector3(-5.15,0,-8.5),0.76], [Vector3(5.20,0,-7.5),0.72],
+		[Vector3(-4.75,0,-6.4),0.78], [Vector3(5.10,0,-5.3),0.70],
+		[Vector3(-5.35,0,-4.65),0.68], [Vector3(4.95,0,-4.75),0.66],
+		[Vector3(-5.00,0,7.10),0.64], [Vector3(4.70,0,7.35),0.68],
+		[Vector3(-5.45,0,8.05),0.64], [Vector3(5.05,0,8.45),0.68],
+		[Vector3(-4.80,0,9.25),0.70], [Vector3(5.30,0,9.55),0.66]
 	]:
 		add_child(_tree(spec[0], spec[1]))
 
@@ -240,6 +240,11 @@ void fragment() {
 		Vector3(4.35,0.02,5.1), Vector3(-4.0,0.02,6.2), Vector3(3.7,0.02,8.0)
 	]:
 		add_child(_grass_tuft(pos))
+	for pos in [
+		Vector3(-4.65,0.02,-2.75), Vector3(4.55,0.02,-2.95),
+		Vector3(-4.55,0.02,5.10), Vector3(4.45,0.02,5.25)
+	]:
+		add_child(_shrub(pos))
 
 func _try_authored_core() -> bool:
 	var path := "res://assets/zastava_core.glb"
@@ -809,13 +814,13 @@ func _tree(pos: Vector3, scale_factor: float) -> Node3D:
 	root.add_child(trunk)
 	var crown := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.74
-	mesh.height = 1.34
+	mesh.radius = 0.60
+	mesh.height = 1.16
 	mesh.radial_segments = 7
 	mesh.rings = 4
 	crown.mesh = mesh
-	crown.position = Vector3(0, 1.53, 0)
-	crown.scale = Vector3(1.0, 1.06, 0.92)
+	crown.position = Vector3(0, 1.42, 0)
+	crown.scale = Vector3(0.96, 1.08, 0.88)
 	crown.material_override = _mat(C_GRASS_DARK.darkened(0.08))
 	root.add_child(crown)
 	return root
@@ -907,6 +912,23 @@ func _dock(pos: Vector3) -> Node3D:
 		root.add_child(_box("DockPlank",Vector3(0.72,0.08,0.42),C_WOOD_LIGHT,Vector3(0,0.12,float(i)*0.38)))
 	for x in [-0.30,0.30]:
 		root.add_child(_box("DockPost",Vector3(0.08,0.72,0.08),C_WOOD,Vector3(x,0.28,0.56)))
+	return root
+
+func _shrub(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(3):
+		var crown := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.22 + float(i % 2) * 0.04
+		mesh.height = 0.34
+		mesh.radial_segments = 6
+		mesh.rings = 3
+		crown.mesh = mesh
+		crown.position = Vector3(-0.20 + float(i)*0.18,0.20,float(i%2)*0.12)
+		crown.scale = Vector3(1.0,0.70,0.90)
+		crown.material_override = _mat(C_GRASS_DARK.lightened(0.02 + float(i)*0.025))
+		root.add_child(crown)
 	return root
 
 func _grass_tuft(pos: Vector3) -> Node3D:
