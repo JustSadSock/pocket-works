@@ -5,11 +5,11 @@
   "name": "Последний камень",
   "shortName": "Камень",
   "description": "Построй крепость из ограниченных ресурсов и выдержи двенадцать осад.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "releaseDate": "2026-09-27",
-  "releaseDateTime": "2026-09-27T15:21:11.783Z",
+  "releaseDateTime": "2026-09-27T16:16:00.000Z",
   "changelog": [
-    "Строительство 3D-крепости, двенадцать осад, разрушения и сохранение кампании."
+    "Добавлена видимая строительная сетка, подсветка выбранной клетки и исправлено управление строительством на телефоне."
   ],
   "status": "active",
   "preset": "vite",
@@ -17,7 +17,7 @@
   "backgroundColor": "#202b2b",
   "themeColor": "#202b2b",
   "orientation": "landscape",
-  "cacheName": "last-stone-v1.0.0",
+  "cacheName": "last-stone-v1.0.1",
   "storageNamespace": "pocket-works:last-stone",
   "tags": [
     "PWA",
