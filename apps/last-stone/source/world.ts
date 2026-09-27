@@ -11,6 +11,7 @@ import { Scene } from '@babylonjs/core/scene';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { PointerEventTypes } from '@babylonjs/core/Events/pointerEvents';
+import '@babylonjs/core/Culling/ray';
 import { CENTER, SIZE, MAX_HP, type State, type Piece, type Enemy, type Shot, type Kind } from './simulation';
 
 const tone=(v:string)=>Color3.FromHexString(v);
