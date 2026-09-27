@@ -12,9 +12,9 @@ import {
 
 function runGame(){
 installMobileRuntime();
-registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.0',
-  releaseNotes:['Строительство 3D-крепости, двенадцать осад, разрушение стен и сохранение кампании.'] });
-createWorkshopMode({appName:'Последний камень',version:'1.0.0',
+registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.1',
+  releaseNotes:['Добавлена видимая строительная сетка и надёжная подсветка клетки под пальцем.'] });
+createWorkshopMode({appName:'Последний камень',version:'1.0.1',
   cachePrefix:'last-stone-',storageNamespace:'pocket-works:last-stone'});
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -54,7 +54,7 @@ function modal(title:string,copy:string,primary:string,action:()=>void,secondary
 function hideModal(){$('modal-backdrop').classList.add('hidden');}
 function intro(){
   modal('Замок держится на ваших решениях.',
-    'Выберите постройку внизу и коснитесь земли. Камеру можно вращать пальцем. Перед штурмом разведка покажет направление удара. Постройте защиту, переживите осаду и используйте награду для следующей.',
+    'Выберите постройку внизу: на земле появится строительная сетка. Коснитесь клетки — она подсветится, а постройка встанет в неё. Камеру можно вращать пальцем. Перед штурмом разведка покажет направление удара.',
     'К СТРОИТЕЛЬСТВУ →',()=>{});
 }
 const tools=$('tools');
@@ -75,7 +75,7 @@ function draw(){
   $('intel-copy').textContent=state.wave<2?'Пехота идёт к донжону. Перекройте ей путь.':
     [`${plan.total} штурмующих`,plan.ram?'таран':null,plan.ladder?'лестницы':null,plan.catapult?'катапульта':null].filter(Boolean).join(' · ');
   $('notice').textContent=state.phase==='build'
-    ? 'Выберите элемент и коснитесь земли. Зажмите и ведите для поворота камеры.'
+    ? 'Сетка — доступные клетки. Выберите элемент и коснитесь клетки для строительства.'
     : state.phase==='siege'?'Стрелки ведут огонь сами. Следите за воротами и проломами.':
       state.phase==='won'?'Крепость выстояла все двенадцать осад.':'Донжон пал. Кампания окончена.';
   $('siege-strip').classList.toggle('hidden',state.phase!=='siege');$('dock').classList.toggle('hidden',state.phase!=='build');
@@ -88,7 +88,8 @@ function draw(){
     const c=COST[kind];button.classList.toggle('unaffordable',state.stone<c.stone||state.timber<c.timber||state.iron<c.iron);
   }
   $('repair').classList.toggle('active',selected==='repair');$('remove').classList.toggle('active',selected==='remove');
-  if(hover) world.preview(...hover,selected==='repair'||selected==='remove'?null:selected,
+  world.setBuildMode(state.phase==='build');
+  if(hover&&state.phase==='build') world.preview(...hover,selected==='repair'||selected==='remove'?null:selected,
     selected==='repair'||selected==='remove'?true:!canBuild(state,selected,...hover));
   const test=window as Window & {__AI_TEST_STATE__?:unknown};
   test.__AI_TEST_STATE__={app:'last-stone',phase:state.phase,wave:state.wave,stone:state.stone,timber:state.timber,
