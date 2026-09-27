@@ -136,3 +136,20 @@ Footsteps, impacts, sword whooshes, wind, engines, snow/sand crunch and UI feedb
 - workflow jobs do not receive application secrets;
 - app PRs must not modify the shared Asset Forge workflow or tools;
 - changes to Asset Forge itself are platform work and use the `platform-change` label.
+
+## Parameterized recipes
+
+`tools/asset-forge/recipes.py` provides deterministic `rock`, `tree`, `weapon` and `buildingModule` starting points, plus optional collision proxy and LOD copy. These are authored geometry generators, not final art direction. Each app keeps its own parameters and thin entry script under `apps/<slug>/asset-forge/`:
+
+```python
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ["POCKET_WORKS_ROOT"]) / "tools" / "asset-forge"))
+from recipes import build_asset
+
+build_asset(Path(__file__).with_name("recipe.json"), os.environ["ASSET_FORGE_OUTPUT"])
+```
+
+A recipe file can start with `{"type":"rock","seed":41,"parameters":{"radius":1.1},"lod":{"ratio":0.5},"collision":{"size":[2,2,1]}}`. Add the thin script as a normal Asset Forge manifest job. The platform smoke job exports and re-imports a generated recipe GLB; each game still inspects silhouettes, materials, pivot, animation and collision in its own visual QA.

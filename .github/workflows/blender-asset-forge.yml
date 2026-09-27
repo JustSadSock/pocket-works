@@ -58,6 +58,15 @@ jobs:
             --python tools/asset-forge/smoke_generate.py -- \
             --output "$PWD/asset-forge-smoke/forge-smoke.glb"
 
+      - name: Generate recipe GLB smoke asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$BLENDER" --background --factory-startup \
+            --python tools/asset-forge/recipes.py -- \
+            --recipe tools/asset-forge/recipe-smoke.json \
+            --output "$PWD/asset-forge-smoke/recipe-rock.glb"
+
       - name: Re-import and verify GLB
         shell: bash
         run: |
@@ -67,12 +76,15 @@ jobs:
             --input "$PWD/asset-forge-smoke/forge-smoke.glb" \
             --require-armature \
             --require-animation
+          "$BLENDER" --background --factory-startup \
+            --python tools/asset-forge/verify_glb.py -- \
+            --input "$PWD/asset-forge-smoke/recipe-rock.glb"
 
       - name: Upload smoke asset
         uses: actions/upload-artifact@v4
         with:
           name: blender-asset-forge-smoke
-          path: asset-forge-smoke/forge-smoke.glb
+          path: asset-forge-smoke/*.glb
           if-no-files-found: error
           retention-days: 7
 
