@@ -711,7 +711,7 @@ func _end_day() -> void:
 	var income := maxi(0, int(state["trade"]) / 6)
 	state["money"] = int(state["money"]) + income
 	if int(state["food"]) < 0:
-		var shortage := abs(int(state["food"]))
+		var shortage: int = absi(int(state["food"]))
 		state["food"] = 0
 		state["trust"] = int(state["trust"]) - 5 - shortage
 		state["population"] = maxi(0, int(state["population"]) - maxi(1, shortage / 3))
