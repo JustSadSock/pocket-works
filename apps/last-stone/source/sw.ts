@@ -6,10 +6,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'last-stone-';
-const CACHE_NAME = 'last-stone-v1.0.2';
-const APP_VERSION = '1.0.2';
+const CACHE_NAME = 'last-stone-v1.0.3';
+const APP_VERSION = '1.0.3';
 const RELEASE_DATE = '2026-09-27';
-const RELEASE_NOTES = ["Исправлена стартовая кнопка на iPhone, убран проблемный blur поверх WebGL и усилено обновление закэшированной сборки."];
+const RELEASE_NOTES = ["Стартовая блокирующая плашка удалена: игра сразу открывается в режиме строительства."];
 
 setCacheNameDetails({
   prefix: 'last-stone',
