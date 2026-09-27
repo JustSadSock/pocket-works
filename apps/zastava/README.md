@@ -56,3 +56,16 @@ The scene favors a stable 60 fps interaction budget over expensive desktop effec
 The final Godot Web export is regenerated after Asset Forge output changes.
 
 CI sign-off uses the committed Godot Web export produced from the same authored asset set.
+
+
+## 1.1 polish pass
+
+The mobile presentation was rebuilt around legibility and physicality rather than translucent UI. The resource band now sits below the mobile safe area on an opaque plate, visitor copy uses high-contrast text, and decision results surface visible resource deltas.
+
+The former horizontal slider is now a mechanical gate lever with an arced travel path and hard decision detents. The diorama gained authored tone correction plus runtime clutter, road ruts, riverbank reeds and stones, bridge joinery, fencing, dock props, lanterns, forge smoke and lightweight ambient inhabitants.
+
+Visitor animation now includes idle weight shifts, role silhouettes, turn-around motion and decision reactions. WebAudio ambience reacts to weather and population. Campaigns also roll one of three regional conditions so repeated runs apply different systemic pressure.
+
+Web boot is staged: the menu renders first, the core diorama is built across subsequent frames, and ambient inhabitants/audio are activated only after the player enters a shift.
+
+The mechanical lever also has a scene-level fallback hitbox for mobile canvas pointer routing; its semantic decision remains single-fire even if both GUI and raw pointer paths observe the same drag.

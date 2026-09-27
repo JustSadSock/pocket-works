@@ -1,5 +1,7 @@
 extends Node3D
 
+signal boot_completed
+
 const VISITOR_SCRIPT := preload("res://source/visitor_actor.gd")
 
 var sun: DirectionalLight3D
@@ -19,43 +21,109 @@ var visitor: Node3D
 var current_weather := "clear"
 var authored_core := false
 var last_growth_level := 0
+var ambient_root: Node3D
+var ambient_people: Array[Node3D] = []
+var prosperity_details: Node3D
+var security_details: Node3D
+var trade_details: Node3D
+var lanterns: Array[OmniLight3D] = []
+var forge_smoke: GPUParticles3D
+var motion_clock := 0.0
+var boot_ready := false
+var live_scene_ready := false
+var live_scene_building := false
+var pending_state: Dictionary = {}
+var pending_weather := "clear"
+var current_time_progress := 0.28
 
-const C_GRASS := Color("#7e8a73")
-const C_GRASS_DARK := Color("#65715f")
-const C_STONE := Color("#a59d89")
-const C_STONE_DARK := Color("#726f66")
-const C_WOOD := Color("#765b48")
-const C_WOOD_LIGHT := Color("#a07b58")
-const C_ROOF := Color("#6f4d43")
-const C_ROAD := Color("#8c7d67")
-const C_WATER := Color("#627d82")
-const C_METAL := Color("#555d59")
-const C_CLOTH := Color("#8a725a")
+const C_GRASS := Color("#66735f")
+const C_GRASS_DARK := Color("#505d4d")
+const C_STONE := Color("#8f897b")
+const C_STONE_DARK := Color("#5f6059")
+const C_WOOD := Color("#684936")
+const C_WOOD_LIGHT := Color("#916643")
+const C_ROOF := Color("#644239")
+const C_ROAD := Color("#756852")
+const C_WATER := Color("#4c6e72")
+const C_METAL := Color("#444d49")
+const C_CLOTH := Color("#79634e")
 
 func _ready() -> void:
+	# Keep _ready intentionally tiny. Godot does not dismiss its Web splash until
+	# the first rendered frame; building the whole diorama here made Chromium sit
+	# on the engine splash while meshes, GLB materials and particles were created.
+	set_process(false)
 	_build_environment()
+
+func finish_boot(initial_state: Dictionary, weather: String) -> void:
+	if boot_ready:
+		set_state(initial_state)
+		set_weather(weather)
+		boot_completed.emit()
+		return
+	pending_state = initial_state.duplicate(true)
+	pending_weather = weather
+
+	PocketWorks.set_boot_stage("world-landscape")
 	_build_landscape()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-gatehouse")
 	authored_core = _try_authored_core()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-village")
 	_build_village_architecture()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-mechanism")
 	_build_moving_bridge()
+	await get_tree().process_frame
+
+	PocketWorks.set_boot_stage("world-weather")
 	_build_weather()
-	set_time(0.28)
+	await get_tree().process_frame
+
+	boot_ready = true
+	set_time(current_time_progress)
+	set_state(pending_state)
+	set_weather(pending_weather)
+	PocketWorks.set_boot_stage("world-ready")
+	boot_completed.emit()
+
+func activate_live_scene(state: Dictionary) -> void:
+	if live_scene_ready or live_scene_building or not boot_ready:
+		return
+	live_scene_building = true
+	PocketWorks.set_boot_stage("live-details")
+	await get_tree().process_frame
+	_build_living_details()
+	await get_tree().process_frame
+	live_scene_ready = true
+	live_scene_building = false
+	set_state(state)
+	set_time(current_time_progress)
+	set_process(true)
+	PocketWorks.set_boot_stage("live-ready")
+
+func is_boot_ready() -> bool:
+	return boot_ready
 
 func _build_environment() -> void:
 	environment = WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("#9aa39a")
+	env.background_color = Color("#737e78")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#c5c2ae")
-	env.ambient_light_energy = 0.68
+	env.ambient_light_color = Color("#b8b09b")
+	env.ambient_light_energy = 0.46
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.environment = env
 	add_child(environment)
 
 	sun = DirectionalLight3D.new()
-	sun.light_color = Color("#f0d7aa")
-	sun.light_energy = 1.25
+	sun.light_color = Color("#efd0a3")
+	sun.light_energy = 0.92
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 28.0
 	sun.rotation_degrees = Vector3(-48, -24, 0)
@@ -63,8 +131,8 @@ func _build_environment() -> void:
 
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 20.5
-	camera.position = Vector3(8.7, 12.8, 14.0)
+	camera.size = 19.2
+	camera.position = Vector3(8.4, 12.1, 13.6)
 	camera.look_at_from_position(camera.position, Vector3(0, 0.2, -0.5))
 	camera.current = true
 	add_child(camera)
@@ -94,9 +162,10 @@ void vertex() {
 }
 void fragment() {
 	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.7) * 0.5 + 0.5;
-	ALBEDO = mix(vec3(0.31,0.43,0.46), vec3(0.43,0.55,0.56), ripple * 0.18);
-	ROUGHNESS = 0.30;
-	METALLIC = 0.02;
+	float bands = sin(VERTEX.x * 5.0 - TIME * 0.55) * 0.5 + 0.5;
+	ALBEDO = mix(vec3(0.22,0.36,0.38), vec3(0.34,0.49,0.49), ripple * 0.22 + bands * 0.05);
+	ROUGHNESS = 0.38;
+	METALLIC = 0.015;
 }
 """
 	var sm := ShaderMaterial.new()
@@ -120,6 +189,23 @@ void fragment() {
 		var tree := _tree(Vector3(side * (4.5 + float(i % 2) * 0.55), 0, 5.4 + float(i) * 0.8), 0.72)
 		add_child(tree)
 
+	# Readable ground detail: ruts, stones and riverbank growth stop the world from
+	# looking like three flat colour planes.
+	for i in range(8):
+		var rut := _box("RoadRut", Vector3(0.09, 0.018, 0.62), C_ROAD.darkened(0.18), Vector3(-0.48 if i % 2 == 0 else 0.48, 0.045, -8.6 + float(i) * 1.08))
+		rut.rotation_degrees.y = -2.0
+		add_child(rut)
+	for pos in [
+		Vector3(-3.9,0.04,2.9), Vector3(4.1,0.04,2.4), Vector3(-5.0,0.04,0.1),
+		Vector3(4.8,0.04,-0.4), Vector3(-2.9,0.04,4.0), Vector3(3.1,0.04,4.5)
+	]:
+		add_child(_rock(pos, 0.20 + absf(pos.x) * 0.018))
+	for pos in [
+		Vector3(-4.5,0.02,2.2), Vector3(-3.7,0.02,3.6), Vector3(4.4,0.02,1.7),
+		Vector3(3.8,0.02,3.5), Vector3(-5.0,0.02,0.9)
+	]:
+		add_child(_reed_cluster(pos))
+
 func _try_authored_core() -> bool:
 	var path := "res://assets/zastava_core.glb"
 	if not ResourceLoader.exists(path):
@@ -128,9 +214,27 @@ func _try_authored_core() -> bool:
 	if packed is PackedScene:
 		var instance := (packed as PackedScene).instantiate()
 		instance.name = "AuthoredCore"
+		_tint_authored_core(instance)
 		add_child(instance)
 		return true
 	return false
+
+func _tint_authored_core(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_node := node as MeshInstance3D
+		var n := String(mesh_node.name).to_lower()
+		var tint := C_STONE
+		if n.contains("roof") or n.contains("banner"):
+			tint = C_ROOF if n.contains("roof") else Color("#6d4a3e")
+		elif n.contains("iron") or n.contains("drum") or n.contains("chain"):
+			tint = C_METAL
+		elif n.contains("booth") or n.contains("winch") or n.contains("oak"):
+			tint = C_WOOD_LIGHT
+		elif n.contains("slit") or n.contains("mortar") or n.contains("cap"):
+			tint = C_STONE_DARK
+		mesh_node.material_override = _mat(tint)
+	for child in node.get_children():
+		_tint_authored_core(child)
 
 func _build_village_architecture() -> void:
 	village_root = Node3D.new()
@@ -192,6 +296,12 @@ func _build_moving_bridge() -> void:
 	for x in [-0.82, 0.82]:
 		var rail := _box("Rail", Vector3(0.10, 0.48, 4.3), C_WOOD, Vector3(x, 0.34, 2.15))
 		bridge_pivot.add_child(rail)
+	for i in range(12):
+		var z := 0.32 + float(i) * 0.34
+		bridge_pivot.add_child(_box("Plank", Vector3(1.68, 0.035, 0.055), C_WOOD.darkened(0.16), Vector3(0, 0.135, z)))
+		for x in [-0.69, 0.69]:
+			var stud := _box("Stud", Vector3(0.055, 0.035, 0.055), C_METAL, Vector3(x, 0.162, z))
+			bridge_pivot.add_child(stud)
 
 	gate_bar = Node3D.new()
 	gate_bar.name = "Gate"
@@ -199,7 +309,136 @@ func _build_moving_bridge() -> void:
 	add_child(gate_bar)
 	for x in [-0.70, -0.35, 0.0, 0.35, 0.70]:
 		gate_bar.add_child(_box("Iron", Vector3(0.09, 2.55, 0.09), C_METAL, Vector3(x, 1.25, 0)))
+		var spike := _roof(Vector3(0.18, 0.28, 0.18), C_METAL)
+		spike.position = Vector3(x, -0.10, 0)
+		spike.rotation_degrees = Vector3(0, 0, 180)
+		gate_bar.add_child(spike)
 	gate_bar.add_child(_box("Cross", Vector3(1.65, 0.11, 0.10), C_METAL, Vector3(0, 1.18, 0)))
+
+func _build_living_details() -> void:
+	ambient_root = Node3D.new()
+	ambient_root.name = "LivingDetails"
+	add_child(ambient_root)
+
+	# Clutter around the gate and settlement.
+	for spec in [
+		[Vector3(-2.55,0,-2.82),0.46], [Vector3(-3.02,0,-2.62),0.38],
+		[Vector3(2.46,0,-2.95),0.42], [Vector3(3.02,0,-3.18),0.34]
+	]:
+		ambient_root.add_child(_barrel(spec[0], spec[1]))
+	ambient_root.add_child(_crate(Vector3(-2.18,0,-3.15),0.48))
+	ambient_root.add_child(_crate(Vector3(2.15,0,-3.52),0.42))
+	ambient_root.add_child(_signpost(Vector3(2.0,0,5.15)))
+	ambient_root.add_child(_fence(Vector3(-4.8,0,-5.7), 3.0, 8.0))
+	ambient_root.add_child(_fence(Vector3(4.75,0,-7.0), 2.8, -5.0))
+	ambient_root.add_child(_dock(Vector3(-3.75,0.02,1.55)))
+
+	trade_details = Node3D.new()
+	trade_details.name = "TradeDetails"
+	ambient_root.add_child(trade_details)
+	for i in range(4):
+		trade_details.add_child(_crate(Vector3(2.7 + float(i%2)*0.55,0,-4.0-float(i/2)*0.55),0.36))
+	trade_details.visible = false
+
+	security_details = Node3D.new()
+	security_details.name = "SecurityDetails"
+	ambient_root.add_child(security_details)
+	for x in [-2.35, 2.35]:
+		var rack := _box("SpearRack", Vector3(0.10, 1.25, 0.10), C_WOOD, Vector3(x,0.65,-2.72))
+		security_details.add_child(rack)
+		for j in range(3):
+			var spear := _box("Spear", Vector3(0.035, 1.45, 0.035), C_METAL, Vector3(x-0.18+float(j)*0.18,0.80,-2.67))
+			spear.rotation_degrees.z = -4.0 + float(j)*4.0
+			security_details.add_child(spear)
+	security_details.visible = false
+
+	prosperity_details = Node3D.new()
+	prosperity_details.name = "ProsperityDetails"
+	ambient_root.add_child(prosperity_details)
+	for i in range(5):
+		var cloth := _box("Laundry", Vector3(0.42,0.24,0.025), Color("#9a8a6f").lightened(float(i%2)*0.08), Vector3(-3.8+float(i)*0.45,1.35,-5.85))
+		cloth.rotation_degrees.z = -5.0 + float(i)*3.0
+		prosperity_details.add_child(cloth)
+	prosperity_details.visible = false
+
+	# Tiny background inhabitants. They are deliberately simple and only read as
+	# movement at this camera distance.
+	for spec in [
+		[Vector3(-2.6,0,-4.1), Color("#695b4b"), 0.55, 0.0],
+		[Vector3(2.45,0,-5.0), Color("#59685f"), 0.70, 1.6],
+		[Vector3(-3.1,0,-7.0), Color("#756154"), 0.42, 3.0],
+		[Vector3(3.2,0,-8.2), Color("#5e6470"), 0.60, 4.4]
+	]:
+		var person := _ambient_person(spec[0], spec[1])
+		person.set_meta("origin", spec[0])
+		person.set_meta("range", spec[2])
+		person.set_meta("phase", spec[3])
+		ambient_people.append(person)
+		ambient_root.add_child(person)
+
+	for pos in [Vector3(-1.28,2.45,-1.48), Vector3(1.28,2.45,-1.48)]:
+		var lamp := OmniLight3D.new()
+		lamp.position = pos
+		lamp.light_color = Color("#e9a35f")
+		lamp.light_energy = 0.0
+		lamp.omni_range = 4.0
+		lamp.shadow_enabled = false
+		add_child(lamp)
+		lanterns.append(lamp)
+		var cage := _box("Lantern", Vector3(0.18,0.28,0.18), Color("#6e4a2f"), pos)
+		add_child(cage)
+
+	forge_smoke = _smoke_particles()
+	forge_smoke.position = Vector3(-2.45,2.65,-3.85)
+	forge_smoke.emitting = false
+	add_child(forge_smoke)
+
+func _process(delta: float) -> void:
+	if not live_scene_ready:
+		return
+	motion_clock += delta
+	for i in range(ambient_people.size()):
+		var p := ambient_people[i]
+		if not is_instance_valid(p) or not p.visible:
+			continue
+		var origin: Vector3 = p.get_meta("origin")
+		var travel: float = float(p.get_meta("range"))
+		var phase: float = float(p.get_meta("phase"))
+		var offset := sin(motion_clock * (0.34 + float(i)*0.035) + phase) * travel
+		p.position = origin + Vector3(offset, absf(sin(motion_clock*2.1+phase))*0.025, 0)
+		p.rotation_degrees.y = 90.0 if cos(motion_clock*(0.34+float(i)*0.035)+phase) >= 0.0 else -90.0
+	for i in range(lanterns.size()):
+		if lanterns[i].light_energy > 0.0:
+			lanterns[i].light_energy = 0.78 + sin(motion_clock*8.0+float(i))*0.08
+
+func _smoke_particles() -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = 18
+	p.lifetime = 3.2
+	p.visibility_aabb = AABB(Vector3(-2,-1,-2),Vector3(4,7,4))
+	var proc := ParticleProcessMaterial.new()
+	proc.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	proc.emission_box_extents = Vector3(0.10,0.05,0.10)
+	proc.direction = Vector3(0.12,1,0.04)
+	proc.spread = 16.0
+	proc.gravity = Vector3(0,0.16,0)
+	proc.initial_velocity_min = 0.25
+	proc.initial_velocity_max = 0.48
+	proc.scale_min = 0.12
+	proc.scale_max = 0.32
+	p.process_material = proc
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.12
+	mesh.height = 0.24
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.28,0.30,0.28,0.38)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh.material = mat
+	p.draw_pass_1 = mesh
+	return p
 
 func _build_weather() -> void:
 	rain = _precipitation(false)
@@ -234,31 +473,43 @@ func _precipitation(is_snow: bool) -> GPUParticles3D:
 
 func set_weather(kind: String) -> void:
 	current_weather = kind
+	pending_weather = kind
+	if not boot_ready or rain == null or snow == null:
+		return
 	rain.emitting = kind == "rain"
 	snow.emitting = kind == "snow"
 	if kind == "rain":
-		environment.environment.background_color = Color("#7e8988")
-		environment.environment.ambient_light_energy = 0.50
+		environment.environment.background_color = Color("#697574")
+		environment.environment.ambient_light_energy = 0.40
 	elif kind == "snow":
-		environment.environment.background_color = Color("#aeb7b5")
-		environment.environment.ambient_light_energy = 0.76
+		environment.environment.background_color = Color("#8f9996")
+		environment.environment.ambient_light_energy = 0.58
 	else:
-		environment.environment.background_color = Color("#9aa39a")
-		environment.environment.ambient_light_energy = 0.68
+		environment.environment.background_color = Color("#737e78")
+		environment.environment.ambient_light_energy = 0.46
 
 func set_time(progress: float) -> void:
+	current_time_progress = progress
+	if environment == null or sun == null:
+		return
 	var t: float = clampf(progress, 0.0, 1.0)
 	sun.rotation_degrees.x = lerp(-35.0, -72.0, abs(t - 0.5) * 1.5)
 	sun.rotation_degrees.y = lerp(-55.0, 45.0, t)
 	if t < 0.72:
-		sun.light_color = Color("#f0d7aa").lerp(Color("#e6b07c"), max(0.0, (t - 0.5) / 0.22))
-		sun.light_energy = lerp(1.25, 0.86, max(0.0, (t - 0.55) / 0.17))
+		sun.light_color = Color("#efd0a3").lerp(Color("#dca06d"), max(0.0, (t - 0.5) / 0.22))
+		sun.light_energy = lerp(0.92, 0.68, max(0.0, (t - 0.55) / 0.17))
 	else:
 		sun.light_color = Color("#bf8b72")
 		sun.light_energy = lerp(0.78, 0.30, (t - 0.72) / 0.28)
-	environment.environment.ambient_light_color = Color("#c5c2ae").lerp(Color("#77808b"), max(0.0, (t - 0.58) / 0.42))
+	environment.environment.ambient_light_color = Color("#b8b09b").lerp(Color("#68737c"), max(0.0, (t - 0.58) / 0.42))
+	var lamp_energy := clampf((t - 0.62) / 0.20, 0.0, 1.0) * 0.78
+	for lamp in lanterns:
+		lamp.light_energy = lamp_energy
 
 func set_state(state: Dictionary) -> void:
+	pending_state = state.duplicate(true)
+	if not boot_ready or village_root == null:
+		return
 	var population := int(state.get("population", 18))
 	var trade := int(state.get("trade", 8))
 	var guard := int(state.get("guard", 6))
@@ -274,6 +525,16 @@ func set_state(state: Dictionary) -> void:
 		_set_visible_animated(barracks, guard >= 11)
 	if tents:
 		_set_visible_animated(tents, population >= 52 and trust < 58)
+	if trade_details:
+		_set_visible_animated(trade_details, trade >= 18)
+	if security_details:
+		_set_visible_animated(security_details, guard >= 10)
+	if prosperity_details:
+		_set_visible_animated(prosperity_details, population >= 36 and trust >= 45)
+	if forge_smoke:
+		forge_smoke.emitting = bool(state.get("has_forge", false))
+	for i in range(ambient_people.size()):
+		ambient_people[i].visible = i < clampi(1 + int(population / 28), 1, ambient_people.size())
 	if growth > last_growth_level:
 		last_growth_level = growth
 
@@ -289,15 +550,19 @@ func _set_visible_animated(node: Node3D, desired: bool) -> void:
 		node.visible = false
 
 func operate_gate(opened: bool) -> void:
-	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	if not boot_ready or bridge_pivot == null or gate_bar == null:
+		return
+	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	if opened:
-		tw.tween_property(gate_bar, "position", Vector3(0, 2.25, -1.23), 0.55)
-		tw.tween_property(bridge_pivot, "rotation", Vector3.ZERO, 0.55)
+		tw.tween_property(gate_bar, "position", Vector3(0, 2.30, -1.23), 0.62)
+		tw.tween_property(bridge_pivot, "rotation", Vector3.ZERO, 0.72).set_delay(0.08)
 	else:
-		tw.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.36)
-		tw.tween_property(bridge_pivot, "rotation", Vector3(-0.78, 0, 0), 0.48)
+		tw.tween_property(bridge_pivot, "rotation", Vector3(-0.78, 0, 0), 0.58)
+		tw.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.42).set_delay(0.18)
 
 func spawn_visitor(profile: Dictionary, variant: int) -> void:
+	if not boot_ready:
+		return
 	if is_instance_valid(visitor):
 		visitor.queue_free()
 	visitor = VISITOR_SCRIPT.new()
@@ -321,6 +586,11 @@ func _house(pos: Vector3, scale_factor: float, yaw: float) -> Node3D:
 	roof.position = Vector3(0, 1.60, 0)
 	root.add_child(roof)
 	root.add_child(_box("Door", Vector3(0.38, 0.70, 0.06), C_WOOD, Vector3(0, 0.38, 0.755)))
+	for x in [-0.52, 0.52]:
+		var beam := _box("Beam", Vector3(0.08,1.22,0.07), C_WOOD.darkened(0.12), Vector3(x,0.72,0.76))
+		root.add_child(beam)
+	var sill := _box("Sill", Vector3(1.28,0.07,0.07), C_WOOD.darkened(0.12), Vector3(0,0.92,0.76))
+	root.add_child(sill)
 	return root
 
 func _market(pos: Vector3) -> Node3D:
@@ -371,6 +641,107 @@ func _tree(pos: Vector3, scale_factor: float) -> Node3D:
 	crown.position = Vector3(0, 1.72, 0)
 	crown.material_override = _mat(C_GRASS_DARK.darkened(0.06))
 	root.add_child(crown)
+	return root
+
+func _rock(pos: Vector3, scale_factor: float) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = scale_factor
+	mesh.height = scale_factor * 1.15
+	mesh.radial_segments = 7
+	mesh.rings = 4
+	mesh_instance.mesh = mesh
+	mesh_instance.position = pos
+	mesh_instance.scale = Vector3(1.35,0.65,0.95)
+	mesh_instance.rotation_degrees.y = pos.x * 13.0
+	mesh_instance.material_override = _mat(C_STONE_DARK.lightened(0.10))
+	return mesh_instance
+
+func _reed_cluster(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(5):
+		var blade := _box("Reed", Vector3(0.035,0.46+float(i%3)*0.08,0.035), C_GRASS_DARK.lightened(0.10), Vector3(-0.16+float(i)*0.08,0.22,0))
+		blade.rotation_degrees.z = -7.0 + float(i)*3.0
+		root.add_child(blade)
+	return root
+
+func _barrel(pos: Vector3, scale_factor: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	var body := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = scale_factor*0.34
+	mesh.bottom_radius = scale_factor*0.38
+	mesh.height = scale_factor*0.82
+	mesh.radial_segments = 10
+	body.mesh = mesh
+	body.position.y = scale_factor*0.41
+	body.material_override = _mat(C_WOOD)
+	root.add_child(body)
+	for y in [0.16,0.50,0.76]:
+		root.add_child(_box("Hoop", Vector3(scale_factor*0.82,0.035,scale_factor*0.82), C_METAL, Vector3(0,scale_factor*y,0)))
+	return root
+
+func _crate(pos: Vector3, scale_factor: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.add_child(_box("Crate", Vector3(scale_factor,scale_factor*0.72,scale_factor), C_WOOD_LIGHT, Vector3(0,scale_factor*0.36,0)))
+	root.add_child(_box("Brace", Vector3(scale_factor*0.08,scale_factor*0.76,scale_factor*1.03), C_WOOD.darkened(0.14), Vector3(0,scale_factor*0.36,0)))
+	return root
+
+func _signpost(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.add_child(_box("Post",Vector3(0.11,1.65,0.11),C_WOOD,Vector3(0,0.82,0)))
+	var arm := _box("Sign",Vector3(0.95,0.28,0.10),C_WOOD_LIGHT,Vector3(0.36,1.32,0))
+	arm.rotation_degrees.z = -4.0
+	root.add_child(arm)
+	return root
+
+func _fence(pos: Vector3, length: float, yaw: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation_degrees.y = yaw
+	var count := maxi(2,int(length/0.65))
+	for i in range(count):
+		root.add_child(_box("FencePost",Vector3(0.09,0.78,0.09),C_WOOD,Vector3(-length*0.5+float(i)*(length/float(count-1)),0.39,0)))
+	for y in [0.28,0.58]:
+		root.add_child(_box("FenceRail",Vector3(length,0.07,0.07),C_WOOD.darkened(0.08),Vector3(0,y,0)))
+	return root
+
+func _dock(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(4):
+		root.add_child(_box("DockPlank",Vector3(0.72,0.08,0.42),C_WOOD_LIGHT,Vector3(0,0.12,float(i)*0.38)))
+	for x in [-0.30,0.30]:
+		root.add_child(_box("DockPost",Vector3(0.08,0.72,0.08),C_WOOD,Vector3(x,0.28,0.56)))
+	return root
+
+func _ambient_person(pos: Vector3, color: Color) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	var body := MeshInstance3D.new()
+	var body_mesh := CylinderMesh.new()
+	body_mesh.top_radius = 0.11
+	body_mesh.bottom_radius = 0.16
+	body_mesh.height = 0.48
+	body_mesh.radial_segments = 7
+	body.mesh = body_mesh
+	body.position.y = 0.45
+	body.material_override = _mat(color)
+	root.add_child(body)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.11
+	head_mesh.height = 0.22
+	head_mesh.radial_segments = 7
+	head_mesh.rings = 4
+	head.mesh = head_mesh
+	head.position.y = 0.79
+	head.material_override = _mat(Color("#b99874"))
+	root.add_child(head)
 	return root
 
 func _roof(size: Vector3, color: Color) -> MeshInstance3D:

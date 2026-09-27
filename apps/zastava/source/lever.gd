@@ -8,25 +8,167 @@ var enabled := true
 var active_touch := -1
 var snap_tween: Tween
 
-const LEFT := Color("#76514b")
-const RIGHT := Color("#526b62")
-const METAL := Color("#414846")
-const TRACK := Color("#9a8f79")
-const WOOD := Color("#8a6248")
-const GLOW := Color("#d6c59f")
+var plate: Panel
+var arc_line: Line2D
+var stem_line: Line2D
+var pivot_node: Panel
+var knob_node: Panel
+var left_stop: Panel
+var right_stop: Panel
+
+const LEFT := Color("#9a5b53")
+const RIGHT := Color("#5f8171")
+const METAL := Color("#2c3431")
+const METAL_EDGE := Color("#716b5e")
+const TRACK := Color("#a18f72")
+const WOOD := Color("#7c523a")
+const WOOD_LIGHT := Color("#a97450")
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	custom_minimum_size = Vector2(520, 150)
-	set_process(false)
-	queue_redraw()
+	custom_minimum_size = Vector2(500, 154)
+	_build_visuals()
+	_update_visual()
+
+func _style_box(bg: Color, border: Color, border_width: int, radius: int) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.border_color = border
+	s.border_width_left = border_width
+	s.border_width_top = border_width
+	s.border_width_right = border_width
+	s.border_width_bottom = border_width
+	s.corner_radius_top_left = radius
+	s.corner_radius_top_right = radius
+	s.corner_radius_bottom_left = radius
+	s.corner_radius_bottom_right = radius
+	return s
+
+func _circle_panel(diameter: float, color: Color, border: Color, width: int) -> Panel:
+	var p := Panel.new()
+	p.size = Vector2(diameter, diameter)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_theme_stylebox_override("panel", _style_box(color, border, width, int(diameter * 0.5)))
+	add_child(p)
+	return p
+
+func _build_visuals() -> void:
+	plate = Panel.new()
+	plate.position = Vector2(6, 5)
+	plate.size = Vector2(size.x - 12, size.y - 10)
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_theme_stylebox_override("panel", _style_box(Color("#1a211e"), METAL_EDGE.darkened(0.08), 3, 8))
+	add_child(plate)
+	move_child(plate, 0)
+
+	arc_line = Line2D.new()
+	arc_line.width = 13.0
+	arc_line.default_color = TRACK.darkened(0.10)
+	arc_line.antialiased = true
+	arc_line.z_index = 2
+	arc_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(arc_line)
+
+	stem_line = Line2D.new()
+	stem_line.width = 15.0
+	stem_line.default_color = METAL_EDGE
+	stem_line.antialiased = true
+	stem_line.z_index = 4
+	stem_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(stem_line)
+
+	pivot_node = _circle_panel(48, METAL_EDGE.darkened(0.10), Color("#111613"), 5)
+	pivot_node.z_index = 5
+
+	knob_node = _circle_panel(66, WOOD, Color("#2b1b14"), 6)
+	knob_node.z_index = 7
+	var shine := Panel.new()
+	shine.position = Vector2(10, 8)
+	shine.size = Vector2(18, 13)
+	shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shine.add_theme_stylebox_override("panel", _style_box(WOOD_LIGHT, WOOD_LIGHT, 0, 8))
+	knob_node.add_child(shine)
+
+	left_stop = _circle_panel(42, LEFT, LEFT.darkened(0.25), 5)
+	left_stop.z_index = 5
+	var lx := Label.new()
+	lx.text = "×"
+	lx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lx.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lx.add_theme_font_size_override("font_size", 25)
+	lx.add_theme_color_override("font_color", Color("#f4e3dc"))
+	left_stop.add_child(lx)
+
+	right_stop = _circle_panel(42, RIGHT, RIGHT.darkened(0.25), 5)
+	right_stop.z_index = 5
+	var rx := Label.new()
+	rx.text = "→"
+	rx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rx.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	rx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rx.add_theme_font_size_override("font_size", 22)
+	rx.add_theme_color_override("font_color", Color("#e0f0e7"))
+	right_stop.add_child(rx)
+
+	for i in range(4):
+		var bolt := _circle_panel(12, Color("#444942"), Color("#111411"), 2)
+		bolt.z_index = 3
+		var x := 25.0 if i % 2 == 0 else size.x - 37.0
+		var y := 22.0 if i < 2 else size.y - 34.0
+		bolt.position = Vector2(x, y)
+
+func _pivot() -> Vector2:
+	return Vector2(size.x * 0.5, size.y - 25.0)
+
+func _knob_position() -> Vector2:
+	var pivot := _pivot()
+	var t := (handle_x + 1.0) * 0.5
+	var angle := lerpf(-2.36, -0.78, t)
+	return pivot + Vector2(cos(angle), sin(angle)) * 88.0
+
+func _update_visual() -> void:
+	if plate == null:
+		return
+	var pivot := _pivot()
+	var points := PackedVector2Array()
+	for i in range(25):
+		var t := float(i) / 24.0
+		var a := lerpf(-2.36, -0.78, t)
+		points.append(pivot + Vector2(cos(a), sin(a)) * 88.0)
+	arc_line.points = points
+
+	var knob := _knob_position()
+	stem_line.points = PackedVector2Array([pivot, knob])
+	pivot_node.position = pivot - pivot_node.size * 0.5
+	knob_node.position = knob - knob_node.size * 0.5
+	left_stop.position = pivot + Vector2(-120, -58) - left_stop.size * 0.5
+	right_stop.position = pivot + Vector2(120, -58) - right_stop.size * 0.5
+
+	var intensity := absf(handle_x)
+	if handle_x < -0.32:
+		knob_node.modulate = Color.WHITE.lerp(LEFT.lightened(0.28), intensity * 0.35)
+	elif handle_x > 0.32:
+		knob_node.modulate = Color.WHITE.lerp(RIGHT.lightened(0.28), intensity * 0.35)
+	else:
+		knob_node.modulate = Color.WHITE
 
 func set_enabled(value: bool) -> void:
 	enabled = value
 	if not enabled:
 		dragging = false
 		_snap_to(0.0)
-	queue_redraw()
+	modulate.a = 1.0 if value else 0.74
+
+func preview_external(value: float) -> void:
+	if not enabled:
+		return
+	if snap_tween and snap_tween.is_running():
+		snap_tween.kill()
+	handle_x = clampf(value, -1.0, 1.0)
+	_update_visual()
 
 func _gui_input(event: InputEvent) -> void:
 	if not enabled:
@@ -62,18 +204,18 @@ func _begin_drag(pos: Vector2) -> void:
 func _update_drag(pos: Vector2) -> void:
 	if not dragging:
 		return
-	var half := maxf(1.0, size.x * 0.5 - 72.0)
-	handle_x = clamp((pos.x - size.x * 0.5) / half, -1.0, 1.0)
-	queue_redraw()
+	var half := maxf(1.0, size.x * 0.5 - 88.0)
+	handle_x = clampf((pos.x - size.x * 0.5) / half, -1.0, 1.0)
+	_update_visual()
 
 func _end_drag() -> void:
 	if not dragging:
 		return
 	dragging = false
-	if handle_x <= -0.52:
+	if handle_x <= -0.55:
 		decision.emit(-1)
 		_snap_to(-1.0)
-	elif handle_x >= 0.52:
+	elif handle_x >= 0.55:
 		decision.emit(1)
 		_snap_to(1.0)
 	else:
@@ -86,46 +228,11 @@ func _snap_to(target: float) -> void:
 	if snap_tween and snap_tween.is_running():
 		snap_tween.kill()
 	snap_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	snap_tween.tween_method(_set_handle, handle_x, target, 0.20 if target == 0.0 else 0.14)
+	snap_tween.tween_method(_set_handle, handle_x, target, 0.18 if target == 0.0 else 0.13)
 	if target != 0.0:
-		snap_tween.tween_interval(0.22)
+		snap_tween.tween_interval(0.18)
 		snap_tween.tween_method(_set_handle, target, 0.0, 0.24)
 
 func _set_handle(value: float) -> void:
 	handle_x = value
-	queue_redraw()
-
-func _draw() -> void:
-	var center := Vector2(size.x * 0.5, size.y * 0.56)
-	var left_x := 62.0
-	var right_x := size.x - 62.0
-	draw_rect(Rect2(Vector2(left_x, center.y - 12), Vector2(right_x - left_x, 24)), TRACK.darkened(0.30), true)
-	draw_rect(Rect2(Vector2(left_x, center.y - 5), Vector2(right_x - left_x, 10)), TRACK, true)
-
-	var left_fill := Rect2(Vector2(left_x, center.y - 5), Vector2(max(0.0, center.x - left_x), 10))
-	var right_fill := Rect2(Vector2(center.x, center.y - 5), Vector2(max(0.0, right_x - center.x), 10))
-	draw_rect(left_fill, LEFT.darkened(0.12), true)
-	draw_rect(right_fill, RIGHT.darkened(0.12), true)
-
-	draw_circle(Vector2(left_x, center.y), 22, LEFT)
-	draw_circle(Vector2(right_x, center.y), 22, RIGHT)
-	draw_circle(center, 18, METAL.lightened(0.18))
-
-	var half := maxf(1.0, size.x * 0.5 - 72.0)
-	var knob := Vector2(center.x + handle_x * half, center.y - 18)
-	var stem_start := center + Vector2(0, 2)
-	draw_line(stem_start, knob, METAL, 18.0, true)
-	draw_line(stem_start, knob, METAL.lightened(0.18), 7.0, true)
-	draw_circle(knob, 31, WOOD.darkened(0.18))
-	draw_circle(knob - Vector2(3, 5), 24, WOOD)
-	draw_circle(knob - Vector2(8, 10), 6, WOOD.lightened(0.22))
-
-	if enabled:
-		var a: float = absf(handle_x)
-		if a > 0.30:
-			var signal_color := LEFT if handle_x < 0 else RIGHT
-			draw_circle(knob, 38 + a * 4.0, Color(signal_color, 0.18), false, 5.0)
-		else:
-			draw_circle(knob, 38, Color(GLOW, 0.12), false, 3.0)
-	else:
-		draw_rect(Rect2(Vector2(left_x, center.y - 5), Vector2(right_x - left_x, 10)), Color(0.2,0.22,0.21,0.45), true)
+	_update_visual()

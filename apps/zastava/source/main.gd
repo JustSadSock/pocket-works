@@ -6,245 +6,245 @@ const LEVER_SCRIPT := preload("res://source/lever.gd")
 const TOTAL_DAYS := 60
 const VISITORS_PER_DAY := 3
 
-const C_UI := Color("#2f3936")
-const C_UI_2 := Color("#46534e")
-const C_TEXT := Color("#e8dfca")
-const C_MUTED := Color("#b7b09f")
-const C_RUST := Color("#a85f43")
-const C_GREEN := Color("#60786d")
-const C_RED := Color("#8a514b")
-const C_SAND := Color("#c5b696")
+const C_UI := Color("#202824")
+const C_UI_2 := Color("#6f685b")
+const C_TEXT := Color("#f5eddc")
+const C_MUTED := Color("#d2c8b5")
+const C_RUST := Color("#9c543d")
+const C_GREEN := Color("#79a18d")
+const C_RED := Color("#b26c62")
+const C_SAND := Color("#ddcba7")
 
 const VISITORS := [
 	{
 		"id":"refugees", "name":"Мирослава", "role":"семья беженцев",
-		"line":"Сгорела деревня. Нас девятеро. Работать будем за еду и крышу.",
+		"line":"Мы из Бобровки. Дома сгорели. Нас девять. Пустите — будем работать.",
 		"accept":{"population":9,"food":-8,"trust":5,"disease":4},
 		"reject":{"trust":-5,"crime":2},
-		"accept_result":"Семья проходит внутрь. К вечеру у стены появляются новые костры.",
-		"reject_result":"Ворота остаются закрыты. Очередь молча расступается.",
-		"accept_later":{"delay":4,"text":"Беженцы обжились. Трое уже работают у плотника.","effects":{"trade":3,"food":2}}
+		"accept_result":"Девятерых записали и выдали им пайки на вечер.",
+		"reject_result":"Семью не пропустили. Они ушли вдоль реки.",
+		"accept_later":{"delay":4,"text":"Трое из беженцев устроились к плотнику. Поселение получило новые рабочие руки.","effects":{"trade":3,"food":2}}
 	},
 	{
 		"id":"blacksmith", "name":"Остап", "role":"кузнец",
-		"line":"Мою кузницу забрали за долги. Дайте угол — починю оружие и инструменты.",
+		"line":"Кузницу забрали за долги. Дайте сарай — буду чинить инструмент и оружие.",
 		"accept":{"money":-8,"trade":4,"guard":2,"has_forge":1},
 		"reject":{"trust":-1},
-		"accept_result":"Кузнец получает сарай у стены. Уже слышен первый удар молота.",
-		"reject_result":"Остап уходит вдоль реки вместе с инструментами."
+		"accept_result":"Остап занял пустой сарай у стены. Кузница начала работу.",
+		"reject_result":"Остап забрал инструменты и ушёл на восток."
 	},
 	{
 		"id":"grain", "name":"Борис", "role":"зерновой купец",
-		"line":"Двадцать мешков ржи. Цена высокая, но следующего обоза может не быть.",
+		"line":"Двадцать мешков ржи. Четырнадцать монет. Дешевле в ближайшие дни не будет.",
 		"accept":{"money":-14,"food":28,"trade":2},
 		"reject":{"food":-1},
-		"accept_result":"Мешки уходят на склад, монеты — в чужой сундук.",
-		"reject_result":"Караван разворачивается. Склад не стал полнее."
+		"accept_result":"Рожь приняли на склад. Купцу заплатили четырнадцать монет.",
+		"reject_result":"Сделка не состоялась. Караван поехал дальше."
 	},
 	{
 		"id":"deserter", "name":"Левко", "role":"дезертир",
-		"line":"Я умею держать копьё. Имя можете не спрашивать. Мне нужна новая сторона.",
+		"line":"Служил у князя Орлика. Ушёл вчера. Возьмёте в стражу — останусь.",
 		"accept":{"guard":2,"trust":-2,"crime":3},
 		"reject":{"guard":-1,"trust":1},
-		"accept_result":"Стража нехотя выдаёт ему серый плащ.",
-		"reject_result":"Он смотрит на стены ещё секунду и уходит.",
-		"accept_later":{"delay":6,"text":"Новый стражник исчез ночью вместе с двумя арбалетами.","effects":{"guard":-1,"crime":4}}
+		"accept_result":"Левко приняли на службу и выдали копьё.",
+		"reject_result":"Левко получил отказ и вернулся на тракт.",
+		"accept_later":{"delay":6,"text":"Левко пропал ночью. Вместе с ним исчезли два арбалета.","effects":{"guard":-1,"crime":4}}
 	},
 	{
 		"id":"healer", "name":"Агнесса", "role":"лекарь",
-		"line":"Мне нужна комната и чистая вода. Взамен лечу ваших людей.",
+		"line":"Нужна комната и чистая вода. Я лекарь. Плату беру только за работу.",
 		"accept":{"money":-6,"disease":-9,"trust":4},
 		"reject":{"disease":3,"trust":-2},
-		"accept_result":"Лекарю освобождают комнату рядом со складом.",
-		"reject_result":"Она уходит к следующему поселению."
+		"accept_result":"Агнессе выделили комнату у склада. Она открыла приём.",
+		"reject_result":"Агнесса ушла в город ниже по реке."
 	},
 	{
 		"id":"taxman", "name":"Королевский сборщик", "role":"чиновник",
-		"line":"Корона требует десять монет и двух людей в обоз. Печать настоящая.",
+		"line":"По указу: десять монет и двое людей в обоз. Вот печать.",
 		"accept":{"money":-10,"population":-2,"trust":-2},
 		"reject":{"money":4,"guard":-1,"trust":2},
-		"accept_result":"Печать ставится в книгу. Корона довольна, жители — не очень.",
-		"reject_result":"Сборщик уезжает злой. На дороге становится подозрительно тихо.",
-		"reject_later":{"delay":5,"text":"Из столицы пришёл штраф за неповиновение.","effects":{"money":-9,"trade":-2}}
+		"accept_result":"Сбор уплачен. Двоих жителей забрали с обозом.",
+		"reject_result":"Сборщику отказали. Он записал имя заставы и уехал.",
+		"reject_later":{"delay":5,"text":"Пришёл королевский штраф за отказ сборщику.","effects":{"money":-9,"trade":-2}}
 	},
 	{
 		"id":"smugglers", "name":"Двое лодочников", "role":"контрабандисты",
-		"line":"Мы ничего не везём. Просто очень тяжёлая пустая лодка. И пять монет вам.",
+		"line":"В лодке ничего интересного. Пять монет — и вы её не досматриваете.",
 		"accept":{"money":5,"crime":7,"trust":-2},
 		"reject":{"crime":-2,"trade":-1},
-		"accept_result":"Лодка исчезает под мостом. Сундук становится тяжелее.",
-		"reject_result":"Стража разворачивает лодку шестами."
+		"accept_result":"Пять монет приняли. Лодку пропустили без досмотра.",
+		"reject_result":"Лодку развернули и отправили обратно вниз по реке."
 	},
 	{
 		"id":"mason", "name":"Яромир", "role":"каменщик",
-		"line":"Вижу трещины в башне. Дайте камень и плату — простоит ещё поколение.",
+		"line":"На восточной башне пошла трещина. За одиннадцать монет укреплю кладку.",
 		"accept":{"money":-11,"guard":3,"trust":2},
 		"reject":{"money":2},
-		"accept_result":"У башни появляются леса и рабочие.",
-		"reject_result":"Трещина никуда не делась. Каменщик — да."
+		"accept_result":"Яромир начал ремонт башни.",
+		"reject_result":"От ремонта отказались. Яромир ушёл."
 	},
 	{
 		"id":"engineer", "name":"Марк", "role":"мостовой мастер",
-		"line":"Ваш механизм жрёт цепи. Переделаю противовес. Недёшево.",
+		"line":"Противовес собран плохо. За девять монет переделаю — мост будет ходить быстрее.",
 		"accept":{"money":-9,"trade":4,"guard":1},
 		"reject":{"trade":-1},
-		"accept_result":"Мастер разбирает кожух механизма прямо на месте.",
-		"reject_result":"Старые цепи продолжают скрипеть."
+		"accept_result":"Марк взялся за подъёмный механизм.",
+		"reject_result":"Ремонт отложен. Старый механизм остался как есть."
 	},
 	{
 		"id":"mercenaries", "name":"Сотник Радан", "role":"наёмники",
-		"line":"Шесть копий. Платите сейчас — неделю никто не полезет к вашим стенам.",
+		"line":"Шесть бойцов. Шестнадцать монет за службу. Работаем неделю.",
 		"accept":{"money":-16,"guard":7,"trust":-1},
 		"reject":{"guard":-1,"crime":2},
-		"accept_result":"На стене становится теснее от чужих щитов.",
-		"reject_result":"Отряд уходит вверх по тракту."
+		"accept_result":"Шестерых наёмников поставили в караулы.",
+		"reject_result":"Радан получил отказ и увёл людей."
 	},
 	{
 		"id":"monks", "name":"Брат Павел", "role":"монахи",
-		"line":"Несём книги и сушёные травы. Просим ночлег и хлеб.",
+		"line":"Нас двенадцать. Нужны ночлег и хлеб. Есть лекарства и сушёные травы.",
 		"accept":{"food":-5,"trust":5,"disease":-3},
 		"reject":{"trust":-3},
-		"accept_result":"Во дворе пахнет травами и дымом маленькой печи.",
-		"reject_result":"Монахи молча продолжают путь."
+		"accept_result":"Монахов разместили во дворе. Травы передали лекарю.",
+		"reject_result":"Монахам отказали в ночлеге. Они продолжили путь."
 	},
 	{
 		"id":"sick_family", "name":"Катерина", "role":"больная семья",
-		"line":"У сына жар. До города два дня. Пожалуйста.",
+		"line":"У мальчика жар третий день. До города не дойдём. Пустите хотя бы до утра.",
 		"accept":{"population":4,"trust":6,"disease":12},
 		"reject":{"trust":-7,"disease":-1},
-		"accept_result":"Стража отступает на шаг, но ворота открываются.",
-		"reject_result":"Мать ещё долго стоит перед закрытой решёткой.",
-		"accept_later":{"delay":3,"text":"Жар оказался заразным. Лазарет переполнен.","effects":{"disease":7,"food":-4}}
+		"accept_result":"Семью пропустили и отвели в отдельный дом.",
+		"reject_result":"Семью не пропустили. Они ушли к северной дороге.",
+		"accept_later":{"delay":3,"text":"Болезнь у мальчика оказалась заразной. В лазарете появились новые больные.","effects":{"disease":7,"food":-4}}
 	},
 	{
 		"id":"envoy", "name":"Эдвард", "role":"королевский посланник",
-		"line":"Еду без досмотра. Таков обычай короны.",
+		"line":"Королевская почта. Я не стою в очереди и груз не открываю.",
 		"accept":{"trust":-1,"trade":3},
 		"reject":{"trust":3,"money":-3},
-		"accept_result":"Посланник даже не замедляет коня.",
-		"reject_result":"Досмотр занимает час. В мешках ничего."
+		"accept_result":"Посланника пропустили без досмотра.",
+		"reject_result":"Обоз досмотрели. Запрещённого груза не нашли."
 	},
 	{
 		"id":"ferryman", "name":"Сава", "role":"паромщик",
-		"line":"Мост кормит вас, а река могла бы кормить нас обоих. Дайте лицензию.",
+		"line":"Хочу поставить паром ниже моста. Четыре монеты за лицензию и доля с перевозок.",
 		"accept":{"money":-4,"trade":7,"trust":3},
 		"reject":{"trade":-2},
-		"accept_result":"Ниже по течению начинают ставить причал.",
-		"reject_result":"Сава складывает бумаги обратно в сапог."
+		"accept_result":"Саве выдали лицензию на паром.",
+		"reject_result":"В лицензии отказали. Сава ушёл искать другой участок."
 	},
 	{
 		"id":"orphans", "name":"Старшая девочка", "role":"четверо сирот",
-		"line":"Мы не просим денег. Только пустите туда, где есть стены.",
+		"line":"Нас четверо. Старшему четырнадцать. Нужны место и еда.",
 		"accept":{"population":4,"food":-5,"trust":6},
 		"reject":{"trust":-8,"crime":2},
-		"accept_result":"Дети быстро исчезают среди домов.",
-		"reject_result":"Они уходят молча. Даже стражники отводят глаза."
+		"accept_result":"Детей разместили у семей в поселении.",
+		"reject_result":"Детям отказали. Они ушли вместе с караваном."
 	},
 	{
 		"id":"hunter", "name":"Тихон", "role":"охотник",
-		"line":"Мясо, шкуры и новости с северной дороги. Возьмёте всё за семь монет.",
+		"line":"Две туши, шкуры и соль. Семь монет за всё.",
 		"accept":{"money":-7,"food":16,"trade":2},
 		"reject":{"food":-1},
-		"accept_result":"На рынке появляются свежие туши и шкуры.",
-		"reject_result":"Охотник уходит продавать товар дальше."
+		"accept_result":"Товар Тихона купили и разгрузили на рынке.",
+		"reject_result":"Тихон поехал продавать товар в город."
 	},
 	{
 		"id":"guild", "name":"Гильдейский мастер", "role":"торговый союз",
-		"line":"Снизьте пошлину на сезон. Мы удвоим поток караванов.",
+		"line":"Снизьте пошлину до конца сезона. Взамен гильдия поведёт караваны через ваш мост.",
 		"accept":{"money":-6,"trade":10,"trust":2},
 		"reject":{"money":5,"trade":-5},
-		"accept_result":"На доске у ворот меняют ставку. Телег становится больше.",
-		"reject_result":"Гильдейская печать исчезает в футляре."
+		"accept_result":"Пошлину снизили. Гильдия включила заставу в свой маршрут.",
+		"reject_result":"Условия гильдии отклонили."
 	},
 	{
 		"id":"prisoner", "name":"Страж из уезда", "role":"конвой с пленником",
-		"line":"Разбойник. Нужно оставить его у вас до утра.",
+		"line":"Поймали разбойника. До суда сутки пути. Оставьте его у себя до утра.",
 		"accept":{"guard":-1,"crime":4,"money":3},
 		"reject":{"trust":1},
-		"accept_result":"Пленника запирают в кладовой под башней.",
-		"reject_result":"Конвой продолжает путь в темноте.",
-		"accept_later":{"delay":2,"text":"Пленник сбежал через крышу склада.","effects":{"crime":5,"food":-3}}
+		"accept_result":"Пленника заперли в кладовой под башней.",
+		"reject_result":"Конвою отказали. Они продолжили путь.",
+		"accept_later":{"delay":2,"text":"Пленник ночью разобрал часть крыши и сбежал.","effects":{"crime":5,"food":-3}}
 	},
 	{
 		"id":"brewer", "name":"Ганна", "role":"пивовар",
-		"line":"Есть дрожжи, руки и рецепт. Нужна только крыша и зерно.",
+		"line":"Есть оборудование и дрожжи. Дайте помещение и семь мешков зерна — открою пивоварню.",
 		"accept":{"food":-7,"population":2,"trade":6,"trust":3},
 		"reject":{"trade":-1},
-		"accept_result":"У дальней стены начинают мыть старые бочки.",
-		"reject_result":"Рецепт уезжает вместе с хозяйкой."
+		"accept_result":"Ганне выделили помещение. Пивоварня начала работу.",
+		"reject_result":"Ганна получила отказ и уехала."
 	},
 	{
 		"id":"scribe", "name":"Иларион", "role":"писарь",
-		"line":"Могу вести учёт людей, пошлин и запасов. За еду и пять монет.",
+		"line":"Веду счета и реестры. Пять монет и питание — наведу порядок в книгах.",
 		"accept":{"money":-5,"food":-2,"trade":3,"crime":-3},
 		"reject":{"crime":1},
-		"accept_result":"В караулке появляется книга толще кирпича.",
-		"reject_result":"Писарь уходит, аккуратно пересчитав собственные шаги."
+		"accept_result":"Иларион принял книги заставы и начал перепись.",
+		"reject_result":"Иларион получил отказ и ушёл."
 	},
 	{
 		"id":"militia", "name":"Сельский староста", "role":"ополченцы",
-		"line":"Двенадцать людей готовы дежурить. Но семьи хотят жить за стеной.",
+		"line":"Двенадцать мужчин готовы в караул. Условие одно: их семьи селятся за стеной.",
 		"accept":{"population":12,"food":-10,"guard":5,"trust":4},
 		"reject":{"guard":-2,"trust":-3},
-		"accept_result":"Во дворе появляется ещё дюжина копий и столько же узлов с вещами.",
-		"reject_result":"Ополченцы возвращаются к своим деревням."
+		"accept_result":"Ополченцев и семьи поселили внутри стены.",
+		"reject_result":"Староста получил отказ. Ополчение вернулось домой."
 	},
 	{
 		"id":"noble", "name":"Барон Рутгер", "role":"дворянин с охотой",
-		"line":"Откройте ворота без очереди. Мои люди оставят щедрый подарок.",
+		"line":"Откройте сейчас и без досмотра. За задержку платить не собираюсь.",
 		"accept":{"money":9,"trust":-4,"food":-2},
 		"reject":{"trust":3,"trade":-2},
-		"accept_result":"Очередь недовольно гудит, пока свита проходит первой.",
-		"reject_result":"Барон обещает запомнить ваше лицо."
+		"accept_result":"Барона пропустили вне очереди. Он оставил плату.",
+		"reject_result":"Барону отказали в особом порядке. Он уехал недовольным."
 	},
 	{
 		"id":"firewood", "name":"Дровосеки", "role":"лесная артель",
-		"line":"Нам нужен проход к нижнему лесу. Вам — половина заготовки.",
+		"line":"Пустите артель в нижний лес. Половина заготовленных дров останется заставе.",
 		"accept":{"food":5,"trade":4,"trust":1},
 		"reject":{"trade":-2},
-		"accept_result":"Через мост тянутся первые телеги с брёвнами.",
-		"reject_result":"Топоры и лошади уходят на север."
+		"accept_result":"Дровосекам открыли проход. Первый воз вернулся к вечеру.",
+		"reject_result":"Артели отказали в проходе."
 	},
 	{
 		"id":"serfs", "name":"Пятнадцать беглецов", "role":"беглые крестьяне",
-		"line":"Помещик забирает половину урожая. Если впустите — останемся здесь.",
+		"line":"Мы ушли от барона Крестича. Нас пятнадцать. Если впустите — останемся.",
 		"accept":{"population":15,"food":-11,"trust":8,"trade":2},
 		"reject":{"trust":-6},
-		"accept_result":"За стеной внезапно становится заметно теснее.",
-		"reject_result":"Группа долго спорит, потом исчезает на дороге.",
-		"accept_later":{"delay":5,"text":"От владельца беглецов пришло требование компенсации.","effects":{"money":-8,"trust":2}}
+		"accept_result":"Беглецов впустили и распределили по пустующим домам.",
+		"reject_result":"Беглецам отказали. Они ушли к северному лесу.",
+		"accept_later":{"delay":5,"text":"Барон Крестич прислал требование заплатить за беглых крестьян.","effects":{"money":-8,"trust":2}}
 	},
 	{
 		"id":"doctor", "name":"Доктор Вейс", "role":"чумной лекарь",
-		"line":"Если болезнь доберётся сюда, поздно будет искать меня потом.",
+		"line":"Я врач. Работаю с заразными больными. Двенадцать монет за сезон.",
 		"accept":{"money":-12,"disease":-14,"trust":1},
 		"reject":{"disease":2},
-		"accept_result":"Чёрный клюв лекаря пугает детей, но лазарет получает хозяина.",
-		"reject_result":"Лекарь продолжает путь к городу."
+		"accept_result":"Вейса наняли. Он принял лазарет и ввёл карантинные правила.",
+		"reject_result":"Вейса не наняли. Он уехал в город."
 	},
 	{
 		"id":"salt", "name":"Мара", "role":"соляной торговец",
-		"line":"Соль сохраняет мясо лучше молитв. Девять монет за партию.",
+		"line":"Шесть мешков соли. Девять монет. Больше у меня нет.",
 		"accept":{"money":-9,"food":18,"trade":3},
 		"reject":{"food":-2},
-		"accept_result":"Белые мешки уходят глубоко в сухой склад.",
-		"reject_result":"Телега скрипит прочь."
+		"accept_result":"Соль купили и убрали на склад.",
+		"reject_result":"Соль не купили. Мара уехала дальше."
 	},
 	{
 		"id":"veterans", "name":"Старший десятник", "role":"ветераны",
-		"line":"Война закончилась для короля, не для нас. Пятеро ищут службу.",
+		"line":"Пятеро ветеранов ищут постоянную службу. Нужны еда и место в казарме.",
 		"accept":{"guard":5,"food":-5,"trust":2},
 		"reject":{"guard":-1,"crime":2},
-		"accept_result":"Опытные люди быстро находят слабые места на стене.",
-		"reject_result":"Отряд растворяется среди трактиров на большой дороге."
+		"accept_result":"Ветеранов приняли в гарнизон.",
+		"reject_result":"Ветеранам отказали. Они ушли в город."
 	},
 	{
 		"id":"pilgrims", "name":"Паломники", "role":"дорожная процессия",
-		"line":"Только переночевать. Нас двадцать, еды почти нет.",
+		"line":"Нас двадцать. Просим место на одну ночь и немного хлеба.",
 		"accept":{"food":-8,"trust":5,"trade":2},
 		"reject":{"trust":-3},
-		"accept_result":"Внутри стен звучат тихие песни.",
-		"reject_result":"Процессия ставит лагерь далеко за рекой."
+		"accept_result":"Паломников разместили во дворе до утра.",
+		"reject_result":"Паломникам отказали. Они поставили лагерь за рекой."
 	}
 ]
 
@@ -278,6 +278,8 @@ var people_label: Label
 var guard_label: Label
 var trust_label: Label
 var weather_label: Label
+var condition_label: Label
+var result_panel: PanelContainer
 var visitor_panel: PanelContainer
 var visitor_name: Label
 var visitor_role: Label
@@ -293,18 +295,32 @@ var sound_button: Button
 var end_title: Label
 var end_copy: Label
 var pause_button: Button
+var world_boot_ready := false
+var continue_ready_text := "НАЧАТЬ СМЕНУ"
+var fallback_lever_dragging := false
+var fallback_lever_touch := -1
+var fallback_lever_x := 0.0
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	PocketWorks.set_boot_stage("ready-enter")
 	PocketWorks.set_document_title("ЗАСТАВА")
 	sound_enabled = bool(PocketWorks.storage_get("sound", true))
-	world = WORLD_SCRIPT.new()
-	add_child(world)
+
+	# Build the menu before the 3D world. This lets the first Web frame land fast
+	# enough for mobile Chromium to dismiss Godot's engine splash.
 	_build_ui()
 	_load_or_prepare()
-	PocketWorks.set_boot_stage("ready")
-	_publish_state("ready")
+	continue_button.disabled = true
+	continue_button.text = "ПОДГОТОВКА ЗАСТАВЫ…"
+
+	world = WORLD_SCRIPT.new()
+	add_child(world)
+	world.boot_completed.connect(_on_world_boot_completed)
+
+	PocketWorks.set_boot_stage("menu-visible")
+	_publish_state("menu")
+	call_deferred("_begin_world_boot")
 
 func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
@@ -318,32 +334,39 @@ func _build_ui() -> void:
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(hud)
 
+	# Keep the resource band below the iOS safe area. Opaque by design: no scene blur
+	# or low-contrast text can leak through it.
 	var top := PanelContainer.new()
-	top.position = Vector2(14, 18)
-	top.size = Vector2(557, 105)
-	top.add_theme_stylebox_override("panel", _panel_style(Color(0.13,0.16,0.15,0.90), C_UI_2, 2))
+	top.position = Vector2(18, 92)
+	top.size = Vector2(549, 116)
+	top.add_theme_stylebox_override("panel", _panel_style(Color("#1c2421"), Color("#786f5e"), 2))
 	hud.add_child(top)
 	var top_box := VBoxContainer.new()
-	top_box.add_theme_constant_override("separation", 4)
+	top_box.add_theme_constant_override("separation", 6)
 	top.add_child(top_box)
 	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 12)
+	top_row.add_theme_constant_override("separation", 8)
 	top_box.add_child(top_row)
-	day_label = _label("ДЕНЬ 1 / 60", 20, C_TEXT)
+	day_label = _label("ДЕНЬ 1 / 60", 18, C_TEXT)
 	day_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(day_label)
-	weather_label = _label("ЯСНО", 14, C_MUTED)
+	condition_label = _label("", 12, C_SAND)
+	condition_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	condition_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(condition_label)
+	weather_label = _label("ЯСНО", 12, C_MUTED)
+	weather_label.custom_minimum_size = Vector2(62, 0)
 	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	weather_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(weather_label)
 	pause_button = Button.new()
-	pause_button.text = "ПАУЗА"
-	pause_button.custom_minimum_size = Vector2(92, 42)
+	pause_button.text = "II"
+	pause_button.custom_minimum_size = Vector2(46, 34)
 	_style_button(pause_button, false)
 	pause_button.pressed.connect(_pause)
 	top_row.add_child(pause_button)
+
 	var stats := HBoxContainer.new()
-	stats.add_theme_constant_override("separation", 4)
+	stats.add_theme_constant_override("separation", 2)
 	top_box.add_child(stats)
 	money_label = _stat(stats, "КАЗНА", "40")
 	food_label = _stat(stats, "ЕДА", "70")
@@ -351,75 +374,90 @@ func _build_ui() -> void:
 	guard_label = _stat(stats, "СТРАЖА", "6")
 	trust_label = _stat(stats, "ДОВЕРИЕ", "55")
 
+	result_panel = PanelContainer.new()
+	result_panel.position = Vector2(50, 746)
+	result_panel.size = Vector2(485, 62)
+	result_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	result_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.10,0.13,0.12,0.96), Color("#665f52"), 1))
+	result_panel.modulate.a = 0.0
+	hud.add_child(result_panel)
 	result_hint = Label.new()
-	result_hint.position = Vector2(32, 750)
-	result_hint.size = Vector2(521, 62)
 	result_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	result_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	result_hint.add_theme_font_size_override("font_size", 17)
+	result_hint.add_theme_font_size_override("font_size", 15)
 	result_hint.add_theme_color_override("font_color", C_TEXT)
-	result_hint.modulate.a = 0.0
-	hud.add_child(result_hint)
+	result_hint.add_theme_constant_override("outline_size", 2)
+	result_hint.add_theme_color_override("font_outline_color", Color("#101411"))
+	result_panel.add_child(result_hint)
 
 	visitor_panel = PanelContainer.new()
-	visitor_panel.position = Vector2(28, 820)
-	visitor_panel.size = Vector2(529, 190)
-	visitor_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.12,0.15,0.14,0.93), C_UI_2, 2))
+	visitor_panel.position = Vector2(26, 814)
+	visitor_panel.size = Vector2(533, 182)
+	visitor_panel.add_theme_stylebox_override("panel", _panel_style(Color("#1c2421"), Color("#746b5b"), 2))
 	hud.add_child(visitor_panel)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_bottom", 14)
 	visitor_panel.add_child(margin)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
-	visitor_name = _label("—", 27, C_TEXT)
+	visitor_name = _label("—", 26, C_TEXT)
+	visitor_name.add_theme_constant_override("outline_size", 2)
+	visitor_name.add_theme_color_override("font_outline_color", Color("#0d100f"))
 	box.add_child(visitor_name)
-	visitor_role = _label("ожидание у ворот", 14, C_SAND)
+	visitor_role = _label("ОЖИДАНИЕ У ВОРОТ", 13, C_SAND)
 	box.add_child(visitor_role)
-	visitor_line = _label("...", 19, C_MUTED)
+	var divider := HSeparator.new()
+	divider.add_theme_constant_override("separation", 6)
+	box.add_child(divider)
+	visitor_line = _label("...", 19, C_TEXT)
 	visitor_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	visitor_line.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	visitor_line.add_theme_constant_override("outline_size", 1)
+	visitor_line.add_theme_color_override("font_outline_color", Color("#0d100f"))
 	box.add_child(visitor_line)
 
 	var choice_row := HBoxContainer.new()
-	choice_row.position = Vector2(42, 1017)
-	choice_row.size = Vector2(501, 30)
+	choice_row.position = Vector2(46, 1002)
+	choice_row.size = Vector2(493, 28)
 	hud.add_child(choice_row)
-	var reject := _label("←  ЗАКРЫТЬ", 16, Color("#d4aaa3"))
+	var reject := _label("ЗАКРЫТЬ", 14, Color("#e2a49a"))
 	reject.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	choice_row.add_child(reject)
-	var accept := _label("ПРОПУСТИТЬ  →", 16, Color("#a9c5b6"))
+	var accept := _label("ПРОПУСТИТЬ", 14, Color("#a9d8c0"))
 	accept.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	accept.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	choice_row.add_child(accept)
 
 	lever = LEVER_SCRIPT.new()
-	lever.position = Vector2(32, 1040)
-	lever.size = Vector2(521, 170)
+	lever.position = Vector2(42, 1024)
+	lever.size = Vector2(501, 154)
 	lever.decision.connect(_on_decision)
 	hud.add_child(lever)
 
 	var footer := Label.new()
-	footer.text = "Потяни рычаг до края и отпусти"
-	footer.position = Vector2(120, 1215)
-	footer.size = Vector2(345, 28)
+	footer.text = "Потяни рукоять к нужному упору"
+	footer.position = Vector2(112, 1182)
+	footer.size = Vector2(361, 30)
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 13)
-	footer.add_theme_color_override("font_color", Color(C_MUTED, 0.75))
+	footer.add_theme_color_override("font_color", Color(C_TEXT, 0.78))
+	footer.add_theme_constant_override("outline_size", 2)
+	footer.add_theme_color_override("font_outline_color", Color("#202421"))
 	hud.add_child(footer)
 
 	start_overlay = _overlay(root)
-	var start_box := _overlay_box(start_overlay, Vector2(500, 535))
-	start_box.add_child(_title("ЗАСТАВА", 48))
-	var copy := _label("Один мост. Один рычаг. Шестьдесят дней, за которые маленькая пограничная будка может стать городом — или закончиться бунтом и пустым складом.", 19, C_MUTED)
+	var start_box := _overlay_box(start_overlay, Vector2(500, 505))
+	start_box.add_child(_title("ЗАСТАВА", 46))
+	var copy := _label("Продержи мост 60 дней. Люди, деньги, еда и гарнизон меняются от каждого решения.", 19, C_TEXT)
 	copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	start_box.add_child(copy)
-	var rule := _label("Людей не оценивают карточки. Смотри, кто приходит, принимай решение и запоминай, что сделал миру.", 16, C_SAND)
+	var rule := _label("Слушай, кто пришёл. Решай у ворот. Последствия могут вернуться через несколько дней.", 16, C_SAND)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rule.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	start_box.add_child(rule)
@@ -437,14 +475,14 @@ func _build_ui() -> void:
 	pause_overlay = _overlay(root)
 	pause_overlay.visible = false
 	var pause_box := _overlay_box(pause_overlay, Vector2(430, 420))
-	pause_box.add_child(_title("СМЕНА ПРИОСТАНОВЛЕНА", 30))
+	pause_box.add_child(_title("ПАУЗА", 30))
 	var resume := _action_button("ПРОДОЛЖИТЬ", true)
 	resume.pressed.connect(_resume)
 	pause_box.add_child(resume)
 	sound_button = _action_button("ЗВУК: ВКЛ" if sound_enabled else "ЗВУК: ВЫКЛ", false)
 	sound_button.pressed.connect(_toggle_sound)
 	pause_box.add_child(sound_button)
-	var restart := _action_button("НАЧАТЬ КАМПАНИЮ ЗАНОВО", false)
+	var restart := _action_button("НАЧАТЬ ЗАНОВО", false)
 	restart.pressed.connect(_confirm_new_game)
 	pause_box.add_child(restart)
 	var pause_exit := _action_button("POCKET WORKS", false)
@@ -455,8 +493,7 @@ func _build_ui() -> void:
 	confirm_overlay.visible = false
 	var confirm_box := _overlay_box(confirm_overlay, Vector2(440, 330))
 	confirm_box.add_child(_title("СБРОСИТЬ КАМПАНИЮ?", 28))
-	var confirm_copy := _label("Текущая застава и все отложенные последствия будут удалены.", 17, C_MUTED)
-	confirm_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var confirm_copy := _label("Текущее прохождение будет удалено.", 17, C_MUTED)
 	confirm_copy.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_copy)
 	var confirm_yes := _action_button("СБРОСИТЬ", true)
@@ -471,7 +508,7 @@ func _build_ui() -> void:
 	var end_box := _overlay_box(end_overlay, Vector2(490, 500))
 	end_title = _title("СЕЗОН ОКОНЧЕН", 36)
 	end_box.add_child(end_title)
-	end_copy = _label("", 18, C_MUTED)
+	end_copy = _label("", 18, C_TEXT)
 	end_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_copy.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_box.add_child(end_copy)
@@ -487,17 +524,35 @@ func _load_or_prepare() -> void:
 	if saved is Dictionary and int(saved.get("version", 0)) == 1:
 		state = saved
 		rng.state = int(state.get("rng_state", 1))
-		continue_button.text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
+		if not state.has("condition"):
+			state["condition"] = "ordinary"
+		continue_ready_text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
 	else:
 		_reset_state()
-		continue_button.text = "НАЧАТЬ СМЕНУ"
+		continue_ready_text = "НАЧАТЬ СМЕНУ"
+	continue_button.text = continue_ready_text
 	hud.visible = false
 	start_overlay.visible = true
+
+func _begin_world_boot() -> void:
+	# Yield once so the menu is actually painted before any mesh creation begins.
+	await get_tree().process_frame
+	PocketWorks.set_boot_stage("world-boot-start")
+	world.finish_boot(state, String(state.get("weather", "clear")))
+
+func _on_world_boot_completed() -> void:
+	world_boot_ready = true
+	continue_button.disabled = false
+	continue_button.text = continue_ready_text
 	world.set_state(state)
 	world.set_weather(String(state.get("weather", "clear")))
+	PocketWorks.set_boot_stage("ready")
+	_publish_state("ready")
 
 func _reset_state() -> void:
 	rng.seed = int(Time.get_unix_time_from_system()) ^ 0x5A57A
+	var conditions := ["lean_year", "busy_road", "border_fear"]
+	var condition: String = conditions[rng.randi_range(0, conditions.size() - 1)]
 	state = {
 		"version":1,
 		"day":1,
@@ -513,6 +568,7 @@ func _reset_state() -> void:
 		"visitors_today":0,
 		"scheduled":[],
 		"weather":"clear",
+		"condition":condition,
 		"rng_state":rng.state
 	}
 	recent_ids.clear()
@@ -521,26 +577,44 @@ func _reset_state() -> void:
 	_save()
 
 func _start_or_continue() -> void:
+	if not world_boot_ready:
+		return
 	start_overlay.visible = false
 	hud.visible = true
 	paused_game = false
 	world.set_state(state)
 	_begin_day_if_needed()
 	_show_next()
+	call_deferred("_activate_live_presentation")
+
+func _activate_live_presentation() -> void:
+	if not world_boot_ready:
+		return
+	await get_tree().process_frame
+	world.activate_live_scene(state)
+	PocketWorks.set_ambience(sound_enabled, String(state.get("weather", "clear")), int(state.get("population", 18)))
 
 func _confirm_new_game() -> void:
 	confirm_overlay.visible = true
 
 func _new_game() -> void:
 	_reset_state()
+	continue_ready_text = "НАЧАТЬ СМЕНУ"
 	confirm_overlay.visible = false
 	end_overlay.visible = false
 	pause_overlay.visible = false
+	if not world_boot_ready:
+		start_overlay.visible = true
+		hud.visible = false
+		continue_button.disabled = true
+		continue_button.text = "ПОДГОТОВКА ЗАСТАВЫ…"
+		return
 	start_overlay.visible = false
 	hud.visible = true
 	world.set_state(state)
 	_begin_day_if_needed()
 	_show_next()
+	call_deferred("_activate_live_presentation")
 
 func _begin_day_if_needed() -> void:
 	if int(state.get("visitors_today", 0)) != 0:
@@ -549,6 +623,7 @@ func _begin_day_if_needed() -> void:
 	var day := int(state["day"])
 	state["weather"] = _pick_weather(day)
 	world.set_weather(String(state["weather"]))
+	PocketWorks.set_ambience(sound_enabled, String(state["weather"]), int(state.get("population", 18)))
 	world.set_time(0.20)
 	_process_scheduled()
 	_daily_background(day)
@@ -644,7 +719,11 @@ func _on_decision(value: int) -> void:
 		scheduled.append({"due":due,"text":later.get("text","Последствие решения."),"effects":later.get("effects",{})})
 		state["scheduled"] = scheduled
 	var result_key := key + "_result"
-	_flash(String(current_visitor.get(result_key, "Решение принято.")), C_GREEN if accepted else C_RED)
+	var result_text := String(current_visitor.get(result_key, "Решение принято."))
+	var summary := _effect_summary(current_visitor.get(key, {}))
+	if not summary.is_empty():
+		result_text += "\n" + summary
+	_flash(result_text, C_GREEN if accepted else C_RED)
 	state["visitors_today"] = int(state["visitors_today"]) + 1
 	state["rng_state"] = rng.state
 	world.set_state(state)
@@ -697,9 +776,17 @@ func _show_consequence(item: Dictionary) -> void:
 	timer.timeout.connect(_show_next)
 
 func _daily_background(day: int) -> void:
-	if day > 1:
-		return
-	# First day intentionally has no hidden modifier; the player learns the clean loop.
+	var condition := String(state.get("condition", "ordinary"))
+	if condition == "lean_year" and day > 1 and day % 4 == 0:
+		state["food"] = maxi(0, int(state["food"]) - 2)
+		outcome_queue.append({"text":"Урожай в округе слабый. На рынок привезли меньше еды, чем обычно.","effects":{}})
+	elif condition == "busy_road" and day > 1 and day % 3 == 0:
+		state["trade"] = mini(100, int(state["trade"]) + 1)
+		state["crime"] = mini(100, int(state["crime"]) + 1)
+	elif condition == "border_fear" and day > 1 and day % 5 == 0:
+		if int(state["guard"]) < 10:
+			state["trust"] = maxi(0, int(state["trust"]) - 2)
+			outcome_queue.append({"text":"По дороге снова слухи о рейдах. Люди спрашивают, хватит ли стражи.","effects":{}})
 
 func _end_day() -> void:
 	decision_locked = true
@@ -716,13 +803,13 @@ func _end_day() -> void:
 		state["food"] = 0
 		state["trust"] = int(state["trust"]) - 5 - shortage
 		state["population"] = maxi(0, int(state["population"]) - maxi(1, shortage / 3))
-		outcome_queue.append({"text":"Еды не хватило. Ночью несколько семей ушли, а утром очередь у склада стала злой.","effects":{}})
+		outcome_queue.append({"text":"Запасов не хватило. Несколько семей ушли до рассвета.","effects":{}})
 	if int(state["disease"]) > 22:
 		var sick_loss := maxi(1, int(state["disease"]) / 22)
 		state["population"] = maxi(0, int(state["population"]) - sick_loss)
 		state["trust"] = int(state["trust"]) - 2
 		state["disease"] = maxi(0, int(state["disease"]) - 3)
-		outcome_queue.append({"text":"Ночью лазарет снова работал без сна. Несколько домов погасли.","effects":{}})
+		outcome_queue.append({"text":"За ночь болезнь забрала нескольких жителей.","effects":{}})
 	else:
 		state["disease"] = maxi(0, int(state["disease"]) - 1)
 	if int(state["crime"]) > 28:
@@ -730,7 +817,7 @@ func _end_day() -> void:
 		state["money"] = int(state["money"]) - stolen
 		state["trust"] = int(state["trust"]) - 2
 		state["crime"] = maxi(0, int(state["crime"]) - 2)
-		outcome_queue.append({"text":"Ночью вскрыли один из складов. Стража нашла только следы у воды.","effects":{}})
+		outcome_queue.append({"text":"Ночью вскрыли склад. Часть казны пропала.","effects":{}})
 	if int(state["guard"]) >= 12:
 		state["crime"] = maxi(0, int(state["crime"]) - 2)
 	if int(state["trust"]) >= 70:
@@ -767,7 +854,7 @@ func _finish(success: bool) -> void:
 	if success:
 		end_title.text = "МОСТ ПЕРЕЖИЛ СЕЗОН"
 		var identity := _settlement_identity()
-		end_copy.text = "Шестьдесят дней закончились. %s\n\nНаселение: %d · казна: %d · стража: %d · доверие: %d.\n\nЗастава осталась не набором бонусов, а местом, которое помнит почти каждое ваше решение." % [
+		end_copy.text = "Шестьдесят дней закончились. %s\n\nНаселение: %d · казна: %d · стража: %d · доверие: %d.\n\nСезон закончен. Такой стала застава к последнему дню." % [
 			identity, int(state["population"]), int(state["money"]), int(state["guard"]), int(state["trust"])
 		]
 		if sound_enabled:
@@ -775,7 +862,7 @@ func _finish(success: bool) -> void:
 	else:
 		end_title.text = "ЗАСТАВА НЕ УДЕРЖАЛАСЬ"
 		var reason := "Люди перестали подчиняться." if int(state.get("trust", 0)) <= 0 else ("Поселение опустело." if int(state.get("population", 0)) <= 0 else "Долги съели остатки власти.")
-		end_copy.text = "%s\n\nК этому привела не одна кнопка: цепочка решений постепенно изменила еду, безопасность, торговлю и отношение людей." % reason
+		end_copy.text = "%s\n\nДо конца сезона застава не дожила." % reason
 		if sound_enabled:
 			PocketWorks.play_sfx("bad", 0.9)
 	_publish_state("complete")
@@ -797,22 +884,47 @@ func _settlement_identity() -> String:
 
 func _refresh_hud() -> void:
 	day_label.text = "ДЕНЬ %d / %d" % [mini(int(state.get("day", 1)), TOTAL_DAYS), TOTAL_DAYS]
+	var condition := String(state.get("condition", "ordinary"))
+	condition_label.text = {"lean_year":"НЕУРОЖАЙ","busy_road":"БОЛЬШОЙ ТРАКТ","border_fear":"ТРЕВОЖНАЯ ГРАНИЦА","ordinary":""}.get(condition, "")
 	money_label.text = "КАЗНА\n%d" % int(state.get("money", 0))
 	food_label.text = "ЕДА\n%d" % int(state.get("food", 0))
 	people_label.text = "ЛЮДИ\n%d" % int(state.get("population", 0))
 	guard_label.text = "СТРАЖА\n%d" % int(state.get("guard", 0))
 	trust_label.text = "ДОВЕРИЕ\n%d" % int(state.get("trust", 0))
+	money_label.add_theme_color_override("font_color", C_RED if int(state.get("money", 0)) < 8 else C_TEXT)
+	food_label.add_theme_color_override("font_color", C_RED if int(state.get("food", 0)) < 14 else C_TEXT)
+	guard_label.add_theme_color_override("font_color", C_RED if int(state.get("guard", 0)) < 4 else C_TEXT)
+	trust_label.add_theme_color_override("font_color", C_RED if int(state.get("trust", 0)) < 24 else C_TEXT)
 	var w := String(state.get("weather", "clear"))
 	weather_label.text = {"clear":"ЯСНО","rain":"ДОЖДЬ","snow":"СНЕГ"}.get(w, "ЯСНО")
+	PocketWorks.set_ambience(sound_enabled, w, int(state.get("population", 18)))
 
 func _flash(text_value: String, color: Color) -> void:
 	result_hint.text = text_value
-	result_hint.add_theme_color_override("font_color", color)
-	result_hint.modulate.a = 0.0
+	result_hint.add_theme_color_override("font_color", color.lightened(0.20))
+	result_panel.modulate.a = 0.0
 	var tw := create_tween()
-	tw.tween_property(result_hint, "modulate:a", 1.0, 0.12)
-	tw.tween_interval(0.88)
-	tw.tween_property(result_hint, "modulate:a", 0.0, 0.34)
+	tw.tween_property(result_panel, "modulate:a", 1.0, 0.10)
+	tw.tween_interval(1.12)
+	tw.tween_property(result_panel, "modulate:a", 0.0, 0.26)
+
+func _effect_summary(effects: Dictionary) -> String:
+	var parts: Array[String] = []
+	var visible := {
+		"money":"казна",
+		"food":"еда",
+		"population":"люди",
+		"guard":"стража",
+		"trust":"доверие"
+	}
+	for key in visible.keys():
+		if effects.has(key) and int(effects[key]) != 0:
+			var value := int(effects[key])
+			var sign := "+" if value > 0 else ""
+			parts.append(sign + str(value) + " " + String(visible[key]))
+	if effects.has("has_forge") and int(effects["has_forge"]) > 0:
+		parts.append("+ кузница")
+	return " · ".join(parts)
 
 func _pause() -> void:
 	if campaign_over:
@@ -821,6 +933,7 @@ func _pause() -> void:
 	decision_locked = true
 	lever.set_enabled(false)
 	pause_overlay.visible = true
+	PocketWorks.set_ambience(false)
 	_save()
 	_publish_state("paused")
 
@@ -829,12 +942,14 @@ func _resume() -> void:
 	paused_game = false
 	decision_locked = false if not current_visitor.is_empty() else true
 	lever.set_enabled(not current_visitor.is_empty())
+	PocketWorks.set_ambience(sound_enabled, String(state.get("weather", "clear")), int(state.get("population", 18)))
 	_publish_state("awaiting_decision" if not current_visitor.is_empty() else "running")
 
 func _toggle_sound() -> void:
 	sound_enabled = not sound_enabled
 	PocketWorks.storage_set("sound", sound_enabled)
 	sound_button.text = "ЗВУК: ВКЛ" if sound_enabled else "ЗВУК: ВЫКЛ"
+	PocketWorks.set_ambience(sound_enabled, String(state.get("weather", "clear")), int(state.get("population", 18)))
 	if sound_enabled:
 		PocketWorks.play_sfx("bell", 1.0)
 
@@ -860,12 +975,69 @@ func _publish_state(stage: String) -> void:
 			"trust":int(state.get("trust", 0))
 		},
 		"weather":String(state.get("weather", "clear")),
-		"campaignOver":campaign_over
+		"campaignOver":campaign_over,
+		"worldBootReady":world_boot_ready
 	})
 
 func _on_exit_pressed() -> void:
 	_save()
 	PocketWorks.exit_to_launcher()
+
+func _input(event: InputEvent) -> void:
+	# The lever owns normal GUI input. This scene-level path is intentionally
+	# redundant: mobile browsers occasionally route a drag as raw canvas input
+	# instead of Control GUI input. A gate mechanism should not miss a finger.
+	if decision_locked or paused_game or campaign_over or lever == null:
+		fallback_lever_dragging = false
+		fallback_lever_touch = -1
+		return
+
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed and fallback_lever_touch == -1 and _in_lever_hitbox(touch.position):
+			fallback_lever_touch = touch.index
+			fallback_lever_dragging = true
+			_preview_fallback_lever(touch.position.x)
+		elif not touch.pressed and touch.index == fallback_lever_touch:
+			_finish_fallback_lever(touch.position.x)
+			fallback_lever_touch = -1
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if fallback_lever_dragging and drag.index == fallback_lever_touch:
+			_preview_fallback_lever(drag.position.x)
+	elif event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index == MOUSE_BUTTON_LEFT:
+			if mouse.pressed and _in_lever_hitbox(mouse.position):
+				fallback_lever_dragging = true
+				_preview_fallback_lever(mouse.position.x)
+			elif not mouse.pressed and fallback_lever_dragging:
+				_finish_fallback_lever(mouse.position.x)
+	elif event is InputEventMouseMotion and fallback_lever_dragging:
+		_preview_fallback_lever((event as InputEventMouseMotion).position.x)
+
+func _in_lever_hitbox(pos: Vector2) -> bool:
+	return pos.x >= 24.0 and pos.x <= 561.0 and pos.y >= 1008.0 and pos.y <= 1202.0
+
+func _lever_normalized_from_x(x: float) -> float:
+	return clampf((x - 292.5) / 178.0, -1.0, 1.0)
+
+func _preview_fallback_lever(x: float) -> void:
+	fallback_lever_x = _lever_normalized_from_x(x)
+	lever.preview_external(fallback_lever_x)
+
+func _finish_fallback_lever(x: float) -> void:
+	if not fallback_lever_dragging:
+		return
+	fallback_lever_dragging = false
+	var value := _lever_normalized_from_x(x)
+	lever.preview_external(value)
+	if value >= 0.52:
+		_on_decision(1)
+	elif value <= -0.52:
+		_on_decision(-1)
+	else:
+		lever.reset()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_CLOSE_REQUEST:
@@ -876,12 +1048,15 @@ func _label(text_value: String, font_size: int, color: Color) -> Label:
 	l.text = text_value
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
+	l.add_theme_constant_override("outline_size", 1)
+	l.add_theme_color_override("font_outline_color", Color("#111512"))
 	return l
 
 func _stat(parent: HBoxContainer, title: String, value: String) -> Label:
-	var l := _label(title + "\n" + value, 13, C_TEXT)
+	var l := _label(title + "\n" + value, 12, C_TEXT)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.custom_minimum_size = Vector2(100, 44)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(96, 48)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(l)
 	return l

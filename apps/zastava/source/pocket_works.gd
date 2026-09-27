@@ -78,3 +78,53 @@ func play_sfx(kind: String, pitch: float = 1.0) -> void:
 	})();
 	""" % [JSON.stringify(kind), str(pitch)]
 	_web_eval(source)
+
+
+func set_ambience(enabled: bool, weather: String = "clear", population: int = 18) -> void:
+	if not OS.has_feature("web"):
+		return
+	var source := """
+	(() => {
+		const enabled = %s, weather = %s, population = %s;
+		const AC = window.AudioContext || window.webkitAudioContext;
+		if (!AC) return;
+		const ctx = window.__zastavaAudio || (window.__zastavaAudio = new AC());
+		if (ctx.state === 'suspended' && enabled) ctx.resume().catch(() => {});
+		if (!window.__zastavaAmbience) {
+			const master = ctx.createGain(); master.gain.value = 0.0001; master.connect(ctx.destination);
+			const makeNoise = (type, cutoff, gainValue) => {
+				const len = ctx.sampleRate * 2, buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+				const data = buffer.getChannelData(0);
+				let last = 0;
+				for (let i=0;i<len;i++) {
+					const white = Math.random()*2-1;
+					last = type === 'brown' ? (last + 0.02*white)/1.02 : white;
+					data[i] = type === 'brown' ? last*3.2 : white;
+				}
+				const src = ctx.createBufferSource(); src.buffer = buffer; src.loop = true;
+				const filter = ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=cutoff;
+				const gain = ctx.createGain(); gain.gain.value=gainValue;
+				src.connect(filter); filter.connect(gain); gain.connect(master); src.start();
+				return gain;
+			};
+			const river = makeNoise('brown', 620, .26);
+			const wind = makeNoise('white', 950, .045);
+			const rain = makeNoise('white', 2600, .0001);
+			const crowd = ctx.createGain(); crowd.gain.value=.0001; crowd.connect(master);
+			for (let i=0;i<3;i++) {
+				const o=ctx.createOscillator(), g=ctx.createGain();
+				o.type='sine'; o.frequency.value=92+i*31; g.gain.value=.0028;
+				o.connect(g); g.connect(crowd); o.start();
+			}
+			window.__zastavaAmbience={master,river,wind,rain,crowd};
+		}
+		const a=window.__zastavaAmbience, now=ctx.currentTime;
+		const ramp=(node,value)=>{node.gain.cancelScheduledValues(now);node.gain.setTargetAtTime(value,now,.25);};
+		ramp(a.master, enabled ? .11 : .0001);
+		ramp(a.river, weather==='snow' ? .16 : .24);
+		ramp(a.wind, weather==='snow' ? .11 : weather==='rain' ? .075 : .042);
+		ramp(a.rain, weather==='rain' ? .16 : .0001);
+		ramp(a.crowd, enabled ? Math.min(.055, .008 + population*.00055) : .0001);
+	})();
+	""" % [str(enabled).to_lower(), JSON.stringify(weather), str(population)]
+	_web_eval(source)

@@ -303,6 +303,51 @@ async function runRelicSiegeJourney(page: Page, testInfo: TestInfo) {
   });
 }
 
+async function runZastavaJourney(page: Page, testInfo: TestInfo) {
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__;
+    return state?.app === 'zastava' && state?.loadingState === 'ready';
+  }, undefined, { timeout: 82_000 });
+
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  const width = viewport!.width;
+  const height = viewport!.height;
+
+  // Godot draws its UI inside the canvas, so role/button locators cannot reach the
+  // start control. Tap the center of the authored start button, then wait for the QA
+  // bridge to confirm that a real visitor is awaiting a decision.
+  // The Godot logical viewport letterboxes horizontally on the emulated phone.
+  // 55.5% of viewport height is the center of the primary start/continue button.
+  // Tap twice: the first touch can be consumed by canvas focus on WebKit/Chromium,
+  // the second is a normal in-canvas control activation.
+  const startX = Math.round(width * 0.50);
+  const startY = Math.round(height * 0.555);
+  await page.touchscreen.tap(startX, startY);
+  await page.waitForTimeout(350);
+  const started = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.awaitingDecision === true);
+  if (!started) await page.touchscreen.tap(startX, startY);
+  await page.waitForFunction(() => {
+    const state = (window as any).__AI_TEST_STATE__;
+    return state?.app === 'zastava' && state?.awaitingDecision === true;
+  }, undefined, { timeout: 12_000 });
+
+  // Operate the actual mechanical lever rather than spraying random touches over the
+  // canvas. The control only reads horizontal travel, matching real touch behavior.
+  await dragPointer(
+    page,
+    { x: Math.round(width * 0.50), y: Math.round(height * 0.84) },
+    { x: Math.round(width * 0.82), y: Math.round(height * 0.84) }
+  );
+  await page.waitForTimeout(900);
+
+  const state = await page.evaluate(() => (window as any).__AI_TEST_STATE__ ?? null);
+  expect(state?.app).toBe('zastava');
+  expect(state?.loadingState).toBe('resolved');
+  expect(state?.visitorsToday ?? 0).toBeGreaterThanOrEqual(1);
+  await attachCriticalScreenshot(page, testInfo, 'zastava-after-decision', { fullPage: false });
+}
+
 async function clickLikelyStartControl(page: Page) {
   const label = /start|play|begin|enter|continue|resume|launch|new game|начать|играть|старт|продолжить|войти|почати|грати|увійти/i;
   const candidates = page.getByRole('button', { name: label });
@@ -334,7 +379,7 @@ test.describe('AI exploratory mobile gameplay', () => {
       // Heavy Babylon/WebGL scenes can take tens of seconds per interaction sequence on
       // GitHub-hosted software rendering. Keep assertions strict but allow the browser
       // enough wall-clock time to finish the same real input sequence.
-      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : 60_000);
+      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : app.slug === 'zastava' ? 120_000 : 60_000);
 
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
@@ -358,6 +403,8 @@ test.describe('AI exploratory mobile gameplay', () => {
 
       if (app.slug === 'relic-siege') {
         await runRelicSiegeJourney(page, testInfo);
+      } else if (app.slug === 'zastava') {
+        await runZastavaJourney(page, testInfo);
       } else {
         await clickLikelyStartControl(page);
 
