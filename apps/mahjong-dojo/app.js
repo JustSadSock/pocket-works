@@ -18,7 +18,7 @@ const codes = (source) => source.trim().split(/\s+/).map(tileId);
 
 const storage = createVersionedStore({
   namespace: 'pocket-works:mahjong-dojo',
-  version: 1,
+  version: 2,
   defaults: {
     lessonsCompleted: [],
     drill: { attempts: 0, correct: 0, streak: 0, bestStreak: 0 },
@@ -26,6 +26,9 @@ const storage = createVersionedStore({
     wins: 0,
     difficulty: 'club',
     sound: true
+  },
+  migrations: {
+    1: (value) => ({ ...value, lessonsCompleted: [] })
   },
   validate(value) { return value && typeof value === 'object' && !Array.isArray(value); }
 });
@@ -70,45 +73,162 @@ const ui = {
 
 const LESSONS = [
   {
-    title: 'Читать стол', subtitle: 'Масти, достоинства и почётные кости',
+    title: 'Как вообще выигрывают', subtitle: 'Собери 4 группы и пару раньше остальных',
     steps: [
-      { kind: 'intro', copy: 'В риичи 34 типа костей. Ман, пин и соу идут от 1 до 9; отдельно лежат четыре ветра и три дракона.', display: '1m 4m 9m 2p 5p 8p 3s 6s 9s E S W N P F C' },
-      { kind: 'choice', copy: 'Найди почётную кость. У неё нет последовательностей — только пары и тройки.', prompt: 'Какая из этих костей — хонор?', options: ['4m','7p','E','2s'], answer: 'E', explain: 'Восток — ветер, значит почётная кость. 4m, 7p и 2s принадлежат числовым мастям.' }
+      {
+        kind: 'groups',
+        copy: 'Главная идея проще, чем выглядит стол. Обычная победная рука — это четыре группы по три кости и одна пара. Не нужно сначала учить названия всех костей: нужно научиться видеть эти блоки.',
+        groups: [
+          { tiles: '2m 3m 4m', label: 'три подряд' },
+          { tiles: '6p 7p 8p', label: 'три подряд' },
+          { tiles: '3s 4s 5s', label: 'три подряд' },
+          { tiles: 'E E E', label: 'три одинаковые' },
+          { tiles: '5p 5p', label: 'пара' }
+        ]
+      },
+      {
+        kind: 'choice',
+        copy: 'В большинстве рук ты всё время пытаешься приблизиться именно к этой структуре.',
+        prompt: 'Что нужно собрать для обычной победы?',
+        options: [
+          { value: 'four-and-pair', label: '4 группы по три + 1 пара' },
+          { value: 'seven-random', label: 'Любые 14 красивых костей' },
+          { value: 'one-suit', label: 'Обязательно все кости одной масти' }
+        ],
+        answer: 'four-and-pair',
+        explain: 'Да. Четыре группы и пара — базовый скелет руки. Есть специальные исключения, но для первой игры их можно пока игнорировать.'
+      }
     ]
   },
   {
-    title: 'Скелет руки', subtitle: 'Четыре группы и одна пара',
+    title: 'Что происходит в твой ход', subtitle: 'Взял одну → выбросил одну',
     steps: [
-      { kind: 'intro', copy: 'Обычная закрытая победная рука содержит четыре группы по три кости и пару. Группа — последовательность или тройка.', display: '1m 2m 3m 4m 5m 6m 7p 8p 9p 2s 3s 4s E E' },
-      { kind: 'choice', copy: 'Последовательность не может пересекать границу масти и не существует среди ветров/драконов.', prompt: 'Какая тройка является последовательностью?', options: ['8m 9m 1p','2s 3s 4s','E S W','5p 5p 5p'], answer: '2s 3s 4s', explain: '2–3–4 соу — чистая последовательность. 5p×3 — тройка, но не последовательность.' }
+      {
+        kind: 'intro',
+        copy: 'Обычно перед твоим ходом в руке 13 костей. Ты берёшь одну из стены, получаешь 14, смотришь — не победил ли — и если нет, выбрасываешь одну. После сброса снова остаётся 13.',
+        display: '1m 2m 3m 4m 5m 6m 7p 8p 9p 2s 3s 4s E'
+      },
+      {
+        kind: 'choice',
+        copy: 'Это основной ритм всей партии. Уже одного этого достаточно, чтобы не сидеть за столом с лицом человека, которого случайно назначили бухгалтером драконов.',
+        prompt: 'У тебя 13 костей и начинается твой ход. Что дальше?',
+        options: [
+          { value: 'draw-discard', label: 'Взять одну, затем выбросить одну' },
+          { value: 'discard-first', label: 'Сначала выбросить две' },
+          { value: 'keep-drawing', label: 'Брать кости, пока не станет 14 хороших' }
+        ],
+        answer: 'draw-discard',
+        explain: 'Именно. Взял одну → проверил руку → выбросил одну. Это главный цикл партии.'
+      },
+      {
+        kind: 'discard',
+        copy: 'Попробуй сам. После добора у тебя 14 костей. Почти всё уже связано в группы, а красный дракон торчит отдельно.',
+        hand: '1m 2m 3m 4m 5m 6m 7p 8p 9p 2s 3s 4s 6p C',
+        answer: 'C',
+        explain: 'Да. Изолированная кость обычно первый кандидат на сброс, если остальные уже хорошо связаны.'
+      }
     ]
   },
   {
-    title: 'Сянтэн', subtitle: 'Расстояние до тенпая',
+    title: 'Какие комбинации работают', subtitle: 'Три подряд, три одинаковые и пара',
     steps: [
-      { kind: 'intro', copy: 'Сянтэн показывает, сколько улучшений отделяет руку от тенпая. 0 = тенпай, −1 = готовая победная рука. Сначала уменьшаем сянтэн, потом считаем ширину улучшений.', display: '1m 2m 3m 4m 5m 6m 7m 8m 3p 4p 5p 6s 6s E' },
-      { kind: 'discard', copy: 'Здесь одиночный Восток почти ничего не делает для структуры. Найди лучший сброс.', hand: '1m 2m 3m 4m 5m 6m 7m 8m 3p 4p 5p 6s 6s E', answer: 'E', explain: 'Сброс Востока сохраняет все связанные числовые блоки и пару 6s.' }
+      {
+        kind: 'groups',
+        copy: 'Есть только две основные группы: три последовательных числа одной масти или три одинаковые кости. Отдельно нужна одна пара. Названия мастей можно выучить потом — сейчас важно видеть форму.',
+        groups: [
+          { tiles: '2s 3s 4s', label: 'работает: подряд в одной масти' },
+          { tiles: '7p 7p 7p', label: 'работает: три одинаковые' },
+          { tiles: 'N N', label: 'пара' }
+        ]
+      },
+      {
+        kind: 'tile-choice',
+        copy: 'Последовательность нельзя собирать через разные масти и нельзя делать из ветров/драконов.',
+        prompt: 'Какая из трёх групп действительно рабочая?',
+        options: [
+          { value: 'run', tiles: '2s 3s 4s', label: 'подряд' },
+          { value: 'mixed', tiles: '8m 9m 1p', label: 'разные масти' },
+          { value: 'honors', tiles: 'E S W', label: 'разные ветры' }
+        ],
+        answer: 'run',
+        explain: '2–3–4 одной масти — рабочая последовательность. Всё остальное здесь не является группой.'
+      }
     ]
   },
   {
-    title: 'Укеирэ', subtitle: 'Не только близко, но и широко',
+    title: 'Когда рука почти готова', subtitle: 'Пойми ожидание, а термин запомнится сам',
     steps: [
-      { kind: 'intro', copy: 'Две руки могут иметь одинаковый сянтэн, но разное число полезных доборов. Это и есть укеирэ: сколько оставшихся костей реально улучшает форму.', display: '2p 3p 1m 2m 3m 4m 5m 6m 7s 8s 9s E E' },
-      { kind: 'wait', copy: 'Рука в тенпае. Какие кости завершают блок 2p–3p?', hand: '2p 3p 1m 2m 3m 4m 5m 6m 7s 8s 9s E E', options: ['1p','2p','4p','5p'], answers: ['1p','4p'], explain: '2–3 ждёт 1 или 4: классическое двухстороннее рянмэн-ожидание.' }
+      {
+        kind: 'intro',
+        copy: 'Если тебе не хватает ровно одной подходящей кости до победной структуры, рука готова ждать победу. Это состояние называют тенпаем. Главное — понять идею, а не зубрить слово.',
+        display: '2p 3p 1m 2m 3m 4m 5m 6m 7s 8s 9s E E'
+      },
+      {
+        kind: 'wait',
+        copy: 'Здесь всё уже собрано, кроме блока 2–3 кружков. Какая кость завершит его?',
+        hand: '2p 3p 1m 2m 3m 4m 5m 6m 7s 8s 9s E E',
+        options: ['1p','2p','4p','5p'],
+        answers: ['1p','4p'],
+        explain: 'Верно: 2–3 можно закончить единицей слева или четвёркой справа. Поэтому такое ожидание особенно удобное.'
+      }
     ]
   },
   {
-    title: 'Риичи', subtitle: 'Обязательство в обмен на яку',
+    title: 'Как объявляется победа', subtitle: 'Цумо, рон и зачем новичку риичи',
     steps: [
-      { kind: 'intro', copy: 'Закрытая рука в тенпае может объявить риичи, заплатив 1000 очков. После объявления менять структуру уже нельзя: обычно сбрасывается только свежий добор.', display: '2p 3p 1m 2m 3m 4m 5m 6m 7s 8s 9s E E' },
-      { kind: 'choice', copy: 'Риичи — не кнопка «я почти выиграл». У него есть формальные условия.', prompt: 'Когда объявление легально?', options: ['Любая закрытая рука','Закрытая рука в тенпае и есть 1000 очков','После любого пон','Только с парой драконов'], answer: 'Закрытая рука в тенпае и есть 1000 очков', explain: 'Нужна закрытая рука, тенпай и депозит 1000. После риичи свобода сброса резко ограничена.' }
+      {
+        kind: 'choice',
+        copy: 'Если победную кость ты взял сам из стены — это цумо. Если её только что выбросил соперник и она завершает твою руку — можно объявить рон.',
+        prompt: 'Брат выбросил именно ту кость, которая завершает твою готовую руку. Что объявлять?',
+        options: [
+          { value: 'ron', label: 'Рон — победа на чужом сбросе' },
+          { value: 'tsumo', label: 'Цумо — как будто я взял её сам' },
+          { value: 'nothing', label: 'Ничего, ждать следующего круга' }
+        ],
+        answer: 'ron',
+        explain: 'Да. Рон — победа на сбросе другого игрока. Цумо — когда победную кость ты добрал сам.'
+      },
+      {
+        kind: 'choice',
+        copy: 'В риичи-маджонге одной красивой формы недостаточно: нужен хотя бы один разрешённый способ победы — яку. Для первой игры не надо учить весь список. Самый понятный путь: держать руку закрытой и, когда она готова ждать одну кость, объявить риичи.',
+        prompt: 'Что проще всего использовать новичку как понятный путь к легальной победе?',
+        options: [
+          { value: 'riichi', label: 'Не открывать руку и объявить риичи в готовом ожидании' },
+          { value: 'memorize', label: 'Сначала выучить весь список яку наизусть' },
+          { value: 'dora', label: 'Надеяться, что любая дора сама разрешит победу' }
+        ],
+        answer: 'riichi',
+        explain: 'Именно. Для первых партий закрытая рука + риичи — нормальный ориентир. Остальные яку можно добавлять постепенно.'
+      }
     ]
   },
   {
-    title: 'Яку и хан', subtitle: 'Почему готовая форма ещё не всегда победа',
+    title: 'Как выбирать, что выбросить', subtitle: 'Сохраняй связанное, режь изолированное',
     steps: [
-      { kind: 'intro', copy: 'Чтобы выиграть, мало собрать форму: нужен хотя бы один яку. Яку дают хан; больше хан обычно значит дороже рука. Дора увеличивает стоимость, но сама по себе яку не заменяет.', display: '2m 3m 4m 3m 4m 5m 4p 5p 6p 6s 7s 8s 5p 5p' },
-      { kind: 'choice', copy: 'В этой руке нет единиц, девяток и почётных костей.', prompt: 'Какой базовый яку здесь виден?', options: ['Танъяо','Якухай','Кокуши','Чанта'], answer: 'Танъяо', explain: 'Танъяо — рука только из простых числовых костей 2–8. Это 1 хан.' }
+      {
+        kind: 'intro',
+        copy: 'Базовая стратегия без математики: не ломай готовые тройки и хорошие соседние числа; сначала смотри на одиночные ветра, драконов, крайние числа и другие кости, которые почти ни с чем не соединяются.',
+        display: '1m 2m 3m 4m 5m 6m 7m 8m 3p 4p 5p 6s 6s E'
+      },
+      {
+        kind: 'discard',
+        copy: 'Все числовые кости здесь связаны между собой, а Восток один. Что выбросишь?',
+        hand: '1m 2m 3m 4m 5m 6m 7m 8m 3p 4p 5p 6s 6s E',
+        answer: 'E',
+        explain: 'Да. Ты сохранил все связанные блоки и пару 6s, а убрал одиночную кость.'
+      },
+      {
+        kind: 'choice',
+        copy: 'Дальше тренер начнёт показывать две цифры: сколько шагов осталось до готового ожидания и сколько разных доборов улучшают руку. Они называются сянтэн и укеирэ, но тебе важнее сначала понимать смысл.',
+        prompt: 'Что важнее при выборе сброса?',
+        options: [
+          { value: 'closer-wider', label: 'Быть ближе к готовой руке и иметь больше полезных доборов' },
+          { value: 'pretty', label: 'Оставлять самые красивые символы' },
+          { value: 'names', label: 'Сначала помнить японское название каждой кости' }
+        ],
+        answer: 'closer-wider',
+        explain: 'Да. Именно это потом формализуют сянтэн и укеирэ. Слова вторичны; решение — первично.'
+      }
     ]
   }
 ];
@@ -265,7 +385,7 @@ function renderHome() {
   ui.streak.textContent = String(drill.bestStreak || 0);
   ui.accuracy.textContent = drill.attempts ? `${Math.round((drill.correct / drill.attempts) * 100)}%` : '—';
   ui.academyProgress.textContent = `${completed.length} / ${LESSONS.length}`;
-  if (completed.length < LESSONS.length) ui.continueLabel.textContent = completed.length ? `Продолжить: ${LESSONS[completed.length].title}` : 'Начать с Академии';
+  if (completed.length < LESSONS.length) ui.continueLabel.textContent = completed.length ? `Продолжить: ${LESSONS[completed.length].title}` : 'Научиться играть с нуля';
   else if ((drill.attempts || 0) < 12) ui.continueLabel.textContent = 'Закрепить форму в Лаборатории';
   else ui.continueLabel.textContent = 'Сыграть тренировочную партию';
 }
@@ -293,20 +413,27 @@ function openLesson(index) {
 function renderLesson() {
   const lesson = LESSONS[state.lessonIndex];
   const step = lesson.steps[state.lessonStep];
-  state.lessonSolved = step.kind === 'intro';
+  state.lessonSolved = step.kind === 'intro' || step.kind === 'groups';
   ui.lessonProgress.style.width = `${((state.lessonStep + 1) / lesson.steps.length) * 100}%`;
   ui.lessonKicker.textContent = `УРОК ${state.lessonIndex + 1} · ШАГ ${state.lessonStep + 1}/${lesson.steps.length}`;
   ui.lessonTitle.textContent = lesson.title;
   ui.lessonCopy.textContent = step.copy;
   ui.lessonFeedback.className = 'lesson-feedback';
-  ui.lessonFeedback.textContent = step.kind === 'intro' ? 'Рассмотри пример и переходи дальше.' : 'Выбери ответ.';
+  ui.lessonFeedback.textContent = (step.kind === 'intro' || step.kind === 'groups') ? 'Разбери пример и переходи дальше.' : 'Сделай выбор — ошибаться здесь нормально.';
   ui.lessonNext.disabled = !state.lessonSolved;
   ui.lessonNext.textContent = state.lessonStep === lesson.steps.length - 1 ? 'Завершить урок' : 'Дальше';
 
   if (step.kind === 'intro') {
     ui.lessonStage.innerHTML = `<div class="hand-zone">${codes(step.display).map((id) => tileHtml(id)).join('')}</div>`;
+  } else if (step.kind === 'groups') {
+    ui.lessonStage.innerHTML = `<div class="lesson-groups">${step.groups.map((group) => `<div class="lesson-group"><div class="hand-zone">${codes(group.tiles).map((id) => tileHtml(id, { mini: true })).join('')}</div><span>${group.label}</span></div>`).join('')}</div>`;
   } else if (step.kind === 'choice') {
-    ui.lessonStage.innerHTML = `<div class="lesson-big">${step.prompt}</div><div class="choice-row">${step.options.map((value) => `<button class="choice-button" type="button" data-answer="${value}" data-native-press>${value.includes(' ') ? value : tileName(tileId(value))}</button>`).join('')}</div>`;
+    ui.lessonStage.innerHTML = `<div class="lesson-big">${step.prompt}</div><div class="choice-row">${step.options.map((option) => {
+      const item = typeof option === 'string' ? { value: option, label: option } : option;
+      return `<button class="choice-button" type="button" data-answer="${item.value}" data-native-press>${item.label}</button>`;
+    }).join('')}</div>`;
+  } else if (step.kind === 'tile-choice') {
+    ui.lessonStage.innerHTML = `<div class="lesson-big">${step.prompt}</div><div class="choice-row tile-choice-row">${step.options.map((option) => `<button class="choice-button tile-choice" type="button" data-answer="${option.value}" data-native-press><span class="choice-tiles">${codes(option.tiles).map((id) => tileHtml(id, { mini: true })).join('')}</span><span>${option.label}</span></button>`).join('')}</div>`;
   } else if (step.kind === 'discard') {
     const hand = codes(step.hand);
     ui.lessonStage.innerHTML = `<div class="lesson-big">Коснись кости, которую выбросишь.</div><div class="hand-zone">${sortTiles(hand).map((id) => tileHtml(id, { button: true })).join('')}</div>`;
@@ -338,13 +465,24 @@ function completeLesson() {
   completed.add(state.lessonIndex);
   storage.set('lessonsCompleted', [...completed].sort((a, b) => a - b));
   playSound('good');
+  const finalLesson = state.lessonIndex === LESSONS.length - 1;
   showResult({
-    kicker: 'УРОК ПРОЙДЕН',
-    title: LESSONS[state.lessonIndex].title,
-    copy: state.lessonIndex < LESSONS.length - 1 ? `Открыта следующая ступень: «${LESSONS[state.lessonIndex + 1].title}».` : 'База закрытой игры собрана. Теперь Лаборатория и Стол будут полезнее, а не просто красивее.',
+    kicker: finalLesson ? 'БАЗА ГОТОВА' : 'УРОК ПРОЙДЕН',
+    title: finalLesson ? 'Можно садиться за стол' : LESSONS[state.lessonIndex].title,
+    copy: finalLesson
+      ? 'Теперь ты понимаешь цель руки, ритм хода, рабочие группы, ожидание, рон/цумо, риичи и базовый принцип сброса. Этого уже достаточно, чтобы сыграть первую осмысленную партию и учиться дальше по ситуации.'
+      : `Открыта следующая ступень: «${LESSONS[state.lessonIndex + 1].title}».`,
     extra: '',
-    again: 'К Академии',
-    onAgain: () => setView('academy')
+    again: finalLesson ? 'Сыграть учебную партию' : 'К Академии',
+    onAgain: () => {
+      if (finalLesson) {
+        state.tableDifficulty = 'learner';
+        storage.set('difficulty', 'learner');
+        setView('table-setup');
+      } else {
+        setView('academy');
+      }
+    }
   });
 }
 
@@ -805,7 +943,7 @@ ui.lessonStage.addEventListener('click', (event) => {
   if (state.lessonSolved || step.kind === 'intro') return;
   const choice = event.target.closest('[data-answer]');
   const tile = event.target.closest('[data-tile]');
-  if (step.kind === 'choice' && choice) solveLesson(choice.dataset.answer === step.answer, step.explain, choice);
+  if ((step.kind === 'choice' || step.kind === 'tile-choice') && choice) solveLesson(choice.dataset.answer === step.answer, step.explain, choice);
   if (step.kind === 'discard' && tile) solveLesson(tileCode(Number(tile.dataset.tile)) === step.answer, step.explain, tile);
   if (step.kind === 'wait' && choice) {
     choice.classList.toggle('is-correct');
@@ -878,7 +1016,7 @@ document.addEventListener('visibilitychange', () => {
 
 createWorkshopMode({
   appName: 'KŌAN · Mahjong Dojo',
-  version: '0.1.0',
+  version: '0.2.0',
   cachePrefix: 'mahjong-dojo-',
   storageNamespace: 'pocket-works:mahjong-dojo',
   onReset() {
