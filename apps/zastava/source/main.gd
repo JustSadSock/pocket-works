@@ -359,7 +359,7 @@ func _build_ui() -> void:
 	weather_label.custom_minimum_size = Vector2(62, 0)
 	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(weather_label)
-	version_label = _label("v1.1.1", 10, Color(C_MUTED, 0.68))
+	version_label = _label("v1.1.2", 10, Color(C_MUTED, 0.68))
 	version_label.custom_minimum_size = Vector2(48, 0)
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(version_label)
