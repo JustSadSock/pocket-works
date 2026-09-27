@@ -24,6 +24,8 @@ export class World {
   private debris:Debris[]=[];
   private ground:Mesh;
   private ghost:Mesh;
+  private cellMarker:Mesh;
+  private buildGrid:Mesh[]=[];
   private mats:Record<string,StandardMaterial>={};
   private lastPieceSig='';
   onTile:(x:number,z:number)=>void=()=>{};
@@ -62,15 +64,24 @@ export class World {
     material('roof','#5f6960');material('water','#7f9690');
     material('ghost','#d6b97e').alpha=.48;material('invalid','#bd553f').alpha=.5;
     material('damage','#82534a');material('arrow','#292b2b');
+    material('grid','#e2d1aa').alpha=.42;this.mats.grid.emissiveColor=tone('#544c3f');
+    material('gridStrong','#f0d49d').alpha=.62;this.mats.gridStrong.emissiveColor=tone('#68583e');
+    material('cell','#e8c67f').alpha=.22;this.mats.cell.emissiveColor=tone('#795d31');
     this.ground=MeshBuilder.CreateGround('selection-ground',{width:SIZE*2.25,height:SIZE*2.25},this.scene);
     // Keep the interaction plane enabled for debugging, but do not depend on mesh picking:
     // Babylon skips meshes with isVisible=false during picking.
     this.ground.isVisible=true;this.ground.visibility=0;this.ground.isPickable=false;
     this.ghost=MeshBuilder.CreateBox('preview',{width:2.03,height:1.7,depth:2.03},this.scene);
     this.ghost.material=this.mats.ghost;this.ghost.isPickable=false;this.ghost.setEnabled(false);
+    this.cellMarker=MeshBuilder.CreateGround('build-cell-marker',{width:2.08,height:2.08},this.scene);
+    this.cellMarker.position.y=.045;this.cellMarker.material=this.mats.cell;this.cellMarker.isPickable=false;this.cellMarker.setEnabled(false);
     this.makeEnvironment();
+    this.makeBuildGrid();
     this.scene.onPointerObservable.add(info=>{
-      if(info.type===PointerEventTypes.POINTERDOWN) this.down={x:this.scene.pointerX,y:this.scene.pointerY,time:performance.now()};
+      if(info.type===PointerEventTypes.POINTERDOWN) {
+        this.down={x:this.scene.pointerX,y:this.scene.pointerY,time:performance.now()};
+        const cell=this.pick();if(cell)this.onHover(...cell);
+      }
       if(info.type===PointerEventTypes.POINTERMOVE && this.down===null) {
         const cell=this.pick();if(cell) this.onHover(...cell);
       }
@@ -91,6 +102,22 @@ export class World {
     m.position=worldPos(x,z,y);if(parent)m.parent=parent;m.material=this.mats[mat];m.isPickable=false;
     m.receiveShadows=true;(this.scene.metadata.shadows as ShadowGenerator).addShadowCaster(m);
     return m;
+  }
+  private makeBuildGrid(){
+    const span=SIZE*2.25;
+    for(let i=0;i<=SIZE;i++){
+      const offset=-span*.5+i*2.25;
+      const edge=i===0||i===SIZE;
+      const horizontal=MeshBuilder.CreateBox('grid-line-z',{width:span,height:.018,depth:edge?.075:.045},this.scene);
+      horizontal.position.set(0,.035,offset);horizontal.material=this.mats[edge?'gridStrong':'grid'];horizontal.isPickable=false;
+      const vertical=MeshBuilder.CreateBox('grid-line-x',{width:edge?.075:.045,height:.018,depth:span},this.scene);
+      vertical.position.set(offset,.036,0);vertical.material=this.mats[edge?'gridStrong':'grid'];vertical.isPickable=false;
+      this.buildGrid.push(horizontal,vertical);
+    }
+  }
+  setBuildMode(enabled:boolean){
+    for(const line of this.buildGrid)line.setEnabled(enabled);
+    if(!enabled){this.ghost.setEnabled(false);this.cellMarker.setEnabled(false);}
   }
   private makeEnvironment(){
     this.box('cliff',31,2,31,CENTER,-1.35,CENTER,'dirt');
@@ -131,6 +158,9 @@ export class World {
     return x>=0&&z>=0&&x<SIZE&&z<SIZE?[x,z]:null;
   }
   preview(x:number,z:number,kind:Kind|null,valid:boolean){
+    this.cellMarker.setEnabled(true);
+    this.cellMarker.position=worldPos(x,z,.045);
+    this.cellMarker.material=this.mats[valid?'cell':'invalid'];
     this.ghost.setEnabled(kind!==null);
     if(!kind)return;
     this.ghost.position=worldPos(x,z,kind==='tower'?1.5:.85);
