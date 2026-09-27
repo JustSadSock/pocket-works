@@ -174,6 +174,43 @@ const LESSONS = [
     ]
   },
   {
+    title: 'Когда можно взять чужой сброс', subtitle: 'Пон, чи и цена открытой руки',
+    steps: [
+      {
+        kind: 'groups',
+        copy: 'Иногда чужой сброс можно забрать и сразу выложить готовую группу на стол. Если у тебя уже есть две одинаковые кости, третью можно забрать через пон. Если сброс завершает последовательность, игрок слева может дать тебе чи.',
+        groups: [
+          { tiles: '5p 5p 5p', label: 'пон: три одинаковые' },
+          { tiles: '3s 4s 5s', label: 'чи: последовательность' }
+        ]
+      },
+      {
+        kind: 'choice',
+        copy: 'После такого вызова группа лежит открыто и все её видят. Это ускоряет руку, но закрывает некоторые варианты победы — например, обычное риичи уже нельзя объявить.',
+        prompt: 'Брат выбросил 5 кружков, а у тебя в руке уже две такие же. Что можно сделать?',
+        options: [
+          { value: 'pon', label: 'Объявить пон и открыть тройку' },
+          { value: 'ron-always', label: 'Обязательно объявить рон' },
+          { value: 'take-silently', label: 'Просто молча взять кость в руку' }
+        ],
+        answer: 'pon',
+        explain: 'Да. Пон собирает три одинаковые кости из твоих двух и чужого сброса. Но делать пон необязательно — иногда закрытая рука выгоднее.'
+      },
+      {
+        kind: 'choice',
+        copy: 'Чи работает строже: им собирают последовательность и обычно можно использовать только сброс игрока непосредственно слева. Пон на три одинаковые можно объявить на подходящий сброс любого соперника.',
+        prompt: 'Почему не стоит хватать каждый подходящий сброс?',
+        options: [
+          { value: 'tradeoff', label: 'Открытая рука быстрее, но теряет часть вариантов и риичи' },
+          { value: 'always-bad', label: 'Открывать руку вообще запрещено' },
+          { value: 'no-effect', label: 'Открытие руки ничего не меняет' }
+        ],
+        answer: 'tradeoff',
+        explain: 'Именно. Вызов — это обмен: получаешь готовую группу сейчас, но уменьшаешь свободу и набор доступных способов победы.'
+      }
+    ]
+  },
+  {
     title: 'Как объявляется победа', subtitle: 'Цумо, рон и зачем новичку риичи',
     steps: [
       {
@@ -439,7 +476,7 @@ function renderLesson() {
     ui.lessonStage.innerHTML = `<div class="lesson-big">Коснись кости, которую выбросишь.</div><div class="hand-zone">${sortTiles(hand).map((id) => tileHtml(id, { button: true })).join('')}</div>`;
   } else if (step.kind === 'wait') {
     const hand = codes(step.hand);
-    ui.lessonStage.innerHTML = `<div class="hand-zone">${sortTiles(hand).map((id) => tileHtml(id)).join('')}</div><div class="lesson-big">Выбери все ожидания.</div><div class="choice-row">${step.options.map((value) => `<button class="choice-button" type="button" data-answer="${value}" data-native-press>${tileName(tileId(value))}</button>`).join('')}</div>`;
+    ui.lessonStage.innerHTML = `<div class="hand-zone">${sortTiles(hand).map((id) => tileHtml(id)).join('')}</div><div class="lesson-big">Выбери все подходящие кости.</div><div class="choice-row tile-choice-row">${step.options.map((value) => `<button class="choice-button tile-choice wait-choice" type="button" data-answer="${value}" data-native-press><span class="choice-tiles">${tileHtml(tileId(value), { mini: true })}</span></button>`).join('')}</div>`;
     state.lessonSelections = new Set();
   }
 }
