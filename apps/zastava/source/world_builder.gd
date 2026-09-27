@@ -195,12 +195,12 @@ void fragment() {
 	# Trees are curated outside the rectangular river footprint. Procedural z
 	# stepping used to place trunks directly in the water.
 	for spec in [
-		[Vector3(-5.15,0,-8.4),0.86], [Vector3(5.20,0,-7.2),0.80],
-		[Vector3(-4.75,0,-5.7),0.92], [Vector3(5.10,0,-4.35),0.78],
-		[Vector3(-5.35,0,-2.65),0.82], [Vector3(4.95,0,-2.55),0.76],
-		[Vector3(-5.00,0,5.25),0.74], [Vector3(4.70,0,5.75),0.78],
-		[Vector3(-5.45,0,7.05),0.70], [Vector3(5.05,0,7.70),0.76],
-		[Vector3(-4.80,0,9.00),0.80], [Vector3(5.30,0,9.35),0.72]
+		[Vector3(-5.15,0,-8.4),0.82], [Vector3(5.20,0,-7.2),0.78],
+		[Vector3(-4.75,0,-5.7),0.86], [Vector3(5.10,0,-4.35),0.74],
+		[Vector3(-5.35,0,-3.55),0.76], [Vector3(4.95,0,-3.65),0.72],
+		[Vector3(-5.00,0,6.25),0.70], [Vector3(4.70,0,6.55),0.74],
+		[Vector3(-5.45,0,7.55),0.68], [Vector3(5.05,0,8.00),0.72],
+		[Vector3(-4.80,0,9.15),0.76], [Vector3(5.30,0,9.45),0.70]
 	]:
 		add_child(_tree(spec[0], spec[1]))
 
@@ -321,7 +321,22 @@ func _build_gatehouse() -> void:
 	village_root.add_child(wall_l)
 	village_root.add_child(wall_r)
 
+func _build_gatehouse_runtime_detail() -> void:
+	for x in [-1.65, 1.65]:
+		add_child(_box("TowerFoundation", Vector3(1.82,0.24,1.54), C_STONE_DARK.darkened(0.04), Vector3(x,0.12,-1.95)))
+		for beam_x in [-0.58,0.58]:
+			add_child(_box("TowerBrace", Vector3(0.075,1.72,0.08), C_WOOD.darkened(0.15), Vector3(x+beam_x,1.55,-1.18)))
+		add_child(_box("TowerLintel", Vector3(1.28,0.08,0.08), C_WOOD.darkened(0.15), Vector3(x,2.28,-1.18)))
+	for x in [-3.45,3.45]:
+		add_child(_box("WallFoundation", Vector3(2.10,0.22,0.92), C_STONE_DARK.darkened(0.04), Vector3(x,0.11,-2.0)))
+	for x in [-2.62,2.62]:
+		var pole := _box("BannerPole",Vector3(0.045,1.18,0.045),C_WOOD.darkened(0.20),Vector3(x,1.76,-1.48))
+		add_child(pole)
+		var cloth := _box("GateBanner",Vector3(0.34,0.52,0.035),Color("#705045"),Vector3(x + (0.18 if x < 0 else -0.18),1.91,-1.46))
+		add_child(cloth)
+
 func _build_moving_bridge() -> void:
+	_build_gatehouse_runtime_detail()
 	# Fixed aprons close the visual/physical gaps between road, gate and the
 	# moving deck. The bridge hinge now sits exactly at the outer gate threshold.
 	add_child(_box("GateApron", Vector3(2.02, 0.26, 0.82), C_STONE_DARK.lightened(0.10), Vector3(0, 0.17, -1.52)))
@@ -390,7 +405,7 @@ func _build_living_details() -> void:
 	ambient_root.add_child(_signpost(Vector3(2.0,0,5.15)))
 	ambient_root.add_child(_fence(Vector3(-4.8,0,-5.7), 3.0, 8.0))
 	ambient_root.add_child(_fence(Vector3(4.75,0,-7.0), 2.8, -5.0))
-	ambient_root.add_child(_dock(Vector3(-5.20,0.04,RIVER_Z_MIN - 0.10)))
+	ambient_root.add_child(_mooring_post(Vector3(-5.05,0,RIVER_Z_MIN - 0.42)))
 	ambient_root.add_child(_woodpile(Vector3(-2.75,0,-4.38)))
 	ambient_root.add_child(_handcart(Vector3(3.05,0,-4.55), -18.0))
 	ambient_root.add_child(_well(Vector3(-3.55,0,-5.55)))
@@ -790,17 +805,18 @@ func _tree(pos: Vector3, scale_factor: float) -> Node3D:
 	var root := Node3D.new()
 	root.position = pos
 	root.scale = Vector3.ONE * scale_factor
-	var trunk := _box("Trunk", Vector3(0.30, 1.2, 0.30), C_WOOD, Vector3(0, 0.60, 0))
+	var trunk := _box("Trunk", Vector3(0.26, 1.1, 0.26), C_WOOD, Vector3(0, 0.55, 0))
 	root.add_child(trunk)
 	var crown := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.88
-	mesh.height = 1.6
+	mesh.radius = 0.74
+	mesh.height = 1.34
 	mesh.radial_segments = 7
 	mesh.rings = 4
 	crown.mesh = mesh
-	crown.position = Vector3(0, 1.72, 0)
-	crown.material_override = _mat(C_GRASS_DARK.darkened(0.06))
+	crown.position = Vector3(0, 1.53, 0)
+	crown.scale = Vector3(1.0, 1.06, 0.92)
+	crown.material_override = _mat(C_GRASS_DARK.darkened(0.08))
 	root.add_child(crown)
 	return root
 
@@ -900,6 +916,16 @@ func _grass_tuft(pos: Vector3) -> Node3D:
 		var blade := _box("Grass", Vector3(0.035,0.26+float(i%2)*0.06,0.035), C_GRASS_DARK.lightened(0.06), Vector3(-0.10+float(i)*0.065,0.13,0))
 		blade.rotation_degrees.z = -12.0 + float(i)*8.0
 		root.add_child(blade)
+	return root
+
+func _mooring_post(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.add_child(_box("Mooring",Vector3(0.14,0.82,0.14),C_WOOD.darkened(0.14),Vector3(0,0.41,0)))
+	root.add_child(_box("Cap",Vector3(0.24,0.08,0.24),C_WOOD_LIGHT.darkened(0.10),Vector3(0,0.84,0)))
+	var rope := _box("Rope",Vector3(0.035,0.035,0.72),Color("#9a8467"),Vector3(0.18,0.50,0.28))
+	rope.rotation_degrees.y = -22.0
+	root.add_child(rope)
 	return root
 
 func _woodpile(pos: Vector3) -> Node3D:
