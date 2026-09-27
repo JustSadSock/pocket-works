@@ -1,6 +1,7 @@
 extends Node3D
 
 signal boot_completed
+signal visitor_flow_finished
 
 const VISITOR_SCRIPT := preload("res://source/visitor_actor.gd")
 
@@ -36,6 +37,9 @@ var pending_state: Dictionary = {}
 var pending_weather := "clear"
 var current_time_progress := 0.28
 var time_tween: Tween
+var weather_tween: Tween
+var gate_motion_tween: Tween
+var gate_is_open := false
 
 const C_GRASS := Color("#66735f")
 const C_GRASS_DARK := Color("#505d4d")
@@ -174,36 +178,41 @@ void fragment() {
 	water_mesh.material_override = sm
 	add_child(water_mesh)
 
-	var road_a := _box("RoadNear", Vector3(2.0, 0.05, 7.4), C_ROAD, Vector3(0, 0.01, -5.3))
-	road_a.rotation_degrees.y = -2
+	var road_a := _box("RoadNear", Vector3(2.0, 0.05, 7.0), C_ROAD, Vector3(0, 0.01, -5.25))
+	road_a.rotation_degrees.y = -1.0
 	add_child(road_a)
-	var road_b := _box("RoadFar", Vector3(1.75, 0.05, 7.0), C_ROAD.darkened(0.05), Vector3(0, 0.01, 6.1))
+	var road_b := _box("RoadFar", Vector3(1.75, 0.05, 5.4), C_ROAD.darkened(0.05), Vector3(0, 0.01, 6.75))
 	add_child(road_b)
 
-	for i in range(9):
-		var side := -1.0 if i % 2 == 0 else 1.0
-		var z := -8.8 + float(i) * 2.0
-		var tree := _tree(Vector3(side * (4.7 + float(i % 3) * 0.45), 0, z), 0.8 + float(i % 4) * 0.08)
-		add_child(tree)
-	for i in range(6):
-		var side := -1.0 if i % 2 == 0 else 1.0
-		var tree := _tree(Vector3(side * (4.5 + float(i % 2) * 0.55), 0, 5.4 + float(i) * 0.8), 0.72)
-		add_child(tree)
+	# Trees are curated outside the rectangular river footprint. Procedural z
+	# stepping used to place trunks directly in the water.
+	for spec in [
+		[Vector3(-5.15,0,-8.4),0.86], [Vector3(5.20,0,-7.2),0.80],
+		[Vector3(-4.75,0,-5.7),0.92], [Vector3(5.10,0,-4.35),0.78],
+		[Vector3(-5.35,0,-2.65),0.82], [Vector3(4.95,0,-2.55),0.76],
+		[Vector3(-5.00,0,5.25),0.74], [Vector3(4.70,0,5.75),0.78],
+		[Vector3(-5.45,0,7.05),0.70], [Vector3(5.05,0,7.70),0.76],
+		[Vector3(-4.80,0,9.00),0.80], [Vector3(5.30,0,9.35),0.72]
+	]:
+		add_child(_tree(spec[0], spec[1]))
 
 	# Readable ground detail: ruts, stones and riverbank growth stop the world from
 	# looking like three flat colour planes.
-	for i in range(8):
-		var rut := _box("RoadRut", Vector3(0.09, 0.018, 0.62), C_ROAD.darkened(0.18), Vector3(-0.48 if i % 2 == 0 else 0.48, 0.045, -8.6 + float(i) * 1.08))
-		rut.rotation_degrees.y = -2.0
+	for i in range(7):
+		var rut := _box("RoadRut", Vector3(0.09, 0.018, 0.62), C_ROAD.darkened(0.18), Vector3(-0.48 if i % 2 == 0 else 0.48, 0.045, -8.55 + float(i) * 1.02))
+		rut.rotation_degrees.y = -1.0
 		add_child(rut)
+	# Shore detail hugs the actual z edges of the river instead of floating in
+	# the middle of the water plane.
 	for pos in [
-		Vector3(-3.9,0.04,2.9), Vector3(4.1,0.04,2.4), Vector3(-5.0,0.04,0.1),
-		Vector3(4.8,0.04,-0.4), Vector3(-2.9,0.04,4.0), Vector3(3.1,0.04,4.5)
+		Vector3(-4.8,0.04,-1.62), Vector3(4.6,0.04,-1.55),
+		Vector3(-4.6,0.04,3.72), Vector3(4.9,0.04,3.66),
+		Vector3(-3.1,0.04,4.15), Vector3(3.25,0.04,-1.48)
 	]:
-		add_child(_rock(pos, 0.20 + absf(pos.x) * 0.018))
+		add_child(_rock(pos, 0.20 + absf(pos.x) * 0.016))
 	for pos in [
-		Vector3(-4.5,0.02,2.2), Vector3(-3.7,0.02,3.6), Vector3(4.4,0.02,1.7),
-		Vector3(3.8,0.02,3.5), Vector3(-5.0,0.02,0.9)
+		Vector3(-4.7,0.02,-1.70), Vector3(-3.9,0.02,3.72),
+		Vector3(4.5,0.02,-1.68), Vector3(3.9,0.02,3.70)
 	]:
 		add_child(_reed_cluster(pos))
 
@@ -288,21 +297,30 @@ func _build_gatehouse() -> void:
 	village_root.add_child(wall_r)
 
 func _build_moving_bridge() -> void:
+	# Fixed aprons close the visual/physical gaps between road, gate and the
+	# moving deck. The bridge hinge now sits exactly at the outer gate threshold.
+	add_child(_box("GateApron", Vector3(1.92, 0.24, 0.74), C_STONE_DARK.lightened(0.10), Vector3(0, 0.16, -1.50)))
+	add_child(_box("FarLanding", Vector3(1.96, 0.24, 0.82), C_ROAD.darkened(0.03), Vector3(0, 0.16, 4.10)))
+
 	bridge_pivot = Node3D.new()
 	bridge_pivot.name = "BridgePivot"
-	bridge_pivot.position = Vector3(0, 0.18, -1.0)
+	bridge_pivot.position = Vector3(0, 0.18, -1.14)
 	add_child(bridge_pivot)
-	var deck := _box("Deck", Vector3(1.8, 0.24, 4.3), C_WOOD_LIGHT, Vector3(0, 0, 2.15))
+	var bridge_length := 4.92
+	var bridge_center := bridge_length * 0.5
+	var deck := _box("Deck", Vector3(1.8, 0.24, bridge_length), C_WOOD_LIGHT, Vector3(0, 0, bridge_center))
 	bridge_pivot.add_child(deck)
 	for x in [-0.82, 0.82]:
-		var rail := _box("Rail", Vector3(0.10, 0.48, 4.3), C_WOOD, Vector3(x, 0.34, 2.15))
+		var rail := _box("Rail", Vector3(0.10, 0.48, bridge_length), C_WOOD, Vector3(x, 0.34, bridge_center))
 		bridge_pivot.add_child(rail)
-	for i in range(12):
-		var z := 0.32 + float(i) * 0.34
+	for i in range(14):
+		var z := 0.28 + float(i) * 0.34
 		bridge_pivot.add_child(_box("Plank", Vector3(1.68, 0.035, 0.055), C_WOOD.darkened(0.16), Vector3(0, 0.135, z)))
 		for x in [-0.69, 0.69]:
 			var stud := _box("Stud", Vector3(0.055, 0.035, 0.055), C_METAL, Vector3(x, 0.162, z))
 			bridge_pivot.add_child(stud)
+	# Closed is the canonical idle state: raised deck, lowered portcullis.
+	bridge_pivot.rotation = Vector3(-0.82, 0, 0)
 
 	gate_bar = Node3D.new()
 	gate_bar.name = "Gate"
@@ -443,8 +461,10 @@ func _smoke_particles() -> GPUParticles3D:
 
 func _build_weather() -> void:
 	rain = _precipitation(false)
+	rain.amount_ratio = 0.0
 	add_child(rain)
 	snow = _precipitation(true)
+	snow.amount_ratio = 0.0
 	add_child(snow)
 
 func _precipitation(is_snow: bool) -> GPUParticles3D:
@@ -477,8 +497,12 @@ func set_weather(kind: String) -> void:
 	pending_weather = kind
 	if not boot_ready or rain == null or snow == null:
 		return
+	if weather_tween and weather_tween.is_running():
+		weather_tween.kill()
 	rain.emitting = kind == "rain"
 	snow.emitting = kind == "snow"
+	rain.amount_ratio = 1.0 if kind == "rain" else 0.0
+	snow.amount_ratio = 1.0 if kind == "snow" else 0.0
 	if kind == "rain":
 		environment.environment.background_color = Color("#697574")
 		environment.environment.ambient_light_energy = 0.40
@@ -488,6 +512,42 @@ func set_weather(kind: String) -> void:
 	else:
 		environment.environment.background_color = Color("#737e78")
 		environment.environment.ambient_light_energy = 0.46
+
+func transition_weather(kind: String, duration: float = 2.4) -> void:
+	pending_weather = kind
+	if not boot_ready or rain == null or snow == null:
+		current_weather = kind
+		return
+	if kind == current_weather:
+		return
+	if weather_tween and weather_tween.is_running():
+		weather_tween.kill()
+
+	var target_bg := Color("#737e78")
+	var target_ambient := 0.46
+	if kind == "rain":
+		target_bg = Color("#697574")
+		target_ambient = 0.40
+	elif kind == "snow":
+		target_bg = Color("#8f9996")
+		target_ambient = 0.58
+
+	if kind == "rain" or current_weather == "rain":
+		rain.emitting = true
+	if kind == "snow" or current_weather == "snow":
+		snow.emitting = true
+
+	current_weather = kind
+	weather_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	weather_tween.tween_property(environment.environment, "background_color", target_bg, duration)
+	weather_tween.tween_property(environment.environment, "ambient_light_energy", target_ambient, duration)
+	weather_tween.tween_property(rain, "amount_ratio", 1.0 if kind == "rain" else 0.0, duration)
+	weather_tween.tween_property(snow, "amount_ratio", 1.0 if kind == "snow" else 0.0, duration)
+	weather_tween.finished.connect(_finish_weather_transition.bind(kind), CONNECT_ONE_SHOT)
+
+func _finish_weather_transition(kind: String) -> void:
+	rain.emitting = kind == "rain"
+	snow.emitting = kind == "snow"
 
 func transition_time(target: float, duration: float = 0.45) -> void:
 	if time_tween and time_tween.is_running():
@@ -557,16 +617,20 @@ func _set_visible_animated(node: Node3D, desired: bool) -> void:
 	else:
 		node.visible = false
 
-func operate_gate(opened: bool) -> void:
+func operate_gate(opened: bool):
 	if not boot_ready or bridge_pivot == null or gate_bar == null:
-		return
-	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		return null
+	if gate_motion_tween and gate_motion_tween.is_running():
+		gate_motion_tween.kill()
+	gate_motion_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	if opened:
-		tw.tween_property(gate_bar, "position", Vector3(0, 2.30, -1.23), 0.62)
-		tw.tween_property(bridge_pivot, "rotation", Vector3.ZERO, 0.72).set_delay(0.08)
+		gate_motion_tween.tween_property(gate_bar, "position", Vector3(0, 2.30, -1.23), 0.58)
+		gate_motion_tween.tween_property(bridge_pivot, "rotation", Vector3.ZERO, 0.78).set_delay(0.06)
 	else:
-		tw.tween_property(bridge_pivot, "rotation", Vector3(-0.78, 0, 0), 0.58)
-		tw.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.42).set_delay(0.18)
+		gate_motion_tween.tween_property(bridge_pivot, "rotation", Vector3(-0.82, 0, 0), 0.66)
+		gate_motion_tween.tween_property(gate_bar, "position", Vector3(0, 0, -1.23), 0.40).set_delay(0.18)
+	gate_is_open = opened
+	return gate_motion_tween
 
 func spawn_visitor(profile: Dictionary, variant: int) -> void:
 	if not boot_ready:
@@ -575,14 +639,53 @@ func spawn_visitor(profile: Dictionary, variant: int) -> void:
 		visitor.queue_free()
 	visitor = VISITOR_SCRIPT.new()
 	add_child(visitor)
-	visitor.position = Vector3(0.0, 0.0, 8.2)
+	visitor.position = Vector3(0.0, 0.03, 8.25)
 	visitor.configure(profile, variant)
-	visitor.walk_to(1.72)
+	# Waiting point is on the far bank, never on the water/bridge footprint.
+	visitor.walk_to(4.58)
+
+func resolve_visitor(accepted: bool) -> void:
+	if not is_instance_valid(visitor):
+		var fallback_tw = operate_gate(false)
+		if fallback_tw:
+			await fallback_tw.finished
+		visitor_flow_finished.emit()
+		return
+
+	var active_visitor = visitor
+	active_visitor.react(accepted)
+	if accepted:
+		var open_tw = operate_gate(true)
+		if open_tw:
+			await open_tw.finished
+		if not is_instance_valid(active_visitor):
+			visitor_flow_finished.emit()
+			return
+		var route: Array[Vector3] = [
+			Vector3(0.0, 0.03, 4.48),
+			Vector3(0.0, 0.30, 3.88),
+			Vector3(0.0, 0.30, -1.10),
+			Vector3(0.0, 0.14, -1.62),
+			Vector3(0.0, 0.03, -3.60)
+		]
+		active_visitor.walk_path(route, true)
+		await active_visitor.gone
+		var close_tw = operate_gate(false)
+		if close_tw:
+			await close_tw.finished
+	else:
+		operate_gate(false)
+		var reject_route: Array[Vector3] = [Vector3(0.0, 0.03, 8.75)]
+		active_visitor.walk_path(reject_route, true)
+		await active_visitor.gone
+
+	visitor = null
+	visitor_flow_finished.emit()
 
 func visitor_react(accepted: bool) -> void:
+	# Compatibility wrapper for older calls; new gameplay uses resolve_visitor().
 	if is_instance_valid(visitor):
 		visitor.react(accepted)
-		visitor.depart(accepted)
 
 func _house(pos: Vector3, scale_factor: float, yaw: float) -> Node3D:
 	var root := Node3D.new()

@@ -359,7 +359,7 @@ func _build_ui() -> void:
 	weather_label.custom_minimum_size = Vector2(62, 0)
 	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(weather_label)
-	version_label = _label("v1.1.1", 10, Color(C_MUTED, 0.68))
+	version_label = _label("v1.1.2", 10, Color(C_MUTED, 0.68))
 	version_label.custom_minimum_size = Vector2(48, 0)
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(version_label)
@@ -531,6 +531,8 @@ func _load_or_prepare() -> void:
 		rng.state = int(state.get("rng_state", 1))
 		if not state.has("condition"):
 			state["condition"] = "ordinary"
+		if not state.has("weather_days_left"):
+			state["weather_days_left"] = 2
 		continue_ready_text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
 	else:
 		_reset_state()
@@ -573,6 +575,7 @@ func _reset_state() -> void:
 		"visitors_today":0,
 		"scheduled":[],
 		"weather":"clear",
+		"weather_days_left":3,
 		"condition":condition,
 		"rng_state":rng.state
 	}
@@ -626,22 +629,36 @@ func _begin_day_if_needed() -> void:
 		_refresh_hud()
 		return
 	var day := int(state["day"])
-	state["weather"] = _pick_weather(day)
-	world.set_weather(String(state["weather"]))
-	PocketWorks.set_ambience(sound_enabled, String(state["weather"]), int(state.get("population", 18)))
-	world.transition_time(0.20, 0.38)
+	var weather := _advance_weather(day)
+	world.transition_weather(weather, 2.6)
+	PocketWorks.set_ambience(sound_enabled, weather, int(state.get("population", 18)))
+	# A gameplay day now moves through a narrow daylight band. Three decisions no
+	# longer compress sunrise-to-night into a few seconds.
+	world.transition_time(0.34, 1.25)
 	_process_scheduled()
 	_daily_background(day)
 	_refresh_hud()
 	_save()
 
-func _pick_weather(day: int) -> String:
+func _advance_weather(day: int) -> String:
+	var current := String(state.get("weather", "clear"))
+	var days_left := int(state.get("weather_days_left", 0))
+	if days_left > 0:
+		state["weather_days_left"] = days_left - 1
+		return current
+
 	var roll := rng.randf()
-	if day > 42 and roll < 0.24:
-		return "snow"
-	if roll < 0.27:
-		return "rain"
-	return "clear"
+	var next_weather := "clear"
+	if day > 42 and roll < 0.18:
+		next_weather = "snow"
+	elif roll < 0.40:
+		next_weather = "rain"
+	else:
+		next_weather = "clear"
+
+	state["weather"] = next_weather
+	state["weather_days_left"] = rng.randi_range(2, 4)
+	return next_weather
 
 func _show_next() -> void:
 	if campaign_over or paused_game:
@@ -670,7 +687,7 @@ func _show_next() -> void:
 	var variant := rng.randi_range(0, 11)
 	world.spawn_visitor(current_visitor, variant)
 	var index := int(state["visitors_today"])
-	world.transition_time(0.25 + float(index) * 0.18, 0.44)
+	world.transition_time(0.38 + float(index) * 0.055, 0.80)
 	_publish_state("awaiting_decision")
 
 func _pick_visitor() -> Dictionary:
@@ -710,10 +727,12 @@ func _on_decision(value: int) -> void:
 	if sound_enabled:
 		PocketWorks.play_sfx("lever", 1.08 if accepted else 0.86)
 		PocketWorks.haptic(20)
-	world.operate_gate(accepted)
 	if sound_enabled:
 		PocketWorks.play_sfx("gate", 1.04 if accepted else 0.90)
-	world.visitor_react(accepted)
+	if world.visitor_flow_finished.is_connected(_on_visitor_flow_finished):
+		world.visitor_flow_finished.disconnect(_on_visitor_flow_finished)
+	world.visitor_flow_finished.connect(_on_visitor_flow_finished, CONNECT_ONE_SHOT)
+	world.resolve_visitor(accepted)
 
 	var key := "accept" if accepted else "reject"
 	_apply_effects(current_visitor.get(key, {}))
@@ -740,7 +759,11 @@ func _on_decision(value: int) -> void:
 	current_visitor = {}
 	_save()
 	_publish_state("resolved")
-	var timer := get_tree().create_timer(1.45)
+
+func _on_visitor_flow_finished() -> void:
+	if campaign_over or paused_game:
+		return
+	var timer := get_tree().create_timer(0.22)
 	timer.timeout.connect(_show_next)
 
 func _apply_effects(effects: Dictionary) -> void:
@@ -800,7 +823,7 @@ func _end_day() -> void:
 	decision_locked = true
 	lever.set_enabled(false)
 	world.operate_gate(false)
-	world.transition_time(0.74, 0.62)
+	world.transition_time(0.55, 1.15)
 	var population := int(state["population"])
 	var upkeep := maxi(2, int(ceil(float(population) / 11.0)))
 	state["food"] = int(state["food"]) - upkeep
