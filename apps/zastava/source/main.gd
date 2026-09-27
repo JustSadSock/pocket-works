@@ -649,6 +649,7 @@ func _on_decision(value: int) -> void:
 	state["rng_state"] = rng.state
 	world.set_state(state)
 	_refresh_hud()
+	current_visitor = {}
 	_save()
 	_publish_state("resolved")
 	var timer := get_tree().create_timer(1.45)
