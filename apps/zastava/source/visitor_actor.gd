@@ -4,6 +4,8 @@ signal reached_gate
 signal gone
 
 var target_z := 7.0
+var target_point := Vector3.ZERO
+var path_points: Array[Vector3] = []
 var walking := false
 var leaving := false
 var speed := 2.35
@@ -40,42 +42,67 @@ func configure(profile: Dictionary, variant: int) -> void:
 
 func walk_to(z_value: float) -> void:
 	target_z = z_value
-	walking = true
+	walk_path([Vector3(position.x, base_y, z_value)])
+
+func walk_path(points: Array[Vector3]) -> void:
+	path_points.clear()
+	for point in points:
+		path_points.append(point)
+	leaving = false
+	_advance_path_segment()
 
 func depart(accepted: bool) -> void:
 	leaving = true
-	target_z = -7.4 if accepted else 8.6
 	walking = false
+	path_points.clear()
+	var target := Vector3(0.0, base_y, -4.0 if accepted else 8.6)
 	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	if accepted:
-		tw.tween_property(self, "rotation_degrees:y", 0.0, 0.18)
-	else:
-		tw.tween_property(self, "rotation_degrees:y", 180.0, 0.28)
-	tw.tween_interval(0.08)
-	tw.tween_callback(func(): walking = true)
+	tw.tween_property(self, "rotation_degrees:y", 0.0 if accepted else 180.0, 0.20 if accepted else 0.28)
+	tw.tween_interval(0.06)
+	tw.tween_callback(func():
+		path_points.append(target)
+		_advance_path_segment()
+	)
+
+func _advance_path_segment() -> void:
+	if path_points.is_empty():
+		walking = false
+		_reset_pose()
+		if leaving:
+			gone.emit()
+			queue_free()
+		return
+	target_point = path_points.pop_front()
+	target_z = target_point.z
+	walking = true
+	var dz := target_point.z - position.z
+	if absf(dz) > 0.03:
+		rotation_degrees.y = 0.0 if dz < 0.0 else 180.0
 
 func _process(delta: float) -> void:
 	phase += delta * (6.6 if walking else 1.8)
 	if walking:
-		var p := position
-		p.z = move_toward(p.z, target_z, speed * delta)
-		p.y = base_y + absf(sin(phase)) * 0.035
-		position = p
+		position = position.move_toward(target_point, speed * delta)
 		var swing := sin(phase) * 0.48
 		var counter := sin(phase * 2.0) * 0.035
+		skeleton.set_bone_pose_position(pelvis_bone, Vector3(0, absf(sin(phase)) * 0.035, 0))
 		skeleton.set_bone_pose_rotation(arm_l, Quaternion(Vector3.RIGHT, swing))
 		skeleton.set_bone_pose_rotation(arm_r, Quaternion(Vector3.RIGHT, -swing))
 		skeleton.set_bone_pose_rotation(leg_l, Quaternion(Vector3.RIGHT, -swing * 0.72))
 		skeleton.set_bone_pose_rotation(leg_r, Quaternion(Vector3.RIGHT, swing * 0.72))
 		skeleton.set_bone_pose_rotation(spine_bone, Quaternion(Vector3.FORWARD, counter))
-		if absf(position.z - target_z) < 0.04:
-			walking = false
-			_reset_pose()
-			if leaving:
-				gone.emit()
-				queue_free()
+		if position.distance_to(target_point) < 0.035:
+			position = target_point
+			if path_points.is_empty():
+				walking = false
+				_reset_pose()
+				if leaving:
+					gone.emit()
+					queue_free()
+				else:
+					reached_gate.emit()
 			else:
-				reached_gate.emit()
+				_advance_path_segment()
 	else:
 		# Weight shift, breathing and small head movement. Enough to stop the visitor
 		# from reading as a frozen chess piece without wasting a full animation rig.
@@ -109,6 +136,7 @@ func _set_head_yaw(value: float) -> void:
 	skeleton.set_bone_pose_rotation(head_bone, Quaternion(Vector3.UP, value))
 
 func _reset_pose() -> void:
+	skeleton.set_bone_pose_position(pelvis_bone, Vector3.ZERO)
 	skeleton.set_bone_pose_position(spine_bone, Vector3.ZERO)
 	for idx in [pelvis_bone, spine_bone, arm_l, arm_r, leg_l, leg_r, head_bone]:
 		skeleton.set_bone_pose_rotation(idx, Quaternion.IDENTITY)
