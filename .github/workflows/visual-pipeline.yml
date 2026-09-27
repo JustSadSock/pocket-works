@@ -1,0 +1,57 @@
+name: Visual Pipeline
+
+on:
+  pull_request:
+    paths:
+      - 'shared/visual-kit/**'
+      - 'shared/game-production/**'
+      - 'assets/catalog.json'
+      - 'scripts/pw-asset*'
+      - 'scripts/asset-compiler*'
+      - 'scripts/pw-visual-test.mjs'
+      - 'scripts/visual-qa-core*'
+      - 'scripts/validate-visual-manifests*'
+      - 'scripts/build-enhanced.mjs'
+      - 'tools/asset-forge/recipes.py'
+      - '.github/workflows/visual-pipeline.yml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Match browser package to container
+        run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
+      - name: Validate production helpers
+        run: |
+          npm run validate:visual
+          npm run validate:assets
+          npm run validate:game-production
+          npm run validate:visual-qa
+          npm run validate:asset-compiler
+      - name: Build production-like site
+        run: npm run build:quality-site
+      - name: Capture mobile visual QA smoke
+        run: npm run pw:visual-test -- screen-lab
+      - name: Upload visual contact sheet and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-pipeline-smoke
+          path: quality-artifacts/visual/screen-lab/
+          if-no-files-found: warn
+          retention-days: 14

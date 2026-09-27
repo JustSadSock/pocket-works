@@ -21,3 +21,5 @@ An app can define `apps/<slug>/visual-scenes.json` to capture more than launch:
 Each scene begins at the app's entry URL. Selectors should be stable and representative of the real user flow. `path` can target another route inside the same app. An app may publish `window.__PW_VISUAL_METRICS__` with draw calls and texture memory; the runner records it verbatim without inventing metrics. Inspect renderer diagnostics separately where unavailable. The runner blocks Service Workers for deterministic screenshots; offline lifecycle QA remains in the existing Playwright suite.
 
 Use `--url http://127.0.0.1:4173` if a preview is already running. The command requires local Playwright browser binaries (`npx playwright install chromium webkit`); CI should provision both before invoking it.
+
+The `Visual Pipeline` PR gate runs these checks and captures a fixed mobile smoke sheet from Screen Lab. It validates the runner in CI; each consuming game must still supply its own meaningful scenes and inspect its own outputs.
