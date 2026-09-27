@@ -67,3 +67,5 @@ The former horizontal slider is now a mechanical gate lever with an arced travel
 Visitor animation now includes idle weight shifts, role silhouettes, turn-around motion and decision reactions. WebAudio ambience reacts to weather and population. Campaigns also roll one of three regional conditions so repeated runs apply different systemic pressure.
 
 Web boot is staged: the menu renders first, the core diorama is built across subsequent frames, and ambient inhabitants/audio are activated only after the player enters a shift.
+
+The mechanical lever also has a scene-level fallback hitbox for mobile canvas pointer routing; its semantic decision remains single-fire even if both GUI and raw pointer paths observe the same drag.
