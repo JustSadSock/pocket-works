@@ -25,5 +25,17 @@ describe('Last Raven campaign',()=>{
     while(s.day<=12){if(s.phase==='visitor'||s.phase==='letter')choose(s,s.current!.choices.find(c=>canChoose(s,c.id))!.id);else if(s.phase==='night')advanceNight(s);else break}
     expect(s.phase).toBe('siege');for(let i=0;i<1000&&s.phase==='siege';i++)stepSiege(s,1/30);expect(['won','lost']).toContain(s.phase);
   });
+  it('lets a consistently hostile campaign lose the final siege',()=>{
+    const s=createGame(1);startGame(s);
+    while(s.phase!=='siege'){
+      if(s.phase==='visitor'||s.phase==='letter'){
+        const choices=s.current!.choices.filter(c=>canChoose(s,c.id));
+        const choice=choices.find(c=>c.id==='refuse'||c.id==='burn')??choices.at(-1)!;
+        choose(s,choice.id);
+      }else if(s.phase==='night')advanceNight(s);
+    }
+    for(let i=0;i<1000&&s.phase==='siege';i++)stepSiege(s,1/30);
+    expect(s.phase).toBe('lost');
+  });
   it('round-trips persistence',()=>{const s=createGame(91);startGame(s);const r=restoreGame(serializeGame(s));expect(r?.day).toBe(1);expect(r?.current?.id).toBe(s.current?.id)});
 });
