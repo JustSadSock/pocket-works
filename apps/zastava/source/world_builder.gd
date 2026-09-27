@@ -163,18 +163,18 @@ func _build_landscape() -> void:
 	plane.subdivide_width = 36
 	plane.subdivide_depth = 16
 	water_mesh.mesh = plane
-	water_mesh.position = Vector3(0, -0.03, 1.0)
+	water_mesh.position = Vector3(0, 0.015, RIVER_CENTER_Z)
 	var shader := Shader.new()
 	shader.code = """
 shader_type spatial;
 render_mode cull_disabled;
 void vertex() {
-	float a = sin(VERTEX.x * 1.7 + TIME * 1.15) * 0.045;
-	float b = sin(VERTEX.z * 2.4 - TIME * 0.82) * 0.028;
+	float a = sin(VERTEX.x * 1.7 + TIME * 0.82) * 0.018;
+	float b = sin(VERTEX.z * 2.4 - TIME * 0.61) * 0.011;
 	VERTEX.y += a + b;
 }
 void fragment() {
-	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.7) * 0.5 + 0.5;
+	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.10) * 0.5 + 0.5;
 	float bands = sin(VERTEX.x * 5.0 - TIME * 0.55) * 0.5 + 0.5;
 	ALBEDO = mix(vec3(0.20,0.32,0.34), vec3(0.31,0.44,0.44), ripple * 0.16 + bands * 0.035);
 	ROUGHNESS = 0.46;
