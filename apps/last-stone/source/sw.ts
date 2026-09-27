@@ -6,8 +6,8 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'last-stone-';
-const CACHE_NAME = 'last-stone-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'last-stone-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-09-27';
 const RELEASE_NOTES = ["Строительство 3D-крепости, двенадцать осад, разрушения и сохранение кампании."];
 
