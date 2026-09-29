@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#f3f2ec"/>
+  <rect x="34" y="34" width="444" height="444" fill="none" stroke="#161713" stroke-width="20"/>
+  <g stroke="#161713" stroke-width="17" stroke-linecap="square">
+    <line x1="256" y1="62" x2="256" y2="168"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(36 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(72 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(108 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(144 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(180 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(216 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(252 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(288 256 256)"/>
+    <line x1="256" y1="62" x2="256" y2="168" transform="rotate(324 256 256)"/>
+  </g>
+  <circle cx="256" cy="256" r="72" fill="#b8ef2f" stroke="#161713" stroke-width="20"/>
+  <circle cx="256" cy="256" r="17" fill="#161713"/>
+</svg>

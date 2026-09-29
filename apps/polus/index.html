@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f2ec">
+  <meta name="description" content="ПОЛЮС — политический профиль на десяти независимых осях.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ПОЛЮС">
+  <title>ПОЛЮС — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-keyboard-aware>
+  <header class="topbar" data-ui>
+    <a class="brand" href="#home" data-route="home" aria-label="Главная ПОЛЮС">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span><b>ПОЛЮС</b><small>политический профиль</small></span>
+    </a>
+    <div class="top-actions">
+      <button id="resumeChip" class="resume-chip" type="button" data-native-press hidden>Продолжить</button>
+      <a class="shell-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+    </div>
+  </header>
+
+  <section id="homeView" class="view active" data-view="home">
+    <div class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">10 ОСЕЙ · 10–100 ВОПРОСОВ</p>
+        <h1>Не один ярлык.<br><span>Десять координат.</span></h1>
+        <p class="lede">Тест разбирает взгляды по независимым конфликтам ценностей. Короткий режим даёт грубый контур; длинный добирает вопросы там, где ответы противоречат друг другу или данных пока мало.</p>
+      </div>
+      <div class="hero-glyph" aria-hidden="true" id="heroGlyph"></div>
+    </div>
+
+    <section class="depth-panel">
+      <div class="section-line">
+        <div>
+          <p class="eyebrow">ГЛУБИНА</p>
+          <h2><span id="depthValue">50</span> вопросов</h2>
+        </div>
+        <div class="depth-badge" id="depthBadge">подробно</div>
+      </div>
+      <input id="depthRange" class="depth-range" type="range" min="10" max="100" step="10" value="50" aria-label="Количество вопросов">
+      <div class="depth-ticks" aria-hidden="true"><span>10</span><span>30</span><span>50</span><span>70</span><span>100</span></div>
+      <p id="depthNote" class="muted">Пять заходов на каждую ось в среднем; адаптивный выбор уточнит спорные зоны.</p>
+      <button id="startBtn" class="primary-action" type="button" data-native-press>
+        <span>Начать профиль</span><b>→</b>
+      </button>
+    </section>
+
+    <section class="axis-preview" aria-labelledby="axes-title">
+      <div class="section-line"><div><p class="eyebrow">АРХИТЕКТУРА</p><h2 id="axes-title">Что именно измеряется</h2></div><button class="text-btn" type="button" data-route="method" data-native-press>Методика</button></div>
+      <div id="axisPreviewList" class="axis-preview-list"></div>
+    </section>
+
+    <section class="home-links">
+      <button class="rail-link" type="button" data-route="compare" data-native-press><span><b>Справочник</b><small>Страны и исторические фигуры — вручную, по источникам</small></span><i>↗</i></button>
+      <button class="rail-link" type="button" id="lastResultBtn" data-route="results" data-native-press hidden><span><b>Последний результат</b><small id="lastResultMeta">Сохранён локально</small></span><i>↗</i></button>
+    </section>
+  </section>
+
+  <section id="quizView" class="view quiz-view" data-view="quiz" aria-live="polite">
+    <div class="quiz-progress" data-ui>
+      <div class="progress-meta"><button id="quitQuizBtn" class="icon-text" type="button" data-native-press>← Выйти</button><span><b id="qIndex">1</b>/<span id="qTotal">50</span></span></div>
+      <div class="progress-track"><i id="progressFill"></i></div>
+      <div id="liveAxis" class="live-axis"></div>
+    </div>
+    <article class="question-stage">
+      <p id="questionDomain" class="eyebrow">ОСЬ</p>
+      <h2 id="questionText">Вопрос</h2>
+      <p class="question-help">Отвечай на утверждение как на принцип для государства в целом, а не как на конкретный закон в вакууме.</p>
+    </article>
+    <div class="answer-scale" id="answerScale" role="radiogroup" aria-label="Степень согласия">
+      <button type="button" role="radio" aria-checked="false" data-value="-3" data-native-press><b>1</b><span>совсем<br>не согласен</span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="-2" data-native-press><b>2</b><span></span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="-1" data-native-press><b>3</b><span></span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="0" data-native-press><b>4</b><span>нейтрально /<br>зависит</span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="1" data-native-press><b>5</b><span></span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="2" data-native-press><b>6</b><span></span></button>
+      <button type="button" role="radio" aria-checked="false" data-value="3" data-native-press><b>7</b><span>полностью<br>согласен</span></button>
+    </div>
+    <div class="quiz-bottom" data-ui>
+      <button id="backQuestionBtn" class="secondary-action" type="button" data-native-press disabled>Назад</button>
+      <button id="skipQuestionBtn" class="secondary-action" type="button" data-native-press>Не уверен</button>
+    </div>
+  </section>
+
+  <section id="resultsView" class="view" data-view="results">
+    <div class="result-head">
+      <div><p class="eyebrow">ТВОЙ ПРОФИЛЬ</p><h1>Карта без ярлыка.</h1></div>
+      <button id="shareBtn" class="square-btn" type="button" data-native-press aria-label="Поделиться результатом">↗</button>
+    </div>
+    <section class="compass-block">
+      <div class="compass-title"><div><p class="eyebrow">КЛАССИЧЕСКАЯ ПРОЕКЦИЯ</p><h2 id="quadrantName">—</h2></div><span id="resultConfidence">—</span></div>
+      <div class="compass" id="compass">
+        <span class="c-label top">больше власти</span><span class="c-label bottom">больше свободы</span><span class="c-label left">экономически левее</span><span class="c-label right">экономически правее</span>
+        <i class="axis-x"></i><i class="axis-y"></i><b id="compassDot" class="compass-dot"></b>
+      </div>
+      <p class="fine-print">Это только двухмерная проекция четырёх зон. Основной результат ниже — десять отдельных осей, потому что один квадрат неизбежно теряет детали.</p>
+    </section>
+    <section class="axes-results">
+      <div class="section-line"><div><p class="eyebrow">10 КООРДИНАТ</p><h2>Полный профиль</h2></div><button class="text-btn" type="button" data-route="method" data-native-press>Как считается</button></div>
+      <div id="axesResultsList" class="axes-results-list"></div>
+    </section>
+    <section class="result-actions">
+      <button class="rail-link" type="button" data-route="compare" data-native-press><span><b>Открыть справочник</b><small>Сопоставить профиль с конкретными странами и фигурами вручную</small></span><i>↗</i></button>
+      <button id="restartBtn" class="rail-link danger-soft" type="button" data-native-press><span><b>Пройти заново</b><small>Текущий результат останется до старта нового теста</small></span><i>↺</i></button>
+    </section>
+  </section>
+
+  <section id="compareView" class="view" data-view="compare">
+    <div class="page-head"><button class="icon-text" type="button" data-route="home" data-native-press>← Главная</button><p class="eyebrow">СПРАВОЧНИК</p><h1>Сравнивай сам,<br>не получай «вердикт».</h1><p>Выбери конкретную страну или историческую фигуру. ПОЛЮС покажет только документированные особенности и к каким осям они относятся — без автоматического топа, рейтинга «похожести» или рекомендации.</p></div>
+    <div class="compare-tabs" role="tablist"><button class="active" type="button" data-ref-type="country" data-native-press>Современные государства</button><button type="button" data-ref-type="figure" data-native-press>Исторические фигуры</button></div>
+    <div id="referenceList" class="reference-list"></div>
+    <article id="referenceDetail" class="reference-detail" hidden></article>
+  </section>
+
+  <section id="methodView" class="view" data-view="method">
+    <div class="page-head"><button class="icon-text" type="button" data-route="home" data-native-press>← Главная</button><p class="eyebrow">МЕТОДИКА</p><h1>Что считается<br>и где тест врёт.</h1></div>
+    <div class="method-grid">
+      <article><b>01</b><h2>Десять осей</h2><p>Каждый вопрос относится к одной оси и имеет направление. Итог — взвешенное среднее ответов от −100 до +100. Никакая одна ось не подменяет остальные.</p></article>
+      <article><b>02</b><h2>Адаптивная глубина</h2><p>Первые вопросы покрывают все оси. Затем алгоритм чаще выбирает оси, где ответов меньше или они сильнее расходятся. Поэтому 70 вопросов — не просто первые 70 из списка.</p></article>
+      <article><b>03</b><h2>Уверенность</h2><p>Отдельно учитываются объём данных и согласованность ответов внутри оси. Крайний результат с двумя противоречивыми ответами визуально выглядит менее уверенно, чем такой же результат после десяти согласованных.</p></article>
+      <article><b>04</b><h2>Классический компас</h2><p>Экономическая координата собирается из рыночной автономии и перераспределения; вертикальная — из гражданских свобод и централизации власти. Это удобная проекция, а не «истина о человеке».</p></article>
+      <article><b>05</b><h2>Справочник</h2><p>Страны и фигуры не получают числовой «балл похожести». Карточки содержат проверяемые особенности и ссылки на источники; пользователь сам решает, что для него существеннее.</p></article>
+      <article><b>06</b><h2>Ограничения</h2><p>Политические взгляды зависят от контекста, институтов и конкретных компромиссов. Короткий тест особенно грубый; даже 100 вопросов измеряют ответы на выбранную модель, а не некую объективную идеологию.</p></article>
+    </div>
+    <section class="sources">
+      <p class="eyebrow">ИСТОЧНИКИ И ОРИЕНТИРЫ</p>
+      <a href="https://www.v-dem.net/data/the-v-dem-dataset/" target="_blank" rel="noreferrer">V-Dem Dataset v16 (2026) — институциональные индикаторы ↗</a>
+      <a href="https://manifesto-project.wzb.eu/datasets" target="_blank" rel="noreferrer">Manifesto Project 2026a — кодирование политических программ ↗</a>
+      <a href="https://www.worldvaluessurvey.org/" target="_blank" rel="noreferrer">World Values Survey — международные опросы ценностей ↗</a>
+      <p class="fine-print">ПОЛЮС не копирует шкалы этих проектов и не выдаёт себя за их валидированный тест. Они используются как ориентиры по тому, как разделять политические измерения, работать с источниками и не сводить всё к одному ярлыку.</p>
+    </section>
+  </section>
+
+  <dialog id="confirmDialog" class="confirm-dialog">
+    <form method="dialog">
+      <p class="eyebrow">ПОДТВЕРЖДЕНИЕ</p><h2 id="confirmTitle">Выйти из теста?</h2><p id="confirmText">Прогресс сохранён, можно вернуться позже.</p>
+      <div><button value="cancel" class="secondary-action" data-native-press>Отмена</button><button id="confirmOk" value="ok" class="primary-action compact" data-native-press>Выйти</button></div>
+    </form>
+  </dialog>
+
+  <footer class="app-footer" data-ui>
+    <span>ПОЛЮС v1.0.0</span>
+    <button type="button" data-workshop-trigger data-native-press>Workshop</button>
+  </footer>
+</main>
+
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПОЛЮС" data-app-version="1.0.0"></script>
+<script src="./data.js"></script>
+<script src="./app.js" type="module"></script>
+</body>
+</html>
