@@ -1,0 +1,21 @@
+{
+  "id": "/apps/polus/",
+  "name": "ПОЛЮС",
+  "short_name": "ПОЛЮС",
+  "description": "Политический профиль на десяти независимых осях.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f3f2ec",
+  "theme_color": "#f3f2ec",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
