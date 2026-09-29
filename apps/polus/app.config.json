@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "polus",
+  "name": "ПОЛЮС",
+  "shortName": "ПОЛЮС",
+  "description": "Политический профиль на 10 осях: от 10 до 100 вопросов, карта взглядов, уверенность результата и нейтральный справочник для ручного сравнения.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-29",
+  "releaseDateTime": "2026-09-29T11:21:00+02:00",
+  "changelog": [
+    "Первый релиз: адаптивный тест на 10–100 вопросов и десять независимых политических осей.",
+    "Добавлены классическая двухосевая проекция, оценка уверенности, сохранение прогресса и повторный проход.",
+    "Добавлен нейтральный справочник современных государств и исторических политических фигур без автоматического рейтинга или рекомендаций."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#b8ef2f",
+  "backgroundColor": "#f3f2ec",
+  "themeColor": "#f3f2ec",
+  "orientation": "portrait",
+  "cacheName": "polus-v1.0.0",
+  "storageNamespace": "pocket-works:polus",
+  "tags": ["PWA", "offline", "quiz", "politics", "profile", "education"],
+  "order": 34
+}
