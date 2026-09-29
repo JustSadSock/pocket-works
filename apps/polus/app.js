@@ -71,6 +71,7 @@ function route(name, options) {
   views.forEach(function (view, key) {
     view.classList.toggle('active', key === target);
   });
+  refreshHomeState();
   if (opts.replaceHash !== false) history.replaceState(null, '', '#' + target);
   if (target === 'results') renderResults();
   if (target === 'compare') renderReferences();
@@ -420,7 +421,8 @@ function refreshHomeState() {
   const session = store.get('session');
   const result = store.get('result');
 
-  resumeChip.hidden = !session;
+  const quizActive = views.get('quiz') && views.get('quiz').classList.contains('active');
+  resumeChip.hidden = !session || Boolean(quizActive);
   if (session) resumeChip.textContent = 'Продолжить ' + (session.cursor + 1) + '/' + session.total;
 
   lastResultBtn.hidden = !result;
