@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SEAL_LIMIT, createProfile, createRun, createBattle, playCard, sacrificeUnit, endTurn,
+  SEAL_LIMIT, createProfile, createRun as createFreshRun, createBattle, playCard, sacrificeUnit, endTurn,
   resolveNode, chooseCardReward, chooseRelic, chooseItem, hearthUpgrade, altarSelect,
   afterBattleVictory, cardById, cloneCard, rollCardChoices, rollRelicChoices, useItem, hydrateRun
 } from '../game-core.js';
+
+function createRun(...args){const run=createFreshRun(...args);run.pending=null;return run}
 
 test('run is deterministic and contains three rule-changing bosses',()=>{
   const a=createRun(12345,createProfile()),b=createRun(12345,createProfile());
@@ -114,4 +116,37 @@ test('v1 saves migrate into v2 without keeping stale battle state',()=>{
 test('active v2 balance saves migrate to independent seals',()=>{
   const run=createRun(93,createProfile());run.battle=createBattle(run);delete run.battle.seals;run.battle.balance=-3;run.battle.balanceLimit=6;
   const migrated=hydrateRun(JSON.stringify(run));assert.deepEqual(migrated.battle.seals,{player:0,enemy:3});assert.equal('balance' in migrated.battle,false);
+});
+
+test('new runs start with a reward and preparation rooms lead into battle without advancing depth',()=>{
+  const r=createFreshRun(101);assert.equal(r.pending.opening,true);chooseCardReward(r,r.pending.choices[0].instanceId);assert.equal(r.depth,0);assert.equal(r.pending,null);
+  const room=r.trail[0].find(n=>n.type==='cache');assert.ok(room);resolveNode(r,room);chooseCardReward(r,r.pending.choices[0].instanceId);assert.equal(r.depth,0);assert.equal(r.pending.type,'battle');assert.ok(r.battle);
+});
+test('rituals, sacrifices and items return independent timelines and ended battles reject changes',()=>{
+  const r=createRun(102),b=createBattle(r);r.battle=b;b.hand=[cloneCard('moth'),cloneCard('salt')];b.ember=9;
+  const spawn=playCard(r,b,b.hand[0].instanceId,0);assert.equal(spawn.events[0].type,'spawn');
+  const sacrifice=sacrificeUnit(r,b,0);assert.deepEqual(sacrifice.events.map(e=>e.type),['death','spawn']);
+  r.items=['teeth'];const item=useItem(r,b,'teeth');assert.deepEqual(item.events.map(e=>e.type),['seal']);assert.deepEqual(sacrifice.events.map(e=>e.type),['death','spawn']);
+  b.ended=true;assert.equal(useItem(r,b,'teeth').ok,false);assert.equal(sacrificeUnit(r,b,0).ok,false);assert.equal(playCard(r,b,b.hand[0].instanceId,0).ok,false);
+});
+test('zero attack neither consumes a ward nor triggers thorn retaliation',()=>{
+  const r=createRun(103),b=createBattle(r);r.battle=b;b.intent=[];b.hand=[cloneCard('hare',{sigils:[]})];playCard(r,b,b.hand[0].instanceId,0);
+  b.enemy[0]={...cloneCard('boar'),atk:0,hp:4,maxHp:4,sigils:['ward','thorn'],wardUsed:false};endTurn(r,b);assert.equal(b.player[0].hp,1);assert.equal(b.enemy[0].wardUsed,false);
+});
+test('prior phase transition immediately reduces resources and advances the turn',()=>{
+  const r=createRun(104),b=createBattle(r,'prior');r.battle=b;b.seals.player=6;b.ember=9;b.sacrificedThisTurn=true;
+  const result=endTurn(r,b);assert.equal(result.phase,true);assert.equal(b.ember,2);assert.equal(b.maxEmber,2);assert.equal(b.round,2);assert.equal(b.sacrificedThisTurn,false);
+});
+test('mirror refuses empty targets without spending the item',()=>{
+  const r=createRun(105),b=createBattle(r);r.items=['mirror'];b.enemy.fill(null);assert.equal(useItem(r,b,'mirror').ok,false);assert.deepEqual(r.items,['mirror']);
+});
+
+test('dead creatures recycle while Echo never accumulates the root health bonus',()=>{
+  const r=createRun(106),b=createBattle(r);r.battle=b;b.hand=[cloneCard('wolf'),cloneCard('hare',{sigils:['echo','root']})];b.ember=9;
+  playCard(r,b,b.hand[0].instanceId,0);sacrificeUnit(r,b,0);assert.ok(b.discard.some(c=>c.id==='wolf'));
+  b.sacrificedThisTurn=false;playCard(r,b,b.hand[0].instanceId,0);assert.equal(b.player[0].hp,3);sacrificeUnit(r,b,0);b.sacrificedThisTurn=false;
+  playCard(r,b,b.hand[0].instanceId,0);assert.equal(b.player[0].hp,3);
+});
+test('warden chain suspends attacks in its lane',()=>{
+  const r=createRun(107),b=createBattle(r,'warden');r.battle=b;b.hand=[cloneCard('wolf')];b.enemy.fill(null);b.intent=[];playCard(r,b,b.hand[0].instanceId,0);b.lockedLane=0;const result=endTurn(r,b);assert.equal(result.events.some(e=>e.type==='attack'&&e.lane===0),false);
 });

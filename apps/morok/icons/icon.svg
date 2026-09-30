@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="crispEdges">
-  <rect width="512" height="512" fill="#0b0908"/>
-  <rect x="48" y="54" width="416" height="404" fill="#1b1712"/>
-  <rect x="64" y="70" width="384" height="372" fill="#2a241c"/>
+  <rect width="512" height="512" fill="#10170d"/>
+  <rect x="48" y="54" width="416" height="404" fill="#222d1d"/>
+  <rect x="64" y="70" width="384" height="372" fill="#35412b"/>
   <path fill="#0a0907" d="M132 384V198l28-62 48-42h96l48 42 28 62v186z"/>
   <path fill="#b19b77" d="M190 122h132l34 42-18 154-82 80-82-80-18-154z"/>
   <path fill="#75634b" d="M205 143h102l22 32-15 124-58 58-58-58-15-124z"/>
   <rect x="207" y="211" width="34" height="14" fill="#2a1d16"/>
   <rect x="271" y="211" width="34" height="14" fill="#2a1d16"/>
-  <rect x="218" y="216" width="12" height="6" fill="#b64c31"/>
-  <rect x="282" y="216" width="12" height="6" fill="#b64c31"/>
+  <rect x="218" y="216" width="12" height="6" fill="#71482e"/>
+  <rect x="282" y="216" width="12" height="6" fill="#71482e"/>
   <path fill="#4c2b20" d="M248 247h16v65h-16zM222 271h68v14h-68z"/>
   <path fill="#8f7958" d="M80 390h352v14H80zM115 350h282v12H115z"/>
   <path fill="#c29d66" d="M92 330h8v45h-8zm312 0h8v45h-8z"/>
