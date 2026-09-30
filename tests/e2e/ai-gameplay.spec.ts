@@ -325,12 +325,23 @@ async function runLastStoneJourney(page: Page, testInfo: TestInfo) {
   for (const point of points) {
     await page.touchscreen.tap(point.x, point.y);
     await page.waitForTimeout(220);
+    const confirm = page.locator('#confirm-build');
+    if (await confirm.isVisible()) {
+      const previewCount = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.pieces?.length ?? 0);
+      expect(previewCount, 'Placement preview must not spend resources or build before confirmation').toBe(before);
+      if (await confirm.isEnabled()) {
+        await confirm.click();
+        await expect(page.locator('#placement')).toBeHidden();
+      } else {
+        await page.locator('#cancel-build').click();
+      }
+    }
     const count = await page.evaluate(() => (window as any).__AI_TEST_STATE__?.pieces?.length ?? 0);
     if (count > before) break;
   }
 
   const after = await page.evaluate(() => (window as any).__AI_TEST_STATE__ ?? null);
-  expect(after?.pieces?.length ?? 0, 'Touching the visible Last Stone build grid must place a structure').toBeGreaterThan(before);
+  expect(after?.pieces?.length ?? 0, 'Touching and confirming a valid Last Stone cell must place a structure').toBeGreaterThan(before);
   await attachCriticalScreenshot(page, testInfo, 'last-stone-build-ready', { fullPage: false });
 }
 
