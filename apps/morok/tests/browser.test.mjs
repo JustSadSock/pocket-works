@@ -28,7 +28,7 @@ for(const [engineName,engine]of Object.entries({chromium,webkit})){
     await page.screenshot({path:`${out}/${engineName}-${size.width}-start.png`});
     // Fixture is a valid persisted save; all actions after loading use the real UI.
     await page.goto(new URL('icons/icon.svg',base).href);await page.evaluate(([key,r])=>localStorage.setItem(key,JSON.stringify(r)),[key,fixture()]);await page.goto(base);await page.waitForFunction(()=>window.__AI_TEST_STATE__);if(await page.evaluate(()=>window.__AI_TEST_STATE__.mode==='menu'))await page.click('#continueBtn');
-    const card=page.locator('#hand .game-card').first();let holdBox=await card.boundingBox();await page.mouse.move(holdBox.x+20,holdBox.y+25);await page.mouse.down();await page.waitForTimeout(470);await page.mouse.up();assert.equal(await page.locator('#cardFocus').isVisible(),true);await page.click('#focusClose');
+    const card=page.locator('#hand .game-card').first();let holdBox=await card.boundingBox();await page.mouse.move(holdBox.x+20,holdBox.y+25);await page.mouse.down();await page.locator('#cardFocus').waitFor({state:'visible'});await page.mouse.up();assert.equal(await page.locator('#cardFocus').isVisible(),true);await page.click('#focusClose');
     let cr=await card.boundingBox(),slot=await page.locator('#playerRow .lane').first().boundingBox();
     // Pointer drag, then actual move-to-slot and release. Neither uses force clicks.
     await page.mouse.move(cr.x+20,cr.y+25);await page.mouse.down();await page.mouse.move(slot.x+slot.width/2,slot.y+slot.height/2,{steps:10});await page.mouse.up();
