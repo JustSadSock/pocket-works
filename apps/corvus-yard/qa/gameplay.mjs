@@ -1,0 +1,32 @@
+import {chromium,webkit} from '@playwright/test';
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+const directory=process.env.CORVUS_QA_DIR||'/tmp/corvus-qa';await mkdir(directory,{recursive:true});
+const reports=[];
+for(const [name,type] of [['chromium',chromium],['webkit',webkit]]){
+ const browser=await type.launch({headless:true});
+ const context=await browser.newContext({viewport:{width:393,height:852},hasTouch:true,deviceScaleFactor:1});
+ const page=await context.newPage(),errors=[],failed=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('requestfailed',r=>failed.push(r.url()));
+ const state=()=>page.evaluate(()=>window.__AI_TEST_STATE__);
+ const shot=tag=>page.screenshot({path:`${directory}/${name}-${tag}.png`});
+ await page.goto(`${process.env.CORVUS_QA_URL||'http://127.0.0.1:4173'}/apps/corvus-yard/`);
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.phase==='menu');await shot('menu');
+ await page.touchscreen.tap(...await page.locator('#start').evaluate(e=>{const r=e.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]}));
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.phase==='playing');assert.equal((await state()).rigReady,true);await shot('perched');
+ const flap=await page.locator('#flap').boundingBox();assert(flap);
+ await page.mouse.move(flap.x+flap.width/2,flap.y+flap.height/2);await page.mouse.down();
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.position.y>10&&!window.__AI_TEST_STATE__.grounded);await page.mouse.up();await shot('flight');
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.mode==='glide');await shot('glide');
+ const airborne=await state();assert(airborne.speed>3);assert(airborne.ecology.wildlife>0);
+ await page.locator('#pause').click();await page.waitForFunction(()=>window.__AI_TEST_STATE__?.phase==='paused');
+ const stopped=(await state()).position;await page.waitForTimeout(200);assert.deepEqual((await state()).position,stopped);
+ assert.equal(await page.locator('#pause-menu .exit').isVisible(),true);await page.locator('#home').click();
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.grounded&&window.__AI_TEST_STATE__.support==='home');
+ await page.locator('#pause').click();await page.locator('#pause-sound').click();await page.reload();
+ await page.waitForFunction(()=>window.__AI_TEST_STATE__?.phase==='menu');assert.equal(await page.locator('#sound').textContent(),'Звук: выключен');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
+ reports.push({browser:name,airborne,errors,failed});await context.close();await browser.close();
+}
+await writeFile(`${directory}/report.json`,JSON.stringify(reports,null,2));

@@ -1,0 +1,12 @@
+# Generated locally and in CI from the isolated source and public assets.
+/app.js
+/app.js.map
+/index.html
+/styles.css
+/sw.js
+/sw.js.map
+/manifest.webmanifest
+/assets/
+/icons/
+/models/
+/registerSW.js

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "slug": "corvus-yard",
+  "name": "CORVUS · Над дворами",
+  "shortName": "CORVUS",
+  "description": "Живой ворон над осенним каналом: летай, охоться, садись на ветви и разбивай орехи о камень.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-30",
+  "releaseDateTime": "2026-09-30T12:58:33+02:00",
+  "changelog": [
+    "Первый игровой участок: инерционный полёт, скелетная анимация ворона и осенний квартал у канала.",
+    "Посадка на ветви и крыши, поиск пищи, перенос предметов и раскалывание орехов.",
+    "Вертикальное управление, пространственный звук, сохранение и автономная загрузка."
+  ],
+  "status": "active",
+  "preset": "vite",
+  "runtime": "enhanced",
+  "accent": "#b79967",
+  "backgroundColor": "#9caaa2",
+  "themeColor": "#34403a",
+  "orientation": "portrait",
+  "cacheName": "corvus-yard-v1.0.0",
+  "storageNamespace": "pocket-works:corvus-yard",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "3D",
+    "Babylon.js",
+    "flight",
+    "simulation",
+    "portrait",
+    "mobile"
+  ],
+  "order": 18
+}
