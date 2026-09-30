@@ -140,7 +140,7 @@ function createSpecs(images, rng) {
       id: item.id,
       baseW,
       baseH,
-      sourceScaleCap: Math.max(0.05, sourceScaleCap),
+      sourceScaleCap: Math.max(EPSILON, sourceScaleCap),
       randomOrder: rng(),
       originalIndex: index
     };
