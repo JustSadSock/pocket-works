@@ -14,8 +14,8 @@
     <div class="scene-shade"></div>
     <header class="topbar" data-ui>
       <div class="identity"><span class="sigil">✣</span><div><strong>ПОСЛЕДНИЙ КАМЕНЬ</strong><small id="wave-name">ОСАДА I / XII</small></div></div>
-      <div class="resources"><span><i class="resource-mark stone"></i><b id="stone">125</b><small>камень</small></span>
-        <span><i class="resource-mark wood"></i><b id="timber">50</b><small>дерево</small></span>
+      <div class="resources"><span><i class="resource-mark stone"></i><b id="stone">200</b><small>камень</small></span>
+        <span><i class="resource-mark wood"></i><b id="timber">65</b><small>дерево</small></span>
         <span><i class="resource-mark iron"></i><b id="iron">12</b><small>железо</small></span></div>
       <div class="top-actions">
         <button id="sound" class="icon-button" type="button" aria-label="Отключить звук">◖))</button>
@@ -36,9 +36,13 @@
     <footer class="dock" id="dock" data-ui>
       <div class="intel"><b id="intel-title">СЕВЕРНЫЙ ТРАКТ</b><span id="intel-copy">Пехота. Сначала укрепите направление удара.</span></div>
       <div class="tools" id="tools"></div>
-      <div class="dock-actions"><button id="repair" type="button">Ремонт</button><button id="remove" type="button">Разобрать</button>
+      <div class="dock-actions"><button id="repair" type="button">Ремонт</button><button id="upgrade" type="button">Усилить</button><button id="undo" type="button">Отменить ход</button><button id="remove" type="button">Разобрать</button>
         <button id="start" class="start" type="button">НАЧАТЬ ОСАДУ <span>↗</span></button></div>
     </footer>
+    <section id="placement" class="placement hidden" data-ui aria-label="Подтверждение строительства">
+      <span id="placement-copy" role="status"></span>
+      <div><button id="rotate-piece" type="button">Повернуть</button><button id="cancel-build" type="button">Отмена</button><button id="confirm-build" type="button">Подтвердить</button></div>
+    </section>
     <div class="modal-backdrop hidden" id="modal-backdrop">
       <section class="modal" id="modal" role="dialog" aria-modal="true">
         <span class="modal-index">✣ &nbsp; ПОСЛЕДНИЙ КАМЕНЬ</span>

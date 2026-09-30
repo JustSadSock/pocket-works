@@ -1,12 +1,13 @@
 {
   "name": "@pocket-works/last-stone",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs last-stone",
     "test": "vitest run --config vite.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:gameplay": "node qa/gameplay.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.2.1"
