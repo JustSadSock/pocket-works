@@ -33,10 +33,14 @@
       <strong id="siege-title">ШТУРМ</strong><span id="siege-count">0 / 6</span>
       <button id="speed" type="button">×1</button><button id="pause" type="button">Пауза</button>
     </div>
+    <section class="action-bar hidden" id="action-bar" data-ui aria-live="polite">
+      <div class="action-copy"><b id="action-title">Стена · клетка</b><span id="action-detail">Стоимость</span></div>
+      <div class="action-buttons"><button id="action-cancel" type="button">ОТМЕНА</button><button id="action-confirm" type="button">ПОСТРОИТЬ</button></div>
+    </section>
     <footer class="dock" id="dock" data-ui>
       <div class="intel"><b id="intel-title">СЕВЕРНЫЙ ТРАКТ</b><span id="intel-copy">Пехота. Сначала укрепите направление удара.</span></div>
       <div class="tools" id="tools"></div>
-      <div class="dock-actions"><button id="repair" type="button">Ремонт</button><button id="remove" type="button">Разобрать</button>
+      <div class="dock-actions"><button id="repair" type="button">Ремонт</button><button id="upgrade" type="button">Усилить</button><button id="remove" type="button">Разобрать</button>
         <button id="start" class="start" type="button">НАЧАТЬ ОСАДУ <span>↗</span></button></div>
     </footer>
     <div class="modal-backdrop hidden" id="modal-backdrop">
