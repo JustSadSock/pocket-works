@@ -1,4 +1,4 @@
-export const VERSION='3.0.0';
+export const VERSION='3.1.0';
 export const LANES=4;
 export const SEAL_LIMIT=6;
 export const BALANCE_LIMIT=SEAL_LIMIT;
@@ -17,7 +17,7 @@ export const SIGILS={
   twin:{name:'Двойной удар',mark:'Ⅱ',text:'Атакует дважды.'},
   martyr:{name:'Мученик',mark:'✚',text:'После смерти даёт +2 Останка.'},
   parasite:{name:'Паразит',mark:'⊙',text:'После смерти переходит в руку как бесплатная личинка.'},
-  chain:{name:'Цепь',mark:'≋',text:'Прямой урон также ранит соседнюю вражескую карту.'}
+  chain:{name:'Цепь',mark:'≋',text:'Каждый удар также наносит 1 урона соседним врагам.'}
 };
 
 const C=(id,name,faction,costType,cost,atk,hp,sigils,text,rarity='common',portrait=id)=>({id,name,type:'creature',faction,costType,cost,atk,hp,sigils,text,rarity,portrait});
@@ -158,7 +158,7 @@ export function createBattle(run,bossId=null,elite=false){
     phase:1,phasesTotal:bossId?(BOSSES[bossId]?.phases||1):1,lockedLane:null,
     ember:3+(relics.has('black-candle')?1:0),maxEmber:3,remains:run.cycleVersion===3?1+Math.floor(run.depth/3):0,player:Array(LANES).fill(null),enemy:Array(LANES).fill(null),intent:[],
     hand:[],drawPile:shuffle(run.deck.map(c=>({...c,sigils:[...c.sigils]})),rng),discard:[],heritage:null,heritageCharges:1,
-    sacrificedThisTurn:false,firstDeathBonusUsed:false,firstDiscountUsed:false,firstDirectUsed:false,spawnSerial:1,ended:false,winner:null,
+    sacrificedThisTurn:false,movedThisTurn:false,firstDeathBonusUsed:false,firstDiscountUsed:false,firstDirectUsed:false,spawnSerial:1,ended:false,winner:null,
     log:[bossId?`${BOSSES[bossId].name} положил ладони на стол.`:'Противник молча раздал карты.']
   };
   drawCards(battle,relics.has('hare-foot')||bossId?5:4);
@@ -205,6 +205,22 @@ export function sacrificeUnit(run,battle,lane,sigil=null){
   if(battle.sacrificedThisTurn)return{ok:false,reason:'Жертву можно провести только один раз за ход.'};const unit=battle.player[lane];if(!unit)return{ok:false,reason:'Здесь нет существа для жертвы.'};
   battle.events=[];const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick,events:[...battle.events]}
 }
+export function canMove(battle,from,to){
+  if(!battle||battle.ended)return{ok:false,reason:'Сдача окончена.'};
+  if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=LANES||to>=LANES||!battle.player[from])return{ok:false,reason:'Выбери своего зверя.'};
+  if(battle.movedThisTurn)return{ok:false,reason:'Один сдвиг за ход.'};
+  if(from===battle.lockedLane||to===battle.lockedLane)return{ok:false,reason:'Цепь не пускает.'};
+  if(Math.abs(from-to)!==1)return{ok:false,reason:'Сдвиг только на соседнее место.'};
+  if(battle.player[to])return{ok:false,reason:'Место занято.'};
+  if(battle.ember<1)return{ok:false,reason:'Для сдвига нужен 1 уголь.'};
+  return{ok:true,cost:1}
+}
+export function moveUnit(run,battle,from,to){
+  const check=canMove(battle,from,to);if(!check.ok)return check;
+  const unit=battle.player[from];battle.events=[];battle.player[to]=unit;battle.player[from]=null;battle.ember--;battle.movedThisTurn=true;
+  recordBattleEvent(battle,{type:'move',side:'player',from,lane:to,unitId:unit.instanceId,name:unit.name});
+  battle.log.unshift(`${unit.name}: сдвиг на место ${to+1}.`);return{ok:true,events:[...battle.events]}
+}
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
 function recordBattleEvent(battle,event){(battle.events||(battle.events=[])).push(event)}
 function damageUnit(run,battle,side,lane,amount,attacker,source='attack'){
@@ -216,27 +232,24 @@ function damageUnit(run,battle,side,lane,amount,attacker,source='attack'){
   const before=unit.hp;unit.hp-=amount;
   recordBattleEvent(battle,{type:'damage',side,lane,unitId:unit.instanceId,name:unit.name,amount,hpBefore:before,hpAfter:Math.max(0,unit.hp),source});
   if(attacker&&unit.sigils.includes('thorn')){
-    const thornBefore=attacker.hp;attacker.hp-=1;
     const attackerSide=side==='player'?'enemy':'player',attackerBoard=attackerSide==='player'?battle.player:battle.enemy,attackerLane=attackerBoard.indexOf(attacker);
-    recordBattleEvent(battle,{type:'damage',side:attackerSide,lane:attackerLane,unitId:attacker.instanceId,name:attacker.name,amount:1,hpBefore:thornBefore,hpAfter:Math.max(0,attacker.hp),source:'thorn'})
+    if(attacker.sigils.includes('ward')&&!attacker.wardUsed){attacker.wardUsed=true;recordBattleEvent(battle,{type:'ward',side:attackerSide,lane:attackerLane,unitId:attacker.instanceId,name:attacker.name})}
+    else{const thornBefore=attacker.hp;attacker.hp--;recordBattleEvent(battle,{type:'damage',side:attackerSide,lane:attackerLane,unitId:attacker.instanceId,name:attacker.name,amount:1,hpBefore:thornBefore,hpAfter:Math.max(0,attacker.hp),source:'thorn'})}
   }
   if(attacker&&attacker.sigils.includes('bleed')&&unit.hp>0){
     const bleedBefore=unit.hp;unit.hp-=1;
     recordBattleEvent(battle,{type:'damage',side,lane,unitId:unit.instanceId,name:unit.name,amount:1,hpBefore:bleedBefore,hpAfter:Math.max(0,unit.hp),source:'bleed'})
   }
-  if(attacker&&attacker.sigils.includes('chain')){
-    for(const adj of[lane-1,lane+1])if(adj>=0&&adj<LANES&&board[adj]){
-      const chained=board[adj],chainBefore=chained.hp;chained.hp-=1;
-      recordBattleEvent(battle,{type:'damage',side,lane:adj,unitId:chained.instanceId,name:chained.name,amount:1,hpBefore:chainBefore,hpAfter:Math.max(0,chained.hp),source:'chain'});
-      if(chained.hp<=0)killUnit(run,battle,side,adj,'chain')
-    }
-  }
+  if(attacker?.sigils.includes('chain'))chainDamage(run,battle,side,lane);
   if(unit.hp<=0)killUnit(run,battle,side,lane,'combat');
   if(attacker&&attacker.hp<=0){
     const other=side==='player'?'enemy':'player',otherBoard=other==='player'?battle.player:battle.enemy,idx=otherBoard.indexOf(attacker);
     if(idx>=0)killUnit(run,battle,other,idx,'thorns')
   }
   return amount
+}
+function chainDamage(run,battle,side,lane){
+  for(const adj of[lane-1,lane+1])if(adj>=0&&adj<LANES)damageUnit(run,battle,side,adj,1,null,'chain');
 }
 function notifyDeath(run,battle,side){
   const board=side==='player'?battle.player:battle.enemy;for(const u of board)if(u?.sigils.includes('scavenger')&&side==='player')battle.remains++;
@@ -255,9 +268,9 @@ function killUnit(run,battle,side,lane,cause='combat'){
   }
   if(side==='player'&&!unit.token&&(!unit.sigils.includes('echo')||cause==='rite'||battle.hand.length>=7)){const printed=unit.cardSnapshot||run.deck.find(c=>c.instanceId===unit.instanceId)||cardById(unit.id);if(printed)battle.discard.push({...printed,sigils:[...printed.sigils]})}
   if(side==='player'&&unit.sigils.includes('echo')&&cause!=='rite'&&battle.hand.length<7){
-    const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp-(unit.sigils.includes('root')?2:0),sigils:[...unit.sigils]}))
+    const source=unit.cardSnapshot||cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp-(unit.sigils.includes('root')?2:0),sigils:[...unit.sigils]}))
   }
-  if(side==='player'&&unit.sigils.includes('parasite')&&battle.hand.length<7)battle.hand.push(cloneCard('leech',{name:'Личинка',cost:0,costType:'ember',atk:1,hp:1,sigils:[]}));
+  if(side==='player'&&unit.sigils.includes('parasite')&&battle.hand.length<7)battle.hand.push(cloneCard('leech',{name:'Личинка',cost:0,costType:'ember',atk:1,hp:1,sigils:[],token:true}));
   battle.log.unshift(`${unit.name}: карта уничтожена.`)
 }
 function spawnIntent(battle){
@@ -285,8 +298,8 @@ function doAttacks(run,battle,side){
       recordBattleEvent(battle,{type:'attack',side,lane,attackerId:attacker.instanceId,name:attacker.name,targetSide:side==='player'?'enemy':'player',targetLane:lane,targetId:defender?.instanceId||null,targetName:defender?.name||null,direct:!defender,amount,strike:n+1,strikes:attacks});
       if(defender){
         damageUnit(run,battle,side==='player'?'enemy':'player',lane,amount,attacker,'attack');
-        if(attacker.sigils.includes('hunger')&&!foe[lane]){attacker.atk++;recordBattleEvent(battle,{type:'buff',side,lane,unitId:attacker.instanceId,name:attacker.name,stat:'atk',amount:1})}
-      }else directDamage(run,battle,side,amount,attacker,lane);
+        if(attacker.hp>0&&attacker.sigils.includes('hunger')&&foe[lane]!==defender){attacker.atk++;recordBattleEvent(battle,{type:'buff',side,lane,unitId:attacker.instanceId,name:attacker.name,stat:'atk',amount:1})}
+      }else{directDamage(run,battle,side,amount,attacker,lane);if(attacker.sigils.includes('chain'))chainDamage(run,battle,side==='player'?'enemy':'player',lane)}
       if(battle.seals.player>=SEAL_LIMIT||battle.seals.enemy>=SEAL_LIMIT)break
     }
     if(battle.seals.player>=SEAL_LIMIT||battle.seals.enemy>=SEAL_LIMIT)break
@@ -299,7 +312,6 @@ function bossHook(run,battle){
     recordBattleEvent(battle,{type:'lock',lane:battle.lockedLane,bossId:'warden'});
     battle.log.unshift(`Смотритель заблокировал линию ${battle.lockedLane+1}.`)
   }
-  if(battle.bossId==='bellkeeper'&&battle.round%2===0)planIntent(battle,1);
   if(battle.bossId==='prior'&&battle.phase===2){battle.maxEmber=2;battle.ember=Math.min(battle.ember,2)}
 }
 function phaseOrFinish(run,battle){
@@ -321,16 +333,28 @@ export function endTurn(run,battle){
   doAttacks(run,battle,'player');
   let end=phaseOrFinish(run,battle);
   if(end?.ended)return{...end,events:[...battle.events]};
-  if(end?.phase){battle.round++;battle.sacrificedThisTurn=false;battle.firstDirectUsed=false;drawCards(battle,1);recordBattleEvent(battle,{type:'round',round:battle.round,ember:battle.ember});return{...end,events:[...battle.events]}}
+  if(end?.phase){battle.round++;battle.sacrificedThisTurn=false;battle.movedThisTurn=false;battle.firstDirectUsed=false;drawCards(battle,1);recordBattleEvent(battle,{type:'round',round:battle.round,ember:battle.ember});return{...end,events:[...battle.events]}}
   recordBattleEvent(battle,{type:'sequence',label:'enemy'});
   doAttacks(run,battle,'enemy');
   end=phaseOrFinish(run,battle);
   if(end)return{...end,events:[...battle.events]};
   spawnIntent(battle);
-  battle.round++;battle.ember=battle.maxEmber+(new Set(run.relics).has('small-bell')&&battle.round%3===0?1:0);battle.sacrificedThisTurn=false;drawCards(battle,1);bossHook(run,battle);
+  battle.round++;battle.ember=battle.maxEmber+(new Set(run.relics).has('small-bell')&&battle.round%3===0?1:0);battle.sacrificedThisTurn=false;battle.movedThisTurn=false;drawCards(battle,1);bossHook(run,battle);
   const count=battle.bossId?(battle.bossId==='bellkeeper'&&battle.round%2===0?2:1):(battle.elite&&battle.round%3===0?2:1);planIntent(battle,count);
   recordBattleEvent(battle,{type:'round',round:battle.round,ember:battle.ember,lockedLane:battle.lockedLane});
   return{ok:true,events:[...battle.events]}
+}
+// Use the real resolver on a detached state: prediction cannot drift from combat rules.
+export function forecastTurn(run,battle){
+  if(!battle||battle.ended)return null;
+  const copy=JSON.parse(JSON.stringify(battle)),owner={...run,stats:{...run.stats},log:[...(run.log||[])],battle:copy};
+  const result=endTurn(owner,copy),events=result.events||[];
+  const units={};for(const side of ['player','enemy'])for(const unit of battle[side].filter(Boolean)){
+    const survivor=copy[side].find(u=>u?.instanceId===unit.instanceId);
+    units[unit.instanceId]={hp:survivor?.hp||0,dead:events.some(e=>e.type==='death'&&e.unitId===unit.instanceId),removed:!survivor};
+  }
+  const damage={player:0,enemy:0};for(const event of events)if(event.type==='seal')damage[event.side]+=event.after-event.before;
+  return{units,damage,seals:{...copy.seals},phase:!!result.phase,winner:result.winner||null};
 }
 function finishBattle(run,battle,winner){
   battle.ended=true;battle.winner=winner;

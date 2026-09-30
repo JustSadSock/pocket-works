@@ -69,7 +69,7 @@
 
     <div class="board" id="board" data-gesture-surface data-block-callout>
       <div class="row enemy-row" id="enemyRow"></div>
-      <div class="board-divider"><span id="roundText">ХОД 1</span><i></i></div>
+      <div class="board-divider"><span id="roundText">ХОД 1</span><span id="turnForecast" aria-live="polite"></span></div>
       <div class="row player-row" id="playerRow"></div>
     </div>
 
@@ -146,7 +146,8 @@
     <ol><li><b>Положи карту.</b><span>Перетащи её в пустое место или нажми на карту, затем на место. Удерживай карту для чтения. Уголь обновляется каждый ход. Кости остаются.</span></li>
       <li><b>Печати.</b><span>Прямой урон ломает печати противника. Разрушь все шесть раньше, чем противник разрушит твои.</span></li>
       <li><b>Жертва.</b><span>Свою карту можно разрезать раз за ход: получишь кости и унаследуешь одну её метку следующей картой.</span></li>
-      <li><b>Намерения.</b><span>Маленькие карты за руками противника показывают, что появится после твоего хода.</span></li>
+      <li><b>Сдвиг.</b><span>Нажми на своего зверя, затем на соседнее пустое место. Один сдвиг за ход стоит 1 уголь. Цепь не пропускает карты.</span></li>
+      <li><b>Перед ударом.</b><span>Зарубка × на карте означает гибель, стрелка показывает оставшееся здоровье. Надпись между рядами считает печати после обеих атак. Новые враги в верхнем ряду выйдут после удара; нажми на них, чтобы рассмотреть.</span></li>
       <li><b>Улучшения.</b><span>Алтарь переносит метку навсегда и удаляет карту-донора. Второе улучшение у жаровни добавляет случайную метку. Предметы расходуются после применения.</span></li>
       <li><b>Боссы.</b><span>Смотритель запирает линии, Звонарь ускоряет стол, Приор меняет правила между фазами.</span></li>
     </ol>
@@ -159,7 +160,7 @@
   <div class="portrait-only"><b>МОРОК ИГРАЕТСЯ ВЕРТИКАЛЬНО</b><span>Поверни телефон.</span></div>
 </main>
 
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="3.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МОРОК" data-app-version="3.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
