@@ -14,11 +14,11 @@ function widthRangeForCount(count) {
 }
 
 function scaleCeilingForCount(count) {
-  if (count <= 3) return 1.42;
-  if (count <= 6) return 1.34;
-  if (count <= 16) return 1.28;
-  if (count <= 40) return 1.22;
-  return 1.18;
+  if (count <= 3) return 1.55;
+  if (count <= 6) return 1.50;
+  if (count <= 16) return 1.45;
+  if (count <= 40) return 1.42;
+  return 1.38;
 }
 
 function pageMarginForCount(count) {
