@@ -1,4 +1,4 @@
-export const VERSION='2.2.0';
+export const VERSION='3.0.0';
 export const LANES=4;
 export const SEAL_LIMIT=6;
 export const BALANCE_LIMIT=SEAL_LIMIT;
@@ -57,7 +57,7 @@ export const CARD_LIBRARY=[
   R('bark','Кожаная стяжка',1,'Союзник получает +3 здоровья и Оберег.','bark'),
   R('needle','Костяная игла',1,'Союзник получает +1/+1. Затем возьми карту.','needle'),
   R('salt','Чёрная соль',1,'Нанеси 2 урона вражеской карте.','salt'),
-  R('milk','Нажим',2,'Сдвинь маркер давления на 2 в сторону противника.','milk'),
+  R('milk','Нажим',2,'Разбей две печати противника.','milk'),
   R('molt','Снятая кожа',1,'Уничтожь союзника. Возьми 2 карты и получи 2 Останка.','molt','uncommon'),
   R('whisper','Добор',2,'Возьми 3 карты.','whisper','uncommon'),
   R('nails','Три гвоздя',2,'Союзник получает Шип и +2 здоровья.','nails','uncommon'),
@@ -90,7 +90,7 @@ export const ITEMS=[
   {id:'bell',name:'Железный колокол',mark:'◉',text:'+2 Угля сейчас.',target:'none'},
   {id:'thread',name:'Чёрная нить',mark:'⌁',text:'Следующее Наследие применяется дважды.',target:'none'},
   {id:'mirror',name:'Осколок зеркала',mark:'◇',text:'Возьми копию самой сильной вражеской карты 1/1.',target:'none'},
-  {id:'teeth',name:'Горсть зубов',mark:'∴',text:'Сдвинь маркер давления на 2 в сторону противника.',target:'none'}
+  {id:'teeth',name:'Горсть зубов',mark:'∴',text:'Разбей две печати противника.',target:'none'}
 ];
 
 export const BOSSES={
@@ -115,11 +115,11 @@ export function starterDeck(){return['hare','hare','crow','wolf','moth','toad','
 export function createProfile(){return{version:2,bestDepth:0,wins:0,totalRuns:0,discovered:[]}}
 function startingItems(seed){const rng=rngFrom(seed^0x51f15e);return shuffle(ITEMS,rng).slice(0,2).map(x=>x.id)}
 export function createRun(seed=Date.now(),profile=createProfile()){
-  const runSeed=hashSeed(seed);return{
+  const runSeed=hashSeed(seed);const run={
     version:2,seed:runSeed,depth:0,maxDepth:9,deck:starterDeck(),relics:[],items:startingItems(runSeed),
-    battle:null,pending:null,result:null,secrets:{},trail:generateTrail(runSeed),log:['Забег начался.'],stats:{kills:0,sacrifices:0,cardsPlayed:0,itemsUsed:0},
+    cycleVersion:3,battle:null,pending:null,result:null,secrets:{},trail:generateTrail(runSeed),log:['Забег начался.'],stats:{kills:0,sacrifices:0,cardsPlayed:0,itemsUsed:0},
     profileSnapshot:{wins:profile.wins||0}
-  }
+  };run.pending={type:'card-choice',title:'Одну возьми. Остальные останутся здесь.',choices:rollCardChoices(run,3,'opening'),opening:true};return run
 }
 function generateTrail(seed){
   const rng=rngFrom(seed^0x9e3779b9),stages=[];
@@ -137,15 +137,15 @@ export function rollRelicChoices(run,count=3){const rng=rngFrom(run.seed^hashSee
 export function rollItemChoices(run,count=3){const rng=rngFrom(run.seed^hashSeed(`item:${run.depth}:${run.items.length}`));return shuffle(ITEMS,rng).slice(0,count)}
 
 function encounterPool(depth,bossId=null){
-  if(bossId==='warden')return['enemy-boar','enemy-wolf','enemy-ram'];
+  if(bossId==='warden')return['enemy-boar','enemy-wolf'];
   if(bossId==='bellkeeper')return['enemy-crow','enemy-bird','enemy-owl','enemy-adder'];
   if(bossId==='prior')return['enemy-widow','enemy-ox','enemy-ram','enemy-bird','enemy-stag'];
   if(depth<2)return['enemy-rat','enemy-wolf','enemy-crow','enemy-moth'];
   if(depth<5)return['enemy-wolf','enemy-boar','enemy-owl','enemy-adder','enemy-moth','enemy-bird'];
   return['enemy-boar','enemy-owl','enemy-adder','enemy-stag','enemy-ram','enemy-ox','enemy-widow']
 }
-function makeEnemyUnit(id,depth=0){const base=enemyById(id),scale=Math.floor(depth/4);return{...base,sigils:[...base.sigils],instanceId:uid(id),maxHp:base.hp+scale,hp:base.hp+scale,atk:base.atk+scale,wardUsed:false,side:'enemy'}}
-function makePlayerUnit(card){const rootBonus=card.sigils.includes('root')?2:0;return{...card,sigils:[...card.sigils],maxHp:card.hp+rootBonus,hp:card.hp+rootBonus,atk:card.atk,wardUsed:false,side:'player'}}
+function makeEnemyUnit(id,depth=0){const base=enemyById(id),scale=Math.floor(depth/4);return{...base,sigils:[...base.sigils],instanceId:uid(id),maxHp:base.hp+scale,hp:base.hp+scale,atk:base.atk,wardUsed:false,side:'enemy'}}
+function makePlayerUnit(card){const rootBonus=card.sigils.includes('root')?2:0;return{...card,sigils:[...card.sigils],maxHp:card.hp+rootBonus,hp:card.hp+rootBonus,atk:card.atk,wardUsed:false,side:'player',cardSnapshot:{...card,sigils:[...card.sigils]}}}
 function planIntent(battle,count=1){
   const rng=rngFrom(battle.seed^hashSeed(`intent:${battle.round}:${battle.spawnSerial++}`)),pool=encounterPool(battle.depth,battle.bossId);
   const free=[0,1,2,3].filter(l=>l!==battle.lockedLane&&!battle.enemy[l]&&!battle.intent.some(x=>x.lane===l));
@@ -154,14 +154,19 @@ function planIntent(battle,count=1){
 export function createBattle(run,bossId=null,elite=false){
   const rng=rngFrom(run.seed^hashSeed(`battle:${run.depth}:${bossId||'none'}:${elite}`)),relics=new Set(run.relics);
   const battle={
-    seed:hashSeed(`${run.seed}:${run.depth}:${Date.now()}`),depth:run.depth,bossId,elite,round:1,seals:{player:0,enemy:0},sealLimit:SEAL_LIMIT,
+    seed:hashSeed(`${run.seed}:${run.depth}:${bossId||'none'}:${elite}`),depth:run.depth,bossId,elite,round:1,seals:{player:0,enemy:0},sealLimit:SEAL_LIMIT,
     phase:1,phasesTotal:bossId?(BOSSES[bossId]?.phases||1):1,lockedLane:null,
-    ember:3+(relics.has('black-candle')?1:0),maxEmber:3,remains:0,player:Array(LANES).fill(null),enemy:Array(LANES).fill(null),intent:[],
+    ember:3+(relics.has('black-candle')?1:0),maxEmber:3,remains:run.cycleVersion===3?1+Math.floor(run.depth/3):0,player:Array(LANES).fill(null),enemy:Array(LANES).fill(null),intent:[],
     hand:[],drawPile:shuffle(run.deck.map(c=>({...c,sigils:[...c.sigils]})),rng),discard:[],heritage:null,heritageCharges:1,
     sacrificedThisTurn:false,firstDeathBonusUsed:false,firstDiscountUsed:false,firstDirectUsed:false,spawnSerial:1,ended:false,winner:null,
     log:[bossId?`${BOSSES[bossId].name} положил ладони на стол.`:'Противник молча раздал карты.']
   };
-  drawCards(battle,relics.has('hare-foot')?5:4);planIntent(battle,bossId?2:1);if(elite&&!bossId)planIntent(battle,1);return battle
+  drawCards(battle,relics.has('hare-foot')||bossId?5:4);
+  if(run.cycleVersion===3){
+    if(!battle.hand.some(c=>c.type==='creature'&&c.costType==='ember'&&c.cost<=2&&c.atk>0)){const i=battle.drawPile.findIndex(c=>c.type==='creature'&&c.costType==='ember'&&c.cost<=2&&c.atk>0);if(i>=0){const replace=battle.hand.pop();battle.hand.push(battle.drawPile.splice(i,1)[0]);if(replace)battle.drawPile.push(replace)}}
+    planIntent(battle,1);spawnIntent(battle);battle.events=[];
+  }
+  planIntent(battle,1);if(elite&&!bossId)planIntent(battle,1);return battle
 }
 export function drawCards(battle,count=1){
   for(let n=0;n<count;n++){if(!battle.drawPile.length){if(!battle.discard.length)break;const rng=rngFrom(battle.seed^hashSeed(`reshuffle:${battle.round}:${n}`));battle.drawPile=shuffle(battle.discard.splice(0),rng)}if(battle.hand.length>=7)break;const card=battle.drawPile.shift();if(card)battle.hand.push(card)}
@@ -176,13 +181,14 @@ export function canPlay(run,battle,card,lane=null,targetLane=null){
 }
 function payCost(battle,card,cost){if(card.costType==='ember')battle.ember-=cost;if(card.costType==='remains')battle.remains-=cost}
 export function playCard(run,battle,cardInstanceId,lane=null,targetLane=null){
+  if(!battle||battle.ended)return{ok:false,reason:'Сдача окончена.'};
   const index=battle.hand.findIndex(c=>c.instanceId===cardInstanceId);if(index<0)return{ok:false,reason:'Карты уже нет в руке.'};const card=battle.hand[index],check=canPlay(run,battle,card,lane,targetLane);if(!check.ok)return check;
-  payCost(battle,card,check.cost);if(card.costType==='ember'&&new Set(run.relics).has('moth-lantern')&&!battle.firstDiscountUsed)battle.firstDiscountUsed=true;battle.hand.splice(index,1);
+  battle.events=[];payCost(battle,card,check.cost);if(card.costType==='ember'&&new Set(run.relics).has('moth-lantern')&&!battle.firstDiscountUsed)battle.firstDiscountUsed=true;battle.hand.splice(index,1);
   if(card.type==='creature'){
     const copy={...card,sigils:[...card.sigils]};if(battle.heritage&&!copy.sigils.includes(battle.heritage)){copy.sigils.push(battle.heritage);battle.heritageCharges--;if(battle.heritageCharges<=0)battle.heritage=null}
-    battle.player[lane]=makePlayerUnit(copy);battle.log.unshift(`${copy.name}: карта разыграна.`)
+    battle.player[lane]=makePlayerUnit(copy);recordBattleEvent(battle,{type:'spawn',side:'player',lane,unit:{...battle.player[lane],sigils:[...copy.sigils]},source:'hand'});battle.log.unshift(`${copy.name}: карта разыграна.`)
   }else{resolveRite(run,battle,card,targetLane);battle.discard.push(card)}
-  run.stats.cardsPlayed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner,phase:!!ended?.phase}
+  run.stats.cardsPlayed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner,phase:!!ended?.phase,events:[...battle.events]}
 }
 function resolveRite(run,battle,card,targetLane){
   if(card.rite==='bark'){const u=battle.player[targetLane];u.maxHp+=3;u.hp+=3;if(!u.sigils.includes('ward'))u.sigils.push('ward');u.wardUsed=false}
@@ -195,13 +201,15 @@ function resolveRite(run,battle,card,targetLane){
   else if(card.rite==='lash'){for(let i=0;i<LANES;i++)if(battle.enemy[i])damageUnit(run,battle,'enemy',i,1,null)}
 }
 export function sacrificeUnit(run,battle,lane,sigil=null){
+  if(!battle||battle.ended)return{ok:false,reason:'Сдача окончена.'};
   if(battle.sacrificedThisTurn)return{ok:false,reason:'Жертву можно провести только один раз за ход.'};const unit=battle.player[lane];if(!unit)return{ok:false,reason:'Здесь нет существа для жертвы.'};
-  const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick}
+  battle.events=[];const pick=sigil&&unit.sigils.includes(sigil)?sigil:unit.sigils[0]||null;battle.sacrificedThisTurn=true;battle.heritage=pick;battle.heritageCharges=(new Set(run.relics).has('red-thread')||battle.threadPrimed)?2:1;battle.threadPrimed=false;battle.remains+=Math.max(1,Math.ceil((unit.cost||0)/2));run.stats.sacrifices++;killUnit(run,battle,'player',lane,'sacrifice');battle.log.unshift(pick?`Наследие сохранено: ${SIGILS[pick]?.name||pick}.`:'Жертва принесла Останки.');return{ok:true,heritage:pick,events:[...battle.events]}
 }
 function attackValue(unit,board,lane,direct=false){let value=unit.atk;if(unit.sigils.includes('pack')){if(board[lane-1])value++;if(board[lane+1])value++}if(direct&&unit.sigils.includes('lurk'))value++;return Math.max(0,value)}
 function recordBattleEvent(battle,event){(battle.events||(battle.events=[])).push(event)}
 function damageUnit(run,battle,side,lane,amount,attacker,source='attack'){
   const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return 0;
+  if(amount<=0)return 0;
   if(unit.sigils.includes('ward')&&!unit.wardUsed){
     unit.wardUsed=true;recordBattleEvent(battle,{type:'ward',side,lane,unitId:unit.instanceId,name:unit.name});battle.log.unshift(`${unit.name}: Оберег поглотил удар.`);return 0
   }
@@ -237,16 +245,17 @@ function notifyDeath(run,battle,side){
 function killUnit(run,battle,side,lane,cause='combat'){
   const board=side==='player'?battle.player:battle.enemy,unit=board[lane];if(!unit)return;
   recordBattleEvent(battle,{type:'death',side,lane,unitId:unit.instanceId,name:unit.name,cause});
-  board[lane]=null;if(side==='enemy')run.stats.kills++;notifyDeath(run,battle,side);
+  board[lane]=null;if(side==='enemy')run.stats.kills++;else if(run.cycleVersion===3)battle.remains++;notifyDeath(run,battle,side);
   if(side==='player'&&unit.sigils.includes('martyr'))battle.remains+=2;
   if(unit.sigils.includes('brood')){
     const base=side==='player'?cardById('leech'):enemyById('enemy-rat');
     const child=side==='player'?makePlayerUnit(cloneCard(base,{atk:1,hp:1,sigils:[]})):makeEnemyUnit('enemy-rat',0);
-    child.atk=1;child.hp=1;child.maxHp=1;child.sigils=[];board[lane]=child;
+    child.token=true;child.atk=1;child.hp=1;child.maxHp=1;child.sigils=[];board[lane]=child;
     recordBattleEvent(battle,{type:'spawn',side,lane,unit:{...child,sigils:[...child.sigils]},source:'brood'})
   }
+  if(side==='player'&&!unit.token&&(!unit.sigils.includes('echo')||cause==='rite'||battle.hand.length>=7)){const printed=unit.cardSnapshot||run.deck.find(c=>c.instanceId===unit.instanceId)||cardById(unit.id);if(printed)battle.discard.push({...printed,sigils:[...printed.sigils]})}
   if(side==='player'&&unit.sigils.includes('echo')&&cause!=='rite'&&battle.hand.length<7){
-    const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp,sigils:[...unit.sigils]}))
+    const source=cardById(unit.id);if(source)battle.hand.push(cloneCard(source,{upgrades:unit.upgrades||0,mutationLevel:unit.mutationLevel||0,atk:unit.atk,hp:unit.maxHp-(unit.sigils.includes('root')?2:0),sigils:[...unit.sigils]}))
   }
   if(side==='player'&&unit.sigils.includes('parasite')&&battle.hand.length<7)battle.hand.push(cloneCard('leech',{name:'Личинка',cost:0,costType:'ember',atk:1,hp:1,sigils:[]}));
   battle.log.unshift(`${unit.name}: карта уничтожена.`)
@@ -267,11 +276,12 @@ function directDamage(run,battle,side,amount,attacker=null,lane=null){
 function doAttacks(run,battle,side){
   const own=side==='player'?battle.player:battle.enemy,foe=side==='player'?battle.enemy:battle.player;
   for(let lane=0;lane<LANES;lane++){
-    const attacker=own[lane];if(!attacker)continue;
+    const attacker=own[lane];if(!attacker||lane===battle.lockedLane)continue;
     const attacks=attacker.sigils.includes('twin')?2:1;
     for(let n=0;n<attacks;n++){
       if(!attacker||attacker.hp<=0)break;
       const defender=foe[lane],amount=attackValue(attacker,own,lane,!defender);
+      if(amount===0)continue;
       recordBattleEvent(battle,{type:'attack',side,lane,attackerId:attacker.instanceId,name:attacker.name,targetSide:side==='player'?'enemy':'player',targetLane:lane,targetId:defender?.instanceId||null,targetName:defender?.name||null,direct:!defender,amount,strike:n+1,strikes:attacks});
       if(defender){
         damageUnit(run,battle,side==='player'?'enemy':'player',lane,amount,attacker,'attack');
@@ -295,7 +305,7 @@ function bossHook(run,battle){
 function phaseOrFinish(run,battle){
   if(battle.seals.player>=SEAL_LIMIT){
     if(battle.bossId&&battle.phase<battle.phasesTotal){
-      battle.phase++;battle.seals={player:0,enemy:0};battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);
+      battle.phase++;battle.maxEmber=2;battle.ember=Math.min(battle.ember,2);battle.seals={player:0,enemy:0};battle.enemy.fill(null);battle.intent=[];battle.lockedLane=null;planIntent(battle,2);
       recordBattleEvent(battle,{type:'phase',bossId:battle.bossId,phase:battle.phase,sealsReset:true});
       battle.log.unshift('Безликий приор: вторая фаза. Максимум Угля снижен до 2.');return{ok:true,phase:true}
     }
@@ -310,7 +320,8 @@ export function endTurn(run,battle){
   recordBattleEvent(battle,{type:'sequence',label:'player'});
   doAttacks(run,battle,'player');
   let end=phaseOrFinish(run,battle);
-  if(end?.ended||end?.phase)return{...end,events:[...battle.events]};
+  if(end?.ended)return{...end,events:[...battle.events]};
+  if(end?.phase){battle.round++;battle.sacrificedThisTurn=false;battle.firstDirectUsed=false;drawCards(battle,1);recordBattleEvent(battle,{type:'round',round:battle.round,ember:battle.ember});return{...end,events:[...battle.events]}}
   recordBattleEvent(battle,{type:'sequence',label:'enemy'});
   doAttacks(run,battle,'enemy');
   end=phaseOrFinish(run,battle);
@@ -329,15 +340,17 @@ function finishBattle(run,battle,winner){
 }
 
 export function useItem(run,battle,itemId,targetLane=null){
+  if(!battle||battle.ended)return{ok:false,reason:'Сдача окончена.'};
   const idx=run.items.indexOf(itemId);if(idx<0)return{ok:false,reason:'Этого предмета уже нет.'};const item=itemInfo(itemId);if(!item)return{ok:false,reason:'Неизвестный предмет.'};
   if(item.target==='player'&&(targetLane==null||!battle.player[targetLane]))return{ok:false,reason:'Выбери своего зверя.'};
-  if(itemId==='knife'){killUnit(run,battle,'player',targetLane,'item');battle.remains+=3}
+  if(itemId==='mirror'&&(!battle.enemy.some(Boolean)||battle.hand.length>=7))return{ok:false,reason:battle.hand.length>=7?'В руке уже семь карт.':'На столе нет врага для отражения.'};
+  battle.events=[];if(itemId==='knife'){killUnit(run,battle,'player',targetLane,'item');battle.remains+=3}
   if(itemId==='smoke')battle.intent=[];
   if(itemId==='bell')battle.ember+=2;
   if(itemId==='thread'){battle.threadPrimed=true;battle.log.unshift('Чёрная нить активна: следующее Наследие применится дважды.')}
   if(itemId==='mirror'){const candidates=battle.enemy.filter(Boolean).sort((a,b)=>(b.atk+b.hp)-(a.atk+a.hp));if(candidates[0]&&battle.hand.length<7){const u=candidates[0];battle.hand.push(cloneCard('hare',{name:`Отражение: ${u.name}`,atk:1,hp:1,cost:0,sigils:[...u.sigils].slice(0,1),portrait:u.portrait}))}}
   if(itemId==='teeth'){const before=battle.seals.player;battle.seals.player=Math.min(SEAL_LIMIT,before+2);recordBattleEvent(battle,{type:'seal',side:'player',amount:2,before,after:battle.seals.player,source:'item'})}
-  run.items.splice(idx,1);run.stats.itemsUsed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner}
+  run.items.splice(idx,1);run.stats.itemsUsed++;const ended=phaseOrFinish(run,battle);return{ok:true,ended:!!ended?.ended,winner:ended?.winner,phase:!!ended?.phase,events:[...battle.events]}
 }
 
 export function resolveNode(run,node){
@@ -348,6 +361,7 @@ export function resolveNode(run,node){
   if(node.type==='item')run.pending={type:'item-choice',title:'Выбор предмета',choices:rollItemChoices(run,3),nodeId:node.id};
   if(node.type==='hearth')run.pending={type:'hearth',title:'Улучшение карты',nodeId:node.id};
   if(node.type==='altar')run.pending={type:'altar',title:'Перенос метки',nodeId:node.id,donor:null};
+  if(run.pending&&run.cycleVersion===3&&run.trail[run.depth]?.some(n=>n.id===node.id))run.pending.preparation=true;
   return{ok:true,type:run.pending?.type}
 }
 export function chooseCardReward(run,id){const p=run.pending;if(!p||p.type!=='card-choice')return{ok:false};const card=p.choices.find(c=>c.instanceId===id);if(!card)return{ok:false};run.deck.push(card);completeNode(run);return{ok:true}}
@@ -369,7 +383,7 @@ export function afterBattleVictory(run){
   if(bossId){if(run.depth>=run.maxDepth-1||bossId==='prior'){run.result='won';run.pending={type:'run-win'};return{ok:true,won:true}}run.pending={type:'relic-choice',title:`Трофей после: ${BOSSES[bossId].name}`,choices:rollRelicChoices(run,3),nodeId:'boss-trophy'};return{ok:true,boss:true}}
   run.pending={type:'card-choice',title:'Награда за бой',choices:rollCardChoices(run,new Set(run.relics).has('split-coin')?4:3,'battle'),nodeId:'battle-reward'};return{ok:true}
 }
-export function completeNode(run){run.pending=null;run.battle=null;run.depth++;if(run.depth>=run.maxDepth&&!run.result)run.result='won';return run}
+export function completeNode(run){const p=run.pending;if(p?.opening){run.pending=null;return run}if(p?.preparation){run.battle=createBattle(run);run.pending={type:'battle',nodeId:p.nodeId};return run}run.pending=null;run.battle=null;run.depth++;if(run.depth>=run.maxDepth&&!run.result)run.result='won';return run}
 export function skipReward(run){if(run.pending?.type==='card-choice'){completeNode(run);return{ok:true}}return{ok:false}}
 export function serializeRun(run){return JSON.stringify(run)}
-export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}parsed.secrets=parsed.secrets||{};if(parsed.battle&&!parsed.battle.seals){const legacy=Number(parsed.battle.balance)||0;parsed.battle.seals={player:Math.max(0,legacy),enemy:Math.max(0,-legacy)};parsed.battle.sealLimit=SEAL_LIMIT;delete parsed.battle.balance;delete parsed.battle.balanceLimit}return parsed}
+export function hydrateRun(raw){const parsed=typeof raw==='string'?JSON.parse(raw):raw;if(!parsed||![1,2].includes(parsed.version)||!Array.isArray(parsed.deck)||!Array.isArray(parsed.trail))throw new Error('Повреждённое сохранение МОРОК.');if(parsed.version===1){parsed.version=2;parsed.items=parsed.items||[];parsed.relics=parsed.relics||[];parsed.stats={itemsUsed:0,...parsed.stats};parsed.trail=generateTrail(parsed.seed);parsed.depth=Math.min(parsed.depth,8);parsed.battle=null;parsed.pending=null;parsed.result=null}if(!Number.isInteger(parsed.depth)||parsed.depth<0||parsed.depth>9||!Array.isArray(parsed.items)||!Array.isArray(parsed.relics)||!parsed.stats)throw new Error('Повреждённый маршрут.');if(parsed.battle&&(!Array.isArray(parsed.battle.player)||parsed.battle.player.length!==4||!Array.isArray(parsed.battle.enemy)||parsed.battle.enemy.length!==4||!Array.isArray(parsed.battle.hand)||!Array.isArray(parsed.battle.intent)))throw new Error('Повреждённый стол.');parsed.secrets=parsed.secrets||{};if(parsed.battle&&!parsed.battle.seals){const legacy=Number(parsed.battle.balance)||0;parsed.battle.seals={player:Math.max(0,legacy),enemy:Math.max(0,-legacy)};parsed.battle.sealLimit=SEAL_LIMIT;delete parsed.battle.balance;delete parsed.battle.balanceLimit}return parsed}

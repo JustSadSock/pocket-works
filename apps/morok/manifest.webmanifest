@@ -2,13 +2,24 @@
   "id": "/apps/morok/",
   "name": "МОРОК",
   "short_name": "МОРОК",
-  "description": "Пиксельный 2.5D deckbuilder за физическим столом: последовательные анимированные бои, печати, мутации, предметы и три босса.",
+  "description": "Девять карточных дуэлей за мрачным столом. Жертвы, метки, печати и три хозяина.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
-  "background_color": "#0b0908",
-  "theme_color": "#0b0908",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "background_color": "#10170d",
+  "theme_color": "#10170d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
