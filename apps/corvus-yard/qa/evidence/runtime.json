@@ -1,0 +1,30 @@
+{
+  "assetCommit": "989126c6",
+  "capturedAt": "2026-09-30T21:31:20.902910+00:00",
+  "engines": {
+    "chromium": "140.0.7339.16",
+    "webkit": "26.6 / Playwright build 2359"
+  },
+  "files": {
+    "public/models/crow.glb": {
+      "bytes": 1628380,
+      "sha256": "33037dbc93922e02469d0034044892c6bcdb088eaf727441c9892cac0aebd812"
+    },
+    "public/models/world.glb": {
+      "bytes": 1877412,
+      "sha256": "04606fd446cf78e1350e8a3014977eb3bb3be47319c7fb0f5120cb549ca22013"
+    },
+    "app.js": {
+      "bytes": 67950,
+      "sha256": "c22a467ca70b30a8477d9d070008cc610c61f550db862f1096bea63b181b87cc"
+    },
+    "source/main.ts": {
+      "bytes": 13513,
+      "sha256": "bd04683b2bc3aec91d49f56fe486e5f6f0d3be0983fb335f64eb99b49c69e080"
+    },
+    "source/flight.ts": {
+      "bytes": 8333,
+      "sha256": "07a34e6624402fdddc56c47c60e1132c8a643a8342452f290807c8b262cafd7c"
+    }
+  }
+}

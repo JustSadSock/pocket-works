@@ -17,4 +17,14 @@ npm run registry:check
 
 Generated runtime files are not source-controlled; CI and Cloudflare build them from source. The models in public/models are committed. Deterministic Blender sources and the Asset Forge manifest are in asset-forge.
 
-Current validation: 17 simulation/ecology tests, TypeScript and Vite/PWA build. Chromium portrait startup, flight, walk, pause and home return exercised with no console errors. Visual and performance review is still in progress: this is not yet signed off as a polished vertical slice. Real-phone performance, WebKit/offline acceptance, wider landing/collision coverage and complete progression browser testing remain release gates.
+Current validation: 29 flight, collision and ecology tests, TypeScript, Vite/PWA build and registry checks. Chromium completed the full progression through actual controls and additionally passed native two-finger stick/flap steering and touch cancellation. WebKit completed the full progression through real controls: portrait touch start, takeoff/glide, pause/home return, branch walkoff/ground landing, two meals, carried walnut/drop/crack, bell-tower auto-perch/completion, persisted settings/progress and offline reload. No console errors or failed requests were recorded. The offline WebKit check physically stopped the local HTTP server while the service worker supplied the complete application and both GLBs. The final Chromium flight samples were approximately 30–36 FPS, WebKit 18–29 FPS, and lighter street views reached approximately 40–55 FPS under headless software rendering with adaptive quality; these are not measurements from an iPhone.
+
+The browser runner starts its own HTTP server and never mutates the gameplay state. Full progression is enabled explicitly:
+
+```sh
+CORVUS_QA_FULL=1 npm run test:gameplay --workspace @pocket-works/corvus-yard
+```
+
+`CORVUS_QA_BROWSERS` selects Chromium/WebKit, `CORVUS_CHROMIUM_PATH` and `CORVUS_WEBKIT_PATH` override browser executables, and `CORVUS_QA_DIR` selects report/screenshots output. `CORVUS_QA_NATIVE_OFFLINE=1` verifies the cache by stopping the embedded HTTP server; this avoids a WPE WebKit offline-emulation protocol error. Local evidence lives under `qa/evidence/`.
+
+Both full browser runs and reviewed screenshots are in `qa/evidence/chromium-acceptance/` and `qa/evidence/webkit-acceptance/`; reload and offline return retained two meals, one cracked walnut and the bell-tower visit. Additional roof/perch/collision traversal remains outside this automated acceptance route. Real iPhone/Safari performance still requires physical-device validation. The current environment uses headless Chromium and Linux WebKit, not mobile Safari.

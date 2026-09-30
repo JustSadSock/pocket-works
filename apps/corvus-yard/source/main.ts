@@ -68,7 +68,7 @@ function frame(dt:number){elapsed+=dt;
   if(Math.hypot(state.position.x,state.position.z)>78||state.position.y>65){state.yaw=Math.atan2(-state.position.x,-state.position.z);state.velocity.x-=state.position.x*dt*.12;state.velocity.z-=state.position.z*dt*.12;toast('За кварталом сильный ветер. Поворачивай домой.');}
   ecology.update(dt,elapsed,state);const target=ecology.nearestTarget(state);rig.update(state,input.controls,dt,target?.position);camera.update(state,dt,world.colliders);world.clearCameraView(camera.camera.position);audio.update(state,dt);effects.update(state,dt,world);
   $('objective').textContent=objective();$('target').hidden=!target;if(target)$('target').textContent=target.label;$('interact').textContent=ecology.carrying?'Съесть':'Взять';$('drop').hidden=!ecology.carrying;
-  if(!completed&&ecology.progress.visited.includes('bell-tower')){completed=true;save();phase='complete';input.reset();audio.pause();$('complete').hidden=false;$('controls').hidden=true;}
+  if(!completed&&ecology.progress.visited.includes('bell-tower')){completed=true;save();phase='complete';input.reset();audio.pause();$('complete').hidden=false;$('controls').hidden=true;$('hud').hidden=true;$('target').hidden=true;$('toast').classList.remove('visible');}
   if(elapsed-lastSave>8){save();lastSave=elapsed;}
  }else if(phase==='menu'){rig?.update(state,{turn:0,pitch:0,flap:0,brake:0},dt);ecology?.update(dt,elapsed,state);}
  if(phase==='playing'||phase==='menu')world?.update(dt,elapsed,new Vector3(state.position.x,state.position.y,state.position.z));
