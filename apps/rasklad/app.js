@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { buildPackedLayout } from './layout-core.js';
 
 installMobileRuntime();
 
@@ -158,94 +159,30 @@ async function makeThumb(file, id) {
   }
 }
 
-function widthRangeForCount(count) {
-  if (count <= 3) return [0.27, 0.48];
-  if (count <= 6) return [0.21, 0.38];
-  if (count <= 10) return [0.16, 0.31];
-  if (count <= 16) return [0.125, 0.255];
-  if (count <= 26) return [0.095, 0.205];
-  if (count <= 40) return [0.073, 0.165];
-  return [0.058, 0.13];
-}
-
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
-function rectOverlap(a, b) {
-  const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
-  const y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-  return x * y;
-}
-
-function candidateScore(candidate, placed) {
-  const area = candidate.w * candidate.h;
-  let overlap = 0;
-  for (const item of placed) overlap += rectOverlap(candidate, item);
-  const centerX = candidate.x + candidate.w / 2;
-  const centerY = candidate.y + candidate.h / 2;
-  const mildCenterBias = Math.abs(centerX - .5) * .001 + Math.abs(centerY - .5) * .0007;
-  return overlap / Math.max(area, .00001) + mildCenterBias;
+function layoutSeed() {
+  if (globalThis.crypto?.getRandomValues) {
+    const seed = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(seed);
+    return seed[0];
+  }
+  return Math.floor(Math.random() * 0xffffffff) >>> 0;
 }
 
 function makeLayout() {
-  const count = state.images.length;
-  if (!count) {
+  if (!state.images.length) {
     state.layout = [];
     renderLayout();
     return;
   }
 
-  const margin = count > 30 ? .014 : .021;
-  const range = widthRangeForCount(count);
-  const shuffled = [...state.images].sort(() => Math.random() - .5);
-  const placed = [];
-
-  shuffled.forEach((item, index) => {
-    const ratio = item.width / item.height;
-    let w = randomBetween(range[0], range[1]);
-    let h = w * PAGE_ASPECT / ratio;
-
-    const maxByHeight = (1 - margin * 2) * ratio / PAGE_ASPECT;
-    if (w > maxByHeight) {
-      w = maxByHeight;
-      h = w * PAGE_ASPECT / ratio;
-    }
-
-    const targetPixelW = w * PAGE_W;
-    const targetPixelH = h * PAGE_H;
-    const noUpscale = Math.min(1, item.width / targetPixelW, item.height / targetPixelH);
-    w *= noUpscale;
-    h *= noUpscale;
-
-    const maxX = Math.max(margin, 1 - margin - w);
-    const maxY = Math.max(margin, 1 - margin - h);
-    let best = null;
-    let bestScore = Infinity;
-    const tries = Math.min(260, 80 + count * 6);
-
-    for (let attempt = 0; attempt < tries; attempt += 1) {
-      const candidate = {
-        id: item.id,
-        x: randomBetween(margin, maxX),
-        y: randomBetween(margin, maxY),
-        w,
-        h,
-        order: index
-      };
-      const score = candidateScore(candidate, placed);
-      if (score < bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
-      if (score < .004) break;
-    }
-
-    placed.push(best);
-  });
-
-  state.layout = placed;
-  renderLayout();
+  try {
+    const packed = buildPackedLayout(state.images, layoutSeed());
+    state.layout = packed.items;
+    renderLayout();
+  } catch (error) {
+    console.error(error);
+    showToast('Не удалось собрать плотную раскладку. Попробуй перерандомить.');
+  }
 }
 
 function renderLayout() {
