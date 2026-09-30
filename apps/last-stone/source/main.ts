@@ -6,22 +6,26 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { World } from './world';
 import {
-  COST, LABEL, type Kind, type State,
-  build, canBuild, loadGame, saveGame, remove, repair, startWave, tick, wavePlan, newGame
+  COST, LABEL, MAX_LEVEL, type Kind, type State,
+  build, canBuild, loadGame, saveGame, remove, repair, repairCost, upgrade, upgradeCost,
+  pieceAt, pieceMaxHp, startWave, tick, wavePlan, newGame
 } from './simulation';
 
 function runGame(){
 installMobileRuntime();
-registerEnhancedUpdate({ appName:'Последний камень', version:'1.0.3',
-  releaseNotes:['Стартовая блокирующая плашка убрана: игра сразу открывается в режиме строительства.'] });
-createWorkshopMode({appName:'Последний камень',version:'1.0.3',
+registerEnhancedUpdate({ appName:'Последний камень', version:'1.1.0',
+  releaseNotes:['Строительство теперь подтверждается перед расходом ресурсов.','Добавлены усиления до III уровня, улучшенный ремонт и более читаемый feedback проломов.'] });
+createWorkshopMode({appName:'Последний камень',version:'1.1.0',
   cachePrefix:'last-stone-',storageNamespace:'pocket-works:last-stone'});
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const storage='pocket-works:last-stone:campaign';
 let state:State=loadGame(localStorage.getItem(storage));
-let selected:Kind|'remove'|'repair'='wall';
+type ActionMode=Kind|'remove'|'repair'|'upgrade';
+interface PendingAction { mode:ActionMode; x:number; z:number }
+let selected:ActionMode='wall';
 let hover:[number,number]|null=null;
+let pending:PendingAction|null=null;
 let sound=true,paused=false,speed=1,lastTime=performance.now(),accumulator=0,saveTime=0,noticeTime=0;
 let audio:AudioContext|null=null;
 const world=new World($<HTMLCanvasElement>('world'),$('app'));
@@ -41,6 +45,42 @@ function beep(note=180,duration=.07,volume=.035){
     gain.gain.setValueAtTime(volume,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);
     osc.connect(gain);gain.connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration);
   }catch { /* Audio is optional. */ }
+}
+function haptic(ms=12){try{navigator.vibrate?.(ms);}catch{/* Optional tactile feedback. */}}
+function costText(cost:{stone:number;timber:number;iron:number}){
+  return [cost.stone?`${cost.stone} ◆`:'',cost.timber?`${cost.timber} ▰`:'',cost.iron?`${cost.iron} ◇`:''].filter(Boolean).join(' · ')||'без материалов';
+}
+function actionError(item:PendingAction):string|null{
+  if(item.mode!=='repair'&&item.mode!=='remove'&&item.mode!=='upgrade')return canBuild(state,item.mode,item.x,item.z);
+  const p=pieceAt(state,item.x,item.z);if(!p)return 'На этой клетке нет постройки';
+  if(item.mode==='repair'){
+    if(p.hp>=pieceMaxHp(p))return 'Постройка не повреждена';
+    const q=repairCost(p);if(state.stone<q.stone||state.timber<q.timber||state.iron<q.iron)return 'Не хватает материалов для ремонта';
+  }
+  if(item.mode==='upgrade'){
+    if(p.level>=MAX_LEVEL)return 'Усиление III — максимум';
+    const q=upgradeCost(p);if(state.stone<q.stone||state.timber<q.timber||state.iron<q.iron)return 'Не хватает материалов для усиления';
+  }
+  return null;
+}
+function updatePendingUI(){
+  const bar=$('action-bar'),confirm=$<HTMLButtonElement>('action-confirm');
+  if(!pending||state.phase!=='build'){bar.classList.add('hidden');return;}
+  bar.classList.remove('hidden');
+  const p=pieceAt(state,pending.x,pending.z),err=actionError(pending);
+  let title='',detail='';
+  if(pending.mode!=='repair'&&pending.mode!=='remove'&&pending.mode!=='upgrade'){
+    title=`${LABEL[pending.mode]} · клетка ${pending.x+1}:${pending.z+1}`;
+    detail=err??`Стоимость: ${costText(COST[pending.mode])}`;
+    confirm.textContent='ПОСТРОИТЬ';
+  }else if(p){
+    title=`${LABEL[p.kind]} · уровень ${p.level}`;
+    if(pending.mode==='repair'){const q=repairCost(p);detail=err??`Ремонт: ${costText(q)} · прочность ${Math.ceil(p.hp)}/${pieceMaxHp(p)}`;confirm.textContent='ПОЧИНИТЬ';}
+    else if(pending.mode==='upgrade'){const q=upgradeCost(p);detail=err??`Усиление до уровня ${p.level+1}: ${costText(q)}`;confirm.textContent='УСИЛИТЬ';}
+    else {detail='Разборка вернёт часть материалов. Действие подтверждается здесь.';confirm.textContent='РАЗОБРАТЬ';}
+  }else {title='Пустая клетка';detail=err??'';confirm.textContent='ПОДТВЕРДИТЬ';}
+  $('action-title').textContent=title;$('action-detail').textContent=err??detail;
+  bar.classList.toggle('invalid',!!err);confirm.disabled=!!err;
 }
 function message(value:string){const el=$('toast');el.textContent=value;el.classList.add('show');clearTimeout(noticeTime);noticeTime=window.setTimeout(()=>el.classList.remove('show'),2400);}
 function bindModalAction(button:HTMLButtonElement,action:()=>void){
@@ -89,7 +129,7 @@ for(const kind of names){
   const b=document.createElement('button');b.type='button';b.dataset.kind=kind;
   const c=COST[kind];
   b.innerHTML=`<span class="tool-symbol">${symbols[kind]}</span><span class="tool-label">${LABEL[kind]}</span><small>${c.stone?c.stone+' ◆ ':''}${c.timber?c.timber+' ▰ ':''}${c.iron?c.iron+' ◇':''}</small>`;
-  b.addEventListener('click',()=>{selected=kind;draw();beep(270);message(`${LABEL[kind]}: коснитесь клетки на земле`);});
+  b.addEventListener('click',()=>{selected=kind;pending=null;draw();beep(270);message(`${LABEL[kind]}: выберите клетку, затем подтвердите строительство`);});
   tools.append(b);
 }
 function draw(){
@@ -114,32 +154,48 @@ function draw(){
     button.classList.toggle('active',selected===kind);
     const c=COST[kind];button.classList.toggle('unaffordable',state.stone<c.stone||state.timber<c.timber||state.iron<c.iron);
   }
-  $('repair').classList.toggle('active',selected==='repair');$('remove').classList.toggle('active',selected==='remove');
+  $('repair').classList.toggle('active',selected==='repair');$('remove').classList.toggle('active',selected==='remove');$('upgrade').classList.toggle('active',selected==='upgrade');
   world.setBuildMode(state.phase==='build');
-  if(hover&&state.phase==='build') world.preview(...hover,selected==='repair'||selected==='remove'?null:selected,
-    selected==='repair'||selected==='remove'?true:!canBuild(state,selected,...hover));
+  const focus=pending?[pending.x,pending.z] as [number,number]:hover;
+  const mode=pending?.mode??selected;
+  if(focus&&state.phase==='build') world.preview(...focus,mode==='repair'||mode==='remove'||mode==='upgrade'?null:mode,
+    mode==='repair'||mode==='remove'||mode==='upgrade'?!actionError({mode,x:focus[0],z:focus[1]}):!canBuild(state,mode,...focus));
+  updatePendingUI();
   const test=window as Window & {__AI_TEST_STATE__?:unknown};
   test.__AI_TEST_STATE__={app:'last-stone',phase:state.phase,wave:state.wave,stone:state.stone,timber:state.timber,
     iron:state.iron,keep:state.keep,pieces:state.pieces.map(p=>({x:p.x,z:p.z,kind:p.kind,hp:p.hp})),
-    enemies:state.enemies.length,spawned:state.spawned,kills:state.kills,selected,paused,speed};
+    enemies:state.enemies.length,spawned:state.spawned,kills:state.kills,selected,pending,paused,speed};
 }
 world.onHover=(x,z)=>{hover=[x,z];draw();};
 world.onTile=(x,z)=>{
   hover=[x,z];if(state.phase!=='build')return;
-  let error:string|null=null;
-  if(selected==='remove')error=remove(state,x,z);
-  else if(selected==='repair')error=repair(state,x,z);
-  else error=build(state,selected,x,z);
-  if(error){message(error);beep(95,.11);draw();return;}
-  beep(selected==='remove'?140:320,.09);save();draw();world.update(state,0);
+  pending={mode:selected,x,z};
+  const error=actionError(pending);
+  if(error){beep(105,.08);message(error);}else{beep(250,.05);haptic(8);}
+  draw();
 };
-$('repair').onclick=()=>{selected='repair';draw();message('Коснитесь повреждённой постройки');};
-$('remove').onclick=()=>{selected='remove';draw();message('Разборка возвращает часть материалов');};
+$('action-cancel').onclick=()=>{pending=null;draw();beep(170,.05);};
+$('action-confirm').onclick=()=>{
+  if(!pending)return;
+  const item=pending,error=actionError(item);if(error){message(error);beep(95,.11);draw();return;}
+  let result:string|null=null;
+  if(item.mode==='remove')result=remove(state,item.x,item.z);
+  else if(item.mode==='repair')result=repair(state,item.x,item.z);
+  else if(item.mode==='upgrade')result=upgrade(state,item.x,item.z);
+  else result=build(state,item.mode,item.x,item.z);
+  if(result){message(result);beep(95,.11);draw();return;}
+  pending=null;beep(item.mode==='remove'?140:item.mode==='upgrade'?430:320,.09);haptic(item.mode==='remove'?18:12);
+  save();world.update(state,0);draw();
+};
+$('repair').onclick=()=>{selected='repair';pending=null;draw();message('Выберите повреждённую постройку и подтвердите ремонт');};
+$('remove').onclick=()=>{selected='remove';pending=null;draw();message('Выберите постройку — разборка потребует подтверждения');};
+$('upgrade').onclick=()=>{selected='upgrade';pending=null;draw();message('Выберите постройку для усиления до III уровня');};
 $('start').onclick=()=>{
+  if(pending){message('Сначала подтвердите или отмените выбранное действие');beep(120,.08);return;}
   if(!state.pieces.some(p=>p.kind==='tower'||p.kind==='archer')) {
     message('Поставьте хотя бы одну башню или лучников');return;
   }
-  startWave(state);paused=false;speed=1;save();draw();beep(110,.3,.07);
+  pending=null;startWave(state);paused=false;speed=1;save();draw();beep(110,.3,.07);haptic(24);
 };
 $('speed').onclick=()=>{speed=speed===1?2:1;draw();beep(350);};
 $('pause').onclick=()=>{paused=!paused;draw();beep(230);};
@@ -164,7 +220,7 @@ function end(){
 }
 function restart(){
   modal('Начать новую кампанию?','Текущая крепость и её прогресс будут удалены.',
-    'ДА, НАЧАТЬ ЗАНОВО',()=>{state=newGame();selected='wall';save();world.update(state,0);draw();message('Выберите постройку и коснитесь клетки на земле.');},
+    'ДА, НАЧАТЬ ЗАНОВО',()=>{state=newGame();selected='wall';pending=null;save();world.update(state,0);draw();message('Выберите постройку, клетку и подтвердите размещение.');},
     {label:'Отмена',action:()=>{}});
 }
 function frame(now:number){
@@ -192,7 +248,7 @@ function frame(now:number){
 }
 world.update(state,0);draw();
 if(state.phase==='won'||state.phase==='lost')end();
-else if(!localStorage.getItem(storage))message('Выберите постройку внизу и коснитесь клетки на земле.');
+else if(!localStorage.getItem(storage))message('Выберите постройку, коснитесь клетки и подтвердите размещение.');
 requestAnimationFrame(frame);
 }
 
