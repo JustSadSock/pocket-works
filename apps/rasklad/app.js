@@ -95,12 +95,12 @@ function crc32(bytes) {
 }
 
 async function tagPngDpi(blob, dpi = 300) {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const head = new Uint8Array(await blob.slice(0, 33).arrayBuffer());
   const signature = [137, 80, 78, 71, 13, 10, 26, 10];
-  if (bytes.length < 33 || !signature.every((value, index) => bytes[index] === value)) return blob;
+  if (head.length < 33 || !signature.every((value, index) => head[index] === value)) return blob;
 
-  const firstLength = new DataView(bytes.buffer, bytes.byteOffset + 8, 4).getUint32(0);
-  const firstType = String.fromCharCode(...bytes.slice(12, 16));
+  const firstLength = new DataView(head.buffer, head.byteOffset + 8, 4).getUint32(0);
+  const firstType = String.fromCharCode(...head.slice(12, 16));
   if (firstType !== 'IHDR') return blob;
 
   const insertAt = 8 + 12 + firstLength;
@@ -114,7 +114,7 @@ async function tagPngDpi(blob, dpi = 300) {
   chunk[16] = 1;
   view.setUint32(17, crc32(chunk.slice(4, 17)));
 
-  return new Blob([bytes.slice(0, insertAt), chunk, bytes.slice(insertAt)], { type: 'image/png' });
+  return new Blob([blob.slice(0, insertAt), chunk, blob.slice(insertAt)], { type: 'image/png' });
 }
 
 async function makeThumb(file, id) {
