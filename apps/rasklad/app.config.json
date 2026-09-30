@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "rasklad",
+  "name": "РАСКЛАД",
+  "shortName": "РАСКЛАД",
+  "description": "Быстрая случайная раскладка изображений на лист A4 с lossless PNG-экспортом в печатном разрешении.",
+  "version": "1.0.0",
+  "releaseDate": "2026-09-30",
+  "releaseDateTime": "2026-09-30T21:21:00+02:00",
+  "changelog": [
+    "Первый релиз: мультизагрузка изображений, случайная аккуратная раскладка на A4 и мгновенная перетасовка.",
+    "Экспорт строится из оригиналов в 2480×3508 px и сохраняется в lossless PNG без JPEG-пережатия.",
+    "Превью использует отдельные облегчённые миниатюры, чтобы большие фотографии не забивали память телефона."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#275d52",
+  "backgroundColor": "#d8d0bf",
+  "themeColor": "#20352f",
+  "orientation": "any",
+  "cacheName": "rasklad-v1.0.0",
+  "storageNamespace": "pocket-works:rasklad",
+  "tags": [
+    "images",
+    "a4",
+    "print",
+    "layout",
+    "collage",
+    "random",
+    "png",
+    "export",
+    "offline",
+    "tool"
+  ],
+  "order": 54
+}
