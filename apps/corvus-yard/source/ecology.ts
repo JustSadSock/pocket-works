@@ -4,7 +4,8 @@ import type { CrowState, V3 } from './flight';
 type Perch = { id:string; position:Vector3; radius:number; kind:string };
 type Kind = 'beetle'|'mouse'|'scrap'|'walnut'|'shiny';
 type Item = { kind:Kind; root:TransformNode; velocity:Vector3; home:Vector3; alive:boolean; consumed:boolean; cracked:boolean; droppedFrom:number; fear:number; phase:number; radius:number };
-export type EcologyProgress = { foods:number; nuts:number; visited:string[]; consumedIds?:string[]; crackedIds?:string[] };
+type SavedItem = { id:string; position:number[]; velocity:number[]; alive:boolean };
+export type EcologyProgress = { foods:number; nuts:number; visited:string[]; consumedIds?:string[]; crackedIds?:string[]; items?:SavedItem[]; carriedId?:string|null };
 type Bird = { root:TransformNode; home:Vector3; target:Vector3; velocity:Vector3; phase:number; flying:boolean; timer:number; wings:TransformNode[]; blend:number; imported?:ReturnType<AssetContainer['instantiateModelsToScene']> };
 const names:Record<Kind,string> = { beetle:'Жук',mouse:'Полёвка',scrap:'Кусочек хлеба',walnut:'Грецкий орех',shiny:'Блестящая крышка' };
 const clamp=(x:number,a:number,b:number)=>Math.max(a,Math.min(b,x));
@@ -21,10 +22,10 @@ export class Ecology {
   private birdAsset:AssetContainer|null=null;
   private dead=false;
   private age=0;
-  constructor(private scene:Scene,private perches:Perch[],savedProgress?:EcologyProgress,private surfaceHeight?:(x:number,z:number,previousY:number)=>number) {
+  constructor(private scene:Scene,private perches:Perch[],savedProgress?:EcologyProgress,private surfaceHeight?:(x:number,z:number,previousY:number)=>number,private resolveCollision?:(position:Vector3,previous:Vector3,radius:number)=>{normal:Vector3;impact:number}|null) {
     const count=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.floor(value)):0;
-    const ids=(value:unknown)=>Array.isArray(value)?[...new Set(value.filter((id):id is string=>typeof id==='string'))]:[];
-    this.progress={foods:count(savedProgress?.foods),nuts:count(savedProgress?.nuts),visited:ids(savedProgress?.visited),consumedIds:ids(savedProgress?.consumedIds),crackedIds:ids(savedProgress?.crackedIds)};
+    const ids=(value:unknown)=>Array.isArray(value)?[...new Set(value.slice(0,64).filter((id):id is string=>typeof id==='string'&&id.length<=80))]:[];
+    this.progress={foods:count(savedProgress?.foods),nuts:count(savedProgress?.nuts),visited:ids(savedProgress?.visited),consumedIds:ids(savedProgress?.consumedIds),crackedIds:ids(savedProgress?.crackedIds),items:[],carriedId:null};
     const mats={
       beetle:this.material('beetle',new Color3(.065,.095,.057),.38),
       mouse:this.material('mouse',new Color3(.24,.19,.14),.96),
@@ -63,8 +64,21 @@ export class Ecology {
       if(kind==='shiny'){body.scaling.set(1,.16,1);}
       const consumed=this.progress.consumedIds!.includes(root.name),cracked=kind==='walnut'&&this.progress.crackedIds!.includes(root.name);
       root.setEnabled(!consumed);if(cracked){root.scaling.y=.6;root.scaling.x=1.17;}
-      this.items.push({kind,root,velocity:Vector3.Zero(),home:root.position.clone(),alive:kind==='mouse'||kind==='beetle',consumed,cracked,droppedFrom:0,fear:0,phase:i*1.79,radius});
+      const item:Item={kind,root,velocity:Vector3.Zero(),home:root.position.clone(),alive:kind==='mouse'||kind==='beetle',consumed,cracked,droppedFrom:0,fear:0,phase:i*1.79,radius};
+      const saved=Array.isArray(savedProgress?.items)?savedProgress.items.slice(0,64).find(s=>s&&typeof s==='object'&&s.id===root.name):undefined;
+      const validVector=(v:unknown,bounds:number):v is number[]=>Array.isArray(v)&&v.length===3&&v.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=bounds);
+      if(saved&&validVector(saved.position,90)&&saved.position[1]>=-.5&&validVector(saved.velocity,40)){
+        root.position.copyFromFloats(saved.position[0],saved.position[1],saved.position[2]);item.velocity.copyFromFloats(saved.velocity[0],saved.velocity[1],saved.velocity[2]);
+        item.alive=item.alive&&saved.alive===true;
+      }
+      this.items.push(item);
     });
+    this.progress.consumedIds=this.progress.consumedIds!.filter(id=>this.items.some(item=>item.root.name===id));
+    this.progress.crackedIds=this.progress.crackedIds!.filter(id=>this.items.some(item=>item.kind==='walnut'&&item.root.name===id));
+    this.progress.visited=this.progress.visited.filter(id=>perches.some(perch=>perch.id===id));
+    this.held=this.items.find(item=>item.root.name===savedProgress?.carriedId&&!item.consumed)||null;
+    if(this.held){this.held.alive=false;this.held.velocity.setAll(0);}
+    this.persistItems();
     const homes=perches.filter(p=>p.position.y>2).slice(0,9);
     homes.forEach((p,i)=>{const size=.55+(i%3)*.06;const home=p.position.add(new Vector3((i%2)*.12,.456*size,0));const root=new TransformNode(`wildlife-${i}`,scene);root.position.copyFrom(home);root.rotation.y=i*2.1;root.scaling.setAll(size);this.birds.push({root,home,target:home.clone(),velocity:Vector3.Zero(),phase:i*1.72,flying:false,timer:3+i,wings:[],blend:0});});
     // The same authored skeleton as the player, shared geometry/materials across all flock members.
@@ -81,6 +95,7 @@ export class Ecology {
       }
     }).catch(()=>{ /* Player asset loading owns the visible error screen. */ });
   }
+  private persistItems(){this.progress.carriedId=this.held?.root.name||null;this.progress.items=this.items.map(item=>({id:item.root.name,position:item.root.position.asArray(),velocity:item.velocity.asArray(),alive:item.alive}));}
   get carrying(){return this.held!==null;}
   private material(name:string,color:Color3,roughness:number,metallic=0){const m=new PBRMaterial(`ecology-${name}`,this.scene);m.albedoColor=color;m.roughness=roughness;m.metallic=metallic;this.materials.push(m);return m;}
   private organicMesh(name:string,rx:number,ry:number,rz:number,material:PBRMaterial):Mesh{
@@ -110,19 +125,30 @@ export class Ecology {
         item.fear=Math.max(0,item.fear-dt*.6);
         if(distance<(item.kind==='mouse'?4.8:1.9)&&attack)item.fear=1;
         let dx=Math.sin(time*.36+item.phase),dz=Math.cos(time*.29+item.phase);
-        if(item.fear>.1){dx=item.root.position.x-state.position.x;dz=item.root.position.z-state.position.z;const len=Math.hypot(dx,dz)||1;dx/=len;dz/=len;}
+        if(item.fear>.1){
+          const shelter=item.home.add(new Vector3(item.home.x>=0?3.5:-3.5,0,1.8));
+          const escape=item.root.position.subtract(vec(state.position));escape.y=0;
+          const cover=shelter.subtract(item.root.position);cover.y=0;
+          const move=escape.normalize().scale(distance<2?1:.3).add(cover.normalize().scale(distance<2?.35:1));move.normalize();dx=move.x;dz=move.z;
+        }
         else if(Vector3.Distance(item.home,item.root.position)>3){dx=item.home.x-item.root.position.x;dz=item.home.z-item.root.position.z;const len=Math.hypot(dx,dz)||1;dx/=len;dz/=len;}
         const speed=item.kind==='mouse'?(item.fear>.1?2.6:.16):.07;
         item.root.position.x+=dx*dt*speed;item.root.position.z+=dz*dt*speed;item.root.rotation.y=Math.atan2(dx,dz);
         item.root.position.y=item.radius+(item.kind==='mouse'?Math.sin(time*(item.fear?22:7)+item.phase)*.015:0);
       }else{
-        const moving=item.velocity.lengthSquared()>.0001||item.root.position.y>item.radius+.01;
+        const moving=item.velocity.lengthSquared()>.0001||item.root.position.y>this.itemFloor(item.root.position)+item.radius+.01;
         if(moving){
-          const previousY=item.root.position.y;
+          const previous=item.root.position.clone(),previousY=previous.y;
           item.velocity.y-=9.81*dt;item.root.position.addInPlace(item.velocity.scale(dt));
+          const downwardImpact=-item.velocity.y;
+          const collision=this.resolveCollision?.(item.root.position,previous,item.radius);
+          if(collision){
+            const toward=Vector3.Dot(item.velocity,collision.normal);
+            if(toward<0)item.velocity.subtractInPlace(collision.normal.scale(toward*1.25));
+          }
           const floor=this.itemFloor(item.root.position,previousY);item.root.rotation.x+=dt*item.velocity.z*.8;item.root.rotation.z-=dt*item.velocity.x*.8;
-          if(item.root.position.y<floor+item.radius){
-            const impact=-item.velocity.y;item.root.position.y=floor+item.radius;
+          if(item.root.position.y<=floor+item.radius+.003){
+            const impact=downwardImpact;item.root.position.y=floor+item.radius;
             if(item.kind==='walnut'&&!item.cracked&&impact>7.8&&this.isHard(item.root.position)){
               item.cracked=true;if(!this.progress.crackedIds!.includes(item.root.name)){this.progress.crackedIds!.push(item.root.name);this.progress.nuts++;}item.root.scaling.y=.6;item.root.scaling.x=1.17;
               this.spawnShell(item.root.position,item.phase);
@@ -133,6 +159,7 @@ export class Ecology {
         }
       }
     }
+    this.persistItems();
     this.birds.forEach((bird,i)=>this.updateBird(bird,i,dt,time,state));
     if(this.progress.foods>=2&&this.progress.nuts>=1){
       for(const perch of this.perches){if(/tower/i.test(perch.id)&&state.grounded&&Vector3.Distance(vec(state.position),perch.position)<2&&!this.progress.visited.includes(perch.id))this.progress.visited.push(perch.id);}
@@ -193,19 +220,19 @@ export class Ecology {
     if(this.held)return this.eat(state);
     if(state.speed>5)return 'Сначала затормози рядом с целью';
     const item=this.candidate(state);if(!item)return 'Подлети ближе к еде или предмету';
-    this.held=item;item.alive=false;item.velocity.setAll(0);this.placeHeld(item,state);
+    this.held=item;item.alive=false;item.velocity.setAll(0);this.placeHeld(item,state);this.persistItems();
     return item.kind==='walnut'&&!item.cracked?'Орех в клюве. Сбрось его на дорожку с высоты':`${names[item.kind]} — в клюве`;
   }
   drop(state:CrowState):string{
     if(!this.held)return 'В клюве ничего нет';
-    const item=this.held;this.placeHeld(item,state);this.held=null;item.velocity.copyFrom(vec(state.velocity)).scaleInPlace(.65);item.velocity.y-=.7;item.droppedFrom=state.position.y;
+    const item=this.held;this.placeHeld(item,state);this.held=null;item.velocity.copyFrom(vec(state.velocity)).scaleInPlace(.65);item.velocity.y-=.7;item.droppedFrom=state.position.y;this.persistItems();
     return item.kind==='walnut'?'Орех падает. Твёрдая дорожка расколет скорлупу':'Предмет отпущен';
   }
   eat(_state:CrowState):string{
     const item=this.held;if(!item)return 'Сначала возьми еду';
     if(item.kind==='shiny')return 'Крышка блестит, но несъедобна. Можно бросить';
     if(item.kind==='walnut'&&!item.cracked)return 'Твёрдая скорлупа. Сбрось орех на дорожку с высоты 4 м';
-    this.held=null;item.consumed=true;item.root.setEnabled(false);if(!this.progress.consumedIds!.includes(item.root.name)){this.progress.consumedIds!.push(item.root.name);this.progress.foods++;}
+    this.held=null;item.consumed=true;item.root.setEnabled(false);if(!this.progress.consumedIds!.includes(item.root.name)){this.progress.consumedIds!.push(item.root.name);this.progress.foods++;}this.persistItems();
     return item.kind==='walnut'?'Орех расколот и съеден':'Еда съедена';
   }
   nearestTarget(state:CrowState):{position:Vector3;label:string}|null{

@@ -1,4 +1,4 @@
-"""CORVUS — deterministic layered-feather raven, 16-bone authored rig.
+"""CORVUS — deterministic layered-feather raven, 11-bone authored rig.
 Original geometry; no external asset or texture dependency. Blender 4.5+.
 """
 import bpy, math, random, os, sys, argparse
@@ -10,8 +10,10 @@ def mat(name,col,rough=.36,metal=0):
  m=bpy.data.materials.new(name); m.diffuse_color=(*col,1); m.use_nodes=True
  bs=m.node_tree.nodes.get('Principled BSDF'); bs.inputs['Base Color'].default_value=(*col,1); bs.inputs['Roughness'].default_value=rough; bs.inputs['Metallic'].default_value=metal
  return m
-plumage=mat('Obsidian · violet blue feather sheen',(.018,.023,.033),.48,.10)
-featherM=[mat('Flight feather %s'%i,(.014+i*.002,.019+i*.002,.026+i*.003),.40+i*.022,.10) for i in range(5)]
+plumage=mat('Obsidian · violet blue feather sheen',(.018,.023,.033),.59,.04)
+# Two feather materials share draw calls across the entire skinned bird.
+feather_alt=mat('Flight feather · soft blue black',(.021,.027,.038),.53,.06)
+featherM=[plumage,feather_alt,plumage,feather_alt,plumage]
 beak=mat('Horn · satin black',(.018,.020,.021),.29,.03); claw=mat('Scutes · charcoal',(.035,.038,.039),.6); eye=mat('Eye · wet obsidian',(.003,.004,.004),.08); iris=mat('Iris · deep umber',(.055,.038,.022),.22); glint=mat('Eye catchlight',(.38,.40,.36),.15)
 # Blender forward -Y; glTF forward +Z. Wing origin at shoulder.
 bones={
@@ -41,14 +43,14 @@ def feather(name,start,end,width,m,b,curve=.012):
  s=Vector(start); e=Vector(end); d=e-s; side=Vector((d.y,-d.x,0)).normalized(); vs=[]
  for i in range(7):
   t=i/6; c=s+d*t+Vector((0,0,curve*math.sin(math.pi*t))); w=width*(math.sin(math.pi*(.08+.9*t))**.65)*(1-.65*t)
-  for offset,z in [(-w,0),(0,.007*(1-t)),(w,0),(0,-.003)]:vs.append(tuple(c+side*offset+Vector((0,0,z))))
+  for offset,z in [(-w,0),(0,.0028*(1-t)),(w,0),(0,-.001)]:vs.append(tuple(c+side*offset+Vector((0,0,z))))
  fs=[]
  for i in range(6):
   for j in range(4):fs.append((i*4+j,i*4+(j+1)%4,(i+1)*4+(j+1)%4,(i+1)*4+j))
  fs += [(0,1,2,3),(24,27,26,25)]
  mesh=bpy.data.meshes.new(name); mesh.from_pydata(vs,[],fs); mesh.update(); o=bpy.data.objects.new(name,mesh); bpy.context.collection.objects.link(o); bind(o,m,b)
  # central shaft has stronger specular and makes plumage visibly layered.
- tube(name+' rachis',start,tuple(s+d*.90+Vector((0,0,.004))),.002,.0007,m,b,5)
+ tube(name+' rachis',start,tuple(s+d*.90+Vector((0,0,.004))),.0012,.0005,m,b,5)
 ell('Deep keel breast',(0,-.015,-.055),(.145,.27,.205),plumage,'Body',28,18)
 ell('Shoulder mantle',(0,.055,.075),(.164,.215,.13),plumage,'Body',24,16)
 ell('Neck',(0,-.205,.13),(.096,.115,.133),plumage,'Head')
@@ -103,39 +105,58 @@ for row in range(6):
  for j in range(30):
   theta=2*math.pi*j/30+(row%2)*.12
   x=.148*radius*math.sin(theta); y=-.015-.272*radius*math.cos(theta)
-  feather('Breast contour',(x,y,z),(x*.94,y*.92,z-.073),.025,featherM[(j+row)%5],'Body',.004)
+  feather('Breast contour',(x,y,z),(x*.98,y*.98,z-.042),.022,featherM[(j+row)%5],'Body',.004)
 # Combine all geometry into one skinned mesh; preserve bone groups and materials.
 bpy.ops.object.select_all(action='DESELECT')
 for o in parts:o.select_set(True)
 bpy.context.view_layer.objects.active=parts[0]; bpy.ops.object.join(); model=bpy.context.object; model.name='Corvus layered feather skin'
+# Baked foot contact coordinates keep toes at the actual support during stance.
+foot_vertices={}
+for side in ['L','R']:
+ group=model.vertex_groups.get('Foot.'+side)
+ foot_vertices[side]=[model.matrix_world @ v.co for v in model.data.vertices if any(g.group==group.index for g in v.groups)]
 # Authored clips, all bones keyed, NLA tracks guarantee separate GLTF clips.
 rig.animation_data_create(); fps=30; bpy.context.scene.render.fps=fps
-for clip,duration in [('Idle',2.4),('Walk',.8),('Flap',.6),('Glide',1.8),('Fold',1.1),('Brake',.8),('Hit',.7),('Preen',2.4)]:
+for clip,duration in [('Idle',2.4),('Walk',.8),('Run',.55),('Takeoff',.7),('Land',.65),('Flap',.6),('Glide',1.8),('Fold',1.1),('Brake',.8),('Hit',.7),('Preen',2.4)]:
  act=bpy.data.actions.new(clip); rig.animation_data.action=act
  for f in range(0,int(duration*fps)+1,3):
   t=f/fps; cyc=2*math.pi*t/duration
-  for pb in rig.pose.bones:pb.rotation_mode='XYZ'; pb.rotation_euler=(0,0,0); pb.location=(0,0,0)
+  for pb in rig.pose.bones:pb.rotation_mode='XYZ'; pb.rotation_euler=(0,0,0); pb.location=(0,0,0); pb.scale=(1,1,1)
   for side,sgn in [('L',1),('R',-1)]:
    wing=rig.pose.bones['Wing.'+side]; wrist=rig.pose.bones['Wrist.'+side]
-   if clip in ['Idle','Walk','Fold','Preen']:
-    fold=Matrix(((0,0,-sgn),(sgn,0,0),(0,-1,0))).to_quaternion(); rest=wing.bone.matrix_local.to_quaternion(); wing.rotation_euler=(rest.inverted() @ fold @ rest).to_euler('XYZ'); wrist.rotation_euler=(0,0,0)
-   elif clip=='Flap':wing.rotation_euler=(math.sin(cyc)*.64,0,sgn*.04); wrist.rotation_euler=(math.sin(cyc-.4)*.27,0,0)
-   elif clip=='Brake':wing.rotation_euler=(.72,0,sgn*-.18); wrist.rotation_euler=(.3,0,0)
+   if clip in ['Idle','Walk','Run','Fold','Preen']:
+    # Fold along the body, not vertically into a cape. Compress the wing chord
+    # and span in bone-local space to simulate the articulated feather stack.
+    fold=(Matrix.Rotation(sgn*math.pi*.5,4,'Z') @ Matrix.Rotation(-.8,4,'X')).to_quaternion(); rest=wing.bone.matrix_local.to_quaternion(); wing.rotation_euler=(rest.inverted() @ fold @ rest).to_euler('XYZ'); wing.scale=(.48,.72,1); wrist.rotation_euler=(0,0,0)
+   elif clip in ['Flap','Takeoff']:wing.rotation_euler=(math.sin(cyc)*.64,0,sgn*.04); wrist.rotation_euler=(math.sin(cyc-.4)*.27,0,0)
+   elif clip in ['Brake','Land']:wing.rotation_euler=(.72,0,sgn*-.18); wrist.rotation_euler=(.3,0,0)
    elif clip=='Hit':wing.rotation_euler=(math.sin(cyc)*.25,sgn*.4,sgn*math.sin(cyc)*.4)
    else:wing.rotation_euler=(.02+math.sin(cyc)*.012,0,sgn*-.10)
    leg=rig.pose.bones['Leg.'+side]; foot=rig.pose.bones['Foot.'+side]
-   if clip=='Walk':leg.rotation_euler.x=math.sin(cyc+(0 if sgn==1 else math.pi))*.38; foot.rotation_euler.x=-leg.rotation_euler.x*.55
+   if clip in ['Walk','Run']:leg.rotation_euler.x=math.sin(cyc+(0 if sgn==1 else math.pi))*(.38 if clip=='Walk' else .5); foot.rotation_euler.x=-leg.rotation_euler.x*.7
    elif clip in ['Flap','Glide']:leg.rotation_euler.x=-.8; foot.rotation_euler.x=.8
-  if clip in ['Flap','Glide','Brake']:rig.pose.bones['Body'].rotation_euler.x=.42;rig.pose.bones['Head'].rotation_euler.x=-.1
+   elif clip=='Takeoff':leg.rotation_euler.x=-.8*(f/(duration*fps)); foot.rotation_euler.x=-leg.rotation_euler.x
+   elif clip=='Land':leg.rotation_euler.x=.2; foot.rotation_euler.x=-.2
+  if clip in ['Flap','Glide','Brake','Takeoff','Land']:rig.pose.bones['Body'].rotation_euler.x=.42;rig.pose.bones['Head'].rotation_euler.x=-.1
   if clip=='Idle':rig.pose.bones['Head'].rotation_euler=(math.sin(cyc)*.06,0,math.sin(cyc)*.19)
-  if clip=='Walk':rig.pose.bones['Body'].location.z=abs(math.sin(cyc))*.015; rig.pose.bones['Head'].rotation_euler.x=math.sin(cyc*2)*.08
+  if clip in ['Walk','Run']:rig.pose.bones['Body'].location.z=abs(math.sin(cyc))*.008; rig.pose.bones['Head'].rotation_euler.x=math.sin(cyc*2)*.08
   if clip=='Preen':rig.pose.bones['Head'].rotation_euler=(.3*math.sin(cyc),.65*math.sin(cyc),.8*math.sin(cyc)); rig.pose.bones['Wing.L'].rotation_euler.y=.7
   if clip=='Hit':rig.pose.bones['Body'].rotation_euler.x=math.sin(cyc)*.3
   rig.pose.bones['Tail'].rotation_euler.x=math.sin(cyc)*.03
-  for pb in rig.pose.bones:pb.keyframe_insert('rotation_euler',frame=f); pb.keyframe_insert('location',frame=f)
+  if clip in ['Walk','Run']:
+   bpy.context.view_layer.update()
+   for side,phase in [('L',0),('R',math.pi)]:
+    foot=rig.pose.bones['Foot.'+side]
+    skin=foot.matrix @ foot.bone.matrix_local.inverted()
+    lowest=min((skin @ v).z for v in foot_vertices[side])
+    support=-.456+max(0,math.sin(cyc+phase))*(.035 if clip=='Walk' else .05)
+    parent=foot.parent
+    basis=parent.matrix @ parent.bone.matrix_local.inverted() @ foot.bone.matrix_local
+    foot.location=basis.inverted().to_3x3() @ Vector((0,0,support-lowest))
+  for pb in rig.pose.bones:pb.keyframe_insert('rotation_euler',frame=f); pb.keyframe_insert('location',frame=f); pb.keyframe_insert('scale',frame=f)
  track=rig.animation_data.nla_tracks.new(); track.name=clip; track.strips.new(clip,0,act)
  rig.animation_data.action=None
-for pb in rig.pose.bones:pb.rotation_euler=(0,0,0);pb.location=(0,0,0)
+for pb in rig.pose.bones:pb.rotation_euler=(0,0,0);pb.location=(0,0,0);pb.scale=(1,1,1)
 bpy.context.scene.frame_set(0)
 os.makedirs(os.path.dirname(os.path.abspath(a.output)),exist_ok=True)
 bpy.ops.export_scene.gltf(filepath=os.path.abspath(a.output),export_format='GLB',export_animations=True,export_animation_mode='NLA_TRACKS',export_skins=True,export_yup=True,export_apply=False)

@@ -1,4 +1,4 @@
-import { AbstractMesh, AnimationGroup, Observer, PBRMaterial, Quaternion, Scene, SceneLoader, TransformNode, Vector3 } from '@babylonjs/core';
+import { AbstractMesh, AnimationGroup, Matrix, Observer, PBRMaterial, Quaternion, Scene, SceneLoader, TransformNode, Vector3 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type { CrowState, Controls } from './flight';
 const mix = (a:number,b:number,k:number,dt:number)=>a+(b-a)*(1-Math.exp(-k*dt));
@@ -16,6 +16,9 @@ export class CrowRig {
  // before the next evaluation also covers paused/zero-weight animation targets.
  private secondaryBases=new Map<TransformNode,Quaternion>();
  private secondaryDelta=new Quaternion();
+ private headInverse=Matrix.Identity();
+ private headWorldAxis=Vector3.Zero(); private headLocalAxis=Vector3.Zero();
+ private selectedClip='Idle';
  constructor(private scene:Scene){this.root=new TransformNode('living-raven',scene);}
  async load():Promise<void>{
   const result=await SceneLoader.ImportMeshAsync('', './models/', 'crow.glb', this.scene);
@@ -43,14 +46,18 @@ export class CrowRig {
   this.root.rotationQuaternion=Quaternion.FromEulerAngles(-s.pitch,s.yaw,s.roll);
   this.bank=mix(this.bank,controls.turn,5,dt);
   if(s.mode==='idle' && this.elapsed%19>14)this.preen=true;else this.preen=false;
-  let selected=s.mode==='walk'||s.mode==='run'?'Walk':s.mode==='stunned'?'Hit':s.mode==='brake'||s.mode==='land'?'Brake':s.grounded?(this.preen?'Preen':'Idle'):s.flap>.25?'Flap':'Glide';
+  const selected=s.mode==='run'?'Run':s.mode==='walk'?'Walk':s.mode==='stunned'?'Hit':s.mode==='takeoff'?'Takeoff':s.mode==='land'?'Land':s.mode==='brake'?'Brake':s.grounded?(this.preen?'Preen':'Idle'):s.flap>.25?'Flap':'Glide';
+  if(selected!==this.selectedClip){
+   this.selectedClip=selected;
+   if(['Takeoff','Land','Hit','Preen'].includes(selected))this.groups.get(selected)?.goToFrame(this.groups.get(selected)!.from);
+  }
   for(const [name,group] of this.groups){
    let target=name===selected?1:0;
-   if(!s.grounded && s.mode!=='stunned' && s.mode!=='brake' && s.mode!=='land'){
+   if(!s.grounded && s.mode!=='stunned' && s.mode!=='takeoff' && s.mode!=='brake' && s.mode!=='land'){
     const flap=Math.max(0,Math.min(1,(s.flap-.08)/.72)); target=name==='Flap'?flap:name==='Glide'?1-flap:0;
    }
    const w=mix(this.weights.get(name)||0,target,s.mode==='stunned'?14:8,dt);this.weights.set(name,w);group.setWeightForAllAnimatables(w);
-   group.speedRatio=name==='Walk'?Math.max(.55,s.speed/.8):name==='Flap'?(.9+s.flap*.25):1;
+   group.speedRatio=name==='Walk'?Math.max(.55,s.speed/.8):name==='Run'?Math.max(.8,s.speed/1.8):name==='Flap'?(.9+s.flap*.25):1;
   }
   let yaw=Math.sin(this.elapsed*.6)*.32,pitch=Math.sin(this.elapsed*.43)*.08;
   if(lookTarget){
@@ -73,7 +80,28 @@ export class CrowRig {
    joint.rotationQuaternion.normalize();
   };
   // Bones have Blender-local rotations baked through the glTF parent conversion.
-  add('Head',-this.headPitch,0,-this.headYaw);add('Tail',this.tail,0,this.bank*.13);
+  const head=this.joints.get('Head');
+  if(head){
+   // Blender bone axes are tilted relative to the character. Express the look
+   // axes in the evaluated joint frame, including glTF's reflected LH root.
+   const matrix=head.computeWorldMatrix(true);matrix.invertToRef(this.headInverse);
+   this.root.computeWorldMatrix(true);
+   if(!head.rotationQuaternion)head.rotationQuaternion=Quaternion.FromEulerAngles(head.rotation.x,head.rotation.y,head.rotation.z);
+   let base=this.secondaryBases.get(head);
+   if(!base){base=head.rotationQuaternion.clone();this.secondaryBases.set(head,base);}
+   head.rotationQuaternion.copyFrom(base);
+   const rotate=(axis:Vector3,angle:number)=>{
+    Vector3.TransformNormalToRef(axis,this.root.getWorldMatrix(),this.headWorldAxis);
+    Vector3.TransformNormalToRef(this.headWorldAxis,this.headInverse,this.headLocalAxis);
+    this.headLocalAxis.normalize();
+    if(matrix.determinant()<0)this.headLocalAxis.scaleInPlace(-1);
+    Quaternion.RotationAxisToRef(this.headLocalAxis,angle,this.secondaryDelta);
+    head.rotationQuaternion!.multiplyInPlace(this.secondaryDelta);
+   };
+   rotate(Vector3.UpReadOnly,this.headYaw);rotate(Vector3.RightReadOnly,-this.headPitch);
+   head.rotationQuaternion.normalize();
+  }
+  add('Tail',this.tail,0,this.bank*.13);
   const shimmer=Math.sin(this.elapsed*10)*.009*Math.min(1,this.state.speed/9);
   add('Wrist.L',shimmer,0,-this.bank*.035);add('Wrist.R',-shimmer,0,-this.bank*.035);
  }

@@ -63,7 +63,7 @@ function integrate(s: CrowState, c: Controls, dt: number, wind: V3) {
   t.landing = Math.max(0, t.landing - dt);
   s.impact = smooth(s.impact, 0, 3, dt);
   if (s.grounded) {
-    if (c.flap > .15 && t.stunned <= 0) { launchCrow(s); return; }
+    if (c.flap > .15 && c.brake < .2 && t.stunned <= 0) { launchCrow(s); return; }
     if (s.mode !== 'idle' && s.mode !== 'walk' && s.mode !== 'run' && s.mode !== 'land') t.landing = .4;
     s.yaw += (t.stunned > 0 ? 0 : c.turn) * 2.1 * dt;
     const walk = (t.stunned > 0 ? 0 : c.pitch) * (Math.abs(c.pitch) > .75 ? 2.3 : 1.1);
@@ -81,7 +81,9 @@ function integrate(s: CrowState, c: Controls, dt: number, wind: V3) {
 
   const stunned = t.stunned > 0;
   const turn = stunned ? 0 : c.turn;
-  const pitchInput = stunned ? 0 : c.pitch;
+  // Upward control requests a sustainable climb angle. Full stick must not stall into vertical hover.
+  // Downward input retains its full range for an intentional dive.
+  const pitchInput = stunned ? 0 : c.pitch > 0 ? c.pitch * .35 : c.pitch;
   const brake = stunned ? 0 : c.brake;
   const air = { x: s.velocity.x - wind.x, y: s.velocity.y - wind.y, z: s.velocity.z - wind.z };
   const airSpeed = Math.max(.1, magnitude(air));
@@ -109,7 +111,9 @@ function integrate(s: CrowState, c: Controls, dt: number, wind: V3) {
   const desiredX = fx * horizontal, desiredZ = fz * horizontal;
   const ax = ux * normalHorizontal * lift + fx * Math.cos(s.pitch) * thrust - air.x * drag + clamp((desiredX - air.x) * steer, -8, 8);
   const az = uz * normalHorizontal * lift + fz * Math.cos(s.pitch) * thrust - air.z * drag + clamp((desiredZ - air.z) * steer, -8, 8);
-  const ay = -9.81 + normalY * lift + Math.sin(s.pitch) * thrust - air.y * drag;
+  // A spread tail and cupped wings also brake the downward component: landing is a controlled sink.
+  const descentDrag = brake * .72 * Math.max(0, -air.y) ** 2;
+  const ay = -9.81 + normalY * lift + Math.sin(s.pitch) * thrust - air.y * drag + descentDrag;
   s.velocity.x += ax * dt; s.velocity.y += ay * dt; s.velocity.z += az * dt;
   // Safety only: ordinary flight settles naturally around 5–16 m/s.
   const speed = magnitude(s.velocity);
@@ -126,7 +130,8 @@ export function hitCrow(s: CrowState, normal: V3, intensity: number): void {
   const n = { x: normal.x / length, y: normal.y / length, z: normal.z / length };
   const approach = s.velocity.x * n.x + s.velocity.y * n.y + s.velocity.z * n.z;
   if (approach >= 0) return;
-  const severity = clamp(Math.max(intensity, -approach), 0, 20);
+  // Only the velocity into the surface causes trauma; tangential speed can harmlessly brush a wall.
+  const severity = clamp(-approach, 0, 20);
   const bounce = severity > 6 ? .28 : .05;
   s.velocity.x -= n.x * approach * (1 + bounce);
   s.velocity.y -= n.y * approach * (1 + bounce);

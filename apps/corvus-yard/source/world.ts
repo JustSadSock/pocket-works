@@ -27,8 +27,8 @@ export class World {
   for(const [x,z,w,d,h] of houses){
    this.addCollider(x-w/2,0,z-d/2,x+w/2,h,z+d/2);
    // Follow the authored pitched roof instead of a phantom rectangular volume above its eaves.
-   const half=w/2+.25, strips=24;
-   for(let i=0;i<strips;i++){const left=-half+i*half*2/strips,right=left+half*2/strips;const edge=Math.min(Math.abs(left),Math.abs(right));const top=h+3.1*(1-edge/half);this.addCollider(x+left,h,z-d/2-.25,x+right,top,z+d/2+.25);}
+   const half=w/2+.25, strips=48;
+   for(let i=0;i<strips;i++){const left=-half+i*half*2/strips,right=left+half*2/strips;const edge=Math.min(Math.abs(left),Math.abs(right));const top=Math.max(h,h+3.1*(1-edge/half)-.115);this.addCollider(x+left,h,z-d/2-.25,x+right,top,z+d/2+.25);}
    this.perches.push({id:`roof-${x}`,position:new Vector3(x,h+3.14,z),radius:.45,kind:'roof'});
    this.addCollider(x+w*.27-.5,h,z+.2,x+w*.27+.5,h+3.5,z+1.2);
   }
@@ -71,7 +71,7 @@ export class World {
    const vs=g.getVerticesData(VertexBuffer.PositionKind)!;const uv=g.getVerticesData(VertexBuffer.UVKind)!;for(let i=0;i<vs.length/3;i++){uv[i*2]=(vs[i*3]+x+90)/180;uv[i*2+1]=(vs[i*3+2]+z+90)/180;}g.setVerticesData(VertexBuffer.UVKind,uv);this.meshes.push(g);
   }
   const water=MeshBuilder.CreateGround('slow canal water',{width:11.2,height:44.8,subdivisions:32},this.scene);water.position.set(0,-.38,11);water.isPickable=false;
-  const wm=new ShaderMaterial('wind rippled canal',this.scene,{vertexSource:`precision highp float;attribute vec3 position;attribute vec2 uv;uniform mat4 worldViewProjection;uniform float time;varying vec2 vUV;varying vec3 wp;void main(){vec3 p=position;p.y+=sin(p.x*1.7+p.z*.65+time*1.9)*.025+sin(p.z*2.2-time*.9)*.014;vUV=uv;wp=p;gl_Position=worldViewProjection*vec4(p,1.);}`,fragmentSource:`precision highp float;varying vec2 vUV;varying vec3 wp;uniform float time;void main(){float ripple=sin(wp.x*3.+wp.z*1.4+time*2.)*.5+.5;float glint=pow(max(0.,sin(wp.x*8.+wp.z*3.+time*2.1)),22.);vec3 c=mix(vec3(.15,.23,.22),vec3(.36,.44,.38),ripple*.32);c+=vec3(.76,.65,.42)*glint*.16;float edge=smoothstep(0.,.08,min(vUV.x,1.-vUV.x));c=mix(vec3(.19,.23,.17),c,edge);gl_FragColor=vec4(c,1.);}`},{attributes:['position','uv'],uniforms:['worldViewProjection','time']});water.material=wm;this.waterMaterial=wm;this.meshes.push(water);
+  const wm=new ShaderMaterial('wind rippled canal',this.scene,{vertexSource:`precision highp float;attribute vec3 position;attribute vec2 uv;uniform mat4 worldViewProjection;uniform float time;varying vec2 vUV;varying vec3 wp;void main(){vec3 p=position;p.y+=sin(p.x*1.7+p.z*.65+time*1.9)*.025+sin(p.z*2.2-time*.9)*.014;vUV=uv;wp=p;gl_Position=worldViewProjection*vec4(p,1.);}`,fragmentSource:`precision highp float;varying vec2 vUV;varying vec3 wp;uniform float time;void main(){float ripple=sin(wp.x*1.3+sin(wp.z*.9)+time*.8)*sin(wp.z*2.1-time*.7)*.5+.5;float glint=pow(max(0.,sin(wp.x*6.+sin(wp.z*1.4)*2.+wp.z*5.+time*1.4)),18.);vec3 c=mix(vec3(.15,.23,.22),vec3(.36,.44,.38),ripple*.32);c+=vec3(.76,.65,.42)*glint*.055;float edge=smoothstep(0.,.08,min(vUV.x,1.-vUV.x));c=mix(vec3(.19,.23,.17),c,edge);gl_FragColor=vec4(c,1.);}`},{attributes:['position','uv'],uniforms:['worldViewProjection','time']});water.material=wm;this.waterMaterial=wm;this.meshes.push(water);
  }
  private createGrass(){
   // Authored meadow islands leave paths, canal and approach corridors unobstructed.
@@ -93,8 +93,28 @@ export class World {
   const consider=(height:number)=>{if(Math.abs(height-footY)<.6&&(support===null||height>support))support=height;};
   consider(this.groundHeight(x,z));
   for(const [cx,cz,w,d,h] of houses){if(Math.abs(x-cx)<=w/2+.25&&Math.abs(z-cz)<=d/2+.25)consider(h+3.1*(1-Math.abs(x-cx)/(w/2+.25))+.025);}
-  for(const perch of this.perches){if(perch.kind==='roof')continue;if(Math.hypot(x-perch.position.x,z-perch.position.z)<=perch.radius)consider(perch.position.y);}
+  for(const [cx,cz,w,d,h] of houses){if(Math.abs(x-(cx+w*.27))<.5&&Math.abs(z-(cz+.7))<.5)consider(h+3.5);}
+  for(const [cx,cz] of [[39,-24],[-24,-39]]){if(Math.abs(x-cx)<.7&&z>cz-1.2&&z<cz+.8)consider(1.395);else if(Math.abs(x-cx)<.95&&Math.abs(z-cz)<2)consider(.98);}
+  // Foot contacts follow narrow branch axes, rather than invisible circular platforms.
+  const home=this.perches.find(p=>p.id==='home');
+  if(home&&x>=-3.95&&x<=1.95&&Math.abs(z+15)<.15){const u=(x+4)/6;consider(7.6+u*.6+(.17-u*.11)+(home.position.y-8.10));}
+  for(let i=0;i<trees.length;i++){const [cx,cz,h]=trees[i],ax=cx+.2,az=cz,bx=cx+Math.cos(i)*2.7,bz=cz+Math.sin(i)*2.7,dx=bx-ax,dz=bz-az;const u=((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz);if(u>=0&&u<=1&&Math.hypot(x-(ax+dx*u),z-(az+dz*u))<.15)consider(h*.55-.8+u*3.1+.15*(1-u)+.045*u);}
+  for(const perch of this.perches){if(perch.kind==='roof'||perch.id==='home'||(perch.kind==='branch'&&perch.id.startsWith('branch-')))continue;if(Math.hypot(x-perch.position.x,z-perch.position.z)<=perch.radius)consider(perch.position.y);}
   return support;
+ }
+ /** Highest surface crossed by the feet during a descent; no acquisition from below. */
+ landingHeight(x:number,z:number,fromY:number,toY:number):number|null {
+  if(toY>fromY)return null;
+  let surface:number|null=null;
+  const consider=(y:number)=>{if(y<=fromY+.025&&y>=toY-.025&&(surface===null||y>surface))surface=y;};
+  consider(this.groundHeight(x,z));
+  for(const [cx,cz,w,d,h] of houses){
+   if(Math.abs(x-cx)<=w/2+.25&&Math.abs(z-cz)<=d/2+.25)consider(h+3.1*(1-Math.abs(x-cx)/(w/2+.25))+.025);
+   if(Math.abs(x-(cx+w*.27))<.5&&Math.abs(z-(cz+.7))<.5)consider(h+3.5);
+  }
+  for(const [cx,cz] of [[39,-24],[-24,-39]]){if(Math.abs(x-cx)<.7&&z>cz-1.2&&z<cz+.8)consider(1.395);else if(Math.abs(x-cx)<.95&&Math.abs(z-cz)<2)consider(.98);}
+  // Narrow sites need an intentional approach and stay in the auto-perch system.
+  return surface;
  }
  /** Swept conservative AABB collision. Mutates position out of the collider; impact is the correction distance, not velocity. */
  resolve(position:Vector3,previous:Vector3,radius:number):{normal:Vector3,impact:number}|null {
