@@ -83,6 +83,40 @@ function canvasToBlob(canvas, type, quality) {
   });
 }
 
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+async function tagPngDpi(blob, dpi = 300) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.length < 33 || !signature.every((value, index) => bytes[index] === value)) return blob;
+
+  const firstLength = new DataView(bytes.buffer, bytes.byteOffset + 8, 4).getUint32(0);
+  const firstType = String.fromCharCode(...bytes.slice(12, 16));
+  if (firstType !== 'IHDR') return blob;
+
+  const insertAt = 8 + 12 + firstLength;
+  const pixelsPerMeter = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, 9);
+  chunk.set([112, 72, 89, 115], 4);
+  view.setUint32(8, pixelsPerMeter);
+  view.setUint32(12, pixelsPerMeter);
+  chunk[16] = 1;
+  view.setUint32(17, crc32(chunk.slice(4, 17)));
+
+  return new Blob([bytes.slice(0, insertAt), chunk, bytes.slice(insertAt)], { type: 'image/png' });
+}
+
 async function makeThumb(file, id) {
   const loaded = await loadImageFromFile(file);
   const image = loaded.image;
@@ -345,7 +379,8 @@ async function exportPng() {
 
     els.loadingTitle.textContent = 'Упаковываю lossless PNG';
     els.loadingDetail.textContent = PAGE_W + ' × ' + PAGE_H;
-    const blob = await canvasToBlob(canvas, 'image/png');
+    const rawBlob = await canvasToBlob(canvas, 'image/png');
+    const blob = await tagPngDpi(rawBlob, 300);
     downloadBlob(blob, exportFilename());
     canvas.width = 1;
     canvas.height = 1;
