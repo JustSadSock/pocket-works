@@ -6,10 +6,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'last-stone-';
-const CACHE_NAME = 'last-stone-v1.0.3';
-const APP_VERSION = '1.0.3';
-const RELEASE_DATE = '2026-09-27';
-const RELEASE_NOTES = ["Стартовая блокирующая плашка удалена: игра сразу открывается в режиме строительства."];
+const CACHE_NAME = 'last-stone-v1.1.0';
+const APP_VERSION = '1.1.0';
+const RELEASE_DATE = '2026-09-30';
+const RELEASE_NOTES = ["Строительство с подтверждением и полноценный цикл осады, разрушения и восстановления."];
 
 setCacheNameDetails({
   prefix: 'last-stone',
@@ -18,6 +18,7 @@ setCacheNameDetails({
   runtime: 'runtime'
 });
 
+clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
@@ -41,6 +42,6 @@ self.addEventListener('activate', (event) => {
           .filter((key) => key.startsWith(CACHE_PREFIX) && !key.includes(`v${APP_VERSION}`) && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       ))
-      .then(() => clientsClaim())
+
   );
 });

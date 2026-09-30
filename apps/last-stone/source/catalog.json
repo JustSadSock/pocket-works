@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "ground-grain",
+      "kind": "texture",
+      "material": "grass",
+      "seed": 737,
+      "count": 0,
+      "palette": [
+        "#71815a",
+        "#a7a273"
+      ],
+      "tags": [
+        "ground",
+        "moss",
+        "walkable"
+      ],
+      "dimensions": [
+        256,
+        256
+      ],
+      "pivot": "not-applicable",
+      "lod": "256px",
+      "license": "project-authored"
+    },
+    {
+      "id": "stone-grain",
+      "kind": "texture",
+      "material": "stone",
+      "seed": 239,
+      "count": 0,
+      "palette": [
+        "#aaa896",
+        "#6f7166"
+      ],
+      "tags": [
+        "masonry",
+        "medieval",
+        "rough"
+      ],
+      "dimensions": [
+        256,
+        256
+      ],
+      "pivot": "not-applicable",
+      "lod": "256px",
+      "license": "project-authored"
+    },
+    {
+      "id": "wood-grain",
+      "kind": "texture",
+      "material": "wood",
+      "seed": 883,
+      "count": 0,
+      "palette": [
+        "#796147",
+        "#493d2d"
+      ],
+      "tags": [
+        "wood",
+        "bridge",
+        "warmWood"
+      ],
+      "dimensions": [
+        256,
+        256
+      ],
+      "pivot": "not-applicable",
+      "lod": "256px",
+      "license": "project-authored"
+    },
+    {
+      "id": "alder-grove",
+      "kind": "scatter",
+      "material": "grass",
+      "seed": 739,
+      "count": 38,
+      "palette": [
+        "#71815a",
+        "#a7a273"
+      ],
+      "tags": [
+        "tree",
+        "natural",
+        "scatterable"
+      ],
+      "dimensions": [
+        3.2,
+        5,
+        3.2
+      ],
+      "pivot": "ground",
+      "lod": "low-poly",
+      "license": "project-authored"
+    }
+  ]
+}
