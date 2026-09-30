@@ -5,7 +5,7 @@ random.seed(27)
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 def mat(name,col,rough=.8,metal=0):
  m=bpy.data.materials.new(name);m.diffuse_color=(*col,1);m.use_nodes=True;p=m.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*col,1);p.inputs['Roughness'].default_value=rough;p.inputs['Metallic'].default_value=metal;return m
-brick=mat('warm old Amsterdam brick',(.31,.115,.072)); stone=mat('weathered limestone',(.50,.47,.38)); trim=mat('painted ivory window reveals',(.75,.72,.61)); glass=mat('reflective blue grey glass',(.16,.25,.28),.17,.3);roof=mat('hand laid slate tiles',(.14,.17,.18));wood=mat('dark weathered oak',(.16,.105,.055));iron=mat('black wrought iron',(.10,.115,.10),.43,.7); bark=mat('deep grooved plane tree bark',(.20,.16,.115)); amber=mat('ochre autumn foliage',(.54,.30,.065)); rust=mat('copper autumn foliage',(.38,.14,.045));green=mat('muted olive foliage',(.29,.31,.10));leather=mat('car dark blue paint',(.12,.21,.23),.28,.45)
+brick=mat('warm old Amsterdam brick',(.31,.115,.072)); stone=mat('weathered limestone',(.39,.40,.35)); trim=mat('painted ivory window reveals',(.66,.65,.57)); glass=mat('reflective blue grey glass',(.16,.25,.28),.17,.3);roof=mat('hand laid slate tiles',(.14,.17,.18));wood=mat('dark weathered oak',(.16,.105,.055));iron=mat('black wrought iron',(.10,.115,.10),.43,.7); bark=mat('deep grooved plane tree bark',(.20,.16,.115)); amber=mat('ochre autumn foliage',(.38,.28,.095)); rust=mat('copper autumn foliage',(.31,.13,.055));green=mat('muted olive foliage',(.23,.27,.115));leather=mat('car dark blue paint',(.12,.21,.23),.28,.45)
 def pos(x,y,z):return (-x,-z,y) # Babylon glTF LH conversion mirrors X.
 def cube(name,p,s,m,bevel=0):
  bpy.ops.mesh.primitive_cube_add(size=1,location=pos(*p));o=bpy.context.object;o.name=name;o.dimensions=(s[0],s[2],s[1]);bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);o.data.materials.append(m)
@@ -16,6 +16,21 @@ def branch(name,a,b,r1,r2,m,vertices=9):
  aa=Vector(pos(*a));bb=Vector(pos(*b));d=bb-aa;bpy.ops.mesh.primitive_cone_add(vertices=vertices,radius1=r1,radius2=r2,depth=d.length,location=(aa+bb)/2);o=bpy.context.object;o.name=name;o.rotation_euler=d.to_track_quat('Z','Y').to_euler();o.data.materials.append(m);return o
 def mesh(name,verts,faces,m):
  me=bpy.data.meshes.new(name);me.from_pydata([pos(*v) for v in verts],[],[list(reversed(f)) for f in faces]);me.materials.append(m);o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);return o
+def leaf_fan(name,center,material,count=90):
+ # Individually curled, lobed leaves: openings between them transmit the sky.
+ verts=[];faces=[]
+ cx,cy,cz=center
+ for j in range(count):
+  ang=random.random()*math.tau;r=math.sqrt(random.random())*2.55
+  x=cx+math.cos(ang)*r;z=cz+math.sin(ang)*r;y=cy+random.uniform(-.65,1.2)*(1-r/3.8)
+  length=random.uniform(.21,.40);width=length*.62;yaw=random.random()*math.tau;tilt=random.uniform(-.7,.7)
+  outline=[(0,-1),(-.36,-.54),(-1,-.37),(-.58,.0),(-.80,.34),(-.32,.26),(0,1),(.32,.26),(.80,.34),(.58,0),(1,-.37),(.36,-.54)]
+  start=len(verts);verts.append((x,y+.02,z))
+  for u,v in outline:
+   xx=u*width;zz=v*length
+   verts.append((x+xx*math.cos(yaw)-zz*math.sin(yaw),y+zz*tilt+abs(u)*.045,z+xx*math.sin(yaw)+zz*math.cos(yaw)))
+  for i in range(12):faces.append((start,start+1+i,start+1+(i+1)%12))
+ obj=mesh(name,[(x-cx,y-cy,z-cz) for x,y,z in verts],faces,material);obj.location=pos(cx,cy,cz);return obj
 def house(x,z,w,d,h):
  cube('canal house brick', (x,h/2,z),(w,h,d),brick,.075)
  # pitched slate roof with projecting eaves
@@ -30,6 +45,14 @@ def house(x,z,w,d,h):
     cube('window mullion',(px,yy,zz+side*.12),(.075,1.42,.035),trim);cube('window crossbar',(px,yy+.18,zz+side*.12),(.98,.07,.035),trim)
   for yy in [h-.2,.25]:cube('stone cornice',(x,yy,z+side*d/2),(w+.15,.22,.28),stone,.02)
  cube('oak street door',(x,.95,z-d/2-.09),(.9,1.9,.12),wood,.04)
+ cube('door lintel',(x,1.96,z-d/2-.13),(1.15,.16,.20),stone,.025)
+ cube('door threshold',(x,.045,z-d/2-.17),(1.08,.09,.28),stone,.02)
+ for side in [-1,1]:
+  branch('rain downpipe',(x+w/2-.22,.2,z+side*(d/2+.16)),(x+w/2-.22,h-.1,z+side*(d/2+.16)),.042,.042,iron,7)
+ for row in range(1,11):
+  u=row/11;yy=h+(1-u)*3.1;xx=x+u*(w/2+.25)
+  branch('subtle slate lap',(xx,yy+.012,z-d/2),(xx,yy+.012,z+d/2),.009,.009,roof,5)
+  branch('subtle slate lap',(2*x-xx,yy+.012,z-d/2),(2*x-xx,yy+.012,z+d/2),.009,.009,roof,5)
  cube('chimney',(x+w*.27,h+2.4,z+.7),(.8,2,.8),brick,.05);cube('chimney cap',(x+w*.27,h+3.43,z+.7),(1,.14,1),stone,.03)
  # roof tile seams and rain gutter
  for side in [-1,1]:branch('rain gutter',(x-w/2,h,z+side*d/2),(x+w/2,h,z+side*d/2),.075,.075,iron)
@@ -55,14 +78,19 @@ for z in [7.5,10.5]:
 TREES=[(-4,-15,11),(15,-5,14),(-18,2,13),(18,15,12),(-17,-18,10),(40,7,15),(-40,12,15),(-26,40,17),(31,41,16),(-43,-10,12)]
 for idx,(x,z,h) in enumerate(TREES):
  branch('tree trunk',(x,0,z),(x+.35,h*.73,z+.2),.45,.17,bark,12)
+ for root in range(5):
+  angle=root*math.tau/5+idx;branch('exposed tree root',(x,.17,z),(x+math.cos(angle)*.85,.035,z+math.sin(angle)*.85),.14,.025,bark,7)
+ for strip in range(9):
+  angle=strip*math.tau/9;radius=.405
+  branch('raised bark ridge',(x+math.cos(angle)*radius,.3,z+math.sin(angle)*radius),(x+.26+math.cos(angle)*.24,h*.55,z+.15+math.sin(angle)*.24),.024,.012,wood,5)
  for k in range(7):
   ang=k*2.399+idx;rad=2.7+(k%3)*.7; yy=h*.55+k*.55;end=(x+math.cos(ang)*rad,yy+2.3,z+math.sin(ang)*rad)
   branch('tree spreading branch',(x+.2,yy-.8,z),end,.15,.045,bark)
-  bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2,radius=1,location=pos(end[0],end[1]+.8,end[2]));o=bpy.context.object;o.name='canopy_%02d_%02d'%(idx,k);o.scale=(2.3,2.3,1.5);o.data.materials.append([amber,rust,green][(idx+k)%3]);
-  # leaf fans break each crown outline: flat clusters with warm upper/light underside variation
-  for j in range(13):
-   a=random.random()*math.tau;r=random.uniform(.5,2.7);px=end[0]+math.cos(a)*r;pz=end[2]+math.sin(a)*r;py=end[1]+random.uniform(-.2,2)
-   mesh('crown leaf cluster',[(px-.38,py,pz),(px+.38,py+.08,pz),(px+.12,py+.15,pz+.45),(px-.3,py+.04,pz+.3)],[(0,1,2,3)], [amber,rust,green][(idx+k+j)%3])
+  # Fine twigs support a porous canopy rather than an opaque polygon ball.
+  for j in range(5):
+   angle=ang+j*1.25;tip=(end[0]+math.cos(angle)*1.7,end[1]+.45+j*.17,end[2]+math.sin(angle)*1.7)
+   branch('leaf-bearing twig',end,tip,.022,.005,bark,5)
+  leaf_fan('canopy_%02d_%02d'%(idx,k),(end[0],end[1]+.55,end[2]),[amber,rust,green][(idx+k)%3],110)
 branch('perch_flexible_home',(-4,7.6,-15),(2,8.2,-15),.17,.06,bark)
 # iron park fence, street lamps and authored benches
 for z in [-19,20]:
@@ -86,6 +114,19 @@ for x,z in [(39,-24),(-24,-39)]:
  cube('parked car body',(x,.65,z),(1.75,.65,4),leather,.2);cube('car cabin',(x,1.12,z-.2),(1.4,.55,2),glass,.17)
  for dx in [-.85,.85]:
   for dz in [-1.25,1.25]:branch('rubber wheel',(x+dx-.1,.4,z+dz),(x+dx+.1,.4,z+dz),.35,.35,iron,14)
+# Recessed canal joints, moss at the water line and pavement courses.
+moss=mat('canal moss at waterline',(.16,.205,.10),.97)
+for side in [-1,1]:
+ for j in range(44):
+  cube('retaining stone joint',(side*5.585,-.04,-10+j),(.012,.025,.68),iron)
+  if j%3!=0:cube('damp moss seam',(side*5.58,-.21,-10+j),(.018,.085,.48),moss,.005)
+for x,z in [(-12,-8),(12,2),(-13,15),(21,-16)]:
+ for j in range(7):cube('bench paving slab',(x-1.2+j*.4,.012,z-.4),(.37,.025,1.6),stone,.01)
+# Quiet roofs at the boundary keep a flying bird inside a recognisable district.
+for idx in range(11):
+ x=-66+idx*12;z=68+(idx%3)*3;h=8+(idx%4)*2.5
+ cube('distant courtyard facade',(x,h*.5,z),(10,h,9),[brick,stone][idx%2])
+ mesh('distant pitched roof',[(x-5,h,z-5),(x+5,h,z-5),(x,h+2.3,z-5),(x-5,h,z+5),(x+5,h,z+5),(x,h+2.3,z+5)],[(0,2,5,3),(1,4,5,2),(0,1,2),(3,5,4)],roof)
 # Merge opaque static geometry by material; canopy stays separate for wind sway.
 for material in list(bpy.data.materials):
  objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and not o.name.startswith('canopy') and not o.name.startswith('perch_flexible') and o.data.materials and o.data.materials[0]==material]
