@@ -1,13 +1,14 @@
 export const SIZE = 11;
 export const CENTER = 5;
 export const MAX_WAVE = 12;
+export const MAX_LEVEL = 3;
 export type Kind = 'wall' | 'tower' | 'gate' | 'archer' | 'brace';
 export type Side = 'north' | 'east' | 'south' | 'west';
 export type Phase = 'build' | 'siege' | 'won' | 'lost';
 export interface Piece { x: number; z: number; kind: Kind; hp: number; level: number }
 export interface Enemy { id: number; x: number; z: number; hp: number; maxHp: number; speed: number; attack: number; type: 'soldier' | 'ram' | 'ladder' | 'catapult'; cooldown: number; climb?: {x:number;z:number;fromX:number;fromZ:number} }
 export interface Shot { x: number; z: number; tx: number; tz: number; age: number; duration: number; power: number; source: 'enemy' | 'defender' }
-export interface Event { type: 'hit' | 'break' | 'shot' | 'kill' | 'keep'; x: number; z: number; power?: number }
+export interface Event { type: 'hit' | 'break' | 'shot' | 'kill' | 'keep' | 'upgrade'; x: number; z: number; power?: number }
 export interface State {
   version: 1; phase: Phase; wave: number; stone: number; timber: number; iron: number;
   keep: number; pieces: Piece[]; enemies: Enemy[]; shots: Shot[]; elapsed: number;
@@ -24,13 +25,24 @@ export const THREATS: Side[] = ['north', 'east', 'south', 'west', 'north', 'sout
 const key = (x: number, z: number) => `${x},${z}`;
 const inside = (x: number, z: number) => x >= 0 && z >= 0 && x < SIZE && z < SIZE;
 const dist = (x: number, z: number, a: number, b: number) => Math.abs(x-a) + Math.abs(z-b);
-const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+const dirs = [[1,0],[-1,0],[0,1],[0,-1]] as const;
 export function newGame(): State {
   return { version: 1, phase: 'build', wave: 1, stone: 125, timber: 50, iron: 12, keep: 100,
     pieces: [], enemies: [], shots: [], elapsed: 0, spawned: 0, kills: 0, score: 0,
     seed: 737, events: [] };
 }
 export function pieceAt(s: State, x: number, z: number) { return s.pieces.find(p => p.x === x && p.z === z); }
+export function pieceMaxHp(piece: Pick<Piece,'kind'|'level'>) {
+  return Math.round(MAX_HP[piece.kind] * (1 + (Math.max(1,piece.level)-1) * .35));
+}
+export function upgradeCost(piece: Pick<Piece,'kind'|'level'>) {
+  const base=COST[piece.kind], scale=piece.level===1?.72:1.05;
+  return {
+    stone: Math.max(base.stone ? 1 : 0, Math.ceil(base.stone*scale)),
+    timber: Math.max(base.timber ? 1 : 0, Math.ceil(base.timber*scale)),
+    iron: Math.max(piece.level===2 ? 1 : 0, Math.ceil(base.iron*scale + (piece.level===2 && piece.kind!=='archer' ? 1 : 0)))
+  };
+}
 export function canBuild(s: State, kind: Kind, x: number, z: number): string | null {
   if (s.phase !== 'build') return 'Стройте между осадами';
   if (!inside(x,z) || x === CENTER && z === CENTER) return 'Здесь находится донжон';
@@ -57,19 +69,37 @@ export function remove(s: State, x: number, z: number): string | null {
   if (s.phase !== 'build') return 'Подождите конца осады';
   const i = s.pieces.findIndex(p => p.x === x && p.z === z);
   if (i < 0) return 'Здесь нечего разобрать';
-  const p = s.pieces.splice(i,1)[0], c = COST[p.kind], fraction = p.hp / MAX_HP[p.kind];
-  s.stone += Math.floor(c.stone * .65 * fraction); s.timber += Math.floor(c.timber * .65 * fraction);
-  s.iron += Math.floor(c.iron * .65 * fraction); return null;
+  const p = s.pieces.splice(i,1)[0], c = COST[p.kind], fraction = p.hp / pieceMaxHp(p);
+  const levelValue=1+(p.level-1)*.45;
+  s.stone += Math.floor(c.stone * .65 * fraction * levelValue); s.timber += Math.floor(c.timber * .65 * fraction * levelValue);
+  s.iron += Math.floor(c.iron * .65 * fraction * levelValue); return null;
+}
+export function repairCost(piece:Piece) {
+  const max=pieceMaxHp(piece),missing=Math.max(0,1-piece.hp/max),c=COST[piece.kind];
+  return {
+    stone: Math.max(c.stone && missing>.01 ? 1 : 0, Math.ceil(c.stone*missing*.5*(1+(piece.level-1)*.25))),
+    timber: Math.ceil(c.timber*missing*.5*(1+(piece.level-1)*.25)),
+    iron: Math.ceil(c.iron*missing*.35*(1+(piece.level-1)*.2))
+  };
 }
 export function repair(s: State, x: number, z: number): string | null {
   if (s.phase !== 'build') return 'Подождите конца осады';
   const p = pieceAt(s,x,z); if (!p) return 'Выберите повреждённую постройку';
-  if (p.hp >= MAX_HP[p.kind]) return 'Постройка цела';
-  const missing = 1-p.hp/MAX_HP[p.kind], c = COST[p.kind];
-  const stone = Math.max(c.stone ? 1 : 0, Math.ceil(c.stone*missing*.5));
-  const timber = Math.ceil(c.timber*missing*.5);
-  if (s.stone < stone || s.timber < timber) return 'Не хватает материалов для ремонта';
-  s.stone -= stone; s.timber -= timber; p.hp = MAX_HP[p.kind]; return null;
+  if (p.hp >= pieceMaxHp(p)) return 'Постройка цела';
+  const c=repairCost(p);
+  if (s.stone < c.stone || s.timber < c.timber || s.iron<c.iron) return 'Не хватает материалов для ремонта';
+  s.stone -= c.stone; s.timber -= c.timber; s.iron-=c.iron; p.hp = pieceMaxHp(p); return null;
+}
+export function upgrade(s:State,x:number,z:number):string|null {
+  if(s.phase!=='build')return 'Усиливайте крепость между осадами';
+  const p=pieceAt(s,x,z);if(!p)return 'Выберите постройку';
+  if(p.level>=MAX_LEVEL)return 'Достигнут максимальный уровень';
+  const c=upgradeCost(p);
+  if(s.stone<c.stone||s.timber<c.timber||s.iron<c.iron)return 'Не хватает материалов для усиления';
+  const oldMax=pieceMaxHp(p),ratio=Math.max(.2,p.hp/oldMax);
+  s.stone-=c.stone;s.timber-=c.timber;s.iron-=c.iron;p.level++;
+  p.hp=Math.round(pieceMaxHp(p)*Math.min(1,ratio+.18));
+  s.events.push({type:'upgrade',x,z,power:p.level});return null;
 }
 export function startWave(s: State) {
   if (s.phase !== 'build') return;
@@ -99,7 +129,8 @@ function spawn(s: State) {
 }
 function damage(s: State, p: Piece, value: number) {
   const brace = dirs.some(([dx,dz]) => pieceAt(s,p.x+dx,p.z+dz)?.kind === 'brace');
-  p.hp -= value * (brace ? .65 : 1);
+  const levelArmor=1-(p.level-1)*.09;
+  p.hp -= value * (brace ? .65 : 1) * levelArmor;
   s.events.push({type:'hit',x:p.x,z:p.z,power:value});
   if (p.hp > 0) return;
   s.pieces.splice(s.pieces.indexOf(p),1); s.events.push({type:'break',x:p.x,z:p.z,power:22});
@@ -111,10 +142,9 @@ function damage(s: State, p: Piece, value: number) {
     for(const enemy of s.enemies)if(dist(enemy.x,enemy.z,p.x,p.z)<2)enemy.hp-=30;
   }
 }
-// One shared weighted flow field per castle layout; rebuilt only when a section falls.
 const flowCache=new WeakMap<State,{signature:string;costs:Map<string,number>}>();
 function flow(s:State) {
-  const signature=s.pieces.map(p=>`${p.x},${p.z},${p.kind}`).join(';');
+  const signature=s.pieces.map(p=>`${p.x},${p.z},${p.kind},${Math.ceil(p.hp/20)}`).join(';');
   const cached=flowCache.get(s);if(cached?.signature===signature)return cached.costs;
   const costs = new Map<string,number>([[key(CENTER,CENTER),0]]);
   const seen = new Set<string>();
@@ -125,7 +155,8 @@ function flow(s:State) {
     for (const [dx,dz] of dirs) {
       const nx=x+dx,nz=z+dz; if (!inside(nx,nz)) continue;
       const p = pieceAt(s,nx,nz);
-      const penalty = p ? p.kind === 'gate' ? 2.3 : p.kind === 'brace' || p.kind === 'archer' ? 1.5 : 4.5 + Math.max(0,p.hp)/35 : 0;
+      const hpRatio=p?p.hp/pieceMaxHp(p):0;
+      const penalty = p ? p.kind === 'gate' ? 2.1+hpRatio*1.1 : p.kind === 'brace' || p.kind === 'archer' ? 1.5 : 4.2 + hpRatio*3.2 : 0;
       const next = cost+1+penalty;
       if (next < (costs.get(key(nx,nz)) ?? Infinity)) { costs.set(key(nx,nz),next); frontier.push([next,nx,nz]); }
     }
@@ -139,7 +170,10 @@ function nextStep(s: State, e: Enemy): {x:number;z:number;piece?:Piece} | undefi
   let best: {x:number;z:number;cost:number}|undefined;
   for (const [dx,dz] of dirs) {
     const x=sx+dx,z=sz+dz; if (!inside(x,z)) continue;
-    const p=pieceAt(s,x,z), penalty=p ? p.kind === 'gate' ? 2.3 : p.kind === 'brace'||p.kind === 'archer' ? 1.5 : 4.5+p.hp/35 : 0;
+    const p=pieceAt(s,x,z), hpRatio=p?p.hp/pieceMaxHp(p):0;
+    let penalty=p ? p.kind === 'gate' ? 2.1+hpRatio : p.kind === 'brace'||p.kind === 'archer' ? 1.5 : 4.2+hpRatio*3 : 0;
+    if(e.type==='ram'&&p)penalty-=p.kind==='gate'?1.35:(p.kind==='wall'?0.65:0);
+    if(e.type==='ladder'&&p?.kind==='wall')penalty-=1.15;
     const cost=(costs.get(key(x,z)) ?? Infinity)+penalty;
     if (!best || cost < best.cost) best={x,z,cost};
   }
@@ -211,14 +245,13 @@ export function tick(s: State, dt: number) {
     }
   }
   for (const p of s.pieces) if (p.kind==='tower'||p.kind==='archer') {
-    const range=p.kind==='tower'?4.7:3.6;
+    const range=(p.kind==='tower'?4.7:3.6)+(p.level-1)*.35;
     const target=s.enemies.filter(e=>e.hp>0 && dist(p.x,p.z,e.x,e.z)<=range)
       .sort((a,b)=>dist(a.x,a.z,CENTER,CENTER)-dist(b.x,b.z,CENTER,CENTER))[0];
     if (!target) continue;
-    // Fire at a predictable cadence with an offset per building.
-    const interval=p.kind==='tower'?1.9:1.2;
+    const interval=(p.kind==='tower'?1.9:1.2)*(1-(p.level-1)*.12);
     if (Math.floor((s.elapsed-dt+(p.x*3+p.z)*.13)/interval) === Math.floor((s.elapsed+(p.x*3+p.z)*.13)/interval)) continue;
-    s.shots.push({x:p.x,z:p.z,tx:target.x,tz:target.z,age:0,duration:.35,power:p.kind==='tower'?22:15,source:'defender'});
+    s.shots.push({x:p.x,z:p.z,tx:target.x,tz:target.z,age:0,duration:.35,power:(p.kind==='tower'?22:15)*(1+(p.level-1)*.24),source:'defender'});
     s.events.push({type:'shot',x:p.x,z:p.z});
   }
   for (const e of [...s.enemies]) if (e.hp<=0) {
@@ -243,9 +276,11 @@ export function loadGame(raw:string|null):State {
       if (!Number.isFinite(v[k])) throw Error(); (s[k] as number)=v[k];
     }
     for (const p of v.pieces) {
+      const level=Number.isInteger(p.level)?Math.max(1,Math.min(MAX_LEVEL,p.level)):1;
       if (!inside(p.x,p.z)|| !Object.hasOwn(COST,p.kind)|| !Number.isFinite(p.hp) || p.hp<=0 ||
         s.pieces.some(q=>q.x===p.x&&q.z===p.z)) throw Error();
-      s.pieces.push({x:p.x,z:p.z,kind:p.kind,hp:Math.min(p.hp,MAX_HP[p.kind as Kind]),level:1});
+      const piece:Piece={x:p.x,z:p.z,kind:p.kind,level,hp:1};
+      piece.hp=Math.min(p.hp,pieceMaxHp(piece));s.pieces.push(piece);
     }
     s.phase=v.phase==='siege'?'build':v.phase; return s;
   } catch { return newGame(); }
