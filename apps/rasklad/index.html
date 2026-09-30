@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#20352f">
+  <meta name="description" content="РАСКЛАД — случайно размещает изображения на A4 и экспортирует lossless PNG 2480×3508 px.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="РАСКЛАД">
+  <title>РАСКЛАД</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="topbar" data-ui>
+      <a class="back-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW</a>
+      <div class="brand">
+        <strong>РАСКЛАД</strong>
+        <span>A4 / RANDOM COMPOSITOR</span>
+      </div>
+      <button class="text-button" id="clearButton" type="button" data-native-press disabled>Очистить</button>
+    </header>
+
+    <section class="workspace">
+      <div class="paper-stage" id="dropZone" data-touch-action="manipulation">
+        <div class="paper" id="paper" aria-label="Предпросмотр листа A4">
+          <div class="registration top-left" aria-hidden="true"></div>
+          <div class="registration top-right" aria-hidden="true"></div>
+          <div class="registration bottom-left" aria-hidden="true"></div>
+          <div class="registration bottom-right" aria-hidden="true"></div>
+
+          <div class="empty-state" id="emptyState">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M11 17h42v34H11zM18 42l10-11 8 8 5-5 12 12M22 27h.01"/>
+              <path d="M32 6v18M24 14l8-8 8 8"/>
+            </svg>
+            <strong>Закинь изображения</strong>
+            <span>Можно сразу пачку. Они случайно разложатся на одном листе A4.</span>
+          </div>
+
+          <div class="image-layer" id="imageLayer"></div>
+
+          <div class="loading-state" id="loadingState" hidden>
+            <i></i>
+            <strong id="loadingTitle">Готовлю отпечатки</strong>
+            <span id="loadingDetail">0 / 0</span>
+          </div>
+        </div>
+
+        <div class="drop-hint" id="dropHint" aria-hidden="true">ОТПУСТИ НА ЛИСТ</div>
+      </div>
+
+      <aside class="control-rail" data-ui>
+        <div class="status-line">
+          <span id="countLabel">0 изображений</span>
+          <span>A4 · 2480×3508 · PNG</span>
+        </div>
+
+        <label class="action-button add-button" for="fileInput" data-native-press>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>
+          <span>
+            <strong>Добавить изображения</strong>
+            <small>JPG, PNG, WEBP, HEIC — что умеет открыть браузер</small>
+          </span>
+        </label>
+        <input id="fileInput" class="file-input" type="file" accept="image/*" multiple>
+
+        <div class="action-row">
+          <button class="action-button shuffle-button" id="shuffleButton" type="button" data-native-press disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3c4 0 6 10 10 10h3M17 14l3 3-3 3M4 17h3c1.6 0 2.8-1.7 4-3.7M14 7.7C15 7.3 16 7 17 7h3M17 4l3 3-3 3"/></svg>
+            <span><strong>Перерандомить</strong><small>Новая композиция</small></span>
+          </button>
+
+          <button class="action-button export-button" id="exportButton" type="button" data-native-press disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            <span><strong>Экспорт PNG</strong><small>300 DPI размер</small></span>
+          </button>
+        </div>
+
+        <p class="quality-note">
+          Экспорт рисуется заново из оригинальных файлов. Превью — только лёгкие миниатюры; изображения не увеличиваются выше исходного разрешения при печатном размере.
+        </p>
+      </aside>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
