@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SEAL_LIMIT, createProfile, createRun as createFreshRun, createBattle, playCard, sacrificeUnit, endTurn,
   resolveNode, chooseCardReward, chooseRelic, chooseItem, hearthUpgrade, altarSelect,
-  afterBattleVictory, cardById, cloneCard, rollCardChoices, rollRelicChoices, useItem, hydrateRun
+  afterBattleVictory, cardById, cloneCard, rollCardChoices, rollRelicChoices, useItem, hydrateRun, canMove, moveUnit, forecastTurn
 } from '../game-core.js';
 
 function createRun(...args){const run=createFreshRun(...args);run.pending=null;return run}
@@ -149,4 +149,69 @@ test('dead creatures recycle while Echo never accumulates the root health bonus'
 });
 test('warden chain suspends attacks in its lane',()=>{
   const r=createRun(107),b=createBattle(r,'warden');r.battle=b;b.hand=[cloneCard('wolf')];b.enemy.fill(null);b.intent=[];playCard(r,b,b.hand[0].instanceId,0);b.lockedLane=0;const result=endTurn(r,b);assert.equal(result.events.some(e=>e.type==='attack'&&e.lane===0),false);
+});
+
+
+test('one paid adjacent move preserves the creature and resets next turn',()=>{
+  const r=createRun(40),b=createBattle(r);r.battle=b;b.enemy.fill(null);b.intent=[];
+  b.hand=[cloneCard('wolf')];b.ember=4;playCard(r,b,b.hand[0].instanceId,0);const unit=b.player[0];
+  assert.equal(canMove(b,0,2).ok,false);assert.equal(moveUnit(r,b,0,1).ok,true);
+  assert.equal(b.player[1],unit);assert.equal(b.player[0],null);assert.equal(b.ember,1);
+  assert.equal(moveUnit(r,b,1,2).ok,false);assert.equal(b.events[0].type,'move');
+  endTurn(r,b);assert.equal(b.movedThisTurn,false);assert.equal(canMove(b,1,2).ok,true);
+  b.lockedLane=1;assert.equal(canMove(b,1,2).ok,false);b.lockedLane=2;assert.equal(canMove(b,1,2).ok,false);
+  b.lockedLane=null;b.ember=0;assert.equal(canMove(b,1,2).ok,false);
+});
+
+test('forecast is detached and agrees with the real resolver across encounters',()=>{
+  for(let seed=0;seed<100;seed++){
+    const r=createRun(seed);r.depth=seed%9;const b=createBattle(r,seed%3===0?'prior':seed%3===1?'bellkeeper':null);r.battle=b;
+    b.hand=[cloneCard(seed%2?'wolf':'two-face'),cloneCard('hare')];b.ember=9;
+    playCard(r,b,b.hand[0].instanceId,seed%4);playCard(r,b,b.hand[0].instanceId,(seed+1)%4);
+    const before=JSON.stringify(r),prediction=forecastTurn(r,b);assert.equal(JSON.stringify(r),before);
+    const result=endTurn(r,b);assert.deepEqual(prediction.seals,b.seals);assert.equal(prediction.winner,result.winner||null);assert.equal(prediction.phase,!!result.phase);
+    for(const [id,expected]of Object.entries(prediction.units)){
+      const survivor=[...b.player,...b.enemy].find(u=>u?.instanceId===id);
+      assert.equal(expected.hp,survivor?.hp||0);assert.equal(expected.dead,result.events.some(e=>e.type==='death'&&e.unitId===id));
+    }
+  }
+});
+
+test('Bellkeeper announces exactly two reinforcements on an even turn',()=>{
+  const r=createRun(20),b=createBattle(r,'bellkeeper');b.enemy.fill(null);b.intent=[];
+  endTurn(r,b);assert.equal(b.round,2);assert.equal(b.intent.length,2);
+});
+
+test('a ward absorbs thorn retaliation and chain splash including direct attacks',()=>{
+  const r=createRun(41),b=createBattle(r);b.enemy.fill(null);b.intent=[];b.hand=[cloneCard('fox',{sigils:['ward'],hp:1})];b.ember=9;playCard(r,b,b.hand[0].instanceId,0);
+  b.enemy[0]={...cloneCard('boar'),side:'enemy',atk:0,hp:4,maxHp:4};endTurn(r,b);
+  assert.equal(b.player[0].hp,1);assert.equal(b.player[0].wardUsed,true);
+  b.player.fill(null);b.enemy.fill(null);b.intent=[];b.hand=[cloneCard('chain-dog')];b.ember=9;playCard(r,b,b.hand[0].instanceId,1);
+  b.enemy[0]={...cloneCard('doe'),side:'enemy',atk:0,hp:3,maxHp:3,wardUsed:false};b.enemy[2]={...cloneCard('hare'),side:'enemy',sigils:[],atk:0,hp:1,maxHp:1};
+  const result=endTurn(r,b);assert.equal(b.enemy[0].hp,3);assert.equal(b.enemy[0].wardUsed,true);assert.equal(b.enemy[2],null);
+  assert.ok(result.events.some(e=>e.type==='damage'&&e.source==='chain'));assert.equal(b.seals.player,3);
+});
+
+test('Hunger counts a kill even when Brood replaces the defender',()=>{
+  const r=createRun(42),b=createBattle(r);b.enemy.fill(null);b.intent=[];b.hand=[cloneCard('fox')];b.ember=9;playCard(r,b,b.hand[0].instanceId,0);
+  b.enemy[0]={...cloneCard('moth'),side:'enemy',atk:0,hp:1,maxHp:1};endTurn(r,b);
+  assert.equal(b.player[0].atk,3);assert.equal(b.enemy[0].id,'enemy-rat');
+});
+
+test('generated larvae do not enter discard and Echo keeps reflected card identity',()=>{
+  const r=createRun(43),b=createBattle(r);r.items=['knife'];b.enemy.fill(null);b.intent=[];b.hand=[cloneCard('leech')];b.remains=9;playCard(r,b,b.hand[0].instanceId,0);useItem(r,b,'knife',0);
+  const larva=b.hand.find(c=>c.name==='Личинка');assert.equal(larva.token,true);playCard(r,b,larva.instanceId,0);b.sacrificedThisTurn=false;sacrificeUnit(r,b,0);
+  assert.equal(b.discard.length,1);assert.equal(b.discard[0].name,'Чёрная пиявка');
+  b.hand=[cloneCard('hare',{name:'Отражение',portrait:'wolf',sigils:['echo']})];playCard(r,b,b.hand[0].instanceId,0);b.sacrificedThisTurn=false;sacrificeUnit(r,b,0);
+  const echo=b.hand.find(c=>c.name==='Отражение');assert.ok(echo);assert.equal(echo.portrait,'wolf');
+});
+
+
+test('spending the last ember to block an open lane averts a forecast defeat',()=>{
+  const r=createRun(44),b=createBattle(r);r.battle=b;b.enemy.fill(null);b.intent=[];b.seals.enemy=5;
+  b.hand=[cloneCard('wolf')];b.ember=3;playCard(r,b,b.hand[0].instanceId,1);
+  b.enemy[0]={...cloneCard('crow'),sigils:[],side:'enemy',atk:1,hp:1,maxHp:1};
+  assert.equal(forecastTurn(r,b).winner,'enemy');assert.equal(moveUnit(r,b,1,0).ok,true);assert.equal(b.ember,0);
+  const predicted=forecastTurn(r,b);assert.equal(predicted.winner,null);assert.equal(predicted.damage.enemy,0);
+  endTurn(r,b);assert.equal(b.ended,false);assert.equal(b.seals.enemy,5);assert.equal(b.enemy[0],null);
 });

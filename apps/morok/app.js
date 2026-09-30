@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {
   VERSION,SEAL_LIMIT,SIGILS,RELICS,ITEMS,BOSSES,sigilInfo,itemInfo,bossInfo,nodeLabel,
   createProfile,createRun,hydrateRun,resolveNode,chooseCardReward,chooseRelic,chooseItem,
-  hearthUpgrade,altarSelect,afterBattleVictory,skipReward,playCard,canPlay,sacrificeUnit,endTurn,useItem
+  hearthUpgrade,altarSelect,afterBattleVictory,skipReward,playCard,canPlay,sacrificeUnit,endTurn,useItem,canMove,moveUnit,forecastTurn
 } from './game-core.js';
 
 installMobileRuntime();
@@ -19,7 +19,7 @@ const el={
   app:$('#app'),opponent:$('#opponent'),mask:$('#opponentMask'),maskMark:$('.mask-mark'),speech:$('#opponentSpeech'),wallSeal:$('#wallSeal'),
   table:$('#table'),sealPlate:$('#sealPlate'),enemySeals:$('#enemySeals'),playerSeals:$('#playerSeals'),sealStatus:$('#sealStatus'),
   combatCaption:$('#combatCaption'),combatCaptionMain:$('#combatCaptionMain'),combatCaptionSub:$('#combatCaptionSub'),turnCue:$('#turnCue'),turnCueText:$('#turnCueText'),
-  ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),
+  ember:$('#emberText'),remains:$('#remainsText'),intent:$('#intentRack'),enemy:$('#enemyRow'),player:$('#playerRow'),round:$('#roundText'),forecast:$('#turnForecast'),
   heritage:$('#heritageToken'),sacrifice:$('#sacrificeBtn'),items:$('#itemRack'),endTurn:$('#endTurnBtn'),deckBtn:$('#deckBtn'),deckCount:$('#deckCount'),hand:$('#hand'),
   menu:$('#menuTray'),continue:$('#continueBtn'),continueMeta:$('#continueMeta'),newRun:$('#newRunBtn'),rules:$('#rulesBtn'),
   route:$('#routeTablet'),routeDepth:$('#routeDepth'),routeTitle:$('#routeTitle'),routeChoices:$('#routeChoices'),routeRelics:$('#routeRelics'),routeItems:$('#routeItems'),
@@ -239,12 +239,26 @@ function renderBattle(){
   const b=run.battle;if(!b){setMode(run.pending?'event':'route');return}
   renderSeals();el.ember.textContent=b.ember;el.remains.textContent=b.remains;el.round.textContent=`ХОД ${b.round}${b.bossId?` · ${b.phase}/${b.phasesTotal}`:''}`;
   renderIntent(b);renderRows(b);renderHand(b);renderItems(b);renderSelection(b);highlightTargets();publishState();
+  renderForecast(b);
+}
+function renderForecast(b){
+  const forecast=forecastTurn(run,b);if(!forecast)return;
+  const text=forecast.winner==='player'?'Его печати не выдержат.':forecast.winner==='enemy'?'Твои печати не выдержат.':forecast.phase?'Приор сменит правила.':`Его печати −${forecast.damage.player} · твои −${forecast.damage.enemy}`;
+  el.forecast.textContent=text;el.forecast.dataset.danger=String(forecast.winner==='enemy');el.forecast.dataset.win=String(forecast.winner==='player');
+  el.endTurn.setAttribute('aria-label',`Закончить ход. ${text}`);
+  for(const node of $$('.unit-card')){
+    const result=forecast.units[node.dataset.unitId];if(!result)continue;
+    node.classList.toggle('will-die',result.dead);
+    if(result.dead||result.hp<Number(node.querySelector('.unit-stats span')?.textContent.replace(/[^0-9]/g,''))){
+      const mark=document.createElement('small');mark.className='wound-mark';mark.textContent=result.dead?'×':`→${result.hp}`;mark.setAttribute('aria-label',result.dead?'Погибнет после удара':`После удара: ${result.hp} здоровья`);node.append(mark);
+    }
+  }
 }
 function renderIntent(b){
   el.intent.replaceChildren();
   for(let lane=0;lane<4;lane++){
-    const p=b.intent.find(x=>x.lane===lane),n=document.createElement('div');n.className='intent-card'+(p?'':' empty');
-    if(p){n.innerHTML=artSvg(p.unit,true)+`<b>${p.unit.atk}/${p.unit.hp}</b>`}el.intent.append(n);
+    const p=b.intent.find(x=>x.lane===lane),n=document.createElement(p?'button':'div');n.className='intent-card'+(p?'':' empty');
+    if(p){n.type='button';n.innerHTML=artSvg(p.unit,true)+`<b>${p.unit.atk}/${p.unit.hp}</b>`;n.setAttribute('aria-label',`${p.unit.name}, появится на месте ${lane+1} после удара`);n.addEventListener('click',()=>{if(blocked())return;openFocus(p.unit);el.focusText.textContent='Выйдет после этого удара. Атаковать начнёт со следующего.'})}el.intent.append(n);
   }
 }
 function renderRows(b){
@@ -303,6 +317,10 @@ async function animateCombat(events,beforeSeals,token=sceneToken){
         animation.finished.finally(()=>{attacker.style.zIndex='';if(lane)lane.style.zIndex=''});
       }
       feedback('swing');await wait(heavy?170:140);hideCombatCaption();continue;
+    }
+    if(event.type==='move'){
+      const unit=unitNodeById(event.unitId),destination=laneNode(event.side,event.lane);
+      if(unit&&destination){const from=unit.getBoundingClientRect(),to=destination.getBoundingClientRect();const animation=!reduced.matches?unit.animate([{transform:'translate(0,0) rotate(0)'},{transform:`translate(${(to.left-from.left)*.5}px,-7px) rotate(3deg)`,offset:.5},{transform:`translate(${to.left-from.left}px,0) rotate(0)`}],{duration:180,fill:'forwards',easing:'ease-out'}):null;feedback('pickup');await wait(180);destination.replaceChildren(unit);animation?.cancel();feedback('wood')}continue;
     }
     if(event.type==='ward'){
       const target=unitNodeById(event.unitId);target?.classList.add('combat-ward');floatDamage(event.side,event.lane,'0','ward');feedback('bone');
@@ -400,6 +418,7 @@ function selectedCardObj(){return run?.battle?.hand.find(c=>c.instanceId===selec
 function highlightTargets(){
   $$('.lane').forEach(n=>n.classList.remove('valid','unavailable'));const b=run?.battle,c=selectedCardObj();if(!b)return;
   if(selectedItem==='knife'){$$('#playerRow .lane').forEach((n,i)=>{if(b.player[i])n.classList.add('valid')});return}
+  if(!c&&selectedUnit!==null){$$('#playerRow .lane').forEach((n,i)=>{n.classList.toggle('valid',canMove(b,selectedUnit,i).ok);n.classList.toggle('unavailable',i!==selectedUnit&&!canMove(b,selectedUnit,i).ok)});return}
   if(!c)return;
   $$('.lane').forEach(n=>{const side=n.dataset.side,lane=Number(n.dataset.lane);const correct=c.type==='creature'?side==='player':c.rite==='salt'?side==='enemy':['bark','needle','molt','nails'].includes(c.rite)&&side==='player';const ok=correct&&canPlay(run,b,c,c.type==='creature'?lane:null,lane).ok;n.classList.toggle('valid',ok);n.classList.toggle('unavailable',!ok)});
 
@@ -423,11 +442,13 @@ function laneTap(side,lane,node){
   if(side==='enemy'&&b.enemy[lane]){openFocus(b.enemy[lane]);return}
   if(side==='player'&&b.player[lane]){
     selectedUnit=selectedUnit===lane?null:lane;heritageChoice=selectedUnit!==null?b.player[lane].sigils[0]||null:null;feedback('bone');renderBattle();
+  }else if(side==='player'&&selectedUnit!==null){
+    const from=selectedUnit,check=canMove(b,from,lane);if(!check.ok){bad(node,check.reason);return}void resolveAction(()=>moveUnit(run,b,from,lane));
   }
 }
 function bad(node,msg){node?.classList.add('invalid');setTimeout(()=>node?.classList.remove('invalid'),260);toast(msg||'Нельзя.');feedback('warning')}
 function renderSelection(b){
-  const c=selectedCardObj();el.actionHint.textContent=c?`${c.name} · ${cardAffordable(c,b)?c.type==='creature'?'выбери пустое место':c.rite==='salt'?'выбери врага':['bark','needle','molt','nails'].includes(c.rite)?'выбери своего зверя':'подтверди ритуал':'не хватает '+(c.costType==='ember'?'угля':'костей')}`:b.heritage?`Наследие: ${sigilInfo(b.heritage).name}`:'Перетащи карту на стол · удерживай, чтобы рассмотреть';el.cancelCard.hidden=!c&&!selectedItem;el.cast.hidden=!c||!['milk','whisper','lash'].includes(c.rite);
+  const c=selectedCardObj();el.actionHint.textContent=c?`${c.name} · ${cardAffordable(c,b)?c.type==='creature'?'выбери пустое место':c.rite==='salt'?'выбери врага':['bark','needle','molt','nails'].includes(c.rite)?'выбери своего зверя':'подтверди ритуал':'не хватает '+(c.costType==='ember'?'угля':'костей')}`:selectedUnit!==null?b.movedThisTurn?'Сдвиг уже сделан':b.ember<1?'Сдвиг требует 1 уголь · или принеси жертву':'Сдвиг: соседнее место · 1 уголь':b.heritage?`Наследие: ${sigilInfo(b.heritage).name}`:'Перетащи карту · нажми на зверя для сдвига';el.cancelCard.hidden=!c&&!selectedItem&&selectedUnit===null;el.cast.hidden=!c||!['milk','whisper','lash'].includes(c.rite);
   const u=selectedUnit!==null?b.player[selectedUnit]:null;el.sacrifice.hidden=!u||b.sacrificedThisTurn;el.heritage.hidden=!u||!u.sigils.length;
   if(u?.sigils.length){if(!heritageChoice||!u.sigils.includes(heritageChoice))heritageChoice=u.sigils[0];const s=sigilInfo(heritageChoice);el.heritage.querySelector('span').textContent=s.mark;el.heritage.querySelector('small').textContent=s.name.toUpperCase();el.heritage.setAttribute('role','button');el.heritage.tabIndex=0}
 }
@@ -443,7 +464,7 @@ function renderItems(b){
     const item=itemInfo(id);if(!item)return;const btn=document.createElement('button');btn.type='button';btn.className='item'+(selectedItem===id?' selected':'');btn.innerHTML=`<b>${item.mark}</b><small>${item.name}</small>`;
     btn.title=item.text;btn.setAttribute('aria-label',item.name+': '+item.text);btn.addEventListener('click',()=>{
       if(blocked())return;el.itemHint.textContent=item.text;
-      if(item.target==='player'){selectedItem=selectedItem===id?null:id;selectedCard=null;feedback('bone');renderBattle();highlightTargets();return}
+      if(item.target==='player'){selectedItem=selectedItem===id?null:id;selectedCard=null;selectedUnit=null;feedback('bone');renderBattle();highlightTargets();return}
       void resolveAction(()=>{const r=useItem(run,b,id,null);if(!r.ok){toast(r.reason);feedback('warning')}else feedback(id==='bell'?'bell':'bone');return r});
     });el.items.append(btn);
   });
@@ -572,7 +593,7 @@ function requestNewRun(){const saved=readRun();if(saved&&!saved.result)confirm('
 el.continue.addEventListener('click',continueRun);el.newRun.addEventListener('click',requestNewRun);el.again.addEventListener('click',newRun);
 el.resultHome.addEventListener('click',()=>{run=null;save(true);setMode('menu')});
 el.eventSkip.addEventListener('click',()=>{if(skipReward(run).ok){feedback('paper');save();setMode('route')}});
-el.cancelCard.addEventListener('click',()=>{if(blocked())return;selectedCard=null;selectedItem=null;renderBattle()});el.cast.addEventListener('click',()=>{const c=selectedCardObj();if(!c||blocked())return;void resolveAction(()=>{const r=playCard(run,run.battle,c.instanceId);if(!r.ok)bad(el.cast,r.reason);return r})});
+el.cancelCard.addEventListener('click',()=>{if(blocked())return;selectedCard=null;selectedItem=null;selectedUnit=null;renderBattle()});el.cast.addEventListener('click',()=>{const c=selectedCardObj();if(!c||blocked())return;void resolveAction(()=>{const r=playCard(run,run.battle,c.instanceId);if(!r.ok)bad(el.cast,r.reason);return r})});
 el.endTurn.addEventListener('click',doEndTurn);el.sacrifice.addEventListener('click',doSacrifice);el.heritage.addEventListener('click',cycleHeritage);el.heritage.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cycleHeritage()}});
 el.deckBtn.addEventListener('click',openLedger);el.ledgerClose.addEventListener('click',()=>{el.ledger.hidden=true;feedback('paper')});
 el.focusClose.addEventListener('click',()=>{el.focus.hidden=true;feedback('paper')});
