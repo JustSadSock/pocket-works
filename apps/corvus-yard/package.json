@@ -1,0 +1,16 @@
+{
+  "name": "@pocket-works/corvus-yard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vitest run --config vite.config.ts && tsc --noEmit -p tsconfig.json && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs corvus-yard",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:gameplay": "node qa/gameplay.mjs"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1",
+    "@babylonjs/loaders": "^9.2.1"
+  }
+}

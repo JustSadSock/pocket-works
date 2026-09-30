@@ -1,0 +1,230 @@
+[
+  {
+    "browser": "webkit",
+    "status": "passed",
+    "checks": [
+      "portrait touch start",
+      "takeoff and glide",
+      "pause freeze and home return",
+      "branch walkoff and ground landing",
+      "two meals through actual pickup/eat controls",
+      "walnut carried, airborne drop and hard-surface crack",
+      "bell tower progression completion",
+      "sound and progression persistence",
+      "service worker offline reload with local crow/world assets"
+    ],
+    "airborne": {
+      "phase": "playing",
+      "position": {
+        "x": 0.30313537116808714,
+        "y": 11.083766240046645,
+        "z": -8.65787584985859
+      },
+      "velocity": {
+        "x": 0.46408200929379273,
+        "y": 0.8040968311728329,
+        "z": 6.817563201555447
+      },
+      "mode": "glide",
+      "grounded": false,
+      "speed": 6.880487761231416,
+      "rigReady": true,
+      "ecology": {
+        "carrying": null,
+        "foods": 0,
+        "nuts": 0,
+        "visited": [],
+        "wildlife": 9,
+        "birdAssetsReady": true,
+        "targets": [
+          {
+            "kind": "scrap",
+            "position": [
+              0.5,
+              0.11,
+              -14
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "scrap",
+            "position": [
+              -1.1,
+              0.11,
+              -18
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "beetle",
+            "position": [
+              1.9313912534567832,
+              0.07,
+              -13.08249384812973
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "beetle",
+            "position": [
+              -3.061728228283158,
+              0.07,
+              -18.919089507634006
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "walnut",
+            "position": [
+              1,
+              0.12,
+              -15
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "walnut",
+            "position": [
+              -1,
+              0.12,
+              -12
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "shiny",
+            "position": [
+              4,
+              0.11,
+              -16
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "mouse",
+            "position": [
+              6.0574230281171975,
+              0.146667097229332,
+              -8.764886002167188
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "mouse",
+            "position": [
+              -7.786696861876514,
+              0.15619105077228077,
+              3.904992708093692
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "beetle",
+            "position": [
+              -9.065707948059671,
+              0.07,
+              12.915214745854628
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "scrap",
+            "position": [
+              17,
+              0.11,
+              3
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "walnut",
+            "position": [
+              -12,
+              0.12,
+              -20
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "scrap",
+            "position": [
+              -10,
+              0.11,
+              6
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "scrap",
+            "position": [
+              10,
+              0.11,
+              -5
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "beetle",
+            "position": [
+              8.02142589007136,
+              0.07,
+              -19.89649044878577
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "walnut",
+            "position": [
+              18,
+              0.12,
+              16
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "scrap",
+            "position": [
+              -14,
+              0.11,
+              24
+            ],
+            "cracked": false
+          },
+          {
+            "kind": "shiny",
+            "position": [
+              -23,
+              0.11,
+              17
+            ],
+            "cracked": false
+          }
+        ]
+      },
+      "fps": 18.039687312086592,
+      "support": null,
+      "meshes": 250,
+      "camera": [
+        0.18750242569379424,
+        11.982237950540625,
+        -15.887590932846773
+      ],
+      "yaw": 0,
+      "pitch": 0.07474833142141453,
+      "roll": 0,
+      "renderMs": 27,
+      "quality": "performance",
+      "activeMeshes": 48,
+      "vertices": 318424
+    },
+    "rendererFps": [
+      18.039687312086592,
+      20.804438280166433,
+      22.573363431151236,
+      24.096385542168676,
+      28.818443804034587
+    ],
+    "errors": [],
+    "failed": []
+  }
+]

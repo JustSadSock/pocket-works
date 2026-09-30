@@ -1,0 +1,1 @@
+{"version":1,"jobs":[{"name":"crow","script":"crow.py","output":"public/models/crow.glb","requireArmature":true,"requireAnimation":true},{"name":"world","script":"world.py","output":"public/models/world.glb"}]}
