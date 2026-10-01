@@ -1865,7 +1865,7 @@ class OathScene extends Phaser.Scene {
     this.knightHammer.y = 4 - Math.max(0, vertical) * 2;
 
     this.knightCloak.scaleY = 1 + Math.sin(this.walkPhase * .5) * .022;
-    this.knightCloak.skewX = moving ? Math.cos(this.walkPhase * .5) * .025 : 0;
+    this.knightCloak.rotation = moving ? Math.cos(this.walkPhase * .5) * .025 : 0;
     this.knightShield.rotation = inputState.guardHeld ? -.28 : -.04 + Math.sin(this.walkPhase) * .035;
 
     if (this.attackAnim > 0) {
