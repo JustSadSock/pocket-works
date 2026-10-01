@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from './audio';
+import { canUseOath } from './core';
 import { DIALOGUES, RITUAL_LINES, ZONES, type DialogueNode } from './content';
 import {
   addItem,
@@ -106,6 +107,7 @@ class OathScene extends Phaser.Scene {
   private zoneId = '';
   private runtimeSeconds = 0;
   private qaClock = 0;
+  private autosaveClock = 5;
   private ritualRunning = false;
   private pedestalOathGlow: Phaser.GameObjects.Image | null = null;
   private pedestalTearGlow: Phaser.GameObjects.Image | null = null;
@@ -864,8 +866,8 @@ class OathScene extends Phaser.Scene {
   }
 
   private useAbility() {
-    if (this.save.resolve < 40 || (this.mode !== 'explore' && this.mode !== 'combat')) {
-      if (this.save.resolve < 40) this.toast('Недостаточно решимости.');
+    if (!canUseOath(this.save.resolve) || (this.mode !== 'explore' && this.mode !== 'combat')) {
+      if (!canUseOath(this.save.resolve)) this.toast('Недостаточно решимости.');
       return;
     }
     this.save.resolve -= 40;
@@ -1039,6 +1041,10 @@ class OathScene extends Phaser.Scene {
     };
   }
 
+  saveNow() {
+    this.commitSave();
+  }
+
   pauseWorld() {
     if (this.mode === 'pause') return;
     this.modeBeforePause = this.mode;
@@ -1076,6 +1082,7 @@ class OathScene extends Phaser.Scene {
     const dt = Math.min(.05, deltaMs / 1000);
     this.runtimeSeconds += dt;
     this.qaClock -= dt;
+    this.autosaveClock -= dt;
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.attackAnim = Math.max(0, this.attackAnim - dt);
     this.hurtCooldown = Math.max(0, this.hurtCooldown - dt);
@@ -1091,6 +1098,11 @@ class OathScene extends Phaser.Scene {
       const whole = Math.floor(this.runtimeSeconds);
       this.runtimeSeconds -= whole;
       this.save.playSeconds += whole;
+    }
+
+    if (this.autosaveClock <= 0 && (this.mode === 'explore' || this.mode === 'combat')) {
+      this.autosaveClock = 5;
+      this.commitSave();
     }
 
     if (this.qaClock <= 0) {
@@ -1120,6 +1132,7 @@ export function createThirdOathGame(parent: HTMLElement, save: SaveState, callba
     resume: () => scene.resumeWorld(),
     restartFromCheckpoint: () => scene.restartFromCheckpoint(),
     resumeAfterComplete: () => scene.resumeAfterComplete(),
+    saveNow: () => scene.saveNow(),
     destroy: () => {
       inputState.moveX = 0; inputState.moveY = 0; inputState.guardHeld = false; inputState.attackHeld = false;
       game.destroy(true);

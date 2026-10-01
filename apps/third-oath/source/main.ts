@@ -4,6 +4,8 @@ import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { registerSW } from 'virtual:pwa-register';
 import { audio } from './audio';
+import { clampPercent, hasProgress, healthPercent } from './core';
+import { ITEMS } from './content';
 import { createThirdOathGame, inputState, type DialogueView } from './game';
 import { clearSave, freshSave, loadSave, persistSave, type GameMode, type SaveState } from './state';
 
@@ -53,6 +55,8 @@ const moveThumb = $('moveThumb');
 const attackButton = $<HTMLButtonElement>('attackButton');
 const guardButton = $<HTMLButtonElement>('guardButton');
 const abilityButton = $<HTMLButtonElement>('abilityButton');
+const inventoryList = $('inventoryList');
+const objectiveText = $('objectiveText');
 
 let save: SaveState = loadSave();
 let controller: ReturnType<typeof createThirdOathGame> | null = null;
@@ -71,7 +75,7 @@ function updateSoundLabels() {
 
 function syncMenu() {
   updateSoundLabels();
-  const progressed = Object.keys(save.flags).length > 0 || save.inventory.length > 0 || save.playSeconds > 5;
+  const progressed = hasProgress(save.flags, save.inventory, save.playSeconds);
   continueLabel.textContent = progressed ? 'ПРОДОЛЖИТЬ' : 'ВОЙТИ В КАПЕЛЛУ';
   if (save.completed) continueMeta.textContent = 'Глава I завершена · вернуться в Зал Клятв';
   else if (progressed) continueMeta.textContent = 'Продолжить с последнего места';
@@ -92,10 +96,43 @@ function resetInputs() {
 }
 
 function renderHud(health: number, maxHealth: number, resolve: number, combat: boolean) {
-  healthBar.style.width = String(Math.max(0, Math.min(100, health / maxHealth * 100))) + '%';
+  healthBar.style.width = String(healthPercent(health, maxHealth)) + '%';
   healthText.textContent = String(health) + ' / ' + String(maxHealth);
-  resolveBar.style.width = String(Math.max(0, Math.min(100, resolve))) + '%';
+  resolveBar.style.width = String(clampPercent(resolve)) + '%';
   document.body.classList.toggle('in-combat', combat);
+}
+
+function renderJournal() {
+  inventoryList.replaceChildren();
+  const catalog = Object.values(ITEMS) as Array<{ id: string; name: string; note: string }>;
+  const found = save.inventory
+    .map((id) => catalog.find((item) => item.id === id))
+    .filter((item): item is { id: string; name: string; note: string } => Boolean(item));
+
+  if (found.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'journal-empty';
+    empty.textContent = 'Пока ничего.';
+    inventoryList.append(empty);
+  } else {
+    for (const item of found) {
+      const row = document.createElement('div');
+      row.className = 'journal-item';
+      const name = document.createElement('strong');
+      name.textContent = item.name;
+      const note = document.createElement('small');
+      note.textContent = item.note;
+      row.append(name, note);
+      inventoryList.append(row);
+    }
+  }
+
+  if (!save.flags.secretDoorOpen) objectiveText.textContent = 'Осмотреть капеллу. Под алтарём тянет холодом.';
+  else if (!save.flags.cryptWardenDefeated) objectiveText.textContent = 'Спуститься в крипту и найти путь глубже.';
+  else if (!save.flags.oathPlaced || !save.flags.tearPlaced) objectiveText.textContent = 'Вернуться к трём пьедесталам внизу.';
+  else if (!save.flags.hallAwakened) objectiveText.textContent = 'Подождать ответа Зала Клятв.';
+  else if (!save.completed) objectiveText.textContent = 'Босые следы ведут к старой башне.';
+  else objectiveText.textContent = 'Башня открыта. Глава I завершена.';
 }
 
 function showPrompt(label: string | null) {
@@ -188,7 +225,7 @@ function createController() {
       resetInputs();
       completeScreen.hidden = false;
     },
-    onSave: (next) => { save = next; }
+    onSave: (next) => { save = next; if (!pauseScreen.hidden) renderJournal(); }
   });
 }
 
@@ -206,6 +243,7 @@ async function startGame() {
 
 function showMenu() {
   resetInputs();
+  controller?.saveNow();
   controller?.destroy();
   controller = null;
   currentMode = 'menu';
@@ -240,8 +278,10 @@ soundButton.addEventListener('click', toggleSound);
 pauseSoundButton.addEventListener('click', toggleSound);
 
 $('pauseButton').addEventListener('click', () => {
+  controller?.saveNow();
   controller?.pause();
   resetInputs();
+  renderJournal();
   pauseScreen.hidden = false;
   audio.ui();
 });
@@ -342,6 +382,7 @@ interactButton.addEventListener('pointerdown', (event) => {
 window.addEventListener('blur', resetInputs);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    controller?.saveNow();
     resetInputs();
     if (gameScreen.hidden === false && pauseScreen.hidden === true && currentMode !== 'complete' && currentMode !== 'dead') {
       controller?.pause();

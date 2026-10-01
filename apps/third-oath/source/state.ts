@@ -54,7 +54,8 @@ export function normalizeSave(raw: unknown): SaveState {
   if (!raw || typeof raw !== 'object') return base;
   const data = raw as Partial<SaveState>;
   const maxHealth = Math.max(1, Math.min(9, finite(data.maxHealth, base.maxHealth)));
-  const health = Math.max(0.5, Math.min(maxHealth, finite(data.health, base.health)));
+  const rawHealth = finite(data.health, base.health);
+  const health = rawHealth <= 0 ? maxHealth : Math.max(0.5, Math.min(maxHealth, rawHealth));
   const resolve = Math.max(0, Math.min(100, finite(data.resolve, base.resolve)));
   const inventory = Array.isArray(data.inventory)
     ? [...new Set(data.inventory.filter((item): item is string => typeof item === 'string'))].slice(0, 40)
@@ -77,7 +78,7 @@ export function normalizeSave(raw: unknown): SaveState {
     inventory,
     flags,
     checks,
-    position,
+    position: rawHealth <= 0 ? { ...checkpoint } : position,
     checkpoint,
     stats: {
       will: Math.max(0, Math.min(8, finite(data.stats?.will, base.stats.will))),
