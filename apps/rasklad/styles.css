@@ -73,8 +73,8 @@ button:focus-visible, a:focus-visible, label:focus-within { outline: 3px solid v
 .paper-stage { position: relative; min-height: 0; display: grid; place-items: center; padding: 14px 14px 10px; overflow: hidden; }
 .paper {
   position: relative;
-  height: min(calc(var(--app-viewport-height) - 302px), calc((100vw - 28px) * 1.4142857));
-  max-height: calc(var(--app-viewport-height) - 178px);
+  height: min(calc(var(--app-viewport-height) - 372px), calc((100vw - 28px) * 1.4142857));
+  max-height: calc(var(--app-viewport-height) - 248px);
   min-height: 180px;
   aspect-ratio: 210 / 297;
   overflow: hidden;
@@ -139,13 +139,106 @@ button:focus-visible, a:focus-visible, label:focus-within { outline: 3px solid v
 .add-button { width: 100%; color: var(--paper); background: var(--green); border-color: var(--green-dark); box-shadow: 4px 4px 0 rgba(23,68,58,.22); }
 .add-button small { color: rgba(255,253,247,.72); }
 .file-input { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.density-control {
+  margin-top: 8px;
+  padding: 9px 10px 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,253,247,.34);
+}
+
+.density-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.density-head label {
+  font-size: .7rem;
+  font-weight: 850;
+}
+
+.density-head output {
+  color: var(--green-dark);
+  font: 900 .64rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .05em;
+}
+
+.density-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.density-row > span {
+  color: var(--muted);
+  font: 800 .45rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+
+.density-slider {
+  --density-fill: 85%;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  touch-action: pan-x;
+}
+
+.density-slider::-webkit-slider-runnable-track {
+  height: 5px;
+  border: 1px solid rgba(32,53,47,.28);
+  background: linear-gradient(to right, var(--green) 0 var(--density-fill), rgba(32,53,47,.10) var(--density-fill) 100%);
+}
+
+.density-slider::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--paper);
+  box-shadow: 2px 2px 0 rgba(32,53,47,.17);
+}
+
+.density-slider::-moz-range-track {
+  height: 5px;
+  border: 1px solid rgba(32,53,47,.28);
+  background: rgba(32,53,47,.10);
+}
+
+.density-slider::-moz-range-progress {
+  height: 5px;
+  background: var(--green);
+}
+
+.density-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 2px 2px 0 rgba(32,53,47,.17);
+}
+
+.density-slider:disabled { opacity: .38; }
+
 .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .shuffle-button { color: var(--green-dark); }
 .export-button { color: var(--paper); background: var(--ink); }
 .export-button small { color: rgba(255,253,247,.68); }
 .quality-note { margin: 8px 2px 0; color: var(--muted); font-size: .58rem; line-height: 1.35; }
 .toast {
-  position: fixed; z-index: 30; left: 50%; bottom: calc(var(--safe-bottom) + 136px);
+  position: fixed; z-index: 30; left: 50%; bottom: calc(var(--safe-bottom) + 204px);
   max-width: min(88vw, 440px); padding: 10px 13px; border: 1px solid var(--ink); color: var(--paper); background: var(--ink);
   box-shadow: 4px 4px 0 rgba(32,53,47,.16); font-size: .72rem; font-weight: 750; line-height: 1.3;
   opacity: 0; transform: translate(-50%, 10px); pointer-events: none; transition: opacity .18s ease, transform .18s ease;
@@ -161,7 +254,7 @@ button:focus-visible, a:focus-visible, label:focus-within { outline: 3px solid v
 }
 @media (max-height: 650px) and (max-width: 759px) {
   .quality-note { display: none; }
-  .paper { height: min(calc(var(--app-viewport-height) - 246px), calc((100vw - 28px) * 1.4142857)); }
+  .paper { height: min(calc(var(--app-viewport-height) - 316px), calc((100vw - 28px) * 1.4142857)); }
   .action-button { min-height: 52px; }
 }
 @media (prefers-reduced-motion: reduce) {
