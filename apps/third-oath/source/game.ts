@@ -30,7 +30,7 @@ export interface DialogueView {
 }
 
 export interface GameCallbacks {
-  onHud: (health: number, maxHealth: number, resolve: number, combat: boolean) => void;
+  onHud: (health: number, maxHealth: number, resolve: number, combat: boolean, bossHealth: number, bossMaxHealth: number) => void;
   onPrompt: (label: string | null) => void;
   onDialogue: (view: DialogueView | null) => void;
   onZone: (name: string, kicker: string) => void;
@@ -1282,6 +1282,7 @@ class OathScene extends Phaser.Scene {
       this.toast('НОСИТЕЛЬ ПЕЧАТИ');
     }
     this.setMode('combat');
+    this.syncHud();
   }
 
   private spawnTowerEnemy(kind: TowerEnemyKind, x: number, y: number, encounter: 'bell' | 'boss') {
@@ -1482,6 +1483,7 @@ class OathScene extends Phaser.Scene {
     } else {
       this.save.flags.towerGuardianDefeated = true;
       this.elinVisual?.setAlpha(1);
+      this.syncHud();
       addItem(this.save, 'seal-shard');
       this.save.checkpoint = { x: 450, y: -1730 };
       this.towerEncounter = null;
@@ -1817,7 +1819,15 @@ class OathScene extends Phaser.Scene {
   }
 
   private syncHud() {
-    this.callbacks.onHud(this.save.health, this.save.maxHealth, this.save.resolve, this.mode === 'combat');
+    const boss = this.towerEnemies.find((enemy) => !enemy.dead && enemy.kind === 'bearer');
+    this.callbacks.onHud(
+      this.save.health,
+      this.save.maxHealth,
+      this.save.resolve,
+      this.mode === 'combat',
+      boss?.health ?? 0,
+      boss?.maxHealth ?? 0
+    );
   }
 
   private commitSave() {
