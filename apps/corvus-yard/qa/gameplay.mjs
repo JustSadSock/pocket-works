@@ -48,6 +48,7 @@ try{for(const name of names){
    for(const clip of ['Preen','Ruffle','Call']){
     await page.waitForFunction(name=>window.__AI_TEST_STATE__?.rig?.clip===name,clip,{timeout:180000});
     await page.waitForFunction(name=>window.__AI_TEST_STATE__.rig.activeClips.some(c=>c.name===name&&c.weight>.8),clip);
+    await page.waitForTimeout(clip==='Preen'?800:clip==='Call'?500:250);
     await shot(clip.toLowerCase());
    }
    assert((await state()).rig.joints>=50,'The feather rig must survive GLB import');checks.push('authored preen, ruffle and call with separate feather joints');
@@ -74,6 +75,7 @@ try{for(const name of names){
   // Walk off the home branch backwards; ground food is directly below/behind it.
   await hold('KeyS',()=>!window.__AI_TEST_STATE__.grounded&&window.__AI_TEST_STATE__.position.y<6.2);
   await hold('Shift',()=>window.__AI_TEST_STATE__.grounded&&window.__AI_TEST_STATE__.position.y<2);
+  await shot('landing');await wait(()=>window.__AI_TEST_STATE__?.mode==='idle');await page.waitForTimeout(250);
   await shot('ground');checks.push('branch walkoff and ground landing');console.log(name,'GROUND',JSON.stringify(await state()));
   if(process.env.CORVUS_QA_FULL==='1'){
    const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));

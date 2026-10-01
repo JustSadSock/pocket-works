@@ -9,7 +9,7 @@ export class CrowCamera {
   readonly camera: FreeCamera;
   private target = Vector3.Zero();
   private heading = new Vector3(0, 0, 1);
-  private distance = 3.2;
+  private distance = 2.8;
   private initialized = false;
 
   constructor(scene: Scene, private canvas: HTMLCanvasElement) {
@@ -23,10 +23,10 @@ export class CrowCamera {
 
   reset(state: CrowState) {
     this.heading.set(Math.sin(state.yaw), 0, Math.cos(state.yaw));
-    this.distance = state.grounded ? 3.2 : 4.7;
+    this.distance = state.grounded ? 2.8 : 4.2;
     this.target.copyFromFloats(state.position.x, state.position.y, state.position.z).addInPlace(new Vector3(0, 0.65, 0)).addInPlace(this.heading.scale(1.1));
     this.camera.position.copyFromFloats(state.position.x, state.position.y, state.position.z).subtractInPlace(this.heading.scale(this.distance));
-    this.camera.position.y = Math.max(0.5, state.position.y + .88);
+    this.camera.position.y = Math.max(0.5, state.position.y + .70);
     this.camera.fov = 1.08;
     this.camera.setTarget(this.target);
     this.initialized = true;
@@ -47,17 +47,17 @@ export class CrowCamera {
     this.heading = Vector3.Lerp(this.heading, forward, response(state.grounded ? 5.8 : 4.6, dt));
     if (this.heading.lengthSquared() < 0.01) this.heading.copyFrom(forward);
     this.heading.normalize();
-    this.distance += ((state.grounded ? 3.2 : 4.7 + speedN * 0.7) - this.distance) * response(3.8, dt);
+    this.distance += ((state.grounded ? 2.8 : 4.2 + speedN * 0.7) - this.distance) * response(3.8, dt);
     const portrait = this.canvas.clientHeight > this.canvas.clientWidth;
-    const targetHeight = portrait ? 0.65 : 0.55;
-    const lookahead = state.grounded ? 0.85 : 1.3 + speedN * 0.8;
+    const targetHeight = portrait ? 0.34 : 0.30;
+    const lookahead = state.grounded ? 0.60 : 1.3 + speedN * 0.8;
     const desiredTarget = position.add(new Vector3(0, targetHeight, 0)).add(this.heading.scale(lookahead));
     // Vertical look-ahead is small enough that diving never points the entire view at the ground.
     desiredTarget.y += Math.max(-0.65, Math.min(0.65, state.velocity.y * 0.04));
     this.target = Vector3.Lerp(this.target, desiredTarget, response(7.5, dt));
     const anchor = position.add(new Vector3(0, 0.65, 0));
     let desired = position.subtract(this.heading.scale(this.distance));
-    desired.y += .88 + speedN * 0.3;
+    desired.y += .70 + speedN * 0.3;
     desired = this.avoidObstacles(anchor, desired, colliders);
     // Enter tight spaces promptly, emerge gradually so walls do not whip the camera around.
     const blocked = Vector3.DistanceSquared(anchor, desired) < this.distance * this.distance * 0.65;

@@ -90,7 +90,12 @@ export class World {
    const vs=g.getVerticesData(VertexBuffer.PositionKind)!;const uv=g.getVerticesData(VertexBuffer.UVKind)!;for(let i=0;i<vs.length/3;i++){uv[i*2]=(vs[i*3]+x+90)/180;uv[i*2+1]=(vs[i*3+2]+z+90)/180;}g.setVerticesData(VertexBuffer.UVKind,uv);this.meshes.push(g);
   }
   const water=MeshBuilder.CreateGround('slow canal water',{width:11.2,height:44.8,subdivisions:32},this.scene);water.position.set(0,-.38,11);water.isPickable=false;
-  const wm=new ShaderMaterial('wind rippled canal',this.scene,{vertexSource:`precision highp float;attribute vec3 position;attribute vec2 uv;uniform mat4 worldViewProjection;uniform float time;varying vec2 vUV;varying vec3 wp;void main(){vec3 p=position;p.y+=sin(p.x*1.7+p.z*.65+time*1.9)*.025+sin(p.z*2.2-time*.9)*.014;vUV=uv;wp=p;gl_Position=worldViewProjection*vec4(p,1.);}`,fragmentSource:`precision highp float;varying vec2 vUV;varying vec3 wp;uniform float time;void main(){float ripple=sin(wp.x*1.3+sin(wp.z*.9)+time*.8)*sin(wp.z*2.1-time*.7)*.5+.5;float glint=pow(max(0.,sin(wp.x*6.+sin(wp.z*1.4)*2.+wp.z*5.+time*1.4)),18.);vec3 c=mix(vec3(.15,.23,.22),vec3(.36,.44,.38),ripple*.32);c+=vec3(.76,.65,.42)*glint*.055;float edge=smoothstep(0.,.08,min(vUV.x,1.-vUV.x));c=mix(vec3(.19,.23,.17),c,edge);gl_FragColor=vec4(c,1.);}`},{attributes:['position','uv'],uniforms:['worldViewProjection','time']});water.material=wm;this.waterMaterial=wm;this.meshes.push(water);
+  const wm=new ShaderMaterial('wind rippled canal',this.scene,{
+   vertexSource:`precision highp float;attribute vec3 position;attribute vec2 uv;uniform mat4 world;uniform mat4 worldViewProjection;uniform float time;varying vec2 vUV;varying vec3 wp;varying vec3 wn;
+   void main(){vec3 p=position;float a=p.x*1.7+p.z*.65+time*1.9;float b=p.z*2.2-time*.9;p.y+=sin(a)*.016+sin(b)*.009;wn=normalize(vec3(-cos(a)*.0272,1.,-cos(a)*.0104-cos(b)*.0198));vUV=uv;wp=(world*vec4(p,1.)).xyz;gl_Position=worldViewProjection*vec4(p,1.);}`,
+   fragmentSource:`precision highp float;varying vec2 vUV;varying vec3 wp;varying vec3 wn;uniform vec3 cameraPosition;uniform float time;
+   void main(){vec3 eye=normalize(cameraPosition-wp);vec3 n=normalize(wn);vec3 reflected=reflect(-eye,n);float fresnel=.035+.68*pow(1.-max(0.,dot(n,eye)),5.);float horizon=pow(max(0.,reflected.y),.55);vec3 sky=mix(vec3(.59,.66,.66),vec3(.27,.40,.52),horizon);float cloud=sin(reflected.x*8.+sin(reflected.z*7.)*1.8)*sin(reflected.z*11.-reflected.x*2.);sky=mix(sky,vec3(.78,.79,.73),smoothstep(-.4,.5,cloud)*.22);float wave=sin(wp.x*3.7+wp.z*1.6+time*.8)*sin(wp.z*4.1-time*.7);vec3 body=vec3(.115,.185,.16)+wave*.009;vec3 c=mix(body,sky,fresnel);vec3 halfVector=normalize(eye+normalize(vec3(.55,.85,-.35)));float light=pow(max(0.,dot(n,halfVector)),180.);c+=vec3(.70,.59,.38)*light*.24;float edge=smoothstep(0.,.035,min(vUV.x,1.-vUV.x));c=mix(vec3(.14,.17,.105),c,edge);gl_FragColor=vec4(c,1.);}`
+  },{attributes:['position','uv'],uniforms:['world','worldViewProjection','time','cameraPosition']});water.material=wm;this.waterMaterial=wm;this.meshes.push(water);
  }
  private createGrass(){
   // Authored meadow islands leave paths, canal and approach corridors unobstructed.
@@ -153,7 +158,7 @@ export class World {
  update(dt:number,time:number,crowPosition:Vector3):void {
   this.time=time;
   const home=this.perches[0];if(this.branch&&this.branchRest&&home){const weight=Vector3.DistanceSquared(crowPosition,home.position)<1.3?-.055:0;this.bendVelocity+=(weight-this.bend)*dt*22;this.bendVelocity*=Math.exp(-dt*4);this.bend+=this.bendVelocity*dt;this.branch.position.y=this.branchRest.y+this.bend+Math.sin(time*.65)*.01;home.position.y=8.10+this.bend+Math.sin(time*.65)*.01;}
-  this.waterMaterial?.setFloat('time',time);this.grassMaterial?.setFloat('time',time);
+  this.waterMaterial?.setFloat('time',time);if(this.scene.activeCamera)this.waterMaterial?.setVector3('cameraPosition',this.scene.activeCamera.globalPosition);this.grassMaterial?.setFloat('time',time);
   for(let i=0;i<this.canopies.length;i++){const c=this.canopies[i];const r=this.canopyRest.get(c)!;const gust=Math.sin(time*.63+i*.7)*.5+Math.sin(time*1.43+i*.23)*.22;c.position.x=r.x+gust*.065;c.rotation.z=gust*.012;c.rotation.x=Math.sin(time*.83+i)*.006;}
   for(let i=0;i<this.leaves.length;i++){const l=this.leaves[i];const d=Vector3.DistanceSquared(l.position,crowPosition);l.position.x+=dt*(.5+Math.sin(time+i)*.15+(d<2?1.2:0));l.position.z+=Math.sin(time*1.5+i)*dt*.15;l.position.y=Math.max(.2,1.3+Math.sin(time*.7+i)*.7);l.rotation.x+=dt;l.rotation.y+=dt*.8;if(l.position.x>32)l.position.x=-32;}
  }
