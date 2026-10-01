@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(path,'utf8');
-const [launcher,index,rootWorker,updateManager,enhancedUpdateManager,launcherSync,prepareSite,vetrolomWorker,vetrolomConfig]=await Promise.all([
+const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager,launcherSync,prepareSite,vetrolomWorker,vetrolomConfig]=await Promise.all([
   read('launcher-update-all-v3.js'),
+  read('app.js'),
   read('index.html'),
   read('sw.js'),
   read('shared/update-manager.js'),
@@ -15,8 +16,11 @@ const [launcher,index,rootWorker,updateManager,enhancedUpdateManager,launcherSyn
 const errors=[];
 const requireToken=(source,token,label)=>{if(!source.includes(token))errors.push(`${label} must include ${token}`);};
 
-for(const token of ['APP_TIMEOUT','withTimeout(installRelease','timedOut','skipped','UPDATE_CONCURRENCY=3','expectedFingerprint','pw-update-progress','verifiedReleaseIsActive','navigator.serviceWorker.getRegistration(scopeUrl.href)','workerMatches(registration?.active,app)']){
+for(const token of ['APP_TIMEOUT','withTimeout(installRelease','timedOut','skipped','UPDATE_CONCURRENCY=3','expectedFingerprint','pw-update-progress','verifiedReleaseIsActive','navigator.serviceWorker.getRegistration(scopeUrl.href)','workerMatches(registration?.active,app)','pocketworks:registry-snapshot',"source:'bulk-update'"]){
   requireToken(launcher,token,'launcher fingerprint updater');
+}
+for(const token of ['pocketworks:registry-snapshot','applyExternalRegistrySnapshot']){
+  requireToken(launcherApp,token,'launcher live registry handoff');
 }
 for(const source of [index,rootWorker,prepareSite])requireToken(source,'launcher-update-all-v3.js','launcher deployment');
 for(const token of ['readStoredValue(seenKey)','alreadySeen','setStoredValue(seenKey, waitingInfo.version)'])requireToken(updateManager,token,'managed update seen-state');
@@ -24,7 +28,8 @@ for(const token of ['__POCKET_WORKS_RELEASE__','coherentRelease?.verified','retu
 const enhancedHandoff=enhancedUpdateManager.indexOf('coherentRelease?.verified');
 const enhancedRegistration=enhancedUpdateManager.indexOf('registerSW({');
 if(enhancedHandoff<0||enhancedRegistration<0||enhancedHandoff>enhancedRegistration)errors.push('enhanced release-guard handoff must run before vite-plugin-pwa registration');
-for(const token of ['RELEASE_CURSOR_KEY','buildReleaseCursor','persistReleaseCursor(closedDigest.releaseCursor)','removeStored(LEGACY_REGISTRY_HISTORY_KEY)','removeStored(LEGACY_SEEN_DIGESTS_KEY)','remember: false, immediate: true'])requireToken(launcherSync,token,'launcher acknowledged-registry cursor');
+for(const token of ['RELEASE_CURSOR_KEY','buildReleaseCursor','persistReleaseCursor(closedDigest.releaseCursor)','removeStored(LEGACY_REGISTRY_HISTORY_KEY)','removeStored(LEGACY_SEEN_DIGESTS_KEY)','remember: false, immediate: true','pocketworks:registry-snapshot','publishRegistrySnapshot(nextApps)'])requireToken(launcherSync,token,'launcher acknowledged-registry cursor');
+if(launcherSync.includes('requestLauncherRefresh')||launcherSync.includes('refreshButton.click()'))errors.push('launcher registry sync must hand live registry data directly to app.js instead of synthesizing the Update button');
 for(const token of ['createHash','canonicalFingerprint','fingerprints.get(app.slug)'])requireToken(prepareSite,token,'release fingerprint build');
 for(const token of ['AbortController','Promise.allSettled','caches.match(canonical)','RUNTIME_SHELL',"APP_VERSION='1.5.2'"])requireToken(vetrolomWorker,token,'Vetrolom worker');
 
