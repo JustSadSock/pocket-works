@@ -1,0 +1,16 @@
+{
+  "id": "/apps/inkfall/",
+  "name": "INKFALL",
+  "short_name": "INKFALL",
+  "description": "Вертикальная аркада о падении сквозь живой чернильный поток.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#101936",
+  "theme_color": "#101936",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
