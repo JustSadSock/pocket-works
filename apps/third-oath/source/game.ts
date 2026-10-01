@@ -689,77 +689,85 @@ class OathScene extends Phaser.Scene {
   }
 
   private drawTowerProps(g: Phaser.GameObjects.Graphics) {
-    // Vestibule: damp stair landing and the first clear continuation of the barefoot trail.
-    g.fillStyle(0x0b0b0a, .6);
-    g.fillEllipse(450, -108, 185, 74);
-    for (let sy = 34; sy > -245; sy -= 43) {
-      const width = 150 + Math.abs(sy % 86) * .4;
-      g.fillStyle(0x37352e, 1);
-      g.fillRect(450 - width / 2, sy, width, 18);
-      g.fillStyle(0x5d5748, .22);
-      g.fillRect(450 - width / 2 + 5, sy + 2, width - 10, 3);
-      g.lineStyle(1, 0x11110e, .75);
-      g.beginPath(); g.moveTo(450 - width / 2, sy + 17); g.lineTo(450 + width / 2, sy + 17); g.strokePath();
+    // Stairs are shallow stacked prisms, so they climb in screen space instead
+    // of reading as a ladder painted flat on the floor.
+    g.fillStyle(0x080807, .52);
+    g.fillEllipse(450, -104, 205, 62);
+    let stairIndex = 0;
+    for (let sy = 32; sy > -246; sy -= 43) {
+      const width = 154 - stairIndex * 3;
+      const x = 450 - width / 2;
+      this.drawPrism(g, x, sy - 8, width, 18, 10, 0x49453b, 0x282620, 0x343128, 7);
+      g.lineStyle(1, 0x817761, .16);
+      g.beginPath(); g.moveTo(x + 12, sy - 5); g.lineTo(x + width - 12, sy - 5); g.strokePath();
+      stairIndex += 1;
     }
 
-    // Bell floor: one huge cracked bell, hanging off-axis. Its missing tongue becomes a clue.
-    g.fillStyle(0x070706, .7);
-    g.fillEllipse(456, -688, 236, 92);
-    g.fillStyle(0x3e3a30, 1);
+    // Bell: broad mouth ellipse + curved body, suspended above the floor.
+    g.fillStyle(0x060605, .68);
+    g.fillEllipse(458, -674, 244, 67);
+    g.fillStyle(0x302c24, 1);
     g.beginPath();
-    g.moveTo(366, -760); g.lineTo(534, -750); g.lineTo(558, -668); g.lineTo(342, -668); g.closePath();
+    g.moveTo(386, -770); g.lineTo(516, -765); g.lineTo(551, -693);
+    g.lineTo(532, -670); g.lineTo(364, -674); g.lineTo(346, -696); g.closePath();
     g.fillPath();
-    g.fillStyle(0x685c45, .34);
-    g.beginPath(); g.moveTo(382, -746); g.lineTo(519, -738); g.lineTo(528, -724); g.lineTo(374, -730); g.closePath(); g.fillPath();
-    g.lineStyle(4, 0x201d17, .9);
-    g.beginPath(); g.moveTo(397, -760); g.lineTo(422, -690); g.lineTo(408, -668); g.strokePath();
-    g.lineStyle(2, 0x91836a, .24);
-    g.beginPath(); g.moveTo(374, -702); g.lineTo(542, -694); g.strokePath();
-    for (const x of [372, 528]) {
-      g.lineStyle(3, 0x343630, .7);
-      g.beginPath(); g.moveTo(x, -878); g.lineTo(x + (x < 450 ? 24 : -20), -760); g.strokePath();
+    g.fillStyle(0x574936, .52);
+    g.beginPath(); g.moveTo(397,-758); g.lineTo(507,-754); g.lineTo(531,-704); g.lineTo(371,-707); g.closePath(); g.fillPath();
+    g.fillStyle(0x171612, .84); g.fillEllipse(450, -687, 176, 31);
+    g.lineStyle(3, 0x877960, .26); g.strokeEllipse(450, -690, 190, 37);
+    g.lineStyle(4, 0x1c1914, .92);
+    g.beginPath(); g.moveTo(404, -758); g.lineTo(426, -706); g.lineTo(411, -676); g.strokePath();
+    for (const x of [376, 524]) {
+      g.lineStyle(4, 0x343630, .72);
+      g.beginPath(); g.moveTo(x, -884); g.lineTo(x + (x < 450 ? 22 : -18), -769); g.strokePath();
     }
 
-    // Archive: dense vertical shelves, one desk, and deliberate gaps where registers were removed.
-    for (const x of [156, 238, 662, 744]) {
-      g.fillStyle(0x1c1711, .9); g.fillRect(x - 28, -1500, 56, 330);
-      g.lineStyle(2, 0x56412d, .44); g.strokeRect(x - 28, -1500, 56, 330);
-      for (let sy = -1478; sy < -1184; sy += 44) {
-        g.fillStyle(0x453321, .66); g.fillRect(x - 24, sy, 48, 3);
+    // Archive shelves are upright against the side walls and cast a narrow floor shadow.
+    for (const [x, side] of [[156,1],[238,1],[662,-1],[744,-1]] as Array<[number,number]>) {
+      g.fillStyle(0x070605, .42); g.fillRect(x - 24 + side * 5, -1490, 54, 322);
+      g.fillStyle(0x241b13, 1); g.fillRect(x - 27, -1500, 54, 318);
+      g.fillStyle(side > 0 ? 0x4e3a28 : 0x34271d, .62);
+      g.fillRect(side > 0 ? x - 27 : x + 19, -1500, 8, 318);
+      g.lineStyle(2, 0x664b32, .38); g.strokeRect(x - 27, -1500, 54, 318);
+      for (let sy = -1478; sy < -1190; sy += 44) {
+        g.fillStyle(0x5a432d, .7); g.fillRect(x - 23, sy, 46, 4);
         for (let book = 0; book < 5; book += 1) {
           if ((book + Math.abs(sy) + x) % 7 === 0) continue;
           const bw = 5 + (book % 3) * 2;
-          g.fillStyle(book % 2 ? 0x4c3b29 : 0x343129, .82);
-          g.fillRect(x - 20 + book * 9, sy - 25 + (book % 2) * 2, bw, 24 - (book % 3) * 3);
+          g.fillStyle(book % 2 ? 0x54412d : 0x343129, .84);
+          g.fillRect(x - 20 + book * 9, sy - 24 + (book % 2), bw, 23 - (book % 3) * 2);
         }
       }
     }
-    g.fillStyle(0x090807, .65); g.fillEllipse(450, -1283, 202, 75);
-    g.fillStyle(0x3b2a1b, 1); g.fillRect(362, -1320, 176, 58);
-    g.fillStyle(0x68472b, .42); g.fillRect(370, -1316, 160, 5);
-    g.lineStyle(1, 0x8f6943, .2); g.strokeRect(362, -1320, 176, 58);
-    g.fillStyle(0xc0b28d, .28); g.fillRect(405, -1305, 83, 46);
-    g.lineStyle(1, 0x554a39, .38);
+
+    // Archive desk, now an actual raised object.
+    this.drawPrism(g, 360, -1321, 180, 43, 26, 0x4d351f, 0x271b12, 0x332217, 10);
+    g.fillStyle(0xc0b28d, .26);
+    g.beginPath();
+    g.moveTo(405,-1312); g.lineTo(490,-1312); g.lineTo(484,-1282); g.lineTo(399,-1282); g.closePath(); g.fillPath();
+    g.lineStyle(1, 0x554a39, .4);
     for (let line = 0; line < 5; line += 1) {
-      g.beginPath(); g.moveTo(412, -1296 + line * 7); g.lineTo(479 - line * 3, -1296 + line * 7); g.strokePath();
+      g.beginPath(); g.moveTo(411,-1305 + line * 5); g.lineTo(481 - line * 2,-1305 + line * 5); g.strokePath();
     }
 
-    // Seal chamber: stone disc and radial grooves remain mostly achromatic until the choice.
-    g.fillStyle(0x080909, .72); g.fillCircle(458, -1760, 128);
-    g.fillStyle(0x252824, 1); g.fillCircle(450, -1768, 116);
+    // The seal is carved into the floor plane, therefore every circle is
+    // foreshortened into an ellipse.
+    g.fillStyle(0x080909, .72); g.fillEllipse(458, -1759, 258, 156);
+    g.fillStyle(0x252824, 1); g.fillEllipse(450, -1768, 232, 142);
     for (const radius of [32, 58, 86, 110]) {
       g.lineStyle(radius === 58 ? 3 : 1, 0x6b7067, radius === 58 ? .24 : .12);
-      g.strokeCircle(450, -1768, radius);
+      g.strokeEllipse(450, -1768, radius * 2, radius * 1.22);
     }
     g.lineStyle(2, 0x67777a, .16);
     for (let i = 0; i < 8; i += 1) {
       const a = i / 8 * Math.PI * 2;
       g.beginPath();
-      g.moveTo(450 + Math.cos(a) * 34, -1768 + Math.sin(a) * 34);
-      g.lineTo(450 + Math.cos(a) * 105, -1768 + Math.sin(a) * 105);
+      g.moveTo(450 + Math.cos(a) * 34, -1768 + Math.sin(a) * 21);
+      g.lineTo(450 + Math.cos(a) * 105, -1768 + Math.sin(a) * 64);
       g.strokePath();
     }
   }
+
 
   private drawCracks(g: Phaser.GameObjects.Graphics) {
     const cracks = [
@@ -1084,32 +1092,34 @@ class OathScene extends Phaser.Scene {
 
   private createElinVisual() {
     if (this.elinVisual) return;
-    const shadow = this.add.ellipse(0, 15, 37, 14, 0x000000, .56);
+    const shadow = this.add.ellipse(1, 28, 38, 12, 0x000000, .58);
+    const feet = this.add.graphics();
+    feet.fillStyle(0x9b7f61, .7);
+    feet.fillEllipse(-5, 28, 7, 5);
+    feet.fillEllipse(5, 28, 7, 5);
+
     const body = this.add.graphics();
-    body.fillStyle(0x292b29, .96);
+    body.fillStyle(0x292b29, .98);
     body.beginPath();
-    body.moveTo(-12, -2); body.lineTo(-14, 11); body.lineTo(-7, 31); body.lineTo(0, 35);
-    body.lineTo(8, 31); body.lineTo(14, 11); body.lineTo(11, -2); body.closePath(); body.fillPath();
-    body.fillStyle(0x555851, .48); body.fillRoundedRect(-8, -8, 16, 21, 5);
-    body.fillStyle(0x9a8265, .82); body.fillEllipse(0, -15, 11, 10);
+    body.moveTo(-12,-4); body.lineTo(-14,11); body.lineTo(-8,28); body.lineTo(0,34);
+    body.lineTo(8,28); body.lineTo(14,11); body.lineTo(12,-4); body.closePath(); body.fillPath();
+    body.fillStyle(0x555851, .48); body.fillRoundedRect(-8,-10,16,22,5);
+    body.fillStyle(0x987e61, .8); body.fillEllipse(0,-18,11,10);
     body.fillStyle(0x3a3c38, 1);
-    body.beginPath(); body.moveTo(-8,-17); body.lineTo(-4,-24); body.lineTo(5,-23); body.lineTo(8,-16); body.lineTo(3,-11); body.lineTo(-4,-11); body.closePath(); body.fillPath();
-    body.lineStyle(2, 0x745548, .5);
-    body.beginPath(); body.moveTo(-7, 7); body.lineTo(7, 7); body.strokePath();
-    const bareFeet = this.add.graphics();
-    bareFeet.fillStyle(0xa18464, .7);
-    bareFeet.fillEllipse(-5, 30, 6, 11);
-    bareFeet.fillEllipse(5, 30, 6, 11);
-    this.elinVisual = this.add.container(450, -1762, [shadow, body, bareFeet]).setDepth(38);
+    body.beginPath(); body.moveTo(-9,-20); body.lineTo(-4,-27); body.lineTo(5,-26); body.lineTo(9,-19); body.lineTo(4,-12); body.lineTo(-4,-12); body.closePath(); body.fillPath();
+    body.lineStyle(2, 0x745548, .5); body.beginPath(); body.moveTo(-7,6); body.lineTo(7,6); body.strokePath();
+
+    this.elinVisual = this.add.container(450, -1771, [shadow, feet, body]).setDepth(38);
     this.tweens.add({
       targets: this.elinVisual,
-      y: -1765,
+      y: -1774,
       duration: 2100,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
   }
+
 
   private createSealChoiceGlow() {
     if (this.sealChoiceGlow) return;
@@ -1363,33 +1373,41 @@ class OathScene extends Phaser.Scene {
     (body.body as Phaser.Physics.Arcade.Body).setCircle(kind === 'bearer' ? 14 : 10, kind === 'bearer' ? 2 : 6, kind === 'bearer' ? 2 : 6);
     this.physics.add.collider(body, this.walls);
 
-    const shadow = this.add.ellipse(1, kind === 'bearer' ? 20 : 14, kind === 'bearer' ? 56 : 38, kind === 'bearer' ? 21 : 15, 0x000000, .65);
+    const footY = kind === 'bearer' ? 34 : 28;
+    const shadow = this.add.ellipse(1, footY, kind === 'bearer' ? 58 : 40, kind === 'bearer' ? 17 : 13, 0x000000, .66);
+    const legs = this.add.graphics();
+    legs.fillStyle(kind === 'watcher' ? 0x121718 : 0x141512, 1);
+    legs.fillRoundedRect(-8, 11, 7, kind === 'bearer' ? 23 : 18, 3);
+    legs.fillRoundedRect(2, 11, 7, kind === 'bearer' ? 23 : 18, 3);
+
     const figure = this.add.graphics();
     if (kind === 'hushed') {
       figure.fillStyle(0x181a18, 1);
-      figure.beginPath(); figure.moveTo(-14,-4); figure.lineTo(-17,14); figure.lineTo(-8,31); figure.lineTo(0,35); figure.lineTo(9,31); figure.lineTo(17,14); figure.lineTo(14,-4); figure.closePath(); figure.fillPath();
-      figure.fillStyle(0x44463e, .86); figure.fillRoundedRect(-10,-8,20,24,6);
-      figure.fillStyle(0x10110f, 1); figure.fillCircle(0,-14,9);
-      figure.lineStyle(3, 0x777166, .8); figure.beginPath(); figure.moveTo(10,-3); figure.lineTo(22,18); figure.strokePath();
-      figure.fillStyle(0x8d7c60, .32); figure.fillRect(-7,3,14,3);
+      figure.beginPath(); figure.moveTo(-14,-5); figure.lineTo(-17,12); figure.lineTo(-8,29); figure.lineTo(0,34); figure.lineTo(9,29); figure.lineTo(17,12); figure.lineTo(14,-5); figure.closePath(); figure.fillPath();
+      figure.fillStyle(0x44463e, .86); figure.fillRoundedRect(-10,-10,20,24,6);
+      figure.fillStyle(0x10110f, 1); figure.fillEllipse(0,-18,18,20);
+      figure.lineStyle(3, 0x777166, .8); figure.beginPath(); figure.moveTo(11,-5); figure.lineTo(22,18); figure.strokePath();
+      figure.fillStyle(0x8d7c60, .32); figure.fillRect(-7,2,14,3);
     } else if (kind === 'watcher') {
-      figure.fillStyle(0x131819, 1); figure.fillTriangle(-13,8,13,8,0,35);
-      figure.fillStyle(0x39474a, .9); figure.fillRoundedRect(-9,-7,18,22,6);
-      figure.fillStyle(0x0a0d0e, 1); figure.fillCircle(0,-15,10);
-      figure.fillStyle(0x7db5c2, .7); figure.fillRect(-7,-16,14,2);
-      figure.lineStyle(3, 0x48565a, .9); figure.beginPath(); figure.moveTo(12,-3); figure.lineTo(22,20); figure.strokePath();
-      figure.fillStyle(0x7db5c2, .42); figure.fillCircle(22,20,4);
+      figure.fillStyle(0x131819, 1);
+      figure.beginPath(); figure.moveTo(-13,-2); figure.lineTo(-15,13); figure.lineTo(-7,31); figure.lineTo(0,35); figure.lineTo(8,31); figure.lineTo(15,13); figure.lineTo(12,-2); figure.closePath(); figure.fillPath();
+      figure.fillStyle(0x39474a, .9); figure.fillRoundedRect(-10,-10,20,24,6);
+      figure.fillStyle(0x0a0d0e, 1); figure.fillEllipse(0,-19,20,22);
+      figure.fillStyle(0x7db5c2, .72); figure.fillRect(-7,-20,14,2);
+      figure.lineStyle(3, 0x48565a, .9); figure.beginPath(); figure.moveTo(13,-4); figure.lineTo(22,20); figure.strokePath();
+      figure.fillStyle(0x7db5c2, .46); figure.fillCircle(22,20,4);
     } else {
-      figure.fillStyle(0x181918, 1); figure.fillRoundedRect(-18,-9,36,36,8);
-      figure.fillStyle(0x565851, .92); figure.fillRoundedRect(-15,-7,30,31,7);
-      figure.fillStyle(0x262927, 1); figure.fillCircle(0,-19,14);
-      figure.fillStyle(0x73766d, .54); figure.fillRect(-11,-21,22,5);
-      figure.fillStyle(0x2e3231, 1); figure.fillRoundedRect(-27,-4,16,32,5);
-      figure.lineStyle(3, 0x91856f, .64); figure.strokeRoundedRect(-27,-4,16,32,5);
-      figure.lineStyle(5, 0x4a4033, 1); figure.beginPath(); figure.moveTo(18,-8); figure.lineTo(32,26); figure.strokePath();
-      figure.fillStyle(0x2b2c28,1); figure.fillRect(24,21,20,8);
+      figure.fillStyle(0x1b1c1a, 1); figure.fillRoundedRect(-19,-12,38,39,9);
+      figure.fillStyle(0x5a5c55, .94); figure.fillRoundedRect(-15,-10,30,32,7);
+      figure.fillStyle(0x252826, 1); figure.fillEllipse(0,-23,27,28);
+      figure.fillStyle(0x777a71, .54); figure.fillRect(-11,-25,22,5);
+      figure.fillStyle(0x2e3231, 1); figure.fillRoundedRect(-28,-5,17,34,5);
+      figure.lineStyle(3, 0x91856f, .64); figure.strokeRoundedRect(-28,-5,17,34,5);
+      figure.lineStyle(5, 0x4a4033, 1); figure.beginPath(); figure.moveTo(19,-10); figure.lineTo(33,28); figure.strokePath();
+      figure.fillStyle(0x2b2c28,1); figure.fillRect(25,22,21,8);
     }
-    const visual = this.add.container(x, y, [shadow, figure]).setDepth(kind === 'bearer' ? 41 : 39);
+
+    const visual = this.add.container(x, y - (kind === 'bearer' ? 13 : 9), [shadow, legs, figure]).setDepth(kind === 'bearer' ? 41 : 39);
     const ring = this.add.circle(x, y, kind === 'bearer' ? 54 : 40, 0x8d4f3d, 0).setStrokeStyle(2, kind === 'watcher' ? 0x75a8b3 : 0xa36a55, 0).setDepth(16);
     const maxHealth = kind === 'hushed' ? 3 : kind === 'watcher' ? 3 : (this.save.flags.sealChoiceBind ? 10 : 9);
     this.towerEnemies.push({
@@ -1397,6 +1415,7 @@ class OathScene extends Phaser.Scene {
       health: maxHealth, maxHealth, cooldown: .55, windup: 0, stun: 0, dead: false, attackIndex: 0
     });
   }
+
 
   private spawnTowerBolt(source: TowerEnemyState) {
     const dx = this.player.x - source.body.x;
@@ -1580,31 +1599,31 @@ class OathScene extends Phaser.Scene {
     arcade.setCircle(11, 5, 5);
     this.physics.add.collider(body, this.walls);
 
-    const shadow = this.add.ellipse(2, 15, 42, 17, 0x000000, .68);
+    const shadow = this.add.ellipse(1, 27, 44, 14, 0x000000, .68);
+    const legs = this.add.graphics();
+    legs.fillStyle(0x11120f, 1); legs.fillRoundedRect(-8, 10, 7, 19, 3); legs.fillRoundedRect(2, 10, 7, 19, 3);
     const cloak = this.add.graphics();
     cloak.fillStyle(0x111310, 1);
     cloak.beginPath();
-    cloak.moveTo(-16, -4); cloak.lineTo(-18, 12); cloak.lineTo(-9, 31); cloak.lineTo(0, 35);
-    cloak.lineTo(10, 31); cloak.lineTo(18, 12); cloak.lineTo(15, -4); cloak.closePath();
-    cloak.fillPath();
-    cloak.fillStyle(0x25271f, .92); cloak.fillRoundedRect(-12, -8, 24, 27, 7);
-    cloak.fillStyle(0x090a09, 1); cloak.fillCircle(0, -14, 11);
-    cloak.fillStyle(0x5b4a38, .28); cloak.fillEllipse(0, -13, 9, 6);
-    cloak.lineStyle(2, 0x5f4d3b, .72);
-    cloak.beginPath(); cloak.moveTo(-9, -1); cloak.lineTo(9, 6); cloak.strokePath();
-    cloak.lineStyle(1, 0x7f735f, .18);
-    cloak.beginPath(); cloak.moveTo(-10, 12); cloak.lineTo(0, 31); cloak.lineTo(10, 12); cloak.strokePath();
+    cloak.moveTo(-15,-5); cloak.lineTo(-18,11); cloak.lineTo(-10,28); cloak.lineTo(0,35);
+    cloak.lineTo(10,28); cloak.lineTo(18,11); cloak.lineTo(15,-5); cloak.closePath(); cloak.fillPath();
+    cloak.fillStyle(0x282a22, .92); cloak.fillRoundedRect(-12,-10,24,27,7);
+    cloak.fillStyle(0x090a09, 1); cloak.fillEllipse(0,-18,20,21);
+    cloak.fillStyle(0x5b4a3a, .24); cloak.fillEllipse(1,-16,8,6);
+    cloak.lineStyle(2, 0x5f4d3b, .72); cloak.beginPath(); cloak.moveTo(-9,-2); cloak.lineTo(9,7); cloak.strokePath();
+    cloak.lineStyle(1, 0x7f735f, .18); cloak.beginPath(); cloak.moveTo(-10,12); cloak.lineTo(0,31); cloak.lineTo(10,12); cloak.strokePath();
     const weapon = this.add.graphics();
-    weapon.lineStyle(4, 0x4d4d46, 1); weapon.beginPath(); weapon.moveTo(13, -12); weapon.lineTo(23, 19); weapon.strokePath();
-    weapon.fillStyle(0x282a27, 1); weapon.fillRect(18, 14, 17, 6);
-    weapon.fillStyle(0x66645a, .46); weapon.fillRect(19, 15, 14, 2);
-    const visual = this.add.container(body.x, body.y, [shadow, cloak, weapon]).setDepth(39);
+    weapon.lineStyle(4, 0x5b5a51, 1); weapon.beginPath(); weapon.moveTo(14,-13); weapon.lineTo(23,21); weapon.strokePath();
+    weapon.fillStyle(0x292a27, 1); weapon.fillRect(18,16,17,6);
+    weapon.fillStyle(0x737066, .42); weapon.fillRect(19,17,14,2);
+    const visual = this.add.container(body.x, body.y - 9, [shadow, legs, cloak, weapon]).setDepth(39);
     const ring = this.add.circle(body.x, body.y, 44, 0x8d4f3d, 0).setStrokeStyle(2, 0xa36a55, 0).setDepth(16);
 
     this.enemy = { body, visual, ring, health: 4, cooldown: .45, windup: 0, stun: 0, dead: false };
     this.setMode('combat');
     this.toast('В крипте кто-то дышит.');
   }
+
 
   private updateEnemy(dt: number) {
     const enemy = this.enemy;
