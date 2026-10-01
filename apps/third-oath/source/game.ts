@@ -146,6 +146,8 @@ class OathScene extends Phaser.Scene {
   private pedestalOathGlow: Phaser.GameObjects.Image | null = null;
   private pedestalTearGlow: Phaser.GameObjects.Image | null = null;
   private ritualCenterGlow: Phaser.GameObjects.Image | null = null;
+  private elinVisual: Phaser.GameObjects.Container | null = null;
+  private sealChoiceGlow: Phaser.GameObjects.Image | null = null;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor(ctx: SceneContext) {
@@ -972,7 +974,11 @@ class OathScene extends Phaser.Scene {
       this.addFootprints();
     }
     if (this.save.flags.bellFightCleared) this.openBellGate(false);
-    if (this.save.flags.archiveExamined) this.openSealGate(false);
+    if (this.save.flags.archiveExamined) {
+      this.openSealGate(false);
+      if (!this.save.flags.towerGuardianDefeated) this.createElinVisual();
+    }
+    if (this.save.flags.sealChoiceMade) this.createSealChoiceGlow();
     if (this.save.flags.sealChoiceMade && !this.save.flags.towerGuardianDefeated) this.spawnTowerEncounter('boss');
   }
 
@@ -1002,6 +1008,45 @@ class OathScene extends Phaser.Scene {
     if (this.save.flags.gaveNameToElin) this.startDialogue('tower-name');
     else if (this.save.flags.resistedElin) this.startDialogue('tower-silence');
     else this.startDialogue('tower-neutral');
+  }
+
+  private createElinVisual() {
+    if (this.elinVisual) return;
+    const shadow = this.add.ellipse(0, 15, 37, 14, 0x000000, .56);
+    const body = this.add.graphics();
+    body.fillStyle(0x292b29, .96);
+    body.beginPath();
+    body.moveTo(-12, -2); body.lineTo(-14, 11); body.lineTo(-7, 31); body.lineTo(0, 35);
+    body.lineTo(8, 31); body.lineTo(14, 11); body.lineTo(11, -2); body.closePath(); body.fillPath();
+    body.fillStyle(0x555851, .48); body.fillRoundedRect(-8, -8, 16, 21, 5);
+    body.fillStyle(0x9a8265, .82); body.fillEllipse(0, -15, 11, 10);
+    body.fillStyle(0x3a3c38, 1);
+    body.beginPath(); body.moveTo(-8,-17); body.lineTo(-4,-24); body.lineTo(5,-23); body.lineTo(8,-16); body.lineTo(3,-11); body.lineTo(-4,-11); body.closePath(); body.fillPath();
+    body.lineStyle(2, 0x745548, .5);
+    body.beginPath(); body.moveTo(-7, 7); body.lineTo(7, 7); body.strokePath();
+    const bareFeet = this.add.graphics();
+    bareFeet.fillStyle(0xa18464, .7);
+    bareFeet.fillEllipse(-5, 30, 6, 11);
+    bareFeet.fillEllipse(5, 30, 6, 11);
+    this.elinVisual = this.add.container(450, -1762, [shadow, body, bareFeet]).setDepth(38);
+    this.tweens.add({
+      targets: this.elinVisual,
+      y: -1765,
+      duration: 2100,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private createSealChoiceGlow() {
+    if (this.sealChoiceGlow) return;
+    const tint = this.save.flags.sealChoiceBind ? 0xc09a66 : this.save.flags.sealChoiceCut ? 0x8ebec7 : 0x91d1dd;
+    this.sealChoiceGlow = this.add.image(450, -1768, 'third-oath-blue-glow')
+      .setDepth(20).setScale(this.save.flags.sealChoiceBreak ? 1.05 : .72)
+      .setAlpha(this.save.flags.sealChoiceBind ? .18 : .3)
+      .setTint(tint)
+      .setBlendMode(Phaser.BlendModes.ADD);
   }
 
   private startElinDialogue() {
@@ -1186,7 +1231,10 @@ class OathScene extends Phaser.Scene {
       this.save.flags.sealChoiceMade = true;
       this.save.flags.sealChoiceBreak = true;
       if (effect === 'choose-break-costly') this.save.health = Math.max(.5, this.save.health - 1);
+      this.save.stats.will = Math.min(8, this.save.stats.will + 1);
       this.save.resolve = 100;
+      this.elinVisual?.setAlpha(.32);
+      this.createSealChoiceGlow();
       this.spawnTowerEncounter('boss');
     } else if (effect === 'choose-bind') {
       this.save.flags.sealChoiceMade = true;
@@ -1194,11 +1242,16 @@ class OathScene extends Phaser.Scene {
       this.save.maxHealth = Math.min(9, this.save.maxHealth + 1);
       this.save.health = Math.min(this.save.maxHealth, this.save.health + 1);
       this.save.resolve = Math.min(100, this.save.resolve + 35);
+      this.elinVisual?.setAlpha(.28);
+      this.createSealChoiceGlow();
       this.spawnTowerEncounter('boss');
     } else if (effect === 'choose-cut') {
       this.save.flags.sealChoiceMade = true;
       this.save.flags.sealChoiceCut = true;
+      this.save.stats.insight = Math.min(8, this.save.stats.insight + 1);
       this.save.resolve = Math.min(100, this.save.resolve + 55);
+      this.elinVisual?.setAlpha(.36);
+      this.createSealChoiceGlow();
       this.spawnTowerEncounter('boss');
     } else if (effect === 'finish-chapter2') {
       this.save.flags.finishChapter2Pending = true;
@@ -1428,6 +1481,7 @@ class OathScene extends Phaser.Scene {
       this.commitSave();
     } else {
       this.save.flags.towerGuardianDefeated = true;
+      this.elinVisual?.setAlpha(1);
       addItem(this.save, 'seal-shard');
       this.save.checkpoint = { x: 450, y: -1730 };
       this.towerEncounter = null;
