@@ -43,3 +43,29 @@ for (const count of [1, 3, 6, 10, 20, 40, 60]) {
     }
   });
 }
+
+
+test('density slider increases page usage without overlaps', () => {
+  for (const count of [10, 20, 40, 60]) {
+    for (let seed = 1; seed <= 10; seed += 1) {
+      const images = imagesFor(count, seed);
+      const layoutSeed = seed * 3571 + count;
+      const loose = buildPackedLayout(images, layoutSeed, { density: 0 });
+      const dense = buildPackedLayout(images, layoutSeed, { density: 100 });
+
+      assert.equal(hasOverlap(loose.items), false);
+      assert.equal(hasOverlap(dense.items), false);
+      assert.ok(
+        dense.coverage >= loose.coverage + 0.05,
+        `density should reduce whitespace for ${count} images: ${loose.coverage} -> ${dense.coverage}`
+      );
+    }
+  }
+});
+
+test('density input is clamped and defaults to 85', () => {
+  const images = imagesFor(12, 3);
+  assert.equal(buildPackedLayout(images, 42).density, 85);
+  assert.equal(buildPackedLayout(images, 42, { density: -20 }).density, 0);
+  assert.equal(buildPackedLayout(images, 42, { density: 140 }).density, 100);
+});
