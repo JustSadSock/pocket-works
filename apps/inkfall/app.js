@@ -6,7 +6,7 @@ installMobileRuntime();
 const $=s=>document.querySelector(s);
 const canvas=$('#game');
 const state={
-  screen:'menu',depth:0,charge:0,lives:3,speed:260,flash:0,
+  screen:'menu',depth:0,charge:0,lives:3,speed:260,flash:0,nearMiss:0,burstFx:0,
   player:{x:0,targetX:0,y:0,vx:0,invuln:0,burst:0},
   tears:[],sparks:[],particles:[],trails:[]
 };
@@ -39,7 +39,7 @@ function particles(x,y,color,n=12,s=120){
   }
 }
 function reset(){
-  seed=7331;state.depth=0;state.charge=0;state.lives=3;state.speed=260;state.flash=0;
+  seed=7331;state.depth=0;state.charge=0;state.lives=3;state.speed=260;state.flash=0;state.nearMiss=0;state.burstFx=0;
   state.tears.length=0;state.sparks.length=0;state.particles.length=0;state.trails.length=0;
   const {W,H}=renderer.size();
   Object.assign(state.player,{x:W*.5,targetX:W*.5,y:H*.74,vx:0,invuln:0,burst:0});
@@ -55,7 +55,7 @@ function end(){
 }
 function spawnTear(){
   const {W}=renderer.size(),w=48+rand()*74;
-  state.tears.push({x:34+rand()*Math.max(1,W-68-w),y:-100,w,h:28+rand()*28,lean:(rand()-.5)*.7});
+  state.tears.push({x:34+rand()*Math.max(1,W-68-w),y:-100,w,h:28+rand()*28,lean:(rand()-.5)*.7,passed:false});
 }
 function spawnSpark(){
   const {W}=renderer.size();
@@ -75,7 +75,7 @@ function hit(){
 }
 function doBurst(){
   if(state.screen!=='playing'||state.charge<100)return;
-  state.charge=0;state.player.burst=1.05;state.player.invuln=1.05;
+  state.charge=0;state.player.burst=1.05;state.player.invuln=1.05;state.burstFx=1;
   particles(state.player.x,state.player.y,'#df7c55',26,205);
   for(const o of state.tears){
     const dx=o.x+o.w/2-state.player.x,dy=o.y+o.h/2-state.player.y;
@@ -104,6 +104,11 @@ function update(dt){
       o.dead=true;
       if(p.burst>0){particles(o.x+o.w/2,o.y+o.h/2,'#f2ecdf',8,130);state.depth+=5}else hit();
     }
+    if(!o.dead&&!o.passed&&o.y>p.y+24){
+      o.passed=true;
+      const gap=Math.abs((o.x+o.w*.5)-p.x)-o.w*.5;
+      if(gap>12&&gap<52){state.nearMiss=1;state.charge=Math.min(100,state.charge+7);state.depth+=3;particles(p.x,p.y-8,'#82aaa7',6,80)}
+    }
   }
   for(const o of state.sparks){
     o.y+=fall*dt*.92;
@@ -119,6 +124,8 @@ function update(dt){
   state.particles=state.particles.filter(o=>o.life>0);
   state.trails=state.trails.filter(o=>o.life>0);
   state.flash=Math.max(0,state.flash-dt*1.8);
+  state.nearMiss=Math.max(0,state.nearMiss-dt*2.6);
+  state.burstFx=Math.max(0,state.burstFx-dt*1.25);
   hud();
 }
 function frame(now){
