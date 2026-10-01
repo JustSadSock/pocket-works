@@ -70,6 +70,27 @@
         </label>
         <input id="fileInput" class="file-input" type="file" accept="image/*" multiple>
 
+        <section class="density-control" aria-labelledby="densityLabel">
+          <div class="density-head">
+            <label id="densityLabel" for="densitySlider">Плотность раскладки</label>
+            <output id="densityValue" for="densitySlider">85%</output>
+          </div>
+          <div class="density-row">
+            <span>ВОЗДУХ</span>
+            <input
+              class="density-slider"
+              id="densitySlider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="85"
+              aria-label="Плотность расстановки изображений"
+            >
+            <span>ПЛОТНО</span>
+          </div>
+        </section>
+
         <div class="action-row">
           <button class="action-button shuffle-button" id="shuffleButton" type="button" data-native-press disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3c4 0 6 10 10 10h3M17 14l3 3-3 3M4 17h3c1.6 0 2.8-1.7 4-3.7M14 7.7C15 7.3 16 7 17 7h3M17 4l3 3-3 3"/></svg>
@@ -83,7 +104,7 @@
         </div>
 
         <p class="quality-note">
-          Изображения не пересекаются: упаковщик мягко уплотняет случайную композицию на A4. Экспорт рисуется заново из оригиналов без апскейла выше исходного разрешения.
+          Изображения не пересекаются. Слайдер регулирует, сколько воздуха оставлять между ними; экспорт рисуется заново из оригиналов без апскейла выше исходного разрешения.
         </p>
       </aside>
     </section>
