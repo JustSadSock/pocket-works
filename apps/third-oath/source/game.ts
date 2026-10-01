@@ -172,7 +172,6 @@ class OathScene extends Phaser.Scene {
     this.keys = this.input.keyboard?.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,E,Q,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>;
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
     this.cameras.main.setZoom(1);
-    this.cameras.main.fadeIn(650, 12, 11, 10);
 
     this.setMode(this.hasLivingEnemies() ? 'combat' : 'explore');
     this.updateZone(true);
@@ -1813,9 +1812,9 @@ class OathScene extends Phaser.Scene {
     this.save.position = { x: this.player.x, y: this.player.y };
     this.commitSave();
     audio.door();
-    this.cameras.main.fadeOut(720, 10, 10, 9);
+    this.cameras.main.resetFX();
     this.setMode('complete');
-    this.time.delayedCall(760, () => this.callbacks.onComplete());
+    this.time.delayedCall(180, () => this.callbacks.onComplete());
   }
 
   private syncHud() {
@@ -1881,7 +1880,7 @@ class OathScene extends Phaser.Scene {
   }
 
   resumeAfterComplete() {
-    this.cameras.main.fadeIn(450, 10, 10, 9);
+    this.cameras.main.resetFX();
     this.cameras.main.startFollow(this.player, true, .09, .09);
     this.setMode('explore');
   }
