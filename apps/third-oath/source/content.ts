@@ -119,6 +119,7 @@ export const DIALOGUES: Record<string, DialogueNode> = {
     text: 'Кожаные корешки срезаны ножом. В каждом реестре одна и та же третья строка: «Я отдаю имя, чтобы клятва пережила меня».',
     options: [
       { id: 'letter', label: 'Сопоставить печать солнца и стрелы с пометками на полях.', next: 'archive-letter', requiresItem: 'sun-letter' },
+      { id: 'clapper', label: 'Сверить имена на языке колокола с пустыми строками.', next: 'archive-clapper', requiresItem: 'bell-clapper' },
       { id: 'insight', label: '[Проницательность] Восстановить порядок выскобленных записей.', next: 'archive-insight', failNext: 'archive-fail', skill: 'insight', difficulty: 15, checkId: 'archive-order' },
       { id: 'leave', label: 'Оставить реестры как есть.' }
     ]
@@ -128,6 +129,12 @@ export const DIALOGUES: Record<string, DialogueNode> = {
     speaker: 'АРХИВ',
     text: 'Печать принадлежала Смотрителям Рассвета. Они не пытались уничтожить клятву — они научились вырезать из неё одно имя, не обрушивая остальные.',
     options: [{ id: 'take', label: 'Вырезать страницу с их методом.', effect: 'take-archive-leaf' }]
+  },
+  'archive-clapper': {
+    id: 'archive-clapper',
+    speaker: 'АРХИВ',
+    text: 'Имена на железе совпадают с пустыми строками. Колокол не созывал рыцарей — он подтверждал, что башня уже забрала очередное имя.',
+    options: [{ id: 'understand', label: 'Разомкнуть верхнюю печать по последовательности имён.', effect: 'learn-archive-truth' }]
   },
   'archive-insight': {
     id: 'archive-insight',
