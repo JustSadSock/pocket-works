@@ -40,6 +40,14 @@ try{for(const name of names){
   await page.goto(`${url}/apps/corvus-yard/`);
   await wait(()=>window.__AI_TEST_STATE__?.phase==='menu');await shot('menu');
   if(process.env.CORVUS_QA_MUTE==='1')await tap('#sound');await tap('#start');await wait(()=>window.__AI_TEST_STATE__?.phase==='playing');assert.equal((await state()).rigReady,true);await shot('perched');checks.push('portrait touch start');console.log(name,'STARTUP',JSON.stringify(await state()));
+  if(process.env.CORVUS_QA_VISUAL==='1'){
+   for(const clip of ['Preen','Ruffle','Call']){
+    await page.waitForFunction(name=>window.__AI_TEST_STATE__?.rig?.clip===name,clip,{timeout:180000});
+    await page.waitForFunction(name=>window.__AI_TEST_STATE__.rig.activeClips.some(c=>c.name===name&&c.weight>.8),clip);
+    await shot(clip.toLowerCase());
+   }
+   assert((await state()).rig.joints>=50,'The feather rig must survive GLB import');checks.push('authored preen, ruffle and call with separate feather joints');
+  }
   if(name==='chromium'){
    const cdp=await context.newCDPSession(page),b=await page.locator('#flap').boundingBox();assert(b);
    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:b.x+b.width/2,y:b.y+b.height/2,id:1}]});

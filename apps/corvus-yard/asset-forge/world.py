@@ -91,7 +91,7 @@ for idx,(x,z,h) in enumerate(TREES):
   for j in range(5):
    angle=ang+j*1.25;tip=(end[0]+math.cos(angle)*1.7,end[1]+.45+j*.17,end[2]+math.sin(angle)*1.7)
    branch('leaf-bearing twig',end,tip,.022,.005,bark,5)
-  leaf_fan('canopy_%02d_%02d'%(idx,k),(end[0],end[1]+.55,end[2]),[amber,rust,green][(idx+k)%3],110)
+  leaf_fan('canopy_%02d_%02d'%(idx,k),(end[0],end[1]+.55,end[2]),[amber,rust,green][(idx+k)%3],70)
 branch('perch_flexible_home',(-4,7.6,-15),(2,8.2,-15),.17,.06,bark)
 # iron park fence, street lamps and authored benches
 for z in [-19,20]:

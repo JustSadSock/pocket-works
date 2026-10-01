@@ -73,7 +73,7 @@ function frame(dt:number){elapsed+=dt;
  }else if(phase==='menu'){camera?.preview(state,elapsed,dt);rig?.update(state,{turn:0,pitch:0,flap:0,brake:0},dt);ecology?.update(dt,elapsed,state);}
  if(phase==='playing'||phase==='menu')world?.update(dt,elapsed,new Vector3(state.position.x,state.position.y,state.position.z));
  if(elapsed>toastUntil)$('toast').classList.remove('visible');
- (window as unknown as {__AI_TEST_STATE__:unknown}).__AI_TEST_STATE__={phase,position:{...state.position},velocity:{...state.velocity},mode:state.mode,grounded:state.grounded,speed:state.speed,rigReady:rig?.ready,ecology:ecology?.summary(),fps:engine?.getFps(),support:support?.id||null,meshes:scene?.meshes.length,camera:camera?.camera.position.asArray(),yaw:state.yaw,pitch:state.pitch,roll:state.roll,renderMs,quality,activeMeshes:scene?.getActiveMeshes().length,vertices:scene?.getTotalVertices()};
+ (window as unknown as {__AI_TEST_STATE__:unknown}).__AI_TEST_STATE__={phase,position:{...state.position},velocity:{...state.velocity},mode:state.mode,grounded:state.grounded,speed:state.speed,rigReady:rig?.ready,rig:rig?.presentation,ecology:ecology?.summary(),fps:engine?.getFps(),support:support?.id||null,meshes:scene?.meshes.length,camera:camera?.camera.position.asArray(),yaw:state.yaw,pitch:state.pitch,roll:state.roll,renderMs,quality,activeMeshes:scene?.getActiveMeshes().length,vertices:scene?.getTotalVertices()};
 }
 async function boot(){try{
  engine=new Engine(canvas,false,{preserveDrawingBuffer:false,stencil:false,powerPreference:'high-performance'},true);engine.setHardwareScalingLevel(Math.max(1,devicePixelRatio/1.5));

@@ -150,6 +150,10 @@ for row in range(6):
 bpy.ops.object.select_all(action='DESELECT')
 for o in parts:o.select_set(True)
 bpy.context.view_layer.objects.active=parts[0]; bpy.ops.object.join(); model=bpy.context.object; model.name='Corvus layered feather skin'
+# Distant flock members share the authored rig but use a lighter mesh.
+if os.path.basename(a.output).startswith('crow-distant'):
+ decimate=model.modifiers.new('Distant plumage simplification','DECIMATE');decimate.ratio=.36
+ bpy.context.view_layer.objects.active=model;bpy.ops.object.modifier_apply(modifier=decimate.name)
 # Baked foot contact coordinates keep toes at the actual support during stance.
 foot_vertices={}
 for side in ['L','R']:
@@ -160,12 +164,21 @@ for side in ['L','R']:
 def rotate_world(pb,x=0,y=0,z=0):
  rotation=Matrix.Rotation(z,4,'Z') @ Matrix.Rotation(y,4,'Y') @ Matrix.Rotation(x,4,'X')
  rest=pb.bone.matrix_local.to_quaternion();pb.rotation_euler=(rest.inverted() @ rotation.to_quaternion() @ rest).to_euler('XYZ')
+pose_cache={}
+def pose_global(pb,target):
+ # This rig uses full scale inheritance and no constraints. Resolve local
+ # hinge channels algebraically; avoid reskinning the whole bird per feather.
+ if pb.parent:
+  parent=pose_cache.get(pb.parent.name,pb.parent.bone.matrix_local)
+  basis=parent @ pb.parent.bone.matrix_local.inverted() @ pb.bone.matrix_local
+ else:basis=pb.bone.matrix_local
+ pb.matrix_basis=basis.inverted() @ target
+ pose_cache[pb.name]=target
 def folded_joint(pb,head,side,ruffle=0):
  # Explicit global hinge poses put trailing vanes down the flank. Reconstruct
  # local channels through Blender's pose matrix, preserving a unit skin scale.
  rotation=Matrix.Rotation(side*(1.48+ruffle),4,'Z') @ Matrix.Rotation(-1.42,4,'X')
- pb.matrix=Matrix.Translation(Vector(head)) @ rotation @ pb.bone.matrix_local.to_3x3().to_4x4()
- bpy.context.view_layer.update()
+ pose_global(pb,Matrix.Translation(Vector(head)) @ rotation @ pb.bone.matrix_local.to_3x3().to_4x4())
 def stack_primary(pb,side,index,secondary=False):
  head=Vector((side*(.147+index*.0008),.145+index*.009,.035-index*.0015))
  tip=Vector((side*(.135+index*.001),.46+index*.016,-.115-index*.003))
@@ -173,13 +186,13 @@ def stack_primary(pb,side,index,secondary=False):
   head=Vector((side*.13,.025+index*.017,.06-index*.003));tip=Vector((side*.143,.28+index*.008,-.15+index*.002))
  axis=(tip-head).normalized();normal=Vector((side,0,0));across=axis.cross(normal).normalized();normal=across.cross(axis).normalized()
  basis=Matrix((across,axis,normal)).transposed().to_4x4()
- pb.matrix=Matrix.Translation(head) @ basis;bpy.context.view_layer.update()
+ pose_global(pb,Matrix.Translation(head) @ basis)
 rig.animation_data_create(); fps=30; bpy.context.scene.render.fps=fps
 clips=[('Idle',4.8),('Walk',.8),('Run',.55),('Takeoff',.8),('Land',.75),('Flap',.72),('Glide',2.4),('Fold',1.1),('Brake',.8),('Hit',.7),('Preen',3.2),('Peck',1.2),('Ruffle',1.6),('Call',1.8)]
 for clip,duration in clips:
  act=bpy.data.actions.new(clip);rig.animation_data.action=act
  for f in range(0,round(duration*fps)+1,2):
-  t=f/fps;u=min(1,t/duration);cyc=math.tau*u
+  t=f/fps;u=min(1,t/duration);cyc=math.tau*u;pose_cache.clear()
   for pb in rig.pose.bones:pb.rotation_mode='XYZ';pb.rotation_euler=(0,0,0);pb.location=(0,0,0);pb.scale=(1,1,1)
   for side in ['L','R']:
    blink=max(.001,1-abs(u-(.64 if clip=='Idle' else .82))/.020) if clip in ['Idle','Glide'] else .001
@@ -192,7 +205,7 @@ for clip,duration in clips:
     folded_joint(forearm,(sgn*.16,.20,.025),sgn)
     folded_joint(wrist,(sgn*.15,.13,.032),sgn)
     vane=Matrix(((0,-sgn*.34,-sgn*.94),(0,.94,-.34),(sgn,0,0))).transposed().to_4x4()
-    secondary.matrix=Matrix.Translation(Vector((sgn*.145,.13,.035))) @ vane @ secondary.bone.matrix_local.to_3x3().to_4x4();bpy.context.view_layer.update()
+    pose_global(secondary,Matrix.Translation(Vector((sgn*.145,.13,.035))) @ vane @ secondary.bone.matrix_local.to_3x3().to_4x4())
     folded_joint(rig.pose.bones['Coverts.'+side],(sgn*.15,-.02,.07),sgn)
     for i in range(10):
      stack_primary(rig.pose.bones['Primary.%s.%02d'%(side,i)],sgn,i)

@@ -47,7 +47,7 @@ export class CrowRig {
   this.root.rotationQuaternion=Quaternion.FromEulerAngles(-s.pitch,s.yaw,s.roll);
   this.bank=mix(this.bank,controls.turn,5,dt);
   this.idleAge=s.mode==='idle'?this.idleAge+dt:0;
-  if(s.mode!==this.lastMode){this.gesture='Idle';this.gestureUntil=0;}this.lastMode=s.mode;
+  if(s.mode!==this.lastMode&&!s.grounded){this.gesture='Idle';this.gestureUntil=0;}this.lastMode=s.mode;
   const moment=this.idleAge%37;
   this.preen=s.mode==='idle'&&moment>13&&moment<16.2;
   const idle=s.mode==='idle'&&this.elapsed<this.gestureUntil?this.gesture:this.preen?'Preen':moment>25&&moment<26.6?'Ruffle':moment>33&&moment<34.8?'Call':'Idle';
@@ -117,6 +117,7 @@ export class CrowRig {
   const shimmer=Math.sin(this.elapsed*10)*.009*Math.min(1,this.state.speed/9);
   add('Wrist.L',shimmer,0,-this.bank*.035);add('Wrist.R',-shimmer,0,-this.bank*.035);
  }
+ get presentation(){return {clip:this.selectedClip,activeClips:[...this.weights].filter(([,w])=>w>.01).map(([name,weight])=>({name,weight})),joints:this.joints.size};}
  consumeCall():boolean{const pending=this.callPending;this.callPending=false;return pending;}
  gestureAction(kind:'Peck'|'Call'):void{this.gesture=kind;this.gestureUntil=this.elapsed+(kind==='Peck'?1.2:1.8);this.groups.get(kind)?.goToFrame(this.groups.get(kind)!.from);}
  dispose():void{
