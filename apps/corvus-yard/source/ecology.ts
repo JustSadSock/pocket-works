@@ -205,7 +205,13 @@ export class Ecology {
       if(bird.timer<0&&distance<.18){bird.flying=false;bird.root.position.copyFrom(bird.home);bird.velocity.setAll(0);bird.timer=8+index*1.7;bird.root.rotation.set(0,index*2.1,0);}
     }
     bird.blend+=(Number(bird.flying)-bird.blend)*(1-Math.exp(-dt*7));
-    bird.imported?.animationGroups.forEach(group=>{if(/Flap$/i.test(group.name))group.setWeightForAllAnimatables(bird.blend);if(/Idle$/i.test(group.name))group.setWeightForAllAnimatables(1-bird.blend);});
+    const animateIdle=this.age<2||Vector3.DistanceSquared(vec(state.position),bird.root.position)<625;
+    bird.imported?.animationGroups.forEach(group=>{
+      const weight=/Flap$/i.test(group.name)?bird.blend:/Idle$/i.test(group.name)?1-bird.blend:0;
+      group.setWeightForAllAnimatables(weight);
+      const active=weight>.001&&(/Flap$/i.test(group.name)||animateIdle);
+      if(!active&&group.isPlaying)group.pause();else if(active&&!group.isPlaying)group.play(true);
+    });
   }
   private placeHeld(item:Item,state:CrowState){
     const forward=new Vector3(Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.cos(state.yaw)*Math.cos(state.pitch));
