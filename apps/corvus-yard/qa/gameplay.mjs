@@ -80,7 +80,10 @@ try{for(const name of names){
   assert.equal(await page.locator('#pause-menu .exit').isVisible(),true);await tap('#home');await wait(()=>window.__AI_TEST_STATE__?.grounded&&window.__AI_TEST_STATE__.support==='home');checks.push('pause freeze and home return');
   // Walk off the home branch backwards; ground food is directly below/behind it.
   await hold('KeyS',()=>!window.__AI_TEST_STATE__.grounded&&window.__AI_TEST_STATE__.position.y<6.2);
-  await hold('Shift',()=>window.__AI_TEST_STATE__.grounded&&window.__AI_TEST_STATE__.position.y<2);
+  // Keep the downward request through braking so the approach cannot glide
+  // across the bank into the canal before the feet reach ground.
+  await page.keyboard.down('KeyS');
+  try{await hold('Shift',()=>window.__AI_TEST_STATE__.grounded&&window.__AI_TEST_STATE__.position.y<2);}finally{await page.keyboard.up('KeyS');}
   await shot('landing');await wait(()=>window.__AI_TEST_STATE__?.mode==='idle');await page.waitForTimeout(250);
   await shot('ground');checks.push('branch walkoff and ground landing');console.log(name,'GROUND',JSON.stringify(await state()));
   if(process.env.CORVUS_QA_FULL==='1'){

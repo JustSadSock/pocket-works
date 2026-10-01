@@ -1,0 +1,74 @@
+{
+  "status": "passed",
+  "joints": 61,
+  "clips": 14,
+  "supportHeight": -0.456,
+  "tolerance": 0.015,
+  "samples": [
+    {
+      "frame": 0.0,
+      "feet": {
+        "Foot.L": {
+          "minFootHeight": -0.4559999704360962,
+          "maxFootHeight": -0.24853387475013733
+        },
+        "Foot.R": {
+          "minFootHeight": -0.4559999108314514,
+          "maxFootHeight": -0.24853385984897614
+        }
+      }
+    },
+    {
+      "frame": 3.200000286102295,
+      "feet": {
+        "Foot.L": {
+          "minFootHeight": -0.4560009837150574,
+          "maxFootHeight": -0.25613319873809814
+        },
+        "Foot.R": {
+          "minFootHeight": -0.45600104331970215,
+          "maxFootHeight": -0.2561332881450653
+        }
+      }
+    },
+    {
+      "frame": 6.40000057220459,
+      "feet": {
+        "Foot.L": {
+          "minFootHeight": -0.45600104331970215,
+          "maxFootHeight": -0.26348406076431274
+        },
+        "Foot.R": {
+          "minFootHeight": -0.4560009837150574,
+          "maxFootHeight": -0.26348406076431274
+        }
+      }
+    },
+    {
+      "frame": 9.600000858306885,
+      "feet": {
+        "Foot.L": {
+          "minFootHeight": -0.45600104331970215,
+          "maxFootHeight": -0.2716112732887268
+        },
+        "Foot.R": {
+          "minFootHeight": -0.45600107312202454,
+          "maxFootHeight": -0.2716112732887268
+        }
+      }
+    },
+    {
+      "frame": 12.80000114440918,
+      "feet": {
+        "Foot.L": {
+          "minFootHeight": -0.4560009241104126,
+          "maxFootHeight": -0.2794017791748047
+        },
+        "Foot.R": {
+          "minFootHeight": -0.4560009241104126,
+          "maxFootHeight": -0.2794017791748047
+        }
+      }
+    }
+  ]
+}
