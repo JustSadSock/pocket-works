@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'rasklad-';
-const CACHE_NAME = 'rasklad-v1.1.0';
-const APP_VERSION = '1.1.0';
-const RELEASE_DATE = '2026-09-30';
+const CACHE_NAME = 'rasklad-v1.2.0';
+const APP_VERSION = '1.2.0';
+const RELEASE_DATE = '2026-10-01';
 const APP_SHELL = [
   './',
   './index.html',
@@ -35,9 +35,9 @@ self.addEventListener('message', (event) => {
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
       releaseNotes: [
-        'Изображения теперь никогда не накладываются друг на друга.',
-        'Новый упаковщик плотнее заполняет A4, сохраняя случайный разброс размеров.',
-        'Lossless PNG 2480×3508 px по-прежнему строится напрямую из исходных файлов.'
+        'Добавлен слайдер плотности раскладки 0–100%.',
+        'Плотность меняется без перерандомивания текущей композиции и сохраняется между запусками.',
+        'Наложения изображений остаются запрещены при любой плотности.'
       ],
       cacheName: CACHE_NAME
     });
