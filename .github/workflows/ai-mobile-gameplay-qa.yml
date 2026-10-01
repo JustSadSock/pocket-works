@@ -101,14 +101,27 @@ jobs:
               '.github/workflows/godot-web-runtime.yml'
             ]);
             const godotTransportQa = files.some((file) => godotTransportFiles.has(file));
+            const launcherFiles = new Set([
+              'app.js',
+              'index.html',
+              'sw.js',
+              'launcher-sync.js',
+              'launcher-update-all-v3.js',
+              'launcher-release-links.js',
+              'shared/update-manager.js',
+              'shared/release-guard.js'
+            ]);
+            const launcherQa = files.some((file) => launcherFiles.has(file));
             fs.appendFileSync(process.env.GITHUB_ENV, `PW_APP_TARGETS=${targets.join(',')}\n`);
             fs.appendFileSync(process.env.GITHUB_ENV, `PW_GODOT_TRANSPORT_QA=${godotTransportQa ? '1' : '0'}\n`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PW_LAUNCHER_QA=${launcherQa ? '1' : '0'}\n`);
             if (targets.length) {
               console.log(`Exploratory QA targets changed apps: ${targets.join(',')}`);
             } else {
               console.log('No changed app slug detected; exploratory QA will sample the newest active apps.');
             }
             if (godotTransportQa) console.log('Godot production transport changed; dedicated browser boot gate enabled.');
+            if (launcherQa) console.log('Launcher update transport changed; installed-app Sync gate enabled.');
           }).catch((error) => {
             console.error(error);
             process.exitCode = 1;
@@ -142,6 +155,9 @@ jobs:
           fi
           if [[ "${PW_GODOT_TRANSPORT_QA:-0}" == "1" ]]; then
             TESTS+=(tests/e2e/godot-runtime.spec.ts)
+          fi
+          if [[ "${PW_LAUNCHER_QA:-0}" == "1" ]]; then
+            TESTS+=(tests/e2e/launcher-sync.spec.ts)
           fi
           npx playwright test "${TESTS[@]}"
 

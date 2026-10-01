@@ -2,8 +2,9 @@ const REGISTRY_CACHE_KEY='pocket-works:registry:v1';
 const VERIFIED_RELEASES_KEY='pocket-works:verified-releases:v1';
 const UPDATE_CONCURRENCY=3;
 const APP_TIMEOUT=30_000;
-const INSTALL_TIMEOUT=22_000;
-const ACTIVATION_TIMEOUT=10_000;
+const UPDATE_CHECK_TIMEOUT=12_000;
+const INSTALL_TIMEOUT=18_000;
+const ACTIVATION_TIMEOUT=8_000;
 
 const refreshButton=document.querySelector('#refresh-button');
 const syncStatus=document.querySelector('#sync-status');
@@ -15,7 +16,7 @@ const errorText=error=>error instanceof Error?error.message:String(error);
 const progressRoot=document.createElement('div');
 progressRoot.className='pw-update-progress';
 progressRoot.hidden=true;
-progressRoot.innerHTML='<div class="pw-update-progress__copy"><strong data-pw-update-stage>Checking fingerprints</strong><span data-pw-update-count>0 / 0</span></div><div class="pw-update-progress__track"><i data-pw-update-bar></i></div>';
+progressRoot.innerHTML='<div class="pw-update-progress__copy"><strong data-pw-update-stage>Syncing shelf</strong><span data-pw-update-count>0 / 0</span></div><div class="pw-update-progress__track"><i data-pw-update-bar></i></div>';
 document.querySelector('.command-deck')?.append(progressRoot);
 const progressStage=progressRoot.querySelector('[data-pw-update-stage]');
 const progressCount=progressRoot.querySelector('[data-pw-update-count]');
@@ -48,14 +49,7 @@ function storeVerified(app){
 
 function locallyCurrent(app,verified){
   const saved=verified[app.slug];
-  if(!saved||saved.version!==app.version)return false;
-  const fingerprint=expectedFingerprint(app);
-  if(saved.fingerprint===fingerprint)return true;
-  if(!saved.fingerprint){
-    storeVerified(app);
-    return true;
-  }
-  return false;
+  return Boolean(saved&&saved.version===app.version&&saved.fingerprint===expectedFingerprint(app));
 }
 
 function writeRegistrySnapshot(apps){
@@ -71,21 +65,48 @@ async function fetchLiveRegistry(){
   return apps.filter(app=>app&&app.status!=='archived'&&typeof app.slug==='string'&&typeof app.path==='string'&&typeof app.version==='string');
 }
 
-function workerMatches(worker,app){
-  if(!worker)return false;
-  try{
-    const url=new URL(worker.scriptURL);
-    return url.searchParams.get('pw_release')===app.version&&url.searchParams.get('pw_fp')===expectedFingerprint(app);
-  }catch{return false;}
+function workerInfoAttempt(worker,timeout){
+  if(!worker)return Promise.resolve(null);
+  return new Promise(resolve=>{
+    const channel=new MessageChannel();
+    const timer=setTimeout(()=>resolve(null),timeout);
+    channel.port1.onmessage=event=>{
+      clearTimeout(timer);
+      resolve(event.data||null);
+    };
+    try{worker.postMessage({type:'GET_UPDATE_INFO'},[channel.port2]);}
+    catch{clearTimeout(timer);resolve(null);}
+  });
 }
 
-async function verifiedReleaseIsActive(app,verified){
-  if(!locallyCurrent(app,verified))return false;
-  try{
-    const scopeUrl=new URL(app.path,location.href);
-    const registration=await navigator.serviceWorker.getRegistration(scopeUrl.href);
-    return workerMatches(registration?.active,app);
-  }catch{return false;}
+async function workerInfo(worker){
+  for(const timeout of [450,900]){
+    const info=await workerInfoAttempt(worker,timeout);
+    if(info)return info;
+  }
+  return null;
+}
+
+function scopeHref(app){
+  const url=new URL(app.path,location.href);
+  url.hash='';
+  url.search='';
+  if(!url.pathname.endsWith('/'))url.pathname+='/';
+  return url.href;
+}
+
+async function collectInstalledTargets(apps){
+  const registrations=await navigator.serviceWorker.getRegistrations();
+  const byScope=new Map(registrations.map(registration=>{
+    const url=new URL(registration.scope);
+    url.hash='';
+    url.search='';
+    if(!url.pathname.endsWith('/'))url.pathname+='/';
+    return[url.href,registration];
+  }));
+  return apps
+    .map(app=>({app,registration:byScope.get(scopeHref(app))}))
+    .filter(target=>Boolean(target.registration));
 }
 
 function waitForWorkerState(worker,accepted,timeout){
@@ -106,71 +127,70 @@ function waitForWorkerState(worker,accepted,timeout){
   });
 }
 
-async function waitForCandidate(registration){
-  if(registration.installing||registration.waiting)return registration.installing||registration.waiting;
-  return new Promise(resolve=>{
-    const deadline=Date.now()+2600;
-    const inspect=()=>{
-      const candidate=registration.installing||registration.waiting;
-      if(candidate||Date.now()>=deadline){
-        registration.removeEventListener('updatefound',inspect);
-        resolve(candidate||null);
-        return;
-      }
-      setTimeout(inspect,80);
-    };
-    registration.addEventListener('updatefound',inspect);
-    inspect();
-  });
-}
-
-async function activateExpectedWorker(registration,app){
-  const deadline=Date.now()+ACTIVATION_TIMEOUT;
-  while(Date.now()<deadline){
-    if(workerMatches(registration.active,app))return registration.active;
-    if(registration.waiting){
-      try{registration.waiting.postMessage({type:'SKIP_WAITING'});}catch{}
-    }
-    await wait(100);
-  }
-  throw new Error('new release did not become active');
-}
-
-async function installRelease(app,onStage){
-  const scopeUrl=new URL(app.path,location.href);
-  const previous=await navigator.serviceWorker.getRegistration(scopeUrl.href);
-  if(workerMatches(previous?.active,app)){
-    storeVerified(app);
-    return{app,status:'current'};
-  }
-
-  onStage('Downloading service worker');
-  const workerUrl=new URL('sw.js',scopeUrl);
-  workerUrl.searchParams.set('pw_release',app.version);
-  workerUrl.searchParams.set('pw_fp',expectedFingerprint(app));
-  const registration=await navigator.serviceWorker.register(workerUrl.href,{scope:scopeUrl.href,updateViaCache:'none'});
-
-  if(!workerMatches(registration.active,app)&&!registration.installing&&!registration.waiting){
-    try{await registration.update();}catch{}
-  }
-
-  const candidate=await waitForCandidate(registration);
-  if(candidate&&candidate.state==='installing'){
+async function activateCandidate(registration,candidate,onStage){
+  if(!candidate)return false;
+  if(candidate.state==='installing'){
     onStage('Installing offline files');
     const state=await waitForWorkerState(candidate,['installed','activated','redundant'],INSTALL_TIMEOUT);
     if(state==='redundant')throw new Error('new worker became redundant');
   }
 
-  onStage('Activating release');
-  await activateExpectedWorker(registration,app);
-  storeVerified(app);
-  return{app,status:previous?'updated':'installed'};
+  const waiting=registration.waiting||(candidate.state==='installed'?candidate:null);
+  if(waiting){
+    onStage('Activating release');
+    try{waiting.postMessage({type:'SKIP_WAITING'});}catch{}
+  }
+
+  const deadline=Date.now()+ACTIVATION_TIMEOUT;
+  while(Date.now()<deadline){
+    if(registration.active===candidate||candidate.state==='activated')return true;
+    if(candidate.state==='redundant')throw new Error('new worker became redundant');
+    await wait(100);
+  }
+  return registration.active===candidate||candidate.state==='activated';
 }
 
-async function updateApplication(app,verified,onStage){
-  if(await verifiedReleaseIsActive(app,verified))return{app,status:'current'};
-  try{return await withTimeout(installRelease(app,onStage),APP_TIMEOUT,`${app.name} update`);}
-  catch(error){return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};}
+async function updateInstalledApplication(app,registration,verified,onStage){
+  try{
+    const beforeActive=registration.active;
+    const beforeInfo=await workerInfo(beforeActive);
+
+    if(locallyCurrent(app,verified)&&(!beforeInfo?.version||beforeInfo.version===app.version)){
+      return{app,status:'current'};
+    }
+
+    onStage('Checking installed release');
+    await withTimeout(registration.update(),UPDATE_CHECK_TIMEOUT,`${app.name} worker check`);
+
+    let candidate=registration.installing||registration.waiting;
+    if(candidate){
+      await activateCandidate(registration,candidate,onStage);
+    }else if(registration.active!==beforeActive){
+      candidate=registration.active;
+    }
+
+    const active=registration.active;
+    const activeInfo=await workerInfo(active);
+
+    if(activeInfo?.version&&activeInfo.version!==app.version){
+      throw new Error(`active worker reports v${activeInfo.version}; expected v${app.version}`);
+    }
+
+    if(activeInfo?.version===app.version){
+      storeVerified(app);
+      return{app,status:candidate||beforeInfo?.version!==app.version?'updated':'current'};
+    }
+
+    if(candidate||active!==beforeActive){
+      storeVerified(app);
+      return{app,status:'updated'};
+    }
+
+    if(locallyCurrent(app,readVerified()))return{app,status:'current'};
+    return{app,status:'checked'};
+  }catch(error){
+    return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};
+  }
 }
 
 async function mapWithConcurrency(items,concurrency,handler,onProgress){
@@ -191,23 +211,26 @@ async function mapWithConcurrency(items,concurrency,handler,onProgress){
 
 function showProgress({completed,total,label}){
   progressRoot.hidden=false;
-  progressStage.textContent=label||'Checking fingerprints';
+  progressStage.textContent=label||'Syncing shelf';
   progressCount.textContent=`${completed} / ${total}`;
-  progressBar.style.width=`${total?Math.min(100,completed/total*100):0}%`;
-  refreshButton.textContent=`${completed}/${total}`;
+  progressBar.style.width=`${total?Math.min(100,completed/total*100):100}%`;
+  refreshButton.textContent=total?`${completed}/${total}`:'Sync';
 }
 
-function summaryFor(results){
-  const changed=results.filter(result=>['updated','installed'].includes(result.status)).length;
+function summaryFor(results,onDemand){
+  const changed=results.filter(result=>result.status==='updated').length;
   const current=results.filter(result=>result.status==='current').length;
+  const checked=results.filter(result=>result.status==='checked').length;
   const failed=results.filter(result=>result.status==='failed');
-  const names=failed.slice(0,3).map(result=>result.app.name).join(', ');
-  return{
-    changed,current,failed,
-    main:failed.length
-      ?`${changed} updated / ${current} current / ${failed.length} skipped${names?`: ${names}`:''}`
-      :`${changed} updated / ${current} current`
-  };
+  const names=failed.slice(0,2).map(result=>result.app.name).join(', ');
+  const pieces=[];
+  if(changed)pieces.push(`${changed} updated`);
+  if(current)pieces.push(`${current} current`);
+  if(checked)pieces.push(`${checked} checked`);
+  if(onDemand)pieces.push(`${onDemand} on-demand`);
+  if(failed.length)pieces.push(`${failed.length} failed${names?`: ${names}`:''}`);
+  if(!pieces.length)pieces.push('Shelf synced');
+  return{changed,current,checked,failed,onDemand,main:pieces.join(' / ')};
 }
 
 async function runBulkUpdate(){
@@ -215,9 +238,9 @@ async function runBulkUpdate(){
   bulkUpdateRunning=true;
   completedCount=0;
   refreshButton.disabled=true;
-  refreshButton.textContent='0/…';
-  syncStatus.textContent='Reading release fingerprints';
-  showProgress({completed:0,total:0,label:'Reading release fingerprints'});
+  refreshButton.textContent='…';
+  syncStatus.textContent='Reading live shelf';
+  showProgress({completed:0,total:0,label:'Reading live shelf'});
 
   const active=new Map();
   try{
@@ -229,42 +252,61 @@ async function runBulkUpdate(){
     window.dispatchEvent(new CustomEvent('pocketworks:registry-snapshot',{
       detail:{apps,source:'bulk-update'}
     }));
+
+    const targets=await collectInstalledTargets(apps);
+    const onDemand=Math.max(0,apps.length-targets.length);
     const verified=readVerified();
-    showProgress({completed:0,total:apps.length,label:'Comparing local fingerprints'});
+
+    if(targets.length===0){
+      const summary=summaryFor([],onDemand);
+      window.dispatchEvent(new CustomEvent('pocketworks:bulk-update-complete',{detail:summary}));
+      syncStatus.textContent=summary.main;
+      showProgress({completed:0,total:0,label:summary.main});
+      navigator.vibrate?.(10);
+      return;
+    }
+
+    showProgress({completed:0,total:targets.length,label:`Checking ${targets.length} installed app${targets.length===1?'':'s'}`});
 
     const results=await mapWithConcurrency(
-      apps,
+      targets,
       UPDATE_CONCURRENCY,
-      app=>updateApplication(app,verified,stage=>{
-        active.set(app.slug,`${app.name} · ${stage}`);
-        showProgress({completed:completedCount,total:apps.length,label:[...active.values()][0]||stage});
-        syncStatus.textContent=[...active.values()].slice(0,2).join(' + ');
-      }),
+      target=>withTimeout(
+        updateInstalledApplication(target.app,target.registration,verified,stage=>{
+        active.set(target.app.slug,`${target.app.name} · ${stage}`);
+        showProgress({completed:completedCount,total:targets.length,label:[...active.values()][0]||stage});
+          syncStatus.textContent=[...active.values()].slice(0,2).join(' + ');
+        }),
+        APP_TIMEOUT,
+        `${target.app.name} update`
+      ).catch(error=>({app:target.app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')})),
       (completed,total,result)=>{
         active.delete(result.app.slug);
         const label=result.status==='failed'
-          ?`${result.app.name} · skipped`
-          :result.status==='current'
-            ?`${result.app.name} · fingerprint + active worker match`
-            :`${result.app.name} · ${result.status}`;
+          ?`${result.app.name} · failed`
+          :result.status==='updated'
+            ?`${result.app.name} · updated`
+            :result.status==='current'
+              ?`${result.app.name} · current`
+              :`${result.app.name} · checked`;
         showProgress({completed,total,label});
         syncStatus.textContent=result.status==='failed'?`${result.app.name}: ${result.error}`:label;
       }
     );
 
-    const summary=summaryFor(results);
+    const summary=summaryFor(results,onDemand);
     window.dispatchEvent(new CustomEvent('pocketworks:bulk-update-complete',{detail:summary}));
     syncStatus.textContent=summary.main;
-    showProgress({completed:apps.length,total:apps.length,label:summary.main});
+    showProgress({completed:targets.length,total:targets.length,label:summary.main});
     navigator.vibrate?.(summary.failed.length?[10,40,10]:12);
-    setTimeout(()=>{if(!bulkUpdateRunning)progressRoot.hidden=true;},2600);
   }catch(error){
     syncStatus.textContent=`${errorText(error)} — previous releases kept`;
     progressStage.textContent=syncStatus.textContent;
   }finally{
     bulkUpdateRunning=false;
     refreshButton.disabled=false;
-    refreshButton.textContent='Update';
+    refreshButton.textContent='Sync';
+    setTimeout(()=>{if(!bulkUpdateRunning)progressRoot.hidden=true;},2800);
   }
 }
 
@@ -272,5 +314,5 @@ refreshButton?.addEventListener('click',event=>{
   if(!event.isTrusted)return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  runBulkUpdate();
+  void runBulkUpdate();
 },{capture:true});

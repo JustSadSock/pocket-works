@@ -16,9 +16,11 @@ const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager
 const errors=[];
 const requireToken=(source,token,label)=>{if(!source.includes(token))errors.push(`${label} must include ${token}`);};
 
-for(const token of ['APP_TIMEOUT','withTimeout(installRelease','timedOut','skipped','UPDATE_CONCURRENCY=3','expectedFingerprint','pw-update-progress','verifiedReleaseIsActive','navigator.serviceWorker.getRegistration(scopeUrl.href)','workerMatches(registration?.active,app)','pocketworks:registry-snapshot',"source:'bulk-update'"]){
-  requireToken(launcher,token,'launcher fingerprint updater');
+for(const token of ['APP_TIMEOUT','UPDATE_CHECK_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','expectedFingerprint','pw-update-progress','collectInstalledTargets','navigator.serviceWorker.getRegistrations()','registration.update()','workerInfo','on-demand','pocketworks:registry-snapshot',"source:'bulk-update'"]){
+  requireToken(launcher,token,'launcher installed-app updater');
 }
+if(launcher.includes('navigator.serviceWorker.register('))errors.push('launcher Sync must not register Service Workers for applications that are not already installed');
+if(launcher.includes("workerUrl.searchParams.set('pw_release'")||launcher.includes("workerUrl.searchParams.set('pw_fp'"))errors.push('launcher Sync must not encode release identity into Service Worker script URLs');
 for(const token of ['pocketworks:registry-snapshot','applyExternalRegistrySnapshot']){
   requireToken(launcherApp,token,'launcher live registry handoff');
 }
@@ -40,4 +42,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('Release-guard ownership, active worker verification, managed seen-state, acknowledged registry cursor, bounded installs and Vetrolom resilient precache are valid.');
+console.log('Release-guard ownership, installed-app-only Sync, managed seen-state, acknowledged registry cursor and Vetrolom resilient precache are valid.');

@@ -18,10 +18,14 @@ const requireToken=(file,token,label)=>{if(!files[file].includes(token))errors.p
 
 requireToken('index','launcher-update-all-v3.js','launcher entry');
 requireToken('index','launcher-release-links.js','launcher entry');
-requireToken('updater','expectedFingerprint','fingerprint updater');
-requireToken('updater','pw_fp','fingerprint updater');
-requireToken('updater','verifiedReleaseIsActive','fingerprint updater');
+requireToken('updater','expectedFingerprint','installed app verification');
+requireToken('updater','collectInstalledTargets','installed app verification');
+requireToken('updater','navigator.serviceWorker.getRegistrations()','installed app verification');
+requireToken('updater','registration.update()','installed app verification');
+requireToken('updater','workerInfo','installed app verification');
 requireToken('updater','pw-update-progress','update progress');
+if(files.updater.includes('navigator.serviceWorker.register('))errors.push('Launcher Sync must not create application Service Worker registrations');
+if(files.updater.includes("workerUrl.searchParams.set('pw_release'")||files.updater.includes("workerUrl.searchParams.set('pw_fp'"))errors.push('Launcher Sync must keep application Service Worker script URLs canonical');
 requireToken('links','fingerprint','versioned launch links');
 requireToken('links','clearStaleAppRuntime','launcher release convergence');
 requireToken('links','stopImmediatePropagation','launcher stale-runtime handoff');
