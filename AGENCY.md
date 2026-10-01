@@ -42,3 +42,17 @@ The first screen must communicate what the app does and expose a meaningful acti
 ## Final diversity check
 
 Before shipping, compare the finished app against the recent five again. If a screenshot with the logo removed could plausibly be mistaken for one of them, redesign the dominant surface before merging.
+
+
+## Visual skill modules
+
+For implementation work, this guide is only the diversity/originality layer. Repository agents must also load the discipline-specific guidance in `docs/agent-skills/`:
+
+- always: `VISUAL-DIRECTION.md`;
+- Canvas/procedural 2D: `CANVAS-2D.md`;
+- HUD/product/game interface: `GAME-UI.md`;
+- motion/juice/interaction feel: `MOTION-GAME-FEEL.md`;
+- 3D presentation: `3D-SCENE.md`;
+- before merge: `VISUAL-QA.md`.
+
+Do not collapse these into one generic "make it beautiful" instruction. Their separation is intentional: art direction, rendering technique, interface ergonomics, motion and visual verification fail in different ways and should be reasoned about independently.
