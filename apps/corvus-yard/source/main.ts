@@ -29,7 +29,7 @@ function toast(text:string){$('toast').textContent=text;$('toast').classList.add
 function toggleSound(){audio.setEnabled(!audio.enabled);if(audio.enabled&&phase==='playing')void audio.unlock();syncSound();save();}
 function syncSound(){for(const id of ['sound','pause-sound'])$(id).textContent=`Звук: ${audio.enabled?'включён':'выключен'}`;}
 syncSound();$('sound').onclick=toggleSound;$('pause-sound').onclick=toggleSound;
-function play(){phase='playing';input.reset();for(const id of ['menu','pause-menu','complete'])$(id).hidden=true;$('controls').hidden=false;$('hud').hidden=false;void audio.unlock().catch(()=>{});}
+function play(){if(phase==='menu')camera.reset(state);phase='playing';input.reset();for(const id of ['menu','pause-menu','complete'])$(id).hidden=true;$('controls').hidden=false;$('hud').hidden=false;void audio.unlock().catch(()=>{});}
 $('start').onclick=()=>{play();toast('Удерживай «Взмах» для взлёта. Отпусти — и планируй.');};
 function pause(){if(phase!=='playing')return;phase='paused';input.reset();audio.pause();save();$('pause-menu').hidden=false;$('controls').hidden=true;}
 $('pause').onclick=pause;$('resume').onclick=play;$('explore').onclick=play;

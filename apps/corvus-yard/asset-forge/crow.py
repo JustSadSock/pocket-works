@@ -10,9 +10,9 @@ def mat(name,col,rough=.36,metal=0):
  m=bpy.data.materials.new(name); m.diffuse_color=(*col,1); m.use_nodes=True
  bs=m.node_tree.nodes.get('Principled BSDF'); bs.inputs['Base Color'].default_value=(*col,1); bs.inputs['Roughness'].default_value=rough; bs.inputs['Metallic'].default_value=metal
  return m
-plumage=mat('Obsidian · violet blue feather sheen',(.014,.018,.024),.43,.08)
+plumage=mat('Obsidian · violet blue feather sheen',(.014,.018,.024),.52,.03)
 # Two feather materials share draw calls across the entire skinned bird.
-feather_alt=mat('Flight feather · soft blue black',(.024,.031,.043),.46,.10)
+feather_alt=mat('Flight feather · soft blue black',(.024,.031,.043),.49,.04)
 featherM=[plumage,feather_alt,plumage,feather_alt,plumage]
 beak=mat('Horn · satin black',(.018,.020,.021),.29,.03); claw=mat('Scutes · charcoal',(.035,.038,.039),.6); eye=mat('Eye · wet obsidian',(.003,.004,.004),.08); iris=mat('Iris · deep umber',(.055,.038,.022),.22); glint=mat('Eye catchlight',(.38,.40,.36),.15)
 # Subtle vane texture, no downloaded assets. The shaft and diagonal barbs
@@ -64,7 +64,7 @@ def ell(name,loc,scale,m,b,seg=20,rings=12):
  bpy.ops.mesh.primitive_uv_sphere_add(segments=seg,ring_count=rings,location=loc); o=bpy.context.object; o.name=name; o.scale=scale; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); return bind(o,m,b)
 def tube(name,p1,p2,r1,r2,m,b,verts=8):
  v=Vector(p2)-Vector(p1); bpy.ops.mesh.primitive_cone_add(vertices=verts,radius1=r1,radius2=r2,depth=v.length,location=(Vector(p1)+Vector(p2))/2); o=bpy.context.object; o.name=name; o.rotation_euler=v.to_track_quat('Z','Y').to_euler(); return bind(o,m,b)
-def feather(name,start,end,width,m,b,curve=.012):
+def feather(name,start,end,width,m,b,curve=.003):
  # Lenticular blade, curved shaft and four cross sections; actual volume.
  s=Vector(start); e=Vector(end); d=e-s; side=Vector((d.y,-d.x,0)).normalized(); vs=[]
  for i in range(9):

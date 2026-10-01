@@ -71,9 +71,9 @@ export class CrowCamera {
   preview(state:CrowState,time:number,dt:number){
     if(!this.initialized)this.reset(state);
     const angle=2.3+Math.sin(time*.12)*.14;
-    const desired=new Vector3(state.position.x+Math.sin(angle)*2.25,state.position.y+.22,state.position.z-Math.cos(angle)*2.25);
-    this.camera.position=Vector3.Lerp(this.camera.position,desired,response(2,dt));
-    this.target.set(state.position.x,state.position.y-.36,state.position.z);
+    const desired=new Vector3(state.position.x+Math.sin(angle)*2.75,state.position.y+.12,state.position.z-Math.cos(angle)*2.75);
+    this.camera.position.copyFrom(desired);
+    this.target.set(state.position.x,state.position.y-.48,state.position.z);
     this.camera.fov=.90;this.camera.setTarget(this.target);
   }
   private avoidObstacles(anchor: Vector3, desired: Vector3, colliders: Collider[]) {
