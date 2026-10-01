@@ -93,6 +93,13 @@ interface TowerBolt {
 type SceneContext = { save: SaveState; callbacks: GameCallbacks };
 
 const WORLD = { left: 80, top: -1900, width: 740, height: 4210 };
+const PROJECTION = {
+  floorTileW: 58,
+  floorTileH: 32,
+  floorSkew: 5,
+  wallRise: 18,
+  wallSide: 8
+} as const;
 
 function noise01(x: number, y: number, seed = 17) {
   const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 33.71) * 43758.5453;
@@ -336,64 +343,68 @@ class OathScene extends Phaser.Scene {
   }
 
   private drawRoom(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, seed: number) {
-    g.fillStyle(0x171713, 1);
+    g.fillStyle(0x161612, 1);
     g.fillRect(x, y, w, h);
-    const tileW = 54;
-    const tileH = 40;
+
+    const tileW = PROJECTION.floorTileW;
+    const tileH = PROJECTION.floorTileH;
+    const skew = PROJECTION.floorSkew;
     const palette = [0x29271f, 0x302d24, 0x25241e, 0x343027, 0x22221d, 0x2d2b23];
-    for (let row = 0; row < Math.ceil(h / tileH); row += 1) {
+
+    for (let row = 0; row < Math.ceil(h / tileH) + 1; row += 1) {
       const yy = y + row * tileH;
       const offset = row % 2 ? -tileW / 2 : 0;
       for (let col = -1; col < Math.ceil(w / tileW) + 1; col += 1) {
         const xx = x + col * tileW + offset;
         const n = noise01(col + seed, row, seed);
-        const edge = 1 + Math.floor(noise01(col, row, seed + 5) * 2);
         const color = palette[Math.floor(n * palette.length) % palette.length];
+        const inset = 1 + Math.floor(noise01(col, row, seed + 5) * 2);
 
-        g.fillStyle(0x0d0d0b, .72);
-        g.fillRect(xx, yy, tileW, tileH);
+        // The floor is a shallow 3/4 plane: wide, vertically compressed stones with
+        // a tiny diagonal bias. Nothing else in the scene is allowed to use a
+        // different projection language.
+        const p1 = new Phaser.Math.Vector2(xx + inset + skew, yy + inset);
+        const p2 = new Phaser.Math.Vector2(xx + tileW - inset, yy + inset);
+        const p3 = new Phaser.Math.Vector2(xx + tileW - inset - skew, yy + tileH - inset);
+        const p4 = new Phaser.Math.Vector2(xx + inset, yy + tileH - inset);
+
+        g.fillStyle(0x0b0b09, .78);
+        g.fillPoints([
+          new Phaser.Math.Vector2(xx + skew, yy),
+          new Phaser.Math.Vector2(xx + tileW, yy),
+          new Phaser.Math.Vector2(xx + tileW - skew, yy + tileH),
+          new Phaser.Math.Vector2(xx, yy + tileH)
+        ], true);
         g.fillStyle(color, 1);
-        g.fillRect(xx + edge, yy + edge, tileW - edge * 2, tileH - edge * 2);
+        g.fillPoints([p1,p2,p3,p4], true);
 
-        // Hand-painted bevel: a dim warm top edge and a colder lower edge stop the
-        // floor from reading like a CSS grid while remaining cheap to render.
-        g.lineStyle(1, 0x686151, .14 + n * .08);
+        g.lineStyle(1, 0x716957, .12 + n * .08);
         g.beginPath();
-        g.moveTo(xx + 4, yy + 3);
-        g.lineTo(xx + tileW - 5, yy + 3);
-        g.moveTo(xx + 3, yy + 4);
-        g.lineTo(xx + 3, yy + tileH - 5);
+        g.moveTo(p1.x + 3, p1.y + 1);
+        g.lineTo(p2.x - 4, p2.y + 1);
         g.strokePath();
-        g.lineStyle(1, 0x090a09, .34);
+
+        g.lineStyle(1, 0x090a09, .4);
         g.beginPath();
-        g.moveTo(xx + 5, yy + tileH - 3);
-        g.lineTo(xx + tileW - 4, yy + tileH - 3);
+        g.moveTo(p4.x + 3, p4.y - 1);
+        g.lineTo(p3.x - 4, p3.y - 1);
         g.strokePath();
 
         const stain = noise01(col * 3 + seed, row * 5, 41);
-        if (stain > .63) {
-          const sx = xx + 8 + noise01(col, row, 61) * (tileW - 16);
-          const sy = yy + 7 + noise01(col, row, 67) * (tileH - 14);
-          g.fillStyle(stain > .86 ? 0x11130f : 0x1b1b16, .18 + stain * .12);
-          g.fillEllipse(sx, sy, 8 + stain * 13, 3 + stain * 6);
+        if (stain > .66) {
+          const sx = xx + 10 + noise01(col, row, 61) * (tileW - 20);
+          const sy = yy + 6 + noise01(col, row, 67) * (tileH - 12);
+          g.fillStyle(stain > .86 ? 0x11130f : 0x1a1a15, .17 + stain * .11);
+          g.fillEllipse(sx, sy, 9 + stain * 14, 3 + stain * 4);
         }
 
-        if (n > .72) {
-          g.lineStyle(1, n > .9 ? 0x77705c : 0x11110f, n > .9 ? .22 : .58);
+        if (n > .76) {
+          g.lineStyle(1, n > .9 ? 0x7c735e : 0x10100e, n > .9 ? .18 : .5);
           g.beginPath();
-          g.moveTo(xx + tileW * (.18 + noise01(col, row, 73) * .14), yy + 5);
-          g.lineTo(xx + tileW * .48, yy + tileH * .43);
-          g.lineTo(xx + tileW * (.38 + noise01(row, col, 79) * .18), yy + tileH - 6);
+          g.moveTo(xx + tileW * .28, yy + 5);
+          g.lineTo(xx + tileW * .5, yy + tileH * .42);
+          g.lineTo(xx + tileW * .43, yy + tileH - 5);
           g.strokePath();
-        }
-
-        // Small mineral flecks are intentionally sparse. They break procedural
-        // repetition without turning the floor into visual noise.
-        for (let fleck = 0; fleck < 2; fleck += 1) {
-          const fx = xx + 7 + noise01(col * 7 + fleck, row, seed + 83) * (tileW - 14);
-          const fy = yy + 6 + noise01(col, row * 9 + fleck, seed + 89) * (tileH - 12);
-          g.fillStyle(fleck ? 0x958b73 : 0x0b0b0a, fleck ? .08 : .13);
-          g.fillCircle(fx, fy, fleck ? .7 : 1.1);
         }
       }
     }
@@ -401,205 +412,269 @@ class OathScene extends Phaser.Scene {
 
   private drawWallVisual(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number) {
     const horizontal = w >= h;
-    g.fillStyle(0x050505, .76);
-    g.fillRect(x + 7, y + 10, w, h);
+    const rise = PROJECTION.wallRise;
+    const side = PROJECTION.wallSide;
 
-    // Walls have a readable top face and a dark inner lip. From the fixed 3/4
-    // camera this tiny fake extrusion adds far more depth than another shader.
-    g.fillStyle(0x464136, 1);
-    g.fillRect(x, y, w, h);
+    // Contact shadow belongs to the floor plane.
+    g.fillStyle(0x030303, .55);
+    if (horizontal) g.fillRect(x + 6, y + h + rise - 2, w, 7);
+    else g.fillRect(x + w + side - 1, y + 8, 7, h + rise - 2);
+
     if (horizontal) {
-      g.fillStyle(0x5b5444, .72);
-      g.fillRect(x + 1, y + 1, w - 2, Math.min(6, h * .3));
-      g.fillStyle(0x1e1d18, .72);
-      g.fillRect(x + 1, y + h - 6, w - 2, 5);
-    } else {
-      g.fillStyle(0x585142, .58);
-      g.fillRect(x + 1, y + 1, Math.min(6, w * .3), h - 2);
-      g.fillStyle(0x1d1c18, .7);
-      g.fillRect(x + w - 6, y + 1, 5, h - 2);
-    }
+      // Top cap.
+      g.fillStyle(0x575044, 1);
+      g.beginPath();
+      g.moveTo(x + side, y);
+      g.lineTo(x + w, y);
+      g.lineTo(x + w - side, y + h);
+      g.lineTo(x, y + h);
+      g.closePath();
+      g.fillPath();
 
-    const major = horizontal ? w : h;
-    const minor = horizontal ? h : w;
-    const brick = 31;
-    for (let p = 0; p < major; p += brick) {
-      const n = noise01(x + p, y, 23);
-      const inset = 2 + Math.floor(n * 2);
-      g.fillStyle(n > .58 ? 0x514a3d : 0x3b382f, .48);
-      if (horizontal) g.fillRect(x + p + inset, y + 8, Math.max(8, Math.min(brick - 4, w - p - inset)), Math.max(4, minor - 15));
-      else g.fillRect(x + 8, y + p + inset, Math.max(4, minor - 15), Math.max(8, Math.min(brick - 4, h - p - inset)));
-      if (n > .77) {
-        g.lineStyle(1, 0x8a8068, .15);
-        if (horizontal) {
-          g.beginPath(); g.moveTo(x + p + 8, y + 10); g.lineTo(x + p + 20, y + h - 8); g.strokePath();
-        } else {
-          g.beginPath(); g.moveTo(x + 9, y + p + 8); g.lineTo(x + w - 8, y + p + 19); g.strokePath();
-        }
+      // Front face drops toward the viewer.
+      g.fillStyle(0x2b2923, 1);
+      g.beginPath();
+      g.moveTo(x, y + h);
+      g.lineTo(x + w - side, y + h);
+      g.lineTo(x + w - side, y + h + rise);
+      g.lineTo(x, y + h + rise);
+      g.closePath();
+      g.fillPath();
+
+      // Right side catches a little ambient light.
+      g.fillStyle(0x39362d, 1);
+      g.beginPath();
+      g.moveTo(x + w - side, y + h);
+      g.lineTo(x + w, y);
+      g.lineTo(x + w, y + rise);
+      g.lineTo(x + w - side, y + h + rise);
+      g.closePath();
+      g.fillPath();
+
+      const brick = 34;
+      for (let p = 5; p < w - 8; p += brick) {
+        const n = noise01(x + p, y, 23);
+        g.lineStyle(1, 0x8a806a, .1 + n * .08);
+        g.beginPath();
+        g.moveTo(x + p, y + h + 3);
+        g.lineTo(x + p, y + h + rise - 3);
+        g.strokePath();
+      }
+      g.lineStyle(1, 0x8f856f, .28);
+      g.beginPath(); g.moveTo(x + side + 3, y + 3); g.lineTo(x + w - 5, y + 3); g.strokePath();
+    } else {
+      // Long walls keep a narrow top plane and visible inward side; this avoids
+      // the "vertical strip" look from the old strict top-down version.
+      g.fillStyle(0x504a3f, 1);
+      g.beginPath();
+      g.moveTo(x + side, y);
+      g.lineTo(x + w, y + side);
+      g.lineTo(x + w - side, y + h);
+      g.lineTo(x, y + h - side);
+      g.closePath();
+      g.fillPath();
+
+      g.fillStyle(0x302d26, 1);
+      g.beginPath();
+      g.moveTo(x + w - side, y + h);
+      g.lineTo(x + w, y + side);
+      g.lineTo(x + w + side, y + side + rise);
+      g.lineTo(x + w, y + h + rise);
+      g.closePath();
+      g.fillPath();
+
+      g.fillStyle(0x25231e, .96);
+      g.beginPath();
+      g.moveTo(x, y + h - side);
+      g.lineTo(x + w - side, y + h);
+      g.lineTo(x + w, y + h + rise);
+      g.lineTo(x + side, y + h + rise);
+      g.closePath();
+      g.fillPath();
+
+      const brick = 31;
+      for (let p = 8; p < h - 8; p += brick) {
+        const n = noise01(x, y + p, 29);
+        g.lineStyle(1, 0x817864, .08 + n * .08);
+        g.beginPath();
+        g.moveTo(x + w - 5, y + p);
+        g.lineTo(x + w + side - 2, y + p + rise * .55);
+        g.strokePath();
       }
     }
-    g.lineStyle(1, 0x8d826a, .24);
-    g.strokeRect(x, y, w, h);
+  }
+
+  private drawPrism(
+    g: Phaser.GameObjects.Graphics,
+    x: number, y: number, w: number, d: number, height: number,
+    top: number, front: number, side: number,
+    skew = 8
+  ) {
+    g.fillStyle(0x050504, .5);
+    g.fillEllipse(x + w * .52, y + d + height + 4, w * .94, Math.max(8, d * .46));
+
+    g.fillStyle(front, 1);
+    g.beginPath();
+    g.moveTo(x, y + d);
+    g.lineTo(x + w - skew, y + d);
+    g.lineTo(x + w - skew, y + d + height);
+    g.lineTo(x, y + d + height);
+    g.closePath();
+    g.fillPath();
+
+    g.fillStyle(side, 1);
+    g.beginPath();
+    g.moveTo(x + w - skew, y + d);
+    g.lineTo(x + w, y);
+    g.lineTo(x + w, y + height);
+    g.lineTo(x + w - skew, y + d + height);
+    g.closePath();
+    g.fillPath();
+
+    g.fillStyle(top, 1);
+    g.beginPath();
+    g.moveTo(x + skew, y);
+    g.lineTo(x + w, y);
+    g.lineTo(x + w - skew, y + d);
+    g.lineTo(x, y + d);
+    g.closePath();
+    g.fillPath();
+
+    g.lineStyle(1, 0x9a8e75, .18);
+    g.beginPath();
+    g.moveTo(x + skew + 3, y + 2);
+    g.lineTo(x + w - 4, y + 2);
+    g.strokePath();
+  }
+
+  private drawCylinderPedestal(
+    g: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, width: number, depth: number, height: number,
+    top: number, front: number
+  ) {
+    g.fillStyle(0x050505, .62);
+    g.fillEllipse(cx + 5, cy + height + depth * .28, width * 1.04, depth * .62);
+    g.fillStyle(front, 1);
+    g.fillRect(cx - width / 2, cy, width, height);
+    g.fillEllipse(cx, cy + height, width, depth);
+    g.fillStyle(top, 1);
+    g.fillEllipse(cx, cy, width, depth);
+    g.lineStyle(2, 0x918873, .24);
+    g.strokeEllipse(cx, cy, width - 7, depth - 5);
   }
 
   private drawChapelProps(g: Phaser.GameObjects.Graphics) {
-    // Altar: stepped stone body, worn linen and shallow carved oath mark.
-    g.fillStyle(0x070706, .62);
-    g.fillEllipse(456, 1951, 204, 82);
-    g.fillStyle(0x37352e, 1);
-    g.fillRect(382, 1916, 136, 43);
-    g.fillStyle(0x575144, 1);
-    g.fillRect(370, 1905, 160, 19);
-    g.fillStyle(0x726852, .35);
-    g.fillRect(376, 1907, 148, 4);
-    g.lineStyle(1, 0x9a8e73, .3);
-    g.strokeRect(370, 1905, 160, 19);
-    g.lineStyle(2, 0x151411, .72);
-    g.strokeRect(382, 1916, 136, 43);
-    g.fillStyle(0x8b8069, .18);
-    g.fillRect(423, 1909, 54, 42);
-    g.lineStyle(2, 0xb0a184, .24);
+    // Altar and pews use the same shallow 3/4 projection as the walls.
+    this.drawPrism(g, 372, 1898, 160, 36, 42, 0x5c5548, 0x302d26, 0x3c382f, 10);
+    g.fillStyle(0x9b8e73, .2);
     g.beginPath();
-    g.moveTo(450, 1913); g.lineTo(450, 1943);
-    g.moveTo(435, 1926); g.lineTo(465, 1926);
-    g.strokePath();
+    g.moveTo(418,1902); g.lineTo(482,1902); g.lineTo(475,1930); g.lineTo(412,1930); g.closePath(); g.fillPath();
+    g.lineStyle(2, 0xb0a184, .24);
+    g.beginPath(); g.moveTo(450,1908); g.lineTo(450,1927); g.moveTo(438,1917); g.lineTo(462,1917); g.strokePath();
 
-    // Wax and two mismatched candle holders keep the shrine grounded in use.
-    for (const [cx, cy, tall] of [[404, 1897, 13], [496, 1899, 10]] as Array<[number, number, number]>) {
-      g.fillStyle(0x312d25, 1); g.fillRect(cx - 4, cy, 8, 6);
-      g.fillStyle(0xb5a27d, .66); g.fillRect(cx - 2, cy - tall, 4, tall);
-      g.fillStyle(0xc79d5b, .78); g.fillCircle(cx, cy - tall - 3, 2.4);
-      g.fillStyle(0xe1c98f, .58); g.fillCircle(cx, cy - tall - 4, 1.1);
+    for (const [cx, cy, tall] of [[404, 1894, 13], [496, 1897, 10]] as Array<[number, number, number]>) {
+      g.fillStyle(0x2f2b23, 1); g.fillEllipse(cx, cy + 2, 10, 5);
+      g.fillStyle(0xb5a27d, .7); g.fillRect(cx - 2, cy - tall, 4, tall);
+      g.fillStyle(0xc79d5b, .82); g.fillCircle(cx, cy - tall - 3, 2.5);
+      g.fillStyle(0xefd69a, .6); g.fillCircle(cx, cy - tall - 4, 1.2);
     }
 
     for (let row = 0; row < 4; row += 1) {
-      const yy = 2028 + row * 43;
+      const yy = 2025 + row * 45;
       for (const xx of [270, 570]) {
         const worn = noise01(row, xx, 29);
-        g.fillStyle(0x090807, .62);
-        g.fillRect(xx - 80 + 6, yy + 10, 160, 24);
-        // Rear support and legs make each pew read as furniture, not a bar.
-        g.fillStyle(0x21180f, 1);
-        g.fillRect(xx - 76, yy + 14, 8, 16);
-        g.fillRect(xx + 68, yy + 14, 8, 16);
-        g.fillStyle(worn > .55 ? 0x49331f : 0x3c2b1c, 1);
-        g.fillRect(xx - 80, yy, 160, 18);
-        g.fillStyle(0x65472b, .52);
-        g.fillRect(xx - 73, yy + 3, 145, 3);
-        g.fillStyle(0x2d2015, 1);
-        g.fillRect(xx - 78, yy - 7, 156, 7);
-        g.lineStyle(1, 0x806040, .18);
-        g.beginPath();
-        g.moveTo(xx - 62, yy + 9); g.lineTo(xx + 48, yy + 9);
-        g.moveTo(xx - 20, yy + 4); g.lineTo(xx + 61, yy + 5);
-        g.strokePath();
-        if (worn > .68) {
-          g.lineStyle(1, 0xa17a4c, .18);
-          g.beginPath(); g.moveTo(xx - 28, yy + 2); g.lineTo(xx - 10, yy + 14); g.strokePath();
-        }
+        const woodTop = worn > .55 ? 0x513820 : 0x422f1f;
+        this.drawPrism(g, xx - 80, yy, 160, 17, 13, woodTop, 0x241a12, 0x302116, 7);
+
+        // Raised backrest: a true vertical element, not another floor rectangle.
+        g.fillStyle(0x1d150f, 1);
+        g.fillRect(xx - 75, yy - 15, 150, 8);
+        g.fillStyle(0x563b23, 1);
+        g.fillRect(xx - 72, yy - 19, 144, 8);
+        g.lineStyle(1, 0x8c6742, .18);
+        g.beginPath(); g.moveTo(xx - 66, yy - 17); g.lineTo(xx + 57, yy - 17); g.strokePath();
+
+        g.fillStyle(0x1d1711, 1);
+        g.fillRect(xx - 72, yy + 22, 7, 15);
+        g.fillRect(xx + 65, yy + 22, 7, 15);
       }
     }
 
-    // Iron devotional basins.
     for (const xx of [245, 655]) {
-      g.fillStyle(0x0b0b0a, .55); g.fillEllipse(xx + 4, 1822, 60, 24);
-      g.fillStyle(0x373832, 1); g.fillCircle(xx, 1812, 27);
-      g.lineStyle(3, 0x151613, .92); g.strokeCircle(xx, 1812, 17);
-      g.lineStyle(1, 0x89816c, .26); g.strokeCircle(xx, 1812, 23);
-      g.fillStyle(0x171a18, 1); g.fillEllipse(xx, 1813, 25, 12);
+      g.fillStyle(0x090909, .52); g.fillEllipse(xx + 4, 1827, 62, 21);
+      g.fillStyle(0x343630, 1); g.fillRect(xx - 22, 1797, 44, 15);
+      g.fillStyle(0x4b4c45, 1); g.fillEllipse(xx, 1797, 48, 19);
+      g.fillStyle(0x151715, 1); g.fillEllipse(xx, 1798, 30, 11);
+      g.lineStyle(1, 0x918874, .22); g.strokeEllipse(xx, 1797, 45, 17);
     }
 
-    // Rubble and old candle drips keep the negative space from feeling generated.
     const debris = [[164,1988,6],[714,2058,5],[346,2168,4],[656,2187,7],[198,2112,3]] as Array<[number,number,number]>;
     for (const [dx,dy,r] of debris) {
-      g.fillStyle(0x4b473c, .62); g.fillCircle(dx,dy,r);
-      g.fillStyle(0x77705d, .15); g.fillCircle(dx-1.5,dy-1.5,Math.max(1,r*.45));
+      g.fillStyle(0x4b473c, .62); g.fillEllipse(dx,dy,r*2,r);
+      g.fillStyle(0x77705d, .15); g.fillEllipse(dx-1.5,dy-1.5,Math.max(1,r*.8),Math.max(1,r*.35));
     }
   }
 
   private drawCryptProps(g: Phaser.GameObjects.Graphics) {
     for (const [x, y, open] of [[305, 1180, 1], [595, 1288, 0], [310, 1350, 0]] as Array<[number, number, number]>) {
-      g.fillStyle(0x080807, .72);
-      g.fillRoundedRect(x - 66 + 9, y - 29 + 11, 132, 58, 8);
-      g.fillStyle(open ? 0x302f2a : 0x3d3b33, 1);
-      g.fillRoundedRect(x - 66, y - 29, 132, 58, 8);
-      g.fillStyle(0x565247, .42);
-      g.fillRoundedRect(x - 58, y - 22, 116, 13, 5);
-      g.lineStyle(2, 0x8e8775, .23);
-      g.strokeRoundedRect(x - 60, y - 23, 120, 46, 6);
-      g.lineStyle(1, 0x141412, .82);
-      g.beginPath();
-      g.moveTo(x - 38, y); g.lineTo(x + 38, y);
-      g.moveTo(x, y - 15); g.lineTo(x, y + 16);
-      g.strokePath();
-      g.lineStyle(1, 0x8a806d, .12);
-      g.beginPath();
-      g.moveTo(x - 43, y + 15); g.lineTo(x - 18, y + 15);
-      g.moveTo(x + 18, y + 15); g.lineTo(x + 43, y + 15);
-      g.strokePath();
+      this.drawPrism(g, x - 66, y - 25, 132, 36, 24, open ? 0x39372f : 0x464239, 0x282721, 0x343129, 9);
+      g.lineStyle(2, 0x8a826f, .2);
+      g.beginPath(); g.moveTo(x - 39, y - 16); g.lineTo(x + 35, y - 16); g.strokePath();
+      g.lineStyle(1, 0x171714, .72);
+      g.beginPath(); g.moveTo(x, y - 21); g.lineTo(x, y + 5); g.strokePath();
       if (open) {
-        g.fillStyle(0x090a09, .88);
-        g.fillRoundedRect(x - 49, y - 12, 98, 27, 4);
-        g.lineStyle(2, 0x605b4e, .35);
-        g.beginPath(); g.moveTo(x - 61, y - 25); g.lineTo(x + 57, y - 38); g.strokePath();
+        g.fillStyle(0x080908, .9);
+        g.beginPath();
+        g.moveTo(x - 48, y - 18); g.lineTo(x + 42, y - 18);
+        g.lineTo(x + 35, y + 3); g.lineTo(x - 52, y + 3); g.closePath(); g.fillPath();
+        g.lineStyle(2, 0x5f5b4f, .35);
+        g.beginPath(); g.moveTo(x - 55, y - 27); g.lineTo(x + 55, y - 42); g.strokePath();
       }
     }
 
-    // Damp barefoot impressions: subdued enough to be discovered, not quest-marker blue.
     for (const [fx,fy,flip] of [[470,1112,0],[486,1091,1],[470,1067,0]] as Array<[number,number,number]>) {
       g.fillStyle(0x4b4033, .2);
-      g.fillEllipse(fx, fy, 31, 12);
-      g.fillEllipse(fx + (flip ? -9 : 9), fy - 7, 9, 5);
+      g.fillEllipse(fx, fy, 26, 9);
+      g.fillEllipse(fx + (flip ? -8 : 8), fy - 5, 8, 4);
     }
 
-    // Wall-side ossuary shelves without the usual fantasy skull spam.
-    g.fillStyle(0x211f1a, .7); g.fillRect(672, 1060, 25, 208);
+    // Ossuary shelves are upright architecture, visually rooted with a base shadow.
+    g.fillStyle(0x070706, .5); g.fillRect(675, 1069, 31, 208);
+    g.fillStyle(0x241f19, 1); g.fillRect(672, 1058, 25, 208);
+    g.fillStyle(0x4a3b2c, .45); g.fillRect(675, 1058, 5, 208);
     for (let sy = 1080; sy < 1250; sy += 42) {
-      g.fillStyle(0x474338, .45); g.fillRect(676, sy, 17, 3);
-      g.fillStyle(0xb0a68d, .16); g.fillEllipse(684, sy - 7, 13, 5);
+      g.fillStyle(0x50483a, .5); g.fillRect(676, sy, 17, 3);
+      g.fillStyle(0xb0a68d, .15); g.fillEllipse(684, sy - 7, 13, 5);
     }
   }
 
   private drawHallProps(g: Phaser.GameObjects.Graphics) {
     const pedestals = [[300, 560], [450, 530], [600, 560]] as Array<[number, number]>;
 
-    // The oath diagram is carved rather than glowing until the ritual responds.
     g.lineStyle(7, 0x0d0f0f, .44);
     g.beginPath();
-    g.moveTo(300, 560); g.lineTo(450, 690); g.lineTo(600, 560);
-    g.moveTo(450, 530); g.lineTo(450, 690);
+    g.moveTo(300, 570); g.lineTo(450, 700); g.lineTo(600, 570);
+    g.moveTo(450, 540); g.lineTo(450, 700);
     g.strokePath();
     g.lineStyle(2, 0x5e6869, .18);
     g.beginPath();
-    g.moveTo(300, 560); g.lineTo(450, 690); g.lineTo(600, 560);
-    g.moveTo(450, 530); g.lineTo(450, 690);
+    g.moveTo(300, 570); g.lineTo(450, 700); g.lineTo(600, 570);
+    g.moveTo(450, 540); g.lineTo(450, 700);
     g.strokePath();
 
-    g.fillStyle(0x0a0a09, .72); g.fillCircle(450 + 5, 690 + 8, 45);
-    g.fillStyle(0x24241f, 1); g.fillCircle(450, 690, 38);
-    g.lineStyle(2, 0x6f6959, .23); g.strokeCircle(450, 690, 31);
-    g.lineStyle(1, 0x8b8370, .13); g.strokeCircle(450, 690, 22);
+    this.drawCylinderPedestal(g, 450, 682, 72, 24, 14, 0x34352f, 0x1d1e1b);
 
     for (let index = 0; index < pedestals.length; index += 1) {
       const [x, y] = pedestals[index];
-      g.fillStyle(0x080808, .72);
-      g.fillEllipse(x + 7, y + 25, 91, 38);
-      g.fillStyle(index === 2 ? 0x3a3932 : 0x454238, 1);
-      g.fillCircle(x, y, 45);
-      g.fillStyle(0x595448, .36);
-      g.fillEllipse(x - 5, y - 8, 59, 27);
-      g.lineStyle(3, 0x877f6a, .3);
-      g.strokeCircle(x, y, 36);
-      g.lineStyle(1, 0xa19983, .16);
-      g.strokeCircle(x, y, 29);
+      this.drawCylinderPedestal(g, x, y, 82, 29, 22, index === 2 ? 0x46443b : 0x514d40, 0x292823);
       g.fillStyle(0x111210, 1);
-      g.fillCircle(x, y, 15);
-      g.lineStyle(2, 0x777565, .22);
+      g.fillEllipse(x, y - 1, 28, 11);
+      g.lineStyle(2, 0x817c69, .24);
       g.beginPath();
       if (index === 0) {
-        g.moveTo(x - 8, y); g.lineTo(x + 8, y); g.moveTo(x, y - 8); g.lineTo(x, y + 8);
+        g.moveTo(x - 8, y - 1); g.lineTo(x + 8, y - 1); g.moveTo(x, y - 6); g.lineTo(x, y + 4);
       } else if (index === 1) {
-        g.moveTo(x, y - 9); g.lineTo(x + 7, y + 2); g.lineTo(x, y + 9); g.lineTo(x - 7, y + 2); g.closePath();
+        g.moveTo(x, y - 7); g.lineTo(x + 7, y); g.lineTo(x, y + 7); g.lineTo(x - 7, y); g.closePath();
       } else {
         g.moveTo(x - 7, y - 5); g.lineTo(x + 7, y + 5);
         g.moveTo(x + 7, y - 5); g.lineTo(x - 7, y + 5);
@@ -607,10 +682,9 @@ class OathScene extends Phaser.Scene {
       g.strokePath();
     }
 
-    // Broken concentric engraving around the central seal.
     for (const radius of [86, 128, 172]) {
       g.lineStyle(1, 0x5b5b50, radius === 86 ? .15 : .09);
-      g.strokeCircle(450, 655, radius);
+      g.strokeEllipse(450, 665, radius * 2, radius * 1.28);
     }
   }
 
@@ -798,83 +872,82 @@ class OathScene extends Phaser.Scene {
     body.setMaxVelocity(150, 150);
     this.physics.add.collider(this.player, this.walls);
 
-    const shadow = this.add.ellipse(2, 16, 42, 18, 0x000000, .62);
+    // Character art is upright in screen space. The old implementation rotated
+    // this entire container with movement direction, which made the knight read
+    // like a cardboard token lying on the floor.
+    const shadow = this.add.ellipse(1, 25, 44, 14, 0x000000, .68);
 
-    const boots = this.add.graphics();
-    boots.fillStyle(0x181713, 1);
-    boots.fillEllipse(-7, 15, 9, 15);
-    boots.fillEllipse(7, 15, 9, 15);
-    boots.fillStyle(0x514637, .28);
-    boots.fillRect(-10, 12, 7, 3);
-    boots.fillRect(3, 12, 7, 3);
+    const legs = this.add.graphics();
+    legs.fillStyle(0x171714, 1);
+    legs.fillRoundedRect(-8, 9, 7, 18, 3);
+    legs.fillRoundedRect(2, 9, 7, 18, 3);
+    legs.fillStyle(0x4d4234, .34);
+    legs.fillEllipse(-5, 27, 10, 5);
+    legs.fillEllipse(6, 27, 10, 5);
 
     const cloak = this.add.graphics();
-    cloak.fillStyle(0x171b1c, .96);
+    cloak.fillStyle(0x171b1c, .98);
     cloak.beginPath();
-    cloak.moveTo(-15, -2); cloak.lineTo(-17, 11); cloak.lineTo(-8, 29);
-    cloak.lineTo(0, 33); cloak.lineTo(9, 29); cloak.lineTo(17, 11); cloak.lineTo(14, -2); cloak.closePath();
+    cloak.moveTo(-14, -4); cloak.lineTo(-17, 10); cloak.lineTo(-11, 27);
+    cloak.lineTo(0, 34); cloak.lineTo(11, 27); cloak.lineTo(17, 10); cloak.lineTo(14, -4); cloak.closePath();
     cloak.fillPath();
-    cloak.fillStyle(0x31383a, .68);
+    cloak.fillStyle(0x30383a, .64);
     cloak.beginPath();
-    cloak.moveTo(-9, 2); cloak.lineTo(-9, 20); cloak.lineTo(0, 29); cloak.lineTo(8, 20); cloak.lineTo(9, 2); cloak.closePath();
+    cloak.moveTo(-9, 0); cloak.lineTo(-10, 19); cloak.lineTo(0, 29); cloak.lineTo(9, 19); cloak.lineTo(9, 0); cloak.closePath();
     cloak.fillPath();
-    cloak.lineStyle(1, 0x777a74, .2);
-    cloak.beginPath(); cloak.moveTo(-13, 8); cloak.lineTo(0, 31); cloak.lineTo(13, 8); cloak.strokePath();
-    cloak.lineStyle(1, 0x131515, .78);
-    cloak.beginPath(); cloak.moveTo(0, 5); cloak.lineTo(0, 29); cloak.strokePath();
+    cloak.lineStyle(1, 0x7b7e78, .18);
+    cloak.beginPath(); cloak.moveTo(-12, 9); cloak.lineTo(0, 31); cloak.lineTo(12, 9); cloak.strokePath();
     this.knightCloak = cloak;
 
     const torso = this.add.graphics();
-    // mail shadow / tunic
-    torso.fillStyle(0x232725, 1); torso.fillRoundedRect(-13, -7, 26, 28, 7);
-    torso.fillStyle(0x505451, 1); torso.fillRoundedRect(-10, -6, 20, 24, 6);
-    torso.fillStyle(0x77786f, .34); torso.fillRect(-8, -4, 16, 4);
-    // belt, buckle and breast strap
-    torso.fillStyle(0x211b15, 1); torso.fillRect(-11, 9, 22, 5);
+    torso.fillStyle(0x232725, 1); torso.fillRoundedRect(-14, -10, 28, 27, 8);
+    torso.fillStyle(0x555955, 1); torso.fillRoundedRect(-10, -8, 20, 22, 6);
+    torso.fillStyle(0x77786f, .34); torso.fillRect(-8, -6, 16, 4);
+    torso.fillStyle(0x211b15, 1); torso.fillRect(-12, 9, 24, 5);
     torso.fillStyle(0x9a8059, .72); torso.fillRect(-2, 9, 4, 5);
     torso.lineStyle(2, 0x2b241b, .8);
-    torso.beginPath(); torso.moveTo(-8, -4); torso.lineTo(8, 10); torso.strokePath();
-    // asymmetrical pauldrons
-    torso.fillStyle(0x686a64, .92); torso.fillEllipse(-13, -3, 11, 9);
-    torso.fillStyle(0x4b504e, .96); torso.fillEllipse(13, -2, 10, 8);
-    torso.lineStyle(1, 0xa8a294, .3); torso.strokeEllipse(-13, -3, 10, 8);
-    // hood / head with warm skin barely visible
-    torso.fillStyle(0x1c1d1b, 1); torso.fillCircle(0, -14, 10);
-    torso.fillStyle(0x977d5c, .9); torso.fillEllipse(0, -13, 10, 9);
-    torso.fillStyle(0x252724, 1);
+    torso.beginPath(); torso.moveTo(-8, -5); torso.lineTo(8, 10); torso.strokePath();
+
+    // Raised shoulders and hood create an upright 3/4 silhouette.
+    torso.fillStyle(0x6f716a, .92); torso.fillEllipse(-13, -5, 12, 9);
+    torso.fillStyle(0x4b504e, .96); torso.fillEllipse(13, -4, 11, 8);
+    torso.lineStyle(1, 0xaaa495, .28); torso.strokeEllipse(-13, -5, 11, 8);
+    torso.fillStyle(0x1a1c1b, 1); torso.fillEllipse(0, -18, 18, 20);
+    torso.fillStyle(0x8f7658, .68); torso.fillEllipse(1, -16, 8, 7);
+    torso.fillStyle(0x292b28, 1);
     torso.beginPath();
-    torso.moveTo(-9, -16); torso.lineTo(-5, -23); torso.lineTo(5, -23); torso.lineTo(10, -15);
-    torso.lineTo(6, -9); torso.lineTo(0, -12); torso.lineTo(-6, -9); torso.closePath();
+    torso.moveTo(-10, -20); torso.lineTo(-5, -28); torso.lineTo(5, -28); torso.lineTo(11, -19);
+    torso.lineTo(6, -11); torso.lineTo(0, -14); torso.lineTo(-6, -11); torso.closePath();
     torso.fillPath();
-    torso.lineStyle(1, 0x7d7b72, .22); torso.beginPath(); torso.moveTo(-5,-20); torso.lineTo(5,-20); torso.strokePath();
+    torso.lineStyle(1, 0x858278, .22); torso.beginPath(); torso.moveTo(-5,-24); torso.lineTo(5,-24); torso.strokePath();
 
     const shield = this.add.graphics();
-    shield.fillStyle(0x16191a, .72);
+    shield.fillStyle(0x151819, .84);
     shield.beginPath();
-    shield.moveTo(-11, -14); shield.lineTo(10, -10); shield.lineTo(11, 6); shield.lineTo(0, 18); shield.lineTo(-12, 6); shield.closePath();
+    shield.moveTo(-12, -16); shield.lineTo(10, -11); shield.lineTo(12, 7); shield.lineTo(0, 20); shield.lineTo(-13, 7); shield.closePath();
     shield.fillPath();
-    shield.lineStyle(2, 0x8b8069, .82); shield.strokePath();
-    shield.fillStyle(0x394144, .82);
+    shield.lineStyle(2, 0x91856d, .84); shield.strokePath();
+    shield.fillStyle(0x3a4447, .84);
     shield.beginPath();
-    shield.moveTo(-7, -10); shield.lineTo(6, -7); shield.lineTo(7, 4); shield.lineTo(0, 12); shield.lineTo(-8, 4); shield.closePath();
+    shield.moveTo(-8, -11); shield.lineTo(7, -8); shield.lineTo(8, 5); shield.lineTo(0, 14); shield.lineTo(-9, 5); shield.closePath();
     shield.fillPath();
-    shield.lineStyle(1, 0x9a9180, .42); shield.strokePath();
     shield.lineStyle(2, 0xb39a6f, .38);
-    shield.beginPath(); shield.moveTo(0, -7); shield.lineTo(0, 10); shield.strokePath();
-    shield.fillStyle(0x9d895f, .65);
-    shield.fillCircle(0, 1, 2.2);
-    this.knightShield = this.add.container(-17, 1, [shield]);
+    shield.beginPath(); shield.moveTo(0, -7); shield.lineTo(0, 11); shield.strokePath();
+    shield.fillStyle(0xa58d62, .66); shield.fillCircle(0, 2, 2.3);
+    this.knightShield = this.add.container(-19, 2, [shield]);
 
     const hammerG = this.add.graphics();
-    hammerG.fillStyle(0x4c3927, 1); hammerG.fillRoundedRect(-2, -19, 4, 31, 1);
-    hammerG.fillStyle(0x242827, 1); hammerG.fillRoundedRect(-12, -26, 24, 10, 2);
-    hammerG.fillStyle(0x555957, .72); hammerG.fillRect(-10, -24, 20, 3);
-    hammerG.lineStyle(1, 0xb0a893, .38); hammerG.strokeRoundedRect(-12, -26, 24, 10, 2);
-    hammerG.fillStyle(0x242522, 1); hammerG.fillRect(8, -23, 8, 4);
-    this.knightHammer = this.add.container(17, 3, [hammerG]);
-    this.knightHammer.rotation = .3;
+    hammerG.fillStyle(0x4c3927, 1); hammerG.fillRoundedRect(-2, -21, 4, 34, 1);
+    hammerG.fillStyle(0x242827, 1); hammerG.fillRoundedRect(-12, -29, 24, 10, 2);
+    hammerG.fillStyle(0x5c605d, .7); hammerG.fillRect(-10, -27, 20, 3);
+    hammerG.lineStyle(1, 0xb0a893, .4); hammerG.strokeRoundedRect(-12, -29, 24, 10, 2);
+    this.knightHammer = this.add.container(19, 4, [hammerG]);
+    this.knightHammer.rotation = .26;
 
-    this.knight = this.add.container(this.player.x, this.player.y, [shadow, boots, cloak, torso, this.knightShield, this.knightHammer]).setDepth(40);
+    this.knight = this.add.container(
+      this.player.x, this.player.y - 10,
+      [shadow, legs, cloak, torso, this.knightShield, this.knightHammer]
+    ).setDepth(40);
   }
 
   private createAtmosphere() {
@@ -1374,7 +1447,7 @@ class OathScene extends Phaser.Scene {
       if (enemy.dead) continue;
       enemy.cooldown = Math.max(0, enemy.cooldown - dt);
       enemy.stun = Math.max(0, enemy.stun - dt);
-      enemy.visual.setPosition(enemy.body.x, enemy.body.y);
+      enemy.visual.setPosition(enemy.body.x, enemy.body.y - (enemy.kind === 'bearer' ? 13 : 9));
       enemy.ring.setPosition(enemy.body.x, enemy.body.y);
 
       const dx = this.player.x - enemy.body.x;
@@ -1383,7 +1456,7 @@ class OathScene extends Phaser.Scene {
 
       if (enemy.stun > 0) {
         enemy.body.setVelocity(0, 0);
-        enemy.visual.rotation += dt * (enemy.kind === 'bearer' ? .8 : 1.8);
+        enemy.visual.rotation = Math.sin(this.walkPhase * (enemy.kind === 'bearer' ? 10 : 15)) * (enemy.kind === 'bearer' ? .05 : .08);
         enemy.ring.setAlpha(0);
         continue;
       }
@@ -1410,14 +1483,16 @@ class OathScene extends Phaser.Scene {
         if (distance < 145) enemy.body.setVelocity((-dx / distance) * 62, (-dy / distance) * 62);
         else if (distance > 245) enemy.body.setVelocity((dx / distance) * 48, (dy / distance) * 48);
         else enemy.body.setVelocity(0, 0);
-        enemy.visual.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+        enemy.visual.rotation = 0;
+      enemy.visual.setScale(dx < 0 ? -1 : 1, 1);
         if (distance < 330 && enemy.cooldown <= 0) enemy.windup = .72;
       } else {
         const range = enemy.kind === 'bearer' ? 88 : 68;
         const speed = enemy.kind === 'bearer' ? 48 : 68;
         if (distance > range - 9) {
           enemy.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
-          enemy.visual.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+          enemy.visual.rotation = 0;
+        enemy.visual.setScale(dx < 0 ? -1 : 1, 1);
         } else enemy.body.setVelocity(0, 0);
         if (distance <= range && enemy.cooldown <= 0) enemy.windup = enemy.kind === 'bearer' ? .82 : .52;
       }
@@ -1536,7 +1611,7 @@ class OathScene extends Phaser.Scene {
     if (!enemy || enemy.dead) return;
     enemy.cooldown = Math.max(0, enemy.cooldown - dt);
     enemy.stun = Math.max(0, enemy.stun - dt);
-    enemy.visual.setPosition(enemy.body.x, enemy.body.y);
+    enemy.visual.setPosition(enemy.body.x, enemy.body.y - 9);
     enemy.ring.setPosition(enemy.body.x, enemy.body.y);
 
     const dx = this.player.x - enemy.body.x;
@@ -1545,7 +1620,7 @@ class OathScene extends Phaser.Scene {
 
     if (enemy.stun > 0) {
       enemy.body.setVelocity(0, 0);
-      enemy.visual.rotation += dt * 2.1;
+      enemy.visual.rotation = Math.sin(this.walkPhase * 18) * .08;
       enemy.ring.setAlpha(0);
       return;
     }
@@ -1751,15 +1826,34 @@ class OathScene extends Phaser.Scene {
       this.walkPhase += dt * 2.1;
     }
 
-    this.knight.setPosition(this.player.x, this.player.y + Math.sin(this.walkPhase) * (len > .08 ? 1.2 : .35));
-    this.knight.rotation = this.facing + Math.PI / 2;
-    this.knightCloak.scaleY = 1 + Math.sin(this.walkPhase * .5) * .025;
-    this.knightShield.rotation = inputState.guardHeld ? -.38 : -.06 + Math.sin(this.walkPhase) * .04;
+    const moving = len > .08;
+    const bob = Math.sin(this.walkPhase) * (moving ? 1.2 : .3);
+    const side = Math.cos(this.facing);
+    const vertical = Math.sin(this.facing);
+    const facingLeft = side < -.12;
+    const horizontalWeight = Math.abs(side);
+
+    // Crucial 3/4 rule: the character never rotates with the floor plane.
+    this.knight.setPosition(this.player.x, this.player.y - 10 + bob);
+    this.knight.rotation = 0;
+    this.knight.setScale(facingLeft ? -1 : 1, 1);
+
+    // Gear shifts around the torso rather than spinning the whole sprite.
+    const handSide = facingLeft ? -1 : 1;
+    this.knightShield.x = (-18 - horizontalWeight * 2) * handSide;
+    this.knightShield.y = 3 + Math.max(0, -vertical) * 2;
+    this.knightHammer.x = (19 + horizontalWeight * 2) * handSide;
+    this.knightHammer.y = 4 - Math.max(0, vertical) * 2;
+
+    this.knightCloak.scaleY = 1 + Math.sin(this.walkPhase * .5) * .022;
+    this.knightCloak.skewX = moving ? Math.cos(this.walkPhase * .5) * .025 : 0;
+    this.knightShield.rotation = (inputState.guardHeld ? -.28 : -.04 + Math.sin(this.walkPhase) * .035) * handSide;
+
     if (this.attackAnim > 0) {
       const p = 1 - this.attackAnim / .24;
-      this.knightHammer.rotation = -.65 + Math.sin(p * Math.PI) * 2.2;
+      this.knightHammer.rotation = (-.55 + Math.sin(p * Math.PI) * 2.05) * handSide;
     } else {
-      this.knightHammer.rotation = .28 + Math.sin(this.walkPhase) * .05;
+      this.knightHammer.rotation = (.22 + Math.sin(this.walkPhase) * .045) * handSide;
     }
 
     if (inputState.attackPressed || this.keys?.SPACE?.isDown && this.attackCooldown <= 0) {
@@ -1775,6 +1869,7 @@ class OathScene extends Phaser.Scene {
       this.activeInteractable?.action();
     }
   }
+
 
   private updateInteractable() {
     if (this.mode !== 'explore' && this.mode !== 'combat') {
