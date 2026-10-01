@@ -1,30 +1,59 @@
 {
-  "assetCommit": "989126c6",
-  "capturedAt": "2026-09-30T21:31:20.902910+00:00",
+  "assetCommit": "0ef5f12630bf91bd442d30e36b6c38f8fa251e67",
+  "capturedAt": "2026-10-01T07:20:53.987453+00:00",
   "engines": {
     "chromium": "140.0.7339.16",
     "webkit": "26.6 / Playwright build 2359"
   },
+  "captureNote": "Menu and perched captures wait for the compositor; all progression uses actual inputs. Linux software rendering is not a physical phone performance measurement.",
   "files": {
     "public/models/crow.glb": {
-      "bytes": 1628380,
-      "sha256": "33037dbc93922e02469d0034044892c6bcdb088eaf727441c9892cac0aebd812"
+      "bytes": 2046464,
+      "sha256": "7b6bac0b5400cd8a97aa95da2e6e2f4d2a815f89fe4da6ddb28b0e667386d147"
+    },
+    "public/models/crow-distant.glb": {
+      "bytes": 1144692,
+      "sha256": "d4159286730033a442842f95a81de32ea3867524447a27be598deb7a45ade0c3"
     },
     "public/models/world.glb": {
-      "bytes": 1877412,
-      "sha256": "04606fd446cf78e1350e8a3014977eb3bb3be47319c7fb0f5120cb549ca22013"
+      "bytes": 2706992,
+      "sha256": "3713decd5658d90ea85e2dc18fbad1cf775d028892b80115b2f8cd06460aee3a"
     },
     "app.js": {
-      "bytes": 67950,
-      "sha256": "c22a467ca70b30a8477d9d070008cc610c61f550db862f1096bea63b181b87cc"
+      "bytes": 72581,
+      "sha256": "728cef6401873274b9c2d41d67b5b0545628d92da3dcb47c68829a426eb5612e"
     },
     "source/main.ts": {
-      "bytes": 13513,
-      "sha256": "bd04683b2bc3aec91d49f56fe486e5f6f0d3be0983fb335f64eb99b49c69e080"
+      "bytes": 15226,
+      "sha256": "b3b7ae8fc70d07600463a308d3e07d8c7fadadf11a06ad392697755a92d215f3"
+    },
+    "source/camera.ts": {
+      "bytes": 5606,
+      "sha256": "f9c707c323f74bdda3a5b9105e4d54d4ac47a3ce85a38664de32489639a7e889"
+    },
+    "source/crow.ts": {
+      "bytes": 8835,
+      "sha256": "4863f7dcb4b93be4c378d2a3674a9522b6fc1a2b83f76ec1e72a2bf1b697de04"
+    },
+    "source/world.ts": {
+      "bytes": 21403,
+      "sha256": "f0bd1b9a11dbfdd179112004f38fbc8e7004efd3882ef533538988f36078c1d5"
+    },
+    "source/ecology.ts": {
+      "bytes": 20343,
+      "sha256": "dfe0f3c494c898828d57df188075126ba6e308c21ec71f2199f4a662445ea1c1"
     },
     "source/flight.ts": {
       "bytes": 8333,
       "sha256": "07a34e6624402fdddc56c47c60e1132c8a643a8342452f290807c8b262cafd7c"
+    },
+    "asset-forge/crow.py": {
+      "bytes": 18935,
+      "sha256": "92052d8bfc73834ba4fb78d93f60c997669b2f8e41b5a7162a939469a9e42bcd"
+    },
+    "asset-forge/world.py": {
+      "bytes": 12122,
+      "sha256": "3ea4940a5e4950f67a68a8271a654390ca0eb3354395940a37b7e0f004bd019c"
     }
   }
 }

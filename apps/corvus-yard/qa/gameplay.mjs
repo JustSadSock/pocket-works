@@ -31,7 +31,11 @@ try{for(const name of names){
   observed={checks,errors,failed,rendererFps:samples};page.setDefaultTimeout(120000);
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('requestfailed',r=>failed.push(r.url()));
   const state=()=>page.evaluate(()=>window.__AI_TEST_STATE__);
-  const shot=tag=>page.screenshot({path:`${directory}/${name}-${tag}.png`});failureShot=()=>shot('failed');
+  const shot=async tag=>{
+   // Let the first WebKit frame and camera transition reach the compositor.
+   if(tag==='menu'||tag==='perched')await page.waitForTimeout(1000);
+   return page.screenshot({path:`${directory}/${name}-${tag}.png`});
+  };failureShot=()=>shot('failed');
   heartbeat=setInterval(async()=>{try{const s=await state();if(s)console.log(name,'HEARTBEAT',JSON.stringify({phase:s.phase,position:s.position,yaw:s.yaw,speed:s.speed,grounded:s.grounded,mode:s.mode,carry:s.ecology?.carrying,foods:s.ecology?.foods,nuts:s.ecology?.nuts,visited:s.ecology?.visited}));}catch{}},2000);
   const wait=async predicate=>{try{return await page.waitForFunction(predicate,undefined,{timeout:240000});}catch(error){throw Error(`${error.message}; last observed state: ${JSON.stringify(await state())}`);}};
   const tap=async id=>{const b=await page.locator(id).boundingBox();assert(b);await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);};
