@@ -63,9 +63,36 @@ interface EnemyState {
   dead: boolean;
 }
 
+type TowerEnemyKind = 'hushed' | 'watcher' | 'bearer';
+
+interface TowerEnemyState {
+  kind: TowerEnemyKind;
+  encounter: 'bell' | 'boss';
+  body: Phaser.Physics.Arcade.Image;
+  visual: Phaser.GameObjects.Container;
+  ring: Phaser.GameObjects.Arc;
+  health: number;
+  maxHealth: number;
+  cooldown: number;
+  windup: number;
+  stun: number;
+  dead: boolean;
+  attackIndex: number;
+}
+
+interface TowerBolt {
+  visual: Phaser.GameObjects.Arc;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  dead: boolean;
+}
+
 type SceneContext = { save: SaveState; callbacks: GameCallbacks };
 
-const WORLD = { left: 80, top: 70, width: 740, height: 2240 };
+const WORLD = { left: 80, top: -1900, width: 740, height: 4210 };
 
 function noise01(x: number, y: number, seed = 17) {
   const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 33.71) * 43758.5453;
@@ -92,6 +119,13 @@ class OathScene extends Phaser.Scene {
   private activeInteractable: Interactable | null = null;
   private currentDialogue: DialogueNode | null = null;
   private enemy: EnemyState | null = null;
+  private towerEnemies: TowerEnemyState[] = [];
+  private towerBolts: TowerBolt[] = [];
+  private towerEncounter: 'bell' | 'boss' | null = null;
+  private bellGateBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
+  private sealGateBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
+  private bellGateVisual: Phaser.GameObjects.Graphics | null = null;
+  private sealGateVisual: Phaser.GameObjects.Graphics | null = null;
   private secretDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
   private cryptDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
   private towerDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
@@ -213,6 +247,13 @@ class OathScene extends Phaser.Scene {
     this.drawRoom(g, 400, 850, 100, 160, 11);
     this.drawRoom(g, 130, 330, 640, 520, 13);
     this.drawRoom(g, 380, 80, 140, 250, 19);
+    this.drawRoom(g, 260, -280, 380, 360, 23);
+    this.drawRoom(g, 380, -510, 140, 230, 29);
+    this.drawRoom(g, 160, -900, 580, 390, 31);
+    this.drawRoom(g, 380, -1120, 140, 220, 37);
+    this.drawRoom(g, 120, -1540, 660, 420, 41);
+    this.drawRoom(g, 380, -1660, 140, 120, 43);
+    this.drawRoom(g, 240, -1880, 420, 220, 47);
 
     this.drawWallVisual(g, 105, 1684, 690, 24);
     this.drawWallVisual(g, 105, 2208, 690, 28);
@@ -243,14 +284,53 @@ class OathScene extends Phaser.Scene {
     this.drawWallVisual(g, 114, 314, 266, 28);
     this.drawWallVisual(g, 520, 314, 266, 28);
 
-    this.drawWallVisual(g, 364, 64, 172, 28);
+    this.drawWallVisual(g, 364, 64, 36, 28);
+    this.drawWallVisual(g, 500, 64, 36, 28);
     this.drawWallVisual(g, 364, 318, 172, 28);
     this.drawWallVisual(g, 364, 64, 24, 282);
     this.drawWallVisual(g, 512, 64, 24, 282);
 
+    // Tower vestibule
+    this.drawWallVisual(g, 244, -296, 156, 28);
+    this.drawWallVisual(g, 500, -296, 156, 28);
+    this.drawWallVisual(g, 244, 64, 156, 28);
+    this.drawWallVisual(g, 500, 64, 156, 28);
+    this.drawWallVisual(g, 244, -296, 24, 388);
+    this.drawWallVisual(g, 632, -296, 24, 388);
+
+    // Bell stair and floor
+    this.drawWallVisual(g, 364, -526, 24, 258);
+    this.drawWallVisual(g, 512, -526, 24, 258);
+    this.drawWallVisual(g, 144, -916, 256, 28);
+    this.drawWallVisual(g, 500, -916, 256, 28);
+    this.drawWallVisual(g, 144, -522, 256, 28);
+    this.drawWallVisual(g, 500, -522, 256, 28);
+    this.drawWallVisual(g, 144, -916, 24, 422);
+    this.drawWallVisual(g, 732, -916, 24, 422);
+
+    // Archive stair and archive
+    this.drawWallVisual(g, 364, -1136, 24, 248);
+    this.drawWallVisual(g, 512, -1136, 24, 248);
+    this.drawWallVisual(g, 104, -1556, 296, 28);
+    this.drawWallVisual(g, 500, -1556, 296, 28);
+    this.drawWallVisual(g, 104, -1132, 296, 28);
+    this.drawWallVisual(g, 500, -1132, 296, 28);
+    this.drawWallVisual(g, 104, -1556, 24, 452);
+    this.drawWallVisual(g, 772, -1556, 24, 452);
+
+    // Seal stair and chamber
+    this.drawWallVisual(g, 364, -1676, 24, 148);
+    this.drawWallVisual(g, 512, -1676, 24, 148);
+    this.drawWallVisual(g, 224, -1896, 452, 28);
+    this.drawWallVisual(g, 224, -1672, 176, 28);
+    this.drawWallVisual(g, 500, -1672, 176, 28);
+    this.drawWallVisual(g, 224, -1896, 24, 252);
+    this.drawWallVisual(g, 652, -1896, 24, 252);
+
     this.drawChapelProps(g);
     this.drawCryptProps(g);
     this.drawHallProps(g);
+    this.drawTowerProps(g);
     this.drawCracks(g);
   }
 
@@ -533,6 +613,79 @@ class OathScene extends Phaser.Scene {
     }
   }
 
+  private drawTowerProps(g: Phaser.GameObjects.Graphics) {
+    // Vestibule: damp stair landing and the first clear continuation of the barefoot trail.
+    g.fillStyle(0x0b0b0a, .6);
+    g.fillEllipse(450, -108, 185, 74);
+    for (let sy = 34; sy > -245; sy -= 43) {
+      const width = 150 + Math.abs(sy % 86) * .4;
+      g.fillStyle(0x37352e, 1);
+      g.fillRect(450 - width / 2, sy, width, 18);
+      g.fillStyle(0x5d5748, .22);
+      g.fillRect(450 - width / 2 + 5, sy + 2, width - 10, 3);
+      g.lineStyle(1, 0x11110e, .75);
+      g.beginPath(); g.moveTo(450 - width / 2, sy + 17); g.lineTo(450 + width / 2, sy + 17); g.strokePath();
+    }
+
+    // Bell floor: one huge cracked bell, hanging off-axis. Its missing tongue becomes a clue.
+    g.fillStyle(0x070706, .7);
+    g.fillEllipse(456, -688, 236, 92);
+    g.fillStyle(0x3e3a30, 1);
+    g.beginPath();
+    g.moveTo(366, -760); g.lineTo(534, -750); g.lineTo(558, -668); g.lineTo(342, -668); g.closePath();
+    g.fillPath();
+    g.fillStyle(0x685c45, .34);
+    g.beginPath(); g.moveTo(382, -746); g.lineTo(519, -738); g.lineTo(528, -724); g.lineTo(374, -730); g.closePath(); g.fillPath();
+    g.lineStyle(4, 0x201d17, .9);
+    g.beginPath(); g.moveTo(397, -760); g.lineTo(422, -690); g.lineTo(408, -668); g.strokePath();
+    g.lineStyle(2, 0x91836a, .24);
+    g.beginPath(); g.moveTo(374, -702); g.lineTo(542, -694); g.strokePath();
+    for (const x of [372, 528]) {
+      g.lineStyle(3, 0x343630, .7);
+      g.beginPath(); g.moveTo(x, -878); g.lineTo(x + (x < 450 ? 24 : -20), -760); g.strokePath();
+    }
+
+    // Archive: dense vertical shelves, one desk, and deliberate gaps where registers were removed.
+    for (const x of [156, 238, 662, 744]) {
+      g.fillStyle(0x1c1711, .9); g.fillRect(x - 28, -1500, 56, 330);
+      g.lineStyle(2, 0x56412d, .44); g.strokeRect(x - 28, -1500, 56, 330);
+      for (let sy = -1478; sy < -1184; sy += 44) {
+        g.fillStyle(0x453321, .66); g.fillRect(x - 24, sy, 48, 3);
+        for (let book = 0; book < 5; book += 1) {
+          if ((book + Math.abs(sy) + x) % 7 === 0) continue;
+          const bw = 5 + (book % 3) * 2;
+          g.fillStyle(book % 2 ? 0x4c3b29 : 0x343129, .82);
+          g.fillRect(x - 20 + book * 9, sy - 25 + (book % 2) * 2, bw, 24 - (book % 3) * 3);
+        }
+      }
+    }
+    g.fillStyle(0x090807, .65); g.fillEllipse(450, -1283, 202, 75);
+    g.fillStyle(0x3b2a1b, 1); g.fillRect(362, -1320, 176, 58);
+    g.fillStyle(0x68472b, .42); g.fillRect(370, -1316, 160, 5);
+    g.lineStyle(1, 0x8f6943, .2); g.strokeRect(362, -1320, 176, 58);
+    g.fillStyle(0xc0b28d, .28); g.fillRect(405, -1305, 83, 46);
+    g.lineStyle(1, 0x554a39, .38);
+    for (let line = 0; line < 5; line += 1) {
+      g.beginPath(); g.moveTo(412, -1296 + line * 7); g.lineTo(479 - line * 3, -1296 + line * 7); g.strokePath();
+    }
+
+    // Seal chamber: stone disc and radial grooves remain mostly achromatic until the choice.
+    g.fillStyle(0x080909, .72); g.fillCircle(458, -1760, 128);
+    g.fillStyle(0x252824, 1); g.fillCircle(450, -1768, 116);
+    for (const radius of [32, 58, 86, 110]) {
+      g.lineStyle(radius === 58 ? 3 : 1, 0x6b7067, radius === 58 ? .24 : .12);
+      g.strokeCircle(450, -1768, radius);
+    }
+    g.lineStyle(2, 0x67777a, .16);
+    for (let i = 0; i < 8; i += 1) {
+      const a = i / 8 * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(450 + Math.cos(a) * 34, -1768 + Math.sin(a) * 34);
+      g.lineTo(450 + Math.cos(a) * 105, -1768 + Math.sin(a) * 105);
+      g.strokePath();
+    }
+  }
+
   private drawCracks(g: Phaser.GameObjects.Graphics) {
     const cracks = [
       [196, 1860, 280, 1822, 305, 1840],
@@ -567,7 +720,28 @@ class OathScene extends Phaser.Scene {
     wall(384, 834, 32, 178); wall(484, 834, 32, 178);
     wall(114, 842, 286, 28); wall(500, 842, 286, 28); wall(114, 314, 24, 556); wall(762, 314, 24, 556);
     wall(114, 314, 266, 28); wall(520, 314, 266, 28);
-    wall(364, 64, 172, 28); wall(364, 64, 24, 282); wall(512, 64, 24, 282);
+    wall(364, 64, 36, 28); wall(500, 64, 36, 28); wall(364, 64, 24, 282); wall(512, 64, 24, 282);
+
+    wall(244, -296, 156, 28); wall(500, -296, 156, 28); wall(244, 64, 156, 28); wall(500, 64, 156, 28);
+    wall(244, -296, 24, 388); wall(632, -296, 24, 388);
+    wall(364, -526, 24, 258); wall(512, -526, 24, 258);
+    wall(144, -916, 256, 28); wall(500, -916, 256, 28); wall(144, -522, 256, 28); wall(500, -522, 256, 28);
+    wall(144, -916, 24, 422); wall(732, -916, 24, 422);
+    wall(364, -1136, 24, 248); wall(512, -1136, 24, 248);
+    wall(104, -1556, 296, 28); wall(500, -1556, 296, 28); wall(104, -1132, 296, 28); wall(500, -1132, 296, 28);
+    wall(104, -1556, 24, 452); wall(772, -1556, 24, 452);
+    wall(364, -1676, 24, 148); wall(512, -1676, 24, 148);
+    wall(224, -1896, 452, 28); wall(224, -1672, 176, 28); wall(500, -1672, 176, 28);
+    wall(224, -1896, 24, 252); wall(652, -1896, 24, 252);
+
+    if (!this.save.flags.bellFightCleared) {
+      this.bellGateBlocker = wall(400, -918, 100, 36);
+      this.bellGateVisual = this.createBarrierVisual(400, -918, 100, 36, 'gate');
+    }
+    if (!this.save.flags.archiveExamined) {
+      this.sealGateBlocker = wall(400, -1558, 100, 36);
+      this.sealGateVisual = this.createBarrierVisual(400, -1558, 100, 36, 'door');
+    }
 
     if (!this.save.flags.secretDoorOpen) {
       this.secretDoorBlocker = wall(400, 1678, 100, 34);
@@ -705,7 +879,9 @@ class OathScene extends Phaser.Scene {
   private createAtmosphere() {
     const lights = [
       [220, 1980, 1.05], [680, 1980, .95], [225, 1120, .72], [675, 1340, .62],
-      [210, 760, .58], [690, 760, .58], [450, 410, .42]
+      [210, 760, .58], [690, 760, .58], [450, 410, .42],
+      [330, -120, .44], [570, -120, .36], [260, -620, .28], [650, -810, .34],
+      [450, -1310, .52], [245, -1440, .28], [660, -1450, .25]
     ] as Array<[number, number, number]>;
     for (const [x, y, scale] of lights) {
       const glow = this.add.image(x, y, 'third-oath-glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(.42).setScale(scale).setDepth(15);
@@ -761,9 +937,29 @@ class OathScene extends Phaser.Scene {
         action: () => this.toast(this.save.flags.hallAwakened ? 'Камень здесь так и не появился.' : 'Пусто. Здесь должно быть третье.')
       },
       {
-        id: 'tower-door', x: 450, y: 340, radius: 74, label: 'Открыть дверь башни',
-        active: () => this.save.flags.hallAwakened === true,
-        action: () => this.completeChapter()
+        id: 'tower-door', x: 450, y: 340, radius: 74, label: 'Войти в старую башню',
+        active: () => this.save.flags.hallAwakened === true && !this.save.flags.chapter1Complete,
+        action: () => this.enterTower()
+      },
+      {
+        id: 'broken-bell', x: 450, y: -710, radius: 92, label: 'Осмотреть разбитый колокол',
+        active: () => this.save.flags.bellFightCleared === true,
+        action: () => this.toast(hasItem(this.save, 'bell-clapper') ? 'На языке колокола выцарапаны имена.' : 'Колокол расколот. Язык вырван.')
+      },
+      {
+        id: 'archive-desk', x: 450, y: -1290, radius: 88, label: 'Изучить реестр',
+        active: () => this.save.flags.bellFightCleared === true,
+        action: () => this.startDialogue('archive')
+      },
+      {
+        id: 'sealed-passage', x: 450, y: -1512, radius: 76, label: 'Проверить печать',
+        active: () => !this.save.flags.archiveExamined,
+        action: () => this.toast('Печать отзывается на выскобленные страницы. Сначала нужен реестр.')
+      },
+      {
+        id: 'elin', x: 450, y: -1768, radius: 104, label: 'Подойти к Элину',
+        active: () => this.save.flags.archiveExamined === true && !this.save.flags.sealChoiceMade && !this.save.flags.towerGuardianDefeated,
+        action: () => this.startElinDialogue()
       }
     ];
   }
@@ -775,6 +971,9 @@ class OathScene extends Phaser.Scene {
       this.ritualCenterGlow = this.add.image(450, 690, 'third-oath-blue-glow').setDepth(19).setScale(.75).setAlpha(.18).setBlendMode(Phaser.BlendModes.ADD);
       this.addFootprints();
     }
+    if (this.save.flags.bellFightCleared) this.openBellGate(false);
+    if (this.save.flags.archiveExamined) this.openSealGate(false);
+    if (this.save.flags.sealChoiceMade && !this.save.flags.towerGuardianDefeated) this.spawnTowerEncounter('boss');
   }
 
   private openSecretDoor() {
@@ -789,6 +988,48 @@ class OathScene extends Phaser.Scene {
     this.save.checkpoint = { x: 450, y: 1770 };
     this.save.position = { x: this.player.x, y: this.player.y };
     this.commitSave();
+  }
+
+  private enterTower() {
+    if (this.save.flags.chapter1Complete) return;
+    this.save.flags.chapter1Complete = true;
+    this.save.chapter = 2;
+    this.save.checkpoint = { x: 450, y: 210 };
+    this.save.position = { x: this.player.x, y: this.player.y };
+    this.commitSave();
+    audio.whisper();
+    this.toast('ГЛАВА II · СТАРАЯ БАШНЯ');
+    if (this.save.flags.gaveNameToElin) this.startDialogue('tower-name');
+    else if (this.save.flags.resistedElin) this.startDialogue('tower-silence');
+    else this.startDialogue('tower-neutral');
+  }
+
+  private startElinDialogue() {
+    if (this.save.flags.gaveNameToElin) this.startDialogue('elin-meet-name');
+    else if (this.save.flags.resistedElin) this.startDialogue('elin-meet-silent');
+    else this.startDialogue('elin-meet-neutral');
+  }
+
+  private openBellGate(withFeedback = true) {
+    this.bellGateBlocker?.destroy();
+    this.bellGateVisual?.destroy();
+    this.bellGateBlocker = null;
+    this.bellGateVisual = null;
+    if (withFeedback) {
+      audio.door();
+      this.cameras.main.shake(150, .003);
+    }
+  }
+
+  private openSealGate(withFeedback = true) {
+    this.sealGateBlocker?.destroy();
+    this.sealGateVisual?.destroy();
+    this.sealGateBlocker = null;
+    this.sealGateVisual = null;
+    if (withFeedback) {
+      audio.door();
+      this.toast('Верхняя печать отпускает дверь.');
+    }
   }
 
   private placeStone(kind: 'oath' | 'tear') {
@@ -886,18 +1127,25 @@ class OathScene extends Phaser.Scene {
     if (!option) return;
     audio.ui();
     let next = option.next;
+    let effect = option.effect;
     if (option.skill && option.difficulty && option.checkId) {
       const passed = resolveHiddenCheck(this.save, option.checkId, option.skill, option.difficulty);
       next = passed ? option.next : option.failNext;
+      if (!passed && option.failNext) effect = undefined;
     }
-    if (option.effect) this.applyDialogueEffect(option.effect);
+    if (effect) this.applyDialogueEffect(effect);
     this.commitSave();
     if (next) {
       this.startDialogue(next);
     } else {
       this.currentDialogue = null;
       this.callbacks.onDialogue(null);
-      this.setMode(this.enemy && !this.enemy.dead ? 'combat' : 'explore');
+      if (this.save.flags.finishChapter2Pending) {
+        this.save.flags.finishChapter2Pending = false;
+        this.completeChapterTwo();
+        return;
+      }
+      this.setMode(this.hasLivingEnemies() ? 'combat' : 'explore');
     }
   }
 
@@ -918,11 +1166,277 @@ class OathScene extends Phaser.Scene {
       this.save.flags.gaveNameToElin = true;
     } else if (effect === 'kept-silence') {
       this.save.flags.resistedElin = true;
+    } else if (effect === 'enter-tower') {
+      this.save.flags.towerVoiceHeard = true;
+    } else if (effect === 'take-archive-leaf') {
+      addItem(this.save, 'archive-leaf');
+      this.save.flags.archiveExamined = true;
+      this.save.flags.archiveTruth = true;
+      audio.pickup();
+      this.toast('ЛИСТ РЕЕСТРА');
+      this.openSealGate();
+    } else if (effect === 'learn-archive-truth') {
+      this.save.flags.archiveExamined = true;
+      this.save.flags.archiveTruth = true;
+      this.openSealGate();
+    } else if (effect === 'choose-break' || effect === 'choose-break-costly') {
+      this.save.flags.sealChoiceMade = true;
+      this.save.flags.sealChoiceBreak = true;
+      if (effect === 'choose-break-costly') this.save.health = Math.max(.5, this.save.health - 1);
+      this.save.resolve = 100;
+      this.spawnTowerEncounter('boss');
+    } else if (effect === 'choose-bind') {
+      this.save.flags.sealChoiceMade = true;
+      this.save.flags.sealChoiceBind = true;
+      this.save.maxHealth = Math.min(9, this.save.maxHealth + 1);
+      this.save.health = Math.min(this.save.maxHealth, this.save.health + 1);
+      this.save.resolve = Math.min(100, this.save.resolve + 35);
+      this.spawnTowerEncounter('boss');
+    } else if (effect === 'choose-cut') {
+      this.save.flags.sealChoiceMade = true;
+      this.save.flags.sealChoiceCut = true;
+      this.save.resolve = Math.min(100, this.save.resolve + 55);
+      this.spawnTowerEncounter('boss');
+    } else if (effect === 'finish-chapter2') {
+      this.save.flags.finishChapter2Pending = true;
     }
   }
 
   private toast(text: string) {
     this.callbacks.onToast(text);
+  }
+
+  private hasLivingEnemies() {
+    return Boolean(this.enemy && !this.enemy.dead) || this.towerEnemies.some((enemy) => !enemy.dead);
+  }
+
+  private spawnTowerEncounter(encounter: 'bell' | 'boss') {
+    if (this.towerEncounter === encounter && this.towerEnemies.some((enemy) => !enemy.dead)) return;
+    this.towerEnemies = this.towerEnemies.filter((enemy) => !enemy.dead);
+    this.towerEncounter = encounter;
+    if (encounter === 'bell') {
+      if (this.save.flags.bellFightCleared) return;
+      this.spawnTowerEnemy('hushed', 285, -685, encounter);
+      this.spawnTowerEnemy('hushed', 615, -650, encounter);
+      this.spawnTowerEnemy('watcher', 450, -820, encounter);
+      this.toast('КОЛОКОЛ ОТВЕЧАЕТ НЕ ЗВУКОМ');
+    } else {
+      if (this.save.flags.towerGuardianDefeated) return;
+      this.spawnTowerEnemy('bearer', 450, -1810, encounter);
+      this.toast('НОСИТЕЛЬ ПЕЧАТИ');
+    }
+    this.setMode('combat');
+  }
+
+  private spawnTowerEnemy(kind: TowerEnemyKind, x: number, y: number, encounter: 'bell' | 'boss') {
+    const body = this.physics.add.image(x, y, 'third-oath-marker');
+    body.setVisible(false);
+    (body.body as Phaser.Physics.Arcade.Body).setCircle(kind === 'bearer' ? 14 : 10, kind === 'bearer' ? 2 : 6, kind === 'bearer' ? 2 : 6);
+    this.physics.add.collider(body, this.walls);
+
+    const shadow = this.add.ellipse(1, kind === 'bearer' ? 20 : 14, kind === 'bearer' ? 56 : 38, kind === 'bearer' ? 21 : 15, 0x000000, .65);
+    const figure = this.add.graphics();
+    if (kind === 'hushed') {
+      figure.fillStyle(0x181a18, 1);
+      figure.beginPath(); figure.moveTo(-14,-4); figure.lineTo(-17,14); figure.lineTo(-8,31); figure.lineTo(0,35); figure.lineTo(9,31); figure.lineTo(17,14); figure.lineTo(14,-4); figure.closePath(); figure.fillPath();
+      figure.fillStyle(0x44463e, .86); figure.fillRoundedRect(-10,-8,20,24,6);
+      figure.fillStyle(0x10110f, 1); figure.fillCircle(0,-14,9);
+      figure.lineStyle(3, 0x777166, .8); figure.beginPath(); figure.moveTo(10,-3); figure.lineTo(22,18); figure.strokePath();
+      figure.fillStyle(0x8d7c60, .32); figure.fillRect(-7,3,14,3);
+    } else if (kind === 'watcher') {
+      figure.fillStyle(0x131819, 1); figure.fillTriangle(-13,8,13,8,0,35);
+      figure.fillStyle(0x39474a, .9); figure.fillRoundedRect(-9,-7,18,22,6);
+      figure.fillStyle(0x0a0d0e, 1); figure.fillCircle(0,-15,10);
+      figure.fillStyle(0x7db5c2, .7); figure.fillRect(-7,-16,14,2);
+      figure.lineStyle(3, 0x48565a, .9); figure.beginPath(); figure.moveTo(12,-3); figure.lineTo(22,20); figure.strokePath();
+      figure.fillStyle(0x7db5c2, .42); figure.fillCircle(22,20,4);
+    } else {
+      figure.fillStyle(0x181918, 1); figure.fillRoundedRect(-18,-9,36,36,8);
+      figure.fillStyle(0x565851, .92); figure.fillRoundedRect(-15,-7,30,31,7);
+      figure.fillStyle(0x262927, 1); figure.fillCircle(0,-19,14);
+      figure.fillStyle(0x73766d, .54); figure.fillRect(-11,-21,22,5);
+      figure.fillStyle(0x2e3231, 1); figure.fillRoundedRect(-27,-4,16,32,5);
+      figure.lineStyle(3, 0x91856f, .64); figure.strokeRoundedRect(-27,-4,16,32,5);
+      figure.lineStyle(5, 0x4a4033, 1); figure.beginPath(); figure.moveTo(18,-8); figure.lineTo(32,26); figure.strokePath();
+      figure.fillStyle(0x2b2c28,1); figure.fillRect(24,21,20,8);
+    }
+    const visual = this.add.container(x, y, [shadow, figure]).setDepth(kind === 'bearer' ? 41 : 39);
+    const ring = this.add.circle(x, y, kind === 'bearer' ? 54 : 40, 0x8d4f3d, 0).setStrokeStyle(2, kind === 'watcher' ? 0x75a8b3 : 0xa36a55, 0).setDepth(16);
+    const maxHealth = kind === 'hushed' ? 3 : kind === 'watcher' ? 3 : (this.save.flags.sealChoiceBind ? 10 : 9);
+    this.towerEnemies.push({
+      kind, encounter, body, visual, ring,
+      health: maxHealth, maxHealth, cooldown: .55, windup: 0, stun: 0, dead: false, attackIndex: 0
+    });
+  }
+
+  private spawnTowerBolt(source: TowerEnemyState) {
+    const dx = this.player.x - source.body.x;
+    const dy = this.player.y - source.body.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const visual = this.add.circle(source.body.x, source.body.y, 6, 0x8fd3df, .85)
+      .setStrokeStyle(2, 0xc2edf2, .65).setBlendMode(Phaser.BlendModes.ADD).setDepth(36);
+    this.towerBolts.push({
+      visual, x: source.body.x, y: source.body.y,
+      vx: dx / len * 190, vy: dy / len * 190, life: 2.4, dead: false
+    });
+    audio.whisper();
+  }
+
+  private updateTowerBolts(dt: number) {
+    for (const bolt of this.towerBolts) {
+      if (bolt.dead) continue;
+      bolt.life -= dt;
+      bolt.x += bolt.vx * dt;
+      bolt.y += bolt.vy * dt;
+      bolt.visual.setPosition(bolt.x, bolt.y);
+      if (bolt.life <= 0) {
+        bolt.dead = true;
+        bolt.visual.destroy();
+        continue;
+      }
+      if (Phaser.Math.Distance.Between(bolt.x, bolt.y, this.player.x, this.player.y) < 20) {
+        const guardAge = performance.now() - inputState.guardPressedAt;
+        if (inputState.guardHeld && guardAge < 250) {
+          this.save.resolve = Math.min(100, this.save.resolve + 18);
+          audio.block();
+          this.toast('ОТБИТО');
+        } else if (inputState.guardHeld) {
+          this.save.resolve = Math.min(100, this.save.resolve + 6);
+          this.damagePlayer(.5);
+        } else {
+          this.damagePlayer(1);
+        }
+        bolt.dead = true;
+        bolt.visual.destroy();
+      }
+    }
+    this.towerBolts = this.towerBolts.filter((bolt) => !bolt.dead);
+  }
+
+  private updateTowerEnemies(dt: number) {
+    for (const enemy of this.towerEnemies) {
+      if (enemy.dead) continue;
+      enemy.cooldown = Math.max(0, enemy.cooldown - dt);
+      enemy.stun = Math.max(0, enemy.stun - dt);
+      enemy.visual.setPosition(enemy.body.x, enemy.body.y);
+      enemy.ring.setPosition(enemy.body.x, enemy.body.y);
+
+      const dx = this.player.x - enemy.body.x;
+      const dy = this.player.y - enemy.body.y;
+      const distance = Math.hypot(dx, dy) || 1;
+
+      if (enemy.stun > 0) {
+        enemy.body.setVelocity(0, 0);
+        enemy.visual.rotation += dt * (enemy.kind === 'bearer' ? .8 : 1.8);
+        enemy.ring.setAlpha(0);
+        continue;
+      }
+
+      const windupDuration = enemy.kind === 'watcher' ? .72 : enemy.kind === 'bearer' ? .82 : .52;
+      if (enemy.windup > 0) {
+        enemy.windup -= dt;
+        enemy.body.setVelocity(0, 0);
+        const progress = 1 - enemy.windup / windupDuration;
+        const baseRadius = enemy.kind === 'bearer' ? 48 : 34;
+        enemy.ring.setRadius(baseRadius + progress * (enemy.kind === 'bearer' ? 30 : 20));
+        enemy.ring.setStrokeStyle(enemy.kind === 'bearer' ? 3.2 : 2.4, enemy.kind === 'watcher' ? 0x79b4c0 : 0xa86d58, .2 + progress * .72);
+        if (enemy.windup <= 0) {
+          enemy.ring.setStrokeStyle(2, 0xa86d58, 0);
+          enemy.attackIndex += 1;
+          if (enemy.kind === 'watcher') this.spawnTowerBolt(enemy);
+          else this.towerEnemyStrike(enemy, distance);
+          enemy.cooldown = enemy.kind === 'bearer' ? .95 : enemy.kind === 'watcher' ? 1.35 : .9;
+        }
+        continue;
+      }
+
+      if (enemy.kind === 'watcher') {
+        if (distance < 145) enemy.body.setVelocity((-dx / distance) * 62, (-dy / distance) * 62);
+        else if (distance > 245) enemy.body.setVelocity((dx / distance) * 48, (dy / distance) * 48);
+        else enemy.body.setVelocity(0, 0);
+        enemy.visual.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+        if (distance < 330 && enemy.cooldown <= 0) enemy.windup = .72;
+      } else {
+        const range = enemy.kind === 'bearer' ? 88 : 68;
+        const speed = enemy.kind === 'bearer' ? 48 : 68;
+        if (distance > range - 9) {
+          enemy.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
+          enemy.visual.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+        } else enemy.body.setVelocity(0, 0);
+        if (distance <= range && enemy.cooldown <= 0) enemy.windup = enemy.kind === 'bearer' ? .82 : .52;
+      }
+    }
+  }
+
+  private towerEnemyStrike(enemy: TowerEnemyState, distance: number) {
+    const range = enemy.kind === 'bearer' ? 100 : 78;
+    if (distance > range) return;
+    const guardAge = performance.now() - inputState.guardPressedAt;
+    if (inputState.guardHeld && guardAge < (enemy.kind === 'bearer' ? 190 : 230)) {
+      this.save.resolve = Math.min(100, this.save.resolve + (enemy.kind === 'bearer' ? 32 : 24));
+      enemy.stun = enemy.kind === 'bearer' ? .62 : .88;
+      this.cameras.main.shake(130, enemy.kind === 'bearer' ? .006 : .004);
+      audio.block();
+      this.toast('ПАРИРОВАНИЕ');
+      this.syncHud();
+      return;
+    }
+    if (inputState.guardHeld) {
+      this.save.resolve = Math.min(100, this.save.resolve + 8);
+      this.damagePlayer(enemy.kind === 'bearer' ? .75 : .5);
+      audio.block();
+      return;
+    }
+    this.damagePlayer(enemy.kind === 'bearer' ? 1.5 : 1);
+  }
+
+  private damageTowerEnemy(enemy: TowerEnemyState, amount: number, stun: number) {
+    if (enemy.dead) return;
+    enemy.health -= amount;
+    enemy.stun = Math.max(enemy.stun, stun);
+    this.save.resolve = Math.min(100, this.save.resolve + (enemy.kind === 'bearer' ? 9 : 12));
+    this.cameras.main.shake(enemy.kind === 'bearer' ? 120 : 90, enemy.kind === 'bearer' ? .005 : .0035);
+    audio.hit();
+    if (enemy.health <= 0) this.killTowerEnemy(enemy);
+  }
+
+  private killTowerEnemy(enemy: TowerEnemyState) {
+    if (enemy.dead) return;
+    enemy.dead = true;
+    enemy.body.setVelocity(0, 0);
+    enemy.body.destroy();
+    enemy.ring.destroy();
+    this.tweens.add({
+      targets: enemy.visual, alpha: 0, scaleX: .72, scaleY: .72,
+      duration: enemy.kind === 'bearer' ? 760 : 430, ease: 'Sine.easeIn',
+      onComplete: () => enemy.visual.destroy()
+    });
+    if (this.towerEnemies.some((candidate) => !candidate.dead && candidate.encounter === enemy.encounter)) return;
+
+    if (enemy.encounter === 'bell') {
+      this.save.flags.bellFightCleared = true;
+      addItem(this.save, 'bell-clapper');
+      this.save.checkpoint = { x: 450, y: -760 };
+      this.openBellGate();
+      audio.pickup();
+      this.toast('ЯЗЫК КОЛОКОЛА');
+      this.towerEncounter = null;
+      this.setMode('explore');
+      this.commitSave();
+    } else {
+      this.save.flags.towerGuardianDefeated = true;
+      addItem(this.save, 'seal-shard');
+      this.save.checkpoint = { x: 450, y: -1730 };
+      this.towerEncounter = null;
+      audio.pickup();
+      this.toast('ОСКОЛОК ПЕЧАТИ');
+      this.commitSave();
+      this.time.delayedCall(620, () => {
+        if (this.save.flags.sealChoiceCut) this.startDialogue('chapter2-cut');
+        else if (this.save.flags.sealChoiceBind) this.startDialogue('chapter2-bind');
+        else this.startDialogue('chapter2-break');
+      });
+    }
   }
 
   private spawnWarden() {
@@ -1038,6 +1552,7 @@ class OathScene extends Phaser.Scene {
       this.setMode('dead');
       this.player.setVelocity(0, 0);
       this.enemy?.body.setVelocity(0, 0);
+      for (const enemy of this.towerEnemies) if (!enemy.dead) enemy.body.setVelocity(0, 0);
       this.callbacks.onDeath();
     }
   }
@@ -1047,22 +1562,43 @@ class OathScene extends Phaser.Scene {
     this.attackCooldown = .38;
     this.attackAnim = .24;
     audio.swing();
-    const enemy = this.enemy;
-    if (!enemy || enemy.dead) return;
-    const dx = enemy.body.x - this.player.x;
-    const dy = enemy.body.y - this.player.y;
-    const dist = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
-    if (dist > 78 || Math.abs(angleDelta(angle, this.facing)) > 1.05) return;
     this.time.delayedCall(85, () => {
-      if (!this.enemy || this.enemy.dead) return;
-      this.enemy.health -= 1;
-      this.enemy.stun = .24;
-      this.save.resolve = Math.min(100, this.save.resolve + 13);
-      this.cameras.main.shake(95, .004);
-      audio.hit();
-      this.syncHud();
-      if (this.enemy.health <= 0) this.killWarden();
+      let bestDistance = Infinity;
+      let towerTarget: TowerEnemyState | null = null;
+      for (const candidate of this.towerEnemies) {
+        if (candidate.dead) continue;
+        const dx = candidate.body.x - this.player.x;
+        const dy = candidate.body.y - this.player.y;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        if (dist <= (candidate.kind === 'bearer' ? 86 : 78) && Math.abs(angleDelta(angle, this.facing)) <= 1.08 && dist < bestDistance) {
+          towerTarget = candidate;
+          bestDistance = dist;
+        }
+      }
+
+      const warden = this.enemy;
+      if (warden && !warden.dead) {
+        const dx = warden.body.x - this.player.x;
+        const dy = warden.body.y - this.player.y;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        if (dist <= 78 && Math.abs(angleDelta(angle, this.facing)) <= 1.05 && dist < bestDistance) {
+          warden.health -= 1;
+          warden.stun = .24;
+          this.save.resolve = Math.min(100, this.save.resolve + 13);
+          this.cameras.main.shake(95, .004);
+          audio.hit();
+          this.syncHud();
+          if (warden.health <= 0) this.killWarden();
+          return;
+        }
+      }
+
+      if (towerTarget) {
+        this.damageTowerEnemy(towerTarget, 1, towerTarget.kind === 'bearer' ? .18 : .26);
+        this.syncHud();
+      }
     });
   }
 
@@ -1089,6 +1625,11 @@ class OathScene extends Phaser.Scene {
         this.enemy.stun = 1.1;
         if (this.enemy.health <= 0) this.killWarden();
       }
+    }
+    for (const enemy of this.towerEnemies) {
+      if (enemy.dead) continue;
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.body.x, enemy.body.y);
+      if (d < 132) this.damageTowerEnemy(enemy, enemy.kind === 'bearer' ? 1.5 : 2, enemy.kind === 'bearer' ? .72 : 1.05);
     }
     this.cameras.main.flash(90, 82, 142, 161, false);
     this.syncHud();
@@ -1206,15 +1747,16 @@ class OathScene extends Phaser.Scene {
     this.callbacks.onZone(zone.name, zone.kicker);
   }
 
-  private completeChapter() {
-    if (!this.save.flags.hallAwakened) return;
+  private completeChapterTwo() {
+    if (!this.save.flags.towerGuardianDefeated) return;
     this.save.completed = true;
+    this.save.flags.chapter2Complete = true;
     this.save.position = { x: this.player.x, y: this.player.y };
     this.commitSave();
     audio.door();
-    this.cameras.main.fadeOut(650, 10, 10, 9);
+    this.cameras.main.fadeOut(720, 10, 10, 9);
     this.setMode('complete');
-    this.time.delayedCall(700, () => this.callbacks.onComplete());
+    this.time.delayedCall(760, () => this.callbacks.onComplete());
   }
 
   private syncHud() {
@@ -1236,6 +1778,12 @@ class OathScene extends Phaser.Scene {
       zone: this.zoneId,
       player: { x: Math.round(this.player?.x ?? this.save.position.x), y: Math.round(this.player?.y ?? this.save.position.y), health: this.save.health, resolve: this.save.resolve },
       enemy: this.enemy && !this.enemy.dead ? { health: this.enemy.health, x: Math.round(this.enemy.body.x), y: Math.round(this.enemy.body.y) } : null,
+      enemies: this.towerEnemies.filter((enemy) => !enemy.dead).map((enemy) => ({
+        kind: enemy.kind, health: enemy.health, maxHealth: enemy.maxHealth,
+        x: Math.round(enemy.body.x), y: Math.round(enemy.body.y)
+      })),
+      projectiles: this.towerBolts.filter((bolt) => !bolt.dead).length,
+      chapter: this.save.chapter,
       inventory: [...this.save.inventory],
       flags: { ...this.save.flags },
       completed: this.save.completed
@@ -1289,9 +1837,13 @@ class OathScene extends Phaser.Scene {
     this.hurtCooldown = Math.max(0, this.hurtCooldown - dt);
 
     if (!this.enemy && !this.save.flags.cryptWardenDefeated && this.player.y < 1430 && this.player.y > 1020) this.spawnWarden();
+    if (this.save.flags.hallAwakened && !this.save.flags.chapter1Complete && this.player.y < 315) this.enterTower();
+    if (this.save.flags.chapter1Complete && !this.save.flags.bellFightCleared && !this.towerEncounter && this.player.y < -535 && this.player.y > -900) this.spawnTowerEncounter('bell');
 
     this.updatePlayer(dt);
     this.updateEnemy(dt);
+    this.updateTowerEnemies(dt);
+    this.updateTowerBolts(dt);
     this.updateInteractable();
     this.updateZone();
 
