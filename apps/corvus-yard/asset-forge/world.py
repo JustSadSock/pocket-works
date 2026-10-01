@@ -1,5 +1,5 @@
 """Authored autumn canal courtyard. Metres; Blender Z-up exported to Babylon Y-up."""
-import bpy, math, random, os, sys
+import bpy, bmesh, math, random, os, sys
 from mathutils import Vector
 random.seed(27)
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
@@ -8,12 +8,23 @@ def mat(name,col,rough=.8,metal=0):
 brick=mat('warm old Amsterdam brick',(.31,.115,.072)); stone=mat('weathered limestone',(.39,.40,.35)); trim=mat('painted ivory window reveals',(.66,.65,.57)); glass=mat('reflective blue grey glass',(.16,.25,.28),.17,.3);roof=mat('hand laid slate tiles',(.14,.17,.18));wood=mat('dark weathered oak',(.16,.105,.055));iron=mat('black wrought iron',(.10,.115,.10),.43,.7); bark=mat('deep grooved plane tree bark',(.20,.16,.115)); amber=mat('ochre autumn foliage',(.38,.28,.095)); rust=mat('copper autumn foliage',(.31,.13,.055));green=mat('muted olive foliage',(.23,.27,.115));leather=mat('car dark blue paint',(.12,.21,.23),.28,.45)
 def pos(x,y,z):return (-x,-z,y) # Babylon glTF LH conversion mirrors X.
 def cube(name,p,s,m,bevel=0):
- bpy.ops.mesh.primitive_cube_add(size=1,location=pos(*p));o=bpy.context.object;o.name=name;o.dimensions=(s[0],s[2],s[1]);bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);o.data.materials.append(m)
+ # Construct geometry directly; operator-based creation resynchronises every
+ # existing facade and leaf each time a small window is added.
+ sx,sy,sz=s[0]/2,s[2]/2,s[1]/2
+ verts=[(-sx,-sy,-sz),(sx,-sy,-sz),(sx,sy,-sz),(-sx,sy,-sz),(-sx,-sy,sz),(sx,-sy,sz),(sx,sy,sz),(-sx,sy,sz)]
+ faces=[(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]
+ me=bpy.data.meshes.new(name);me.from_pydata(verts,[],faces);me.update()
  if bevel:
-  mod=o.modifiers.new('soft weathered edges','BEVEL');mod.width=bevel;mod.segments=2;bpy.context.view_layer.objects.active=o;bpy.ops.object.modifier_apply(modifier=mod.name)
- return o
+  bm=bmesh.new();bm.from_mesh(me);bmesh.ops.bevel(bm,geom=list(bm.edges),offset=bevel,segments=2,affect='EDGES');bm.to_mesh(me);bm.free()
+ me.materials.append(m);o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);o.location=pos(*p);return o
 def branch(name,a,b,r1,r2,m,vertices=9):
- aa=Vector(pos(*a));bb=Vector(pos(*b));d=bb-aa;bpy.ops.mesh.primitive_cone_add(vertices=vertices,radius1=r1,radius2=r2,depth=d.length,location=(aa+bb)/2);o=bpy.context.object;o.name=name;o.rotation_euler=d.to_track_quat('Z','Y').to_euler();o.data.materials.append(m);return o
+ aa=Vector(pos(*a));bb=Vector(pos(*b));d=bb-aa;rotation=d.to_track_quat('Z','Y');center=(aa+bb)/2;verts=[]
+ for radius,z in [(r1,-d.length/2),(r2,d.length/2)]:
+  for i in range(vertices):
+   angle=i*math.tau/vertices;verts.append(tuple(center+rotation @ Vector((math.cos(angle)*radius,math.sin(angle)*radius,z))))
+ faces=[tuple(range(vertices-1,-1,-1)),tuple(range(vertices,vertices*2))]
+ for i in range(vertices):faces.append((i,(i+1)%vertices,(i+1)%vertices+vertices,i+vertices))
+ me=bpy.data.meshes.new(name);me.from_pydata(verts,[],faces);me.update();me.materials.append(m);o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);return o
 def mesh(name,verts,faces,m):
  me=bpy.data.meshes.new(name);me.from_pydata([pos(*v) for v in verts],[],[list(reversed(f)) for f in faces]);me.materials.append(m);o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);return o
 def leaf_fan(name,center,material,count=90):
