@@ -13,7 +13,9 @@ const DENSITY_STORAGE_KEY = 'pocket-works:rasklad:density';
 
 function readStoredDensity() {
   try {
-    const value = Number(localStorage.getItem(DENSITY_STORAGE_KEY));
+    const stored = localStorage.getItem(DENSITY_STORAGE_KEY);
+    if (stored === null) return DEFAULT_DENSITY;
+    const value = Number(stored);
     return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : DEFAULT_DENSITY;
   } catch {
     return DEFAULT_DENSITY;
