@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4b6c70"/>
+      <stop offset="1" stop-color="#38565a"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="206" fill="#28332f" stroke="#8f8169" stroke-width="12"/>
+  <path d="M86 340h340v78H86z" fill="url(#water)"/>
+  <path d="M104 362c64-18 117-14 169 1 57 17 105 16 135-4v59H104z" fill="#5f7e7c" opacity=".72"/>
+  <path d="M132 162h92v194h-92zM288 162h92v194h-92z" fill="#c7b895"/>
+  <path d="M122 162h112l-18-47h-76zM278 162h112l-18-47h-76z" fill="#704a3e"/>
+  <path d="M214 244h84v112h-84z" fill="#39443f"/>
+  <path d="M226 257h60v99h-60z" fill="#a76143"/>
+  <path d="M154 214h48v10h-48zM310 214h48v10h-48z" fill="#786a57"/>
+  <path d="M160 280h36v9h-36zM316 280h36v9h-36z" fill="#786a57"/>
+  <path d="M182 356h148l-30 50h-88z" fill="#b67a4b"/>
+  <path d="M194 356h124" stroke="#dfb06e" stroke-width="9" stroke-linecap="round"/>
+  <path d="M256 116v55" stroke="#4b5550" stroke-width="10"/>
+  <path d="M242 132h28" stroke="#4b5550" stroke-width="8"/>
+  <circle cx="256" cy="101" r="12" fill="#9f5d46"/>
+  <path d="M132 354h248" stroke="#ddc392" stroke-width="10"/>
+</svg>
