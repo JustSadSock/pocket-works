@@ -10,6 +10,24 @@ describe('third-oath state', () => {
     expect(save.inventory).toEqual(['x']);
   });
 
+  it('migrates a completed 0.1 save into the start of Chapter II', () => {
+    const save = normalizeSave({
+      schema: 1,
+      completed: true,
+      health: 4,
+      maxHealth: 5,
+      flags: { hallAwakened: true },
+      position: { x: 450, y: 360 },
+      checkpoint: { x: 450, y: 600 }
+    });
+    expect(save.schema).toBe(2);
+    expect(save.chapter).toBe(2);
+    expect(save.completed).toBe(false);
+    expect(save.flags.chapter1Complete).toBe(true);
+    expect(save.position).toEqual({ x: 450, y: 210 });
+    expect(save.checkpoint).toEqual({ x: 450, y: 210 });
+  });
+
   it('keeps item operations idempotent', () => {
     const save = freshSave();
     addItem(save, 'oath-stone');
