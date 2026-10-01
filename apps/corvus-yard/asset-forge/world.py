@@ -58,7 +58,7 @@ def house(x,z,w,d,h):
  for side in [-1,1]:branch('rain gutter',(x-w/2,h,z+side*d/2),(x+w/2,h,z+side*d/2),.075,.075,iron)
  for t in range(1,8):
   zz=z-d/2+t*d/8
-  branch('roof tile course',(x-w/2-.18,h+.035,zz),(x,h+3.12,zz),.021,.021,stone,5);branch('roof tile course',(x,h+3.12,zz),(x+w/2+.18,h+.035,zz),.021,.021,stone,5)
+  branch('roof tile course',(x-w/2-.18,h+.035,zz),(x,h+3.12,zz),.014,.014,roof,5);branch('roof tile course',(x,h+3.12,zz),(x+w/2+.18,h+.035,zz),.014,.014,roof,5)
 for params in [(-28,27,8,9,13),(-19,28,7,9,15),(-10,28,8,9,12),(26,24,10,12,10),(37,27,9,12,13),(-31,-28,11,12,9),(28,-26,13,10,8)]:house(*params)
 # tower landmark; stacked offsets and louvred bell stage
 cube('bell tower',(3,15,49),(5.6,30,5.6),brick,.12)
@@ -84,6 +84,7 @@ for idx,(x,z,h) in enumerate(TREES):
   angle=strip*math.tau/9;radius=.405
   branch('raised bark ridge',(x+math.cos(angle)*radius,.3,z+math.sin(angle)*radius),(x+.26+math.cos(angle)*.24,h*.55,z+.15+math.sin(angle)*.24),.024,.012,wood,5)
  for k in range(7):
+  if idx==0 and k in [0,3]:continue
   ang=k*2.399+idx;rad=2.7+(k%3)*.7; yy=h*.55+k*.55;end=(x+math.cos(ang)*rad,yy+2.3,z+math.sin(ang)*rad)
   branch('tree spreading branch',(x+.2,yy-.8,z),end,.15,.045,bark)
   # Fine twigs support a porous canopy rather than an opaque polygon ball.
@@ -126,6 +127,13 @@ for x,z in [(-12,-8),(12,2),(-13,15),(21,-16)]:
 for idx in range(11):
  x=-66+idx*12;z=68+(idx%3)*3;h=8+(idx%4)*2.5
  cube('distant courtyard facade',(x,h*.5,z),(10,h,9),[brick,stone][idx%2])
+ for floor in range(int(h/3)):
+  for col in range(4):
+   px=x-3.4+col*2.25;yy=1.6+floor*2.9
+   cube('distant window reveal',(px,yy,z-4.54),(1.0,1.4,.08),trim)
+   cube('distant recessed window',(px,yy,z-4.60),(.80,1.20,.03),glass)
+ cube('distant chimney',(x+2.8,h+1.4,z),(1.0,2.6,.9),brick)
+
  mesh('distant pitched roof',[(x-5,h,z-5),(x+5,h,z-5),(x,h+2.3,z-5),(x-5,h,z+5),(x+5,h,z+5),(x,h+2.3,z+5)],[(0,2,5,3),(1,4,5,2),(0,1,2),(3,5,4)],roof)
 # Merge opaque static geometry by material; canopy stays separate for wind sway.
 for material in list(bpy.data.materials):

@@ -10,3 +10,6 @@
 /icons/
 /models/
 /registerSW.js
+
+/source/node_modules/
+/.dist/

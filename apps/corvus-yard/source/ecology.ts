@@ -79,7 +79,7 @@ export class Ecology {
     this.held=this.items.find(item=>item.root.name===savedProgress?.carriedId&&!item.consumed)||null;
     if(this.held){this.held.alive=false;this.held.velocity.setAll(0);}
     this.persistItems();
-    const homes=perches.filter(p=>p.position.y>2).slice(0,9);
+    const homes=perches.filter(p=>p.position.y>2&&p.id!=='home').slice(0,9);
     homes.forEach((p,i)=>{const size=.55+(i%3)*.06;const home=p.position.add(new Vector3((i%2)*.12,.456*size,0));const root=new TransformNode(`wildlife-${i}`,scene);root.position.copyFrom(home);root.rotation.y=i*2.1;root.scaling.setAll(size);this.birds.push({root,home,target:home.clone(),velocity:Vector3.Zero(),phase:i*1.72,flying:false,timer:3+i,wings:[],blend:0});});
     // The same authored skeleton as the player, shared geometry/materials across all flock members.
     void SceneLoader.LoadAssetContainerAsync('./models/','crow.glb',scene).then(asset=>{

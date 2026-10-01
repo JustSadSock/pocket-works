@@ -2,7 +2,7 @@ import '../../../shared/mobile-runtime.css';
 import './styles.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
-import { Engine, Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, MeshBuilder, StandardMaterial, RawCubeTexture, Constants } from '@babylonjs/core';
+import { Engine, Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, MeshBuilder, StandardMaterial, RawCubeTexture, Constants, ShaderMaterial } from '@babylonjs/core';
 import { World, type Perch } from './world';
 import { CrowRig } from './crow';
 import { CrowCamera } from './camera';
@@ -12,7 +12,7 @@ import { Ecology, type EcologyProgress } from './ecology';
 import { FlightEffects } from './effects';
 import { createCrowState, stepCrow, launchCrow, hitCrow, landCrow } from './flight';
 installMobileRuntime();
-registerEnhancedUpdate({appName:'CORVUS',version:'1.0.0',releaseNotes:['Живой ворон над осенним каналом.']});
+registerEnhancedUpdate({appName:'CORVUS',version:'1.1.0',releaseNotes:['Новое оперение, живые движения и осенний свет.']});
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const canvas=$<HTMLCanvasElement>('scene');
 const namespace='pocket-works:corvus-yard:save';
@@ -34,7 +34,7 @@ $('start').onclick=()=>{play();toast('Удерживай «Взмах» для �
 function pause(){if(phase!=='playing')return;phase='paused';input.reset();audio.pause();save();$('pause-menu').hidden=false;$('controls').hidden=true;}
 $('pause').onclick=pause;$('resume').onclick=play;$('explore').onclick=play;
 $('home').onclick=()=>{state=createCrowState({x:0,y:world.perches[0].position.y+.46,z:-15});support=world.perches[0];state.yaw=0;camera.reset(state);play();toast('Родная ветка. Новый заход.');};
-function interact(){if(phase!=='playing')return;const was=ecology.carrying;toast(ecology.interact(state));audio.event(was?'eat':'pickup',state.position);save();}
+function interact(){if(phase!=='playing')return;const was=ecology.carrying;rig.gestureAction('Peck');toast(ecology.interact(state));audio.event(was?'eat':'pickup',state.position);save();}
 function drop(){if(phase!=='playing')return;toast(ecology.drop(state));audio.event('drop',state.position);}
 $('interact').onclick=interact;$('drop').onclick=drop;
 window.addEventListener('keydown',e=>{if(e.repeat)return;if(e.code==='Escape')phase==='playing'?pause():phase==='paused'?play():null;if(e.code==='KeyE')interact();if(e.code==='KeyQ')drop();});
@@ -66,27 +66,34 @@ function frame(dt:number){elapsed+=dt;
    }
   }else{const p=new Vector3(state.position.x,state.position.y,state.position.z),collision=world.resolve(p,previous,.27);state.position={x:p.x,y:p.y,z:p.z};if(collision)hitCrow(state,collision.normal,state.speed);const supportY=world.supportHeight(p.x,p.z,state.supportY);if(supportY===null||supportY<-.1){state.grounded=false;state.velocity.y=-1;support=null;}else{state.supportY=supportY;state.position.y=supportY+.46;if(support&&Math.hypot(p.x-support.position.x,p.z-support.position.z)>support.radius)support=null;}}
   if(Math.hypot(state.position.x,state.position.z)>78||state.position.y>65){state.yaw=Math.atan2(-state.position.x,-state.position.z);state.velocity.x-=state.position.x*dt*.12;state.velocity.z-=state.position.z*dt*.12;toast('За кварталом сильный ветер. Поворачивай домой.');}
-  ecology.update(dt,elapsed,state);const target=ecology.nearestTarget(state);rig.update(state,input.controls,dt,target?.position);camera.update(state,dt,world.colliders);world.clearCameraView(camera.camera.position);audio.update(state,dt);effects.update(state,dt,world);
+  ecology.update(dt,elapsed,state);const target=ecology.nearestTarget(state);rig.update(state,input.controls,dt,target?.position);if(rig.consumeCall())audio.event('caw',state.position);camera.update(state,dt,world.colliders);world.clearCameraView(camera.camera.position);audio.update(state,dt);effects.update(state,dt,world);
   $('objective').textContent=objective();$('target').hidden=!target;if(target)$('target').textContent=target.label;$('interact').textContent=ecology.carrying?'Съесть':'Взять';$('drop').hidden=!ecology.carrying;
   if(!completed&&ecology.progress.visited.includes('bell-tower')){completed=true;save();phase='complete';input.reset();audio.pause();$('complete').hidden=false;$('controls').hidden=true;$('hud').hidden=true;$('target').hidden=true;$('toast').classList.remove('visible');}
   if(elapsed-lastSave>8){save();lastSave=elapsed;}
- }else if(phase==='menu'){rig?.update(state,{turn:0,pitch:0,flap:0,brake:0},dt);ecology?.update(dt,elapsed,state);}
+ }else if(phase==='menu'){camera?.preview(state,elapsed,dt);rig?.update(state,{turn:0,pitch:0,flap:0,brake:0},dt);ecology?.update(dt,elapsed,state);}
  if(phase==='playing'||phase==='menu')world?.update(dt,elapsed,new Vector3(state.position.x,state.position.y,state.position.z));
  if(elapsed>toastUntil)$('toast').classList.remove('visible');
  (window as unknown as {__AI_TEST_STATE__:unknown}).__AI_TEST_STATE__={phase,position:{...state.position},velocity:{...state.velocity},mode:state.mode,grounded:state.grounded,speed:state.speed,rigReady:rig?.ready,ecology:ecology?.summary(),fps:engine?.getFps(),support:support?.id||null,meshes:scene?.meshes.length,camera:camera?.camera.position.asArray(),yaw:state.yaw,pitch:state.pitch,roll:state.roll,renderMs,quality,activeMeshes:scene?.getActiveMeshes().length,vertices:scene?.getTotalVertices()};
 }
 async function boot(){try{
  engine=new Engine(canvas,false,{preserveDrawingBuffer:false,stencil:false,powerPreference:'high-performance'},true);engine.setHardwareScalingLevel(Math.max(1,devicePixelRatio/1.5));
- scene=new Scene(engine);scene.clearColor=new Color4(.61,.67,.64,1);scene.fogMode=Scene.FOGMODE_EXP;scene.fogDensity=.0035;scene.fogColor=new Color3(.61,.67,.64);scene.imageProcessingConfiguration.exposure=1.1;scene.imageProcessingConfiguration.contrast=1.12;scene.imageProcessingConfiguration.toneMappingEnabled=true;
+ scene=new Scene(engine);scene.clearColor=new Color4(.54,.62,.65,1);scene.fogMode=Scene.FOGMODE_EXP;scene.fogDensity=.0031;scene.fogColor=new Color3(.54,.62,.65);scene.imageProcessingConfiguration.exposure=1.18;scene.imageProcessingConfiguration.contrast=1.20;scene.imageProcessingConfiguration.toneMappingEnabled=true;
  // Local sky irradiance instead of a network HDR dependency.
  const size=16,faces:Uint8Array[]=[];for(let f=0;f<6;f++){const data=new Uint8Array(size*size*4);for(let i=0;i<size*size;i++){const y=Math.floor(i/size)/size,v=f===2?1:f===3?.38:.65+y*.15;data[i*4]=170*v;data[i*4+1]=185*v;data[i*4+2]=185*v;data[i*4+3]=255;}faces.push(data);}scene.environmentTexture=new RawCubeTexture(scene,faces,size,Constants.TEXTUREFORMAT_RGBA,Constants.TEXTURETYPE_UNSIGNED_BYTE,true);
- const sky=MeshBuilder.CreateSphere('overcast sky',{diameter:400,segments:16,sideOrientation:1},scene);const skyMat=new StandardMaterial('mist sky',scene);skyMat.disableLighting=true;skyMat.emissiveColor=new Color3(.62,.69,.67);skyMat.backFaceCulling=false;sky.material=skyMat;sky.isPickable=false;
- const ambient=new HemisphericLight('soft sky',new Vector3(0,1,0),scene);ambient.intensity=.7;ambient.diffuse=new Color3(.79,.86,.85);ambient.groundColor=new Color3(.25,.24,.16);
- const sun=new DirectionalLight('late autumn sun',new Vector3(-.55,-.85,.35),scene);sun.position.set(25,55,-25);sun.intensity=2.1;sun.diffuse=new Color3(1,.86,.63);const shadows=new ShadowGenerator(1024,sun);shadows.useBlurExponentialShadowMap=true;shadows.blurKernel=12;shadows.blurScale=2;shadows.bias=.0008;shadows.normalBias=.025;shadows.setDarkness(.22);
+ const sky=MeshBuilder.CreateSphere('layered autumn sky',{diameter:400,segments:24,sideOrientation:1},scene);
+ const skyMat=new ShaderMaterial('cool sky and warm cloud breaks',scene,{vertexSource:`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;varying vec3 direction;void main(){direction=normalize(position);gl_Position=worldViewProjection*vec4(position,1.);}`,fragmentSource:`precision highp float;varying vec3 direction;void main(){vec3 d=normalize(direction);float h=max(0.,d.y);vec3 c=mix(vec3(.59,.66,.66),vec3(.27,.40,.52),pow(h,.55));float cloud=sin(d.x*8.+sin(d.z*7.)*1.8)*sin(d.z*11.-d.x*2.);float veil=smoothstep(-.4,.5,cloud)*smoothstep(.05,.3,h)*(1.-smoothstep(.55,.95,h));c=mix(c,vec3(.78,.79,.73),veil*.48);float sun=pow(max(0.,dot(d,normalize(vec3(.55,.85,-.35)))),24.);c+=vec3(.20,.14,.06)*sun;gl_FragColor=vec4(c,1.);}`},{attributes:['position'],uniforms:['worldViewProjection']});skyMat.backFaceCulling=false;sky.material=skyMat;sky.isPickable=false;
+ const ambient=new HemisphericLight('soft sky',new Vector3(0,1,0),scene);ambient.intensity=.52;ambient.diffuse=new Color3(.73,.83,1);ambient.groundColor=new Color3(.22,.24,.17);
+ const sun=new DirectionalLight('late autumn sun',new Vector3(-.55,-.85,.35),scene);sun.position.set(25,55,-25);sun.intensity=1.85;sun.diffuse=new Color3(1,.89,.74);const shadows=new ShadowGenerator(1024,sun);shadows.useBlurExponentialShadowMap=true;shadows.blurKernel=12;shadows.blurScale=2;shadows.bias=.0008;shadows.normalBias=.025;shadows.setDarkness(.22);
  world=new World(scene);rig=new CrowRig(scene);camera=new CrowCamera(scene,canvas);await Promise.all([world.load(),rig.load()]);
  for(const m of world.meshes)if(m.getTotalVertices()>0&&!/ground|water|grass|leaf/i.test(m.name))shadows.addShadowCaster(m);
- shadows.getShadowMap()!.refreshRate=0;for(const material of scene.materials)material.freeze();
+ shadows.getShadowMap()!.refreshRate=0;
+ // Static district shadows stay cached; the moving crow has a small separate map.
+ const movingSun=new DirectionalLight('feather and landing shadow',sun.direction.clone(),scene);movingSun.intensity=.30;movingSun.diffuse=sun.diffuse.clone();sun.intensity=1.55;
+ const crowShadows=new ShadowGenerator(256,movingSun);crowShadows.usePercentageCloserFiltering=true;crowShadows.filteringQuality=ShadowGenerator.QUALITY_LOW;crowShadows.bias=.001;crowShadows.normalBias=.012;crowShadows.setDarkness(.15);
+ rig.meshes.forEach(m=>{if(m.getTotalVertices()>0)crowShadows.addShadowCaster(m);});
+ scene.onBeforeRenderObservable.add(()=>{movingSun.position.copyFrom(rig.root.position).addInPlace(new Vector3(9,14,-8));});
+ for(const material of scene.materials)material.freeze();
  ecology=new Ecology(scene,world.perches,saved,(x,z,y)=>world.landingHeight(x,z,y+.1,-1)??world.groundHeight(x,z),(p,prev,r)=>world.resolve(p,prev,r));effects=new FlightEffects(scene);support=world.perches[0];state=createCrowState({x:support.position.x,y:support.position.y+.46,z:support.position.z});state.yaw=0;camera.reset(state);phase='menu';$('loading').hidden=true;$<HTMLButtonElement>('start').disabled=false;
- let previous=performance.now(),slowFrames=0,optimized=false;engine.runRenderLoop(()=>{const now=performance.now(),frameDuration=now-previous,dt=Math.min(.05,frameDuration/1000);previous=now;if(document.hidden)return;frame(dt);const begin=performance.now();scene.render();renderMs=performance.now()-begin;if(renderMs>32||frameDuration>45)slowFrames++;else slowFrames=Math.max(0,slowFrames-1);if(!optimized&&slowFrames>12){optimized=true;quality='performance';engine.setHardwareScalingLevel(Math.max(1.7,devicePixelRatio));}});
+ let previous=performance.now(),slowFrames=0,optimized=false;engine.runRenderLoop(()=>{const now=performance.now(),frameDuration=now-previous,dt=Math.min(.05,frameDuration/1000);previous=now;if(document.hidden)return;frame(dt);const begin=performance.now();scene.render();renderMs=performance.now()-begin;if(renderMs>32||frameDuration>45)slowFrames++;else slowFrames=Math.max(0,slowFrames-1);if(!optimized&&slowFrames>12){optimized=true;quality='performance';movingSun.intensity=0;sun.intensity=1.85;crowShadows.getShadowMap()!.refreshRate=0;engine.setHardwareScalingLevel(Math.max(1.7,devicePixelRatio));}});
  }catch(error){phase='error';$('loading').textContent='Не удалось загрузить квартал. Перезапусти приложение.';$<HTMLButtonElement>('start').disabled=false;$('start').textContent='Повторить загрузку';$('start').onclick=()=>location.reload();console.error(error);}}
 void boot();
