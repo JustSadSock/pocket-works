@@ -29,3 +29,14 @@
 ## QA contract
 
 Игра публикует `window.__PW_TEST_STATE__` и сохраняет ключевые фазовые значения: сцена, здоровье, режим, инвентарь и сюжетные флаги.
+
+
+## Chapter II — Old Tower
+
+The continuation begins immediately behind the Chapter I tower door.
+
+Planned playable path:
+
+**tower vestibule → broken bell stair → archive → sealed chamber → Elin**
+
+Chapter II deliberately reuses Chapter I state instead of resetting the player: the letter, whether the player gave Elin their name, whether they resisted the whisper, and the two placed stones all affect dialogue or encounter conditions.
