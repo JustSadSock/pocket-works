@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12110f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Клятва">
+  <title>Третья клятва</title>
+</head>
+<body data-fullscreen-app>
+  <main id="app" class="app-shell" data-app-shell>
+    <section id="bootScreen" class="screen boot-screen">
+      <div class="sigil" aria-hidden="true"><i></i><b></b><em></em></div>
+      <p class="eyebrow">КЛЯТВЕННЫЙ РЫЦАРЬ</p>
+      <h1>Третья<br>клятва</h1>
+      <p class="boot-copy">Воск ещё мягкий. Дверь под капеллой открывали недавно.</p>
+      <div class="menu-actions" data-ui>
+        <button id="continueButton" class="primary-btn" type="button" data-native-press>
+          <span id="continueLabel">ВОЙТИ В КАПЕЛЛУ</span>
+          <small id="continueMeta">Новая игра</small>
+        </button>
+        <button id="newGameButton" class="text-btn" type="button" data-native-press>Начать заново</button>
+        <button id="soundButton" class="text-btn" type="button" data-native-press>Звук · вкл</button>
+        <a class="text-btn launcher-link" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+      <div class="boot-foot"><span>ГЛАВА I</span><span>ТРИ КЛЮЧА</span></div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen" hidden>
+      <div id="gameRoot" class="game-root" data-gesture-surface data-block-callout></div>
+
+      <header id="hud" class="hud" data-ui>
+        <div class="vitals">
+          <div class="bar health"><i id="healthBar"></i></div>
+          <span id="healthText">5 / 5</span>
+        </div>
+        <div class="resolve-wrap">
+          <span>РЕШИМОСТЬ</span>
+          <div class="bar resolve"><i id="resolveBar"></i></div>
+        </div>
+        <button id="pauseButton" class="pause-btn" type="button" data-native-press aria-label="Пауза"><span></span><span></span></button>
+      </header>
+
+      <div id="zoneTitle" class="zone-title" hidden>
+        <small id="zoneKicker">НИЖНИЙ ПРИХОД</small>
+        <strong id="zoneName">КАПЕЛЛА</strong>
+      </div>
+
+      <div id="toast" class="toast" hidden></div>
+
+      <div id="prompt" class="prompt" hidden>
+        <span class="prompt-mark"></span><span id="promptText">Осмотреть</span>
+      </div>
+
+      <div class="controls" data-ui>
+        <div id="movePad" class="move-pad" data-gesture-surface data-block-callout>
+          <div class="move-ring"></div>
+          <div id="moveThumb" class="move-thumb"></div>
+        </div>
+        <div class="action-cluster">
+          <button id="abilityButton" class="action-btn ability" type="button" data-native-press aria-label="Клятва">
+            <span class="ability-glyph"></span><small>КЛЯТВА</small>
+          </button>
+          <button id="guardButton" class="action-btn guard" type="button" data-native-press aria-label="Щит">
+            <span class="shield-glyph"></span><small>ЩИТ</small>
+          </button>
+          <button id="attackButton" class="action-btn attack" type="button" data-native-press aria-label="Атака">
+            <span class="slash-glyph"></span><small>УДАР</small>
+          </button>
+          <button id="interactButton" class="action-btn interact" type="button" data-native-press hidden>
+            <span class="interact-glyph"></span><small>ДЕЙСТВИЕ</small>
+          </button>
+        </div>
+      </div>
+
+      <section id="dialoguePanel" class="dialogue-panel" hidden data-ui>
+        <div class="dialogue-head"><span id="speakerName">—</span><i></i></div>
+        <p id="dialogueText"></p>
+        <div id="dialogueOptions" class="dialogue-options"></div>
+      </section>
+
+      <section id="ritualOverlay" class="ritual-overlay" hidden>
+        <div class="ritual-sigil" aria-hidden="true"></div>
+        <p id="ritualText"></p>
+      </section>
+
+      <section id="pauseScreen" class="modal-screen" hidden data-ui>
+        <div class="modal-panel">
+          <p class="eyebrow">ПАУЗА</p>
+          <h2>Клятва ждёт.</h2>
+          <div class="journal">
+            <section>
+              <span class="journal-label">ЦЕЛЬ</span>
+              <p id="objectiveText" class="objective-text">Осмотреть капеллу.</p>
+            </section>
+            <section>
+              <span class="journal-label">НАХОДКИ</span>
+              <div id="inventoryList" class="inventory-list"></div>
+            </section>
+          </div>
+          <button id="resumeButton" class="primary-btn compact" type="button" data-native-press>Продолжить</button>
+          <button id="pauseSoundButton" class="text-btn" type="button" data-native-press>Звук · вкл</button>
+          <button id="quitButton" class="text-btn" type="button" data-native-press>В главное меню</button>
+          <a class="text-btn launcher-link" href="../../" data-app-control>В Pocket Works</a>
+        </div>
+      </section>
+
+      <section id="deathScreen" class="modal-screen death-screen" hidden data-ui>
+        <div class="modal-panel">
+          <p class="eyebrow">КЛЯТВА НЕ РАЗОРВАНА</p>
+          <h2>Ты упал.</h2>
+          <p>Последний спокойный вдох всё ещё помнит тебя.</p>
+          <button id="retryButton" class="primary-btn compact" type="button" data-native-press>Вернуться</button>
+          <button id="deathMenuButton" class="text-btn" type="button" data-native-press>В главное меню</button>
+        </div>
+      </section>
+
+      <section id="completeScreen" class="modal-screen complete-screen" hidden data-ui>
+        <div class="modal-panel">
+          <p class="eyebrow">ГЛАВА I · ТРИ КЛЮЧА</p>
+          <h2>Башня открыта.</h2>
+          <p>За дверью кто-то босой отступил на один шаг.</p>
+          <button id="continueAfterButton" class="primary-btn compact" type="button" data-native-press>Вернуться в зал</button>
+          <button id="completeMenuButton" class="text-btn" type="button" data-native-press>В главное меню</button>
+          <a class="text-btn launcher-link" href="../../" data-app-control>В Pocket Works</a>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
