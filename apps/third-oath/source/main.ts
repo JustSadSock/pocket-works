@@ -43,6 +43,8 @@ const ritualText = $('ritualText');
 const healthBar = $('healthBar');
 const healthText = $('healthText');
 const resolveBar = $('resolveBar');
+const bossStatus = $('bossStatus');
+const bossBar = $('bossBar');
 const prompt = $('prompt');
 const promptText = $('promptText');
 const interactButton = $<HTMLButtonElement>('interactButton');
@@ -100,10 +102,13 @@ function resetInputs() {
   moveThumb.style.transform = 'translate3d(0,0,0)';
 }
 
-function renderHud(health: number, maxHealth: number, resolve: number, combat: boolean) {
+function renderHud(health: number, maxHealth: number, resolve: number, combat: boolean, bossHealth: number, bossMaxHealth: number) {
   healthBar.style.width = String(healthPercent(health, maxHealth)) + '%';
   healthText.textContent = String(health) + ' / ' + String(maxHealth);
   resolveBar.style.width = String(clampPercent(resolve)) + '%';
+  const bossVisible = bossMaxHealth > 0 && bossHealth > 0;
+  bossStatus.hidden = !bossVisible;
+  bossBar.style.width = String(bossVisible ? healthPercent(bossHealth, bossMaxHealth) : 0) + '%';
   document.body.classList.toggle('in-combat', combat);
 }
 
