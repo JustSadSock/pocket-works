@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from './audio';
-import { canUseOath } from './core';
+import { canUseOath, getOccludedSections } from './core';
 import { DIALOGUES, RITUAL_LINES, ZONES, type DialogueNode } from './content';
 import {
   addItem,
@@ -94,11 +94,11 @@ type SceneContext = { save: SaveState; callbacks: GameCallbacks };
 
 const WORLD = { left: 80, top: -1900, width: 740, height: 4210 };
 const PROJECTION = {
-  floorTileW: 58,
-  floorTileH: 32,
-  floorSkew: 5,
-  wallRise: 18,
-  wallSide: 8
+  floorTileW: 60,
+  floorTileH: 38,
+  floorSkew: 0,
+  wallRise: 6,
+  wallSide: 3
 } as const;
 
 function noise01(x: number, y: number, seed = 17) {
@@ -155,6 +155,7 @@ class OathScene extends Phaser.Scene {
   private ritualCenterGlow: Phaser.GameObjects.Image | null = null;
   private elinVisual: Phaser.GameObjects.Container | null = null;
   private sealChoiceGlow: Phaser.GameObjects.Image | null = null;
+  private visibilityMasks = new Map<string, Phaser.GameObjects.Graphics>();
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor(ctx: SceneContext) {
@@ -175,6 +176,7 @@ class OathScene extends Phaser.Scene {
     this.createAtmosphere();
     this.registerInteractables();
     this.restoreStoryVisuals();
+    this.refreshVisibilityMasks();
 
     this.keys = this.input.keyboard?.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,E,Q,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>;
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
@@ -343,13 +345,12 @@ class OathScene extends Phaser.Scene {
   }
 
   private drawRoom(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, seed: number) {
-    g.fillStyle(0x161612, 1);
+    g.fillStyle(0x181713, 1);
     g.fillRect(x, y, w, h);
 
     const tileW = PROJECTION.floorTileW;
     const tileH = PROJECTION.floorTileH;
-    const skew = PROJECTION.floorSkew;
-    const palette = [0x29271f, 0x302d24, 0x25241e, 0x343027, 0x22221d, 0x2d2b23];
+    const palette = [0x29271f, 0x2d2b23, 0x25241e, 0x302d25, 0x23221d];
 
     for (let row = 0; row < Math.ceil(h / tileH) + 1; row += 1) {
       const yy = y + row * tileH;
@@ -358,53 +359,35 @@ class OathScene extends Phaser.Scene {
         const xx = x + col * tileW + offset;
         const n = noise01(col + seed, row, seed);
         const color = palette[Math.floor(n * palette.length) % palette.length];
-        const inset = 1 + Math.floor(noise01(col, row, seed + 5) * 2);
 
-        // The floor is a shallow 3/4 plane: wide, vertically compressed stones with
-        // a tiny diagonal bias. Nothing else in the scene is allowed to use a
-        // different projection language.
-        const p1 = new Phaser.Math.Vector2(xx + inset + skew, yy + inset);
-        const p2 = new Phaser.Math.Vector2(xx + tileW - inset, yy + inset);
-        const p3 = new Phaser.Math.Vector2(xx + tileW - inset - skew, yy + tileH - inset);
-        const p4 = new Phaser.Math.Vector2(xx + inset, yy + tileH - inset);
-
-        g.fillStyle(0x0b0b09, .78);
-        g.fillPoints([
-          new Phaser.Math.Vector2(xx + skew, yy),
-          new Phaser.Math.Vector2(xx + tileW, yy),
-          new Phaser.Math.Vector2(xx + tileW - skew, yy + tileH),
-          new Phaser.Math.Vector2(xx, yy + tileH)
-        ], true);
+        // Clean top-down slab: mild irregularity and low-contrast grout, no fake
+        // perspective skew competing with walls/props.
+        g.fillStyle(0x11100e, .7);
+        g.fillRect(xx, yy, tileW, tileH);
         g.fillStyle(color, 1);
-        g.fillPoints([p1,p2,p3,p4], true);
+        g.fillRect(xx + 2, yy + 2, tileW - 4, tileH - 4);
 
-        g.lineStyle(1, 0x716957, .12 + n * .08);
+        g.lineStyle(1, 0x6d6656, .08 + n * .05);
         g.beginPath();
-        g.moveTo(p1.x + 3, p1.y + 1);
-        g.lineTo(p2.x - 4, p2.y + 1);
+        g.moveTo(xx + 6, yy + 4);
+        g.lineTo(xx + tileW - 7, yy + 4);
         g.strokePath();
 
-        g.lineStyle(1, 0x090a09, .4);
-        g.beginPath();
-        g.moveTo(p4.x + 3, p4.y - 1);
-        g.lineTo(p3.x - 4, p3.y - 1);
-        g.strokePath();
-
-        const stain = noise01(col * 3 + seed, row * 5, 41);
-        if (stain > .66) {
-          const sx = xx + 10 + noise01(col, row, 61) * (tileW - 20);
-          const sy = yy + 6 + noise01(col, row, 67) * (tileH - 12);
-          g.fillStyle(stain > .86 ? 0x11130f : 0x1a1a15, .17 + stain * .11);
-          g.fillEllipse(sx, sy, 9 + stain * 14, 3 + stain * 4);
+        if (n > .82) {
+          g.lineStyle(1, 0x11110f, .38);
+          g.beginPath();
+          g.moveTo(xx + tileW * .28, yy + 7);
+          g.lineTo(xx + tileW * .48, yy + tileH * .48);
+          g.lineTo(xx + tileW * .42, yy + tileH - 7);
+          g.strokePath();
         }
 
-        if (n > .76) {
-          g.lineStyle(1, n > .9 ? 0x7c735e : 0x10100e, n > .9 ? .18 : .5);
-          g.beginPath();
-          g.moveTo(xx + tileW * .28, yy + 5);
-          g.lineTo(xx + tileW * .5, yy + tileH * .42);
-          g.lineTo(xx + tileW * .43, yy + tileH - 5);
-          g.strokePath();
+        const stain = noise01(col * 3 + seed, row * 5, 41);
+        if (stain > .8) {
+          const sx = xx + 12 + noise01(col, row, 61) * (tileW - 24);
+          const sy = yy + 9 + noise01(col, row, 67) * (tileH - 18);
+          g.fillStyle(0x161712, .16);
+          g.fillEllipse(sx, sy, 10 + stain * 10, 4 + stain * 3);
         }
       }
     }
@@ -413,137 +396,77 @@ class OathScene extends Phaser.Scene {
   private drawWallVisual(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number) {
     const horizontal = w >= h;
     const rise = PROJECTION.wallRise;
-    const side = PROJECTION.wallSide;
 
-    // Contact shadow belongs to the floor plane.
-    g.fillStyle(0x030303, .55);
-    if (horizontal) g.fillRect(x + 6, y + h + rise - 2, w, 7);
-    else g.fillRect(x + w + side - 1, y + 8, 7, h + rise - 2);
+    // One consistent rule: walls are thick top-down bands with only a restrained
+    // inner face. No trapezoid extrusion, no pseudo-isometric side planes.
+    g.fillStyle(0x050504, .48);
+    g.fillRect(x + 4, y + 5, w, h + (horizontal ? rise : 0));
 
-    if (horizontal) {
-      // Top cap.
-      g.fillStyle(0x575044, 1);
-      g.beginPath();
-      g.moveTo(x + side, y);
-      g.lineTo(x + w, y);
-      g.lineTo(x + w - side, y + h);
-      g.lineTo(x, y + h);
-      g.closePath();
-      g.fillPath();
+    g.fillStyle(0x454138, 1);
+    g.fillRect(x, y, w, h);
 
-      // Front face drops toward the viewer.
-      g.fillStyle(0x2b2923, 1);
-      g.beginPath();
-      g.moveTo(x, y + h);
-      g.lineTo(x + w - side, y + h);
-      g.lineTo(x + w - side, y + h + rise);
-      g.lineTo(x, y + h + rise);
-      g.closePath();
-      g.fillPath();
+    g.fillStyle(0x5b5548, .38);
+    if (horizontal) g.fillRect(x + 2, y + 2, w - 4, 4);
+    else g.fillRect(x + 2, y + 2, 4, h - 4);
 
-      // Right side catches a little ambient light.
-      g.fillStyle(0x39362d, 1);
-      g.beginPath();
-      g.moveTo(x + w - side, y + h);
-      g.lineTo(x + w, y);
-      g.lineTo(x + w, y + rise);
-      g.lineTo(x + w - side, y + h + rise);
-      g.closePath();
-      g.fillPath();
+    g.fillStyle(0x292720, .9);
+    if (horizontal) g.fillRect(x, y + h - 4, w, 4 + rise);
+    else g.fillRect(x + w - 5, y, 5, h);
 
-      const brick = 34;
-      for (let p = 5; p < w - 8; p += brick) {
-        const n = noise01(x + p, y, 23);
-        g.lineStyle(1, 0x8a806a, .1 + n * .08);
-        g.beginPath();
-        g.moveTo(x + p, y + h + 3);
-        g.lineTo(x + p, y + h + rise - 3);
-        g.strokePath();
-      }
-      g.lineStyle(1, 0x8f856f, .28);
-      g.beginPath(); g.moveTo(x + side + 3, y + 3); g.lineTo(x + w - 5, y + 3); g.strokePath();
-    } else {
-      // Long walls keep a narrow top plane and visible inward side; this avoids
-      // the "vertical strip" look from the old strict top-down version.
-      g.fillStyle(0x504a3f, 1);
-      g.beginPath();
-      g.moveTo(x + side, y);
-      g.lineTo(x + w, y + side);
-      g.lineTo(x + w - side, y + h);
-      g.lineTo(x, y + h - side);
-      g.closePath();
-      g.fillPath();
-
-      g.fillStyle(0x302d26, 1);
-      g.beginPath();
-      g.moveTo(x + w - side, y + h);
-      g.lineTo(x + w, y + side);
-      g.lineTo(x + w + side, y + side + rise);
-      g.lineTo(x + w, y + h + rise);
-      g.closePath();
-      g.fillPath();
-
-      g.fillStyle(0x25231e, .96);
-      g.beginPath();
-      g.moveTo(x, y + h - side);
-      g.lineTo(x + w - side, y + h);
-      g.lineTo(x + w, y + h + rise);
-      g.lineTo(x + side, y + h + rise);
-      g.closePath();
-      g.fillPath();
-
-      const brick = 31;
-      for (let p = 8; p < h - 8; p += brick) {
-        const n = noise01(x, y + p, 29);
-        g.lineStyle(1, 0x817864, .08 + n * .08);
-        g.beginPath();
-        g.moveTo(x + w - 5, y + p);
-        g.lineTo(x + w + side - 2, y + p + rise * .55);
-        g.strokePath();
+    const major = horizontal ? w : h;
+    const brick = 38;
+    for (let p = 8; p < major - 7; p += brick) {
+      const n = noise01(x + p, y + p, 23);
+      g.lineStyle(1, 0x89806a, .08 + n * .05);
+      if (horizontal) {
+        g.beginPath(); g.moveTo(x + p, y + 3); g.lineTo(x + p, y + h - 5); g.strokePath();
+      } else {
+        g.beginPath(); g.moveTo(x + 3, y + p); g.lineTo(x + w - 5, y + p); g.strokePath();
       }
     }
+
+    g.lineStyle(1, 0x8d826c, .18);
+    g.strokeRect(x, y, w, h);
   }
 
   private drawPrism(
     g: Phaser.GameObjects.Graphics,
     x: number, y: number, w: number, d: number, height: number,
     top: number, front: number, side: number,
-    skew = 8
+    skew = 2
   ) {
-    g.fillStyle(0x050504, .5);
-    g.fillEllipse(x + w * .52, y + d + height + 4, w * .94, Math.max(8, d * .46));
+    const visualHeight = Math.max(4, Math.min(13, height * .42));
+    const visualSkew = Math.min(3, skew);
 
-    g.fillStyle(front, 1);
-    g.beginPath();
-    g.moveTo(x, y + d);
-    g.lineTo(x + w - skew, y + d);
-    g.lineTo(x + w - skew, y + d + height);
-    g.lineTo(x, y + d + height);
-    g.closePath();
-    g.fillPath();
+    g.fillStyle(0x050504, .38);
+    g.fillEllipse(x + w * .5 + 3, y + d + visualHeight + 3, w * .88, Math.max(6, d * .32));
 
-    g.fillStyle(side, 1);
+    // Thin front lip, not a large 3D wall.
+    g.fillStyle(front, .96);
+    g.fillRect(x, y + d, w - visualSkew, visualHeight);
+
+    g.fillStyle(side, .82);
     g.beginPath();
-    g.moveTo(x + w - skew, y + d);
-    g.lineTo(x + w, y);
-    g.lineTo(x + w, y + height);
-    g.lineTo(x + w - skew, y + d + height);
+    g.moveTo(x + w - visualSkew, y + d);
+    g.lineTo(x + w, y + 1);
+    g.lineTo(x + w, y + visualHeight);
+    g.lineTo(x + w - visualSkew, y + d + visualHeight);
     g.closePath();
     g.fillPath();
 
     g.fillStyle(top, 1);
     g.beginPath();
-    g.moveTo(x + skew, y);
+    g.moveTo(x + visualSkew, y);
     g.lineTo(x + w, y);
-    g.lineTo(x + w - skew, y + d);
+    g.lineTo(x + w - visualSkew, y + d);
     g.lineTo(x, y + d);
     g.closePath();
     g.fillPath();
 
-    g.lineStyle(1, 0x9a8e75, .18);
+    g.lineStyle(1, 0x9a8e75, .13);
     g.beginPath();
-    g.moveTo(x + skew + 3, y + 2);
-    g.lineTo(x + w - 4, y + 2);
+    g.moveTo(x + visualSkew + 4, y + 2);
+    g.lineTo(x + w - 5, y + 2);
     g.strokePath();
   }
 
@@ -552,15 +475,17 @@ class OathScene extends Phaser.Scene {
     cx: number, cy: number, width: number, depth: number, height: number,
     top: number, front: number
   ) {
-    g.fillStyle(0x050505, .62);
-    g.fillEllipse(cx + 5, cy + height + depth * .28, width * 1.04, depth * .62);
+    const visualHeight = Math.max(5, Math.min(12, height * .45));
+    const visualDepth = Math.max(12, depth * .72);
+    g.fillStyle(0x050505, .45);
+    g.fillEllipse(cx + 4, cy + visualHeight + 5, width * .94, visualDepth * .48);
     g.fillStyle(front, 1);
-    g.fillRect(cx - width / 2, cy, width, height);
-    g.fillEllipse(cx, cy + height, width, depth);
+    g.fillRect(cx - width / 2, cy, width, visualHeight);
+    g.fillEllipse(cx, cy + visualHeight, width, visualDepth);
     g.fillStyle(top, 1);
-    g.fillEllipse(cx, cy, width, depth);
-    g.lineStyle(2, 0x918873, .24);
-    g.strokeEllipse(cx, cy, width - 7, depth - 5);
+    g.fillEllipse(cx, cy, width, visualDepth);
+    g.lineStyle(2, 0x918873, .18);
+    g.strokeEllipse(cx, cy, width - 7, visualDepth - 4);
   }
 
   private drawChapelProps(g: Phaser.GameObjects.Graphics) {
@@ -752,18 +677,18 @@ class OathScene extends Phaser.Scene {
 
     // The seal is carved into the floor plane, therefore every circle is
     // foreshortened into an ellipse.
-    g.fillStyle(0x080909, .72); g.fillEllipse(458, -1759, 258, 156);
-    g.fillStyle(0x252824, 1); g.fillEllipse(450, -1768, 232, 142);
+    g.fillStyle(0x080909, .72); g.fillEllipse(458, -1759, 258, 192);
+    g.fillStyle(0x252824, 1); g.fillEllipse(450, -1768, 232, 174);
     for (const radius of [32, 58, 86, 110]) {
       g.lineStyle(radius === 58 ? 3 : 1, 0x6b7067, radius === 58 ? .24 : .12);
-      g.strokeEllipse(450, -1768, radius * 2, radius * 1.22);
+      g.strokeEllipse(450, -1768, radius * 2, radius * 1.62);
     }
     g.lineStyle(2, 0x67777a, .16);
     for (let i = 0; i < 8; i += 1) {
       const a = i / 8 * Math.PI * 2;
       g.beginPath();
-      g.moveTo(450 + Math.cos(a) * 34, -1768 + Math.sin(a) * 21);
-      g.lineTo(450 + Math.cos(a) * 105, -1768 + Math.sin(a) * 64);
+      g.moveTo(450 + Math.cos(a) * 34, -1768 + Math.sin(a) * 27);
+      g.lineTo(450 + Math.cos(a) * 105, -1768 + Math.sin(a) * 82);
       g.strokePath();
     }
   }
@@ -841,7 +766,7 @@ class OathScene extends Phaser.Scene {
   }
 
   private createBarrierVisual(x: number, y: number, w: number, h: number, kind: 'stone' | 'gate' | 'door') {
-    const g = this.add.graphics().setDepth(9);
+    const g = this.add.graphics().setDepth(34);
     if (kind === 'stone') {
       g.fillStyle(0x3b382f, 1);
       g.fillRect(x, y, w, h);
@@ -1062,12 +987,47 @@ class OathScene extends Phaser.Scene {
     if (this.save.flags.sealChoiceMade && !this.save.flags.towerGuardianDefeated) this.spawnTowerEncounter('boss');
   }
 
+  private refreshVisibilityMasks() {
+    const hidden = new Set(getOccludedSections(this.save.flags));
+    const sections = [
+      { id: 'crypt', x: 80, y: 970, w: 740, h: 720 },
+      { id: 'hall', x: 80, y: 300, w: 740, h: 700 },
+      { id: 'tower', x: 80, y: -920, w: 740, h: 1260 },
+      { id: 'archive', x: 80, y: -1570, w: 740, h: 680 },
+      { id: 'seal', x: 80, y: -1910, w: 740, h: 370 }
+    ] as const;
+
+    for (const section of sections) {
+      const existing = this.visibilityMasks.get(section.id);
+      if (!hidden.has(section.id)) {
+        existing?.destroy();
+        this.visibilityMasks.delete(section.id);
+        continue;
+      }
+      if (existing) continue;
+
+      const mask = this.add.graphics().setDepth(30);
+      mask.fillStyle(0x080807, 1);
+      mask.fillRect(section.x, section.y, section.w, section.h);
+
+      // A very small falloff at the doorway edge keeps the concealment from
+      // looking like an arbitrary black rectangle, while still revealing zero map detail.
+      mask.fillStyle(0x080807, .82);
+      mask.fillRect(section.x, section.y + section.h, section.w, 8);
+      mask.fillStyle(0x080807, .46);
+      mask.fillRect(section.x, section.y + section.h + 8, section.w, 6);
+
+      this.visibilityMasks.set(section.id, mask);
+    }
+  }
+
   private openSecretDoor() {
     this.save.flags.secretDoorOpen = true;
     this.secretDoorBlocker?.destroy();
     this.secretDoorVisual?.destroy();
     this.secretDoorBlocker = null;
     this.secretDoorVisual = null;
+    this.refreshVisibilityMasks();
     this.cameras.main.shake(220, .004);
     audio.door();
     this.toast('За стеной — узкий спуск.');
@@ -1080,6 +1040,7 @@ class OathScene extends Phaser.Scene {
     if (this.save.flags.chapter1Complete) return;
     this.save.flags.chapter1Complete = true;
     this.save.chapter = 2;
+    this.refreshVisibilityMasks();
     this.save.checkpoint = { x: 450, y: 210 };
     this.save.position = { x: this.player.x, y: this.player.y };
     this.commitSave();
@@ -1142,6 +1103,7 @@ class OathScene extends Phaser.Scene {
     this.bellGateVisual?.destroy();
     this.bellGateBlocker = null;
     this.bellGateVisual = null;
+    this.refreshVisibilityMasks();
     if (withFeedback) {
       audio.door();
       this.cameras.main.shake(150, .003);
@@ -1153,6 +1115,7 @@ class OathScene extends Phaser.Scene {
     this.sealGateVisual?.destroy();
     this.sealGateBlocker = null;
     this.sealGateVisual = null;
+    this.refreshVisibilityMasks();
     if (withFeedback) {
       audio.door();
       this.toast('Верхняя печать отпускает дверь.');
@@ -1211,6 +1174,7 @@ class OathScene extends Phaser.Scene {
       this.towerDoorVisual?.destroy();
       this.towerDoorBlocker = null;
       this.towerDoorVisual = null;
+      this.refreshVisibilityMasks();
       this.addFootprints();
       this.commitSave();
       audio.whisper();
@@ -1812,6 +1776,7 @@ class OathScene extends Phaser.Scene {
     this.cryptDoorVisual?.destroy();
     this.cryptDoorBlocker = null;
     this.cryptDoorVisual = null;
+    this.refreshVisibilityMasks();
     audio.pickup();
     this.toast('СЛЕЗА');
     this.setMode('explore');
