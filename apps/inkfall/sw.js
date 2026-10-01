@@ -1,7 +1,7 @@
 const CACHE_PREFIX='inkfall-';
 const CACHE_NAME='inkfall-v1.0.0-p1';
 const APP_SHELL=[
-  './','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg',
+  './','./index.html','./app.config.json','./styles.css','./app.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'
 ];
 self.addEventListener('install',event=>{
