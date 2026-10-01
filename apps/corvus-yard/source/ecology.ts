@@ -79,10 +79,10 @@ export class Ecology {
     this.held=this.items.find(item=>item.root.name===savedProgress?.carriedId&&!item.consumed)||null;
     if(this.held){this.held.alive=false;this.held.velocity.setAll(0);}
     this.persistItems();
-    const homes=perches.filter(p=>p.position.y>2).slice(0,9);
+    const homes=perches.filter(p=>p.position.y>2&&p.id!=='home').slice(0,9);
     homes.forEach((p,i)=>{const size=.55+(i%3)*.06;const home=p.position.add(new Vector3((i%2)*.12,.456*size,0));const root=new TransformNode(`wildlife-${i}`,scene);root.position.copyFrom(home);root.rotation.y=i*2.1;root.scaling.setAll(size);this.birds.push({root,home,target:home.clone(),velocity:Vector3.Zero(),phase:i*1.72,flying:false,timer:3+i,wings:[],blend:0});});
     // The same authored skeleton as the player, shared geometry/materials across all flock members.
-    void SceneLoader.LoadAssetContainerAsync('./models/','crow.glb',scene).then(asset=>{
+    void SceneLoader.LoadAssetContainerAsync('./models/','crow-distant.glb',scene).then(asset=>{
       if(this.dead){asset.dispose();return;}
       this.birdAsset=asset;
       for(const [i,bird] of this.birds.entries()){
@@ -205,7 +205,13 @@ export class Ecology {
       if(bird.timer<0&&distance<.18){bird.flying=false;bird.root.position.copyFrom(bird.home);bird.velocity.setAll(0);bird.timer=8+index*1.7;bird.root.rotation.set(0,index*2.1,0);}
     }
     bird.blend+=(Number(bird.flying)-bird.blend)*(1-Math.exp(-dt*7));
-    bird.imported?.animationGroups.forEach(group=>{if(/Flap$/i.test(group.name))group.setWeightForAllAnimatables(bird.blend);if(/Idle$/i.test(group.name))group.setWeightForAllAnimatables(1-bird.blend);});
+    const animateIdle=this.age<2||Vector3.DistanceSquared(vec(state.position),bird.root.position)<625;
+    bird.imported?.animationGroups.forEach(group=>{
+      const weight=/Flap$/i.test(group.name)?bird.blend:/Idle$/i.test(group.name)?1-bird.blend:0;
+      group.setWeightForAllAnimatables(weight);
+      const active=weight>.001&&(/Flap$/i.test(group.name)||animateIdle);
+      if(!active&&group.isPlaying)group.pause();else if(active&&!group.isPlaying)group.play(true);
+    });
   }
   private placeHeld(item:Item,state:CrowState){
     const forward=new Vector3(Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.cos(state.yaw)*Math.cos(state.pitch));

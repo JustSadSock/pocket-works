@@ -17,7 +17,11 @@ npm run registry:check
 
 Generated runtime files are not source-controlled; CI and Cloudflare build them from source. The models in public/models are committed. Deterministic Blender sources and the Asset Forge manifest are in asset-forge.
 
-Current validation: 29 flight, collision and ecology tests, TypeScript, Vite/PWA build and registry checks. Chromium completed the full progression through actual controls and additionally passed native two-finger stick/flap steering and touch cancellation. WebKit completed the full progression through real controls: portrait touch start, takeoff/glide, pause/home return, branch walkoff/ground landing, two meals, carried walnut/drop/crack, bell-tower auto-perch/completion, persisted settings/progress and offline reload. No console errors or failed requests were recorded. The offline WebKit check physically stopped the local HTTP server while the service worker supplied the complete application and both GLBs. The final Chromium flight samples were approximately 30–36 FPS, WebKit 18–29 FPS, and lighter street views reached approximately 40–55 FPS under headless software rendering with adaptive quality; these are not measurements from an iPhone.
+Visual release 1.1: the player raven has 61 authored joints and 14 named clips, including blink channels, preening, pecking, ruffling and calling. Feather blades carry a shared packed vane texture. Folded primary and secondary feathers have individual hinge poses; their lengths remain intact. The flock uses a decimated version of the same rig. Inactive clips and distant idle flock animation pause to limit animation cost. A small moving shadow map is reserved for balanced rendering; adaptive performance uses the cached district shadows and contact effects.
+
+The district now has porous, individually lobed autumn leaves, fine twigs and roots, patterned bark/stone/slate, rain pipes, doorstep detail and a distant roofline. A local sky shader separates cool cloud light from a warm sun break. Runtime assets remain local and offline cached.
+
+Validation covers 29 flight, collision and ecology tests, TypeScript, Vite/PWA and registry validation. The browser runner also observes preen/ruffle/call clips and captures their real rendered states with `CORVUS_QA_VISUAL=1`. Physical iPhone performance has not been measured.
 
 The browser runner starts its own HTTP server and never mutates the gameplay state. Full progression is enabled explicitly:
 

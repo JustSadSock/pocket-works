@@ -1,1 +1,24 @@
-{"version":1,"jobs":[{"name":"crow","script":"crow.py","output":"public/models/crow.glb","requireArmature":true,"requireAnimation":true},{"name":"world","script":"world.py","output":"public/models/world.glb"}]}
+{
+  "version": 1,
+  "jobs": [
+    {
+      "name": "crow",
+      "script": "crow.py",
+      "output": "public/models/crow.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    },
+    {
+      "name": "world",
+      "script": "world.py",
+      "output": "public/models/world.glb"
+    },
+    {
+      "name": "crow-distant",
+      "script": "crow-distant.py",
+      "output": "public/models/crow-distant.glb",
+      "requireArmature": true,
+      "requireAnimation": true
+    }
+  ]
+}

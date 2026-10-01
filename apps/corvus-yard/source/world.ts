@@ -14,11 +14,11 @@ export class World {
   loaded.meshes.forEach(m=>{m.isPickable=false;m.receiveShadows=true;if(m.getTotalVertices()>0)this.meshes.push(m);if(m.name.startsWith('perch_flexible')){this.branch=m;this.branchRest=m.position.clone();}if(m.name.startsWith('canopy')){this.canopies.push(m);this.canopyRest.set(m,m.position.clone());}if(m.material instanceof PBRMaterial){m.material.environmentIntensity=.65;m.material.useRadianceOverAlpha=false;}});
   // Leave the home branch's approach corridor open; crowns must frame the bird, not swallow it.
   const homeView=new Vector3(0,10,-15);
-  for(const crown of this.canopies){crown.computeWorldMatrix(true);if(Vector3.Distance(crown.getAbsolutePosition(),homeView)<5.2){crown.dispose();this.canopyRest.delete(crown);}}
+  for(const crown of this.canopies){crown.computeWorldMatrix(true);if(Vector3.Distance(crown.getAbsolutePosition(),homeView)<3.3){crown.dispose();this.canopyRest.delete(crown);}}
   this.canopies=this.canopies.filter(m=>!m.isDisposed());this.meshes=this.meshes.filter(m=>!m.isDisposed());
   for(const m of this.meshes){if(!(m instanceof Mesh)||!/foliage/i.test(m.name))continue;const p=m.getVerticesData(VertexBuffer.PositionKind),indices=m.getIndices();if(!p||!indices)continue;const matrix=m.computeWorldMatrix(true),kept:number[]=[];
-   for(let i=0;i<indices.length;i+=3){const a=indices[i]*3,b=indices[i+1]*3,c=indices[i+2]*3;const center=Vector3.TransformCoordinates(new Vector3((p[a]+p[b]+p[c])/3,(p[a+1]+p[b+1]+p[c+1])/3,(p[a+2]+p[b+2]+p[c+2])/3),matrix);if(Vector3.Distance(center,homeView)>5.2)kept.push(indices[i],indices[i+1],indices[i+2]);}m.setIndices(kept);}
-  this.applyBrickTexture();
+   for(let i=0;i<indices.length;i+=3){const a=indices[i]*3,b=indices[i+1]*3,c=indices[i+2]*3;const center=Vector3.TransformCoordinates(new Vector3((p[a]+p[b]+p[c])/3,(p[a+1]+p[b+1]+p[c+1])/3,(p[a+2]+p[b+2]+p[c+2])/3),matrix);if(Vector3.Distance(center,homeView)>3.3)kept.push(indices[i],indices[i+1],indices[i+2]);}m.setIndices(kept);}
+  this.applyBrickTexture();this.applySurfaceTextures();
   // Batch authored static details by material; animated crowns and home branch stay independent.
   const batches=new Map<object,Mesh[]>();
   for(const node of this.meshes){if(!(node instanceof Mesh)||!node.material||this.canopies.includes(node)||node===this.branch||node.name==='park ground'||node.name==='slow canal water')continue;node.computeWorldMatrix(true);const list=batches.get(node.material)||[];list.push(node);batches.set(node.material,list);}
@@ -51,8 +51,27 @@ export class World {
   const texture=new DynamicTexture('irregular fired brick and mortar',{width:512,height:512},this.scene,true);const c=texture.getContext() as unknown as CanvasRenderingContext2D;c.fillStyle='#6f6657';c.fillRect(0,0,512,512);
   let seed=96;const rand=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
   for(let row=0;row<8;row++)for(let col=-1;col<5;col++){const x=col*128+(row%2)*64,y=row*64;const v=rand()*24;c.fillStyle=`rgb(${113+v},${61+v*.55},${40+v*.35})`;c.fillRect(x+2,y+2,124,59);for(let j=0;j<125;j++){c.fillStyle=rand()>.5?'rgba(211,173,124,.09)':'rgba(29,17,10,.15)';c.fillRect(x+rand()*124,y+rand()*60,rand()*9+1,2);}}
-  texture.update(false);texture.wrapU=Texture.WRAP_ADDRESSMODE;texture.wrapV=Texture.WRAP_ADDRESSMODE;
+  texture.update(false);texture.wrapU=Texture.WRAP_ADDRESSMODE;texture.wrapV=Texture.WRAP_ADDRESSMODE;texture.anisotropicFilteringLevel=4;
   for(const m of this.meshes){if(!(m.material instanceof PBRMaterial)||!m.material.name.includes('warm old'))continue;const p=m.getVerticesData(VertexBuffer.PositionKind),n=m.getVerticesData(VertexBuffer.NormalKind);if(!p||!n)continue;const uv:number[]=[];for(let i=0;i<p.length;i+=3){uv.push((Math.abs(n[i])>.5?p[i+2]:p[i])*.5,p[i+1]*.5);}m.setVerticesData(VertexBuffer.UVKind,uv);m.material.albedoTexture=texture;m.material.albedoColor=Color3.White();m.material.roughness=.94;}
+ }
+ private applySurfaceTextures(){
+  // Three small local textures supply material scale, weathering and grain.
+  for(const kind of ['limestone','bark','slate'] as const){
+   const texture=new DynamicTexture(`weathered ${kind}`,{width:256,height:256},this.scene,true),c=texture.getContext() as unknown as CanvasRenderingContext2D;
+   let seed=kind==='bark'?817:kind==='slate'?431:197;const rnd=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
+   c.fillStyle=kind==='limestone'?'#8a8e7e':kind==='bark'?'#4c4031':'#3c4749';c.fillRect(0,0,256,256);
+   for(let i=0;i<6500;i++){const v=rnd();c.fillStyle=v>.5?'rgba(226,217,185,.07)':'rgba(11,17,16,.12)';c.fillRect(rnd()*256,rnd()*256,kind==='bark'?1:rnd()*5+1,kind==='bark'?8+rnd()*28:1+rnd()*2);}
+   if(kind==='limestone'){for(let row=0;row<4;row++){c.fillStyle='rgba(30,34,27,.23)';c.fillRect(0,row*64,256,2);for(let col=0;col<3;col++)c.fillRect((col*96+row%2*48)%256,row*64,2,64);}}
+   if(kind==='bark'){for(let i=0;i<12;i++){const x=i*22+rnd()*8;c.strokeStyle='rgba(24,22,16,.35)';c.lineWidth=1+rnd()*2;c.beginPath();c.moveTo(x,0);for(let y=0;y<270;y+=20)c.lineTo(x+Math.sin(y*.07+i)*4,y);c.stroke();}}
+   texture.update(false);texture.wrapU=texture.wrapV=Texture.WRAP_ADDRESSMODE;texture.anisotropicFilteringLevel=4;
+   const materials=new Set<PBRMaterial>();
+   for(const mesh of this.meshes){const material=mesh.material;if(!(material instanceof PBRMaterial)||!(kind==='limestone'?material.name.includes('limestone'):kind==='bark'?material.name.includes('bark'):material.name.includes('slate')))continue;
+    const positions=mesh.getVerticesData(VertexBuffer.PositionKind),normals=mesh.getVerticesData(VertexBuffer.NormalKind);if(!positions||!normals)continue;const uv:number[]=[];
+    for(let i=0;i<positions.length;i+=3){const y=positions[i+1],x=positions[i],z=positions[i+2],horizontal=Math.abs(normals[i+1])>.6;uv.push((Math.abs(normals[i])>.5?z:x)*(kind==='bark'?1.3:.6),(horizontal?z:y)*(kind==='bark'?.45:.6));}
+    mesh.setVerticesData(VertexBuffer.UVKind,uv);materials.add(material);
+   }
+   for(const m of materials){m.albedoTexture=texture;m.albedoColor=Color3.White();m.roughness=kind==='slate'?.72:.92;m.metallic=0;}
+  }
  }
  private addCollider(x:number,y:number,z:number,X:number,Y:number,Z:number){this.colliders.push({min:new Vector3(x,y,z),max:new Vector3(X,Y,Z)});}
  private createTerrain(){
@@ -61,7 +80,7 @@ export class World {
   const rand=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
   for(let i=0;i<60000;i++){const g=rand()*32;ctx.fillStyle=`rgba(${70+g},${74+g},${48+g*.7},.36)`;ctx.fillRect(rand()*1024,rand()*1024,rand()*3+1,rand()*3+1);}
   const px=(v:number)=>(v+90)/180*1024;const pz=(v:number)=>(90-v)/180*1024;
-  const path=(points:number[][],width:number)=>{ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#b0a78c';ctx.lineWidth=width/180*1024;ctx.beginPath();points.forEach(([x,z],i)=>i?ctx.lineTo(px(x),pz(z)):ctx.moveTo(px(x),pz(z)));ctx.stroke();};
+  const path=(points:number[][],width:number)=>{ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#9a947d';ctx.lineWidth=width/180*1024;ctx.beginPath();points.forEach(([x,z],i)=>i?ctx.lineTo(px(x),pz(z)):ctx.moveTo(px(x),pz(z)));ctx.stroke();};
   path([[-47,-34],[-22,-23],[-12,-8],[-10,8],[-11,20],[-20,38]],3.2);path([[43,-30],[20,-20],[10,-8],[10,10],[11,26],[24,37]],3.2);path([[-22,-23],[0,-23],[20,-20]],2.8);path([[-12,9],[13,9]],3.2);
   ctx.fillStyle='#797971';ctx.fillRect(px(-51),pz(-34),px(51)-px(-51),6/180*1024);
   for(let i=0;i<15000;i++){ctx.fillStyle=rand()>.5?'rgba(221,207,164,.14)':'rgba(52,45,34,.11)';ctx.fillRect(rand()*1024,rand()*1024,1.5,1);}
@@ -135,8 +154,8 @@ export class World {
   this.time=time;
   const home=this.perches[0];if(this.branch&&this.branchRest&&home){const weight=Vector3.DistanceSquared(crowPosition,home.position)<1.3?-.055:0;this.bendVelocity+=(weight-this.bend)*dt*22;this.bendVelocity*=Math.exp(-dt*4);this.bend+=this.bendVelocity*dt;this.branch.position.y=this.branchRest.y+this.bend+Math.sin(time*.65)*.01;home.position.y=8.10+this.bend+Math.sin(time*.65)*.01;}
   this.waterMaterial?.setFloat('time',time);this.grassMaterial?.setFloat('time',time);
-  for(let i=0;i<this.canopies.length;i++){const c=this.canopies[i];const r=this.canopyRest.get(c)!;c.position.x=r.x+Math.sin(time*.72+i*.4)*.08;c.rotation.z=Math.sin(time*.65+i*.8)*.013;}
-  for(let i=0;i<this.leaves.length;i++){const l=this.leaves[i];l.position.x+=dt*(.5+Math.sin(time+i)*.15);l.position.y=Math.max(.2,1.3+Math.sin(time*.7+i)*.7);l.rotation.x+=dt;l.rotation.y+=dt*.8;if(l.position.x>32)l.position.x=-32;}
+  for(let i=0;i<this.canopies.length;i++){const c=this.canopies[i];const r=this.canopyRest.get(c)!;const gust=Math.sin(time*.63+i*.7)*.5+Math.sin(time*1.43+i*.23)*.22;c.position.x=r.x+gust*.065;c.rotation.z=gust*.012;c.rotation.x=Math.sin(time*.83+i)*.006;}
+  for(let i=0;i<this.leaves.length;i++){const l=this.leaves[i];const d=Vector3.DistanceSquared(l.position,crowPosition);l.position.x+=dt*(.5+Math.sin(time+i)*.15+(d<2?1.2:0));l.position.z+=Math.sin(time*1.5+i)*dt*.15;l.position.y=Math.max(.2,1.3+Math.sin(time*.7+i)*.7);l.rotation.x+=dt;l.rotation.y+=dt*.8;if(l.position.x>32)l.position.x=-32;}
  }
  clearCameraView(cameraPosition:Vector3):void{for(const crown of this.canopies){crown.computeWorldMatrix(true);crown.setEnabled(Vector3.DistanceSquared(crown.getAbsolutePosition(),cameraPosition)>10);}}
  dispose(){this.meshes.forEach(m=>m.dispose());this.waterMaterial?.dispose();}

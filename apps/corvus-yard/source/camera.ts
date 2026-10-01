@@ -9,7 +9,7 @@ export class CrowCamera {
   readonly camera: FreeCamera;
   private target = Vector3.Zero();
   private heading = new Vector3(0, 0, 1);
-  private distance = 4.5;
+  private distance = 3.2;
   private initialized = false;
 
   constructor(scene: Scene, private canvas: HTMLCanvasElement) {
@@ -23,10 +23,10 @@ export class CrowCamera {
 
   reset(state: CrowState) {
     this.heading.set(Math.sin(state.yaw), 0, Math.cos(state.yaw));
-    this.distance = state.grounded ? 4.5 : 6;
+    this.distance = state.grounded ? 3.2 : 4.7;
     this.target.copyFromFloats(state.position.x, state.position.y, state.position.z).addInPlace(new Vector3(0, 0.65, 0)).addInPlace(this.heading.scale(1.1));
     this.camera.position.copyFromFloats(state.position.x, state.position.y, state.position.z).subtractInPlace(this.heading.scale(this.distance));
-    this.camera.position.y = Math.max(0.5, state.position.y + 1.05);
+    this.camera.position.y = Math.max(0.5, state.position.y + .88);
     this.camera.fov = 1.08;
     this.camera.setTarget(this.target);
     this.initialized = true;
@@ -47,7 +47,7 @@ export class CrowCamera {
     this.heading = Vector3.Lerp(this.heading, forward, response(state.grounded ? 5.8 : 4.6, dt));
     if (this.heading.lengthSquared() < 0.01) this.heading.copyFrom(forward);
     this.heading.normalize();
-    this.distance += ((state.grounded ? 4.5 : 6 + speedN * 0.7) - this.distance) * response(3.8, dt);
+    this.distance += ((state.grounded ? 3.2 : 4.7 + speedN * 0.7) - this.distance) * response(3.8, dt);
     const portrait = this.canvas.clientHeight > this.canvas.clientWidth;
     const targetHeight = portrait ? 0.65 : 0.55;
     const lookahead = state.grounded ? 0.85 : 1.3 + speedN * 0.8;
@@ -57,7 +57,7 @@ export class CrowCamera {
     this.target = Vector3.Lerp(this.target, desiredTarget, response(7.5, dt));
     const anchor = position.add(new Vector3(0, 0.65, 0));
     let desired = position.subtract(this.heading.scale(this.distance));
-    desired.y += 1.05 + speedN * 0.3;
+    desired.y += .88 + speedN * 0.3;
     desired = this.avoidObstacles(anchor, desired, colliders);
     // Enter tight spaces promptly, emerge gradually so walls do not whip the camera around.
     const blocked = Vector3.DistanceSquared(anchor, desired) < this.distance * this.distance * 0.65;
@@ -68,6 +68,14 @@ export class CrowCamera {
     this.camera.setTarget(this.target);
   }
 
+  preview(state:CrowState,time:number,dt:number){
+    if(!this.initialized)this.reset(state);
+    const angle=2.3+Math.sin(time*.12)*.14;
+    const desired=new Vector3(state.position.x+Math.sin(angle)*2.75,state.position.y+.12,state.position.z-Math.cos(angle)*2.75);
+    this.camera.position.copyFrom(desired);
+    this.target.set(state.position.x,state.position.y-.48,state.position.z);
+    this.camera.fov=.90;this.camera.setTarget(this.target);
+  }
   private avoidObstacles(anchor: Vector3, desired: Vector3, colliders: Collider[]) {
     const delta = desired.subtract(anchor);
     let nearest = 1;
