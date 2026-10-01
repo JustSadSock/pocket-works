@@ -8,8 +8,35 @@ const PAGE_H = 3508;
 const PAGE_ASPECT = PAGE_W / PAGE_H;
 const MAX_IMAGES = 60;
 const THUMB_MAX = 560;
+const DEFAULT_DENSITY = 85;
+const DENSITY_STORAGE_KEY = 'pocket-works:rasklad:density';
 
-const state = { images: [], layout: [], busy: false };
+function readStoredDensity() {
+  try {
+    const stored = localStorage.getItem(DENSITY_STORAGE_KEY);
+    if (stored === null) return DEFAULT_DENSITY;
+    const value = Number(stored);
+    return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : DEFAULT_DENSITY;
+  } catch {
+    return DEFAULT_DENSITY;
+  }
+}
+
+function persistDensity(value) {
+  try {
+    localStorage.setItem(DENSITY_STORAGE_KEY, String(value));
+  } catch {
+    // Storage is optional; density still works for the current session.
+  }
+}
+
+const state = {
+  images: [],
+  layout: [],
+  busy: false,
+  density: readStoredDensity(),
+  layoutSeed: null
+};
 
 const els = {
   fileInput: document.querySelector('#fileInput'),
@@ -22,11 +49,14 @@ const els = {
   exportButton: document.querySelector('#exportButton'),
   clearButton: document.querySelector('#clearButton'),
   countLabel: document.querySelector('#countLabel'),
+  densitySlider: document.querySelector('#densitySlider'),
+  densityValue: document.querySelector('#densityValue'),
   dropZone: document.querySelector('#dropZone'),
   toast: document.querySelector('#toast')
 };
 
 let toastTimer = 0;
+let densityTimer = 0;
 
 function showToast(message) {
   window.clearTimeout(toastTimer);
@@ -51,14 +81,24 @@ function setBusy(busy, title, detail) {
   syncControls();
 }
 
+function syncDensityControl() {
+  const value = Math.round(state.density);
+  els.densitySlider.value = String(value);
+  els.densitySlider.style.setProperty('--density-fill', value + '%');
+  els.densityValue.value = value + '%';
+  els.densityValue.textContent = value + '%';
+}
+
 function syncControls() {
   const hasImages = state.images.length > 0;
   els.shuffleButton.disabled = !hasImages || state.busy;
   els.exportButton.disabled = !hasImages || state.busy;
   els.clearButton.disabled = !hasImages || state.busy;
   els.fileInput.disabled = state.busy;
+  els.densitySlider.disabled = state.busy;
   els.emptyState.hidden = hasImages || state.busy;
   els.countLabel.textContent = pluralImages(state.images.length);
+  syncDensityControl();
 }
 
 function loadImageFromFile(file) {
@@ -168,15 +208,22 @@ function layoutSeed() {
   return Math.floor(Math.random() * 0xffffffff) >>> 0;
 }
 
-function makeLayout() {
+function makeLayout({ newSeed = true } = {}) {
   if (!state.images.length) {
     state.layout = [];
+    state.layoutSeed = null;
     renderLayout();
     return;
   }
 
+  if (newSeed || state.layoutSeed === null) state.layoutSeed = layoutSeed();
+
   try {
-    const packed = buildPackedLayout(state.images, layoutSeed());
+    const packed = buildPackedLayout(
+      state.images,
+      state.layoutSeed,
+      { density: state.density }
+    );
     state.layout = packed.items;
     renderLayout();
   } catch (error) {
@@ -253,6 +300,7 @@ function clearAll() {
   for (const item of state.images) URL.revokeObjectURL(item.thumbUrl);
   state.images = [];
   state.layout = [];
+  state.layoutSeed = null;
   els.imageLayer.replaceChildren();
   els.fileInput.value = '';
   syncControls();
@@ -336,8 +384,28 @@ els.fileInput.addEventListener('change', async (event) => {
 });
 
 els.shuffleButton.addEventListener('click', () => {
-  makeLayout();
+  makeLayout({ newSeed: true });
   showToast('Новая раскладка.');
+});
+
+function applyDensityFromSlider() {
+  state.density = Number(els.densitySlider.value);
+  persistDensity(state.density);
+  syncDensityControl();
+
+  window.clearTimeout(densityTimer);
+  densityTimer = window.setTimeout(() => {
+    if (state.images.length && !state.busy) makeLayout({ newSeed: false });
+  }, 90);
+}
+
+els.densitySlider.addEventListener('input', applyDensityFromSlider);
+els.densitySlider.addEventListener('change', () => {
+  window.clearTimeout(densityTimer);
+  state.density = Number(els.densitySlider.value);
+  persistDensity(state.density);
+  syncDensityControl();
+  if (state.images.length && !state.busy) makeLayout({ newSeed: false });
 });
 
 els.exportButton.addEventListener('click', exportPng);
