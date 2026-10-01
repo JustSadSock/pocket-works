@@ -226,6 +226,9 @@ async function runBulkUpdate(){
 
     const apps=await fetchLiveRegistry();
     writeRegistrySnapshot(apps);
+    window.dispatchEvent(new CustomEvent('pocketworks:registry-snapshot',{
+      detail:{apps,source:'bulk-update'}
+    }));
     const verified=readVerified();
     showProgress({completed:0,total:apps.length,label:'Comparing local fingerprints'});
 

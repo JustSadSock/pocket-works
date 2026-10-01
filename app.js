@@ -671,6 +671,31 @@ async function loadRegistry({ manual = false } = {}) {
   renderShelf();
 }
 
+async function applyExternalRegistrySnapshot(apps) {
+  if (!Array.isArray(apps)) return false;
+
+  const nextRegistry = normalizeRegistry(apps);
+  if (apps.length > 0 && nextRegistry.length === 0) return false;
+
+  registry = nextRegistry;
+  saveRegistrySnapshot(registry);
+  lastSyncAt = Date.now();
+
+  if (!registry.some((app) => app.slug === shelfState.selected)) {
+    shelfState.selected = registry[0]?.slug || null;
+    persistShelfState();
+  }
+
+  await readOfflineReadiness();
+  syncStatus.textContent = `Synced ${formatRecent(lastSyncAt)}`;
+  renderShelf({ transition: true });
+  return true;
+}
+
+window.addEventListener('pocketworks:registry-snapshot', (event) => {
+  void applyExternalRegistrySnapshot(event.detail?.apps);
+});
+
 filterStrip.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-filter]');
   if (!button) return;
