@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.0';
-const APP_VERSION = '0.10.0';
-const RELEASE_DATE = '2026-09-13';
-const CACHE_PROTOCOL = 6;
+const CACHE_NAME = 'pocket-works-launcher-v0.10.1';
+const APP_VERSION = '0.10.1';
+const RELEASE_DATE = '2026-10-01';
+const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
-  'The launcher is now a tactile, spatial library with weighted surfaces, calmer materials and real application objects.',
-  'Opening a work now expands it from the shelf, while returning restores its place and scroll position.',
-  'Search, filters, details, update progress and mobile sheets share a quieter physical motion system.'
+  'Library release detection now updates the visible shelf immediately instead of routing through the Sync button.',
+  'Sync now refreshes only applications that are already installed on this device instead of registering more than a hundred Service Workers at once.',
+  'Installed apps use their existing Service Worker registration for updates, avoiding Safari registration churn and false stale-release checks.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
