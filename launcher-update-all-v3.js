@@ -271,11 +271,15 @@ async function runBulkUpdate(){
     const results=await mapWithConcurrency(
       targets,
       UPDATE_CONCURRENCY,
-      target=>updateInstalledApplication(target.app,target.registration,verified,stage=>{
+      target=>withTimeout(
+        updateInstalledApplication(target.app,target.registration,verified,stage=>{
         active.set(target.app.slug,`${target.app.name} · ${stage}`);
         showProgress({completed:completedCount,total:targets.length,label:[...active.values()][0]||stage});
-        syncStatus.textContent=[...active.values()].slice(0,2).join(' + ');
-      }),
+          syncStatus.textContent=[...active.values()].slice(0,2).join(' + ');
+        }),
+        APP_TIMEOUT,
+        `${target.app.name} update`
+      ).catch(error=>({app:target.app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')})),
       (completed,total,result)=>{
         active.delete(result.app.slug);
         const label=result.status==='failed'
@@ -310,11 +314,5 @@ refreshButton?.addEventListener('click',event=>{
   if(!event.isTrusted)return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  void withTimeout(runBulkUpdate(),APP_TIMEOUT+15_000,'Pocket Works sync').catch(error=>{
-    bulkUpdateRunning=false;
-    refreshButton.disabled=false;
-    refreshButton.textContent='Sync';
-    syncStatus.textContent=`${errorText(error)} — previous releases kept`;
-    progressStage.textContent=syncStatus.textContent;
-  });
+  void runBulkUpdate();
 },{capture:true});
