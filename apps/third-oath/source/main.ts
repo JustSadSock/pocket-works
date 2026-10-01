@@ -9,11 +9,11 @@ import { ITEMS } from './content';
 import { createThirdOathGame, inputState, type DialogueView } from './game';
 import { clearSave, freshSave, loadSave, persistSave, type GameMode, type SaveState } from './state';
 
-const VERSION = '0.2.1';
+const VERSION = '0.2.2';
 const RELEASE_NOTES = [
-  'Единая 3/4 top-down перспектива для пола, стен, персонажей и ключевых пропсов.',
-  'Герой и враги больше не вращаются как плоские фишки по полу.',
-  'Алтари, лавки, саркофаги, пьедесталы, башня и архив получили согласованный объём и контактные тени.'
+  'Clean top-down визуал с более спокойной и согласованной глубиной.',
+  'Стены и пропсы больше не выглядят как набор несогласованных 3D-блоков.',
+  'Неоткрытые комнаты и секции полностью скрываются за закрытыми проходами.'
 ];
 
 const runtime = installMobileRuntime();
