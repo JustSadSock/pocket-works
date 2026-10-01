@@ -138,8 +138,8 @@ export const DIALOGUES: Record<string, DialogueNode> = {
   'archive-fail': {
     id: 'archive-fail',
     speaker: 'АРХИВ',
-    text: 'Чернила слишком старые, а нож работал слишком тщательно. Остаётся только смысл третьей строки.',
-    options: [{ id: 'close', label: 'Закрыть книгу.' }]
+    text: 'Чернила слишком старые, а нож работал слишком тщательно. Остаётся только смысл третьей строки и грубая схема замка на обороте.',
+    options: [{ id: 'force', label: 'Использовать схему, чтобы открыть верхний проход.', effect: 'learn-archive-basic' }]
   },
   'elin-meet-name': {
     id: 'elin-meet-name',
