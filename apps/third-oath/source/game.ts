@@ -1853,26 +1853,26 @@ class OathScene extends Phaser.Scene {
     const horizontalWeight = Math.abs(side);
 
     // Crucial 3/4 rule: the character never rotates with the floor plane.
+    // Horizontal facing mirrors the entire silhouette as one drawing, so shield
+    // and weapon change screen side together instead of cancelling each other.
     this.knight.setPosition(this.player.x, this.player.y - 10 + bob);
     this.knight.rotation = 0;
     this.knight.setScale(facingLeft ? -1 : 1, 1);
 
-    // Gear shifts around the torso rather than spinning the whole sprite.
-    const handSide = facingLeft ? -1 : 1;
-    this.knightShield.x = (-18 - horizontalWeight * 2) * handSide;
+    this.knightShield.x = -18 - horizontalWeight * 2;
     this.knightShield.y = 3 + Math.max(0, -vertical) * 2;
-    this.knightHammer.x = (19 + horizontalWeight * 2) * handSide;
+    this.knightHammer.x = 19 + horizontalWeight * 2;
     this.knightHammer.y = 4 - Math.max(0, vertical) * 2;
 
     this.knightCloak.scaleY = 1 + Math.sin(this.walkPhase * .5) * .022;
     this.knightCloak.skewX = moving ? Math.cos(this.walkPhase * .5) * .025 : 0;
-    this.knightShield.rotation = (inputState.guardHeld ? -.28 : -.04 + Math.sin(this.walkPhase) * .035) * handSide;
+    this.knightShield.rotation = inputState.guardHeld ? -.28 : -.04 + Math.sin(this.walkPhase) * .035;
 
     if (this.attackAnim > 0) {
       const p = 1 - this.attackAnim / .24;
-      this.knightHammer.rotation = (-.55 + Math.sin(p * Math.PI) * 2.05) * handSide;
+      this.knightHammer.rotation = -.55 + Math.sin(p * Math.PI) * 2.05;
     } else {
-      this.knightHammer.rotation = (.22 + Math.sin(this.walkPhase) * .045) * handSide;
+      this.knightHammer.rotation = .22 + Math.sin(this.walkPhase) * .045;
     }
 
     if (inputState.attackPressed || this.keys?.SPACE?.isDown && this.attackCooldown <= 0) {
