@@ -172,7 +172,7 @@ class OathScene extends Phaser.Scene {
     this.cameras.main.setZoom(1);
     this.cameras.main.fadeIn(650, 12, 11, 10);
 
-    this.setMode('explore');
+    this.setMode(this.hasLivingEnemies() ? 'combat' : 'explore');
     this.updateZone(true);
     this.syncHud();
     this.publishQA();
@@ -1178,6 +1178,9 @@ class OathScene extends Phaser.Scene {
     } else if (effect === 'learn-archive-truth') {
       this.save.flags.archiveExamined = true;
       this.save.flags.archiveTruth = true;
+      this.openSealGate();
+    } else if (effect === 'learn-archive-basic') {
+      this.save.flags.archiveExamined = true;
       this.openSealGate();
     } else if (effect === 'choose-break' || effect === 'choose-break-costly') {
       this.save.flags.sealChoiceMade = true;
