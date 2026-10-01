@@ -1,0 +1,51 @@
+:root{
+  --ink:#101936;
+  --ink-2:#17244a;
+  --bone:#f2ecdf;
+  --ember:#df7c55;
+  --sea:#82aaa7;
+  --line:rgba(242,236,223,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--bone);font-family:ui-rounded,"Avenir Next","Segoe UI",sans-serif;overflow:hidden}
+body{min-height:var(--app-viewport-height,100dvh)}
+button,a{font:inherit}
+button{color:inherit}
+.game-shell{position:relative;width:100%;height:var(--app-viewport-height,100dvh);min-height:100%;overflow:hidden;background:var(--ink);isolation:isolate}
+#game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;z-index:4;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 14px) 18px 0;display:grid;grid-template-columns:1fr minmax(108px,34%) 46px;gap:14px;align-items:start;pointer-events:none}
+.hud>*{pointer-events:auto}
+.eyebrow{display:block;font-size:10px;font-weight:800;letter-spacing:.22em;color:rgba(242,236,223,.64)}
+.score-stack strong{display:block;margin-top:2px;font:800 28px/1 "Arial Narrow","Avenir Next Condensed",sans-serif;letter-spacing:-.03em}
+.meter-wrap{padding-top:2px}
+.meter{height:7px;margin-top:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;transform:skewX(-18deg)}
+.meter i{display:block;width:0;height:100%;background:var(--ember);transition:width .12s linear}
+.icon-button{width:46px;height:46px;border:1px solid rgba(242,236,223,.32);background:rgba(16,25,54,.44);clip-path:polygon(12% 0,100% 0,100% 78%,78% 100%,0 100%,0 12%);font-weight:900;font-size:16px;backdrop-filter:blur(6px)}
+.icon-button:active{transform:translateY(2px)}
+.burst-button{position:absolute;z-index:4;right:18px;bottom:calc(env(safe-area-inset-bottom) + 18px);min-width:138px;min-height:58px;padding:10px 16px 9px;border:1px solid rgba(223,124,85,.7);background:rgba(223,124,85,.12);clip-path:polygon(0 0,88% 0,100% 26%,100% 100%,12% 100%,0 74%);text-align:right;transition:transform .12s ease,background .18s ease,opacity .18s ease}
+.burst-button span{display:block;font-weight:900;letter-spacing:.16em}
+.burst-button small{display:block;margin-top:2px;font-size:9px;letter-spacing:.05em;color:rgba(242,236,223,.58)}
+.burst-button:enabled{background:var(--ember);color:#181a2e;box-shadow:0 0 0 1px rgba(242,236,223,.22) inset}
+.burst-button:enabled small{color:rgba(24,26,46,.7)}
+.burst-button:enabled:active{transform:scale(.96) translateY(2px)}
+.burst-button:disabled{opacity:.46}
+.overlay{position:absolute;z-index:10;inset:0;padding:calc(env(safe-area-inset-top) + 42px) 26px calc(env(safe-area-inset-bottom) + 28px);display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(180deg,rgba(16,25,54,.4),rgba(16,25,54,.93) 58%,#101936 100%);backdrop-filter:blur(4px)}
+.overlay[hidden]{display:none}
+.intro{align-items:stretch}
+.mark{position:absolute;right:-54px;top:16%;width:220px;height:330px;border:1px solid rgba(242,236,223,.16);transform:rotate(17deg);background:repeating-linear-gradient(98deg,transparent 0 14px,rgba(130,170,167,.08) 14px 16px);clip-path:polygon(48% 0,100% 15%,83% 100%,0 82%,18% 20%)}
+.intro-copy{position:relative;max-width:320px;margin-top:14vh}
+.intro h1{margin:8px 0 12px;font:900 clamp(72px,24vw,122px)/.72 "Arial Narrow","Avenir Next Condensed",sans-serif;letter-spacing:-.08em}
+.intro p:not(.eyebrow){max-width:280px;margin:20px 0 0;color:rgba(242,236,223,.74);line-height:1.42}
+.actions{display:grid;gap:10px;max-width:340px}
+.primary,.secondary,.exit-link{min-height:52px;border:0;padding:0 18px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-weight:900;letter-spacing:.12em}
+.primary{background:var(--bone);color:var(--ink);clip-path:polygon(0 0,94% 0,100% 28%,100% 100%,6% 100%,0 72%)}
+.primary:active,.secondary:active{transform:translateY(2px)}
+.secondary{background:transparent;color:var(--bone);border:1px solid rgba(242,236,223,.32)}
+.exit-link{color:rgba(242,236,223,.7);border-top:1px solid var(--line)}
+.hint{align-self:flex-end;margin:14px 0 0;font-size:11px;letter-spacing:.13em;color:rgba(242,236,223,.48)}
+.compact{justify-content:center;gap:36px;background:rgba(16,25,54,.92)}
+.compact h2{margin:8px 0 0;font:800 38px/1 "Arial Narrow","Avenir Next Condensed",sans-serif}
+.compact p{color:rgba(242,236,223,.64)}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
