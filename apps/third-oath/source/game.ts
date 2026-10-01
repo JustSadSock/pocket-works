@@ -1939,7 +1939,6 @@ export function createThirdOathGame(parent: HTMLElement, save: SaveState, callba
     parent,
     transparent: false,
     backgroundColor: '#0c0b0a',
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
     physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
