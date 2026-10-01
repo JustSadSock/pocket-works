@@ -31,3 +31,28 @@ The guidance was synthesized from:
 - Practitioner reports from Claude/Codex users: use concrete references and anti-references, define tokens before broad implementation, keep art data separate from game logic, constrain palette and dimensions for procedural/pixel art, and use screenshot review instead of trusting code-only completion.
 
 Do not treat any one external skill as authoritative. Pocket Works product requirements, repository constraints, device targets, and the user's brief come first.
+
+
+## Community takeaways encoded here
+
+The modules deliberately preserve several recurring practitioner lessons rather than importing whole third-party prompt packs:
+
+- Give the agent concrete references plus explicit anti-references; text-only "make it modern" briefs tend to collapse toward generic defaults.
+- Lock a compact design-token vocabulary before generating a large interface so later changes do not silently reintroduce discarded visual patterns.
+- Treat product UI, marketing/landing visuals and game UI as different modes with different hierarchy and density requirements.
+- For Canvas/pixel-art work, constrain dimensions and palettes, use seeded procedural variation, and keep asset definitions separate from game logic.
+- Use deterministic time-based rendering for procedural animation when reproducibility and screenshot comparison matter.
+- Attach "juice" to semantic events and use small/medium/large feedback tiers instead of applying shake, glow and particles everywhere.
+- Inspect the rendered result at target viewports; code quality and green tests do not prove visual quality.
+
+Reference material:
+- https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md
+- https://github.com/pbakaus/impeccable
+- https://github.com/gamedev-skills/awesome-gamedev-agent-skills/blob/main/skills/disciplines/game-feel/SKILL.md
+- https://github.com/openai/plugins/blob/main/plugins/game-studio/skills/game-ui-frontend/SKILL.md
+- https://www.reddit.com/r/ClaudeAI/comments/1q4l76k/
+- https://www.reddit.com/r/ClaudeCode/comments/1ubr1ed/
+- https://www.reddit.com/r/ClaudeAI/comments/1wi0rhx/
+- https://www.reddit.com/r/ClaudeCode/comments/1s2cgdo/
+
+External material is used as inspiration and evidence only; Pocket Works guidance is independently written and adapted to this repository.
