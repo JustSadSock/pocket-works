@@ -8,7 +8,8 @@ export interface PlayerStats {
 }
 
 export interface SaveState {
-  schema: 1;
+  schema: 2;
+  chapter: number;
   health: number;
   maxHealth: number;
   resolve: number;
@@ -28,7 +29,8 @@ const STORAGE_KEY = 'pocket-works:third-oath:save:v1';
 
 export function freshSave(): SaveState {
   return {
-    schema: 1,
+    schema: 2,
+    chapter: 1,
     health: 5,
     maxHealth: 5,
     resolve: 0,
@@ -61,6 +63,8 @@ export function normalizeSave(raw: unknown): SaveState {
     ? [...new Set(data.inventory.filter((item): item is string => typeof item === 'string'))].slice(0, 40)
     : base.inventory;
   const flags = data.flags && typeof data.flags === 'object' ? { ...data.flags } as Record<string, boolean> : {};
+  const legacyChapterOneComplete = data.schema === 1 && data.completed === true;
+  if (legacyChapterOneComplete) flags.chapter1Complete = true;
   const checks = data.checks && typeof data.checks === 'object' ? { ...data.checks } as Record<string, boolean> : {};
   const position = data.position && typeof data.position === 'object'
     ? { x: finite(data.position.x, base.position.x), y: finite(data.position.y, base.position.y) }
@@ -71,21 +75,24 @@ export function normalizeSave(raw: unknown): SaveState {
   return {
     ...base,
     ...data,
-    schema: 1,
+    schema: 2,
+    chapter: Math.max(1, Math.min(2, Math.floor(finite(data.chapter, legacyChapterOneComplete ? 2 : base.chapter)))),
     maxHealth,
     health,
     resolve,
     inventory,
     flags,
     checks,
-    position: rawHealth <= 0 ? { ...checkpoint } : position,
-    checkpoint,
+    position: legacyChapterOneComplete
+      ? { x: 450, y: 210 }
+      : rawHealth <= 0 ? { ...checkpoint } : position,
+    checkpoint: legacyChapterOneComplete ? { x: 450, y: 210 } : checkpoint,
     stats: {
       will: Math.max(0, Math.min(8, finite(data.stats?.will, base.stats.will))),
       insight: Math.max(0, Math.min(8, finite(data.stats?.insight, base.stats.insight)))
     },
     sound: data.sound !== false,
-    completed: data.completed === true,
+    completed: legacyChapterOneComplete ? false : data.completed === true,
     playSeconds: Math.max(0, finite(data.playSeconds, 0)),
     checkSeed: Math.max(1, Math.floor(finite(data.checkSeed, base.checkSeed)))
   };
