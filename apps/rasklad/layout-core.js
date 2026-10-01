@@ -35,6 +35,30 @@ function gutterForCount(count) {
   return 0.0035;
 }
 
+function clampDensity(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 85;
+  return Math.min(100, Math.max(0, numeric));
+}
+
+function lerp(from, to, amount) {
+  return from + (to - from) * amount;
+}
+
+function densitySettings(count, density) {
+  const normalized = clampDensity(density) / 100;
+  const eased = Math.pow(normalized, 0.85);
+  const baseMargin = pageMarginForCount(count);
+  const baseGutter = gutterForCount(count);
+
+  return {
+    density: Math.round(clampDensity(density)),
+    margin: baseMargin * lerp(1.65, 0.60, eased),
+    gutter: baseGutter * lerp(2.40, 0.15, eased),
+    maxScale: scaleCeilingForCount(count) * lerp(0.72, 1.02, eased)
+  };
+}
+
 function makeRng(seed) {
   let value = (Number(seed) >>> 0) || 0x6d2b79f5;
   return () => {
@@ -300,17 +324,17 @@ export function hasOverlap(items) {
   return false;
 }
 
-export function buildPackedLayout(images, seed = Date.now()) {
-  if (!images.length) return { items: [], coverage: 0, scale: 1 };
+export function buildPackedLayout(images, seed = Date.now(), options = {}) {
+  const density = clampDensity(options.density ?? 85);
+  if (!images.length) return { items: [], coverage: 0, scale: 1, density };
 
   const normalizedSeed = Number(seed) >>> 0;
   const specRng = makeRng(normalizedSeed ^ 0xa511e9b3);
   const specs = createSpecs(images, specRng);
-  const margin = pageMarginForCount(images.length);
-  const gutter = gutterForCount(images.length);
-  const maxScale = scaleCeilingForCount(images.length);
+  const settings = densitySettings(images.length, density);
+  const { margin, gutter, maxScale } = settings;
 
-  let low = 0.30;
+  let low = Math.min(0.30, maxScale);
   let high = maxScale;
   let best = bestPackAtScale(specs, low, margin, gutter, normalizedSeed, 10);
 
@@ -345,6 +369,7 @@ export function buildPackedLayout(images, seed = Date.now()) {
     coverage: best.coverage,
     scale: low,
     margin,
-    gutter
+    gutter,
+    density: settings.density
   };
 }
