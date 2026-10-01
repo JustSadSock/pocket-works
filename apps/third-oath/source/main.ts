@@ -9,11 +9,11 @@ import { ITEMS } from './content';
 import { createThirdOathGame, inputState, type DialogueView } from './game';
 import { clearSave, freshSave, loadSave, persistSave, type GameMode, type SaveState } from './state';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const RELEASE_NOTES = [
-  'Первая играбельная глава: капелла, крипта и Зал Клятв.',
-  'Мобильное top-down управление, диалоги, бой, предметы и скрытые проверки.',
-  'Процедурный Phaser-визуал, атмосферный звук и офлайн PWA.'
+  'Глава II: старая башня, колокольный ярус, реестр имён и встреча с Элином.',
+  'Новые противники: Безгласные, дальнобойные Смотрящие и Носитель печати.',
+  'Три решения судьбы башенной печати с последствиями старых проверок и найденного письма.'
 ];
 
 const runtime = installMobileRuntime();
@@ -43,6 +43,8 @@ const ritualText = $('ritualText');
 const healthBar = $('healthBar');
 const healthText = $('healthText');
 const resolveBar = $('resolveBar');
+const bossStatus = $('bossStatus');
+const bossBar = $('bossBar');
 const prompt = $('prompt');
 const promptText = $('promptText');
 const interactButton = $<HTMLButtonElement>('interactButton');
@@ -57,6 +59,10 @@ const guardButton = $<HTMLButtonElement>('guardButton');
 const abilityButton = $<HTMLButtonElement>('abilityButton');
 const inventoryList = $('inventoryList');
 const objectiveText = $('objectiveText');
+const completeKicker = $('completeKicker');
+const completeTitle = $('completeTitle');
+const completeCopy = $('completeCopy');
+const continueAfterButton = $<HTMLButtonElement>('continueAfterButton');
 
 let save: SaveState = loadSave();
 let controller: ReturnType<typeof createThirdOathGame> | null = null;
@@ -77,7 +83,8 @@ function syncMenu() {
   updateSoundLabels();
   const progressed = hasProgress(save.flags, save.inventory, save.playSeconds);
   continueLabel.textContent = progressed ? 'ПРОДОЛЖИТЬ' : 'ВОЙТИ В КАПЕЛЛУ';
-  if (save.completed) continueMeta.textContent = 'Глава I завершена · вернуться в Зал Клятв';
+  if (save.completed) continueMeta.textContent = 'Глава II завершена · вернуться к печати';
+  else if (save.chapter >= 2) continueMeta.textContent = 'Глава II · Старая башня';
   else if (progressed) continueMeta.textContent = 'Продолжить с последнего места';
   else continueMeta.textContent = 'Новая игра';
   newGameButton.hidden = !progressed;
@@ -95,10 +102,13 @@ function resetInputs() {
   moveThumb.style.transform = 'translate3d(0,0,0)';
 }
 
-function renderHud(health: number, maxHealth: number, resolve: number, combat: boolean) {
+function renderHud(health: number, maxHealth: number, resolve: number, combat: boolean, bossHealth: number, bossMaxHealth: number) {
   healthBar.style.width = String(healthPercent(health, maxHealth)) + '%';
   healthText.textContent = String(health) + ' / ' + String(maxHealth);
   resolveBar.style.width = String(clampPercent(resolve)) + '%';
+  const bossVisible = bossMaxHealth > 0 && bossHealth > 0;
+  bossStatus.hidden = !bossVisible;
+  bossBar.style.width = String(bossVisible ? healthPercent(bossHealth, bossMaxHealth) : 0) + '%';
   document.body.classList.toggle('in-combat', combat);
 }
 
@@ -131,8 +141,13 @@ function renderJournal() {
   else if (!save.flags.cryptWardenDefeated) objectiveText.textContent = 'Спуститься в крипту и найти путь глубже.';
   else if (!save.flags.oathPlaced || !save.flags.tearPlaced) objectiveText.textContent = 'Вернуться к трём пьедесталам внизу.';
   else if (!save.flags.hallAwakened) objectiveText.textContent = 'Подождать ответа Зала Клятв.';
-  else if (!save.completed) objectiveText.textContent = 'Босые следы ведут к старой башне.';
-  else objectiveText.textContent = 'Башня открыта. Глава I завершена.';
+  else if (!save.flags.chapter1Complete) objectiveText.textContent = 'Босые следы ведут к старой башне.';
+  else if (!save.flags.bellFightCleared) objectiveText.textContent = 'Подняться к разбитому колоколу.';
+  else if (!save.flags.archiveExamined) objectiveText.textContent = 'Найти реестр имён выше колокольного яруса.';
+  else if (!save.flags.sealChoiceMade) objectiveText.textContent = 'Подойти к Элину у башенной печати.';
+  else if (!save.flags.towerGuardianDefeated) objectiveText.textContent = 'Пережить ответ печати.';
+  else if (!save.completed) objectiveText.textContent = 'Послушать, что осталось после Носителя.';
+  else objectiveText.textContent = 'Глава II завершена.';
 }
 
 function showPrompt(label: string | null) {
@@ -223,6 +238,18 @@ function createController() {
     },
     onComplete: () => {
       resetInputs();
+      completeKicker.textContent = 'ГЛАВА II · ИМЯ';
+      if (save.flags.sealChoiceCut) {
+        completeTitle.textContent = 'Две строки исчезли.';
+        completeCopy.textContent = 'Башня осталась стоять, но больше не знает ни тебя, ни Элина.';
+      } else if (save.flags.sealChoiceBind) {
+        completeTitle.textContent = 'Печать сохранена.';
+        completeCopy.textContent = 'Имена остались внутри. Элин ушёл раньше, чем ты успел обернуться.';
+      } else {
+        completeTitle.textContent = 'Имена вышли наружу.';
+        completeCopy.textContent = 'Камень молчит. Впервые за много лет башня никого не помнит.';
+      }
+      continueAfterButton.textContent = 'Вернуться к печати';
       completeScreen.hidden = false;
     },
     onSave: (next) => { save = next; if (!pauseScreen.hidden) renderJournal(); }
@@ -297,7 +324,7 @@ $('retryButton').addEventListener('click', () => {
   controller?.restartFromCheckpoint();
 });
 $('deathMenuButton').addEventListener('click', () => { audio.ui(); showMenu(); });
-$('continueAfterButton').addEventListener('click', () => {
+continueAfterButton.addEventListener('click', () => {
   completeScreen.hidden = true;
   controller?.resumeAfterComplete();
   audio.ui();

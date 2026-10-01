@@ -117,6 +117,26 @@ button, a, [data-ui] { -webkit-user-select: none; user-select: none; }
 .pause-btn { pointer-events: auto; width: 44px; height: 44px; border: 0; background: transparent; display: flex; gap: 5px; align-items: center; justify-content: center; opacity: .72; }
 .pause-btn span { width: 2px; height: 14px; background: #b2aa9c; }
 
+.boss-status {
+  position: absolute; z-index: 59; left: 50%; top: calc(var(--safe-top) + 54px);
+  width: min(58vw, 250px); transform: translateX(-50%); pointer-events: none;
+  display: grid; gap: 5px;
+}
+.boss-status > span {
+  color: #9f9687; text-align: center;
+  font: 750 .49rem/1 var(--sans); letter-spacing: .17em;
+  text-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+.boss-bar {
+  height: 3px; overflow: hidden;
+  background: rgba(9,9,8,.72); border: 1px solid rgba(164,151,127,.18);
+}
+.boss-bar i {
+  display: block; width: 100%; height: 100%;
+  background: linear-gradient(90deg, #69463c, #a46a58);
+  transition: width .16s ease;
+}
+
 .zone-title {
   position: absolute; z-index: 58; left: 50%; top: calc(var(--safe-top) + 76px); width: min(82vw, 360px);
   transform: translate(-50%, -8px); text-align: center; opacity: 0; pointer-events: none;

@@ -4,13 +4,13 @@
   "name": "Третья клятва",
   "shortName": "Клятва",
   "description": "Мрачная мобильная top-down narrative action-RPG: исследование, скрытые проверки, опасные короткие бои и последствия решений.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "releaseDate": "2026-10-01",
-  "releaseDateTime": "2026-10-01T18:17:00+02:00",
+  "releaseDateTime": "2026-10-01T19:58:00+03:00",
   "changelog": [
-    "Первая играбельная глава: капелла, крипта и Зал Клятв.",
-    "Мобильное top-down управление, диалоги, исследование, бой, предметы и сюжетные проверки.",
-    "Авторский процедурный визуальный слой Phaser: освещение, текстуры, частицы, камеры и атмосферный звук."
+    "Глава II: старая башня, колокольный ярус, реестр имён и встреча с Элином.",
+    "Безгласные, Смотрящие и Носитель печати расширяют бой ближними и дальними угрозами.",
+    "Три решения судьбы печати учитывают прежние ответы, письмо из крипты и скрытые проверки."
   ],
   "status": "active",
   "preset": "phaser",
@@ -19,8 +19,19 @@
   "backgroundColor": "#12110f",
   "themeColor": "#12110f",
   "orientation": "portrait",
-  "cacheName": "third-oath-v0.1.0",
+  "cacheName": "third-oath-v0.2.0",
   "storageNamespace": "pocket-works:third-oath",
-  "tags": ["PWA", "offline", "game", "2D", "Phaser", "RPG", "narrative", "top-down", "portrait", "mobile"],
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "2D",
+    "Phaser",
+    "RPG",
+    "narrative",
+    "top-down",
+    "portrait",
+    "mobile"
+  ],
   "order": 218
 }
