@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUseOath, clampPercent, hasProgress, healthPercent } from './core';
+import { canUseOath, clampPercent, getOccludedSections, hasProgress, healthPercent } from './core';
 
 describe('third-oath core helpers', () => {
   it('clamps HUD percentages safely', () => {
@@ -20,5 +20,17 @@ describe('third-oath core helpers', () => {
   it('checks oath ability cost at the boundary', () => {
     expect(canUseOath(39)).toBe(false);
     expect(canUseOath(40)).toBe(true);
+  });
+
+  it('keeps map sections hidden behind unopened progression gates', () => {
+    expect(getOccludedSections({})).toEqual(['crypt', 'hall', 'tower', 'archive', 'seal']);
+    expect(getOccludedSections({ secretDoorOpen: true })).toEqual(['hall', 'tower', 'archive', 'seal']);
+    expect(getOccludedSections({
+      secretDoorOpen: true,
+      cryptWardenDefeated: true,
+      hallAwakened: true,
+      bellFightCleared: true,
+      archiveExamined: true
+    })).toEqual([]);
   });
 });

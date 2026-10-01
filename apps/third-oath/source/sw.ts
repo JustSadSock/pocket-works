@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'third-oath-';
-const CACHE_NAME = 'third-oath-v0.2.1';
-const APP_VERSION = '0.2.1';
+const CACHE_NAME = 'third-oath-v0.2.2';
+const APP_VERSION = '0.2.2';
 const RELEASE_DATE = '2026-10-01';
 const RELEASE_NOTES = [
-  'Единая 3/4 top-down перспектива для мира и персонажей.',
-  'Герой и враги больше не выглядят как плоские вращающиеся фишки.',
-  'Ключевые пропсы и архитектура получили согласованный объём и контактные тени.'
+  'Clean top-down визуал с мягкой глубиной вместо перегруженной псевдо-3/4 геометрии.',
+  'Стены, пол и пропсы приведены к одной спокойной системе.',
+  'Закрытые участки карты теперь скрыты до открытия соответствующих проходов.'
 ];
 
 setCacheNameDetails({ prefix: 'third-oath', suffix: 'v' + APP_VERSION, precache: 'precache', runtime: 'runtime' });
