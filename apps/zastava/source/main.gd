@@ -359,7 +359,7 @@ func _build_ui() -> void:
 	weather_label.custom_minimum_size = Vector2(62, 0)
 	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(weather_label)
-	version_label = _label("v1.1.2", 10, Color(C_MUTED, 0.68))
+	version_label = _label("v1.2.0", 10, Color(C_MUTED, 0.68))
 	version_label.custom_minimum_size = Vector2(48, 0)
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(version_label)
@@ -533,6 +533,8 @@ func _load_or_prepare() -> void:
 			state["condition"] = "ordinary"
 		if not state.has("weather_days_left"):
 			state["weather_days_left"] = 2
+		if not state.has("visual_time"):
+			state["visual_time"] = 0.38
 		continue_ready_text = "ПРОДОЛЖИТЬ · ДЕНЬ %d" % int(state.get("day", 1))
 	else:
 		_reset_state()
@@ -553,6 +555,7 @@ func _on_world_boot_completed() -> void:
 	continue_button.text = continue_ready_text
 	world.set_state(state)
 	world.set_weather(String(state.get("weather", "clear")))
+	world.set_time(float(state.get("visual_time", 0.38)))
 	PocketWorks.set_boot_stage("ready")
 	_publish_state("ready")
 
@@ -576,6 +579,7 @@ func _reset_state() -> void:
 		"scheduled":[],
 		"weather":"clear",
 		"weather_days_left":3,
+		"visual_time":0.38,
 		"condition":condition,
 		"rng_state":rng.state
 	}
@@ -632,9 +636,6 @@ func _begin_day_if_needed() -> void:
 	var weather := _advance_weather(day)
 	world.transition_weather(weather, 2.6)
 	PocketWorks.set_ambience(sound_enabled, weather, int(state.get("population", 18)))
-	# A gameplay day now moves through a narrow daylight band. Three decisions no
-	# longer compress sunrise-to-night into a few seconds.
-	world.transition_time(0.34, 1.25)
 	_process_scheduled()
 	_daily_background(day)
 	_refresh_hud()
@@ -686,8 +687,9 @@ func _show_next() -> void:
 	lever.reset()
 	var variant := rng.randi_range(0, 11)
 	world.spawn_visitor(current_visitor, variant)
-	var index := int(state["visitors_today"])
-	world.transition_time(0.38 + float(index) * 0.055, 0.80)
+	var visual_time := fposmod(float(state.get("visual_time", 0.38)) + 0.018, 1.0)
+	state["visual_time"] = visual_time
+	world.transition_time(visual_time, 1.15)
 	_publish_state("awaiting_decision")
 
 func _pick_visitor() -> Dictionary:
@@ -823,7 +825,9 @@ func _end_day() -> void:
 	decision_locked = true
 	lever.set_enabled(false)
 	world.operate_gate(false)
-	world.transition_time(0.55, 1.15)
+	var day_time := fposmod(float(state.get("visual_time", 0.38)) + 0.012, 1.0)
+	state["visual_time"] = day_time
+	world.transition_time(day_time, 1.40)
 	var population := int(state["population"])
 	var upkeep := maxi(2, int(ceil(float(population) / 11.0)))
 	state["food"] = int(state["food"]) - upkeep

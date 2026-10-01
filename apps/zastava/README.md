@@ -71,3 +71,5 @@ Web boot is staged: the menu renders first, the core diorama is built across sub
 The mechanical lever also has a scene-level fallback hitbox for mobile canvas pointer routing; its semantic decision remains single-fire even if both GUI and raw pointer paths observe the same drag.
 
 Version 1.1.1 deliberately rotates the application cache namespace and keeps the active version visible in the HUD so stale production clients are immediately obvious.
+
+Final 1.2 visual sign-off uses the regenerated Web export with the corrected water clearance.

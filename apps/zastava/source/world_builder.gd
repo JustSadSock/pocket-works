@@ -53,6 +53,14 @@ const C_WATER := Color("#4c6e72")
 const C_METAL := Color("#444d49")
 const C_CLOTH := Color("#79634e")
 
+const RIVER_CENTER_Z := 1.0
+const RIVER_HALF_DEPTH := 2.80
+const RIVER_Z_MIN := RIVER_CENTER_Z - RIVER_HALF_DEPTH
+const RIVER_Z_MAX := RIVER_CENTER_Z + RIVER_HALF_DEPTH
+const BRIDGE_HALF_WIDTH := 1.08
+const GATE_Z := -1.14
+const FAR_LANDING_Z := 4.10
+
 func _ready() -> void:
 	# Keep _ready intentionally tiny. Godot does not dismiss its Web splash until
 	# the first rendered frame; building the whole diorama here made Chromium sit
@@ -136,9 +144,9 @@ func _build_environment() -> void:
 
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 19.2
-	camera.position = Vector3(8.4, 12.1, 13.6)
-	camera.look_at_from_position(camera.position, Vector3(0, 0.2, -0.5))
+	camera.size = 18.7
+	camera.position = Vector3(8.25, 12.0, 13.25)
+	camera.look_at_from_position(camera.position, Vector3(0, 0.35, -0.75))
 	camera.current = true
 	add_child(camera)
 
@@ -155,22 +163,22 @@ func _build_landscape() -> void:
 	plane.subdivide_width = 36
 	plane.subdivide_depth = 16
 	water_mesh.mesh = plane
-	water_mesh.position = Vector3(0, -0.03, 1.0)
+	water_mesh.position = Vector3(0, 0.015, RIVER_CENTER_Z)
 	var shader := Shader.new()
 	shader.code = """
 shader_type spatial;
 render_mode cull_disabled;
 void vertex() {
-	float a = sin(VERTEX.x * 1.7 + TIME * 1.15) * 0.045;
-	float b = sin(VERTEX.z * 2.4 - TIME * 0.82) * 0.028;
+	float a = sin(VERTEX.x * 1.7 + TIME * 0.82) * 0.018;
+	float b = sin(VERTEX.z * 2.4 - TIME * 0.61) * 0.011;
 	VERTEX.y += a + b;
 }
 void fragment() {
-	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.7) * 0.5 + 0.5;
+	float ripple = sin((VERTEX.x + VERTEX.z) * 3.2 + TIME * 1.10) * 0.5 + 0.5;
 	float bands = sin(VERTEX.x * 5.0 - TIME * 0.55) * 0.5 + 0.5;
-	ALBEDO = mix(vec3(0.22,0.36,0.38), vec3(0.34,0.49,0.49), ripple * 0.22 + bands * 0.05);
-	ROUGHNESS = 0.38;
-	METALLIC = 0.015;
+	ALBEDO = mix(vec3(0.20,0.32,0.34), vec3(0.31,0.44,0.44), ripple * 0.16 + bands * 0.035);
+	ROUGHNESS = 0.46;
+	METALLIC = 0.01;
 }
 """
 	var sm := ShaderMaterial.new()
@@ -187,34 +195,56 @@ void fragment() {
 	# Trees are curated outside the rectangular river footprint. Procedural z
 	# stepping used to place trunks directly in the water.
 	for spec in [
-		[Vector3(-5.15,0,-8.4),0.86], [Vector3(5.20,0,-7.2),0.80],
-		[Vector3(-4.75,0,-5.7),0.92], [Vector3(5.10,0,-4.35),0.78],
-		[Vector3(-5.35,0,-2.65),0.82], [Vector3(4.95,0,-2.55),0.76],
-		[Vector3(-5.00,0,5.25),0.74], [Vector3(4.70,0,5.75),0.78],
-		[Vector3(-5.45,0,7.05),0.70], [Vector3(5.05,0,7.70),0.76],
-		[Vector3(-4.80,0,9.00),0.80], [Vector3(5.30,0,9.35),0.72]
+		[Vector3(-5.15,0,-8.5),0.76], [Vector3(5.20,0,-7.5),0.72],
+		[Vector3(-4.75,0,-6.4),0.78], [Vector3(5.10,0,-5.3),0.70],
+		[Vector3(-5.35,0,-4.65),0.68], [Vector3(4.95,0,-4.75),0.66],
+		[Vector3(-5.00,0,7.10),0.64], [Vector3(4.70,0,7.35),0.68],
+		[Vector3(-5.45,0,8.05),0.64], [Vector3(5.05,0,8.45),0.68],
+		[Vector3(-4.80,0,9.25),0.70], [Vector3(5.30,0,9.55),0.66]
 	]:
 		add_child(_tree(spec[0], spec[1]))
 
-	# Readable ground detail: ruts, stones and riverbank growth stop the world from
-	# looking like three flat colour planes.
+	# Give the rectangular water mesh actual banks. Each bank is split around the
+	# bridge corridor, so land can never visually cover the usable crossing.
+	for side_index in range(2):
+		var side: float = -1.0 if side_index == 0 else 1.0
+		var bank_x: float = side * 3.85
+		add_child(_box("NearBank", Vector3(5.45, 0.18, 0.56), C_GRASS_DARK.lightened(0.04), Vector3(bank_x, 0.015, RIVER_Z_MIN - 0.08)))
+		add_child(_box("FarBankLip", Vector3(5.45, 0.18, 0.56), C_GRASS_DARK.lightened(0.02), Vector3(bank_x, 0.015, RIVER_Z_MAX + 0.08)))
+		var wet_near := _box("WetBank", Vector3(5.35, 0.028, 0.14), C_ROAD.darkened(0.22), Vector3(bank_x, 0.07, RIVER_Z_MIN + 0.12))
+		var wet_far := _box("WetBank", Vector3(5.35, 0.028, 0.14), C_ROAD.darkened(0.22), Vector3(bank_x, 0.07, RIVER_Z_MAX - 0.12))
+		add_child(wet_near)
+		add_child(wet_far)
+
 	for i in range(7):
-		var rut := _box("RoadRut", Vector3(0.09, 0.018, 0.62), C_ROAD.darkened(0.18), Vector3(-0.48 if i % 2 == 0 else 0.48, 0.045, -8.55 + float(i) * 1.02))
+		var rut := _box("RoadRut", Vector3(0.07, 0.014, 0.56), C_ROAD.darkened(0.18), Vector3(-0.43 if i % 2 == 0 else 0.43, 0.045, -8.50 + float(i) * 1.02))
 		rut.rotation_degrees.y = -1.0
 		add_child(rut)
-	# Shore detail hugs the actual z edges of the river instead of floating in
-	# the middle of the water plane.
+
 	for pos in [
-		Vector3(-4.8,0.04,-1.62), Vector3(4.6,0.04,-1.55),
-		Vector3(-4.6,0.04,3.72), Vector3(4.9,0.04,3.66),
-		Vector3(-3.1,0.04,4.15), Vector3(3.25,0.04,-1.48)
+		Vector3(-4.75,0.08,RIVER_Z_MIN - 0.42), Vector3(4.55,0.08,RIVER_Z_MIN - 0.38),
+		Vector3(-4.55,0.08,RIVER_Z_MAX + 0.40), Vector3(4.82,0.08,RIVER_Z_MAX + 0.36),
+		Vector3(-3.15,0.08,RIVER_Z_MAX + 0.48), Vector3(3.25,0.08,RIVER_Z_MIN - 0.44)
 	]:
-		add_child(_rock(pos, 0.20 + absf(pos.x) * 0.016))
+		_add_land_prop(_rock_cluster(pos, 0.23), pos, 0.22)
+
 	for pos in [
-		Vector3(-4.7,0.02,-1.70), Vector3(-3.9,0.02,3.72),
-		Vector3(4.5,0.02,-1.68), Vector3(3.9,0.02,3.70)
+		Vector3(-4.65,0.02,RIVER_Z_MIN - 0.22), Vector3(-3.9,0.02,RIVER_Z_MAX + 0.20),
+		Vector3(4.45,0.02,RIVER_Z_MIN - 0.20), Vector3(3.9,0.02,RIVER_Z_MAX + 0.22)
 	]:
-		add_child(_reed_cluster(pos))
+		_add_land_prop(_reed_cluster(pos), pos, 0.12)
+
+	# Small grass tufts break the empty planes without becoming gameplay clutter.
+	for pos in [
+		Vector3(-3.8,0.02,-3.1), Vector3(4.1,0.02,-4.0), Vector3(-4.25,0.02,-6.4),
+		Vector3(4.35,0.02,5.1), Vector3(-4.0,0.02,6.2), Vector3(3.7,0.02,8.0)
+	]:
+		add_child(_grass_tuft(pos))
+	for pos in [
+		Vector3(-4.65,0.02,-2.75), Vector3(4.55,0.02,-2.95),
+		Vector3(-4.55,0.02,5.10), Vector3(4.45,0.02,5.25)
+	]:
+		add_child(_shrub(pos))
 
 func _try_authored_core() -> bool:
 	var path := "res://assets/zastava_core.glb"
@@ -296,22 +326,40 @@ func _build_gatehouse() -> void:
 	village_root.add_child(wall_l)
 	village_root.add_child(wall_r)
 
+func _build_gatehouse_runtime_detail() -> void:
+	for x in [-1.65, 1.65]:
+		add_child(_box("TowerFoundation", Vector3(1.82,0.24,1.54), C_STONE_DARK.darkened(0.04), Vector3(x,0.12,-1.95)))
+		for beam_x in [-0.58,0.58]:
+			add_child(_box("TowerBrace", Vector3(0.075,1.72,0.08), C_WOOD.darkened(0.15), Vector3(x+beam_x,1.55,-1.18)))
+		add_child(_box("TowerLintel", Vector3(1.28,0.08,0.08), C_WOOD.darkened(0.15), Vector3(x,2.28,-1.18)))
+	for x in [-3.45,3.45]:
+		add_child(_box("WallFoundation", Vector3(2.10,0.22,0.92), C_STONE_DARK.darkened(0.04), Vector3(x,0.11,-2.0)))
+	for x in [-2.62,2.62]:
+		var pole := _box("BannerPole",Vector3(0.045,1.18,0.045),C_WOOD.darkened(0.20),Vector3(x,1.76,-1.48))
+		add_child(pole)
+		var cloth := _box("GateBanner",Vector3(0.34,0.52,0.035),Color("#705045"),Vector3(x + (0.18 if x < 0 else -0.18),1.91,-1.46))
+		add_child(cloth)
+
 func _build_moving_bridge() -> void:
+	_build_gatehouse_runtime_detail()
 	# Fixed aprons close the visual/physical gaps between road, gate and the
 	# moving deck. The bridge hinge now sits exactly at the outer gate threshold.
-	add_child(_box("GateApron", Vector3(1.92, 0.24, 0.74), C_STONE_DARK.lightened(0.10), Vector3(0, 0.16, -1.50)))
-	add_child(_box("FarLanding", Vector3(1.96, 0.24, 0.82), C_ROAD.darkened(0.03), Vector3(0, 0.16, 4.10)))
+	add_child(_box("GateApron", Vector3(2.02, 0.26, 0.82), C_STONE_DARK.lightened(0.10), Vector3(0, 0.17, -1.52)))
+	add_child(_box("FarLanding", Vector3(2.02, 0.24, 0.90), C_ROAD.darkened(0.05), Vector3(0, 0.16, FAR_LANDING_Z)))
+	for x in [-0.94, 0.94]:
+		add_child(_box("GateCurb", Vector3(0.12, 0.30, 0.88), C_STONE_DARK, Vector3(x, 0.23, -1.52)))
+		add_child(_box("LandingPost", Vector3(0.11, 0.48, 0.11), C_WOOD.darkened(0.08), Vector3(x, 0.30, FAR_LANDING_Z + 0.16)))
 
 	bridge_pivot = Node3D.new()
 	bridge_pivot.name = "BridgePivot"
-	bridge_pivot.position = Vector3(0, 0.18, -1.14)
+	bridge_pivot.position = Vector3(0, 0.18, GATE_Z)
 	add_child(bridge_pivot)
-	var bridge_length := 4.92
+	var bridge_length := 4.98
 	var bridge_center := bridge_length * 0.5
 	var deck := _box("Deck", Vector3(1.8, 0.24, bridge_length), C_WOOD_LIGHT, Vector3(0, 0, bridge_center))
 	bridge_pivot.add_child(deck)
 	for x in [-0.82, 0.82]:
-		var rail := _box("Rail", Vector3(0.10, 0.48, bridge_length), C_WOOD, Vector3(x, 0.34, bridge_center))
+		var rail := _box("Rail", Vector3(0.085, 0.40, bridge_length), C_WOOD.darkened(0.04), Vector3(x, 0.31, bridge_center))
 		bridge_pivot.add_child(rail)
 	for i in range(14):
 		var z := 0.28 + float(i) * 0.34
@@ -333,6 +381,18 @@ func _build_moving_bridge() -> void:
 		spike.rotation_degrees = Vector3(0, 0, 180)
 		gate_bar.add_child(spike)
 	gate_bar.add_child(_box("Cross", Vector3(1.65, 0.11, 0.10), C_METAL, Vector3(0, 1.18, 0)))
+	for x in [-0.90, 0.90]:
+		var hinge := MeshInstance3D.new()
+		var hinge_mesh := CylinderMesh.new()
+		hinge_mesh.top_radius = 0.16
+		hinge_mesh.bottom_radius = 0.16
+		hinge_mesh.height = 0.28
+		hinge_mesh.radial_segments = 10
+		hinge.mesh = hinge_mesh
+		hinge.position = Vector3(x, 0.30, GATE_Z + 0.02)
+		hinge.rotation_degrees.z = 90.0
+		hinge.material_override = _mat(C_METAL.darkened(0.08))
+		add_child(hinge)
 
 func _build_living_details() -> void:
 	ambient_root = Node3D.new()
@@ -350,7 +410,10 @@ func _build_living_details() -> void:
 	ambient_root.add_child(_signpost(Vector3(2.0,0,5.15)))
 	ambient_root.add_child(_fence(Vector3(-4.8,0,-5.7), 3.0, 8.0))
 	ambient_root.add_child(_fence(Vector3(4.75,0,-7.0), 2.8, -5.0))
-	ambient_root.add_child(_dock(Vector3(-3.75,0.02,1.55)))
+	ambient_root.add_child(_mooring_post(Vector3(-5.05,0,RIVER_Z_MIN - 0.42)))
+	ambient_root.add_child(_woodpile(Vector3(-2.75,0,-4.38)))
+	ambient_root.add_child(_handcart(Vector3(3.05,0,-4.55), -18.0))
+	ambient_root.add_child(_well(Vector3(-3.55,0,-5.55)))
 
 	trade_details = Node3D.new()
 	trade_details.name = "TradeDetails"
@@ -469,8 +532,8 @@ func _build_weather() -> void:
 
 func _precipitation(is_snow: bool) -> GPUParticles3D:
 	var p := GPUParticles3D.new()
-	p.amount = 220 if is_snow else 360
-	p.lifetime = 2.8 if is_snow else 1.2
+	p.amount = 130 if is_snow else 210
+	p.lifetime = 3.2 if is_snow else 1.0
 	p.visibility_aabb = AABB(Vector3(-8, -1, -11), Vector3(16, 14, 24))
 	var proc := ParticleProcessMaterial.new()
 	proc.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
@@ -482,9 +545,9 @@ func _precipitation(is_snow: bool) -> GPUParticles3D:
 	proc.initial_velocity_max = 0.75 if is_snow else 7.5
 	p.process_material = proc
 	var drop := BoxMesh.new()
-	drop.size = Vector3(0.025 if is_snow else 0.018, 0.05 if is_snow else 0.34, 0.025)
+	drop.size = Vector3(0.020 if is_snow else 0.010, 0.040 if is_snow else 0.18, 0.020)
 	var dm := StandardMaterial3D.new()
-	dm.albedo_color = Color(0.88, 0.91, 0.90, 0.9) if is_snow else Color(0.70, 0.79, 0.80, 0.58)
+	dm.albedo_color = Color(0.88, 0.90, 0.88, 0.72) if is_snow else Color(0.63, 0.72, 0.74, 0.34)
 	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	drop.material = dm
 	p.draw_pass_1 = drop
@@ -549,28 +612,35 @@ func _finish_weather_transition(kind: String) -> void:
 	rain.emitting = kind == "rain"
 	snow.emitting = kind == "snow"
 
-func transition_time(target: float, duration: float = 0.45) -> void:
+func transition_time(target: float, duration: float = 0.75) -> void:
 	if time_tween and time_tween.is_running():
 		time_tween.kill()
 	var start := current_time_progress
+	var unwrapped_target := fposmod(target, 1.0)
+	if unwrapped_target < start - 0.5:
+		unwrapped_target += 1.0
+	elif unwrapped_target > start + 0.5:
+		unwrapped_target -= 1.0
 	time_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	time_tween.tween_method(set_time, start, clampf(target, 0.0, 1.0), maxf(0.05, duration))
+	time_tween.tween_method(set_time, start, unwrapped_target, maxf(0.10, duration))
 
 func set_time(progress: float) -> void:
-	current_time_progress = progress
+	var t: float = fposmod(progress, 1.0)
+	current_time_progress = t
 	if environment == null or sun == null:
 		return
-	var t: float = clampf(progress, 0.0, 1.0)
-	sun.rotation_degrees.x = lerp(-35.0, -72.0, abs(t - 0.5) * 1.5)
-	sun.rotation_degrees.y = lerp(-55.0, 45.0, t)
-	if t < 0.72:
-		sun.light_color = Color("#efd0a3").lerp(Color("#dca06d"), max(0.0, (t - 0.5) / 0.22))
-		sun.light_energy = lerp(0.92, 0.68, max(0.0, (t - 0.55) / 0.17))
-	else:
-		sun.light_color = Color("#bf8b72")
-		sun.light_energy = lerp(0.70, 0.46, (t - 0.72) / 0.28)
-	environment.environment.ambient_light_color = Color("#b8b09b").lerp(Color("#777d78"), max(0.0, (t - 0.58) / 0.42))
-	var lamp_energy := clampf((t - 0.62) / 0.20, 0.0, 1.0) * 0.78
+
+	# Continuous 24h cycle. Noon is 0.50, sunrise/sunset sit near 0.25/0.75.
+	# Night stays readable; there is no piecewise jump at the end of a day.
+	var sun_height: float = sin((t - 0.25) * TAU)
+	var daylight: float = clampf((sun_height + 0.18) / 1.18, 0.0, 1.0)
+	var horizon: float = pow(1.0 - absf(sun_height), 2.0) * daylight
+	sun.rotation_degrees.x = lerpf(8.0, -58.0, daylight)
+	sun.rotation_degrees.y = t * 360.0 - 120.0
+	sun.light_color = Color("#8da0b5").lerp(Color("#efd5ad"), daylight).lerp(Color("#d79369"), horizon * 0.42)
+	sun.light_energy = lerpf(0.18, 0.94, daylight)
+	environment.environment.ambient_light_color = Color("#66717d").lerp(Color("#b9b39f"), daylight)
+	var lamp_energy := (1.0 - daylight) * 0.82
 	for lamp in lanterns:
 		lamp.light_energy = lamp_energy
 
@@ -740,33 +810,47 @@ func _tree(pos: Vector3, scale_factor: float) -> Node3D:
 	var root := Node3D.new()
 	root.position = pos
 	root.scale = Vector3.ONE * scale_factor
-	var trunk := _box("Trunk", Vector3(0.30, 1.2, 0.30), C_WOOD, Vector3(0, 0.60, 0))
+	var trunk := _box("Trunk", Vector3(0.26, 1.1, 0.26), C_WOOD, Vector3(0, 0.55, 0))
 	root.add_child(trunk)
 	var crown := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.88
-	mesh.height = 1.6
+	mesh.radius = 0.60
+	mesh.height = 1.16
 	mesh.radial_segments = 7
 	mesh.rings = 4
 	crown.mesh = mesh
-	crown.position = Vector3(0, 1.72, 0)
-	crown.material_override = _mat(C_GRASS_DARK.darkened(0.06))
+	crown.position = Vector3(0, 1.42, 0)
+	crown.scale = Vector3(0.96, 1.08, 0.88)
+	crown.material_override = _mat(C_GRASS_DARK.darkened(0.08))
 	root.add_child(crown)
 	return root
 
-func _rock(pos: Vector3, scale_factor: float) -> MeshInstance3D:
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	mesh.radius = scale_factor
-	mesh.height = scale_factor * 1.15
-	mesh.radial_segments = 7
-	mesh.rings = 4
-	mesh_instance.mesh = mesh
-	mesh_instance.position = pos
-	mesh_instance.scale = Vector3(1.35,0.65,0.95)
-	mesh_instance.rotation_degrees.y = pos.x * 13.0
-	mesh_instance.material_override = _mat(C_STONE_DARK.lightened(0.10))
-	return mesh_instance
+func _rock_cluster(pos: Vector3, scale_factor: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(3):
+		var mesh_instance := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = scale_factor * (0.62 + float(i) * 0.10)
+		mesh.height = scale_factor * (0.78 + float(i) * 0.08)
+		mesh.radial_segments = 6
+		mesh.rings = 3
+		mesh_instance.mesh = mesh
+		mesh_instance.position = Vector3((float(i)-1.0)*scale_factor*0.62, scale_factor*0.22, float(i%2)*scale_factor*0.28)
+		mesh_instance.scale = Vector3(1.0 + float(i)*0.10, 0.72, 0.88)
+		mesh_instance.rotation_degrees = Vector3(float(i)*7.0, pos.x*9.0+float(i)*19.0, float(i-1)*5.0)
+		mesh_instance.material_override = _mat(C_STONE_DARK.lightened(0.06 + float(i)*0.025))
+		root.add_child(mesh_instance)
+	return root
+
+func _add_land_prop(node: Node3D, pos: Vector3, margin: float = 0.0) -> void:
+	if _is_water_position(pos, margin):
+		node.queue_free()
+		return
+	add_child(node)
+
+func _is_water_position(pos: Vector3, margin: float = 0.0) -> bool:
+	return pos.z > RIVER_Z_MIN + margin and pos.z < RIVER_Z_MAX - margin and absf(pos.x) > BRIDGE_HALF_WIDTH
 
 func _reed_cluster(pos: Vector3) -> Node3D:
 	var root := Node3D.new()
@@ -828,6 +912,102 @@ func _dock(pos: Vector3) -> Node3D:
 		root.add_child(_box("DockPlank",Vector3(0.72,0.08,0.42),C_WOOD_LIGHT,Vector3(0,0.12,float(i)*0.38)))
 	for x in [-0.30,0.30]:
 		root.add_child(_box("DockPost",Vector3(0.08,0.72,0.08),C_WOOD,Vector3(x,0.28,0.56)))
+	return root
+
+func _shrub(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(3):
+		var crown := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.22 + float(i % 2) * 0.04
+		mesh.height = 0.34
+		mesh.radial_segments = 6
+		mesh.rings = 3
+		crown.mesh = mesh
+		crown.position = Vector3(-0.20 + float(i)*0.18,0.20,float(i%2)*0.12)
+		crown.scale = Vector3(1.0,0.70,0.90)
+		crown.material_override = _mat(C_GRASS_DARK.lightened(0.02 + float(i)*0.025))
+		root.add_child(crown)
+	return root
+
+func _grass_tuft(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for i in range(4):
+		var blade := _box("Grass", Vector3(0.035,0.26+float(i%2)*0.06,0.035), C_GRASS_DARK.lightened(0.06), Vector3(-0.10+float(i)*0.065,0.13,0))
+		blade.rotation_degrees.z = -12.0 + float(i)*8.0
+		root.add_child(blade)
+	return root
+
+func _mooring_post(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.add_child(_box("Mooring",Vector3(0.14,0.82,0.14),C_WOOD.darkened(0.14),Vector3(0,0.41,0)))
+	root.add_child(_box("Cap",Vector3(0.24,0.08,0.24),C_WOOD_LIGHT.darkened(0.10),Vector3(0,0.84,0)))
+	var rope := _box("Rope",Vector3(0.035,0.035,0.72),Color("#9a8467"),Vector3(0.18,0.50,0.28))
+	rope.rotation_degrees.y = -22.0
+	root.add_child(rope)
+	return root
+
+func _woodpile(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	for row in range(2):
+		for i in range(4-row):
+			var log := MeshInstance3D.new()
+			var mesh := CylinderMesh.new()
+			mesh.top_radius = 0.105
+			mesh.bottom_radius = 0.105
+			mesh.height = 0.72
+			mesh.radial_segments = 8
+			log.mesh = mesh
+			log.rotation_degrees.z = 90.0
+			log.position = Vector3(-0.34+float(i)*0.23,0.12+float(row)*0.18,0)
+			log.material_override = _mat(C_WOOD_LIGHT.darkened(0.08))
+			root.add_child(log)
+	return root
+
+func _handcart(pos: Vector3, yaw: float) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation_degrees.y = yaw
+	root.add_child(_box("CartBed", Vector3(1.05,0.16,0.62), C_WOOD_LIGHT, Vector3(0,0.42,0)))
+	root.add_child(_box("CartSide", Vector3(1.05,0.28,0.08), C_WOOD, Vector3(0,0.58,-0.28)))
+	root.add_child(_box("CartSide", Vector3(1.05,0.28,0.08), C_WOOD, Vector3(0,0.58,0.28)))
+	for x in [-0.42,0.42]:
+		var wheel := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.27
+		mesh.bottom_radius = 0.27
+		mesh.height = 0.08
+		mesh.radial_segments = 12
+		wheel.mesh = mesh
+		wheel.rotation_degrees.z = 90.0
+		wheel.position = Vector3(x,0.28,0)
+		wheel.material_override = _mat(C_WOOD.darkened(0.18))
+		root.add_child(wheel)
+	root.add_child(_box("Handle", Vector3(0.08,0.08,1.30), C_WOOD, Vector3(0,0.45,0.92)))
+	return root
+
+func _well(pos: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	var ring := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.46
+	mesh.bottom_radius = 0.52
+	mesh.height = 0.48
+	mesh.radial_segments = 12
+	ring.mesh = mesh
+	ring.position.y = 0.24
+	ring.material_override = _mat(C_STONE_DARK.lightened(0.10))
+	root.add_child(ring)
+	for x in [-0.52,0.52]:
+		root.add_child(_box("WellPost",Vector3(0.08,1.30,0.08),C_WOOD,Vector3(x,0.72,0)))
+	var roof := _roof(Vector3(1.35,0.38,0.85),C_ROOF.darkened(0.04))
+	roof.position = Vector3(0,1.38,0)
+	root.add_child(roof)
 	return root
 
 func _ambient_person(pos: Vector3, color: Color) -> Node3D:
