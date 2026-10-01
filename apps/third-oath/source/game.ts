@@ -94,6 +94,9 @@ class OathScene extends Phaser.Scene {
   private secretDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
   private cryptDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
   private towerDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
+  private secretDoorVisual: Phaser.GameObjects.Graphics | null = null;
+  private cryptDoorVisual: Phaser.GameObjects.Graphics | null = null;
+  private towerDoorVisual: Phaser.GameObjects.Graphics | null = null;
   private facing = -Math.PI / 2;
   private walkPhase = 0;
   private stepClock = 0;
@@ -410,9 +413,50 @@ class OathScene extends Phaser.Scene {
     wall(114, 314, 266, 28); wall(520, 314, 266, 28);
     wall(364, 64, 172, 28); wall(364, 64, 24, 282); wall(512, 64, 24, 282);
 
-    if (!this.save.flags.secretDoorOpen) this.secretDoorBlocker = wall(400, 1678, 100, 34);
-    if (!this.save.flags.cryptWardenDefeated) this.cryptDoorBlocker = wall(400, 988, 100, 36);
-    if (!this.save.flags.hallAwakened) this.towerDoorBlocker = wall(380, 306, 140, 40);
+    if (!this.save.flags.secretDoorOpen) {
+      this.secretDoorBlocker = wall(400, 1678, 100, 34);
+      this.secretDoorVisual = this.createBarrierVisual(400, 1678, 100, 34, 'stone');
+    }
+    if (!this.save.flags.cryptWardenDefeated) {
+      this.cryptDoorBlocker = wall(400, 988, 100, 36);
+      this.cryptDoorVisual = this.createBarrierVisual(400, 988, 100, 36, 'gate');
+    }
+    if (!this.save.flags.hallAwakened) {
+      this.towerDoorBlocker = wall(380, 306, 140, 40);
+      this.towerDoorVisual = this.createBarrierVisual(380, 306, 140, 40, 'door');
+    }
+  }
+
+  private createBarrierVisual(x: number, y: number, w: number, h: number, kind: 'stone' | 'gate' | 'door') {
+    const g = this.add.graphics().setDepth(9);
+    if (kind === 'stone') {
+      g.fillStyle(0x3b382f, 1);
+      g.fillRect(x, y, w, h);
+      g.lineStyle(1, 0x746c59, .28);
+      for (let xx = x + 12; xx < x + w; xx += 28) {
+        g.beginPath(); g.moveTo(xx, y + 2); g.lineTo(xx - 7, y + h - 2); g.strokePath();
+      }
+      g.lineStyle(2, 0x171612, .75);
+      g.beginPath(); g.moveTo(x + 5, y + h - 5); g.lineTo(x + w - 8, y + 6); g.strokePath();
+    } else if (kind === 'gate') {
+      g.fillStyle(0x11110f, .82); g.fillRect(x, y, w, h);
+      g.lineStyle(4, 0x4a4a42, .94);
+      for (let xx = x + 10; xx < x + w; xx += 15) {
+        g.beginPath(); g.moveTo(xx, y); g.lineTo(xx, y + h); g.strokePath();
+      }
+      g.lineStyle(3, 0x696557, .55);
+      g.beginPath(); g.moveTo(x, y + h * .54); g.lineTo(x + w, y + h * .54); g.strokePath();
+    } else {
+      g.fillStyle(0x201913, 1); g.fillRect(x, y, w, h);
+      g.fillStyle(0x3c2e22, .88); g.fillRect(x + 8, y + 4, w - 16, h - 8);
+      g.lineStyle(3, 0x6d5f4a, .55); g.strokeRect(x + 4, y + 2, w - 8, h - 4);
+      g.lineStyle(2, 0x15110e, .9);
+      for (let xx = x + 26; xx < x + w; xx += 28) {
+        g.beginPath(); g.moveTo(xx, y + 4); g.lineTo(xx, y + h - 4); g.strokePath();
+      }
+      g.fillStyle(0x807056, .75); g.fillCircle(x + w - 20, y + h / 2, 3);
+    }
+    return g;
   }
 
   private createPlayer() {
@@ -542,7 +586,9 @@ class OathScene extends Phaser.Scene {
   private openSecretDoor() {
     this.save.flags.secretDoorOpen = true;
     this.secretDoorBlocker?.destroy();
+    this.secretDoorVisual?.destroy();
     this.secretDoorBlocker = null;
+    this.secretDoorVisual = null;
     this.cameras.main.shake(220, .004);
     audio.door();
     this.toast('За стеной — узкий спуск.');
@@ -600,7 +646,9 @@ class OathScene extends Phaser.Scene {
       this.callbacks.onRitual(null);
       this.save.flags.hallAwakened = true;
       this.towerDoorBlocker?.destroy();
+      this.towerDoorVisual?.destroy();
       this.towerDoorBlocker = null;
+      this.towerDoorVisual = null;
       this.addFootprints();
       this.commitSave();
       audio.whisper();
@@ -612,7 +660,6 @@ class OathScene extends Phaser.Scene {
   }
 
   private addFootprints() {
-    if (this.save.flags.footprintsShown) return;
     const g = this.add.graphics().setDepth(10);
     const points = [[462, 650], [438, 612], [458, 573], [439, 532], [459, 491], [441, 450], [457, 407], [444, 365]] as Array<[number, number]>;
     g.fillStyle(0x2c3539, .52);
@@ -866,7 +913,9 @@ class OathScene extends Phaser.Scene {
     this.save.checkpoint = { x: 450, y: 1320 };
     this.save.position = { x: this.player.x, y: this.player.y };
     this.cryptDoorBlocker?.destroy();
+    this.cryptDoorVisual?.destroy();
     this.cryptDoorBlocker = null;
+    this.cryptDoorVisual = null;
     audio.pickup();
     this.toast('СЛЕЗА');
     this.setMode('explore');
@@ -995,12 +1044,18 @@ class OathScene extends Phaser.Scene {
     this.modeBeforePause = this.mode;
     this.setMode('pause');
     this.physics.world.pause();
+    this.time.paused = true;
+    this.tweens.pauseAll();
   }
 
   resumeWorld() {
     if (this.mode !== 'pause') return;
     this.physics.world.resume();
-    this.setMode(this.modeBeforePause === 'pause' ? 'explore' : this.modeBeforePause);
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    const target = this.modeBeforePause === 'pause' ? 'explore' : this.modeBeforePause;
+    if (target === 'dialogue' && this.currentDialogue) this.startDialogue(this.currentDialogue.id);
+    else this.setMode(target);
   }
 
   resumeAfterComplete() {
