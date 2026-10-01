@@ -91,9 +91,9 @@ class OathScene extends Phaser.Scene {
   private activeInteractable: Interactable | null = null;
   private currentDialogue: DialogueNode | null = null;
   private enemy: EnemyState | null = null;
-  private secretDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
-  private cryptDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
-  private towerDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
+  private secretDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
+  private cryptDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
+  private towerDoorBlocker: Phaser.Types.Physics.Arcade.ImageWithStaticBody | null = null;
   private secretDoorVisual: Phaser.GameObjects.Graphics | null = null;
   private cryptDoorVisual: Phaser.GameObjects.Graphics | null = null;
   private towerDoorVisual: Phaser.GameObjects.Graphics | null = null;
@@ -398,7 +398,7 @@ class OathScene extends Phaser.Scene {
   private buildCollision() {
     this.walls = this.physics.add.staticGroup();
     const wall = (x: number, y: number, w: number, h: number) => {
-      const body = this.walls.create(x + w / 2, y + h / 2, 'third-oath-marker') as Phaser.Physics.Arcade.StaticImage;
+      const body = this.walls.create(x + w / 2, y + h / 2, 'third-oath-marker') as Phaser.Types.Physics.Arcade.ImageWithStaticBody;
       body.setVisible(false).setDisplaySize(w, h).refreshBody();
       return body;
     };
