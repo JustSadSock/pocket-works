@@ -91,9 +91,9 @@ class OathScene extends Phaser.Scene {
   private activeInteractable: Interactable | null = null;
   private currentDialogue: DialogueNode | null = null;
   private enemy: EnemyState | null = null;
-  private secretDoorBlocker: Phaser.Physics.Arcade.Image | null = null;
-  private cryptDoorBlocker: Phaser.Physics.Arcade.Image | null = null;
-  private towerDoorBlocker: Phaser.Physics.Arcade.Image | null = null;
+  private secretDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
+  private cryptDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
+  private towerDoorBlocker: Phaser.Physics.Arcade.StaticImage | null = null;
   private facing = -Math.PI / 2;
   private walkPhase = 0;
   private stepClock = 0;
@@ -395,7 +395,7 @@ class OathScene extends Phaser.Scene {
   private buildCollision() {
     this.walls = this.physics.add.staticGroup();
     const wall = (x: number, y: number, w: number, h: number) => {
-      const body = this.walls.create(x + w / 2, y + h / 2, 'third-oath-marker') as Phaser.Physics.Arcade.Image;
+      const body = this.walls.create(x + w / 2, y + h / 2, 'third-oath-marker') as Phaser.Physics.Arcade.StaticImage;
       body.setVisible(false).setDisplaySize(w, h).refreshBody();
       return body;
     };
