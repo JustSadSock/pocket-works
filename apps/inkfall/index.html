@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#101936">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="INKFALL">
+  <title>INKFALL</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell game-shell" data-app-shell data-fullscreen-app>
+    <canvas id="game" data-gesture-surface data-block-callout aria-label="Игровое поле INKFALL"></canvas>
+
+    <div class="hud" data-ui>
+      <div class="score-stack" aria-live="polite">
+        <span class="eyebrow">ГЛУБИНА</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="meter-wrap">
+        <span class="eyebrow">ИМПУЛЬС</span>
+        <div class="meter" aria-label="Заряд импульса"><i id="meterFill"></i></div>
+      </div>
+      <button id="pauseBtn" class="icon-button" type="button" data-native-press aria-label="Пауза">Ⅱ</button>
+    </div>
+
+    <button id="burstBtn" class="burst-button" type="button" data-native-press disabled>
+      <span>ПРОБИВ</span>
+      <small>нужен полный импульс</small>
+    </button>
+
+    <section id="menu" class="overlay intro" data-ui>
+      <div class="mark" aria-hidden="true"></div>
+      <div class="intro-copy">
+        <p class="eyebrow">ПОТОК / 01</p>
+        <h1>INK<br>FALL</h1>
+        <p>Веди свет вниз. Разломы режут поток. Искры заряжают пробив.</p>
+      </div>
+      <div class="actions">
+        <button id="startBtn" class="primary" type="button" data-native-press>ПАДАТЬ</button>
+        <a class="exit-link" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+      <p class="hint">Веди пальцем влево и вправо</p>
+    </section>
+
+    <section id="pause" class="overlay compact" data-ui hidden>
+      <div>
+        <p class="eyebrow">ПАУЗА</p>
+        <h2>Поток замер.</h2>
+      </div>
+      <div class="actions">
+        <button id="resumeBtn" class="primary" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
+        <button id="restartPauseBtn" class="secondary" type="button" data-native-press>ЗАНОВО</button>
+        <a class="exit-link" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+    </section>
+
+    <section id="gameover" class="overlay compact" data-ui hidden>
+      <div>
+        <p class="eyebrow">ПОТОК ПОРВАН</p>
+        <h2 id="finalScore">0 м</h2>
+        <p id="bestScore">Рекорд: 0 м</p>
+      </div>
+      <div class="actions">
+        <button id="restartBtn" class="primary" type="button" data-native-press>ЕЩЁ РАЗ</button>
+        <a class="exit-link" href="../../" data-app-control>В Pocket Works</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
