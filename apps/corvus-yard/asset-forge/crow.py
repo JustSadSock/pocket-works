@@ -277,7 +277,8 @@ for clip,duration in clips:
    neck.location.y=-hold*.009
   if clip=='Preen':
    reach=math.sin(math.pi*u)**2
-   rotate_world(neck,x=.12*reach,z=.54*reach);rotate_world(head,x=.40*reach,y=.18*math.sin(cyc*5)*reach,z=.50*reach)
+   rotate_world(neck,x=.12*reach,z=.90*reach);neck.location.y=.025*reach
+   rotate_world(head,x=.40*reach,y=.08*math.sin(cyc*5)*reach,z=1.15*reach)
   if clip=='Peck':
    reach=math.sin(math.pi*u)**6;rotate_world(neck,x=.58*reach);rotate_world(head,x=.35*reach);rotate_world(jaw,x=.09*reach)
   if clip=='Call':

@@ -43,12 +43,17 @@ try{for(const name of names){
   const home=async()=>{await tap('#pause');await tap('#home');await wait(()=>window.__AI_TEST_STATE__?.support==='home'&&window.__AI_TEST_STATE__.grounded);};
   await page.goto(`${url}/apps/corvus-yard/`);
   await wait(()=>window.__AI_TEST_STATE__?.phase==='menu');await shot('menu');
+  if(process.env.CORVUS_QA_VISUAL==='1'){
+   await wait(()=>window.__AI_TEST_STATE__?.rig.clip==='Preen'&&window.__AI_TEST_STATE__.rig.activeClips.some(c=>c.name==='Preen'&&c.weight>.8));
+   await page.waitForTimeout(1100);await shot('menu-preen');await wait(()=>window.__AI_TEST_STATE__?.rig.clip==='Idle');
+  }
   if(process.env.CORVUS_QA_MUTE==='1')await tap('#sound');await tap('#start');await wait(()=>window.__AI_TEST_STATE__?.phase==='playing');assert.equal((await state()).rigReady,true);await shot('perched');checks.push('portrait touch start');console.log(name,'STARTUP',JSON.stringify(await state()));
   if(process.env.CORVUS_QA_VISUAL==='1'){
    for(const clip of ['Preen','Ruffle','Call']){
     await page.waitForFunction(name=>window.__AI_TEST_STATE__?.rig?.clip===name,clip,{timeout:180000});
     await page.waitForFunction(name=>window.__AI_TEST_STATE__.rig.activeClips.some(c=>c.name===name&&c.weight>.8),clip);
-    await page.waitForTimeout(clip==='Preen'?800:clip==='Call'?500:250);
+    await page.waitForTimeout(clip==='Preen'?1100:clip==='Call'?500:250);
+    assert.equal((await state()).rig.clip,clip,'Visual capture must remain inside the observed clip');
     await shot(clip.toLowerCase());
    }
    assert((await state()).rig.joints>=50,'The feather rig must survive GLB import');checks.push('authored preen, ruffle and call with separate feather joints');
@@ -58,7 +63,8 @@ try{for(const name of names){
    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:b.x+b.width/2,y:b.y+b.height/2,id:1}]});
    try{await wait(()=>window.__AI_TEST_STATE__?.position.y>10&&!window.__AI_TEST_STATE__.grounded);}finally{await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}checks.push('native touch hold takeoff');
   }else await hold('Space',()=>window.__AI_TEST_STATE__?.position.y>10&&!window.__AI_TEST_STATE__.grounded);
-  console.log(name,'AIRBORNE',JSON.stringify(await state()));await shot('flight');await wait(()=>window.__AI_TEST_STATE__?.mode==='glide');await shot('glide');
+  console.log(name,'AIRBORNE',JSON.stringify(await state()));await shot('flight');await wait(()=>window.__AI_TEST_STATE__?.mode==='glide');
+  await wait(()=>window.__AI_TEST_STATE__?.rig.activeClips.some(c=>c.name==='Glide'&&c.weight>.85));await shot('glide');
   const airborne=await state();assert(airborne.speed>3);assert(airborne.ecology.wildlife>0);checks.push('takeoff and glide');
   if(name==='chromium'){
    const cdp=await context.newCDPSession(page),stick=await page.locator('#stick').boundingBox(),flap=await page.locator('#flap').boundingBox();assert(stick&&flap);

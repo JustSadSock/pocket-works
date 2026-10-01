@@ -23,6 +23,8 @@ Visual release 1.2 corrects the upper coverts' skin weights: they now follow the
 
 The district now has porous, individually lobed autumn leaves, fine twigs and roots, patterned bark/stone/slate, rain pipes, doorstep detail and a distant roofline. A local sky shader separates cool cloud light from a warm sun break. Runtime assets remain local and offline cached.
 
+The reimported landing foot heights are also checked at five clip samples by `qa/validate-land.py`; the report is saved in `qa/evidence/landing-contact.json`.
+
 Validation covers 29 flight, collision and ecology tests, TypeScript, Vite/PWA and registry validation. The browser runner also observes preen/ruffle/call clips and captures their real rendered states with `CORVUS_QA_VISUAL=1`. Physical iPhone performance has not been measured.
 
 The browser runner starts its own HTTP server and never mutates the gameplay state. Full progression is enabled explicitly:
