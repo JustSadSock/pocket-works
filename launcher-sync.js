@@ -9,7 +9,6 @@ const MANAGED_SEEN_PREFIX = 'pocket-works:managed-update-seen:v1:';
 const REGISTRY_CHECK_INTERVAL = 5 * 60 * 1000;
 const REGISTRY_CHECK_COOLDOWN = 45 * 1000;
 
-const refreshButton = document.querySelector('#refresh-button');
 const deckActions = document.querySelector('.deck-actions');
 const cachedRegistryAtBoot = readRegistryCache()?.apps || [];
 const returningUser = storageHas(SHELF_STORAGE_KEY) || cachedRegistryAtBoot.length > 0;
@@ -63,6 +62,7 @@ function normalizeRegistry(apps) {
     .filter((app) => app && typeof app === 'object' && app.status !== 'archived')
     .filter((app) => typeof app.slug === 'string' && typeof app.name === 'string')
     .map((app) => ({
+      ...app,
       slug: app.slug,
       name: app.name,
       description: typeof app.description === 'string' ? app.description : '',
@@ -288,13 +288,10 @@ function buildRegistryDigest(changes, nextApps) {
   };
 }
 
-async function requestLauncherRefresh() {
-  if (!refreshButton) return;
-  const deadline = Date.now() + 4500;
-  while (refreshButton.disabled && Date.now() < deadline) {
-    await new Promise((resolve) => window.setTimeout(resolve, 120));
-  }
-  if (!refreshButton.disabled) refreshButton.click();
+function publishRegistrySnapshot(apps) {
+  window.dispatchEvent(new CustomEvent('pocketworks:registry-snapshot', {
+    detail: { apps, source: 'release-check' }
+  }));
 }
 
 async function fetchLiveRegistry() {
@@ -322,7 +319,7 @@ async function checkRegistry({ force = false } = {}) {
 
       const visibleFingerprint = registryFingerprint(readRegistryCache()?.apps || []);
       const liveFingerprint = registryFingerprint(nextApps);
-      if (visibleFingerprint !== liveFingerprint) await requestLauncherRefresh();
+      if (visibleFingerprint !== liveFingerprint) publishRegistrySnapshot(nextApps);
 
       const hasChanges = changes.added.length > 0 || changes.updated.length > 0;
       if (hasChanges && Object.keys(baseline).length > 0) {
