@@ -8,7 +8,7 @@ export interface PlayerStats {
 }
 
 export interface SaveState {
-  schema: 2;
+  schema: number;
   chapter: number;
   health: number;
   maxHealth: number;
