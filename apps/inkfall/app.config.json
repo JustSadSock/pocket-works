@@ -5,13 +5,13 @@
   "name": "INKFALL",
   "shortName": "INKFALL",
   "description": "Вертикальная аркада о падении сквозь живой чернильный поток: уворачивайтесь от разломов, собирайте искры и пробивайте путь рывком.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "releaseDate": "2026-10-01",
   "releaseDateTime": "2026-10-01T18:40:00+02:00",
   "changelog": [
-    "Первый релиз: бесконечный вертикальный забег, рывок, рекорд и офлайн-режим.",
-    "Процедурная Canvas-гравюра с текучими слоями, частицами, шлейфом и реакцией камеры.",
-    "Мобильное управление пальцем, пауза и возврат в Pocket Works."
+    "Полный visual rebuild: живой псевдо-3D тоннель, меняющиеся цветовые зоны и глубокий параллакс.",
+    "Новая подача персонажа, разломов и искр, скоростные штрихи, шлейфы, вспышки и burst-шокволна.",
+    "Добавлен near-miss: опасный пролёт у края ускоряет заряд и визуально отвечает на риск."
   ],
   "status": "active",
   "preset": "game-2d",
@@ -19,8 +19,18 @@
   "backgroundColor": "#101936",
   "themeColor": "#101936",
   "orientation": "portrait",
-  "cacheName": "inkfall-v1.0.0-p1",
+  "cacheName": "inkfall-v1.1.0-p2",
   "storageNamespace": "pocket-works:inkfall",
-  "tags": ["PWA", "offline", "game", "arcade", "canvas", "touch", "procedural", "visual", "portrait"],
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "arcade",
+    "canvas",
+    "touch",
+    "procedural",
+    "visual",
+    "portrait"
+  ],
   "order": 94
 }
