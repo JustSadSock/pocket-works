@@ -2,7 +2,7 @@ import '../../../shared/mobile-runtime.css';
 import './styles.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
-import { Engine, Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, MeshBuilder, StandardMaterial, RawCubeTexture, Constants, ShaderMaterial } from '@babylonjs/core';
+import { Engine, Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, MeshBuilder, StandardMaterial, RawCubeTexture, Constants, ShaderMaterial, ImageProcessingConfiguration } from '@babylonjs/core';
 import { World, type Perch } from './world';
 import { CrowRig } from './crow';
 import { CrowCamera } from './camera';
@@ -12,7 +12,7 @@ import { Ecology, type EcologyProgress } from './ecology';
 import { FlightEffects } from './effects';
 import { createCrowState, stepCrow, launchCrow, hitCrow, landCrow } from './flight';
 installMobileRuntime();
-registerEnhancedUpdate({appName:'CORVUS',version:'1.1.0',releaseNotes:['Новое оперение, живые движения и осенний свет.']});
+registerEnhancedUpdate({appName:'CORVUS',version:'1.2.0',releaseNotes:['Сложенные крылья, мягкая посадка и новые водные блики.']});
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const canvas=$<HTMLCanvasElement>('scene');
 const namespace='pocket-works:corvus-yard:save';
@@ -77,12 +77,12 @@ function frame(dt:number){elapsed+=dt;
 }
 async function boot(){try{
  engine=new Engine(canvas,false,{preserveDrawingBuffer:false,stencil:false,powerPreference:'high-performance'},true);engine.setHardwareScalingLevel(Math.max(1,devicePixelRatio/1.5));
- scene=new Scene(engine);scene.clearColor=new Color4(.54,.62,.65,1);scene.fogMode=Scene.FOGMODE_EXP;scene.fogDensity=.0031;scene.fogColor=new Color3(.54,.62,.65);scene.imageProcessingConfiguration.exposure=1.18;scene.imageProcessingConfiguration.contrast=1.20;scene.imageProcessingConfiguration.toneMappingEnabled=true;
+ scene=new Scene(engine);scene.clearColor=new Color4(.54,.62,.65,1);scene.fogMode=Scene.FOGMODE_EXP;scene.fogDensity=.0022;scene.fogColor=new Color3(.54,.62,.65);scene.imageProcessingConfiguration.exposure=1.18;scene.imageProcessingConfiguration.contrast=1.12;scene.imageProcessingConfiguration.toneMappingEnabled=true;scene.imageProcessingConfiguration.toneMappingType=ImageProcessingConfiguration.TONEMAPPING_KHR_PBR_NEUTRAL;
  // Local sky irradiance instead of a network HDR dependency.
  const size=16,faces:Uint8Array[]=[];for(let f=0;f<6;f++){const data=new Uint8Array(size*size*4);for(let i=0;i<size*size;i++){const y=Math.floor(i/size)/size,v=f===2?1:f===3?.38:.65+y*.15;data[i*4]=170*v;data[i*4+1]=185*v;data[i*4+2]=185*v;data[i*4+3]=255;}faces.push(data);}scene.environmentTexture=new RawCubeTexture(scene,faces,size,Constants.TEXTUREFORMAT_RGBA,Constants.TEXTURETYPE_UNSIGNED_BYTE,true);
  const sky=MeshBuilder.CreateSphere('layered autumn sky',{diameter:400,segments:24,sideOrientation:1},scene);
  const skyMat=new ShaderMaterial('cool sky and warm cloud breaks',scene,{vertexSource:`precision highp float;attribute vec3 position;uniform mat4 worldViewProjection;varying vec3 direction;void main(){direction=normalize(position);gl_Position=worldViewProjection*vec4(position,1.);}`,fragmentSource:`precision highp float;varying vec3 direction;void main(){vec3 d=normalize(direction);float h=max(0.,d.y);vec3 c=mix(vec3(.59,.66,.66),vec3(.27,.40,.52),pow(h,.55));float cloud=sin(d.x*8.+sin(d.z*7.)*1.8)*sin(d.z*11.-d.x*2.);float veil=smoothstep(-.4,.5,cloud)*smoothstep(.05,.3,h)*(1.-smoothstep(.55,.95,h));c=mix(c,vec3(.78,.79,.73),veil*.48);float sun=pow(max(0.,dot(d,normalize(vec3(.55,.85,-.35)))),24.);c+=vec3(.20,.14,.06)*sun;gl_FragColor=vec4(c,1.);}`},{attributes:['position'],uniforms:['worldViewProjection']});skyMat.backFaceCulling=false;sky.material=skyMat;sky.isPickable=false;
- const ambient=new HemisphericLight('soft sky',new Vector3(0,1,0),scene);ambient.intensity=.52;ambient.diffuse=new Color3(.73,.83,1);ambient.groundColor=new Color3(.22,.24,.17);
+ const ambient=new HemisphericLight('soft sky',new Vector3(0,1,0),scene);ambient.intensity=.52;ambient.diffuse=new Color3(.82,.90,1);ambient.groundColor=new Color3(.22,.24,.17);
  const sun=new DirectionalLight('late autumn sun',new Vector3(-.55,-.85,.35),scene);sun.position.set(25,55,-25);sun.intensity=1.85;sun.diffuse=new Color3(1,.89,.74);const shadows=new ShadowGenerator(1024,sun);shadows.useBlurExponentialShadowMap=true;shadows.blurKernel=12;shadows.blurScale=2;shadows.bias=.0008;shadows.normalBias=.025;shadows.setDarkness(.22);
  world=new World(scene);rig=new CrowRig(scene);camera=new CrowCamera(scene,canvas);await Promise.all([world.load(),rig.load()]);
  for(const m of world.meshes)if(m.getTotalVertices()>0&&!/ground|water|grass|leaf/i.test(m.name))shadows.addShadowCaster(m);

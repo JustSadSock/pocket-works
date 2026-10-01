@@ -19,7 +19,11 @@ Generated runtime files are not source-controlled; CI and Cloudflare build them 
 
 Visual release 1.1: the player raven has 61 authored joints and 14 named clips, including blink channels, preening, pecking, ruffling and calling. Feather blades carry a shared packed vane texture. Folded primary and secondary feathers have individual hinge poses; their lengths remain intact. The flock uses a decimated version of the same rig. Inactive clips and distant idle flock animation pause to limit animation cost. A small moving shadow map is reserved for balanced rendering; adaptive performance uses the cached district shadows and contact effects.
 
+Visual release 1.2 corrects the upper coverts' skin weights: they now follow their individual primary/secondary hinges instead of folding as one full-span rigid fan. Preening turns and retracts the neck to reach the scapular plumage. Landing closes those rigid poses smoothly, settles the body and plants the feet at the support height. The chase camera sits closer with a lower ground look target. Neutral PBR tone mapping and brighter ochre/copper foliage retain more material color. Canal normals, sky Fresnel and the sun highlight respond to the camera angle; this is a local analytic sky reflection, without scene-space building reflections or a costly reflection pass.
+
 The district now has porous, individually lobed autumn leaves, fine twigs and roots, patterned bark/stone/slate, rain pipes, doorstep detail and a distant roofline. A local sky shader separates cool cloud light from a warm sun break. Runtime assets remain local and offline cached.
+
+The reimported landing foot heights are also checked at five clip samples by `qa/validate-land.py`; the report is saved in `qa/evidence/landing-contact.json`.
 
 Validation covers 29 flight, collision and ecology tests, TypeScript, Vite/PWA and registry validation. The browser runner also observes preen/ruffle/call clips and captures their real rendered states with `CORVUS_QA_VISUAL=1`. Physical iPhone performance has not been measured.
 

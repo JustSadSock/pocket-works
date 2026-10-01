@@ -82,10 +82,10 @@ def feather(name,start,end,width,m,b,curve=.003):
    idx=mesh.loops[loop].vertex_index; uv.data[loop].uv=([0,.5,1,.5][idx%4],(idx//4)/8)
  if 'primary' in name.lower() or 'secondary' in name.lower():
   tube(name+' rachis',start,tuple(s+d*.84+Vector((0,0,.002))),.00065,.0002,m,b,5)
-ell('Deep keel breast',(0,-.015,-.055),(.122,.255,.184),plumage,'Body',28,18)
+ell('Deep keel breast',(0,-.015,-.055),(.116,.255,.174),plumage,'Body',28,18)
 ell('Shoulder mantle',(0,.055,.075),(.139,.209,.113),plumage,'Body',24,16)
 ell('Neck',(0,-.205,.13),(.081,.106,.123),plumage,'Neck')
-ell('Angular raven cranium',(0,-.295,.225),(.095,.111,.088),plumage,'Head',24,16)
+ell('Angular raven cranium',(0,-.295,.225),(.093,.117,.085),plumage,'Head',24,16)
 # Short crown plumage follows the skull rather than one uninterrupted specular dome.
 for row in range(4):
  for col in range(7):
@@ -128,7 +128,12 @@ for s in [-1,1]:
  for row in range(3):
   for i in range(13):
    x=.17+i*.038; y=.02+row*.045
-   feather('Upper wing covert',(s*x,y,.09),(s*(x+.04),y+.12,.08),.020,featherM[(row+i)%5],'Coverts.'+('L' if s==1 else 'R'))
+   # Coverts follow the feather-bearing section, not one rigid full-span fan.
+   # Their rest geometry stays intact while individual hinges stack at rest.
+   suffix='L' if s==1 else 'R'
+   index=min(9,max(0,round((x-(.51 if x>=.49 else .19))/(.023 if x>=.49 else .033))))
+   hinge=('Primary.' if x>=.49 else 'Vane.')+suffix+'.%02d'%index
+   feather('Upper wing covert',(s*x,y,.09),(s*(x+.04),y+.12,.08),.018,featherM[(row+i)%5],hinge)
  for i in range(5):
   x=s*(i*.023+.012); feather('Wedge tail',(x,.18,-.025),(x*1.55,.63-abs(x)*1.05,-.09),.027,featherM[i%5],'Tail')
  # Anatomical legs: feathered thigh, thin scaly tarsus and three forward + back toes.
@@ -188,7 +193,7 @@ def stack_primary(pb,side,index,secondary=False):
  basis=Matrix((across,axis,normal)).transposed().to_4x4()
  pose_global(pb,Matrix.Translation(head) @ basis)
 rig.animation_data_create(); fps=30; bpy.context.scene.render.fps=fps
-clips=[('Idle',4.8),('Walk',.8),('Run',.55),('Takeoff',.8),('Land',.75),('Flap',.72),('Glide',2.4),('Fold',1.1),('Brake',.8),('Hit',.7),('Preen',3.2),('Peck',1.2),('Ruffle',1.6),('Call',1.8)]
+clips=[('Idle',4.8),('Walk',.8),('Run',.55),('Takeoff',.8),('Land',.55),('Flap',.72),('Glide',2.4),('Fold',1.1),('Brake',.8),('Hit',.7),('Preen',3.2),('Peck',1.2),('Ruffle',1.6),('Call',1.8)]
 for clip,duration in clips:
  act=bpy.data.actions.new(clip);rig.animation_data.action=act
  for f in range(0,round(duration*fps)+1,2):
@@ -219,10 +224,27 @@ for clip,duration in clips:
     rotate_world(wrist,y=-sgn*math.sin(phase-.46)*.31,z=sgn*recovery*.30)
     for i in range(10):rotate_world(rig.pose.bones['Primary.%s.%02d'%(side,i)],x=math.sin(phase-.6-i*.065)*.026)
    elif clip in ['Brake','Land']:
-    settle=1-u if clip=='Land' else 1
     rotate_world(wing,y=-sgn*(.48+.10*math.sin(cyc)),z=-sgn*.20)
     rotate_world(forearm,y=-sgn*.20,z=sgn*.10)
     rotate_world(wrist,y=-sgn*.22,z=sgn*.12)
+    if clip=='Land':
+     close=max(0,min(1,(u-.15)/.75));close=close*close*(3-2*close)
+     # Interpolate rigid poses, never compress the feathers to hide the wing.
+     for joint in [wing,forearm,wrist,secondary,rig.pose.bones['Coverts.'+side]]+[rig.pose.bones['Primary.%s.%02d'%(side,i)] for i in range(10)]+[rig.pose.bones['Vane.%s.%02d'%(side,i)] for i in range(10)]:
+      start=joint.matrix_basis.copy()
+      if joint==wing:folded_joint(joint,(sgn*.12,.015,.06),sgn)
+      elif joint==forearm:folded_joint(joint,(sgn*.16,.20,.025),sgn)
+      elif joint==wrist:folded_joint(joint,(sgn*.15,.13,.032),sgn)
+      elif joint.name.startswith('Primary.'):stack_primary(joint,sgn,int(joint.name[-2:]))
+      elif joint.name.startswith('Vane.'):stack_primary(joint,sgn,int(joint.name[-2:]),True)
+      elif joint.name.startswith('Coverts.'):folded_joint(joint,(sgn*.15,-.02,.07),sgn)
+      else:
+       vane=Matrix(((0,-sgn*.34,-sgn*.94),(0,.94,-.34),(sgn,0,0))).transposed().to_4x4()
+       pose_global(joint,Matrix.Translation(Vector((sgn*.145,.13,.035))) @ vane @ joint.bone.matrix_local.to_3x3().to_4x4())
+      aLoc,aRot,aScale=start.decompose();bLoc,bRot,bScale=joint.matrix_basis.decompose()
+      joint.matrix_basis=Matrix.LocRotScale(aLoc.lerp(bLoc,close),aRot.slerp(bRot,close),aScale.lerp(bScale,close))
+      parent=pose_cache.get(joint.parent.name,joint.parent.bone.matrix_local) if joint.parent else Matrix.Identity(4)
+      pose_cache[joint.name]=parent @ (joint.parent.bone.matrix_local.inverted() if joint.parent else Matrix.Identity(4)) @ joint.bone.matrix_local @ joint.matrix_basis
    elif clip=='Hit':rotate_world(wing,y=-sgn*math.sin(cyc)*.3,z=sgn*.2)
    else:
     rotate_world(wing,y=-sgn*(.04+math.sin(cyc)*.014),z=-sgn*.055)
@@ -237,8 +259,10 @@ for clip,duration in clips:
    elif clip in ['Land','Brake']:rotate_world(leg,x=.14);rotate_world(foot,x=-.14)
   body=rig.pose.bones['Body'];head=rig.pose.bones['Head'];neck=rig.pose.bones['Neck'];tail=rig.pose.bones['Tail'];jaw=rig.pose.bones['Jaw']
   if clip in ['Flap','Glide','Brake','Takeoff','Land']:
-   rotate_world(body,x=.30);rotate_world(neck,x=-.12);rotate_world(head,x=-.15)
+   settle=1-u if clip=='Land' else 1
+   rotate_world(body,x=.30*settle);rotate_world(neck,x=-.12*settle);rotate_world(head,x=-.15*settle)
    if clip=='Flap':body.location.z=math.sin(cyc-.35)*.007
+   if clip=='Land':body.location.z=-.018*math.sin(math.pi*u)
    rotate_world(tail,x=.08 if clip in ['Land','Brake'] else -.05)
    tail.scale.x=1.28 if clip in ['Land','Brake'] else 1
   if clip=='Idle':
@@ -253,7 +277,10 @@ for clip,duration in clips:
    neck.location.y=-hold*.009
   if clip=='Preen':
    reach=math.sin(math.pi*u)**2
-   rotate_world(neck,x=.12*reach,z=.54*reach);rotate_world(head,x=.40*reach,y=.18*math.sin(cyc*5)*reach,z=.50*reach)
+   rotate_world(neck,x=.12*reach,z=.90*reach)
+   # Retract and bend the neck so the turned bill reaches the scapular plumage.
+   neck.location=neck.bone.matrix_local.to_3x3().inverted() @ (Vector((-.12,.12,-.035))*reach)
+   rotate_world(head,x=.40*reach,y=.08*math.sin(cyc*5)*reach,z=1.15*reach)
   if clip=='Peck':
    reach=math.sin(math.pi*u)**6;rotate_world(neck,x=.58*reach);rotate_world(head,x=.35*reach);rotate_world(jaw,x=.09*reach)
   if clip=='Call':
@@ -261,13 +288,13 @@ for clip,duration in clips:
   if clip=='Ruffle':
    shake=math.sin(cyc*7)*math.sin(math.pi*u);rotate_world(body,z=.035*shake);rotate_world(head,z=-.055*shake);rotate_world(tail,z=.04*shake)
   if clip=='Hit':rotate_world(body,x=math.sin(cyc)*.3)
-  if clip in ['Walk','Run']:
+  if clip in ['Walk','Run','Land']:
    bpy.context.view_layer.update()
    for side,phase in [('L',0),('R',math.pi)]:
     foot=rig.pose.bones['Foot.'+side]
     skin=foot.matrix @ foot.bone.matrix_local.inverted()
     lowest=min((skin @ v).z for v in foot_vertices[side])
-    support=-.456+max(0,math.sin(cyc+phase))*(.035 if clip=='Walk' else .05)
+    support=-.456+(max(0,math.sin(cyc+phase))*(.035 if clip=='Walk' else .05) if clip!='Land' else 0)
     parent=foot.parent
     basis=parent.matrix @ parent.bone.matrix_local.inverted() @ foot.bone.matrix_local
     foot.location=basis.inverted().to_3x3() @ Vector((0,0,support-lowest))
