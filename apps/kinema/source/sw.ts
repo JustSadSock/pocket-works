@@ -6,13 +6,13 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'kinema-';
-const CACHE_NAME = 'kinema-v1.7.0';
-const APP_VERSION = '1.7.0';
+const CACHE_NAME = 'kinema-v1.8.0';
+const APP_VERSION = '1.8.0';
 const RELEASE_DATE = '2026-09-09';
 const RELEASE_NOTES = [
-  'Velocity-vector inertia separates physical trajectory from body facing for smoother acceleration, braking and reversals.',
-  'WalkBack, StrafeLeft/Right and PivotLeft/Right Blender actions now blend into real directional movement.',
-  'Body lean and third-person camera lead react to actual acceleration and travel direction while Safari material stabilization remains enabled.'
+  'Babylon is loaded through modular imports and the glTF loader is deferred until the Blender character is requested.',
+  'The scene boots at a lighter render scale, then raises mobile fidelity to about 1.85 device-scale with a 2048 landscape shadow map.',
+  'KINEMA 1.7 inertial velocity, directional actions, Safari material stabilization and camera lead remain intact.'
 ];
 
 setCacheNameDetails({ prefix: 'kinema', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
