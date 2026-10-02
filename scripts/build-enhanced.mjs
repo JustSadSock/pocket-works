@@ -1,11 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
+import { compileForApp } from './asset-compiler.mjs';
 
 const root = process.cwd();
 const command = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const configs = (await collectAppConfigs(root)).filter((config) => runtimeForConfig(config) === 'enhanced');
 
 for (const config of configs) {
+  await compileForApp(config.slug);
   console.log(`Building enhanced app ${config.slug}…`);
   const result = spawnSync(command, ['run', 'build', '--workspace', `@pocket-works/${config.slug}`], {
     cwd: root,
