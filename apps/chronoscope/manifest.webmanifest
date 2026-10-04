@@ -1,0 +1,14 @@
+{
+  "id": "/apps/chronoscope/",
+  "name": "ХРОНОСКОП",
+  "short_name": "Хроноскоп",
+  "description": "Интерактивные исторические реконструкции на карте и временной шкале.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#d8cfb6",
+  "theme_color": "#202624",
+  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
