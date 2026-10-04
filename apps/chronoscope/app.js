@@ -132,18 +132,47 @@ function drawTerrain(ts){
   ctx.save();ctx.strokeStyle='rgba(216,208,188,.55)';ctx.lineWidth=1.4;ctx.setLineDash([3,3]);
   ctx.beginPath();ctx.moveTo(chainA.x,chainA.y);ctx.lineTo(chainB.x,chainB.y);ctx.stroke();ctx.restore();
 }
+function drawWallStroke(points,width,s){
+  line(points,'rgba(0,0,0,.55)',Math.max(4,width*s+5));
+  line(points,COLORS.wall,Math.max(2.5,width*s));
+  line(points,'#232826',Math.max(1,width*s*.42),[Math.max(3,8*s),Math.max(2,5*s)]);
+}
+function drawBreach(){
+  if(state.time<322)return;
+  const p=worldToScreen(123,334),s=scale(),progress=clamp((state.time-322)/30,0,1);
+  ctx.save();ctx.translate(p.x,p.y);
+  ctx.fillStyle='rgba(11,14,14,.92)';
+  ctx.fillRect(-Math.max(4,8*s),-Math.max(12,26*s),Math.max(8,16*s),Math.max(24,52*s));
+  const rubble=[
+    [-17,-19,5],[-10,-8,4],[-15,8,4],[-8,20,5],[10,-18,4],[15,-5,5],[11,12,4],[17,21,3]
+  ];
+  rubble.forEach(([x,y,r],i)=>{
+    ctx.globalAlpha=.42+.45*progress;
+    ctx.fillStyle=i%3===0?'#d8d0bc':'#77776f';
+    ctx.fillRect(x*s*.7-r*.45,y*s*.7-r*.35,Math.max(2,r*s*.65),Math.max(2,r*s*.45));
+  });
+  ctx.strokeStyle=`rgba(208,106,85,${.25+.55*progress})`;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-21*s,-18*s);ctx.lineTo(19*s,19*s);ctx.stroke();
+  ctx.restore();
+}
 function drawWalls(){
   if(!state.layers.walls)return;
   const s=scale();
   for(const wall of scenario.walls){
     if(wall.kind==='major'){
-      line(wall.points,'rgba(0,0,0,.55)',Math.max(4,wall.width*s+5));
-      line(wall.points,COLORS.wall,Math.max(2.5,wall.width*s));
-      line(wall.points,'#232826',Math.max(1,wall.width*s*.42),[Math.max(3,8*s),Math.max(2,5*s)]);
+      if(state.time>=322){
+        const upper=[[116,126],[123,212],[119,302],[121,314]];
+        const lower=[[124,352],[126,392],[116,470],[151,548],[222,608]];
+        drawWallStroke(upper,wall.width,s);
+        drawWallStroke(lower,wall.width,s);
+      }else{
+        drawWallStroke(wall.points,wall.width,s);
+      }
     }else{
       line(wall.points,'rgba(216,208,188,.6)',Math.max(1.1,wall.width*s));
     }
   }
+  drawBreach();
 }
 function drawPlaces(){
   if(!state.layers.labels)return;
