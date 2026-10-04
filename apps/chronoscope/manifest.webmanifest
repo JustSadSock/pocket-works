@@ -6,9 +6,9 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone","fullscreen","minimal-ui"],
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#0b0e0e",
-  "theme_color": "#0b0e0e",
+  "background_color": "#d8cfb6",
+  "theme_color": "#202624",
   "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
