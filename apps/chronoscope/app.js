@@ -150,9 +150,11 @@ function drawWallTowers(points) {
     }
   }
 }
-function drawBreach() {
-  if(state.time<318)return;
-  const p=worldToScreen(123,334),s=scale(),progress=clamp((state.time-318)/35,0,1);
+function activeBreaches() {
+  return (scenario.breaches||[]).filter(b=>state.time>=b.from);
+}
+function drawBreachEffect(breach) {
+  const p=worldToScreen(breach.x,breach.y),s=scale(),progress=clamp((state.time-breach.from)/35,0,1);
   ctx.save();ctx.translate(p.x,p.y);ctx.rotate(.035);
   ctx.fillStyle='#d8cfb6';ctx.fillRect(-Math.max(4,7*s),-Math.max(11,25*s),Math.max(8,14*s),Math.max(22,50*s));
   const rubble=[[-17,-17,4],[-10,-9,3],[-15,6,4],[-8,18,5],[10,-16,4],[15,-5,4],[11,10,3],[17,20,4]];
@@ -164,24 +166,24 @@ function drawBreach() {
 }
 function drawWalls() {
   if(!state.layers.walls)return;
+  const breaches=activeBreaches();
   for(const wall of scenario.walls){
     const s=scale(),outer=wall.kind==='major'?'#675e4f':'#7e7460';
-    if(wall.kind==='major'&&state.time>=318){
-      const upper=[[116,126],[123,212],[119,302],[121,316]];
-      const lower=[[124,352],[126,392],[116,470],[151,548],[222,608]];
-      for(const segment of [upper,lower]){
+    const breach=wall.kind==='major'?breaches.find(b=>!b.wall||b.wall===wall.id):null;
+    if(breach?.upper&&breach?.lower){
+      for(const segment of [breach.upper,breach.lower]){
         line(segment,'rgba(32,38,36,.28)',wall.width*s+3);
         line(segment,outer,wall.width*s);
         line(segment,'#b5a887',Math.max(1,2.2*s),[4*s,5*s]);
       }
-      drawWallTowers(upper);drawWallTowers(lower);
+      drawWallTowers(breach.upper);drawWallTowers(breach.lower);
     }else{
       line(wall.points,'rgba(32,38,36,.28)',wall.width*s+3);
       line(wall.points,outer,wall.width*s);
       if(wall.kind==='major'){line(wall.points,'#b5a887',Math.max(1,2.2*s),[4*s,5*s]);drawWallTowers(wall.points);}
     }
   }
-  drawBreach();
+  breaches.forEach(drawBreachEffect);
 }
 function drawPlaces() {
   if(!state.layers.labels)return;
@@ -256,64 +258,60 @@ function drawImpact(x,y,phase,intensity=1) {
   ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle=`rgba(103,94,79,${.18*(1-phase)})`;ctx.beginPath();ctx.arc(p.x,p.y,r*.65,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-function drawBombardment(ts) {
-  if(state.time<8||state.time>52)return;
-  const targets=[[123,318],[121,342],[120,365]],sources=[[48,278],[42,332],[50,390]];
-  for(let i=0;i<3;i++){
+function sideColor(side) {
+  return side==='byzantine'?COLORS.byz:COLORS.ottoman;
+}
+function visualIsActive(v) {
+  return state.time>=v.from&&(v.to==null||state.time<=v.to);
+}
+function drawBombardmentVisual(v,ts) {
+  const targets=v.targets||[],sources=v.sources||[];
+  for(let i=0;i<Math.min(targets.length,sources.length);i++){
     const a=worldToScreen(...sources[i]),b=worldToScreen(...targets[i]);
     const lift=34+10*i,phase=((ts*.00042)+i*.31)%1;
-    ctx.save();ctx.strokeStyle='rgba(138,73,61,.32)';ctx.lineWidth=1.15;ctx.setLineDash([4,5]);
+    ctx.save();
+    ctx.strokeStyle=v.side==='byzantine'?'rgba(39,75,89,.32)':'rgba(138,73,61,.32)';
+    ctx.lineWidth=1.15;ctx.setLineDash([4,5]);
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo((a.x+b.x)/2,Math.min(a.y,b.y)-lift,b.x,b.y);ctx.stroke();ctx.restore();
     if(phase>.72)drawImpact(targets[i][0],targets[i][1],(phase-.72)/.28,.9);
   }
 }
-function drawWaveScenes() {
-  if(state.time>=38&&state.time<150){
-    drawArrow([[62,360],[88,355],[111,348]],COLORS.ottoman,3,.42);
-    drawArrow([[54,385],[82,375],[111,360]],COLORS.ottoman,2.4,.3);
-  }
-  if(state.time>=120&&state.time<250){
-    drawArrow([[60,468],[86,445],[116,414]],COLORS.ottoman,3.5,.42);
-    drawArrow([[54,430],[85,422],[117,405]],COLORS.ottoman,2.2,.26);
-  }
-  if(state.time>=205&&state.time<365){
-    drawArrow([[62,300],[93,313],[128,327]],COLORS.ottoman,4.2,.6);
-    drawArrow([[70,278],[102,294],[128,318]],COLORS.ottoman,2.6,.34);
-  }
+function drawArrowsVisual(v) {
+  const color=sideColor(v.side);
+  (v.arrows||[]).forEach(a=>drawArrow(a.points,color,a.width??3,a.alpha??.45));
 }
-function drawGiustinianiScene(ts) {
-  if(state.time<286||state.time>330)return;
-  const p=worldToScreen(158,320),pulse=((ts%1100)/1100);
-  ctx.save();ctx.strokeStyle=`rgba(39,75,89,${.7*(1-pulse)})`;ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(p.x,p.y,10+pulse*24,0,Math.PI*2);ctx.stroke();ctx.restore();
-  drawArrow([[158,320],[184,304],[218,291]],COLORS.byz,2.2,.38);
+function drawRetreatVisual(v,ts) {
+  const center=v.center||v.path?.[0];if(!center)return;
+  const p=worldToScreen(...center),pulse=((ts%1100)/1100),color=sideColor(v.side);
+  ctx.save();
+  ctx.strokeStyle=(v.side==='byzantine'?'rgba(39,75,89,':'rgba(138,73,61,')+(.7*(1-pulse))+')';
+  ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,10+pulse*24,0,Math.PI*2);ctx.stroke();ctx.restore();
+  if(v.path)drawArrow(v.path,color,2.2,.38);
 }
-function drawBreachScene(ts) {
-  if(state.time<312)return;
-  const pulse=((ts%1300)/1300);drawImpact(124,334,pulse,1.15);
-  if(state.time>=322){
-    drawArrow([[108,326],[135,334],[170,340],[208,346]],COLORS.ottoman,4.4,.62);
-    drawArrow([[111,346],[143,350],[188,361]],COLORS.ottoman,3,.38);
-  }
+function drawImpactVisual(v,ts) {
+  const phase=((ts%1300)/1300),center=v.center;if(!center)return;
+  drawImpact(center[0],center[1],phase,v.intensity??1);
 }
-function drawLastStandScene(ts) {
-  if(state.time<344||state.time>385)return;
-  const p=worldToScreen(180,344),phase=((ts%1400)/1400);
-  ctx.save();ctx.strokeStyle=`rgba(39,75,89,${.52*(1-phase)})`;ctx.lineWidth=2;ctx.setLineDash([3,4]);
-  ctx.beginPath();ctx.arc(p.x,p.y,14+phase*20,0,Math.PI*2);ctx.stroke();ctx.restore();
-}
-function drawCityIngress() {
-  if(state.time<376)return;
-  drawArrow([[172,340],[265,352],[360,360],[485,370]],COLORS.ottoman,4,.48);
-  drawArrow([[182,352],[280,395],[410,420]],COLORS.ottoman,2.8,.3);
-  drawArrow([[176,328],[290,300],[430,285]],COLORS.ottoman,2.6,.26);
+function drawStandVisual(v,ts) {
+  if(!v.center)return;
+  const p=worldToScreen(...v.center),phase=((ts%1400)/1400);
+  ctx.save();
+  ctx.strokeStyle=(v.side==='ottoman'?'rgba(138,73,61,':'rgba(39,75,89,')+(.52*(1-phase))+')';
+  ctx.lineWidth=2;ctx.setLineDash([3,4]);ctx.beginPath();ctx.arc(p.x,p.y,14+phase*20,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 function drawEventScene(ts) {
   if(!state.layers.events)return;
-  drawBombardment(ts);drawWaveScenes();drawGiustinianiScene(ts);drawBreachScene(ts);drawLastStandScene(ts);drawCityIngress();
+  for(const v of scenario.visuals||[]){
+    if(!visualIsActive(v))continue;
+    if(v.type==='bombardment')drawBombardmentVisual(v,ts);
+    else if(v.type==='arrows')drawArrowsVisual(v);
+    else if(v.type==='retreat')drawRetreatVisual(v,ts);
+    else if(v.type==='impact')drawImpactVisual(v,ts);
+    else if(v.type==='stand')drawStandVisual(v,ts);
+  }
   const e=activeEvent(scenario.events,state.time,9);if(!e)return;
   const p=worldToScreen(e.focus.x,e.focus.y),pulse=(ts%1200)/1200;
-  ctx.save();ctx.strokeStyle=`rgba(138,73,61,${.28*(1-pulse)})`;ctx.lineWidth=1.4;ctx.setLineDash([2,5]);
+  ctx.save();ctx.strokeStyle='rgba(138,73,61,'+(.28*(1-pulse))+')';ctx.lineWidth=1.4;ctx.setLineDash([2,5]);
   ctx.beginPath();ctx.arc(p.x,p.y,14+pulse*26,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 function render(ts) {
