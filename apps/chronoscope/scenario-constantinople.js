@@ -48,6 +48,66 @@ export const constantinople = {
     { id:'byz-center', side:'byzantine', label:'Центр обороны', shape:'line', size:12, track:[{t:0,x:166,y:330,strength:1},{t:250,x:158,y:330,strength:.76},{t:310,x:153,y:331,strength:.48},{t:350,x:184,y:344,strength:.22},{t:420,x:270,y:374,strength:.08}] },
     { id:'byz-north', side:'byzantine', label:'Северный сектор', shape:'line', size:10, track:[{t:0,x:160,y:208,strength:1},{t:240,x:151,y:218,strength:.78},{t:345,x:173,y:226,strength:.42},{t:420,x:250,y:250,strength:.12}] }
   ],
+  breaches: [
+    {
+      id:'central-breach', from:318, x:123, y:334,
+      upper:[[116,126],[123,212],[119,302],[121,316]],
+      lower:[[124,352],[126,392],[116,470],[151,548],[222,608]]
+    }
+  ],
+  visuals: [
+    {
+      type:'bombardment', from:8, to:52, side:'ottoman',
+      sources:[[48,278],[42,332],[50,390]],
+      targets:[[123,318],[121,342],[120,365]]
+    },
+    {
+      type:'arrows', from:38, to:150, side:'ottoman',
+      arrows:[
+        {points:[[62,360],[88,355],[111,348]],width:3,alpha:.42},
+        {points:[[54,385],[82,375],[111,360]],width:2.4,alpha:.3}
+      ]
+    },
+    {
+      type:'arrows', from:120, to:250, side:'ottoman',
+      arrows:[
+        {points:[[60,468],[86,445],[116,414]],width:3.5,alpha:.42},
+        {points:[[54,430],[85,422],[117,405]],width:2.2,alpha:.26}
+      ]
+    },
+    {
+      type:'arrows', from:205, to:365, side:'ottoman',
+      arrows:[
+        {points:[[62,300],[93,313],[128,327]],width:4.2,alpha:.6},
+        {points:[[70,278],[102,294],[128,318]],width:2.6,alpha:.34}
+      ]
+    },
+    {
+      type:'retreat', from:286, to:330, side:'byzantine',
+      center:[158,320], path:[[158,320],[184,304],[218,291]]
+    },
+    {
+      type:'impact', from:312, side:'ottoman', center:[124,334], intensity:1.15
+    },
+    {
+      type:'arrows', from:322, side:'ottoman',
+      arrows:[
+        {points:[[108,326],[135,334],[170,340],[208,346]],width:4.4,alpha:.62},
+        {points:[[111,346],[143,350],[188,361]],width:3,alpha:.38}
+      ]
+    },
+    {
+      type:'stand', from:344, to:385, side:'byzantine', center:[180,344]
+    },
+    {
+      type:'arrows', from:376, side:'ottoman',
+      arrows:[
+        {points:[[172,340],[265,352],[360,360],[485,370]],width:4,alpha:.48},
+        {points:[[182,352],[280,395],[410,420]],width:2.8,alpha:.3},
+        {points:[[176,328],[290,300],[430,285]],width:2.6,alpha:.26}
+      ]
+    }
+  ],
   events: [
     { id:'bombardment', t:20, importance:2, title:'Артиллерия открывает финальную фазу', body:'Перед общим приступом османские батареи усиливают огонь по сухопутному фронту. На карте подсвечен центральный участок, где оборона уже истощена предыдущими неделями осады.', confidence:'Время приблизительное', focus:{x:126,y:330,zoom:2.05} },
     { id:'irregulars', t:48, importance:3, title:'Первая волна', body:'В атаку идут лёгкие и иррегулярные части. Их задача — измотать защитников и заставить расходовать силы на внешнем рубеже.', confidence:'Последовательность надёжна', focus:{x:108,y:350,zoom:2.2} },
