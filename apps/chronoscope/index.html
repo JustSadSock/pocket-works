@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#0b0e0e">
+  <meta name="theme-color" content="#202624">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Хроноскоп">
@@ -18,117 +18,80 @@
 <body>
   <main class="app-shell" data-app-shell data-fullscreen-app>
     <section class="library" id="library" aria-labelledby="library-title">
-      <div class="opening-map" aria-hidden="true">
-        <div class="opening-coast"></div>
-        <div class="opening-wall"></div>
-        <div class="opening-front front-a"></div>
-        <div class="opening-front front-b"></div>
-        <div class="opening-dot dot-a"></div>
-        <div class="opening-dot dot-b"></div>
-        <div class="opening-year">1453</div>
+      <div class="library-map" aria-hidden="true">
+        <span class="contour c1"></span><span class="contour c2"></span><span class="contour c3"></span>
+        <span class="trace t1"></span><span class="trace t2"></span><span class="trace t3"></span>
       </div>
-
       <header class="library-head" data-ui>
-        <div class="brandline"><span>POCKET WORKS</span><i></i><span>HISTORICAL SIMULATION</span></div>
+        <p class="kicker">POCKET WORKS / ИСТОРИЧЕСКИЕ РЕКОНСТРУКЦИИ</p>
         <h1 id="library-title">ХРОНОСКОП</h1>
-        <p class="deck">История как пространство и время. Перематывай событие, двигай карту, следи за частями и включай режиссёрскую камеру.</p>
+        <p class="deck">Событие не как статья, а как управляемая запись: двигай время, карту и камеру сам.</p>
       </header>
-
-      <article class="scenario-card">
-        <div class="scenario-index">01</div>
-        <div class="scenario-copy">
-          <div class="scenario-meta"><span>29 MAY 1453</span><span>CONSTANTINOPLE</span></div>
-          <h2>Последний штурм</h2>
-          <p>Феодосиевы стены, волны османской атаки, сектора обороны, командиры и ключевые моменты на единой временной оси.</p>
-          <div class="scenario-strip"><span>07:00</span><span>8 EVENTS</span><span>6 FORMATIONS</span></div>
-        </div>
-        <button id="open-scenario" class="open-scenario" type="button" data-native-press>
-          <span>НАЧАТЬ РЕКОНСТРУКЦИЮ</span><b>→</b>
-        </button>
+      <article class="scenario-card" data-native-press>
+        <div class="scenario-meta"><span>ДЕМО-СЦЕНАРИЙ</span><span>29.05.1453</span></div>
+        <h2>Константинополь</h2>
+        <p>Финальный штурм: стены, сектора обороны, волны атаки, командиры и ключевые моменты на одной временной шкале.</p>
+        <div class="scenario-strip"><span>≈ 7 часов</span><span>8 событий</span><span>6 групп войск</span></div>
+        <button id="open-scenario" class="open-scenario" type="button" data-native-press>Открыть реконструкцию</button>
       </article>
-
       <footer class="library-foot" data-ui>
-        <a href="../../" data-app-control class="pw-link">← POCKET WORKS</a>
-        <span>ENGINE 1.1 / SCENARIOS ARE DATA-DRIVEN</span>
+        <a href="../../" data-app-control class="pw-link">В Pocket Works</a>
+        <p>Новые реконструкции добавляются как отдельные сценарии без переписывания движка.</p>
       </footer>
     </section>
 
     <section class="viewer" id="viewer" hidden>
       <canvas id="map" class="map" data-gesture-surface data-touch-action="none" aria-label="Интерактивная историческая карта"></canvas>
-
       <header class="hud-top" data-ui>
-        <button id="back-library" class="hud-button text-button" type="button" data-native-press>← СЦЕНАРИИ</button>
-        <div class="title-stack">
-          <span class="eyebrow">29 MAY 1453</span>
-          <strong id="scenario-title">КОНСТАНТИНОПОЛЬ</strong>
-        </div>
-        <button id="layers-button" class="hud-button layer-button" type="button" aria-label="Слои карты" data-native-press>
-          <i></i><i></i><i></i>
-        </button>
+        <button id="back-library" class="hud-button text-button" type="button" data-native-press>Библиотека</button>
+        <div class="title-stack"><strong id="scenario-title">Константинополь</strong><span id="clock">29 мая · 01:30</span></div>
+        <button id="layers-button" class="hud-button icon-button" type="button" aria-label="Слои карты" data-native-press><span></span><span></span><span></span></button>
       </header>
 
-      <div class="time-stamp" data-ui>
-        <span id="clock">29 мая · 01:30</span>
-      </div>
-
       <div class="map-tools" data-ui>
-        <button id="auto-camera" class="tool-button active" type="button" aria-pressed="true" data-native-press><span class="tool-dot"></span>DIRECTOR</button>
-        <button id="focus-event" class="tool-button" type="button" data-native-press>FOCUS EVENT</button>
+        <button id="auto-camera" class="tool-button active" type="button" aria-pressed="true" data-native-press><span class="tool-dot"></span>Автокамера</button>
+        <button id="focus-event" class="tool-button" type="button" data-native-press>К событию</button>
       </div>
 
       <div class="zoom-tools" data-ui>
-        <button id="zoom-in" type="button" aria-label="Приблизить" data-native-press>＋</button>
+        <button id="zoom-in" type="button" aria-label="Приблизить" data-native-press>+</button>
         <button id="zoom-out" type="button" aria-label="Отдалить" data-native-press>−</button>
       </div>
 
       <aside class="legend" id="legend" data-ui>
-        <span><i class="byz"></i>BYZANTINE</span>
-        <span><i class="ottoman"></i>OTTOMAN</span>
+        <span><i class="byz"></i>Византия</span><span><i class="ottoman"></i>Османы</span>
       </aside>
 
       <article class="event-card" id="event-card" hidden data-ui>
-        <div class="event-rail">
-          <span class="event-time" id="event-time"></span>
-          <button id="event-close" type="button" aria-label="Скрыть событие" data-native-press>×</button>
-        </div>
+        <div class="event-time" id="event-time"></div>
         <h2 id="event-title"></h2>
         <p id="event-body"></p>
-        <div class="event-confidence" id="event-confidence"></div>
+        <div class="event-foot"><span id="event-confidence"></span><button id="event-close" type="button" data-native-press>Скрыть</button></div>
       </article>
 
       <section class="timeline" id="timeline" data-ui>
         <div class="timeline-head">
           <button id="play" class="play" type="button" aria-label="Запустить" data-native-press><span class="play-icon"></span></button>
-          <div class="timeline-readout">
-            <span id="time-readout">01:30</span>
-            <strong id="phase">ПЕРЕД ШТУРМОМ</strong>
-          </div>
+          <div class="timeline-readout"><strong id="phase">Перед штурмом</strong><span id="time-readout">01:30</span></div>
           <button id="speed" class="speed" type="button" data-native-press>AUTO</button>
         </div>
         <div class="scrub" id="scrub" data-gesture-surface data-touch-action="none" role="slider" aria-label="Время реконструкции" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
-          <div class="scrub-track">
-            <div class="scrub-progress" id="scrub-progress"></div>
-            <div class="scrub-events" id="scrub-events"></div>
-            <div class="scrub-thumb" id="scrub-thumb"></div>
-          </div>
+          <div class="scrub-track"><div class="scrub-progress" id="scrub-progress"></div><div class="scrub-events" id="scrub-events"></div><div class="scrub-thumb" id="scrub-thumb"></div></div>
         </div>
-        <div class="timeline-scale"><span>01:30</span><span>DAWN</span><span>08:30</span></div>
+        <div class="timeline-scale"><span>01:30</span><span>РАССВЕТ</span><span>08:30</span></div>
       </section>
 
       <section class="layers-sheet" id="layers-sheet" hidden data-ui>
-        <div class="sheet-head">
-          <div><span>MAP DISPLAY</span><h2>Слои</h2></div>
-          <button id="layers-close" type="button" data-native-press>×</button>
-        </div>
+        <div class="sheet-head"><div><span>ОТОБРАЖЕНИЕ</span><h2>Слои карты</h2></div><button id="layers-close" type="button" data-native-press>Закрыть</button></div>
         <div id="layer-list" class="layer-list"></div>
-        <div class="sheet-note">Ручное движение отключает режиссёрскую камеру. DIRECTOR возвращает автоматическую композицию.</div>
-        <a href="../../" class="sheet-pw" data-app-control>← POCKET WORKS</a>
+        <div class="sheet-note">Ручное перемещение карты автоматически отключает режиссёрскую камеру. Включить её обратно можно сверху.</div>
+        <a href="../../" class="sheet-pw" data-app-control>В Pocket Works</a>
       </section>
 
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     </section>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ХРОНОСКОП" data-app-version="1.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ХРОНОСКОП" data-app-version="1.2.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
