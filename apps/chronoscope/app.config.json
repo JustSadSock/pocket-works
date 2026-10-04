@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slug": "chronoscope",
+  "name": "ХРОНОСКОП",
+  "shortName": "Хроноскоп",
+  "description": "Интерактивный движок исторических реконструкций: карта, таймлайн, отряды, ключевые события и режиссёрская камера.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-04",
+  "releaseDateTime": "2026-10-04T12:44:00+03:00",
+  "changelog": [
+    "Создан универсальный движок исторических реконструкций с отделёнными от рендера сценарными данными.",
+    "Добавлены скраббинг времени, ручная панорама и масштаб, автокамера, умная скорость и слои карты.",
+    "Встроен демонстрационный сценарий финального штурма Константинополя 29 мая 1453 года для проверки полного цикла."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#274b59",
+  "backgroundColor": "#d8cfb6",
+  "themeColor": "#202624",
+  "orientation": "any",
+  "cacheName": "chronoscope-v1.0.0",
+  "storageNamespace": "pocket-works:chronoscope",
+  "tags": ["history", "simulation", "map", "timeline", "canvas", "interactive", "offline", "touch", "education"],
+  "order": 224
+}
