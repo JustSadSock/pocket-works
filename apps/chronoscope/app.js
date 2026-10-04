@@ -51,7 +51,13 @@ function resize(){
   ui.canvas.width=Math.round(view.width*view.dpr);ui.canvas.height=Math.round(view.height*view.dpr);
   ctx.setTransform(view.dpr,0,0,view.dpr,0,0);
 }
-function scale(){return Math.min(view.width/scenario.bounds.width,view.height/scenario.bounds.height)*state.camera.zoom;}
+function scale(){
+  const base=Math.min(view.width/scenario.bounds.width,view.height/scenario.bounds.height);
+  const portrait=view.height/view.width>1.35;
+  const wideShot=1-clamp((state.camera.zoom-1)/1.4,0,1);
+  const framingBoost=portrait?1+.38*wideShot:1;
+  return base*state.camera.zoom*framingBoost;
+}
 function worldToScreen(x,y){
   const s=scale();return{x:view.width/2+(x-state.camera.x)*s,y:view.height/2+(y-state.camera.y)*s};
 }
