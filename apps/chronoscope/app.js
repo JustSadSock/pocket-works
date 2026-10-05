@@ -198,7 +198,7 @@ function drawBreachEffect(breach) {
     ctx.fillStyle='#fff5df';ctx.fillText(label,x,y+3);ctx.restore();
   }
 }
-function drawWalls()function drawWalls() {
+function drawWalls() {
   if(!state.layers.walls)return;
   const breaches=activeBreaches();
   for(const wall of scenario.walls){
@@ -412,7 +412,7 @@ function showEvent(e) {
   requestAnimationFrame(()=>drawEventPreview(e));
   if(e.id!==state.lastEvent){state.lastEvent=e.id;if(e.importance>=4)try{navigator.vibrate?.([12,32,12]);}catch{}}
 }
-function updateUi(){function updateUi(){
+function updateUi(){
   const pct=state.time/scenario.duration*100, clock=formatClock(scenario.startMinutes,state.time);
   ui.progress.style.width=pct+'%';ui.thumb.style.left=pct+'%';ui.scrub.setAttribute('aria-valuenow',String(Math.round(pct)));
   ui.clock.textContent=clock;ui.time.textContent=clock;ui.phase.textContent=phaseAt(state.time);
@@ -460,7 +460,7 @@ function buildTicks(){
     label.addEventListener('click',()=>jumpToEvent(e));ui.timelineEvents.appendChild(label);
   });
 }
-function buildLayers(){function buildLayers(){
+function buildLayers(){
   const info={terrain:['География','берега и вода'],walls:['Укрепления','стены и ворота'],units:['Войска','группы и движение'],commanders:['Командиры','знаковые личности'],labels:['Подписи','места и ориентиры'],events:['События','пульсация точек интереса']};
   ui.layerList.innerHTML='';
   Object.entries(info).forEach(([key,val])=>{const row=document.createElement('div');row.className='layer-row';const copy=document.createElement('div');copy.innerHTML='<strong>'+val[0]+'</strong><br><span>'+val[1]+'</span>';const b=document.createElement('button');b.type='button';b.className='layer-toggle '+(state.layers[key]?'on':'');b.setAttribute('aria-label',val[0]);b.addEventListener('click',()=>{state.layers[key]=!state.layers[key];b.classList.toggle('on',state.layers[key]);render();persist();});row.append(copy,b);ui.layerList.appendChild(row);});
