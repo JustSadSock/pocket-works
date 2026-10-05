@@ -267,7 +267,7 @@ function drawUnit(unit) {
     if(unit.elite){ctx.strokeStyle='#f4dfaf';ctx.lineWidth=1.5;ctx.strokeRect(-size*.82,-size*.44,size*1.64,size*.88);}
   }
   ctx.restore();
-  if(state.camera.zoom>1.45){
+  if(state.camera.zoom>2.25){
     ctx.save();ctx.font='700 8px system-ui';ctx.textAlign='center';
     const m=ctx.measureText(unit.label),pad=3;ctx.fillStyle='rgba(241,232,210,.88)';
     ctx.fillRect(p.x-m.width/2-pad,p.y+size*.52,m.width+pad*2,13);ctx.fillStyle=COLORS.ink;ctx.fillText(unit.label,p.x,p.y+size*.52+9);ctx.restore();
@@ -455,8 +455,7 @@ function buildTicks(){
   scenario.events.forEach(e=>{
     const b=document.createElement('button');b.type='button';b.className='event-tick '+(e.importance>=4?'major':'');
     b.style.left=(e.t/scenario.duration*100)+'%';b.setAttribute('aria-label',e.title);b.addEventListener('click',ev=>{ev.stopPropagation();jumpToEvent(e);});ui.ticks.appendChild(b);
-    const label=document.createElement('button');label.type='button';label.className='timeline-event';label.style.left=(e.t/scenario.duration*100)+'%';
-    label.innerHTML='<strong>'+formatClock(scenario.startMinutes,e.t)+'</strong><span>'+(e.short||e.title)+'</span>';
+    const label=document.createElement('button');label.type='button';label.className='timeline-event';label.innerHTML='<strong>'+formatClock(scenario.startMinutes,e.t)+'</strong><span>'+(e.short||e.title)+'</span>';
     label.addEventListener('click',()=>jumpToEvent(e));ui.timelineEvents.appendChild(label);
   });
 }
