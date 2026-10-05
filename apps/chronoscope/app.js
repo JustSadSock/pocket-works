@@ -161,7 +161,7 @@ function drawTerrain() {
   path(scenario.terrain.galata,COLORS.landAlt,'rgba(73,67,56,.4)',1.1);
   drawMainlandDetail();drawUrbanDetail();
 }
-function drawWallTowersfunction drawWallTowers(points) {
+function drawWallTowers(points) {
   const s=scale();
   for(let i=0;i<points.length-1;i++){
     const [x1,y1]=points[i],[x2,y2]=points[i+1],d=Math.hypot(x2-x1,y2-y1);
@@ -174,7 +174,7 @@ function drawWallTowersfunction drawWallTowers(points) {
     }
   }
 }
-function activeBreachesfunction activeBreaches() {
+function activeBreaches() {
   return (scenario.breaches||[]).filter(b=>state.time>=b.from);
 }
 function drawBreachEffect(breach) {
@@ -310,7 +310,7 @@ function drawArrow(pointsfunction drawArrow(points,color,width=3,alpha=.55) {
   const a=screen[screen.length-2],b=screen[screen.length-1],ang=Math.atan2(b.y-a.y,b.x-a.x),r=Math.max(7,11*scale());
   ctx.translate(b.x,b.y);ctx.rotate(ang);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(-r*.75,-r*.58);ctx.lineTo(-r*.45,0);ctx.lineTo(-r*.75,r*.58);ctx.closePath();ctx.fill();ctx.restore();
 }
-function drawImpactfunction drawImpact(x,y,phase,intensity=1) {
+function drawImpact(x,y,phase,intensity=1) {
   const p=worldToScreen(x,y),r=(8+phase*24)*intensity;
   ctx.save();ctx.strokeStyle=`rgba(138,73,61,${.56*(1-phase)})`;ctx.lineWidth=1.6;
   ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.stroke();
