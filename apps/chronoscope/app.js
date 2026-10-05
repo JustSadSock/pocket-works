@@ -53,8 +53,7 @@ function resize() {
 function scale() {
   const base=Math.min(view.width/scenario.bounds.width,view.height/scenario.bounds.height);
   const portrait=view.height>view.width*1.25;
-  const wide=clamp((1.35-state.camera.zoom)/.7,0,1);
-  return base*state.camera.zoom*(portrait?1.18+wide*.08:1);
+  return base*state.camera.zoom*(portrait?1.10:1);
 }
 function worldToScreen(x, y) {
   const s = scale();
