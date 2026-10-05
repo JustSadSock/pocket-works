@@ -39,3 +39,7 @@ node --check apps/chronoscope/scenario-constantinople.js
 node --check apps/chronoscope/sw.js
 npm run registry:check
 ```
+
+## Visual target 1.3
+
+The viewer now deliberately targets the attainable simple top-down reference: large readable formations, flat coast/fortification geometry, simple ships and artillery, bold movement arrows, an explicit breach, and a light documentary timeline. The goal is production consistency rather than painterly illustration detail.
