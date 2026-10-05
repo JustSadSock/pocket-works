@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'chronoscope-';
-const CACHE_NAME = 'chronoscope-v1.2.0';
-const APP_VERSION = '1.2.0';
-const RELEASE_DATE = '2026-10-04';
+const CACHE_NAME = 'chronoscope-v1.3.0';
+const APP_VERSION = '1.3.0';
+const RELEASE_DATE = '2026-10-05';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Возвращён исходный светлый стиль исторического атласа.',
-  'События получили отдельную визуальную постановку вместо универсального маркера.',
-  'Улучшены масштаб, детализация карты, отряды, пролом стены и направления штурма.'
+  'Карта Константинополя пересобрана под простой top-down референс.',
+  'Улучшены формации, корабли, артиллерия, стрелки наступления и пролом стены.',
+  'HUD, карточка события и таймлайн приближены к целевому светлому атласному интерфейсу.'
 ];
 const APP_SHELL = [
   './','./index.html','./styles.css','./app.js','./engine.js','./scenario-constantinople.js',
