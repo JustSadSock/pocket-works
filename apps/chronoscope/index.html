@@ -42,10 +42,26 @@
 
     <section class="viewer" id="viewer" hidden>
       <canvas id="map" class="map" data-gesture-surface data-touch-action="none" aria-label="Интерактивная историческая карта"></canvas>
-      <header class="hud-top" data-ui>
-        <button id="back-library" class="hud-button text-button" type="button" data-native-press>Библиотека</button>
-        <div class="title-stack"><strong id="scenario-title">Константинополь</strong><span id="clock">29 мая · 01:30</span></div>
-        <button id="layers-button" class="hud-button icon-button" type="button" aria-label="Слои карты" data-native-press><span></span><span></span><span></span></button>
+
+      <header class="atlas-header" data-ui>
+        <div class="atlas-title-row">
+          <button id="back-library" class="brand-button" type="button" data-native-press aria-label="Вернуться к сценариям">
+            <span class="hourglass-mark">⌛</span><strong>ХРОНОСКОП</strong>
+          </button>
+          <div class="scenario-heading">
+            <strong id="scenario-title">Константинополь</strong><span>⌄</span>
+          </div>
+          <button id="layers-button" class="settings-button" type="button" aria-label="Слои карты" data-native-press>⚙</button>
+        </div>
+        <div class="atlas-subrow">
+          <div class="date-block"><strong>29 МАЯ 1453</strong><span id="clock">04:10</span></div>
+          <div class="atlas-tabs">
+            <button class="atlas-tab active" type="button" disabled>Карта</button>
+            <button id="events-tab" class="atlas-tab" type="button" data-native-press>События</button>
+            <button id="commanders-tab" class="atlas-tab" type="button" data-native-press>Командиры</button>
+            <button id="layers-tab" class="atlas-tab" type="button" data-native-press>Слои</button>
+          </div>
+        </div>
       </header>
 
       <div class="map-tools" data-ui>
@@ -59,39 +75,47 @@
       </div>
 
       <aside class="legend" id="legend" data-ui>
-        <span><i class="byz"></i>Византия</span><span><i class="ottoman"></i>Османы</span>
+        <span><i class="ottoman"></i>Османы</span><span><i class="byz"></i>Византия</span>
       </aside>
 
       <article class="event-card" id="event-card" hidden data-ui>
-        <div class="event-time" id="event-time"></div>
-        <h2 id="event-title"></h2>
-        <p id="event-body"></p>
-        <div class="event-foot"><span id="event-confidence"></span><button id="event-close" type="button" data-native-press>Скрыть</button></div>
+        <canvas id="event-preview" class="event-preview" aria-hidden="true"></canvas>
+        <div class="event-copy">
+          <div class="event-time" id="event-time"></div>
+          <h2 id="event-title"></h2>
+          <p id="event-body"></p>
+          <div class="event-foot"><span id="event-confidence"></span><button id="event-close" type="button" data-native-press>×</button></div>
+        </div>
       </article>
 
       <section class="timeline" id="timeline" data-ui>
-        <div class="timeline-head">
-          <button id="play" class="play" type="button" aria-label="Запустить" data-native-press><span class="play-icon"></span></button>
-          <div class="timeline-readout"><strong id="phase">Перед штурмом</strong><span id="time-readout">01:30</span></div>
-          <button id="speed" class="speed" type="button" data-native-press>AUTO</button>
-        </div>
         <div class="scrub" id="scrub" data-gesture-surface data-touch-action="none" role="slider" aria-label="Время реконструкции" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
           <div class="scrub-track"><div class="scrub-progress" id="scrub-progress"></div><div class="scrub-events" id="scrub-events"></div><div class="scrub-thumb" id="scrub-thumb"></div></div>
         </div>
-        <div class="timeline-scale"><span>01:30</span><span>РАССВЕТ</span><span>08:30</span></div>
+        <div id="timeline-events" class="timeline-events"></div>
+        <div class="timeline-controls">
+          <button id="speed" class="speed" type="button" data-native-press>AUTO</button>
+          <div class="transport">
+            <button id="prev-event" class="transport-small" type="button" aria-label="Предыдущее событие" data-native-press>◀</button>
+            <button id="play" class="play" type="button" aria-label="Запустить" data-native-press><span class="play-icon"></span></button>
+            <button id="next-event" class="transport-small" type="button" aria-label="Следующее событие" data-native-press>▶</button>
+          </div>
+          <button id="overview" class="overview-button" type="button" data-native-press>▱ Общий план</button>
+        </div>
+        <div class="timeline-readout"><strong id="phase">Перед штурмом</strong><span id="time-readout">01:30</span></div>
       </section>
 
       <section class="layers-sheet" id="layers-sheet" hidden data-ui>
         <div class="sheet-head"><div><span>ОТОБРАЖЕНИЕ</span><h2>Слои карты</h2></div><button id="layers-close" type="button" data-native-press>Закрыть</button></div>
         <div id="layer-list" class="layer-list"></div>
-        <div class="sheet-note">Ручное перемещение карты автоматически отключает режиссёрскую камеру. Включить её обратно можно сверху.</div>
+        <div class="sheet-note">Ручное перемещение карты отключает режиссёрскую камеру. «Общий план» возвращает обзор всей сцены.</div>
         <a href="../../" class="sheet-pw" data-app-control>В Pocket Works</a>
       </section>
 
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     </section>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ХРОНОСКОП" data-app-version="1.2.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ХРОНОСКОП" data-app-version="1.3.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
