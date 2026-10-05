@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "rock_coast_01",
+      "name": "Coast Rocks 01",
+      "kind": "model",
+      "tags": ["rock", "coast", "natural", "scatterable", "realistic", "high-poly"],
+      "style": "photoreal",
+      "palette": ["stone-grey", "sand", "moss"],
+      "dimensions": { "unit": "unknown", "value": null },
+      "pivot": "source",
+      "lod": "source only; compile before mobile use",
+      "provider": "polyhaven",
+      "providerId": "coast_rocks_01",
+      "license": "CC0-1.0",
+      "source": "https://polyhaven.com/a/coast_rocks_01",
+      "selection": { "group": "gltf", "resolution": "1k", "format": "gltf" }
+    },
+    {
+      "id": "material_warm_wood_01",
+      "name": "Wooden Planks",
+      "kind": "texture",
+      "tags": ["wood", "planks", "warmWood", "floor", "wall", "realistic"],
+      "style": "photoreal",
+      "palette": ["warm-brown", "tan"],
+      "dimensions": { "unit": "mm", "value": [2000, 2000] },
+      "pivot": "not-applicable",
+      "lod": "1k texture",
+      "provider": "polyhaven",
+      "providerId": "wooden_planks",
+      "license": "CC0-1.0",
+      "source": "https://polyhaven.com/a/wooden_planks",
+      "selection": { "group": "Diffuse", "resolution": "1k", "format": "jpg" }
+    },
+    {
+      "id": "sky_city_sunset_01",
+      "name": "Joburg Central Sunset",
+      "kind": "hdri",
+      "tags": ["sky", "sunset", "city", "warm", "environment"],
+      "style": "photoreal",
+      "palette": ["pink", "cool-blue", "warm-orange"],
+      "dimensions": { "unit": "not-applicable", "value": null },
+      "pivot": "not-applicable",
+      "lod": "1k HDR",
+      "provider": "polyhaven",
+      "providerId": "sunset_jhbcentral",
+      "license": "CC0-1.0",
+      "source": "https://polyhaven.com/a/sunset_jhbcentral",
+      "selection": { "group": "hdri", "resolution": "1k", "format": "hdr" }
+    }
+  ]
+}

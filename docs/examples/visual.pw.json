@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "direction": "Weathered limestone hill village at dawn",
+  "shapeLanguage": ["broad silhouettes", "irregular stonework", "thin timber details"],
+  "palette": ["#596957", "#c6b59a", "#cd8259", "#252b2b"],
+  "roughness": [0.65, 1],
+  "contrast": "medium",
+  "detailScale": "medium",
+  "lighting": "soft morning sidelight",
+  "decorationDensity": 0.55,
+  "camera": "three-quarter perspective; village tower remains the focal point",
+  "effects": ["ground mist", "dust motes", "contact shadows"],
+  "avoid": ["glassmorphism", "neon-everywhere", "paper-ui"]
+}
