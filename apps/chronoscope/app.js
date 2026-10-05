@@ -293,7 +293,7 @@ function drawShip(ship) {
   ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(.5*s,-11*s);ctx.lineTo(8*s,-8*s);ctx.lineTo(.5*s,-5*s);ctx.closePath();ctx.fill();
   ctx.restore();
 }
-function drawArrow(pointsfunction drawArrow(points,color,width=3,alpha=.55) {
+function drawArrow(points,color,width=3,alpha=.55) {
   if(points.length<2)return;
   const screen=points.map(([x,y])=>worldToScreen(x,y));
   ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=Math.max(2,width*scale());ctx.lineCap='round';ctx.lineJoin='round';
