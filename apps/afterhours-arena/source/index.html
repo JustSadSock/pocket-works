@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#171d21">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Afterhours">
+  <title>AFTERHOURS ARENA</title>
+</head>
+<body data-app-preset="phaser" data-fullscreen-app>
+  <main class="cabinet" data-app-shell>
+    <header class="marquee">
+      <a class="exit-link" href="../../">← Pocket Works</a>
+      <div class="wordmark"><span>AFTERHOURS</span><strong>ARENA<span class="mark-lines" aria-hidden="true">≡</span></strong></div>
+      <div class="marquee-right"><span class="edition">16-BIT / FIGHT CLUB</span><button id="sound-btn" type="button" aria-label="Выключить звук">ЗВУК ВКЛ</button></div>
+    </header>
+    <section class="machine" aria-label="Аркадный файтинг">
+      <div class="screen-rim">
+        <div class="screen" id="screen">
+          <div id="engine-stage" data-gesture-surface data-block-callout aria-label="Игровая арена"></div>
+          <div class="scanlines" aria-hidden="true"></div>
+          <div id="loading" class="loading" role="status">ВКЛЮЧАЕМ АВТОМАТ…</div>
+          <div id="hud" class="hud" hidden>
+            <div class="fighter-hud"><div class="name-row"><b id="p1-name">ROOK</b><span>ВЫ <i id="p1-wins"></i></span></div><div class="health"><i id="p1-health"></i></div><div class="meter"><i id="p1-meter"></i></div><span id="p1-ready" class="ready">СПЕЦ ГОТОВ</span></div>
+            <div class="timer"><b id="timer">60</b><span id="round-label">РАУНД 01</span></div>
+            <div class="fighter-hud opponent"><div class="name-row"><b id="p2-name">VESPER</b><span>CPU <i id="p2-wins"></i></span></div><div class="health"><i id="p2-health"></i></div><div class="meter"><i id="p2-meter"></i></div><span id="p2-ready" class="ready">СПЕЦ ГОТОВ</span></div>
+          </div>
+          <div class="stage-caption" id="stage-caption"><span>СЕВЕРНЫЙ ПРИЧАЛ</span><span>00:47 / ПОСЛЕ ЗАКРЫТИЯ</span></div>
+          <div id="callout" class="callout" aria-live="polite"></div>
+          <div id="combo" class="combo" aria-live="polite"></div>
+          <section id="menu" class="selection" hidden aria-label="Выбор бойца">
+            <div class="menu-heading"><p>НОЧЬ ТОЛЬКО НАЧИНАЕТСЯ</p><h1>ВЫБЕРИ СВОЮ СТОРОНУ.</h1></div>
+            <div class="roster">
+              <button class="fighter-card selected" data-fighter="rook" type="button" aria-pressed="true"><img id="portrait-rook" alt="Rook: боец в оранжевой куртке"><div><span class="fighter-number">01 / СИЛА</span><b>ROOK</b><small>Кулаки порта</small></div><i class="choice-marker">ВЫБРАН</i></button>
+              <div class="versus" aria-hidden="true">VS</div>
+              <button class="fighter-card" data-fighter="vesper" type="button" aria-pressed="false"><img id="portrait-vesper" alt="Vesper: боец с нефритовым шарфом"><div><span class="fighter-number">02 / СКОРОСТЬ</span><b>VESPER</b><small>Тихая буря</small></div><i class="choice-marker">ВЫБРАН</i></button>
+            </div>
+            <div class="menu-actions"><button id="start-btn" class="primary" type="button" data-native-press disabled>НАЧАТЬ БОЙ <span>→</span></button><button id="help-btn" class="secondary" type="button" data-native-press>УПРАВЛЕНИЕ</button></div>
+            <p class="match-info">ВЫ ПРОТИВ CPU · ДО ДВУХ ПОБЕД <span id="record"></span></p>
+          </section>
+          <section id="overlay" class="overlay" hidden aria-labelledby="overlay-title">
+            <div class="overlay-content"><p id="overlay-kicker">РАУНД ЗАВЕРШЁН</p><h2 id="overlay-title">ПОБЕДА</h2><p id="overlay-copy"></p><div class="overlay-actions"><button id="continue-btn" class="primary" type="button">СЛЕДУЮЩИЙ РАУНД →</button><button id="select-btn" class="secondary" type="button">ВЫБОР БОЙЦА</button><a href="../../">← Pocket Works</a></div></div>
+          </section>
+        </div>
+      </div>
+      <div class="control-deck" id="control-deck">
+        <div class="move-controls" aria-label="Движение">
+          <button data-input="left" type="button" aria-label="Двигаться влево">←<small>A</small></button>
+          <button data-input="jump" type="button" aria-label="Прыгнуть">↑<small>SPACE</small></button>
+          <button data-input="right" type="button" aria-label="Двигаться вправо">→<small>D</small></button>
+        </div>
+        <div class="deck-label"><span class="live-dot"></span><b>ONE MORE ROUND.</b><small>СЕВЕРНЫЙ ПРИЧАЛ / CABINET 01</small></div>
+        <div class="attack-controls" aria-label="Атаки">
+          <button data-input="block" class="block" type="button">БЛОК<small>S</small></button>
+          <button data-input="punch" type="button">РУКА<small>J</small></button>
+          <button data-input="kick" type="button">НОГА<small>K</small></button>
+          <button data-input="special" class="special" type="button">СПЕЦ<small>L / 60</small></button>
+        </div>
+      </div>
+    </section>
+    <footer class="cabinet-footer"><span>AFTERHOURS © 2026</span><span id="footer-hint">ВЫБЕРИ БОЙЦА. ЗАЙМИ АРЕНУ.</span><div><button id="fullscreen-btn" type="button">ПОЛНЫЙ ЭКРАН</button><button id="pause-btn" type="button" disabled>ПАУЗА</button></div></footer>
+  </main>
+  <dialog id="help-dialog"><div class="help-top"><span>КАК ИГРАТЬ</span><button id="close-help" type="button" aria-label="Закрыть управление">×</button></div><h2>БЛИЖЕ. БЫСТРЕЕ. ТОЧНЕЕ.</h2><dl><dt>A / D или ← / →</dt><dd>Движение</dd><dt>SPACE или ↑</dt><dd>Прыжок · уклонение от волны</dd><dt>J / K</dt><dd>Быстрый удар рукой / длинный удар ногой</dd><dt>S или ↓</dt><dd>Удерживать блок</dd><dt>L</dt><dd>Спецприём · расход 60 энергии</dd><dt>ESC / P · F</dt><dd>Пауза · полный экран</dd></dl><p>На телефоне используй кнопки под ареной. Удержание повторяет атаки. Обычные удары не пробивают блок; волна наносит небольшой урон. Энергия растёт при попаданиях и защите.</p><button id="help-done" class="primary" type="button">ПОНЯТНО →</button></dialog>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

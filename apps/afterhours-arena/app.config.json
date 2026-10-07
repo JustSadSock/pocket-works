@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "enhanced",
+  "slug": "afterhours-arena",
+  "name": "AFTERHOURS ARENA",
+  "shortName": "Afterhours",
+  "description": "16-битный аркадный файтинг: два бойца, ночной порт и поединки до двух побед.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-07",
+  "releaseDateTime": "2026-10-07T23:40:00+03:00",
+  "changelog": [
+    "Первый ночной турнир: два бойца, блок, прыжки, спецприёмы и поединок до двух побед."
+  ],
+  "status": "active",
+  "preset": "phaser",
+  "accent": "#ef854d",
+  "backgroundColor": "#171d21",
+  "themeColor": "#171d21",
+  "orientation": "landscape",
+  "cacheName": "afterhours-arena-v0.1.0",
+  "storageNamespace": "pocket-works:afterhours-arena",
+  "tags": [
+    "game",
+    "fighting",
+    "16-bit",
+    "Phaser",
+    "offline",
+    "landscape",
+    "mobile"
+  ],
+  "order": 210
+}
