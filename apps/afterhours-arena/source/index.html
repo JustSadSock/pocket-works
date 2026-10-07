@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#171d21">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Afterhours">
+  <title>AFTERHOURS ARENA</title>
+</head>
+<body data-app-preset="phaser" data-fullscreen-app>
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="app-header" data-ui>
+      <div>
+        <p class="app-kicker">Phaser 3 / ENHANCED</p>
+        <h1>AFTERHOURS ARENA</h1>
+        <p class="selectable-content">16-битный аркадный файтинг: два бойца, ночной порт и поединки до двух побед.</p>
+      </div>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </header>
+
+    <section class="stage" aria-labelledby="stage-title">
+      <h2 id="stage-title">A game scene with an explicit update loop.</h2>
+      <div class="engine-stage" id="engine-stage" data-gesture-surface data-block-callout></div>
+      <output id="status" aria-live="polite">Starting scene…</output>
+    </section>
+
+    <footer data-ui>
+      <span>afterhours-arena</span>
+      <span>v0.1.0 · experimental</span>
+    </footer>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

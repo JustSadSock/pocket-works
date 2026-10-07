@@ -1,0 +1,11 @@
+{
+  "name": "@pocket-works/afterhours-arena",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs afterhours-arena",
+    "test": "vitest run --config vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AFTERHOURS ARENA">
+  <rect width="512" height="512" fill="#171d21"/>
+  <path d="M64 64h384v384H64z" fill="none" stroke="#ef854d" stroke-width="22"/>
+  <path d="M96 352 256 96l160 256-160 64z" fill="#ef854d" opacity=".92"/>
+  <text x="256" y="318" text-anchor="middle" fill="#171d21" font-family="system-ui,sans-serif" font-size="112" font-weight="900">AA</text>
+</svg>
