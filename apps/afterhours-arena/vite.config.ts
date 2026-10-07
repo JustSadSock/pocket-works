@@ -14,7 +14,7 @@ export default defineConfig({
   build: {
     outDir: buildRoot,
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         entryFileNames: 'app.js',
@@ -64,7 +64,7 @@ export default defineConfig({
     })
   ],
   test: {
-    include: [path.join(sourceRoot, '**/*.test.ts')],
+    include: ['**/*.test.ts'],
     environment: 'node'
   }
 });

@@ -8,7 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Afterhours">
   <title>AFTERHOURS ARENA</title>
-</head>
+  <script type="module" crossorigin src="./app.js"></script>
+  <link rel="stylesheet" crossorigin href="./styles.css">
+<link rel="manifest" href="./manifest.webmanifest"></head>
 <body data-app-preset="phaser" data-fullscreen-app>
   <main class="cabinet" data-app-shell>
     <header class="marquee">
@@ -63,6 +65,5 @@
     <footer class="cabinet-footer"><span>AFTERHOURS © 2026</span><span id="footer-hint">ВЫБЕРИ БОЙЦА. ЗАЙМИ АРЕНУ.</span><div><button id="fullscreen-btn" type="button">ПОЛНЫЙ ЭКРАН</button><button id="pause-btn" type="button" disabled>ПАУЗА</button></div></footer>
   </main>
   <dialog id="help-dialog"><div class="help-top"><span>КАК ИГРАТЬ</span><button id="close-help" type="button" aria-label="Закрыть управление">×</button></div><h2>БЛИЖЕ. БЫСТРЕЕ. ТОЧНЕЕ.</h2><dl><dt>A / D или ← / →</dt><dd>Движение</dd><dt>SPACE или ↑</dt><dd>Прыжок · уклонение от волны</dd><dt>J / K</dt><dd>Быстрый удар рукой / длинный удар ногой</dd><dt>S или ↓</dt><dd>Удерживать блок</dd><dt>L</dt><dd>Спецприём · расход 60 энергии</dd><dt>ESC / P · F</dt><dd>Пауза · полный экран</dd></dl><p>На телефоне используй кнопки под ареной. Удержание повторяет атаки. Обычные удары не пробивают блок; волна наносит небольшой урон. Энергия растёт при попаданиях и защите.</p><button id="help-done" class="primary" type="button">ПОНЯТНО →</button></dialog>
-  <script type="module" src="./main.ts"></script>
 </body>
 </html>

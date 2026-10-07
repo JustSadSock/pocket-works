@@ -7,11 +7,11 @@
   "description": "16-битный аркадный файтинг: два бойца, ночной порт и поединки до двух побед.",
   "version": "0.1.0",
   "releaseDate": "2026-10-07",
-  "releaseDateTime": "2026-10-07T20:16:14.831Z",
+  "releaseDateTime": "2026-10-07T23:40:00+03:00",
   "changelog": [
-    "Initial phaser 3 preset release."
+    "Первый ночной турнир: два бойца, блок, прыжки, спецприёмы и поединок до двух побед."
   ],
-  "status": "experimental",
+  "status": "active",
   "preset": "phaser",
   "accent": "#ef854d",
   "backgroundColor": "#171d21",
@@ -20,11 +20,13 @@
   "cacheName": "afterhours-arena-v0.1.0",
   "storageNamespace": "pocket-works:afterhours-arena",
   "tags": [
-    "phaser",
     "game",
-    "canvas",
-    "typescript",
-    "workbox"
+    "fighting",
+    "16-bit",
+    "Phaser",
+    "offline",
+    "landscape",
+    "mobile"
   ],
-  "order": 100
+  "order": 210
 }
