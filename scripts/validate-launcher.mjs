@@ -22,7 +22,7 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registryStore] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registryStore, offlineInspector] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('launcher-performance.css'),
@@ -33,7 +33,8 @@ const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packa
   read('shared/launcher-list-motion.css'),
   read('package.json'),
   read('manifest.webmanifest'),
-  read('shared/launcher-registry.js')
+  read('shared/launcher-registry.js'),
+  read('shared/offline-readiness.js')
 ]);
 
 const packageJson = JSON.parse(packageSource);
@@ -96,7 +97,7 @@ for (const token of [
   'subscribeRegistry',
   'favorites',
   'recents',
-  'caches.keys()',
+  'inspectOfflineReadiness',
   'data-action="details"',
   'navigator.clipboard',
   'startViewTransition',
@@ -105,6 +106,10 @@ for (const token of [
   'setDocumentScrollLocked'
 ]) {
   requireText(app, token, 'app.js');
+}
+
+for (const token of ['cacheInventory', 'criticalEntrypointUrls', 'getRegistrations', 'cacheStorage.keys()']) {
+  requireText(offlineInspector, token, 'shared/offline-readiness.js');
 }
 
 for (const token of ['pocket-works:registry:v1', 'loadRegistry', 'setRegistrySnapshot', 'subscribeRegistry']) {
