@@ -53,6 +53,7 @@ let toastTimer = 0;
 let dirty = true;
 let lastRevealFrame = 0;
 let cutGesture = { active: false, pointerId: null, lastTickIndex: -1 };
+let chipGesture = { active: false, pointerId: null };
 let audioContext = null;
 let toolCursor = null;
 const effects = [];
@@ -277,7 +278,7 @@ function updateControls() {
   cutMeterFill.style.width = `${Math.round((progress * .7 + chips / CHIP_COUNT * .3) * 100)}%`;
   cutInstruction.textContent = cutFinished === PIECE_COUNT
     ? 'Все кусочки стекла освобождены.'
-    : trimMode ? `Клещи: отколите край у светлой засечки · ${chips} из ${CHIP_COUNT}`
+    : trimMode ? `Клещи: захватите засечку и потяните наружу · ${chips}/${CHIP_COUNT}`
       : progress > 0 ? 'Тяните резец вдоль трещины, не перескакивая линию.'
       : 'Поставьте резец на латунную точку и ведите вдоль силуэта.';
   leadButton.disabled = !state.assembled.every(Boolean);
@@ -857,6 +858,10 @@ function drawCutStage() {
         if (i === chips) {
           ctx.shadowColor='#f2cf83';ctx.shadowBlur=14;
           ctx.fillStyle='#fff1b4'; ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fill();
+          const outward=Math.atan2(p.y-g.cy,p.x-g.cx);
+          ctx.rotate(outward);
+          ctx.lineWidth=1.6;ctx.strokeStyle='rgba(255,241,196,.95)';
+          ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(25,0);ctx.moveTo(20,-4);ctx.lineTo(25,0);ctx.lineTo(20,4);ctx.stroke();
         }
       }
       ctx.restore();
@@ -1280,11 +1285,9 @@ function beginCut(event, point) {
       showToast('Подведите клещи к светлой засечке на краю стекла.');
       tone('error'); return;
     }
-    scatterGlass(target.x, target.y, state.colors[state.cutIndex]);
-    state.chipProgress[state.cutIndex] = Math.min(CHIP_COUNT, step + 1);
-    tone('glass'); haptic([7, 24, 9]);
-    if (state.chipProgress[state.cutIndex] === CHIP_COUNT) finishCurrentCut();
-    else { updateControls(); persist(); markDirty(); }
+    chipGesture={active:true,pointerId:event.pointerId,start:point,target,step};
+    try{canvas.setPointerCapture?.(event.pointerId);}catch{}
+    tone('tap');haptic(6);markDirty();
     return;
   }
   const g = cutGeometry(state.cutIndex);
@@ -1302,6 +1305,22 @@ function beginCut(event, point) {
 }
 
 function moveCut(event, point) {
+  if(chipGesture.active && chipGesture.pointerId===event.pointerId){
+    const geo=cutGeometry(state.cutIndex),center={x:geo.cx,y:geo.cy};
+    const dx=point.x-chipGesture.target.x,dy=point.y-chipGesture.target.y;
+    const rr=Math.max(1,Math.hypot(chipGesture.target.x-center.x,chipGesture.target.y-center.y));
+    const outward=(dx*(chipGesture.target.x-center.x)+dy*(chipGesture.target.y-center.y))/rr;
+    if(outward>15 && Math.hypot(dx,dy)>18){
+      const target=chipGesture.target,step=chipGesture.step;
+      chipGesture={active:false,pointerId:null};
+      scatterGlass(target.x,target.y,state.colors[state.cutIndex]);
+      state.chipProgress[state.cutIndex]=Math.min(CHIP_COUNT,step+1);
+      tone('glass');haptic([7,24,9]);
+      if(state.chipProgress[state.cutIndex]===CHIP_COUNT)finishCurrentCut();
+      else{updateControls();persist();markDirty();}
+    }
+    return;
+  }
   if (!cutGesture.active || cutGesture.pointerId !== event.pointerId) return;
   const g = cutGeometry(state.cutIndex);
   const currentProgress = state.cutProgress[state.cutIndex] || 0;
@@ -1330,6 +1349,12 @@ function moveCut(event, point) {
 }
 
 function endCut(event) {
+  if (chipGesture.active && chipGesture.pointerId===event.pointerId){
+    chipGesture={active:false,pointerId:null};
+    try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+    showToast('Потяните клещи от детали наружу, чтобы отколоть край.');
+    markDirty();return;
+  }
   if (cutGesture.pointerId !== event.pointerId) return;
   try { canvas.releasePointerCapture?.(event.pointerId); } catch {}
   cutGesture = { active: false, pointerId: null, lastTickIndex: -1 };
