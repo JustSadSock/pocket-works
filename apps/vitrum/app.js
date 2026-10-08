@@ -1511,4 +1511,8 @@ normalizeStageFromProgress();
 updateControls();
 setStage(state.stage);
 publishTestState();
+// iOS WebKit may present the first DOM frame before its first animation callback.
+// Paint the ready, sized canvas synchronously so the workshop never opens empty.
+render(performance.now());
+dirty = false;
 requestAnimationFrame(animationLoop);
