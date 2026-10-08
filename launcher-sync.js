@@ -5,6 +5,7 @@ const RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v2';
 const LEGACY_RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v1';
 const CURSOR_DB_NAME = 'pocket-works-release-tracking';
 const CURSOR_DB_STORE = 'state';
+const CURSOR_CHANNEL_NAME = 'pocket-works-release-cursor';
 const LEGACY_REGISTRY_HISTORY_KEY = 'pocket-works:registry-history:v2';
 const LEGACY_SEEN_DIGESTS_KEY = 'pocket-works:seen-release-digests:v1';
 const LAST_DIGEST_KEY = 'pocket-works:last-release-digest:v1';
@@ -26,6 +27,8 @@ let releaseCursorInitialized = false;
 let cursorLoadPromise = null;
 let cursorWritePromise = Promise.resolve();
 let lastCursorSavedAt = 0;
+let failedDigest = null;
+let cursorChannel = null;
 
 function storageHas(key) {
   try {
@@ -192,9 +195,9 @@ async function loadReleaseCursor() {
 }
 
 function persistReleaseCursor(cursor) {
-  const compact = normalizeReleaseCursor(cursor);
-  // Advance immediately: an in-flight network check must not resurrect a
-  // digest that the user has just dismissed.
+  const compact = { ...normalizeReleaseCursor(releaseCursorMemory), ...normalizeReleaseCursor(cursor) };
+  // Acknowledging a partial digest must not discard other known releases.
+  // Advance immediately so an in-flight request cannot resurrect a dismissed digest.
   releaseCursorMemory = compact;
   releaseCursorInitialized = true;
   lastCursorSavedAt = Math.max(Date.now(), lastCursorSavedAt + 1);
@@ -213,6 +216,8 @@ function persistReleaseCursor(cursor) {
     const storedInDb = await cursorDatabase('write', record);
     if (!storedLocally && !storedInDb) {
       console.warn('Pocket Works cannot persist release acknowledgements; current session remains acknowledged');
+    } else {
+      try { cursorChannel?.postMessage({ type: 'CURSOR_SAVED', record }); } catch { /* unsupported */ }
     }
     return storedLocally || storedInDb;
   });
@@ -277,7 +282,7 @@ function ensureWhatsNewButton() {
     // Do not replace an unacknowledged digest with a history-only copy:
     // the history intentionally has no release cursor to acknowledge.
     if (activeDigest) return;
-    const digest = readJson(LAST_DIGEST_KEY);
+    const digest = failedDigest || readJson(LAST_DIGEST_KEY);
     if (digest) enqueueDigest(digest, { remember: false, immediate: true });
   });
   deckActions.prepend(button);
@@ -327,10 +332,30 @@ function closeDigest(surface) {
   // A queued registry digest was computed against the unacknowledged cursor.
   digestQueue = digestQueue.filter((digest) => digest.kind !== 'registry');
   window.setTimeout(async () => {
-    await committed;
+    const saved = await committed;
+    if (!saved && closedDigest?.kind === 'registry') {
+      // Never pretend the user has acknowledged something that cannot be saved.
+      failedDigest = closedDigest;
+      updateWhatsNewButton(closedDigest, { unread: true });
+      showAcknowledgementWarning();
+    } else {
+      failedDigest = null;
+    }
     if (digestQueue.length > 0) showDigest(digestQueue.shift());
     void checkRegistry({ force: true });
   }, 180);
+}
+
+function showAcknowledgementWarning() {
+  let message = document.querySelector('[data-release-storage-warning]');
+  if (!message) {
+    message = document.createElement('p');
+    message.dataset.releaseStorageWarning = '';
+    message.setAttribute('role', 'alert');
+    message.style.cssText = 'position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:2147483647;padding:12px 16px;background:#422;color:white;border-radius:10px;font:14px/1.4 system-ui;box-shadow:0 6px 24px #0006';
+    document.body.append(message);
+  }
+  message.textContent = 'Could not save read updates on this device. Free some browser storage and retry from What’s new.';
 }
 
 function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
@@ -371,7 +396,8 @@ function buildRegistryDigest(changes, nextApps) {
     id: `registry:${hashString(registryFingerprint(nextApps))}`,
     kind: 'registry',
     changeCount: total,
-    releaseCursor: buildReleaseCursor(nextApps),
+    // Acknowledge only releases in this digest, not a stale whole-library snapshot.
+    releaseCursor: buildReleaseCursor([...changes.added, ...changes.updated]),
     eyebrow: changes.added.length > 0 ? 'NEW ON THE SHELF' : 'APPLICATIONS UPDATED',
     title: changes.added.length > 0
       ? `${changes.added.length} new application${changes.added.length === 1 ? '' : 's'}`
@@ -482,6 +508,37 @@ async function showCurrentShellRelease() {
     console.warn('Pocket Works could not read the active launcher release', error);
   }
 }
+
+
+function adoptCursorRecord(record) {
+  if (!record || !Number.isFinite(record.savedAt) || record.savedAt <= lastCursorSavedAt) return;
+  const remote = normalizeReleaseCursor(record.apps);
+  releaseCursorMemory = { ...normalizeReleaseCursor(releaseCursorMemory), ...remote };
+  lastCursorSavedAt = record.savedAt;
+  releaseCursorInitialized = true;
+  if (activeDigest?.kind === 'registry' && activeDigest.releaseCursor) {
+    const alreadySeen = Object.entries(activeDigest.releaseCursor)
+      .every(([slug, token]) => releaseCursorMemory[slug] === token);
+    if (alreadySeen) {
+      document.querySelector('[data-launcher-release-digest]')?.classList.remove('is-visible');
+      activeDigest = null;
+      digestQueue = digestQueue.filter(digest => digest.kind !== 'registry');
+      updateWhatsNewButton(readJson(LAST_DIGEST_KEY), { unread: false });
+    }
+  }
+}
+
+try {
+  cursorChannel = new BroadcastChannel(CURSOR_CHANNEL_NAME);
+  cursorChannel.addEventListener('message', event => {
+    if (event.data?.type === 'CURSOR_SAVED') adoptCursorRecord(event.data.record);
+  });
+} catch { /* private mode / older browser */ }
+window.addEventListener('storage', event => {
+  if (event.key === RELEASE_CURSOR_KEY && event.newValue) {
+    try { adoptCursorRecord(JSON.parse(event.newValue)); } catch { /* ignore */ }
+  }
+});
 
 const lastDigest = readJson(LAST_DIGEST_KEY);
 if (lastDigest) updateWhatsNewButton(lastDigest, { unread: false });
