@@ -1,5 +1,6 @@
+import { loadRegistry as requestRegistry, getRegistrySnapshot } from './shared/launcher-registry.js';
+
 const SHELF_STORAGE_KEY = 'pocket-works:shelf:v1';
-const REGISTRY_CACHE_KEY = 'pocket-works:registry:v1';
 const RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v2';
 const LEGACY_RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v1';
 const CURSOR_DB_NAME = 'pocket-works-release-tracking';
@@ -60,8 +61,7 @@ function removeStored(key) {
 }
 
 function readRegistryCache() {
-  const value = readJson(REGISTRY_CACHE_KEY);
-  return value && Array.isArray(value.apps) ? value : null;
+  return getRegistrySnapshot();
 }
 
 function normalizeRegistry(apps) {
@@ -388,14 +388,8 @@ function publishRegistrySnapshot(apps) {
 }
 
 async function fetchLiveRegistry() {
-  const response = await fetch(`./apps.json?registry=${Date.now()}`, {
-    cache: 'no-store',
-    headers: { 'cache-control': 'no-cache' }
-  });
-  if (!response.ok) throw new Error(`Registry request failed: ${response.status}`);
-  const apps = await response.json();
-  if (!Array.isArray(apps)) throw new TypeError('apps.json must contain an array');
-  return normalizeRegistry(apps);
+  const snapshot = await requestRegistry({ force: true });
+  return normalizeRegistry(snapshot.apps);
 }
 
 async function checkRegistry({ force = false } = {}) {
