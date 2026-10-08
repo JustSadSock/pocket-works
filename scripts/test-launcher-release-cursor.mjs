@@ -6,6 +6,11 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../launcher-sync.js', import.meta.url), 'utf8');
 const storage = new Map();
 const indexed = new Map();
+// Existing users may have a bad v1 cursor and a stale 30-release badge.
+storage.set('pocket-works:release-cursor:v1', JSON.stringify({ apps: { 'test-app': 'stale' } }));
+storage.set('pocket-works:last-release-digest:v1', JSON.stringify({
+  kind: 'registry', notes: Array(30).fill('Already viewed release')
+}));
 let quotaExceeded = false;
 const soon = (callback) => Promise.resolve().then(callback);
 
@@ -127,6 +132,7 @@ const first = boot(original);
 await first.checkRegistry({ force: true });
 assert.equal(first.getActive(), null, 'initial live registry is a silent baseline');
 assert.ok(indexed.get('cursor')?.apps?.['test-app'], 'baseline persists in IndexedDB');
+assert.ok(!first.getCount(), 'old unread badges are cleared by the v2 bootstrap');
 
 first.setApps(next);
 await first.checkRegistry({ force: true });
@@ -150,10 +156,19 @@ await reopened.checkRegistry({ force: true });
 assert.equal(reopened.getActive(), null, 'reopening does not repeat acknowledged updates');
 assert.ok(!reopened.getCount(), 'reopening does not show a stale badge');
 
+// Return to writable localStorage: acknowledged history may remain browsable,
+// but the badge must not reappear on the next launcher visit.
+quotaExceeded = false;
 const later = [{ ...next[0], version: '1.2', fingerprint: 'build-3' }];
 reopened.setApps(later);
 await reopened.checkRegistry({ force: true });
 assert.equal(reopened.getActive()?.changeCount, 1, 'a later release is still detected');
+reopened.closeDigest(reopened.getSurface());
+await reopened.runTimers();
+const again = boot(later);
+await again.checkRegistry({ force: true });
+assert.equal(again.getActive(), null, 'locally saved acknowledgement survives another visit');
+assert.ok(!again.getCount(), 'saved release history never implies unread updates');
 
 const metadataOnly = [{ ...next[0], updatedAt: '2026-10-10T00:00:00Z', changelog: ['Edited copy'] }];
 const metadataCheck = boot(next);
