@@ -30,7 +30,7 @@
     "validate:mobile": "node scripts/validate-mobile-runtime.mjs",
     "validate:configs": "node scripts/app-config.test.mjs && node scripts/validate-app-configs.mjs",
     "validate:updates": "node scripts/validate-update-contract.mjs",
-    "validate:launcher": "node scripts/validate-launcher.mjs && node scripts/validate-update-watchdog.mjs && node scripts/validate-release-coherence.mjs",
+    "validate:launcher": "node scripts/validate-launcher.mjs && node scripts/validate-update-watchdog.mjs && node scripts/validate-release-coherence.mjs && node scripts/test-launcher-release-cursor.mjs",
     "validate:capabilities": "node scripts/validate-capabilities.mjs",
     "validate:lan": "node scripts/validate-pocket-lan.mjs",
     "validate:enhanced": "node scripts/validate-enhanced.mjs",
