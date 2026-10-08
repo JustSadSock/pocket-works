@@ -1,6 +1,5 @@
 import { loadRegistry, subscribeRegistry } from './launcher-registry.js';
 
-const REGISTRY_URL = './apps.json';
 const SHELF_STATE_KEY = 'pocket-works:shelf:v1';
 
 let registryBySlug = new Map();
