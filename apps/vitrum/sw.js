@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'vitrum-';
-const CACHE_NAME = 'vitrum-v2.0.0';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'vitrum-v3.0.0';
+const APP_VERSION = '3.0.0';
 const RELEASE_DATE = '2026-10-08';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Резец, клещи, укладка стекла, ручная прокладка свинца и пайка с удержанием инструмента.',
-  'Новые материалы и свет, сохранение старого прогресса, офлайн-мастерская.'
+  'Свободное рисование любых стеклянных фрагментов вместо заранее составленной розы.',
+  'Объёмное стекло, реальные жесты раскроя и пайки, компоновка, свет и PNG.'
 ];
 const APP_SHELL = [
   './',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './app.config.json',
   './styles.css',
   './app.js',
+  './render.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
