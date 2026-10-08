@@ -2,11 +2,15 @@
   "id": "/apps/vitrum/",
   "name": "VITRUM — мастерская витражиста",
   "short_name": "VITRUM",
-  "description": "Тактильный симулятор создания средневекового витража.",
+  "description": "Нарисуйте собственный витраж из объёмных фрагментов стекла, вручную вырежьте, соедините свинцом и пропаяйте.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#1b140e",
   "theme_color": "#20150e",
