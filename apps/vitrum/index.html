@@ -1,131 +1,97 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1b120d">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="VITRUM">
-  <title>VITRUM</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
-  <link rel="stylesheet" href="../../shared/update-manager.css">
-  <link rel="stylesheet" href="./styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#251b16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VITRUM">
+<title>VITRUM — свободная мастерская</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="app-shell" data-app-shell data-fullscreen-app>
-    <div class="grain" aria-hidden="true"></div>
-
-    <header class="topbar" data-ui>
-      <a class="launcher-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
-      <div class="brand-block">
-        <span class="brand">VITRUM</span>
-        <span class="project-label">Мастерская у собора · 1286</span>
+<main class="atelier" data-app-shell data-fullscreen-app>
+  <header class="masthead" data-ui>
+    <a class="home-link" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works">← Назад</a>
+    <div class="wordmark"><strong>VITRUM</strong><small>ATELIER · ANNO MCCLXXXVI</small></div>
+    <button id="soundBtn" class="quiet" type="button" data-native-press aria-pressed="true">Звук: вкл</button>
+  </header>
+  <div class="story-head" data-ui>
+    <div><span class="chapter" id="chapter">МАСТЕРСКАЯ / 01</span><h1 id="headline">Рисуй светом</h1></div>
+    <p id="instructions">Вырежи стекло любой формы, затем составь собственный витраж.</p>
+  </div>
+  <section class="scene" id="scene" data-gesture-surface data-block-callout>
+    <canvas id="art" aria-label="Мастерская витражиста: рисование и сборка стекла"></canvas>
+    <div class="scene-grain" aria-hidden="true"></div>
+    <div class="scene-note" id="sceneNote" aria-live="polite">Нарисуй первый стеклянный фрагмент</div>
+    <div class="message" id="message" aria-live="polite" role="status"></div>
+  </section>
+  <footer class="controls" data-ui>
+    <div class="color-band" id="colorBand">
+      <span class="band-label">СТЕКЛО</span>
+      <div class="colors" aria-label="Цвет стекла">
+        <button class="swatch chosen" data-pigment="0" type="button" data-native-press aria-label="Кобальтовое стекло"><i></i></button>
+        <button class="swatch" data-pigment="1" type="button" data-native-press aria-label="Рубиновое стекло"><i></i></button>
+        <button class="swatch" data-pigment="2" type="button" data-native-press aria-label="Янтарное стекло"><i></i></button>
+        <button class="swatch" data-pigment="3" type="button" data-native-press aria-label="Зелёное стекло"><i></i></button>
+        <button class="swatch" data-pigment="4" type="button" data-native-press aria-label="Аметистовое стекло"><i></i></button>
+        <button class="swatch" data-pigment="5" type="button" data-native-press aria-label="Молочное стекло"><i></i></button>
       </div>
-      <button id="soundToggle" class="text-control" type="button" data-native-press aria-pressed="true">Звук</button>
-    </header>
-
-    <section class="progress-rail" aria-label="Этапы работы" data-ui>
-      <button class="stage-marker is-active" data-stage-target="design" type="button" data-native-press><span>1</span><b>Схема</b></button>
-      <i></i>
-      <button class="stage-marker" data-stage-target="cut" type="button" data-native-press disabled><span>2</span><b>Раскрой</b></button>
-      <i></i>
-      <button class="stage-marker" data-stage-target="assemble" type="button" data-native-press disabled><span>3</span><b>Сборка</b></button>
-      <i></i>
-      <button class="stage-marker" data-stage-target="lead" type="button" data-native-press disabled><span>4</span><b>Свинец</b></button>
-      <i></i>
-      <button class="stage-marker" data-stage-target="solder" type="button" data-native-press disabled><span>5</span><b>Пайка</b></button>
-    </section>
-
-    <section class="workspace" aria-labelledby="stageTitle">
-      <div class="stage-copy" data-ui>
-        <div>
-          <p id="stageEyebrow" class="eyebrow">Картон · выбор стекла</p>
-          <h1 id="stageTitle">Соберите цветовую схему</h1>
-        </div>
-        <p id="stageHint" class="stage-hint">Выберите лист стекла снизу и коснитесь элемента розы.</p>
+      <span id="colorName" class="color-name">КОБАЛЬТ</span>
+    </div>
+    <div id="composeTools" class="toolset">
+      <div class="main-actions">
+        <button id="newGlass" class="action action-solid" type="button" data-native-press>✦ Новый фрагмент</button>
+        <button id="workLead" class="action action-ghost" type="button" data-native-press>Свинец</button>
+        <button id="goReveal" class="action action-ghost" type="button" data-native-press>На свет</button>
       </div>
-
-      <div id="canvasFrame" class="canvas-frame" data-gesture-surface data-block-callout>
-        <canvas id="workCanvas" aria-label="Рабочий стол витражиста"></canvas>
-        <div class="canvas-vignette" aria-hidden="true"></div>
-        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div class="edit-tools" id="editTools" hidden>
+        <span class="edit-title" id="pieceLabel">Фрагмент</span>
+        <button id="rotateL" class="small-tool" aria-label="Повернуть влево" type="button" data-native-press>↶ 15°</button>
+        <button id="rotateR" class="small-tool" aria-label="Повернуть вправо" type="button" data-native-press>↷ 15°</button>
+        <button id="smaller" class="small-tool" aria-label="Уменьшить" type="button" data-native-press>−</button>
+        <button id="bigger" class="small-tool" aria-label="Увеличить" type="button" data-native-press>+</button>
+        <button id="removePiece" class="small-tool danger" aria-label="Удалить фрагмент" type="button" data-native-press>×</button>
       </div>
-
-      <div id="designDock" class="tool-dock is-visible" data-ui>
-        <div class="glass-rack" role="group" aria-label="Листы стекла">
-          <button class="glass-swatch is-selected" data-color="0" type="button" data-native-press aria-label="Кобальтовое стекло"><span></span><small>кобальт</small></button>
-          <button class="glass-swatch" data-color="1" type="button" data-native-press aria-label="Рубиновое стекло"><span></span><small>рубин</small></button>
-          <button class="glass-swatch" data-color="2" type="button" data-native-press aria-label="Янтарное стекло"><span></span><small>янтарь</small></button>
-          <button class="glass-swatch" data-color="3" type="button" data-native-press aria-label="Изумрудное стекло"><span></span><small>зелень</small></button>
-          <button class="glass-swatch" data-color="4" type="button" data-native-press aria-label="Молочное стекло"><span></span><small>молочное</small></button>
-        </div>
-        <div class="dock-actions">
-          <button id="motifButton" class="secondary-action" type="button" data-native-press>Медальон: звезда</button>
-          <button id="startCutButton" class="primary-action" type="button" data-native-press>Начать раскрой</button>
-        </div>
+      <div class="bottom-meta"><span id="pieceCount">0 ФРАГМЕНТОВ</span><button id="resetWork" class="underlined" type="button">Очистить окно</button></div>
+    </div>
+    <div id="cutTools" class="toolset" hidden>
+      <div class="process-readout"><span id="cutLabel">01 / НАДРЕЗ</span><div class="meter"><i id="cutMeter"></i></div></div>
+      <div class="main-actions two">
+        <button id="discardCut" class="action action-ghost" type="button" data-native-press>Вернуться</button>
+        <button id="redoCut" class="action action-solid" type="button" data-native-press>Начать контур заново</button>
       </div>
-
-      <div id="cutDock" class="tool-dock" data-ui>
-        <div class="cut-readout">
-          <span>Элемент <b id="cutCount">1 / 7</b></span>
-          <div class="cut-meter"><i id="cutMeterFill"></i></div>
-          <small id="cutInstruction">Обведите контур, затем отколите края клещами.</small>
-        </div>
+    </div>
+    <div id="leadTools" class="toolset" hidden>
+      <div class="process-readout"><span id="leadLabel">СВИНЦОВАЯ ЛЕНТА</span><div class="meter"><i id="leadMeter"></i></div></div>
+      <div class="main-actions"><button id="leaveLead" class="action action-ghost" type="button" data-native-press>← К витражу</button></div>
+    </div>
+    <div id="solderTools" class="toolset" hidden>
+      <div class="process-readout"><span id="solderLabel">ОЛОВО · 0 / 3</span><div class="meter"><i id="solderMeter"></i></div></div>
+      <div class="main-actions"><button id="leaveSolder" class="action action-ghost" type="button" data-native-press>← К витражу</button></div>
+    </div>
+    <div id="revealTools" class="toolset" hidden>
+      <label class="sun-track"><span>УГОЛ СВЕТА</span><input id="sunRange" type="range" min="-70" max="70" value="20"></label>
+      <div class="main-actions two">
+        <button id="backToWork" class="action action-ghost" type="button" data-native-press>← В мастерскую</button>
+        <button id="exportImage" class="action action-solid" type="button" data-native-press>Сохранить PNG</button>
       </div>
-
-      <div id="assembleDock" class="tool-dock" data-ui>
-        <p class="tray-label">ВЫРЕЗАННЫЕ ДЕТАЛИ · ПЕРЕТАЩИТЕ ПАЛЬЦЕМ НА ЧЕРТЁЖ</p>
-        <div id="pieceTray" class="piece-tray" role="group" aria-label="Вырезанные элементы"></div>
-        <div class="dock-actions single">
-          <button id="leadButton" class="primary-action" type="button" data-native-press disabled>Начать прокладку свинца</button>
-        </div>
-      </div>
-
-      <div id="leadDock" class="tool-dock" data-ui>
-        <div class="lead-readout">
-          <div class="craft-counter"><span>Уложено профилей</span><b id="leadCount">0 / 7</b></div>
-          <small id="leadInstruction">Начните от светлой метки и ведите металл по кромке.</small>
-          <span class="lead-reel" aria-hidden="true"></span>
-        </div>
-      </div>
-
-      <div id="solderDock" class="tool-dock" data-ui>
-        <div class="solder-readout">
-          <span>Узлы припоя <b id="solderCount">0 / 7</b></span>
-          <small>Удерживайте палец на каждом узле: олово расплавится постепенно.</small>
-        </div>
-        <div class="dock-actions single">
-          <button id="revealButton" class="primary-action" type="button" data-native-press disabled>Поднять окно к свету</button>
-        </div>
-      </div>
-
-      <div id="revealDock" class="tool-dock reveal-dock" data-ui>
-        <label class="sun-control">Солнце <input id="sunSlider" type="range" min="-70" max="70" value="18"></label>
-        <div class="dock-actions">
-          <button id="newProjectButton" class="secondary-action" type="button" data-native-press>Новая работа</button>
-          <a class="primary-action link-action" href="../../" data-app-control data-native-press>В Pocket Works</a>
-        </div>
-      </div>
-    </section>
-
-    <dialog id="resetDialog" class="reset-dialog">
-      <div class="dialog-sheet" data-ui>
-        <p class="eyebrow">Новый заказ</p>
-        <h2>Снять текущую работу со стола?</h2>
-        <p>Схема и весь прогресс раскроя будут сброшены.</p>
-        <div class="dialog-actions">
-          <button id="cancelReset" class="secondary-action" type="button" data-native-press>Оставить</button>
-          <button id="confirmReset" class="primary-action" type="button" data-native-press>Начать заново</button>
-        </div>
-      </div>
-    </dialog>
-  </main>
-
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="VITRUM" data-app-version="2.0.0"></script>
-  <script type="module" src="./app.js"></script>
+    </div>
+  </footer>
+  <dialog id="confirmDialog">
+    <div class="dialog-sheet">
+      <div class="chapter">ОСТОРОЖНО</div><h2 id="confirmTitle">Убрать фрагмент?</h2>
+      <p id="confirmText">Это действие нельзя отменить.</p>
+      <div class="main-actions two"><button id="cancelAction" class="action action-ghost" type="button">Оставить</button><button id="acceptAction" class="action action-solid" type="button">Удалить</button></div>
+    </div>
+  </dialog>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="VITRUM" data-app-version="3.0.0"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
