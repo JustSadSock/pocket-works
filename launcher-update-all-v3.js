@@ -1,17 +1,13 @@
 import { loadRegistry as requestRegistry } from './shared/launcher-registry.js';
+import { installedTargets, updateInstalledApplication, withTimeout, getVerifiedReleases } from './shared/release-coordinator.js';
 
-const VERIFIED_RELEASES_KEY='pocket-works:verified-releases:v1';
 const UPDATE_CONCURRENCY=3;
 const APP_TIMEOUT=30_000;
-const UPDATE_CHECK_TIMEOUT=12_000;
-const INSTALL_TIMEOUT=18_000;
-const ACTIVATION_TIMEOUT=8_000;
 
 const refreshButton=document.querySelector('#refresh-button');
 const syncStatus=document.querySelector('#sync-status');
 let bulkUpdateRunning=false;
 let completedCount=0;
-const wait=ms=>new Promise(resolve=>window.setTimeout(resolve,ms));
 const errorText=error=>error instanceof Error?error.message:String(error);
 
 const progressRoot=document.createElement('div');
@@ -23,167 +19,9 @@ const progressStage=progressRoot.querySelector('[data-pw-update-stage]');
 const progressCount=progressRoot.querySelector('[data-pw-update-count]');
 const progressBar=progressRoot.querySelector('[data-pw-update-bar]');
 
-function withTimeout(promise,ms,label){
-  let timer;
-  return Promise.race([
-    promise,
-    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out`)),ms);})
-  ]).finally(()=>clearTimeout(timer));
-}
-
-function expectedFingerprint(app){
-  return typeof app.fingerprint==='string'&&app.fingerprint?app.fingerprint:`version-${app.version}`;
-}
-
-function readVerified(){
-  try{return JSON.parse(localStorage.getItem(VERIFIED_RELEASES_KEY)||'{}');}
-  catch{return{};}
-}
-
-function storeVerified(app){
-  try{
-    const state=readVerified();
-    state[app.slug]={version:app.version,fingerprint:expectedFingerprint(app),verifiedAt:Date.now()};
-    localStorage.setItem(VERIFIED_RELEASES_KEY,JSON.stringify(state));
-  }catch{}
-}
-
-function locallyCurrent(app,verified){
-  const saved=verified[app.slug];
-  return Boolean(saved&&saved.version===app.version&&saved.fingerprint===expectedFingerprint(app));
-}
-
 async function fetchLiveRegistry(){
   const snapshot=await requestRegistry({force:true});
   return snapshot.apps.filter(app=>app&&app.status!=='archived'&&typeof app.slug==='string'&&typeof app.path==='string'&&typeof app.version==='string');
-}
-
-function workerInfoAttempt(worker,timeout){
-  if(!worker)return Promise.resolve(null);
-  return new Promise(resolve=>{
-    const channel=new MessageChannel();
-    const timer=setTimeout(()=>resolve(null),timeout);
-    channel.port1.onmessage=event=>{
-      clearTimeout(timer);
-      resolve(event.data||null);
-    };
-    try{worker.postMessage({type:'GET_UPDATE_INFO'},[channel.port2]);}
-    catch{clearTimeout(timer);resolve(null);}
-  });
-}
-
-async function workerInfo(worker){
-  for(const timeout of [450,900]){
-    const info=await workerInfoAttempt(worker,timeout);
-    if(info)return info;
-  }
-  return null;
-}
-
-function scopeHref(app){
-  const url=new URL(app.path,location.href);
-  url.hash='';
-  url.search='';
-  if(!url.pathname.endsWith('/'))url.pathname+='/';
-  return url.href;
-}
-
-async function collectInstalledTargets(apps){
-  const registrations=await navigator.serviceWorker.getRegistrations();
-  const byScope=new Map(registrations.map(registration=>{
-    const url=new URL(registration.scope);
-    url.hash='';
-    url.search='';
-    if(!url.pathname.endsWith('/'))url.pathname+='/';
-    return[url.href,registration];
-  }));
-  return apps
-    .map(app=>({app,registration:byScope.get(scopeHref(app))}))
-    .filter(target=>Boolean(target.registration));
-}
-
-function waitForWorkerState(worker,accepted,timeout){
-  if(!worker)return Promise.resolve(null);
-  if(accepted.includes(worker.state))return Promise.resolve(worker.state);
-  return new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{
-      worker.removeEventListener('statechange',inspect);
-      reject(new Error(`worker stayed ${worker.state}`));
-    },timeout);
-    function inspect(){
-      if(!accepted.includes(worker.state))return;
-      clearTimeout(timer);
-      worker.removeEventListener('statechange',inspect);
-      resolve(worker.state);
-    }
-    worker.addEventListener('statechange',inspect);
-  });
-}
-
-async function activateCandidate(registration,candidate,onStage){
-  if(!candidate)return false;
-  if(candidate.state==='installing'){
-    onStage('Installing offline files');
-    const state=await waitForWorkerState(candidate,['installed','activated','redundant'],INSTALL_TIMEOUT);
-    if(state==='redundant')throw new Error('new worker became redundant');
-  }
-
-  const waiting=registration.waiting||(candidate.state==='installed'?candidate:null);
-  if(waiting){
-    onStage('Activating release');
-    try{waiting.postMessage({type:'SKIP_WAITING'});}catch{}
-  }
-
-  const deadline=Date.now()+ACTIVATION_TIMEOUT;
-  while(Date.now()<deadline){
-    if(registration.active===candidate||candidate.state==='activated')return true;
-    if(candidate.state==='redundant')throw new Error('new worker became redundant');
-    await wait(100);
-  }
-  return registration.active===candidate||candidate.state==='activated';
-}
-
-async function updateInstalledApplication(app,registration,verified,onStage){
-  try{
-    const beforeActive=registration.active;
-    const beforeInfo=await workerInfo(beforeActive);
-
-    if(locallyCurrent(app,verified)&&(!beforeInfo?.version||beforeInfo.version===app.version)){
-      return{app,status:'current'};
-    }
-
-    onStage('Checking installed release');
-    await withTimeout(registration.update(),UPDATE_CHECK_TIMEOUT,`${app.name} worker check`);
-
-    let candidate=registration.installing||registration.waiting;
-    if(candidate){
-      await activateCandidate(registration,candidate,onStage);
-    }else if(registration.active!==beforeActive){
-      candidate=registration.active;
-    }
-
-    const active=registration.active;
-    const activeInfo=await workerInfo(active);
-
-    if(activeInfo?.version&&activeInfo.version!==app.version){
-      throw new Error(`active worker reports v${activeInfo.version}; expected v${app.version}`);
-    }
-
-    if(activeInfo?.version===app.version){
-      storeVerified(app);
-      return{app,status:candidate||beforeInfo?.version!==app.version?'updated':'current'};
-    }
-
-    if(candidate||active!==beforeActive){
-      storeVerified(app);
-      return{app,status:'updated'};
-    }
-
-    if(locallyCurrent(app,readVerified()))return{app,status:'current'};
-    return{app,status:'checked'};
-  }catch(error){
-    return{app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')};
-  }
 }
 
 async function mapWithConcurrency(items,concurrency,handler,onProgress){
@@ -245,9 +83,9 @@ async function runBulkUpdate(){
       detail:{apps,source:'bulk-update'}
     }));
 
-    const targets=await collectInstalledTargets(apps);
+    const targets=await installedTargets(apps);
     const onDemand=Math.max(0,apps.length-targets.length);
-    const verified=readVerified();
+    const verified=getVerifiedReleases();
 
     if(targets.length===0){
       const summary=summaryFor([],onDemand);
@@ -264,11 +102,11 @@ async function runBulkUpdate(){
       targets,
       UPDATE_CONCURRENCY,
       target=>withTimeout(
-        updateInstalledApplication(target.app,target.registration,verified,stage=>{
+        updateInstalledApplication(target.app,target.registration,{verified,onStage:stage=>{
         active.set(target.app.slug,`${target.app.name} · ${stage}`);
         showProgress({completed:completedCount,total:targets.length,label:[...active.values()][0]||stage});
           syncStatus.textContent=[...active.values()].slice(0,2).join(' + ');
-        }),
+        }}),
         APP_TIMEOUT,
         `${target.app.name} update`
       ).catch(error=>({app:target.app,status:'failed',error:errorText(error),timedOut:errorText(error).includes('timed out')})),
