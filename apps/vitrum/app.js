@@ -291,8 +291,15 @@ function beginLead(e,p){
 function moveLead(e,p){
  if(leadDrag?.pointerId!==e.pointerId)return;
  const piece=selected();if(!piece)return;
- const samples=currentLeadSamples(),index=Math.floor(piece.lead*(samples.length-1)),near=nearest(p,samples);
- if(near.distance>Math.max(25,Math.min(vw*.085,35))||near.index<index-2||near.index>index+24)return;
+ const samples=currentLeadSamples(),index=Math.floor(piece.lead*(samples.length-1));
+ // Search the forward arc only: the final point coincides with the start.
+ // Global nearest-point search would snap to index 0 and stall at 92–99%.
+ let near={index,distance:Infinity};
+ for(let k=Math.max(0,index-2);k<=Math.min(samples.length-1,index+26);k++){
+  const q=samples[k],distance=Math.hypot(p.x-q.x,p.y-q.y);
+  if(distance<near.distance)near={index:k,distance};
+ }
+ if(near.distance>Math.max(25,Math.min(vw*.085,35)))return;
  const next=Math.max(index,near.index);
  if(next===index)return;
  piece.lead=clamp(next/(samples.length-1),0,1);
