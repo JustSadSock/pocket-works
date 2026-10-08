@@ -10,6 +10,8 @@ assert.deepEqual(criticalEntrypointUrls(html, origin + 'apps/alpha/index.html'),
   origin + 'apps/alpha/app.js'
 ]);
 
+assert.deepEqual(criticalEntrypointUrls('<script src="https://cdn.example/app.js"></script>', origin + 'apps/alpha/'), ['https://cdn.example/app.js']);
+
 const cacheEntries = new Map([
   [origin + 'apps/alpha/', html],
   [origin + 'apps/alpha/styles.css', 'body{}'],
