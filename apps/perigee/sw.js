@@ -1,7 +1,7 @@
 const PREFIX='perigee-';
-const CACHE='perigee-v1.0.0-p2';
-const VERSION='1.0.0';
-const NOTES=['Шесть орбитальных миссий','Кинематографическая графика и прогноз курса','Офлайн PWA и сохранения'];
+const CACHE='perigee-v1.0.1-p2';
+const VERSION='1.0.1';
+const NOTES=["Исправлен увод композиции при жестах прицеливания на мобильных устройствах.","При обновлении Service Worker сохраняется текущая экспедиция, а не повторно появляется заставка.","Повторно проверена совместимость с iPhone WebKit и Chromium."];
 const ASSETS=['./','./index.html','./app.config.json','./styles.css','./app.js','./physics.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const KEYS=new Map(ASSETS.map(path=>{const url=new URL(path,SCOPE);return [url.pathname,url.href];}));
