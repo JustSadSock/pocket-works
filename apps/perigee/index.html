@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#07151b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ПЕРИГЕЙ">
+  <title>ПЕРИГЕЙ — орбитальные манёвры</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="canvas" data-fullscreen-app>
+  <main id="app" class="app-shell is-intro" data-app-shell data-fullscreen-app>
+    <canvas id="scene" data-gesture-surface data-block-callout aria-label="Космическая карта. Потяните от зонда в направлении цели и отпустите."></canvas>
+
+    <header class="header" id="hud" data-ui>
+      <div class="header-left">
+        <a class="back" href="../../" data-app-control aria-label="В Pocket Works">← <span>WORKS</span></a>
+        <div class="mission-heading">
+          <span id="sector" class="eyebrow">01 / КРАЙ СИСТЕМЫ</span>
+          <h1 id="missionName">ПЕРВЫЙ ИМПУЛЬС</h1>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="soundBtn" class="symbol-btn" type="button" data-native-press aria-label="Выключить звук">♫</button>
+        <button id="pauseBtn" class="symbol-btn" type="button" data-native-press aria-label="Открыть паузу">Ⅱ</button>
+      </div>
+    </header>
+
+    <aside class="bottom-hud" id="bottomHud" data-ui>
+      <div class="hud-caption"><span class="eyebrow">ТЕЛЕМЕТРИЯ</span><span id="attemptsLabel">ПОПЫТОК 0</span></div>
+      <div class="impulse">
+        <span id="impulseLabel">ЗАДАЙ НАПРАВЛЕНИЕ</span>
+        <div class="impulse-track" role="progressbar" aria-label="Импульс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="impulseTrack"><i id="impulseFill"></i></div>
+        <button id="resetBtn" type="button" class="reset" data-native-press aria-label="Начать заново">↻</button>
+      </div>
+      <div class="mission-nav" id="missionNav" aria-label="Выбор открытой экспедиции"></div>
+    </aside>
+
+    <section id="intro" class="overlay intro" data-ui aria-labelledby="introTitle">
+      <div class="intro-top"><span class="edition">ИГРА О ГРАВИТАЦИИ</span><span>РАСЧЁТ • РИСК • ОРБИТА</span></div>
+      <div class="intro-bottom">
+        <div class="intro-line" aria-hidden="true"><span class="orbit-mark"></span> ЭКСПЕДИЦИЯ 01—06</div>
+        <h2 id="introTitle">ПЕРИ<br><em>ГЕЙ.</em></h2>
+        <p>Никаких рельсов. Только импульс, притяжение и твой расчёт. Проведи корабль через поле тяготения к станции.</p>
+        <button id="startBtn" type="button" class="action primary" data-native-press>НАЧАТЬ ЭКСПЕДИЦИЮ <span>↗</span></button>
+        <a href="../../" class="overlay-exit" data-app-control>← Вернуться в Pocket Works</a>
+      </div>
+    </section>
+
+    <section id="modal" class="overlay modal" data-ui hidden aria-labelledby="modalTitle" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <p id="modalEyebrow" class="eyebrow">МАНЁВР ЗАВЕРШЁН</p>
+        <h2 id="modalTitle">СИГНАЛ ПРИНЯТ.</h2>
+        <p id="modalDescription">Зонд на орбите станции.</p>
+        <div id="modalStat" class="modal-stat"></div>
+        <div class="modal-actions">
+          <button id="primaryBtn" class="action primary" type="button" data-native-press>СЛЕДУЮЩАЯ ОРБИТА <span>↗</span></button>
+          <button id="secondaryBtn" class="action secondary" type="button" data-native-press>ПОВТОРИТЬ МАНЁВР</button>
+          <a href="../../" class="overlay-exit" data-app-control>← Вернуться в Pocket Works</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
