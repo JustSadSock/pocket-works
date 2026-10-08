@@ -21,6 +21,7 @@ jobs:
         run: |
           npm run validate:scripts
           npm run validate:launcher
+          node scripts/test-publish-policy.mjs
 
   change-scope:
     if: github.event_name == 'pull_request'
