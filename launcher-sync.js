@@ -1,6 +1,9 @@
 const SHELF_STORAGE_KEY = 'pocket-works:shelf:v1';
 const REGISTRY_CACHE_KEY = 'pocket-works:registry:v1';
-const RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v1';
+const RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v2';
+const LEGACY_RELEASE_CURSOR_KEY = 'pocket-works:release-cursor:v1';
+const CURSOR_DB_NAME = 'pocket-works-release-tracking';
+const CURSOR_DB_STORE = 'state';
 const LEGACY_REGISTRY_HISTORY_KEY = 'pocket-works:registry-history:v2';
 const LEGACY_SEEN_DIGESTS_KEY = 'pocket-works:seen-release-digests:v1';
 const LAST_DIGEST_KEY = 'pocket-works:last-release-digest:v1';
@@ -17,6 +20,11 @@ let lastRegistryCheckAt = 0;
 let registryCheckPromise = null;
 let activeDigest = null;
 let digestQueue = [];
+let releaseCursorMemory = null;
+let releaseCursorInitialized = false;
+let cursorLoadPromise = null;
+let cursorWritePromise = Promise.resolve();
+let lastCursorSavedAt = 0;
 
 function storageHas(key) {
   try {
@@ -73,6 +81,11 @@ function normalizeRegistry(apps) {
 }
 
 function registrySignature(app) {
+  // The published fingerprint identifies the actual deployable app contents.
+  // Rewriting the registry timestamp or notes is not an application update.
+  if (typeof app.fingerprint === 'string' && app.fingerprint) {
+    return [app.version, app.fingerprint].join('\u001f');
+  }
   return [app.version, app.updatedAt, ...app.changelog].join('\u001f');
 }
 
@@ -102,40 +115,108 @@ function normalizeReleaseCursor(value) {
   );
 }
 
-function persistReleaseCursor(cursor) {
-  const compact = normalizeReleaseCursor(cursor);
-
-  // The old implementation stored the whole 79+ app registry and giant digest IDs
-  // in localStorage. Remove those first so a near-full origin still has room for the
-  // compact cursor (slug -> short release hash).
-  removeStored(LEGACY_REGISTRY_HISTORY_KEY);
-  removeStored(LEGACY_SEEN_DIGESTS_KEY);
-
-  if (writeJson(RELEASE_CURSOR_KEY, { savedAt: Date.now(), apps: compact })) return true;
-
-  // LAST_DIGEST_KEY is only a convenience for the manual “What's new” button.
-  // If storage is at quota, the release cursor is more important than that history.
-  removeStored(LAST_DIGEST_KEY);
-  return writeJson(RELEASE_CURSOR_KEY, { savedAt: Date.now(), apps: compact });
+// A compact localStorage copy is fast to read; IndexedDB is a durable fallback
+// for iOS origins where dozens of apps have filled the shared localStorage quota.
+function cursorDatabase(mode, record) {
+  return new Promise((resolve) => {
+    if (!('indexedDB' in window)) { resolve(mode === 'read' ? null : false); return; }
+    let db = null;
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      try { db?.close(); } catch { /* ignore */ }
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish(mode === 'read' ? null : false), 2000);
+    try {
+      const opening = window.indexedDB.open(CURSOR_DB_NAME, 1);
+      opening.onupgradeneeded = () => {
+        if (!opening.result.objectStoreNames.contains(CURSOR_DB_STORE)) {
+          opening.result.createObjectStore(CURSOR_DB_STORE);
+        }
+      };
+      opening.onerror = () => finish(mode === 'read' ? null : false);
+      opening.onblocked = () => finish(mode === 'read' ? null : false);
+      opening.onsuccess = () => {
+        db = opening.result;
+        if (done) { db.close(); return; }
+        try {
+          const tx = db.transaction(CURSOR_DB_STORE, mode === 'read' ? 'readonly' : 'readwrite');
+          const store = tx.objectStore(CURSOR_DB_STORE);
+          if (mode === 'read') {
+            const request = store.get('cursor');
+            request.onsuccess = () => finish(request.result || null);
+            request.onerror = () => finish(null);
+          } else {
+            store.put(record, 'cursor');
+            tx.oncomplete = () => finish(true);
+            tx.onerror = () => finish(false);
+            tx.onabort = () => finish(false);
+          }
+        } catch {
+          finish(mode === 'read' ? null : false);
+        }
+      };
+    } catch {
+      finish(mode === 'read' ? null : false);
+    }
+  });
 }
 
-function readReleaseCursor() {
-  const current = readJson(RELEASE_CURSOR_KEY);
-  const currentApps = normalizeReleaseCursor(current?.apps);
-  if (Object.keys(currentApps).length > 0) return currentApps;
+async function loadReleaseCursor() {
+  if (releaseCursorMemory !== null) return releaseCursorMemory;
+  if (cursorLoadPromise) return cursorLoadPromise;
+  cursorLoadPromise = (async () => {
+    const local = readJson(RELEASE_CURSOR_KEY);
+    const indexed = await cursorDatabase('read');
+    const records = [indexed, local]
+      .filter((record) => record && Object.keys(normalizeReleaseCursor(record.apps)).length > 0)
+      .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
-  const legacyApps = readJson(LEGACY_REGISTRY_HISTORY_KEY)?.apps;
-  const migrationSource = Array.isArray(legacyApps) && legacyApps.length > 0
-    ? legacyApps
-    : cachedRegistryAtBoot;
-  const migrated = buildReleaseCursor(migrationSource);
+    releaseCursorInitialized = records.length > 0;
+    lastCursorSavedAt = Number(records[0]?.savedAt) || 0;
+    releaseCursorMemory = releaseCursorInitialized ? normalizeReleaseCursor(records[0].apps) : {};
 
-  if (Object.keys(migrated).length > 0) persistReleaseCursor(migrated);
-  else {
+    // v1 contained an unreliable baseline and could replay dozens of already
+    // acknowledged updates. Bootstrap v2 from the current LIVE registry once.
+    removeStored(LEGACY_RELEASE_CURSOR_KEY);
     removeStored(LEGACY_REGISTRY_HISTORY_KEY);
     removeStored(LEGACY_SEEN_DIGESTS_KEY);
-  }
-  return migrated;
+    if (!releaseCursorInitialized) removeStored(LAST_DIGEST_KEY);
+    return releaseCursorMemory;
+  })();
+  try { return await cursorLoadPromise; }
+  finally { cursorLoadPromise = null; }
+}
+
+function persistReleaseCursor(cursor) {
+  const compact = normalizeReleaseCursor(cursor);
+  // Advance immediately: an in-flight network check must not resurrect a
+  // digest that the user has just dismissed.
+  releaseCursorMemory = compact;
+  releaseCursorInitialized = true;
+  lastCursorSavedAt = Math.max(Date.now(), lastCursorSavedAt + 1);
+  const record = { savedAt: lastCursorSavedAt, apps: compact };
+
+  cursorWritePromise = cursorWritePromise.catch(() => false).then(async () => {
+    removeStored(LEGACY_RELEASE_CURSOR_KEY);
+    removeStored(LEGACY_REGISTRY_HISTORY_KEY);
+    removeStored(LEGACY_SEEN_DIGESTS_KEY);
+    let storedLocally = writeJson(RELEASE_CURSOR_KEY, record);
+    if (!storedLocally) {
+      // History is expendable; the acknowledgement cursor is not.
+      removeStored(LAST_DIGEST_KEY);
+      storedLocally = writeJson(RELEASE_CURSOR_KEY, record);
+    }
+    const storedInDb = await cursorDatabase('write', record);
+    if (!storedLocally && !storedInDb) {
+      console.warn('Pocket Works cannot persist release acknowledgements; current session remains acknowledged');
+    }
+    return storedLocally || storedInDb;
+  });
+  return cursorWritePromise;
 }
 
 function registryFingerprint(apps) {
@@ -193,6 +274,9 @@ function ensureWhatsNewButton() {
   button.dataset.nativePress = '';
   button.innerHTML = `What's new <span data-whats-new-count hidden></span>`;
   button.addEventListener('click', () => {
+    // Do not replace an unacknowledged digest with a history-only copy:
+    // the history intentionally has no release cursor to acknowledge.
+    if (activeDigest) return;
     const digest = readJson(LAST_DIGEST_KEY);
     if (digest) enqueueDigest(digest, { remember: false, immediate: true });
   });
@@ -200,14 +284,17 @@ function ensureWhatsNewButton() {
   return button;
 }
 
-function updateWhatsNewButton(digest) {
-  const button = ensureWhatsNewButton();
-  if (!button || !digest) return;
+function updateWhatsNewButton(digest, { unread = false } = {}) {
+  const button = digest
+    ? ensureWhatsNewButton()
+    : deckActions?.querySelector('[data-whats-new]');
+  if (!button) return;
+  if (!digest) { button.remove(); return; }
   const counter = button.querySelector('[data-whats-new-count]');
-  const count = Array.isArray(digest.notes) ? digest.notes.length : 0;
-  counter.textContent = String(count);
+  const count = unread ? (digest?.changeCount || digest?.notes?.length || 0) : 0;
+  counter.textContent = count ? String(count) : '';
   counter.hidden = count === 0;
-  button.classList.add('has-release');
+  button.classList.toggle('has-release', count > 0);
 }
 
 function showDigest(digest) {
@@ -229,26 +316,31 @@ function showDigest(digest) {
 
 function closeDigest(surface) {
   const closedDigest = activeDigest;
-  if (closedDigest?.kind === 'registry' && closedDigest.releaseCursor) {
-    persistReleaseCursor(closedDigest.releaseCursor);
-  }
+  const committed = closedDigest?.kind === 'registry' && closedDigest.releaseCursor
+    ? persistReleaseCursor(closedDigest.releaseCursor)
+    : Promise.resolve(true);
 
   surface.classList.remove('is-visible');
   activeDigest = null;
+  updateWhatsNewButton(readJson(LAST_DIGEST_KEY), { unread: false });
 
-  // Any queued registry digest was calculated against the old cursor. Throw it
-  // away and immediately recalculate from the state the user just acknowledged.
+  // A queued registry digest was computed against the unacknowledged cursor.
   digestQueue = digestQueue.filter((digest) => digest.kind !== 'registry');
-  window.setTimeout(() => {
+  window.setTimeout(async () => {
+    await committed;
     if (digestQueue.length > 0) showDigest(digestQueue.shift());
-    checkRegistry({ force: true });
+    void checkRegistry({ force: true });
   }, 180);
 }
 
 function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
   if (!digest || !Array.isArray(digest.notes) || digest.notes.length === 0) return;
-  if (remember) writeJson(LAST_DIGEST_KEY, digest);
-  updateWhatsNewButton(digest);
+  if (remember) {
+    // Keep a small readable history, not a second copy of the full cursor.
+    const { releaseCursor, ...history } = digest;
+    writeJson(LAST_DIGEST_KEY, history);
+  }
+  updateWhatsNewButton(digest, { unread: remember });
 
   if (activeDigest && !immediate) {
     if (!digestQueue.some((item) => item.id === digest.id)) digestQueue.push(digest);
@@ -278,6 +370,7 @@ function buildRegistryDigest(changes, nextApps) {
   return {
     id: `registry:${hashString(registryFingerprint(nextApps))}`,
     kind: 'registry',
+    changeCount: total,
     releaseCursor: buildReleaseCursor(nextApps),
     eyebrow: changes.added.length > 0 ? 'NEW ON THE SHELF' : 'APPLICATIONS UPDATED',
     title: changes.added.length > 0
@@ -307,27 +400,33 @@ async function fetchLiveRegistry() {
 
 async function checkRegistry({ force = false } = {}) {
   if (!navigator.onLine) return false;
-  if (!force && Date.now() - lastRegistryCheckAt < REGISTRY_CHECK_COOLDOWN) return false;
   if (registryCheckPromise) return registryCheckPromise;
+  if (!force && Date.now() - lastRegistryCheckAt < REGISTRY_CHECK_COOLDOWN) return false;
 
-  const baseline = readReleaseCursor();
   lastRegistryCheckAt = Date.now();
   registryCheckPromise = (async () => {
     try {
+      await loadReleaseCursor();
       const nextApps = await fetchLiveRegistry();
-      const changes = diffRegistry(baseline, nextApps);
 
       const visibleFingerprint = registryFingerprint(readRegistryCache()?.apps || []);
       const liveFingerprint = registryFingerprint(nextApps);
       if (visibleFingerprint !== liveFingerprint) publishRegistrySnapshot(nextApps);
 
-      const hasChanges = changes.added.length > 0 || changes.updated.length > 0;
-      if (hasChanges && Object.keys(baseline).length > 0) {
+      const nextCursor = buildReleaseCursor(nextApps);
+      if (!releaseCursorInitialized) {
+        // On first v2 run, do not label the entire existing library as new.
+        // This also repairs users whose v1 acknowledgement was never saved.
+        await persistReleaseCursor(nextCursor);
+        updateWhatsNewButton(null, { unread: false });
+        return true;
+      }
+
+      // Read the cursor AFTER the request, not before it: the user may have
+      // dismissed an overlay while the network operation was in flight.
+      const changes = diffRegistry(releaseCursorMemory, nextApps);
+      if (changes.added.length || changes.updated.length) {
         enqueueDigest(buildRegistryDigest(changes, nextApps));
-      } else if (!hasChanges || Object.keys(baseline).length === 0) {
-        // First launch, successful migration, or a fully caught-up registry.
-        // Persisting here heals missing/corrupt cursors without marking unseen changes read.
-        persistReleaseCursor(buildReleaseCursor(nextApps));
       }
       return true;
     } catch (error) {
@@ -391,7 +490,7 @@ async function showCurrentShellRelease() {
 }
 
 const lastDigest = readJson(LAST_DIGEST_KEY);
-if (lastDigest) updateWhatsNewButton(lastDigest);
+if (lastDigest) updateWhatsNewButton(lastDigest, { unread: false });
 
 window.addEventListener('online', () => checkRegistry({ force: true }), { passive: true });
 window.addEventListener('pageshow', (event) => {
