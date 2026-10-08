@@ -1476,6 +1476,9 @@ function normalizeStageFromProgress() {
   if (state.stage === 'lead' && !state.assembled.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'solder' && !state.assembled.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'solder' && !state.leadProgress.every(v=>v>=.995)) state.stage='lead';
+  if (state.stage === 'lead' && state.leadProgress.every(v=>v>=.995)) state.stage='solder';
+  if (state.stage === 'lead' && state.leadProgress[state.leadIndex]>=.995) state.leadIndex=state.leadProgress.findIndex(v=>v<.995);
+  if (state.stage === 'reveal' && !state.leadProgress.every(v=>v>=.995)) state.stage='lead';
   if (state.stage === 'reveal' && !state.soldered.every(Boolean)) state.stage = 'solder';
 }
 
