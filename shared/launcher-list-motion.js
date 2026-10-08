@@ -1,3 +1,5 @@
+import { subscribeRegistry } from './launcher-registry.js';
+
 const root = document.documentElement;
 const list = document.querySelector('#app-list');
 const detailUpdated = document.querySelector('#detail-updated');
@@ -51,26 +53,6 @@ if (list) {
         .filter((app) => app && typeof app.slug === 'string')
         .map((app) => [app.slug, app])
     );
-  }
-
-  function readSavedRegistry() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(registryCacheKey) || 'null');
-      if (Array.isArray(saved?.apps)) normalizeRegistry(saved.apps);
-    } catch {
-      // A malformed cache should not affect the launcher.
-    }
-  }
-
-  async function refreshRegistry() {
-    try {
-      const response = await fetch(`./apps.json?v=${Date.now()}`, { cache: 'no-store' });
-      if (!response.ok) return;
-      normalizeRegistry(await response.json());
-      patchReleaseTimes();
-    } catch {
-      // The launcher itself handles offline registry fallbacks.
-    }
   }
 
   function parseReleaseTime(value) {
@@ -462,8 +444,10 @@ if (list) {
     if (document.hidden) clearPendingMotion({ cancelAnimations: true });
   });
 
-  readSavedRegistry();
-  refreshRegistry();
+  subscribeRegistry(snapshot => {
+    normalizeRegistry(snapshot.apps);
+    patchReleaseTimes();
+  }, { immediate: true });
   patchReleaseTimes();
   installControlPolish();
 }

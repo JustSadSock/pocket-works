@@ -3,10 +3,11 @@ import {
   setDocumentScrollLocked
 } from './shared/mobile-runtime.js';
 
+import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
+
 installMobileRuntime();
 
 const STORAGE_KEY = 'pocket-works:shelf:v1';
-const REGISTRY_CACHE_KEY = 'pocket-works:registry:v1';
 const FILTERS = ['all', 'favorites', 'recent', 'offline', 'experimental'];
 const SORTS = ['updated', 'recent', 'name'];
 const SORT_LABELS = {
@@ -119,27 +120,6 @@ function persistShelfState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   } catch (error) {
     console.warn('Pocket Works could not persist shelf state', error);
-  }
-}
-
-function saveRegistrySnapshot(apps) {
-  try {
-    localStorage.setItem(REGISTRY_CACHE_KEY, JSON.stringify({
-      savedAt: Date.now(),
-      apps
-    }));
-  } catch (error) {
-    console.warn('Pocket Works could not save the registry snapshot', error);
-  }
-}
-
-function readRegistrySnapshot() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(REGISTRY_CACHE_KEY) || 'null');
-    if (!parsed || !Array.isArray(parsed.apps)) return null;
-    return parsed;
-  } catch {
-    return null;
   }
 }
 
@@ -632,19 +612,13 @@ async function loadRegistry({ manual = false } = {}) {
   errorState.hidden = true;
 
   try {
-    const response = await fetch(`./apps.json?v=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`Registry request failed: ${response.status}`);
-    const apps = await response.json();
-    if (!Array.isArray(apps)) throw new TypeError('apps.json must contain an array');
-
-    registry = normalizeRegistry(apps);
-    saveRegistrySnapshot(registry);
-    lastSyncAt = Date.now();
+    const live = await fetchRegistry({ force: manual });
+    registry = normalizeRegistry(live.apps);
+    lastSyncAt = live.savedAt;
     syncStatus.textContent = `Synced ${formatRecent(lastSyncAt)}`;
   } catch (error) {
     console.error(error);
-    const snapshot = readRegistrySnapshot();
-
+    const snapshot = getRegistrySnapshot();
     if (snapshot) {
       registry = normalizeRegistry(snapshot.apps);
       lastSyncAt = snapshot.savedAt;
@@ -678,7 +652,6 @@ async function applyExternalRegistrySnapshot(apps) {
   if (apps.length > 0 && nextRegistry.length === 0) return false;
 
   registry = nextRegistry;
-  saveRegistrySnapshot(registry);
   lastSyncAt = Date.now();
 
   if (!registry.some((app) => app.slug === shelfState.selected)) {
@@ -693,7 +666,14 @@ async function applyExternalRegistrySnapshot(apps) {
 }
 
 window.addEventListener('pocketworks:registry-snapshot', (event) => {
-  void applyExternalRegistrySnapshot(event.detail?.apps);
+  if (!Array.isArray(event.detail?.apps)) return;
+  try { setRegistrySnapshot(event.detail.apps, { source: event.detail.source || 'external' }); }
+  catch (error) { console.warn('Pocket Works rejected a registry handoff', error); }
+});
+
+let launcherInitialized = false;
+subscribeRegistry((snapshot) => {
+  if (launcherInitialized) void applyExternalRegistrySnapshot(snapshot.apps);
 });
 
 filterStrip.addEventListener('click', (event) => {
@@ -818,6 +798,7 @@ document.addEventListener('keydown', (event) => {
 
 updateSystemStatus();
 loadRegistry().then(() => {
+  launcherInitialized = true;
   body.classList.add('is-library-ready');
   restoreLibraryPosition();
 });

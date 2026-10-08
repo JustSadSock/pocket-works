@@ -1,4 +1,5 @@
-const REGISTRY_URL = './apps.json';
+import { loadRegistry, subscribeRegistry } from './launcher-registry.js';
+
 const SHELF_STATE_KEY = 'pocket-works:shelf:v1';
 
 let registryBySlug = new Map();
@@ -46,20 +47,16 @@ function refreshAllIcons() {
   refreshDetailIcon();
 }
 
-async function loadRegistry() {
-  const response = await fetch(`${REGISTRY_URL}?icon-previews=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Icon registry request failed: ${response.status}`);
-  const apps = await response.json();
-  registryBySlug = new Map(apps.map((app) => [app.slug, app]));
+function acceptRegistry(snapshot) {
+  registryBySlug = new Map(snapshot.apps.map(app => [app.slug, app]));
+  refreshAllIcons();
 }
 
 async function startIconPreviews() {
-  try {
-    await loadRegistry();
-  } catch (error) {
+  subscribeRegistry(acceptRegistry, { immediate: true });
+  void loadRegistry().catch(error => {
     console.warn('Pocket Works could not load application icons', error);
-    return;
-  }
+  });
 
   const list = document.querySelector('#app-list');
   const detail = document.querySelector('#detail-content');

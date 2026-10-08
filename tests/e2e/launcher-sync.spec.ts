@@ -43,5 +43,6 @@ test('launcher Sync updates only already-installed application workers', async (
 
 test('launcher shell advertises the update-system release', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('.shelf-heading .eyebrow')).toContainText('0.10.1');
+  const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  await expect(page.locator('.shelf-heading .eyebrow')).toContainText(packageJson.version);
 });

@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 
 // Browser-free regression checks for the launcher release acknowledgement path.
 // The actual launcher module is evaluated with deterministic storage and DOM fakes.
-const source = await readFile(new URL('../launcher-sync.js', import.meta.url), 'utf8');
+const source = (await readFile(new URL('../launcher-sync.js', import.meta.url), 'utf8'))
+  .replace(/^import [^\n]+;\s*/, '');
 const storage = new Map();
 const indexed = new Map();
 // Existing users may have a bad v1 cursor and a stale 30-release badge.
@@ -12,6 +13,7 @@ storage.set('pocket-works:last-release-digest:v1', JSON.stringify({
   kind: 'registry', notes: Array(30).fill('Already viewed release')
 }));
 let quotaExceeded = false;
+let indexedUnavailable = false;
 const soon = (callback) => Promise.resolve().then(callback);
 
 function boot(initialApps) {
@@ -21,7 +23,7 @@ function boot(initialApps) {
   const timers = [];
 
   const element = () => ({
-    textContent: '', hidden: false, dataset: {},
+    textContent: '', hidden: false, dataset: {}, style: {},
     classList: { add() {}, remove() {}, toggle() {} },
     append() {}, replaceChildren() {}, setAttribute() {}, addEventListener() {}, remove() {}
   });
@@ -79,7 +81,7 @@ function boot(initialApps) {
         }
       };
       const opening = { result: db };
-      void soon(() => opening.onsuccess?.());
+      void soon(() => indexedUnavailable ? opening.onerror?.() : opening.onsuccess?.());
       return opening;
     }
   };
@@ -103,13 +105,20 @@ function boot(initialApps) {
   const factory = new Function(
     'window', 'document', 'localStorage', 'navigator', 'fetch',
     'queueMicrotask', 'requestAnimationFrame', 'CustomEvent', 'setTimeout', 'clearTimeout',
+    'requestRegistry', 'getRegistrySnapshot', 'BroadcastChannel',
     source + '\nreturn {checkRegistry, closeDigest, getActive: () => activeDigest, getCursor: () => releaseCursorMemory};'
   );
   const runtime = factory(
     window, document, localStorage, { onLine: true }, fetch,
     () => {}, () => {}, class CustomEvent {}, (callback) => {
       timers.push(callback); return timers.length;
-    }, () => {}
+    }, () => {},
+    async () => ({ apps }),
+    () => {
+      const saved = storage.get('pocket-works:registry:v1');
+      return saved ? JSON.parse(saved) : { apps: [] };
+    },
+    class FakeBroadcastChannel { addEventListener() {} postMessage() {} close() {} }
   );
   runtime.setApps = (value) => { apps = value; };
   runtime.getSurface = () => surface;
@@ -176,5 +185,45 @@ await metadataCheck.checkRegistry({ force: true });
 metadataCheck.setApps(metadataOnly);
 await metadataCheck.checkRegistry({ force: true });
 assert.equal(metadataCheck.getActive(), null, 'metadata-only churn is not an app release');
+
+
+const secondOriginal = { slug: 'other', name: 'Other', version: '1.0', fingerprint: 'other-1' };
+const twoApps = [later[0], secondOriginal];
+const partial = boot(twoApps);
+await partial.checkRegistry({ force: true });
+assert.equal(partial.getActive()?.changeCount, 1, 'a newly added second app is unread');
+partial.closeDigest(partial.getSurface());
+await partial.runTimers();
+const priorOtherToken = partial.getCursor()['other'];
+// closeDigest starts a background check; let its microtasks settle before changing fixtures.
+await new Promise(resolve => setImmediate(resolve));
+partial.setApps([{ ...later[0], version: '1.3', fingerprint: 'build-4' }, secondOriginal]);
+await partial.checkRegistry({ force: true });
+assert.equal(partial.getActive()?.changeCount, 1, 'only the changed app is unread');
+partial.closeDigest(partial.getSurface());
+await partial.runTimers();
+assert.ok(partial.getCursor()['test-app'], 'newly acknowledged app is preserved');
+assert.equal(partial.getCursor()['other'], priorOtherToken, 'a partial digest preserves another app acknowledgement');
+
+// Both localStorage and IndexedDB can fail in private mode or at quota.
+const broken = boot([{ ...later[0], version: '1.3', fingerprint: 'build-4' }, secondOriginal]);
+await broken.checkRegistry({ force: true });
+const brokenLatest = [{ ...later[0], version: '1.4', fingerprint: 'build-5' }, secondOriginal];
+broken.setApps(brokenLatest);
+await broken.checkRegistry({ force: true });
+assert.equal(broken.getActive()?.changeCount, 1);
+quotaExceeded = true;
+indexedUnavailable = true;
+broken.closeDigest(broken.getSurface());
+await broken.runTimers();
+assert.equal(broken.getCount(), '1', 'failed persistence must retain an unread indicator');
+
+quotaExceeded = false;
+indexedUnavailable = false;
+broken.clickHistory();
+assert.equal(broken.getActive()?.kind, 'registry', 'failed acknowledgement can be retried');
+broken.closeDigest(broken.getSurface());
+await broken.runTimers();
+assert.ok(!broken.getCount(), 'retry clears the unread badge after storage recovers');
 
 console.log('Launcher acknowledgement persistence regression checks passed.');

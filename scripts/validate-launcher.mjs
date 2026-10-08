@@ -22,7 +22,7 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registryStore] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('launcher-performance.css'),
@@ -32,7 +32,8 @@ const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packa
   read('shared/launcher-list-motion.js'),
   read('shared/launcher-list-motion.css'),
   read('package.json'),
-  read('manifest.webmanifest')
+  read('manifest.webmanifest'),
+  read('shared/launcher-registry.js')
 ]);
 
 const packageJson = JSON.parse(packageSource);
@@ -92,7 +93,7 @@ for (const [label, version] of [
 for (const token of [
   'installMobileRuntime()',
   'pocket-works:shelf:v1',
-  'pocket-works:registry:v1',
+  'subscribeRegistry',
   'favorites',
   'recents',
   'caches.keys()',
@@ -104,6 +105,10 @@ for (const token of [
   'setDocumentScrollLocked'
 ]) {
   requireText(app, token, 'app.js');
+}
+
+for (const token of ['pocket-works:registry:v1', 'loadRegistry', 'setRegistrySnapshot', 'subscribeRegistry']) {
+  requireText(registryStore, token, 'shared/launcher-registry.js');
 }
 
 for (const token of [
