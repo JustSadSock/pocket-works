@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.1';
-const APP_VERSION = '0.10.1';
-const RELEASE_DATE = '2026-10-01';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.2';
+const APP_VERSION = '0.10.2';
+const RELEASE_DATE = '2026-10-09';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
-  'Library release detection now updates the visible shelf immediately instead of routing through the Sync button.',
-  'Sync now refreshes only applications that are already installed on this device instead of registering more than a hundred Service Workers at once.',
-  'Installed apps use their existing Service Worker registration for updates, avoiding Safari registration churn and false stale-release checks.'
+  'Library remembers acknowledged app releases across visits, even when localStorage is full.',
+  'Unread update badges now disappear after acknowledgement and only return for genuinely new releases.',
+  'First-time release tracking starts from the current library instead of replaying the old backlog.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
