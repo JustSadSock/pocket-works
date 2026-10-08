@@ -1,8 +1,10 @@
-import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { installMobileRuntime, setDocumentScrollLocked } from '../../shared/mobile-runtime.js';
 import { STAGE_COUNT, STEP, stageAt, launchVector, makeCraft, advanceCraft, predict, safeReadProgress } from './physics.js';
 import { paint } from './renderer.js';
 
 installMobileRuntime();
+// The entire surface is a direct-manipulation game; lock native page panning.
+setDocumentScrollLocked(true);
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), scene = $('scene'), ctx = scene.getContext('2d', { alpha: false });
@@ -14,10 +16,19 @@ const primaryBtn = $('primaryBtn'), secondaryBtn = $('secondaryBtn');
 const modalEyebrow = $('modalEyebrow'), modalTitle = $('modalTitle');
 const modalDescription = $('modalDescription'), modalStat = $('modalStat');
 const STORAGE_KEY = 'pocket-works:perigee:progress-v1';
+const SESSION_KEY = 'pocket-works:perigee:session-v1';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let stored = {};
 try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { stored = {}; }
 let progress = safeReadProgress(stored);
+let sessionIndex = null;
+try {
+  const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+  if (saved && Number.isInteger(saved.index) && saved.index >= 0 && saved.index < progress.unlocked) sessionIndex = saved.index;
+} catch { /* session storage may be disabled */ }
+function rememberSession(i) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ index: i })); } catch { /* optional */ }
+}
 let audio = null, master = null;
 let index = 0, stage = null, pointerId = null, press = null;
 let width = 0, height = 0, factor = 1, dpr = 1;
@@ -132,6 +143,7 @@ function goTo(i) {
   accumulator=0;settleResult=null;pointerId=null;press=null;
   completionCode='';
   launched=true;
+  rememberSession(index);
   intro.hidden=true;modal.hidden=true;
   app.classList.remove('is-intro');
   renderNav();updateHud();
@@ -320,6 +332,7 @@ function frame(now) {
 }
 
 resize(true);
+if (sessionIndex !== null) goTo(sessionIndex);
 renderNav();
 updateHud();
 frameId=requestAnimationFrame(frame);
