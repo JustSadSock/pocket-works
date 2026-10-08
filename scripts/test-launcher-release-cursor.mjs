@@ -203,4 +203,25 @@ await partial.runTimers();
 assert.ok(partial.getCursor()['test-app'], 'newly acknowledged app is preserved');
 assert.equal(partial.getCursor()['other'], priorOtherToken, 'a partial digest preserves another app acknowledgement');
 
+// Both localStorage and IndexedDB can fail in private mode or at quota.
+const broken = boot([{ ...later[0], version: '1.3', fingerprint: 'build-4' }, secondOriginal]);
+await broken.checkRegistry({ force: true });
+const brokenLatest = [{ ...later[0], version: '1.4', fingerprint: 'build-5' }, secondOriginal];
+broken.setApps(brokenLatest);
+await broken.checkRegistry({ force: true });
+assert.equal(broken.getActive()?.changeCount, 1);
+quotaExceeded = true;
+indexedUnavailable = true;
+broken.closeDigest(broken.getSurface());
+await broken.runTimers();
+assert.equal(broken.getCount(), '1', 'failed persistence must retain an unread indicator');
+
+quotaExceeded = false;
+indexedUnavailable = false;
+broken.clickHistory();
+assert.equal(broken.getActive()?.kind, 'registry', 'failed acknowledgement can be retried');
+broken.closeDigest(broken.getSurface());
+await broken.runTimers();
+assert.equal(broken.getCount(), '', 'retry clears the unread badge after storage recovers');
+
 console.log('Launcher acknowledgement persistence regression checks passed.');
