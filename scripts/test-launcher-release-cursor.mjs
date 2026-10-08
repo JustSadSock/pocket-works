@@ -170,8 +170,8 @@ await again.checkRegistry({ force: true });
 assert.equal(again.getActive(), null, 'locally saved acknowledgement survives another visit');
 assert.ok(!again.getCount(), 'saved release history never implies unread updates');
 
-const metadataOnly = [{ ...next[0], updatedAt: '2026-10-10T00:00:00Z', changelog: ['Edited copy'] }];
-const metadataCheck = boot(next);
+const metadataOnly = [{ ...later[0], updatedAt: '2026-10-10T00:00:00Z', changelog: ['Edited copy'] }];
+const metadataCheck = boot(later);
 await metadataCheck.checkRegistry({ force: true });
 metadataCheck.setApps(metadataOnly);
 await metadataCheck.checkRegistry({ force: true });
