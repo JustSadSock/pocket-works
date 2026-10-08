@@ -340,6 +340,7 @@ function closeDigest(surface) {
       showAcknowledgementWarning();
     } else {
       failedDigest = null;
+      document.querySelector('[data-release-storage-warning]')?.remove();
     }
     if (digestQueue.length > 0) showDigest(digestQueue.shift());
     void checkRegistry({ force: true });
