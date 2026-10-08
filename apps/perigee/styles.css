@@ -90,3 +90,13 @@ html,body{overscroll-behavior:none;overflow:hidden;max-width:100%}
 #app{width:100%;touch-action:none;overflow:clip;contain:layout paint}
 .intro,.modal{overflow:hidden;touch-action:none}
 .intro button,.intro a,.modal button,.modal a{touch-action:manipulation}
+
+/* On portrait phones, prioritize complete mission titles over redundant
+   branding in the back control; the exit retains its accessible full label. */
+@media(max-width:600px){
+  .back{width:44px;min-width:44px;padding:0}
+  .back span{display:none}
+  .header-left{gap:12px}
+  .mission-heading h1{font-size:clamp(13px,3.5vw,17px);letter-spacing:-.015em}
+  .mission-heading .eyebrow{font-size:9px;letter-spacing:.12em}
+}
