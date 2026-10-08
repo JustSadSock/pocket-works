@@ -188,7 +188,7 @@ function showModal(type) {
     modalDescription.textContent=type==='impact'?'Притяжение оказалось сильнее расчёта. Измени угол или стартовый импульс.':'Зонд покинул рабочую область. Попробуй более короткую дугу.';
     modalStat.textContent='ПОПЫТОК В СЕКТОРЕ: '+attempts[index];
     primaryBtn.innerHTML='НОВЫЙ ИМПУЛЬС <span>↗</span>';
-    secondaryBtn.textContent='ВЫБРАТЬ ДРУГОЙ СЕКТОР';
+    secondaryBtn.textContent=index>0?'ПРЕДЫДУЩИЙ СЕКТОР':'ПОВТОРИТЬ СЕКТОР';
   }
 }
 function pause() {
@@ -241,7 +241,7 @@ function onPointerUp(ev) {
   try {scene.releasePointerCapture(ev.pointerId);} catch {}
   if(model.mode!=='aim')return;
   const moved=start?Math.hypot(ev.clientX-start.clientX,ev.clientY-start.clientY):0;
-  const vec=moved>10?launchVector(stage.start,point(ev)):null;
+  const vec=moved>10?launchVector(stage.start,model.drag):null;
   model.mode='ready';model.drag=null;model.prediction=null;
   if(vec)launch(vec);
   else {sound('aim');updateHud();}
