@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 const files={
   index:await readFile('index.html','utf8'),
   updater:await readFile('launcher-update-all-v3.js','utf8'),
+  coordinator:await readFile('shared/release-coordinator.js','utf8'),
   links:await readFile('launcher-release-links.js','utf8'),
   guard:await readFile('shared/release-guard.js','utf8'),
   updateManager:await readFile('shared/update-manager.js','utf8'),
@@ -18,13 +19,15 @@ const requireToken=(file,token,label)=>{if(!files[file].includes(token))errors.p
 
 requireToken('index','launcher-update-all-v3.js','launcher entry');
 requireToken('index','launcher-release-links.js','launcher entry');
-requireToken('updater','expectedFingerprint','installed app verification');
-requireToken('updater','collectInstalledTargets','installed app verification');
-requireToken('updater','navigator.serviceWorker.getRegistrations()','installed app verification');
-requireToken('updater','registration.update()','installed app verification');
-requireToken('updater','workerInfo','installed app verification');
+requireToken('updater','installedTargets','installed app verification');
+requireToken('updater','updateInstalledApplication','installed app verification');
+requireToken('coordinator','releaseIdentity','installed app verification');
+requireToken('coordinator','getRegistrations()','installed app verification');
+requireToken('coordinator','registration.update()','installed app verification');
+requireToken('coordinator','workerInfo','installed app verification');
+requireToken('coordinator','clearStaleAppRuntime','launcher release convergence');
 requireToken('updater','pw-update-progress','update progress');
-if(files.updater.includes('navigator.serviceWorker.register('))errors.push('Launcher Sync must not create application Service Worker registrations');
+if(files.updater.includes('navigator.serviceWorker.register(')||files.coordinator.includes('navigator.serviceWorker.register('))errors.push('Launcher Sync must not create application Service Worker registrations');
 if(files.updater.includes("workerUrl.searchParams.set('pw_release'")||files.updater.includes("workerUrl.searchParams.set('pw_fp'"))errors.push('Launcher Sync must keep application Service Worker script URLs canonical');
 requireToken('links','fingerprint','versioned launch links');
 requireToken('links','clearStaleAppRuntime','launcher release convergence');
