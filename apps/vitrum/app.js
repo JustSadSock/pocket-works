@@ -178,7 +178,30 @@ function ensureAudio() {
   return audioContext;
 }
 
+function frictionNoise(kind) {
+  const ac=ensureAudio();if(!ac)return;
+  const length=Math.floor(ac.sampleRate*(kind==='score'?.065:kind==='solder'?.21:.13));
+  const buffer=ac.createBuffer(1,length,ac.sampleRate);
+  const data=buffer.getChannelData(0);
+  const rnd=seeded(Math.floor(ac.currentTime*1000000)+length);
+  let prior=0;
+  for(let i=0;i<length;i++){
+    const r=(rnd()*2-1);
+    prior=prior*.57+r*.43;
+    const envelope=Math.pow(1-i/length,kind==='solder'? .7:2);
+    data[i]=(kind==='score'?prior:r)*envelope;
+  }
+  const source=ac.createBufferSource();source.buffer=buffer;
+  const filter=ac.createBiquadFilter();
+  filter.type=kind==='solder'?'lowpass':'highpass';
+  filter.frequency.value=kind==='solder'?1150:kind==='score'?1850:1100;
+  const gain=ac.createGain();
+  gain.gain.value=kind==='score'?.013:kind==='solder'?.025:.035;
+  source.connect(filter).connect(gain).connect(ac.destination);
+  source.start();
+}
 function tone(kind = 'tap') {
+  if(kind==='score'||kind==='glass'||kind==='solder') frictionNoise(kind);
   const ac = ensureAudio();
   if (!ac) return;
   const now = ac.currentTime;
@@ -409,8 +432,32 @@ function drawBackground() {
     ctx.stroke();
   }
   ctx.restore();
+  // A worn oak bench: joined planks, grain that follows the timber, scattered tools.
+  ctx.save();
+  ctx.lineWidth=1;
+  const rnd=seeded(1847);
+  for(let y=0;y<cssHeight;y+=cssHeight/4.5){
+    ctx.strokeStyle='rgba(0,0,0,.20)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cssWidth,y+2);ctx.stroke();
+    ctx.strokeStyle='rgba(231,178,109,.11)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,y+4);ctx.lineTo(cssWidth,y+6);ctx.stroke();
+  }
+  for(let i=0;i<85;i++){
+    const y=rnd()*cssHeight, x=rnd()*cssWidth;
+    ctx.strokeStyle=rnd()>.42?'rgba(235,191,123,.067)':'rgba(0,0,0,.13)';
+    ctx.lineWidth=.3+rnd()*.9;
+    ctx.beginPath();ctx.moveTo(x-25,y);ctx.bezierCurveTo(x+45,y-5+rnd()*10,x+80,y+3-rnd()*7,x+125,y);ctx.stroke();
+  }
+  // Iron cutting-wheel and grozing pliers remain near the left margin.
+  ctx.translate(Math.max(18,cssWidth*.052),cssHeight*.81);
+  ctx.rotate(-.24);
+  ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=9;ctx.shadowOffsetX=4;
+  ctx.strokeStyle='#605746';ctx.lineCap='round';ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(-4,-33);ctx.lineTo(4,43);ctx.moveTo(12,-32);ctx.lineTo(5,41);ctx.stroke();
+  ctx.strokeStyle='#b5a38a';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(-4,-40);ctx.lineTo(2,15);ctx.moveTo(13,-39);ctx.lineTo(6,15);ctx.stroke();
+  ctx.restore();
 }
-
 function drawPaper(geo) {
   const pad = geo.r * 1.15;
   ctx.save();
@@ -488,8 +535,26 @@ function glassFill(path, colorIndex, seedValue, alpha = .94, lightBias = 0) {
     ctx.arc(rnd() * cssWidth, rnd() * cssHeight, r, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = .13;
+  // Mouth-blown medieval glass is not a flat translucent sticker: molten striae,
+  // trapped air and uneven thickness make adjacent colors refract differently.
+  ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=.13;
+  for(let j=0;j<11;j++){
+    const yy=cssHeight*(.08+j*.093);
+    const bend=(rnd()-.5)*47;
+    const ribbon=ctx.createLinearGradient(0,yy-6,0,yy+13);
+    ribbon.addColorStop(0,'rgba(255,247,214,0)');
+    ribbon.addColorStop(.4,'rgba(255,248,223,.65)');
+    ribbon.addColorStop(1,'rgba(255,250,220,0)');
+    ctx.fillStyle=ribbon;
+    ctx.beginPath();ctx.moveTo(-20,yy);
+    ctx.bezierCurveTo(cssWidth*.26,yy-14+bend,cssWidth*.72,yy+16-bend,cssWidth+20,yy-6);
+    ctx.lineTo(cssWidth+20,yy+12);
+    ctx.bezierCurveTo(cssWidth*.72,yy+26-bend,cssWidth*.26,yy+bend, -20,yy+17);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.globalCompositeOperation='source-over';
+  ctx.globalAlpha=.13;
   const glow = ctx.createRadialGradient(cssWidth * .35, cssHeight * .26, 0, cssWidth * .35, cssHeight * .26, Math.max(cssWidth, cssHeight) * .5);
   glow.addColorStop(0, '#fff');
   glow.addColorStop(1, 'transparent');
@@ -560,6 +625,31 @@ function drawMotif(geo, subtle = false) {
   ctx.restore();
 }
 
+function drawGrisaille(geo,visible=()=>true) {
+  for(let i=0;i<6;i++){
+    if(!visible(i))continue;
+    const points=geo.pieces[i],path=pathFromPoints(points);
+    const theta=-Math.PI/2+i*Math.PI/3;
+    const base=polar(geo.cx,geo.cy,geo.r*.28,theta);
+    ctx.save();ctx.clip(path);ctx.translate(base.x,base.y);ctx.rotate(theta+Math.PI/2);
+    ctx.strokeStyle='#1e201b';ctx.lineWidth=Math.max(.85,geo.r*.009);
+    ctx.globalAlpha=.31;
+    const scale=geo.r;
+    // Fired grisaille foliate curls, intentionally restrained beneath the glass.
+    ctx.beginPath();ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-scale*.08,scale*.16,scale*.12,scale*.3,0,scale*.52);ctx.stroke();
+    for(let k=0;k<3;k++){
+      const y=scale*(.12+k*.112),side=k%2?1:-1;
+      ctx.beginPath();ctx.moveTo(0,y);
+      ctx.quadraticCurveTo(side*scale*.16,y-scale*.13,side*scale*.17,y+scale*.06);
+      ctx.quadraticCurveTo(side*scale*.065,y+scale*.07,0,y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(side*scale*.04,y);ctx.lineTo(side*scale*.14,y+.04*scale);ctx.stroke();
+    }
+    ctx.globalAlpha=.34;ctx.fillStyle='#f9dca5';
+    ctx.beginPath();ctx.ellipse(0,scale*.43,scale*.017,scale*.04,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
 function drawRose(stageMode = 'design') {
   const geo = regionGeometry();
   if (stageMode === 'design') {
@@ -572,6 +662,7 @@ function drawRose(stageMode = 'design') {
       ctx.lineWidth = Math.max(2, geo.r * .017);
       ctx.stroke(path);
     });
+    drawGrisaille(geo);
     drawMotif(geo, true);
   } else if (stageMode === 'assemble') {
     drawLightTable(geo);
@@ -591,11 +682,13 @@ function drawRose(stageMode = 'design') {
         ctx.restore();
       }
     });
+    drawGrisaille(geo,i=>state.assembled[i]);
     if (state.assembled[6]) drawMotif(geo, false);
     drawLeadNetwork(geo, true, false);
   } else {
     drawLightTable(geo);
     geo.pieces.forEach((points, i) => glassFill(pathFromPoints(points), state.colors[i], i, .98));
+    drawGrisaille(geo);
     drawMotif(geo, false);
     drawLeadNetwork(geo, false, true);
   }
@@ -813,6 +906,7 @@ function drawLeadStage() {
     ctx.stroke(pathFromPoints(points));ctx.restore();
     drawLeadProfile(samples,state.leadProgress[i],Math.max(6,geo.r*.055));
   });
+  drawGrisaille(geo);
   const n=Math.min(state.leadIndex,PIECE_COUNT-1);
   if (state.leadProgress[n] < .995) {
     const samples=leadPath(geo,n);
@@ -1021,6 +1115,7 @@ function drawReveal(time) {
   // Window glass with a slow, tiny highlight drift.
   const shimmer = Math.sin(time * .00045) * .04 + sun * .08;
   geo.pieces.forEach((points, i) => glassFill(pathFromPoints(points), state.colors[i], i, 1, shimmer));
+  drawGrisaille(geo);
   drawMotif(geo, false);
   drawLeadNetwork(geo, false, true);
 
