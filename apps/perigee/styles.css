@@ -83,3 +83,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--orange);outline-off
 @keyframes planetSway{from{transform:translateY(4px) rotate(-25deg)}to{transform:translateY(-13px) rotate(-22deg)}}
 @media(min-width:800px){.intro::before{left:19%;top:15%;width:455px;height:455px}.intro::after{width:550px;height:190px;left:4%;top:28%}}
 @media(max-height:690px){.intro::before{width:min(66vw,320px);height:min(66vw,320px);left:43%;top:13%}.intro::after{top:20%;height:17vw;border-width:10px;left:22%;width:82vw}}
+
+/* The app has no document scrolling. iOS gesture inertia must never translate
+   the whole viewport after a precision aiming gesture. */
+html,body{overscroll-behavior:none;overflow:hidden;max-width:100%}
+#app{width:100%;touch-action:none;overflow:clip;contain:layout paint}
+.intro,.modal{overflow:hidden;touch-action:none}
+.intro button,.intro a,.modal button,.modal a{touch-action:manipulation}
