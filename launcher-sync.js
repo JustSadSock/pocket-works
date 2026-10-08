@@ -271,6 +271,9 @@ function ensureWhatsNewButton() {
   button.dataset.nativePress = '';
   button.innerHTML = `What's new <span data-whats-new-count hidden></span>`;
   button.addEventListener('click', () => {
+    // Do not replace an unacknowledged digest with a history-only copy:
+    // the history intentionally has no release cursor to acknowledge.
+    if (activeDigest) return;
     const digest = readJson(LAST_DIGEST_KEY);
     if (digest) enqueueDigest(digest, { remember: false, immediate: true });
   });
@@ -279,8 +282,11 @@ function ensureWhatsNewButton() {
 }
 
 function updateWhatsNewButton(digest, { unread = false } = {}) {
-  const button = ensureWhatsNewButton();
+  const button = digest
+    ? ensureWhatsNewButton()
+    : deckActions?.querySelector('[data-whats-new]');
   if (!button) return;
+  if (!digest) { button.remove(); return; }
   const counter = button.querySelector('[data-whats-new-count]');
   const count = unread ? (digest?.changeCount || digest?.notes?.length || 0) : 0;
   counter.textContent = count ? String(count) : '';
