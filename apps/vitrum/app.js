@@ -3,9 +3,10 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 
 const STORAGE_KEY = 'pocket-works:vitrum:state';
-const STAGES = ['design', 'cut', 'assemble', 'solder', 'reveal'];
+const STAGES = ['design', 'cut', 'assemble', 'lead', 'solder', 'reveal'];
 const PIECE_COUNT = 7;
 const JOINT_COUNT = 7;
+const CHIP_COUNT = 5;
 const PALETTE = [
   { name: 'кобальт', base: '#255f9d', dark: '#12375f', light: '#72b8df' },
   { name: 'рубин', base: '#ae3a31', dark: '#681d25', light: '#ef7a58' },
@@ -31,6 +32,8 @@ const cutMeterFill = document.querySelector('#cutMeterFill');
 const cutInstruction = document.querySelector('#cutInstruction');
 const pieceTray = document.querySelector('#pieceTray');
 const leadButton = document.querySelector('#leadButton');
+const leadCount = document.querySelector('#leadCount');
+const leadInstruction = document.querySelector('#leadInstruction');
 const solderCount = document.querySelector('#solderCount');
 const revealButton = document.querySelector('#revealButton');
 const sunSlider = document.querySelector('#sunSlider');
@@ -50,7 +53,16 @@ let toastTimer = 0;
 let dirty = true;
 let lastRevealFrame = 0;
 let cutGesture = { active: false, pointerId: null, lastTickIndex: -1 };
+let chipGesture = { active: false, pointerId: null };
 let audioContext = null;
+let toolCursor = null;
+const effects = [];
+let lastFrameTime = 0;
+let lastHeatSaved = 0;
+let releasedAt = -1;
+let assembleDrag = { active: false };
+let leadGesture = { active: false };
+let solderGesture = { active: false };
 
 function defaultState() {
   return {
@@ -60,10 +72,14 @@ function defaultState() {
     motif: 0,
     cutDone: Array(PIECE_COUNT).fill(false),
     cutProgress: Array(PIECE_COUNT).fill(0),
+    chipProgress: Array(PIECE_COUNT).fill(0),
     cutIndex: 0,
     assembled: Array(PIECE_COUNT).fill(false),
+    leadProgress: Array(PIECE_COUNT).fill(0),
+    leadIndex: 0,
     selectedPiece: null,
     soldered: Array(JOINT_COUNT).fill(false),
+    solderHeat: Array(JOINT_COUNT).fill(0),
     sun: 18,
     sound: true,
     finished: false
@@ -85,10 +101,22 @@ function loadState() {
     next.cutProgress = Array.isArray(raw.cutProgress) && raw.cutProgress.length === PIECE_COUNT
       ? raw.cutProgress.map((value) => Math.max(0, Math.min(1, Number(value) || 0)))
       : next.cutProgress;
+    next.chipProgress = Array.isArray(raw.chipProgress) && raw.chipProgress.length === PIECE_COUNT
+      ? raw.chipProgress.map(value => clampInt(value, 0, CHIP_COUNT, 0)) : next.chipProgress;
+    // Old cut completions remain valid when upgrading an unfinished 1.x workshop.
+    next.cutDone.forEach((done, i) => { if (done) next.chipProgress[i] = CHIP_COUNT; });
     next.cutIndex = clampInt(raw.cutIndex, 0, PIECE_COUNT - 1, 0);
     next.assembled = normalizeFlags(raw.assembled, PIECE_COUNT);
+    next.leadProgress = Array.isArray(raw.leadProgress) && raw.leadProgress.length === PIECE_COUNT
+      ? raw.leadProgress.map(v => Math.max(0, Math.min(1, Number(v) || 0))) : next.leadProgress;
+    next.leadIndex = clampInt(raw.leadIndex, 0, PIECE_COUNT - 1, 0);
+    // Preserve assembled old-format projects that reached soldering before hand-laid lead existed.
+    if (['solder','reveal'].includes(raw.stage) && !Array.isArray(raw.leadProgress)) next.leadProgress.fill(1);
     next.selectedPiece = Number.isInteger(raw.selectedPiece) && raw.selectedPiece >= 0 && raw.selectedPiece < PIECE_COUNT ? raw.selectedPiece : null;
     next.soldered = normalizeFlags(raw.soldered, JOINT_COUNT);
+    next.solderHeat = Array.isArray(raw.solderHeat) && raw.solderHeat.length===JOINT_COUNT
+      ? raw.solderHeat.map(v=>Math.max(0,Math.min(1,Number(v)||0))) : next.solderHeat;
+    next.soldered.forEach((done,i)=> {if(done)next.solderHeat[i]=1;});
     next.sun = Number.isFinite(Number(raw.sun)) ? Math.max(-70, Math.min(70, Number(raw.sun))) : 18;
     next.sound = raw.sound !== false;
     next.finished = raw.finished === true;
@@ -115,11 +143,14 @@ function persist() {
 function publishTestState() {
   window.__AI_TEST_STATE__ = {
     app: 'vitrum',
-    version: '1.0.0',
+    version: '2.0.0',
     stage: state.stage,
     cut: state.cutDone.filter(Boolean).length,
+    chip: state.chipProgress[state.cutIndex],
     assembled: state.assembled.filter(Boolean).length,
+    lead: state.leadProgress.filter(v => v >= .995).length,
     soldered: state.soldered.filter(Boolean).length,
+    heat: state.solderHeat.map(v=>Math.round(v*100)),
     selectedPiece: state.selectedPiece,
     finished: state.finished
   };
@@ -149,7 +180,30 @@ function ensureAudio() {
   return audioContext;
 }
 
+function frictionNoise(kind) {
+  const ac=ensureAudio();if(!ac)return;
+  const length=Math.floor(ac.sampleRate*(kind==='score' ? .065 : kind==='solder' ? .21 : .13));
+  const buffer=ac.createBuffer(1,length,ac.sampleRate);
+  const data=buffer.getChannelData(0);
+  const rnd=seeded(Math.floor(ac.currentTime*1000000)+length);
+  let prior=0;
+  for(let i=0;i<length;i++){
+    const r=(rnd()*2-1);
+    prior=prior*.57+r*.43;
+    const envelope=Math.pow(1-i/length,kind==='solder'? .7:2);
+    data[i]=(kind==='score'?prior:r)*envelope;
+  }
+  const source=ac.createBufferSource();source.buffer=buffer;
+  const filter=ac.createBiquadFilter();
+  filter.type=kind==='solder'?'lowpass':'highpass';
+  filter.frequency.value=kind==='solder'?1150:kind==='score'?1850:1100;
+  const gain=ac.createGain();
+  gain.gain.value=kind==='score' ? .013 : kind==='solder' ? .025 : .035;
+  source.connect(filter).connect(gain).connect(ac.destination);
+  source.start();
+}
 function tone(kind = 'tap') {
+  if(kind==='score'||kind==='glass'||kind==='solder') frictionNoise(kind);
   const ac = ensureAudio();
   if (!ac) return;
   const now = ac.currentTime;
@@ -183,21 +237,23 @@ function setStage(next) {
   docks.design.classList.toggle('is-visible', next === 'design');
   docks.cut.classList.toggle('is-visible', next === 'cut');
   docks.assemble.classList.toggle('is-visible', next === 'assemble');
+  docks.lead.classList.toggle('is-visible', next === 'lead');
   docks.solder.classList.toggle('is-visible', next === 'solder');
   docks.reveal.classList.toggle('is-visible', next === 'reveal');
 
   const index = STAGES.indexOf(next);
   stageMarkers.forEach((marker, i) => {
-    marker.classList.toggle('is-active', i === Math.min(index, 3));
+    marker.classList.toggle('is-active', i === Math.min(index, 4));
     marker.classList.toggle('is-done', i < index);
     marker.disabled = true;
   });
 
   const copy = {
     design: ['Картон · выбор стекла', 'Соберите цветовую схему', 'Выберите лист стекла снизу и коснитесь элемента розы.'],
-    cut: ['Раскрой · железный резец', 'Проведите линию надреза', 'Начните от латунной метки и ведите по светлому контуру без отрыва.'],
-    assemble: ['Сборка · свинцовый профиль', 'Верните стекло в рисунок', 'Выберите кусок в лотке, затем коснитесь его места в розе.'],
-    solder: ['Пайка · узлы сети', 'Закрепите свинцовую сетку', 'Коснитесь каждого светлого узла. Припой должен связать профиль.'],
+    cut: ['Раскрой · резец и клещи', 'Надрезать, затем отколоть', 'Ведите резец по контуру. После надреза откалывайте выступающие края клещами.'],
+    assemble: ['Сборка · стекло на картоне', 'Уложите кусочки вручную', 'Возьмите деталь из нижнего лотка и перетащите на совпадающее место.'],
+    lead: ['Свинец · Н-профиль', 'Обогните стекло свинцом', 'От золотой метки протяните тёмную полосу вдоль края детали.'],
+    solder: ['Пайка · раскалённое железо', 'Пропаяйте каждое соединение', 'Прижмите наконечник к медному узлу и держите до полного расплавления припоя.'],
     reveal: ['Установка · северный трансепт', 'Окно готово', 'Проведите солнце по шкале и посмотрите, как меняется цветной свет.']
   }[next];
   stageEyebrow.textContent = copy[0];
@@ -217,11 +273,17 @@ function updateControls() {
   const current = Math.min(state.cutIndex + 1, PIECE_COUNT);
   cutCount.textContent = `${current} / ${PIECE_COUNT}`;
   const progress = state.cutDone[state.cutIndex] ? 1 : (state.cutProgress[state.cutIndex] || 0);
-  cutMeterFill.style.width = `${Math.round(progress * 100)}%`;
+  const chips = state.chipProgress[state.cutIndex] || 0;
+  const trimMode = progress >= .995;
+  cutMeterFill.style.width = `${Math.round((progress * .7 + chips / CHIP_COUNT * .3) * 100)}%`;
   cutInstruction.textContent = cutFinished === PIECE_COUNT
-    ? 'Все элементы раскроены.'
-    : progress > 0 ? 'Продолжите от латунной метки по направлению линии.' : 'Начните от латунной метки и ведите резец по линии.';
+    ? 'Все кусочки стекла освобождены.'
+    : trimMode ? `Клещи: захватите засечку и потяните наружу · ${chips}/${CHIP_COUNT}`
+      : progress > 0 ? 'Тяните резец вдоль трещины, не перескакивая линию.'
+      : 'Поставьте резец на латунную точку и ведите вдоль силуэта.';
   leadButton.disabled = !state.assembled.every(Boolean);
+  leadCount.textContent = `${state.leadProgress.filter(v => v >= .995).length} / ${PIECE_COUNT}`;
+  leadInstruction.textContent = `Проведите свинец по контуру детали ${Math.min(state.leadIndex + 1, PIECE_COUNT)} из ${PIECE_COUNT}`;
   solderCount.textContent = `${state.soldered.filter(Boolean).length} / ${JOINT_COUNT}`;
   revealButton.disabled = !state.soldered.every(Boolean);
   sunSlider.value = String(state.sun);
@@ -229,29 +291,34 @@ function updateControls() {
 }
 
 function renderPieceTray() {
-  if (state.stage !== 'assemble') return;
-  pieceTray.replaceChildren();
-  state.cutDone.forEach((done, i) => {
-    if (!done) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'piece-chip';
-    button.dataset.piece = String(i);
-    button.dataset.nativePress = '';
-    button.setAttribute('aria-label', i === 6 ? 'Центральный медальон' : `Лепесток ${i + 1}`);
-    button.style.setProperty('--piece-color', PALETTE[state.colors[i]].base);
-    button.classList.toggle('is-selected', state.selectedPiece === i);
-    button.classList.toggle('is-placed', state.assembled[i]);
-    button.disabled = state.assembled[i];
-    button.addEventListener('click', () => {
-      state.selectedPiece = i;
-      tone('tap');
-      haptic(5);
-      updateControls();
-      persist();
-      markDirty();
-    });
-    pieceTray.append(button);
+  if(state.stage!=='assemble')return;
+  // Keep the actual DOM nodes alive while dragging. Rebuilding the tray on
+  // pointerdown discards capture on iOS and makes a held glass piece vanish.
+  if(pieceTray.children.length!==PIECE_COUNT){
+    pieceTray.replaceChildren();
+    for(let i=0;i<PIECE_COUNT;i++){
+      const button=document.createElement('button');
+      button.type='button';button.className='piece-chip';
+      button.dataset.piece=String(i);
+      button.dataset.nativePress='';
+      button.setAttribute('aria-label',i===PIECE_COUNT-1?'Центральный медальон':`Лепесток ${i+1}`);
+      button.addEventListener('pointerdown',event=>{
+        if(event.button!==0 && event.pointerType==='mouse')return;
+        beginAssemblyDrag(event,i,button);
+      });
+      button.addEventListener('click',event=>{
+        if(event.detail!==0)return;
+        state.selectedPiece=i;tone('tap');haptic(5);
+        updateControls();persist();markDirty();
+      });
+      pieceTray.append(button);
+    }
+  }
+  Array.from(pieceTray.children).forEach((button,i)=>{
+    button.style.setProperty('--piece-color',PALETTE[state.colors[i]].base);
+    button.classList.toggle('is-selected',state.selectedPiece===i);
+    button.classList.toggle('is-placed',state.assembled[i]);
+    button.disabled=state.assembled[i];
   });
 }
 
@@ -286,25 +353,27 @@ function polar(cx, cy, r, angle) {
 }
 
 function regionGeometry() {
-  const cx = cssWidth * .5;
-  const cy = cssHeight * (state.stage === 'reveal' ? .38 : .47);
-  const r = Math.min(cssWidth * .37, cssHeight * (state.stage === 'reveal' ? .29 : .36));
-  const pieces = [];
-  for (let i = 0; i < 6; i++) {
-    const angle = -Math.PI / 2 + i * Math.PI / 3;
-    const inner = r * .25;
+  const cx=cssWidth*.5;
+  const cy=cssHeight*(state.stage==='reveal' ? .38 : .47);
+  const r=Math.min(cssWidth*.37,cssHeight*(state.stage==='reveal' ? .29 : .36));
+  const pieces=[],inner=r*.29,outer=r*.92,segment=Math.PI/3;
+  // Genuine fitted rose geometry: six pieces tile a twelve-sided outer ring
+  // around a central hexagon. Every adjacent pair shares the SAME contour.
+  // There are no magical gaps or imaginary pieces when the lead is fitted.
+  const first=-Math.PI/2-segment/2;
+  for(let i=0;i<6;i++){
+    const a=first+i*segment,b=a+segment;
     pieces.push([
-      polar(cx, cy, inner, angle - .39),
-      polar(cx, cy, r * .57, angle - .26),
-      polar(cx, cy, r * .88, angle),
-      polar(cx, cy, r * .57, angle + .26),
-      polar(cx, cy, inner, angle + .39)
+      polar(cx,cy,inner,a),
+      polar(cx,cy,outer,a),
+      polar(cx,cy,outer,a+segment/3),
+      polar(cx,cy,outer,a+2*segment/3),
+      polar(cx,cy,outer,b),
+      polar(cx,cy,inner,b)
     ]);
   }
-  const center = [];
-  for (let i = 0; i < 10; i++) center.push(polar(cx, cy, r * .235, -Math.PI / 2 + i * Math.PI / 5));
-  pieces.push(center);
-  return { cx, cy, r, pieces };
+  pieces.push(Array.from({length:6},(_,i)=>polar(cx,cy,inner,first+i*segment)));
+  return {cx,cy,r,pieces};
 }
 
 function pathFromPoints(points) {
@@ -371,8 +440,32 @@ function drawBackground() {
     ctx.stroke();
   }
   ctx.restore();
+  // A worn oak bench: joined planks, grain that follows the timber, scattered tools.
+  ctx.save();
+  ctx.lineWidth=1;
+  const rnd=seeded(1847);
+  for(let y=0;y<cssHeight;y+=cssHeight/4.5){
+    ctx.strokeStyle='rgba(0,0,0,.20)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cssWidth,y+2);ctx.stroke();
+    ctx.strokeStyle='rgba(231,178,109,.11)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,y+4);ctx.lineTo(cssWidth,y+6);ctx.stroke();
+  }
+  for(let i=0;i<85;i++){
+    const y=rnd()*cssHeight, x=rnd()*cssWidth;
+    ctx.strokeStyle=rnd()>.42?'rgba(235,191,123,.067)':'rgba(0,0,0,.13)';
+    ctx.lineWidth=.3+rnd()*.9;
+    ctx.beginPath();ctx.moveTo(x-25,y);ctx.bezierCurveTo(x+45,y-5+rnd()*10,x+80,y+3-rnd()*7,x+125,y);ctx.stroke();
+  }
+  // Iron cutting-wheel and grozing pliers remain near the left margin.
+  ctx.translate(Math.max(18,cssWidth*.052),cssHeight*.81);
+  ctx.rotate(-.24);
+  ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=9;ctx.shadowOffsetX=4;
+  ctx.strokeStyle='#605746';ctx.lineCap='round';ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(-4,-33);ctx.lineTo(4,43);ctx.moveTo(12,-32);ctx.lineTo(5,41);ctx.stroke();
+  ctx.strokeStyle='#b5a38a';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(-4,-40);ctx.lineTo(2,15);ctx.moveTo(13,-39);ctx.lineTo(6,15);ctx.stroke();
+  ctx.restore();
 }
-
 function drawPaper(geo) {
   const pad = geo.r * 1.15;
   ctx.save();
@@ -450,8 +543,26 @@ function glassFill(path, colorIndex, seedValue, alpha = .94, lightBias = 0) {
     ctx.arc(rnd() * cssWidth, rnd() * cssHeight, r, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = .13;
+  // Mouth-blown medieval glass is not a flat translucent sticker: molten striae,
+  // trapped air and uneven thickness make adjacent colors refract differently.
+  ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=.13;
+  for(let j=0;j<11;j++){
+    const yy=cssHeight*(.08+j*.093);
+    const bend=(rnd()-.5)*47;
+    const ribbon=ctx.createLinearGradient(0,yy-6,0,yy+13);
+    ribbon.addColorStop(0,'rgba(255,247,214,0)');
+    ribbon.addColorStop(.4,'rgba(255,248,223,.65)');
+    ribbon.addColorStop(1,'rgba(255,250,220,0)');
+    ctx.fillStyle=ribbon;
+    ctx.beginPath();ctx.moveTo(-20,yy);
+    ctx.bezierCurveTo(cssWidth*.26,yy-14+bend,cssWidth*.72,yy+16-bend,cssWidth+20,yy-6);
+    ctx.lineTo(cssWidth+20,yy+12);
+    ctx.bezierCurveTo(cssWidth*.72,yy+26-bend,cssWidth*.26,yy+bend, -20,yy+17);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.globalCompositeOperation='source-over';
+  ctx.globalAlpha=.13;
   const glow = ctx.createRadialGradient(cssWidth * .35, cssHeight * .26, 0, cssWidth * .35, cssHeight * .26, Math.max(cssWidth, cssHeight) * .5);
   glow.addColorStop(0, '#fff');
   glow.addColorStop(1, 'transparent');
@@ -522,6 +633,31 @@ function drawMotif(geo, subtle = false) {
   ctx.restore();
 }
 
+function drawGrisaille(geo,visible=()=>true) {
+  for(let i=0;i<6;i++){
+    if(!visible(i))continue;
+    const points=geo.pieces[i],path=pathFromPoints(points);
+    const theta=-Math.PI/2+i*Math.PI/3;
+    const base=polar(geo.cx,geo.cy,geo.r*.28,theta);
+    ctx.save();ctx.clip(path);ctx.translate(base.x,base.y);ctx.rotate(theta+Math.PI/2);
+    ctx.strokeStyle='#1e201b';ctx.lineWidth=Math.max(.85,geo.r*.009);
+    ctx.globalAlpha=.31;
+    const scale=geo.r;
+    // Fired grisaille foliate curls, intentionally restrained beneath the glass.
+    ctx.beginPath();ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-scale*.08,scale*.16,scale*.12,scale*.3,0,scale*.52);ctx.stroke();
+    for(let k=0;k<3;k++){
+      const y=scale*(.12+k*.112),side=k%2?1:-1;
+      ctx.beginPath();ctx.moveTo(0,y);
+      ctx.quadraticCurveTo(side*scale*.16,y-scale*.13,side*scale*.17,y+scale*.06);
+      ctx.quadraticCurveTo(side*scale*.065,y+scale*.07,0,y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(side*scale*.04,y);ctx.lineTo(side*scale*.14,y+.04*scale);ctx.stroke();
+    }
+    ctx.globalAlpha=.34;ctx.fillStyle='#f9dca5';
+    ctx.beginPath();ctx.ellipse(0,scale*.43,scale*.017,scale*.04,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
 function drawRose(stageMode = 'design') {
   const geo = regionGeometry();
   if (stageMode === 'design') {
@@ -534,6 +670,7 @@ function drawRose(stageMode = 'design') {
       ctx.lineWidth = Math.max(2, geo.r * .017);
       ctx.stroke(path);
     });
+    drawGrisaille(geo);
     drawMotif(geo, true);
   } else if (stageMode === 'assemble') {
     drawLightTable(geo);
@@ -553,11 +690,13 @@ function drawRose(stageMode = 'design') {
         ctx.restore();
       }
     });
+    drawGrisaille(geo,i=>state.assembled[i]);
     if (state.assembled[6]) drawMotif(geo, false);
     drawLeadNetwork(geo, true, false);
   } else {
     drawLightTable(geo);
     geo.pieces.forEach((points, i) => glassFill(pathFromPoints(points), state.colors[i], i, .98));
+    drawGrisaille(geo);
     drawMotif(geo, false);
     drawLeadNetwork(geo, false, true);
   }
@@ -582,6 +721,64 @@ function drawLightTable(geo) {
   ctx.restore();
 }
 
+function chipPoint(geometry, step) {
+  const index = Math.min(geometry.samples.length - 2, Math.round(((step + .45) / CHIP_COUNT) * (geometry.samples.length - 1)));
+  return geometry.samples[index];
+}
+function scatterGlass(x, y, paletteIndex, type = 'chip') {
+  const color = PALETTE[paletteIndex];
+  const now = performance.now();
+  const rnd = seeded(Math.floor(now) + Math.round(x * 33 + y * 7));
+  for (let i = 0; i < (type === 'chip' ? 14 : 8); i++) {
+    const angle = rnd() * Math.PI * 2, speed = 22 + rnd() * 80;
+    effects.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 25, start: now,
+      duration: 430 + rnd() * 250, size: 1.5 + rnd() * 5.3, color: i % 4 ? color.light : '#fff3ce', angle });
+  }
+}
+function drawEffects(time) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const fx = effects[i], age = (time - fx.start) / fx.duration;
+    if (age >= 1) { effects.splice(i, 1); continue; }
+    const t = age * fx.duration * .001, fade = (1 - age) * (1 - age);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.translate(fx.x + fx.vx * t, fx.y + fx.vy * t + 120 * t * t);
+    ctx.rotate(fx.angle + age * 2);
+    ctx.fillStyle = fx.color;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = fx.color;
+    ctx.beginPath(); ctx.moveTo(0, -fx.size); ctx.lineTo(fx.size * .8, fx.size * .8); ctx.lineTo(-fx.size * .6, fx.size * .45); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawTool(kind, x, y, time) {
+  if (x == null || y == null) return;
+  ctx.save();
+  ctx.translate(x - 22, y - 30);
+  ctx.rotate(-.73);
+  ctx.shadowColor = 'rgba(0,0,0,.5)';
+  ctx.shadowBlur = 9; ctx.shadowOffsetY = 4;
+  if (kind === 'solder') {
+    ctx.fillStyle = '#442d1b'; ctx.fillRect(-5, -50, 10, 35);
+    ctx.fillStyle = '#b67d43'; ctx.fillRect(-3.7, -18, 7.4, 31);
+    ctx.fillStyle = '#d0b295'; ctx.beginPath(); ctx.moveTo(-3.7, 13); ctx.lineTo(0, 34); ctx.lineTo(3.7, 13); ctx.fill();
+    ctx.shadowColor = 'rgba(255,167,70,.7)'; ctx.shadowBlur = 15;
+    ctx.fillStyle = '#ffca7f'; ctx.beginPath(); ctx.arc(0, 33, 3.8, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'chip') {
+    ctx.strokeStyle = '#bdaca0'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath();ctx.moveTo(-12, -27);ctx.lineTo(-2, 5);ctx.lineTo(-8, 30);ctx.moveTo(12, -27);ctx.lineTo(2, 5);ctx.lineTo(8, 30);ctx.stroke();
+    ctx.strokeStyle = '#423b37'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-13,-26);ctx.lineTo(-2,5);ctx.lineTo(-8,31);ctx.moveTo(13,-26);ctx.lineTo(2,5);ctx.lineTo(8,31);ctx.stroke();
+    ctx.fillStyle = '#d0b08a';ctx.beginPath();ctx.arc(0,5,4,0,Math.PI*2);ctx.fill();
+  } else {
+    const body = ctx.createLinearGradient(-6,0,6,0);
+    body.addColorStop(0, '#453d33'); body.addColorStop(.4, '#d8be92'); body.addColorStop(1, '#514b40');
+    ctx.fillStyle= '#603d20'; ctx.fillRect(-6,-42,12,37);
+    ctx.fillStyle=body;ctx.fillRect(-4,-5,8,30);
+    ctx.fillStyle='#e4dfd1';ctx.beginPath();ctx.moveTo(-3.8,24);ctx.lineTo(0,37);ctx.lineTo(3.8,24);ctx.fill();
+  }
+  ctx.restore();
+}
 function drawCutStage() {
   const g = cutGeometry(state.cutIndex);
   const color = PALETTE[state.colors[state.cutIndex]];
@@ -627,10 +824,12 @@ function drawCutStage() {
   ctx.restore();
 
   const progress = state.cutProgress[state.cutIndex] || 0;
+  const trimMode = progress >= .995;
+  const chips = state.chipProgress[state.cutIndex] || 0;
   const upto = Math.max(1, Math.floor(progress * (g.samples.length - 1)));
   ctx.save();
-  ctx.strokeStyle = '#f5cf82';
-  ctx.lineWidth = 3.2;
+  ctx.strokeStyle = trimMode ? '#fff8d0' : 'rgba(250,239,202,.83)';
+  ctx.lineWidth = trimMode ? 1.5 : 2.2;
   ctx.lineCap = 'round';
   ctx.shadowColor = 'rgba(255,209,117,.48)';
   ctx.shadowBlur = 8;
@@ -640,14 +839,42 @@ function drawCutStage() {
   ctx.stroke();
   ctx.restore();
 
-  const marker = g.samples[Math.min(upto, g.samples.length - 1)];
+  // Freshly bitten edges scatter chips and expose the rough core of the glass.
+  if (trimMode) {
+    for (let i = 0; i < CHIP_COUNT; i++) {
+      const p = chipPoint(g, i);
+      const done = i < chips;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (done) {
+        ctx.strokeStyle = 'rgba(245,244,221,.92)'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(-6,-3);ctx.lineTo(0,4);ctx.lineTo(5,-4);ctx.stroke();
+        ctx.fillStyle = 'rgba(28,17,14,.62)';
+        ctx.beginPath(); ctx.moveTo(-5,-4);ctx.lineTo(0,-10);ctx.lineTo(5,-3);ctx.lineTo(3,2);ctx.lineTo(-3,2);ctx.fill();
+      } else {
+        ctx.strokeStyle = i === chips ? '#fff1af' : 'rgba(253,239,191,.37)';
+        ctx.lineWidth = i === chips ? 3 : 1.5;
+        ctx.beginPath(); ctx.arc(0,0,i === chips ? 11:6,0,Math.PI*2);ctx.stroke();
+        if (i === chips) {
+          ctx.shadowColor='#f2cf83';ctx.shadowBlur=14;
+          ctx.fillStyle='#fff1b4'; ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fill();
+          const outward=Math.atan2(p.y-g.cy,p.x-g.cx);
+          ctx.rotate(outward);
+          ctx.lineWidth=1.6;ctx.strokeStyle='rgba(255,241,196,.95)';
+          ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(25,0);ctx.moveTo(20,-4);ctx.lineTo(25,0);ctx.lineTo(20,4);ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+  const marker = trimMode ? chipPoint(g, Math.min(chips, CHIP_COUNT - 1)) : g.samples[Math.min(upto, g.samples.length - 1)];
   ctx.save();
   ctx.fillStyle = '#e5b56b';
   ctx.strokeStyle = '#5a3518';
   ctx.lineWidth = 2;
   ctx.shadowColor = 'rgba(255,195,93,.65)';
   ctx.shadowBlur = 10;
-  ctx.beginPath(); ctx.arc(marker.x, marker.y, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (!trimMode) { ctx.beginPath(); ctx.arc(marker.x, marker.y, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   ctx.restore();
 
   ctx.fillStyle = 'rgba(27,18,13,.56)';
@@ -655,32 +882,196 @@ function drawCutStage() {
   ctx.fillStyle = 'rgba(246,224,186,.76)';
   ctx.font = '10px Georgia';
   ctx.textAlign = 'center';
-  ctx.fillText(`лист ${color.name} · элемент ${state.cutIndex + 1}`, cssWidth / 2, sy + sheetH - 11);
+  ctx.fillText(trimMode ? `КЛЕЩИ · ${chips}/${CHIP_COUNT} СКОЛОВ` : `РЕЗЕЦ · ${color.name} · деталь ${state.cutIndex + 1}`, cssWidth / 2, sy + sheetH - 11);
+  if(state.cutDone[state.cutIndex] && releasedAt>0){
+    // The scored glass finally separates from the sheet, catches the lamp,
+    // and rises above the ragged surrounding waste.
+    const t=Math.min(1,(performance.now()-releasedAt)/420);
+    const lift=5+12*(1-Math.pow(1-t,3));
+    ctx.save();ctx.translate(0,-lift);
+    ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=16+t*10;ctx.shadowOffsetY=7+t*9;
+    ctx.fillStyle=color.dark;ctx.fill(path);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    glassFill(path,state.colors[state.cutIndex],state.cutIndex,.99);
+    ctx.strokeStyle='rgba(255,249,224,.95)';ctx.lineWidth=2.6;ctx.stroke(path);
+    ctx.restore();
+  }
 }
 
 function jointPositions(geo) {
   const joints = [];
-  for (let i = 0; i < 6; i++) joints.push(polar(geo.cx, geo.cy, geo.r * .26, -Math.PI / 2 + i * Math.PI / 3));
-  joints.push({ x: geo.cx, y: geo.cy });
+  for (let i = 0; i < 6; i++) joints.push(polar(geo.cx, geo.cy, geo.r * .29, -Math.PI / 2 - Math.PI / 6 + i * Math.PI / 3));
+  joints.push(polar(geo.cx, geo.cy, geo.r * .92, -Math.PI / 2));
   return joints;
 }
 
+function drawLeadProfile(samples, progress, width) {
+  const count = Math.floor(progress * (samples.length - 1));
+  if (count < 1) return;
+  ctx.save();ctx.lineCap = 'round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(samples[0].x,samples[0].y);
+  for (let i=1;i<=count;i++) ctx.lineTo(samples[i].x,samples[i].y);
+  ctx.strokeStyle='rgba(0,0,0,.65)';ctx.lineWidth=width+3;ctx.shadowColor='#030202';ctx.shadowBlur=5;ctx.shadowOffsetY=3;ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.strokeStyle='#424341';ctx.lineWidth=width;ctx.stroke();
+  ctx.strokeStyle='rgba(212,209,188,.52)';ctx.lineWidth=Math.max(1,width*.17);ctx.stroke();
+  ctx.restore();
+}
+function leadPath(geometry,index) { return polySamples(geometry.pieces[index], index===PIECE_COUNT-1?7:10); }
+function drawLeadStage() {
+  const geo=regionGeometry();
+  drawLightTable(geo);
+  geo.pieces.forEach((points,i)=> {
+    glassFill(pathFromPoints(points),state.colors[i],i,.96);
+    const samples=leadPath(geo,i);
+    ctx.save();
+    ctx.strokeStyle = i===state.leadIndex ? 'rgba(244,209,147,.57)' : 'rgba(56,50,42,.38)';
+    ctx.lineWidth = i===state.leadIndex ? 2 : 1;
+    ctx.setLineDash(i===state.leadIndex ? [3,6]:[2,7]);
+    ctx.stroke(pathFromPoints(points));ctx.restore();
+    drawLeadProfile(samples,state.leadProgress[i],Math.max(6,geo.r*.055));
+  });
+  drawGrisaille(geo);
+  const n=Math.min(state.leadIndex,PIECE_COUNT-1);
+  if (state.leadProgress[n] < .995) {
+    const samples=leadPath(geo,n);
+    const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+    const p=samples[index];
+    ctx.save();ctx.shadowColor='#ffd890';ctx.shadowBlur=13;ctx.fillStyle='#f7d595';ctx.strokeStyle='#8d632d';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
+  }
+  if (toolCursor) drawTool('score',toolCursor.x,toolCursor.y,performance.now());
+}
+function drawAssemblyGhost(time) {
+  if (!assembleDrag.active) return;
+  const geo=regionGeometry(), i=assembleDrag.index;
+  const points=geo.pieces[i], sum=points.reduce((a,p)=>({x:a.x+p.x/points.length,y:a.y+p.y/points.length}),{x:0,y:0});
+  const target={x:sum.x,y:sum.y};
+  const near=Math.hypot(assembleDrag.x-target.x,assembleDrag.y-target.y)<Math.max(55,geo.r*.39);
+  const dx=(near ? target.x*.28+assembleDrag.x*.72 : assembleDrag.x)-sum.x;
+  const dy=(near ? target.y*.28+assembleDrag.y*.72 : assembleDrag.y)-sum.y-22;
+  const translated=points.map(p=>({x:p.x+dx,y:p.y+dy}));
+  const path=pathFromPoints(translated);
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=19;ctx.shadowOffsetY=10;
+  ctx.fillStyle=PALETTE[state.colors[i]].dark;ctx.fill(path);ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  glassFill(path,state.colors[i],i,.99);
+  ctx.strokeStyle='rgba(250,239,206,.78)';ctx.lineWidth=2;ctx.stroke(path);
+  if(near) {
+    ctx.strokeStyle='rgba(255,219,136,.8)';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.stroke(pathFromPoints(points));
+  }
+  ctx.restore();
+}
+function beginAssemblyDrag(event,index,element=null) {
+  if(state.stage!=='assemble'||state.assembled[index])return;
+  if (assembleDrag.active) return;
+  event.preventDefault();
+  state.selectedPiece=index;
+  const rect=canvas.getBoundingClientRect();
+  assembleDrag={active:true,pointerId:event.pointerId,index,fromX:event.clientX,fromY:event.clientY,
+    x:event.clientX-rect.left,y:event.clientY-rect.top,moved:false,element};
+  try{(element||canvas).setPointerCapture?.(event.pointerId);}catch{}
+  tone('glass');haptic(7);updateControls();persist();markDirty();
+}
+function moveAssemblyDrag(event) {
+  if(!assembleDrag.active || event.pointerId!==assembleDrag.pointerId)return;
+  const rect=canvas.getBoundingClientRect();
+  assembleDrag.x=event.clientX-rect.left;assembleDrag.y=event.clientY-rect.top;
+  if(Math.hypot(event.clientX-assembleDrag.fromX,event.clientY-assembleDrag.fromY)>18)assembleDrag.moved=true;
+  if(event.cancelable)event.preventDefault();
+  markDirty();
+}
+function endAssemblyDrag(event) {
+  if(!assembleDrag.active || event.pointerId!==assembleDrag.pointerId)return;
+  const drag=assembleDrag;
+  moveAssemblyDrag(event);
+  assembleDrag={active:false};
+  const geo=regionGeometry(), points=geo.pieces[drag.index];
+  const center=points.reduce((a,p)=>({x:a.x+p.x/points.length,y:a.y+p.y/points.length}),{x:0,y:0});
+  const distance=Math.hypot(drag.x-center.x,drag.y-22-center.y);
+  if(drag.moved && distance<Math.max(55,geo.r*.39)) {
+    state.assembled[drag.index]=true;
+    state.selectedPiece=null;
+    tone('glass');haptic([7,18,10]);
+    scatterGlass(center.x,center.y,state.colors[drag.index],'settle');
+    if(state.assembled.every(Boolean))showToast('Стекло на картоне. Проложите свинцовый профиль.');
+  } else if(drag.moved) {
+    tone('error');haptic(7);
+    showToast('Подведите стекло к его нарисованному контуру.');
+  } else {
+    showToast('Не отпускайте деталь: проведите её с лотка к схеме.');
+  }
+  updateControls();persist();markDirty();
+}
+function beginLead(event,point) {
+  const geo=regionGeometry(), n=state.leadIndex, samples=leadPath(geo,n);
+  const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+  if(Math.hypot(point.x-samples[index].x,point.y-samples[index].y)>35){
+    tone('error');showToast('Начните от латунной метки на кромке.');return;
+  }
+  leadGesture={active:true,pointerId:event.pointerId};
+  canvas.setPointerCapture?.(event.pointerId);
+  tone('score');haptic(6);
+}
+function moveLead(event,point) {
+  if(!leadGesture.active||leadGesture.pointerId!==event.pointerId)return;
+  const geo=regionGeometry(), n=state.leadIndex, samples=leadPath(geo,n);
+  const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+  const nearest=nearestSample(point,samples);
+  if(nearest.distance>Math.max(22,cssWidth*.065)||nearest.index<index-2||nearest.index>index+12)return;
+  const next=Math.max(index,nearest.index);
+  if(next===index)return;
+  state.leadProgress[n]=Math.min(1,next/(samples.length-1));
+  if(next%7===0)tone('score');
+  markDirty();updateControls();persist();
+  if(next>=samples.length-3) {
+    state.leadProgress[n]=1;
+    leadGesture.active=false;
+    tone('glass');haptic([8,25,9]);
+    const nextPiece=state.leadProgress.findIndex(v=>v<.995);
+    if(nextPiece===-1) {
+      showToast('Свинец уложен. Пора спаять пересечения.');
+      setStage('solder');
+    } else {
+      state.leadIndex=nextPiece;
+      showToast('Профиль лёг в паз.');
+      updateControls();persist();markDirty();
+    }
+  }
+}
+function endLead(event) {
+  if(leadGesture.pointerId!==event.pointerId)return;
+  try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  leadGesture={active:false};
+}
 function drawSolderStage() {
   const geo = drawRose('solder');
   const joints = jointPositions(geo);
   joints.forEach((p, i) => {
     ctx.save();
-    const done = state.soldered[i];
-    ctx.fillStyle = done ? '#b9b5aa' : '#f0d394';
-    ctx.strokeStyle = done ? '#595750' : '#725228';
+    const done = state.soldered[i], heat = state.solderHeat[i];
+    // Raw copper starts dark; molten tin grows from the iron's contact point.
+    ctx.fillStyle = done ? '#9b9c94' : '#805637';
+    ctx.strokeStyle = done ? '#4d4c49' : '#422b20';
     ctx.lineWidth = 2;
-    ctx.shadowColor = done ? 'rgba(220,220,210,.22)' : 'rgba(255,208,115,.78)';
-    ctx.shadowBlur = done ? 5 : 12;
-    ctx.beginPath(); ctx.arc(p.x, p.y, done ? 5.4 : 7.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    if (done) {
-      ctx.globalAlpha = .45;
-      ctx.fillStyle = '#f3efe5';
-      ctx.beginPath(); ctx.arc(p.x - 1.5, p.y - 1.7, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = heat > 0 && !done ? 'rgba(255,140,65,.9)' : 'rgba(0,0,0,.3)';
+    ctx.shadowBlur = 6 + heat * 13;
+    const radius=done?6.4:4.2+heat*3.5;
+    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();ctx.stroke();
+    if(heat>0) {
+      ctx.globalAlpha = .35 + heat*.58;
+      ctx.fillStyle = done ? '#f5f0df':'#ffd497';
+      ctx.beginPath();ctx.ellipse(p.x-1.4,p.y-1.9,1.2+heat*2.8,1+heat*1.2,-.3,0,Math.PI*2);ctx.fill();
+    }
+    if(solderGesture.active && solderGesture.index===i) {
+      const pulse= .5 + Math.sin(performance.now()*.019)*.2;
+      ctx.globalAlpha=.6+pulse*.25;
+      ctx.strokeStyle='#ffd48b';ctx.lineWidth=2.3;ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(p.x,p.y,11+heat*7,-Math.PI/2,-Math.PI/2+Math.PI*2*heat);ctx.stroke();
+      for(let j=0;j<3;j++){
+        const t=performance.now()*.001+j*1.9;
+        ctx.fillStyle='rgba(234,230,211,.32)';
+        ctx.beginPath();ctx.ellipse(p.x+Math.sin(t*2+j)*6,p.y-12-(t*17+j*6)%30,3+j,5+j,0,0,Math.PI*2);ctx.fill();
+      }
     }
     ctx.restore();
   });
@@ -749,6 +1140,7 @@ function drawReveal(time) {
   // Window glass with a slow, tiny highlight drift.
   const shimmer = Math.sin(time * .00045) * .04 + sun * .08;
   geo.pieces.forEach((points, i) => glassFill(pathFromPoints(points), state.colors[i], i, 1, shimmer));
+  drawGrisaille(geo);
   drawMotif(geo, false);
   drawLeadNetwork(geo, false, true);
 
@@ -780,18 +1172,27 @@ function render(time = performance.now()) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
   if (state.stage === 'reveal') {
     drawReveal(time);
+    drawEffects(time);
     return;
   }
   drawBackground();
   if (state.stage === 'design') drawRose('design');
   else if (state.stage === 'cut') drawCutStage();
-  else if (state.stage === 'assemble') drawRose('assemble');
+  else if (state.stage === 'assemble') { drawRose('assemble'); drawAssemblyGhost(time); }
+  else if (state.stage === 'lead') drawLeadStage();
   else if (state.stage === 'solder') drawSolderStage();
+  drawEffects(time);
+  if (toolCursor && (state.stage === 'cut' || state.stage === 'solder')) {
+    drawTool(state.stage === 'solder' ? 'solder' : (state.cutProgress[state.cutIndex] >= .995 ? 'chip' : 'score'), toolCursor.x, toolCursor.y, time);
+  }
 }
 
 function animationLoop(time) {
+  const dt=lastFrameTime ? Math.min(64,time-lastFrameTime) : 16;
+  lastFrameTime=time;
   if (document.visibilityState === 'visible') {
-    if (dirty || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
+    updateSolderHold(dt,time);
+    if (dirty || effects.length || solderGesture.active || toolCursor || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
       render(time);
       dirty = false;
       if (state.stage === 'reveal') lastRevealFrame = time;
@@ -826,53 +1227,69 @@ function handleDesignTap(point) {
   markDirty();
 }
 
-function handleAssembleTap(point) {
-  if (state.selectedPiece === null) {
-    showToast('Сначала выберите вырезанный элемент в лотке.');
-    tone('error');
-    return;
-  }
-  const geo = regionGeometry();
-  const target = geo.pieces.findIndex((poly) => pointInPolygon(point, poly));
-  if (target < 0) return;
-  if (target !== state.selectedPiece) {
-    showToast('Этот кусок сюда не ложится.');
-    tone('error');
-    haptic([8, 28, 8]);
-    return;
-  }
-  state.assembled[target] = true;
-  state.selectedPiece = null;
-  tone('glass');
-  haptic(12);
-  updateControls();
-  persist();
-  markDirty();
-  if (state.assembled.every(Boolean)) showToast('Роза собрана. Теперь нужен свинец.');
+// Keyboard users select a part in the tray; pointer users drag from the tray or across the glass.
+function beginAssemblyOnCanvas(event) {
+  if(state.selectedPiece===null){showToast('Сначала возьмите кусочек стекла в лотке.');return;}
+  beginAssemblyDrag(event,state.selectedPiece);
 }
 
-function handleSolderTap(point) {
-  const geo = regionGeometry();
-  const joints = jointPositions(geo);
-  let best = -1, dist = Infinity;
-  joints.forEach((p, i) => {
-    if (state.soldered[i]) return;
-    const d = Math.hypot(point.x - p.x, point.y - p.y);
-    if (d < dist) { dist = d; best = i; }
+function beginSolder(event,point) {
+  const joints=jointPositions(regionGeometry());
+  let index=-1,distance=Infinity;
+  joints.forEach((p,i)=>{
+    if(state.soldered[i])return;
+    const d=Math.hypot(point.x-p.x,point.y-p.y);
+    if(d<distance){distance=d;index=i;}
   });
-  if (best >= 0 && dist < Math.max(27, geo.r * .15)) {
-    state.soldered[best] = true;
-    tone('solder');
-    haptic(14);
-    updateControls();
-    persist();
-    markDirty();
-    if (state.soldered.every(Boolean)) showToast('Сеть закреплена. Можно поднимать окно.');
+  if(index<0||distance>Math.max(32,regionGeometry().r*.19)){
+    showToast('Поставьте раскалённое железо на неприпаянный узел.');
+    tone('error');return;
   }
+  solderGesture={active:true,pointerId:event.pointerId,index,point};
+  try{canvas.setPointerCapture?.(event.pointerId);}catch{}
+  tone('solder');haptic(8);markDirty();
+}
+function updateSolderHold(dt,time) {
+  if(!solderGesture.active)return;
+  const index=solderGesture.index;
+  const joint=jointPositions(regionGeometry())[index];
+  if(Math.hypot(solderGesture.point.x-joint.x,solderGesture.point.y-joint.y)>Math.max(43,regionGeometry().r*.27))return;
+  const old=state.solderHeat[index];
+  state.solderHeat[index]=Math.min(1,old+Math.min(60,dt)/720);
+  if(time-lastHeatSaved>110){persist();lastHeatSaved=time;}
+  if(state.solderHeat[index]>=1){
+    state.soldered[index]=true;
+    solderGesture={active:false};
+    tone('glass');haptic([12,20,12]);
+    scatterGlass(joint.x,joint.y,state.colors[index%PIECE_COUNT],'settle');
+    if(state.soldered.every(Boolean))showToast('Последний шов запаян. Окно можно поднять к свету.');
+    else showToast('Олово схватилось. Следующий узел.');
+    updateControls();persist();
+  }
+  markDirty();
+}
+function endSolder(event) {
+  if(solderGesture.pointerId!==event.pointerId)return;
+  try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  solderGesture={active:false};
+  persist();markDirty();
 }
 
 function beginCut(event, point) {
   if (state.cutDone[state.cutIndex]) return;
+  if (state.cutProgress[state.cutIndex] >= .995) {
+    const geometry = cutGeometry(state.cutIndex);
+    const step = state.chipProgress[state.cutIndex];
+    const target = chipPoint(geometry, step);
+    if (Math.hypot(point.x - target.x,point.y - target.y) > 34) {
+      showToast('Подведите клещи к светлой засечке на краю стекла.');
+      tone('error'); return;
+    }
+    chipGesture={active:true,pointerId:event.pointerId,start:point,target,step};
+    try{canvas.setPointerCapture?.(event.pointerId);}catch{}
+    tone('tap');haptic(6);markDirty();
+    return;
+  }
   const g = cutGeometry(state.cutIndex);
   const progressIndex = Math.floor((state.cutProgress[state.cutIndex] || 0) * (g.samples.length - 1));
   const marker = g.samples[Math.min(progressIndex, g.samples.length - 1)];
@@ -888,6 +1305,22 @@ function beginCut(event, point) {
 }
 
 function moveCut(event, point) {
+  if(chipGesture.active && chipGesture.pointerId===event.pointerId){
+    const geo=cutGeometry(state.cutIndex),center={x:geo.cx,y:geo.cy};
+    const dx=point.x-chipGesture.target.x,dy=point.y-chipGesture.target.y;
+    const rr=Math.max(1,Math.hypot(chipGesture.target.x-center.x,chipGesture.target.y-center.y));
+    const outward=(dx*(chipGesture.target.x-center.x)+dy*(chipGesture.target.y-center.y))/rr;
+    if(outward>15 && Math.hypot(dx,dy)>18){
+      const target=chipGesture.target,step=chipGesture.step;
+      chipGesture={active:false,pointerId:null};
+      scatterGlass(target.x,target.y,state.colors[state.cutIndex]);
+      state.chipProgress[state.cutIndex]=Math.min(CHIP_COUNT,step+1);
+      tone('glass');haptic([7,24,9]);
+      if(state.chipProgress[state.cutIndex]===CHIP_COUNT)finishCurrentCut();
+      else{updateControls();persist();markDirty();}
+    }
+    return;
+  }
   if (!cutGesture.active || cutGesture.pointerId !== event.pointerId) return;
   const g = cutGeometry(state.cutIndex);
   const currentProgress = state.cutProgress[state.cutIndex] || 0;
@@ -906,19 +1339,33 @@ function moveCut(event, point) {
   updateControls();
   persist();
   markDirty();
-  if (nextIndex >= g.samples.length - 3) finishCurrentCut();
+  if (nextIndex >= g.samples.length - 3) {
+    state.cutProgress[state.cutIndex] = 1;
+    cutGesture.active = false;
+    tone('glass'); haptic(14);
+    showToast('Контур надрезан. Теперь отколите края клещами.');
+    updateControls(); persist(); markDirty();
+  }
 }
 
 function endCut(event) {
+  if (chipGesture.active && chipGesture.pointerId===event.pointerId){
+    chipGesture={active:false,pointerId:null};
+    try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+    showToast('Потяните клещи от детали наружу, чтобы отколоть край.');
+    markDirty();return;
+  }
   if (cutGesture.pointerId !== event.pointerId) return;
   try { canvas.releasePointerCapture?.(event.pointerId); } catch {}
   cutGesture = { active: false, pointerId: null, lastTickIndex: -1 };
 }
 
 function finishCurrentCut() {
-  if (state.cutDone[state.cutIndex]) return;
+  if (state.cutDone[state.cutIndex] || state.chipProgress[state.cutIndex] < CHIP_COUNT) return;
   state.cutDone[state.cutIndex] = true;
+  releasedAt=performance.now();
   state.cutProgress[state.cutIndex] = 1;
+  scatterGlass(cssWidth*.5, cssHeight*.5, state.colors[state.cutIndex]);
   tone('glass');
   haptic([8, 24, 12]);
   const finishedIndex = state.cutIndex;
@@ -927,6 +1374,7 @@ function finishCurrentCut() {
   markDirty();
   window.setTimeout(() => {
     if (state.stage !== 'cut' || state.cutIndex !== finishedIndex) return;
+    releasedAt=-1;
     const next = state.cutDone.findIndex((done) => !done);
     if (next === -1) {
       showToast('Все семь элементов готовы.');
@@ -944,19 +1392,30 @@ function finishCurrentCut() {
 canvas.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   const point = canvasPoint(event);
+  toolCursor = point;
+  markDirty();
   ensureAudio();
   if (state.stage === 'design') handleDesignTap(point);
   else if (state.stage === 'cut') beginCut(event, point);
-  else if (state.stage === 'assemble') handleAssembleTap(point);
-  else if (state.stage === 'solder') handleSolderTap(point);
+  else if (state.stage === 'assemble') beginAssemblyOnCanvas(event);
+  else if (state.stage === 'lead') beginLead(event, point);
+  else if (state.stage === 'solder') beginSolder(event,point);
 });
 canvas.addEventListener('pointermove', (event) => {
-  if (state.stage !== 'cut') return;
-  event.preventDefault();
-  moveCut(event, canvasPoint(event));
+  const point = canvasPoint(event);
+  toolCursor = point;
+  if (state.stage === 'cut') { event.preventDefault(); moveCut(event, point); }
+  else if (state.stage === 'lead') { event.preventDefault(); moveLead(event, point); }
+  else if (state.stage === 'assemble') moveAssemblyDrag(event);
+  else if (state.stage === 'solder' && solderGesture.active && event.pointerId===solderGesture.pointerId) solderGesture.point=point;
+  markDirty();
 });
-canvas.addEventListener('pointerup', endCut);
-canvas.addEventListener('pointercancel', endCut);
+canvas.addEventListener('pointerup', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); endSolder(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointercancel', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); endSolder(event); toolCursor = null; markDirty(); });
+window.addEventListener('pointermove', event => { if(assembleDrag.active) moveAssemblyDrag(event); });
+window.addEventListener('pointerup', event => { if(assembleDrag.active) endAssemblyDrag(event); });
+window.addEventListener('pointercancel', event => { if(assembleDrag.active) endAssemblyDrag(event); });
+canvas.addEventListener('pointerleave', () => { if (!cutGesture.active) { toolCursor = null; markDirty(); } });
 canvas.addEventListener('lostpointercapture', (event) => endCut(event));
 
 swatches.forEach((button, index) => button.addEventListener('click', () => {
@@ -994,7 +1453,7 @@ leadButton.addEventListener('click', () => {
   if (!state.assembled.every(Boolean)) return;
   tone('glass');
   haptic(10);
-  setStage('solder');
+  setStage('lead');
 });
 
 revealButton.addEventListener('click', () => {
@@ -1039,7 +1498,12 @@ function normalizeStageFromProgress() {
   // Stored state may come from an interrupted transition; never trap the user.
   if (state.stage === 'cut' && state.cutDone.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'assemble' && !state.cutDone.every(Boolean)) state.stage = 'cut';
+  if (state.stage === 'lead' && !state.assembled.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'solder' && !state.assembled.every(Boolean)) state.stage = 'assemble';
+  if (state.stage === 'solder' && !state.leadProgress.every(v=>v>=.995)) state.stage='lead';
+  if (state.stage === 'lead' && state.leadProgress.every(v=>v>=.995)) state.stage='solder';
+  if (state.stage === 'lead' && state.leadProgress[state.leadIndex]>=.995) state.leadIndex=state.leadProgress.findIndex(v=>v<.995);
+  if (state.stage === 'reveal' && !state.leadProgress.every(v=>v>=.995)) state.stage='lead';
   if (state.stage === 'reveal' && !state.soldered.every(Boolean)) state.stage = 'solder';
 }
 
@@ -1047,4 +1511,8 @@ normalizeStageFromProgress();
 updateControls();
 setStage(state.stage);
 publishTestState();
+// iOS WebKit may present the first DOM frame before its first animation callback.
+// Paint the ready, sized canvas synchronously so the workshop never opens empty.
+render(performance.now());
+dirty = false;
 requestAnimationFrame(animationLoop);
