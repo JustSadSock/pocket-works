@@ -143,7 +143,7 @@ function persist() {
 function publishTestState() {
   window.__AI_TEST_STATE__ = {
     app: 'vitrum',
-    version: '1.0.0',
+    version: '2.0.0',
     stage: state.stage,
     cut: state.cutDone.filter(Boolean).length,
     chip: state.chipProgress[state.cutIndex],
