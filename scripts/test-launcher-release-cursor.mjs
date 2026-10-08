@@ -224,6 +224,6 @@ broken.clickHistory();
 assert.equal(broken.getActive()?.kind, 'registry', 'failed acknowledgement can be retried');
 broken.closeDigest(broken.getSurface());
 await broken.runTimers();
-assert.equal(broken.getCount(), '', 'retry clears the unread badge after storage recovers');
+assert.ok(!broken.getCount(), 'retry clears the unread badge after storage recovers');
 
 console.log('Launcher acknowledgement persistence regression checks passed.');
