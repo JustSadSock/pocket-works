@@ -67,6 +67,7 @@ const launchName = launchStage?.querySelector('.launch-stage__object strong');
 let registry = [];
 let offlineReady = new Set();
 let offlineStates = new Map();
+let offlineAuditGeneration = 0;
 let panelOpen = false;
 let lastFocusedElement = null;
 let lastSyncAt = null;
@@ -616,16 +617,23 @@ async function copyAppLink(slug) {
 }
 
 async function readOfflineReadiness() {
+  const generation = ++offlineAuditGeneration;
+  const apps = [...registry];
   try {
-    offlineStates = await inspectOfflineReadiness(registry);
+    const report = await inspectOfflineReadiness(apps);
+    if (generation !== offlineAuditGeneration) return;
+    offlineStates = report;
     offlineReady = new Set(
-      [...offlineStates].filter(([, result]) => result.status === 'ready').map(([slug]) => slug)
+      [...report].filter(([, result]) => result.status === 'ready').map(([slug]) => slug)
     );
   } catch (error) {
+    if (generation !== offlineAuditGeneration) return;
     console.warn('Pocket Works could not inspect offline application resources', error);
     offlineStates = new Map();
     offlineReady = new Set();
   }
+  // Avoid blocking first paint on CacheStorage enumeration and inspection.
+  renderShelf();
 }
 
 async function loadRegistry({ manual = false } = {}) {
@@ -664,8 +672,8 @@ async function loadRegistry({ manual = false } = {}) {
     persistShelfState();
   }
 
-  await readOfflineReadiness();
   renderShelf();
+  void readOfflineReadiness();
 }
 
 async function applyExternalRegistrySnapshot(apps) {
@@ -682,7 +690,7 @@ async function applyExternalRegistrySnapshot(apps) {
     persistShelfState();
   }
 
-  await readOfflineReadiness();
+  void readOfflineReadiness();
   syncStatus.textContent = `Synced ${formatRecent(lastSyncAt)}`;
   renderShelf({ transition: true });
   return true;
@@ -792,8 +800,7 @@ document.addEventListener('visibilitychange', async () => {
   syncDetailPreviewMotion();
 
   if (!document.hidden) {
-    await readOfflineReadiness();
-    renderShelf();
+    void readOfflineReadiness();
   }
 });
 
