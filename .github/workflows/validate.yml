@@ -43,7 +43,7 @@ jobs:
           node-version: 22
 
       - name: Install build dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Build published Enhanced apps
         run: npm run build:enhanced
@@ -108,7 +108,7 @@ jobs:
           node-version: 22
 
       - name: Install build dependencies
-        run: npm install --silent --no-audit --no-fund
+        run: npm install --legacy-peer-deps --silent --no-audit --no-fund
 
       - name: Generate, build and test Enhanced presets
         run: npm run test:forge:enhanced
@@ -135,7 +135,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Install browser engines
         run: npx playwright install --with-deps chromium webkit
@@ -172,7 +172,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Assemble Lighthouse site
         run: npm run build:quality-site
