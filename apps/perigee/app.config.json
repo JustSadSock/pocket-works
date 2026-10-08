@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "perigee",
+  "name": "ПЕРИГЕЙ",
+  "shortName": "Перигей",
+  "description": "Шесть тактических орбитальных экспедиций: направляйте зонд с точным предпросмотром траектории, используйте притяжение планет и стыкуйтесь со станцией.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-08",
+  "releaseDateTime": "2026-10-08T23:00:00+03:00",
+  "changelog": [
+    "Шесть связанных гравитационных миссий с точным предсказанием полёта и столкновениями.",
+    "Процедурные планеты, кольца, трассировка курса, частицы и анимация стыковки.",
+    "Тактильное управление, процедурное аудио, пауза, повтор миссий и локальное сохранение.",
+    "Автономная установка PWA и адаптация для вертикальных экранов Pocket Works."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#e9b18d",
+  "backgroundColor": "#07151b",
+  "themeColor": "#07151b",
+  "orientation": "portrait",
+  "cacheName": "perigee-v1.0.0-p2",
+  "storageNamespace": "pocket-works:perigee",
+  "tags": [
+    "space",
+    "physics",
+    "strategy",
+    "puzzle",
+    "canvas",
+    "mobile",
+    "offline",
+    "game"
+  ],
+  "order": 228
+}

@@ -1,0 +1,25 @@
+{
+  "id": "/apps/perigee/",
+  "name": "ПЕРИГЕЙ",
+  "short_name": "Перигей",
+  "description": "Тактические орбитальные манёвры: используй гравитацию и рассчитай курс.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#07151b",
+  "theme_color": "#07151b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
