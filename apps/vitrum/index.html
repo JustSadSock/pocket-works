@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#20150e">
+  <meta name="theme-color" content="#1b120d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VITRUM">
@@ -23,7 +23,7 @@
       <a class="launcher-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
       <div class="brand-block">
         <span class="brand">VITRUM</span>
-        <span class="project-label">Северная роза · мастерская 1286</span>
+        <span class="project-label">Мастерская у собора · 1286</span>
       </div>
       <button id="soundToggle" class="text-control" type="button" data-native-press aria-pressed="true">Звук</button>
     </header>
@@ -35,7 +35,9 @@
       <i></i>
       <button class="stage-marker" data-stage-target="assemble" type="button" data-native-press disabled><span>3</span><b>Сборка</b></button>
       <i></i>
-      <button class="stage-marker" data-stage-target="solder" type="button" data-native-press disabled><span>4</span><b>Пайка</b></button>
+      <button class="stage-marker" data-stage-target="lead" type="button" data-native-press disabled><span>4</span><b>Свинец</b></button>
+      <i></i>
+      <button class="stage-marker" data-stage-target="solder" type="button" data-native-press disabled><span>5</span><b>Пайка</b></button>
     </section>
 
     <section class="workspace" aria-labelledby="stageTitle">
@@ -71,21 +73,30 @@
         <div class="cut-readout">
           <span>Элемент <b id="cutCount">1 / 7</b></span>
           <div class="cut-meter"><i id="cutMeterFill"></i></div>
-          <small id="cutInstruction">Начните от латунной метки и ведите резец по линии.</small>
+          <small id="cutInstruction">Обведите контур, затем отколите края клещами.</small>
         </div>
       </div>
 
       <div id="assembleDock" class="tool-dock" data-ui>
+        <p class="tray-label">ВЫРЕЗАННЫЕ ДЕТАЛИ · ПЕРЕТАЩИТЕ ПАЛЬЦЕМ НА ЧЕРТЁЖ</p>
         <div id="pieceTray" class="piece-tray" role="group" aria-label="Вырезанные элементы"></div>
         <div class="dock-actions single">
-          <button id="leadButton" class="primary-action" type="button" data-native-press disabled>Наложить свинец</button>
+          <button id="leadButton" class="primary-action" type="button" data-native-press disabled>Начать прокладку свинца</button>
+        </div>
+      </div>
+
+      <div id="leadDock" class="tool-dock" data-ui>
+        <div class="lead-readout">
+          <div class="craft-counter"><span>Уложено профилей</span><b id="leadCount">0 / 7</b></div>
+          <small id="leadInstruction">Начните от светлой метки и ведите металл по кромке.</small>
+          <span class="lead-reel" aria-hidden="true"></span>
         </div>
       </div>
 
       <div id="solderDock" class="tool-dock" data-ui>
         <div class="solder-readout">
           <span>Узлы припоя <b id="solderCount">0 / 7</b></span>
-          <small>Коснитесь светлых узлов на свинцовой сети.</small>
+          <small>Удерживайте палец на каждом узле: олово расплавится постепенно.</small>
         </div>
         <div class="dock-actions single">
           <button id="revealButton" class="primary-action" type="button" data-native-press disabled>Поднять окно к свету</button>
@@ -114,7 +125,7 @@
     </dialog>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="VITRUM" data-app-version="1.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="VITRUM" data-app-version="2.0.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
