@@ -1,3 +1,5 @@
+import { loadRegistry as requestRegistry } from './shared/launcher-registry.js';
+
 const REGISTRY_CACHE_KEY='pocket-works:registry:v1';
 const VERIFIED_RELEASES_KEY='pocket-works:verified-releases:v1';
 const UPDATE_CONCURRENCY=3;
@@ -52,17 +54,9 @@ function locallyCurrent(app,verified){
   return Boolean(saved&&saved.version===app.version&&saved.fingerprint===expectedFingerprint(app));
 }
 
-function writeRegistrySnapshot(apps){
-  try{localStorage.setItem(REGISTRY_CACHE_KEY,JSON.stringify({savedAt:Date.now(),apps}));}
-  catch{}
-}
-
 async function fetchLiveRegistry(){
-  const response=await fetch(`./apps.json?fingerprints=${Date.now()}`,{cache:'no-store',headers:{'cache-control':'no-cache'}});
-  if(!response.ok)throw new Error(`Registry request failed: ${response.status}`);
-  const apps=await response.json();
-  if(!Array.isArray(apps))throw new TypeError('apps.json must contain an array');
-  return apps.filter(app=>app&&app.status!=='archived'&&typeof app.slug==='string'&&typeof app.path==='string'&&typeof app.version==='string');
+  const snapshot=await requestRegistry({force:true});
+  return snapshot.apps.filter(app=>app&&app.status!=='archived'&&typeof app.slug==='string'&&typeof app.path==='string'&&typeof app.version==='string');
 }
 
 function workerInfoAttempt(worker,timeout){
@@ -248,7 +242,6 @@ async function runBulkUpdate(){
     if(!navigator.onLine)throw new Error('No internet connection');
 
     const apps=await fetchLiveRegistry();
-    writeRegistrySnapshot(apps);
     window.dispatchEvent(new CustomEvent('pocketworks:registry-snapshot',{
       detail:{apps,source:'bulk-update'}
     }));
