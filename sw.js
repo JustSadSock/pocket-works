@@ -1,17 +1,17 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.2';
-const APP_VERSION = '0.10.2';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.3';
+const APP_VERSION = '0.10.3';
 const RELEASE_DATE = '2026-10-09';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
-  'Library remembers acknowledged app releases across visits, even when localStorage is full.',
-  'Unread update badges now disappear after acknowledgement and only return for genuinely new releases.',
-  'First-time release tracking starts from the current library instead of replaying the old backlog.'
+  'Release acknowledgements now merge per-app changes and sync between open tabs.',
+  'Library data, previews and update checks now share one deduplicated registry request.',
+  'Launcher checks run automatically for pull requests and main branch changes.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/pocket-works-icon.svg', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/pocket-works-icon.svg', './shared/launcher-registry.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];
