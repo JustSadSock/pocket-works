@@ -38,7 +38,7 @@ export function launchVector(from, to) {
   const dx = to.x - from.x, dy = to.y - from.y;
   const distance = Math.hypot(dx, dy);
   if (distance < 24) return null;
-  const speed = Math.min(970, Math.max(200, distance * 2.75));
+  const speed = Math.min(970, Math.max(200, distance * 1.85));
   return { vx: dx / distance * speed, vy: dy / distance * speed, speed };
 }
 
