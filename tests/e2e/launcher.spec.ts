@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 const registry = JSON.parse(
-  readFileSync(new URL('../../apps.json', import.meta.url), 'utf8')
+  readFileSync(new URL('../../dist-site/apps.json', import.meta.url), 'utf8')
 ) as Array<{ slug: string; version: string; updatedAt: string }>;
 const screenLabVersion = registry.find((app) => app.slug === 'screen-lab')?.version;
 const echoesVersion = registry.find((app) => app.slug === 'echoes')?.version;
