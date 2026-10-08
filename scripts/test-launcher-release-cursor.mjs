@@ -191,12 +191,16 @@ const secondOriginal = { slug: 'other', name: 'Other', version: '1.0', fingerpri
 const twoApps = [later[0], secondOriginal];
 const partial = boot(twoApps);
 await partial.checkRegistry({ force: true });
+assert.equal(partial.getActive()?.changeCount, 1, 'a newly added second app is unread');
+partial.closeDigest(partial.getSurface());
+await partial.runTimers();
+const priorOtherToken = partial.getCursor()['other'];
 partial.setApps([{ ...later[0], version: '1.3', fingerprint: 'build-4' }, secondOriginal]);
 await partial.checkRegistry({ force: true });
 assert.equal(partial.getActive()?.changeCount, 1, 'only the changed app is unread');
 partial.closeDigest(partial.getSurface());
 await partial.runTimers();
 assert.ok(partial.getCursor()['test-app'], 'newly acknowledged app is preserved');
-assert.equal(partial.getCursor()['other'], undefined, 'a partial digest does not invent acknowledgements for unseen apps');
+assert.equal(partial.getCursor()['other'], priorOtherToken, 'a partial digest preserves another app acknowledgement');
 
 console.log('Launcher acknowledgement persistence regression checks passed.');
