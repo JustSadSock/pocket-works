@@ -187,6 +187,9 @@ function selfIntersect(raw){
 function commitContour(points){
  if(points.length<8||pathLength(points)<80){toast('Слишком короткий надрез. Нарисуй фигуру покрупнее.');sound('error');return;}
  const raw=simplify(points,3);
+ // The user's return to the starting point is a closure, not an extra
+ // zero-length edge. Duplicate end vertices otherwise block lead tracing.
+ if(raw.length>3&&Math.hypot(raw[0].x-raw.at(-1).x,raw[0].y-raw.at(-1).y)<9)raw.pop();
  // Resample large splines so the outline is stable on every phone.
  const dec=raw.length>125?raw.filter((_,i)=>i%Math.ceil(raw.length/120)===0):raw;
  if(dec.length<3){toast('Контур не замкнулся — попробуй ещё раз.');return}
@@ -297,7 +300,7 @@ function moveLead(e,p){
  let near={index,distance:Infinity};
  for(let k=Math.max(0,index-2);k<=Math.min(samples.length-1,index+26);k++){
   const q=samples[k],distance=Math.hypot(p.x-q.x,p.y-q.y);
-  if(distance<near.distance)near={index:k,distance};
+  if(distance<=near.distance+.05)near={index:k,distance};
  }
  if(near.distance>Math.max(25,Math.min(vw*.085,35)))return;
  const next=Math.max(index,near.index);
