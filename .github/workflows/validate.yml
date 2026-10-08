@@ -35,6 +35,10 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Assemble and validate published runtime assets
         run: npm run deploy:site
+      - name: Install WebKit for iPhone launcher smoke
+        run: npx playwright install --with-deps webkit
+      - name: Verify iPhone launcher search, persistence and updates
+        run: npx playwright test tests/e2e/launcher.spec.ts tests/e2e/launcher-sync.spec.ts --project=webkit-mobile-portrait
 
   change-scope:
     if: github.event_name == 'pull_request'
