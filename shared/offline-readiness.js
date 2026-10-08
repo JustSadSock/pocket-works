@@ -15,7 +15,8 @@ export function criticalEntrypointUrls(html, entryUrl) {
     if (!source || /^(?:data:|blob:|#)/i.test(source)) continue;
     try {
       const url = new URL(source, entryUrl);
-      if (url.origin === new URL(entryUrl).origin) required.push(canonical(url.href, entryUrl));
+      // Third-party bootstrap files are required too; offline cannot be claimed if they are unavailable.
+      required.push(canonical(url.href, entryUrl));
     } catch { /* ignore invalid reference */ }
   }
   // Godot WASM split bootstrap embeds part URLs as quoted strings.
