@@ -33,7 +33,6 @@ const sw = {
   async getRegistrations() { return [registration]; },
   register() { throw new Error('Bulk Sync must not install new Service Workers'); }
 };
-globalThis.navigator = { serviceWorker: sw };
 const targets = await installedTargets([app, { slug: 'beta', path: './apps/beta/' }], sw);
 assert.equal(targets.length, 1, 'only previously installed applications are targeted');
 
