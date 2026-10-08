@@ -5,6 +5,7 @@ import {
 
 import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
 import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
+import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 
 installMobileRuntime();
 
@@ -65,6 +66,7 @@ const launchName = launchStage?.querySelector('.launch-stage__object strong');
 
 let registry = [];
 let offlineReady = new Set();
+let offlineStates = new Map();
 let panelOpen = false;
 let lastFocusedElement = null;
 let lastSyncAt = null;
@@ -428,7 +430,9 @@ function patchAppEntry(entry, app, index) {
   setText(p.name, app.name);
   setText(p.status, app.status === 'experimental' ? 'lab' : app.status);
   setText(p.description, app.description);
-  const cacheLabel = offlineReady.has(app.slug) ? 'offline ready' : 'not cached';
+  const cacheState = offlineStates.get(app.slug)?.status;
+  const cacheLabel = cacheState === 'ready' ? 'offline essentials cached' :
+    cacheState === 'partial' ? 'partial cache' : 'not cached';
   const baseMeta = [
     `v${app.version}`, app.updatedAt, cacheLabel,
     ...(app.tags || []).slice(0, 2)
@@ -469,7 +473,7 @@ function renderDetail(app) {
   const signature = app ? JSON.stringify([
     app.slug, app.version, app.description, app.updatedAt, app.status, app.preset,
     app.accent, app.tags, app.changelog, isFavorite(app.slug),
-    offlineReady.has(app.slug), recentTimestamp(app.slug), panelOpen
+    offlineStates.get(app.slug), recentTimestamp(app.slug), panelOpen
   ]) : 'empty';
   if (lastDetailSignature === signature) return;
   lastDetailSignature = signature;
@@ -490,7 +494,10 @@ function renderDetail(app) {
   detailDescription.textContent = app.description;
   detailVersion.textContent = `v${app.version}`;
   detailUpdated.textContent = formatDate(app.updatedAt);
-  detailOffline.textContent = offlineReady.has(app.slug) ? 'ready' : 'open once';
+  const offlineState = offlineStates.get(app.slug);
+  detailOffline.textContent = offlineState?.status === 'ready' ? 'essentials cached' :
+    offlineState?.status === 'partial' ? 'incomplete cache' : 'open online first';
+  detailOffline.title = offlineState?.reason || 'Offline availability has not been verified';
   detailOpened.textContent = formatRecent(recentTimestamp(app.slug));
   detailOpen.href = app.path;
   detailOpen.dataset.slug = app.slug;
@@ -609,20 +616,14 @@ async function copyAppLink(slug) {
 }
 
 async function readOfflineReadiness() {
-  if (!('caches' in window)) {
-    offlineReady = new Set();
-    return;
-  }
-
   try {
-    const cacheNames = await caches.keys();
+    offlineStates = await inspectOfflineReadiness(registry);
     offlineReady = new Set(
-      registry
-        .filter((app) => cacheNames.some((cacheName) => cacheName.startsWith(`${app.slug}-`)))
-        .map((app) => app.slug)
+      [...offlineStates].filter(([, result]) => result.status === 'ready').map(([slug]) => slug)
     );
   } catch (error) {
-    console.warn('Pocket Works could not inspect application caches', error);
+    console.warn('Pocket Works could not inspect offline application resources', error);
+    offlineStates = new Map();
     offlineReady = new Set();
   }
 }
