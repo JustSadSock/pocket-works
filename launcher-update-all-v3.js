@@ -1,6 +1,5 @@
 import { loadRegistry as requestRegistry } from './shared/launcher-registry.js';
 
-const REGISTRY_CACHE_KEY='pocket-works:registry:v1';
 const VERIFIED_RELEASES_KEY='pocket-works:verified-releases:v1';
 const UPDATE_CONCURRENCY=3;
 const APP_TIMEOUT=30_000;
