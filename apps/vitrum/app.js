@@ -3,7 +3,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 
 const STORAGE_KEY = 'pocket-works:vitrum:state';
-const STAGES = ['design', 'cut', 'assemble', 'solder', 'reveal'];
+const STAGES = ['design', 'cut', 'assemble', 'lead', 'solder', 'reveal'];
 const PIECE_COUNT = 7;
 const JOINT_COUNT = 7;
 const CHIP_COUNT = 5;
@@ -32,6 +32,8 @@ const cutMeterFill = document.querySelector('#cutMeterFill');
 const cutInstruction = document.querySelector('#cutInstruction');
 const pieceTray = document.querySelector('#pieceTray');
 const leadButton = document.querySelector('#leadButton');
+const leadCount = document.querySelector('#leadCount');
+const leadInstruction = document.querySelector('#leadInstruction');
 const solderCount = document.querySelector('#solderCount');
 const revealButton = document.querySelector('#revealButton');
 const sunSlider = document.querySelector('#sunSlider');
@@ -55,6 +57,9 @@ let audioContext = null;
 let toolCursor = null;
 const effects = [];
 let lastFrameTime = 0;
+let assembleDrag = { active: false };
+let leadGesture = { active: false };
+let solderGesture = { active: false };
 
 function defaultState() {
   return {
@@ -67,6 +72,8 @@ function defaultState() {
     chipProgress: Array(PIECE_COUNT).fill(0),
     cutIndex: 0,
     assembled: Array(PIECE_COUNT).fill(false),
+    leadProgress: Array(PIECE_COUNT).fill(0),
+    leadIndex: 0,
     selectedPiece: null,
     soldered: Array(JOINT_COUNT).fill(false),
     sun: 18,
@@ -96,6 +103,11 @@ function loadState() {
     next.cutDone.forEach((done, i) => { if (done) next.chipProgress[i] = CHIP_COUNT; });
     next.cutIndex = clampInt(raw.cutIndex, 0, PIECE_COUNT - 1, 0);
     next.assembled = normalizeFlags(raw.assembled, PIECE_COUNT);
+    next.leadProgress = Array.isArray(raw.leadProgress) && raw.leadProgress.length === PIECE_COUNT
+      ? raw.leadProgress.map(v => Math.max(0, Math.min(1, Number(v) || 0))) : next.leadProgress;
+    next.leadIndex = clampInt(raw.leadIndex, 0, PIECE_COUNT - 1, 0);
+    // Preserve assembled old-format projects that reached soldering before hand-laid lead existed.
+    if (['solder','reveal'].includes(raw.stage) && !Array.isArray(raw.leadProgress)) next.leadProgress.fill(1);
     next.selectedPiece = Number.isInteger(raw.selectedPiece) && raw.selectedPiece >= 0 && raw.selectedPiece < PIECE_COUNT ? raw.selectedPiece : null;
     next.soldered = normalizeFlags(raw.soldered, JOINT_COUNT);
     next.sun = Number.isFinite(Number(raw.sun)) ? Math.max(-70, Math.min(70, Number(raw.sun))) : 18;
@@ -129,6 +141,7 @@ function publishTestState() {
     cut: state.cutDone.filter(Boolean).length,
     chip: state.chipProgress[state.cutIndex],
     assembled: state.assembled.filter(Boolean).length,
+    lead: state.leadProgress.filter(v => v >= .995).length,
     soldered: state.soldered.filter(Boolean).length,
     selectedPiece: state.selectedPiece,
     finished: state.finished
@@ -193,12 +206,13 @@ function setStage(next) {
   docks.design.classList.toggle('is-visible', next === 'design');
   docks.cut.classList.toggle('is-visible', next === 'cut');
   docks.assemble.classList.toggle('is-visible', next === 'assemble');
+  docks.lead.classList.toggle('is-visible', next === 'lead');
   docks.solder.classList.toggle('is-visible', next === 'solder');
   docks.reveal.classList.toggle('is-visible', next === 'reveal');
 
   const index = STAGES.indexOf(next);
   stageMarkers.forEach((marker, i) => {
-    marker.classList.toggle('is-active', i === Math.min(index, 3));
+    marker.classList.toggle('is-active', i === Math.min(index, 4));
     marker.classList.toggle('is-done', i < index);
     marker.disabled = true;
   });
@@ -206,8 +220,9 @@ function setStage(next) {
   const copy = {
     design: ['Картон · выбор стекла', 'Соберите цветовую схему', 'Выберите лист стекла снизу и коснитесь элемента розы.'],
     cut: ['Раскрой · резец и клещи', 'Надрезать, затем отколоть', 'Ведите резец по контуру. После надреза откалывайте выступающие края клещами.'],
-    assemble: ['Сборка · свинцовый профиль', 'Верните стекло в рисунок', 'Выберите кусок в лотке, затем коснитесь его места в розе.'],
-    solder: ['Пайка · узлы сети', 'Закрепите свинцовую сетку', 'Коснитесь каждого светлого узла. Припой должен связать профиль.'],
+    assemble: ['Сборка · стекло на картоне', 'Уложите кусочки вручную', 'Возьмите деталь из нижнего лотка и перетащите на совпадающее место.'],
+    lead: ['Свинец · Н-профиль', 'Обогните стекло свинцом', 'От золотой метки протяните тёмную полосу вдоль края детали.'],
+    solder: ['Пайка · раскалённое железо', 'Пропаяйте каждое соединение', 'Прижмите наконечник к медному узлу и держите до полного расплавления припоя.'],
     reveal: ['Установка · северный трансепт', 'Окно готово', 'Проведите солнце по шкале и посмотрите, как меняется цветной свет.']
   }[next];
   stageEyebrow.textContent = copy[0];
@@ -236,6 +251,8 @@ function updateControls() {
       : progress > 0 ? 'Тяните резец вдоль трещины, не перескакивая линию.'
       : 'Поставьте резец на латунную точку и ведите вдоль силуэта.';
   leadButton.disabled = !state.assembled.every(Boolean);
+  leadCount.textContent = `${state.leadProgress.filter(v => v >= .995).length} / ${PIECE_COUNT}`;
+  leadInstruction.textContent = `Проведите свинец по контуру детали ${Math.min(state.leadIndex + 1, PIECE_COUNT)} из ${PIECE_COUNT}`;
   solderCount.textContent = `${state.soldered.filter(Boolean).length} / ${JOINT_COUNT}`;
   revealButton.disabled = !state.soldered.every(Boolean);
   sunSlider.value = String(state.sun);
@@ -257,13 +274,14 @@ function renderPieceTray() {
     button.classList.toggle('is-selected', state.selectedPiece === i);
     button.classList.toggle('is-placed', state.assembled[i]);
     button.disabled = state.assembled[i];
-    button.addEventListener('click', () => {
-      state.selectedPiece = i;
-      tone('tap');
-      haptic(5);
-      updateControls();
-      persist();
-      markDirty();
+    button.addEventListener('pointerdown', event => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      beginAssemblyDrag(event, i, button);
+    });
+    button.addEventListener('click', event => {
+      if (event.detail !== 0) return; // keyboard accessibility
+      state.selectedPiece = i; tone('tap'); haptic(5);
+      updateControls(); persist(); markDirty();
     });
     pieceTray.append(button);
   });
@@ -763,6 +781,143 @@ function jointPositions(geo) {
   return joints;
 }
 
+function drawLeadProfile(samples, progress, width) {
+  const count = Math.floor(progress * (samples.length - 1));
+  if (count < 1) return;
+  ctx.save();ctx.lineCap = 'round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(samples[0].x,samples[0].y);
+  for (let i=1;i<=count;i++) ctx.lineTo(samples[i].x,samples[i].y);
+  ctx.strokeStyle='rgba(0,0,0,.65)';ctx.lineWidth=width+3;ctx.shadowColor='#030202';ctx.shadowBlur=5;ctx.shadowOffsetY=3;ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.strokeStyle='#424341';ctx.lineWidth=width;ctx.stroke();
+  ctx.strokeStyle='rgba(212,209,188,.52)';ctx.lineWidth=Math.max(1,width*.17);ctx.stroke();
+  ctx.restore();
+}
+function leadPath(geometry,index) { return polySamples(geometry.pieces[index], index===PIECE_COUNT-1?7:10); }
+function drawLeadStage() {
+  const geo=regionGeometry();
+  drawLightTable(geo);
+  geo.pieces.forEach((points,i)=> {
+    glassFill(pathFromPoints(points),state.colors[i],i,.96);
+    const samples=leadPath(geo,i);
+    ctx.save();
+    ctx.strokeStyle = i===state.leadIndex ? 'rgba(244,209,147,.57)' : 'rgba(56,50,42,.38)';
+    ctx.lineWidth = i===state.leadIndex ? 2 : 1;
+    ctx.setLineDash(i===state.leadIndex ? [3,6]:[2,7]);
+    ctx.stroke(pathFromPoints(points));ctx.restore();
+    drawLeadProfile(samples,state.leadProgress[i],Math.max(6,geo.r*.055));
+  });
+  const n=Math.min(state.leadIndex,PIECE_COUNT-1);
+  if (state.leadProgress[n] < .995) {
+    const samples=leadPath(geo,n);
+    const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+    const p=samples[index];
+    ctx.save();ctx.shadowColor='#ffd890';ctx.shadowBlur=13;ctx.fillStyle='#f7d595';ctx.strokeStyle='#8d632d';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
+  }
+  if (toolCursor) drawTool('score',toolCursor.x,toolCursor.y,performance.now());
+}
+function drawAssemblyGhost(time) {
+  if (!assembleDrag.active) return;
+  const geo=regionGeometry(), i=assembleDrag.index;
+  const points=geo.pieces[i], sum=points.reduce((a,p)=>({x:a.x+p.x/points.length,y:a.y+p.y/points.length}),{x:0,y:0});
+  const target={x:sum.x,y:sum.y};
+  const near=Math.hypot(assembleDrag.x-target.x,assembleDrag.y-target.y)<Math.max(55,geo.r*.39);
+  const dx=(near ? target.x*.28+assembleDrag.x*.72 : assembleDrag.x)-sum.x;
+  const dy=(near ? target.y*.28+assembleDrag.y*.72 : assembleDrag.y)-sum.y-22;
+  const translated=points.map(p=>({x:p.x+dx,y:p.y+dy}));
+  const path=pathFromPoints(translated);
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=19;ctx.shadowOffsetY=10;
+  ctx.fillStyle=PALETTE[state.colors[i]].dark;ctx.fill(path);ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  glassFill(path,state.colors[i],i,.99);
+  ctx.strokeStyle='rgba(250,239,206,.78)';ctx.lineWidth=2;ctx.stroke(path);
+  if(near) {
+    ctx.strokeStyle='rgba(255,219,136,.8)';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.stroke(pathFromPoints(points));
+  }
+  ctx.restore();
+}
+function beginAssemblyDrag(event,index,element=null) {
+  if(state.stage!=='assemble'||state.assembled[index])return;
+  if (assembleDrag.active) return;
+  event.preventDefault();
+  state.selectedPiece=index;
+  const rect=canvas.getBoundingClientRect();
+  assembleDrag={active:true,pointerId:event.pointerId,index,fromX:event.clientX,fromY:event.clientY,
+    x:event.clientX-rect.left,y:event.clientY-rect.top,moved:false,element};
+  try{(element||canvas).setPointerCapture?.(event.pointerId);}catch{}
+  tone('glass');haptic(7);updateControls();persist();markDirty();
+}
+function moveAssemblyDrag(event) {
+  if(!assembleDrag.active || event.pointerId!==assembleDrag.pointerId)return;
+  const rect=canvas.getBoundingClientRect();
+  assembleDrag.x=event.clientX-rect.left;assembleDrag.y=event.clientY-rect.top;
+  if(Math.hypot(event.clientX-assembleDrag.fromX,event.clientY-assembleDrag.fromY)>18)assembleDrag.moved=true;
+  if(event.cancelable)event.preventDefault();
+  markDirty();
+}
+function endAssemblyDrag(event) {
+  if(!assembleDrag.active || event.pointerId!==assembleDrag.pointerId)return;
+  const drag=assembleDrag;
+  moveAssemblyDrag(event);
+  assembleDrag={active:false};
+  const geo=regionGeometry(), points=geo.pieces[drag.index];
+  const center=points.reduce((a,p)=>({x:a.x+p.x/points.length,y:a.y+p.y/points.length}),{x:0,y:0});
+  const distance=Math.hypot(drag.x-center.x,drag.y-22-center.y);
+  if(drag.moved && distance<Math.max(55,geo.r*.39)) {
+    state.assembled[drag.index]=true;
+    state.selectedPiece=null;
+    tone('glass');haptic([7,18,10]);
+    scatterGlass(center.x,center.y,state.colors[drag.index],'settle');
+    if(state.assembled.every(Boolean))showToast('Стекло на картоне. Проложите свинцовый профиль.');
+  } else if(drag.moved) {
+    tone('error');haptic(7);
+    showToast('Подведите стекло к его нарисованному контуру.');
+  } else {
+    showToast('Не отпускайте деталь: проведите её с лотка к схеме.');
+  }
+  updateControls();persist();markDirty();
+}
+function beginLead(event,point) {
+  const geo=regionGeometry(), n=state.leadIndex, samples=leadPath(geo,n);
+  const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+  if(Math.hypot(point.x-samples[index].x,point.y-samples[index].y)>35){
+    tone('error');showToast('Начните от латунной метки на кромке.');return;
+  }
+  leadGesture={active:true,pointerId:event.pointerId};
+  canvas.setPointerCapture?.(event.pointerId);
+  tone('score');haptic(6);
+}
+function moveLead(event,point) {
+  if(!leadGesture.active||leadGesture.pointerId!==event.pointerId)return;
+  const geo=regionGeometry(), n=state.leadIndex, samples=leadPath(geo,n);
+  const index=Math.floor(state.leadProgress[n]*(samples.length-1));
+  const nearest=nearestSample(point,samples);
+  if(nearest.distance>Math.max(22,cssWidth*.065)||nearest.index<index-2||nearest.index>index+12)return;
+  const next=Math.max(index,nearest.index);
+  if(next===index)return;
+  state.leadProgress[n]=Math.min(1,next/(samples.length-1));
+  if(next%7===0)tone('score');
+  markDirty();updateControls();persist();
+  if(next>=samples.length-3) {
+    state.leadProgress[n]=1;
+    leadGesture.active=false;
+    tone('glass');haptic([8,25,9]);
+    const nextPiece=state.leadProgress.findIndex(v=>v<.995);
+    if(nextPiece===-1) {
+      showToast('Свинец уложен. Пора спаять пересечения.');
+      setStage('solder');
+    } else {
+      state.leadIndex=nextPiece;
+      showToast('Профиль лёг в паз.');
+      updateControls();persist();markDirty();
+    }
+  }
+}
+function endLead(event) {
+  if(leadGesture.pointerId!==event.pointerId)return;
+  try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  leadGesture={active:false};
+}
 function drawSolderStage() {
   const geo = drawRose('solder');
   const joints = jointPositions(geo);
@@ -884,7 +1039,8 @@ function render(time = performance.now()) {
   drawBackground();
   if (state.stage === 'design') drawRose('design');
   else if (state.stage === 'cut') drawCutStage();
-  else if (state.stage === 'assemble') drawRose('assemble');
+  else if (state.stage === 'assemble') { drawRose('assemble'); drawAssemblyGhost(time); }
+  else if (state.stage === 'lead') drawLeadStage();
   else if (state.stage === 'solder') drawSolderStage();
   drawEffects(time);
   if (toolCursor && (state.stage === 'cut' || state.stage === 'solder')) {
@@ -929,29 +1085,10 @@ function handleDesignTap(point) {
   markDirty();
 }
 
-function handleAssembleTap(point) {
-  if (state.selectedPiece === null) {
-    showToast('Сначала выберите вырезанный элемент в лотке.');
-    tone('error');
-    return;
-  }
-  const geo = regionGeometry();
-  const target = geo.pieces.findIndex((poly) => pointInPolygon(point, poly));
-  if (target < 0) return;
-  if (target !== state.selectedPiece) {
-    showToast('Этот кусок сюда не ложится.');
-    tone('error');
-    haptic([8, 28, 8]);
-    return;
-  }
-  state.assembled[target] = true;
-  state.selectedPiece = null;
-  tone('glass');
-  haptic(12);
-  updateControls();
-  persist();
-  markDirty();
-  if (state.assembled.every(Boolean)) showToast('Роза собрана. Теперь нужен свинец.');
+// Keyboard users select a part in the tray; pointer users drag from the tray or across the glass.
+function beginAssemblyOnCanvas(event) {
+  if(state.selectedPiece===null){showToast('Сначала возьмите кусочек стекла в лотке.');return;}
+  beginAssemblyDrag(event,state.selectedPiece);
 }
 
 function handleSolderTap(point) {
@@ -1074,17 +1211,23 @@ canvas.addEventListener('pointerdown', (event) => {
   ensureAudio();
   if (state.stage === 'design') handleDesignTap(point);
   else if (state.stage === 'cut') beginCut(event, point);
-  else if (state.stage === 'assemble') handleAssembleTap(point);
+  else if (state.stage === 'assemble') beginAssemblyOnCanvas(event);
+  else if (state.stage === 'lead') beginLead(event, point);
   else if (state.stage === 'solder') handleSolderTap(point);
 });
 canvas.addEventListener('pointermove', (event) => {
   const point = canvasPoint(event);
   toolCursor = point;
   if (state.stage === 'cut') { event.preventDefault(); moveCut(event, point); }
+  else if (state.stage === 'lead') { event.preventDefault(); moveLead(event, point); }
+  else if (state.stage === 'assemble') moveAssemblyDrag(event);
   markDirty();
 });
-canvas.addEventListener('pointerup', (event) => { endCut(event); toolCursor = null; markDirty(); });
-canvas.addEventListener('pointercancel', (event) => { endCut(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointerup', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointercancel', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); toolCursor = null; markDirty(); });
+window.addEventListener('pointermove', event => { if(assembleDrag.active) moveAssemblyDrag(event); });
+window.addEventListener('pointerup', event => { if(assembleDrag.active) endAssemblyDrag(event); });
+window.addEventListener('pointercancel', event => { if(assembleDrag.active) endAssemblyDrag(event); });
 canvas.addEventListener('pointerleave', () => { if (!cutGesture.active) { toolCursor = null; markDirty(); } });
 canvas.addEventListener('lostpointercapture', (event) => endCut(event));
 
@@ -1123,7 +1266,7 @@ leadButton.addEventListener('click', () => {
   if (!state.assembled.every(Boolean)) return;
   tone('glass');
   haptic(10);
-  setStage('solder');
+  setStage('lead');
 });
 
 revealButton.addEventListener('click', () => {
@@ -1168,7 +1311,9 @@ function normalizeStageFromProgress() {
   // Stored state may come from an interrupted transition; never trap the user.
   if (state.stage === 'cut' && state.cutDone.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'assemble' && !state.cutDone.every(Boolean)) state.stage = 'cut';
+  if (state.stage === 'lead' && !state.assembled.every(Boolean)) state.stage = 'assemble';
   if (state.stage === 'solder' && !state.assembled.every(Boolean)) state.stage = 'assemble';
+  if (state.stage === 'solder' && !state.leadProgress.every(v=>v>=.995)) state.stage='lead';
   if (state.stage === 'reveal' && !state.soldered.every(Boolean)) state.stage = 'solder';
 }
 
