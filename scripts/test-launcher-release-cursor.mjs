@@ -195,6 +195,8 @@ assert.equal(partial.getActive()?.changeCount, 1, 'a newly added second app is u
 partial.closeDigest(partial.getSurface());
 await partial.runTimers();
 const priorOtherToken = partial.getCursor()['other'];
+// closeDigest starts a background check; let its microtasks settle before changing fixtures.
+await new Promise(resolve => setImmediate(resolve));
 partial.setApps([{ ...later[0], version: '1.3', fingerprint: 'build-4' }, secondOriginal]);
 await partial.checkRegistry({ force: true });
 assert.equal(partial.getActive()?.changeCount, 1, 'only the changed app is unread');
