@@ -58,6 +58,7 @@ let toolCursor = null;
 const effects = [];
 let lastFrameTime = 0;
 let lastHeatSaved = 0;
+let releasedAt = -1;
 let assembleDrag = { active: false };
 let leadGesture = { active: false };
 let solderGesture = { active: false };
@@ -877,6 +878,19 @@ function drawCutStage() {
   ctx.font = '10px Georgia';
   ctx.textAlign = 'center';
   ctx.fillText(trimMode ? `КЛЕЩИ · ${chips}/${CHIP_COUNT} СКОЛОВ` : `РЕЗЕЦ · ${color.name} · деталь ${state.cutIndex + 1}`, cssWidth / 2, sy + sheetH - 11);
+  if(state.cutDone[state.cutIndex] && releasedAt>0){
+    // The scored glass finally separates from the sheet, catches the lamp,
+    // and rises above the ragged surrounding waste.
+    const t=Math.min(1,(performance.now()-releasedAt)/420);
+    const lift=5+12*(1-Math.pow(1-t,3));
+    ctx.save();ctx.translate(0,-lift);
+    ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=16+t*10;ctx.shadowOffsetY=7+t*9;
+    ctx.fillStyle=color.dark;ctx.fill(path);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    glassFill(path,state.colors[state.cutIndex],state.cutIndex,.99);
+    ctx.strokeStyle='rgba(255,249,224,.95)';ctx.lineWidth=2.6;ctx.stroke(path);
+    ctx.restore();
+  }
 }
 
 function jointPositions(geo) {
@@ -1324,6 +1338,7 @@ function endCut(event) {
 function finishCurrentCut() {
   if (state.cutDone[state.cutIndex] || state.chipProgress[state.cutIndex] < CHIP_COUNT) return;
   state.cutDone[state.cutIndex] = true;
+  releasedAt=performance.now();
   state.cutProgress[state.cutIndex] = 1;
   scatterGlass(cssWidth*.5, cssHeight*.5, state.colors[state.cutIndex]);
   tone('glass');
@@ -1334,6 +1349,7 @@ function finishCurrentCut() {
   markDirty();
   window.setTimeout(() => {
     if (state.stage !== 'cut' || state.cutIndex !== finishedIndex) return;
+    releasedAt=-1;
     const next = state.cutDone.findIndex((done) => !done);
     if (next === -1) {
       showToast('Все семь элементов готовы.');
