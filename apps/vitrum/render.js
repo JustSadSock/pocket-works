@@ -241,11 +241,6 @@ function drawWindow(ctx,w,h,s,interaction,time){
  ctx.restore();
  if(s.mode==='solder'&&interaction.pointer)drawIron(ctx,interaction.pointer.x-24,interaction.pointer.y-41);
  // Scored limestone at the lower edge and work notes on aged paper.
- if(!reveal){
-   ctx.save();ctx.textAlign='center';ctx.font='italic 11px Georgia';ctx.fillStyle='#d4b487';
-   ctx.fillText(s.pieces.length?`${s.pieces.length} фрагм. · рисунок свободный`:'Здесь появится твой рисунок',w*.5,Math.min(h-15,frame.y+frame.h+26));
-   ctx.restore();
- }
  if(reveal){
    ctx.save();const gloss=ctx.createLinearGradient(0,0,w,0);gloss.addColorStop(0,'#f7eac900');gloss.addColorStop(.55,'#fff0ca20');gloss.addColorStop(1,'#f7eac900');
    ctx.fillStyle=gloss;ctx.fillRect(0,0,w,h);ctx.restore();
