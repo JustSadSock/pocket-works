@@ -32,7 +32,7 @@ test('preview and real flight produce identical coordinates and collision outcom
   }
 });
 test('all six missions have achievable routes',()=>{
-  const guesses=[[-33.5,283],[-74.7,303],[29.7,312],[-57.9,622],[39.3,284],[-29.2,414]];
+  const guesses=[[-33.5,283],[-74.7,303],[29.7,312],[-57.9,622],[-33.8,947],[-29.2,414]];
   for(let i=0;i<STAGE_COUNT;i++){
     const s=stageAt(i,1750),[initialAngle,initialSpeed]=guesses[i];
     let solved=false;
