@@ -31,18 +31,28 @@ test('preview and real flight produce identical coordinates and collision outcom
     }
   }
 });
-test('all six missions have achievable routes',()=>{
-  const guesses=[[-33.5,283],[-74.7,303],[29.7,312],[-57.9,622],[-33.8,947],[-29.2,414]];
-  for(let i=0;i<STAGE_COUNT;i++){
-    const s=stageAt(i,1750),[initialAngle,initialSpeed]=guesses[i];
-    let solved=false;
-    for(let da=-7;da<=7&&!solved;da++){
-      for(let dv=-90;dv<=90;dv+=15){
-        const a=(initialAngle+da)*Math.PI/180,v=initialSpeed+dv;
-        if(predict(s,{vx:v*Math.cos(a),vy:v*Math.sin(a)}).event?.type==='dock'){solved=true;break;}
+test('all six missions have achievable routes on both short and tall phones',()=>{
+  for(const h of [1650,2160]){
+    for(let i=0;i<STAGE_COUNT;i++){
+      const s=stageAt(i,h);
+      let solved=false;
+      for(let angle=-Math.PI;angle<Math.PI&&!solved;angle+=0.045){
+        for(let speed=200;speed<=970;speed+=20){
+          const v={vx:speed*Math.cos(angle),vy:speed*Math.sin(angle)};
+          if(predict(s,v).event?.type==='dock'){solved=true;break;}
+        }
       }
+      assert.ok(solved,'mission '+(i+1)+' should be solvable at height '+h);
     }
-    assert.ok(solved,'mission '+(i+1)+' should be solvable');
+  }
+});
+test('launches and docks stay clear of HUD safe zones',()=>{
+  for(const h of [1650,2160]){
+    for(let i=0;i<STAGE_COUNT;i++){
+      const s=stageAt(i,h);
+      assert.ok(s.start.y>h*.25 && s.start.y<h*.74,'launch outside safe playfield');
+      assert.ok(s.target.y>h*.2 && s.target.y<h*.74,'dock outside safe playfield');
+    }
   }
 });
 test('untrusted progress is clamped and sanitized',()=>{
