@@ -3,17 +3,17 @@ export const STEP = 1 / 60;
 export const MAX_STEPS = 600;
 
 const RAW = [
-  { name: 'ПЕРВЫЙ ИМПУЛЬС', sector: '01 / КРАЙ СИСТЕМЫ', brief: 'Один мир. Один точный манёвр.', start: [.15, .79], target: [.82, .24],
+  { name: 'ПЕРВЫЙ ИМПУЛЬС', sector: '01 / КРАЙ СИСТЕМЫ', brief: 'Один мир. Один точный манёвр.', start: [.15, .69], target: [.82, .27],
     planets: [[.49, .51, 110, 7, 'ember']] },
-  { name: 'ТЯЖЁЛЫЙ СОСЕД', sector: '02 / ПРИЛИВ', brief: 'Притяжение меняет даже верный курс.', start: [.12, .76], target: [.83, .21],
+  { name: 'ТЯЖЁЛЫЙ СОСЕД', sector: '02 / ПРИЛИВ', brief: 'Притяжение меняет даже верный курс.', start: [.12, .69], target: [.83, .27],
     planets: [[.54, .48, 145, 12, 'jade']] },
-  { name: 'ДВОЙНАЯ ТЕНЬ', sector: '03 / БЛИЗНЕЦЫ', brief: 'Обойди двух стражей орбиты.', start: [.14, .20], target: [.82, .77],
+  { name: 'ДВОЙНАЯ ТЕНЬ', sector: '03 / БЛИЗНЕЦЫ', brief: 'Обойди двух стражей орбиты.', start: [.14, .29], target: [.82, .69],
     planets: [[.48, .45, 125, 14, 'cerulean'], [.78, .42, 75, 3, 'ash']] },
-  { name: 'ПАРАЛЛАКС', sector: '04 / РАЗЛОМ', brief: 'Лови свободный коридор.', start: [.18, .81], target: [.81, .18],
+  { name: 'ПАРАЛЛАКС', sector: '04 / РАЗЛОМ', brief: 'Лови свободный коридор.', start: [.18, .71], target: [.81, .27],
     planets: [[.45, .39, 139, 15, 'ochre'], [.77, .58, 79, 6, 'ice']] },
   { name: 'УЗКОЕ ОКНО', sector: '05 / ПЕРЕХВАТ', brief: 'Прямой путь закрыт. Ищи дугу.', start: [.13, .53], target: [.84, .33],
     planets: [[.49, .52, 150, 14, 'jade'], [.31, .19, 80, 8, 'ash'], [.71, .81, 95, 7, 'ember']] },
-  { name: 'ПЕРИГЕЙ', sector: '06 / ПОСЛЕДНИЙ СИГНАЛ', brief: 'Используй всё, чему научился.', start: [.17, .83], target: [.82, .17],
+  { name: 'ПЕРИГЕЙ', sector: '06 / ПОСЛЕДНИЙ СИГНАЛ', brief: 'Используй всё, чему научился.', start: [.17, .71], target: [.82, .27],
     planets: [[.43, .59, 135, 14, 'cerulean'], [.70, .36, 120, 12, 'ochre']] }
 ];
 export const STAGE_COUNT = RAW.length;
@@ -26,7 +26,7 @@ export function stageAt(index, worldHeight = 1780) {
     name: raw.name, sector: raw.sector, brief: raw.brief,
     width: WORLD_WIDTH, height: worldHeight,
     start: { x: raw.start[0] * WORLD_WIDTH, y: raw.start[1] * worldHeight },
-    target: { x: raw.target[0] * WORLD_WIDTH, y: raw.target[1] * worldHeight, radius: i === 4 ? 88 : 78 },
+    target: { x: raw.target[0] * WORLD_WIDTH, y: raw.target[1] * worldHeight, radius: i === 4 ? 105 : 98 },
     planets: raw.planets.map(([x,y,r,m,kind],n) => ({
       id: n, x: x * WORLD_WIDTH, y: y * worldHeight,
       r, mass: m * 1e6, kind
