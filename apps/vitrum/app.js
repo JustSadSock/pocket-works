@@ -6,6 +6,7 @@ const STORAGE_KEY = 'pocket-works:vitrum:state';
 const STAGES = ['design', 'cut', 'assemble', 'solder', 'reveal'];
 const PIECE_COUNT = 7;
 const JOINT_COUNT = 7;
+const CHIP_COUNT = 5;
 const PALETTE = [
   { name: 'кобальт', base: '#255f9d', dark: '#12375f', light: '#72b8df' },
   { name: 'рубин', base: '#ae3a31', dark: '#681d25', light: '#ef7a58' },
@@ -51,6 +52,9 @@ let dirty = true;
 let lastRevealFrame = 0;
 let cutGesture = { active: false, pointerId: null, lastTickIndex: -1 };
 let audioContext = null;
+let toolCursor = null;
+const effects = [];
+let lastFrameTime = 0;
 
 function defaultState() {
   return {
@@ -60,6 +64,7 @@ function defaultState() {
     motif: 0,
     cutDone: Array(PIECE_COUNT).fill(false),
     cutProgress: Array(PIECE_COUNT).fill(0),
+    chipProgress: Array(PIECE_COUNT).fill(0),
     cutIndex: 0,
     assembled: Array(PIECE_COUNT).fill(false),
     selectedPiece: null,
@@ -85,6 +90,10 @@ function loadState() {
     next.cutProgress = Array.isArray(raw.cutProgress) && raw.cutProgress.length === PIECE_COUNT
       ? raw.cutProgress.map((value) => Math.max(0, Math.min(1, Number(value) || 0)))
       : next.cutProgress;
+    next.chipProgress = Array.isArray(raw.chipProgress) && raw.chipProgress.length === PIECE_COUNT
+      ? raw.chipProgress.map(value => clampInt(value, 0, CHIP_COUNT, 0)) : next.chipProgress;
+    // Old cut completions remain valid when upgrading an unfinished 1.x workshop.
+    next.cutDone.forEach((done, i) => { if (done) next.chipProgress[i] = CHIP_COUNT; });
     next.cutIndex = clampInt(raw.cutIndex, 0, PIECE_COUNT - 1, 0);
     next.assembled = normalizeFlags(raw.assembled, PIECE_COUNT);
     next.selectedPiece = Number.isInteger(raw.selectedPiece) && raw.selectedPiece >= 0 && raw.selectedPiece < PIECE_COUNT ? raw.selectedPiece : null;
@@ -118,6 +127,7 @@ function publishTestState() {
     version: '1.0.0',
     stage: state.stage,
     cut: state.cutDone.filter(Boolean).length,
+    chip: state.chipProgress[state.cutIndex],
     assembled: state.assembled.filter(Boolean).length,
     soldered: state.soldered.filter(Boolean).length,
     selectedPiece: state.selectedPiece,
@@ -195,7 +205,7 @@ function setStage(next) {
 
   const copy = {
     design: ['Картон · выбор стекла', 'Соберите цветовую схему', 'Выберите лист стекла снизу и коснитесь элемента розы.'],
-    cut: ['Раскрой · железный резец', 'Проведите линию надреза', 'Начните от латунной метки и ведите по светлому контуру без отрыва.'],
+    cut: ['Раскрой · резец и клещи', 'Надрезать, затем отколоть', 'Ведите резец по контуру. После надреза откалывайте выступающие края клещами.'],
     assemble: ['Сборка · свинцовый профиль', 'Верните стекло в рисунок', 'Выберите кусок в лотке, затем коснитесь его места в розе.'],
     solder: ['Пайка · узлы сети', 'Закрепите свинцовую сетку', 'Коснитесь каждого светлого узла. Припой должен связать профиль.'],
     reveal: ['Установка · северный трансепт', 'Окно готово', 'Проведите солнце по шкале и посмотрите, как меняется цветной свет.']
@@ -217,10 +227,14 @@ function updateControls() {
   const current = Math.min(state.cutIndex + 1, PIECE_COUNT);
   cutCount.textContent = `${current} / ${PIECE_COUNT}`;
   const progress = state.cutDone[state.cutIndex] ? 1 : (state.cutProgress[state.cutIndex] || 0);
-  cutMeterFill.style.width = `${Math.round(progress * 100)}%`;
+  const chips = state.chipProgress[state.cutIndex] || 0;
+  const trimMode = progress >= .995;
+  cutMeterFill.style.width = `${Math.round((progress * .7 + chips / CHIP_COUNT * .3) * 100)}%`;
   cutInstruction.textContent = cutFinished === PIECE_COUNT
-    ? 'Все элементы раскроены.'
-    : progress > 0 ? 'Продолжите от латунной метки по направлению линии.' : 'Начните от латунной метки и ведите резец по линии.';
+    ? 'Все кусочки стекла освобождены.'
+    : trimMode ? `Клещи: отколите край у светлой засечки · ${chips} из ${CHIP_COUNT}`
+      : progress > 0 ? 'Тяните резец вдоль трещины, не перескакивая линию.'
+      : 'Поставьте резец на латунную точку и ведите вдоль силуэта.';
   leadButton.disabled = !state.assembled.every(Boolean);
   solderCount.textContent = `${state.soldered.filter(Boolean).length} / ${JOINT_COUNT}`;
   revealButton.disabled = !state.soldered.every(Boolean);
@@ -582,6 +596,64 @@ function drawLightTable(geo) {
   ctx.restore();
 }
 
+function chipPoint(geometry, step) {
+  const index = Math.min(geometry.samples.length - 2, Math.round(((step + .45) / CHIP_COUNT) * (geometry.samples.length - 1)));
+  return geometry.samples[index];
+}
+function scatterGlass(x, y, paletteIndex, type = 'chip') {
+  const color = PALETTE[paletteIndex];
+  const now = performance.now();
+  const rnd = seeded(Math.floor(now) + Math.round(x * 33 + y * 7));
+  for (let i = 0; i < (type === 'chip' ? 14 : 8); i++) {
+    const angle = rnd() * Math.PI * 2, speed = 22 + rnd() * 80;
+    effects.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 25, start: now,
+      duration: 430 + rnd() * 250, size: 1.5 + rnd() * 5.3, color: i % 4 ? color.light : '#fff3ce', angle });
+  }
+}
+function drawEffects(time) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const fx = effects[i], age = (time - fx.start) / fx.duration;
+    if (age >= 1) { effects.splice(i, 1); continue; }
+    const t = age * fx.duration * .001, fade = (1 - age) * (1 - age);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.translate(fx.x + fx.vx * t, fx.y + fx.vy * t + 120 * t * t);
+    ctx.rotate(fx.angle + age * 2);
+    ctx.fillStyle = fx.color;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = fx.color;
+    ctx.beginPath(); ctx.moveTo(0, -fx.size); ctx.lineTo(fx.size * .8, fx.size * .8); ctx.lineTo(-fx.size * .6, fx.size * .45); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawTool(kind, x, y, time) {
+  if (x == null || y == null) return;
+  ctx.save();
+  ctx.translate(x - 22, y - 30);
+  ctx.rotate(-.73);
+  ctx.shadowColor = 'rgba(0,0,0,.5)';
+  ctx.shadowBlur = 9; ctx.shadowOffsetY = 4;
+  if (kind === 'solder') {
+    ctx.fillStyle = '#442d1b'; ctx.fillRect(-5, -50, 10, 35);
+    ctx.fillStyle = '#b67d43'; ctx.fillRect(-3.7, -18, 7.4, 31);
+    ctx.fillStyle = '#d0b295'; ctx.beginPath(); ctx.moveTo(-3.7, 13); ctx.lineTo(0, 34); ctx.lineTo(3.7, 13); ctx.fill();
+    ctx.shadowColor = 'rgba(255,167,70,.7)'; ctx.shadowBlur = 15;
+    ctx.fillStyle = '#ffca7f'; ctx.beginPath(); ctx.arc(0, 33, 3.8, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'chip') {
+    ctx.strokeStyle = '#bdaca0'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath();ctx.moveTo(-12, -27);ctx.lineTo(-2, 5);ctx.lineTo(-8, 30);ctx.moveTo(12, -27);ctx.lineTo(2, 5);ctx.lineTo(8, 30);ctx.stroke();
+    ctx.strokeStyle = '#423b37'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-13,-26);ctx.lineTo(-2,5);ctx.lineTo(-8,31);ctx.moveTo(13,-26);ctx.lineTo(2,5);ctx.lineTo(8,31);ctx.stroke();
+    ctx.fillStyle = '#d0b08a';ctx.beginPath();ctx.arc(0,5,4,0,Math.PI*2);ctx.fill();
+  } else {
+    const body = ctx.createLinearGradient(-6,0,6,0);
+    body.addColorStop(0, '#453d33'); body.addColorStop(.4, '#d8be92'); body.addColorStop(1, '#514b40');
+    ctx.fillStyle= '#603d20'; ctx.fillRect(-6,-42,12,37);
+    ctx.fillStyle=body;ctx.fillRect(-4,-5,8,30);
+    ctx.fillStyle='#e4dfd1';ctx.beginPath();ctx.moveTo(-3.8,24);ctx.lineTo(0,37);ctx.lineTo(3.8,24);ctx.fill();
+  }
+  ctx.restore();
+}
 function drawCutStage() {
   const g = cutGeometry(state.cutIndex);
   const color = PALETTE[state.colors[state.cutIndex]];
@@ -627,10 +699,12 @@ function drawCutStage() {
   ctx.restore();
 
   const progress = state.cutProgress[state.cutIndex] || 0;
+  const trimMode = progress >= .995;
+  const chips = state.chipProgress[state.cutIndex] || 0;
   const upto = Math.max(1, Math.floor(progress * (g.samples.length - 1)));
   ctx.save();
-  ctx.strokeStyle = '#f5cf82';
-  ctx.lineWidth = 3.2;
+  ctx.strokeStyle = trimMode ? '#fff8d0' : 'rgba(250,239,202,.83)';
+  ctx.lineWidth = trimMode ? 1.5 : 2.2;
   ctx.lineCap = 'round';
   ctx.shadowColor = 'rgba(255,209,117,.48)';
   ctx.shadowBlur = 8;
@@ -640,14 +714,38 @@ function drawCutStage() {
   ctx.stroke();
   ctx.restore();
 
-  const marker = g.samples[Math.min(upto, g.samples.length - 1)];
+  // Freshly bitten edges scatter chips and expose the rough core of the glass.
+  if (trimMode) {
+    for (let i = 0; i < CHIP_COUNT; i++) {
+      const p = chipPoint(g, i);
+      const done = i < chips;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (done) {
+        ctx.strokeStyle = 'rgba(245,244,221,.92)'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(-6,-3);ctx.lineTo(0,4);ctx.lineTo(5,-4);ctx.stroke();
+        ctx.fillStyle = 'rgba(28,17,14,.62)';
+        ctx.beginPath(); ctx.moveTo(-5,-4);ctx.lineTo(0,-10);ctx.lineTo(5,-3);ctx.lineTo(3,2);ctx.lineTo(-3,2);ctx.fill();
+      } else {
+        ctx.strokeStyle = i === chips ? '#fff1af' : 'rgba(253,239,191,.37)';
+        ctx.lineWidth = i === chips ? 3 : 1.5;
+        ctx.beginPath(); ctx.arc(0,0,i === chips ? 11:6,0,Math.PI*2);ctx.stroke();
+        if (i === chips) {
+          ctx.shadowColor='#f2cf83';ctx.shadowBlur=14;
+          ctx.fillStyle='#fff1b4'; ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  }
+  const marker = trimMode ? chipPoint(g, Math.min(chips, CHIP_COUNT - 1)) : g.samples[Math.min(upto, g.samples.length - 1)];
   ctx.save();
   ctx.fillStyle = '#e5b56b';
   ctx.strokeStyle = '#5a3518';
   ctx.lineWidth = 2;
   ctx.shadowColor = 'rgba(255,195,93,.65)';
   ctx.shadowBlur = 10;
-  ctx.beginPath(); ctx.arc(marker.x, marker.y, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (!trimMode) { ctx.beginPath(); ctx.arc(marker.x, marker.y, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   ctx.restore();
 
   ctx.fillStyle = 'rgba(27,18,13,.56)';
@@ -655,7 +753,7 @@ function drawCutStage() {
   ctx.fillStyle = 'rgba(246,224,186,.76)';
   ctx.font = '10px Georgia';
   ctx.textAlign = 'center';
-  ctx.fillText(`лист ${color.name} · элемент ${state.cutIndex + 1}`, cssWidth / 2, sy + sheetH - 11);
+  ctx.fillText(trimMode ? `КЛЕЩИ · ${chips}/${CHIP_COUNT} СКОЛОВ` : `РЕЗЕЦ · ${color.name} · деталь ${state.cutIndex + 1}`, cssWidth / 2, sy + sheetH - 11);
 }
 
 function jointPositions(geo) {
@@ -780,6 +878,7 @@ function render(time = performance.now()) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
   if (state.stage === 'reveal') {
     drawReveal(time);
+    drawEffects(time);
     return;
   }
   drawBackground();
@@ -787,11 +886,15 @@ function render(time = performance.now()) {
   else if (state.stage === 'cut') drawCutStage();
   else if (state.stage === 'assemble') drawRose('assemble');
   else if (state.stage === 'solder') drawSolderStage();
+  drawEffects(time);
+  if (toolCursor && (state.stage === 'cut' || state.stage === 'solder')) {
+    drawTool(state.stage === 'solder' ? 'solder' : (state.cutProgress[state.cutIndex] >= .995 ? 'chip' : 'score'), toolCursor.x, toolCursor.y, time);
+  }
 }
 
 function animationLoop(time) {
   if (document.visibilityState === 'visible') {
-    if (dirty || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
+    if (dirty || effects.length || toolCursor || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
       render(time);
       dirty = false;
       if (state.stage === 'reveal') lastRevealFrame = time;
@@ -873,6 +976,21 @@ function handleSolderTap(point) {
 
 function beginCut(event, point) {
   if (state.cutDone[state.cutIndex]) return;
+  if (state.cutProgress[state.cutIndex] >= .995) {
+    const geometry = cutGeometry(state.cutIndex);
+    const step = state.chipProgress[state.cutIndex];
+    const target = chipPoint(geometry, step);
+    if (Math.hypot(point.x - target.x,point.y - target.y) > 34) {
+      showToast('Подведите клещи к светлой засечке на краю стекла.');
+      tone('error'); return;
+    }
+    scatterGlass(target.x, target.y, state.colors[state.cutIndex]);
+    state.chipProgress[state.cutIndex] = Math.min(CHIP_COUNT, step + 1);
+    tone('glass'); haptic([7, 24, 9]);
+    if (state.chipProgress[state.cutIndex] === CHIP_COUNT) finishCurrentCut();
+    else { updateControls(); persist(); markDirty(); }
+    return;
+  }
   const g = cutGeometry(state.cutIndex);
   const progressIndex = Math.floor((state.cutProgress[state.cutIndex] || 0) * (g.samples.length - 1));
   const marker = g.samples[Math.min(progressIndex, g.samples.length - 1)];
@@ -906,7 +1024,13 @@ function moveCut(event, point) {
   updateControls();
   persist();
   markDirty();
-  if (nextIndex >= g.samples.length - 3) finishCurrentCut();
+  if (nextIndex >= g.samples.length - 3) {
+    state.cutProgress[state.cutIndex] = 1;
+    cutGesture.active = false;
+    tone('glass'); haptic(14);
+    showToast('Контур надрезан. Теперь отколите края клещами.');
+    updateControls(); persist(); markDirty();
+  }
 }
 
 function endCut(event) {
@@ -916,9 +1040,10 @@ function endCut(event) {
 }
 
 function finishCurrentCut() {
-  if (state.cutDone[state.cutIndex]) return;
+  if (state.cutDone[state.cutIndex] || state.chipProgress[state.cutIndex] < CHIP_COUNT) return;
   state.cutDone[state.cutIndex] = true;
   state.cutProgress[state.cutIndex] = 1;
+  scatterGlass(cssWidth*.5, cssHeight*.5, state.colors[state.cutIndex]);
   tone('glass');
   haptic([8, 24, 12]);
   const finishedIndex = state.cutIndex;
@@ -944,6 +1069,8 @@ function finishCurrentCut() {
 canvas.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   const point = canvasPoint(event);
+  toolCursor = point;
+  markDirty();
   ensureAudio();
   if (state.stage === 'design') handleDesignTap(point);
   else if (state.stage === 'cut') beginCut(event, point);
@@ -951,12 +1078,14 @@ canvas.addEventListener('pointerdown', (event) => {
   else if (state.stage === 'solder') handleSolderTap(point);
 });
 canvas.addEventListener('pointermove', (event) => {
-  if (state.stage !== 'cut') return;
-  event.preventDefault();
-  moveCut(event, canvasPoint(event));
+  const point = canvasPoint(event);
+  toolCursor = point;
+  if (state.stage === 'cut') { event.preventDefault(); moveCut(event, point); }
+  markDirty();
 });
-canvas.addEventListener('pointerup', endCut);
-canvas.addEventListener('pointercancel', endCut);
+canvas.addEventListener('pointerup', (event) => { endCut(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointercancel', (event) => { endCut(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointerleave', () => { if (!cutGesture.active) { toolCursor = null; markDirty(); } });
 canvas.addEventListener('lostpointercapture', (event) => endCut(event));
 
 swatches.forEach((button, index) => button.addEventListener('click', () => {
