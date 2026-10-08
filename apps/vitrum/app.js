@@ -180,7 +180,7 @@ function ensureAudio() {
 
 function frictionNoise(kind) {
   const ac=ensureAudio();if(!ac)return;
-  const length=Math.floor(ac.sampleRate*(kind==='score'?.065:kind==='solder'?.21:.13));
+  const length=Math.floor(ac.sampleRate*(kind==='score' ? .065 : kind==='solder' ? .21 : .13));
   const buffer=ac.createBuffer(1,length,ac.sampleRate);
   const data=buffer.getChannelData(0);
   const rnd=seeded(Math.floor(ac.currentTime*1000000)+length);
@@ -196,7 +196,7 @@ function frictionNoise(kind) {
   filter.type=kind==='solder'?'lowpass':'highpass';
   filter.frequency.value=kind==='solder'?1150:kind==='score'?1850:1100;
   const gain=ac.createGain();
-  gain.gain.value=kind==='score'?.013:kind==='solder'?.025:.035;
+  gain.gain.value=kind==='score' ? .013 : kind==='solder' ? .025 : .035;
   source.connect(filter).connect(gain).connect(ac.destination);
   source.start();
 }
@@ -289,30 +289,34 @@ function updateControls() {
 }
 
 function renderPieceTray() {
-  if (state.stage !== 'assemble') return;
-  pieceTray.replaceChildren();
-  state.cutDone.forEach((done, i) => {
-    if (!done) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'piece-chip';
-    button.dataset.piece = String(i);
-    button.dataset.nativePress = '';
-    button.setAttribute('aria-label', i === 6 ? 'Центральный медальон' : `Лепесток ${i + 1}`);
-    button.style.setProperty('--piece-color', PALETTE[state.colors[i]].base);
-    button.classList.toggle('is-selected', state.selectedPiece === i);
-    button.classList.toggle('is-placed', state.assembled[i]);
-    button.disabled = state.assembled[i];
-    button.addEventListener('pointerdown', event => {
-      if (event.button !== 0 && event.pointerType === 'mouse') return;
-      beginAssemblyDrag(event, i, button);
-    });
-    button.addEventListener('click', event => {
-      if (event.detail !== 0) return; // keyboard accessibility
-      state.selectedPiece = i; tone('tap'); haptic(5);
-      updateControls(); persist(); markDirty();
-    });
-    pieceTray.append(button);
+  if(state.stage!=='assemble')return;
+  // Keep the actual DOM nodes alive while dragging. Rebuilding the tray on
+  // pointerdown discards capture on iOS and makes a held glass piece vanish.
+  if(pieceTray.children.length!==PIECE_COUNT){
+    pieceTray.replaceChildren();
+    for(let i=0;i<PIECE_COUNT;i++){
+      const button=document.createElement('button');
+      button.type='button';button.className='piece-chip';
+      button.dataset.piece=String(i);
+      button.dataset.nativePress='';
+      button.setAttribute('aria-label',i===PIECE_COUNT-1?'Центральный медальон':`Лепесток ${i+1}`);
+      button.addEventListener('pointerdown',event=>{
+        if(event.button!==0 && event.pointerType==='mouse')return;
+        beginAssemblyDrag(event,i,button);
+      });
+      button.addEventListener('click',event=>{
+        if(event.detail!==0)return;
+        state.selectedPiece=i;tone('tap');haptic(5);
+        updateControls();persist();markDirty();
+      });
+      pieceTray.append(button);
+    }
+  }
+  Array.from(pieceTray.children).forEach((button,i)=>{
+    button.style.setProperty('--piece-color',PALETTE[state.colors[i]].base);
+    button.classList.toggle('is-selected',state.selectedPiece===i);
+    button.classList.toggle('is-placed',state.assembled[i]);
+    button.disabled=state.assembled[i];
   });
 }
 
