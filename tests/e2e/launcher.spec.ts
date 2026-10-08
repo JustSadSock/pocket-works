@@ -203,6 +203,6 @@ test('launcher preserves card identity across sorting and filtering', async ({ p
   await page.locator('#app-search').fill('');
   await expect.poll(() => card.evaluate(element => element === (window as any).__pwStableCard))
     .toBe(true);
-  await expect(card.locator('.app-entry__meta')).not.toContainText(/T\\d{2}:/);
+  await expect(card.locator('.app-entry__meta')).not.toContainText(/T\d{2}:/);
 });
 
