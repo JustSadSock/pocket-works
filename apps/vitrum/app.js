@@ -351,25 +351,27 @@ function polar(cx, cy, r, angle) {
 }
 
 function regionGeometry() {
-  const cx = cssWidth * .5;
-  const cy = cssHeight * (state.stage === 'reveal' ? .38 : .47);
-  const r = Math.min(cssWidth * .37, cssHeight * (state.stage === 'reveal' ? .29 : .36));
-  const pieces = [];
-  for (let i = 0; i < 6; i++) {
-    const angle = -Math.PI / 2 + i * Math.PI / 3;
-    const inner = r * .25;
+  const cx=cssWidth*.5;
+  const cy=cssHeight*(state.stage==='reveal' ? .38 : .47);
+  const r=Math.min(cssWidth*.37,cssHeight*(state.stage==='reveal' ? .29 : .36));
+  const pieces=[],inner=r*.29,outer=r*.92,segment=Math.PI/3;
+  // Genuine fitted rose geometry: six pieces tile a twelve-sided outer ring
+  // around a central hexagon. Every adjacent pair shares the SAME contour.
+  // There are no magical gaps or imaginary pieces when the lead is fitted.
+  const first=-Math.PI/2-segment/2;
+  for(let i=0;i<6;i++){
+    const a=first+i*segment,b=a+segment;
     pieces.push([
-      polar(cx, cy, inner, angle - .39),
-      polar(cx, cy, r * .57, angle - .26),
-      polar(cx, cy, r * .88, angle),
-      polar(cx, cy, r * .57, angle + .26),
-      polar(cx, cy, inner, angle + .39)
+      polar(cx,cy,inner,a),
+      polar(cx,cy,outer,a),
+      polar(cx,cy,outer,a+segment/3),
+      polar(cx,cy,outer,a+2*segment/3),
+      polar(cx,cy,outer,b),
+      polar(cx,cy,inner,b)
     ]);
   }
-  const center = [];
-  for (let i = 0; i < 10; i++) center.push(polar(cx, cy, r * .235, -Math.PI / 2 + i * Math.PI / 5));
-  pieces.push(center);
-  return { cx, cy, r, pieces };
+  pieces.push(Array.from({length:6},(_,i)=>polar(cx,cy,inner,first+i*segment)));
+  return {cx,cy,r,pieces};
 }
 
 function pathFromPoints(points) {
@@ -879,8 +881,8 @@ function drawCutStage() {
 
 function jointPositions(geo) {
   const joints = [];
-  for (let i = 0; i < 6; i++) joints.push(polar(geo.cx, geo.cy, geo.r * .26, -Math.PI / 2 + i * Math.PI / 3));
-  joints.push({ x: geo.cx, y: geo.cy });
+  for (let i = 0; i < 6; i++) joints.push(polar(geo.cx, geo.cy, geo.r * .29, -Math.PI / 2 - Math.PI / 6 + i * Math.PI / 3));
+  joints.push(polar(geo.cx, geo.cy, geo.r * .92, -Math.PI / 2));
   return joints;
 }
 
