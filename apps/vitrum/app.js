@@ -57,6 +57,7 @@ let audioContext = null;
 let toolCursor = null;
 const effects = [];
 let lastFrameTime = 0;
+let lastHeatSaved = 0;
 let assembleDrag = { active: false };
 let leadGesture = { active: false };
 let solderGesture = { active: false };
@@ -76,6 +77,7 @@ function defaultState() {
     leadIndex: 0,
     selectedPiece: null,
     soldered: Array(JOINT_COUNT).fill(false),
+    solderHeat: Array(JOINT_COUNT).fill(0),
     sun: 18,
     sound: true,
     finished: false
@@ -110,6 +112,9 @@ function loadState() {
     if (['solder','reveal'].includes(raw.stage) && !Array.isArray(raw.leadProgress)) next.leadProgress.fill(1);
     next.selectedPiece = Number.isInteger(raw.selectedPiece) && raw.selectedPiece >= 0 && raw.selectedPiece < PIECE_COUNT ? raw.selectedPiece : null;
     next.soldered = normalizeFlags(raw.soldered, JOINT_COUNT);
+    next.solderHeat = Array.isArray(raw.solderHeat) && raw.solderHeat.length===JOINT_COUNT
+      ? raw.solderHeat.map(v=>Math.max(0,Math.min(1,Number(v)||0))) : next.solderHeat;
+    next.soldered.forEach((done,i)=> {if(done)next.solderHeat[i]=1;});
     next.sun = Number.isFinite(Number(raw.sun)) ? Math.max(-70, Math.min(70, Number(raw.sun))) : 18;
     next.sound = raw.sound !== false;
     next.finished = raw.finished === true;
@@ -143,6 +148,7 @@ function publishTestState() {
     assembled: state.assembled.filter(Boolean).length,
     lead: state.leadProgress.filter(v => v >= .995).length,
     soldered: state.soldered.filter(Boolean).length,
+    heat: state.solderHeat.map(v=>Math.round(v*100)),
     selectedPiece: state.selectedPiece,
     finished: state.finished
   };
@@ -923,17 +929,30 @@ function drawSolderStage() {
   const joints = jointPositions(geo);
   joints.forEach((p, i) => {
     ctx.save();
-    const done = state.soldered[i];
-    ctx.fillStyle = done ? '#b9b5aa' : '#f0d394';
-    ctx.strokeStyle = done ? '#595750' : '#725228';
+    const done = state.soldered[i], heat = state.solderHeat[i];
+    // Raw copper starts dark; molten tin grows from the iron's contact point.
+    ctx.fillStyle = done ? '#9b9c94' : '#805637';
+    ctx.strokeStyle = done ? '#4d4c49' : '#422b20';
     ctx.lineWidth = 2;
-    ctx.shadowColor = done ? 'rgba(220,220,210,.22)' : 'rgba(255,208,115,.78)';
-    ctx.shadowBlur = done ? 5 : 12;
-    ctx.beginPath(); ctx.arc(p.x, p.y, done ? 5.4 : 7.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    if (done) {
-      ctx.globalAlpha = .45;
-      ctx.fillStyle = '#f3efe5';
-      ctx.beginPath(); ctx.arc(p.x - 1.5, p.y - 1.7, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = heat > 0 && !done ? 'rgba(255,140,65,.9)' : 'rgba(0,0,0,.3)';
+    ctx.shadowBlur = 6 + heat * 13;
+    const radius=done?6.4:4.2+heat*3.5;
+    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();ctx.stroke();
+    if(heat>0) {
+      ctx.globalAlpha = .35 + heat*.58;
+      ctx.fillStyle = done ? '#f5f0df':'#ffd497';
+      ctx.beginPath();ctx.ellipse(p.x-1.4,p.y-1.9,1.2+heat*2.8,1+heat*1.2,-.3,0,Math.PI*2);ctx.fill();
+    }
+    if(solderGesture.active && solderGesture.index===i) {
+      const pulse= .5 + Math.sin(performance.now()*.019)*.2;
+      ctx.globalAlpha=.6+pulse*.25;
+      ctx.strokeStyle='#ffd48b';ctx.lineWidth=2.3;ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(p.x,p.y,11+heat*7,-Math.PI/2,-Math.PI/2+Math.PI*2*heat);ctx.stroke();
+      for(let j=0;j<3;j++){
+        const t=performance.now()*.001+j*1.9;
+        ctx.fillStyle='rgba(234,230,211,.32)';
+        ctx.beginPath();ctx.ellipse(p.x+Math.sin(t*2+j)*6,p.y-12-(t*17+j*6)%30,3+j,5+j,0,0,Math.PI*2);ctx.fill();
+      }
     }
     ctx.restore();
   });
@@ -1049,8 +1068,11 @@ function render(time = performance.now()) {
 }
 
 function animationLoop(time) {
+  const dt=lastFrameTime ? Math.min(64,time-lastFrameTime) : 16;
+  lastFrameTime=time;
   if (document.visibilityState === 'visible') {
-    if (dirty || effects.length || toolCursor || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
+    updateSolderHold(dt,time);
+    if (dirty || effects.length || solderGesture.active || toolCursor || (state.stage === 'reveal' && time - lastRevealFrame > 50)) {
       render(time);
       dirty = false;
       if (state.stage === 'reveal') lastRevealFrame = time;
@@ -1091,24 +1113,46 @@ function beginAssemblyOnCanvas(event) {
   beginAssemblyDrag(event,state.selectedPiece);
 }
 
-function handleSolderTap(point) {
-  const geo = regionGeometry();
-  const joints = jointPositions(geo);
-  let best = -1, dist = Infinity;
-  joints.forEach((p, i) => {
-    if (state.soldered[i]) return;
-    const d = Math.hypot(point.x - p.x, point.y - p.y);
-    if (d < dist) { dist = d; best = i; }
+function beginSolder(event,point) {
+  const joints=jointPositions(regionGeometry());
+  let index=-1,distance=Infinity;
+  joints.forEach((p,i)=>{
+    if(state.soldered[i])return;
+    const d=Math.hypot(point.x-p.x,point.y-p.y);
+    if(d<distance){distance=d;index=i;}
   });
-  if (best >= 0 && dist < Math.max(27, geo.r * .15)) {
-    state.soldered[best] = true;
-    tone('solder');
-    haptic(14);
-    updateControls();
-    persist();
-    markDirty();
-    if (state.soldered.every(Boolean)) showToast('Сеть закреплена. Можно поднимать окно.');
+  if(index<0||distance>Math.max(32,regionGeometry().r*.19)){
+    showToast('Поставьте раскалённое железо на неприпаянный узел.');
+    tone('error');return;
   }
+  solderGesture={active:true,pointerId:event.pointerId,index,point};
+  try{canvas.setPointerCapture?.(event.pointerId);}catch{}
+  tone('solder');haptic(8);markDirty();
+}
+function updateSolderHold(dt,time) {
+  if(!solderGesture.active)return;
+  const index=solderGesture.index;
+  const joint=jointPositions(regionGeometry())[index];
+  if(Math.hypot(solderGesture.point.x-joint.x,solderGesture.point.y-joint.y)>Math.max(43,regionGeometry().r*.27))return;
+  const old=state.solderHeat[index];
+  state.solderHeat[index]=Math.min(1,old+Math.min(60,dt)/720);
+  if(time-lastHeatSaved>110){persist();lastHeatSaved=time;}
+  if(state.solderHeat[index]>=1){
+    state.soldered[index]=true;
+    solderGesture={active:false};
+    tone('glass');haptic([12,20,12]);
+    scatterGlass(joint.x,joint.y,state.colors[index%PIECE_COUNT],'settle');
+    if(state.soldered.every(Boolean))showToast('Последний шов запаян. Окно можно поднять к свету.');
+    else showToast('Олово схватилось. Следующий узел.');
+    updateControls();persist();
+  }
+  markDirty();
+}
+function endSolder(event) {
+  if(solderGesture.pointerId!==event.pointerId)return;
+  try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  solderGesture={active:false};
+  persist();markDirty();
 }
 
 function beginCut(event, point) {
@@ -1213,7 +1257,7 @@ canvas.addEventListener('pointerdown', (event) => {
   else if (state.stage === 'cut') beginCut(event, point);
   else if (state.stage === 'assemble') beginAssemblyOnCanvas(event);
   else if (state.stage === 'lead') beginLead(event, point);
-  else if (state.stage === 'solder') handleSolderTap(point);
+  else if (state.stage === 'solder') beginSolder(event,point);
 });
 canvas.addEventListener('pointermove', (event) => {
   const point = canvasPoint(event);
@@ -1221,10 +1265,11 @@ canvas.addEventListener('pointermove', (event) => {
   if (state.stage === 'cut') { event.preventDefault(); moveCut(event, point); }
   else if (state.stage === 'lead') { event.preventDefault(); moveLead(event, point); }
   else if (state.stage === 'assemble') moveAssemblyDrag(event);
+  else if (state.stage === 'solder' && solderGesture.active && event.pointerId===solderGesture.pointerId) solderGesture.point=point;
   markDirty();
 });
-canvas.addEventListener('pointerup', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); toolCursor = null; markDirty(); });
-canvas.addEventListener('pointercancel', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointerup', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); endSolder(event); toolCursor = null; markDirty(); });
+canvas.addEventListener('pointercancel', (event) => { endCut(event); endLead(event); endAssemblyDrag(event); endSolder(event); toolCursor = null; markDirty(); });
 window.addEventListener('pointermove', event => { if(assembleDrag.active) moveAssemblyDrag(event); });
 window.addEventListener('pointerup', event => { if(assembleDrag.active) endAssemblyDrag(event); });
 window.addEventListener('pointercancel', event => { if(assembleDrag.active) endAssemblyDrag(event); });
