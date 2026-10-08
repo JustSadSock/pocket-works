@@ -263,7 +263,7 @@ export function paint(ctx,stage,model,now,reduced=false) {
   for(const planet of stage.planets) circles(ctx,planet,t,reduced);
   target(ctx,stage.target,t,reduced,model.fx?.type==='dock');
   details(ctx,stage,t,reduced);
-  if(model.mode!=='flight' && model.mode!=='end' && model.mode!=='lost') {
+  if(model.mode==='intro' || model.mode==='ready' || model.mode==='aim' || (model.mode==='pause' && !model.craft)) {
     const a=model.drag ? Math.atan2(model.drag.y-stage.start.y,model.drag.x-stage.start.x) : -.65;
     craft(ctx,stage.start,a,t,0);
     if(!model.drag) {
