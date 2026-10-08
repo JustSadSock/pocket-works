@@ -24,6 +24,7 @@ let releaseCursorMemory = null;
 let releaseCursorInitialized = false;
 let cursorLoadPromise = null;
 let cursorWritePromise = Promise.resolve();
+let lastCursorSavedAt = 0;
 
 function storageHas(key) {
   try {
@@ -170,11 +171,12 @@ async function loadReleaseCursor() {
   cursorLoadPromise = (async () => {
     const local = readJson(RELEASE_CURSOR_KEY);
     const indexed = await cursorDatabase('read');
-    const records = [local, indexed]
+    const records = [indexed, local]
       .filter((record) => record && Object.keys(normalizeReleaseCursor(record.apps)).length > 0)
       .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
     releaseCursorInitialized = records.length > 0;
+    lastCursorSavedAt = Number(records[0]?.savedAt) || 0;
     releaseCursorMemory = releaseCursorInitialized ? normalizeReleaseCursor(records[0].apps) : {};
 
     // v1 contained an unreliable baseline and could replay dozens of already
@@ -195,7 +197,8 @@ function persistReleaseCursor(cursor) {
   // digest that the user has just dismissed.
   releaseCursorMemory = compact;
   releaseCursorInitialized = true;
-  const record = { savedAt: Date.now(), apps: compact };
+  lastCursorSavedAt = Math.max(Date.now(), lastCursorSavedAt + 1);
+  const record = { savedAt: lastCursorSavedAt, apps: compact };
 
   cursorWritePromise = cursorWritePromise.catch(() => false).then(async () => {
     removeStored(LEGACY_RELEASE_CURSOR_KEY);
