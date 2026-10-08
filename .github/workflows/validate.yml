@@ -23,6 +23,19 @@ jobs:
           npm run validate:launcher
           node scripts/test-publish-policy.mjs
 
+  production-packaging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install application build dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Assemble and validate published runtime assets
+        run: npm run deploy:site
+
   change-scope:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
