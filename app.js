@@ -4,6 +4,7 @@ import {
 } from './shared/mobile-runtime.js';
 
 import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
+import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
 
 installMobileRuntime();
 
@@ -166,8 +167,8 @@ const previewObserver = 'IntersectionObserver' in window
   : null;
 
 function observeListPreviews() {
-  previewObserver?.disconnect();
-  for (const preview of list.querySelectorAll('.app-preview')) {
+  for (const preview of list.querySelectorAll('.app-preview:not([data-observed])')) {
+    preview.dataset.observed = 'true';
     if (previewObserver) previewObserver.observe(preview);
     else preview.classList.add('is-in-view');
   }
@@ -381,7 +382,7 @@ function updateControlState(apps) {
     if (counter) counter.textContent = String(counts[filter] || 0);
   }
 
-  searchInput.value = shelfState.query;
+  if (searchInput.value !== shelfState.query) searchInput.value = shelfState.query;
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
   sortButton.textContent = SORT_LABELS[shelfState.sort];
@@ -392,49 +393,62 @@ function updateControlState(apps) {
   resultSummary.textContent = `${apps.length} ${noun}${qualifier}`;
 }
 
+function createAppEntry() {
+  const entry = template.content.firstElementChild.cloneNode(true);
+  entry.pwParts = {
+    select: entry.querySelector('.app-entry__select'),
+    favorite: entry.querySelector('.app-entry__favorite'),
+    open: entry.querySelector('.app-entry__open'),
+    preview: entry.querySelector('.app-preview'),
+    name: entry.querySelector('.app-entry__name'),
+    status: entry.querySelector('.app-entry__status'),
+    description: entry.querySelector('.app-entry__description'),
+    meta: entry.querySelector('.app-entry__meta')
+  };
+  return entry;
+}
+
+function patchAppEntry(entry, app, index) {
+  const p = entry.pwParts;
+  entry.dataset.slug = app.slug;
+  entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
+  entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
+  entry.classList.toggle('is-selected', shelfState.selected === app.slug);
+
+  p.select.dataset.slug = app.slug;
+  p.select.setAttribute('aria-label', `View ${app.name} details`);
+  p.favorite.dataset.slug = app.slug;
+  p.favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
+  p.favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
+  setText(p.favorite, isFavorite(app.slug) ? '★' : '☆');
+  p.open.dataset.slug = app.slug;
+  if (p.open.getAttribute('href') !== app.path) p.open.href = app.path;
+  p.open.setAttribute('aria-label', `Open ${app.name}`);
+
+  setText(p.name, app.name);
+  setText(p.status, app.status === 'experimental' ? 'lab' : app.status);
+  setText(p.description, app.description);
+  const cacheLabel = offlineReady.has(app.slug) ? 'offline ready' : 'not cached';
+  const baseMeta = [
+    `v${app.version}`, app.updatedAt, cacheLabel,
+    ...(app.tags || []).slice(0, 2)
+  ].filter(Boolean).join(' / ');
+  if (p.meta.dataset.pwBase !== baseMeta) {
+    p.meta.dataset.pwBase = baseMeta;
+    setText(p.meta, baseMeta);
+  }
+  if (p.preview.dataset.preset !== (app.preset || 'vanilla') ||
+      p.preview.dataset.iconSlug !== app.slug) configurePreview(p.preview, app);
+}
+
 function renderApps(apps) {
-  list.replaceChildren();
   emptyState.hidden = apps.length !== 0;
-
-  apps.forEach((app, index) => {
-    const fragment = template.content.cloneNode(true);
-    const entry = fragment.querySelector('.app-entry');
-    const select = fragment.querySelector('.app-entry__select');
-    const favorite = fragment.querySelector('.app-entry__favorite');
-    const open = fragment.querySelector('.app-entry__open');
-    const preview = fragment.querySelector('.app-preview');
-
-    entry.dataset.slug = app.slug;
-    entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
-    entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
-    entry.classList.toggle('is-selected', shelfState.selected === app.slug);
-
-    select.dataset.slug = app.slug;
-    select.setAttribute('aria-label', `View ${app.name} details`);
-    favorite.dataset.slug = app.slug;
-    favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
-    favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
-    favorite.textContent = isFavorite(app.slug) ? '★' : '☆';
-    open.dataset.slug = app.slug;
-    open.href = app.path;
-    open.setAttribute('aria-label', `Open ${app.name}`);
-
-    fragment.querySelector('.app-entry__name').textContent = app.name;
-    fragment.querySelector('.app-entry__status').textContent = app.status === 'experimental' ? 'lab' : app.status;
-    fragment.querySelector('.app-entry__description').textContent = app.description;
-
-    const cacheLabel = offlineReady.has(app.slug) ? 'offline ready' : 'not cached';
-    fragment.querySelector('.app-entry__meta').textContent = [
-      `v${app.version}`,
-      app.updatedAt,
-      cacheLabel,
-      ...(app.tags || []).slice(0, 2)
-    ].filter(Boolean).join(' / ');
-
-    configurePreview(preview, app);
-    list.append(fragment);
+  reconcileKeyed(list, apps, {
+    key: app => app.slug,
+    create: createAppEntry,
+    patch: patchAppEntry,
+    remove: entry => previewObserver?.unobserve(entry.querySelector('.app-preview'))
   });
-
   observeListPreviews();
 }
 
@@ -450,7 +464,15 @@ function installInstruction() {
     : 'Install independently from the application page using your browser’s install action.';
 }
 
+let lastDetailSignature = '';
 function renderDetail(app) {
+  const signature = app ? JSON.stringify([
+    app.slug, app.version, app.description, app.updatedAt, app.status, app.preset,
+    app.accent, app.tags, app.changelog, isFavorite(app.slug),
+    offlineReady.has(app.slug), recentTimestamp(app.slug), panelOpen
+  ]) : 'empty';
+  if (lastDetailSignature === signature) return;
+  lastDetailSignature = signature;
   if (!app) {
     detailEmpty.hidden = false;
     detailContent.hidden = true;
