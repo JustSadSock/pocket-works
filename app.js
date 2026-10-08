@@ -300,11 +300,17 @@ function updateSystemStatus() {
   offlineCount.textContent = `${offlineReady.size} offline-ready`;
 }
 
-function formatDate(value) {
+function formatDate(value, compact = false) {
   if (!value) return 'unknown';
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+  const source = String(value);
+  const hasTime = source.includes('T');
+  const date = new Date(hasTime ? source : `${source}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return source;
+  return new Intl.DateTimeFormat(undefined, {
+    ...(compact ? {} : { year: 'numeric' }),
+    month: 'short', day: 'numeric',
+    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {})
+  }).format(date);
 }
 
 function formatRecent(timestamp) {
@@ -435,7 +441,7 @@ function patchAppEntry(entry, app, index) {
   const cacheLabel = cacheState === 'ready' ? 'offline essentials cached' :
     cacheState === 'partial' ? 'partial cache' : 'not cached';
   const baseMeta = [
-    `v${app.version}`, app.updatedAt, cacheLabel,
+    `v${app.version}`, formatDate(app.updatedAt, true), cacheLabel,
     ...(app.tags || []).slice(0, 2)
   ].filter(Boolean).join(' / ');
   if (p.meta.dataset.pwBase !== baseMeta) {
