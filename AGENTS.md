@@ -337,3 +337,14 @@ Before creating or materially changing visible output:
 Do not copy external skill text or blindly apply a fashionable style. Translate the relevant guidance into the current product's explicit brief, audience, runtime, device constraints and existing identity. User-provided references and Pocket Works product requirements are authoritative.
 
 A visual task is not done because the CSS/render code is sophisticated. It is done only when the rendered states have been inspected at target viewport sizes and the result is readable, distinct, coherent and functionally complete.
+
+## 19. Creative production gate — prevent template-shaped visual output
+
+Visible product work uses the **production pipeline** in `docs/CREATIVE-PRODUCTION.md`, not just the visual skill text. Read it before new app creation or a visible redesign.
+
+- `npm run new:app` creates a technical scaffold and `visual-direction.json` with **draft** content. The default layout, generated monogram icon and preset demo are not a finished product; replace them.
+- Author specific composition, art-medium, silhouette, typography, animation *and* visual differentiation decisions; set the visual direction to `ready` only when implemented. No universally applied Pocket Works game UI theme.
+- Choose authored assets when the signature object is difficult to express convincingly with Canvas primitives. Do not add surface noise, gradients or UI ornament merely to make a sparse scene look richer.
+- Implement and exercise a representative real user action and review the first frame, response frame, settled frame and recorded motion. Readiness of visual rendering is not inferred from a successful Playwright run.
+- The PR creative check validates `visual-direction.json` and rejects a largely unmodified Forge skin or icon in newly created apps. Existing apps do not need mass migration; visual redesigns must participate.
+- Keep visual production documents and artifact evidence app-specific; no shared stylistic tokens or fixed common header should be imposed on new applications.
