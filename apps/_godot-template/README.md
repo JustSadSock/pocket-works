@@ -10,3 +10,7 @@ Pocket Works Godot Web application.
 - Shared platform bridge: PocketWorks autoload in source/pocket_works.gd
 
 The repository agent authors the Godot project as text. GitHub Actions runs the pinned Godot editor headlessly and commits the generated Web export back to the feature branch.
+
+## Creative production
+
+The Godot project is an implementation scaffold. Complete the generated `visual-direction.json` before release; use a deliberately authored composition, focal assets and meaningful animation rather than retaining default primitives and menu treatment. Review screenshot and motion evidence in WebKit. See `docs/CREATIVE-PRODUCTION.md`.
