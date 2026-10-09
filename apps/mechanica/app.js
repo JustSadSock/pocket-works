@@ -34,7 +34,7 @@ function restore(){
     return {level:Number.isInteger(v.level)&&v.level>=0&&v.level<=6?v.level:0,solved:Array.from({length:6},(_,i)=>Boolean(v.solved&&v.solved[i])),gears,selected:[1,2,3].includes(v.selected)?v.selected:2,sound:v.sound!==false,charge:Number.isFinite(v.charge)?Math.max(0,Math.min(100,v.charge)):100};
   } catch {return {level:0,solved:Array(6).fill(false),gears:Array.from({length:7},()=>({})),selected:2,sound:true,charge:100};}
 }
-const state={...restore(),running:false,runTime:0,phase:0,runResult:null,history:[],drag:null,toastTimer:0,flash:0,winShown:false};
+const state={...restore(),running:false,runTime:0,phase:0,runResult:null,history:[],drag:null,toastTimer:0,flash:0,winShown:false,spinFactor:0,impact:null};
 let graph=null, audio=null, lastTime=0, raf=0, screen={scale:1,ox:0,oy:0,w:360,h:500}, redraw=true;
 const level=()=>state.level===6?FREE:CASES[state.level], current=()=>state.gears[state.level];
 function save(){
@@ -101,6 +101,11 @@ function refresh(){
   $('case-index').textContent=free?'∞':String(state.level+1).padStart(2,'0');
   $('stock-label').textContent=free?'ЗАПАС НЕ ОГРАНИЧЕН':'ВЫБЕРИ И ПОСТАВЬ';
   $('charge-read').textContent='ПРУЖИНА · '+Math.ceil(state.charge)+'%';
+  const dial=document.querySelector('.wind-dial');if(dial)dial.style.setProperty('--charge',state.charge+'%');
+  const signal=$('link-indicator'),connected=graph.connected&&!graph.jam;
+  signal.classList.toggle('connected',connected);signal.classList.toggle('jammed',graph.jam);
+  $('link-label').textContent=graph.jam?'ЗАКЛИНИЛО':connected?'ПРИВОД СОЕДИНЁН':'ПРИВОД РАЗОМКНУТ';
+  $('run').setAttribute('aria-label',state.running?'Остановить механизм':'Запустить механизм');
   $('run').classList.toggle('running',state.running);
   $('run').querySelector('b').textContent=state.running?'СТОП':'ПУСК';
   $('run-caption').textContent=state.running?'ОСТАНОВИТЬ':'ИСПЫТАТЬ МАШИНУ';
@@ -135,7 +140,10 @@ function place(index,size,movingFrom=null){
   if(others.some(g=>Math.hypot(x-g[0],y-g[1])<r+g[2]-5)){
     toast('Колёса накладываются. Нужна другая деталь.');sound('error');return false;
   }
-  snapshot();state.gears[state.level]=trial;apply();sound('place');state.flash=.32;return true;
+  snapshot();state.gears[state.level]=trial;apply();sound('place');state.flash=.32;
+  state.impact={id:index,x,y,t:0};redraw=true;
+  try{window.navigator?.vibrate?.(12);}catch{}
+  return true;
 }
 function remove(index){
   if(current()[index]==null)return;
@@ -158,6 +166,7 @@ function run(){
   if(state.running){stop();refresh();sound('tap');return;}
   if(state.charge<20){toast('Недостаточно энергии. Заведи пружину.');sound('error');return;}
   graph=getGraph();state.running=true;state.runTime=0;state.runResult=graph;
+  state.spinFactor=0;
   refresh();sound('run');
   if(graph.jam)toast('Механизм заклинивает');
   else if(!graph.connected)toast('Вращение не дошло до выходного вала');
@@ -195,6 +204,8 @@ $('undo').addEventListener('click',()=>{
 $('wind').addEventListener('click',wind);$('run').addEventListener('click',run);
 $('sound').addEventListener('click',()=>{
   state.sound=!state.sound;$('sound').classList.toggle('off',!state.sound);
+$('sound').setAttribute('aria-pressed',String(state.sound));
+  
   $('sound').setAttribute('aria-label',state.sound?'Выключить звук':'Включить звук');save();if(state.sound)sound('tap');
 });
 $('modal').addEventListener('click',e=>{
@@ -310,25 +321,42 @@ function gearPath(r,teeth){
 function drawGear(n,speed,opacity=1,x=n.x,y=n.y){
   const r=n.r,t=n.size===1?10:n.size===2?14:18;
   ctx.save();ctx.globalAlpha=opacity;
-  circle(x+2.6,y+5,r+6,'#071c1f99');
-  ctx.translate(x,y);
-  const angle=speed===null?0:(state.phase*speed*TAU/60);
+  const impact=state.impact&&state.impact.id===n.id?state.impact:null;
+  const drop=impact ? -Math.pow(1-impact.t/.34,2)*4*Math.cos(impact.t*26) : 0;
+  circle(x+3,y+7,r+7,'#03191cbd');
+  ctx.translate(x,y+drop);
+  const angle=speed===null?0:state.phase*speed*TAU/60;
   ctx.rotate(angle);
+  // Layered tooth flank, body and bevel: each polygon remains coupled to the same shaft angle.
+  ctx.save();ctx.translate(0,5.5);gearPath(r,t);ctx.fillStyle='#392b22';ctx.fill();
+  ctx.translate(0,-2);gearPath(r,t);ctx.fillStyle='#735234';ctx.fill();
+  ctx.restore();
   gearPath(r,t);
-  const metal=ctx.createRadialGradient(-r*.35,-r*.43,r*.12,0,0,r+7);
-  metal.addColorStop(0,'#fae6ad');metal.addColorStop(.32,'#cb9b60');metal.addColorStop(.67,'#977048');metal.addColorStop(.84,'#d6b278');metal.addColorStop(1,'#493c2c');
-  ctx.fillStyle=metal;ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle='#3b2d21';ctx.stroke();
-  gearPath(r-3,t);ctx.strokeStyle='#ffe2a1';ctx.lineWidth=1;ctx.stroke();
-  circle(0,0,r-9,'#806c4b','#eed3a0',2);
-  circle(0,0,r-12,'#3f675f','#382d21',3);
+  const metal=ctx.createLinearGradient(-r,-r,r,r);
+  metal.addColorStop(0,'#ffdf9f');metal.addColorStop(.22,'#d6a86c');
+  metal.addColorStop(.46,'#b1834d');metal.addColorStop(.7,'#865e36');
+  metal.addColorStop(.88,'#d7af72');metal.addColorStop(1,'#fff0bf');
+  ctx.fillStyle=metal;ctx.fill();ctx.lineWidth=1.7;ctx.strokeStyle='#36281d';ctx.stroke();
+  gearPath(r-3,t);ctx.strokeStyle='#ffe1aa99';ctx.lineWidth=.85;ctx.stroke();
+  // Engraved concentric machining lines and recessed apertures.
+  circle(0,0,r-8,'#6e5034','#f2ce8d',1.3);
+  circle(0,0,r-11,'#a58050','#4d3b27',1);
+  ctx.lineWidth=.6;ctx.strokeStyle='#ffdc9d5a';
+  for(let k=0;k<3;k++){arc(0,0,r-12.3-k*2.1);ctx.stroke();}
   const slots=n.size===1?4:n.size===2?5:6;
   for(let i=0;i<slots;i++){
-    const a=i*TAU/slots,rx=Math.cos(a)*(r-16),ry=Math.sin(a)*(r-16);
-    circle(rx,ry,Math.max(2,r*.12),'#244941','#cfa773',1);
+    const a=i*TAU/slots;
+    const rx=Math.cos(a)*(r-15),ry=Math.sin(a)*(r-15);
+    const hole=Math.max(2.8,r*.107);
+    circle(rx,ry,hole+1,'#553f2c','#dbab6b',.7);
+    circle(rx-.4,ry-.6,hole-.7,'#233b39','#866b47',.6);
   }
-  circle(0,0,10,'#edd4a0','#4d3929',2);
-  circle(-2,-2,4.5,'#4b4e42','#b99d6c',1);
-  line(0,-r+13,0,-10,'#f6d49b',1.3);
+  const hub=ctx.createRadialGradient(-3,-4,2,0,0,12);
+  hub.addColorStop(0,'#fff1c3');hub.addColorStop(.28,'#c79f62');hub.addColorStop(.8,'#76552f');hub.addColorStop(1,'#3e2d1f');
+  circle(0,1,11,hub,'#2a251e',2);
+  circle(0,-1,5.1,'#344844','#e7c68b',1.5);
+  circle(-1.1,-2.2,1.3,'#ffebbd');
+  line(0,-r+12,0,-r+5,'#fff0c1',1.8);
   ctx.restore();
 }
 function screw(x,y){circle(x+1,y+2,5,'#0b2829');circle(x,y,4,'#ac9a71','#253c39',1);line(x-2,y+1,x+2,y-1,'#3b463b',1);}
@@ -336,53 +364,104 @@ function label(text,x,y,color='#a9c3ae',size=10){
   ctx.fillStyle=color;ctx.font=size+'px Arial';ctx.textAlign='center';ctx.fillText(text,x,y);
 }
 function drawPlate(){
-  const bg=ctx.createLinearGradient(0,0,360,500);
-  bg.addColorStop(0,'#2b5c57');bg.addColorStop(.35,'#204f4d');bg.addColorStop(.7,'#143d3f');bg.addColorStop(1,'#092e33');
+  const bg=ctx.createRadialGradient(145,188,28,180,280,435);
+  bg.addColorStop(0,'#3a5750');bg.addColorStop(.43,'#213c3c');bg.addColorStop(1,'#091e25');
   ctx.fillStyle=bg;ctx.fillRect(0,0,360,500);
-  for(let i=0;i<130;i++){
-    const x=(i*71.39)%360,y=(i*123.17)%500;line(x,y,x+((i%3)+2),y+.5,i%4?'#cce2c30b':'#0b20211b',.7);
+  // Fine lathed grain, lacquer scratches and shallow reflected light.
+  for(let i=0;i<208;i++){
+    const x=(i*73.39)%360,y=(i*127.17)%500;
+    line(x,y,x+(i%4+1)*1.7,y+(i%3-1)*.7,i%5===0?'#c7b78b18':'#07181824',.7);
   }
-  ctx.strokeStyle='#73978a55';ctx.lineWidth=1;for(let x=18;x<=342;x+=27){line(x,161,x,406,'#a1b3a00a');}for(let y=166;y<=400;y+=27){line(15,y,345,y,'#a1b3a00a');}
-  const rim=ctx.createLinearGradient(0,158,0,410);rim.addColorStop(0,'#193d3e');rim.addColorStop(.5,'#32625c');rim.addColorStop(1,'#092e2f');
-  ctx.fillStyle=rim;ctx.fillRect(12,156,336,256);
-  ctx.strokeStyle='#879a83';ctx.lineWidth=2;ctx.strokeRect(13,157,334,254);ctx.strokeStyle='#08292a';ctx.lineWidth=4;ctx.strokeRect(18,162,324,244);
-  [26,334].forEach(x=>[170,398].forEach(y=>screw(x,y)));
-  // Calibration top: an inset spring cylinder and a functional brass output dial.
-  ctx.fillStyle='#0b2d30';ctx.fillRect(19,84,322,66);ctx.strokeStyle='#65887b';ctx.strokeRect(20,85,320,65);
-  label('ЗАПАС ХОДА',93,98,'#b7cbb7',8);label('ВЫХОДНОЙ ВАЛ',264,98,'#b7cbb7',8);
+  const bevel=ctx.createLinearGradient(0,152,0,418);
+  bevel.addColorStop(0,'#90866c');bevel.addColorStop(.03,'#273936');
+  bevel.addColorStop(.06,'#0b2225');bevel.addColorStop(.95,'#0b2225');
+  bevel.addColorStop(.98,'#637560');bevel.addColorStop(1,'#101f22');
+  ctx.fillStyle=bevel;ctx.fillRect(7,153,346,269);
+  ctx.strokeStyle='#bbaf86';ctx.lineWidth=1.5;ctx.strokeRect(8,153,344,267);
+  const well=ctx.createRadialGradient(155,260,10,178,305,240);
+  well.addColorStop(0,'#385954');well.addColorStop(.62,'#193e40');
+  well.addColorStop(1,'#0a2a30');
+  ctx.fillStyle=well;ctx.fillRect(17,164,326,242);
+  ctx.strokeStyle='#0a2224';ctx.lineWidth=4;ctx.strokeRect(17,164,326,242);
+  ctx.strokeStyle='#7d917d';ctx.lineWidth=1;ctx.strokeRect(20,167,320,235);
+  // Cast metal texture and precisely milled registration grid.
+  for(let i=0;i<8;i++){
+    const x=36+i*41;line(x,179,x,392,'#c3d2b013',.65);
+  }
+  for(let j=0;j<6;j++){
+    const y=190+j*39;line(28,y,332,y,'#c3d2b013',.65);
+  }
+  for(let i=0;i<190;i++){
+    const x=25+(i*47.7)%310,y=174+(i*83.7)%225;
+    circle(x,y,.38,i%3?'#a2b6a713':'#091b1f37');
+  }
+  [29,331].forEach(x=>[171,399].forEach(y=>{
+    circle(x+1,y+3,8,'#06191a','#485046',1);
+    circle(x,y,5,'#a88d5f','#e7d0a0',1);
+    line(x-2.4,y+2.2,x+2.4,y-2.2,'#36332c',1.5);
+  }));
+  // Top mounted dual binnacle: spring reserve and output tachometer.
+  ctx.fillStyle='#0b1f22';ctx.fillRect(21,81,318,69);
+  ctx.strokeStyle='#927d59';ctx.lineWidth=1.5;ctx.strokeRect(22,82,316,68);
+  line(23,85,337,85,'#ebc98d55',1);
+  const glass=ctx.createLinearGradient(20,87,20,144);glass.addColorStop(0,'#1a3534');
+  glass.addColorStop(.5,'#0f282c');glass.addColorStop(1,'#203d39');
+  ctx.fillStyle=glass;ctx.fillRect(25,87,309,58);
+  label('РЕСУРС ПРУЖИНЫ',105,99,'#bdc2a8',7.7);
+  label('ОБОРОТЫ / МИН',267,99,'#bdc2a8',7.7);
+  // Energy display consists of twenty-one physically seated brass shutters.
   for(let i=0;i<21;i++){
-    const x=29+i*6.4;ctx.fillStyle=i*5<=state.charge?'#cfaa6f':'#385752';
-    ctx.fillRect(x,110,4,15);line(x,128,x+3,128,'#c0b38b55',1);
+    const x=30+i*6.4,active=i*5<=state.charge;
+    ctx.fillStyle=active?'#bd9053':'#263b38';ctx.fillRect(x,108,4.5,25);
+    if(active){line(x+.7,109,x+.7,130,'#ffe8aa98',1);line(x+4,109,x+4,130,'#503e30',.8);}
+    else line(x+2,108,x+2,130,'#6e817540',.8);
   }
-  ctx.strokeStyle='#a88c61';ctx.strokeRect(26,106,134,25);
-  circle(265,122,18,'#0a2b2d','#ac996e',3);
-  for(let k=0;k<12;k++){const a=k*TAU/12;line(265+Math.cos(a)*12.5,122+Math.sin(a)*12.5,265+Math.cos(a)*15.5,122+Math.sin(a)*15.5,'#c2b382',1);}
-  const out=graph&&graph.output||0,needle=(Math.sign(out)*Math.min(1,Math.abs(out)/40))*1.3;
-  const theta=Math.PI/2+needle;
-  line(265,122,265+Math.cos(theta)*11,122-Math.sin(theta)*11,'#eac58d',2);
-  circle(265,122,3,'#deb77b');
-  label(out?'ОБ/МИН '+labelRPM(out):'НЕТ ХОДА',265,145,'#b6cfb8',8);
-  // Foot brass transmission markings.
-  label('M E C H A N I C A  /  P A T E N T   N°  0 1',180,448,'#c7af83',8);
-  line(38,458,322,458,'#7f9e8b',1);
-  label('ВЕДУЩИЙ',80,427,'#a9bca7',9);label('ВЕДОМЫЙ',280,427,'#a9bca7',9);
+  ctx.strokeStyle='#a99166';ctx.lineWidth=1;ctx.strokeRect(27,105,141,31);
+  // Glass-covered output dial.
+  circle(265,121,20,'#0a1a20','#bca577',3);
+  circle(265,121,17,'#213e3e','#e5cb96',.7);
+  for(let k=0;k<13;k++){
+    const a=(k/12)*Math.PI*1.45+Math.PI*.78;
+    line(265+Math.cos(a)*12,121+Math.sin(a)*12,265+Math.cos(a)*15.4,121+Math.sin(a)*15.4,'#e0c38c',1);
+  }
+  const out=graph&&graph.output||0;
+  const needle=(Math.sign(out)*Math.min(1,Math.abs(out)/36))*1.4;
+  const theta=-Math.PI/2+needle;
+  line(265,121,265+Math.cos(theta)*13,121+Math.sin(theta)*13,'#f2d197',1.9);
+  circle(265,121,3,'#d7b981','#3d3027',.6);
+  arc(261,116,14,Math.PI*1.14,Math.PI*1.65);ctx.strokeStyle='#f2f6e64b';ctx.lineWidth=1.3;ctx.stroke();
+  label(out?'ВАЛ '+labelRPM(out)+' RPM':'НЕТ ХОДА',311,125,'#ccb988',7.3);
+  label('МАШИННОЕ ОТДЕЛЕНИЕ',180,439,'#c3b38e',8.2);
+  line(42,448,318,448,'#a493685d',1);
+  label('ИСТОЧНИК',79,429,'#bac9ac',8);
+  label('ВЫХОД',280,429,'#bac9ac',8);
 }
 function drawSocket(x,y,occupied,index){
-  circle(x+1.5,y+3,11,'#0b2527');
-  circle(x,y,9,'#0d3436','#779689',2);
-  circle(x,y,4,'#071f21','#b49b71',1);
+  circle(x+2,y+4,15,'#081c1ea6');
+  circle(x,y,13,'#5b6856','#142e2e',2.4);
+  circle(x,y,10,'#172b2d','#c2a675',2);
+  circle(x,y,6,'#081a1e','#536b64',1);
+  circle(x-1,y-1,2.4,'#121e20','#c6aa79',.8);
   if(!occupied){
     const pulse=state.drag&&socketAt(state.drag.p.x,state.drag.p.y)===index;
-    if(pulse){circle(x,y,15,null,'#f9d99d',2);}
-    line(x-16,y,x-10,y,'#99a694',1);line(x+10,y,x+16,y,'#99a694',1);
-    line(x,y-16,x,y-10,'#99a694',1);line(x,y+10,x,y+16,'#99a694',1);
+    if(pulse){
+      circle(x,y,18,'#d4b37523','#ffdda0',1.7);
+      for(let k=0;k<4;k++){
+        const a=k*TAU/4+Math.PI/4;
+        line(x+Math.cos(a)*19,y+Math.sin(a)*19,x+Math.cos(a)*24,y+Math.sin(a)*24,'#f7dba7',1.5);
+      }
+    }
+    ctx.save();ctx.setLineDash([2,3]);
+    arc(x,y,20,0,TAU);ctx.strokeStyle='#a9ad8b6a';ctx.lineWidth=1;ctx.stroke();ctx.restore();
   }
 }
 function drawSourceAndTarget(){
   const p=level();const source=graph.nodes[0],target=graph.nodes[1];
   [source,target].forEach(n=>{
-    circle(n.x+1,n.y+2,n.r+13,'#0e3132','#8b9479',3);
-    circle(n.x,n.y,n.r+9,'#173f40','#43635c',2);
+    circle(n.x+3,n.y+6,n.r+15,'#071b1cda','#293e3a',1);
+    circle(n.x,n.y,n.r+12,'#4a584a','#ba9e6c',3);
+    circle(n.x,n.y,n.r+8,'#193d3b','#364e42',2);
+    for(let i=0;i<8;i++){const a=i*TAU/8;circle(n.x+Math.cos(a)*(n.r+10),n.y+Math.sin(a)*(n.r+10),1.3,'#e2c793');}
   });
   label('01',source.x,source.y-source.r-19,'#c9b18b',10);
   label('02',target.x,target.y-target.r-19,'#c9b18b',10);
@@ -423,8 +502,13 @@ function render(){
     const size=d.fromTray||current()[d.from];
     if(size){drawGear({r:RADII[size],size},null,.70,d.p.x,d.p.y);}
   }
+  if(state.impact){
+    const i=state.impact,progress=Math.min(1,i.t/.34);
+    const alpha=Math.max(0,(1-progress)*.7);
+    circle(i.x,i.y,RADII[current()[i.id]||2]+7+progress*18,null,'rgba(255,220,151,'+alpha+')',2-progress);
+  }
   if(state.flash>0){
-    ctx.strokeStyle='rgba(241,210,143,'+(state.flash*.55)+')';ctx.lineWidth=4;ctx.strokeRect(19,163,322,242);
+    ctx.strokeStyle='rgba(239,187,94,'+(state.flash*.45)+')';ctx.lineWidth=2.4;ctx.strokeRect(21,168,318,233);
   }
   redraw=false;
 }
@@ -432,10 +516,23 @@ function tick(ts){
   if(document.hidden){raf=0;return;}
   const dt=Math.min(.055,(ts-(lastTime||ts))/1000);lastTime=ts;
   if(state.running){
-    state.phase+=dt;
+    const jammed=state.runResult&&state.runResult.jam;
+    const wanted=jammed ? .065 : 1;
+    state.spinFactor+=(wanted-state.spinFactor)*Math.min(1,dt*(jammed?17:3.7));
     state.runTime+=dt;
     state.charge=Math.max(0,state.charge-dt*16);
-    if(state.runTime>(state.level===6?1.85:1.85)||state.charge<=0){save();finish();}
+    const energy=$('charge-read');if(energy)energy.textContent='ПРУЖИНА · '+Math.ceil(state.charge)+'%';
+    const winding=document.querySelector('.wind-dial');if(winding)winding.style.setProperty('--charge',state.charge+'%');
+    if(state.runTime>=1.85||state.charge<=0){save();finish();}
+    redraw=true;
+  }else if(state.spinFactor>.002){
+    state.spinFactor*=Math.exp(-dt*7);
+    redraw=true;
+  }
+  if(state.spinFactor>.002)state.phase+=dt*state.spinFactor;
+  if(state.impact){
+    state.impact.t+=dt;
+    if(state.impact.t>=.34)state.impact=null;
     redraw=true;
   }
   if(state.flash>0){state.flash=Math.max(0,state.flash-dt*.9);redraw=true;}
