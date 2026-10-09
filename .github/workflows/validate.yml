@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A new platform patch supersedes incomplete expensive builds for the same PR.
+# Without this, each small fix runs a full production+WebKit matrix in parallel.
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   creative-direction:
     if: github.event_name == 'pull_request'
