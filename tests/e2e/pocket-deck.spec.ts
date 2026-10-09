@@ -34,11 +34,12 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   monitor.assertClean();
 });
 
-test('widgets can be configured, reordered and saved without losing previous shelf data',async({page})=>{
+test('widgets can be configured, reordered and saved without losing previous shelf data',async({page},info)=>{
   await openDeck(page);
   await page.locator('#deck-customize').click();
   await expect(page.locator('#deck-editor')).toBeVisible();
   await expect(page.locator('[data-edit-id="continue"]')).toBeVisible();
+  await attachCriticalScreenshot(page,info,'deck-widget-editor',{fullPage:false});
   await page.locator('#deck-widget-picker').selectOption('projects');
   await page.locator('#deck-widget-add').click();
   await expect(page.locator('#deck-editor-list .deck-editor-row')).toHaveCount(4);
@@ -137,9 +138,71 @@ test('bulk organization selects unkept projects and archives only after confirma
   await expect(page.locator('.app-entry[data-slug="'+second+'"]')).toBeVisible();
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
+  // Reloading turns this into a returning-user visit: acknowledge the current
+  // shell's release receipt before interacting with the underlying project.
+  await expect(page.locator('[data-digest-close]')).toBeVisible();
+  await page.locator('[data-digest-close]').click();
   await page.locator('.app-entry[data-slug="'+first+'"] .app-entry__select').click();
   await page.locator('[data-deck-stage="trial"]').click();
   await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
+});
+
+test('cancelled widget drag preserves its position',async({page})=>{
+  await openDeck(page);
+  await page.locator('#deck-customize').click();
+  const rows=page.locator('#deck-editor-list .deck-editor-row');
+  const order=await rows.evaluateAll(items=>items.map(item=>item.getAttribute('data-edit-id')));
+  const handle=rows.first().locator('[data-deck-drag]');
+  const box=await handle.boundingBox();
+  const target=await rows.nth(1).boundingBox();
+  expect(box).toBeTruthy();expect(target).toBeTruthy();
+  await page.mouse.move(box!.x+box!.width/2,box!.y+box!.height/2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x+box!.width/2,target!.y+target!.height/2);
+  await handle.dispatchEvent('pointercancel',{pointerId:1,clientY:target!.y+target!.height/2});
+  await page.mouse.up();
+  await expect(rows.first()).not.toHaveClass(/is-dragging/);
+  expect(await rows.evaluateAll(items=>items.map(item=>item.getAttribute('data-edit-id')))).toEqual(order);
+  await page.locator('#deck-editor-save').click();
+  expect(await page.locator('#deck-widgets .deck-widget').evaluateAll(items=>items.map(item=>item.getAttribute('data-widget-id')))).toEqual(order);
+});
+
+test('archiving a spotlight removes the project from home widgets',async({page})=>{
+  await openDeck(page);
+  await page.locator('#deck-customize').click();
+  await page.locator('#deck-widget-picker').selectOption('spotlight');
+  await page.locator('#deck-widget-add').click();
+  const picker=page.locator('[data-deck-widget-slug]').last();
+  const slug=await picker.inputValue();
+  await page.locator('#deck-editor-save').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator(`.app-entry[data-slug="${slug}"] .app-entry__select`).click();
+  await page.locator('[data-deck-stage="archive"]').click();
+  await page.locator('#detail-close').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
+  await expect(page.locator(`#deck-home [data-deck-open="${slug}"]`)).toHaveCount(0);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator(`#deck-home [data-deck-open="${slug}"]`)).toHaveCount(0);
+});
+
+test('saved layout and launcher navigation remain available offline',async({page,context,browserName})=>{
+  test.skip(browserName!=='chromium','Offline Service Worker navigation is covered in Chromium, as in service-worker.spec.ts; Playwright WebKit reports an internal navigation error in offline mode.');
+  await openDeck(page);
+  await page.evaluate(async()=>{
+    await navigator.serviceWorker.ready;
+    if(!navigator.serviceWorker.controller)await new Promise<void>(resolve=>
+      navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));
+  });
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('[data-deck-density="micro"]').click();
+  await context.setOffline(true);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
+  await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
+  await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
+  await expect(page.locator('#deck-home')).toBeVisible();
+  await context.setOffline(false);
 });

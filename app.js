@@ -598,7 +598,10 @@ function selectApp(slug, { openPanel = true } = {}) {
   if (deck?.getView() === 'home') deck.setView('library');
   shelfState.selected = slug;
   persistShelfState();
-  renderShelf({ transition: true });
+  // Commit the selected project's fields before exposing the editable panel.
+  // A deferred view-transition callback otherwise shows the previous project
+  // briefly and can overwrite notes typed during the panel's opening motion.
+  renderShelf({ transition: false });
   if (openPanel) openDetailPanel();
 }
 

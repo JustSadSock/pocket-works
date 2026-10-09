@@ -57,7 +57,7 @@ export function installPocketDeck({
   function widgetContent(widget){
     const favorites=favoriteSet();
     const apps=sorted();
-    const selected=widget.kind==='spotlight'&&widget.slug?appBySlug(widget.slug):null;
+    const selected=widget.kind==='spotlight'&&widget.slug?apps.find(app=>app.slug===widget.slug):null;
     if(widget.kind==='continue'){
       const app=recent()[0]||apps.find(a=>favorites.has(a.slug))||apps[0];
       return app?`<div class="deck-widget__heading"><span>CONTINUE</span><span class="deck-widget__counter">${formatAgo(getRecents()[app.slug])}</span></div>
@@ -111,6 +111,11 @@ export function installPocketDeck({
     modelSignature=signature;
     widgets.innerHTML=state.widgets.length?state.widgets.map(w=>`<section class="deck-widget deck-widget--${escapeHtml(w.size)}" data-widget-id="${escapeHtml(w.id)}">${widgetContent(w)}</section>`).join('')
       :`<div class="deck-home-blank"><span>YOUR SPACE</span><strong>Make it yours.</strong><p>Add a widget to start building your home screen.</p><button type="button" data-deck-edit>Add a widget +</button></div>`;
+    // A cached cover index can outlive an individual image. Restore the genuine
+    // app icon when its screenshot is unavailable, including offline visits.
+    for(const photo of widgets.querySelectorAll('.deck-art__photo')){
+      photo.addEventListener('error',()=>photo.remove(),{once:true});
+    }
   }
   function renderNavigation(){
     const state=current();
@@ -384,6 +389,13 @@ export function installPocketDeck({
   $('#deck-layout-import-file').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)void importLayout(file);e.target.value='';});
   // Pointer-controlled reorder, with keyboard-accessible up/down alternatives.
   let drag=null;
+  const cancelDrag=()=>{
+    if(!drag)return;
+    drag.target.style.removeProperty('transform');
+    drag.target.classList.remove('is-dragging');
+    drag=null;
+  };
+  editor.addEventListener('close',cancelDrag);
   $('#deck-editor-list').addEventListener('pointerdown',e=>{
     const handle=e.target.closest('[data-deck-drag]');if(!handle)return;
     const row=handle.closest('[data-edit-id]');if(!row)return;
@@ -410,7 +422,8 @@ export function installPocketDeck({
     drag=null;
   };
   $('#deck-editor-list').addEventListener('pointerup',releaseDrag);
-  $('#deck-editor-list').addEventListener('pointercancel',releaseDrag);
+  $('#deck-editor-list').addEventListener('pointercancel',cancelDrag);
+  $('#deck-editor-list').addEventListener('lostpointercapture',cancelDrag);
 
   let holdTimer=0,holdXY=null;
   home.addEventListener('pointerdown',e=>{
