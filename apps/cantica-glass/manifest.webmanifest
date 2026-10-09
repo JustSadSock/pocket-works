@@ -1,0 +1,25 @@
+{
+  "id": "/apps/cantica-glass/",
+  "name": "CANTICA — Песнь света",
+  "short_name": "CANTICA",
+  "description": "Готическая игра-головоломка о витраже и свете.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#111a1d",
+  "theme_color": "#131b20",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
