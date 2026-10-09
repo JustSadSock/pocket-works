@@ -7,6 +7,7 @@ import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot
 import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
 import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 import { createShelfStateStore } from './shared/shelf-state.js';
+import { installShelfTools } from './shared/shell-tools.js';
 
 installMobileRuntime();
 
@@ -649,7 +650,7 @@ async function loadRegistry({ manual = false } = {}) {
     }
   } finally {
     refreshButton.disabled = false;
-    refreshButton.textContent = 'Sync';
+    refreshButton.textContent = 'Refresh';
   }
 
   if (!registry.some((app) => app.slug === shelfState.selected)) {
@@ -811,6 +812,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+installShelfTools({ store: shelfStore });
 updateSystemStatus();
 void shelfStore.hydrate();
 window.addEventListener('storage', (event) => {
