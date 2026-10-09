@@ -188,9 +188,9 @@ html.has-pocket-deck .app-entry{
   display:block;position:relative;min-width:0;min-height:0;overflow:hidden;
   border:1px solid #354246;border-radius:4px;background:#1d282d;box-shadow:none;
   opacity:1;transform:none;animation:none;transition:filter .12s,transform .17s;isolation:isolate;
-  /* Stable grid track heights matter more than speculative offscreen layout
-     skips: WebKit can repeatedly resize auto-contained cells while scrolling. */
-  content-visibility:visible;
+  /* The catalog can contain hundreds of apps. Skip off-screen card layout and
+     painting rather than running the old list's animation machinery. */
+  content-visibility:auto;contain-intrinsic-size:auto 186px;
 }
 html.has-pocket-deck .app-entry::before{display:none;}
 html.has-pocket-deck .app-entry.is-selected{border-color:#df9c81;transform:none;box-shadow:inset 0 0 0 1px #df9c81;}
