@@ -1,0 +1,25 @@
+{
+  "id": "/apps/mechanica/",
+  "name": "МЕХАНИКА",
+  "short_name": "МЕХАНИКА",
+  "description": "Тактильная мастерская шестерён: собирай передачи, заводи пружину и приводи механизмы в движение.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#173e40",
+  "theme_color": "#173e40",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
