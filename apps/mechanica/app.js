@@ -208,8 +208,10 @@ function syncSize(){
   const bounds=canvas.getBoundingClientRect(),dpr=Math.min(3,window.devicePixelRatio||1);
   const w=Math.max(1,bounds.width),h=Math.max(1,bounds.height);
   const bw=Math.round(w*dpr),bh=Math.round(h*dpr);
+  const changed=canvas.width!==bw||canvas.height!==bh||screen.w!==w||screen.h!==h;
   if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}
-  screen={scale:Math.min(w/360,h/500),ox:(w-360*Math.min(w/360,h/500))/2,oy:(h-500*Math.min(w/360,h/500))/2,w,h,dpr};redraw=true;
+  const scale=Math.min(w/360,h/500);
+  screen={scale,ox:(w-360*scale)/2,oy:(h-500*scale)/2,w,h,dpr};if(changed)redraw=true;
 }
 function position(clientX,clientY){
   const rect=canvas.getBoundingClientRect();
@@ -265,6 +267,7 @@ document.querySelectorAll('.part').forEach(el=>{
   el.addEventListener('pointerdown',e=>{
     if(el.disabled)return;
     start={id:e.pointerId,x:e.clientX,y:e.clientY,size:Number(el.dataset.size),moved:false};
+    try{el.setPointerCapture(e.pointerId);}catch{}
     state.selected=start.size;save();refresh();
   });
   el.addEventListener('pointermove',e=>{
