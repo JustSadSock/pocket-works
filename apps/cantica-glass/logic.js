@@ -11,7 +11,7 @@ function seeded(seed){
 const at=(s,r,c)=>r*s+c;
 function stepDirection(a,b,s){const dr=Math.floor(b/s)-Math.floor(a/s),dc=b%s-a%s;return DIRECTIONS.findIndex(([rr,cc])=>rr===dr&&cc===dc);}
 function destinations(index,size,rand){
-  const count=index<25?1:index<100?(index%5===0?2:1):index<220?2:index<385?3:4;
+  const count=index<50?1:index<190?2:index<360?3:4;
   const cols=Array.from({length:size},(_,i)=>i);
   for(let j=cols.length-1;j>0;j--){const k=Math.floor(rand()*(j+1));[cols[j],cols[k]]=[cols[k],cols[j]];}
   const chosen=[];
