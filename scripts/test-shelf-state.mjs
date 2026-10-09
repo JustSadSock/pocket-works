@@ -84,7 +84,7 @@ await newTab.importBackup(backup);
 assert.equal(newTab.get().favorites.length, 3);
 await newTab.flush();
 assert.equal(JSON.parse(data.get('pocket-works:shelf:v2')).data.favorites.length, 3);
-await assert.rejects(newTab.importBackup({ schema: 'invalid' }), TypeError);
+assert.throws(() => newTab.importBackup({ schema: 'invalid' }), TypeError);
 assert.equal(newTab.acceptCrossTabRecord({
   schema: SHELF_EXPORT_SCHEMA, savedAt: Date.now() + 100_000,
   data: { favorites: ['rivet'], sort: 'name' }
