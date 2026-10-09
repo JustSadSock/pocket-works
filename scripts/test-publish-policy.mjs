@@ -11,7 +11,7 @@ for (const file of [
 for (const file of [
   'qa/gameplay.mjs', 'asset-forge/model.py', 'audio-forge/generator.mjs',
   'tests/e2e/smoke.spec.js', 'source/main.ts', 'public/source-model.blend',
-  'README.md', 'AGENTS.md', 'progress.md', 'vite.config.ts',
+  'README.md', 'AGENTS.md', 'progress.md', 'visual-direction.json', 'vite.config.ts',
   'assets/.DS_Store', 'screenshots/intro.png', 'source/index.html',
   'notes/visual-feedback.md', 'src/main.ts', 'assets/model.blend1'
 ]) {
