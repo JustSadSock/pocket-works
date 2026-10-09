@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111a20">
-<meta name="description" content="CANTICA — средневековая головоломка о свете и витражах.">
+<meta name="theme-color" content="#172222">
+<meta name="description" content="CANTICA — пятьсот световых витражей в ожившем средневековом манускрипте.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CANTICA">
-<title>CANTICA — Песнь света</title>
+<title>CANTICA · Книга света</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon.svg">
@@ -20,51 +20,108 @@
 <body>
 <main class="app-shell" data-app-shell data-fullscreen-app>
   <header class="topbar" data-ui>
-    <a class="exit" href="../../" data-app-control data-native-press>← Pocket Works</a>
-    <div class="seal" aria-label="CANTICA"><span>C</span></div>
+    <a href="../../" class="exit" data-app-control data-native-press aria-label="Вернуться в Pocket Works"><span aria-hidden="true" class="exit-symbol">‹</span><span>Pocket Works</span></a>
+    <div class="brand" aria-label="CANTICA"><span class="brand-emblem" aria-hidden="true">✣</span><span>CANTICA</span></div>
     <button class="sound" id="soundBtn" type="button" aria-pressed="false" data-native-press>Звук выкл.</button>
   </header>
+
   <section class="folio" data-ui>
-    <div class="folio-rule"><span>✧</span><span>ANNO DOMINI · MCCXLVIII</span><span>✧</span></div>
-    <p class="chapter" id="chapterLabel">КНИГА I · ОКНО 01</p>
-    <h1 id="levelName">Погасшая часовня</h1>
-    <p class="subline" id="levelNote">Собери дорогу для первого луча.</p>
+    <p class="chapter" id="chapterLabel">КНИГА I · ОКНО 001 / 500</p>
+    <div class="folio-title">
+      <span class="folio-flourish" aria-hidden="true">✥</span>
+      <h1 id="levelName">Первый луч</h1>
+      <span class="folio-flourish" aria-hidden="true">✥</span>
+    </div>
+    <p class="subline" id="levelNote">Направь свет к реликварию.</p>
   </section>
-  <div class="window-progress" data-ui aria-label="Прогресс книги окон"><div class="window-progress-track"><i id="progressFill"></i></div><span id="progressText">1 / 500</span></div>
-  <section class="window-stage" id="stage" data-gesture-surface data-block-callout aria-label="Игровое витражное окно">
-    <canvas id="glass" tabindex="0" role="application" aria-label="Сетка витража 5 на 5. Нажимайте на фрагменты, чтобы поворачивать световые дорожки. Стрелки и Enter — управление с клавиатуры."></canvas>
+
+  <div class="window-progress" data-ui aria-label="Прогресс прохождения">
+    <span class="progress-sigil" aria-hidden="true">✜</span>
+    <div class="window-progress-track"><i id="progressFill"></i></div>
+    <span id="progressText">1 / 500</span>
+  </div>
+
+  <section class="window-stage" id="stage" data-gesture-surface data-block-callout aria-label="Готическое витражное окно">
+    <canvas id="glass" tabindex="0" role="application" aria-label="Поворачивайте кусочки стекла, соединяя световые каналы. Клавиши-стрелки выбирают фрагмент, Enter поворачивает его."></canvas>
     <div class="stage-grain" aria-hidden="true"></div>
     <div class="stage-corner corner-left" aria-hidden="true">❦</div>
     <div class="stage-corner corner-right" aria-hidden="true">❦</div>
   </section>
+
   <section class="inscription" data-ui>
-    <div class="inscription-side"><span class="small-cap">ПОВОРОТОВ</span><strong id="moves">00</strong></div>
-    <div class="inscription-center"><span class="ornament">✣</span><span id="status" aria-live="polite">Коснись стекла, чтобы повернуть</span><span class="ornament">✣</span></div>
-    <div class="inscription-side right"><span class="small-cap">ОГНИ</span><strong id="flames">0 / 1</strong></div>
+    <div class="inscription-side"><span class="small-cap">ПОВОРОТЫ</span><strong id="moves">00</strong></div>
+    <div class="inscription-center"><span id="status" aria-live="polite">Коснись стекла, чтобы повернуть</span></div>
+    <div class="inscription-side right"><span class="small-cap">СВЕТ</span><strong id="flames">0 / 1</strong></div>
   </section>
+
   <footer class="pedestal" data-ui>
-    <button id="chaptersBtn" class="edge-action" data-native-press type="button"><span class="button-rune">☷</span><span>Главы</span></button>
-    <button id="hintBtn" class="primary-action" data-native-press type="button"><span class="button-rune">✶</span><span>Подсказать путь</span></button>
-    <button id="restartBtn" class="edge-action" data-native-press type="button"><span class="button-rune">↶</span><span>Заново</span></button>
+    <button id="chaptersBtn" class="edge-action book-control" data-native-press type="button" aria-label="Открыть книгу глав">
+      <span class="button-rune" aria-hidden="true">▤</span><span>Книга окон</span>
+    </button>
+    <button id="hintBtn" class="primary-action wax-control" data-native-press type="button" aria-label="Подсказать следующий ход">
+      <span class="seal-inner"><span class="button-rune" aria-hidden="true">✶</span></span>
+      <span class="wax-caption">Подсказка</span>
+    </button>
+    <button id="restartBtn" class="edge-action reset-control" data-native-press type="button" aria-label="Начать окно заново">
+      <span class="button-rune" aria-hidden="true">↶</span><span>Заново</span>
+    </button>
   </footer>
+
   <button class="workshop-access" type="button" data-workshop-trigger data-native-press aria-label="Открыть мастерскую и диагностику">⚙</button>
+
+  <!-- The codex is a genuine second navigation surface: the whole page unfolds, not a popup of cards. -->
+  <section class="manuscript" id="manuscript" hidden aria-hidden="true">
+    <div class="manuscript-backdrop" aria-hidden="true"></div>
+    <div class="manuscript-frame" role="dialog" aria-modal="true" aria-label="Книга окон">
+      <header class="manuscript-toolbar">
+        <button id="codexBack" type="button" class="codex-back" aria-label="Вернуться к списку книг"><span aria-hidden="true">‹</span> Книги</button>
+        <div class="codex-wordmark"><span aria-hidden="true">✠</span> CANTICA <span class="tiny-roman">· LIBER LUMINIS</span></div>
+        <button id="codexClose" type="button" class="codex-close" aria-label="Закрыть манускрипт">×</button>
+      </header>
+      <div class="book-casing">
+        <div class="book-page-stack" aria-hidden="true"></div>
+        <div class="codex-page" id="codexPage">
+          <div class="paper-frame">
+            <div class="paper-filigree filigree-tl" aria-hidden="true">❦</div>
+            <div class="paper-filigree filigree-tr" aria-hidden="true">❦</div>
+            <div class="paper-filigree filigree-bl" aria-hidden="true">✥</div>
+            <div class="paper-filigree filigree-br" aria-hidden="true">✥</div>
+            <div class="codex-rubric"><span aria-hidden="true">✦</span><span id="codexEyebrow">CODEX LUMINIS</span><span aria-hidden="true">✦</span></div>
+            <div class="codex-art" id="codexArt" aria-hidden="true">✣</div>
+            <h2 class="codex-title" id="codexTitle">Книга света</h2>
+            <p class="codex-subtitle" id="codexSubtitle">Десять книг. Пятьсот окон. Один свет.</p>
+            <div class="codex-separator" aria-hidden="true"><span>✣</span></div>
+            <div id="codexContent" class="codex-content"></div>
+            <footer class="codex-folio">
+              <button id="codexPrev" type="button" class="folio-turn" aria-label="Предыдущая страница"><span aria-hidden="true">‹</span> Назад</button>
+              <div class="codex-folio-center"><span id="codexStatus">0 / 500</span><span id="codexPageCount">CATALOGUS</span></div>
+              <button id="codexNext" type="button" class="folio-turn" aria-label="Следующая страница">Далее <span aria-hidden="true">›</span></button>
+            </footer>
+          </div>
+        </div>
+      </div>
+      <p class="codex-announcement" id="codexAnnouncement" aria-live="polite"></p>
+      <a href="../../" class="codex-exit" data-app-control>Вернуться в Pocket Works</a>
+    </div>
+  </section>
+
   <div class="scrim" id="scrim" hidden>
     <section class="illumination" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button class="modal-close" id="modalClose" type="button" aria-label="Закрыть окно">×</button>
-      <div class="modal-icon" id="modalIcon">✦</div>
+      <div class="modal-icon" id="modalIcon" aria-hidden="true">✦</div>
       <p class="modal-kicker" id="modalKicker">КНИГА СВЕТА</p>
       <h2 id="modalTitle">Свет возвращён</h2>
       <p class="modal-copy" id="modalCopy"></p>
       <div class="chapter-list" id="chapterList" hidden></div>
       <div class="modal-buttons">
         <button id="modalPrimary" type="button" class="modal-primary" data-native-press>Продолжить</button>
-        <button id="modalSecondary" type="button" class="modal-secondary" data-native-press>Вернуться к окну</button>
+        <button id="modalSecondary" type="button" class="modal-secondary" data-native-press>К витражу</button>
       </div>
-      <a href="../../" class="modal-exit" data-app-control>← В Pocket Works</a>
+      <a href="../../" class="modal-exit" data-app-control>← Pocket Works</a>
     </section>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="2.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="3.0.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

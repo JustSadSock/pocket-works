@@ -2,7 +2,7 @@
   "id": "/apps/cantica-glass/",
   "name": "CANTICA — Песнь света",
   "short_name": "CANTICA",
-  "description": "500 витражных головоломок, готическое стекло и живой свет.",
+  "description": "Пятьсот средневековых витражей внутри иллюминированного манускрипта.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -13,7 +13,7 @@
   ],
   "orientation": "portrait",
   "background_color": "#111a1d",
-  "theme_color": "#111a20",
+  "theme_color": "#172222",
   "icons": [
     {
       "src": "./icons/icon.svg",

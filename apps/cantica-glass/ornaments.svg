@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 820" preserveAspectRatio="none">
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ab824b"/><stop offset=".48" stop-color="#d6be86"/><stop offset="1" stop-color="#8b6342"/></linearGradient>
+<radialGradient id="wash"><stop stop-color="#f7eaca" stop-opacity=".35"/><stop offset="1" stop-color="#f7eaca" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="420" height="820" fill="url(#wash)"/>
+<g fill="none" stroke="url(#gold)" stroke-width="1.5" opacity=".65">
+<path d="M16 155V70Q16 16 72 16H157M404 155V70Q404 16 348 16H263"/>
+<path d="M16 665v85q0 54 56 54h85M404 665v85q0 54-56 54h-85"/>
+<path d="M22 155V79Q22 22 79 22h78M398 155V79Q398 22 341 22h-78"/>
+<path d="M22 665v76q0 57 57 57h78M398 665v76q0 57-57 57h-78"/>
+</g>
+<g id="corner" transform="translate(21 23)" stroke="#8a613e" stroke-width="1.5" fill="none" opacity=".64">
+<path d="M0 95Q8 45 27 27Q45 8 95 0M0 70Q21 20 66 0"/>
+<path d="M0 43Q15 2 42 0M0 17Q25 12 26 34Q23 49 12 46Q4 43 12 34Q19 32 20 39"/>
+<path d="M31 13Q48 19 42 37Q38 46 31 43Q25 40 31 34Q38 31 37 39"/>
+<path d="M13 50Q31 48 34 61Q30 70 20 67Q14 64 20 57"/>
+<path d="M50 0Q61 22 82 16Q89 9 80 5Q72 3 73 11"/>
+<path d="M12 76Q33 65 44 81Q49 94 39 94Q33 89 40 86"/>
+<path d="M58 7Q52 37 73 46Q91 43 90 31Q84 26 79 31Q78 37 83 38"/>
+<path d="M38 44Q66 51 68 73Q60 89 50 78Q46 72 54 70Q60 70 59 76"/>
+<path d="M65 17Q69 33 85 27"/>
+<circle cx="13" cy="13" r="3.5" fill="#8c5844" stroke="none"/>
+<path d="M19 9l6-7 3 8-5 6zM8 20l-7 5 10 5 7-6z" fill="#9e7750"/>
+<path d="M50 17q-13 0-12-13q12 1 12 13zM19 57Q8 55 8 65Q16 70 19 57zM63 55Q69 45 77 51Q76 60 63 55z" fill="#a18b56" fill-opacity=".5"/>
+</g>
+<use href="#corner" transform="translate(420 0) scale(-1 1)"/>
+<use href="#corner" transform="translate(0 820) scale(1 -1)"/>
+<use href="#corner" transform="translate(420 820) scale(-1 -1)"/>
+<g fill="none" stroke="#9a7145" stroke-width="1" opacity=".52">
+<path d="M143 17Q179 27 210 17Q242 27 278 17M143 803Q179 793 210 803Q242 793 278 803"/>
+<path d="M200 16q10-10 20 0q-10 10-20 0zM200 804q10-10 20 0q-10-10-20 0z" fill="#9c6343" fill-opacity=".35"/>
+<path d="M18 334q12 26 0 52q-12-26 0-52zM402 334q12 26 0 52q-12-26 0-52z"/>
+<path d="M18 432q12 26 0 52q-12-26 0-52zM402 432q12 26 0 52q-12-26 0-52z"/>
+</g>
+<g opacity=".23" stroke="#744d30" stroke-width=".7">
+<path d="M42 190h14M364 190h14M42 630h14M364 630h14"/>
+<circle cx="21" cy="409" r="6" fill="none"/><circle cx="399" cy="409" r="6" fill="none"/>
+</g>
+</svg>
