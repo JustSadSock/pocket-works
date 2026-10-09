@@ -1,4 +1,3 @@
-@import url('data:text/css,'); 
 :root{color-scheme:dark;--ink:#111a1d;--stone:#253238;--lead:#0c1618;--parchment:#e7d4ae;--faded:#b09d77;--wine:#9b4351;--gold:#dcc489;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--workshop-bg:#182329;--workshop-fg:#eadbbd;--workshop-accent:#caab75}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111a1d}
