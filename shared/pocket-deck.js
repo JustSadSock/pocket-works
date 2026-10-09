@@ -359,6 +359,20 @@ export function installPocketDeck({
     if(chosen.has(slug))chosen.delete(slug);else chosen.add(slug);
     renderOrganize();
   },true);
+  // Critical editor actions are bound directly to their controls as well as
+  // delegated through the shell. This keeps modal open/close dependable on
+  // WebKit during touch-to-click retargeting and DOM reconciliation.
+  for(const [selector,handler] of [
+    ['#deck-customize',()=>openEditor()],
+    ['#deck-editor-cancel',()=>closeEditor(false)],
+    ['#deck-editor-save',()=>closeEditor(true)],
+    ['#deck-search-action',()=>setView('library',{focus:true})]
+  ]){
+    $(selector)?.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();
+      handler();
+    });
+  }
   document.addEventListener('click',onClick);
   $('#deck-archive-confirm').addEventListener('cancel',()=>{ /* closing by Escape is non-destructive */ });
   editor.addEventListener('cancel',e=>{e.preventDefault();closeEditor(false);});
