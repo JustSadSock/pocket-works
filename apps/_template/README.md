@@ -27,3 +27,7 @@ npm run health
 ```
 
 The app must remain independently installable and usable after one successful online launch followed by offline reload.
+
+## Visual production — required before release
+
+This is a neutral runtime scaffold, **not** a starter art style or an acceptable finished product. Complete `visual-direction.json`, replace the copied title/navigation layout where appropriate, author a distinctive icon and focal artwork, and verify the first frame, active interaction and settled state with browser screenshots and video. See `docs/CREATIVE-PRODUCTION.md`.
