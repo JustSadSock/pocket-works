@@ -606,7 +606,7 @@ const manuscript=createManuscript({
   onPageTurn:pageRustle,
   reduceMotion:()=>reduced.matches
 });
-createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.0.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.1.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
 hydrate();
 measure();wake();
 if(state.solved)window.setTimeout(showVictory,120);
