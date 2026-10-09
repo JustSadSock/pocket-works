@@ -58,11 +58,18 @@
     </section>
     <div class="deck-library-head" data-ui>
       <div><span class="deck-overline">YOUR COLLECTION</span><h2 id="deck-view-title">Library</h2></div>
+      <button id="deck-organize-start" type="button" data-deck-organize>Organize</button>
       <div id="deck-density-controls" class="deck-density" role="group" aria-label="Library density">
         <button data-deck-density="comfortable" type="button" aria-label="Large covers" title="Large covers">▦</button>
         <button data-deck-density="compact" type="button" aria-label="Compact covers" title="Compact covers">▥</button>
         <button data-deck-density="micro" type="button" aria-label="Small covers" title="Small covers">⠿</button>
       </div>
+    </div>
+    <div id="deck-organize-bar" class="deck-organize-bar" hidden role="toolbar" aria-label="Organize library">
+      <strong id="deck-organize-count">0 selected</strong>
+      <button type="button" data-deck-select-unsaved>Select unkept</button>
+      <button type="button" data-deck-organize-archive>Archive selected</button>
+      <button type="button" data-deck-organize-cancel>Done</button>
     </div>
     <section class="command-deck" aria-label="Application library controls" data-ui>
       <label class="search-field" for="app-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="app-search" type="search" inputmode="search" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Find a work…"><kbd aria-hidden="true">⌘ K</kbd><button id="clear-search" type="button" aria-label="Clear search" data-native-press hidden>×</button></label>
@@ -107,6 +114,11 @@
     <footer class="shelf-footer" data-ui><p><span id="sync-status">Registry not synced</span><span aria-hidden="true"> · </span><span id="offline-count">0 offline-ready</span><span aria-hidden="true"> · </span><span id="storage-status">Checking personal shelf backup…</span></p><button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button></footer>
     <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
   </main>
+  <dialog id="deck-archive-confirm" class="deck-archive-confirm" aria-labelledby="deck-archive-title">
+    <p class="deck-overline">ORGANIZE LIBRARY</p><h2 id="deck-archive-title">Move to archive?</h2>
+    <p id="deck-archive-summary">Selected projects will be hidden from the main library. Their files and saves remain intact.</p>
+    <div><button id="deck-archive-cancel" type="button">Cancel</button><button id="deck-archive-accept" type="button">Archive projects</button></div>
+  </dialog>
   <dialog id="deck-editor" class="deck-editor" aria-labelledby="deck-editor-title">
     <div class="deck-editor__head">
       <div><span class="deck-overline">PERSONALIZE</span><h2 id="deck-editor-title">Your layout</h2><p>Move, resize and configure widgets. Changes are saved on this device.</p></div>
