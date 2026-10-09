@@ -10,6 +10,10 @@ async function openDeck(page: import('@playwright/test').Page) {
 
 test('Pocket Deck boots into an authored home and switches to dense library',async({page},info)=>{
   const monitor=monitorUnexpectedBrowserOutput(page);
+  const missingResources:string[]=[];
+  page.on('response',response=>{
+    if(response.status()>=400)missingResources.push(`${response.status()} ${response.url()}`);
+  });
   await openDeck(page);
   await expect(page.locator('[data-deck-view="home"]').last()).toHaveAttribute('aria-current','page');
   await expect(page.locator('#deck-home')).toBeVisible();
@@ -26,6 +30,7 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
   await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  if(missingResources.length)console.log('Pocket Deck missing resources:',missingResources);
   monitor.assertClean();
 });
 
