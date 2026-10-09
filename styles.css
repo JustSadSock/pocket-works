@@ -179,3 +179,30 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .room-light{display:none}.launch-stage.is-launching .launch-stage__object{transform:none}
 }
+
+/* Stage 3 · Quiet mechanical instrumentation, not a second visual theme. */
+.deck-actions{flex-wrap:wrap;justify-content:flex-end}
+#update-installed-button{border-color:color-mix(in srgb,var(--brass) 42%,var(--line));color:var(--paper)}
+#shelf-tools-button{min-width:56px}
+#storage-status[data-state="warning"]{color:#edb793}
+.shelf-tools{width:min(520px,calc(100vw - 24px));max-height:min(86dvh,760px);overflow:auto;box-sizing:border-box;padding:25px 24px;border:1px solid #786949;border-radius:12px;background:#24231f;color:var(--paper);box-shadow:0 22px 90px #000b;font:inherit}
+.shelf-tools::backdrop{background:rgba(10,9,7,.76);backdrop-filter:blur(3px)}
+.shelf-tools__header{display:flex;justify-content:space-between;align-items:start;gap:16px;border-bottom:1px solid var(--line);padding-bottom:17px}
+.shelf-tools__header h2{font-family:Georgia,serif;font-weight:400;font-size:2.4rem;line-height:1.1;margin:6px 0 0}
+.shelf-tools__header button{border:1px solid var(--line);background:transparent;color:var(--paper);font-size:1.4rem;min-width:43px;min-height:43px;border-radius:6px;cursor:pointer}
+.shelf-tools__intro{color:var(--soft);font-size:.9rem;line-height:1.6;margin:16px 0 20px}
+.shelf-tools__facts{border-block:1px solid var(--line);padding:5px 0}
+.shelf-tools__facts>div{display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+.shelf-tools__facts>div:last-child{border:0}
+.shelf-tools__facts span{font-size:.8rem;color:var(--muted)}
+.shelf-tools__facts strong{text-align:right;font-size:.83rem;font-weight:600;color:var(--paper);overflow-wrap:anywhere}
+.shelf-tools__status{min-height:1.3rem;margin:12px 0;color:var(--brass);font-size:.82rem}
+.shelf-tools__status[data-state="error"]{color:#ffb4a8}
+.shelf-tools__actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shelf-tools__actions button{min-height:45px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;color:var(--paper);background:#343229;font:inherit;font-size:.82rem;cursor:pointer;text-align:center;transition:background .15s,border-color .15s}
+.shelf-tools__actions button:active{background:#4b4535;transform:translateY(1px)}
+.shelf-tools__actions button:focus-visible,.shelf-tools__header button:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.shelf-tools__actions button:disabled{opacity:.55;cursor:wait}
+#tools-repair{grid-column:1/-1;border-color:#826f4b}
+.shelf-tools__note{margin:16px 0 0;color:var(--muted);font-size:.73rem;line-height:1.6}
+@media(max-width:760px){.deck-actions{gap:4px}#sort-button{min-width:62px;max-width:76px}#update-installed-button{min-width:65px;max-width:90px;font-size:.69rem;white-space:normal;line-height:1.1}#shelf-tools-button{min-width:45px;font-size:.7rem}.shelf-tools{padding:19px 17px}.shelf-tools__actions{gap:7px}.shelf-tools__actions button{font-size:.74rem}}

@@ -11,9 +11,12 @@ const FINGERPRINT_PLACEHOLDER='__PW_RELEASE_FINGERPRINT__';
 const CLOUDFLARE_ASSET_LIMIT=25*1024*1024;
 const WASM_SPLIT_THRESHOLD=24*1024*1024;
 const WASM_CHUNK_SIZE=16*1024*1024;
+// Identical committed Godot engine binaries are deployed once, by content hash.
+// Each app still precaches its own references for independent offline launch.
+const sharedGodotEngines=new Map();
 const rootFiles=[
   'index.html','styles.css','launcher-performance.css','launcher-sync.css','app.js',
-  'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
+  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
 
@@ -100,7 +103,7 @@ async function walkFiles(directory,prefix=''){
 
 function wasmChunkBootstrap(relative,parts,totalSize,version){
   const target='./'+relative;
-  const chunkUrls=parts.map(part=>'./'+part+'?pw_release='+encodeURIComponent(version));
+  const chunkUrls=parts.map(part=>(part.startsWith('../')?part:'./'+part)+'?pw_release='+encodeURIComponent(version));
   return `<script data-pocketworks-wasm-chunks>
 (() => {
   const targetUrl = new URL(${JSON.stringify(target)}, window.location.href);
@@ -182,12 +185,22 @@ async function splitOversizedGodotWasm(directory,slug,version){
     if(info.size<=WASM_SPLIT_THRESHOLD)continue;
 
     const source=await readFile(file);
-    const parts=[];
-    for(let offset=0,index=0;offset<source.length;offset+=WASM_CHUNK_SIZE,index+=1){
-      const part=`${relative}.part-${String(index).padStart(3,'0')}`;
-      await writeFile(path.join(directory,part),source.subarray(offset,Math.min(source.length,offset+WASM_CHUNK_SIZE)));
-      parts.push(part);
+    const digest=createHash('sha256').update(source).digest('hex');
+    const cacheKey=`${digest}:${source.length}`;
+    let parts=sharedGodotEngines.get(cacheKey);
+    if(!parts){
+      const engineDir=path.join(output,'shared','godot-engines',digest.slice(0,24));
+      await mkdir(engineDir,{recursive:true});
+      parts=[];
+      for(let offset=0,index=0;offset<source.length;offset+=WASM_CHUNK_SIZE,index+=1){
+        const part=`engine.wasm.part-${String(index).padStart(3,'0')}`;
+        await writeFile(path.join(engineDir,part),source.subarray(offset,Math.min(source.length,offset+WASM_CHUNK_SIZE)));
+        parts.push(`../../shared/godot-engines/${digest.slice(0,24)}/${part}`);
+      }
+      sharedGodotEngines.set(cacheKey,parts);
     }
+    // The committed game's canonical WASM remains untouched. Only its build copy
+    // is replaced by a fetch trampoline referencing the shared engine chunks.
     await rm(file);
 
     const indexPath=path.join(directory,'index.html');
@@ -201,12 +214,12 @@ async function splitOversizedGodotWasm(directory,slug,version){
     const swPath=path.join(directory,'sw.js');
     let sw=await readFile(swPath,'utf8');
     const originalJson=JSON.stringify('./'+relative);
-    const partJson=parts.map(part=>JSON.stringify('./'+part)).join(',\n  ');
+    const partJson=parts.map(part=>JSON.stringify(part.startsWith('../')?part:'./'+part)).join(',\n  ');
     if(!sw.includes(originalJson))throw new Error(`Godot app ${slug} service worker does not cache ${relative}`);
     sw=sw.replace(originalJson,partJson);
     await writeFile(swPath,sw,'utf8');
 
-    splitRecords.push({relative,parts,totalSize:source.length});
+    splitRecords.push({relative,parts,totalSize:source.length,digest});
     console.log(
       `Split Godot WASM ${slug}/${relative}: ${(source.length/1024/1024).toFixed(2)} MiB -> ${parts.length} chunk(s), max ${(WASM_CHUNK_SIZE/1024/1024).toFixed(0)} MiB`
     );
@@ -296,4 +309,4 @@ const registryPath=path.join('dist-site','apps.json');
 const registrySource=await buildRegistry({root,outputPath:registryPath});
 const registry=JSON.parse(registrySource).map(app=>({...app,fingerprint:fingerprints.get(app.slug)}));
 await writeFile(path.join(root,registryPath),`${JSON.stringify(registry,null,2)}\n`,'utf8');
-console.log(`Prepared coherent production site with ${configs.length} fingerprinted application release(s).`);
+console.log(`Prepared coherent production site with ${configs.length} fingerprinted application release(s) and ${sharedGodotEngines.size} unique shared oversized Godot engine(s).`);
