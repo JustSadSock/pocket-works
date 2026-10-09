@@ -14,6 +14,10 @@ const refreshButton = document.querySelector('#refresh-button');
 const sortButton = document.querySelector('#sort-button');
 const resetShelf = document.querySelector('#reset-shelf');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+// Contact Sheet is a two-dimensional, virtual-density grid. Its layout must not
+// be driven by the old vertical shelf FLIP animations or per-row DOM updates.
+const isPocketDeck = Boolean(document.querySelector('#deck-home'));
+
 const registryCacheKey = 'pocket-works:registry:v1';
 
 if (list) {
@@ -73,6 +77,7 @@ if (list) {
   }
 
   function patchReleaseTimes() {
+    if (isPocketDeck) return;
     for (const entry of list.querySelectorAll('.app-entry[data-slug]')) {
       const app = registryBySlug.get(entry.dataset.slug);
       const meta = entry.querySelector('.app-entry__meta');
@@ -134,6 +139,7 @@ if (list) {
   }
 
   function captureLayout(reason) {
+    if (isPocketDeck) return;
     if (!firstRenderHandled || document.hidden || reducedMotion.matches || pendingReason) return;
 
     cancelActiveAnimations();
@@ -166,6 +172,7 @@ if (list) {
   }
 
   function revealInitialEntries() {
+    if (isPocketDeck) return;
     patchReleaseTimes();
     if (reducedMotion.matches || document.hidden || typeof list.animate !== 'function') return;
 
@@ -187,6 +194,7 @@ if (list) {
   }
 
   function animateListUpdate() {
+    if (isPocketDeck) return;
     patchReleaseTimes();
 
     const reason = pendingReason;
@@ -258,6 +266,7 @@ if (list) {
   }
 
   function scheduleAnimation() {
+    if (isPocketDeck) return;
     cancelScheduledFrames();
 
     if (!firstRenderHandled) {
