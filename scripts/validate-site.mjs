@@ -1,5 +1,6 @@
 import { access, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { collectAppConfigs } from './app-config.mjs';
 import { shouldPublishAppPath, shouldPublishGodotWebPath } from './publish-policy.mjs';
 
@@ -74,30 +75,29 @@ for(const config of configs){
       }
 
       if(await exists(deployedPath))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} must be split because it exceeds the Cloudflare-safe threshold`);
-      const prefix=`${sourceEntry.name}.part-`;
-      const partNames=entries
-        .filter(entry=>entry.isFile()&&entry.name.startsWith(prefix))
-        .map(entry=>entry.name)
-        .sort();
+      const digest=createHash('sha256').update(source).digest('hex').slice(0,24);
+      const sharedDir=path.join(output,'shared','godot-engines',digest);
       const expectedPartCount=Math.ceil(source.length/WASM_CHUNK_SIZE);
-      if(partNames.length!==expectedPartCount){
-        errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} expected ${expectedPartCount} chunks but found ${partNames.length}`);
+      const partNames=Array.from({length:expectedPartCount},(_,index)=>`engine.wasm.part-${String(index).padStart(3,'0')}`);
+      if(!(await exists(sharedDir))){
+        errors.push(`dist-site/apps/${config.slug} missing shared Godot engine ${digest}`);
         continue;
       }
-      const expectedNames=Array.from({length:expectedPartCount},(_,index)=>`${prefix}${String(index).padStart(3,'0')}`);
-      if(partNames.some((name,index)=>name!==expectedNames[index])){
-        errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} chunk sequence is not contiguous`);
+      const sharedEntries=(await readdir(sharedDir)).sort();
+      if(JSON.stringify(sharedEntries)!==JSON.stringify(partNames)){
+        errors.push(`shared Godot engine ${digest} has invalid or extra chunks`);
         continue;
       }
-
-      const parts=await Promise.all(partNames.map(name=>readFile(path.join(directory,name))));
+      const parts=await Promise.all(partNames.map(name=>readFile(path.join(sharedDir,name))));
       const reconstructed=Buffer.concat(parts);
-      if(!reconstructed.equals(source))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} chunks do not reconstruct the committed Godot WASM byte-for-byte`);
+      if(!reconstructed.equals(source))errors.push(`dist-site/apps/${config.slug}/${sourceEntry.name} shared chunks differ from committed WASM`);
       if(!html.includes('data-pocketworks-wasm-chunks')||!html.includes(JSON.stringify('./'+sourceEntry.name))){
-        errors.push(`dist-site/apps/${config.slug}/index.html is missing the Godot WASM chunk bootstrap for ${sourceEntry.name}`);
+        errors.push(`dist-site/apps/${config.slug}/index.html is missing shared Godot WASM bootstrap`);
       }
       for(const partName of partNames){
-        if(!sw.includes(JSON.stringify('./'+partName)))errors.push(`dist-site/apps/${config.slug}/sw.js does not precache ${partName}`);
+        const ref=`../../shared/godot-engines/${digest}/${partName}`;
+        if(!sw.includes(JSON.stringify(ref)))errors.push(`dist-site/apps/${config.slug}/sw.js does not precache shared ${ref}`);
+        if(!html.includes(ref))errors.push(`dist-site/apps/${config.slug}/index.html does not load shared ${ref}`);
       }
       if(sw.includes(JSON.stringify('./'+sourceEntry.name)))errors.push(`dist-site/apps/${config.slug}/sw.js must not precache missing split source ${sourceEntry.name}`);
     }
@@ -141,6 +141,24 @@ if(await exists(path.join(output,'apps'))){
   const deployed=(await readdir(path.join(output,'apps'),{withFileTypes:true})).filter(entry=>entry.isDirectory()).map(entry=>entry.name);
   const expected=new Set(configs.map(config=>config.slug));
   for(const directory of deployed)if(!expected.has(directory))errors.push(`dist-site includes unregistered app directory ${directory}`);
+}
+
+// Shared engine directory is content-addressed and must not contain unused copies.
+const sharedEngineRoot=path.join(output,'shared','godot-engines');
+if(await exists(sharedEngineRoot)){
+  const required=new Set();
+  for(const config of configs){
+    if(config.runtime!=='godot')continue;
+    const files=await walkFiles(path.join(root,'apps',config.slug,'web'));
+    for(const file of files.filter(name=>name.endsWith('.wasm'))){
+      const source=await readFile(path.join(root,'apps',config.slug,'web',file));
+      if(source.length>WASM_SPLIT_THRESHOLD)required.add(createHash('sha256').update(source).digest('hex').slice(0,24));
+    }
+  }
+  for(const entry of await readdir(sharedEngineRoot)){
+    if(!required.has(entry))errors.push(`dist-site includes unused shared Godot engine ${entry}`);
+  }
+  if((await readdir(sharedEngineRoot)).length!==required.size)errors.push('shared Godot engine deduplication count mismatch');
 }
 
 for(const relative of await walkFiles(output)){
