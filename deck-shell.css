@@ -271,6 +271,24 @@ html.has-pocket-deck .shelf-footer{font-size:.62rem;color:#9ca9a6;border-color:#
 #deck-layout-status{width:100%;font-size:.73rem;color:#a9cebb;}
 .deck-editor__footer{position:sticky;bottom:0;padding:11px 18px calc(11px + env(safe-area-inset-bottom));background:#19272c;border-top:1px solid #3b4b51;}
 #deck-editor-save{width:100%;min-height:46px;border:0;border-radius:6px;background:#edae95;color:#17272a;font-size:.85rem;font-weight:780;}
+/* App opening is visually anchored to its real thumbnail instead of a generic fade. */
+html.has-pocket-deck .launch-stage__room{background:transparent;backdrop-filter:none;}
+html.has-pocket-deck .launch-stage__object{
+  width:170px;aspect-ratio:1;border-radius:6px;border:1px solid #607074;
+  background:linear-gradient(145deg,#283b3e,#16252b);box-shadow:0 20px 70px #0009;
+}
+html.has-pocket-deck .launch-stage__icon{width:108px;background-size:cover;filter:none;border-radius:4px;}
+html.has-pocket-deck .launch-stage__object strong{font-family:inherit;font-size:.85rem;font-weight:770;letter-spacing:-.03em;}
+html.has-pocket-deck .launch-stage__object small{font-size:.56rem;color:#aec2b8;}
+html.has-pocket-deck .launch-stage.deck-launch--cover .launch-stage__icon{width:100%;height:115px;aspect-ratio:auto;object-fit:cover;}
+html.has-pocket-deck .launch-stage.is-launching .launch-stage__room{animation:deck-launch-shade 535ms ease-out forwards;}
+html.has-pocket-deck .launch-stage.is-launching .launch-stage__object{animation:deck-card-launch 535ms cubic-bezier(.16,.85,.25,1) forwards;}
+@keyframes deck-launch-shade{to{background:#101a1e;backdrop-filter:blur(10px);}}
+@keyframes deck-card-launch{
+  0%{opacity:1;transform:translate3d(var(--deck-launch-x,0px),var(--deck-launch-y,0px),0) scale(var(--deck-launch-scale-x,.6),var(--deck-launch-scale-y,.6));filter:none;}
+  48%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:none;}
+  100%{opacity:1;transform:translate3d(0,0,0) scale(7);filter:blur(6px);}
+}
 @media(min-width:981px){
   html.has-pocket-deck .shelf-shell{padding-left:100px;padding-right:32px;padding-bottom:30px;}
   html.has-pocket-deck .masthead{height:85px;}
