@@ -311,13 +311,13 @@ export function installPocketDeck({
     const details=event.target.closest('[data-deck-details]');
     if(details){setView('library');onDetails(details.dataset.deckDetails);return;}
     if(event.target.closest('[data-deck-search]')){setView('library',{focus:true});return;}
-    const view=event.target.closest('[data-deck-view]');
+    const view=event.target.closest('button[data-deck-view], a[data-deck-view]');
     if(view){event.preventDefault();setView(view.dataset.deckView);return;}
     if(event.target.closest('[data-deck-edit]')){openEditor();return;}
     if(event.target.closest('[data-deck-reroll]')){pendingSeed++;modelSignature='';renderHome();return;}
     if(event.target.closest('[data-deck-tools]')){onTools();return;}
     if(event.target.closest('[data-deck-refresh]')){onRefresh();return;}
-    const density=event.target.closest('[data-deck-density]');
+    const density=event.target.closest('button[data-deck-density]');
     if(density){store.update({density:density.dataset.deckDensity});return;}
     const action=event.target.closest('[data-deck-stage]');
     if(action){setStage($('#detail-open')?.dataset.slug,action.dataset.deckStage);return;}
