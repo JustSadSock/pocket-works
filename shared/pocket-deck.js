@@ -27,6 +27,8 @@ export function installPocketDeck({
   let editing=false;
   let editingLayout=null;
   let previewSignature='';
+  let organizing=false;
+  let chosen=new Set();
   const current=()=>store.get();
   const favoriteSet=()=>new Set(getFavorites());
   const available=()=>getApps().filter(app=>!current().archived.includes(app.slug));
@@ -125,6 +127,8 @@ export function installPocketDeck({
     }
     $('#deck-view-title').textContent=visibleTitle[state.view];
     $('#deck-density-controls').hidden=state.view==='home';
+    $('#deck-organize-start').hidden=state.view!=='library';
+    if(state.view!=='library'){organizing=false;chosen.clear();}
     for(const button of document.querySelectorAll('[data-deck-density]')){
       button.setAttribute('aria-pressed',String(button.dataset.deckDensity===state.density));
     }
@@ -143,11 +147,39 @@ export function installPocketDeck({
       preview.append(image);
     }
   }
+  function renderOrganize(){
+    const bar=$('#deck-organize-bar');
+    bar.hidden=!organizing || current().view!=='library';
+    $('#deck-organize-start').setAttribute('aria-pressed',String(organizing));
+    $('#deck-organize-count').textContent=`${chosen.size} selected`;
+    const action=bar.querySelector('[data-deck-organize-archive]');
+    action.disabled=chosen.size===0;
+    for(const card of document.querySelectorAll('#app-list .app-entry[data-slug]')){
+      const selected=chosen.has(card.dataset.slug);
+      card.classList.toggle('deck-is-chosen',selected);
+      card.setAttribute('aria-selected',String(selected));
+    }
+  }
+  function exitOrganize(){
+    organizing=false;chosen.clear();renderOrganize();
+  }
+  function archiveChosen(){
+    const selected=[...chosen].filter(slug=>appBySlug(slug));
+    if(!selected.length)return;
+    const state=current();
+    const archived=[...new Set([...selected,...state.archived])];
+    const projectStages={...state.projectStages};
+    for(const slug of selected)projectStages[slug]='archive';
+    exitOrganize();
+    $('#deck-archive-confirm').close();
+    store.update({archived,projectStages});
+  }
   function render(){
     renderNavigation();
     renderHome();
     paintCovers();
     renderProjectDetails();
+    renderOrganize();
   }
   function setView(view,{focus=false}={}){
     if(!['home','library','archive'].includes(view))return;
@@ -258,6 +290,22 @@ export function installPocketDeck({
     }catch(error){$('#deck-layout-status').textContent=`Import failed: ${error.message}`;}
   }
   function onClick(event){
+    if(event.target.closest('[data-deck-organize]')){
+      organizing=!organizing;chosen.clear();renderOrganize();return;
+    }
+    if(event.target.closest('[data-deck-organize-cancel]')){exitOrganize();return;}
+    if(event.target.closest('[data-deck-select-unsaved]')){
+      const kept=favoriteSet(),stages=current().projectStages;
+      chosen=new Set(available().filter(app=>!kept.has(app.slug)&&stages[app.slug]!=='kept').map(app=>app.slug));
+      renderOrganize();return;
+    }
+    if(event.target.closest('[data-deck-organize-archive]')){
+      if(!chosen.size)return;
+      $('#deck-archive-summary').textContent=`Move ${chosen.size} selected projects into your archive? You can restore them any time. Apps, saves and source files are not deleted.`;
+      $('#deck-archive-confirm').showModal();return;
+    }
+    if(event.target.id==='deck-archive-cancel'){$('#deck-archive-confirm').close();return;}
+    if(event.target.id==='deck-archive-accept'){archiveChosen();return;}
     const open=event.target.closest('[data-deck-open]');
     if(open){onOpen(event,open.dataset.deckOpen,open);return;}
     const details=event.target.closest('[data-deck-details]');
@@ -299,7 +347,20 @@ export function installPocketDeck({
     const remove=event.target.closest('[data-deck-remove]');
     if(remove){editingLayout.widgets=editingLayout.widgets.filter(w=>w.id!==remove.dataset.deckRemove);renderEditorRows();}
   }
+  // Capture library card touches only while organizing; this prevents launching a
+  // game when the user intends to select it for bulk archival.
+  document.addEventListener('click',event=>{
+    if(!organizing || current().view!=='library')return;
+    const card=event.target.closest('#app-list .app-entry[data-slug]');
+    if(!card)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const slug=card.dataset.slug;
+    if(chosen.has(slug))chosen.delete(slug);else chosen.add(slug);
+    renderOrganize();
+  },true);
   document.addEventListener('click',onClick);
+  $('#deck-archive-confirm').addEventListener('cancel',()=>{ /* closing by Escape is non-destructive */ });
   editor.addEventListener('cancel',e=>{e.preventDefault();closeEditor(false);});
   editor.addEventListener('click',e=>{if(e.target===editor)closeEditor(false);});
   editor.addEventListener('change',e=>{
