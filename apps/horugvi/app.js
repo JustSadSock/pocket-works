@@ -3,7 +3,7 @@ installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('battle'), ctx = canvas.getContext('2d', { alpha:false });
-const COLS=8, ROWS=10, KEY='horugvi-campaign-v1:save', SAVE_VERSION=1;
+const COLS=8, ROWS=10, KEY='pocket-works:horugvi:save', SAVE_VERSION=1;
 const P={ink:'#3f3c2c',gold:'#d3b36f',red:'#a3493a',blue:'#486d79',paper:'#e4d0a4',grass:'#93a476'};
 const SCENES=[
   {title:'У БРОДА',book:'КНИГА ПЕРВАЯ',eyebrow:'I · ПЕРЕПРАВА',name:'На рассвете у брода',description:'За рекой показались чужие стяги. Удержите оба брода до седьмого хода. Не дайте разбить знамя воеводы.',objective:'Удерживайте брод · 7 ходов',limit:7,goal:'survive',theme:0,woods:[[1,1],[6,2],[0,6],[6,7]],hills:[[4,6],[5,6]],village:[[7,8]],road:[[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9]],
