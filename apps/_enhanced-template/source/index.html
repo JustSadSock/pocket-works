@@ -11,14 +11,12 @@
 </head>
 <body data-app-preset="__APP_PRESET__" data-fullscreen-app>
   <main class="app-shell" data-app-shell data-keyboard-aware>
-    <header class="app-header" data-ui>
-      <div>
-        <p class="app-kicker">__PRESET_LABEL__ / ENHANCED</p>
-        <h1>__APP_NAME__</h1>
-        <p class="selectable-content">__APP_DESCRIPTION__</p>
-      </div>
+    <!-- Technical scaffold only. The product must replace this composition before release. -->
+    <nav class="app-tools" data-ui aria-label="Application navigation">
+      <a href="../../" data-app-control>← Library</a>
+      <span class="app-label">__APP_NAME__</span>
       <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
-    </header>
+    </nav>
 
     <section class="stage" aria-labelledby="stage-title">
       __PRESET_MARKUP__
