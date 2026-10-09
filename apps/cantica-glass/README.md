@@ -1,35 +1,34 @@
-# CANTICA II · Песнь света
+# CANTICA III — Книга света
 
-A portrait offline-first Gothic stained-glass puzzle inside Pocket Works. Every action changes physical-looking leaded glass and its internal light circuit.
+A portrait, offline-first Gothic glass puzzle in Pocket Works, with 500 deterministic stages and a completely rebuilt manuscript-native interface.
 
-## Gameplay
-Rotate panes by tapping. A channel carries light only when it meets a reciprocal channel in the adjacent pane. Reach every reliquary at the bottom.
+## Play and chapters
 
-- 500 deterministic, seeded, offline-generated levels in ten books of 50.
-- Grid sizes: 4×4 (levels 1–25), 5×5 (26–135), 6×6 (136–305), 7×7 (306–500).
-- Reliquary targets increase from one to four, alongside path length and decoy complexity.
-- Every puzzle is generated from a spanning tree with an actual solution; scrambling ensures it starts incomplete.
-- 'Главы' opens ten books and 50 numbered windows in each; locked windows are not selectable.
-- 'Подсказать путь' highlights a pane and the number of rotations needed; 'Заново' confirms before reshuffling.
-- Drag the sun medallion left/right to shift refracted highlights and projected caustics (visual only).
-- Keyboard controls: arrow keys select a pane; Enter/Space rotates it. Escape dismisses dialogs.
-- Sound defaults to muted and can be switched on by a user gesture.
-- From every important screen the player can return directly to Pocket Works.
+The core stained-glass window, illumination physics, hints, keyboard tile controls and saves are unchanged. Outside the window, the interface is restrained stone, bronze and wax. The main navigation is a physically presented medieval book.
 
-## Save state and migration
-The current save namespace is pocket-works:cantica-glass:save-v2. The previous save-v1 is read if v2 is absent: previously unlocked windows and sound preference are kept, but puzzle rotations and best attempts are reset because the generated routes differ.
+Open **Книга окон** on the lower plinth. A full-screen vellum folio unfolds with ten separately named volumes. Each volume has an illuminated initial, bespoke symbol, progress, lock state and highlighted current book. Each of the ten volumes contains 50 puzzle windows, divided into two large pages of 25 medallions. Medallions show completed/current/available/sealed status. Navigate via page buttons, left-right swipe or keyboard, then tap an unlocked medallion to jump directly into that actual puzzle. Escape first returns to the catalogue and then closes it.
 
-## Rendering
-Canvas 2D combines beveled leadwork, stained polygons, lens-like thickness, tiny trapped bubbles, carved glass ornament, screen-blended light channels and chromatic caustics. DOM navigation and controls are framed as a medieval stone instrument, not a generic web dashboard. Works offline without external fonts or asset downloads.
+Completing windows 50, 100, and so on through 450 unlocks the next book with a special illuminated victory sheet and a direct **Открыть новую книгу** action. Completed books and unlocked windows remain available. Window 500 ends in the final completion sheet.
 
-## Verification
-From the repository root:
+## Art and motion
+
+Hand-authored gilded ornamental SVG, quiet cinnabar rubrics and thick mottled parchment replace HTML cards. The manuscript's edges, spine, paper stack and full-screen opening are physically modelled with CSS; folio flips use perspective rotation and settle naturally. The game HUD becomes a dark stone framing with a wax-seal hint button and low-chroma type. Optional page rustle belongs to the existing sound toggle. Reduced-motion, safe-area insets, keyboard focus, accessibility labels and compact screens are supported.
+
+## Integrity
+
+- Release 3.0.0 on 2026-10-09.
+- The existing puzzle-save key remains pocket-works:cantica-glass:save-v2.
+- All 500 deterministic levels and their routes remain unchanged.
+- The offline scoped service-worker cache now includes the new manuscript.js and ornaments.svg assets.
+- Pocket Works exits are preserved in both gameplay and codex.
+
+## QA
+
 - node --test apps/cantica-glass/tests/logic.test.mjs
+- node --test apps/cantica-glass/tests/manuscript.test.mjs
 - node --check apps/cantica-glass/app.js
+- node --check apps/cantica-glass/manuscript.js
 - npm run registry:check
 - node scripts/validate-visual-direction.mjs --app=cantica-glass
-- npm run deploy:site
 
-The tests cover 500 levels × four scrambles, uniqueness, hint-driven completion, save restoration and difficulty tiers. Browser QA should additionally check layout and finger gestures on iPhone-sized viewports.
-
-Release 2.0.0 · 2026-10-09.
+The manuscript tests cover ten volumes, locked states, 25-level pages, page turning, dismissal and final-level selection. Device visual QA is needed to confirm accurate paper sizing and legible details on target phones.
