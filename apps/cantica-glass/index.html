@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#131b20">
+<meta name="theme-color" content="#111a20">
 <meta name="description" content="CANTICA — средневековая головоломка о свете и витражах.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,6 +30,7 @@
     <h1 id="levelName">Погасшая часовня</h1>
     <p class="subline" id="levelNote">Собери дорогу для первого луча.</p>
   </section>
+  <div class="window-progress" data-ui aria-label="Прогресс книги окон"><div class="window-progress-track"><i id="progressFill"></i></div><span id="progressText">1 / 500</span></div>
   <section class="window-stage" id="stage" data-gesture-surface data-block-callout aria-label="Игровое витражное окно">
     <canvas id="glass" tabindex="0" role="application" aria-label="Сетка витража 5 на 5. Нажимайте на фрагменты, чтобы поворачивать световые дорожки. Стрелки и Enter — управление с клавиатуры."></canvas>
     <div class="stage-grain" aria-hidden="true"></div>
@@ -63,7 +64,7 @@
     </section>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="2.0.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
