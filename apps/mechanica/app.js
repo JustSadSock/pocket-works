@@ -13,6 +13,13 @@ const CASES = [
   {name:'ЛАБИРИНТ',subtitle:'ПОСЛЕДНИЙ МЕХАНИЗМ',hint:'Четыре шестерни разного размера проведут вращение через поворот.',source:[55,315,2],target:[271,269,3],holes:[[109,315],[155,315],[155,269],[209,269],[209,335],[155,369]],stock:{1:1,2:3,3:0},sign:-1}
 ];
 const FREE = {name:'СВОБОДНАЯ СБОРКА',subtitle:'СОБСТВЕННАЯ МАШИНА',hint:'Без ограничений: экспериментируй с передачами и направлением.',source:[55,247,2],target:[271,247,2],holes:[[109,247],[163,247],[217,247],[109,193],[163,193],[217,193],[109,301],[163,301],[217,301],[163,355]],stock:{1:999,2:999,3:999},sign:1};
+function centerScene(scene){
+  const ys=[scene.source[1],scene.target[1],...scene.holes.map(h=>h[1])];
+  const shift=296-(Math.min(...ys)+Math.max(...ys))/2;
+  scene.source[1]+=shift;scene.target[1]+=shift;
+  scene.holes.forEach(h=>{h[1]+=shift;});
+}
+CASES.forEach(centerScene);centerScene(FREE);
 const KEY='pocket-works:mechanica:v1';
 function restore(){
   try {
@@ -348,17 +355,17 @@ function drawPlate(){
     ctx.fillRect(x,110,4,15);line(x,128,x+3,128,'#c0b38b55',1);
   }
   ctx.strokeStyle='#a88c61';ctx.strokeRect(26,106,134,25);
-  circle(265,123,21,'#0a2b2d','#ac996e',3);
-  for(let k=0;k<12;k++){const a=k*TAU/12;line(265+Math.cos(a)*16,123+Math.sin(a)*16,265+Math.cos(a)*18,123+Math.sin(a)*18,'#c2b382',1);}
+  circle(265,122,18,'#0a2b2d','#ac996e',3);
+  for(let k=0;k<12;k++){const a=k*TAU/12;line(265+Math.cos(a)*12.5,122+Math.sin(a)*12.5,265+Math.cos(a)*15.5,122+Math.sin(a)*15.5,'#c2b382',1);}
   const out=graph&&graph.output||0,needle=(Math.sign(out)*Math.min(1,Math.abs(out)/40))*1.3;
   const theta=Math.PI/2+needle;
-  line(265,123,265+Math.cos(theta)*14,123-Math.sin(theta)*14,'#eac58d',2);
-  circle(265,123,3,'#deb77b');
+  line(265,122,265+Math.cos(theta)*11,122-Math.sin(theta)*11,'#eac58d',2);
+  circle(265,122,3,'#deb77b');
   label(out?'ОБ/МИН '+labelRPM(out):'НЕТ ХОДА',265,145,'#b6cfb8',8);
   // Foot brass transmission markings.
   label('M E C H A N I C A  /  P A T E N T   N°  0 1',180,448,'#c7af83',8);
   line(38,458,322,458,'#7f9e8b',1);
-  label('ВЕДУЩИЙ',80,476,'#a9bca7',9);label('ВЕДОМЫЙ',280,476,'#a9bca7',9);
+  label('ВЕДУЩИЙ',80,427,'#a9bca7',9);label('ВЕДОМЫЙ',280,427,'#a9bca7',9);
 }
 function drawSocket(x,y,occupied,index){
   circle(x+1.5,y+3,11,'#0b2527');
