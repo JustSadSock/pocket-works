@@ -12,6 +12,7 @@ import {
 } from './app-config.mjs';
 import { getPreset } from './presets.mjs';
 import { getEnhancedPreset } from './enhanced-presets.mjs';
+import { draftVisualDirection } from './visual-direction.mjs';
 
 const textExtensions = new Set(['.css', '.html', '.js', '.ts', '.json', '.md', '.svg', '.webmanifest', '.gd', '.tscn', '.tres', '.godot', '.cfg', '.gdshader']);
 
@@ -115,8 +116,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
   const name = typeof options.name === 'string' ? options.name : humanize(slug);
   const shortName = typeof options['short-name'] === 'string' ? options['short-name'] : name.slice(0, 20);
   const description = typeof options.description === 'string' ? options.description : preset.description;
-  const accent = typeof options.accent === 'string' ? options.accent : '#ff4d1f';
-  const backgroundColor = typeof options.background === 'string' ? options.background : '#10110f';
+  const accent = typeof options.accent === 'string' ? options.accent : '#929292';
+  const backgroundColor = typeof options.background === 'string' ? options.background : '#202020';
   const themeColor = typeof options.theme === 'string' ? options.theme : backgroundColor;
   const version = '0.1.0';
   const releaseDateTime = new Date().toISOString();
@@ -208,6 +209,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     await mkdir(iconDirectory, { recursive: true });
     await writeFile(path.join(appDirectory, 'app.config.json'), `${JSON.stringify(config, null, 2)}\n`, 'utf8');
     if (runtime === 'quick') await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    await writeFile(path.join(appDirectory, 'visual-direction.json'), `${JSON.stringify(draftVisualDirection(slug, name), null, 2)}\n`, 'utf8');
 
     const safeName = escapeMarkup(name);
     const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">\n  <rect width="512" height="512" fill="${backgroundColor}"/>\n  <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>\n  <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>\n  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>\n</svg>\n`;
@@ -223,6 +225,7 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
 
   console.log(`Pocket Forge created apps/${slug} with the ${runtime}/${presetName} preset.`);
   console.log('The app is self-registered by app.config.json; no shared registry file was modified.');
+  console.log('DESIGN REQUIRED: visual-direction.json is a draft. Replace its TODOs, the starter layout, artwork and icon before release.');
   console.log(`Open after npm run prepare:site: /apps/${slug}/`);
   return config;
 }
