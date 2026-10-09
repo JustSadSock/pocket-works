@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#131b20">
+<meta name="description" content="CANTICA — средневековая головоломка о свете и витражах.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CANTICA">
+<title>CANTICA — Песнь света</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-fullscreen-app>
+  <header class="topbar" data-ui>
+    <a class="exit" href="../../" data-app-control data-native-press>← Pocket Works</a>
+    <div class="seal" aria-label="CANTICA"><span>C</span></div>
+    <button class="sound" id="soundBtn" type="button" aria-pressed="false" data-native-press>Звук выкл.</button>
+  </header>
+  <section class="folio" data-ui>
+    <div class="folio-rule"><span>✧</span><span>ANNO DOMINI · MCCXLVIII</span><span>✧</span></div>
+    <p class="chapter" id="chapterLabel">КНИГА I · ОКНО 01</p>
+    <h1 id="levelName">Погасшая часовня</h1>
+    <p class="subline" id="levelNote">Собери дорогу для первого луча.</p>
+  </section>
+  <section class="window-stage" id="stage" data-gesture-surface data-block-callout aria-label="Игровое витражное окно">
+    <canvas id="glass" tabindex="0" role="application" aria-label="Сетка витража 5 на 5. Нажимайте на фрагменты, чтобы поворачивать световые дорожки. Стрелки и Enter — управление с клавиатуры."></canvas>
+    <div class="stage-grain" aria-hidden="true"></div>
+    <div class="stage-corner corner-left" aria-hidden="true">❦</div>
+    <div class="stage-corner corner-right" aria-hidden="true">❦</div>
+  </section>
+  <section class="inscription" data-ui>
+    <div class="inscription-side"><span class="small-cap">ПОВОРОТОВ</span><strong id="moves">00</strong></div>
+    <div class="inscription-center"><span class="ornament">✣</span><span id="status" aria-live="polite">Коснись стекла, чтобы повернуть</span><span class="ornament">✣</span></div>
+    <div class="inscription-side right"><span class="small-cap">ОГНИ</span><strong id="flames">0 / 1</strong></div>
+  </section>
+  <footer class="pedestal" data-ui>
+    <button id="chaptersBtn" class="edge-action" data-native-press type="button"><span class="button-rune">☷</span><span>Главы</span></button>
+    <button id="hintBtn" class="primary-action" data-native-press type="button"><span class="button-rune">✶</span><span>Подсказать путь</span></button>
+    <button id="restartBtn" class="edge-action" data-native-press type="button"><span class="button-rune">↶</span><span>Заново</span></button>
+  </footer>
+  <button class="workshop-access" type="button" data-workshop-trigger data-native-press aria-label="Открыть мастерскую и диагностику">⚙</button>
+  <div class="scrim" id="scrim" hidden>
+    <section class="illumination" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" type="button" aria-label="Закрыть окно">×</button>
+      <div class="modal-icon" id="modalIcon">✦</div>
+      <p class="modal-kicker" id="modalKicker">КНИГА СВЕТА</p>
+      <h2 id="modalTitle">Свет возвращён</h2>
+      <p class="modal-copy" id="modalCopy"></p>
+      <div class="chapter-list" id="chapterList" hidden></div>
+      <div class="modal-buttons">
+        <button id="modalPrimary" type="button" class="modal-primary" data-native-press>Продолжить</button>
+        <button id="modalSecondary" type="button" class="modal-secondary" data-native-press>Вернуться к окну</button>
+      </div>
+      <a href="../../" class="modal-exit" data-app-control>← В Pocket Works</a>
+    </section>
+  </div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

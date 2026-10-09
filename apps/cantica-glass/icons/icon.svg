@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title>CANTICA — stained glass rose and celestial beam</title>
+<defs><radialGradient id="sky"><stop stop-color="#36596a"/><stop offset="1" stop-color="#112126"/></radialGradient>
+<linearGradient id="glass" x2=".9" y2="1"><stop stop-color="#ffeab1"/><stop offset=".5" stop-color="#ca8a49"/><stop offset="1" stop-color="#9a5046"/></linearGradient></defs>
+<rect width="512" height="512" fill="#152329"/>
+<path d="M80 470V203Q80 126 256 34Q432 126 432 203V470Z" fill="url(#sky)" stroke="#978365" stroke-width="23"/>
+<path d="M104 460V207Q104 142 256 67Q408 142 408 207V460Z" fill="#11252c" stroke="#263b40" stroke-width="9"/>
+<g stroke="#101a1f" stroke-width="11" stroke-linejoin="round">
+<path d="M256 73L256 234 181 157Z" fill="#bd8551"/>
+<path d="M256 73L331 157 256 234Z" fill="#326480"/>
+<path d="M331 157L388 210 256 234Z" fill="#9e3e50"/>
+<path d="M388 210L388 317 256 234Z" fill="#ba975d"/>
+<path d="M388 317L330 370 256 234Z" fill="#285e6e"/>
+<path d="M330 370L256 411 256 234Z" fill="#863e54"/>
+<path d="M256 411L181 370 256 234Z" fill="#ce9555"/>
+<path d="M181 370L124 317 256 234Z" fill="#356e65"/>
+<path d="M124 317L124 210 256 234Z" fill="#7a4974"/>
+<path d="M124 210L181 157 256 234Z" fill="#b55c58"/>
+</g>
+<circle cx="256" cy="235" r="74" fill="#b89465" stroke="#16272b" stroke-width="12"/>
+<circle cx="256" cy="235" r="55" fill="url(#glass)" stroke="#e8cc93" stroke-width="5"/>
+<g stroke="#5b4930" stroke-width="4"><path d="M256 180V290M201 235H311M217 196L295 275M294 196L217 275"/></g>
+<circle cx="256" cy="235" r="15" fill="#fff1c5" stroke="#1b2c31" stroke-width="7"/>
+<path d="M244 323L256 302 268 323 263 440H249Z" fill="#f4d68e" stroke="#18282d" stroke-width="7"/>
+<path d="M80 468H432" stroke="#baa079" stroke-width="18"/>
+</svg>
