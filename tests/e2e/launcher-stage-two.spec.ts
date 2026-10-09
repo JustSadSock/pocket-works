@@ -4,6 +4,8 @@ import { expect, test } from '@playwright/test';
 // individual apps may reload during Service Worker release-guard activation.
 async function openShelf(page: import('@playwright/test').Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#deck-bottom-nav')).toBeVisible();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('.app-entry').first()).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/is-launcher-ui-ready/);
   // The root worker may take over the first tab after its first install.

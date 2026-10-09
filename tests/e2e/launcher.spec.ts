@@ -19,14 +19,18 @@ if (!echoesVersion) throw new Error('ECHOES is missing from apps.json');
 if (!newestApp) throw new Error('apps.json is empty');
 
 async function expectExpandedLauncherList(page: import('@playwright/test').Page) {
+  if (await page.locator('#deck-home').isVisible()) {
+    await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  }
   await expect(page.locator('.app-entry')).toHaveCount(registry.length);
   const geometry = await page.locator('.app-entry').evaluateAll((entries) => entries.map((entry) => {
     const rect = entry.getBoundingClientRect();
     return { top: Math.round(rect.top), height: Math.round(rect.height), width: Math.round(rect.width) };
   }));
 
-  expect(geometry.every((rect) => rect.height >= 90 && rect.width > 200)).toBe(true);
-  expect(new Set(geometry.map((rect) => rect.top)).size).toBe(geometry.length);
+  expect(geometry.every((rect) => rect.height >= 105 && rect.width >= 75)).toBe(true);
+  const rows = new Set(geometry.map((rect) => rect.top));
+  expect(rows.size).toBeGreaterThan(1);
   await expect(page.locator('#app-list')).not.toHaveCSS('height', '0px');
   expect(await page.locator('#app-list').evaluate((element) => element.style.height)).toBe('');
 }

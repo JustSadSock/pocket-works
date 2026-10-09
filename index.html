@@ -3,41 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <meta name="theme-color" content="#201f1c">
+  <meta name="theme-color" content="#11191d">
   <meta name="description" content="Pocket Works — a tactile personal library of small offline-first applications.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.10.5">
+  <meta name="pocket-works-build" content="0.10.6">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.10.5">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.10.5" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.10.5">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.10.5">
-  <link rel="stylesheet" href="./styles.css?v=0.10.5">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.10.5">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.10.5">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.10.5">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.10.5">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.10.6">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.10.6" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.10.6">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.10.6">
+  <link rel="stylesheet" href="./styles.css?v=0.10.6">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.10.6">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.10.6">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.10.6">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.10.6">
+  <link rel="stylesheet" href="./deck-shell.css?v=0.10.6">
 </head>
 <body>
   <div class="library-room" aria-hidden="true"><span class="room-light"></span><span class="room-grain"></span><span class="room-shadow"></span></div>
   <main class="shelf-shell" data-app-shell>
     <header class="masthead" data-ui>
-      <a class="brand-lockup" href="./" aria-label="Pocket Works library home">
+      <a class="brand-lockup" href="./" data-deck-view="home" aria-label="Pocket Works home">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <span><strong>Pocket Works</strong><small>personal library</small></span>
       </a>
       <div class="shelf-heading">
-        <p class="eyebrow">COLLECTION · 0.10.5</p>
-        <h1>Small worlds,<br><em>kept close.</em></h1>
+        <p class="eyebrow">COLLECTION · 0.10.6</p>
+        <h1>PocketWorks</h1>
       </div>
       <div class="system-rail" aria-label="Library status">
         <p><span class="status-light" id="network-light" aria-hidden="true"></span><span>connection</span><strong id="network-status">online</strong></p>
         <p><span>running as</span><strong id="display-mode">browser</strong></p>
         <p><span>on this shelf</span><strong><span id="app-count">0</span> works</strong></p>
       </div>
+      <div class="deck-top-actions" data-ui>
+        <button id="deck-search-action" type="button" data-deck-search aria-label="Search apps" title="Search applications">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        </button>
+        <button type="button" data-deck-tools aria-label="Open PocketWorks settings" title="PocketWorks settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6"></path></svg>
+        </button>
+      </div>
     </header>
+    <section id="deck-home" class="deck-home" aria-label="Personal home">
+      <div class="deck-home__intro">
+        <div><p class="deck-overline">PERSONAL SPACE <span class="deck-home__accent">/</span> 01</p><h2>Your worlds.</h2></div>
+        <button id="deck-customize" type="button" data-deck-edit><span aria-hidden="true">+</span> Customize</button>
+      </div>
+      <div id="deck-widgets" class="deck-widgets" aria-live="polite">
+        <div class="deck-loading">Opening your collection…</div>
+      </div>
+    </section>
+    <div class="deck-library-head" data-ui>
+      <div><span class="deck-overline">YOUR COLLECTION</span><h2 id="deck-view-title">Library</h2></div>
+      <button id="deck-organize-start" type="button" data-deck-organize>Organize</button>
+      <div id="deck-density-controls" class="deck-density" role="group" aria-label="Library density">
+        <button data-deck-density="comfortable" type="button" aria-label="Large covers" title="Large covers">▦</button>
+        <button data-deck-density="compact" type="button" aria-label="Compact covers" title="Compact covers">▥</button>
+        <button data-deck-density="micro" type="button" aria-label="Small covers" title="Small covers">⠿</button>
+      </div>
+    </div>
+    <div id="deck-organize-bar" class="deck-organize-bar" hidden role="toolbar" aria-label="Organize library">
+      <strong id="deck-organize-count">0 selected</strong>
+      <button type="button" data-deck-select-unsaved>Select unkept</button>
+      <button type="button" data-deck-organize-archive>Archive selected</button>
+      <button type="button" data-deck-organize-cancel>Done</button>
+    </div>
     <section class="command-deck" aria-label="Application library controls" data-ui>
       <label class="search-field" for="app-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="app-search" type="search" inputmode="search" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Find a work…"><kbd aria-hidden="true">⌘ K</kbd><button id="clear-search" type="button" aria-label="Clear search" data-native-press hidden>×</button></label>
       <div class="command-row">
@@ -66,15 +99,44 @@
           <header class="detail-header"><p class="section-code" id="detail-kicker">APPLICATION</p><h2 id="detail-name">—</h2><p id="detail-description">—</p></header>
           <dl class="detail-facts"><div><dt>version</dt><dd id="detail-version">—</dd></div><div><dt>released</dt><dd id="detail-updated">—</dd></div><div><dt>offline</dt><dd id="detail-offline">—</dd></div><div><dt>last opened</dt><dd id="detail-opened">—</dd></div></dl>
           <div class="detail-tags" id="detail-tags" aria-label="Application tags"></div>
+          <section id="deck-project-detail" class="deck-project-detail" aria-label="Project development" hidden></section>
           <section class="release-notes" aria-labelledby="release-title"><p class="section-code" id="release-title">NOTES FROM THE MAKER</p><ul id="detail-changelog"></ul></section>
           <div class="detail-actions"><a id="detail-open" href="#" data-native-press><span>Open work</span><b aria-hidden="true">↗</b></a><button id="detail-favorite" type="button" data-native-press>Save to shelf</button><button id="detail-copy" type="button" data-native-press>Copy link</button></div>
           <p class="install-note" id="install-note"></p>
         </div>
       </aside>
     </section>
+    <nav id="deck-bottom-nav" class="deck-bottom-nav" aria-label="PocketWorks navigation" data-ui>
+      <button type="button" data-deck-view="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v11H3z"></path><path d="M9 21v-7h6v7"></path></svg><span>Home</span></button>
+      <button type="button" data-deck-view="library" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="8"></rect><rect x="14" y="3" width="7" height="8"></rect><rect x="3" y="15" width="7" height="6"></rect><rect x="14" y="15" width="7" height="6"></rect></svg><span>Library</span></button>
+      <button type="button" data-deck-view="archive" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v5H3zM5 9v12h14V9M9 14h6"></path></svg><span>Archive</span></button>
+    </nav>
     <footer class="shelf-footer" data-ui><p><span id="sync-status">Registry not synced</span><span aria-hidden="true"> · </span><span id="offline-count">0 offline-ready</span><span aria-hidden="true"> · </span><span id="storage-status">Checking personal shelf backup…</span></p><button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button></footer>
     <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
   </main>
+  <dialog id="deck-archive-confirm" class="deck-archive-confirm" aria-labelledby="deck-archive-title">
+    <p class="deck-overline">ORGANIZE LIBRARY</p><h2 id="deck-archive-title">Move to archive?</h2>
+    <p id="deck-archive-summary">Selected projects will be hidden from the main library. Their files and saves remain intact.</p>
+    <div><button id="deck-archive-cancel" type="button">Cancel</button><button id="deck-archive-accept" type="button">Archive projects</button></div>
+  </dialog>
+  <dialog id="deck-editor" class="deck-editor" aria-labelledby="deck-editor-title">
+    <div class="deck-editor__head">
+      <div><span class="deck-overline">PERSONALIZE</span><h2 id="deck-editor-title">Your layout</h2><p>Move, resize and configure widgets. Changes are saved on this device.</p></div>
+      <button id="deck-editor-cancel" type="button" aria-label="Close without saving">×</button>
+    </div>
+    <div class="deck-editor__list" id="deck-editor-list" aria-label="Widget order"></div>
+    <div class="deck-editor__add"><label for="deck-widget-picker">Add a widget</label>
+      <select id="deck-widget-picker"><option value="continue">Continue</option><option value="saved">On my shelf</option><option value="new">Just made</option><option value="projects">In progress</option><option value="random">Rediscover</option><option value="collection">A collection</option><option value="spotlight">Spotlight</option></select>
+      <button type="button" id="deck-widget-add">+ Add</button>
+    </div>
+    <div class="deck-editor__backup">
+      <button type="button" id="deck-layout-export">Export layout</button>
+      <button type="button" id="deck-layout-import">Import layout</button>
+      <input id="deck-layout-import-file" type="file" accept=".json,application/json" hidden>
+      <span id="deck-layout-status" role="status" aria-live="polite"></span>
+    </div>
+    <div class="deck-editor__footer"><button type="button" id="deck-editor-save">Save layout</button></div>
+  </dialog>
   <dialog id="shelf-tools" class="shelf-tools" aria-labelledby="tools-title">
     <header class="shelf-tools__header"><div><p class="section-code">LIBRARY MAINTENANCE</p><h2 id="tools-title">Shelf tools</h2></div><button type="button" id="tools-close" aria-label="Close tools">×</button></header>
     <p class="shelf-tools__intro">Local diagnostics and personal shelf backups. These actions never delete application saves.</p>
@@ -94,14 +156,14 @@
   <template id="app-card-template">
     <article class="app-entry"><button class="app-entry__select" type="button" data-action="details" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></button><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button><a class="app-entry__open" data-action="open" data-native-press aria-label="Open application"><span>Open</span><b aria-hidden="true">↗</b></a></article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.10.5" data-update-manager data-service-worker="./sw.js?build=0.10.5" data-app-name="Pocket Works" data-app-version="0.10.5"></script>
-  <script src="./shared/view-transition-guard.js?v=0.10.5" type="module"></script>
-  <script src="./launcher-new-app-focus.js?v=0.10.5"></script>
-  <script src="./app.js?v=0.10.5" type="module"></script>
-  <script src="./launcher-release-links.js?v=0.10.5" type="module"></script>
-  <script src="./launcher-update-all-v3.js?v=0.10.5" type="module"></script>
-  <script src="./launcher-sync.js?v=0.10.5" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.10.5" type="module"></script>
-  <script src="./shared/app-icon-previews.js?v=0.10.5" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.10.6" data-update-manager data-service-worker="./sw.js?build=0.10.6" data-app-name="Pocket Works" data-app-version="0.10.6"></script>
+  <script src="./shared/view-transition-guard.js?v=0.10.6" type="module"></script>
+  <script src="./launcher-new-app-focus.js?v=0.10.6"></script>
+  <script src="./app.js?v=0.10.6" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.10.6" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.10.6" type="module"></script>
+  <script src="./launcher-sync.js?v=0.10.6" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.10.6" type="module"></script>
+  <script src="./shared/app-icon-previews.js?v=0.10.6" type="module"></script>
 </body>
 </html>

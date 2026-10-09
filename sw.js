@@ -1,17 +1,17 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.5';
-const APP_VERSION = '0.10.5';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.6';
+const APP_VERSION = '0.10.6';
 const RELEASE_DATE = '2026-10-09';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
-  'Godot Web engines are shared between identical games instead of deployed three times.',
-  'Favorites and recents now have a redundant backup and can be exported or imported.',
-  'Library refresh, installed-app updates and device diagnostics have separate controls.'
+  'A redesigned Pocket Deck home screen with movable and configurable widgets.',
+  'Dense visual Contact Sheet library, reversible archive and project development notes.',
+  'Authentic game screenshot covers when available, with native icons as fallback.'
 ];
 const APP_SHELL = [
-  './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
+  './', './index.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/pocket-works-icon.svg', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];
@@ -77,6 +77,25 @@ self.addEventListener('fetch', (event) => {
   if (requestUrl.pathname.startsWith(APPLICATIONS_PATH)) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
+    return;
+  }
+  const coverPath=new URL('./covers/',SCOPE_URL).pathname;
+  if(requestUrl.pathname.startsWith(coverPath) && /\.(?:png|jpe?g|webp)$/i.test(requestUrl.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(CACHE_NAME);
+      const cached=await cache.match(event.request);
+      const refresh=fetch(event.request).then(async response=>{
+        if(response.ok)await cache.put(event.request,response.clone());
+        return response;
+      });
+      if(cached){
+        // Display immediately when offline or on a repeat visit, but refresh
+        // changed screenshot art in the background for the next opening.
+        event.waitUntil(refresh.catch(()=>{}));
+        return cached;
+      }
+      try{return await refresh;}catch{return Response.error();}
+    })());
     return;
   }
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);

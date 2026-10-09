@@ -2,14 +2,14 @@
   "id": "/",
   "name": "Pocket Works",
   "short_name": "Pocket Works",
-  "description": "A tactile personal library of small installable offline-first applications.",
+  "description": "Your personal collection of small playable worlds.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#1d1c19",
-  "theme_color": "#201f1c",
+  "background_color": "#11191d",
+  "theme_color": "#11191d",
   "categories": ["utilities", "productivity", "developer tools"],
   "icons": [
     {

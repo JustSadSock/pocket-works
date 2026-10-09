@@ -8,6 +8,7 @@ import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
 import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 import { createShelfStateStore } from './shared/shelf-state.js';
 import { installShelfTools } from './shared/shell-tools.js';
+import { installPocketDeck } from './shared/pocket-deck.js';
 
 installMobileRuntime();
 
@@ -74,6 +75,7 @@ let panelOpen = false;
 let lastFocusedElement = null;
 let lastSyncAt = null;
 let launchInProgress = false;
+let deck = null;
 
 function defaultShelfState() {
   return { favorites: [], recents: {}, filter: 'all', sort: 'updated', selected: null, query: '' };
@@ -203,6 +205,7 @@ function launchApp(event, slug, link) {
 
   try {
     sessionStorage.setItem('pocket-works:return-object', app.slug);
+    sessionStorage.setItem('pocket-works:return-deck-view', deck?.getView() || 'library');
     sessionStorage.setItem('pocket-works:return-scroll', String(window.scrollY));
   } catch {
     // Spatial continuity is an enhancement; navigation must always work.
@@ -213,9 +216,21 @@ function launchApp(event, slug, link) {
     return;
   }
 
-  const sourcePreview = link.closest('.app-entry')?.querySelector('.app-preview') || detailPreview;
-  const iconImage = sourcePreview?.style.getPropertyValue('--app-icon-image')
+  const sourcePreview = link.closest('.app-entry')?.querySelector('.app-preview') || link.closest('.deck-tile')?.querySelector('.deck-art') || detailPreview;
+  const sourcePhoto = sourcePreview?.querySelector('.deck-art__photo, .deck-cover-photo');
+  const coverUrl = sourcePhoto?.getAttribute('src');
+  const iconImage = coverUrl ? `url("${new URL(coverUrl, document.baseURI).href}")`
+    : sourcePreview?.style.getPropertyValue('--app-icon-image')
     || `url("${new URL(`${app.path}icons/icon.svg?v=${encodeURIComponent(app.version || '0')}`, document.baseURI).href}")`;
+  const bounds = sourcePreview?.getBoundingClientRect();
+  if (deck && bounds?.width > 0 && bounds?.height > 0) {
+    launchStage.classList.add('deck-launch');
+    launchStage.style.setProperty('--deck-launch-x', `${bounds.left + bounds.width / 2 - window.innerWidth / 2}px`);
+    launchStage.style.setProperty('--deck-launch-y', `${bounds.top + bounds.height / 2 - window.innerHeight / 2}px`);
+    launchStage.style.setProperty('--deck-launch-scale-x', String(bounds.width / 170));
+    launchStage.style.setProperty('--deck-launch-scale-y', String(bounds.height / 170));
+    launchStage.classList.toggle('deck-launch--cover', Boolean(coverUrl));
+  }
 
   launchStage.style.setProperty('--launch-icon', iconImage);
   launchStage.style.setProperty('--launch-accent', app.accent || '#c8a460');
@@ -346,19 +361,22 @@ function compareApps(left, right) {
 
 function visibleApps() {
   const query = shelfState.query.trim();
-  return registry
+  const view = deck?.getView() || 'library';
+  const pool = view === 'home' ? registry : (deck?.getVisibleList() || registry);
+  return pool
     .filter((app) => appMatchesQuery(app, query))
-    .filter(appMatchesFilter)
+    .filter((app) => view === 'archive' || appMatchesFilter(app))
     .sort(compareApps);
 }
 
 function filterCounts() {
+  const apps = deck ? registry.filter(app => !deck.getState().archived.includes(app.slug)) : registry;
   return {
-    all: registry.length,
-    favorites: registry.filter((app) => isFavorite(app.slug)).length,
-    recent: registry.filter((app) => recentTimestamp(app.slug) > 0).length,
-    offline: registry.filter((app) => offlineReady.has(app.slug)).length,
-    experimental: registry.filter((app) => app.status === 'experimental').length
+    all: apps.length,
+    favorites: apps.filter((app) => isFavorite(app.slug)).length,
+    recent: apps.filter((app) => recentTimestamp(app.slug) > 0).length,
+    offline: apps.filter((app) => offlineReady.has(app.slug)).length,
+    experimental: apps.filter((app) => app.status === 'experimental').length
   };
 }
 
@@ -433,6 +451,11 @@ function patchAppEntry(entry, app, index) {
 }
 
 function renderApps(apps) {
+  const inArchive = deck?.getView() === 'archive';
+  emptyState.querySelector('strong').textContent = inArchive ? 'Nothing archived.' : 'Nothing on this shelf.';
+  emptyState.querySelector('p').textContent = inArchive
+    ? 'You can move unused experiments here from Library. Nothing gets deleted.'
+    : 'Try another filter or clear the search.';
   emptyState.hidden = apps.length !== 0;
   reconcileKeyed(list, apps, {
     key: app => app.slug,
@@ -529,6 +552,7 @@ function renderShelf({ transition = false } = {}) {
     renderApps(apps);
     renderDetail(selectedApp());
     updateSystemStatus();
+    deck?.refresh();
   };
 
   if (transition) runViewTransition(render);
@@ -571,9 +595,13 @@ function closeDetailPanel({ restoreFocus = true } = {}) {
 function selectApp(slug, { openPanel = true } = {}) {
   const app = registry.find((item) => item.slug === slug);
   if (!app) return;
+  if (deck?.getView() === 'home') deck.setView('library');
   shelfState.selected = slug;
   persistShelfState();
-  renderShelf({ transition: true });
+  // Commit the selected project's fields before exposing the editable panel.
+  // A deferred view-transition callback otherwise shows the previous project
+  // briefly and can overwrite notes typed during the panel's opening motion.
+  renderShelf({ transition: false });
   if (openPanel) openDetailPanel();
 }
 
@@ -812,6 +840,21 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+deck = installPocketDeck({
+  getApps: () => registry,
+  getFavorites: () => shelfState.favorites,
+  getRecents: () => shelfState.recents,
+  getSelected: () => shelfState.selected,
+  onViewChanged: () => {
+    if (deck?.getView() !== 'library') shelfState.query = '';
+    renderShelf();
+  },
+  onOpen: (event, slug, link) => launchApp(event, slug, link),
+  onDetails: slug => selectApp(slug),
+  onFavorite: slug => toggleFavorite(slug),
+  onRefresh: () => loadRegistry({ manual: true }),
+  onTools: () => document.querySelector('#shelf-tools-button')?.click()
+});
 installShelfTools({ store: shelfStore });
 updateSystemStatus();
 void shelfStore.hydrate();
