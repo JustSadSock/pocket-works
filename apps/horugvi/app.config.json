@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "slug": "horugvi",
+  "name": "ХОРУГВИ",
+  "shortName": "Хоругви",
+  "description": "Живая средневековая миниатюра: приказы, знамёна, мораль и три связанных тактических сражения.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-09",
+  "releaseDateTime": "2026-10-09T03:00:00+03:00",
+  "changelog": ["Три связанные битвы с ограниченными приказами, фланговыми атаками и моралью.","Рисованное поле боя, войска и витражные сцены хроники; автосохранение и звук."],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#a44435",
+  "backgroundColor": "#e1cfaa",
+  "themeColor": "#28372e",
+  "orientation": "portrait",
+  "cacheName": "horugvi-v1.0.0",
+  "storageNamespace": "horugvi-campaign-v1",
+  "runtime": "quick",
+  "tags": ["game", "strategy", "medieval", "tactics", "canvas"],
+  "order": 14
+}
