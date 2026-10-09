@@ -24,6 +24,7 @@ jobs:
           node scripts/test-publish-policy.mjs
 
   production-packaging:
+    if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'platform/') || contains(github.event.pull_request.labels.*.name, 'platform-change'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
