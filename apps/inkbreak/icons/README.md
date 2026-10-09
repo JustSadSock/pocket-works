@@ -1,7 +1,3 @@
-# Generated install icon
+# Courier icon
 
-Pocket Forge creates `icon.svg` automatically from the application name, accent and background colors.
-
-Replace it with a deliberate app-specific symbol before calling the product visually finished. Keep the same local path or update both the manifest and Service Worker shell together.
-
-Platform-specific PNG generation can be added later without changing the app identity contract.
+Original ink-drawn nib mask and vermilion cape inside an irregular print frame. Authored specifically for this comic, independently of Forge scaffolding. SVG source is the canonical icon.
