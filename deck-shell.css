@@ -192,6 +192,11 @@ html.has-pocket-deck .app-entry{
      painting rather than running the old list's animation machinery. */
   content-visibility:auto;contain-intrinsic-size:auto 186px;
 }
+/* First visible rows keep real dimensions; later hundreds of tiles paint lazily. */
+html.has-pocket-deck .app-entry:nth-child(-n+12){
+  content-visibility:visible;
+  contain-intrinsic-size:none;
+}
 html.has-pocket-deck .app-entry::before{display:none;}
 html.has-pocket-deck .app-entry.is-selected{border-color:#df9c81;transform:none;box-shadow:inset 0 0 0 1px #df9c81;}
 html.has-pocket-deck .app-entry__select{display:flex;flex-direction:column;align-items:stretch;width:100%;
