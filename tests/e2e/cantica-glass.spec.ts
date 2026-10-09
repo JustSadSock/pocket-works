@@ -49,6 +49,6 @@ test.describe('CANTICA III illuminated manuscript',()=>{
     await expect(page.locator('.volume-entry')).toHaveCount(10);
     await page.locator('#codexClose').click();
     await expect(page.locator('#manuscript')).toBeHidden();
-    monitor.assertNoUnexpectedBrowserOutput();
+    monitor.assertClean();
   });
 });
