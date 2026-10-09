@@ -1,4 +1,5 @@
-const CACHE_PREFIX='mechanica-',CACHE_NAME='mechanica-v1.0.0',APP_VERSION='1.0.0',RELEASE_DATE='2026-10-10';
+const CACHE_NAME='mechanica-v1.0.0';
+const CACHE_PREFIX='mechanica-',APP_VERSION='1.0.0',RELEASE_DATE='2026-10-10';
 const CACHE_PROTOCOL=3;
 const RELEASE_NOTES=['Шесть механических головоломок и свободная сборка шестерён.','Рабочие передачи с расчётом передаточного отношения, завода пружины и направления вращения.','Сохранение схем, звуковые эффекты и офлайн-режим.'];
 const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
