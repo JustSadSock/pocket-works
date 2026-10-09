@@ -11,7 +11,7 @@ const SOURCE_DIRS = new Set([
 const ROOT_FILES = new Set([
   'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig.json',
   'project.godot', 'export_presets.cfg', 'README.md', 'AGENTS.md',
-  'progress.md', '.env', '.env.example'
+  'progress.md', 'visual-direction.json', '.env', '.env.example'
 ]);
 const SOURCE_EXTENSIONS = /(?:\.map|\.py|\.pyc|\.blend\d*|\.psd|\.aseprite|\.gd|\.ts|\.tsx|\.log|\.md)$/i;
 const TEST_PATTERN = /(?:^|\/)(?:[^/]+\.)?(?:test|spec)\.(?:js|mjs|cjs)$/i;
