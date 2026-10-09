@@ -205,6 +205,12 @@ html.has-pocket-deck .app-entry .app-preview{display:block;position:relative;wid
   margin:0;border:0;border-radius:0;background:#222b31;box-shadow:none;transform:none;}
 html.has-pocket-deck .app-entry .app-preview::after{z-index:2;border-radius:0;box-shadow:none;background:linear-gradient(transparent 60%,rgba(7,14,18,.64));}
 html.has-pocket-deck .app-entry .app-preview.has-app-icon::before{inset:19%;filter:drop-shadow(0 6px 15px rgba(0,0,0,.2));}
+/* Loading 130 CSS background SVGs at once blocks WebKit's main thread.
+   Keep the original image only for cards near the viewport; IntersectionObserver
+   in the established launcher preview runtime drives is-in-view. */
+html.has-pocket-deck .app-entry .app-preview.has-app-icon:not(.is-in-view)::before{
+  background-image:none!important;
+}
 html.has-pocket-deck .app-preview.has-deck-cover::before{display:none!important;}
 html.has-pocket-deck .app-preview.has-deck-cover::after{background:linear-gradient(transparent 60%,rgba(6,10,12,.35));}
 html.has-pocket-deck .deck-cover-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
