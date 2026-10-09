@@ -451,6 +451,11 @@ function patchAppEntry(entry, app, index) {
 }
 
 function renderApps(apps) {
+  const inArchive = deck?.getView() === 'archive';
+  emptyState.querySelector('strong').textContent = inArchive ? 'Nothing archived.' : 'Nothing on this shelf.';
+  emptyState.querySelector('p').textContent = inArchive
+    ? 'You can move unused experiments here from Library. Nothing gets deleted.'
+    : 'Try another filter or clear the search.';
   emptyState.hidden = apps.length !== 0;
   reconcileKeyed(list, apps, {
     key: app => app.slug,
