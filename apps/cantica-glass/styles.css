@@ -58,3 +58,117 @@ button:focus-visible,a:focus-visible,canvas:focus-visible{outline:2px solid #f7e
 @media(max-height:680px){.topbar{height:45px}.folio{min-height:84px;padding:1px 0}.folio-rule{display:none}.folio h1{font-size:25px}.chapter{margin:3px 0}.subline{margin:2px 0;font-size:11px}.inscription{min-height:48px;padding:4px 0}.pedestal{min-height:63px;padding:5px 0}.pedestal button{min-height:51px}}
 @media(min-width:650px){.app-shell{max-width:500px;margin:auto;box-shadow:0 0 0 1px #aa946044,0 0 80px #02080a}.window-stage{margin-inline:0}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* CANTICA II — the entire interface is carved as an illuminated manuscript in stone. */
+.app-shell {
+  background:
+    radial-gradient(ellipse 58% 23% at 50% 30%,#8c745a37 0%,transparent 100%),
+    radial-gradient(ellipse 130% 85% at 50% 32%,#364c50 0%,#1c2b31 51%,#0d181d 100%);
+}
+.app-shell::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  box-shadow:inset 0 0 85px #071112cf,inset 0 0 3px 1px #d5a97022;
+  background:radial-gradient(ellipse 80% 48% at 50% 54%,transparent 15%,#060f152e 98%);
+}
+.topbar{border-bottom:1px solid #bc986038;box-shadow:0 1px 0 #10191c;z-index:2}
+.seal{filter:drop-shadow(0 3px 4px #0008)}
+.folio{position:relative;min-height:106px}
+.folio h1{font-size:clamp(23px,6.7vw,34px);text-shadow:0 2px 0 #02090a,0 0 28px #b6855e39}
+.folio .chapter{font-size:9px;letter-spacing:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 18px}
+.folio .subline{color:#cfc1a7}
+.window-progress{height:16px;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:0 10px 4px;z-index:1}
+.window-progress-track{height:4px;position:relative;flex:1;overflow:hidden;background:#070e14;box-shadow:inset 0 1px 1px #000,0 1px 0 #73857d33;border-left:1px solid #86714e;border-right:1px solid #86714e}
+.window-progress-track i{display:block;height:100%;min-width:3px;background:linear-gradient(90deg,#a95b53,#b68b50 45%,#fae1aa);box-shadow:0 0 12px #fbd38d;transition:width .38s cubic-bezier(.16,.88,.3,1)}
+.window-progress>span{font:10px/1 Georgia,serif;color:#a99d82;min-width:44px;text-align:right;letter-spacing:.07em;font-variant-numeric:tabular-nums}
+.window-stage{border:1px solid #7c695037;border-top-color:#b49b685c;border-bottom-color:#89724c75;
+  box-shadow:inset 0 8px 16px #040c11a8,inset 0 -11px 14px #030a0e94,0 4px 16px #040c11a6;
+  background:#16262c}
+.window-stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(102deg,#fff3bc17 0%,transparent 24%,transparent 67%,#07101444 100%),
+    radial-gradient(ellipse 35% 45% at 50% 18%,#ffcf7820,transparent 100%);
+  mix-blend-mode:screen;
+}
+.window-stage::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  box-shadow:inset 0 0 25px #071218,inset 0 0 2px #c3a67e8a;
+}
+.stage-grain{z-index:2;opacity:.17}
+.stage-corner{z-index:3}
+.inscription{
+  min-height:53px;padding:6px 0;
+  background:linear-gradient(180deg,#101d23,#1d2d32 48%,#14232a 100%);
+  border-top:2px ridge #9c866441;border-bottom:1px solid #8a785740;
+  box-shadow:inset 0 1px 10px #0009;
+}
+.inscription-center{font-size:11px;line-height:1.12;letter-spacing:.015em}
+.inscription strong{text-shadow:0 0 13px #dcb66a41}
+.pedestal{
+  min-height:75px;
+  background:linear-gradient(180deg,transparent,#25343754 70%,#0b181b61);
+}
+.pedestal button{
+  overflow:hidden;border:1px solid #715e40;
+  box-shadow:inset 0 1px 1px #cbb68a60,inset 0 -3px 6px #020b0fa1,0 3px 7px #050d10aa;
+}
+.pedestal button::before{
+  content:"";position:absolute;inset:4px;pointer-events:none;
+  border:1px solid #e5c79428;
+}
+.pedestal button::after{
+  content:"";position:absolute;left:12%;right:12%;top:3px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#ffeec198,transparent);
+}
+.pedestal .edge-action{background:linear-gradient(165deg,#334748,#223137 45%,#17272d)}
+.pedestal .primary-action{
+  color:#302f28!important;
+  border-color:#e8c796;
+  background:linear-gradient(152deg,#f9e5b4,#d9b97d 38%,#aa824e 72%,#e3c592);
+  box-shadow:inset 0 2px 1px #ffefc2,inset 0 -3px 5px #7d5b2a,0 3px 9px #000a;
+}
+.pedestal .primary-action .button-rune{text-shadow:0 1px 0 #fff6ca}
+.pedestal button:active{transform:translateY(2px) scale(.988);box-shadow:inset 0 3px 7px #0713176c}
+.illumination{
+  background:
+    radial-gradient(ellipse 100% 35% at 50% 3%,#8d704f2b,transparent 100%),
+    repeating-linear-gradient(0deg,#fff3b902 0 1px,transparent 1px 6px),
+    linear-gradient(145deg,#36494a,#1c2b30 52%,#24343a);
+  border-image:linear-gradient(145deg,#a38a62,#354b4b 40%,#9b835c 76%,#4a5751) 1;
+  max-height:min(92dvh,780px);
+  box-shadow:inset 0 0 0 1px #baa47760,inset 0 0 50px #071112,0 26px 95px #010a0fe6;
+}
+.modal-icon{
+  border-radius:50%;
+  background:radial-gradient(circle at 39% 27%,#f1dba65c,#9f704339 37%,#1d3037 74%);
+  box-shadow:inset 0 0 1px 3px #a58d6155,0 0 0 5px #142125,0 0 0 6px #897047,0 0 45px #e8ba6548;
+}
+.modal-primary{box-shadow:inset 0 2px 2px #ffefbe,0 3px 8px #0008}
+.modal-secondary{box-shadow:inset 0 2px 2px #bbc6b52c,0 3px 8px #0008}
+.chapter-list{display:block;margin:0 auto 14px;max-height:min(45dvh,365px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a58c64 #1a292c;padding:3px}
+.book-navigation{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;margin-bottom:12px}
+.book-navigation button{min-height:34px;padding:2px 0;text-align:center;font-size:11px;color:#bdab88;border:1px solid #596461;background:#1b2a2d;box-shadow:inset 0 1px 0 #cdbb8e26}
+.book-navigation button.selected-book{border-color:#ddc091;color:#222f31;background:#dcc390}
+.book-navigation button:disabled{opacity:.3}
+.book-page-name{font-size:11px;letter-spacing:.08em;color:#dfc69d;padding:1px 0 9px;text-align:center;margin:0}
+.window-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.window-grid button{
+  min-height:40px;min-width:0;padding:3px;
+  display:grid;place-items:center;text-align:center;
+  font:13px/1 Georgia,serif;font-variant-numeric:tabular-nums;
+  color:#b9a883;background:linear-gradient(150deg,#26393d,#17262c);
+  border:1px solid #715e4480;
+}
+.window-grid button.is-lit{color:#ffdf97;background:linear-gradient(150deg,#695339,#293b3e);box-shadow:inset 0 0 8px #c29c504a}
+.window-grid button.is-current{border:2px solid #f1d497;color:#fff0c2}
+.window-grid button:disabled{opacity:.22;cursor:default}
+.window-grid button:not(:disabled):active{transform:scale(.95);filter:brightness(1.3)}
+@media(max-height:680px){
+  .folio{min-height:77px}
+  .window-progress{height:12px;padding-bottom:2px}
+  .pedestal{min-height:63px}
+  .inscription{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){
+  .window-progress-track i{transition:none!important}
+}
