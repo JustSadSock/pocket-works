@@ -185,3 +185,24 @@ test('KROMKA exit controls use native links and return to the Pocket Works launc
   await expect(page.locator('h1')).toContainText('Pocket');
   monitor.assertClean();
 });
+
+test('launcher preserves card identity across sorting and filtering', async ({ page }) => {
+  await openStablePage(page, '/', '.app-entry[data-slug="screen-lab"]');
+  const card = page.locator('.app-entry[data-slug="screen-lab"]');
+  await card.evaluate(element => { (window as any).__pwStableCard = element; });
+
+  await page.locator('#sort-button').click();
+  await expect.poll(() => card.evaluate(element => element === (window as any).__pwStableCard))
+    .toBe(true);
+
+  await page.locator('#app-search').fill('screen lab');
+  await expect(card).toBeVisible();
+  await expect.poll(() => card.evaluate(element => element === (window as any).__pwStableCard))
+    .toBe(true);
+
+  await page.locator('#app-search').fill('');
+  await expect.poll(() => card.evaluate(element => element === (window as any).__pwStableCard))
+    .toBe(true);
+  await expect(card.locator('.app-entry__meta')).not.toContainText(/T\d{2}:/);
+});
+

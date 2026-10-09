@@ -1,3 +1,5 @@
+import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './shared/release-coordinator.js';
+
 (()=>{
   'use strict';
   const REGISTRY_KEY='pocket-works:registry:v1';
@@ -22,22 +24,6 @@
       verified={};
       observed={};
     }
-  }
-
-  function sameRelease(state,release){
-    if(!state||!release)return false;
-    if(state.version!==release.version)return false;
-    if(release.fingerprint&&state.fingerprint!==release.fingerprint)return false;
-    return true;
-  }
-
-  function needsConvergence(slug,release){
-    const running=observed[slug];
-    const cached=verified[slug];
-    return Boolean(
-      running?.version&&!sameRelease(running,release)||
-      cached?.version&&!sameRelease(cached,release)
-    );
   }
 
   function versionedHref(anchor){
@@ -73,43 +59,6 @@
     if(meta.textContent!==next)meta.textContent=next;
   }
 
-  async function clearStaleAppRuntime(slug,release){
-    const registrationPrefix=`/apps/${slug}/`;
-    if('serviceWorker'in navigator){
-      try{
-        const registrations=await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations
-          .filter(registration=>{
-            try{return new URL(registration.scope).pathname.includes(registrationPrefix);}catch{return false;}
-          })
-          .map(registration=>registration.unregister().catch(()=>false)));
-      }catch{}
-    }
-
-    if('caches'in window){
-      try{
-        const keys=await caches.keys();
-        await Promise.all(keys
-          .filter(key=>{
-            const owned=key.startsWith(`${slug}-`)||key.startsWith(`pocket-works-app-${slug}-`);
-            return owned&&!(release?.version&&key.includes(`v${release.version}`));
-          })
-          .map(key=>caches.delete(key)));
-      }catch{}
-    }
-
-    try{
-      if(observed[slug]&&!sameRelease(observed[slug],release)){
-        delete observed[slug];
-        localStorage.setItem(OBSERVED_KEY,JSON.stringify(observed));
-      }
-      if(verified[slug]&&!sameRelease(verified[slug],release)){
-        delete verified[slug];
-        localStorage.setItem(VERIFIED_KEY,JSON.stringify(verified));
-      }
-    }catch{}
-  }
-
   function rewrite(root=document){
     root.querySelectorAll?.('a[data-action="open"][data-slug],#detail-open[data-slug]').forEach(versionedHref);
     root.querySelectorAll?.('.app-entry[data-slug]').forEach(annotateEntry);
@@ -137,7 +86,7 @@
     const anchor=event.target.closest?.('a[data-action="open"],#detail-open');
     const slug=anchor?.dataset?.slug;
     const release=releases.get(slug);
-    if(!anchor||!slug||!release||!needsConvergence(slug,release)||opening.has(slug))return;
+    if(!anchor||!slug||!release||!needsReleaseConvergence(slug,release)||opening.has(slug))return;
     if('button'in event&&event.button!==0)return;
     if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
 
@@ -145,7 +94,9 @@
     event.stopImmediatePropagation();
     opening.add(slug);
     versionedHref(anchor);
-    void clearStaleAppRuntime(slug,release).finally(()=>{
+    void clearStaleAppRuntime(slug,release).catch(error => {
+      console.warn('Pocket Works failed to clean stale release', error);
+    }).finally(()=>{
       try{
         const target=new URL(anchor.href,location.href);
         target.searchParams.set('pw_handoff',Date.now().toString(36));

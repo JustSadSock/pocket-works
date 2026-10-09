@@ -156,7 +156,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   :root{--safe-right:max(12px,var(--app-safe-right,env(safe-area-inset-right)));--safe-left:max(12px,var(--app-safe-left,env(safe-area-inset-left)))}
   .masthead{display:block;min-height:218px;padding:8px 3px 24px}.brand-lockup{margin-bottom:38px}.shelf-heading h1{font-size:clamp(3.25rem,14vw,5.2rem)}
   .command-deck{top:6px;display:block;margin-inline:-3px;padding:8px}.search-field{margin-bottom:7px}.search-field kbd{display:none}.command-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
-  .filter-strip button{padding-inline:10px}.deck-actions button{padding-inline:10px}#sort-button{display:none}
+  .filter-strip button{padding-inline:10px}.deck-actions button{padding-inline:8px}#sort-button{display:inline-flex;align-items:center;justify-content:center;min-width:72px;max-width:88px;font-size:.7rem;letter-spacing:-.02em}
   .collection-head{min-height:72px}.collection-head h2{font-size:2.65rem}
   .app-list{gap:10px}.app-entry{grid-template-columns:minmax(0,1fr) 50px;min-height:150px;border-radius:9px}
   .app-entry__select{grid-column:1/-1;grid-template-columns:102px minmax(0,1fr);gap:16px;padding:14px 13px 12px}

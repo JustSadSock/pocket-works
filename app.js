@@ -4,6 +4,8 @@ import {
 } from './shared/mobile-runtime.js';
 
 import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
+import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
+import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 
 installMobileRuntime();
 
@@ -64,6 +66,8 @@ const launchName = launchStage?.querySelector('.launch-stage__object strong');
 
 let registry = [];
 let offlineReady = new Set();
+let offlineStates = new Map();
+let offlineAuditGeneration = 0;
 let panelOpen = false;
 let lastFocusedElement = null;
 let lastSyncAt = null;
@@ -166,8 +170,8 @@ const previewObserver = 'IntersectionObserver' in window
   : null;
 
 function observeListPreviews() {
-  previewObserver?.disconnect();
-  for (const preview of list.querySelectorAll('.app-preview')) {
+  for (const preview of list.querySelectorAll('.app-preview:not([data-observed])')) {
+    preview.dataset.observed = 'true';
     if (previewObserver) previewObserver.observe(preview);
     else preview.classList.add('is-in-view');
   }
@@ -296,11 +300,17 @@ function updateSystemStatus() {
   offlineCount.textContent = `${offlineReady.size} offline-ready`;
 }
 
-function formatDate(value) {
+function formatDate(value, compact = false) {
   if (!value) return 'unknown';
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+  const source = String(value);
+  const hasTime = source.includes('T');
+  const date = new Date(hasTime ? source : `${source}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return source;
+  return new Intl.DateTimeFormat(undefined, {
+    ...(compact ? {} : { year: 'numeric' }),
+    month: 'short', day: 'numeric',
+    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {})
+  }).format(date);
 }
 
 function formatRecent(timestamp) {
@@ -381,7 +391,7 @@ function updateControlState(apps) {
     if (counter) counter.textContent = String(counts[filter] || 0);
   }
 
-  searchInput.value = shelfState.query;
+  if (searchInput.value !== shelfState.query) searchInput.value = shelfState.query;
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
   sortButton.textContent = SORT_LABELS[shelfState.sort];
@@ -392,49 +402,64 @@ function updateControlState(apps) {
   resultSummary.textContent = `${apps.length} ${noun}${qualifier}`;
 }
 
+function createAppEntry() {
+  const entry = template.content.firstElementChild.cloneNode(true);
+  entry.pwParts = {
+    select: entry.querySelector('.app-entry__select'),
+    favorite: entry.querySelector('.app-entry__favorite'),
+    open: entry.querySelector('.app-entry__open'),
+    preview: entry.querySelector('.app-preview'),
+    name: entry.querySelector('.app-entry__name'),
+    status: entry.querySelector('.app-entry__status'),
+    description: entry.querySelector('.app-entry__description'),
+    meta: entry.querySelector('.app-entry__meta')
+  };
+  return entry;
+}
+
+function patchAppEntry(entry, app, index) {
+  const p = entry.pwParts;
+  entry.dataset.slug = app.slug;
+  entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
+  entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
+  entry.classList.toggle('is-selected', shelfState.selected === app.slug);
+
+  p.select.dataset.slug = app.slug;
+  p.select.setAttribute('aria-label', `View ${app.name} details`);
+  p.favorite.dataset.slug = app.slug;
+  p.favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
+  p.favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
+  setText(p.favorite, isFavorite(app.slug) ? '★' : '☆');
+  p.open.dataset.slug = app.slug;
+  if (p.open.getAttribute('href') !== app.path) p.open.href = app.path;
+  p.open.setAttribute('aria-label', `Open ${app.name}`);
+
+  setText(p.name, app.name);
+  setText(p.status, app.status === 'experimental' ? 'lab' : app.status);
+  setText(p.description, app.description);
+  const cacheState = offlineStates.get(app.slug)?.status;
+  const cacheLabel = cacheState === 'ready' ? 'offline essentials cached' :
+    cacheState === 'partial' ? 'partial cache' : 'not cached';
+  const baseMeta = [
+    `v${app.version}`, formatDate(app.updatedAt, true), cacheLabel,
+    ...(app.tags || []).slice(0, 2)
+  ].filter(Boolean).join(' / ');
+  if (p.meta.dataset.pwBase !== baseMeta) {
+    p.meta.dataset.pwBase = baseMeta;
+    setText(p.meta, baseMeta);
+  }
+  if (p.preview.dataset.preset !== (app.preset || 'vanilla') ||
+      p.preview.dataset.iconSlug !== app.slug) configurePreview(p.preview, app);
+}
+
 function renderApps(apps) {
-  list.replaceChildren();
   emptyState.hidden = apps.length !== 0;
-
-  apps.forEach((app, index) => {
-    const fragment = template.content.cloneNode(true);
-    const entry = fragment.querySelector('.app-entry');
-    const select = fragment.querySelector('.app-entry__select');
-    const favorite = fragment.querySelector('.app-entry__favorite');
-    const open = fragment.querySelector('.app-entry__open');
-    const preview = fragment.querySelector('.app-preview');
-
-    entry.dataset.slug = app.slug;
-    entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
-    entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
-    entry.classList.toggle('is-selected', shelfState.selected === app.slug);
-
-    select.dataset.slug = app.slug;
-    select.setAttribute('aria-label', `View ${app.name} details`);
-    favorite.dataset.slug = app.slug;
-    favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
-    favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
-    favorite.textContent = isFavorite(app.slug) ? '★' : '☆';
-    open.dataset.slug = app.slug;
-    open.href = app.path;
-    open.setAttribute('aria-label', `Open ${app.name}`);
-
-    fragment.querySelector('.app-entry__name').textContent = app.name;
-    fragment.querySelector('.app-entry__status').textContent = app.status === 'experimental' ? 'lab' : app.status;
-    fragment.querySelector('.app-entry__description').textContent = app.description;
-
-    const cacheLabel = offlineReady.has(app.slug) ? 'offline ready' : 'not cached';
-    fragment.querySelector('.app-entry__meta').textContent = [
-      `v${app.version}`,
-      app.updatedAt,
-      cacheLabel,
-      ...(app.tags || []).slice(0, 2)
-    ].filter(Boolean).join(' / ');
-
-    configurePreview(preview, app);
-    list.append(fragment);
+  reconcileKeyed(list, apps, {
+    key: app => app.slug,
+    create: createAppEntry,
+    patch: patchAppEntry,
+    remove: entry => previewObserver?.unobserve(entry.querySelector('.app-preview'))
   });
-
   observeListPreviews();
 }
 
@@ -450,7 +475,15 @@ function installInstruction() {
     : 'Install independently from the application page using your browser’s install action.';
 }
 
+let lastDetailSignature = '';
 function renderDetail(app) {
+  const signature = app ? JSON.stringify([
+    app.slug, app.version, app.description, app.updatedAt, app.status, app.preset,
+    app.accent, app.tags, app.changelog, isFavorite(app.slug),
+    offlineStates.get(app.slug), recentTimestamp(app.slug), panelOpen
+  ]) : 'empty';
+  if (lastDetailSignature === signature) return;
+  lastDetailSignature = signature;
   if (!app) {
     detailEmpty.hidden = false;
     detailContent.hidden = true;
@@ -468,7 +501,10 @@ function renderDetail(app) {
   detailDescription.textContent = app.description;
   detailVersion.textContent = `v${app.version}`;
   detailUpdated.textContent = formatDate(app.updatedAt);
-  detailOffline.textContent = offlineReady.has(app.slug) ? 'ready' : 'open once';
+  const offlineState = offlineStates.get(app.slug);
+  detailOffline.textContent = offlineState?.status === 'ready' ? 'essentials cached' :
+    offlineState?.status === 'partial' ? 'incomplete cache' : 'open online first';
+  detailOffline.title = offlineState?.reason || 'Offline availability has not been verified';
   detailOpened.textContent = formatRecent(recentTimestamp(app.slug));
   detailOpen.href = app.path;
   detailOpen.dataset.slug = app.slug;
@@ -587,22 +623,23 @@ async function copyAppLink(slug) {
 }
 
 async function readOfflineReadiness() {
-  if (!('caches' in window)) {
-    offlineReady = new Set();
-    return;
-  }
-
+  const generation = ++offlineAuditGeneration;
+  const apps = [...registry];
   try {
-    const cacheNames = await caches.keys();
+    const report = await inspectOfflineReadiness(apps);
+    if (generation !== offlineAuditGeneration) return;
+    offlineStates = report;
     offlineReady = new Set(
-      registry
-        .filter((app) => cacheNames.some((cacheName) => cacheName.startsWith(`${app.slug}-`)))
-        .map((app) => app.slug)
+      [...report].filter(([, result]) => result.status === 'ready').map(([slug]) => slug)
     );
   } catch (error) {
-    console.warn('Pocket Works could not inspect application caches', error);
+    if (generation !== offlineAuditGeneration) return;
+    console.warn('Pocket Works could not inspect offline application resources', error);
+    offlineStates = new Map();
     offlineReady = new Set();
   }
+  // Avoid blocking first paint on CacheStorage enumeration and inspection.
+  renderShelf();
 }
 
 async function loadRegistry({ manual = false } = {}) {
@@ -641,8 +678,8 @@ async function loadRegistry({ manual = false } = {}) {
     persistShelfState();
   }
 
-  await readOfflineReadiness();
   renderShelf();
+  void readOfflineReadiness();
 }
 
 async function applyExternalRegistrySnapshot(apps) {
@@ -659,7 +696,7 @@ async function applyExternalRegistrySnapshot(apps) {
     persistShelfState();
   }
 
-  await readOfflineReadiness();
+  void readOfflineReadiness();
   syncStatus.textContent = `Synced ${formatRecent(lastSyncAt)}`;
   renderShelf({ transition: true });
   return true;
@@ -769,8 +806,7 @@ document.addEventListener('visibilitychange', async () => {
   syncDetailPreviewMotion();
 
   if (!document.hidden) {
-    await readOfflineReadiness();
-    renderShelf();
+    void readOfflineReadiness();
   }
 });
 

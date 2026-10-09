@@ -1,6 +1,7 @@
 import { access, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs } from './app-config.mjs';
+import { shouldPublishAppPath, shouldPublishGodotWebPath } from './publish-policy.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
@@ -116,6 +117,12 @@ for(const config of configs){
     if(release.version!==config.version)errors.push(`dist-site/apps/${config.slug}/release.json version mismatch`);
     if(!/^[0-9a-f]{24}$/.test(release.fingerprint||''))errors.push(`dist-site/apps/${config.slug}/release.json fingerprint is invalid`);
     if(!Array.isArray(release.files)||!release.files.includes('index.html'))errors.push(`dist-site/apps/${config.slug}/release.json has no file inventory`);
+    for (const file of release.files || []) {
+      const allowed = config.runtime === 'godot'
+        ? shouldPublishGodotWebPath(file)
+        : shouldPublishAppPath(file);
+      if (!allowed) errors.push(`dist-site/apps/${config.slug} shipped development-only file ${file}`);
+    }
   }
 
   const registryEntry=registryBySlug.get(config.slug);

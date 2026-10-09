@@ -1,17 +1,17 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.3';
-const APP_VERSION = '0.10.3';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.4';
+const APP_VERSION = '0.10.4';
 const RELEASE_DATE = '2026-10-09';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
-  'Release acknowledgements now merge per-app changes and sync between open tabs.',
-  'Library data, previews and update checks now share one deduplicated registry request.',
-  'Launcher checks run automatically for pull requests and main branch changes.'
+  'Installed application updates and stale-cache recovery now share one lifecycle coordinator.',
+  'Library cards preserve their elements while sorting, filtering, and refreshing.',
+  'Offline readiness checks bootstrap assets, while production builds omit development files.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/pocket-works-icon.svg', './shared/launcher-registry.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/pocket-works-icon.svg', './shared/launcher-registry.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];

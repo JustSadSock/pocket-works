@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(path,'utf8');
-const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager,launcherSync,prepareSite,vetrolomWorker,vetrolomConfig]=await Promise.all([
+const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager,launcherSync,prepareSite,vetrolomWorker,vetrolomConfig,releaseCoordinator]=await Promise.all([
   read('launcher-update-all-v3.js'),
   read('app.js'),
   read('index.html'),
@@ -11,13 +11,17 @@ const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager
   read('launcher-sync.js'),
   read('scripts/prepare-site.mjs'),
   read('apps/vetrolom/sw.js'),
-  read('apps/vetrolom/app.config.json')
+  read('apps/vetrolom/app.config.json'),
+  read('shared/release-coordinator.js')
 ]);
 const errors=[];
 const requireToken=(source,token,label)=>{if(!source.includes(token))errors.push(`${label} must include ${token}`);};
 
-for(const token of ['APP_TIMEOUT','UPDATE_CHECK_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','expectedFingerprint','pw-update-progress','collectInstalledTargets','navigator.serviceWorker.getRegistrations()','registration.update()','workerInfo','on-demand','pocketworks:registry-snapshot',"source:'bulk-update'"]){
-  requireToken(launcher,token,'launcher installed-app updater');
+for(const token of ['APP_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','pw-update-progress','installedTargets','on-demand','pocketworks:registry-snapshot',"source:'bulk-update'"]){
+  requireToken(launcher,token,'launcher bulk update interface');
+}
+for(const token of ['CHECK_TIMEOUT','ACTIVATION_TIMEOUT','releaseIdentity','getVerifiedReleases','installedTargets','registration.update()','workerInfo','saveVerified','clearStaleAppRuntime']){
+  requireToken(releaseCoordinator,token,'central release coordinator');
 }
 if(launcher.includes('navigator.serviceWorker.register('))errors.push('launcher Sync must not register Service Workers for applications that are not already installed');
 if(launcher.includes("workerUrl.searchParams.set('pw_release'")||launcher.includes("workerUrl.searchParams.set('pw_fp'"))errors.push('launcher Sync must not encode release identity into Service Worker script URLs');

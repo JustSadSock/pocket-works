@@ -3,6 +3,7 @@ import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
 import { buildRegistry } from './build-registry.mjs';
+import { shouldPublishAppPath, shouldPublishGodotWebPath, shouldPublishSharedPath } from './publish-policy.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
@@ -15,16 +16,16 @@ const rootFiles=[
   'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
-const appDevEntries=new Set(['package.json','vite.config.ts','tsconfig.json','README.md','source','public','.dist','server','web','.godot','project.godot','export_presets.cfg']);
 
-async function copyDirectoryFiltered(source,destination,shouldSkip){
+async function copyDirectoryFiltered(source,destination,shouldSkip,prefix=''){
   await mkdir(destination,{recursive:true});
   const entries=await readdir(source,{withFileTypes:true});
   for(const entry of entries){
-    if(shouldSkip(entry.name,entry))continue;
+    const relative=path.posix.join(prefix,entry.name);
+    if(shouldSkip(relative,entry))continue;
     const from=path.join(source,entry.name);
     const to=path.join(destination,entry.name);
-    if(entry.isDirectory())await copyDirectoryFiltered(from,to,shouldSkip);
+    if(entry.isDirectory())await copyDirectoryFiltered(from,to,shouldSkip,relative);
     else await cp(from,to);
   }
 }
@@ -270,7 +271,7 @@ for(const file of rootFiles)await cp(path.join(root,file),path.join(output,file)
 await copyDirectoryFiltered(
   path.join(root,'shared'),
   path.join(output,'shared'),
-  (name,entry)=>!entry.isDirectory()&&(name.endsWith('.ts')||name.endsWith('.map'))
+  (relative,entry)=>!shouldPublishSharedPath(relative,entry.isDirectory())
 );
 
 const configs=await collectAppConfigs(root);
@@ -282,11 +283,11 @@ for(const config of configs){
     const generated=path.join(source,'web');
     try{await access(path.join(generated,'index.html'));}
     catch{throw new Error(`Godot app ${config.slug} has no committed web/index.html; run the Godot Web Runtime workflow before deployment`);}
-    await copyDirectoryFiltered(generated,destination,name=>name.endsWith('.map'));
+    await copyDirectoryFiltered(generated,destination,(relative,entry)=>!shouldPublishGodotWebPath(relative,entry.isDirectory()));
     await cp(path.join(source,'app.config.json'),path.join(destination,'app.config.json'));
     await splitOversizedGodotWasm(destination,config.slug,config.version);
   }else{
-    await copyDirectoryFiltered(source,destination,name=>appDevEntries.has(name)||name.endsWith('.map'));
+    await copyDirectoryFiltered(source,destination,(relative,entry)=>!shouldPublishAppPath(relative,entry.isDirectory()));
   }
   fingerprints.set(config.slug,await stampRelease(destination,config));
 }
