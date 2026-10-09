@@ -336,6 +336,15 @@ html.has-pocket-deck .launch-stage.is-launching .launch-stage__object{animation:
   .deck-mini-grid{gap:6px;}
   .deck-tile--hero .deck-art{aspect-ratio:1.1;}
 }
+@media(max-width:440px){
+  .deck-library-head{gap:7px;align-items:center;}
+  .deck-library-head h2{font-size:clamp(1.75rem,6vw,2.3rem);}
+  #deck-organize-start{padding:0 8px;min-width:68px;font-size:.7rem;}
+  .deck-density{gap:1px;padding:2px;}
+  .deck-density button{width:30px;height:33px;font-size:1.03rem;}
+  .deck-organize-bar{gap:5px;}
+  .deck-organize-bar button{padding:5px 7px;font-size:.68rem;}
+}
 @media(max-width:369px){
   .deck-home__intro h2{font-size:2.25rem;}
   .deck-tile--hero .deck-tile__caption strong{font-size:1.95rem;}
