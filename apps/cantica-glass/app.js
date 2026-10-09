@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf,neededTurns} from './logic.js';
+import {createManuscript} from './manuscript.js';
 
 installMobileRuntime();
 
@@ -13,7 +14,7 @@ const colors=['#296987','#a33c50','#c18b42','#3d7869','#784e82','#c2a56c','#385b
 const glyphs=['✣','✦','✤','✧'];
 const state={level:0,variant:0,board:[],moves:0,hints:0,unlocked:1,best:{},solved:false,sound:false,highlight:-1,highlightUntil:0,selected:0,pressedIndex:-1,sunAngle:0};
 let animation=0,lastFrame=0,view={width:320,height:450,dpr:1,boardX:0,boardY:0,tile:56};
-let audio=null,press=null;
+let audio=null,press=null,modalFocus=null;
 const toneNumber=n=>String(n).padStart(2,'0');
 const windowNumber=n=>String(n).padStart(3,'0');
 const currentLevel=()=>LEVELS[state.level];
@@ -60,6 +61,7 @@ function updateCopy(){
   $('status').textContent=state.solved?'Все реликвии озарены':light.lit.some(Boolean)?'Свет дошёл до алтаря':'Стекло — повернуть · солнце — потянуть';
   $('soundBtn').textContent=state.sound?'Звук вкл.':'Звук выкл.';
   $('soundBtn').setAttribute('aria-pressed',String(state.sound));
+  canvas.setAttribute('aria-label','Витраж '+level.size+' на '+level.size+'. Нажмите на фрагмент для поворота, стрелки и Enter — управление с клавиатуры.');
   document.title='CANTICA · '+level.name;
 }
 function startLevel(index,variant=0){
@@ -109,8 +111,15 @@ function chime(frequency,kind){
     }
   }catch{}
 }
-function closeModal(){$('scrim').hidden=true;$('chapterList').hidden=true; $('modalPrimary').onclick=null;$('modalSecondary').onclick=null;}
+function closeModal(){
+  if($('scrim').hidden)return;
+  $('scrim').hidden=true;$('chapterList').hidden=true;
+  $('modalPrimary').onclick=null;$('modalSecondary').onclick=null;
+  if(modalFocus?.isConnected)try{modalFocus.focus({preventScroll:true});}catch{}
+  modalFocus=null;
+}
 function openModal({kicker='КНИГА СВЕТА',title,copy,icon='✦',primary='Продолжить',secondary='К витражу',onPrimary=closeModal,onSecondary=closeModal,showList=false}){
+  if($('scrim').hidden)modalFocus=document.activeElement;
   $('scrim').hidden=false;
   $('modalKicker').textContent=kicker;
   $('modalTitle').textContent=title;
@@ -121,43 +130,30 @@ function openModal({kicker='КНИГА СВЕТА',title,copy,icon='✦',primary
   $('modalPrimary').onclick=onPrimary;
   $('modalSecondary').onclick=onSecondary;
   $('chapterList').hidden=!showList;
+  try{$('modalPrimary').focus({preventScroll:true});}catch{}
 }
 function showVictory(){
   const last=state.level===LEVELS.length-1;
+  const newBook=(state.level+1)%50===0&&!last&&state.unlocked>state.level+1;
   const best=state.best[state.level];
-  openModal({kicker:'ОКНО '+toneNumber(state.level+1)+' · ЗАЖЖЕНО',title:last?'Великий рассвет':'Свет возвращён',
-    copy:LEVELS[state.level].epilogue+' '+state.moves+' поворотов. Лучший результат: '+best+'.'+(state.hints?' Подсказок: '+state.hints+'.':''),
-    icon:last?'✺':'✧',primary:last?'Выбрать главу':'Следующее окно',
-    onPrimary:()=>last?showChapters():startLevel(state.level+1),
-    secondary:'Посмотреть витраж',onSecondary:closeModal});
+  const bookNumber=Math.floor((state.level+1)/50);
+  openModal({
+    kicker:newBook?'LIBER '+(bookNumber+1)+' · APERTUS':'ОКНО '+windowNumber(state.level+1)+' · ОСВЕЩЕНО',
+    title:last?'Великий рассвет':newBook?'Новая книга открыта':'Свет возвращён',
+    copy:LEVELS[state.level].epilogue+' '+state.moves+' поворотов. Лучший результат: '+best+'.'+
+      (state.hints?' Подсказок: '+state.hints+'.':'')+
+      (newBook?' Теперь доступна книга «'+LEVELS[state.level+1].book+'».':''),
+    icon:last?'✺':newBook?'✠':'✧',
+    primary:last?'Открыть книгу света':newBook?'Открыть новую книгу':'Следующее окно',
+    secondary:'Посмотреть витраж',
+    onPrimary:()=>last?showChapters():newBook?showChapters(bookNumber):startLevel(state.level+1),
+    onSecondary:closeModal
+  });
 }
-function showChapters(book=Math.floor(state.level/50)){
-  if(!Number.isInteger(book)||book<0||book>9)book=Math.floor(state.level/50);
-  const start=book*50,unlockedInBook=Math.max(0,Math.min(50,state.unlocked-start));
-  openModal({kicker:'LIBER LUMINIS · D FENESTRAE',title:'Книга окон',
-    copy:LEVELS[start].book+' · '+unlockedInBook+' из 50 окон открыто.',
-    icon:'❖',primary:'К витражу',onPrimary:closeModal,secondary:'Закрыть',showList:true});
-  const list=$('chapterList');list.replaceChildren();
-  const navigator=document.createElement('div');navigator.className='book-navigation';
-  for(let i=0;i<10;i++){
-    const b=document.createElement('button');b.type='button';
-    b.textContent=String(i+1);b.title='Книга '+(i+1)+': '+LEVELS[i*50].book;
-    b.setAttribute('aria-label',b.title);b.className=i===book?'selected-book':'';
-    if(i*50>=state.unlocked)b.disabled=true;
-    b.addEventListener('click',()=>showChapters(i));navigator.append(b);
-  }
-  list.append(navigator);
-  const label=document.createElement('p');label.className='book-page-name';
-  label.textContent='КНИГА '+(book+1)+' · '+LEVELS[start].book;list.append(label);
-  const page=document.createElement('div');page.className='window-grid';
-  for(let i=start;i<Math.min(start+50,LEVEL_COUNT);i++){
-    const b=document.createElement('button');b.type='button';
-    b.textContent=String(i+1);b.disabled=i>=state.unlocked;
-    b.className=(i===state.level?'is-current ':'')+(state.best[i]?'is-lit':'');
-    b.setAttribute('aria-label','Окно '+(i+1)+(state.best[i]?', пройдено':'')+(i>=state.unlocked?', закрыто':''));
-    b.addEventListener('click',()=>startLevel(i));page.append(b);
-  }
-  list.append(page);
+function showChapters(book=null){
+  closeModal();
+  if(Number.isInteger(book)&&book>=0&&book<10)manuscript.show({book:true,level:book*50});
+  else manuscript.show();
 }
 function showRestart(){
   openModal({kicker:'ПЕРЕПЛЁТ СВЕТА',title:'Переложить стекло?',copy:'Расположение фрагментов изменится. Уже пройденные главы и лучшие результаты сохранятся.',
@@ -175,6 +171,24 @@ function hint(){
   $('status').textContent='Строка '+row+', столбец '+col+': повернуть '+next.clockwise+' р.';
   canvas.focus({preventScroll:true});
   chime(660,'turn');save();
+}
+function pageRustle(){
+  if(!state.sound)return;
+  try{
+    const Audio=window.AudioContext||window.webkitAudioContext;
+    if(!Audio)return;
+    if(!audio)audio=new Audio();
+    if(audio.state==='suspended')audio.resume().catch(()=>{});
+    const frames=Math.floor(audio.sampleRate*.14),buffer=audio.createBuffer(1,frames,audio.sampleRate);
+    const samples=buffer.getChannelData(0);
+    for(let i=0;i<frames;i++){
+      const envelope=Math.pow(Math.sin(Math.PI*i/frames),1.2);
+      samples[i]=(Math.random()*2-1)*envelope;
+    }
+    const src=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+    src.buffer=buffer;filter.type='bandpass';filter.frequency.value=1180;filter.Q.value=.7;
+    gain.gain.value=.022;src.connect(filter);filter.connect(gain);gain.connect(audio.destination);src.start();
+  }catch{}
 }
 function resetApp(){
   try{localStorage.removeItem(SAVE_KEY);}catch{}
@@ -539,17 +553,28 @@ canvas.addEventListener('keydown',event=>{
   if(event.key==='ArrowRight'&&col<N()-1)state.selected+=1;
 });
 $('hintBtn').addEventListener('click',hint);
-$('chaptersBtn').addEventListener('click',showChapters);
+$('chaptersBtn').addEventListener('click',()=>showChapters());
 $('restartBtn').addEventListener('click',showRestart);
 $('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;updateCopy();save();if(state.sound)chime(570,'turn');});
 $('modalClose').addEventListener('click',closeModal);
 $('scrim').addEventListener('pointerdown',event=>{if(event.target===$('scrim'))closeModal();});
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('scrim').hidden)closeModal();});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!$('scrim').hidden){event.preventDefault();closeModal();}
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(animation)cancelAnimationFrame(animation);animation=0;save();}else wake();});
 window.addEventListener('pagehide',save);
 window.addEventListener('resize',()=>{measure();wake();});
 if('ResizeObserver'in window)new ResizeObserver(()=>{measure();wake();}).observe(canvas);
-createWorkshopMode({appName:'CANTICA — Песнь света',version:'2.0.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+const manuscript=createManuscript({
+  levels:LEVELS,
+  getUnlocked:()=>state.unlocked,
+  getBest:()=>state.best,
+  getCurrent:()=>state.level,
+  onSelect:index=>startLevel(index),
+  onPageTurn:pageRustle,
+  reduceMotion:()=>reduced.matches
+});
+createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.0.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
 hydrate();
 measure();wake();
 if(state.solved)window.setTimeout(showVictory,120);
