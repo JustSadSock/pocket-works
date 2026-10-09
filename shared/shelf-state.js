@@ -27,12 +27,17 @@ export function cleanShelfState(value) {
   };
 }
 
-export function createShelfStateStore({
-  storage = globalThis.localStorage,
-  database = globalThis.indexedDB,
-  onState = () => {},
-  onStatus = () => {}
-} = {}) {
+export function createShelfStateStore(options = {}) {
+  const { onState = () => {}, onStatus = () => {} } = options;
+  let storage = options.storage;
+  let database = options.database;
+  // Safari private mode / sandboxed frames may throw when storage is accessed.
+  if (!Object.hasOwn(options, 'storage')) {
+    try { storage = globalThis.localStorage; } catch { storage = null; }
+  }
+  if (!Object.hasOwn(options, 'database')) {
+    try { database = globalThis.indexedDB; } catch { database = null; }
+  }
   let savedAt = 0;
   let state = cleanShelfState({});
   let revision = 0;
