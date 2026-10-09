@@ -186,9 +186,9 @@ function measure(){
   view.dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.round(box.width*view.dpr);
   canvas.height=Math.round(box.height*view.dpr);
-  view.tile=Math.max(30,Math.min((box.width-48)/5,(box.height-161)/5,79));
+  view.tile=Math.max(30,Math.min((box.width-48)/5,(box.height-183)/5,79));
   view.boardX=(box.width-view.tile*5)/2;
-  view.boardY=Math.max(97,(box.height-view.tile*5)/2+6);
+  view.boardY=Math.max(124,(box.height-view.tile*5)/2+16);
   if(view.boardY+view.tile*5+38>view.height)view.boardY=view.height-view.tile*5-40;
 }
 function gothicArch(x1,y1,x2,y2,pointY){
@@ -334,7 +334,7 @@ function paintGlassTile(index,time,lit){
     ctx.restore();
   }
   // Medallion centre, more rosette than pipe connector.
-  const pulse=lit&&!reduced.matches?.5+.5*Math.sin(time*.004+index):.8;
+  const pulse=lit&&!reduced.matches ? .5+.5*Math.sin(time*.004+index) : .8;
   ctx.save();if(lit){ctx.shadowColor='#ffdfa4';ctx.shadowBlur=s*.29*pulse;}
   circle(0,0,s*.145,lit?'#f0d5a1':'#6e5f57','#132326',s*.06);
   circle(0,0,s*.087,lit?'#fff0bf':tint(b,1),'#6f543a',1.8);
