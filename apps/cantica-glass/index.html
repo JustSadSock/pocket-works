@@ -28,15 +28,15 @@
   <section class="folio" data-ui>
     <p class="chapter" id="chapterLabel">КНИГА I · ОКНО 001 / 500</p>
     <div class="folio-title">
-      <span class="folio-flourish" aria-hidden="true">✥</span>
+      <span class="folio-flourish" aria-hidden="true">❧</span>
       <h1 id="levelName">Первый луч</h1>
-      <span class="folio-flourish" aria-hidden="true">✥</span>
+      <span class="folio-flourish" aria-hidden="true">❧</span>
     </div>
     <p class="subline" id="levelNote">Направь свет к реликварию.</p>
   </section>
 
   <div class="window-progress" data-ui aria-label="Прогресс прохождения">
-    <span class="progress-sigil" aria-hidden="true">✜</span>
+    <span class="progress-sigil" aria-hidden="true">✦</span>
     <div class="window-progress-track"><i id="progressFill"></i></div>
     <span id="progressText">1 / 500</span>
   </div>
@@ -56,14 +56,14 @@
 
   <footer class="pedestal" data-ui>
     <button id="chaptersBtn" class="edge-action book-control" data-native-press type="button" aria-label="Открыть книгу глав">
-      <span class="button-rune" aria-hidden="true">▤</span><span>Книга окон</span>
+      <svg class="control-symbol" viewBox="0 0 42 33" aria-hidden="true"><path d="M21 6C13 3 7 4 3 7v21c5-3 12-4 18-1 6-3 13-2 18 1V7c-6-4-13-4-18-1Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M21 6v21M7 11c4-2 8-1 11 0M7 16c4-2 8-1 11 0M25 11c4-2 8-2 11 0M25 16c4-2 8-1 11 0" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Книга окон</span>
     </button>
     <button id="hintBtn" class="primary-action wax-control" data-native-press type="button" aria-label="Подсказать следующий ход">
       <span class="seal-inner"><span class="button-rune" aria-hidden="true">✶</span></span>
       <span class="wax-caption">Подсказка</span>
     </button>
     <button id="restartBtn" class="edge-action reset-control" data-native-press type="button" aria-label="Начать окно заново">
-      <span class="button-rune" aria-hidden="true">↶</span><span>Заново</span>
+      <svg class="control-symbol" viewBox="0 0 42 33" aria-hidden="true"><path d="M13 11a13 13 0 1 1-3 12M13 5v11H3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Заново</span>
     </button>
   </footer>
 
@@ -121,7 +121,7 @@
     </section>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="3.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="3.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
