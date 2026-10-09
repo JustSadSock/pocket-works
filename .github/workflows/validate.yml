@@ -64,7 +64,9 @@ jobs:
       - name: Install WebKit for iPhone launcher smoke
         run: npx playwright install --with-deps webkit
       - name: Verify iPhone launcher search, persistence and updates
-        run: npx playwright test tests/e2e/pocket-deck.spec.ts tests/e2e/launcher-stage-two.spec.ts tests/e2e/launcher-stage-three.spec.ts --project=webkit-mobile-portrait
+        run: |
+          npx playwright test tests/e2e/deck-layout-diagnostics.spec.ts --project=webkit-mobile-portrait --workers=1
+          npx playwright test tests/e2e/pocket-deck.spec.ts tests/e2e/launcher-stage-two.spec.ts tests/e2e/launcher-stage-three.spec.ts --project=webkit-mobile-portrait
       - name: Upload Pocket Deck mobile screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
