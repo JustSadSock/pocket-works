@@ -29,7 +29,7 @@ for(const file of [
 ]){
   if(!(await exists(path.join(output,file))))errors.push(`dist-site is missing ${file}`);
 }
-for(const forbidden of ['node_modules','scripts','docs','package.json','wrangler.jsonc']){
+for(const forbidden of ['node_modules','scripts','docs','package.json','wrangler.jsonc','launcher-update-all.js','launcher-update-all-v2.js']){
   if(await exists(path.join(output,forbidden)))errors.push(`dist-site must not publish ${forbidden}`);
 }
 
