@@ -1,0 +1,25 @@
+{
+  "id": "/apps/horugvi/",
+  "name": "ХОРУГВИ",
+  "short_name": "Хоругви",
+  "description": "Живая средневековая миниатюра: приказы, знамёна, мораль и три связанных тактических сражения.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#e1cfaa",
+  "theme_color": "#28372e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

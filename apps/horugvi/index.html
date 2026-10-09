@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#28372e"><meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Хоругви">
+  <meta name="description" content="Хоругви — ожившая средневековая миниатюра и игра о полководческом искусстве.">
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+  <title>ХОРУГВИ</title>
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <header class="mast" data-ui>
+      <a class="home-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <div class="mast-mid"><div class="mast-leaf">✣</div><div class="mast-title">ХОРУГВИ</div><div class="mast-sub" id="chapter">КНИГА ПЕРВАЯ</div></div>
+      <button class="round-button" id="menuBtn" type="button" data-native-press aria-label="Меню">☷</button>
+    </header>
+    <section class="folio" aria-label="Поле сражения">
+      <div class="battle-ribbon" id="battleRibbon" data-ui><span id="scenarioName">У БРОДА</span><span id="roundLabel">ЛЕТО 1242 · ХОД I</span></div>
+      <div class="canvas-wrap" id="canvasWrap"><canvas id="battle" data-gesture-surface data-block-callout aria-label="Поле сражения. Нажмите на свой отряд, затем отдайте приказ."></canvas>
+        <div class="canvas-corner tl"></div><div class="canvas-corner tr"></div><div class="canvas-corner bl"></div><div class="canvas-corner br"></div>
+        <div id="fieldToast" class="field-toast" role="status"></div>
+      </div>
+      <div class="field-caption"><span class="legend-mark">✧</span><span id="objective">Удержите переправу</span><span class="legend-mark">✧</span></div>
+    </section>
+    <section class="command-desk" data-ui>
+      <div class="unit-strip">
+        <div class="seal"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 51 14 56 34 46 52 25 59 8 45 7 23 18 9Z" fill="#a84b3c" stroke="#502f2a" stroke-width="2"/><path d="M32 15v33M20 28h24" stroke="#f6d8a3" stroke-width="7"/></svg></div>
+        <div class="unit-copy"><div id="unitName" class="unit-name">Выберите хоругвь</div><div id="unitDetail" class="unit-detail">Приказы стоят дороже мечей</div></div>
+        <div class="ink-meter"><div class="ink-count" id="ordersCount">2/2</div><div class="ink-label">ПРИКАЗА</div></div>
+      </div>
+      <div class="orders" id="orders" aria-label="Приказы">
+        <button type="button" data-command="move" data-native-press><span class="order-pict">↗</span><span>Поход</span></button>
+        <button type="button" data-command="attack" data-native-press><span class="order-pict">⚔</span><span>Натиск</span></button>
+        <button type="button" data-command="hold" data-native-press><span class="order-pict">♜</span><span>Стоять</span></button>
+        <button type="button" data-command="rally" data-native-press><span class="order-pict">✣</span><span>Сбор</span></button>
+      </div>
+      <div class="end-row"><div id="hint" class="hint" aria-live="polite">Коснитесь синего знамени</div><button id="endTurn" type="button" data-native-press><span>ПРОЖИТЬ ХОД</span><strong>›</strong></button></div>
+    </section>
+    <div class="overlay" id="overlay" aria-live="polite">
+      <div class="folio-panel" id="panel">
+        <div class="panel-cap">✣ · CHRONICA BELLI · ✣</div>
+        <div class="glass-window" aria-hidden="true"><svg viewBox="0 0 280 176" preserveAspectRatio="xMidYMid slice">
+          <defs><clipPath id="arch"><path d="M10 174V45Q140-51 270 45V174Z"/></clipPath></defs>
+          <g clip-path="url(#arch)"><rect width="280" height="176" fill="#293c42"/><path d="M0 101 56 62 94 97 143 32 213 90 280 50V176H0" fill="#c1a962"/><path d="M0 129 63 88 124 120 180 64 280 110V176H0" fill="#79908c"/><path d="M0 158q67-73 137-23t143-32v73H0" fill="#596f4e"/><circle cx="202" cy="37" r="26" fill="#edc77d"/><path d="M88 147V28" stroke="#282e2c" stroke-width="5"/><path d="M90 30 168 45 139 97 90 82Z" fill="#9d4037"/><path d="M116 51v28m-15-13h32" stroke="#e6c788" stroke-width="7"/><path d="M48 145q10-38 29-20 20-32 37 7l13 44H43" fill="#344e49" stroke="#242e2c" stroke-width="4"/><ellipse cx="83" cy="115" rx="13" ry="16" fill="#d6ab83"/><path d="M69 110q16-30 29 0" fill="#343e40" stroke="#242e2c" stroke-width="4"/>
+          <path d="M0 51h280M0 108h280M52 0v176M140 0v176M222 0v176" stroke="#1f292a" stroke-width="4" fill="none" opacity=".88"/></g><path d="M10 174V45Q140-51 270 45V174Z" fill="none" stroke="#343331" stroke-width="10"/><path d="M16 172V48Q140-40 264 48V172" fill="none" stroke="#e1c38b" stroke-width="3"/>
+        </svg></div>
+        <p class="panel-eyebrow" id="panelEyebrow">ЛЕТОПИСЬ О ВОЙНЕ</p>
+        <h1 id="panelTitle">Хоругви</h1>
+        <p class="panel-copy" id="panelCopy">Гонец прибыл на рассвете. У брода замечено неприятельское войско.</p>
+        <div class="panel-actions" id="panelActions"><button id="primary" type="button" data-native-press>Начать сражение <span>→</span></button></div>
+        <a href="../../" class="panel-exit" data-app-control>Вернуться в Pocket Works</a>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Хоругви" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
