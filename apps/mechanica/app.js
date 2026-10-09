@@ -205,7 +205,7 @@ $('wind').addEventListener('click',wind);$('run').addEventListener('click',run);
 $('sound').addEventListener('click',()=>{
   state.sound=!state.sound;$('sound').classList.toggle('off',!state.sound);
 $('sound').setAttribute('aria-pressed',String(state.sound));
-  $('sound').setAttribute('aria-pressed',String(state.sound));
+  
   $('sound').setAttribute('aria-label',state.sound?'Выключить звук':'Включить звук');save();if(state.sound)sound('tap');
 });
 $('modal').addEventListener('click',e=>{
@@ -430,12 +430,11 @@ function drawPlate(){
   line(265,121,265+Math.cos(theta)*13,121+Math.sin(theta)*13,'#f2d197',1.9);
   circle(265,121,3,'#d7b981','#3d3027',.6);
   arc(261,116,14,Math.PI*1.14,Math.PI*1.65);ctx.strokeStyle='#f2f6e64b';ctx.lineWidth=1.3;ctx.stroke();
-  label(out?'ВАЛ '+labelRPM(out)+' RPM':'НЕТ ХОДА',265,145,'#ccb988',7.7);
+  label(out?'ВАЛ '+labelRPM(out)+' RPM':'НЕТ ХОДА',311,125,'#ccb988',7.3);
   label('МАШИННОЕ ОТДЕЛЕНИЕ',180,439,'#c3b38e',8.2);
   line(42,448,318,448,'#a493685d',1);
   label('ИСТОЧНИК',79,429,'#bac9ac',8);
   label('ВЫХОД',280,429,'#bac9ac',8);
-  label('ПЕРЕДАЧИ  /  ПАТЕНТ   M-01',180,469,'#9aaf99',7.5);
 }
 function drawSocket(x,y,occupied,index){
   circle(x+2,y+4,15,'#081c1ea6');
@@ -522,6 +521,8 @@ function tick(ts){
     state.spinFactor+=(wanted-state.spinFactor)*Math.min(1,dt*(jammed?17:3.7));
     state.runTime+=dt;
     state.charge=Math.max(0,state.charge-dt*16);
+    const energy=$('charge-read');if(energy)energy.textContent='ПРУЖИНА · '+Math.ceil(state.charge)+'%';
+    const winding=document.querySelector('.wind-dial');if(winding)winding.style.setProperty('--charge',state.charge+'%');
     if(state.runTime>=1.85||state.charge<=0){save();finish();}
     redraw=true;
   }else if(state.spinFactor>.002){
