@@ -217,8 +217,20 @@ function launchApp(event, slug, link) {
   }
 
   const sourcePreview = link.closest('.app-entry')?.querySelector('.app-preview') || link.closest('.deck-tile')?.querySelector('.deck-art') || detailPreview;
-  const iconImage = sourcePreview?.style.getPropertyValue('--app-icon-image')
+  const sourcePhoto = sourcePreview?.querySelector('.deck-art__photo, .deck-cover-photo');
+  const coverUrl = sourcePhoto?.getAttribute('src');
+  const iconImage = coverUrl ? `url("${new URL(coverUrl, document.baseURI).href}")`
+    : sourcePreview?.style.getPropertyValue('--app-icon-image')
     || `url("${new URL(`${app.path}icons/icon.svg?v=${encodeURIComponent(app.version || '0')}`, document.baseURI).href}")`;
+  const bounds = sourcePreview?.getBoundingClientRect();
+  if (deck && bounds?.width > 0 && bounds?.height > 0) {
+    launchStage.classList.add('deck-launch');
+    launchStage.style.setProperty('--deck-launch-x', `${bounds.left + bounds.width / 2 - window.innerWidth / 2}px`);
+    launchStage.style.setProperty('--deck-launch-y', `${bounds.top + bounds.height / 2 - window.innerHeight / 2}px`);
+    launchStage.style.setProperty('--deck-launch-scale-x', String(bounds.width / 170));
+    launchStage.style.setProperty('--deck-launch-scale-y', String(bounds.height / 170));
+    launchStage.classList.toggle('deck-launch--cover', Boolean(coverUrl));
+  }
 
   launchStage.style.setProperty('--launch-icon', iconImage);
   launchStage.style.setProperty('--launch-accent', app.accent || '#c8a460');
