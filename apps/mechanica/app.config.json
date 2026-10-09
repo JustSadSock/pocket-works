@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "mechanica",
+  "name": "МЕХАНИКА",
+  "shortName": "МЕХАНИКА",
+  "description": "Тактильная мастерская шестерён: собирай передачи, заводи пружину и приводи механизмы в движение.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-10",
+  "releaseDateTime": "2026-10-10T00:09:00+03:00",
+  "changelog": [
+    "Шесть механических головоломок с расчётом сцепления, направления и передаточного отношения.",
+    "Свободная мастерская, механический завод и живое вращение передачи.",
+    "Латунные шестерни на эмалированном станке, локальные сохранения, звук и офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#ca9957",
+  "backgroundColor": "#173e40",
+  "themeColor": "#173e40",
+  "orientation": "portrait",
+  "cacheName": "mechanica-v1.0.0",
+  "storageNamespace": "pocket-works:mechanica",
+  "tags": [
+    "game",
+    "puzzle",
+    "construction",
+    "engineering",
+    "gears",
+    "physics",
+    "canvas",
+    "offline"
+  ],
+  "order": 310
+}
