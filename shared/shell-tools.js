@@ -2,7 +2,7 @@ import { getRegistrySnapshot } from './launcher-registry.js';
 
 function escapeText(value) { return String(value ?? 'unknown'); }
 
-export function installShelfTools({ store, refreshLibrary, updateApps } = {}) {
+export function installShelfTools({ store } = {}) {
   const dialog = document.querySelector('#shelf-tools');
   const open = document.querySelector('#shelf-tools-button');
   if (!dialog || !open || !store) return;
@@ -130,8 +130,10 @@ export function installShelfTools({ store, refreshLibrary, updateApps } = {}) {
       const names = (await caches.keys()).filter(name => name.startsWith('pocket-works-launcher-'));
       await Promise.all(names.map(name => caches.delete(name)));
       const registration = await navigator.serviceWorker.getRegistration('./');
-      await registration?.update();
-      setStatus('Launcher cache cleared. Reloading to restore current files…');
+      // A same-version update() does not reinstall the worker or refill its precache.
+      // Re-registering after reload always executes the normal atomic install.
+      await registration?.unregister();
+      setStatus('Launcher cache cleared. Reloading and reinstalling current shell…');
       location.reload();
     } catch (error) {
       button.disabled = false;
