@@ -325,6 +325,29 @@ for(const config of configs){
   }else{
     await copyDirectoryFiltered(source,destination,(relative,entry)=>!shouldPublishAppPath(relative,entry.isDirectory()));
   }
+  // The launcher always displays each application's actual icon. Some runtimes
+  // publish their SVG from public/icons while others ship it beside app code;
+  // ensure the canonical runtime URL exists in every assembled app directory.
+  const appIcon=path.join(destination,'icons','icon.svg');
+  try{await access(appIcon);}
+  catch{
+    const candidates=[
+      path.join(source,'icons','icon.svg'),
+      path.join(source,'public','icons','icon.svg'),
+      path.join(source,'web','icons','icon.svg')
+    ];
+    let restored=false;
+    for(const candidate of candidates){
+      try{
+        await access(candidate);
+        await mkdir(path.dirname(appIcon),{recursive:true});
+        await cp(candidate,appIcon);
+        restored=true;
+        break;
+      }catch(error){if(error.code!=='ENOENT')throw error;}
+    }
+    if(!restored)throw new Error(`Application ${config.slug} has no actual published icon or icon source`);
+  }
   fingerprints.set(config.slug,await stampRelease(destination,config));
 }
 
