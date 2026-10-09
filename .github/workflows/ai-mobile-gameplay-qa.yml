@@ -153,9 +153,6 @@ jobs:
           if [[ ",${PW_APP_TARGETS:-}," == *",sinew,"* ]]; then
             TESTS+=(tests/e2e/sinew.spec.ts)
           fi
-          if [[ ",${PW_APP_TARGETS:-}," == *",cantica-glass,"* ]]; then
-            TESTS+=(tests/e2e/cantica-glass.spec.ts)
-          fi
           if [[ ",${PW_APP_TARGETS:-}," == *",zamkni,"* ]]; then
             TESTS+=(tests/e2e/zamkni.spec.ts)
           fi
