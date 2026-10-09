@@ -285,3 +285,142 @@ button:focus-visible,a:focus-visible,canvas:focus-visible{outline:2px solid #ead
  .manuscript-frame,.codex-page,.manuscript-backdrop{transition:none!important}
 }
 @keyframes ink-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+
+/* CANTICA 3.1 · CHAPEL PLAYFIELD
+   HUD is now the bottom of a single architectural instrument. The lancet and
+   floor share a responsive coordinate system; there is no rectangular browser
+   "card" surrounding the window. */
+.app-shell{
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 46%,#53605224,transparent 100%),
+    linear-gradient(90deg,#111c1e,#223132 10%,#1b292b 50%,#223132 90%,#101a1c);
+}
+.topbar{flex:0 0 43px;min-height:43px;border-bottom-color:#a28f6e33}
+.brand{top:5px;letter-spacing:.145em;font-size:13px}
+.brand-emblem{color:#b69a73;font-size:18px}
+.folio{
+  flex:0 0 auto;
+  height:80px;min-height:76px;max-height:86px;
+  padding:5px 0 5px;gap:3px;
+  justify-content:center;
+}
+.chapter{font-size:9px;letter-spacing:.14em;color:#bea880}
+.folio-title{gap:10px}
+.folio-title h1{font-size:clamp(23px,6.7vw,31px);font-weight:400;color:#f1e1c0;line-height:1.08}
+.folio-flourish{font-size:19px;opacity:.63;color:#c4aa7a;transform:translateY(1px)}
+.folio-flourish:last-child{transform:translateY(1px) scaleX(-1)}
+.subline{font-size:11px;line-height:1.15;color:#bdb09a;max-width:94%;margin-inline:auto}
+.window-progress{flex:0 0 14px;height:14px;padding:0 11px 4px}
+.progress-sigil{font-size:10px;color:#c6a772}
+.window-progress-track{height:2px;background:#091416}
+.window-progress-track i{background:linear-gradient(90deg,#6a654e,#bda77a,#f0ddb3)}
+#progressText{font-size:9px;letter-spacing:.055em}
+.window-stage{
+  margin:0 -4px;min-height:175px;
+  overflow:hidden;border:0;outline:0;background:#1e2c2c;
+  box-shadow:inset 0 0 22px 2px #0510139c;
+}
+.window-stage::before{
+  inset:0;border:0;
+  background:linear-gradient(180deg,#0d171d73,transparent 4%,transparent 93%,#0b181b4d);
+  box-shadow:inset 0 0 17px #0812174d;
+  z-index:1;pointer-events:none;
+}
+.stage-grain{opacity:.11}
+.stage-corner{display:none}
+.inscription{
+  flex:0 0 56px;min-height:56px;
+  margin:0 -4px;grid-template-columns:72px minmax(0,1fr) 72px;
+  gap:0;padding:3px 9px 5px;
+  border-top:3px solid #7f795f;border-bottom:1px solid #0c1618;
+  background:linear-gradient(180deg,#46534a 0,#273631 9%,#182723 42%,#24342f 100%);
+  box-shadow:inset 0 3px 8px #030b0d9c,inset 0 -1px 0 #9e8c6550;
+}
+.inscription::before{content:none}
+.inscription-side{min-height:36px;justify-content:center;position:relative;padding:0 4px}
+.inscription-side:first-child::after{
+  content:"";position:absolute;right:0;top:4px;bottom:4px;width:1px;
+  background:linear-gradient(transparent,#ac946e8e,transparent)
+}
+.inscription-side.right::before{
+  content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;
+  background:linear-gradient(transparent,#ac946e8e,transparent)
+}
+.small-cap{font-size:8px;letter-spacing:.13em;color:#bea882}
+.inscription strong{font-size:21px;font-weight:400;color:#f5dfb2;text-shadow:0 1px 3px #02090a}
+.inscription-center{font-size:11px;line-height:1.23;padding:0 7px;color:#dbccb0}
+#status{max-width:220px}
+.pedestal{
+  flex:0 0 77px;min-height:77px;
+  padding:5px 4px 3px;
+  grid-template-columns:minmax(82px,1fr) minmax(102px,1.1fr) minmax(82px,1fr);
+  background:
+    radial-gradient(ellipse 30% 95% at 50% 0,#654d3e45,transparent),
+    linear-gradient(180deg,#273831 0,#1c2b27 38%,#152325 100%);
+  box-shadow:inset 0 5px 9px #030c10a3;
+}
+.pedestal::before{
+  height:1px;left:9px;right:9px;
+  background:linear-gradient(90deg,transparent,#bba47683 21%,#e1cc9957 50%,#bba47683 79%,transparent)
+}
+.pedestal button{min-height:62px;gap:3px;transition:transform .14s ease,filter .14s ease}
+.pedestal button:active{transform:translateY(2px);filter:brightness(1.13)}
+.pedestal button:focus-visible{outline-offset:-3px}
+.edge-action::before{
+  content:"";position:absolute;inset:7px 6px;
+  border:1px solid #a3936d42;border-radius:1px;pointer-events:none;
+  box-shadow:inset 0 1px 6px #02090a40;
+}
+.edge-action{color:#e0cfb0;font-size:12px;letter-spacing:.01em}
+.control-symbol{width:35px;height:28px;display:block;stroke:#dbc49c;filter:drop-shadow(0 1px 2px #060b0d);overflow:visible}
+.book-control .control-symbol{height:28px;width:34px}
+.reset-control .control-symbol{width:31px;height:28px}
+.seal-inner{
+  width:49px;height:49px;
+  clip-path:none;
+  border-radius:46% 49% 47% 52% / 49% 50% 47% 48%;
+  background:
+    radial-gradient(circle at 36% 24%,#cb9b78 0,#965d4e 34%,#784b43 62%,#513733 100%);
+  border:2px solid #ad7860;
+  box-shadow:inset 0 2px 3px #e2ac7e9a,inset 0 -3px 4px #4229279c,0 3px 5px #050c0d8c;
+}
+.seal-inner::before{inset:7px;border:1px solid #d9a48280}
+.seal-inner .button-rune{font-size:24px;font-weight:400}
+.wax-caption{font-size:11px;line-height:1.05;margin-top:0;color:#e9d4af}
+.wax-control{gap:1px!important}
+.workshop-access{top:calc(var(--safe-t) + 43px);font-size:12px;opacity:.42}
+@media(max-height:720px){
+  .topbar{flex-basis:39px;min-height:39px}
+  .folio{height:66px;min-height:66px;max-height:66px;padding:1px 0 2px;gap:1px}
+  .folio-title h1{font-size:24px}
+  .subline{font-size:10px}
+  .window-progress{flex-basis:10px;height:10px;padding-bottom:2px}
+  .inscription{flex-basis:45px;min-height:45px;padding:2px 6px}
+  .inscription strong{font-size:18px}
+  .pedestal{flex-basis:67px;min-height:67px;padding:3px 3px 2px}
+  .pedestal button{min-height:57px}
+  .seal-inner{width:42px;height:42px}
+  .control-symbol{height:25px;width:29px}
+  .workshop-access{top:calc(var(--safe-t) + 39px)}
+}
+@media(max-height:585px){
+  .folio{height:58px;min-height:58px;max-height:58px}
+  .chapter{font-size:8px}
+  .folio-title h1{font-size:21px}
+  .subline{display:none}
+  .pedestal{flex-basis:60px;min-height:60px}
+  .pedestal button{min-height:52px}
+  .seal-inner{width:36px;height:36px}
+  .wax-caption{font-size:10px}
+  .inscription-center{font-size:10px}
+}
+@media(max-width:350px){
+  .brand{font-size:12px;letter-spacing:.07em}
+  .exit,.sound{min-width:77px;font-size:10px}
+  .folio-title h1{font-size:23px}
+  .folio-flourish{font-size:14px}
+  .inscription{grid-template-columns:63px minmax(0,1fr) 63px}
+  .pedestal{grid-template-columns:minmax(71px,1fr) minmax(86px,1.1fr) minmax(71px,1fr)}
+  .edge-action{font-size:11px}
+}
