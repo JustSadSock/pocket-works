@@ -8,7 +8,7 @@ Choose a blue standard, select **Поход** then tap a destination, or choose 
 
 ## Technical contract
 
-Self-contained Quick-PWA app under `apps/horugvi/`, using shared mobile runtime, app-owned Canvas and CSS, isolated localStorage key `horugvi-campaign-v1:save`, and namespaced cache `horugvi-v1.0.0`. No third-party assets or network calls. Replays are deterministic per scenario and save version. Character renderings, landscape and terrain are procedural canvas art (not external images). Sound is disabled by default and can be enabled in the pause menu.
+Self-contained Quick-PWA app under `apps/horugvi/`, using shared mobile runtime, app-owned Canvas and CSS, isolated localStorage key `pocket-works:horugvi:save`, and namespaced cache `horugvi-v1.0.0`. No third-party assets or network calls. Replays are deterministic per scenario and save version. Character renderings, landscape and terrain are procedural canvas art (not external images). Sound is disabled by default and can be enabled in the pause menu.
 
 ## QA
 
