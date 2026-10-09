@@ -473,10 +473,10 @@ function paintGlassTile(index,time,lit){
   }
 }
 function paintRelics(trace,time){
-  const {boardX:x,boardY:y,tile:s}=view,baseY=y+N()*s+22;
+  const {boardX:x,boardY:y,tile:s,relicY:baseY,gridBottom}=view;
   LEVELS[state.level].exits.forEach((col,i)=>{
     const cx=x+(col+.5)*s,lit=trace.lit[i];
-    line(cx,y+N()*s,cx,baseY,'#ae9162',Math.max(2.5,s*.042));
+    line(cx,gridBottom+3,cx,baseY,'#b6a078',Math.max(2,s*.036));
     const r=Math.min(16,s*.25);
     ctx.save();if(lit){ctx.shadowColor='#ffc774';ctx.shadowBlur=reduced.matches?9:14+Math.sin(time*.006+i)*3;}
     circle(cx,baseY,r,lit?'#b47c42':'#1c3036','#d6bd84',2.6);
@@ -492,15 +492,26 @@ function paintRelics(trace,time){
   });
 }
 function paintSun(trace,time){
-  const {boardX:x,boardY:y,tile:s}=view,cx=x+s*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*s*.5,py=y-28;
-  ctx.save();ctx.shadowColor='#f1c773';ctx.shadowBlur=trace.reached[currentLevel().entryCol]?20:10;
-  circle(cx,py,Math.min(11,s*.2),'#d7aa5d','#f9e9b7',2);
+  const {roseX:rx,roseY:ry,roseRadius:rr,entryX,boardY:y,tile:s}=view;
+  const hitX=rx+Math.sin(state.sunAngle)*rr*.19;
+  const hitY=ry;
+  const active=trace.reached[currentLevel().entryCol];
+  // The source lives *inside* the stained rose, not as a second floating icon.
+  const wave=reduced.matches?0:Math.sin(time*.003)*.12;
+  ctx.save();ctx.lineCap='round';ctx.shadowColor='#ffe2a1';ctx.shadowBlur=active?13:5;
+  ctx.beginPath();ctx.moveTo(hitX,hitY+rr*.17);
+  ctx.quadraticCurveTo(entryX,hitY+(y-hitY)*.57,entryX,y+4);
+  ctx.strokeStyle=active?'#f8d993': '#a58c685b';
+  ctx.lineWidth=Math.max(1.4,s*.053);
+  ctx.stroke();ctx.restore();
+  // Tight metal boss has a modest jewel and an honest touch target.
+  ctx.save();ctx.shadowColor='#f9dd9c';ctx.shadowBlur=active?13+wave*8:4;
+  circle(hitX,hitY,Math.max(5,rr*.22),'#e6c98d','#243031',Math.max(2,rr*.13));
+  circle(hitX-rr*.04,hitY-rr*.06,Math.max(2.5,rr*.095),'#fff4c8');
   ctx.restore();
-  for(let d=0;d<8;d++){const a=d*Math.PI/4;
-    line(cx+Math.cos(a)*14,py+Math.sin(a)*14,cx+Math.cos(a)*18,py+Math.sin(a)*18,'#ceb17c',1.5);}
-  if(trace.reached[currentLevel().entryCol]){
-    ctx.save();ctx.shadowColor='#f7da8c';ctx.shadowBlur=17;
-    line(cx,py+9,cx,y+8,'#fff1b5',Math.max(3,s*.075));ctx.restore();
+  for(let d=0;d<4;d++){
+    const a=d*Math.PI/2;
+    circle(hitX+Math.cos(a)*rr*.32,hitY+Math.sin(a)*rr*.32,1.2,'#eed2a6b1');
   }
 }
 function render(time){
@@ -523,10 +534,6 @@ function render(time){
   paintLuminousLeads(trace,time);
   paintSun(trace,time);
   paintRelics(trace,time);
-  // A hand-etched sill beneath the reliquaries.
-  const xx=view.boardX,yy=view.boardY+view.tile*N()+37;
-  line(xx-13,yy,xx+view.tile*N()+13,yy,'#8c7857',1);
-  for(let i=0;i<7;i++)circle(xx+i*(view.tile*N()/6),yy,1.5,'#c9ad77');
   lastFrame=time;
   if(!document.hidden)animation=requestAnimationFrame(render);
 }
@@ -537,8 +544,8 @@ function wake(){
 function onTouchEnd(event){
   if(!press||press.id!==event.pointerId)return;
   const initial=press;press=null;state.pressedIndex=-1;
-  if(initial.sun){save();updateCopy();return;}
   try{canvas.releasePointerCapture(event.pointerId);}catch{}
+  if(initial.sun){save();updateCopy();return;}
   const rect=canvas.getBoundingClientRect();
   const dx=event.clientX-initial.x,dy=event.clientY-initial.y;
   if(Math.hypot(dx,dy)>13)return;
@@ -550,9 +557,9 @@ function onTouchEnd(event){
 canvas.addEventListener('pointerdown',event=>{
   if(!$('scrim').hidden||event.button!==0)return;
   const rect=canvas.getBoundingClientRect(),lx=event.clientX-rect.left,ly=event.clientY-rect.top;
-  const sunlightX=view.boardX+view.tile*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*view.tile*.5;
-  const sunlightY=view.boardY-28;
-  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<23;
+  const sunlightX=view.roseX+Math.sin(state.sunAngle)*view.roseRadius*.19;
+  const sunlightY=view.roseY;
+  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<Math.max(20,view.roseRadius*.7);
   const col=Math.floor((lx-view.boardX)/view.tile),row=Math.floor((ly-view.boardY)/view.tile);
   state.pressedIndex=!sun&&col>=0&&col<N()&&row>=0&&row<N()?row*N()+col:-1;
   press={id:event.pointerId,x:event.clientX,y:event.clientY,sun,sunAngleAtPress:state.sunAngle};
