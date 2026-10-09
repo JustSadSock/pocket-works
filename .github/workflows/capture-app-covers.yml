@@ -52,7 +52,7 @@ jobs:
         run: node scripts/capture-covers.mjs
       - name: Commit only verified screenshot files
         run: |
-          git add -- 'covers/*.jpg'
+          git add -A -- covers/ || true
           if git diff --cached --quiet; then
             echo "No new screens; all captures either exist or did not meet the image gate."
             exit 0
