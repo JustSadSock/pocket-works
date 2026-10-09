@@ -392,7 +392,7 @@ if (list) {
 
     const refreshObserver = new MutationObserver(() => {
       if (!refreshButton) return;
-      const done = !refreshButton.disabled && refreshButton.textContent.trim() === 'Sync';
+      const done = !refreshButton.disabled && refreshButton.textContent.trim() === 'Refresh';
       if (!done) return;
       window.setTimeout(() => {
         refreshButton.classList.remove('is-busy');
