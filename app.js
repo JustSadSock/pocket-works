@@ -6,10 +6,11 @@ import {
 import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
 import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
 import { inspectOfflineReadiness } from './shared/offline-readiness.js';
+import { createShelfStateStore } from './shared/shelf-state.js';
 
 installMobileRuntime();
 
-const STORAGE_KEY = 'pocket-works:shelf:v1';
+
 const FILTERS = ['all', 'favorites', 'recent', 'offline', 'experimental'];
 const SORTS = ['updated', 'recent', 'name'];
 const SORT_LABELS = {
@@ -74,57 +75,35 @@ let lastSyncAt = null;
 let launchInProgress = false;
 
 function defaultShelfState() {
-  return {
-    favorites: [],
-    recents: {},
-    filter: 'all',
-    sort: 'updated',
-    selected: null,
-    query: ''
-  };
+  return { favorites: [], recents: {}, filter: 'all', sort: 'updated', selected: null, query: '' };
 }
 
-function readShelfState() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    const state = defaultShelfState();
-
-    if (Array.isArray(parsed.favorites)) {
-      state.favorites = parsed.favorites.filter((slug) => typeof slug === 'string');
+let shelfState;
+let shelfCanRender = false;
+let shelfSavePending = false;
+const shelfStore = createShelfStateStore({
+  onState(next) {
+    const query = shelfState?.query || '';
+    shelfState = { ...next, query };
+    if (shelfCanRender && !shelfSavePending) renderShelf();
+  },
+  onStatus(status) {
+    const message = document.querySelector('#storage-status');
+    if (message) {
+      message.textContent = status.warning || (status.localOk && status.dbOk
+        ? 'Personal shelf backed up on device'
+        : status.localOk || status.dbOk ? 'Personal shelf saved' : 'Personal shelf storage unavailable');
+      message.dataset.state = status.warning ? 'warning' : 'ready';
     }
-
-    if (parsed.recents && typeof parsed.recents === 'object' && !Array.isArray(parsed.recents)) {
-      state.recents = Object.fromEntries(
-        Object.entries(parsed.recents)
-          .filter(([slug, value]) => typeof slug === 'string' && Number.isFinite(value))
-      );
-    }
-
-    if (FILTERS.includes(parsed.filter)) state.filter = parsed.filter;
-    if (SORTS.includes(parsed.sort)) state.sort = parsed.sort;
-    if (typeof parsed.selected === 'string') state.selected = parsed.selected;
-    return state;
-  } catch {
-    return defaultShelfState();
   }
-}
-
-let shelfState = readShelfState();
+});
+shelfState = shelfStore.get();
 
 function persistShelfState() {
-  const persisted = {
-    favorites: [...new Set(shelfState.favorites)],
-    recents: shelfState.recents,
-    filter: shelfState.filter,
-    sort: shelfState.sort,
-    selected: shelfState.selected
-  };
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
-  } catch (error) {
-    console.warn('Pocket Works could not persist shelf state', error);
-  }
+  shelfSavePending = true;
+  const result = shelfStore.save(shelfState);
+  shelfSavePending = false;
+  return result;
 }
 
 function normalizeRegistry(apps) {
@@ -833,8 +812,15 @@ document.addEventListener('keydown', (event) => {
 });
 
 updateSystemStatus();
+void shelfStore.hydrate();
+window.addEventListener('storage', (event) => {
+  if (event.key !== 'pocket-works:shelf:v2' || !event.newValue) return;
+  try { shelfStore.acceptCrossTabRecord(JSON.parse(event.newValue)); }
+  catch { /* another tab has malformed shelf data */ }
+});
 loadRegistry().then(() => {
   launcherInitialized = true;
+  shelfCanRender = true;
   body.classList.add('is-library-ready');
   restoreLibraryPosition();
 });
