@@ -230,7 +230,8 @@ function paintBackdrop(time){
     for(let xx=((Math.floor(yy/39)%2)*40)-37;xx<w;xx+=80)
       line(xx,yy-39,xx,yy,'#a6a08410',1);
   }
-  const spotlight=ctx.createRadialGradient(w/2,y-36,8,w/2,y+80,w*.72);
+  const beamShift=Math.sin(state.sunAngle)*w*.31;
+  const spotlight=ctx.createRadialGradient(w/2+beamShift,y-65,8,w/2+beamShift*.45,y+100,w*.82);
   spotlight.addColorStop(0,'#caad7845');spotlight.addColorStop(.5,'#835e3920');spotlight.addColorStop(1,'#0b141600');
   ctx.fillStyle=spotlight;ctx.fillRect(0,0,w,h);
   const lx=x-17,rx=x+s*N()+17,top=y-50,bottom=y+s*N()+12,tip=y-122;
@@ -238,8 +239,11 @@ function paintBackdrop(time){
   ctx.fillStyle='#0c171a';ctx.fill();
   ctx.save();ctx.clip();
   const light=ctx.createLinearGradient(lx,tip,rx,bottom);
-  light.addColorStop(0,'#896d5566');light.addColorStop(.48,'#173e4c');light.addColorStop(1,'#7d4b4d');
+  light.addColorStop(0,'#c69a6a80');light.addColorStop(.48,'#1e4759');light.addColorStop(1,'#8e555b');
   ctx.fillStyle=light;ctx.fillRect(lx,tip,rx-lx,bottom-tip);
+  const crystal=ctx.createLinearGradient(lx+beamShift*.28,top,rx+beamShift*.48,bottom);
+  crystal.addColorStop(0,'#fff4b117');crystal.addColorStop(.4,'#f3bf5f05');crystal.addColorStop(1,'#ffdfab1e');
+  ctx.fillStyle=crystal;ctx.fillRect(lx,top,rx-lx,bottom-top);
   // Radiant rose and top tracery.
   const cx=w/2,ry=y-59,rr=Math.min(40,s*.66);
   circle(cx,ry,rr+5,'#121d22','#68553a',4);
@@ -297,6 +301,38 @@ function paintBackdrop(time){
     circle(dx,dy,i%5===0?1.15:.55,'#f6dfa044');
   }
 }
+function paintCaustics(trace,time){
+  const {boardX:x,boardY:y,tile:s,width:w,height:h}=view,n=N();
+  if(!trace.reached.some(Boolean))return;
+  ctx.save();ctx.globalCompositeOperation='screen';
+  const phase=Math.sin(state.sunAngle)*s*.66;
+  for(let i=0;i<state.board.length;i++){
+    if(!trace.reached[i])continue;
+    const px=x+(i%n+.5)*s,py=y+(Math.floor(i/n)+.5)*s;
+    const offset=phase+(px-w/2)*.14,pigment=colors[(i*3+state.level)%colors.length];
+    const gradient=ctx.createLinearGradient(px,py,px+offset,Math.min(h,py+s*2.2));
+    gradient.addColorStop(0,tint(pigment,.09));gradient.addColorStop(1,tint(pigment,0));
+    polygon([[px-s*.24,py+s*.15],[px+s*.24,py+s*.15],
+      [px+offset+s*.46,Math.min(h,py+s*1.7)],
+      [px+offset-s*.4,Math.min(h,py+s*1.7)]],gradient);
+  }
+  ctx.restore();
+}
+function paintLuminousLeads(trace,time){
+  if(!trace.segments.length)return;
+  const {boardX:x,boardY:y,tile:s}=view,n=N();
+  ctx.save();ctx.globalCompositeOperation='screen';
+  ctx.lineJoin='round';ctx.lineCap='round';
+  for(const [a,b,dist] of trace.segments){
+    const ax=x+(a%n+.5)*s,ay=y+(Math.floor(a/n)+.5)*s;
+    const bx=x+(b%n+.5)*s,by=y+(Math.floor(b/n)+.5)*s;
+    const glow=reduced.matches?.35:.30+.07*Math.cos(time*.0032-dist*.63);
+    ctx.save();ctx.shadowColor='#ffd78f';ctx.shadowBlur=s*.32;
+    line(ax,ay,bx,by,'rgba(255,221,149,'+glow+')',Math.max(2,s*.10));ctx.restore();
+    line(ax,ay,bx,by,'rgba(255,251,218,'+(glow*.38)+')',Math.max(.6,s*.029));
+  }
+  ctx.restore();
+}
 function paintGlassTile(index,time,lit){
   const s=view.tile,col=index%N(),row=Math.floor(index/N()),x=view.boardX+col*s,y=view.boardY+row*s;
   const tile=state.board[index],cx=x+s/2,cy=y+s/2;
@@ -334,6 +370,13 @@ function paintGlassTile(index,time,lit){
   const soft=ctx.createLinearGradient(-h,-h*.8,h,h*.6);
   soft.addColorStop(0,'#fffbd026');soft.addColorStop(.34,'#ffffff02');soft.addColorStop(.65,'#0714141a');soft.addColorStop(1,'#ffe6b116');
   ctx.fillStyle=soft;ctx.fillRect(-h,-h,s,s);
+  // Gradated glass thickness, polished fractures and trapped air.
+  const inner=ctx.createRadialGradient(-h*.28,-h*.38,s*.01,h*.16,h*.20,s*.86);
+  inner.addColorStop(0,'#fff9dc31');inner.addColorStop(.46,'#ffffff00');inner.addColorStop(1,'#07121e63');
+  ctx.fillStyle=inner;ctx.fillRect(-h,-h,s,s);
+  ctx.save();ctx.rotate((seed%13)*.075);ctx.scale(1,.38);
+  ctx.beginPath();ctx.ellipse(-h*.22,-h*.36,s*.13,s*.034,.3,0,Math.PI*2);
+  ctx.strokeStyle='#fff8df61';ctx.lineWidth=Math.max(.7,s*.012);ctx.stroke();ctx.restore();
   // Leaded branches are the playable channels; rotating the pane rotates the ornament.
   for(let d=0;d<4;d++){
     if(!(tile.baseMask&(1<<d)))continue;
@@ -368,10 +411,17 @@ function paintGlassTile(index,time,lit){
   // Fixed came grid. Bevel and a little cast shadow sell the material.
   ctx.strokeStyle='#030c0e';ctx.lineWidth=Math.max(4,s*.09);ctx.strokeRect(x+1.4,y+1.4,s-2.8,s-2.8);
   ctx.strokeStyle='#79746a';ctx.lineWidth=Math.max(1.3,s*.026);ctx.strokeRect(x+3.2,y+3.2,s-6.4,s-6.4);
+  line(x+s-3,y+4,x+s-3,y+s-3,'#020c12ae',Math.max(2,s*.052));
+  line(x+3,y+s-3,x+s-3,y+s-3,'#020c12a8',Math.max(2,s*.044));
+  if(lit){ctx.save();ctx.globalCompositeOperation='screen';
+    const bloom=ctx.createRadialGradient(cx,cy,0,cx,cy,s*.75);
+    bloom.addColorStop(0,'#ffe3a130');bloom.addColorStop(1,'#fff2b100');
+    ctx.fillStyle=bloom;ctx.fillRect(x+2,y+2,s-4,s-4);ctx.restore();}
   line(x+4,y+4,x+s-4,y+4,'#e0ce9d59',1);
   line(x+4,y+4,x+4,y+s-4,'#cadad052',1);
   // At each join a small soldered joint.
   circle(x+1,y+1,Math.max(2,s*.045),'#5e615b','#192729',1);
+  if(index===state.pressedIndex){ctx.save();ctx.strokeStyle='#fff2c8';ctx.lineWidth=3;ctx.strokeRect(x+3,y+3,s-6,s-6);ctx.restore();}
   if(index===state.selected && document.activeElement===canvas){
     ctx.strokeStyle='#fff2b0';ctx.lineWidth=2;ctx.strokeRect(x+4,y+4,s-8,s-8);
   }
@@ -422,6 +472,7 @@ function render(time){
   ctx.clearRect(0,0,w,h);
   paintBackdrop(time);
   const trace=traceLight(state.board,state.level);
+  paintCaustics(trace,time);
   for(let i=0;i<state.board.length;i++){
     const tile=state.board[i];
     if(reduced.matches)tile.angle=tile.targetAngle;
@@ -431,6 +482,7 @@ function render(time){
     }
     paintGlassTile(i,time,trace.reached[i]);
   }
+  paintLuminousLeads(trace,time);
   paintSun(trace,time);
   paintRelics(trace,time);
   // A hand-etched sill beneath the reliquaries.
