@@ -27,7 +27,8 @@ html.has-pocket-deck [hidden] { display: none !important; }
 html.has-pocket-deck .library-room { background: #11191d; }
 html.has-pocket-deck .library-room span { display: none; }
 html.has-pocket-deck .shelf-shell {
-  padding: 0 max(16px,var(--safe-right)) calc(88px + var(--app-safe-bottom,0px)) max(16px,var(--safe-left));
+  padding: var(--safe-top,env(safe-area-inset-top)) max(16px,var(--safe-right))
+    calc(88px + var(--app-safe-bottom,env(safe-area-inset-bottom))) max(16px,var(--safe-left));
   max-width: 1380px;
 }
 html.has-pocket-deck .masthead {
