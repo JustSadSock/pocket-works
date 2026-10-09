@@ -20,7 +20,7 @@ export function fitChapel(width,height,size,entryCol){
   const archTipY=boardY-crown+8;
   const archShoulderY=boardY-8;
   const sillY=gridBottom+Math.min(38,foot-6);
-  const relicY=gridBottom+Math.min(20,foot*.46);
+  const relicY=gridBottom+Math.min(18,foot*.39);
   return {
     width:w,height:h,size,tile,boardX,boardY,gridWidth,gridBottom,
     roseX,roseY,roseRadius,entryX,
