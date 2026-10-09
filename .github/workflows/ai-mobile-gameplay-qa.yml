@@ -138,6 +138,9 @@ jobs:
         run: |
           set -euo pipefail
           TESTS=(tests/e2e/ai-gameplay.spec.ts)
+          if [[ -n "${PW_APP_TARGETS:-}" ]]; then
+            TESTS+=(tests/e2e/visual-direction.spec.ts)
+          fi
           if [[ ",${PW_APP_TARGETS:-}," == *",formica-colony,"* ]]; then
             TESTS+=(tests/e2e/formica-colony.spec.ts)
           fi
