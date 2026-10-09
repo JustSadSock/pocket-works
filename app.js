@@ -538,6 +538,10 @@ function renderDetail(app) {
 }
 
 function runViewTransition(callback) {
+  // Snapshotting a full 130-item Contact Sheet can stall touch-target geometry
+  // on iOS WebKit. Deck navigates with native instant updates and uses its own
+  // focused panel/launch animations rather than animating the entire document.
+  if (deck) { callback(); return; }
   if (document.startViewTransition && !reducedMotionQuery.matches) {
     document.startViewTransition(callback);
   } else {
