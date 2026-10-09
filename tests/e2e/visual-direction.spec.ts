@@ -61,7 +61,8 @@ async function performAndCapture(page: Page, info: TestInfo, action: VisualEvide
     await capture(page, info, '02-action-press');
     await page.mouse.up();
   } else if (action.type === 'tap') {
-    await page.touchscreen.tap(...Object.values(relativePoint(page, action.from!)) as [number,number]);
+    const point = relativePoint(page, action.from!);
+    await page.touchscreen.tap(point.x, point.y);
     await page.waitForTimeout(80);
     await capture(page, info, '02-action-tap');
   } else {
