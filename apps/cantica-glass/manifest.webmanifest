@@ -2,7 +2,7 @@
   "id": "/apps/cantica-glass/",
   "name": "CANTICA — Песнь света",
   "short_name": "CANTICA",
-  "description": "Пятьсот средневековых витражей внутри иллюминированного манускрипта.",
+  "description": "Средневековые витражные головоломки в каменной часовне и иллюминированном манускрипте.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
