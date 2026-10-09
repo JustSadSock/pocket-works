@@ -18,3 +18,7 @@ npm run typecheck --workspace=@pocket-works/__APP_SLUG__
 ```
 
 Source files live in `source/`. The build writes deployable `index.html`, `app.js`, `styles.css`, `manifest.webmanifest` and `sw.js` into this application directory. Do not edit generated build output directly.
+
+## Visual production — required before release
+
+This is only a build/runtime scaffold. Complete `visual-direction.json`, replace its temporary presentation and geometric icon, author the focal asset, and review real interaction screenshots/video before release. See `docs/CREATIVE-PRODUCTION.md`.

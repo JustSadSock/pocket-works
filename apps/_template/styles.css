@@ -1,141 +1,77 @@
+/* Pocket Forge technical scaffold — deliberately not a finished visual identity.
+   Replace layout, type, colors and motion to match visual-direction.json. */
 :root {
   color-scheme: dark;
   --bg: __APP_BACKGROUND__;
-  --fg: #f0eee7;
-  --muted: #9b9d94;
+  --fg: #e5e5e5;
+  --muted: #a3a3a3;
   --accent: __APP_ACCENT__;
-  --safe-top: max(18px, var(--app-safe-top));
-  --safe-right: max(18px, var(--app-safe-right));
-  --safe-bottom: max(22px, var(--app-safe-bottom));
-  --safe-left: max(18px, var(--app-safe-left));
+  --safe-top: max(12px, var(--app-safe-top));
+  --safe-right: max(12px, var(--app-safe-right));
+  --safe-bottom: max(12px, var(--app-safe-bottom));
+  --safe-left: max(12px, var(--app-safe-left));
   --workshop-bg: var(--bg);
   --workshop-fg: var(--fg);
   --workshop-muted: var(--muted);
   --workshop-accent: var(--accent);
 }
-
 * { box-sizing: border-box; }
-html, body { min-height: 100%; }
-html { background: var(--bg); }
-
+html, body { margin: 0; min-height: 100%; background: var(--bg); }
 body {
-  margin: 0;
   min-width: 320px;
-  min-height: var(--app-viewport-height);
-  overflow-x: hidden;
-  background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 16px/1.5 system-ui, sans-serif;
+  overflow-x: clip;
 }
-
-button { font: inherit; }
-
+button, a { font: inherit; }
+button { cursor: pointer; }
 .app-shell {
-  width: min(100%, 760px);
   min-height: var(--app-viewport-height);
-  margin: 0 auto;
-  padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--app-keyboard-inset)) var(--safe-left);
+  padding: var(--safe-top) var(--safe-right)
+    calc(var(--safe-bottom) + var(--app-keyboard-inset)) var(--safe-left);
 }
-
-.app-header { padding: 18px 0 38px; }
-
-.app-kicker {
-  margin: 0 0 12px;
-  color: var(--accent);
-  font: 700 .72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .1em;
-}
-
-h1 {
-  margin: 0 0 14px;
-  font-size: clamp(2.4rem, 12vw, 5.5rem);
-  line-height: .88;
-  letter-spacing: -.07em;
-}
-
-.app-header > p:last-child {
-  max-width: 44ch;
+.app-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  margin-bottom: 20px;
   color: var(--muted);
-  line-height: 1.55;
+  font-size: .79rem;
 }
-
-.stage {
-  display: grid;
-  gap: 18px;
-  min-height: 46dvh;
-  align-content: center;
-  border-top: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
-  padding: 28px 0;
+.app-tools a { color: inherit; text-decoration: none; min-height: 44px; display: grid; align-items: center; }
+.app-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workshop-trigger {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  min-height: 44px;
+  padding: 0 11px;
 }
-
-.stage h2 {
-  max-width: 20ch;
-  margin: 0;
-  font-size: clamp(1.5rem, 7vw, 2.8rem);
-  line-height: 1;
-  letter-spacing: -.045em;
-}
-
+.stage { min-height: 48dvh; }
+.stage h2 { font-size: 1.35rem; font-weight: 500; line-height: 1.2; margin: 0 0 18px; }
 #primary-action {
-  width: fit-content;
-  min-width: 44px;
-  min-height: 48px;
-  padding: 0 18px;
-  border: 1px solid var(--accent);
-  border-radius: 0;
+  display: inline-grid;
+  place-items: center;
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--fg);
   background: transparent;
   color: var(--fg);
-  cursor: pointer;
-  transition: transform .12s ease, background-color .16s ease, color .16s ease;
+  touch-action: manipulation;
 }
-
-#primary-action:active,
-#primary-action.is-pressed {
-  background: var(--accent);
-  color: var(--bg);
-}
-
-#status {
-  color: var(--muted);
-  font: .78rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
+#primary-action:active, #primary-action.is-pressed,
+.workshop-trigger:active, .workshop-trigger.is-pressed { background: var(--fg); color: var(--bg); }
+#status { display: block; margin-top: 12px; color: var(--muted); font-size: .84rem; }
 footer {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  padding-top: 16px;
+  gap: 12px;
+  margin-top: 24px;
   color: var(--muted);
-  font: .68rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: .72rem;
 }
-
-.workshop-trigger {
-  min-height: 44px;
-  padding: 0 10px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-transform: inherit;
-  cursor: pointer;
-}
-
-.workshop-trigger:active,
-.workshop-trigger.is-pressed { color: var(--accent); }
-
 __PRESET_STYLES__
-
-@media (max-width: 480px) {
-  footer { flex-wrap: wrap; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    transition-duration: .01ms !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-  }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

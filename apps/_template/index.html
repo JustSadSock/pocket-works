@@ -18,11 +18,12 @@
 </head>
 <body data-app-preset="__APP_PRESET__">
   <main class="app-shell" data-app-shell data-keyboard-aware>
-    <header class="app-header" data-ui>
-      <p class="app-kicker">__PRESET_LABEL__ / POCKET WORKS</p>
-      <h1>__APP_NAME__</h1>
-      <p class="selectable-content">__APP_DESCRIPTION__</p>
-    </header>
+    <!-- Technical scaffold only. Replace with the product's own visual composition. -->
+    <nav class="app-tools" data-ui aria-label="Application navigation">
+      <a href="../../" data-app-control>← Library</a>
+      <span class="app-label">__APP_NAME__</span>
+      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
+    </nav>
 
     <section class="stage" aria-labelledby="stage-title">
       __PRESET_MARKUP__
@@ -31,7 +32,6 @@
     <footer data-ui>
       <span>__APP_SLUG__</span>
       <span>v__APP_VERSION__ · __APP_STATUS__</span>
-      <button class="workshop-trigger" type="button" data-workshop-trigger data-native-press>Workshop</button>
     </footer>
   </main>
 

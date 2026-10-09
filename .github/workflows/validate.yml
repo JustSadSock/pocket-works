@@ -10,6 +10,25 @@ permissions:
   contents: read
 
 jobs:
+  creative-direction:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout app design history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate creative contract and Forge technical templates
+        run: npm run validate:creative
+      - name: Require a finished visual direction for visible app changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npm run validate:creative:changed
+
   platform-smoke:
     runs-on: ubuntu-latest
     steps:

@@ -1,6 +1,6 @@
 # Pocket Works Visual Agent Skills
 
-These modules are mandatory visual-production guidance for repository agents. They are intentionally split by discipline so an agent can load only the guidance relevant to the task instead of carrying one giant aesthetic prompt.
+These modules are mandatory visual-production guidance for repository agents. **For executable production steps, see `../CREATIVE-PRODUCTION.md`: reading aesthetic guidance alone cannot substitute for replacing the starter UI and checking rendered motion.** They are intentionally split by discipline so an agent can load only the guidance relevant to the task instead of carrying one giant aesthetic prompt.
 
 They synthesize proven patterns from public agent skills and practitioner workflows, then adapt them to Pocket Works constraints. They are not vendored copies.
 
