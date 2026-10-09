@@ -22,7 +22,7 @@ function matchValue(source, pattern, label) {
   return match[1];
 }
 
-const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registryStore, offlineInspector] = await Promise.all([
+const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packageSource, manifestSource, registryStore, offlineInspector, shelfStore, shellTools] = await Promise.all([
   read('index.html'),
   read('styles.css'),
   read('launcher-performance.css'),
@@ -34,7 +34,9 @@ const [html, css, performanceCss, app, worker, guard, motionJs, motionCss, packa
   read('package.json'),
   read('manifest.webmanifest'),
   read('shared/launcher-registry.js'),
-  read('shared/offline-readiness.js')
+  read('shared/offline-readiness.js'),
+  read('shared/shelf-state.js'),
+  read('shared/shell-tools.js')
 ]);
 
 const packageJson = JSON.parse(packageSource);
@@ -93,7 +95,7 @@ for (const [label, version] of [
 
 for (const token of [
   'installMobileRuntime()',
-  'pocket-works:shelf:v1',
+  'createShelfStateStore',
   'subscribeRegistry',
   'favorites',
   'recents',
@@ -106,6 +108,13 @@ for (const token of [
   'setDocumentScrollLocked'
 ]) {
   requireText(app, token, 'app.js');
+}
+
+for (const token of ['pocket-works:shelf:v1', 'pocket-works:shelf:v2', 'indexedDB', 'exportBackup', 'importBackup']) {
+  requireText(shelfStore, token, 'shared/shelf-state.js');
+}
+for (const token of ['tools-recheck', 'tools-export', 'tools-import', 'tools-repair', 'getRegistrations']) {
+  requireText(shellTools, token, 'shared/shell-tools.js');
 }
 
 for (const token of ['cacheInventory', 'criticalEntrypointUrls', 'getRegistrations', 'cacheStorage.keys()']) {
