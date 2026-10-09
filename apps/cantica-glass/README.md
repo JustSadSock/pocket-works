@@ -32,3 +32,19 @@ Hand-authored gilded ornamental SVG, quiet cinnabar rubrics and thick mottled pa
 - node scripts/validate-visual-direction.mjs --app=cantica-glass
 
 The manuscript tests cover ten volumes, locked states, 25-level pages, page turning, dismissal and final-level selection. Device visual QA is needed to confirm accurate paper sizing and legible details on target phones.
+
+
+## 3.1.0 — coherent chapel playfield
+
+The puzzle artwork itself remains intact: this release rebuilds the architecture surrounding it instead of repainting every tile. A shared geometry module (`playfield-layout.js`) computes the arch crown, square mosaic, stained rose, solar centre, stone jambs, altar outlets and raised sill from the available screen rectangle. The independent pieces no longer disagree or clip each other on different phone heights.
+
+- The painted rose and the draggable sun are now the **same physical object**. A small refracted ray links its central jewel to the actual entry column, including on even-sized boards.
+- Gothic springers, shafts with capitals, an inset recess and a full-width stone ledge replace free-floating lancets and ornament glyphs.
+- Touch coordinates, relic locations and glass drawing use the same returned layout, across board sizes 4–7.
+- The outer UI is materially quieter: shorter manuscript title, smaller progress ribbon, carved stone score sill, custom line-drawn book/restart insignia and a rounded stamped-wax hint button.
+- The extra vertical space on tall devices is distributed symmetrically; shorter portrait devices prioritize glass instead of retaining hardcoded empty padding.
+- Saved puzzles remain under `pocket-works:cantica-glass:save-v2`; the 500-level generator and chapter manuscript are unchanged.
+
+### Geometry regression
+
+Run `node --test apps/cantica-glass/tests/playfield-layout.test.mjs` to check 396 viewport/level-size combinations and 500 generated layouts. The other two existing suites continue to cover puzzle routes and manuscript navigation.

@@ -2,6 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf,neededTurns} from './logic.js';
 import {createManuscript} from './manuscript.js';
+import {fitChapel} from './playfield-layout.js';
 
 installMobileRuntime();
 
@@ -13,7 +14,7 @@ const LEGACY_KEY='pocket-works:cantica-glass:save-v1';
 const colors=['#296987','#a33c50','#c18b42','#3d7869','#784e82','#c2a56c','#385b71','#963e48'];
 const glyphs=['✣','✦','✤','✧'];
 const state={level:0,variant:0,board:[],moves:0,hints:0,unlocked:1,best:{},solved:false,sound:false,highlight:-1,highlightUntil:0,selected:0,pressedIndex:-1,sunAngle:0};
-let animation=0,lastFrame=0,view={width:320,height:450,dpr:1,boardX:0,boardY:0,tile:56};
+let animation=0,lastFrame=0,view={...fitChapel(320,450,4,1),dpr:1};
 let audio=null,press=null,modalFocus=null;
 const toneNumber=n=>String(n).padStart(2,'0');
 const windowNumber=n=>String(n).padStart(3,'0');
@@ -214,104 +215,128 @@ function circle(x,y,r,fill,stroke,width=1){
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}
 }
 function measure(){
-  const box=canvas.getBoundingClientRect();
-  if(box.width<10||box.height<10)return;
-  view.width=box.width;view.height=box.height;
-  view.dpr=Math.min(window.devicePixelRatio||1,2);
-  canvas.width=Math.round(box.width*view.dpr);
-  canvas.height=Math.round(box.height*view.dpr);
-  const size=N();
-  view.tile=Math.max(27,Math.min((box.width-29)/size,(box.height-171)/size,79));
-  view.boardX=(box.width-view.tile*size)/2;
-  view.boardY=Math.max(74,Math.min(Math.max(127,(box.height-view.tile*size)/2+12),box.height-view.tile*size-39));
+  const bounds=canvas.getBoundingClientRect();
+  if(bounds.width<10||bounds.height<10)return;
+  const geometry=fitChapel(bounds.width,bounds.height,N(),currentLevel().entryCol);
+  view={...geometry,dpr:Math.min(window.devicePixelRatio||1,2)};
+  // Pixel sizes are rescaled, but layout and pointer hit-tests remain in CSS pixels.
+  const pixelW=Math.round(bounds.width*view.dpr),pixelH=Math.round(bounds.height*view.dpr);
+  if(canvas.width!==pixelW||canvas.height!==pixelH){
+    canvas.width=pixelW;canvas.height=pixelH;
+  }
 }
-function gothicArch(x1,y1,x2,y2,pointY){
-  const center=(x1+x2)/2;
-  ctx.beginPath();ctx.moveTo(x1,y2);ctx.lineTo(x1,y1);
-  ctx.bezierCurveTo(x1,y1-23,center-47,pointY+30,center,pointY);
-  ctx.bezierCurveTo(center+47,pointY+30,x2,y1-23,x2,y1);
-  ctx.lineTo(x2,y2);ctx.closePath();
+function pointedArch(left,shoulder,right,bottom,tip){
+  const mid=(left+right)/2,w=right-left,rise=shoulder-tip;
+  ctx.beginPath();ctx.moveTo(left,bottom);ctx.lineTo(left,shoulder);
+  ctx.bezierCurveTo(left,shoulder-rise*.61,mid-w*.23,tip+rise*.07,mid,tip);
+  ctx.bezierCurveTo(mid+w*.23,tip+rise*.07,right,shoulder-rise*.61,right,shoulder);
+  ctx.lineTo(right,bottom);ctx.closePath();
 }
 function paintBackdrop(time){
-  const {width:w,height:h,boardX:x,boardY:y,tile:s}=view;
-  const sky=ctx.createLinearGradient(0,0,0,h);
-  sky.addColorStop(0,'#26373f');sky.addColorStop(.48,'#17262c');sky.addColorStop(1,'#111a20');
-  ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
-  // Stone courses, drawn with different joint offsets.
-  for(let yy=18;yy<h;yy+=39){
-    line(0,yy,w,yy,'#a6a08412',1);
-    for(let xx=((Math.floor(yy/39)%2)*40)-37;xx<w;xx+=80)
-      line(xx,yy-39,xx,yy,'#a6a08410',1);
+  const {width:w,height:h,boardX:x,boardY:y,tile:s,gridWidth:gw,gridBottom:gb,
+    archLeft:left,archRight:right,archTipY:tip,archShoulderY:shoulder,
+    frameBottom:bottom,roseX:cx,roseY:ry,roseRadius:rr,relicY,sillY}=view;
+  const masonry=ctx.createLinearGradient(0,0,w,h);
+  masonry.addColorStop(0,'#2b3938');masonry.addColorStop(.48,'#1c2929');masonry.addColorStop(1,'#142124');
+  ctx.fillStyle=masonry;ctx.fillRect(0,0,w,h);
+  // Small, unobtrusive courses of quarried limestone outside the lit recess.
+  for(let yy=16;yy<h;yy+=42){
+    line(0,yy,w,yy,'#c7ae7a0a',1);
+    for(let xx=((Math.floor(yy/42)%2)*35)-35;xx<w;xx+=70)
+      line(xx,yy-42,xx,yy,'#d2b78409',1);
   }
-  const beamShift=Math.sin(state.sunAngle)*w*.31;
-  const spotlight=ctx.createRadialGradient(w/2+beamShift,y-65,8,w/2+beamShift*.45,y+100,w*.82);
-  spotlight.addColorStop(0,'#caad7845');spotlight.addColorStop(.5,'#835e3920');spotlight.addColorStop(1,'#0b141600');
-  ctx.fillStyle=spotlight;ctx.fillRect(0,0,w,h);
-  const lx=x-17,rx=x+s*N()+17,top=y-50,bottom=y+s*N()+12,tip=y-122;
-  gothicArch(lx,top,rx,bottom,tip);
-  ctx.fillStyle='#0c171a';ctx.fill();
+  const ambient=ctx.createRadialGradient(cx+Math.sin(state.sunAngle)*w*.19,ry,5,cx,y+gw*.37,w*.75);
+  ambient.addColorStop(0,'#b4976c45');ambient.addColorStop(.48,'#c28f5210');ambient.addColorStop(1,'#06101200');
+  ctx.fillStyle=ambient;ctx.fillRect(0,0,w,h);
+
+  // Dark internal depth: the mosaic belongs to a single lancet opening.
+  pointedArch(left,shoulder,right,bottom,tip);
+  ctx.fillStyle='#091519';ctx.fill();
   ctx.save();ctx.clip();
-  const light=ctx.createLinearGradient(lx,tip,rx,bottom);
-  light.addColorStop(0,'#c69a6a80');light.addColorStop(.48,'#1e4759');light.addColorStop(1,'#8e555b');
-  ctx.fillStyle=light;ctx.fillRect(lx,tip,rx-lx,bottom-tip);
-  const crystal=ctx.createLinearGradient(lx+beamShift*.28,top,rx+beamShift*.48,bottom);
-  crystal.addColorStop(0,'#fff4b117');crystal.addColorStop(.4,'#f3bf5f05');crystal.addColorStop(1,'#ffdfab1e');
-  ctx.fillStyle=crystal;ctx.fillRect(lx,top,rx-lx,bottom-top);
-  // Radiant rose and top tracery.
-  const cx=w/2,ry=y-59,rr=Math.min(40,s*.66);
-  circle(cx,ry,rr+5,'#121d22','#68553a',4);
-  for(let i=0;i<8;i++){
-    const a=i*Math.PI/4,ux=Math.cos(a),uy=Math.sin(a);
-    const p=[[cx+ux*rr*.24-uy*rr*.29,ry+uy*rr*.24+ux*rr*.29],
-      [cx+ux*rr*.9,ry+uy*rr*.9],
-      [cx+ux*rr*.24+uy*rr*.29,ry+uy*rr*.24-ux*rr*.29]];
-    polygon(p,colors[(i+2)%colors.length],'#091419',2.8);
-    line(cx+ux*rr*.33,ry+uy*rr*.33,cx+ux*rr*.72,ry+uy*rr*.72,'#fff3c54c',1);
-  }
-  circle(cx,ry,rr*.22,'#debd7e','#1a272c',3);
-  for(let a=0;a<12;a++) {
-    const ang=a*Math.PI/6;line(cx+Math.cos(ang)*rr*.1,ry+Math.sin(ang)*rr*.1,cx+Math.cos(ang)*rr*.16,ry+Math.sin(ang)*rr*.16,'#744a27',1.5);
-  }
-  // Tiny lancets carved into the upper glass shoulders.
-  for(const side of [-1,1]){
-    const px=cx+side*(rr+23);
-    ctx.beginPath();ctx.moveTo(px-10,y-17);ctx.lineTo(px-10,y-53);ctx.quadraticCurveTo(px-9,y-72,px,y-80);
-    ctx.quadraticCurveTo(px+9,y-72,px+10,y-53);ctx.lineTo(px+10,y-17);ctx.closePath();
-    ctx.fillStyle=side<0?'#5c3b53':'#315968';ctx.fill();
-    ctx.strokeStyle='#16262a';ctx.lineWidth=4;ctx.stroke();
-    line(px,y-73,px,y-18,'#b995664c',1.7);
-  }
-  ctx.restore();
-  gothicArch(lx-7,top-2,rx+7,bottom+6,tip-9);
-  ctx.strokeStyle='#0a1316';ctx.lineWidth=18;ctx.stroke();
-  gothicArch(lx-7,top-2,rx+7,bottom+6,tip-9);
-  ctx.strokeStyle='#847357';ctx.lineWidth=5;ctx.stroke();
-  gothicArch(lx-11,top-3,rx+11,bottom+8,tip-13);
-  ctx.strokeStyle='#4a5758';ctx.lineWidth=2.5;ctx.stroke();
-  // Chiselled ribs down each side.
+  const innerSky=ctx.createLinearGradient(x,tip,x+gw,bottom);
+  innerSky.addColorStop(0,'#4a5a59');innerSky.addColorStop(.28,'#304d55');
+  innerSky.addColorStop(.62,'#18323c');innerSky.addColorStop(1,'#18252b');
+  ctx.fillStyle=innerSky;ctx.fillRect(left,tip,right-left,bottom-tip);
+
+  // Reflected colour follows the sun; only the glazing, not the stone, is saturated.
+  const shift=Math.sin(state.sunAngle)*gw*.19;
+  const glassWash=ctx.createRadialGradient(cx+shift,ry,rr*.3,cx+shift,y+gw*.25,gw*.66);
+  glassWash.addColorStop(0,'#f1be7a48');glassWash.addColorStop(.46,'#8d735633');glassWash.addColorStop(1,'#bf885a00');
+  ctx.fillStyle=glassWash;ctx.fillRect(left,tip,right-left,bottom-tip);
+
+  // Consecutive springers join the round rose to the vertical glazing below.
   for(const sign of [-1,1]){
-    const ax=sign<0?lx-16:rx+16;
-    const v=ctx.createLinearGradient(ax-8,0,ax+8,0);
-    v.addColorStop(0,'#0e1a1c');v.addColorStop(.45,'#71807b');v.addColorStop(.64,'#374448');v.addColorStop(1,'#101b1e');
-    ctx.fillStyle=v;ctx.fillRect(ax-8,top-4,16,bottom-top+21);
-    ctx.fillStyle='#a08d70';ctx.fillRect(ax-12,top+3,24,5);ctx.fillRect(ax-12,bottom-15,24,7);
-    line(ax-5,top+18,ax-5,bottom-17,'#b6a68e34',1);
+    const fx=cx+sign*(rr+14);
+    line(fx,ry+rr*.42,cx+sign*gw*.36,y-4,'#0e2026',Math.max(3,s*.07));
+    line(fx+sign*1.4,ry+rr*.42,cx+sign*gw*.36,y-4,'#ae936454',1.15);
   }
-  // Colored reflections spilling beneath the window.
-  ctx.save();ctx.globalAlpha=.23;
-  for(let i=0;i<11;i++){
-    const xx=x+s*(i%N()+.32);
-    const jitter=(rand(i*21+state.level*18)-.5)*s;
-    const g=ctx.createLinearGradient(xx,y+s*N(),xx+jitter*2,h);
-    g.addColorStop(0,tint(colors[(i+state.level)%colors.length],.8));g.addColorStop(1,'#10192100');
-    polygon([[xx-9,y+s*N()+8],[xx+10,y+s*N()+8],[xx+22+jitter,h],[xx-31+jitter,h]],g);
+  // Rose: eight regularly shaped handmade glass petals, all within the arch.
+  ctx.save();ctx.shadowColor='#050b0d';ctx.shadowBlur=9;
+  circle(cx,ry,rr+6,'#15242a','#121c20',7);
+  ctx.restore();
+  circle(cx,ry,rr+3,null,'#ae976d',2.3);
+  for(let i=0;i<8;i++){
+    const ang=-Math.PI/2+i*Math.PI/4,outer=rr*.86,inner=rr*.26;
+    const co=Math.cos(ang),si=Math.sin(ang);
+    const petal=[[cx+co*inner-si*rr*.24,ry+si*inner+co*rr*.24],
+      [cx+co*outer-si*rr*.17,ry+si*outer+co*rr*.17],
+      [cx+co*outer+si*rr*.17,ry+si*outer-co*rr*.17],
+      [cx+co*inner+si*rr*.24,ry+si*inner-co*rr*.24]];
+    polygon(petal,colors[(i+state.level)%colors.length],'#0b1b21',Math.max(2,rr*.13));
+    line(cx+co*rr*.38,ry+si*rr*.38,cx+co*rr*.75,ry+si*rr*.75,'#f9e7c34e',1);
+  }
+  circle(cx,ry,rr*.27,'#c8ad7a','#18252b',Math.max(2,rr*.15));
+  circle(cx,ry,rr*.14,'#fff1bb','#896840',1.2);
+  ctx.restore();
+
+  // Cut-stone outer arch: dark undercut, a pale bevel, then a thin shadow.
+  pointedArch(left-3,shoulder,right+3,bottom+4,tip-3);
+  ctx.strokeStyle='#0a1314';ctx.lineWidth=Math.min(14,s*.19);ctx.stroke();
+  pointedArch(left-4,shoulder,right+4,bottom+4,tip-5);
+  ctx.strokeStyle='#837966';ctx.lineWidth=Math.min(7,s*.1);ctx.stroke();
+  pointedArch(left-7,shoulder+2,right+7,bottom+5,tip-8);
+  ctx.strokeStyle='#b3a185';ctx.lineWidth=1.15;ctx.stroke();
+
+  // Columns terminate in actual capitals at the beginning and end of the mosaic.
+  for(const sign of [-1,1]){
+    const px=sign<0?left-5:right+5,pillar=Math.max(5,Math.min(10,s*.145));
+    const stone=ctx.createLinearGradient(px-pillar,0,px+pillar,0);
+    stone.addColorStop(0,'#0c191a');stone.addColorStop(.34,'#707b72');
+    stone.addColorStop(.59,'#58665f');stone.addColorStop(1,'#142322');
+    ctx.fillStyle=stone;
+    ctx.fillRect(px-pillar/2,y-3,pillar,gb-y+14);
+    line(px-pillar*.15,y+6,px-pillar*.15,gb+7,'#d8c49b43',1.1);
+    const cap=Math.max(7,pillar*1.05);
+    ctx.fillStyle='#7e7865';ctx.fillRect(px-cap,y-7,cap*2,5);
+    ctx.fillStyle='#b1a183';ctx.fillRect(px-cap,y-7,cap*2,1.5);
+    ctx.fillStyle='#77715f';ctx.fillRect(px-cap,gb+7,cap*2,6);
+    ctx.fillStyle='#a99d7e';ctx.fillRect(px-cap,gb+7,cap*2,1.5);
+  }
+  // The stone sill unifies the beam outlets and the reliquaries.
+  const ledge=ctx.createLinearGradient(0,gb,0,sillY+5);
+  ledge.addColorStop(0,'#17272c');ledge.addColorStop(.37,'#576257');ledge.addColorStop(.53,'#313e39');ledge.addColorStop(1,'#121f22');
+  ctx.fillStyle=ledge;
+  ctx.fillRect(Math.max(2,x-13),gb+5,Math.min(w-4,gw+26),Math.max(5,sillY-gb+3));
+  line(Math.max(2,x-13),gb+6,Math.min(w-2,x+gw+13),gb+6,'#c1ab8752',1.5);
+  line(Math.max(2,x-13),sillY,Math.min(w-2,x+gw+13),sillY,'#d8c29872',1.3);
+  for(let i=0;i<Math.min(9,N()+3);i++){
+    const sx=x+gw*(i/(Math.min(9,N()+3)-1));
+    circle(sx,sillY,1.3,'#c0a67870');
+  }
+
+  // Small refracted pools remain inside the recess and stone ledge.
+  ctx.save();ctx.globalAlpha=.13;
+  for(let i=0;i<N()+2;i++){
+    const xx=x+gw*(i+.6)/(N()+2),jitter=(rand(i*71+state.level*11)-.5)*s;
+    const beam=ctx.createLinearGradient(xx,gb,xx+jitter,sillY);
+    beam.addColorStop(0,tint(colors[(i+state.level)%colors.length],.85));
+    beam.addColorStop(1,tint(colors[(i+state.level)%colors.length],0));
+    polygon([[xx-4,gb+6],[xx+4,gb+6],[xx+10+jitter,sillY],[xx-9+jitter,sillY]],beam);
   }
   ctx.restore();
-  // Early dust is tiny and slow; reduced-motion uses a frozen frame.
-  for(let i=0;i<20;i++){
-    const dx=rand(i*187+3)*w;
-    const dy=(rand(i*71+5)*h+(reduced.matches?0:time*.004*(i%3+1)))%h;
-    circle(dx,dy,i%5===0?1.15:.55,'#f6dfa044');
+  for(let i=0;i<18;i++){
+    const dx=rand(i*187+3)*w,dy=(rand(i*71+5)*h+(reduced.matches?0:time*.002*(i%3+1)))%h;
+    circle(dx,dy,i%5===0?.9:.5,'#f6dfa02c');
   }
 }
 function paintCaustics(trace,time){
@@ -448,10 +473,10 @@ function paintGlassTile(index,time,lit){
   }
 }
 function paintRelics(trace,time){
-  const {boardX:x,boardY:y,tile:s}=view,baseY=y+N()*s+22;
+  const {boardX:x,boardY:y,tile:s,relicY:baseY,gridBottom}=view;
   LEVELS[state.level].exits.forEach((col,i)=>{
     const cx=x+(col+.5)*s,lit=trace.lit[i];
-    line(cx,y+N()*s,cx,baseY,'#ae9162',Math.max(2.5,s*.042));
+    line(cx,gridBottom+3,cx,baseY,'#b6a078',Math.max(2,s*.036));
     const r=Math.min(16,s*.25);
     ctx.save();if(lit){ctx.shadowColor='#ffc774';ctx.shadowBlur=reduced.matches?9:14+Math.sin(time*.006+i)*3;}
     circle(cx,baseY,r,lit?'#b47c42':'#1c3036','#d6bd84',2.6);
@@ -467,15 +492,26 @@ function paintRelics(trace,time){
   });
 }
 function paintSun(trace,time){
-  const {boardX:x,boardY:y,tile:s}=view,cx=x+s*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*s*.5,py=y-28;
-  ctx.save();ctx.shadowColor='#f1c773';ctx.shadowBlur=trace.reached[currentLevel().entryCol]?20:10;
-  circle(cx,py,Math.min(11,s*.2),'#d7aa5d','#f9e9b7',2);
+  const {roseX:rx,roseY:ry,roseRadius:rr,entryX,boardY:y,tile:s}=view;
+  const hitX=rx+Math.sin(state.sunAngle)*rr*.19;
+  const hitY=ry;
+  const active=trace.reached[currentLevel().entryCol];
+  // The source lives *inside* the stained rose, not as a second floating icon.
+  const wave=reduced.matches?0:Math.sin(time*.003)*.12;
+  ctx.save();ctx.lineCap='round';ctx.shadowColor='#ffe2a1';ctx.shadowBlur=active?13:5;
+  ctx.beginPath();ctx.moveTo(hitX,hitY+rr*.17);
+  ctx.quadraticCurveTo(entryX,hitY+(y-hitY)*.57,entryX,y+4);
+  ctx.strokeStyle=active?'#f8d993': '#a58c685b';
+  ctx.lineWidth=Math.max(1.4,s*.053);
+  ctx.stroke();ctx.restore();
+  // Tight metal boss has a modest jewel and an honest touch target.
+  ctx.save();ctx.shadowColor='#f9dd9c';ctx.shadowBlur=active?13+wave*8:4;
+  circle(hitX,hitY,Math.max(5,rr*.22),'#e6c98d','#243031',Math.max(2,rr*.13));
+  circle(hitX-rr*.04,hitY-rr*.06,Math.max(2.5,rr*.095),'#fff4c8');
   ctx.restore();
-  for(let d=0;d<8;d++){const a=d*Math.PI/4;
-    line(cx+Math.cos(a)*14,py+Math.sin(a)*14,cx+Math.cos(a)*18,py+Math.sin(a)*18,'#ceb17c',1.5);}
-  if(trace.reached[currentLevel().entryCol]){
-    ctx.save();ctx.shadowColor='#f7da8c';ctx.shadowBlur=17;
-    line(cx,py+9,cx,y+8,'#fff1b5',Math.max(3,s*.075));ctx.restore();
+  for(let d=0;d<4;d++){
+    const a=d*Math.PI/2;
+    circle(hitX+Math.cos(a)*rr*.32,hitY+Math.sin(a)*rr*.32,1.2,'#eed2a6b1');
   }
 }
 function render(time){
@@ -498,10 +534,6 @@ function render(time){
   paintLuminousLeads(trace,time);
   paintSun(trace,time);
   paintRelics(trace,time);
-  // A hand-etched sill beneath the reliquaries.
-  const xx=view.boardX,yy=view.boardY+view.tile*N()+37;
-  line(xx-13,yy,xx+view.tile*N()+13,yy,'#8c7857',1);
-  for(let i=0;i<7;i++)circle(xx+i*(view.tile*N()/6),yy,1.5,'#c9ad77');
   lastFrame=time;
   if(!document.hidden)animation=requestAnimationFrame(render);
 }
@@ -512,8 +544,8 @@ function wake(){
 function onTouchEnd(event){
   if(!press||press.id!==event.pointerId)return;
   const initial=press;press=null;state.pressedIndex=-1;
-  if(initial.sun){save();updateCopy();return;}
   try{canvas.releasePointerCapture(event.pointerId);}catch{}
+  if(initial.sun){save();updateCopy();return;}
   const rect=canvas.getBoundingClientRect();
   const dx=event.clientX-initial.x,dy=event.clientY-initial.y;
   if(Math.hypot(dx,dy)>13)return;
@@ -525,9 +557,9 @@ function onTouchEnd(event){
 canvas.addEventListener('pointerdown',event=>{
   if(!$('scrim').hidden||event.button!==0)return;
   const rect=canvas.getBoundingClientRect(),lx=event.clientX-rect.left,ly=event.clientY-rect.top;
-  const sunlightX=view.boardX+view.tile*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*view.tile*.5;
-  const sunlightY=view.boardY-28;
-  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<23;
+  const sunlightX=view.roseX+Math.sin(state.sunAngle)*view.roseRadius*.19;
+  const sunlightY=view.roseY;
+  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<Math.max(20,view.roseRadius*.7);
   const col=Math.floor((lx-view.boardX)/view.tile),row=Math.floor((ly-view.boardY)/view.tile);
   state.pressedIndex=!sun&&col>=0&&col<N()&&row>=0&&row<N()?row*N()+col:-1;
   press={id:event.pointerId,x:event.clientX,y:event.clientY,sun,sunAngleAtPress:state.sunAngle};
@@ -574,7 +606,7 @@ const manuscript=createManuscript({
   onPageTurn:pageRustle,
   reduceMotion:()=>reduced.matches
 });
-createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.0.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.1.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
 hydrate();
 measure();wake();
 if(state.solved)window.setTimeout(showVictory,120);
