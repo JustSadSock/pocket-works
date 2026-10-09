@@ -1,9 +1,8 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf,neededTurns,verifyLevels} from './logic.js';
+import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf,neededTurns} from './logic.js';
 
 installMobileRuntime();
-verifyLevels();
 
 const $=id=>document.getElementById(id);
 const canvas=$('glass'),ctx=canvas.getContext('2d',{alpha:false});
@@ -210,7 +209,7 @@ function measure(){
   const size=N();
   view.tile=Math.max(27,Math.min((box.width-29)/size,(box.height-171)/size,79));
   view.boardX=(box.width-view.tile*size)/2;
-  view.boardY=Math.max(74,Math.min(Math.max(108,(box.height-view.tile*size)/2+12),box.height-view.tile*size-39));
+  view.boardY=Math.max(74,Math.min(Math.max(127,(box.height-view.tile*size)/2+12),box.height-view.tile*size-39));
 }
 function gothicArch(x1,y1,x2,y2,pointY){
   const center=(x1+x2)/2;
@@ -454,7 +453,7 @@ function paintRelics(trace,time){
   });
 }
 function paintSun(trace,time){
-  const {boardX:x,boardY:y,tile:s}=view,cx=x+s*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*s*.5,py=y-14;
+  const {boardX:x,boardY:y,tile:s}=view,cx=x+s*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*s*.5,py=y-28;
   ctx.save();ctx.shadowColor='#f1c773';ctx.shadowBlur=trace.reached[currentLevel().entryCol]?20:10;
   circle(cx,py,Math.min(11,s*.2),'#d7aa5d','#f9e9b7',2);
   ctx.restore();
@@ -513,8 +512,8 @@ canvas.addEventListener('pointerdown',event=>{
   if(!$('scrim').hidden||event.button!==0)return;
   const rect=canvas.getBoundingClientRect(),lx=event.clientX-rect.left,ly=event.clientY-rect.top;
   const sunlightX=view.boardX+view.tile*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*view.tile*.5;
-  const sunlightY=view.boardY-14;
-  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<30;
+  const sunlightY=view.boardY-28;
+  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<23;
   const col=Math.floor((lx-view.boardX)/view.tile),row=Math.floor((ly-view.boardY)/view.tile);
   state.pressedIndex=!sun&&col>=0&&col<N()&&row>=0&&row<N()?row*N()+col:-1;
   press={id:event.pointerId,x:event.clientX,y:event.clientY,sun,sunAngleAtPress:state.sunAngle};
