@@ -15,7 +15,7 @@
   "themeColor": "#28372e",
   "orientation": "portrait",
   "cacheName": "horugvi-v1.0.0",
-  "storageNamespace": "horugvi-campaign-v1",
+  "storageNamespace": "pocket-works:horugvi",
   "runtime": "quick",
   "tags": ["game", "strategy", "medieval", "tactics", "canvas"],
   "order": 14
