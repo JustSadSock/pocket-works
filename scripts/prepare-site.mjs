@@ -103,7 +103,7 @@ async function walkFiles(directory,prefix=''){
 
 function wasmChunkBootstrap(relative,parts,totalSize,version){
   const target='./'+relative;
-  const chunkUrls=parts.map(part=>'./'+part+'?pw_release='+encodeURIComponent(version));
+  const chunkUrls=parts.map(part=>(part.startsWith('../')?part:'./'+part)+'?pw_release='+encodeURIComponent(version));
   return `<script data-pocketworks-wasm-chunks>
 (() => {
   const targetUrl = new URL(${JSON.stringify(target)}, window.location.href);
@@ -214,7 +214,7 @@ async function splitOversizedGodotWasm(directory,slug,version){
     const swPath=path.join(directory,'sw.js');
     let sw=await readFile(swPath,'utf8');
     const originalJson=JSON.stringify('./'+relative);
-    const partJson=parts.map(part=>JSON.stringify('./'+part)).join(',\n  ');
+    const partJson=parts.map(part=>JSON.stringify(part.startsWith('../')?part:'./'+part)).join(',\n  ');
     if(!sw.includes(originalJson))throw new Error(`Godot app ${slug} service worker does not cache ${relative}`);
     sw=sw.replace(originalJson,partJson);
     await writeFile(swPath,sw,'utf8');
