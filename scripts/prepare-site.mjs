@@ -16,7 +16,7 @@ const WASM_CHUNK_SIZE=16*1024*1024;
 const sharedGodotEngines=new Map();
 const rootFiles=[
   'index.html','styles.css','launcher-performance.css','launcher-sync.css','app.js',
-  'launcher-update-all.js','launcher-update-all-v2.js','launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
+  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
 
