@@ -133,7 +133,7 @@ function showVictory(){
     secondary:'Посмотреть витраж',onSecondary:closeModal});
 }
 function showChapters(book=Math.floor(state.level/50)){
-  if(book<0||book>9)book=Math.floor(state.level/50);
+  if(!Number.isInteger(book)||book<0||book>9)book=Math.floor(state.level/50);
   const start=book*50,unlockedInBook=Math.max(0,Math.min(50,state.unlocked-start));
   openModal({kicker:'LIBER LUMINIS · D FENESTRAE',title:'Книга окон',
     copy:LEVELS[start].book+' · '+unlockedInBook+' из 50 окон открыто.',
