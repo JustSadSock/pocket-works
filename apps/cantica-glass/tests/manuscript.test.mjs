@@ -84,3 +84,24 @@ test('Closing, page-turn keyboard and entering chapters do not alter puzzle pers
    assert.ok(soundTurns>=1);
  }finally{globalThis.document=beforeDoc;globalThis.window=beforeWindow;globalThis.requestAnimationFrame=beforeRAF;}
 });
+
+test('Leaving an animated manuscript cancels a pending level selection',()=>{
+ const {doc,ids}=fakeDOM();
+ const beforeDoc=globalThis.document,beforeWindow=globalThis.window,beforeRAF=globalThis.requestAnimationFrame;
+ const queue=[];
+ globalThis.document=doc;globalThis.window={setTimeout:fn=>{queue.push(fn);return queue.length;}};
+ globalThis.requestAnimationFrame=fn=>fn();
+ try{
+   const selected=[];
+   const codex=createManuscript({
+     levels:LEVELS,getUnlocked:()=>5,getBest:()=>({}),getCurrent:()=>0,
+     onSelect:i=>selected.push(i),reduceMotion:()=>false
+   });
+   codex.show({book:true,level:0});
+   ids.codexContent.children[1].children[0].trigger('click');
+   codex.hide();
+   while(queue.length)queue.shift()();
+   assert.deepEqual(selected,[]);
+   assert.equal(ids.manuscript.hidden,true);
+ }finally{globalThis.document=beforeDoc;globalThis.window=beforeWindow;globalThis.requestAnimationFrame=beforeRAF;}
+});
