@@ -25,10 +25,10 @@ test('launcher Sync updates only already-installed application workers', async (
   });
   expect(before).toEqual(['/apps/screen-lab/']);
 
-  const sync = page.locator('#refresh-button');
+  const sync = page.locator('#update-installed-button');
   await sync.click();
   await expect(sync).toBeEnabled({ timeout: 35_000 });
-  await expect(sync).toHaveText('Sync');
+  await expect(sync).toHaveText('Update apps');
 
   const after = await page.evaluate(async () => {
     const registrations = await navigator.serviceWorker.getRegistrations();
