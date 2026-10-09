@@ -4,7 +4,7 @@ import { installedTargets, updateInstalledApplication, withTimeout, getVerifiedR
 const UPDATE_CONCURRENCY=3;
 const APP_TIMEOUT=30_000;
 
-const refreshButton=document.querySelector('#refresh-button');
+const refreshButton=document.querySelector('#update-installed-button');
 const syncStatus=document.querySelector('#sync-status');
 let bulkUpdateRunning=false;
 let completedCount=0;
@@ -45,7 +45,7 @@ function showProgress({completed,total,label}){
   progressStage.textContent=label||'Syncing shelf';
   progressCount.textContent=`${completed} / ${total}`;
   progressBar.style.width=`${total?Math.min(100,completed/total*100):100}%`;
-  refreshButton.textContent=total?`${completed}/${total}`:'Sync';
+  refreshButton.textContent=total?`${completed}/${total}` : 'Update apps';
 }
 
 function summaryFor(results,onDemand){
@@ -135,14 +135,9 @@ async function runBulkUpdate(){
   }finally{
     bulkUpdateRunning=false;
     refreshButton.disabled=false;
-    refreshButton.textContent='Sync';
+    refreshButton.textContent='Update apps';
     setTimeout(()=>{if(!bulkUpdateRunning)progressRoot.hidden=true;},2800);
   }
 }
 
-refreshButton?.addEventListener('click',event=>{
-  if(!event.isTrusted)return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  void runBulkUpdate();
-},{capture:true});
+refreshButton?.addEventListener('click', () => { void runBulkUpdate(); });
