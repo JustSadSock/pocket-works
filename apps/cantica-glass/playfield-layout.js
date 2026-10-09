@@ -4,7 +4,7 @@ export function fitChapel(width,height,size,entryCol){
   if(!Number.isFinite(width)||!Number.isFinite(height)||size<4||size>7)
     throw new Error('Invalid chapel viewport');
   const w=Math.max(120,width),h=Math.max(190,height);
-  const side=Math.max(11,Math.min(19,w*.037));
+  const side=Math.max(18,Math.min(25,w*.052));
   const crown=Math.max(58,Math.min(97,h*.204));
   const foot=Math.max(34,Math.min(48,h*.095));
   const tile=Math.max(0,Math.min(96,(w-side*2)/size,(h-crown-foot)/size));
