@@ -33,13 +33,13 @@ test('mobile library preserves visible card nodes on sort and search', async ({ 
   await expect(screenLab.locator('.app-entry__meta')).not.toContainText(/T\d{2}:/);
 });
 
-test('mobile Sync refreshes the registry without installing unrelated apps', async ({ page }) => {
+test('mobile library Refresh never installs unrelated apps', async ({ page }) => {
   await openShelf(page);
   const before = await page.locator('#app-list .app-entry').count();
   expect(before).toBeGreaterThan(20);
   await page.locator('#refresh-button').click();
-  await expect(page.locator('#refresh-button')).toHaveText('Sync', { timeout: 35_000 });
-  await expect(page.locator('#sync-status')).toContainText(/on-demand|current|checked|updated/);
+  await expect(page.locator('#refresh-button')).toHaveText('Refresh', { timeout: 35_000 });
+  await expect(page.locator('#sync-status')).toContainText(/Synced|Saved shelf|Registry unavailable/);
   await expect(page.locator('#app-list .app-entry')).toHaveCount(before);
 
   const unwanted = await page.evaluate(async () => {
