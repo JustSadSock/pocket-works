@@ -60,7 +60,7 @@ test('widgets can be configured, reordered and saved without losing previous she
   await expect(page.locator('#deck-widgets .deck-widget')).toHaveCount(4);
 });
 
-test('archive is reversible and project development notes persist independently of saved games',async({page})=>{
+test('archive is reversible and project development notes persist independently of saved games',async({page},info)=>{
   await openDeck(page);
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
@@ -70,6 +70,10 @@ test('archive is reversible and project development notes persist independently 
   await target.locator('.app-entry__select').click();
   await expect(page.locator('#deck-project-detail')).toBeVisible();
   await page.locator('#deck-project-note').fill('Improve flight feel and landing transitions');
+  await page.locator('#deck-project-detail [data-deck-stage="building"]').click();
+  await expect(page.locator('#deck-project-note')).toHaveValue('Improve flight feel and landing transitions');
+  await page.locator('#deck-project-note').scrollIntoViewIfNeeded();
+  await attachCriticalScreenshot(page,info,'deck-note-after-stage-change',{fullPage:false});
   await page.locator('#deck-note-save').click();
   await expect(page.locator('#deck-note-feedback')).toContainText('Saved');
   await page.locator('#deck-project-detail [data-deck-stage="archive"]').click();

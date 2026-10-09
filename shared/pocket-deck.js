@@ -215,12 +215,17 @@ export function installPocketDeck({
     }
     const signature=[slug,stageOf(slug),history.map(h=>h.version).join('|')].join(':');
     if(root.dataset.signature===signature)return;
+    // Stage and release-history updates must not erase a note being edited.
+    // Only carry the draft within the same project; switching projects loads
+    // that project's saved note.
+    const note=root.dataset.slug===slug ? ($('#deck-project-note')?.value ?? state.projectNotes[slug] ?? '') : (state.projectNotes[slug]||'');
+    root.dataset.slug=slug;
     root.dataset.signature=signature;
     root.innerHTML=`<div class="deck-project-detail__label">PROJECT JOURNEY</div>
       <div class="deck-project-detail__stages">
         ${[['trial','Trial'],['building','Developing'],['kept','Keep'],['archive','Archive']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
       </div>
-      <label class="deck-project-detail__note">Next improvement <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="The one thing that would make this project worth returning to…">${escapeHtml(current().projectNotes[slug]||'')}</textarea></label>
+      <label class="deck-project-detail__note">Next improvement <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="The one thing that would make this project worth returning to…">${escapeHtml(note)}</textarea></label>
       <button type="button" id="deck-note-save">Save project note</button>
       <span id="deck-note-feedback" role="status" aria-live="polite"></span>
       <div class="deck-project-detail__timeline">
