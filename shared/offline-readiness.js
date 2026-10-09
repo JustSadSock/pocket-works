@@ -80,7 +80,7 @@ export async function inspectOfflineReadiness(apps, {
       const missing = required.filter(url => !files.has(url));
       if (app.runtime === 'godot') {
         if (!sameAppFiles.some(url => /\.pck$/i.test(url))) missing.push('Godot game data');
-        const wasm = sameAppFiles.filter(url => /\.wasm(?:\.part-[0-9]+)?$/i.test(url));
+        const wasm = [...sameAppFiles, ...required].filter(url => /\.wasm(?:\.part-[0-9]+)?$/i.test(url));
         if (!wasm.length) missing.push('Godot WebAssembly');
       }
       if (missing.length) {
