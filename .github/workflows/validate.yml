@@ -52,6 +52,11 @@ jobs:
     if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'platform/') || contains(github.event.pull_request.labels.*.name, 'platform-change'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Use the same browser build as exploratory-mobile. A floating Playwright
+    # install can otherwise change WebKit actionability independently of code.
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,10 +64,10 @@ jobs:
           node-version: 22
       - name: Install application build dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Match Playwright package to browser image
+        run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
       - name: Assemble and validate published runtime assets
         run: npm run deploy:site
-      - name: Install WebKit for iPhone launcher smoke
-        run: npx playwright install --with-deps webkit
       - name: Verify iPhone launcher search, persistence and updates
         run: |
           npx playwright test tests/e2e/deck-layout-diagnostics.spec.ts --project=webkit-mobile-portrait --workers=1
