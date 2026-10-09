@@ -90,9 +90,13 @@ export function createManuscript({
     button.setAttribute('aria-label','Окно '+(i+1)+': '+levels[i].name+(selected?', текущее':lit?', завершено':unlocked?', доступно':', закрыто'));
     if(unlocked)button.addEventListener('click',()=>{
       if(busy)return;
+      busy=true;
+      const ticket=++revision;
       onPageTurn?.();
       host.classList.add('manuscript-depart');
       window.setTimeout(()=>{
+        // A closed or superseded book can never launch a stale level.
+        if(!open||ticket!==revision)return;
         onSelect(i);
         hide(true);
       },reduceMotion()?0:200);
