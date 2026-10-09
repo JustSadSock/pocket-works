@@ -498,7 +498,8 @@ function wake(){
 }
 function onTouchEnd(event){
   if(!press||press.id!==event.pointerId)return;
-  const initial=press;press=null;
+  const initial=press;press=null;state.pressedIndex=-1;
+  if(initial.sun){save();updateCopy();return;}
   try{canvas.releasePointerCapture(event.pointerId);}catch{}
   const rect=canvas.getBoundingClientRect();
   const dx=event.clientX-initial.x,dy=event.clientY-initial.y;
@@ -510,12 +511,23 @@ function onTouchEnd(event){
 }
 canvas.addEventListener('pointerdown',event=>{
   if(!$('scrim').hidden||event.button!==0)return;
-  press={id:event.pointerId,x:event.clientX,y:event.clientY};
+  const rect=canvas.getBoundingClientRect(),lx=event.clientX-rect.left,ly=event.clientY-rect.top;
+  const sunlightX=view.boardX+view.tile*(currentLevel().entryCol+.5)+Math.sin(state.sunAngle)*view.tile*.5;
+  const sunlightY=view.boardY-14;
+  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<30;
+  const col=Math.floor((lx-view.boardX)/view.tile),row=Math.floor((ly-view.boardY)/view.tile);
+  state.pressedIndex=!sun&&col>=0&&col<N()&&row>=0&&row<N()?row*N()+col:-1;
+  press={id:event.pointerId,x:event.clientX,y:event.clientY,sun,sunAngleAtPress:state.sunAngle};
   try{canvas.setPointerCapture(event.pointerId);}catch{}
 });
+canvas.addEventListener('pointermove',event=>{
+  if(!press||!press.sun||press.id!==event.pointerId)return;
+  state.sunAngle=Math.max(-.8,Math.min(.8,(event.clientX-press.x)/105+press.sunAngleAtPress));
+  $('status').textContent='Солнечный луч меняет угол и преломление';
+});
 canvas.addEventListener('pointerup',onTouchEnd);
-canvas.addEventListener('pointercancel',()=>{press=null;});
-canvas.addEventListener('lostpointercapture',()=>{press=null;});
+canvas.addEventListener('pointercancel',()=>{press=null;state.pressedIndex=-1;});
+canvas.addEventListener('lostpointercapture',()=>{press=null;state.pressedIndex=-1;});
 canvas.addEventListener('keydown',event=>{
   if(event.key==='Enter'||event.key===' '){event.preventDefault();turnTile(state.selected);return;}
   const arrows={ArrowUp:-N(),ArrowDown:N(),ArrowLeft:-1,ArrowRight:1};
