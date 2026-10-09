@@ -1,0 +1,63 @@
+name: Capture Application Covers
+
+# Covers are real browser screenshots stored separately from apps. A failed capture
+# leaves the app's authored icon intact; it never substitutes generated AI scenery.
+on:
+  workflow_dispatch:
+    inputs:
+      slugs:
+        description: 'Comma-separated slugs to refresh (empty = oldest missing covers)'
+        required: false
+        default: ''
+      limit:
+        description: 'Maximum screenshots per run (1–24)'
+        required: false
+        default: '12'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'deck-shell.css'
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pocket-works-cover-capture
+  cancel-in-progress: false
+
+jobs:
+  real-app-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install build and screenshot dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Assemble production-like site
+        run: npm run build:quality-site
+      - name: Capture actual application screens
+        env:
+          PW_COVER_SLUGS: ${{ github.event.inputs.slugs || '' }}
+          PW_COVER_LIMIT: ${{ github.event.inputs.limit || '12' }}
+        run: node scripts/capture-covers.mjs
+      - name: Commit only verified screenshot files
+        run: |
+          git add -- 'covers/*.jpg'
+          if git diff --cached --quiet; then
+            echo "No new screens; all captures either exist or did not meet the image gate."
+            exit 0
+          fi
+          git config user.name 'pocket-works-cover-bot'
+          git config user.email 'pocket-works-cover-bot@users.noreply.github.com'
+          git commit -m 'chore(covers): record genuine app screenshots [skip ci]'
+          git push origin HEAD:main

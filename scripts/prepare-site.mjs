@@ -15,7 +15,7 @@ const WASM_CHUNK_SIZE=16*1024*1024;
 // Each app still precaches its own references for independent offline launch.
 const sharedGodotEngines=new Map();
 const rootFiles=[
-  'index.html','styles.css','launcher-performance.css','launcher-sync.css','app.js',
+  'index.html','styles.css','deck-shell.css','launcher-performance.css','launcher-sync.css','app.js',
   'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js',
   'manifest.webmanifest','sw.js'
 ];
@@ -286,6 +286,29 @@ await copyDirectoryFiltered(
   path.join(output,'shared'),
   (relative,entry)=>!shouldPublishSharedPath(relative,entry.isDirectory())
 );
+
+// The launcher displays original captured application screens, never synthetic art.
+const coversDir=path.join(output,'covers');
+await mkdir(coversDir,{recursive:true});
+const coversIndex={};
+const sourceCovers=path.join(root,'covers');
+try{
+  for(const file of (await readdir(sourceCovers)).sort()){
+    if(!/^[a-z0-9-]+\.(?:jpg|jpeg|png|webp)$/.test(file))continue;
+    await cp(path.join(sourceCovers,file),path.join(coversDir,file));
+    coversIndex[file.replace(/\.(?:jpg|jpeg|png|webp)$/,'')]='./covers/'+file;
+  }
+}catch(error){if(error.code!=='ENOENT')throw error;}
+// A verified gameplay frame from CORVUS exists in the repository already.
+if(!coversIndex['corvus-yard']){
+  const screenshot=path.join(root,'apps/corvus-yard/qa/evidence/chromium-acceptance/chromium-flight.png');
+  try{
+    await access(screenshot);
+    await cp(screenshot,path.join(coversDir,'corvus-yard.png'));
+    coversIndex['corvus-yard']='./covers/corvus-yard.png';
+  }catch(error){if(error.code!=='ENOENT')throw error;}
+}
+await writeFile(path.join(coversDir,'index.json'),JSON.stringify(coversIndex,null,2)+'\n','utf8');
 
 const configs=await collectAppConfigs(root);
 const fingerprints=new Map();

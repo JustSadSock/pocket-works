@@ -191,6 +191,10 @@ for (const asset of [
   './shared/launcher-list-motion.css',
   './shared/launcher-list-motion.js',
   './launcher-performance.css',
+  './deck-shell.css',
+  './shared/deck-state.js',
+  './shared/pocket-deck.js',
+  './covers/index.json',
   './apps.json'
 ]) {
   requireText(worker, asset, 'sw.js APP_SHELL');
@@ -207,8 +211,8 @@ for (const token of [
 requireText(worker, "event.data?.type === 'GET_UPDATE_INFO'", 'sw.js managed updates');
 requireText(worker, "event.data?.type === 'SKIP_WAITING'", 'sw.js managed updates');
 
-if (manifest.background_color !== '#1d1c19' || manifest.theme_color !== '#201f1c') {
-  errors.push('manifest colors must match the tactile library surfaces #1d1c19 / #201f1c');
+if (manifest.background_color !== '#11191d' || manifest.theme_color !== '#11191d') {
+  errors.push('manifest colors must match the Pocket Deck surface #11191d');
 }
 
 if (registry.length === 0) {

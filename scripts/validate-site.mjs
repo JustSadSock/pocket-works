@@ -24,13 +24,26 @@ async function walkFiles(directory,prefix=''){
 }
 
 for(const file of [
-  'index.html','styles.css','launcher-performance.css','launcher-sync.css','app.js',
+  'index.html','styles.css','deck-shell.css','launcher-performance.css','launcher-sync.css','app.js',
   'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','manifest.webmanifest','sw.js','apps.json'
 ]){
   if(!(await exists(path.join(output,file))))errors.push(`dist-site is missing ${file}`);
 }
 for(const forbidden of ['node_modules','scripts','docs','package.json','wrangler.jsonc','launcher-update-all.js','launcher-update-all-v2.js']){
   if(await exists(path.join(output,forbidden)))errors.push(`dist-site must not publish ${forbidden}`);
+}
+
+// The cover manifest must never reference a non-existent or untrusted file.
+let coverIndex={};
+try{coverIndex=JSON.parse(await readFile(path.join(output,'covers/index.json'),'utf8'));}
+catch(error){errors.push(`dist-site/covers/index.json missing or invalid: ${error.message}`);}
+for(const [slug,cover] of Object.entries(coverIndex)){
+  if(!/^[a-z0-9-]{1,96}$/.test(slug) ||
+     typeof cover!=='string' ||
+     !/^\.\/covers\/[a-z0-9-]+\.(?:jpg|jpeg|png|webp)$/.test(cover)){
+    errors.push(`invalid cover entry for ${slug}`);continue;
+  }
+  if(!(await exists(path.join(output,cover.replace(/^\.\//,'')))))errors.push(`missing screenshot cover for ${slug}`);
 }
 
 let registry=[];
