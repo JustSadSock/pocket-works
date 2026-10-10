@@ -21,7 +21,7 @@
   "themeColor": "#30382e",
   "orientation": "portrait",
   "cacheName": "doctrina-v2.0.0",
-  "storageNamespace": "pocket-works:doctrina:atlas:v2",
+  "storageNamespace": "pocket-works:doctrina",
   "tags": [
     "PWA",
     "offline",
