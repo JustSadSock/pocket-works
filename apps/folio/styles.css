@@ -167,3 +167,9 @@ button svg,a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-wid
 .work-delete{position:absolute;right:5px;bottom:11px;width:35px;height:35px;display:grid;place-items:center;background:#d9cbb5d9;border:1px solid #bba98f;color:#4f5d4f}
 .work-delete svg{width:17px;height:17px}
 .work-card h3{padding-right:39px}
+
+.hand-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:14px 0 3px;padding:12px 0;border-top:1px solid #ccbaa1}
+.hand-row span{font-size:11px;font-weight:700;flex:1;min-width:120px}
+.hand-row button{min-height:40px;background:#d6c3a8;padding:0 13px;font-size:12px}
+.hand-row button.active{background:#2c433a;color:#f1e7d6}
+.modal-backdrop{padding-bottom:calc(22px + var(--app-keyboard-inset,0px))}
