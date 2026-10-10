@@ -46,7 +46,7 @@ function setTab(tab){
 function percent(id,value){$(id).style.width=CLAMP(value)+'%'}
 function renderStats(){
  $('peaceValue').textContent=state.peace;$('lawValue').textContent=state.law;
- percent('peaceFill',state.peace);percent('lawFill',state.law);
+ percent('peaceFill',state.peace);percent('lawFill',state.law);$('favorValue').textContent=state.favor;percent('favorFill',state.favor);
 }
 function renderCase(){
  renderStats();const section=$('caseView');
@@ -88,7 +88,7 @@ function renderMap(){
  let base=`<defs><pattern id="mapsand" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M2 3h2M9 11h3" stroke="#9e9b7f" stroke-width=".8" opacity=".3"/></pattern><linearGradient id="water"><stop stop-color="#7c9d9c"/><stop offset="1" stop-color="#4f7887"/></linearGradient></defs><rect width="330" height="378" fill="#8c948c"/><rect width="330" height="378" fill="url(#mapsand)"/><path d="M7 0Q45 26 32 78T9 179T23 300T8 378" stroke="#4c7c81" stroke-width="15" fill="none" opacity=".6"/><path d="M312 4Q287 84 318 161T315 282T330 378" stroke="#598e8c" stroke-width="19" fill="none" opacity=".5"/>`;
  for(let i=0;i<REGIONS.length;i++){
   const r=REGIONS[i],h=state.houses[state.owners[i]],fill=TINCTURES[h.arms.field].hex,stroke=i===state.selectedRegion?'#fff2c7':'#ebd3a2';
-  base+=`<path data-region="${i}" tabindex="0" role="button" aria-label="${r.name}, владение ${h.name}" d="${r.path}" fill="${fill}" fill-opacity=".91" stroke="${stroke}" stroke-width="${i===state.selectedRegion?4:1.8}"/><text x="${r.x}" y="${r.y}" text-anchor="middle">${h.short}</text>`;
+  base+=`<path data-region="${i}" tabindex="0" role="button" aria-label="${r.name}, владение ${h.name}" d="${r.path}" fill="${fill}" fill-opacity=".91" style="stroke:${stroke};stroke-width:${i===state.selectedRegion?4:1.8}px"/><text x="${r.x}" y="${r.y}" text-anchor="middle">${h.short}</text>`;
  }
  base+=`<path d="M57 38 119 23 188 29 264 48 281 108 291 171 297 240 267 307 210 346 144 354 101 328 94 297 33 273 23 219 32 165 53 102Z" fill="none" stroke="#d8b98a" stroke-width="3"/><path d="M39 24v23m-11-11h22" stroke="#e6d7af" stroke-width="2"/><text x="33" y="21" font-size="12">N</text><text x="167" y="368" font-size="9" text-anchor="middle">REGNVM ELLARI · ANNO ${state.done?1309:CASES[state.caseIndex].year}</text>`;
  $('realmMap').innerHTML=base;
@@ -154,6 +154,8 @@ function confirmVerdict(){
 }
 function resultEnding(){
  if(state.peace<=13||state.law<=12)return {title:'Раскол королевства',text:'Вассалы отвергли реестр. Грамоты перестали защищать права, и Эллар раскололся на враждующие земли.'};
+ if(state.favor>=75&&state.peace>=30&&state.law>=20)return {title:'Железная корона',text:'Земли покорны государю, но решение каждого нового спора зависит от королевской милости, а не от старого закона.'};
+ if(state.favor<=22&&state.peace>=55&&state.law>=55)return {title:'Союз великих домов',text:'Сильные бароны защищают старые грамоты общим советом; королевская власть больше не правит единолично.'};
  if(state.peace>=72&&state.law>=72)return {title:'Век законных гербов',text:'Королевство вышло из смуты. Гербовник признан высшим свидетельством наследственного права.'};
  if(state.peace>=48&&state.law>=48)return {title:'Мир под старой печатью',text:'Королевство сохранилось, хотя многие бароны считают часть решений несправедливыми.'};
  return {title:'Хрупкая корона',text:'Королевство дожило до нового царствования, но каждую новую грамоту встречают подозрением.'};

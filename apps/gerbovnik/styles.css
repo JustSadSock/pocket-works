@@ -33,3 +33,5 @@
 .ending-panel p{font:16px/1.45 var(--serif);margin:17px 0 22px}
 .ending-panel button{display:block;width:100%;min-height:47px;margin:9px auto 0;background:#7f403b;border:1px solid #4f2e2b;color:#f5e4bf;font:800 11px var(--sans);letter-spacing:.08em}
 .ending-panel button:last-child{background:transparent;color:#7f403b}
+
+.realm-track{gap:8px;padding-left:10px;padding-right:10px}.realm-stat>span{font-size:7px;letter-spacing:.025em}.track-seal{display:none}.crown-stat .meter i{background:#aa815f}
