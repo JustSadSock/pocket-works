@@ -1,4 +1,4 @@
-import {PROVINCES,FACTIONS,EDICTS,LAWS,DIPLOMACY,PETITIONS,newGame,validState,governmentName,enactEdict,enactLaw,foreignAction,choosePetition,endTurn,scoreState,warnings} from './core-v2.js';
+import {PROVINCES,FACTIONS,EDICTS,LAWS,TECHNOLOGIES,DIPLOMACY,PETITIONS,newGame,validState,governmentName,enactEdict,enactLaw,research,foreignAction,choosePetition,endTurn,scoreState,warnings} from './core-v2.js';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 const SAVE_KEY='pocket-works:doctrina:atlas:v2';
@@ -6,9 +6,10 @@ const root=document.getElementById('app');
 const safe=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function restore(){try{const v=JSON.parse(localStorage.getItem(SAVE_KEY));return validState(v)?v:null;}catch{return null;}}
 const saved=restore();
+let noticeTimer=0;
 let state=saved||newGame('crown',1348),chosen='capital',page='council',modal=saved?(state.phase==='finished'?'end':null):'start',notice='',soundContext;
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch{notify('Не удалось сохранить — хранилище заполнено.');}}
-function notify(message){notice=message;const el=document.querySelector('.toast');if(el){el.textContent=message;el.classList.add('show');}}
+function notify(message){notice=message;const el=root.querySelector('.toast');if(el){el.textContent=message;el.classList.add('show');}clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{notice='';root.querySelector('.toast')?.classList.remove('show');},3300);}
 function ping(f=420){if(state.flags?.sound===false)return;try{const Audio=window.AudioContext||window.webkitAudioContext;soundContext ||=new Audio();const o=soundContext.createOscillator(),g=soundContext.createGain();o.type='triangle';o.frequency.value=f;g.gain.value=.035;g.gain.exponentialRampToValueAtTime(.0001,soundContext.currentTime+.13);o.connect(g);g.connect(soundContext.destination);o.start();o.stop(soundContext.currentTime+.14);}catch{}}
 function act(result){if(!result.ok){ping(170);notify(result.message);return;}ping(420);save();if(state.phase==='finished')modal='end';else if(state.petition)modal='petition';render();notify(result.message);}
 const date=()=>['Весна','Лето','Осень','Зима'][(state.turn-1)%4]+' '+(1348+Math.floor((state.turn-1)/4));
@@ -46,7 +47,10 @@ function council(){
  ${LAWS.map(l=>{const active=state.laws.includes(l.id),need=l.requires.find(k=>!state.laws.includes(k));
  return `<button class="law ${active?'adopted':''}" data-law="${l.id}" ${active?'disabled':''}>
  <div><strong>${l.name}</strong><p>${l.desc}</p><small>${l.effects}</small>${need?`<small class="red">Необходим закон «${LAWS.find(x=>x.id===need).name}»</small>`:''}</div>
- <span>${active?'ПРИНЯТ':'−'+l.cost+' ✣'}</span></button>`;}).join('')}`;
+ <span>${active?'ПРИНЯТ':'−'+l.cost+' ✣'}</span></button>`;}).join('')}
+ <div class="subrule">ЗНАНИЯ И МАСТЕРСТВО <small>${(state.technologies||[]).length} ИЗ ${TECHNOLOGIES.length}</small></div>
+ ${TECHNOLOGIES.map(t=>{const active=(state.technologies||[]).includes(t.id),need=t.requires.find(k=>!(state.technologies||[]).includes(k));
+ return `<button class="law ${active?'adopted':''}" data-research="${t.id}" ${active?'disabled':''}><div><strong>${t.name}</strong><p>${t.desc}</p><small>${t.effect}</small>${need?`<small class="red">Необходимо: ${TECHNOLOGIES.find(x=>x.id===need).name}</small>`:''}</div><span>${active?'ОТКРЫТО':'−'+t.cost+' ✣'}</span></button>`;}).join('')}`;
 }
 
 function province(){
@@ -104,15 +108,16 @@ function render(){
  <footer class="desk-footer"><div class="seals"><small>ПЕЧАТИ</small><span>${[0,1].map(i=>`<i class="${i<state.ap?'ready':''}">✣</i>`).join('')}</span></div><button class="advance" data-next ${state.phase==='finished'?'disabled':''}>${state.phase==='finished'?'ПРАВЛЕНИЕ ОКОНЧЕНО':'ЗАВЕРШИТЬ СЕЗОН'} <b>→</b></button></footer>
  </section><div role="status" class="toast ${notice?'show':''}">${safe(notice)}</div>${popup()}</main>`;
  const box=root.querySelector('#pane-scroll');if(box)box.scrollTop=scroll;
- window.__AI_TEST_STATE__={app:'doctrina',version:'2.0.0',turn:state.turn,phase:state.phase,selected:chosen,tab:page,treasury:state.treasury,grain:state.grain,ap:state.ap,petition:!!state.petition,score:scoreState(state),laws:state.laws.length};
+ window.__AI_TEST_STATE__={app:'doctrina',version:'2.0.0',turn:state.turn,phase:state.phase,selected:chosen,tab:page,treasury:state.treasury,grain:state.grain,ap:state.ap,petition:!!state.petition,score:scoreState(state),laws:state.laws.length,technologies:(state.technologies||[]).length};
 }
 root.addEventListener('click',event=>{
- const t=event.target.closest('[data-start],[data-region],[data-tab],[data-law],[data-edict],[data-foreign],[data-petition],[data-next],[data-settings],[data-sound],[data-help],[data-close],[data-reset],[data-confirm-reset]');
+ const t=event.target.closest('[data-start],[data-region],[data-tab],[data-law],[data-research],[data-edict],[data-foreign],[data-petition],[data-next],[data-settings],[data-sound],[data-help],[data-close],[data-reset],[data-confirm-reset]');
  if(!t)return;
  if(t.dataset.start){state=newGame(t.dataset.start,Date.now());chosen='capital';page='council';modal=null;save();ping();render();notify('Власть учреждена. Подпишите первый указ.');return;}
- if(t.dataset.region){chosen=t.dataset.region;page='province';ping(260);render();return;}
- if(t.dataset.tab){page=t.dataset.tab;ping(290);render();return;}
+ if(t.dataset.region){chosen=t.dataset.region;page='province';const pane=root.querySelector('#pane-scroll');if(pane)pane.scrollTop=0;ping(260);render();return;}
+ if(t.dataset.tab){page=t.dataset.tab;const pane=root.querySelector('#pane-scroll');if(pane)pane.scrollTop=0;ping(290);render();return;}
  if(t.dataset.law){act(enactLaw(state,t.dataset.law));return;}
+ if(t.dataset.research){act(research(state,t.dataset.research));return;}
  if(t.dataset.edict){act(enactEdict(state,chosen,t.dataset.edict));return;}
  if(t.dataset.foreign){act(foreignAction(state,t.dataset.foreign,t.dataset.kind));return;}
  if(t.hasAttribute('data-petition')){const result=choosePetition(state,Number(t.dataset.petition));modal=null;act(result);return;}
