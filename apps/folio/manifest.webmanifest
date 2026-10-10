@@ -1,0 +1,24 @@
+{
+  "id": "/apps/folio/",
+  "name": "FOLIO — Мастерская рисунка",
+  "short_name": "FOLIO",
+  "description": "Тактильная рисовальная мастерская для пальца: живые кисти, точное остриё, слои, палитры и личный альбом.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#e6dcc9",
+  "theme_color": "#e6dcc9",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
