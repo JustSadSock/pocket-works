@@ -48,3 +48,44 @@ function council(){
  <div><strong>${l.name}</strong><p>${l.desc}</p><small>${l.effects}</small>${need?`<small class="red">Необходим закон «${LAWS.find(x=>x.id===need).name}»</small>`:''}</div>
  <span>${active?'ПРИНЯТ':'−'+l.cost+' ✣'}</span></button>`;}).join('')}`;
 }
+
+function province(){
+ const p=PROVINCES.find(p=>p.id===chosen),d=state.provinces.find(x=>x.id===chosen);
+ return `<div class="section-rule"><b>Ⅱ · ВЛАДЕНИЯ КОРОНЫ</b><span>ПРИКАЗЫ И ПОДАТИ</span></div>
+ <div class="province-heading"><div class="roman-number">${String(PROVINCES.indexOf(p)+1).padStart(2,'0')}</div><div><small>${p.kind} · ${p.resource}</small><h2>${p.name}</h2></div><span class="region-flower">✥</span></div>
+ <div class="measures"><div>ВЕРНОСТЬ<strong>${d.loyalty}</strong></div><div>СМУТА<strong class="${d.unrest>55?'red':''}">${d.unrest}</strong></div><div>ДОСТАТОК<strong>${d.wealth}</strong></div><div>СТЕНЫ<strong>${d.fort}/5</strong></div></div>
+ <div class="subrule">УКАЗЫ В ${p.name.toUpperCase()} <small>1 ПЕЧАТЬ</small></div>
+ ${EDICTS.map(d=>`<button class="edict" data-edict="${d.id}"><span class="edict-symbol">✣</span><div><strong>${d.name}</strong><p>${d.detail}</p></div><span>${d.tag}</span></button>`).join('')}`;
+}
+function diplomacy(){
+ return `<div class="section-rule"><b>Ⅲ · ВНЕШНИЕ ДВОРЫ</b><span>ПОСОЛЬСКАЯ ПАЛАТА</span></div>
+ <p class="intro-note">Отношения ниже −55 грозят нападением. Укрепления и численность дружины определяют исход набега.</p>
+ ${DIPLOMACY.map(d=>{const value=state.diplomacy[d.id];return `<article class="foreign">
+ <div class="foreign-header"><span class="foreign-icon">${d.id==='sea'?'≋':d.id==='west'?'✥':'✦'}</span><div><small>${d.motto}</small><strong>${d.name}</strong></div><b class="${value<0?'red':''}">${value>0?'+':''}${value}</b></div>
+ <div class="relation"><i style="width:${(value+100)/2}%"></i></div>
+ <div class="foreign-actions"><button data-foreign="${d.id}" data-kind="envoy">Посольство <small>−8</small></button><button data-foreign="${d.id}" data-kind="tribute">Дары <small>−18</small></button><button data-foreign="${d.id}" data-kind="threat">Угроза</button></div></article>`;}).join('')}`;
+}
+function chronicle(){
+ return `<div class="section-rule"><b>Ⅳ · ЛЕТОПИСЬ</b><span>${state.log.length} ЗАПИСЕЙ</span></div>
+ <div class="annals">${state.log.map(n=>`<article class="annal ${n.type}"><small>ЛЕТО ${1348+Math.floor((n.turn-1)/4)} · ${['I','II','III','IV'][(n.turn-1)%4]}</small><p>${safe(n.text)}</p></article>`).join('')}</div>`;
+}
+const pane=()=>page==='province'?province():page==='diplomacy'?diplomacy():page==='chronicle'?chronicle():council();
+function popup(){
+ if(modal==='start')return `<div class="veil"><section class="dialog start" role="dialog" aria-modal="true"><div class="initial-mark">✣</div><small class="eyebrow">ДОКТРИНА · КНИГА ПЕРВАЯ</small><h1>Семь земель.<br><em>Одна печать.</em></h1>
+ <p>1348 год. Прежняя держава распалась. Выберите основу новой власти и удержите престол двадцать четыре сезона.</p>
+ <div class="charters">
+ <button data-start="crown"><b>01 <span>Корона Ардена</span></b><small>Сбалансированная власть, казна и войско.</small><em>ЗНАТЬ · ПРЕСТОЛ</em></button>
+ <button data-start="league"><b>02 <span>Союз Семи Градов</span></b><small>Торговля и богатые города, но слабый центр.</small><em>ГИЛЬДИИ · СЕРЕБРО</em></button>
+ <button data-start="abbey"><b>03 <span>Священная марка</span></b><small>Сильное духовенство и полные житницы, мало воинов.</small><em>ВЕРА · ХЛЕБ</em></button></div><a class="exit-link" href="../../">← В POCKET WORKS</a>
+ </section></div>`;
+ if(modal==='petition'||state.petition){const e=PETITIONS[state.petition?.id];if(!e)return '';
+ return `<div class="veil"><section class="dialog petition" role="dialog" aria-modal="true"><small class="eyebrow">ПРОШЕНИЕ ВЕЛИКОМУ СОВЕТУ</small><span class="wax">✣</span><h2>${e.title}</h2><p>${e.body}</p>
+ <button class="dialog-action primary" data-petition="0"><b>ПОДПИСАТЬ</b><span>${e.a.name}</span></button>
+ <button class="dialog-action" data-petition="1"><b>ОТКАЗАТЬ</b><span>${e.b.name}</span></button>
+ <small class="dialog-foot">Выбор навсегда войдёт в летопись правления.</small></section></div>`;}
+ if(modal==='end')return `<div class="veil"><section class="dialog ending" role="dialog" aria-modal="true"><small class="eyebrow">ПОСЛЕДНЯЯ СТРАНИЦА</small><div class="end-score">${scoreState(state)}</div><h2>Правление окончено</h2><p>${state.summary}</p><button class="dialog-action primary" data-close>ЧИТАТЬ ЛЕТОПИСЬ</button><button class="dialog-action" data-reset>НОВАЯ ДИНАСТИЯ</button></section></div>`;
+ if(modal==='reset')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">СЛОМАТЬ ПЕЧАТЬ</small><h2>Начать заново?</h2><p>Нынешняя кампания будет заменена. Архив старой ДОКТРИНЫ 0.1 не удаляется.</p><button class="dialog-action primary" data-confirm-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action" data-close>ОТМЕНА</button></section></div>`;
+ if(modal==='help')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПОСОБИЕ ПРАВИТЕЛЯ</small><h2>Две печати на сезон</h2><p>Нажимайте на землю, чтобы издать местный указ. В Совете принимайте законы, а во внешних дворах отправляйте посольства. Каждое действие расходует одну печать.</p><p>Завершите сезон, чтобы получить доход, содержать войско и узнать об угрозах. Следите за хлебом, легитимностью, смутой, поддержкой сословий и летописью решений.</p><button class="dialog-action primary" data-close>ПОНЯТНО</button></section></div>`;
+ if(modal==='settings')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПАЛАТА ПИСЦА</small><h2>Настройки</h2><button class="dialog-action" data-sound>${state.flags?.sound===false?'ВКЛЮЧИТЬ ЗВУК':'ВЫКЛЮЧИТЬ ЗВУК'}</button><button class="dialog-action" data-help>ПРАВИЛА ИГРЫ</button><button class="dialog-action" data-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action primary" data-close>К КАРТЕ</button></section></div>`;
+ return '';
+}
