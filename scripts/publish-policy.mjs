@@ -14,7 +14,9 @@ const ROOT_FILES = new Set([
   'progress.md', 'visual-direction.json', '.env', '.env.example'
 ]);
 const SOURCE_EXTENSIONS = /(?:\.map|\.py|\.pyc|\.blend\d*|\.psd|\.aseprite|\.gd|\.ts|\.tsx|\.log|\.md)$/i;
-const TEST_PATTERN = /(?:^|\/)(?:[^/]+\.)?(?:test|spec)\.(?:js|mjs|cjs)$/i;
+// spec.js can be product data (FORMA). Tests use a .test/.spec suffix
+// or live in a directory excluded above.
+const TEST_PATTERN = /(?:^|\/)[^/]+\.(?:test|spec)\.(?:js|mjs|cjs)$/i;
 
 export function shouldPublishAppPath(relative, isDirectory = false) {
   const parts = relative.split(/[\\/]+/).filter(Boolean);

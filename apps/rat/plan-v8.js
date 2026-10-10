@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const VERSION = '2.1.0';
-  const EXPECTED_LENGTH = 23598;
+  const EXPECTED_LENGTH = 23599;
   const PARTS = Array.from({ length: 10 }, (_, index) => `./plan-v8-source-${index + 1}.part`);
   async function readPart(path) {
     try {

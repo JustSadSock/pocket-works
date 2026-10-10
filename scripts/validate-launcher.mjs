@@ -76,7 +76,10 @@ for (const reference of [
   requireText(html, reference, 'index.html');
 }
 
-requireText(html, 'maximum-scale=1', 'index.html viewport');
+const maximumScale = html.match(/maximum-scale\s*=\s*([\d.]+)/i);
+if ((maximumScale && Number(maximumScale[1]) < 2) || /user-scalable\s*=\s*(?:no|0)/i.test(html)) {
+  errors.push('index.html viewport must allow accessible browser zoom');
+}
 requireText(html, 'data-app-shell', 'index.html');
 requireText(html, 'data-filter="favorites"', 'index.html');
 requireText(html, 'data-filter="recent"', 'index.html');

@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCampaignFile } from '../parser-v2.js';
+import { parseCampaignFile, SaveParseError } from '../parser-v2.js';
+
+test('the browser parser entrypoint exports its typed failure', () => {
+  assert.equal(new SaveParseError('bad save', 'INVALID').message, 'bad save');
+});
 
 const SAMPLE = `EU5txt
 meta_data={ date=1450.1.2 start_date=1337.1.1 player=POL version="1.0.4" }

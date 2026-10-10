@@ -36,3 +36,16 @@ MELT//CRYPT's TypeScript facade resolves a separately named JavaScript runtime
 instead of resolving back to itself. Plain Node assertion suites run under Node,
 and SIROCCO's Vitest suite collects only its TypeScript tests. RELIC SIEGE now
 checks the actual imported GLB geometry and gameplay audio streams.
+
+Exploratory browser QA exposed historical startup failures during the metadata
+migration. Runtime `src/spec.js` files are retained by publication policy;
+CLADA concatenates exact text fragments without inserting code into tokens;
+CHANCELLERY exports its parser error; EMERGENCE LAB's clamp is available during
+initialization; PALIMPSEST bounds its animation progress; and RAT tolerates the
+removed legacy setup readout and checks the actual shipped plan packet length.
+These failures are repaired rather than added to the validation ledger.
+
+Lighthouse evidence also identified a launcher layout shift during late Deck
+activation and two accessibility failures. The initial HTML uses its final Deck
+layout, density selection updates only buttons (not the HTML root), and the
+launcher viewport allows zoom. Lighthouse budgets remain unchanged.

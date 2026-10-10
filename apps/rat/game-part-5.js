@@ -42,7 +42,10 @@ function renderSetup() {
     slot.innerHTML = config ? setupMiniFormation(config) : '';
   });
   const score = persistent.setup.reduce((value, item) => value + (item.slot === 'center' ? 1 : 0), 0);
-  $('#setupBalance').textContent = score === 1 ? 'ровный' : score > 1 ? 'плотный центр' : 'широкий';
+  // The v6 setup replaces the legacy balance readout; older render wrappers
+  // still call this function while installing the current interface.
+  const balanceReadout = $('#setupBalance');
+  if (balanceReadout) balanceReadout.textContent = score === 1 ? 'ровный' : score > 1 ? 'плотный центр' : 'широкий';
   bindRegimentCards();
 }
 

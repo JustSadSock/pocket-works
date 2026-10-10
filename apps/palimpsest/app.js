@@ -325,7 +325,7 @@ function drawMap(timestamp = performance.now()) {
       ctx.stroke();
     }
     if (pulseStateIds.includes(state.id) && timestamp < animationUntil) {
-      const t = 1 - (animationUntil - timestamp) / 420;
+      const t = Math.max(0, Math.min(1, 1 - (animationUntil - timestamp) / 420));
       ctx.beginPath();
       ctx.arc(point.x, point.y, 9 + t * 25, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(159, 53, 43, ${1 - t})`;
