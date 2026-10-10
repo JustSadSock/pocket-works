@@ -1,12 +1,20 @@
 {
-  "name": "ПЕПЕЛЬНИК — Pocket Works",
+  "name": "ПЕПЕЛЬНИК",
   "short_name": "ПЕПЕЛЬНИК",
-  "description": "Вертикальная пиксельная RPG-рогалик о мёртвом рыцаре.",
+  "description": "Вертикальная пиксельная RPG-рогалик о мёртвом рыцаре, который собирает осколки воли в семи залах Пепельника.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#17130f",
   "theme_color": "#17130f",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "/apps/pepelnick/"
 }

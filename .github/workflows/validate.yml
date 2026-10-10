@@ -161,6 +161,15 @@ jobs:
       - name: Validate browser quality contract
         run: npm run validate:quality
 
+      - name: Upload explicit legacy validation debt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-validation-debt
+          path: quality-artifacts/validation-debt
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Test published Enhanced apps
         run: npm run test:enhanced
 

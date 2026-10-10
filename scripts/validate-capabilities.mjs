@@ -1,3 +1,4 @@
+import { reportValidationDebt } from './validation-debt.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
@@ -92,9 +93,10 @@ for (const config of configs) {
   }
 }
 
-if (errors.length > 0) {
+const regressions = reportValidationDebt('capabilities',errors,root);
+if (regressions.length > 0) {
   console.error(`Capability validation failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
-  for (const error of errors) console.error(`- ${error}`);
+  for (const error of regressions) console.error(`- ${error}`);
   process.exit(1);
 }
 

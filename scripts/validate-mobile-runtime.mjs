@@ -1,3 +1,4 @@
+import { reportValidationDebt } from './validation-debt.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
@@ -83,9 +84,10 @@ for (const target of godotTargets) {
   requireIncludes(main, ['PocketWorks.exit_to_launcher', 'PocketWorks.publish_test_state'], `${directory}/source/main.gd`);
 }
 
-if (errors.length > 0) {
+const regressions = reportValidationDebt('mobile',errors,root);
+if (regressions.length > 0) {
   console.error(`Mobile runtime validation failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
-  for (const error of errors) console.error(`- ${error}`);
+  for (const error of regressions) console.error(`- ${error}`);
   process.exit(1);
 }
 

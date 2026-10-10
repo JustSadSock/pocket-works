@@ -4,7 +4,7 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url:string; revision?:string }> };
-const APP_VERSION='1.2.0'; const CACHE_PREFIX='corvus-yard-';
+const APP_VERSION="1.2.0"; const CACHE_PREFIX='corvus-yard-';
 setCacheNameDetails({prefix:'corvus-yard',suffix:`v${APP_VERSION}`,precache:'precache',runtime:'runtime'});
 precacheAndRoute(self.__WB_MANIFEST);cleanupOutdatedCaches();registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
 self.addEventListener('message',(event)=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:'2026-10-01',releaseNotes:['Сложенные крылья, мягкая посадка и новые водные блики.']});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});

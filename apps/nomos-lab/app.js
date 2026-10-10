@@ -15,3 +15,4 @@ style.textContent=css;
 document.head.append(style);
 const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
 try{await import(url)}finally{URL.revokeObjectURL(url)}
+import('../../shared/update-manager.js').then(({ registerManagedServiceWorker }) => registerManagedServiceWorker({ path: './sw.js', currentVersion: '2.1.0', renderPrompt: false })).catch(error => console.warn('Offline installation unavailable', error));

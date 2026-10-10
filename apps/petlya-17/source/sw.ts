@@ -6,7 +6,7 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'petlya-17-';
-const CACHE_NAME = 'petlya-17-v3.0.0';
+const CACHE_NAME = 'petlya-17-v3.1.1';
 const APP_VERSION = '3.0.0';
 const RELEASE_DATE = '2026-07-14';
 const RELEASE_NOTES = [

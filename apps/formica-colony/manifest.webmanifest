@@ -1,8 +1,8 @@
 {
   "name": "FORMICA // COLONY",
   "short_name": "FORMICA",
-  "description": "Живая 2D-симуляция муравьиной колонии с физическими ресурсами и автономным поведением.",
-  "id": "./",
+  "description": "Живой 2D-симулятор муравьиной колонии: физическая пища, постепенное рытьё грунта, феромоны, расплод и самостоятельная экосистема.",
+  "id": "/apps/formica-colony/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "background_color": "#e8dcc1",
   "theme_color": "#e8dcc1",
   "icons": [
-    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

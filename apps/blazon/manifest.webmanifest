@@ -1,12 +1,20 @@
 {
-  "name":"БЛАЗОН: Доктрина",
-  "short_name":"БЛАЗОН",
-  "id":"/apps/blazon/",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "background_color":"#070d0a",
-  "theme_color":"#0c1510",
-  "orientation":"portrait",
-  "icons":[{"src":"./icons/icon.svg?pw_release=5.10.0","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "БЛАЗОН: Доктрина",
+  "short_name": "БЛАЗОН",
+  "id": "/apps/blazon/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070d0a",
+  "theme_color": "#0c1510",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg?pw_release=5.10.0",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Автономная полевая битва равных армий, где герб растёт от простого щита основателя до полного геральдического достижения и каждая эволюция фигуры меняет поведение живого фронта."
 }

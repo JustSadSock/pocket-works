@@ -2,15 +2,24 @@
   "id": "/apps/perelist/",
   "name": "ПЕРЕЛИСТ",
   "short_name": "ПЕРЕЛИСТ",
-  "description": "Два листа: текст и числа.",
+  "description": "Два листа в одном жесте: свободный оформляемый текст на первом и редактируемые числа на втором, с автосохранением.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#e4ddd0",
   "theme_color": "#26333a",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

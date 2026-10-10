@@ -2,7 +2,7 @@
   "id": "/apps/sled/",
   "name": "СЛЕД",
   "short_name": "СЛЕД",
-  "description": "Чистая дуэль о разрезании связности: обрушивай отрезанные области, разделяй поле и запирай соперника.",
+  "description": "Чистая дуэль о разрезании связности: двигай камень, обрушивай отрезанные области и запирай соперника на шестиугольном поле.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +10,17 @@
   "background_color": "#e8e0cf",
   "theme_color": "#e8e0cf",
   "lang": "ru",
-  "categories": ["games", "strategy", "entertainment"],
+  "categories": [
+    "games",
+    "strategy",
+    "entertainment"
+  ],
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

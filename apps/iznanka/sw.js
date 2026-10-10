@@ -1,4 +1,4 @@
-const CACHE = 'iznanka-v1.0.0';
+const CACHE_NAME = 'iznanka-v1.0.0';
 const PREFIX = 'iznanka-';
 const ASSETS = [
   './',
@@ -25,13 +25,13 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(PREFIX) && key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok && (url.pathname.includes('/apps/iznanka/') || url.pathname.includes('/shared/mobile-runtime'))) {
             const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
           return response;
         })

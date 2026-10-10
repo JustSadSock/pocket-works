@@ -1,8 +1,8 @@
 {
-  "id": "./",
+  "id": "/apps/gloamstep/",
   "name": "GLOAMSTEP",
   "short_name": "GLOAMSTEP",
-  "description": "Компактный мобильный пошаговый рогалик на пять этажей.",
+  "description": "Компактный пошаговый рогалик: пять процедурных этажей, туман войны, реликвии, пермадес и финальный Страж Пепла.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

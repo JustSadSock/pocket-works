@@ -2,11 +2,15 @@
   "id": "/apps/poryadok/",
   "name": "ПОРЯДОК",
   "short_name": "ПОРЯДОК",
-  "description": "Интерактивная лаборатория масштаба от протона до наблюдаемой Вселенной.",
+  "description": "Интерактивная лаборатория масштаба: путешествие от протона до наблюдаемой Вселенной, сравнение объектов и кубы материалов одинаковой массы.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#e8e1d1",
   "theme_color": "#e8e1d1",

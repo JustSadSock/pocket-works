@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'tempo-';
-const CACHE_NAME = 'tempo-v1.3.0-fix1';
+const CACHE_NAME = 'tempo-v1.3.0';
 const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-08-07';
 const CACHE_PROTOCOL = 3;

@@ -1,13 +1,20 @@
 {
   "id": "/apps/nomos-lab/",
-  "name": "НОМОС — лаборатория государств",
+  "name": "НОМОС",
   "short_name": "НОМОС",
-  "description": "Живая лаборатория возникновения государств и общественных систем.",
+  "description": "Живая политико-экономическая лаборатория с устойчивой дипломатией: государства накапливают причины конфликтов, ведут ограниченные войны, заключают перемирия и распадаются только после затяжных кризисов.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#e7dcc0",
   "theme_color": "#27231d",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

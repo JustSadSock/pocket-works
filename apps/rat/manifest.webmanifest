@@ -1,8 +1,8 @@
 {
-  "id": "./",
+  "id": "/apps/rat/",
   "name": "РАТЬ",
   "short_name": "РАТЬ",
-  "description": "Живая тактическая дуэль маленьких армий с предбоевым построением и переключаемыми способами командования.",
+  "description": "Живая тактическая игра о пяти полках: соберите армию, увидьте настоящую карту до сигнала, раздайте каждому полку первый приказ и вмешивайтесь редкими командами после начала сражения.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "background_color": "#26352e",
   "theme_color": "#26352e",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

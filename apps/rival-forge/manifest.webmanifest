@@ -1,14 +1,25 @@
 {
   "id": "/apps/rival-forge/",
-  "name": "RIVAL FORGE — Match-Aware Team Builder",
+  "name": "RIVAL FORGE",
   "short_name": "RIVAL FORGE",
-  "description": "Конструктор пати Marvel Rivals с контекстом карты, контрпиками и локальной метой группы.",
+  "description": "Мобильный конструктор Marvel Rivals для конкретной компании: профили игроков, карта и сторона, известные вражеские пики, контрзамены, дерево решений, история матчей и локальная мета.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#f3efe4",
   "theme_color": "#141518",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

@@ -4,7 +4,7 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
-const APP_VERSION='1.0.0';
+const APP_VERSION="1.0.0";
 const CACHE_PREFIX='veshchestvo-';
 setCacheNameDetails({prefix:'veshchestvo',suffix:`v${APP_VERSION}`,precache:'precache',runtime:'runtime'});
 precacheAndRoute(self.__WB_MANIFEST);

@@ -2,7 +2,7 @@
   "id": "/apps/seam/",
   "name": "ОСЬ",
   "short_name": "ОСЬ",
-  "description": "Тактическая дуэль формаций, толчков, резерва и борьбы за центр.",
+  "description": "Абстрактная тактическая дуэль: двигайте формации, толкайте линии, возвращайте резерв и победите удержанием центра или выбиванием Корня.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -12,8 +12,8 @@
     "minimal-ui"
   ],
   "orientation": "any",
-  "background_color": "#e8dfcf",
-  "theme_color": "#e8dfcf",
+  "background_color": "#e9e0d0",
+  "theme_color": "#e9e0d0",
   "icons": [
     {
       "src": "./icons/icon.svg",

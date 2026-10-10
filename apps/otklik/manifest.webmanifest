@@ -2,11 +2,15 @@
   "id": "/apps/otklik/",
   "name": "ОТКЛИК",
   "short_name": "ОТКЛИК",
-  "description": "Лаборатория акустики с формой комнаты по камере или AR и понятными картами голоса, баса и эха.",
+  "description": "Карманная лаборатория акустики: форма комнаты по камере или AR, понятные карты голоса, баса и эха, конкретные рекомендации.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#d8d1c2",
   "theme_color": "#d8d1c2",

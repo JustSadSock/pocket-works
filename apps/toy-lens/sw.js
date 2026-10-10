@@ -1,5 +1,5 @@
 const CACHE_NAME = 'toy-lens-v1.1.0';
-const CACHE_PREFIX = 'toy-lens-v';
+const CACHE_PREFIX = "toy-lens-";
 const APP_SHELL = [
   './',
   './index.html',

@@ -2,11 +2,15 @@
   "id": "/apps/faza/",
   "name": "ФАЗА",
   "short_name": "ФАЗА",
-  "description": "Абстрактная дуэль о трёх сменяющихся схемах связности, захватах и удержании пути.",
+  "description": "Турнирная абстрактная дуэль: ставьте камни, выключайте одну ось соседства, разрезайте группы и удерживайте путь через поле.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#e9e2d5",
   "theme_color": "#e9e2d5",

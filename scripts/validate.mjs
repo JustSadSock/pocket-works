@@ -1,3 +1,4 @@
+import { localScripts, hasWorkerRegistration, entrySources } from './pwa-entrypoints.mjs';
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
@@ -42,9 +43,12 @@ async function validateHtml(label, relativePath) {
   try { html = await readText(relativePath); }
   catch (error) { fail(`${label} could not be read: ${error.message}`); return; }
 
-  for (const reference of ['./manifest.webmanifest', './styles.css', './app.js']) {
-    if (!html.includes(reference)) fail(`${label} must reference ${reference}`);
+  for (const reference of ['./manifest.webmanifest', './styles.css']) {
+    if (!html.includes(reference) && !html.includes(reference.slice(2))) fail(`${label} must reference ${reference}`);
   }
+  const scripts = localScripts(html);
+  if (!scripts.length) fail(`${label} must reference an app-owned JavaScript entrypoint`);
+  for (const script of scripts) if (!(await exists(path.join(root,path.dirname(relativePath),script)))) fail(`${label} references missing entrypoint ${script}`);
   if (!/name=["']viewport["'][^>]*viewport-fit=cover/i.test(html)) fail(`${label} viewport meta must include viewport-fit=cover`);
 }
 
@@ -103,17 +107,18 @@ async function validateServiceWorker(label, relativePath, expectedPrefix, runtim
   const broadCleanup = /\.filter\s*\(\s*\(?\s*key\s*\)?\s*=>\s*key\s*!==\s*CACHE_NAME\s*\)/;
   if (broadCleanup.test(source)) fail(`${label} deletes caches without checking ownership; cleanup must be prefix-scoped`);
   if (source.includes('caches.keys()') && !source.includes('startsWith(')) fail(`${label} cache cleanup must use an ownership prefix`);
-  const shellFiles = runtime === 'godot' ? ['./index.html', './manifest.webmanifest'] : ['./index.html', './styles.css', './app.js', './manifest.webmanifest'];
+  const shellFiles = runtime === 'godot' ? ['./index.html', './manifest.webmanifest'] : ['./index.html', './styles.css', './manifest.webmanifest'];
+  if(runtime==='quick') {
+    const html=await readText(path.join(path.dirname(relativePath),'index.html'));
+    const scripts=localScripts(html);
+    for(const script of scripts) if(!source.includes(script) && !source.includes(script.slice(2))) fail(`${label} app shell must include entrypoint ${script}`);
+  }
   for (const shellFile of shellFiles) {
     if (!source.includes(shellFile)) fail(`${label} app shell must include ${shellFile}`);
   }
 }
 
-function validatesServiceWorkerRegistration(source, html) {
-  const directRegistration = source.includes("serviceWorker.register('./sw.js')") || source.includes('serviceWorker.register("./sw.js")');
-  const managedRegistration = html.includes('data-update-manager') && html.includes('data-service-worker="./sw.js"');
-  return directRegistration || managedRegistration;
-}
+const validatesServiceWorkerRegistration = hasWorkerRegistration;
 
 for (const relativePath of rootRequiredFiles) {
   if (!(await exists(path.join(root, relativePath)))) fail(`root launcher is missing ${relativePath}`);
@@ -195,7 +200,8 @@ for (const [index, app] of apps.entries()) {
     try {
       const appSource = await readText(path.join(appDirectory, 'app.js'));
       const appHtml = await readText(path.join(appDirectory, 'index.html'));
-      if (!validatesServiceWorkerRegistration(appSource, appHtml)) fail(`${app.slug} must register ./sw.js directly or through the managed update script`);
+      const reachableSources=await entrySources(path.join(root,appDirectory),appHtml);
+      if (!validatesServiceWorkerRegistration(appSource+'\n'+reachableSources, appHtml)) fail(`${app.slug} must register ./sw.js directly or through the managed update script`);
     } catch (error) {
       fail(`${app.slug} Service Worker registration could not be validated: ${error.message}`);
     }

@@ -5,7 +5,7 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX = 'firn-';
-const CACHE_NAME = 'firn-v1.0.0';
+const CACHE_NAME = 'firn-v1.2.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-09-08';
 const RELEASE_NOTES = [

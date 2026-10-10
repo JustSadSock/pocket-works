@@ -2,15 +2,24 @@
   "id": "/apps/glubina-13/",
   "name": "ГЛУБИНА 13",
   "short_name": "ГЛУБИНА 13",
-  "description": "Экспедиционный 3D-хоррор о подводной капсуле, сонаре, сокровищах и возвращении из бесконечных руин.",
+  "description": "Экспедиционный 3D-хоррор: веди капсулу через подводные руины, находи артефакты сонаром и возвращайся к шлюзу, пока Слушатель ищет последний шум.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#041012",
   "theme_color": "#041012",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

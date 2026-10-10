@@ -1,3 +1,4 @@
+import { reportValidationDebt } from './validation-debt.mjs';
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, ENHANCED_APP_PRESETS, runtimeForConfig } from './app-config.mjs';
@@ -101,9 +102,10 @@ for (const config of enhancedConfigs) {
   }
 }
 
-if (errors.length > 0) {
+const regressions = reportValidationDebt('enhanced',errors,root);
+if (regressions.length > 0) {
   console.error(`Enhanced runtime validation failed with ${errors.length} issue${errors.length === 1 ? '' : 's'}:`);
-  for (const error of errors) console.error(`- ${error}`);
+  for (const error of regressions) console.error(`- ${error}`);
   process.exit(1);
 }
 

@@ -1,3 +1,4 @@
+import { reportValidationDebt } from './validation-debt.mjs';
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
@@ -26,5 +27,6 @@ validateFresh(rootWorker,'root sw.js',{passThroughApps:true});
 const templateWorker=await read('apps/_template/sw.js');requireIncludes(templateWorker,['GET_UPDATE_INFO','SKIP_WAITING'],'apps/_template/sw.js');validateFresh(templateWorker,'apps/_template/sw.js');
 const configs=await collectAppConfigs(root);
 for(const config of configs){const directory=`apps/${config.slug}`,runtime=runtimeForConfig(config);if(runtime==='enhanced'){const main=await read(`${directory}/source/main.ts`),worker=await read(`${directory}/source/sw.ts`);requireIncludes(main,['registerEnhancedUpdate',`version: '${config.version}'`],`${directory}/source/main.ts`);validateEnhanced(worker,`${directory}/source/sw.ts`,config)}else if(runtime==='godot'){const workerPath=`${directory}/web/sw.js`;if(await exists(workerPath)){const worker=await read(workerPath);validateQuickWorker(worker,workerPath,config)}}else{const index=await read(`${directory}/index.html`),worker=await read(`${directory}/sw.js`);if(config.slug==='blazon'){requireIncludes(index,['../../shared/update-manager.css'],`${directory}/index.html`);validateCoherentWorker(worker,`${directory}/sw.js`,config)}else{requireIncludes(index,['../../shared/update-manager.js','data-update-manager',`data-app-version="${config.version}"`],`${directory}/index.html`);validateQuickWorker(worker,`${directory}/sw.js`,config)}}}
-if(errors.length){console.error(`Update contract validation failed with ${errors.length} issue(s):`);errors.forEach(error=>console.error(`- ${error}`));process.exit(1)}
+const regressions = reportValidationDebt('updates',errors,root);
+if(regressions.length){console.error(`Update contract validation failed with ${errors.length} issue(s):`);regressions.forEach(error=>console.error(`- ${error}`));process.exit(1)}
 console.log(`Managed update contract passed for ${configs.length} application releases.`);

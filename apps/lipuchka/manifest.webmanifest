@@ -2,11 +2,15 @@
   "id": "/apps/lipuchka/",
   "name": "ЛИПУЧКА",
   "short_name": "ЛИПУЧКА",
-  "description": "Тактильная антистресс-игра про липкий валик, ворс и подозрительно приятную уборку.",
+  "description": "Тактильная антистресс-игра про липкий валик: собирай ворс с ткани, снимай набившийся слой и открывай новые узоры без таймеров и поражений.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#eee4d0",
   "theme_color": "#2e5c5b",

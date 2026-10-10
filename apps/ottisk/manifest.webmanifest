@@ -2,11 +2,15 @@
   "id": "/apps/ottisk/",
   "name": "ОТТИСК",
   "short_name": "ОТТИСК",
-  "description": "Однопальцевая ризографическая залипалка про точное совмещение красочных слоёв и красивый печатный брак.",
+  "description": "Однопальцевая ризографическая залипалка: лови движущиеся красочные слои, собирай серии точных совмещений и печатай красивые несовершенные тиражи.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#eee6d4",
   "theme_color": "#173c42",

@@ -1,5 +1,5 @@
 const PREFIX='perigee-';
-const CACHE='perigee-v1.0.1-p2';
+const CACHE_NAME='perigee-v1.0.1-p2';
 const VERSION='1.0.1';
 const NOTES=["Исправлен увод композиции при жестах прицеливания на мобильных устройствах.","При обновлении Service Worker сохраняется текущая экспедиция, а не повторно появляется заставка.","Повторно проверена совместимость с iPhone WebKit и Chromium."];
 const ASSETS=['./','./index.html','./app.config.json','./styles.css','./app.js','./physics.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
@@ -8,19 +8,19 @@ const KEYS=new Map(ASSETS.map(path=>{const url=new URL(path,SCOPE);return [url.p
 function tagged(value){const url=new URL(value instanceof Request?value.url:value,SCOPE);url.searchParams.set('__pw_build',VERSION+'-p2');return url;}
 async function fresh(request){const response=await fetch(tagged(request),{cache:'no-store',credentials:'same-origin'});if(!response.ok)throw Error('Request failed: '+response.status);return response;}
 async function fromNetwork(request,canonical,fallback=canonical){
-  try{const response=await fresh(request);const cache=await caches.open(CACHE);await cache.put(canonical,response.clone());return response;}
+  try{const response=await fresh(request);const cache=await caches.open(CACHE_NAME);await cache.put(canonical,response.clone());return response;}
   catch{const result=await caches.match(canonical);return result||await caches.match(fallback)||Response.error();}
 }
 self.addEventListener('install',event=>event.waitUntil((async()=>{
-  const cache=await caches.open(CACHE);
+  const cache=await caches.open(CACHE_NAME);
   await Promise.all([...new Set(KEYS.values())].map(async url=>cache.put(url,await fresh(url))));
 })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
-  await Promise.all((await caches.keys()).filter(name=>name.startsWith(PREFIX)&&name!==CACHE).map(name=>caches.delete(name)));
+  await Promise.all((await caches.keys()).filter(name=>name.startsWith(PREFIX)&&name!==CACHE_NAME).map(name=>caches.delete(name)));
   await self.clients.claim();
 })()));
 self.addEventListener('message',event=>{
-  if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:VERSION,releaseDate:'2026-10-08',releaseNotes:NOTES,cacheProtocol:2,cacheName:CACHE});
+  if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:VERSION,releaseDate:'2026-10-08',releaseNotes:NOTES,cacheProtocol:2,cacheName:CACHE_NAME});
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
 self.addEventListener('fetch',event=>{
