@@ -120,6 +120,11 @@ test('launcher retains personal shelf state and reset requires a second confirma
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
   await expectExpandedLauncherList(page);
 
+  const releaseNotice = page.locator('[data-launcher-release-digest].is-visible [data-digest-close]');
+  if (await releaseNotice.isVisible()) {
+    await releaseNotice.click();
+    await expect(page.locator('[data-launcher-release-digest]')).not.toHaveClass(/is-visible/);
+  }
   const reset = page.locator('#reset-shelf');
   await reset.click();
   await expect(reset).toHaveText('Press again to reset');

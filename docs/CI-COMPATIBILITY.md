@@ -55,3 +55,6 @@ page. Real controller replacements keep the once-per-release reload guard.
 Screen Lab resolves version-query requests against its app-owned offline cache.
 Legacy catalog tests explicitly navigate from Home to Library before exercising
 the catalog, retaining all their assertions.
+The reset scenario dismisses the visible release digest through its normal
+button before accessing the footer; it still checks both confirmation presses
+and persisted favorites without forcing clicks through an overlay.
