@@ -1,0 +1,20 @@
+{
+  "id": "/apps/defixio/",
+  "name": "DEFIXIO — Латинские проклятия",
+  "short_name": "DEFIXIO",
+  "description": "Латинь, отлитая в свинце.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#251f1a",
+  "theme_color": "#251f1a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
