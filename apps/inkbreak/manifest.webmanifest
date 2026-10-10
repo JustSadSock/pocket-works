@@ -1,0 +1,25 @@
+{
+  "id": "/apps/inkbreak/",
+  "name": "ТУШЬ",
+  "short_name": "ТУШЬ",
+  "description": "Рисованный 3D-комикс: пробейся сквозь чернильную банду на крышах города.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#eee4cc",
+  "theme_color": "#eee4cc",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
