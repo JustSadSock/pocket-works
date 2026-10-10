@@ -7,7 +7,7 @@ type VisualEvidence = {
   schemaVersion: number;
   status: string;
   product: string;
-  architecture?: { comparisons?: Array<{ slug: string }> };
+  architecture?: { spatialLayout?: string; comparisons?: Array<{ slug: string }> };
   evidence: {
     entry: './';
     interaction: {
@@ -129,6 +129,20 @@ for (const target of targets) {
     await page.waitForTimeout(350);
     await capture(page, info, '01-first-frame');
     const targetTopology = await measureTopology(page);
+    const firstHeader = targetTopology.headers[0];
+    const stage = targetTopology.canvas[0];
+    // Check a claimed "unique" composition against actual element geometry.
+    // Full-bleed canvases with overlaid HUD do not satisfy the central-stage
+    // condition. The threshold intentionally targets the recurrent web shell.
+    const visiblyStacked = Boolean(firstHeader && stage &&
+      firstHeader[1] < .12 && firstHeader[3] < .2 &&
+      stage[1] > .12 && stage[3] > .24 && (stage[1] + stage[3]) < .83 &&
+      targetTopology.controlDistribution.bottom >= 2);
+    if (target.direction.schemaVersion === 2 && visiblyStacked) {
+      expect(target.direction.architecture?.spatialLayout,
+        'Rendered screen has a header, centered canvas and bottom controls. Do not disguise a repeated layout with different prose.')
+        .toBe('header-stage-footer');
+    }
     await performAndCapture(page, info, target.direction.evidence.interaction);
     await page.waitForTimeout(420);
     await capture(page, info, '03-settled-state');
