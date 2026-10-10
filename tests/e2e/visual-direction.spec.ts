@@ -146,6 +146,7 @@ for (const target of targets) {
     await performAndCapture(page, info, target.direction.evidence.interaction);
     await page.waitForTimeout(420);
     await capture(page, info, '03-settled-state');
+    expect(errors, `Browser errors during ${target.slug} visual proof`).toEqual([]);
     const neighbors = (target.direction.architecture?.comparisons || [])
       .map(item => item.slug).filter(slug => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)).slice(0, 2);
     const neighborTopologies = [];
@@ -169,7 +170,6 @@ for (const target of targets) {
       }, null, 2)),
       contentType: 'application/json'
     });
-    expect(errors, `Browser errors during ${target.slug} visual proof`).toEqual([]);
   });
 }
 
