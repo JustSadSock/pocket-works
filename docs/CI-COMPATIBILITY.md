@@ -58,3 +58,12 @@ the catalog, retaining all their assertions.
 The reset scenario dismisses the visible release digest through its normal
 button before accessing the footer; it still checks both confirmation presses
 and persisted favorites without forcing clicks through an overlay.
+
+Sync waits for an activated controller and verifies that first installation did
+not reload the page. Browser QA runs all four browser/orientation projects as
+separate CI jobs with distinct evidence artifacts, preserving every scenario
+and assertion while avoiding a combined 400-case run exceeding the 25-minute
+exploratory job limit. Exploratory automation pins both its image and package
+to Playwright 1.64.0. The KVARTA scenario stalled on native mouse input under
+the old 1.55 runner, while the identical scenario with video enabled completes
+in about four seconds under 1.64; no game input or video checks are bypassed.

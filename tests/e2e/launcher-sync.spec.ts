@@ -14,10 +14,11 @@ test('launcher Sync updates only already-installed application workers', async (
     return registrations.filter((registration) => new URL(registration.scope).pathname.includes('/apps/screen-lab/')).length;
   }), { timeout: 10_000 }).toBe(1);
 
-  // The release guard reloads once when the installed worker takes control.
-  // Finish that lifecycle before leaving the app, otherwise its navigation
-  // can interrupt the return to the launcher.
-  await expect(page).toHaveURL(/pw_controller=/, { timeout: 20_000 });
+  // First installation claims the current document without interrupting it.
+  // Wait for ownership rather than a reload URL that only real upgrades use.
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.state),
+    { timeout: 20_000 }).toBe('activated');
+  await expect(page).not.toHaveURL(/pw_controller=/);
   await page.waitForLoadState('load');
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });

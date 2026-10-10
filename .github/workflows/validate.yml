@@ -214,6 +214,10 @@ jobs:
   browser-quality:
     needs: health
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-mobile-portrait, webkit-mobile-portrait, chromium-mobile-landscape, webkit-mobile-landscape]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -233,13 +237,13 @@ jobs:
         run: npm run build:quality-site
 
       - name: Run Playwright mobile matrix
-        run: npm run test:e2e
+        run: npm run test:e2e -- --project="${{ matrix.project }}"
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: |
             playwright-report
             test-results
