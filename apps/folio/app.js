@@ -40,6 +40,7 @@ const stage=$('working-area');
 const canvas=$('artboard');
 const viewCtx=canvas.getContext('2d',{alpha:true});
 const supportsIDB=typeof indexedDB!=='undefined';
+const cloneData=(object)=>typeof structuredClone==='function'?structuredClone(object):JSON.parse(JSON.stringify(object));
 const escapeHTML=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function notify(message){
   const toast=$('toast');
@@ -230,9 +231,10 @@ function setCursor(e){
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
 function beginStroke(e){
-  const point=inputPoint(e);
-  const isInside=point[0]>=0&&point[0]<=state.doc.width&&point[1]>=0&&point[1]<=state.doc.height;
-  if(!isInside)return;
+  const tip=pointerTip(canvasPoint(e));
+  const rawPoint=screenDoc(tip.x,tip.y);
+  if(rawPoint[0]<0||rawPoint[0]>state.doc.width||rawPoint[1]<0||rawPoint[1]>state.doc.height)return;
+  const point=[rawPoint[0],rawPoint[1]];
   state.draft={
     id:uid(),layer:state.doc.activeLayer,tool:state.tool,brush:state.brush,
     color:state.color,size:state.size,opacity:state.opacity,points:[[...point,1]]
@@ -380,7 +382,7 @@ function renderSheet(){
   if(state.sheet==='color'){
     const colors=state.doc?.palette||palettes.atelier;
     body.innerHTML='<p class="sheet-subheading">ЦВЕТА ЭТОГО РИСУНКА</p><div class="palette-grid">'+colors.map(c=>'<button class="palette-chip '+(c.toLowerCase()===state.color.toLowerCase()?'is-active':'')+'" style="--chip:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('')+'</div><div class="color-picker-line"><input id="custom-color" type="color" value="'+state.color+'"><label for="custom-color">Свой оттенок<br><small>Выбери любой цвет спектра</small></label><button class="action-quiet" id="keep-color">В палитру +</button></div>';
-    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;updateToolUI();});
+    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;selectTool('brush');updateToolUI();});
     $('keep-color').onclick=()=>{
       if(!state.doc.palette.includes(state.color)){state.doc.palette.push(state.color);queueSave();notify('Цвет сохранён');}
       renderSheet();
@@ -397,7 +399,7 @@ function renderSheet(){
     body.innerHTML='<p class="sheet-footnote">PNG в исходном разрешении '+state.doc.width+' × '+state.doc.height+' пикселей. Слои сохраняются в редактируемом проекте FOLIO.</p><div class="sheet-actions"><button class="primary" id="do-png">Сохранить PNG</button><button id="do-copy">Копия проекта</button></div><div class="sheet-actions"><button id="do-delete">Удалить работу</button></div>';
     $('do-png').onclick=exportPNG;
     $('do-copy').onclick=async()=>{
-      const copy=structuredClone(state.doc);copy.id=uid();copy.title+=' — копия';copy.updatedAt=Date.now();
+      const copy=cloneData(state.doc);copy.id=uid();copy.title+=' — копия';copy.updatedAt=Date.now();
       await putWork(copy);notify('Копия добавлена в альбом');closeSheet();
     };
     $('do-delete').onclick=()=>showModal({title:'Удалить работу?',note:'Рисунок исчезнет из локального альбома. Это действие нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{const id=state.doc.id;await removeWork(id);state.doc=null;closeSheet();await showHome();notify('Работа удалена');}});
@@ -416,7 +418,7 @@ function renderLayerSheet(body){
   $('rename-layer').onclick=()=>showModal({title:'Название слоя',input:currentLayer().name,okText:'Сохранить',onOk:name=>{currentLayer().name=name||currentLayer().name;renderSheet();queueSave();}});
   $('duplicate-layer').onclick=()=>{
     if(doc.layers.length>=12){notify('Максимум 12 слоёв');return;}
-    const l=currentLayer(),i=doc.layers.indexOf(l),copy=structuredClone(l);
+    const l=currentLayer(),i=doc.layers.indexOf(l),copy=cloneData(l);
     copy.id=uid();copy.name+=' — копия';copy.strokes=copy.strokes.map(s=>({...s,id:uid(),layer:copy.id}));
     doc.layers.splice(i+1,0,copy);doc.activeLayer=copy.id;renderSheet();scheduleDraw();queueSave();
   };
