@@ -16,7 +16,7 @@ requires concrete choices, and creates real browser evidence.
 ## 1. The product's visual thesis precedes implementation
 
 When you create a new app with `npm run new:app -- <slug>`, Forge generates
-`apps/<slug>/visual-direction.json` in **draft** state.
+`apps/<slug>/visual-direction.json` in **draft** state (schema v2).
 
 Complete every field before attempting to ship:
 
@@ -34,6 +34,38 @@ Complete every field before attempting to ship:
 - **motion:** the exact action, anticipation, immediate response, follow-through,
   interruption and reduced-motion equivalent;
 - **evidence:** one real `click`, `tap` or `drag` with a user-visible result.
+
+### Structural identity — a second, executable gate
+
+The v2 direction also requires `architecture`, a description of the **actual
+shipped screen** rather than an adjective-based artistic plan:
+
+- `spatialLayout`: full-bleed world, instrument, document, workbench, etc.;
+- `controlLocation`: where interaction lives, e.g. direct-on-object rather than
+  a permanently visible bottom deck;
+- `navigation`: how the app changes spatial context;
+- `chromeTopology`: whether the experience is framed, unframed or diegetic;
+- `dominantMotion`: its characteristic feedback timing;
+- `primaryVerb`, `physicalFeedback`, `spatialRationale`: describe working
+  interactions and the phone layout with concrete causal language;
+- `comparisons`: review the newest two known visual profiles, and specify
+  **both** visible composition differences and interaction differences.
+
+The validator compares the five architecture axes against up to five recent
+products with known architecture, including curated legacy profiles for
+MЕХАНИКА and CANTICA. It rejects the same spatial layout + control position +
+chrome topology **even if the colors, motion and assets are different**.
+It also rejects any four matching axes. This tests the repeated interface
+*skeleton*, not artistic merit.
+
+The labels describe what was really built; they are **not** layout presets or
+instructions to use a different control scheme for novelty alone. When two
+apps genuinely require the same interaction shell, the correct response is a
+substantive UX rethink, not false metadata.
+
+v1 files on untouched legacy apps remain valid. Newly created and visibly
+redesigned apps must migrate to v2. Browser screenshots remain the ground truth:
+the schema cannot detect dishonestly filled answers or guarantee visual quality.
 
 Do not invent a style by selecting a preset. Presets are working examples of
 an API, **not** examples of acceptable finished interface composition.
@@ -111,7 +143,7 @@ New app PRs and visible redesigns are checked by
 Explicit local checks use
 `node scripts/validate-visual-direction.mjs --app=<slug>`.
 
-The gate rejects draft answers and missing evidence interactions. For
+The gate rejects draft answers, repeated architectural shells and missing evidence interactions. For
 **new apps**, it also rejects Forge's default monogram icon and stylesheets
 that retain most of the starter CSS. The check does *not* claim to score art.
 

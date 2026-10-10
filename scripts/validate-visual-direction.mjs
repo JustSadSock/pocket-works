@@ -1,3 +1,4 @@
+import { getRecentArchitectureProfiles, validateArchitecturalDiversity } from './visual-architecture.mjs';
 import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -57,6 +58,14 @@ async function checkApp(slug, { newApp = false, visual = false } = {}) {
   try { record = JSON.parse(await readFile(document, 'utf8')); }
   catch (error) { return [`apps/${slug}/visual-direction.json cannot be read: ${error.message}`]; }
   errors.push(...validateVisualDirection(record, slug).map(e => `apps/${slug}: ${e}`));
+  if (newApp || visual) {
+    if (record.schemaVersion !== 2) {
+      errors.push(`apps/${slug}: visible work requires visual direction v2 with a real interaction architecture`);
+    } else {
+      const neighbors = await getRecentArchitectureProfiles(root, slug);
+      errors.push(...validateArchitecturalDiversity(record.architecture, neighbors, slug).map(e => `apps/${slug}: ${e}`));
+    }
+  }
   if (!newApp) return errors;
 
   // A generated icon with a different app name is not a new art direction.
