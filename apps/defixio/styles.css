@@ -125,7 +125,7 @@ transition:transform .52s cubic-bezier(.17,.86,.17,1.1),opacity .14s}
   padding:4px 14px 3px 17px;border:1px solid #72614f;border-bottom:3px solid #191614;
   border-radius:2px 3px 1px 1px;background:linear-gradient(99deg,#b0a08b,#877764 45%,#a18f77 94%);
   box-shadow:inset 0 2px 0 rgba(244,225,184,.36),0 2px 2px #0e0c0bbb;
-  color:#2a251f;touch-action:pan-y;user-select:none}
+  color:#2a251f;touch-action:none;user-select:none}
 .word-bar:before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:3px;
 background:repeating-linear-gradient(to bottom,#47372a 0 2px,transparent 3px 6px);opacity:.4}
 .word-bar:active,.word-bar.pressed{transform:translateY(2px);box-shadow:inset 0 2px 4px #514333,0 0 0 #000;
