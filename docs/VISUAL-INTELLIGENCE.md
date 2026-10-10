@@ -63,8 +63,10 @@ Files are copied into the owning app's `visual-memory/` under SHA-256 names;
 `memory.json` stores provenance and links feedback to the capture. Reimporting
 the same capture is idempotent. Commit reviewed evidence in the owning app PR,
 including its motion where material. Do not retain unrelated videos or use
-expiring CI artifacts as the only durable history. This platform PR changes no
-existing app. The archive becomes richer with each subsequent app release.
+expiring CI artifacts as the only durable history. This foundation does not
+mass-import captures into existing apps; release compatibility repairs are
+documented separately in CI-COMPATIBILITY.md. The archive becomes richer with
+each subsequent app release.
 
 ## Acceptance and boundaries
 
