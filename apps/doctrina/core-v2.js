@@ -30,6 +30,14 @@ export const LAWS = [
  {id:'roads',name:'Каменные тракты',desc:'Торговые пути связывают самые далёкие земли.',cost:32,requires:['charter'],effects:'Доход +7, торговля +2 за сезон'},
  {id:'estates',name:'Великий совет',desc:'Сословия получают голос в решениях государя.',cost:28,requires:['royal'],effects:'Законность +15, поддержка сословий +6'}
 ];
+export const TECHNOLOGIES = [
+ {id:'survey',name:'Землемерные книги',desc:'Единый учёт поместий и крестьянских наделов.',cost:19,requires:[],effect:'Доход +3 за сезон'},
+ {id:'mills',name:'Водяные мельницы',desc:'Мельничные плотины снабжают хлебом бедные земли.',cost:23,requires:[],effect:'Зерно +4 за сезон'},
+ {id:'messengers',name:'Почтовые тракты',desc:'Гонцы доставляют грамоты за пределы державы.',cost:20,requires:['survey'],effect:'Посольства эффективнее'},
+ {id:'foundries',name:'Оружейные кузни',desc:'Кузнецы снабжают дружину железом, а крепости стрелами.',cost:27,requires:['mills'],effect:'Оборона +10, войско +4'},
+ {id:'heraldry',name:'Государственная печать',desc:'Общий герб укрепляет права верховной власти.',cost:18,requires:['messengers'],effect:'Законность +8, влияние знати +4'},
+ {id:'tradecraft',name:'Двойная запись',desc:'Купеческие счетоводы предотвращают утечку торговых пошлин.',cost:26,requires:['survey'],effect:'Доход +4 за сезон'}
+];
 export const DIPLOMACY = [
  {id:'west',name:'Западная марка',motto:'Герцогство Эшмар',base:-18},
  {id:'east',name:'Восточная корона',motto:'Королевство Веден',base:8},
@@ -57,7 +65,7 @@ function pick(s,list){return list[Math.floor(roll(s)*list.length)];}
 export function newGame(realm='crown',seed=Date.now()){
  const n=(Number(seed)>>>0)||16731;
  const s={version:2,realm,seed:n,rng:n,turn:1,limit:24,ap:2,treasury:64,grain:65,army:32,
- legitimacy:65,authority:60,stability:66,lawfulness:42,trade:1,laws:[],
+ legitimacy:65,authority:60,stability:66,lawfulness:42,trade:1,laws:[],technologies:[],
  factions:{nobles:58,guilds:52,clergy:57,commons:54,captains:57},
  provinces:PROVINCES.map((p,i)=>({id:p.id,unrest:12+(i*9)%19,loyalty:55+(i*11)%22,wealth:38+(i*15)%27,fort:i===0||i===4?2:0})),
  diplomacy:{west:-18,east:8,sea:22},peace:0,raid:null,petition:null,log:[],phase:'play',summary:'',
@@ -93,6 +101,7 @@ export function enactEdict(s,provinceId,edictId){
  const d=EDICTS.find(x=>x.id===edictId),p=s.provinces.find(x=>x.id===provinceId);
  if(!d||!p)return {ok:false,message:'Неизвестная земля или указ'};
  const err=spend(s,d.cost);if(err)return {ok:false,message:err};
+ if(d.id==='watch'&&p.fort>=5)return {ok:false,message:'Крепость уже укреплена до предела'};
  if(d.id==='granary'&&s.grain<14)return {ok:false,message:'Амбары почти пусты — не хватает 14 зерна'};
  s.ap--;s.treasury-=d.cost;
  if(d.id==='levy'){s.treasury+=18;p.unrest+=17;p.loyalty-=8;s.factions.commons-=5;}
@@ -120,6 +129,21 @@ export function enactLaw(s,id){
  const msg='В государственный свод внесён закон «'+law.name+'».';
  note(s,msg);return {ok:true,message:msg};
 }
+export function research(s,id){
+ const tech=TECHNOLOGIES.find(t=>t.id===id);
+ if(!tech)return {ok:false,message:'Неизвестное открытие'};
+ s.technologies ||= [];
+ if(s.technologies.includes(id))return {ok:false,message:'Это знание уже изучено'};
+ const prerequisite=tech.requires.find(t=>!s.technologies.includes(t));
+ if(prerequisite)return {ok:false,message:'Сначала необходимо открытие «'+TECHNOLOGIES.find(t=>t.id===prerequisite).name+'»'};
+ const err=spend(s,tech.cost);if(err)return {ok:false,message:err};
+ s.ap--;s.treasury-=tech.cost;s.technologies.push(id);
+ if(id==='foundries')s.army+=4;
+ if(id==='heraldry'){s.legitimacy+=8;s.factions.nobles+=4;}
+ normalize(s);
+ const msg='Мастера державы освоили: «'+tech.name+'».';
+ note(s,msg);return {ok:true,message:msg};
+}
 export function foreignAction(s,id,type){
  if(!DIPLOMACY.find(d=>d.id===id))return {ok:false,message:'Неизвестный сосед'};
  if(!['envoy','tribute','threat'].includes(type))return {ok:false,message:'Неизвестное действие'};
@@ -128,7 +152,7 @@ export function foreignAction(s,id,type){
  if(type==='threat'&&s.army<15)return {ok:false,message:'Угроза без войска неубедительна'};
  s.ap--;s.treasury-=cost;
  const delta=type==='envoy'?12:type==='tribute'?25:-27;
- s.diplomacy[id]+=delta;
+ s.diplomacy[id]+=delta+(type==='envoy'&&s.technologies?.includes('messengers')?6:0);
  if(type==='envoy')s.legitimacy+=2;
  if(type==='threat'){s.authority+=5;s.factions.captains+=6;}
  normalize(s);
@@ -147,8 +171,8 @@ export function choosePetition(s,index){
  const msg=title+': '+choice.name+'.';note(s,msg,index===1?'warn':'info');return {ok:true,message:msg};
 }
 function season(s){
- const income=7+Math.round(s.provinces.reduce((n,p)=>n+p.wealth*(p.loyalty/100),0)/48)+(s.laws.includes('charter')?4:0)+(s.laws.includes('roads')?7:0)+s.trade;
- const grainIncome=8+s.provinces.filter(p=>['valley','ford','south'].includes(p.id)).reduce((n,p)=>n+Math.round((100-p.unrest)/24),0)+(s.laws.includes('tithe')?5:0);
+ const income=7+Math.round(s.provinces.reduce((n,p)=>n+p.wealth*(p.loyalty/100),0)/48)+(s.laws.includes('charter')?4:0)+(s.laws.includes('roads')?7:0)+(s.technologies?.includes('survey')?3:0)+(s.technologies?.includes('tradecraft')?4:0)+s.trade;
+ const grainIncome=8+s.provinces.filter(p=>['valley','ford','south'].includes(p.id)).reduce((n,p)=>n+Math.round((100-p.unrest)/24),0)+(s.laws.includes('tithe')?5:0)+(s.technologies?.includes('mills')?4:0);
  const upkeep=7+Math.ceil(s.army/12)-(s.laws.includes('levies')?2:0);
  const consumption=15+Math.ceil(s.army/16);
  s.treasury+=income-upkeep;s.grain+=grainIncome-consumption;
@@ -170,7 +194,7 @@ function season(s){
 function borders(s){
  if(s.raid){
   const p=s.provinces.find(x=>x.id===s.raid.target);
-  const defense=s.army*.38+(p?.fort||0)*13+s.authority*.07;
+  const defense=s.army*.38+(p?.fort||0)*13+s.authority*.07+(s.technologies?.includes('foundries')?10:0);
   const attack=s.raid.strength;
   if(defense>=attack){s.army-=Math.ceil(attack/7);s.legitimacy+=8;s.diplomacy[s.raid.enemy]+=9;
    note(s,'Набег отражён у '+PROVINCES.find(x=>x.id===s.raid.target).name+'.','major');}
@@ -189,7 +213,6 @@ function borders(s){
  for(const neighbor of DIPLOMACY){s.diplomacy[neighbor.id]-=(neighbor.id==='west'?2:1);}
 }
 export function endTurn(s){
- const err=spend(s,0);
  // End season is legal with no AP, but not with an unresolved petition.
  if(s.phase!=='play')return {ok:false,message:'Правление уже завершено'};
  if(s.petition)return {ok:false,message:'Сначала ответьте на прошение'};
