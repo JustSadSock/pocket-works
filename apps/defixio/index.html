@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#251f1a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="DEFIXIO">
+<meta name="description" content="Римская мастерская латинских проклятий.">
+<title>DEFIXIO — Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg"><link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css">
+</head><body data-fullscreen-app>
+<main id="app" class="app" data-app-shell>
+  <header class="masthead" data-ui>
+    <a class="back-link" href="../../" data-app-control data-native-press>← POCKET WORKS</a>
+    <span class="brand">D<span class="brand-star">✳</span>F</span>
+    <button type="button" class="sound-button" id="soundBtn" data-native-press aria-label="Выключить звук" aria-pressed="true">SONVS <span class="sound-mark">◖))</span></button>
+  </header>
+  <div class="commission" id="commission" data-ui>
+    <div class="commission-meta"><span id="chapter">TABVLA · I / XII</span><button id="archiveBtn" class="archive-link" type="button" data-native-press>АРХИВ <span id="archiveCount">0</span> ↗</button></div>
+    <div class="commission-rule"></div>
+    <p class="commission-name" id="commissionName">MALEDICTIO PRIMA</p>
+    <h1 id="task">Пусть вор потеряет золото.</h1>
+  </div>
+  <section class="workbench" id="workbench" aria-label="Свинцовая табличка">
+    <div class="powder powder-left"></div><div class="powder powder-right"></div>
+    <span class="roman-mark mark-a" aria-hidden="true">S·P·Q·R</span><span class="roman-mark mark-b" aria-hidden="true">ANNO · MMXXVI</span>
+    <div class="tablet-wrap" id="tabletWrap">
+      <div class="tablet" id="tablet" data-gesture-surface data-block-callout>
+        <div class="tablet-edge"></div>
+        <div class="tablet-top" aria-hidden="true"><span>✣</span> DEFIXIO <span>✣</span></div>
+        <div class="scratch-field" id="scratchField" aria-hidden="true"></div>
+        <div class="writing" id="writing" aria-label="Гравировка"><button class="glyph-slot active" data-slot="0" type="button" aria-label="Первая часть надписи">·······</button><button class="glyph-slot" data-slot="1" type="button" aria-label="Вторая часть надписи">·······</button><button class="glyph-slot" data-slot="2" type="button" aria-label="Третья часть надписи">·······</button></div>
+        <div class="tablet-stamp" id="stamp" aria-hidden="true"><div>ACTVM<br><b>✦</b><br>EST</div></div>
+        <div class="tablet-foot" aria-hidden="true">PER VERBA · PER FERRVM</div>
+        <div class="tablet-grain" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="stylus" id="stylus" aria-hidden="true"><span class="stylus-tip"></span></div>
+    <span class="desk-number" aria-hidden="true">Ⅻ</span>
+  </section>
+  <section class="toolwell" id="toolwell" data-ui>
+    <div id="puzzleControls">
+      <div class="toolwell-head"><div><span class="toolwell-kicker">FERRVM · РЕЗЕЦ</span><h2 id="slotQuestion">КТО ПОНЕСЁТ НАКАЗАНИЕ?</h2></div><div class="errors" id="errors" aria-label="Ошибки"><span></span><span></span><span></span></div></div>
+      <div class="word-bars" id="wordBars" role="group" aria-label="Варианты латинского слова"></div>
+      <p id="feedback" class="feedback" aria-live="polite">Выбери слово или перетащи его на металл.</p>
+    </div>
+    <div id="doneControls" class="end-controls" hidden>
+      <div class="outcome-kicker">✣  ТАБЛИЧКА ЗАПЕЧАТАНА  ✣</div><p class="outcome-phrase" id="outcomePhrase"></p>
+      <div class="end-actions"><button id="nextBtn" class="main-action" type="button" data-native-press>СЛЕДУЮЩАЯ ТАБЛИЧКА <span>→</span></button><button id="toArchiveBtn" type="button" class="small-action" data-native-press>В АРХИВ</button></div>
+    </div>
+    <div id="failedControls" class="end-controls" hidden>
+      <div class="outcome-kicker danger">SVPERFICIES FRACTA</div><p class="failed-copy">Свинец испорчен. Даже боги не прочитают эту кашу.</p>
+      <button id="retryBtn" class="main-action" type="button" data-native-press>ПЕРЕПЛАВИТЬ <span>↺</span></button>
+    </div>
+    <div id="freeControls" class="free-controls" hidden>
+      <div class="toolwell-head"><div><span class="toolwell-kicker">OFFICINA LIBERA</span><h2>СОЧИНИ СВОЁ ПРОКЛЯТИЕ</h2></div></div>
+      <div class="free-row"><span>КОМУ</span><button id="targetBtn" type="button" data-native-press></button></div>
+      <div class="free-row"><span>КАКУЮ УЧАСТЬ</span><button id="fateBtn" type="button" data-native-press></button></div>
+      <button id="freeEngraveBtn" class="main-action" type="button" data-native-press>ВЫЦАРАПАТЬ ФОРМУЛУ <span>↗</span></button>
+    </div>
+    <nav class="tool-nav" aria-label="Режимы">
+      <button id="studyBtn" type="button" data-native-press class="nav-active">ЗАКАЗЫ</button>
+      <span class="nav-dot">✣</span>
+      <button id="freeBtn" type="button" data-native-press>СВОБОДНЫЙ РЕЗЕЦ</button>
+      <span class="nav-dot">✣</span>
+      <button id="infoBtn" type="button" data-native-press>О ЛАТЫНИ</button>
+    </nav>
+  </section>
+  <div id="overlay" class="overlay" hidden data-ui>
+    <div class="overlay-shade" id="overlayShade"></div>
+    <section class="archive-sheet" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
+      <div class="sheet-top"><span>COLLECTIO DEFIXIONVM</span><button id="closeOverlay" aria-label="Закрыть" type="button" data-native-press>✕</button></div>
+      <h2 id="overlayTitle">Архив табличек</h2><p id="overlayLead" class="overlay-lead"></p>
+      <div id="archiveItems" class="archive-items"></div>
+      <a href="../../" class="sheet-exit" data-app-control data-native-press>← Вернуться в Pocket Works</a>
+    </section>
+  </div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="DEFIXIO" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
