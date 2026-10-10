@@ -35,3 +35,7 @@
 .ending-panel button:last-child{background:transparent;color:#7f403b}
 
 .realm-track{gap:8px;padding-left:10px;padding-right:10px}.realm-stat>span{font-size:7px;letter-spacing:.025em}.track-seal{display:none}.crown-stat .meter i{background:#aa815f}
+
+/* Keep the legal seal available on short phones while the dossier scrolls. */
+.case-scene .seal-row{position:sticky;bottom:0;z-index:4;min-height:62px;background:#dbc9aa;border-top:1px solid #b59a72;box-shadow:0 -7px 15px #553f2522;padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
+.case-scene.completed .seal-row{display:none}
