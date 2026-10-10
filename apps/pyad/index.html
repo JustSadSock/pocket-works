@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#203b4d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ПЯДЬ">
+<meta name="description" content="Маленькое средневековое королевство в настоящем пиксель-арте. Отбей пять ночных набегов.">
+<title>ПЯДЬ — Малое королевство</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+</head><body>
+<main class="realm-app" data-app-shell data-fullscreen-app>
+<header class="topbar" data-ui><a href="../../" class="leave" data-app-control data-native-press>← POCKET WORKS</a><div class="insignia"><b>ПЯДЬ</b><small>МАЛОЕ КОРОЛЕВСТВО</small></div><button type="button" id="menuBtn" data-native-press>МЕНЮ</button></header>
+<section class="scene-area" aria-label="Пиксельная миниатюра средневекового владения">
+ <div class="skyline" data-ui><span id="dayTag">ЛЕТО 1248 · ДЕНЬ I</span><span id="keepTag">ЗАМОК 9 / 9</span></div>
+ <div class="canvas-frame"><canvas id="world" width="240" height="352" data-gesture-surface data-block-callout aria-label="Игровое поле: три дороги. Коснитесь дороги, чтобы выбрать её."></canvas><div class="scene-toast" id="sceneToast" role="status"></div></div>
+ <div class="world-legend" data-ui><span class="legend-line"></span><span id="worldLegend">Три дороги ведут к одним воротам</span><span class="legend-line"></span></div>
+</section>
+<section class="command" data-ui>
+ <div class="census"><div class="stock"><i class="ico grain"></i><span>ЗЕРНО</span><b id="foodCount">6</b></div><div class="stock"><i class="ico timber"></i><span>ДЕРЕВО</span><b id="woodCount">5</b></div><div class="stock orders"><i class="ico stamp"></i><span id="actionsName">ПРИКАЗЫ</span><b id="actionsCount">3</b></div></div>
+ <div class="road-picker" role="group" aria-label="Выбрать дорогу"><span>ДОРОГА</span><button type="button" data-lane="0" data-native-press>СЕВЕР</button><button type="button" data-lane="1" class="is-selected" data-native-press>ТРАКТ</button><button type="button" data-lane="2" data-native-press>ЮГ</button></div>
+ <div class="context-note" id="contextNote" aria-live="polite">Выбери дорогу, затем размести защитников.</div>
+ <div class="day-tools" id="dayTools" role="group" aria-label="Дневные действия">
+ <button type="button" data-action="harvest" data-native-press><span class="toolmark">▥</span><b>ЖАТВА</b><small>+5 зерна</small></button>
+ <button type="button" data-action="wood" data-native-press><span class="toolmark">╫</span><b>ЛЕС</b><small>+4 дерева</small></button>
+ <button type="button" data-action="militia" data-native-press><span class="toolmark">†</span><b>КОПЬЯ</b><small>2 зер. · 1 дер.</small></button>
+ <button type="button" data-action="archer" data-native-press><span class="toolmark">↗</span><b>ЛУКИ</b><small>3 зер. · 3 дер.</small></button>
+ <button type="button" data-action="wall" data-native-press><span class="toolmark">▦</span><b>ЧАСТОКОЛ</b><small>4 дерева</small></button>
+ <button type="button" data-action="repair" data-native-press><span class="toolmark">✚</span><b>РЕМОНТ</b><small>3 дерева</small></button>
+ </div>
+ <div class="night-tools" id="nightTools" hidden><div class="war-note">ПЕРЕНОСИ ЗНАМЯ ПО ДОРОГАМ: ЕГО ОТРЯД СРАЖАЕТСЯ СИЛЬНЕЕ.</div><div class="battle-stat"><span id="enemyCount">0 захватчиков</span><span id="bannerStatus">ЗНАМЯ ГОТОВО</span></div></div>
+ <button id="nightBtn" class="main-order" type="button" data-native-press>ПОСЛАТЬ ЗАСТАВЫ В НОЧЬ <span>→</span></button>
+</section>
+<div id="overlay" class="overlay" data-ui><div class="veil"></div><section class="codex" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="crest" aria-hidden="true"><span class="crest-tower"></span><span class="crest-sun"></span></div><div class="latin" id="panelKicker">ANNO DOMINI MCCXLVIII</div><h1 id="panelTitle">Пядь земли</h1><p id="panelText">Всё королевство умещается на одной странице. Пять ночей — и одна крепость, которой больше некуда отступать.</p><div class="ledger" id="panelLedger">Днём добывай припасы и строй оборону. Ночью переноси знамя между дорогами.</div><div id="panelButtons" class="panel-buttons"><button type="button" id="panelMain" class="primary" data-native-press>ПРИНЯТЬ КОРОНУ</button></div><a href="../../" data-app-control data-native-press class="overlay-exit">Вернуться в Pocket Works</a></section></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЯДЬ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
