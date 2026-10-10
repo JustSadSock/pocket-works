@@ -25,3 +25,11 @@
 @media(max-width:355px){.case-heading{padding:8px 8px 5px}.case-heading h1{font-size:22px}.case-heading p{font-size:12px}.contest{padding-left:11px;padding-right:11px;min-height:142px}.claimant-arms{height:87px;width:77px}.claimant{min-height:124px}.clue-body{font-size:11px}.evidence-buttons button>span:nth-child(2){font-size:9px}.docket{margin:0 8px}.verdicts{padding:7px 8px 0}.seal-row{padding-left:8px;padding-right:8px}.seal-row button{font-size:10px;padding:0 8px}.tabbar button{font-size:7px}.tabbar button>span{font-size:19px}}
 @media(max-height:710px){.case-heading{padding-top:7px}.contest{min-height:130px;padding-bottom:2px}.claimant-arms{height:84px}.claimant{min-height:120px}.clue-body{padding-bottom:6px}.verdicts{padding-top:6px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+.case-scene.completed .contest,.case-scene.completed .docket,.case-scene.completed .verdicts,.case-scene.completed .seal-row{display:none}
+.case-scene.completed .case-heading{padding:40px 20px 15px}
+.ending-panel{margin:20px 15px 10px;padding:28px 18px;border:3px double #a77558;background:#ede1c8;color:#4b3433;text-align:center;box-shadow:inset 0 0 0 6px #ead9ba}
+.ending-panel>span{font:800 12px var(--sans);letter-spacing:.15em;color:#9a5344}
+.ending-panel p{font:16px/1.45 var(--serif);margin:17px 0 22px}
+.ending-panel button{display:block;width:100%;min-height:47px;margin:9px auto 0;background:#7f403b;border:1px solid #4f2e2b;color:#f5e4bf;font:800 11px var(--sans);letter-spacing:.08em}
+.ending-panel button:last-child{background:transparent;color:#7f403b}
