@@ -1,6 +1,7 @@
+import { draftArchitecture, validateArchitecture } from './visual-architecture.mjs';
 // Authoring contract for Pocket Works visual work. The questionnaire is intentionally
 // not an art-style picker: every answer must describe THIS product, not a preset skin.
-export const VISUAL_SCHEMA_VERSION = 1;
+export const VISUAL_SCHEMA_VERSION = 2;
 
 const draft = hint => `TODO — ${hint}`;
 
@@ -19,6 +20,7 @@ export function draftVisualDirection(slug, name) {
       signature: draft('One unique visual or interactive behavior recognizable without a logo'),
       distinction: draft('Which nearby Pocket Works apps look similar and how will this differ?')
     },
+    architecture: draftArchitecture(),
     production: {
       renderer: draft('Why DOM/CSS, sprites, Canvas, WebGL, or authored 3D is appropriate'),
       focalAsset: draft('What is the hero object and how will its visual asset be authored?')
@@ -52,7 +54,8 @@ const suspicious = /(?:clean modern(?: premium)?|beautiful and unique|high quali
 export function validateVisualDirection(record, slug) {
   const errors = [];
   if (!record || typeof record !== 'object' || Array.isArray(record)) return ['visual-direction.json must contain an object'];
-  if (record.schemaVersion !== VISUAL_SCHEMA_VERSION) errors.push('Unsupported visual direction schema version');
+  if (![1, VISUAL_SCHEMA_VERSION].includes(record.schemaVersion)) errors.push('Unsupported visual direction schema version');
+  if (record.schemaVersion === VISUAL_SCHEMA_VERSION) errors.push(...validateArchitecture(record.architecture));
   if (record.status !== 'ready') errors.push('Set status to ready after visual work and screenshot review');
   if (record.product !== slug) errors.push(`Expected visual product slug ${slug}`);
   const allAnswers = [];

@@ -227,6 +227,6 @@ These rules apply when app.config.json declares runtime godot.
 
 ## 11. Authored visual identity before release
 
-Before a new product or visible redesign is delivered, follow `docs/CREATIVE-PRODUCTION.md` and complete `apps/<slug>/visual-direction.json`. This file identifies the real composition, rendering medium, distinctive material/shape system and a user action with anticipation, immediate feedback and settling. Generate browser screenshots and interaction video, **open and inspect** them, and compare against visually adjacent apps. A green functional test does not constitute visual approval.
+Before a new product or visible redesign is delivered, follow `docs/CREATIVE-PRODUCTION.md` and complete `apps/<slug>/visual-direction.json`. This file identifies the real composition, rendering medium, distinctive material/shape system and a user action with anticipation, immediate feedback and settling. For new apps and visible redesigns, schema v2 also requires a distinct interaction architecture; the build rejects a repeated header-stage-footer/control layout even if the artistic material differs. Generate browser screenshots and interaction video, **open and inspect** them, and compare against visually adjacent apps. A green functional test does not constitute visual approval.
 
 The Forge CSS, title arrangement and geometric monogram icon are temporary scaffolding. Do not call an app complete until all are replaced by a coherent authored presentation. Do not apply the launcher look or another game's visual kit to a new product by default.
