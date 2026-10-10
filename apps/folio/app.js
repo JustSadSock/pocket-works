@@ -33,6 +33,7 @@ const state = {
   undo:[], redo:[], cache:new Map(), dirty:new Set(),
   frame:0, saveTimer:0, cursorTimer:0, toastTimer:0
 };
+try { if(localStorage.getItem('pocket-works:folio:hand')==='left')state.hand='left'; }catch{}
 let database=null;
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
@@ -231,6 +232,7 @@ function setCursor(e){
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
 function beginStroke(e){
+  if(!currentLayer()?.visible || currentLayer()?.opacity===0){notify('Этот слой скрыт или прозрачен');return;}
   const tip=pointerTip(canvasPoint(e));
   const rawPoint=screenDoc(tip.x,tip.y);
   if(rawPoint[0]<0||rawPoint[0]>state.doc.width||rawPoint[1]<0||rawPoint[1]>state.doc.height)return;
@@ -377,7 +379,7 @@ function closeSheet(){
 function renderSheet(){
   const body=$('sheet-body');if(!state.sheet)return;
   if(state.sheet==='brush'){
-    body.innerHTML='<div class="brush-list">'+brushes.map(b=>'<button class="brush-choice '+(b.id===state.brush?'is-active':'')+'" data-brush="'+b.id+'"><div class="brush-mark '+b.id+'"><i></i></div><div><strong>'+b.name+'</strong><span>'+b.hint+'</span></div></button>').join('')+'</div><p class="sheet-footnote">Размер и насыщенность регулируются под холстом.</p>';
+    body.innerHTML='<div class="brush-list">'+brushes.map(b=>'<button class="brush-choice '+(b.id===state.brush?'is-active':'')+'" data-brush="'+b.id+'"><div class="brush-mark '+b.id+'"><i></i></div><div><strong>'+b.name+'</strong><span>'+b.hint+'</span></div></button>').join('')+'</div><div class="hand-row"><span>Острие для руки</span><button data-hand="right" class="'+(state.hand==='right'?'active':'')+'">Правша</button><button data-hand="left" class="'+(state.hand==='left'?'active':'')+'">Левша</button></div><p class="sheet-footnote">Размер и насыщенность регулируются под холстом.</p>';
   }
   if(state.sheet==='color'){
     const colors=state.doc?.palette||palettes.atelier;
@@ -435,6 +437,7 @@ function renderLayerSheet(body){
 }
 $('sheet-body').addEventListener('click',e=>{
   const target=e.target.closest('button');if(!target)return;
+  if(target.dataset.hand){state.hand=target.dataset.hand;try{localStorage.setItem('pocket-works:folio:hand',state.hand);}catch{}renderSheet();notify(state.hand==='left'?'Острие для левой руки':'Острие для правой руки');}
   if(target.dataset.brush){state.brush=target.dataset.brush;selectTool('brush');closeSheet();notify(brushes.find(b=>b.id===state.brush).name);}
   if(target.dataset.color){state.color=target.dataset.color;selectTool('brush');closeSheet();}
   if(target.dataset.toggleLayer){const l=state.doc.layers.find(x=>x.id===target.dataset.toggleLayer);l.visible=!l.visible;renderSheet();scheduleDraw();queueSave();}
