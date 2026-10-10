@@ -88,10 +88,20 @@ jobs:
           }
 
           changedFiles().then((files) => {
-            const targets = [...new Set(files
+            const isVisualGateChange = files.some((file) => [
+              'scripts/visual-architecture.mjs',
+              'scripts/visual-direction.mjs',
+              'tests/e2e/visual-direction.spec.ts'
+            ].includes(file));
+            const changedAppSlugs = files
               .map((file) => /^apps\/([^/]+)\//.exec(file)?.[1])
-              .filter((slug) => slug && !slug.startsWith('_')))]
-              .sort();
+              .filter((slug) => slug && !slug.startsWith('_'));
+            // Exercise real CANTICA and MECHANICA screenshots when changing the
+            // anti-clone QA itself, not only when an application changes.
+            const targets = [...new Set([
+              ...changedAppSlugs,
+              ...(isVisualGateChange ? ['mechanica', 'cantica-glass'] : [])
+            ])].sort();
             const godotTransportFiles = new Set([
               'scripts/prepare-site.mjs',
               'scripts/validate-site.mjs',
