@@ -1,3 +1,4 @@
+import { validateArtBible } from './art-bible.mjs';
 import { getRecentArchitectureProfiles, validateArchitecturalDiversity } from './visual-architecture.mjs';
 import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
@@ -65,6 +66,11 @@ async function checkApp(slug, { newApp = false, visual = false } = {}) {
       const neighbors = await getRecentArchitectureProfiles(root, slug);
       errors.push(...validateArchitecturalDiversity(record.architecture, neighbors, slug).map(e => `apps/${slug}: ${e}`));
     }
+  }
+  const biblePath = path.join(base, 'art-bible.json');
+  if (newApp || await fileExists(biblePath)) {
+    try { errors.push(...validateArtBible(JSON.parse(await readFile(biblePath, 'utf8')), slug).map(e => `apps/${slug}: ${e}`)); }
+    catch (error) { errors.push(`apps/${slug}: art-bible.json required and readable: ${error.message}`); }
   }
   if (!newApp) return errors;
 

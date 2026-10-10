@@ -12,6 +12,7 @@ import {
 } from './app-config.mjs';
 import { getPreset } from './presets.mjs';
 import { getEnhancedPreset } from './enhanced-presets.mjs';
+import { draftArtBible } from './art-bible.mjs';
 import { draftVisualDirection } from './visual-direction.mjs';
 
 const textExtensions = new Set(['.css', '.html', '.js', '.ts', '.json', '.md', '.svg', '.webmanifest', '.gd', '.tscn', '.tres', '.godot', '.cfg', '.gdshader']);
@@ -210,6 +211,8 @@ export async function createApp(argv = process.argv.slice(2), root = process.cwd
     await writeFile(path.join(appDirectory, 'app.config.json'), `${JSON.stringify(config, null, 2)}\n`, 'utf8');
     if (runtime === 'quick') await writeFile(path.join(appDirectory, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
     await writeFile(path.join(appDirectory, 'visual-direction.json'), `${JSON.stringify(draftVisualDirection(slug, name), null, 2)}\n`, 'utf8');
+
+    await writeFile(path.join(appDirectory, 'art-bible.json'), JSON.stringify(draftArtBible(slug), null, 2) + '\n');
 
     const safeName = escapeMarkup(name);
     const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="${safeName}">\n  <rect width="512" height="512" fill="${backgroundColor}"/>\n  <path d="M64 64h384v384H64z" fill="none" stroke="${accent}" stroke-width="22"/>\n  <path d="M96 352 256 96l160 256-160 64z" fill="${accent}" opacity=".92"/>\n  <text x="256" y="318" text-anchor="middle" fill="${backgroundColor}" font-family="system-ui,sans-serif" font-size="112" font-weight="900">${escapeMarkup(initials(name))}</text>\n</svg>\n`;

@@ -348,3 +348,8 @@ Visible product work uses the **production pipeline** in `docs/CREATIVE-PRODUCTI
 - Implement and exercise a representative real user action and review the first frame, response frame, settled frame and recorded motion. Readiness of visual rendering is not inferred from a successful Playwright run.
 - The PR creative check validates v2 `visual-direction.json`, rejects a repeated phone layout/control topology against the recent known profiles and rejects a largely unmodified Forge skin or icon in newly created apps. Do not confuse new materials with a new interaction architecture. Existing apps do not need mass migration; visual redesigns must participate.
 - Keep visual production documents and artifact evidence app-specific; no shared stylistic tokens or fixed common header should be imposed on new applications.
+
+
+## Visual Intelligence production foundation
+
+Before new app art production, follow `docs/VISUAL-INTELLIGENCE.md`: inspect visual memory, research references, explore three materially different concepts and complete the app-local `art-bible.json`. Preserve reviewed frames/video and separately attributed feedback. Image diagnostics support inspection and never replace artistic judgment. Stages II–IV remain separate platform tasks in `docs/ART-PRODUCTION-ROADMAP.md`.

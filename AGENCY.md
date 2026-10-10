@@ -56,3 +56,8 @@ For implementation work, this guide is only the diversity/originality layer. Rep
 - before merge: `VISUAL-QA.md`.
 
 Do not collapse these into one generic "make it beautiful" instruction. Their separation is intentional: art direction, rendering technique, interface ergonomics, motion and visual verification fail in different ways and should be reasoned about independently.
+
+
+## Visual Intelligence production foundation
+
+Before new app art production, follow `docs/VISUAL-INTELLIGENCE.md`: inspect visual memory, research references, explore three materially different concepts and complete the app-local `art-bible.json`. Preserve reviewed frames/video and separately attributed feedback. Image diagnostics support inspection and never replace artistic judgment. Stages II–IV remain separate platform tasks in `docs/ART-PRODUCTION-ROADMAP.md`.

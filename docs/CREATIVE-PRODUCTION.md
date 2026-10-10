@@ -168,3 +168,8 @@ judgment, not a numerical “creativity score”.
 
 **A stronger model is useful, but it cannot substitute for an actual
 production process and feedback from rendered evidence.**
+
+
+## Visual Intelligence production foundation
+
+Before new app art production, follow `docs/VISUAL-INTELLIGENCE.md`: inspect visual memory, research references, explore three materially different concepts and complete the app-local `art-bible.json`. Preserve reviewed frames/video and separately attributed feedback. Image diagnostics support inspection and never replace artistic judgment. Stages II–IV remain separate platform tasks in `docs/ART-PRODUCTION-ROADMAP.md`.
