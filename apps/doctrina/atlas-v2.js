@@ -89,3 +89,47 @@ function popup(){
  if(modal==='settings')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПАЛАТА ПИСЦА</small><h2>Настройки</h2><button class="dialog-action" data-sound>${state.flags?.sound===false?'ВКЛЮЧИТЬ ЗВУК':'ВЫКЛЮЧИТЬ ЗВУК'}</button><button class="dialog-action" data-help>ПРАВИЛА ИГРЫ</button><button class="dialog-action" data-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action primary" data-close>К КАРТЕ</button></section></div>`;
  return '';
 }
+
+function render(){
+ const scroll=root.querySelector('#pane-scroll')?.scrollTop||0;
+ const ld=(name,value,alert=false)=>`<div class="ledger-cell ${alert?'bad':''}"><small>${name}</small><strong>${value}</strong></div>`;
+ root.innerHTML=`<main class="doctrina-shell">
+ <header class="mast"><a class="back" href="../../" aria-label="Pocket Works">‹</a><span class="brand-seal">D</span><div class="mast-copy"><small>ДОКТРИНА Ⅱ · ГОСУДАРСТВЕННЫЙ АТЛАС</small><strong>${governmentName(state)}</strong></div><button class="settings" data-settings aria-label="Настройки">☷</button></header>
+ <div class="ledger">${ld('СЕРЕБРО',state.treasury,state.treasury<22)}${ld('ЗЕРНО',state.grain,state.grain<24)}${ld('ЗАКОННОСТЬ',state.legitimacy+'%',state.legitimacy<30)}${ld('ВОЙСКО',state.army)}</div>
+ <section class="atlas"><div class="atlas-top"><span>АТЛАС ВЛАДЕНИЙ <small>• ${date().toUpperCase()}</small></span><button data-help aria-label="Правила игры">?</button></div><div class="map-container">${map()}</div>
+ <div class="atlas-key"><span><i></i> КОРОННЫЕ ЗЕМЛИ</span><span><i class="danger"></i> СМУТА</span><span>7 ОБЛАСТЕЙ</span></div></section>
+ <section class="desk"><nav class="tab-bar" aria-label="Управление государством">
+ ${[['council','Ⅰ','СОВЕТ'],['province','Ⅱ','ЗЕМЛИ'],['diplomacy','Ⅲ','ДВОРЫ'],['chronicle','Ⅳ','ЛЕТОПИСЬ']].map(item=>`<button data-tab="${item[0]}" class="${page===item[0]?'on':''}"><span>${item[1]}</span>${item[2]}</button>`).join('')}</nav>
+ <div class="pane-scroll" id="pane-scroll">${pane()}</div>
+ <footer class="desk-footer"><div class="seals"><small>ПЕЧАТИ</small><span>${[0,1].map(i=>`<i class="${i<state.ap?'ready':''}">✣</i>`).join('')}</span></div><button class="advance" data-next ${state.phase==='finished'?'disabled':''}>${state.phase==='finished'?'ПРАВЛЕНИЕ ОКОНЧЕНО':'ЗАВЕРШИТЬ СЕЗОН'} <b>→</b></button></footer>
+ </section><div role="status" class="toast ${notice?'show':''}">${safe(notice)}</div>${popup()}</main>`;
+ const box=root.querySelector('#pane-scroll');if(box)box.scrollTop=scroll;
+ window.__AI_TEST_STATE__={app:'doctrina',version:'2.0.0',turn:state.turn,phase:state.phase,selected:chosen,tab:page,treasury:state.treasury,grain:state.grain,ap:state.ap,petition:!!state.petition,score:scoreState(state),laws:state.laws.length};
+}
+root.addEventListener('click',event=>{
+ const t=event.target.closest('[data-start],[data-region],[data-tab],[data-law],[data-edict],[data-foreign],[data-petition],[data-next],[data-settings],[data-sound],[data-help],[data-close],[data-reset],[data-confirm-reset]');
+ if(!t)return;
+ if(t.dataset.start){state=newGame(t.dataset.start,Date.now());chosen='capital';page='council';modal=null;save();ping();render();notify('Власть учреждена. Подпишите первый указ.');return;}
+ if(t.dataset.region){chosen=t.dataset.region;page='province';ping(260);render();return;}
+ if(t.dataset.tab){page=t.dataset.tab;ping(290);render();return;}
+ if(t.dataset.law){act(enactLaw(state,t.dataset.law));return;}
+ if(t.dataset.edict){act(enactEdict(state,chosen,t.dataset.edict));return;}
+ if(t.dataset.foreign){act(foreignAction(state,t.dataset.foreign,t.dataset.kind));return;}
+ if(t.hasAttribute('data-petition')){const result=choosePetition(state,Number(t.dataset.petition));modal=null;act(result);return;}
+ if(t.hasAttribute('data-next')){act(endTurn(state));return;}
+ if(t.hasAttribute('data-settings'))modal='settings';
+ else if(t.hasAttribute('data-sound')){state.flags ||= {};state.flags.sound=!state.flags.sound;save();}
+ else if(t.hasAttribute('data-help'))modal='help';
+ else if(t.hasAttribute('data-reset'))modal='reset';
+ else if(t.hasAttribute('data-confirm-reset')){try{localStorage.removeItem(SAVE_KEY);}catch{}state=newGame('crown',1348);page='council';chosen='capital';modal='start';notice='';}
+ else if(t.hasAttribute('data-close'))modal=null;
+ render();
+});
+root.addEventListener('keydown',event=>{
+ const r=event.target.closest('[data-region]');
+ if(r&&(event.key==='Enter'||event.key===' ')){event.preventDefault();r.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+ if(event.key==='Escape'&&modal&&modal!=='start'&&!state.petition){modal=null;render();}
+});
+window.addEventListener('pagehide',()=>{if(modal!=='start')save();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&modal!=='start')save();});
+render();
