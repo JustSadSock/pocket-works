@@ -27,3 +27,12 @@ exemptions because their slugs/findings are absent. Platform changes must not
 silently migrate the artistic UI of all historical apps merely to install a
 new optional capability. Build failures, manifest drift, missing runtime files,
 new cache/registration mistakes and browser regressions remain hard failures.
+
+Enhanced typechecking now loads the PWA virtual-module declarations and the
+shared JavaScript modules' public types. The three older Babylon configurations
+use the template's `skipLibCheck` setting to avoid conflicting DOM/worker and
+vendor declaration files; application source still receives strict typechecking.
+MELT//CRYPT's TypeScript facade resolves a separately named JavaScript runtime
+instead of resolving back to itself. Plain Node assertion suites run under Node,
+and SIROCCO's Vitest suite collects only its TypeScript tests. RELIC SIEGE now
+checks the actual imported GLB geometry and gameplay audio streams.

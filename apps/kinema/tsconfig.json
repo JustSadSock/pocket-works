@@ -6,6 +6,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
     "strict": true,
     "noEmit": true,
+    "skipLibCheck": true,
     "types": ["vite/client"]
   },
   "include": ["source/**/*.ts", "vite.config.ts"]

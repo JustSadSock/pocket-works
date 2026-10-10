@@ -63,8 +63,9 @@ function createStablePhaser(): typeof Phaser {
 try {
   const runtime = await unpackRuntime();
   const stablePhaser = createStablePhaser();
-  const stableRegisterEnhancedUpdate = (options: Record<string, unknown>): void => registerEnhancedUpdate({
+  const stableRegisterEnhancedUpdate = (options: Record<string, unknown>): void => void registerEnhancedUpdate({
     ...options,
+    appName: typeof options.appName === 'string' ? options.appName : 'WHISTLE 90',
     version: RELEASE_VERSION,
     releaseNotes: [
       'Исправлен фриз матча на iPhone и в standalone-PWA.',
@@ -72,7 +73,7 @@ try {
       'Добавлено автоматическое восстановление цикла после возврата в приложение.'
     ]
   });
-  const stableCreateWorkshopMode = (options: Record<string, unknown>): void => createWorkshopMode({
+  const stableCreateWorkshopMode = (options: Record<string, unknown>): void => void createWorkshopMode({
     ...options,
     version: RELEASE_VERSION
   });

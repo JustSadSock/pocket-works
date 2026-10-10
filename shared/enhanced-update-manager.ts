@@ -1,3 +1,4 @@
+/// <reference types="vite-plugin-pwa/vanillajs" />
 import { registerSW } from 'virtual:pwa-register';
 import './update-manager.css';
 
@@ -74,7 +75,7 @@ export function registerEnhancedUpdate(options: EnhancedUpdateOptions): Enhanced
   }
 
   let prompt: ReturnType<typeof createPrompt> | null = null;
-  let updateSW: EnhancedUpdateHandle | undefined;
+  let updateSW: EnhancedUpdateHandle = async () => {};
 
   updateSW = registerSW({
     immediate: true,

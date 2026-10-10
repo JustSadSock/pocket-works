@@ -64,7 +64,7 @@ describe('directional body motion', () => {
       [0.5, -0.8, 2.4, -0.4],
       [1, 0, 0.1, 1.5]
     ] as const) {
-      const weights = directionalWeights(...sample);
+      const weights = directionalWeights(sample[0], sample[1], sample[2], sample[3]);
       const total = Object.values(weights).reduce((sum, value) => sum + value, 0);
       expect(total).toBeCloseTo(1, 6);
     }
