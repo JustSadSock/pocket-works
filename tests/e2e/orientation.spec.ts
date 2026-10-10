@@ -3,7 +3,8 @@ import {
   assertNoHorizontalOverflow,
   attachCriticalScreenshot,
   monitorUnexpectedBrowserOutput,
-  openStablePage
+  openStablePage,
+  openLibraryPage
 } from './helpers';
 
 test('Screen Lab matches the project orientation without viewport overflow', async ({ page }, testInfo) => {
@@ -27,7 +28,7 @@ test('Screen Lab matches the project orientation without viewport overflow', asy
 test('launcher remains usable in the project orientation', async ({ page }, testInfo) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
-  await openStablePage(page, '/', screenLabEntry);
+  await openLibraryPage(page, screenLabEntry);
 
   await expect(page.locator('#app-search')).toBeVisible();
   await expect(screenLabEntry.locator('.app-entry__select')).toBeVisible();

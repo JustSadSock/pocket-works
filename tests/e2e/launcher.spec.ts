@@ -5,7 +5,8 @@ import {
   assertNoHorizontalOverflow,
   attachCriticalScreenshot,
   monitorUnexpectedBrowserOutput,
-  openStablePage
+  openStablePage,
+  openLibraryPage
 } from './helpers';
 
 const registry = JSON.parse(
@@ -95,7 +96,7 @@ test('launcher shelf supports precise updated sorting, search, details and favor
 
 test('launcher list remains expanded after reload and BFCache-safe cleanup', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
-  await openStablePage(page, '/', '.app-entry');
+  await openLibraryPage(page, '.app-entry');
   await expectExpandedLauncherList(page);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -112,7 +113,7 @@ test('launcher list remains expanded after reload and BFCache-safe cleanup', asy
 test('launcher retains personal shelf state and reset requires a second confirmation press', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
-  await openStablePage(page, '/', screenLabEntry);
+  await openLibraryPage(page, screenLabEntry);
 
   await screenLabEntry.locator('.app-entry__favorite').click();
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -191,7 +192,7 @@ test('KROMKA exit controls use native links and return to the Pocket Works launc
 });
 
 test('launcher preserves card identity across sorting and filtering', async ({ page }) => {
-  await openStablePage(page, '/', '.app-entry[data-slug="screen-lab"]');
+  await openLibraryPage(page, '.app-entry[data-slug="screen-lab"]');
   const card = page.locator('.app-entry[data-slug="screen-lab"]');
   await card.evaluate(element => { (window as any).__pwStableCard = element; });
 

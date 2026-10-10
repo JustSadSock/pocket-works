@@ -49,3 +49,9 @@ Lighthouse evidence also identified a launcher layout shift during late Deck
 activation and two accessibility failures. The initial HTML uses its final Deck
 layout, density selection updates only buttons (not the HTML root), and the
 launcher viewport allows zoom. Lighthouse budgets remain unchanged.
+
+First Service Worker installation no longer reloads an already coherent running
+page. Real controller replacements keep the once-per-release reload guard.
+Screen Lab resolves version-query requests against its app-owned offline cache.
+Legacy catalog tests explicitly navigate from Home to Library before exercising
+the catalog, retaining all their assertions.
