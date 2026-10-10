@@ -181,6 +181,7 @@ function season(s){
  if(s.treasury<7){s.army-=5;s.factions.captains-=6;note(s,'Опустевшая казна задерживает жалование дружине.','warn');}
  for(const p of s.provinces){
    p.unrest+=(p.loyalty<45?3:0)+(s.factions.commons<32?4:0)+(s.grain<15?4:0)-Math.floor(p.loyalty/32);
+   p.loyalty-=1; // Remote lords slowly drift from the crown unless actively governed.
    p.loyalty+=(p.unrest>62?-4:0)+(p.unrest<18?1:0);
    if(s.laws.includes('royal'))p.unrest-=1;
    if(s.laws.includes('roads'))p.wealth+=1;
@@ -222,7 +223,7 @@ export function endTurn(s){
  if(s.legitimacy<=7 || s.provinces.filter(p=>p.loyalty<15).length>=3)
   return {ok:true,message:done(s,'Корона лишилась доверия. Три земли отказались повиноваться государю.')};
  if(s.turn>s.limit){
-  const score=scoreState(s),epitaph=score>=72?'Золотой век':score>=48?'Хрупкий мир':'Раздробленное наследие';
+  const score=scoreState(s),epitaph=score>=80?'Золотой век':score>=55?'Хрупкий мир':'Раздробленное наследие';
   return {ok:true,message:done(s,epitaph+'. Двадцать четыре сезона правления вошли в летопись.')};
  }
  if(s.turn%3===0){
