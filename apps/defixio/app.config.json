@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "defixio",
+  "name": "DEFIXIO — Латинские проклятия",
+  "shortName": "DEFIXIO",
+  "description": "Римская мастерская проклятий: выцарапывай настоящие латинские формулы на свинце, изучай падежи и запечатывай таблички.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-10",
+  "releaseDateTime": "2026-10-10T12:20:00+03:00",
+  "changelog": [
+    "Первый выпуск: двенадцать грамматических проклятий с нарастающей сложностью.",
+    "Тактильная свинцовая табличка, звуки резца, повреждения от ошибок и запечатывание.",
+    "Архив готовых формул, свободная мастерская и автономное сохранение прогресса."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "runtime": "quick",
+  "accent": "#b6a28b",
+  "backgroundColor": "#251f1a",
+  "themeColor": "#251f1a",
+  "orientation": "portrait",
+  "cacheName": "defixio-v1.0.0",
+  "storageNamespace": "pocket-works:defixio",
+  "tags": [
+    "game",
+    "latin",
+    "language",
+    "puzzle",
+    "history",
+    "offline",
+    "interactive"
+  ],
+  "order": 337
+}
