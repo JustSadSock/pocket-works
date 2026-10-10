@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "pyad",
+  "name": "ПЯДЬ — Малое королевство",
+  "shortName": "ПЯДЬ",
+  "description": "Настоящая пиксельная средневековая миниатюра: укрепляй три дороги, собирай припасы и переживи пять осад.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-10",
+  "releaseDateTime": "2026-10-10T19:56:00+03:00",
+  "changelog": [
+    "Первый выпуск: пять ночных набегов, трёхполосная оборона, вербовка ополчения и лучников.",
+    "Ручной пиксель-арт в низком разрешении, ожившая деревня, знаменосец и маленькая осада.",
+    "Автосохранение, автономная PWA, звуковое сопровождение и игровая хроника."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#be8c48",
+  "backgroundColor": "#203b4d",
+  "themeColor": "#203b4d",
+  "orientation": "portrait",
+  "cacheName": "pyad-v1.0.0",
+  "storageNamespace": "pocket-works:pyad",
+  "tags": [
+    "game",
+    "strategy",
+    "pixel-art",
+    "medieval",
+    "tower-defense",
+    "offline",
+    "canvas"
+  ],
+  "order": 338
+}
