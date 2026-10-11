@@ -114,7 +114,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends python3-pil inkscape krita
+          sudo apt-get install -y --no-install-recommends python3-pil inkscape krita xvfb xauth
           curl -fsSL -o /tmp/pixelorama.tar.gz https://github.com/Orama-Interactive/Pixelorama/releases/download/v1.2.3/Pixelorama-Linux-64bit.tar.gz
           echo 'e7bb3b5f485e3a67f06b15a2c8414a8a7c18b7c6d2cf73f6b3b5904d86821e4b  /tmp/pixelorama.tar.gz' | sha256sum --check --strict
           tar -xf /tmp/pixelorama.tar.gz -C /tmp

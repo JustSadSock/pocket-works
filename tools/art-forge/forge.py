@@ -36,6 +36,15 @@ def command(args, env=None, timeout=180):
         raise RuntimeError(f"Tool failed ({error.returncode}): {(error.stdout + error.stderr)[-4000:]}") from error
 
 
+def krita_args(executable):
+    # Krita 5.2 forcibly selects XCB; its documented export mode still needs X.
+    # A private virtual display is an editor dependency, not a GUI user session.
+    xvfb = shutil.which("xvfb-run")
+    if not os.environ.get("DISPLAY") and xvfb:
+        return [xvfb, "-a", executable]
+    return [executable]
+
+
 def capabilities(overrides=None):
     overrides = overrides or {}
     result = {}
@@ -55,7 +64,7 @@ def capabilities(overrides=None):
                 env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
                 prefix = [executable, "--headless", "--quit", "--"] if tool == "pixelorama" else [executable]
                 if tool == "krita":
-                    prefix += ["-platform", "offscreen"]
+                    prefix = krita_args(executable)
                 version = command(prefix + ["--version"], env, 20)
                 help_text = command(prefix + ["--help"], env, 20)
                 text = help_text.stdout + help_text.stderr
@@ -402,7 +411,7 @@ def execute(job, source, inputs, outputs, caps, trusted):
                 args.append(f"--export-{key}={positive(params[key], 8192, key)}")
         command(args)
     elif adapter == "krita":
-        command([executable, "-platform", "offscreen", source, "--export", "--export-filename", outputs["image"]],
+        command([*krita_args(executable), source, "--export", "--export-filename", outputs["image"]],
                 dict(os.environ, QT_QPA_PLATFORM="offscreen"))
     elif adapter == "pixelorama":
         command([executable, "--headless", "--quit", "--", "--export", "--spritesheet", "--direction", "0",
@@ -411,6 +420,7 @@ def execute(job, source, inputs, outputs, caps, trusted):
         if not trusted:
             raise ValueError("Authored Python needs explicit --allow-authored-python")
         env = dict(os.environ, ART_FORGE_OUTPUTS=json.dumps({k: str(v) for k, v in outputs.items()}),
+                   ART_FORGE_INPUTS=json.dumps({k: str(v) for k, v in inputs.items()}),
                    ART_FORGE_PARAMETERS=json.dumps(params), ART_FORGE_SEED=str(job["seed"]),
                    ASSET_FORGE_OUTPUT=str(outputs["model"]), POCKET_WORKS_ROOT=str(ROOT))
         command([executable, "--background", "--factory-startup", "--python-exit-code", "1",
@@ -424,6 +434,8 @@ def execute(job, source, inputs, outputs, caps, trusted):
 def build(app, data, caps, trusted=False):
     app = app.resolve()
     ordered, runtime, index = plan(app, data)
+    if not caps.get("pillow", {}).get("available"):
+        raise ValueError("Pillow is required for output validation")
     for job in ordered:
         if not caps[tool_for(job["adapter"])]["available"]:
             raise ValueError("Blocked tool for " + job["id"])

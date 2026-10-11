@@ -41,8 +41,8 @@ be distinct, contained paths (including symlinks). Editable BLEND outputs live i
 `asset-forge/generated/`, are recorded as source paths and are not published or
 precached. Dependencies are a DAG; a job
 must explicitly depend on the producer of each input. Jobs cannot supply commands,
-executables, extra CLI flags or environment variables. Outputs must be under
-`runtimeRoot`; `runtimeRoot: "."` supports Quick/Godot apps. The generated index
+executables, extra CLI flags or environment variables. Runtime exports must be
+under `runtimeRoot`; `runtimeRoot: "."` supports Quick/Godot apps. The generated index
 contains runtime-relative URLs, hashes, dimensions/geometry budgets, source
 hashes, seed, parameters, provenance and actual tool version. It is an offline
 precache input, not an automatic change to somebody else's worker or renderer.
@@ -73,6 +73,11 @@ raster need Pillow. Vector PNG needs Inkscape. Krita/Pixelorama/Blender availabi
 is separate from artistic fitness. New adapters are platform changes; add format,
 parameter, containment and real-tool round-trip tests before listing support.
 
+Krita 5.2 forces the XCB platform even for CLI export. The adapter uses a private
+`xvfb-run -a` display when no display is configured; CI installs Xvfb and xauth.
+An installation without a usable native/virtual display is reported unavailable.
+No user desktop session or account login is involved.
+
 Every generated GLB is re-imported by a fresh Blender process before publication.
 `validation: {"requireArmature": true, "requireAnimation": true}` adds the existing
 Asset Forge skeletal/animation requirements. File size, triangles and embedded
@@ -83,7 +88,12 @@ Running it requires `--allow-authored-python`; this flag is a trust acknowledgem
 **not a sandbox**. Only trusted same-repository authors should use it. Do not run
 untrusted source with credentials, network access or write tokens. Blender receives
 `ART_FORGE_OUTPUTS` (JSON mapping role→staged absolute path), `ART_FORGE_PARAMETERS`,
-`ART_FORGE_SEED` and `ASSET_FORGE_OUTPUT` (GLB path for compatible scripts). Use
+`ART_FORGE_SEED` and `ASSET_FORGE_OUTPUT` (GLB path for compatible scripts).
+Use `ART_FORGE_INPUTS` (declared app-relative path→current staged absolute path)
+for textures/models produced by earlier jobs; do not read last build's public
+files. Declare every helper script and imported texture in `inputs` so freshness
+covers the complete authoring graph. Pack textures into the BLEND source for
+portable baking, and embed them in GLB for offline use. Use
 `--python-exit-code 1` so failures cannot masquerade as successful generation.
 Baking uses `--disable-autoexec` and the platform's own fixed export script.
 
