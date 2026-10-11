@@ -1,12 +1,12 @@
 {
-  "name": "ЗАМАЗКА — бюро реставрации",
+  "name": "ЗАМАЗКА — музей подделок",
   "short_name": "ЗАМАЗКА",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#293b37",
-  "theme_color": "#293b37",
+  "background_color": "#241e1a",
+  "theme_color": "#201b18",
   "orientation": "portrait",
   "lang": "ru",
   "icons": [
