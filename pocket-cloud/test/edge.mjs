@@ -24,6 +24,8 @@ result=await call(a,'folio','list');assert.equal(result.status,200);assert.equal
 result=await call(a,'folio','item','page_1','POST',packed);assert.equal(result.status,200,JSON.stringify(result.body));
 assert.equal(result.body.item.revision,1);
 result=await call(b,'folio','list');assert.equal(result.body.items.length,0,'Different Google user must be isolated');
+result=await call(b,'folio','list',null,'GET',null,{'x-pw-expected-account':'11111111-1111-4111-8111-111111111111'});
+assert.equal(result.status,409);assert.equal(result.body.error,'account_changed');
 result=await call(a,'zamazka','list');assert.equal(result.body.items.length,0,'App namespaces are independent');
 result=await call(a,'folio','item','page_1');assert.equal(result.status,200);
 assert.deepEqual(JSON.parse(Buffer.from(result.body.payload,'base64').toString('utf8')),doc);
