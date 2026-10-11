@@ -84,6 +84,23 @@ try{
  assert.equal(joined.state.participants[0].name,nick1);
  assert.equal(joined.state.participants[0].verified,true);
  assert.equal(joined.state.participants[1].verified,false);
+ // The room seat must survive a verified profile edit and WebSocket reconnection.
+ const revisedName=nick1+'X';
+ const updated=await fetch(base+'/pocket-id/profile',{method:'POST',headers:{
+  origin:base,'content-type':'application/json',cookie:alice.cookie
+ },body:JSON.stringify({nickname:revisedName,avatar:'stone'})});
+ assert.equal(updated.status,200,await updated.text());
+ await close(verified);
+ verified=await open(aliceToken,alice.cookie);
+ const refreshed=await verified.next('authenticated');
+ assert.equal(refreshed.player.id,auth.player.id);
+ assert.equal(refreshed.player.name,revisedName);
+ assert.equal(refreshed.player.avatar,'stone');
+ verified.send('join_room',{roomId:room.roomId});
+ const rejoined=await verified.next('room_joined');
+ assert.equal(rejoined.state.participants[0].id,auth.player.id);
+ assert.equal(rejoined.state.participants[0].name,revisedName);
+ assert.equal(rejoined.state.participants[0].avatar,'stone');
  // Leave both seats before revoking the host cookie, so room cleanup is deterministic.
  verified.send('leave_room');
  guest.send('leave_room');
