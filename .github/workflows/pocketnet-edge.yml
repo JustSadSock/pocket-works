@@ -61,6 +61,7 @@ jobs:
           mkdir -p dist-site
           printf '<!doctype html><title>Edge CI</title>' > dist-site/index.html
           cp privacy.html dist-site/privacy.html
+          cp privacy.html dist-site/privacy.txt
           /tmp/pocketnet-wrangler/node_modules/.bin/wrangler deploy --assets ./dist-site/ --dry-run --outdir /tmp/pocketnet-bundle
       - name: Test real local Worker, SQLite, WebSocket and rooms
         shell: bash
