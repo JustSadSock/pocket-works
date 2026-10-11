@@ -1,6 +1,6 @@
 # Pocket Server
 
-Pocket Server is the single long-running WebSocket process for internet play. The existing PocketLAN capability remains the zero-server option for local play. The launcher and applications remain hosted through the existing Cloudflare production pipeline; only the online game backend needs a Node.js host. **For a permanent no-monthly-fee personal server**, follow [the Oracle Always Free guide](./POCKETNET-FREE-HOSTING.md). The original Lightsail instructions below remain an alternative for paid hosting.
+Pocket Server is the legacy self-hosted Node.js process for internet play. **The default Cloudflare Durable Objects implementation is documented in [POCKETNET-CLOUDFLARE.md](./POCKETNET-CLOUDFLARE.md).** The existing PocketLAN capability remains the zero-server option for local play. The launcher and applications remain hosted through the existing Cloudflare production pipeline; only the online game backend needs a Node.js host. **For a permanent no-monthly-fee personal server**, follow [the Oracle Always Free guide](./POCKETNET-FREE-HOSTING.md). The original Lightsail instructions below remain an alternative for paid hosting.
 
 ## Contract
 

@@ -52,7 +52,9 @@
     "test:forge:godot": "node scripts/test-godot-forge.mjs",
     "health": "npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced && npm run test:forge:godot && npm run test:shpilka && npm run test:moss-marble",
     "visual:memory": "node scripts/visual-memory.mjs",
-    "sync:metadata": "node scripts/sync-app-metadata.mjs"
+    "sync:metadata": "node scripts/sync-app-metadata.mjs",
+    "build:pocketnet": "node scripts/build-pocketnet-modules.mjs",
+    "snapshot:pocketnet": "node scripts/build-pocketnet-modules.mjs --snapshot"
   },
   "dependencies": {
     "phaser": "^3.90.0",

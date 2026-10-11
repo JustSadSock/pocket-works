@@ -1,0 +1,44 @@
+# PocketNet на Cloudflare Durable Objects (Workers Free)
+
+PocketNet для друзей теперь размещается внутри **существующего** Cloudflare Worker `pocket-works`, без отдельного VPS, платного тарифа и домашнего компьютера. Публичный API: `https://<ваш-site>/pocketnet/health`, `POST /pocketnet/session`, `wss://<ваш-site>/pocketnet/ws`. Внешний домен не нужен: достаточно штатного workers.dev.
+
+## Модель
+
+- `pocketnet/worker.mjs` — маршрутизатор, остальные статические файлы остаются на Cloudflare Assets. `assets.run_worker_first` включён **только** для `/pocketnet/*`.
+- `PocketNetHub` — SQLite Durable Object с предельными 32 комнатами и 48 WebSocket-соединениями. Используется hibernatable `ctx.acceptWebSocket` / `serializeAttachment`, состояние сохраняется в Durable Object storage, а не в памяти Worker.
+- Гостевые сессии: случайные bearer-токены, 7 дней TTL, отдельные для вкладок, доступ только с того же браузерного origin. Не является регистрацией / профилем Pocket Works.
+- Устаревшая пустая комната с истёкшими 30 минутами без активности удаляется будильником. Правила и события считаются **на сервере**, а не в браузере.
+- `module-versions/<game>/vN.ts` — неизменяемые серверные версии. Комната фиксирует `version`. При новом деплое новые комнаты используют текущую версию, а старые — прежнюю при сохранённом snapshot-файле в репозитории. Это позволяет обновлять игру независимо от комнат. Однако новый деплой Worker **может переподключить WebSocket**; абсолютного zero-disconnect Cloudflare не обещает.
+- Существующий Node.js `pocket-server/` остаётся в репозитории для self-hosting, но не является требованием для облачного режима. PocketLAN также не изменён.
+
+## Развёртывание
+
+В `wrangler.jsonc` выставлены `main`, Durable Object binding `POCKETNET` и миграция `new_sqlite_classes`. Уже существующий Cloudflare Workers Builds выполняет:
+
+```sh
+npm run deploy:site
+npx wrangler deploy --assets ./dist-site/
+```
+
+`npm run deploy:site` теперь также проверяет и генерирует статический список модулей. Если нет опубликованного `/pocketnet/health`, откройте в Cloudflare Dashboard → Workers & Pages → pocket-works → Deployments логи последней сборки. При ошибке прав доступа к Durable Objects потребуется авторизация Cloudflare с соответствующей привилегией. Прямого доступа к управлению чужим Cloudflare-аккаунтом у GitHub-коннектора нет.
+
+## Добавление/изменение игры
+
+1. Пишите серверные правила в `apps/<slug>/server/module.ts`, конфиг — `module.json`.
+2. Запустите `node scripts/build-pocketnet-modules.mjs --snapshot`. Команда создаёт **новый** immutable `pocketnet/module-versions/<slug>/vN.ts` и обновляет `modules.lock.json`. Изменение старых snapshot-файлов запрещено.
+3. Закоммитьте исходные правила, snapshot и lock. CI должен проверить сборку и end-to-end тесты.
+4. Публикация `main` вместе с клиентом автоматически активирует новую версию. Деплой может коротко переподключить игроков, а комнаты восстанавливаются из SQLite.
+
+**Ограничение:** архив игровых версий входит в пакет Worker; следите за лимитом размера кода на Free. Изменения межмодульных зависимостей должны быть частью immutable snapshot, а не внешней mutable зависимости. Новые возможности и миграции данных должны проходить тесты совместимости.
+
+## Проверка
+
+- `https://<сайт>/pocketnet/health` → `ok:true`, `modules:["zamazka"]`, `games.zamazka.rulesVersion:2`
+- Pocket Works → ЗАМАЗКА → Создать комнату → второй браузер → Присоединиться.
+- Покинуть/вернуться, разорвать сеть/восстановить, открыть комнату после перезагрузки Worker.
+- `node scripts/build-pocketnet-modules.mjs` и `node --check pocketnet/hub.mjs`.
+- CI `PocketNet Edge`: сборка Worker с SQLite DO и end-to-end WebSocket сценарий на локальном Wrangler.
+
+## Границы бесплатности
+
+Отдельная VM и статический IP не используются. Durable Objects/Workers Free имеют квоты на запросы, хранение и CPU, а не SLA. Лимиты 32 комнат и 48 сокетов защищают маленький проект, но не исключают достижения Cloudflare квот. При превышении операций возможны ошибки до следующего периода квоты; проверьте `Workers → Metrics`. Для критичных данных предусмотрите резервные копии / административный план экспорта; бесплатный тариф не гарантирует непрерывную доступность.

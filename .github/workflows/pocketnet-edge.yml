@@ -1,0 +1,57 @@
+name: PocketNet Edge
+
+on:
+  pull_request:
+    paths:
+      - 'pocketnet/**'
+      - 'apps/*/server/**'
+      - 'scripts/build-pocketnet-modules.mjs'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - '.github/workflows/pocketnet-edge.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pocketnet/**'
+      - 'apps/*/server/**'
+      - 'scripts/build-pocketnet-modules.mjs'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - '.github/workflows/pocketnet-edge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install WebSocket test driver
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Validate and generate immutable module registry
+        run: |
+          npm run build:pocketnet
+          node --check pocketnet/hub.mjs
+          node --check pocketnet/worker.mjs
+          node --check scripts/build-pocketnet-modules.mjs
+      - name: Install Wrangler 4
+        run: npm install --prefix /tmp/pocketnet-wrangler --no-audit --no-fund wrangler@4
+      - name: Compile Worker and verify Durable Object configuration
+        run: |
+          mkdir -p dist-site
+          printf '<!doctype html><title>Edge CI</title>' > dist-site/index.html
+          /tmp/pocketnet-wrangler/node_modules/.bin/wrangler deploy --assets ./dist-site/ --dry-run --outdir /tmp/pocketnet-bundle
+      - name: Test real local Worker, SQLite, WebSocket and rooms
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-dev.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
+          node pocketnet/test/edge.mjs
