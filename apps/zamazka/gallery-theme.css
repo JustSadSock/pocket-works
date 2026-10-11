@@ -109,3 +109,31 @@ border:5px ridge #c4a46e;padding:7px;outline:1px solid #45331c;box-shadow:0 1px 
 @media(max-height:740px) and (max-width:699px){.museum-headline h1{font-size:44px}.museum-display{margin-top:9px}}
 @media(min-width:700px){.museum-headline h1{font-size:clamp(65px,7vw,120px)}}
 @media(max-height:580px) and (orientation:landscape){.museum-headline h1{font-size:34px}}
+
+
+/* The entry desk and invitation card belong to a physical museum. */
+.lobby-entry,.exhibition-lobby{max-width:570px;padding-top:clamp(24px,5vh,52px)}
+.entry-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:8px 0 24px}
+.entry-heading h2{margin:0;line-height:1.05}.entry-heading .hint{max-width:320px}
+.entry-stamp{flex:none;display:grid;place-items:center;width:68px;height:77px;transform:rotate(8deg);border:3px double #99734c;color:#86613b;font:italic 24px/1 Georgia,serif;box-shadow:2px 3px 0 #d8c6aa}
+.entry-guide{display:flex;align-items:center;gap:14px;margin:13px 0;color:#554332;font-size:14px;line-height:1.4}
+.entry-step{font:italic 25px Georgia,serif;color:#9a7751}
+.room-entry-input{text-transform:uppercase;font:600 24px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.09em}
+.room-entry-input::placeholder{font:400 15px/1.4 system-ui,sans-serif;letter-spacing:normal;text-transform:none}
+.entry-error{margin:18px 0;border-left-color:#9a3f36;background:#f4e0da;color:#752a22}
+.connecting-room{display:grid;justify-items:center;align-content:center;min-height:58vh;gap:14px}
+.connecting-room>.busy{width:28px;height:28px;border-width:3px}
+.connecting-room h2{margin:0}.connecting-room .hint{margin:0 0 12px}
+.exhibition-lobby>h2{line-height:1.02}.exhibition-lobby>.hint{max-width:390px}
+.exhibition-lobby .room-ticket{position:relative;margin:24px 0;border:2px solid #9b7951;border-left:8px solid #886341;background:linear-gradient(140deg,#f2e3c9,#e6d2b0);box-shadow:4px 6px 0 #d2b998;padding:20px 22px;overflow:hidden}
+.exhibition-lobby .room-ticket:after{content:"";position:absolute;right:-33px;top:62px;width:95px;height:95px;border:4px double #b39b79;border-radius:50%;pointer-events:none;opacity:.4}
+.ticket-top,.lobby-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ticket-live{font:700 10px system-ui,sans-serif;letter-spacing:.11em;color:#536d53}
+.ticket-live span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#56865b;margin-right:4px;box-shadow:0 0 0 3px #56865b24}
+.room-ticket .room-code{font:700 clamp(34px,9vw,54px)/1.15 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.1em;color:#34261e;user-select:all;overflow-wrap:anywhere;margin:18px 0 6px;position:relative;z-index:1}
+.ticket-help{font-size:12px;color:#67513e;margin:6px 0 18px}
+.ticket-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:relative;z-index:1}
+.ticket-actions .btn{font-size:12px;padding:10px 7px;min-width:0}
+.lobby-list-heading{margin-top:26px}.lobby-list-heading>span:last-child{font-size:11px;color:#776453}
+.me-tag{color:#97734f;font-size:11px;font-weight:500;margin-left:4px}
+@media(max-width:370px){.ticket-actions{grid-template-columns:1fr}.room-ticket .room-code{font-size:31px;letter-spacing:.06em}.entry-stamp{width:50px;height:58px;font-size:18px}}
