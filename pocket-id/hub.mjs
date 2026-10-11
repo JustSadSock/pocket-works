@@ -94,6 +94,10 @@ export class PocketIdentity {
     if(!['GET','POST'].includes(request.method)) return response({error:'method_not_allowed'},405,{allow:'GET, POST'});
     if(request.method==='POST'&&!allowWrite(request,url)) return response({error:'origin_or_content_type_denied'},403);
     try {
+      if(!this.lastCleanup||Date.now()-this.lastCleanup>5*60_000) {
+        this.lastCleanup=Date.now();
+        this.cleanup();
+      }
       if(path==='/pocket-id/config'&&request.method==='GET')
         return response({ok:true,googleEnabled:Boolean(this.env.GOOGLE_CLIENT_ID&&this.env.GOOGLE_CLIENT_SECRET),avatars:AVATARS});
       if(path==='/pocket-id/me'&&request.method==='GET')
@@ -142,6 +146,14 @@ export class PocketIdentity {
             candidate.name,candidate.normalized,avatar,Date.now(),user.id);
         } catch(e) { if(codeError(e)) return response({error:'nickname_taken'},409); throw e; }
         return response({user:publicUser(this.one('SELECT * FROM accounts WHERE id=?',user.id))});
+      }
+      if(path==='/pocket-id/new-key'&&request.method==='POST') {
+        const user=await this.session(request);
+        if(!user) return response({error:'sign_in_required'},401);
+        const secret=random();
+        this.query('UPDATE accounts SET recovery_hash=?,updated_at=? WHERE id=?',
+          await digest(user.id+'.'+secret),Date.now(),user.id);
+        return response({recoveryCode:'PW1-'+user.id+'.'+secret});
       }
       if(path==='/pocket-id/logout'&&request.method==='POST') {
         const raw=getCookie(request,ID_COOKIE);
