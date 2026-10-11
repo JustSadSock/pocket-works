@@ -8,7 +8,7 @@ Launch → gallery → create a canvas (portrait, square or landscape) → draw 
 
 ### Controls
 
-- One pointer draws. Two pointers pan, zoom and rotate the paper; pinch cancels an uncommitted stroke.
+- In Direct and Offset modes one pointer draws. In Precision mode, the leading pointer aims without painting until the other hand holds the draw button. Two pointers pan, zoom and rotate the paper; pinch cancels an uncommitted stroke.
 - **Точно:** visible nib is offset above the finger; the cursor reveals the precise stroke position.
 - **Обычно:** the brush follows the finger directly.
 - Size and opacity use the lower hand-reachable tool strip.
@@ -28,3 +28,24 @@ Professional concepts such as PSD exchange, pixel-grid editing, onion-skin anima
 ## Testing
 
 `node --check apps/folio/app.js`, `npm run registry:check`, `node scripts/validate-visual-direction.mjs --app=folio`, and the mobile browser quality flow. Real-device Safari and offline-reload verification are needed for final device sign-off.
+
+## 1.1.0 — Two-hand Precision & desktop
+
+### Touch drawing
+- **Точное перо** is the default on phones: the leading finger positions the offset crosshair but never draws on its own.
+- Hold **РИСОВАТЬ** with the other thumb to put the nib on paper; releasing immediately finishes the current stroke. Release/hold again to break the line without moving the aiming finger.
+- The button is on the left for right-handed users and on the right for left-handed users; handedness is in the brush picker.
+- The mode selector cycles `Точное перо`, `Остриё` (draw while moving), and `Прямо` (draw under the finger). Preferences are local to each device layout.
+- Two fingers on the paper still zoom, rotate and pan; the independent arm button never counts as a canvas pointer.
+- If the draw finger leaves the canvas or the button receives pointer cancellation, drawing stops without leaving stuck pressed state.
+
+### Desktop drawing
+- At desktop widths, dedicated **left tool/color rail** and **right brush/layer inspector** surround the canvas; the mobile bottom dock does not consume height.
+- Mouse drawing defaults to **Прямо**. A mouse/pen pointer is never artificially offset.
+- In **Точное перо**, hold `Shift` while moving with the mouse button down or use the physical on-canvas draw button.
+- `Space` + drag / middle mouse = pan, wheel = zoom around pointer, right click = sample color.
+- `B`, `E`, `I` = brush/eraser/pipette; `[` and `]` = brush size; `0` = fit; `F` = focus; `Ctrl/Cmd+Z` and `Ctrl/Cmd+Y` = history; `Ctrl/Cmd+S` = persist; `Ctrl/Cmd+Shift+S` = PNG.
+- The same IndexedDB work database, brush engine and image formats are used on desktop and mobile. No user account or sync is implied.
+
+
+Optional precision lock: switch on “Двойной тап закрепляет кнопку” in the brush sheet. Double tap the draw button to latch it; tap once to release. It is **off by default**.

@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'folio-';
-const CACHE_NAME = 'folio-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'folio-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-11';
 const RELEASE_NOTES=[
   "Первая версия FOLIO: пальцевое рисование, точное остриё, мультитач-навигация и кисти.",

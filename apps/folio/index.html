@@ -93,15 +93,56 @@
           <button id="export" class="export-button" aria-label="Экспортировать PNG" title="Экспортировать PNG"><svg><use href="#i-export"/></svg></button>
         </div>
       </header>
+      <div class="workspace">
+        <aside class="desktop-rail" data-ui aria-label="Инструменты ПК">
+          <div class="desktop-rail-heading"><strong>F<span>.</span></strong><small>ИНСТРУМЕНТЫ</small></div>
+          <div class="desktop-tool-stack">
+            <button id="desktop-brush-tool" class="desktop-tool is-active" title="Кисть — B"><svg><use href="#i-brush"/></svg><span>Кисть <kbd>B</kbd></span></button>
+            <button id="desktop-eraser-tool" class="desktop-tool" title="Ластик — E"><svg><use href="#i-eraser"/></svg><span>Ластик <kbd>E</kbd></span></button>
+            <button id="desktop-pipette-tool" class="desktop-tool" title="Пипетка — I"><svg><use href="#i-pipette"/></svg><span>Пипетка <kbd>I</kbd></span></button>
+            <button id="desktop-color-tool" class="desktop-tool" title="Выбрать цвет"><svg><use href="#i-layers"/></svg><span>Палитра</span></button>
+            <button id="desktop-focus-tool" class="desktop-tool" title="Скрыть панели — F"><svg><use href="#i-grid"/></svg><span>Фокус <kbd>F</kbd></span></button>
+          </div>
+          <div class="desktop-swatches-title">БЫСТРЫЕ ЦВЕТА</div>
+          <div class="desktop-swatches" id="desktop-swatches"></div>
+          <div class="desktop-rail-footer">
+            <button id="desktop-idea" class="desktop-inspire"><svg><use href="#i-spark"/></svg> Найти идею</button>
+            <div class="desktop-shortcuts"><span>ПРОСТЫЕ ЖЕСТЫ</span><p><kbd>Пробел</kbd> + перетаскивание — переместить</p><p><kbd>Колесо</kbd> — масштаб</p><p><kbd>B</kbd> <kbd>E</kbd> <kbd>I</kbd> — инструменты</p><p><kbd>Ctrl</kbd> + <kbd>Z</kbd> — отменить</p></div>
+          </div>
+        </aside>
       <div class="working-area" id="working-area">
         <canvas id="artboard" data-gesture-surface data-block-callout aria-label="Холст, рисуйте пальцем"></canvas>
         <div class="nib-cursor" id="nib-cursor" hidden></div>
         <div class="stage-hud" data-ui>
-          <button id="mode-toggle" class="mode-toggle" title="Переключить режим ввода"><span id="mode-icon">◎</span><span id="mode-label">Острие</span></button>
+          <button id="mode-toggle" class="mode-toggle" title="Переключить режим ввода"><span id="mode-icon">◎</span><span id="mode-label">Точное перо</span></button>
           <button id="fit" class="zoom-button" title="Вписать холст в экран"><span id="zoom-label">100%</span><svg><use href="#i-zoom"/></svg></button>
         </div>
+        <button class="arm-button" id="precision-arm" type="button" aria-label="Зажмите, чтобы рисовать" aria-pressed="false" data-gesture-surface><span class="arm-glyph" aria-hidden="true">✣</span><strong>РИСОВАТЬ</strong><small id="arm-hint">ЗАЖАТЬ</small></button>
         <button class="focus-restore" id="focus-restore" hidden>Показать инструменты</button>
-        <div class="canvas-guide" id="canvas-guide" aria-live="polite">Один палец рисует · два двигают холст</div>
+        <div class="canvas-guide" id="canvas-guide" aria-live="polite">Наведи остриё · зажми «Рисовать» слева</div>
+      </div>
+      <aside class="desktop-inspector" data-ui aria-label="Свойства кистей и слои">
+        <div class="inspector-intro"><span>РАБОЧИЙ ПРОЦЕСС</span><strong>Настройка штриха</strong></div>
+        <div class="inspector-section">
+          <div class="inspector-label">КИСТЬ <span id="desktop-brush-name">Тушь</span></div>
+          <div id="desktop-brush-choices" class="desktop-brush-choices"></div>
+          <label class="desktop-slider-label">Толщина <output id="desktop-size-value">9 px</output><input type="range" min="1" max="72" step="1" value="9" id="desktop-size"></label>
+          <label class="desktop-slider-label">Насыщенность <output id="desktop-opacity-value">100%</output><input type="range" min="10" max="100" step="5" value="100" id="desktop-opacity"></label>
+          <div class="desktop-color-control"><span>Текущий цвет</span><input id="desktop-color" type="color" aria-label="Цвет кисти" value="#a6553e"></div>
+        </div>
+        <div class="inspector-section">
+          <div class="inspector-label">СПОСОБ ВВОДА</div>
+          <div class="desktop-mode-choices" id="desktop-mode-choices">
+            <button data-input-mode="direct">Прямой</button><button data-input-mode="nib">Остриё</button><button data-input-mode="precision">Точный</button>
+          </div>
+          <p class="inspector-help" id="desktop-mode-help">Мышь и графический планшет рисуют непосредственно на холсте.</p>
+        </div>
+        <div class="inspector-section inspector-layer-section">
+          <div class="inspector-heading"><span>СЛОИ</span><button id="desktop-add-layer" title="Добавить слой"><svg><use href="#i-plus"/></svg> Добавить</button></div>
+          <div class="desktop-layers" id="desktop-layers"></div>
+          <button id="desktop-layer-options" class="desktop-layer-options">Порядок, копия и прозрачность →</button>
+        </div>
+      </aside>
       </div>
       <div class="studio-bottom" data-ui>
         <div class="precision-rail">
@@ -135,7 +176,7 @@
     </div>
     <div id="toast" class="toast" aria-live="polite"></div>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.1.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
