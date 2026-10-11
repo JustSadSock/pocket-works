@@ -28,14 +28,18 @@ const ideas = [
 const state = {
   doc:null, works:[], tool:'brush', brush:'ink', color:'#a6553e', size:9, opacity:1,
   mode:'precision', hand:'right', sheet:null, focus:false, idea:0,
-  armPointer:null, armKeyboard:false, aimEvent:null, spacePan:false,
+  armPointer:null, armKeyboard:false, armLocked:false, allowLock:false, lastArmTap:0,
+  aimEvent:null, spacePan:false,
   panPointer:null, panStart:null, cursorActive:false,
   view:{cx:0,cy:0,scale:1,rot:0}, pointers:new Map(), pinch:null,
   draft:null, draftStart:0, lastMove:0, blockDraw:false,
   undo:[], redo:[], cache:new Map(), dirty:new Set(),
   frame:0, saveTimer:0, cursorTimer:0, toastTimer:0
 };
-try { if(localStorage.getItem('pocket-works:folio:hand')==='left')state.hand='left'; }catch{}
+try {
+  if(localStorage.getItem('pocket-works:folio:hand')==='left')state.hand='left';
+  state.allowLock=localStorage.getItem('pocket-works:folio:allowLock')==='true';
+}catch{}
 const isDesktop=()=>matchMedia('(min-width:960px) and (pointer:fine) and (min-height:500px)').matches;
 function preferredMode(){
   const key='pocket-works:folio:mode:'+(isDesktop()?'desktop':'mobile');
@@ -243,11 +247,14 @@ function setCursor(e){
   nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
-function isArmed(){return state.armPointer!==null||state.armKeyboard;}
+function isArmed(){return state.armLocked||state.armPointer!==null||state.armKeyboard;}
 function updateArmUI(){
   const pressed=isArmed();
   $('precision-arm').classList.toggle('is-armed',pressed);
+  $('precision-arm').classList.toggle('is-locked',state.armLocked);
   $('precision-arm').setAttribute('aria-pressed',String(pressed));
+  $('precision-arm').setAttribute('aria-label',state.armLocked?'Отключить непрерывное рисование':'Удерживать для рисования');
+  $('arm-hint').textContent=state.armLocked?'ЗАКРЕПЛЕНО':state.allowLock?'ЗАЖАТЬ / 2 ТАПА':'ЗАЖАТЬ';
 }
 function armDrawing(pointerOrKeyboard,isDown,cancel=false){
   if(pointerOrKeyboard==='keyboard')state.armKeyboard=isDown;
@@ -269,14 +276,14 @@ function setInputMode(mode,{save=true}={}){
   $('studio').classList.toggle('mode-precision',active);
   $('canvas-guide').textContent=active?'Наведи остриё · зажми «Рисовать» другой рукой':
     mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
-  if(!active){state.armPointer=null;state.armKeyboard=false;updateArmUI();}
+  if(!active){state.armPointer=null;state.armKeyboard=false;state.armLocked=false;updateArmUI();}
   hideCursor();updateToolUI();
   if(state.doc)syncDesktop();
 }
 function resetInput(){
   finishStroke(true);state.pointers.clear();state.pinch=null;state.blockDraw=false;
   state.aimEvent=null;state.panPointer=null;state.panStart=null;state.spacePan=false;
-  state.armPointer=null;state.armKeyboard=false;updateArmUI();hideCursor();
+  state.armPointer=null;state.armKeyboard=false;state.armLocked=false;state.lastArmTap=0;updateArmUI();hideCursor();
   $('studio').classList.remove('is-panning');
 }
 function beginStroke(e){
@@ -424,11 +431,21 @@ $('precision-arm').addEventListener('pointerdown',e=>{
   if(!state.doc||state.mode!=='precision'||state.sheet)return;
   e.preventDefault();e.stopPropagation();
   try{$('precision-arm').setPointerCapture(e.pointerId);}catch{}
+  if(state.armLocked){
+    state.armLocked=false;state.lastArmTap=0;state.armPointer=null;
+    updateArmUI();finishStroke();notify('Перо поднято');return;
+  }
+  const now=performance.now();
+  if(state.allowLock&&now-state.lastArmTap<350){
+    state.armLocked=true;state.lastArmTap=0;notify('Перо закреплено · нажми снова, чтобы поднять');
+  }
   armDrawing(e.pointerId,true);
 });
 function stopArm(e){
   if(state.armPointer!==e.pointerId)return;
   e.preventDefault();
+  if(state.allowLock&&!state.armLocked&&e.type==='pointerup')state.lastArmTap=performance.now();
+  if(e.type==='pointercancel')state.armLocked=false;
   armDrawing(e.pointerId,false,e.type==='pointercancel');
 }
 $('precision-arm').addEventListener('pointerup',stopArm);
@@ -499,7 +516,15 @@ function closeSheet(){
 function renderSheet(){
   const body=$('sheet-body');if(!state.sheet)return;
   if(state.sheet==='brush'){
-    body.innerHTML='<div class="brush-list">'+brushes.map(b=>'<button class="brush-choice '+(b.id===state.brush?'is-active':'')+'" data-brush="'+b.id+'"><div class="brush-mark '+b.id+'"><i></i></div><div><strong>'+b.name+'</strong><span>'+b.hint+'</span></div></button>').join('')+'</div><div class="hand-row"><span>Острие для руки</span><button data-hand="right" class="'+(state.hand==='right'?'active':'')+'">Правша</button><button data-hand="left" class="'+(state.hand==='left'?'active':'')+'">Левша</button></div><p class="sheet-footnote">Размер и насыщенность регулируются под холстом.</p>';
+    body.innerHTML='<div class="brush-list">'+brushes.map(b=>'<button class="brush-choice '+(b.id===state.brush?'is-active':'')+'" data-brush="'+b.id+'"><div class="brush-mark '+b.id+'"><i></i></div><div><strong>'+b.name+'</strong><span>'+b.hint+'</span></div></button>').join('')+'</div><div class="hand-row"><span>Острие для руки</span><button data-hand="right" class="'+(state.hand==='right'?'active':'')+'">Правша</button><button data-hand="left" class="'+(state.hand==='left'?'active':'')+'">Левша</button></div><label class="precision-lock-toggle"><input id="allow-lock" type="checkbox" '+(state.allowLock?'checked':'')+'><span>Двойной тап закрепляет кнопку<br><small>Опционально: для длинных штрихов, без удержания</small></span></label><p class="sheet-footnote">Размер и насыщенность регулируются под холстом.</p>';
+  }
+  if(state.sheet==='brush'){
+    $('allow-lock').onchange=e=>{
+      state.allowLock=e.target.checked;
+      if(!state.allowLock&&state.armLocked){state.armLocked=false;finishStroke();}
+      updateArmUI();
+      try{localStorage.setItem('pocket-works:folio:allowLock',String(state.allowLock));}catch{}
+    };
   }
   if(state.sheet==='color'){
     const colors=state.doc?.palette||palettes.atelier;
@@ -810,6 +835,7 @@ window.addEventListener('blur',()=>{
   state.spacePan=false;state.panPointer=null;state.panStart=null;$('studio').classList.remove('is-panning');
   if(state.armKeyboard)armDrawing('keyboard',false,true);
   if(state.armPointer!==null)armDrawing(state.armPointer,false,true);
+  state.armLocked=false;updateArmUI();
   finishStroke(true);hideCursor();
 });
 window.addEventListener('resize',()=>{
@@ -820,6 +846,7 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     if(state.armPointer!==null)armDrawing(state.armPointer,false,true);
     if(state.armKeyboard)armDrawing('keyboard',false,true);
+    state.armLocked=false;updateArmUI();
     finishStroke();void persist();
   }
 });
