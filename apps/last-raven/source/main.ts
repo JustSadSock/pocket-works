@@ -20,7 +20,7 @@ import { advanceNight, canChoose, canSiegeOrder, choose, createGame, issueSiegeO
 
 installMobileRuntime();
 registerEnhancedUpdate({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',releaseNotes:[
-  '38–40 основных событий: новые цепочки решений и возвращающиеся персонажи.',
+  '40 основных событий: новые цепочки решений и возвращающиеся персонажи.',
   'Финальная осада теперь требует приказов кастеляна; объёмный зимний замок и новый боевой интерфейс.'
 ]});
 createWorkshopMode({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',cachePrefix:'last-raven-',storageNamespace:'pocket-works:last-raven'});
