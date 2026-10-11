@@ -95,3 +95,17 @@ border:5px ridge #c4a46e;padding:7px;outline:1px solid #45331c;box-shadow:0 1px 
 @media(max-height:740px) and (max-width:699px){.museum-home{padding-top:10px}.museum-headline{margin-top:6px}.museum-headline h1{font-size:44px}.museum-headline p{font-size:10px;margin-top:7px}.museum-display{min-height:170px;margin:0 -18px 4px}.museum-centerpiece{width:min(46vw,187px)}.museum-gilded{padding:4px;border-width:4px}.museum-centerpiece figcaption{padding-top:4px}.museum-ribbon{display:none}.museum-control .start-restoration{min-height:62px}.museum-footer{margin-top:6px}.museum-lower{margin-top:5px}}
 @media(max-height:580px) and (orientation:landscape){.museum-home{padding:12px 20px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr}.museum-kicker{grid-column:1/3}.museum-headline{grid-column:1;margin:2px 0;text-align:left}.museum-display{grid-column:2;grid-row:2;min-height:180px;max-height:calc(100vh - 80px)}.museum-centerpiece{width:120px}.museum-control{grid-column:1;grid-row:2;align-self:end;margin:0}.museum-headline h1{font-size:34px}.museum-headline p{display:none}.museum-footer{display:none}.museum-lower button{min-height:38px;font-size:10px}.start-restoration{min-height:55px}.museum-gilded{max-height:calc(100% - 30px)}}
 @media(prefers-reduced-motion:reduce){.museum-home *, .museum-home *:after,.picture{transition:none!important;animation:none!important}}
+
+/* WebKit on lean Linux/iOS browser stacks may reject font-shorthand with fractional
+   line-heights. Keep the display serif explicit on every museum-specific title. */
+.museum-headline h1{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-style:normal;font-weight:400;font-size:clamp(48px,12.8vw,67px);line-height:.95;letter-spacing:-.055em}
+.museum-headline h1 em{font-style:italic}
+.phase-head h2{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-size:27px;line-height:1.05;font-weight:400}
+.picture .caption{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-size:17px;line-height:1.12;font-weight:400}
+.notice{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-size:13px;line-height:1.6;font-weight:400}
+.start-restoration strong{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-size:20px;font-weight:400}
+.museum-centerpiece figcaption strong{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important;font-size:15px;font-style:italic}
+.dialog-box h2,.page h2{font-family:Georgia,"Times New Roman","Liberation Serif",serif!important}
+@media(max-height:740px) and (max-width:699px){.museum-headline h1{font-size:44px}.museum-display{margin-top:9px}}
+@media(min-width:700px){.museum-headline h1{font-size:clamp(65px,7vw,120px)}}
+@media(max-height:580px) and (orientation:landscape){.museum-headline h1{font-size:34px}}
