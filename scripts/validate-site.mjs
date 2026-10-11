@@ -25,7 +25,7 @@ async function walkFiles(directory,prefix=''){
 
 for(const file of [
   'index.html','styles.css','deck-shell.css','launcher-performance.css','launcher-sync.css','app.js',
-  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','launcher-new-app-focus.js','manifest.webmanifest','sw.js','apps.json','privacy.html'
+  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','launcher-new-app-focus.js','manifest.webmanifest','sw.js','apps.json','privacy.html','privacy.txt'
 ]){
   if(!(await exists(path.join(output,file))))errors.push(`dist-site is missing ${file}`);
 }
@@ -37,6 +37,8 @@ for(const forbidden of ['node_modules','scripts','docs','package.json','wrangler
 try {
   const html=await readFile(path.join(output,'privacy.html'),'utf8');
   const launcher=await readFile(path.join(output,'index.html'),'utf8');
+  const alias=await readFile(path.join(output,'privacy.txt'),'utf8');
+  if(alias!==html) errors.push('privacy.txt must be identical to privacy.html');
   if(!html.includes('<title>Privacy Policy — Pocket Works</title>')||
      !html.includes('Google subject ID')||!html.includes('Cloudflare')) {
     errors.push('privacy.html must describe actual Pocket ID / Google / Cloudflare processing');
