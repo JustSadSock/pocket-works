@@ -1,15 +1,16 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.3.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){for(const key of Object.keys(localStorage)){if(key.startsWith('pocket-works:zamazka:'))localStorage.removeItem(key)}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.4.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
-const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',NAME_KEY=NS+'name',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
+const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const q=new URLSearchParams(location.search);
 if(q.get('server')&&/^https?:\/\//.test(q.get('server')))localStorage.setItem(SERVER_KEY,q.get('server'));
-let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
+let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===2?g.art:Number(g.art)+REAL_COUNT,edition:2})):[]}catch{return[]}})();
 
 // Retry a smaller Wikimedia thumbnail when the original master is too small.
@@ -31,6 +32,8 @@ function change(html,which){if(page!==which)closeDialog();stopEditor();page=whic
 const head=(phase,title,until)=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2></div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
 function home(){
+ connectionEpoch++;
+ clearTabGuest();
  if(net){try{net.leaveRoom()}catch{}net.close();net=null}
  view=null;roomId='';practice=null;
  change('<section class="museum-home">'+
@@ -62,7 +65,7 @@ function home(){
    }
  });
 }
-function setup(mode){change('<section class="page"><div class="section-label">ПРИЁМНАЯ / '+(mode==='create'?'НОВАЯ КОМНАТА':'ПРИСОЕДИНЕНИЕ')+'</div><h2>'+(mode==='create'?'Открыть выставку':'Найти выставку')+'</h2><label class="field" for="who">Имя реставратора</label><input class="input" id="who" maxlength="22" autocomplete="nickname" value="'+esc(localStorage.getItem(NAME_KEY)||'Реставратор')+'"><label class="field" for="address">Адрес PocketNet</label><input class="input" id="address" type="url" inputmode="url" placeholder="https://ваш-игровой-сервер" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'"><p class="hint">Для онлайна запусти бесплатный сервер на Windows через один BAT-файл. Адрес из окна запуска вставь сюда один раз. <a class="art-source" href="https://github.com/JustSadSock/pocket-works/blob/main/apps/zamazka/server/README-QUICKSTART.md" target="_blank" rel="noopener noreferrer">Инструкция и запуск сервера ↗</a></p>'+(mode==='join'?'<label class="field" for="room">Ссылка или идентификатор комнаты</label><input class="input" id="room" placeholder="UUID комнаты" value="'+esc(q.get('room')||'')+'">':'')+'<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(mode==='create'?'Создать комнату':'Присоединиться')+'</button><button class="btn ghost" data-action="menu">Назад</button></div></section>','setup')}
+function setup(mode){change('<section class="page"><div class="section-label">ПРИЁМНАЯ / '+(mode==='create'?'НОВАЯ КОМНАТА':'ПРИСОЕДИНЕНИЕ')+'</div><h2>'+(mode==='create'?'Открыть выставку':'Найти выставку')+'</h2><label class="field" for="who">Имя реставратора</label><input class="input" id="who" maxlength="22" autocomplete="nickname" value="'+esc(tabGuestName())+'"><label class="field" for="address">Адрес PocketNet</label><input class="input" id="address" type="url" inputmode="url" placeholder="https://ваш-игровой-сервер" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'"><p class="hint">Для онлайна запусти бесплатный сервер на Windows через один BAT-файл. Адрес из окна запуска вставь сюда один раз. <a class="art-source" href="https://github.com/JustSadSock/pocket-works/blob/main/apps/zamazka/server/README-QUICKSTART.md" target="_blank" rel="noopener noreferrer">Инструкция и запуск сервера ↗</a></p>'+(mode==='join'?'<label class="field" for="room">Ссылка или идентификатор комнаты</label><input class="input" id="room" placeholder="UUID комнаты" value="'+esc(q.get('room')||'')+'">':'')+'<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(mode==='create'?'Создать комнату':'Присоединиться')+'</button><button class="btn ghost" data-action="menu">Назад</button></div></section>','setup')}
 function lobby(){
  if(!view)return;
  const players=view.participants||[],leader=view.host===me?.id;
@@ -130,32 +133,72 @@ async function connect(mode){
  let room='';
  if(mode==='join'){const raw=(screen.querySelector('#room')?.value||'').trim();room=raw.includes('?')?(new URL(raw,location.href).searchParams.get('room')||''):raw;
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(room)){notify('Вставь ссылку или идентификатор комнаты');return}}
- localStorage.setItem(NAME_KEY,name);localStorage.setItem(SERVER_KEY,u.origin);
+ localStorage.setItem(SERVER_KEY,u.origin);
+ const epoch=++connectionEpoch;
+ me=null;view=null;roomId='';
  change('<section class="page center"><h2>Открываем зал</h2><p class="hint"><span class="busy"></span> Подключаемся к игровому серверу…</p><button class="btn ghost wide" data-action="menu">Отменить</button></section>','connecting');
  try{
-  if(net)net.close();net=new PocketNet({serverUrl:u.origin,name});
-  net.roomId=null;net.persist();
-  net.on('connected',data=>{me=data.player});
-  net.on('room_joined',msg=>{roomId=msg.roomId;net.sendGame({type:'sync'});if(!view)change('<section class="page center"><h2>Получаем экспозицию</h2><p class="hint"><span class="busy"></span> Загружаем комнату…</p></section>','connecting')});
-  net.on('game_event',msg=>{const e=msg.event;if(e?.type==='state'){view=e.payload;renderView()}else if(e?.type==='notice')notify(String(e.payload||'Не удалось выполнить действие'))});
-  net.on('presence',data=>{if(data.disconnected)notify('Один из гостей потерял соединение');try{net.sendGame({type:'sync'})}catch{}});
-  net.on('disconnected',()=>notify('Связь прервана. Переподключаемся…'));
-  net.on('error',error=>notify('Сеть: '+(error?.code||error?.message||'ошибка')));
-  await net.connect();
-  if(mode==='create')net.createRoom('zamazka');
-  else net.joinRoom(room);
- }catch(e){const cause=e?.message||'нет ответа';notify('Не удалось подключиться: '+cause);net?.close();net=null;setup(mode)}
+  // localStorage is deliberately NOT passed to PocketNet: tabs must never share
+  // a guest token. Detect copied/duplicated tab sessions before authentication.
+  const storage=await prepareTabGuest(u.origin,name);
+  if(epoch!==connectionEpoch)return; // User left the connecting screen.
+  if(net)net.close();
+  const client=new PocketNet({serverUrl:u.origin,name,storage});
+  net=client;
+  // A deliberate create/join starts without a pending room auto-join.
+  client.roomId=null;client.persist();
+  client.on('connected',data=>{
+    if(client.closed)return;
+    me=data.player;
+    markTabGuest(u.origin,client.token);
+  });
+  client.on('room_joined',msg=>{
+    if(client.closed)return;
+    roomId=msg.roomId;
+    client.sendGame({type:'sync'});
+    // The lightweight Windows host may deliver onJoin game_event BEFORE
+    // room_joined; redraw the lobby now that its invitation code is known.
+    if(view)renderView();
+    else change('<section class="page center"><h2>Получаем экспозицию</h2><p class="hint"><span class="busy"></span> Загружаем комнату…</p></section>','connecting');
+  });
+  client.on('game_event',msg=>{
+    if(client.closed)return;
+    const e=msg.event;
+    if(e?.type==='state'){view=e.payload;renderView()}
+    else if(e?.type==='notice')notify(String(e.payload||'Не удалось выполнить действие'));
+  });
+  client.on('presence',data=>{
+    if(client.closed)return;
+    if(data.disconnected)notify('Один из гостей потерял соединение');
+    try{client.sendGame({type:'sync'})}catch{}
+  });
+  client.on('disconnected',()=>{
+    if(!client.closed)notify('Связь прервана. Переподключаемся…');
+  });
+  client.on('error',error=>{
+    if(!client.closed)notify('Сеть: '+(error?.code||error?.message||'ошибка'));
+  });
+  await client.connect();
+  if(epoch!==connectionEpoch){client.close();return}
+  if(mode==='create')client.createRoom('zamazka');
+  else client.joinRoom(room);
+ }catch(e){
+  if(epoch!==connectionEpoch)return;
+  const cause=e?.message||'нет ответа';
+  notify('Не удалось подключиться: '+cause);
+  net?.close();net=null;clearTabGuest();setup(mode);
+ }
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
  const data=editor.getData();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
  ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.clearDraft();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — сохранили работу в личном фонде')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
-function share(){const link=new URL(location.href);link.searchParams.set('room',roomId);const server=localStorage.getItem(SERVER_KEY);if(server)link.searchParams.set('server',server);const href=link.toString();if(navigator.share){navigator.share({title:'ЗАМАЗКА — приглашение',url:href}).catch(()=>navigator.clipboard?.writeText(href))}else if(navigator.clipboard){navigator.clipboard.writeText(href).then(()=>notify('Приглашение скопировано')).catch(()=>notify(href))}else notify(href)}
+function share(){const link=new URL(location.href);link.searchParams.set('room',roomId);const server=net?.serverUrl||localStorage.getItem(SERVER_KEY);if(server)link.searchParams.set('server',server);const href=link.toString();if(navigator.share){navigator.share({title:'ЗАМАЗКА — приглашение',url:href}).catch(()=>navigator.clipboard?.writeText(href))}else if(navigator.clipboard){navigator.clipboard.writeText(href).then(()=>notify('Приглашение скопировано')).catch(()=>notify(href))}else notify(href)}
 function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata">'+esc(a.artist)+' · '+esc(a.date)+'<div>'+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
-function settings(){modal('Настройки','<label class="field" for="settingName">Имя</label><input class="input" id="settingName" maxlength="22" value="'+esc(localStorage.getItem(NAME_KEY)||'Реставратор')+'"><label class="field" for="settingServer">Сервер интернет-комнат</label><input class="input" id="settingServer" type="url" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'" placeholder="https://"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки интерфейса</label><p class="hint">Изменение адреса сервера действует при следующем подключении. Офлайн-тренировка не требует сервера.</p>',[
- ['Сохранить',()=>{localStorage.setItem(NAME_KEY,dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');localStorage.setItem(SERVER_KEY,dialog.querySelector('#settingServer').value.trim());beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']])}
+function settings(){modal('Настройки','<label class="field" for="settingName">Имя</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field" for="settingServer">Сервер интернет-комнат</label><input class="input" id="settingServer" type="url" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'" placeholder="https://"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки интерфейса</label><p class="hint">Новое имя и адрес применятся при следующем подключении. Каждая вкладка может использовать собственное имя и игровую сессию.</p>',[
+ ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');localStorage.setItem(SERVER_KEY,dialog.querySelector('#settingServer').value.trim());beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']])}
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 screen.addEventListener('click',e=>{
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved]');if(!b)return;
