@@ -91,6 +91,38 @@ export class Editor{
    if(b.dataset.cmd==='out')this.zoom(.77);
    if(b.dataset.cmd==='center')this.center();
   };
+  // Keyboard shortcuts for desktop conservation; Space temporarily pans
+  // without stealing Ctrl+ shortcuts outside the active canvas.
+  this.keyboardDown=e=>{
+   if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
+      document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
+   const focusOnControls=e.target?.closest?.('button,a');
+   const byCode={KeyB:'brush',KeyP:'pencil',KeyS:'spray',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
+   let target;
+   if(e.ctrlKey){
+    if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
+    else if(e.code==='KeyY')target='redo';
+    if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
+    return;
+   }
+   if(focusOnControls)return;
+   if(e.code==='Space'&&!e.repeat){
+    e.preventDefault();
+    this.spaceTool=this.tool;
+    this.root.querySelector('[data-tool="hand"]')?.click();
+   }else if(e.code==='Digit0'){e.preventDefault();this.root.querySelector('[data-cmd="center"]')?.click()}
+   else if(['Equal','NumpadAdd'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="in"]')?.click()}
+   else if(['Minus','NumpadSubtract'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="out"]')?.click()}
+   else if(byCode[e.code]){e.preventDefault();this.root.querySelector('[data-tool="'+byCode[e.code]+'"]')?.click()}
+  };
+  this.keyboardUp=e=>{
+   if(e.code==='Space'&&this.spaceTool){
+     this.root.querySelector('[data-tool="'+this.spaceTool+'"]')?.click();
+     this.spaceTool=null;
+   }
+  };
+  window.addEventListener('keydown',this.keyboardDown);
+  window.addEventListener('keyup',this.keyboardUp);
   this.root.addEventListener('click',this.actions);
   this.slider=e=>{if(e.target.id==='brushSize')this.size=Number(e.target.value);if(e.target.id==='customColor')this.color=e.target.value};
   this.root.addEventListener('input',this.slider);
@@ -102,5 +134,5 @@ export class Editor{
  }
  getData(){return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.viewport.removeEventListener('wheel',this.wheel);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('resize',this.resize)}
+ dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.viewport.removeEventListener('wheel',this.wheel);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
