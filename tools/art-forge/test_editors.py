@@ -43,7 +43,7 @@ def make_kra(path, color, krita):
             image.save(stream, format="PNG")
             archive.writestr("data/" + name + ".png", stream.getvalue())
     # This is actual native save, not a ZIP pretending to be KRA.
-    command([krita, ora, "--export", "--export-filename", path], dict(os.environ, QT_QPA_PLATFORM="offscreen"))
+    command([krita, "-platform", "offscreen", ora, "--export", "--export-filename", path], dict(os.environ, QT_QPA_PLATFORM="offscreen"))
     with zipfile.ZipFile(path) as archive:
         assert "maindoc.xml" in archive.namelist()
         assert archive.read("maindoc.xml").count(b'nodetype="paintlayer"') == 2

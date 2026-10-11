@@ -54,6 +54,8 @@ def capabilities(overrides=None):
             try:
                 env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
                 prefix = [executable, "--headless", "--quit", "--"] if tool == "pixelorama" else [executable]
+                if tool == "krita":
+                    prefix += ["-platform", "offscreen"]
                 version = command(prefix + ["--version"], env, 20)
                 help_text = command(prefix + ["--help"], env, 20)
                 text = help_text.stdout + help_text.stderr
@@ -103,7 +105,7 @@ def plan(app, data):
         raise ValueError("Expected 1–128 jobs")
     by_id, producers, sources = {}, {index: "index"}, set()
     for job in jobs:
-        if not isinstance(job, dict) or set(job) - {"id", "adapter", "source", "inputs", "dependsOn", "seed", "parameters", "outputs", "budget", "provenance"}:
+        if not isinstance(job, dict) or set(job) - {"id", "adapter", "source", "inputs", "dependsOn", "seed", "parameters", "outputs", "budget", "provenance", "validation"}:
             raise ValueError("Unknown job field; commands/flags are forbidden")
         identity = job.get("id")
         if not isinstance(identity, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", identity) or identity in by_id:
@@ -149,6 +151,9 @@ def plan(app, data):
             raise ValueError("GLB needs geometry and texture budgets")
         if adapter != "blender" and not {"maxWidth", "maxHeight"} <= set(budget):
             raise ValueError("2D needs dimension budgets")
+        validation = job.get("validation", {})
+        if not isinstance(validation, dict) or set(validation) - {"requireArmature", "requireAnimation"} or any(not isinstance(v, bool) for v in validation.values()) or (validation and adapter != "blender"):
+            raise ValueError("Invalid Blender round-trip validation requirements")
         by_id[identity] = job
     # Resolve the entire graph before any editor is invoked.
     ordered, visiting, visited = [], set(), set()
@@ -235,6 +240,12 @@ def pixel(source, outputs):
             raise ValueError("Unique named frames required")
         names.add(name)
         duration = positive(frame.get("durationMs"), 60000, "durationMs")
+        pivot = frame.get("pivot", [width / 2, height - 1])
+        if not isinstance(pivot, list) or len(pivot) != 2 or not all(isinstance(n, (int, float)) and not isinstance(n, bool) and 0 <= n <= limit for n, limit in zip(pivot, [width, height])):
+            raise ValueError("Pixel pivot must be within the frame")
+        tag = frame.get("tag", name)
+        if not isinstance(tag, str) or not tag:
+            raise ValueError("Pixel animation tag must be named")
         layers = frame.get("layers")
         if not isinstance(layers, list) or not 1 <= len(layers) <= 64:
             raise ValueError("Frame requires layers")
@@ -252,7 +263,7 @@ def pixel(source, outputs):
                 image = Image.alpha_composite(image, rgba)
         sheet.paste(image, (i * width, 0))
         records.append({"name": name, "rect": [i * width, 0, width, height], "durationMs": duration,
-                        "pivot": frame.get("pivot", [width / 2, height - 1]), "tag": frame.get("tag", name)})
+                        "pivot": pivot, "tag": tag})
     sheet.save(outputs["image"])
     json_write(outputs["atlas"], {"version": 1, "image": outputs["image"].name,
                                    "sampling": "nearest", "frames": records})
@@ -391,7 +402,7 @@ def execute(job, source, inputs, outputs, caps, trusted):
                 args.append(f"--export-{key}={positive(params[key], 8192, key)}")
         command(args)
     elif adapter == "krita":
-        command([executable, source, "--export", "--export-filename", outputs["image"]],
+        command([executable, "-platform", "offscreen", source, "--export", "--export-filename", outputs["image"]],
                 dict(os.environ, QT_QPA_PLATFORM="offscreen"))
     elif adapter == "pixelorama":
         command([executable, "--headless", "--quit", "--", "--export", "--spritesheet", "--direction", "0",
@@ -436,6 +447,13 @@ def build(app, data, caps, trusted=False):
                 location = {"source": targets[role].relative_to(app).as_posix()} if role == "editable" else {"url": targets[role].relative_to(runtime).as_posix()}
                 records[role] = {**location, **validate_output(output, job["budget"])}
                 staged[targets[role]] = output
+            if job["adapter"] == "blender":
+                verify = ROOT / "tools/asset-forge/verify_glb.py"
+                arguments = [caps["blender"]["executable"], "--background", "--factory-startup", "--python-exit-code", "1", "--python", verify, "--", "--input", outputs["model"]]
+                for key, flag in (("requireArmature", "--require-armature"), ("requireAnimation", "--require-animation")):
+                    if job.get("validation", {}).get(key):
+                        arguments.append(flag)
+                command(arguments, timeout=180)
             if sum(record["bytes"] for role, record in records.items() if role != "editable") > job["budget"]["maxBytes"]:
                 raise ValueError("Combined runtime exports exceed byte budget")
             entries.append({"id": job["id"], "adapter": job["adapter"], "seed": job["seed"],

@@ -24,6 +24,7 @@ jobs:
     env:
       ART_FORGE_EVIDENCE: ${{ github.workspace }}/quality-artifacts/art-forge-source
       BLENDER_VERSION: "5.2.1"
+      TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
     steps:
       - uses: actions/checkout@v4

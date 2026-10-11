@@ -73,6 +73,11 @@ raster need Pillow. Vector PNG needs Inkscape. Krita/Pixelorama/Blender availabi
 is separate from artistic fitness. New adapters are platform changes; add format,
 parameter, containment and real-tool round-trip tests before listing support.
 
+Every generated GLB is re-imported by a fresh Blender process before publication.
+`validation: {"requireArmature": true, "requireAnimation": true}` adds the existing
+Asset Forge skeletal/animation requirements. File size, triangles and embedded
+texture dimensions are also checked; successful generation alone is insufficient.
+
 Blender Python is executable repository code, not an untrusted data format.
 Running it requires `--allow-authored-python`; this flag is a trust acknowledgement,
 **not a sandbox**. Only trusted same-repository authors should use it. Do not run
