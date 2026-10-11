@@ -45,5 +45,5 @@ export function preferredPocketName(identity,fallback){
   return identity?.complete&&identity.nickname?identity.nickname:fallback;
 }
 export function pocketIdentitySessionKey(identity){
-  return identity?.complete&&identity.id?'pocket-id:'+identity.id+':'+(identity.updatedAt||0):'guest';
+  return identity?.complete&&identity.id?'pocket-id:'+identity.id:'guest';
 }
