@@ -78,3 +78,9 @@
   .pw-id-active__plate .pw-id-avatar{width:68px;min-width:68px;}
 }
 @media(prefers-reduced-motion:reduce){.pw-id-dialog *{transition:none!important;animation:none!important;}}
+
+/* The policy remains accessible before registration and from the main shelf. */
+.pw-id-dialog__bottom a {color:#e7b692;text-underline-offset:3px;font-weight:700;white-space:nowrap;}
+.pw-id-dialog__bottom a:hover {color:#ffe0cb;}
+html.has-pocket-deck .shelf-footer .pw-id-privacy-link {color:#d9b8a4;text-underline-offset:3px;white-space:nowrap;}
+html.has-pocket-deck .shelf-footer .pw-id-privacy-link:hover {color:#fff0de;}
