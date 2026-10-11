@@ -1,4 +1,8 @@
-const CACHE_PREFIX='ne-moya-problema-',CACHE_NAME='ne-moya-problema-v1.0.0',APP_VERSION='1.0.0',RELEASE_DATE='2026-10-11',CACHE_PROTOCOL=2;
+const CACHE_PREFIX='ne-moya-problema-';
+const CACHE_NAME='ne-moya-problema-v1.0.0';
+const APP_VERSION='1.0.0';
+const RELEASE_DATE='2026-10-11';
+const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=['Первая локальная игра для 3–8 человек: катастрофы, секретные цели и расследования.','Шесть изометрических сцен с анимацией, автосохранение, офлайн и настройки звука.'];
 const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./scene.js','./data.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const SCOPE=new URL('./',self.registration.scope),BUILD=APP_VERSION+'-p'+CACHE_PROTOCOL,KEYS=new Map(SHELL.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
