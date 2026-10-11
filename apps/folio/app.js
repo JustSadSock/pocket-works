@@ -671,7 +671,7 @@ async function openWork(doc,isNew=false){
   if(isNew)queueSave();
 }
 async function showHome(){
-  if(state.doc)await persist();
+  if(state.doc){finishStroke();await persist();}
   resetInput();state.doc=null;resetCache();
   $('studio').hidden=true;$('home').hidden=false;closeSheet();
   state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -854,7 +854,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.0.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.1.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
