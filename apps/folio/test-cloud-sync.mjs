@@ -12,7 +12,7 @@ Object.defineProperties(globalThis,{
  location:{value:{origin:'http://127.0.0.1:8787',assign(){}},configurable:true},
  navigator:{value:{onLine:true},configurable:true},
  window:{value:{addEventListener(){}},configurable:true},
- document:{value:{querySelector(q){return q==='#folio-cloud-status'?status:button}},configurable:true},
+ document:{value:{querySelector(q){return q==='#folio-cloud-status'?status:button},addEventListener(){}},configurable:true},
  confirm:{value:()=>true,configurable:true},
  localStorage:{get(){return localStorageOf(storage)},configurable:true}
 });
