@@ -1,22 +1,24 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.7.2';
-const ART_CACHE = 'zamazka-artworks-v1.7.2';
-const APP_VERSION = '1.7.2';
-const RELEASE_DATE = '2026-10-11';
+const CACHE_NAME = 'zamazka-v1.8.0';
+const ART_CACHE = 'zamazka-artworks-v1.8.0';
+const APP_VERSION = '1.8.0';
+const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Комнаты PocketNet без ручной настройки сервера.","Короткий код из 8 символов: копируй код или отправляй ссылку.","Игроки входят со своим ником; понятные ошибки подключения."];
+const RELEASE_NOTES = ["Галерея на главном экране: 54 картины, колесо, свайп, стрелки и клавиатура.","Личная рисованная эмблема: простой редактор, локальное сохранение, синхронизация с игроками PocketNet.","Полная стилистическая унификация главного меню, входа, лобби, картин, голосования и результатов."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
   './gallery-theme.css',
+  './atelier-shell.css',
   './desktop-layout.css',
   './restoration-17.css',
   './legacy-artworks.js',
   './app.js',
   './tab-guests.js',
   './room-code.js',
+  './emblem.js',
   './artworks.js',
   './museum-catalog.js',
   './editor.js',

@@ -8,13 +8,13 @@ const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
-type State={host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
  host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,deadline:s.deadline,
- selected:s.selected,participants:s.participants,turn:s.turn,scores:s.scores,
+ selected:s.selected,participants:s.participants,emblems:s.emblems||{},turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation}:null,
@@ -86,9 +86,18 @@ function normalize(raw:unknown):Stroke[]|null{
  }
  return out;
 }
+// Never accept SVG, markup, or arbitrary URLs as player-drawn images.
+function sanitizeEmblem(value:unknown):string|null|undefined{
+ if(value===null)return null;
+ if(typeof value!=='string'||value.length>12000)return undefined;
+ if(!/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value))return undefined;
+ if(value.startsWith('data:image/png;base64,')&&!value.slice(22).startsWith('iVBORw0KGgo'))return undefined;
+ if(value.startsWith('data:image/webp;base64,')&&!value.slice(23).startsWith('UklGR'))return undefined;
+ return value;
+}
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -96,7 +105,7 @@ const module: PocketModule<State>={
    return {state,events:emit(state)};
  },
  onLeave({state,player,players}){
-   if(state.phase==='lobby'){state.participants=state.participants.filter(p=>p.id!==player.id);delete state.scores[player.id]}
+   if(state.phase==='lobby'){state.participants=state.participants.filter(p=>p.id!==player.id);delete state.scores[player.id];if(state.emblems)delete state.emblems[player.id]}
    if(state.host===player.id)state.host=players[0]?.id||'';
    return {state,events:emit(state)};
  },
@@ -107,6 +116,13 @@ const module: PocketModule<State>={
    if(state.deadline&&now()>=state.deadline&&state.phase!=='results')step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
+   if(a.type==='emblem'){
+     const data=sanitizeEmblem(a.image);
+     if(data===undefined)return {state,events:notice(id,'Не удалось сохранить личный знак: изображение слишком большое или некорректное.')};
+     state.emblems||={};
+     if(data===null)delete state.emblems[id];else state.emblems[id]=data;
+     return {state,events:emit(state)};
+   }
    if(a.type==='start'&&state.phase==='lobby'){
      if(state.host!==id)return {state,events:notice(id,'Запустить матч может создатель комнаты.')};
      if(members(state).length<MIN_PLAYERS)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};

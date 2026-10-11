@@ -175,6 +175,9 @@ jobs:
           if [[ ",${PW_APP_TARGETS:-}," == *",zamkni,"* ]]; then
             TESTS+=(tests/e2e/zamkni.spec.ts)
           fi
+          if [[ ",${PW_APP_TARGETS:-}," == *",zamazka,"* ]]; then
+            TESTS+=(tests/e2e/zamazka.spec.ts)
+          fi
           if [[ "${PW_GODOT_TRANSPORT_QA:-0}" == "1" ]]; then
             TESTS+=(tests/e2e/godot-runtime.spec.ts)
           fi
