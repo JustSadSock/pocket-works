@@ -352,3 +352,6 @@ button svg,a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-wid
 @media (prefers-reduced-motion:reduce){
  .nib-cursor,.nib-measure{transition:none!important}
 }
+
+.studio-screen.tool-fill .arm-button{display:none!important}
+.studio-screen.tool-fill .nib-cursor{display:none!important}
