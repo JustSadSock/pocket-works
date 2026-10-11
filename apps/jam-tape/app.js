@@ -570,7 +570,12 @@ startTicker();probeTimer=setInterval(probeClock,12000);
 renderWelcome();
 async function refreshIdentity(){
  const previous=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ const previousAccount=pocketIdentity?.id||null;
  pocketIdentity=await getPocketIdentity({force:true});
+ if(room && previousAccount!==(pocketIdentity?.id||null)){
+  leaveNetwork(true);
+  inform('Аккаунт Pocket ID изменился — переподключись к студии');
+ }
  if(previous===(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||''))return;
  if(pocketIdentity?.complete)name=pocketIdentity.nickname;
  else try{name=localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{name='Музыкант'}
