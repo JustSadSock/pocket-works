@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.6.0';
-const ART_CACHE = 'zamazka-artworks-v1.3.0';
-const APP_VERSION = '1.6.0';
+const CACHE_NAME = 'zamazka-v1.7.0';
+const ART_CACHE = 'zamazka-artworks-v1.7.0';
+const APP_VERSION = '1.7.0';
 const RELEASE_DATE = '2026-10-11';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Длинные непрерывные мазки больше не обрываются после 45 точек: редактор бережно упрощает траекторию без потери соединения и сохраняет совместимость с сервером.","Средняя кнопка мыши перемещает полотно при любом выбранном инструменте; удерживание пробела продолжает временно включать панораму.","Колёсико мыши масштабирует холст относительно указателя; понятные курсоры для рисования и перетаскивания."];
+const RELEASE_NOTES = ["Случайные неповторяющиеся повреждения: шесть форм, разный размер, положение и поворот; точный контур одинаков в редакторе и сравнении.","Расширенная коллекция: 54 произведения, включая 46 новых музейных картин из проверенных файлов Wikimedia Commons.","Новый судебный зал: три фишки на один экспонат, любая раскладка, награда за правильные фишки и обман.","Двухактное раскрытие: сначала ставки друзей, затем эффектное сравнение с оригиналом и понятный протокол очков."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,10 +12,12 @@ const APP_SHELL = [
   './styles.css',
   './gallery-theme.css',
   './desktop-layout.css',
+  './restoration-17.css',
   './legacy-artworks.js',
   './app.js',
   './tab-guests.js',
   './artworks.js',
+  './museum-catalog.js',
   './editor.js',
   '../../shared/capabilities/net.js',
   './manifest.webmanifest',

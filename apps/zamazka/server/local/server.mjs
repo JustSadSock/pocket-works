@@ -32,8 +32,9 @@ const rulesHash=createHash('sha256').update(compiledBundle).digest('hex').slice(
 // Historical builds with no metadata required three people. Do not advertise
 // 2-player compatibility unless the running module explicitly confirms it.
 const minPlayers=Number.isInteger(compiledRules.MIN_PLAYERS)?compiledRules.MIN_PLAYERS:3;
+const rulesVersion=Number.isInteger(compiledRules.RULESET_VERSION)?compiledRules.RULESET_VERSION:1;
 if(game?.protocolVersion!==1)throw Error('Game module version mismatch');
-console.log(JSON.stringify({event:'game_rules_loaded',path:selectedRules,minPlayers,rulesHash}));
+console.log(JSON.stringify({event:'game_rules_loaded',path:selectedRules,minPlayers,rulesVersion,rulesHash}));
 
 async function readJson(path,fallback){try{return JSON.parse(await readFile(path,'utf8'))}catch{return fallback}}
 const sessions=new Map(Object.entries(await readJson(TOKENS_FILE,{})));
@@ -124,7 +125,7 @@ const web=createServer(async(req,res)=>{
  try{
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(req.method==='OPTIONS')return respond(res,204,{});
-  if(req.method==='GET'&&pathname==='/health')return respond(res,200,{ok:true,gameId:'zamazka',minPlayers,rulesHash,rooms:rooms.size,players:connections.size});
+  if(req.method==='GET'&&pathname==='/health')return respond(res,200,{ok:true,gameId:'zamazka',minPlayers,rulesVersion,rulesHash,rooms:rooms.size,players:connections.size});
   if(req.method==='POST'&&pathname==='/session'){
    const ip=String(req.headers['cf-connecting-ip']||req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0];
    const rate=sessionRates.get(ip)||{at:0,count:0};

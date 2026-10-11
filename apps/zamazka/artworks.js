@@ -1,4 +1,5 @@
 import { svgFor as legacySvg, ARTS as LEGACY } from './legacy-artworks.js';
+import { MUSEUM_ADDITIONS } from './museum-catalog.js';
 
 /** An entirely public-domain gallery. Descriptions and source links are kept beside the images. */
 export const W = 600, H = 450;
@@ -11,10 +12,11 @@ const REAL=[
   {title:'Телега для сена',artist:'Джон Констебл',date:'1821',style:'Романтизм',museum:'Национальная галерея · Лондон',file:'John-constable-the-hay-wain.jpg',path:'9/96/',source:'https://commons.wikimedia.org/wiki/File:John-constable-the-hay-wain.jpg'},
   {title:'Впечатление. Восход солнца',artist:'Клод Моне',date:'1872',style:'Импрессионизм',museum:'Музей Мармоттан-Моне · Париж',file:'Monet_-_Impression%2C_Sunrise.jpg',path:'5/59/',source:'https://commons.wikimedia.org/wiki/File:Monet_-_Impression,_Sunrise.jpg'},
   {title:'Спальня в Арле',artist:'Винсент ван Гог',date:'1889',style:'Постимпрессионизм',museum:'Институт искусств · Чикаго',file:'Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg',path:'5/50/',source:'https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg'},
-  {title:'Рождение Венеры',artist:'Сандро Боттичелли',date:'ок. 1485',style:'Раннее Возрождение',museum:'Галерея Уффици · Флоренция',file:'Birth_of_Venus_Botticelli.jpg',path:'1/14/',source:'https://commons.wikimedia.org/wiki/File:Birth_of_Venus_Botticelli.jpg'}
+  {title:'Рождение Венеры',artist:'Сандро Боттичелли',date:'ок. 1485',style:'Раннее Возрождение',museum:'Галерея Уффици · Флоренция',file:'Birth_of_Venus_Botticelli.jpg',path:'1/14/',source:'https://commons.wikimedia.org/wiki/File:Birth_of_Venus_Botticelli.jpg'},
+  ...MUSEUM_ADDITIONS
 ];
 export const REAL_COUNT=REAL.length;
-export const PLAYABLE_IDS=[1,2,3,4,5,6,7];
+export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1);
 export const ARTS=[
  ...REAL.map((entry,id)=>({...entry,id,isReal:true})),
  ...LEGACY.map((entry,i)=>({...entry,id:i+REAL.length,artist:'Коллекция ЗАМАЗКИ 1.0',date:'2026',museum:'Личный архив',isReal:false}))
@@ -23,7 +25,7 @@ export const ARTS=[
 // sources and gracefully falls back where the original master is smaller than 1920px.
 const PREVIEW_WIDTH=1280;
 const MASTER_WIDTHS=[1920,1280,960];
-const ART_CACHE='zamazka-artworks-v1.3.0';
+const ART_CACHE='zamazka-artworks-v1.7.0';
 export function artworkURL(id,width=PREVIEW_WIDTH){
  const entry=ARTS[id];if(!entry)return '';
  return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
@@ -84,8 +86,50 @@ export function drawArtwork(ctx,image,id){
  ctx.drawImage(image,sx,sy,sw,sh,0,0,W,H);
 }
 function rand(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
+const SHAPES=['round','oval','star','torn','diamond','burst'];
+// Generated afresh by the server for every player and every round. A 32-bit
+// variation seed is part of the signed game state; all clients can reproduce
+// exactly the same contour in editor, votes, reveals and saved paintings.
 export function zoneFor(id,variation=0){
- const r=rand((id+11)*16331+(variation+1)*113);
- return {x:Math.floor(65+r()*340),y:Math.floor(55+r()*205),w:116,h:106};
+ const seed=(Math.imul((id+11)>>>0,2654435761)^(Number(variation)>>>0)^0x5195afd3)>>>0;
+ const r=rand(seed);
+ const kind=SHAPES[Math.floor(r()*SHAPES.length)];
+ const cx=100+r()*400,cy=85+r()*275;
+ const rx=44+r()*36,ry=40+r()*30;
+ const rotation=r()*Math.PI*2;
+ const count=kind==='star'?10:kind==='diamond'?4:kind==='burst'?20:kind==='torn'?15:32;
+ const points=[];
+ for(let i=0;i<count;i++){
+  const angle=i/count*Math.PI*2+rotation;
+  let radius=1;
+  if(kind==='star')radius=i%2===0?1:.46+r()*.09;
+  else if(kind==='burst')radius=i%2===0?1:.69+r()*.18;
+  else if(kind==='torn')radius=.71+r()*.3;
+  else if(kind==='diamond')radius=.96;
+  else radius=kind==='round'?.94+r()*.06:.93+r()*.08;
+  const arx=kind==='round'?(rx+ry)/2:rx;
+  const ary=kind==='round'?(rx+ry)/2:ry;
+  points.push([Math.round((cx+Math.cos(angle)*arx*radius)*10)/10,Math.round((cy+Math.sin(angle)*ary*radius)*10)/10]);
+ }
+ const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
+ const x=Math.min(...xs),y=Math.min(...ys);
+ return {x,y,w:Math.max(...xs)-x,h:Math.max(...ys)-y,kind,points};
 }
-export function primeGallery(){return Promise.allSettled(REAL.map((_,id)=>loadArtwork(id)))}
+export function damagePath(ctx,zone){
+ ctx.beginPath();
+ if(!zone.points?.length){ctx.rect(zone.x,zone.y,zone.w,zone.h);return}
+ zone.points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+ ctx.closePath();
+}
+export function insideDamage(zone,point){
+ if(!zone.points?.length)return point[0]>=zone.x&&point[0]<=zone.x+zone.w&&point[1]>=zone.y&&point[1]<=zone.y+zone.h;
+ let hit=false;
+ for(let i=0,j=zone.points.length-1;i<zone.points.length;j=i++){
+  const a=zone.points[i],b=zone.points[j];
+  if((a[1]>point[1])!==(b[1]>point[1])&&point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0])hit=!hit;
+ }
+ return hit;
+}
+// Never preload 48 masters at once. The first eight power the menu; other
+// artworks are loaded on demand during preview and cached after first view.
+export function primeGallery(){return Promise.allSettled(Array.from({length:8},(_,id)=>loadArtwork(id)))}

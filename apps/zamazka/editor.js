@@ -1,4 +1,4 @@
-import {W,H,zoneFor,loadArtwork,drawArtwork} from './artworks.js';
+import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork} from './artworks.js';
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
@@ -17,7 +17,7 @@ function prepareCanvas(canvas,editor=false){
  ctx.imageSmoothingQuality='high';
  return ctx;
 }
-function clipZone(ctx,z){ctx.beginPath();ctx.rect(z.x,z.y,z.w,z.h);ctx.clip();}
+function clipZone(ctx,z){damagePath(ctx,z);ctx.clip();}
 function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.5,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
 function drawStroke(ctx,stroke){
  const pts=stroke.p||[];if(!pts.length)return;
@@ -84,7 +84,7 @@ export class Editor{
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')'}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
- inside(p){const z=this.zone;return p[0]>=z.x&&p[0]<=z.x+z.w&&p[1]>=z.y&&p[1]<=z.y+z.h}
+ inside(p){return insideDamage(this.zone,p)}
  save(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.strokes))}catch{}this.onChange(this.strokes.length)}
  attach(){
   this.down=e=>{
@@ -171,7 +171,7 @@ export class Editor{
   this.keyboardDown=e=>{
    if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
       document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
-   const byCode={KeyB:'brush',KeyP:'pencil',KeyS:'spray',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
+   const byCode={KeyB:'brush',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
    let target;
    if(e.ctrlKey){
     if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
@@ -205,7 +205,7 @@ export class Editor{
  }
  async pick(p){if(this.inside(p))return;try{const image=await loadArtwork(this.id);const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,image,this.id);const rgb=x.getImageData(p[0]|0,p[1]|0,1,1).data;this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.root.querySelector('#customColor').value=this.color;this.tool='brush';this.root.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='brush'));this.onChange(this.strokes.length)}catch{}}
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
- const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);[...this.strokes,...(this.working?[this.working]:[])].forEach(s=>drawStroke(x,s));x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;x.strokeRect(this.zone.x+.5,this.zone.y+.5,this.zone.w-1,this.zone.h-1);x.restore();
+ const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);[...this.strokes,...(this.working?[this.working]:[])].forEach(s=>drawStroke(x,s));x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
  }
  getData(){return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}

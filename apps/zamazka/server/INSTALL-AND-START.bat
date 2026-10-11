@@ -5,7 +5,7 @@ title ZAMAZKA - quick online server
 set "ZAMAZKA_HOST_DIR=%~dp0ZAMAZKA-SERVER"
 echo.
 echo ======================================================
-echo  ZAMAZKA - One-click online server installer
+echo  ZAMAZKA - Grand Restoration game server installer
 echo  Downloads the server from your Pocket Works repository.
 echo ======================================================
 echo.
