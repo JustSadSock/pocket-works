@@ -1,0 +1,13 @@
+/* Identity stamps are compact native game UI markers, never decorative login buttons. */
+.pw-identity-avatar {width:32px;height:32px;display:inline-grid;place-items:center;vertical-align:middle;flex:none;border-radius:7px;background:var(--pw-a-bg);color:var(--pw-a-ink);box-shadow:inset 0 1px 3px #0004;border:1px solid #ffffff30;overflow:hidden;}
+.pw-identity-avatar svg{width:75%;height:75%;pointer-events:none;}
+.pw-identity-avatar--small{width:23px;height:23px;border-radius:5px;}
+.pw-identity-mark{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;margin-left:6px;border-radius:5px;padding:2px 5px;font:700 10px/1.2 ui-monospace,monospace;white-space:nowrap;letter-spacing:.035em;}
+.pw-identity-mark--verified{border:1px solid #a2c4af70;background:#43625323;color:inherit;}
+.pw-identity-mark--guest{border:1px solid #a0a4a270;color:inherit;opacity:.68;}
+.pw-identity-mark--verified .pw-identity-avatar{width:17px;height:17px;border-radius:3px;}
+.pw-identity-status{display:inline-flex;align-items:center;gap:9px;line-height:1.2;vertical-align:middle;}
+.pw-identity-status small{font-size:.68rem;opacity:.8;}
+.pw-identity-status .pw-identity-avatar{width:27px;height:27px;}
+.pw-identity-profile-link{font-size:.76rem;color:inherit;text-underline-offset:3px;opacity:.8;white-space:nowrap;}
+.pw-identity-profile-link:hover{opacity:1;}
