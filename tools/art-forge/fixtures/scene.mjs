@@ -40,7 +40,7 @@ function draw(){
  }else if(medium==='drawn'){
   const size=Math.min(w*.95,h*.95);c.drawImage(heron,(w-size*.857)/2+(actions%2)*12,(h-size)/2,size*.857,size);
  }else{
-  const size=Math.min(w*.94,h*.94);c.fillStyle='#748b81';c.beginPath();c.ellipse(w/2,h*.83,size*.36,size*.035,0,0,Math.PI*2);c.fill();c.drawImage(baked,(w-size)/2+(actions%2)*8,(h-size)/2,size,size);
+  const size=Math.min(w*.94,h*.94);c.drawImage(baked,(w-size)/2+(actions%2)*8,(h-size)/2,size,size);
  }
 }
 function publish(){window.__ART_TEST_STATE__={medium,actions,meshes:imported.meshes.length,triangles:assets.harbor.outputs.model.triangles,loaded:true};document.querySelector('#status').textContent=`${medium} · revisions ${actions}`;}
