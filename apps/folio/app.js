@@ -507,7 +507,7 @@ canvas.addEventListener('pointermove',e=>{
     smoothAim(sample);
     state.aimEvent=sample;
     if(state.mode==='precision'&&!isArmed())continue;
-    if(!state.draft&&state.mode==='precision')beginStroke(sample);
+    if(!state.draft)beginStroke(sample);
     extendStroke(sample);
   }
   // Use the same filtered coordinates for both the ring and the painted path.
@@ -646,7 +646,7 @@ function renderSheet(){
   if(state.sheet==='color'){
     const colors=state.doc?.palette||palettes.atelier;
     body.innerHTML='<p class="sheet-subheading">ЦВЕТА ЭТОГО РИСУНКА</p><div class="palette-grid">'+colors.map(c=>'<button class="palette-chip '+(c.toLowerCase()===state.color.toLowerCase()?'is-active':'')+'" style="--chip:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('')+'</div><div class="color-picker-line"><input id="custom-color" type="color" value="'+state.color+'"><label for="custom-color">Свой оттенок<br><small>Выбери любой цвет спектра</small></label><button class="action-quiet" id="keep-color">В палитру +</button></div>';
-    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;selectTool('brush');updateToolUI();});
+    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;selectTool(state.tool==='fill'?'fill':'brush');updateToolUI();});
     $('keep-color').onclick=()=>{
       if(!state.doc.palette.includes(state.color)){state.doc.palette.push(state.color);queueSave();notify('Цвет сохранён');}
       renderSheet();
@@ -701,7 +701,7 @@ $('sheet-body').addEventListener('click',e=>{
   const target=e.target.closest('button');if(!target)return;
   if(target.dataset.hand){state.hand=target.dataset.hand;try{localStorage.setItem('pocket-works:folio:hand',state.hand);}catch{}renderSheet();notify(state.hand==='left'?'Острие для левой руки':'Острие для правой руки');}
   if(target.dataset.brush){state.brush=target.dataset.brush;selectTool('brush');closeSheet();notify(brushes.find(b=>b.id===state.brush).name);}
-  if(target.dataset.color){state.color=target.dataset.color;selectTool('brush');closeSheet();}
+  if(target.dataset.color){state.color=target.dataset.color;selectTool(state.tool==='fill'?'fill':'brush');closeSheet();}
   if(target.dataset.toggleLayer){const l=state.doc.layers.find(x=>x.id===target.dataset.toggleLayer);l.visible=!l.visible;renderSheet();scheduleDraw();queueSave();}
   if(target.dataset.selectLayer){state.doc.activeLayer=target.dataset.selectLayer;renderSheet();scheduleDraw();}
   if(target.dataset.shiftLayer){
@@ -910,7 +910,7 @@ $('desktop-brush-choices').onclick=e=>{
 };
 $('desktop-swatches').onclick=e=>{
   const b=e.target.closest('[data-desktop-color]');if(!b)return;
-  state.color=b.dataset.desktopColor;selectTool('brush');syncDesktop();
+  state.color=b.dataset.desktopColor;selectTool(state.tool==='fill'?'fill':'brush');syncDesktop();
 };
 $('desktop-layers').onclick=e=>{
   const eye=e.target.closest('[data-desktop-eye]');
@@ -918,7 +918,7 @@ $('desktop-layers').onclick=e=>{
   const layer=e.target.closest('[data-desktop-layer]');
   if(layer){state.doc.activeLayer=layer.dataset.desktopLayer;syncDesktop();queueSave();}
 };
-$('desktop-color').oninput=e=>{state.color=e.target.value;selectTool('brush');};
+$('desktop-color').oninput=e=>{state.color=e.target.value;selectTool(state.tool==='fill'?'fill':'brush');};
 $('desktop-size').oninput=e=>{state.size=Number(e.target.value);updateToolUI();};
 $('desktop-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
 $('desktop-mode-choices').onclick=e=>{
