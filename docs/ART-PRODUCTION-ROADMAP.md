@@ -32,6 +32,7 @@ frame pacing and repeated interaction on phone Chromium/WebKit.
 
 Accept distinct drawn motion, skeletal 3D and contact-driven physical response,
 including sounds, interruption and reload of exported clips.
+Implementation contract and rendered acceptance evidence: ANIMATION-STUDIO.md.
 
 ## IV. Visual Critic & Continuous Improvement
 
