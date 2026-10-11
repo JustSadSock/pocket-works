@@ -72,7 +72,7 @@ const strip=(s:State,id:string)=>({
  correct:s.phase==='reveal'||s.phase==='results'?s.correct:null,
  prompt:id===s.author&&s.phase==='compose'?s.options[s.correct]:null,
  answered:Object.keys(s.answers),myAnswer:s.answers[id]??null,
- answers:s.phase==='reveal'?s.answers:{},history:s.phase==='results'?s.history:[],score:s.score,attempts:s.attempts
+ answers:s.phase==='reveal'?s.answers:{},history:s.phase==='results'||s.phase==='reveal'?s.history:[],score:s.score,attempts:s.attempts
 });
 const emit=(s:State)=>s.players.map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}));
 const notice=(id:string,message:string)=>[{type:'notice',to:id,payload:message}];
