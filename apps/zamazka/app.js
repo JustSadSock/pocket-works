@@ -427,6 +427,7 @@ screen.addEventListener('click',e=>{
  else if(action==='retry-gallery')home();
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
+ else if(action==='cloud-sync')void zamazkaCloud?.sync();
  else if(action==='menu'){if(net||practice&&practice.phase==='drawing'){modal('Покинуть выставку?','<p class="hint">Текущая партия будет покинута. Несданные мазки сохраняются на устройстве.</p>',[['Покинуть',()=>{closeDialog();home()},'primary'],['Остаться',closeDialog,'ghost']])}else home()}
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
@@ -474,7 +475,24 @@ async function refreshPocketBadge(){
   if(note)note.innerHTML=isPocketMember()?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>';
  }
 }
+zamazkaCloud=createZamazkaCloud({
+ getArchive:()=>saved,
+ setArchive(items){
+  saved=items;
+  localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));
+  if(page==='collection')collection();
+  if(page==='home'){const number=screen.querySelector('.museum-footer [data-action="collection"] span');if(number)number.textContent=String(saved.length).padStart(2,'0');}
+ },
+ getEmblem:()=>personalEmblem,
+ setEmblem(emblem){
+  if(!storeEmblem(emblem.strokes,emblem.image))throw Error('Не удалось сохранить облачный знак на устройство');
+  personalEmblem=getSavedEmblem();syncIdentity();
+  if(page==='lobby')lobby();
+ },
+ notify
+});
 if(q.has('room'))setup('join');else home();
+zamazkaCloud.start();
 void refreshPocketBadge();
 window.addEventListener('pageshow',()=>void refreshPocketBadge());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshPocketBadge()});
