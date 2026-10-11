@@ -21,6 +21,7 @@ let active=null;
 try{
  if(typeof BroadcastChannel!=='undefined')channel=new BroadcastChannel(CHANNEL_NAME);
 }catch{}
+channel?.unref?.(); // Keep Node-based smoke tests free to exit.
 if(channel)channel.addEventListener('message',event=>{
  const m=event.data;
  if(!m||m.kind!=='who-owns-guest'||!active)return;
