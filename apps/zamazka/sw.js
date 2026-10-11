@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.9.0';
-const ART_CACHE = 'zamazka-artworks-v1.9.0';
-const APP_VERSION = '1.9.0';
+const CACHE_NAME = 'zamazka-v1.10.0';
+const ART_CACHE = 'zamazka-artworks-v1.10.0';
+const APP_VERSION = '1.10.0';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Плавная галерея: картины физически перемещаются между рамами без подмены во время анимации.","Общий холст в комнате ожидания: все рисуют одновременно через PocketNet с передачей небольших штрихов.","Рисунок сохраняется в комнате, восстанавливается при входе и переподключении; куратор может очистить холст."];
+const RELEASE_NOTES = ["Плавная галерея: картины физически перемещаются между рамами без подмены во время анимации.","Общий холст в комнате ожидания: все рисуют одновременно через PocketNet с передачей небольших штрихов.","Рисунок сохраняется в комнате, восстанавливается при входе и переподключении; куратор может очистить холст.","Pocket ID: ник реставратора и подтверждённые аккаунты в комнатах и итогах."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,6 +26,8 @@ const APP_SHELL = [
   './museum-catalog.js',
   './editor.js',
   '../../shared/capabilities/net.js',
+  '../../shared/capabilities/identity.js',
+  '../../shared/capabilities/identity.css',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
