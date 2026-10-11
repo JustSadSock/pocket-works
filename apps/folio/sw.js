@@ -1,20 +1,16 @@
 const CACHE_PREFIX = 'folio-';
-const CACHE_NAME = 'folio-v1.4.0';
-const APP_VERSION = '1.4.0';
+const CACHE_NAME = 'folio-v1.5.0';
+const APP_VERSION = '1.5.0';
 const RELEASE_DATE = '2026-10-11';
-const RELEASE_NOTES = [
-  "Заливка теперь ориентируется только на реальные контуры, а не на ранее закрашенные участки: можно свободно перекрашивать области, пересечения линий аккуратно закрываются.",
-  "Быстрые штрихи больше не обрываются до точки отпускания: сглаживание подстраивается под скорость движения, последние координаты учитываются, рисунок не превращается неожиданно в прямую линию.",
-  "На ПК курсор показывает реальный круг размера кисти и ластика с учётом масштаба, включая обычный ввод мышью и графическим пером."
-];
+const RELEASE_NOTES = ["Заливка теперь ориентируется только на реальные контуры, а не на ранее закрашенные участки: можно свободно перекрашивать области, пересечения линий аккуратно закрываются.","Быстрые штрихи больше не обрываются до точки отпускания: сглаживание подстраивается под скорость движения, последние координаты учитываются, рисунок не превращается неожиданно в прямую линию.","На ПК курсор показывает реальный круг размера кисти и ластика с учётом масштаба, включая обычный ввод мышью и графическим пером.","Pocket Cloud: защищённая синхронизация многослойных рисунков через Pocket ID, сохранение конфликтующих версий и удалений."];
 const CACHE_PROTOCOL = 2;
-const APP_SHELL = ['./','./index.html','./styles.css','./app.js','./fill-engine.mjs','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
+const APP_SHELL = ['./','./index.html','./styles.css','./app.js','./cloud-sync.js','./fill-engine.mjs','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
   '../../shared/update-manager.css','../../shared/update-manager.js',
   '../../shared/workshop-mode.css','../../shared/workshop-mode.js',
   '../../shared/pwa-utils.js','../../shared/capabilities/motion.js',
   '../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js',
-  '../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+  '../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/capabilities/cloud.js','../../shared/capabilities/identity.js'];
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = APP_VERSION + '-p' + CACHE_PROTOCOL;
 const FILES = new Map(APP_SHELL.map(entry => {
