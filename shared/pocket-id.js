@@ -114,7 +114,7 @@ function renderAvatars() {
 function display() {
   guestIntro.hidden=Boolean(user?.linkedGoogle)||!config.googleEnabled;
   activeSection.hidden=!user;
-  edit.hidden=mode==='recover'||Boolean(user&&mode==='view');
+  edit.hidden=!['create','edit','onboarding'].includes(mode);
   recoverSection.hidden=mode!=='recover';
   recoveryBox.hidden=mode!=='key';
   recoverToggle.hidden=Boolean(user)||mode==='recover';
