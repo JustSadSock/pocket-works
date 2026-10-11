@@ -1,0 +1,35 @@
+name: ZAMAZKA online server smoke
+
+on:
+  pull_request:
+    paths:
+      - "apps/zamazka/server/**"
+      - ".github/workflows/zamazka-online-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/zamazka/server/**"
+      - ".github/workflows/zamazka-online-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  duo-and-trio:
+    name: Real WebSocket duo and trio
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: pocket-server/package-lock.json
+      - name: Install local host dependencies
+        working-directory: apps/zamazka/server/local
+        run: npm install --no-audit --no-fund
+      - name: Test HTTP, WebSocket, two and three players
+        working-directory: apps/zamazka/server/local
+        run: npm test
