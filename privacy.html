@@ -130,8 +130,9 @@
         <section id="storage">
           <span class="section-index">04 — ON YOUR DEVICE</span>
           <h2>What stays local?</h2>
-          <p>Supported games and creative apps may store drawings, progress, settings and other content locally in your browser or installed web app using device storage and caches. Pocket ID <strong>does not currently synchronize these items between devices</strong>.</p>
+          <p>Supported games and creative apps may store drawings, progress, settings and other content locally in your browser or installed web app using device storage and caches. Pocket Cloud now offers optional account-based synchronization for <strong>FOLIO drawings and ЗАМАЗКА restoration archives and personal seals</strong>. Other supported games continue storing saves locally unless they explicitly say otherwise.</p>
           <p>We use secure, HttpOnly cookies to keep you signed in. A session can remain valid for up to 30 days. You can sign out to revoke the current session. The service also uses a short-lived cookie during Google login to protect the authorization process.</p>
+          <p>When enabled, Pocket Cloud stores compressed drawing/project data in account-isolated Cloudflare SQLite Durable Objects, including each item's identifier, title, modification timestamp and revision metadata. The initial storage limits are approximately 16 MB per Pocket ID account and 1 MB per uploaded item. Cloud versions remain available when you use another signed-in device. Deleted documents are represented by revision markers to prevent stale devices from accidentally restoring old files.</p>
           <p>PocketNet multiplayer creates short-lived room sessions. When you are signed in, PocketNet verifies your Pocket ID session and stores your account identifier, verified nickname and selected avatar with its temporary player session and room membership. Guests can still play without an account and are visibly labeled as guests. Individual games may have their own specific data behavior.</p>
         </section>
         <section id="uses">
@@ -143,7 +144,7 @@
             <li>To run optional multiplayer sessions and maintain the site's functionality and security.</li>
             <li>To troubleshoot errors and operate the service.</li>
           </ul>
-          <p>We do not sell Pocket ID profile data or use it to deliver targeted advertisements. Future services, such as cloud saves or friends, will require an update to this policy before their data handling is introduced.</p>
+          <p>We do not sell Pocket ID profile data or use it to deliver targeted advertisements. Additional cloud support for other games, friends and social features will require an update to this policy before their data handling is introduced.</p>
         </section>
         <section id="retention">
           <span class="section-index">06 — RETENTION &amp; SECURITY</span>
