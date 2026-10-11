@@ -17,7 +17,7 @@ const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let personalEmblem=getSavedEmblem();
-let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false;
+let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
 const museumOrder=[0,...PLAYABLE_IDS.filter(id=>id!==3),3];
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
 
@@ -116,7 +116,7 @@ function home(){
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
  if(net){try{net.leaveRoom()}catch{}net.close();net=null}
- view=null;roomId='';practice=null;boardResync=false;
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';
  change('<section class="museum-home">'+
   '<div class="museum-kicker"><span>ATELIER · № 001</span><span>БЮРО РЕСТАВРАЦИИ</span></div>'+
   '<div class="museum-headline"><div class="museum-smalltitle">Игра для тех, кто видит детали</div><h1>Искусство<br><em>подделки.</em></h1><p>Подлинные шедевры. Утраченные фрагменты.<br>Одна очень убедительная ложь.</p></div>'+
@@ -169,7 +169,7 @@ function lobby(){
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button></div></div>'+
   '<div class="lobby-list-heading"><span class="section-label">РЕСТАВРАТОРЫ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
   '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
-  commonsHtml(leader)+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
+  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
   '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>';
  if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
@@ -186,7 +186,7 @@ function lobby(){
    return;
  }
  change(markup,'lobby');
- commonsBoard=createCommonsBoard(screen.querySelector('.commons-desk'),{send:packet=>net?.sendGame(packet),onError:notify,canClear:leader,snapshot:view?.board||{revision:0,segments:[]}});
+ if(Number(roomModuleVersion.slice(1))>=3)commonsBoard=createCommonsBoard(screen.querySelector('.commons-desk'),{send:packet=>net?.sendGame(packet),onError:notify,canClear:leader,snapshot:view?.board||{revision:0,segments:[]}});
  boardResync=false;
 }
 function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+'</span></button>').join('')+'</div>'}
@@ -327,6 +327,7 @@ async function connect(mode){
    client.on('room_joined',msg=>{
      if(client.closed)return;
      roomId=msg.roomId;
+     roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
      if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
