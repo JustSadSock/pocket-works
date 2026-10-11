@@ -12,6 +12,6 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test-server.mjs"
+    "test": "node test-server.mjs && node test-game.mjs"
   }
 }
