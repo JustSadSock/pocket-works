@@ -137,7 +137,7 @@ function home(){
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>54 ПОЛОТНА · 2–8 ИГРОКОВ</span>')+'</div>'+
   '</div></section>','home');
- shiftMuseum(0,false);syncIdentity();
+ syncIdentity();
  primeGallery().then(results=>{
    if(page!=='home')return;
    const primary=screen.querySelector('#primary-action');
