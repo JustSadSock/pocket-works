@@ -11,7 +11,7 @@ const uniqueId=()=>crypto.randomUUID();
 export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,notify}){
  const status=document.querySelector('#folio-cloud-status');
  const action=document.querySelector('#folio-cloud-action');
- let user=null,client=null,working=false,timer=null,enabled=false;
+ let user=null,client=null,working=false,timer=null,enabled=false,rerun=false;
  let stats={uploads:0,downloads:0,copies:0,deletions:0};
  const setStatus=(label,busy=false)=>{
   status.textContent=label;
@@ -74,7 +74,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   saveMeta(meta);stats.downloads++;
  };
  async function run({manual=false}={}){
-  if(working)return;
+  if(working){rerun=true;return;}
   if(!navigator.onLine){setStatus('Нет сети · рисунки сохранены локально');return}
   working=true;setStatus('Соединяем альбом с Pocket ID…',true);
   let failures=[];
@@ -139,7 +139,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   }catch(error){
    setStatus('Облако недоступно · рисунки сохранены локально');
    if(manual)notify(error.message||'Ошибка синхронизации');
-  }finally{working=false}
+  }finally{working=false;if(rerun){rerun=false;schedule()}}
  }
  function schedule(){
   if(!enabled)return;
