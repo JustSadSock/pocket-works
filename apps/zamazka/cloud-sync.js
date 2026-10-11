@@ -29,7 +29,11 @@ export function createZamazkaCloud({getArchive,setArchive,getEmblem,setEmblem,no
  const saveMeta=(id,data)=>{try{localStorage.setItem(META(user.id)+':'+id,JSON.stringify(data))}catch{}};
  async function allow(manual){
   const identity=await getPocketIdentity({force:true});
-  if(!identity?.complete){user=null;client=null;enabled=false;update('Войди в Pocket ID для облака');return false}
+  if(!identity?.complete){
+   user=null;client=null;enabled=false;update('Войди в Pocket ID для облака');
+   if(manual)location.assign('/?pocket-id=login');
+   return false;
+  }
   user=identity;client=new PocketCloudClient('zamazka');
   const owner=localStorage.getItem(OWNER);
   if(owner&&owner!==user.id){
