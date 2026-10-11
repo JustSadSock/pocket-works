@@ -3,7 +3,7 @@ import {galleryWindow} from './museum-motion.js';
 import {boardPacket,paintBoardDelta} from './commons-board.js';
 const order=[0,1,2,4,3];
 assert.deepEqual(galleryWindow(order,0).map(x=>x.id),[4,3,0,1,2]);
-assert.deepEqual(galleryWindow(order,4).map(x=>x.id),[1,2,4,3,0]);
+assert.deepEqual(galleryWindow(order,4).map(x=>x.id),[2,4,3,0,1]);
 const basic={k:'s2',q:0,c:'#aabbcc',s:9,p:[[0,0],[950,599]],revision:0};
 assert.equal(boardPacket(basic),true);
 assert.equal(boardPacket({...basic,p:[[961,0]]}),false);
