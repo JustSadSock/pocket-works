@@ -85,13 +85,19 @@ try {
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
-  assert.equal(created.version, 'v1');
+  assert.equal(created.version, 'v2');
   const roomId = created.roomId;
   const code = roomId.slice(0, 8).toUpperCase();
   second.send('join_room', { roomId: '00000000' });
   assert.equal((await second.next('error')).code, 'room_not_found');
   second.send('join_room', { roomId: code });
   assert.equal((await second.next('room_joined')).roomId, roomId);
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+  second.send('game_message', { payload: { type: 'emblem', image: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' } });
+  assert.match((await second.next('game_event', m => m.event?.type === 'notice')).event.payload, /знак/i);
+  second.send('game_message', { payload: { type: 'emblem', image: png } });
+  const badge = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.emblems?.[(event.event.payload.participants || []).find(p => p.name === 'Observer')?.id] === png);
+  assert.equal(Object.values(badge.event.payload.emblems).includes(png), true);
   first.send('game_message', { payload: { type: 'start', rounds: 1 } });
   const started = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.phase === 'preview');
   assert.equal(started.event.payload.round, 1);
@@ -108,7 +114,7 @@ try {
   await sleep(100);
   again.send('leave_room');
   assert.equal((await health()).rooms, 0);
-  console.log('PASS: Cloudflare DO session, short room code, invalid code, UUID reconnect and cleanup');
+  console.log('PASS: PocketNet short rooms, 2 players, persistent profile images, unsafe image rejection, reconnect and cleanup');
 } finally {
   await close(first);
   await close(second);
