@@ -271,6 +271,17 @@ export class PocketNetHub {
               state: room.state, players: room.players });
             this.emit(room, result.events ?? []);
           } else {
+            // Reconnecting with the same durable token keeps the same seat while
+            // propagating a freshly verified nickname/avatar into room snapshots.
+            const old = room.players.find(p => p.id === player.id);
+            if (old && (old.name !== member.name || old.avatar !== member.avatar || old.accountId !== member.accountId)) {
+              const refresh = p => p.id === player.id ? { ...p, ...member } : p;
+              room.players = room.players.map(refresh);
+              if (Array.isArray(room.state?.participants)) room.state.participants = room.state.participants.map(refresh);
+              if (Array.isArray(room.state?.players)) room.state.players = room.state.players.map(refresh);
+              this.persist(room);
+              this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+            }
             this.setRoom(ws, room.id);
             message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
               state: room.state, players: room.players });
