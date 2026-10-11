@@ -1,0 +1,38 @@
+// Exact two-player full round regression, without waiting through real-world timers.
+import { build } from 'esbuild';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { strict as assert } from 'node:assert';
+const here=dirname(fileURLToPath(import.meta.url));
+const result=await build({entryPoints:[join(here,'../module.ts')],bundle:true,platform:'node',target:'node22',format:'esm',write:false});
+const game=(await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].contents).toString('base64'))).default;
+const alice={id:'alice',name:'Алиса'},bob={id:'bob',name:'Боб'};
+const players=[alice,bob];
+let state=game.createRoom({player:alice,players:[alice],payload:null}).state;
+state=game.onJoin({state,player:bob,players,payload:null}).state;
+function action(player,type,args={}){
+ const response=game.onMessage({state,player,players,payload:{type,...args}});
+ assert(response?.state,'No state after '+type);
+ state=response.state;
+ return response;
+}
+action(alice,'start',{rounds:1});
+assert.equal(state.phase,'preview');assert.equal(state.participants.length,2);
+state.deadline=Date.now()-1;action(alice,'pulse');assert.equal(state.phase,'drawing');
+action(alice,'submit',{strokes:[]});assert.equal(state.phase,'drawing');
+action(bob,'submit',{strokes:[]});assert.equal(state.phase,'voting');
+const first=state.participants[state.turn];
+const observer=first.id===alice.id?bob:alice;
+action(observer,'vote',{art:state.assignments[first.id].art});
+assert.equal(state.phase,'voting');assert.equal(state.turn,1);
+const second=state.participants[state.turn];
+const secondObserver=second.id===alice.id?bob:alice;
+action(secondObserver,'vote',{art:state.assignments[second.id].art});
+assert.equal(state.phase,'reveal');
+assert.equal(Object.keys(state.scores).length,2);
+for(const player of players)assert.equal(state.scores[player.id].eye,100);
+state.deadline=Date.now()-1;action(alice,'pulse');
+assert.equal(state.phase,'reveal');assert.equal(state.turn,1);
+state.deadline=Date.now()-1;action(alice,'pulse');
+assert.equal(state.phase,'results');
+console.log('PASS: two-player full game round, submissions, both votes, reveal and scores');
