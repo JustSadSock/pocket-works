@@ -3,3 +3,5 @@ node_modules/
 local-logs/
 local-data/
 package-lock.json
+live-module.ts
+live-module.ts.download
