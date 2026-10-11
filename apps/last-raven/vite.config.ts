@@ -38,7 +38,7 @@ export default defineConfig({
         id: '/apps/last-raven/',
         name: 'ПОСЛЕДНИЙ ВОРОН',
         short_name: 'ВОРОН',
-        description: 'Камерная стратегия о северном замке, воротах, письмах и последствиях решений.',
+        description: 'Средневековая стратегия о северном замке с ветвящимися судьбами и интерактивной осадой.',
         start_url: './',
         scope: './',
         display: 'standalone',

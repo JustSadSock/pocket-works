@@ -38,8 +38,8 @@
       <div class="start-raven" aria-hidden="true"><i></i><i></i><b></b></div>
       <p class="eyebrow">СЕВЕР · МАЛЫЙ ЗАМОК · ВОЙНА РЯДОМ</p>
       <h1>ПОСЛЕДНИЙ<br><em>ВОРОН</em></h1>
-      <p class="lead">Двенадцать дней держите замок между чужими армиями. Решайте, кого впускать, кому верить и какие письма лучше никогда не отправлять.</p>
-      <div class="start-rule"><span>1 замок</span><span>4 силы</span><span>12 дней</span></div>
+      <p class="lead">Двенадцать дней удерживайте северный замок. Каждое письмо и каждый человек могут изменить судьбу людей — а на тринадцатое утро вы сами поведёте оборону.</p>
+      <div class="start-rule"><span>1 замок</span><span>4 силы</span><span>3 приказа в осаде</span></div>
       <button id="continue" class="wide secondary hidden" type="button">ПРОДОЛЖИТЬ С ДНЯ <b id="continue-day">1</b></button>
       <button id="new-game" class="wide primary" type="button">ПРИНЯТЬ КЛЮЧИ ОТ ЗАМКА</button>
       <button id="start-exit" class="quiet" type="button">← В PocketWorks</button>
@@ -80,7 +80,15 @@
       <div class="siege-title"><span>ШТУРМ</span><b id="siege-time">00:24</b></div>
       <div class="siege-meter"><label>СТЕНА</label><div><i id="wall-fill"></i></div><b id="wall-text">100</b></div>
       <div class="siege-meter enemy"><label>АТАКУЮЩИЕ</label><div><i id="enemy-fill"></i></div><b id="enemy-text">100</b></div>
-      <p>Теперь решения уже приняты. Остаётся смотреть, что они стоили.</p>
+      <div id="siege-instruction" class="siege-instruction" aria-live="polite">ПЕРВЫЙ ПРИКАЗ · ВРАГ ПОДХОДИТ</div>
+      <div id="siege-actions" class="siege-actions awaiting" aria-label="Приказы во время осады">
+        <button type="button" data-siege-order="reinforce"><b>УКРЕПИТЬ</b><small>−3 дров · +19 стена</small></button>
+        <button type="button" data-siege-order="volley"><b>ЗАЛП</b><small>−2 еды · −14 врагов</small></button>
+        <button type="button" data-siege-order="sortie"><b>ВЫЛАЗКА</b><small>−3 стража · −23 врагов</small></button>
+        <button type="button" data-siege-order="rally"><b>ПОДНЯТЬ ЗНАМЯ</b><small>−1 золото · дух +10</small></button>
+        <button type="button" data-siege-order="hold"><b>ДЕРЖАТЬ СТРОЙ</b><small>без расходов · +3 стена</small></button>
+      </div>
+      <p id="siege-history">Каждый приказ влияет на выживание крепости.</p>
     </section>
 
     <section id="end-screen" class="end-screen hidden" data-ui>
