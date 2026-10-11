@@ -112,14 +112,14 @@ function renderAvatars() {
   }
 }
 function display() {
-  guestIntro.hidden=Boolean(user);
+  guestIntro.hidden=Boolean(user?.linkedGoogle)||!config.googleEnabled;
   activeSection.hidden=!user;
   edit.hidden=mode==='recover'||Boolean(user&&mode==='view');
   recoverSection.hidden=mode!=='recover';
   recoveryBox.hidden=mode!=='key';
   recoverToggle.hidden=Boolean(user)||mode==='recover';
   newAccount.hidden=Boolean(user)||mode!=='recover';
-  googleAction.hidden=!config.googleEnabled;
+  googleAction.hidden=!config.googleEnabled||Boolean(user?.linkedGoogle);
   googleAction.textContent=user?'Link Google account':'Continue with Google';
   headline.textContent=user?'Your Pocket ID':mode==='recover'?'Recover your ID':'An identity for your worlds.';
   subtitle.textContent=user?'Your profile follows you between devices.':'Create a permanent profile or sign in with Google.';
